@@ -87,6 +87,8 @@ function mount(
         },
       ],
       projects: [project],
+      // T111's live answer: the fixture observer is eligible unless a test says otherwise.
+      eligibility: [{ providerId: 'p', modelId: 'o', status: 'eligible' }],
       ...clips,
     },
   })
@@ -248,19 +250,152 @@ it('reloads saved results without originals and refreshes an expired preview onl
   expect(reads).toBe(initial + 1)
   expect(view.queryClient.getMutationCache().getAll()).toHaveLength(0)
 })
-it('blocks non-video observers and never substitutes another registered model', async () => {
-  const nonVideo: FakeProvidersOptions = {
-    ...models,
-    models: models.models!.map((m) => ({ ...m, videoInput: false })),
-  }
+it('blocks an observer the server refuses, says why, and never substitutes another model', async () => {
   const starts: unknown[] = []
-  mount({ generationStarts: starts }, {}, nonVideo)
+  const calls: string[] = []
+  mount({
+    generationStarts: starts,
+    calls,
+    eligibility: [{ providerId: 'p', modelId: 'o', status: 'video_input_absent' }],
+  })
   await selectSource()
   expect(screen.getByRole('button', { name: '생성' })).toBeDisabled()
   expect(starts).toHaveLength(0)
-  expect(
-    screen.getByText('압축 영상의 직접 전송과 고정 샘플링을 지원하는 관찰 모델을 선택해 주세요.'),
-  ).toBeInTheDocument()
+  expect(calls).not.toContain('QuoteClipGeneration')
+  // The saved choice stays selected and the reason sits beside the field and in the
+  // action's readiness line; nothing was saved over it.
+  const observe = screen.getByRole('combobox', { name: /관찰 모델/ })
+  expect(observe).toHaveTextContent('Video observer')
+  expect(screen.getAllByText('영상 입력을 받지 않는 모델이에요').length).toBeGreaterThanOrEqual(1)
+  expect(observe).toHaveAccessibleDescription(/영상 입력을 받지 않는 모델이에요/)
+  expect(calls).not.toContain('SaveSelection')
+})
+it('enables a non-Google observer the server qualified even without static processing', async () => {
+  const qwen: FakeProvidersOptions = {
+    ...models,
+    models: [
+      {
+        providerId: 'p',
+        modelId: 'qwen/vl',
+        label: 'Qwen VL',
+        vision: true,
+        videoInput: true,
+        inlineStaticVideo: false,
+        stages: [Stage.OBSERVE],
+      },
+      models.models![1],
+    ],
+    selections: [
+      { stage: Stage.OBSERVE, providerId: 'p', modelId: 'qwen/vl' },
+      { stage: Stage.WRITE, providerId: 'p', modelId: 'w' },
+    ],
+  }
+  const quotes: unknown[] = []
+  mount(
+    {
+      quoteRequests: quotes,
+      eligibility: [{ providerId: 'p', modelId: 'qwen/vl', status: 'eligible' }],
+    },
+    {},
+    qwen,
+  )
+  await selectSource()
+  await screen.findByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' })
+  expect(quotes[0]).toMatchObject({ observeModel: { providerId: 'p', modelId: 'qwen/vl' } })
+})
+it('greys every ineligible observer with its one reason and keeps the refused saved choice', async () => {
+  const observers = [
+    ['o', 'price_ceiling_unavailable', '요금 상한을 확인할 수 없는 경로예요'],
+    ['absent', 'video_input_absent', '영상 입력을 받지 않는 모델이에요'],
+    ['route', 'inline_endpoint_unavailable', '지금 클립 영상을 그대로 받을 수 있는 경로가 없어요'],
+    [
+      'params',
+      'required_parameters_unsupported',
+      '클립 분석 요청에 필요한 설정을 지원하지 않는 경로예요',
+    ],
+    ['fine', 'eligible', ''],
+  ] as const
+  const many: FakeProvidersOptions = {
+    ...models,
+    models: [
+      ...observers.map(([id]) => ({
+        providerId: 'p',
+        modelId: id,
+        label: `Observer ${id}`,
+        vision: true,
+        videoInput: id !== 'absent',
+        stages: [Stage.OBSERVE],
+      })),
+      models.models![1],
+    ],
+  }
+  const calls: string[] = []
+  mount(
+    {
+      calls,
+      eligibility: observers.map(([id, status]) => ({ providerId: 'p', modelId: id, status })),
+    },
+    {},
+    many,
+  )
+  const user = userEvent.setup()
+  const observe = await screen.findByRole('combobox', { name: /관찰 모델/ })
+  await waitFor(() => expect(observe).toBeEnabled())
+  // The refused saved choice is still the field's value, with its reason described.
+  expect(observe).toHaveTextContent('Observer o')
+  await waitFor(() =>
+    expect(observe).toHaveAccessibleDescription(/요금 상한을 확인할 수 없는 경로예요/),
+  )
+  await user.click(observe)
+  for (const [id, , reason] of observers) {
+    const option = screen.getByRole('option', { name: new RegExp(`Observer ${id}`) })
+    if (reason) {
+      expect(option).toHaveAttribute('aria-disabled', 'true')
+      expect(option).toHaveTextContent(reason)
+    } else {
+      expect(option).not.toHaveAttribute('aria-disabled')
+    }
+  }
+  // Picking a refused model saves nothing; the eligible one is not chosen for the user.
+  await user.click(screen.getByRole('option', { name: /Observer params/ }))
+  expect(calls).not.toContain('SaveSelection')
+  expect(observe).toHaveTextContent('Observer o')
+})
+it('fails the clip action closed while eligibility loads or cannot be read, and retries on request', async () => {
+  let down = true
+  const calls: string[] = []
+  mount({ eligibilityFails: () => down, calls })
+  await selectSource()
+  expect(screen.getByRole('button', { name: '생성' })).toBeDisabled()
+  await screen.findAllByText(/관찰 모델이 클립 분석에 쓸 수 있는지 확인하지 못했어요/)
+  expect(calls).not.toContain('QuoteClipGeneration')
+  expect(screen.queryByText(/NETWORK_UNAVAILABLE/)).not.toBeInTheDocument()
+  down = false
+  await userEvent.setup().click(screen.getByRole('button', { name: '다시 확인' }))
+  await screen.findByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' })
+})
+it('never treats an unspecified, unknown or duplicated status as eligible', async () => {
+  for (const eligibility of [
+    [{ providerId: 'p', modelId: 'o', status: 'unspecified' as const }],
+    [
+      { providerId: 'p', modelId: 'o', status: 'eligible' as const },
+      { providerId: 'p', modelId: 'o', status: 'price_ceiling_unavailable' as const },
+    ],
+    [],
+  ]) {
+    const calls: string[] = []
+    const view = mount({ eligibility, calls })
+    await selectSource()
+    expect(screen.getByRole('button', { name: '생성' })).toBeDisabled()
+    expect(calls).not.toContain('QuoteClipGeneration')
+    expect(
+      screen.getAllByText(
+        '선택한 관찰 모델은 클립 분석에 아직 쓸 수 없어요. 다른 모델을 선택해 주세요.',
+      ).length,
+    ).toBeGreaterThanOrEqual(1)
+    view.unmount()
+    vi.restoreAllMocks()
+  }
 })
 it('does not automatically retry a failed start request', async () => {
   const calls: string[] = []

@@ -45,8 +45,11 @@ export {
   QuoteClipGenerationResponseSchema,
   ClipAccountingSchema,
   ClipAttemptSchema,
+  ClipAnalysisEligibility,
+  ListClipAnalysisEligibilityResponseSchema,
 } from './gen/postpilot/v1/clip_pb'
 export type {
+  ListClipAnalysisEligibilityResponse as ProtoClipAnalysisEligibilityList,
   VideoTemplate as ProtoVideoTemplate,
   ClipProject as ProtoClipProject,
   ClipEditPlan as ProtoClipEditPlan,

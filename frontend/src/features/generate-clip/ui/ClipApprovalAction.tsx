@@ -1,5 +1,10 @@
 import { useTranslation } from 'react-i18next'
-import type { ClipProject, ClipQuote, ReadyClipBatch } from '@/entities/clip-project'
+import type {
+  ClipEligibilityStatus,
+  ClipProject,
+  ClipQuote,
+  ReadyClipBatch,
+} from '@/entities/clip-project'
 import type { ModelRef } from '@/entities/model-catalog'
 import { useMyPlan } from '@/entities/plan'
 import { appFailureFromConnect } from '@/shared/api'
@@ -13,6 +18,7 @@ export function ClipApprovalAction({
   batch,
   observe,
   write,
+  observeStatus,
   ready,
   pending,
   onApprove,
@@ -22,6 +28,8 @@ export function ClipApprovalAction({
   batch?: ReadyClipBatch
   observe: ModelRef | null
   write: ModelRef | null
+  /** The observe model's live eligibility the quote is bound to (T112). */
+  observeStatus: ClipEligibilityStatus | undefined
   ready: boolean
   pending: boolean
   onApprove(quote: ClipQuote): void
@@ -34,6 +42,7 @@ export function ClipApprovalAction({
       batch={batch}
       observe={observe}
       write={write}
+      observeStatus={observeStatus}
       onApprove={onApprove}
     />
   ) : (
@@ -52,6 +61,7 @@ function QuotedAction({
   batch,
   observe,
   write,
+  observeStatus,
   onApprove,
 }: {
   ownerId: string
@@ -59,10 +69,11 @@ function QuotedAction({
   batch: ReadyClipBatch
   observe: ModelRef
   write: ModelRef
+  observeStatus: ClipEligibilityStatus | undefined
   onApprove(quote: ClipQuote): void
 }) {
   const { t } = useTranslation('clips')
-  const query = useClipQuote(ownerId, project, batch, observe, write)
+  const query = useClipQuote(ownerId, project, batch, observe, write, observeStatus)
   const { myPlan } = useMyPlan()
   const quote = query.quote
   const insufficient =

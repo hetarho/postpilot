@@ -101,6 +101,12 @@ export const models = {
   candidateB: '후보 B',
   savePair: 'A/B 조합 저장',
   differentModels: '서로 다른 모델을 선택해 주세요.',
+  availability: {
+    loading: '이 작업에 쓸 수 있는 모델인지 확인하는 중이에요.',
+    failed: '모델을 쓸 수 있는지 확인하지 못했어요. 다시 확인해 주세요.',
+    retry: '다시 확인',
+    unresolved: '이 작업에서는 아직 쓸 수 없는 모델이에요.',
+  },
   vanished: '등록된 모델 목록에서 사라졌어요',
   unsuitable: '이 단계에서는 쓸 수 없는 모델이에요',
   unavailable: '등록 해제된 모델',

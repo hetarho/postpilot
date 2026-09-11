@@ -1,9 +1,10 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { initializeI18n } from '@/app/providers/i18n'
 import { Code } from '@connectrpc/connect'
 import { Stage } from '@/shared/api'
+import type { ModelAvailability, ModelRef, ModelVerdict } from '@/entities/model-catalog'
 import { createTestQueryClient, withProviders } from '@/test/session'
 import { type FakeProvidersOptions, createFakeProviderTransport } from '@/test/providers'
 import { StageModelSelect } from './StageModelSelect'
@@ -326,5 +327,99 @@ describe('a model above the account tier', () => {
     await openPanel(user, /관찰 모델/)
     expect(screen.getByRole('option', { name: /Watcher/ })).toHaveAccessibleName(/영상/)
     expect(screen.getByRole('option', { name: /Blind/ })).not.toHaveAccessibleName(/영상/)
+  })
+})
+
+describe('StageModelSelect with a workflow availability verdict (T112)', () => {
+  const VIDEO: FakeProvidersOptions['models'] = [
+    { providerId: 'p', modelId: 'google', label: 'Gemini', vision: true, videoInput: true },
+    { providerId: 'p', modelId: 'qwen', label: 'Qwen', vision: true, videoInput: true },
+    { providerId: 'p', modelId: 'amazon', label: 'Nova', vision: true, videoInput: true },
+    {
+      providerId: 'p',
+      modelId: 'nokey',
+      label: 'Keyless',
+      vision: true,
+      videoInput: true,
+      disabledReason: 'API key not configured',
+    },
+  ]
+  const ready = (refused: Record<string, string>): ModelAvailability => ({
+    kind: 'ready',
+    resolve: (ref: ModelRef): ModelVerdict =>
+      ref.modelId in refused
+        ? { usable: false, reason: refused[ref.modelId] }
+        : ref.modelId === 'qwen' || ref.modelId === 'nokey'
+          ? { usable: true }
+          : { usable: false, reason: '' },
+  })
+
+  function renderWith(availability: ModelAvailability, options: FakeProvidersOptions = {}) {
+    const transport = createFakeProviderTransport({ models: VIDEO, ...options })
+    const queryClient = createTestQueryClient()
+    render(<StageModelSelect stage="observe" availability={availability} />, {
+      wrapper: withProviders(transport, queryClient),
+    })
+  }
+
+  it('greys refused models with their reason, keeps a refused saved choice selected, and saves no refused pick', async () => {
+    const calls: string[] = []
+    const user = userEvent.setup()
+    renderWith(ready({ google: '요금 상한을 확인할 수 없는 경로예요' }), {
+      calls,
+      selections: [{ stage: Stage.OBSERVE, providerId: 'p', modelId: 'google' }],
+    })
+    const trigger = await openPanel(user, /관찰 모델/)
+    expect(trigger).toHaveTextContent('Gemini')
+    expect(trigger).toHaveAccessibleDescription(/요금 상한을 확인할 수 없는 경로예요/)
+    const gemini = screen.getByRole('option', { name: /Gemini/ })
+    expect(gemini).toHaveAttribute('aria-disabled', 'true')
+    expect(gemini).toHaveTextContent('요금 상한을 확인할 수 없는 경로예요')
+    // Unresolved is unusable too, with the generic note rather than an invented reason.
+    const nova = screen.getByRole('option', { name: /Nova/ })
+    expect(nova).toHaveAttribute('aria-disabled', 'true')
+    // The provider's own state keeps precedence over the workflow verdict.
+    expect(screen.getByRole('option', { name: /Keyless/ })).toHaveTextContent(
+      'API key not configured',
+    )
+    expect(screen.getByRole('option', { name: /Qwen/ })).not.toHaveAttribute('aria-disabled')
+    await user.click(nova)
+    expect(calls).not.toContain('SaveSelection')
+    expect(trigger).toHaveTextContent('Gemini')
+  })
+
+  it('lets the user pick a usable model and only that', async () => {
+    const calls: string[] = []
+    const user = userEvent.setup()
+    renderWith(ready({}), { calls })
+    await openPanel(user, /관찰 모델/)
+    await user.click(screen.getByRole('option', { name: /Qwen/ }))
+    await waitFor(() => expect(calls).toContain('SaveSelection'))
+  })
+
+  it('closes every pick while the verdict is loading or failed and offers a retry', async () => {
+    const calls: string[] = []
+    const user = userEvent.setup()
+    const { unmount } = render(<></>)
+    unmount()
+    renderWith({ kind: 'loading' }, { calls })
+    let trigger = await openPanel(user, /관찰 모델/)
+    expect(trigger).toHaveAccessibleDescription(/쓸 수 있는 모델인지 확인하는 중이에요/)
+    for (const name of [/Gemini/, /Qwen/])
+      expect(screen.getByRole('option', { name })).toHaveAttribute('aria-disabled', 'true')
+    await user.click(screen.getByRole('option', { name: /Qwen/ }))
+    expect(calls).not.toContain('SaveSelection')
+    let retried = 0
+    const failed = () => {
+      cleanup()
+      renderWith({ kind: 'failed', retry: () => retried++ }, { calls })
+    }
+    failed()
+    trigger = await openPanel(user, /관찰 모델/)
+    expect(trigger).toHaveAccessibleDescription(/확인하지 못했어요/)
+    await user.keyboard('{Escape}')
+    await user.click(screen.getByRole('button', { name: '다시 확인' }))
+    expect(retried).toBe(1)
+    expect(calls).not.toContain('SaveSelection')
   })
 })

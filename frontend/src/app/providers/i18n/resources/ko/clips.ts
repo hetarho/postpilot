@@ -107,7 +107,18 @@ export const clips = {
     failedAt: '{{stage}} 단계에서 실패했어요',
     finished: '클립이 완성됐어요',
     models: '생성 모델',
-    videoRequired: '압축 영상의 직접 전송과 고정 샘플링을 지원하는 관찰 모델을 선택해 주세요.',
+    eligibility: {
+      loading: '관찰 모델이 클립 분석에 쓸 수 있는지 확인하는 중이에요.',
+      failed: '관찰 모델이 클립 분석에 쓸 수 있는지 확인하지 못했어요. 다시 확인해 주세요.',
+      retry: '다시 확인',
+      unresolved: '선택한 관찰 모델은 클립 분석에 아직 쓸 수 없어요. 다른 모델을 선택해 주세요.',
+      reason: {
+        video_input_absent: '영상 입력을 받지 않는 모델이에요',
+        inline_endpoint_unavailable: '지금 클립 영상을 그대로 받을 수 있는 경로가 없어요',
+        required_parameters_unsupported: '클립 분석 요청에 필요한 설정을 지원하지 않는 경로예요',
+        price_ceiling_unavailable: '요금 상한을 확인할 수 없는 경로예요',
+      },
+    },
     selectModels: '관찰 모델과 작성 모델을 선택해 주세요.',
     creditPolicy:
       '표시된 최대 크레딧을 승인해야 생성해요. 모든 원본과 분석용 영상을 검증한 뒤 필요한 크레딧을 한 번 예약하며, 승인액과 예약액을 넘겨 청구하지 않아요. 실패한 작업에 확인된 유료 사용이 없으면 기본 비용도 차감하지 않아요.',

@@ -56,3 +56,5 @@ export {
   useSaveComparisonPair,
 } from './api/useModelSetup'
 export { getSelectionsQueryKey } from './api/catalog-mappers'
+export type { ModelAvailability, ModelVerdict } from './model/availability'
+export { verdictOf } from './model/availability'

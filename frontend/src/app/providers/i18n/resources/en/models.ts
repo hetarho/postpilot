@@ -102,6 +102,12 @@ export const models = {
   candidateB: 'Candidate B',
   savePair: 'Save A/B pair',
   differentModels: 'Select two different models.',
+  availability: {
+    loading: 'Checking which models this task can use.',
+    failed: 'Could not check whether the model can be used. Check again.',
+    retry: 'Check again',
+    unresolved: 'This model cannot be used for this task yet.',
+  },
   vanished: 'No longer appears in the registered model list',
   unsuitable: 'Cannot be used for this stage',
   unavailable: 'Unregistered model',

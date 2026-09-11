@@ -2,6 +2,8 @@ import { create } from '@bufbuild/protobuf'
 import { Code, type createRouterTransport } from '@connectrpc/connect'
 import {
   ClipService,
+  ClipAnalysisEligibility,
+  ListClipAnalysisEligibilityResponseSchema,
   VideoTemplateSchema,
   CreateVideoTemplateResponseSchema,
   UpdateVideoTemplateResponseSchema,
@@ -55,6 +57,23 @@ export interface FakeClipProject extends ClipProjectDraft {
   editPlanRevision?: number
   renderedPlanRevision?: number
 }
+export type FakeClipEligibility =
+  | 'unspecified'
+  | 'eligible'
+  | 'video_input_absent'
+  | 'inline_endpoint_unavailable'
+  | 'required_parameters_unsupported'
+  | 'price_ceiling_unavailable'
+
+const ELIGIBILITY_WIRE: Record<FakeClipEligibility, ClipAnalysisEligibility> = {
+  unspecified: ClipAnalysisEligibility.UNSPECIFIED,
+  eligible: ClipAnalysisEligibility.ELIGIBLE,
+  video_input_absent: ClipAnalysisEligibility.VIDEO_INPUT_ABSENT,
+  inline_endpoint_unavailable: ClipAnalysisEligibility.INLINE_ENDPOINT_UNAVAILABLE,
+  required_parameters_unsupported: ClipAnalysisEligibility.REQUIRED_PARAMETERS_UNSUPPORTED,
+  price_ceiling_unavailable: ClipAnalysisEligibility.PRICE_CEILING_UNAVAILABLE,
+}
+
 export interface FakeClipsOptions {
   projects?: FakeClipProject[]
   readProject?: (project: FakeClipProject) => FakeClipProject
@@ -67,6 +86,12 @@ export interface FakeClipsOptions {
   quoteMaxCredits?: number
   quoteExpiresAt?: string
   quoteFails?: AppFailureReason
+  /** T111's live eligibility answer, one row per registered observe model. Absent means the
+   *  server names nobody, which the page must read as "unresolved", never as eligible. */
+  eligibility?: Array<{ providerId: string; modelId: string; status: FakeClipEligibility }>
+  /** Make ListClipAnalysisEligibility fail; a function is read on every call, so a test can
+   *  let a retry succeed. */
+  eligibilityFails?: boolean | (() => boolean)
   renderStarts?: unknown[]
   renderJobId?: string
   renderFails?: boolean
@@ -244,6 +269,20 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
   const batches = new Map<string, ProtoClipSourceBatch>()
   const quotes = new Map<string, { id: string; max: number }>()
   let quoteNumber = 0
+  router.rpc(ClipService.method.listClipAnalysisEligibility, () => {
+    options.calls?.push('ListClipAnalysisEligibility')
+    const fails =
+      typeof options.eligibilityFails === 'function'
+        ? options.eligibilityFails()
+        : options.eligibilityFails
+    if (fails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
+    return create(ListClipAnalysisEligibilityResponseSchema, {
+      models: (options.eligibility ?? []).map((row) => ({
+        model: { providerId: row.providerId, modelId: row.modelId },
+        status: ELIGIBILITY_WIRE[row.status],
+      })),
+    })
+  })
   router.rpc(ClipService.method.quoteClipGeneration, (req) => {
     options.calls?.push('QuoteClipGeneration')
     options.quoteRequests?.push(req)

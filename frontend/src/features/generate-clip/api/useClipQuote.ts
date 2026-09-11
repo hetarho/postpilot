@@ -2,7 +2,12 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@connectrpc/connect'
 import { useTransport } from '@connectrpc/connect-query'
 import { useQuery } from '@tanstack/react-query'
-import { toClipQuote, type ClipProject, type ReadyClipBatch } from '@/entities/clip-project'
+import {
+  toClipQuote,
+  type ClipEligibilityStatus,
+  type ClipProject,
+  type ReadyClipBatch,
+} from '@/entities/clip-project'
 import type { ModelRef } from '@/entities/model-catalog'
 import { ClipService } from '@/shared/api'
 import { POLL_INTERVAL_MS } from '@/shared/config'
@@ -16,9 +21,10 @@ export function useClipQuote(
   batch: ReadyClipBatch,
   observe: ModelRef,
   write: ModelRef,
+  status: ClipEligibilityStatus | undefined,
 ) {
   const transport = useTransport()
-  const binding = clipQuoteBinding(project, batch, observe, write)
+  const binding = clipQuoteBinding(project, batch, observe, write, status)
   const query = useQuery({
     queryKey: ['clip-quote', transport, ownerId, binding],
     gcTime: 0,

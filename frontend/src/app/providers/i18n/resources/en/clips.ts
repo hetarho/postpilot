@@ -111,8 +111,19 @@ export const clips = {
     failedAt: 'Failed during: {{stage}}',
     finished: 'Your clip is ready',
     models: 'Generation models',
-    videoRequired:
-      'Choose an observation model supporting inline compressed video and static sampling.',
+    eligibility: {
+      loading: 'Checking whether the observation model can analyse clips.',
+      failed: 'Could not check whether the observation model can analyse clips. Check again.',
+      retry: 'Check again',
+      unresolved: 'The selected observation model cannot analyse clips yet. Choose another model.',
+      reason: {
+        video_input_absent: 'does not take video input',
+        inline_endpoint_unavailable: 'has no route right now that accepts the clip video inline',
+        required_parameters_unsupported:
+          'has no route that supports the settings the clip analysis request needs',
+        price_ceiling_unavailable: 'has no route with a confirmable price ceiling',
+      },
+    },
     selectModels: 'Choose an observation model and a writing model.',
     creditPolicy:
       'Generation requires approval of the displayed maximum. After every original and analysis copy is verified, credits are reserved once. Your charge never exceeds either approval or reservation. Failed work without confirmed billable usage costs nothing, including the base charge.',

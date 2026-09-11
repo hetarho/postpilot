@@ -178,6 +178,7 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
           batch={upload.readyBatch}
           observe={generation.observeRef}
           write={generation.writeRef}
+          observeStatus={generation.observeStatus}
           ready={ready && generation.modelsReady && !generation.busy}
           pending={generation.starting}
           // The queue is flushed BEFORE the run starts, so an approval can never be committed
@@ -209,11 +210,27 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
         {/* The 영상 템플릿 and the two model selectors stay in ①'s PANEL rather than riding the
             dock's header the way the post editor's 말투 does: choosing a template rewrites the
             answer fields directly beneath it (CLIP-40). */}
-        <StageModelSelect stage="observe" disabled={generation.busy} requireInlineStaticVideo />
+        {/* T111's live eligibility is the observe picker's verdict for THIS workflow: the
+            picker greys what it refuses with the reason, and the note below is the action's
+            one readiness line. The saved choice is never cleared or swapped here; it may
+            still serve photo-only posts. */}
+        <StageModelSelect
+          stage="observe"
+          disabled={generation.busy}
+          availability={generation.availability}
+        />
         <StageModelSelect stage="write" disabled={generation.busy} />
         {!generation.modelsReady && (
-          <Typography variant="body" className="text-content-secondary">
-            {t('generation.videoRequired')}
+          <Typography variant="body" role="status" className="text-content-secondary break-words">
+            {generation.eligibility.kind === 'loading'
+              ? t('generation.eligibility.loading')
+              : generation.eligibility.kind === 'failed'
+                ? t('generation.eligibility.failed')
+                : !generation.observeRef || !generation.writeRef
+                  ? t('generation.selectModels')
+                  : generation.observeStatus && generation.observeStatus !== 'eligible'
+                    ? t(`generation.eligibility.reason.${generation.observeStatus}`)
+                    : t('generation.eligibility.unresolved')}
           </Typography>
         )}
         <Typography variant="body" className="text-content-secondary">

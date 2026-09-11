@@ -3,14 +3,17 @@ import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   type CatalogModel,
+  type ModelAvailability,
   type StageName,
   levelPrefix,
   refKey,
   useSaveSelection,
   useStageSelection,
+  verdictOf,
 } from '@/entities/model-catalog'
 import {
   AppFailureMessage,
+  Button,
   FieldLabel,
   FieldMessage,
   Listbox,
@@ -32,19 +35,24 @@ export function StageModelSelect({
   optional = false,
   disabled = false,
   requireVideoInput = false,
-  requireInlineStaticVideo = false,
+  availability,
 }: {
   stage: StageName
   className?: string
   optional?: boolean
   disabled?: boolean
   requireVideoInput?: boolean
-  requireInlineStaticVideo?: boolean
+  /** A page's own per-model verdict for its workflow (T112). Absent, the picker behaves as
+   *  it always has; present, a model the verdict refuses is greyed with that reason, a
+   *  saved choice the verdict refuses stays selected and says why under the field, and
+   *  nothing can be picked while the verdict is loading or failed. */
+  availability?: ModelAvailability
 }) {
   const { t } = useTranslation('models')
   const id = useId()
   const { models, selected, unavailable, isPending, isError } = useStageSelection(stage)
   const save = useSaveSelection()
+  const selectedVerdict = selected ? verdictOf(availability, selected) : undefined
 
   // The saved choice's key when it can be shown as chosen; the greyed unusable entry
   // otherwise. An empty value is the placeholder.
@@ -53,10 +61,20 @@ export function StageModelSelect({
   const loadErrorId = `${id}-load-error`
   const saveErrorId = `${id}-save-error`
   const unavailableId = `${id}-unavailable`
+  const availabilityId = `${id}-availability`
+  const availabilityNote =
+    availability?.kind === 'loading'
+      ? t('availability.loading')
+      : availability?.kind === 'failed'
+        ? t('availability.failed')
+        : selectedVerdict && !selectedVerdict.usable
+          ? selectedVerdict.reason || t('availability.unresolved')
+          : ''
   const describedBy = [
     isError && loadErrorId,
     save.failure && saveErrorId,
     unavailable && unavailableId,
+    availabilityNote && availabilityId,
   ]
     .filter(Boolean)
     .join(' ')
@@ -70,16 +88,18 @@ export function StageModelSelect({
     ...(unavailable
       ? [{ value: UNAVAILABLE_VALUE, label: refKey(unavailable.ref), disabled: true }]
       : []),
-    ...models.map((model) => ({
-      value: refKey(model.ref),
-      label: optionLabel(model, stage),
-      disabled:
-        model.disabled ||
-        (!requireInlineStaticVideo && !model.affordable) ||
-        (requireVideoInput && !model.videoInput) ||
-        (requireInlineStaticVideo &&
-          (!model.vision || !model.videoInput || !model.inlineStaticVideo)),
-    })),
+    ...models.map((model) => {
+      const verdict = verdictOf(availability, model.ref)
+      return {
+        value: refKey(model.ref),
+        label: optionLabel(model, stage, verdict.usable ? '' : verdict.reason),
+        disabled:
+          model.disabled ||
+          (!availability && !model.affordable) ||
+          (requireVideoInput && !model.videoInput) ||
+          !verdict.usable,
+      }
+    }),
   ]
 
   return (
@@ -104,10 +124,9 @@ export function StageModelSelect({
             !disabled &&
             chosen &&
             !chosen.disabled &&
-            (requireInlineStaticVideo || chosen.affordable) &&
+            (availability || chosen.affordable) &&
             (!requireVideoInput || chosen.videoInput) &&
-            (!requireInlineStaticVideo ||
-              (chosen.vision && chosen.videoInput && chosen.inlineStaticVideo))
+            verdictOf(availability, chosen.ref).usable
           )
             save.save(stage, chosen.ref)
         }}
@@ -130,6 +149,22 @@ export function StageModelSelect({
         // something that just went wrong, and it renders on first paint.
         <FieldMessage id={unavailableId} role="status" className="mt-1">
           {unavailable.reason}
+        </FieldMessage>
+      )}
+      {availabilityNote && (
+        // The workflow's verdict on the saved choice, or the state of the verdict itself. The
+        // choice stays selected — it may still serve other work — so this is a standing note,
+        // not an alert, and it may run to several lines at 360 px rather than be cut.
+        <FieldMessage id={availabilityId} role="status" className="mt-1 break-words">
+          {availabilityNote}
+          {availability?.kind === 'failed' && availability.retry && (
+            <>
+              {' '}
+              <Button type="button" variant="ghost" size="compact" onClick={availability.retry}>
+                {t('availability.retry')}
+              </Button>
+            </>
+          )}
         </FieldMessage>
       )}
       {isError && (
@@ -160,7 +195,7 @@ const UNAVAILABLE_VALUE = '__unavailable__'
  *  These strings are only ever read inside the OPEN panel, where the row wraps them — a disabled
  *  option can never become the closed trigger's value, because `onChange` refuses it and an
  *  unusable saved choice is rendered as the separate entry above. */
-function optionLabel(model: CatalogModel, stage: StageName): string {
+function optionLabel(model: CatalogModel, stage: StageName, refusal = ''): string {
   const badges = [
     model.vision && '👁',
     // Watching a clip is a capability of its own, and a post with a video needs it of the
@@ -173,11 +208,15 @@ function optionLabel(model: CatalogModel, stage: StageName): string {
   // A locked model stays listed rather than vanishing, and says which tier unlocks it: the
   // reason it cannot be chosen is the only thing this entry has to teach. A provider without
   // a key is the more immediate obstacle, so that reason wins when both apply.
+  // The workflow's own refusal (T112) comes after the provider's state: a model with no key is
+  // unusable everywhere, which is the more immediate thing to say.
   const reason = model.disabled
     ? ` (${model.disabledReason})`
-    : !model.affordable
-      ? ` (${i18next.t('selectField.unaffordable', { ns: 'models', credits: model.requiredCredits })})`
-      : ''
+    : refusal
+      ? ` (${refusal})`
+      : !model.affordable
+        ? ` (${i18next.t('selectField.unaffordable', { ns: 'models', credits: model.requiredCredits })})`
+        : ''
   // The grade LEADS: the closed trigger truncates, so a trailing one is never read.
   return `${levelPrefix(model, stage)}${model.label}${badges ? ` ${badges}` : ''}${reason}`
 }

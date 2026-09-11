@@ -56,3 +56,18 @@ export type {
 } from './model/edit-plan'
 export { toClipEditingState, clipPlanToProto } from './api/edit-plan'
 export { toClipQuote, toClipAccounting } from './api/credits'
+export {
+  CLIP_ELIGIBILITY_STATUSES,
+  clipEligibilityOf,
+  isClipEligibilityStatus,
+} from './model/eligibility'
+export type {
+  ClipEligibilityStatus,
+  ClipIneligibility,
+  ClipModelEligibility,
+} from './model/eligibility'
+export {
+  clipEligibilityKey,
+  toClipEligibility,
+  useClipAnalysisEligibility,
+} from './api/eligibility'
