@@ -266,18 +266,40 @@ var layoutReasons = map[string]string{
 
 func (e planViolation) LayoutReason() string { return layoutReasons[string(e)] }
 
-// LayoutViolation restates one design-system violation as an invalid plan, for
-// a check the renderer makes on its own — V3's contrast, which only exists once
-// the footage under a copy has been sampled (CDS-44).
-func LayoutViolation(v design.Violation) error { return planViolation(v) }
+// FurnitureSlot marks a layout failure the design system's own furniture caused.
+const FurnitureSlot = design.FurnitureSlot
+
+// LayoutError is one verifier failure and the caption it names: the (cut, copy)
+// whose style, anchor or presence the repair ladder may change (CDS-55), or the
+// furniture slot when the badge, a chip or a card failed — a renderer defect no
+// caption repair can reach. It keeps the invalid-plan identity and the
+// content-free reason every caller already understands.
+type LayoutError struct {
+	planViolation
+	Cut, Copy int
+}
+
+func (e *LayoutError) Unwrap() error   { return ErrInvalid }
+func (e *LayoutError) Furniture() bool { return e.Cut < 0 }
+
+// LayoutViolation restates one design-system violation the renderer found on its
+// own — V3's contrast, which only exists once the footage under a copy has been
+// sampled (CDS-44) — naming the caption it was measured on.
+func LayoutViolation(v design.Violation, cut, copy int) error {
+	return &LayoutError{planViolation(v), cut, copy}
+}
 
 // VerifyLayout gates a render on the design system (CDS-52) and restates the
-// failure as an invalid plan, which is what every caller already understands.
+// failure as an invalid plan that names the failing caption (CDS-55).
 func VerifyLayout(ratio string, approved []string, m Manifest) error {
 	err := design.VerifyApproved(m, ratio, approved)
+	var f *design.Failure
+	if errors.As(err, &f) {
+		return &LayoutError{planViolation(f.Check), f.Cut, f.Copy}
+	}
 	var v design.Violation
 	if errors.As(err, &v) {
-		return planViolation(v)
+		return &LayoutError{planViolation(v), FurnitureSlot, FurnitureSlot}
 	}
 	return err
 }

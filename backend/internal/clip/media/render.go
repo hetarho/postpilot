@@ -257,9 +257,13 @@ func (r *Rendering) Render(ctx context.Context, ws clip.MediaWorkspace, plan cli
 	if err != nil {
 		return result, err
 	}
-	if err = clip.VerifyLayout(plan.Ratio, plan.Styles, c.manifest); err != nil {
+	// A compiled plan that fails here walks CDS-55's ladder — style, anchor,
+	// drop — before any source byte is fetched; a person's plan is refused with
+	// the check named, and a furniture failure fails at once (CDS-52).
+	if err = r.repair(ctx, ws, canvas, &c); err != nil {
 		return result, err
 	}
+	plan = c.plan
 	// The layers that need no source pixels: the fixed one (the disclosure badge
 	// and this cut's chips, which never move) and the card. The copy's own plate
 	// waits for the cut's own callback, because an unplated style does not know
@@ -587,45 +591,129 @@ func (r *Rendering) copyLayer(ctx context.Context, ws clip.MediaWorkspace, canva
 	c.resolve(canvas)
 	if !design.Legible(c.cutElements(index, copyIndex)) {
 		if !c.plan.Compiled() {
-			return "", clip.LayoutViolation(design.ViolationContrast)
+			return "", clip.LayoutViolation(design.ViolationContrast, index, copyIndex)
 		}
-		if err := r.fallback(ctx, ws, canvas, c, index, copyIndex); err != nil {
+		// CDS-44's last clause is rung 1 of the one ladder: 깔끔하게, whose plate
+		// needs no ground at all (CDS-16). It is recorded as the contrast fallback
+		// it is, so step ② can say the footage, not the words, moved the style.
+		if _, err := r.rung(ctx, ws, canvas, c, index, copyIndex, rungStyle, "contrast"); err != nil {
 			return "", err
 		}
 	}
 	return r.copyPlate(ctx, ws, canvas, c.plan.Cuts[index].Copies[copyIndex], c.layouts[index][copyIndex], index, c.grounds[index][copyIndex])
 }
 
-// fallback is CDS-44's last clause: a pairing the scrim could not lift goes back
-// to 깔끔하게, whose plate needs no ground at all (CDS-16). The anchor is kept
-// when 깔끔하게 may stand there and is otherwise its own (CDS-24 is the law on
-// which anchors a style takes, and V6 would refuse the copy anywhere else). The
-// whole plan is measured again so the manifest describes what is really drawn.
-func (r *Rendering) fallback(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, c *composed, index, copyIndex int) error {
+// The three rungs of CDS-55's repair ladder, in the order they are tried: the
+// style falls back to 깔끔하게 (whose plate answers V2, V3 and V5 by itself), the
+// anchor falls back to the style's own default, and the copy is dropped so the
+// cut shows its footage.
+const (
+	rungStyle = iota
+	rungAnchor
+	rungDrop
+	rungsExhausted
+)
+
+// repair walks the ladder for a COMPILED plan whose manifest fails a check,
+// re-laying out and verifying after every rung, until the manifest verifies or
+// the ladder is exhausted for a failing caption. It costs at most one full
+// ladder per caption and one layout per rung, and no download. A plan a person
+// corrected is refused with the check named and never moved, and a failure the
+// design system's own furniture caused fails at once: that is a renderer
+// defect, not a composition (CDS-52, CDS-55).
+func (r *Rendering) repair(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, c *composed) error {
+	taken := map[[2]int]int{}
+	for {
+		err := clip.VerifyLayout(c.plan.Ratio, c.plan.Styles, c.manifest)
+		if err == nil {
+			return nil
+		}
+		var failure *clip.LayoutError
+		if !errors.As(err, &failure) || failure.Furniture() || !c.plan.Compiled() {
+			return err
+		}
+		key := [2]int{failure.Cut, failure.Copy}
+		if failure.Cut >= len(c.plan.Cuts) || failure.Copy >= len(c.plan.Cuts[failure.Cut].Copies) {
+			return err
+		}
+		next := taken[key]
+		for ; next < rungsExhausted; next++ {
+			changed, err := r.rung(ctx, ws, canvas, c, failure.Cut, failure.Copy, next, "")
+			if err != nil {
+				return err
+			}
+			if changed {
+				break
+			}
+		}
+		if next >= rungsExhausted {
+			return err
+		}
+		taken[key] = next + 1
+	}
+}
+
+// rung applies one step of the ladder to one caption and re-measures the whole
+// plan so the manifest describes what is really drawn. It reports false when
+// the caption already sits where the rung would put it, so the next rung is
+// tried without a layout pass. The record names the step, or the caller's own
+// name for it (the post-sample contrast fallback).
+func (r *Rendering) rung(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, c *composed, index, copyIndex, step int, record string) (bool, error) {
 	plan := c.plan
 	plan.Cuts = slices.Clone(plan.Cuts)
 	plan.Cuts[index].Copies = slices.Clone(plan.Cuts[index].Copies)
+	plan.Decisions = slices.Clone(plan.Decisions)
 	copied := plan.Cuts[index].Copies[copyIndex]
-	copied.Style = "clean"
-	if !slices.Contains(design.StyleAnchors("clean"), copied.Anchor) {
-		copied.Anchor = design.Styles["clean"].Anchor
+	switch step {
+	case rungStyle:
+		if copied.Style == "clean" {
+			return false, nil
+		}
+		copied.Style = "clean"
+		// The anchor is kept when 깔끔하게 may stand there and is otherwise its own
+		// (CDS-24 is the law on which anchors a style takes).
+		if !slices.Contains(design.StyleAnchors("clean"), copied.Anchor) {
+			copied.Anchor = design.Styles["clean"].Anchor
+		}
+		copied.Align = design.Styles["clean"].Align
+		if record == "" {
+			record = "style"
+		}
+	case rungAnchor:
+		style, ok := design.Styles[copied.Style]
+		if !ok || (copied.Anchor == style.Anchor && copied.Align == style.Align) {
+			return false, nil
+		}
+		copied.Anchor, copied.Align = style.Anchor, style.Align
+		if record == "" {
+			record = "anchor"
+		}
+	case rungDrop:
+		if strings.TrimSpace(copied.Text) == "" {
+			return false, nil
+		}
+		copied = clip.Copy{}
+		if record == "" {
+			record = "dropped"
+		}
+	default:
+		return false, nil
 	}
-	copied.Align = design.Styles["clean"].Align
 	plan.Cuts[index].Copies[copyIndex] = copied
 	if index < len(plan.Decisions) {
-		plan.Decisions[index].Fallback = "contrast"
+		plan.Decisions[index].Recorded(record)
 	}
 	next, err := r.layout(ctx, ws, canvas, plan)
 	if err != nil {
-		return err
+		return false, err
 	}
-	// A plated style is never sampled, so the ground this copy was measured
-	// against is no longer part of what it draws.
+	// The grounds already sampled still describe the other copies; this one is
+	// plated or gone, so what it was measured against is no longer drawn.
 	next.grounds = c.grounds
 	next.grounds[index][copyIndex] = Luminance{}
 	next.resolve(canvas)
 	*c = next
-	return nil
+	return true, nil
 }
 
 // The project accent, which every card and chip paints with (CLIP-14).
@@ -642,20 +730,24 @@ func answerAccent(plan clip.EditPlan) string {
 
 // Layout is the same pass on its own workspace, for a caller that wants the
 // manifest without rendering: it downloads nothing and writes no video.
-func (r *Rendering) Layout(ctx context.Context, plan clip.EditPlan, sources []clip.RenderSource) (manifest clip.Manifest, err error) {
+func (r *Rendering) Layout(ctx context.Context, plan clip.EditPlan, sources []clip.RenderSource) (repaired clip.EditPlan, manifest clip.Manifest, err error) {
 	if err = clip.ValidateEditPlan(r.cfg, plan, sources); err != nil {
-		return nil, err
+		return plan, nil, err
 	}
 	canvas, _ := clip.ClipCanvas(plan.Ratio)
+	repaired = plan
 	err = r.media.WithWorkspace(ctx, "clip-layout", func(ws clip.MediaWorkspace) error {
 		c, err := r.layout(ctx, ws, canvas, plan)
 		if err != nil {
 			return err
 		}
-		manifest = c.manifest
-		return clip.VerifyLayout(plan.Ratio, plan.Styles, c.manifest)
+		// The same ladder the render walks, so a compiled plan that verifies
+		// here is the plan the render will get (CDS-55).
+		err = r.repair(ctx, ws, canvas, &c)
+		manifest, repaired = c.manifest, c.plan
+		return err
 	})
-	return manifest, err
+	return repaired, manifest, err
 }
 
 func (r *Rendering) runRender(ctx context.Context, ws clip.MediaWorkspace, output string, args []string) error {

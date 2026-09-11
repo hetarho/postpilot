@@ -88,9 +88,13 @@ func latinTokens(text string) []string {
 // correction step and the manifest can say WHY a copy looks the way it does
 // rather than only what it looks like.
 type Composition struct {
-	Class    string
-	Scene    string
-	Fallback string // "", "short_text", "extended_cut", "dropped"
+	Class string
+	Scene string
+	// Fallback is every step taken away from the first choice, comma-joined in
+	// order: the compiler's own "short_text" / "extended_cut" / "dropped", and
+	// the repair ladder's "contrast" (V3, after sampling), "style", "anchor" and
+	// "dropped" (CDS-55). Step ② reads it to say what happened.
+	Fallback string
 	// Whether CDS-43's second copy was placed on this cut, so the correction
 	// step can say why a cut carries two.
 	Second bool
@@ -353,4 +357,18 @@ func fitExposure(cut Cut, text string, written Written, fallback string, limit i
 	}
 	// ③ drop the copy.
 	return "", cut.EndMS, "dropped"
+}
+
+// Recorded appends one repair step to a composition's record, once.
+func (c *Composition) Recorded(step string) {
+	for _, taken := range strings.Split(c.Fallback, ",") {
+		if taken == step {
+			return
+		}
+	}
+	if c.Fallback == "" {
+		c.Fallback = step
+		return
+	}
+	c.Fallback += "," + step
 }

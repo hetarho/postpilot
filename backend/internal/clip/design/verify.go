@@ -59,6 +59,34 @@ type Violation string
 func (v Violation) Error() string                { return "clip layout violation: " + string(v) }
 func (v Violation) OutputValidationCode() string { return string(v) }
 
+// FurnitureSlot is the slot of a failure the design system's own furniture
+// caused — the badge, a chip or a card — which no caption repair can reach.
+const FurnitureSlot = -1
+
+// Failure is one failing check and WHERE it failed: the caption (cut, copy)
+// whose style, anchor or presence the repair ladder may change (CDS-55), or the
+// furniture slot. It unwraps to its Violation, so every errors.Is on a check
+// keeps holding.
+type Failure struct {
+	Check     Violation
+	Cut, Copy int
+}
+
+func (f *Failure) Error() string                { return f.Check.Error() }
+func (f *Failure) Unwrap() error                { return f.Check }
+func (f *Failure) OutputValidationCode() string { return string(f.Check) }
+func (f *Failure) Furniture() bool              { return f.Cut < 0 }
+
+// at names the failure's slot from the element that failed: a caption's own, or
+// furniture for the badge, a chip or a card.
+func at(v Violation, e Element) error {
+	if caption(e) {
+		return &Failure{Check: v, Cut: e.Cut, Copy: e.Copy}
+	}
+	return &Failure{Check: v, Cut: FurnitureSlot, Copy: FurnitureSlot}
+}
+func furniture(v Violation) error { return &Failure{Check: v, Cut: FurnitureSlot, Copy: FurnitureSlot} }
+
 const (
 	ViolationSafeArea   Violation = "plan_layout_safe_area"
 	ViolationSize       Violation = "plan_layout_size"
@@ -116,17 +144,17 @@ func Verify(m Manifest, ratio string) error { return VerifyApproved(m, ratio, ni
 func VerifyApproved(m Manifest, ratio string, approved []string) error {
 	safe, ok := Safe(ratio)
 	if !ok {
-		return ViolationSafeArea
+		return furniture(ViolationSafeArea)
 	}
 	// A cut may carry two copies (CDS-43), so every per-caption rule is keyed by
 	// the copy, not by the cut it sits on.
 	lines := map[slot]int{}
 	for _, e := range m {
 		if !slices.Contains(ElementKinds, e.Kind) {
-			return ViolationKind
+			return at(ViolationKind, e)
 		}
 		if e.StartMS < 0 || e.EndMS <= e.StartMS {
-			return ViolationSize
+			return at(ViolationSize, e)
 		}
 		// Two elements are not bound by the safe area, and only two: the scrim,
 		// which CDS-32 places full-bleed across the frame's own edge, and the
@@ -135,54 +163,54 @@ func VerifyApproved(m Manifest, ratio string, approved []string) error {
 		// text, and a card's own lines sit 40 px inside its plate, so they are
 		// checked here like every other text.
 		if e.Kind != "scrim" && e.Kind != "card" && !within(e.Region, safe) {
-			return ViolationSafeArea
+			return at(ViolationSafeArea, e)
 		}
 		if err := verifyContrast(e); err != nil {
-			return err
+			return at(ViolationContrast, e)
 		}
 		// The badge never moves, a chip does not settle and a card only fades:
 		// only a caption's own elements carry the two permitted motions (CDS-31,
 		// CDS-30, CDS-28, CDS-4).
 		if !caption(e) {
 			if e.InMS != 0 || e.OutMS != 0 || e.DY != 0 {
-				return ViolationMotion
+				return at(ViolationMotion, e)
 			}
 			// A card's own lines are typeset by the design system at a role's
 			// nominal size, so what V2 has to hold them to is the scale's own
 			// floor: no text in a clip is ever smaller than the smallest role
 			// CDS-19 defines (CDS-2).
 			if (e.Kind == "copy" || e.Kind == "chip-category") && e.FontSize < MinTypeSize() {
-				return ViolationSize
+				return at(ViolationSize, e)
 			}
 			continue
 		}
 		style, known := Styles[e.Style]
 		if !known {
-			return ViolationSize
+			return at(ViolationSize, e)
 		}
 		if e.InMS != Motion.InMS || e.OutMS != Motion.OutMS || e.DY != Motion.InDY {
-			return ViolationMotion
+			return at(ViolationMotion, e)
 		}
 		// CDS-32: a scrim appears only under an UNPLATED style and never lies on
 		// a plate. A wash under ink at α ≥ 0.72 would darken nothing and dim the
 		// footage for no reason.
 		if e.Kind == "scrim" && style.Plate != "" {
-			return ViolationKind
+			return at(ViolationKind, e)
 		}
 		if e.Kind != "copy" {
 			continue
 		}
 		if e.FontSize < style.Role().Min || e.FontSize > style.Role().Size {
-			return ViolationSize
+			return at(ViolationSize, e)
 		}
 		if Chars(e.Text) > style.Chars {
-			return ViolationSize
+			return at(ViolationSize, e)
 		}
 		lines[slotOf(e)]++
 	}
-	for at, n := range lines {
-		if n > Styles[styleOf(m, at)].Lines {
-			return ViolationSize
+	for where, n := range lines {
+		if n > Styles[styleOf(m, where)].Lines {
+			return &Failure{Check: ViolationSize, Cut: where.Cut, Copy: where.Copy}
 		}
 	}
 
@@ -206,7 +234,15 @@ func VerifyApproved(m Manifest, ratio string, approved []string) error {
 				continue
 			}
 			if overlaps(a.Region, b.Region) {
-				return ViolationOverlap
+				// The caption is what the ladder can move; when two captions
+				// meet, the later one yields (CDS-55, the V13/V14 reading).
+				switch {
+				case caption(b):
+					return at(ViolationOverlap, b)
+				case caption(a):
+					return at(ViolationOverlap, a)
+				}
+				return furniture(ViolationOverlap)
 			}
 		}
 	}
@@ -296,7 +332,7 @@ func verifyDisclosure(m Manifest, duration int) error {
 			continue
 		}
 		if badge.Kind != "" {
-			return ViolationDisclosure
+			return furniture(ViolationDisclosure)
 		}
 		badge = e
 	}
@@ -305,16 +341,16 @@ func verifyDisclosure(m Manifest, duration int) error {
 		phrase = phrase || badge.Text == text
 	}
 	if !phrase || badge.FontSize != Type["badge"].Size || badge.Background != Color["badge_ad"].Hex {
-		return ViolationDisclosure
+		return furniture(ViolationDisclosure)
 	}
 	// ONE badge covering both of CDS-5's minimum windows — the first 3.0 s and
 	// the last 3.0 s — necessarily spans the whole clip, which is also CDS-5's
 	// default. A second badge would be a second disclosure and is refused above.
 	if badge.StartMS > 0 || badge.EndMS < duration {
-		return ViolationDisclosure
+		return furniture(ViolationDisclosure)
 	}
 	if duration < int(Timing.BadgeMinHeadS*1000) && duration < int(Timing.BadgeMinTailS*1000) {
-		return ViolationDisclosure
+		return furniture(ViolationDisclosure)
 	}
 	return nil
 }
@@ -345,7 +381,7 @@ func verifySequence(m Manifest, approved []string) error {
 			style[at], anchor[at] = e.Style, e.Anchor
 		}
 		if style[at] != e.Style || anchor[at] != e.Anchor {
-			return ViolationFrequency
+			return &Failure{Check: ViolationFrequency, Cut: at.Cut, Copy: at.Copy}
 		}
 	}
 	// In clip order: a cut's second copy follows its first, and CDS-40's run and
@@ -367,15 +403,18 @@ func verifySequence(m Manifest, approved []string) error {
 			run = 1
 		}
 		// A fourth consecutive use of one style must have alternated (CDS-40).
+		// A sequence rule has no single failing element: the LATER of the pair is
+		// reported, the one whose style or anchor can change without invalidating
+		// what came before (CDS-55).
 		if (run > Guards.RunMax && alternates) || bold > Guards.BoldMax {
-			return ViolationFrequency
+			return &Failure{Check: ViolationFrequency, Cut: cut.Cut, Copy: cut.Copy}
 		}
 		if i == 0 {
 			continue
 		}
 		from, to := slices.Index(AnchorOrder, anchor[cuts[i-1]]), slices.Index(AnchorOrder, anchor[cut])
 		if from < 0 || to < 0 {
-			return ViolationAnchorStep
+			return &Failure{Check: ViolationAnchorStep, Cut: cut.Cut, Copy: cut.Copy}
 		}
 		// Only between cuts that share a style: a style change is a deliberate
 		// visual change, and CDS-40 can demand one whose anchors are further
@@ -384,7 +423,7 @@ func verifySequence(m Manifest, approved []string) error {
 			continue
 		}
 		if to-from > 1 || from-to > 1 {
-			return ViolationAnchorStep
+			return &Failure{Check: ViolationAnchorStep, Cut: cut.Cut, Copy: cut.Copy}
 		}
 	}
 	return nil

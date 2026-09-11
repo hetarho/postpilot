@@ -32,7 +32,10 @@ type CaptionSizer interface {
 	// system's verifier (CDS-52), touching no source pixel. The composer runs it
 	// on its own result so a residual violation is a COMPOSITION failure with
 	// the check named, not a surprise at render time.
-	Layout(ctx context.Context, plan clip.EditPlan, sources []clip.RenderSource) (clip.Manifest, error)
+	// Layout measures and verifies the whole plan without rendering. A compiled
+	// plan whose manifest fails a check walks CDS-55's repair ladder inside it,
+	// and the plan that verified is the one returned.
+	Layout(ctx context.Context, plan clip.EditPlan, sources []clip.RenderSource) (clip.EditPlan, clip.Manifest, error)
 }
 type Config struct {
 	Analysis                                                                                          clip.AnalysisLimits
@@ -290,8 +293,14 @@ func (s *Service) compose(ctx context.Context, input clip.PlanningInput, plan *c
 		sources = append(sources, a.Source.RenderSource)
 	}
 	plan.Styles = input.Template.CopyStyles
-	_, err = s.captions.Layout(ctx, *plan, sources)
-	return err
+	repaired, _, err := s.captions.Layout(ctx, *plan, sources)
+	if err != nil {
+		return err
+	}
+	// The ladder may have moved a style or an anchor or dropped a copy; the plan
+	// that is stored and rendered is the one that verified.
+	*plan = repaired
+	return nil
 }
 
 func abs(n int) int {

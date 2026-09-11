@@ -281,7 +281,8 @@ func TestVerifyRejectsOneFixturePerCheck(t *testing.T) {
 				t.Fatalf("got %v want %v", got, tc.want)
 			}
 			// A violation names its check and never the owner's own words.
-			if got.Error() == "" || got.(design.Violation).OutputValidationCode() != string(tc.want) {
+			var failure *design.Failure
+			if got.Error() == "" || !errors.As(got, &failure) || failure.OutputValidationCode() != string(tc.want) {
 				t.Fatalf("violation does not name its check: %v", got)
 			}
 		})

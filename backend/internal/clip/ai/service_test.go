@@ -50,9 +50,9 @@ type fakeSizer struct {
 }
 
 // The composer verifies its own result through this port (CDS-52).
-func (f *fakeSizer) Layout(context.Context, clip.EditPlan, []clip.RenderSource) (clip.Manifest, error) {
+func (f *fakeSizer) Layout(_ context.Context, plan clip.EditPlan, _ []clip.RenderSource) (clip.EditPlan, clip.Manifest, error) {
 	f.layouts++
-	return nil, f.layoutErr
+	return plan, nil, f.layoutErr
 }
 
 func (f *fakeSizer) CaptionSize(context.Context, string, clip.Caption) (float64, float64, error) {

@@ -2,6 +2,7 @@ package media
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"slices"
@@ -140,7 +141,7 @@ func TestAContrastFallbackPutsTheSentenceBackOnAPlate(t *testing.T) {
 		}
 		c.grounds[1][0] = Luminance{Mean: 0.95, R: 1, G: 1, B: 1, Frames: []float64{0.95}}
 		c.resolve(canvas)
-		if err := r.fallback(t.Context(), ws, canvas, &c, 1, 0); err != nil {
+		if _, err := r.rung(t.Context(), ws, canvas, &c, 1, 0, rungStyle, "contrast"); err != nil {
 			return err
 		}
 		// 깔끔하게 at its own anchor, because CDS-24 does not let it stand where
@@ -224,5 +225,203 @@ func TestTwoCopiesOnOneCutLayOutAndVerify(t *testing.T) {
 		return nil
 	}); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// A compiled plan whose manifest fails a check walks CDS-55's ladder before any
+// download: the caption's style falls back to 깔끔하게, then its anchor to the
+// style's own default, then the copy is dropped — and each rung is recorded on
+// the cut so step ② can say what happened.
+func TestTheRepairLadderWalksStyleThenAnchorThenDrop(t *testing.T) {
+	a, r := measured(t)
+	canvas, _ := clip.ClipCanvas("vertical")
+	base := func() clip.EditPlan {
+		return clip.EditPlan{Ratio: "vertical", DurationMS: 15000, Disclosure: "ad", Preset: "restaurant", Accent: "coral", Cuts: []clip.EditCut{
+			{ID: "one", SourceID: "s", Fingerprint: "s", EndMS: 7600, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{Text: "기록처럼 오늘", Style: "clean", Anchor: "bottom", Align: "center"}}},
+			{ID: "two", SourceID: "s", Fingerprint: "s", EndMS: 7600, TransitionMS: 200, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{Text: "다시 오고 싶은 곳", Style: "clean", Anchor: "bottom", Align: "center"}}},
+		}, Decisions: []clip.Composition{{Class: "DESC"}, {Class: "DESC"}}}
+	}
+	// Rung 1: a third 크게 강조 in one clip is one more than CDS-40 allows (V14);
+	// the later caption yields its style and everything else stands.
+	styleCase := base()
+	styleCase.Cuts = append(styleCase.Cuts, clip.EditCut{ID: "three", SourceID: "s", Fingerprint: "s", EndMS: 7600, TransitionMS: 200, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{Text: "또 오고 싶다", Style: "bold", Anchor: "upper_mid", Align: "center", Accent: "amber"}}})
+	styleCase.Decisions = append(styleCase.Decisions, clip.Composition{Class: "EMOTION"})
+	styleCase.DurationMS = 22400
+	for i := 0; i < 2; i++ {
+		styleCase.Cuts[i].Copies[0] = clip.Copy{Text: "또 오고 싶다", Style: "bold", Anchor: "upper_mid", Align: "center", Accent: "amber"}
+	}
+	long := "또 오고 싶다"
+	// Rung 2: two 깔끔하게 cuts whose anchors are three steps apart (V13); the
+	// style is already 깔끔하게, so the first rung has nothing to do.
+	anchorCase := base()
+	anchorCase.Cuts[1].Copies[0].Anchor = "top"
+	// Rung 3: a second copy on one cut sharing the first one's window (V7, the
+	// later copy yields); 깔끔하게 at its default anchor already, so only the drop
+	// is left.
+	dropCase := base()
+	dropCase.Cuts[0].Copies = append(dropCase.Cuts[0].Copies, clip.Copy{Text: "한 번 더", Style: "clean", Anchor: "bottom", Align: "center"})
+	for name, tc := range map[string]struct {
+		plan   clip.EditPlan
+		cut    int
+		record string
+		check  func(clip.EditPlan) error
+	}{
+		"style": {styleCase, 2, "style", func(p clip.EditPlan) error {
+			if c := p.Cuts[2].FirstCopy(); c.Style != "clean" || c.Text != long || p.Cuts[0].FirstCopy().Style != "bold" || p.Cuts[1].FirstCopy().Style != "bold" {
+				return fmt.Errorf("style rung placed %+v", p.Cuts)
+			}
+			return nil
+		}},
+		"anchor": {anchorCase, 1, "anchor", func(p clip.EditPlan) error {
+			if c := p.Cuts[1].FirstCopy(); c.Anchor != design.Styles["clean"].Anchor || c.Style != "clean" {
+				return fmt.Errorf("anchor rung placed %+v", c)
+			}
+			return nil
+		}},
+		"drop": {dropCase, 0, "dropped", func(p clip.EditPlan) error {
+			if p.Cuts[0].Copies[0].Text == "" || p.Cuts[0].Copies[1].Text != "" || len(p.Cuts[0].Placed()) != 1 {
+				return fmt.Errorf("drop rung kept the wrong copy: %+v", p.Cuts[0].Copies)
+			}
+			return nil
+		}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if err := a.WithWorkspace(t.Context(), "ladder-"+name, func(ws clip.MediaWorkspace) error {
+				c, err := r.layout(t.Context(), ws, canvas, tc.plan)
+				if err != nil {
+					return err
+				}
+				if clip.VerifyLayout("vertical", nil, c.manifest) == nil {
+					return fmt.Errorf("the fixture verifies before repair")
+				}
+				if err := r.repair(t.Context(), ws, canvas, &c); err != nil {
+					return fmt.Errorf("the ladder gave up: %w", err)
+				}
+				if err := clip.VerifyLayout("vertical", nil, c.manifest); err != nil {
+					return fmt.Errorf("repaired manifest still fails: %w", err)
+				}
+				if err := tc.check(c.plan); err != nil {
+					return err
+				}
+				if got := c.plan.Decisions[tc.cut].Fallback; got != tc.record {
+					return fmt.Errorf("recorded %q, want %q", got, tc.record)
+				}
+				for i, d := range c.plan.Decisions {
+					if i != tc.cut && d.Fallback != "" {
+						return fmt.Errorf("an untouched cut was recorded: %+v", d)
+					}
+				}
+				// The caller's plan is untouched: every rung clones before it moves.
+				if tc.plan.Cuts[tc.cut].Copies[0].Style == "" && name != "drop" {
+					return fmt.Errorf("the caller's plan was mutated")
+				}
+				return nil
+			}); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+// The ladder is the compiler's: a plan a person corrected is refused with the
+// check named and never moved, and a failure the design system's own furniture
+// caused fails at once with the furniture slot — no rung is tried.
+func TestTheLadderRefusesPersonsPlansAndFurnitureFailures(t *testing.T) {
+	a, r := measured(t)
+	canvas, _ := clip.ClipCanvas("vertical")
+	plan := clip.EditPlan{Ratio: "vertical", DurationMS: 15000, Disclosure: "ad", Preset: "restaurant", Accent: "coral", Cuts: []clip.EditCut{
+		{ID: "one", SourceID: "s", Fingerprint: "s", EndMS: 7600, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{Text: "기록처럼 오늘", Style: "clean", Anchor: "bottom", Align: "center"}}},
+		{ID: "two", SourceID: "s", Fingerprint: "s", EndMS: 7600, TransitionMS: 200, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{Text: "다시 오고 싶은 곳", Style: "clean", Anchor: "top", Align: "center"}}},
+	}}
+	if err := a.WithWorkspace(t.Context(), "ladder-refusals", func(ws clip.MediaWorkspace) error {
+		// A person's plan: no decisions, the anchor-step failure is named, nothing moves.
+		c, err := r.layout(t.Context(), ws, canvas, plan)
+		if err != nil {
+			return err
+		}
+		var failure *clip.LayoutError
+		if err := r.repair(t.Context(), ws, canvas, &c); !errors.As(err, &failure) || failure.LayoutReason() != "CLIP_LAYOUT_ANCHOR_STEP" || failure.Cut != 1 || failure.Copy != 0 || failure.Furniture() {
+			return fmt.Errorf("a person's plan was not refused with its check: %v", err)
+		}
+		if c.plan.Cuts[1].FirstCopy().Anchor != "top" {
+			return fmt.Errorf("a person's plan was moved: %+v", c.plan.Cuts[1])
+		}
+		// Furniture: the badge pushed out of the safe area on an otherwise
+		// compiled plan is a renderer defect, refused at once.
+		compiled := plan
+		compiled.Cuts = slices.Clone(plan.Cuts)
+		compiled.Cuts[1].Copies = []clip.Copy{{Text: "다시 오고 싶은 곳", Style: "clean", Anchor: "bottom", Align: "center"}}
+		compiled.Decisions = []clip.Composition{{Class: "DESC"}, {Class: "DESC"}}
+		c, err = r.layout(t.Context(), ws, canvas, compiled)
+		if err != nil {
+			return err
+		}
+		if err := r.repair(t.Context(), ws, canvas, &c); err != nil {
+			return fmt.Errorf("the compiled fixture does not verify: %w", err)
+		}
+		for i := range c.manifest {
+			if c.manifest[i].Kind == "badge" {
+				c.manifest[i].Region.X = -10
+			}
+		}
+		if err := r.repair(t.Context(), ws, canvas, &c); !errors.As(err, &failure) || !failure.Furniture() || failure.LayoutReason() != "CLIP_LAYOUT_SAFE_AREA" {
+			return fmt.Errorf("a furniture failure was not refused at once: %v", err)
+		}
+		for _, d := range c.plan.Decisions {
+			if d.Fallback != "" {
+				return fmt.Errorf("a rung was tried on a furniture failure: %+v", d)
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// A clip whose every caption was dropped still lays out and verifies: the badge
+// and the cards remain, and nothing carries a style.
+func TestAClipWithEveryCaptionDroppedStillLaysOut(t *testing.T) {
+	a, r := measured(t)
+	canvas, _ := clip.ClipCanvas("vertical")
+	plan := clip.EditPlan{Ratio: "vertical", DurationMS: 15000, Disclosure: "ad", Preset: "restaurant", Accent: "coral", Hook: "오늘의 한 끼", Cuts: []clip.EditCut{
+		{ID: "one", SourceID: "s", Fingerprint: "s", EndMS: 7600, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{}}},
+		{ID: "two", SourceID: "s", Fingerprint: "s", EndMS: 7600, TransitionMS: 200, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{}}},
+	}, Decisions: []clip.Composition{{Fallback: "dropped"}, {Fallback: "dropped"}}}
+	if err := a.WithWorkspace(t.Context(), "all-dropped", func(ws clip.MediaWorkspace) error {
+		c, err := r.layout(t.Context(), ws, canvas, plan)
+		if err != nil {
+			return err
+		}
+		if err := r.repair(t.Context(), ws, canvas, &c); err != nil {
+			return err
+		}
+		badge, styled := 0, 0
+		for _, e := range c.manifest {
+			if e.Kind == "badge" {
+				badge++
+			}
+			if e.Style != "" {
+				styled++
+			}
+		}
+		if badge != 1 || styled != 0 {
+			return fmt.Errorf("badge=%d styled=%d", badge, styled)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// RENDER.md carries the two verify points and the ladder between them.
+func TestRenderNotesDocumentTheRepairLadder(t *testing.T) {
+	notes, err := os.ReadFile("../../../build/RENDER.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, phrase := range []string{"repair ladder", "furniture slot", "AFTER the cuts are rendered", "never walks the ladder"} {
+		if !strings.Contains(string(notes), phrase) {
+			t.Fatalf("RENDER.md does not say %q", phrase)
+		}
 	}
 }

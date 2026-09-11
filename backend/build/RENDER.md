@@ -108,12 +108,31 @@ sampled or assumed ground; for a card line the card; for the category chip the
 accent pill. For an unplated style it is the `stroke.dark` α0.85 outline CDS-25
 and CDS-26 give it, composited over the scrim-washed footage — the stroke is the
 mechanism those styles use, and it holds white text at 13.2:1 over a white frame
-where the bare footage would be 1:1. A pairing still under the floor falls back
-to 깔끔하게 at the same anchor when the compiler chose the style (a plan that
-still carries one decision per cut has not been through a person) and is refused
+where the bare footage would be 1:1. A pairing still under the floor is rung 1
+of the repair ladder below — 깔끔하게 at the same anchor where that style may
+stand, else at its own — when the compiler chose the style (a plan that still
+carries one decision per cut has not been through a person) and is refused
 `CLIP_LAYOUT_CONTRAST` when a person chose it. Because the whole manifest changes
 once a ground is known, it is verified a second time after the cuts are rendered
 and before they are joined.
+
+There are two verify points and they behave differently on purpose. BEFORE any
+download, a compiled plan whose manifest fails a check walks CDS-55's caption
+repair ladder: the failing caption's style falls back to 깔끔하게 (whose plate
+answers V2, V3 and V5 by itself), then its anchor falls back to the style's own
+default, then the copy is dropped and the cut shows its footage; the plan is laid
+out and verified again after every rung, at most one ladder per caption and one
+layout per rung, so a plan of N captions costs at most 3N layout passes and no
+source byte. The verifier names WHICH caption failed (cut, copy) — for the
+sequence rules V13 and V14 the later of the pair, the one whose style or anchor
+can change without invalidating what came before — and a failure the design
+system's own furniture caused (badge, chip, card: the furniture slot) fails at
+once as a renderer defect. Every rung taken is recorded on the cut's composition
+(`contrast`, `style`, `anchor`, `dropped`) so step ② can say what happened. A plan
+a PERSON corrected never walks the ladder: it is refused with the failing check
+named and is never silently moved (CDS-52). AFTER the cuts are rendered the
+verify stays a hard failure: the footage is already encoded, and a repair there
+would mean re-rendering.
 
 The keyword is a caption field, never a marker inside the text, and its highlight
 starts at the measured advance of the prefix before it — `--query-all` on the real
