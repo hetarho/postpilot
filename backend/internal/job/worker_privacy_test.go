@@ -75,3 +75,34 @@ func TestClipWorkerLogsOnlyAllowlistedDiagnostics(t *testing.T) {
 		}
 	}
 }
+
+type outputDiagnosticError struct {
+	error
+	code string
+}
+
+func (e outputDiagnosticError) Unwrap() error                { return e.error }
+func (e outputDiagnosticError) OutputValidationCode() string { return e.code }
+
+func TestClipWorkerLogsOnlyCodeOwnedOutputViolations(t *testing.T) {
+	var logs bytes.Buffer
+	previous := slog.Default()
+	slog.SetDefault(slog.New(slog.NewJSONHandler(&logs, nil)))
+	t.Cleanup(func() { slog.SetDefault(previous) })
+	for _, code := range []string{"plan_timeline", "plan_cut_range", "plan_caption_time", "output_shape", "private-canary"} {
+		logs.Reset()
+		err := diagnosticStageError{stage: "plan", error: fmt.Errorf("private-canary: %w", outputDiagnosticError{error: llm.ErrBadOutput, code: code})}
+		logJobFailure(Job{ID: "owned-job", Kind: KindGenerateClip}, failureFromError(err), err)
+		var got map[string]any
+		if json.Unmarshal(logs.Bytes(), &got) != nil || strings.Contains(logs.String(), "private-canary") {
+			t.Fatal("private output diagnostic escaped")
+		}
+		if code == "private-canary" {
+			if got["output_validation"] != nil {
+				t.Fatal("untrusted code logged", got)
+			}
+		} else if got["output_validation"] != code || got["stage"] != "plan" {
+			t.Fatal("safe output violation lost", got)
+		}
+	}
+}

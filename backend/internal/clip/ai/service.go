@@ -163,7 +163,7 @@ func (s *Service) Plan(ctx context.Context, model llm.ModelRef, input clip.Plann
 		width, height, err := s.captions.CaptionSize(ctx, input.Ratio, cut.Copy)
 		if err != nil {
 			if errors.Is(err, clip.ErrInvalid) {
-				err = llm.ErrBadOutput
+				err = outputError("caption_measurement")
 			}
 			return clip.EditPlan{}, response.Usage, stageError("plan", err)
 		}
@@ -243,8 +243,11 @@ func validateInput(cfg Config, in clip.PlanningInput) error {
 	return nil
 }
 func validatePlan(cfg Config, in clip.PlanningInput, plan clip.EditPlan) error {
-	if plan.Ratio != in.Ratio || math.Abs(float64(plan.DurationMS)-float64(in.TargetDurationMS)) > float64(cfg.TargetToleranceMS) {
-		return llm.ErrBadOutput
+	if plan.Ratio != in.Ratio {
+		return outputError("plan_ratio")
+	}
+	if math.Abs(float64(plan.DurationMS)-float64(in.TargetDurationMS)) > float64(cfg.TargetToleranceMS) {
+		return outputError("plan_target_duration")
 	}
 	sources := make([]clip.RenderSource, 0, len(in.Analyses))
 	for _, a := range in.Analyses {
@@ -254,11 +257,14 @@ func validatePlan(cfg Config, in clip.PlanningInput, plan clip.EditPlan) error {
 		if errors.Is(err, clip.ErrCopyTooLong) {
 			return err
 		}
-		return llm.ErrBadOutput
+		return fmt.Errorf("%w: %w", llm.ErrBadOutput, err)
 	}
 	for _, cut := range plan.Cuts {
-		if !slices.Contains(in.Template.CopyStyles, cut.Copy.Style) || (cut.Copy.Accent != "" && cut.Copy.Accent != in.Template.Accent) {
-			return llm.ErrBadOutput
+		if !slices.Contains(in.Template.CopyStyles, cut.Copy.Style) {
+			return outputError("plan_style")
+		}
+		if cut.Copy.Accent != "" && cut.Copy.Accent != in.Template.Accent {
+			return outputError("plan_accent")
 		}
 	}
 	return nil

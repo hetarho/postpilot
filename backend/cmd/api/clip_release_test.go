@@ -151,7 +151,7 @@ func TestClipRelease(t *testing.T) {
 		t.Run("20-sources-30-minutes", func(t *testing.T) { h := newReleaseHarness(t, "success", true); h.exercise("success") })
 		return
 	}
-	for _, mode := range []string{"success", "seeked cut", "delayed audio", "master", "denied", "partial", "overage", "unknown usage", "malformed", "truncated", "oversized response", "save failure", "malformed last source", "oversized proxy", "disk", "unknown prices", "price drift", "legacy client", "expired quote", "changed quote", "aborted client", "restart prepare", "restart hold", "restart partial", "restart save"} {
+	for _, mode := range []string{"success", "multi-source", "seeked cut", "delayed audio", "master", "denied", "partial", "overage", "unknown usage", "malformed", "truncated", "oversized response", "save failure", "malformed last source", "oversized proxy", "disk", "unknown prices", "price drift", "legacy client", "expired quote", "changed quote", "aborted client", "restart prepare", "restart hold", "restart partial", "restart save"} {
 		t.Run(mode, func(t *testing.T) { h := newReleaseHarness(t, mode, false); h.exercise(mode) })
 	}
 }
@@ -222,6 +222,22 @@ func newReleaseHarness(t *testing.T, mode string, stress bool) *releaseHarness {
 	st := clipstore.New(d.Writer, d.Reader)
 	projects := clip.NewService(st, config.ClipLimits())
 	objects := &releaseObjects{root: root, paths: map[string]string{}, downloads: map[string]int{}}
+	if mode == "multi-source" {
+		blob := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			key := r.URL.Query().Get("key")
+			objects.mu.Lock()
+			path := objects.paths[key]
+			objects.mu.Unlock()
+			if !strings.HasPrefix(key, clip.ResultPrefix) || path == "" {
+				http.NotFound(w, r)
+				return
+			}
+			w.Header().Set("Content-Type", "video/mp4")
+			http.ServeFile(w, r, path)
+		}))
+		t.Cleanup(blob.Close)
+		objects.readBase = blob.URL
+	}
 	sources := clip.NewSourceService(st, objects, config.ClipSourceLimits(6*time.Hour, 10*time.Minute))
 	projects.SetSources(sources)
 	js := jobstore.New(d.Writer, d.Reader)
@@ -250,11 +266,16 @@ func newReleaseHarness(t *testing.T, mode string, stress bool) *releaseHarness {
 		client.Transport = h.aborted
 		h.client = postpilotv1connect.NewClipServiceClient(&client, rpcServer.URL)
 	}
-	template, err := projects.CreateTemplate(ctx, "release-user", clip.Recipe{Name: "synthetic release", InformationFields: []clip.InformationField{{Label: "place", Prompt: "where"}}, CopyStyles: []string{"clean"}})
+	recipe := clip.Recipe{Name: "synthetic release", InformationFields: []clip.InformationField{{Label: "place", Prompt: "where"}}, CopyStyles: []string{"clean"}}
+	ratio := "horizontal"
+	if mode == "multi-source" {
+		recipe.CopyStyles, recipe.Accent, recipe.CutGuidance, ratio = []string{"diary"}, "amber", "균등분할", "vertical"
+	}
+	template, err := projects.CreateTemplate(ctx, "release-user", recipe)
 	if err != nil {
 		t.Fatal(err)
 	}
-	p, err := projects.CreateProject(ctx, "release-user", clip.ProjectInput{Title: "synthetic release", VideoTemplateID: template.ID, Ratio: "horizontal", TargetDurationMS: 15000, Answers: []clip.Answer{{Label: "place", Text: "fixture"}}})
+	p, err := projects.CreateProject(ctx, "release-user", clip.ProjectInput{Title: "synthetic release", VideoTemplateID: template.ID, Ratio: ratio, TargetDurationMS: 15000, Answers: []clip.Answer{{Label: "place", Text: "fixture"}}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -263,6 +284,9 @@ func newReleaseHarness(t *testing.T, mode string, stress bool) *releaseHarness {
 		t.Fatal("unauthenticated access", err)
 	}
 	durations := []int{16000, 16000}
+	if mode == "multi-source" {
+		durations = []int{4290, 3744, 1480, 5010, 5108, 4508, 5428, 6702}
+	}
 	if mode == "overage" {
 		durations[0] = 60000
 	}
@@ -298,7 +322,14 @@ func newReleaseHarness(t *testing.T, mode string, stress bool) *releaseHarness {
 		if e != nil {
 			t.Fatal(e)
 		}
-		manifest = append(manifest, &v1.ClipSourceMetadata{Filename: fmt.Sprintf("fixture-%02d.mp4", i), ContentType: "video/mp4", Bytes: info.Size(), DurationMs: int32(duration), Width: 1280, Height: 720, Fingerprint: fingerprint})
+		width, height := int32(1280), int32(720)
+		if mode == "multi-source" {
+			width, height = 1440, 1920
+			if i == 5 {
+				width, height = height, width
+			}
+		}
+		manifest = append(manifest, &v1.ClipSourceMetadata{Filename: fmt.Sprintf("fixture-%02d.mp4", i), ContentType: "video/mp4", Bytes: info.Size(), DurationMs: int32(duration), Width: width, Height: height, Fingerprint: fingerprint})
 		h.expected += (duration + 59999) / 60000
 	}
 	upload, err := h.client.CreateClipSourceBatch(ctx, releaseRequest(h, &v1.CreateClipSourceBatchRequest{ProjectId: p.ID, Sources: manifest}))
@@ -368,6 +399,12 @@ func (h *releaseHarness) fixture(root string, duration int) string {
 	// Repetition is only fixture construction, never an analysis shortcut. Each
 	// declared source is downloaded, fully decoded and encoded independently.
 	args := []string{"-hide_banner", "-nostdin", "-v", "error", "-f", "lavfi", "-i", "color=c=blue:s=1280x720:r=30", "-stream_loop", "-1", "-i", "/usr/share/postpilot-media/speech.m4a", "-t", fmt.Sprintf("%.3f", float64(duration)/1000), "-c:v", "libx264", "-preset", "ultrafast", "-threads", "1", "-pix_fmt", "yuv420p", "-c:a", "aac", "-ar", "48000", "-ac", "2", path}
+	if h.metrics.mode == "multi-source" {
+		args[7] = "color=c=blue:s=1440x1920:r=30"
+		if duration == 4508 {
+			args[7] = "color=c=blue:s=1920x1440:r=30"
+		}
+	}
 	if h.metrics.mode == "delayed audio" {
 		args = append(append(append([]string{}, args[:8]...), "-itsoffset", "0.250"), args[8:]...)
 	}
@@ -577,11 +614,24 @@ func (h *releaseHarness) exercise(mode string) {
 		if got.Result == nil {
 			t.Fatal("no result")
 		}
+		if mode == "multi-source" {
+			for _, url := range []string{got.Result.ViewUrl, got.Result.DownloadUrl} {
+				response, err := http.Get(url)
+				if err != nil {
+					t.Fatal(err)
+				}
+				read, err := io.Copy(io.Discard, io.LimitReader(response.Body, got.Result.Bytes+1))
+				_ = response.Body.Close()
+				if err != nil || response.StatusCode != http.StatusOK || response.Header.Get("Content-Type") != "video/mp4" || read != got.Result.Bytes {
+					t.Fatal("persisted preview/download is not readable", err)
+				}
+			}
+		}
 		h.inspectResult()
 		h.objects.mu.Lock()
 		for i, key := range h.sourceKeys {
 			want := 1
-			if i == 0 {
+			if i == 0 || mode == "multi-source" {
 				want = 2
 			}
 			if h.objects.downloads[key] != want {
@@ -638,8 +688,15 @@ func (h *releaseHarness) exercise(mode string) {
 	h.metrics.mu.Lock()
 	defer h.metrics.mu.Unlock()
 	m := h.metrics
-	if m.maxOriginals > 1 || m.maxWorkspaces > 1 || m.maxProcesses > 1 || len(m.prepared) > 49 || m.maxProxy > 8<<20 || m.disk > 8<<30 || m.proxyBytes > 512<<20 {
-		t.Fatalf("resource bound originals=%d workspaces=%d processes=%d proxies=%d max_proxy=%d disk=%d", m.maxOriginals, m.maxWorkspaces, m.maxProcesses, len(m.prepared), m.maxProxy, m.disk)
+	workspaceLimit := 1
+	if mode == "multi-source" {
+		// Caption measurement owns a short-lived scratch workspace inside the
+		// single generation job. Older fixtures have empty captions. Count the
+		// job workspace separately so this never permits concurrent media jobs.
+		workspaceLimit++
+	}
+	if m.maxOriginals > 1 || m.maxJobWorkspaces > 1 || m.maxWorkspaces > workspaceLimit || m.maxProcesses > 1 || len(m.prepared) > 49 || m.maxProxy > 8<<20 || m.disk > 8<<30 || m.proxyBytes > 512<<20 {
+		t.Fatalf("resource bound originals=%d job_workspaces=%d workspaces=%d processes=%d proxies=%d max_proxy=%d disk=%d", m.maxOriginals, m.maxJobWorkspaces, m.maxWorkspaces, m.maxProcesses, len(m.prepared), m.maxProxy, m.disk)
 	}
 	t.Logf("release sources=%d chunks=%d HTTP=%d max_request=%d max_proxy=%d disk_peak=%d prepared_peak=%d originals=%d workspaces=%d processes=%d preparation=%s render=%s elapsed=%s approved=%d held=%d charged=%d refund=%d", len(h.sourceKeys), len(m.prepared), wantCalls, h.provider.maxRequest.Load(), m.maxProxy, m.disk, m.proxyBytes, m.maxOriginals, m.maxWorkspaces, m.maxProcesses, m.prepareTime, m.renderTime, time.Since(start), maxCredits, held, charged, a.GetRefundCredits())
 }
@@ -670,13 +727,20 @@ func (h *releaseHarness) inspectResult() {
 		if err != nil {
 			return err
 		}
-		if info.Width != 1920 || info.Height != 1080 || info.DurationMS < 15000 || info.DurationMS > 15034 || !info.HasAudio {
+		width, height := 1920, 1080
+		if h.metrics.mode == "multi-source" {
+			width, height = 1080, 1920
+		}
+		if info.Width != width || info.Height != height || info.DurationMS < 15000 || info.DurationMS > 15034 || !info.HasAudio {
 			return fmt.Errorf("invalid original-derived final output: %+v", info)
 		}
 		for _, at := range []int{700, 3100, 10700} {
 			originalAt := at
 			if h.metrics.mode == "seeked cut" {
 				originalAt += 1000
+			}
+			if h.metrics.mode == "multi-source" {
+				originalAt = map[int]int{700: 700, 3100: 1300, 10700: 2000}[at]
 			}
 			x, e := releaseSpeech(h.t.Context(), h.firstFixture, originalAt)
 			if e != nil {

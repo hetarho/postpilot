@@ -139,22 +139,22 @@ func (s *shape) accepts(value any) bool {
 }
 func decode(raw string, maxBytes int, contract *shape, out any) error {
 	if len(raw) > maxBytes || !utf8.ValidString(raw) {
-		return llm.ErrBadOutput
+		return outputError("output_encoding_or_size")
 	}
 	candidate, ok := llm.JSONCandidate(raw)
 	if !ok {
-		return llm.ErrBadOutput
+		return outputError("output_json")
 	}
 	var value any
 	structure := json.NewDecoder(strings.NewReader(candidate))
 	structure.UseNumber()
 	if structure.Decode(&value) != nil || !contract.accepts(value) {
-		return llm.ErrBadOutput
+		return outputError("output_shape")
 	}
 	d := json.NewDecoder(strings.NewReader(candidate))
 	d.DisallowUnknownFields()
 	if err := d.Decode(out); err != nil {
-		return llm.ErrBadOutput
+		return outputError("output_field_type")
 	}
 	return nil
 }
@@ -191,7 +191,7 @@ func parsePlan(cfg Config, input clip.PlanningInput, raw string) (clip.EditPlan,
 		return clip.EditPlan{}, err
 	}
 	if wire.Ratio == nil || wire.Duration == nil || wire.Cuts == nil {
-		return clip.EditPlan{}, llm.ErrBadOutput
+		return clip.EditPlan{}, outputError("plan_required")
 	}
 	byID := map[string]clip.AnalysisSource{}
 	for _, analysis := range input.Analyses {
@@ -201,17 +201,23 @@ func parsePlan(cfg Config, input clip.PlanningInput, raw string) (clip.EditPlan,
 	for _, c := range *wire.Cuts {
 		focal, ok := c.Focal.domain()
 		if !ok || c.ID == nil || utf8.RuneCountInString(*c.ID) > cfg.MaxCutIDRunes || c.SourceID == nil || c.Start == nil || c.End == nil || c.Caption == nil {
-			return clip.EditPlan{}, llm.ErrBadOutput
+			return clip.EditPlan{}, outputError("plan_cut_fields")
 		}
 		source, exists := byID[*c.SourceID]
 		p := c.Caption
-		if !exists || p.Text == nil || p.Start == nil || p.End == nil || *p.End <= *p.Start || p.Position == nil || p.Style == nil || p.Accent == nil {
-			return clip.EditPlan{}, llm.ErrBadOutput
+		if !exists {
+			return clip.EditPlan{}, outputError("plan_source")
+		}
+		if p.Text == nil || p.Start == nil || p.End == nil || p.Position == nil || p.Style == nil || p.Accent == nil {
+			return clip.EditPlan{}, outputError("plan_caption_fields")
+		}
+		if *p.End <= *p.Start {
+			return clip.EditPlan{}, outputError("plan_caption_time")
 		}
 		volume := 1.0
 		if len(c.Volume) != 0 {
 			if string(c.Volume) == "null" || json.Unmarshal(c.Volume, &volume) != nil {
-				return clip.EditPlan{}, llm.ErrBadOutput
+				return clip.EditPlan{}, outputError("plan_volume")
 			}
 		}
 		result.Cuts = append(result.Cuts, clip.Cut{ID: *c.ID, SourceID: source.ID, Fingerprint: source.Fingerprint, StartMS: *c.Start, EndMS: *c.End, Focal: focal, Volume: &volume, Copy: clip.Caption{Text: *p.Text, StartMS: *p.Start, EndMS: *p.End, Position: *p.Position, Style: *p.Style, Accent: *p.Accent}})

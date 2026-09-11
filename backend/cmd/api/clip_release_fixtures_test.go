@@ -12,6 +12,7 @@ import (
 	"io"
 	"math"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -32,6 +33,7 @@ type releaseObjects struct {
 	paths     map[string]string
 	downloads map[string]int
 	uploads   int
+	readBase  string
 }
 
 type releaseLog struct {
@@ -145,6 +147,9 @@ func (o *releaseObjects) PresignRead(_ context.Context, key, _ string, _ bool, _
 	if !strings.HasPrefix(key, clip.ResultPrefix) {
 		return "", errors.New("source/proxy signed for analysis")
 	}
+	if o.readBase != "" {
+		return o.readBase + "/result?key=" + url.QueryEscape(key), nil
+	}
 	return "http://fixture.invalid/result", nil
 }
 func (o *releaseObjects) ListResults(context.Context) ([]clip.StoredObject, error) {
@@ -166,6 +171,7 @@ type releaseMetrics struct {
 	workspace                                            string
 	disk, proxyBytes, maxProxy                           int64
 	maxOriginals, maxWorkspaces, maxProcesses, processes int
+	jobWorkspaces, maxJobWorkspaces                      int
 	prepareTime, renderTime                              time.Duration
 	probeCount                                           int
 	mode                                                 string
@@ -230,7 +236,10 @@ func (m *releaseMedia) WithWorkspace(ctx context.Context, id string, fn func(cli
 	return m.Adapter.WithWorkspace(ctx, id, func(ws clip.MediaWorkspace) error {
 		m.metrics.mu.Lock()
 		m.metrics.workspace = ws.Path
+		m.metrics.jobWorkspaces++
+		m.metrics.maxJobWorkspaces = max(m.metrics.maxJobWorkspaces, m.metrics.jobWorkspaces)
 		m.metrics.mu.Unlock()
+		defer func() { m.metrics.mu.Lock(); m.metrics.jobWorkspaces--; m.metrics.mu.Unlock() }()
 		if m.metrics.mode == "disk" {
 			ws.CheckCapacity = func(int64) error { return clip.ErrWorkspaceLimit }
 		}
@@ -287,7 +296,13 @@ func (r releaseRenderer) Render(ctx context.Context, ws clip.MediaWorkspace, p c
 	defer func() { r.metrics.mu.Lock(); r.metrics.renderTime += time.Since(start); r.metrics.mu.Unlock() }()
 	return r.Rendering.Render(ctx, ws, p, s, func(ctx context.Context, id string, consume func(clip.MediaSource) error) error {
 		return loader(ctx, id, func(source clip.MediaSource) error {
-			if !strings.HasPrefix(filepath.Base(source.Path), "source-") || source.Info.Width != 1280 {
+			matches := false
+			for _, expected := range s {
+				if expected.ID == id && source.Info.Width == expected.Info.Width && source.Info.Height == expected.Info.Height {
+					matches = true
+				}
+			}
+			if !strings.HasPrefix(filepath.Base(source.Path), "source-") || !matches {
 				return errors.New("renderer did not receive original geometry")
 			}
 			return consume(source)
@@ -453,6 +468,18 @@ func (p *releaseProvider) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			cut := content.(map[string]any)["cuts"].([]any)[0].(map[string]any)
 			cut["start_ms"] = 1000
 			cut["end_ms"] = 16000
+		}
+		if p.mode == "multi-source" {
+			lengths := []int{2000, 2000, 1000, 2400, 2300, 2300, 2200, 2200}
+			if len(analyses) != len(lengths) {
+				p.reject(w, "multi-source fixture requires eight analyses")
+				return
+			}
+			var cuts []any
+			for i, analysis := range analyses {
+				cuts = append(cuts, map[string]any{"id": fmt.Sprintf("cut-%d", i), "source_id": analysis.(map[string]any)["source_id"], "start_ms": 0, "end_ms": lengths[i], "volume": 1, "focal": map[string]float64{"x": .5, "y": .5}, "caption": map[string]any{"text": fmt.Sprintf("한글 장면 %d", i+1), "start_ms": 0, "end_ms": lengths[i], "position": "bottom", "style": "diary", "accent": "amber"}})
+			}
+			content.(map[string]any)["cuts"] = cuts
 		}
 	} else {
 		p.reject(w, "wrong observation/plan budget or modality")

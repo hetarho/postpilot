@@ -92,17 +92,28 @@ func normalized(v float64) bool { return !math.IsNaN(v) && !math.IsInf(v, 0) && 
 func ValidCopy(c Copy, maxRunes int) bool {
 	return utf8.ValidString(c.Text) && utf8.RuneCountInString(c.Text) <= maxRunes && slices.Contains([]string{"top", "center", "bottom"}, c.Position) && slices.Contains([]string{"clean", "diary", "emphasis"}, c.Style) && slices.Contains([]string{"", "coral", "amber", "lime", "teal", "blue", "violet", "pink"}, c.Accent)
 }
+
+// planViolation preserves the invalid-plan identity and a content-free cause.
+type planViolation string
+
+func (e planViolation) Error() string                { return "invalid clip plan: " + string(e) }
+func (e planViolation) Unwrap() error                { return ErrInvalid }
+func (e planViolation) OutputValidationCode() string { return string(e) }
+
 func ValidateEditPlan(cfg RenderConfig, plan EditPlan, sources []RenderSource) error {
 	if _, err := ClipCanvas(plan.Ratio); err != nil {
-		return err
+		return planViolation("plan_ratio")
 	}
-	if len(plan.Cuts) == 0 || len(plan.Cuts) > cfg.MaxCuts || plan.DurationMS < cfg.MinDurationMS || plan.DurationMS > cfg.MaxDurationMS {
-		return ErrInvalid
+	if len(plan.Cuts) == 0 || len(plan.Cuts) > cfg.MaxCuts {
+		return planViolation("plan_cut_count")
+	}
+	if plan.DurationMS < cfg.MinDurationMS || plan.DurationMS > cfg.MaxDurationMS {
+		return planViolation("plan_duration_range")
 	}
 	byID := map[string]RenderSource{}
 	for _, s := range sources {
 		if s.ID == "" || s.Fingerprint == "" || s.Info.DurationMS <= 0 || s.Info.Width <= 0 || s.Info.Height <= 0 || byID[s.ID].ID != "" {
-			return ErrInvalid
+			return planViolation("plan_source_metadata")
 		}
 		byID[s.ID] = s
 	}
@@ -113,22 +124,40 @@ func ValidateEditPlan(cfg RenderConfig, plan EditPlan, sources []RenderSource) e
 			return ErrCopyTooLong
 		}
 		s, ok := byID[c.SourceID]
-		if !ok || c.Fingerprint != s.Fingerprint || strings.TrimSpace(c.ID) == "" || seen[c.ID] || c.StartMS < 0 || c.StartMS >= c.EndMS || c.EndMS > s.Info.DurationMS || c.EndMS-c.StartMS <= 2*cfg.FadeMS || !normalized(c.Focal.X) || !normalized(c.Focal.Y) || !normalized(c.OriginalVolume()) || !ValidCopy(c.Copy, cfg.MaxCopyRunes) {
-			return ErrInvalid
+		if !ok || c.Fingerprint != s.Fingerprint {
+			return planViolation("plan_source")
+		}
+		if strings.TrimSpace(c.ID) == "" || seen[c.ID] {
+			return planViolation("plan_cut_identity")
+		}
+		if c.StartMS < 0 || c.StartMS >= c.EndMS || c.EndMS > s.Info.DurationMS {
+			return planViolation("plan_cut_range")
+		}
+		if c.EndMS-c.StartMS <= 2*cfg.FadeMS {
+			return planViolation("plan_cut_fade")
+		}
+		if !normalized(c.Focal.X) || !normalized(c.Focal.Y) {
+			return planViolation("plan_focal")
+		}
+		if !normalized(c.OriginalVolume()) {
+			return planViolation("plan_volume")
+		}
+		if !ValidCopy(c.Copy, cfg.MaxCopyRunes) {
+			return planViolation("plan_copy_format")
 		}
 		seen[c.ID] = true
 		captionStart, captionEnd := c.CaptionWindow()
 		if captionStart < 0 || captionEnd <= captionStart || captionEnd > c.EndMS-c.StartMS {
-			return ErrInvalid
+			return planViolation("plan_caption_time")
 		}
 		if c.EndMS-c.StartMS > cfg.MaxDurationMS+cfg.FadeMS*(len(plan.Cuts)-1)-total {
-			return ErrInvalid
+			return planViolation("plan_duration_limit")
 		}
 		total += c.EndMS - c.StartMS
 	}
 	// Overlap is part of the approved timeline, not extra trimming after approval.
 	if total-cfg.FadeMS*(len(plan.Cuts)-1) != plan.DurationMS {
-		return ErrInvalid
+		return planViolation("plan_timeline")
 	}
 	return nil
 }

@@ -14,14 +14,14 @@
 | AUTH | 5 | 5 | - | 0 |
 | QUOTA | 9 | 9 | - | 0 |
 | POST | 5 | 5 | - | 0 |
-| VOICE | 3 | 3 | - | 1 |
-| GEN | 6 | 6 | - | 0 |
+| VOICE | 2 | 2 | - | 1 |
+| GEN | 5 | 5 | - | 0 |
 | MODEL | 9 | 9 | - | 0 |
-| TMPL | 5 | 5 | - | 1 |
+| TMPL | 4 | 4 | - | 1 |
 | GUIDE | 2 | 2 | - | 0 |
 | EXPORT | 2 | 2 | - | 0 |
 | PUB | 4 | 4 | - | 0 |
-| LANG | 3 | 3 | - | 0 |
+| LANG | 2 | 2 | - | 0 |
 | THEME | 9 | 9 | - | 0 |
 | MKT | 4 | 4 | - | 0 |
 | VIDEO | 2 | 2 | - | 1 |
@@ -44,6 +44,7 @@
 - the MODEL r9 level series (T092–T095) is complete; re-teach `/recomend-models` to emit `<id> <level>` lines — its id-only block now clears every set level under MODEL-59
 - T008 needs the owner present: re-read its base at PUB@4 · ARCH@2 first (it still says PUB@2 ARCH@1), then BEFORE `install` the owner must re-run `postpilot-agent setup` so the connection records driver signature smarteditor-one-20260910-a6, and the queued `20260905-test` job must be canceled or deliberately used as the smoke's own job; once it closes, update-ssot PUB for VIDEO-17 + TMPL-39
 ## log
+- 260911 T096 delivery requested (fix); commit/push diagnostics and verified regressions while keeping original-failure reproduction blocked; rerun local gates, preserve unrelated uncommitted edits, no paid calls
 - 260911 T094 done; 등급 Listbox + unset mark per registration, 등급순 sort, 등급 변경 diff group; canApply now counts a relevel, since a re-grade-only document was previewable but not committable
 - 260911 T096 blocked recheck (fix); same production plan failure with no raw output; two T094 test files now pass but web build has concurrent fixture type errors; remote main unchanged, original input still needed, paid total unchanged USD 0.011057
 - 260911 T096 blocked (fix); actual failed output unavailable and synthetic cases succeed, requested original input; paid total USD 0.011057, no more calls; BE/agent/race/media/codegen pass, concurrent T094 FE gates non-green; no T096 commit/push
@@ -63,4 +64,3 @@
 - 260911 update-ssot MODEL start (tier); registered models carry a user-facing level label, shown beside the model and used for ordering
 - 260911 T091 resumed (fix); owner approved synthetic live verification up to USD 0.10 total, no historical replay or production settings change
 - 260911 T091 blocked (fix); inspected the actual wire and official contracts without an evidenced cause; ask for bounded synthetic live verification, no paid call or speculative code change
-- 260911 T091 claimed (fix); prioritize the actual analyze 400 and a playable end-to-end result over additional defensive features; preserve concurrent work and existing credit ceilings, no historical replay
