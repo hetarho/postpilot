@@ -104,7 +104,19 @@ describe('clip directory and setup', () => {
       answers: [{ label: '장소', text: '서울' }],
     })
     expect(await screen.findByLabelText('원본 영상 선택')).toBeEnabled()
-    expect(screen.getByText('원본 영상을 다시 선택해 주세요')).toBeInTheDocument()
+    // The status line reports the project's own state now; the picker's own button is what says
+    // to select sources (CLIP-38).
+    expect(await screen.findByRole('status', { name: '클립 상태' })).toHaveTextContent('초안')
+  })
+  it('gives /clips/new the workspace top row and no lifecycle', async () => {
+    mount('/clips/new')
+    expect(await screen.findByRole('link', { name: '클립 목록' })).toBeInTheDocument()
+    // The page's ONE status region is mounted before there is a project to have a status
+    // (CLIP-37), and a draft with no lifecycle shows no step bar and nothing to delete.
+    expect(screen.getByRole('status', { name: '클립 상태' })).toBeInTheDocument()
+    expect(screen.queryByRole('tablist', { name: '클립 단계' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '삭제' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '클립 만들기' })).toBeInTheDocument()
   })
   it('keeps every unsaved setup value after a localized save failure', async () => {
     const { router } = mount('/clips/new', { projectSaveFails: true })
@@ -197,7 +209,10 @@ describe('clip page local upload lifecycle', () => {
     expect(calls.filter((c) => c === 'ConfirmClipSource')).toHaveLength(1)
     expect(screen.getByRole('button', { name: '생성' })).toBeDisabled()
     await user.click(screen.getByRole('button', { name: '선택 취소' }))
-    await screen.findByText('원본 영상을 다시 선택해 주세요')
+    // Back to idle: the status line drops to the project's own state and the picker asks for a
+    // fresh selection rather than a replacement.
+    expect(await screen.findByRole('status', { name: '클립 상태' })).toHaveTextContent('초안')
+    expect(screen.getByLabelText('원본 영상 선택')).toBeInTheDocument()
     expect(calls).toContain('DiscardClipSourceBatch')
     expect(revoke).toHaveBeenCalledWith('blob:local-clip')
   })
@@ -218,7 +233,7 @@ describe('clip page local upload lifecycle', () => {
     expect(revoke).toHaveBeenCalledWith('blob:local-clip')
     expect(calls).not.toContain('DiscardClipSourceBatch')
     mount('/clips/project')
-    expect(await screen.findByText('원본 영상을 다시 선택해 주세요')).toBeInTheDocument()
+    expect(await screen.findByRole('status', { name: '클립 상태' })).toHaveTextContent('초안')
     expect(screen.queryByText('clip.mp4')).not.toBeInTheDocument()
   })
 })

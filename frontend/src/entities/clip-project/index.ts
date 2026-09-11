@@ -6,6 +6,8 @@ export {
   normalizeClipProject,
   validClipProject,
 } from './model/types'
+export { clipState, clipStateLabel } from './model/state'
+export type { ClipState } from './model/state'
 export type {
   ClipRatio,
   ClipProjectDraft,

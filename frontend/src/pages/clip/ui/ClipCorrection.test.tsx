@@ -65,13 +65,46 @@ async function mount(clips: FakeClipsOptions = {}, jobs: FakeJobsOptions = {}) {
       ...clips,
     },
   })
-  const video = await screen.findByLabelText('클립 미리보기')
-  const button = await screen.findByRole('button', { name: '수정' })
-  await waitFor(() => expect(button).toBeEnabled())
-  await userEvent.click(button)
+  // A rendered result describes the project as 완성, so the workspace opens on ③; the correction
+  // is step ② now, reached from the step bar rather than a 수정 button (CLIP-36).
+  await screen.findByLabelText('클립 미리보기')
+  await goToStep('클립 다듬기')
   await screen.findByRole('heading', { name: '컷·자막 수정' })
-  return { ...view, video }
+  return view
 }
+async function goToStep(name: '클립 생성' | '클립 다듬기' | '클립 완성') {
+  await userEvent.click(await screen.findByRole('tab', { name }))
+}
+/** The retained result, checked where it now lives (③): a correction may neither lose it nor
+ *  remint its presigned URL. Leaves the caller back on ②. */
+async function expectResultKept() {
+  await goToStep('클립 완성')
+  expect(await screen.findByLabelText('클립 미리보기')).toHaveAttribute(
+    'src',
+    'https://private.test/old',
+  )
+  await goToStep('클립 다듬기')
+}
+it("docks exactly one committing control at a time, the current step's", async () => {
+  await mount()
+  // ② — the correction's own bar. ①'s approval and ③'s download belong to other panels.
+  expect(screen.getByRole('button', { name: '다시 출력 · 크레딧 사용 없음' })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /승인하고 생성|^생성$/ })).not.toBeInTheDocument()
+  expect(screen.queryByRole('link', { name: '영상 다운로드' })).not.toBeInTheDocument()
+
+  await goToStep('클립 완성')
+  expect(await screen.findByRole('link', { name: '영상 다운로드' })).toBeInTheDocument()
+  expect(
+    screen.queryByRole('button', { name: '다시 출력 · 크레딧 사용 없음' }),
+  ).not.toBeInTheDocument()
+
+  await goToStep('클립 생성')
+  expect(await screen.findByRole('button', { name: /생성/ })).toBeInTheDocument()
+  expect(screen.queryByRole('link', { name: '영상 다운로드' })).not.toBeInTheDocument()
+  expect(
+    screen.queryByRole('button', { name: '다시 출력 · 크레딧 사용 없음' }),
+  ).not.toBeInTheDocument()
+})
 const cut = (number = 1) => within(screen.getByRole('region', { name: `컷 ${number}` }))
 const change = (label: string, value: string, number = 1) =>
   fireEvent.change(cut(number).getByLabelText(label), { target: { value } })
@@ -98,8 +131,7 @@ async function select(ids = ['a', 'b']) {
 }
 it('keeps the result mounted across every edit and saves exact fields with its revision', async () => {
   const writes: NonNullable<FakeClipsOptions['planWrites']> = []
-  const { video } = await mount({ planWrites: writes })
-  expect(screen.getByLabelText('클립 미리보기')).toBe(video)
+  await mount({ planWrites: writes })
   change('원본 시작 (ms)', '1000')
   change('원본 끝 (ms)', '16000')
   change('컷 길이 (ms)', '16000')
@@ -141,7 +173,7 @@ it('keeps the result mounted across every edit and saves exact fields with its r
       ],
     },
   })
-  expect(screen.getByLabelText('클립 미리보기')).toBe(video)
+  await expectResultKept()
   expect(screen.getByRole('button', { name: '다시 출력 · 크레딧 사용 없음' })).toBeDisabled()
 })
 it('shows bounds beside fields and never sends an invalid plan', async () => {
@@ -161,16 +193,21 @@ it('shows bounds beside fields and never sends an invalid plan', async () => {
   expect(writes).toEqual([])
 })
 it('keeps local edits and video on optimistic conflict, and guards leaving', async () => {
-  const { video, router } = await mount({ planSaveConflict: true })
+  const { router } = await mount({ planSaveConflict: true })
   change('자막 원문', '잃지 않을 수정')
   await userEvent.click(screen.getByRole('button', { name: '수정 저장' }))
   await screen.findByText(/저장된 수정본이 변경되었어요/)
   expect(cut().getByLabelText('자막 원문')).toHaveValue('잃지 않을 수정')
-  expect(screen.getByLabelText('클립 미리보기')).toBe(video)
+  await expectResultKept()
+  expect(cut().getByLabelText('자막 원문')).toHaveValue('잃지 않을 수정')
+  // The guard is the PAGE's now, so it still fires after the owner has looked at another step.
+  await goToStep('클립 완성')
   await userEvent.click(screen.getByRole('link', { name: '클립 목록' }))
   await screen.findByRole('dialog')
   expect(router.state.location.pathname).toBe('/clips/clip')
   await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: '취소' }))
+  // And the draft is still there after the whole round trip through the other steps.
+  await goToStep('클립 다듬기')
   expect(cut().getByLabelText('자막 원문')).toHaveValue('잃지 않을 수정')
 })
 it('checks every required fingerprint before reserving any batch', async () => {
@@ -240,7 +277,7 @@ it('deletes a cut, reselects only its remaining source and rerenders once with n
   await screen.findByRole('progressbar', { name: '영상 렌더링' })
   expect(revoke).not.toHaveBeenCalled()
   expect(cut().getByLabelText('자막 원문')).toBeDisabled()
-  expect(screen.getByLabelText('클립 미리보기')).toBe(view.video)
+  await expectResultKept()
   job.status = 'done'
   job.stage = 'cleanup'
   await act(() =>
@@ -291,7 +328,7 @@ it('preserves saved corrections and the prior result after a failed free render'
     stage: 'render',
     failureReason: 'CLIP_PROCESSING_FAILED',
   }
-  const { video } = await mount({ calls }, { jobs: [job] })
+  await mount({ calls }, { jobs: [job] })
   change('자막 원문', '출력 실패에도 보존')
   await userEvent.click(screen.getByRole('button', { name: '수정 저장' }))
   await screen.findByText('수정됨 · 다시 출력 필요')
@@ -300,7 +337,7 @@ it('preserves saved corrections and the prior result after a failed free render'
   await userEvent.click(screen.getByRole('button', { name: '다시 출력 · 크레딧 사용 없음' }))
   await waitFor(() => expect(screen.getByRole('alert')).toBeVisible())
   expect(cut().getByLabelText('자막 원문')).toHaveValue('출력 실패에도 보존')
-  expect(screen.getByLabelText('클립 미리보기')).toBe(video)
+  await expectResultKept()
   expect(screen.getByRole('button', { name: '수정 저장' })).toBeDisabled()
   expect(screen.getByRole('button', { name: '다시 출력 · 크레딧 사용 없음' })).toBeDisabled()
   expect(calls.filter((c) => c === 'StartClipRender')).toHaveLength(1)

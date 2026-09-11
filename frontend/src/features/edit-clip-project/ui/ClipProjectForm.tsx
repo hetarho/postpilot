@@ -39,24 +39,18 @@ export function ClipProjectForm({
   stored,
   onUploadAllowed,
   children,
-  status,
-  progress,
   disabled = false,
   actions,
   refusal,
-  showStatus = true,
   onSaveStateChange,
 }: {
   ownerId: string
   stored?: ClipProject
   onUploadAllowed?: (allowed: boolean) => void
   children?: ReactNode
-  status?: (saved: boolean) => ReactNode
-  progress?: ReactNode
   disabled?: boolean
   actions?: (ready: boolean, dirty: boolean) => ReactNode
   refusal?: ReactNode
-  showStatus?: boolean
   onSaveStateChange?: (saved: boolean) => void
 }) {
   const { t } = useTranslation('clips')
@@ -67,9 +61,7 @@ export function ClipProjectForm({
   )
   const [seconds, setSeconds] = useState(String(draft.targetDurationMs / 1000))
   const [baseline, setBaseline] = useState(JSON.stringify(normalizeClipProject(draft)))
-  const [saved, setSaved] = useState(false)
-  const [confirmDelete, setConfirmDelete] = useState(false)
-  const { save, remove } = useClipProjectMutations(ownerId)
+  const { save } = useClipProjectMutations(ownerId)
   const submitting = useRef(false)
   const leaving = useRef(false)
   const selected = templates.templates.find((v) => v.id === draft.videoTemplateId)
@@ -77,7 +69,7 @@ export function ClipProjectForm({
   const dirty = JSON.stringify(normalizeClipProject(draft)) !== baseline
   const storedJSON = stored ? JSON.stringify(normalizeClipProject(stored)) : baseline
   const synced = storedJSON === baseline
-  const pending = disabled || save.isPending || remove.isPending
+  const pending = disabled || save.isPending
   if (!synced && !dirty && !save.isPending) {
     const refreshed = JSON.parse(storedJSON) as ClipProjectDraft
     setDraft(refreshed)
@@ -94,11 +86,10 @@ export function ClipProjectForm({
     onUploadAllowed?.(valid && !dirty && synced && !pending)
   }, [valid, dirty, synced, pending, onUploadAllowed])
   const change = <K extends keyof ClipProjectDraft>(key: K, value: ClipProjectDraft[K]) => {
-    setSaved(false)
     onSaveStateChange?.(false)
     setDraft((current) => ({ ...current, [key]: value }))
   }
-  const failure = save.error ?? remove.error
+  const failure = save.error
   const submit = async () => {
     if (pending || !valid || (!dirty && stored) || submitting.current) return
     submitting.current = true
@@ -106,7 +97,6 @@ export function ClipProjectForm({
       const value = await save.mutateAsync({ id: stored?.id, draft })
       setDraft(projectDraft(value))
       setBaseline(JSON.stringify(normalizeClipProject(value)))
-      setSaved(true)
       onSaveStateChange?.(true)
       if (!stored) {
         leaving.current = true
@@ -118,29 +108,8 @@ export function ClipProjectForm({
       submitting.current = false
     }
   }
-  const deleteProject = async () => {
-    if (pending || !stored || submitting.current) return
-    submitting.current = true
-    try {
-      await remove.mutateAsync(stored.id)
-      leaving.current = true
-      await navigate({ to: '/clips', replace: true })
-    } catch {
-      setConfirmDelete(false)
-    } finally {
-      submitting.current = false
-    }
-  }
   return (
     <>
-      {progress}
-      {showStatus && (
-        <div role="status" aria-live="polite" className="mt-4">
-          {status
-            ? status(saved)
-            : saved && <Typography variant="meta">{t('project.saved')}</Typography>}
-        </div>
-      )}
       <form
         id="clip-project-form"
         className="mt-6"
@@ -295,11 +264,6 @@ export function ClipProjectForm({
           </div>
         )}
         <div className="flex flex-wrap justify-end gap-3">
-          {stored && (
-            <Button variant="danger" disabled={pending} onClick={() => setConfirmDelete(true)}>
-              {t('project.delete')}
-            </Button>
-          )}
           <Button
             form="clip-project-form"
             type="submit"
@@ -313,16 +277,6 @@ export function ClipProjectForm({
           {actions?.(valid && !dirty && synced && !pending, dirty)}
         </div>
       </ActionBar>
-      <Dialog
-        open={confirmDelete}
-        title={t('project.deleteTitle')}
-        confirmLabel={t('project.delete')}
-        onClose={() => setConfirmDelete(false)}
-        onConfirm={() => void deleteProject()}
-        pending={remove.isPending}
-      >
-        {t('project.deleteBody')}
-      </Dialog>
       <Dialog
         open={blocker.status === 'blocked'}
         title={t('project.leaveTitle')}

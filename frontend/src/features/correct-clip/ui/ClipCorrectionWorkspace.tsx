@@ -1,5 +1,4 @@
-import { useRef, useState, type ReactNode } from 'react'
-import { useBlocker } from '@tanstack/react-router'
+import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { COPY_POSITIONS, type ClipEditCut, type ClipEditingState } from '@/entities/clip-project'
 import { CLIP_ACCENTS, CopyStylePreview } from '@/entities/clip-template'
@@ -92,7 +91,6 @@ export function ClipCorrectionWorkspace({
   renderPending,
   renderFailure,
   onRender,
-  onExit,
   sourcePicker,
   localSources,
 }: {
@@ -103,20 +101,13 @@ export function ClipCorrectionWorkspace({
   renderPending: boolean
   renderFailure?: AppFailure
   onRender: () => void
-  onExit: () => void
   sourcePicker: ReactNode
   localSources: ReadonlyArray<{ fingerprint: string; url: string }>
 }) {
   const { t } = useTranslation('clips')
-  const [confirm, setConfirm] = useState<'exit' | 'reload' | 'delete'>()
+  const [confirm, setConfirm] = useState<'reload' | 'delete'>()
   const [deleteId, setDeleteId] = useState('')
   const [inspect, setInspect] = useState('')
-  const leaving = useRef(false)
-  const blocker = useBlocker({
-    shouldBlockFn: () => correction.dirty && !leaving.current,
-    enableBeforeUnload: () => correction.dirty && !leaving.current,
-    withResolver: true,
-  })
   const busy = disabled || correction.pending
   const mutate = (...args: Parameters<Correction['change']>) => {
     if (!busy) correction.change(...args)
@@ -375,13 +366,6 @@ export function ClipCorrectionWorkspace({
         )}
         <div className="flex flex-wrap justify-end gap-3">
           <Button
-            variant="ghost"
-            disabled={busy}
-            onClick={() => (correction.dirty ? setConfirm('exit') : onExit())}
-          >
-            {t('correction.exit')}
-          </Button>
-          <Button
             variant={correction.dirty ? 'cta' : 'secondary'}
             className="w-full sm:w-auto"
             pending={correction.pending}
@@ -404,34 +388,15 @@ export function ClipCorrectionWorkspace({
       <Dialog
         open={!!confirm}
         title={t(confirm === 'delete' ? 'correction.deleteTitle' : 'correction.leaveTitle')}
-        confirmLabel={t(
-          confirm === 'delete'
-            ? 'correction.deleteCut'
-            : confirm === 'reload'
-              ? 'correction.reload'
-              : 'project.leave',
-        )}
+        confirmLabel={t(confirm === 'delete' ? 'correction.deleteCut' : 'correction.reload')}
         onClose={() => setConfirm(undefined)}
         onConfirm={() => {
           if (confirm === 'delete') mutate({ type: 'remove', id: deleteId })
-          else if (confirm === 'reload') correction.reload()
-          else onExit()
+          else correction.reload()
           setConfirm(undefined)
         }}
       >
         {t(confirm === 'delete' ? 'correction.deleteBody' : 'correction.leaveBody')}
-      </Dialog>
-      <Dialog
-        open={blocker.status === 'blocked'}
-        title={t('correction.leaveTitle')}
-        confirmLabel={t('project.leave')}
-        onClose={() => blocker.reset?.()}
-        onConfirm={() => {
-          leaving.current = true
-          blocker.proceed?.()
-        }}
-      >
-        {t('correction.leaveBody')}
       </Dialog>
     </>
   )

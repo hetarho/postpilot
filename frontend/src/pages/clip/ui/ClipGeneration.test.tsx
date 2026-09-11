@@ -88,6 +88,11 @@ function mount(
     },
   })
 }
+/** The workspace is three panels behind one tab row now (CLIP-36), so a test that asserts across
+ *  steps has to say which one it is looking at. */
+async function goToStep(name: '클립 생성' | '클립 다듬기' | '클립 완성') {
+  await userEvent.setup().click(await screen.findByRole('tab', { name }))
+}
 async function selectSource() {
   const file = new File(['clip'], 'clip.mp4', { type: 'video/mp4' })
   vi.mocked(readSourceManifest).mockResolvedValue([
@@ -171,10 +176,10 @@ it('approves once, retains local previews until terminal, then releases and refe
       }),
     })
   })
+  // A finished render describes the project as 완성, so the bar follows to ③ where the result is.
   const video = await screen.findByLabelText('클립 미리보기')
   expect(revoke).toHaveBeenCalledExactlyOnceWith('blob:clip-source')
   expect(screen.queryByLabelText('clip.mp4')).not.toBeInTheDocument()
-  expect(screen.getByText('clip.mp4 · 처리 완료 · 원본 재선택 필요')).toBeInTheDocument()
   expect(video).toHaveAttribute('src', result.viewUrl)
   expect(video).toHaveAttribute('controls')
   expect(video).toHaveAttribute('preload', 'metadata')
@@ -184,6 +189,9 @@ it('approves once, retains local previews until terminal, then releases and refe
   )
   expect(calls.filter((c) => c === 'GetClipProject').length).toBeGreaterThan(1)
   expect(calls).not.toContain('DiscardClipSourceBatch')
+  // The consumed selection's summary stays with the picker that made it, on ①.
+  await goToStep('클립 생성')
+  expect(screen.getByText('clip.mp4 · 처리 완료 · 원본 재선택 필요')).toBeInTheDocument()
   // A new selection after completion must not be mistaken for the consumed batch.
   await selectSource()
   expect(
@@ -200,11 +208,15 @@ it('keeps an older result visible on a durable credit refusal and requires a new
     failureParams: { required: '79', balance: '12', renews_at: '2026-09-30T15:00:00Z' },
   }
   mount({ projects: [{ ...project, result, latestJob: job }] }, { jobs: [job] })
-  expect(await screen.findByLabelText('클립 미리보기')).toHaveAttribute('src', result.viewUrl)
+  // A failed attempt opens on the step that owns its retry (CLIP-26).
   expect(await screen.findByText(/크레딧이 79 필요한데 12만 남았어요/)).toBeInTheDocument()
   expect(screen.getByText('원본 확인 단계에서 실패했어요')).toBeInTheDocument()
   expect(screen.getByRole('link', { name: '크레딧·요금제 확인' })).toHaveAttribute('href', '/plans')
   expect(screen.getByRole('button', { name: '다시 생성' })).toBeDisabled()
+  // The previous successful result is untouched, one tab away (CLIP-26).
+  await goToStep('클립 완성')
+  expect(await screen.findByLabelText('클립 미리보기')).toHaveAttribute('src', result.viewUrl)
+  await goToStep('클립 생성')
   await selectSource()
   expect(
     await screen.findByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' }),
@@ -463,11 +475,14 @@ it.each([false, true])(
 
 it('displays a pricing refusal beside generation while leaving the previous result downloadable', async () => {
   mount({ projects: [{ ...project, result }], quoteFails: 'CLIP_MODEL_PRICING_UNAVAILABLE' })
+  // A saved result opens on ③, where the download is docked; the refusal belongs beside the
+  // generation that earned it, on ①.
+  expect(await screen.findByLabelText('클립 미리보기')).toHaveAttribute('src', result.viewUrl)
+  expect(screen.getByRole('link', { name: '영상 다운로드' })).toBeEnabled()
+  await goToStep('클립 생성')
   await selectSource()
   await screen.findByRole('alert')
   expect(screen.getByRole('button', { name: '생성' })).toBeDisabled()
-  expect(screen.getByLabelText('클립 미리보기')).toHaveAttribute('src', result.viewUrl)
-  expect(screen.getByRole('link', { name: '영상 다운로드' })).toBeEnabled()
 })
 
 it.each([0, 7])(
@@ -514,7 +529,9 @@ it.each([0, 7])(
     await screen.findByText('크레딧 정산이 완료됐어요.')
     expect(credit.getByText(charge + ' 크레딧')).toBeVisible()
     expect(credit.getAllByText(40 - charge + ' 크레딧').length).toBeGreaterThan(0)
-    expect(screen.getByLabelText('클립 미리보기')).toHaveAttribute('src', result.viewUrl)
+    // The settlement is reported on every step; the preserved result is on ③.
+    await goToStep('클립 완성')
+    expect(await screen.findByLabelText('클립 미리보기')).toHaveAttribute('src', result.viewUrl)
   },
 )
 
