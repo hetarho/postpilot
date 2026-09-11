@@ -1,0 +1,28 @@
+{
+ "data": {
+  "id": "qwen/qwen3-vl-235b-a22b-instruct",
+  "endpoints": [
+   {
+    "tag": "alibaba",
+    "model_id": "qwen/qwen3-vl-235b-a22b-instruct",
+    "status": 0,
+    "context_length": 131072,
+    "max_completion_tokens": 32768,
+    "pricing": {
+     "prompt": "0.0000002",
+     "completion": "0.0000012"
+    },
+    "supported_parameters": [
+     "max_tokens",
+     "response_format",
+     "structured_outputs",
+     "reasoning",
+     "temperature",
+     "top_p",
+     "seed",
+     "stop"
+    ]
+   }
+  ]
+ }
+}

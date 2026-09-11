@@ -91,8 +91,17 @@ func (s *Service) model(ref llm.ModelRef, stage string) (llm.ModelInfo, error) {
 		}
 		return info, llm.ErrProviderDisabled
 	}
-	if stage == llm.StageNameObserve && (!info.Vision || !info.VideoInput || !info.VideoDelivery.InlineStaticVideo) {
-		return info, clip.ErrModelInputUnsupported
+	// The catalog's raw modality is the only gate here; whether a current endpoint
+	// takes the bounded inline clip is proven when the price is frozen and
+	// rechecked before the call (CLIP-30). No delivery-profile flag admits or
+	// refuses a model.
+	if stage == llm.StageNameObserve {
+		if !info.VideoInput {
+			return info, llm.ErrVideoInputAbsent
+		}
+		if !info.Vision {
+			return info, clip.ErrModelInputUnsupported
+		}
 	}
 	return info, nil
 }
@@ -120,7 +129,14 @@ func (s *Service) ObserveChunk(ctx context.Context, model llm.ModelRef, input cl
 	}
 	system, user := BuildObservePrompt(input)
 	request := llm.Request{System: system, Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.InlineVideoPart(input.Video), llm.TextPart(user)}}}, Stage: llm.StageNameObserve, Reasoning: input.Policy.Reasoning, DisableReasoning: input.Policy.DisableReasoning, MaxTokens: input.Policy.CompletionTokens, Execution: execution}
-	if info.StructuredOutput {
+	// The schema goes when the FROZEN policy says so: a quote priced for the
+	// parser fallback never executes with a schema parameter nobody qualified,
+	// and a model that lost the capability since the quote is refused, not
+	// silently downgraded.
+	if execution.Call.StructuredOutput {
+		if !info.StructuredOutput {
+			return clip.ChunkAnalysis{}, llm.Usage{}, clip.ErrPricingUnavailable
+		}
 		request.JSONSchema = ChunkSchema()
 	}
 	if !execution.Matches(model, request) || input.Video.Size > 8<<20 || !boundedPrompt(system, user, request.JSONSchema, llm.ExecutionInlineStatic) {
@@ -150,7 +166,10 @@ func (s *Service) Plan(ctx context.Context, model llm.ModelRef, input clip.Plann
 	}
 	system, user := BuildPlanPrompt(input, s.cfg.Render.FadeMS)
 	request := llm.Request{System: system, Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(user)}}}, Stage: llm.StageNameWrite, Reasoning: input.Policy.Reasoning, DisableReasoning: input.Policy.DisableReasoning, MaxTokens: input.Policy.CompletionTokens, Execution: execution}
-	if info.StructuredOutput {
+	if execution.Call.StructuredOutput {
+		if !info.StructuredOutput {
+			return clip.EditPlan{}, llm.Usage{}, clip.ErrPricingUnavailable
+		}
 		request.JSONSchema = PlanSchema()
 	}
 	if !boundedPrompt(system, user, request.JSONSchema, llm.ExecutionTextOnly) {

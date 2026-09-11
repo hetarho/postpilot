@@ -24,7 +24,27 @@ service ClipService {
   rpc CreateClipSourceBatch(CreateClipSourceBatchRequest) returns (CreateClipSourceBatchResponse) {}
   rpc ConfirmClipSource(ConfirmClipSourceRequest) returns (ConfirmClipSourceResponse) {}
   rpc DiscardClipSourceBatch(DiscardClipSourceBatchRequest) returns (DiscardClipSourceBatchResponse) {}
+  // Read-only: every registered observe model with its current clip-analysis
+  // eligibility (CLIP-30, CLIP-44). No model call, no write, no provider detail.
+  rpc ListClipAnalysisEligibility(ListClipAnalysisEligibilityRequest) returns (ListClipAnalysisEligibilityResponse) {}
 }
+
+// Exactly one answer per model. UNSPECIFIED is a missing value, never eligible.
+enum ClipAnalysisEligibility {
+  CLIP_ANALYSIS_ELIGIBILITY_UNSPECIFIED = 0;
+  CLIP_ANALYSIS_ELIGIBILITY_ELIGIBLE = 1;
+  CLIP_ANALYSIS_ELIGIBILITY_VIDEO_INPUT_ABSENT = 2;
+  CLIP_ANALYSIS_ELIGIBILITY_INLINE_ENDPOINT_UNAVAILABLE = 3;
+  CLIP_ANALYSIS_ELIGIBILITY_REQUIRED_PARAMETERS_UNSUPPORTED = 4;
+  CLIP_ANALYSIS_ELIGIBILITY_PRICE_CEILING_UNAVAILABLE = 5;
+}
+message ClipAnalysisModelEligibility {
+  ModelRef model = 1;
+  ClipAnalysisEligibility status = 2;
+}
+message ListClipAnalysisEligibilityRequest {}
+// Registry order; display metadata is the observe model list's (ProviderService).
+message ListClipAnalysisEligibilityResponse { repeated ClipAnalysisModelEligibility models = 1; }
 message ClipInformationField { string label = 1; string prompt = 2; }
 message ClipInformationFields { repeated ClipInformationField values = 1; }
 // Stable style ids, one per role: clean (깔끔하게) narrative, memo (메모) fact,

@@ -343,7 +343,9 @@ func (p *releaseProvider) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		p.gets.Add(1)
 		pricing := map[string]any{"prompt": "0.0000003", "completion": "0.0000025", "request": "0", "image": "0.0000003", "audio": "0.000001", "input_audio_cache": "0.0000001", "internal_reasoning": "0.0000025", "input_cache_read": "0.00000003", "input_cache_write": "0.0000000833333333333333", "web_search": "0.014", "discount": 0}
 		if p.mode == "unknown prices" {
-			delete(pricing, "audio")
+			// An omitted media rate is a known zero under the OpenRouter contract;
+			// a dimension this code does not know is the unknown charge that refuses.
+			pricing["video_second"] = "0.001"
 		}
 		if p.mode == "price drift" {
 			p.metrics.mu.Lock()

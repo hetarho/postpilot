@@ -22,7 +22,7 @@ func TestMultimodalAdmissionEnvelopeIsNeverMeasuredUsage(t *testing.T) {
 	svc, st := newTestService(t, seoulNoon)
 	p := approvedTestClip().Calls[0].Policy
 	p.InputUSDPerMillion, p.OutputUSDPerMillion = "1", "2.5"
-	p.Pricing = llm.CallPricing{Version: llm.CallPricingVersion, Fingerprint: strings.Repeat("a", 64), Delivery: llm.ExecutionInlineStatic, PromptUSDPerMillion: "0.3", CompletionUSDPerMillion: "2.5", RequestUSD: "0.01", ImageUSD: "0.0000003", AudioUSDPerToken: "0.000001"}
+	p.Pricing = llm.CallPricing{Version: llm.CallPricingVersion, Fingerprint: strings.Repeat("a", 64), Delivery: llm.ExecutionInlineStatic, Endpoint: "leaf", RequiredParameters: "max_tokens", PromptUSDPerMillion: "0.3", CompletionUSDPerMillion: "2.5", RequestUSD: "0.01", ImageUSD: "0.0000003", AudioUSDPerToken: "0.000001"}
 	if cost, ok := p.QuoteMicrousd(); !ok || cost != 60498 {
 		t.Fatalf("quote %d valid %v", cost, ok)
 	}
@@ -166,7 +166,7 @@ func TestMultimodalQuoteAndActualCountHoldUseIdenticalPrices(t *testing.T) {
 	for i := range reservation.Calls {
 		p := &reservation.Calls[i].Policy
 		p.InputUSDPerMillion, p.OutputUSDPerMillion = "1", "2.5"
-		p.Pricing = llm.CallPricing{Version: llm.CallPricingVersion, Fingerprint: strings.Repeat("a", 64), Delivery: llm.ExecutionTextOnly, PromptUSDPerMillion: "0.3", CompletionUSDPerMillion: "2.5", RequestUSD: "0.01", ImageUSD: "0.0000003", AudioUSDPerToken: "0.000001"}
+		p.Pricing = llm.CallPricing{Version: llm.CallPricingVersion, Fingerprint: strings.Repeat("a", 64), Delivery: llm.ExecutionTextOnly, Endpoint: "leaf", RequiredParameters: "max_tokens", PromptUSDPerMillion: "0.3", CompletionUSDPerMillion: "2.5", RequestUSD: "0.01", ImageUSD: "0.0000003", AudioUSDPerToken: "0.000001"}
 	}
 	reservation.Calls[0].Policy.Pricing.Delivery = llm.ExecutionInlineStatic
 	quoted, err := ClipCredits(reservation.Calls)

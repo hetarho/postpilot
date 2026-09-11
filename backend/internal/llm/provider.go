@@ -4,7 +4,10 @@
 // observation and writing choose theirs per stage ([I3]) — so the port reads no default.
 package llm
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 // ReasoningEffort is the provider-neutral reasoning strength accepted by the port.
 // Unset is a registry override that deliberately leaves the wire request untouched;
@@ -174,6 +177,9 @@ type AdapterConfig struct {
 	BaseURL         string
 	APIKey          string
 	ReasoningFormat string
+	// See Options.EndpointCacheTTL and Options.EndpointFetchTimeout.
+	EndpointCacheTTL     time.Duration
+	EndpointFetchTimeout time.Duration
 }
 
 // AdapterFactory builds a Provider for one yaml entry. It must validate what it needs

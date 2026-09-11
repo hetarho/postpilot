@@ -66,7 +66,7 @@ func TestClipMeteringRequiresTheCompleteAdmittedExecutionPolicy(t *testing.T) {
 			if _, err = st.PickNextQueued(ctx, time.Now()); err != nil {
 				t.Fatal(err)
 			}
-			p := llm.CallPolicy{Ref: llm.ModelRef{ProviderID: "p", ModelID: "o"}, Stage: "observe", CompletionTokens: 8192, InputUSDPerMillion: "1", OutputUSDPerMillion: "2", Pricing: llm.CallPricing{Version: 1, Fingerprint: strings.Repeat("a", 64), Delivery: llm.ExecutionInlineStatic, PromptUSDPerMillion: "1", CompletionUSDPerMillion: "2", RequestUSD: "0", ImageUSD: "0.000001", AudioUSDPerToken: "0.000001"}}
+			p := llm.CallPolicy{Ref: llm.ModelRef{ProviderID: "p", ModelID: "o"}, Stage: "observe", CompletionTokens: 8192, InputUSDPerMillion: "1", OutputUSDPerMillion: "2", Pricing: llm.CallPricing{Version: llm.CallPricingVersion, Fingerprint: strings.Repeat("a", 64), Delivery: llm.ExecutionInlineStatic, Endpoint: "leaf", RequiredParameters: "max_tokens", PromptUSDPerMillion: "1", CompletionUSDPerMillion: "2", RequestUSD: "0", ImageUSD: "0.000001", AudioUSDPerToken: "0.000001"}}
 			w := p
 			w.Ref.ModelID = "w"
 			w.Stage = "write"

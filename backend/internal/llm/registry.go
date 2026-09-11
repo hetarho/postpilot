@@ -150,6 +150,13 @@ type Options struct {
 	Timeout time.Duration
 	// MaxTokens is the completion cap when a request sets none.
 	MaxTokens int
+	// EndpointCacheTTL is how long an adapter may reuse one successfully read
+	// endpoint document for clip qualification, and EndpointFetchTimeout bounds one
+	// such read. They are the catalog's own TTL and fetch timeout, so a route is
+	// never trusted longer than the model list that named it. Zero means the
+	// adapter's defaults.
+	EndpointCacheTTL     time.Duration
+	EndpointFetchTimeout time.Duration
 }
 
 // The yaml shape. Field names are the contract documented in providers.yaml; unknown
@@ -269,6 +276,7 @@ func Parse(data []byte, getenv func(string) string, adapters map[string]AdapterF
 	// must not hide behind a missing key until the day the key is set.
 	provider, err := factory(AdapterConfig{
 		ProviderID: p.ID, BaseURL: p.BaseURL, APIKey: key, ReasoningFormat: p.ReasoningFormat,
+		EndpointCacheTTL: opts.EndpointCacheTTL, EndpointFetchTimeout: opts.EndpointFetchTimeout,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", where, err)
@@ -461,8 +469,10 @@ func (r *Registry) Complete(ctx context.Context, ref ModelRef, req Request) (Res
 		if !req.Execution.Matches(ref, req) || !slices.Contains(resolved.Stages, req.Stage) {
 			return Response{}, ErrUnsupported
 		}
-		if req.Execution.Delivery == ExecutionInlineStatic && !r.describe(resolved).VideoDelivery.InlineStaticVideo {
-			return Response{}, ErrUnsupported
+		// The route itself was qualified when the policy was frozen and is rechecked
+		// by the adapter before the call; the registry only holds the raw modality.
+		if req.Execution.Delivery == ExecutionInlineStatic && !resolved.VideoInput {
+			return Response{}, ErrVideoInputAbsent
 		}
 		ctx, cancel := context.WithTimeout(ctx, r.opts.Timeout)
 		defer cancel()

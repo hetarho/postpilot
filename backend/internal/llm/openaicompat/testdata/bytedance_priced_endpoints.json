@@ -1,0 +1,46 @@
+{
+ "data": {
+  "id": "bytedance/seed-1.6-vision",
+  "endpoints": [
+   {
+    "tag": "bytedance",
+    "model_id": "bytedance/seed-1.6-vision",
+    "status": 0,
+    "context_length": 262144,
+    "max_completion_tokens": 16384,
+    "pricing": {
+     "prompt": "0.00000025",
+     "completion": "0.000002",
+     "image": "0.0000005",
+     "request": "0",
+     "overrides": [
+      {
+       "min_prompt_tokens": 128000,
+       "prompt": "0.0000005",
+       "completion": "0.000004"
+      },
+      {
+       "utc_start": 0,
+       "utc_end": 800,
+       "utc_days": [
+        "saturday",
+        "sunday"
+       ],
+       "prompt": "0.0000001"
+      }
+     ]
+    },
+    "supported_parameters": [
+     "max_tokens",
+     "response_format",
+     "structured_outputs",
+     "reasoning",
+     "temperature",
+     "top_p",
+     "seed",
+     "stop"
+    ]
+   }
+  ]
+ }
+}

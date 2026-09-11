@@ -157,7 +157,7 @@ func approvedClipCalls(count int) job.ClipReservation {
 		if i == 1 {
 			delivery = llm.ExecutionTextOnly
 		}
-		r.Calls[i].Policy.Pricing = llm.CallPricing{Version: 1, Fingerprint: strings.Repeat("a", 64), Delivery: delivery, PromptUSDPerMillion: "0.1", CompletionUSDPerMillion: "0.7", RequestUSD: "0", ImageUSD: "0", AudioUSDPerToken: "0"}
+		r.Calls[i].Policy.Pricing = llm.CallPricing{Version: llm.CallPricingVersion, Fingerprint: strings.Repeat("a", 64), Delivery: delivery, Endpoint: "leaf", RequiredParameters: "max_tokens", PromptUSDPerMillion: "0.1", CompletionUSDPerMillion: "0.7", RequestUSD: "0", ImageUSD: "0", AudioUSDPerToken: "0"}
 	}
 	return r
 }

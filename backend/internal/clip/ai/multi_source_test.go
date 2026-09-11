@@ -85,6 +85,7 @@ func TestEightShortSourcesComposeWithExactTransitionTimeline(t *testing.T) {
 	for _, structured := range []bool{false, true} {
 		in, wire := multiSourcePlan()
 		s, models, captions := newService(t, raw(wire), structured)
+		in.Policy = testPolicy("write")
 		got, usage, err := s.Plan(t.Context(), testRef(), in)
 		if err != nil || len(got.Cuts) != 8 || got.DurationMS != 15000 || got.Ratio != in.Ratio {
 			t.Fatalf("multi-source plan: %+v %v", got, err)

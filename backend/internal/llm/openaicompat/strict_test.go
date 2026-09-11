@@ -19,7 +19,7 @@ import (
 )
 
 func strictRequest() llm.Request {
-	call := llm.CallPolicy{Ref: llm.ModelRef{ProviderID: "test", ModelID: "google/gemini-2.5-flash"}, Stage: "observe", CompletionTokens: 8192, Reasoning: llm.ReasoningLow, InputUSDPerMillion: "0.125", OutputUSDPerMillion: "0.75"}
+	call := llm.CallPolicy{Ref: llm.ModelRef{ProviderID: "test", ModelID: "google/gemini-2.5-flash"}, Stage: "observe", CompletionTokens: 8192, Reasoning: llm.ReasoningLow, StructuredOutput: true, InputUSDPerMillion: "0.125", OutputUSDPerMillion: "0.75"}
 	call, _ = strictEndpointFixture(call.Ref.ModelID).freeze(call, llm.ExecutionInlineStatic)
 	return llm.Request{Model: call.Ref.ModelID, System: "Analyze this synthetic fixture.", Stage: call.Stage, MaxTokens: call.CompletionTokens, Reasoning: call.Reasoning,
 		JSONSchema: []byte(`{"type":"object"}`),
@@ -100,7 +100,6 @@ func TestStrictRejectsInvalidPolicyAndMediaBeforeAnyHTTP(t *testing.T) {
 		"signed url": func(r *llm.Request) {
 			r.Messages[0].Parts[1] = llm.VideoPart("https://private.test/secret", "video/mp4")
 		},
-		"unknown family": func(r *llm.Request) { r.Model = "unknown/video"; r.Execution.Call.Ref.ModelID = r.Model },
 		"online variant": func(r *llm.Request) { r.Model += ":online"; r.Execution.Call.Ref.ModelID = r.Model },
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -330,5 +329,27 @@ func TestStrictCancellationClosesBlockedSourceAndPipe(t *testing.T) {
 	case <-done:
 	case <-time.After(time.Second):
 		t.Fatal("cancellation leaked a source/pipe")
+	}
+}
+
+// A model outside any documented family is not refused by name: its current
+// endpoint document decides (CLIP-30). Here the document cannot be read, so the
+// answer is "no route" — one metadata GET, no completion, no other model.
+func TestVendorNeutralModelIsDecidedByItsEndpointDocument(t *testing.T) {
+	var gets, posts atomic.Int32
+	client := strictTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			gets.Add(1)
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		posts.Add(1)
+	})
+	r := strictRequest()
+	r.Model = "unknown/video"
+	r.Execution.Call.Ref.ModelID = r.Model
+	_, err := client.Complete(context.Background(), r)
+	if !errors.Is(err, llm.ErrInlineEndpointUnavailable) || !errors.Is(err, llm.ErrUnsupported) || gets.Load() != 1 || posts.Load() != 0 {
+		t.Fatalf("err=%v gets=%d posts=%d", err, gets.Load(), posts.Load())
 	}
 }

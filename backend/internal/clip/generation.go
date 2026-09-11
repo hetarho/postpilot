@@ -32,6 +32,7 @@ type GenerationService struct {
 	cfg        GenerationConfig
 	pricing    QuotePricing
 	accounting AccountingReader
+	admission  AnalysisAdmission
 	now        func() time.Time
 }
 
@@ -137,7 +138,12 @@ func (e *StageFailure) Failure() llm.Failure {
 	var credits *plan.InsufficientCreditsError
 	var layout interface{ LayoutReason() string }
 	var facts *MissingFactsError
+	var admission *ModelAdmissionError
 	switch {
+	// The model's own admission answer comes first: it unwraps to the generic
+	// unsupported error, which must not swallow the specific reason.
+	case errors.As(e.Cause, &admission):
+		f = admission.Failure()
 	case errors.Is(e.Cause, ErrQuoteRequired):
 		f = llm.Failure{Reason: "CLIP_QUOTE_REQUIRED"}
 	case errors.Is(e.Cause, ErrQuoteExpired):
@@ -255,7 +261,7 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 			return ErrQuoteChanged
 		}
 		if err = s.planner.ValidateModels(pricing.Observe.Ref, pricing.Plan.Ref); err != nil {
-			return err
+			return admissionRefusal(pricing.Observe.Ref, err)
 		}
 		if s.planner.Budgets() != (CompletionBudgets{Observe: pricing.Observe.CompletionTokens, Plan: pricing.Plan.CompletionTokens}) {
 			return ErrQuoteChanged
@@ -266,9 +272,11 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 		if s.pricing == nil {
 			return ErrPricingUnavailable
 		}
+		// The same qualification the quote ran, on the current document: a leaf
+		// that drifted refuses here, before the reservation and any model call.
 		current, err := s.pricing.Freeze(ctx, pricing.Observe.Ref, pricing.Plan.Ref, count)
 		if err != nil {
-			return err
+			return admissionRefusal(pricing.Observe.Ref, err)
 		}
 		if !current.Valid() || current.ObservationCalls != count || current.Observe != pricing.Observe || current.Plan != pricing.Plan || current.MaxCredits > p.Approval.MaxCredits {
 			return ErrQuoteChanged
@@ -285,7 +293,7 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 		for _, v := range prepared {
 			observation, err := s.observe(ctx, v.chunk, sources[v.source], pricing.Observe)
 			if err != nil {
-				return err
+				return admissionRefusal(pricing.Observe.Ref, err)
 			}
 			chunks = append(chunks, observation)
 			set("analyze", len(chunks), count)

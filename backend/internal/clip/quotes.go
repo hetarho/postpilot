@@ -160,7 +160,7 @@ func (s *GenerationService) quoteInputs(ctx context.Context, user, id, batch, ob
 		return p, t, b, pricing, err
 	}
 	if err = s.planner.ValidateModels(modelRef(observe), modelRef(write)); err != nil {
-		return p, t, b, pricing, err
+		return p, t, b, pricing, admissionRefusal(modelRef(observe), err)
 	}
 	b, err = s.store.GetSourceBatch(ctx, user, batch)
 	if err != nil {
@@ -178,7 +178,7 @@ func (s *GenerationService) quoteInputs(ctx context.Context, user, id, batch, ob
 	}
 	pricing, err = s.pricing.Freeze(ctx, modelRef(observe), modelRef(write), count)
 	if err != nil {
-		return p, t, b, pricing, err
+		return p, t, b, pricing, admissionRefusal(modelRef(observe), err)
 	}
 	if pricing.Version != PricingPolicyVersion || pricing.ObservationCalls != count || pricing.MaxCredits < 0 || pricing.Observe.Ref != modelRef(observe) || pricing.Plan.Ref != modelRef(write) || !pricing.Observe.Valid() || !pricing.Plan.Valid() {
 		return p, t, b, pricing, ErrPricingUnavailable

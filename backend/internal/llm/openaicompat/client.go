@@ -39,6 +39,7 @@ type Client struct {
 	apiKey          string
 	reasoningFormat string
 	http            *http.Client
+	endpointDocs    *endpointCache
 }
 
 // Factory is the llm.AdapterFactory for `adapter: openai_compatible`.
@@ -69,6 +70,7 @@ func New(cfg llm.AdapterConfig, httpClient *http.Client) *Client {
 		apiKey:          cfg.APIKey,
 		reasoningFormat: cfg.ReasoningFormat,
 		http:            httpClient,
+		endpointDocs:    newEndpointCache(cfg.EndpointCacheTTL, cfg.EndpointFetchTimeout),
 	}
 }
 
@@ -202,7 +204,7 @@ func (c *Client) buildRequest(req llm.Request) chatRequest {
 		messages = append(messages, chatMessage{Role: "system", Content: req.System})
 	}
 	for _, m := range req.Messages {
-		messages = append(messages, chatMessage{Role: string(m.Role), Content: content(m.Parts)})
+		messages = append(messages, chatMessage{Role: string(m.Role), Content: content(m.Parts, c.VideoDelivery(req.Model).InlineStaticVideo)})
 	}
 	out := chatRequest{
 		Model:         req.Model,
@@ -228,7 +230,11 @@ func (c *Client) buildRequest(req llm.Request) chatRequest {
 	return out
 }
 
-func content(parts []llm.Part) any {
+// staticProcessing is whether the model's documented profile takes the
+// `processing: static` control (see Client.VideoDelivery); every other route
+// sends the bounded inline part with no provider-specific processing field, and
+// no route ever asks for adaptive exploration (CLIP-43).
+func content(parts []llm.Part, staticProcessing bool) any {
 	// A text-only message goes as a string: it is the one form every compatible server
 	// accepts, and an empty part list must be "" rather than [] for the same reason.
 	if len(parts) == 0 {
@@ -240,7 +246,11 @@ func content(parts []llm.Part) any {
 	out := make([]contentPart, 0, len(parts))
 	for _, p := range parts {
 		if p.InlineVideo != nil {
-			out = append(out, contentPart{Type: "video_url", VideoURL: &videoURL{URL: "data:video/mp4;base64,", Processing: "static"}})
+			video := &videoURL{URL: "data:video/mp4;base64,"}
+			if staticProcessing {
+				video.Processing = "static"
+			}
+			out = append(out, contentPart{Type: "video_url", VideoURL: video})
 			continue
 		}
 		if p.IsImage() {

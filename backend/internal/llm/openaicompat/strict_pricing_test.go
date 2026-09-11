@@ -72,8 +72,10 @@ func TestNonzeroMediaQuoteAndExecutionUseOneFrozenProfile(t *testing.T) {
 		t.Fatal("quoting issued a completion")
 	}
 	req.Execution.Call = p
+	// The recheck before the completion reads the same unexpired document the
+	// quote read: one GET serves both, and the POST names the frozen leaf.
 	out, err := c.Complete(context.Background(), req)
-	if err != nil || out.Usage.CostMicrousd != 4000 || gets.Load() != 2 || posts.Load() != 1 {
+	if err != nil || out.Usage.CostMicrousd != 4000 || gets.Load() != 1 || posts.Load() != 1 {
 		t.Fatalf("out=%+v err=%v gets=%d posts=%d", out, err, gets.Load(), posts.Load())
 	}
 }
@@ -127,9 +129,8 @@ func TestConditionalRatesAndCacheApplicability(t *testing.T) {
 
 func TestUnknownOrMissingApplicablePriceRefusesQuote(t *testing.T) {
 	for name, mutate := range map[string]func(*pricedEndpoint){
-		"missing audio":  func(e *pricedEndpoint) { delete(e.Pricing, "audio") },
-		"missing visual": func(e *pricedEndpoint) { delete(e.Pricing, "image") },
-		"unknown":        func(e *pricedEndpoint) { e.Pricing["video_second"] = json.RawMessage(`"0"`) },
+		"unknown":         func(e *pricedEndpoint) { e.Pricing["video_second"] = json.RawMessage(`"0"`) },
+		"malformed audio": func(e *pricedEndpoint) { e.Pricing["audio"] = json.RawMessage(`"free"`) },
 		"unknown condition": func(e *pricedEndpoint) {
 			e.Pricing["overrides"] = json.RawMessage(`[{"new_condition":1,"prompt":"0"}]`)
 		},
@@ -154,5 +155,21 @@ func TestParentAndDuplicateTagsAreNotExactRoutes(t *testing.T) {
 	variant.Tag += "/priority"
 	if uniqueLeaf(e, []pricedEndpoint{e, variant}) || uniqueLeaf(e, []pricedEndpoint{e, e}) || !uniqueLeaf(variant, []pricedEndpoint{e, variant}) {
 		t.Fatal("ambiguous endpoint selection")
+	}
+}
+
+// Under the OpenRouter pricing contract a unit is listed when it is charged
+// separately: a leaf that lists no image or audio rate bills the inline clip as
+// prompt tokens, so those envelopes are zero and known, not unknown. The same
+// leaf listing a rate it does not name in a way this code understands refuses.
+func TestOmittedMediaUnitsAreIncludedNotUnknown(t *testing.T) {
+	_, endpoints := geminiPriceFixture(t)
+	e := endpoints[0]
+	delete(e.Pricing, "audio")
+	delete(e.Pricing, "image")
+	delete(e.Pricing, "input_audio_cache")
+	p, ok := e.freeze(strictRequest().Execution.Call, llm.ExecutionInlineStatic)
+	if !ok || p.Pricing.ImageUSD != "0" || p.Pricing.AudioUSDPerToken != "0" || p.InputUSDPerMillion != "0.3" {
+		t.Fatalf("prompt-only leaf refused or mispriced: %+v %v", p, ok)
 	}
 }

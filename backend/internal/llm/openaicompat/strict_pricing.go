@@ -1,8 +1,6 @@
 package openaicompat
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"math/big"
 	"slices"
@@ -118,12 +116,16 @@ func readPriceEnvelope(raw map[string]json.RawMessage) (priceEnvelope, bool) {
 	return p, true
 }
 
+// freeze prices the leaf for the request the policy describes. Under the
+// OpenRouter pricing contract a pricing key is present when that unit is
+// charged separately and absent when it is not, so an inline request on a leaf
+// that lists no `image`/`audio` rate is billed as prompt tokens and those
+// envelopes are zero — included, not unknown. A key that is present but
+// malformed, a dimension this code does not know, or a cache-write semantics
+// it cannot place still refuse: an unknown charge is never treated as free.
 func (e pricedEndpoint) freeze(call llm.CallPolicy, delivery llm.ExecutionDelivery) (llm.CallPolicy, bool) {
-	if !e.supports(call, delivery) {
-		return llm.CallPolicy{}, false
-	}
 	p, ok := readPriceEnvelope(e.Pricing)
-	if !ok || (delivery == llm.ExecutionInlineStatic && (p["audio"] == nil || (p["image"] == nil && p["image_token"] == nil))) {
+	if !ok {
 		return llm.CallPolicy{}, false
 	}
 	inputKeys := []string{"prompt", "input_cache_read"}
@@ -162,19 +164,15 @@ func (e pricedEndpoint) freeze(call llm.CallPolicy, delivery llm.ExecutionDelive
 			uniform = false
 		}
 	}
-	// Exclude mutable latency/uptime and normalize supported-parameter ordering.
-	canonical := e
-	canonical.SupportedParameters = slices.Clone(e.SupportedParameters)
-	slices.Sort(canonical.SupportedParameters)
-	raw, err := json.Marshal(canonical)
-	if err != nil {
+	fingerprint, ok := e.fingerprint()
+	if !ok {
 		return llm.CallPolicy{}, false
 	}
-	hash := sha256.Sum256(raw)
 	call.InputUSDPerMillion = priceDecimal(in.Mul(in, big.NewRat(1_000_000, 1)))
 	call.OutputUSDPerMillion = priceDecimal(out.Mul(out, big.NewRat(1_000_000, 1)))
 	call.Pricing = llm.CallPricing{
-		Version: llm.CallPricingVersion, Fingerprint: hex.EncodeToString(hash[:]), Delivery: delivery,
+		Version: llm.CallPricingVersion, Fingerprint: fingerprint, Delivery: delivery,
+		Endpoint: e.Tag, RequiredParameters: strings.Join(call.RequiredParameters(), ","),
 		PromptUSDPerMillion:     priceDecimal(p.rate("prompt").Mul(p.rate("prompt"), big.NewRat(1_000_000, 1))),
 		CompletionUSDPerMillion: call.OutputUSDPerMillion,
 		RequestUSD:              priceDecimal(p.rate("request")), ImageUSD: priceDecimal(p.rate("image")), AudioUSDPerToken: priceDecimal(p.rate("audio")),

@@ -76,6 +76,14 @@ export const errors = {
     'Generation did not start: {{required}} credits exceed your approved maximum of {{approved}}. Review a new quote.',
   CLIP_MODEL_PRICING_UNAVAILABLE:
     'Generation did not start because model pricing is unavailable. Choose another model or try again later.',
+  CLIP_MODEL_VIDEO_INPUT_ABSENT:
+    'The model {{model}} does not take video input, so it cannot analyse clips. Choose a model with video input.',
+  CLIP_MODEL_INLINE_ENDPOINT_UNAVAILABLE:
+    'No current route for {{model}} accepts the clip video inline. Choose another model or try again later.',
+  CLIP_MODEL_REQUIRED_PARAMETERS_UNSUPPORTED:
+    'The route for {{model}} does not support the settings the clip analysis request needs. Choose another model.',
+  CLIP_MODEL_PRICE_CEILING_UNAVAILABLE:
+    'The price ceiling for {{model}} could not be confirmed, so generation did not start. Choose another model or try again later.',
   CLIP_SOURCE_UNAVAILABLE:
     'The videos are processing or the upload has expired. Check progress, then select the source videos again.',
   CLIP_NOT_FOUND: 'Could not find the clip or video template.',

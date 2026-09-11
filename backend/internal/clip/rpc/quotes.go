@@ -23,7 +23,8 @@ func (h *Handler) QuoteClipGeneration(ctx context.Context, req *connect.Request[
 	observe := llm.ModelRef{ProviderID: req.Msg.GetObserveModel().GetProviderId(), ModelID: req.Msg.GetObserveModel().GetModelId()}
 	write := llm.ModelRef{ProviderID: req.Msg.GetWriteModel().GetProviderId(), ModelID: req.Msg.GetWriteModel().GetModelId()}
 	q, err := h.generation.Quote(ctx, user, req.Msg.ProjectId, req.Msg.BatchId, observe.String(), write.String())
-	if errors.Is(err, llm.ErrUnsupported) {
+	var admission *clip.ModelAdmissionError
+	if errors.Is(err, llm.ErrUnsupported) && !errors.As(err, &admission) {
 		return nil, rpcserver.NewAppError(connect.CodeFailedPrecondition, "video input is required", "MODEL_VIDEO_UNSUPPORTED", map[string]string{"model": observe.String()})
 	}
 	if err != nil {

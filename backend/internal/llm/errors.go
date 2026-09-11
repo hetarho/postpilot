@@ -29,6 +29,35 @@ var (
 	ErrOutputTruncated = errors.New("model output truncated by completion budget")
 )
 
+// AdmissionError is one of the four stable ways a registered model fails the
+// bounded clip-analysis qualification (CLIP-30, CLIP-44). Each unwraps to
+// ErrUnsupported so every existing capability check keeps its behaviour, while
+// a caller that owns the product reason can tell them apart. The value carries
+// no provider payload, price or key: the message is a fixed sentence.
+type AdmissionError struct{ kind string }
+
+func (e *AdmissionError) Error() string { return "clip analysis admission: " + e.kind }
+func (e *AdmissionError) Unwrap() error { return ErrUnsupported }
+
+// Kind is the stable code-owned name of the failed check.
+func (e *AdmissionError) Kind() string { return e.kind }
+
+var (
+	// ErrVideoInputAbsent: the catalog entry does not advertise video input, so no
+	// endpoint document is even read.
+	ErrVideoInputAbsent = &AdmissionError{"video_input_absent"}
+	// ErrInlineEndpointUnavailable: no current, unique provider leaf can take the
+	// bounded inline request — including a document that could not be read, because
+	// an unproven route is not an eligible one.
+	ErrInlineEndpointUnavailable = &AdmissionError{"inline_endpoint_unavailable"}
+	// ErrRequiredParametersUnsupported: a route exists but no leaf supports every
+	// parameter the actual request sends.
+	ErrRequiredParametersUnsupported = &AdmissionError{"required_parameters_unsupported"}
+	// ErrPriceCeilingUnavailable: a leaf takes the request but publishes no complete,
+	// enforceable price ceiling for every unit the request can incur.
+	ErrPriceCeilingUnavailable = &AdmissionError{"price_ceiling_unavailable"}
+)
+
 // Stable failure reasons owned by the LLM context. They are intentionally prose-free:
 // callers persist or project them while choosing the user-facing copy at the edge.
 const (

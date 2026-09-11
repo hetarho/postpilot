@@ -7,6 +7,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/postpilot/backend/internal/clip"
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
+	"github.com/postpilot/backend/internal/llm"
 )
 
 func TestQuoteFailuresHaveStableReasons(t *testing.T) {
@@ -48,6 +49,36 @@ func TestPreparationFailuresHaveStableReasons(t *testing.T) {
 		detail, e := ce.Details()[0].Value()
 		if e != nil || detail.(*v1.AppErrorDetail).Reason != reason {
 			t.Fatal(detail, e)
+		}
+	}
+}
+
+// The four admission reasons ride the same detail contract with the model as
+// their one display-safe parameter; the wire enum has one value per status and
+// treats anything else as unspecified, never eligible.
+func TestAdmissionRefusalsAndEligibilityWire(t *testing.T) {
+	model := llm.ModelRef{ProviderID: "openrouter", ModelID: "someone/video"}
+	for cause, reason := range map[error]string{llm.ErrVideoInputAbsent: "CLIP_MODEL_VIDEO_INPUT_ABSENT", llm.ErrInlineEndpointUnavailable: "CLIP_MODEL_INLINE_ENDPOINT_UNAVAILABLE", llm.ErrRequiredParametersUnsupported: "CLIP_MODEL_REQUIRED_PARAMETERS_UNSUPPORTED", llm.ErrPriceCeilingUnavailable: "CLIP_MODEL_PRICE_CEILING_UNAVAILABLE"} {
+		var ce *connect.Error
+		if e := toConnectError(&clip.ModelAdmissionError{Model: model, Err: cause}); !errors.As(e, &ce) || ce.Code() != connect.CodeFailedPrecondition {
+			t.Fatal(e)
+		}
+		detail, e := ce.Details()[0].Value()
+		d := detail.(*v1.AppErrorDetail)
+		if e != nil || d.Reason != reason || len(d.Params) != 1 || d.Params["model"] != "openrouter/someone/video" {
+			t.Fatal(d, e)
+		}
+	}
+	for status, want := range map[clip.EligibilityStatus]v1.ClipAnalysisEligibility{
+		clip.EligibilityEligible:                      v1.ClipAnalysisEligibility_CLIP_ANALYSIS_ELIGIBILITY_ELIGIBLE,
+		clip.EligibilityVideoInputAbsent:              v1.ClipAnalysisEligibility_CLIP_ANALYSIS_ELIGIBILITY_VIDEO_INPUT_ABSENT,
+		clip.EligibilityInlineEndpointUnavailable:     v1.ClipAnalysisEligibility_CLIP_ANALYSIS_ELIGIBILITY_INLINE_ENDPOINT_UNAVAILABLE,
+		clip.EligibilityRequiredParametersUnsupported: v1.ClipAnalysisEligibility_CLIP_ANALYSIS_ELIGIBILITY_REQUIRED_PARAMETERS_UNSUPPORTED,
+		clip.EligibilityPriceCeilingUnavailable:       v1.ClipAnalysisEligibility_CLIP_ANALYSIS_ELIGIBILITY_PRICE_CEILING_UNAVAILABLE,
+		"":                                            v1.ClipAnalysisEligibility_CLIP_ANALYSIS_ELIGIBILITY_UNSPECIFIED,
+	} {
+		if got := eligibilityProto(status); got != want {
+			t.Fatalf("%q → %v", status, got)
 		}
 	}
 }

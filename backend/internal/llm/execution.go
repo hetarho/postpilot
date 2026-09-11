@@ -91,7 +91,7 @@ func (p ExecutionPolicy) Matches(ref ModelRef, r Request) bool {
 	if !p.Call.Valid() || !p.Call.Pricing.Valid() || p.Call.Pricing.Delivery != p.Delivery || p.Call.Ref != ref || p.Call.Stage != r.Stage || p.Call.CompletionTokens != r.MaxTokens || p.Call.Reasoning != r.Reasoning || p.Call.DisableReasoning != r.DisableReasoning || !p.NoFallback || !p.RequireParameters {
 		return false
 	}
-	if r.ValidateParts() != nil || r.HasImages() {
+	if r.ValidateParts() != nil || r.HasImages() || (len(r.JSONSchema) > 0) != p.Call.StructuredOutput {
 		return false
 	}
 	inline := 0

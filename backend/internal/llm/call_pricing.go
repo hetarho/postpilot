@@ -3,19 +3,34 @@ package llm
 import (
 	"context"
 	"math/big"
+	"strings"
 )
 
-const CallPricingVersion = 1
+// Version 2 froze the chosen provider leaf and the parameters the request
+// requires beside the price; a version-1 envelope stored by an older quote or
+// queued job is refused and re-quoted rather than read with a guessed route.
+const CallPricingVersion = 2
 const ClipInputUnits = 30_000
+
+// MaxEndpointTag bounds a frozen provider leaf; the adapter's own tag grammar is
+// stricter, this only keeps a stored envelope readable.
+const MaxEndpointTag = 128
 
 // CallPricing is a durable, provider-neutral admission envelope. The opaque
 // fingerprint pins the adapter's documented route and applicable billing profile;
 // it is not a client-supplied routing key. Token envelopes in CallPolicy are NOT
 // measured prices when AggregateUsageSufficient is false.
+//
+// Endpoint is the one provider leaf the adapter qualified and will route to with
+// fallbacks disabled; RequiredParameters is the comma-joined sorted list of
+// request parameters that leaf must support (CallPolicy.RequiredParameters).
+// Both are opaque to everything above the llm boundary.
 type CallPricing struct {
 	Version                                      int
 	Fingerprint                                  string
 	Delivery                                     ExecutionDelivery
+	Endpoint                                     string
+	RequiredParameters                           string
 	PromptUSDPerMillion, CompletionUSDPerMillion string
 	RequestUSD, ImageUSD, AudioUSDPerToken       string
 	AggregateUsageSufficient                     bool
@@ -23,6 +38,9 @@ type CallPricing struct {
 
 func (p CallPricing) Valid() bool {
 	if p.Version != CallPricingVersion || len(p.Fingerprint) != 64 || (p.Delivery != ExecutionTextOnly && p.Delivery != ExecutionInlineStatic) {
+		return false
+	}
+	if p.Endpoint == "" || len(p.Endpoint) > MaxEndpointTag || !strings.Contains(","+p.RequiredParameters+",", ",max_tokens,") {
 		return false
 	}
 	for _, c := range p.Fingerprint {

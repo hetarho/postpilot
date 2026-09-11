@@ -157,8 +157,10 @@ func main() {
 		os.Exit(1)
 	}
 	registry, err := llm.Load(cfg.ProvidersConfig, os.Getenv, adapters, catalogSvc, llm.Options{
-		Timeout:   cfg.LLMStageTimeout,
-		MaxTokens: cfg.LLMMaxTokensDefault,
+		Timeout:              cfg.LLMStageTimeout,
+		MaxTokens:            cfg.LLMMaxTokensDefault,
+		EndpointCacheTTL:     cfg.CatalogTTL,
+		EndpointFetchTimeout: cfg.CatalogFetchTimeout,
 	})
 	if err != nil {
 		slog.Error("providers config invalid", "err", err)

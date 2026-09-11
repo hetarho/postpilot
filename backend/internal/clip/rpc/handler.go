@@ -48,12 +48,51 @@ func (h *Handler) StartClipGeneration(ctx context.Context, req *connect.Request[
 	}
 	id, err := h.generation.Start(ctx, user, req.Msg.ProjectId, req.Msg.BatchId, observe.String(), write.String(), clip.QuoteApproval{QuoteID: req.Msg.QuoteId, MaxCredits: maxCredits})
 	if err != nil {
-		if errors.Is(err, llm.ErrUnsupported) {
+		var admission *clip.ModelAdmissionError
+		if errors.Is(err, llm.ErrUnsupported) && !errors.As(err, &admission) {
 			return nil, rpcserver.NewAppError(connect.CodeFailedPrecondition, "video input is required", "MODEL_VIDEO_UNSUPPORTED", map[string]string{"model": observe.String()})
 		}
 		return nil, toConnectError(err)
 	}
 	return connect.NewResponse(&v1.StartClipGenerationResponse{JobId: id}), nil
+}
+
+// ListClipAnalysisEligibility answers CLIP-44 for every registered observe model:
+// refs and statuses only, no model call, no write, nothing from the provider.
+func (h *Handler) ListClipAnalysisEligibility(ctx context.Context, _ *connect.Request[v1.ListClipAnalysisEligibilityRequest]) (*connect.Response[v1.ListClipAnalysisEligibilityResponse], error) {
+	if _, err := actingUser(ctx); err != nil {
+		return nil, err
+	}
+	if h.generation == nil {
+		return nil, toConnectError(clip.ErrPricingUnavailable)
+	}
+	items, err := h.generation.ListAnalysisEligibility(ctx)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+	out := &v1.ListClipAnalysisEligibilityResponse{Models: make([]*v1.ClipAnalysisModelEligibility, 0, len(items))}
+	for _, item := range items {
+		out.Models = append(out.Models, &v1.ClipAnalysisModelEligibility{Model: &v1.ModelRef{ProviderId: item.Model.ProviderID, ModelId: item.Model.ModelID}, Status: eligibilityProto(item.Status)})
+	}
+	return connect.NewResponse(out), nil
+}
+
+// eligibilityProto maps the five domain statuses; anything else is the
+// unspecified wire value, which no reader may take as eligible.
+func eligibilityProto(s clip.EligibilityStatus) v1.ClipAnalysisEligibility {
+	switch s {
+	case clip.EligibilityEligible:
+		return v1.ClipAnalysisEligibility_CLIP_ANALYSIS_ELIGIBILITY_ELIGIBLE
+	case clip.EligibilityVideoInputAbsent:
+		return v1.ClipAnalysisEligibility_CLIP_ANALYSIS_ELIGIBILITY_VIDEO_INPUT_ABSENT
+	case clip.EligibilityInlineEndpointUnavailable:
+		return v1.ClipAnalysisEligibility_CLIP_ANALYSIS_ELIGIBILITY_INLINE_ENDPOINT_UNAVAILABLE
+	case clip.EligibilityRequiredParametersUnsupported:
+		return v1.ClipAnalysisEligibility_CLIP_ANALYSIS_ELIGIBILITY_REQUIRED_PARAMETERS_UNSUPPORTED
+	case clip.EligibilityPriceCeilingUnavailable:
+		return v1.ClipAnalysisEligibility_CLIP_ANALYSIS_ELIGIBILITY_PRICE_CEILING_UNAVAILABLE
+	}
+	return v1.ClipAnalysisEligibility_CLIP_ANALYSIS_ELIGIBILITY_UNSPECIFIED
 }
 
 func NewHandler(service *clip.Service) *Handler                     { return &Handler{service: service} }
@@ -67,7 +106,13 @@ func actingUser(ctx context.Context) (string, error) {
 }
 func toConnectError(err error) error {
 	var facts *clip.MissingFactsError
+	var admission *clip.ModelAdmissionError
 	switch {
+	// The model's admission answer first: it unwraps to the generic unsupported
+	// error and must keep its own reason and the model it names (CLIP-44, LANG-21).
+	case errors.As(err, &admission):
+		f := admission.Failure()
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip analysis model not eligible", f.Reason, f.Params)
 	case errors.Is(err, clip.ErrQuoteRequired):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip credit approval required", "CLIP_QUOTE_REQUIRED", nil)
 	case errors.Is(err, clip.ErrQuoteExpired):

@@ -41,6 +41,7 @@ func TestComposeActualFailureTimingWithoutAnotherPaidCall(t *testing.T) {
 	for _, structured := range []bool{false, true} {
 		in, wire := failedTimingPlan()
 		s, models, captions := newService(t, raw(wire), structured)
+		in.Policy = testPolicy("write")
 		got, usage, err := s.Plan(t.Context(), testRef(), in)
 		if err != nil {
 			t.Fatal(err)

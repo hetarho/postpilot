@@ -1,20 +1,33 @@
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { createClient } from '@connectrpc/connect'
 import { useTransport } from '@connectrpc/connect-query'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   clipProjectsKey,
   toClipProject,
+  useClipAnalysisEligibility,
   type ClipProject,
   type ClipQuote,
   type ReadyClipBatch,
 } from '@/entities/clip-project'
 import { isTerminal, useJob } from '@/entities/generation-job'
 import { myPlanQueryKey } from '@/entities/plan'
-import { useSelectionSavePending, useStageSelection, type ModelRef } from '@/entities/model-catalog'
+import {
+  useSelectionSavePending,
+  useStageSelection,
+  type ModelAvailability,
+  type ModelRef,
+} from '@/entities/model-catalog'
 import { ClipService, appFailureFromConnect, type AppFailure } from '@/shared/api'
 import { POLL_INTERVAL_MS } from '@/shared/config'
-import { clipModelsReady, clipQuoteBinding, readyClipBatch } from '../model/preconditions'
+import {
+  clipModelsReady,
+  clipQuoteBinding,
+  readyClipBatch,
+  selectedClipStatus,
+  type ClipEligibilityState,
+} from '../model/preconditions'
 
 interface Ownership {
   begin(batchId: string): boolean
@@ -30,6 +43,10 @@ const DEFINITE_REFUSALS = new Set([
   'CLIP_QUOTE_EXPIRED',
   'CLIP_MODEL_PRICING_UNAVAILABLE',
   'CLIP_MODEL_INPUT_UNSUPPORTED',
+  'CLIP_MODEL_VIDEO_INPUT_ABSENT',
+  'CLIP_MODEL_INLINE_ENDPOINT_UNAVAILABLE',
+  'CLIP_MODEL_REQUIRED_PARAMETERS_UNSUPPORTED',
+  'CLIP_MODEL_PRICE_CEILING_UNAVAILABLE',
   'CLIP_SOURCE_UNAVAILABLE',
   'CLIP_NOT_FOUND',
   'CLIP_INVALID_INPUT',
@@ -47,6 +64,35 @@ export function useGenerateClip(ownerId: string, project: ClipProject, ownedJobI
   const observe = useStageSelection('observe')
   const write = useStageSelection('write')
   const selectionPending = useSelectionSavePending()
+  const { t } = useTranslation('clips')
+  // T111's live answer for every registered observe model. It is the authority for THIS
+  // workflow: the picker greys what it refuses, the action closes while it is loading or
+  // failed, and a quote is bound to the status it was read under.
+  const eligibilityQuery = useClipAnalysisEligibility(ownerId)
+  const eligibility: ClipEligibilityState = eligibilityQuery.isError
+    ? { kind: 'failed' }
+    : eligibilityQuery.data
+      ? { kind: 'ready', rows: eligibilityQuery.data }
+      : { kind: 'loading' }
+  const observeStatus = selectedClipStatus(eligibility, observe.selected)
+  const availability: ModelAvailability =
+    eligibility.kind === 'ready'
+      ? {
+          kind: 'ready',
+          resolve: (ref) => {
+            const status = selectedClipStatus(eligibility, ref)
+            if (status === 'eligible') return { usable: true }
+            return {
+              usable: false,
+              reason: status
+                ? t(`generation.eligibility.reason.${status}`)
+                : t('generation.eligibility.unresolved'),
+            }
+          },
+        }
+      : eligibility.kind === 'failed'
+        ? { kind: 'failed', retry: () => void eligibilityQuery.refetch() }
+        : { kind: 'loading' }
   const [started, setStarted] = useState<{ id: string; previous?: string }>()
   const [localFailure, setLocalFailure] = useState<AppFailure>()
   const [uncertain, setUncertain] = useState<{
@@ -107,7 +153,7 @@ export function useGenerateClip(ownerId: string, project: ClipProject, ownedJobI
     !!uncertain ||
     (!!id && (!job || !isTerminal(job))) ||
     (!!project.latestJob && project.latestJob.id !== id && !isTerminal(project.latestJob))
-  const modelsReady = !selectionPending && clipModelsReady(observe, write)
+  const modelsReady = !selectionPending && clipModelsReady(observe, write, eligibility)
   const resolution = useQuery({
     queryKey: ['clip-start-resolution', transport, ownerId, project.id, uncertain?.batchId],
     enabled: !!uncertain,
@@ -212,7 +258,8 @@ export function useGenerateClip(ownerId: string, project: ClipProject, ownedJobI
       return
     }
     if (
-      quote.binding !== clipQuoteBinding(project, batch, observe.selected, write.selected) ||
+      quote.binding !==
+        clipQuoteBinding(project, batch, observe.selected, write.selected, observeStatus) ||
       Date.parse(quote.expiresAt) <= Date.now()
     ) {
       setLocalFailure({ reason: 'CLIP_QUOTE_EXPIRED', params: {} })
@@ -255,6 +302,9 @@ export function useGenerateClip(ownerId: string, project: ClipProject, ownedJobI
     job,
     busy,
     modelsReady,
+    availability,
+    eligibility,
+    observeStatus,
     accounting,
     observeRef: observe.selected,
     writeRef: write.selected,

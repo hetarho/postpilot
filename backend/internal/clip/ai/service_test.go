@@ -99,8 +99,15 @@ func (f *fakeSizer) CardElements(_ context.Context, plan clip.EditPlan) (clip.Ma
 	}, nil
 }
 
+// structuredFixture is what testPolicy freezes as the request's schema
+// presence; newService sets it from the model it fakes, the way FreezeCall reads
+// the catalog, so fixtures built after newService describe the same request.
+var structuredFixture = true
+
 func newService(t *testing.T, raw string, structured bool) (*ai.Service, *fakeModels, *fakeSizer) {
 	t.Helper()
+	structuredFixture = structured
+	t.Cleanup(func() { structuredFixture = true })
 	f := &fakeModels{info: llm.ModelInfo{Vision: true, VideoInput: true, VideoDelivery: llm.VideoDelivery{InlineStaticVideo: true}, StructuredOutput: structured, Stages: []string{llm.StageNameObserve, llm.StageNameWrite}}, response: llm.Response{Text: raw, Usage: llm.Usage{CompletionTokens: 100, PromptTokens: 200, CostReported: true, CostMicrousd: 10}}}
 	c := &fakeSizer{}
 	cfg := config.ClipAI(&config.Config{LLMReasoning: config.LLMReasoningPolicy{Observe: llm.ReasoningLow, Write: llm.ReasoningLow}})
@@ -124,7 +131,7 @@ func testPolicy(stage string) llm.CallPolicy {
 	if stage == "write" {
 		delivery, budget = llm.ExecutionTextOnly, 32768
 	}
-	return llm.CallPolicy{Ref: testRef(), Stage: stage, CompletionTokens: budget, Reasoning: llm.ReasoningLow, InputUSDPerMillion: "1", OutputUSDPerMillion: "2", Pricing: llm.CallPricing{Version: 1, Fingerprint: strings.Repeat("a", 64), Delivery: delivery, PromptUSDPerMillion: "1", CompletionUSDPerMillion: "2", RequestUSD: "0", ImageUSD: "0", AudioUSDPerToken: "0"}}
+	return llm.CallPolicy{Ref: testRef(), Stage: stage, CompletionTokens: budget, Reasoning: llm.ReasoningLow, StructuredOutput: structuredFixture, InputUSDPerMillion: "1", OutputUSDPerMillion: "2", Pricing: llm.CallPricing{Version: llm.CallPricingVersion, Fingerprint: strings.Repeat("a", 64), Delivery: delivery, Endpoint: "leaf", RequiredParameters: "max_tokens,reasoning,response_format,structured_outputs", PromptUSDPerMillion: "1", CompletionUSDPerMillion: "2", RequestUSD: "0", ImageUSD: "0", AudioUSDPerToken: "0"}}
 }
 func observation() map[string]any {
 	return map[string]any{"source_id": "source", "chunk_index": 1, "segments": []any{map[string]any{"start_ms": 0, "end_ms": 5000, "event": "음식을 담는다", "subjects": []string{"접시"}, "speech": "", "quality": "steady and sharp", "focal": map[string]any{"x": .5, "y": .5}, "scene": "food", "readable_text": false, "subject": map[string]any{"x": .2, "y": .6, "width": .6, "height": .3}}}}
@@ -491,7 +498,7 @@ func TestFailuresKeepStageUsageAndTruncationWithoutFallback(t *testing.T) {
 	}
 }
 func TestModelGatesAndInputValidationPrecedeNetwork(t *testing.T) {
-	for _, mode := range []string{"no video", "no vision", "no inline", "wrong purpose", "disabled", "bad chunk", "bad inline", "missing policy", "missing answer", "duplicate source"} {
+	for _, mode := range []string{"no video", "no vision", "schema capability lost", "wrong purpose", "disabled", "bad chunk", "bad inline", "missing policy", "missing answer", "duplicate source"} {
 		t.Run(mode, func(t *testing.T) {
 			s, f, _ := newService(t, raw(observation()), true)
 			in := chunk()
@@ -501,8 +508,9 @@ func TestModelGatesAndInputValidationPrecedeNetwork(t *testing.T) {
 				f.info.VideoInput = false
 			case "no vision":
 				f.info.Vision = false
-			case "no inline":
-				f.info.VideoDelivery.InlineStaticVideo = false
+			case "schema capability lost":
+				// The frozen policy says a schema goes; the model no longer takes one.
+				f.info.StructuredOutput = false
 			case "missing policy":
 				in.Policy = llm.CallPolicy{}
 			case "wrong purpose":
@@ -527,7 +535,17 @@ func TestModelGatesAndInputValidationPrecedeNetwork(t *testing.T) {
 			if err == nil || len(f.calls) != 0 {
 				t.Fatal("invalid admission called provider")
 			}
+			// The raw modality is the clip context's one admission answer here; a
+			// delivery-profile flag is nobody's gate any more (CLIP-30).
+			if mode == "no video" && !errors.Is(err, llm.ErrVideoInputAbsent) {
+				t.Fatalf("no video = %v", err)
+			}
 		})
+	}
+	s, f, _ := newService(t, raw(observation()), true)
+	f.info.VideoDelivery.InlineStaticVideo = false
+	if _, _, err := s.ObserveChunk(t.Context(), testRef(), chunk()); err != nil || len(f.calls) != 1 {
+		t.Fatalf("a model outside the static-processing profile was refused by flag: %v", err)
 	}
 }
 
@@ -618,6 +636,7 @@ func TestPlanTwentySourcesNinetySecondsAndDistinctRangeReuse(t *testing.T) {
 	}
 	v["cuts"] = cuts
 	s, f, _ := newService(t, raw(v), false)
+	in.Policy = testPolicy("write")
 	got, _, err := s.Plan(t.Context(), testRef(), in)
 	if err != nil || got.DurationMS != 90000 || len(got.Cuts) != 50 || got.Cuts[0].OriginalVolume() != 0 || got.Cuts[1].OriginalVolume() != 1 || len(f.calls) != 1 || f.calls[0].MaxTokens != 32768 {
 		t.Fatalf("%+v %v", got, err)
@@ -641,6 +660,7 @@ func TestStrictFieldsSilentSpeechCancellationAndCaptionFailure(t *testing.T) {
 			seg["focal"].(map[string]any)["x"] = nil
 		}
 		s, _, _ := newService(t, raw(v), false)
+		in.Policy = testPolicy("observe")
 		if _, _, err := s.ObserveChunk(t.Context(), testRef(), in); !errors.Is(err, llm.ErrBadOutput) {
 			t.Fatalf("%s: %v", mode, err)
 		}

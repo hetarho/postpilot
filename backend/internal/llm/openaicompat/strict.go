@@ -22,9 +22,15 @@ type strictLimits struct {
 
 var clipLimits = strictLimits{8 << 20, 12 << 20, 1 << 20, 4 << 20, 1 << 20}
 
-// Documented profiles only. The raw modality remains untouched. In particular,
-// Gemini accepts inline MP4, but its URL support is YouTube-only (AI Studio), or
-// absent (Vertex): neither is an ordinary signed object URL. See testdata/README.md.
+// VideoDelivery is the adapter's documented delivery PROFILES, not clip
+// admission: InlineStaticVideo names the one profile (Gemini through OpenRouter)
+// whose `processing: static` mode is documented, so the strict request selects
+// fixed-rate sampling there and sends no processing control anywhere else
+// (CLIP-43). Whether a model may analyse clips at all is decided by
+// FreezePricing against its current endpoint document (CLIP-30); this flag never
+// admits or refuses one. Gemini's URL support is YouTube-only (AI Studio) or
+// absent (Vertex), so no profile enables ordinary signed object URLs.
+// See testdata/README.md.
 func (c *Client) VideoDelivery(model string) llm.VideoDelivery {
 	return llm.VideoDelivery{InlineStaticVideo: c.reasoningFormat == "openrouter" && strings.HasPrefix(model, "google/gemini-") && strictModelID.MatchString(model)}
 }
@@ -71,7 +77,10 @@ func (c *Client) strictEnvelope(req llm.Request, endpoint string, limits strictL
 	if metadata > limits.MetadataBytes {
 		return nil, nil, llm.ErrUnsupported
 	}
-	if video != nil && (video.Size > limits.InlineBytes || !c.VideoDelivery(req.Model).InlineStaticVideo) {
+	// The frozen policy already proved the leaf takes the bounded inline part;
+	// only the size bound is re-read here. Matches above pinned exactly one part
+	// for inline delivery and none otherwise.
+	if video != nil && video.Size > limits.InlineBytes {
 		return nil, nil, llm.ErrUnsupported
 	}
 	// Bound unencoded text/schema bytes conservatively within the input allowance.
@@ -86,7 +95,10 @@ func (c *Client) strictEnvelope(req llm.Request, endpoint string, limits strictL
 	}
 	wire := c.buildRequest(req)
 	prices := policy.Call.Pricing
-	wire.Provider = &strictRouting{RequireParameters: true, Only: []string{endpoint}, Order: []string{endpoint}, MaxPrice: strictPrices{
+	// One leaf, named twice so an account-wide provider list cannot widen it,
+	// fallbacks off and parameter filtering on: the request goes to the qualified
+	// route or nowhere (QUOTA-44, QUOTA-47).
+	wire.Provider = &strictRouting{AllowFallbacks: false, RequireParameters: true, Only: []string{endpoint}, Order: []string{endpoint}, MaxPrice: strictPrices{
 		Prompt: wirePrice(prices.PromptUSDPerMillion), Completion: wirePrice(prices.CompletionUSDPerMillion),
 		Request: wirePrice(prices.RequestUSD), Image: wirePrice(prices.ImageUSD), Audio: wirePrice(prices.AudioUSDPerToken),
 	}}
@@ -209,6 +221,12 @@ func sanitizedStrictError(err error) error {
 	var truncated *llm.TruncatedError
 	if errors.As(err, &truncated) {
 		return truncated
+	}
+	// The four admission failures are fixed sentences that carry nothing from the
+	// provider; the clip context reads them for its product reasons.
+	var admission *llm.AdmissionError
+	if errors.As(err, &admission) {
+		return admission
 	}
 	var provider *llm.ProviderError
 	if errors.As(err, &provider) {

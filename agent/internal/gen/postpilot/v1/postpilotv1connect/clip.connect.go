@@ -84,6 +84,9 @@ const (
 	// ClipServiceDiscardClipSourceBatchProcedure is the fully-qualified name of the ClipService's
 	// DiscardClipSourceBatch RPC.
 	ClipServiceDiscardClipSourceBatchProcedure = "/postpilot.v1.ClipService/DiscardClipSourceBatch"
+	// ClipServiceListClipAnalysisEligibilityProcedure is the fully-qualified name of the ClipService's
+	// ListClipAnalysisEligibility RPC.
+	ClipServiceListClipAnalysisEligibilityProcedure = "/postpilot.v1.ClipService/ListClipAnalysisEligibility"
 )
 
 // ClipServiceClient is a client for the postpilot.v1.ClipService service.
@@ -105,6 +108,9 @@ type ClipServiceClient interface {
 	CreateClipSourceBatch(context.Context, *connect.Request[v1.CreateClipSourceBatchRequest]) (*connect.Response[v1.CreateClipSourceBatchResponse], error)
 	ConfirmClipSource(context.Context, *connect.Request[v1.ConfirmClipSourceRequest]) (*connect.Response[v1.ConfirmClipSourceResponse], error)
 	DiscardClipSourceBatch(context.Context, *connect.Request[v1.DiscardClipSourceBatchRequest]) (*connect.Response[v1.DiscardClipSourceBatchResponse], error)
+	// Read-only: every registered observe model with its current clip-analysis
+	// eligibility (CLIP-30, CLIP-44). No model call, no write, no provider detail.
+	ListClipAnalysisEligibility(context.Context, *connect.Request[v1.ListClipAnalysisEligibilityRequest]) (*connect.Response[v1.ListClipAnalysisEligibilityResponse], error)
 }
 
 // NewClipServiceClient constructs a client for the postpilot.v1.ClipService service. By default, it
@@ -220,28 +226,35 @@ func NewClipServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(clipServiceMethods.ByName("DiscardClipSourceBatch")),
 			connect.WithClientOptions(opts...),
 		),
+		listClipAnalysisEligibility: connect.NewClient[v1.ListClipAnalysisEligibilityRequest, v1.ListClipAnalysisEligibilityResponse](
+			httpClient,
+			baseURL+ClipServiceListClipAnalysisEligibilityProcedure,
+			connect.WithSchema(clipServiceMethods.ByName("ListClipAnalysisEligibility")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // clipServiceClient implements ClipServiceClient.
 type clipServiceClient struct {
-	saveClipEditPlan       *connect.Client[v1.SaveClipEditPlanRequest, v1.SaveClipEditPlanResponse]
-	startClipRender        *connect.Client[v1.StartClipRenderRequest, v1.StartClipRenderResponse]
-	startClipGeneration    *connect.Client[v1.StartClipGenerationRequest, v1.StartClipGenerationResponse]
-	quoteClipGeneration    *connect.Client[v1.QuoteClipGenerationRequest, v1.QuoteClipGenerationResponse]
-	listVideoTemplates     *connect.Client[v1.ListVideoTemplatesRequest, v1.ListVideoTemplatesResponse]
-	createVideoTemplate    *connect.Client[v1.CreateVideoTemplateRequest, v1.CreateVideoTemplateResponse]
-	updateVideoTemplate    *connect.Client[v1.UpdateVideoTemplateRequest, v1.UpdateVideoTemplateResponse]
-	deleteVideoTemplate    *connect.Client[v1.DeleteVideoTemplateRequest, v1.DeleteVideoTemplateResponse]
-	seedPresetFields       *connect.Client[v1.SeedPresetFieldsRequest, v1.SeedPresetFieldsResponse]
-	listClipProjects       *connect.Client[v1.ListClipProjectsRequest, v1.ListClipProjectsResponse]
-	createClipProject      *connect.Client[v1.CreateClipProjectRequest, v1.CreateClipProjectResponse]
-	getClipProject         *connect.Client[v1.GetClipProjectRequest, v1.GetClipProjectResponse]
-	updateClipProject      *connect.Client[v1.UpdateClipProjectRequest, v1.UpdateClipProjectResponse]
-	deleteClipProject      *connect.Client[v1.DeleteClipProjectRequest, v1.DeleteClipProjectResponse]
-	createClipSourceBatch  *connect.Client[v1.CreateClipSourceBatchRequest, v1.CreateClipSourceBatchResponse]
-	confirmClipSource      *connect.Client[v1.ConfirmClipSourceRequest, v1.ConfirmClipSourceResponse]
-	discardClipSourceBatch *connect.Client[v1.DiscardClipSourceBatchRequest, v1.DiscardClipSourceBatchResponse]
+	saveClipEditPlan            *connect.Client[v1.SaveClipEditPlanRequest, v1.SaveClipEditPlanResponse]
+	startClipRender             *connect.Client[v1.StartClipRenderRequest, v1.StartClipRenderResponse]
+	startClipGeneration         *connect.Client[v1.StartClipGenerationRequest, v1.StartClipGenerationResponse]
+	quoteClipGeneration         *connect.Client[v1.QuoteClipGenerationRequest, v1.QuoteClipGenerationResponse]
+	listVideoTemplates          *connect.Client[v1.ListVideoTemplatesRequest, v1.ListVideoTemplatesResponse]
+	createVideoTemplate         *connect.Client[v1.CreateVideoTemplateRequest, v1.CreateVideoTemplateResponse]
+	updateVideoTemplate         *connect.Client[v1.UpdateVideoTemplateRequest, v1.UpdateVideoTemplateResponse]
+	deleteVideoTemplate         *connect.Client[v1.DeleteVideoTemplateRequest, v1.DeleteVideoTemplateResponse]
+	seedPresetFields            *connect.Client[v1.SeedPresetFieldsRequest, v1.SeedPresetFieldsResponse]
+	listClipProjects            *connect.Client[v1.ListClipProjectsRequest, v1.ListClipProjectsResponse]
+	createClipProject           *connect.Client[v1.CreateClipProjectRequest, v1.CreateClipProjectResponse]
+	getClipProject              *connect.Client[v1.GetClipProjectRequest, v1.GetClipProjectResponse]
+	updateClipProject           *connect.Client[v1.UpdateClipProjectRequest, v1.UpdateClipProjectResponse]
+	deleteClipProject           *connect.Client[v1.DeleteClipProjectRequest, v1.DeleteClipProjectResponse]
+	createClipSourceBatch       *connect.Client[v1.CreateClipSourceBatchRequest, v1.CreateClipSourceBatchResponse]
+	confirmClipSource           *connect.Client[v1.ConfirmClipSourceRequest, v1.ConfirmClipSourceResponse]
+	discardClipSourceBatch      *connect.Client[v1.DiscardClipSourceBatchRequest, v1.DiscardClipSourceBatchResponse]
+	listClipAnalysisEligibility *connect.Client[v1.ListClipAnalysisEligibilityRequest, v1.ListClipAnalysisEligibilityResponse]
 }
 
 // SaveClipEditPlan calls postpilot.v1.ClipService.SaveClipEditPlan.
@@ -329,6 +342,11 @@ func (c *clipServiceClient) DiscardClipSourceBatch(ctx context.Context, req *con
 	return c.discardClipSourceBatch.CallUnary(ctx, req)
 }
 
+// ListClipAnalysisEligibility calls postpilot.v1.ClipService.ListClipAnalysisEligibility.
+func (c *clipServiceClient) ListClipAnalysisEligibility(ctx context.Context, req *connect.Request[v1.ListClipAnalysisEligibilityRequest]) (*connect.Response[v1.ListClipAnalysisEligibilityResponse], error) {
+	return c.listClipAnalysisEligibility.CallUnary(ctx, req)
+}
+
 // ClipServiceHandler is an implementation of the postpilot.v1.ClipService service.
 type ClipServiceHandler interface {
 	SaveClipEditPlan(context.Context, *connect.Request[v1.SaveClipEditPlanRequest]) (*connect.Response[v1.SaveClipEditPlanResponse], error)
@@ -348,6 +366,9 @@ type ClipServiceHandler interface {
 	CreateClipSourceBatch(context.Context, *connect.Request[v1.CreateClipSourceBatchRequest]) (*connect.Response[v1.CreateClipSourceBatchResponse], error)
 	ConfirmClipSource(context.Context, *connect.Request[v1.ConfirmClipSourceRequest]) (*connect.Response[v1.ConfirmClipSourceResponse], error)
 	DiscardClipSourceBatch(context.Context, *connect.Request[v1.DiscardClipSourceBatchRequest]) (*connect.Response[v1.DiscardClipSourceBatchResponse], error)
+	// Read-only: every registered observe model with its current clip-analysis
+	// eligibility (CLIP-30, CLIP-44). No model call, no write, no provider detail.
+	ListClipAnalysisEligibility(context.Context, *connect.Request[v1.ListClipAnalysisEligibilityRequest]) (*connect.Response[v1.ListClipAnalysisEligibilityResponse], error)
 }
 
 // NewClipServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -459,6 +480,12 @@ func NewClipServiceHandler(svc ClipServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(clipServiceMethods.ByName("DiscardClipSourceBatch")),
 		connect.WithHandlerOptions(opts...),
 	)
+	clipServiceListClipAnalysisEligibilityHandler := connect.NewUnaryHandler(
+		ClipServiceListClipAnalysisEligibilityProcedure,
+		svc.ListClipAnalysisEligibility,
+		connect.WithSchema(clipServiceMethods.ByName("ListClipAnalysisEligibility")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/postpilot.v1.ClipService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ClipServiceSaveClipEditPlanProcedure:
@@ -495,6 +522,8 @@ func NewClipServiceHandler(svc ClipServiceHandler, opts ...connect.HandlerOption
 			clipServiceConfirmClipSourceHandler.ServeHTTP(w, r)
 		case ClipServiceDiscardClipSourceBatchProcedure:
 			clipServiceDiscardClipSourceBatchHandler.ServeHTTP(w, r)
+		case ClipServiceListClipAnalysisEligibilityProcedure:
+			clipServiceListClipAnalysisEligibilityHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -570,4 +599,8 @@ func (UnimplementedClipServiceHandler) ConfirmClipSource(context.Context, *conne
 
 func (UnimplementedClipServiceHandler) DiscardClipSourceBatch(context.Context, *connect.Request[v1.DiscardClipSourceBatchRequest]) (*connect.Response[v1.DiscardClipSourceBatchResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipService.DiscardClipSourceBatch is not implemented"))
+}
+
+func (UnimplementedClipServiceHandler) ListClipAnalysisEligibility(context.Context, *connect.Request[v1.ListClipAnalysisEligibilityRequest]) (*connect.Response[v1.ListClipAnalysisEligibilityResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipService.ListClipAnalysisEligibility is not implemented"))
 }
