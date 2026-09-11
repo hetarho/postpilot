@@ -204,7 +204,19 @@ func (h *Handler) ListClipProjects(ctx context.Context, req *connect.Request[v1.
 	}
 	out := make([]*v1.ClipProject, 0, len(values))
 	for _, v := range values {
-		out = append(out, projectProto(v))
+		p := projectProto(v)
+		// The directory badges a running generation and a failed attempt (CLIP-41), so each row
+		// carries its latest job the way the detail does. One indexed read per project, as the
+		// post list does for its own active job; `editing`, `accounting` and `latest_attempt`
+		// stay detail-only.
+		if h.jobs != nil {
+			j, err := h.jobs.LatestForClip(ctx, user, v.ID)
+			if err != nil {
+				return nil, toConnectError(err)
+			}
+			p.LatestJob = jobrpc.ToProto(j)
+		}
+		out = append(out, p)
 	}
 	return connect.NewResponse(&v1.ListClipProjectsResponse{Projects: out}), nil
 }
