@@ -14,18 +14,18 @@
 | AUTH | 5 | 5 | - | 0 |
 | QUOTA | 9 | 9 | - | 0 |
 | POST | 5 | 5 | - | 0 |
-| VOICE | 2 | 2 | - | 1 |
-| GEN | 5 | 5 | - | 0 |
+| VOICE | 3 | 3 | - | 1 |
+| GEN | 6 | 6 | - | 0 |
 | MODEL | 9 | 9 | - | 0 |
-| TMPL | 4 | 4 | - | 1 |
+| TMPL | 5 | 5 | - | 1 |
 | GUIDE | 2 | 2 | - | 0 |
 | EXPORT | 2 | 2 | - | 0 |
 | PUB | 4 | 4 | - | 0 |
-| LANG | 2 | 2 | - | 0 |
-| THEME | 9 | 9 | - | 0 |
+| LANG | 3 | 3 | - | 0 |
+| THEME | 10 | 10 | - | 0 |
 | MKT | 4 | 4 | - | 0 |
 | VIDEO | 2 | 2 | - | 1 |
-| CLIP | 3 | 3 | - | 0 |
+| CLIP | 4 | 4 | - | 0 |
 | BILL | 4 | 4 | - | 0 |
 
 ## review
@@ -39,27 +39,22 @@
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 
 ## next
-- Clip generation through T096 is complete: actual owner-original reproduction, generated MP4, queued app regression, local/remote CI and exact production rollout verified; no further paid verification is needed (cumulative USD 0.020052)
-- the MODEL r9 level series (T092–T095) is complete and `/recomend-models` emits graded lines; nothing further owed on it
+- the CLIP r4 + THEME r10 unification is complete (T097–T101), so `ClipTemplateEditor` is free: the CDS task that adds the category preset and the four styles builds on its new shape rather than waiting on it
 - T008 needs the owner present: re-read its base at PUB@4 · ARCH@2 first (it still says PUB@2 ARCH@1), then BEFORE `install` the owner must re-run `postpilot-agent setup` so the connection records driver signature smarteditor-one-20260910-a6, and the queued `20260905-test` job must be canceled or deliberately used as the smoke's own job; once it closes, update-ssot PUB for VIDEO-17 + TMPL-39
 ## log
+- 260911 T101 done (tpl); 영상 템플릿 목록·상세가 글 템플릿 화면 모양으로, 삭제는 행으로 옮기며 연결 해제 수를 삭제 전에 경고; `clipDetachedCount` 라우터 상태 제거; locale parity 테스트가 en 누락을 잡음
+- 260911 T101 claimed (tpl); the dsgn session confirmed no CDS code task exists and is touching no code, so this takes `ClipTemplateEditor.tsx` first
+- 260911 T100 done (dir); `/clips` takes the post list's rows, badge, relative time and URL-carried search/filter; `ListControls` lifted into `shared/ui` and `filter-posts` rewired onto it unchanged; the badge reads the job first, the filter reads the state only
+- 260911 T100 claimed (dir)
+- 260911 T099 done (list); the list answer fills `latest_job` per project through the same port the detail uses, detail-only fields untouched; test in `clip/store`'s harness because `h.jobs` is a concrete queue, not a port; BE gate green, no proto change
+- 260911 T099 claimed (list)
+- 260911 T098 done (auto); module-level per-project settings queue (debounce, latest-wins, backoff, no retry on a repeatable refusal), 저장 버튼·dirty 게이트·이탈 다이얼로그 제거, `클립 만들기`만 `/clips/new`에 남음; `useSaveStatus`는 ARCH-18 때문에 shared로 못 가고 순수 부분만 `shared/lib/save-state`로
+- 260911 T098 claimed (auto)
+- 260911 T097 done (wksp); three steps from durable state, editor top row, one status region with CLIP-38's precedence, one dock per step, delete as its own slice; the bar follows the project's state and a failed attempt opens on its retry step, and the unsaved-correction guard moved up to the page; full FE gate green
+- 260911 T097 claimed (wksp)
+- 260911 create-task CLIP THEME merged (unif); a parallel session's CLIP r5 + CDS r1 landed mid-run in the shared tree, so T097..T101 were rebased to CLIP@5 and T101 took `ClipTemplateEditor` first; this commit carries the r4 delta only — the r5 ✎ lines and the CDS rows stay with that session
+- 260911 create-task CLIP THEME done (unif); r4+r10 → T097 workspace shape · T098 settings autosave · T099 BE list latest job · T100 `/clips` rows and narrowing · T101 영상 템플릿 screens; CLIP tasked=4, THEME tasked=10; no proto change and CLIP-9's fixed ratio untouched
+- 260911 create-task CLIP THEME start (unif); CLIP r4 delta CLIP-36+ 37+ 38+ 39+ 40+ 41+ 42+ CLIP-17✎ and THEME r10 THEME-39+
+- 260911 update-ssot CLIP THEME done (unif); THEME-39 makes the lifecycle shape a product rule, CLIP r4 adopts it on all five clip surfaces; owner chose 3 steps, autosave, the full post list and the 영상 템플릿 screens in scope, with 클립 만들기 kept on `/clips/new` so CLIP-9's fixed ratio and the BE's ratio-less patch stand
+- 260911 update-ssot CLIP THEME start (unif); the clip working surface and directory diverge from the post editor's step bar, one status region, one dock and row shape
 - 260911 T096 done; original failure reproduced and fixed by bounded deterministic timeline compilation; real 15s MP4 and authenticated queue/storage/download verified; e850fa8 pushed, CI 34549381300 and deployment 34549381321 pass, exact production image healthy; reported paid total USD 0.020052
-- 260911 T096 functional fix verified (fix); eight actual observations succeeded, composition reproduced invalid caption exposure and 12700ms/15200ms arithmetic mismatch; bounded local timeline compilation renders a real 15s Korean-captioned MP4, offline authenticated queue/storage/download regression passes; actual paid aggregate USD 0.020052, no retry
-- 260911 T096 resumed (fix); owner supplied the exact eight failed videos and requested actual generation testing; keep cumulative paid verification strictly below USD 0.10, preserve private captures outside git, complete the functional fix rather than diagnostics alone
-- 260911 recomend-models re-taught (tier); its tiers are now the product's four levels and the paste block emits `<id> <level>`; 최고성능 split into 고급/최고 so `premium` is reachable
-- 260911 T096 delivery requested (fix); commit/push diagnostics and verified regressions while keeping original-failure reproduction blocked; rerun local gates, preserve unrelated uncommitted edits, no paid calls
-- 260911 T094 done; 등급 Listbox + unset mark per registration, 등급순 sort, 등급 변경 diff group; canApply now counts a relevel, since a re-grade-only document was previewable but not committable
-- 260911 T096 blocked recheck (fix); same production plan failure with no raw output; two T094 test files now pass but web build has concurrent fixture type errors; remote main unchanged, original input still needed, paid total unchanged USD 0.011057
-- 260911 T096 blocked (fix); actual failed output unavailable and synthetic cases succeed, requested original input; paid total USD 0.011057, no more calls; BE/agent/race/media/codegen pass, concurrent T094 FE gates non-green; no T096 commit/push
-- 260911 T094 claimed (lvl)
-- 260911 T095 done; per-stage grade on CatalogModel, ordering composed into filterForStage so all three selector call sites share it, grade leads every option label; full FE gate passes
-- 260911 T095 claimed (lvl)
-- 260911 T093 done; `<id> [level]` grammar, relevel preview, level-aware sync/export; tightened looksLikeModelID to need a slash so a bullet is malformed_line again, not unknown_level
-- 260911 T096 working (fix); owner caps all additional paid verification strictly below USD 0.10, reserve each next call before dispatch and retain unknown usage at its maximum; multi-source and safe diagnostic regressions pass
-- 260911 T093 claimed (lvl)
-- 260911 T092 done; level column 0040, per-registration domain/store/RPC and the stage-keyed llm+ModelInfo wire; ARCH-26 and gen idempotence pass, FE untouched and still builds
-- 260911 T091 delivered (fix); 2d484e8 pushed, CI https://github.com/hetarho/postpilot/actions/runs/34506698657 and rollout https://github.com/hetarho/postpilot/actions/runs/34506698910 pass; exact production image running, /health ok, restarts=0 and OOM=false; no further paid call or user-media replay
-- 260911 T092 claimed (lvl); chaining T092→T093→T095→T094, commit per task on main
-- 260911 create-task MODEL done (tier); r9 → T092 BE column+wire · T093 BE document · T095 FE selectors · T094 FE admin; MODEL tasked=9
-- 260911 T091 done (fix); corrected constrained output schemas, actual observation/planning and 15s Korean-captioned MP4 passed; all local gates/races green, reported test cost USD 0.003055 and conservative total USD 0.056321 within approval; no commit/push/deploy
-- 260911 create-task MODEL start (tier); r9 delta MODEL-57+ 58+ 59+ and the eight ✎ lines
