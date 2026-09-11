@@ -35,7 +35,10 @@ var AnchorOrder = []string{"top", "upper_mid", "lower_mid", "bottom"}
 var ElementKinds = []string{"copy", "plate", "bar", "highlight", "badge", "chip", "card", "chip-category", "scrim"}
 
 type Element struct {
-	Cut              int
+	Cut int
+	// Which of the cut's copies this element belongs to (CDS-43): 0 for the one
+	// copy a cut usually carries, and for every piece of furniture.
+	Copy             int
 	Kind             string // one of ElementKinds
 	Style            string
 	Anchor           string
@@ -108,7 +111,9 @@ func Verify(m Manifest, ratio string) error {
 	if !ok {
 		return ViolationSafeArea
 	}
-	lines := map[int]int{}
+	// A cut may carry two copies (CDS-43), so every per-caption rule is keyed by
+	// the copy, not by the cut it sits on.
+	lines := map[slot]int{}
 	for _, e := range m {
 		if !slices.Contains(ElementKinds, e.Kind) {
 			return ViolationKind
@@ -166,10 +171,10 @@ func Verify(m Manifest, ratio string) error {
 		if Chars(e.Text) > style.Chars {
 			return ViolationSize
 		}
-		lines[e.Cut]++
+		lines[slotOf(e)]++
 	}
-	for cut, n := range lines {
-		if n > Styles[styleOfCut(m, cut)].Lines {
+	for at, n := range lines {
+		if n > Styles[styleOf(m, at)].Lines {
 			return ViolationSize
 		}
 	}
@@ -241,8 +246,20 @@ func sameElement(a, b Element) bool {
 	if a.Cut != b.Cut {
 		return false
 	}
-	return (caption(a) && caption(b)) || (cardPart(a) && cardPart(b))
+	// Two copies of ONE cut are two elements, not one: CDS-43 keeps them apart
+	// in time, and if they ever shared a window they would have to be checked
+	// against each other like anything else.
+	if caption(a) && caption(b) {
+		return a.Copy == b.Copy
+	}
+	return cardPart(a) && cardPart(b)
 }
+
+// slot names one caption of one cut, which is the scope every per-caption rule
+// is read on (CDS-43).
+type slot struct{ Cut, Copy int }
+
+func slotOf(e Element) slot { return slot{e.Cut, e.Copy} }
 
 // cardPart is the card plate itself, its category chip or one of its own lines.
 func cardPart(e Element) bool {
@@ -297,9 +314,9 @@ func verifyDisclosure(m Manifest, duration int) error {
 
 // The badge is its own layer and a chip carries no style, so neither answers for
 // the cut it happens to sit on.
-func styleOfCut(m Manifest, cut int) string {
+func styleOf(m Manifest, at slot) string {
 	for _, e := range m {
-		if e.Cut == cut && caption(e) {
+		if slotOf(e) == at && caption(e) {
 			return e.Style
 		}
 	}
@@ -308,21 +325,29 @@ func styleOfCut(m Manifest, cut int) string {
 
 // The per-clip rules of CDS-38 and CDS-40, read off the cut order.
 func verifySequence(m Manifest) error {
-	cuts := []int{}
-	style, anchor := map[int]string{}, map[int]string{}
+	cuts := []slot{}
+	style, anchor := map[slot]string{}, map[slot]string{}
 	for _, e := range m {
 		if !caption(e) {
 			continue
 		}
-		if _, seen := style[e.Cut]; !seen {
-			cuts = append(cuts, e.Cut)
-			style[e.Cut], anchor[e.Cut] = e.Style, e.Anchor
+		at := slotOf(e)
+		if _, seen := style[at]; !seen {
+			cuts = append(cuts, at)
+			style[at], anchor[at] = e.Style, e.Anchor
 		}
-		if style[e.Cut] != e.Style || anchor[e.Cut] != e.Anchor {
+		if style[at] != e.Style || anchor[at] != e.Anchor {
 			return ViolationFrequency
 		}
 	}
-	slices.Sort(cuts)
+	// In clip order: a cut's second copy follows its first, and CDS-40's run and
+	// CDS-38's step are read over that sequence.
+	slices.SortFunc(cuts, func(a, b slot) int {
+		if a.Cut != b.Cut {
+			return a.Cut - b.Cut
+		}
+		return a.Copy - b.Copy
+	})
 	bold, run := 0, 0
 	for i, cut := range cuts {
 		if style[cut] == "bold" {

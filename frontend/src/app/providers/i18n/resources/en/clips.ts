@@ -69,6 +69,11 @@ export const clips = {
     rangeError: 'Keep start before end within the source’s 0–{{max}} ms.',
     cutDurationError: 'Each cut must be longer than {{min}} ms.',
     transition: 'Join with the cut before',
+    addCopy: 'Add a caption',
+    removeCopy: 'Remove the second caption',
+    copyCountError:
+      'A cut carries at most two captions, and a second one only on a cut of 4 s or more.',
+    copyClassesError: 'The second caption states the number the first one describes.',
     transitions: { cut: 'Cut (no fade)', fade: 'Fade {{ms}} ms' },
     transitionError: 'The first cut always starts on a cut, and a join is either a cut or a fade.',
     captionWindowError: 'Keep the caption inside the cut, with start before end.',

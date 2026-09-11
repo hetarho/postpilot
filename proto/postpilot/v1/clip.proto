@@ -242,6 +242,8 @@ message ClipEditCut {
   string fingerprint = 3;
   int32 start_ms = 4;
   int32 end_ms = 5;
+  // The first copy, kept populated for one release so a client that has not
+  // moved to `copies` still shows the sentence. `copies` is the authority.
   ClipCaption copy = 6;
   int32 volume_permille = 7;
   // Reserved fact labels whose chips belong on this cut, at most two.
@@ -250,6 +252,9 @@ message ClipEditCut {
   // earns and 300 the fade-through-black nothing offers yet. The first cut of a
   // plan always carries 0.
   int32 transition_ms = 9;
+  // One copy, or the two CDS-43 lets a cut of 4 s or more carry in sequence: a
+  // description and then the number it leads to, never both on screen at once.
+  repeated ClipCaption copies = 10;
 }
 message ClipEditPlan {
   int32 duration_ms = 1;

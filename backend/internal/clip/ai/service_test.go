@@ -292,8 +292,8 @@ func TestRecordedLiveClipResponses(t *testing.T) {
 		t.Fatal(err)
 	}
 	cut := result.Cuts[0]
-	start, end := cut.CaptionWindow()
-	if result.DurationMS != 15000 || len(result.Cuts) != 3 || cut.Copy.Text != "영상 생성 확인" || start != 120 || end != 4880 {
+	start, end := cut.CaptionWindow(0)
+	if result.DurationMS != 15000 || len(result.Cuts) != 3 || cut.FirstCopy().Text != "영상 생성 확인" || start != 120 || end != 4880 {
 		t.Fatalf("unexpected plan: %+v", result)
 	}
 	// One scene throughout, so CDS-36 joins every boundary with a hard cut.
@@ -302,8 +302,8 @@ func TestRecordedLiveClipResponses(t *testing.T) {
 	}
 	// The recorded response named no style or position; the design system chose
 	// both from the scene and the sentence (CDS-39, CDS-40).
-	if cut.Copy.Style != "clean" || cut.Copy.Anchor != "bottom" || cut.Copy.Align != "center" || result.Decisions[0].Class != "FACT" {
-		t.Fatalf("placement was not the design system's: %+v %+v", cut.Copy, result.Decisions)
+	if cut.FirstCopy().Style != "clean" || cut.FirstCopy().Anchor != "bottom" || cut.FirstCopy().Align != "center" || result.Decisions[0].Class != "FACT" {
+		t.Fatalf("placement was not the design system's: %+v %+v", cut.FirstCopy(), result.Decisions)
 	}
 	if len(models.calls) != 3 || models.calls[0].MaxTokens != 8192 || models.calls[1].MaxTokens != 32768 {
 		t.Fatal("production budgets or call count changed")
@@ -361,7 +361,7 @@ func TestPlanIsGroundedMeasuredAndPreservesExactAnswers(t *testing.T) {
 		// Nothing here was chosen by the model: a noun-led sentence on a food
 		// close-up is 메모 by CDS-40, and 메모's own first candidate is TOP/LEFT
 		// (CDS-24) — which clears the subject box at the bottom of the frame.
-		if cut.Copy.Style != "memo" || cut.Copy.Align != "left" || cut.Copy.Anchor != "top" || cut.Fingerprint != in.Analyses[0].Source.Fingerprint || cut.Volume == nil || *cut.Volume != 1 {
+		if cut.FirstCopy().Style != "memo" || cut.FirstCopy().Align != "left" || cut.FirstCopy().Anchor != "top" || cut.Fingerprint != in.Analyses[0].Source.Fingerprint || cut.Volume == nil || *cut.Volume != 1 {
 			t.Fatalf("%+v", cut)
 		}
 		// 메모 has two candidate anchors (CDS-24), so the selector measures the
@@ -372,7 +372,7 @@ func TestPlanIsGroundedMeasuredAndPreservesExactAnswers(t *testing.T) {
 		}
 		// The window is CDS-27's, not the model's: cut start + 120 ms to cut end
 		// − 120 ms, which a zero start and end resolve to.
-		if start, end := cut.CaptionWindow(); start != 120 || end != 4880 {
+		if start, end := cut.CaptionWindow(0); start != 120 || end != 4880 {
 			t.Fatalf("caption window %d..%d", start, end)
 		}
 		request := f.calls[0]
@@ -391,7 +391,7 @@ func TestPlanIsGroundedMeasuredAndPreservesExactAnswers(t *testing.T) {
 		// decides, and the box only ever moves it off a subject (CDS-38).
 		in.Analyses[0].Segments[0].Subject = clip.Region{}
 		got, _, err = s.Plan(t.Context(), testRef(), in)
-		if err != nil || got.Cuts[0].Copy.Anchor != "top" || got.Cuts[0].Copy.Align != "left" {
+		if err != nil || got.Cuts[0].FirstCopy().Anchor != "top" || got.Cuts[0].FirstCopy().Align != "left" {
 			t.Fatalf("the default anchor moved: %+v %v", got, err)
 		}
 	}

@@ -150,7 +150,7 @@ func TestMediaProfileSmoke(t *testing.T) {
 					renderStart := time.Now()
 					// Every clip carries its disclosure badge (CDS-5), so the
 					// profile renders one too — and therefore measures it.
-					plan := clip.EditPlan{Ratio: "horizontal", DurationMS: 15000, Disclosure: "ad", Cuts: []clip.Cut{{ID: "profile-cut", SourceID: "profile", Fingerprint: "synthetic", EndMS: 15000, Focal: clip.Point{X: .5, Y: .5}, Copy: clip.Copy{Style: "clean", Anchor: "bottom", Align: "center"}}}}
+					plan := clip.EditPlan{Ratio: "horizontal", DurationMS: 15000, Disclosure: "ad", Cuts: []clip.Cut{{ID: "profile-cut", SourceID: "profile", Fingerprint: "synthetic", EndMS: 15000, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{Style: "clean", Anchor: "bottom", Align: "center"}}}}}
 					result, err := r.Render(t.Context(), ws, plan, []clip.RenderSource{{ID: "profile", Fingerprint: "synthetic", Info: info}}, func(_ context.Context, id string, consume func(clip.MediaSource) error) error {
 						return consume(clip.MediaSource{Path: original, SourceID: id, Fingerprint: "synthetic", Info: info})
 					})

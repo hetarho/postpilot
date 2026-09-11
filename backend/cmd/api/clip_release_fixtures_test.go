@@ -474,18 +474,27 @@ func (p *releaseProvider) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// The writing contract of T105: the model writes WORDS — the sentence, a
 		// shorter alternative, the one word to accent and the cut's own chips —
 		// and the design system chooses the style, the anchor and the accent.
-		content = map[string]any{"ratio": metadata["ratio"], "duration_ms": 15000, "hook": "", "cuts": []any{map[string]any{
-			"id": "fixture-cut", "source_id": source, "start_ms": 0, "end_ms": 15000, "volume": 1,
-			"focal": map[string]float64{"x": .5, "y": .5}, "chips": []string{},
-			"caption": map[string]any{"text": "", "start_ms": 0, "end_ms": 15000, "short_text": "", "keyword": ""},
-		}}}
+		// Three contiguous cuts of one source, not one long take: CDS-37 holds
+		// every cut to 6.0 s, so fifteen seconds is three cuts at the least. They
+		// are adjacent and show one scene, so the output timeline still maps
+		// one-to-one onto the source and the speech comparison below holds.
+		offset := 0
 		if p.mode == "seeked cut" {
-			cut := content.(map[string]any)["cuts"].([]any)[0].(map[string]any)
-			cut["start_ms"] = 1000
-			cut["end_ms"] = 16000
+			offset = 1000
 		}
+		var fixtureCuts []any
+		for i := 0; i < 3; i++ {
+			fixtureCuts = append(fixtureCuts, map[string]any{
+				"id": fmt.Sprintf("fixture-cut-%d", i), "source_id": source,
+				"start_ms": offset + i*5000, "end_ms": offset + (i+1)*5000, "volume": 1,
+				"focal": map[string]float64{"x": .5, "y": .5}, "chips": []string{},
+				"caption": map[string]any{"text": "", "start_ms": 0, "end_ms": 5000, "short_text": "", "keyword": ""},
+			})
+		}
+		content = map[string]any{"ratio": metadata["ratio"], "duration_ms": 15000, "hook": "", "cuts": fixtureCuts}
 		if strings.HasPrefix(p.mode, "multi-source") {
-			lengths := []int{2000, 2000, 1000, 2400, 2300, 2300, 2200, 2200}
+			// 1200 ms, not 1000: CDS-37 admits no cut shorter than 1.2 s.
+			lengths := []int{2000, 2000, 1200, 2400, 2300, 2300, 2200, 2200}
 			if len(analyses) != len(lengths) {
 				p.reject(w, "multi-source fixture requires eight analyses")
 				return

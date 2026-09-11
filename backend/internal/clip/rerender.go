@@ -41,7 +41,12 @@ func (s *GenerationService) SaveCorrection(ctx context.Context, user, id string,
 	}
 	// The same bundled font/measurement used by rendering. No source or provider.
 	for _, c := range next.Cuts {
-		if _, _, err = sizer.CaptionSize(ctx, next.Ratio, c.Copy); err != nil {
+		for _, copy := range c.Copies {
+			if _, _, err = sizer.CaptionSize(ctx, next.Ratio, copy); err != nil {
+				break
+			}
+		}
+		if err != nil {
 			return Project{}, err
 		}
 	}

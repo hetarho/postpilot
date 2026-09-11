@@ -47,27 +47,33 @@ func frameSeconds(frames, fps int) string {
 // the animated copy layer. They are SEPARATE overlay inputs precisely because
 // the badge may not move (CDS-31) while the copy must (CDS-4).
 func cutGraph(cfg clip.RenderConfig, canvas clip.Canvas, c clip.EditCut, source clip.MediaInfo, frames int, l layers, withAudio bool) string {
-	furniture, copy := l.Fixed != "", l.Copy != ""
 	var graph strings.Builder
 	fmt.Fprintf(&graph, "[0:V:0]trim=duration=%s,setpts=PTS-STARTPTS,fps=%d,%s,setsar=1,format=yuv420p[base];", seconds(c.EndMS-c.StartMS), cfg.FPS, coverChain(canvas, c.Focal))
 	last, input := "[base]", 1
-	if furniture {
+	if l.Fixed != "" {
 		fmt.Fprintf(&graph, "%s[%d:v:0]overlay=0:0:format=auto:shortest=0[fixed];", last, input)
 		last, input = "[fixed]", input+1
 	}
-	if copy {
+	// One plate per copy, each in its own window. CDS-43's two copies are
+	// sequential, so the second simply enables where the first has ended.
+	for j, plate := range l.Copies {
+		if plate == "" {
+			input++
+			continue
+		}
 		// CDS-4 allows exactly two motions: a 180 ms fade-in that settles 12 px
 		// upward, eased, and a 120 ms fade-out that does not move. Both are
 		// expressions on the one looped plate image — never a second raster per
 		// frame, and never anything else.
-		start, end := c.CaptionWindow()
+		start, end := c.CaptionWindow(j)
 		m := design.Motion
 		in, out := float64(m.InMS)/1000, float64(m.OutMS)/1000
-		fmt.Fprintf(&graph, "[%d:v:0]format=rgba,fade=t=in:st=%s:d=%s:alpha=1,fade=t=out:st=%s:d=%s:alpha=1[plate];", input, seconds(start), strconv.FormatFloat(in, 'f', 3, 64), seconds(end-m.OutMS), strconv.FormatFloat(out, 'f', 3, 64))
-		fmt.Fprintf(&graph, "%s[plate]overlay=x=0:y='%.0f*pow(1-min(1,max(0,(t-%s)/%s)),3)':format=auto:shortest=0", last, m.InDY, seconds(start), strconv.FormatFloat(in, 'f', 3, 64))
+		fmt.Fprintf(&graph, "[%d:v:0]format=rgba,fade=t=in:st=%s:d=%s:alpha=1,fade=t=out:st=%s:d=%s:alpha=1[plate%d];", input, seconds(start), strconv.FormatFloat(in, 'f', 3, 64), seconds(end-m.OutMS), strconv.FormatFloat(out, 'f', 3, 64), j)
+		fmt.Fprintf(&graph, "%s[plate%d]overlay=x=0:y='%.0f*pow(1-min(1,max(0,(t-%s)/%s)),3)':format=auto:shortest=0", last, j, m.InDY, seconds(start), strconv.FormatFloat(in, 'f', 3, 64))
 		fmt.Fprintf(&graph, ":enable='gte(t,%s)*lt(t,%s)'", seconds(start), seconds(end))
-		graph.WriteString("[copy];")
-		last = "[copy]"
+		fmt.Fprintf(&graph, "[copy%d];", j)
+		last = fmt.Sprintf("[copy%d]", j)
+		input++
 	}
 	// The card is the last layer over the footage: nothing shows under it
 	// (CDS-45). It carries no motion of its own beyond the fade CDS-28 and
@@ -165,23 +171,34 @@ func (r *Rendering) baseArgs() []string {
 	return []string{"-hide_banner", "-nostdin", "-v", "error", "-xerror", "-n", "-filter_complex_threads", strconv.Itoa(r.media.cfg.Threads)}
 }
 
-// layers is what a cut overlays: the fixed badge and chips, the animated copy
-// plate, and a card whose window is CUT-RELATIVE by the time it gets here.
+// layers is what a cut overlays: the fixed badge and chips, one animated plate
+// per copy, and a card whose window is CUT-RELATIVE by the time it gets here.
 type layers struct {
-	Fixed, Copy, Card string
-	Window            cardLayout
+	Fixed  string
+	Copies []string
+	Card   string
+	Window cardLayout
+}
+
+// inputs is every layer image this cut hands FFmpeg, in the order renderCut adds
+// them. An empty entry is a copy that drew nothing and takes no input.
+func (l layers) inputs() []string {
+	out := []string{}
+	for _, layer := range append([]string{l.Fixed}, l.Copies...) {
+		if layer != "" {
+			out = append(out, layer)
+		}
+	}
+	if l.Card != "" {
+		out = append(out, l.Card)
+	}
+	return out
 }
 
 // cardInput is the card image's own ffmpeg input index: the source is 0 and each
-// present layer takes the next one, in the order renderCut adds them.
+// present layer takes the next one.
 func (l layers) cardInput() int {
-	index := 1
-	for _, layer := range []string{l.Fixed, l.Copy} {
-		if layer != "" {
-			index++
-		}
-	}
-	return index
+	return len(l.inputs())
 }
 
 func (r *Rendering) renderCut(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, cut clip.EditCut, source clip.MediaSource, frames int, l layers, path string, audio bool) error {
@@ -189,10 +206,8 @@ func (r *Rendering) renderCut(ctx context.Context, ws clip.MediaWorkspace, canva
 		return err
 	}
 	args := append(r.baseArgs(), "-threads", strconv.Itoa(r.media.cfg.Threads), "-protocol_whitelist", "file,pipe", "-ss", seconds(cut.StartMS), "-i", source.Path)
-	for _, layer := range []string{l.Fixed, l.Copy, l.Card} {
-		if layer != "" {
-			args = append(args, "-loop", "1", "-framerate", strconv.Itoa(r.cfg.FPS), "-i", layer)
-		}
+	for _, layer := range l.inputs() {
+		args = append(args, "-loop", "1", "-framerate", strconv.Itoa(r.cfg.FPS), "-i", layer)
 	}
 	args = append(args, "-filter_complex", cutGraph(r.cfg, canvas, cut, source.Info, frames, l, audio))
 	args = append(args, r.encodeArgs(audio)...)
@@ -275,14 +290,19 @@ func (r *Rendering) Render(ctx context.Context, ws clip.MediaWorkspace, plan cli
 			if calls != 1 || source.SourceID != cut.SourceID || source.Fingerprint != cut.Fingerprint || source.Info.DurationMS != expected.Info.DurationMS || source.Info.Width != expected.Info.Width || source.Info.Height != expected.Info.Height || source.Info.HasAudio != expected.Info.HasAudio {
 				return clip.ErrInvalidMedia
 			}
-			plate, err := r.copyLayer(ctx, ws, canvas, &c, i, source)
-			if err != nil {
-				return err
+			// One plate per copy, in the cut's own order (CDS-43).
+			plates := make([]string, len(c.plan.Cuts[i].Copies))
+			for j := range c.plan.Cuts[i].Copies {
+				plate, err := r.copyLayer(ctx, ws, canvas, &c, i, j, source)
+				if err != nil {
+					return err
+				}
+				plates[j] = plate
+				if plate != "" {
+					paths = append(paths, plate)
+				}
 			}
-			if plate != "" {
-				paths = append(paths, plate)
-			}
-			return r.renderCut(ctx, ws, canvas, c.plan.Cuts[i], source, frames[i], layers{fixed[i], plate, cardPlates[i], c.cards[i].relativeTo(offsets[i])}, cutPaths[i], audio)
+			return r.renderCut(ctx, ws, canvas, c.plan.Cuts[i], source, frames[i], layers{fixed[i], plates, cardPlates[i], c.cards[i].relativeTo(offsets[i])}, cutPaths[i], audio)
 		})
 		if err != nil {
 			return result, err
@@ -389,7 +409,7 @@ func planTransitions(plan clip.EditPlan) []int {
 // without touching one source pixel, so the manifest and its verification come
 // before any download.
 func (r *Rendering) layout(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, plan clip.EditPlan) (composed, error) {
-	layouts, plates, manifest := make([]copyLayout, len(plan.Cuts)), make([]furniture, len(plan.Cuts)), clip.Manifest{}
+	layouts, plates, manifest := make([][]copyLayout, len(plan.Cuts)), make([]furniture, len(plan.Cuts)), clip.Manifest{}
 	cards := make([]cardLayout, len(plan.Cuts))
 	offsets := cutOffsets(plan)
 	answers := map[string]string{}
@@ -424,16 +444,21 @@ func (r *Rendering) layout(ctx context.Context, ws clip.MediaWorkspace, canvas c
 		}
 		badged = true
 		manifest = append(manifest, elements...)
-		if strings.TrimSpace(cut.Copy.Text) == "" {
-			continue
+		// One layout per copy: a cut of 4 s or more may carry two, one after the
+		// other (CDS-43).
+		layouts[i] = make([]copyLayout, len(cut.Copies))
+		for j, copy := range cut.Copies {
+			if strings.TrimSpace(copy.Text) == "" {
+				continue
+			}
+			l, err := r.layoutCopy(ctx, ws, canvas, copy)
+			if err != nil {
+				return composed{}, err
+			}
+			layouts[i][j] = l
+			copyStart, copyEnd := cut.CaptionWindow(j)
+			manifest = append(manifest, l.Elements(i, j, copy, offsets[i]+copyStart, offsets[i]+copyEnd)...)
 		}
-		l, err := r.layoutCopy(ctx, ws, canvas, cut.Copy)
-		if err != nil {
-			return composed{}, err
-		}
-		layouts[i] = l
-		copyStart, copyEnd := cut.CaptionWindow()
-		manifest = append(manifest, l.Elements(i, cut.Copy, offsets[i]+copyStart, offsets[i]+copyEnd)...)
 	}
 	// The cards are measured last so the copy they hide is already placed: no
 	// copy or chip shows under either card (CDS-45).
@@ -459,8 +484,12 @@ func (r *Rendering) layout(ctx context.Context, ws clip.MediaWorkspace, canvas c
 		}
 		manifest = append(manifest, measured.Elements(i)...)
 	}
+	grounds := make([][]Luminance, len(plan.Cuts))
+	for i, cut := range plan.Cuts {
+		grounds[i] = make([]Luminance, len(cut.Copies))
+	}
 	return composed{plan: plan, layouts: layouts, furniture: plates, cards: cards, manifest: manifest,
-		grounds: make([]Luminance, len(plan.Cuts))}, nil
+		grounds: grounds}, nil
 }
 
 // composed is everything one pass of layout produced: the plan it was measured
@@ -469,21 +498,21 @@ func (r *Rendering) layout(ctx context.Context, ws clip.MediaWorkspace, canvas c
 // why it travels as one value (CDS-44).
 type composed struct {
 	plan      clip.EditPlan
-	layouts   []copyLayout
+	layouts   [][]copyLayout
 	furniture []furniture
 	cards     []cardLayout
 	manifest  clip.Manifest
-	// What the sampler measured under each cut's copy, empty for a cut whose
-	// style is plated or which carries no copy.
-	grounds []Luminance
+	// What the sampler measured under each COPY, empty for one whose style is
+	// plated or which was dropped. Parallel to the cut's own copies (CDS-43).
+	grounds [][]Luminance
 }
 
 // cutElements is one cut's own caption elements, which is the scope a contrast
 // decision is made on.
-func (c *composed) cutElements(index int) clip.Manifest {
+func (c *composed) cutElements(cut, copy int) clip.Manifest {
 	out := clip.Manifest{}
 	for _, e := range c.manifest {
-		if e.Cut == index && e.Style != "" {
+		if e.Cut == cut && e.Copy == copy && e.Style != "" {
 			out = append(out, e)
 		}
 	}
@@ -505,27 +534,29 @@ func (c *composed) resolve(canvas clip.Canvas) {
 	}
 	offsets := cutOffsets(c.plan)
 	for i, cut := range c.plan.Cuts {
-		ground := c.grounds[i]
-		if !ground.Sampled() {
-			continue
-		}
-		background := ground.Background(canvas, c.layouts[i].Style, cut.Copy.Anchor, c.layouts[i].Region)
-		for j := range kept {
-			if kept[j].Cut == i && kept[j].Kind == "copy" && kept[j].Style != "" {
-				kept[j].Background = background
+		for j, copy := range cut.Copies {
+			ground := c.grounds[i][j]
+			if !ground.Sampled() {
+				continue
 			}
+			background := ground.Background(canvas, c.layouts[i][j].Style, copy.Anchor, c.layouts[i][j].Region)
+			for k := range kept {
+				if kept[k].Cut == i && kept[k].Copy == j && kept[k].Kind == "copy" && kept[k].Style != "" {
+					kept[k].Background = background
+				}
+			}
+			s, ok := scrimFor(canvas, copy.Anchor)
+			if !ok || !ground.Scrim() {
+				continue
+			}
+			start, end := cut.CaptionWindow(j)
+			kept = append(kept, design.Element{
+				Cut: i, Copy: j, Kind: "scrim", Style: copy.Style, Anchor: copy.Anchor,
+				Region: design.Region(s.Region), StartMS: offsets[i] + start, EndMS: offsets[i] + end,
+				Background: design.Scrim[s.Edge].Hex,
+				InMS:       design.Motion.InMS, OutMS: design.Motion.OutMS, DY: design.Motion.InDY,
+			})
 		}
-		s, ok := scrimFor(canvas, cut.Copy.Anchor)
-		if !ok || !ground.Scrim() {
-			continue
-		}
-		start, end := cut.CaptionWindow()
-		kept = append(kept, design.Element{
-			Cut: i, Kind: "scrim", Style: cut.Copy.Style, Anchor: cut.Copy.Anchor,
-			Region: design.Region(s.Region), StartMS: offsets[i] + start, EndMS: offsets[i] + end,
-			Background: design.Scrim[s.Edge].Hex,
-			InMS:       design.Motion.InMS, OutMS: design.Motion.OutMS, DY: design.Motion.InDY,
-		})
 	}
 	c.manifest = kept
 }
@@ -538,31 +569,31 @@ func (c *composed) resolve(canvas clip.Canvas) {
 // and what contrast V3 then measures. A pairing still under the floor puts the
 // sentence back on a plate when the compiler chose the style, and is refused
 // when a person did.
-func (r *Rendering) copyLayer(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, c *composed, index int, source clip.MediaSource) (string, error) {
+func (r *Rendering) copyLayer(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, c *composed, index, copyIndex int, source clip.MediaSource) (string, error) {
 	cut := c.plan.Cuts[index]
-	if strings.TrimSpace(cut.Copy.Text) == "" {
+	copy := cut.Copies[copyIndex]
+	if strings.TrimSpace(copy.Text) == "" {
 		return "", nil
 	}
-	if c.layouts[index].Style.Plate != "" {
-		return r.copyPlate(ctx, ws, canvas, cut.Copy, c.layouts[index], index, Luminance{})
+	if c.layouts[index][copyIndex].Style.Plate != "" {
+		return r.copyPlate(ctx, ws, canvas, copy, c.layouts[index][copyIndex], index, Luminance{})
 	}
-	start, end := cut.CaptionWindow()
-	ground, err := r.sample(ctx, ws, canvas, source, cut, [2]int{start, end}, c.layouts[index].Region, index)
+	start, end := cut.CaptionWindow(copyIndex)
+	ground, err := r.sample(ctx, ws, canvas, source, cut, [2]int{start, end}, c.layouts[index][copyIndex].Region, index)
 	if err != nil {
 		return "", err
 	}
-	c.grounds[index] = ground
+	c.grounds[index][copyIndex] = ground
 	c.resolve(canvas)
-	if !design.Legible(c.cutElements(index)) {
+	if !design.Legible(c.cutElements(index, copyIndex)) {
 		if !c.plan.Compiled() {
 			return "", clip.LayoutViolation(design.ViolationContrast)
 		}
-		if err := r.fallback(ctx, ws, canvas, c, index); err != nil {
+		if err := r.fallback(ctx, ws, canvas, c, index, copyIndex); err != nil {
 			return "", err
 		}
-		cut = c.plan.Cuts[index]
 	}
-	return r.copyPlate(ctx, ws, canvas, cut.Copy, c.layouts[index], index, c.grounds[index])
+	return r.copyPlate(ctx, ws, canvas, c.plan.Cuts[index].Copies[copyIndex], c.layouts[index][copyIndex], index, c.grounds[index][copyIndex])
 }
 
 // fallback is CDS-44's last clause: a pairing the scrim could not lift goes back
@@ -570,16 +601,17 @@ func (r *Rendering) copyLayer(ctx context.Context, ws clip.MediaWorkspace, canva
 // when 깔끔하게 may stand there and is otherwise its own (CDS-24 is the law on
 // which anchors a style takes, and V6 would refuse the copy anywhere else). The
 // whole plan is measured again so the manifest describes what is really drawn.
-func (r *Rendering) fallback(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, c *composed, index int) error {
+func (r *Rendering) fallback(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, c *composed, index, copyIndex int) error {
 	plan := c.plan
 	plan.Cuts = slices.Clone(plan.Cuts)
-	copied := plan.Cuts[index].Copy
+	plan.Cuts[index].Copies = slices.Clone(plan.Cuts[index].Copies)
+	copied := plan.Cuts[index].Copies[copyIndex]
 	copied.Style = "clean"
 	if !slices.Contains(design.StyleAnchors("clean"), copied.Anchor) {
 		copied.Anchor = design.Styles["clean"].Anchor
 	}
 	copied.Align = design.Styles["clean"].Align
-	plan.Cuts[index].Copy = copied
+	plan.Cuts[index].Copies[copyIndex] = copied
 	if index < len(plan.Decisions) {
 		plan.Decisions[index].Fallback = "contrast"
 	}
@@ -587,10 +619,10 @@ func (r *Rendering) fallback(ctx context.Context, ws clip.MediaWorkspace, canvas
 	if err != nil {
 		return err
 	}
-	// A plated style is never sampled, so the ground this cut was measured
+	// A plated style is never sampled, so the ground this copy was measured
 	// against is no longer part of what it draws.
 	next.grounds = c.grounds
-	next.grounds[index] = Luminance{}
+	next.grounds[index][copyIndex] = Luminance{}
 	next.resolve(canvas)
 	*c = next
 	return nil
@@ -599,8 +631,10 @@ func (r *Rendering) fallback(ctx context.Context, ws clip.MediaWorkspace, canvas
 // The project accent, which every card and chip paints with (CLIP-14).
 func answerAccent(plan clip.EditPlan) string {
 	for _, c := range plan.Cuts {
-		if c.Copy.Accent != "" {
-			return c.Copy.Accent
+		for _, copy := range c.Copies {
+			if copy.Accent != "" {
+				return copy.Accent
+			}
 		}
 	}
 	return plan.Accent

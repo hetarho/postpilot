@@ -102,17 +102,17 @@ it.each<[(p: ClipEditPlan) => void]>([
   ],
   [
     (p) => {
-      p.cuts[0]!.copy.startMs = -1
+      p.cuts[0]!.copies[0]!.startMs = -1
     },
   ],
   [
     (p) => {
-      p.cuts[0]!.copy.endMs = 10001
+      p.cuts[0]!.copies[0]!.endMs = 10001
     },
   ],
   [
     (p) => {
-      p.cuts[0]!.copy.text = '가'.repeat(501)
+      p.cuts[0]!.copies[0]!.text = '가'.repeat(501)
     },
   ],
   [
@@ -167,8 +167,8 @@ it('accepts muted/full source audio and refuses a non-approved style', () => {
   state.plan.cuts[0]!.volumePermille = 0
   expect(validateClipPlan(state.plan, state).valid).toBe(true)
   state.copyStyles = ['clean', 'memo']
-  state.plan.cuts[0]!.copy.style = 'bold'
-  expect(validateClipPlan(state.plan, state).cuts[0]!.style).toBe(true)
+  state.plan.cuts[0]!.copies[0]!.style = 'bold'
+  expect(validateClipPlan(state.plan, state).cuts[0]!.copies[0]!.style).toBe(true)
 })
 
 /** The design system's own rules, mirrored here for immediacy. The server's
@@ -178,15 +178,15 @@ it('mirrors the per-style limits, the exposure minimum and the per-clip guards',
   const cut = (over: Partial<ClipEditCut> = {}, copy: Partial<ClipCaption> = {}) => ({
     ...state.plan.cuts[0]!,
     ...over,
-    copy: { ...state.plan.cuts[0]!.copy, ...copy },
+    copies: [{ ...state.plan.cuts[0]!.copies[0]!, ...copy }],
   })
   const check = (cuts: ClipEditCut[]) =>
     validateClipPlan({ ...state.plan, cuts, durationMs: 19800 }, state)
 
   // 깔끔하게 takes two lines of fourteen; fifteen on one line is past it.
-  expect(check([cut({ id: 'a' }, { text: '가'.repeat(14) })]).cuts[0]!.text).toBe(false)
-  expect(check([cut({ id: 'a' }, { text: '가'.repeat(15) })]).cuts[0]!.text).toBe(true)
-  expect(check([cut({ id: 'a' }, { text: '가\n나\n다' })]).cuts[0]!.text).toBe(true)
+  expect(check([cut({ id: 'a' }, { text: '가'.repeat(14) })]).cuts[0]!.copies[0]!.text).toBe(false)
+  expect(check([cut({ id: 'a' }, { text: '가'.repeat(15) })]).cuts[0]!.copies[0]!.text).toBe(true)
+  expect(check([cut({ id: 'a' }, { text: '가\n나\n다' })]).cuts[0]!.copies[0]!.text).toBe(true)
 
   // CDS-41: 900 ms plus 90 ms a character, inside the copy's own window.
   expect(copyChars('여섯 글자다 !?')).toBe(5)
@@ -195,19 +195,21 @@ it('mirrors the per-style limits, the exposure minimum and the per-clip guards',
     { id: 'a', startMs: 0, endMs: 1589 },
     { text: '여섯 글자다', startMs: 0, endMs: 0 },
   )
-  expect(check([tight]).cuts[0]!.exposure).toBe(true)
-  expect(check([{ ...tight, endMs: 1590 }]).cuts[0]!.exposure).toBe(false)
+  expect(check([tight]).cuts[0]!.copies[0]!.exposure).toBe(true)
+  expect(check([{ ...tight, endMs: 1590 }]).cuts[0]!.copies[0]!.exposure).toBe(false)
 
   // 메모 sits LEFT at the top or the bottom (CDS-24).
   expect(
-    check([cut({ id: 'a' }, { style: 'memo', anchor: 'top', align: 'left' })]).cuts[0]!.anchor,
+    check([cut({ id: 'a' }, { style: 'memo', anchor: 'top', align: 'left' })]).cuts[0]!.copies[0]!
+      .anchor,
   ).toBe(false)
   expect(
-    check([cut({ id: 'a' }, { style: 'memo', anchor: 'top', align: 'center' })]).cuts[0]!.anchor,
+    check([cut({ id: 'a' }, { style: 'memo', anchor: 'top', align: 'center' })]).cuts[0]!.copies[0]!
+      .anchor,
   ).toBe(true)
   expect(
     check([cut({ id: 'a' }, { style: 'memo', anchor: 'lower_mid', align: 'left' })]).cuts[0]!
-      .anchor,
+      .copies[0]!.anchor,
   ).toBe(true)
 
   // CDS-38: one anchor step between consecutive cuts of the SAME style, and any
@@ -216,11 +218,11 @@ it('mirrors the per-style limits, the exposure minimum and the per-clip guards',
     cut({ id: 'a' }, { anchor: 'bottom' }),
     cut({ id: 'b' }, { anchor: 'top', align: 'center' }),
   ]
-  expect(check(stepped).cuts[1]!.anchor).toBe(true)
+  expect(check(stepped).cuts[1]!.copies[0]!.anchor).toBe(true)
   stepped[1] = cut({ id: 'b' }, { anchor: 'lower_mid' })
-  expect(check(stepped).cuts[1]!.anchor).toBe(false)
+  expect(check(stepped).cuts[1]!.copies[0]!.anchor).toBe(false)
   stepped[1] = cut({ id: 'b' }, { style: 'memo', anchor: 'top', align: 'left' })
-  expect(check(stepped).cuts[1]!.anchor).toBe(false)
+  expect(check(stepped).cuts[1]!.copies[0]!.anchor).toBe(false)
 
   // At most two chips, from the reserved labels (CDS-30).
   expect(check([cut({ id: 'a', chips: ['위치', '가격'] })]).cuts[0]!.chips).toBe(false)
@@ -238,10 +240,12 @@ it('mirrors the per-style limits, the exposure minimum and the per-clip guards',
   expect(check(run.slice(0, 3)).frequency).toBe(false)
 
   // The accent word has to appear in the caption it accents.
-  expect(check([cut({ id: 'a' }, { style: 'mark', keyword: '없음' })]).cuts[0]!.keyword).toBe(true)
+  expect(
+    check([cut({ id: 'a' }, { style: 'mark', keyword: '없음' })]).cuts[0]!.copies[0]!.keyword,
+  ).toBe(true)
   expect(
     check([cut({ id: 'a' }, { style: 'mark', text: '가격 9900원', keyword: '9900원' })]).cuts[0]!
-      .keyword,
+      .copies[0]!.keyword,
   ).toBe(false)
 })
 
@@ -293,7 +297,11 @@ it.each([
   [[0, 300, 0], 29700],
 ])('takes %s off the footage', (transitions, durationMs) => {
   const state = clipEditingFixture()
-  const third = { ...state.plan.cuts[1]!, id: 'cut-c', copy: { ...state.plan.cuts[1]!.copy } }
+  const third = {
+    ...state.plan.cuts[1]!,
+    id: 'cut-c',
+    copies: state.plan.cuts[1]!.copies.map((copy) => ({ ...copy })),
+  }
   state.plan.cuts = [...state.plan.cuts, third].map((c, i) => ({
     ...c,
     transitionMs: transitions[i]!,

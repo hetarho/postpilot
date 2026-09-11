@@ -20,8 +20,10 @@ type CorrectionCut struct {
 	StartMS, EndMS            int
 	// The transition INTO this cut (CDS-36). The owner may change it on step ②,
 	// which is why it rides the editable representation and the stored plan.
-	TransitionMS   int
-	Copy           Caption
+	TransitionMS int
+	// One copy, or CDS-43's two in sequence. The owner may add and remove the
+	// second one on step ②, which is why it is a list here too.
+	Copies         []Caption
 	Chips          []string
 	VolumePermille int
 }
@@ -41,8 +43,79 @@ type CorrectionState struct {
 
 // Version 2 carries each cut's own transition. A version-1 plan predates CDS-36
 // and was rendered with a fade at every boundary, so that is exactly what it is
-// read back as — its stored duration was computed from it.
-const storedPlanVersion = 2
+// read back as — its stored duration was computed from it. Version 3 carries a
+// LIST of copies (CDS-43); everything before it wrote exactly one, which is what
+// it is read back as.
+const storedPlanVersion = 3
+
+// The cut every stored plan before version 3 wrote: one `Copy` where there is
+// now a list. It is a separate type rather than a token rewrite because a
+// caption's own text may contain a brace and a rewrite could not tell them apart.
+type legacyCorrectionCut struct {
+	ID, SourceID, Fingerprint string
+	StartMS, EndMS            int
+	TransitionMS              int
+	Copy                      Caption
+	Chips                     []string
+	VolumePermille            int
+}
+
+// The whole plan T076 stored, whose cuts also carried one copy each.
+type legacyEditPlan struct {
+	Ratio       string
+	DurationMS  int
+	Cuts        []legacyEditCut
+	Disclosure  string
+	Facts       []Answer
+	Preset      string
+	Hook        string
+	CTA, Accent string
+	Written     []Written
+	Decisions   []Composition
+}
+type legacyEditCut struct {
+	ID, SourceID, Fingerprint string
+	StartMS, EndMS            int
+	TransitionMS              int
+	Focal                     Point
+	Copy                      Copy
+	Chips                     []string
+	Volume                    *float64
+}
+
+func (p legacyEditPlan) upgrade() EditPlan {
+	out := EditPlan{Ratio: p.Ratio, DurationMS: p.DurationMS, Disclosure: p.Disclosure, Facts: p.Facts,
+		Preset: p.Preset, Hook: p.Hook, CTA: p.CTA, Accent: p.Accent, Written: p.Written, Decisions: p.Decisions}
+	for _, c := range p.Cuts {
+		out.Cuts = append(out.Cuts, Cut{ID: c.ID, SourceID: c.SourceID, Fingerprint: c.Fingerprint,
+			StartMS: c.StartMS, EndMS: c.EndMS, TransitionMS: c.TransitionMS, Focal: c.Focal,
+			Copies: []Copy{c.Copy}, Chips: c.Chips, Volume: c.Volume})
+	}
+	return out
+}
+
+type legacyCorrectionPlan struct {
+	DurationMS int
+	Cuts       []legacyCorrectionCut
+	Hook       string
+}
+type legacyStoredEditPlan struct {
+	Version    int
+	Ratio      string
+	Plan       legacyCorrectionPlan
+	Focals     map[string]Point
+	CopyStyles []string
+}
+
+func (p legacyCorrectionPlan) upgrade() CorrectionPlan {
+	out := CorrectionPlan{DurationMS: p.DurationMS, Hook: p.Hook}
+	for _, c := range p.Cuts {
+		out.Cuts = append(out.Cuts, CorrectionCut{ID: c.ID, SourceID: c.SourceID, Fingerprint: c.Fingerprint,
+			StartMS: c.StartMS, EndMS: c.EndMS, TransitionMS: c.TransitionMS,
+			Copies: []Caption{c.Copy}, Chips: c.Chips, VolumePermille: c.VolumePermille})
+	}
+	return out
+}
 
 type storedEditPlan struct {
 	Version    int
@@ -55,7 +128,7 @@ type storedEditPlan struct {
 func CorrectionFromPlan(p EditPlan) CorrectionPlan {
 	out := CorrectionPlan{DurationMS: p.DurationMS, Hook: p.Hook, Cuts: make([]CorrectionCut, 0, len(p.Cuts))}
 	for _, c := range p.Cuts {
-		out.Cuts = append(out.Cuts, CorrectionCut{c.ID, c.SourceID, c.Fingerprint, c.StartMS, c.EndMS, c.TransitionMS, c.Copy, slices.Clone(c.Chips), int(math.Round(c.OriginalVolume() * 1000))})
+		out.Cuts = append(out.Cuts, CorrectionCut{c.ID, c.SourceID, c.Fingerprint, c.StartMS, c.EndMS, c.TransitionMS, slices.Clone(c.Copies), slices.Clone(c.Chips), int(math.Round(c.OriginalVolume() * 1000))})
 	}
 	return out
 }
@@ -120,10 +193,11 @@ func DecodeEditPlan(raw string) (EditPlan, []string, error) {
 	if marker.Version == 0 {
 		// T076's original representation. Do not invent template permissions lost in
 		// that format: only styles already present in the retained plan are approved.
-		var p EditPlan
-		if err := strictJSON(raw, &p); err != nil {
-			return p, nil, err
+		var legacy legacyEditPlan
+		if err := strictJSON(raw, &legacy); err != nil {
+			return EditPlan{}, nil, err
 		}
+		p := legacy.upgrade()
 		if len(p.Cuts) == 0 || p.DurationMS <= 0 {
 			return EditPlan{}, nil, ErrInvalid
 		}
@@ -139,14 +213,25 @@ func DecodeEditPlan(raw string) (EditPlan, []string, error) {
 		}
 		styles := []string{}
 		for _, c := range p.Cuts {
-			if !slices.Contains(styles, c.Copy.Style) {
-				styles = append(styles, c.Copy.Style)
+			for _, copy := range c.Copies {
+				if !slices.Contains(styles, copy.Style) {
+					styles = append(styles, copy.Style)
+				}
 			}
 		}
 		return p, styles, nil
 	}
 	var s storedEditPlan
-	if err := strictJSON(raw, &s); err != nil || s.Version < 1 || s.Version > storedPlanVersion {
+	if marker.Version < 3 {
+		var legacy legacyStoredEditPlan
+		if err := strictJSON(raw, &legacy); err != nil {
+			return EditPlan{}, nil, ErrInvalid
+		}
+		s = storedEditPlan{legacy.Version, legacy.Ratio, legacy.Plan.upgrade(), legacy.Focals, legacy.CopyStyles}
+	} else if err := strictJSON(raw, &s); err != nil {
+		return EditPlan{}, nil, ErrInvalid
+	}
+	if s.Version < 1 || s.Version > storedPlanVersion {
 		return EditPlan{}, nil, ErrInvalid
 	}
 	if s.Version < 2 {
@@ -169,7 +254,7 @@ func DecodeEditPlan(raw string) (EditPlan, []string, error) {
 			return EditPlan{}, nil, ErrInvalid
 		}
 		v := float64(c.VolumePermille) / 1000
-		p.Cuts = append(p.Cuts, Cut{ID: c.ID, SourceID: c.SourceID, Fingerprint: c.Fingerprint, StartMS: c.StartMS, EndMS: c.EndMS, TransitionMS: c.TransitionMS, Focal: f, Copy: c.Copy, Chips: c.Chips, Volume: &v})
+		p.Cuts = append(p.Cuts, Cut{ID: c.ID, SourceID: c.SourceID, Fingerprint: c.Fingerprint, StartMS: c.StartMS, EndMS: c.EndMS, TransitionMS: c.TransitionMS, Focal: f, Copies: c.Copies, Chips: c.Chips, Volume: &v})
 	}
 	return p, s.CopyStyles, nil
 }
@@ -220,11 +305,16 @@ func ApplyCorrection(cfg RenderConfig, p Project, input CorrectionPlan) (EditPla
 	}
 	for _, c := range input.Cuts {
 		prior, ok := known[c.ID]
-		if !ok || c.SourceID != prior.SourceID || c.Fingerprint != prior.Fingerprint || c.VolumePermille < 0 || c.VolumePermille > 1000 || !slices.Contains(styles, c.Copy.Style) {
+		if !ok || c.SourceID != prior.SourceID || c.Fingerprint != prior.Fingerprint || c.VolumePermille < 0 || c.VolumePermille > 1000 {
 			return EditPlan{}, nil, ErrInvalid
 		}
+		for _, copy := range c.Copies {
+			if !slices.Contains(styles, copy.Style) {
+				return EditPlan{}, nil, ErrInvalid
+			}
+		}
 		v := float64(c.VolumePermille) / 1000
-		prior.StartMS, prior.EndMS, prior.TransitionMS, prior.Copy, prior.Chips, prior.Volume = c.StartMS, c.EndMS, c.TransitionMS, c.Copy, c.Chips, &v
+		prior.StartMS, prior.EndMS, prior.TransitionMS, prior.Copies, prior.Chips, prior.Volume = c.StartMS, c.EndMS, c.TransitionMS, c.Copies, c.Chips, &v
 		next.Cuts = append(next.Cuts, prior)
 	}
 	// A reorder carries each cut's own transition with it (CDS-36), so whichever

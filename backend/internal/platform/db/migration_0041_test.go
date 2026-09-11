@@ -92,7 +92,7 @@ func TestMigration0041RewritesStoredPlansAndTemplatesIntoTheCDSVocabulary(t *tes
 	if len(plan.Cuts) != 2 {
 		t.Fatal(len(plan.Cuts))
 	}
-	first, second := plan.Cuts[0].Copy, plan.Cuts[1].Copy
+	first, second := plan.Cuts[0].FirstCopy(), plan.Cuts[1].FirstCopy()
 	if first.Anchor != "lower_mid" || first.Align != "center" || first.Style != "memo" {
 		t.Fatalf("first caption = %+v", first)
 	}
@@ -108,7 +108,7 @@ func TestMigration0041RewritesStoredPlansAndTemplatesIntoTheCDSVocabulary(t *tes
 	}
 	// The read-time belt is idempotent over an already migrated row.
 	again, _, err := clip.DecodeEditPlan(stored)
-	if err != nil || again.Cuts[0].Copy.Anchor != "lower_mid" {
+	if err != nil || again.Cuts[0].Copies[0].Anchor != "lower_mid" {
 		t.Fatalf("second decode changed the plan: %v", err)
 	}
 }

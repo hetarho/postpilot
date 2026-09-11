@@ -166,6 +166,26 @@ focal points drive cover-cropping, never stretch-to-fit. Times are integer ms un
 the binary boundary.
 Cumulative frame rounding avoids per-cut rounding drift at constant 30 fps.
 
+## Two copies on one cut
+
+A cut usually carries one copy; a cut of 4.0 s or more whose sentence DESCRIBES
+may also state the number it leads to, 120 ms after the description has left and
+never beside it (CDS-43). `Cut.Copies` is therefore a list of one or two, and
+every per-caption rule — the style's limits, the exposure minimum, the anchor
+step, the style frequency — is read on the copy rather than on the cut. A
+manifest element carries the copy it belongs to, so the verifier can tell two
+captions of one cut apart; a plan stored before this is read back as the one copy
+it was (stored version 3).
+
+The compiler never asks the model for a second sentence: it lifts the number out
+of the words it already has. CDS-39 reads a number FIRST, so a sentence that
+states one is classified `NUM` and is never the description CDS-43 splits — in
+practice the second copy is the `short_text` the model wrote beside the
+description, and the clause walk is the fallback for a sentence the classifier
+reads as a description anyway. The two windows come out of the one CDS-27 window,
+split by what each sentence earns under CDS-41 and parted by the same 120 ms
+lead. The renderer draws one plate per copy, each enabled only in its own window.
+
 ## Transitions
 
 Every cut carries the transition INTO it (`TransitionMS`), and the first cut of a

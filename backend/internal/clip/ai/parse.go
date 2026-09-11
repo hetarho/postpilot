@@ -275,7 +275,7 @@ func parsePlan(cfg Config, input clip.PlanningInput, raw string) (clip.EditPlan,
 		}
 		// The caption arrives as WORDS only; the compiler places it.
 		written := clip.Written{Text: *p.Text, ShortText: optional(p.ShortText), Keyword: optional(p.Keyword)}
-		result.Cuts = append(result.Cuts, clip.Cut{ID: *c.ID, SourceID: source.ID, Fingerprint: source.Fingerprint, StartMS: *c.Start, EndMS: *c.End, Focal: focal, Volume: &volume, Chips: chips, Copy: clip.Caption{Text: written.Text, StartMS: *p.Start, EndMS: *p.End}})
+		result.Cuts = append(result.Cuts, clip.Cut{ID: *c.ID, SourceID: source.ID, Fingerprint: source.Fingerprint, StartMS: *c.Start, EndMS: *c.End, Focal: focal, Volume: &volume, Chips: chips, Copies: []clip.Caption{{Text: written.Text, StartMS: *p.Start, EndMS: *p.End}}})
 		result.Written = append(result.Written, written)
 	}
 	// The timeline is compiled here; the design system's own decisions and the

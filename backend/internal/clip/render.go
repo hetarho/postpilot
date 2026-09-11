@@ -37,7 +37,10 @@ type Cut struct {
 	// keeps each cut's own entry and the first cut is always a hard cut.
 	TransitionMS int
 	Focal        Point
-	Copy         Copy
+	// One copy, or the two CDS-43 lets a cut of 4 s or more carry in sequence:
+	// a description and then the number it leads to, never both on screen at
+	// once. A cut whose copy the composer dropped carries none.
+	Copies []Copy
 	// Reserved fact labels whose chips belong on this cut (CDS-30), at most two
 	// at a time. Part of the approved composition, so it is stored with it.
 	Chips  []string
@@ -45,14 +48,40 @@ type Cut struct {
 }
 type EditCut = Cut
 
+// FirstCopy is the one a caller that knows nothing of CDS-43 means: the copy a
+// cut has always had. A cut with no copy at all answers with an empty one.
+func (c Cut) FirstCopy() Copy {
+	if len(c.Copies) == 0 {
+		return Copy{}
+	}
+	return c.Copies[0]
+}
+
+// Placed is the copies that actually show: a dropped one carries no text and no
+// placement, and the cut simply shows its footage.
+func (c Cut) Placed() []Copy {
+	out := make([]Copy, 0, len(c.Copies))
+	for _, copy := range c.Copies {
+		if strings.TrimSpace(copy.Text) != "" {
+			out = append(out, copy)
+		}
+	}
+	return out
+}
+
 // CDS-27: copy enters at cut start + 120 ms and leaves at cut end - 120 ms, so
 // no text straddles a transition. Both zero takes that default; an explicit
-// window is exactly what the plan or the owner asked for.
-func (c Cut) CaptionWindow() (int, int) {
-	if c.Copy.StartMS == 0 && c.Copy.EndMS == 0 {
+// window is exactly what the plan or the owner asked for — which is what a
+// SECOND copy always carries, since two default windows would overlap.
+func (c Cut) CaptionWindow(index int) (int, int) {
+	copy := Copy{}
+	if index >= 0 && index < len(c.Copies) {
+		copy = c.Copies[index]
+	}
+	if copy.StartMS == 0 && copy.EndMS == 0 {
 		return CopyLeadMS, c.EndMS - c.StartMS - CopyLeadMS
 	}
-	return c.Copy.StartMS, c.Copy.EndMS
+	return copy.StartMS, copy.EndMS
 }
 
 // TransitionTotal is what the transitions take off the timeline: a cut overlaps
@@ -315,8 +344,10 @@ func ValidateEditPlan(cfg RenderConfig, plan EditPlan, sources []RenderSource) e
 	total := 0
 	seen := map[string]bool{}
 	for i, c := range plan.Cuts {
-		if utf8.RuneCountInString(c.Copy.Text) > cfg.MaxCopyRunes {
-			return ErrCopyTooLong
+		for _, copy := range c.Copies {
+			if utf8.RuneCountInString(copy.Text) > cfg.MaxCopyRunes {
+				return ErrCopyTooLong
+			}
 		}
 		s, ok := byID[c.SourceID]
 		if !ok || c.Fingerprint != s.Fingerprint {
@@ -348,8 +379,17 @@ func ValidateEditPlan(cfg RenderConfig, plan EditPlan, sources []RenderSource) e
 		if !normalized(c.OriginalVolume()) {
 			return planViolation("plan_volume")
 		}
-		if !ValidCopy(c.Copy, cfg.MaxCopyRunes) {
-			return planViolation("plan_copy_format")
+		// CDS-43: one copy, or two only on a cut of 4 s or more.
+		if len(c.Copies) > design.Copy.MaxPerCut {
+			return planViolation("plan_copy_count")
+		}
+		if len(c.Copies) > 1 && c.EndMS-c.StartMS < design.Copy.SecondMinCutMS() {
+			return planViolation("plan_copy_second_cut")
+		}
+		for _, copy := range c.Copies {
+			if !ValidCopy(copy, cfg.MaxCopyRunes) {
+				return planViolation("plan_copy_format")
+			}
 		}
 		// A chip names one of the five reserved facts, and at most two show at
 		// once (CDS-30).
@@ -362,15 +402,26 @@ func ValidateEditPlan(cfg RenderConfig, plan EditPlan, sources []RenderSource) e
 			}
 		}
 		seen[c.ID] = true
-		captionStart, captionEnd := c.CaptionWindow()
-		if captionStart < 0 || captionEnd <= captionStart || captionEnd > c.EndMS-c.StartMS {
-			return planViolation("plan_caption_time")
-		}
-		// The style's own line and character limits (CDS-20, CDS-23..26) and the
-		// exposure its length earns (CDS-41). An empty copy is a cut with no text,
-		// not a copy that breaks them.
-		if style := design.Styles[c.Copy.Style]; strings.TrimSpace(c.Copy.Text) != "" {
-			lines := strings.Split(c.Copy.Text, "\n")
+		previousEnd := 0
+		for j, copy := range c.Copies {
+			captionStart, captionEnd := c.CaptionWindow(j)
+			if captionStart < 0 || captionEnd <= captionStart || captionEnd > c.EndMS-c.StartMS {
+				return planViolation("plan_caption_time")
+			}
+			// Never both at once: the second copy starts a clear 120 ms after
+			// the first has left (CDS-43).
+			if j > 0 && captionStart-previousEnd < design.Timing.CopyLeadMS {
+				return planViolation("plan_copy_sequence")
+			}
+			previousEnd = captionEnd
+			// The style's own line and character limits (CDS-20, CDS-23..26) and
+			// the exposure its length earns (CDS-41). An empty copy is a cut with
+			// no text, not a copy that breaks them.
+			style := design.Styles[copy.Style]
+			if strings.TrimSpace(copy.Text) == "" {
+				continue
+			}
+			lines := strings.Split(copy.Text, "\n")
 			if len(lines) > style.Lines {
 				return planViolation("plan_copy_lines")
 			}
@@ -379,13 +430,19 @@ func ValidateEditPlan(cfg RenderConfig, plan EditPlan, sources []RenderSource) e
 					return planViolation("plan_copy_chars")
 				}
 			}
-			if captionEnd-captionStart < MinExposureMS(c.Copy.Text) {
+			if captionEnd-captionStart < MinExposureMS(copy.Text) {
 				return planViolation("plan_copy_exposure")
 			}
 			// The accent word must be in the text it accents (CDS-25, CDS-26).
-			if c.Copy.Keyword != "" && !strings.Contains(c.Copy.Text, c.Copy.Keyword) {
+			if copy.Keyword != "" && !strings.Contains(copy.Text, copy.Keyword) {
 				return planViolation("plan_copy_keyword")
 			}
+		}
+		// A second copy is a description followed by the number it leads to, in
+		// that order and no other (CDS-43).
+		if placed := c.Placed(); len(placed) > 1 &&
+			(design.Classify(placed[0].Text) != design.ClassDesc || design.Classify(placed[1].Text) != design.ClassNum) {
+			return planViolation("plan_copy_classes")
 		}
 		if c.EndMS-c.StartMS > cfg.MaxDurationMS+plan.TransitionTotal()-total {
 			return planViolation("plan_duration_limit")

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 
@@ -43,9 +44,9 @@ func TestTheRenderedPlanVerifiesOnEveryRatio(t *testing.T) {
 		plan := clip.EditPlan{Ratio: ratio, DurationMS: 15200, Disclosure: "ad", Preset: "restaurant", Hook: "정확한 한글", Accent: "coral", Facts: []clip.Answer{
 			{Label: "상호", Text: "연남 김밥"}, {Label: "위치", Text: "서울 연남동"}, {Label: "가격", Text: "9,900원"},
 		}, Cuts: []clip.EditCut{
-			{ID: "one", SourceID: "audio", Fingerprint: "audio", EndMS: 5200, Focal: clip.Point{X: .5, Y: .5}, Chips: []string{"위치", "가격"}, Copy: clip.Copy{Text: "정확한 한글 & 여행", Style: "clean", Anchor: "bottom", Align: "center", Accent: "coral"}},
-			{ID: "two", SourceID: "rotated", Fingerprint: "rotated", EndMS: 5000, Focal: clip.Point{X: .5, Y: .5}, Copy: clip.Copy{Text: "기록처럼 <오늘>", Style: "memo", Anchor: "lower_mid", Align: "left", Accent: "teal"}},
-			{ID: "three", SourceID: "silent", Fingerprint: "silent", EndMS: 5200, TransitionMS: 200, Focal: clip.Point{X: .5, Y: .5}, Copy: clip.Copy{Text: "다시 오고 싶은 곳", Style: "bold", Anchor: "upper_mid", Align: "center", Accent: "amber", StartMS: 120, EndMS: 2400}},
+			{ID: "one", SourceID: "audio", Fingerprint: "audio", EndMS: 5200, Focal: clip.Point{X: .5, Y: .5}, Chips: []string{"위치", "가격"}, Copies: []clip.Copy{{Text: "정확한 한글 & 여행", Style: "clean", Anchor: "bottom", Align: "center", Accent: "coral"}}},
+			{ID: "two", SourceID: "rotated", Fingerprint: "rotated", EndMS: 5000, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{Text: "기록처럼 <오늘>", Style: "memo", Anchor: "lower_mid", Align: "left", Accent: "teal"}}},
+			{ID: "three", SourceID: "silent", Fingerprint: "silent", EndMS: 5200, TransitionMS: 200, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{Text: "다시 오고 싶은 곳", Style: "bold", Anchor: "upper_mid", Align: "center", Accent: "amber", StartMS: 120, EndMS: 2400}}},
 		}}
 		canvas, _ := clip.ClipCanvas(ratio)
 		if err := a.WithWorkspace(t.Context(), "dry", func(ws clip.MediaWorkspace) error {
@@ -74,7 +75,7 @@ func TestTheRenderedPlanVerifiesOnEveryRatio(t *testing.T) {
 			// accent word white and still verifies — the second pass the render
 			// makes after the cuts are drawn (CDS-44, CDS-52).
 			l, _ := design.Layout(ratio)
-			c.grounds[2] = Luminance{Mean: 0.8, R: 0.9, G: 0.9, B: 0.9, Frames: []float64{0.8}}
+			c.grounds[2][0] = Luminance{Mean: 0.8, R: 0.9, G: 0.9, B: 0.9, Frames: []float64{0.8}}
 			c.resolve(canvas)
 			scrim := clip.Manifest{}
 			for _, e := range c.manifest {
@@ -87,7 +88,7 @@ func TestTheRenderedPlanVerifiesOnEveryRatio(t *testing.T) {
 			}
 			// It shares the copy's own window, and the copy is now read against
 			// the washed ground rather than against nothing.
-			start, end := plan.Cuts[2].CaptionWindow()
+			start, end := plan.Cuts[2].CaptionWindow(0)
 			offsets := cutOffsets(plan)
 			if scrim[0].StartMS != offsets[2]+start || scrim[0].EndMS != offsets[2]+end {
 				return fmt.Errorf("%s scrim window %d..%d", ratio, scrim[0].StartMS, scrim[0].EndMS)
@@ -120,8 +121,8 @@ func TestTheRenderedPlanVerifiesOnEveryRatio(t *testing.T) {
 func TestAContrastFallbackPutsTheSentenceBackOnAPlate(t *testing.T) {
 	a, r := measured(t)
 	plan := clip.EditPlan{Ratio: "vertical", DurationMS: 15000, Disclosure: "ad", Preset: "restaurant", Accent: "coral", Cuts: []clip.EditCut{
-		{ID: "one", SourceID: "s", Fingerprint: "s", EndMS: 7600, Focal: clip.Point{X: .5, Y: .5}, Copy: clip.Copy{Text: "기록처럼 오늘", Style: "memo", Anchor: "top", Align: "left", Accent: "teal"}},
-		{ID: "two", SourceID: "s", Fingerprint: "s", EndMS: 7600, TransitionMS: 200, Focal: clip.Point{X: .5, Y: .5}, Copy: clip.Copy{Text: "다시 오고 싶은 곳", Style: "bold", Anchor: "upper_mid", Align: "center", Accent: "amber"}},
+		{ID: "one", SourceID: "s", Fingerprint: "s", EndMS: 7600, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{Text: "기록처럼 오늘", Style: "memo", Anchor: "top", Align: "left", Accent: "teal"}}},
+		{ID: "two", SourceID: "s", Fingerprint: "s", EndMS: 7600, TransitionMS: 200, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{Text: "다시 오고 싶은 곳", Style: "bold", Anchor: "upper_mid", Align: "center", Accent: "amber"}}},
 	}, Decisions: []clip.Composition{{Class: "EMOTION"}, {Class: "EMOTION"}}}
 	canvas, _ := clip.ClipCanvas("vertical")
 	if !plan.Compiled() {
@@ -137,14 +138,14 @@ func TestAContrastFallbackPutsTheSentenceBackOnAPlate(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		c.grounds[1] = Luminance{Mean: 0.95, R: 1, G: 1, B: 1, Frames: []float64{0.95}}
+		c.grounds[1][0] = Luminance{Mean: 0.95, R: 1, G: 1, B: 1, Frames: []float64{0.95}}
 		c.resolve(canvas)
-		if err := r.fallback(t.Context(), ws, canvas, &c, 1); err != nil {
+		if err := r.fallback(t.Context(), ws, canvas, &c, 1, 0); err != nil {
 			return err
 		}
 		// 깔끔하게 at its own anchor, because CDS-24 does not let it stand where
 		// 크게 강조 stood and V6 would refuse the copy there.
-		got := c.plan.Cuts[1].Copy
+		got := c.plan.Cuts[1].FirstCopy()
 		if got.Style != "clean" || got.Anchor != design.Styles["clean"].Anchor || got.Align != design.Styles["clean"].Align {
 			return fmt.Errorf("fallback placed %+v", got)
 		}
@@ -153,8 +154,8 @@ func TestAContrastFallbackPutsTheSentenceBackOnAPlate(t *testing.T) {
 		}
 		// The plate needs no ground, so the sample is no longer part of what the
 		// cut draws — and no scrim is left behind on a plated style (CDS-32).
-		if c.grounds[1].Sampled() {
-			return fmt.Errorf("kept a ground a plate does not read: %+v", c.grounds[1])
+		if c.grounds[1][0].Sampled() {
+			return fmt.Errorf("kept a ground a plate does not read: %+v", c.grounds[1][0])
 		}
 		for _, e := range c.manifest {
 			if e.Kind == "scrim" {
@@ -163,10 +164,64 @@ func TestAContrastFallbackPutsTheSentenceBackOnAPlate(t *testing.T) {
 		}
 		// The caller's own plan is untouched: the cuts are cloned, never patched
 		// through the slice the caller still holds.
-		if plan.Cuts[1].Copy.Style != "bold" {
+		if plan.Cuts[1].Copies[0].Style != "bold" {
 			t.Fatal("the caller's plan was mutated")
 		}
 		return clip.VerifyLayout("vertical", c.manifest)
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// A cut carrying CDS-43's two copies lays out and verifies both: two plates, two
+// windows that never meet, and one manifest that names them apart.
+func TestTwoCopiesOnOneCutLayOutAndVerify(t *testing.T) {
+	a, r := measured(t)
+	plan := clip.EditPlan{Ratio: "vertical", DurationMS: 15000, Disclosure: "ad", Preset: "restaurant", Accent: "coral", Cuts: []clip.EditCut{
+		{ID: "one", SourceID: "s", Fingerprint: "s", EndMS: 7500, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{
+			{Text: "조용한 골목을 걸었어요", Style: "clean", Anchor: "bottom", Align: "center", Accent: "coral", StartMS: 120, EndMS: 3000},
+			{Text: "9900원", Style: "clean", Anchor: "bottom", Align: "center", Accent: "coral", StartMS: 3120, EndMS: 7380},
+		}},
+		{ID: "two", SourceID: "s", Fingerprint: "s", EndMS: 7500, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{
+			{Text: "기록처럼 오늘", Style: "memo", Anchor: "top", Align: "left", Accent: "teal"},
+		}},
+	}}
+	canvas, _ := clip.ClipCanvas("vertical")
+	if err := a.WithWorkspace(t.Context(), "two-copies", func(ws clip.MediaWorkspace) error {
+		c, err := r.layout(t.Context(), ws, canvas, plan)
+		if err != nil {
+			return err
+		}
+		if err := clip.VerifyLayout("vertical", c.manifest); err != nil {
+			return err
+		}
+		if len(c.layouts[0]) != 2 || len(c.grounds[0]) != 2 {
+			return fmt.Errorf("one layout for two copies: %d %d", len(c.layouts[0]), len(c.grounds[0]))
+		}
+		// The manifest tells the two apart, and their windows never meet: the
+		// verifier would otherwise read them as one caption on two anchors.
+		windows := map[int][2]int{}
+		for _, e := range c.manifest {
+			if e.Cut == 0 && e.Kind == "copy" {
+				windows[e.Copy] = [2]int{e.StartMS, e.EndMS}
+			}
+		}
+		if len(windows) != 2 {
+			return fmt.Errorf("the manifest does not name both copies: %+v", windows)
+		}
+		if windows[0][1] > windows[1][0] {
+			return fmt.Errorf("the two copies share the screen: %+v", windows)
+		}
+		// A plan the compiler wrote is refused the same way as a plan a person
+		// wrote when the second copy breaks CDS-43.
+		broken := plan
+		broken.Cuts = slices.Clone(plan.Cuts)
+		broken.Cuts[0].Copies = slices.Clone(plan.Cuts[0].Copies)
+		broken.Cuts[0].Copies[1].StartMS = 2000
+		if _, err := r.layout(t.Context(), ws, canvas, broken); err != nil {
+			return err
+		}
+		return nil
 	}); err != nil {
 		t.Fatal(err)
 	}

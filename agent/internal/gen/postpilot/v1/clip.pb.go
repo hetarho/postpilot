@@ -2861,20 +2861,25 @@ func (x *ClipCaption) GetKeyword() string {
 }
 
 type ClipEditCut struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	SourceId       string                 `protobuf:"bytes,2,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
-	Fingerprint    string                 `protobuf:"bytes,3,opt,name=fingerprint,proto3" json:"fingerprint,omitempty"`
-	StartMs        int32                  `protobuf:"varint,4,opt,name=start_ms,json=startMs,proto3" json:"start_ms,omitempty"`
-	EndMs          int32                  `protobuf:"varint,5,opt,name=end_ms,json=endMs,proto3" json:"end_ms,omitempty"`
-	Copy           *ClipCaption           `protobuf:"bytes,6,opt,name=copy,proto3" json:"copy,omitempty"`
-	VolumePermille int32                  `protobuf:"varint,7,opt,name=volume_permille,json=volumePermille,proto3" json:"volume_permille,omitempty"`
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Id          string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	SourceId    string                 `protobuf:"bytes,2,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
+	Fingerprint string                 `protobuf:"bytes,3,opt,name=fingerprint,proto3" json:"fingerprint,omitempty"`
+	StartMs     int32                  `protobuf:"varint,4,opt,name=start_ms,json=startMs,proto3" json:"start_ms,omitempty"`
+	EndMs       int32                  `protobuf:"varint,5,opt,name=end_ms,json=endMs,proto3" json:"end_ms,omitempty"`
+	// The first copy, kept populated for one release so a client that has not
+	// moved to `copies` still shows the sentence. `copies` is the authority.
+	Copy           *ClipCaption `protobuf:"bytes,6,opt,name=copy,proto3" json:"copy,omitempty"`
+	VolumePermille int32        `protobuf:"varint,7,opt,name=volume_permille,json=volumePermille,proto3" json:"volume_permille,omitempty"`
 	// Reserved fact labels whose chips belong on this cut, at most two.
 	Chips []string `protobuf:"bytes,8,rep,name=chips,proto3" json:"chips,omitempty"`
 	// The transition INTO this cut: 0 is a hard cut, 200 the fade a scene change
 	// earns and 300 the fade-through-black nothing offers yet. The first cut of a
 	// plan always carries 0.
-	TransitionMs  int32 `protobuf:"varint,9,opt,name=transition_ms,json=transitionMs,proto3" json:"transition_ms,omitempty"`
+	TransitionMs int32 `protobuf:"varint,9,opt,name=transition_ms,json=transitionMs,proto3" json:"transition_ms,omitempty"`
+	// One copy, or the two CDS-43 lets a cut of 4 s or more carry in sequence: a
+	// description and then the number it leads to, never both on screen at once.
+	Copies        []*ClipCaption `protobuf:"bytes,10,rep,name=copies,proto3" json:"copies,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2970,6 +2975,13 @@ func (x *ClipEditCut) GetTransitionMs() int32 {
 		return x.TransitionMs
 	}
 	return 0
+}
+
+func (x *ClipEditCut) GetCopies() []*ClipCaption {
+	if x != nil {
+		return x.Copies
+	}
+	return nil
 }
 
 type ClipEditPlan struct {
@@ -3677,7 +3689,7 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\bstart_ms\x18\x05 \x01(\x05R\astartMs\x12\x15\n" +
 	"\x06end_ms\x18\x06 \x01(\x05R\x05endMs\x12\x14\n" +
 	"\x05align\x18\a \x01(\tR\x05align\x12\x18\n" +
-	"\akeyword\x18\b \x01(\tR\akeyword\"\xa1\x02\n" +
+	"\akeyword\x18\b \x01(\tR\akeyword\"\xd4\x02\n" +
 	"\vClipEditCut\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tsource_id\x18\x02 \x01(\tR\bsourceId\x12 \n" +
@@ -3687,7 +3699,9 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\x04copy\x18\x06 \x01(\v2\x19.postpilot.v1.ClipCaptionR\x04copy\x12'\n" +
 	"\x0fvolume_permille\x18\a \x01(\x05R\x0evolumePermille\x12\x14\n" +
 	"\x05chips\x18\b \x03(\tR\x05chips\x12#\n" +
-	"\rtransition_ms\x18\t \x01(\x05R\ftransitionMs\"r\n" +
+	"\rtransition_ms\x18\t \x01(\x05R\ftransitionMs\x121\n" +
+	"\x06copies\x18\n" +
+	" \x03(\v2\x19.postpilot.v1.ClipCaptionR\x06copies\"r\n" +
 	"\fClipEditPlan\x12\x1f\n" +
 	"\vduration_ms\x18\x01 \x01(\x05R\n" +
 	"durationMs\x12-\n" +
@@ -3851,50 +3865,51 @@ var file_postpilot_v1_clip_proto_depIdxs = []int32{
 	55, // 32: postpilot.v1.ClipPricedCall.model:type_name -> postpilot.v1.ModelRef
 	42, // 33: postpilot.v1.QuoteClipGenerationResponse.priced_calls:type_name -> postpilot.v1.ClipPricedCall
 	44, // 34: postpilot.v1.ClipEditCut.copy:type_name -> postpilot.v1.ClipCaption
-	45, // 35: postpilot.v1.ClipEditPlan.cuts:type_name -> postpilot.v1.ClipEditCut
-	46, // 36: postpilot.v1.ClipEditingState.plan:type_name -> postpilot.v1.ClipEditPlan
-	47, // 37: postpilot.v1.ClipEditingState.sources:type_name -> postpilot.v1.ClipRetainedSource
-	46, // 38: postpilot.v1.SaveClipEditPlanRequest.plan:type_name -> postpilot.v1.ClipEditPlan
-	8,  // 39: postpilot.v1.SaveClipEditPlanResponse.project:type_name -> postpilot.v1.ClipProject
-	49, // 40: postpilot.v1.ClipService.SaveClipEditPlan:input_type -> postpilot.v1.SaveClipEditPlanRequest
-	51, // 41: postpilot.v1.ClipService.StartClipRender:input_type -> postpilot.v1.StartClipRenderRequest
-	39, // 42: postpilot.v1.ClipService.StartClipGeneration:input_type -> postpilot.v1.StartClipGenerationRequest
-	41, // 43: postpilot.v1.ClipService.QuoteClipGeneration:input_type -> postpilot.v1.QuoteClipGenerationRequest
-	11, // 44: postpilot.v1.ClipService.ListVideoTemplates:input_type -> postpilot.v1.ListVideoTemplatesRequest
-	13, // 45: postpilot.v1.ClipService.CreateVideoTemplate:input_type -> postpilot.v1.CreateVideoTemplateRequest
-	15, // 46: postpilot.v1.ClipService.UpdateVideoTemplate:input_type -> postpilot.v1.UpdateVideoTemplateRequest
-	17, // 47: postpilot.v1.ClipService.DeleteVideoTemplate:input_type -> postpilot.v1.DeleteVideoTemplateRequest
-	5,  // 48: postpilot.v1.ClipService.SeedPresetFields:input_type -> postpilot.v1.SeedPresetFieldsRequest
-	19, // 49: postpilot.v1.ClipService.ListClipProjects:input_type -> postpilot.v1.ListClipProjectsRequest
-	21, // 50: postpilot.v1.ClipService.CreateClipProject:input_type -> postpilot.v1.CreateClipProjectRequest
-	23, // 51: postpilot.v1.ClipService.GetClipProject:input_type -> postpilot.v1.GetClipProjectRequest
-	25, // 52: postpilot.v1.ClipService.UpdateClipProject:input_type -> postpilot.v1.UpdateClipProjectRequest
-	27, // 53: postpilot.v1.ClipService.DeleteClipProject:input_type -> postpilot.v1.DeleteClipProjectRequest
-	33, // 54: postpilot.v1.ClipService.CreateClipSourceBatch:input_type -> postpilot.v1.CreateClipSourceBatchRequest
-	35, // 55: postpilot.v1.ClipService.ConfirmClipSource:input_type -> postpilot.v1.ConfirmClipSourceRequest
-	37, // 56: postpilot.v1.ClipService.DiscardClipSourceBatch:input_type -> postpilot.v1.DiscardClipSourceBatchRequest
-	50, // 57: postpilot.v1.ClipService.SaveClipEditPlan:output_type -> postpilot.v1.SaveClipEditPlanResponse
-	52, // 58: postpilot.v1.ClipService.StartClipRender:output_type -> postpilot.v1.StartClipRenderResponse
-	40, // 59: postpilot.v1.ClipService.StartClipGeneration:output_type -> postpilot.v1.StartClipGenerationResponse
-	43, // 60: postpilot.v1.ClipService.QuoteClipGeneration:output_type -> postpilot.v1.QuoteClipGenerationResponse
-	12, // 61: postpilot.v1.ClipService.ListVideoTemplates:output_type -> postpilot.v1.ListVideoTemplatesResponse
-	14, // 62: postpilot.v1.ClipService.CreateVideoTemplate:output_type -> postpilot.v1.CreateVideoTemplateResponse
-	16, // 63: postpilot.v1.ClipService.UpdateVideoTemplate:output_type -> postpilot.v1.UpdateVideoTemplateResponse
-	18, // 64: postpilot.v1.ClipService.DeleteVideoTemplate:output_type -> postpilot.v1.DeleteVideoTemplateResponse
-	6,  // 65: postpilot.v1.ClipService.SeedPresetFields:output_type -> postpilot.v1.SeedPresetFieldsResponse
-	20, // 66: postpilot.v1.ClipService.ListClipProjects:output_type -> postpilot.v1.ListClipProjectsResponse
-	22, // 67: postpilot.v1.ClipService.CreateClipProject:output_type -> postpilot.v1.CreateClipProjectResponse
-	24, // 68: postpilot.v1.ClipService.GetClipProject:output_type -> postpilot.v1.GetClipProjectResponse
-	26, // 69: postpilot.v1.ClipService.UpdateClipProject:output_type -> postpilot.v1.UpdateClipProjectResponse
-	28, // 70: postpilot.v1.ClipService.DeleteClipProject:output_type -> postpilot.v1.DeleteClipProjectResponse
-	34, // 71: postpilot.v1.ClipService.CreateClipSourceBatch:output_type -> postpilot.v1.CreateClipSourceBatchResponse
-	36, // 72: postpilot.v1.ClipService.ConfirmClipSource:output_type -> postpilot.v1.ConfirmClipSourceResponse
-	38, // 73: postpilot.v1.ClipService.DiscardClipSourceBatch:output_type -> postpilot.v1.DiscardClipSourceBatchResponse
-	57, // [57:74] is the sub-list for method output_type
-	40, // [40:57] is the sub-list for method input_type
-	40, // [40:40] is the sub-list for extension type_name
-	40, // [40:40] is the sub-list for extension extendee
-	0,  // [0:40] is the sub-list for field type_name
+	44, // 35: postpilot.v1.ClipEditCut.copies:type_name -> postpilot.v1.ClipCaption
+	45, // 36: postpilot.v1.ClipEditPlan.cuts:type_name -> postpilot.v1.ClipEditCut
+	46, // 37: postpilot.v1.ClipEditingState.plan:type_name -> postpilot.v1.ClipEditPlan
+	47, // 38: postpilot.v1.ClipEditingState.sources:type_name -> postpilot.v1.ClipRetainedSource
+	46, // 39: postpilot.v1.SaveClipEditPlanRequest.plan:type_name -> postpilot.v1.ClipEditPlan
+	8,  // 40: postpilot.v1.SaveClipEditPlanResponse.project:type_name -> postpilot.v1.ClipProject
+	49, // 41: postpilot.v1.ClipService.SaveClipEditPlan:input_type -> postpilot.v1.SaveClipEditPlanRequest
+	51, // 42: postpilot.v1.ClipService.StartClipRender:input_type -> postpilot.v1.StartClipRenderRequest
+	39, // 43: postpilot.v1.ClipService.StartClipGeneration:input_type -> postpilot.v1.StartClipGenerationRequest
+	41, // 44: postpilot.v1.ClipService.QuoteClipGeneration:input_type -> postpilot.v1.QuoteClipGenerationRequest
+	11, // 45: postpilot.v1.ClipService.ListVideoTemplates:input_type -> postpilot.v1.ListVideoTemplatesRequest
+	13, // 46: postpilot.v1.ClipService.CreateVideoTemplate:input_type -> postpilot.v1.CreateVideoTemplateRequest
+	15, // 47: postpilot.v1.ClipService.UpdateVideoTemplate:input_type -> postpilot.v1.UpdateVideoTemplateRequest
+	17, // 48: postpilot.v1.ClipService.DeleteVideoTemplate:input_type -> postpilot.v1.DeleteVideoTemplateRequest
+	5,  // 49: postpilot.v1.ClipService.SeedPresetFields:input_type -> postpilot.v1.SeedPresetFieldsRequest
+	19, // 50: postpilot.v1.ClipService.ListClipProjects:input_type -> postpilot.v1.ListClipProjectsRequest
+	21, // 51: postpilot.v1.ClipService.CreateClipProject:input_type -> postpilot.v1.CreateClipProjectRequest
+	23, // 52: postpilot.v1.ClipService.GetClipProject:input_type -> postpilot.v1.GetClipProjectRequest
+	25, // 53: postpilot.v1.ClipService.UpdateClipProject:input_type -> postpilot.v1.UpdateClipProjectRequest
+	27, // 54: postpilot.v1.ClipService.DeleteClipProject:input_type -> postpilot.v1.DeleteClipProjectRequest
+	33, // 55: postpilot.v1.ClipService.CreateClipSourceBatch:input_type -> postpilot.v1.CreateClipSourceBatchRequest
+	35, // 56: postpilot.v1.ClipService.ConfirmClipSource:input_type -> postpilot.v1.ConfirmClipSourceRequest
+	37, // 57: postpilot.v1.ClipService.DiscardClipSourceBatch:input_type -> postpilot.v1.DiscardClipSourceBatchRequest
+	50, // 58: postpilot.v1.ClipService.SaveClipEditPlan:output_type -> postpilot.v1.SaveClipEditPlanResponse
+	52, // 59: postpilot.v1.ClipService.StartClipRender:output_type -> postpilot.v1.StartClipRenderResponse
+	40, // 60: postpilot.v1.ClipService.StartClipGeneration:output_type -> postpilot.v1.StartClipGenerationResponse
+	43, // 61: postpilot.v1.ClipService.QuoteClipGeneration:output_type -> postpilot.v1.QuoteClipGenerationResponse
+	12, // 62: postpilot.v1.ClipService.ListVideoTemplates:output_type -> postpilot.v1.ListVideoTemplatesResponse
+	14, // 63: postpilot.v1.ClipService.CreateVideoTemplate:output_type -> postpilot.v1.CreateVideoTemplateResponse
+	16, // 64: postpilot.v1.ClipService.UpdateVideoTemplate:output_type -> postpilot.v1.UpdateVideoTemplateResponse
+	18, // 65: postpilot.v1.ClipService.DeleteVideoTemplate:output_type -> postpilot.v1.DeleteVideoTemplateResponse
+	6,  // 66: postpilot.v1.ClipService.SeedPresetFields:output_type -> postpilot.v1.SeedPresetFieldsResponse
+	20, // 67: postpilot.v1.ClipService.ListClipProjects:output_type -> postpilot.v1.ListClipProjectsResponse
+	22, // 68: postpilot.v1.ClipService.CreateClipProject:output_type -> postpilot.v1.CreateClipProjectResponse
+	24, // 69: postpilot.v1.ClipService.GetClipProject:output_type -> postpilot.v1.GetClipProjectResponse
+	26, // 70: postpilot.v1.ClipService.UpdateClipProject:output_type -> postpilot.v1.UpdateClipProjectResponse
+	28, // 71: postpilot.v1.ClipService.DeleteClipProject:output_type -> postpilot.v1.DeleteClipProjectResponse
+	34, // 72: postpilot.v1.ClipService.CreateClipSourceBatch:output_type -> postpilot.v1.CreateClipSourceBatchResponse
+	36, // 73: postpilot.v1.ClipService.ConfirmClipSource:output_type -> postpilot.v1.ConfirmClipSourceResponse
+	38, // 74: postpilot.v1.ClipService.DiscardClipSourceBatch:output_type -> postpilot.v1.DiscardClipSourceBatchResponse
+	58, // [58:75] is the sub-list for method output_type
+	41, // [41:58] is the sub-list for method input_type
+	41, // [41:41] is the sub-list for extension type_name
+	41, // [41:41] is the sub-list for extension extendee
+	0,  // [0:41] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_clip_proto_init() }

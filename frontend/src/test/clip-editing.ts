@@ -15,16 +15,18 @@ export function clipEditingFixture(): ClipEditingState {
         // The scene changes between the two, so the second leads in with
         // CDS-36's fade and the clip is 200 ms shorter than its footage.
         transitionMs: i === 0 ? 0 : 200,
-        copy: {
-          text: `caption ${id}`,
-          anchor: 'bottom',
-          align: 'center',
-          keyword: '',
-          style: 'clean',
-          accent: '',
-          startMs: 0,
-          endMs: 0,
-        },
+        copies: [
+          {
+            text: `caption ${id}`,
+            anchor: 'bottom' as const,
+            align: 'center' as const,
+            keyword: '',
+            style: 'clean' as const,
+            accent: '' as const,
+            startMs: 0,
+            endMs: 0,
+          },
+        ],
         chips: [],
         volumePermille: 1000,
       })),

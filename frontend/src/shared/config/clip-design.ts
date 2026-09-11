@@ -43,6 +43,9 @@ export const CLIP_GUARDS = design.guards
 /** CDS-36's transitions: the default, the fade a scene change earns and the
  *  fade-through-black nothing offers yet. */
 export const CLIP_TRANSITION = design.transition
+/** CDS-43: how many copies a cut may carry, the cut length the second one needs
+ *  and how short the second sentence has to be to stand alone. */
+export const CLIP_COPY = design.copy
 export const CLIP_CLASSES = design.classes
 export const CLIP_SCENE_STYLES = design.scene_styles
 export const CLIP_FACTS = design.facts

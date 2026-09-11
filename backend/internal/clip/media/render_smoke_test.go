@@ -221,9 +221,9 @@ func TestRenderSmoke(t *testing.T) {
 				plan := clip.EditPlan{Ratio: ratio, DurationMS: 15200, Disclosure: "ad", Preset: "restaurant", Hook: "정확한 한글", Accent: "coral", Facts: []clip.Answer{
 					{Label: "상호", Text: "연남 김밥"}, {Label: "위치", Text: "서울 연남동"}, {Label: "가격", Text: "9,900원"},
 				}, Cuts: []clip.EditCut{
-					{ID: "one", SourceID: "audio", Fingerprint: "audio", EndMS: 5200, Focal: clip.Point{X: .5, Y: .5}, Chips: []string{"위치", "가격"}, Copy: clip.Copy{Text: "정확한 한글 & 여행", Style: "clean", Anchor: "bottom", Align: "center", Accent: "coral"}},
-					{ID: "two", SourceID: "rotated", Fingerprint: "rotated", EndMS: 5000, Focal: clip.Point{X: .5, Y: .5}, Volume: volume(.5), Copy: clip.Copy{Text: "기록처럼 <오늘>", Style: "memo", Anchor: "lower_mid", Align: "left", Accent: "teal"}},
-					{ID: "three", SourceID: "silent", Fingerprint: "silent", EndMS: 5200, TransitionMS: 200, Focal: clip.Point{X: .5, Y: .5}, Volume: volume(0), Copy: clip.Copy{Text: "다시 오고 싶은 곳", Style: "bold", Anchor: "upper_mid", Align: "center", Accent: "amber", StartMS: 120, EndMS: 2400}},
+					{ID: "one", SourceID: "audio", Fingerprint: "audio", EndMS: 5200, Focal: clip.Point{X: .5, Y: .5}, Chips: []string{"위치", "가격"}, Copies: []clip.Copy{{Text: "정확한 한글 & 여행", Style: "clean", Anchor: "bottom", Align: "center", Accent: "coral"}}},
+					{ID: "two", SourceID: "rotated", Fingerprint: "rotated", EndMS: 5000, Focal: clip.Point{X: .5, Y: .5}, Volume: volume(.5), Copies: []clip.Copy{{Text: "기록처럼 <오늘>", Style: "memo", Anchor: "lower_mid", Align: "left", Accent: "teal"}}},
+					{ID: "three", SourceID: "silent", Fingerprint: "silent", EndMS: 5200, TransitionMS: 200, Focal: clip.Point{X: .5, Y: .5}, Volume: volume(0), Copies: []clip.Copy{{Text: "다시 오고 싶은 곳", Style: "bold", Anchor: "upper_mid", Align: "center", Accent: "amber", StartMS: 120, EndMS: 2400}}},
 				}}
 				if variant != "vertical" && variant != "horizontal" && variant != "square" {
 					// One cut, no cards: these variants are about timing and
@@ -240,22 +240,22 @@ func TestRenderSmoke(t *testing.T) {
 						plan.Cuts = plan.Cuts[:1]
 					}
 					plan.Cuts[0].EndMS = 15017
-					plan.Cuts[0].Copy.Text = ""
+					plan.Cuts[0].Copies[0].Text = ""
 				}
 				if variant == "bright-scrim" {
 					// One 형광펜 cut on white footage: the sampler has to find a
 					// bright ground and the scrim has to reach the pixels.
 					plan.Cuts = plan.Cuts[:1]
 					plan.Cuts[0].EndMS = 15000
-					plan.Cuts[0].Copy = clip.Copy{Text: "가격 9900원", Keyword: "9900원", Style: "mark", Anchor: "bottom", Align: "center", Accent: "amber"}
+					plan.Cuts[0].Copies = []clip.Copy{{Text: "가격 9900원", Keyword: "9900원", Style: "mark", Anchor: "bottom", Align: "center", Accent: "amber"}}
 					plan.Cuts[0].Chips = nil
 				}
 				if variant == "caption-timed" {
 					plan.Cuts = plan.Cuts[:1]
 					plan.Cuts[0].EndMS = 15000
-					plan.Cuts[0].Copy.StartMS = 4000
-					plan.Cuts[0].Copy.EndMS = 10000
-					width, height, err := r.CaptionSize(t.Context(), ratio, plan.Cuts[0].Copy)
+					plan.Cuts[0].Copies[0].StartMS = 4000
+					plan.Cuts[0].Copies[0].EndMS = 10000
+					width, height, err := r.CaptionSize(t.Context(), ratio, plan.Cuts[0].FirstCopy())
 					if err != nil || width <= 0 || height <= 0 {
 						return fmt.Errorf("measure timed caption: %v", err)
 					}
@@ -396,7 +396,7 @@ func TestRenderSmoke(t *testing.T) {
 						}
 					}
 					if bright < 100 {
-						t.Fatalf("copy pixels missing for style %s: %d", plan.Cuts[i].Copy.Style, bright)
+						t.Fatalf("copy pixels missing for style %s: %d", plan.Cuts[i].Copies[0].Style, bright)
 					}
 					for y := 0; y < canvas.Height; y += 4 {
 						for x := 0; x < canvas.Width; x += 4 {
@@ -409,7 +409,7 @@ func TestRenderSmoke(t *testing.T) {
 							}
 						}
 					}
-					if err := exportRenderSmoke(ratio+"-"+plan.Cuts[i].Copy.Style+".png", path); err != nil {
+					if err := exportRenderSmoke(ratio+"-"+plan.Cuts[i].Copies[0].Style+".png", path); err != nil {
 						return err
 					}
 					if err := os.Remove(path); err != nil {

@@ -76,7 +76,7 @@ func runRender(t *testing.T, h *generationHarness) error {
 func TestCorrectionSaveConflictSubsetRenderAndZeroUsage(t *testing.T) {
 	h, old, draft := completedClip(t)
 	ctx := context.Background()
-	draft.Cuts[0].Copy.Text = "手書き・정확한 수정"
+	draft.Cuts[0].Copies[0].Text = "手書き・정확한 수정"
 	draft.Cuts[0].VolumePermille = 0
 	if _, err := h.service.SaveCorrection(ctx, "bob", old.ID, 1, draft); !errors.Is(err, clip.ErrNotFound) {
 		t.Fatal(err)

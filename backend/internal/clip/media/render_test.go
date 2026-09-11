@@ -176,7 +176,7 @@ func TestCopyLayoutAndSVGGolden(t *testing.T) {
 		}
 		svg := copySVG(canvas, c, l, Luminance{})
 		golden(t, "copy-"+style+"-keyword.svg", svg+"\n")
-		for _, e := range l.Elements(0, c, 0, 3000) {
+		for _, e := range l.Elements(0, 0, c, 0, 3000) {
 			if e.Region.X+e.Region.Width > canvas.Safe.X+canvas.Safe.Width {
 				t.Fatalf("%s %s crossed x %v: %+v", style, e.Kind, canvas.Safe.X+canvas.Safe.Width, e.Region)
 			}
@@ -311,7 +311,7 @@ func TestRenderFilterGoldens(t *testing.T) {
 	r := testRenderer(t, newAdapter(t, &fakeRunner{}))
 	canvas, _ := clip.ClipCanvas("horizontal")
 	c := clip.EditCut{StartMS: 100, EndMS: 7700, Focal: clip.Point{X: .25, Y: .75}, Volume: volume(.5)}
-	golden(t, "cut.filter", cutGraph(r.cfg, canvas, c, clip.MediaInfo{HasAudio: true}, 228, layers{Copy: "copy.png"}, true)+"\n")
+	golden(t, "cut.filter", cutGraph(r.cfg, canvas, c, clip.MediaInfo{HasAudio: true}, 228, layers{Copies: []string{"copy.png"}}, true)+"\n")
 	// CDS-36 on one timeline: a hard cut CONCATENATES and a scene change
 	// dissolves, so the same three cuts join three different ways. The audio
 	// graph is golden beside each one because its boundaries are CDS-35's, not
@@ -337,7 +337,7 @@ func TestRenderFilterGoldens(t *testing.T) {
 	}
 	// CDS-4 and CDS-27: exactly one 180 ms fade-in settling 12 px, one 120 ms
 	// fade-out that does not move, and a window inset 120 ms at both ends.
-	graph := cutGraph(r.cfg, canvas, c, clip.MediaInfo{HasAudio: true}, 228, layers{Copy: "copy.png"}, true)
+	graph := cutGraph(r.cfg, canvas, c, clip.MediaInfo{HasAudio: true}, 228, layers{Copies: []string{"copy.png"}}, true)
 	for _, want := range []string{
 		"fade=t=in:st=0.120:d=0.180:alpha=1",
 		"fade=t=out:st=7.360:d=0.120:alpha=1",
@@ -350,8 +350,8 @@ func TestRenderFilterGoldens(t *testing.T) {
 	}
 	// The fixed layer is its own overlay with no fade and no y expression: the
 	// disclosure badge may not move (CDS-31) while the copy must (CDS-4).
-	both := cutGraph(r.cfg, canvas, c, clip.MediaInfo{}, 228, layers{Fixed: "fixed.png", Copy: "copy.png"}, false)
-	if !strings.Contains(both, "[base][1:v:0]overlay=0:0:format=auto:shortest=0[fixed];") || !strings.Contains(both, "[2:v:0]format=rgba,fade=") || !strings.Contains(both, "[fixed][plate]overlay=x=0:y=") {
+	both := cutGraph(r.cfg, canvas, c, clip.MediaInfo{}, 228, layers{Fixed: "fixed.png", Copies: []string{"copy.png"}}, false)
+	if !strings.Contains(both, "[base][1:v:0]overlay=0:0:format=auto:shortest=0[fixed];") || !strings.Contains(both, "[2:v:0]format=rgba,fade=") || !strings.Contains(both, "[fixed][plate0]overlay=x=0:y=") {
 		t.Fatalf("fixed and animated layers are not separate: %s", both)
 	}
 	fixedOnly := cutGraph(r.cfg, canvas, clip.EditCut{StartMS: 100, EndMS: 7700}, clip.MediaInfo{}, 228, layers{Fixed: "fixed.png"}, false)
@@ -366,17 +366,17 @@ func TestRenderFilterGoldens(t *testing.T) {
 	}
 	// An explicit window is exactly what the plan asked for, not re-inset.
 	explicit := c
-	explicit.Copy = clip.Copy{Text: "x", StartMS: 1000, EndMS: 4000}
-	if !strings.Contains(cutGraph(r.cfg, canvas, explicit, clip.MediaInfo{}, 228, layers{Copy: "copy.png"}, false), "enable='gte(t,1.000)*lt(t,4.000)'") {
+	explicit.Copies = []clip.Copy{{Text: "x", StartMS: 1000, EndMS: 4000}}
+	if !strings.Contains(cutGraph(r.cfg, canvas, explicit, clip.MediaInfo{}, 228, layers{Copies: []string{"copy.png"}}, false), "enable='gte(t,1.000)*lt(t,4.000)'") {
 		t.Fatal("an explicit caption window was moved")
 	}
 	// The card is the last layer, fades the way its own kind fades, and dips the
 	// original audio 6 dB for its own window while it is up (CDS-28, CDS-35).
-	hook := cutGraph(r.cfg, canvas, c, clip.MediaInfo{HasAudio: true}, 228, layers{Copy: "copy.png", Card: "card.png", Window: cardLayout{Kind: "hook", StartMS: 0, EndMS: 1500}}, true)
+	hook := cutGraph(r.cfg, canvas, c, clip.MediaInfo{HasAudio: true}, 228, layers{Copies: []string{"copy.png"}, Card: "card.png", Window: cardLayout{Kind: "hook", StartMS: 0, EndMS: 1500}}, true)
 	golden(t, "cut-hook-card.filter", hook+"\n")
 	for _, want := range []string{
 		"[2:v:0]format=rgba,fade=t=out:st=1.300:d=0.200:alpha=1[card];",
-		"[copy][card]overlay=0:0:format=auto:shortest=0:enable='gte(t,0.000)*lt(t,1.500)'[carded];[carded]trim=",
+		"[copy0][card]overlay=0:0:format=auto:shortest=0:enable='gte(t,0.000)*lt(t,1.500)'[carded];[carded]trim=",
 		"volume=volume=-6.000000dB:eval=frame:enable='lt(t,1.500)'",
 	} {
 		if !strings.Contains(hook, want) {
@@ -398,8 +398,8 @@ func TestRenderFilterGoldens(t *testing.T) {
 func TestCaptionExposureUsesOnlyValidatedCutRelativeTimes(t *testing.T) {
 	r := testRenderer(t, newAdapter(t, &fakeRunner{}))
 	canvas, _ := clip.ClipCanvas("vertical")
-	c := clip.Cut{EndMS: 15000, Focal: clip.Point{X: .5, Y: .5}, Copy: clip.Caption{StartMS: 1000, EndMS: 12000}}
-	graph := cutGraph(r.cfg, canvas, c, clip.MediaInfo{}, 450, layers{Copy: "copy.png"}, false)
+	c := clip.Cut{EndMS: 15000, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Caption{{StartMS: 1000, EndMS: 12000}}}
+	graph := cutGraph(r.cfg, canvas, c, clip.MediaInfo{}, 450, layers{Copies: []string{"copy.png"}}, false)
 	if !strings.Contains(graph, ":enable='gte(t,1.000)*lt(t,12.000)'") {
 		t.Fatal(graph)
 	}
@@ -433,7 +433,7 @@ func TestRenderDoesNotLoadInvalidPlansOrLeakOnFailure(t *testing.T) {
 			a := newAdapter(t, fake)
 			r := testRenderer(t, a)
 			s := clip.RenderSource{ID: "source", Fingerprint: "hash", Info: clip.MediaInfo{DurationMS: 20000, Width: 1920, Height: 1080}}
-			plan := clip.EditPlan{Ratio: "vertical", DurationMS: 15000, Cuts: []clip.EditCut{{ID: "one", SourceID: s.ID, Fingerprint: s.Fingerprint, EndMS: 15000, Focal: clip.Point{X: .5, Y: .5}, Copy: clip.Copy{Style: "clean", Anchor: "bottom", Align: "center"}}}}
+			plan := clip.EditPlan{Ratio: "vertical", DurationMS: 15000, Cuts: []clip.EditCut{{ID: "one", SourceID: s.ID, Fingerprint: s.Fingerprint, EndMS: 15000, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{Style: "clean", Anchor: "bottom", Align: "center"}}}}}
 			if mode == "invalid" {
 				plan.DurationMS = 14000
 			}

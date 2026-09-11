@@ -22,19 +22,33 @@ export function toClipEditingState(value: ProtoClipEditingState): ClipEditingSta
       durationMs: value.plan.durationMs,
       hook: value.plan.hook,
       cuts: value.plan.cuts.map((c) => {
-        const copy = c.copy
-        // A cut whose copy the composer dropped arrives with no placement:
-        // valid, and the correction screen shows it as a cut with no text.
-        const placed = (copy?.text ?? '').trim() !== ''
-        if (
-          !copy ||
-          (placed &&
-            (!COPY_ANCHORS.includes(copy.position as ClipCaption['anchor']) ||
-              !COPY_ALIGNS.includes(copy.align as ClipCaption['align']) ||
-              !COPY_STYLES.includes(copy.style as CopyStyle))) ||
-          !CLIP_ACCENTS.includes(copy.accent as ClipAccent)
-        )
-          throw new Error('Invalid clip caption')
+        // `copies` is the authority; a server that still sends only the one
+        // `copy` is read exactly as it was before CDS-43.
+        const wire = c.copies.length > 0 ? c.copies : c.copy ? [c.copy] : []
+        if (wire.length === 0) throw new Error('Invalid clip caption')
+        const copies = wire.map((copy) => {
+          // A cut whose copy the composer dropped arrives with no placement:
+          // valid, and the correction screen shows it as a cut with no text.
+          const placed = copy.text.trim() !== ''
+          if (
+            (placed &&
+              (!COPY_ANCHORS.includes(copy.position as ClipCaption['anchor']) ||
+                !COPY_ALIGNS.includes(copy.align as ClipCaption['align']) ||
+                !COPY_STYLES.includes(copy.style as CopyStyle))) ||
+            !CLIP_ACCENTS.includes(copy.accent as ClipAccent)
+          )
+            throw new Error('Invalid clip caption')
+          return {
+            text: copy.text,
+            startMs: copy.startMs,
+            endMs: copy.endMs,
+            anchor: copy.position as ClipCaption['anchor'],
+            align: copy.align as ClipCaption['align'],
+            keyword: copy.keyword,
+            style: copy.style as CopyStyle,
+            accent: copy.accent as ClipAccent,
+          }
+        })
         return {
           id: c.id,
           sourceId: c.sourceId,
@@ -44,16 +58,7 @@ export function toClipEditingState(value: ProtoClipEditingState): ClipEditingSta
           transitionMs: c.transitionMs,
           volumePermille: c.volumePermille,
           chips: [...c.chips],
-          copy: {
-            text: copy.text,
-            startMs: copy.startMs,
-            endMs: copy.endMs,
-            anchor: copy.position as ClipCaption['anchor'],
-            align: copy.align as ClipCaption['align'],
-            keyword: copy.keyword,
-            style: copy.style as CopyStyle,
-            accent: copy.accent as ClipAccent,
-          },
+          copies,
         }
       }),
     },
@@ -87,8 +92,10 @@ export function clipPlanToProto(plan: ClipEditPlan) {
       volumePermille: c.volumePermille,
       chips: [...c.chips],
       // `position` carries the anchor on the wire; the field kept its number
-      // through the vocabulary change (CDS-12).
-      copy: { ...c.copy, position: c.copy.anchor },
+      // through the vocabulary change (CDS-12). `copy` stays populated with the
+      // first one for a release, beside the list that is the authority.
+      copy: { ...c.copies[0]!, position: c.copies[0]!.anchor },
+      copies: c.copies.map((copy) => ({ ...copy, position: copy.anchor })),
     })),
   }
 }

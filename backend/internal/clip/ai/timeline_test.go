@@ -62,13 +62,13 @@ func TestComposeActualFailureTimingWithoutAnotherPaidCall(t *testing.T) {
 			if c.SourceID != original["source_id"] || c.StartMS != original["start_ms"] || c.OriginalVolume() != 1 {
 				t.Fatal("lost selected footage or original audio")
 			}
-			if c.Copy.Text != p["text"] && c.Copy.Text != p["short_text"] {
-				t.Fatalf("copy %q is neither what was written nor its alternative", c.Copy.Text)
+			if c.FirstCopy().Text != p["text"] && c.FirstCopy().Text != p["short_text"] {
+				t.Fatalf("copy %q is neither what was written nor its alternative", c.FirstCopy().Text)
 			}
-			if c.Copy.Accent != "amber" || !slices.Contains(in.Template.CopyStyles, c.Copy.Style) {
-				t.Fatalf("cut %d styling: %+v", i, c.Copy)
+			if c.FirstCopy().Accent != "amber" || !slices.Contains(in.Template.CopyStyles, c.FirstCopy().Style) {
+				t.Fatalf("cut %d styling: %+v", i, c.FirstCopy())
 			}
-			if start, end := c.CaptionWindow(); start != 120 || end != c.EndMS-c.StartMS-120 {
+			if start, end := c.CaptionWindow(0); start != 120 || end != c.EndMS-c.StartMS-120 {
 				t.Fatalf("cut %d window %d..%d", i, start, end)
 			}
 		}
@@ -132,7 +132,7 @@ func TestComposeCorrectsArithmeticAndExposureButKeepsValidTiming(t *testing.T) {
 			// The copy's window is CDS-27's, whatever the model asked for: cut
 			// start + 120 ms to cut end − 120 ms, and it always fits the cut.
 			cut := got.Cuts[0]
-			start, end := cut.CaptionWindow()
+			start, end := cut.CaptionWindow(0)
 			if start != 120 || end != cut.EndMS-cut.StartMS-120 || end <= start {
 				t.Fatalf("caption window %d..%d in a %d ms cut", start, end, cut.EndMS-cut.StartMS)
 			}

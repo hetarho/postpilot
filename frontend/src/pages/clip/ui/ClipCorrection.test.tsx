@@ -172,18 +172,20 @@ it('keeps the result mounted across every edit and saves exact fields with its r
           endMs: 17000,
           transitionMs: 200,
           volumePermille: 250,
-          copy: {
-            text: '정확한 한국어 <copy>',
-            style: 'memo',
-            // The anchor the wire calls `position`; it round-trips through the
-            // proto mapper on the way back, so a lost mapping fails here. 메모
-            // sits LEFT at the top or the bottom (CDS-24).
-            anchor: 'bottom',
-            align: 'left',
-            accent: 'teal',
-            startMs: 200,
-            endMs: 2000,
-          },
+          copies: [
+            {
+              text: '정확한 한국어 <copy>',
+              style: 'memo',
+              // The anchor the wire calls `position`; it round-trips through the
+              // proto mapper on the way back, so a lost mapping fails here. 메모
+              // sits LEFT at the top or the bottom (CDS-24).
+              anchor: 'bottom',
+              align: 'left',
+              accent: 'teal',
+              startMs: 200,
+              endMs: 2000,
+            },
+          ],
         },
       ],
     },
@@ -248,6 +250,35 @@ it('offers a transition on every cut but the first and shows what it costs', asy
   await userEvent.click(second)
   await userEvent.click(screen.getByRole('option', { name: '컷 (바로 전환)' }))
   expect(screen.getByText(/20000/)).toBeVisible()
+})
+// CDS-43 on the screen: a cut of 4 s or more may state the number its sentence
+// leads to as a second caption, after the first has left and never beside it.
+it('adds and removes the second caption on a long enough cut', async () => {
+  const writes: NonNullable<FakeClipsOptions['planWrites']> = []
+  await mount({ planWrites: writes })
+  // The fixture's cuts are 10 s, so both may carry a second caption.
+  expect(cut().getAllByLabelText('자막 원문')).toHaveLength(1)
+  await userEvent.click(cut().getByRole('button', { name: '자막 추가' }))
+  const fields = cut().getAllByLabelText('자막 원문')
+  expect(fields).toHaveLength(2)
+  // The second one starts empty, a clear 120 ms after the first has left.
+  expect(fields[1]!).toHaveValue('')
+  const starts = cut().getAllByLabelText('자막 시작 (컷 내 ms)')
+  const ends = cut().getAllByLabelText('자막 끝 (컷 내 ms)')
+  expect(Number((starts[1]! as HTMLInputElement).value)).toBe(
+    Number((ends[0]! as HTMLInputElement).value) + 120,
+  )
+  // A description, then the number it leads to (CDS-43), and the plan saves.
+  fireEvent.change(fields[0]!, { target: { value: '조용한 골목을 천천히 걸었어요' } })
+  fireEvent.change(fields[1]!, { target: { value: '9900원' } })
+  await userEvent.click(screen.getByRole('button', { name: '수정 저장' }))
+  await screen.findByText('수정됨 · 다시 출력 필요')
+  expect(writes[0]!.plan.cuts[0]!.copies).toHaveLength(2)
+  expect(writes[0]!.plan.cuts[0]!.copies[1]!.text).toBe('9900원')
+  // Removed again, the first caption takes CDS-27's default window back.
+  await userEvent.click(cut().getByRole('button', { name: '두 번째 자막 삭제' }))
+  expect(cut().getAllByLabelText('자막 원문')).toHaveLength(1)
+  expect(cut().getByLabelText('자막 시작 (컷 내 ms)')).toHaveValue(0)
 })
 it('keeps local edits and video on optimistic conflict, and guards leaving', async () => {
   const { router } = await mount({ planSaveConflict: true })

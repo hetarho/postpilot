@@ -13,7 +13,7 @@ import (
 
 func validPlan() (clip.EditPlan, []clip.RenderSource) {
 	s := clip.RenderSource{ID: "source", Fingerprint: "hash", Info: clip.MediaInfo{DurationMS: 20000, Width: 1920, Height: 1080}}
-	c := clip.EditCut{ID: "one", SourceID: s.ID, Fingerprint: s.Fingerprint, EndMS: 7600, Focal: clip.Point{X: .5, Y: .5}, Copy: clip.Copy{Text: "Hello", Anchor: "bottom", Align: "center", Style: "clean"}}
+	c := clip.EditCut{ID: "one", SourceID: s.ID, Fingerprint: s.Fingerprint, EndMS: 7600, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{Text: "Hello", Anchor: "bottom", Align: "center", Style: "clean"}}}
 	d := c
 	d.ID = "two"
 	// The scene changes between the two, so the second leads in with CDS-36's
@@ -31,7 +31,7 @@ func TestValidateEditPlan(t *testing.T) {
 		"unknown ratio": func(p *clip.EditPlan) { p.Ratio = "2:3" }, "too short": func(p *clip.EditPlan) { p.DurationMS = 14999 }, "too long": func(p *clip.EditPlan) { p.DurationMS = 90001 }, "empty": func(p *clip.EditPlan) { p.Cuts = nil },
 		"missing fade accounting": func(p *clip.EditPlan) { p.DurationMS = 15200 }, "foreign source": func(p *clip.EditPlan) { p.Cuts[0].SourceID = "foreign" }, "changed bytes": func(p *clip.EditPlan) { p.Cuts[0].Fingerprint = "changed" }, "duplicate cut": func(p *clip.EditPlan) { p.Cuts[1].ID = p.Cuts[0].ID },
 		"before source": func(p *clip.EditPlan) { p.Cuts[0].StartMS = -1 }, "past source": func(p *clip.EditPlan) { p.Cuts[0].EndMS = 20001 }, "short fade": func(p *clip.EditPlan) { p.Cuts[0].EndMS = 200 }, "NaN volume": func(p *clip.EditPlan) { p.Cuts[0].Volume = volume(math.NaN()) }, "loud": func(p *clip.EditPlan) { p.Cuts[0].Volume = volume(1.001) }, "negative volume": func(p *clip.EditPlan) { p.Cuts[0].Volume = volume(-.1) },
-		"NaN focal": func(p *clip.EditPlan) { p.Cuts[0].Focal.X = math.NaN() }, "outside focal": func(p *clip.EditPlan) { p.Cuts[0].Focal.Y = 1.1 }, "free anchor": func(p *clip.EditPlan) { p.Cuts[0].Copy.Anchor = "x=10" }, "free align": func(p *clip.EditPlan) { p.Cuts[0].Copy.Align = "justify" }, "free style": func(p *clip.EditPlan) { p.Cuts[0].Copy.Style = "animated" }, "free accent": func(p *clip.EditPlan) { p.Cuts[0].Copy.Accent = "#123456" },
+		"NaN focal": func(p *clip.EditPlan) { p.Cuts[0].Focal.X = math.NaN() }, "outside focal": func(p *clip.EditPlan) { p.Cuts[0].Focal.Y = 1.1 }, "free anchor": func(p *clip.EditPlan) { p.Cuts[0].Copies[0].Anchor = "x=10" }, "free align": func(p *clip.EditPlan) { p.Cuts[0].Copies[0].Align = "justify" }, "free style": func(p *clip.EditPlan) { p.Cuts[0].Copies[0].Style = "animated" }, "free accent": func(p *clip.EditPlan) { p.Cuts[0].Copies[0].Accent = "#123456" },
 		// CDS-36 admits three transitions and the first cut takes none.
 		"invented transition": func(p *clip.EditPlan) { p.Cuts[1].TransitionMS = 150 }, "fades in from nothing": func(p *clip.EditPlan) { p.Cuts[0].TransitionMS = 200 },
 	} {
@@ -44,7 +44,7 @@ func TestValidateEditPlan(t *testing.T) {
 		})
 	}
 	p, s = validPlan()
-	p.Cuts[0].Copy.Text = strings.Repeat("가", 501)
+	p.Cuts[0].Copies[0].Text = strings.Repeat("가", 501)
 	if err := clip.ValidateEditPlan(cfg, p, s); err != clip.ErrCopyTooLong {
 		t.Fatal(err)
 	}
@@ -82,8 +82,8 @@ func TestCopyLimitsAndExposurePerStyle(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			p, s := validPlan()
-			p.Cuts[0].Copy.Style, p.Cuts[0].Copy.Text = tc.style, tc.text
-			p.Cuts[0].Copy.StartMS, p.Cuts[0].Copy.EndMS = tc.start, tc.end
+			p.Cuts[0].Copies[0].Style, p.Cuts[0].Copies[0].Text = tc.style, tc.text
+			p.Cuts[0].Copies[0].StartMS, p.Cuts[0].Copies[0].EndMS = tc.start, tc.end
 			err := clip.ValidateEditPlan(cfg, p, s)
 			if tc.code == "" {
 				if err != nil {
@@ -207,6 +207,57 @@ func TestDurationArithmeticWithMixedTransitions(t *testing.T) {
 				if err := clip.ValidateEditPlan(cfg, wrong, s); err == nil {
 					t.Fatal("accepted a duration the cuts do not add up to")
 				}
+			}
+		})
+	}
+}
+
+// CDS-43: a cut of 4 s or more may carry a description and then the number it
+// leads to, 120 ms apart and never together.
+func TestSecondCopyRules(t *testing.T) {
+	cfg := config.ClipRender(&config.Config{})
+	// 7.6 s a cut, so both copies fit with room to spare.
+	twoCopies := func() (clip.EditPlan, []clip.RenderSource) {
+		p, s := validPlan()
+		for i := range p.Cuts {
+			p.Cuts[i].Copies = []clip.Copy{
+				{Text: "조용한 골목을 천천히 걸었어요", Anchor: "bottom", Align: "center", Style: "clean", StartMS: 120, EndMS: 3000},
+				{Text: "9900원", Anchor: "bottom", Align: "center", Style: "clean", StartMS: 3120, EndMS: 7480},
+			}
+		}
+		return p, s
+	}
+	p, s := twoCopies()
+	if err := clip.ValidateEditPlan(cfg, p, s); err != nil {
+		t.Fatal(err)
+	}
+	for name, mutate := range map[string]func(*clip.EditPlan){
+		// Three is not a number CDS-43 offers.
+		"three copies": func(p *clip.EditPlan) {
+			p.Cuts[0].Copies = append(p.Cuts[0].Copies, p.Cuts[0].Copies[0])
+		},
+		// A cut under 4 s carries one copy and no more.
+		"short cut": func(p *clip.EditPlan) {
+			p.Cuts[0].EndMS = 3900
+			p.Cuts[0].Copies[1].EndMS = 3780
+			p.DurationMS -= 3700
+		},
+		// Never both at once, and never closer than the 120 ms lead.
+		"overlapping windows": func(p *clip.EditPlan) { p.Cuts[0].Copies[1].StartMS = 2900 },
+		"touching windows":    func(p *clip.EditPlan) { p.Cuts[0].Copies[1].StartMS = 3000 },
+		// A description first, the number second — not the other way round.
+		"reversed classes": func(p *clip.EditPlan) {
+			p.Cuts[0].Copies[0].Text, p.Cuts[0].Copies[1].Text = p.Cuts[0].Copies[1].Text, p.Cuts[0].Copies[0].Text
+		},
+		"two descriptions": func(p *clip.EditPlan) { p.Cuts[0].Copies[1].Text = "다시 오고 싶은 골목이었어요" },
+		// Each copy answers for its own exposure (CDS-41).
+		"second too brief": func(p *clip.EditPlan) { p.Cuts[0].Copies[1].EndMS = 3300 },
+	} {
+		t.Run(name, func(t *testing.T) {
+			p, s := twoCopies()
+			mutate(&p)
+			if err := clip.ValidateEditPlan(cfg, p, s); err == nil {
+				t.Fatal("accepted a second copy CDS-43 refuses")
 			}
 		})
 	}

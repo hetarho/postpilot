@@ -417,10 +417,10 @@ func copySVG(canvas clip.Canvas, c clip.Copy, l copyLayout, ground Luminance) st
 
 // Elements returns what this copy places, for the manifest the verifier reads.
 // The window is already on the output timeline.
-func (l copyLayout) Elements(cut int, c clip.Copy, startMS, endMS int) clip.Manifest {
+func (l copyLayout) Elements(cut, copy int, c clip.Copy, startMS, endMS int) clip.Manifest {
 	m := clip.Manifest{}
 	add := func(kind string, region clip.Region, size float64, fill, background string) {
-		m = append(m, design.Element{Cut: cut, Kind: kind, Style: c.Style, Anchor: c.Anchor, Region: design.Region(region),
+		m = append(m, design.Element{Cut: cut, Copy: copy, Kind: kind, Style: c.Style, Anchor: c.Anchor, Region: design.Region(region),
 			StartMS: startMS, EndMS: endMS, FontSize: size, Fill: fill, Background: background,
 			InMS: design.Motion.InMS, OutMS: design.Motion.OutMS, DY: design.Motion.InDY})
 	}

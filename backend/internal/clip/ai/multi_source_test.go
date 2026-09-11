@@ -100,17 +100,17 @@ func TestEightShortSourcesComposeWithExactTransitionTimeline(t *testing.T) {
 			}
 			// A cut too short for its copy's earned exposure carries none: CDS-41
 			// shortens, then extends, then drops, and the choice is recorded.
-			if cut.Copy.Text == "" {
+			if cut.FirstCopy().Text == "" {
 				if got.Decisions[i].Fallback != "dropped" {
 					t.Fatalf("cut %d lost its copy silently: %+v", i, got.Decisions[i])
 				}
 				dropped++
 				continue
 			}
-			if cut.Copy.Accent != "amber" || !slices.Contains(in.Template.CopyStyles, cut.Copy.Style) {
-				t.Fatalf("cut %d used %q outside the approved set", i, cut.Copy.Style)
+			if cut.FirstCopy().Accent != "amber" || !slices.Contains(in.Template.CopyStyles, cut.FirstCopy().Style) {
+				t.Fatalf("cut %d used %q outside the approved set", i, cut.FirstCopy().Style)
 			}
-			styles[cut.Copy.Style]++
+			styles[cut.FirstCopy().Style]++
 		}
 		// Eight cuts of one scene: CDS-36 joins every boundary with a hard cut,
 		// so the clip is exactly as long as the footage it selected.

@@ -1,7 +1,8 @@
-import { useState, type ReactNode } from 'react'
+import { Fragment, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { CLIP_FACTS, CLIP_TRANSITION, CLIP_TYPE, clipStyle } from '@/shared/config'
 import {
+  allowsSecondCopy,
   CLIP_TRANSITION_CHOICES,
   COPY_ALIGNS,
   COPY_ANCHORS,
@@ -315,147 +316,234 @@ export function ClipCorrectionWorkspace({
                         cut={cut}
                       />
                     )}
-                    <div>
-                      <FieldLabel htmlFor={`${prefix}-copy`}>{t('correction.copy')}</FieldLabel>
-                      <Textarea
-                        id={`${prefix}-copy`}
-                        autoGrow
-                        inputMode="text"
-                        {...INPUT}
-                        autoCapitalize="sentences"
-                        autoCorrect="on"
-                        value={cut.copy.text}
-                        aria-invalid={errors?.text}
-                        aria-describedby={errors?.text ? `${prefix}-copy-error` : undefined}
-                        onChange={(e) =>
-                          patch({ type: 'copy', id: cut.id, patch: { text: e.target.value } })
-                        }
-                      />
-                      {errors?.text && (
-                        <FieldMessage id={`${prefix}-copy-error`}>
-                          {t('validation.tooLong', { max: state.maxCopyRunes })}
-                        </FieldMessage>
-                      )}
-                      <CopyStylePreview
-                        style={cut.copy.style}
-                        accent={cut.copy.accent}
-                        keyword={cut.copy.keyword}
-                        text={cut.copy.text}
-                      />
-                    </div>
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                      <CutNumber
-                        id={`${prefix}-copy-start`}
-                        label={t('correction.copyStart')}
-                        value={cut.copy.startMs}
-                        max={cut.endMs - cut.startMs}
-                        error={errors?.copyStart ? windowError : undefined}
-                        onChange={(startMs) =>
-                          patch({ type: 'copy', id: cut.id, patch: { startMs } })
-                        }
-                      />
-                      <CutNumber
-                        id={`${prefix}-copy-end`}
-                        label={t('correction.copyEnd')}
-                        value={cut.copy.endMs}
-                        max={cut.endMs - cut.startMs}
-                        error={errors?.copyEnd ? windowError : undefined}
-                        onChange={(endMs) => patch({ type: 'copy', id: cut.id, patch: { endMs } })}
-                      />
-                    </div>
-                    <Typography variant="body" className="text-content-secondary">
-                      {t('correction.captionWindowHelp')}
-                    </Typography>
-                    {errors?.exposure && (
-                      <FieldMessage>{t('correction.exposureError')}</FieldMessage>
-                    )}
-                    <div>
-                      <FieldLabel id={`${prefix}-anchor-label`} htmlFor={`${prefix}-anchor`}>
-                        {t('correction.position')}
-                      </FieldLabel>
-                      <Listbox
-                        id={`${prefix}-anchor`}
-                        aria-labelledby={`${prefix}-anchor-label`}
-                        value={cut.copy.anchor}
-                        disabled={busy}
-                        onChange={(anchor) =>
-                          patch({ type: 'copy', id: cut.id, patch: { anchor } })
-                        }
-                        options={COPY_ANCHORS.map((value) => ({
-                          value,
-                          label: t(`correction.anchors.${value}`),
-                        }))}
-                      />
-                      {errors?.anchor && (
-                        <FieldMessage>{t('correction.anchorStepError')}</FieldMessage>
-                      )}
-                    </div>
-                    {/* Two controls rather than one twelve-item list: the owner
-                        reasons about height and side separately, and the
-                        one-step rule concerns the vertical anchor alone. */}
-                    <div>
-                      <FieldLabel id={`${prefix}-align-label`} htmlFor={`${prefix}-align`}>
-                        {t('correction.align')}
-                      </FieldLabel>
-                      <Listbox
-                        id={`${prefix}-align`}
-                        aria-labelledby={`${prefix}-align-label`}
-                        value={cut.copy.align}
-                        disabled={busy}
-                        onChange={(align) => patch({ type: 'copy', id: cut.id, patch: { align } })}
-                        options={COPY_ALIGNS.map((value) => ({
-                          value,
-                          label: t(`aligns.${value}`),
-                        }))}
-                      />
-                    </div>
-                    <div>
-                      <FieldLabel id={`${prefix}-style-label`} htmlFor={`${prefix}-style`}>
-                        {t('editor.styles')}
-                      </FieldLabel>
-                      <Listbox
-                        id={`${prefix}-style`}
-                        aria-labelledby={`${prefix}-style-label`}
-                        value={cut.copy.style}
-                        disabled={busy}
-                        onChange={(style) => patch({ type: 'copy', id: cut.id, patch: { style } })}
-                        options={state.copyStyles.map((value) => ({
-                          value,
-                          label: t(`style.${value}`),
-                        }))}
-                      />
-                      {errors?.style && <FieldMessage>{t('validation.styles')}</FieldMessage>}
-                      {errors?.text && (
-                        <FieldMessage>
-                          {t('correction.styleLimit', {
-                            lines: clipStyle(cut.copy.style).lines,
-                            chars: clipStyle(cut.copy.style).chars,
-                          })}
-                        </FieldMessage>
-                      )}
-                    </div>
-                    {/* 크게 강조 colours one word and 형광펜 highlights it; no
-                        other style draws a keyword (CDS-25, CDS-26). */}
-                    {(clipStyle(cut.copy.style).highlight ||
-                      clipStyle(cut.copy.style).stroke !== '') && (
+                    {cut.copies.map((copy, j) => {
+                      const copyErrors = errors?.copies[j]
+                      return (
+                        <Fragment key={j}>
+                          <div>
+                            <FieldLabel htmlFor={`${prefix}-copy-${j}`}>
+                              {t('correction.copy')}
+                            </FieldLabel>
+                            <Textarea
+                              id={`${prefix}-copy-${j}`}
+                              autoGrow
+                              inputMode="text"
+                              {...INPUT}
+                              autoCapitalize="sentences"
+                              autoCorrect="on"
+                              value={copy.text}
+                              aria-invalid={copyErrors?.text}
+                              aria-describedby={
+                                copyErrors?.text ? `${prefix}-copy-${j}-error` : undefined
+                              }
+                              onChange={(e) =>
+                                patch({
+                                  type: 'copy',
+                                  id: cut.id,
+                                  index: j,
+                                  patch: { text: e.target.value },
+                                })
+                              }
+                            />
+                            {copyErrors?.text && (
+                              <FieldMessage id={`${prefix}-copy-${j}-error`}>
+                                {t('validation.tooLong', { max: state.maxCopyRunes })}
+                              </FieldMessage>
+                            )}
+                            <CopyStylePreview
+                              style={copy.style}
+                              accent={copy.accent}
+                              keyword={copy.keyword}
+                              text={copy.text}
+                            />
+                          </div>
+                          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <CutNumber
+                              id={`${prefix}-copy-${j}-start`}
+                              label={t('correction.copyStart')}
+                              value={copy.startMs}
+                              max={cut.endMs - cut.startMs}
+                              error={copyErrors?.copyStart ? windowError : undefined}
+                              onChange={(startMs) =>
+                                patch({ type: 'copy', id: cut.id, index: j, patch: { startMs } })
+                              }
+                            />
+                            <CutNumber
+                              id={`${prefix}-copy-${j}-end`}
+                              label={t('correction.copyEnd')}
+                              value={copy.endMs}
+                              max={cut.endMs - cut.startMs}
+                              error={copyErrors?.copyEnd ? windowError : undefined}
+                              onChange={(endMs) =>
+                                patch({ type: 'copy', id: cut.id, index: j, patch: { endMs } })
+                              }
+                            />
+                          </div>
+                          <Typography variant="body" className="text-content-secondary">
+                            {t('correction.captionWindowHelp')}
+                          </Typography>
+                          {copyErrors?.exposure && (
+                            <FieldMessage>{t('correction.exposureError')}</FieldMessage>
+                          )}
+                          <div>
+                            <FieldLabel
+                              id={`${prefix}-anchor-${j}-label`}
+                              htmlFor={`${prefix}-anchor-${j}`}
+                            >
+                              {t('correction.position')}
+                            </FieldLabel>
+                            <Listbox
+                              id={`${prefix}-anchor-${j}`}
+                              aria-labelledby={`${prefix}-anchor-${j}-label`}
+                              value={copy.anchor}
+                              disabled={busy}
+                              onChange={(anchor) =>
+                                patch({ type: 'copy', id: cut.id, index: j, patch: { anchor } })
+                              }
+                              options={COPY_ANCHORS.map((value) => ({
+                                value,
+                                label: t(`correction.anchors.${value}`),
+                              }))}
+                            />
+                            {copyErrors?.anchor && (
+                              <FieldMessage>{t('correction.anchorStepError')}</FieldMessage>
+                            )}
+                          </div>
+                          {/* Two controls rather than one twelve-item list: the owner
+                              reasons about height and side separately, and the
+                              one-step rule concerns the vertical anchor alone. */}
+                          <div>
+                            <FieldLabel
+                              id={`${prefix}-align-${j}-label`}
+                              htmlFor={`${prefix}-align-${j}`}
+                            >
+                              {t('correction.align')}
+                            </FieldLabel>
+                            <Listbox
+                              id={`${prefix}-align-${j}`}
+                              aria-labelledby={`${prefix}-align-${j}-label`}
+                              value={copy.align}
+                              disabled={busy}
+                              onChange={(align) =>
+                                patch({ type: 'copy', id: cut.id, index: j, patch: { align } })
+                              }
+                              options={COPY_ALIGNS.map((value) => ({
+                                value,
+                                label: t(`aligns.${value}`),
+                              }))}
+                            />
+                          </div>
+                          <div>
+                            <FieldLabel
+                              id={`${prefix}-style-${j}-label`}
+                              htmlFor={`${prefix}-style-${j}`}
+                            >
+                              {t('editor.styles')}
+                            </FieldLabel>
+                            <Listbox
+                              id={`${prefix}-style-${j}`}
+                              aria-labelledby={`${prefix}-style-${j}-label`}
+                              value={copy.style}
+                              disabled={busy}
+                              onChange={(style) =>
+                                patch({ type: 'copy', id: cut.id, index: j, patch: { style } })
+                              }
+                              options={state.copyStyles.map((value) => ({
+                                value,
+                                label: t(`style.${value}`),
+                              }))}
+                            />
+                            {copyErrors?.style && (
+                              <FieldMessage>{t('validation.styles')}</FieldMessage>
+                            )}
+                            {copyErrors?.text && (
+                              <FieldMessage>
+                                {t('correction.styleLimit', {
+                                  lines: clipStyle(copy.style).lines,
+                                  chars: clipStyle(copy.style).chars,
+                                })}
+                              </FieldMessage>
+                            )}
+                          </div>
+                          {/* 크게 강조 colours one word and 형광펜 highlights it; no
+                              other style draws a keyword (CDS-25, CDS-26). */}
+                          {(clipStyle(copy.style).highlight ||
+                            clipStyle(copy.style).stroke !== '') && (
+                            <div>
+                              <FieldLabel htmlFor={`${prefix}-keyword-${j}`}>
+                                {t('correction.keyword')}
+                              </FieldLabel>
+                              <TextField
+                                id={`${prefix}-keyword-${j}`}
+                                type="text"
+                                inputMode="text"
+                                {...INPUT}
+                                value={copy.keyword}
+                                disabled={busy}
+                                aria-invalid={copyErrors?.keyword}
+                                onChange={(e) =>
+                                  patch({
+                                    type: 'copy',
+                                    id: cut.id,
+                                    index: j,
+                                    patch: { keyword: e.target.value },
+                                  })
+                                }
+                              />
+                              {copyErrors?.keyword && (
+                                <FieldMessage>{t('correction.keywordError')}</FieldMessage>
+                              )}
+                            </div>
+                          )}
+                          <div>
+                            <FieldLabel
+                              id={`${prefix}-accent-${j}-label`}
+                              htmlFor={`${prefix}-accent-${j}`}
+                            >
+                              {t('editor.accent')}
+                            </FieldLabel>
+                            <Listbox
+                              id={`${prefix}-accent-${j}`}
+                              aria-labelledby={`${prefix}-accent-${j}-label`}
+                              value={copy.accent}
+                              disabled={busy}
+                              onChange={(accent) =>
+                                patch({ type: 'copy', id: cut.id, index: j, patch: { accent } })
+                              }
+                              options={CLIP_ACCENTS.map((value) => ({
+                                value,
+                                label: t(`accent.${value || 'none'}`),
+                              }))}
+                            />
+                          </div>
+                        </Fragment>
+                      )
+                    })}
+                    {/* CDS-43: a cut of 4 s or more may state the number its
+                        sentence leads to as a second copy, after the first has
+                        left. Nothing else may be added, and it is removed the
+                        same way. */}
+                    {(cut.copies.length > 1 || allowsSecondCopy(cut)) && (
                       <div>
-                        <FieldLabel htmlFor={`${prefix}-keyword`}>
-                          {t('correction.keyword')}
-                        </FieldLabel>
-                        <TextField
-                          id={`${prefix}-keyword`}
-                          type="text"
-                          inputMode="text"
-                          {...INPUT}
-                          value={cut.copy.keyword}
+                        <Button
+                          variant="secondary"
                           disabled={busy}
-                          aria-invalid={errors?.keyword}
-                          onChange={(e) =>
-                            patch({ type: 'copy', id: cut.id, patch: { keyword: e.target.value } })
+                          onClick={() =>
+                            patch({
+                              type: cut.copies.length > 1 ? 'removeCopy' : 'addCopy',
+                              id: cut.id,
+                            })
                           }
-                        />
-                        {errors?.keyword && (
-                          <FieldMessage>{t('correction.keywordError')}</FieldMessage>
+                        >
+                          {t(
+                            cut.copies.length > 1 ? 'correction.removeCopy' : 'correction.addCopy',
+                          )}
+                        </Button>
+                        {errors?.copyCount && (
+                          <FieldMessage>{t('correction.copyCountError')}</FieldMessage>
+                        )}
+                        {errors?.copyClasses && (
+                          <FieldMessage>{t('correction.copyClassesError')}</FieldMessage>
                         )}
                       </div>
                     )}
@@ -495,24 +583,6 @@ export function ClipCorrectionWorkspace({
                         </div>
                       )}
                       {errors?.chips && <FieldMessage>{t('correction.chipsError')}</FieldMessage>}
-                    </div>
-                    <div>
-                      <FieldLabel id={`${prefix}-accent-label`} htmlFor={`${prefix}-accent`}>
-                        {t('editor.accent')}
-                      </FieldLabel>
-                      <Listbox
-                        id={`${prefix}-accent`}
-                        aria-labelledby={`${prefix}-accent-label`}
-                        value={cut.copy.accent}
-                        disabled={busy}
-                        onChange={(accent) =>
-                          patch({ type: 'copy', id: cut.id, patch: { accent } })
-                        }
-                        options={CLIP_ACCENTS.map((value) => ({
-                          value,
-                          label: t(`accent.${value || 'none'}`),
-                        }))}
-                      />
                     </div>
                     <CutNumber
                       id={`${prefix}-volume`}

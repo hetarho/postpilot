@@ -259,6 +259,18 @@ type TransitionTokens struct {
 	BlackMS      int     `json:"black_ms"`
 	FadeRatioMax float64 `json:"fade_ratio_max"`
 }
+
+// CDS-43's numbers: how many copies a cut may carry, the cut length the second
+// one needs, and how short the second sentence has to be to stand alone.
+type CopyTokens struct {
+	MaxPerCut      int     `json:"max_per_cut"`
+	SecondMinCutS  float64 `json:"second_min_cut_s"`
+	SecondMaxChars int     `json:"second_max_chars"`
+}
+
+// SecondMinCutMS is the same number the plan speaks in: integer milliseconds.
+func (c CopyTokens) SecondMinCutMS() int { return int(c.SecondMinCutS * 1000) }
+
 type Loudnorm struct {
 	I   float64 `json:"i"`
 	TP  float64 `json:"tp"`
@@ -297,6 +309,7 @@ type system struct {
 	Motion            MotionTokens                 `json:"motion"`
 	Timing            TimingTokens                 `json:"timing"`
 	Transition        TransitionTokens             `json:"transition"`
+	Copy              CopyTokens                   `json:"copy"`
 	Audio             AudioTokens                  `json:"audio"`
 	Luma              LumaTokens                   `json:"luma"`
 }
@@ -347,6 +360,7 @@ var (
 	Motion            = loaded.Motion
 	Timing            = loaded.Timing
 	Transition        = loaded.Transition
+	Copy              = loaded.Copy
 	Audio             = loaded.Audio
 	Luma              = loaded.Luma
 )

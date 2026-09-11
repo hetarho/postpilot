@@ -36,10 +36,10 @@ PKG_CONFIG_PATH=/opt/media/lib/pkgconfig ./configure \
   --disable-shared --enable-static --disable-doc --disable-debug --disable-autodetect \
   --disable-network --disable-everything --enable-gpl --enable-libx264 --enable-zlib \
   --enable-ffmpeg --enable-ffprobe --enable-avcodec --enable-avformat --enable-avfilter --enable-swscale --enable-swresample \
-  --enable-protocol=file,pipe --enable-demuxer=mov,matroska,image2,image2pipe \
+  --enable-protocol=file,pipe --enable-demuxer=mov,matroska,image2,image2pipe,wav \
   --enable-decoder=h264,hevc,vp8,vp9,mpeg4,mjpeg,prores,aac,mp3,opus,vorbis,alac,pcm_s16le,pcm_s24le,pcm_s32le,pcm_f32le,pcm_s16be,pcm_s24be,pcm_s32be,wrapped_avframe \
   --enable-parser=h264,hevc,vp8,vp9,mpeg4video,mjpeg,aac,mpegaudio,opus,vorbis \
-  --enable-decoder=png --enable-encoder=libx264,aac,wrapped_avframe,pcm_s16le,png --enable-muxer=mp4,null,image2,image2pipe,pcm_s16le \
+  --enable-decoder=png --enable-encoder=libx264,aac,wrapped_avframe,pcm_s16le,png --enable-muxer=mp4,null,image2,image2pipe,pcm_s16le,wav \
   --enable-bsf=aac_adtstoasc,h264_mp4toannexb,hevc_mp4toannexb \
   --enable-filter=scale,setsar,fps,format,transpose,hflip,vflip,aresample,aformat,anull,null,trim,atrim,setpts,asetpts \
   --enable-filter=crop,overlay,xfade,acrossfade,concat,volume,apad,settb,asettb,fade,afade,loudnorm \

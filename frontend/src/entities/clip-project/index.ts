@@ -31,6 +31,9 @@ export {
   useClipProjectMutations,
 } from './api/clip-project'
 export {
+  allowsSecondCopy,
+  classifyCopy,
+  firstCopy,
   CLIP_TRANSITIONS,
   CLIP_TRANSITION_CHOICES,
   COPY_ANCHORS,

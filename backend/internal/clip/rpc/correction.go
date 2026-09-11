@@ -8,11 +8,29 @@ import (
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 )
 
+// caption is the one mapping from the wire's caption to the domain's; the wire
+// still calls the vertical anchor `position` (CDS-12).
+func caption(c *v1.ClipCaption) clip.Caption {
+	return clip.Caption{Text: c.GetText(), Anchor: c.GetPosition(), Align: c.GetAlign(), Keyword: c.GetKeyword(),
+		Style: c.GetStyle(), Accent: c.GetAccent(), StartMS: int(c.GetStartMs()), EndMS: int(c.GetEndMs())}
+}
+func captionProto(c clip.Caption) *v1.ClipCaption {
+	return &v1.ClipCaption{Text: c.Text, Position: c.Anchor, Align: c.Align, Keyword: c.Keyword,
+		Style: c.Style, Accent: c.Accent, StartMs: int32(c.StartMS), EndMs: int32(c.EndMS)}
+}
 func correctionPlan(p *v1.ClipEditPlan) clip.CorrectionPlan {
 	out := clip.CorrectionPlan{DurationMS: int(p.GetDurationMs()), Hook: p.GetHook()}
 	for _, c := range p.GetCuts() {
-		copy := c.GetCopy()
-		out.Cuts = append(out.Cuts, clip.CorrectionCut{ID: c.GetId(), SourceID: c.GetSourceId(), Fingerprint: c.GetFingerprint(), StartMS: int(c.GetStartMs()), EndMS: int(c.GetEndMs()), TransitionMS: int(c.GetTransitionMs()), VolumePermille: int(c.GetVolumePermille()), Chips: c.GetChips(), Copy: clip.Caption{Text: copy.GetText(), Anchor: copy.GetPosition(), Align: copy.GetAlign(), Keyword: copy.GetKeyword(), Style: copy.GetStyle(), Accent: copy.GetAccent(), StartMS: int(copy.GetStartMs()), EndMS: int(copy.GetEndMs())}})
+		copies := make([]clip.Caption, 0, len(c.GetCopies()))
+		for _, copy := range c.GetCopies() {
+			copies = append(copies, caption(copy))
+		}
+		// A client that has not moved to `copies` still sends the one `copy`,
+		// and is read exactly as it was before CDS-43.
+		if len(copies) == 0 && c.GetCopy() != nil {
+			copies = append(copies, caption(c.GetCopy()))
+		}
+		out.Cuts = append(out.Cuts, clip.CorrectionCut{ID: c.GetId(), SourceID: c.GetSourceId(), Fingerprint: c.GetFingerprint(), StartMS: int(c.GetStartMs()), EndMS: int(c.GetEndMs()), TransitionMS: int(c.GetTransitionMs()), VolumePermille: int(c.GetVolumePermille()), Chips: c.GetChips(), Copies: copies})
 	}
 	return out
 }
@@ -22,7 +40,17 @@ func editingProto(s *clip.CorrectionState) *v1.ClipEditingState {
 	}
 	out := &v1.ClipEditingState{Plan: &v1.ClipEditPlan{DurationMs: int32(s.Plan.DurationMS), Hook: s.Plan.Hook}, CopyStyles: s.CopyStyles, FadeMs: int32(s.FadeMS), MaxCuts: int32(s.MaxCuts), MaxCopyRunes: int32(s.MaxCopyRunes), MinDurationMs: int32(s.MinDurationMS), MaxDurationMs: int32(s.MaxDurationMS)}
 	for _, c := range s.Plan.Cuts {
-		out.Plan.Cuts = append(out.Plan.Cuts, &v1.ClipEditCut{Id: c.ID, SourceId: c.SourceID, Fingerprint: c.Fingerprint, StartMs: int32(c.StartMS), EndMs: int32(c.EndMS), TransitionMs: int32(c.TransitionMS), VolumePermille: int32(c.VolumePermille), Chips: c.Chips, Copy: &v1.ClipCaption{Text: c.Copy.Text, Position: c.Copy.Anchor, Align: c.Copy.Align, Keyword: c.Copy.Keyword, Style: c.Copy.Style, Accent: c.Copy.Accent, StartMs: int32(c.Copy.StartMS), EndMs: int32(c.Copy.EndMS)}})
+		copies := make([]*v1.ClipCaption, 0, len(c.Copies))
+		for _, copy := range c.Copies {
+			copies = append(copies, captionProto(copy))
+		}
+		// `copy` stays populated with the first one for a release, so a client
+		// that has not moved to `copies` still shows the sentence.
+		first := &v1.ClipCaption{}
+		if len(copies) > 0 {
+			first = copies[0]
+		}
+		out.Plan.Cuts = append(out.Plan.Cuts, &v1.ClipEditCut{Id: c.ID, SourceId: c.SourceID, Fingerprint: c.Fingerprint, StartMs: int32(c.StartMS), EndMs: int32(c.EndMS), TransitionMs: int32(c.TransitionMS), VolumePermille: int32(c.VolumePermille), Chips: c.Chips, Copy: first, Copies: copies})
 	}
 	for _, s := range s.Sources {
 		out.Sources = append(out.Sources, &v1.ClipRetainedSource{Id: s.ID, Fingerprint: s.Fingerprint, Filename: s.Filename, DurationMs: int32(s.Info.DurationMS), Width: int32(s.Info.Width), Height: int32(s.Info.Height)})

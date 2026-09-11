@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"math"
 	"slices"
-	"strings"
 	"unicode/utf8"
 
 	"github.com/postpilot/backend/internal/clip"
@@ -259,9 +258,11 @@ func (s *Service) compose(ctx context.Context, input clip.PlanningInput, plan *c
 		slack, plan.DurationMS = slack-grown, plan.DurationMS+grown
 		plan.Cuts[i] = composed
 		plan.Decisions = append(plan.Decisions, decision)
-		if strings.TrimSpace(composed.Copy.Text) != "" {
-			history = append(history, composed.Copy.Style)
-			previous = composed.Copy.Anchor
+		// Both copies count against CDS-40's frequency guards, and the anchor a
+		// later cut steps from is the LAST one this cut showed.
+		for _, copy := range composed.Placed() {
+			history = append(history, copy.Style)
+			previous = copy.Anchor
 		}
 	}
 	// The guards above make V13 and V14 hold by construction; this is what
@@ -366,14 +367,13 @@ func validatePlan(cfg Config, in clip.PlanningInput, plan clip.EditPlan) error {
 	for _, cut := range plan.Cuts {
 		// A cut whose copy the compiler dropped has no style and no accent to
 		// check (CDS-41's last fallback).
-		if strings.TrimSpace(cut.Copy.Text) == "" {
-			continue
-		}
-		if !slices.Contains(in.Template.CopyStyles, cut.Copy.Style) {
-			return outputError("plan_style")
-		}
-		if cut.Copy.Accent != "" && cut.Copy.Accent != in.Template.Accent {
-			return outputError("plan_accent")
+		for _, copy := range cut.Placed() {
+			if !slices.Contains(in.Template.CopyStyles, copy.Style) {
+				return outputError("plan_style")
+			}
+			if copy.Accent != "" && copy.Accent != in.Template.Accent {
+				return outputError("plan_accent")
+			}
 		}
 	}
 	return nil

@@ -91,6 +91,9 @@ type Composition struct {
 	Class    string
 	Scene    string
 	Fallback string // "", "short_text", "extended_cut", "dropped"
+	// Whether CDS-43's second copy was placed on this cut, so the correction
+	// step can say why a cut carries two.
+	Second bool
 }
 
 // Compose turns one written cut into a placed one: it classifies the sentence,
@@ -119,7 +122,7 @@ func Compose(
 	out, decision := cut, Composition{Scene: design.Scene(scene)}
 	// A dropped or absent copy carries nothing: no placement, no accent, no
 	// keyword. The cut simply shows its footage.
-	out.Copy = Caption{}
+	out.Copies = nil
 	text := strings.TrimSpace(written.Text)
 	if text == "" {
 		return out, decision, nil
@@ -175,14 +178,97 @@ func Compose(
 	chosen := design.SelectAnchor(candidates, design.Region(subject), placed, readableText, previousAnchor)
 	if chosen < 0 {
 		decision.Fallback = "dropped"
-		out.Copy, out.EndMS = Caption{}, cut.EndMS
+		out.Copies, out.EndMS = nil, cut.EndMS
 		return out, decision, nil
 	}
 	// The window is CDS-27's, always: the copy's own start and end stay zero so
 	// CaptionWindow resolves them to cut start + 120 ms … cut end − 120 ms. The
 	// model's caption times are advisory and are not carried through.
-	out.Copy = captions[chosen]
+	out.Copies = []Caption{captions[chosen]}
+	// CDS-43's second copy, on a long enough cut and only from words the model
+	// already wrote. It never costs another call: the number is lifted out of
+	// the sentence the compiler was handed, or is the short alternative itself.
+	if first, second, ok := secondCopy(out, written, allowed, append(history, captions[chosen].Style), accent, measure); ok {
+		// Both windows become explicit: two CDS-27 defaults would run over each
+		// other, and CDS-43 admits no overlap.
+		out.Copies = []Caption{first, second}
+		decision.Second = true
+	}
 	return out, decision, nil
+}
+
+// secondCopy is CDS-43: a cut of 4 s or more whose sentence describes may also
+// state the number it leads to, 120 ms after the description has left and never
+// beside it. The number has to stand alone — the short alternative, or a clause
+// of the sentence — in the style's own handful of characters; anything longer is
+// a second sentence, which is not what CDS-43 offers.
+func secondCopy(cut Cut, written Written, allowed []string, history design.StyleHistory, accent string, measure func(Caption) (Region, bool, error)) (Caption, Caption, bool) {
+	first := cut.FirstCopy()
+	if cut.EndMS-cut.StartMS < design.Copy.SecondMinCutMS() || design.Classify(first.Text) != design.ClassDesc {
+		return Caption{}, Caption{}, false
+	}
+	text := numericClause(first.Text, written)
+	if text == "" || !Grounded(text, written.Answers) {
+		return Caption{}, Caption{}, false
+	}
+	style := design.SelectStyle(design.Scene(""), design.ClassNum, allowed, history, keywords(text, written.Keyword))
+	if !withinStyle(text, style) {
+		return Caption{}, Caption{}, false
+	}
+	// Both windows come out of the one CDS-27 window, split by what each
+	// sentence earns and parted by the same 120 ms lead (CDS-41, CDS-43).
+	lead := design.Timing.CopyLeadMS
+	room := cut.EndMS - cut.StartMS - 3*lead
+	a, b := MinExposureMS(first.Text), MinExposureMS(text)
+	if a+b > room {
+		return Caption{}, Caption{}, false
+	}
+	share := max(a, room*a/(a+b))
+	if room-share < b {
+		share = room - b
+	}
+	first.StartMS, first.EndMS = lead, lead+share
+	rule := design.Styles[style]
+	for _, anchor := range []string{rule.Anchor, rule.AnchorAlt} {
+		if anchor == "" {
+			continue
+		}
+		c := Caption{Text: text, Anchor: anchor, Align: rule.Align, Style: style, Accent: accent,
+			Keyword: keywordIn(text, written.Keyword), StartMS: first.EndMS + lead, EndMS: cut.EndMS - cut.StartMS - lead}
+		// A measurement failure here is not worth the whole plan: the cut keeps
+		// the one copy it already has.
+		if _, ok, err := measure(c); err == nil && ok {
+			return first, c, true
+		}
+	}
+	return Caption{}, Caption{}, false
+}
+
+// numericClause is the number the sentence turns on, standing on its own: the
+// short alternative when that is what it already is, else the one clause of the
+// sentence that states a number. Anything over the design system's own ceiling
+// is a sentence rather than a number and is refused.
+//
+// In practice it is almost always the short alternative: CDS-39 reads a number
+// FIRST, so a sentence carrying one is classified NUM and is never the
+// description CDS-43 splits. The clause walk is what answers for a sentence the
+// classifier reads as a description anyway.
+func numericClause(text string, written Written) string {
+	candidates := []string{strings.TrimSpace(written.ShortText)}
+	for _, clause := range strings.FieldsFunc(text, func(r rune) bool {
+		return r == ',' || r == '\n' || r == '.' || r == '·'
+	}) {
+		candidates = append(candidates, strings.TrimSpace(clause))
+	}
+	for _, candidate := range candidates {
+		if candidate == "" || candidate == text || design.Chars(candidate) > design.Copy.SecondMaxChars {
+			continue
+		}
+		if design.Classify(candidate) == design.ClassNum {
+			return candidate
+		}
+	}
+	return ""
 }
 
 // selectFitting chooses the style for the text, and shortens the text when its

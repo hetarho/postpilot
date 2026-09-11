@@ -1,4 +1,6 @@
 import {
+  CLIP_CLASSES,
+  CLIP_COPY,
   CLIP_FACTS,
   CLIP_GUARDS,
   CLIP_TIMING,
@@ -44,7 +46,8 @@ export interface ClipEditCut {
   endMs: number
   /** The transition into this cut (CDS-36): 0 is a hard cut. */
   transitionMs: number
-  copy: ClipCaption
+  /** One copy, or the two CDS-43 lets a cut of 4 s or more carry in sequence. */
+  copies: ClipCaption[]
   /** Reserved fact labels whose chips belong on this cut, at most two. */
   chips: string[]
   volumePermille: number
@@ -76,8 +79,21 @@ export interface ClipEditingState {
 export function copyClipPlan(plan: ClipEditPlan): ClipEditPlan {
   return {
     ...plan,
-    cuts: plan.cuts.map((c) => ({ ...c, chips: [...c.chips], copy: { ...c.copy } })),
+    cuts: plan.cuts.map((c) => ({
+      ...c,
+      chips: [...c.chips],
+      copies: c.copies.map((copy) => ({ ...copy })),
+    })),
   }
+}
+/** The copy a caller that knows nothing of CDS-43 means: the one a cut has
+ *  always had. */
+export function firstCopy(cut: ClipEditCut): ClipCaption {
+  return cut.copies[0]!
+}
+/** CDS-43: a cut of 4 s or more may carry a second copy. */
+export function allowsSecondCopy(cut: ClipEditCut): boolean {
+  return cut.endMs - cut.startMs >= CLIP_COPY.second_min_cut_s * 1000
 }
 export type ClipEdit =
   | { type: 'move'; from: number; to: number }
@@ -87,7 +103,9 @@ export type ClipEdit =
       id: string
       patch: Partial<Pick<ClipEditCut, 'startMs' | 'endMs' | 'volumePermille' | 'transitionMs'>>
     }
-  | { type: 'copy'; id: string; patch: Partial<ClipCaption> }
+  | { type: 'copy'; id: string; index?: number; patch: Partial<ClipCaption> }
+  | { type: 'addCopy'; id: string }
+  | { type: 'removeCopy'; id: string }
   | { type: 'chips'; id: string; chips: string[] }
   | { type: 'hook'; hook: string }
 /** The clip is its footage less what each cut's own transition overlaps
@@ -112,15 +130,35 @@ export function editClipPlan(plan: ClipEditPlan, edit: ClipEdit): ClipEditPlan {
   } else if (edit.type === 'remove') next.cuts = next.cuts.filter((c) => c.id !== edit.id)
   else if (edit.type === 'hook') next.hook = edit.hook
   else
-    next.cuts = next.cuts.map((c) =>
-      c.id !== edit.id
-        ? c
-        : edit.type === 'cut'
-          ? { ...c, ...edit.patch }
-          : edit.type === 'chips'
-            ? { ...c, chips: [...edit.chips] }
-            : { ...c, copy: { ...c.copy, ...edit.patch } },
-    )
+    next.cuts = next.cuts.map((c) => {
+      if (c.id !== edit.id) return c
+      if (edit.type === 'cut') return { ...c, ...edit.patch }
+      if (edit.type === 'chips') return { ...c, chips: [...edit.chips] }
+      // CDS-43: the second copy starts a clear 120 ms after the first leaves and
+      // runs to the end of the cut's own window, so adding one never puts two
+      // sentences on screen together.
+      if (edit.type === 'addCopy') {
+        if (c.copies.length > 1 || !allowsSecondCopy(c)) return c
+        const lead = CLIP_TIMING.copy_lead_ms
+        const window = copyWindow(c, 0)
+        const half = lead + Math.round((window.end - window.start) / 2)
+        return {
+          ...c,
+          copies: [
+            { ...c.copies[0]!, startMs: lead, endMs: half },
+            { ...c.copies[0]!, text: '', keyword: '', startMs: half + lead, endMs: window.end },
+          ],
+        }
+      }
+      // Removing the second copy gives the first CDS-27's default window back.
+      if (edit.type === 'removeCopy')
+        return { ...c, copies: [{ ...c.copies[0]!, startMs: 0, endMs: 0 }] }
+      const index = edit.index ?? 0
+      return {
+        ...c,
+        copies: c.copies.map((copy, i) => (i === index ? { ...copy, ...edit.patch } : copy)),
+      }
+    })
   // A reorder carries each cut's transition with it, so whichever cut ends up
   // in front leads in from nothing — the same normalisation the server makes.
   if (next.cuts[0]) next.cuts[0] = { ...next.cuts[0], transitionMs: 0 }
@@ -137,12 +175,12 @@ export function minExposureMs(text: string): number {
   return CLIP_TIMING.sub_min_base_ms + CLIP_TIMING.sub_min_per_char_ms * copyChars(text)
 }
 /** The window a copy actually gets: its own, or CDS-27's default inset. */
-function copyWindow(cut: ClipEditCut, state: ClipEditingState) {
-  const whole = cut.copy.startMs === 0 && cut.copy.endMs === 0
+function copyWindow(cut: ClipEditCut, index: number) {
+  const copy = cut.copies[index] ?? { startMs: 0, endMs: 0 }
+  const whole = copy.startMs === 0 && copy.endMs === 0
   const lead = CLIP_TIMING.copy_lead_ms
-  const start = whole ? lead : cut.copy.startMs
-  const end = whole ? cut.endMs - cut.startMs - lead : cut.copy.endMs
-  void state
+  const start = whole ? lead : copy.startMs
+  const end = whole ? cut.endMs - cut.startMs - lead : copy.endMs
   return { start, end, length: end - start }
 }
 /** The style's own line and character limits (CDS-20, CDS-23..26). */
@@ -181,16 +219,45 @@ export function groundedInAnswers(
   return true
 }
 
-/** CDS-38: consecutive cuts move at most one anchor step, measured only between
- *  cuts that share a style — a style change is a deliberate visual change. */
-function withinAnchorStep(cuts: readonly ClipEditCut[], cut: ClipEditCut): boolean {
-  const placed = cuts.filter((c) => c.copy.text.trim() !== '')
-  const index = placed.findIndex((c) => c.id === cut.id)
-  if (index <= 0) return true
-  const previous = placed[index - 1]!
-  if (previous.copy.style !== cut.copy.style) return true
+/** CDS-39's sentence classes, in the priority the table is read in: a number
+ *  with a unit first, then a hook, then a short noun-led fact, then everything
+ *  else. The server's own classifier is the authority; this mirrors it so the
+ *  screen can say why a second copy is refused where it is typed (CDS-43). */
+export function classifyCopy(text: string): 'NUM' | 'HOOK' | 'FACT' | 'DESC' {
+  const trimmed = text.trim()
+  if (trimmed === '') return 'DESC'
+  const units = CLIP_CLASSES.num_units.map((u: string) => u.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&'))
+  if (new RegExp(`[\\d,]*\\d\\s*(${units.join('|')})`, 'u').test(trimmed)) return 'NUM'
+  const chars = copyChars(trimmed)
+  if (
+    chars <= CLIP_CLASSES.hook_max_chars &&
+    (/[?!]$/u.test(trimmed) || CLIP_CLASSES.hook_markers.some((m: string) => trimmed.includes(m)))
+  )
+    return 'HOOK'
+  const last = Array.from(trimmed.replace(/[\s\p{P}\p{S}]+$/u, '')).at(-1) ?? ''
+  if (chars <= CLIP_CLASSES.fact_max_chars && !CLIP_CLASSES.fact_verb_endings.includes(last))
+    return 'FACT'
+  return 'DESC'
+}
+
+/** Every copy that actually shows, in clip order: a cut's second copy follows
+ *  its first, and CDS-38's step and CDS-40's run are read over that sequence. */
+function placedCopies(cuts: readonly ClipEditCut[]) {
+  return cuts.flatMap((cut, i) =>
+    cut.copies.flatMap((copy, j) => (copy.text.trim() === '' ? [] : [{ cut: i, index: j, copy }])),
+  )
+}
+/** CDS-38: consecutive copies move at most one anchor step, measured only
+ *  between copies that share a style — a style change is a deliberate change. */
+function withinAnchorStep(cuts: readonly ClipEditCut[], cut: number, index: number): boolean {
+  const placed = placedCopies(cuts)
+  const at = placed.findIndex((p) => p.cut === cut && p.index === index)
+  if (at <= 0) return true
+  const previous = placed[at - 1]!.copy
+  const copy = placed[at]!.copy
+  if (previous.style !== copy.style) return true
   const order = COPY_ANCHORS as readonly string[]
-  return Math.abs(order.indexOf(cut.copy.anchor) - order.indexOf(previous.copy.anchor)) <= 1
+  return Math.abs(order.indexOf(copy.anchor) - order.indexOf(previous.anchor)) <= 1
 }
 export function requiredClipSources(plan: ClipEditPlan, sources: readonly RetainedClipSource[]) {
   const needed = new Set(plan.cuts.map((c) => c.fingerprint))
@@ -198,10 +265,49 @@ export function requiredClipSources(plan: ClipEditPlan, sources: readonly Retain
 }
 export function validateClipPlan(plan: ClipEditPlan, state: ClipEditingState) {
   const integer = Number.isSafeInteger
-  const cuts = plan.cuts.map((c) => {
+  const cuts = plan.cuts.map((c, index) => {
     const source = state.sources.find((s) => s.id === c.sourceId && s.fingerprint === c.fingerprint)
     const duration = c.endMs - c.startMs
-    const whole = c.copy.startMs === 0 && c.copy.endMs === 0
+    // One entry per copy: a cut of 4 s or more may carry two (CDS-43), and every
+    // per-caption rule is the copy's, not the cut's.
+    const copies = c.copies.map((copy, j) => {
+      const whole = copy.startMs === 0 && copy.endMs === 0
+      const placed = copy.text.trim() !== ''
+      const previous = j === 0 ? null : copyWindow(c, j - 1)
+      return {
+        // The rune ceiling is the contract's; the per-style line and character
+        // limits below are the design system's, and both are mirrored here for
+        // immediacy only — the server's verifier stays the authority.
+        text:
+          Array.from(copy.text).length > state.maxCopyRunes ||
+          (placed && !withinStyleLimits(copy.text, copy.style)),
+        exposure: placed && copyWindow(c, j).length < minExposureMs(copy.text),
+        copyStart:
+          !integer(copy.startMs) ||
+          copy.startMs < 0 ||
+          (!whole && copy.startMs >= copy.endMs) ||
+          // Never both at once: the second copy starts a clear 120 ms after the
+          // first has left (CDS-43).
+          (previous !== null && copy.startMs - previous.end < CLIP_TIMING.copy_lead_ms),
+        copyEnd:
+          !integer(copy.endMs) || (!whole && (copy.endMs <= copy.startMs || copy.endMs > duration)),
+        // A cut whose copy the composer dropped carries no placement at all, and
+        // that is a valid plan — the cut simply shows its footage.
+        anchor:
+          placed &&
+          (!COPY_ANCHORS.includes(copy.anchor) ||
+            !COPY_ALIGNS.includes(copy.align) ||
+            // 메모 is LEFT-aligned at TOP or BOTTOM (CDS-24), and consecutive
+            // copies move at most one anchor step when they share a style.
+            (copy.style === 'memo' &&
+              (copy.align !== 'left' || !['top', 'bottom'].includes(copy.anchor))) ||
+            !withinAnchorStep(plan.cuts, index, j)),
+        keyword: copy.keyword !== '' && !copy.text.includes(copy.keyword),
+        style:
+          placed && (!COPY_STYLES.includes(copy.style) || !state.copyStyles.includes(copy.style)),
+        accent: !CLIP_ACCENTS.includes(copy.accent),
+      }
+    })
     return {
       identity: !source || !c.id || plan.cuts.filter((v) => v.id === c.id).length !== 1,
       start: !integer(c.startMs) || c.startMs < 0 || c.startMs >= c.endMs,
@@ -211,54 +317,33 @@ export function validateClipPlan(plan: ClipEditPlan, state: ClipEditingState) {
       transition:
         !(CLIP_TRANSITIONS as readonly number[]).includes(c.transitionMs) ||
         (plan.cuts[0] === c && c.transitionMs !== 0),
-      // The rune ceiling is the contract's; the per-style line and character
-      // limits below are the design system's, and both are mirrored here for
-      // immediacy only — the server's verifier stays the authority.
-      text:
-        Array.from(c.copy.text).length > state.maxCopyRunes ||
-        (c.copy.text.trim() !== '' && !withinStyleLimits(c.copy.text, c.copy.style)),
-      exposure:
-        c.copy.text.trim() !== '' && copyWindow(c, state).length < minExposureMs(c.copy.text),
+      // CDS-43: one copy, or two only on a cut of 4 s or more, and then a
+      // description followed by the number it leads to.
+      copyCount:
+        c.copies.length === 0 ||
+        c.copies.length > CLIP_COPY.max_per_cut ||
+        (c.copies.length > 1 && !allowsSecondCopy(c)),
+      copyClasses:
+        c.copies.filter((copy) => copy.text.trim() !== '').length > 1 &&
+        !(classifyCopy(c.copies[0]!.text) === 'DESC' && classifyCopy(c.copies[1]!.text) === 'NUM'),
       chips:
         c.chips.length > 2 ||
         c.chips.some((label) => !(CLIP_FACTS.chips as readonly string[]).includes(label)),
-      copyStart:
-        !integer(c.copy.startMs) ||
-        c.copy.startMs < 0 ||
-        (!whole && c.copy.startMs >= c.copy.endMs),
-      copyEnd:
-        !integer(c.copy.endMs) ||
-        (!whole && (c.copy.endMs <= c.copy.startMs || c.copy.endMs > duration)),
-      // A cut whose copy the composer dropped carries no placement at all, and
-      // that is a valid plan — the cut simply shows its footage.
-      anchor:
-        c.copy.text.trim() !== '' &&
-        (!COPY_ANCHORS.includes(c.copy.anchor) ||
-          !COPY_ALIGNS.includes(c.copy.align) ||
-          // 메모 is LEFT-aligned at TOP or BOTTOM (CDS-24), and consecutive
-          // cuts move at most one anchor step when they share a style (CDS-38).
-          (c.copy.style === 'memo' &&
-            (c.copy.align !== 'left' || !['top', 'bottom'].includes(c.copy.anchor))) ||
-          !withinAnchorStep(plan.cuts, c)),
-      keyword: c.copy.keyword !== '' && !c.copy.text.includes(c.copy.keyword),
-      style:
-        c.copy.text.trim() !== '' &&
-        (!COPY_STYLES.includes(c.copy.style) || !state.copyStyles.includes(c.copy.style)),
-      accent: !CLIP_ACCENTS.includes(c.copy.accent),
       volume: !integer(c.volumePermille) || c.volumePermille < 0 || c.volumePermille > 1000,
+      copies,
     }
   })
   // CDS-40's per-clip guards: 크게 강조 at most twice, and no style four times
-  // in a row.
-  const placed = plan.cuts.filter((c) => c.copy.text.trim() !== '')
+  // in a row — counted over every copy that shows, not every cut.
+  const placed = placedCopies(plan.cuts).map((p) => p.copy)
   const frequency =
-    placed.filter((c) => c.copy.style === 'bold').length > CLIP_GUARDS.bold_max ||
+    placed.filter((copy) => copy.style === 'bold').length > CLIP_GUARDS.bold_max ||
     // A run LONGER than run_max is the violation: the fourth consecutive use of
     // one style must have alternated (CDS-40).
     placed.some(
-      (cut, i) =>
+      (copy, i) =>
         i >= CLIP_GUARDS.run_max &&
-        placed.slice(i - CLIP_GUARDS.run_max, i + 1).every((v) => v.copy.style === cut.copy.style),
+        placed.slice(i - CLIP_GUARDS.run_max, i + 1).every((v) => v.style === copy.style),
     )
   const duration = clipPlanDuration(plan.cuts)
   const timeline =
@@ -279,6 +364,10 @@ export function validateClipPlan(plan: ClipEditPlan, state: ClipEditingState) {
       !timeline &&
       !frequency &&
       !hook &&
-      cuts.every((c) => Object.values(c).every((v) => !v)),
+      cuts.every(
+        (c) =>
+          Object.entries(c).every(([key, v]) => key === 'copies' || !v) &&
+          c.copies.every((copy) => Object.values(copy).every((v) => !v)),
+      ),
   }
 }

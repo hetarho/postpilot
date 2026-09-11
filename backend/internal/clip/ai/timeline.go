@@ -52,12 +52,18 @@ func composeTimeline(cfg Config, in clip.PlanningInput, plan *clip.EditPlan) err
 		if length <= 2*cfg.Render.FadeMS {
 			return outputError("plan_cut_fade")
 		}
-		if c.Copy.StartMS < 0 || c.Copy.EndMS <= c.Copy.StartMS || c.Copy.StartMS >= length {
-			return outputError("plan_caption_time")
+		// The model writes one caption per cut; CDS-43's second one is the
+		// compiler's, and is placed after this timeline is settled.
+		for j := range c.Copies {
+			copy := &c.Copies[j]
+			if copy.StartMS < 0 || copy.EndMS <= copy.StartMS || copy.StartMS >= length {
+				return outputError("plan_caption_time")
+			}
+			// A caption cannot be exposed beyond the selected footage. Do not
+			// infer absolute/source timestamps, move its start, or accept an
+			// empty exposure.
+			copy.EndMS = min(copy.EndMS, length)
 		}
-		// A caption cannot be exposed beyond the selected footage. Do not infer
-		// absolute/source timestamps, move its start, or accept an empty exposure.
-		c.Copy.EndMS = min(c.Copy.EndMS, length)
 	}
 	// CDS-37's length bounds and CDS-36's transitions are the caller's, not the
 	// model's: the scene the observer reported decides both, so the same input
@@ -93,7 +99,7 @@ func composeTimeline(cfg Config, in clip.PlanningInput, plan *clip.EditPlan) err
 		} else {
 			// Keep every selected cut, its own CDS-37 floor, the transitions
 			// that eat into it and a positive caption exposure.
-			room[i] = c.EndMS - c.StartMS - max(2*cfg.Render.FadeMS+1, c.Copy.StartMS+1, minimum)
+			room[i] = c.EndMS - c.StartMS - max(2*cfg.Render.FadeMS+1, c.FirstCopy().StartMS+1, minimum)
 		}
 	}
 	// Distribute the adjustment evenly, redistributing when a scene reaches
@@ -122,7 +128,9 @@ func composeTimeline(cfg Config, in clip.PlanningInput, plan *clip.EditPlan) err
 	}
 	for i := range plan.Cuts {
 		c := &plan.Cuts[i]
-		c.Copy.EndMS = min(c.Copy.EndMS, c.EndMS-c.StartMS)
+		for j := range c.Copies {
+			c.Copies[j].EndMS = min(c.Copies[j].EndMS, c.EndMS-c.StartMS)
+		}
 	}
 	plan.DurationMS = in.TargetDurationMS
 	return nil
@@ -202,8 +210,10 @@ func holdCutLengths(plan *clip.EditPlan, analyses map[string]clip.SourceAnalysis
 		}
 		// Whichever end moved, the caption still lives inside the cut.
 		length := c.EndMS - c.StartMS
-		c.Copy.StartMS = min(c.Copy.StartMS, length-1)
-		c.Copy.EndMS = min(c.Copy.EndMS, length)
+		for j := range c.Copies {
+			c.Copies[j].StartMS = min(c.Copies[j].StartMS, length-1)
+			c.Copies[j].EndMS = min(c.Copies[j].EndMS, length)
+		}
 	}
 	return nil
 }
