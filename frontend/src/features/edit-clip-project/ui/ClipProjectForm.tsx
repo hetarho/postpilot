@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useBlocker, useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import {
+  CLIP_CTAS,
+  CLIP_DISCLOSURES,
   CLIP_PROJECT_LIMITS,
   CLIP_RATIOS,
   emptyClipProject,
@@ -191,6 +193,46 @@ export function ClipProjectForm({
               <FieldMessage>{t('project.detachedTemplate')}</FieldMessage>
             )}
           </div>
+          <div>
+            <FieldLabel id="clip-disclosure-label" htmlFor="clip-disclosure">
+              {t('project.disclosure')}
+            </FieldLabel>
+            <Typography variant="body" className="text-content-secondary mb-2">
+              {t('project.disclosureHelp')}
+            </Typography>
+            <Listbox
+              id="clip-disclosure"
+              aria-labelledby="clip-disclosure-label"
+              value={draft.disclosure}
+              onChange={(value) => change('disclosure', value as ClipProjectDraft['disclosure'])}
+              options={[
+                { value: '', label: t('project.chooseDisclosure'), disabled: true },
+                ...CLIP_DISCLOSURES.map((value) => ({ value, label: t(`disclosure.${value}`) })),
+              ]}
+              aria-invalid={draft.disclosure === ''}
+            />
+            {draft.disclosure === '' && (
+              <FieldMessage>{t('project.disclosureRequired')}</FieldMessage>
+            )}
+          </div>
+          <div>
+            <FieldLabel id="clip-cta-label" htmlFor="clip-cta">
+              {t('project.cta')}
+            </FieldLabel>
+            <Typography variant="body" className="text-content-secondary mb-2">
+              {t('project.ctaHelp')}
+            </Typography>
+            <Listbox
+              id="clip-cta"
+              aria-labelledby="clip-cta-label"
+              value={draft.cta}
+              onChange={(value) => change('cta', value as ClipProjectDraft['cta'])}
+              options={['' as const, ...CLIP_CTAS].map((value) => ({
+                value,
+                label: t(`cta.${value}`),
+              }))}
+            />
+          </div>
           {selected?.informationFields.map((field, index) => {
             const answer = draft.answers.find((a) => a.label === field.label)?.text ?? ''
             const invalid = !answer.trim() || Array.from(answer).length > CLIP_PROJECT_LIMITS.answer
@@ -243,6 +285,11 @@ export function ClipProjectForm({
                   onChange={(value) => change('ratio', value)}
                   options={CLIP_RATIOS.map((value) => ({ value, label: t(`ratio.${value}`) }))}
                 />
+                {/* Naver Clip takes landscape and long-form only from the PC
+                    web, and square support is unconfirmed (CDS-49). */}
+                <Typography variant="body" className="text-content-secondary mt-2">
+                  {t(`ratioGuidance.${draft.ratio}`)}
+                </Typography>
               </>
             )}
           </div>

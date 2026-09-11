@@ -4,6 +4,9 @@ import { emptyClipRecipe, normalizeRecipe, validateClipRecipe, type ClipRecipe }
 const valid = (): ClipRecipe => ({
   ...emptyClipRecipe(),
   name: '영상',
+  // A template names its category preset, which fixes chip priority, the
+  // default CTA and the default accent (CDS-50).
+  preset: 'restaurant',
   informationFields: [{ label: '장소', prompt: '어디인가요?' }],
 })
 describe('clip recipe bounds', () => {
@@ -28,6 +31,11 @@ describe('clip recipe bounds', () => {
     { copyStyles: ['clean', 'clean'] },
     { copyStyles: ['unknown'] },
     { accent: 'custom' },
+    // A save must name one of the five presets, and every approved style set
+    // keeps 깔끔하게 (CDS-50, and T102's ValidCopyStyles).
+    { preset: '' },
+    { preset: 'bakery' },
+    { copyStyles: ['memo'] },
     { informationFields: [{ label: '', prompt: 'p' }] },
     { informationFields: [{ label: 'a'.repeat(41), prompt: 'p' }] },
     { informationFields: [{ label: 'a', prompt: 'p'.repeat(201) }] },

@@ -27,6 +27,9 @@ export function toClipTemplate(value: ProtoVideoTemplate): ClipTemplate {
     informationFields: value.informationFields.map((f) => ({ label: f.label, prompt: f.prompt })),
     copyStyles: value.copyStyles as CopyStyle[],
     accent: value.accent as ClipAccent,
+    // An empty preset is a template written before presets existed; the editor
+    // requires one on save (CDS-50).
+    preset: value.preset as ClipRecipe['preset'],
     projectCount: value.projectCount,
     createdAt: value.createdAt,
     updatedAt: value.updatedAt,
@@ -77,5 +80,15 @@ export function useClipTemplateMutations(ownerId: string) {
     mutationFn: (id: string) => client.deleteVideoTemplate({ id }),
     onSuccess: invalidate,
   })
-  return { save, remove }
+  // The reserved information fields a preset needs, with their code-owned
+  // prompts: the owner should not have to type a Korean label exactly for the
+  // renderer to find the fact under it (CDS-1, CDS-30).
+  const seed = useMutation({
+    mutationFn: async (preset: string) =>
+      (await client.seedPresetFields({ preset })).fields.map((f) => ({
+        label: f.label,
+        prompt: f.prompt,
+      })),
+  })
+  return { save, remove, seed }
 }

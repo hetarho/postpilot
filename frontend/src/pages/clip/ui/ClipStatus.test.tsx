@@ -40,6 +40,8 @@ const project = (over: Partial<ClipProject> = {}): ClipProject => ({
   ratio: 'vertical',
   targetDurationMs: 15000,
   answers: [],
+  disclosure: 'ad',
+  cta: '',
   createdAt: '2026-09-11',
   updatedAt: '2026-09-11',
   editPlanRevision: 0,

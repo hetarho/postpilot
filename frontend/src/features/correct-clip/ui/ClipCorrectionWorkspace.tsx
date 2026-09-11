@@ -1,12 +1,19 @@
 import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { COPY_ANCHORS, type ClipEditCut, type ClipEditingState } from '@/entities/clip-project'
+import { CLIP_FACTS, clipStyle } from '@/shared/config'
+import {
+  COPY_ALIGNS,
+  COPY_ANCHORS,
+  type ClipEditCut,
+  type ClipEditingState,
+} from '@/entities/clip-project'
 import { CLIP_ACCENTS, CopyStylePreview } from '@/entities/clip-template'
 import type { AppFailure } from '@/shared/api'
 import {
   ActionBar,
   AppFailureMessage,
   Button,
+  Checkbox,
   Dialog,
   FieldLabel,
   FieldMessage,
@@ -93,6 +100,7 @@ export function ClipCorrectionWorkspace({
   onRender,
   sourcePicker,
   localSources,
+  answers,
 }: {
   correction: Correction
   state: ClipEditingState
@@ -103,8 +111,14 @@ export function ClipCorrectionWorkspace({
   onRender: () => void
   sourcePicker: ReactNode
   localSources: ReadonlyArray<{ fingerprint: string; url: string }>
+  /** The project's own answers: a chip can only show a fact the owner gave
+   *  (CDS-30), so only labels with an answer are offered. */
+  answers: ReadonlyArray<{ label: string; text: string }>
 }) {
   const { t } = useTranslation('clips')
+  const chipLabels = (CLIP_FACTS.chips as readonly string[]).filter((label) =>
+    answers.some((a) => a.label === label && a.text.trim() !== ''),
+  )
   const [confirm, setConfirm] = useState<'reload' | 'delete'>()
   const [deleteId, setDeleteId] = useState('')
   const [inspect, setInspect] = useState('')
@@ -133,6 +147,10 @@ export function ClipCorrectionWorkspace({
           </FieldMessage>
         )}
         {correction.validation?.count && <FieldMessage>{t('correction.countError')}</FieldMessage>}
+        {/* A per-clip rule belongs to the clip, not to one cut (CDS-40). */}
+        {correction.validation?.frequency && (
+          <FieldMessage>{t('correction.frequencyError')}</FieldMessage>
+        )}
         <fieldset disabled={busy} className="mt-6 min-w-0">
           <SortableList
             disabled={busy}
@@ -252,6 +270,7 @@ export function ClipCorrectionWorkspace({
                       <CopyStylePreview
                         style={cut.copy.style}
                         accent={cut.copy.accent}
+                        keyword={cut.copy.keyword}
                         text={cut.copy.text}
                       />
                     </div>
@@ -278,6 +297,9 @@ export function ClipCorrectionWorkspace({
                     <Typography variant="body" className="text-content-secondary">
                       {t('correction.captionWindowHelp')}
                     </Typography>
+                    {errors?.exposure && (
+                      <FieldMessage>{t('correction.exposureError')}</FieldMessage>
+                    )}
                     <div>
                       <FieldLabel id={`${prefix}-anchor-label`} htmlFor={`${prefix}-anchor`}>
                         {t('correction.position')}
@@ -293,6 +315,28 @@ export function ClipCorrectionWorkspace({
                         options={COPY_ANCHORS.map((value) => ({
                           value,
                           label: t(`correction.anchors.${value}`),
+                        }))}
+                      />
+                      {errors?.anchor && (
+                        <FieldMessage>{t('correction.anchorStepError')}</FieldMessage>
+                      )}
+                    </div>
+                    {/* Two controls rather than one twelve-item list: the owner
+                        reasons about height and side separately, and the
+                        one-step rule concerns the vertical anchor alone. */}
+                    <div>
+                      <FieldLabel id={`${prefix}-align-label`} htmlFor={`${prefix}-align`}>
+                        {t('correction.align')}
+                      </FieldLabel>
+                      <Listbox
+                        id={`${prefix}-align`}
+                        aria-labelledby={`${prefix}-align-label`}
+                        value={cut.copy.align}
+                        disabled={busy}
+                        onChange={(align) => patch({ type: 'copy', id: cut.id, patch: { align } })}
+                        options={COPY_ALIGNS.map((value) => ({
+                          value,
+                          label: t(`aligns.${value}`),
                         }))}
                       />
                     </div>
@@ -311,6 +355,77 @@ export function ClipCorrectionWorkspace({
                           label: t(`style.${value}`),
                         }))}
                       />
+                      {errors?.style && <FieldMessage>{t('validation.styles')}</FieldMessage>}
+                      {errors?.text && (
+                        <FieldMessage>
+                          {t('correction.styleLimit', {
+                            lines: clipStyle(cut.copy.style).lines,
+                            chars: clipStyle(cut.copy.style).chars,
+                          })}
+                        </FieldMessage>
+                      )}
+                    </div>
+                    {/* 크게 강조 colours one word and 형광펜 highlights it; no
+                        other style draws a keyword (CDS-25, CDS-26). */}
+                    {(clipStyle(cut.copy.style).highlight ||
+                      clipStyle(cut.copy.style).stroke !== '') && (
+                      <div>
+                        <FieldLabel htmlFor={`${prefix}-keyword`}>
+                          {t('correction.keyword')}
+                        </FieldLabel>
+                        <TextField
+                          id={`${prefix}-keyword`}
+                          type="text"
+                          inputMode="text"
+                          {...INPUT}
+                          value={cut.copy.keyword}
+                          disabled={busy}
+                          aria-invalid={errors?.keyword}
+                          onChange={(e) =>
+                            patch({ type: 'copy', id: cut.id, patch: { keyword: e.target.value } })
+                          }
+                        />
+                        {errors?.keyword && (
+                          <FieldMessage>{t('correction.keywordError')}</FieldMessage>
+                        )}
+                      </div>
+                    )}
+                    <div>
+                      <Typography variant="fieldTitle" as="p">
+                        {t('correction.chips')}
+                      </Typography>
+                      <Typography variant="body" className="text-content-secondary mt-1 mb-2">
+                        {t('correction.chipsHelp')}
+                      </Typography>
+                      {chipLabels.length === 0 ? (
+                        <Typography variant="body" className="text-content-secondary">
+                          {t('correction.chipsNone')}
+                        </Typography>
+                      ) : (
+                        <div className="flex flex-wrap gap-x-4">
+                          {chipLabels.map((label) => (
+                            <label key={label} className="flex min-h-11 items-center gap-3 px-3">
+                              <Checkbox
+                                checked={cut.chips.includes(label)}
+                                disabled={
+                                  busy || (cut.chips.length >= 2 && !cut.chips.includes(label))
+                                }
+                                onChange={(e) =>
+                                  patch({
+                                    type: 'chips',
+                                    id: cut.id,
+                                    chips: e.target.checked
+                                      ? [...cut.chips, label]
+                                      : cut.chips.filter((v) => v !== label),
+                                  })
+                                }
+                              />
+                              <Typography variant="label">{label}</Typography>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                      {errors?.chips && <FieldMessage>{t('correction.chipsError')}</FieldMessage>}
                     </div>
                     <div>
                       <FieldLabel id={`${prefix}-accent-label`} htmlFor={`${prefix}-accent`}>

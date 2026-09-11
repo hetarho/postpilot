@@ -32,6 +32,8 @@ function fixture(): FakeClipProject {
     ratio: 'vertical',
     targetDurationMs: 19800,
     answers: [],
+    disclosure: 'ad',
+    cta: '',
     editPlanRevision: 1,
     renderedPlanRevision: 1,
     editing: clipEditingFixture(),
@@ -59,6 +61,7 @@ async function mount(clips: FakeClipsOptions = {}, jobs: FakeJobsOptions = {}) {
           cutGuidance: '',
           copyStyles: ['clean'],
           accent: '',
+          preset: 'restaurant',
         },
       ],
       projects: [fixture()],
@@ -140,7 +143,9 @@ it('keeps the result mounted across every edit and saves exact fields with its r
   change('자막 끝 (컷 내 ms)', '2000')
   change('원본 소리 (%)', '25')
   await userEvent.click(cut().getByRole('combobox', { name: /자막 위치/ }))
-  await userEvent.click(screen.getByRole('option', { name: '아래쪽 중간' }))
+  await userEvent.click(screen.getByRole('option', { name: '하단' }))
+  await userEvent.click(cut().getByRole('combobox', { name: /가로 정렬/ }))
+  await userEvent.click(screen.getByRole('option', { name: '왼쪽' }))
   await userEvent.click(cut().getByRole('combobox', { name: /자막 스타일/ }))
   await userEvent.click(screen.getByRole('option', { name: '메모' }))
   await userEvent.click(cut().getByRole('combobox', { name: /강조 색상/ }))
@@ -165,9 +170,10 @@ it('keeps the result mounted across every edit and saves exact fields with its r
             text: '정확한 한국어 <copy>',
             style: 'memo',
             // The anchor the wire calls `position`; it round-trips through the
-            // proto mapper on the way back, so a lost mapping fails here.
-            anchor: 'lower_mid',
-            align: 'center',
+            // proto mapper on the way back, so a lost mapping fails here. 메모
+            // sits LEFT at the top or the bottom (CDS-24).
+            anchor: 'bottom',
+            align: 'left',
             accent: 'teal',
             startMs: 200,
             endMs: 2000,

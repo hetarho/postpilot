@@ -3,6 +3,7 @@ import { useBlocker, useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import {
   CLIP_ACCENTS,
+  CLIP_PRESETS_LIST,
   CLIP_TEMPLATE_LIMITS,
   COPY_STYLES,
   CopyStylePreview,
@@ -56,11 +57,12 @@ export function ClipTemplateEditor({
   const [baseline, setBaseline] = useState(() =>
     JSON.stringify(normalizeRecipe(stored ? recipeOf(stored) : emptyClipRecipe())),
   )
+  const [pendingSeed, setPendingSeed] = useState<InformationField[] | null>(null)
   const [fieldIds, setFieldIds] = useState(() =>
     draft.informationFields.map((_, i) => `field-${i}`),
   )
   const [saved, setSaved] = useState(false)
-  const { save: saveMutation } = useClipTemplateMutations(ownerId)
+  const { save: saveMutation, seed: seedMutation } = useClipTemplateMutations(ownerId)
   const submitting = useRef(false)
   const leaving = useRef(false)
   const errors = validateClipRecipe(draft)
@@ -77,6 +79,30 @@ export function ClipTemplateEditor({
   const change = <K extends keyof ClipRecipe>(key: K, value: ClipRecipe[K]) => {
     setSaved(false)
     setDraft((current) => ({ ...current, [key]: value }))
+  }
+  // Choosing a preset seeds the reserved information fields it needs. Existing
+  // labels are KEPT — the owner's own questions and their answers survive
+  // (CLIP-25) — and only missing reserved ones are added. When the template is
+  // already used by projects, the addition changes what their step ① asks for,
+  // so the owner is told before it happens.
+  const applySeed = (fields: InformationField[]) => {
+    const existing = new Set(draft.informationFields.map((f) => f.label.trim()))
+    const additions = fields.filter((f) => !existing.has(f.label))
+    if (additions.length === 0) return
+    setFieldIds([...fieldIds, ...additions.map(() => crypto.randomUUID())])
+    change('informationFields', [...draft.informationFields, ...additions])
+  }
+  const choosePreset = async (preset: ClipRecipe['preset']) => {
+    change('preset', preset)
+    if (preset === '') return
+    const fields = await seedMutation.mutateAsync(preset)
+    const existing = new Set(draft.informationFields.map((f) => f.label.trim()))
+    const additions = fields.filter((f) => !existing.has(f.label))
+    if (additions.length > 0 && (stored?.projectCount ?? 0) > 0) {
+      setPendingSeed(fields)
+      return
+    }
+    applySeed(fields)
   }
   const fieldChange = (index: number, key: keyof InformationField, value: string) =>
     change(
@@ -240,6 +266,25 @@ export function ClipTemplateEditor({
               {t('editor.addField')}
             </Button>
           </section>
+          <div>
+            <FieldLabel id="clip-preset-label" htmlFor="clip-preset">
+              {t('editor.preset')}
+            </FieldLabel>
+            <Typography variant="body" className="text-content-secondary mb-2">
+              {t('editor.presetHelp')}
+            </Typography>
+            <Listbox
+              id="clip-preset"
+              aria-labelledby="clip-preset-label"
+              value={draft.preset}
+              onChange={(value) => choosePreset(value as ClipRecipe['preset'])}
+              options={[
+                { value: '', label: t('editor.presetNone'), disabled: true },
+                ...CLIP_PRESETS_LIST.map((value) => ({ value, label: t(`preset.${value}`) })),
+              ]}
+            />
+            {errors.preset && <FieldMessage>{t('validation.preset')}</FieldMessage>}
+          </div>
           <section aria-labelledby="clip-styles-heading">
             <Typography variant="title" id="clip-styles-heading">
               {t('editor.styles')}
@@ -252,7 +297,8 @@ export function ClipTemplateEditor({
                 <div key={style} className="min-w-0">
                   <label className="flex min-h-11 items-center gap-3 px-3">
                     <Checkbox
-                      checked={draft.copyStyles.includes(style)}
+                      checked={style === 'clean' || draft.copyStyles.includes(style)}
+                      disabled={style === 'clean'}
                       onChange={(e) =>
                         change(
                           'copyStyles',
@@ -264,9 +310,15 @@ export function ClipTemplateEditor({
                     />
                     <Typography variant="label">{t(`style.${style}`)}</Typography>
                   </label>
+                  {style === 'clean' && (
+                    <Typography variant="body" className="text-content-secondary px-3">
+                      {t('editor.styleAlwaysOn')}
+                    </Typography>
+                  )}
                   <CopyStylePreview
                     style={style}
                     accent={draft.accent}
+                    keyword={t('editor.previewKeyword')}
                     text={t('editor.preview')}
                   />
                 </div>
@@ -312,6 +364,18 @@ export function ClipTemplateEditor({
           </Button>
         </div>
       </ActionBar>
+      <Dialog
+        open={pendingSeed !== null}
+        title={t('editor.seedTitle')}
+        confirmLabel={t('editor.seedConfirm')}
+        onClose={() => setPendingSeed(null)}
+        onConfirm={() => {
+          if (pendingSeed) applySeed(pendingSeed)
+          setPendingSeed(null)
+        }}
+      >
+        {t('editor.seedBody', { count: stored?.projectCount ?? 0 })}
+      </Dialog>
       <Dialog
         open={blocker.status === 'blocked'}
         title={t('editor.leaveTitle')}

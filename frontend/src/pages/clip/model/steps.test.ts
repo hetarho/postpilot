@@ -26,6 +26,8 @@ const base: ClipProject = {
   videoTemplateId: 'tpl',
   ratio: 'vertical',
   targetDurationMs: 30000,
+  disclosure: 'ad',
+  cta: '',
   answers: [],
   createdAt: '2026-09-11',
   updatedAt: '2026-09-11',

@@ -1,5 +1,7 @@
 export {
   CLIP_RATIOS,
+  CLIP_DISCLOSURES,
+  CLIP_CTAS,
   CLIP_PROJECT_LIMITS,
   emptyClipProject,
   projectDraft,
@@ -10,6 +12,8 @@ export { clipState, clipStateLabel } from './model/state'
 export type { ClipState } from './model/state'
 export type {
   ClipRatio,
+  ClipDisclosureId,
+  ClipCTAId,
   ClipProjectDraft,
   ClipProject,
   ClipSourceMetadata,

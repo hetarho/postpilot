@@ -388,3 +388,31 @@ export const GUIDELINE_TEXT_MAX_CHARS = positiveIntEnv(
   import.meta.env.VITE_GUIDELINE_TEXT_MAX_CHARS,
   300,
 )
+
+/** The clip design system: the numbers the renderer embeds, read rather than
+ *  copied. See shared/config/clip-design.ts. */
+export {
+  CLIP_DESIGN,
+  CLIP_STYLES,
+  CLIP_PRESETS,
+  CLIP_DISCLOSURES,
+  CLIP_CTAS,
+  CLIP_SHADOW,
+  CLIP_SPACING,
+  CLIP_TIMING,
+  CLIP_GUARDS,
+  CLIP_CLASSES,
+  CLIP_SCENE_STYLES,
+  CLIP_FACTS,
+  CLIP_ACCENT_HEX,
+  clipStyle,
+  clipType,
+  clipPaint,
+} from './clip-design'
+export type {
+  ClipStyleId,
+  ClipRatioId,
+  ClipPresetId,
+  ClipDisclosureId,
+  ClipCTAId,
+} from './clip-design'

@@ -23,6 +23,7 @@ const template = {
   cutGuidance: '',
   copyStyles: ['clean'] as const,
   accent: '' as const,
+  preset: 'restaurant' as const,
 }
 const project: ClipProjectDraft & { id: string } = {
   id: 'project',
@@ -30,6 +31,8 @@ const project: ClipProjectDraft & { id: string } = {
   videoTemplateId: template.id,
   ratio: 'vertical',
   targetDurationMs: 30000,
+  disclosure: 'ad',
+  cta: '',
   answers: [{ label: '장소', text: '제주도' }],
 }
 const mount = (path: string, clips: FakeClipsOptions = {}) =>
@@ -53,6 +56,10 @@ async function fillSetup() {
   await user.click(screen.getByRole('combobox', { name: /^영상 템플릿/ }))
   await user.click(await screen.findByRole('option', { name: '여행' }))
   await user.type(await screen.findByLabelText('장소'), '서울')
+  // A clip carries its ad disclosure throughout, so its campaign type is part
+  // of a complete setup (CDS-5).
+  await user.click(screen.getByRole('combobox', { name: /^체험단 유형/ }))
+  await user.click(await screen.findByRole('option', { name: '광고' }))
   return user
 }
 describe('clip directory and setup', () => {
@@ -108,6 +115,8 @@ describe('clip directory and setup', () => {
       title: '새 경험',
       ratio: 'square',
       targetDurationMs: 15000,
+      disclosure: 'ad',
+      cta: '',
       answers: [{ label: '장소', text: '서울' }],
     })
     expect(await screen.findByLabelText('원본 영상 선택')).toBeEnabled()

@@ -33,6 +33,8 @@ const project: FakeClipProject = {
   videoTemplateId: 'template',
   ratio: 'vertical',
   targetDurationMs: 15000,
+  disclosure: 'ad',
+  cta: '',
   answers: [],
 }
 const result = {
@@ -81,6 +83,7 @@ function mount(
           cutGuidance: '',
           copyStyles: ['clean'],
           accent: '',
+          preset: 'restaurant',
         },
       ],
       projects: [project],

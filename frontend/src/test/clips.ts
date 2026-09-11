@@ -22,10 +22,12 @@ import {
   SaveClipEditPlanResponseSchema,
   StartClipRenderResponseSchema,
   ClipEditingStateSchema,
+  SeedPresetFieldsResponseSchema,
   type ProtoClipSourceBatch,
   type AppFailureReason,
 } from '@/shared/api'
 import type { ClipRecipe } from '@/entities/clip-template'
+import { CLIP_DESIGN } from '@/shared/config'
 import {
   clipPlanToProto,
   toClipEditingState,
@@ -68,6 +70,8 @@ export interface FakeClipsOptions {
   renderStarts?: unknown[]
   renderJobId?: string
   renderFails?: boolean
+  /** A verifier refusal, as the server's stable reason (CDS-52, LANG-21). */
+  renderRefusal?: AppFailureReason
   planWrites?: Array<{ revision: number; plan: ClipEditPlan }>
   planSaveConflict?: boolean
   projectWrites?: ClipProjectDraft[]
@@ -133,6 +137,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       informationFields: req.informationFields.map(({ label, prompt }) => ({ label, prompt })),
       copyStyles: req.copyStyles as ClipRecipe['copyStyles'],
       accent: req.accent as ClipRecipe['accent'],
+      preset: req.preset as ClipRecipe['preset'],
     }
     options.writes?.push(row)
     rows.set(row.id, row)
@@ -152,8 +157,21 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       }))
     if (req.copyStyles) row.copyStyles = req.copyStyles.values as ClipRecipe['copyStyles']
     if (req.accent !== undefined) row.accent = req.accent as ClipRecipe['accent']
+    if (req.preset !== undefined) row.preset = req.preset as ClipRecipe['preset']
     options.writes?.push({ ...row })
     return create(UpdateVideoTemplateResponseSchema, { template: toProto(row) })
+  })
+  router.rpc(ClipService.method.seedPresetFields, (req) => {
+    options.calls?.push('SeedPresetFields')
+    const preset = CLIP_DESIGN.presets[req.preset as keyof typeof CLIP_DESIGN.presets]
+    if (!preset) throw connectAppError('CLIP_INVALID_INPUT', Code.InvalidArgument)
+    const labels = ['상호', ...preset.chips].filter((l, i, all) => all.indexOf(l) === i)
+    return create(SeedPresetFieldsResponseSchema, {
+      fields: labels.map((label) => ({
+        label,
+        prompt: CLIP_DESIGN.facts.prompts[label as keyof typeof CLIP_DESIGN.facts.prompts],
+      })),
+    })
   })
   router.rpc(ClipService.method.deleteVideoTemplate, (req) => {
     options.calls?.push('DeleteVideoTemplate')
@@ -191,6 +209,8 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       ratio: req.ratio as ClipProjectDraft['ratio'],
       targetDurationMs: req.targetDurationMs,
       answers: req.answers.map((a) => ({ label: a.label, text: a.text })),
+      disclosure: req.disclosure as ClipProjectDraft['disclosure'],
+      cta: req.cta as ClipProjectDraft['cta'],
     }
     projects.set(p.id, p)
     options.projectWrites?.push(p)
@@ -204,6 +224,9 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     if (req.title !== undefined) p.title = req.title
     if (req.videoTemplateId !== undefined) p.videoTemplateId = req.videoTemplateId
     if (req.targetDurationMs !== undefined) p.targetDurationMs = req.targetDurationMs
+    if (req.disclosure !== undefined)
+      p.disclosure = req.disclosure as ClipProjectDraft['disclosure']
+    if (req.cta !== undefined) p.cta = req.cta as ClipProjectDraft['cta']
     for (const answer of req.answers)
       p.answers = [
         ...p.answers.filter((a) => a.label !== answer.label),
@@ -251,6 +274,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     options.calls?.push('StartClipRender')
     options.renderStarts?.push(req)
     if (options.renderFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
+    if (options.renderRefusal) throw connectAppError(options.renderRefusal, Code.InvalidArgument)
     const p = projects.get(req.projectId),
       b = batches.get(req.batchId)
     if (!p || !b || b.state !== 'ready')

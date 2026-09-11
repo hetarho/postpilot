@@ -16,6 +16,8 @@ const draft = (title: string): ClipProjectDraft => ({
   ratio: 'vertical',
   targetDurationMs: 15000,
   answers: [],
+  disclosure: 'ad' as const,
+  cta: '' as const,
 })
 
 beforeEach(() => vi.useFakeTimers())

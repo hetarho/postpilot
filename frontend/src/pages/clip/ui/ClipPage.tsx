@@ -227,6 +227,7 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
     <ClipCorrectionWorkspace
       correction={correction}
       state={plan}
+      answers={project.answers}
       disabled={pending}
       renderReady={!!upload.readyBatch && correction.revision === project.editPlanRevision}
       renderPending={generation.starting}

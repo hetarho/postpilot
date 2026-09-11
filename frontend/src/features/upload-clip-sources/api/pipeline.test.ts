@@ -16,6 +16,8 @@ describe('clip source Connect boundary', () => {
             videoTemplateId: 'template',
             ratio: 'vertical',
             targetDurationMs: 30000,
+            disclosure: 'ad',
+            cta: '',
             answers: [],
           },
         ],

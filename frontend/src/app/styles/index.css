@@ -29,15 +29,22 @@
 /* ── Tier 1: palette ────────────────────────────────────────────────────────────────────────── */
 :root {
   /* Fixed media colours: these preview the output artifact, independently of UI theme. */
-  --palette-clip-coral: #ff6b5f;
-  --palette-clip-amber: #ffb23f;
-  --palette-clip-lime: #b8d94a;
-  --palette-clip-teal: #43c5b5;
-  --palette-clip-blue: #5b8def;
-  --palette-clip-violet: #8b6fe8;
-  --palette-clip-pink: #e96aae;
-  --palette-clip-ink: #19171c;
-  --palette-clip-paper: #fff4d9;
+  /* The clip design system's own palette (CDS-14, CDS-15). These hexes are the
+     ones shared/config/clip-design.json carries and the renderer embeds; a
+     vitest compares the two so neither side can drift. */
+  --palette-clip-coral: #ff6b57;
+  --palette-clip-amber: #ffb020;
+  --palette-clip-lime: #9bd53a;
+  --palette-clip-teal: #2bb8a6;
+  --palette-clip-blue: #3d7bff;
+  --palette-clip-violet: #8a63ff;
+  --palette-clip-pink: #ff6fb5;
+  --palette-clip-ink-900: #111111;
+  --palette-clip-paper-50: #fffcf5;
+  --palette-clip-stroke: #0b0b0b;
+  --palette-clip-badge: #111111;
+  --palette-clip-ink: #1a1a1a;
+  --palette-clip-paper: #fffcf5;
   --palette-clip-white: #ffffff;
   /* mauve — the neutral. Hue 298 (the primary's hue) at a whisper-level chroma: ~5% of the
      violet ramp's peak, so greys read as "cool, faintly violet" without ever reading as purple.
@@ -633,6 +640,10 @@
   --color-clip-blue: var(--palette-clip-blue);
   --color-clip-violet: var(--palette-clip-violet);
   --color-clip-pink: var(--palette-clip-pink);
+  --color-clip-ink-900: var(--palette-clip-ink-900);
+  --color-clip-paper-50: var(--palette-clip-paper-50);
+  --color-clip-stroke: var(--palette-clip-stroke);
+  --color-clip-badge: var(--palette-clip-badge);
   --color-clip-ink: var(--palette-clip-ink);
   --color-clip-paper: var(--palette-clip-paper);
   --color-clip-white: var(--palette-clip-white);

@@ -9,6 +9,9 @@ const draft = (): ClipProjectDraft => ({
   ...emptyClipProject(),
   title: '경험',
   videoTemplateId: 'owned',
+  // Every clip carries its ad disclosure, so the campaign type is part of a
+  // complete setup (CDS-5, CDS-31).
+  disclosure: 'sponsored',
   answers: [{ label: '장소', text: '제주' }],
 })
 const fields = [{ label: '장소' }]
@@ -24,6 +27,9 @@ describe('clip setup validation', () => {
     { answers: [] },
     { answers: [{ label: '장소', text: ' ' }] },
     { answers: [{ label: '장소', text: '😀'.repeat(501) }] },
+    { disclosure: '' as const },
+    { disclosure: 'editorial' as ClipProjectDraft['disclosure'] },
+    { cta: 'subscribe' as ClipProjectDraft['cta'] },
   ])('rejects invalid setup %j', (patch) => {
     expect(validClipProject({ ...draft(), ...patch }, fields)).toBe(false)
   })

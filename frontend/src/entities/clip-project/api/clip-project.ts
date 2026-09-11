@@ -25,6 +25,10 @@ export function toClipProject(value: ProtoClipProject): ClipProject {
     videoTemplateId: value.videoTemplateId,
     ratio: value.ratio as ClipRatio,
     targetDurationMs: value.targetDurationMs,
+    // An empty campaign type is a clip still being set up; generation refuses
+    // one (CDS-5). An empty CTA means the template preset's (CDS-29).
+    disclosure: value.disclosure as ClipProject['disclosure'],
+    cta: value.cta as ClipProject['cta'],
     answers: value.answers.map((a) => ({ label: a.label, text: a.text })),
     createdAt: value.createdAt,
     updatedAt: value.updatedAt,

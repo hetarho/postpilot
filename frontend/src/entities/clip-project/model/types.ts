@@ -1,7 +1,13 @@
 import type { GenerationJob } from '@/entities/generation-job/@x/clip-project'
+import type { ClipCTAId, ClipDisclosureId } from '@/shared/config'
 import type { ClipEditingState } from './edit-plan'
 
 export const CLIP_RATIOS = ['vertical', 'horizontal', 'square'] as const
+/** The five campaign types and three CTAs, read from the design system: the
+ *  phrases are code-owned and only these ids ever travel (CDS-29, CDS-31). */
+export { CLIP_DISCLOSURES, CLIP_CTAS } from '@/shared/config'
+import { CLIP_CTAS, CLIP_DISCLOSURES } from '@/shared/config'
+export type { ClipDisclosureId, ClipCTAId } from '@/shared/config'
 export type ClipRatio = (typeof CLIP_RATIOS)[number]
 export const CLIP_PROJECT_LIMITS = {
   title: 100,
@@ -15,6 +21,11 @@ export interface ClipProjectDraft {
   ratio: ClipRatio
   targetDurationMs: number
   answers: Array<{ label: string; text: string }>
+  /** The campaign type the disclosure badge shows. Empty is allowed while the
+   *  clip is being set up; generation refuses it (CDS-5, CDS-31). */
+  disclosure: ClipDisclosureId | ''
+  /** The closing call to action, or empty for the template preset's (CDS-29). */
+  cta: ClipCTAId | ''
 }
 export interface ClipProject extends ClipProjectDraft {
   id: string
@@ -75,7 +86,15 @@ export interface ClipSourceBatch {
 }
 export type ReadyClipBatch = ClipSourceBatch & { state: 'ready' }
 export function emptyClipProject(): ClipProjectDraft {
-  return { title: '', videoTemplateId: '', ratio: 'vertical', targetDurationMs: 30000, answers: [] }
+  return {
+    title: '',
+    videoTemplateId: '',
+    ratio: 'vertical',
+    targetDurationMs: 30000,
+    answers: [],
+    disclosure: '',
+    cta: '',
+  }
 }
 export function projectDraft(value: ClipProjectDraft): ClipProjectDraft {
   return {
@@ -84,6 +103,8 @@ export function projectDraft(value: ClipProjectDraft): ClipProjectDraft {
     ratio: value.ratio,
     targetDurationMs: value.targetDurationMs,
     answers: value.answers.map((a) => ({ ...a })),
+    disclosure: value.disclosure,
+    cta: value.cta,
   }
 }
 export function normalizeClipProject(value: ClipProjectDraft): ClipProjectDraft {
@@ -99,6 +120,11 @@ export function validClipProject(
     length(value.title.trim()) <= CLIP_PROJECT_LIMITS.title &&
     !!value.videoTemplateId &&
     !!fields &&
+    // A clip carries its ad disclosure for its whole length (CDS-5), and the
+    // phrase comes from the campaign type — so the type is part of a complete
+    // setup, not something to discover at approval.
+    CLIP_DISCLOSURES.includes(value.disclosure as ClipDisclosureId) &&
+    (value.cta === '' || CLIP_CTAS.includes(value.cta as ClipCTAId)) &&
     CLIP_RATIOS.includes(value.ratio) &&
     Number.isInteger(value.targetDurationMs) &&
     value.targetDurationMs >= CLIP_PROJECT_LIMITS.minSeconds * 1000 &&

@@ -12,6 +12,7 @@ const template: FakeClipTemplate = {
   cutGuidance: '',
   copyStyles: ['clean'],
   accent: '',
+  preset: 'restaurant',
 }
 const result = {
   contentType: 'video/mp4',
@@ -23,6 +24,8 @@ const base = {
   videoTemplateId: 'template',
   ratio: 'vertical' as const,
   targetDurationMs: 15000,
+  disclosure: 'ad' as const,
+  cta: '' as const,
   answers: [],
 }
 const running: FakeGenerationJobRow = {

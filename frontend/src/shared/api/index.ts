@@ -27,6 +27,7 @@ export {
   SaveClipEditPlanResponseSchema,
   StartClipRenderResponseSchema,
   ListVideoTemplatesResponseSchema,
+  SeedPresetFieldsResponseSchema,
   CreateVideoTemplateResponseSchema,
   UpdateVideoTemplateResponseSchema,
   DeleteVideoTemplateResponseSchema,

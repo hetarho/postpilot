@@ -1,3 +1,13 @@
+import {
+  CLIP_PRESETS,
+  CLIP_SPACING,
+  CLIP_STYLES,
+  clipStyle,
+  clipType,
+  type ClipPresetId,
+  type ClipStyleId,
+} from '@/shared/config'
+
 export const CLIP_TEMPLATE_LIMITS = {
   name: 40,
   guidance: 4000,
@@ -6,10 +16,12 @@ export const CLIP_TEMPLATE_LIMITS = {
   prompt: 200,
 } as const
 
-/** The four CDS copy styles, one per role: clean 깔끔하게 narrative, memo 메모 fact,
- *  bold 크게 강조 emotion and hook, mark 형광펜 one number or keyword. */
-export const COPY_STYLES = ['clean', 'memo', 'bold', 'mark'] as const
-export type CopyStyle = (typeof COPY_STYLES)[number]
+/** The four CDS copy styles, one per role, and the five category presets — both
+ *  read from the design system rather than listed again here. */
+export const COPY_STYLES = CLIP_STYLES
+export type CopyStyle = ClipStyleId
+export const CLIP_PRESETS_LIST = CLIP_PRESETS
+export type ClipPreset = ClipPresetId
 export const CLIP_ACCENTS = [
   '',
   'coral',
@@ -31,6 +43,9 @@ export interface ClipRecipe {
   cutGuidance: string
   copyStyles: CopyStyle[]
   accent: ClipAccent
+  /** One of the five category presets. Empty is only ever a template written
+   *  before presets existed; a save must name one (CDS-50). */
+  preset: ClipPreset | ''
 }
 export interface ClipTemplate extends ClipRecipe {
   id: string
@@ -39,21 +54,51 @@ export interface ClipTemplate extends ClipRecipe {
   updatedAt: string
 }
 
-// Canvas-space measurements mirrored by the deterministic renderer (T074). The
-// authoritative type scale now lives in shared/config/clip-design.json; T103
-// takes the preview and the renderer onto it when it draws the four styles.
-export const COPY_STYLE_MEASUREMENTS = {
-  clean: { fontSize: 56, minFontSize: 48, weight: 700, padding: 22, radius: 16 },
-  memo: { fontSize: 44, minFontSize: 40, weight: 600, padding: 18, radius: 16 },
-  bold: { fontSize: 72, minFontSize: 64, weight: 800, padding: 0, radius: 0 },
-  mark: { fontSize: 60, minFontSize: 52, weight: 800, padding: 0, radius: 0 },
-} as const
+/** What the preview needs to draw a style, taken from the design system: the
+ *  renderer reads the same bytes, so a preview cannot drift from a render. */
+export function copyStyleMeasurements(style: CopyStyle) {
+  const rule = clipStyle(style)
+  const role = clipType(style)
+  return {
+    fontSize: role.size,
+    minFontSize: role.min,
+    weight: role.weight,
+    tracking: role.tracking,
+    padding: rule.padding,
+    padLeft: rule.pad_left,
+    radius: rule.plate === '' ? 0 : CLIP_SPACING.radius_box,
+    plate: rule.plate,
+    bar: rule.bar,
+    dot: rule.dot,
+    stroke:
+      rule.stroke === 'mark'
+        ? CLIP_SPACING.stroke_mark
+        : rule.stroke === ''
+          ? 0
+          : CLIP_SPACING.stroke_text,
+    shadow: rule.shadow !== '',
+    highlight: rule.highlight,
+    lines: rule.lines,
+    chars: rule.chars,
+    anchor: rule.anchor,
+    align: rule.align,
+  }
+}
 
 /** An unplated style paints its text with a stroke instead of a box (CDS-25, CDS-26). */
-export const PLATED_COPY_STYLES: readonly CopyStyle[] = ['clean', 'memo']
+export const PLATED_COPY_STYLES: readonly CopyStyle[] = COPY_STYLES.filter(
+  (style) => clipStyle(style).plate !== '',
+)
 
 export function emptyClipRecipe(): ClipRecipe {
-  return { name: '', informationFields: [], cutGuidance: '', copyStyles: ['clean'], accent: '' }
+  return {
+    name: '',
+    informationFields: [],
+    cutGuidance: '',
+    copyStyles: ['clean'],
+    accent: '',
+    preset: '',
+  }
 }
 export function normalizeRecipe(value: ClipRecipe): ClipRecipe {
   return {
@@ -72,6 +117,7 @@ export function recipeOf(value: ClipRecipe): ClipRecipe {
     cutGuidance: value.cutGuidance,
     copyStyles: [...value.copyStyles],
     accent: value.accent,
+    preset: value.preset,
   }
 }
 export type FieldError = 'required' | 'tooLong' | 'duplicate' | 'invalid'
@@ -100,6 +146,8 @@ export function validateClipRecipe(value: ClipRecipe) {
       new Set(recipe.copyStyles).size !== recipe.copyStyles.length ||
       recipe.copyStyles.some((v) => !COPY_STYLES.includes(v)),
     accent: !CLIP_ACCENTS.includes(recipe.accent),
+    // A template names its category, which fixes chip priority, CTA and accent.
+    preset: !CLIP_PRESETS.includes(recipe.preset as ClipPresetId),
   }
   return {
     ...errors,
@@ -109,6 +157,7 @@ export function validateClipRecipe(value: ClipRecipe) {
       !errors.fieldCount &&
       !errors.styles &&
       !errors.accent &&
+      !errors.preset &&
       fields.every((f) => !f.label && !f.prompt),
   }
 }

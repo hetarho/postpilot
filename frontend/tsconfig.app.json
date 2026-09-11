@@ -13,6 +13,9 @@
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
     "noEmit": true,
+    /* shared/config/clip-design.json is the byte-identical mirror of the file the
+       renderer embeds, so the preview and the validators read the same numbers. */
+    "resolveJsonModule": true,
     "jsx": "react-jsx",
 
     /* FSD path alias (TS 6+: paths resolve relative to this tsconfig) */
