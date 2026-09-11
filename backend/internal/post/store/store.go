@@ -54,8 +54,12 @@ func (s *Store) CreatePost(ctx context.Context, p post.Post) error {
 		Title:          p.Title,
 		Memo:           p.Memo,
 		TargetLanguage: string(p.TargetLanguage),
-		CreatedAt:      formatTime(p.CreatedAt),
-		UpdatedAt:      formatTime(p.UpdatedAt),
+		// The template's seeds, or NULL when the create named none (TEMPLATE-48). A zero tag
+		// count is "nobody named one" here, never a post asking for no tags.
+		TargetLength: optionalInt64(p.TargetLength),
+		TagCount:     createTagCount(p.TagCount),
+		CreatedAt:    formatTime(p.CreatedAt),
+		UpdatedAt:    formatTime(p.UpdatedAt),
 	})
 	if err != nil {
 		if isUniqueViolation(err) {
@@ -106,13 +110,16 @@ func (s *Store) ReassignVoice(ctx context.Context, slug, userID, voiceID string,
 // AssignTemplate is the only writer of posts.template_id besides the create and the foreign
 // key's ON DELETE SET NULL. A foreign or unknown id is refused by the composite FK even if a
 // service check were bypassed, and that refusal is reported as a missing template.
-func (s *Store) AssignTemplate(ctx context.Context, slug, userID string, templateID *string, updatedAt time.Time) (bool, error) {
+func (s *Store) AssignTemplate(ctx context.Context, slug, userID string, templateID *string, seed post.TemplateNumbers, updatedAt time.Time) (bool, error) {
 	value := sql.NullString{}
 	if templateID != nil && *templateID != "" {
 		value = sql.NullString{String: *templateID, Valid: true}
 	}
 	n, err := s.write.AssignPostTemplate(ctx, sqlc.AssignPostTemplateParams{
-		TemplateID: value, UpdatedAt: formatTime(updatedAt), Slug: slug, UserID: userID,
+		TemplateID:       value,
+		SeedTargetLength: optionalInt64(seed.TargetLength),
+		SeedTagCount:     optionalInt64(seed.TagCount),
+		UpdatedAt:        formatTime(updatedAt), Slug: slug, UserID: userID,
 	})
 	if err != nil {
 		if isTemplateOwnershipViolation(err) {
@@ -835,6 +842,16 @@ func tagCountOrDefault(value sql.NullInt64) int {
 		return config.PostTagCountDefault
 	}
 	return int(value.Int64)
+}
+
+// createTagCount is the create path's own unset: the domain's TagCount is always concrete
+// once a post exists, so 0 can only mean "this create named no template with an opinion",
+// and the column stays NULL - which reads back as the configured default.
+func createTagCount(value int) sql.NullInt64 {
+	if value <= 0 {
+		return sql.NullInt64{}
+	}
+	return sql.NullInt64{Int64: int64(value), Valid: true}
 }
 
 func optionalInt64(value *int) sql.NullInt64 {

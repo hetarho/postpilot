@@ -42,7 +42,8 @@ func (h *Handler) CreateTemplate(ctx context.Context, req *connect.Request[postp
 	if err != nil {
 		return nil, err
 	}
-	created, err := h.service.Create(ctx, userID, req.Msg.GetName(), req.Msg.GetDescription(), req.Msg.GetBody())
+	created, err := h.service.Create(ctx, userID, req.Msg.GetName(), req.Msg.GetDescription(), req.Msg.GetBody(),
+		template.Numbers{TargetLength: number(req.Msg.TargetLength), TagCount: number(req.Msg.TagCount)})
 	if err != nil {
 		return nil, toConnectError("create template", err)
 	}
@@ -56,7 +57,16 @@ func (h *Handler) UpdateTemplate(ctx context.Context, req *connect.Request[postp
 	}
 	// Presence is the edit unit: a field the request did not carry is never named by any
 	// statement, so two fields edited from two tabs cannot overwrite each other.
-	patch := template.Patch{Name: req.Msg.Name, Description: req.Msg.Description, Body: req.Msg.Body}
+	//
+	// The two generation numbers are the exception (TEMPLATE-8): they travel as one pair that
+	// is always written, an absent member meaning "no opinion" rather than "not part of this
+	// edit", because the template screen holds both and sends both on every save.
+	patch := template.Patch{
+		Name: req.Msg.Name, Description: req.Msg.Description, Body: req.Msg.Body,
+		Numbers: &template.Numbers{
+			TargetLength: number(req.Msg.TargetLength), TagCount: number(req.Msg.TagCount),
+		},
+	}
 	updated, err := h.service.Update(ctx, userID, req.Msg.GetId(), patch)
 	if err != nil {
 		return nil, toConnectError("update template", err)
@@ -91,8 +101,20 @@ func actingUser(ctx context.Context) (string, error) {
 // has to point at the offending line and it must not parse wire prose to find out which one.
 func toConnectError(op string, err error) error {
 	var tooLong *template.FieldTooLongError
+	var outOfRange *template.NumberOutOfRangeError
 	var parseErr *template.ParseError
 	switch {
+	case errors.As(err, &outOfRange):
+		// `max` is omitted for a number the product gives no ceiling: the target length is any
+		// positive value, and a params key claiming a ceiling would be a rule nobody set.
+		params := map[string]string{
+			"field": outOfRange.Field, "min": strconv.Itoa(outOfRange.Min),
+			"actual": strconv.Itoa(outOfRange.Value),
+		}
+		if outOfRange.Max > 0 {
+			params["max"] = strconv.Itoa(outOfRange.Max)
+		}
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "template number is out of range", "TEMPLATE_NUMBER_OUT_OF_RANGE", params)
 	case errors.As(err, &tooLong):
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "template field is too long", "TEMPLATE_FIELD_TOO_LONG", map[string]string{
 			"field": tooLong.Field, "max": strconv.Itoa(tooLong.Max), "actual": strconv.Itoa(tooLong.Chars),
@@ -123,8 +145,27 @@ func toProtoTemplate(t template.Template) *postpilotv1.Template {
 	}
 	return &postpilotv1.Template{
 		Id: t.ID, Name: t.Name, Description: t.Description, Body: t.Body,
+		TargetLength: protoNumber(t.TargetLength), TagCount: protoNumber(t.TagCount),
 		PostCount: int32(t.PostCount),
 		CreatedAt: t.CreatedAt.UTC().Format(timeLayout),
 		UpdatedAt: t.UpdatedAt.UTC().Format(timeLayout),
 	}
+}
+
+// number and protoNumber carry "no opinion" across the wire edge unchanged: an absent field
+// is a template that says nothing about that number, never a zero.
+func number(value *int32) *int {
+	if value == nil {
+		return nil
+	}
+	out := int(*value)
+	return &out
+}
+
+func protoNumber(value *int) *int32 {
+	if value == nil {
+		return nil
+	}
+	out := int32(*value)
+	return &out
 }

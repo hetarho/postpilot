@@ -42,7 +42,7 @@ func (s *Service) List(ctx context.Context, userID string) ([]Template, error) {
 	return templates, nil
 }
 
-func (s *Service) Create(ctx context.Context, userID, name, description, body string) (Template, error) {
+func (s *Service) Create(ctx context.Context, userID, name, description, body string, numbers Numbers) (Template, error) {
 	name, err := s.validName(name)
 	if err != nil {
 		return Template{}, err
@@ -55,10 +55,14 @@ func (s *Service) Create(ctx context.Context, userID, name, description, body st
 	if err != nil {
 		return Template{}, err
 	}
+	if err := s.validNumbers(numbers); err != nil {
+		return Template{}, err
+	}
 	now := s.now()
 	created := Template{
 		ID: s.newID(), UserID: userID, Name: name, Description: description,
-		Body: body, CreatedAt: now, UpdatedAt: now,
+		Body: body, TargetLength: numbers.TargetLength, TagCount: numbers.TagCount,
+		CreatedAt: now, UpdatedAt: now,
 	}
 	if err := s.store.Insert(ctx, created, s.limits.MaxPerAccount); err != nil {
 		return Template{}, err
@@ -96,6 +100,11 @@ func (s *Service) Update(ctx context.Context, userID, id string, patch Patch) (T
 			return Template{}, err
 		}
 		patch.Body = &body
+	}
+	if patch.Numbers != nil {
+		if err := s.validNumbers(*patch.Numbers); err != nil {
+			return Template{}, err
+		}
 	}
 	return s.store.Update(ctx, userID, id, patch, s.now())
 }
@@ -169,6 +178,28 @@ func (s *Service) validDescription(value string) (string, error) {
 		return "", &FieldTooLongError{Field: "description", Chars: chars, Max: s.limits.DescriptionMaxChars}
 	}
 	return trimmed, nil
+}
+
+// validNumbers bounds the two generation numbers against the POST option's own limits. nil
+// is valid on both and is what "no opinion" writes (TEMPLATE-47): the assignment then leaves
+// the post's value alone rather than clearing it.
+func (s *Service) validNumbers(numbers Numbers) error {
+	if value := numbers.TargetLength; value != nil {
+		if *value < s.limits.TargetLengthMin {
+			return &NumberOutOfRangeError{
+				Field: "target_length", Value: *value, Min: s.limits.TargetLengthMin,
+			}
+		}
+	}
+	if value := numbers.TagCount; value != nil {
+		if *value < s.limits.TagCountMin || *value > s.limits.TagCountMax {
+			return &NumberOutOfRangeError{
+				Field: "tag_count", Value: *value,
+				Min: s.limits.TagCountMin, Max: s.limits.TagCountMax,
+			}
+		}
+	}
+	return nil
 }
 
 // validBody trims, bounds, and PARSES. Parsing is part of validation rather than a later

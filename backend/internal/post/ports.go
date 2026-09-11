@@ -114,7 +114,11 @@ type Store interface {
 	// updated_at and nothing else: a template is never learned from, so unlike a voice
 	// reassignment it must not disturb content, revisions, the machine baseline or
 	// finalization, and it is allowed in every status.
-	AssignTemplate(ctx context.Context, slug, userID string, templateID *string, updatedAt time.Time) (bool, error)
+	//
+	// It also seeds the post's two generation options from the template being assigned
+	// (TEMPLATE-48), in the same statement: a nil member of seed is a number that template has
+	// no opinion about and leaves the post's own value alone.
+	AssignTemplate(ctx context.Context, slug, userID string, templateID *string, seed TemplateNumbers, updatedAt time.Time) (bool, error)
 	// UpsertTemplateAnswers writes one row per answer in ONE transaction, keyed by label.
 	// It never deletes: clearing an answer is an empty Text, which the enqueue reads the way
 	// it reads a switched-off field, and a label the current template no longer declares is

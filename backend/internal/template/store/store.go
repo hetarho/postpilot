@@ -47,7 +47,8 @@ func (s *Store) Insert(ctx context.Context, t template.Template, maxPerAccount i
 	}
 	err = q.InsertTemplate(ctx, sqlc.InsertTemplateParams{
 		ID: t.ID, UserID: t.UserID, Name: t.Name, Description: t.Description,
-		Body: t.Body, CreatedAt: formatTime(t.CreatedAt), UpdatedAt: formatTime(t.UpdatedAt),
+		Body: t.Body, TargetLength: nullNumber(t.TargetLength), TagCount: nullNumber(t.TagCount),
+		CreatedAt: formatTime(t.CreatedAt), UpdatedAt: formatTime(t.UpdatedAt),
 	})
 	if err != nil {
 		if isUniqueViolation(err) {
@@ -68,7 +69,8 @@ func (s *Store) List(ctx context.Context, userID string) ([]template.Template, e
 	}
 	out := make([]template.Template, 0, len(rows))
 	for _, row := range rows {
-		value, err := toTemplate(row.ID, row.UserID, row.Name, row.Description, row.Body, row.CreatedAt, row.UpdatedAt, row.PostCount)
+		value, err := toTemplate(row.ID, row.UserID, row.Name, row.Description, row.Body,
+			row.TargetLength, row.TagCount, row.CreatedAt, row.UpdatedAt, row.PostCount)
 		if err != nil {
 			return nil, err
 		}
@@ -89,7 +91,8 @@ func (s *Store) get(ctx context.Context, q *sqlc.Queries, userID, id string) (te
 	if err != nil {
 		return template.Template{}, fmt.Errorf("select template: %w", err)
 	}
-	return toTemplate(row.ID, row.UserID, row.Name, row.Description, row.Body, row.CreatedAt, row.UpdatedAt, row.PostCount)
+	return toTemplate(row.ID, row.UserID, row.Name, row.Description, row.Body,
+		row.TargetLength, row.TagCount, row.CreatedAt, row.UpdatedAt, row.PostCount)
 }
 
 // Update runs one statement per present field inside a single transaction, so a field the
@@ -133,6 +136,22 @@ func (s *Store) Update(ctx context.Context, userID, id string, patch template.Pa
 		n, err := q.UpdateTemplateBody(ctx, sqlc.UpdateTemplateBodyParams{Body: *patch.Body, UpdatedAt: stamp, ID: id, UserID: userID})
 		if err != nil {
 			return template.Template{}, fmt.Errorf("update template body: %w", err)
+		}
+		if n == 0 {
+			return template.Template{}, template.ErrNotFound
+		}
+		touched = true
+	}
+	// The two numbers are written TOGETHER, absence meaning no opinion rather than "not part
+	// of this edit" (TEMPLATE-8): the template screen holds both and sends both.
+	if patch.Numbers != nil {
+		n, err := q.UpdateTemplateNumbers(ctx, sqlc.UpdateTemplateNumbersParams{
+			TargetLength: nullNumber(patch.Numbers.TargetLength),
+			TagCount:     nullNumber(patch.Numbers.TagCount),
+			UpdatedAt:    stamp, ID: id, UserID: userID,
+		})
+		if err != nil {
+			return template.Template{}, fmt.Errorf("update template numbers: %w", err)
 		}
 		if n == 0 {
 			return template.Template{}, template.ErrNotFound
@@ -183,7 +202,8 @@ func (s *Store) Delete(ctx context.Context, userID, id string) (int, error) {
 	return int(attached), nil
 }
 
-func toTemplate(id, userID, name, description, body, createdAt, updatedAt string, postCount int64) (template.Template, error) {
+func toTemplate(id, userID, name, description, body string, targetLength, tagCount sql.NullInt64,
+	createdAt, updatedAt string, postCount int64) (template.Template, error) {
 	created, err := parseTime(createdAt)
 	if err != nil {
 		return template.Template{}, fmt.Errorf("parse template created_at: %w", err)
@@ -194,8 +214,26 @@ func toTemplate(id, userID, name, description, body, createdAt, updatedAt string
 	}
 	return template.Template{
 		ID: id, UserID: userID, Name: name, Description: description, Body: body,
+		TargetLength: numberOf(targetLength), TagCount: numberOf(tagCount),
 		PostCount: int(postCount), CreatedAt: created, UpdatedAt: updated,
 	}, nil
+}
+
+// nullNumber and numberOf are the one place a "no opinion" number crosses the SQL edge. NULL
+// and nil mean the same thing on both sides: the template says nothing about that number.
+func nullNumber(value *int) sql.NullInt64 {
+	if value == nil {
+		return sql.NullInt64{}
+	}
+	return sql.NullInt64{Int64: int64(*value), Valid: true}
+}
+
+func numberOf(value sql.NullInt64) *int {
+	if !value.Valid {
+		return nil
+	}
+	number := int(value.Int64)
+	return &number
 }
 
 func formatTime(value time.Time) string { return value.UTC().Format(writeLayout) }

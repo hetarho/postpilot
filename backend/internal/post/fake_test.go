@@ -156,10 +156,11 @@ func (f *fakeStore) ListTemplateAnswers(_ context.Context, slug string) ([]Templ
 	return out, nil
 }
 
-// AssignTemplate mirrors the real single UPDATE: only the assignment and updated_at move.
-// Everything the voice reassignment above withdraws is deliberately left alone here — a
-// template is never learned from, so assigning one may not cost a post its learn eligibility.
-func (f *fakeStore) AssignTemplate(_ context.Context, slug, userID string, templateID *string, updatedAt time.Time) (bool, error) {
+// AssignTemplate mirrors the real single UPDATE: the assignment, the seeded numbers and
+// updated_at move together. Everything the voice reassignment above withdraws is deliberately
+// left alone here — a template is never learned from, so assigning one may not cost a post its
+// learn eligibility.
+func (f *fakeStore) AssignTemplate(_ context.Context, slug, userID string, templateID *string, seed TemplateNumbers, updatedAt time.Time) (bool, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	existing, ok := f.posts[slug]
@@ -170,6 +171,13 @@ func (f *fakeStore) AssignTemplate(_ context.Context, slug, userID string, templ
 		existing.TemplateID = ""
 	} else {
 		existing.TemplateID = *templateID
+	}
+	// COALESCE, like the SQL: a number the template has no opinion about keeps the post's own.
+	if seed.TargetLength != nil {
+		existing.TargetLength = seed.TargetLength
+	}
+	if seed.TagCount != nil {
+		existing.TagCount = *seed.TagCount
 	}
 	existing.UpdatedAt = updatedAt
 	f.posts[slug] = existing

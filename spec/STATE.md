@@ -13,11 +13,11 @@
 | ARCH | 2 | 2 | - | 0 |
 | AUTH | 5 | 5 | - | 0 |
 | QUOTA | 9 | 9 | - | 0 |
-| POST | 5 | 5 | - | 0 |
+| POST | 6 | 6 | - | 0 |
 | VOICE | 3 | 3 | - | 1 |
 | GEN | 6 | 6 | - | 0 |
 | MODEL | 9 | 9 | - | 0 |
-| TMPL | 5 | 5 | - | 1 |
+| TMPL | 6 | 6 | - | 1 |
 | GUIDE | 2 | 2 | - | 0 |
 | EXPORT | 2 | 2 | - | 0 |
 | PUB | 4 | 4 | - | 0 |
@@ -38,7 +38,7 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
-| T105 | Deterministic composition: scene-aware analysis, sentence classes, style and anchor selection, exposure and grounding | CDS CLIP | - | todo |
+| T105 | Deterministic composition: scene-aware analysis, sentence classes, style and anchor selection, exposure and grounding | CDS CLIP | - | doing@260911.cds |
 | T106 | The clip surfaces speak the design system: four styles, anchors, presets, disclosure and CTA | CDS CLIP THEME LANG | - | todo |
 | T107 | Hook and ending cards, the Paperlogy face and brightness-aware scrims | CDS CLIP | T105 T106 | todo |
 | T108 | Conditional transitions and loudness normalisation | CDS CLIP | T105 T106 | todo |
@@ -46,12 +46,20 @@
 | T110 | Release QA on the Naver app and the overlay measurement | CDS CLIP | T107 T108 | todo |
 | T111 | Vendor-neutral clip-analysis qualification and strict routing | CLIP QUOTA VIDEO MODEL LANG ARCH | - | todo |
 | T112 | Clip-analysis model eligibility picker | CLIP LANG ARCH | T111 | todo |
+| T114 | The template screen authors the two numbers and the post shows what a template seeded | TMPL POST | T113 | todo |
 
 ## next
+- implement-task T114 (template screen fields, seeded values on the post); T113 landed the contract, the column and the seed
 - implement-task T105 (deterministic composition) then T106 (FE surfaces) in either order, then T107 · T108 → T109; T110 needs the owner with the Naver app and closes CDS-11. T111 → T112 are independent of this chain
 - T102/T103/T104 landed the design package, the renderer and the clip furniture: every following CDS task reads `backend/internal/clip/design` and its byte-identical mirror `frontend/src/shared/config/clip-design.json`, never a literal. Every render now carries its disclosure badge and its chips, the verifier gates each one (V1 V2 V5 V6 V7 V9 V10 V13 V14) and the generation gate refuses a clip with no campaign type or fewer than two facts. **A generation job queued before this deploy fails with CLIP_INVALID_INPUT and must be re-approved** (payload version 3). The clip SURFACES still have no preset picker, alignment control, disclosure or CTA field (T106's), and V3 contrast waits for T107's brightness sampler
 - T008 needs the owner present: re-read its base at PUB@4 · ARCH@2 first (it still says PUB@2 ARCH@1), then BEFORE `install` the owner must re-run `postpilot-agent setup` so the connection records driver signature smarteditor-one-20260910-a6, and the queued `20260905-test` job must be canceled or deliberately used as the smoke's own job; once it closes, update-ssot PUB for VIDEO-17 + TMPL-39
 ## log
+- 260911 T113 done (len); a template carries optional `target_length`/`tag_count` (migration 0043, NULL = no opinion) and an assignment seeds the post's own options with `COALESCE` in the assigning statement; a run still freezes the POST's values; the length has a floor and no ceiling because the post's option has none; sqlc rewrites parameters by byte offset, so a non-ASCII character anywhere in a queries/*.sql file breaks that whole file
+- 260911 T113 claimed (len)
+- 260911 create-task TMPL POST done (len); TMPL r6 + POST r6 → T113 contract·migration·validation·seed in the assigning statement · T114 template screen fields and the seeded values on the post; TMPL tasked=6, POST tasked=6; the seed reuses the post's own bounds and the directory port already in place, so no new config key and no new port
+- 260911 create-task TMPL POST start (len)
+- 260911 update-ssot TMPL POST done (len); TMPL r6 gives a template two optional numbers (`target_length` `tag_count`, unset = 의견 없음) that seed the post's own options on assignment and reach no prompt, POST r6 puts the seed inside the assigning transaction; TMPL-34's per-template length/tags rejection lifted; no doing task is affected and GEN is untouched (a run still freezes the post's values)
+- 260911 T105 claimed (cds)
 - 260911 T104 done (cds); disclosure badge + information chips on every render, the five CDS-50 presets and the reserved facts in `design.json`, an approval gate that refuses a clip with no campaign type or fewer than two of 상호·위치·가격·메뉴, and 10 new `CLIP_*` reasons; the generation payload went to version 3 (one named constant, three readers were checking 2) so a QUEUED JOB MUST BE RE-APPROVED; the badge got its own static overlay layer because it may not move while the copy must; a long chip value is cut with an ellipsis rather than squeezed
 - 260911 T104 claimed (cds)
 - 260911 T103 done (cds); the four styles, the 180/120 ms motions and a pre-FFmpeg manifest verifier (V1 V2 V5 V7 V9 V13 V14) with six `CLIP_LAYOUT_*` reasons; the bundled FFmpeg had no `fade` filter — its allowlist now carries one, because CDS-4 admits no other entrance; `design.Verify` takes the manifest and a ratio, not `clip` types, which would be an import cycle; the keyword's offset is measured through the keyword because a prefix can be a space with no ink box
@@ -66,9 +74,3 @@
 - 260911 create-task CDS done (dsgn); CDS r1 + CLIP r5 → T102 vocabulary/constants · T103 styles/motion/verifier · T104 badge/chips/presets/facts · T105 deterministic composition · T106 FE · T107 cards/Paperlogy/scrims · T108 transitions/loudness · T109 two copies · T110 Naver QA; CDS tasked=1, CLIP tasked=5; CDS-41's regenerate-twice is read as an in-call short_text alternative (no unplanned paid call) — owner to confirm or return via update-ssot
 - 260911 create-task CDS start (dsgn); CDS r1 (all) + CLIP r5 delta CLIP-4✎ 13✎ 14✎ 15✎ 16✎ 18✎ 28✎; T101 shares ClipTemplateEditor with the preset/style task
 - 260911 T101 done (tpl); 영상 템플릿 목록·상세가 글 템플릿 화면 모양으로, 삭제는 행으로 옮기며 연결 해제 수를 삭제 전에 경고; `clipDetachedCount` 라우터 상태 제거; locale parity 테스트가 en 누락을 잡음
-- 260911 T101 claimed (tpl); the dsgn session confirmed no CDS code task exists and is touching no code, so this takes `ClipTemplateEditor.tsx` first
-- 260911 T100 done (dir); `/clips` takes the post list's rows, badge, relative time and URL-carried search/filter; `ListControls` lifted into `shared/ui` and `filter-posts` rewired onto it unchanged; the badge reads the job first, the filter reads the state only
-- 260911 T100 claimed (dir)
-- 260911 T099 done (list); the list answer fills `latest_job` per project through the same port the detail uses, detail-only fields untouched; test in `clip/store`'s harness because `h.jobs` is a concrete queue, not a port; BE gate green, no proto change
-- 260911 T099 claimed (list)
-- 260911 T098 done (auto); module-level per-project settings queue (debounce, latest-wins, backoff, no retry on a repeatable refusal), 저장 버튼·dirty 게이트·이탈 다이얼로그 제거, `클립 만들기`만 `/clips/new`에 남음; `useSaveStatus`는 ARCH-18 때문에 shared로 못 가고 순수 부분만 `shared/lib/save-state`로

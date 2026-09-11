@@ -34,9 +34,15 @@ type Template struct {
 	Body string `protobuf:"bytes,4,opt,name=body,proto3" json:"body,omitempty"`
 	// Posts currently referencing it. Shown before a delete, which detaches rather than
 	// cascading — it is a projection, so it is never accepted on a write.
-	PostCount     int32  `protobuf:"varint,5,opt,name=post_count,json=postCount,proto3" json:"post_count,omitempty"`
-	CreatedAt     string `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     string `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	PostCount int32  `protobuf:"varint,5,opt,name=post_count,json=postCount,proto3" json:"post_count,omitempty"`
+	CreatedAt string `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt string `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	// What the posts this template shapes usually want (TEMPLATE-47). Both are unset when the
+	// template has no opinion about them, and both are SEEDS: assigning the template copies a
+	// set one onto the post's own option, and nothing here ever reaches a prompt — a run keeps
+	// freezing the post's values.
+	TargetLength  *int32 `protobuf:"varint,8,opt,name=target_length,json=targetLength,proto3,oneof" json:"target_length,omitempty"`
+	TagCount      *int32 `protobuf:"varint,9,opt,name=tag_count,json=tagCount,proto3,oneof" json:"tag_count,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -118,6 +124,20 @@ func (x *Template) GetUpdatedAt() string {
 		return x.UpdatedAt
 	}
 	return ""
+}
+
+func (x *Template) GetTargetLength() int32 {
+	if x != nil && x.TargetLength != nil {
+		return *x.TargetLength
+	}
+	return 0
+}
+
+func (x *Template) GetTagCount() int32 {
+	if x != nil && x.TagCount != nil {
+		return *x.TagCount
+	}
+	return 0
 }
 
 // The template a post is written from, as the post screens need it. Transport-only, and
@@ -256,10 +276,15 @@ func (x *ListTemplatesResponse) GetTemplates() []*Template {
 }
 
 type CreateTemplateRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Description   string                 `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
-	Body          string                 `protobuf:"bytes,3,opt,name=body,proto3" json:"body,omitempty"`
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Name        string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Description string                 `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
+	Body        string                 `protobuf:"bytes,3,opt,name=body,proto3" json:"body,omitempty"`
+	// Absent is 값 없음 — the template has no opinion about that number. Bounds are the post
+	// option's own (a positive length, a tag count in 1–10), because a set value only ever
+	// lands in a post's option.
+	TargetLength  *int32 `protobuf:"varint,4,opt,name=target_length,json=targetLength,proto3,oneof" json:"target_length,omitempty"`
+	TagCount      *int32 `protobuf:"varint,5,opt,name=tag_count,json=tagCount,proto3,oneof" json:"tag_count,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -315,6 +340,20 @@ func (x *CreateTemplateRequest) GetBody() string {
 	return ""
 }
 
+func (x *CreateTemplateRequest) GetTargetLength() int32 {
+	if x != nil && x.TargetLength != nil {
+		return *x.TargetLength
+	}
+	return 0
+}
+
+func (x *CreateTemplateRequest) GetTagCount() int32 {
+	if x != nil && x.TagCount != nil {
+		return *x.TagCount
+	}
+	return 0
+}
+
 type CreateTemplateResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Template      *Template              `protobuf:"bytes,1,opt,name=template,proto3" json:"template,omitempty"`
@@ -362,11 +401,17 @@ func (x *CreateTemplateResponse) GetTemplate() *Template {
 // Field presence is the edit unit, as it is for UpdateVoiceProfile: only the supplied
 // fields change, so two fields edited from two tabs cannot overwrite each other.
 type UpdateTemplateRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          *string                `protobuf:"bytes,2,opt,name=name,proto3,oneof" json:"name,omitempty"`
-	Description   *string                `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`
-	Body          *string                `protobuf:"bytes,4,opt,name=body,proto3,oneof" json:"body,omitempty"`
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Id          string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name        *string                `protobuf:"bytes,2,opt,name=name,proto3,oneof" json:"name,omitempty"`
+	Description *string                `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`
+	Body        *string                `protobuf:"bytes,4,opt,name=body,proto3,oneof" json:"body,omitempty"`
+	// The two numbers are the exception to the presence rule above: absent means 값 없음 and
+	// clears the stored one, because the template screen holds both and sends both on every
+	// save (TEMPLATE-8). A second meaning for absence would only give an unset number two
+	// ways to be written.
+	TargetLength  *int32 `protobuf:"varint,5,opt,name=target_length,json=targetLength,proto3,oneof" json:"target_length,omitempty"`
+	TagCount      *int32 `protobuf:"varint,6,opt,name=tag_count,json=tagCount,proto3,oneof" json:"tag_count,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -427,6 +472,20 @@ func (x *UpdateTemplateRequest) GetBody() string {
 		return *x.Body
 	}
 	return ""
+}
+
+func (x *UpdateTemplateRequest) GetTargetLength() int32 {
+	if x != nil && x.TargetLength != nil {
+		return *x.TargetLength
+	}
+	return 0
+}
+
+func (x *UpdateTemplateRequest) GetTagCount() int32 {
+	if x != nil && x.TagCount != nil {
+		return *x.TagCount
+	}
+	return 0
 }
 
 type UpdateTemplateResponse struct {
@@ -567,7 +626,7 @@ var File_postpilot_v1_template_proto protoreflect.FileDescriptor
 
 const file_postpilot_v1_template_proto_rawDesc = "" +
 	"\n" +
-	"\x1bpostpilot/v1/template.proto\x12\fpostpilot.v1\"\xc1\x01\n" +
+	"\x1bpostpilot/v1/template.proto\x12\fpostpilot.v1\"\xad\x02\n" +
 	"\bTemplate\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
@@ -578,27 +637,42 @@ const file_postpilot_v1_template_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x06 \x01(\tR\tcreatedAt\x12\x1d\n" +
 	"\n" +
-	"updated_at\x18\a \x01(\tR\tupdatedAt\"1\n" +
+	"updated_at\x18\a \x01(\tR\tupdatedAt\x12(\n" +
+	"\rtarget_length\x18\b \x01(\x05H\x00R\ftargetLength\x88\x01\x01\x12 \n" +
+	"\ttag_count\x18\t \x01(\x05H\x01R\btagCount\x88\x01\x01B\x10\n" +
+	"\x0e_target_lengthB\f\n" +
+	"\n" +
+	"_tag_count\"1\n" +
 	"\vTemplateRef\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\"\x16\n" +
 	"\x14ListTemplatesRequest\"M\n" +
 	"\x15ListTemplatesResponse\x124\n" +
-	"\ttemplates\x18\x01 \x03(\v2\x16.postpilot.v1.TemplateR\ttemplates\"a\n" +
+	"\ttemplates\x18\x01 \x03(\v2\x16.postpilot.v1.TemplateR\ttemplates\"\xcd\x01\n" +
 	"\x15CreateTemplateRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
 	"\vdescription\x18\x02 \x01(\tR\vdescription\x12\x12\n" +
-	"\x04body\x18\x03 \x01(\tR\x04body\"L\n" +
+	"\x04body\x18\x03 \x01(\tR\x04body\x12(\n" +
+	"\rtarget_length\x18\x04 \x01(\x05H\x00R\ftargetLength\x88\x01\x01\x12 \n" +
+	"\ttag_count\x18\x05 \x01(\x05H\x01R\btagCount\x88\x01\x01B\x10\n" +
+	"\x0e_target_lengthB\f\n" +
+	"\n" +
+	"_tag_count\"L\n" +
 	"\x16CreateTemplateResponse\x122\n" +
-	"\btemplate\x18\x01 \x01(\v2\x16.postpilot.v1.TemplateR\btemplate\"\xa2\x01\n" +
+	"\btemplate\x18\x01 \x01(\v2\x16.postpilot.v1.TemplateR\btemplate\"\x8e\x02\n" +
 	"\x15UpdateTemplateRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12%\n" +
 	"\vdescription\x18\x03 \x01(\tH\x01R\vdescription\x88\x01\x01\x12\x17\n" +
-	"\x04body\x18\x04 \x01(\tH\x02R\x04body\x88\x01\x01B\a\n" +
+	"\x04body\x18\x04 \x01(\tH\x02R\x04body\x88\x01\x01\x12(\n" +
+	"\rtarget_length\x18\x05 \x01(\x05H\x03R\ftargetLength\x88\x01\x01\x12 \n" +
+	"\ttag_count\x18\x06 \x01(\x05H\x04R\btagCount\x88\x01\x01B\a\n" +
 	"\x05_nameB\x0e\n" +
 	"\f_descriptionB\a\n" +
-	"\x05_body\"L\n" +
+	"\x05_bodyB\x10\n" +
+	"\x0e_target_lengthB\f\n" +
+	"\n" +
+	"_tag_count\"L\n" +
 	"\x16UpdateTemplateResponse\x122\n" +
 	"\btemplate\x18\x01 \x01(\v2\x16.postpilot.v1.TemplateR\btemplate\"'\n" +
 	"\x15DeleteTemplateRequest\x12\x0e\n" +
@@ -660,6 +734,8 @@ func file_postpilot_v1_template_proto_init() {
 	if File_postpilot_v1_template_proto != nil {
 		return
 	}
+	file_postpilot_v1_template_proto_msgTypes[0].OneofWrappers = []any{}
+	file_postpilot_v1_template_proto_msgTypes[4].OneofWrappers = []any{}
 	file_postpilot_v1_template_proto_msgTypes[6].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{

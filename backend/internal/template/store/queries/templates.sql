@@ -6,18 +6,18 @@
 -- the count and the detach are about (ARCHITECTURE section 2.2).
 
 -- name: InsertTemplate :exec
-INSERT INTO templates (id, user_id, name, description, body, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?);
+INSERT INTO templates (id, user_id, name, description, body, target_length, tag_count, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 -- name: ListTemplates :many
-SELECT t.id, t.user_id, t.name, t.description, t.body, t.created_at, t.updated_at,
+SELECT t.id, t.user_id, t.name, t.description, t.body, t.target_length, t.tag_count, t.created_at, t.updated_at,
        (SELECT count(*) FROM posts po WHERE po.template_id = t.id AND po.user_id = t.user_id) AS post_count
 FROM templates t
 WHERE t.user_id = ?
 ORDER BY t.name, t.id;
 
 -- name: GetTemplate :one
-SELECT t.id, t.user_id, t.name, t.description, t.body, t.created_at, t.updated_at,
+SELECT t.id, t.user_id, t.name, t.description, t.body, t.target_length, t.tag_count, t.created_at, t.updated_at,
        (SELECT count(*) FROM posts po WHERE po.template_id = t.id AND po.user_id = t.user_id) AS post_count
 FROM templates t
 WHERE t.id = ? AND t.user_id = ?;
@@ -40,6 +40,16 @@ UPDATE templates SET description = ?, updated_at = ? WHERE id = ? AND user_id = 
 
 -- name: UpdateTemplateBody :execrows
 UPDATE templates SET body = ?, updated_at = ? WHERE id = ? AND user_id = ?;
+
+-- The two generation numbers are the exception to the rule above: they are written TOGETHER
+-- on every edit, absence meaning "no opinion" rather than "not part of this edit" (TEMPLATE-8).
+-- The template screen is the only place either is authored and it always holds both, so a
+-- presence rule here would only give an unset number two ways to be written.
+
+-- name: UpdateTemplateNumbers :execrows
+UPDATE templates SET target_length = sqlc.narg(target_length), tag_count = sqlc.narg(tag_count),
+    updated_at = sqlc.arg(updated_at)
+WHERE id = sqlc.arg(id) AND user_id = sqlc.arg(user_id);
 
 -- name: CountPostsForTemplate :one
 SELECT count(*) FROM posts WHERE template_id = ? AND user_id = ?;

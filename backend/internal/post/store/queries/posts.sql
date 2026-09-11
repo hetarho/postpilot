@@ -2,8 +2,11 @@
 -- caller remembering to check it.
 
 -- name: CreatePost :exec
-INSERT INTO posts (slug, user_id, voice_id, template_id, title, memo, target_language, status, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?);
+-- target_length and tag_count are the template's seeds when the create names one, and NULL
+-- otherwise: a post nobody gave a number to reads as natural length and the default count.
+INSERT INTO posts (slug, user_id, voice_id, template_id, title, memo, target_language,
+    target_length, tag_count, status, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?);
 
 -- name: UpdatePostDraft :execrows
 UPDATE posts SET title = sqlc.arg(title), memo = sqlc.arg(memo),
@@ -78,8 +81,17 @@ WHERE slug = ? AND user_id = ? AND voice_id <> ?;
 -- Assignment is not a reassignment: unlike the voice, a template is never learned from, so
 -- this touches no content, revision, machine baseline or finalization column and is allowed
 -- in every status. NULL is the clear.
-UPDATE posts SET template_id = ?, updated_at = ?
-WHERE slug = ? AND user_id = ?;
+--
+-- It also SEEDS the two generation options from the template that is being assigned
+-- (TEMPLATE-48): a seed parameter is non-NULL only for a number that template has set, so
+-- COALESCE says exactly "overwrite when the template has an opinion, keep the post's own
+-- otherwise", in this one statement, so a post can never be left seeded by an assignment
+-- that did not land. Clearing the assignment passes no seed at all.
+UPDATE posts SET template_id = sqlc.narg(template_id),
+    target_length = COALESCE(sqlc.narg(seed_target_length), target_length),
+    tag_count = COALESCE(sqlc.narg(seed_tag_count), tag_count),
+    updated_at = sqlc.arg(updated_at)
+WHERE slug = sqlc.arg(slug) AND user_id = sqlc.arg(user_id);
 
 -- name: CountPostsByVoice :one
 SELECT count(*) FROM posts WHERE voice_id = ? AND user_id = ?;

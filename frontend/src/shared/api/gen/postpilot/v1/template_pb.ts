@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file postpilot/v1/template.proto.
  */
 export const file_postpilot_v1_template: GenFile = /*@__PURE__*/
-  fileDesc("Chtwb3N0cGlsb3QvdjEvdGVtcGxhdGUucHJvdG8SDHBvc3RwaWxvdC52MSKDAQoIVGVtcGxhdGUSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRIMCgRib2R5GAQgASgJEhIKCnBvc3RfY291bnQYBSABKAUSEgoKY3JlYXRlZF9hdBgGIAEoCRISCgp1cGRhdGVkX2F0GAcgASgJIicKC1RlbXBsYXRlUmVmEgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkiFgoUTGlzdFRlbXBsYXRlc1JlcXVlc3QiQgoVTGlzdFRlbXBsYXRlc1Jlc3BvbnNlEikKCXRlbXBsYXRlcxgBIAMoCzIWLnBvc3RwaWxvdC52MS5UZW1wbGF0ZSJIChVDcmVhdGVUZW1wbGF0ZVJlcXVlc3QSDAoEbmFtZRgBIAEoCRITCgtkZXNjcmlwdGlvbhgCIAEoCRIMCgRib2R5GAMgASgJIkIKFkNyZWF0ZVRlbXBsYXRlUmVzcG9uc2USKAoIdGVtcGxhdGUYASABKAsyFi5wb3N0cGlsb3QudjEuVGVtcGxhdGUihQEKFVVwZGF0ZVRlbXBsYXRlUmVxdWVzdBIKCgJpZBgBIAEoCRIRCgRuYW1lGAIgASgJSACIAQESGAoLZGVzY3JpcHRpb24YAyABKAlIAYgBARIRCgRib2R5GAQgASgJSAKIAQFCBwoFX25hbWVCDgoMX2Rlc2NyaXB0aW9uQgcKBV9ib2R5IkIKFlVwZGF0ZVRlbXBsYXRlUmVzcG9uc2USKAoIdGVtcGxhdGUYASABKAsyFi5wb3N0cGlsb3QudjEuVGVtcGxhdGUiIwoVRGVsZXRlVGVtcGxhdGVSZXF1ZXN0EgoKAmlkGAEgASgJIjAKFkRlbGV0ZVRlbXBsYXRlUmVzcG9uc2USFgoOZGV0YWNoZWRfcG9zdHMYASABKAUyigMKD1RlbXBsYXRlU2VydmljZRJaCg1MaXN0VGVtcGxhdGVzEiIucG9zdHBpbG90LnYxLkxpc3RUZW1wbGF0ZXNSZXF1ZXN0GiMucG9zdHBpbG90LnYxLkxpc3RUZW1wbGF0ZXNSZXNwb25zZSIAEl0KDkNyZWF0ZVRlbXBsYXRlEiMucG9zdHBpbG90LnYxLkNyZWF0ZVRlbXBsYXRlUmVxdWVzdBokLnBvc3RwaWxvdC52MS5DcmVhdGVUZW1wbGF0ZVJlc3BvbnNlIgASXQoOVXBkYXRlVGVtcGxhdGUSIy5wb3N0cGlsb3QudjEuVXBkYXRlVGVtcGxhdGVSZXF1ZXN0GiQucG9zdHBpbG90LnYxLlVwZGF0ZVRlbXBsYXRlUmVzcG9uc2UiABJdCg5EZWxldGVUZW1wbGF0ZRIjLnBvc3RwaWxvdC52MS5EZWxldGVUZW1wbGF0ZVJlcXVlc3QaJC5wb3N0cGlsb3QudjEuRGVsZXRlVGVtcGxhdGVSZXNwb25zZSIAQkRaQmdpdGh1Yi5jb20vcG9zdHBpbG90L2JhY2tlbmQvaW50ZXJuYWwvZ2VuL3Bvc3RwaWxvdC92MTtwb3N0cGlsb3R2MWIGcHJvdG8z");
+  fileDesc("Chtwb3N0cGlsb3QvdjEvdGVtcGxhdGUucHJvdG8SDHBvc3RwaWxvdC52MSLXAQoIVGVtcGxhdGUSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRIMCgRib2R5GAQgASgJEhIKCnBvc3RfY291bnQYBSABKAUSEgoKY3JlYXRlZF9hdBgGIAEoCRISCgp1cGRhdGVkX2F0GAcgASgJEhoKDXRhcmdldF9sZW5ndGgYCCABKAVIAIgBARIWCgl0YWdfY291bnQYCSABKAVIAYgBAUIQCg5fdGFyZ2V0X2xlbmd0aEIMCgpfdGFnX2NvdW50IicKC1RlbXBsYXRlUmVmEgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkiFgoUTGlzdFRlbXBsYXRlc1JlcXVlc3QiQgoVTGlzdFRlbXBsYXRlc1Jlc3BvbnNlEikKCXRlbXBsYXRlcxgBIAMoCzIWLnBvc3RwaWxvdC52MS5UZW1wbGF0ZSKcAQoVQ3JlYXRlVGVtcGxhdGVSZXF1ZXN0EgwKBG5hbWUYASABKAkSEwoLZGVzY3JpcHRpb24YAiABKAkSDAoEYm9keRgDIAEoCRIaCg10YXJnZXRfbGVuZ3RoGAQgASgFSACIAQESFgoJdGFnX2NvdW50GAUgASgFSAGIAQFCEAoOX3RhcmdldF9sZW5ndGhCDAoKX3RhZ19jb3VudCJCChZDcmVhdGVUZW1wbGF0ZVJlc3BvbnNlEigKCHRlbXBsYXRlGAEgASgLMhYucG9zdHBpbG90LnYxLlRlbXBsYXRlItkBChVVcGRhdGVUZW1wbGF0ZVJlcXVlc3QSCgoCaWQYASABKAkSEQoEbmFtZRgCIAEoCUgAiAEBEhgKC2Rlc2NyaXB0aW9uGAMgASgJSAGIAQESEQoEYm9keRgEIAEoCUgCiAEBEhoKDXRhcmdldF9sZW5ndGgYBSABKAVIA4gBARIWCgl0YWdfY291bnQYBiABKAVIBIgBAUIHCgVfbmFtZUIOCgxfZGVzY3JpcHRpb25CBwoFX2JvZHlCEAoOX3RhcmdldF9sZW5ndGhCDAoKX3RhZ19jb3VudCJCChZVcGRhdGVUZW1wbGF0ZVJlc3BvbnNlEigKCHRlbXBsYXRlGAEgASgLMhYucG9zdHBpbG90LnYxLlRlbXBsYXRlIiMKFURlbGV0ZVRlbXBsYXRlUmVxdWVzdBIKCgJpZBgBIAEoCSIwChZEZWxldGVUZW1wbGF0ZVJlc3BvbnNlEhYKDmRldGFjaGVkX3Bvc3RzGAEgASgFMooDCg9UZW1wbGF0ZVNlcnZpY2USWgoNTGlzdFRlbXBsYXRlcxIiLnBvc3RwaWxvdC52MS5MaXN0VGVtcGxhdGVzUmVxdWVzdBojLnBvc3RwaWxvdC52MS5MaXN0VGVtcGxhdGVzUmVzcG9uc2UiABJdCg5DcmVhdGVUZW1wbGF0ZRIjLnBvc3RwaWxvdC52MS5DcmVhdGVUZW1wbGF0ZVJlcXVlc3QaJC5wb3N0cGlsb3QudjEuQ3JlYXRlVGVtcGxhdGVSZXNwb25zZSIAEl0KDlVwZGF0ZVRlbXBsYXRlEiMucG9zdHBpbG90LnYxLlVwZGF0ZVRlbXBsYXRlUmVxdWVzdBokLnBvc3RwaWxvdC52MS5VcGRhdGVUZW1wbGF0ZVJlc3BvbnNlIgASXQoORGVsZXRlVGVtcGxhdGUSIy5wb3N0cGlsb3QudjEuRGVsZXRlVGVtcGxhdGVSZXF1ZXN0GiQucG9zdHBpbG90LnYxLkRlbGV0ZVRlbXBsYXRlUmVzcG9uc2UiAEJEWkJnaXRodWIuY29tL3Bvc3RwaWxvdC9iYWNrZW5kL2ludGVybmFsL2dlbi9wb3N0cGlsb3QvdjE7cG9zdHBpbG90djFiBnByb3RvMw");
 
 /**
  * @generated from message postpilot.v1.Template
@@ -60,6 +60,21 @@ export type Template = Message<"postpilot.v1.Template"> & {
    * @generated from field: string updated_at = 7;
    */
   updatedAt: string;
+
+  /**
+   * What the posts this template shapes usually want (TEMPLATE-47). Both are unset when the
+   * template has no opinion about them, and both are SEEDS: assigning the template copies a
+   * set one onto the post's own option, and nothing here ever reaches a prompt — a run keeps
+   * freezing the post's values.
+   *
+   * @generated from field: optional int32 target_length = 8;
+   */
+  targetLength?: number | undefined;
+
+  /**
+   * @generated from field: optional int32 tag_count = 9;
+   */
+  tagCount?: number | undefined;
 };
 
 /**
@@ -144,6 +159,20 @@ export type CreateTemplateRequest = Message<"postpilot.v1.CreateTemplateRequest"
    * @generated from field: string body = 3;
    */
   body: string;
+
+  /**
+   * Absent is 값 없음 — the template has no opinion about that number. Bounds are the post
+   * option's own (a positive length, a tag count in 1–10), because a set value only ever
+   * lands in a post's option.
+   *
+   * @generated from field: optional int32 target_length = 4;
+   */
+  targetLength?: number | undefined;
+
+  /**
+   * @generated from field: optional int32 tag_count = 5;
+   */
+  tagCount?: number | undefined;
 };
 
 /**
@@ -196,6 +225,21 @@ export type UpdateTemplateRequest = Message<"postpilot.v1.UpdateTemplateRequest"
    * @generated from field: optional string body = 4;
    */
   body?: string | undefined;
+
+  /**
+   * The two numbers are the exception to the presence rule above: absent means 값 없음 and
+   * clears the stored one, because the template screen holds both and sends both on every
+   * save (TEMPLATE-8). A second meaning for absence would only give an unset number two
+   * ways to be written.
+   *
+   * @generated from field: optional int32 target_length = 5;
+   */
+  targetLength?: number | undefined;
+
+  /**
+   * @generated from field: optional int32 tag_count = 6;
+   */
+  tagCount?: number | undefined;
 };
 
 /**

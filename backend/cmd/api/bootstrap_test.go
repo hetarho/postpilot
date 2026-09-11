@@ -237,6 +237,83 @@ func TestAccountBootstrapPrecedesPostCreation(t *testing.T) {
 
 // Plan 11 A4/A7: the composition root is the ONLY place the post's template id crosses into
 // generation, and every prompt hangs off it. This walks the real adapters end to end — a post
+// TEMPLATE-47: a template's own numbers are SEEDS and nothing more. What a run freezes is
+// the POST's option, so a value the author typed over the seed is what reaches generation —
+// the template is never consulted again, here or anywhere downstream.
+func TestARunFreezesThePostsNumbersNotTheTemplates(t *testing.T) {
+	handle, err := db.Open(filepath.Join(t.TempDir(), "seed.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer handle.Close()
+	ctx := context.Background()
+	if err := db.Migrate(ctx, handle.Writer); err != nil {
+		t.Fatal(err)
+	}
+	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: time.Now()}); err != nil {
+		t.Fatal(err)
+	}
+	if err := defaultVoiceBootstrap(ctx, handle, "alice"); err != nil {
+		t.Fatal(err)
+	}
+
+	voiceSvc := voice.NewService(voicestore.New(handle.Writer, handle.Reader), nil, nil)
+	postSvc := post.NewService(poststore.New(handle.Writer, handle.Reader), noBlobs{}, time.Minute, time.Minute, 1<<20, 30)
+	postSvc.SetVoiceDirectory(postVoices{service: voiceSvc})
+	templateSvc := template.NewService(
+		templatestore.New(handle.Writer, handle.Reader),
+		template.Limits{
+			NameMaxChars: 40, DescriptionMaxChars: 200, BodyMaxChars: 4000,
+			MaxPerAccount: 50, MaxRepeatExpansion: 40, PhotoRowMax: 4,
+			AskLabelMaxChars: 40, AskMaxPerBody: 10,
+			TargetLengthMin: 1, TagCountMin: 1, TagCountMax: 10,
+		},
+	)
+	postSvc.SetTemplateDirectory(postTemplates{service: templateSvc})
+
+	shaped, err := templateSvc.Create(ctx, "alice", "정보성 식당 리뷰", "", "<write>인트로</write>",
+		template.Numbers{TargetLength: intPtr(1800), TagCount: intPtr(7)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defaultVoice, err := voiceSvc.DefaultVoice(ctx, "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	language := post.LanguageKorean
+	saved, err := postSvc.SaveDraft(ctx, "alice", "", "제주", "", &defaultVoice.ID, &shaped.ID, &language, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if saved.TargetLength == nil || *saved.TargetLength != 1800 || saved.TagCount != 7 {
+		t.Fatalf("the create did not seed through the real stack: length=%v tags=%d", saved.TargetLength, saved.TagCount)
+	}
+
+	// The author types over both. The template still says 1800/7 and must not win.
+	typed := 1200
+	if _, err := postSvc.SaveGenerationOptions(ctx, "alice", saved.Slug, &typed, intPtr(3)); err != nil {
+		t.Fatal(err)
+	}
+	input, err := generationPosts{service: postSvc}.AttachedImages(ctx, "alice", saved.Slug)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if input.TargetLength == nil || *input.TargetLength != typed || input.TagCount != 3 {
+		t.Fatalf("a run read the template instead of the post: length=%v tags=%d", input.TargetLength, input.TagCount)
+	}
+
+	// And the brief the enqueue freezes carries the shape alone: the numbers have no way in.
+	brief, ok, err := (generationTemplates{service: templateSvc}).RenderedFor(ctx, "alice", input.TemplateID, nil, nil)
+	if err != nil || !ok {
+		t.Fatalf("render: ok=%v err=%v", ok, err)
+	}
+	if strings.Contains(brief.Body, "1800") || strings.Contains(brief.Body, "1200") {
+		t.Fatalf("a number reached the frozen brief:\n%s", brief.Body)
+	}
+}
+
+func intPtr(value int) *int { return &value }
+
 // saved with a 템플릿, read back through generationPosts, resolved through generationTemplates —
 // because both contexts' own tests inject the id into a fake and so cannot see it dropped here.
 func TestGenerationAdapterCarriesThePostTemplateThroughToTheFrozenBrief(t *testing.T) {
@@ -265,12 +342,13 @@ func TestGenerationAdapterCarriesThePostTemplateThroughToTheFrozenBrief(t *testi
 			NameMaxChars: 40, DescriptionMaxChars: 200, BodyMaxChars: 4000,
 			MaxPerAccount: 50, MaxRepeatExpansion: 40, PhotoRowMax: 4,
 			AskLabelMaxChars: 40, AskMaxPerBody: 10,
+			TargetLengthMin: 1, TagCountMin: 1, TagCountMax: 10,
 		},
 	)
 	postSvc.SetTemplateDirectory(postTemplates{service: templateSvc})
 
 	created, err := templateSvc.Create(ctx, "alice", "정보성 식당 리뷰", "협찬 방문 리뷰",
-		"<write>인트로</write>\n<slot kind=\"place\" label=\"네이버 지도\"/>\n<repeat each=\"photo\">\n<slot kind=\"photo\"/>\n<write>사진 설명</write>\n</repeat>")
+		"<write>인트로</write>\n<slot kind=\"place\" label=\"네이버 지도\"/>\n<repeat each=\"photo\">\n<slot kind=\"photo\"/>\n<write>사진 설명</write>\n</repeat>", template.Numbers{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -484,6 +562,7 @@ func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.
 			NameMaxChars: 40, DescriptionMaxChars: 200, BodyMaxChars: 4000,
 			MaxPerAccount: 50, MaxRepeatExpansion: 40, PhotoRowMax: 4,
 			AskLabelMaxChars: 40, AskMaxPerBody: 10,
+			TargetLengthMin: 1, TagCountMin: 1, TagCountMax: 10,
 		},
 	)
 	postSvc.SetTemplateDirectory(postTemplates{service: templateSvc})
@@ -494,11 +573,11 @@ func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.
 	)
 	guidelineSvc.SetTemplateDirectory(guidelineTemplates{service: templateSvc})
 
-	review, err := templateSvc.Create(ctx, "alice", "무인가게 리뷰", "", "사진마다 설명하세요")
+	review, err := templateSvc.Create(ctx, "alice", "무인가게 리뷰", "", "사진마다 설명하세요", template.Numbers{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	other, err := templateSvc.Create(ctx, "alice", "협찬 리뷰", "", "협찬을 밝히세요")
+	other, err := templateSvc.Create(ctx, "alice", "협찬 리뷰", "", "협찬을 밝히세요", template.Numbers{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -596,6 +675,7 @@ func TestGuidelineCandidateAdaptersRecordReviewAndApproveAcrossTheSeam(t *testin
 			NameMaxChars: 40, DescriptionMaxChars: 200, BodyMaxChars: 4000,
 			MaxPerAccount: 50, MaxRepeatExpansion: 40, PhotoRowMax: 4,
 			AskLabelMaxChars: 40, AskMaxPerBody: 10,
+			TargetLengthMin: 1, TagCountMin: 1, TagCountMax: 10,
 		},
 	)
 	postSvc.SetTemplateDirectory(postTemplates{service: templateSvc})
@@ -666,7 +746,7 @@ func TestGuidelineCandidateAdaptersRecordReviewAndApproveAcrossTheSeam(t *testin
 	}
 
 	// A5: approval is the standard create, with the scope chosen here and nowhere earlier.
-	review, err := templateSvc.Create(ctx, "alice", "무인가게 리뷰", "", "사진마다 설명하세요")
+	review, err := templateSvc.Create(ctx, "alice", "무인가게 리뷰", "", "사진마다 설명하세요", template.Numbers{})
 	if err != nil {
 		t.Fatal(err)
 	}

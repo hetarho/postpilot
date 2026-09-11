@@ -37,6 +37,26 @@ var (
 	ErrExpansionTooLarge = errors.New("expanding this template for that many photos exceeds the bound")
 )
 
+// NumberOutOfRangeError is a generation number a template may not hold. The bounds are the
+// POST option's own (TEMPLATE-6): a template's number only ever lands in a post's option, so
+// one the post would refuse must not be storable here either.
+//
+// Max 0 means the product sets no ceiling - the target length is any positive number
+// (POST-20), and inventing one here would be a rule the post itself does not have.
+type NumberOutOfRangeError struct {
+	Field string
+	Value int
+	Min   int
+	Max   int
+}
+
+func (e *NumberOutOfRangeError) Error() string {
+	if e.Max <= 0 {
+		return fmt.Sprintf("template %s is %d; it must be at least %d", e.Field, e.Value, e.Min)
+	}
+	return fmt.Sprintf("template %s is %d; it must be between %d and %d", e.Field, e.Value, e.Min, e.Max)
+}
+
 // FieldTooLongError names the field and both counts so the handler can build one message
 // without re-deriving which limit was hit.
 type FieldTooLongError struct {
@@ -69,12 +89,21 @@ type Limits struct {
 	// memo off a phone costs more than the invented sentence it prevents.
 	AskLabelMaxChars int
 	AskMaxPerBody    int
+	// TargetLengthMin and TagCountMin/Max bound the two generation numbers a template may
+	// author (TEMPLATE-47). They are the POST option's bounds, passed in rather than owned
+	// here: the number is a SEED for that option, and a template able to store one the post
+	// refuses would make an assignment fail at a place the user never typed anything. The
+	// length has a floor and no ceiling, exactly as the post's own option does.
+	TargetLengthMin int
+	TagCountMin     int
+	TagCountMax     int
 }
 
 func (l Limits) valid() bool {
 	return l.NameMaxChars > 0 && l.DescriptionMaxChars > 0 && l.BodyMaxChars > 0 &&
 		l.MaxPerAccount > 0 && l.MaxRepeatExpansion > 0 && l.PhotoRowMax > 0 &&
-		l.AskLabelMaxChars > 0 && l.AskMaxPerBody > 0
+		l.AskLabelMaxChars > 0 && l.AskMaxPerBody > 0 &&
+		l.TargetLengthMin > 0 && l.TagCountMin > 0 && l.TagCountMax >= l.TagCountMin
 }
 
 // Template is the aggregate. Body is the single source of truth for the template's shape:
@@ -89,9 +118,15 @@ type Template struct {
 	Name        string
 	Description string
 	Body        string
-	PostCount   int
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	// TargetLength and TagCount are what the posts this template shapes usually want
+	// (TEMPLATE-47). nil is "no opinion": assigning the template then leaves the post's own
+	// option alone. Neither ever reaches a prompt - they are seeds for the post's options and
+	// a run keeps freezing the post's values.
+	TargetLength *int
+	TagCount     *int
+	PostCount    int
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }
 
 // Patch is a presence-based update: a nil field is not part of the edit. This is what lets
@@ -100,10 +135,21 @@ type Patch struct {
 	Name        *string
 	Description *string
 	Body        *string
+	// The two numbers break the presence rule on purpose (TEMPLATE-8): Numbers present means
+	// "write both", each member nil meaning no opinion, because the template screen holds
+	// both and sends both on every save. A second meaning for an absent number would only
+	// give an unset one two ways to be written.
+	Numbers *Numbers
+}
+
+// Numbers is the pair a save writes together.
+type Numbers struct {
+	TargetLength *int
+	TagCount     *int
 }
 
 func (p Patch) empty() bool {
-	return p.Name == nil && p.Description == nil && p.Body == nil
+	return p.Name == nil && p.Description == nil && p.Body == nil && p.Numbers == nil
 }
 
 // Answer is what one post supplies for one data field, handed in by the caller at enqueue.

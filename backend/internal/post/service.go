@@ -179,8 +179,11 @@ func (s *Service) SaveDraft(ctx context.Context, userID, slug, title, memo strin
 			return Post{}, err
 		}
 	}
-	if templateID != nil && targetTemplate != found.TemplateID {
-		if _, err := s.store.AssignTemplate(ctx, slug, userID, &targetTemplate, s.now()); err != nil {
+	if templateID != nil && targetTemplate.ID != found.TemplateID {
+		// The seeds ride on the assignment's own statement (TEMPLATE-48): a template with an
+		// opinion overwrites that option, one without leaves the post's value alone, and
+		// clearing to 없음 seeds nothing at all.
+		if _, err := s.store.AssignTemplate(ctx, slug, userID, &targetTemplate.ID, targetTemplate.Seeds(), s.now()); err != nil {
 			return Post{}, fmt.Errorf("assign template: %w", err)
 		}
 	}
@@ -324,24 +327,29 @@ func (s *Service) voiceRefs(ctx context.Context, userID string) (map[string]Voic
 // assignableTemplate resolves the presence-aware field to the id that should end up on the
 // post: "" for absent-or-cleared, otherwise an owned template's id. An unknown or foreign id
 // is refused here, before any other part of the request is applied.
-func (s *Service) assignableTemplate(ctx context.Context, userID string, templateID *string) (string, error) {
+//
+// It answers with the whole ref rather than the id because the assignment SEEDS the post's
+// two generation options from it (TEMPLATE-48), and the directory it already reads is where
+// those numbers are: looking them up again afterwards would be a second read of a row that
+// could have changed in between.
+func (s *Service) assignableTemplate(ctx context.Context, userID string, templateID *string) (TemplateRef, error) {
 	if templateID == nil || strings.TrimSpace(*templateID) == "" {
-		return "", nil
+		return TemplateRef{}, nil
 	}
 	wanted := strings.TrimSpace(*templateID)
 	if s.templates == nil {
-		return "", errors.New("template directory is not configured")
+		return TemplateRef{}, errors.New("template directory is not configured")
 	}
 	templates, err := s.templates.Templates(ctx, userID)
 	if err != nil {
-		return "", fmt.Errorf("list templates: %w", err)
+		return TemplateRef{}, fmt.Errorf("list templates: %w", err)
 	}
 	for _, p := range templates {
 		if p.ID == wanted {
-			return p.ID, nil
+			return p, nil
 		}
 	}
-	return "", ErrTemplateNotFound
+	return TemplateRef{}, ErrTemplateNotFound
 }
 
 // templateRefs names every template the account owns so a read model can label an assignment.
@@ -383,7 +391,7 @@ func projectVoice(refs map[string]VoiceRef, voiceID string) VoiceRef {
 // and each attempt sees one more taken slug, so it converges immediately.
 const slugAttempts = 5
 
-func (s *Service) createPost(ctx context.Context, userID, title, memo, voiceID, templateID string, targetLanguage Language) (Post, error) {
+func (s *Service) createPost(ctx context.Context, userID, title, memo, voiceID string, assigned TemplateRef, targetLanguage Language) (Post, error) {
 	now := s.now()
 
 	// Mint-then-insert is a check-then-act, so the insert is what actually decides:
@@ -408,10 +416,15 @@ func (s *Service) createPost(ctx context.Context, userID, title, memo, voiceID, 
 		}
 
 		created := Post{
-			Slug:           slug,
-			UserID:         userID,
-			VoiceID:        voiceID,
-			TemplateID:     templateID,
+			Slug:       slug,
+			UserID:     userID,
+			VoiceID:    voiceID,
+			TemplateID: assigned.ID,
+			// Seeded by the template this post is created with, exactly as a later assignment
+			// seeds it (TEMPLATE-48). A template with no opinion leaves both unset, which is
+			// natural length and the default count.
+			TargetLength:   assigned.TargetLength,
+			TagCount:       seededTagCount(assigned.TagCount),
 			Title:          title,
 			Memo:           memo,
 			Status:         StatusDraft,
@@ -430,6 +443,15 @@ func (s *Service) createPost(ctx context.Context, userID, title, memo, voiceID, 
 	}
 
 	return Post{}, fmt.Errorf("create post: could not mint a free slug in %d attempts", slugAttempts)
+}
+
+// seededTagCount turns "no opinion" into the create's own unset (0), which the store writes
+// as NULL - the same thing a post created without a template has always stored.
+func seededTagCount(value *int) int {
+	if value == nil {
+		return 0
+	}
+	return *value
 }
 
 // Get returns the caller's post with a fresh view URL on every image.

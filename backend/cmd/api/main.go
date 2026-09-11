@@ -346,6 +346,12 @@ func main() {
 			PhotoRowMax:        cfg.TemplatePhotoRowMax,
 			AskLabelMaxChars:   cfg.TemplateAskLabelMaxChars,
 			AskMaxPerBody:      cfg.TemplateAskMaxPerBody,
+			// The two generation numbers are bounded by the POST option they seed, not by a
+			// template limit of their own (TEMPLATE-6): a template must not be able to store a
+			// number the post would refuse.
+			TargetLengthMin: 1,
+			TagCountMin:     config.PostTagCountMin,
+			TagCountMax:     config.PostTagCountMax,
 		},
 	)
 	postSvc.SetTemplateDirectory(postTemplates{service: templateSvc})
@@ -808,7 +814,12 @@ func (a postTemplates) Templates(ctx context.Context, userID string) ([]post.Tem
 	}
 	out := make([]post.TemplateRef, 0, len(templates))
 	for _, p := range templates {
-		out = append(out, post.TemplateRef{ID: p.ID, Name: p.Name})
+		// The two generation numbers travel with the ref because an assignment seeds the post's
+		// own options from them (TEMPLATE-48). Nothing else reads them: no prompt, payload or
+		// read model ever sees a template's number.
+		out = append(out, post.TemplateRef{
+			ID: p.ID, Name: p.Name, TargetLength: p.TargetLength, TagCount: p.TagCount,
+		})
 	}
 	return out, nil
 }

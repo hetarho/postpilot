@@ -194,6 +194,24 @@ type VoiceRef struct {
 type TemplateRef struct {
 	ID   string
 	Name string
+	// The two generation numbers the template authored (TEMPLATE-47). nil is "no opinion":
+	// assigning this template then leaves the post's own option alone. They are read here
+	// only to SEED an assignment - nothing projects them onto a read model, and no prompt
+	// ever sees a template's number.
+	TargetLength *int
+	TagCount     *int
+}
+
+// TemplateNumbers is what an assignment seeds. A nil member is a number the template has no
+// opinion about, which keeps the post's own value (TEMPLATE-48).
+type TemplateNumbers struct {
+	TargetLength *int
+	TagCount     *int
+}
+
+// Seeds reports what this template writes onto a post it is assigned to.
+func (r TemplateRef) Seeds() TemplateNumbers {
+	return TemplateNumbers{TargetLength: r.TargetLength, TagCount: r.TagCount}
 }
 
 // Post is the aggregate exposed by the drafting context. Generation may replace its
@@ -224,7 +242,9 @@ type Post struct {
 	MachineBaselineVoiceID string
 	TargetLength           *int
 	// TagCount is how many tags a run asks for (POST-63). Always concrete: the store reads a
-	// row never saved with one as config.PostTagCountDefault, so no caller sees "unset".
+	// row never saved with one as config.PostTagCountDefault, so no caller sees "unset". The
+	// one exception is a Post being CREATED, where 0 means "nobody named one" and the column
+	// stays NULL - a create seeds it only when the template it names has an opinion.
 	TagCount          int
 	FinalizedRevision int64
 	FinalizedAt       *time.Time

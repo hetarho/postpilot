@@ -21,6 +21,8 @@ func testLimits() Limits {
 		NameMaxChars: 40, DescriptionMaxChars: 200, BodyMaxChars: 4000,
 		MaxPerAccount: 3, MaxRepeatExpansion: 40, PhotoRowMax: fixtureParseOptions.PhotoRowMax,
 		AskLabelMaxChars: 40, AskMaxPerBody: fixtureParseOptions.AskMaxPerBody,
+		// The POST option's bounds: the length has a floor and no ceiling, the tag count both.
+		TargetLengthMin: 1, TagCountMin: 1, TagCountMax: 10,
 	}
 }
 
@@ -121,7 +123,7 @@ func TestCreateRefusesABodyThatDoesNotParse(t *testing.T) {
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			_, err := svc.Create(context.Background(), "alice", "리뷰", "", tc.body)
+			_, err := svc.Create(context.Background(), "alice", "리뷰", "", tc.body, Numbers{})
 			var parseErr *ParseError
 			if !errors.As(err, &parseErr) {
 				t.Fatalf("error = %v, want a ParseError", err)
@@ -143,22 +145,22 @@ func TestFieldRules(t *testing.T) {
 	svc, _ := newService(t)
 	ctx := context.Background()
 
-	if _, err := svc.Create(ctx, "alice", "  ", "", okBody); !errors.Is(err, ErrNameRequired) {
+	if _, err := svc.Create(ctx, "alice", "  ", "", okBody, Numbers{}); !errors.Is(err, ErrNameRequired) {
 		t.Fatalf("empty name error = %v", err)
 	}
-	if _, err := svc.Create(ctx, "alice", "리뷰", "", "   "); !errors.Is(err, ErrBodyRequired) {
+	if _, err := svc.Create(ctx, "alice", "리뷰", "", "   ", Numbers{}); !errors.Is(err, ErrBodyRequired) {
 		t.Fatalf("empty body error = %v", err)
 	}
 	var tooLong *FieldTooLongError
-	if _, err := svc.Create(ctx, "alice", strings.Repeat("가", 41), "", okBody); !errors.As(err, &tooLong) || tooLong.Field != "name" {
+	if _, err := svc.Create(ctx, "alice", strings.Repeat("가", 41), "", okBody, Numbers{}); !errors.As(err, &tooLong) || tooLong.Field != "name" {
 		t.Fatalf("long name error = %v", err)
 	}
 	// A Hangul syllable counts as ONE character on both sides of the wire.
-	if _, err := svc.Create(ctx, "alice", strings.Repeat("가", 40), "", okBody); err != nil {
+	if _, err := svc.Create(ctx, "alice", strings.Repeat("가", 40), "", okBody, Numbers{}); err != nil {
 		t.Fatalf("a 40-syllable name must fit: %v", err)
 	}
 
-	created, err := svc.Create(ctx, "alice", "다른 이름", "", okBody)
+	created, err := svc.Create(ctx, "alice", "다른 이름", "", okBody, Numbers{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -175,22 +177,22 @@ func TestFieldRules(t *testing.T) {
 func TestCreateRefusesADuplicateNameAndTheCap(t *testing.T) {
 	svc, _ := newService(t)
 	ctx := context.Background()
-	if _, err := svc.Create(ctx, "alice", "리뷰", "", okBody); err != nil {
+	if _, err := svc.Create(ctx, "alice", "리뷰", "", okBody, Numbers{}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := svc.Create(ctx, "alice", " 리뷰 ", "", okBody); !errors.Is(err, ErrDuplicateName) {
+	if _, err := svc.Create(ctx, "alice", " 리뷰 ", "", okBody, Numbers{}); !errors.Is(err, ErrDuplicateName) {
 		t.Fatalf("duplicate after trim error = %v", err)
 	}
 	// Another account may hold the same name.
-	if _, err := svc.Create(ctx, "bob", "리뷰", "", okBody); err != nil {
+	if _, err := svc.Create(ctx, "bob", "리뷰", "", okBody, Numbers{}); err != nil {
 		t.Fatalf("a foreign account's name collided: %v", err)
 	}
 	for _, name := range []string{"둘", "셋"} {
-		if _, err := svc.Create(ctx, "alice", name, "", okBody); err != nil {
+		if _, err := svc.Create(ctx, "alice", name, "", okBody, Numbers{}); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if _, err := svc.Create(ctx, "alice", "넷", "", okBody); !errors.Is(err, ErrTooMany) {
+	if _, err := svc.Create(ctx, "alice", "넷", "", okBody, Numbers{}); !errors.Is(err, ErrTooMany) {
 		t.Fatalf("cap error = %v", err)
 	}
 }
@@ -199,7 +201,7 @@ func TestCreateRefusesADuplicateNameAndTheCap(t *testing.T) {
 func TestAForeignIDIsIndistinguishableFromAnUnknownOne(t *testing.T) {
 	svc, _ := newService(t)
 	ctx := context.Background()
-	bobs, err := svc.Create(ctx, "bob", "리뷰", "", okBody)
+	bobs, err := svc.Create(ctx, "bob", "리뷰", "", okBody, Numbers{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -222,7 +224,7 @@ func TestAForeignIDIsIndistinguishableFromAnUnknownOne(t *testing.T) {
 func TestRenderedForExpandsAndBounds(t *testing.T) {
 	svc, _ := newService(t)
 	ctx := context.Background()
-	created, err := svc.Create(ctx, "alice", "리뷰", "", okBody)
+	created, err := svc.Create(ctx, "alice", "리뷰", "", okBody, Numbers{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -259,7 +261,7 @@ func TestRenderedForExpandsAndBounds(t *testing.T) {
 func TestDeleteReportsTheDetachCount(t *testing.T) {
 	svc, store := newService(t)
 	ctx := context.Background()
-	created, err := svc.Create(ctx, "alice", "리뷰", "", okBody)
+	created, err := svc.Create(ctx, "alice", "리뷰", "", okBody, Numbers{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -277,7 +279,7 @@ func TestDeleteReportsTheDetachCount(t *testing.T) {
 func TestAnEmptyPatchWritesNothing(t *testing.T) {
 	svc, store := newService(t)
 	ctx := context.Background()
-	created, err := svc.Create(ctx, "alice", "리뷰", "", okBody)
+	created, err := svc.Create(ctx, "alice", "리뷰", "", okBody, Numbers{})
 	if err != nil {
 		t.Fatal(err)
 	}

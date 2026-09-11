@@ -11,23 +11,36 @@ import (
 )
 
 const assignPostTemplate = `-- name: AssignPostTemplate :execrows
-UPDATE posts SET template_id = ?, updated_at = ?
-WHERE slug = ? AND user_id = ?
+UPDATE posts SET template_id = ?1,
+    target_length = COALESCE(?2, target_length),
+    tag_count = COALESCE(?3, tag_count),
+    updated_at = ?4
+WHERE slug = ?5 AND user_id = ?6
 `
 
 type AssignPostTemplateParams struct {
-	TemplateID sql.NullString
-	UpdatedAt  string
-	Slug       string
-	UserID     string
+	TemplateID       sql.NullString
+	SeedTargetLength sql.NullInt64
+	SeedTagCount     sql.NullInt64
+	UpdatedAt        string
+	Slug             string
+	UserID           string
 }
 
 // Assignment is not a reassignment: unlike the voice, a template is never learned from, so
 // this touches no content, revision, machine baseline or finalization column and is allowed
 // in every status. NULL is the clear.
+//
+// It also SEEDS the two generation options from the template that is being assigned
+// (TEMPLATE-48): a seed parameter is non-NULL only for a number that template has set, so
+// COALESCE says exactly "overwrite when the template has an opinion, keep the post's own
+// otherwise", in this one statement, so a post can never be left seeded by an assignment
+// that did not land. Clearing the assignment passes no seed at all.
 func (q *Queries) AssignPostTemplate(ctx context.Context, arg AssignPostTemplateParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, assignPostTemplate,
 		arg.TemplateID,
+		arg.SeedTargetLength,
+		arg.SeedTagCount,
 		arg.UpdatedAt,
 		arg.Slug,
 		arg.UserID,
@@ -56,8 +69,9 @@ func (q *Queries) CountPostsByVoice(ctx context.Context, arg CountPostsByVoicePa
 
 const createPost = `-- name: CreatePost :exec
 
-INSERT INTO posts (slug, user_id, voice_id, template_id, title, memo, target_language, status, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?)
+INSERT INTO posts (slug, user_id, voice_id, template_id, title, memo, target_language,
+    target_length, tag_count, status, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?)
 `
 
 type CreatePostParams struct {
@@ -68,12 +82,16 @@ type CreatePostParams struct {
 	Title          string
 	Memo           string
 	TargetLanguage string
+	TargetLength   sql.NullInt64
+	TagCount       sql.NullInt64
 	CreatedAt      string
 	UpdatedAt      string
 }
 
 // Posts. Every query is scoped by user_id: ownership is enforced in SQL, not by a
 // caller remembering to check it.
+// target_length and tag_count are the template's seeds when the create names one, and NULL
+// otherwise: a post nobody gave a number to reads as natural length and the default count.
 func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) error {
 	_, err := q.db.ExecContext(ctx, createPost,
 		arg.Slug,
@@ -83,6 +101,8 @@ func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) error {
 		arg.Title,
 		arg.Memo,
 		arg.TargetLanguage,
+		arg.TargetLength,
+		arg.TagCount,
 		arg.CreatedAt,
 		arg.UpdatedAt,
 	)
