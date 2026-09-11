@@ -22,6 +22,17 @@ export const templates = {
     help: 'A template decides the structure and order. Style and endings still follow the voice profile.',
     submit: 'Create template',
   },
+  numbers: {
+    targetLengthTick: 'Set a target length',
+    targetLength: 'Target length',
+    targetLengthHelp:
+      'Picking this template fills the post’s target length with this value. Changing it on the post keeps what you changed.',
+    tagCountTick: 'Set a tag count',
+    tagCount: 'Tag count',
+    tagCountHelp:
+      'Picking this template fills the post’s tag count with this value. Leave it off to keep whatever the post already has.',
+    range: 'Enter a number between {{min}} and {{max}}.',
+  },
   emptyDescription: 'No description',
   screen: {
     mode: {

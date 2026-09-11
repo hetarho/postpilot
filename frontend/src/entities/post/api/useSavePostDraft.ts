@@ -38,6 +38,16 @@ export function applyingSavedDraft(saved: Post, cached: GetPostResponse | undefi
     }
     post.voice = clone(VoiceRefSchema, saved.voice)
   }
+  // An ASSIGNMENT seeds the post's two generation options from the template it assigns
+  // (TEMPLATE-48), so the values that come back with it are the ones this mutation settled.
+  // Only then: an ordinary autosave of title and memo carries whatever the row held when the
+  // request was built, and installing that would roll back an options save that landed while
+  // it was in flight. Compared BEFORE `post.template` is overwritten below, or it always
+  // reads equal.
+  if (saved.template?.id !== cached.post.template?.id) {
+    post.targetLength = saved.targetLength
+    post.tagCount = saved.tagCount
+  }
   // Unconditional, unlike the voice: the response always reports the current 템플릿, and an
   // unset one is a real answer (없음). A `if (saved.template)` guard would make a clear
   // invisible until the next GetPost.

@@ -113,6 +113,7 @@ export const errors = {
   TEMPLATE_BODY_REQUIRED: '템플릿 내용을 입력해 주세요.',
   TEMPLATE_NAME_TAKEN: '같은 이름의 템플릿이 이미 있어요.',
   TEMPLATE_FIELD_TOO_LONG: '입력값은 {{max}}자 이하여야 해요. 현재 {{actual}}자예요.',
+  TEMPLATE_NUMBER_OUT_OF_RANGE: '{{min}} 이상으로 적어 주세요. 지금은 {{actual}}이에요.',
   TEMPLATE_PARSE_FAILED:
     '{{line}}번째 줄을 읽을 수 없어요 ({{reason}}). 원문 모드에서 고쳐 주세요.',
   TEMPLATE_LIMIT_REACHED:

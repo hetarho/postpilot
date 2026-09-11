@@ -75,6 +75,10 @@ export const DEFAULT_POST_VOICE: FakePostVoice = {
 export interface FakePostTemplate {
   id: string
   name: string
+  /** What this template seeds onto a post it is assigned to (TEMPLATE-48). Absent is 의견 없음:
+   *  the assignment then leaves the post's own option alone. */
+  targetLength?: number
+  tagCount?: number
 }
 
 /** One SavePostDraft as the server saw its assignments: present on a create or a change,
@@ -424,7 +428,19 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
     // Validated before anything else is applied, like the server: a bad 템플릿 must leave the
     // title and memo exactly as they were.
     let template = existing?.template
-    if (req.templateId !== undefined) template = assignableTemplate(req.templateId)
+    // What the assignment seeds, resolved before anything is written: only an assignment that
+    // CHANGES the template seeds, and only for the numbers that template has an opinion about
+    // (TEMPLATE-48).
+    let seededLength = existing?.targetLength
+    let seededTags = existing?.tagCount ?? 4
+    if (req.templateId !== undefined) {
+      template = assignableTemplate(req.templateId)
+      if (template && template.id !== existing?.template?.id) {
+        const source = templates.find((candidate) => candidate.id === template?.id)
+        if (source?.targetLength !== undefined) seededLength = source.targetLength
+        if (source?.tagCount !== undefined) seededTags = source.tagCount
+      }
+    }
     let voice = existing?.voice ?? toVoiceRef(DEFAULT_POST_VOICE)
     let reassigned = false
     if (!req.slug) {
@@ -464,8 +480,8 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       machineBaselineRevision: reassigned ? 0n : (existing?.machineBaselineRevision ?? 0n),
       machineBaselineVoiceId: reassigned ? '' : (existing?.machineBaselineVoiceId ?? ''),
       canFinalize: reassigned ? Boolean(existing?.content) : (existing?.canFinalize ?? false),
-      targetLength: existing?.targetLength,
-      tagCount: existing?.tagCount ?? 4,
+      targetLength: seededLength,
+      tagCount: seededTags,
       finalizedRevision: existing?.finalizedRevision ?? 0n,
       finalizedAt: existing?.finalizedAt ?? '',
       targetLanguage: contentLanguageToProto(

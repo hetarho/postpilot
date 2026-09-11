@@ -9,6 +9,10 @@ export function toTemplate(template: ProtoTemplate): Template {
     name: template.name,
     description: template.description,
     body: template.body,
+    // Absent stays absent: a template with no opinion about a number must not arrive as a 0
+    // the screen would then show as a ticked field asking for zero characters.
+    targetLength: template.targetLength,
+    tagCount: template.tagCount,
     postCount: template.postCount,
     createdAt: template.createdAt,
     updatedAt: template.updatedAt,

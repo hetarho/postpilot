@@ -14,7 +14,14 @@ export function useCreateTemplate(ownerId: string) {
   return {
     ...mutation,
     errorMessage: templateErrorMessage(mutation.error),
-    create: (fields: { name: string; description: string; body: string }) =>
-      mutation.mutateAsync(fields),
+    // The two generation numbers ride along, `undefined` meaning 의견 없음 - the proto field is
+    // optional, so an unticked one is simply not on the wire (TEMPLATE-47).
+    create: (fields: {
+      name: string
+      description: string
+      body: string
+      targetLength?: number
+      tagCount?: number
+    }) => mutation.mutateAsync(fields),
   }
 }

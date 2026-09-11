@@ -78,12 +78,15 @@ describe('the template screen', () => {
     await user.click(save)
 
     await waitFor(() => expect(updates).toHaveLength(1))
-    // All three present in ONE call: they are one decision now, not three saves.
+    // Every field present in ONE call: they are one decision now, not three saves. The two
+    // generation numbers ride along unset, which is 의견 없음 (TEMPLATE-8).
     expect(updates[0]).toEqual({
       id: 'template-review',
       name: '정보성 식당 리뷰 2편',
       description: '협찬 방문 리뷰',
       body: REVIEW.body,
+      targetLength: undefined,
+      tagCount: undefined,
     })
     expect(await screen.findByText('저장했어요.')).toBeInTheDocument()
   })
@@ -137,6 +140,8 @@ describe('the template screen', () => {
       name: '카페 방문기',
       description: '동네 카페',
       body: '<write>첫인상을 씁니다</write>',
+      targetLength: undefined,
+      tagCount: undefined,
     })
   })
 

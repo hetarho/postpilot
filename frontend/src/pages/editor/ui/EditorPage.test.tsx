@@ -2530,6 +2530,42 @@ describe('the post template', () => {
     expect(draftSaves[0].templateId).toBeUndefined()
   })
 
+  // TEMPLATE-48: picking a template seeds the post's two generation options, and the screen
+  // shows the seeded values at once — on the response the picker already awaits, with no
+  // second call and nothing saying a template wrote them.
+  it('shows the numbers a picked template seeded', async () => {
+    const user = userEvent.setup()
+    const calls: string[] = []
+    renderAppAt('/posts/20260820-memo', {
+      user: USER,
+      calls,
+      posts: {
+        posts: [{ slug: '20260820-memo' }],
+        templates: [
+          { id: 'template-review', name: '정보성 식당 리뷰', targetLength: 1800, tagCount: 7 },
+          { id: 'template-diary', name: '일기' },
+        ],
+      },
+      templates: { templates: PURPOSES },
+    })
+
+    const brief = await openBrief(user)
+    // The post starts with natural length and the default count.
+    expect(within(brief).queryByLabelText('목표 글자 수')).not.toBeInTheDocument()
+    expect(within(brief).getByLabelText('태그 개수')).toHaveValue(4)
+    await user.keyboard('{Escape}')
+
+    await pickTemplate(user, '정보성 식당 리뷰')
+    await waitFor(() => expect(calls).toContain('SavePostDraft'), AUTOSAVED)
+
+    const seeded = await openBrief(user)
+    // The length arrived, so its tick is on and the field carries it.
+    await waitFor(() => expect(within(seeded).getByLabelText('목표 글자 수')).toHaveValue(1800))
+    expect(within(seeded).getByLabelText('태그 개수')).toHaveValue(7)
+    // Seeded, not saved twice: the values rode the assignment's own response.
+    expect(calls).not.toContain('SavePostGenerationOptions')
+  })
+
   it('carries a chosen template into the create', async () => {
     const user = userEvent.setup()
     const draftSaves: FakeDraftSave[] = []

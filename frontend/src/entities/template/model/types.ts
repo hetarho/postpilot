@@ -19,6 +19,11 @@ export interface Template {
   /** May be empty. Shown as help text under the selector and injected as the 이 글의 템플릿 line. */
   description: string
   body: string
+  /** What the posts this template shapes usually want (TEMPLATE-47). `undefined` is 의견 없음:
+   *  assigning the template then leaves the post's own option alone. Neither reaches a prompt —
+   *  they are seeds for the post's two options, and a run freezes what the POST holds. */
+  targetLength?: number
+  tagCount?: number
   /** Posts currently assigned to it. A projection: the delete confirmation names it. */
   postCount: number
   createdAt: string

@@ -118,6 +118,7 @@ export const errors = {
   TEMPLATE_NAME_TAKEN: 'A template with that name already exists.',
   TEMPLATE_FIELD_TOO_LONG:
     'The value must be no more than {{max}} characters. It is currently {{actual}}.',
+  TEMPLATE_NUMBER_OUT_OF_RANGE: 'The value must be at least {{min}}. It is currently {{actual}}.',
   TEMPLATE_PARSE_FAILED: 'Line {{line}} could not be read ({{reason}}). Fix it in the source view.',
   TEMPLATE_LIMIT_REACHED:
     'You cannot add another template. Delete one you no longer use and try again.',

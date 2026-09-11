@@ -16,8 +16,17 @@ import {
 import { useCreateTemplate } from '@/features/create-template'
 import { useUpdateTemplate } from '@/features/edit-template'
 import {
+  POST_TAG_COUNT_DEFAULT,
+  POST_TAG_COUNT_MAX,
+  POST_TAG_COUNT_MIN,
+  POST_TARGET_LENGTH_DEFAULT,
+  POST_TARGET_LENGTH_MAX,
+  POST_TARGET_LENGTH_MIN,
+} from '@/shared/config'
+import {
   ActionBar,
   Button,
+  Checkbox,
   Dialog,
   FieldCount,
   FieldLabel,
@@ -121,6 +130,10 @@ interface Draft {
   name: string
   description: string
   body: string
+  /** `undefined` is 의견 없음 — this template says nothing about that number, and assigning it
+   *  leaves the post's own option alone (TEMPLATE-47). */
+  targetLength?: number
+  tagCount?: number
 }
 
 function draftOf(stored: Template | undefined): Draft {
@@ -128,13 +141,48 @@ function draftOf(stored: Template | undefined): Draft {
     name: stored?.name ?? '',
     description: stored?.description ?? '',
     body: stored?.body ?? '',
+    targetLength: stored?.targetLength,
+    tagCount: stored?.tagCount,
   }
+}
+
+/** One number as it is being EDITED: whether its 사용 tick is on, and the text in the field.
+ *  The text outlives an unticked box on purpose — unticking and reticking must not lose what
+ *  was typed (the 목표 글자 수 rule of POST-20). */
+interface NumberDraft {
+  enabled: boolean
+  text: string
+}
+
+function numberDraftOf(value: number | undefined): NumberDraft {
+  return { enabled: value !== undefined, text: value?.toString() ?? '' }
+}
+
+/** The value this field contributes to the draft: `undefined` while unticked, and NaN while
+ *  ticked with something unusable in it — which is dirty, refused by the save gate, and never
+ *  confused with 의견 없음. */
+function numberValue(field: NumberDraft): number | undefined {
+  return field.enabled ? Number(field.text) : undefined
+}
+
+function numberValid(field: NumberDraft, min: number, max: number): boolean {
+  if (!field.enabled) return true
+  const parsed = Number(field.text)
+  return field.text.trim() !== '' && Number.isInteger(parsed) && parsed >= min && parsed <= max
 }
 
 function Editor({ ownerId, stored }: { ownerId: string; stored: Template | undefined }) {
   const { t } = useTranslation(['templates', 'common'])
   const navigate = useNavigate()
   const [draft, setDraft] = useState<Draft>(() => draftOf(stored))
+  // The two generation numbers are part of the same one draft (TEMPLATE-49), kept as their own
+  // editing state because a ticked field can hold text that is not yet a number.
+  const [lengthField, setLengthField] = useState<NumberDraft>(() =>
+    numberDraftOf(stored?.targetLength),
+  )
+  const [tagsField, setTagsField] = useState<NumberDraft>(() => numberDraftOf(stored?.tagCount))
+  const lengthValid = numberValid(lengthField, POST_TARGET_LENGTH_MIN, POST_TARGET_LENGTH_MAX)
+  const tagsValid = numberValid(tagsField, POST_TAG_COUNT_MIN, POST_TAG_COUNT_MAX)
   // What the last successful save wrote, taken from the mutation's OWN response. The directory
   // query lags a save by a refetch, so comparing against it alone would leave the screen dirty
   // for that whole window — which re-enables 저장 and makes the leave guard warn about a
@@ -159,12 +207,16 @@ function Editor({ ownerId, stored }: { ownerId: string; stored: Template | undef
     name: draft.name.trim(),
     description: draft.description.trim(),
     body: draft.body,
+    targetLength: numberValue(lengthField),
+    tagCount: numberValue(tagsField),
   }
   const baseline = savedBaseline ?? draftOf(stored)
   const dirty =
     trimmed.name !== baseline.name ||
     trimmed.description !== baseline.description ||
-    trimmed.body !== baseline.body
+    trimmed.body !== baseline.body ||
+    trimmed.targetLength !== baseline.targetLength ||
+    trimmed.tagCount !== baseline.tagCount
   const pending = create.isPending || update.isPending
   const errorMessage = create.errorMessage || update.errorMessage
   const failed = create.isError || update.isError
@@ -177,7 +229,14 @@ function Editor({ ownerId, stored }: { ownerId: string; stored: Template | undef
   // draft parses and nothing here would otherwise notice — and saving would silently drop the
   // row the author is looking at (TEMPLATE-44).
   const [askConflict, setAskConflict] = useState(false)
-  const blocked = !dirty || !canSaveTemplate(trimmed) || !parsed.ok || askConflict || pending
+  const blocked =
+    !dirty ||
+    !canSaveTemplate(trimmed) ||
+    !lengthValid ||
+    !tagsValid ||
+    !parsed.ok ||
+    askConflict ||
+    pending
 
   // A REF, not state: the post-save redirect below runs in the same tick as the state update
   // that would clear `dirty`, and the blocker reads its render-time closure — so without this the
@@ -228,10 +287,23 @@ function Editor({ ownerId, stored }: { ownerId: string; stored: Template | undef
     }
   }
 
-  const field = (key: keyof Draft) => (value: string) => {
+  const field = (key: 'name' | 'description' | 'body') => (value: string) => {
     setDraft((current) => ({ ...current, [key]: value }))
     setSaved(false)
   }
+
+  // Ticking reveals a field with a usable number ALREADY in it, and a value typed earlier in
+  // this session outranks the default — the same rule the post's own 목표 글자 수 follows, so
+  // the field behaves identically in the two places it is met (POST-20).
+  const numberField =
+    (set: typeof setLengthField, fallback: number) => (next: Partial<NumberDraft>) => {
+      set((current) => {
+        const merged = { ...current, ...next }
+        if (next.enabled && !current.text) merged.text = String(fallback)
+        return merged
+      })
+      setSaved(false)
+    }
 
   // `stored` is still read for the heading and for the create-vs-update decision, so a refetch
   // that lands after a save changes neither: `savedBaseline` already describes the saved state.
@@ -248,6 +320,30 @@ function Editor({ ownerId, stored }: { ownerId: string; stored: Template | undef
         value={draft.description}
         onChange={field('description')}
         disabled={pending}
+      />
+      <NumberField
+        id="template-target-length"
+        tick={t('numbers.targetLengthTick', { ns: 'templates' })}
+        label={t('numbers.targetLength', { ns: 'templates' })}
+        help={t('numbers.targetLengthHelp', { ns: 'templates' })}
+        field={lengthField}
+        min={POST_TARGET_LENGTH_MIN}
+        max={POST_TARGET_LENGTH_MAX}
+        valid={lengthValid}
+        disabled={pending}
+        onChange={numberField(setLengthField, POST_TARGET_LENGTH_DEFAULT)}
+      />
+      <NumberField
+        id="template-tag-count"
+        tick={t('numbers.tagCountTick', { ns: 'templates' })}
+        label={t('numbers.tagCount', { ns: 'templates' })}
+        help={t('numbers.tagCountHelp', { ns: 'templates' })}
+        field={tagsField}
+        min={POST_TAG_COUNT_MIN}
+        max={POST_TAG_COUNT_MAX}
+        valid={tagsValid}
+        disabled={pending}
+        onChange={numberField(setTagsField, POST_TAG_COUNT_DEFAULT)}
       />
 
       <section aria-labelledby="template-composition-heading" className="mt-8">
@@ -365,6 +461,79 @@ function NameField({
         className="mt-1"
       />
       <FieldCount left={left} />
+    </div>
+  )
+}
+
+/** One of the template's two generation numbers: a 사용 tick and, when it is on, a number field
+ *  (TEMPLATE-49). Unticked is 의견 없음 — assigning this template then leaves the post's own
+ *  option alone, which is why the tick is not a "0" and cannot be one. */
+function NumberField({
+  id,
+  tick,
+  label,
+  help,
+  field,
+  min,
+  max,
+  valid,
+  disabled,
+  onChange,
+}: {
+  id: string
+  /** The 사용 question. The field below carries the plain name, so a screen reader never hears
+   *  the same words twice for two different controls. */
+  tick: string
+  label: string
+  help: string
+  field: NumberDraft
+  min: number
+  max: number
+  valid: boolean
+  disabled: boolean
+  onChange: (next: Partial<NumberDraft>) => void
+}) {
+  const { t } = useTranslation(['templates', 'common'])
+  return (
+    <div className="mt-4">
+      <label
+        className={typographyStyles({
+          variant: 'label',
+          className: 'flex min-h-11 items-center gap-3',
+        })}
+      >
+        <Checkbox
+          checked={field.enabled}
+          disabled={disabled}
+          onChange={(event) => onChange({ enabled: event.target.checked })}
+        />
+        {tick}
+      </label>
+      <Typography variant="meta" as="p" className="text-content-secondary max-w-measure">
+        {help}
+      </Typography>
+      {field.enabled && (
+        <div className="mt-2">
+          <FieldLabel htmlFor={id}>{label}</FieldLabel>
+          <TextField
+            id={id}
+            type="number"
+            min={min}
+            max={max}
+            value={field.text}
+            disabled={disabled}
+            autoComplete="off"
+            aria-invalid={!valid || undefined}
+            onChange={(event) => onChange({ text: event.target.value })}
+            className="mt-1"
+          />
+          {!valid && (
+            <FieldMessage className="mt-1">
+              {t('numbers.range', { ns: 'templates', min, max })}
+            </FieldMessage>
+          )}
+        </div>
+      )}
     </div>
   )
 }

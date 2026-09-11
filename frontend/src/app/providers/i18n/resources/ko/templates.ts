@@ -22,6 +22,17 @@ export const templates = {
     help: '템플릿은 글의 구성과 순서를 정해요. 문체와 종결어미는 그대로 말투 프로필을 따릅니다.',
     submit: '템플릿 만들기',
   },
+  numbers: {
+    targetLengthTick: '목표 글자 수 사용',
+    targetLength: '목표 글자 수',
+    targetLengthHelp:
+      '이 템플릿을 고르면 글의 목표 글자 수가 이 값으로 채워져요. 글에서 바꾸면 바꾼 값이 유지됩니다.',
+    tagCountTick: '태그 수 사용',
+    tagCount: '태그 수',
+    tagCountHelp:
+      '이 템플릿을 고르면 글의 태그 수가 이 값으로 채워져요. 비워 두면 글의 설정을 그대로 둡니다.',
+    range: '{{min}}에서 {{max}} 사이로 적어 주세요.',
+  },
   emptyDescription: '설명 없음',
   screen: {
     mode: {

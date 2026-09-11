@@ -120,6 +120,9 @@ export const appFailureSpecs = {
   TEMPLATE_NAME_TAKEN: {},
   TEMPLATE_LIMIT_REACHED: {},
   TEMPLATE_FIELD_TOO_LONG: { required: ['actual', 'max'], optional: ['field'] },
+  // `max` is optional: the target length has a floor and no ceiling, because the post option
+  // this number seeds has none either.
+  TEMPLATE_NUMBER_OUT_OF_RANGE: { required: ['actual', 'min'], optional: ['field', 'max'] },
   TEMPLATE_PARSE_FAILED: { required: ['line', 'reason'] },
   PURPOSE_NOT_FOUND: {},
   GUIDELINE_NOT_FOUND: {},

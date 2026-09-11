@@ -17,6 +17,9 @@ export interface FakeTemplateRow {
   name: string
   description?: string
   body?: string
+  /** The two generation numbers a template may author. Absent is 의견 없음 (TEMPLATE-47). */
+  targetLength?: number
+  tagCount?: number
   /** Posts currently assigned to it, as the server's projection reports. */
   postCount?: number
 }
@@ -34,10 +37,18 @@ export interface FakeTemplatesOptions {
     name: string | undefined
     description: string | undefined
     body: string | undefined
+    targetLength: number | undefined
+    tagCount: number | undefined
   }>
   /** Records every CreateTemplate, so a test can prove the screen's one save carried all three
    *  fields in one call. */
-  creates?: Array<{ name: string; description: string; body: string }>
+  creates?: Array<{
+    name: string
+    description: string
+    body: string
+    targetLength: number | undefined
+    tagCount: number | undefined
+  }>
 }
 
 const DEFAULT_AT = '2026-08-28T12:00:00Z'
@@ -47,6 +58,8 @@ interface Row {
   name: string
   description: string
   body: string
+  targetLength?: number
+  tagCount?: number
   postCount: number
 }
 
@@ -62,6 +75,8 @@ export function registerTemplateService(router: ConnectRouter, options: FakeTemp
         name: row.name,
         description: row.description ?? '',
         body: row.body ?? '지침',
+        targetLength: row.targetLength,
+        tagCount: row.tagCount,
         postCount: row.postCount ?? 0,
       },
     ]),
@@ -88,7 +103,13 @@ export function registerTemplateService(router: ConnectRouter, options: FakeTemp
 
   rpc(TemplateService.method.createTemplate, (req) => {
     calls?.push('CreateTemplate')
-    options.creates?.push({ name: req.name, description: req.description, body: req.body })
+    options.creates?.push({
+      name: req.name,
+      description: req.description,
+      body: req.body,
+      targetLength: req.targetLength,
+      tagCount: req.tagCount,
+    })
     const name = req.name.trim()
     if (!name) throw connectAppError('TEMPLATE_NAME_REQUIRED', Code.InvalidArgument)
     if (!req.body.trim()) throw connectAppError('TEMPLATE_BODY_REQUIRED', Code.InvalidArgument)
@@ -99,6 +120,8 @@ export function registerTemplateService(router: ConnectRouter, options: FakeTemp
       name,
       description: req.description.trim(),
       body: req.body.trim(),
+      targetLength: req.targetLength,
+      tagCount: req.tagCount,
       postCount: 0,
     }
     rows.set(row.id, row)
@@ -112,6 +135,8 @@ export function registerTemplateService(router: ConnectRouter, options: FakeTemp
       name: req.name,
       description: req.description,
       body: req.body,
+      targetLength: req.targetLength,
+      tagCount: req.tagCount,
     })
     const row = rows.get(req.id)
     if (!row) throw connectAppError('TEMPLATE_NOT_FOUND', Code.NotFound)
@@ -128,6 +153,10 @@ export function registerTemplateService(router: ConnectRouter, options: FakeTemp
       if (!body) throw connectAppError('TEMPLATE_BODY_REQUIRED', Code.InvalidArgument)
       row.body = body
     }
+    // The two numbers are written TOGETHER on every save, like the server: absence is 의견 없음
+    // and clears the stored one (TEMPLATE-8).
+    row.targetLength = req.targetLength
+    row.tagCount = req.tagCount
     return create(UpdateTemplateResponseSchema, { template: toProto(row) })
   })
 

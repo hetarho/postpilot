@@ -30,7 +30,13 @@ export function useUpdateTemplate(ownerId: string, templateId: string) {
   return {
     ...mutation,
     errorMessage: templateErrorMessage(mutation.error),
-    saveAll: (fields: { name: string; description: string; body: string }) =>
+    saveAll: (fields: {
+      name: string
+      description: string
+      body: string
+      targetLength?: number
+      tagCount?: number
+    }) =>
       mutation.mutateAsync({
         id: templateId,
         name: fields.name.trim(),
@@ -38,6 +44,11 @@ export function useUpdateTemplate(ownerId: string, templateId: string) {
         // NOT trimmed: the body is the canonical serialization of the composition, and trimming
         // it here would rewrite a stored body that carries significant outer bytes (change 30 A11).
         body: fields.body,
+        // Both numbers go out on every save, absence meaning 의견 없음 rather than "not part of
+        // this edit": this screen is the only place either is authored and it always holds both,
+        // so unticking one has to be able to clear it (TEMPLATE-8).
+        targetLength: fields.targetLength,
+        tagCount: fields.tagCount,
       }),
   }
 }

@@ -7,6 +7,7 @@ import {
   ObservationSchema,
   PostContentSchema,
   PostSchema,
+  TemplateRefSchema,
   VoiceRefSchema,
 } from '@/shared/api'
 import { applyingSavedDraft } from './useSavePostDraft'
@@ -47,6 +48,59 @@ describe('applying a draft save response', () => {
     expect(applied.observations[0]?.scene).toBe('completed observation')
     expect(applied.content?.title).toBe('completed draft')
     expect(applied.activeJob?.id).toBe('job-new')
+  })
+
+  // TEMPLATE-48: an assignment SEEDS the post's two generation options, so those values are
+  // this mutation's to settle — but only on the save that changed the assignment. An ordinary
+  // autosave carries whatever the row held when its request was built.
+  it('takes the seeded numbers only when the save changed the template', () => {
+    const cachedWith = (templateId: string, length: number, tags: number) =>
+      create(GetPostResponseSchema, {
+        post: create(PostSchema, {
+          slug: 'post',
+          template: templateId
+            ? create(TemplateRefSchema, { id: templateId, name: '리뷰' })
+            : undefined,
+          targetLength: length,
+          tagCount: tags,
+        }),
+      })
+
+    // The picker assigned a template, and the response carries what it seeded.
+    const assigned = applyingSavedDraft(
+      create(PostSchema, {
+        slug: 'post',
+        template: create(TemplateRefSchema, { id: 'template-review', name: '리뷰' }),
+        targetLength: 1800,
+        tagCount: 7,
+      }),
+      cachedWith('', 1000, 4),
+    )
+    expect(assigned.targetLength).toBe(1800)
+    expect(assigned.tagCount).toBe(7)
+
+    // An ordinary autosave whose response predates an options save that already landed in the
+    // cache must not put the old numbers back.
+    const typing = applyingSavedDraft(
+      create(PostSchema, {
+        slug: 'post',
+        template: create(TemplateRefSchema, { id: 'template-review', name: '리뷰' }),
+        targetLength: 1800,
+        tagCount: 7,
+      }),
+      cachedWith('template-review', 1200, 3),
+    )
+    expect(typing.targetLength).toBe(1200)
+    expect(typing.tagCount).toBe(3)
+
+    // Clearing the template to 없음 seeds nothing: the post keeps what it last received.
+    const cleared = applyingSavedDraft(
+      create(PostSchema, { slug: 'post', targetLength: 1200, tagCount: 3 }),
+      cachedWith('template-review', 1200, 3),
+    )
+    expect(cleared.targetLength).toBe(1200)
+    expect(cleared.tagCount).toBe(3)
+    expect(cleared.template).toBeUndefined()
   })
 
   it('takes the voice and the cleared baseline only when the save reassigned the post', () => {
