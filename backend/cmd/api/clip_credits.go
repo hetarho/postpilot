@@ -86,7 +86,9 @@ func (a clipAdmission) ObserveModels() []clip.AnalysisCandidate {
 	return out
 }
 
+// QualifyObserve is the read-only eligibility answer, so an unexpired document
+// the adapter already read may serve it; a quote or a job never takes this path.
 func (a clipAdmission) QualifyObserve(ctx context.Context, ref llm.ModelRef) error {
-	_, err := a.registry.FreezeExecution(ctx, ref, llm.StageNameObserve, a.cfg.ObserveCompletionTokens, a.cfg.ObserveReasoning, llm.ExecutionInlineStatic)
+	_, err := a.registry.FreezeExecution(llm.AllowCachedEndpoints(ctx), ref, llm.StageNameObserve, a.cfg.ObserveCompletionTokens, a.cfg.ObserveReasoning, llm.ExecutionInlineStatic)
 	return err
 }

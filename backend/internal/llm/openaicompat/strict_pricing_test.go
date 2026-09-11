@@ -72,10 +72,11 @@ func TestNonzeroMediaQuoteAndExecutionUseOneFrozenProfile(t *testing.T) {
 		t.Fatal("quoting issued a completion")
 	}
 	req.Execution.Call = p
-	// The recheck before the completion reads the same unexpired document the
-	// quote read: one GET serves both, and the POST names the frozen leaf.
+	// The recheck before the completion reads the LIVE document, not the copy
+	// the quote read: a price that moved in between is what it refuses. Two
+	// GETs, one POST naming the frozen leaf.
 	out, err := c.Complete(context.Background(), req)
-	if err != nil || out.Usage.CostMicrousd != 4000 || gets.Load() != 1 || posts.Load() != 1 {
+	if err != nil || out.Usage.CostMicrousd != 4000 || gets.Load() != 2 || posts.Load() != 1 {
 		t.Fatalf("out=%+v err=%v gets=%d posts=%d", out, err, gets.Load(), posts.Load())
 	}
 }

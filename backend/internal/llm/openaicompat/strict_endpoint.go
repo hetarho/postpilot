@@ -109,16 +109,21 @@ func newEndpointCache(ttl, timeout time.Duration) *endpointCache {
 	return &endpointCache{docs: map[string]endpointDocument{}, inflight: map[string]*endpointFetch{}, sem: make(chan struct{}, endpointFetchConcurrency), ttl: ttl, timeout: timeout, now: time.Now}
 }
 
-// endpoints returns the current document for a model, reading it at most once
-// per TTL. The caller's context cancels only the caller's wait; a fetch that
-// other callers share runs to its own timeout.
+// endpoints returns the current document for a model. Concurrent readers of one
+// model share a single fetch, and every successful read is kept for the catalog
+// TTL — but only a caller that llm.AllowCachedEndpoints marked (the read-only
+// eligibility list) is answered from that copy. A quote, an admission and the
+// pre-completion recheck read the live document, so a price that moved since
+// the quote refuses rather than slipping past an unexpired cache (QUOTA-47).
+// The caller's context cancels only the caller's wait; a fetch that other
+// callers share runs to its own timeout.
 func (c *Client) endpoints(ctx context.Context, client *http.Client, model string) ([]pricedEndpoint, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
 	cache := c.endpointDocs
 	cache.mu.Lock()
-	if doc, ok := cache.docs[model]; ok && cache.now().Sub(doc.fetched) < cache.ttl {
+	if doc, ok := cache.docs[model]; ok && llm.CachedEndpointsAllowed(ctx) && cache.now().Sub(doc.fetched) < cache.ttl {
 		cache.mu.Unlock()
 		return slices.Clone(doc.endpoints), nil
 	}

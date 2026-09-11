@@ -107,3 +107,23 @@ func (p ExecutionPolicy) Matches(ref ModelRef, r Request) bool {
 	}
 	return (p.Delivery == ExecutionTextOnly && inline == 0) || (p.Delivery == ExecutionInlineStatic && inline == 1)
 }
+
+// cachedEndpointsKey marks a context whose endpoint-document reads may be
+// served from an adapter's unexpired cache.
+type cachedEndpointsKey struct{}
+
+// AllowCachedEndpoints marks a read-only qualification — the eligibility list a
+// picker shows — as one an adapter may answer from an unexpired document it
+// already read. A quote, the admission before a job's first call and the
+// recheck before every completion never carry it: they read the live document,
+// because a price that moved since the quote is exactly what they exist to
+// refuse (QUOTA-47).
+func AllowCachedEndpoints(ctx context.Context) context.Context {
+	return context.WithValue(ctx, cachedEndpointsKey{}, true)
+}
+
+// CachedEndpointsAllowed reports whether AllowCachedEndpoints marked the context.
+func CachedEndpointsAllowed(ctx context.Context) bool {
+	allowed, _ := ctx.Value(cachedEndpointsKey{}).(bool)
+	return allowed
+}

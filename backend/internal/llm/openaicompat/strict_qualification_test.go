@@ -225,9 +225,10 @@ func TestUnreadableOrMalformedDocumentIsNotEligible(t *testing.T) {
 	}
 }
 
-// The document is read once per catalog TTL and shared by concurrent readers;
-// a failed read is never cached; an expired document is read again; the
-// pre-completion recheck reuses an unexpired one.
+// Concurrent readers of one model share a single fetch; the read-only
+// eligibility list (AllowCachedEndpoints) is served from an unexpired document
+// and reads again once it expires; a failed read is never cached; a quote, an
+// admission and the pre-completion recheck always read the live document.
 func TestEndpointDocumentCacheTTLConcurrencyAndFailure(t *testing.T) {
 	var gets atomic.Int32
 	var fail atomic.Bool
@@ -248,12 +249,13 @@ func TestEndpointDocumentCacheTTLConcurrencyAndFailure(t *testing.T) {
 	now := time.Unix(1_700_000_000, 0)
 	c.endpointDocs.now = func() time.Time { return now }
 	call := observeCall(model, true)
+	listing := llm.AllowCachedEndpoints(context.Background())
 	var wg sync.WaitGroup
 	for i := 0; i < 16; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			if _, err := c.FreezePricing(context.Background(), call, llm.ExecutionInlineStatic); err != nil {
+			if _, err := c.FreezePricing(listing, call, llm.ExecutionInlineStatic); err != nil {
 				t.Error(err)
 			}
 		}()
@@ -262,22 +264,29 @@ func TestEndpointDocumentCacheTTLConcurrencyAndFailure(t *testing.T) {
 	if gets.Load() != 1 {
 		t.Fatalf("%d concurrent reads of one model reached the provider", gets.Load())
 	}
-	// A completion inside the TTL rechecks against the cached document.
-	frozen, _ := c.FreezePricing(context.Background(), call, llm.ExecutionInlineStatic)
+	// The eligibility list inside the TTL is answered from the document it read.
+	if _, err := c.FreezePricing(listing, call, llm.ExecutionInlineStatic); err != nil || gets.Load() != 1 {
+		t.Fatalf("listing re-read an unexpired document: err=%v gets=%d", err, gets.Load())
+	}
+	// A quote reads live, and so does the recheck before its completion.
+	frozen, err := c.FreezePricing(context.Background(), call, llm.ExecutionInlineStatic)
+	if err != nil || gets.Load() != 2 {
+		t.Fatalf("quote served from cache: err=%v gets=%d", err, gets.Load())
+	}
 	req := strictRequest()
 	req.Model, req.Execution.Call = model, frozen
-	if _, err := c.Complete(context.Background(), req); err != nil || gets.Load() != 1 {
-		t.Fatalf("recheck re-read an unexpired document: err=%v gets=%d", err, gets.Load())
+	if _, err := c.Complete(context.Background(), req); err != nil || gets.Load() != 3 {
+		t.Fatalf("recheck served from cache: err=%v gets=%d", err, gets.Load())
 	}
-	// Past the TTL the document is read again — and a read that fails is not
-	// kept, so the next caller reads again too.
+	// Past the TTL the listing reads again — and a read that fails is not kept,
+	// so the next caller reads again too.
 	now = now.Add(c.endpointDocs.ttl)
 	fail.Store(true)
-	if _, err := c.FreezePricing(context.Background(), call, llm.ExecutionInlineStatic); !errors.Is(err, llm.ErrInlineEndpointUnavailable) || gets.Load() != 2 {
+	if _, err := c.FreezePricing(listing, call, llm.ExecutionInlineStatic); !errors.Is(err, llm.ErrInlineEndpointUnavailable) || gets.Load() != 4 {
 		t.Fatalf("expired document served or failure cached: err=%v gets=%d", err, gets.Load())
 	}
 	fail.Store(false)
-	if _, err := c.FreezePricing(context.Background(), call, llm.ExecutionInlineStatic); err != nil || gets.Load() != 3 {
+	if _, err := c.FreezePricing(listing, call, llm.ExecutionInlineStatic); err != nil || gets.Load() != 5 {
 		t.Fatalf("failed read was cached: err=%v gets=%d", err, gets.Load())
 	}
 	if c.endpointDocs.ttl != defaultEndpointCacheTTL || c.endpointDocs.timeout != defaultEndpointFetchTimout || cap(c.endpointDocs.sem) != endpointFetchConcurrency {
