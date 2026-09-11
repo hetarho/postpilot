@@ -127,6 +127,9 @@ type EditPlan struct {
 	// The closing call to action, already resolved against the preset, and the
 	// project accent both cards paint with (CDS-29, CLIP-14).
 	CTA, Accent string
+	// Styles is the template's approved copy styles, set at render time like
+	// the facts above: the verifier reads CDS-40's run rule against it.
+	Styles []string
 	// What the model wrote per cut, parallel to Cuts, before the compiler placed
 	// it. It is the compiler's input and is never stored with the plan.
 	Written []Written
@@ -270,8 +273,8 @@ func LayoutViolation(v design.Violation) error { return planViolation(v) }
 
 // VerifyLayout gates a render on the design system (CDS-52) and restates the
 // failure as an invalid plan, which is what every caller already understands.
-func VerifyLayout(ratio string, m Manifest) error {
-	err := design.Verify(m, ratio)
+func VerifyLayout(ratio string, approved []string, m Manifest) error {
+	err := design.VerifyApproved(m, ratio, approved)
 	var v design.Violation
 	if errors.As(err, &v) {
 		return planViolation(v)
@@ -295,6 +298,12 @@ func (p EditPlan) Compiled() bool {
 func (p EditPlan) WithFacts(disclosure string, facts []Answer, preset, cta, accent string) EditPlan {
 	p.Disclosure, p.Facts, p.Preset = disclosure, facts, preset
 	p.CTA, p.Accent = cta, accent
+	return p
+}
+
+// WithStyles records the template's approved copy styles for the verifier.
+func (p EditPlan) WithStyles(styles []string) EditPlan {
+	p.Styles = styles
 	return p
 }
 

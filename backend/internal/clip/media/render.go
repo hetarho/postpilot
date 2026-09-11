@@ -257,7 +257,7 @@ func (r *Rendering) Render(ctx context.Context, ws clip.MediaWorkspace, plan cli
 	if err != nil {
 		return result, err
 	}
-	if err = clip.VerifyLayout(plan.Ratio, c.manifest); err != nil {
+	if err = clip.VerifyLayout(plan.Ratio, plan.Styles, c.manifest); err != nil {
 		return result, err
 	}
 	// The layers that need no source pixels: the fixed one (the disclosure badge
@@ -317,7 +317,7 @@ func (r *Rendering) Render(ctx context.Context, ws clip.MediaWorkspace, plan cli
 	// what has to hold, so the whole manifest is verified again before they
 	// become one clip (CDS-52).
 	manifest := c.manifest
-	if err = clip.VerifyLayout(plan.Ratio, manifest); err != nil {
+	if err = clip.VerifyLayout(plan.Ratio, plan.Styles, manifest); err != nil {
 		return result, err
 	}
 	output := filepath.Join(ws.Path, "clip-result.mp4")
@@ -653,7 +653,7 @@ func (r *Rendering) Layout(ctx context.Context, plan clip.EditPlan, sources []cl
 			return err
 		}
 		manifest = c.manifest
-		return clip.VerifyLayout(plan.Ratio, c.manifest)
+		return clip.VerifyLayout(plan.Ratio, plan.Styles, c.manifest)
 	})
 	return manifest, err
 }

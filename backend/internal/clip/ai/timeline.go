@@ -112,7 +112,27 @@ func composeTimeline(cfg Config, in clip.PlanningInput, plan *clip.EditPlan) err
 			}
 		}
 		if active == 0 {
-			return outputError("plan_timeline")
+			if !grow {
+				return outputError("plan_timeline")
+			}
+			// Every cut sits at its scene's ceiling or the end of its observed
+			// footage. The target is the owner's, but the footage is what it
+			// is: a clip the length floor accepts ships at the length the
+			// footage holds rather than being refused for the seconds it
+			// cannot have (a food-only shoot under CDS-37's 4.0 s cannot reach
+			// 30 s from 36 s of takes).
+			achieved := in.TargetDurationMS - remaining
+			if achieved < cfg.Render.MinDurationMS {
+				return outputError("plan_timeline")
+			}
+			for i := range plan.Cuts {
+				c := &plan.Cuts[i]
+				for j := range c.Copies {
+					c.Copies[j].EndMS = min(c.Copies[j].EndMS, c.EndMS-c.StartMS)
+				}
+			}
+			plan.DurationMS = achieved
+			return nil
 		}
 		share := (remaining + active - 1) / active
 		for i := range plan.Cuts {
@@ -141,13 +161,7 @@ func composeTimeline(cfg Config, in clip.PlanningInput, plan *clip.EditPlan) err
 // range of the same source, and never past CDS-37's ceiling for its scene.
 func cutCeiling(plan *clip.EditPlan, analyses map[string]clip.SourceAnalysis, scenes []string, i int) int {
 	c := plan.Cuts[i]
-	end := c.EndMS
-	for _, segment := range analyses[c.SourceID].Segments {
-		if segment.StartMS <= c.StartMS && segment.EndMS >= c.EndMS {
-			end = segment.EndMS
-			break
-		}
-	}
+	_, end := observedSpan(analyses[c.SourceID], c)
 	for j, other := range plan.Cuts {
 		if i == j || other.SourceID != c.SourceID {
 			continue
@@ -163,17 +177,47 @@ func cutCeiling(plan *clip.EditPlan, analyses map[string]clip.SourceAnalysis, sc
 	return min(end, c.StartMS+maximum)
 }
 
+// observedSpan is the footage a cut may grow into: the run of segments that
+// touch each other around it. The observer reports one segment per event, so a
+// cut that spans a boundary sits in observed footage on both sides; only a GAP
+// between two segments is unobserved. A cut no segment covers keeps its own
+// range.
+func observedSpan(a clip.SourceAnalysis, c clip.Cut) (int, int) {
+	start, end := c.StartMS, c.EndMS
+	covered := false
+	for _, segment := range a.Segments {
+		if segment.StartMS <= c.StartMS && segment.EndMS >= c.StartMS {
+			start, end, covered = segment.StartMS, segment.EndMS, true
+			break
+		}
+	}
+	if !covered {
+		return c.StartMS, c.EndMS
+	}
+	for extended := true; extended; {
+		extended = false
+		for _, segment := range a.Segments {
+			if segment.StartMS <= end && segment.EndMS > end {
+				end, extended = segment.EndMS, true
+			}
+			if segment.EndMS >= start && segment.StartMS < start {
+				start, extended = segment.StartMS, true
+			}
+		}
+	}
+	if end < c.EndMS {
+		// The cut runs past every observed segment: it is not grounded, so it
+		// gets no room either way.
+		return c.StartMS, c.EndMS
+	}
+	return start, end
+}
+
 // cutFloor is the earliest a cut's start may move: the segment it was observed
 // in, and never back over the previous already-selected range of that source.
 func cutFloor(plan *clip.EditPlan, analyses map[string]clip.SourceAnalysis, i int) int {
 	c := plan.Cuts[i]
-	start := c.StartMS
-	for _, segment := range analyses[c.SourceID].Segments {
-		if segment.StartMS <= c.StartMS && segment.EndMS >= c.EndMS {
-			start = segment.StartMS
-			break
-		}
-	}
+	start, _ := observedSpan(analyses[c.SourceID], c)
 	for j, other := range plan.Cuts {
 		if i == j || other.SourceID != c.SourceID {
 			continue

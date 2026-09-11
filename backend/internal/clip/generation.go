@@ -306,7 +306,7 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 		}
 		// The badge and the chips read the PROJECT, not the plan: always the
 		// owner's current campaign type and current answers.
-		video, err := s.renderer.Render(ctx, ws, edit.WithFacts(p.Disclosure, p.Answers, p.Template.Preset, p.CTA, p.Template.Accent), renderSources, func(ctx context.Context, id string, fn func(MediaSource) error) error {
+		video, err := s.renderer.Render(ctx, ws, edit.WithFacts(p.Disclosure, p.Answers, p.Template.Preset, p.CTA, p.Template.Accent).WithStyles(p.Template.CopyStyles), renderSources, func(ctx context.Context, id string, fn func(MediaSource) error) error {
 			for i, v := range b.Sources {
 				if v.ID == id {
 					return s.withSource(ctx, ws, v, sources[i].Info, fn)

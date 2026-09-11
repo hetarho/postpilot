@@ -106,7 +106,14 @@ func within(r, safe Region) bool {
 // windows meet · V9 the two permitted motions · V13 one anchor step between
 // consecutive cuts · V14 style frequency.
 // V4, V8, V11 and V12 belong to components this manifest does not carry yet.
-func Verify(m Manifest, ratio string) error {
+func Verify(m Manifest, ratio string) error { return VerifyApproved(m, ratio, nil) }
+
+// VerifyApproved is Verify for a clip whose template approved only some styles.
+// CDS-40's run rule asks a fourth consecutive use to alternate between 깔끔하게
+// and 메모; a template that approved only one of the two left the composer no
+// alternate, so the run is the owner's choice, not a defect. nil approves
+// every style.
+func VerifyApproved(m Manifest, ratio string, approved []string) error {
 	safe, ok := Safe(ratio)
 	if !ok {
 		return ViolationSafeArea
@@ -203,7 +210,7 @@ func Verify(m Manifest, ratio string) error {
 			}
 		}
 	}
-	return verifySequence(m)
+	return verifySequence(m, approved)
 }
 
 // V3: every text is read against its effective background — the plate or card
@@ -324,7 +331,8 @@ func styleOf(m Manifest, at slot) string {
 }
 
 // The per-clip rules of CDS-38 and CDS-40, read off the cut order.
-func verifySequence(m Manifest) error {
+func verifySequence(m Manifest, approved []string) error {
+	alternates := canAlternate(approved)
 	cuts := []slot{}
 	style, anchor := map[slot]string{}, map[slot]string{}
 	for _, e := range m {
@@ -359,7 +367,7 @@ func verifySequence(m Manifest) error {
 			run = 1
 		}
 		// A fourth consecutive use of one style must have alternated (CDS-40).
-		if run > 3 || bold > 2 {
+		if (run > Guards.RunMax && alternates) || bold > Guards.BoldMax {
 			return ViolationFrequency
 		}
 		if i == 0 {
@@ -386,4 +394,19 @@ func verifySequence(m Manifest) error {
 // which may be the owner's own words.
 func (m Manifest) String() string {
 	return fmt.Sprintf("clip layout manifest: %d elements", len(m))
+}
+
+// canAlternate reports whether the approved set holds both styles CDS-40
+// alternates between, which is what makes a long run avoidable.
+func canAlternate(approved []string) bool {
+	if approved == nil {
+		return true
+	}
+	n := 0
+	for _, style := range Guards.RunAlternate {
+		if slices.Contains(approved, style) {
+			n++
+		}
+	}
+	return n >= 2
 }

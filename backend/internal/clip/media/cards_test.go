@@ -75,7 +75,7 @@ func TestCardGeometryAndGoldensPerRatio(t *testing.T) {
 							return fmt.Errorf("%s/%s %s left the safe area: %+v", ratio, kind, e.Kind, e.Region)
 						}
 					}
-					if err := clip.VerifyLayout(ratio, withBadge(measured.Elements(0), ratio, 19800)); err != nil {
+					if err := clip.VerifyLayout(ratio, nil, withBadge(measured.Elements(0), ratio, 19800)); err != nil {
 						return fmt.Errorf("%s/%s/%s: %w", ratio, kind, name, err)
 					}
 				}

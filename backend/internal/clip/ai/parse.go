@@ -264,11 +264,16 @@ func parsePlan(cfg Config, input clip.PlanningInput, raw string) (clip.EditPlan,
 				return clip.EditPlan{}, outputError("plan_volume")
 			}
 		}
+		// A chip is one of CDS-30's reserved labels and at most two show at
+		// once. A label outside that vocabulary (the model naming 상호, say,
+		// which the hook card already carries) is dropped, not refused: the
+		// renderer would place nothing for it, so refusing the whole plan
+		// would cost a paid retry for no visible difference.
 		chips := []string{}
 		if c.Chips != nil {
 			for _, label := range *c.Chips {
-				if !slices.Contains(design.Fact.Chips, label) {
-					return clip.EditPlan{}, outputError("plan_chip_label")
+				if !slices.Contains(design.Fact.Chips, label) || slices.Contains(chips, label) || len(chips) >= 2 {
+					continue
 				}
 				chips = append(chips, label)
 			}

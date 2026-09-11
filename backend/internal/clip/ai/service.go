@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math"
 	"slices"
 	"unicode/utf8"
 
@@ -271,6 +270,7 @@ func (s *Service) compose(ctx context.Context, input clip.PlanningInput, plan *c
 	for _, a := range input.Analyses {
 		sources = append(sources, a.Source.RenderSource)
 	}
+	plan.Styles = input.Template.CopyStyles
 	_, err = s.captions.Layout(ctx, *plan, sources)
 	return err
 }
@@ -351,7 +351,9 @@ func validatePlan(cfg Config, in clip.PlanningInput, plan clip.EditPlan) error {
 	if plan.Ratio != in.Ratio {
 		return outputError("plan_ratio")
 	}
-	if math.Abs(float64(plan.DurationMS)-float64(in.TargetDurationMS)) > float64(cfg.TargetToleranceMS) {
+	// The compiler holds the target from above; from below it may deliver
+	// less when the footage ran out, so only an overrun is the model's error.
+	if plan.DurationMS-in.TargetDurationMS > cfg.TargetToleranceMS {
 		return outputError("plan_target_duration")
 	}
 	sources := make([]clip.RenderSource, 0, len(in.Analyses))

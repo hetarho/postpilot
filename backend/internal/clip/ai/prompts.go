@@ -3,8 +3,10 @@ package ai
 import (
 	"bytes"
 	"encoding/json"
+	"strings"
 
 	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/clip/design"
 )
 
 const observePrompt = `You observe one real source-video chunk; report facts, not an edit plan.
@@ -20,7 +22,7 @@ Use only source_id values in analyses. Cut ranges are absolute integer source mi
 Caption start_ms/end_ms are relative to the trimmed cut, satisfy 0 <= start_ms < end_ms <= cut duration and define its exposure. Copy is at most two short lines of supported Korean/Latin text, no emoji. Preserve names, numbers and ko/en answer text faithfully; infer the copy language from the supplied recipe and answers, never translate quoted facts without instruction.
 You do NOT choose the caption's style, position or accent: the caller decides all three from the scene and the sentence, so the same input always gives the same clip. Write the words only.
 short_text is the SAME fact in 14 characters or fewer, used when the cut is too short to show the full sentence; keyword is the one number or word the sentence turns on, copied EXACTLY from text, or empty.
-chips names which of 상호 · 위치 · 가격 · 메뉴 · 영업 · 평점 this cut states on screen, at most two and only labels the answers actually carry.
+chips names which of {{chips}} this cut states on screen, at most two and only labels the answers actually carry; the business name is not a chip, the opening card carries it.
 hook is the opening card's title: at most two lines of 9 characters, in the template preset's tone.
 Voice: first person and experiential. No emoji, no ㅋㅋ, no ㄹㅇ, no 최고 or 역대급. EVERY number and every proper noun — 상호, 메뉴, 가격, 인원, 시간 — must appear in the answers; a sentence that invents one is dropped, so never invent one.
 Cut length is 1.2 to 6.0 seconds, and a food close-up at most 4.0.
@@ -67,7 +69,10 @@ func BuildPlanPrompt(in clip.PlanningInput, fadeMS int) (string, string) {
 		}
 		analyses = append(analyses, map[string]any{"source_id": a.Source.ID, "source_name": a.Source.Filename, "duration_ms": a.Source.Info.DurationMS, "width": a.Source.Info.Width, "height": a.Source.Info.Height, "has_audio": a.Source.Info.HasAudio, "segments": segments})
 	}
-	return planPrompt + string(planSchema), promptJSON(map[string]any{
+	// The chip vocabulary is CDS-30's, read from the design tables so the prompt
+	// can never offer the model a label the parser will not accept.
+	system := strings.ReplaceAll(planPrompt, "{{chips}}", strings.Join(design.Fact.Chips, " · ")) + string(planSchema)
+	return system, promptJSON(map[string]any{
 		"template": map[string]any{"name": in.Template.Name, "information_fields": fields, "cut_guidance": in.Template.CutGuidance, "copy_styles": in.Template.CopyStyles, "accent": in.Template.Accent},
 		"answers":  answers, "ratio": in.Ratio, "target_duration_ms": in.TargetDurationMS, "fade_ms": fadeMS, "analyses": analyses,
 	})

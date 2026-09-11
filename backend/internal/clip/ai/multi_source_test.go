@@ -10,6 +10,8 @@ import (
 	"testing"
 
 	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/clip/ai"
+	"github.com/postpilot/backend/internal/clip/design"
 	"github.com/postpilot/backend/internal/llm"
 )
 
@@ -141,7 +143,6 @@ func TestMultiSourceOutputDiagnosticsPreserveFailureAndUsage(t *testing.T) {
 		// is an unknown property, not a disallowed value.
 		{"style", "output_shape", func(v map[string]any) { firstCut(v)["caption"].(map[string]any)["style"] = "bold" }},
 		{"accent", "output_shape", func(v map[string]any) { firstCut(v)["caption"].(map[string]any)["accent"] = "coral" }},
-		{"chip label", "plan_chip_label", func(v map[string]any) { firstCut(v)["chips"] = []string{"주차"} }},
 		{"shape", "output_shape", func(v map[string]any) { v["private-canary"] = "private-canary" }},
 		{"field type", "output_field_type", func(v map[string]any) { firstCut(v)["start_ms"] = 1.5 }},
 	} {
@@ -158,6 +159,26 @@ func TestMultiSourceOutputDiagnosticsPreserveFailureAndUsage(t *testing.T) {
 				t.Fatal("diagnostics changed privacy, failure, usage or retry behavior")
 			}
 		})
+	}
+}
+
+// A chip outside CDS-30's vocabulary is dropped, never a reason to refuse the
+// plan: the renderer places nothing for it, so a paid retry would change
+// nothing on screen. The prompt offers exactly the labels the parser keeps.
+func TestUnknownChipLabelsAreDroppedNotRefused(t *testing.T) {
+	in, wire := multiSourcePlan()
+	firstCut(wire)["chips"] = []any{"상호", "주차", "위치", "위치", "가격"}
+	s, _, _ := newService(t, raw(wire), true)
+	plan, _, err := s.Plan(t.Context(), testRef(), in)
+	if err != nil {
+		t.Fatalf("plan refused over an unknown chip: %v", err)
+	}
+	if got := plan.Cuts[0].Chips; len(got) != 2 || got[0] != "위치" || got[1] != "가격" {
+		t.Fatalf("chips = %v, want the two reserved labels in order", got)
+	}
+	system, _ := ai.BuildPlanPrompt(in, 200)
+	if !strings.Contains(system, strings.Join(design.Fact.Chips, " · ")) || strings.Contains(system, "상호 · 위치") {
+		t.Fatal("the prompt's chip vocabulary is not the design table's")
 	}
 }
 

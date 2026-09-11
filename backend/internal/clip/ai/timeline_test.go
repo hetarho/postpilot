@@ -285,3 +285,79 @@ func TestACutThatCannotReachTheFloorIsRefused(t *testing.T) {
 		t.Fatalf("a cut under the floor was composed anyway: %v", err)
 	}
 }
+
+// A target the footage cannot hold is not the model's error. When every cut
+// sits at its scene's ceiling or the end of what was observed, the compiler
+// delivers the length the footage holds — as long as the length floor accepts
+// it; TestComposeCannotFillTargetFromUnobservedOrReusedFootage keeps the
+// refusal for a clip that would fall under the floor.
+func TestFootageBoundClipShipsAtTheLengthItHolds(t *testing.T) {
+	in := planningInput()
+	base := in.Analyses[0]
+	in.Analyses = nil
+	for i := 0; i < 3; i++ {
+		a := base
+		a.Source.ID = fmt.Sprintf("source-%d", i)
+		a.Source.Fingerprint = fmt.Sprintf("hash-%d", i)
+		a.Segments = slices.Clone(base.Segments)
+		in.Analyses = append(in.Analyses, a)
+	}
+	scene, _ := clip.CutScene(clip.Cut{SourceID: "source-0"}, in.Analyses[0])
+	_, ceiling := design.CutBounds(scene)
+	cut := func(id, source string, start, end int) map[string]any {
+		return map[string]any{"id": id, "source_id": source, "start_ms": start, "end_ms": end, "focal": map[string]any{"x": .5, "y": .5}, "chips": []string{},
+			"caption": map[string]any{"text": "여행", "start_ms": 200, "end_ms": end - start - 200, "short_text": "여행", "keyword": ""}}
+	}
+	// Two cuts at the ceiling and one that has used all of its source: the
+	// footage holds 2×ceiling + 4.5 s, and the target asks for 3 s more.
+	in.Analyses[2].Source.Info.DurationMS, in.Analyses[2].Segments[0].EndMS = 4500, 4500
+	held := 2*ceiling + 4500
+	in.TargetDurationMS = held + 3000
+	wire := map[string]any{"ratio": "vertical", "duration_ms": in.TargetDurationMS, "hook": "정확한 여행",
+		"cuts": []any{cut("a", "source-0", 0, ceiling), cut("b", "source-1", 0, ceiling), cut("c", "source-2", 0, 4500)}}
+	s, _, _ := newService(t, raw(wire), true)
+	plan, _, err := s.Plan(t.Context(), testRef(), in)
+	if err != nil {
+		t.Fatalf("a footage-bound clip above the floor was refused: %v", err)
+	}
+	if plan.DurationMS != held-plan.TransitionTotal() || plan.DurationMS >= in.TargetDurationMS {
+		t.Fatalf("duration %d, want the %d the footage holds less %d of transitions", plan.DurationMS, held, plan.TransitionTotal())
+	}
+}
+
+// The observer reports one segment per event, so a cut across a boundary sits
+// in observed footage on both sides; only a gap is unobserved. Growth may run
+// on into the touching segment.
+func TestACutMayGrowAcrossTouchingSegments(t *testing.T) {
+	in := planningInput()
+	base := in.Analyses[0]
+	in.Analyses = nil
+	for i := 0; i < 3; i++ {
+		a := base
+		a.Source.ID = fmt.Sprintf("source-%d", i)
+		a.Source.Fingerprint = fmt.Sprintf("hash-%d", i)
+		a.Segments = slices.Clone(base.Segments)
+		in.Analyses = append(in.Analyses, a)
+	}
+	scene, _ := clip.CutScene(clip.Cut{SourceID: "source-0"}, in.Analyses[0])
+	_, ceiling := design.CutBounds(scene)
+	first, second := base.Segments[0], base.Segments[0]
+	first.EndMS, second.StartMS = 2800, 2800
+	in.Analyses[0].Segments = []clip.Segment{first, second}
+	cut := func(id, source string, start, end int) map[string]any {
+		return map[string]any{"id": id, "source_id": source, "start_ms": start, "end_ms": end, "focal": map[string]any{"x": .5, "y": .5}, "chips": []string{},
+			"caption": map[string]any{"text": "여행", "start_ms": 200, "end_ms": end - start - 200, "short_text": "여행", "keyword": ""}}
+	}
+	// Only the straddling cut has room; it must reach its ceiling to meet the target.
+	in.TargetDurationMS = 2*ceiling + ceiling
+	wire := map[string]any{"ratio": "vertical", "duration_ms": in.TargetDurationMS, "hook": "정확한 여행",
+		"cuts": []any{cut("straddle", "source-0", 1000, 4000), cut("b", "source-1", 0, ceiling), cut("c", "source-2", 0, ceiling)}}
+	s, _, _ := newService(t, raw(wire), true)
+	plan, _, err := s.Plan(t.Context(), testRef(), in)
+	if err != nil {
+		t.Fatalf("growth across touching segments refused: %v", err)
+	}
+	if got := plan.Cuts[0].EndMS; got != 1000+ceiling {
+		t.Fatalf("straddling cut ends at %d, want %d", got, 1000+ceiling)
+	}
+}

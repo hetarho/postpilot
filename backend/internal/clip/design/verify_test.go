@@ -287,3 +287,29 @@ func TestVerifyRejectsOneFixturePerCheck(t *testing.T) {
 		})
 	}
 }
+
+// CDS-40's run rule asks a fourth consecutive use to alternate between 깔끔하게
+// and 메모. A template that approved only one of the two gave the composer no
+// alternate, so the run is the owner's choice and the verifier lets it through;
+// with both approved, or with nothing said, the run is still a defect.
+func TestSingleApprovedStyleMayRun(t *testing.T) {
+	m := conformant()
+	run := design.Manifest{m[0]}
+	run[0].EndMS = 3120 + 3*7000
+	for i := range 4 {
+		e := m[3]
+		e.Cut, e.Anchor = i, []string{"bottom", "lower_mid", "bottom", "lower_mid"}[i]
+		e.Region.Y = []float64{1292, 1067, 1292, 1067}[i]
+		e.StartMS, e.EndMS = 120+i*7000, 3120+i*7000
+		run = append(run, e)
+	}
+	if err := design.Verify(run, "vertical"); !errors.Is(err, design.ViolationFrequency) {
+		t.Fatalf("an avoidable run passed: %v", err)
+	}
+	if err := design.VerifyApproved(run, "vertical", []string{"clean", "memo"}); !errors.Is(err, design.ViolationFrequency) {
+		t.Fatalf("a run the approved set could have broken passed: %v", err)
+	}
+	if err := design.VerifyApproved(run, "vertical", []string{"clean"}); err != nil {
+		t.Fatalf("a single approved style cannot alternate, yet the run was refused: %v", err)
+	}
+}
