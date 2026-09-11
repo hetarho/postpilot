@@ -202,7 +202,7 @@ func newReleaseHarness(t *testing.T, mode string, stress bool) *releaseHarness {
 	if _, err = d.Writer.Exec("INSERT INTO credit_lots(id,user_id,kind,granted,remaining,created_at) VALUES ('release-extra','release-user','purchased',5000,5000,?)", time.Now().UTC().Format(time.RFC3339Nano)); err != nil {
 		t.Fatal(err)
 	}
-	cfg := &config.Config{ClipWorkRoot: filepath.Join(root, "work"), ClipFFmpegPath: "/usr/local/bin/ffmpeg", ClipFFprobePath: "/usr/local/bin/ffprobe", ClipResvgPath: "/usr/local/bin/resvg", ClipFontPath: "/usr/share/postpilot-fonts/pretendard/PretendardVariable.ttf", ClipWorkStaleAge: time.Hour, ClipMediaTimeout: 15 * time.Minute, ClipSourceBatchTTL: 6 * time.Hour, PresignPutTTL: 10 * time.Minute, PresignGetTTL: time.Minute, ClipQuoteTTL: 5 * time.Minute, OrphanMinAge: time.Hour}
+	cfg := &config.Config{ClipWorkRoot: filepath.Join(root, "work"), ClipFFmpegPath: "/usr/local/bin/ffmpeg", ClipFFprobePath: "/usr/local/bin/ffprobe", ClipResvgPath: "/usr/local/bin/resvg", ClipFontPath: "/usr/share/postpilot-fonts/pretendard/PretendardVariable.ttf", ClipDisplayFontPath: "/usr/share/postpilot-fonts/paperlogy/Paperlogy-8ExtraBold.ttf", ClipWorkStaleAge: time.Hour, ClipMediaTimeout: 15 * time.Minute, ClipSourceBatchTTL: 6 * time.Hour, PresignPutTTL: 10 * time.Minute, PresignGetTTL: time.Minute, ClipQuoteTTL: 5 * time.Minute, OrphanMinAge: time.Hour}
 	mcfg := config.ClipMedia(cfg)
 	runner := releaseRunner{ExecRunner: clipmedia.ExecRunner{StdoutLimit: mcfg.StdoutLimit, StderrLimit: mcfg.StderrLimit, WaitDelay: mcfg.WaitDelay}, metrics: metrics, root: cfg.ClipWorkRoot}
 	adapter, err := clipmedia.New(mcfg, runner)
@@ -266,7 +266,12 @@ func newReleaseHarness(t *testing.T, mode string, stress bool) *releaseHarness {
 		client.Transport = h.aborted
 		h.client = postpilotv1connect.NewClipServiceClient(&client, rpcServer.URL)
 	}
-	recipe := clip.Recipe{Name: "synthetic release", Preset: "restaurant", InformationFields: []clip.InformationField{{Label: "place", Prompt: "where"}}, CopyStyles: []string{"clean"}}
+	// The reserved labels a clip's own chips and cards read (CDS-30, CDS-28).
+	// Two of them plus a campaign type are what the approval gate requires
+	// before a credit is reserved (CDS-1, CDS-5).
+	recipe := clip.Recipe{Name: "synthetic release", Preset: "restaurant", InformationFields: []clip.InformationField{
+		{Label: "상호", Prompt: "가게 이름"}, {Label: "위치", Prompt: "어디"}, {Label: "place", Prompt: "where"},
+	}, CopyStyles: []string{"clean"}}
 	ratio := "horizontal"
 	if strings.HasPrefix(mode, "multi-source") {
 		recipe.CopyStyles, recipe.Accent, recipe.CutGuidance, ratio = []string{"clean", "memo"}, "amber", "균등분할", "vertical"
@@ -275,7 +280,9 @@ func newReleaseHarness(t *testing.T, mode string, stress bool) *releaseHarness {
 	if err != nil {
 		t.Fatal(err)
 	}
-	p, err := projects.CreateProject(ctx, "release-user", clip.ProjectInput{Title: "synthetic release", VideoTemplateID: template.ID, Ratio: ratio, TargetDurationMS: 15000, Answers: []clip.Answer{{Label: "place", Text: "fixture"}}})
+	p, err := projects.CreateProject(ctx, "release-user", clip.ProjectInput{Title: "synthetic release", VideoTemplateID: template.ID, Ratio: ratio, TargetDurationMS: 15000, Disclosure: "ad", Answers: []clip.Answer{
+		{Label: "상호", Text: "연남 김밥"}, {Label: "위치", Text: "서울 연남동"}, {Label: "place", Text: "fixture"},
+	}})
 	if err != nil {
 		t.Fatal(err)
 	}

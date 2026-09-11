@@ -40,7 +40,15 @@ export const CLIP_SHADOW = design.shadow
 export const CLIP_SPACING = design.spacing
 export const CLIP_TIMING = design.timing
 export const CLIP_GUARDS = design.guards
+/** CDS-36's transitions: the default, the fade a scene change earns and the
+ *  fade-through-black nothing offers yet. */
+export const CLIP_TRANSITION = design.transition
 export const CLIP_CLASSES = design.classes
 export const CLIP_SCENE_STYLES = design.scene_styles
 export const CLIP_FACTS = design.facts
 export const CLIP_ACCENT_HEX = design.accent
+/** The voice CDS-42 refuses: emoji and these tokens. */
+export const CLIP_VOICE = design.voice
+/** The type scale itself, for the two texts that answer to a role rather than to
+ *  a copy style: the hook card's sentence and its category chip (CDS-28). */
+export const CLIP_TYPE = design.type

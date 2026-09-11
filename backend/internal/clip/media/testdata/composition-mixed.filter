@@ -1,0 +1,1 @@
+[0:v:0]settb=AVTB,setpts=PTS-STARTPTS[v0];[1:v:0]settb=AVTB,setpts=PTS-STARTPTS[v1];[2:v:0]settb=AVTB,setpts=PTS-STARTPTS[v2];[v0][v1]concat=n=2:v=1:a=0[vx1];[vx1][v2]xfade=transition=fade:duration=0.200:offset=10.000000000[vx2];[vx2]trim=end_frame=456,setpts=PTS-STARTPTS,format=yuv420p[v]

@@ -1,4 +1,12 @@
-import { CLIP_FACTS, CLIP_GUARDS, CLIP_TIMING, clipStyle } from '@/shared/config'
+import {
+  CLIP_FACTS,
+  CLIP_GUARDS,
+  CLIP_TIMING,
+  CLIP_TRANSITION,
+  CLIP_TYPE,
+  CLIP_VOICE,
+  clipStyle,
+} from '@/shared/config'
 import {
   CLIP_ACCENTS,
   COPY_STYLES,
@@ -22,12 +30,20 @@ export interface ClipCaption {
   startMs: number
   endMs: number
 }
+/** CDS-36's three transitions. The value is the one INTO the cut, so the first
+ *  cut of a plan always carries 0: a clip does not fade in from nothing. 300 is
+ *  the fade-through-black no control offers yet. */
+export const CLIP_TRANSITIONS = [0, CLIP_TRANSITION.fade_ms, CLIP_TRANSITION.black_ms] as const
+/** What step 2 offers: a hard cut or the fade a scene change earns. */
+export const CLIP_TRANSITION_CHOICES = [0, CLIP_TRANSITION.fade_ms] as const
 export interface ClipEditCut {
   id: string
   sourceId: string
   fingerprint: string
   startMs: number
   endMs: number
+  /** The transition into this cut (CDS-36): 0 is a hard cut. */
+  transitionMs: number
   copy: ClipCaption
   /** Reserved fact labels whose chips belong on this cut, at most two. */
   chips: string[]
@@ -36,6 +52,8 @@ export interface ClipEditCut {
 export interface ClipEditPlan {
   durationMs: number
   cuts: ClipEditCut[]
+  /** The opening card's one sentence (CDS-28). Empty renders no hook card. */
+  hook: string
 }
 export interface RetainedClipSource {
   id: string
@@ -67,11 +85,17 @@ export type ClipEdit =
   | {
       type: 'cut'
       id: string
-      patch: Partial<Pick<ClipEditCut, 'startMs' | 'endMs' | 'volumePermille'>>
+      patch: Partial<Pick<ClipEditCut, 'startMs' | 'endMs' | 'volumePermille' | 'transitionMs'>>
     }
   | { type: 'copy'; id: string; patch: Partial<ClipCaption> }
   | { type: 'chips'; id: string; chips: string[] }
-export function editClipPlan(plan: ClipEditPlan, edit: ClipEdit, fadeMs: number): ClipEditPlan {
+  | { type: 'hook'; hook: string }
+/** The clip is its footage less what each cut's own transition overlaps
+ *  (CDS-36) — never one fade times the boundaries. */
+export function clipPlanDuration(cuts: readonly ClipEditCut[]): number {
+  return cuts.reduce((sum, c, i) => sum + c.endMs - c.startMs - (i === 0 ? 0 : c.transitionMs), 0)
+}
+export function editClipPlan(plan: ClipEditPlan, edit: ClipEdit): ClipEditPlan {
   const next = copyClipPlan(plan)
   if (edit.type === 'move') {
     if (
@@ -86,6 +110,7 @@ export function editClipPlan(plan: ClipEditPlan, edit: ClipEdit, fadeMs: number)
     const [cut] = next.cuts.splice(edit.from, 1)
     next.cuts.splice(edit.to, 0, cut!)
   } else if (edit.type === 'remove') next.cuts = next.cuts.filter((c) => c.id !== edit.id)
+  else if (edit.type === 'hook') next.hook = edit.hook
   else
     next.cuts = next.cuts.map((c) =>
       c.id !== edit.id
@@ -96,9 +121,10 @@ export function editClipPlan(plan: ClipEditPlan, edit: ClipEdit, fadeMs: number)
             ? { ...c, chips: [...edit.chips] }
             : { ...c, copy: { ...c.copy, ...edit.patch } },
     )
-  next.durationMs =
-    next.cuts.reduce((sum, c) => sum + c.endMs - c.startMs, 0) -
-    fadeMs * Math.max(0, next.cuts.length - 1)
+  // A reorder carries each cut's transition with it, so whichever cut ends up
+  // in front leads in from nothing — the same normalisation the server makes.
+  if (next.cuts[0]) next.cuts[0] = { ...next.cuts[0], transitionMs: 0 }
+  next.durationMs = clipPlanDuration(next.cuts)
   return next
 }
 /** Korean syllables, spaces and punctuation excluded — the same count the
@@ -125,6 +151,36 @@ function withinStyleLimits(text: string, style: ClipCaption['style']): boolean {
   const lines = text.split('\n')
   return lines.length <= rule.lines && lines.every((line) => copyChars(line) <= rule.chars)
 }
+/** The hook card's sentence: two lines of nine at most (CDS-28), grounded in the
+ *  owner's own answers (CDS-42). A hook the field refuses would be dropped by
+ *  the compiler rather than shown, so it is refused here where it is typed. */
+export function withinHookLimits(hook: string): boolean {
+  const lines = hook.split('\n')
+  return lines.length <= 2 && copyChars(hook) <= 2 * CLIP_TYPE.hook.chars
+}
+
+/** CDS-42: a sentence may only state numbers and Latin names the owner's own
+ *  answers already carry, and never the voice the design system refuses. The
+ *  server checks the same thing on the hook the model writes; this is what lets
+ *  the field refuse one the owner types. */
+export function groundedInAnswers(
+  text: string,
+  answers: ReadonlyArray<{ label: string; text: string }>,
+): boolean {
+  if (text.trim() === '') return true
+  if (CLIP_VOICE.banned.some((token: string) => text.includes(token))) return false
+  if (/\p{Extended_Pictographic}/u.test(text)) return false
+  const haystack = answers.map((a) => a.text).join(' ')
+  const digits = (value: string) => value.replace(/\D/gu, '')
+  for (const number of text.match(/[\d,]*\d/gu) ?? [])
+    if (!digits(haystack).includes(digits(number))) return false
+  // A capitalised Latin run is a name the owner has to have given (CDS-42);
+  // lowercase words are ordinary prose.
+  for (const token of text.match(/\p{Lu}[\p{L}']+/gu) ?? [])
+    if (!haystack.toLowerCase().includes(token.toLowerCase())) return false
+  return true
+}
+
 /** CDS-38: consecutive cuts move at most one anchor step, measured only between
  *  cuts that share a style — a style change is a deliberate visual change. */
 function withinAnchorStep(cuts: readonly ClipEditCut[], cut: ClipEditCut): boolean {
@@ -150,7 +206,11 @@ export function validateClipPlan(plan: ClipEditPlan, state: ClipEditingState) {
       identity: !source || !c.id || plan.cuts.filter((v) => v.id === c.id).length !== 1,
       start: !integer(c.startMs) || c.startMs < 0 || c.startMs >= c.endMs,
       end: !integer(c.endMs) || c.endMs > (source?.durationMs ?? 0) || c.endMs <= c.startMs,
-      duration: !integer(duration) || duration <= 2 * state.fadeMs,
+      duration: !integer(duration) || duration <= 2 * CLIP_TRANSITION.fade_ms,
+      // CDS-36 admits three transitions, and the first cut takes none.
+      transition:
+        !(CLIP_TRANSITIONS as readonly number[]).includes(c.transitionMs) ||
+        (plan.cuts[0] === c && c.transitionMs !== 0),
       // The rune ceiling is the contract's; the per-style line and character
       // limits below are the design system's, and both are mirrored here for
       // immediacy only — the server's verifier stays the authority.
@@ -200,21 +260,25 @@ export function validateClipPlan(plan: ClipEditPlan, state: ClipEditingState) {
         i >= CLIP_GUARDS.run_max &&
         placed.slice(i - CLIP_GUARDS.run_max, i + 1).every((v) => v.copy.style === cut.copy.style),
     )
-  const duration =
-    plan.cuts.reduce((sum, c) => sum + c.endMs - c.startMs, 0) -
-    state.fadeMs * Math.max(0, plan.cuts.length - 1)
+  const duration = clipPlanDuration(plan.cuts)
   const timeline =
     !integer(plan.durationMs) ||
     plan.durationMs !== duration ||
     duration < state.minDurationMs ||
     duration > state.maxDurationMs
   const count = plan.cuts.length === 0 || plan.cuts.length > state.maxCuts
+  const hook = !withinHookLimits(plan.hook)
   return {
     cuts,
     timeline,
     count,
     frequency,
+    hook,
     valid:
-      !count && !timeline && !frequency && cuts.every((c) => Object.values(c).every((v) => !v)),
+      !count &&
+      !timeline &&
+      !frequency &&
+      !hook &&
+      cuts.every((c) => Object.values(c).every((v) => !v)),
   }
 }

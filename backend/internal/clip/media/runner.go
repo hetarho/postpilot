@@ -12,6 +12,10 @@ import (
 type Command struct {
 	Binary, Dir string
 	Args        []string
+	// FFmpeg prints a filter's own report — loudnorm's measurement JSON among
+	// them — on stderr and nowhere else, so a caller that needs one asks for
+	// stderr instead of stdout. The bound and the failure text are unchanged.
+	CaptureStderr bool
 }
 type Runner interface {
 	Run(context.Context, Command) ([]byte, error)
@@ -54,6 +58,14 @@ func (r ExecRunner) Run(ctx context.Context, command Command) ([]byte, error) {
 	}
 	if out.exceeded {
 		return nil, errors.New("media command output exceeded its bound")
+	}
+	if command.CaptureStderr {
+		// A filter report arrives at the END of the log, so a truncated stderr
+		// is a missing report, not a shorter one.
+		if stderr.exceeded {
+			return nil, errors.New("media command log exceeded its bound")
+		}
+		return stderr.data, nil
 	}
 	return out.data, nil
 }

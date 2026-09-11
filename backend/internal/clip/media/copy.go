@@ -21,13 +21,21 @@ import (
 	"golang.org/x/image/font/sfnt"
 )
 
+// The two bundled faces (CDS-17, CLIP-13), each pinned by size and checksum:
+// the renderer never discovers a font and never substitutes one.
 const pretendardSHA256 = "3090ccde0442bb347aa7685d9ba8b17436a60682df6e8f92a9a670de14056e22"
+const paperlogySHA256 = "fb0324f8ac057e50f4f4632331617e347bfe5a04184f7b0db514be682fb6b25c"
+const pretendardBytes, paperlogyBytes = 6739336, 1304560
 const fontFamily = "Pretendard Variable"
 
 type Rendering struct {
 	media *Adapter
 	cfg   clip.RenderConfig
 	font  *sfnt.Font
+	// The secondary face, by the family name the file itself declares. Nil only
+	// when it is not configured, which the constructor refuses.
+	display       *sfnt.Font
+	displayFamily string
 }
 
 var _ clip.Renderer = (*Rendering)(nil)
@@ -36,23 +44,51 @@ func NewRenderer(media *Adapter, cfg clip.RenderConfig) (*Rendering, error) {
 	if media == nil || cfg.FadeMS != design.Transition.FadeMS || cfg.FPS != 30 || cfg.MaxCuts <= 0 || cfg.MaxCopyRunes <= 0 || cfg.MinDurationMS != 15000 || cfg.MaxDurationMS != 90000 || !filepath.IsAbs(cfg.ResvgPath) || !filepath.IsAbs(cfg.FontPath) {
 		return nil, errors.New("invalid clip renderer configuration")
 	}
-	info, err := os.Lstat(cfg.FontPath)
-	if err != nil || !info.Mode().IsRegular() || info.Size() != 6739336 {
+	font, err := bundledFace(cfg.FontPath, pretendardBytes, pretendardSHA256)
+	if err != nil {
+		return nil, err
+	}
+	if !filepath.IsAbs(cfg.DisplayFontPath) {
+		return nil, errors.New("invalid clip renderer configuration")
+	}
+	display, err := bundledFace(cfg.DisplayFontPath, paperlogyBytes, paperlogySHA256)
+	if err != nil {
+		return nil, err
+	}
+	return &Rendering{media, cfg, font, display, design.FontFamily("paperlogy")}, nil
+}
+
+// bundledFace loads one pinned face: the size and the checksum both have to
+// match, so a swapped or truncated file fails the constructor rather than the
+// render.
+func bundledFace(path string, size int64, sum string) (*sfnt.Font, error) {
+	info, err := os.Lstat(path)
+	if err != nil || !info.Mode().IsRegular() || info.Size() != size {
 		return nil, errors.New("bundled clip font is missing or changed")
 	}
-	data, err := os.ReadFile(cfg.FontPath)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
 	hash := sha256.Sum256(data)
-	if hex.EncodeToString(hash[:]) != pretendardSHA256 {
+	if hex.EncodeToString(hash[:]) != sum {
 		return nil, errors.New("bundled clip font checksum mismatch")
 	}
-	font, err := sfnt.Parse(data)
-	if err != nil {
-		return nil, err
+	return sfnt.Parse(data)
+}
+
+// family and face answer which of the two bundled faces a type role is set in.
+func (r *Rendering) family(role design.TypeRole) string {
+	if role.Face == "paperlogy" {
+		return r.displayFamily
 	}
-	return &Rendering{media, cfg, font}, nil
+	return fontFamily
+}
+func (r *Rendering) face(role design.TypeRole) *sfnt.Font {
+	if role.Face == "paperlogy" {
+		return r.display
+	}
+	return r.font
 }
 
 func escaped(value string) string {
@@ -60,7 +96,8 @@ func escaped(value string) string {
 	_ = xml.EscapeText(&b, []byte(value))
 	return b.String()
 }
-func (r *Rendering) checkCopy(text string) error {
+func (r *Rendering) checkCopy(text string, role design.TypeRole) error {
+	font := r.face(role)
 	var buf sfnt.Buffer
 	for _, c := range text {
 		if c == '\n' {
@@ -72,7 +109,7 @@ func (r *Rendering) checkCopy(text string) error {
 		if c == '\u200d' || c == '\ufe0e' || c == '\ufe0f' {
 			continue
 		}
-		id, err := r.font.GlyphIndex(&buf, c)
+		id, err := font.GlyphIndex(&buf, c)
 		if err != nil || id == 0 {
 			return clip.ErrInvalid
 		}
@@ -125,21 +162,29 @@ func copyCandidates(text string, maxLines int) ([][]string, []string, error) {
 
 // Measured at 100 px with the role's tracking expressed in px, so scaling the
 // result by size/100 gives exactly the tracking the final SVG asks for.
-func measureSVG(values []string, weight int, tracking float64) string {
+func measureSVG(values []string, weight int, tracking float64, family string) string {
 	var b strings.Builder
 	b.WriteString(`<svg xmlns="http://www.w3.org/2000/svg" width="10000" height="500">`)
 	for i, text := range values {
-		fmt.Fprintf(&b, `<text id="m%d" x="0" y="200" xml:space="preserve" font-family="%s" font-weight="%d" font-size="100" letter-spacing="%.4f">%s</text>`, i, fontFamily, weight, tracking*100, escaped(text))
+		fmt.Fprintf(&b, `<text id="m%d" x="0" y="200" xml:space="preserve" font-family="%s" font-weight="%d" font-size="100" letter-spacing="%.4f">%s</text>`, i, family, weight, tracking*100, escaped(text))
 	}
 	b.WriteString(`</svg>`)
 	return b.String()
 }
+
+// Both faces are handed to resvg explicitly, and system discovery stays off:
+// the SVG asks for one of the two family names by hand (CLIP-13).
 func (r *Rendering) resvg(ctx context.Context, ws clip.MediaWorkspace, args ...string) ([]byte, error) {
-	return r.media.run(ctx, ws, r.cfg.ResvgPath, append([]string{"--skip-system-fonts", "--use-font-file", r.cfg.FontPath, "--font-family", fontFamily}, args...)...)
+	return r.media.run(ctx, ws, r.cfg.ResvgPath, append([]string{
+		"--skip-system-fonts",
+		"--use-font-file", r.cfg.FontPath,
+		"--use-font-file", r.cfg.DisplayFontPath,
+		"--font-family", fontFamily,
+	}, args...)...)
 }
-func (r *Rendering) measure(ctx context.Context, ws clip.MediaWorkspace, values []string, weight int, tracking float64) (map[string]clip.Region, error) {
+func (r *Rendering) measure(ctx context.Context, ws clip.MediaWorkspace, values []string, weight int, tracking float64, family string) (map[string]clip.Region, error) {
 	path := filepath.Join(ws.Path, "copy-measure.svg")
-	data := []byte(measureSVG(values, weight, tracking))
+	data := []byte(measureSVG(values, weight, tracking, family))
 	if err := r.media.capacity(ws, int64(len(data))); err != nil {
 		return nil, err
 	}
@@ -284,12 +329,32 @@ func paint(token string) (string, string) {
 
 // Every colour, radius, stroke and offset below is a CDS token read from the
 // design system; the only arithmetic is placement.
-func copySVG(canvas clip.Canvas, c clip.Copy, l copyLayout) string {
+func copySVG(canvas clip.Canvas, c clip.Copy, l copyLayout, ground Luminance) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, `<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d">`, canvas.Width, canvas.Height)
 	p, s := l.Region, l.Style
 	accent := design.Accent[c.Accent]
 	radius := design.Spacing.RadiusBox
+	// A scrim appears only under an UNPLATED style, only at its own anchor, and
+	// only when the sampled ground demands one (CDS-32, CDS-44). It shares the
+	// copy's own in and out, which it gets by riding the same plate.
+	if s.Plate == "" && ground.Scrim() {
+		if scrim, ok := scrimFor(canvas, c.Anchor); ok {
+			paint := design.Scrim[scrim.Edge]
+			fmt.Fprintf(&b, `<defs><linearGradient id="scrim" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="%s" stop-opacity="%s"/><stop offset="1" stop-color="%s" stop-opacity="%s"/></linearGradient></defs>`,
+				paint.Hex, trimmed(paint.From), paint.Hex, trimmed(paint.To))
+			fmt.Fprintf(&b, `<rect x="%.3f" y="%.3f" width="%.3f" height="%.3f" fill="url(#scrim)"/>`,
+				scrim.Region.X, scrim.Region.Y, scrim.Region.Width, scrim.Region.Height)
+		}
+	}
+	// An accent word turns white on a bright ground (CDS-44). It is 크게 강조's
+	// word that turns, and only it: 형광펜's accent is the marker stroke BEHIND
+	// white text, so whitening that would paint white on white — CDS-26 keeps
+	// the text white precisely so its contrast never depends on the accent.
+	word := accent
+	if ground.AccentWhite() && !s.Highlight {
+		word = design.Color["text_white"].Hex
+	}
 	if s.Shadow != "" {
 		sh := design.Shadow[s.Shadow]
 		// CSS blur radius is twice a Gaussian standard deviation.
@@ -335,11 +400,11 @@ func copySVG(canvas clip.Canvas, c clip.Copy, l copyLayout) string {
 			filter = ` filter="url(#shadow)"`
 		}
 		fmt.Fprintf(&b, `<text x="%.3f" y="%.3f" xml:space="preserve" font-family="%s" font-size="%.0f" font-weight="%d" letter-spacing="%.4f" fill="%s" stroke="%s" stroke-opacity="%s" stroke-width="%.3f" stroke-linejoin="round" paint-order="stroke fill"%s>`,
-			x, y, fontFamily, l.FontSize, l.Role.Weight, l.Role.Tracking*l.FontSize, fill, stroke, strokeOpacity, s.StrokeWidth(), filter)
+			x, y, design.FontFamily(l.Role.Face), l.FontSize, l.Role.Weight, l.Role.Tracking*l.FontSize, fill, stroke, strokeOpacity, s.StrokeWidth(), filter)
 		// 크게 강조 colours one word in place, so the line stays one shaped run.
 		if accent != "" && !s.Highlight && s.Stroke != "" && l.Keyword.Present && l.Keyword.Line == i {
 			at := strings.Index(line, l.Keyword.Text)
-			fmt.Fprintf(&b, `%s<tspan fill="%s">%s</tspan>%s`, escaped(line[:at]), accent, escaped(l.Keyword.Text), escaped(line[at+len(l.Keyword.Text):]))
+			fmt.Fprintf(&b, `%s<tspan fill="%s">%s</tspan>%s`, escaped(line[:at]), word, escaped(l.Keyword.Text), escaped(line[at+len(l.Keyword.Text):]))
 		} else {
 			b.WriteString(escaped(line))
 		}
@@ -396,10 +461,10 @@ func (l copyLayout) Elements(cut int, c clip.Copy, startMS, endMS int) clip.Mani
 // keyword, the prefix that precedes it on each line that holds it: its advance
 // is where the highlight starts (CDS-26), never an estimated width.
 func (r *Rendering) layoutCopy(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, c clip.Copy) (copyLayout, error) {
-	if err := r.checkCopy(c.Text); err != nil {
+	style := design.Styles[c.Style]
+	if err := r.checkCopy(c.Text, style.Role()); err != nil {
 		return copyLayout{}, err
 	}
-	style := design.Styles[c.Style]
 	candidates, values, err := copyCandidates(c.Text, style.Lines)
 	if err != nil {
 		return copyLayout{}, err
@@ -415,7 +480,7 @@ func (r *Rendering) layoutCopy(ctx context.Context, ws clip.MediaWorkspace, canv
 			}
 		}
 	}
-	bounds, err := r.measure(ctx, ws, values, style.Role().Weight, style.Role().Tracking)
+	bounds, err := r.measure(ctx, ws, values, style.Role().Weight, style.Role().Tracking, r.family(style.Role()))
 	if err != nil {
 		return copyLayout{}, err
 	}
@@ -464,11 +529,11 @@ func (r *Rendering) badgeAndChips(ctx context.Context, ws clip.MediaWorkspace, c
 			}
 		}
 	}
-	if err := r.checkCopy(strings.Join(values, "") + ellipsis); err != nil {
+	role := design.Type["badge"]
+	if err := r.checkCopy(strings.Join(values, "")+ellipsis, role); err != nil {
 		return furniture{}, err
 	}
-	role := design.Type["badge"]
-	bounds, err := r.measure(ctx, ws, values, role.Weight, role.Tracking)
+	bounds, err := r.measure(ctx, ws, values, role.Weight, role.Tracking, r.family(role))
 	if err != nil {
 		return furniture{}, err
 	}
@@ -594,11 +659,11 @@ func (f furniture) Elements(duration int, chipCut int, chipStart, chipEnd int) c
 	return m
 }
 
-func (r *Rendering) copyPlate(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, c clip.Copy, layout copyLayout, index int) (string, error) {
+func (r *Rendering) copyPlate(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, c clip.Copy, layout copyLayout, index int, ground Luminance) (string, error) {
 	if strings.TrimSpace(c.Text) == "" {
 		return "", nil
 	}
-	return r.rasterize(ctx, ws, canvas, copySVG(canvas, c, layout), fmt.Sprintf("copy-%04d", index))
+	return r.rasterize(ctx, ws, canvas, copySVG(canvas, c, layout, ground), fmt.Sprintf("copy-%04d", index))
 }
 
 // furniturePlate is the fixed layer: the disclosure badge and this cut's chips,
@@ -670,7 +735,7 @@ func (r *Rendering) CaptionSize(ctx context.Context, ratio string, c clip.Captio
 	if strings.TrimSpace(c.Text) == "" {
 		return 0, 0, nil
 	}
-	if err := r.checkCopy(c.Text); err != nil {
+	if err := r.checkCopy(c.Text, design.Styles[c.Style].Role()); err != nil {
 		return 0, 0, err
 	}
 	err = r.media.WithWorkspace(ctx, "clip-caption-size", func(ws clip.MediaWorkspace) error {

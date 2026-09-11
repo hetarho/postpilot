@@ -1,9 +1,11 @@
 import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { CLIP_FACTS, clipStyle } from '@/shared/config'
+import { CLIP_FACTS, CLIP_TRANSITION, CLIP_TYPE, clipStyle } from '@/shared/config'
 import {
+  CLIP_TRANSITION_CHOICES,
   COPY_ALIGNS,
   COPY_ANCHORS,
+  groundedInAnswers,
   type ClipEditCut,
   type ClipEditingState,
 } from '@/entities/clip-project'
@@ -127,6 +129,10 @@ export function ClipCorrectionWorkspace({
     if (!busy) correction.change(...args)
   }
   const failure = correction.failure ?? renderFailure
+  // Two lines of nine, and only facts the owner gave (CDS-28, CDS-42). The
+  // grounding half needs the project's answers, which the plan does not carry.
+  const hookError =
+    correction.validation?.hook || !groundedInAnswers(correction.draft.hook, answers)
   return (
     <>
       <section aria-labelledby="clip-correction-heading" className="mt-10">
@@ -151,6 +157,32 @@ export function ClipCorrectionWorkspace({
         {correction.validation?.frequency && (
           <FieldMessage>{t('correction.frequencyError')}</FieldMessage>
         )}
+        {/* The opening card's own sentence, which belongs to the clip rather
+            than to any cut (CDS-28). */}
+        <div className="mt-6">
+          <FieldLabel htmlFor="clip-hook">{t('correction.hook')}</FieldLabel>
+          <Textarea
+            id="clip-hook"
+            autoGrow
+            inputMode="text"
+            {...INPUT}
+            autoCapitalize="sentences"
+            autoCorrect="on"
+            disabled={busy}
+            value={correction.draft.hook}
+            aria-invalid={hookError}
+            aria-describedby={hookError ? 'clip-hook-error' : 'clip-hook-help'}
+            onChange={(e) => mutate({ type: 'hook', hook: e.target.value })}
+          />
+          <Typography variant="body" id="clip-hook-help" className="text-content-secondary">
+            {t('correction.hookHelp', { lines: 2, chars: CLIP_TYPE.hook.chars })}
+          </Typography>
+          {hookError && (
+            <FieldMessage id="clip-hook-error">
+              {t('correction.hookError', { lines: 2, chars: CLIP_TYPE.hook.chars })}
+            </FieldMessage>
+          )}
+        </div>
         <fieldset disabled={busy} className="mt-6 min-w-0">
           <SortableList
             disabled={busy}
@@ -215,11 +247,13 @@ export function ClipCorrectionWorkspace({
                         id={`${prefix}-duration`}
                         label={t('correction.duration')}
                         value={cut.endMs - cut.startMs}
-                        min={2 * state.fadeMs + 1}
+                        min={2 * CLIP_TRANSITION.fade_ms + 1}
                         max={(source?.durationMs ?? 0) - cut.startMs}
                         error={
                           errors?.duration
-                            ? t('correction.cutDurationError', { min: 2 * state.fadeMs })
+                            ? t('correction.cutDurationError', {
+                                min: 2 * CLIP_TRANSITION.fade_ms,
+                              })
                             : undefined
                         }
                         onChange={(duration) =>
@@ -230,6 +264,41 @@ export function ClipCorrectionWorkspace({
                           })
                         }
                       />
+                    </div>
+                    {/* CDS-36: the transition belongs to the cut it leads INTO,
+                        so it travels with the cut through a reorder and the
+                        first cut can only be a hard cut — a clip does not fade
+                        in from nothing. */}
+                    <div>
+                      <FieldLabel
+                        id={`${prefix}-transition-label`}
+                        htmlFor={`${prefix}-transition`}
+                      >
+                        {t('correction.transition')}
+                      </FieldLabel>
+                      <Listbox
+                        id={`${prefix}-transition`}
+                        aria-labelledby={`${prefix}-transition-label`}
+                        value={String(index === 0 ? 0 : cut.transitionMs)}
+                        disabled={busy || index === 0}
+                        onChange={(value) =>
+                          patch({
+                            type: 'cut',
+                            id: cut.id,
+                            patch: { transitionMs: Number(value) },
+                          })
+                        }
+                        options={CLIP_TRANSITION_CHOICES.map((value) => ({
+                          value: String(value),
+                          label:
+                            value === 0
+                              ? t('correction.transitions.cut')
+                              : t('correction.transitions.fade', { ms: value }),
+                        }))}
+                      />
+                      {errors?.transition && (
+                        <FieldMessage>{t('correction.transitionError')}</FieldMessage>
+                      )}
                     </div>
                     {url && (
                       <Button

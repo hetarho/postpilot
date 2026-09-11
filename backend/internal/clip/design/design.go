@@ -162,9 +162,17 @@ func (s StyleRule) StrokeWidth() float64 {
 // Role is the style's type scale entry (CDS-19).
 func (s StyleRule) Role() TypeRole { return Type[s.Type] }
 
+// FontFamily is the family name the bundled file itself declares, which is what
+// the renderer has to hand resvg. CDS-17 names the faces; this maps a role's
+// face to the string that finds it.
+func FontFamily(face string) string { return Faces[face] }
+
 // One category preset (CDS-50). Its values live in configuration, never in code
 // (CDS-51), and every preset shares the badge, the two cards and normalisation.
 type Preset struct {
+	// The category the hook card shows on its chip (CDS-28, CDS-50). Korean and
+	// code-owned, like the disclosure phrases.
+	Label     string         `json:"label"`
 	Hook      string         `json:"hook"`
 	Chips     []string       `json:"chips"`
 	CTA       string         `json:"cta"`
@@ -231,6 +239,9 @@ type TimingTokens struct {
 	SubMinPerCharMS int     `json:"sub_min_per_char_ms"`
 	CutMinS         float64 `json:"cut_min_s"`
 	CutMaxS         float64 `json:"cut_max_s"`
+	// CDS-37's own ceiling for a food close-up, which holds a plate on screen
+	// long enough to read and no longer.
+	CutMaxFoodS     float64 `json:"cut_max_food_s"`
 	HookCardS       float64 `json:"hook_card_s"`
 	EndCardS        float64 `json:"end_card_s"`
 	BadgeMinHeadS   float64 `json:"badge_min_head_s"`
@@ -241,8 +252,11 @@ type TimingTokens struct {
 	SubOccupancyMin float64 `json:"sub_occupancy_min"`
 }
 type TransitionTokens struct {
-	Default      string  `json:"default"`
-	FadeMS       int     `json:"fade_ms"`
+	Default string `json:"default"`
+	FadeMS  int    `json:"fade_ms"`
+	// The fade-through-black CDS-36 admits around the cards. Validation accepts
+	// it so a manual plan may choose it; nothing selects it on its own.
+	BlackMS      int     `json:"black_ms"`
 	FadeRatioMax float64 `json:"fade_ratio_max"`
 }
 type Loudnorm struct {
@@ -258,6 +272,7 @@ type AudioTokens struct {
 type LumaTokens struct {
 	ScrimThreshold float64 `json:"scrim_threshold"`
 	SigmaThreshold float64 `json:"sigma_threshold"`
+	ContrastMin    float64 `json:"contrast_min"`
 }
 type system struct {
 	Ratios            map[string]RatioLayout       `json:"ratios"`
@@ -274,6 +289,7 @@ type system struct {
 	Disclosure        map[string]string            `json:"disclosure"`
 	CTA               map[string]string            `json:"cta"`
 	Facts             Facts                        `json:"facts"`
+	Faces             map[string]string            `json:"faces"`
 	Classes           ClassRules                   `json:"classes"`
 	SceneStyles       map[string]map[string]string `json:"scene_styles"`
 	Guards            GuardRules                   `json:"guards"`
@@ -323,6 +339,7 @@ var (
 	Disclosure        = loaded.Disclosure
 	CTA               = loaded.CTA
 	Fact              = loaded.Facts
+	Faces             = loaded.Faces
 	Classes           = loaded.Classes
 	SceneStyles       = loaded.SceneStyles
 	Guards            = loaded.Guards
@@ -393,4 +410,17 @@ func Safe(ratio string) (Region, bool) {
 func Anchors(ratio string) (Anchor, bool) {
 	l, ok := Ratios[ratio]
 	return l.Anchor, ok
+}
+
+// StyleAnchors is where CDS-24 lets a style stand: its default anchor and, when
+// it has one, its alternative. V6 refuses the copy at any other.
+func StyleAnchors(style string) []string {
+	s, ok := Styles[style]
+	if !ok {
+		return nil
+	}
+	if s.AnchorAlt == "" {
+		return []string{s.Anchor}
+	}
+	return []string{s.Anchor, s.AnchorAlt}
 }

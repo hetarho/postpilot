@@ -29,8 +29,18 @@ func TestCompositionTreeBoundsVideoDecodersAndKeepsAudioForFinalPass(t *testing.
 					return err
 				}
 			}
+			// Every boundary fades, which is the densest tree the renderer can
+			// be asked for: each merge has to carry its own overlap.
+			transitions := make([]int, 100)
+			for i := 1; i < len(transitions); i++ {
+				transitions[i] = 200
+			}
+			assembled := ""
+			if audio {
+				assembled = filepath.Join(ws.Path, "compose-audio.wav")
+			}
 			var cleanup []string
-			args, err := r.compositionInputs(t.Context(), ws, cuts, frames, audio, &cleanup)
+			args, err := r.compositionInputs(t.Context(), ws, cuts, frames, transitions, assembled, &loudness{I: -20, TP: -3, LRA: 7, Threshold: -30, Offset: 0.1}, &cleanup)
 			if err != nil {
 				return err
 			}
@@ -47,8 +57,10 @@ func TestCompositionTreeBoundsVideoDecodersAndKeepsAudioForFinalPass(t *testing.
 			if strings.Count(graph, ":v:0]") != 2 || !strings.Contains(graph, "trim=end_frame=1506,") {
 				t.Fatal("lost timeline", graph)
 			}
-			if audio && (strings.Count(graph, ":a:0]") != 100 || !strings.Contains(graph, "atrim=end_sample=2409600,")) {
-				t.Fatal("changed original audio", graph)
+			// The audio is one assembled, already-measured track by now: the
+			// final pass opens a single audio decoder and only normalises it.
+			if audio && (strings.Count(graph, ":a:0]") != 1 || !strings.Contains(graph, "measured_I=-20") || !strings.Contains(graph, "linear=true")) {
+				t.Fatal("did not apply the measured loudness", graph)
 			}
 			if !audio && strings.Contains(graph, ":a:0]") {
 				t.Fatal("invented audio")

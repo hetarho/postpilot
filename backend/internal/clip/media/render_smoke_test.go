@@ -6,7 +6,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"image"
-	"image/png"
 	"io"
 	"math"
 	"os"
@@ -20,11 +19,18 @@ import (
 
 func renderConfig(t *testing.T) clip.RenderConfig {
 	t.Helper()
-	font := os.Getenv("CLIP_FONT_PATH")
-	if font == "" {
-		font = "/usr/share/postpilot-fonts/pretendard/PretendardVariable.ttf"
+	// Both faces, from the same variables the image sets (CDS-17): the renderer
+	// refuses to start without the display face, so a config that names only
+	// Pretendard fails the constructor rather than any render.
+	font := path("CLIP_FONT_PATH", "/usr/share/postpilot-fonts/pretendard/PretendardVariable.ttf")
+	display := path("CLIP_FONT_PAPERLOGY_PATH", "/usr/share/postpilot-fonts/paperlogy/Paperlogy-8ExtraBold.ttf")
+	return config.ClipRender(&config.Config{ClipResvgPath: "/usr/local/bin/resvg", ClipFontPath: font, ClipDisplayFontPath: display})
+}
+func path(key, fallback string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
 	}
-	return config.ClipRender(&config.Config{ClipResvgPath: "/usr/local/bin/resvg", ClipFontPath: font})
+	return fallback
 }
 func TestRenderSmoke(t *testing.T) {
 	if os.Getenv("CLIP_MEDIA_SMOKE") != "1" {
@@ -39,11 +45,11 @@ func TestRenderSmoke(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := a.WithWorkspace(t.Context(), "glyphs", func(ws clip.MediaWorkspace) error {
-		semibold, err := r.measure(t.Context(), ws, []string{"한글 여행 W"}, 600, 0)
+		semibold, err := r.measure(t.Context(), ws, []string{"한글 여행 W"}, 600, 0, fontFamily)
 		if err != nil {
 			return err
 		}
-		bold, err := r.measure(t.Context(), ws, []string{"한글 여행 W"}, 800, 0)
+		bold, err := r.measure(t.Context(), ws, []string{"한글 여행 W"}, 800, 0, fontFamily)
 		if err != nil {
 			return err
 		}
@@ -56,7 +62,7 @@ func TestRenderSmoke(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		plate, err := r.copyPlate(t.Context(), ws, canvas, copy, layout, 0)
+		plate, err := r.copyPlate(t.Context(), ws, canvas, copy, layout, 0, Luminance{})
 		if err != nil {
 			return err
 		}
@@ -79,7 +85,7 @@ func TestRenderSmoke(t *testing.T) {
 			if err != nil {
 				return fmt.Errorf("%s: %w", style, err)
 			}
-			path, err := r.copyPlate(t.Context(), ws, canvas, c, l, 1)
+			path, err := r.copyPlate(t.Context(), ws, canvas, c, l, 1, Luminance{})
 			if err != nil {
 				return fmt.Errorf("%s: %w", style, err)
 			}
@@ -141,11 +147,14 @@ func TestRenderSmoke(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	for _, variant := range []string{"vertical", "horizontal", "square", "silent-rounded", "audio-rounded", "caption-timed"} {
+	for _, variant := range []string{"vertical", "horizontal", "square", "silent-rounded", "audio-rounded", "caption-timed", "bright-scrim"} {
 		t.Run(variant, func(t *testing.T) {
 			ratio := variant
 			if variant == "silent-rounded" || variant == "audio-rounded" || variant == "caption-timed" {
 				ratio = "square"
+			}
+			if variant == "bright-scrim" {
+				ratio = "vertical"
 			}
 			err := a.WithWorkspace(t.Context(), ratio, func(ws clip.MediaWorkspace) error {
 				infos := map[string]clip.MediaInfo{}
@@ -154,12 +163,18 @@ func TestRenderSmoke(t *testing.T) {
 				load := func(ctx context.Context, id string, consume func(clip.MediaSource) error) error {
 					path := filepath.Join(ws.Path, "fixture.mp4")
 					defer os.Remove(path)
-					args := []string{"-hide_banner", "-nostdin", "-v", "error", "-f", "lavfi", "-i", "color=c=blue:s=1280x720:r=30"}
+					// CDS-44 only has something to measure on bright footage, so
+					// that one variant is shot on white.
+					colour := "blue"
+					if variant == "bright-scrim" {
+						colour = "white"
+					}
+					args := []string{"-hide_banner", "-nostdin", "-v", "error", "-f", "lavfi", "-i", "color=c=" + colour + ":s=1280x720:r=30"}
 					if id != "silent" {
 						args = append(args, "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=48000")
 					}
 					length := "6"
-					if variant == "silent-rounded" || variant == "audio-rounded" || variant == "caption-timed" {
+					if variant == "silent-rounded" || variant == "audio-rounded" || variant == "caption-timed" || variant == "bright-scrim" {
 						length = "16"
 					}
 					args = append(args, "-t", length, "-c:v", "libx264", "-preset", "ultrafast", "-threads", "2", "-pix_fmt", "yuv420p")
@@ -196,13 +211,27 @@ func TestRenderSmoke(t *testing.T) {
 				}
 				// Every clip carries its disclosure badge, and the first cut
 				// carries the chips its facts earn (CDS-5, CDS-30).
-				plan := clip.EditPlan{Ratio: ratio, DurationMS: 15000, Disclosure: "ad", Preset: "restaurant", Facts: []clip.Answer{
+				// The clip opens on a hook card and closes on a CTA card
+				// (CDS-28, CDS-29). The last cut's copy leaves before the
+				// ending card arrives, because nothing shows under a card
+				// (CDS-45) — which the verifier would otherwise refuse.
+				// The second cut joins with a hard cut and the third fades, so
+				// one render exercises both boundaries CDS-36 admits and the
+				// audio has to stay locked to the picture across each of them.
+				plan := clip.EditPlan{Ratio: ratio, DurationMS: 15200, Disclosure: "ad", Preset: "restaurant", Hook: "정확한 한글", Accent: "coral", Facts: []clip.Answer{
 					{Label: "상호", Text: "연남 김밥"}, {Label: "위치", Text: "서울 연남동"}, {Label: "가격", Text: "9,900원"},
 				}, Cuts: []clip.EditCut{
 					{ID: "one", SourceID: "audio", Fingerprint: "audio", EndMS: 5200, Focal: clip.Point{X: .5, Y: .5}, Chips: []string{"위치", "가격"}, Copy: clip.Copy{Text: "정확한 한글 & 여행", Style: "clean", Anchor: "bottom", Align: "center", Accent: "coral"}},
 					{ID: "two", SourceID: "rotated", Fingerprint: "rotated", EndMS: 5000, Focal: clip.Point{X: .5, Y: .5}, Volume: volume(.5), Copy: clip.Copy{Text: "기록처럼 <오늘>", Style: "memo", Anchor: "lower_mid", Align: "left", Accent: "teal"}},
-					{ID: "three", SourceID: "silent", Fingerprint: "silent", EndMS: 5200, Focal: clip.Point{X: .5, Y: .5}, Volume: volume(0), Copy: clip.Copy{Text: "다시 오고 싶은 곳", Style: "bold", Anchor: "upper_mid", Align: "center", Accent: "amber"}},
+					{ID: "three", SourceID: "silent", Fingerprint: "silent", EndMS: 5200, TransitionMS: 200, Focal: clip.Point{X: .5, Y: .5}, Volume: volume(0), Copy: clip.Copy{Text: "다시 오고 싶은 곳", Style: "bold", Anchor: "upper_mid", Align: "center", Accent: "amber", StartMS: 120, EndMS: 2400}},
 				}}
+				if variant != "vertical" && variant != "horizontal" && variant != "square" {
+					// One cut, no cards: these variants are about timing and
+					// rounding, and a card over the only cut would cover the
+					// copy they measure.
+					plan.Hook, plan.Facts = "", nil
+					plan.Disclosure = "ad"
+				}
 				if variant == "silent-rounded" || variant == "audio-rounded" {
 					plan.DurationMS = 15017
 					if variant == "silent-rounded" {
@@ -212,6 +241,14 @@ func TestRenderSmoke(t *testing.T) {
 					}
 					plan.Cuts[0].EndMS = 15017
 					plan.Cuts[0].Copy.Text = ""
+				}
+				if variant == "bright-scrim" {
+					// One 형광펜 cut on white footage: the sampler has to find a
+					// bright ground and the scrim has to reach the pixels.
+					plan.Cuts = plan.Cuts[:1]
+					plan.Cuts[0].EndMS = 15000
+					plan.Cuts[0].Copy = clip.Copy{Text: "가격 9900원", Keyword: "9900원", Style: "mark", Anchor: "bottom", Align: "center", Accent: "amber"}
+					plan.Cuts[0].Chips = nil
 				}
 				if variant == "caption-timed" {
 					plan.Cuts = plan.Cuts[:1]
@@ -223,12 +260,43 @@ func TestRenderSmoke(t *testing.T) {
 						return fmt.Errorf("measure timed caption: %v", err)
 					}
 				}
+				// Whatever the variant kept, the first cut leads in from nothing
+				// and the declared duration is the footage less its overlaps.
+				plan.Cuts[0].TransitionMS = 0
+				selected := 0
+				for _, c := range plan.Cuts {
+					selected += c.EndMS - c.StartMS
+				}
+				plan.DurationMS = selected - plan.TransitionTotal()
 				result, err := r.Render(t.Context(), ws, plan, sources, load)
 				if err != nil {
 					return err
 				}
 				if math.Abs(float64(result.Info.DurationMS-plan.DurationMS)) > 1000.0/30 || result.Info.HasAudio != (variant != "silent-rounded") {
 					t.Fatalf("result=%+v", result)
+				}
+				// V12 on the delivered file: 30 fps, H.264 High and 48 kHz AAC,
+				// and the track measured again at CDS-35's −16 LUFS ±1. Render
+				// already refuses a miss; this says what the miss would be.
+				for _, stream := range result.Info.Streams {
+					if stream.Kind == "video" && (stream.Codec != "h264" || stream.Profile != "High") {
+						t.Fatalf("V12 video: %+v", stream)
+					}
+				}
+				if result.Info.FrameRateNumerator != 30*result.Info.FrameRateDenominator {
+					t.Fatalf("V12 frame rate: %d/%d", result.Info.FrameRateNumerator, result.Info.FrameRateDenominator)
+				}
+				if result.Info.HasAudio {
+					if result.Info.AudioRate != 48000 {
+						t.Fatalf("V12 sample rate: %d", result.Info.AudioRate)
+					}
+					measured, err := r.measureLoudness(t.Context(), ws, result.Path)
+					if err != nil {
+						return err
+					}
+					if !measured.Silent && math.Abs(measured.I-design.Audio.Loudnorm.I) > 1 {
+						t.Fatalf("%s delivered %.2f LUFS, not %.1f ±1", variant, measured.I, design.Audio.Loudnorm.I)
+					}
 				}
 				fileBytes, err := os.ReadFile(result.Path)
 				if err != nil {
@@ -240,6 +308,41 @@ func TestRenderSmoke(t *testing.T) {
 				}
 				if variant == "silent-rounded" || variant == "audio-rounded" {
 					return nil
+				}
+				if variant == "bright-scrim" {
+					canvas, _ := clip.ClipCanvas(ratio)
+					l, _ := design.Layout(ratio)
+					// The manifest records what the sampler decided, so the
+					// scrim is there to be found before any pixel is read.
+					scrim := clip.Region{}
+					for _, e := range result.Manifest {
+						if e.Kind == "scrim" {
+							scrim = clip.Region(e.Region)
+						}
+					}
+					if scrim != clip.Region(l.ScrimBottom) {
+						return fmt.Errorf("white footage did not earn CDS-32's bottom scrim: %+v", result.Manifest)
+					}
+					path := filepath.Join(ws.Path, "scrim.png")
+					if _, err := a.run(t.Context(), ws, a.cfg.FFmpegPath, "-v", "error", "-ss", "7", "-i", result.Path, "-frames:v", "1", "-c:v", "png", "-threads", "1", path); err != nil {
+						return err
+					}
+					frame, err := readPNG(path)
+					if err != nil {
+						return err
+					}
+					// The gradient is 0 at the band's top edge and 0.55 at the
+					// bottom, so the frame darkens down the band and the white
+					// above it is untouched.
+					above := blueAt(frame, canvas.Width/2, int(scrim.Y)-40)
+					low := blueAt(frame, 20, int(scrim.Y+scrim.Height)-4)
+					if above < 0xf000 || low > above*3/4 {
+						return fmt.Errorf("scrim did not reach the pixels: %d above, %d inside", above, low)
+					}
+					if err := exportRenderSmoke("vertical-scrim.png", path); err != nil {
+						return err
+					}
+					return os.Remove(path)
 				}
 				if variant == "caption-timed" {
 					for i, at := range []string{"2", "7", "12"} {
@@ -313,6 +416,50 @@ func TestRenderSmoke(t *testing.T) {
 						return err
 					}
 				}
+				// The two cards, in pixels: the hook card is up at the very first
+				// frames and the ending card in the last second, each an ink
+				// plate over the footage carrying its accent (CDS-28, CDS-29).
+				for _, want := range []struct {
+					kind, at string
+					second   float64
+				}{{"hook", "0.5", 0.5}, {"end", fmt.Sprintf("%.1f", float64(plan.DurationMS)/1000-1), float64(plan.DurationMS)/1000 - 1}} {
+					var region clip.Region
+					for _, e := range result.Manifest {
+						if e.Kind == "card" && e.Text == want.kind {
+							region = clip.Region(e.Region)
+						}
+					}
+					if region.Width == 0 {
+						t.Fatalf("%s card is not in the manifest", want.kind)
+					}
+					path := filepath.Join(ws.Path, "card-"+want.kind+".png")
+					if _, err := a.run(t.Context(), ws, a.cfg.FFmpegPath, "-v", "error", "-ss", want.at, "-i", result.Path, "-frames:v", "1", "-c:v", "png", "-threads", "1", path); err != nil {
+						return err
+					}
+					frame, err := readPNG(path)
+					if err != nil {
+						return err
+					}
+					// The footage is flat blue, so the plate is visible as blue
+					// the ink took away: inside the card the blue channel is a
+					// fraction of what the bare frame has beside it.
+					inside := blueAt(frame, int(region.X+region.Width/2), int(region.Y+4))
+					outside := blueAt(frame, int(region.X+region.Width/2), int(region.Y)-20)
+					if inside > outside/2 {
+						t.Fatalf("%s card plate is not on the frame: blue %d inside, %d outside", want.kind, inside, outside)
+					}
+					// And its own accent is on it: the category pill on the hook
+					// card, the CTA line on the ending one.
+					if !scan(frame, region, func(r, g, b, a uint32) bool { return r > 40000 && r > 2*b }) {
+						t.Fatalf("%s card lost its accent", want.kind)
+					}
+					if err := exportRenderSmoke(ratio+"-card-"+want.kind+".png", path); err != nil {
+						return err
+					}
+					if err := os.Remove(path); err != nil {
+						return err
+					}
+				}
 				var levels []float64
 				for _, at := range []string{"2", "7", "12"} {
 					data, err := a.run(t.Context(), ws, a.cfg.FFmpegPath, "-v", "error", "-ss", at, "-i", result.Path, "-t", "0.1", "-vn", "-ac", "1", "-ar", "48000", "-c:a", "pcm_s16le", "-f", "s16le", "pipe:1")
@@ -367,13 +514,7 @@ func scan(img image.Image, region clip.Region, match func(r, g, b, a uint32) boo
 	}
 	return false
 }
-func readPNG(path string) (image.Image, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	return png.Decode(bytes.NewReader(data))
-}
+func readPNG(path string) (image.Image, error) { return readFrame(path) }
 
 // Only an explicit local test export retains synthetic fixtures for owner picker
 // verification. Ordinary build smoke leaves no file outside its test workspace.
@@ -405,3 +546,10 @@ func errorsJoinClose(err error, file *os.File) error {
 	return closeErr
 }
 func volume(v float64) *float64 { return &v }
+
+// blueAt is the blue channel at one pixel, which is what the flat blue fixture
+// makes a plate measurable by: ink at α0.88 keeps only an eighth of it.
+func blueAt(img image.Image, x, y int) uint32 {
+	_, _, b, _ := img.At(x, y).RGBA()
+	return b
+}

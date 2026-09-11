@@ -116,8 +116,10 @@ func TestRatioLayoutsMatchCDS46To48(t *testing.T) {
 
 func TestTypeScaleAndCharacterCountsMatchCDS19And20(t *testing.T) {
 	want := map[string]design.TypeRole{
-		"hook":    {Size: 84, Min: 72, Face: "paperlogy", Weight: 800, Tracking: -0.02, LineHeight: 1.15, Chars: 9},
-		"title":   {Size: 72, Min: 64, Face: "pretendard", Weight: 800, Tracking: -0.02, LineHeight: 1.2, Chars: 11},
+		"hook": {Size: 84, Min: 72, Face: "paperlogy", Weight: 800, Tracking: -0.02, LineHeight: 1.15, Chars: 9},
+		// CDS-17 gives the hook title and 크게 강조 to the secondary face, which
+		// CDS-25's parenthetical made conditional on it being bundled. It is now.
+		"title":   {Size: 72, Min: 64, Face: "paperlogy", Weight: 800, Tracking: -0.02, LineHeight: 1.2, Chars: 11},
 		"mark":    {Size: 60, Min: 52, Face: "pretendard", Weight: 800, Tracking: -0.01, LineHeight: 1.3},
 		"body":    {Size: 56, Min: 48, Face: "pretendard", Weight: 700, Tracking: -0.01, LineHeight: 1.3, Chars: 14},
 		"caption": {Size: 44, Min: 40, Face: "pretendard", Weight: 600, Tracking: 0, LineHeight: 1.3, Chars: 18},
@@ -126,6 +128,15 @@ func TestTypeScaleAndCharacterCountsMatchCDS19And20(t *testing.T) {
 	}
 	if !reflect.DeepEqual(design.Type, want) {
 		t.Fatalf("type scale\n got %+v\nwant %+v", design.Type, want)
+	}
+	// Exactly two faces, each named as the bundled file itself declares it.
+	if !reflect.DeepEqual(design.Faces, map[string]string{"pretendard": "Pretendard Variable", "paperlogy": "Paperlogy 8 ExtraBold"}) {
+		t.Fatalf("faces %+v", design.Faces)
+	}
+	for role, entry := range design.Type {
+		if design.FontFamily(entry.Face) == "" {
+			t.Fatalf("%s names an unbundled face %q", role, entry.Face)
+		}
 	}
 	// CDS-3: no role may be typeset under the body floor of 48 px.
 	if design.Type["body"].Min != 48 || design.Type["caption"].Min < 40 || design.Type["badge"].Size != 40 {
@@ -235,19 +246,19 @@ func TestStylesMotionTimingTransitionAudioAndLuma(t *testing.T) {
 		t.Fatal("motion", design.Motion)
 	}
 	// CDS-41, CDS-37, CDS-28, CDS-29, CDS-5.
-	if design.Timing != (design.TimingTokens{SubMinBaseMS: 900, SubMinPerCharMS: 90, CutMinS: 1.2, CutMaxS: 6, HookCardS: 1.5, EndCardS: 2.5, BadgeMinHeadS: 3, BadgeMinTailS: 3, ChipMinS: 2, CopyLeadMS: 120, SubExtendMS: 240, SubOccupancyMin: 0.6}) {
+	if design.Timing != (design.TimingTokens{SubMinBaseMS: 900, SubMinPerCharMS: 90, CutMinS: 1.2, CutMaxS: 6, CutMaxFoodS: 4, HookCardS: 1.5, EndCardS: 2.5, BadgeMinHeadS: 3, BadgeMinTailS: 3, ChipMinS: 2, CopyLeadMS: 120, SubExtendMS: 240, SubOccupancyMin: 0.6}) {
 		t.Fatal("timing", design.Timing)
 	}
 	// CDS-36.
-	if design.Transition != (design.TransitionTokens{Default: "cut", FadeMS: 200, FadeRatioMax: 0.4}) {
+	if design.Transition != (design.TransitionTokens{Default: "cut", FadeMS: 200, BlackMS: 300, FadeRatioMax: 0.4}) {
 		t.Fatal("transition", design.Transition)
 	}
 	// CDS-35.
 	if design.Audio != (design.AudioTokens{Loudnorm: design.Loudnorm{I: -16, TP: -1.5, LRA: 11}, CrossfadeMS: 60, HookDipDB: -6}) {
 		t.Fatal("audio", design.Audio)
 	}
-	// CDS-44.
-	if design.Luma != (design.LumaTokens{ScrimThreshold: 0.6, SigmaThreshold: 0.25}) {
+	// CDS-44 and CDS-16's 4.5:1 floor, which V3 gates every pairing on.
+	if design.Luma != (design.LumaTokens{ScrimThreshold: 0.6, SigmaThreshold: 0.25, ContrastMin: 4.5}) {
 		t.Fatal("luma", design.Luma)
 	}
 }

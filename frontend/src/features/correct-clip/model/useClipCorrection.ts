@@ -17,7 +17,7 @@ import { ClipService, appFailureFromConnect } from '@/shared/api'
 export function useClipCorrection(ownerId: string, project: ClipProject) {
   const transport = useTransport()
   const cache = useQueryClient()
-  const initial = project.editing?.plan ?? { durationMs: 0, cuts: [] }
+  const initial = project.editing?.plan ?? { durationMs: 0, cuts: [], hook: '' }
   const [draft, setDraft] = useState(() => copyClipPlan(initial))
   const [baseline, setBaseline] = useState(() => JSON.stringify(initial))
   const [revision, setRevision] = useState(project.editPlanRevision)
@@ -52,7 +52,7 @@ export function useClipCorrection(ownerId: string, project: ClipProject) {
   const change = (edit: ClipEdit) => {
     if (saving.current || !project.editing) return
     mutation.reset()
-    setDraft((current) => editClipPlan(current, edit, project.editing!.fadeMs))
+    setDraft((current) => editClipPlan(current, edit))
   }
   async function save() {
     if (saving.current || !dirty || !validation?.valid) return

@@ -455,7 +455,15 @@ func (p *releaseProvider) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	var content any
 	if videoCount == 1 && wire.MaxTokens == 8192 {
-		content = map[string]any{"source_id": metadata["source_id"], "chunk_index": metadata["chunk_index"], "segments": []any{map[string]any{"start_ms": 0, "end_ms": metadata["chunk_duration_ms"], "event": "synthetic scene", "subjects": []string{"test pattern"}, "speech": "synthetic speech", "quality": "usable", "focal": map[string]float64{"x": .5, "y": .5}, "avoid": map[string]int{"x": 0, "y": 0, "width": 0, "height": 0}}}}
+		// The observation contract of CDS-39: the scene type, whether the footage
+		// already carries readable text and the principal subject's own box are
+		// what the design system reads to place a caption (T105).
+		content = map[string]any{"source_id": metadata["source_id"], "chunk_index": metadata["chunk_index"], "segments": []any{map[string]any{
+			"start_ms": 0, "end_ms": metadata["chunk_duration_ms"], "event": "synthetic scene",
+			"subjects": []string{"test pattern"}, "speech": "synthetic speech", "quality": "usable",
+			"focal": map[string]float64{"x": .5, "y": .5}, "scene": "scenery", "readable_text": false,
+			"subject": map[string]float64{"x": .3, "y": .3, "width": .4, "height": .4},
+		}}}
 	} else if videoCount == 0 && wire.MaxTokens == 32768 {
 		analyses, ok := metadata["analyses"].([]any)
 		if !ok || len(analyses) == 0 {
@@ -463,7 +471,14 @@ func (p *releaseProvider) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		source := analyses[0].(map[string]any)["source_id"]
-		content = map[string]any{"ratio": metadata["ratio"], "duration_ms": 15000, "cuts": []any{map[string]any{"id": "fixture-cut", "source_id": source, "start_ms": 0, "end_ms": 15000, "volume": 1, "focal": map[string]float64{"x": .5, "y": .5}, "caption": map[string]any{"text": "", "start_ms": 0, "end_ms": 15000, "position": "bottom", "style": "clean", "accent": ""}}}}
+		// The writing contract of T105: the model writes WORDS — the sentence, a
+		// shorter alternative, the one word to accent and the cut's own chips —
+		// and the design system chooses the style, the anchor and the accent.
+		content = map[string]any{"ratio": metadata["ratio"], "duration_ms": 15000, "hook": "", "cuts": []any{map[string]any{
+			"id": "fixture-cut", "source_id": source, "start_ms": 0, "end_ms": 15000, "volume": 1,
+			"focal": map[string]float64{"x": .5, "y": .5}, "chips": []string{},
+			"caption": map[string]any{"text": "", "start_ms": 0, "end_ms": 15000, "short_text": "", "keyword": ""},
+		}}}
 		if p.mode == "seeked cut" {
 			cut := content.(map[string]any)["cuts"].([]any)[0].(map[string]any)
 			cut["start_ms"] = 1000
@@ -477,9 +492,15 @@ func (p *releaseProvider) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			var cuts []any
 			for i, analysis := range analyses {
-				cuts = append(cuts, map[string]any{"id": fmt.Sprintf("cut-%d", i), "source_id": analysis.(map[string]any)["source_id"], "start_ms": 0, "end_ms": lengths[i], "volume": 1, "focal": map[string]float64{"x": .5, "y": .5}, "caption": map[string]any{"text": fmt.Sprintf("한글 장면 %d", i+1), "start_ms": 0, "end_ms": lengths[i], "position": "bottom", "style": "memo", "accent": "amber"}})
+				cuts = append(cuts, map[string]any{
+					"id": fmt.Sprintf("cut-%d", i), "source_id": analysis.(map[string]any)["source_id"],
+					"start_ms": 0, "end_ms": lengths[i], "volume": 1,
+					"focal": map[string]float64{"x": .5, "y": .5}, "chips": []string{"위치"},
+					"caption": map[string]any{"text": fmt.Sprintf("한글 장면 %d", i+1), "start_ms": 0, "end_ms": lengths[i], "short_text": fmt.Sprintf("장면 %d", i+1), "keyword": ""},
+				})
 			}
 			content.(map[string]any)["cuts"] = cuts
+			content.(map[string]any)["hook"] = "연남 김밥 한 줄"
 			if p.mode == "multi-source-timing" {
 				// The real failing response's timing shape, with synthetic copy
 				// and source IDs. Exercise compilation through the actual queue.

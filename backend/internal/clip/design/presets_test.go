@@ -11,21 +11,24 @@ import (
 // CTA, cut rhythm and default accent. CDS-51 keeps the values in configuration.
 func TestPresetsMatchCDS50(t *testing.T) {
 	want := map[string]design.Preset{
-		"restaurant": {Hook: "fact", Chips: []string{"위치", "가격", "메뉴"}, CTA: "place", Accent: "coral",
+		"restaurant": {Label: "음식점", Hook: "fact", Chips: []string{"위치", "가격", "메뉴"}, CTA: "place", Accent: "coral",
 			Styles: map[string]int{"clean": 50, "mark": 25, "memo": 20, "bold": 5}, CutMinS: 2.5, CutMaxS: 4, Rhythm: "cut"},
-		"cafe": {Hook: "space", Chips: []string{"위치", "메뉴", "영업"}, CTA: "save", Accent: "teal",
+		"cafe": {Label: "카페", Hook: "space", Chips: []string{"위치", "메뉴", "영업"}, CTA: "save", Accent: "teal",
 			Styles: map[string]int{"clean": 45, "memo": 30, "bold": 15, "mark": 10}, CutMinS: 4, CutMaxS: 6, Rhythm: "fade"},
-		"stay": {Hook: "location", Chips: []string{"위치", "가격", "영업"}, CTA: "blog", Accent: "blue",
+		"stay": {Label: "숙소·여행", Hook: "location", Chips: []string{"위치", "가격", "영업"}, CTA: "blog", Accent: "blue",
 			Styles: map[string]int{"clean": 50, "memo": 35, "bold": 10, "mark": 5}, CutMinS: 4, CutMaxS: 6, Rhythm: "fade", PriceNote: "1박 기준"},
-		"beauty": {Hook: "usage", Chips: []string{"가격", "메뉴", "평점"}, CTA: "blog", Accent: "pink",
+		"beauty": {Label: "뷰티", Hook: "usage", Chips: []string{"가격", "메뉴", "평점"}, CTA: "blog", Accent: "pink",
 			Styles: map[string]int{"clean": 40, "mark": 30, "memo": 20, "bold": 10}, CutMinS: 2, CutMaxS: 3, Rhythm: "cut", Refuse: "efficacy"},
-		"home": {Hook: "problem", Chips: []string{"가격", "메뉴", "평점"}, CTA: "blog", Accent: "amber",
+		"home": {Label: "생활용품·가전", Hook: "problem", Chips: []string{"가격", "메뉴", "평점"}, CTA: "blog", Accent: "amber",
 			Styles: map[string]int{"clean": 40, "mark": 35, "memo": 20, "bold": 5}, CutMinS: 3, CutMaxS: 4, Rhythm: "cut", Refuse: "specs"},
 	}
 	if !reflect.DeepEqual(design.Presets, want) {
 		t.Fatalf("presets\n got %+v\nwant %+v", design.Presets, want)
 	}
 	for id, p := range want {
+		if p.Label == "" {
+			t.Fatalf("%s has no category label for its hook card", id)
+		}
 		total := 0
 		for style, share := range p.Styles {
 			if _, ok := design.Styles[style]; !ok {

@@ -29,8 +29,10 @@ var AnchorOrder = []string{"top", "upper_mid", "lower_mid", "bottom"}
 // canvas pixels and the window is the OUTPUT timeline, so the verifier needs
 // nothing but the manifest to answer every check.
 // ElementKinds is the whole catalogue a manifest may name (V10): anything else
-// is a decoration the design system refuses (CDS-6, CDS-33).
-var ElementKinds = []string{"copy", "plate", "bar", "highlight", "badge", "chip"}
+// is a decoration the design system refuses (CDS-6, CDS-33). `card` is a hook or
+// ending plate, `chip-category` the preset label on the hook card, and `scrim`
+// the one full-bleed wash CDS-32 allows.
+var ElementKinds = []string{"copy", "plate", "bar", "highlight", "badge", "chip", "card", "chip-category", "scrim"}
 
 type Element struct {
 	Cut              int
@@ -63,7 +65,27 @@ const (
 	ViolationFrequency  Violation = "plan_layout_frequency"
 	ViolationDisclosure Violation = "plan_layout_disclosure"
 	ViolationKind       Violation = "plan_layout_kind"
+	ViolationContrast   Violation = "plan_layout_contrast"
 )
+
+// An element belongs to a caption exactly when it carries a copy style: the
+// line, the plate, the bar or dot, the highlight and the scrim the compiler
+// placed for one written sentence. The badge, the chips and the two cards are
+// the design system's own furniture — they carry no style, never move (CDS-31,
+// CDS-30, CDS-28) and are not measured against a style's limits.
+func caption(e Element) bool { return e.Style != "" }
+
+// MinTypeSize is the smallest size anything in the type scale may be set at:
+// the floor of its smallest role (CDS-19).
+func MinTypeSize() float64 {
+	smallest := 0.0
+	for _, role := range Type {
+		if smallest == 0 || role.Min < smallest {
+			smallest = role.Min
+		}
+	}
+	return smallest
+}
 
 func overlaps(a, b Region) bool {
 	return a.X < b.X+b.Width && b.X < a.X+a.Width && a.Y < b.Y+b.Height && b.Y < a.Y+a.Height
@@ -76,11 +98,11 @@ func within(r, safe Region) bool {
 // before a single source byte is fetched, so a plan that breaks the design
 // system costs neither credits nor a download.
 //
-// V1 safe area · V2 size floors · V5 lines and characters · V7 overlap between
-// elements of different cuts whose windows meet · V9 the two permitted motions ·
-// V13 one anchor step between consecutive cuts · V14 style frequency.
-// V3 contrast needs frame sampling and lands with the brightness sampler; V4,
-// V6, V8, V10, V11 and V12 belong to components this manifest does not carry yet.
+// V1 safe area · V2 size floors · V3 contrast against the effective background ·
+// V5 lines and characters · V7 overlap between elements of different cuts whose
+// windows meet · V9 the two permitted motions · V13 one anchor step between
+// consecutive cuts · V14 style frequency.
+// V4, V8, V11 and V12 belong to components this manifest does not carry yet.
 func Verify(m Manifest, ratio string) error {
 	safe, ok := Safe(ratio)
 	if !ok {
@@ -94,14 +116,31 @@ func Verify(m Manifest, ratio string) error {
 		if e.StartMS < 0 || e.EndMS <= e.StartMS {
 			return ViolationSize
 		}
-		if !within(e.Region, safe) {
+		// Two elements are not bound by the safe area, and only two: the scrim,
+		// which CDS-32 places full-bleed across the frame's own edge, and the
+		// card plate, whose 9:16 width CDS-28 states as x 144–936 — sixteen
+		// pixels past CDS-9's x ≤ 920. What the safe area exists to protect is
+		// text, and a card's own lines sit 40 px inside its plate, so they are
+		// checked here like every other text.
+		if e.Kind != "scrim" && e.Kind != "card" && !within(e.Region, safe) {
 			return ViolationSafeArea
 		}
-		// The badge never moves and a chip does not settle: only a copy's own
-		// elements carry the two permitted motions (CDS-31, CDS-30, CDS-4).
-		if e.Kind == "badge" || e.Kind == "chip" {
+		if err := verifyContrast(e); err != nil {
+			return err
+		}
+		// The badge never moves, a chip does not settle and a card only fades:
+		// only a caption's own elements carry the two permitted motions (CDS-31,
+		// CDS-30, CDS-28, CDS-4).
+		if !caption(e) {
 			if e.InMS != 0 || e.OutMS != 0 || e.DY != 0 {
 				return ViolationMotion
+			}
+			// A card's own lines are typeset by the design system at a role's
+			// nominal size, so what V2 has to hold them to is the scale's own
+			// floor: no text in a clip is ever smaller than the smallest role
+			// CDS-19 defines (CDS-2).
+			if (e.Kind == "copy" || e.Kind == "chip-category") && e.FontSize < MinTypeSize() {
+				return ViolationSize
 			}
 			continue
 		}
@@ -111,6 +150,12 @@ func Verify(m Manifest, ratio string) error {
 		}
 		if e.InMS != Motion.InMS || e.OutMS != Motion.OutMS || e.DY != Motion.InDY {
 			return ViolationMotion
+		}
+		// CDS-32: a scrim appears only under an UNPLATED style and never lies on
+		// a plate. A wash under ink at α ≥ 0.72 would darken nothing and dim the
+		// footage for no reason.
+		if e.Kind == "scrim" && style.Plate != "" {
+			return ViolationKind
 		}
 		if e.Kind != "copy" {
 			continue
@@ -139,6 +184,12 @@ func Verify(m Manifest, ratio string) error {
 			// A badge or chip shares its window with the copy of whatever cut it
 			// spans, so overlap is checked between every pair whose windows meet
 			// and that do not belong to the same cut's own copy.
+			// A scrim lies under everything by definition (CDS-45): it is the
+			// ground the badge, the chips and the copy are read against, not a
+			// thing they can collide with.
+			if a.Kind == "scrim" || b.Kind == "scrim" {
+				continue
+			}
 			if sameElement(a, b) || !(a.StartMS < b.EndMS && b.StartMS < a.EndMS) {
 				continue
 			}
@@ -150,10 +201,52 @@ func Verify(m Manifest, ratio string) error {
 	return verifySequence(m)
 }
 
-// Elements of one cut's own copy are meant to sit on each other; the badge is
-// its own layer and a chip belongs to whichever cut it spans.
+// V3: every text is read against its effective background — the plate or card
+// under it, or, for an unplated style, the scrim and the sampled footage the
+// renderer resolved (CDS-44) — and no pairing may fall under 4.5:1 (CDS-16).
+// An element whose background is unknown carries no pairing to check: an
+// unplated caption before the sampler has run, and every element the design
+// system already certified against its token (CDS-16's plated α ≥ 0.72).
+func verifyContrast(e Element) error {
+	if e.Kind != "copy" && e.Kind != "chip-category" {
+		return nil
+	}
+	if e.Fill == "" || e.Background == "" {
+		return nil
+	}
+	ratio, ok := Contrast(e.Fill, e.Background)
+	if !ok || ratio < Luma.ContrastMin {
+		return ViolationContrast
+	}
+	return nil
+}
+
+// Legible reports whether every pairing in these elements clears V3's floor: the
+// same check Verify runs, for a renderer deciding whether to fall back (CDS-44).
+func Legible(m Manifest) bool {
+	for _, e := range m {
+		if verifyContrast(e) != nil {
+			return false
+		}
+	}
+	return true
+}
+
+// The elements of one caption are meant to sit on each other, and so are a
+// card's plate and its own lines. Every other pair that shares a window is
+// checked: the badge against a chip, a chip against another chip, and a card
+// against any caption — which is what keeps copy and chips out from under a
+// card (CDS-45, V7).
 func sameElement(a, b Element) bool {
-	return a.Kind != "badge" && b.Kind != "badge" && a.Kind != "chip" && b.Kind != "chip" && a.Cut == b.Cut
+	if a.Cut != b.Cut {
+		return false
+	}
+	return (caption(a) && caption(b)) || (cardPart(a) && cardPart(b))
+}
+
+// cardPart is the card plate itself, its category chip or one of its own lines.
+func cardPart(e Element) bool {
+	return !caption(e) && (e.Kind == "card" || e.Kind == "chip-category" || e.Kind == "copy")
 }
 func durationOf(m Manifest) int {
 	end := 0
@@ -206,7 +299,7 @@ func verifyDisclosure(m Manifest, duration int) error {
 // the cut it happens to sit on.
 func styleOfCut(m Manifest, cut int) string {
 	for _, e := range m {
-		if e.Cut == cut && e.Kind != "badge" && e.Kind != "chip" {
+		if e.Cut == cut && caption(e) {
 			return e.Style
 		}
 	}
@@ -218,7 +311,7 @@ func verifySequence(m Manifest) error {
 	cuts := []int{}
 	style, anchor := map[int]string{}, map[int]string{}
 	for _, e := range m {
-		if e.Kind == "badge" || e.Kind == "chip" {
+		if !caption(e) {
 			continue
 		}
 		if _, seen := style[e.Cut]; !seen {

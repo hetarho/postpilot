@@ -31,8 +31,13 @@ type Copy = Caption
 type Cut struct {
 	ID, SourceID, Fingerprint string
 	StartMS, EndMS            int
-	Focal                     Point
-	Copy                      Copy
+	// The transition INTO this cut (CDS-36): 0 is a hard cut, 200 the fade a
+	// scene change earns and 300 the fade-through-black nothing selects on its
+	// own. It belongs to the cut it leads into, so reordering step ②'s cuts
+	// keeps each cut's own entry and the first cut is always a hard cut.
+	TransitionMS int
+	Focal        Point
+	Copy         Copy
 	// Reserved fact labels whose chips belong on this cut (CDS-30), at most two
 	// at a time. Part of the approved composition, so it is stored with it.
 	Chips  []string
@@ -48,6 +53,23 @@ func (c Cut) CaptionWindow() (int, int) {
 		return CopyLeadMS, c.EndMS - c.StartMS - CopyLeadMS
 	}
 	return c.Copy.StartMS, c.Copy.EndMS
+}
+
+// TransitionTotal is what the transitions take off the timeline: a cut overlaps
+// the one before it by its own transition (CDS-36), so the clip is shorter than
+// the sum of its cuts by exactly this.
+func (p EditPlan) TransitionTotal() int {
+	total := 0
+	for _, c := range p.Cuts {
+		total += c.TransitionMS
+	}
+	return total
+}
+
+// The three transitions CDS-36 admits and nothing else. 300 is accepted so a
+// manual plan may choose the fade-through-black; no control offers it.
+func ValidTransition(ms int) bool {
+	return ms == 0 || ms == design.Transition.FadeMS || ms == design.Transition.BlackMS
 }
 
 func (c EditCut) OriginalVolume() float64 {
@@ -73,6 +95,9 @@ type EditPlan struct {
 	// The opening card's title, written by the model under CDS-42 and rendered
 	// by the hook card; empty when it could not be grounded.
 	Hook string
+	// The closing call to action, already resolved against the preset, and the
+	// project accent both cards paint with (CDS-29, CLIP-14).
+	CTA, Accent string
 	// What the model wrote per cut, parallel to Cuts, before the compiler placed
 	// it. It is the compiler's input and is never stored with the plan.
 	Written []Written
@@ -97,7 +122,9 @@ type Renderer interface {
 	Render(context.Context, MediaWorkspace, EditPlan, []RenderSource, RenderSourceLoader) (RenderedVideo, error)
 }
 type RenderConfig struct {
-	ResvgPath, FontPath                                              string
+	ResvgPath, FontPath string
+	// The secondary face (CDS-17): the hook title and 크게 강조 are set in it.
+	DisplayFontPath                                                  string
 	MaxCuts, MaxCopyRunes, FadeMS, FPS, CRF, AudioRate, AudioBitrate int
 	MinDurationMS, MaxDurationMS                                     int
 }
@@ -190,6 +217,7 @@ const (
 	reasonLayoutFrequency  = "CLIP_LAYOUT_FREQUENCY"
 	reasonLayoutDisclosure = "CLIP_LAYOUT_DISCLOSURE"
 	reasonLayoutKind       = "CLIP_LAYOUT_KIND"
+	reasonLayoutContrast   = "CLIP_LAYOUT_CONTRAST"
 )
 
 var layoutReasons = map[string]string{
@@ -201,9 +229,15 @@ var layoutReasons = map[string]string{
 	string(design.ViolationFrequency):  reasonLayoutFrequency,
 	string(design.ViolationDisclosure): reasonLayoutDisclosure,
 	string(design.ViolationKind):       reasonLayoutKind,
+	string(design.ViolationContrast):   reasonLayoutContrast,
 }
 
 func (e planViolation) LayoutReason() string { return layoutReasons[string(e)] }
+
+// LayoutViolation restates one design-system violation as an invalid plan, for
+// a check the renderer makes on its own — V3's contrast, which only exists once
+// the footage under a copy has been sampled (CDS-44).
+func LayoutViolation(v design.Violation) error { return planViolation(v) }
 
 // VerifyLayout gates a render on the design system (CDS-52) and restates the
 // failure as an invalid plan, which is what every caller already understands.
@@ -216,11 +250,22 @@ func VerifyLayout(ratio string, m Manifest) error {
 	return err
 }
 
+// Compiled reports whether this plan came straight from the compiler, which is
+// the one thing that decides who owns a style choice. The per-cut decisions are
+// the compiler's own output and are never stored with a plan (they are not part
+// of the approved composition), so a plan that still carries one per cut has not
+// been through a person. It is what lets a contrast fallback stay silent on a
+// machine's choice and be reported on a person's (CDS-44, CDS-52).
+func (p EditPlan) Compiled() bool {
+	return len(p.Cuts) > 0 && len(p.Decisions) == len(p.Cuts)
+}
+
 // WithProject fills the render inputs the badge and the chips need. It is
 // called at render time rather than at approval time so a stored plan never
 // carries a stale disclosure.
-func (p EditPlan) WithFacts(disclosure string, facts []Answer, preset string) EditPlan {
+func (p EditPlan) WithFacts(disclosure string, facts []Answer, preset, cta, accent string) EditPlan {
 	p.Disclosure, p.Facts, p.Preset = disclosure, facts, preset
+	p.CTA, p.Accent = cta, accent
 	return p
 }
 
@@ -250,6 +295,10 @@ func ValidateEditPlan(cfg RenderConfig, plan EditPlan, sources []RenderSource) e
 	if _, err := ClipCanvas(plan.Ratio); err != nil {
 		return planViolation("plan_ratio")
 	}
+	// Two lines of nine, which is what the hook card sets (CDS-28).
+	if design.Chars(plan.Hook) > 2*design.Type["hook"].Chars || strings.Count(plan.Hook, "\n") > 1 {
+		return planViolation("plan_hook")
+	}
 	if len(plan.Cuts) == 0 || len(plan.Cuts) > cfg.MaxCuts {
 		return planViolation("plan_cut_count")
 	}
@@ -265,7 +314,7 @@ func ValidateEditPlan(cfg RenderConfig, plan EditPlan, sources []RenderSource) e
 	}
 	total := 0
 	seen := map[string]bool{}
-	for _, c := range plan.Cuts {
+	for i, c := range plan.Cuts {
 		if utf8.RuneCountInString(c.Copy.Text) > cfg.MaxCopyRunes {
 			return ErrCopyTooLong
 		}
@@ -279,7 +328,18 @@ func ValidateEditPlan(cfg RenderConfig, plan EditPlan, sources []RenderSource) e
 		if c.StartMS < 0 || c.StartMS >= c.EndMS || c.EndMS > s.Info.DurationMS {
 			return planViolation("plan_cut_range")
 		}
-		if c.EndMS-c.StartMS <= 2*cfg.FadeMS {
+		// A transition belongs to the cut it leads into and the first cut has
+		// none: a clip does not fade in from nothing (CDS-36).
+		if !ValidTransition(c.TransitionMS) || (i == 0 && c.TransitionMS != 0) {
+			return planViolation("plan_cut_transition")
+		}
+		// A cut has to outlast both boundaries that eat into it — its own
+		// transition and the one the next cut leads in with.
+		overlap := c.TransitionMS
+		if i+1 < len(plan.Cuts) {
+			overlap += plan.Cuts[i+1].TransitionMS
+		}
+		if c.EndMS-c.StartMS <= max(2*design.Transition.FadeMS, overlap) {
 			return planViolation("plan_cut_fade")
 		}
 		if !normalized(c.Focal.X) || !normalized(c.Focal.Y) {
@@ -327,13 +387,13 @@ func ValidateEditPlan(cfg RenderConfig, plan EditPlan, sources []RenderSource) e
 				return planViolation("plan_copy_keyword")
 			}
 		}
-		if c.EndMS-c.StartMS > cfg.MaxDurationMS+cfg.FadeMS*(len(plan.Cuts)-1)-total {
+		if c.EndMS-c.StartMS > cfg.MaxDurationMS+plan.TransitionTotal()-total {
 			return planViolation("plan_duration_limit")
 		}
 		total += c.EndMS - c.StartMS
 	}
 	// Overlap is part of the approved timeline, not extra trimming after approval.
-	if total-cfg.FadeMS*(len(plan.Cuts)-1) != plan.DurationMS {
+	if total-plan.TransitionTotal() != plan.DurationMS {
 		return planViolation("plan_timeline")
 	}
 	return nil

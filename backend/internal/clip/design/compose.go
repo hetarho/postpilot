@@ -284,3 +284,39 @@ func Banned(text string) bool {
 	}
 	return false
 }
+
+// Transitions is CDS-36's whole rule, and the only place a transition is
+// chosen: a hard cut joins two cuts of the same scene, a 200 ms fade joins two
+// that differ, and at most 40 % of the boundaries may fade. The value at index i
+// is the transition INTO cut i, so index 0 is always a hard cut — a clip does
+// not fade in from nothing.
+//
+// When the fades exceed the ratio the EARLIEST ones are kept: they sit where the
+// clip is still establishing its scenes, and a viewer who has already been shown
+// three places does not need a fourth one softened.
+func Transitions(scenes []string) []int {
+	out := make([]int, len(scenes))
+	if len(scenes) < 2 {
+		return out
+	}
+	// The ratio is of the BOUNDARIES, of which there are one fewer than cuts.
+	budget := int(Transition.FadeRatioMax * float64(len(scenes)-1))
+	for i := 1; i < len(scenes); i++ {
+		if Scene(scenes[i]) == Scene(scenes[i-1]) || budget <= 0 {
+			continue
+		}
+		out[i] = Transition.FadeMS
+		budget--
+	}
+	return out
+}
+
+// CutBounds is CDS-37's length range for one scene, in milliseconds. A food
+// close-up has its own shorter ceiling; every other scene takes the shared one.
+func CutBounds(scene string) (int, int) {
+	maximum := Timing.CutMaxS
+	if Scene(scene) == "food" {
+		maximum = Timing.CutMaxFoodS
+	}
+	return int(Timing.CutMinS * 1000), int(maximum * 1000)
+}

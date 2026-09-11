@@ -36,7 +36,14 @@ func TestRecordedMultiSourcePlans(t *testing.T) {
 			s, models, captions := newService(t, response.Text, true)
 			models.response = response
 			got, usage, err := s.Plan(t.Context(), testRef(), fixture.Input)
-			if err != nil || len(got.Cuts) != 4 || got.DurationMS != 15000 || got.Ratio != "vertical" {
+			total := 0
+			for _, c := range got.Cuts {
+				total += c.EndMS - c.StartMS
+			}
+			// The recorded cuts all show the same scene, so CDS-36 joins every
+			// one of them with a hard cut and the clip is exactly as long as its
+			// footage — inside the target's own tolerance.
+			if err != nil || len(got.Cuts) != 4 || got.Ratio != "vertical" || got.TransitionTotal() != 0 || got.DurationMS != total || abs(got.DurationMS-15000) > 1000 {
 				t.Fatalf("recorded plan rejected: %+v %v", got, err)
 			}
 			// One paid call, and at most one measurement per candidate anchor.
@@ -51,8 +58,9 @@ func multiSourcePlan() (clip.PlanningInput, map[string]any) {
 	in := clip.PlanningInput{Policy: testPolicy("write"), Template: clip.Recipe{Name: "여덟 장면", CopyStyles: []string{"clean", "memo"}, Accent: "amber"}, Ratio: "vertical", TargetDurationMS: 15000}
 	durations := []int{4290, 3744, 1480, 5010, 5108, 4508, 5428, 6702}
 	// The third cut is 1200 ms, not 1000: a three-character copy earns 1170 ms of
-	// exposure (CDS-41) and a cut cannot be shorter than the copy it carries. The
-	// eight still sum to 16400, the fade timeline's 15000.
+	// exposure (CDS-41) and a cut cannot be shorter than the copy it carries —
+	// which is also CDS-37's own floor. The eight sum to 16400 and the target
+	// pulls them back to 15000.
 	lengths := []int{2000, 2000, 1200, 2200, 2300, 2300, 2200, 2200}
 	var cuts []any
 	for i, duration := range durations {
@@ -71,7 +79,7 @@ func multiSourcePlan() (clip.PlanningInput, map[string]any) {
 	return in, map[string]any{"ratio": "vertical", "duration_ms": 15000, "hook": "여덟 장면", "cuts": cuts}
 }
 
-func TestEightShortSourcesComposeWithExactFadeTimeline(t *testing.T) {
+func TestEightShortSourcesComposeWithExactTransitionTimeline(t *testing.T) {
 	for _, structured := range []bool{false, true} {
 		in, wire := multiSourcePlan()
 		s, models, captions := newService(t, raw(wire), structured)
@@ -104,7 +112,9 @@ func TestEightShortSourcesComposeWithExactFadeTimeline(t *testing.T) {
 			}
 			styles[cut.Copy.Style]++
 		}
-		if total-200*(len(got.Cuts)-1) != got.DurationMS || models.calls[0].HasVideos() || models.calls[0].HasImages() {
+		// Eight cuts of one scene: CDS-36 joins every boundary with a hard cut,
+		// so the clip is exactly as long as the footage it selected.
+		if got.TransitionTotal() != 0 || total-got.TransitionTotal() != got.DurationMS || models.calls[0].HasVideos() || models.calls[0].HasImages() {
 			t.Fatal("invalid timeline or non-text planning")
 		}
 		if len(styles) < 2 {
@@ -149,4 +159,11 @@ func TestMultiSourceOutputDiagnosticsPreserveFailureAndUsage(t *testing.T) {
 			}
 		})
 	}
+}
+
+func abs(n int) int {
+	if n < 0 {
+		return -n
+	}
+	return n
 }

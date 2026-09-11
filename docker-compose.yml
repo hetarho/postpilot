@@ -2,6 +2,12 @@
 # Go toolchain version is pinned by the image, not by whatever is on the host.
 # The frontend runs on the host (`pnpm dev:web`, Vite on :2564) and proxies /api here.
 #
+# `dev:api` passes `--build` on purpose. The `./backend:/app` mount carries Go source
+# changes in, so a stale image still *looks* live — but anything baked at build time
+# (the fonts and resvg below) stays whatever it was, and the process then exits 1 at
+# boot while the container reports `Up`. The frontend sees only a 502 from the proxy.
+# A cached rebuild costs a few seconds; that failure costs an afternoon.
+#
 # Host port 7678 → container 8080. The dev ports spell the project on a phone keypad —
 # 7678 = P-O-S-T (api), 2564 = B-L-O-G (web) — which keeps them clear of 8080/1214 (the
 # sibling cosimosi stack) and of every common dev default. In production the api owns 8080

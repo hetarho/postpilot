@@ -18,6 +18,7 @@ describe('clip design-system refusals', () => {
     'CLIP_LAYOUT_FREQUENCY',
     'CLIP_LAYOUT_DISCLOSURE',
     'CLIP_LAYOUT_KIND',
+    'CLIP_LAYOUT_CONTRAST',
     'CLIP_DISCLOSURE_REQUIRED',
   ] as const
 

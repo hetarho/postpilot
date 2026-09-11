@@ -4,49 +4,56 @@ import { ClipEditingStateSchema } from '@/shared/api'
 import { clipEditingFixture } from '@/test/clip-editing'
 import { clipPlanToProto, toClipEditingState } from '../api/edit-plan'
 import {
+  clipPlanDuration,
   copyChars,
   copyClipPlan,
   editClipPlan,
+  groundedInAnswers,
   minExposureMs,
   requiredClipSources,
   validateClipPlan,
+  withinHookLimits,
   type ClipCaption,
   type ClipEditCut,
   type ClipEditPlan,
 } from './edit-plan'
 
-it('immutably edits every field, reorders/deletes and recalculates fade overlap', () => {
+it('immutably edits every field, reorders/deletes and recalculates transition overlap', () => {
   const state = clipEditingFixture(),
     snapshot = structuredClone(state)
-  let plan = editClipPlan(state.plan, { type: 'move', from: 0, to: 1 }, state.fadeMs)
+  let plan = editClipPlan(state.plan, { type: 'move', from: 0, to: 1 })
   expect(plan.cuts.map((c) => c.id)).toEqual(['cut-b', 'cut-a'])
-  plan = editClipPlan(
-    plan,
-    { type: 'cut', id: 'cut-b', patch: { startMs: 1000, endMs: 21000, volumePermille: 123 } },
-    state.fadeMs,
-  )
-  plan = editClipPlan(
-    plan,
-    {
-      type: 'copy',
-      id: 'cut-b',
-      patch: {
-        text: '정확한 <문구>',
-        startMs: 200,
-        endMs: 3000,
-        // 메모 sits LEFT at the top or the bottom (CDS-24); anywhere else is
-        // a placement the verifier refuses.
-        anchor: 'bottom',
-        align: 'left',
-        style: 'memo',
-        accent: 'teal',
-      },
+  // The fade rode cut-b, and cut-b is now first: a clip does not fade in from
+  // nothing, so the reorder cleared it and the clip is its whole footage.
+  expect(plan.cuts.map((c) => c.transitionMs)).toEqual([0, 0])
+  expect(plan.durationMs).toBe(20000)
+  plan = editClipPlan(plan, {
+    type: 'cut',
+    id: 'cut-b',
+    patch: { startMs: 1000, endMs: 21000, volumePermille: 123 },
+  })
+  plan = editClipPlan(plan, {
+    type: 'copy',
+    id: 'cut-b',
+    patch: {
+      text: '정확한 <문구>',
+      startMs: 200,
+      endMs: 3000,
+      // 메모 sits LEFT at the top or the bottom (CDS-24); anywhere else is
+      // a placement the verifier refuses.
+      anchor: 'bottom',
+      align: 'left',
+      style: 'memo',
+      accent: 'teal',
     },
-    state.fadeMs,
-  )
+  })
+  expect(plan.durationMs).toBe(30000)
+  // The owner fades into the cut that now follows, and only that boundary is
+  // taken off the timeline (CDS-36).
+  plan = editClipPlan(plan, { type: 'cut', id: 'cut-a', patch: { transitionMs: 200 } })
   expect(plan.durationMs).toBe(29800)
   expect(validateClipPlan(plan, state).valid).toBe(true)
-  plan = editClipPlan(plan, { type: 'remove', id: 'cut-a' }, state.fadeMs)
+  plan = editClipPlan(plan, { type: 'remove', id: 'cut-a' })
   expect(plan.durationMs).toBe(20000)
   expect(requiredClipSources(plan, state.sources).map((s) => s.id)).toEqual(['b'])
   expect(state).toEqual(snapshot)
@@ -79,6 +86,18 @@ it.each<[(p: ClipEditPlan) => void]>([
   [
     (p) => {
       p.cuts[0]!.endMs = 400
+    },
+  ],
+  [
+    // CDS-36 admits a cut, a 200 ms fade and a 300 ms fade-through-black.
+    (p) => {
+      p.cuts[1]!.transitionMs = 150
+    },
+  ],
+  [
+    // A clip does not fade in from nothing.
+    (p) => {
+      p.cuts[0]!.transitionMs = 200
     },
   ],
   [
@@ -224,4 +243,64 @@ it('mirrors the per-style limits, the exposure minimum and the per-clip guards',
     check([cut({ id: 'a' }, { style: 'mark', text: '가격 9900원', keyword: '9900원' })]).cuts[0]!
       .keyword,
   ).toBe(false)
+})
+
+/** The hook card's own sentence (CDS-28, CDS-42). The field refuses what the
+ *  compiler would drop, so the owner sees why rather than losing the card. */
+it("holds the hook to two lines of nine, grounded in the owner's answers", () => {
+  const state = clipEditingFixture(),
+    answers = [
+      { label: '상호', text: '해람 베이커리' },
+      { label: '가격', text: '9,900원' },
+    ]
+  expect(withinHookLimits('아홉 글자까지만')).toBe(true)
+  expect(copyChars('가'.repeat(18))).toBe(18)
+  expect(withinHookLimits('가'.repeat(18))).toBe(true)
+  expect(withinHookLimits('가'.repeat(19))).toBe(false)
+  expect(withinHookLimits('한 줄\n두 줄\n세 줄')).toBe(false)
+
+  // A number or a Latin name has to come from step ①; ordinary prose does not.
+  expect(groundedInAnswers('', answers)).toBe(true)
+  expect(groundedInAnswers('9900원 빵집', answers)).toBe(true)
+  expect(groundedInAnswers('12000원 빵집', answers)).toBe(false)
+  expect(groundedInAnswers('해람 Bakery', [{ label: '상호', text: '해람 Bakery' }])).toBe(true)
+  expect(groundedInAnswers('해람 Bakery', answers)).toBe(false)
+  expect(groundedInAnswers('역대급 빵집', answers)).toBe(false)
+  expect(groundedInAnswers('빵집 🥐', answers)).toBe(false)
+
+  // The whole plan carries it, and an invalid hook invalidates the plan.
+  expect(validateClipPlan({ ...state.plan, hook: '아홉 글자까지만' }, state).hook).toBe(false)
+  const long = validateClipPlan({ ...state.plan, hook: '가'.repeat(19) }, state)
+  expect(long.hook).toBe(true)
+  expect(long.valid).toBe(false)
+  expect(editClipPlan(state.plan, { type: 'hook', hook: '갓 구운 빵' }).hook).toBe('갓 구운 빵')
+  expect(
+    toClipEditingState(
+      create(ClipEditingStateSchema, {
+        ...state,
+        plan: clipPlanToProto({ ...state.plan, hook: '갓 구운 빵' }),
+      }),
+    ).plan.hook,
+  ).toBe('갓 구운 빵')
+})
+
+// CDS-36: the duration is the footage less what each cut's own transition
+// overlaps, and the same three transitions the renderer accepts.
+it.each([
+  [[0, 0, 0], 30000],
+  [[0, 200, 200], 29600],
+  [[0, 0, 200], 29800],
+  [[0, 300, 0], 29700],
+])('takes %s off the footage', (transitions, durationMs) => {
+  const state = clipEditingFixture()
+  const third = { ...state.plan.cuts[1]!, id: 'cut-c', copy: { ...state.plan.cuts[1]!.copy } }
+  state.plan.cuts = [...state.plan.cuts, third].map((c, i) => ({
+    ...c,
+    transitionMs: transitions[i]!,
+  }))
+  state.plan.durationMs = clipPlanDuration(state.plan.cuts)
+  expect(state.plan.durationMs).toBe(durationMs)
+  expect(validateClipPlan(state.plan, state).timeline).toBe(false)
+  // One millisecond either way is a timeline the renderer cannot make.
+  expect(validateClipPlan({ ...state.plan, durationMs: durationMs + 1 }, state).timeline).toBe(true)
 })

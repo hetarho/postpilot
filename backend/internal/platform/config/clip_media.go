@@ -12,7 +12,9 @@ func loadClipMedia(cfg *Config) error {
 	cfg.ClipFFprobePath = getenv("CLIP_FFPROBE_PATH", "/usr/local/bin/ffprobe")
 	cfg.ClipResvgPath = getenv("CLIP_RESVG_PATH", "/usr/local/bin/resvg")
 	cfg.ClipFontPath = getenv("CLIP_FONT_PATH", "/usr/share/postpilot-fonts/pretendard/PretendardVariable.ttf")
-	for key, value := range map[string]string{"CLIP_WORK_ROOT": cfg.ClipWorkRoot, "CLIP_FFMPEG_PATH": cfg.ClipFFmpegPath, "CLIP_FFPROBE_PATH": cfg.ClipFFprobePath, "CLIP_RESVG_PATH": cfg.ClipResvgPath, "CLIP_FONT_PATH": cfg.ClipFontPath} {
+	// The secondary face the hook title and 크게 강조 are set in (CDS-17).
+	cfg.ClipDisplayFontPath = getenv("CLIP_FONT_PAPERLOGY_PATH", "/usr/share/postpilot-fonts/paperlogy/Paperlogy-8ExtraBold.ttf")
+	for key, value := range map[string]string{"CLIP_WORK_ROOT": cfg.ClipWorkRoot, "CLIP_FFMPEG_PATH": cfg.ClipFFmpegPath, "CLIP_FFPROBE_PATH": cfg.ClipFFprobePath, "CLIP_RESVG_PATH": cfg.ClipResvgPath, "CLIP_FONT_PATH": cfg.ClipFontPath, "CLIP_FONT_PAPERLOGY_PATH": cfg.ClipDisplayFontPath} {
 		if strings.ContainsAny(value, "$\x00") || !filepath.IsAbs(value) || filepath.Clean(value) != value || filepath.Dir(value) == "/" {
 			return fmt.Errorf("%s must be a dedicated absolute path", key)
 		}

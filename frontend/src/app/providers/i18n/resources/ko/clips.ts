@@ -57,10 +57,18 @@ export const clips = {
     exposureError: '자막이 짧게 지나가요. 문구를 줄이거나 노출 시간을 늘려 주세요.',
     frequencyError:
       '같은 스타일이 너무 자주 쓰였어요. 크게 강조는 두 번까지, 같은 스타일은 연속 세 번까지예요.',
+    hook: '훅 문장',
+    hookHelp:
+      '첫 1.5초 카드에 뜨는 한 문장이에요. {{lines}}줄 × {{chars}}자까지, ① 단계에 적은 정보 안에서 써 주세요. 비워 두면 카드 없이 시작해요.',
+    hookError:
+      '훅 문장은 {{lines}}줄 × {{chars}}자까지예요. 숫자나 영문은 ① 단계에 적은 정보에 있는 것만 쓸 수 있어요.',
     anchors: { top: '상단', upper_mid: '위쪽 중간', lower_mid: '아래쪽 중간', bottom: '하단' },
     volume: '원본 소리 (%)',
     rangeError: '원본의 0~{{max}} ms 안에서 시작보다 끝이 늦어야 해요.',
     cutDurationError: '컷 길이는 {{min}} ms보다 길어야 해요.',
+    transition: '앞 컷과의 전환',
+    transitions: { cut: '컷 (바로 전환)', fade: '페이드 {{ms}} ms' },
+    transitionError: '첫 컷은 컷으로 시작해요. 전환은 컷 또는 페이드만 고를 수 있어요.',
     captionWindowError: '자막은 컷 안에서 시작보다 끝이 늦어야 해요.',
     captionWindowHelp: '시간은 컷 시작을 기준으로 해요. 둘 다 0이면 컷 전체에 자막이 나와요.',
     volumeError: '볼륨은 0~100%로 입력해 주세요.',

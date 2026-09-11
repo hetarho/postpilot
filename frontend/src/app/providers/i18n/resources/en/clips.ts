@@ -59,10 +59,18 @@ export const clips = {
     exposureError: 'This caption passes too quickly. Shorten it or give it more time.',
     frequencyError:
       'One style was used too often. Bold takes at most two per clip, and one style at most three in a row.',
+    hook: 'Hook sentence',
+    hookHelp:
+      'The one line on the opening card, for the first 1.5 seconds. Up to {{lines}} lines of {{chars}} characters, written from the facts you gave in step ①. Leave it empty to open on the footage itself.',
+    hookError:
+      'The hook takes at most {{lines}} lines of {{chars}} characters, and any number or Latin word in it has to appear in the facts from step ①.',
     anchors: { top: 'Top', upper_mid: 'Upper middle', lower_mid: 'Lower middle', bottom: 'Bottom' },
     volume: 'Original audio (%)',
     rangeError: 'Keep start before end within the source’s 0–{{max}} ms.',
     cutDurationError: 'Each cut must be longer than {{min}} ms.',
+    transition: 'Join with the cut before',
+    transitions: { cut: 'Cut (no fade)', fade: 'Fade {{ms}} ms' },
+    transitionError: 'The first cut always starts on a cut, and a join is either a cut or a fade.',
     captionWindowError: 'Keep the caption inside the cut, with start before end.',
     captionWindowHelp:
       'Times are relative to the cut. Set both to 0 to show the caption for the whole cut.',

@@ -2870,7 +2870,11 @@ type ClipEditCut struct {
 	Copy           *ClipCaption           `protobuf:"bytes,6,opt,name=copy,proto3" json:"copy,omitempty"`
 	VolumePermille int32                  `protobuf:"varint,7,opt,name=volume_permille,json=volumePermille,proto3" json:"volume_permille,omitempty"`
 	// Reserved fact labels whose chips belong on this cut, at most two.
-	Chips         []string `protobuf:"bytes,8,rep,name=chips,proto3" json:"chips,omitempty"`
+	Chips []string `protobuf:"bytes,8,rep,name=chips,proto3" json:"chips,omitempty"`
+	// The transition INTO this cut: 0 is a hard cut, 200 the fade a scene change
+	// earns and 300 the fade-through-black nothing offers yet. The first cut of a
+	// plan always carries 0.
+	TransitionMs  int32 `protobuf:"varint,9,opt,name=transition_ms,json=transitionMs,proto3" json:"transition_ms,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2961,10 +2965,19 @@ func (x *ClipEditCut) GetChips() []string {
 	return nil
 }
 
+func (x *ClipEditCut) GetTransitionMs() int32 {
+	if x != nil {
+		return x.TransitionMs
+	}
+	return 0
+}
+
 type ClipEditPlan struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	DurationMs    int32                  `protobuf:"varint,1,opt,name=duration_ms,json=durationMs,proto3" json:"duration_ms,omitempty"`
-	Cuts          []*ClipEditCut         `protobuf:"bytes,2,rep,name=cuts,proto3" json:"cuts,omitempty"`
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	DurationMs int32                  `protobuf:"varint,1,opt,name=duration_ms,json=durationMs,proto3" json:"duration_ms,omitempty"`
+	Cuts       []*ClipEditCut         `protobuf:"bytes,2,rep,name=cuts,proto3" json:"cuts,omitempty"`
+	// The opening card's one sentence (CDS-28). Empty renders no hook card.
+	Hook          string `protobuf:"bytes,3,opt,name=hook,proto3" json:"hook,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3011,6 +3024,13 @@ func (x *ClipEditPlan) GetCuts() []*ClipEditCut {
 		return x.Cuts
 	}
 	return nil
+}
+
+func (x *ClipEditPlan) GetHook() string {
+	if x != nil {
+		return x.Hook
+	}
+	return ""
 }
 
 type ClipRetainedSource struct {
@@ -3098,15 +3118,17 @@ func (x *ClipRetainedSource) GetHeight() int32 {
 }
 
 type ClipEditingState struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Plan          *ClipEditPlan          `protobuf:"bytes,1,opt,name=plan,proto3" json:"plan,omitempty"`
-	Sources       []*ClipRetainedSource  `protobuf:"bytes,2,rep,name=sources,proto3" json:"sources,omitempty"`
-	CopyStyles    []string               `protobuf:"bytes,3,rep,name=copy_styles,json=copyStyles,proto3" json:"copy_styles,omitempty"`
-	FadeMs        int32                  `protobuf:"varint,4,opt,name=fade_ms,json=fadeMs,proto3" json:"fade_ms,omitempty"`
-	MaxCuts       int32                  `protobuf:"varint,5,opt,name=max_cuts,json=maxCuts,proto3" json:"max_cuts,omitempty"`
-	MaxCopyRunes  int32                  `protobuf:"varint,6,opt,name=max_copy_runes,json=maxCopyRunes,proto3" json:"max_copy_runes,omitempty"`
-	MinDurationMs int32                  `protobuf:"varint,7,opt,name=min_duration_ms,json=minDurationMs,proto3" json:"min_duration_ms,omitempty"`
-	MaxDurationMs int32                  `protobuf:"varint,8,opt,name=max_duration_ms,json=maxDurationMs,proto3" json:"max_duration_ms,omitempty"`
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	Plan       *ClipEditPlan          `protobuf:"bytes,1,opt,name=plan,proto3" json:"plan,omitempty"`
+	Sources    []*ClipRetainedSource  `protobuf:"bytes,2,rep,name=sources,proto3" json:"sources,omitempty"`
+	CopyStyles []string               `protobuf:"bytes,3,rep,name=copy_styles,json=copyStyles,proto3" json:"copy_styles,omitempty"`
+	// Retained for one release so a client that has not moved to each cut's own
+	// `transition_ms` still reads a number. Nothing computes a duration from it.
+	FadeMs        int32 `protobuf:"varint,4,opt,name=fade_ms,json=fadeMs,proto3" json:"fade_ms,omitempty"`
+	MaxCuts       int32 `protobuf:"varint,5,opt,name=max_cuts,json=maxCuts,proto3" json:"max_cuts,omitempty"`
+	MaxCopyRunes  int32 `protobuf:"varint,6,opt,name=max_copy_runes,json=maxCopyRunes,proto3" json:"max_copy_runes,omitempty"`
+	MinDurationMs int32 `protobuf:"varint,7,opt,name=min_duration_ms,json=minDurationMs,proto3" json:"min_duration_ms,omitempty"`
+	MaxDurationMs int32 `protobuf:"varint,8,opt,name=max_duration_ms,json=maxDurationMs,proto3" json:"max_duration_ms,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3655,7 +3677,7 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\bstart_ms\x18\x05 \x01(\x05R\astartMs\x12\x15\n" +
 	"\x06end_ms\x18\x06 \x01(\x05R\x05endMs\x12\x14\n" +
 	"\x05align\x18\a \x01(\tR\x05align\x12\x18\n" +
-	"\akeyword\x18\b \x01(\tR\akeyword\"\xfc\x01\n" +
+	"\akeyword\x18\b \x01(\tR\akeyword\"\xa1\x02\n" +
 	"\vClipEditCut\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tsource_id\x18\x02 \x01(\tR\bsourceId\x12 \n" +
@@ -3664,11 +3686,13 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\x06end_ms\x18\x05 \x01(\x05R\x05endMs\x12-\n" +
 	"\x04copy\x18\x06 \x01(\v2\x19.postpilot.v1.ClipCaptionR\x04copy\x12'\n" +
 	"\x0fvolume_permille\x18\a \x01(\x05R\x0evolumePermille\x12\x14\n" +
-	"\x05chips\x18\b \x03(\tR\x05chips\"^\n" +
+	"\x05chips\x18\b \x03(\tR\x05chips\x12#\n" +
+	"\rtransition_ms\x18\t \x01(\x05R\ftransitionMs\"r\n" +
 	"\fClipEditPlan\x12\x1f\n" +
 	"\vduration_ms\x18\x01 \x01(\x05R\n" +
 	"durationMs\x12-\n" +
-	"\x04cuts\x18\x02 \x03(\v2\x19.postpilot.v1.ClipEditCutR\x04cuts\"\xb1\x01\n" +
+	"\x04cuts\x18\x02 \x03(\v2\x19.postpilot.v1.ClipEditCutR\x04cuts\x12\x12\n" +
+	"\x04hook\x18\x03 \x01(\tR\x04hook\"\xb1\x01\n" +
 	"\x12ClipRetainedSource\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12 \n" +
 	"\vfingerprint\x18\x02 \x01(\tR\vfingerprint\x12\x1a\n" +

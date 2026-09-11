@@ -97,6 +97,7 @@ export const appFailureSpecs = {
   CLIP_LAYOUT_FREQUENCY: {},
   CLIP_LAYOUT_DISCLOSURE: {},
   CLIP_LAYOUT_KIND: {},
+  CLIP_LAYOUT_CONTRAST: {},
   CLIP_DISCLOSURE_REQUIRED: {},
   CLIP_FACTS_REQUIRED: { required: ['labels'] },
   CLIP_SOURCE_UNAVAILABLE: {},

@@ -7,6 +7,8 @@ import (
 	"math"
 	"slices"
 	"strings"
+
+	"github.com/postpilot/backend/internal/clip/design"
 )
 
 var ErrPlanConflict = errors.New("clip edit plan revision conflict")
@@ -16,13 +18,19 @@ var ErrPlanConflict = errors.New("clip edit plan revision conflict")
 type CorrectionCut struct {
 	ID, SourceID, Fingerprint string
 	StartMS, EndMS            int
-	Copy                      Caption
-	Chips                     []string
-	VolumePermille            int
+	// The transition INTO this cut (CDS-36). The owner may change it on step ②,
+	// which is why it rides the editable representation and the stored plan.
+	TransitionMS   int
+	Copy           Caption
+	Chips          []string
+	VolumePermille int
 }
 type CorrectionPlan struct {
 	DurationMS int
 	Cuts       []CorrectionCut
+	// The opening card's sentence (CDS-28). Part of the approved composition, so
+	// unlike the disclosure and the facts it IS stored with the plan.
+	Hook string
 }
 type CorrectionState struct {
 	Plan                                                        CorrectionPlan
@@ -30,6 +38,12 @@ type CorrectionState struct {
 	CopyStyles                                                  []string
 	FadeMS, MaxCuts, MaxCopyRunes, MinDurationMS, MaxDurationMS int
 }
+
+// Version 2 carries each cut's own transition. A version-1 plan predates CDS-36
+// and was rendered with a fade at every boundary, so that is exactly what it is
+// read back as — its stored duration was computed from it.
+const storedPlanVersion = 2
+
 type storedEditPlan struct {
 	Version    int
 	Ratio      string
@@ -39,9 +53,9 @@ type storedEditPlan struct {
 }
 
 func CorrectionFromPlan(p EditPlan) CorrectionPlan {
-	out := CorrectionPlan{DurationMS: p.DurationMS, Cuts: make([]CorrectionCut, 0, len(p.Cuts))}
+	out := CorrectionPlan{DurationMS: p.DurationMS, Hook: p.Hook, Cuts: make([]CorrectionCut, 0, len(p.Cuts))}
 	for _, c := range p.Cuts {
-		out.Cuts = append(out.Cuts, CorrectionCut{c.ID, c.SourceID, c.Fingerprint, c.StartMS, c.EndMS, c.Copy, slices.Clone(c.Chips), int(math.Round(c.OriginalVolume() * 1000))})
+		out.Cuts = append(out.Cuts, CorrectionCut{c.ID, c.SourceID, c.Fingerprint, c.StartMS, c.EndMS, c.TransitionMS, c.Copy, slices.Clone(c.Chips), int(math.Round(c.OriginalVolume() * 1000))})
 	}
 	return out
 }
@@ -50,7 +64,7 @@ func EncodeEditPlan(p EditPlan, styles []string) (string, error) {
 	for _, c := range p.Cuts {
 		focals[c.ID] = c.Focal
 	}
-	b, err := json.Marshal(storedEditPlan{1, p.Ratio, CorrectionFromPlan(p), focals, slices.Clone(styles)})
+	b, err := json.Marshal(storedEditPlan{storedPlanVersion, p.Ratio, CorrectionFromPlan(p), focals, slices.Clone(styles)})
 	return string(b), err
 }
 func strictJSON(raw string, out any) error {
@@ -116,6 +130,13 @@ func DecodeEditPlan(raw string) (EditPlan, []string, error) {
 		if _, err := ClipCanvas(p.Ratio); err != nil {
 			return EditPlan{}, nil, err
 		}
+		// T076 predates CDS-36 too: every boundary was a fade, and the stored
+		// duration only adds up if it is read back as one.
+		for i := range p.Cuts {
+			if i > 0 {
+				p.Cuts[i].TransitionMS = design.Transition.FadeMS
+			}
+		}
 		styles := []string{}
 		for _, c := range p.Cuts {
 			if !slices.Contains(styles, c.Copy.Style) {
@@ -125,8 +146,15 @@ func DecodeEditPlan(raw string) (EditPlan, []string, error) {
 		return p, styles, nil
 	}
 	var s storedEditPlan
-	if err := strictJSON(raw, &s); err != nil || s.Version != 1 {
+	if err := strictJSON(raw, &s); err != nil || s.Version < 1 || s.Version > storedPlanVersion {
 		return EditPlan{}, nil, ErrInvalid
+	}
+	if s.Version < 2 {
+		for i := range s.Plan.Cuts {
+			if i > 0 {
+				s.Plan.Cuts[i].TransitionMS = design.Transition.FadeMS
+			}
+		}
 	}
 	if len(s.Plan.Cuts) == 0 || s.Plan.DurationMS <= 0 {
 		return EditPlan{}, nil, ErrInvalid
@@ -134,14 +162,14 @@ func DecodeEditPlan(raw string) (EditPlan, []string, error) {
 	if _, err := ClipCanvas(s.Ratio); err != nil {
 		return EditPlan{}, nil, err
 	}
-	p := EditPlan{Ratio: s.Ratio, DurationMS: s.Plan.DurationMS}
+	p := EditPlan{Ratio: s.Ratio, DurationMS: s.Plan.DurationMS, Hook: s.Plan.Hook}
 	for _, c := range s.Plan.Cuts {
 		f, ok := s.Focals[c.ID]
 		if !ok || c.VolumePermille < 0 || c.VolumePermille > 1000 {
 			return EditPlan{}, nil, ErrInvalid
 		}
 		v := float64(c.VolumePermille) / 1000
-		p.Cuts = append(p.Cuts, Cut{ID: c.ID, SourceID: c.SourceID, Fingerprint: c.Fingerprint, StartMS: c.StartMS, EndMS: c.EndMS, Focal: f, Copy: c.Copy, Chips: c.Chips, Volume: &v})
+		p.Cuts = append(p.Cuts, Cut{ID: c.ID, SourceID: c.SourceID, Fingerprint: c.Fingerprint, StartMS: c.StartMS, EndMS: c.EndMS, TransitionMS: c.TransitionMS, Focal: f, Copy: c.Copy, Chips: c.Chips, Volume: &v})
 	}
 	return p, s.CopyStyles, nil
 }
@@ -183,15 +211,26 @@ func ApplyCorrection(cfg RenderConfig, p Project, input CorrectionPlan) (EditPla
 	for _, c := range old.Cuts {
 		known[c.ID] = c
 	}
-	next := EditPlan{Ratio: p.Ratio, DurationMS: input.DurationMS}
+	next := EditPlan{Ratio: p.Ratio, DurationMS: input.DurationMS, Hook: strings.TrimSpace(input.Hook)}
+	// The hook is the one text on a corrected plan the owner wrote for the clip
+	// rather than for a cut, so it answers to CDS-42 here: it may only state
+	// numbers and names the owner's own answers already carry.
+	if !Grounded(next.Hook, p.Answers) {
+		return EditPlan{}, nil, planViolation("plan_hook")
+	}
 	for _, c := range input.Cuts {
 		prior, ok := known[c.ID]
 		if !ok || c.SourceID != prior.SourceID || c.Fingerprint != prior.Fingerprint || c.VolumePermille < 0 || c.VolumePermille > 1000 || !slices.Contains(styles, c.Copy.Style) {
 			return EditPlan{}, nil, ErrInvalid
 		}
 		v := float64(c.VolumePermille) / 1000
-		prior.StartMS, prior.EndMS, prior.Copy, prior.Chips, prior.Volume = c.StartMS, c.EndMS, c.Copy, c.Chips, &v
+		prior.StartMS, prior.EndMS, prior.TransitionMS, prior.Copy, prior.Chips, prior.Volume = c.StartMS, c.EndMS, c.TransitionMS, c.Copy, c.Chips, &v
 		next.Cuts = append(next.Cuts, prior)
+	}
+	// A reorder carries each cut's own transition with it (CDS-36), so whichever
+	// cut the owner moved to the front leads in from nothing.
+	if len(next.Cuts) > 0 {
+		next.Cuts[0].TransitionMS = 0
 	}
 	refs := make([]RenderSource, 0, len(sources))
 	for _, s := range sources {

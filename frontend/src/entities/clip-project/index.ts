@@ -31,12 +31,17 @@ export {
   useClipProjectMutations,
 } from './api/clip-project'
 export {
+  CLIP_TRANSITIONS,
+  CLIP_TRANSITION_CHOICES,
   COPY_ANCHORS,
   COPY_ALIGNS,
+  clipPlanDuration,
   copyClipPlan,
   editClipPlan,
+  groundedInAnswers,
   requiredClipSources,
   validateClipPlan,
+  withinHookLimits,
 } from './model/edit-plan'
 export type {
   ClipCaption,

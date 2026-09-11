@@ -215,3 +215,57 @@ func TestBannedVoice(t *testing.T) {
 		}
 	}
 }
+
+// CDS-36: a hard cut is the default, a scene change earns a 200 ms fade and no
+// more than 40 % of the boundaries may take one — the earliest ones.
+func TestTransitionsFadeOnlyOnSceneChangeAndWithinTheRatio(t *testing.T) {
+	for name, c := range map[string]struct {
+		scenes []string
+		want   []int
+	}{
+		"one cut":            {[]string{"food"}, []int{0}},
+		"two of one scene":   {[]string{"food", "food"}, []int{0, 0}},
+		"two that differ":    {[]string{"food", "menu"}, []int{0, 0}},
+		"one change of four": {[]string{"food", "food", "menu", "menu"}, []int{0, 0, 200, 0}},
+		"every boundary":     {[]string{"food", "menu", "food", "menu", "food", "menu"}, []int{0, 200, 200, 0, 0, 0}},
+		"unknown scene":      {[]string{"", "scenery", "menu", "menu"}, []int{0, 0, 200, 0}},
+		"none":               {nil, []int{}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			got := design.Transitions(c.scenes)
+			if len(got) != len(c.want) {
+				t.Fatalf("%v", got)
+			}
+			for i := range got {
+				if got[i] != c.want[i] {
+					t.Fatalf("%v, want %v", got, c.want)
+				}
+			}
+			// Whatever the scenes, the ratio holds and the clip never fades in.
+			fades := 0
+			for _, ms := range got {
+				if ms != 0 {
+					fades++
+				}
+			}
+			if len(got) > 0 && got[0] != 0 {
+				t.Fatal("the clip faded in from nothing")
+			}
+			if len(got) > 1 && float64(fades) > design.Transition.FadeRatioMax*float64(len(got)-1) {
+				t.Fatalf("%d of %d boundaries faded", fades, len(got)-1)
+			}
+		})
+	}
+}
+
+// CDS-37: 1.2–6.0 s, and a food close-up is held to 4.0 s.
+func TestCutBoundsHoldFoodShorter(t *testing.T) {
+	for _, scene := range []string{"scenery", "interior", "menu", "person", "unknown"} {
+		if minimum, maximum := design.CutBounds(scene); minimum != 1200 || maximum != 6000 {
+			t.Fatalf("%s %d..%d", scene, minimum, maximum)
+		}
+	}
+	if minimum, maximum := design.CutBounds("food"); minimum != 1200 || maximum != 4000 {
+		t.Fatalf("food %d..%d", minimum, maximum)
+	}
+}

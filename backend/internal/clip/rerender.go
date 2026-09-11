@@ -156,7 +156,7 @@ func (s *GenerationService) RunRender(ctx context.Context, user, job, project st
 	if err != nil {
 		return err
 	}
-	plan = plan.WithFacts(p.Disclosure, p.Answers, t.Preset)
+	plan = plan.WithFacts(p.Disclosure, p.Answers, t.Preset, p.CTA, t.Accent)
 	if err = MatchRenderBatch(plan, b); err != nil {
 		return err
 	}

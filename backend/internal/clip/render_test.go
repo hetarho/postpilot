@@ -16,6 +16,9 @@ func validPlan() (clip.EditPlan, []clip.RenderSource) {
 	c := clip.EditCut{ID: "one", SourceID: s.ID, Fingerprint: s.Fingerprint, EndMS: 7600, Focal: clip.Point{X: .5, Y: .5}, Copy: clip.Copy{Text: "Hello", Anchor: "bottom", Align: "center", Style: "clean"}}
 	d := c
 	d.ID = "two"
+	// The scene changes between the two, so the second leads in with CDS-36's
+	// fade and the clip is 200 ms shorter than the sum of its cuts.
+	d.TransitionMS = 200
 	return clip.EditPlan{Ratio: "vertical", DurationMS: 15000, Cuts: []clip.EditCut{c, d}}, []clip.RenderSource{s}
 }
 func TestValidateEditPlan(t *testing.T) {
@@ -29,6 +32,8 @@ func TestValidateEditPlan(t *testing.T) {
 		"missing fade accounting": func(p *clip.EditPlan) { p.DurationMS = 15200 }, "foreign source": func(p *clip.EditPlan) { p.Cuts[0].SourceID = "foreign" }, "changed bytes": func(p *clip.EditPlan) { p.Cuts[0].Fingerprint = "changed" }, "duplicate cut": func(p *clip.EditPlan) { p.Cuts[1].ID = p.Cuts[0].ID },
 		"before source": func(p *clip.EditPlan) { p.Cuts[0].StartMS = -1 }, "past source": func(p *clip.EditPlan) { p.Cuts[0].EndMS = 20001 }, "short fade": func(p *clip.EditPlan) { p.Cuts[0].EndMS = 200 }, "NaN volume": func(p *clip.EditPlan) { p.Cuts[0].Volume = volume(math.NaN()) }, "loud": func(p *clip.EditPlan) { p.Cuts[0].Volume = volume(1.001) }, "negative volume": func(p *clip.EditPlan) { p.Cuts[0].Volume = volume(-.1) },
 		"NaN focal": func(p *clip.EditPlan) { p.Cuts[0].Focal.X = math.NaN() }, "outside focal": func(p *clip.EditPlan) { p.Cuts[0].Focal.Y = 1.1 }, "free anchor": func(p *clip.EditPlan) { p.Cuts[0].Copy.Anchor = "x=10" }, "free align": func(p *clip.EditPlan) { p.Cuts[0].Copy.Align = "justify" }, "free style": func(p *clip.EditPlan) { p.Cuts[0].Copy.Style = "animated" }, "free accent": func(p *clip.EditPlan) { p.Cuts[0].Copy.Accent = "#123456" },
+		// CDS-36 admits three transitions and the first cut takes none.
+		"invented transition": func(p *clip.EditPlan) { p.Cuts[1].TransitionMS = 150 }, "fades in from nothing": func(p *clip.EditPlan) { p.Cuts[0].TransitionMS = 200 },
 	} {
 		t.Run(name, func(t *testing.T) {
 			p, s := validPlan()
@@ -165,5 +170,44 @@ func volume(v float64) *float64 { return &v }
 func TestOriginalVolumeDefaultsAndExplicitMute(t *testing.T) {
 	if (clip.EditCut{}).OriginalVolume() != 1 || (clip.EditCut{Volume: volume(0)}).OriginalVolume() != 0 {
 		t.Fatal("original audio default or explicit mute changed")
+	}
+}
+
+// The plan's duration is the footage it selected less what its transitions
+// overlap — per cut, not one fade times the boundaries (CDS-36).
+func TestDurationArithmeticWithMixedTransitions(t *testing.T) {
+	cfg := config.ClipRender(&config.Config{})
+	for name, transitions := range map[string][]int{
+		"every boundary hard":  {0, 0, 0},
+		"every boundary fades": {0, 200, 200},
+		"mixed":                {0, 0, 200},
+		"through black":        {0, 300, 0},
+	} {
+		t.Run(name, func(t *testing.T) {
+			p, s := validPlan()
+			third := p.Cuts[1]
+			third.ID = "three"
+			p.Cuts = append(p.Cuts, third)
+			total := 0
+			for i := range p.Cuts {
+				p.Cuts[i].TransitionMS = transitions[i]
+				total += p.Cuts[i].EndMS - p.Cuts[i].StartMS
+			}
+			if p.TransitionTotal() != transitions[1]+transitions[2] {
+				t.Fatal("transition total", p.TransitionTotal())
+			}
+			p.DurationMS = total - p.TransitionTotal()
+			if err := clip.ValidateEditPlan(cfg, p, s); err != nil {
+				t.Fatal(err)
+			}
+			// One millisecond either way is a timeline the renderer cannot make.
+			for _, off := range []int{-1, 1} {
+				wrong := p
+				wrong.DurationMS += off
+				if err := clip.ValidateEditPlan(cfg, wrong, s); err == nil {
+					t.Fatal("accepted a duration the cuts do not add up to")
+				}
+			}
+		})
 	}
 }

@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "concurrently -n web,api -c cyan,magenta \"pnpm run dev:web\" \"pnpm run dev:api\"",
     "dev:web": "pnpm --filter ./frontend dev",
-    "dev:api": "docker compose --profile dev up backend",
+    "dev:api": "docker compose --profile dev up --build backend",
     "gen": "node scripts/gen.mjs",
     "gen:proto": "node scripts/gen.mjs proto",
     "gen:sql": "node scripts/gen.mjs sql",

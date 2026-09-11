@@ -246,8 +246,17 @@ message ClipEditCut {
   int32 volume_permille = 7;
   // Reserved fact labels whose chips belong on this cut, at most two.
   repeated string chips = 8;
+  // The transition INTO this cut: 0 is a hard cut, 200 the fade a scene change
+  // earns and 300 the fade-through-black nothing offers yet. The first cut of a
+  // plan always carries 0.
+  int32 transition_ms = 9;
 }
-message ClipEditPlan { int32 duration_ms = 1; repeated ClipEditCut cuts = 2; }
+message ClipEditPlan {
+  int32 duration_ms = 1;
+  repeated ClipEditCut cuts = 2;
+  // The opening card's one sentence (CDS-28). Empty renders no hook card.
+  string hook = 3;
+}
 message ClipRetainedSource {
   string id = 1;
   string fingerprint = 2;
@@ -260,6 +269,8 @@ message ClipEditingState {
   ClipEditPlan plan = 1;
   repeated ClipRetainedSource sources = 2;
   repeated string copy_styles = 3;
+  // Retained for one release so a client that has not moved to each cut's own
+  // `transition_ms` still reads a number. Nothing computes a duration from it.
   int32 fade_ms = 4;
   int32 max_cuts = 5;
   int32 max_copy_runes = 6;

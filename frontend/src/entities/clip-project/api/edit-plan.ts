@@ -20,6 +20,7 @@ export function toClipEditingState(value: ProtoClipEditingState): ClipEditingSta
   return {
     plan: {
       durationMs: value.plan.durationMs,
+      hook: value.plan.hook,
       cuts: value.plan.cuts.map((c) => {
         const copy = c.copy
         // A cut whose copy the composer dropped arrives with no placement:
@@ -40,6 +41,7 @@ export function toClipEditingState(value: ProtoClipEditingState): ClipEditingSta
           fingerprint: c.fingerprint,
           startMs: c.startMs,
           endMs: c.endMs,
+          transitionMs: c.transitionMs,
           volumePermille: c.volumePermille,
           chips: [...c.chips],
           copy: {
@@ -74,12 +76,14 @@ export function toClipEditingState(value: ProtoClipEditingState): ClipEditingSta
 export function clipPlanToProto(plan: ClipEditPlan) {
   return {
     durationMs: plan.durationMs,
+    hook: plan.hook,
     cuts: plan.cuts.map((c) => ({
       id: c.id,
       sourceId: c.sourceId,
       fingerprint: c.fingerprint,
       startMs: c.startMs,
       endMs: c.endMs,
+      transitionMs: c.transitionMs,
       volumePermille: c.volumePermille,
       chips: [...c.chips],
       // `position` carries the anchor on the wire; the field kept its number

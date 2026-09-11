@@ -13,7 +13,7 @@ import (
 func correctionFixture(t *testing.T) (clip.Project, clip.CorrectionPlan) {
 	t.Helper()
 	sources := []clip.SourceAnalysis{{Source: clip.AnalysisSource{RenderSource: clip.RenderSource{ID: "a", Fingerprint: "fa", Info: clip.MediaInfo{DurationMS: 40000, Width: 1920, Height: 1080}}, Filename: "a.mp4"}}, {Source: clip.AnalysisSource{RenderSource: clip.RenderSource{ID: "b", Fingerprint: "fb", Info: clip.MediaInfo{DurationMS: 40000, Width: 1920, Height: 1080}}, Filename: "b.mp4"}}}
-	plan := clip.EditPlan{Ratio: "vertical", DurationMS: 19800, Cuts: []clip.Cut{{ID: "first", SourceID: "a", Fingerprint: "fa", EndMS: 10000, Focal: clip.Point{X: .3, Y: .4}, Copy: clip.Caption{Text: "hello", Anchor: "bottom", Align: "center", Style: "clean"}}, {ID: "second", SourceID: "b", Fingerprint: "fb", EndMS: 10000, Focal: clip.Point{X: .5, Y: .5}, Copy: clip.Caption{Text: "서울", Anchor: "top", Align: "left", Style: "memo"}}}}
+	plan := clip.EditPlan{Ratio: "vertical", DurationMS: 19800, Cuts: []clip.Cut{{ID: "first", SourceID: "a", Fingerprint: "fa", EndMS: 10000, Focal: clip.Point{X: .3, Y: .4}, Copy: clip.Caption{Text: "hello", Anchor: "bottom", Align: "center", Style: "clean"}}, {ID: "second", SourceID: "b", Fingerprint: "fb", EndMS: 10000, TransitionMS: 200, Focal: clip.Point{X: .5, Y: .5}, Copy: clip.Caption{Text: "서울", Anchor: "top", Align: "left", Style: "memo"}}}}
 	a, _ := json.Marshal(sources)
 	raw, err := clip.EncodeEditPlan(plan, []string{"clean", "memo"})
 	if err != nil {
@@ -28,6 +28,9 @@ func TestCorrectionMutationsAndIntegerPersistence(t *testing.T) {
 	draft.Cuts[0].StartMS = 1000
 	draft.Cuts[0].EndMS = 20000
 	draft.Cuts[0].VolumePermille = 123
+	// The fade rides the cut it leads into, so the swap carries it along and the
+	// cut now in front leads in from nothing.
+	draft.Cuts[0].TransitionMS, draft.Cuts[1].TransitionMS = 0, 200
 	draft.Cuts[0].Copy = clip.Caption{Text: "정확한 글자 & <copy>", Anchor: "lower_mid", Align: "center", Style: "clean", Accent: "coral", StartMS: 200, EndMS: 2000}
 	draft.DurationMS = 28800
 	next, styles, err := clip.ApplyCorrection(cfg, p, draft)

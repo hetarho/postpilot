@@ -33,8 +33,10 @@ type MediaWorkspace struct {
 	CheckCapacity func(additional int64) error
 }
 type MediaStream struct {
-	Index       int
-	Kind, Codec string
+	Index int
+	// Profile is the encoder profile the stream declares — "High" for the H.264
+	// V12 asks a delivered clip for. Empty where the container states none.
+	Kind, Codec, Profile string
 }
 type MediaInfo struct {
 	PixelFormat, SampleAspectRatio                        string

@@ -85,7 +85,7 @@
     "title": {
       "size": 72,
       "min": 64,
-      "face": "pretendard",
+      "face": "paperlogy",
       "weight": 800,
       "tracking": -0.02,
       "line_height": 1.2,
@@ -253,6 +253,7 @@
   },
   "presets": {
     "restaurant": {
+      "label": "음식점",
       "hook": "fact",
       "chips": ["위치", "가격", "메뉴"],
       "cta": "place",
@@ -265,6 +266,7 @@
       "refuse": ""
     },
     "cafe": {
+      "label": "카페",
       "hook": "space",
       "chips": ["위치", "메뉴", "영업"],
       "cta": "save",
@@ -277,6 +279,7 @@
       "refuse": ""
     },
     "stay": {
+      "label": "숙소·여행",
       "hook": "location",
       "chips": ["위치", "가격", "영업"],
       "cta": "blog",
@@ -289,6 +292,7 @@
       "refuse": ""
     },
     "beauty": {
+      "label": "뷰티",
       "hook": "usage",
       "chips": ["가격", "메뉴", "평점"],
       "cta": "blog",
@@ -301,6 +305,7 @@
       "refuse": "efficacy"
     },
     "home": {
+      "label": "생활용품·가전",
       "hook": "problem",
       "chips": ["가격", "메뉴", "평점"],
       "cta": "blog",
@@ -339,6 +344,10 @@
     },
     "defaults": { "chips": ["위치", "가격", "메뉴"], "cta": "blog" }
   },
+  "faces": {
+    "pretendard": "Pretendard Variable",
+    "paperlogy": "Paperlogy 8 ExtraBold"
+  },
   "classes": {
     "num_units": ["원", "분", "인", "%", "개", "시", "배"],
     "hook_markers": ["이유", "비밀", "진짜", "솔직히", "결론", "이거"],
@@ -372,6 +381,7 @@
     "sub_min_per_char_ms": 90,
     "cut_min_s": 1.2,
     "cut_max_s": 6,
+    "cut_max_food_s": 4,
     "hook_card_s": 1.5,
     "end_card_s": 2.5,
     "badge_min_head_s": 3,
@@ -381,11 +391,11 @@
     "sub_extend_ms": 240,
     "sub_occupancy_min": 0.6
   },
-  "transition": { "default": "cut", "fade_ms": 200, "fade_ratio_max": 0.4 },
+  "transition": { "default": "cut", "fade_ms": 200, "black_ms": 300, "fade_ratio_max": 0.4 },
   "audio": {
     "loudnorm": { "i": -16, "tp": -1.5, "lra": 11 },
     "crossfade_ms": 60,
     "hook_dip_db": -6
   },
-  "luma": { "scrim_threshold": 0.6, "sigma_threshold": 0.25 }
+  "luma": { "scrim_threshold": 0.6, "sigma_threshold": 0.25, "contrast_min": 4.5 }
 }

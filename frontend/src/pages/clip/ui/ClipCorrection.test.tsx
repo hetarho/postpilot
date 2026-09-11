@@ -152,6 +152,11 @@ it('keeps the result mounted across every edit and saves exact fields with its r
   await userEvent.click(screen.getByRole('option', { name: '청록' }))
   await userEvent.click(screen.getAllByRole('button', { name: '아래로 이동' })[0]!)
   expect(cut(2).getByLabelText('자막 원문')).toHaveValue('정확한 한국어 <copy>')
+  // The fade rode the second cut, which the reorder moved to the front: it
+  // leads in from nothing now, so the owner puts the fade on the cut that
+  // follows it instead (CDS-36).
+  await userEvent.click(cut(2).getByRole('combobox', { name: /앞 컷과의 전환/ }))
+  await userEvent.click(screen.getByRole('option', { name: '페이드 200 ms' }))
   await userEvent.click(screen.getByRole('button', { name: '수정 저장' }))
   await screen.findByText('수정됨 · 다시 출력 필요')
   expect(writes).toHaveLength(1)
@@ -160,11 +165,12 @@ it('keeps the result mounted across every edit and saves exact fields with its r
     plan: {
       durationMs: 25800,
       cuts: [
-        { id: 'cut-b' },
+        { id: 'cut-b', transitionMs: 0 },
         {
           id: 'cut-a',
           startMs: 1000,
           endMs: 17000,
+          transitionMs: 200,
           volumePermille: 250,
           copy: {
             text: '정확한 한국어 <copy>',
@@ -185,6 +191,31 @@ it('keeps the result mounted across every edit and saves exact fields with its r
   await expectResultKept()
   expect(screen.getByRole('button', { name: '다시 출력 · 크레딧 사용 없음' })).toBeDisabled()
 })
+/** The hook card's sentence is the clip's, not a cut's (CDS-28): it sits above
+ *  the cut list, refuses more than two lines of nine, and refuses a number the
+ *  owner never gave (CDS-42). */
+it('edits the hook sentence and refuses an ungrounded or over-long one', async () => {
+  const writes: NonNullable<FakeClipsOptions['planWrites']> = []
+  const project = fixture()
+  project.answers = [{ label: '상호', text: '해람 베이커리' }]
+  await mount({ planWrites: writes, projects: [project] })
+  // The hook is the clip's own field, outside every cut region.
+  const hook = (value: string) =>
+    fireEvent.change(screen.getByLabelText('훅 문장'), { target: { value } })
+  hook('갓 구운 빵')
+  expect(screen.getByLabelText('훅 문장')).not.toHaveAttribute('aria-invalid', 'true')
+  hook('가'.repeat(19))
+  expect(screen.getByLabelText('훅 문장')).toHaveAttribute('aria-invalid', 'true')
+  expect(screen.getByText(/훅 문장은 2줄 × 9자까지예요/)).toBeVisible()
+  expect(screen.getByRole('button', { name: '수정 저장' })).toBeDisabled()
+  // A price the owner never answered is not the clip's to claim.
+  hook('9900원 빵집')
+  expect(screen.getByLabelText('훅 문장')).toHaveAttribute('aria-invalid', 'true')
+  hook('갓 구운 빵')
+  await userEvent.click(screen.getByRole('button', { name: '수정 저장' }))
+  await waitFor(() => expect(writes).toHaveLength(1))
+  expect(writes[0]!.plan.hook).toBe('갓 구운 빵')
+})
 it('shows bounds beside fields and never sends an invalid plan', async () => {
   const writes: NonNullable<FakeClipsOptions['planWrites']> = []
   await mount({ planWrites: writes })
@@ -200,6 +231,23 @@ it('shows bounds beside fields and never sends an invalid plan', async () => {
   expect(cut().getByText('볼륨은 0~100%로 입력해 주세요.')).toBeVisible()
   await userEvent.click(screen.getByRole('button', { name: '수정 저장' }))
   expect(writes).toEqual([])
+})
+// CDS-36 on the screen: the first cut can only be a cut, every later cut chooses
+// between a cut and the fade, and the choice moves the final length.
+it('offers a transition on every cut but the first and shows what it costs', async () => {
+  await mount({})
+  const first = cut().getByRole('combobox', { name: /앞 컷과의 전환/ })
+  expect(first).toBeDisabled()
+  expect(first).toHaveTextContent('컷 (바로 전환)')
+  const second = cut(2).getByRole('combobox', { name: /앞 컷과의 전환/ })
+  expect(second).toBeEnabled()
+  expect(second).toHaveTextContent('페이드 200 ms')
+  // The fixture's two 10 s cuts overlap by one fade; taking it away gives the
+  // clip its 200 ms back.
+  expect(screen.getByText(/19800/)).toBeVisible()
+  await userEvent.click(second)
+  await userEvent.click(screen.getByRole('option', { name: '컷 (바로 전환)' }))
+  expect(screen.getByText(/20000/)).toBeVisible()
 })
 it('keeps local edits and video on optimistic conflict, and guards leaving', async () => {
   const { router } = await mount({ planSaveConflict: true })

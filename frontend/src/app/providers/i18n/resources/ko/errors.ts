@@ -89,6 +89,8 @@ export const errors = {
   CLIP_LAYOUT_DISCLOSURE:
     '광고·협찬 표기가 클립 전체에 제대로 들어가지 않아 출력을 멈췄어요. 체험단 유형을 다시 확인해 주세요.',
   CLIP_LAYOUT_KIND: '허용되지 않은 화면 요소가 있어 출력을 멈췄어요. 다시 시도해 주세요.',
+  CLIP_LAYOUT_CONTRAST:
+    '자막이 배경과 충분히 구분되지 않아 출력을 멈췄어요. 그 컷의 스타일을 깔끔하게로 바꾸거나 다른 장면을 골라 주세요.',
   CLIP_DISCLOSURE_REQUIRED:
     '체험단 유형을 먼저 선택해 주세요. 광고·협찬 표기는 클립에 반드시 들어가요.',
   CLIP_FACTS_REQUIRED:

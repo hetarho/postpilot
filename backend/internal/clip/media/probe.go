@@ -17,6 +17,7 @@ type probeDocument struct {
 	Streams []struct {
 		Index             int    `json:"index"`
 		Codec             string `json:"codec_name"`
+		Profile           string `json:"profile"`
 		Kind              string `json:"codec_type"`
 		Width             int    `json:"width"`
 		Height            int    `json:"height"`
@@ -77,7 +78,7 @@ func (a *Adapter) Probe(ctx context.Context, ws clip.MediaWorkspace, path string
 	info := clip.MediaInfo{ContainerDurationMS: durationMS(doc.Format.Duration)}
 	found := false
 	for _, s := range doc.Streams {
-		info.Streams = append(info.Streams, clip.MediaStream{Index: s.Index, Kind: s.Kind, Codec: s.Codec})
+		info.Streams = append(info.Streams, clip.MediaStream{Index: s.Index, Kind: s.Kind, Codec: s.Codec, Profile: s.Profile})
 		if s.Kind == "audio" {
 			if !info.HasAudio {
 				info.AudioDurationMS = durationMS(s.Duration)

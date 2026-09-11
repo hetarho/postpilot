@@ -68,9 +68,18 @@ func (a *Adapter) run(ctx context.Context, ws clip.MediaWorkspace, binary string
 	return a.runBounded(ctx, ws, binary, "", 0, nil, args...)
 }
 
+// runLog runs a command that writes nothing but its own log: the loudness
+// measurement passes, whose report FFmpeg prints only on stderr.
+func (a *Adapter) runLog(ctx context.Context, ws clip.MediaWorkspace, binary string, args ...string) ([]byte, error) {
+	return a.runCommand(ctx, ws, Command{Binary: binary, Dir: ws.Path, Args: args, CaptureStderr: true}, "", 0, nil)
+}
+
 // Only subprocess execution is serialized: caption measurement can open a nested
 // workspace during planning, so a workspace-wide semaphore would deadlock.
 func (a *Adapter) runBounded(ctx context.Context, ws clip.MediaWorkspace, binary, output string, limit int64, limitError error, args ...string) ([]byte, error) {
+	return a.runCommand(ctx, ws, Command{Binary: binary, Dir: ws.Path, Args: args}, output, limit, limitError)
+}
+func (a *Adapter) runCommand(ctx context.Context, ws clip.MediaWorkspace, command Command, output string, limit int64, limitError error) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(ctx, a.cfg.OperationTimeout)
 	defer cancel()
 	select {
@@ -124,7 +133,7 @@ func (a *Adapter) runBounded(ctx context.Context, ws clip.MediaWorkspace, binary
 	// Always stop the monitor, including a custom runner panic. The outer
 	// workspace defer then owns cleanup after the child has stopped.
 	defer close(done)
-	data, err := a.runner.Run(ctx, Command{Binary: binary, Dir: ws.Path, Args: args})
+	data, err := a.runner.Run(ctx, command)
 	cancel()
 	monitorErr := <-monitored
 	return data, errors.Join(monitorErr, check(), err)

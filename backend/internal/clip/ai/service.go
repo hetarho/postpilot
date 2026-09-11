@@ -25,6 +25,11 @@ type CaptionSizer interface {
 	// Copy yields to them and never displaces them (CDS-45), so the selector has
 	// to see them before it chooses an anchor.
 	FixedElements(ctx context.Context, ratio, disclosure string, labels []string, answers []clip.Answer) (clip.Manifest, error)
+	// CardElements is the hook and ending cards, measured and placed. Copy
+	// yields to them exactly as it does to the badge (CDS-28, CDS-29, CDS-45):
+	// nothing shows under a card, so the selector needs their regions before it
+	// chooses an anchor for the first and the last cut.
+	CardElements(ctx context.Context, plan clip.EditPlan) (clip.Manifest, error)
 	// Layout lays the whole composed plan out and gates it on the design
 	// system's verifier (CDS-52), touching no source pixel. The composer runs it
 	// on its own result so a residual violation is a COMPOSITION failure with
@@ -195,10 +200,22 @@ func (s *Service) compose(ctx context.Context, input clip.PlanningInput, plan *c
 	}
 	// The plan's own preset and facts decide which chips a cut can carry.
 	plan.Preset, plan.Facts, plan.Disclosure = input.Template.Preset, input.Answers, input.Disclosure
+	plan.CTA, plan.Accent = input.CTA, input.Template.Accent
 	// CDS-41 may lengthen a cut to fit its copy, but the timeline is already
 	// reconciled to the owner's approved target, so the extension may only use
 	// the slack that target still allows.
 	slack := min(s.cfg.TargetToleranceMS-abs(plan.DurationMS-input.TargetDurationMS), s.cfg.Render.MaxDurationMS-plan.DurationMS)
+	// The hook is dropped rather than shown ungrounded (CDS-42), and it has to be
+	// settled before the cards are measured, since a card without a hook
+	// sentence is no card at all (CDS-28).
+	// Two lines of nine, which is what the hook card sets (CDS-28).
+	if !clip.Grounded(plan.Hook, input.Answers) || clip.CopyChars(plan.Hook) > 2*design.Type["hook"].Chars {
+		plan.Hook = ""
+	}
+	cards, err := s.captions.CardElements(ctx, *plan)
+	if err != nil {
+		return err
+	}
 	history, previous := design.StyleHistory{}, ""
 	// The badge and the chips are placed before any copy, and copy yields to
 	// them (CDS-45); T107's cards join this list.
@@ -219,9 +236,20 @@ func (s *Service) compose(ctx context.Context, input clip.PlanningInput, plan *c
 			}
 		}
 		limit = min(limit, analysis.Source.Info.DurationMS, cut.EndMS+max(0, slack))
+		// CDS-37's ceiling holds through the exposure extension too: a cut may
+		// pass its scene's maximum only by what the copy's own minimum needs.
+		_, maximum := design.CutBounds(scene)
+		limit = min(limit, cut.StartMS+max(maximum, clip.MinExposureMS(written.Text)+design.Timing.SubExtendMS+2*design.Timing.CopyLeadMS))
 		placed, err := s.captions.FixedElements(ctx, input.Ratio, input.Disclosure, plan.ChipLabels(cut), input.Answers)
 		if err != nil {
 			return err
+		}
+		// The two cards cover the middle of the first and the last cut, so a
+		// copy on those cuts has to go somewhere else (CDS-45).
+		for _, e := range cards {
+			if e.Cut == i {
+				placed = append(placed, e)
+			}
 		}
 		composed, decision, err := clip.Compose(canvas, cut, written, scene, readable, clip.CutSubject(canvas, cut, analysis), placed, input.Template.CopyStyles, input.Template.Accent, history, previous, limit, measured)
 		if err != nil {
@@ -236,18 +264,13 @@ func (s *Service) compose(ctx context.Context, input clip.PlanningInput, plan *c
 			previous = composed.Copy.Anchor
 		}
 	}
-	// The hook is dropped rather than shown ungrounded; T107 then renders the
-	// card without a title.
-	if !clip.Grounded(plan.Hook, input.Answers) || clip.CopyChars(plan.Hook) > design.Type["hook"].Chars {
-		plan.Hook = ""
-	}
 	// The guards above make V13 and V14 hold by construction; this is what
 	// catches anything they do not, before a single byte is downloaded.
 	sources := make([]clip.RenderSource, 0, len(input.Analyses))
 	for _, a := range input.Analyses {
 		sources = append(sources, a.Source.RenderSource)
 	}
-	_, err := s.captions.Layout(ctx, *plan, sources)
+	_, err = s.captions.Layout(ctx, *plan, sources)
 	return err
 }
 

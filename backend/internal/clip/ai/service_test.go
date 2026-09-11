@@ -38,9 +38,15 @@ type fakeSizer struct {
 	err       error
 	fixedErr  error
 	layoutErr error
+	cardErr   error
 	calls     int
 	fixed     int
+	cards     int
 	layouts   int
+	// The cards the composer is told to keep copy off, in the shape the real
+	// renderer returns them: the hook card over the first cut and the ending
+	// card over the last.
+	cardPlan clip.EditPlan
 }
 
 // The composer verifies its own result through this port (CDS-52).
@@ -68,6 +74,31 @@ func (f *fakeSizer) FixedElements(_ context.Context, _, disclosure string, label
 	}
 	return out, nil
 }
+
+// The two cards, measured at their ratio's own geometry (CDS-28, CDS-29): a
+// 400 px stack centred on the ratio's card line. They cover the middle of the
+// frame, which is the band a mid-frame anchor wants, so a copy on the first or
+// the last cut has to move.
+func (f *fakeSizer) CardElements(_ context.Context, plan clip.EditPlan) (clip.Manifest, error) {
+	f.cards++
+	f.cardPlan = plan
+	if f.cardErr != nil {
+		return nil, f.cardErr
+	}
+	layout, ok := design.Layout(plan.Ratio)
+	if !ok || len(plan.Cuts) == 0 || plan.Hook == "" {
+		return nil, nil
+	}
+	const height = 400
+	box := func(width, centre float64) design.Region {
+		return design.Region{X: (float64(layout.Canvas.Width) - width) / 2, Y: centre - height/2, Width: width, Height: height}
+	}
+	return clip.Manifest{
+		{Cut: 0, Kind: "card", Region: box(layout.HookCard.Width, layout.HookCard.CenterY)},
+		{Cut: len(plan.Cuts) - 1, Kind: "card", Region: box(layout.EndCard.Width, layout.EndCard.CenterY)},
+	}, nil
+}
+
 func newService(t *testing.T, raw string, structured bool) (*ai.Service, *fakeModels, *fakeSizer) {
 	t.Helper()
 	f := &fakeModels{info: llm.ModelInfo{Vision: true, VideoInput: true, VideoDelivery: llm.VideoDelivery{InlineStaticVideo: true}, StructuredOutput: structured, Stages: []string{llm.StageNameObserve, llm.StageNameWrite}}, response: llm.Response{Text: raw, Usage: llm.Usage{CompletionTokens: 100, PromptTokens: 200, CostReported: true, CostMicrousd: 10}}}
@@ -103,7 +134,17 @@ func planningInput() clip.PlanningInput {
 }
 func plan() map[string]any {
 	// Words only: the model no longer names a position, a style or an accent.
-	return map[string]any{"ratio": "vertical", "duration_ms": 15000, "hook": "정확한 여행", "cuts": []any{map[string]any{"id": "cut-one", "source_id": "source", "start_ms": 0, "end_ms": 15000, "focal": map[string]any{"x": .5, "y": .5}, "chips": []string{}, "caption": map[string]any{"text": "정확한 한글 & 여행", "start_ms": 1000, "end_ms": 14000, "short_text": "한글 여행", "keyword": ""}}}}
+	// Three cuts, because CDS-37 holds every cut to 6.0 s while a clip is at
+	// least 15 s (CLIP-19): one long take is not a clip any more.
+	cut := func(id string, start, end int, text string) map[string]any {
+		return map[string]any{"id": id, "source_id": "source", "start_ms": start, "end_ms": end, "focal": map[string]any{"x": .5, "y": .5}, "chips": []string{},
+			"caption": map[string]any{"text": text, "start_ms": 1000, "end_ms": end - start - 1000, "short_text": "한글 여행", "keyword": ""}}
+	}
+	return map[string]any{"ratio": "vertical", "duration_ms": 15000, "hook": "정확한 여행", "cuts": []any{
+		cut("cut-one", 0, 5000, "정확한 한글 & 여행"),
+		cut("cut-two", 5000, 10000, "조용한 한글 & 여행"),
+		cut("cut-three", 10000, 15000, "천천히 걷는 골목"),
+	}}
 }
 func raw(value any) string {
 	data, err := json.Marshal(value)
@@ -229,21 +270,42 @@ func TestRecordedLiveClipResponses(t *testing.T) {
 		t.Fatal(err)
 	}
 	models.response.Text = string(planJSON)
-	result, _, err := s.Plan(t.Context(), testRef(), clip.PlanningInput{Policy: testPolicy("write"), Template: clip.Recipe{Name: "합성 영상 검증", CutGuidance: "15초 한 컷으로 구성하고 자막은 '영상 생성 확인'으로 해주세요.", CopyStyles: []string{"clean"}, Accent: "coral"}, Ratio: "horizontal", TargetDurationMS: 15000, Analyses: analyses})
+	input := clip.PlanningInput{Policy: testPolicy("write"), Template: clip.Recipe{Name: "합성 영상 검증", CutGuidance: "15초 한 컷으로 구성하고 자막은 '영상 생성 확인'으로 해주세요.", CopyStyles: []string{"clean"}, Accent: "coral"}, Ratio: "horizontal", TargetDurationMS: 15000, Analyses: analyses}
+	// The recorded response is ONE fifteen-second take, which is exactly what
+	// CDS-37 now refuses: no cut may run past 6.0 s, and a single cut cannot then
+	// reach the fifteen-second floor. The evidence is kept as it was recorded and
+	// the refusal is what it proves.
+	var diagnostic interface{ OutputValidationCode() string }
+	if _, _, err = s.Plan(t.Context(), testRef(), input); !errors.As(err, &diagnostic) || diagnostic.OutputValidationCode() != "plan_timeline" {
+		t.Fatalf("a single-take plan is no longer executable under CDS-37: %v", err)
+	}
+	// The same words over three cuts — what the design system does admit — still
+	// compile, and nothing but the cut count changed.
+	var recorded map[string]any
+	if err = json.Unmarshal(planJSON, &recorded); err != nil {
+		t.Fatal(err)
+	}
+	recorded["cuts"] = splitRecordedCut(recorded["cuts"].([]any)[0].(map[string]any), 3, 5000)
+	models.response.Text = raw(recorded)
+	result, _, err := s.Plan(t.Context(), testRef(), input)
 	if err != nil {
 		t.Fatal(err)
 	}
 	cut := result.Cuts[0]
 	start, end := cut.CaptionWindow()
-	if result.DurationMS != 15000 || len(result.Cuts) != 1 || cut.Copy.Text != "영상 생성 확인" || start != 120 || end != 14880 {
+	if result.DurationMS != 15000 || len(result.Cuts) != 3 || cut.Copy.Text != "영상 생성 확인" || start != 120 || end != 4880 {
 		t.Fatalf("unexpected plan: %+v", result)
+	}
+	// One scene throughout, so CDS-36 joins every boundary with a hard cut.
+	if result.TransitionTotal() != 0 {
+		t.Fatalf("invented a transition inside one scene: %+v", result.Cuts)
 	}
 	// The recorded response named no style or position; the design system chose
 	// both from the scene and the sentence (CDS-39, CDS-40).
 	if cut.Copy.Style != "clean" || cut.Copy.Anchor != "bottom" || cut.Copy.Align != "center" || result.Decisions[0].Class != "FACT" {
 		t.Fatalf("placement was not the design system's: %+v %+v", cut.Copy, result.Decisions)
 	}
-	if len(models.calls) != 2 || models.calls[0].MaxTokens != 8192 || models.calls[1].MaxTokens != 32768 {
+	if len(models.calls) != 3 || models.calls[0].MaxTokens != 8192 || models.calls[1].MaxTokens != 32768 {
 		t.Fatal("production budgets or call count changed")
 	}
 	if string(models.calls[0].JSONSchema) != string(ai.ChunkSchema()) || string(models.calls[1].JSONSchema) != string(ai.PlanSchema()) {
@@ -292,7 +354,7 @@ func TestPlanIsGroundedMeasuredAndPreservesExactAnswers(t *testing.T) {
 		s, f, c := newService(t, "Here is the JSON:\n"+raw(plan()), structured)
 		in := planningInput()
 		got, usage, err := s.Plan(t.Context(), testRef(), in)
-		if err != nil || usage != f.response.Usage || len(got.Cuts) != 1 {
+		if err != nil || usage != f.response.Usage || len(got.Cuts) != 3 {
 			t.Fatalf("%+v %v", got, err)
 		}
 		cut := got.Cuts[0]
@@ -305,12 +367,12 @@ func TestPlanIsGroundedMeasuredAndPreservesExactAnswers(t *testing.T) {
 		// 메모 has two candidate anchors (CDS-24), so the selector measures the
 		// plate at both and at neither more, and the composition is verified
 		// exactly once before the plan is returned (CDS-52).
-		if c.calls != 2 || c.fixed != 1 || c.layouts != 1 {
+		if c.calls != 2*len(got.Cuts) || c.fixed != len(got.Cuts) || c.layouts != 1 {
 			t.Fatalf("%d measurements, %d fixed-element reads, %d verifications", c.calls, c.fixed, c.layouts)
 		}
 		// The window is CDS-27's, not the model's: cut start + 120 ms to cut end
 		// − 120 ms, which a zero start and end resolve to.
-		if start, end := cut.CaptionWindow(); start != 120 || end != 14880 {
+		if start, end := cut.CaptionWindow(); start != 120 || end != 4880 {
 			t.Fatalf("caption window %d..%d", start, end)
 		}
 		request := f.calls[0]
@@ -535,18 +597,20 @@ func TestPlanTwentySourcesNinetySecondsAndDistinctRangeReuse(t *testing.T) {
 	}
 	v := plan()
 	v["duration_ms"] = 90000
-	cuts := make([]any, 100)
+	// Ninety seconds of 1.8 s cuts: CDS-37's 1.2 s floor puts a ceiling on how
+	// many cuts ninety seconds can hold, so this is fifty, not a hundred.
+	cuts := make([]any, 50)
 	for i := range cuts {
 		c := firstCut(plan())
 		c["id"] = fmt.Sprintf("cut-%d", i)
 		c["source_id"] = fmt.Sprintf("source-%d", i%20)
-		c["end_ms"] = 1098
+		c["end_ms"] = 1800
 		p := c["caption"].(map[string]any)
-		// A 1098 ms cut pays for two characters of exposure and no more (CDS-41);
-		// this fixture is about a hundred cuts and ninety seconds, not about copy.
+		// A 1.8 s cut pays for two characters of exposure and little more
+		// (CDS-41); this fixture is about the cut count, not about copy.
 		p["text"] = "여행"
 		p["start_ms"] = 0
-		p["end_ms"] = 1098
+		p["end_ms"] = 1800
 		if i == 0 {
 			c["volume"] = 0
 		}
@@ -555,7 +619,7 @@ func TestPlanTwentySourcesNinetySecondsAndDistinctRangeReuse(t *testing.T) {
 	v["cuts"] = cuts
 	s, f, _ := newService(t, raw(v), false)
 	got, _, err := s.Plan(t.Context(), testRef(), in)
-	if err != nil || got.DurationMS != 90000 || len(got.Cuts) != 100 || got.Cuts[0].OriginalVolume() != 0 || got.Cuts[1].OriginalVolume() != 1 || len(f.calls) != 1 || f.calls[0].MaxTokens != 32768 {
+	if err != nil || got.DurationMS != 90000 || len(got.Cuts) != 50 || got.Cuts[0].OriginalVolume() != 0 || got.Cuts[1].OriginalVolume() != 1 || len(f.calls) != 1 || f.calls[0].MaxTokens != 32768 {
 		t.Fatalf("%+v %v", got, err)
 	}
 }
@@ -613,4 +677,27 @@ func TestCutBoundsRejectIntegerWraparoundBeforeRendering(t *testing.T) {
 	if _, _, err := s.Plan(t.Context(), testRef(), planningInput()); !errors.Is(err, llm.ErrBadOutput) || len(f.calls) != 1 || measure.calls != 0 {
 		t.Fatalf("overflowed source range accepted: %v", err)
 	}
+}
+
+// splitRecordedCut cuts one recorded take into n consecutive cuts of the same
+// source, keeping its caption, focal point and gain: the words are the model's,
+// only the cut count is the design system's (CDS-37).
+func splitRecordedCut(cut map[string]any, n, length int) []any {
+	out := make([]any, 0, n)
+	for i := 0; i < n; i++ {
+		c := map[string]any{}
+		for k, v := range cut {
+			c[k] = v
+		}
+		c["id"] = fmt.Sprintf("%v-%d", cut["id"], i)
+		c["start_ms"], c["end_ms"] = i*length, (i+1)*length
+		caption := map[string]any{}
+		for k, v := range cut["caption"].(map[string]any) {
+			caption[k] = v
+		}
+		caption["start_ms"], caption["end_ms"] = 200, length-200
+		c["caption"] = caption
+		out = append(out, c)
+	}
+	return out
 }

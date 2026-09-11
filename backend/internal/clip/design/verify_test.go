@@ -38,6 +38,37 @@ func conformant() design.Manifest {
 	return m
 }
 
+// The hook card over the first cut: its plate, its category chip and its two
+// lines, none of which carries a copy style — the design system typesets them
+// itself (CDS-28).
+func card() design.Manifest {
+	m := design.Manifest{{
+		Cut: 0, Kind: "card", Text: "hook", Region: design.Region{X: 144, Y: 640, Width: 792, Height: 300},
+		StartMS: 0, EndMS: 1500, Background: design.Color["ink_900s"].Hex,
+	}}
+	for i, e := range []design.Element{
+		{Kind: "chip-category", Text: "카페", FontSize: design.Type["label"].Size, Fill: design.Color["ink_900"].Hex, Background: design.Accent["coral"]},
+		{Kind: "copy", Text: "갓 구운 빵", FontSize: design.Type["hook"].Size, Fill: design.Color["text_white"].Hex, Background: design.Color["ink_900s"].Hex},
+		{Kind: "copy", Text: "해람 베이커리", FontSize: design.Type["body"].Size, Fill: design.Color["text_muted"].Hex, Background: design.Color["ink_900s"].Hex},
+	} {
+		e.Cut, e.StartMS, e.EndMS = 0, 0, 1500
+		e.Region = design.Region{X: 184, Y: 680 + float64(i)*80, Width: 400, Height: 60}
+		m = append(m, e)
+	}
+	return m
+}
+
+// The scrim under an unplated copy: full-bleed by CDS-32, riding the copy's own
+// window and motion, and lying under everything (CDS-45).
+func scrim() design.Element {
+	l, _ := design.Layout("vertical")
+	return design.Element{
+		Cut: 0, Kind: "scrim", Style: "mark", Anchor: "bottom", Region: design.Region(l.ScrimBottom),
+		StartMS: 120, EndMS: 3120, Background: design.Scrim["bottom"].Hex,
+		InMS: design.Motion.InMS, OutMS: design.Motion.OutMS, DY: design.Motion.InDY,
+	}
+}
+
 func TestVerifyAcceptsAConformantManifest(t *testing.T) {
 	if err := design.Verify(conformant(), "vertical"); err != nil {
 		t.Fatal(err)
@@ -47,6 +78,48 @@ func TestVerifyAcceptsAConformantManifest(t *testing.T) {
 	}
 	if err := design.Verify(conformant(), "2:3"); !errors.Is(err, design.ViolationSafeArea) {
 		t.Fatal("unknown ratio", err)
+	}
+	// The cards join the same manifest: their own lines answer to the type
+	// scale's floor rather than to a copy style's table.
+	full := append(conformant(), card()...)
+	if err := design.Verify(full, "vertical"); err != nil {
+		t.Fatal(err)
+	}
+	if !design.Legible(full) {
+		t.Fatal("every pairing in a conformant manifest clears V3")
+	}
+}
+
+// The scrim: the one element allowed outside the safe area and under everything
+// else, and only ever under an unplated style (CDS-32, CDS-45).
+func TestVerifyAcceptsAScrimOnlyUnderAnUnplatedStyle(t *testing.T) {
+	badge := conformant()[0]
+	badge.EndMS = 3120
+	m := design.Manifest{badge, {
+		Cut: 0, Kind: "copy", Style: "mark", Anchor: "bottom", Text: "열여섯 글자까지",
+		Region: design.Region{X: 300, Y: 1310, Width: 400, Height: 70}, FontSize: design.Type["mark"].Size,
+		StartMS: 120, EndMS: 3120, Fill: design.Color["text_white"].Hex, Background: "#737373",
+		InMS: design.Motion.InMS, OutMS: design.Motion.OutMS, DY: design.Motion.InDY,
+	}, scrim()}
+	if err := design.Verify(m, "vertical"); err != nil {
+		t.Fatal(err)
+	}
+	// The scrim runs full-bleed to y 1420, past the badge and every chip, and
+	// collides with none of them: it is the ground they are read against.
+	if l, _ := design.Layout("vertical"); float64(l.ScrimBottom.X) != 0 {
+		t.Fatal("CDS-32's scrim is full-bleed")
+	}
+	// A scrim under a plate would darken nothing (CDS-32).
+	plated := append(design.Manifest{}, m...)
+	plated[2].Style = "clean"
+	if err := design.Verify(plated, "vertical"); !errors.Is(err, design.ViolationKind) {
+		t.Fatal("a scrim under a plated style is not an element CDS allows:", err)
+	}
+	// And the copy it protects still has to clear V3 against the washed ground.
+	dim := append(design.Manifest{}, m...)
+	dim[1].Background = "#B9B9B9"
+	if err := design.Verify(dim, "vertical"); !errors.Is(err, design.ViolationContrast) {
+		t.Fatal("a scrim does not excuse an unreadable pairing:", err)
 	}
 }
 
@@ -167,6 +240,33 @@ func TestVerifyRejectsOneFixturePerCheck(t *testing.T) {
 				out = append(out, e)
 			}
 			return out
+		}},
+		// V3: white on a ground the scrim could not darken enough. This is the
+		// one check that needs the footage, so it is the sampled background that
+		// fails it, never a token pairing (CDS-44).
+		"contrast": {design.ViolationContrast, func(m design.Manifest) design.Manifest {
+			m[3].Fill, m[3].Background = design.Color["text_white"].Hex, "#B9B9B9"
+			return m
+		}},
+		"contrast on a card": {design.ViolationContrast, func(m design.Manifest) design.Manifest {
+			c := card()
+			c[1].Background = "#3A3A3A" // an accent that dark would hide its ink
+			return append(m, c...)
+		}},
+		// A card covers the footage, so nothing of another layer may show under
+		// it: not a caption (CDS-28's "no copy under it") and not a chip.
+		"copy under a card": {design.ViolationOverlap, func(m design.Manifest) design.Manifest {
+			c := card()
+			c[0].Region = m[1].Region
+			c[0].StartMS, c[0].EndMS = m[1].StartMS, m[1].EndMS
+			return append(m, c[0])
+		}},
+		// A scrim is a wash, not a plate: it may not move on its own, and its
+		// kind is the only one exempt from the safe area.
+		"scrim moves on its own": {design.ViolationMotion, func(m design.Manifest) design.Manifest {
+			e := scrim()
+			e.Style, e.DY = "", 48
+			return append(m, e)
 		}},
 		// One cut carries one style at one anchor.
 		"two styles in a cut": {design.ViolationFrequency, func(m design.Manifest) design.Manifest {
