@@ -21,7 +21,10 @@ resolved Alpine component versions ship under `/usr/share/postpilot-media/`.
 The musl copyright notice is extracted from the Alpine-mirrored 1.2.6 source archive,
 verified with SHA-512 `1adad96eddb3a2eb0cacb3e363b0046568925fcdd75cf8b0503f2139df1f693d64730779ca0ce8131b7624ab2d37f4247bb1d3393c523de6e30d2b1d7732555c`
 from Alpine's `3.24-stable/main/musl/APKBUILD`; zlib's 1.3.2 license is included too.
-No nonfree codec option is enabled. Input protocols are file and pipe only; network,
+The enabled filter set is an allowlist, not a default build: `fade` is in it
+because the clip design system's only permitted entrance and exit are a 180 ms
+and a 120 ms alpha fade, and the renderer animates the caption plate's alpha
+with it. No nonfree codec option is enabled. Input protocols are file and pipe only; network,
 external-device capture and unneeded containers are disabled. Common H.264/HEVC,
 VP8/VP9, MPEG-4, MJPEG and ProRes inputs are supported in the accepted containers;
 unsupported codecs are rejected before observation.

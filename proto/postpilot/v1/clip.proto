@@ -210,6 +210,9 @@ message ClipCaption {
   // Horizontal alignment against the anchor: center, left or right. Separate
   // from the anchor because the anchor-step rule reasons over the anchor alone.
   string align = 7;
+  // The one word 크게 강조 colours and 형광펜 highlights. A substring of `text`,
+  // or empty for none; a field rather than a marker so `text` stays exact.
+  string keyword = 8;
 }
 message ClipEditCut {
   string id = 1;

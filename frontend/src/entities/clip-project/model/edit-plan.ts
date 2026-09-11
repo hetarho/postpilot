@@ -14,6 +14,8 @@ export interface ClipCaption {
   text: string
   anchor: (typeof COPY_ANCHORS)[number]
   align: (typeof COPY_ALIGNS)[number]
+  /** The one word 크게 강조 colours and 형광펜 highlights; a substring of `text`. */
+  keyword: string
   style: CopyStyle
   accent: ClipAccent
   startMs: number
@@ -114,6 +116,7 @@ export function validateClipPlan(plan: ClipEditPlan, state: ClipEditingState) {
         !integer(c.copy.endMs) ||
         (!whole && (c.copy.endMs <= c.copy.startMs || c.copy.endMs > duration)),
       anchor: !COPY_ANCHORS.includes(c.copy.anchor) || !COPY_ALIGNS.includes(c.copy.align),
+      keyword: c.copy.keyword !== '' && !c.copy.text.includes(c.copy.keyword),
       style: !COPY_STYLES.includes(c.copy.style) || !state.copyStyles.includes(c.copy.style),
       accent: !CLIP_ACCENTS.includes(c.copy.accent),
       volume: !integer(c.volumePermille) || c.volumePermille < 0 || c.volumePermille > 1000,

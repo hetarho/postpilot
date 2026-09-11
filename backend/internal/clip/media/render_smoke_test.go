@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/clip/design"
 	"github.com/postpilot/backend/internal/platform/config"
 )
 
@@ -38,11 +39,11 @@ func TestRenderSmoke(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := a.WithWorkspace(t.Context(), "glyphs", func(ws clip.MediaWorkspace) error {
-		semibold, err := r.measure(t.Context(), ws, []string{"한글 여행 W"}, 600)
+		semibold, err := r.measure(t.Context(), ws, []string{"한글 여행 W"}, 600, 0)
 		if err != nil {
 			return err
 		}
-		bold, err := r.measure(t.Context(), ws, []string{"한글 여행 W"}, 800)
+		bold, err := r.measure(t.Context(), ws, []string{"한글 여행 W"}, 800, 0)
 		if err != nil {
 			return err
 		}
@@ -50,7 +51,12 @@ func TestRenderSmoke(t *testing.T) {
 			t.Fatal("variable font weight was ignored")
 		}
 		canvas, _ := clip.ClipCanvas("vertical")
-		plate, err := r.copyPlate(t.Context(), ws, canvas, clip.Copy{Text: "한글 여행", Style: "clean", Anchor: "bottom", Align: "center"}, 0)
+		copy := clip.Copy{Text: "한글 여행", Style: "clean", Anchor: "bottom", Align: "center"}
+		layout, err := r.layoutCopy(t.Context(), ws, canvas, copy)
+		if err != nil {
+			return err
+		}
+		plate, err := r.copyPlate(t.Context(), ws, canvas, copy, layout, 0)
 		if err != nil {
 			return err
 		}
@@ -61,6 +67,75 @@ func TestRenderSmoke(t *testing.T) {
 		_, _, _, alpha := img.At(0, 0).RGBA()
 		if alpha != 0 {
 			t.Fatal("copy plate background is not transparent")
+		}
+		// Every style, rasterized by the real resvg against the real font, is
+		// checked in pixels: a plated style paints its plate token and its accent
+		// where CDS puts it, an unplated one paints the stroke instead, and
+		// 형광펜's highlight sits where the measured advance puts it (CDS-23..26).
+		amber := design.Accent["amber"]
+		for style, rule := range design.Styles {
+			c := clip.Copy{Text: "가격 9900원", Keyword: "9900원", Style: style, Anchor: rule.Anchor, Align: rule.Align, Accent: "amber"}
+			l, err := r.layoutCopy(t.Context(), ws, canvas, c)
+			if err != nil {
+				return fmt.Errorf("%s: %w", style, err)
+			}
+			path, err := r.copyPlate(t.Context(), ws, canvas, c, l, 1)
+			if err != nil {
+				return fmt.Errorf("%s: %w", style, err)
+			}
+			img, err := readPNG(path)
+			if err != nil {
+				return err
+			}
+			p := l.Region
+			if rule.Plate != "" {
+				// A point on the plate's top edge, inside its own padding and
+				// clear of the corner radius: only the plate can have painted it.
+				token := design.Color[rule.Plate]
+				red, _, _, alpha := img.At(int(p.X+p.Width/2), int(p.Y+2)).RGBA()
+				want := uint32(math.Round(token.Alpha * 0xffff))
+				if alpha < want-0x300 || alpha > want+0x300 {
+					return fmt.Errorf("%s plate alpha %d want %d", style, alpha, want)
+				}
+				// Premultiplied by that alpha: ink reads dark, paper reads light.
+				if dark := red < alpha/2; dark != (rule.Plate == "ink_900") {
+					return fmt.Errorf("%s plate colour %d over alpha %d", style, red, alpha)
+				}
+				// The accent bar runs the plate's full height at its left edge;
+				// the dot sits inside the top-left padding instead.
+				x, y := int(p.X+2), int(p.Y+p.Height/2)
+				if rule.Dot {
+					x, y = int(p.X+rule.Padding.H+design.Spacing.DotAccent/2), int(p.Y+rule.Padding.V+design.Spacing.DotAccent/2)
+				}
+				if !isAccent(img, x, y) {
+					return fmt.Errorf("%s is missing its accent at %d,%d", style, x, y)
+				}
+				continue
+			}
+			// The stroke under the fill is the only thing an unplated style paints
+			// nearly opaque and nearly black; the shadow is softer than α0.85.
+			if !scan(img, p, func(r, g, b, a uint32) bool {
+				return a > 0xd000 && r < 0x3000 && g < 0x3000 && b < 0x3000
+			}) {
+				return fmt.Errorf("%s painted no %s stroke", style, rule.Stroke)
+			}
+			if !rule.Highlight {
+				// 크게 강조 colours the word itself, so the accent is on a glyph.
+				if !scan(img, p, func(r, g, b, a uint32) bool { return a > 0x8000 && r > 2*b }) {
+					return fmt.Errorf("%s did not colour its accent word %s", style, amber)
+				}
+				continue
+			}
+			u := design.Spacing.UnderlineMark
+			x := int(p.X + l.Keyword.Offset + l.Keyword.Width/2)
+			y := int(p.Y + (1-u.RaiseEM-u.HeightEM/2)*l.FontSize)
+			if !isAccent(img, x, y) {
+				return fmt.Errorf("%s highlight is missing at %d,%d", style, x, y)
+			}
+			// It is BEHIND the keyword, not before or after it.
+			if isAccent(img, int(p.X+2), y) {
+				return fmt.Errorf("%s highlighted the whole line", style)
+			}
 		}
 		return nil
 	}); err != nil {
@@ -121,8 +196,8 @@ func TestRenderSmoke(t *testing.T) {
 				}
 				plan := clip.EditPlan{Ratio: ratio, DurationMS: 15000, Cuts: []clip.EditCut{
 					{ID: "one", SourceID: "audio", Fingerprint: "audio", EndMS: 5200, Focal: clip.Point{X: .5, Y: .5}, Copy: clip.Copy{Text: "정확한 한글 & 여행", Style: "clean", Anchor: "bottom", Align: "center", Accent: "coral"}},
-					{ID: "two", SourceID: "rotated", Fingerprint: "rotated", EndMS: 5000, Focal: clip.Point{X: .5, Y: .5}, Volume: volume(.5), Copy: clip.Copy{Text: "기록처럼 <오늘>", Style: "memo", Anchor: "top", Align: "left", Accent: "teal"}},
-					{ID: "three", SourceID: "silent", Fingerprint: "silent", EndMS: 5200, Focal: clip.Point{X: .5, Y: .5}, Volume: volume(0), Copy: clip.Copy{Text: "다시 오고 싶은 곳", Style: "bold", Anchor: "lower_mid", Align: "center", Accent: "amber"}},
+					{ID: "two", SourceID: "rotated", Fingerprint: "rotated", EndMS: 5000, Focal: clip.Point{X: .5, Y: .5}, Volume: volume(.5), Copy: clip.Copy{Text: "기록처럼 <오늘>", Style: "memo", Anchor: "lower_mid", Align: "left", Accent: "teal"}},
+					{ID: "three", SourceID: "silent", Fingerprint: "silent", EndMS: 5200, Focal: clip.Point{X: .5, Y: .5}, Volume: volume(0), Copy: clip.Copy{Text: "다시 오고 싶은 곳", Style: "bold", Anchor: "upper_mid", Align: "center", Accent: "amber"}},
 				}}
 				if variant == "silent-rounded" || variant == "audio-rounded" {
 					plan.DurationMS = 15017
@@ -266,6 +341,23 @@ func TestRenderSmoke(t *testing.T) {
 			}
 		})
 	}
+}
+
+// isAccent reads amber #FFB020 through whatever is drawn over it: red leads and
+// blue trails, which no other colour in these styles does.
+func isAccent(img image.Image, x, y int) bool {
+	r, g, b, a := img.At(x, y).RGBA()
+	return a > 0x8000 && r > 2*b && g > b
+}
+func scan(img image.Image, region clip.Region, match func(r, g, b, a uint32) bool) bool {
+	for y := int(region.Y); y < int(region.Y+region.Height); y++ {
+		for x := int(region.X); x < int(region.X+region.Width); x++ {
+			if match(img.At(x, y).RGBA()) {
+				return true
+			}
+		}
+	}
+	return false
 }
 func readPNG(path string) (image.Image, error) {
 	data, err := os.ReadFile(path)

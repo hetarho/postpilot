@@ -56,11 +56,22 @@ type chunkJSON struct {
 // (CDS-23..26) until CDS-38's deterministic selection replaces both in T105.
 func defaultAlign(style string) string { return design.Styles[style].Align }
 
+// Only 크게 강조 and 형광펜 accent one word (CDS-25, CDS-26); for every other
+// style a keyword would be an accent the design system does not draw.
+func keywordOf(value *string, style string) string {
+	s := design.Styles[style]
+	if value == nil || (!s.Highlight && s.Stroke == "") {
+		return ""
+	}
+	return *value
+}
+
 type captionJSON struct {
 	Text     *string `json:"text"`
 	Start    *int    `json:"start_ms"`
 	End      *int    `json:"end_ms"`
 	Position *string `json:"position"`
+	Keyword  *string `json:"keyword"`
 	Style    *string `json:"style"`
 	Accent   *string `json:"accent"`
 }
@@ -226,7 +237,7 @@ func parsePlan(cfg Config, input clip.PlanningInput, raw string) (clip.EditPlan,
 				return clip.EditPlan{}, outputError("plan_volume")
 			}
 		}
-		result.Cuts = append(result.Cuts, clip.Cut{ID: *c.ID, SourceID: source.ID, Fingerprint: source.Fingerprint, StartMS: *c.Start, EndMS: *c.End, Focal: focal, Volume: &volume, Copy: clip.Caption{Text: *p.Text, StartMS: *p.Start, EndMS: *p.End, Anchor: *p.Position, Align: defaultAlign(*p.Style), Style: *p.Style, Accent: *p.Accent}})
+		result.Cuts = append(result.Cuts, clip.Cut{ID: *c.ID, SourceID: source.ID, Fingerprint: source.Fingerprint, StartMS: *c.Start, EndMS: *c.End, Focal: focal, Volume: &volume, Copy: clip.Caption{Text: *p.Text, StartMS: *p.Start, EndMS: *p.End, Anchor: *p.Position, Align: defaultAlign(*p.Style), Keyword: keywordOf(p.Keyword, *p.Style), Style: *p.Style, Accent: *p.Accent}})
 	}
 	if err := composeTimeline(cfg, input, &result); err != nil {
 		return clip.EditPlan{}, err

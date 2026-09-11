@@ -28,7 +28,8 @@
               "end_ms": { "type": "integer", "minimum": 1 },
               "position": { "type": "string", "enum": ["top", "upper_mid", "lower_mid", "bottom"] },
               "style": { "type": "string", "enum": ["clean", "memo", "bold", "mark"] },
-              "accent": { "type": "string", "enum": ["", "coral", "amber", "lime", "teal", "blue", "violet", "pink"] }
+              "accent": { "type": "string", "enum": ["", "coral", "amber", "lime", "teal", "blue", "violet", "pink"] },
+              "keyword": { "type": "string", "maxLength": 500 }
             }
           }
         }

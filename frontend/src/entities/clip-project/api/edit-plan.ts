@@ -43,6 +43,7 @@ export function toClipEditingState(value: ProtoClipEditingState): ClipEditingSta
             endMs: copy.endMs,
             anchor: copy.position as ClipCaption['anchor'],
             align: copy.align as ClipCaption['align'],
+            keyword: copy.keyword,
             style: copy.style as CopyStyle,
             accent: copy.accent as ClipAccent,
           },

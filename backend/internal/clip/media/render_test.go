@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/clip/design"
 )
 
 func testRenderer(t *testing.T, a *Adapter) *Rendering {
@@ -40,7 +41,7 @@ func TestBundledFontAndGraphemeBoundaries(t *testing.T) {
 			t.Fatalf("unsupported text %q", text)
 		}
 	}
-	candidates, _, err := copyCandidates("a\u0308한글")
+	candidates, _, err := copyCandidates("a\u0308한글", 2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,11 +53,19 @@ func TestBundledFontAndGraphemeBoundaries(t *testing.T) {
 			t.Fatal("split a grapheme")
 		}
 	}
-	if _, _, err := copyCandidates("one\ntwo\nthree"); !errors.Is(err, clip.ErrCopyTooLong) {
+	if _, _, err := copyCandidates("one\ntwo\nthree", 2); !errors.Is(err, clip.ErrCopyTooLong) {
 		t.Fatal(err)
 	}
-	if _, values, err := copyCandidates("same\nsame"); err != nil || len(values) != 1 {
+	if _, values, err := copyCandidates("same\nsame", 2); err != nil || len(values) != 1 {
 		t.Fatalf("duplicate line measurement: %v %v", values, err)
+	}
+	// 메모 and 형광펜 are exactly one line (CDS-24, CDS-26): a second one is
+	// refused outright rather than wrapped away.
+	if _, _, err := copyCandidates("one\ntwo", 1); !errors.Is(err, clip.ErrCopyTooLong) {
+		t.Fatal(err)
+	}
+	if got, _, err := copyCandidates("한글 여행", 1); err != nil || len(got) != 1 || len(got[0]) != 1 {
+		t.Fatalf("one-line style offered a wrap: %v %v", got, err)
 	}
 	cfg := r.cfg
 	cfg.FontPath = filepath.Join(t.TempDir(), "font.ttf")
@@ -65,31 +74,120 @@ func TestBundledFontAndGraphemeBoundaries(t *testing.T) {
 		t.Fatal("wrong font accepted")
 	}
 }
+
+// The four styles on the three ratios, each drawn only from CDS tokens. The
+// goldens are what catches a token silently changing shape; the assertions after
+// them are the properties CDS states outright.
 func TestCopyLayoutAndSVGGolden(t *testing.T) {
-	canvas, _ := clip.ClipCanvas("vertical")
 	text := `한글 & <여행>`
 	bounds := map[string]clip.Region{text: {X: 1, Y: -80, Width: 500, Height: 100}}
-	for _, style := range []string{"clean", "memo", "bold", "mark"} {
-		c := clip.Copy{Text: text, Anchor: "bottom", Align: "center", Style: style, Accent: "coral"}
+	for _, ratio := range []string{"vertical", "horizontal", "square"} {
+		canvas, _ := clip.ClipCanvas(ratio)
+		for style, rule := range design.Styles {
+			c := clip.Copy{Text: text, Anchor: rule.Anchor, Align: rule.Align, Style: style, Accent: "coral"}
+			l, err := fitCopy(canvas, c, [][]string{{text}}, bounds)
+			if err != nil {
+				t.Fatalf("%s/%s: %v", ratio, style, err)
+			}
+			svg := copySVG(canvas, c, l)
+			golden(t, fmt.Sprintf("copy-%s-%s.svg", style, ratio), svg+"\n")
+			if strings.Contains(svg, "<여행>") || !strings.Contains(svg, "&amp; &lt;여행&gt;") {
+				t.Fatal("text not escaped")
+			}
+			// CDS-2: the plate the layout chose is inside the safe area, and the
+			// size never falls below the role's floor (CDS-3, CDS-19).
+			if l.Region.X < canvas.Safe.X || l.Region.X+l.Region.Width > canvas.Safe.X+canvas.Safe.Width {
+				t.Fatalf("%s/%s left the safe area: %+v", ratio, style, l.Region)
+			}
+			if l.FontSize < rule.Role().Min || l.FontSize > rule.Role().Size {
+				t.Fatalf("%s/%s size %v outside [%v,%v]", ratio, style, l.FontSize, rule.Role().Min, rule.Role().Size)
+			}
+			// A plated style paints its plate and no stroke; an unplated one the
+			// reverse, with the drop shadow (CDS-23..26).
+			plate := strings.Contains(svg, `fill="`+design.Color[rule.Plate].Hex+`" fill-opacity=`)
+			if (rule.Plate != "") != plate {
+				t.Fatalf("%s/%s plate=%v", ratio, style, plate)
+			}
+			if strings.Contains(svg, "feDropShadow") != (rule.Shadow != "") {
+				t.Fatalf("%s/%s shadow", ratio, style)
+			}
+			if want := fmt.Sprintf(`stroke-width="%.3f"`, rule.StrokeWidth()); !strings.Contains(svg, want) {
+				t.Fatalf("%s/%s missing %s", ratio, style, want)
+			}
+		}
+	}
+	canvas, _ := clip.ClipCanvas("vertical")
+	// Neutral: no accent means no bar, no dot and no highlight anywhere.
+	for style := range design.Styles {
+		c := clip.Copy{Text: text, Anchor: "bottom", Align: "center", Style: style}
 		l, err := fitCopy(canvas, c, [][]string{{text}}, bounds)
 		if err != nil {
 			t.Fatal(err)
 		}
 		svg := copySVG(canvas, c, l)
-		golden(t, "copy-"+style+".svg", svg+"\n")
-		if strings.Contains(svg, "<여행>") || !strings.Contains(svg, "&amp; &lt;여행&gt;") {
-			t.Fatal("text not escaped")
-		}
-		b := map[string]clip.Region{text: {Width: 100000, Height: 100}}
-		if _, err := fitCopy(canvas, c, [][]string{{text}}, b); !errors.Is(err, clip.ErrCopyTooLong) {
-			t.Fatal(err)
+		golden(t, "copy-"+style+"-neutral.svg", svg+"\n")
+		if strings.Contains(svg, design.Accent["coral"]) || strings.Contains(svg, "<circle") {
+			t.Fatalf("%s painted an accent it was not given", style)
 		}
 	}
+	// A keyword at the end of the line: its highlight is measured from the
+	// prefix's advance and still may not cross the safe area's right edge (920).
+	keyed := "가격 9900원"
+	kb := map[string]clip.Region{keyed: {X: 1, Y: -80, Width: 700, Height: 100}, "가격 ": {X: 1, Y: -80, Width: 220, Height: 100}, "9900원": {X: 1, Y: -80, Width: 470, Height: 100}}
+	for _, style := range []string{"bold", "mark"} {
+		c := clip.Copy{Text: keyed, Keyword: "9900원", Anchor: design.Styles[style].Anchor, Align: "right", Style: style, Accent: "amber"}
+		l, err := fitCopy(canvas, c, [][]string{{keyed}}, kb)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !l.Keyword.Present || l.Keyword.Line != 0 || l.Keyword.Offset <= 0 {
+			t.Fatalf("%s lost its measured keyword: %+v", style, l.Keyword)
+		}
+		svg := copySVG(canvas, c, l)
+		golden(t, "copy-"+style+"-keyword.svg", svg+"\n")
+		for _, e := range l.Elements(0, c, 0, 3000) {
+			if e.Region.X+e.Region.Width > canvas.Safe.X+canvas.Safe.Width {
+				t.Fatalf("%s %s crossed x %v: %+v", style, e.Kind, canvas.Safe.X+canvas.Safe.Width, e.Region)
+			}
+		}
+		if strings.Contains(svg, `fill-opacity="0.9"`) != design.Styles[style].Highlight {
+			t.Fatalf("%s highlight", style)
+		}
+		// 크게 강조 colours the word in place instead (CDS-25).
+		if strings.Contains(svg, "<tspan") != (style == "bold") {
+			t.Fatalf("%s accent word", style)
+		}
+	}
+	// Two lines, and the fit loop refusing rather than shrinking past the floor.
 	c := clip.Copy{Text: "one two", Style: "clean", Anchor: "top", Align: "left"}
 	b := map[string]clip.Region{"one two": {Width: 2500, Height: 100}, "one ": {Width: 800, Height: 100}, "two": {Width: 800, Height: 100}}
 	l, err := fitCopy(canvas, c, [][]string{{"one two"}, {"one ", "two"}}, b)
-	if err != nil || len(l.Lines) != 2 || l.FontSize != 54 {
+	if err != nil || len(l.Lines) != 2 || l.FontSize != design.Type["body"].Size {
 		t.Fatalf("%+v %v", l, err)
+	}
+	for style, rule := range design.Styles {
+		wide := map[string]clip.Region{text: {Width: 100000, Height: 100}}
+		c := clip.Copy{Text: text, Anchor: rule.Anchor, Align: rule.Align, Style: style}
+		if _, err := fitCopy(canvas, c, [][]string{{text}}, wide); !errors.Is(err, clip.ErrCopyTooLong) {
+			t.Fatalf("%s shrank below its floor: %v", style, err)
+		}
+		// A copy that fits ONLY at the floor still renders, exactly there. The
+		// room available depends on the style's own anchor and alignment, so it
+		// is probed rather than assumed.
+		floor := rule.Role().Min
+		left, right, _ := copyInsets(rule)
+		room := 0.0
+		for w := canvas.Safe.Width; w >= 1; w-- {
+			if _, err := clip.PlaceCopy(canvas, rule.Anchor, rule.Align, w, 2*floor); err == nil {
+				room = w
+				break
+			}
+		}
+		atFloor := map[string]clip.Region{text: {Width: (room - left - right - 1) * 100 / floor, Height: 100}}
+		got, err := fitCopy(canvas, c, [][]string{{text}}, atFloor)
+		if err != nil || got.FontSize != floor {
+			t.Fatalf("%s did not reach its floor %v: %v %v", style, floor, got.FontSize, err)
+		}
 	}
 }
 func golden(t *testing.T, name, actual string) {
@@ -123,6 +221,31 @@ func TestRenderFilterGoldens(t *testing.T) {
 	if !strings.Contains(cutGraph(r.cfg, canvas, c, clip.MediaInfo{}, 228, false, true), "anullsrc=r=48000:cl=stereo") {
 		t.Fatal("missing synthesized silence")
 	}
+	// CDS-4 and CDS-27: exactly one 180 ms fade-in settling 12 px, one 120 ms
+	// fade-out that does not move, and a window inset 120 ms at both ends.
+	graph := cutGraph(r.cfg, canvas, c, clip.MediaInfo{HasAudio: true}, 228, true, true)
+	for _, want := range []string{
+		"fade=t=in:st=0.120:d=0.180:alpha=1",
+		"fade=t=out:st=7.360:d=0.120:alpha=1",
+		"overlay=x=0:y='12*pow(1-min(1,max(0,(t-0.120)/0.180)),3)'",
+		"enable='gte(t,0.120)*lt(t,7.480)'",
+	} {
+		if !strings.Contains(graph, want) {
+			t.Fatalf("lost motion %s in %s", want, graph)
+		}
+	}
+	// Nothing else moves or eases: no zoom, wipe, slide, rotation or blur.
+	for _, forbidden := range []string{"zoompan", "rotate", "boxblur", "gblur", "wipe", "slide", "scroll"} {
+		if strings.Contains(graph, forbidden) {
+			t.Fatalf("forbidden motion %s", forbidden)
+		}
+	}
+	// An explicit window is exactly what the plan asked for, not re-inset.
+	explicit := c
+	explicit.Copy = clip.Copy{Text: "x", StartMS: 1000, EndMS: 4000}
+	if !strings.Contains(cutGraph(r.cfg, canvas, explicit, clip.MediaInfo{}, 228, true, false), "enable='gte(t,1.000)*lt(t,4.000)'") {
+		t.Fatal("an explicit caption window was moved")
+	}
 	frames := cutFrames(clip.EditPlan{Cuts: []clip.EditCut{{EndMS: 5011}, {EndMS: 5022}, {EndMS: 5367}}}, 30)
 	if !reflect.DeepEqual(frames, []int{150, 151, 161}) {
 		t.Fatal(frames)
@@ -143,7 +266,7 @@ func TestCopyMeasurementAndExplicitFontArguments(t *testing.T) {
 	a := newAdapter(t, fake)
 	r := testRenderer(t, a)
 	if err := a.WithWorkspace(t.Context(), "copy", func(ws clip.MediaWorkspace) error {
-		bounds, err := r.measure(t.Context(), ws, []string{"한글"}, 600)
+		bounds, err := r.measure(t.Context(), ws, []string{"한글"}, 600, 0)
 		if err != nil {
 			return err
 		}
@@ -160,15 +283,23 @@ func TestCopyMeasurementAndExplicitFontArguments(t *testing.T) {
 	}
 }
 
-func TestCopyRecipesMatchFrontendPreview(t *testing.T) {
+// The renderer reads its sizes from the design system now, so the frontend
+// preview is compared against the same numbers rather than against a second
+// table. The preview keeps its own copy only until it reads clip-design.json.
+func TestFrontendPreviewMeasurementsMatchTheDesignSystem(t *testing.T) {
 	data, err := os.ReadFile("../../../../frontend/src/entities/clip-template/model/types.ts")
 	if err != nil {
 		t.Fatal(err)
 	}
-	for style, r := range copyRecipes {
-		want := fmt.Sprintf("%s: { fontSize: %d, minFontSize: %d, weight: %d, padding: %d, radius: %d }", style, r.FontSize, r.MinFontSize, r.Weight, r.Padding, r.Radius)
+	for id, style := range design.Styles {
+		radius := 0.0
+		if style.Plate != "" {
+			radius = design.Spacing.RadiusBox
+		}
+		role := style.Role()
+		want := fmt.Sprintf("%s: { fontSize: %.0f, minFontSize: %.0f, weight: %d, padding: %.0f, radius: %.0f }", id, role.Size, role.Min, role.Weight, style.Padding.V, radius)
 		if !strings.Contains(string(data), want) {
-			t.Fatalf("preview and render recipe differ: %s", style)
+			t.Fatalf("preview and design system differ: %s\nwant %s", id, want)
 		}
 	}
 }

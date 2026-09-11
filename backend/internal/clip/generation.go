@@ -123,6 +123,7 @@ func (e *StageFailure) FailureStage() string { return e.Stage }
 func (e *StageFailure) Failure() llm.Failure {
 	f := llm.NormalizeFailure(e.Cause)
 	var credits *plan.InsufficientCreditsError
+	var layout interface{ LayoutReason() string }
 	switch {
 	case errors.Is(e.Cause, ErrQuoteRequired):
 		f = llm.Failure{Reason: "CLIP_QUOTE_REQUIRED"}
@@ -144,6 +145,10 @@ func (e *StageFailure) Failure() llm.Failure {
 		f = llm.Failure{Reason: "CLIP_INVALID_MEDIA", TechnicalDetail: "Source verification failed before analysis."}
 	case errors.Is(e.Cause, ErrCopyTooLong):
 		f = llm.Failure{Reason: "CLIP_COPY_TOO_LONG"}
+	// One reason per verifier check, so the correction step can point at what
+	// failed instead of saying the plan is invalid (CDS-52, LANG-21).
+	case errors.As(e.Cause, &layout) && layout.LayoutReason() != "":
+		f = llm.Failure{Reason: layout.LayoutReason()}
 	case errors.Is(e.Cause, ErrInvalid):
 		f = llm.Failure{Reason: "CLIP_INVALID_INPUT"}
 	case errors.Is(e.Cause, ErrPlanConflict):

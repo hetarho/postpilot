@@ -80,6 +80,17 @@ export const errors = {
     'The videos are processing or the upload has expired. Check progress, then select the source videos again.',
   CLIP_NOT_FOUND: 'Could not find the clip or video template.',
   CLIP_COPY_TOO_LONG: 'This caption does not fit in two lines. Shorten it and try again.',
+  CLIP_LAYOUT_SAFE_AREA:
+    'A caption fell outside the screen-safe area, so rendering stopped. Shorten it or move the caption.',
+  CLIP_LAYOUT_SIZE:
+    'A caption broke the legible minimum size or the line and character limits. Shorten it.',
+  CLIP_LAYOUT_OVERLAP:
+    'A caption overlapped another element, so rendering stopped. Adjust its position or timing.',
+  CLIP_LAYOUT_MOTION: 'A caption used motion that is not allowed, so rendering stopped. Try again.',
+  CLIP_LAYOUT_ANCHOR_STEP:
+    'Consecutive cuts move their captions too far. Keep the change to one step.',
+  CLIP_LAYOUT_FREQUENCY:
+    'One caption style was used too often. Bold takes at most two per clip, and one style at most three in a row.',
   CLIP_BUSY: 'A clip job is still running. Wait for it to finish.',
   CLIP_PLAN_CONFLICT:
     'The saved edit plan changed. Keep your edits and reload the latest revision before saving again.',

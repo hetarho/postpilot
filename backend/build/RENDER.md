@@ -16,9 +16,54 @@ breaks and at most two lines. The final SVG uses the same font weight and measur
 bounds. The minimum-size failure is `CLIP_COPY_TOO_LONG`; unsupported glyphs and
 control characters are invalid input, never substituted images or fonts.
 Pretendard is pinned with its OFL notice in `backend/assets/fonts/pretendard`.
-Style sizes, weights, padding, radius and accents match the T070 preview contract.
 The four style ids are clean, memo, bold and mark; every approved set keeps clean,
-because every design-system fallback lands on it.
+because every design-system fallback lands on it. Each is drawn only from design
+tokens, never a literal:
+
+- `clean` — an `ink.900` plate at `radius.box`, an 8 px accent bar clipped to the
+  plate's own rounded rect at its left inner edge, 22/32 padding with the bar
+  inside a 40 px left inset, `t.body` 56/700 white, at most two lines.
+- `memo` — a `paper.50` plate, one 14 px accent dot at the top left, 18/28 padding
+  with 54 px on the left, `t.caption` 44/600 `text.ink`, exactly one line.
+- `bold` — no plate: white `t.title` 72/800 over a 6 px round-joined `stroke.dark`
+  painted under the fill, plus the `shadow.text` drop shadow. One word may take
+  the accent, as a `tspan` inside the line so the run stays shaped as one.
+  Pretendard 800 stands in until Paperlogy is bundled.
+- `mark` — no plate: white `t.mark` 60/800 with a 4 px stroke and the same shadow,
+  and the keyword's `underline.mark` highlight (accent α0.9, 0.42em tall, raised
+  0.28em above the baseline, 6 px past each side) drawn behind the text.
+
+The keyword is a caption field, never a marker inside the text, and its highlight
+starts at the measured advance of the prefix before it — `--query-all` on the real
+font, not an estimate. Sub-pixel kerning between the prefix's last glyph and the
+keyword's first is not modelled, which a rectangle can absorb and a glyph could
+not; that is why `bold` colours its word in place instead of redrawing it.
+
+Letter-spacing is the role's tracking in px at the rendered size, and the same
+tracking scaled to 100 px is used when measuring, so the fit and the final SVG
+agree. The fit loop searches only between a role's nominal size and its minimum
+(body 48, caption 40, title 64, mark 52); below the minimum the copy is refused
+with `CLIP_COPY_TOO_LONG`, never shrunk further.
+
+Copy enters at its window's start with a 180 ms alpha fade that settles 12 px
+upward — `overlay=x=0:y='12*pow(1-min(1,max(0,(t-T0)/0.180)),3)'`, an ease-out
+cubic on the one looped plate image — and leaves with a 120 ms alpha fade and no
+movement. Both are `fade=...:alpha=1` on the plate input; there is no second
+rasterisation per frame and no other motion. A cut's default window is inset
+120 ms at each end so no text straddles a transition; an explicit window is used
+exactly as given.
+
+The renderer emits a manifest of every element it places (kind, style, anchor,
+region in canvas pixels, output-timeline window, font size, fill, background and
+the motion values) and `design.Verify` gates the render on it BEFORE any source
+byte is fetched and before FFmpeg runs, so a plan that breaks the design system
+costs neither a download nor an encode. It implements V1 safe area, V2 size
+floors, V5 lines and characters, V7 overlap between different cuts whose windows
+meet, V9 the two permitted motions, V13 one anchor step between consecutive cuts
+and V14 style frequency, and names the failing check as its own stable reason
+(`CLIP_LAYOUT_*`). V3 contrast needs frame sampling and is a documented gap until
+the brightness sampler lands; V4, V6, V8, V10, V11 and V12 cover components the
+manifest does not carry yet.
 
 The three safe areas and every placement number come from one embedded
 configuration file, `internal/clip/design/design.json`, which the frontend mirrors

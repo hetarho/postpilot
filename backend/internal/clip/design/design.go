@@ -122,20 +122,46 @@ type SpacingTokens struct {
 	RadiusCard    float64   `json:"radius_card"`
 	BarAccent     float64   `json:"bar_accent"`
 	StrokeText    float64   `json:"stroke_text"`
+	StrokeMark    float64   `json:"stroke_mark"`
+	DotAccent     float64   `json:"dot_accent"`
 	UnderlineMark Underline `json:"underline_mark"`
 }
 
-// One copy style (CDS-22..26). Plate is empty for an unplated style, and
-// AnchorAlt is empty where CDS states no alternative anchor for it.
+// One copy style (CDS-22..26). Plate is empty for an unplated style, AnchorAlt is
+// empty where CDS states no alternative anchor for it, and Stroke and Shadow name
+// a spacing/shadow token rather than repeating its number.
 type StyleRule struct {
-	Type      string `json:"type"`
-	Plate     string `json:"plate"`
-	Lines     int    `json:"lines"`
-	Chars     int    `json:"chars"`
-	Anchor    string `json:"anchor"`
-	AnchorAlt string `json:"anchor_alt"`
-	Align     string `json:"align"`
+	Type      string  `json:"type"`
+	Plate     string  `json:"plate"`
+	Lines     int     `json:"lines"`
+	Chars     int     `json:"chars"`
+	Anchor    string  `json:"anchor"`
+	AnchorAlt string  `json:"anchor_alt"`
+	Align     string  `json:"align"`
+	Padding   Pad     `json:"padding"`
+	PadLeft   float64 `json:"pad_left"`
+	Bar       bool    `json:"bar"`
+	Dot       bool    `json:"dot"`
+	Stroke    string  `json:"stroke"`
+	Shadow    string  `json:"shadow"`
+	Highlight bool    `json:"highlight"`
 }
+
+// StrokeWidth is the round-joined stroke painted under an unplated style's fill:
+// 6 px for 크게 강조 and 4 px for 형광펜 (CDS-21, CDS-25, CDS-26).
+func (s StyleRule) StrokeWidth() float64 {
+	switch s.Stroke {
+	case "text":
+		return Spacing.StrokeText
+	case "mark":
+		return Spacing.StrokeMark
+	}
+	return 0
+}
+
+// Role is the style's type scale entry (CDS-19).
+func (s StyleRule) Role() TypeRole { return Type[s.Type] }
+
 type MotionTokens struct {
 	InMS  int        `json:"in_ms"`
 	InDY  float64    `json:"in_dy"`

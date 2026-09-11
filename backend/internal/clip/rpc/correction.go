@@ -12,7 +12,7 @@ func correctionPlan(p *v1.ClipEditPlan) clip.CorrectionPlan {
 	out := clip.CorrectionPlan{DurationMS: int(p.GetDurationMs())}
 	for _, c := range p.GetCuts() {
 		copy := c.GetCopy()
-		out.Cuts = append(out.Cuts, clip.CorrectionCut{ID: c.GetId(), SourceID: c.GetSourceId(), Fingerprint: c.GetFingerprint(), StartMS: int(c.GetStartMs()), EndMS: int(c.GetEndMs()), VolumePermille: int(c.GetVolumePermille()), Copy: clip.Caption{Text: copy.GetText(), Anchor: copy.GetPosition(), Align: copy.GetAlign(), Style: copy.GetStyle(), Accent: copy.GetAccent(), StartMS: int(copy.GetStartMs()), EndMS: int(copy.GetEndMs())}})
+		out.Cuts = append(out.Cuts, clip.CorrectionCut{ID: c.GetId(), SourceID: c.GetSourceId(), Fingerprint: c.GetFingerprint(), StartMS: int(c.GetStartMs()), EndMS: int(c.GetEndMs()), VolumePermille: int(c.GetVolumePermille()), Copy: clip.Caption{Text: copy.GetText(), Anchor: copy.GetPosition(), Align: copy.GetAlign(), Keyword: copy.GetKeyword(), Style: copy.GetStyle(), Accent: copy.GetAccent(), StartMS: int(copy.GetStartMs()), EndMS: int(copy.GetEndMs())}})
 	}
 	return out
 }
@@ -22,7 +22,7 @@ func editingProto(s *clip.CorrectionState) *v1.ClipEditingState {
 	}
 	out := &v1.ClipEditingState{Plan: &v1.ClipEditPlan{DurationMs: int32(s.Plan.DurationMS)}, CopyStyles: s.CopyStyles, FadeMs: int32(s.FadeMS), MaxCuts: int32(s.MaxCuts), MaxCopyRunes: int32(s.MaxCopyRunes), MinDurationMs: int32(s.MinDurationMS), MaxDurationMs: int32(s.MaxDurationMS)}
 	for _, c := range s.Plan.Cuts {
-		out.Plan.Cuts = append(out.Plan.Cuts, &v1.ClipEditCut{Id: c.ID, SourceId: c.SourceID, Fingerprint: c.Fingerprint, StartMs: int32(c.StartMS), EndMs: int32(c.EndMS), VolumePermille: int32(c.VolumePermille), Copy: &v1.ClipCaption{Text: c.Copy.Text, Position: c.Copy.Anchor, Align: c.Copy.Align, Style: c.Copy.Style, Accent: c.Copy.Accent, StartMs: int32(c.Copy.StartMS), EndMs: int32(c.Copy.EndMS)}})
+		out.Plan.Cuts = append(out.Plan.Cuts, &v1.ClipEditCut{Id: c.ID, SourceId: c.SourceID, Fingerprint: c.Fingerprint, StartMs: int32(c.StartMS), EndMs: int32(c.EndMS), VolumePermille: int32(c.VolumePermille), Copy: &v1.ClipCaption{Text: c.Copy.Text, Position: c.Copy.Anchor, Align: c.Copy.Align, Keyword: c.Copy.Keyword, Style: c.Copy.Style, Accent: c.Copy.Accent, StartMs: int32(c.Copy.StartMS), EndMs: int32(c.Copy.EndMS)}})
 	}
 	for _, s := range s.Sources {
 		out.Sources = append(out.Sources, &v1.ClipRetainedSource{Id: s.ID, Fingerprint: s.Fingerprint, Filename: s.Filename, DurationMs: int32(s.Info.DurationMS), Width: int32(s.Info.Width), Height: int32(s.Info.Height)})

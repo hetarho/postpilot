@@ -98,7 +98,14 @@
       "weight": 800,
       "tracking": -0.01,
       "line_height": 1.3,
-      "chars": 0
+      "chars": 0,
+      "padding": { "v": 0, "h": 0 },
+      "pad_left": 0,
+      "bar": false,
+      "dot": false,
+      "stroke": "mark",
+      "shadow": "text",
+      "highlight": true
     },
     "body": {
       "size": 56,
@@ -174,6 +181,8 @@
     "radius_card": 24,
     "bar_accent": 8,
     "stroke_text": 6,
+    "stroke_mark": 4,
+    "dot_accent": 14,
     "underline_mark": { "height_em": 0.42, "raise_em": 0.28, "extend": 6 }
   },
   "styles": {
@@ -184,7 +193,14 @@
       "chars": 14,
       "anchor": "bottom",
       "anchor_alt": "",
-      "align": "center"
+      "align": "center",
+      "padding": { "v": 22, "h": 32 },
+      "pad_left": 40,
+      "bar": true,
+      "dot": false,
+      "stroke": "",
+      "shadow": "",
+      "highlight": false
     },
     "memo": {
       "type": "caption",
@@ -193,7 +209,14 @@
       "chars": 18,
       "anchor": "top",
       "anchor_alt": "bottom",
-      "align": "left"
+      "align": "left",
+      "padding": { "v": 18, "h": 28 },
+      "pad_left": 54,
+      "bar": false,
+      "dot": true,
+      "stroke": "",
+      "shadow": "",
+      "highlight": false
     },
     "bold": {
       "type": "title",
@@ -202,7 +225,14 @@
       "chars": 11,
       "anchor": "upper_mid",
       "anchor_alt": "lower_mid",
-      "align": "center"
+      "align": "center",
+      "padding": { "v": 0, "h": 0 },
+      "pad_left": 0,
+      "bar": false,
+      "dot": false,
+      "stroke": "text",
+      "shadow": "text",
+      "highlight": false
     },
     "mark": {
       "type": "mark",
@@ -211,7 +241,14 @@
       "chars": 16,
       "anchor": "bottom",
       "anchor_alt": "",
-      "align": "center"
+      "align": "center",
+      "padding": { "v": 0, "h": 0 },
+      "pad_left": 0,
+      "bar": false,
+      "dot": false,
+      "stroke": "mark",
+      "shadow": "text",
+      "highlight": true
     }
   },
   "motion": { "in_ms": 180, "in_dy": 12, "out_ms": 120, "ease": [0.22, 1, 0.36, 1] },

@@ -2596,7 +2596,10 @@ type ClipCaption struct {
 	EndMs    int32  `protobuf:"varint,6,opt,name=end_ms,json=endMs,proto3" json:"end_ms,omitempty"`
 	// Horizontal alignment against the anchor: center, left or right. Separate
 	// from the anchor because the anchor-step rule reasons over the anchor alone.
-	Align         string `protobuf:"bytes,7,opt,name=align,proto3" json:"align,omitempty"`
+	Align string `protobuf:"bytes,7,opt,name=align,proto3" json:"align,omitempty"`
+	// The one word 크게 강조 colours and 형광펜 highlights. A substring of `text`,
+	// or empty for none; a field rather than a marker so `text` stays exact.
+	Keyword       string `protobuf:"bytes,8,opt,name=keyword,proto3" json:"keyword,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2676,6 +2679,13 @@ func (x *ClipCaption) GetEndMs() int32 {
 func (x *ClipCaption) GetAlign() string {
 	if x != nil {
 		return x.Align
+	}
+	return ""
+}
+
+func (x *ClipCaption) GetKeyword() string {
+	if x != nil {
+		return x.Keyword
 	}
 	return ""
 }
@@ -3434,7 +3444,7 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"maxCredits\x12\x1d\n" +
 	"\n" +
 	"expires_at\x18\x03 \x01(\tR\texpiresAt\x12?\n" +
-	"\fpriced_calls\x18\x04 \x03(\v2\x1c.postpilot.v1.ClipPricedCallR\vpricedCalls\"\xb3\x01\n" +
+	"\fpriced_calls\x18\x04 \x03(\v2\x1c.postpilot.v1.ClipPricedCallR\vpricedCalls\"\xcd\x01\n" +
 	"\vClipCaption\x12\x12\n" +
 	"\x04text\x18\x01 \x01(\tR\x04text\x12\x1a\n" +
 	"\bposition\x18\x02 \x01(\tR\bposition\x12\x14\n" +
@@ -3442,7 +3452,8 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\x06accent\x18\x04 \x01(\tR\x06accent\x12\x19\n" +
 	"\bstart_ms\x18\x05 \x01(\x05R\astartMs\x12\x15\n" +
 	"\x06end_ms\x18\x06 \x01(\x05R\x05endMs\x12\x14\n" +
-	"\x05align\x18\a \x01(\tR\x05align\"\xe6\x01\n" +
+	"\x05align\x18\a \x01(\tR\x05align\x12\x18\n" +
+	"\akeyword\x18\b \x01(\tR\akeyword\"\xe6\x01\n" +
 	"\vClipEditCut\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tsource_id\x18\x02 \x01(\tR\bsourceId\x12 \n" +

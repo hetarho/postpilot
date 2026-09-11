@@ -14,6 +14,7 @@ export function clipEditingFixture(): ClipEditingState {
           text: `caption ${id}`,
           anchor: 'bottom',
           align: 'center',
+          keyword: '',
           style: 'clean',
           accent: '',
           startMs: 0,

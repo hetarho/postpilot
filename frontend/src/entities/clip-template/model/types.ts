@@ -43,10 +43,10 @@ export interface ClipTemplate extends ClipRecipe {
 // authoritative type scale now lives in shared/config/clip-design.json; T103
 // takes the preview and the renderer onto it when it draws the four styles.
 export const COPY_STYLE_MEASUREMENTS = {
-  clean: { fontSize: 54, minFontSize: 36, weight: 600, padding: 28, radius: 24 },
-  memo: { fontSize: 44, minFontSize: 32, weight: 600, padding: 22, radius: 16 },
-  bold: { fontSize: 76, minFontSize: 48, weight: 800, padding: 24, radius: 0 },
-  mark: { fontSize: 60, minFontSize: 52, weight: 800, padding: 24, radius: 0 },
+  clean: { fontSize: 56, minFontSize: 48, weight: 700, padding: 22, radius: 16 },
+  memo: { fontSize: 44, minFontSize: 40, weight: 600, padding: 18, radius: 16 },
+  bold: { fontSize: 72, minFontSize: 64, weight: 800, padding: 0, radius: 0 },
+  mark: { fontSize: 60, minFontSize: 52, weight: 800, padding: 0, radius: 0 },
 } as const
 
 /** An unplated style paints its text with a stroke instead of a box (CDS-25, CDS-26). */

@@ -6,7 +6,6 @@ import (
 	"math"
 	"slices"
 	"strings"
-	"unicode"
 	"unicode/utf8"
 
 	"github.com/postpilot/backend/internal/clip/design"
@@ -20,7 +19,12 @@ type Point struct{ X, Y float64 }
 type Region struct{ X, Y, Width, Height float64 }
 type Caption struct {
 	Text, Anchor, Align, Style, Accent string
-	// Relative to the trimmed cut. Both zero preserves the whole-cut default.
+	// The one word 크게 강조 colours and 형광펜 highlights (CDS-25, CDS-26). A
+	// substring of Text, chosen by the planner or the owner; empty means none.
+	// It is a field rather than a marker inside Text because Text must stay
+	// exactly what the owner approved, down to the byte.
+	Keyword string
+	// Relative to the trimmed cut. Both zero takes the CDS-27 default window.
 	StartMS, EndMS int
 }
 type Copy = Caption
@@ -33,9 +37,12 @@ type Cut struct {
 }
 type EditCut = Cut
 
+// CDS-27: copy enters at cut start + 120 ms and leaves at cut end - 120 ms, so
+// no text straddles a transition. Both zero takes that default; an explicit
+// window is exactly what the plan or the owner asked for.
 func (c Cut) CaptionWindow() (int, int) {
 	if c.Copy.StartMS == 0 && c.Copy.EndMS == 0 {
-		return 0, c.EndMS - c.StartMS
+		return CopyLeadMS, c.EndMS - c.StartMS - CopyLeadMS
 	}
 	return c.Copy.StartMS, c.Copy.EndMS
 }
@@ -60,9 +67,10 @@ type RenderSource struct {
 // The consumer downloads only the requested source, then removes it after fn.
 type RenderSourceLoader func(context.Context, string, func(MediaSource) error) error
 type RenderedVideo struct {
-	Path  string
-	Info  MediaInfo
-	Bytes int64
+	Path     string
+	Info     MediaInfo
+	Bytes    int64
+	Manifest Manifest
 }
 type Renderer interface {
 	Render(context.Context, MediaWorkspace, EditPlan, []RenderSource, RenderSourceLoader) (RenderedVideo, error)
@@ -99,19 +107,18 @@ var CopyAligns = []string{"center", "left", "right"}
 // LOWER_MID and a caption the owner saw low should not jump to the top.
 var copyAnchorFallback = []string{"bottom", "lower_mid", "upper_mid", "top"}
 
-// CDS's constraints count Korean syllables and exclude spaces and punctuation.
-// A Latin or digit run counts one per character: the CDS tables are
-// Korean-first and the stricter reading is the safe one.
-func CopyChars(text string) int {
-	n := 0
-	for _, r := range text {
-		if unicode.IsSpace(r) || unicode.IsPunct(r) || unicode.IsSymbol(r) {
-			continue
-		}
-		n++
-	}
-	return n
-}
+// CDS's constraints count Korean syllables and exclude spaces and punctuation;
+// the design system owns the counter so the renderer, the validator and the
+// verifier can never disagree about how long a copy is.
+func CopyChars(text string) int { return design.Chars(text) }
+
+// CDS-27's inset at both ends of a cut's own copy window.
+const CopyLeadMS = 120
+
+// Manifest is every element the renderer places, in the design system's own
+// shape so the verifier can read it without knowing the clip domain.
+type Manifest = design.Manifest
+type ManifestElement = design.Element
 
 // CDS-41's minimum exposure for one copy, in milliseconds.
 func MinExposureMS(text string) int {
@@ -129,6 +136,42 @@ type planViolation string
 func (e planViolation) Error() string                { return "invalid clip plan: " + string(e) }
 func (e planViolation) Unwrap() error                { return ErrInvalid }
 func (e planViolation) OutputValidationCode() string { return string(e) }
+
+// One stable reason per verifier check, so the correction step can point at the
+// field instead of saying "invalid plan" (LANG-21). The table is the allowlist:
+// a code without an entry has no layout reason at all.
+// Each is its own named constant so the public-reason scan can read it
+// (internal/platform/rpcserver/failure_reasons_test.go).
+const (
+	reasonLayoutSafeArea   = "CLIP_LAYOUT_SAFE_AREA"
+	reasonLayoutSize       = "CLIP_LAYOUT_SIZE"
+	reasonLayoutOverlap    = "CLIP_LAYOUT_OVERLAP"
+	reasonLayoutMotion     = "CLIP_LAYOUT_MOTION"
+	reasonLayoutAnchorStep = "CLIP_LAYOUT_ANCHOR_STEP"
+	reasonLayoutFrequency  = "CLIP_LAYOUT_FREQUENCY"
+)
+
+var layoutReasons = map[string]string{
+	string(design.ViolationSafeArea):   reasonLayoutSafeArea,
+	string(design.ViolationSize):       reasonLayoutSize,
+	string(design.ViolationOverlap):    reasonLayoutOverlap,
+	string(design.ViolationMotion):     reasonLayoutMotion,
+	string(design.ViolationAnchorStep): reasonLayoutAnchorStep,
+	string(design.ViolationFrequency):  reasonLayoutFrequency,
+}
+
+func (e planViolation) LayoutReason() string { return layoutReasons[string(e)] }
+
+// VerifyLayout gates a render on the design system (CDS-52) and restates the
+// failure as an invalid plan, which is what every caller already understands.
+func VerifyLayout(ratio string, m Manifest) error {
+	err := design.Verify(m, ratio)
+	var v design.Violation
+	if errors.As(err, &v) {
+		return planViolation(v)
+	}
+	return err
+}
 
 func ValidateEditPlan(cfg RenderConfig, plan EditPlan, sources []RenderSource) error {
 	if _, err := ClipCanvas(plan.Ratio); err != nil {
@@ -195,6 +238,10 @@ func ValidateEditPlan(cfg RenderConfig, plan EditPlan, sources []RenderSource) e
 			}
 			if captionEnd-captionStart < MinExposureMS(c.Copy.Text) {
 				return planViolation("plan_copy_exposure")
+			}
+			// The accent word must be in the text it accents (CDS-25, CDS-26).
+			if c.Copy.Keyword != "" && !strings.Contains(c.Copy.Text, c.Copy.Keyword) {
+				return planViolation("plan_copy_keyword")
 			}
 		}
 		if c.EndMS-c.StartMS > cfg.MaxDurationMS+cfg.FadeMS*(len(plan.Cuts)-1)-total {

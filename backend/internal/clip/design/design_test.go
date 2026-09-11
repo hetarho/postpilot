@@ -174,6 +174,8 @@ func TestColourAndSpacingTokensMatchCDS14And15And21(t *testing.T) {
 		GapStack: 16, GapChip: 12,
 		RadiusBox: 16, RadiusChip: 999, RadiusCard: 24,
 		BarAccent: 8, StrokeText: 6,
+		// 형광펜's 4 px stroke (CDS-26) and 메모's 14 px dot (CDS-24).
+		StrokeMark: 4, DotAccent: 14,
 		UnderlineMark: design.Underline{HeightEM: 0.42, RaiseEM: 0.28, Extend: 6},
 	}
 	if design.Spacing != spacing {
@@ -184,17 +186,43 @@ func TestColourAndSpacingTokensMatchCDS14And15And21(t *testing.T) {
 func TestStylesMotionTimingTransitionAudioAndLuma(t *testing.T) {
 	// CDS-22 through CDS-26: four styles, one per role.
 	styles := map[string]design.StyleRule{
-		"clean": {Type: "body", Plate: "ink_900", Lines: 2, Chars: 14, Anchor: "bottom", Align: "center"},
-		"memo":  {Type: "caption", Plate: "paper_50", Lines: 1, Chars: 18, Anchor: "top", AnchorAlt: "bottom", Align: "left"},
-		"bold":  {Type: "title", Lines: 2, Chars: 11, Anchor: "upper_mid", AnchorAlt: "lower_mid", Align: "center"},
-		"mark":  {Type: "mark", Lines: 1, Chars: 16, Anchor: "bottom", Align: "center"},
+		// CDS-23: plate, bar, pad.box with the bar inside a 40 px left inset.
+		"clean": {Type: "body", Plate: "ink_900", Lines: 2, Chars: 14, Anchor: "bottom", Align: "center",
+			Padding: design.Pad{V: 22, H: 32}, PadLeft: 40, Bar: true},
+		// CDS-24: light plate, one accent dot, its own 18/28 padding.
+		"memo": {Type: "caption", Plate: "paper_50", Lines: 1, Chars: 18, Anchor: "top", AnchorAlt: "bottom", Align: "left",
+			Padding: design.Pad{V: 18, H: 28}, PadLeft: 54, Dot: true},
+		// CDS-25 and CDS-26: no plate, a stroke under the fill and a drop shadow.
+		"bold": {Type: "title", Lines: 2, Chars: 11, Anchor: "upper_mid", AnchorAlt: "lower_mid", Align: "center",
+			Stroke: "text", Shadow: "text"},
+		"mark": {Type: "mark", Lines: 1, Chars: 16, Anchor: "bottom", Align: "center",
+			Stroke: "mark", Shadow: "text", Highlight: true},
 	}
 	if !reflect.DeepEqual(design.Styles, styles) {
 		t.Fatalf("styles\n got %+v\nwant %+v", design.Styles, styles)
 	}
+	// 깔끔하게's padding IS pad.box (CDS-23), so the two have one value, not two.
+	if design.Styles["clean"].Padding != design.Spacing.PadBox {
+		t.Fatal("clean padding drifted from pad.box")
+	}
+	if design.Styles["bold"].StrokeWidth() != 6 || design.Styles["mark"].StrokeWidth() != 4 || design.Styles["clean"].StrokeWidth() != 0 {
+		t.Fatal("stroke widths")
+	}
+	if design.Spacing.DotAccent != 14 || design.Spacing.StrokeMark != 4 {
+		t.Fatal("style-specific spacing tokens", design.Spacing)
+	}
 	for id, s := range styles {
 		if _, ok := design.Type[s.Type]; !ok {
 			t.Fatalf("%s names an unknown type role %q", id, s.Type)
+		}
+		if s.Shadow != "" {
+			if _, ok := design.Shadow[s.Shadow]; !ok {
+				t.Fatalf("%s names an unknown shadow %q", id, s.Shadow)
+			}
+		}
+		// An unplated style carries a stroke and a shadow; a plated one neither.
+		if (s.Plate == "") != (s.Stroke != "" && s.Shadow != "") {
+			t.Fatalf("%s mixes a plate with a stroke treatment", id)
 		}
 		if s.Plate != "" {
 			if _, ok := design.Color[s.Plate]; !ok {

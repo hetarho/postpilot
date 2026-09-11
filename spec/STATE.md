@@ -38,9 +38,8 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
-| T103 | Four copy styles, entrance and exit motion, the layout manifest and the verifier | CDS CLIP LANG | - | todo |
 | T104 | Disclosure badge, information chips, category presets and the project's facts | CDS CLIP LANG | - | todo |
-| T105 | Deterministic composition: scene-aware analysis, sentence classes, style and anchor selection, exposure and grounding | CDS CLIP | T103 T104 | todo |
+| T105 | Deterministic composition: scene-aware analysis, sentence classes, style and anchor selection, exposure and grounding | CDS CLIP | T104 | todo |
 | T106 | The clip surfaces speak the design system: four styles, anchors, presets, disclosure and CTA | CDS CLIP THEME LANG | T104 | todo |
 | T107 | Hook and ending cards, the Paperlogy face and brightness-aware scrims | CDS CLIP | T105 T106 | todo |
 | T108 | Conditional transitions and loudness normalisation | CDS CLIP | T105 T106 | todo |
@@ -50,10 +49,12 @@
 | T112 | Clip-analysis model eligibility picker | CLIP LANG ARCH | T111 | todo |
 
 ## next
-- implement-task T103 (four styles, motion, layout manifest, verifier) then T104 in either order, T105 → T106 → T107 · T108 → T109; T110 needs the owner with the Naver app and closes CDS-11. T111 → T112 are independent of this chain
-- T102 landed the design package: every following CDS task reads `backend/internal/clip/design` and its byte-identical mirror `frontend/src/shared/config/clip-design.json`, never a literal. The renderer still draws the pre-CDS three plates under the four new ids and its own accent hexes (T103 owns both), and the clip surfaces still have no preset, alignment control, disclosure or CTA (T106's)
+- implement-task T104 (badge, chips, presets, facts), then T105 → T106 → T107 · T108 → T109; T110 needs the owner with the Naver app and closes CDS-11. T111 → T112 are independent of this chain
+- T102/T103 landed the design package and the renderer: every following CDS task reads `backend/internal/clip/design` and its byte-identical mirror `frontend/src/shared/config/clip-design.json`, never a literal. The renderer now draws the four styles, the two motions and a manifest the verifier gates each render on; the clip surfaces still have no preset, alignment control, disclosure or CTA (T106's), and V3 contrast waits for T107's brightness sampler
 - T008 needs the owner present: re-read its base at PUB@4 · ARCH@2 first (it still says PUB@2 ARCH@1), then BEFORE `install` the owner must re-run `postpilot-agent setup` so the connection records driver signature smarteditor-one-20260910-a6, and the queued `20260905-test` job must be canceled or deliberately used as the smoke's own job; once it closes, update-ssot PUB for VIDEO-17 + TMPL-39
 ## log
+- 260911 T103 done (cds); the four styles, the 180/120 ms motions and a pre-FFmpeg manifest verifier (V1 V2 V5 V7 V9 V13 V14) with six `CLIP_LAYOUT_*` reasons; the bundled FFmpeg had no `fade` filter — its allowlist now carries one, because CDS-4 admits no other entrance; `design.Verify` takes the manifest and a ratio, not `clip` types, which would be an import cycle; the keyword's offset is measured through the keyword because a prefix can be a space with no ink box
+- 260911 T103 claimed (cds)
 - 260911 T102 done (cds); one embedded `design.json` (+ byte-identical FE mirror) pins every CDS constant, `Caption` speaks anchors/alignments and the four style ids, migration 0041 and a read-time token belt carry every stored plan and template over, and `ValidateEditPlan` enforces the per-style line/char limits and CDS-41 exposure; 16:9/1:1 LEFT·RIGHT·CENTER and their scrim rectangles are derived from CDS-47/48's stated numbers (in the task result), and CDS-23's "26 total" vs 2 × 14 wants an update-ssot
 - 260911 create-task CLIP done (prov); CLIP r6 → T111 vendor-neutral backend qualification/routing · T112 clip picker/reasons; CLIP tasked=6; T111 is independent of T102
 - 260911 update-ssot TMPL POST start (len)
@@ -72,5 +73,3 @@
 - 260911 T098 done (auto); module-level per-project settings queue (debounce, latest-wins, backoff, no retry on a repeatable refusal), 저장 버튼·dirty 게이트·이탈 다이얼로그 제거, `클립 만들기`만 `/clips/new`에 남음; `useSaveStatus`는 ARCH-18 때문에 shared로 못 가고 순수 부분만 `shared/lib/save-state`로
 - 260911 T098 claimed (auto)
 - 260911 T097 done (wksp); three steps from durable state, editor top row, one status region with CLIP-38's precedence, one dock per step, delete as its own slice; the bar follows the project's state and a failed attempt opens on its retry step, and the unsaved-correction guard moved up to the page; full FE gate green
-- 260911 T097 claimed (wksp)
-- 260911 create-task CLIP THEME merged (unif); the dsgn session's CLIP r5 + CDS r1 landed mid-run — CLIP is now 5/4 with only the r5 ✎ delta pending, T097..T101 rebased to CLIP@5, and T101 shares `ClipTemplateEditor` with the coming CDS work (category preset CLIP-4✎, four styles CLIP-14✎) so the two must be serialized

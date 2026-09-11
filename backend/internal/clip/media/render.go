@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/clip/design"
 )
 
 // Rounding cumulative cut time (not every individual cut independently) keeps
@@ -33,10 +34,16 @@ func cutGraph(cfg clip.RenderConfig, canvas clip.Canvas, c clip.EditCut, source 
 	var graph strings.Builder
 	fmt.Fprintf(&graph, "[0:V:0]trim=duration=%s,setpts=PTS-STARTPTS,fps=%d,scale=%d:%d:force_original_aspect_ratio=increase:force_divisible_by=2:reset_sar=1,crop=%d:%d:x='max(0,min(iw-ow,iw*%.6f-ow/2))':y='max(0,min(ih-oh,ih*%.6f-oh/2))',setsar=1,format=yuv420p[base];", seconds(c.EndMS-c.StartMS), cfg.FPS, canvas.Width, canvas.Height, canvas.Width, canvas.Height, c.Focal.X, c.Focal.Y)
 	if plate {
-		graph.WriteString("[base][1:v:0]overlay=0:0:format=auto:shortest=0")
-		if c.Copy.StartMS != 0 || c.Copy.EndMS != 0 {
-			fmt.Fprintf(&graph, ":enable='gte(t,%s)*lt(t,%s)'", seconds(c.Copy.StartMS), seconds(c.Copy.EndMS))
-		}
+		// CDS-4 allows exactly two motions: a 180 ms fade-in that settles 12 px
+		// upward, eased, and a 120 ms fade-out that does not move. Both are
+		// expressions on the one looped plate image — never a second raster per
+		// frame, and never anything else.
+		start, end := c.CaptionWindow()
+		m := design.Motion
+		in, out := float64(m.InMS)/1000, float64(m.OutMS)/1000
+		fmt.Fprintf(&graph, "[1:v:0]format=rgba,fade=t=in:st=%s:d=%s:alpha=1,fade=t=out:st=%s:d=%s:alpha=1[plate];", seconds(start), strconv.FormatFloat(in, 'f', 3, 64), seconds(end-m.OutMS), strconv.FormatFloat(out, 'f', 3, 64))
+		fmt.Fprintf(&graph, "[base][plate]overlay=x=0:y='%.0f*pow(1-min(1,max(0,(t-%s)/%s)),3)':format=auto:shortest=0", m.InDY, seconds(start), strconv.FormatFloat(in, 'f', 3, 64))
+		fmt.Fprintf(&graph, ":enable='gte(t,%s)*lt(t,%s)'", seconds(start), seconds(end))
 		graph.WriteString("[copy];[copy]")
 	} else {
 		graph.WriteString("[base]")
@@ -146,10 +153,19 @@ func (r *Rendering) Render(ctx context.Context, ws clip.MediaWorkspace, plan cli
 			}
 		}
 	}()
-	// Validate/rasterize every caption before asking the consumer for source bytes.
+	// Lay out and verify every caption BEFORE asking the consumer for source
+	// bytes: a plan that breaks the design system then costs no download and no
+	// FFmpeg run (CDS-52).
+	layouts, manifest, err := r.layout(ctx, ws, canvas, plan)
+	if err != nil {
+		return result, err
+	}
+	if err = clip.VerifyLayout(plan.Ratio, manifest); err != nil {
+		return result, err
+	}
 	plates := make([]string, len(plan.Cuts))
 	for i, cut := range plan.Cuts {
-		plates[i], err = r.copyPlate(ctx, ws, canvas, cut.Copy, i)
+		plates[i], err = r.copyPlate(ctx, ws, canvas, cut.Copy, layouts[i], i)
 		if err != nil {
 			return result, err
 		}
@@ -212,7 +228,55 @@ func (r *Rendering) Render(ctx context.Context, ws clip.MediaWorkspace, plan cli
 	if err != nil {
 		return result, err
 	}
-	return clip.RenderedVideo{Path: output, Info: info, Bytes: stat.Size()}, nil
+	return clip.RenderedVideo{Path: output, Info: info, Bytes: stat.Size(), Manifest: manifest}, nil
+}
+
+// Output-timeline offset of each cut: the cuts overlap by one fade each.
+func cutOffsets(plan clip.EditPlan, fadeMS int) []int {
+	offsets, elapsed := make([]int, len(plan.Cuts)), 0
+	for i, c := range plan.Cuts {
+		offsets[i] = elapsed
+		elapsed += c.EndMS - c.StartMS - fadeMS
+	}
+	return offsets
+}
+
+// layout measures and places every copy without touching one source pixel, so
+// the manifest and its verification come before any download.
+func (r *Rendering) layout(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, plan clip.EditPlan) ([]copyLayout, clip.Manifest, error) {
+	layouts, manifest := make([]copyLayout, len(plan.Cuts)), clip.Manifest{}
+	offsets := cutOffsets(plan, r.cfg.FadeMS)
+	for i, cut := range plan.Cuts {
+		if strings.TrimSpace(cut.Copy.Text) == "" {
+			continue
+		}
+		l, err := r.layoutCopy(ctx, ws, canvas, cut.Copy)
+		if err != nil {
+			return nil, nil, err
+		}
+		layouts[i] = l
+		start, end := cut.CaptionWindow()
+		manifest = append(manifest, l.Elements(i, cut.Copy, offsets[i]+start, offsets[i]+end)...)
+	}
+	return layouts, manifest, nil
+}
+
+// Layout is the same pass on its own workspace, for a caller that wants the
+// manifest without rendering: it downloads nothing and writes no video.
+func (r *Rendering) Layout(ctx context.Context, plan clip.EditPlan, sources []clip.RenderSource) (manifest clip.Manifest, err error) {
+	if err = clip.ValidateEditPlan(r.cfg, plan, sources); err != nil {
+		return nil, err
+	}
+	canvas, _ := clip.ClipCanvas(plan.Ratio)
+	err = r.media.WithWorkspace(ctx, "clip-layout", func(ws clip.MediaWorkspace) error {
+		_, m, err := r.layout(ctx, ws, canvas, plan)
+		if err != nil {
+			return err
+		}
+		manifest = m
+		return clip.VerifyLayout(plan.Ratio, m)
+	})
+	return manifest, err
 }
 
 func (r *Rendering) runRender(ctx context.Context, ws clip.MediaWorkspace, output string, args []string) error {
