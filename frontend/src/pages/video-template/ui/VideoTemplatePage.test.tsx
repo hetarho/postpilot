@@ -21,13 +21,30 @@ const mount = (path: string, clips: FakeClipsOptions = {}) =>
   renderAppAt(path, { user: { id: 'alice' }, clips: { templates: [template], ...clips } })
 
 describe('video template workflow', () => {
-  it('renders empty and failed directories as text', async () => {
+  it('renders empty and failed directories the way the post templates do', async () => {
     const empty = mount('/video-templates', { templates: [] })
-    expect(await screen.findByText('아직 저장된 영상 템플릿이 없어요')).toBeInTheDocument()
+    // Two parts, like `/templates`: what is missing, and what a video template is FOR.
+    expect(
+      await screen.findByRole('heading', { name: '아직 저장된 영상 템플릿이 없어요' }),
+    ).toBeInTheDocument()
+    expect(screen.getByText(/클립을 만들 때 받을 정보와 컷 구성/)).toBeInTheDocument()
     empty.unmount()
     mount('/video-templates', { listFails: true })
     expect(await screen.findByRole('alert')).toHaveTextContent('영상 템플릿을 불러오지 못했어요.')
     expect(screen.getByRole('button', { name: '다시 시도' })).toBeInTheDocument()
+  })
+  it('badges how many clips each template is used by, and docks one CTA', async () => {
+    mount('/video-templates')
+    const region = within(await screen.findByRole('region', { name: '저장된 영상 템플릿' }))
+    expect(region.getByText('클립 2개')).toBeInTheDocument()
+    expect(screen.getAllByRole('link', { name: '새 영상 템플릿' })).toHaveLength(1)
+  })
+  it("heads the detail with the template's own name, and the create screen with its own", async () => {
+    const editing = mount('/video-templates/owned')
+    expect(await screen.findByRole('heading', { name: '여행', level: 1 })).toBeInTheDocument()
+    editing.unmount()
+    mount('/video-templates/new')
+    expect(await screen.findByRole('heading', { name: '새 영상 템플릿' })).toBeInTheDocument()
   })
   it('requires a session before requesting templates', async () => {
     const calls: string[] = []
@@ -103,33 +120,38 @@ describe('video template workflow', () => {
       expect(screen.queryByLabelText('템플릿 이름')).not.toBeInTheDocument()
     },
   )
-  it('confirms deletion and reports the actual detached count on the directory', async () => {
+  // The delete rides the directory ROW now, where the post-template directory has it (CLIP-42),
+  // and the detach is warned about BEFORE the delete rather than reported on the screen it lands
+  // on — a warning the owner reads after the fact is not a warning.
+  it('warns how many clips a delete detaches, and removes the row', async () => {
     const user = userEvent.setup()
-    const { router, queryClient, transport } = mount('/video-templates/owned', { detachedCount: 3 })
+    const { router, queryClient, transport } = mount('/video-templates')
     const projectKey = ['clip-projects', transport, 'alice', 'list']
     const otherOwnerKey = ['clip-projects', transport, 'bob', 'list']
     queryClient.setQueryData(projectKey, [])
     queryClient.setQueryData(otherOwnerKey, [])
-    await user.click(await screen.findByRole('button', { name: '삭제' }))
+    await user.click(await screen.findByRole('button', { name: '여행 삭제' }))
     const dialog = within(await screen.findByRole('dialog'))
     expect(dialog.getByText(/클립 2개/)).toBeInTheDocument()
     await user.click(dialog.getByRole('button', { name: '삭제' }))
-    expect(
-      await screen.findByText('영상 템플릿을 삭제하고 클립 3개의 연결을 해제했어요.'),
-    ).toBeInTheDocument()
+    await waitFor(() =>
+      expect(screen.queryByRole('link', { name: /여행/ })).not.toBeInTheDocument(),
+    )
+    // The delete acts without navigating: a row is one target, not a row with a button inside it.
     expect(router.state.location.pathname).toBe('/video-templates')
     expect(queryClient.getQueryState(projectKey)?.isInvalidated).toBe(true)
     expect(queryClient.getQueryState(otherOwnerKey)?.isInvalidated).toBe(false)
   })
-  it('does not leave after a failed delete', async () => {
+  it('keeps the row and reports a failed delete beside its own trigger', async () => {
     const user = userEvent.setup()
-    const { router } = mount('/video-templates/owned', { deleteFails: true })
-    await user.click(await screen.findByRole('button', { name: '삭제' }))
+    const { router } = mount('/video-templates', { deleteFails: true })
+    await user.click(await screen.findByRole('button', { name: '여행 삭제' }))
     await user.click(
       within(await screen.findByRole('dialog')).getByRole('button', { name: '삭제' }),
     )
+    // The sheet closes on failure too, so the message is not left behind the scrim.
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
-    expect(router.state.location.pathname).toBe('/video-templates/owned')
-    expect(screen.getByLabelText('템플릿 이름')).toHaveValue('여행')
+    expect(router.state.location.pathname).toBe('/video-templates')
+    expect(await screen.findByRole('link', { name: /여행/ })).toBeInTheDocument()
   })
 })

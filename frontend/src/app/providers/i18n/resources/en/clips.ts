@@ -205,10 +205,14 @@ export const clips = {
     description: 'Save the information to collect, cut guidance and caption styles.',
     saved: 'Saved video templates',
     empty: 'No video templates yet',
+    emptyHelp:
+      'Decide once what a clip should ask for, how its cuts are composed and how its copy looks, and every clip reuses it.',
+    newDockAria: 'Create a new video template',
+    loadFailed: 'Could not load your video templates.',
+    projectCount: '{{count}} clips',
     create: 'New video template',
     fields: '{{count}} information fields',
     updated: 'Updated {{date}}',
-    deleted: 'Deleted the video template and detached {{count}} clips.',
   },
   editor: {
     create: 'New video template',
@@ -260,5 +264,6 @@ export const clips = {
     description:
       'This template will be detached from {{count}} clips. Answers and generated videos will be kept.',
     action: 'Delete',
+    aria: 'Delete {{name}}',
   },
 } as const

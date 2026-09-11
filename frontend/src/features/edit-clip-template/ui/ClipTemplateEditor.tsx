@@ -60,21 +60,19 @@ export function ClipTemplateEditor({
     draft.informationFields.map((_, i) => `field-${i}`),
   )
   const [saved, setSaved] = useState(false)
-  const [confirmDelete, setConfirmDelete] = useState(false)
-  const { save: saveMutation, remove } = useClipTemplateMutations(ownerId)
+  const { save: saveMutation } = useClipTemplateMutations(ownerId)
   const submitting = useRef(false)
   const leaving = useRef(false)
   const errors = validateClipRecipe(draft)
   const dirty = JSON.stringify(normalizeRecipe(draft)) !== baseline
-  const pending = saveMutation.isPending || remove.isPending
+  const pending = saveMutation.isPending
   const guard = () => dirty && !leaving.current
   const blocker = useBlocker({
     shouldBlockFn: guard,
     enableBeforeUnload: guard,
     withResolver: true,
   })
-  const mutationError = saveMutation.error ?? remove.error
-  const failure = mutationError ? appFailureFromConnect(mutationError) : undefined
+  const failure = saveMutation.error ? appFailureFromConnect(saveMutation.error) : undefined
 
   const change = <K extends keyof ClipRecipe>(key: K, value: ClipRecipe[K]) => {
     setSaved(false)
@@ -112,23 +110,6 @@ export function ClipTemplateEditor({
       }
     } catch {
       /* The stable failure is rendered with the original draft intact. */
-    } finally {
-      submitting.current = false
-    }
-  }
-  const deleteTemplate = async () => {
-    if (!stored || submitting.current) return
-    submitting.current = true
-    try {
-      const result = await remove.mutateAsync(stored.id)
-      leaving.current = true
-      await navigate({
-        to: '/video-templates',
-        replace: true,
-        state: { clipDetachedCount: result.detachedProjects },
-      })
-    } catch {
-      setConfirmDelete(false)
     } finally {
       submitting.current = false
     }
@@ -316,12 +297,9 @@ export function ClipTemplateEditor({
             <AppFailureMessage failure={failure} />
           </div>
         )}
+        {/* One action, like `/templates/$templateId`'s dock: the delete rides the directory row
+            now (CLIP-42). */}
         <div className="flex flex-wrap items-center justify-end gap-3">
-          {stored && (
-            <Button variant="danger" disabled={pending} onClick={() => setConfirmDelete(true)}>
-              {t('delete.action')}
-            </Button>
-          )}
           <Button
             type="submit"
             form={FORM_ID}
@@ -334,16 +312,6 @@ export function ClipTemplateEditor({
           </Button>
         </div>
       </ActionBar>
-      <Dialog
-        open={confirmDelete}
-        title={t('delete.title')}
-        confirmLabel={t('delete.action')}
-        onClose={() => setConfirmDelete(false)}
-        onConfirm={() => void deleteTemplate()}
-        pending={remove.isPending}
-      >
-        {t('delete.description', { count: stored?.projectCount ?? 0 })}
-      </Dialog>
       <Dialog
         open={blocker.status === 'blocked'}
         title={t('editor.leaveTitle')}

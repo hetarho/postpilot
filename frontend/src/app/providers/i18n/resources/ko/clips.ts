@@ -199,10 +199,14 @@ export const clips = {
     description: '필요한 정보와 컷 구성, 자막 스타일을 저장해 두세요.',
     saved: '저장된 영상 템플릿',
     empty: '아직 저장된 영상 템플릿이 없어요',
+    emptyHelp:
+      '클립을 만들 때 받을 정보와 컷 구성, 자막 스타일을 한 번 정해 두면 매번 다시 정하지 않아도 돼요.',
+    newDockAria: '새 영상 템플릿 만들기',
+    loadFailed: '영상 템플릿을 불러오지 못했어요.',
+    projectCount: '클립 {{count}}개',
     create: '새 영상 템플릿',
     fields: '정보 {{count}}개',
     updated: '수정 {{date}}',
-    deleted: '영상 템플릿을 삭제하고 클립 {{count}}개의 연결을 해제했어요.',
   },
   editor: {
     create: '새 영상 템플릿',
@@ -253,5 +257,6 @@ export const clips = {
     title: '영상 템플릿을 삭제할까요?',
     description: '클립 {{count}}개에서 이 템플릿의 연결이 해제돼요. 답변과 생성된 영상은 보존돼요.',
     action: '삭제',
+    aria: '{{name}} 삭제',
   },
 } as const

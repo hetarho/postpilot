@@ -604,7 +604,6 @@ declare module '@tanstack/react-router' {
     router: typeof router
   }
   interface HistoryState {
-    clipDetachedCount?: number
     notice?: 'password-changed'
     billingRegistration?: { cardLabel: string; bonusGranted: boolean }
     billingSubscription?: { tier: string; changed?: boolean }
