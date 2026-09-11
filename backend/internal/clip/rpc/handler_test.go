@@ -62,8 +62,31 @@ func TestPresenceActorAndNotFound(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if s.templatePatch.InformationFields == nil || len(*s.templatePatch.InformationFields) != 0 || s.templatePatch.CopyStyles != nil || s.templatePatch.Name != nil || s.templatePatch.Accent == nil {
+	if s.templatePatch.InformationFields == nil || len(*s.templatePatch.InformationFields) != 0 || s.templatePatch.CopyStyles != nil || s.templatePatch.Name != nil || s.templatePatch.Accent == nil || s.templatePatch.Preset != nil {
 		t.Fatal("wrapper presence lost")
+	}
+	// The preset, the disclosure and the CTA carry the same presence semantics:
+	// absent is not a change, and an explicit value reaches the service as one.
+	preset, disclosure, cta := "cafe", "ad", ""
+	if _, err = h.UpdateVideoTemplate(ctx, connect.NewRequest(&v1.UpdateVideoTemplateRequest{Id: "owned", Preset: &preset})); err != nil {
+		t.Fatal(err)
+	}
+	if s.templatePatch.Preset == nil || *s.templatePatch.Preset != "cafe" || s.templatePatch.Accent != nil {
+		t.Fatalf("preset presence: %+v", s.templatePatch)
+	}
+	if _, err = h.UpdateClipProject(ctx, connect.NewRequest(&v1.UpdateClipProjectRequest{Id: "owned", Disclosure: &disclosure, Cta: &cta})); err != nil {
+		t.Fatal(err)
+	}
+	if s.patch.Disclosure == nil || *s.patch.Disclosure != "ad" || s.patch.CTA == nil || *s.patch.CTA != "" {
+		t.Fatalf("disclosure presence: %+v", s.patch)
+	}
+	// The seed is code-owned and only the five presets have one.
+	seed, err := h.SeedPresetFields(ctx, connect.NewRequest(&v1.SeedPresetFieldsRequest{Preset: "restaurant"}))
+	if err != nil || len(seed.Msg.Fields) != 4 || seed.Msg.Fields[0].Label != "상호" || seed.Msg.Fields[0].Prompt == "" {
+		t.Fatalf("preset seed: %+v %v", seed, err)
+	}
+	if _, err := h.SeedPresetFields(ctx, connect.NewRequest(&v1.SeedPresetFieldsRequest{Preset: ""})); connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Fatal(err)
 	}
 	for _, id := range []string{"foreign", "unknown"} {
 		_, err := h.GetClipProject(ctx, connect.NewRequest(&v1.GetClipProjectRequest{Id: id}))

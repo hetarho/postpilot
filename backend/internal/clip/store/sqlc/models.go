@@ -39,6 +39,8 @@ type ClipProject struct {
 	CreatedAt            string
 	UpdatedAt            string
 	Deleting             int64
+	Disclosure           string
+	Cta                  string
 }
 
 type ClipSourceBatch struct {
@@ -78,4 +80,5 @@ type VideoTemplate struct {
 	Accent            sql.NullString
 	CreatedAt         string
 	UpdatedAt         string
+	Preset            string
 }

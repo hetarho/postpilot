@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file postpilot/v1/clip.proto.
  */
 export const file_postpilot_v1_clip: GenFile = /*@__PURE__*/
-  fileDesc("Chdwb3N0cGlsb3QvdjEvY2xpcC5wcm90bxIMcG9zdHBpbG90LnYxIjUKFENsaXBJbmZvcm1hdGlvbkZpZWxkEg0KBWxhYmVsGAEgASgJEg4KBnByb21wdBgCIAEoCSJLChVDbGlwSW5mb3JtYXRpb25GaWVsZHMSMgoGdmFsdWVzGAEgAygLMiIucG9zdHBpbG90LnYxLkNsaXBJbmZvcm1hdGlvbkZpZWxkIiAKDkNsaXBDb3B5U3R5bGVzEg4KBnZhbHVlcxgBIAMoCSLjAQoNVmlkZW9UZW1wbGF0ZRIKCgJpZBgBIAEoCRIMCgRuYW1lGAIgASgJEj4KEmluZm9ybWF0aW9uX2ZpZWxkcxgDIAMoCzIiLnBvc3RwaWxvdC52MS5DbGlwSW5mb3JtYXRpb25GaWVsZBIUCgxjdXRfZ3VpZGFuY2UYBCABKAkSEwoLY29weV9zdHlsZXMYBSADKAkSDgoGYWNjZW50GAYgASgJEhUKDXByb2plY3RfY291bnQYByABKAUSEgoKY3JlYXRlZF9hdBgIIAEoCRISCgp1cGRhdGVkX2F0GAkgASgJIikKCkNsaXBBbnN3ZXISDQoFbGFiZWwYASABKAkSDAoEdGV4dBgCIAEoCSKCAQoKQ2xpcFJlc3VsdBIUCgxjb250ZW50X3R5cGUYASABKAkSDQoFYnl0ZXMYAiABKAMSEwoLZHVyYXRpb25fbXMYAyABKAUSEgoKY3JlYXRlZF9hdBgEIAEoCRIQCgh2aWV3X3VybBgFIAEoCRIUCgxkb3dubG9hZF91cmwYBiABKAki7gMKC0NsaXBQcm9qZWN0EgoKAmlkGAEgASgJEg0KBXRpdGxlGAIgASgJEhkKEXZpZGVvX3RlbXBsYXRlX2lkGAMgASgJEg0KBXJhdGlvGAQgASgJEhoKEnRhcmdldF9kdXJhdGlvbl9tcxgFIAEoBRIpCgdhbnN3ZXJzGAYgAygLMhgucG9zdHBpbG90LnYxLkNsaXBBbnN3ZXISKAoGcmVzdWx0GAcgASgLMhgucG9zdHBpbG90LnYxLkNsaXBSZXN1bHQSGgoSZWRpdF9wbGFuX3JldmlzaW9uGAggASgFEh4KFnJlbmRlcmVkX3BsYW5fcmV2aXNpb24YCSABKAUSEgoKY3JlYXRlZF9hdBgKIAEoCRISCgp1cGRhdGVkX2F0GAsgASgJEi8KCmxhdGVzdF9qb2IYDCABKAsyGy5wb3N0cGlsb3QudjEuR2VuZXJhdGlvbkpvYhIvCgdlZGl0aW5nGA0gASgLMh4ucG9zdHBpbG90LnYxLkNsaXBFZGl0aW5nU3RhdGUSMAoKYWNjb3VudGluZxgOIAEoCzIcLnBvc3RwaWxvdC52MS5DbGlwQWNjb3VudGluZxIxCg5sYXRlc3RfYXR0ZW1wdBgPIAEoCzIZLnBvc3RwaWxvdC52MS5DbGlwQXR0ZW1wdCJBCgtDbGlwQXR0ZW1wdBIOCgZqb2JfaWQYASABKAkSEAoIYmF0Y2hfaWQYAiABKAkSEAoIcXVvdGVfaWQYAyABKAki2wIKDkNsaXBBY2NvdW50aW5nEg4KBmpvYl9pZBgBIAEoCRIOCgZzdGF0dXMYAiABKAkSIQoUYXBwcm92ZWRfbWF4X2NyZWRpdHMYAyABKAVIAIgBARIdChByZXNlcnZlZF9jcmVkaXRzGAQgASgFSAGIAQESIQoUZmluYWxfY2hhcmdlX2NyZWRpdHMYBSABKAVIAogBARIbCg5yZWZ1bmRfY3JlZGl0cxgGIAEoBUgDiAEBEiIKFXNoYWRvd19jaGFyZ2VfY3JlZGl0cxgHIAEoBUgEiAEBEg8KB3NldHRsZWQYCCABKAhCFwoVX2FwcHJvdmVkX21heF9jcmVkaXRzQhMKEV9yZXNlcnZlZF9jcmVkaXRzQhcKFV9maW5hbF9jaGFyZ2VfY3JlZGl0c0IRCg9fcmVmdW5kX2NyZWRpdHNCGAoWX3NoYWRvd19jaGFyZ2VfY3JlZGl0cyIbChlMaXN0VmlkZW9UZW1wbGF0ZXNSZXF1ZXN0IkwKGkxpc3RWaWRlb1RlbXBsYXRlc1Jlc3BvbnNlEi4KCXRlbXBsYXRlcxgBIAMoCzIbLnBvc3RwaWxvdC52MS5WaWRlb1RlbXBsYXRlIqUBChpDcmVhdGVWaWRlb1RlbXBsYXRlUmVxdWVzdBIMCgRuYW1lGAEgASgJEj4KEmluZm9ybWF0aW9uX2ZpZWxkcxgCIAMoCzIiLnBvc3RwaWxvdC52MS5DbGlwSW5mb3JtYXRpb25GaWVsZBIUCgxjdXRfZ3VpZGFuY2UYAyABKAkSEwoLY29weV9zdHlsZXMYBCADKAkSDgoGYWNjZW50GAUgASgJIkwKG0NyZWF0ZVZpZGVvVGVtcGxhdGVSZXNwb25zZRItCgh0ZW1wbGF0ZRgBIAEoCzIbLnBvc3RwaWxvdC52MS5WaWRlb1RlbXBsYXRlIoQCChpVcGRhdGVWaWRlb1RlbXBsYXRlUmVxdWVzdBIKCgJpZBgBIAEoCRIRCgRuYW1lGAIgASgJSACIAQESPwoSaW5mb3JtYXRpb25fZmllbGRzGAMgASgLMiMucG9zdHBpbG90LnYxLkNsaXBJbmZvcm1hdGlvbkZpZWxkcxIZCgxjdXRfZ3VpZGFuY2UYBCABKAlIAYgBARIxCgtjb3B5X3N0eWxlcxgFIAEoCzIcLnBvc3RwaWxvdC52MS5DbGlwQ29weVN0eWxlcxITCgZhY2NlbnQYBiABKAlIAogBAUIHCgVfbmFtZUIPCg1fY3V0X2d1aWRhbmNlQgkKB19hY2NlbnQiTAobVXBkYXRlVmlkZW9UZW1wbGF0ZVJlc3BvbnNlEi0KCHRlbXBsYXRlGAEgASgLMhsucG9zdHBpbG90LnYxLlZpZGVvVGVtcGxhdGUiKAoaRGVsZXRlVmlkZW9UZW1wbGF0ZVJlcXVlc3QSCgoCaWQYASABKAkiOAobRGVsZXRlVmlkZW9UZW1wbGF0ZVJlc3BvbnNlEhkKEWRldGFjaGVkX3Byb2plY3RzGAEgASgFIhkKF0xpc3RDbGlwUHJvamVjdHNSZXF1ZXN0IkcKGExpc3RDbGlwUHJvamVjdHNSZXNwb25zZRIrCghwcm9qZWN0cxgBIAMoCzIZLnBvc3RwaWxvdC52MS5DbGlwUHJvamVjdCKaAQoYQ3JlYXRlQ2xpcFByb2plY3RSZXF1ZXN0Eg0KBXRpdGxlGAEgASgJEhkKEXZpZGVvX3RlbXBsYXRlX2lkGAIgASgJEg0KBXJhdGlvGAMgASgJEhoKEnRhcmdldF9kdXJhdGlvbl9tcxgEIAEoBRIpCgdhbnN3ZXJzGAUgAygLMhgucG9zdHBpbG90LnYxLkNsaXBBbnN3ZXIiRwoZQ3JlYXRlQ2xpcFByb2plY3RSZXNwb25zZRIqCgdwcm9qZWN0GAEgASgLMhkucG9zdHBpbG90LnYxLkNsaXBQcm9qZWN0IiMKFUdldENsaXBQcm9qZWN0UmVxdWVzdBIKCgJpZBgBIAEoCSJEChZHZXRDbGlwUHJvamVjdFJlc3BvbnNlEioKB3Byb2plY3QYASABKAsyGS5wb3N0cGlsb3QudjEuQ2xpcFByb2plY3Qi3QEKGFVwZGF0ZUNsaXBQcm9qZWN0UmVxdWVzdBIKCgJpZBgBIAEoCRISCgV0aXRsZRgCIAEoCUgAiAEBEh4KEXZpZGVvX3RlbXBsYXRlX2lkGAMgASgJSAGIAQESHwoSdGFyZ2V0X2R1cmF0aW9uX21zGAQgASgFSAKIAQESKQoHYW5zd2VycxgFIAMoCzIYLnBvc3RwaWxvdC52MS5DbGlwQW5zd2VyQggKBl90aXRsZUIUChJfdmlkZW9fdGVtcGxhdGVfaWRCFQoTX3RhcmdldF9kdXJhdGlvbl9tcyJHChlVcGRhdGVDbGlwUHJvamVjdFJlc3BvbnNlEioKB3Byb2plY3QYASABKAsyGS5wb3N0cGlsb3QudjEuQ2xpcFByb2plY3QiJgoYRGVsZXRlQ2xpcFByb2plY3RSZXF1ZXN0EgoKAmlkGAEgASgJIhsKGURlbGV0ZUNsaXBQcm9qZWN0UmVzcG9uc2UilAEKEkNsaXBTb3VyY2VNZXRhZGF0YRIQCghmaWxlbmFtZRgBIAEoCRIUCgxjb250ZW50X3R5cGUYAiABKAkSDQoFYnl0ZXMYAyABKAMSEwoLZHVyYXRpb25fbXMYBCABKAUSDQoFd2lkdGgYBSABKAUSDgoGaGVpZ2h0GAYgASgFEhMKC2ZpbmdlcnByaW50GAcgASgJInEKCkNsaXBTb3VyY2USCgoCaWQYASABKAkSMgoIbWV0YWRhdGEYAiABKAsyIC5wb3N0cGlsb3QudjEuQ2xpcFNvdXJjZU1ldGFkYXRhEg0KBXN0YXRlGAMgASgJEhQKDGFjdHVhbF9ieXRlcxgEIAEoAyJ/Cg9DbGlwU291cmNlQmF0Y2gSCgoCaWQYASABKAkSEgoKcHJvamVjdF9pZBgCIAEoCRINCgVzdGF0ZRgDIAEoCRIpCgdzb3VyY2VzGAQgAygLMhgucG9zdHBpbG90LnYxLkNsaXBTb3VyY2USEgoKZXhwaXJlc19hdBgFIAEoCSK4AQoQQ2xpcFNvdXJjZVVwbG9hZBIRCglzb3VyY2VfaWQYASABKAkSDwoHcHV0X3VybBgCIAEoCRI8CgdoZWFkZXJzGAMgAygLMisucG9zdHBpbG90LnYxLkNsaXBTb3VyY2VVcGxvYWQuSGVhZGVyc0VudHJ5EhIKCmV4cGlyZXNfYXQYBCABKAkaLgoMSGVhZGVyc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiZQocQ3JlYXRlQ2xpcFNvdXJjZUJhdGNoUmVxdWVzdBISCgpwcm9qZWN0X2lkGAEgASgJEjEKB3NvdXJjZXMYAiADKAsyIC5wb3N0cGlsb3QudjEuQ2xpcFNvdXJjZU1ldGFkYXRhIn4KHUNyZWF0ZUNsaXBTb3VyY2VCYXRjaFJlc3BvbnNlEiwKBWJhdGNoGAEgASgLMh0ucG9zdHBpbG90LnYxLkNsaXBTb3VyY2VCYXRjaBIvCgd1cGxvYWRzGAIgAygLMh4ucG9zdHBpbG90LnYxLkNsaXBTb3VyY2VVcGxvYWQiPwoYQ29uZmlybUNsaXBTb3VyY2VSZXF1ZXN0EhAKCGJhdGNoX2lkGAEgASgJEhEKCXNvdXJjZV9pZBgCIAEoCSJJChlDb25maXJtQ2xpcFNvdXJjZVJlc3BvbnNlEiwKBWJhdGNoGAEgASgLMh0ucG9zdHBpbG90LnYxLkNsaXBTb3VyY2VCYXRjaCIxCh1EaXNjYXJkQ2xpcFNvdXJjZUJhdGNoUmVxdWVzdBIQCghiYXRjaF9pZBgBIAEoCSIgCh5EaXNjYXJkQ2xpcFNvdXJjZUJhdGNoUmVzcG9uc2Ui7AEKGlN0YXJ0Q2xpcEdlbmVyYXRpb25SZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkSEAoIYmF0Y2hfaWQYAiABKAkSLQoNb2JzZXJ2ZV9tb2RlbBgDIAEoCzIWLnBvc3RwaWxvdC52MS5Nb2RlbFJlZhIrCgt3cml0ZV9tb2RlbBgEIAEoCzIWLnBvc3RwaWxvdC52MS5Nb2RlbFJlZhIQCghxdW90ZV9pZBgFIAEoCRIhChRhcHByb3ZlZF9tYXhfY3JlZGl0cxgGIAEoBUgAiAEBQhcKFV9hcHByb3ZlZF9tYXhfY3JlZGl0cyItChtTdGFydENsaXBHZW5lcmF0aW9uUmVzcG9uc2USDgoGam9iX2lkGAEgASgJIp4BChpRdW90ZUNsaXBHZW5lcmF0aW9uUmVxdWVzdBISCgpwcm9qZWN0X2lkGAEgASgJEhAKCGJhdGNoX2lkGAIgASgJEi0KDW9ic2VydmVfbW9kZWwYAyABKAsyFi5wb3N0cGlsb3QudjEuTW9kZWxSZWYSKwoLd3JpdGVfbW9kZWwYBCABKAsyFi5wb3N0cGlsb3QudjEuTW9kZWxSZWYi2QEKDkNsaXBQcmljZWRDYWxsEiUKBW1vZGVsGAEgASgLMhYucG9zdHBpbG90LnYxLk1vZGVsUmVmEg0KBXN0YWdlGAIgASgJEg0KBWNhbGxzGAMgASgFEhUKDXByb21wdF90b2tlbnMYBCABKAUSGQoRY29tcGxldGlvbl90b2tlbnMYBSABKAUSEQoJcmVhc29uaW5nGAYgASgJEh0KFWlucHV0X3VzZF9wZXJfbWlsbGlvbhgHIAEoCRIeChZvdXRwdXRfdXNkX3Blcl9taWxsaW9uGAggASgJIowBChtRdW90ZUNsaXBHZW5lcmF0aW9uUmVzcG9uc2USEAoIcXVvdGVfaWQYASABKAkSEwoLbWF4X2NyZWRpdHMYAiABKAUSEgoKZXhwaXJlc19hdBgDIAEoCRIyCgxwcmljZWRfY2FsbHMYBCADKAsyHC5wb3N0cGlsb3QudjEuQ2xpcFByaWNlZENhbGwijgEKC0NsaXBDYXB0aW9uEgwKBHRleHQYASABKAkSEAoIcG9zaXRpb24YAiABKAkSDQoFc3R5bGUYAyABKAkSDgoGYWNjZW50GAQgASgJEhAKCHN0YXJ0X21zGAUgASgFEg4KBmVuZF9tcxgGIAEoBRINCgVhbGlnbhgHIAEoCRIPCgdrZXl3b3JkGAggASgJIqUBCgtDbGlwRWRpdEN1dBIKCgJpZBgBIAEoCRIRCglzb3VyY2VfaWQYAiABKAkSEwoLZmluZ2VycHJpbnQYAyABKAkSEAoIc3RhcnRfbXMYBCABKAUSDgoGZW5kX21zGAUgASgFEicKBGNvcHkYBiABKAsyGS5wb3N0cGlsb3QudjEuQ2xpcENhcHRpb24SFwoPdm9sdW1lX3Blcm1pbGxlGAcgASgFIkwKDENsaXBFZGl0UGxhbhITCgtkdXJhdGlvbl9tcxgBIAEoBRInCgRjdXRzGAIgAygLMhkucG9zdHBpbG90LnYxLkNsaXBFZGl0Q3V0InsKEkNsaXBSZXRhaW5lZFNvdXJjZRIKCgJpZBgBIAEoCRITCgtmaW5nZXJwcmludBgCIAEoCRIQCghmaWxlbmFtZRgDIAEoCRITCgtkdXJhdGlvbl9tcxgEIAEoBRINCgV3aWR0aBgFIAEoBRIOCgZoZWlnaHQYBiABKAUi8QEKEENsaXBFZGl0aW5nU3RhdGUSKAoEcGxhbhgBIAEoCzIaLnBvc3RwaWxvdC52MS5DbGlwRWRpdFBsYW4SMQoHc291cmNlcxgCIAMoCzIgLnBvc3RwaWxvdC52MS5DbGlwUmV0YWluZWRTb3VyY2USEwoLY29weV9zdHlsZXMYAyADKAkSDwoHZmFkZV9tcxgEIAEoBRIQCghtYXhfY3V0cxgFIAEoBRIWCg5tYXhfY29weV9ydW5lcxgGIAEoBRIXCg9taW5fZHVyYXRpb25fbXMYByABKAUSFwoPbWF4X2R1cmF0aW9uX21zGAggASgFInIKF1NhdmVDbGlwRWRpdFBsYW5SZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkSGQoRZXhwZWN0ZWRfcmV2aXNpb24YAiABKAUSKAoEcGxhbhgDIAEoCzIaLnBvc3RwaWxvdC52MS5DbGlwRWRpdFBsYW4iRgoYU2F2ZUNsaXBFZGl0UGxhblJlc3BvbnNlEioKB3Byb2plY3QYASABKAsyGS5wb3N0cGlsb3QudjEuQ2xpcFByb2plY3QiWQoWU3RhcnRDbGlwUmVuZGVyUmVxdWVzdBISCgpwcm9qZWN0X2lkGAEgASgJEhkKEWV4cGVjdGVkX3JldmlzaW9uGAIgASgFEhAKCGJhdGNoX2lkGAMgASgJIikKF1N0YXJ0Q2xpcFJlbmRlclJlc3BvbnNlEg4KBmpvYl9pZBgBIAEoCTK0DQoLQ2xpcFNlcnZpY2USYwoQU2F2ZUNsaXBFZGl0UGxhbhIlLnBvc3RwaWxvdC52MS5TYXZlQ2xpcEVkaXRQbGFuUmVxdWVzdBomLnBvc3RwaWxvdC52MS5TYXZlQ2xpcEVkaXRQbGFuUmVzcG9uc2UiABJgCg9TdGFydENsaXBSZW5kZXISJC5wb3N0cGlsb3QudjEuU3RhcnRDbGlwUmVuZGVyUmVxdWVzdBolLnBvc3RwaWxvdC52MS5TdGFydENsaXBSZW5kZXJSZXNwb25zZSIAEmwKE1N0YXJ0Q2xpcEdlbmVyYXRpb24SKC5wb3N0cGlsb3QudjEuU3RhcnRDbGlwR2VuZXJhdGlvblJlcXVlc3QaKS5wb3N0cGlsb3QudjEuU3RhcnRDbGlwR2VuZXJhdGlvblJlc3BvbnNlIgASbAoTUXVvdGVDbGlwR2VuZXJhdGlvbhIoLnBvc3RwaWxvdC52MS5RdW90ZUNsaXBHZW5lcmF0aW9uUmVxdWVzdBopLnBvc3RwaWxvdC52MS5RdW90ZUNsaXBHZW5lcmF0aW9uUmVzcG9uc2UiABJpChJMaXN0VmlkZW9UZW1wbGF0ZXMSJy5wb3N0cGlsb3QudjEuTGlzdFZpZGVvVGVtcGxhdGVzUmVxdWVzdBooLnBvc3RwaWxvdC52MS5MaXN0VmlkZW9UZW1wbGF0ZXNSZXNwb25zZSIAEmwKE0NyZWF0ZVZpZGVvVGVtcGxhdGUSKC5wb3N0cGlsb3QudjEuQ3JlYXRlVmlkZW9UZW1wbGF0ZVJlcXVlc3QaKS5wb3N0cGlsb3QudjEuQ3JlYXRlVmlkZW9UZW1wbGF0ZVJlc3BvbnNlIgASbAoTVXBkYXRlVmlkZW9UZW1wbGF0ZRIoLnBvc3RwaWxvdC52MS5VcGRhdGVWaWRlb1RlbXBsYXRlUmVxdWVzdBopLnBvc3RwaWxvdC52MS5VcGRhdGVWaWRlb1RlbXBsYXRlUmVzcG9uc2UiABJsChNEZWxldGVWaWRlb1RlbXBsYXRlEigucG9zdHBpbG90LnYxLkRlbGV0ZVZpZGVvVGVtcGxhdGVSZXF1ZXN0GikucG9zdHBpbG90LnYxLkRlbGV0ZVZpZGVvVGVtcGxhdGVSZXNwb25zZSIAEmMKEExpc3RDbGlwUHJvamVjdHMSJS5wb3N0cGlsb3QudjEuTGlzdENsaXBQcm9qZWN0c1JlcXVlc3QaJi5wb3N0cGlsb3QudjEuTGlzdENsaXBQcm9qZWN0c1Jlc3BvbnNlIgASZgoRQ3JlYXRlQ2xpcFByb2plY3QSJi5wb3N0cGlsb3QudjEuQ3JlYXRlQ2xpcFByb2plY3RSZXF1ZXN0GicucG9zdHBpbG90LnYxLkNyZWF0ZUNsaXBQcm9qZWN0UmVzcG9uc2UiABJdCg5HZXRDbGlwUHJvamVjdBIjLnBvc3RwaWxvdC52MS5HZXRDbGlwUHJvamVjdFJlcXVlc3QaJC5wb3N0cGlsb3QudjEuR2V0Q2xpcFByb2plY3RSZXNwb25zZSIAEmYKEVVwZGF0ZUNsaXBQcm9qZWN0EiYucG9zdHBpbG90LnYxLlVwZGF0ZUNsaXBQcm9qZWN0UmVxdWVzdBonLnBvc3RwaWxvdC52MS5VcGRhdGVDbGlwUHJvamVjdFJlc3BvbnNlIgASZgoRRGVsZXRlQ2xpcFByb2plY3QSJi5wb3N0cGlsb3QudjEuRGVsZXRlQ2xpcFByb2plY3RSZXF1ZXN0GicucG9zdHBpbG90LnYxLkRlbGV0ZUNsaXBQcm9qZWN0UmVzcG9uc2UiABJyChVDcmVhdGVDbGlwU291cmNlQmF0Y2gSKi5wb3N0cGlsb3QudjEuQ3JlYXRlQ2xpcFNvdXJjZUJhdGNoUmVxdWVzdBorLnBvc3RwaWxvdC52MS5DcmVhdGVDbGlwU291cmNlQmF0Y2hSZXNwb25zZSIAEmYKEUNvbmZpcm1DbGlwU291cmNlEiYucG9zdHBpbG90LnYxLkNvbmZpcm1DbGlwU291cmNlUmVxdWVzdBonLnBvc3RwaWxvdC52MS5Db25maXJtQ2xpcFNvdXJjZVJlc3BvbnNlIgASdQoWRGlzY2FyZENsaXBTb3VyY2VCYXRjaBIrLnBvc3RwaWxvdC52MS5EaXNjYXJkQ2xpcFNvdXJjZUJhdGNoUmVxdWVzdBosLnBvc3RwaWxvdC52MS5EaXNjYXJkQ2xpcFNvdXJjZUJhdGNoUmVzcG9uc2UiAEJEWkJnaXRodWIuY29tL3Bvc3RwaWxvdC9iYWNrZW5kL2ludGVybmFsL2dlbi9wb3N0cGlsb3QvdjE7cG9zdHBpbG90djFiBnByb3RvMw", [file_postpilot_v1_post, file_postpilot_v1_provider]);
+  fileDesc("Chdwb3N0cGlsb3QvdjEvY2xpcC5wcm90bxIMcG9zdHBpbG90LnYxIjUKFENsaXBJbmZvcm1hdGlvbkZpZWxkEg0KBWxhYmVsGAEgASgJEg4KBnByb21wdBgCIAEoCSJLChVDbGlwSW5mb3JtYXRpb25GaWVsZHMSMgoGdmFsdWVzGAEgAygLMiIucG9zdHBpbG90LnYxLkNsaXBJbmZvcm1hdGlvbkZpZWxkIiAKDkNsaXBDb3B5U3R5bGVzEg4KBnZhbHVlcxgBIAMoCSLzAQoNVmlkZW9UZW1wbGF0ZRIKCgJpZBgBIAEoCRIMCgRuYW1lGAIgASgJEj4KEmluZm9ybWF0aW9uX2ZpZWxkcxgDIAMoCzIiLnBvc3RwaWxvdC52MS5DbGlwSW5mb3JtYXRpb25GaWVsZBIUCgxjdXRfZ3VpZGFuY2UYBCABKAkSEwoLY29weV9zdHlsZXMYBSADKAkSDgoGYWNjZW50GAYgASgJEhUKDXByb2plY3RfY291bnQYByABKAUSEgoKY3JlYXRlZF9hdBgIIAEoCRISCgp1cGRhdGVkX2F0GAkgASgJEg4KBnByZXNldBgKIAEoCSIpCgpDbGlwQW5zd2VyEg0KBWxhYmVsGAEgASgJEgwKBHRleHQYAiABKAkiKQoXU2VlZFByZXNldEZpZWxkc1JlcXVlc3QSDgoGcHJlc2V0GAEgASgJIk4KGFNlZWRQcmVzZXRGaWVsZHNSZXNwb25zZRIyCgZmaWVsZHMYASADKAsyIi5wb3N0cGlsb3QudjEuQ2xpcEluZm9ybWF0aW9uRmllbGQiggEKCkNsaXBSZXN1bHQSFAoMY29udGVudF90eXBlGAEgASgJEg0KBWJ5dGVzGAIgASgDEhMKC2R1cmF0aW9uX21zGAMgASgFEhIKCmNyZWF0ZWRfYXQYBCABKAkSEAoIdmlld191cmwYBSABKAkSFAoMZG93bmxvYWRfdXJsGAYgASgJIo8ECgtDbGlwUHJvamVjdBIKCgJpZBgBIAEoCRINCgV0aXRsZRgCIAEoCRIZChF2aWRlb190ZW1wbGF0ZV9pZBgDIAEoCRINCgVyYXRpbxgEIAEoCRIaChJ0YXJnZXRfZHVyYXRpb25fbXMYBSABKAUSKQoHYW5zd2VycxgGIAMoCzIYLnBvc3RwaWxvdC52MS5DbGlwQW5zd2VyEigKBnJlc3VsdBgHIAEoCzIYLnBvc3RwaWxvdC52MS5DbGlwUmVzdWx0EhoKEmVkaXRfcGxhbl9yZXZpc2lvbhgIIAEoBRIeChZyZW5kZXJlZF9wbGFuX3JldmlzaW9uGAkgASgFEhIKCmNyZWF0ZWRfYXQYCiABKAkSEgoKdXBkYXRlZF9hdBgLIAEoCRIvCgpsYXRlc3Rfam9iGAwgASgLMhsucG9zdHBpbG90LnYxLkdlbmVyYXRpb25Kb2ISLwoHZWRpdGluZxgNIAEoCzIeLnBvc3RwaWxvdC52MS5DbGlwRWRpdGluZ1N0YXRlEjAKCmFjY291bnRpbmcYDiABKAsyHC5wb3N0cGlsb3QudjEuQ2xpcEFjY291bnRpbmcSEgoKZGlzY2xvc3VyZRgQIAEoCRILCgNjdGEYESABKAkSMQoObGF0ZXN0X2F0dGVtcHQYDyABKAsyGS5wb3N0cGlsb3QudjEuQ2xpcEF0dGVtcHQiQQoLQ2xpcEF0dGVtcHQSDgoGam9iX2lkGAEgASgJEhAKCGJhdGNoX2lkGAIgASgJEhAKCHF1b3RlX2lkGAMgASgJItsCCg5DbGlwQWNjb3VudGluZxIOCgZqb2JfaWQYASABKAkSDgoGc3RhdHVzGAIgASgJEiEKFGFwcHJvdmVkX21heF9jcmVkaXRzGAMgASgFSACIAQESHQoQcmVzZXJ2ZWRfY3JlZGl0cxgEIAEoBUgBiAEBEiEKFGZpbmFsX2NoYXJnZV9jcmVkaXRzGAUgASgFSAKIAQESGwoOcmVmdW5kX2NyZWRpdHMYBiABKAVIA4gBARIiChVzaGFkb3dfY2hhcmdlX2NyZWRpdHMYByABKAVIBIgBARIPCgdzZXR0bGVkGAggASgIQhcKFV9hcHByb3ZlZF9tYXhfY3JlZGl0c0ITChFfcmVzZXJ2ZWRfY3JlZGl0c0IXChVfZmluYWxfY2hhcmdlX2NyZWRpdHNCEQoPX3JlZnVuZF9jcmVkaXRzQhgKFl9zaGFkb3dfY2hhcmdlX2NyZWRpdHMiGwoZTGlzdFZpZGVvVGVtcGxhdGVzUmVxdWVzdCJMChpMaXN0VmlkZW9UZW1wbGF0ZXNSZXNwb25zZRIuCgl0ZW1wbGF0ZXMYASADKAsyGy5wb3N0cGlsb3QudjEuVmlkZW9UZW1wbGF0ZSK1AQoaQ3JlYXRlVmlkZW9UZW1wbGF0ZVJlcXVlc3QSDAoEbmFtZRgBIAEoCRI+ChJpbmZvcm1hdGlvbl9maWVsZHMYAiADKAsyIi5wb3N0cGlsb3QudjEuQ2xpcEluZm9ybWF0aW9uRmllbGQSFAoMY3V0X2d1aWRhbmNlGAMgASgJEhMKC2NvcHlfc3R5bGVzGAQgAygJEg4KBmFjY2VudBgFIAEoCRIOCgZwcmVzZXQYBiABKAkiTAobQ3JlYXRlVmlkZW9UZW1wbGF0ZVJlc3BvbnNlEi0KCHRlbXBsYXRlGAEgASgLMhsucG9zdHBpbG90LnYxLlZpZGVvVGVtcGxhdGUipAIKGlVwZGF0ZVZpZGVvVGVtcGxhdGVSZXF1ZXN0EgoKAmlkGAEgASgJEhEKBG5hbWUYAiABKAlIAIgBARI/ChJpbmZvcm1hdGlvbl9maWVsZHMYAyABKAsyIy5wb3N0cGlsb3QudjEuQ2xpcEluZm9ybWF0aW9uRmllbGRzEhkKDGN1dF9ndWlkYW5jZRgEIAEoCUgBiAEBEjEKC2NvcHlfc3R5bGVzGAUgASgLMhwucG9zdHBpbG90LnYxLkNsaXBDb3B5U3R5bGVzEhMKBmFjY2VudBgGIAEoCUgCiAEBEhMKBnByZXNldBgHIAEoCUgDiAEBQgcKBV9uYW1lQg8KDV9jdXRfZ3VpZGFuY2VCCQoHX2FjY2VudEIJCgdfcHJlc2V0IkwKG1VwZGF0ZVZpZGVvVGVtcGxhdGVSZXNwb25zZRItCgh0ZW1wbGF0ZRgBIAEoCzIbLnBvc3RwaWxvdC52MS5WaWRlb1RlbXBsYXRlIigKGkRlbGV0ZVZpZGVvVGVtcGxhdGVSZXF1ZXN0EgoKAmlkGAEgASgJIjgKG0RlbGV0ZVZpZGVvVGVtcGxhdGVSZXNwb25zZRIZChFkZXRhY2hlZF9wcm9qZWN0cxgBIAEoBSIZChdMaXN0Q2xpcFByb2plY3RzUmVxdWVzdCJHChhMaXN0Q2xpcFByb2plY3RzUmVzcG9uc2USKwoIcHJvamVjdHMYASADKAsyGS5wb3N0cGlsb3QudjEuQ2xpcFByb2plY3QiuwEKGENyZWF0ZUNsaXBQcm9qZWN0UmVxdWVzdBINCgV0aXRsZRgBIAEoCRIZChF2aWRlb190ZW1wbGF0ZV9pZBgCIAEoCRINCgVyYXRpbxgDIAEoCRIaChJ0YXJnZXRfZHVyYXRpb25fbXMYBCABKAUSKQoHYW5zd2VycxgFIAMoCzIYLnBvc3RwaWxvdC52MS5DbGlwQW5zd2VyEhIKCmRpc2Nsb3N1cmUYBiABKAkSCwoDY3RhGAcgASgJIkcKGUNyZWF0ZUNsaXBQcm9qZWN0UmVzcG9uc2USKgoHcHJvamVjdBgBIAEoCzIZLnBvc3RwaWxvdC52MS5DbGlwUHJvamVjdCIjChVHZXRDbGlwUHJvamVjdFJlcXVlc3QSCgoCaWQYASABKAkiRAoWR2V0Q2xpcFByb2plY3RSZXNwb25zZRIqCgdwcm9qZWN0GAEgASgLMhkucG9zdHBpbG90LnYxLkNsaXBQcm9qZWN0Ip8CChhVcGRhdGVDbGlwUHJvamVjdFJlcXVlc3QSCgoCaWQYASABKAkSEgoFdGl0bGUYAiABKAlIAIgBARIeChF2aWRlb190ZW1wbGF0ZV9pZBgDIAEoCUgBiAEBEh8KEnRhcmdldF9kdXJhdGlvbl9tcxgEIAEoBUgCiAEBEikKB2Fuc3dlcnMYBSADKAsyGC5wb3N0cGlsb3QudjEuQ2xpcEFuc3dlchIXCgpkaXNjbG9zdXJlGAYgASgJSAOIAQESEAoDY3RhGAcgASgJSASIAQFCCAoGX3RpdGxlQhQKEl92aWRlb190ZW1wbGF0ZV9pZEIVChNfdGFyZ2V0X2R1cmF0aW9uX21zQg0KC19kaXNjbG9zdXJlQgYKBF9jdGEiRwoZVXBkYXRlQ2xpcFByb2plY3RSZXNwb25zZRIqCgdwcm9qZWN0GAEgASgLMhkucG9zdHBpbG90LnYxLkNsaXBQcm9qZWN0IiYKGERlbGV0ZUNsaXBQcm9qZWN0UmVxdWVzdBIKCgJpZBgBIAEoCSIbChlEZWxldGVDbGlwUHJvamVjdFJlc3BvbnNlIpQBChJDbGlwU291cmNlTWV0YWRhdGESEAoIZmlsZW5hbWUYASABKAkSFAoMY29udGVudF90eXBlGAIgASgJEg0KBWJ5dGVzGAMgASgDEhMKC2R1cmF0aW9uX21zGAQgASgFEg0KBXdpZHRoGAUgASgFEg4KBmhlaWdodBgGIAEoBRITCgtmaW5nZXJwcmludBgHIAEoCSJxCgpDbGlwU291cmNlEgoKAmlkGAEgASgJEjIKCG1ldGFkYXRhGAIgASgLMiAucG9zdHBpbG90LnYxLkNsaXBTb3VyY2VNZXRhZGF0YRINCgVzdGF0ZRgDIAEoCRIUCgxhY3R1YWxfYnl0ZXMYBCABKAMifwoPQ2xpcFNvdXJjZUJhdGNoEgoKAmlkGAEgASgJEhIKCnByb2plY3RfaWQYAiABKAkSDQoFc3RhdGUYAyABKAkSKQoHc291cmNlcxgEIAMoCzIYLnBvc3RwaWxvdC52MS5DbGlwU291cmNlEhIKCmV4cGlyZXNfYXQYBSABKAkiuAEKEENsaXBTb3VyY2VVcGxvYWQSEQoJc291cmNlX2lkGAEgASgJEg8KB3B1dF91cmwYAiABKAkSPAoHaGVhZGVycxgDIAMoCzIrLnBvc3RwaWxvdC52MS5DbGlwU291cmNlVXBsb2FkLkhlYWRlcnNFbnRyeRISCgpleHBpcmVzX2F0GAQgASgJGi4KDEhlYWRlcnNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBImUKHENyZWF0ZUNsaXBTb3VyY2VCYXRjaFJlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCRIxCgdzb3VyY2VzGAIgAygLMiAucG9zdHBpbG90LnYxLkNsaXBTb3VyY2VNZXRhZGF0YSJ+Ch1DcmVhdGVDbGlwU291cmNlQmF0Y2hSZXNwb25zZRIsCgViYXRjaBgBIAEoCzIdLnBvc3RwaWxvdC52MS5DbGlwU291cmNlQmF0Y2gSLwoHdXBsb2FkcxgCIAMoCzIeLnBvc3RwaWxvdC52MS5DbGlwU291cmNlVXBsb2FkIj8KGENvbmZpcm1DbGlwU291cmNlUmVxdWVzdBIQCghiYXRjaF9pZBgBIAEoCRIRCglzb3VyY2VfaWQYAiABKAkiSQoZQ29uZmlybUNsaXBTb3VyY2VSZXNwb25zZRIsCgViYXRjaBgBIAEoCzIdLnBvc3RwaWxvdC52MS5DbGlwU291cmNlQmF0Y2giMQodRGlzY2FyZENsaXBTb3VyY2VCYXRjaFJlcXVlc3QSEAoIYmF0Y2hfaWQYASABKAkiIAoeRGlzY2FyZENsaXBTb3VyY2VCYXRjaFJlc3BvbnNlIuwBChpTdGFydENsaXBHZW5lcmF0aW9uUmVxdWVzdBISCgpwcm9qZWN0X2lkGAEgASgJEhAKCGJhdGNoX2lkGAIgASgJEi0KDW9ic2VydmVfbW9kZWwYAyABKAsyFi5wb3N0cGlsb3QudjEuTW9kZWxSZWYSKwoLd3JpdGVfbW9kZWwYBCABKAsyFi5wb3N0cGlsb3QudjEuTW9kZWxSZWYSEAoIcXVvdGVfaWQYBSABKAkSIQoUYXBwcm92ZWRfbWF4X2NyZWRpdHMYBiABKAVIAIgBAUIXChVfYXBwcm92ZWRfbWF4X2NyZWRpdHMiLQobU3RhcnRDbGlwR2VuZXJhdGlvblJlc3BvbnNlEg4KBmpvYl9pZBgBIAEoCSKeAQoaUXVvdGVDbGlwR2VuZXJhdGlvblJlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCRIQCghiYXRjaF9pZBgCIAEoCRItCg1vYnNlcnZlX21vZGVsGAMgASgLMhYucG9zdHBpbG90LnYxLk1vZGVsUmVmEisKC3dyaXRlX21vZGVsGAQgASgLMhYucG9zdHBpbG90LnYxLk1vZGVsUmVmItkBCg5DbGlwUHJpY2VkQ2FsbBIlCgVtb2RlbBgBIAEoCzIWLnBvc3RwaWxvdC52MS5Nb2RlbFJlZhINCgVzdGFnZRgCIAEoCRINCgVjYWxscxgDIAEoBRIVCg1wcm9tcHRfdG9rZW5zGAQgASgFEhkKEWNvbXBsZXRpb25fdG9rZW5zGAUgASgFEhEKCXJlYXNvbmluZxgGIAEoCRIdChVpbnB1dF91c2RfcGVyX21pbGxpb24YByABKAkSHgoWb3V0cHV0X3VzZF9wZXJfbWlsbGlvbhgIIAEoCSKMAQobUXVvdGVDbGlwR2VuZXJhdGlvblJlc3BvbnNlEhAKCHF1b3RlX2lkGAEgASgJEhMKC21heF9jcmVkaXRzGAIgASgFEhIKCmV4cGlyZXNfYXQYAyABKAkSMgoMcHJpY2VkX2NhbGxzGAQgAygLMhwucG9zdHBpbG90LnYxLkNsaXBQcmljZWRDYWxsIo4BCgtDbGlwQ2FwdGlvbhIMCgR0ZXh0GAEgASgJEhAKCHBvc2l0aW9uGAIgASgJEg0KBXN0eWxlGAMgASgJEg4KBmFjY2VudBgEIAEoCRIQCghzdGFydF9tcxgFIAEoBRIOCgZlbmRfbXMYBiABKAUSDQoFYWxpZ24YByABKAkSDwoHa2V5d29yZBgIIAEoCSK0AQoLQ2xpcEVkaXRDdXQSCgoCaWQYASABKAkSEQoJc291cmNlX2lkGAIgASgJEhMKC2ZpbmdlcnByaW50GAMgASgJEhAKCHN0YXJ0X21zGAQgASgFEg4KBmVuZF9tcxgFIAEoBRInCgRjb3B5GAYgASgLMhkucG9zdHBpbG90LnYxLkNsaXBDYXB0aW9uEhcKD3ZvbHVtZV9wZXJtaWxsZRgHIAEoBRINCgVjaGlwcxgIIAMoCSJMCgxDbGlwRWRpdFBsYW4SEwoLZHVyYXRpb25fbXMYASABKAUSJwoEY3V0cxgCIAMoCzIZLnBvc3RwaWxvdC52MS5DbGlwRWRpdEN1dCJ7ChJDbGlwUmV0YWluZWRTb3VyY2USCgoCaWQYASABKAkSEwoLZmluZ2VycHJpbnQYAiABKAkSEAoIZmlsZW5hbWUYAyABKAkSEwoLZHVyYXRpb25fbXMYBCABKAUSDQoFd2lkdGgYBSABKAUSDgoGaGVpZ2h0GAYgASgFIvEBChBDbGlwRWRpdGluZ1N0YXRlEigKBHBsYW4YASABKAsyGi5wb3N0cGlsb3QudjEuQ2xpcEVkaXRQbGFuEjEKB3NvdXJjZXMYAiADKAsyIC5wb3N0cGlsb3QudjEuQ2xpcFJldGFpbmVkU291cmNlEhMKC2NvcHlfc3R5bGVzGAMgAygJEg8KB2ZhZGVfbXMYBCABKAUSEAoIbWF4X2N1dHMYBSABKAUSFgoObWF4X2NvcHlfcnVuZXMYBiABKAUSFwoPbWluX2R1cmF0aW9uX21zGAcgASgFEhcKD21heF9kdXJhdGlvbl9tcxgIIAEoBSJyChdTYXZlQ2xpcEVkaXRQbGFuUmVxdWVzdBISCgpwcm9qZWN0X2lkGAEgASgJEhkKEWV4cGVjdGVkX3JldmlzaW9uGAIgASgFEigKBHBsYW4YAyABKAsyGi5wb3N0cGlsb3QudjEuQ2xpcEVkaXRQbGFuIkYKGFNhdmVDbGlwRWRpdFBsYW5SZXNwb25zZRIqCgdwcm9qZWN0GAEgASgLMhkucG9zdHBpbG90LnYxLkNsaXBQcm9qZWN0IlkKFlN0YXJ0Q2xpcFJlbmRlclJlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCRIZChFleHBlY3RlZF9yZXZpc2lvbhgCIAEoBRIQCghiYXRjaF9pZBgDIAEoCSIpChdTdGFydENsaXBSZW5kZXJSZXNwb25zZRIOCgZqb2JfaWQYASABKAkymQ4KC0NsaXBTZXJ2aWNlEmMKEFNhdmVDbGlwRWRpdFBsYW4SJS5wb3N0cGlsb3QudjEuU2F2ZUNsaXBFZGl0UGxhblJlcXVlc3QaJi5wb3N0cGlsb3QudjEuU2F2ZUNsaXBFZGl0UGxhblJlc3BvbnNlIgASYAoPU3RhcnRDbGlwUmVuZGVyEiQucG9zdHBpbG90LnYxLlN0YXJ0Q2xpcFJlbmRlclJlcXVlc3QaJS5wb3N0cGlsb3QudjEuU3RhcnRDbGlwUmVuZGVyUmVzcG9uc2UiABJsChNTdGFydENsaXBHZW5lcmF0aW9uEigucG9zdHBpbG90LnYxLlN0YXJ0Q2xpcEdlbmVyYXRpb25SZXF1ZXN0GikucG9zdHBpbG90LnYxLlN0YXJ0Q2xpcEdlbmVyYXRpb25SZXNwb25zZSIAEmwKE1F1b3RlQ2xpcEdlbmVyYXRpb24SKC5wb3N0cGlsb3QudjEuUXVvdGVDbGlwR2VuZXJhdGlvblJlcXVlc3QaKS5wb3N0cGlsb3QudjEuUXVvdGVDbGlwR2VuZXJhdGlvblJlc3BvbnNlIgASaQoSTGlzdFZpZGVvVGVtcGxhdGVzEicucG9zdHBpbG90LnYxLkxpc3RWaWRlb1RlbXBsYXRlc1JlcXVlc3QaKC5wb3N0cGlsb3QudjEuTGlzdFZpZGVvVGVtcGxhdGVzUmVzcG9uc2UiABJsChNDcmVhdGVWaWRlb1RlbXBsYXRlEigucG9zdHBpbG90LnYxLkNyZWF0ZVZpZGVvVGVtcGxhdGVSZXF1ZXN0GikucG9zdHBpbG90LnYxLkNyZWF0ZVZpZGVvVGVtcGxhdGVSZXNwb25zZSIAEmwKE1VwZGF0ZVZpZGVvVGVtcGxhdGUSKC5wb3N0cGlsb3QudjEuVXBkYXRlVmlkZW9UZW1wbGF0ZVJlcXVlc3QaKS5wb3N0cGlsb3QudjEuVXBkYXRlVmlkZW9UZW1wbGF0ZVJlc3BvbnNlIgASbAoTRGVsZXRlVmlkZW9UZW1wbGF0ZRIoLnBvc3RwaWxvdC52MS5EZWxldGVWaWRlb1RlbXBsYXRlUmVxdWVzdBopLnBvc3RwaWxvdC52MS5EZWxldGVWaWRlb1RlbXBsYXRlUmVzcG9uc2UiABJjChBTZWVkUHJlc2V0RmllbGRzEiUucG9zdHBpbG90LnYxLlNlZWRQcmVzZXRGaWVsZHNSZXF1ZXN0GiYucG9zdHBpbG90LnYxLlNlZWRQcmVzZXRGaWVsZHNSZXNwb25zZSIAEmMKEExpc3RDbGlwUHJvamVjdHMSJS5wb3N0cGlsb3QudjEuTGlzdENsaXBQcm9qZWN0c1JlcXVlc3QaJi5wb3N0cGlsb3QudjEuTGlzdENsaXBQcm9qZWN0c1Jlc3BvbnNlIgASZgoRQ3JlYXRlQ2xpcFByb2plY3QSJi5wb3N0cGlsb3QudjEuQ3JlYXRlQ2xpcFByb2plY3RSZXF1ZXN0GicucG9zdHBpbG90LnYxLkNyZWF0ZUNsaXBQcm9qZWN0UmVzcG9uc2UiABJdCg5HZXRDbGlwUHJvamVjdBIjLnBvc3RwaWxvdC52MS5HZXRDbGlwUHJvamVjdFJlcXVlc3QaJC5wb3N0cGlsb3QudjEuR2V0Q2xpcFByb2plY3RSZXNwb25zZSIAEmYKEVVwZGF0ZUNsaXBQcm9qZWN0EiYucG9zdHBpbG90LnYxLlVwZGF0ZUNsaXBQcm9qZWN0UmVxdWVzdBonLnBvc3RwaWxvdC52MS5VcGRhdGVDbGlwUHJvamVjdFJlc3BvbnNlIgASZgoRRGVsZXRlQ2xpcFByb2plY3QSJi5wb3N0cGlsb3QudjEuRGVsZXRlQ2xpcFByb2plY3RSZXF1ZXN0GicucG9zdHBpbG90LnYxLkRlbGV0ZUNsaXBQcm9qZWN0UmVzcG9uc2UiABJyChVDcmVhdGVDbGlwU291cmNlQmF0Y2gSKi5wb3N0cGlsb3QudjEuQ3JlYXRlQ2xpcFNvdXJjZUJhdGNoUmVxdWVzdBorLnBvc3RwaWxvdC52MS5DcmVhdGVDbGlwU291cmNlQmF0Y2hSZXNwb25zZSIAEmYKEUNvbmZpcm1DbGlwU291cmNlEiYucG9zdHBpbG90LnYxLkNvbmZpcm1DbGlwU291cmNlUmVxdWVzdBonLnBvc3RwaWxvdC52MS5Db25maXJtQ2xpcFNvdXJjZVJlc3BvbnNlIgASdQoWRGlzY2FyZENsaXBTb3VyY2VCYXRjaBIrLnBvc3RwaWxvdC52MS5EaXNjYXJkQ2xpcFNvdXJjZUJhdGNoUmVxdWVzdBosLnBvc3RwaWxvdC52MS5EaXNjYXJkQ2xpcFNvdXJjZUJhdGNoUmVzcG9uc2UiAEJEWkJnaXRodWIuY29tL3Bvc3RwaWxvdC9iYWNrZW5kL2ludGVybmFsL2dlbi9wb3N0cGlsb3QvdjE7cG9zdHBpbG90djFiBnByb3RvMw", [file_postpilot_v1_post, file_postpilot_v1_provider]);
 
 /**
  * @generated from message postpilot.v1.ClipInformationField
@@ -126,6 +126,14 @@ export type VideoTemplate = Message<"postpilot.v1.VideoTemplate"> & {
    * @generated from field: string updated_at = 9;
    */
   updatedAt: string;
+
+  /**
+   * The category preset: restaurant, cafe, stay, beauty or home. Empty is a
+   * template written before presets existed and reads as the shared defaults.
+   *
+   * @generated from field: string preset = 10;
+   */
+  preset: string;
 };
 
 /**
@@ -156,6 +164,43 @@ export type ClipAnswer = Message<"postpilot.v1.ClipAnswer"> & {
  */
 export const ClipAnswerSchema: GenMessage<ClipAnswer> = /*@__PURE__*/
   messageDesc(file_postpilot_v1_clip, 4);
+
+/**
+ * The reserved information fields a preset needs, in the order a form shows
+ * them. Labels are exact Korean and the prompts are code-owned.
+ *
+ * @generated from message postpilot.v1.SeedPresetFieldsRequest
+ */
+export type SeedPresetFieldsRequest = Message<"postpilot.v1.SeedPresetFieldsRequest"> & {
+  /**
+   * @generated from field: string preset = 1;
+   */
+  preset: string;
+};
+
+/**
+ * Describes the message postpilot.v1.SeedPresetFieldsRequest.
+ * Use `create(SeedPresetFieldsRequestSchema)` to create a new message.
+ */
+export const SeedPresetFieldsRequestSchema: GenMessage<SeedPresetFieldsRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_clip, 5);
+
+/**
+ * @generated from message postpilot.v1.SeedPresetFieldsResponse
+ */
+export type SeedPresetFieldsResponse = Message<"postpilot.v1.SeedPresetFieldsResponse"> & {
+  /**
+   * @generated from field: repeated postpilot.v1.ClipInformationField fields = 1;
+   */
+  fields: ClipInformationField[];
+};
+
+/**
+ * Describes the message postpilot.v1.SeedPresetFieldsResponse.
+ * Use `create(SeedPresetFieldsResponseSchema)` to create a new message.
+ */
+export const SeedPresetFieldsResponseSchema: GenMessage<SeedPresetFieldsResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_clip, 6);
 
 /**
  * @generated from message postpilot.v1.ClipResult
@@ -197,7 +242,7 @@ export type ClipResult = Message<"postpilot.v1.ClipResult"> & {
  * Use `create(ClipResultSchema)` to create a new message.
  */
 export const ClipResultSchema: GenMessage<ClipResult> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip, 5);
+  messageDesc(file_postpilot_v1_clip, 7);
 
 /**
  * @generated from message postpilot.v1.ClipProject
@@ -278,6 +323,20 @@ export type ClipProject = Message<"postpilot.v1.ClipProject"> & {
   accounting?: ClipAccounting | undefined;
 
   /**
+   * The owner's campaign type (ad | sponsored | provided | paid | self) and the
+   * closing call to action (blog | place | save, or empty for the preset's).
+   * The phrases are code-owned: only these ids travel.
+   *
+   * @generated from field: string disclosure = 16;
+   */
+  disclosure: string;
+
+  /**
+   * @generated from field: string cta = 17;
+   */
+  cta: string;
+
+  /**
    * Owner-only, byte-free identity for reconciling an ambiguous start response.
    *
    * @generated from field: postpilot.v1.ClipAttempt latest_attempt = 15;
@@ -290,7 +349,7 @@ export type ClipProject = Message<"postpilot.v1.ClipProject"> & {
  * Use `create(ClipProjectSchema)` to create a new message.
  */
 export const ClipProjectSchema: GenMessage<ClipProject> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip, 6);
+  messageDesc(file_postpilot_v1_clip, 8);
 
 /**
  * @generated from message postpilot.v1.ClipAttempt
@@ -317,7 +376,7 @@ export type ClipAttempt = Message<"postpilot.v1.ClipAttempt"> & {
  * Use `create(ClipAttemptSchema)` to create a new message.
  */
 export const ClipAttemptSchema: GenMessage<ClipAttempt> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip, 7);
+  messageDesc(file_postpilot_v1_clip, 9);
 
 /**
  * @generated from message postpilot.v1.ClipAccounting
@@ -371,7 +430,7 @@ export type ClipAccounting = Message<"postpilot.v1.ClipAccounting"> & {
  * Use `create(ClipAccountingSchema)` to create a new message.
  */
 export const ClipAccountingSchema: GenMessage<ClipAccounting> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip, 8);
+  messageDesc(file_postpilot_v1_clip, 10);
 
 /**
  * @generated from message postpilot.v1.ListVideoTemplatesRequest
@@ -384,7 +443,7 @@ export type ListVideoTemplatesRequest = Message<"postpilot.v1.ListVideoTemplates
  * Use `create(ListVideoTemplatesRequestSchema)` to create a new message.
  */
 export const ListVideoTemplatesRequestSchema: GenMessage<ListVideoTemplatesRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip, 9);
+  messageDesc(file_postpilot_v1_clip, 11);
 
 /**
  * @generated from message postpilot.v1.ListVideoTemplatesResponse
@@ -401,7 +460,7 @@ export type ListVideoTemplatesResponse = Message<"postpilot.v1.ListVideoTemplate
  * Use `create(ListVideoTemplatesResponseSchema)` to create a new message.
  */
 export const ListVideoTemplatesResponseSchema: GenMessage<ListVideoTemplatesResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip, 10);
+  messageDesc(file_postpilot_v1_clip, 12);
 
 /**
  * @generated from message postpilot.v1.CreateVideoTemplateRequest
@@ -431,6 +490,13 @@ export type CreateVideoTemplateRequest = Message<"postpilot.v1.CreateVideoTempla
    * @generated from field: string accent = 5;
    */
   accent: string;
+
+  /**
+   * Required on create: one of the five presets.
+   *
+   * @generated from field: string preset = 6;
+   */
+  preset: string;
 };
 
 /**
@@ -438,7 +504,7 @@ export type CreateVideoTemplateRequest = Message<"postpilot.v1.CreateVideoTempla
  * Use `create(CreateVideoTemplateRequestSchema)` to create a new message.
  */
 export const CreateVideoTemplateRequestSchema: GenMessage<CreateVideoTemplateRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip, 11);
+  messageDesc(file_postpilot_v1_clip, 13);
 
 /**
  * @generated from message postpilot.v1.CreateVideoTemplateResponse
@@ -455,7 +521,7 @@ export type CreateVideoTemplateResponse = Message<"postpilot.v1.CreateVideoTempl
  * Use `create(CreateVideoTemplateResponseSchema)` to create a new message.
  */
 export const CreateVideoTemplateResponseSchema: GenMessage<CreateVideoTemplateResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip, 12);
+  messageDesc(file_postpilot_v1_clip, 14);
 
 /**
  * @generated from message postpilot.v1.UpdateVideoTemplateRequest
@@ -490,6 +556,13 @@ export type UpdateVideoTemplateRequest = Message<"postpilot.v1.UpdateVideoTempla
    * @generated from field: optional string accent = 6;
    */
   accent?: string | undefined;
+
+  /**
+   * Present means change it, and only one of the five is accepted.
+   *
+   * @generated from field: optional string preset = 7;
+   */
+  preset?: string | undefined;
 };
 
 /**
@@ -497,7 +570,7 @@ export type UpdateVideoTemplateRequest = Message<"postpilot.v1.UpdateVideoTempla
  * Use `create(UpdateVideoTemplateRequestSchema)` to create a new message.
  */
 export const UpdateVideoTemplateRequestSchema: GenMessage<UpdateVideoTemplateRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip, 13);
+  messageDesc(file_postpilot_v1_clip, 15);
 
 /**
  * @generated from message postpilot.v1.UpdateVideoTemplateResponse
@@ -514,7 +587,7 @@ export type UpdateVideoTemplateResponse = Message<"postpilot.v1.UpdateVideoTempl
  * Use `create(UpdateVideoTemplateResponseSchema)` to create a new message.
  */
 export const UpdateVideoTemplateResponseSchema: GenMessage<UpdateVideoTemplateResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip, 14);
+  messageDesc(file_postpilot_v1_clip, 16);
 
 /**
  * @generated from message postpilot.v1.DeleteVideoTemplateRequest
@@ -531,7 +604,7 @@ export type DeleteVideoTemplateRequest = Message<"postpilot.v1.DeleteVideoTempla
  * Use `create(DeleteVideoTemplateRequestSchema)` to create a new message.
  */
 export const DeleteVideoTemplateRequestSchema: GenMessage<DeleteVideoTemplateRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip, 15);
+  messageDesc(file_postpilot_v1_clip, 17);
 
 /**
  * @generated from message postpilot.v1.DeleteVideoTemplateResponse
@@ -548,7 +621,7 @@ export type DeleteVideoTemplateResponse = Message<"postpilot.v1.DeleteVideoTempl
  * Use `create(DeleteVideoTemplateResponseSchema)` to create a new message.
  */
 export const DeleteVideoTemplateResponseSchema: GenMessage<DeleteVideoTemplateResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip, 16);
+  messageDesc(file_postpilot_v1_clip, 18);
 
 /**
  * @generated from message postpilot.v1.ListClipProjectsRequest
@@ -561,7 +634,7 @@ export type ListClipProjectsRequest = Message<"postpilot.v1.ListClipProjectsRequ
  * Use `create(ListClipProjectsRequestSchema)` to create a new message.
  */
 export const ListClipProjectsRequestSchema: GenMessage<ListClipProjectsRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip, 17);
+  messageDesc(file_postpilot_v1_clip, 19);
 
 /**
  * @generated from message postpilot.v1.ListClipProjectsResponse
@@ -578,7 +651,7 @@ export type ListClipProjectsResponse = Message<"postpilot.v1.ListClipProjectsRes
  * Use `create(ListClipProjectsResponseSchema)` to create a new message.
  */
 export const ListClipProjectsResponseSchema: GenMessage<ListClipProjectsResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip, 18);
+  messageDesc(file_postpilot_v1_clip, 20);
 
 /**
  * @generated from message postpilot.v1.CreateClipProjectRequest
@@ -608,6 +681,18 @@ export type CreateClipProjectRequest = Message<"postpilot.v1.CreateClipProjectRe
    * @generated from field: repeated postpilot.v1.ClipAnswer answers = 5;
    */
   answers: ClipAnswer[];
+
+  /**
+   * Both may be empty at creation; generation refuses an empty disclosure.
+   *
+   * @generated from field: string disclosure = 6;
+   */
+  disclosure: string;
+
+  /**
+   * @generated from field: string cta = 7;
+   */
+  cta: string;
 };
 
 /**
@@ -615,7 +700,7 @@ export type CreateClipProjectRequest = Message<"postpilot.v1.CreateClipProjectRe
  * Use `create(CreateClipProjectRequestSchema)` to create a new message.
  */
 export const CreateClipProjectRequestSchema: GenMessage<CreateClipProjectRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip, 19);
+  messageDesc(file_postpilot_v1_clip, 21);
 
 /**
  * @generated from message postpilot.v1.CreateClipProjectResponse
@@ -632,7 +717,7 @@ export type CreateClipProjectResponse = Message<"postpilot.v1.CreateClipProjectR
  * Use `create(CreateClipProjectResponseSchema)` to create a new message.
  */
 export const CreateClipProjectResponseSchema: GenMessage<CreateClipProjectResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip, 20);
+  messageDesc(file_postpilot_v1_clip, 22);
 
 /**
  * @generated from message postpilot.v1.GetClipProjectRequest
@@ -649,7 +734,7 @@ export type GetClipProjectRequest = Message<"postpilot.v1.GetClipProjectRequest"
  * Use `create(GetClipProjectRequestSchema)` to create a new message.
  */
 export const GetClipProjectRequestSchema: GenMessage<GetClipProjectRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip, 21);
+  messageDesc(file_postpilot_v1_clip, 23);
 
 /**
  * @generated from message postpilot.v1.GetClipProjectResponse
@@ -666,7 +751,7 @@ export type GetClipProjectResponse = Message<"postpilot.v1.GetClipProjectRespons
  * Use `create(GetClipProjectResponseSchema)` to create a new message.
  */
 export const GetClipProjectResponseSchema: GenMessage<GetClipProjectResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip, 22);
+  messageDesc(file_postpilot_v1_clip, 24);
 
 /**
  * @generated from message postpilot.v1.UpdateClipProjectRequest
@@ -698,6 +783,16 @@ export type UpdateClipProjectRequest = Message<"postpilot.v1.UpdateClipProjectRe
    * @generated from field: repeated postpilot.v1.ClipAnswer answers = 5;
    */
   answers: ClipAnswer[];
+
+  /**
+   * @generated from field: optional string disclosure = 6;
+   */
+  disclosure?: string | undefined;
+
+  /**
+   * @generated from field: optional string cta = 7;
+   */
+  cta?: string | undefined;
 };
 
 /**
@@ -705,7 +800,7 @@ export type UpdateClipProjectRequest = Message<"postpilot.v1.UpdateClipProjectRe
  * Use `create(UpdateClipProjectRequestSchema)` to create a new message.
  */
 export const UpdateClipProjectRequestSchema: GenMessage<UpdateClipProjectRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip, 23);
+  messageDesc(file_postpilot_v1_clip, 25);
 
 /**
  * @generated from message postpilot.v1.UpdateClipProjectResponse
@@ -722,7 +817,7 @@ export type UpdateClipProjectResponse = Message<"postpilot.v1.UpdateClipProjectR
  * Use `create(UpdateClipProjectResponseSchema)` to create a new message.
  */
 export const UpdateClipProjectResponseSchema: GenMessage<UpdateClipProjectResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip, 24);
+  messageDesc(file_postpilot_v1_clip, 26);
 
 /**
  * @generated from message postpilot.v1.DeleteClipProjectRequest
@@ -739,7 +834,7 @@ export type DeleteClipProjectRequest = Message<"postpilot.v1.DeleteClipProjectRe
  * Use `create(DeleteClipProjectRequestSchema)` to create a new message.
  */
 export const DeleteClipProjectRequestSchema: GenMessage<DeleteClipProjectRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip, 25);
+  messageDesc(file_postpilot_v1_clip, 27);
 
 /**
  * @generated from message postpilot.v1.DeleteClipProjectResponse
@@ -752,7 +847,7 @@ export type DeleteClipProjectResponse = Message<"postpilot.v1.DeleteClipProjectR
  * Use `create(DeleteClipProjectResponseSchema)` to create a new message.
  */
 export const DeleteClipProjectResponseSchema: GenMessage<DeleteClipProjectResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip, 26);
+  messageDesc(file_postpilot_v1_clip, 28);
 
 /**
  * Source bytes travel directly to object storage, never in an RPC body.
@@ -801,7 +896,7 @@ export type ClipSourceMetadata = Message<"postpilot.v1.ClipSourceMetadata"> & {
  * Use `create(ClipSourceMetadataSchema)` to create a new message.
  */
 export const ClipSourceMetadataSchema: GenMessage<ClipSourceMetadata> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip, 27);
+  messageDesc(file_postpilot_v1_clip, 29);
 
 /**
  * @generated from message postpilot.v1.ClipSource
@@ -833,7 +928,7 @@ export type ClipSource = Message<"postpilot.v1.ClipSource"> & {
  * Use `create(ClipSourceSchema)` to create a new message.
  */
 export const ClipSourceSchema: GenMessage<ClipSource> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip, 28);
+  messageDesc(file_postpilot_v1_clip, 30);
 
 /**
  * @generated from message postpilot.v1.ClipSourceBatch
@@ -870,7 +965,7 @@ export type ClipSourceBatch = Message<"postpilot.v1.ClipSourceBatch"> & {
  * Use `create(ClipSourceBatchSchema)` to create a new message.
  */
 export const ClipSourceBatchSchema: GenMessage<ClipSourceBatch> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip, 29);
+  messageDesc(file_postpilot_v1_clip, 31);
 
 /**
  * @generated from message postpilot.v1.ClipSourceUpload
@@ -902,7 +997,7 @@ export type ClipSourceUpload = Message<"postpilot.v1.ClipSourceUpload"> & {
  * Use `create(ClipSourceUploadSchema)` to create a new message.
  */
 export const ClipSourceUploadSchema: GenMessage<ClipSourceUpload> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip, 30);
+  messageDesc(file_postpilot_v1_clip, 32);
 
 /**
  * @generated from message postpilot.v1.CreateClipSourceBatchRequest
@@ -924,7 +1019,7 @@ export type CreateClipSourceBatchRequest = Message<"postpilot.v1.CreateClipSourc
  * Use `create(CreateClipSourceBatchRequestSchema)` to create a new message.
  */
 export const CreateClipSourceBatchRequestSchema: GenMessage<CreateClipSourceBatchRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip, 31);
+  messageDesc(file_postpilot_v1_clip, 33);
 
 /**
  * @generated from message postpilot.v1.CreateClipSourceBatchResponse
@@ -946,7 +1041,7 @@ export type CreateClipSourceBatchResponse = Message<"postpilot.v1.CreateClipSour
  * Use `create(CreateClipSourceBatchResponseSchema)` to create a new message.
  */
 export const CreateClipSourceBatchResponseSchema: GenMessage<CreateClipSourceBatchResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip, 32);
+  messageDesc(file_postpilot_v1_clip, 34);
 
 /**
  * @generated from message postpilot.v1.ConfirmClipSourceRequest
@@ -968,7 +1063,7 @@ export type ConfirmClipSourceRequest = Message<"postpilot.v1.ConfirmClipSourceRe
  * Use `create(ConfirmClipSourceRequestSchema)` to create a new message.
  */
 export const ConfirmClipSourceRequestSchema: GenMessage<ConfirmClipSourceRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip, 33);
+  messageDesc(file_postpilot_v1_clip, 35);
 
 /**
  * @generated from message postpilot.v1.ConfirmClipSourceResponse
@@ -985,7 +1080,7 @@ export type ConfirmClipSourceResponse = Message<"postpilot.v1.ConfirmClipSourceR
  * Use `create(ConfirmClipSourceResponseSchema)` to create a new message.
  */
 export const ConfirmClipSourceResponseSchema: GenMessage<ConfirmClipSourceResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip, 34);
+  messageDesc(file_postpilot_v1_clip, 36);
 
 /**
  * @generated from message postpilot.v1.DiscardClipSourceBatchRequest
@@ -1002,7 +1097,7 @@ export type DiscardClipSourceBatchRequest = Message<"postpilot.v1.DiscardClipSou
  * Use `create(DiscardClipSourceBatchRequestSchema)` to create a new message.
  */
 export const DiscardClipSourceBatchRequestSchema: GenMessage<DiscardClipSourceBatchRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip, 35);
+  messageDesc(file_postpilot_v1_clip, 37);
 
 /**
  * @generated from message postpilot.v1.DiscardClipSourceBatchResponse
@@ -1015,7 +1110,7 @@ export type DiscardClipSourceBatchResponse = Message<"postpilot.v1.DiscardClipSo
  * Use `create(DiscardClipSourceBatchResponseSchema)` to create a new message.
  */
 export const DiscardClipSourceBatchResponseSchema: GenMessage<DiscardClipSourceBatchResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip, 36);
+  messageDesc(file_postpilot_v1_clip, 38);
 
 /**
  * @generated from message postpilot.v1.StartClipGenerationRequest
@@ -1057,7 +1152,7 @@ export type StartClipGenerationRequest = Message<"postpilot.v1.StartClipGenerati
  * Use `create(StartClipGenerationRequestSchema)` to create a new message.
  */
 export const StartClipGenerationRequestSchema: GenMessage<StartClipGenerationRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip, 37);
+  messageDesc(file_postpilot_v1_clip, 39);
 
 /**
  * @generated from message postpilot.v1.StartClipGenerationResponse
@@ -1074,7 +1169,7 @@ export type StartClipGenerationResponse = Message<"postpilot.v1.StartClipGenerat
  * Use `create(StartClipGenerationResponseSchema)` to create a new message.
  */
 export const StartClipGenerationResponseSchema: GenMessage<StartClipGenerationResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip, 38);
+  messageDesc(file_postpilot_v1_clip, 40);
 
 /**
  * @generated from message postpilot.v1.QuoteClipGenerationRequest
@@ -1106,7 +1201,7 @@ export type QuoteClipGenerationRequest = Message<"postpilot.v1.QuoteClipGenerati
  * Use `create(QuoteClipGenerationRequestSchema)` to create a new message.
  */
 export const QuoteClipGenerationRequestSchema: GenMessage<QuoteClipGenerationRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip, 39);
+  messageDesc(file_postpilot_v1_clip, 41);
 
 /**
  * @generated from message postpilot.v1.ClipPricedCall
@@ -1158,7 +1253,7 @@ export type ClipPricedCall = Message<"postpilot.v1.ClipPricedCall"> & {
  * Use `create(ClipPricedCallSchema)` to create a new message.
  */
 export const ClipPricedCallSchema: GenMessage<ClipPricedCall> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip, 40);
+  messageDesc(file_postpilot_v1_clip, 42);
 
 /**
  * @generated from message postpilot.v1.QuoteClipGenerationResponse
@@ -1190,7 +1285,7 @@ export type QuoteClipGenerationResponse = Message<"postpilot.v1.QuoteClipGenerat
  * Use `create(QuoteClipGenerationResponseSchema)` to create a new message.
  */
 export const QuoteClipGenerationResponseSchema: GenMessage<QuoteClipGenerationResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip, 41);
+  messageDesc(file_postpilot_v1_clip, 43);
 
 /**
  * @generated from message postpilot.v1.ClipCaption
@@ -1252,7 +1347,7 @@ export type ClipCaption = Message<"postpilot.v1.ClipCaption"> & {
  * Use `create(ClipCaptionSchema)` to create a new message.
  */
 export const ClipCaptionSchema: GenMessage<ClipCaption> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip, 42);
+  messageDesc(file_postpilot_v1_clip, 44);
 
 /**
  * @generated from message postpilot.v1.ClipEditCut
@@ -1292,6 +1387,13 @@ export type ClipEditCut = Message<"postpilot.v1.ClipEditCut"> & {
    * @generated from field: int32 volume_permille = 7;
    */
   volumePermille: number;
+
+  /**
+   * Reserved fact labels whose chips belong on this cut, at most two.
+   *
+   * @generated from field: repeated string chips = 8;
+   */
+  chips: string[];
 };
 
 /**
@@ -1299,7 +1401,7 @@ export type ClipEditCut = Message<"postpilot.v1.ClipEditCut"> & {
  * Use `create(ClipEditCutSchema)` to create a new message.
  */
 export const ClipEditCutSchema: GenMessage<ClipEditCut> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip, 43);
+  messageDesc(file_postpilot_v1_clip, 45);
 
 /**
  * @generated from message postpilot.v1.ClipEditPlan
@@ -1321,7 +1423,7 @@ export type ClipEditPlan = Message<"postpilot.v1.ClipEditPlan"> & {
  * Use `create(ClipEditPlanSchema)` to create a new message.
  */
 export const ClipEditPlanSchema: GenMessage<ClipEditPlan> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip, 44);
+  messageDesc(file_postpilot_v1_clip, 46);
 
 /**
  * @generated from message postpilot.v1.ClipRetainedSource
@@ -1363,7 +1465,7 @@ export type ClipRetainedSource = Message<"postpilot.v1.ClipRetainedSource"> & {
  * Use `create(ClipRetainedSourceSchema)` to create a new message.
  */
 export const ClipRetainedSourceSchema: GenMessage<ClipRetainedSource> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip, 45);
+  messageDesc(file_postpilot_v1_clip, 47);
 
 /**
  * @generated from message postpilot.v1.ClipEditingState
@@ -1415,7 +1517,7 @@ export type ClipEditingState = Message<"postpilot.v1.ClipEditingState"> & {
  * Use `create(ClipEditingStateSchema)` to create a new message.
  */
 export const ClipEditingStateSchema: GenMessage<ClipEditingState> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip, 46);
+  messageDesc(file_postpilot_v1_clip, 48);
 
 /**
  * @generated from message postpilot.v1.SaveClipEditPlanRequest
@@ -1442,7 +1544,7 @@ export type SaveClipEditPlanRequest = Message<"postpilot.v1.SaveClipEditPlanRequ
  * Use `create(SaveClipEditPlanRequestSchema)` to create a new message.
  */
 export const SaveClipEditPlanRequestSchema: GenMessage<SaveClipEditPlanRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip, 47);
+  messageDesc(file_postpilot_v1_clip, 49);
 
 /**
  * @generated from message postpilot.v1.SaveClipEditPlanResponse
@@ -1459,7 +1561,7 @@ export type SaveClipEditPlanResponse = Message<"postpilot.v1.SaveClipEditPlanRes
  * Use `create(SaveClipEditPlanResponseSchema)` to create a new message.
  */
 export const SaveClipEditPlanResponseSchema: GenMessage<SaveClipEditPlanResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip, 48);
+  messageDesc(file_postpilot_v1_clip, 50);
 
 /**
  * @generated from message postpilot.v1.StartClipRenderRequest
@@ -1486,7 +1588,7 @@ export type StartClipRenderRequest = Message<"postpilot.v1.StartClipRenderReques
  * Use `create(StartClipRenderRequestSchema)` to create a new message.
  */
 export const StartClipRenderRequestSchema: GenMessage<StartClipRenderRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip, 49);
+  messageDesc(file_postpilot_v1_clip, 51);
 
 /**
  * @generated from message postpilot.v1.StartClipRenderResponse
@@ -1503,7 +1605,7 @@ export type StartClipRenderResponse = Message<"postpilot.v1.StartClipRenderRespo
  * Use `create(StartClipRenderResponseSchema)` to create a new message.
  */
 export const StartClipRenderResponseSchema: GenMessage<StartClipRenderResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip, 50);
+  messageDesc(file_postpilot_v1_clip, 52);
 
 /**
  * All procedures derive the owner from the authenticated session.
@@ -1574,6 +1676,14 @@ export const ClipService: GenService<{
     methodKind: "unary";
     input: typeof DeleteVideoTemplateRequestSchema;
     output: typeof DeleteVideoTemplateResponseSchema;
+  },
+  /**
+   * @generated from rpc postpilot.v1.ClipService.SeedPresetFields
+   */
+  seedPresetFields: {
+    methodKind: "unary";
+    input: typeof SeedPresetFieldsRequestSchema;
+    output: typeof SeedPresetFieldsResponseSchema;
   },
   /**
    * @generated from rpc postpilot.v1.ClipService.ListClipProjects

@@ -15,6 +15,7 @@ service ClipService {
   rpc CreateVideoTemplate(CreateVideoTemplateRequest) returns (CreateVideoTemplateResponse) {}
   rpc UpdateVideoTemplate(UpdateVideoTemplateRequest) returns (UpdateVideoTemplateResponse) {}
   rpc DeleteVideoTemplate(DeleteVideoTemplateRequest) returns (DeleteVideoTemplateResponse) {}
+  rpc SeedPresetFields(SeedPresetFieldsRequest) returns (SeedPresetFieldsResponse) {}
   rpc ListClipProjects(ListClipProjectsRequest) returns (ListClipProjectsResponse) {}
   rpc CreateClipProject(CreateClipProjectRequest) returns (CreateClipProjectResponse) {}
   rpc GetClipProject(GetClipProjectRequest) returns (GetClipProjectResponse) {}
@@ -41,8 +42,15 @@ message VideoTemplate {
   int32 project_count = 7;
   string created_at = 8;
   string updated_at = 9;
+  // The category preset: restaurant, cafe, stay, beauty or home. Empty is a
+  // template written before presets existed and reads as the shared defaults.
+  string preset = 10;
 }
 message ClipAnswer { string label = 1; string text = 2; }
+// The reserved information fields a preset needs, in the order a form shows
+// them. Labels are exact Korean and the prompts are code-owned.
+message SeedPresetFieldsRequest { string preset = 1; }
+message SeedPresetFieldsResponse { repeated ClipInformationField fields = 1; }
 message ClipResult {
   string content_type = 1;
   int64 bytes = 2;
@@ -68,6 +76,11 @@ message ClipProject {
   // Detail only: retained metadata and a structured correction draft, never source URLs.
   ClipEditingState editing = 13;
   ClipAccounting accounting = 14;
+  // The owner's campaign type (ad | sponsored | provided | paid | self) and the
+  // closing call to action (blog | place | save, or empty for the preset's).
+  // The phrases are code-owned: only these ids travel.
+  string disclosure = 16;
+  string cta = 17;
   // Owner-only, byte-free identity for reconciling an ambiguous start response.
   ClipAttempt latest_attempt = 15;
 }
@@ -95,6 +108,8 @@ message CreateVideoTemplateRequest {
   string cut_guidance = 3;
   repeated string copy_styles = 4;
   string accent = 5;
+  // Required on create: one of the five presets.
+  string preset = 6;
 }
 message CreateVideoTemplateResponse { VideoTemplate template = 1; }
 message UpdateVideoTemplateRequest {
@@ -104,6 +119,8 @@ message UpdateVideoTemplateRequest {
   optional string cut_guidance = 4;
   ClipCopyStyles copy_styles = 5;
   optional string accent = 6;
+  // Present means change it, and only one of the five is accepted.
+  optional string preset = 7;
 }
 message UpdateVideoTemplateResponse { VideoTemplate template = 1; }
 message DeleteVideoTemplateRequest { string id = 1; }
@@ -116,6 +133,9 @@ message CreateClipProjectRequest {
   string ratio = 3;
   int32 target_duration_ms = 4;
   repeated ClipAnswer answers = 5;
+  // Both may be empty at creation; generation refuses an empty disclosure.
+  string disclosure = 6;
+  string cta = 7;
 }
 message CreateClipProjectResponse { ClipProject project = 1; }
 message GetClipProjectRequest { string id = 1; }
@@ -127,6 +147,8 @@ message UpdateClipProjectRequest {
   optional int32 target_duration_ms = 4;
   // Only supplied labels change; an empty text explicitly clears that answer.
   repeated ClipAnswer answers = 5;
+  optional string disclosure = 6;
+  optional string cta = 7;
 }
 message UpdateClipProjectResponse { ClipProject project = 1; }
 message DeleteClipProjectRequest { string id = 1; }
@@ -222,6 +244,8 @@ message ClipEditCut {
   int32 end_ms = 5;
   ClipCaption copy = 6;
   int32 volume_permille = 7;
+  // Reserved fact labels whose chips belong on this cut, at most two.
+  repeated string chips = 8;
 }
 message ClipEditPlan { int32 duration_ms = 1; repeated ClipEditCut cuts = 2; }
 message ClipRetainedSource {

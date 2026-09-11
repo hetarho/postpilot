@@ -194,8 +194,12 @@ func TestRenderSmoke(t *testing.T) {
 					}
 					sources = append(sources, clip.RenderSource{ID: id, Fingerprint: id, Info: infos[id]})
 				}
-				plan := clip.EditPlan{Ratio: ratio, DurationMS: 15000, Cuts: []clip.EditCut{
-					{ID: "one", SourceID: "audio", Fingerprint: "audio", EndMS: 5200, Focal: clip.Point{X: .5, Y: .5}, Copy: clip.Copy{Text: "정확한 한글 & 여행", Style: "clean", Anchor: "bottom", Align: "center", Accent: "coral"}},
+				// Every clip carries its disclosure badge, and the first cut
+				// carries the chips its facts earn (CDS-5, CDS-30).
+				plan := clip.EditPlan{Ratio: ratio, DurationMS: 15000, Disclosure: "ad", Preset: "restaurant", Facts: []clip.Answer{
+					{Label: "상호", Text: "연남 김밥"}, {Label: "위치", Text: "서울 연남동"}, {Label: "가격", Text: "9,900원"},
+				}, Cuts: []clip.EditCut{
+					{ID: "one", SourceID: "audio", Fingerprint: "audio", EndMS: 5200, Focal: clip.Point{X: .5, Y: .5}, Chips: []string{"위치", "가격"}, Copy: clip.Copy{Text: "정확한 한글 & 여행", Style: "clean", Anchor: "bottom", Align: "center", Accent: "coral"}},
 					{ID: "two", SourceID: "rotated", Fingerprint: "rotated", EndMS: 5000, Focal: clip.Point{X: .5, Y: .5}, Volume: volume(.5), Copy: clip.Copy{Text: "기록처럼 <오늘>", Style: "memo", Anchor: "lower_mid", Align: "left", Accent: "teal"}},
 					{ID: "three", SourceID: "silent", Fingerprint: "silent", EndMS: 5200, Focal: clip.Point{X: .5, Y: .5}, Volume: volume(0), Copy: clip.Copy{Text: "다시 오고 싶은 곳", Style: "bold", Anchor: "upper_mid", Align: "center", Accent: "amber"}},
 				}}
@@ -247,8 +251,12 @@ func TestRenderSmoke(t *testing.T) {
 						if err != nil {
 							return err
 						}
+						// Only the lower half: the disclosure badge and the chips
+						// are on screen for the WHOLE clip by design (CDS-5,
+						// CDS-30) and both sit at the top, so counting them
+						// would say nothing about the caption's own window.
 						bright := 0
-						for y := 0; y < frame.Bounds().Dy(); y += 2 {
+						for y := frame.Bounds().Dy() / 2; y < frame.Bounds().Dy(); y += 2 {
 							for x := 0; x < frame.Bounds().Dx(); x += 2 {
 								red, green, _, _ := frame.At(x, y).RGBA()
 								if red > 50000 && green > 50000 {

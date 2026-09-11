@@ -251,6 +251,94 @@
       "highlight": true
     }
   },
+  "presets": {
+    "restaurant": {
+      "hook": "fact",
+      "chips": ["위치", "가격", "메뉴"],
+      "cta": "place",
+      "accent": "coral",
+      "styles": { "clean": 50, "mark": 25, "memo": 20, "bold": 5 },
+      "cut_min_s": 2.5,
+      "cut_max_s": 4,
+      "rhythm": "cut",
+      "price_note": "",
+      "refuse": ""
+    },
+    "cafe": {
+      "hook": "space",
+      "chips": ["위치", "메뉴", "영업"],
+      "cta": "save",
+      "accent": "teal",
+      "styles": { "clean": 45, "memo": 30, "bold": 15, "mark": 10 },
+      "cut_min_s": 4,
+      "cut_max_s": 6,
+      "rhythm": "fade",
+      "price_note": "",
+      "refuse": ""
+    },
+    "stay": {
+      "hook": "location",
+      "chips": ["위치", "가격", "영업"],
+      "cta": "blog",
+      "accent": "blue",
+      "styles": { "clean": 50, "memo": 35, "bold": 10, "mark": 5 },
+      "cut_min_s": 4,
+      "cut_max_s": 6,
+      "rhythm": "fade",
+      "price_note": "1박 기준",
+      "refuse": ""
+    },
+    "beauty": {
+      "hook": "usage",
+      "chips": ["가격", "메뉴", "평점"],
+      "cta": "blog",
+      "accent": "pink",
+      "styles": { "clean": 40, "mark": 30, "memo": 20, "bold": 10 },
+      "cut_min_s": 2,
+      "cut_max_s": 3,
+      "rhythm": "cut",
+      "price_note": "",
+      "refuse": "efficacy"
+    },
+    "home": {
+      "hook": "problem",
+      "chips": ["가격", "메뉴", "평점"],
+      "cta": "blog",
+      "accent": "amber",
+      "styles": { "clean": 40, "mark": 35, "memo": 20, "bold": 5 },
+      "cut_min_s": 3,
+      "cut_max_s": 4,
+      "rhythm": "cut",
+      "price_note": "",
+      "refuse": "specs"
+    }
+  },
+  "disclosure": {
+    "ad": "광고",
+    "sponsored": "협찬",
+    "provided": "제품 제공",
+    "paid": "소정의 원고료 지급",
+    "self": "내돈내산"
+  },
+  "cta": {
+    "blog": "자세한 후기는 블로그에",
+    "place": "위치는 프로필 정보 태그에서",
+    "save": "저장해두고 방문해보세요"
+  },
+  "facts": {
+    "labels": ["상호", "위치", "가격", "메뉴", "영업", "평점"],
+    "chips": ["위치", "가격", "메뉴", "영업", "평점"],
+    "minimum": { "labels": ["상호", "위치", "가격", "메뉴"], "count": 2 },
+    "prompts": {
+      "상호": "가게나 제품의 이름을 정확히 적어 주세요.",
+      "위치": "화면에 보여줄 위치를 적어 주세요. (예: 서울 연남동)",
+      "가격": "가격을 적어 주세요. (예: 9,900원)",
+      "메뉴": "대표 메뉴나 제품 이름을 적어 주세요.",
+      "영업": "영업시간이나 휴무를 적어 주세요.",
+      "평점": "직접 남긴 평점이 있으면 적어 주세요."
+    },
+    "defaults": { "chips": ["위치", "가격", "메뉴"], "cta": "blog" }
+  },
   "motion": { "in_ms": 180, "in_dy": 12, "out_ms": 120, "ease": [0.22, 1, 0.36, 1] },
   "timing": {
     "sub_min_base_ms": 900,
@@ -260,7 +348,8 @@
     "hook_card_s": 1.5,
     "end_card_s": 2.5,
     "badge_min_head_s": 3,
-    "badge_min_tail_s": 3
+    "badge_min_tail_s": 3,
+    "chip_min_s": 2
   },
   "transition": { "default": "cut", "fade_ms": 200, "fade_ratio_max": 0.4 },
   "audio": {

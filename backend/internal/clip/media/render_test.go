@@ -213,17 +213,17 @@ func TestRenderFilterGoldens(t *testing.T) {
 	r := testRenderer(t, newAdapter(t, &fakeRunner{}))
 	canvas, _ := clip.ClipCanvas("horizontal")
 	c := clip.EditCut{StartMS: 100, EndMS: 7700, Focal: clip.Point{X: .25, Y: .75}, Volume: volume(.5)}
-	golden(t, "cut.filter", cutGraph(r.cfg, canvas, c, clip.MediaInfo{HasAudio: true}, 228, true, true)+"\n")
+	golden(t, "cut.filter", cutGraph(r.cfg, canvas, c, clip.MediaInfo{HasAudio: true}, 228, false, true, true)+"\n")
 	golden(t, "composition.filter", compositionGraph(r.cfg, []int{156, 150, 156}, true)+"\n")
-	if strings.Contains(cutGraph(r.cfg, canvas, c, clip.MediaInfo{}, 228, false, false), "[a]") {
+	if strings.Contains(cutGraph(r.cfg, canvas, c, clip.MediaInfo{}, 228, false, false, false), "[a]") {
 		t.Fatal("invented audio")
 	}
-	if !strings.Contains(cutGraph(r.cfg, canvas, c, clip.MediaInfo{}, 228, false, true), "anullsrc=r=48000:cl=stereo") {
+	if !strings.Contains(cutGraph(r.cfg, canvas, c, clip.MediaInfo{}, 228, false, false, true), "anullsrc=r=48000:cl=stereo") {
 		t.Fatal("missing synthesized silence")
 	}
 	// CDS-4 and CDS-27: exactly one 180 ms fade-in settling 12 px, one 120 ms
 	// fade-out that does not move, and a window inset 120 ms at both ends.
-	graph := cutGraph(r.cfg, canvas, c, clip.MediaInfo{HasAudio: true}, 228, true, true)
+	graph := cutGraph(r.cfg, canvas, c, clip.MediaInfo{HasAudio: true}, 228, false, true, true)
 	for _, want := range []string{
 		"fade=t=in:st=0.120:d=0.180:alpha=1",
 		"fade=t=out:st=7.360:d=0.120:alpha=1",
@@ -234,6 +234,16 @@ func TestRenderFilterGoldens(t *testing.T) {
 			t.Fatalf("lost motion %s in %s", want, graph)
 		}
 	}
+	// The fixed layer is its own overlay with no fade and no y expression: the
+	// disclosure badge may not move (CDS-31) while the copy must (CDS-4).
+	both := cutGraph(r.cfg, canvas, c, clip.MediaInfo{}, 228, true, true, false)
+	if !strings.Contains(both, "[base][1:v:0]overlay=0:0:format=auto:shortest=0[fixed];") || !strings.Contains(both, "[2:v:0]format=rgba,fade=") || !strings.Contains(both, "[fixed][plate]overlay=x=0:y=") {
+		t.Fatalf("fixed and animated layers are not separate: %s", both)
+	}
+	fixedOnly := cutGraph(r.cfg, canvas, clip.EditCut{StartMS: 100, EndMS: 7700}, clip.MediaInfo{}, 228, true, false, false)
+	if strings.Contains(fixedOnly, "fade=") || !strings.Contains(fixedOnly, "[fixed]trim=") {
+		t.Fatalf("a cut with no copy animated its badge: %s", fixedOnly)
+	}
 	// Nothing else moves or eases: no zoom, wipe, slide, rotation or blur.
 	for _, forbidden := range []string{"zoompan", "rotate", "boxblur", "gblur", "wipe", "slide", "scroll"} {
 		if strings.Contains(graph, forbidden) {
@@ -243,7 +253,7 @@ func TestRenderFilterGoldens(t *testing.T) {
 	// An explicit window is exactly what the plan asked for, not re-inset.
 	explicit := c
 	explicit.Copy = clip.Copy{Text: "x", StartMS: 1000, EndMS: 4000}
-	if !strings.Contains(cutGraph(r.cfg, canvas, explicit, clip.MediaInfo{}, 228, true, false), "enable='gte(t,1.000)*lt(t,4.000)'") {
+	if !strings.Contains(cutGraph(r.cfg, canvas, explicit, clip.MediaInfo{}, 228, false, true, false), "enable='gte(t,1.000)*lt(t,4.000)'") {
 		t.Fatal("an explicit caption window was moved")
 	}
 	frames := cutFrames(clip.EditPlan{Cuts: []clip.EditCut{{EndMS: 5011}, {EndMS: 5022}, {EndMS: 5367}}}, 30)
@@ -256,7 +266,7 @@ func TestCaptionExposureUsesOnlyValidatedCutRelativeTimes(t *testing.T) {
 	r := testRenderer(t, newAdapter(t, &fakeRunner{}))
 	canvas, _ := clip.ClipCanvas("vertical")
 	c := clip.Cut{EndMS: 15000, Focal: clip.Point{X: .5, Y: .5}, Copy: clip.Caption{StartMS: 1000, EndMS: 12000}}
-	graph := cutGraph(r.cfg, canvas, c, clip.MediaInfo{}, 450, true, false)
+	graph := cutGraph(r.cfg, canvas, c, clip.MediaInfo{}, 450, false, true, false)
 	if !strings.Contains(graph, ":enable='gte(t,1.000)*lt(t,12.000)'") {
 		t.Fatal(graph)
 	}

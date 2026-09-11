@@ -91,6 +91,12 @@ export const errors = {
     'Consecutive cuts move their captions too far. Keep the change to one step.',
   CLIP_LAYOUT_FREQUENCY:
     'One caption style was used too often. Bold takes at most two per clip, and one style at most three in a row.',
+  CLIP_LAYOUT_DISCLOSURE:
+    'The ad disclosure did not cover the whole clip, so rendering stopped. Check the campaign type.',
+  CLIP_LAYOUT_KIND: 'The clip contained an element that is not allowed, so rendering stopped.',
+  CLIP_DISCLOSURE_REQUIRED: 'Choose a campaign type first. Every clip carries its ad disclosure.',
+  CLIP_FACTS_REQUIRED:
+    'The clip needs more on-screen information: fill in at least two of 상호, 위치, 가격 and 메뉴. (Empty: {{labels}})',
   CLIP_BUSY: 'A clip job is still running. Wait for it to finish.',
   CLIP_PLAN_CONFLICT:
     'The saved edit plan changed. Keep your edits and reload the latest revision before saving again.',

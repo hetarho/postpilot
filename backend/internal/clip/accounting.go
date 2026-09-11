@@ -31,7 +31,7 @@ func (s *GenerationService) Accounting(ctx context.Context, user, id string) (*A
 	}
 	out := &Accounting{JobID: j.ID, Status: "unavailable"}
 	var p generationPayload
-	if json.Unmarshal(j.Payload, &p) != nil || p.Version != 2 || p.ProjectID != id || p.Batch.UserID != user || p.Approval == nil || p.Approval.MaxCredits < 0 {
+	if json.Unmarshal(j.Payload, &p) != nil || p.Version != generationPayloadVersion || p.ProjectID != id || p.Batch.UserID != user || p.Approval == nil || p.Approval.MaxCredits < 0 {
 		return out, nil
 	}
 	approved := p.Approval.MaxCredits

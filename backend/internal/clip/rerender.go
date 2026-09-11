@@ -150,6 +150,13 @@ func (s *GenerationService) RunRender(ctx context.Context, user, job, project st
 	if err != nil {
 		return err
 	}
+	// The badge and the chips are read fresh from the project and its template,
+	// so a re-render always carries the owner's current campaign type.
+	t, err := s.projects.store.GetTemplate(ctx, user, p.VideoTemplateID)
+	if err != nil {
+		return err
+	}
+	plan = plan.WithFacts(p.Disclosure, p.Answers, t.Preset)
 	if err = MatchRenderBatch(plan, b); err != nil {
 		return err
 	}

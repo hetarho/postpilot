@@ -61,7 +61,7 @@ func (q *Queries) DeleteVideoTemplate(ctx context.Context, arg DeleteVideoTempla
 }
 
 const getClipProject = `-- name: GetClipProject :one
-SELECT id, user_id, title, video_template_id, ratio, target_duration_ms, analysis_json, edit_plan_json, result_key, result_content_type, result_bytes, result_duration_ms, result_created_at, edit_plan_revision, rendered_plan_revision, created_at, updated_at, deleting FROM clip_projects WHERE id = ? AND user_id = ?
+SELECT id, user_id, title, video_template_id, ratio, target_duration_ms, analysis_json, edit_plan_json, result_key, result_content_type, result_bytes, result_duration_ms, result_created_at, edit_plan_revision, rendered_plan_revision, created_at, updated_at, deleting, disclosure, cta FROM clip_projects WHERE id = ? AND user_id = ?
 `
 
 type GetClipProjectParams struct {
@@ -91,12 +91,14 @@ func (q *Queries) GetClipProject(ctx context.Context, arg GetClipProjectParams) 
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Deleting,
+		&i.Disclosure,
+		&i.Cta,
 	)
 	return i, err
 }
 
 const getVideoTemplate = `-- name: GetVideoTemplate :one
-SELECT id, user_id, name, information_fields, cut_guidance, copy_styles, accent, created_at, updated_at FROM video_templates WHERE id = ? AND user_id = ?
+SELECT id, user_id, name, information_fields, cut_guidance, copy_styles, accent, created_at, updated_at, preset FROM video_templates WHERE id = ? AND user_id = ?
 `
 
 type GetVideoTemplateParams struct {
@@ -117,12 +119,13 @@ func (q *Queries) GetVideoTemplate(ctx context.Context, arg GetVideoTemplatePara
 		&i.Accent,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Preset,
 	)
 	return i, err
 }
 
 const insertClipProject = `-- name: InsertClipProject :exec
-INSERT INTO clip_projects(id, user_id, title, video_template_id, ratio, target_duration_ms, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO clip_projects(id, user_id, title, video_template_id, ratio, target_duration_ms, disclosure, cta, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `
 
 type InsertClipProjectParams struct {
@@ -132,6 +135,8 @@ type InsertClipProjectParams struct {
 	VideoTemplateID  sql.NullString
 	Ratio            string
 	TargetDurationMs int64
+	Disclosure       string
+	Cta              string
 	CreatedAt        string
 	UpdatedAt        string
 }
@@ -144,6 +149,8 @@ func (q *Queries) InsertClipProject(ctx context.Context, arg InsertClipProjectPa
 		arg.VideoTemplateID,
 		arg.Ratio,
 		arg.TargetDurationMs,
+		arg.Disclosure,
+		arg.Cta,
 		arg.CreatedAt,
 		arg.UpdatedAt,
 	)
@@ -151,7 +158,7 @@ func (q *Queries) InsertClipProject(ctx context.Context, arg InsertClipProjectPa
 }
 
 const insertVideoTemplate = `-- name: InsertVideoTemplate :exec
-INSERT INTO video_templates(id, user_id, name, information_fields, cut_guidance, copy_styles, accent, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO video_templates(id, user_id, name, information_fields, cut_guidance, copy_styles, accent, preset, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `
 
 type InsertVideoTemplateParams struct {
@@ -162,6 +169,7 @@ type InsertVideoTemplateParams struct {
 	CutGuidance       string
 	CopyStyles        string
 	Accent            sql.NullString
+	Preset            string
 	CreatedAt         string
 	UpdatedAt         string
 }
@@ -175,6 +183,7 @@ func (q *Queries) InsertVideoTemplate(ctx context.Context, arg InsertVideoTempla
 		arg.CutGuidance,
 		arg.CopyStyles,
 		arg.Accent,
+		arg.Preset,
 		arg.CreatedAt,
 		arg.UpdatedAt,
 	)
@@ -219,7 +228,7 @@ func (q *Queries) ListClipAnswers(ctx context.Context, arg ListClipAnswersParams
 }
 
 const listClipProjects = `-- name: ListClipProjects :many
-SELECT id, user_id, title, video_template_id, ratio, target_duration_ms, analysis_json, edit_plan_json, result_key, result_content_type, result_bytes, result_duration_ms, result_created_at, edit_plan_revision, rendered_plan_revision, created_at, updated_at, deleting FROM clip_projects WHERE user_id = ? ORDER BY updated_at DESC, id
+SELECT id, user_id, title, video_template_id, ratio, target_duration_ms, analysis_json, edit_plan_json, result_key, result_content_type, result_bytes, result_duration_ms, result_created_at, edit_plan_revision, rendered_plan_revision, created_at, updated_at, deleting, disclosure, cta FROM clip_projects WHERE user_id = ? ORDER BY updated_at DESC, id
 `
 
 func (q *Queries) ListClipProjects(ctx context.Context, userID string) ([]ClipProject, error) {
@@ -250,6 +259,8 @@ func (q *Queries) ListClipProjects(ctx context.Context, userID string) ([]ClipPr
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Deleting,
+			&i.Disclosure,
+			&i.Cta,
 		); err != nil {
 			return nil, err
 		}
@@ -265,7 +276,7 @@ func (q *Queries) ListClipProjects(ctx context.Context, userID string) ([]ClipPr
 }
 
 const listVideoTemplates = `-- name: ListVideoTemplates :many
-SELECT id, user_id, name, information_fields, cut_guidance, copy_styles, accent, created_at, updated_at FROM video_templates WHERE user_id = ? ORDER BY name, id
+SELECT id, user_id, name, information_fields, cut_guidance, copy_styles, accent, created_at, updated_at, preset FROM video_templates WHERE user_id = ? ORDER BY name, id
 `
 
 func (q *Queries) ListVideoTemplates(ctx context.Context, userID string) ([]VideoTemplate, error) {
@@ -287,6 +298,7 @@ func (q *Queries) ListVideoTemplates(ctx context.Context, userID string) ([]Vide
 			&i.Accent,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Preset,
 		); err != nil {
 			return nil, err
 		}
@@ -313,6 +325,54 @@ type TouchClipParams struct {
 
 func (q *Queries) TouchClip(ctx context.Context, arg TouchClipParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, touchClip, arg.UpdatedAt, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const updateClipCTA = `-- name: UpdateClipCTA :execrows
+UPDATE clip_projects SET cta = ?, updated_at = ? WHERE id = ? AND user_id = ?
+`
+
+type UpdateClipCTAParams struct {
+	Cta       string
+	UpdatedAt string
+	ID        string
+	UserID    string
+}
+
+func (q *Queries) UpdateClipCTA(ctx context.Context, arg UpdateClipCTAParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateClipCTA,
+		arg.Cta,
+		arg.UpdatedAt,
+		arg.ID,
+		arg.UserID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const updateClipDisclosure = `-- name: UpdateClipDisclosure :execrows
+UPDATE clip_projects SET disclosure = ?, updated_at = ? WHERE id = ? AND user_id = ?
+`
+
+type UpdateClipDisclosureParams struct {
+	Disclosure string
+	UpdatedAt  string
+	ID         string
+	UserID     string
+}
+
+func (q *Queries) UpdateClipDisclosure(ctx context.Context, arg UpdateClipDisclosureParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateClipDisclosure,
+		arg.Disclosure,
+		arg.UpdatedAt,
+		arg.ID,
+		arg.UserID,
+	)
 	if err != nil {
 		return 0, err
 	}
@@ -501,6 +561,30 @@ type UpdateVideoTemplateNameParams struct {
 func (q *Queries) UpdateVideoTemplateName(ctx context.Context, arg UpdateVideoTemplateNameParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, updateVideoTemplateName,
 		arg.Name,
+		arg.UpdatedAt,
+		arg.ID,
+		arg.UserID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const updateVideoTemplatePreset = `-- name: UpdateVideoTemplatePreset :execrows
+UPDATE video_templates SET preset = ?, updated_at = ? WHERE id = ? AND user_id = ?
+`
+
+type UpdateVideoTemplatePresetParams struct {
+	Preset    string
+	UpdatedAt string
+	ID        string
+	UserID    string
+}
+
+func (q *Queries) UpdateVideoTemplatePreset(ctx context.Context, arg UpdateVideoTemplatePresetParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateVideoTemplatePreset,
+		arg.Preset,
 		arg.UpdatedAt,
 		arg.ID,
 		arg.UserID,

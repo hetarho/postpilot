@@ -28,9 +28,13 @@ var AnchorOrder = []string{"top", "upper_mid", "lower_mid", "bottom"}
 // it, the accent bar or dot, or the highlight behind a keyword. Regions are
 // canvas pixels and the window is the OUTPUT timeline, so the verifier needs
 // nothing but the manifest to answer every check.
+// ElementKinds is the whole catalogue a manifest may name (V10): anything else
+// is a decoration the design system refuses (CDS-6, CDS-33).
+var ElementKinds = []string{"copy", "plate", "bar", "highlight", "badge", "chip"}
+
 type Element struct {
 	Cut              int
-	Kind             string // copy | plate | bar | highlight
+	Kind             string // one of ElementKinds
 	Style            string
 	Anchor           string
 	Text             string
@@ -57,6 +61,8 @@ const (
 	ViolationMotion     Violation = "plan_layout_motion"
 	ViolationAnchorStep Violation = "plan_layout_anchor_step"
 	ViolationFrequency  Violation = "plan_layout_frequency"
+	ViolationDisclosure Violation = "plan_layout_disclosure"
+	ViolationKind       Violation = "plan_layout_kind"
 )
 
 func overlaps(a, b Region) bool {
@@ -82,15 +88,26 @@ func Verify(m Manifest, ratio string) error {
 	}
 	lines := map[int]int{}
 	for _, e := range m {
-		if !slices.Contains([]string{"copy", "plate", "bar", "highlight"}, e.Kind) {
-			return ViolationSize
+		if !slices.Contains(ElementKinds, e.Kind) {
+			return ViolationKind
 		}
-		style, known := Styles[e.Style]
-		if !known || e.StartMS < 0 || e.EndMS <= e.StartMS {
+		if e.StartMS < 0 || e.EndMS <= e.StartMS {
 			return ViolationSize
 		}
 		if !within(e.Region, safe) {
 			return ViolationSafeArea
+		}
+		// The badge never moves and a chip does not settle: only a copy's own
+		// elements carry the two permitted motions (CDS-31, CDS-30, CDS-4).
+		if e.Kind == "badge" || e.Kind == "chip" {
+			if e.InMS != 0 || e.OutMS != 0 || e.DY != 0 {
+				return ViolationMotion
+			}
+			continue
+		}
+		style, known := Styles[e.Style]
+		if !known {
+			return ViolationSize
 		}
 		if e.InMS != Motion.InMS || e.OutMS != Motion.OutMS || e.DY != Motion.InDY {
 			return ViolationMotion
@@ -112,9 +129,20 @@ func Verify(m Manifest, ratio string) error {
 		}
 	}
 
+	// The badge is placed first and never moves (CDS-45), so it is checked first.
+	duration := durationOf(m)
+	if err := verifyDisclosure(m, duration); err != nil {
+		return err
+	}
 	for i, a := range m {
 		for _, b := range m[i+1:] {
-			if a.Cut != b.Cut && a.StartMS < b.EndMS && b.StartMS < a.EndMS && overlaps(a.Region, b.Region) {
+			// A badge or chip shares its window with the copy of whatever cut it
+			// spans, so overlap is checked between every pair whose windows meet
+			// and that do not belong to the same cut's own copy.
+			if sameElement(a, b) || !(a.StartMS < b.EndMS && b.StartMS < a.EndMS) {
+				continue
+			}
+			if overlaps(a.Region, b.Region) {
 				return ViolationOverlap
 			}
 		}
@@ -122,9 +150,63 @@ func Verify(m Manifest, ratio string) error {
 	return verifySequence(m)
 }
 
+// Elements of one cut's own copy are meant to sit on each other; the badge is
+// its own layer and a chip belongs to whichever cut it spans.
+func sameElement(a, b Element) bool {
+	return a.Kind != "badge" && b.Kind != "badge" && a.Kind != "chip" && b.Kind != "chip" && a.Cut == b.Cut
+}
+func durationOf(m Manifest) int {
+	end := 0
+	for _, e := range m {
+		if e.EndMS > end {
+			end = e.EndMS
+		}
+	}
+	return end
+}
+
+// V6: the disclosure phrase is present, covers the first and last 3.0 s, is
+// typeset at the badge size and painted on the badge colour. The Fair Trade
+// endorsement guideline asks for a size, face and colour clearly distinct from
+// the background, shown at a video's start and end (CDS-5, CDS-31).
+func verifyDisclosure(m Manifest, duration int) error {
+	if len(m) == 0 {
+		return nil
+	}
+	badge := Element{}
+	for _, e := range m {
+		if e.Kind != "badge" {
+			continue
+		}
+		if badge.Kind != "" {
+			return ViolationDisclosure
+		}
+		badge = e
+	}
+	phrase := false
+	for _, text := range Disclosure {
+		phrase = phrase || badge.Text == text
+	}
+	if !phrase || badge.FontSize != Type["badge"].Size || badge.Background != Color["badge_ad"].Hex {
+		return ViolationDisclosure
+	}
+	// ONE badge covering both of CDS-5's minimum windows — the first 3.0 s and
+	// the last 3.0 s — necessarily spans the whole clip, which is also CDS-5's
+	// default. A second badge would be a second disclosure and is refused above.
+	if badge.StartMS > 0 || badge.EndMS < duration {
+		return ViolationDisclosure
+	}
+	if duration < int(Timing.BadgeMinHeadS*1000) && duration < int(Timing.BadgeMinTailS*1000) {
+		return ViolationDisclosure
+	}
+	return nil
+}
+
+// The badge is its own layer and a chip carries no style, so neither answers for
+// the cut it happens to sit on.
 func styleOfCut(m Manifest, cut int) string {
 	for _, e := range m {
-		if e.Cut == cut {
+		if e.Cut == cut && e.Kind != "badge" && e.Kind != "chip" {
 			return e.Style
 		}
 	}
@@ -136,6 +218,9 @@ func verifySequence(m Manifest) error {
 	cuts := []int{}
 	style, anchor := map[int]string{}, map[int]string{}
 	for _, e := range m {
+		if e.Kind == "badge" || e.Kind == "chip" {
+			continue
+		}
 		if _, seen := style[e.Cut]; !seen {
 			cuts = append(cuts, e.Cut)
 			style[e.Cut], anchor[e.Cut] = e.Style, e.Anchor

@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/postpilot/backend/internal/clip/design"
 	"github.com/postpilot/backend/internal/llm"
 )
 
@@ -118,12 +119,13 @@ func QuoteInputDigest(p Project, t VideoTemplate, b SourceBatch, pricing Generat
 	}
 	input := struct {
 		User, Project, Batch, Title, TemplateID, Ratio string
+		Disclosure, CTA                                string
 		Target                                         int
 		Recipe                                         Recipe
 		Answers                                        []Answer
 		Sources                                        []source
 		Pricing                                        GenerationPricing
-	}{p.UserID, p.ID, b.ID, p.Title, p.VideoTemplateID, p.Ratio, p.TargetDurationMS, t.Recipe, requiredQuoteAnswers(p, t), sources, pricing}
+	}{p.UserID, p.ID, b.ID, p.Title, p.VideoTemplateID, p.Ratio, p.Disclosure, p.CTA, p.TargetDurationMS, t.Recipe, requiredQuoteAnswers(p, t), sources, pricing}
 	data, _ := json.Marshal(input) // All fields are concrete JSON-safe values.
 	sum := sha256.Sum256(data)
 	return hex.EncodeToString(sum[:])
@@ -251,7 +253,7 @@ func (s *GenerationService) startApproved(ctx context.Context, user, id, batch, 
 	if !reflect.DeepEqual(q.Pricing, pricing) || q.InputDigest != QuoteInputDigest(p, t, b, pricing) {
 		return "", ErrQuoteChanged
 	}
-	payload, err := json.Marshal(generationPayload{Version: 2, ProjectID: id, Ratio: p.Ratio, Observe: observe, Write: write, TargetDurationMS: p.TargetDurationMS, Template: t.Recipe, Answers: requiredQuoteAnswers(p, t), Batch: b, Approval: &GenerationApproval{QuoteID: q.ID, MaxCredits: q.Pricing.MaxCredits, Pricing: q.Pricing}})
+	payload, err := json.Marshal(generationPayload{Version: generationPayloadVersion, ProjectID: id, Ratio: p.Ratio, Observe: observe, Write: write, TargetDurationMS: p.TargetDurationMS, Template: t.Recipe, Answers: requiredQuoteAnswers(p, t), Disclosure: p.Disclosure, CTA: design.DefaultCTA(t.Preset, p.CTA), Batch: b, Approval: &GenerationApproval{QuoteID: q.ID, MaxCredits: q.Pricing.MaxCredits, Pricing: q.Pricing}})
 	if err != nil {
 		return "", err
 	}
@@ -279,7 +281,7 @@ func (s *GenerationService) acceptedJob(ctx context.Context, user, id, batch, ob
 		return "", err
 	}
 	var p generationPayload
-	if j.Kind != "generate_clip" || json.Unmarshal(j.Payload, &p) != nil || p.Version != 2 || p.ProjectID != id || p.Batch.UserID != user || p.Batch.ID != batch || p.Observe != observe || p.Write != write || p.Approval == nil || p.Approval.QuoteID != a.QuoteID {
+	if j.Kind != "generate_clip" || json.Unmarshal(j.Payload, &p) != nil || p.Version != generationPayloadVersion || p.ProjectID != id || p.Batch.UserID != user || p.Batch.ID != batch || p.Observe != observe || p.Write != write || p.Approval == nil || p.Approval.QuoteID != a.QuoteID {
 		return "", nil
 	}
 	if a.MaxCredits == nil || p.Approval.MaxCredits != *a.MaxCredits {

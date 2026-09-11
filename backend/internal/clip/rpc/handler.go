@@ -7,12 +7,14 @@ import (
 	"errors"
 	"github.com/postpilot/backend/internal/auth"
 	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/clip/design"
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/job"
 	jobrpc "github.com/postpilot/backend/internal/job/rpc"
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/platform/rpcserver"
 	"log/slog"
+	"strings"
 	"time"
 )
 
@@ -64,6 +66,7 @@ func actingUser(ctx context.Context) (string, error) {
 	return user, nil
 }
 func toConnectError(err error) error {
+	var facts *clip.MissingFactsError
 	switch {
 	case errors.Is(err, clip.ErrQuoteRequired):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip credit approval required", "CLIP_QUOTE_REQUIRED", nil)
@@ -81,6 +84,10 @@ func toConnectError(err error) error {
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "clip analysis copy limit", "CLIP_ANALYSIS_TOO_LARGE", nil)
 	case errors.Is(err, clip.ErrPlanConflict):
 		return rpcserver.NewAppError(connect.CodeAborted, "clip edit plan changed", "CLIP_PLAN_CONFLICT", nil)
+	case errors.Is(err, clip.ErrDisclosureRequired):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip disclosure is required", "CLIP_DISCLOSURE_REQUIRED", nil)
+	case errors.As(err, &facts):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip needs more on-screen facts", "CLIP_FACTS_REQUIRED", map[string]string{"labels": strings.Join(facts.Labels, ", ")})
 	case errors.Is(err, clip.ErrBusy):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip is busy", "CLIP_BUSY", nil)
 	case errors.Is(err, llm.ErrModelUnavailable):
@@ -119,14 +126,14 @@ func answers(values []*v1.ClipAnswer) []clip.Answer {
 	return out
 }
 func templateProto(t clip.VideoTemplate) *v1.VideoTemplate {
-	out := &v1.VideoTemplate{Id: t.ID, Name: t.Name, CutGuidance: t.CutGuidance, CopyStyles: t.CopyStyles, Accent: t.Accent, ProjectCount: int32(t.ProjectCount), CreatedAt: t.CreatedAt.UTC().Format(time.RFC3339Nano), UpdatedAt: t.UpdatedAt.UTC().Format(time.RFC3339Nano)}
+	out := &v1.VideoTemplate{Id: t.ID, Name: t.Name, CutGuidance: t.CutGuidance, CopyStyles: t.CopyStyles, Accent: t.Accent, Preset: t.Preset, ProjectCount: int32(t.ProjectCount), CreatedAt: t.CreatedAt.UTC().Format(time.RFC3339Nano), UpdatedAt: t.UpdatedAt.UTC().Format(time.RFC3339Nano)}
 	for _, f := range t.InformationFields {
 		out.InformationFields = append(out.InformationFields, &v1.ClipInformationField{Label: f.Label, Prompt: f.Prompt})
 	}
 	return out
 }
 func projectProto(p clip.Project) *v1.ClipProject {
-	out := &v1.ClipProject{Id: p.ID, Title: p.Title, VideoTemplateId: p.VideoTemplateID, Ratio: p.Ratio, TargetDurationMs: int32(p.TargetDurationMS), EditPlanRevision: int32(p.EditPlanRevision), RenderedPlanRevision: int32(p.RenderedPlanRevision), CreatedAt: p.CreatedAt.UTC().Format(time.RFC3339Nano), UpdatedAt: p.UpdatedAt.UTC().Format(time.RFC3339Nano)}
+	out := &v1.ClipProject{Id: p.ID, Title: p.Title, VideoTemplateId: p.VideoTemplateID, Ratio: p.Ratio, Disclosure: p.Disclosure, Cta: p.CTA, TargetDurationMs: int32(p.TargetDurationMS), EditPlanRevision: int32(p.EditPlanRevision), RenderedPlanRevision: int32(p.RenderedPlanRevision), CreatedAt: p.CreatedAt.UTC().Format(time.RFC3339Nano), UpdatedAt: p.UpdatedAt.UTC().Format(time.RFC3339Nano)}
 	for _, a := range p.Answers {
 		out.Answers = append(out.Answers, &v1.ClipAnswer{Label: a.Label, Text: a.Text})
 	}
@@ -156,7 +163,7 @@ func (h *Handler) CreateVideoTemplate(ctx context.Context, req *connect.Request[
 		return nil, err
 	}
 	m := req.Msg
-	value, err := h.service.CreateTemplate(ctx, user, clip.Recipe{Name: m.Name, InformationFields: fields(m.InformationFields), CutGuidance: m.CutGuidance, CopyStyles: m.CopyStyles, Accent: m.Accent})
+	value, err := h.service.CreateTemplate(ctx, user, clip.Recipe{Name: m.Name, InformationFields: fields(m.InformationFields), CutGuidance: m.CutGuidance, CopyStyles: m.CopyStyles, Accent: m.Accent, Preset: m.Preset})
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -168,7 +175,7 @@ func (h *Handler) UpdateVideoTemplate(ctx context.Context, req *connect.Request[
 		return nil, err
 	}
 	m := req.Msg
-	p := clip.TemplatePatch{Name: m.Name, CutGuidance: m.CutGuidance, Accent: m.Accent}
+	p := clip.TemplatePatch{Name: m.Name, CutGuidance: m.CutGuidance, Accent: m.Accent, Preset: m.Preset}
 	if m.InformationFields != nil {
 		v := fields(m.InformationFields.Values)
 		p.InformationFields = &v
@@ -181,6 +188,23 @@ func (h *Handler) UpdateVideoTemplate(ctx context.Context, req *connect.Request[
 		return nil, toConnectError(err)
 	}
 	return connect.NewResponse(&v1.UpdateVideoTemplateResponse{Template: templateProto(value)}), nil
+}
+
+// SeedPresetFields answers with the reserved information fields a preset needs,
+// so the editor can seed them without the owner typing a Korean label exactly.
+// Pure and owner-independent, but authenticated like every other procedure.
+func (h *Handler) SeedPresetFields(ctx context.Context, req *connect.Request[v1.SeedPresetFieldsRequest]) (*connect.Response[v1.SeedPresetFieldsResponse], error) {
+	if _, err := actingUser(ctx); err != nil {
+		return nil, err
+	}
+	if !clip.ValidPreset(req.Msg.Preset) {
+		return nil, toConnectError(clip.ErrInvalid)
+	}
+	out := &v1.SeedPresetFieldsResponse{}
+	for _, f := range design.PresetFields(req.Msg.Preset) {
+		out.Fields = append(out.Fields, &v1.ClipInformationField{Label: f.Label, Prompt: f.Prompt})
+	}
+	return connect.NewResponse(out), nil
 }
 func (h *Handler) DeleteVideoTemplate(ctx context.Context, req *connect.Request[v1.DeleteVideoTemplateRequest]) (*connect.Response[v1.DeleteVideoTemplateResponse], error) {
 	user, err := actingUser(ctx)
@@ -226,7 +250,7 @@ func (h *Handler) CreateClipProject(ctx context.Context, req *connect.Request[v1
 		return nil, err
 	}
 	m := req.Msg
-	value, err := h.service.CreateProject(ctx, user, clip.ProjectInput{Title: m.Title, VideoTemplateID: m.VideoTemplateId, Ratio: m.Ratio, TargetDurationMS: int(m.TargetDurationMs), Answers: answers(m.Answers)})
+	value, err := h.service.CreateProject(ctx, user, clip.ProjectInput{Title: m.Title, VideoTemplateID: m.VideoTemplateId, Ratio: m.Ratio, TargetDurationMS: int(m.TargetDurationMs), Disclosure: m.Disclosure, CTA: m.Cta, Answers: answers(m.Answers)})
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -280,7 +304,7 @@ func (h *Handler) UpdateClipProject(ctx context.Context, req *connect.Request[v1
 		return nil, err
 	}
 	m := req.Msg
-	p := clip.ProjectPatch{Title: m.Title, VideoTemplateID: m.VideoTemplateId, Answers: answers(m.Answers)}
+	p := clip.ProjectPatch{Title: m.Title, VideoTemplateID: m.VideoTemplateId, Disclosure: m.Disclosure, CTA: m.Cta, Answers: answers(m.Answers)}
 	if m.TargetDurationMs != nil {
 		v := int(*m.TargetDurationMs)
 		p.TargetDurationMS = &v

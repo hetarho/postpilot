@@ -57,6 +57,9 @@ const (
 	// ClipServiceDeleteVideoTemplateProcedure is the fully-qualified name of the ClipService's
 	// DeleteVideoTemplate RPC.
 	ClipServiceDeleteVideoTemplateProcedure = "/postpilot.v1.ClipService/DeleteVideoTemplate"
+	// ClipServiceSeedPresetFieldsProcedure is the fully-qualified name of the ClipService's
+	// SeedPresetFields RPC.
+	ClipServiceSeedPresetFieldsProcedure = "/postpilot.v1.ClipService/SeedPresetFields"
 	// ClipServiceListClipProjectsProcedure is the fully-qualified name of the ClipService's
 	// ListClipProjects RPC.
 	ClipServiceListClipProjectsProcedure = "/postpilot.v1.ClipService/ListClipProjects"
@@ -93,6 +96,7 @@ type ClipServiceClient interface {
 	CreateVideoTemplate(context.Context, *connect.Request[v1.CreateVideoTemplateRequest]) (*connect.Response[v1.CreateVideoTemplateResponse], error)
 	UpdateVideoTemplate(context.Context, *connect.Request[v1.UpdateVideoTemplateRequest]) (*connect.Response[v1.UpdateVideoTemplateResponse], error)
 	DeleteVideoTemplate(context.Context, *connect.Request[v1.DeleteVideoTemplateRequest]) (*connect.Response[v1.DeleteVideoTemplateResponse], error)
+	SeedPresetFields(context.Context, *connect.Request[v1.SeedPresetFieldsRequest]) (*connect.Response[v1.SeedPresetFieldsResponse], error)
 	ListClipProjects(context.Context, *connect.Request[v1.ListClipProjectsRequest]) (*connect.Response[v1.ListClipProjectsResponse], error)
 	CreateClipProject(context.Context, *connect.Request[v1.CreateClipProjectRequest]) (*connect.Response[v1.CreateClipProjectResponse], error)
 	GetClipProject(context.Context, *connect.Request[v1.GetClipProjectRequest]) (*connect.Response[v1.GetClipProjectResponse], error)
@@ -162,6 +166,12 @@ func NewClipServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(clipServiceMethods.ByName("DeleteVideoTemplate")),
 			connect.WithClientOptions(opts...),
 		),
+		seedPresetFields: connect.NewClient[v1.SeedPresetFieldsRequest, v1.SeedPresetFieldsResponse](
+			httpClient,
+			baseURL+ClipServiceSeedPresetFieldsProcedure,
+			connect.WithSchema(clipServiceMethods.ByName("SeedPresetFields")),
+			connect.WithClientOptions(opts...),
+		),
 		listClipProjects: connect.NewClient[v1.ListClipProjectsRequest, v1.ListClipProjectsResponse](
 			httpClient,
 			baseURL+ClipServiceListClipProjectsProcedure,
@@ -223,6 +233,7 @@ type clipServiceClient struct {
 	createVideoTemplate    *connect.Client[v1.CreateVideoTemplateRequest, v1.CreateVideoTemplateResponse]
 	updateVideoTemplate    *connect.Client[v1.UpdateVideoTemplateRequest, v1.UpdateVideoTemplateResponse]
 	deleteVideoTemplate    *connect.Client[v1.DeleteVideoTemplateRequest, v1.DeleteVideoTemplateResponse]
+	seedPresetFields       *connect.Client[v1.SeedPresetFieldsRequest, v1.SeedPresetFieldsResponse]
 	listClipProjects       *connect.Client[v1.ListClipProjectsRequest, v1.ListClipProjectsResponse]
 	createClipProject      *connect.Client[v1.CreateClipProjectRequest, v1.CreateClipProjectResponse]
 	getClipProject         *connect.Client[v1.GetClipProjectRequest, v1.GetClipProjectResponse]
@@ -271,6 +282,11 @@ func (c *clipServiceClient) UpdateVideoTemplate(ctx context.Context, req *connec
 // DeleteVideoTemplate calls postpilot.v1.ClipService.DeleteVideoTemplate.
 func (c *clipServiceClient) DeleteVideoTemplate(ctx context.Context, req *connect.Request[v1.DeleteVideoTemplateRequest]) (*connect.Response[v1.DeleteVideoTemplateResponse], error) {
 	return c.deleteVideoTemplate.CallUnary(ctx, req)
+}
+
+// SeedPresetFields calls postpilot.v1.ClipService.SeedPresetFields.
+func (c *clipServiceClient) SeedPresetFields(ctx context.Context, req *connect.Request[v1.SeedPresetFieldsRequest]) (*connect.Response[v1.SeedPresetFieldsResponse], error) {
+	return c.seedPresetFields.CallUnary(ctx, req)
 }
 
 // ListClipProjects calls postpilot.v1.ClipService.ListClipProjects.
@@ -323,6 +339,7 @@ type ClipServiceHandler interface {
 	CreateVideoTemplate(context.Context, *connect.Request[v1.CreateVideoTemplateRequest]) (*connect.Response[v1.CreateVideoTemplateResponse], error)
 	UpdateVideoTemplate(context.Context, *connect.Request[v1.UpdateVideoTemplateRequest]) (*connect.Response[v1.UpdateVideoTemplateResponse], error)
 	DeleteVideoTemplate(context.Context, *connect.Request[v1.DeleteVideoTemplateRequest]) (*connect.Response[v1.DeleteVideoTemplateResponse], error)
+	SeedPresetFields(context.Context, *connect.Request[v1.SeedPresetFieldsRequest]) (*connect.Response[v1.SeedPresetFieldsResponse], error)
 	ListClipProjects(context.Context, *connect.Request[v1.ListClipProjectsRequest]) (*connect.Response[v1.ListClipProjectsResponse], error)
 	CreateClipProject(context.Context, *connect.Request[v1.CreateClipProjectRequest]) (*connect.Response[v1.CreateClipProjectResponse], error)
 	GetClipProject(context.Context, *connect.Request[v1.GetClipProjectRequest]) (*connect.Response[v1.GetClipProjectResponse], error)
@@ -386,6 +403,12 @@ func NewClipServiceHandler(svc ClipServiceHandler, opts ...connect.HandlerOption
 		ClipServiceDeleteVideoTemplateProcedure,
 		svc.DeleteVideoTemplate,
 		connect.WithSchema(clipServiceMethods.ByName("DeleteVideoTemplate")),
+		connect.WithHandlerOptions(opts...),
+	)
+	clipServiceSeedPresetFieldsHandler := connect.NewUnaryHandler(
+		ClipServiceSeedPresetFieldsProcedure,
+		svc.SeedPresetFields,
+		connect.WithSchema(clipServiceMethods.ByName("SeedPresetFields")),
 		connect.WithHandlerOptions(opts...),
 	)
 	clipServiceListClipProjectsHandler := connect.NewUnaryHandler(
@@ -454,6 +477,8 @@ func NewClipServiceHandler(svc ClipServiceHandler, opts ...connect.HandlerOption
 			clipServiceUpdateVideoTemplateHandler.ServeHTTP(w, r)
 		case ClipServiceDeleteVideoTemplateProcedure:
 			clipServiceDeleteVideoTemplateHandler.ServeHTTP(w, r)
+		case ClipServiceSeedPresetFieldsProcedure:
+			clipServiceSeedPresetFieldsHandler.ServeHTTP(w, r)
 		case ClipServiceListClipProjectsProcedure:
 			clipServiceListClipProjectsHandler.ServeHTTP(w, r)
 		case ClipServiceCreateClipProjectProcedure:
@@ -509,6 +534,10 @@ func (UnimplementedClipServiceHandler) UpdateVideoTemplate(context.Context, *con
 
 func (UnimplementedClipServiceHandler) DeleteVideoTemplate(context.Context, *connect.Request[v1.DeleteVideoTemplateRequest]) (*connect.Response[v1.DeleteVideoTemplateResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipService.DeleteVideoTemplate is not implemented"))
+}
+
+func (UnimplementedClipServiceHandler) SeedPresetFields(context.Context, *connect.Request[v1.SeedPresetFieldsRequest]) (*connect.Response[v1.SeedPresetFieldsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipService.SeedPresetFields is not implemented"))
 }
 
 func (UnimplementedClipServiceHandler) ListClipProjects(context.Context, *connect.Request[v1.ListClipProjectsRequest]) (*connect.Response[v1.ListClipProjectsResponse], error) {

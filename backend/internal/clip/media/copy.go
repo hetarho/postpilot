@@ -436,13 +436,184 @@ func keywordValues(candidates [][]string, keyword string) []string {
 	return out
 }
 
+// The disclosure badge (CDS-31) and the information chips (CDS-30). Both are
+// plated, so neither needs brightness sampling (CDS-16), and both are typeset
+// from the same font and the same tokens as copy.
+type chip struct {
+	Label, Value string
+	Region       clip.Region
+	LabelWidth   float64
+}
+type furniture struct {
+	Badge       clip.Region
+	BadgeText   string
+	BadgeLines  []string
+	Chips       []chip
+	BadgeBounds clip.Region
+}
+
+// badgeAndChips measures the phrase and every chip's text, then places them.
+// The measurement is the only impure half, exactly as it is for copy.
+func (r *Rendering) badgeAndChips(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, ratio, phrase string, labels []string, answers map[string]string) (furniture, error) {
+	values := []string{phrase}
+	seen := map[string]bool{phrase: true}
+	for _, label := range labels {
+		for _, v := range []string{label, strings.TrimSpace(answers[label])} {
+			if v != "" && !seen[v] {
+				values, seen[v] = append(values, v), true
+			}
+		}
+	}
+	if err := r.checkCopy(strings.Join(values, "") + ellipsis); err != nil {
+		return furniture{}, err
+	}
+	role := design.Type["badge"]
+	bounds, err := r.measure(ctx, ws, values, role.Weight, role.Tracking)
+	if err != nil {
+		return furniture{}, err
+	}
+	return placeFurniture(canvas, ratio, phrase, labels, answers, bounds)
+}
+
+// placeFurniture puts the disclosure badge at its ratio's fixed corner and
+// stacks at most two chips from the priority it was given (CDS-30, CDS-31).
+func placeFurniture(canvas clip.Canvas, ratio, phrase string, labels []string, answers map[string]string, bounds map[string]clip.Region) (furniture, error) {
+	out := furniture{BadgeText: phrase}
+	l, ok := design.Layout(ratio)
+	if !ok {
+		return out, clip.ErrInvalid
+	}
+	badgeRole, labelRole, valueRole := design.Type["badge"], design.Type["label"], design.Type["caption"]
+	b := scaled(bounds[phrase], badgeRole.Size/100)
+	out.BadgeBounds = b
+	width, height := math.Ceil(b.Width+2*badgePadH), math.Ceil(b.Height+2*badgePadV)
+	out.Badge = clip.Region{X: l.Badge.Right - width, Y: l.Badge.Top, Width: width, Height: height}
+	if out.Badge.X < canvas.Safe.X || out.Badge.Y+height > canvas.Safe.Y+canvas.Safe.Height {
+		return out, clip.ErrInvalid
+	}
+	pad, gap := design.Spacing.PadChip, design.Spacing.GapStack
+	x, y := l.Chip.X, l.Chip.Y
+	for _, label := range labels {
+		if len(out.Chips) >= maxChips {
+			break
+		}
+		value := strings.TrimSpace(answers[label])
+		if value == "" {
+			continue
+		}
+		lb := scaled(bounds[label], labelRole.Size/100)
+		vb := scaled(bounds[value], valueRole.Size/100)
+		// A chip is at most 600 px wide (CDS-30). A value that does not fit is
+		// CUT and given an ellipsis rather than squeezed: the face is fixed
+		// (CDS-18), so distorting its glyphs is the worse failure. The cut is
+		// proportional to the measured width, and textLength in the SVG is the
+		// hard bound that keeps an imperfect estimate inside the pill.
+		room := l.Chip.MaxWidth - 2*pad.H - lb.Width - design.Spacing.GapChip
+		if vb.Width > room {
+			runes := []rune(value)
+			keep := int(float64(len(runes)) * room / vb.Width)
+			if keep > 0 {
+				keep--
+			}
+			value = string(runes[:keep]) + ellipsis
+			vb.Width = room
+		}
+		w := math.Min(l.Chip.MaxWidth, math.Ceil(lb.Width+design.Spacing.GapChip+vb.Width+2*pad.H))
+		h := math.Ceil(math.Max(lb.Height, vb.Height) + 2*pad.V)
+		c := chip{Label: label, Value: value, LabelWidth: lb.Width, Region: clip.Region{X: x, Y: y, Width: w, Height: h}}
+		if c.Region.X+w > canvas.Safe.X+canvas.Safe.Width || c.Region.Y+h > canvas.Safe.Y+canvas.Safe.Height {
+			break
+		}
+		out.Chips = append(out.Chips, c)
+		if l.Chip.Columns > 1 && len(out.Chips) == 1 {
+			x += w + gap
+			continue
+		}
+		y += h + gap
+	}
+	return out, nil
+}
+
+// CDS-30 shows at most two chips at once, and CDS-31 fixes the badge's padding.
+const maxChips = 2
+const badgePadV, badgePadH = 10, 18
+
+// What a cut chip value ends with. Checked against the bundled font like every
+// other glyph, so an unsupported ellipsis is an error rather than a blank.
+const ellipsis = "…"
+
+func scaled(r clip.Region, factor float64) clip.Region {
+	return clip.Region{X: r.X * factor, Y: r.Y * factor, Width: r.Width * factor, Height: r.Height * factor}
+}
+
+// furnitureSVG paints the badge and the chips on one full-canvas plate: they
+// share a window (the whole clip for the badge) and never animate.
+func furnitureSVG(canvas clip.Canvas, f furniture) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, `<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d">`, canvas.Width, canvas.Height)
+	badge, badgeAlpha := paint("badge_ad")
+	white, _ := paint("text_white")
+	muted, mutedAlpha := paint("text_muted")
+	ink, inkAlpha := paint("ink_900")
+	role := design.Type["badge"]
+	p := f.Badge
+	fmt.Fprintf(&b, `<rect x="%.3f" y="%.3f" width="%.3f" height="%.3f" rx="%.3f" fill="%s" fill-opacity="%s"/>`, p.X, p.Y, p.Width, p.Height, p.Height/2, badge, badgeAlpha)
+	fmt.Fprintf(&b, `<text x="%.3f" y="%.3f" xml:space="preserve" font-family="%s" font-size="%.0f" font-weight="%d" letter-spacing="%.4f" fill="%s">%s</text>`,
+		p.X+badgePadH-f.BadgeBounds.X, p.Y+badgePadV-f.BadgeBounds.Y, fontFamily, role.Size, role.Weight, role.Tracking*role.Size, white, escaped(f.BadgeText))
+	label, value := design.Type["label"], design.Type["caption"]
+	for _, c := range f.Chips {
+		fmt.Fprintf(&b, `<rect x="%.3f" y="%.3f" width="%.3f" height="%.3f" rx="%.3f" fill="%s" fill-opacity="%s"/>`, c.Region.X, c.Region.Y, c.Region.Width, c.Region.Height, c.Region.Height/2, ink, inkAlpha)
+		x := c.Region.X + design.Spacing.PadChip.H
+		baseline := c.Region.Y + c.Region.Height - design.Spacing.PadChip.V
+		fmt.Fprintf(&b, `<text x="%.3f" y="%.3f" xml:space="preserve" font-family="%s" font-size="%.0f" font-weight="%d" letter-spacing="%.4f" fill="%s" fill-opacity="%s">%s</text>`,
+			x, baseline, fontFamily, label.Size, label.Weight, label.Tracking*label.Size, muted, mutedAlpha, escaped(c.Label))
+		// The value is cut to the chip's own width; a chip never grows past it.
+		fmt.Fprintf(&b, `<text x="%.3f" y="%.3f" xml:space="preserve" font-family="%s" font-size="%.0f" font-weight="%d" letter-spacing="%.4f" fill="%s" textLength="%.3f" lengthAdjust="spacingAndGlyphs">%s</text>`,
+			x+c.LabelWidth+design.Spacing.GapChip, baseline, fontFamily, value.Size, value.Weight, value.Tracking*value.Size, white,
+			math.Max(1, c.Region.Width-2*design.Spacing.PadChip.H-c.LabelWidth-design.Spacing.GapChip), escaped(c.Value))
+	}
+	b.WriteString(`</svg>`)
+	return b.String()
+}
+
+// Elements places the badge for the whole clip and each chip for its own cut.
+func (f furniture) Elements(duration int, chipCut int, chipStart, chipEnd int) clip.Manifest {
+	m := clip.Manifest{{
+		Kind: "badge", Text: f.BadgeText, FontSize: design.Type["badge"].Size,
+		Background: design.Color["badge_ad"].Hex, Fill: design.Color["text_white"].Hex,
+		Region: design.Region(f.Badge), StartMS: 0, EndMS: duration,
+	}}
+	for _, c := range f.Chips {
+		m = append(m, design.Element{
+			Cut: chipCut, Kind: "chip", Text: c.Label + " " + c.Value,
+			FontSize: design.Type["caption"].Size, Background: design.Color["ink_900"].Hex,
+			Fill: design.Color["text_white"].Hex, Region: design.Region(c.Region),
+			StartMS: chipStart, EndMS: chipEnd,
+		})
+	}
+	return m
+}
+
 func (r *Rendering) copyPlate(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, c clip.Copy, layout copyLayout, index int) (string, error) {
 	if strings.TrimSpace(c.Text) == "" {
 		return "", nil
 	}
-	svg := filepath.Join(ws.Path, fmt.Sprintf("copy-%04d.svg", index))
-	png := filepath.Join(ws.Path, fmt.Sprintf("copy-%04d.png", index))
-	data := []byte(copySVG(canvas, c, layout))
+	return r.rasterize(ctx, ws, canvas, copySVG(canvas, c, layout), fmt.Sprintf("copy-%04d", index))
+}
+
+// furniturePlate is the fixed layer: the disclosure badge and this cut's chips,
+// drawn in CDS-45's order under the copy and never animated.
+func (r *Rendering) furniturePlate(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, f furniture, index int) (string, error) {
+	if f.BadgeText == "" {
+		return "", nil
+	}
+	return r.rasterize(ctx, ws, canvas, furnitureSVG(canvas, f), fmt.Sprintf("fixed-%04d", index))
+}
+
+func (r *Rendering) rasterize(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, body, name string) (string, error) {
+	svg := filepath.Join(ws.Path, name+".svg")
+	png := filepath.Join(ws.Path, name+".png")
+	data := []byte(body)
 	// A full RGBA canvas plus PNG/metadata headroom is small and known before
 	// rasterization. Reserve it before the subprocess, not after its write.
 	if err := r.media.capacity(ws, int64(len(data))+int64(canvas.Width)*int64(canvas.Height)*5); err != nil {

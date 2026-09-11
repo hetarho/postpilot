@@ -33,7 +33,10 @@ type Cut struct {
 	StartMS, EndMS            int
 	Focal                     Point
 	Copy                      Copy
-	Volume                    *float64 // nil keeps original audio; explicit zero mutes it
+	// Reserved fact labels whose chips belong on this cut (CDS-30), at most two
+	// at a time. Part of the approved composition, so it is stored with it.
+	Chips  []string
+	Volume *float64 // nil keeps original audio; explicit zero mutes it
 }
 type EditCut = Cut
 
@@ -58,6 +61,15 @@ type EditPlan struct {
 	Ratio      string
 	DurationMS int
 	Cuts       []EditCut
+	// Render inputs, not part of the approved composition and never stored with
+	// it: the disclosure the badge shows and the facts a chip reads. They are
+	// filled from the PROJECT at render time, so the badge is always the owner's
+	// current campaign type and a plan stored before presets existed still
+	// renders (CDS-31, CDS-30).
+	Disclosure string
+	Facts      []Answer
+	// The template's category preset, which fixes the chip priority (CDS-50).
+	Preset string
 }
 type RenderSource struct {
 	ID, Fingerprint string
@@ -143,12 +155,19 @@ func (e planViolation) OutputValidationCode() string { return string(e) }
 // Each is its own named constant so the public-reason scan can read it
 // (internal/platform/rpcserver/failure_reasons_test.go).
 const (
+	reasonDisclosureRequired = "CLIP_DISCLOSURE_REQUIRED"
+	reasonFactsRequired      = "CLIP_FACTS_REQUIRED"
+)
+
+const (
 	reasonLayoutSafeArea   = "CLIP_LAYOUT_SAFE_AREA"
 	reasonLayoutSize       = "CLIP_LAYOUT_SIZE"
 	reasonLayoutOverlap    = "CLIP_LAYOUT_OVERLAP"
 	reasonLayoutMotion     = "CLIP_LAYOUT_MOTION"
 	reasonLayoutAnchorStep = "CLIP_LAYOUT_ANCHOR_STEP"
 	reasonLayoutFrequency  = "CLIP_LAYOUT_FREQUENCY"
+	reasonLayoutDisclosure = "CLIP_LAYOUT_DISCLOSURE"
+	reasonLayoutKind       = "CLIP_LAYOUT_KIND"
 )
 
 var layoutReasons = map[string]string{
@@ -158,6 +177,8 @@ var layoutReasons = map[string]string{
 	string(design.ViolationMotion):     reasonLayoutMotion,
 	string(design.ViolationAnchorStep): reasonLayoutAnchorStep,
 	string(design.ViolationFrequency):  reasonLayoutFrequency,
+	string(design.ViolationDisclosure): reasonLayoutDisclosure,
+	string(design.ViolationKind):       reasonLayoutKind,
 }
 
 func (e planViolation) LayoutReason() string { return layoutReasons[string(e)] }
@@ -171,6 +192,36 @@ func VerifyLayout(ratio string, m Manifest) error {
 		return planViolation(v)
 	}
 	return err
+}
+
+// WithProject fills the render inputs the badge and the chips need. It is
+// called at render time rather than at approval time so a stored plan never
+// carries a stale disclosure.
+func (p EditPlan) WithFacts(disclosure string, facts []Answer, preset string) EditPlan {
+	p.Disclosure, p.Facts, p.Preset = disclosure, facts, preset
+	return p
+}
+
+// ChipLabels is the subset of a cut's chips that names a reserved fact and has
+// an answer, in the template preset's own priority (CDS-30, CDS-50).
+func (p EditPlan) ChipLabels(c Cut) []string {
+	answers := map[string]string{}
+	for _, a := range p.Facts {
+		answers[a.Label] = a.Text
+	}
+	out := []string{}
+	// A chip is shown for the whole cut it belongs to and for at least 2.0 s, so
+	// a shorter cut carries none rather than flashing one (CDS-30).
+	if c.EndMS-c.StartMS < int(design.Timing.ChipMinS*1000) {
+		return out
+	}
+	for _, label := range design.ChipPriority(p.Preset) {
+		if !slices.Contains(c.Chips, label) || strings.TrimSpace(answers[label]) == "" {
+			continue
+		}
+		out = append(out, label)
+	}
+	return out
 }
 
 func ValidateEditPlan(cfg RenderConfig, plan EditPlan, sources []RenderSource) error {
@@ -217,6 +268,16 @@ func ValidateEditPlan(cfg RenderConfig, plan EditPlan, sources []RenderSource) e
 		}
 		if !ValidCopy(c.Copy, cfg.MaxCopyRunes) {
 			return planViolation("plan_copy_format")
+		}
+		// A chip names one of the five reserved facts, and at most two show at
+		// once (CDS-30).
+		if len(c.Chips) > 2 {
+			return planViolation("plan_chip_count")
+		}
+		for _, label := range c.Chips {
+			if !slices.Contains(design.Fact.Chips, label) {
+				return planViolation("plan_chip_label")
+			}
 		}
 		seen[c.ID] = true
 		captionStart, captionEnd := c.CaptionWindow()

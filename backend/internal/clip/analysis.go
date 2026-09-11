@@ -44,6 +44,10 @@ type PlanningInput struct {
 	TargetDurationMS int
 	Analyses         []SourceAnalysis
 	Policy           llm.CallPolicy
+	// The campaign type the badge shows and the closing CTA, already resolved
+	// against the template's preset, so the composer and the cards read one
+	// place (CDS-29, CDS-31). The preset itself rides Template.
+	Disclosure, CTA string
 }
 
 func ValidRegion(r Region) bool {

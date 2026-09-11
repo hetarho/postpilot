@@ -106,7 +106,7 @@ func (s *Service) ListTemplates(ctx context.Context, user string) ([]VideoTempla
 }
 func (s *Service) CreateTemplate(ctx context.Context, user string, recipe Recipe) (VideoTemplate, error) {
 	recipe.Name = strings.TrimSpace(recipe.Name)
-	if !bounded(recipe.Name, 1, s.limits.NameChars) || !bounded(recipe.CutGuidance, 0, s.limits.GuidanceChars) || !ValidCopyStyles(recipe.CopyStyles) || !ValidAccent(recipe.Accent) {
+	if !bounded(recipe.Name, 1, s.limits.NameChars) || !bounded(recipe.CutGuidance, 0, s.limits.GuidanceChars) || !ValidCopyStyles(recipe.CopyStyles) || !ValidAccent(recipe.Accent) || !ValidPreset(recipe.Preset) {
 		return VideoTemplate{}, ErrInvalid
 	}
 	fields, err := s.fields(recipe.InformationFields)
@@ -139,6 +139,11 @@ func (s *Service) UpdateTemplate(ctx context.Context, user, id string, p Templat
 		return VideoTemplate{}, ErrInvalid
 	}
 	if p.CopyStyles != nil && !ValidCopyStyles(*p.CopyStyles) {
+		return VideoTemplate{}, ErrInvalid
+	}
+	// The empty preset is readable but never writable: a template that names one
+	// must name one of the five (CDS-50).
+	if p.Preset != nil && !ValidPreset(*p.Preset) {
 		return VideoTemplate{}, ErrInvalid
 	}
 	if p.InformationFields != nil {
@@ -179,12 +184,17 @@ func (s *Service) CreateProject(ctx context.Context, user string, input ProjectI
 	if !bounded(title, 1, s.limits.TitleChars) || !s.duration(input.TargetDurationMS) || !slices.Contains([]string{"vertical", "horizontal", "square"}, input.Ratio) {
 		return Project{}, ErrInvalid
 	}
+	// Empty disclosure is allowed at creation — the owner chooses it before
+	// starting, and the generation gate is what refuses a clip without one.
+	if input.Disclosure != "" && !ValidDisclosure(input.Disclosure) || !ValidCTA(input.CTA) {
+		return Project{}, ErrInvalid
+	}
 	answers, err := s.answers(input.Answers)
 	if err != nil {
 		return Project{}, err
 	}
 	now := time.Now()
-	p := Project{ID: newID(), UserID: user, Title: title, VideoTemplateID: input.VideoTemplateID, Ratio: input.Ratio, TargetDurationMS: input.TargetDurationMS, Answers: answers, CreatedAt: now, UpdatedAt: now}
+	p := Project{ID: newID(), UserID: user, Title: title, VideoTemplateID: input.VideoTemplateID, Ratio: input.Ratio, Disclosure: input.Disclosure, CTA: input.CTA, TargetDurationMS: input.TargetDurationMS, Answers: answers, CreatedAt: now, UpdatedAt: now}
 	if err := s.store.InsertProject(ctx, p); err != nil {
 		return Project{}, err
 	}
@@ -211,6 +221,12 @@ func (s *Service) UpdateProject(ctx context.Context, user, id string, p ProjectP
 		p.Title = &title
 	}
 	if p.TargetDurationMS != nil && !s.duration(*p.TargetDurationMS) {
+		return Project{}, ErrInvalid
+	}
+	if p.Disclosure != nil && !ValidDisclosure(*p.Disclosure) {
+		return Project{}, ErrInvalid
+	}
+	if p.CTA != nil && !ValidCTA(*p.CTA) {
 		return Project{}, ErrInvalid
 	}
 	if p.VideoTemplateID != nil {
@@ -244,6 +260,58 @@ func RequiredAnswers(t VideoTemplate, p Project) error {
 		if strings.TrimSpace(answers[f.Label]) == "" {
 			return fmt.Errorf("%w: missing template answer", ErrInvalid)
 		}
+	}
+	return ApprovalGate(t, p)
+}
+
+// ValidDisclosure and ValidCTA accept only the fixed ids; the phrases themselves
+// are code-owned and never editable (CDS-31), and an empty CTA means "the
+// template preset's" (CDS-29, CDS-51).
+func ValidDisclosure(s string) bool {
+	_, ok := design.Disclosure[s]
+	return ok
+}
+func ValidCTA(s string) bool {
+	if s == "" {
+		return true
+	}
+	_, ok := design.CTA[s]
+	return ok
+}
+func ValidPreset(s string) bool {
+	_, ok := design.Presets[s]
+	return ok
+}
+
+// MissingFactsError names the reserved labels a clip still needs, so the refusal
+// can say which ones rather than that something is missing.
+type MissingFactsError struct{ Labels []string }
+
+func (e *MissingFactsError) Error() string {
+	return "clip needs more on-screen facts: " + strings.Join(e.Labels, ", ")
+}
+
+// ApprovalGate is what CDS-1 and CDS-5 make checkable before a single credit is
+// reserved: a clip renders its disclosure badge and at least two verifiable
+// facts, so a clip without them cannot be started or even quoted.
+func ApprovalGate(t VideoTemplate, p Project) error {
+	if !ValidDisclosure(p.Disclosure) {
+		return ErrDisclosureRequired
+	}
+	answers := map[string]string{}
+	for _, a := range p.Answers {
+		answers[a.Label] = a.Text
+	}
+	present, missing := 0, []string{}
+	for _, label := range design.Fact.Minimum.Labels {
+		if strings.TrimSpace(answers[label]) != "" {
+			present++
+			continue
+		}
+		missing = append(missing, label)
+	}
+	if present < design.Fact.Minimum.Count {
+		return &MissingFactsError{Labels: missing}
 	}
 	return nil
 }

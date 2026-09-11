@@ -44,14 +44,26 @@ func NewGenerationService(store GenerationStore, projects *Service, sources *Sou
 
 // This is the durable application snapshot, not the public project projection. No URL
 // or source byte is serialized. Model choices and every recipe input are frozen here.
+// generationPayloadVersion is bumped whenever the frozen shape changes, and
+// every reader checks it: an approval frozen under an older shape is refused
+// rather than run with fields it never carried. Version 3 added the disclosure
+// and the resolved CTA, so a job approved before the owner could choose a
+// campaign type cannot render a clip that carries one.
+const generationPayloadVersion = 3
+
 type generationPayload struct {
 	Version                          int
 	ProjectID, Ratio, Observe, Write string
 	TargetDurationMS                 int
 	Template                         Recipe
 	Answers                          []Answer
-	Batch                            SourceBatch
-	Approval                         *GenerationApproval
+	// Frozen with the approval, like the template and the answers: the badge's
+	// campaign type and the resolved closing CTA. Version 3 exists because of
+	// them — a job approved before the disclosure was a choice cannot render a
+	// clip that carries one, and is refused rather than rendered without it.
+	Disclosure, CTA string
+	Batch           SourceBatch
+	Approval        *GenerationApproval
 }
 
 func modelRef(s string) llm.ModelRef {
@@ -124,6 +136,7 @@ func (e *StageFailure) Failure() llm.Failure {
 	f := llm.NormalizeFailure(e.Cause)
 	var credits *plan.InsufficientCreditsError
 	var layout interface{ LayoutReason() string }
+	var facts *MissingFactsError
 	switch {
 	case errors.Is(e.Cause, ErrQuoteRequired):
 		f = llm.Failure{Reason: "CLIP_QUOTE_REQUIRED"}
@@ -143,6 +156,10 @@ func (e *StageFailure) Failure() llm.Failure {
 		f = llm.Failure{Reason: "INSUFFICIENT_CREDITS", Params: map[string]string{"required": fmt.Sprint(credits.Required), "balance": fmt.Sprint(credits.Balance), "renews_at": credits.RenewsAt.Format(time.RFC3339)}}
 	case errors.Is(e.Cause, ErrInvalidMedia):
 		f = llm.Failure{Reason: "CLIP_INVALID_MEDIA", TechnicalDetail: "Source verification failed before analysis."}
+	case errors.Is(e.Cause, ErrDisclosureRequired):
+		f = llm.Failure{Reason: reasonDisclosureRequired}
+	case errors.As(e.Cause, &facts):
+		f = llm.Failure{Reason: reasonFactsRequired, Params: map[string]string{"labels": strings.Join(facts.Labels, ", ")}}
 	case errors.Is(e.Cause, ErrCopyTooLong):
 		f = llm.Failure{Reason: "CLIP_COPY_TOO_LONG"}
 	// One reason per verifier check, so the correction step can point at what
@@ -192,7 +209,7 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 	if dec.Decode(&p) != nil || dec.Decode(new(any)) != io.EOF {
 		return ErrInvalid
 	}
-	if p.Version != 2 || p.Approval == nil {
+	if p.Version != generationPayloadVersion || p.Approval == nil {
 		return ErrQuoteRequired
 	}
 	if p.ProjectID != project || p.Batch.ProjectID != project || p.Batch.ID != b.ID || p.Batch.UserID != user || !reflect.DeepEqual(p.Batch.Sources, b.Sources) {
@@ -278,7 +295,7 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 			return err
 		}
 		set("plan", 0, 1)
-		edit, _, err := s.planner.Plan(ctx, pricing.Plan.Ref, PlanningInput{Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Analyses: analyses, Policy: pricing.Plan})
+		edit, _, err := s.planner.Plan(ctx, pricing.Plan.Ref, PlanningInput{Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Analyses: analyses, Policy: pricing.Plan, Disclosure: p.Disclosure, CTA: p.CTA})
 		if err != nil {
 			return err
 		}
@@ -287,7 +304,9 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 		for i, v := range sources {
 			renderSources[i] = v.RenderSource
 		}
-		video, err := s.renderer.Render(ctx, ws, edit, renderSources, func(ctx context.Context, id string, fn func(MediaSource) error) error {
+		// The badge and the chips read the PROJECT, not the plan: always the
+		// owner's current campaign type and current answers.
+		video, err := s.renderer.Render(ctx, ws, edit.WithFacts(p.Disclosure, p.Answers, p.Template.Preset), renderSources, func(ctx context.Context, id string, fn func(MediaSource) error) error {
 			for i, v := range b.Sources {
 				if v.ID == id {
 					return s.withSource(ctx, ws, v, sources[i].Info, fn)

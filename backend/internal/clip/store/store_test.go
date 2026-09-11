@@ -12,6 +12,7 @@ import (
 	"github.com/postpilot/backend/internal/auth"
 	authstore "github.com/postpilot/backend/internal/auth/store"
 	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/clip/design"
 	"github.com/postpilot/backend/internal/clip/store"
 	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/platform/config"
@@ -37,7 +38,7 @@ func setup(t *testing.T) (*clip.Service, *store.Store, *db.DB) {
 	return clip.NewService(s, config.ClipLimits()), s, d
 }
 func recipe() clip.Recipe {
-	return clip.Recipe{Name: " 여행 ", InformationFields: []clip.InformationField{{Label: " 장소 ", Prompt: " 어디였나요? "}}, CopyStyles: []string{"clean", "memo"}, Accent: "teal"}
+	return clip.Recipe{Name: " 여행 ", Preset: "stay", InformationFields: []clip.InformationField{{Label: " 장소 ", Prompt: " 어디였나요? "}}, CopyStyles: []string{"clean", "memo"}, Accent: "teal"}
 }
 func create(t *testing.T, s *clip.Service) (clip.VideoTemplate, clip.Project) {
 	t.Helper()
@@ -46,7 +47,9 @@ func create(t *testing.T, s *clip.Service) (clip.VideoTemplate, clip.Project) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	p, err := s.CreateProject(ctx, "alice", clip.ProjectInput{Title: " 여행 기록 ", VideoTemplateID: v.ID, Ratio: "vertical", TargetDurationMS: 30000, Answers: []clip.Answer{{Label: "장소", Text: "서울"}, {Label: "이전 질문", Text: "보존"}}})
+	// A campaign type and two of the four reserved facts: without them the
+	// approval gate refuses the quote and the start (CDS-1, CDS-5).
+	p, err := s.CreateProject(ctx, "alice", clip.ProjectInput{Title: " 여행 기록 ", VideoTemplateID: v.ID, Ratio: "vertical", TargetDurationMS: 30000, Disclosure: "sponsored", Answers: []clip.Answer{{Label: "장소", Text: "서울"}, {Label: "이전 질문", Text: "보존"}, {Label: "상호", Text: "연남 스테이"}, {Label: "위치", Text: "서울 연남동"}}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,7 +96,7 @@ func TestOwnedLifecyclePresenceAndTemplateDetach(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if updated.Title != title || updated.Ratio != "vertical" || updated.TargetDurationMS != ms || len(updated.Answers) != 2 {
+	if updated.Title != title || updated.Ratio != "vertical" || updated.TargetDurationMS != ms || len(updated.Answers) != 4 {
 		t.Fatalf("partial update: %+v", updated)
 	}
 	name := "새 이름"
@@ -213,3 +216,60 @@ func TestValidationAndIncompleteAnswers(t *testing.T) {
 		}
 	}
 }
+
+// The three columns 0042 added round-trip through the store, and each patch
+// carries presence semantics of its own.
+func TestPresetDisclosureAndCTARoundTrip(t *testing.T) {
+	s, _, _ := setup(t)
+	ctx := context.Background()
+	v, p := create(t, s)
+	if v.Preset != "stay" || p.Disclosure != "sponsored" || p.CTA != "" {
+		t.Fatalf("create lost a column: %q %q %q", v.Preset, p.Disclosure, p.CTA)
+	}
+	// Reading is enough to know the CTA falls back to the preset's.
+	if design.DefaultCTA(v.Preset, p.CTA) != "blog" {
+		t.Fatal("stay's default CTA")
+	}
+	beauty, ad, save := "beauty", "ad", "save"
+	vt, err := s.UpdateTemplate(ctx, "alice", v.ID, clip.TemplatePatch{Preset: &beauty})
+	if err != nil || vt.Preset != "beauty" || vt.Name != "여행" {
+		t.Fatalf("preset patch: %+v %v", vt, err)
+	}
+	up, err := s.UpdateProject(ctx, "alice", p.ID, clip.ProjectPatch{Disclosure: &ad, CTA: &save})
+	if err != nil || up.Disclosure != "ad" || up.CTA != "save" {
+		t.Fatalf("disclosure patch: %+v %v", up, err)
+	}
+	// An absent field is not a change, and an unknown value is refused before
+	// it can reach a column.
+	again, err := s.UpdateProject(ctx, "alice", p.ID, clip.ProjectPatch{})
+	if err != nil || again.Disclosure != "ad" || again.CTA != "save" {
+		t.Fatalf("absent fields changed a column: %+v %v", again, err)
+	}
+	for _, patch := range []clip.ProjectPatch{{Disclosure: ptr("편집")}, {Disclosure: ptr("")}, {CTA: ptr("subscribe")}} {
+		if _, err := s.UpdateProject(ctx, "alice", p.ID, patch); !errors.Is(err, clip.ErrInvalid) {
+			t.Fatalf("invalid patch accepted: %+v %v", patch, err)
+		}
+	}
+	for _, patch := range []clip.TemplatePatch{{Preset: ptr("")}, {Preset: ptr("bakery")}} {
+		if _, err := s.UpdateTemplate(ctx, "alice", v.ID, patch); !errors.Is(err, clip.ErrInvalid) {
+			t.Fatalf("invalid preset accepted: %+v %v", patch, err)
+		}
+	}
+	// A template must name a preset at creation (CDS-50).
+	uncategorised := recipe()
+	uncategorised.Name, uncategorised.Preset = "무분류", ""
+	if _, err := s.CreateTemplate(ctx, "alice", uncategorised); !errors.Is(err, clip.ErrInvalid) {
+		t.Fatal(err)
+	}
+	// A project may be created without a campaign type; the gate is what
+	// refuses one at approval.
+	blank, err := s.CreateProject(ctx, "alice", clip.ProjectInput{Title: "미정", VideoTemplateID: v.ID, Ratio: "square", TargetDurationMS: 15000})
+	if err != nil || blank.Disclosure != "" {
+		t.Fatalf("%+v %v", blank, err)
+	}
+	if _, err := s.CreateProject(ctx, "alice", clip.ProjectInput{Title: "잘못된", VideoTemplateID: v.ID, Ratio: "square", TargetDurationMS: 15000, Disclosure: "편집"}); !errors.Is(err, clip.ErrInvalid) {
+		t.Fatal(err)
+	}
+}
+
+func ptr[T any](value T) *T { return &value }

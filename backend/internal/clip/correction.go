@@ -17,6 +17,7 @@ type CorrectionCut struct {
 	ID, SourceID, Fingerprint string
 	StartMS, EndMS            int
 	Copy                      Caption
+	Chips                     []string
 	VolumePermille            int
 }
 type CorrectionPlan struct {
@@ -40,7 +41,7 @@ type storedEditPlan struct {
 func CorrectionFromPlan(p EditPlan) CorrectionPlan {
 	out := CorrectionPlan{DurationMS: p.DurationMS, Cuts: make([]CorrectionCut, 0, len(p.Cuts))}
 	for _, c := range p.Cuts {
-		out.Cuts = append(out.Cuts, CorrectionCut{c.ID, c.SourceID, c.Fingerprint, c.StartMS, c.EndMS, c.Copy, int(math.Round(c.OriginalVolume() * 1000))})
+		out.Cuts = append(out.Cuts, CorrectionCut{c.ID, c.SourceID, c.Fingerprint, c.StartMS, c.EndMS, c.Copy, slices.Clone(c.Chips), int(math.Round(c.OriginalVolume() * 1000))})
 	}
 	return out
 }
@@ -140,7 +141,7 @@ func DecodeEditPlan(raw string) (EditPlan, []string, error) {
 			return EditPlan{}, nil, ErrInvalid
 		}
 		v := float64(c.VolumePermille) / 1000
-		p.Cuts = append(p.Cuts, Cut{ID: c.ID, SourceID: c.SourceID, Fingerprint: c.Fingerprint, StartMS: c.StartMS, EndMS: c.EndMS, Focal: f, Copy: c.Copy, Volume: &v})
+		p.Cuts = append(p.Cuts, Cut{ID: c.ID, SourceID: c.SourceID, Fingerprint: c.Fingerprint, StartMS: c.StartMS, EndMS: c.EndMS, Focal: f, Copy: c.Copy, Chips: c.Chips, Volume: &v})
 	}
 	return p, s.CopyStyles, nil
 }
@@ -189,7 +190,7 @@ func ApplyCorrection(cfg RenderConfig, p Project, input CorrectionPlan) (EditPla
 			return EditPlan{}, nil, ErrInvalid
 		}
 		v := float64(c.VolumePermille) / 1000
-		prior.StartMS, prior.EndMS, prior.Copy, prior.Volume = c.StartMS, c.EndMS, c.Copy, &v
+		prior.StartMS, prior.EndMS, prior.Copy, prior.Chips, prior.Volume = c.StartMS, c.EndMS, c.Copy, c.Chips, &v
 		next.Cuts = append(next.Cuts, prior)
 	}
 	refs := make([]RenderSource, 0, len(sources))

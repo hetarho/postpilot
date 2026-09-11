@@ -11,7 +11,13 @@ import (
 // A CDS-conformant manifest: two cuts, one anchor step apart, each a plated
 // 깔끔하게 line inside the 9:16 safe area at the body size.
 func conformant() design.Manifest {
-	m := design.Manifest{}
+	// Every clip carries its disclosure badge for the whole clip (CDS-5), at the
+	// ratio's badge box with its right edge at x 888 and its top at y 270.
+	m := design.Manifest{{
+		Kind: "badge", Text: design.Disclosure["ad"], FontSize: design.Type["badge"].Size,
+		Background: design.Color["badge_ad"].Hex, Region: design.Region{X: 768, Y: 270, Width: 120, Height: 60},
+		StartMS: 0, EndMS: 10120, // the clip's own end: cut 1 runs 7120..10120
+	}}
 	for i, anchor := range []string{"bottom", "lower_mid"} {
 		y := 1270.0
 		if anchor == "lower_mid" {
@@ -52,63 +58,97 @@ func TestVerifyRejectsOneFixturePerCheck(t *testing.T) {
 	}{
 		// V1: one pixel above the 9:16 safe area's y 250 is a breach.
 		"safe area": {design.ViolationSafeArea, func(m design.Manifest) design.Manifest {
-			m[0].Region.Y = 249
+			m[1].Region.Y = 249
 			return m
 		}},
 		// V2: below the body floor of 48 px.
 		"size floor": {design.ViolationSize, func(m design.Manifest) design.Manifest {
-			m[2].FontSize = 47
+			m[3].FontSize = 47
 			return m
 		}},
 		"size over nominal": {design.ViolationSize, func(m design.Manifest) design.Manifest {
-			m[2].FontSize = 57
+			m[3].FontSize = 57
 			return m
 		}},
 		// V5: 깔끔하게 takes fourteen characters a line and two lines.
 		"characters": {design.ViolationSize, func(m design.Manifest) design.Manifest {
-			m[2].Text = strings.Repeat("가", 15)
+			m[3].Text = strings.Repeat("가", 15)
 			return m
 		}},
 		// A third line in one cut. Elements of the SAME cut may share pixels, so
 		// this breaks the line count and nothing else.
 		"lines": {design.ViolationSize, func(m design.Manifest) design.Manifest {
-			return append(m, m[2], m[2])
+			return append(m, m[3], m[3])
 		}},
-		"unknown kind": {design.ViolationSize, func(m design.Manifest) design.Manifest {
-			m[1].Kind = "sticker"
+		// V10: a kind outside the catalogue is a decoration CDS refuses.
+		"unknown kind": {design.ViolationKind, func(m design.Manifest) design.Manifest {
+			m[2].Kind = "sticker"
+			return m
+		}},
+		// V6: the disclosure badge, its phrase, its size, its colour and its span.
+		"no badge": {design.ViolationDisclosure, func(m design.Manifest) design.Manifest {
+			return m[1:]
+		}},
+		"two badges": {design.ViolationDisclosure, func(m design.Manifest) design.Manifest {
+			return append(m, m[0])
+		}},
+		"edited phrase": {design.ViolationDisclosure, func(m design.Manifest) design.Manifest {
+			m[0].Text = "광고입니다"
+			return m
+		}},
+		"badge shrunk": {design.ViolationDisclosure, func(m design.Manifest) design.Manifest {
+			m[0].FontSize = 34
+			return m
+		}},
+		"badge decorated": {design.ViolationDisclosure, func(m design.Manifest) design.Manifest {
+			m[0].Background = design.Accent["coral"]
+			return m
+		}},
+		"badge leaves early": {design.ViolationDisclosure, func(m design.Manifest) design.Manifest {
+			m[0].EndMS = 3000
+			return m
+		}},
+		"badge arrives late": {design.ViolationDisclosure, func(m design.Manifest) design.Manifest {
+			m[0].StartMS = 120
+			return m
+		}},
+		// The badge never moves and a chip does not settle (CDS-31, CDS-4).
+		"badge moves": {design.ViolationMotion, func(m design.Manifest) design.Manifest {
+			m[0].DY = design.Motion.InDY
 			return m
 		}},
 		"unknown style": {design.ViolationSize, func(m design.Manifest) design.Manifest {
-			m[0].Style = "neon"
+			m[1].Style = "neon"
 			return m
 		}},
 		// V7: two cuts whose windows meet may not share a pixel.
 		"overlap": {design.ViolationOverlap, func(m design.Manifest) design.Manifest {
-			m[3].StartMS, m[3].EndMS = m[0].StartMS, m[0].EndMS
-			m[3].Region = m[0].Region
+			m[4].StartMS, m[4].EndMS = m[1].StartMS, m[1].EndMS
+			m[4].Region = m[1].Region
 			return m
 		}},
 		// V9: the two permitted motions and nothing else.
 		"motion in": {design.ViolationMotion, func(m design.Manifest) design.Manifest {
-			m[0].InMS = 400
+			m[1].InMS = 400
 			return m
 		}},
 		"motion settle": {design.ViolationMotion, func(m design.Manifest) design.Manifest {
-			m[2].DY = 48
+			m[3].DY = 48
 			return m
 		}},
 		// V13: BOTTOM to TOP is three steps.
 		"anchor step": {design.ViolationAnchorStep, func(m design.Manifest) design.Manifest {
-			for i := 3; i < 6; i++ {
+			for i := 4; i < 7; i++ {
 				m[i].Anchor = "top"
 			}
 			return m
 		}},
 		// V14: a third 크게 강조 in one clip.
 		"bold frequency": {design.ViolationFrequency, func(m design.Manifest) design.Manifest {
-			out := design.Manifest{}
+			out := design.Manifest{m[0]}
+			out[0].EndMS = 3120 + 2*7000
 			for i := range 3 {
-				e := m[2]
+				e := m[3]
 				e.Cut, e.Style, e.Anchor, e.FontSize, e.Region.Y = i, "bold", "upper_mid", 72, 700
 				e.StartMS, e.EndMS = 120+i*7000, 3120+i*7000
 				out = append(out, e)
@@ -117,9 +157,10 @@ func TestVerifyRejectsOneFixturePerCheck(t *testing.T) {
 		}},
 		// V14: a fourth consecutive 깔끔하게 must have alternated.
 		"style run": {design.ViolationFrequency, func(m design.Manifest) design.Manifest {
-			out := design.Manifest{}
+			out := design.Manifest{m[0]}
+			out[0].EndMS = 3120 + 3*7000
 			for i := range 4 {
-				e := m[2]
+				e := m[3]
 				e.Cut, e.Anchor = i, []string{"bottom", "lower_mid", "bottom", "lower_mid"}[i]
 				e.Region.Y = []float64{1292, 1067, 1292, 1067}[i]
 				e.StartMS, e.EndMS = 120+i*7000, 3120+i*7000
@@ -129,8 +170,8 @@ func TestVerifyRejectsOneFixturePerCheck(t *testing.T) {
 		}},
 		// One cut carries one style at one anchor.
 		"two styles in a cut": {design.ViolationFrequency, func(m design.Manifest) design.Manifest {
-			m[2].Style = "memo"
-			m[2].FontSize = 44
+			m[3].Style = "memo"
+			m[3].FontSize = 44
 			return m
 		}},
 	} {

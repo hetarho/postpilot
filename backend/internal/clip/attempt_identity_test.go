@@ -11,7 +11,7 @@ func TestAttemptIdentityIsOwnedAndContainsNoSourceMaterial(t *testing.T) {
 	for _, kind := range []string{"generate_clip", "render_clip"} {
 		var data []byte
 		if kind == "generate_clip" {
-			data, _ = json.Marshal(generationPayload{Version: 2, ProjectID: "project", Batch: batch, Approval: &GenerationApproval{QuoteID: "quote"}})
+			data, _ = json.Marshal(generationPayload{Version: generationPayloadVersion, ProjectID: "project", Batch: batch, Approval: &GenerationApproval{QuoteID: "quote"}})
 		} else {
 			data, _ = json.Marshal(renderPayload{Version: 1, ProjectID: "project", Batch: batch, PlanJSON: "private content"})
 		}

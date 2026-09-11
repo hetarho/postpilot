@@ -266,7 +266,7 @@ func newReleaseHarness(t *testing.T, mode string, stress bool) *releaseHarness {
 		client.Transport = h.aborted
 		h.client = postpilotv1connect.NewClipServiceClient(&client, rpcServer.URL)
 	}
-	recipe := clip.Recipe{Name: "synthetic release", InformationFields: []clip.InformationField{{Label: "place", Prompt: "where"}}, CopyStyles: []string{"clean"}}
+	recipe := clip.Recipe{Name: "synthetic release", Preset: "restaurant", InformationFields: []clip.InformationField{{Label: "place", Prompt: "where"}}, CopyStyles: []string{"clean"}}
 	ratio := "horizontal"
 	if strings.HasPrefix(mode, "multi-source") {
 		recipe.CopyStyles, recipe.Accent, recipe.CutGuidance, ratio = []string{"clean", "memo"}, "amber", "균등분할", "vertical"
