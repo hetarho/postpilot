@@ -258,9 +258,22 @@ func DecodeEditPlan(raw string) (EditPlan, []string, error) {
 	}
 	return p, s.CopyStyles, nil
 }
-func RetainedSources(p Project) ([]AnalysisSource, error) {
+
+// RetainedObservations reads the same recorded evidence used by correction.
+// Old projects without analysis have no evidence, rather than a decode failure.
+func RetainedObservations(p Project) ([]SourceAnalysis, error) {
+	if strings.TrimSpace(p.Analysis) == "" {
+		return nil, nil
+	}
 	var analyses []SourceAnalysis
 	if err := strictJSON(p.Analysis, &analyses); err != nil {
+		return nil, err
+	}
+	return analyses, nil
+}
+func RetainedSources(p Project) ([]AnalysisSource, error) {
+	analyses, err := RetainedObservations(p)
+	if err != nil {
 		return nil, err
 	}
 	sources := make([]AnalysisSource, 0, len(analyses))

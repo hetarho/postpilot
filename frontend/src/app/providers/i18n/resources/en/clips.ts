@@ -214,7 +214,46 @@ export const clips = {
     leaveBody: 'Your unsaved clip settings will be lost.',
     leave: 'Leave',
   },
+  observation: {
+    title: 'What AI observed',
+    description:
+      'Observations used in the latest generation. Select a source to inspect its scenes and used ranges. Viewing costs no credits.',
+    empty: 'No observations are stored yet. They appear here after clip generation completes.',
+    unavailable:
+      'The stored observations could not be read. You can still view the finished video.',
+    previous:
+      'These observations are from the previous generation. They will update when a new generation succeeds.',
+    savedPlan:
+      'Used ranges follow the saved edit plan. They are not yet reflected in the finished video.',
+    renderedPlan: 'Used ranges follow the edit plan reflected in the finished video.',
+    sources: 'Observed source videos',
+    segmentCount_one: '{{count}} observed range',
+    segmentCount_other: '{{count}} observed ranges',
+    noSegments: 'No observed ranges are recorded for this source.',
+    sourceMissing:
+      'Observations are readable without the original. To play a range, select the same original video again in step 1, Generate clip.',
+    showDetails_one: 'Show {{count}} observed range',
+    showDetails_other: 'Show {{count}} observed ranges',
+    hideDetails: 'Hide observed ranges',
+    ranges: 'Timecoded observations',
+    event: 'Scene',
+    subjects: 'Subjects',
+    speech: 'Audible speech',
+    quality: 'Image and recording quality',
+    notRecorded: 'Not recorded',
+    usedRanges: 'Ranges used in the edit plan',
+    usedCut: 'Used in cut {{number}} · Source {{range}}',
+    unused: 'This observed range is not used in the edit plan.',
+    noPlan: 'There is no edit plan to check for used ranges.',
+    previewRange: 'View source range {{range}}',
+    previewTitle: 'Observed source range',
+    closePreview: 'Close',
+  },
   source: {
+    inspect: 'Select {{filename}}',
+    selected: 'Selected source videos',
+    position: 'Selected {{current}} / {{total}} · Scroll sideways to browse',
+    uploadProgress: 'Uploading {{percent}}%',
     title: 'Source videos',
     disclosure:
       'Compressed copies containing the selected footage and audible speech are sent through OpenRouter to an external video-analysis provider. This service deletes originals and analysis copies after the attempt and does not retain them in the project. This does not guarantee the external provider’s retention policy. Local previews remain until processing ends; refreshing or leaving may require source reselection.',

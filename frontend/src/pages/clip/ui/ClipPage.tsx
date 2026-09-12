@@ -17,6 +17,7 @@ import {
 } from '@/features/generate-clip'
 import { StageModelSelect } from '@/features/select-model'
 import { ClipSourcePicker, useClipSourceUpload } from '@/features/upload-clip-sources'
+import { ClipObservationViewer } from '@/features/inspect-clip-observations'
 import { appFailureFromConnect } from '@/shared/api'
 import {
   ActionBar,
@@ -164,6 +165,18 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
       ? 'unrendered'
       : 'clean'
 
+  // Inside each step's content, above its dock, so inspecting a long observation
+  // cannot scroll the step's committing action out of its sticky container.
+  const observationPanel = (
+    <ClipObservationViewer
+      project={project}
+      localSources={upload.entries.map((entry) => ({
+        fingerprint: entry.metadata.fingerprint,
+        url: entry.previewURL,
+      }))}
+    />
+  )
+
   const generatePanel = (
     <ClipProjectForm
       ownerId={ownerId}
@@ -203,6 +216,7 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
         disabled={!uploadAllowed || generation.busy}
         processing={generation.busy}
       />
+      {observationPanel}
       <section aria-labelledby="clip-models-heading" className="mt-10 mb-8 space-y-4">
         <Typography id="clip-models-heading" variant="title">
           {t('generation.models')}
@@ -259,6 +273,7 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
       }))}
       sourcePicker={
         <>
+          {observationPanel}
           <section aria-labelledby="clip-required-sources" className="mt-10 space-y-3">
             <Typography variant="title" id="clip-required-sources">
               {t('correction.requiredSources')}
@@ -288,13 +303,22 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
       }
     />
   ) : (
-    <ClipStepWaiting message={t('steps.refineWaiting')} onGo={() => setStep('generate')} />
+    <>
+      <ClipStepWaiting message={t('steps.refineWaiting')} onGo={() => setStep('generate')} />
+      {observationPanel}
+    </>
   )
 
   const finishPanel = project.result ? (
-    <ClipResult key={project.result.createdAt} ownerId={ownerId} project={project} />
+    <>
+      <ClipResult key={project.result.createdAt} ownerId={ownerId} project={project} />
+      {observationPanel}
+    </>
   ) : (
-    <ClipStepWaiting message={t('steps.finishWaiting')} onGo={() => setStep('generate')} />
+    <>
+      <ClipStepWaiting message={t('steps.finishWaiting')} onGo={() => setStep('generate')} />
+      {observationPanel}
+    </>
   )
 
   return (

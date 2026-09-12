@@ -73,3 +73,10 @@ export {
 } from './api/eligibility'
 
 export { isRapidCut, canSplitRapid, canAddRapid } from './model/caption-pace'
+export { observationCutUsage, observationSummary } from './model/observations'
+export type {
+  ClipObservedSegment,
+  ClipSourceObservation,
+  ClipObservations,
+} from './model/observations'
+export { ClipSourceStrip } from './ui/ClipSourceStrip'

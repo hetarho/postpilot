@@ -1,6 +1,7 @@
 import type { GenerationJob } from '@/entities/generation-job/@x/clip-project'
 import type { ClipCTAId, ClipDisclosureId } from '@/shared/config'
 import type { ClipEditingState } from './edit-plan'
+import type { ClipObservations } from './observations'
 
 export const CLIP_RATIOS = ['vertical', 'horizontal', 'square'] as const
 /** The five campaign types and three CTAs, read from the design system: the
@@ -38,6 +39,7 @@ export interface ClipProject extends ClipProjectDraft {
   latestAttempt?: { jobId: string; batchId: string; quoteId: string }
   accounting?: ClipAccounting
   editing?: ClipEditingState
+  observations?: ClipObservations
   result?: {
     contentType: string
     bytes: number

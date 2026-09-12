@@ -5,6 +5,7 @@ import { ClipService, type ProtoClipProject, type ProtoClipSourceBatch } from '@
 import { toGenerationJob } from '@/entities/generation-job/@x/clip-project'
 import { toClipEditingState } from './edit-plan'
 import { toClipAccounting } from './credits'
+import { toClipObservations } from './observations'
 import { POLL_INTERVAL_MS } from '@/shared/config'
 import {
   CLIP_RATIOS,
@@ -46,6 +47,7 @@ export function toClipProject(value: ProtoClipProject): ClipProject {
         : undefined,
     accounting: value.accounting ? toClipAccounting(value.accounting) : undefined,
     editing: value.editing ? toClipEditingState(value.editing) : undefined,
+    observations: value.observations ? toClipObservations(value.observations) : undefined,
     result: value.result
       ? {
           contentType: value.result.contentType,

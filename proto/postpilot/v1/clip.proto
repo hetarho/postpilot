@@ -107,6 +107,25 @@ message ClipProject {
   bool hide_disclosure = 18;
   // Owner-only, byte-free identity for reconciling an ambiguous start response.
   ClipAttempt latest_attempt = 15;
+  // Detail only: recorded observations from the latest successful generation.
+  ClipObservations observations = 19;
+}
+message ClipObservations {
+  // available | empty | unavailable; older servers omit this message.
+  string status = 1;
+  repeated ClipSourceObservation sources = 2;
+}
+message ClipSourceObservation {
+  ClipRetainedSource source = 1;
+  repeated ClipObservedSegment segments = 2;
+}
+message ClipObservedSegment {
+  int32 start_ms = 1;
+  int32 end_ms = 2;
+  string event = 3;
+  repeated string subjects = 4;
+  string speech = 5;
+  string quality = 6;
 }
 message ClipAttempt {
   string job_id = 1;

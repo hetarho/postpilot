@@ -53,7 +53,7 @@ func editingProto(s *clip.CorrectionState) *v1.ClipEditingState {
 		out.Plan.Cuts = append(out.Plan.Cuts, &v1.ClipEditCut{Id: c.ID, SourceId: c.SourceID, Fingerprint: c.Fingerprint, StartMs: int32(c.StartMS), EndMs: int32(c.EndMS), TransitionMs: int32(c.TransitionMS), VolumePermille: int32(c.VolumePermille), Chips: c.Chips, Copy: first, Copies: copies})
 	}
 	for _, s := range s.Sources {
-		out.Sources = append(out.Sources, &v1.ClipRetainedSource{Id: s.ID, Fingerprint: s.Fingerprint, Filename: s.Filename, DurationMs: int32(s.Info.DurationMS), Width: int32(s.Info.Width), Height: int32(s.Info.Height)})
+		out.Sources = append(out.Sources, retainedSourceProto(s))
 	}
 	return out
 }

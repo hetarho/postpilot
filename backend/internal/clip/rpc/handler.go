@@ -312,12 +312,17 @@ func (h *Handler) GetClipProject(ctx context.Context, req *connect.Request[v1.Ge
 		return nil, toConnectError(err)
 	}
 	out := projectProto(value)
+	out.Observations = observationsProto(value)
 	if h.generation != nil {
-		state, err := h.generation.EditingState(value)
-		if err != nil {
-			return nil, toConnectError(err)
+		// Unreadable evidence must not hide an otherwise downloadable result.
+		// Its dependent correction projection cannot be used in that case.
+		if out.Observations.Status != "unavailable" {
+			state, err := h.generation.EditingState(value)
+			if err != nil {
+				return nil, toConnectError(err)
+			}
+			out.Editing = editingProto(state)
 		}
-		out.Editing = editingProto(state)
 		accounting, err := h.generation.Accounting(ctx, user, value.ID)
 		if err != nil {
 			return nil, toConnectError(err)

@@ -1,9 +1,9 @@
-import { useId } from 'react'
+import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { appFailureFromConnect } from '@/shared/api'
 import { CLIP_SOURCE_CONTAINERS } from '@/shared/config'
 import { DirectUploadError } from '@/shared/lib/upload'
-import { formatDuration } from '@/shared/lib/video'
+import { ClipSourceStrip } from '@/entities/clip-project'
 import { AppFailureMessage, Button, ProgressBar, Typography, buttonStyles } from '@/shared/ui'
 import { ClipSelectionError } from '../model/manifest'
 import { ClipSourceMismatchError } from '../model/reselection'
@@ -29,6 +29,9 @@ export function ClipSourcePicker({
   const busy = ['reading', 'uploading', 'cancelling'].includes(upload.phase)
   const locked = disabled || !!upload.attempt
   const error = upload.error
+  const [selected, setSelected] = useState('')
+  const selectedEntry =
+    upload.entries.find((entry) => entry.metadata.fingerprint === selected) ?? upload.entries[0]
   return (
     <section aria-labelledby={`${inputId}-heading`} className="mt-10 space-y-4">
       <Typography variant="title" id={`${inputId}-heading`}>
@@ -103,39 +106,49 @@ export function ClipSourcePicker({
           )}
         </div>
       )}
-      {upload.entries.length > 0 && (
-        <ul className="space-y-6">
-          {upload.entries.map((entry) => (
-            <li key={entry.metadata.fingerprint} className="min-w-0 space-y-2">
-              <Typography variant="label" className="block break-words">
-                {entry.metadata.filename}
-              </Typography>
-              {!correction && (
-                <video
-                  controls
-                  preload="metadata"
-                  src={entry.previewURL}
-                  width={entry.metadata.width}
-                  height={entry.metadata.height}
-                  aria-label={entry.metadata.filename}
-                  className="aspect-video w-full rounded-md"
-                />
-              )}
-              {!entry.confirmed && (
-                <ProgressBar label={entry.metadata.filename} done={entry.percent} total={100} />
-              )}
-              <Typography variant="meta" className="block">
-                {formatDuration(entry.metadata.durationMs)}
-              </Typography>
-              {entry.confirmed && <Typography variant="meta">{t('source.confirmed')}</Typography>}
-            </li>
-          ))}
-        </ul>
+      {selectedEntry && (
+        <>
+          <ClipSourceStrip
+            label={t('source.selected')}
+            selected={selectedEntry.metadata.fingerprint}
+            onSelect={setSelected}
+            sources={upload.entries.map((entry) => ({
+              ...entry.metadata,
+              previewURL: entry.previewURL,
+              status: entry.confirmed
+                ? t('source.confirmed')
+                : t('source.uploadProgress', { percent: entry.percent }),
+            }))}
+          />
+          {!correction && (
+            <video
+              key={selectedEntry.previewURL}
+              controls
+              playsInline
+              preload="metadata"
+              src={selectedEntry.previewURL}
+              width={selectedEntry.metadata.width}
+              height={selectedEntry.metadata.height}
+              aria-label={selectedEntry.metadata.filename}
+              className="aspect-video w-full rounded-md object-contain"
+            />
+          )}
+          {!selectedEntry.confirmed && (
+            <ProgressBar
+              label={selectedEntry.metadata.filename}
+              done={selectedEntry.percent}
+              total={100}
+            />
+          )}
+        </>
       )}
       {!!upload.summaries?.length && (
-        <ul className="space-y-2" aria-label={t('source.completed')}>
+        <ul
+          className="flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain pb-2"
+          aria-label={t('source.completed')}
+        >
           {upload.summaries.map((entry, index) => (
-            <li key={index} className="min-w-0">
+            <li key={index} className="w-60 min-w-0 shrink-0 snap-start">
               <Typography variant="body" className="break-words">
                 {entry.filename} · {t(`source.outcome.${entry.status}`)}
               </Typography>

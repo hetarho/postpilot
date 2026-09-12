@@ -54,6 +54,7 @@ export interface FakeClipProject extends ClipProjectDraft {
   latestAttempt?: ClipProject['latestAttempt']
   accounting?: ClipProject['accounting']
   editing?: ClipProject['editing']
+  observations?: ClipProject['observations']
   editPlanRevision?: number
   renderedPlanRevision?: number
 }

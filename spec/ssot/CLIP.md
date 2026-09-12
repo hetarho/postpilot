@@ -1,5 +1,5 @@
 # CLIP generated video projects and templates
-> r9 | An account-owned workflow turns multiple pieces of experience footage into a downloadable, Naver Clip-ready video through bounded analysis copies, an approved credit ceiling, AI-selected cuts, exact styled copy and a lightweight correction pass, independently of blog posts.
+> r10 | An account-owned workflow turns multiple pieces of experience footage into a downloadable, Naver Clip-ready video through bounded analysis copies, an approved credit ceiling, AI-selected cuts, exact styled copy and a lightweight correction pass, independently of blog posts.
 
 ## decisions
 - CLIP-1 [o] a clip project is independent of a post and owns its title, chosen video template, template answers, target duration, aspect ratio, analysis, edit plan and latest successful result
@@ -51,12 +51,20 @@
 
 - CLIP-46 [o] project settings independently choose whether to show the campaign disclosure badge; new and older projects default to shown, the owner can turn it off without changing the campaign type, and generation and credit-free rerendering use the saved choice; changing it marks an existing result as needing rerendering
 
+- CLIP-47 [o] source selection uses a horizontal, snapping strip of compact thumbnails with filename, duration and per-source upload state; selecting a source opens one larger local preview, while the page's existing progress and upload failure remain visible outside the strip (→CLIP-34 →CLIP-38 →THEME-25).
+- CLIP-48 [o] every step of an existing clip offers read-only AI observations from its latest successful generation: choose a source horizontally, read a short recorded summary, and expand its time ranges, events, subjects, audible speech and quality notes; viewing makes no AI call and consumes no credits.
+- CLIP-49 [o] each observed range shows the intersecting source ranges and cut numbers used by the saved edit plan; usage follows saved cut order, deletion and trimming, and is labelled as the saved edit plan whenever its revision differs from the rendered result or there is no result ← unsaved corrections and a previous render must not be presented as the delivered video.
+- CLIP-50 [o] observations remain readable without source footage; source playback requires a matching local selection, and missing source media, no stored observations and a stored source with no observed ranges each have an explicit empty state.
+- CLIP-51 [o] a running or failed regeneration keeps previous successful observations visibly labelled as previous results; new observations appear after successful generation, and the interface shows recorded evidence and actual cut usage without invented selection reasons or confidence scores.
+- CLIP-52 [x] observation editing, source-range exclusion before generation, partial observation streaming, per-source AI retries and mandatory observation approval — deferred beyond read-only inspection.
+
 ## flow
 - create: 영상 → 클립 → 새 클립 → choose video template → answer its information fields → choose ratio and target duration → 클립 만들기 → `/clips/<id>` ① (settings autosaved → disclose external analysis → select source videos → observe and write models → view maximum credit charge) → approve and generate
 - steps: ①(no editing state) → ②(an editing state with no result or a plan newer than its render) → ③(a render matching its plan); any step selectable, an unreached step says what it waits for
 - generate: approve ceiling → create job → verify sources and prepare all bounded analysis copies → validate required reservation against approved ceiling → reserve credits (refused: fail without AI or debit, preserve previous result, clean sources) → sequential inline analysis → text-only composition and copy → render originals → result preview and settlement → source/local-preview cleanup
 - correct: ③ preview → ② change cuts · copy · placement · style · volume → reselect sources if absent → 다시 렌더 → ③ download
 - failure: preparation, ceiling validation, analysis or render fails → keep project and previous result → identify stage and settle AI work under QUOTA-46 → clean transient media → reselect sources if absent → AI retry(view and approve new ceiling) | manual rerender retry(no credits)
+- inspect: any step → latest successful observations → select source → summary → expand observed ranges and saved-plan usage → reselect matching source for local playback if needed
 - delete: delete project → remove retained result · analysis · edit plan · metadata
 
 ## constraints
@@ -72,6 +80,7 @@
 - surface: `/clips`, `/clips/new`, `/clips/$clipId`, `/video-templates` and `/video-templates/$templateId` are held to THEME-39 and to POST-43 through POST-49 and POST-65 through POST-69; the correction workspace's own controls (CLIP-17) and every credit, analysis and render policy above are unchanged by that — only the chrome around them is
 
 ## chg
+- r10 260912 CLIP-47+ horizontal source browsing; CLIP-48+ 49+ retained observation inspection and revision-aware cut usage; CLIP-50+ 51+ missing-media and previous-result states; CLIP-52+ read-only scope exclusions
 - r9 260912 CLIP-15✎ one safe area for all elements→caption safe area plus symmetric header badge bounds; CLIP-46+ independent project disclosure visibility, shown by default, applied to generation and rerendering
 - r8 260912 CLIP-4✎ recipe style choices→style choices plus independent caption pace; CLIP-14✎ four→five styles with lightweight text; CLIP-17✎ sentence editing→phrase split/merge and exposure editing; CLIP-45+ backward-compatible sentence and rapid-phrase modes
 - r7 260912 CLIP-7✎ target-only description→observed-footage reconciliation with a shorter result allowed above the 15 s floor; CLIP-30✎ current endpoint requirement→explicit live checks at quote, admission and completion; CLIP-41✎ latest-job badge→automatic refresh until terminal state

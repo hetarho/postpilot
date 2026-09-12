@@ -7,6 +7,11 @@
 - lang: ko
 - docs: en
 
+## ideation
+| id | st |
+|---|---|
+| clip-source-observation-visibility | converted@260912 |
+
 ## ssot
 | id | rev | tasked | pending | [?] |
 |---|---|---|---|---|
@@ -25,7 +30,7 @@
 | THEME | 10 | 10 | - | 0 |
 | MKT | 4 | 4 | - | 0 |
 | VIDEO | 2 | 2 | - | 1 |
-| CLIP | 9 | 9 | - | 0 |
+| CLIP | 10 | 10 | - | 0 |
 | CDS | 9 | 9 | - | 2 |
 | BILL | 4 | 4 | - | 0 |
 
@@ -45,6 +50,14 @@
 - T008 needs the owner present: refresh PUB@5 / ARCH@2, rerun postpilot-agent setup before installation for driver signature smarteditor-one-20260910-a6, and cancel or deliberately reuse the queued 20260905-test job; after completion, update PUB for VIDEO-17 and TMPL-39.
 
 ## log
+- 260912 T124 commit/push authorized (obs); stage the verified implementation and its CLIP r10 documentation while preserving concurrent planning changes
+- 260912 T124 done (obs); CLIP r10 horizontal sources, retained observations and saved-plan cut usage; 1,644 FE tests, backend/agent gates, browser checks, codegen and spec lint pass; local uncommitted changes
+- 260912 T124 scope audit (obs); leave the unrelated DraftEditor hook, historical spec warnings and Vite entry-size warning for separate review; all gates exit successfully
+- 260912 T124 claimed (obs)
+- 260912 create-task CLIP r10 done (obs); T124 covers horizontal source browsing, retained observation API/UI and revision-aware usage
+- 260912 create-task CLIP r10 start (obs)
+- 260912 update-ssot CLIP r10 done (obs); horizontal source browsing and retained read-only observations with saved-plan usage; THEME already permits this pattern; T110 is unaffected by these additional workspace rules
+- 260912 update-ssot CLIP start (obs); approved horizontal sources, retained observation viewing and actual cut usage; then create and implement the task
 - 260912 T123 done (badg); optional disclosure and symmetric header margins verified, both eight-original 20 s renders inspected at 512 MiB / 2 CPUs with no OOM and $0; local checks pass; owner authorized commit/push of T122/T123
 - 260912 T123 checks (badg); persisted visibility, quote invalidation, generation/rerender and active-job guard pass; 1,627 FE tests and backend/agent gates pass; original-footage shown video inspected, hidden and production gates running
 - 260912 T123 claimed (badg); create-task consumed CLIP/CDS r9; implement visibility, header bounds and verified commit/push
@@ -57,10 +70,3 @@
 - 260912 T122 claimed (pace); recipe/caption pace, simple typography, automatic splitting, manual phrase editing and bounded real rendering
 - 260912 create-task CLIP CDS r8 done (pace); deltas consumed by T122
 - 260912 create-task CLIP CDS r8 start (pace)
-- 260912 update-ssot CLIP CDS r8 done (pace); lightweight text, independent rapid pace, phrase editing and bounded rendering; T110 must refresh CDS r8 on resume
-- 260912 update-ssot CLIP CDS start (pace); retain stable captions, add a lightweight text treatment and selectable rapid phrase timing with licensed bundled fonts and real-footage review
-- 260912 owner accepts the T121 top-inset revision and authorizes commit/push of the current implementation, including the T119/T120 commits; the shorts SVG example remains an optional catalog
-- 260912 T121 done (top); vertical inset 40 px plus 40 px gap, regenerated/inspected the 20 s eight-original SVG example at 512 MiB / 2 CPU; 142.355 s render, zero collisions/OOM, $0; local CI checks pass
-- 260912 T121 claimed (top); update shared vertical layout and render the revised owner-footage example
-- 260912 create-task CDS r7 done (top); delta consumed by T121
-- 260912 create-task CDS r7 start (top)
