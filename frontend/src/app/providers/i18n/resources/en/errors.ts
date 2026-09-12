@@ -108,6 +108,9 @@ export const errors = {
   CLIP_FACTS_REQUIRED:
     'The clip needs more on-screen information: fill in at least two of 상호, 위치, 가격 and 메뉴. (Empty: {{labels}})',
   CLIP_BUSY: 'A clip job is still running. Wait for it to finish.',
+  CLIP_COMPOSITION_INVALID: 'Check line {{line}} ({{element_id}}) in the video composition.',
+  CLIP_COMPOSITION_UNAVAILABLE:
+    'Generation for this video composition is being prepared. Your saved composition is preserved.',
   CLIP_PLAN_CONFLICT:
     'The saved edit plan changed. Keep your edits and reload the latest revision before saving again.',
   CLIP_INVALID_MEDIA:

@@ -103,6 +103,8 @@ export const appFailureSpecs = {
   CLIP_SOURCE_UNAVAILABLE: {},
   CLIP_BUSY: {},
   CLIP_PLAN_CONFLICT: {},
+  CLIP_COMPOSITION_INVALID: { required: ['element_id', 'line', 'reason'] },
+  CLIP_COMPOSITION_UNAVAILABLE: {},
   CLIP_INVALID_MEDIA: {},
   CLIP_ANALYSIS_TOO_LARGE: {},
   CLIP_WORKSPACE_LIMIT: {},

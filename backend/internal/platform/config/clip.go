@@ -41,5 +41,5 @@ func ClipSourceLimits(batchTTL, putTTL time.Duration) clip.SourceConfig {
 }
 
 func ClipLimits() clip.Limits {
-	return clip.Limits{NameChars: ClipTemplateNameChars, GuidanceChars: ClipGuidanceChars, FieldCount: ClipInformationFields, LabelChars: ClipLabelChars, PromptChars: ClipPromptChars, TitleChars: ClipTitleChars, AnswerChars: ClipAnswerChars, MinDurationMS: ClipMinDurationMS, MaxDurationMS: ClipMaxDurationMS}
+	return clip.Limits{Composition: ClipCompositionLimits(), NameChars: ClipTemplateNameChars, GuidanceChars: ClipGuidanceChars, FieldCount: ClipInformationFields, LabelChars: ClipLabelChars, PromptChars: ClipPromptChars, TitleChars: ClipTitleChars, AnswerChars: ClipAnswerChars, MinDurationMS: ClipMinDurationMS, MaxDurationMS: ClipMaxDurationMS}
 }

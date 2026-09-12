@@ -98,7 +98,16 @@ func (s *Store) SaveGeneration(ctx context.Context, user, id, analysis, plan str
 			}
 		}
 		n, err := q.SaveGeneration(ctx, sqlc.SaveGenerationParams{AnalysisJson: nullable(analysis), EditPlanJson: nullable(plan), ResultKey: nullable(r.Key), ResultContentType: nullable(r.ContentType), ResultBytes: sql.NullInt64{Int64: r.Bytes, Valid: true}, ResultDurationMs: sql.NullInt64{Int64: int64(r.DurationMS), Valid: true}, ResultCreatedAt: nullable(stamp(r.CreatedAt)), UpdatedAt: stamp(r.CreatedAt), UserID: user, ID: id})
-		return struct{}{}, affected(n, err)
+		if e := affected(n, err); e != nil {
+			return struct{}{}, e
+		}
+		if decoded, _, e := clip.DecodeEditPlan(plan); e == nil && decoded.Portable != nil {
+			old.Composition = &clip.ProjectComposition{Snapshot: decoded.Portable.Snapshot, Inputs: decoded.Portable.Inputs}
+			if e = saveComposition(ctx, q, old); e != nil {
+				return struct{}{}, e
+			}
+		}
+		return struct{}{}, nil
 	})
 	return err
 }

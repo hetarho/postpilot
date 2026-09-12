@@ -7,6 +7,7 @@ import "postpilot/v1/provider.proto";
 
 // All procedures derive the owner from the authenticated session.
 service ClipService {
+  rpc GetClipCapabilities(GetClipCapabilitiesRequest) returns (GetClipCapabilitiesResponse) {}
   rpc SaveClipEditPlan(SaveClipEditPlanRequest) returns (SaveClipEditPlanResponse) {}
   rpc StartClipRender(StartClipRenderRequest) returns (StartClipRenderResponse) {}
   rpc StartClipGeneration(StartClipGenerationRequest) returns (StartClipGenerationResponse) {}
@@ -67,6 +68,8 @@ message VideoTemplate {
   string preset = 10;
   // Empty or steady keeps sentence timing; rapid splits short phrase cues.
   string caption_pace = 11;
+  string composition_body = 12;
+  bool composition_legacy = 13;
 }
 message ClipAnswer { string label = 1; string text = 2; }
 // The reserved information fields a preset needs, in the order a form shows
@@ -109,6 +112,7 @@ message ClipProject {
   ClipAttempt latest_attempt = 15;
   // Detail only: recorded observations from the latest successful generation.
   ClipObservations observations = 19;
+  ClipProjectComposition composition = 20;
 }
 message ClipObservations {
   // available | empty | unavailable; older servers omit this message.
@@ -154,6 +158,7 @@ message CreateVideoTemplateRequest {
   // Required on create: one of the five presets.
   string preset = 6;
   string caption_pace = 7;
+  optional string composition_body = 8;
 }
 message CreateVideoTemplateResponse { VideoTemplate template = 1; }
 message UpdateVideoTemplateRequest {
@@ -166,6 +171,7 @@ message UpdateVideoTemplateRequest {
   // Present means change it, and only one of the five is accepted.
   optional string preset = 7;
   optional string caption_pace = 8;
+  optional string composition_body = 9;
 }
 message UpdateVideoTemplateResponse { VideoTemplate template = 1; }
 message DeleteVideoTemplateRequest { string id = 1; }
@@ -182,6 +188,7 @@ message CreateClipProjectRequest {
   string disclosure = 6;
   string cta = 7;
   bool hide_disclosure = 8;
+  ClipCompositionInputs composition_inputs = 9;
 }
 message CreateClipProjectResponse { ClipProject project = 1; }
 message GetClipProjectRequest { string id = 1; }
@@ -196,6 +203,7 @@ message UpdateClipProjectRequest {
   optional string disclosure = 6;
   optional string cta = 7;
   optional bool hide_disclosure = 8;
+  ClipCompositionInputs composition_inputs = 9;
 }
 message UpdateClipProjectResponse { ClipProject project = 1; }
 message DeleteClipProjectRequest { string id = 1; }
@@ -335,3 +343,39 @@ message SaveClipEditPlanRequest { string project_id = 1; int32 expected_revision
 message SaveClipEditPlanResponse { ClipProject project = 1; }
 message StartClipRenderRequest { string project_id = 1; int32 expected_revision = 2; string batch_id = 3; }
 message StartClipRenderResponse { string job_id = 1; }
+
+// Version 0 means unavailable; storage support never implies execution support.
+message GetClipCapabilitiesRequest {}
+message GetClipCapabilitiesResponse {
+  int32 composition_version = 1;
+  int32 composition_plan_version = 2;
+}
+message ClipCompositionItem {
+  string id = 1;
+  map<string, string> values = 2;
+}
+message ClipCompositionItems { repeated ClipCompositionItem items = 1; }
+message ClipSourceAssociation {
+  string group_id = 1;
+  string item_id = 2;
+  string source_id = 3;
+  string fingerprint = 4;
+  int32 start_ms = 5;
+  int32 end_ms = 6;
+}
+// Present patches replace this whole value, including explicitly empty maps.
+message ClipCompositionInputs {
+  map<string, string> values = 1;
+  map<string, ClipCompositionItems> items = 2;
+  repeated ClipSourceAssociation associations = 3;
+}
+message ClipCompositionSnapshot {
+  int32 version = 1;
+  string body = 2;
+  string template_id = 3;
+  bool legacy = 4;
+}
+message ClipProjectComposition {
+  ClipCompositionSnapshot snapshot = 1;
+  ClipCompositionInputs inputs = 2;
+}

@@ -133,6 +133,9 @@ func CorrectionFromPlan(p EditPlan) CorrectionPlan {
 	return out
 }
 func EncodeEditPlan(p EditPlan, styles []string) (string, error) {
+	if p.Portable != nil {
+		return encodePortablePlan(p, styles)
+	}
 	focals := map[string]Point{}
 	for _, c := range p.Cuts {
 		focals[c.ID] = c.Focal
@@ -185,11 +188,14 @@ func migrateStoredPlan(raw string) string {
 	return raw
 }
 func DecodeEditPlan(raw string) (EditPlan, []string, error) {
-	raw = migrateStoredPlan(raw)
 	var marker struct{ Version int }
 	if json.Unmarshal([]byte(raw), &marker) != nil {
 		return EditPlan{}, nil, ErrInvalid
 	}
+	if marker.Version == CompositionPlanVersion {
+		return decodePortablePlan(raw)
+	}
+	raw = migrateStoredPlan(raw)
 	if marker.Version == 0 {
 		// T076's original representation. Do not invent template permissions lost in
 		// that format: only styles already present in the retained plan are approved.

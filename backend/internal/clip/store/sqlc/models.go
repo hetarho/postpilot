@@ -21,27 +21,29 @@ type ClipGenerationQuote struct {
 }
 
 type ClipProject struct {
-	ID                   string
-	UserID               string
-	Title                string
-	VideoTemplateID      sql.NullString
-	Ratio                string
-	TargetDurationMs     int64
-	AnalysisJson         sql.NullString
-	EditPlanJson         sql.NullString
-	ResultKey            sql.NullString
-	ResultContentType    sql.NullString
-	ResultBytes          sql.NullInt64
-	ResultDurationMs     sql.NullInt64
-	ResultCreatedAt      sql.NullString
-	EditPlanRevision     int64
-	RenderedPlanRevision int64
-	CreatedAt            string
-	UpdatedAt            string
-	Deleting             int64
-	Disclosure           string
-	Cta                  string
-	HideDisclosure       int64
+	ID                      string
+	UserID                  string
+	Title                   string
+	VideoTemplateID         sql.NullString
+	Ratio                   string
+	TargetDurationMs        int64
+	AnalysisJson            sql.NullString
+	EditPlanJson            sql.NullString
+	ResultKey               sql.NullString
+	ResultContentType       sql.NullString
+	ResultBytes             sql.NullInt64
+	ResultDurationMs        sql.NullInt64
+	ResultCreatedAt         sql.NullString
+	EditPlanRevision        int64
+	RenderedPlanRevision    int64
+	CreatedAt               string
+	UpdatedAt               string
+	Deleting                int64
+	Disclosure              string
+	Cta                     string
+	HideDisclosure          int64
+	CompositionInputsJson   sql.NullString
+	CompositionSnapshotJson sql.NullString
 }
 
 type ClipSourceBatch struct {
@@ -83,4 +85,6 @@ type VideoTemplate struct {
 	UpdatedAt         string
 	Preset            string
 	CaptionPace       string
+	CompositionBody   sql.NullString
+	CompositionLegacy int64
 }

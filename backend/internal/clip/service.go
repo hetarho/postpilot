@@ -10,6 +10,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/postpilot/backend/internal/clip/composition"
 	"github.com/postpilot/backend/internal/clip/design"
 )
 
@@ -106,6 +107,22 @@ func (s *Service) ListTemplates(ctx context.Context, user string) ([]VideoTempla
 }
 func (s *Service) CreateTemplate(ctx context.Context, user string, recipe Recipe) (VideoTemplate, error) {
 	recipe.Name = strings.TrimSpace(recipe.Name)
+	if recipe.CompositionBody != "" {
+		if !bounded(recipe.Name, 1, s.limits.NameChars) {
+			return VideoTemplate{}, ErrInvalid
+		}
+		var err error
+		recipe, err = s.authoredRecipe(recipe)
+		if err != nil {
+			return VideoTemplate{}, err
+		}
+		now := time.Now()
+		t := VideoTemplate{ID: newID(), UserID: user, Recipe: recipe, CreatedAt: now, UpdatedAt: now}
+		if err = s.store.InsertTemplate(ctx, t); err != nil {
+			return VideoTemplate{}, err
+		}
+		return t, nil
+	}
 	if !bounded(recipe.Name, 1, s.limits.NameChars) || !bounded(recipe.CutGuidance, 0, s.limits.GuidanceChars) || !ValidCopyStyles(recipe.CopyStyles) || !ValidAccent(recipe.Accent) || !ValidPreset(recipe.Preset) || !ValidCaptionPace(recipe.CaptionPace) {
 		return VideoTemplate{}, ErrInvalid
 	}
@@ -114,6 +131,8 @@ func (s *Service) CreateTemplate(ctx context.Context, user string, recipe Recipe
 		return VideoTemplate{}, err
 	}
 	recipe.InformationFields = fields
+	recipe.CompositionBody = LegacyCompositionBody(recipe)
+	recipe.CompositionLegacy = true
 	now := time.Now()
 	t := VideoTemplate{ID: newID(), UserID: user, Recipe: recipe, CreatedAt: now, UpdatedAt: now}
 	if err := s.store.InsertTemplate(ctx, t); err != nil {
@@ -122,7 +141,8 @@ func (s *Service) CreateTemplate(ctx context.Context, user string, recipe Recipe
 	return t, nil
 }
 func (s *Service) UpdateTemplate(ctx context.Context, user, id string, p TemplatePatch) (VideoTemplate, error) {
-	if _, err := s.store.GetTemplate(ctx, user, id); err != nil {
+	old, err := s.store.GetTemplate(ctx, user, id)
+	if err != nil {
 		return VideoTemplate{}, err
 	}
 	if p.Name != nil {
@@ -131,6 +151,27 @@ func (s *Service) UpdateTemplate(ctx context.Context, user, id string, p Templat
 			return VideoTemplate{}, ErrInvalid
 		}
 		p.Name = &name
+	}
+	if p.CompositionBody != nil {
+		r := old.Recipe
+		r.CompositionBody = *p.CompositionBody
+		r, err = s.authoredRecipe(r)
+		if err != nil {
+			return VideoTemplate{}, err
+		}
+		p.CutGuidance = &r.CutGuidance
+		p.Accent = &r.Accent
+		p.Preset = &r.Preset
+		p.CaptionPace = &r.CaptionPace
+		p.InformationFields = &r.InformationFields
+		p.CopyStyles = &r.CopyStyles
+		return s.store.UpdateTemplate(ctx, user, id, p, time.Now())
+	}
+	if old.CompositionBody != "" && !old.CompositionLegacy {
+		if p.CutGuidance != nil || p.Accent != nil || p.Preset != nil || p.CaptionPace != nil || p.InformationFields != nil || p.CopyStyles != nil {
+			return VideoTemplate{}, ErrInvalid
+		}
+		return s.store.UpdateTemplate(ctx, user, id, p, time.Now())
 	}
 	if p.CutGuidance != nil && !bounded(*p.CutGuidance, 0, s.limits.GuidanceChars) {
 		return VideoTemplate{}, ErrInvalid
@@ -180,7 +221,8 @@ func (s *Service) duration(ms int) bool {
 	return ms >= s.limits.MinDurationMS && ms <= s.limits.MaxDurationMS
 }
 func (s *Service) CreateProject(ctx context.Context, user string, input ProjectInput) (Project, error) {
-	if _, err := s.store.GetTemplate(ctx, user, input.VideoTemplateID); err != nil {
+	template, err := s.store.GetTemplate(ctx, user, input.VideoTemplateID)
+	if err != nil {
 		return Project{}, err
 	}
 	title := strings.TrimSpace(input.Title)
@@ -198,6 +240,13 @@ func (s *Service) CreateProject(ctx context.Context, user string, input ProjectI
 	}
 	now := time.Now()
 	p := Project{ID: newID(), UserID: user, Title: title, VideoTemplateID: input.VideoTemplateID, Ratio: input.Ratio, Disclosure: input.Disclosure, HideDisclosure: input.HideDisclosure, CTA: input.CTA, TargetDurationMS: input.TargetDurationMS, Answers: answers, CreatedAt: now, UpdatedAt: now}
+	p.Composition, err = s.projectComposition(template, input.CompositionInputs, p)
+	if err != nil {
+		return Project{}, err
+	}
+	if input.CompositionInputs != nil && p.Composition.Snapshot.Legacy {
+		p.Answers = legacyAnswers(p.Answers, template.InformationFields, p.Composition.Inputs.Values)
+	}
 	if err := s.store.InsertProject(ctx, p); err != nil {
 		return Project{}, err
 	}
@@ -213,7 +262,8 @@ func (s *Service) UpdateProject(ctx context.Context, user, id string, p ProjectP
 			return Project{}, ErrBusy
 		}
 	}
-	if _, err := s.store.GetProject(ctx, user, id); err != nil {
+	old, err := s.store.GetProject(ctx, user, id)
+	if err != nil {
 		return Project{}, err
 	}
 	if p.Title != nil {
@@ -242,6 +292,62 @@ func (s *Service) UpdateProject(ctx context.Context, user, id string, p ProjectP
 		return Project{}, err
 	}
 	p.Answers = answers
+	p.Composition = nil
+	p.ExpectedCompositionRevision = nil
+	if p.VideoTemplateID != nil && *p.VideoTemplateID != old.VideoTemplateID {
+		t, e := s.store.GetTemplate(ctx, user, *p.VideoTemplateID)
+		if e != nil {
+			return Project{}, e
+		}
+		next := old
+		next.VideoTemplateID = t.ID
+		p.Composition, err = s.projectComposition(t, p.CompositionInputs, next)
+		if err != nil {
+			return Project{}, err
+		}
+	} else if p.CompositionInputs != nil {
+		if old.Composition == nil {
+			return Project{}, ErrInvalid
+		}
+		c := *old.Composition
+		c.Inputs = *p.CompositionInputs
+		limits := s.limits.Composition
+		if c.Snapshot.Legacy {
+			limits = LegacyCompositionLimits(limits)
+		}
+		d, e := composition.Parse(c.Snapshot.Body, limits)
+		if e != nil {
+			return Project{}, e
+		}
+		if e := ValidateCompositionInputs(d, c.Inputs, s.limits.Composition, false); e != nil {
+			return Project{}, e
+		}
+		if e := ValidateSourceAssociations(old, c.Inputs.Associations); e != nil {
+			return Project{}, e
+		}
+		if c.Snapshot.Legacy && c.Snapshot.LegacyRecipe != nil {
+			next := old
+			next.Answers = legacyAnswers(old.Answers, c.Snapshot.LegacyRecipe.InformationFields, c.Inputs.Values)
+			if p.Disclosure != nil {
+				next.Disclosure = *p.Disclosure
+			}
+			if p.HideDisclosure != nil {
+				next.HideDisclosure = *p.HideDisclosure
+			}
+			if p.CTA != nil {
+				next.CTA = *p.CTA
+			}
+			p.Answers = next.Answers
+			updated := LegacyProjectComposition(next, *c.Snapshot.LegacyRecipe)
+			updated.Snapshot.TemplateID = c.Snapshot.TemplateID
+			c = updated
+		}
+		p.Composition = &c
+	}
+	if p.Composition != nil {
+		v := old.EditPlanRevision
+		p.ExpectedCompositionRevision = &v
+	}
 	return s.store.UpdateProject(ctx, user, id, p, time.Now())
 }
 func (s *Service) DeleteProject(ctx context.Context, user, id string) error {
@@ -254,7 +360,14 @@ func (s *Service) DeleteProject(ctx context.Context, user, id string) error {
 }
 
 // RequiredAnswers is the generation gate, separate from saving an unfinished form.
-func RequiredAnswers(t VideoTemplate, p Project) error {
+func RequiredAnswers(t VideoTemplate, p Project, limits ...composition.Limits) error {
+	if t.CompositionBody != "" && !t.CompositionLegacy {
+		if len(limits) != 1 {
+			return ErrInvalid
+		}
+		_, err := GenerationComposition(t, p, limits[0])
+		return err
+	}
 	answers := map[string]string{}
 	for _, a := range p.Answers {
 		answers[a.Label] = a.Text

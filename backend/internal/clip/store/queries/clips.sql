@@ -6,6 +6,14 @@ SELECT * FROM video_templates WHERE id = ? AND user_id = ?;
 INSERT INTO video_templates(id, user_id, name, information_fields, cut_guidance, copy_styles, accent, preset, caption_pace, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 -- name: CountTemplateProjects :one
 SELECT count(*) FROM clip_projects WHERE video_template_id = ? AND user_id = ?;
+-- name: ProjectsForTemplate :many
+SELECT * FROM clip_projects WHERE video_template_id = ? AND user_id = ? ORDER BY id;
+-- name: SaveTemplateComposition :execrows
+UPDATE video_templates SET composition_body=?,composition_legacy=? WHERE id=? AND user_id=?;
+-- name: SaveProjectComposition :execrows
+UPDATE clip_projects SET composition_snapshot_json=?,composition_inputs_json=? WHERE id=? AND user_id=?;
+-- name: TouchCompositionRevision :execrows
+UPDATE clip_projects SET edit_plan_revision=edit_plan_revision+1,updated_at=? WHERE id=? AND user_id=? AND deleting=0;
 -- name: DeleteVideoTemplate :execrows
 DELETE FROM video_templates WHERE id = ? AND user_id = ?;
 -- name: ListClipProjects :many

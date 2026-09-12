@@ -31,6 +31,12 @@ func (s *Store) SaveCorrection(ctx context.Context, user, id string, revision in
 		if n != 1 {
 			return clip.Project{}, clip.ErrPlanConflict
 		}
+		if decoded, _, e := clip.DecodeEditPlan(raw); e == nil && decoded.Portable != nil {
+			p.Composition = &clip.ProjectComposition{Snapshot: decoded.Portable.Snapshot, Inputs: decoded.Portable.Inputs}
+			if e = saveComposition(ctx, q, p); e != nil {
+				return clip.Project{}, e
+			}
+		}
 		return getProject(ctx, q, user, id)
 	})
 }

@@ -80,3 +80,14 @@ export type {
   ClipObservations,
 } from './model/observations'
 export { ClipSourceStrip } from './ui/ClipSourceStrip'
+
+export type {
+  ClipCompositionInputs,
+  ClipProjectComposition,
+  ClipSourceAssociation,
+} from './model/composition'
+export {
+  toProjectComposition,
+  compositionInputsToProto,
+  useClipCapabilities,
+} from './api/composition'

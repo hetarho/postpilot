@@ -46,6 +46,7 @@ type AnalysisLimits struct {
 	ChunkMS, MaxSources, MaxSourceDurationMS, MaxSegments, MaxTextRunes, MaxSubjects int
 }
 type PlanningInput struct {
+	Composition      *ProjectComposition
 	Template         Recipe
 	Answers          []Answer
 	Ratio            string

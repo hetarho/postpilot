@@ -53,6 +53,8 @@ export type {
   ListClipAnalysisEligibilityResponse as ProtoClipAnalysisEligibilityList,
   VideoTemplate as ProtoVideoTemplate,
   ClipProject as ProtoClipProject,
+  ClipProjectComposition as ProtoClipProjectComposition,
+  ClipCompositionInputs as ProtoClipCompositionInputs,
   ClipObservations as ProtoClipObservations,
   ClipEditPlan as ProtoClipEditPlan,
   ClipEditingState as ProtoClipEditingState,

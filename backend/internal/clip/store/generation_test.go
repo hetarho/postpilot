@@ -421,12 +421,13 @@ func TestApprovedGenerationPreparesAllThenUsesFrozenInputs(t *testing.T) {
 		t.Fatal(err)
 	}
 	var snapshot struct {
-		Version  int
-		Template clip.Recipe
-		Answers  []clip.Answer
-		Approval *clip.GenerationApproval
+		Version     int
+		Composition *clip.ProjectComposition
+		Template    clip.Recipe
+		Answers     []clip.Answer
+		Approval    *clip.GenerationApproval
 	}
-	if json.Unmarshal(j.Payload, &snapshot) != nil || snapshot.Version != 3 || snapshot.Approval == nil || snapshot.Approval.MaxCredits <= 0 || snapshot.Approval.Pricing.ObservationCalls != 3 {
+	if json.Unmarshal(j.Payload, &snapshot) != nil || snapshot.Version != 4 || snapshot.Composition == nil || snapshot.Composition.Snapshot.Version != 1 || snapshot.Approval == nil || snapshot.Approval.MaxCredits <= 0 || snapshot.Approval.Pricing.ObservationCalls != 3 {
 		t.Fatal(string(j.Payload))
 	}
 	guidance := "changed after enqueue"

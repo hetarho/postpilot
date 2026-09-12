@@ -49,10 +49,12 @@ func NewGenerationService(store GenerationStore, projects *Service, sources *Sou
 // every reader checks it: an approval frozen under an older shape is refused
 // rather than run with fields it never carried. Version 3 added the disclosure
 // and the resolved CTA, so a job approved before the owner could choose a
-// campaign type cannot render a clip that carries one.
-const generationPayloadVersion = 3
+// campaign type cannot render a clip that carries one. Version 4 freezes the
+// project composition. Already accepted version-3 legacy jobs remain readable.
+const generationPayloadVersion = 4
 
 type generationPayload struct {
+	Composition                      *ProjectComposition
 	Version                          int
 	ProjectID, Ratio, Observe, Write string
 	TargetDurationMS                 int
@@ -216,7 +218,13 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 	if dec.Decode(&p) != nil || dec.Decode(new(any)) != io.EOF {
 		return ErrInvalid
 	}
-	if p.Version != generationPayloadVersion || p.Approval == nil {
+	if err := s.checkComposition(p.Composition); err != nil {
+		return err
+	}
+	if p.Template.CompositionBody != "" && !p.Template.CompositionLegacy && p.Composition == nil {
+		return ErrInvalid
+	}
+	if (p.Version != generationPayloadVersion && p.Version != 3) || (p.Version == generationPayloadVersion && p.Composition == nil) || p.Approval == nil {
 		return ErrQuoteRequired
 	}
 	if p.ProjectID != project || p.Batch.ProjectID != project || p.Batch.ID != b.ID || p.Batch.UserID != user || !reflect.DeepEqual(p.Batch.Sources, b.Sources) {
@@ -267,7 +275,7 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 		if s.planner.Budgets() != (CompletionBudgets{Observe: pricing.Observe.CompletionTokens, Plan: pricing.Plan.CompletionTokens}) {
 			return ErrQuoteChanged
 		}
-		if err = s.planner.ValidatePreparation(pricing.Observe.Ref, PlanningInput{Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Policy: pricing.Plan}, sources); err != nil {
+		if err = s.planner.ValidatePreparation(pricing.Observe.Ref, PlanningInput{Composition: p.Composition, Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Policy: pricing.Plan}, sources); err != nil {
 			return err
 		}
 		if s.pricing == nil {
@@ -304,7 +312,7 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 			return err
 		}
 		set("plan", 0, 1)
-		edit, _, err := s.planner.Plan(ctx, pricing.Plan.Ref, PlanningInput{Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Analyses: analyses, Policy: pricing.Plan, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: p.CTA})
+		edit, _, err := s.planner.Plan(ctx, pricing.Plan.Ref, PlanningInput{Composition: p.Composition, Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Analyses: analyses, Policy: pricing.Plan, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: p.CTA})
 		if err != nil {
 			return err
 		}
@@ -335,6 +343,13 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 		analysisJSON, err = json.Marshal(analyses)
 		if err != nil {
 			return err
+		}
+		if edit.Portable == nil && p.Composition != nil && p.Composition.Snapshot.Legacy {
+			projectSnapshot := Project{VideoTemplateID: p.Composition.Snapshot.TemplateID, Answers: p.Answers, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: p.CTA}
+			edit.Portable, err = FreezeLegacyPlan(projectSnapshot, edit, p.Template, s.projects.limits.Composition)
+			if err != nil {
+				return err
+			}
 		}
 		planJSON, err = EncodeEditPlan(edit, p.Template.CopyStyles)
 		if err != nil {

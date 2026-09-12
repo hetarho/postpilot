@@ -111,6 +111,7 @@ func (c EditCut) OriginalVolume() float64 {
 }
 
 type EditPlan struct {
+	Portable       *PortablePlan
 	HideDisclosure bool
 	Ratio          string
 	DurationMS     int

@@ -8,6 +8,7 @@ import (
 
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/store/sqlc"
+	"github.com/postpilot/backend/internal/platform/config"
 )
 
 var _ clip.QuoteStore = (*Store)(nil)
@@ -54,7 +55,7 @@ func validateQuoteInputs(ctx context.Context, q *sqlc.Queries, quote clip.Genera
 	if quote.ExpiresAt.After(b.ExpiresAt) || quote.InputDigest != clip.QuoteInputDigest(p, t, b, quote.Pricing) {
 		return clip.ErrQuoteChanged
 	}
-	return clip.RequiredAnswers(t, p)
+	return clip.RequiredAnswers(t, p, config.ClipCompositionLimits())
 }
 
 func (s *Store) SaveQuote(ctx context.Context, quote clip.GenerationQuote, now time.Time) error {

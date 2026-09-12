@@ -6,6 +6,7 @@ import { toGenerationJob } from '@/entities/generation-job/@x/clip-project'
 import { toClipEditingState } from './edit-plan'
 import { toClipAccounting } from './credits'
 import { toClipObservations } from './observations'
+import { toProjectComposition, compositionInputsToProto } from './composition'
 import { POLL_INTERVAL_MS } from '@/shared/config'
 import {
   CLIP_RATIOS,
@@ -20,7 +21,9 @@ export const clipProjectsKey = (transport: Transport, ownerId: string) =>
   ['clip-projects', transport, ownerId] as const
 export function toClipProject(value: ProtoClipProject): ClipProject {
   if (!CLIP_RATIOS.includes(value.ratio as ClipRatio)) throw new Error('Invalid clip ratio')
+  const composition = toProjectComposition(value.composition)
   return {
+    ...(composition ? { composition, compositionInputs: composition.inputs } : {}),
     id: value.id,
     title: value.title,
     videoTemplateId: value.videoTemplateId,
@@ -144,10 +147,11 @@ export function useClipProjectMutations(ownerId: string) {
     ])
   const save = useMutation({
     mutationFn: async ({ id, draft }: { id?: string; draft: ClipProjectDraft }) => {
-      const { ratio, ...fields } = normalizeClipProject(draft)
+      const { ratio, compositionInputs, ...fields } = normalizeClipProject(draft)
+      const inputs = compositionInputs ? compositionInputsToProto(compositionInputs) : undefined
       const response = id
-        ? await client.updateClipProject({ id, ...fields })
-        : await client.createClipProject({ ...fields, ratio })
+        ? await client.updateClipProject({ id, ...fields, compositionInputs: inputs })
+        : await client.createClipProject({ ...fields, ratio, compositionInputs: inputs })
       if (!response.project) throw new Error('Missing saved clip')
       return toClipProject(response.project)
     },

@@ -22,6 +22,9 @@ func (s *GenerationService) SaveCorrection(ctx context.Context, user, id string,
 	if err != nil {
 		return Project{}, err
 	}
+	if err := s.checkComposition(p.Composition); err != nil {
+		return Project{}, err
+	}
 	if p.EditPlanRevision != revision || revision <= 0 {
 		return Project{}, ErrPlanConflict
 	}
@@ -51,6 +54,12 @@ func (s *GenerationService) SaveCorrection(ctx context.Context, user, id string,
 			return Project{}, err
 		}
 	}
+	if p.Composition != nil && p.Composition.Snapshot.Legacy && p.Composition.Snapshot.LegacyRecipe != nil {
+		next.Portable, err = FreezeLegacyPlan(p, next, *p.Composition.Snapshot.LegacyRecipe, s.projects.limits.Composition)
+		if err != nil {
+			return Project{}, err
+		}
+	}
 	raw, err := EncodeEditPlan(next, styles)
 	if err != nil {
 		return Project{}, err
@@ -71,6 +80,9 @@ type renderPayload struct {
 func (s *GenerationService) StartRender(ctx context.Context, user, id, batch string, revision int) (string, error) {
 	p, err := s.projects.store.GetProject(ctx, user, id)
 	if err != nil {
+		return "", err
+	}
+	if err := s.checkComposition(p.Composition); err != nil {
 		return "", err
 	}
 	if revision <= 0 || p.EditPlanRevision != revision {
@@ -157,12 +169,24 @@ func (s *GenerationService) RunRender(ctx context.Context, user, job, project st
 	if err != nil {
 		return err
 	}
-	// The badge and the chips are read fresh from the project and its template,
-	// so a re-render always carries the owner's current campaign type.
-	t, err := s.projects.store.GetTemplate(ctx, user, p.VideoTemplateID)
-	if err != nil {
+	if err := s.checkComposition(p.Composition); err != nil {
 		return err
 	}
+	if plan.Portable != nil && !plan.Portable.Snapshot.Legacy && s.CompositionCapability() < CompositionPlanVersion {
+		return ErrCompositionUnavailable
+	}
+	// Manual rerender reads the frozen legacy recipe, including after template
+	// edits or deletion. Project-local disclosure changes retain their meaning.
+	t := VideoTemplate{}
+	if p.Composition != nil && p.Composition.Snapshot.LegacyRecipe != nil {
+		t.Recipe = *p.Composition.Snapshot.LegacyRecipe
+	} else if p.VideoTemplateID != "" {
+		t, err = s.projects.store.GetTemplate(ctx, user, p.VideoTemplateID)
+		if err != nil && !errors.Is(err, ErrNotFound) {
+			return err
+		}
+	}
+
 	plan = plan.WithFacts(p.Disclosure, p.Answers, t.Preset, p.CTA, t.Accent, frozen.HideDisclosure).WithStyles(t.CopyStyles)
 	if err = MatchRenderBatch(plan, b); err != nil {
 		return err

@@ -104,6 +104,9 @@ export const errors = {
   CLIP_FACTS_REQUIRED:
     '화면에 보여줄 정보가 부족해요. 상호·위치·가격·메뉴 중 두 개 이상을 채워 주세요. (비어 있음: {{labels}})',
   CLIP_BUSY: '클립 작업이 진행 중이에요. 완료될 때까지 기다려 주세요.',
+  CLIP_COMPOSITION_INVALID: '영상 구성의 {{line}}번째 줄({{element_id}})을 확인해 주세요.',
+  CLIP_COMPOSITION_UNAVAILABLE:
+    '이 영상 구성의 생성 기능을 준비 중이에요. 저장한 구성은 유지됩니다.',
   CLIP_PLAN_CONFLICT:
     '저장된 수정본이 변경되었어요. 작성 중인 내용은 유지한 채 최신 버전을 확인한 뒤 다시 저장해 주세요.',
   CLIP_INVALID_MEDIA:

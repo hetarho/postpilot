@@ -1,3 +1,4 @@
+import { parseClipComposition } from '../lib/composition-parse'
 import {
   CLIP_PRESETS,
   CLIP_SPACING,
@@ -39,6 +40,8 @@ export interface InformationField {
   prompt: string
 }
 export interface ClipRecipe {
+  compositionBody?: string
+  compositionLegacy?: boolean
   captionPace?: ClipCaptionPace
   name: string
   informationFields: InformationField[]
@@ -114,6 +117,12 @@ export function normalizeRecipe(value: ClipRecipe): ClipRecipe {
 }
 export function recipeOf(value: ClipRecipe): ClipRecipe {
   return {
+    ...(value.compositionBody !== undefined
+      ? {
+          compositionBody: value.compositionBody,
+          compositionLegacy: value.compositionLegacy ?? false,
+        }
+      : {}),
     name: value.name,
     informationFields: value.informationFields.map((f) => ({ ...f })),
     cutGuidance: value.cutGuidance,
@@ -129,6 +138,27 @@ export function validateClipRecipe(value: ClipRecipe) {
   const length = (text: string) => Array.from(text).length
   const textError = (text: string, max: number, required = true): FieldError | undefined =>
     required && !text ? 'required' : length(text) > max ? 'tooLong' : undefined
+  if (recipe.compositionBody !== undefined && !recipe.compositionLegacy) {
+    const name = textError(recipe.name, CLIP_TEMPLATE_LIMITS.name)
+    let composition: 'invalid' | undefined
+    try {
+      parseClipComposition(recipe.compositionBody)
+    } catch {
+      composition = 'invalid'
+    }
+    return {
+      name,
+      guidance: undefined,
+      fields: [],
+      fieldCount: false,
+      styles: false,
+      accent: false,
+      pace: false,
+      preset: false,
+      composition,
+      valid: !name && !composition,
+    }
+  }
   const labels = recipe.informationFields.map((f) => f.label)
   const fields = recipe.informationFields.map((f) => ({
     label:

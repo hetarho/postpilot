@@ -22,6 +22,9 @@ export function toClipTemplate(value: ProtoVideoTemplate): ClipTemplate {
   )
     throw new Error('Invalid clip template contract')
   return {
+    ...(value.compositionBody
+      ? { compositionBody: value.compositionBody, compositionLegacy: value.compositionLegacy }
+      : {}),
     ...(value.captionPace
       ? { captionPace: value.captionPace as NonNullable<ClipRecipe['captionPace']> }
       : {}),
@@ -66,15 +69,21 @@ export function useClipTemplateMutations(ownerId: string) {
   }
   const save = useMutation({
     mutationFn: async ({ id, recipe }: { id?: string; recipe: ClipRecipe }) => {
-      const fields = { ...normalizeRecipe(recipe), captionPace: recipe.captionPace ?? 'steady' }
-      const response = id
-        ? await client.updateVideoTemplate({
-            id,
-            ...fields,
-            informationFields: { values: fields.informationFields },
-            copyStyles: { values: fields.copyStyles },
-          })
-        : await client.createVideoTemplate(fields)
+      const { compositionBody, compositionLegacy, ...recipeFields } = normalizeRecipe(recipe)
+      const fields = { ...recipeFields, captionPace: recipe.captionPace ?? 'steady' }
+      const authored = compositionBody !== undefined && !compositionLegacy
+      const response = authored
+        ? id
+          ? await client.updateVideoTemplate({ id, name: fields.name, compositionBody })
+          : await client.createVideoTemplate({ name: fields.name, compositionBody })
+        : id
+          ? await client.updateVideoTemplate({
+              id,
+              ...fields,
+              informationFields: { values: fields.informationFields },
+              copyStyles: { values: fields.copyStyles },
+            })
+          : await client.createVideoTemplate(fields)
       if (!response.template?.id) throw new Error('Missing saved video template')
       return toClipTemplate(response.template)
     },

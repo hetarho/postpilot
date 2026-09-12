@@ -1,5 +1,6 @@
 import type { GenerationJob } from '@/entities/generation-job/@x/clip-project'
 import type { ClipCTAId, ClipDisclosureId } from '@/shared/config'
+import type { ClipProjectComposition, ClipCompositionInputs } from './composition'
 import type { ClipEditingState } from './edit-plan'
 import type { ClipObservations } from './observations'
 
@@ -17,6 +18,7 @@ export const CLIP_PROJECT_LIMITS = {
   maxSeconds: 90,
 } as const
 export interface ClipProjectDraft {
+  compositionInputs?: ClipCompositionInputs
   title: string
   videoTemplateId: string
   ratio: ClipRatio
@@ -30,6 +32,7 @@ export interface ClipProjectDraft {
   cta: ClipCTAId | ''
 }
 export interface ClipProject extends ClipProjectDraft {
+  composition?: ClipProjectComposition
   id: string
   createdAt: string
   updatedAt: string
@@ -102,6 +105,9 @@ export function emptyClipProject(): ClipProjectDraft {
 }
 export function projectDraft(value: ClipProjectDraft): ClipProjectDraft {
   return {
+    ...(value.compositionInputs
+      ? { compositionInputs: structuredClone(value.compositionInputs) }
+      : {}),
     title: value.title,
     videoTemplateId: value.videoTemplateId,
     ratio: value.ratio,
