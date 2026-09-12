@@ -166,11 +166,11 @@ describe('page-owned clip source session', () => {
     expect(pipeline.revokeURL).not.toHaveBeenCalled()
     expect(session.getSnapshot().entries.map((e) => e.file)).toEqual(files)
     session.finishAttempt('job', 'done')
-    expect(pipeline.revokeURL.mock.calls).toEqual([['blob:one.mp4'], ['blob:two.mp4']])
+    expect(pipeline.revokeURL).not.toHaveBeenCalled()
     expect(pipeline.discard).not.toHaveBeenCalled()
-    expect(session.getSnapshot()).toEqual({
+    expect(session.getSnapshot()).toMatchObject({
       phase: 'finished',
-      entries: [],
+      entries: files.map((file) => ({ file })),
       summaries: files.map((file) => ({ filename: file.name, status: 'done' })),
     })
   })
@@ -202,7 +202,7 @@ describe('page-owned clip source session', () => {
       expect(pipeline.revokeURL).toHaveBeenCalledTimes(2)
     },
   )
-  it('retries a failed discard before allowing another reservation', async () => {
+  it('replaces a selection after a failed discard without deleting retained originals', async () => {
     const { session, pipeline } = fixture()
     await session.select(files)
     pipeline.discard.mockRejectedValueOnce(new Error('offline'))
@@ -210,19 +210,16 @@ describe('page-owned clip source session', () => {
     expect(session.getSnapshot().phase).toBe('failed')
     expect(session.getSnapshot().entries).toEqual([])
     await session.select(files)
-    expect(pipeline.discard).toHaveBeenCalledTimes(2)
+    expect(pipeline.discard).toHaveBeenCalledTimes(1)
     expect(pipeline.reserve).toHaveBeenCalledTimes(2)
     await session.cancel()
     expect(session.getSnapshot().phase).toBe('idle')
   })
-  it('discards the old selection before replacing it', async () => {
+  it('replaces local previews while leaving prior retained originals to the server', async () => {
     const { session, pipeline } = fixture()
     await session.select(files)
     await session.select(files)
-    expect(pipeline.discard).toHaveBeenCalledWith('batch')
-    expect(pipeline.discard.mock.invocationCallOrder[0]).toBeLessThan(
-      pipeline.reserve.mock.invocationCallOrder[1]!,
-    )
+    expect(pipeline.discard).not.toHaveBeenCalled()
     expect(pipeline.revokeURL).toHaveBeenCalledTimes(2)
   })
   it('aborts the actual upload and discards when explicitly cancelled', async () => {

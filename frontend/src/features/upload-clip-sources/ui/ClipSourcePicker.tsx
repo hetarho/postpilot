@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { appFailureFromConnect } from '@/shared/api'
 import { CLIP_SOURCE_CONTAINERS } from '@/shared/config'
@@ -32,6 +32,13 @@ export function ClipSourcePicker({
   const [selected, setSelected] = useState('')
   const selectedEntry =
     upload.entries.find((entry) => entry.metadata.fingerprint === selected) ?? upload.entries[0]
+  const restoreTime = useRef(0)
+  const fingerprint = selectedEntry?.metadata.fingerprint
+  const ensurePlayback = upload.ensurePlayback
+  useEffect(() => {
+    restoreTime.current = 0
+    if (fingerprint) void ensurePlayback(fingerprint).catch(() => {})
+  }, [fingerprint, ensurePlayback])
   return (
     <section aria-labelledby={`${inputId}-heading`} className="mt-10 space-y-4">
       <Typography variant="title" id={`${inputId}-heading`}>
@@ -69,7 +76,7 @@ export function ClipSourcePicker({
               'peer-focus-visible/source:outline-focus-ring peer-focus-visible/source:outline-2 peer-focus-visible/source:outline-offset-2',
           })}
         >
-          {t(upload.phase === 'ready' ? 'source.replace' : 'source.select')}
+          {t(upload.entries.length ? 'source.replace' : 'source.select')}
         </label>
         {(busy || upload.phase === 'ready' || upload.phase === 'failed') && (
           <Button
@@ -120,13 +127,32 @@ export function ClipSourcePicker({
                 : t('source.uploadProgress', { percent: entry.percent }),
             }))}
           />
-          {!correction && (
+          {selectedEntry.retentionExpiresAt && (
+            <Typography variant="meta" className="text-content-secondary">
+              {t('source.retainedUntil', {
+                time: new Date(selectedEntry.retentionExpiresAt).toLocaleString(),
+              })}
+            </Typography>
+          )}
+          {selectedEntry.playbackError && (
+            <Typography variant="body" role="status">
+              {t(`source.access.${selectedEntry.playbackError}`)}
+            </Typography>
+          )}
+          {!correction && selectedEntry.previewURL && (
             <video
               key={selectedEntry.previewURL}
               controls
               playsInline
               preload="metadata"
               src={selectedEntry.previewURL}
+              onLoadedMetadata={(event) => {
+                if (restoreTime.current) event.currentTarget.currentTime = restoreTime.current
+              }}
+              onError={(event) => {
+                restoreTime.current = event.currentTarget.currentTime
+                void upload.ensurePlayback(selectedEntry.metadata.fingerprint, true).catch(() => {})
+              }}
               width={selectedEntry.metadata.width}
               height={selectedEntry.metadata.height}
               aria-label={selectedEntry.metadata.filename}

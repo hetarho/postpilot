@@ -78,7 +78,10 @@ export interface ClipSourceMetadata {
   height: number
   fingerprint: string
 }
+export type ClipSourceAvailability =
+  'uploading' | 'available' | 'active' | 'expired' | 'missing' | 'cleanup_pending'
 export interface ClipSourceBatch {
+  current?: boolean
   id: string
   projectId: string
   state: 'uploading' | 'ready' | 'consuming' | 'cleanup_pending'
@@ -86,6 +89,8 @@ export interface ClipSourceBatch {
   sources: Array<{
     id: string
     state: 'pending' | 'ready'
+    retentionExpiresAt?: string
+    availability?: ClipSourceAvailability
     actualBytes: number
     metadata: ClipSourceMetadata
   }>

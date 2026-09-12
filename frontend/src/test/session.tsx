@@ -261,7 +261,12 @@ export function createFakeAuthBackend(options: FakeAuthOptions = {}): FakeAuthBa
     registerExperimentService(router, { calls, ...options.experiments })
     registerPublishingService(router, { calls, ...options.publishing })
     registerTemplateService(router, { calls, ...options.templates })
-    registerClipService(router, { calls, ownerId: options.user?.id, ...options.clips })
+    registerClipService(router, {
+      calls,
+      ownerId: options.user?.id,
+      sourceJobStatus: (id) => options.jobs?.jobs?.find((j) => j.id === id)?.status,
+      ...options.clips,
+    })
     registerGuidelineService(router, { calls, ...options.guidelines })
     registerPlanServices(router, { plan: user?.plan, calls, ...options.plans })
     registerBillingService(router, { calls, ...options.billing })

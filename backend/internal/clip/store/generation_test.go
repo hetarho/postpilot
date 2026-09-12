@@ -33,6 +33,10 @@ type processingObjects struct {
 	uploads, signs []string
 }
 
+func (o *processingObjects) PresignSourcePlayback(_ context.Context, key, mime string, ttl time.Duration) (string, error) {
+	return "https://playback.example/" + key, nil
+}
+
 func (o *processingObjects) Download(ctx context.Context, key string, w io.Writer, limit int64) (int64, error) {
 	o.downloads[key]++
 	n := o.info[key].Bytes
@@ -294,7 +298,7 @@ func (j generationJobs) Active(ctx context.Context, user, id string) (*clip.Clip
 	if found == nil || err != nil {
 		return nil, err
 	}
-	return &clip.ClipJob{ID: found.ID, Status: found.Status, Stage: found.Stage}, nil
+	return &clip.ClipJob{ID: found.ID, Status: found.Status, Stage: found.Stage, FinishedAt: found.FinishedAt}, nil
 }
 func (j generationJobs) Get(ctx context.Context, user, id string) (*clip.ClipJob, error) {
 	found, err := j.q.Get(ctx, id, user)
@@ -304,7 +308,7 @@ func (j generationJobs) Get(ctx context.Context, user, id string) (*clip.ClipJob
 	if found == nil || err != nil {
 		return nil, err
 	}
-	return &clip.ClipJob{ID: found.ID, Status: found.Status, Stage: found.Stage}, nil
+	return &clip.ClipJob{ID: found.ID, Status: found.Status, Stage: found.Stage, FinishedAt: found.FinishedAt}, nil
 }
 
 type generationHarness struct {
@@ -394,15 +398,19 @@ func (h *generationHarness) run(t *testing.T) error {
 		f := stage.Failure()
 		failure = &job.Failure{Reason: f.Reason, Params: f.Params, TechnicalDetail: f.TechnicalDetail}
 	}
-	if e := h.jobs.Finish(ctx, j.ID, status, failure, time.Now()); e != nil {
+	terminal := time.Now()
+	if e := h.jobs.Finish(ctx, j.ID, status, failure, terminal); e != nil {
+		t.Fatal(e)
+	}
+	if e := h.sources.ReleaseAttempt(ctx, j.UserID, j.ID, terminal); e != nil {
 		t.Fatal(e)
 	}
 	return err
 }
 func (h *generationHarness) assertClean(t *testing.T) {
 	t.Helper()
-	if _, err := h.store.GetSourceBatch(context.Background(), "alice", h.batch.ID); !errors.Is(err, clip.ErrNotFound) {
-		t.Fatal("batch retained", err)
+	if _, err := h.store.GetSourceBatch(context.Background(), "alice", h.batch.ID); err != nil {
+		t.Fatal("original manifest lost", err)
 	}
 	files, err := os.ReadDir(h.media.root)
 	if err != nil || len(files) != 0 {
@@ -410,7 +418,15 @@ func (h *generationHarness) assertClean(t *testing.T) {
 	}
 	for key := range h.objects.info {
 		if strings.HasPrefix(key, clip.SourcePrefix) {
-			t.Fatal("source/proxy retained", key)
+			known := false
+			for _, v := range h.batch.Sources {
+				if v.Key == key {
+					known = true
+				}
+			}
+			if !known {
+				t.Fatal("proxy retained", key)
+			}
 		}
 	}
 }

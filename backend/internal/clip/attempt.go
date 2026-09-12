@@ -212,8 +212,8 @@ func (s *GenerationService) Sweep(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		if j == nil || (j.Status != "queued" && j.Status != "running") {
-			if err = s.sources.Finish(ctx, b.UserID, b.ID); err != nil {
+		if j != nil && j.FinishedAt != nil && (j.Status != "queued" && j.Status != "running") {
+			if err = s.sources.ReleaseAttempt(ctx, b.UserID, b.JobID, *j.FinishedAt); err != nil {
 				return err
 			}
 		}

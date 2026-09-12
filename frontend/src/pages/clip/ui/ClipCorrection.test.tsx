@@ -385,7 +385,7 @@ it('deletes a cut, reselects only its remaining source and rerenders once with n
     ),
   )
   expect(screen.queryByLabelText('선택한 컷의 원본 미리보기')).not.toBeInTheDocument()
-  expect(revoke).toHaveBeenCalledExactlyOnceWith('blob:source-a.mp4')
+  expect(revoke).not.toHaveBeenCalled()
   expect(
     JSON.stringify(
       view.queryClient
@@ -427,11 +427,10 @@ it('preserves saved corrections and the prior result after a failed free render'
   expect(cut().getByLabelText('자막 원문')).toHaveValue('출력 실패에도 보존')
   await expectResultKept()
   expect(screen.getByRole('button', { name: '수정 저장' })).toBeDisabled()
-  expect(screen.getByRole('button', { name: '다시 출력 · 크레딧 사용 없음' })).toBeDisabled()
+  expect(screen.getByRole('button', { name: '다시 출력 · 크레딧 사용 없음' })).toBeEnabled()
   expect(calls.filter((c) => c === 'StartClipRender')).toHaveLength(1)
   expect(calls).not.toContain('StartClipGeneration')
-  expect(revoke).toHaveBeenCalledWith('blob:source-a.mp4')
-  expect(revoke).toHaveBeenCalledWith('blob:source-b.mp4')
+  expect(revoke).not.toHaveBeenCalled()
 })
 it('releases local previews on leave and leaves remote cleanup to the durable lease', async () => {
   const calls: string[] = []

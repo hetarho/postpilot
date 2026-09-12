@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestMigration0035KeepsSourcesOutOfProjects(t *testing.T) {
+func TestClipProjectSchemaKeepsOnlySourceLifecycleReferences(t *testing.T) {
 	d := openTemp(t)
 	if err := Migrate(context.Background(), d.Writer); err != nil {
 		t.Fatal(err)
@@ -15,8 +15,9 @@ func TestMigration0035KeepsSourcesOutOfProjects(t *testing.T) {
 	if err := d.Reader.QueryRow("SELECT sql FROM sqlite_master WHERE name='clip_projects'").Scan(&ddl); err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(strings.ToLower(ddl), "source") {
-		t.Fatal("durable source data in project schema")
+	withoutLifecycle := strings.NewReplacer("source_retention_expires_at", "", "source_access_revoked_at", "", "source_batch_id", "").Replace(strings.ToLower(ddl))
+	if strings.Contains(withoutLifecycle, "source") || strings.Contains(withoutLifecycle, "blob") {
+		t.Fatal("original material leaked into project schema")
 	}
 	for _, column := range []string{"analysis_json", "edit_plan_json", "result_key", "rendered_plan_revision", "edit_plan_revision"} {
 		if !strings.Contains(ddl, column) {

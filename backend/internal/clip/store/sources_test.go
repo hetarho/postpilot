@@ -29,6 +29,10 @@ func (o *sourceObjects) PresignSource(_ context.Context, key, mime string, _ tim
 	}
 	return clip.SignedSourcePut{URL: "https://upload.example/" + key, Headers: map[string]string{"Content-Type": mime, "If-None-Match": "*"}}, nil
 }
+func (o *sourceObjects) PresignSourcePlayback(_ context.Context, key, mime string, ttl time.Duration) (string, error) {
+	return "https://playback.example/" + key, nil
+}
+
 func (o *sourceObjects) HeadSource(_ context.Context, key string) (clip.SourceObjectInfo, error) {
 	o.mu.Lock()
 	defer o.mu.Unlock()
@@ -185,10 +189,10 @@ func TestSourceOwnedCreateConfirmReplaceAndDiscard(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := store.GetSourceBatch(ctx, "alice", u.Batch.ID); !errors.Is(err, clip.ErrNotFound) {
+	if _, err := store.GetSourceBatch(ctx, "alice", u.Batch.ID); err != nil {
 		t.Fatal(err)
 	}
-	if len(objects.deleted) != 2 {
+	if len(objects.deleted) != 0 {
 		t.Fatal(objects.deleted)
 	}
 	for range 2 {
@@ -197,7 +201,7 @@ func TestSourceOwnedCreateConfirmReplaceAndDiscard(t *testing.T) {
 		}
 	}
 	// A request can arrive after cleanup won the race; it must never resurrect readiness.
-	if _, err := store.ConfirmSourceLease(ctx, "alice", newBatch.Batch.ID, newBatch.Batch.Sources[0].ID, 100, time.Now()); !errors.Is(err, clip.ErrNotFound) {
+	if _, err := store.ConfirmSourceLease(ctx, "alice", newBatch.Batch.ID, newBatch.Batch.Sources[0].ID, 100, time.Now()); !errors.Is(err, clip.ErrSourceState) {
 		t.Fatal(err)
 	}
 }
@@ -241,7 +245,7 @@ func TestSourceMismatchAndPartialCleanupRemainRetryable(t *testing.T) {
 			if err := src.Sweep(ctx); err != nil {
 				t.Fatal(err)
 			}
-			if _, err := store.GetSourceBatch(ctx, "alice", b.ID); !errors.Is(err, clip.ErrNotFound) {
+			if _, err := store.GetSourceBatch(ctx, "alice", b.ID); err != nil {
 				t.Fatal(err)
 			}
 			// Late PUT after removal is recovered by the same prefix-limited sweep.
@@ -277,7 +281,7 @@ func TestSourceExpiryConsumptionAndProjectDeletionFence(t *testing.T) {
 	if len(objects.info) != 1 {
 		t.Fatal("consuming bytes were swept")
 	}
-	if _, err := src.Create(ctx, "alice", p.ID, manifest(1)); !errors.Is(err, clip.ErrSourceState) {
+	if _, err := src.Create(ctx, "alice", p.ID, manifest(1)); err != nil {
 		t.Fatal(err)
 	}
 	if err := src.Discard(ctx, "alice", u.Batch.ID); !errors.Is(err, clip.ErrSourceState) {
@@ -360,7 +364,7 @@ func TestSourceBootSweepAndSigningFailure(t *testing.T) {
 		t.Fatal(err)
 	}
 	objects.upload(u.Batch)
-	if _, err := d.Writer.Exec("UPDATE clip_source_batches SET expires_at=?", time.Now().Add(-time.Hour).UTC().Format(time.RFC3339Nano)); err != nil {
+	if _, err := d.Writer.Exec("UPDATE clip_source_batches SET expires_at=?,put_expires_at=?", time.Now().Add(-time.Hour).UTC().Format(time.RFC3339Nano), time.Now().Add(-time.Hour).UTC().Format(time.RFC3339Nano)); err != nil {
 		t.Fatal(err)
 	}
 	runCtx, cancel := context.WithCancel(ctx)

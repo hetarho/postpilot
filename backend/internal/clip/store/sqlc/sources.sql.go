@@ -7,6 +7,7 @@ package sqlc
 
 import (
 	"context"
+	"database/sql"
 )
 
 const fenceSourceProjectDeletion = `-- name: FenceSourceProjectDeletion :execrows
@@ -27,7 +28,7 @@ func (q *Queries) FenceSourceProjectDeletion(ctx context.Context, arg FenceSourc
 }
 
 const getSourceBatch = `-- name: GetSourceBatch :one
-SELECT id, user_id, project_id, state, created_at, expires_at, job_id FROM clip_source_batches WHERE id=? AND user_id=?
+SELECT id, user_id, project_id, state, created_at, expires_at, job_id, put_expires_at FROM clip_source_batches WHERE id=? AND user_id=?
 `
 
 type GetSourceBatchParams struct {
@@ -46,21 +47,23 @@ func (q *Queries) GetSourceBatch(ctx context.Context, arg GetSourceBatchParams) 
 		&i.CreatedAt,
 		&i.ExpiresAt,
 		&i.JobID,
+		&i.PutExpiresAt,
 	)
 	return i, err
 }
 
 const insertSourceBatch = `-- name: InsertSourceBatch :exec
-INSERT INTO clip_source_batches(id,user_id,project_id,state,created_at,expires_at) VALUES (?,?,?,?,?,?)
+INSERT INTO clip_source_batches(id,user_id,project_id,state,created_at,expires_at,put_expires_at) VALUES (?,?,?,?,?,?,?)
 `
 
 type InsertSourceBatchParams struct {
-	ID        string
-	UserID    string
-	ProjectID string
-	State     string
-	CreatedAt string
-	ExpiresAt string
+	ID           string
+	UserID       string
+	ProjectID    string
+	State        string
+	CreatedAt    string
+	ExpiresAt    string
+	PutExpiresAt string
 }
 
 func (q *Queries) InsertSourceBatch(ctx context.Context, arg InsertSourceBatchParams) error {
@@ -71,16 +74,18 @@ func (q *Queries) InsertSourceBatch(ctx context.Context, arg InsertSourceBatchPa
 		arg.State,
 		arg.CreatedAt,
 		arg.ExpiresAt,
+		arg.PutExpiresAt,
 	)
 	return err
 }
 
 const insertSourceLease = `-- name: InsertSourceLease :exec
-INSERT INTO clip_source_leases(id,batch_id,user_id,object_key,filename,content_type,fingerprint,declared_bytes,duration_ms,width,height,state,ordinal) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+INSERT INTO clip_source_leases(id,canonical_id,batch_id,user_id,object_key,filename,content_type,fingerprint,declared_bytes,duration_ms,width,height,state,ordinal) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 `
 
 type InsertSourceLeaseParams struct {
 	ID            string
+	CanonicalID   string
 	BatchID       string
 	UserID        string
 	ObjectKey     string
@@ -98,6 +103,7 @@ type InsertSourceLeaseParams struct {
 func (q *Queries) InsertSourceLease(ctx context.Context, arg InsertSourceLeaseParams) error {
 	_, err := q.db.ExecContext(ctx, insertSourceLease,
 		arg.ID,
+		arg.CanonicalID,
 		arg.BatchID,
 		arg.UserID,
 		arg.ObjectKey,
@@ -142,7 +148,7 @@ func (q *Queries) ListBatchProxies(ctx context.Context, batchID string) ([]strin
 }
 
 const listProjectSourceBatches = `-- name: ListProjectSourceBatches :many
-SELECT id, user_id, project_id, state, created_at, expires_at, job_id FROM clip_source_batches WHERE project_id=? AND user_id=? ORDER BY created_at,id
+SELECT id, user_id, project_id, state, created_at, expires_at, job_id, put_expires_at FROM clip_source_batches WHERE project_id=? AND user_id=? ORDER BY created_at,id
 `
 
 type ListProjectSourceBatchesParams struct {
@@ -167,6 +173,7 @@ func (q *Queries) ListProjectSourceBatches(ctx context.Context, arg ListProjectS
 			&i.CreatedAt,
 			&i.ExpiresAt,
 			&i.JobID,
+			&i.PutExpiresAt,
 		); err != nil {
 			return nil, err
 		}
@@ -182,7 +189,7 @@ func (q *Queries) ListProjectSourceBatches(ctx context.Context, arg ListProjectS
 }
 
 const listSourceCleanup = `-- name: ListSourceCleanup :many
-SELECT id, user_id, project_id, state, created_at, expires_at, job_id FROM clip_source_batches WHERE state='cleanup_pending' ORDER BY created_at,id
+SELECT id, user_id, project_id, state, created_at, expires_at, job_id, put_expires_at FROM clip_source_batches WHERE state='cleanup_pending' AND NOT EXISTS (SELECT 1 FROM clip_source_attempts a WHERE a.batch_id=clip_source_batches.id AND a.released_at IS NULL) ORDER BY created_at,id
 `
 
 func (q *Queries) ListSourceCleanup(ctx context.Context) ([]ClipSourceBatch, error) {
@@ -202,6 +209,7 @@ func (q *Queries) ListSourceCleanup(ctx context.Context) ([]ClipSourceBatch, err
 			&i.CreatedAt,
 			&i.ExpiresAt,
 			&i.JobID,
+			&i.PutExpiresAt,
 		); err != nil {
 			return nil, err
 		}
@@ -217,7 +225,7 @@ func (q *Queries) ListSourceCleanup(ctx context.Context) ([]ClipSourceBatch, err
 }
 
 const listSourceLeases = `-- name: ListSourceLeases :many
-SELECT id, batch_id, user_id, object_key, filename, content_type, fingerprint, declared_bytes, actual_bytes, duration_ms, width, height, state, ordinal FROM clip_source_leases WHERE batch_id=? AND user_id=? ORDER BY ordinal
+SELECT id, batch_id, user_id, object_key, filename, content_type, fingerprint, declared_bytes, actual_bytes, duration_ms, width, height, state, ordinal, canonical_id, retention_expires_at, cleanup_pending FROM clip_source_leases WHERE batch_id=? AND user_id=? ORDER BY ordinal
 `
 
 type ListSourceLeasesParams struct {
@@ -249,6 +257,9 @@ func (q *Queries) ListSourceLeases(ctx context.Context, arg ListSourceLeasesPara
 			&i.Height,
 			&i.State,
 			&i.Ordinal,
+			&i.CanonicalID,
+			&i.RetentionExpiresAt,
+			&i.CleanupPending,
 		); err != nil {
 			return nil, err
 		}
@@ -264,7 +275,7 @@ func (q *Queries) ListSourceLeases(ctx context.Context, arg ListSourceLeasesPara
 }
 
 const markExpiredSources = `-- name: MarkExpiredSources :exec
-UPDATE clip_source_batches SET state='cleanup_pending' WHERE state IN ('uploading','ready') AND expires_at<=?
+UPDATE clip_source_batches SET state='cleanup_pending' WHERE state IN ('uploading','ready') AND expires_at<=? AND NOT EXISTS (SELECT 1 FROM clip_source_leases l WHERE l.batch_id=clip_source_batches.id AND l.cleanup_pending=0) AND NOT EXISTS(SELECT 1 FROM clip_source_attempts a WHERE a.batch_id=clip_source_batches.id AND a.released_at IS NULL)
 `
 
 func (q *Queries) MarkExpiredSources(ctx context.Context, expiresAt string) error {
@@ -304,34 +315,37 @@ func (q *Queries) MarkSourceCleanup(ctx context.Context, arg MarkSourceCleanupPa
 }
 
 const removeSourceBatch = `-- name: RemoveSourceBatch :exec
-DELETE FROM clip_source_batches WHERE id=? AND user_id=? AND state='cleanup_pending'
+DELETE FROM clip_source_batches WHERE clip_source_batches.id=? AND clip_source_batches.user_id=? AND state='cleanup_pending' AND put_expires_at<=? AND NOT EXISTS (SELECT 1 FROM clip_source_attempts a WHERE a.batch_id=clip_source_batches.id AND a.released_at IS NULL)
 `
 
 type RemoveSourceBatchParams struct {
-	ID     string
-	UserID string
+	ID           string
+	UserID       string
+	PutExpiresAt string
 }
 
 func (q *Queries) RemoveSourceBatch(ctx context.Context, arg RemoveSourceBatchParams) error {
-	_, err := q.db.ExecContext(ctx, removeSourceBatch, arg.ID, arg.UserID)
+	_, err := q.db.ExecContext(ctx, removeSourceBatch, arg.ID, arg.UserID, arg.PutExpiresAt)
 	return err
 }
 
 const setSourceLeaseReady = `-- name: SetSourceLeaseReady :execrows
-UPDATE clip_source_leases SET state='ready',actual_bytes=? WHERE id=? AND batch_id=? AND user_id=?
+UPDATE clip_source_leases SET state='ready',actual_bytes=?,retention_expires_at=? WHERE canonical_id=? AND batch_id=? AND user_id=? AND state='pending' AND cleanup_pending=0
 `
 
 type SetSourceLeaseReadyParams struct {
-	ActualBytes int64
-	ID          string
-	BatchID     string
-	UserID      string
+	ActualBytes        int64
+	RetentionExpiresAt sql.NullString
+	CanonicalID        string
+	BatchID            string
+	UserID             string
 }
 
 func (q *Queries) SetSourceLeaseReady(ctx context.Context, arg SetSourceLeaseReadyParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, setSourceLeaseReady,
 		arg.ActualBytes,
-		arg.ID,
+		arg.RetentionExpiresAt,
+		arg.CanonicalID,
 		arg.BatchID,
 		arg.UserID,
 	)
@@ -353,7 +367,7 @@ func (q *Queries) SourceKeyExists(ctx context.Context, key string) (bool, error)
 }
 
 const sourceProjectWritable = `-- name: SourceProjectWritable :one
-SELECT deleting FROM clip_projects WHERE id = ? AND user_id = ?
+SELECT CASE WHEN deleting=1 OR source_access_revoked_at IS NOT NULL THEN 1 ELSE 0 END AS deleting FROM clip_projects WHERE id = ? AND user_id = ?
 `
 
 type SourceProjectWritableParams struct {

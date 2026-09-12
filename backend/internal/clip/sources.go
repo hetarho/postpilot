@@ -23,6 +23,7 @@ type SourceConfig struct {
 	MaxFileBytes, MaxBatchBytes int64
 	Containers                  map[string][]string
 	BatchTTL, PutTTL            time.Duration
+	RetentionTTL, PlaybackTTL   time.Duration
 }
 
 // SourceMetadata is a browser declaration until the independent media probe verifies it.
@@ -34,13 +35,19 @@ type SourceMetadata struct {
 type SourceLease struct {
 	ID, Key, State string
 	SourceMetadata
-	ActualBytes int64
+	ActualBytes    int64
+	ExpiresAt      time.Time
+	CleanupPending bool
+	Availability   string
 }
 type SourceBatch struct {
 	ID, UserID, ProjectID, State, JobID string
 	ProxyKeys                           []string
 	CreatedAt, ExpiresAt                time.Time
+	UploadExpiresAt, PutExpiresAt       time.Time
 	Sources                             []SourceLease
+	Current                             bool
+	AccessDenied                        bool
 }
 type SignedSourcePut struct {
 	URL     string
@@ -67,12 +74,17 @@ type SourceStore interface {
 	ConfirmSourceLease(context.Context, string, string, string, int64, time.Time) (SourceBatch, error)
 	MarkSourceCleanup(context.Context, string, string, bool) (SourceBatch, error)
 	BeginProjectSourceCleanup(context.Context, string, string) ([]SourceBatch, error)
+	RevokeProjectSources(context.Context, string, string, time.Time) ([]SourceBatch, error)
 	ReapSourceBatches(context.Context, time.Time) ([]SourceBatch, error)
-	RemoveSourceBatch(context.Context, string, string) error
+	RemoveSourceBatch(context.Context, string, string, time.Time) error
 	SourceKeyExists(context.Context, string) (bool, error)
+	RemoveProxy(context.Context, string) error
+	ReleaseSourceAttempt(context.Context, string, string, time.Time) error
+	ProjectSourceBatches(context.Context, string, string) ([]SourceBatch, error)
 }
 type ObjectStore interface {
 	PresignSource(context.Context, string, string, time.Duration) (SignedSourcePut, error)
+	PresignSourcePlayback(context.Context, string, string, time.Duration) (string, error)
 	HeadSource(context.Context, string) (SourceObjectInfo, error)
 	Delete(context.Context, string) error
 	// A PUT already in flight can finish after discard deleted its lease. Prefix listing
@@ -86,11 +98,18 @@ type SourceService struct {
 	now     func() time.Time
 }
 
-func NewSourceService(store SourceStore, objects ObjectStore, cfg SourceConfig) *SourceService {
-	if cfg.MaxCount <= 0 || cfg.MaxDurationMS <= 0 || cfg.MaxFilenameChars <= 0 || cfg.MaxFileBytes <= 0 || cfg.MaxBatchBytes < cfg.MaxFileBytes || cfg.BatchTTL <= 0 || cfg.PutTTL <= 0 || cfg.PutTTL > cfg.BatchTTL || len(cfg.Containers) == 0 {
+func NewSourceService(store SourceStore, objects ObjectStore, cfg SourceConfig, clocks ...func() time.Time) *SourceService {
+	if cfg.MaxCount <= 0 || cfg.MaxDurationMS <= 0 || cfg.MaxFilenameChars <= 0 || cfg.MaxFileBytes <= 0 || cfg.MaxBatchBytes < cfg.MaxFileBytes || cfg.BatchTTL <= 0 || cfg.PutTTL <= 0 || cfg.PutTTL > cfg.BatchTTL || cfg.RetentionTTL <= 0 || cfg.PlaybackTTL <= 0 || len(cfg.Containers) == 0 {
 		panic("clip: invalid source limits")
 	}
-	return &SourceService{store: store, objects: objects, config: cfg, now: time.Now}
+	now := time.Now
+	if len(clocks) > 1 || len(clocks) == 1 && clocks[0] == nil {
+		panic("clip: invalid source clock")
+	}
+	if len(clocks) == 1 {
+		now = clocks[0]
+	}
+	return &SourceService{store: store, objects: objects, config: cfg, now: now}
 }
 func (s *SourceService) validateManifest(manifest []SourceMetadata) error {
 	if len(manifest) == 0 || len(manifest) > s.config.MaxCount {
@@ -120,7 +139,7 @@ func (s *SourceService) Create(ctx context.Context, user, project string, manife
 		return SourceBatchUpload{}, err
 	}
 	now := s.now().UTC()
-	b := SourceBatch{ID: newID(), UserID: user, ProjectID: project, State: "uploading", CreatedAt: now, ExpiresAt: now.Add(s.config.BatchTTL)}
+	b := SourceBatch{ID: newID(), UserID: user, ProjectID: project, State: "uploading", CreatedAt: now, ExpiresAt: now.Add(s.config.BatchTTL), UploadExpiresAt: now.Add(s.config.BatchTTL), PutExpiresAt: now.Add(s.config.PutTTL)}
 	for _, m := range manifest {
 		id := newID()
 		ext := strings.ToLower(path.Ext(m.Filename))
@@ -135,6 +154,14 @@ func (s *SourceService) Create(ctx context.Context, user, project string, manife
 	for _, previous := range old {
 		s.cleanupBestEffort(ctx, previous)
 	}
+	// The store may preserve canonical IDs for a matching saved plan on reselection.
+	b, err = s.store.GetSourceBatch(ctx, user, b.ID)
+	if err != nil {
+		return SourceBatchUpload{}, err
+	}
+	if b.AccessDenied || b.State != "uploading" || !s.now().Before(b.UploadExpiresAt) {
+		return SourceBatchUpload{}, ErrSourceState
+	}
 	out := SourceBatchUpload{Batch: b}
 	for _, source := range b.Sources {
 		signed, err := s.objects.PresignSource(ctx, source.Key, source.ContentType, s.config.PutTTL)
@@ -144,6 +171,13 @@ func (s *SourceService) Create(ctx context.Context, user, project string, manife
 		}
 		out.Uploads = append(out.Uploads, SourceUpload{SourceID: source.ID, SignedSourcePut: signed, ExpiresAt: now.Add(s.config.PutTTL)})
 	}
+	current, err := s.store.GetSourceBatch(ctx, user, b.ID)
+	if err != nil {
+		return SourceBatchUpload{}, err
+	}
+	if current.AccessDenied || current.State != "uploading" || !s.now().Before(current.UploadExpiresAt) {
+		return SourceBatchUpload{}, ErrSourceState
+	}
 	return out, nil
 }
 func (s *SourceService) Confirm(ctx context.Context, user, batchID, sourceID string) (SourceBatch, error) {
@@ -151,7 +185,7 @@ func (s *SourceService) Confirm(ctx context.Context, user, batchID, sourceID str
 	if err != nil {
 		return SourceBatch{}, err
 	}
-	if (b.State != "uploading" && b.State != "ready") || !s.now().Before(b.ExpiresAt) {
+	if b.AccessDenied || b.State != "uploading" && b.State != "ready" {
 		return SourceBatch{}, ErrSourceState
 	}
 	for _, source := range b.Sources {
@@ -159,7 +193,13 @@ func (s *SourceService) Confirm(ctx context.Context, user, batchID, sourceID str
 			continue
 		}
 		if source.State == "ready" {
-			return b, nil
+			if source.CleanupPending || !s.now().Before(source.ExpiresAt) {
+				return SourceBatch{}, ErrSourceState
+			}
+			return s.store.ConfirmSourceLease(ctx, user, batchID, sourceID, source.ActualBytes, s.now())
+		}
+		if !s.now().Before(b.UploadExpiresAt) {
+			return SourceBatch{}, ErrSourceState
 		}
 		info, err := s.objects.HeadSource(ctx, source.Key)
 		if err != nil {
@@ -187,17 +227,13 @@ func (s *SourceService) Discard(ctx context.Context, user, id string) error {
 	return nil // deletion intent is durable; storage retries no longer need the client
 }
 
-// Finish is worker-only: the handler must have finished every use of source pixels.
-func (s *SourceService) Finish(ctx context.Context, user, id string) error {
-	b, err := s.store.MarkSourceCleanup(ctx, user, id, true)
-	if errors.Is(err, ErrNotFound) {
-		return nil
+// ReleaseAttempt is called only after the owning queue persisted a terminal outcome.
+// The timestamp is the durable outcome time, never the current sweep time.
+func (s *SourceService) ReleaseAttempt(ctx context.Context, user, job string, terminal time.Time) error {
+	if terminal.IsZero() {
+		return ErrSourceState
 	}
-	if err != nil {
-		return err
-	}
-	s.cleanupBestEffort(ctx, b)
-	return nil
+	return s.store.ReleaseSourceAttempt(ctx, user, job, terminal)
 }
 func (s *SourceService) PrepareProjectDelete(ctx context.Context, user, project string) error {
 	batches, err := s.store.BeginProjectSourceCleanup(ctx, user, project)
@@ -209,17 +245,33 @@ func (s *SourceService) PrepareProjectDelete(ctx context.Context, user, project 
 	}
 	return nil
 }
-func (s *SourceService) cleanup(ctx context.Context, b SourceBatch) error {
-	if b.State != "cleanup_pending" {
-		return ErrSourceState
+
+// RevokeProject permanently denies new original access while active bindings protect
+// pixels until their durable terminal release. Finalization uses this without deleting results.
+func (s *SourceService) RevokeProject(ctx context.Context, user, project string) error {
+	batches, err := s.store.RevokeProjectSources(ctx, user, project, s.now())
+	if err != nil {
+		return err
 	}
+	for _, b := range batches {
+		s.cleanupBestEffort(ctx, b)
+	}
+	return nil
+}
+func (s *SourceService) cleanup(ctx context.Context, b SourceBatch) error {
+	partial := b.State != "cleanup_pending"
 	var errs []error
 	for _, key := range b.ProxyKeys {
 		if err := s.objects.Delete(ctx, key); err != nil {
 			errs = append(errs, errors.New("delete clip proxy failed"))
+		} else if err := s.store.RemoveProxy(ctx, key); err != nil {
+			errs = append(errs, err)
 		}
 	}
 	for _, source := range b.Sources {
+		if partial && !source.CleanupPending {
+			continue
+		}
 		if err := s.objects.Delete(ctx, source.Key); err != nil {
 			errs = append(errs, fmt.Errorf("delete source %s", source.ID))
 		}
@@ -227,7 +279,10 @@ func (s *SourceService) cleanup(ctx context.Context, b SourceBatch) error {
 	if len(errs) != 0 {
 		return errors.Join(errs...)
 	}
-	return s.store.RemoveSourceBatch(ctx, b.UserID, b.ID)
+	if partial || s.now().Before(b.PutExpiresAt) {
+		return nil
+	}
+	return s.store.RemoveSourceBatch(ctx, b.UserID, b.ID, s.now())
 }
 func (s *SourceService) cleanupBestEffort(ctx context.Context, b SourceBatch) {
 	if err := s.cleanup(ctx, b); err != nil {

@@ -15,14 +15,39 @@ type terminalStore struct {
 	commit    bool
 }
 
-func (s *terminalStore) Finish(ctx context.Context, id, status string, failure *Failure, _ time.Time) error {
+func (s *terminalStore) Finish(ctx context.Context, id, status string, failure *Failure, at time.Time) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
 	if s.commit {
 		s.persisted.ID, s.persisted.Status, s.persisted.Failure = id, status, failure
+		s.persisted.FinishedAt = &at
 	}
 	return s.finishErr
+}
+
+func TestWorkerResourceReleaseUsesOnlyDurableTerminalTime(t *testing.T) {
+	at := time.Now().UTC()
+	for _, committed := range []bool{false, true} {
+		t.Run(map[bool]string{false: "uncommitted", true: "committed"}[committed], func(t *testing.T) {
+			store := &terminalStore{persisted: Job{Status: StatusRunning}, commit: committed, finishErr: errors.New("ambiguous terminal write")}
+			q := New(store, time.Second)
+			q.now = func() time.Time { return at }
+			released := 0
+			q.Register(KindRenderClip, func(context.Context, Job, Progress) error { return nil })
+			q.OnTerminal(KindRenderClip, func(ctx context.Context, j Job, terminal time.Time) error {
+				if ctx.Err() != nil || store.persisted.Status != StatusDone || store.persisted.FinishedAt == nil || !terminal.Equal(*store.persisted.FinishedAt) {
+					t.Fatal("release preceded durable terminal outcome")
+				}
+				released++
+				return errors.New("cleanup unavailable")
+			})
+			q.run(context.Background(), Job{ID: "render", Kind: KindRenderClip})
+			if committed && (released != 1 || store.persisted.Status != StatusDone) || !committed && released != 0 {
+				t.Fatal("incorrect terminal resource release", released)
+			}
+		})
+	}
 }
 
 func (s *terminalStore) GetByID(context.Context, string) (Job, error) {

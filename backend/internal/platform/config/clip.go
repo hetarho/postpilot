@@ -35,10 +35,13 @@ const (
 )
 
 func ClipSourceLimits(batchTTL, putTTL time.Duration) clip.SourceConfig {
-	return clip.SourceConfig{MaxCount: ClipSourceCount, MaxDurationMS: ClipSourceDurationMS, MaxFilenameChars: 255, MaxFileBytes: ClipSourceFileBytes, MaxBatchBytes: ClipSourceBatchBytes, BatchTTL: batchTTL, PutTTL: putTTL, Containers: map[string][]string{
+	return clip.SourceConfig{RetentionTTL: ClipOriginalRetention, PlaybackTTL: 5 * time.Minute, MaxCount: ClipSourceCount, MaxDurationMS: ClipSourceDurationMS, MaxFilenameChars: 255, MaxFileBytes: ClipSourceFileBytes, MaxBatchBytes: ClipSourceBatchBytes, BatchTTL: batchTTL, PutTTL: putTTL, Containers: map[string][]string{
 		"mp4": {"video/mp4"}, "mov": {"video/quicktime"}, "m4v": {"video/x-m4v", "video/mp4"}, "webm": {"video/webm"},
 	}}
 }
+
+// Confirmed originals follow product policy independently of incomplete uploads.
+const ClipOriginalRetention = 24 * time.Hour
 
 func ClipLimits() clip.Limits {
 	return clip.Limits{Composition: ClipCompositionLimits(), NameChars: ClipTemplateNameChars, GuidanceChars: ClipGuidanceChars, FieldCount: ClipInformationFields, LabelChars: ClipLabelChars, PromptChars: ClipPromptChars, TitleChars: ClipTitleChars, AnswerChars: ClipAnswerChars, MinDurationMS: ClipMinDurationMS, MaxDurationMS: ClipMaxDurationMS}

@@ -1,5 +1,5 @@
 import { createClient, type Transport } from '@connectrpc/connect'
-import { toClipSourceBatch } from '@/entities/clip-project'
+import { toClipSourceBatch, getClipSources, getClipSourcePlayback } from '@/entities/clip-project'
 import { ClipService } from '@/shared/api'
 import { putBlobWithProgress } from '@/shared/lib/upload'
 import { readSourceManifest } from '../model/manifest'
@@ -9,6 +9,9 @@ export function createClipSourcePipeline(transport: Transport): SourcePipeline {
   const client = createClient(ClipService, transport)
   return {
     read: readSourceManifest,
+    retained: (projectId, signal) => getClipSources(transport, projectId, signal),
+    playback: (projectId, id, fingerprint, signal) =>
+      getClipSourcePlayback(transport, projectId, id, fingerprint, signal),
     async reserve(projectId, manifest, signal) {
       // Deliberately project each metadata field. No File, Blob or preview URL crosses Connect.
       const response = await client.createClipSourceBatch(

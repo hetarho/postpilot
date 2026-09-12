@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"log/slog"
 	"net/url"
 	"reflect"
 	"time"
@@ -107,7 +106,7 @@ func (s *GenerationService) StartRender(ctx context.Context, user, id, batch str
 	if err != nil {
 		return "", err
 	}
-	b, err := s.store.GetSourceBatch(ctx, user, batch)
+	b, err := s.sources.AvailableBatch(ctx, user, batch, plan)
 	if err != nil {
 		return "", err
 	}
@@ -132,13 +131,6 @@ func (s *GenerationService) StartRender(ctx context.Context, user, id, batch str
 func (s *GenerationService) RunRender(ctx context.Context, user, job, project string, payload []byte, progress func(string, int, int)) (err error) {
 	stage := "prepare"
 	defer func() {
-		cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), s.cfg.CleanupTimeout)
-		defer cancel()
-		if b, e := s.store.BatchForJob(cleanup, user, job); e == nil {
-			if e = s.sources.Finish(cleanup, user, b.ID); e != nil {
-				slog.Warn("clip render cleanup deferred", "job", job)
-			}
-		}
 		if err != nil {
 			err = &StageFailure{stage, err}
 		}
@@ -148,7 +140,7 @@ func (s *GenerationService) RunRender(ctx context.Context, user, job, project st
 		return err
 	}
 	var frozen renderPayload
-	if strictJSON(string(payload), &frozen) != nil || frozen.Version != 1 || frozen.ProjectID != project || frozen.Batch.ID != b.ID || frozen.Batch.UserID != user || !reflect.DeepEqual(frozen.Batch.Sources, b.Sources) {
+	if strictJSON(string(payload), &frozen) != nil || frozen.Version != 1 || frozen.ProjectID != project || frozen.Batch.ID != b.ID || frozen.Batch.UserID != user || !SameSourceManifest(frozen.Batch.Sources, b.Sources) {
 		return ErrInvalid
 	}
 	if b.State != "consuming" {
@@ -193,6 +185,7 @@ func (s *GenerationService) RunRender(ctx context.Context, user, job, project st
 	if err = MatchRenderBatch(plan, b); err != nil {
 		return err
 	}
+	b = renderBatchSources(plan, b)
 	set := func(name string, n, total int) { stage = name; progress(name, n, total) }
 	var result Result
 	err = s.media.WithWorkspace(ctx, job, func(ws MediaWorkspace) error {

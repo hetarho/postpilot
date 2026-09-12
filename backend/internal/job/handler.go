@@ -23,6 +23,7 @@ type Queue struct {
 
 	mu       sync.RWMutex
 	handlers map[string]Handler
+	terminal map[string]func(context.Context, Job, time.Time) error
 	now      func() time.Time
 	newID    func() string
 }
@@ -33,8 +34,28 @@ func New(store Store, pollInterval time.Duration) *Queue {
 	}
 	return &Queue{
 		store: store, pollInterval: pollInterval, wake: make(chan struct{}, 1),
-		handlers: make(map[string]Handler), now: time.Now, newID: newID,
+		handlers: make(map[string]Handler), terminal: make(map[string]func(context.Context, Job, time.Time) error), now: time.Now, newID: newID,
 	}
+}
+
+// OnTerminal releases resources owned by a job kind after its durable terminal write.
+// Owners must make this idempotent and recover missed calls after interruption.
+func (q *Queue) OnTerminal(kind string, fn func(context.Context, Job, time.Time) error) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	if fn == nil || q.terminal[kind] != nil {
+		panic("job: invalid terminal observer")
+	}
+	q.terminal[kind] = fn
+}
+func (q *Queue) notifyTerminal(ctx context.Context, j Job, at time.Time) error {
+	q.mu.RLock()
+	fn := q.terminal[j.Kind]
+	q.mu.RUnlock()
+	if fn == nil {
+		return nil
+	}
+	return fn(ctx, j, at)
 }
 
 // Admit installs the plan gate. It is a setter rather than a New parameter because the

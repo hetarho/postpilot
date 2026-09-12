@@ -48,17 +48,20 @@
 | T130 | Build bounded draft video preview and overlay preparation | CLIP CDS ARCH | T128 T133 | todo |
 | T131 | Replace cut forms with a preview-led timeline editor | CLIP CDS ARCH | T129 T130 | todo |
 | T132 | Verify clip composition quality and editing parity | CLIP CDS QUOTA THEME ARCH | T136 | todo |
-| T133 | Retain and reuse private clip originals for 24 hours | CLIP ARCH | T126 | todo |
 | T134 | Cancel clip attempts and settle the unused reservation | CLIP QUOTA ARCH | T128 T133 | todo |
 | T135 | Finalize a matching clip result and delete its originals | CLIP ARCH | T134 | todo |
 | T136 | Show focused clip progress and explicit confirmation | CLIP QUOTA THEME POST ARCH | T131 T134 T135 | todo |
 
 ## next
-- implement-task T133; continue template authoring T129, then preview/editor T130 → T131 plus cancellation/finalization T134 → T135; integrate T136 and verify T132.
+- implement-task T129, then preview/editor T130 → T131 plus cancellation/finalization T134 → T135; integrate T136 and verify T132.
 - T110 must refresh CLIP@12 / CDS@10 before resuming because mandatory cards, disclosure and fact QA changed; it remains owner-blocked: privately load a 9:16 clip with both cards in the Naver picker without publishing, capture the clip-tab overlays and supply the images for CDS-11 measurement. Remaining CDS interpretations are recorded in the results of T107, T108, T109 and T115 (contrast/card geometry, audio seams, exposure and frequency, footage-bound duration).
 - T008 needs the owner present: refresh PUB@5 / ARCH@2, rerun postpilot-agent setup before installation for driver signature smarteditor-one-20260910-a6, and cancel or deliberately reuse the queued 20260905-test job; after completion, update PUB for VIDEO-17 and TMPL-39.
 
 ## log
+- 260913 T133 done (clip); reusable private originals, durable 24-hour retention and source playback pass all local and 27 production release gates; commit then T129 authoring
+- 260913 T133 verification (clip); complete FE/BE and build gates pass, finish signing-race and production lifecycle checks before commit
+- 260913 T133 resumed (clip); confirmed policies remain consumed by T133–T136, continue the authorized implementation and commit sequence
+- 260913 T133 claimed (clip); T128 committed as 828f8f3 with a clean worktree, implement private 24-hour original retention and reuse
 - 260913 T128 done (clip); native composition rendering, bounded overlays and durable element errors pass local and production gates; 100-cut/200-phrase and 20-source/49-observation stress pass, commit then T133 retention
 - 260913 T128 verification (clip); local ARCH gates pass, 100 cuts / 90 s / 200 rapid phrases pass at 366,342,144-byte peak with no OOM; production media, final-frame sampling and 20-source release gates remain running
 - 260913 T128 resumed (clip); confirmed lifecycle policies remain fully covered by CLIP r12 / QUOTA r10 / THEME r11 and T133–T136; continue the authorized T125–T136 implementation goal
@@ -75,7 +78,3 @@
 - 260912 T126 resumed (clip); verified T125 commit and clean code baseline, implement owned composition persistence, conversion and frozen contracts
 - 260912 T126 claimed (clip); T125 committed as 6e4e8ec, implement composition persistence and legacy migration next
 - 260912 T125 done (clip); portable Go/TS composition grammar and resolution, 65 shared cases, 70 FE grammar tests and all local gates pass; commit authorized and T126 next
-- 260912 T125 claimed (clip); implement and commit T125–T136 in dependency order under the authorized goal
-- 260912 create-task audit (lifecycle); all 38 changed decisions covered, 12 todo task references/bases and dependency graph valid; spec lint and diff checks pass with 11 pre-existing warnings; documents/tasks only
-- 260912 create-task CLIP r12 / QUOTA r10 / THEME r11 done (lifecycle); T133–T136 cover retained originals, cancellation settlement, finalization and focused progress; T125–T132 bases refreshed with T130/T131/T132 integration updated
-- 260912 create-task CLIP QUOTA THEME start (lifecycle); decompose retention, explicit confirmation, cancellation accounting and focused running UX; refresh overlapping todo tasks

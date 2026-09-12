@@ -1,6 +1,19 @@
-import type { ClipSourceBatch, ClipSourceMetadata, ReadyClipBatch } from '@/entities/clip-project'
+import { appFailureFromConnect } from '@/shared/api'
+import type {
+  ClipSourceBatch,
+  ClipSourceMetadata,
+  ReadyClipBatch,
+  ClipSourceAvailability,
+} from '@/entities/clip-project'
 
 export interface SourcePipeline {
+  retained?(projectId: string, signal?: AbortSignal): Promise<ClipSourceBatch[]>
+  playback?(
+    projectId: string,
+    id: string,
+    fingerprint: string,
+    signal?: AbortSignal,
+  ): Promise<{ url: string; expiresAt: string }>
   read(files: readonly File[], signal: AbortSignal): Promise<ClipSourceMetadata[]>
   reserve(
     projectId: string,
@@ -23,7 +36,12 @@ export interface SourcePipeline {
   revokeURL(url: string): void
 }
 export interface LocalClipSource {
-  file: File
+  file?: File
+  sourceId?: string
+  retentionExpiresAt?: string
+  playbackExpiresAt?: string
+  availability?: ClipSourceAvailability
+  playbackError?: 'expired' | 'missing' | 'unavailable'
   previewURL: string
   metadata: ClipSourceMetadata
   percent: number
@@ -47,6 +65,12 @@ export interface ClipUploadState {
   error?: unknown
 }
 
+export class ClipSourceAccessError extends Error {
+  constructor(public readonly reason: 'expired' | 'missing' | 'unavailable') {
+    super(`Clip source ${reason}`)
+  }
+}
+
 const activeSessions = new Set<ClipSourceSession>()
 /** Logout/expired authentication releases runtime media immediately, before navigation. */
 export function discardClipSourceSessions() {
@@ -57,9 +81,16 @@ export function discardClipSourceSessions() {
 export class ClipSourceSession {
   private active = false
   private epoch = 0
+  private mediaEpoch = 0
+  private playbackController = new AbortController()
   private controller?: AbortController
   private batchId?: string
-  private requiredKey?: string
+  private requiredFingerprints?: readonly string[]
+  private lastFinishedJob?: string
+  private refreshing?: Promise<void>
+  private playbackRequests = new Map<string, Promise<string>>()
+  private playbackRetried = new Set<string>()
+  private retainedController?: AbortController
   private attempt?: { batch: ReadyClipBatch; epoch: number; jobId?: string }
   private entries = new Map<string, LocalClipSource>()
   private listeners = new Set<() => void>()
@@ -77,21 +108,162 @@ export class ClipSourceSession {
   }
   activate() {
     this.active = true
+    if (this.playbackController.signal.aborted) this.playbackController = new AbortController()
     activeSessions.add(this)
+    void this.refreshRetained()
   }
-  changeConstraints(key: string) {
-    const changed = this.requiredKey !== undefined && this.requiredKey !== key
-    this.requiredKey = key
+  requireSources(fingerprints: readonly string[] | undefined) {
+    this.requiredFingerprints = fingerprints
+    void this.refreshRetained()
+  }
+
+  refreshRetained = (): Promise<void> => {
+    if (!this.active || !this.pipeline.retained || this.attempt || this.controller)
+      return Promise.resolve()
+    if (this.refreshing) return this.refreshing
+    const epoch = this.epoch
+    const controller = new AbortController()
+    this.retainedController?.abort()
+    this.retainedController = controller
+    const request = (async () => {
+      try {
+        const batches = await this.pipeline.retained!(this.projectId, controller.signal)
+        if (!this.current(epoch) || this.attempt) return
+        const current = batches.find((b) => b.current)
+        const seen = new Set<string>()
+        for (const batch of batches)
+          for (const source of batch.sources) {
+            const fp = source.metadata.fingerprint
+            if (seen.has(fp)) continue
+            seen.add(fp)
+            const prior = this.entries.get(fp)
+            this.entries.set(fp, {
+              ...prior,
+              metadata: source.metadata,
+              sourceId: source.id,
+              previewURL:
+                prior?.file || prior?.sourceId === source.id ? (prior?.previewURL ?? '') : '',
+              percent: source.state === 'ready' ? 100 : 0,
+              confirmed: source.state === 'ready',
+              retentionExpiresAt: source.retentionExpiresAt,
+              availability: source.availability,
+            })
+          }
+        for (const [fp, entry] of this.entries)
+          if (!seen.has(fp) && !entry.file) this.entries.delete(fp)
+        const needed =
+          this.requiredFingerprints ?? current?.sources.map((s) => s.metadata.fingerprint) ?? []
+        const ready =
+          current?.state === 'ready' &&
+          needed.length > 0 &&
+          needed.every((fp) =>
+            current.sources.some(
+              (source) =>
+                source.metadata.fingerprint === fp &&
+                source.availability === 'available' &&
+                !!source.retentionExpiresAt &&
+                Date.parse(source.retentionExpiresAt) > Date.now(),
+            ),
+          )
+        this.batchId = current?.id
+        this.publish(
+          ready
+            ? 'ready'
+            : current?.state === 'consuming' && !!this.lastFinishedJob
+              ? 'finished'
+              : 'idle',
+          {
+            ...(ready ? { readyBatch: { ...current, state: 'ready' } } : {}),
+            summaries: this.state.summaries,
+          },
+        )
+      } catch (error) {
+        if (this.current(epoch) && !controller.signal.aborted)
+          this.publish(this.state.phase, { readyBatch: this.state.readyBatch, error })
+      }
+    })().finally(() => {
+      if (this.refreshing === request) this.refreshing = undefined
+    })
+    this.refreshing = request
+    return request
+  }
+  ensurePlayback = (fingerprint: string, refresh = false): Promise<string> => {
+    const entry = this.entries.get(fingerprint)
+    if (!this.active || !entry) return Promise.reject(new ClipSourceAccessError('unavailable'))
+    if (entry.file && entry.previewURL) return Promise.resolve(entry.previewURL)
+    if (this.playbackRequests.has(fingerprint)) return this.playbackRequests.get(fingerprint)!
     if (
-      !changed ||
-      !this.active ||
-      this.attempt ||
-      (this.entries.size === 0 && this.state.phase !== 'reading')
+      !refresh &&
+      entry.previewURL &&
+      entry.playbackExpiresAt &&
+      Date.parse(entry.playbackExpiresAt) > Date.now()
     )
-      return
-    this.dispose()
-    this.activate()
+      return Promise.resolve(entry.previewURL)
+    const epoch = this.mediaEpoch
+    const currentMedia = () => this.active && epoch === this.mediaEpoch
+    const request = (async () => {
+      try {
+        if (!entry.sourceId || !this.pipeline.playback)
+          throw new ClipSourceAccessError('unavailable')
+        if (
+          !entry.retentionExpiresAt ||
+          Date.parse(entry.retentionExpiresAt) <= Date.now() ||
+          ['expired', 'cleanup_pending'].includes(entry.availability ?? '')
+        )
+          throw new ClipSourceAccessError('expired')
+        if (entry.availability === 'missing') throw new ClipSourceAccessError('missing')
+        if (refresh) {
+          if (this.playbackRetried.has(fingerprint)) throw new ClipSourceAccessError('unavailable')
+          this.playbackRetried.add(fingerprint)
+        }
+        const capability = await this.pipeline.playback(
+          this.projectId,
+          entry.sourceId,
+          fingerprint,
+          this.playbackController.signal,
+        )
+        if (!currentMedia()) throw new ClipSourceAccessError('unavailable')
+        const current = this.entries.get(fingerprint)
+        if (!current || current.sourceId !== entry.sourceId)
+          throw new ClipSourceAccessError('unavailable')
+        this.entries.set(fingerprint, {
+          ...current,
+          previewURL: capability.url,
+          playbackExpiresAt: capability.expiresAt,
+          playbackError: undefined,
+        })
+        this.publish(this.state.phase, {
+          readyBatch: this.state.readyBatch,
+          summaries: this.state.summaries,
+        })
+        return capability.url
+      } catch (error) {
+        const failure = appFailureFromConnect(error)
+        const reason =
+          error instanceof ClipSourceAccessError
+            ? error.reason
+            : failure.reason === 'CLIP_SOURCE_EXPIRED'
+              ? 'expired'
+              : failure.reason === 'CLIP_SOURCE_MISSING'
+                ? 'missing'
+                : 'unavailable'
+        if (currentMedia()) {
+          this.entries.set(fingerprint, { ...entry, previewURL: '', playbackError: reason })
+          this.publish(this.state.phase, {
+            readyBatch: this.state.readyBatch,
+            summaries: this.state.summaries,
+          })
+        }
+        throw new ClipSourceAccessError(reason)
+      }
+    })().finally(() => {
+      if (this.playbackRequests.get(fingerprint) === request)
+        this.playbackRequests.delete(fingerprint)
+    })
+    this.playbackRequests.set(fingerprint, request)
+    return request
   }
+
   private publish(
     phase: ClipUploadState['phase'],
     extras: Pick<ClipUploadState, 'readyBatch' | 'error' | 'summaries'> = {},
@@ -107,7 +279,13 @@ export class ClipSourceSession {
     if (this.active) for (const listener of this.listeners) listener()
   }
   private clearFiles() {
-    for (const entry of this.entries.values()) this.pipeline.revokeURL(entry.previewURL)
+    this.mediaEpoch++
+    this.playbackController.abort()
+    this.playbackController = new AbortController()
+    this.playbackRequests.clear()
+    for (const entry of this.entries.values())
+      if (entry.file) this.pipeline.revokeURL(entry.previewURL)
+    this.playbackRetried.clear()
     this.entries.clear()
   }
   private current(token: number) {
@@ -119,7 +297,10 @@ export class ClipSourceSession {
     this.epoch++
     this.controller?.abort()
     this.controller = undefined
+    this.retainedController?.abort()
+    this.refreshing = undefined
     this.clearFiles()
+    this.playbackController.abort()
     this.batchId = undefined
     this.attempt = undefined
     this.publish('idle')
@@ -162,7 +343,16 @@ export class ClipSourceSession {
     this.publish('ready', { readyBatch: batch })
   }
   finishAttempt(jobId: string, status: 'done' | 'failed') {
-    if (!this.active || this.attempt?.jobId !== jobId || this.attempt.epoch !== this.epoch) return
+    if (!this.active) return
+    if (!this.attempt) {
+      if (this.lastFinishedJob !== jobId) {
+        this.lastFinishedJob = jobId
+        void this.refreshRetained()
+      }
+      return
+    }
+    if (this.attempt.jobId !== jobId || this.attempt.epoch !== this.epoch) return
+    this.lastFinishedJob = jobId
     const summaries = [...this.entries.values()].map((e) => ({
       filename: e.metadata.filename,
       status,
@@ -170,10 +360,10 @@ export class ClipSourceSession {
     this.epoch++
     this.controller?.abort()
     this.controller = undefined
-    this.clearFiles()
-    this.batchId = undefined
+    this.batchId = this.attempt.batch.id
     this.attempt = undefined
     this.publish('finished', { summaries })
+    void this.refreshRetained()
   }
   async cancel() {
     if (!this.active || this.attempt) return
@@ -199,15 +389,9 @@ export class ClipSourceSession {
     this.controller?.abort()
     const controller = new AbortController()
     this.controller = controller
-    const previous = this.batchId
     this.clearFiles()
     this.publish('reading')
     try {
-      if (previous) {
-        await this.pipeline.discard(previous)
-        if (!this.current(token)) return
-        this.batchId = undefined
-      }
       const manifest = await this.pipeline.read(files, controller.signal)
       if (!this.current(token)) return
       validate?.(manifest)
@@ -240,7 +424,7 @@ export class ClipSourceSession {
       for (const source of reservation.batch.sources) {
         const entry = this.entries.get(source.metadata.fingerprint)
         const upload = reservation.uploads.find((v) => v.sourceId === source.id)
-        if (!entry || !upload) throw new Error('Missing reserved source')
+        if (!entry?.file || !upload) throw new Error('Missing reserved source')
         await this.pipeline.put(
           upload.putUrl,
           upload.headers,
@@ -255,7 +439,15 @@ export class ClipSourceSession {
         if (!this.current(token)) return
         confirmed = await this.pipeline.confirm(reservation.batch.id, source.id, controller.signal)
         if (!this.current(token)) return
-        this.entries.set(source.metadata.fingerprint, { ...entry, percent: 100, confirmed: true })
+        const lease = confirmed.sources.find((v) => v.id === source.id)
+        this.entries.set(source.metadata.fingerprint, {
+          ...entry,
+          sourceId: source.id,
+          percent: 100,
+          confirmed: true,
+          retentionExpiresAt: lease?.retentionExpiresAt,
+          availability: lease?.availability,
+        })
         this.publish('uploading')
       }
       if (confirmed.id !== reservation.batch.id || confirmed.state !== 'ready')

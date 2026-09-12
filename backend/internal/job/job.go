@@ -186,6 +186,7 @@ type Job struct {
 
 // JobSummary is the public view returned to other contexts and the RPC edge.
 type JobSummary struct {
+	FinishedAt     *time.Time
 	ID             string
 	Kind           string
 	UserID         string
@@ -210,7 +211,7 @@ func summarize(found Job) *JobSummary {
 		Status: found.Status, Stage: found.Stage, ProgressDone: found.ProgressDone,
 		ProgressTotal: found.ProgressTotal, Failure: cloneFailure(found.Failure),
 		ObserveModel: found.ObserveModel, WriteModel: found.WriteModel, TargetLanguage: found.TargetLanguage,
-		CreatedAt: found.CreatedAt, UpdatedAt: found.UpdatedAt,
+		CreatedAt: found.CreatedAt, UpdatedAt: found.UpdatedAt, FinishedAt: found.FinishedAt,
 	}
 }
 

@@ -104,6 +104,8 @@ export interface FakeClipsOptions {
   projectSaveFails?: boolean
   projectListFails?: boolean
   sourceRequests?: unknown[]
+  retainedBatches?: ProtoClipSourceBatch[]
+  sourceJobStatus?: (id: string) => string | undefined
   reserveFails?: boolean
   confirmFails?: boolean
   discardFails?: boolean
@@ -272,7 +274,9 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     if (!projects.delete(req.id)) throw connectAppError('CLIP_NOT_FOUND', Code.NotFound)
     return create(DeleteClipProjectResponseSchema, {})
   })
-  const batches = new Map<string, ProtoClipSourceBatch>()
+  const batches = new Map<string, ProtoClipSourceBatch>(
+    (options.retainedBatches ?? []).map((b) => [b.id, b]),
+  )
   const quotes = new Map<string, { id: string; max: number }>()
   let quoteNumber = 0
   router.rpc(ClipService.method.listClipAnalysisEligibility, () => {
@@ -371,17 +375,45 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     if (options.generationAmbiguous) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
     return create(StartClipGenerationResponseSchema, { jobId })
   })
+  router.rpc(ClipService.method.getClipSources, (req) => {
+    if (!projects.has(req.projectId)) throw connectAppError('CLIP_NOT_FOUND', Code.NotFound)
+    const p = projects.get(req.projectId)!
+    const current = options.readProject?.(p) ?? p
+    const status =
+      options.sourceJobStatus?.(current.latestJob?.id ?? '') ?? current.latestJob?.status
+    for (const b of batches.values())
+      if (
+        b.projectId === req.projectId &&
+        b.state === 'consuming' &&
+        (status === 'done' || status === 'failed')
+      )
+        b.state = 'ready'
+    return { batches: [...batches.values()].filter((b) => b.projectId === req.projectId) }
+  })
+  router.rpc(ClipService.method.getClipSourcePlayback, (req) => {
+    const b = [...batches.values()].find((b) => b.current && b.projectId === req.projectId)
+    const source = b?.sources.find(
+      (s) => s.id === req.sourceId && s.metadata?.fingerprint === req.expectedFingerprint,
+    )
+    if (!source) throw connectAppError('CLIP_NOT_FOUND', Code.NotFound)
+    return {
+      url: `https://storage.test/play/${source.id}`,
+      expiresAt: new Date(Date.now() + 300000).toISOString(),
+    }
+  })
   router.rpc(ClipService.method.createClipSourceBatch, (req) => {
     options.calls?.push('CreateClipSourceBatch')
     options.sourceRequests?.push(req)
     if (options.reserveFails)
       throw connectAppError('CLIP_SOURCE_UNAVAILABLE', Code.FailedPrecondition)
     if (!projects.has(req.projectId)) throw connectAppError('CLIP_NOT_FOUND', Code.NotFound)
+    for (const b of batches.values()) if (b.projectId === req.projectId) b.current = false
     const id = `batch-${++next}`
     const batch = create(ClipSourceBatchSchema, {
       id,
       projectId: req.projectId,
       state: 'uploading',
+      current: true,
       expiresAt: '2099-01-01T00:00:00Z',
       sources: req.sources.map((m, i) => ({ id: `${id}-${i}`, metadata: m, state: 'pending' })),
     })
@@ -405,6 +437,8 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     const source = b?.sources.find((s) => s.id === req.sourceId)
     if (!b || !source) throw connectAppError('CLIP_NOT_FOUND', Code.NotFound)
     source.state = 'ready'
+    source.availability = 'available'
+    source.retentionExpiresAt = b.expiresAt
     source.actualBytes = source.metadata!.bytes
     if (b.sources.every((s) => s.state === 'ready')) b.state = 'ready'
     return create(ConfirmClipSourceResponseSchema, { batch: b })

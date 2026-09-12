@@ -78,6 +78,10 @@ func (l *releaseLog) Write(p []byte) (int, error) {
 func (o *releaseObjects) PresignSource(_ context.Context, key, mime string, _ time.Duration) (clip.SignedSourcePut, error) {
 	return clip.SignedSourcePut{URL: "http://fixture.invalid/" + key, Headers: map[string]string{"Content-Type": mime}}, nil
 }
+func (o *releaseObjects) PresignSourcePlayback(_ context.Context, key, mime string, _ time.Duration) (string, error) {
+	return "http://fixture.invalid/playback?key=" + url.QueryEscape(key), nil
+}
+
 func (o *releaseObjects) HeadSource(_ context.Context, key string) (clip.SourceObjectInfo, error) {
 	o.mu.Lock()
 	defer o.mu.Unlock()

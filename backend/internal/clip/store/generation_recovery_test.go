@@ -124,7 +124,7 @@ func TestGenerationProxyDeletionRetainsRecoveryAuthority(t *testing.T) {
 		t.Fatal("failed delete hidden")
 	}
 	b, err := h.store.GetSourceBatch(context.Background(), "alice", h.batch.ID)
-	if err != nil || b.State != "cleanup_pending" || len(b.ProxyKeys) != 1 {
+	if err != nil || b.State != "ready" || len(b.ProxyKeys) != 1 {
 		t.Fatal(b, err)
 	}
 	h.objects.failDelete[key] = false

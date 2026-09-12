@@ -34,6 +34,7 @@ type GenerationStart struct {
 	Quote                             *GenerationQuote
 }
 type ClipJob struct {
+	FinishedAt              *time.Time
 	ID, Status, Stage, Kind string
 	Payload                 []byte
 	DispatchReady           bool

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/store/sqlc"
+	"reflect"
 	"time"
 )
 
@@ -24,7 +25,14 @@ func (s *Store) SaveCorrection(ctx context.Context, user, id string, revision in
 		if revision <= 0 || p.EditPlanRevision != revision {
 			return clip.Project{}, clip.ErrPlanConflict
 		}
-		n, err := q.SaveCorrection(ctx, sqlc.SaveCorrectionParams{EditPlanJson: nullable(raw), UpdatedAt: stamp(time.Now()), ID: id, UserID: user, EditPlanRevision: int64(revision)})
+		// Compare the semantic plan so a formatting-only save does not renew retention.
+		var oldJSON, newJSON any
+		if p.EditPlan == raw || strictJSON(p.EditPlan, &oldJSON) == nil && strictJSON(raw, &newJSON) == nil && reflect.DeepEqual(oldJSON, newJSON) {
+			return p, nil
+		}
+		now := time.Now()
+
+		n, err := q.SaveCorrection(ctx, sqlc.SaveCorrectionParams{EditPlanJson: nullable(raw), UpdatedAt: stamp(now), ID: id, UserID: user, EditPlanRevision: int64(revision)})
 		if err != nil {
 			return clip.Project{}, err
 		}
@@ -36,6 +44,9 @@ func (s *Store) SaveCorrection(ctx context.Context, user, id string, revision in
 			if e = saveComposition(ctx, q, p); e != nil {
 				return clip.Project{}, e
 			}
+		}
+		if err = renewProjectSources(ctx, q, user, id, now); err != nil {
+			return p, err
 		}
 		return getProject(ctx, q, user, id)
 	})

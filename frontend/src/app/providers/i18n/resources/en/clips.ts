@@ -82,7 +82,7 @@ export const clips = {
     volumeError: 'Enter a volume from 0 to 100%.',
     sourceChanged: 'The source metadata changed. Check the latest saved plan.',
     sourceDisclosure:
-      'Select all required originals below together. This render makes no AI calls, and originals are deleted after processing. Refreshing or leaving may require reselection.',
+      'Rerender retained originals without AI calls. Originals remain for 24 hours after the latest change or attempt ends and are deleted on confirmation. Reselect only expired or missing originals.',
     requiredSources: 'Originals needed for rerender',
     missingSources: 'Still needed: {{names}}',
     unexpectedSources: 'Mismatched or unnecessary files: {{names}}',
@@ -256,7 +256,14 @@ export const clips = {
     uploadProgress: 'Uploading {{percent}}%',
     title: 'Source videos',
     disclosure:
-      'Compressed copies containing the selected footage and audible speech are sent through OpenRouter to an external video-analysis provider. This service deletes originals and analysis copies after the attempt and does not retain them in the project. This does not guarantee the external provider’s retention policy. Local previews remain until processing ends; refreshing or leaving may require source reselection.',
+      'Compressed footage and audible speech are sent through OpenRouter to an external video-analysis provider. Originals remain for 24 hours after confirmation, changes, or an attempt starting or ending, and are deleted when you finalize. Analysis copies are removed after the attempt. This does not guarantee the external provider’s retention policy. Retained originals can be played and reused after reopening the project.',
+    retainedUntil: 'Originals retained until {{time}}',
+    access: {
+      expired: 'Original retention expired. Reselect matching originals for preview or rerender.',
+      missing: 'The original is missing. Reselect the matching file.',
+      unavailable:
+        'Original playback is unavailable. Reopen the project or reselect the matching original.',
+    },
     select: 'Select source videos',
     replace: 'Reselect source videos',
     cancel: 'Cancel selection',
@@ -264,7 +271,7 @@ export const clips = {
       'Choose a template, fill in its answers and save the setup before selecting source videos.',
     confirmed: 'Upload confirmed',
     completed: 'Processed source filenames',
-    outcome: { done: 'Completed · reselect if needed', failed: 'Failed · reselect if needed' },
+    outcome: { done: 'Completed', failed: 'Failed · retry with retained originals' },
     phase: {
       idle: 'Please select the source videos again',
       reading: 'Reading video information',
@@ -272,7 +279,7 @@ export const clips = {
       ready: 'Upload ready',
       accepting: 'Checking job acceptance',
       owned: 'Processing accepted sources',
-      finished: 'Local originals released. Reselect them if needed.',
+      finished: 'Processing finished. Checking retained originals.',
       cancelling: 'Cancelling selection',
       failed: 'Select the source videos again to retry uploading',
     },

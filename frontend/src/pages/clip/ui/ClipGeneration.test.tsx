@@ -121,7 +121,7 @@ async function selectSource() {
   await screen.findByText('업로드 확인 완료')
   return { user, revoke }
 }
-it('approves once, retains local previews until terminal, then releases and refetches the result', async () => {
+it('approves once, retains local previews after terminal and refetches the result', async () => {
   const calls: string[] = []
   const starts: unknown[] = []
   const job: FakeGenerationJobRow = {
@@ -183,7 +183,7 @@ it('approves once, retains local previews until terminal, then releases and refe
   })
   // A finished render describes the project as 완성, so the bar follows to ③ where the result is.
   const video = await screen.findByLabelText('클립 미리보기')
-  expect(revoke).toHaveBeenCalledExactlyOnceWith('blob:clip-source')
+  expect(revoke).not.toHaveBeenCalled()
   expect(screen.queryByLabelText('clip.mp4')).not.toBeInTheDocument()
   expect(video).toHaveAttribute('src', result.viewUrl)
   expect(video).toHaveAttribute('controls')
@@ -196,7 +196,7 @@ it('approves once, retains local previews until terminal, then releases and refe
   expect(calls).not.toContain('DiscardClipSourceBatch')
   // The consumed selection's summary stays with the picker that made it, on ①.
   await goToStep('클립 생성')
-  expect(screen.getByText('clip.mp4 · 처리 완료 · 원본 재선택 필요')).toBeInTheDocument()
+  expect(screen.getByText('clip.mp4 · 처리 완료')).toBeInTheDocument()
   // A new selection after completion must not be mistaken for the consumed batch.
   await selectSource()
   expect(
@@ -427,7 +427,7 @@ it('resolves a lost accepted response by owned identity reads without replaying 
   expect(starts).toHaveLength(1)
   expect(revoke).not.toHaveBeenCalled()
   expect(screen.getByLabelText('clip.mp4')).toHaveAttribute('src', 'blob:clip-source')
-  expect(screen.getByLabelText('원본 영상 선택')).toBeDisabled()
+  expect(screen.getByLabelText(/^원본 영상 (다시 )?선택$/)).toBeDisabled()
   view.unmount()
   expect(revoke).toHaveBeenCalledExactlyOnceWith('blob:clip-source')
   expect(calls).not.toContain('DiscardClipSourceBatch')
@@ -544,9 +544,11 @@ it('finishes the locally owned job even when another tab becomes the latest proj
       }),
     }),
   )
-  await waitFor(() => expect(revoke).toHaveBeenCalledExactlyOnceWith('blob:clip-source'))
-  expect(screen.queryByLabelText('clip.mp4')).not.toBeInTheDocument()
-  expect(screen.getByLabelText('원본 영상 선택')).toBeDisabled()
+  await waitFor(() =>
+    expect(screen.getByLabelText('clip.mp4')).toHaveAttribute('src', 'blob:clip-source'),
+  )
+  expect(revoke).not.toHaveBeenCalled()
+  expect(screen.getByLabelText(/^원본 영상 (다시 )?선택$/)).toBeDisabled()
 })
 
 it('replaces source-bound quotes and sends only the newly displayed quote', async () => {

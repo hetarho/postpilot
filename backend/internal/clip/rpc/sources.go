@@ -9,11 +9,56 @@ import (
 )
 
 func sourceBatchProto(b clip.SourceBatch) *v1.ClipSourceBatch {
-	out := &v1.ClipSourceBatch{Id: b.ID, ProjectId: b.ProjectID, State: b.State, ExpiresAt: b.ExpiresAt.UTC().Format(time.RFC3339Nano)}
+	out := &v1.ClipSourceBatch{Id: b.ID, ProjectId: b.ProjectID, State: b.State, ExpiresAt: b.ExpiresAt.UTC().Format(time.RFC3339Nano), Current: b.Current}
 	for _, v := range b.Sources {
-		out.Sources = append(out.Sources, &v1.ClipSource{Id: v.ID, State: v.State, ActualBytes: v.ActualBytes, Metadata: &v1.ClipSourceMetadata{Filename: v.Filename, ContentType: v.ContentType, Bytes: v.Bytes, DurationMs: int32(v.DurationMS), Width: int32(v.Width), Height: int32(v.Height), Fingerprint: v.Fingerprint}})
+		expires := ""
+		if !v.ExpiresAt.IsZero() {
+			expires = v.ExpiresAt.UTC().Format(time.RFC3339Nano)
+		}
+		availability := v.Availability
+		if availability == "" {
+			availability = clip.SourceAvailability(b, v, time.Now())
+		}
+		out.Sources = append(out.Sources, &v1.ClipSource{Id: v.ID, State: v.State, ActualBytes: v.ActualBytes, RetentionExpiresAt: expires, Availability: availability, Metadata: &v1.ClipSourceMetadata{Filename: v.Filename, ContentType: v.ContentType, Bytes: v.Bytes, DurationMs: int32(v.DurationMS), Width: int32(v.Width), Height: int32(v.Height), Fingerprint: v.Fingerprint}})
 	}
 	return out
+}
+
+func (h *Handler) GetClipSources(ctx context.Context, req *connect.Request[v1.GetClipSourcesRequest]) (*connect.Response[v1.GetClipSourcesResponse], error) {
+	user, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if h.sources == nil {
+		return nil, toConnectError(clip.ErrSourceState)
+	}
+	batches, err := h.sources.GetSources(ctx, user, req.Msg.ProjectId)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+	out := &v1.GetClipSourcesResponse{}
+	for _, b := range batches {
+		out.Batches = append(out.Batches, sourceBatchProto(b))
+	}
+	response := connect.NewResponse(out)
+	response.Header().Set("Cache-Control", "private, no-store")
+	return response, nil
+}
+func (h *Handler) GetClipSourcePlayback(ctx context.Context, req *connect.Request[v1.GetClipSourcePlaybackRequest]) (*connect.Response[v1.GetClipSourcePlaybackResponse], error) {
+	user, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if h.sources == nil {
+		return nil, toConnectError(clip.ErrSourceState)
+	}
+	link, err := h.sources.Playback(ctx, user, req.Msg.ProjectId, req.Msg.SourceId, req.Msg.ExpectedFingerprint)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+	response := connect.NewResponse(&v1.GetClipSourcePlaybackResponse{Url: link.URL, ExpiresAt: link.ExpiresAt.UTC().Format(time.RFC3339Nano)})
+	response.Header().Set("Cache-Control", "private, no-store")
+	return response, nil
 }
 func (h *Handler) CreateClipSourceBatch(ctx context.Context, req *connect.Request[v1.CreateClipSourceBatchRequest]) (*connect.Response[v1.CreateClipSourceBatchResponse], error) {
 	user, err := actingUser(ctx)

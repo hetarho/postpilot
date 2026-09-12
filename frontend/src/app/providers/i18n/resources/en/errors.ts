@@ -84,6 +84,8 @@ export const errors = {
     'The route for {{model}} does not support the settings the clip analysis request needs. Choose another model.',
   CLIP_MODEL_PRICE_CEILING_UNAVAILABLE:
     'The price ceiling for {{model}} could not be confirmed, so generation did not start. Choose another model or try again later.',
+  CLIP_SOURCE_EXPIRED: 'Original retention expired. Reselect matching originals.',
+  CLIP_SOURCE_MISSING: 'The original is missing. Reselect the matching file.',
   CLIP_SOURCE_UNAVAILABLE:
     'The videos are processing or the upload has expired. Check progress, then select the source videos again.',
   CLIP_NOT_FOUND: 'Could not find the clip or video template.',

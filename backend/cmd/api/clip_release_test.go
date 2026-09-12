@@ -259,6 +259,12 @@ func newReleaseHarness(t *testing.T, mode string, stress bool) *releaseHarness {
 	q.Register(job.KindRenderClip, metered(func(ctx context.Context, j job.Job, p job.Progress) error {
 		return g.RunRender(ctx, j.UserID, j.ID, j.ClipProjectID, j.Payload, p)
 	}))
+	for _, kind := range []string{job.KindGenerateClip, job.KindRenderClip} {
+		q.OnTerminal(kind, func(ctx context.Context, j job.Job, at time.Time) error {
+			return sources.ReleaseAttempt(ctx, j.UserID, j.ID, at)
+		})
+	}
+
 	mux := http.NewServeMux()
 	path, handler := postpilotv1connect.NewClipServiceHandler(cliprpc.NewHandler(projects).WithSources(sources).WithGeneration(g, q), connect.WithInterceptors(authrpc.NewInterceptor(authSvc, nil, "")))
 	mux.Handle(path, handler)
@@ -694,8 +700,8 @@ func (h *releaseHarness) exercise(mode string) {
 		t.Fatal("restart replayed work", e)
 	}
 	keys, _ := h.objects.ListSourceKeys(ctx)
-	if len(keys) != 0 {
-		t.Fatal("original object mappings survived terminal cleanup")
+	if len(keys) != len(h.sourceKeys) {
+		t.Fatal("terminal cleanup lost retained original mappings")
 	}
 	entries, err := os.ReadDir(h.media.root)
 	if err != nil {

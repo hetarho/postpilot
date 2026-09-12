@@ -69,7 +69,4 @@ func seedCompletedGeneration(t *testing.T, h *generationHarness) {
 		t.Fatal(err)
 	}
 	h.objects.info[r.Key] = clip.SourceObjectInfo{Bytes: 5, ContentType: "video/mp4"}
-	if err = h.sources.Discard(context.Background(), "alice", h.batch.ID); err != nil {
-		t.Fatal(err)
-	}
 }

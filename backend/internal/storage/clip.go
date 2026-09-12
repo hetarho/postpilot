@@ -11,6 +11,15 @@ import (
 
 var _ clip.ObjectStore = (*Bucket)(nil)
 
+func (b *Bucket) PresignSourcePlayback(ctx context.Context, key, contentType string, ttl time.Duration) (string, error) {
+	request, err := b.presign.PresignGetObject(ctx, &s3.GetObjectInput{Bucket: aws.String(b.name), Key: aws.String(key), ResponseContentType: aws.String(contentType), ResponseCacheControl: aws.String("private, no-store")}, s3.WithPresignExpires(ttl))
+	if err != nil {
+		return "", errors.New("sign clip source playback failed")
+	}
+	// Range is intentionally unsigned; the browser streams directly from private storage.
+	return request.URL, nil
+}
+
 func (b *Bucket) PresignSource(ctx context.Context, key, contentType string, ttl time.Duration) (clip.SignedSourcePut, error) {
 	request, err := b.presign.PresignPutObject(ctx, &s3.PutObjectInput{Bucket: aws.String(b.name), Key: aws.String(key), ContentType: aws.String(contentType), IfNoneMatch: aws.String("*")}, s3.WithPresignExpires(ttl))
 	if err != nil {

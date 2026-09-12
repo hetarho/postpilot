@@ -53,7 +53,7 @@ func (a clipJobs) Latest(ctx context.Context, user, id string) (*clip.ClipJob, e
 	if err != nil || j == nil {
 		return nil, err
 	}
-	return &clip.ClipJob{ID: j.ID, Kind: j.Kind, Status: j.Status, Stage: j.Stage, Payload: j.Payload, DispatchReady: j.DispatchReady}, nil
+	return &clip.ClipJob{ID: j.ID, Kind: j.Kind, Status: j.Status, Stage: j.Stage, Payload: j.Payload, DispatchReady: j.DispatchReady, FinishedAt: j.FinishedAt}, nil
 }
 
 // Reserved only after T084 has verified every prepared proxy; no public caller can

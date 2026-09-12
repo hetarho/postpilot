@@ -7,6 +7,7 @@ import (
 	"github.com/postpilot/backend/internal/clip"
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/platform/config"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"strings"
 	"testing"
@@ -47,7 +48,7 @@ func (s *rpcSourceStore) MarkSourceCleanup(_ context.Context, user, id string, _
 	s.batch.State = "cleanup_pending"
 	return s.batch, nil
 }
-func (s *rpcSourceStore) RemoveSourceBatch(context.Context, string, string) error {
+func (s *rpcSourceStore) RemoveSourceBatch(context.Context, string, string, time.Time) error {
 	s.batch = clip.SourceBatch{}
 	return nil
 }
@@ -61,6 +62,15 @@ func (rpcSourceObjects) HeadSource(context.Context, string) (clip.SourceObjectIn
 	return clip.SourceObjectInfo{Bytes: 123, ContentType: "video/mp4"}, nil
 }
 func (rpcSourceObjects) Delete(context.Context, string) error { return nil }
+func (rpcSourceObjects) PresignSourcePlayback(context.Context, string, string, time.Duration) (string, error) {
+	return "https://storage.example/private?temporary=secret", nil
+}
+func (s *rpcSourceStore) ProjectSourceBatches(_ context.Context, user, project string) ([]clip.SourceBatch, error) {
+	if user != s.batch.UserID || project != s.batch.ProjectID {
+		return nil, clip.ErrNotFound
+	}
+	return []clip.SourceBatch{s.batch}, nil
+}
 func TestSourceRPCUsesActorAndNeverSerializesObjectIdentity(t *testing.T) {
 	store := &rpcSourceStore{}
 	h := NewHandler(nil).WithSources(clip.NewSourceService(store, rpcSourceObjects{}, config.ClipSourceLimits(6*time.Hour, 10*time.Minute)))
@@ -90,8 +100,8 @@ func TestSourceRPCUsesActorAndNeverSerializesObjectIdentity(t *testing.T) {
 	if _, err := h.DiscardClipSourceBatch(ctx, connect.NewRequest(&v1.DiscardClipSourceBatchRequest{BatchId: out.Msg.Batch.Id})); err != nil {
 		t.Fatal(err)
 	}
-	if store.batch.ID != "" {
-		t.Fatal("discard did not reach cleanup")
+	if store.batch.State != "cleanup_pending" {
+		t.Fatal("discard did not retain the PUT tombstone")
 	}
 	for _, message := range []protoreflect.MessageDescriptor{(&v1.ClipSourceMetadata{}).ProtoReflect().Descriptor(), (&v1.ClipSource{}).ProtoReflect().Descriptor(), (&v1.ClipSourceBatch{}).ProtoReflect().Descriptor(), (&v1.CreateClipSourceBatchRequest{}).ProtoReflect().Descriptor()} {
 		fields := message.Fields()
@@ -101,5 +111,44 @@ func TestSourceRPCUsesActorAndNeverSerializesObjectIdentity(t *testing.T) {
 				t.Fatalf("private data in contract: %s.%s", message.Name(), f.Name())
 			}
 		}
+	}
+}
+
+func TestRetainedSourcesRPCSeparatesMetadataFromOwnedPlaybackCapabilities(t *testing.T) {
+	expires := time.Now().Add(time.Hour)
+	source := clip.SourceLease{ID: "source", Key: "clip-inputs/alice/private-original", State: "ready", ExpiresAt: expires, ActualBytes: 123, SourceMetadata: clip.SourceMetadata{Filename: "source.mp4", ContentType: "video/mp4", Bytes: 123, Fingerprint: strings.Repeat("a", 64)}}
+	store := &rpcSourceStore{batch: clip.SourceBatch{ID: "batch", UserID: "alice", ProjectID: "owned", State: "ready", Current: true, ExpiresAt: expires, Sources: []clip.SourceLease{source}}}
+	h := NewHandler(nil).WithSources(clip.NewSourceService(store, rpcSourceObjects{}, config.ClipSourceLimits(6*time.Hour, 10*time.Minute)))
+	ctx := auth.WithUser(context.Background(), "alice")
+	response, err := h.GetClipSources(ctx, connect.NewRequest(&v1.GetClipSourcesRequest{ProjectId: "owned"}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, err := protojson.Marshal(response.Msg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(raw), "clip-inputs") || strings.Contains(string(raw), "temporary") || strings.Contains(string(raw), "https:") {
+		t.Fatal("playback capability or object identity leaked into metadata")
+	}
+	if response.Header().Get("Cache-Control") != "private, no-store" || response.Msg.Batches[0].Sources[0].Availability != "available" {
+		t.Fatal("source availability response", response)
+	}
+	request := connect.NewRequest(&v1.GetClipSourcePlaybackRequest{ProjectId: "owned", SourceId: "source", ExpectedFingerprint: source.Fingerprint})
+	link, err := h.GetClipSourcePlayback(ctx, request)
+	if err != nil || link.Msg.Url == "" || link.Header().Get("Cache-Control") != "private, no-store" {
+		t.Fatal(link, err)
+	}
+	if _, err = h.GetClipSourcePlayback(auth.WithUser(context.Background(), "bob"), request); connect.CodeOf(err) != connect.CodeNotFound {
+		t.Fatal("foreign playback", err)
+	}
+	request.Msg.ExpectedFingerprint = "stale"
+	if _, err = h.GetClipSourcePlayback(ctx, request); connect.CodeOf(err) != connect.CodeNotFound {
+		t.Fatal("stale playback", err)
+	}
+	request.Msg.ExpectedFingerprint = source.Fingerprint
+	store.batch.Sources[0].ExpiresAt = time.Now().Add(-time.Second)
+	if _, err = h.GetClipSourcePlayback(ctx, request); connect.CodeOf(err) != connect.CodeFailedPrecondition {
+		t.Fatal("expired playback", err)
 	}
 }

@@ -78,11 +78,11 @@ func TestCorrectionRejectsEveryInvalidMutationWithoutChangingInput(t *testing.T)
 	}
 }
 
-func TestRenderBatchRequiresExactFingerprintSubset(t *testing.T) {
+func TestRenderBatchRequiresMatchingSubsetAndAllowsRetainedSuperset(t *testing.T) {
 	p, _ := correctionFixture(t)
 	plan, _, _ := clip.DecodeEditPlan(p.EditPlan)
 	plan.Cuts = plan.Cuts[:1]
-	for _, values := range [][]string{nil, {"wrong"}, {"fa", "fb"}, {"fa", "fa"}} {
+	for _, values := range [][]string{nil, {"wrong"}, {"fa", "fa"}} {
 		b := clip.SourceBatch{}
 		for _, v := range values {
 			b.Sources = append(b.Sources, clip.SourceLease{SourceMetadata: clip.SourceMetadata{Fingerprint: v}})
@@ -94,6 +94,10 @@ func TestRenderBatchRequiresExactFingerprintSubset(t *testing.T) {
 	if err := clip.MatchRenderBatch(plan, clip.SourceBatch{Sources: []clip.SourceLease{{SourceMetadata: clip.SourceMetadata{Fingerprint: "fa"}}}}); err != nil {
 		t.Fatal(err)
 	}
+	if err := clip.MatchRenderBatch(plan, clip.SourceBatch{Sources: []clip.SourceLease{{SourceMetadata: clip.SourceMetadata{Fingerprint: "fa"}}, {SourceMetadata: clip.SourceMetadata{Fingerprint: "fb"}}}}); err != nil {
+		t.Fatal(err)
+	}
+
 }
 
 func TestLegacyGeneratedPlanRemainsReadableAndMigratesOnSave(t *testing.T) {

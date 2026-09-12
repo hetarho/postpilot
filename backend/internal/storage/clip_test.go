@@ -36,3 +36,24 @@ func TestClipHeadReportsOnlyActualMetadata(t *testing.T) {
 		t.Fatal(got, err)
 	}
 }
+
+func TestClipPlaybackSignsContainerTypeAndLeavesRangeToTheBrowser(t *testing.T) {
+	b, err := New(context.Background(), Config{Endpoint: "http://storage.internal", PublicEndpoint: "http://storage.browser", AccessKeyID: "test", SecretAccessKey: "test", Bucket: "private", MaxReadBytes: 1024})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, mime := range []string{"video/mp4", "video/quicktime", "video/x-m4v", "video/webm"} {
+		signed, err := b.PresignSourcePlayback(context.Background(), "clip-inputs/alice/b/source", mime, 30*time.Second)
+		if err != nil {
+			t.Fatal(err)
+		}
+		u, err := url.Parse(signed)
+		if err != nil {
+			t.Fatal("invalid signed playback URL")
+		}
+		q := u.Query()
+		if u.Host != "storage.browser" || q.Get("X-Amz-Expires") != "30" || q.Get("response-content-type") != mime || q.Get("response-cache-control") != "private, no-store" || strings.Contains(q.Get("X-Amz-SignedHeaders"), "range") {
+			t.Fatal("playback signing did not preserve the bounded range capability")
+		}
+	}
+}

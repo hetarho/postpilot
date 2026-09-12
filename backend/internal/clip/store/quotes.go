@@ -49,6 +49,14 @@ func validateQuoteInputs(ctx context.Context, q *sqlc.Queries, quote clip.Genera
 	if err != nil {
 		return err
 	}
+	access, e := q.SourceProjectAccess(ctx, sqlc.SourceProjectAccessParams{ID: quote.ProjectID, UserID: quote.UserID})
+	if e != nil {
+		return e
+	}
+	if access.Deleting != 0 || access.SourceAccessRevokedAt.Valid || access.SourceBatchID.String != b.ID {
+		return clip.ErrSourceState
+	}
+
 	if !clip.ValidQuoteBatch(b, quote.UserID, quote.ProjectID, now) {
 		return clip.ErrSourceState
 	}
@@ -105,11 +113,7 @@ func (s *Store) LinkApprovedSourceJob(ctx context.Context, quote clip.Generation
 		if n != 1 {
 			return struct{}{}, clip.ErrQuoteChanged
 		}
-		n, err = q.LinkSourceJob(ctx, sqlc.LinkSourceJobParams{JobID: nullable(job), ID: quote.BatchID, UserID: quote.UserID, ExpiresAt: stamp(now)})
-		if err == nil && n != 1 {
-			err = clip.ErrSourceState
-		}
-		return struct{}{}, err
+		return struct{}{}, bindSourceAttempt(ctx, q, quote.UserID, quote.BatchID, job, now)
 	})
 	return err
 }

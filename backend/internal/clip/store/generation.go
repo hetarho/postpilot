@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/store/sqlc"
 	"time"
@@ -41,33 +42,53 @@ func (s *Store) linkSourceJob(ctx context.Context, user, batch, job string, revi
 				return struct{}{}, clip.ErrPlanConflict
 			}
 		}
-		n, err := q.LinkSourceJob(ctx, sqlc.LinkSourceJobParams{JobID: nullable(job), ID: batch, UserID: user, ExpiresAt: stamp(now)})
-		if err != nil {
-			return struct{}{}, err
-		}
-		if n != 1 {
-			return struct{}{}, clip.ErrSourceState
-		}
-		return struct{}{}, nil
+		return struct{}{}, bindSourceAttempt(ctx, q, user, batch, job, now)
 	})
 	return err
 }
 func (s *Store) BatchForJob(ctx context.Context, user, job string) (clip.SourceBatch, error) {
 	return transact(ctx, s, func(q *sqlc.Queries) (clip.SourceBatch, error) {
-		r, err := q.BatchForJob(ctx, sqlc.BatchForJobParams{UserID: user, JobID: nullable(job)})
+		r, err := q.BatchForJob(ctx, sqlc.BatchForJobParams{UserID: user, JobID: job})
 		if err != nil {
 			return clip.SourceBatch{}, err
 		}
-		return sourceBatchRow(ctx, q, r)
+		b, e := sourceBatchRow(ctx, q, r)
+		if e != nil {
+			return b, e
+		}
+		a, e := q.GetSourceAttempt(ctx, sqlc.GetSourceAttemptParams{UserID: user, JobID: job})
+		if e != nil {
+			return b, e
+		}
+		if a.ManifestJson != "" {
+			raw, e := json.Marshal(clip.SourceManifest(b.Sources))
+			if e != nil {
+				return b, e
+			}
+			if string(raw) != a.ManifestJson {
+				return b, clip.ErrSourceState
+			}
+		}
+		b.JobID = job
+		return b, nil
 	})
 }
 func (s *Store) ListConsumingBatches(ctx context.Context) ([]clip.SourceBatch, error) {
 	return transact(ctx, s, func(q *sqlc.Queries) ([]clip.SourceBatch, error) {
-		rows, err := q.ListConsumingBatches(ctx)
+		attempts, err := q.UnreleasedSourceAttempts(ctx)
 		if err != nil {
 			return nil, err
 		}
-		return sourceRows(ctx, q, rows)
+		var out []clip.SourceBatch
+		for _, a := range attempts {
+			b, e := getSourceBatch(ctx, q, a.UserID, a.BatchID)
+			if e != nil {
+				return nil, e
+			}
+			b.JobID = a.JobID
+			out = append(out, b)
+		}
+		return out, nil
 	})
 }
 func (s *Store) AddProxy(ctx context.Context, user, batch, key string) error {

@@ -21,56 +21,73 @@ type ClipGenerationQuote struct {
 }
 
 type ClipProject struct {
-	ID                      string
-	UserID                  string
-	Title                   string
-	VideoTemplateID         sql.NullString
-	Ratio                   string
-	TargetDurationMs        int64
-	AnalysisJson            sql.NullString
-	EditPlanJson            sql.NullString
-	ResultKey               sql.NullString
-	ResultContentType       sql.NullString
-	ResultBytes             sql.NullInt64
-	ResultDurationMs        sql.NullInt64
-	ResultCreatedAt         sql.NullString
-	EditPlanRevision        int64
-	RenderedPlanRevision    int64
-	CreatedAt               string
-	UpdatedAt               string
-	Deleting                int64
-	Disclosure              string
-	Cta                     string
-	HideDisclosure          int64
-	CompositionInputsJson   sql.NullString
-	CompositionSnapshotJson sql.NullString
+	ID                       string
+	UserID                   string
+	Title                    string
+	VideoTemplateID          sql.NullString
+	Ratio                    string
+	TargetDurationMs         int64
+	AnalysisJson             sql.NullString
+	EditPlanJson             sql.NullString
+	ResultKey                sql.NullString
+	ResultContentType        sql.NullString
+	ResultBytes              sql.NullInt64
+	ResultDurationMs         sql.NullInt64
+	ResultCreatedAt          sql.NullString
+	EditPlanRevision         int64
+	RenderedPlanRevision     int64
+	CreatedAt                string
+	UpdatedAt                string
+	Deleting                 int64
+	Disclosure               string
+	Cta                      string
+	HideDisclosure           int64
+	CompositionInputsJson    sql.NullString
+	CompositionSnapshotJson  sql.NullString
+	SourceRetentionExpiresAt sql.NullString
+	SourceAccessRevokedAt    sql.NullString
+	SourceBatchID            sql.NullString
+}
+
+type ClipSourceAttempt struct {
+	JobID        string
+	UserID       string
+	ProjectID    string
+	BatchID      string
+	ManifestJson string
+	BoundAt      string
+	ReleasedAt   sql.NullString
 }
 
 type ClipSourceBatch struct {
-	ID        string
-	UserID    string
-	ProjectID string
-	State     string
-	CreatedAt string
-	ExpiresAt string
-	JobID     sql.NullString
+	ID           string
+	UserID       string
+	ProjectID    string
+	State        string
+	CreatedAt    string
+	ExpiresAt    string
+	JobID        sql.NullString
+	PutExpiresAt string
 }
 
 type ClipSourceLease struct {
-	ID            string
-	BatchID       string
-	UserID        string
-	ObjectKey     string
-	Filename      string
-	ContentType   string
-	Fingerprint   string
-	DeclaredBytes int64
-	ActualBytes   int64
-	DurationMs    int64
-	Width         int64
-	Height        int64
-	State         string
-	Ordinal       int64
+	ID                 string
+	BatchID            string
+	UserID             string
+	ObjectKey          string
+	Filename           string
+	ContentType        string
+	Fingerprint        string
+	DeclaredBytes      int64
+	ActualBytes        int64
+	DurationMs         int64
+	Width              int64
+	Height             int64
+	State              string
+	Ordinal            int64
+	CanonicalID        string
+	RetentionExpiresAt sql.NullString
+	CleanupPending     int64
 }
 
 type VideoTemplate struct {

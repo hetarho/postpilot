@@ -452,6 +452,13 @@ func (s *Store) UpdateProject(ctx context.Context, user, id string, p clip.Proje
 		if e = saveComposition(ctx, q, next); e != nil {
 			return next, e
 		}
+		next.UpdatedAt = before.UpdatedAt
+		if !reflect.DeepEqual(before, next) {
+			if e = renewProjectSources(ctx, q, user, id, now); e != nil {
+				return next, e
+			}
+		}
+
 		return getProject(ctx, q, user, id)
 	})
 }

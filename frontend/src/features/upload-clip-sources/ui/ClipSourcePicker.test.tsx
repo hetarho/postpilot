@@ -8,6 +8,8 @@ import { ClipSourcePicker } from './ClipSourcePicker'
 function fixture(): ComponentProps<typeof ClipSourcePicker>['upload'] {
   return {
     phase: 'uploading',
+    ensurePlayback: vi.fn(async () => 'blob:test'),
+    refreshRetained: vi.fn(async () => {}),
     entries: ['one.mp4', 'two.mp4', 'three.mp4'].map((filename, index) => ({
       file: new File(['video'], filename),
       metadata: {

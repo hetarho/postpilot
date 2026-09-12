@@ -11,6 +11,7 @@ import (
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/platform/config"
 	"github.com/postpilot/backend/internal/storage"
+	"time"
 )
 
 func newClipGeneration(ctx context.Context, cfg *config.Config, store *clipstore.Store, projects *clip.Service, sources *clip.SourceService, bucket *storage.Bucket, media *clipmedia.Adapter, models meteredRegistry, queue *job.Queue) (*clip.GenerationService, error) {
@@ -35,6 +36,11 @@ func newClipGeneration(ctx context.Context, cfg *config.Config, store *clipstore
 	queue.Register(job.KindRenderClip, metered(func(ctx context.Context, j job.Job, progress job.Progress) error {
 		return service.RunRender(ctx, j.UserID, j.ID, j.ClipProjectID, j.Payload, progress)
 	}))
+	for _, kind := range []string{job.KindGenerateClip, job.KindRenderClip} {
+		queue.OnTerminal(kind, func(ctx context.Context, j job.Job, at time.Time) error {
+			return sources.ReleaseAttempt(ctx, j.UserID, j.ID, at)
+		})
+	}
 	return service, nil
 }
 
@@ -78,5 +84,5 @@ func clipJob(j *job.JobSummary) *clip.ClipJob {
 	if j == nil {
 		return nil
 	}
-	return &clip.ClipJob{ID: j.ID, Status: j.Status, Stage: j.Stage}
+	return &clip.ClipJob{ID: j.ID, Status: j.Status, Stage: j.Stage, FinishedAt: j.FinishedAt}
 }

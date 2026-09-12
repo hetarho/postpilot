@@ -135,8 +135,10 @@ Metrics report cgroup-wide peak memory (including subprocesses and fixture setup
 20 ms sampled workspace disk/proxy high-water marks, actual request/proxy bytes,
 simultaneous originals/workspaces/subprocesses, preparation/render/total elapsed
 time and approval/hold/charge/refund. Prepared paths are restatted at admission;
-intermediate originals and all proxy/request workspaces must disappear at terminal
-cleanup. Disk for the local fake bucket is fixture storage, not worker workspace.
+local intermediate originals and all proxy/request workspaces must disappear at terminal
+cleanup. Confirmed private original objects remain reusable until their retention deadline;
+first durable terminal release renews it once, while project deletion/finalization fences
+access and queues physical deletion. Incomplete uploads still follow CLIP_SOURCE_BATCH_TTL. Disk for the local fake bucket is fixture storage, not worker workspace.
 The separate noisy 60-second case measures both preparation and original rendering
 and checks proxy/final speech timing, VFR, rotation and silence.
 

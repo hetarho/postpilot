@@ -85,6 +85,24 @@ func TestClipDirectUploadLocalStorage(t *testing.T) {
 	if err != nil || info.Bytes != 11 || info.ContentType != "video/mp4" {
 		t.Fatal(info, err)
 	}
+	playback, err := b.PresignSourcePlayback(ctx, key, "video/mp4", 30*time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	read, err := http.NewRequestWithContext(ctx, http.MethodGet, playback, nil)
+	if err != nil {
+		t.Fatal("build range request")
+	}
+	read.Header.Set("Range", "bytes=2-5")
+	response, err := http.DefaultClient.Do(read)
+	if err != nil {
+		t.Fatal("direct range playback failed")
+	}
+	data, err := io.ReadAll(io.LimitReader(response.Body, 1024))
+	response.Body.Close()
+	if err != nil || response.StatusCode != http.StatusPartialContent || response.Header.Get("Content-Range") != "bytes 2-5/11" || response.Header.Get("Content-Type") != "video/mp4" || response.Header.Get("Cache-Control") != "private, no-store" || string(data) != "urce" {
+		t.Fatal("private playback did not honor content type and range")
+	}
 	keys, err := b.ListSourceKeys(ctx)
 	if err != nil || len(keys) != 1 || keys[0] != key {
 		t.Fatal(keys, err)

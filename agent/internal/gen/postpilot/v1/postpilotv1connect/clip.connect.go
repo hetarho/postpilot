@@ -87,6 +87,12 @@ const (
 	// ClipServiceDiscardClipSourceBatchProcedure is the fully-qualified name of the ClipService's
 	// DiscardClipSourceBatch RPC.
 	ClipServiceDiscardClipSourceBatchProcedure = "/postpilot.v1.ClipService/DiscardClipSourceBatch"
+	// ClipServiceGetClipSourcesProcedure is the fully-qualified name of the ClipService's
+	// GetClipSources RPC.
+	ClipServiceGetClipSourcesProcedure = "/postpilot.v1.ClipService/GetClipSources"
+	// ClipServiceGetClipSourcePlaybackProcedure is the fully-qualified name of the ClipService's
+	// GetClipSourcePlayback RPC.
+	ClipServiceGetClipSourcePlaybackProcedure = "/postpilot.v1.ClipService/GetClipSourcePlayback"
 	// ClipServiceListClipAnalysisEligibilityProcedure is the fully-qualified name of the ClipService's
 	// ListClipAnalysisEligibility RPC.
 	ClipServiceListClipAnalysisEligibilityProcedure = "/postpilot.v1.ClipService/ListClipAnalysisEligibility"
@@ -112,6 +118,8 @@ type ClipServiceClient interface {
 	CreateClipSourceBatch(context.Context, *connect.Request[v1.CreateClipSourceBatchRequest]) (*connect.Response[v1.CreateClipSourceBatchResponse], error)
 	ConfirmClipSource(context.Context, *connect.Request[v1.ConfirmClipSourceRequest]) (*connect.Response[v1.ConfirmClipSourceResponse], error)
 	DiscardClipSourceBatch(context.Context, *connect.Request[v1.DiscardClipSourceBatchRequest]) (*connect.Response[v1.DiscardClipSourceBatchResponse], error)
+	GetClipSources(context.Context, *connect.Request[v1.GetClipSourcesRequest]) (*connect.Response[v1.GetClipSourcesResponse], error)
+	GetClipSourcePlayback(context.Context, *connect.Request[v1.GetClipSourcePlaybackRequest]) (*connect.Response[v1.GetClipSourcePlaybackResponse], error)
 	// Read-only: every registered observe model with its current clip-analysis
 	// eligibility (CLIP-30, CLIP-44). No model call, no write, no provider detail.
 	ListClipAnalysisEligibility(context.Context, *connect.Request[v1.ListClipAnalysisEligibilityRequest]) (*connect.Response[v1.ListClipAnalysisEligibilityResponse], error)
@@ -236,6 +244,18 @@ func NewClipServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(clipServiceMethods.ByName("DiscardClipSourceBatch")),
 			connect.WithClientOptions(opts...),
 		),
+		getClipSources: connect.NewClient[v1.GetClipSourcesRequest, v1.GetClipSourcesResponse](
+			httpClient,
+			baseURL+ClipServiceGetClipSourcesProcedure,
+			connect.WithSchema(clipServiceMethods.ByName("GetClipSources")),
+			connect.WithClientOptions(opts...),
+		),
+		getClipSourcePlayback: connect.NewClient[v1.GetClipSourcePlaybackRequest, v1.GetClipSourcePlaybackResponse](
+			httpClient,
+			baseURL+ClipServiceGetClipSourcePlaybackProcedure,
+			connect.WithSchema(clipServiceMethods.ByName("GetClipSourcePlayback")),
+			connect.WithClientOptions(opts...),
+		),
 		listClipAnalysisEligibility: connect.NewClient[v1.ListClipAnalysisEligibilityRequest, v1.ListClipAnalysisEligibilityResponse](
 			httpClient,
 			baseURL+ClipServiceListClipAnalysisEligibilityProcedure,
@@ -265,6 +285,8 @@ type clipServiceClient struct {
 	createClipSourceBatch       *connect.Client[v1.CreateClipSourceBatchRequest, v1.CreateClipSourceBatchResponse]
 	confirmClipSource           *connect.Client[v1.ConfirmClipSourceRequest, v1.ConfirmClipSourceResponse]
 	discardClipSourceBatch      *connect.Client[v1.DiscardClipSourceBatchRequest, v1.DiscardClipSourceBatchResponse]
+	getClipSources              *connect.Client[v1.GetClipSourcesRequest, v1.GetClipSourcesResponse]
+	getClipSourcePlayback       *connect.Client[v1.GetClipSourcePlaybackRequest, v1.GetClipSourcePlaybackResponse]
 	listClipAnalysisEligibility *connect.Client[v1.ListClipAnalysisEligibilityRequest, v1.ListClipAnalysisEligibilityResponse]
 }
 
@@ -358,6 +380,16 @@ func (c *clipServiceClient) DiscardClipSourceBatch(ctx context.Context, req *con
 	return c.discardClipSourceBatch.CallUnary(ctx, req)
 }
 
+// GetClipSources calls postpilot.v1.ClipService.GetClipSources.
+func (c *clipServiceClient) GetClipSources(ctx context.Context, req *connect.Request[v1.GetClipSourcesRequest]) (*connect.Response[v1.GetClipSourcesResponse], error) {
+	return c.getClipSources.CallUnary(ctx, req)
+}
+
+// GetClipSourcePlayback calls postpilot.v1.ClipService.GetClipSourcePlayback.
+func (c *clipServiceClient) GetClipSourcePlayback(ctx context.Context, req *connect.Request[v1.GetClipSourcePlaybackRequest]) (*connect.Response[v1.GetClipSourcePlaybackResponse], error) {
+	return c.getClipSourcePlayback.CallUnary(ctx, req)
+}
+
 // ListClipAnalysisEligibility calls postpilot.v1.ClipService.ListClipAnalysisEligibility.
 func (c *clipServiceClient) ListClipAnalysisEligibility(ctx context.Context, req *connect.Request[v1.ListClipAnalysisEligibilityRequest]) (*connect.Response[v1.ListClipAnalysisEligibilityResponse], error) {
 	return c.listClipAnalysisEligibility.CallUnary(ctx, req)
@@ -383,6 +415,8 @@ type ClipServiceHandler interface {
 	CreateClipSourceBatch(context.Context, *connect.Request[v1.CreateClipSourceBatchRequest]) (*connect.Response[v1.CreateClipSourceBatchResponse], error)
 	ConfirmClipSource(context.Context, *connect.Request[v1.ConfirmClipSourceRequest]) (*connect.Response[v1.ConfirmClipSourceResponse], error)
 	DiscardClipSourceBatch(context.Context, *connect.Request[v1.DiscardClipSourceBatchRequest]) (*connect.Response[v1.DiscardClipSourceBatchResponse], error)
+	GetClipSources(context.Context, *connect.Request[v1.GetClipSourcesRequest]) (*connect.Response[v1.GetClipSourcesResponse], error)
+	GetClipSourcePlayback(context.Context, *connect.Request[v1.GetClipSourcePlaybackRequest]) (*connect.Response[v1.GetClipSourcePlaybackResponse], error)
 	// Read-only: every registered observe model with its current clip-analysis
 	// eligibility (CLIP-30, CLIP-44). No model call, no write, no provider detail.
 	ListClipAnalysisEligibility(context.Context, *connect.Request[v1.ListClipAnalysisEligibilityRequest]) (*connect.Response[v1.ListClipAnalysisEligibilityResponse], error)
@@ -503,6 +537,18 @@ func NewClipServiceHandler(svc ClipServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(clipServiceMethods.ByName("DiscardClipSourceBatch")),
 		connect.WithHandlerOptions(opts...),
 	)
+	clipServiceGetClipSourcesHandler := connect.NewUnaryHandler(
+		ClipServiceGetClipSourcesProcedure,
+		svc.GetClipSources,
+		connect.WithSchema(clipServiceMethods.ByName("GetClipSources")),
+		connect.WithHandlerOptions(opts...),
+	)
+	clipServiceGetClipSourcePlaybackHandler := connect.NewUnaryHandler(
+		ClipServiceGetClipSourcePlaybackProcedure,
+		svc.GetClipSourcePlayback,
+		connect.WithSchema(clipServiceMethods.ByName("GetClipSourcePlayback")),
+		connect.WithHandlerOptions(opts...),
+	)
 	clipServiceListClipAnalysisEligibilityHandler := connect.NewUnaryHandler(
 		ClipServiceListClipAnalysisEligibilityProcedure,
 		svc.ListClipAnalysisEligibility,
@@ -547,6 +593,10 @@ func NewClipServiceHandler(svc ClipServiceHandler, opts ...connect.HandlerOption
 			clipServiceConfirmClipSourceHandler.ServeHTTP(w, r)
 		case ClipServiceDiscardClipSourceBatchProcedure:
 			clipServiceDiscardClipSourceBatchHandler.ServeHTTP(w, r)
+		case ClipServiceGetClipSourcesProcedure:
+			clipServiceGetClipSourcesHandler.ServeHTTP(w, r)
+		case ClipServiceGetClipSourcePlaybackProcedure:
+			clipServiceGetClipSourcePlaybackHandler.ServeHTTP(w, r)
 		case ClipServiceListClipAnalysisEligibilityProcedure:
 			clipServiceListClipAnalysisEligibilityHandler.ServeHTTP(w, r)
 		default:
@@ -628,6 +678,14 @@ func (UnimplementedClipServiceHandler) ConfirmClipSource(context.Context, *conne
 
 func (UnimplementedClipServiceHandler) DiscardClipSourceBatch(context.Context, *connect.Request[v1.DiscardClipSourceBatchRequest]) (*connect.Response[v1.DiscardClipSourceBatchResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipService.DiscardClipSourceBatch is not implemented"))
+}
+
+func (UnimplementedClipServiceHandler) GetClipSources(context.Context, *connect.Request[v1.GetClipSourcesRequest]) (*connect.Response[v1.GetClipSourcesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipService.GetClipSources is not implemented"))
+}
+
+func (UnimplementedClipServiceHandler) GetClipSourcePlayback(context.Context, *connect.Request[v1.GetClipSourcePlaybackRequest]) (*connect.Response[v1.GetClipSourcePlaybackResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipService.GetClipSourcePlayback is not implemented"))
 }
 
 func (UnimplementedClipServiceHandler) ListClipAnalysisEligibility(context.Context, *connect.Request[v1.ListClipAnalysisEligibilityRequest]) (*connect.Response[v1.ListClipAnalysisEligibilityResponse], error) {

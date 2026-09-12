@@ -91,3 +91,6 @@ export {
   compositionInputsToProto,
   useClipCapabilities,
 } from './api/composition'
+
+export { getClipSources, getClipSourcePlayback } from './api/sources'
+export type { ClipSourceAvailability } from './model/types'

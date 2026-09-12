@@ -134,11 +134,11 @@ func QuoteInputDigest(p Project, t VideoTemplate, b SourceBatch, pricing Generat
 }
 
 func ValidQuoteBatch(b SourceBatch, user, project string, now time.Time) bool {
-	if b.UserID != user || b.ProjectID != project || b.State != "ready" || !now.Before(b.ExpiresAt) || len(b.Sources) == 0 {
+	if b.AccessDenied || b.UserID != user || b.ProjectID != project || b.State != "ready" || !now.Before(b.ExpiresAt) || len(b.Sources) == 0 {
 		return false
 	}
 	for _, v := range b.Sources {
-		if v.State != "ready" || v.ActualBytes != v.Bytes || v.Bytes <= 0 {
+		if v.CleanupPending || v.State != "ready" || v.ActualBytes != v.Bytes || v.Bytes <= 0 {
 			return false
 		}
 	}
@@ -171,7 +171,7 @@ func (s *GenerationService) quoteInputs(ctx context.Context, user, id, batch, ob
 	if err = s.planner.ValidateModels(modelRef(observe), modelRef(write)); err != nil {
 		return p, t, b, pricing, admissionRefusal(modelRef(observe), err)
 	}
-	b, err = s.store.GetSourceBatch(ctx, user, batch)
+	b, err = s.sources.AvailableBatch(ctx, user, batch)
 	if err != nil {
 		return p, t, b, pricing, err
 	}

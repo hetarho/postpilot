@@ -25,6 +25,8 @@ service ClipService {
   rpc CreateClipSourceBatch(CreateClipSourceBatchRequest) returns (CreateClipSourceBatchResponse) {}
   rpc ConfirmClipSource(ConfirmClipSourceRequest) returns (ConfirmClipSourceResponse) {}
   rpc DiscardClipSourceBatch(DiscardClipSourceBatchRequest) returns (DiscardClipSourceBatchResponse) {}
+  rpc GetClipSources(GetClipSourcesRequest) returns (GetClipSourcesResponse) {}
+  rpc GetClipSourcePlayback(GetClipSourcePlaybackRequest) returns (GetClipSourcePlaybackResponse) {}
   // Read-only: every registered observe model with its current clip-analysis
   // eligibility (CLIP-30, CLIP-44). No model call, no write, no provider detail.
   rpc ListClipAnalysisEligibility(ListClipAnalysisEligibilityRequest) returns (ListClipAnalysisEligibilityResponse) {}
@@ -223,6 +225,8 @@ message ClipSource {
   ClipSourceMetadata metadata = 2;
   string state = 3;
   int64 actual_bytes = 4;
+  string retention_expires_at = 5;
+  string availability = 6;
 }
 message ClipSourceBatch {
   string id = 1;
@@ -230,6 +234,7 @@ message ClipSourceBatch {
   string state = 3;
   repeated ClipSource sources = 4;
   string expires_at = 5;
+  bool current = 6;
 }
 message ClipSourceUpload {
   string source_id = 1;
@@ -243,6 +248,10 @@ message ConfirmClipSourceRequest { string batch_id = 1; string source_id = 2; }
 message ConfirmClipSourceResponse { ClipSourceBatch batch = 1; }
 message DiscardClipSourceBatchRequest { string batch_id = 1; }
 message DiscardClipSourceBatchResponse {}
+message GetClipSourcesRequest { string project_id = 1; }
+message GetClipSourcesResponse { repeated ClipSourceBatch batches = 1; }
+message GetClipSourcePlaybackRequest { string project_id = 1; string source_id = 2; string expected_fingerprint = 3; }
+message GetClipSourcePlaybackResponse { string url = 1; string expires_at = 2; }
 message StartClipGenerationRequest {
   string project_id = 1;
   string batch_id = 2;

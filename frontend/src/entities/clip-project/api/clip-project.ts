@@ -15,6 +15,7 @@ import {
   type ClipProjectDraft,
   type ClipRatio,
   type ClipSourceBatch,
+  type ClipSourceAvailability,
 } from '../model/types'
 
 export const clipProjectsKey = (transport: Transport, ownerId: string) =>
@@ -71,13 +72,23 @@ export function toClipSourceBatch(value: ProtoClipSourceBatch): ClipSourceBatch 
     projectId: value.projectId,
     state: value.state as ClipSourceBatch['state'],
     expiresAt: value.expiresAt,
+    current: value.current,
     sources: value.sources.map((source) => {
       if (!source.metadata || !['pending', 'ready'].includes(source.state))
         throw new Error('Invalid source lease')
+      if (
+        source.availability &&
+        !['uploading', 'available', 'active', 'expired', 'missing', 'cleanup_pending'].includes(
+          source.availability,
+        )
+      )
+        throw new Error('Invalid source availability')
       const m = source.metadata
       return {
         id: source.id,
         state: source.state as 'pending' | 'ready',
+        retentionExpiresAt: source.retentionExpiresAt || undefined,
+        availability: (source.availability as ClipSourceAvailability) || undefined,
         actualBytes: Number(source.actualBytes),
         metadata: {
           filename: m.filename,

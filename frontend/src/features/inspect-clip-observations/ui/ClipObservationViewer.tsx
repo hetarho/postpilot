@@ -1,4 +1,4 @@
-import { useCallback, useId, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   ClipSourceStrip,
@@ -88,21 +88,19 @@ function SourceObservations({
   observation,
   plan,
   localURL,
+  refreshPlayback,
 }: {
   observation: ClipSourceObservation
   plan?: ClipEditPlan
   localURL?: string
+  refreshPlayback?: () => Promise<string>
 }) {
   const { t } = useTranslation('clips')
   const id = useId()
   const [expanded, setExpanded] = useState(false)
   const [preview, setPreview] = useState<ClipObservedSegment>()
   const closePreview = useCallback(() => setPreview(undefined), [])
-  const [previewSource, setPreviewSource] = useState(localURL)
-  if (previewSource !== localURL) {
-    setPreviewSource(localURL)
-    setPreview(undefined)
-  }
+  const restoreTime = useRef<number | undefined>(undefined)
   const summary = observationSummary(observation)
   return (
     <div className="space-y-4">
@@ -168,7 +166,11 @@ function SourceObservations({
             aria-label={t('observation.previewTitle')}
             className="aspect-video w-full rounded-md object-contain"
             onLoadedMetadata={(event) => {
-              event.currentTarget.currentTime = preview.startMs / 1000
+              event.currentTarget.currentTime = restoreTime.current ?? preview.startMs / 1000
+            }}
+            onError={(event) => {
+              restoreTime.current = event.currentTarget.currentTime
+              void refreshPlayback?.().catch(() => {})
             }}
             onTimeUpdate={(event) => {
               if (event.currentTarget.currentTime >= preview.endMs / 1000) {
@@ -192,9 +194,11 @@ function SourceObservations({
 export function ClipObservationViewer({
   project,
   localSources,
+  resolvePlayback,
 }: {
   project: ClipProject
   localSources: ReadonlyArray<{ fingerprint: string; url: string }>
+  resolvePlayback?: (fingerprint: string, refresh?: boolean) => Promise<string>
 }) {
   const { t } = useTranslation('clips')
   const id = useId()
@@ -202,6 +206,10 @@ export function ClipObservationViewer({
   const observations = project.observations
   const sources = observations?.status === 'available' ? observations.sources : []
   const active = sources.find((item) => item.source.fingerprint === selected) ?? sources[0]
+  const fingerprint = active?.source.fingerprint
+  useEffect(() => {
+    if (fingerprint) void resolvePlayback?.(fingerprint).catch(() => {})
+  }, [fingerprint, resolvePlayback])
   const job = project.latestJob
   const previous =
     job?.kind === 'generate_clip' && ['queued', 'running', 'failed'].includes(job.status)
@@ -247,6 +255,9 @@ export function ClipObservationViewer({
             key={active.source.fingerprint}
             observation={active}
             plan={project.editing?.plan}
+            refreshPlayback={
+              resolvePlayback ? () => resolvePlayback(active.source.fingerprint, true) : undefined
+            }
             localURL={
               localSources.find((local) => local.fingerprint === active.source.fingerprint)?.url
             }

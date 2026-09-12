@@ -3,6 +3,7 @@ import { useTransport } from '@connectrpc/connect-query'
 import { createClipSourcePipeline } from '../api/pipeline'
 import { ClipSourceSession } from './session'
 import type { RetainedClipSource } from '@/entities/clip-project'
+import { POLL_INTERVAL_MS } from '@/shared/config'
 import { matchClipSources } from './reselection'
 
 export function useClipSourceUpload(projectId: string, required?: readonly RetainedClipSource[]) {
@@ -26,9 +27,27 @@ export function useClipSourceUpload(projectId: string, required?: readonly Retai
     }
   }, [session])
   const requiredKey = JSON.stringify(required ?? null)
-  useEffect(() => session.changeConstraints(requiredKey), [session, requiredKey])
+  useEffect(() => {
+    const sources = JSON.parse(requiredKey) as RetainedClipSource[] | null
+    session.requireSources(sources?.map((s) => s.fingerprint))
+  }, [session, requiredKey])
+  useEffect(() => {
+    if (state.phase !== 'finished') return
+    const timer = window.setInterval(() => void session.refreshRetained(), POLL_INTERVAL_MS)
+    return () => window.clearInterval(timer)
+  }, [session, state.phase])
+  useEffect(() => {
+    const at = state.readyBatch?.expiresAt
+    if (!at) return
+    const delay = Date.parse(at) - Date.now()
+    if (!Number.isFinite(delay) || delay > 2 ** 31 - 1) return
+    const timer = window.setTimeout(() => void session.refreshRetained(), Math.max(0, delay))
+    return () => window.clearTimeout(timer)
+  }, [session, state.readyBatch?.expiresAt])
   return {
     ...state,
+    ensurePlayback: session.ensurePlayback,
+    refreshRetained: session.refreshRetained,
     select: (files: File[]) =>
       session.select(
         files,

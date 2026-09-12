@@ -101,6 +101,8 @@ export const appFailureSpecs = {
   CLIP_DISCLOSURE_REQUIRED: {},
   CLIP_FACTS_REQUIRED: { required: ['labels'] },
   CLIP_SOURCE_UNAVAILABLE: {},
+  CLIP_SOURCE_EXPIRED: {},
+  CLIP_SOURCE_MISSING: {},
   CLIP_BUSY: {},
   CLIP_PLAN_CONFLICT: {},
   CLIP_COMPOSITION_INVALID: { required: ['element_id', 'line', 'reason'] },

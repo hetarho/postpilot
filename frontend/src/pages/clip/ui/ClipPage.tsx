@@ -170,6 +170,7 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
   const observationPanel = (
     <ClipObservationViewer
       project={project}
+      resolvePlayback={upload.ensurePlayback}
       localSources={upload.entries.map((entry) => ({
         fingerprint: entry.metadata.fingerprint,
         url: entry.previewURL,

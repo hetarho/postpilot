@@ -150,6 +150,10 @@ func toConnectError(err error) error {
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "clip media is invalid", "CLIP_INVALID_MEDIA", nil)
 	case errors.Is(err, clip.ErrCopyTooLong):
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "clip copy does not fit", "CLIP_COPY_TOO_LONG", nil)
+	case errors.Is(err, clip.ErrSourceExpired):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip originals expired", "CLIP_SOURCE_EXPIRED", nil)
+	case errors.Is(err, clip.ErrSourceMissing):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip originals missing", "CLIP_SOURCE_MISSING", nil)
 	case errors.Is(err, clip.ErrSourceState):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip source batch is not available", "CLIP_SOURCE_UNAVAILABLE", nil)
 	case errors.Is(err, clip.ErrNotFound):

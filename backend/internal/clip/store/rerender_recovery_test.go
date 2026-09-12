@@ -92,7 +92,7 @@ func TestRenderCancellationMalformedPanicAndBootAlwaysClean(t *testing.T) {
 					t.Fatal("failure hidden")
 				}
 			}
-			if _, err = h.store.GetSourceBatch(ctx, "alice", b.ID); !errors.Is(err, clip.ErrNotFound) {
+			if _, err = h.store.GetSourceBatch(ctx, "alice", b.ID); err != nil {
 				t.Fatal(err)
 			}
 			got, err := h.projects.GetProject(ctx, "alice", p.ID)
@@ -109,7 +109,7 @@ func TestRenderExpiryCleanupRetryAndAtomicRevisionSwap(t *testing.T) {
 	h, p, _ := completedClip(t)
 	ctx := context.Background()
 	b := rerenderBatch(t, h, true)
-	if _, err := h.db.Writer.Exec("UPDATE clip_source_batches SET expires_at=? WHERE id=?", time.Now().Add(-time.Hour).Format(time.RFC3339Nano), b.ID); err != nil {
+	if _, err := h.db.Writer.Exec("UPDATE clip_source_leases SET retention_expires_at=? WHERE batch_id=?", time.Now().Add(-time.Hour).Format(time.RFC3339Nano), b.ID); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := h.service.StartRender(ctx, "alice", p.ID, b.ID, 1); !errors.Is(err, clip.ErrSourceState) {
@@ -124,14 +124,14 @@ func TestRenderExpiryCleanupRetryAndAtomicRevisionSwap(t *testing.T) {
 		t.Fatal(err)
 	}
 	pending, err := h.store.GetSourceBatch(ctx, "alice", b.ID)
-	if err != nil || pending.State != "cleanup_pending" {
+	if err != nil || pending.State != "ready" {
 		t.Fatal(pending, err)
 	}
 	h.objects.failDelete[b.Sources[0].Key] = false
 	if err = h.service.Sweep(ctx); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = h.store.GetSourceBatch(ctx, "alice", b.ID); !errors.Is(err, clip.ErrNotFound) {
+	if _, err = h.store.GetSourceBatch(ctx, "alice", b.ID); err != nil {
 		t.Fatal(err)
 	}
 	got, _ := h.projects.GetProject(ctx, "alice", p.ID)

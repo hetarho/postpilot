@@ -25,12 +25,12 @@ func (q *Queries) AddProxy(ctx context.Context, arg AddProxyParams) error {
 }
 
 const batchForJob = `-- name: BatchForJob :one
-SELECT id, user_id, project_id, state, created_at, expires_at, job_id FROM clip_source_batches WHERE user_id=? AND job_id=?
+SELECT b.id, b.user_id, b.project_id, b.state, b.created_at, b.expires_at, b.job_id, b.put_expires_at FROM clip_source_batches b JOIN clip_source_attempts a ON a.batch_id=b.id AND a.user_id=b.user_id WHERE a.user_id=? AND a.job_id=?
 `
 
 type BatchForJobParams struct {
 	UserID string
-	JobID  sql.NullString
+	JobID  string
 }
 
 func (q *Queries) BatchForJob(ctx context.Context, arg BatchForJobParams) (ClipSourceBatch, error) {
@@ -44,6 +44,7 @@ func (q *Queries) BatchForJob(ctx context.Context, arg BatchForJobParams) (ClipS
 		&i.CreatedAt,
 		&i.ExpiresAt,
 		&i.JobID,
+		&i.PutExpiresAt,
 	)
 	return i, err
 }
@@ -101,14 +102,14 @@ func (q *Queries) HasActiveClipJob(ctx context.Context, clipProjectID sql.NullSt
 }
 
 const linkSourceJob = `-- name: LinkSourceJob :execrows
-UPDATE clip_source_batches SET state='consuming',job_id=? WHERE id=? AND user_id=? AND state='ready' AND expires_at>?
+UPDATE clip_source_batches SET state='consuming',job_id=? WHERE clip_source_batches.id=? AND clip_source_batches.user_id=? AND clip_source_batches.state='ready' AND NOT EXISTS(SELECT 1 FROM clip_source_leases l WHERE l.batch_id=clip_source_batches.id AND (l.cleanup_pending=1 OR l.state!='ready' OR l.retention_expires_at<=?4)) AND EXISTS(SELECT 1 FROM clip_projects p WHERE p.id=clip_source_batches.project_id AND p.user_id=clip_source_batches.user_id AND p.source_batch_id=clip_source_batches.id AND p.deleting=0 AND p.source_access_revoked_at IS NULL)
 `
 
 type LinkSourceJobParams struct {
-	JobID     sql.NullString
-	ID        string
-	UserID    string
-	ExpiresAt string
+	JobID  sql.NullString
+	ID     string
+	UserID string
+	Now    sql.NullString
 }
 
 func (q *Queries) LinkSourceJob(ctx context.Context, arg LinkSourceJobParams) (int64, error) {
@@ -116,7 +117,7 @@ func (q *Queries) LinkSourceJob(ctx context.Context, arg LinkSourceJobParams) (i
 		arg.JobID,
 		arg.ID,
 		arg.UserID,
-		arg.ExpiresAt,
+		arg.Now,
 	)
 	if err != nil {
 		return 0, err
@@ -125,7 +126,7 @@ func (q *Queries) LinkSourceJob(ctx context.Context, arg LinkSourceJobParams) (i
 }
 
 const listConsumingBatches = `-- name: ListConsumingBatches :many
-SELECT id, user_id, project_id, state, created_at, expires_at, job_id FROM clip_source_batches WHERE state='consuming'
+SELECT b.id, b.user_id, b.project_id, b.state, b.created_at, b.expires_at, b.job_id, b.put_expires_at FROM clip_source_batches b WHERE EXISTS(SELECT 1 FROM clip_source_attempts a WHERE a.batch_id=b.id AND a.released_at IS NULL)
 `
 
 func (q *Queries) ListConsumingBatches(ctx context.Context) ([]ClipSourceBatch, error) {
@@ -145,6 +146,7 @@ func (q *Queries) ListConsumingBatches(ctx context.Context) ([]ClipSourceBatch, 
 			&i.CreatedAt,
 			&i.ExpiresAt,
 			&i.JobID,
+			&i.PutExpiresAt,
 		); err != nil {
 			return nil, err
 		}

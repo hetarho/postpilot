@@ -351,20 +351,36 @@ func ApplyCorrection(cfg RenderConfig, p Project, input CorrectionPlan) (EditPla
 	return next, styles, nil
 }
 
-// Exactly the remaining source subset, independent of new transient lease ids.
+// Every remaining source must match. A retained manifest may also hold unused originals.
 func MatchRenderBatch(plan EditPlan, batch SourceBatch) error {
 	required := map[string]bool{}
 	for _, c := range plan.Cuts {
 		required[c.Fingerprint] = true
 	}
-	if len(required) != len(batch.Sources) {
-		return ErrSourceState
-	}
+	seen := map[string]bool{}
 	for _, s := range batch.Sources {
-		if !required[s.Fingerprint] {
+		if seen[s.Fingerprint] {
 			return ErrSourceState
 		}
+		seen[s.Fingerprint] = true
 		delete(required, s.Fingerprint)
 	}
+	if len(required) != 0 {
+		return ErrSourceState
+	}
 	return nil
+}
+func renderBatchSources(plan EditPlan, batch SourceBatch) SourceBatch {
+	needed := map[string]bool{}
+	for _, c := range plan.Cuts {
+		needed[c.Fingerprint] = true
+	}
+	out := batch
+	out.Sources = nil
+	for _, v := range batch.Sources {
+		if needed[v.Fingerprint] {
+			out.Sources = append(out.Sources, v)
+		}
+	}
+	return out
 }

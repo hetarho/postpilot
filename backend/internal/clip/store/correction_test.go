@@ -68,7 +68,11 @@ func runRender(t *testing.T, h *generationHarness) error {
 		status = job.StatusFailed
 		failure = &job.Failure{Reason: "CLIP_PROCESSING_FAILED"}
 	}
-	if e := h.jobs.Finish(ctx, j.ID, status, failure, time.Now()); e != nil {
+	terminal := time.Now()
+	if e := h.jobs.Finish(ctx, j.ID, status, failure, terminal); e != nil {
+		t.Fatal(e)
+	}
+	if e := h.sources.ReleaseAttempt(ctx, j.UserID, j.ID, terminal); e != nil {
 		t.Fatal(e)
 	}
 	return err
@@ -93,10 +97,6 @@ func TestCorrectionSaveConflictSubsetRenderAndZeroUsage(t *testing.T) {
 	}
 	if _, err = h.service.StartRender(ctx, "alice", old.ID, "missing", 1); !errors.Is(err, clip.ErrPlanConflict) {
 		t.Fatal(err)
-	}
-	all := rerenderBatch(t, h, false)
-	if _, err = h.service.StartRender(ctx, "alice", old.ID, all.ID, 2); !errors.Is(err, clip.ErrSourceState) {
-		t.Fatal("unused source accepted", err)
 	}
 	b := rerenderBatch(t, h, true)
 	if _, err = h.service.StartRender(ctx, "bob", old.ID, b.ID, 2); !errors.Is(err, clip.ErrNotFound) {
@@ -134,7 +134,7 @@ func TestCorrectionSaveConflictSubsetRenderAndZeroUsage(t *testing.T) {
 			t.Fatal(table, n, err)
 		}
 	}
-	if _, err = h.store.GetSourceBatch(ctx, "alice", b.ID); !errors.Is(err, clip.ErrNotFound) {
+	if _, err = h.store.GetSourceBatch(ctx, "alice", b.ID); err != nil {
 		t.Fatal(err)
 	}
 	keys, err := h.store.DeletionKeys(ctx)
@@ -179,7 +179,7 @@ func TestCorrectionFailuresPreserveSavedPlanAndOldVideo(t *testing.T) {
 			if err != nil || got.EditPlan != saved.EditPlan || got.Result.Key != old.Result.Key || got.RenderedPlanRevision != 1 {
 				t.Fatal(got, err)
 			}
-			if _, err = h.store.GetSourceBatch(ctx, "alice", b.ID); !errors.Is(err, clip.ErrNotFound) {
+			if _, err = h.store.GetSourceBatch(ctx, "alice", b.ID); err != nil {
 				t.Fatal(err)
 			}
 			if h.planner.plans != 0 || len(h.admitter.calls) != 0 {

@@ -14,7 +14,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"time"
 )
@@ -114,8 +113,8 @@ func (s *GenerationService) enqueue(ctx context.Context, input GenerationStart, 
 		// Activation may have committed before the caller lost its context. Never
 		// delete inputs unless the queued-to-failed compare-and-swap succeeded.
 		if failed {
-			if linked, lookup := s.store.BatchForJob(cleanup, user, job); lookup == nil {
-				if finish := s.sources.Finish(cleanup, user, linked.ID); finish != nil {
+			if current, lookup := s.jobs.Get(cleanup, user, job); lookup == nil && current != nil && current.FinishedAt != nil {
+				if finish := s.sources.ReleaseAttempt(cleanup, user, job, *current.FinishedAt); finish != nil {
 					slog.Warn("clip source cleanup pending recovery", "job", job)
 				}
 			}
@@ -202,14 +201,6 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 	stage := "prepare"
 	// Resolve cleanup from the durable linkage, even if payload decoding fails.
 	defer func() {
-		cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), s.cfg.CleanupTimeout)
-		defer cancel()
-		b, lookup := s.store.BatchForJob(cleanup, user, job)
-		if lookup == nil {
-			if e := s.sources.Finish(cleanup, user, b.ID); e != nil {
-				slog.Warn("clip cleanup deferred", "job", job)
-			}
-		}
 		if err != nil {
 			err = &StageFailure{stage, err}
 		}
@@ -233,7 +224,7 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 	if (p.Version != generationPayloadVersion && p.Version != 3) || (p.Version == generationPayloadVersion && p.Composition == nil) || p.Approval == nil {
 		return ErrQuoteRequired
 	}
-	if p.ProjectID != project || p.Batch.ProjectID != project || p.Batch.ID != b.ID || p.Batch.UserID != user || !reflect.DeepEqual(p.Batch.Sources, b.Sources) {
+	if p.ProjectID != project || p.Batch.ProjectID != project || p.Batch.ID != b.ID || p.Batch.UserID != user || !SameSourceManifest(p.Batch.Sources, b.Sources) {
 		return ErrInvalid
 	}
 	if b.State != "consuming" || b.ProjectID != project {

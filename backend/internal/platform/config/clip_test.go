@@ -32,3 +32,12 @@ func TestClipSourceOperationalDefaultsAndOverrides(t *testing.T) {
 		t.Fatal("batch cannot expire before its URL")
 	}
 }
+
+func TestClipConfirmedRetentionDoesNotFollowIncompleteUploadTTL(t *testing.T) {
+	for _, incomplete := range []time.Duration{time.Hour, 6 * time.Hour, 48 * time.Hour} {
+		limits := ClipSourceLimits(incomplete, 10*time.Minute)
+		if limits.RetentionTTL != 24*time.Hour || limits.PlaybackTTL != 5*time.Minute || limits.BatchTTL != incomplete {
+			t.Fatal("original policy inherited the upload bound", limits)
+		}
+	}
+}

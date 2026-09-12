@@ -80,6 +80,8 @@ export const errors = {
     '{{model}} 모델의 경로가 클립 분석 요청에 필요한 설정을 지원하지 않아요. 다른 모델을 선택해 주세요.',
   CLIP_MODEL_PRICE_CEILING_UNAVAILABLE:
     '{{model}} 모델의 요금 상한을 확인할 수 없어 생성을 시작하지 않았어요. 다른 모델을 선택하거나 잠시 후 다시 시도해 주세요.',
+  CLIP_SOURCE_EXPIRED: '원본 보관 기한이 지났어요. 같은 원본을 다시 선택해 주세요.',
+  CLIP_SOURCE_MISSING: '원본을 찾을 수 없어요. 같은 파일을 다시 선택해 주세요.',
   CLIP_SOURCE_UNAVAILABLE:
     '영상이 처리 중이거나 업로드가 만료됐어요. 진행 상태를 확인한 뒤 원본 영상을 다시 선택해 주세요.',
   CLIP_NOT_FOUND: '클립 또는 영상 템플릿을 찾을 수 없어요.',
