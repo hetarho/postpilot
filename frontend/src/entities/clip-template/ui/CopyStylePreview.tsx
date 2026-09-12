@@ -1,4 +1,4 @@
-import { CLIP_SHADOW, CLIP_SPACING, clipPaint } from '@/shared/config'
+import { CLIP_DESIGN, CLIP_SHADOW, CLIP_SPACING, clipPaint } from '@/shared/config'
 import { copyStyleMeasurements, type ClipAccent, type CopyStyle } from '../model/types'
 
 const accentClasses: Record<ClipAccent, string> = {
@@ -34,7 +34,8 @@ export function CopyStylePreview({
 }) {
   const recipe = copyStyleMeasurements(style)
   const plate = recipe.plate ? clipPaint(recipe.plate as 'ink_900') : null
-  const accented = accent !== '' && (recipe.highlight || recipe.stroke > 0) && keyword !== ''
+  const accented =
+    style !== 'simple' && accent !== '' && (recipe.highlight || recipe.stroke > 0) && keyword !== ''
   const baseline = 120 + recipe.fontSize / 3
   return (
     <svg
@@ -104,6 +105,7 @@ export function CopyStylePreview({
         x="540"
         y={baseline}
         textAnchor="middle"
+        fontFamily={style === 'simple' ? CLIP_DESIGN.faces.pretendard : undefined}
         fontSize={recipe.fontSize}
         fontWeight={recipe.weight}
         letterSpacing={recipe.tracking * recipe.fontSize}

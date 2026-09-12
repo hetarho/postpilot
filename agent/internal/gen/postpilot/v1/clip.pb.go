@@ -370,7 +370,9 @@ type VideoTemplate struct {
 	UpdatedAt    string `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	// The category preset: restaurant, cafe, stay, beauty or home. Empty is a
 	// template written before presets existed and reads as the shared defaults.
-	Preset        string `protobuf:"bytes,10,opt,name=preset,proto3" json:"preset,omitempty"`
+	Preset string `protobuf:"bytes,10,opt,name=preset,proto3" json:"preset,omitempty"`
+	// Empty or steady keeps sentence timing; rapid splits short phrase cues.
+	CaptionPace   string `protobuf:"bytes,11,opt,name=caption_pace,json=captionPace,proto3" json:"caption_pace,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -471,6 +473,13 @@ func (x *VideoTemplate) GetUpdatedAt() string {
 func (x *VideoTemplate) GetPreset() string {
 	if x != nil {
 		return x.Preset
+	}
+	return ""
+}
+
+func (x *VideoTemplate) GetCaptionPace() string {
+	if x != nil {
+		return x.CaptionPace
 	}
 	return ""
 }
@@ -724,6 +733,8 @@ type ClipProject struct {
 	// The phrases are code-owned: only these ids travel.
 	Disclosure string `protobuf:"bytes,16,opt,name=disclosure,proto3" json:"disclosure,omitempty"`
 	Cta        string `protobuf:"bytes,17,opt,name=cta,proto3" json:"cta,omitempty"`
+	// Independent visibility choice; older projects/clients keep the badge shown.
+	HideDisclosure bool `protobuf:"varint,18,opt,name=hide_disclosure,json=hideDisclosure,proto3" json:"hide_disclosure,omitempty"`
 	// Owner-only, byte-free identity for reconciling an ambiguous start response.
 	LatestAttempt *ClipAttempt `protobuf:"bytes,15,opt,name=latest_attempt,json=latestAttempt,proto3" json:"latest_attempt,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -870,6 +881,13 @@ func (x *ClipProject) GetCta() string {
 		return x.Cta
 	}
 	return ""
+}
+
+func (x *ClipProject) GetHideDisclosure() bool {
+	if x != nil {
+		return x.HideDisclosure
+	}
+	return false
 }
 
 func (x *ClipProject) GetLatestAttempt() *ClipAttempt {
@@ -1129,6 +1147,7 @@ type CreateVideoTemplateRequest struct {
 	Accent            string                  `protobuf:"bytes,5,opt,name=accent,proto3" json:"accent,omitempty"`
 	// Required on create: one of the five presets.
 	Preset        string `protobuf:"bytes,6,opt,name=preset,proto3" json:"preset,omitempty"`
+	CaptionPace   string `protobuf:"bytes,7,opt,name=caption_pace,json=captionPace,proto3" json:"caption_pace,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1205,6 +1224,13 @@ func (x *CreateVideoTemplateRequest) GetPreset() string {
 	return ""
 }
 
+func (x *CreateVideoTemplateRequest) GetCaptionPace() string {
+	if x != nil {
+		return x.CaptionPace
+	}
+	return ""
+}
+
 type CreateVideoTemplateResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Template      *VideoTemplate         `protobuf:"bytes,1,opt,name=template,proto3" json:"template,omitempty"`
@@ -1259,6 +1285,7 @@ type UpdateVideoTemplateRequest struct {
 	Accent            *string                `protobuf:"bytes,6,opt,name=accent,proto3,oneof" json:"accent,omitempty"`
 	// Present means change it, and only one of the five is accepted.
 	Preset        *string `protobuf:"bytes,7,opt,name=preset,proto3,oneof" json:"preset,omitempty"`
+	CaptionPace   *string `protobuf:"bytes,8,opt,name=caption_pace,json=captionPace,proto3,oneof" json:"caption_pace,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1338,6 +1365,13 @@ func (x *UpdateVideoTemplateRequest) GetAccent() string {
 func (x *UpdateVideoTemplateRequest) GetPreset() string {
 	if x != nil && x.Preset != nil {
 		return *x.Preset
+	}
+	return ""
+}
+
+func (x *UpdateVideoTemplateRequest) GetCaptionPace() string {
+	if x != nil && x.CaptionPace != nil {
+		return *x.CaptionPace
 	}
 	return ""
 }
@@ -1562,10 +1596,11 @@ type CreateClipProjectRequest struct {
 	TargetDurationMs int32                  `protobuf:"varint,4,opt,name=target_duration_ms,json=targetDurationMs,proto3" json:"target_duration_ms,omitempty"`
 	Answers          []*ClipAnswer          `protobuf:"bytes,5,rep,name=answers,proto3" json:"answers,omitempty"`
 	// Both may be empty at creation; generation refuses an empty disclosure.
-	Disclosure    string `protobuf:"bytes,6,opt,name=disclosure,proto3" json:"disclosure,omitempty"`
-	Cta           string `protobuf:"bytes,7,opt,name=cta,proto3" json:"cta,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Disclosure     string `protobuf:"bytes,6,opt,name=disclosure,proto3" json:"disclosure,omitempty"`
+	Cta            string `protobuf:"bytes,7,opt,name=cta,proto3" json:"cta,omitempty"`
+	HideDisclosure bool   `protobuf:"varint,8,opt,name=hide_disclosure,json=hideDisclosure,proto3" json:"hide_disclosure,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *CreateClipProjectRequest) Reset() {
@@ -1645,6 +1680,13 @@ func (x *CreateClipProjectRequest) GetCta() string {
 		return x.Cta
 	}
 	return ""
+}
+
+func (x *CreateClipProjectRequest) GetHideDisclosure() bool {
+	if x != nil {
+		return x.HideDisclosure
+	}
+	return false
 }
 
 type CreateClipProjectResponse struct {
@@ -1786,11 +1828,12 @@ type UpdateClipProjectRequest struct {
 	VideoTemplateId  *string                `protobuf:"bytes,3,opt,name=video_template_id,json=videoTemplateId,proto3,oneof" json:"video_template_id,omitempty"`
 	TargetDurationMs *int32                 `protobuf:"varint,4,opt,name=target_duration_ms,json=targetDurationMs,proto3,oneof" json:"target_duration_ms,omitempty"`
 	// Only supplied labels change; an empty text explicitly clears that answer.
-	Answers       []*ClipAnswer `protobuf:"bytes,5,rep,name=answers,proto3" json:"answers,omitempty"`
-	Disclosure    *string       `protobuf:"bytes,6,opt,name=disclosure,proto3,oneof" json:"disclosure,omitempty"`
-	Cta           *string       `protobuf:"bytes,7,opt,name=cta,proto3,oneof" json:"cta,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Answers        []*ClipAnswer `protobuf:"bytes,5,rep,name=answers,proto3" json:"answers,omitempty"`
+	Disclosure     *string       `protobuf:"bytes,6,opt,name=disclosure,proto3,oneof" json:"disclosure,omitempty"`
+	Cta            *string       `protobuf:"bytes,7,opt,name=cta,proto3,oneof" json:"cta,omitempty"`
+	HideDisclosure *bool         `protobuf:"varint,8,opt,name=hide_disclosure,json=hideDisclosure,proto3,oneof" json:"hide_disclosure,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *UpdateClipProjectRequest) Reset() {
@@ -1870,6 +1913,13 @@ func (x *UpdateClipProjectRequest) GetCta() string {
 		return *x.Cta
 	}
 	return ""
+}
+
+func (x *UpdateClipProjectRequest) GetHideDisclosure() bool {
+	if x != nil && x.HideDisclosure != nil {
+		return *x.HideDisclosure
+	}
+	return false
 }
 
 type UpdateClipProjectResponse struct {
@@ -2961,7 +3011,9 @@ type ClipCaption struct {
 	Align string `protobuf:"bytes,7,opt,name=align,proto3" json:"align,omitempty"`
 	// The one word 크게 강조 colours and 형광펜 highlights. A substring of `text`,
 	// or empty for none; a field rather than a marker so `text` stays exact.
-	Keyword       string `protobuf:"bytes,8,opt,name=keyword,proto3" json:"keyword,omitempty"`
+	Keyword string `protobuf:"bytes,8,opt,name=keyword,proto3" json:"keyword,omitempty"`
+	// Independent of typography. Empty or steady is legacy sentence mode.
+	Pace          string `protobuf:"bytes,9,opt,name=pace,proto3" json:"pace,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3052,6 +3104,13 @@ func (x *ClipCaption) GetKeyword() string {
 	return ""
 }
 
+func (x *ClipCaption) GetPace() string {
+	if x != nil {
+		return x.Pace
+	}
+	return ""
+}
+
 type ClipEditCut struct {
 	state       protoimpl.MessageState `protogen:"open.v1"`
 	Id          string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -3069,8 +3128,8 @@ type ClipEditCut struct {
 	// earns and 300 the fade-through-black nothing offers yet. The first cut of a
 	// plan always carries 0.
 	TransitionMs int32 `protobuf:"varint,9,opt,name=transition_ms,json=transitionMs,proto3" json:"transition_ms,omitempty"`
-	// One copy, or the two CDS-43 lets a cut of 4 s or more carry in sequence: a
-	// description and then the number it leads to, never both on screen at once.
+	// Sentence mode carries up to two copies; rapid mode carries up to 24
+	// sequential short phrases with explicit times (CDS-59).
 	Copies        []*ClipCaption `protobuf:"bytes,10,rep,name=copies,proto3" json:"copies,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -3648,7 +3707,7 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\x15ClipInformationFields\x12:\n" +
 	"\x06values\x18\x01 \x03(\v2\".postpilot.v1.ClipInformationFieldR\x06values\"(\n" +
 	"\x0eClipCopyStyles\x12\x16\n" +
-	"\x06values\x18\x01 \x03(\tR\x06values\"\xdd\x02\n" +
+	"\x06values\x18\x01 \x03(\tR\x06values\"\x80\x03\n" +
 	"\rVideoTemplate\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12Q\n" +
@@ -3663,7 +3722,8 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\t \x01(\tR\tupdatedAt\x12\x16\n" +
 	"\x06preset\x18\n" +
-	" \x01(\tR\x06preset\"6\n" +
+	" \x01(\tR\x06preset\x12!\n" +
+	"\fcaption_pace\x18\v \x01(\tR\vcaptionPace\"6\n" +
 	"\n" +
 	"ClipAnswer\x12\x14\n" +
 	"\x05label\x18\x01 \x01(\tR\x05label\x12\x12\n" +
@@ -3681,7 +3741,7 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x04 \x01(\tR\tcreatedAt\x12\x19\n" +
 	"\bview_url\x18\x05 \x01(\tR\aviewUrl\x12!\n" +
-	"\fdownload_url\x18\x06 \x01(\tR\vdownloadUrl\"\xd3\x05\n" +
+	"\fdownload_url\x18\x06 \x01(\tR\vdownloadUrl\"\xfc\x05\n" +
 	"\vClipProject\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12*\n" +
@@ -3706,7 +3766,8 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\n" +
 	"disclosure\x18\x10 \x01(\tR\n" +
 	"disclosure\x12\x10\n" +
-	"\x03cta\x18\x11 \x01(\tR\x03cta\x12@\n" +
+	"\x03cta\x18\x11 \x01(\tR\x03cta\x12'\n" +
+	"\x0fhide_disclosure\x18\x12 \x01(\bR\x0ehideDisclosure\x12@\n" +
 	"\x0elatest_attempt\x18\x0f \x01(\v2\x19.postpilot.v1.ClipAttemptR\rlatestAttempt\"Z\n" +
 	"\vClipAttempt\x12\x15\n" +
 	"\x06job_id\x18\x01 \x01(\tR\x05jobId\x12\x19\n" +
@@ -3728,7 +3789,7 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\x16_shadow_charge_credits\"\x1b\n" +
 	"\x19ListVideoTemplatesRequest\"W\n" +
 	"\x1aListVideoTemplatesResponse\x129\n" +
-	"\ttemplates\x18\x01 \x03(\v2\x1b.postpilot.v1.VideoTemplateR\ttemplates\"\xf7\x01\n" +
+	"\ttemplates\x18\x01 \x03(\v2\x1b.postpilot.v1.VideoTemplateR\ttemplates\"\x9a\x02\n" +
 	"\x1aCreateVideoTemplateRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12Q\n" +
 	"\x12information_fields\x18\x02 \x03(\v2\".postpilot.v1.ClipInformationFieldR\x11informationFields\x12!\n" +
@@ -3736,9 +3797,10 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\vcopy_styles\x18\x04 \x03(\tR\n" +
 	"copyStyles\x12\x16\n" +
 	"\x06accent\x18\x05 \x01(\tR\x06accent\x12\x16\n" +
-	"\x06preset\x18\x06 \x01(\tR\x06preset\"V\n" +
+	"\x06preset\x18\x06 \x01(\tR\x06preset\x12!\n" +
+	"\fcaption_pace\x18\a \x01(\tR\vcaptionPace\"V\n" +
 	"\x1bCreateVideoTemplateResponse\x127\n" +
-	"\btemplate\x18\x01 \x01(\v2\x1b.postpilot.v1.VideoTemplateR\btemplate\"\xea\x02\n" +
+	"\btemplate\x18\x01 \x01(\v2\x1b.postpilot.v1.VideoTemplateR\btemplate\"\xa3\x03\n" +
 	"\x1aUpdateVideoTemplateRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12R\n" +
@@ -3747,11 +3809,13 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\vcopy_styles\x18\x05 \x01(\v2\x1c.postpilot.v1.ClipCopyStylesR\n" +
 	"copyStyles\x12\x1b\n" +
 	"\x06accent\x18\x06 \x01(\tH\x02R\x06accent\x88\x01\x01\x12\x1b\n" +
-	"\x06preset\x18\a \x01(\tH\x03R\x06preset\x88\x01\x01B\a\n" +
+	"\x06preset\x18\a \x01(\tH\x03R\x06preset\x88\x01\x01\x12&\n" +
+	"\fcaption_pace\x18\b \x01(\tH\x04R\vcaptionPace\x88\x01\x01B\a\n" +
 	"\x05_nameB\x0f\n" +
 	"\r_cut_guidanceB\t\n" +
 	"\a_accentB\t\n" +
-	"\a_preset\"V\n" +
+	"\a_presetB\x0f\n" +
+	"\r_caption_pace\"V\n" +
 	"\x1bUpdateVideoTemplateResponse\x127\n" +
 	"\btemplate\x18\x01 \x01(\v2\x1b.postpilot.v1.VideoTemplateR\btemplate\",\n" +
 	"\x1aDeleteVideoTemplateRequest\x12\x0e\n" +
@@ -3760,7 +3824,7 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\x11detached_projects\x18\x01 \x01(\x05R\x10detachedProjects\"\x19\n" +
 	"\x17ListClipProjectsRequest\"Q\n" +
 	"\x18ListClipProjectsResponse\x125\n" +
-	"\bprojects\x18\x01 \x03(\v2\x19.postpilot.v1.ClipProjectR\bprojects\"\x86\x02\n" +
+	"\bprojects\x18\x01 \x03(\v2\x19.postpilot.v1.ClipProjectR\bprojects\"\xaf\x02\n" +
 	"\x18CreateClipProjectRequest\x12\x14\n" +
 	"\x05title\x18\x01 \x01(\tR\x05title\x12*\n" +
 	"\x11video_template_id\x18\x02 \x01(\tR\x0fvideoTemplateId\x12\x14\n" +
@@ -3770,13 +3834,14 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\n" +
 	"disclosure\x18\x06 \x01(\tR\n" +
 	"disclosure\x12\x10\n" +
-	"\x03cta\x18\a \x01(\tR\x03cta\"P\n" +
+	"\x03cta\x18\a \x01(\tR\x03cta\x12'\n" +
+	"\x0fhide_disclosure\x18\b \x01(\bR\x0ehideDisclosure\"P\n" +
 	"\x19CreateClipProjectResponse\x123\n" +
 	"\aproject\x18\x01 \x01(\v2\x19.postpilot.v1.ClipProjectR\aproject\"'\n" +
 	"\x15GetClipProjectRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"M\n" +
 	"\x16GetClipProjectResponse\x123\n" +
-	"\aproject\x18\x01 \x01(\v2\x19.postpilot.v1.ClipProjectR\aproject\"\xe7\x02\n" +
+	"\aproject\x18\x01 \x01(\v2\x19.postpilot.v1.ClipProjectR\aproject\"\xa9\x03\n" +
 	"\x18UpdateClipProjectRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\x05title\x18\x02 \x01(\tH\x00R\x05title\x88\x01\x01\x12/\n" +
@@ -3786,12 +3851,14 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\n" +
 	"disclosure\x18\x06 \x01(\tH\x03R\n" +
 	"disclosure\x88\x01\x01\x12\x15\n" +
-	"\x03cta\x18\a \x01(\tH\x04R\x03cta\x88\x01\x01B\b\n" +
+	"\x03cta\x18\a \x01(\tH\x04R\x03cta\x88\x01\x01\x12,\n" +
+	"\x0fhide_disclosure\x18\b \x01(\bH\x05R\x0ehideDisclosure\x88\x01\x01B\b\n" +
 	"\x06_titleB\x14\n" +
 	"\x12_video_template_idB\x15\n" +
 	"\x13_target_duration_msB\r\n" +
 	"\v_disclosureB\x06\n" +
-	"\x04_cta\"P\n" +
+	"\x04_ctaB\x12\n" +
+	"\x10_hide_disclosure\"P\n" +
 	"\x19UpdateClipProjectResponse\x123\n" +
 	"\aproject\x18\x01 \x01(\v2\x19.postpilot.v1.ClipProjectR\aproject\"*\n" +
 	"\x18DeleteClipProjectRequest\x12\x0e\n" +
@@ -3878,7 +3945,7 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"maxCredits\x12\x1d\n" +
 	"\n" +
 	"expires_at\x18\x03 \x01(\tR\texpiresAt\x12?\n" +
-	"\fpriced_calls\x18\x04 \x03(\v2\x1c.postpilot.v1.ClipPricedCallR\vpricedCalls\"\xcd\x01\n" +
+	"\fpriced_calls\x18\x04 \x03(\v2\x1c.postpilot.v1.ClipPricedCallR\vpricedCalls\"\xe1\x01\n" +
 	"\vClipCaption\x12\x12\n" +
 	"\x04text\x18\x01 \x01(\tR\x04text\x12\x1a\n" +
 	"\bposition\x18\x02 \x01(\tR\bposition\x12\x14\n" +
@@ -3887,7 +3954,8 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\bstart_ms\x18\x05 \x01(\x05R\astartMs\x12\x15\n" +
 	"\x06end_ms\x18\x06 \x01(\x05R\x05endMs\x12\x14\n" +
 	"\x05align\x18\a \x01(\tR\x05align\x12\x18\n" +
-	"\akeyword\x18\b \x01(\tR\akeyword\"\xd4\x02\n" +
+	"\akeyword\x18\b \x01(\tR\akeyword\x12\x12\n" +
+	"\x04pace\x18\t \x01(\tR\x04pace\"\xd4\x02\n" +
 	"\vClipEditCut\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tsource_id\x18\x02 \x01(\tR\bsourceId\x12 \n" +

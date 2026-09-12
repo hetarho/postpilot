@@ -106,7 +106,7 @@ func (s *Service) ListTemplates(ctx context.Context, user string) ([]VideoTempla
 }
 func (s *Service) CreateTemplate(ctx context.Context, user string, recipe Recipe) (VideoTemplate, error) {
 	recipe.Name = strings.TrimSpace(recipe.Name)
-	if !bounded(recipe.Name, 1, s.limits.NameChars) || !bounded(recipe.CutGuidance, 0, s.limits.GuidanceChars) || !ValidCopyStyles(recipe.CopyStyles) || !ValidAccent(recipe.Accent) || !ValidPreset(recipe.Preset) {
+	if !bounded(recipe.Name, 1, s.limits.NameChars) || !bounded(recipe.CutGuidance, 0, s.limits.GuidanceChars) || !ValidCopyStyles(recipe.CopyStyles) || !ValidAccent(recipe.Accent) || !ValidPreset(recipe.Preset) || !ValidCaptionPace(recipe.CaptionPace) {
 		return VideoTemplate{}, ErrInvalid
 	}
 	fields, err := s.fields(recipe.InformationFields)
@@ -136,6 +136,9 @@ func (s *Service) UpdateTemplate(ctx context.Context, user, id string, p Templat
 		return VideoTemplate{}, ErrInvalid
 	}
 	if p.Accent != nil && !ValidAccent(*p.Accent) {
+		return VideoTemplate{}, ErrInvalid
+	}
+	if p.CaptionPace != nil && !ValidCaptionPace(*p.CaptionPace) {
 		return VideoTemplate{}, ErrInvalid
 	}
 	if p.CopyStyles != nil && !ValidCopyStyles(*p.CopyStyles) {
@@ -194,7 +197,7 @@ func (s *Service) CreateProject(ctx context.Context, user string, input ProjectI
 		return Project{}, err
 	}
 	now := time.Now()
-	p := Project{ID: newID(), UserID: user, Title: title, VideoTemplateID: input.VideoTemplateID, Ratio: input.Ratio, Disclosure: input.Disclosure, CTA: input.CTA, TargetDurationMS: input.TargetDurationMS, Answers: answers, CreatedAt: now, UpdatedAt: now}
+	p := Project{ID: newID(), UserID: user, Title: title, VideoTemplateID: input.VideoTemplateID, Ratio: input.Ratio, Disclosure: input.Disclosure, HideDisclosure: input.HideDisclosure, CTA: input.CTA, TargetDurationMS: input.TargetDurationMS, Answers: answers, CreatedAt: now, UpdatedAt: now}
 	if err := s.store.InsertProject(ctx, p); err != nil {
 		return Project{}, err
 	}

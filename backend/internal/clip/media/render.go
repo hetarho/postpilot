@@ -44,8 +44,8 @@ func frameSeconds(frames, fps int) string {
 
 // cutGraph composes one cut: its cover-cropped footage, the static furniture
 // layer (the disclosure badge and this cut's chips, which never move) and then
-// the animated copy layer. They are SEPARATE overlay inputs precisely because
-// the badge may not move (CDS-31) while the copy must (CDS-4).
+// the caption layers. They are separate overlay inputs because
+// the badge stays fixed (CDS-31) while captions follow their pace (CDS-4).
 func cutGraph(cfg clip.RenderConfig, canvas clip.Canvas, c clip.EditCut, source clip.MediaInfo, frames int, l layers, withAudio bool) string {
 	var graph strings.Builder
 	fmt.Fprintf(&graph, "[0:V:0]trim=duration=%s,setpts=PTS-STARTPTS,fps=%d,%s,setsar=1,format=yuv420p[base];", seconds(c.EndMS-c.StartMS), cfg.FPS, coverChain(canvas, c.Focal))
@@ -54,22 +54,34 @@ func cutGraph(cfg clip.RenderConfig, canvas clip.Canvas, c clip.EditCut, source 
 		fmt.Fprintf(&graph, "%s[%d:v:0]overlay=0:0:format=auto:shortest=0[fixed];", last, input)
 		last, input = "[fixed]", input+1
 	}
-	// One plate per copy, each in its own window. CDS-43's two copies are
-	// sequential, so the second simply enables where the first has ended.
+	// Each caption has its own plate and window: sentence copies under CDS-43,
+	// or rapid phrases under CDS-59.
 	for j, plate := range l.Copies {
 		if plate == "" {
-			input++
 			continue
 		}
-		// CDS-4 allows exactly two motions: a 180 ms fade-in that settles 12 px
+		// Sentence mode uses a 180 ms fade-in that settles 12 px
 		// upward, eased, and a 120 ms fade-out that does not move. Both are
 		// expressions on the one looped plate image — never a second raster per
 		// frame, and never anything else.
 		start, end := c.CaptionWindow(j)
-		m := design.Motion
-		in, out := float64(m.InMS)/1000, float64(m.OutMS)/1000
-		fmt.Fprintf(&graph, "[%d:v:0]format=rgba,loop=loop=%d:size=1:start=0,fade=t=in:st=%s:d=%s:alpha=1,fade=t=out:st=%s:d=%s:alpha=1[plate%d];", input, frames-1, seconds(start), strconv.FormatFloat(in, 'f', 3, 64), seconds(end-m.OutMS), strconv.FormatFloat(out, 'f', 3, 64), j)
-		fmt.Fprintf(&graph, "%s[plate%d]overlay=x=0:y='%.0f*pow(1-min(1,max(0,(t-%s)/%s)),3)':format=auto:shortest=0", last, j, m.InDY, seconds(start), strconv.FormatFloat(in, 'f', 3, 64))
+		pace := ""
+		if j < len(c.Copies) {
+			pace = c.Copies[j].Pace
+		}
+		m := design.CaptionMotion(pace)
+		origin := clip.Region{}
+		if j < len(l.CopyRegions) {
+			origin = l.CopyRegions[j]
+		}
+		if pace == "rapid" {
+			fmt.Fprintf(&graph, "[%d:v:0]format=rgba[plate%d];", input, j)
+			fmt.Fprintf(&graph, "%s[plate%d]overlay=x=%.0f:y=%.0f:format=auto:shortest=0", last, j, origin.X, origin.Y)
+		} else {
+			in, out := float64(m.InMS)/1000, float64(m.OutMS)/1000
+			fmt.Fprintf(&graph, "[%d:v:0]format=rgba,loop=loop=%d:size=1:start=0,fade=t=in:st=%s:d=%s:alpha=1,fade=t=out:st=%s:d=%s:alpha=1[plate%d];", input, frames-1, seconds(start), strconv.FormatFloat(in, 'f', 3, 64), seconds(end-m.OutMS), strconv.FormatFloat(out, 'f', 3, 64), j)
+			fmt.Fprintf(&graph, "%s[plate%d]overlay=x=0:y='%.0f*pow(1-min(1,max(0,(t-%s)/%s)),3)':format=auto:shortest=0", last, j, m.InDY, seconds(start), strconv.FormatFloat(in, 'f', 3, 64))
+		}
 		fmt.Fprintf(&graph, ":enable='gte(t,%s)*lt(t,%s)'", seconds(start), seconds(end))
 		fmt.Fprintf(&graph, "[copy%d];", j)
 		last = fmt.Sprintf("[copy%d]", j)
@@ -181,10 +193,11 @@ func (r *Rendering) baseArgs() []string {
 // layers is what a cut overlays: the fixed badge and chips, one animated plate
 // per copy, and a card whose window is CUT-RELATIVE by the time it gets here.
 type layers struct {
-	Fixed  string
-	Copies []string
-	Card   string
-	Window cardLayout
+	Fixed       string
+	Copies      []string
+	CopyRegions []clip.Region
+	Card        string
+	Window      cardLayout
 }
 
 // inputs is every layer image this cut hands FFmpeg, in the order renderCut adds
@@ -308,17 +321,19 @@ func (r *Rendering) Render(ctx context.Context, ws clip.MediaWorkspace, plan cli
 			}
 			// One plate per copy, in the cut's own order (CDS-43).
 			plates := make([]string, len(c.plan.Cuts[i].Copies))
+			regions := make([]clip.Region, len(plates))
 			for j := range c.plan.Cuts[i].Copies {
 				plate, err := r.copyLayer(ctx, ws, canvas, &c, i, j, source)
 				if err != nil {
 					return err
 				}
 				plates[j] = plate
+				regions[j] = copyCrop(canvas, c.plan.Cuts[i].Copies[j], c.layouts[i][j], c.grounds[i][j])
 				if plate != "" {
 					paths = append(paths, plate)
 				}
 			}
-			return r.renderCut(ctx, ws, canvas, c.plan.Cuts[i], source, frames[i], layers{fixed[i], plates, cardPlates[i], c.cards[i].relativeTo(offsets[i])}, cutPaths[i], audio)
+			return r.renderCut(ctx, ws, canvas, c.plan.Cuts[i], source, frames[i], layers{Fixed: fixed[i], Copies: plates, CopyRegions: regions, Card: cardPlates[i], Window: c.cards[i].relativeTo(offsets[i])}, cutPaths[i], audio)
 		})
 		if err != nil {
 			return result, err
@@ -333,7 +348,7 @@ func (r *Rendering) Render(ctx context.Context, ws clip.MediaWorkspace, plan cli
 	// what has to hold, so the whole manifest is verified again before they
 	// become one clip (CDS-52).
 	manifest := c.manifest
-	if err = clip.VerifyLayout(plan.Ratio, plan.Styles, manifest); err != nil {
+	if err = clip.VerifyLayout(plan.Ratio, plan.Styles, manifest, plan.HideDisclosure); err != nil {
 		return result, err
 	}
 	output := filepath.Join(ws.Path, "clip-result.mp4")
@@ -438,9 +453,11 @@ func (r *Rendering) layout(ctx context.Context, ws clip.MediaWorkspace, canvas c
 	}
 	phrase, ok := design.Disclosure[plan.Disclosure]
 	if !ok {
-		// A plan reaching the renderer without a campaign type is refused here
-		// rather than rendered without its badge (CDS-5).
+		// Campaign identity remains required independently of visibility.
 		return composed{}, clip.ErrDisclosureRequired
+	}
+	if plan.HideDisclosure {
+		phrase = ""
 	}
 	// The two cards, on the first and the last cut (CDS-28, CDS-29). A cut can
 	// hold only one, which is why a single-cut clip renders the hook card and
@@ -459,7 +476,7 @@ func (r *Rendering) layout(ctx context.Context, ws clip.MediaWorkspace, canvas c
 		plates[i] = f
 		start, end := offsets[i], offsets[i]+cut.EndMS-cut.StartMS
 		elements := f.Elements(plan.DurationMS, i, start, end)
-		if badged {
+		if badged && phrase != "" {
 			elements = elements[1:] // one badge in the manifest, one disclosure
 		}
 		badged = true
@@ -571,10 +588,10 @@ func (c *composed) resolve(canvas clip.Canvas) {
 			}
 			start, end := cut.CaptionWindow(j)
 			kept = append(kept, design.Element{
-				Cut: i, Copy: j, Kind: "scrim", Style: copy.Style, Anchor: copy.Anchor,
+				Cut: i, Copy: j, Kind: "scrim", Style: copy.Style, Anchor: copy.Anchor, Pace: copy.Pace,
 				Region: design.Region(s.Region), StartMS: offsets[i] + start, EndMS: offsets[i] + end,
 				Background: design.Scrim[s.Edge].Hex,
-				InMS:       design.Motion.InMS, OutMS: design.Motion.OutMS, DY: design.Motion.InDY,
+				InMS:       design.CaptionMotion(copy.Pace).InMS, OutMS: design.CaptionMotion(copy.Pace).OutMS, DY: design.CaptionMotion(copy.Pace).InDY,
 			})
 		}
 	}
@@ -595,8 +612,8 @@ func (r *Rendering) copyLayer(ctx context.Context, ws clip.MediaWorkspace, canva
 	if strings.TrimSpace(copy.Text) == "" {
 		return "", nil
 	}
-	if c.layouts[index][copyIndex].Style.Plate != "" {
-		return r.copyPlate(ctx, ws, canvas, copy, c.layouts[index][copyIndex], index, Luminance{})
+	if c.layouts[index][copyIndex].Style.Plate != "" || copy.Style == "simple" {
+		return r.copyPlate(ctx, ws, canvas, copy, c.layouts[index][copyIndex], index*design.Rapid.MaxPerCut+copyIndex, Luminance{})
 	}
 	start, end := cut.CaptionWindow(copyIndex)
 	ground, err := r.sample(ctx, ws, canvas, source, cut, [2]int{start, end}, c.layouts[index][copyIndex].Region, index)
@@ -616,7 +633,7 @@ func (r *Rendering) copyLayer(ctx context.Context, ws clip.MediaWorkspace, canva
 			return "", err
 		}
 	}
-	return r.copyPlate(ctx, ws, canvas, c.plan.Cuts[index].Copies[copyIndex], c.layouts[index][copyIndex], index, c.grounds[index][copyIndex])
+	return r.copyPlate(ctx, ws, canvas, c.plan.Cuts[index].Copies[copyIndex], c.layouts[index][copyIndex], index*design.Rapid.MaxPerCut+copyIndex, c.grounds[index][copyIndex])
 }
 
 // The three rungs of CDS-55's repair ladder, in the order they are tried: the
@@ -640,7 +657,7 @@ const (
 func (r *Rendering) repair(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, c *composed) error {
 	taken := map[[2]int]int{}
 	for {
-		err := clip.VerifyLayout(c.plan.Ratio, c.plan.Styles, c.manifest)
+		err := clip.VerifyLayout(c.plan.Ratio, c.plan.Styles, c.manifest, c.plan.HideDisclosure)
 		if err == nil {
 			return nil
 		}

@@ -123,6 +123,9 @@ func (h StyleHistory) run() (string, int) {
 // keywords is how many numbers or keywords the sentence turns on: 형광펜 needs
 // exactly one (CDS-40).
 func SelectStyle(scene, class string, allowed []string, history StyleHistory, keywords int) string {
+	if slices.Contains(allowed, "simple") {
+		return "simple"
+	}
 	style := SceneStyles[Scene(scene)][class]
 	if style == "" {
 		style = Guards.Fallback

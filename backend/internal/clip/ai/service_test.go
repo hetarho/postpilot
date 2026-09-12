@@ -63,12 +63,15 @@ func (f *fakeSizer) CaptionSize(context.Context, string, clip.Caption) (float64,
 // The badge and the chips the composer must keep copy off. The fixture puts the
 // badge where 9:16 puts it (CDS-31) and no chips, so the anchor walk is driven
 // by the subject box alone.
-func (f *fakeSizer) FixedElements(_ context.Context, _, disclosure string, labels []string, _ []clip.Answer) (clip.Manifest, error) {
+func (f *fakeSizer) FixedElements(_ context.Context, _, disclosure string, labels []string, _ []clip.Answer, hideDisclosure ...bool) (clip.Manifest, error) {
 	f.fixed++
 	if f.fixedErr != nil {
 		return nil, f.fixedErr
 	}
 	out := clip.Manifest{{Kind: "badge", Region: design.Region{X: 768, Y: 270, Width: 120, Height: 60}}}
+	if len(hideDisclosure) > 0 && hideDisclosure[0] {
+		out = nil
+	}
 	for i := range labels {
 		out = append(out, design.Element{Kind: "chip", Region: design.Region{X: 96, Y: 290 + float64(i)*76, Width: 300, Height: 60}})
 	}
@@ -721,4 +724,27 @@ func splitRecordedCut(cut map[string]any, n, length int) []any {
 		out = append(out, c)
 	}
 	return out
+}
+
+func TestRapidPlanningUsesOneWriterCall(t *testing.T) {
+	value := plan()
+	for _, item := range value["cuts"].([]any) {
+		item.(map[string]any)["caption"].(map[string]any)["text"] = "오늘은 구로디지털단지에 와보았는데요"
+	}
+	service, models, _ := newService(t, raw(value), true)
+	input := planningInput()
+	input.Template.CaptionPace = "rapid"
+	input.Template.CopyStyles = []string{"clean", "simple"}
+	result, _, err := service.Plan(t.Context(), testRef(), input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(models.calls) != 1 {
+		t.Fatalf("rapid splitting used %d provider calls", len(models.calls))
+	}
+	for _, cut := range result.Cuts {
+		if !cut.Rapid() || len(cut.Copies) != 3 || cut.Copies[0].EndMS-cut.Copies[0].StartMS != 300 {
+			t.Fatal(cut)
+		}
+	}
 }

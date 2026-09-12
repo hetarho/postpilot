@@ -60,7 +60,7 @@ func TestQuoteIsOwnerScopedFreeAndRefreshInvalidatesPreviousApproval(t *testing.
 }
 
 func TestChangedQuoteInputsAndPricesRequireNewApproval(t *testing.T) {
-	for _, change := range []string{"recipe", "answer", "duration", "title", "rate", "budget", "source"} {
+	for _, change := range []string{"recipe", "answer", "duration", "title", "visibility", "rate", "budget", "source"} {
 		t.Run(change, func(t *testing.T) {
 			h := generationSetup(t)
 			pricing := &quotePricing{}
@@ -69,6 +69,9 @@ func TestChangedQuoteInputsAndPricesRequireNewApproval(t *testing.T) {
 			ctx := context.Background()
 			var err error
 			switch change {
+			case "visibility":
+				value := true
+				_, err = h.projects.UpdateProject(ctx, "alice", h.project.ID, clip.ProjectPatch{HideDisclosure: &value})
 			case "recipe":
 				value := "different"
 				_, err = h.projects.UpdateTemplate(ctx, "alice", h.template.ID, clip.TemplatePatch{CutGuidance: &value})

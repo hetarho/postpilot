@@ -163,6 +163,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       copyStyles: req.copyStyles as ClipRecipe['copyStyles'],
       accent: req.accent as ClipRecipe['accent'],
       preset: req.preset as ClipRecipe['preset'],
+      captionPace: (req.captionPace || 'steady') as ClipRecipe['captionPace'],
     }
     options.writes?.push(row)
     rows.set(row.id, row)
@@ -183,6 +184,8 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     if (req.copyStyles) row.copyStyles = req.copyStyles.values as ClipRecipe['copyStyles']
     if (req.accent !== undefined) row.accent = req.accent as ClipRecipe['accent']
     if (req.preset !== undefined) row.preset = req.preset as ClipRecipe['preset']
+    if (req.captionPace !== undefined)
+      row.captionPace = (req.captionPace || 'steady') as ClipRecipe['captionPace']
     options.writes?.push({ ...row })
     return create(UpdateVideoTemplateResponseSchema, { template: toProto(row) })
   })
@@ -235,6 +238,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       targetDurationMs: req.targetDurationMs,
       answers: req.answers.map((a) => ({ label: a.label, text: a.text })),
       disclosure: req.disclosure as ClipProjectDraft['disclosure'],
+      hideDisclosure: req.hideDisclosure,
       cta: req.cta as ClipProjectDraft['cta'],
     }
     projects.set(p.id, p)
@@ -249,6 +253,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     if (req.title !== undefined) p.title = req.title
     if (req.videoTemplateId !== undefined) p.videoTemplateId = req.videoTemplateId
     if (req.targetDurationMs !== undefined) p.targetDurationMs = req.targetDurationMs
+    if (req.hideDisclosure !== undefined) p.hideDisclosure = req.hideDisclosure
     if (req.disclosure !== undefined)
       p.disclosure = req.disclosure as ClipProjectDraft['disclosure']
     if (req.cta !== undefined) p.cta = req.cta as ClipProjectDraft['cta']

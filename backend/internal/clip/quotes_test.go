@@ -45,3 +45,12 @@ func TestQuoteCountCanReachButNeverExceedsFortyNine(t *testing.T) {
 		t.Fatal(n, err)
 	}
 }
+
+func TestDisclosureVisibilityChangesQuoteBinding(t *testing.T) {
+	p := Project{Disclosure: "sponsored"}
+	shown := QuoteInputDigest(p, VideoTemplate{}, SourceBatch{}, GenerationPricing{})
+	p.HideDisclosure = true
+	if shown == QuoteInputDigest(p, VideoTemplate{}, SourceBatch{}, GenerationPricing{}) {
+		t.Fatal("visibility did not invalidate quote")
+	}
+}

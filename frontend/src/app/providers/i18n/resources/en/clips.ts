@@ -181,7 +181,8 @@ export const clips = {
     chooseTemplate: 'Choose a video template',
     disclosure: 'Campaign type',
     disclosureHelp:
-      'The phrase you pick rides the whole clip as its ad disclosure, and cannot be edited.',
+      'The campaign type determines the phrase. Choose separately whether to show it in the video.',
+    showDisclosure: 'Show campaign disclosure in video',
     chooseDisclosure: 'Choose a type',
     disclosureRequired: 'A clip needs a campaign type before it can be generated.',
     cta: 'Closing line',
@@ -286,7 +287,8 @@ export const clips = {
       'This preset needs a few information fields. Step ① of the {{count}} clip(s) using this template will ask for them, and answers already given are kept.',
     seedConfirm: 'Add',
     styles: 'Caption styles',
-    stylesHelp: 'Select at least one style that AI can use.',
+    stylesHelp:
+      'Select Light text to prefer plain white lettering. You can keep the existing styles available too.',
     accent: 'Accent colour',
     preview: 'A moment to remember',
     saved: 'Saved',
@@ -300,7 +302,24 @@ export const clips = {
     leaveBody: 'Your unsaved video template changes will be lost.',
     leave: 'Leave',
   },
-  style: { clean: 'Clean', memo: 'Memo', bold: 'Bold', mark: 'Highlight' },
+  style: { clean: 'Clean', memo: 'Memo', bold: 'Bold', mark: 'Highlight', simple: 'Light text' },
+  pace: {
+    label: 'Caption pace',
+    steady: 'Sentence',
+    rapid: 'Rapid phrases',
+    help: 'Choose pace independently of style. Rapid phrases appear for 0.3–1 second each.',
+    editHelp:
+      'Switch to rapid phrases to split the text, or sentence to merge it. Timing is editable and is not automatically aligned to speech.',
+    splitError: 'Enter caption text or extend the cut to split it.',
+    phrase: 'Phrase {{number}}',
+    addPhrase: 'Add phrase',
+    removePhrase: 'Remove phrase {{number}}',
+    windowHelp:
+      'Currently {{seconds}} s · 300–1000 ms, one line of up to 14 characters. Start when the previous phrase ends or later.',
+    exposureError: 'Show each phrase for 300–1000 ms.',
+    countError: 'Use up to 24 phrases per cut.',
+    textError: 'Enter a nonempty single line of up to 14 characters.',
+  },
   preset: {
     restaurant: 'Restaurant',
     cafe: 'Cafe',

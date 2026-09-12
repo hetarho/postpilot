@@ -199,9 +199,9 @@ func TestStoredPlanBeforeTwoCopiesUpgradesToAList(t *testing.T) {
 	if plan.Cuts[0].FirstCopy().Text != "조용한 골목" || plan.Cuts[1].FirstCopy().Style != "memo" {
 		t.Fatalf("the stored copy changed: %+v", plan.Cuts)
 	}
-	// Saved again, it is a version-3 plan and reads back identically.
+	// Saved again, it is a version-4 plan and reads back identically.
 	next, err := clip.EncodeEditPlan(plan, styles)
-	if err != nil || !strings.Contains(next, `"Version":3`) || !strings.Contains(next, `"Copies":[`) {
+	if err != nil || !strings.Contains(next, `"Version":4`) || !strings.Contains(next, `"Copies":[`) {
 		t.Fatalf("%s %v", next, err)
 	}
 	again, _, err := clip.DecodeEditPlan(next)

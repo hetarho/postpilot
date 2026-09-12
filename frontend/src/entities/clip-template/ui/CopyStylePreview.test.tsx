@@ -49,7 +49,7 @@ describe('copy style preview', () => {
       const highlighted = svg.querySelector('rect[fill-opacity="0.9"]') !== null
       expect(highlighted).toBe(clipStyle(style).highlight)
       expect(svg.querySelector('tspan') !== null).toBe(
-        !clipStyle(style).highlight && clipStyle(style).stroke !== '',
+        style !== 'simple' && !clipStyle(style).highlight && clipStyle(style).stroke !== '',
       )
     }
   })

@@ -2,6 +2,7 @@
   "version": 1,
   "bindings": {
     "copy.clean": "caption",
+    "copy.simple": "caption",
     "copy.memo": "caption",
     "copy.bold": "caption",
     "copy.mark": "caption",

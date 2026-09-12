@@ -15,7 +15,16 @@ import (
 )
 
 // Opt-in design review with local footage and a file-only preset catalog.
-func TestShortsSVGExample(t *testing.T) {
+func TestShortsSVGExample(t *testing.T) { renderShortsExample(t, false) }
+
+// Opt-in comparison: existing plate, lightweight sentence, then rapid phrases.
+func TestCaptionPaceExample(t *testing.T) {
+	if os.Getenv("CLIP_EXAMPLE_PACE") != "1" {
+		t.Skip("opt-in pace comparison")
+	}
+	renderShortsExample(t, true)
+}
+func renderShortsExample(t *testing.T, paceExample bool) {
 	root, output, assets := os.Getenv("CLIP_EXAMPLE_ORIGINALS"), os.Getenv("CLIP_EXAMPLE_OUTPUT"), os.Getenv("CLIP_EXAMPLE_ASSETS")
 	if root == "" || output == "" || assets == "" {
 		t.Skip("requires local originals, output and example asset directories")
@@ -37,13 +46,16 @@ func TestShortsSVGExample(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := a.WithWorkspace(t.Context(), "shorts-example", func(ws clip.MediaWorkspace) error {
-		plan := clip.EditPlan{Ratio: "vertical", DurationMS: 20000, Disclosure: "ad", Preset: "restaurant", Hook: "이 소리, 못 참지", Accent: "lime", CTA: "save", Styles: []string{"clean"},
+		plan := clip.EditPlan{Ratio: "vertical", DurationMS: 20000, Disclosure: "ad", HideDisclosure: os.Getenv("CLIP_EXAMPLE_HIDE_DISCLOSURE") == "1", Preset: "restaurant", Hook: "이 소리, 못 참지", Accent: "lime", CTA: "save", Styles: []string{"clean"},
 			Facts: []clip.Answer{{Label: "상호", Text: "철판 한 끼"}, {Label: "메뉴", Text: "철판 요리 · 볶음밥"}}}
 		// These are editorial sample words about visible footage. The title is
 		// not a claimed merchant name, and no unknown price/location is invented.
 		order := []int{6, 0, 1, 2, 3, 4, 5, 7}
 		ends := []int{2800, 2800, 2600, 1400, 2800, 4000, 1400, 2600}
 		captions := []string{"", "자리부터 잡고", "창밖은 초록", "시작", "양념과 함께", "노릇해질 때까지", "한 쌈", ""}
+		if paceExample {
+			plan.Styles = []string{"clean", "simple"}
+		}
 		var sources []clip.RenderSource
 		paths := map[string]string{}
 		for i, file := range files {
@@ -71,6 +83,23 @@ func TestShortsSVGExample(t *testing.T) {
 			if captions[i] != "" {
 				cut.Copies = []clip.Copy{{Text: captions[i], Style: "clean", Anchor: "bottom", Align: "center", Accent: "lime"}}
 			}
+			if paceExample && len(cut.Copies) > 0 {
+				if i >= 2 {
+					cut.Copies[0].Style = "simple"
+				}
+				if i == 4 || i == 5 {
+					text := "오늘은 철판 요리를 먹어봤어요"
+					if i == 5 {
+						text = "지글지글 익어가면 한 입 더 먹고 싶어요"
+					}
+					cut.Copies[0].Text = text
+					var ok bool
+					cut.Copies, ok = clip.SplitRapid(cut.Copies[0], 120, ends[i]-120)
+					if !ok {
+						return fmt.Errorf("rapid example did not fit")
+					}
+				}
+			}
 			// The title and ending each have their own message, with no duplicate
 			// caption or information strip underneath them.
 			if i > 0 && i < len(order)-1 && ends[i] >= 2000 {
@@ -82,7 +111,7 @@ func TestShortsSVGExample(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		if err := design.VerifyApproved(manifest, plan.Ratio, plan.Styles); err != nil {
+		if err := design.VerifyApproved(manifest, plan.Ratio, plan.Styles, plan.HideDisclosure); err != nil {
 			return fmt.Errorf("example must be free of layout collisions: %w", err)
 		}
 		started := time.Now()
@@ -97,13 +126,13 @@ func TestShortsSVGExample(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		if err := design.VerifyApproved(result.Manifest, plan.Ratio, plan.Styles); err != nil {
+		if err := design.VerifyApproved(result.Manifest, plan.Ratio, plan.Styles, plan.HideDisclosure); err != nil {
 			return err
 		}
 		if result.Info.DurationMS != 20000 || result.Bytes == 0 {
 			return fmt.Errorf("unexpected output: %+v", result.Info)
 		}
-		if err := copyOriginal(result.Path, filepath.Join(output, "shorts-example.mp4")); err != nil {
+		if err := copyOriginal(result.Path, filepath.Join(output, exampleFilename(paceExample))); err != nil {
 			return err
 		}
 		data, err := json.MarshalIndent(laidOut, "", "  ")
@@ -150,4 +179,11 @@ func (r exampleRunner) Run(ctx context.Context, command Command) ([]byte, error)
 		}
 	}
 	return data, nil
+}
+
+func exampleFilename(rapid bool) string {
+	if rapid {
+		return "caption-pace-comparison.mp4"
+	}
+	return "shorts-example.mp4"
 }

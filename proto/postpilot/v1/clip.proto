@@ -65,6 +65,8 @@ message VideoTemplate {
   // The category preset: restaurant, cafe, stay, beauty or home. Empty is a
   // template written before presets existed and reads as the shared defaults.
   string preset = 10;
+  // Empty or steady keeps sentence timing; rapid splits short phrase cues.
+  string caption_pace = 11;
 }
 message ClipAnswer { string label = 1; string text = 2; }
 // The reserved information fields a preset needs, in the order a form shows
@@ -101,6 +103,8 @@ message ClipProject {
   // The phrases are code-owned: only these ids travel.
   string disclosure = 16;
   string cta = 17;
+  // Independent visibility choice; older projects/clients keep the badge shown.
+  bool hide_disclosure = 18;
   // Owner-only, byte-free identity for reconciling an ambiguous start response.
   ClipAttempt latest_attempt = 15;
 }
@@ -130,6 +134,7 @@ message CreateVideoTemplateRequest {
   string accent = 5;
   // Required on create: one of the five presets.
   string preset = 6;
+  string caption_pace = 7;
 }
 message CreateVideoTemplateResponse { VideoTemplate template = 1; }
 message UpdateVideoTemplateRequest {
@@ -141,6 +146,7 @@ message UpdateVideoTemplateRequest {
   optional string accent = 6;
   // Present means change it, and only one of the five is accepted.
   optional string preset = 7;
+  optional string caption_pace = 8;
 }
 message UpdateVideoTemplateResponse { VideoTemplate template = 1; }
 message DeleteVideoTemplateRequest { string id = 1; }
@@ -156,6 +162,7 @@ message CreateClipProjectRequest {
   // Both may be empty at creation; generation refuses an empty disclosure.
   string disclosure = 6;
   string cta = 7;
+  bool hide_disclosure = 8;
 }
 message CreateClipProjectResponse { ClipProject project = 1; }
 message GetClipProjectRequest { string id = 1; }
@@ -169,6 +176,7 @@ message UpdateClipProjectRequest {
   repeated ClipAnswer answers = 5;
   optional string disclosure = 6;
   optional string cta = 7;
+  optional bool hide_disclosure = 8;
 }
 message UpdateClipProjectResponse { ClipProject project = 1; }
 message DeleteClipProjectRequest { string id = 1; }
@@ -255,6 +263,8 @@ message ClipCaption {
   // The one word 크게 강조 colours and 형광펜 highlights. A substring of `text`,
   // or empty for none; a field rather than a marker so `text` stays exact.
   string keyword = 8;
+  // Independent of typography. Empty or steady is legacy sentence mode.
+  string pace = 9;
 }
 message ClipEditCut {
   string id = 1;
@@ -272,8 +282,8 @@ message ClipEditCut {
   // earns and 300 the fade-through-black nothing offers yet. The first cut of a
   // plan always carries 0.
   int32 transition_ms = 9;
-  // One copy, or the two CDS-43 lets a cut of 4 s or more carry in sequence: a
-  // description and then the number it leads to, never both on screen at once.
+  // Sentence mode carries up to two copies; rapid mode carries up to 24
+  // sequential short phrases with explicit times (CDS-59).
   repeated ClipCaption copies = 10;
 }
 message ClipEditPlan {

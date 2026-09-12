@@ -41,8 +41,8 @@ type Chip struct {
 }
 type FurnitureView struct {
 	Canvas
-	Badge Box
-	Label Text
+	Badge *Box
+	Label *Text
 	Chips []Chip
 }
 type CardLine struct {

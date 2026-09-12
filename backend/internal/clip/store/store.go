@@ -27,6 +27,13 @@ func New(writer, reader *sql.DB) *Store {
 
 var _ clip.Store = (*Store)(nil)
 
+func disclosureFlag(hidden bool) int64 {
+	if hidden {
+		return 1
+	}
+	return 0
+}
+
 func stamp(t time.Time) string         { return t.UTC().Format(timeLayout) }
 func nullable(s string) sql.NullString { return sql.NullString{String: s, Valid: s != ""} }
 func dbError(err error) error {
@@ -110,7 +117,7 @@ func templateRow(r sqlc.VideoTemplate) (clip.VideoTemplate, error) {
 	if err := strictJSON(r.CopyStyles, &styles); err != nil {
 		return clip.VideoTemplate{}, fmt.Errorf("stored copy styles: %w", err)
 	}
-	if fields == nil || !clip.ValidCopyStyles(styles) || !clip.ValidAccent(r.Accent.String) {
+	if fields == nil || !clip.ValidCopyStyles(styles) || !clip.ValidAccent(r.Accent.String) || !clip.ValidCaptionPace(r.CaptionPace) {
 		return clip.VideoTemplate{}, errors.New("stored recipe must contain JSON arrays")
 	}
 	created, err := time.Parse(time.RFC3339Nano, r.CreatedAt)
@@ -121,7 +128,7 @@ func templateRow(r sqlc.VideoTemplate) (clip.VideoTemplate, error) {
 	if err != nil {
 		return clip.VideoTemplate{}, err
 	}
-	t := clip.VideoTemplate{ID: r.ID, UserID: r.UserID, Recipe: clip.Recipe{Name: r.Name, CutGuidance: r.CutGuidance, CopyStyles: styles, Accent: r.Accent.String, Preset: r.Preset}, CreatedAt: created, UpdatedAt: updated}
+	t := clip.VideoTemplate{ID: r.ID, UserID: r.UserID, Recipe: clip.Recipe{Name: r.Name, CutGuidance: r.CutGuidance, CopyStyles: styles, Accent: r.Accent.String, Preset: r.Preset, CaptionPace: r.CaptionPace}, CreatedAt: created, UpdatedAt: updated}
 	seen := make(map[string]bool, len(fields))
 	for _, f := range fields {
 		if strings.TrimSpace(f.Label) == "" || strings.TrimSpace(f.Prompt) == "" || seen[f.Label] {
@@ -169,7 +176,7 @@ func (s *Store) ListTemplates(ctx context.Context, user string) ([]clip.VideoTem
 	return out, nil
 }
 func (s *Store) InsertTemplate(ctx context.Context, t clip.VideoTemplate) error {
-	return dbError(s.write.InsertVideoTemplate(ctx, sqlc.InsertVideoTemplateParams{ID: t.ID, UserID: t.UserID, Name: t.Name, InformationFields: encodeFields(t.InformationFields), CutGuidance: t.CutGuidance, CopyStyles: encodeStyles(t.CopyStyles), Accent: nullable(t.Accent), Preset: t.Preset, CreatedAt: stamp(t.CreatedAt), UpdatedAt: stamp(t.UpdatedAt)}))
+	return dbError(s.write.InsertVideoTemplate(ctx, sqlc.InsertVideoTemplateParams{ID: t.ID, UserID: t.UserID, Name: t.Name, InformationFields: encodeFields(t.InformationFields), CutGuidance: t.CutGuidance, CopyStyles: encodeStyles(t.CopyStyles), Accent: nullable(t.Accent), Preset: t.Preset, CaptionPace: t.CaptionPace, CreatedAt: stamp(t.CreatedAt), UpdatedAt: stamp(t.UpdatedAt)}))
 }
 func (s *Store) UpdateTemplate(ctx context.Context, user, id string, p clip.TemplatePatch, now time.Time) (clip.VideoTemplate, error) {
 	return transact(ctx, s, func(q *sqlc.Queries) (clip.VideoTemplate, error) {
@@ -188,6 +195,11 @@ func (s *Store) UpdateTemplate(ctx context.Context, user, id string, p clip.Temp
 		}
 		if p.CutGuidance != nil {
 			if err := affected(q.UpdateVideoTemplateCutGuidance(ctx, sqlc.UpdateVideoTemplateCutGuidanceParams{CutGuidance: *p.CutGuidance, UpdatedAt: stamp(now), ID: id, UserID: user})); err != nil {
+				return clip.VideoTemplate{}, err
+			}
+		}
+		if p.CaptionPace != nil {
+			if err := affected(q.UpdateVideoTemplateCaptionPace(ctx, sqlc.UpdateVideoTemplateCaptionPaceParams{CaptionPace: *p.CaptionPace, UpdatedAt: stamp(now), ID: id, UserID: user})); err != nil {
 				return clip.VideoTemplate{}, err
 			}
 		}
@@ -230,7 +242,7 @@ func projectRow(r sqlc.ClipProject) (clip.Project, error) {
 	if err != nil {
 		return clip.Project{}, err
 	}
-	p := clip.Project{ID: r.ID, UserID: r.UserID, Title: r.Title, VideoTemplateID: r.VideoTemplateID.String, Ratio: r.Ratio, Disclosure: r.Disclosure, CTA: r.Cta, TargetDurationMS: int(r.TargetDurationMs), Analysis: r.AnalysisJson.String, EditPlan: r.EditPlanJson.String, EditPlanRevision: int(r.EditPlanRevision), RenderedPlanRevision: int(r.RenderedPlanRevision), CreatedAt: created, UpdatedAt: updated}
+	p := clip.Project{ID: r.ID, UserID: r.UserID, Title: r.Title, VideoTemplateID: r.VideoTemplateID.String, Ratio: r.Ratio, Disclosure: r.Disclosure, HideDisclosure: r.HideDisclosure != 0, CTA: r.Cta, TargetDurationMS: int(r.TargetDurationMs), Analysis: r.AnalysisJson.String, EditPlan: r.EditPlanJson.String, EditPlanRevision: int(r.EditPlanRevision), RenderedPlanRevision: int(r.RenderedPlanRevision), CreatedAt: created, UpdatedAt: updated}
 	if r.ResultKey.Valid {
 		at, err := time.Parse(time.RFC3339Nano, r.ResultCreatedAt.String)
 		if err != nil {
@@ -286,7 +298,7 @@ func saveAnswers(ctx context.Context, q *sqlc.Queries, user, id string, answers 
 }
 func (s *Store) InsertProject(ctx context.Context, p clip.Project) error {
 	_, err := transact(ctx, s, func(q *sqlc.Queries) (struct{}, error) {
-		err := q.InsertClipProject(ctx, sqlc.InsertClipProjectParams{ID: p.ID, UserID: p.UserID, Title: p.Title, VideoTemplateID: nullable(p.VideoTemplateID), Ratio: p.Ratio, TargetDurationMs: int64(p.TargetDurationMS), Disclosure: p.Disclosure, Cta: p.CTA, CreatedAt: stamp(p.CreatedAt), UpdatedAt: stamp(p.UpdatedAt)})
+		err := q.InsertClipProject(ctx, sqlc.InsertClipProjectParams{ID: p.ID, UserID: p.UserID, Title: p.Title, VideoTemplateID: nullable(p.VideoTemplateID), Ratio: p.Ratio, TargetDurationMs: int64(p.TargetDurationMS), Disclosure: p.Disclosure, HideDisclosure: disclosureFlag(p.HideDisclosure), Cta: p.CTA, CreatedAt: stamp(p.CreatedAt), UpdatedAt: stamp(p.UpdatedAt)})
 		if err == nil {
 			err = saveAnswers(ctx, q, p.UserID, p.ID, p.Answers, p.UpdatedAt)
 		}
@@ -311,6 +323,11 @@ func (s *Store) UpdateProject(ctx context.Context, user, id string, p clip.Proje
 		}
 		if p.TargetDurationMS != nil {
 			if err := affected(q.UpdateClipTargetDurationMS(ctx, sqlc.UpdateClipTargetDurationMSParams{TargetDurationMs: int64(*p.TargetDurationMS), UpdatedAt: stamp(now), ID: id, UserID: user})); err != nil {
+				return clip.Project{}, err
+			}
+		}
+		if p.HideDisclosure != nil {
+			if err := affected(q.UpdateClipHideDisclosure(ctx, sqlc.UpdateClipHideDisclosureParams{HideDisclosure: disclosureFlag(*p.HideDisclosure), UpdatedAt: stamp(now), ID: id, UserID: user})); err != nil {
 				return clip.Project{}, err
 			}
 		}

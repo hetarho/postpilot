@@ -6,6 +6,7 @@ import {
   clipType,
   type ClipPresetId,
   type ClipStyleId,
+  type ClipCaptionPace,
 } from '@/shared/config'
 
 export const CLIP_TEMPLATE_LIMITS = {
@@ -16,7 +17,7 @@ export const CLIP_TEMPLATE_LIMITS = {
   prompt: 200,
 } as const
 
-/** The four CDS copy styles, one per role, and the five category presets — both
+/** The CDS copy styles and five category presets — both
  *  read from the design system rather than listed again here. */
 export const COPY_STYLES = CLIP_STYLES
 export type CopyStyle = ClipStyleId
@@ -38,6 +39,7 @@ export interface InformationField {
   prompt: string
 }
 export interface ClipRecipe {
+  captionPace?: ClipCaptionPace
   name: string
   informationFields: InformationField[]
   cutGuidance: string
@@ -118,6 +120,7 @@ export function recipeOf(value: ClipRecipe): ClipRecipe {
     copyStyles: [...value.copyStyles],
     accent: value.accent,
     preset: value.preset,
+    ...(value.captionPace ? { captionPace: value.captionPace } : {}),
   }
 }
 export type FieldError = 'required' | 'tooLong' | 'duplicate' | 'invalid'
@@ -146,6 +149,7 @@ export function validateClipRecipe(value: ClipRecipe) {
       new Set(recipe.copyStyles).size !== recipe.copyStyles.length ||
       recipe.copyStyles.some((v) => !COPY_STYLES.includes(v)),
     accent: !CLIP_ACCENTS.includes(recipe.accent),
+    pace: recipe.captionPace !== undefined && !['steady', 'rapid'].includes(recipe.captionPace),
     // A template names its category, which fixes chip priority, CTA and accent.
     preset: !CLIP_PRESETS.includes(recipe.preset as ClipPresetId),
   }
@@ -157,6 +161,7 @@ export function validateClipRecipe(value: ClipRecipe) {
       !errors.fieldCount &&
       !errors.styles &&
       !errors.accent &&
+      !errors.pace &&
       !errors.preset &&
       fields.every((f) => !f.label && !f.prompt),
   }

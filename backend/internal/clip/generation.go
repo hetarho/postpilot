@@ -63,6 +63,7 @@ type generationPayload struct {
 	// them — a job approved before the disclosure was a choice cannot render a
 	// clip that carries one, and is refused rather than rendered without it.
 	Disclosure, CTA string
+	HideDisclosure  bool
 	Batch           SourceBatch
 	Approval        *GenerationApproval
 }
@@ -303,7 +304,7 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 			return err
 		}
 		set("plan", 0, 1)
-		edit, _, err := s.planner.Plan(ctx, pricing.Plan.Ref, PlanningInput{Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Analyses: analyses, Policy: pricing.Plan, Disclosure: p.Disclosure, CTA: p.CTA})
+		edit, _, err := s.planner.Plan(ctx, pricing.Plan.Ref, PlanningInput{Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Analyses: analyses, Policy: pricing.Plan, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: p.CTA})
 		if err != nil {
 			return err
 		}
@@ -322,7 +323,7 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 			}
 			return SourceLease{}, MediaInfo{}, false
 		})
-		video, err := s.renderer.Render(ctx, ws, edit.WithFacts(p.Disclosure, p.Answers, p.Template.Preset, p.CTA, p.Template.Accent).WithStyles(p.Template.CopyStyles), renderSources, load)
+		video, err := s.renderer.Render(ctx, ws, edit.WithFacts(p.Disclosure, p.Answers, p.Template.Preset, p.CTA, p.Template.Accent, p.HideDisclosure).WithStyles(p.Template.CopyStyles), renderSources, load)
 		if err = errors.Join(err, releaseSource()); err != nil {
 			return err
 		}

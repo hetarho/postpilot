@@ -125,6 +125,12 @@ func TestRenderSmoke(t *testing.T) {
 			}) {
 				return fmt.Errorf("%s painted no %s stroke", style, rule.Stroke)
 			}
+			if style == "simple" {
+				if scan(img, p, func(r, g, b, a uint32) bool { return a > 0x8000 && r > 2*b }) {
+					return fmt.Errorf("simple coloured a keyword")
+				}
+				continue
+			}
 			if !rule.Highlight {
 				// 크게 강조 colours the word itself, so the accent is on a glyph.
 				if !scan(img, p, func(r, g, b, a uint32) bool { return a > 0x8000 && r > 2*b }) {
@@ -374,6 +380,14 @@ func TestRenderSmoke(t *testing.T) {
 					return nil
 				}
 				canvas, _ := clip.ClipCanvas(ratio)
+				// The badge alone uses the symmetric header bounds (CDS-57).
+				// Exempt only its verified box, not the whole header row.
+				badge := clip.Region{}
+				for _, e := range result.Manifest {
+					if e.Kind == "badge" {
+						badge = clip.Region(e.Region)
+					}
+				}
 				for i, at := range []string{"2", "7", "12"} {
 					path := filepath.Join(ws.Path, fmt.Sprintf("frame-%d.png", i))
 					if _, err := a.run(t.Context(), ws, a.cfg.FFmpegPath, "-v", "error", "-ss", at, "-i", result.Path, "-frames:v", "1", "-c:v", "png", "-threads", "1", path); err != nil {
@@ -401,6 +415,9 @@ func TestRenderSmoke(t *testing.T) {
 					for y := 0; y < canvas.Height; y += 4 {
 						for x := 0; x < canvas.Width; x += 4 {
 							if float64(x) >= canvas.Safe.X && float64(x) < canvas.Safe.X+canvas.Safe.Width && float64(y) >= canvas.Safe.Y && float64(y) < canvas.Safe.Y+canvas.Safe.Height {
+								continue
+							}
+							if float64(x) >= badge.X && float64(x) < badge.X+badge.Width && float64(y) >= badge.Y && float64(y) < badge.Y+badge.Height {
 								continue
 							}
 							red, green, _, _ := frame.At(x, y).RGBA()

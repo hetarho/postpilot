@@ -59,12 +59,13 @@ func (s *GenerationService) SaveCorrection(ctx context.Context, user, id string,
 }
 
 type renderPayload struct {
-	Version   int
-	ProjectID string
-	Revision  int
-	PlanJSON  string
-	Sources   []AnalysisSource
-	Batch     SourceBatch
+	HideDisclosure bool
+	Version        int
+	ProjectID      string
+	Revision       int
+	PlanJSON       string
+	Sources        []AnalysisSource
+	Batch          SourceBatch
 }
 
 func (s *GenerationService) StartRender(ctx context.Context, user, id, batch string, revision int) (string, error) {
@@ -109,7 +110,7 @@ func (s *GenerationService) StartRender(ctx context.Context, user, id, batch str
 	if err = MatchRenderBatch(plan, b); err != nil {
 		return "", err
 	}
-	raw, err := json.Marshal(renderPayload{1, id, revision, p.EditPlan, sources, b})
+	raw, err := json.Marshal(renderPayload{HideDisclosure: p.HideDisclosure, Version: 1, ProjectID: id, Revision: revision, PlanJSON: p.EditPlan, Sources: sources, Batch: b})
 	if err != nil {
 		return "", err
 	}
@@ -145,7 +146,7 @@ func (s *GenerationService) RunRender(ctx context.Context, user, job, project st
 	if err != nil {
 		return err
 	}
-	if p.EditPlanRevision != frozen.Revision || p.EditPlan != frozen.PlanJSON {
+	if p.EditPlanRevision != frozen.Revision || p.EditPlan != frozen.PlanJSON || p.HideDisclosure != frozen.HideDisclosure {
 		return ErrPlanConflict
 	}
 	retained, e := RetainedSources(p)
@@ -162,7 +163,7 @@ func (s *GenerationService) RunRender(ctx context.Context, user, job, project st
 	if err != nil {
 		return err
 	}
-	plan = plan.WithFacts(p.Disclosure, p.Answers, t.Preset, p.CTA, t.Accent).WithStyles(t.CopyStyles)
+	plan = plan.WithFacts(p.Disclosure, p.Answers, t.Preset, p.CTA, t.Accent, frozen.HideDisclosure).WithStyles(t.CopyStyles)
 	if err = MatchRenderBatch(plan, b); err != nil {
 		return err
 	}

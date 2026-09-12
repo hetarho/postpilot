@@ -46,7 +46,7 @@ type CorrectionState struct {
 // read back as — its stored duration was computed from it. Version 3 carries a
 // LIST of copies (CDS-43); everything before it wrote exactly one, which is what
 // it is read back as.
-const storedPlanVersion = 3
+const storedPlanVersion = 4
 
 // The cut every stored plan before version 3 wrote: one `Copy` where there is
 // now a list. It is a separate type rather than a token rewrite because a

@@ -11,7 +11,7 @@ var (
 	ErrDuplicateName = errors.New("video template name already exists")
 	ErrInvalid       = errors.New("invalid clip input")
 	// The owner has not chosen a campaign type, so the clip has no disclosure
-	// phrase to show — and a clip without one may not be rendered (CDS-5).
+	// phrase to show when disclosure visibility is enabled (CDS-5).
 	ErrDisclosureRequired = errors.New("clip disclosure required")
 )
 
@@ -22,6 +22,7 @@ type Limits struct {
 
 type InformationField struct{ Label, Prompt string }
 type Recipe struct {
+	CaptionPace       string
 	Name              string
 	InformationFields []InformationField
 	CutGuidance       string
@@ -38,9 +39,9 @@ type VideoTemplate struct {
 	CreatedAt, UpdatedAt time.Time
 }
 type TemplatePatch struct {
-	Name, CutGuidance, Accent, Preset *string
-	InformationFields                 *[]InformationField
-	CopyStyles                        *[]string
+	Name, CutGuidance, Accent, Preset, CaptionPace *string
+	InformationFields                              *[]InformationField
+	CopyStyles                                     *[]string
 }
 type Answer struct{ Label, Text string }
 type Result struct {
@@ -51,6 +52,7 @@ type Result struct {
 	CreatedAt            time.Time
 }
 type Project struct {
+	HideDisclosure                            bool
 	ID, UserID, Title, VideoTemplateID, Ratio string
 	// The owner's campaign type and closing call to action, as fixed ids: the
 	// phrases are code-owned so the renderer can never be handed an edited
@@ -65,6 +67,7 @@ type Project struct {
 	CreatedAt, UpdatedAt                   time.Time
 }
 type ProjectInput struct {
+	HideDisclosure                bool
 	Title, VideoTemplateID, Ratio string
 	Disclosure, CTA               string
 	TargetDurationMS              int
@@ -73,6 +76,7 @@ type ProjectInput struct {
 
 // Ratio deliberately has no update representation.
 type ProjectPatch struct {
+	HideDisclosure                          *bool
 	Title, VideoTemplateID, Disclosure, CTA *string
 	TargetDurationMS                        *int
 	Answers                                 []Answer

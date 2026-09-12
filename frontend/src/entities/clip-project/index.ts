@@ -71,3 +71,5 @@ export {
   toClipEligibility,
   useClipAnalysisEligibility,
 } from './api/eligibility'
+
+export { isRapidCut, canSplitRapid, canAddRapid } from './model/caption-pace'

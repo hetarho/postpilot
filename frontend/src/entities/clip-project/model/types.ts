@@ -24,6 +24,7 @@ export interface ClipProjectDraft {
   /** The campaign type the disclosure badge shows. Empty is allowed while the
    *  clip is being set up; generation refuses it (CDS-5, CDS-31). */
   disclosure: ClipDisclosureId | ''
+  hideDisclosure?: boolean
   /** The closing call to action, or empty for the template preset's (CDS-29). */
   cta: ClipCTAId | ''
 }
@@ -93,6 +94,7 @@ export function emptyClipProject(): ClipProjectDraft {
     targetDurationMs: 30000,
     answers: [],
     disclosure: '',
+    hideDisclosure: false,
     cta: '',
   }
 }
@@ -104,6 +106,7 @@ export function projectDraft(value: ClipProjectDraft): ClipProjectDraft {
     targetDurationMs: value.targetDurationMs,
     answers: value.answers.map((a) => ({ ...a })),
     disclosure: value.disclosure,
+    hideDisclosure: value.hideDisclosure ?? false,
     cta: value.cta,
   }
 }
@@ -120,9 +123,7 @@ export function validClipProject(
     length(value.title.trim()) <= CLIP_PROJECT_LIMITS.title &&
     !!value.videoTemplateId &&
     !!fields &&
-    // A clip carries its ad disclosure for its whole length (CDS-5), and the
-    // phrase comes from the campaign type — so the type is part of a complete
-    // setup, not something to discover at approval.
+    // Campaign identity is required independently of badge visibility.
     CLIP_DISCLOSURES.includes(value.disclosure as ClipDisclosureId) &&
     (value.cta === '' || CLIP_CTAS.includes(value.cta as ClipCTAId)) &&
     CLIP_RATIOS.includes(value.ratio) &&

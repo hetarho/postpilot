@@ -16,11 +16,15 @@ export const clipTemplatesKey = (transport: Transport, ownerId: string) =>
   ['clip-templates', transport, ownerId] as const
 export function toClipTemplate(value: ProtoVideoTemplate): ClipTemplate {
   if (
+    !['', 'steady', 'rapid'].includes(value.captionPace) ||
     value.copyStyles.some((s) => !COPY_STYLES.includes(s as CopyStyle)) ||
     !CLIP_ACCENTS.includes(value.accent as ClipAccent)
   )
     throw new Error('Invalid clip template contract')
   return {
+    ...(value.captionPace
+      ? { captionPace: value.captionPace as NonNullable<ClipRecipe['captionPace']> }
+      : {}),
     id: value.id,
     name: value.name,
     cutGuidance: value.cutGuidance,
@@ -62,7 +66,7 @@ export function useClipTemplateMutations(ownerId: string) {
   }
   const save = useMutation({
     mutationFn: async ({ id, recipe }: { id?: string; recipe: ClipRecipe }) => {
-      const fields = normalizeRecipe(recipe)
+      const fields = { ...normalizeRecipe(recipe), captionPace: recipe.captionPace ?? 'steady' }
       const response = id
         ? await client.updateVideoTemplate({
             id,

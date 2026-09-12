@@ -22,7 +22,7 @@ type CaptionSizer interface {
 	// FixedElements is the disclosure badge and this cut's chips, already placed.
 	// Copy yields to them and never displaces them (CDS-45), so the selector has
 	// to see them before it chooses an anchor.
-	FixedElements(ctx context.Context, ratio, disclosure string, labels []string, answers []clip.Answer) (clip.Manifest, error)
+	FixedElements(ctx context.Context, ratio, disclosure string, labels []string, answers []clip.Answer, hideDisclosure ...bool) (clip.Manifest, error)
 	// CardElements is the hook and ending cards, measured and placed. Copy
 	// yields to them exactly as it does to the badge (CDS-28, CDS-29, CDS-45):
 	// nothing shows under a card, so the selector needs their regions before it
@@ -219,6 +219,7 @@ func (s *Service) compose(ctx context.Context, input clip.PlanningInput, plan *c
 		return region, err == nil, nil
 	}
 	// The plan's own preset and facts decide which chips a cut can carry.
+	plan.HideDisclosure = input.HideDisclosure
 	plan.Preset, plan.Facts, plan.Disclosure = input.Template.Preset, input.Answers, input.Disclosure
 	plan.CTA, plan.Accent = input.CTA, input.Template.Accent
 	// CDS-41 may lengthen a cut to fit its copy, but the timeline is already
@@ -260,7 +261,7 @@ func (s *Service) compose(ctx context.Context, input clip.PlanningInput, plan *c
 		// pass its scene's maximum only by what the copy's own minimum needs.
 		_, maximum := design.CutBounds(scene, plan.Preset)
 		limit = min(limit, cut.StartMS+max(maximum, clip.MinExposureMS(written.Text)+design.Timing.SubExtendMS+2*design.Timing.CopyLeadMS))
-		placed, err := s.captions.FixedElements(ctx, input.Ratio, input.Disclosure, plan.ChipLabels(cut), input.Answers)
+		placed, err := s.captions.FixedElements(ctx, input.Ratio, input.Disclosure, plan.ChipLabels(cut), input.Answers, input.HideDisclosure)
 		if err != nil {
 			return err
 		}
@@ -271,6 +272,7 @@ func (s *Service) compose(ctx context.Context, input clip.PlanningInput, plan *c
 				placed = append(placed, e)
 			}
 		}
+		written.Pace = input.Template.CaptionPace
 		composed, decision, err := clip.Compose(canvas, cut, written, scene, readable, clip.CutSubject(canvas, cut, analysis), placed, input.Template.CopyStyles, input.Template.Accent, history, previous, limit, measured)
 		if err != nil {
 			return err
@@ -336,7 +338,7 @@ func validateSettings(cfg Config, in clip.PlanningInput) error {
 	if _, err := clip.ClipCanvas(in.Ratio); err != nil {
 		return err
 	}
-	if in.TargetDurationMS < cfg.Render.MinDurationMS || in.TargetDurationMS > cfg.Render.MaxDurationMS || !clip.ValidCopyStyles(in.Template.CopyStyles) || !clip.ValidAccent(in.Template.Accent) || !within(in.Template.Name, 1, cfg.Template.NameChars) || !within(in.Template.CutGuidance, 0, cfg.Template.GuidanceChars) || len(in.Template.InformationFields) > cfg.Template.FieldCount || len(in.Answers) != len(in.Template.InformationFields) {
+	if in.TargetDurationMS < cfg.Render.MinDurationMS || in.TargetDurationMS > cfg.Render.MaxDurationMS || !clip.ValidCopyStyles(in.Template.CopyStyles) || !clip.ValidCaptionPace(in.Template.CaptionPace) || !clip.ValidAccent(in.Template.Accent) || !within(in.Template.Name, 1, cfg.Template.NameChars) || !within(in.Template.CutGuidance, 0, cfg.Template.GuidanceChars) || len(in.Template.InformationFields) > cfg.Template.FieldCount || len(in.Answers) != len(in.Template.InformationFields) {
 		return clip.ErrInvalid
 	}
 	fields := map[string]bool{}

@@ -18,6 +18,8 @@ var ErrCopyTooLong = errors.New("CLIP_COPY_TOO_LONG")
 type Point struct{ X, Y float64 }
 type Region struct{ X, Y, Width, Height float64 }
 type Caption struct {
+	// Empty preserves legacy sentence timing; rapid uses explicit phrase windows.
+	Pace                               string
 	Text, Anchor, Align, Style, Accent string
 	// The one word 크게 강조 colours and 형광펜 highlights (CDS-25, CDS-26). A
 	// substring of Text, chosen by the planner or the owner; empty means none.
@@ -109,9 +111,10 @@ func (c EditCut) OriginalVolume() float64 {
 }
 
 type EditPlan struct {
-	Ratio      string
-	DurationMS int
-	Cuts       []EditCut
+	HideDisclosure bool
+	Ratio          string
+	DurationMS     int
+	Cuts           []EditCut
 	// Render inputs, not part of the approved composition and never stored with
 	// it: the disclosure the badge shows and the facts a chip reads. They are
 	// filled from the PROJECT at render time, so the badge is always the owner's
@@ -212,7 +215,7 @@ func normalized(v float64) bool { return !math.IsNaN(v) && !math.IsInf(v, 0) && 
 // coordinate or an original-audio gain.
 func Normalized(v float64) bool { return normalized(v) }
 func ValidCopy(c Copy, maxRunes int) bool {
-	if !utf8.ValidString(c.Text) || utf8.RuneCountInString(c.Text) > maxRunes || !ValidAccent(c.Accent) {
+	if !utf8.ValidString(c.Text) || utf8.RuneCountInString(c.Text) > maxRunes || !ValidAccent(c.Accent) || !ValidCaptionPace(c.Pace) {
 		return false
 	}
 	// A cut with NO copy carries no placement at all: the design system has
@@ -293,8 +296,8 @@ func LayoutViolation(v design.Violation, cut, copy int) error {
 
 // VerifyLayout enforces delivery checks (CDS-52), excluding advisory overlaps
 // (CDS-56), and names the caption a blocking failure belongs to (CDS-55).
-func VerifyLayout(ratio string, approved []string, m Manifest) error {
-	err := design.VerifyRenderable(m, ratio, approved)
+func VerifyLayout(ratio string, approved []string, m Manifest, hideDisclosure ...bool) error {
+	err := design.VerifyRenderable(m, ratio, approved, hideDisclosure...)
 	var f *design.Failure
 	if errors.As(err, &f) {
 		return &LayoutError{planViolation(f.Check), f.Cut, f.Copy}
@@ -319,7 +322,8 @@ func (p EditPlan) Compiled() bool {
 // WithProject fills the render inputs the badge and the chips need. It is
 // called at render time rather than at approval time so a stored plan never
 // carries a stale disclosure.
-func (p EditPlan) WithFacts(disclosure string, facts []Answer, preset, cta, accent string) EditPlan {
+func (p EditPlan) WithFacts(disclosure string, facts []Answer, preset, cta, accent string, hideDisclosure ...bool) EditPlan {
+	p.HideDisclosure = len(hideDisclosure) > 0 && hideDisclosure[0]
 	p.Disclosure, p.Facts, p.Preset = disclosure, facts, preset
 	p.CTA, p.Accent = cta, accent
 	return p
@@ -413,14 +417,19 @@ func ValidateEditPlan(cfg RenderConfig, plan EditPlan, sources []RenderSource) e
 			return planViolation("plan_volume")
 		}
 		// CDS-43: one copy, or two only on a cut of 4 s or more.
-		if len(c.Copies) > design.Copy.MaxPerCut {
+		rapid := c.Rapid()
+		maxCopies := design.Copy.MaxPerCut
+		if rapid {
+			maxCopies = design.Rapid.MaxPerCut
+		}
+		if len(c.Copies) > maxCopies {
 			return planViolation("plan_copy_count")
 		}
-		if len(c.Copies) > 1 && c.EndMS-c.StartMS < design.Copy.SecondMinCutMS() {
+		if !rapid && len(c.Copies) > 1 && c.EndMS-c.StartMS < design.Copy.SecondMinCutMS() {
 			return planViolation("plan_copy_second_cut")
 		}
 		for _, copy := range c.Copies {
-			if !ValidCopy(copy, cfg.MaxCopyRunes) {
+			if !ValidCopy(copy, cfg.MaxCopyRunes) || (copy.Pace == "rapid" && !rapid) || (rapid && strings.TrimSpace(copy.Text) == "") {
 				return planViolation("plan_copy_format")
 			}
 		}
@@ -443,7 +452,11 @@ func ValidateEditPlan(cfg RenderConfig, plan EditPlan, sources []RenderSource) e
 			}
 			// Never both at once: the second copy starts a clear 120 ms after
 			// the first has left (CDS-43).
-			if j > 0 && captionStart-previousEnd < design.Timing.CopyLeadMS {
+			gap := design.Timing.CopyLeadMS
+			if rapid {
+				gap = 0
+			}
+			if j > 0 && captionStart-previousEnd < gap {
 				return planViolation("plan_copy_sequence")
 			}
 			previousEnd = captionEnd
@@ -463,7 +476,14 @@ func ValidateEditPlan(cfg RenderConfig, plan EditPlan, sources []RenderSource) e
 					return planViolation("plan_copy_chars")
 				}
 			}
-			if captionEnd-captionStart < MinExposureMS(copy.Text) {
+			minimum := MinExposureMS(copy.Text)
+			if rapid {
+				minimum = design.Rapid.MinMS
+				if (copy.StartMS == 0 && copy.EndMS == 0) || captionEnd-captionStart > design.Rapid.MaxMS || strings.Contains(copy.Text, "\n") || CopyChars(copy.Text) > min(style.Chars, design.Rapid.MaxChars) {
+					return planViolation("plan_copy_exposure")
+				}
+			}
+			if captionEnd-captionStart < minimum {
 				return planViolation("plan_copy_exposure")
 			}
 			// The accent word must be in the text it accents (CDS-25, CDS-26).
@@ -473,7 +493,7 @@ func ValidateEditPlan(cfg RenderConfig, plan EditPlan, sources []RenderSource) e
 		}
 		// A second copy is a description followed by the number it leads to, in
 		// that order and no other (CDS-43).
-		if placed := c.Placed(); len(placed) > 1 &&
+		if placed := c.Placed(); !rapid && len(placed) > 1 &&
 			(design.Classify(placed[0].Text) != design.ClassDesc || design.Classify(placed[1].Text) != design.ClassNum) {
 			return planViolation("plan_copy_classes")
 		}

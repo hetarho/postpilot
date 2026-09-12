@@ -73,7 +73,7 @@ func copyView(canvas clip.Canvas, c clip.Copy, l copyLayout, ground Luminance) o
 			u := design.Spacing.UnderlineMark
 			t.Highlight = &overlay.Box{X: x + bounds.X + l.Keyword.Offset - u.Extend, Y: y - (u.RaiseEM+u.HeightEM)*l.FontSize, Width: l.Keyword.Width + 2*u.Extend, Height: u.HeightEM * l.FontSize, Fill: accent, Opacity: "0.9"}
 		}
-		if accent != "" && !s.Highlight && s.Stroke != "" && l.Keyword.Present && l.Keyword.Line == i {
+		if c.Style != "simple" && accent != "" && !s.Highlight && s.Stroke != "" && l.Keyword.Present && l.Keyword.Line == i {
 			at := strings.Index(line, l.Keyword.Text)
 			t.Colored, t.Prefix, t.Keyword, t.Suffix, t.Accent = true, line[:at], l.Keyword.Text, line[at+len(l.Keyword.Text):], word
 		}
@@ -90,8 +90,11 @@ func furnitureView(canvas clip.Canvas, f furniture) overlay.FurnitureView {
 	muted, mutedAlpha := paint("text_muted")
 	ink, inkAlpha := paint("ink_900")
 	p := f.Badge
-	v.Badge = overlayBox(p, p.Height/2, badge, badgeAlpha)
-	v.Label = overlayText(design.Type["badge"], f.BadgeText, p.X+badgePadH-f.BadgeBounds.X, p.Y+(p.Height-f.BadgeBounds.Height)/2-f.BadgeBounds.Y, white, "")
+	if f.BadgeText != "" {
+		box := overlayBox(p, p.Height/2, badge, badgeAlpha)
+		label := overlayText(design.Type["badge"], f.BadgeText, p.X+badgePadH-f.BadgeBounds.X, p.Y+(p.Height-f.BadgeBounds.Height)/2-f.BadgeBounds.Y, white, "")
+		v.Badge, v.Label = &box, &label
+	}
 	for _, c := range f.Chips {
 		x := c.Region.X + design.Spacing.PadChip.H
 		label := overlayText(design.Type["label"], c.Label, x-c.LabelBounds.X, c.Region.Y+(c.Region.Height-c.LabelBounds.Height)/2-c.LabelBounds.Y, muted, mutedAlpha)
@@ -174,8 +177,22 @@ func overlayProbe(view string) any {
 	case "copy-v1":
 		return overlay.CopyView{Canvas: canvas, Plate: &box, Bar: &box, Dot: &overlay.Circle{Radius: 1, Fill: "#111111"}, Shadow: &overlay.Shadow{Fill: "#111111", Opacity: "1"}, Scrim: &overlay.Scrim{Box: box, From: "0", To: "1"}, Lines: []overlay.Text{text}}
 	case "furniture-v1":
-		return overlay.FurnitureView{Canvas: canvas, Badge: box, Label: text, Chips: []overlay.Chip{{Box: box, Label: text, Value: text}}}
+		return overlay.FurnitureView{Canvas: canvas, Badge: &box, Label: &text, Chips: []overlay.Chip{{Box: box, Label: text, Value: text}}}
 	default:
 		return overlay.CardView{Canvas: canvas, Plate: box, Shadow: overlay.Shadow{Fill: "#111111", Opacity: "1"}, Lines: []overlay.CardLine{{Chip: &box, Text: text}, {Text: text}}}
 	}
+}
+
+// Rapid cues retain only their painted region, avoiding a full canvas per input.
+// Scrims occupy the canvas and must keep that extent for custom unplated styles.
+func copyCrop(canvas clip.Canvas, c clip.Copy, l copyLayout, ground Luminance) clip.Region {
+	if c.Pace != "rapid" || ground.Scrim() {
+		return clip.Region{Width: float64(canvas.Width), Height: float64(canvas.Height)}
+	}
+	s := design.Shadow[l.Style.Shadow]
+	pad := math.Ceil(2*s.Blur + math.Max(math.Abs(s.DX), math.Abs(s.DY)) + l.Style.StrokeWidth() + 2)
+	p := l.Region
+	x, y := math.Max(0, math.Floor(p.X-pad)), math.Max(0, math.Floor(p.Y-pad))
+	right, bottom := math.Min(float64(canvas.Width), math.Ceil(p.X+p.Width+pad)), math.Min(float64(canvas.Height), math.Ceil(p.Y+p.Height+pad))
+	return clip.Region{X: x, Y: y, Width: right - x, Height: bottom - y}
 }

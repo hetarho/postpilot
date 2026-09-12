@@ -163,6 +163,10 @@ func (c *Catalog) Presets() []Preset {
 
 func (c *Catalog) Render(binding string, view any) (string, error) {
 	id, ok := c.bindings[binding]
+	// Older deployment catalogs predate the additive simple style.
+	if !ok && binding == "copy.simple" {
+		id, ok = c.bindings["copy.clean"]
+	}
 	if !ok {
 		return "", fmt.Errorf("overlay binding %s is missing", binding)
 	}

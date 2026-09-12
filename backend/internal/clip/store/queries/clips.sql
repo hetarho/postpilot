@@ -3,7 +3,7 @@ SELECT * FROM video_templates WHERE user_id = ? ORDER BY name, id;
 -- name: GetVideoTemplate :one
 SELECT * FROM video_templates WHERE id = ? AND user_id = ?;
 -- name: InsertVideoTemplate :exec
-INSERT INTO video_templates(id, user_id, name, information_fields, cut_guidance, copy_styles, accent, preset, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+INSERT INTO video_templates(id, user_id, name, information_fields, cut_guidance, copy_styles, accent, preset, caption_pace, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 -- name: CountTemplateProjects :one
 SELECT count(*) FROM clip_projects WHERE video_template_id = ? AND user_id = ?;
 -- name: DeleteVideoTemplate :execrows
@@ -13,7 +13,7 @@ SELECT * FROM clip_projects WHERE user_id = ? ORDER BY updated_at DESC, id;
 -- name: GetClipProject :one
 SELECT * FROM clip_projects WHERE id = ? AND user_id = ?;
 -- name: InsertClipProject :exec
-INSERT INTO clip_projects(id, user_id, title, video_template_id, ratio, target_duration_ms, disclosure, cta, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+INSERT INTO clip_projects(id, user_id, title, video_template_id, ratio, target_duration_ms, disclosure, cta, hide_disclosure, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 -- name: DeleteClipProject :execrows
 DELETE FROM clip_projects WHERE id = ? AND user_id = ?;
 -- name: ListClipAnswers :many
@@ -45,3 +45,11 @@ UPDATE clip_projects SET disclosure = ?, updated_at = ? WHERE id = ? AND user_id
 UPDATE clip_projects SET cta = ?, updated_at = ? WHERE id = ? AND user_id = ?;
 -- name: TouchClip :execrows
 UPDATE clip_projects SET updated_at = ? WHERE id = ? AND user_id = ?;
+
+-- name: UpdateVideoTemplateCaptionPace :execrows
+UPDATE video_templates SET caption_pace = ?, updated_at = ? WHERE id = ? AND user_id = ?;
+
+-- name: UpdateClipHideDisclosure :execrows
+UPDATE clip_projects SET hide_disclosure = sqlc.arg(hide_disclosure),
+    edit_plan_revision = edit_plan_revision + CASE WHEN edit_plan_json IS NOT NULL AND hide_disclosure != sqlc.arg(hide_disclosure) THEN 1 ELSE 0 END,
+    updated_at = sqlc.arg(updated_at) WHERE id = sqlc.arg(id) AND user_id = sqlc.arg(user_id);

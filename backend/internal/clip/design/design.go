@@ -262,6 +262,18 @@ type TransitionTokens struct {
 
 // CDS-43's numbers: how many copies a cut may carry, the cut length the second
 // one needs, and how short the second sentence has to be to stand alone.
+type RapidTokens struct {
+	MinMS       int `json:"min_ms"`
+	MaxMS       int `json:"max_ms"`
+	ShortMS     int `json:"short_ms"`
+	MediumMS    int `json:"medium_ms"`
+	LongMS      int `json:"long_ms"`
+	ShortChars  int `json:"short_chars"`
+	TargetChars int `json:"target_chars"`
+	MaxChars    int `json:"max_chars"`
+	MaxPerCut   int `json:"max_per_cut"`
+}
+
 type CopyTokens struct {
 	MaxPerCut      int     `json:"max_per_cut"`
 	SecondMinCutS  float64 `json:"second_min_cut_s"`
@@ -287,6 +299,7 @@ type LumaTokens struct {
 	ContrastMin    float64 `json:"contrast_min"`
 }
 type system struct {
+	Rapid             RapidTokens                  `json:"rapid"`
 	Ratios            map[string]RatioLayout       `json:"ratios"`
 	SafeNaverEstimate Region                       `json:"safe_naver_estimate"`
 	OverlayEstimate   OverlayEstimate              `json:"overlay_estimate"`
@@ -338,6 +351,7 @@ func JSON() []byte {
 }
 
 var (
+	Rapid             = loaded.Rapid
 	Ratios            = loaded.Ratios
 	SafeNaverEstimate = loaded.SafeNaverEstimate
 	Overlay           = loaded.OverlayEstimate

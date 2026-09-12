@@ -24,13 +24,30 @@ export function toClipEditingState(value: ProtoClipEditingState): ClipEditingSta
       cuts: value.plan.cuts.map((c) => {
         // `copies` is the authority; a server that still sends only the one
         // `copy` is read exactly as it was before CDS-43.
-        const wire = c.copies.length > 0 ? c.copies : c.copy ? [c.copy] : []
-        if (wire.length === 0) throw new Error('Invalid clip caption')
+        const wire =
+          c.copies.length > 0
+            ? c.copies
+            : [
+                c.copy ?? {
+                  text: '',
+                  pace: '',
+                  position: '',
+                  align: '',
+                  style: '',
+                  accent: '',
+                  keyword: '',
+                  startMs: 0,
+                  endMs: 0,
+                },
+              ]
+        // A dropped caption has no wire entry. Supply an empty editable slot;
+        // saving it still renders only the footage until the owner types text.
         const copies = wire.map((copy) => {
           // A cut whose copy the composer dropped arrives with no placement:
           // valid, and the correction screen shows it as a cut with no text.
           const placed = copy.text.trim() !== ''
           if (
+            !['', 'steady', 'rapid'].includes(copy.pace) ||
             (placed &&
               (!COPY_ANCHORS.includes(copy.position as ClipCaption['anchor']) ||
                 !COPY_ALIGNS.includes(copy.align as ClipCaption['align']) ||
@@ -39,13 +56,14 @@ export function toClipEditingState(value: ProtoClipEditingState): ClipEditingSta
           )
             throw new Error('Invalid clip caption')
           return {
+            ...(copy.pace ? { pace: copy.pace as NonNullable<ClipCaption['pace']> } : {}),
             text: copy.text,
             startMs: copy.startMs,
             endMs: copy.endMs,
-            anchor: copy.position as ClipCaption['anchor'],
-            align: copy.align as ClipCaption['align'],
+            anchor: (copy.position || 'bottom') as ClipCaption['anchor'],
+            align: (copy.align || 'center') as ClipCaption['align'],
             keyword: copy.keyword,
-            style: copy.style as CopyStyle,
+            style: (copy.style || 'clean') as CopyStyle,
             accent: copy.accent as ClipAccent,
           }
         })
@@ -94,7 +112,7 @@ export function clipPlanToProto(plan: ClipEditPlan) {
       // `position` carries the anchor on the wire; the field kept its number
       // through the vocabulary change (CDS-12). `copy` stays populated with the
       // first one for a release, beside the list that is the authority.
-      copy: { ...c.copies[0]!, position: c.copies[0]!.anchor },
+      copy: c.copies[0] ? { ...c.copies[0], position: c.copies[0].anchor } : undefined,
       copies: c.copies.map((copy) => ({ ...copy, position: copy.anchor })),
     })),
   }

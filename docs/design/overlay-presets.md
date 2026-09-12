@@ -36,6 +36,7 @@ overlays/
   "version": 1,
   "bindings": {
     "copy.clean": "editorial",
+    "copy.simple": "caption",
     "copy.memo": "caption",
     "copy.bold": "caption",
     "copy.mark": "caption",
@@ -87,7 +88,7 @@ measured and wrapped text using the pinned fonts.
 | View | Fields |
 |---|---|
 | `copy-v1` | Optional `Plate`, `Bar`, `Dot`, `Scrim`, `Shadow`; `Lines` of `Text` |
-| `furniture-v1` | `Badge` box, `Label` text; `Chips` with a box and `Label`/`Value` text |
+| `furniture-v1` | optional `Badge` box and `Label` text (nil when hidden); `Chips` with a box and `Label`/`Value` text |
 | `card-v1` | `Empty`, `Plate`, `Shadow`; `Lines` with optional `Chip` box and `Text` |
 
 | Shared value | Fields |
@@ -204,3 +205,37 @@ The sample's `header/overlay.svg` draws the menu and disclosure; `caption/overla
 draws body captions; `opening/overlay.svg` and `ending/overlay.svg` draw the two
 title windows. Runtime text and measured coordinates fill the template fields,
 resvg converts the SVG to a transparent PNG, and FFmpeg overlays it on footage.
+
+## Lightweight text and caption pace
+
+CDS r8 adds `simple` (가벼운 텍스트): the bundled Pretendard Variable face at
+56/600, white fill, dark 4 px outline and a text shadow, without a plate or accent.
+The browser's simple preview self-hosts the same original font and OFL license
+from `frontend/public/fonts/clip/`. Existing catalogs without `copy.simple`
+fall back to their `copy.clean` binding; preserve the supplied outline and shadow
+fields when that binding also draws the simple style. Its contrast proof relies
+on the fixed outline rather than sampling the footage for every phrase.
+
+Caption pace is independent of drawing. Empty/`steady` preserves existing plans;
+`rapid` uses explicit 300–1000 ms windows and immediate replacement. A cut may
+carry up to 24 rapid phrases, each one line of at most 14 characters (or its
+style's tighter limit). The shared splitter preserves a short first word as an
+opening beat, then groups words without another provider call. The correction
+screen can split/merge, add/remove and edit each phrase's exact timing.
+
+Rapid PNGs are cropped to their measured drawing region plus stroke/shadow
+padding and overlaid at the original coordinates; a scrim retains its full
+extent. Presets must keep drawing inside the measured bounds. Every cue has a
+unique raster path, so multiple captions cannot overwrite one another.
+
+`TestRenderSmokeRapidCaptions` checks 24 phrases and the 300 ms boundary using
+real video frames. `TestCaptionPaceExample`, enabled with `CLIP_EXAMPLE_PACE=1`
+and the three example directory variables above, exports a 20 s comparison from
+the eight local originals. This is editorial timing, not forced speech alignment.
+
+Disclosure visibility is a saved project setting, independent of campaign type.
+Keep the header's badge markup inside `{{with .Badge}}` and its text inside
+`{{with .Label}}` so disabling it leaves the information chips visible with no
+empty plate. The supplied catalog and built-in preset both follow this contract.
+The header uses equal outer margins: vertical x=96/984, horizontal x=96/1824,
+and square x=64/1016. Caption anchors and the 80 px vertical header top stay unchanged.

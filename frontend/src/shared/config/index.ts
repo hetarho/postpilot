@@ -402,6 +402,7 @@ export {
   CLIP_TIMING,
   CLIP_TRANSITION,
   CLIP_COPY,
+  CLIP_RAPID,
   CLIP_GUARDS,
   CLIP_CLASSES,
   CLIP_SCENE_STYLES,
@@ -415,6 +416,7 @@ export {
 } from './clip-design'
 export type {
   ClipStyleId,
+  ClipCaptionPace,
   ClipRatioId,
   ClipPresetId,
   ClipDisclosureId,

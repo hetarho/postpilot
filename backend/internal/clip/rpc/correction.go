@@ -11,11 +11,11 @@ import (
 // caption is the one mapping from the wire's caption to the domain's; the wire
 // still calls the vertical anchor `position` (CDS-12).
 func caption(c *v1.ClipCaption) clip.Caption {
-	return clip.Caption{Text: c.GetText(), Anchor: c.GetPosition(), Align: c.GetAlign(), Keyword: c.GetKeyword(),
+	return clip.Caption{Pace: c.GetPace(), Text: c.GetText(), Anchor: c.GetPosition(), Align: c.GetAlign(), Keyword: c.GetKeyword(),
 		Style: c.GetStyle(), Accent: c.GetAccent(), StartMS: int(c.GetStartMs()), EndMS: int(c.GetEndMs())}
 }
 func captionProto(c clip.Caption) *v1.ClipCaption {
-	return &v1.ClipCaption{Text: c.Text, Position: c.Anchor, Align: c.Align, Keyword: c.Keyword,
+	return &v1.ClipCaption{Pace: c.Pace, Text: c.Text, Position: c.Anchor, Align: c.Align, Keyword: c.Keyword,
 		Style: c.Style, Accent: c.Accent, StartMs: int32(c.StartMS), EndMs: int32(c.EndMS)}
 }
 func correctionPlan(p *v1.ClipEditPlan) clip.CorrectionPlan {

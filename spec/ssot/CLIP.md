@@ -1,11 +1,11 @@
 # CLIP generated video projects and templates
-> r7 | An account-owned workflow turns multiple pieces of experience footage into a downloadable, Naver Clip-ready video through bounded analysis copies, an approved credit ceiling, AI-selected cuts, exact styled copy and a lightweight correction pass, independently of blog posts.
+> r9 | An account-owned workflow turns multiple pieces of experience footage into a downloadable, Naver Clip-ready video through bounded analysis copies, an approved credit ceiling, AI-selected cuts, exact styled copy and a lightweight correction pass, independently of blog posts.
 
 ## decisions
 - CLIP-1 [o] a clip project is independent of a post and owns its title, chosen video template, template answers, target duration, aspect ratio, analysis, edit plan and latest successful result
 - CLIP-2 [o] only the authenticated owner may list, view, change, generate, download or delete a clip project or video template; an unknown or foreign id is presented as not found
 - CLIP-3 [o] navigation groups 글 · 말투 · 글 템플릿 · 지침 under 글 and 클립 · 영상 템플릿 under 영상; account, plan, billing and administration remain common destinations
-- CLIP-4 [o] a video template is a reusable account-owned recipe that names the information to collect, the cut-composition guidance, the approved copy style choices and one category preset (→CDS-50)
+- CLIP-4 [o] a video template is a reusable account-owned recipe that names the information to collect, the cut-composition guidance, the approved copy style choices, an independent sentence or rapid-phrase pace and one category preset (→CDS-50)
 - CLIP-5 [o] every generation selects exactly one video template and collects that template's requested information before it can start
 - CLIP-6 [o] a project accepts up to 20 source videos whose combined duration is at most 30 minutes
 - CLIP-7 [o] the owner chooses a target result duration from 15 to 90 seconds before generation; fresh composition first reconciles the timeline to that target within observed footage, but may deliver a shorter result of at least 15 seconds when the selected footage cannot reach it; source identity, observed-range boundaries and the minimum result duration remain hard limits
@@ -15,10 +15,10 @@
 - CLIP-11 [o] generation uses the target duration, source analysis, template guidance and template answers to choose source ranges, order the cuts and write the on-screen copy automatically
 - CLIP-12 [o] generated copy is rendered as exact typeset text through approved visual templates ← AI-drawn Korean lettering can be misspelled or visually inconsistent
 - CLIP-13 [o] the copy renderer uses only product-bundled, fixed-version fonts — Pretendard Variable as the primary face, Paperlogy for hook and emphasis text, Noto Sans KR as the fallback (→CDS-17) — and never a device or host system font ← the same project must render identically across environments
-- CLIP-14 [o] the copy styles are the four CDS defines — 깔끔하게 · 메모 · 크게 강조 · 형광펜 (→CDS-22) — with one project accent from the approved seven-colour palette (→CDS-15)
-- CLIP-15 [o] copy, chips, cards and the disclosure badge stay inside the CDS safe area for the project's ratio and use only the CDS anchors (→CDS-9 →CDS-12 →CDS-13); generation picks the anchor and style by the CDS rules, which keep copy off the scene's principal subject (→CDS-38 →CDS-40)
+- CLIP-14 [o] the copy styles are the five CDS defines — 깔끔하게 · 메모 · 크게 강조 · 형광펜 · 가벼운 텍스트 (→CDS-22) — with one project accent from the approved seven-colour palette (→CDS-15)
+- CLIP-15 [o] copy, chips and card text stay inside the project's CDS safe area and use the CDS anchors (→CDS-9 →CDS-12 →CDS-13); the optional disclosure badge uses the symmetric header bounds (→CDS-57); generation picks the anchor and style by the CDS rules, which keep copy off the scene's principal subject (→CDS-38 →CDS-40)
 - CLIP-16 [o] cuts join with a hard cut by default and a short fade only where the scene type changes (→CDS-36)
-- CLIP-17 [o] step ② 클립 다듬기 (→CLIP-36) lets the owner reorder or delete cuts, extend or shorten each cut within its source range, edit its copy, change its approved copy position or style and adjust its original-audio volume
+- CLIP-17 [o] step ② 클립 다듬기 (→CLIP-36) lets the owner reorder or delete cuts, extend or shorten each cut within its source range, edit its copy, change its approved copy position or style, split or merge phrase captions, edit each phrase's exposure and adjust its original-audio volume
 - CLIP-18 [o] original audio is retained by default, volume is controlled per cut, and the whole track is loudness-normalised at render (→CDS-35)
 - CLIP-19 [o] AI analysis and AI composition regeneration consume the account's existing credits within the maximum shown and approved before generation under QUOTA-45; a durable preparation stage verifies sources and prepares bounded analysis copies before reserving the complete AI run under QUOTA-43; no AI call may precede a successful reservation
 - CLIP-20 [o] manual corrections, rerendering the corrected plan, preview and download consume no additional credits
@@ -47,6 +47,10 @@
 - CLIP-43 [o] analysis sends the prepared bounded copy as one pass, selects `static` processing only for an endpoint that supports it and otherwise omits provider-specific video-processing controls; adaptive video exploration is excluded
 - CLIP-44 [o] the clip analysis-model picker shows every registered observe model, enables those currently eligible under CLIP-30 and gives each disabled model one stable reason: video input absent · compatible inline endpoint absent · required request parameters absent · complete price ceiling unavailable
 
+- CLIP-45 [o] caption pace is independent of typography: templates choose 문장형 (default, including older templates) or 빠른 구절형; generated rapid copy is split into sequential short phrases without an extra AI call, and step ② lets the owner change pace and edit individual phrases and times; this is editorial timing, not forced alignment to recorded speech
+
+- CLIP-46 [o] project settings independently choose whether to show the campaign disclosure badge; new and older projects default to shown, the owner can turn it off without changing the campaign type, and generation and credit-free rerendering use the saved choice; changing it marks an existing result as needing rerendering
+
 ## flow
 - create: 영상 → 클립 → 새 클립 → choose video template → answer its information fields → choose ratio and target duration → 클립 만들기 → `/clips/<id>` ① (settings autosaved → disclose external analysis → select source videos → observe and write models → view maximum credit charge) → approve and generate
 - steps: ①(no editing state) → ②(an editing state with no result or a plan newer than its render) → ③(a render matching its plan); any step selectable, an unreached step says what it waits for
@@ -68,6 +72,8 @@
 - surface: `/clips`, `/clips/new`, `/clips/$clipId`, `/video-templates` and `/video-templates/$templateId` are held to THEME-39 and to POST-43 through POST-49 and POST-65 through POST-69; the correction workspace's own controls (CLIP-17) and every credit, analysis and render policy above are unchanged by that — only the chrome around them is
 
 ## chg
+- r9 260912 CLIP-15✎ one safe area for all elements→caption safe area plus symmetric header badge bounds; CLIP-46+ independent project disclosure visibility, shown by default, applied to generation and rerendering
+- r8 260912 CLIP-4✎ recipe style choices→style choices plus independent caption pace; CLIP-14✎ four→five styles with lightweight text; CLIP-17✎ sentence editing→phrase split/merge and exposure editing; CLIP-45+ backward-compatible sentence and rapid-phrase modes
 - r7 260912 CLIP-7✎ target-only description→observed-footage reconciliation with a shorter result allowed above the 15 s floor; CLIP-30✎ current endpoint requirement→explicit live checks at quote, admission and completion; CLIP-41✎ latest-job badge→automatic refresh until terminal state
 - r6 260911 CLIP-30✎ fixed sampling with `static` where supported→vendor-neutral endpoint-qualified clip analysis with no provider/model-family allowlist; CLIP-43+ one-pass bounded input with `static` only where supported and no adaptive exploration; CLIP-44+ every registered observe model shown with eligibility and one refusal reason
 - r5 260911 CLIP-4✎ recipe→recipe with a category preset; CLIP-13✎ Pretendard only→Pretendard + Paperlogy + Noto Sans KR fallback, all bundled; CLIP-14✎ three styles 깔끔하게·기록처럼·강조형→four CDS styles 깔끔하게·메모·크게 강조·형광펜; CLIP-15✎ platform-safe regions and approved positions→CDS safe areas, anchors and selection rules; CLIP-16✎ fade on every scene change→hard cut default with conditional fade; CLIP-18✎ per-cut volume→per-cut volume plus loudness normalisation; CLIP-28✎ exclusions clarified against the CDS components

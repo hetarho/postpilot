@@ -50,14 +50,14 @@ func furnitureBounds(answers map[string]string, labels []string) map[string]clip
 	return out
 }
 
-// The badge's right edge and top are the ratio's own (CDS-31: 888/80 on 9:16,
+// The badge's right edge and top are the ratio's own (CDS-31: 984/80 on 9:16,
 // 1824/112 on 16:9 and 1016/112 on 1:1), and the chip stack starts at the ratio's
 // chip origin, stacked on 9:16 and 1:1 and two across on 16:9 (CDS-30, CDS-47).
 func TestBadgeGeometryAndChipStackPerRatio(t *testing.T) {
 	answers := map[string]string{"위치": "서울 연남동", "가격": "9,900원", "메뉴": "김밥"}
 	labels := []string{"위치", "가격", "메뉴"}
 	bounds := furnitureBounds(answers, labels)
-	for ratio, badge := range map[string][2]float64{"vertical": {888, 80}, "horizontal": {1824, 112}, "square": {1016, 112}} {
+	for ratio, badge := range map[string][2]float64{"vertical": {984, 80}, "horizontal": {1824, 112}, "square": {1016, 112}} {
 		canvas, _ := clip.ClipCanvas(ratio)
 		l, _ := design.Layout(ratio)
 		f, err := placeFurniture(canvas, ratio, design.Disclosure["ad"], labels, answers, bounds)
@@ -190,5 +190,41 @@ func TestPlanChipLabelsFollowThePresetPriority(t *testing.T) {
 	short.EndMS = int(design.Timing.ChipMinS * 1000)
 	if got := plan.ChipLabels(short); len(got) != 2 {
 		t.Fatalf("a %d ms cut carried %v", short.EndMS, got)
+	}
+}
+
+func TestHiddenDisclosureRetainsChipsAndExplicitVerification(t *testing.T) {
+	for _, ratio := range []string{"vertical", "horizontal", "square"} {
+		canvas, _ := clip.ClipCanvas(ratio)
+		answers := map[string]string{"메뉴": "철판 요리"}
+		bounds := furnitureBounds(answers, []string{"메뉴"})
+		for _, hidden := range []bool{false, true} {
+			phrase := design.Disclosure["ad"]
+			if hidden {
+				phrase = ""
+			}
+			f, err := placeFurniture(canvas, ratio, phrase, []string{"메뉴"}, answers, bounds)
+			if err != nil || len(f.Chips) != 1 {
+				t.Fatal(ratio, f, err)
+			}
+			if !hidden && float64(canvas.Width)-f.Badge.X-f.Badge.Width != f.Chips[0].Region.X {
+				t.Fatal("asymmetric header", ratio, f)
+			}
+			manifest := f.Elements(15000, 0, 0, 15000)
+			if err := design.VerifyApproved(manifest, ratio, nil, hidden); err != nil {
+				t.Fatal(ratio, hidden, err)
+			}
+			if err := design.VerifyApproved(manifest, ratio, nil, !hidden); err == nil {
+				t.Fatal("visibility mismatch passed", ratio, hidden)
+			}
+			svg := furnitureSVG(canvas, f)
+			want := 2
+			if hidden {
+				want = 1
+			}
+			if strings.Count(svg, "<rect") != want || strings.Contains(svg, "광고") == hidden || !strings.Contains(svg, "철판 요리") {
+				t.Fatal(svg)
+			}
+		}
 	}
 }

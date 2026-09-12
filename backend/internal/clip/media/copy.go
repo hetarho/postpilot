@@ -338,9 +338,9 @@ func paint(token string) (string, string) {
 func (l copyLayout) Elements(cut, copy int, c clip.Copy, startMS, endMS int) clip.Manifest {
 	m := clip.Manifest{}
 	add := func(kind string, region clip.Region, size float64, fill, background string) {
-		m = append(m, design.Element{Cut: cut, Copy: copy, Kind: kind, Style: c.Style, Anchor: c.Anchor, Region: design.Region(region),
+		m = append(m, design.Element{Cut: cut, Copy: copy, Kind: kind, Style: c.Style, Anchor: c.Anchor, Pace: c.Pace, Region: design.Region(region),
 			StartMS: startMS, EndMS: endMS, FontSize: size, Fill: fill, Background: background,
-			InMS: design.Motion.InMS, OutMS: design.Motion.OutMS, DY: design.Motion.InDY})
+			InMS: design.CaptionMotion(c.Pace).InMS, OutMS: design.CaptionMotion(c.Pace).OutMS, DY: design.CaptionMotion(c.Pace).InDY})
 	}
 	p, s := l.Region, l.Style
 	if s.Plate != "" {
@@ -368,7 +368,12 @@ func (l copyLayout) Elements(cut, copy int, c clip.Copy, startMS, endMS int) cli
 			u := design.Spacing.UnderlineMark
 			add("highlight", clip.Region{X: x + l.Keyword.Offset - u.Extend, Y: top + (1-u.RaiseEM-u.HeightEM)*l.FontSize, Width: l.Keyword.Width + 2*u.Extend, Height: u.HeightEM * l.FontSize}, 0, accent, "")
 		}
-		add("copy", clip.Region{X: x, Y: top, Width: bounds.Width, Height: bounds.Height}, l.FontSize, fill, design.Color[s.Plate].Hex)
+		background := design.Color[s.Plate].Hex
+		if c.Style == "simple" {
+			stroke := design.Color["stroke_dark"]
+			background, _ = design.Over(stroke.Hex, stroke.Alpha, "#FFFFFF")
+		}
+		add("copy", clip.Region{X: x, Y: top, Width: bounds.Width, Height: bounds.Height}, l.FontSize, fill, background)
 		_ = line
 		top += bounds.Height + l.FontSize*(l.Role.LineHeight-1)
 	}
@@ -439,7 +444,10 @@ type furniture struct {
 // badgeAndChips measures the phrase and every chip's text, then places them.
 // The measurement is the only impure half, exactly as it is for copy.
 func (r *Rendering) badgeAndChips(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, ratio, phrase string, labels []string, answers map[string]string) (furniture, error) {
-	groups := map[string][]string{"badge": {phrase}}
+	groups := map[string][]string{}
+	if phrase != "" {
+		groups["badge"] = []string{phrase}
+	}
 	for _, label := range labels {
 		if value := strings.TrimSpace(answers[label]); value != "" {
 			groups["label"] = append(groups["label"], label)
@@ -500,8 +508,10 @@ func placeFurniture(canvas clip.Canvas, ratio, phrase string, labels []string, a
 	pad, gap := design.Spacing.PadChip, design.Spacing.GapStack
 	rowHeight := math.Ceil(math.Max(badgeRole.Size+2*badgePadV, math.Max(labelRole.Size, valueRole.Size)+2*pad.V))
 	width, height := math.Ceil(b.Width+2*badgePadH), rowHeight
-	out.Badge = clip.Region{X: l.Badge.Right - width, Y: l.Badge.Top, Width: width, Height: height}
-	if out.Badge.X < canvas.Safe.X || out.Badge.Y+height > canvas.Safe.Y+canvas.Safe.Height {
+	if phrase != "" {
+		out.Badge = clip.Region{X: l.Badge.Right - width, Y: l.Badge.Top, Width: width, Height: height}
+	}
+	if phrase != "" && (out.Badge.X < l.Chip.X || out.Badge.Y+height > canvas.Safe.Y+canvas.Safe.Height) {
 		return out, clip.ErrInvalid
 	}
 	x, y := l.Chip.X, l.Chip.Y
@@ -520,7 +530,11 @@ func placeFurniture(canvas clip.Canvas, ratio, phrase string, labels []string, a
 		// (CDS-18), so distorting its glyphs is the worse failure. The cut is
 		// proportional to the measured width, and textLength in the SVG is the
 		// hard bound that keeps an imperfect estimate inside the pill.
-		maxWidth := math.Min(l.Chip.MaxWidth, out.Badge.X-gap-x)
+		right := canvas.Safe.X + canvas.Safe.Width
+		if phrase != "" {
+			right = math.Min(right, out.Badge.X-gap)
+		}
+		maxWidth := math.Min(l.Chip.MaxWidth, right-x)
 		room := maxWidth - 2*pad.H - lb.Width - design.Spacing.GapChip
 		if room <= 0 {
 			break
@@ -564,11 +578,14 @@ func scaled(r clip.Region, factor float64) clip.Region {
 
 // Elements places the badge for the whole clip and each chip for its own cut.
 func (f furniture) Elements(duration int, chipCut int, chipStart, chipEnd int) clip.Manifest {
-	m := clip.Manifest{{
-		Kind: "badge", Text: f.BadgeText, FontSize: design.Type["badge"].Size,
-		Background: design.Color["badge_ad"].Hex, Fill: design.Color["text_white"].Hex,
-		Region: design.Region(f.Badge), StartMS: 0, EndMS: duration,
-	}}
+	m := clip.Manifest{}
+	if f.BadgeText != "" {
+		m = append(m, design.Element{
+			Kind: "badge", Text: f.BadgeText, FontSize: design.Type["badge"].Size,
+			Background: design.Color["badge_ad"].Hex, Fill: design.Color["text_white"].Hex,
+			Region: design.Region(f.Badge), StartMS: 0, EndMS: duration,
+		})
+	}
 	for _, c := range f.Chips {
 		m = append(m, design.Element{
 			Cut: chipCut, Kind: "chip", Text: c.Label + " " + c.Value,
@@ -588,13 +605,18 @@ func (r *Rendering) copyPlate(ctx context.Context, ws clip.MediaWorkspace, canva
 	if err != nil {
 		return "", err
 	}
+	region := copyCrop(canvas, c, layout, ground)
+	if c.Pace == "rapid" {
+		svg = fmt.Sprintf(`<svg xmlns="http://www.w3.org/2000/svg" width="%.0f" height="%.0f" viewBox="%.0f %.0f %.0f %.0f">%s</svg>`, region.Width, region.Height, region.X, region.Y, region.Width, region.Height, svg)
+		canvas.Width, canvas.Height = int(region.Width), int(region.Height)
+	}
 	return r.rasterize(ctx, ws, canvas, svg, fmt.Sprintf("copy-%04d", index))
 }
 
 // furniturePlate is the fixed layer: the disclosure badge and this cut's chips,
 // drawn in CDS-45's order under the copy and never animated.
 func (r *Rendering) furniturePlate(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, f furniture, index int) (string, error) {
-	if f.BadgeText == "" {
+	if f.BadgeText == "" && len(f.Chips) == 0 {
 		return "", nil
 	}
 	svg, err := r.overlays.Render("furniture", furnitureView(canvas, f))
@@ -629,7 +651,7 @@ func (r *Rendering) rasterize(ctx context.Context, ws clip.MediaWorkspace, canva
 // FixedElements places the disclosure badge and a cut's chips and returns them
 // as manifest elements, so the composer can keep copy off them (CDS-45). Like
 // CaptionSize it needs no source pixels and scopes its SVG to its own workspace.
-func (r *Rendering) FixedElements(ctx context.Context, ratio, disclosure string, labels []string, answers []clip.Answer) (out clip.Manifest, err error) {
+func (r *Rendering) FixedElements(ctx context.Context, ratio, disclosure string, labels []string, answers []clip.Answer, hideDisclosure ...bool) (out clip.Manifest, err error) {
 	canvas, err := clip.ClipCanvas(ratio)
 	if err != nil {
 		return nil, err
@@ -637,6 +659,9 @@ func (r *Rendering) FixedElements(ctx context.Context, ratio, disclosure string,
 	phrase, ok := design.Disclosure[disclosure]
 	if !ok {
 		return nil, clip.ErrDisclosureRequired
+	}
+	if len(hideDisclosure) > 0 && hideDisclosure[0] {
+		phrase = ""
 	}
 	texts := map[string]string{}
 	for _, a := range answers {

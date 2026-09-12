@@ -197,6 +197,7 @@ func (p *plannerFake) Plan(ctx context.Context, r llm.ModelRef, in clip.Planning
 }
 
 type rendererFake struct {
+	plan        clip.EditPlan
 	fail        error
 	calls       int
 	captionErr  error
@@ -209,6 +210,7 @@ func (r *rendererFake) CaptionSize(context.Context, string, clip.Caption) (float
 
 func (r *rendererFake) Render(ctx context.Context, ws clip.MediaWorkspace, p clip.EditPlan, _ []clip.RenderSource, loader clip.RenderSourceLoader) (clip.RenderedVideo, error) {
 	r.calls++
+	r.plan = p
 	if r.panicRender {
 		panic("render panic")
 	}

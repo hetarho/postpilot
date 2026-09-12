@@ -142,6 +142,17 @@ func Compose(
 			return out, decision, nil
 		}
 	}
+	if written.Pace == "rapid" {
+		rapid, ok, err := composeRapid(cut, written, text, accent, allowed, placed, subject, readableText, previousAnchor, measure)
+		if err != nil {
+			return out, decision, err
+		}
+		if ok {
+			decision.Class = design.Classify(text)
+			return rapid, decision, nil
+		}
+		decision.Fallback = "sentence_pace"
+	}
 	// Exposure (CDS-41) comes before the class, because it may shorten the text
 	// and the class is a property of the words: the compiler shortens, then
 	// extends the cut, then drops — in that order, recording which it used.
@@ -329,6 +340,7 @@ func keywordIn(text, keyword string) string {
 // alternative of the same fact, the keyword the sentence turns on, and the
 // answers every number and proper noun must come from.
 type Written struct {
+	Pace                     string
 	Text, ShortText, Keyword string
 	Answers                  []Answer
 }

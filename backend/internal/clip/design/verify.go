@@ -40,6 +40,7 @@ type Element struct {
 	// copy a cut usually carries, and for every piece of furniture.
 	Copy             int
 	Kind             string // one of ElementKinds
+	Pace             string
 	Style            string
 	Anchor           string
 	Text             string
@@ -140,18 +141,18 @@ func Verify(m Manifest, ratio string) error { return VerifyApproved(m, ratio, ni
 // and 메모; a template that approved only one of the two left the composer no
 // alternate, so the run is the owner's choice, not a defect. nil approves
 // every style.
-func VerifyApproved(m Manifest, ratio string, approved []string) error {
-	return verify(m, ratio, approved, true)
+func VerifyApproved(m Manifest, ratio string, approved []string, hideDisclosure ...bool) error {
+	return verify(m, ratio, approved, true, len(hideDisclosure) > 0 && hideDisclosure[0])
 }
 
 // VerifyRenderable holds the delivery checks while leaving overlapping text
 // available for owner review (CDS-56). Skip only V7, not the checks after it:
 // accepting an overlap error from VerifyApproved would hide sequence failures.
-func VerifyRenderable(m Manifest, ratio string, approved []string) error {
-	return verify(m, ratio, approved, false)
+func VerifyRenderable(m Manifest, ratio string, approved []string, hideDisclosure ...bool) error {
+	return verify(m, ratio, approved, false, len(hideDisclosure) > 0 && hideDisclosure[0])
 }
 
-func verify(m Manifest, ratio string, approved []string, checkOverlap bool) error {
+func verify(m Manifest, ratio string, approved []string, checkOverlap, hideDisclosure bool) error {
 	safe, ok := Safe(ratio)
 	if !ok {
 		return furniture(ViolationSafeArea)
@@ -166,13 +167,14 @@ func verify(m Manifest, ratio string, approved []string, checkOverlap bool) erro
 		if e.StartMS < 0 || e.EndMS <= e.StartMS {
 			return at(ViolationSize, e)
 		}
-		// Two elements are not bound by the safe area, and only two: the scrim,
-		// which CDS-32 places full-bleed across the frame's own edge, and the
-		// card plate, whose 9:16 width CDS-28 states as x 144–936 — sixteen
-		// pixels past CDS-9's x ≤ 920. What the safe area exists to protect is
-		// text, and a card's own lines sit 40 px inside its plate, so they are
-		// checked here like every other text.
-		if e.Kind != "scrim" && e.Kind != "card" && !within(e.Region, safe) {
+		// Scrims and card plates have their own geometry; text uses the safe
+		// area except the badge, which follows the symmetric header bounds.
+		elementSafe := safe
+		if e.Kind == "badge" {
+			l, _ := Layout(ratio)
+			elementSafe = Region{X: l.Chip.X, Y: safe.Y, Width: l.Badge.Right - l.Chip.X, Height: safe.Height}
+		}
+		if e.Kind != "scrim" && e.Kind != "card" && !within(e.Region, elementSafe) {
 			return at(ViolationSafeArea, e)
 		}
 		if err := verifyContrast(e); err != nil {
@@ -198,7 +200,8 @@ func verify(m Manifest, ratio string, approved []string, checkOverlap bool) erro
 		if !known {
 			return at(ViolationSize, e)
 		}
-		if e.InMS != Motion.InMS || e.OutMS != Motion.OutMS || e.DY != Motion.InDY {
+		motion := CaptionMotion(e.Pace)
+		if !ValidPace(e.Pace) || e.InMS != motion.InMS || e.OutMS != motion.OutMS || e.DY != motion.InDY {
 			return at(ViolationMotion, e)
 		}
 		// CDS-32: a scrim appears only under an UNPLATED style and never lies on
@@ -226,7 +229,7 @@ func verify(m Manifest, ratio string, approved []string, checkOverlap bool) erro
 
 	// The badge is placed first and never moves (CDS-45), so it is checked first.
 	duration := durationOf(m)
-	if err := verifyDisclosure(m, duration); err != nil {
+	if err := verifyDisclosure(m, duration, hideDisclosure); err != nil {
 		return err
 	}
 	if checkOverlap {
@@ -337,11 +340,9 @@ func durationOf(m Manifest) int {
 	return end
 }
 
-// V6: the disclosure phrase is present, covers the first and last 3.0 s, is
-// typeset at the badge size and painted on the badge colour. The Fair Trade
-// endorsement guideline asks for a size, face and colour clearly distinct from
-// the background, shown at a video's start and end (CDS-5, CDS-31).
-func verifyDisclosure(m Manifest, duration int) error {
+// V6: enforce the explicit project visibility choice. A shown badge uses the
+// fixed phrase, size, colour and full-clip timing (CDS-5, CDS-31).
+func verifyDisclosure(m Manifest, duration int, hidden bool) error {
 	if len(m) == 0 {
 		return nil
 	}
@@ -354,6 +355,12 @@ func verifyDisclosure(m Manifest, duration int) error {
 			return furniture(ViolationDisclosure)
 		}
 		badge = e
+	}
+	if hidden {
+		if badge.Kind != "" {
+			return furniture(ViolationDisclosure)
+		}
+		return nil
 	}
 	phrase := false
 	for _, text := range Disclosure {
@@ -389,7 +396,7 @@ func styleOf(m Manifest, at slot) string {
 func verifySequence(m Manifest, approved []string) error {
 	alternates := canAlternate(approved)
 	cuts := []slot{}
-	style, anchor := map[slot]string{}, map[slot]string{}
+	style, anchor, pace := map[slot]string{}, map[slot]string{}, map[slot]string{}
 	for _, e := range m {
 		if !caption(e) {
 			continue
@@ -397,7 +404,7 @@ func verifySequence(m Manifest, approved []string) error {
 		at := slotOf(e)
 		if _, seen := style[at]; !seen {
 			cuts = append(cuts, at)
-			style[at], anchor[at] = e.Style, e.Anchor
+			style[at], anchor[at], pace[at] = e.Style, e.Anchor, e.Pace
 		}
 		if style[at] != e.Style || anchor[at] != e.Anchor {
 			return &Failure{Check: ViolationFrequency, Cut: at.Cut, Copy: at.Copy}
@@ -413,10 +420,12 @@ func verifySequence(m Manifest, approved []string) error {
 	})
 	bold, run := 0, 0
 	for i, cut := range cuts {
-		if style[cut] == "bold" {
+		if style[cut] == "bold" && pace[cut] != "rapid" {
 			bold++
 		}
-		if i > 0 && style[cut] == style[cuts[i-1]] {
+		if pace[cut] == "rapid" || style[cut] == "simple" {
+			run = 0
+		} else if i > 0 && style[cut] == style[cuts[i-1]] && pace[cuts[i-1]] != "rapid" {
 			run++
 		} else {
 			run = 1
@@ -425,7 +434,7 @@ func verifySequence(m Manifest, approved []string) error {
 		// A sequence rule has no single failing element: the LATER of the pair is
 		// reported, the one whose style or anchor can change without invalidating
 		// what came before (CDS-55).
-		if (run > Guards.RunMax && alternates) || bold > Guards.BoldMax {
+		if (run > Guards.RunMax && alternates && pace[cut] != "rapid" && style[cut] != "simple") || bold > Guards.BoldMax {
 			return &Failure{Check: ViolationFrequency, Cut: cut.Cut, Copy: cut.Copy}
 		}
 		if i == 0 {

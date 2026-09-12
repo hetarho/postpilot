@@ -464,3 +464,49 @@ it('localizes the credit-free correction action and accessible field labels in E
   expect(screen.getByRole('heading', { name: 'Edit cuts and captions' })).toBeVisible()
   expect(screen.getAllByLabelText('Original audio (%)')).toHaveLength(2)
 })
+
+it('splits rapid phrases, edits exact windows, persists them and merges back', async () => {
+  const writes: NonNullable<FakeClipsOptions['planWrites']> = []
+  await mount({ planWrites: writes })
+  change('자막 원문', '오늘은 구로디지털단지에 와보았는데요')
+  await userEvent.click(cut().getByRole('combobox', { name: /^자막 흐름/ }))
+  await userEvent.click(screen.getByRole('option', { name: '빠른 구절형' }))
+  expect(cut().getByLabelText('구절 1')).toHaveValue('오늘은')
+  expect(cut().getByLabelText('구절 2')).toHaveValue('구로디지털단지에')
+  expect(
+    cut()
+      .getAllByLabelText('자막 시작 (컷 내 ms)')
+      .map((node) => (node as HTMLInputElement).value),
+  ).toEqual(['120', '420', '920'])
+  fireEvent.change(cut().getAllByLabelText('자막 끝 (컷 내 ms)')[2]!, { target: { value: '2020' } })
+  expect(screen.getByRole('button', { name: '수정 저장' })).toBeDisabled()
+  expect(cut().getByText('각 구절은 300~1000ms 동안 보여 주세요.')).toBeVisible()
+  fireEvent.change(cut().getAllByLabelText('자막 끝 (컷 내 ms)')[2]!, { target: { value: '1420' } })
+  await userEvent.click(screen.getByRole('button', { name: '수정 저장' }))
+  await waitFor(() => expect(writes).toHaveLength(1))
+  expect(writes[0]!.plan.cuts[0]!.copies.map((c) => [c.pace, c.startMs, c.endMs])).toEqual([
+    ['rapid', 120, 420],
+    ['rapid', 420, 920],
+    ['rapid', 920, 1420],
+  ])
+  await userEvent.click(cut().getByRole('combobox', { name: /^자막 흐름/ }))
+  await userEvent.click(screen.getByRole('option', { name: '문장형' }))
+  expect(cut().getByLabelText('자막 원문')).toHaveValue('오늘은 구로디지털단지에 와보았는데요')
+})
+
+it.each(['empty', 'unplaced'])(
+  'keeps a %s compiler-dropped caption editable after a pace fallback',
+  async (variant) => {
+    const project = fixture()
+    const caption = project.editing!.plan.cuts[0]!.copies[0]!
+    Object.assign(caption, { text: '', style: '', anchor: '', align: '', keyword: '' })
+    if (variant === 'empty') project.editing!.plan.cuts[0]!.copies = []
+    await mount({ projects: [project] })
+    expect(cut().getByLabelText('자막 원문')).toHaveValue('')
+    change('자막 원문', '오늘은 구로디지털단지에 와보았는데요')
+    await userEvent.click(cut().getByRole('combobox', { name: /자막 흐름/ }))
+    await userEvent.click(screen.getByRole('option', { name: '빠른 구절형' }))
+    expect(cut().getByLabelText('구절 1')).toHaveValue('오늘은')
+    expect(screen.getByRole('button', { name: '수정 저장' })).toBeEnabled()
+  },
+)

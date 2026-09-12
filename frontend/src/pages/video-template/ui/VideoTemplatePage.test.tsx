@@ -60,7 +60,7 @@ describe('video template workflow', () => {
     await user.click(await region.findByRole('link', { name: /여행/ }))
     expect(await screen.findByLabelText('템플릿 이름')).toHaveValue('여행')
     expect(router.state.location.pathname).toBe('/video-templates/owned')
-    expect(screen.getAllByRole('img', { name: '오늘의 좋은 순간' })).toHaveLength(4)
+    expect(screen.getAllByRole('img', { name: '오늘의 좋은 순간' })).toHaveLength(5)
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
   it('creates one complete recipe and keeps the saved route clean', async () => {
@@ -112,11 +112,15 @@ describe('video template workflow', () => {
     expect(screen.getByRole('checkbox', { name: '깔끔하게' })).toBeDisabled()
     expect(screen.getByRole('checkbox', { name: '깔끔하게' })).toBeChecked()
     await user.click(screen.getByRole('checkbox', { name: '메모' }))
+    await user.click(screen.getByRole('checkbox', { name: '가벼운 텍스트' }))
+    await user.click(screen.getByRole('combobox', { name: /자막 흐름/ }))
+    await user.click(screen.getByRole('option', { name: '빠른 구절형' }))
     await user.click(screen.getByRole('button', { name: '저장' }))
     await screen.findByText('저장했어요')
     expect(writes[0]).toMatchObject({
       informationFields: [{ label: '음식', prompt: '무엇을 먹었나요?' }],
-      copyStyles: ['clean', 'memo'],
+      copyStyles: ['clean', 'memo', 'simple'],
+      captionPace: 'rapid',
     })
   })
   it('keeps edits after a localized server refusal', async () => {

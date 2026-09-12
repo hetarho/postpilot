@@ -1,8 +1,17 @@
 import { Fragment, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { CLIP_FACTS, CLIP_TRANSITION, CLIP_TYPE, clipStyle } from '@/shared/config'
+import {
+  CLIP_FACTS,
+  CLIP_TRANSITION,
+  CLIP_TYPE,
+  clipStyle,
+  type ClipCaptionPace,
+} from '@/shared/config'
 import {
   allowsSecondCopy,
+  isRapidCut,
+  canSplitRapid,
+  canAddRapid,
   CLIP_TRANSITION_CHOICES,
   COPY_ALIGNS,
   COPY_ANCHORS,
@@ -316,13 +325,44 @@ export function ClipCorrectionWorkspace({
                         cut={cut}
                       />
                     )}
+                    <div>
+                      <FieldLabel id={`${prefix}-pace-label`} htmlFor={`${prefix}-pace`}>
+                        {t('pace.label')}
+                      </FieldLabel>
+                      <Listbox<ClipCaptionPace>
+                        id={`${prefix}-pace`}
+                        aria-labelledby={`${prefix}-pace-label`}
+                        value={isRapidCut(cut) ? 'rapid' : 'steady'}
+                        disabled={busy}
+                        onChange={(pace) => patch({ type: 'pace', id: cut.id, pace })}
+                        options={[
+                          { value: 'steady' as const, label: t('pace.steady') },
+                          {
+                            value: 'rapid' as const,
+                            label: t('pace.rapid'),
+                            disabled: !isRapidCut(cut) && !canSplitRapid(cut),
+                          },
+                        ]}
+                      />
+                      <Typography variant="body" className="text-content-secondary mt-2">
+                        {t('pace.editHelp')}
+                      </Typography>
+                      {!isRapidCut(cut) && !canSplitRapid(cut) && (
+                        <FieldMessage>{t('pace.splitError')}</FieldMessage>
+                      )}
+                      {isRapidCut(cut) && errors?.copyCount && (
+                        <FieldMessage>{t('pace.countError')}</FieldMessage>
+                      )}
+                    </div>
                     {cut.copies.map((copy, j) => {
                       const copyErrors = errors?.copies[j]
                       return (
                         <Fragment key={j}>
                           <div>
                             <FieldLabel htmlFor={`${prefix}-copy-${j}`}>
-                              {t('correction.copy')}
+                              {isRapidCut(cut)
+                                ? t('pace.phrase', { number: j + 1 })
+                                : t('correction.copy')}
                             </FieldLabel>
                             <Textarea
                               id={`${prefix}-copy-${j}`}
@@ -347,7 +387,9 @@ export function ClipCorrectionWorkspace({
                             />
                             {copyErrors?.text && (
                               <FieldMessage id={`${prefix}-copy-${j}-error`}>
-                                {t('validation.tooLong', { max: state.maxCopyRunes })}
+                                {isRapidCut(cut)
+                                  ? t('pace.textError')
+                                  : t('validation.tooLong', { max: state.maxCopyRunes })}
                               </FieldMessage>
                             )}
                             <CopyStylePreview
@@ -380,10 +422,18 @@ export function ClipCorrectionWorkspace({
                             />
                           </div>
                           <Typography variant="body" className="text-content-secondary">
-                            {t('correction.captionWindowHelp')}
+                            {isRapidCut(cut)
+                              ? t('pace.windowHelp', {
+                                  seconds: (copy.endMs - copy.startMs) / 1000,
+                                })
+                              : t('correction.captionWindowHelp')}
                           </Typography>
                           {copyErrors?.exposure && (
-                            <FieldMessage>{t('correction.exposureError')}</FieldMessage>
+                            <FieldMessage>
+                              {t(
+                                isRapidCut(cut) ? 'pace.exposureError' : 'correction.exposureError',
+                              )}
+                            </FieldMessage>
                           )}
                           <div>
                             <FieldLabel
@@ -467,34 +517,35 @@ export function ClipCorrectionWorkspace({
                           </div>
                           {/* 크게 강조 colours one word and 형광펜 highlights it; no
                               other style draws a keyword (CDS-25, CDS-26). */}
-                          {(clipStyle(copy.style).highlight ||
-                            clipStyle(copy.style).stroke !== '') && (
-                            <div>
-                              <FieldLabel htmlFor={`${prefix}-keyword-${j}`}>
-                                {t('correction.keyword')}
-                              </FieldLabel>
-                              <TextField
-                                id={`${prefix}-keyword-${j}`}
-                                type="text"
-                                inputMode="text"
-                                {...INPUT}
-                                value={copy.keyword}
-                                disabled={busy}
-                                aria-invalid={copyErrors?.keyword}
-                                onChange={(e) =>
-                                  patch({
-                                    type: 'copy',
-                                    id: cut.id,
-                                    index: j,
-                                    patch: { keyword: e.target.value },
-                                  })
-                                }
-                              />
-                              {copyErrors?.keyword && (
-                                <FieldMessage>{t('correction.keywordError')}</FieldMessage>
-                              )}
-                            </div>
-                          )}
+                          {copy.style !== 'simple' &&
+                            (clipStyle(copy.style).highlight ||
+                              clipStyle(copy.style).stroke !== '') && (
+                              <div>
+                                <FieldLabel htmlFor={`${prefix}-keyword-${j}`}>
+                                  {t('correction.keyword')}
+                                </FieldLabel>
+                                <TextField
+                                  id={`${prefix}-keyword-${j}`}
+                                  type="text"
+                                  inputMode="text"
+                                  {...INPUT}
+                                  value={copy.keyword}
+                                  disabled={busy}
+                                  aria-invalid={copyErrors?.keyword}
+                                  onChange={(e) =>
+                                    patch({
+                                      type: 'copy',
+                                      id: cut.id,
+                                      index: j,
+                                      patch: { keyword: e.target.value },
+                                    })
+                                  }
+                                />
+                                {copyErrors?.keyword && (
+                                  <FieldMessage>{t('correction.keywordError')}</FieldMessage>
+                                )}
+                              </div>
+                            )}
                           <div>
                             <FieldLabel
                               id={`${prefix}-accent-${j}-label`}
@@ -516,6 +567,15 @@ export function ClipCorrectionWorkspace({
                               }))}
                             />
                           </div>
+                          {isRapidCut(cut) && (
+                            <Button
+                              variant="secondary"
+                              disabled={busy || cut.copies.length < 2}
+                              onClick={() => patch({ type: 'removeCopy', id: cut.id, index: j })}
+                            >
+                              {t('pace.removePhrase', { number: j + 1 })}
+                            </Button>
+                          )}
                         </Fragment>
                       )
                     })}
@@ -523,7 +583,16 @@ export function ClipCorrectionWorkspace({
                         sentence leads to as a second copy, after the first has
                         left. Nothing else may be added, and it is removed the
                         same way. */}
-                    {(cut.copies.length > 1 || allowsSecondCopy(cut)) && (
+                    {isRapidCut(cut) && (
+                      <Button
+                        variant="secondary"
+                        disabled={busy || !canAddRapid(cut)}
+                        onClick={() => patch({ type: 'addCopy', id: cut.id })}
+                      >
+                        {t('pace.addPhrase')}
+                      </Button>
+                    )}
+                    {!isRapidCut(cut) && (cut.copies.length > 1 || allowsSecondCopy(cut)) && (
                       <div>
                         <Button
                           variant="secondary"

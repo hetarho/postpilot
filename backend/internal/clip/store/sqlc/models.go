@@ -41,6 +41,7 @@ type ClipProject struct {
 	Deleting             int64
 	Disclosure           string
 	Cta                  string
+	HideDisclosure       int64
 }
 
 type ClipSourceBatch struct {
@@ -81,4 +82,5 @@ type VideoTemplate struct {
 	CreatedAt         string
 	UpdatedAt         string
 	Preset            string
+	CaptionPace       string
 }

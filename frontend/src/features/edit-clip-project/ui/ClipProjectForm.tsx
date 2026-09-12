@@ -21,6 +21,7 @@ import {
   ActionBar,
   AppFailureMessage,
   Button,
+  Checkbox,
   Dialog,
   FieldLabel,
   FieldMessage,
@@ -211,6 +212,13 @@ export function ClipProjectForm({
               ]}
               aria-invalid={draft.disclosure === ''}
             />
+            <label className="mt-4 flex min-h-11 cursor-pointer items-center gap-3">
+              <Checkbox
+                checked={!draft.hideDisclosure}
+                onChange={(event) => change('hideDisclosure', !event.target.checked)}
+              />
+              <Typography variant="body">{t('project.showDisclosure')}</Typography>
+            </label>
             {draft.disclosure === '' && (
               <FieldMessage>{t('project.disclosureRequired')}</FieldMessage>
             )}

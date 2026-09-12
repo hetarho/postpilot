@@ -73,7 +73,7 @@ func BuildPlanPrompt(in clip.PlanningInput, fadeMS int) (string, string) {
 	// can never offer the model a label the parser will not accept.
 	system := strings.ReplaceAll(planPrompt, "{{chips}}", strings.Join(design.Fact.Chips, " · ")) + string(planSchema)
 	return system, promptJSON(map[string]any{
-		"template": map[string]any{"name": in.Template.Name, "information_fields": fields, "cut_guidance": in.Template.CutGuidance, "copy_styles": in.Template.CopyStyles, "accent": in.Template.Accent},
+		"template": map[string]any{"name": in.Template.Name, "information_fields": fields, "cut_guidance": in.Template.CutGuidance, "copy_styles": in.Template.CopyStyles, "caption_pace": in.Template.CaptionPace, "accent": in.Template.Accent},
 		"answers":  answers, "ratio": in.Ratio, "target_duration_ms": in.TargetDurationMS, "fade_ms": fadeMS, "analyses": analyses,
 	})
 }

@@ -39,3 +39,22 @@ func TestCorrectionWireRoundtripAndConflict(t *testing.T) {
 		t.Fatal("owner or ratio became editable")
 	}
 }
+
+func TestRapidCorrectionWireKeepsEveryCue(t *testing.T) {
+	copies, _ := clip.SplitRapid(clip.Caption{Text: "오늘은 구로디지털단지에 와보았는데요", Style: "simple", Anchor: "bottom", Align: "center"}, 120, 1420)
+	s := &clip.CorrectionState{Plan: clip.CorrectionPlan{Cuts: []clip.CorrectionCut{{ID: "one", Copies: copies}}}, CopyStyles: []string{"clean", "simple"}}
+	raw, err := protojson.Marshal(editingProto(s))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var decoded v1.ClipEditingState
+	if err := protojson.Unmarshal(raw, &decoded); err != nil {
+		t.Fatal(err)
+	}
+	if got := correctionPlan(decoded.Plan); !reflect.DeepEqual(got, s.Plan) {
+		t.Fatal(got)
+	}
+	if got := templateProto(clip.VideoTemplate{Recipe: clip.Recipe{CaptionPace: "rapid"}}); got.CaptionPace != "rapid" {
+		t.Fatal(got)
+	}
+}

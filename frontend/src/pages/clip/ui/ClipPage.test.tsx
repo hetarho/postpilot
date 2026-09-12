@@ -63,6 +63,28 @@ async function fillSetup() {
   return user
 }
 describe('clip directory and setup', () => {
+  it('autosaves disclosure visibility independently and restores it after reopening', async () => {
+    const user = userEvent.setup()
+    const updates: ClipProjectDraft[] = []
+    const { router } = mount('/clips/project', { projectWrites: updates })
+    const toggle = await screen.findByRole('checkbox', { name: '영상에 광고·협찬 표시' })
+    expect(toggle).toBeChecked()
+    await user.click(toggle)
+    await waitFor(() =>
+      expect(updates).toContainEqual(
+        expect.objectContaining({ hideDisclosure: true, disclosure: 'ad' }),
+      ),
+    )
+    await router.navigate({ to: '/clips' })
+    await router.navigate({ to: '/clips/$clipId', params: { clipId: 'project' } })
+    expect(await screen.findByRole('checkbox', { name: '영상에 광고·협찬 표시' })).not.toBeChecked()
+    await user.click(screen.getByRole('checkbox', { name: '영상에 광고·협찬 표시' }))
+    await waitFor(() =>
+      expect(updates).toContainEqual(
+        expect.objectContaining({ hideDisclosure: false, disclosure: 'ad' }),
+      ),
+    )
+  })
   it('guards authenticated routes and does not load clips without a session', async () => {
     const calls: string[] = []
     const { router } = renderAppAt('/clips', { calls })

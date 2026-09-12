@@ -285,6 +285,24 @@ export function ClipTemplateEditor({
             />
             {errors.preset && <FieldMessage>{t('validation.preset')}</FieldMessage>}
           </div>
+          <div>
+            <FieldLabel id="clip-pace-label" htmlFor="clip-pace">
+              {t('pace.label')}
+            </FieldLabel>
+            <Listbox
+              id="clip-pace"
+              aria-labelledby="clip-pace-label"
+              value={draft.captionPace ?? 'steady'}
+              onChange={(value) => change('captionPace', value)}
+              options={(['steady', 'rapid'] as const).map((value) => ({
+                value,
+                label: t(`pace.${value}`),
+              }))}
+            />
+            <Typography variant="body" className="text-content-secondary mt-2">
+              {t('pace.help')}
+            </Typography>
+          </div>
           <section aria-labelledby="clip-styles-heading">
             <Typography variant="title" id="clip-styles-heading">
               {t('editor.styles')}

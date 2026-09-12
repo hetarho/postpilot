@@ -8,7 +8,7 @@ import design from './clip-design.json'
 
 export const CLIP_DESIGN = design
 
-export type ClipStyleId = 'clean' | 'memo' | 'bold' | 'mark'
+export type ClipStyleId = 'clean' | 'memo' | 'bold' | 'mark' | 'simple'
 export type ClipRatioId = 'vertical' | 'horizontal' | 'square'
 export type ClipPresetId = keyof typeof design.presets
 export type ClipDisclosureId = keyof typeof design.disclosure
@@ -55,3 +55,6 @@ export const CLIP_VOICE = design.voice
 /** The type scale itself, for the two texts that answer to a role rather than to
  *  a copy style: the hook card's sentence and its category chip (CDS-28). */
 export const CLIP_TYPE = design.type
+
+export type ClipCaptionPace = 'steady' | 'rapid'
+export const CLIP_RAPID = design.rapid

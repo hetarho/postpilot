@@ -72,7 +72,7 @@ func TestRatioLayoutsMatchCDS46To48(t *testing.T) {
 			HookCard: design.CardBox{Width: 792, CenterY: 840},
 			EndCard:  design.CardBox{Width: 792, CenterY: 1040},
 			Chip:     design.ChipStack{X: 96, Y: 80, MaxWidth: 600, Columns: 1},
-			Badge:    design.BadgeBox{Right: 888, Top: 80},
+			Badge:    design.BadgeBox{Right: 984, Top: 80},
 			// CDS-32 states both 9:16 scrim rectangles exactly.
 			ScrimTop:    design.Region{Y: 40, Width: 1080, Height: 310},
 			ScrimBottom: design.Region{Y: 1040, Width: 1080, Height: 380},
@@ -120,6 +120,7 @@ func TestTypeScaleAndCharacterCountsMatchCDS19And20(t *testing.T) {
 		// CDS-25's parenthetical made conditional on it being bundled. It is now.
 		"title":   {Size: 72, Min: 64, Face: "paperlogy", Weight: 800, Tracking: -0.02, LineHeight: 1.2, Chars: 11},
 		"mark":    {Size: 60, Min: 52, Face: "pretendard", Weight: 800, Tracking: -0.01, LineHeight: 1.3},
+		"simple":  {Size: 56, Min: 48, Face: "pretendard", Weight: 600, Tracking: 0.03, LineHeight: 1.3, Chars: 14},
 		"body":    {Size: 56, Min: 48, Face: "pretendard", Weight: 700, Tracking: -0.01, LineHeight: 1.3, Chars: 14},
 		"caption": {Size: 44, Min: 40, Face: "pretendard", Weight: 600, Tracking: 0, LineHeight: 1.3, Chars: 18},
 		"label":   {Size: 36, Min: 34, Face: "pretendard", Weight: 600, Tracking: 0.02, LineHeight: 1.2},
@@ -196,6 +197,7 @@ func TestColourAndSpacingTokensMatchCDS14And15And21(t *testing.T) {
 func TestStylesMotionTimingTransitionAudioAndLuma(t *testing.T) {
 	// CDS-22 through CDS-26: four styles, one per role.
 	styles := map[string]design.StyleRule{
+		"simple": {Type: "simple", Lines: 2, Chars: 14, Anchor: "bottom", Align: "center", Stroke: "mark", Shadow: "text"},
 		// CDS-23: plate, bar, pad.box with the bar inside a 40 px left inset.
 		"clean": {Type: "body", Plate: "ink_900", Lines: 2, Chars: 14, Anchor: "bottom", Align: "center",
 			Padding: design.Pad{V: 22, H: 32}, PadLeft: 40, Bar: true},

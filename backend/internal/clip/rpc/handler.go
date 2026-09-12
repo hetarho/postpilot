@@ -171,14 +171,14 @@ func answers(values []*v1.ClipAnswer) []clip.Answer {
 	return out
 }
 func templateProto(t clip.VideoTemplate) *v1.VideoTemplate {
-	out := &v1.VideoTemplate{Id: t.ID, Name: t.Name, CutGuidance: t.CutGuidance, CopyStyles: t.CopyStyles, Accent: t.Accent, Preset: t.Preset, ProjectCount: int32(t.ProjectCount), CreatedAt: t.CreatedAt.UTC().Format(time.RFC3339Nano), UpdatedAt: t.UpdatedAt.UTC().Format(time.RFC3339Nano)}
+	out := &v1.VideoTemplate{Id: t.ID, Name: t.Name, CutGuidance: t.CutGuidance, CopyStyles: t.CopyStyles, CaptionPace: t.CaptionPace, Accent: t.Accent, Preset: t.Preset, ProjectCount: int32(t.ProjectCount), CreatedAt: t.CreatedAt.UTC().Format(time.RFC3339Nano), UpdatedAt: t.UpdatedAt.UTC().Format(time.RFC3339Nano)}
 	for _, f := range t.InformationFields {
 		out.InformationFields = append(out.InformationFields, &v1.ClipInformationField{Label: f.Label, Prompt: f.Prompt})
 	}
 	return out
 }
 func projectProto(p clip.Project) *v1.ClipProject {
-	out := &v1.ClipProject{Id: p.ID, Title: p.Title, VideoTemplateId: p.VideoTemplateID, Ratio: p.Ratio, Disclosure: p.Disclosure, Cta: p.CTA, TargetDurationMs: int32(p.TargetDurationMS), EditPlanRevision: int32(p.EditPlanRevision), RenderedPlanRevision: int32(p.RenderedPlanRevision), CreatedAt: p.CreatedAt.UTC().Format(time.RFC3339Nano), UpdatedAt: p.UpdatedAt.UTC().Format(time.RFC3339Nano)}
+	out := &v1.ClipProject{Id: p.ID, Title: p.Title, VideoTemplateId: p.VideoTemplateID, Ratio: p.Ratio, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, Cta: p.CTA, TargetDurationMs: int32(p.TargetDurationMS), EditPlanRevision: int32(p.EditPlanRevision), RenderedPlanRevision: int32(p.RenderedPlanRevision), CreatedAt: p.CreatedAt.UTC().Format(time.RFC3339Nano), UpdatedAt: p.UpdatedAt.UTC().Format(time.RFC3339Nano)}
 	for _, a := range p.Answers {
 		out.Answers = append(out.Answers, &v1.ClipAnswer{Label: a.Label, Text: a.Text})
 	}
@@ -208,7 +208,7 @@ func (h *Handler) CreateVideoTemplate(ctx context.Context, req *connect.Request[
 		return nil, err
 	}
 	m := req.Msg
-	value, err := h.service.CreateTemplate(ctx, user, clip.Recipe{Name: m.Name, InformationFields: fields(m.InformationFields), CutGuidance: m.CutGuidance, CopyStyles: m.CopyStyles, Accent: m.Accent, Preset: m.Preset})
+	value, err := h.service.CreateTemplate(ctx, user, clip.Recipe{Name: m.Name, InformationFields: fields(m.InformationFields), CutGuidance: m.CutGuidance, CopyStyles: m.CopyStyles, CaptionPace: m.CaptionPace, Accent: m.Accent, Preset: m.Preset})
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -225,6 +225,7 @@ func (h *Handler) UpdateVideoTemplate(ctx context.Context, req *connect.Request[
 		v := fields(m.InformationFields.Values)
 		p.InformationFields = &v
 	}
+	p.CaptionPace = m.CaptionPace
 	if m.CopyStyles != nil {
 		p.CopyStyles = &m.CopyStyles.Values
 	}
@@ -295,7 +296,7 @@ func (h *Handler) CreateClipProject(ctx context.Context, req *connect.Request[v1
 		return nil, err
 	}
 	m := req.Msg
-	value, err := h.service.CreateProject(ctx, user, clip.ProjectInput{Title: m.Title, VideoTemplateID: m.VideoTemplateId, Ratio: m.Ratio, TargetDurationMS: int(m.TargetDurationMs), Disclosure: m.Disclosure, CTA: m.Cta, Answers: answers(m.Answers)})
+	value, err := h.service.CreateProject(ctx, user, clip.ProjectInput{Title: m.Title, VideoTemplateID: m.VideoTemplateId, Ratio: m.Ratio, TargetDurationMS: int(m.TargetDurationMs), Disclosure: m.Disclosure, HideDisclosure: m.HideDisclosure, CTA: m.Cta, Answers: answers(m.Answers)})
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -349,7 +350,7 @@ func (h *Handler) UpdateClipProject(ctx context.Context, req *connect.Request[v1
 		return nil, err
 	}
 	m := req.Msg
-	p := clip.ProjectPatch{Title: m.Title, VideoTemplateID: m.VideoTemplateId, Disclosure: m.Disclosure, CTA: m.Cta, Answers: answers(m.Answers)}
+	p := clip.ProjectPatch{Title: m.Title, VideoTemplateID: m.VideoTemplateId, Disclosure: m.Disclosure, HideDisclosure: m.HideDisclosure, CTA: m.Cta, Answers: answers(m.Answers)}
 	if m.TargetDurationMs != nil {
 		v := int(*m.TargetDurationMs)
 		p.TargetDurationMS = &v

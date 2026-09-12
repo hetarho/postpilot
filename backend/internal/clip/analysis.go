@@ -56,6 +56,7 @@ type PlanningInput struct {
 	// against the template's preset, so the composer and the cards read one
 	// place (CDS-29, CDS-31). The preset itself rides Template.
 	Disclosure, CTA string
+	HideDisclosure  bool
 }
 
 // CutScene is the scene of the segment a cut starts in, and ReadableText is
