@@ -26,7 +26,7 @@
 | MKT | 4 | 4 | - | 0 |
 | VIDEO | 2 | 2 | - | 1 |
 | CLIP | 7 | 7 | - | 0 |
-| CDS | 5 | 5 | - | 2 |
+| CDS | 6 | 6 | - | 2 |
 | BILL | 4 | 4 | - | 0 |
 
 ## review
@@ -41,11 +41,15 @@
 | T110 | Release QA on the Naver app and the overlay measurement | CDS CLIP | T108 | blocked@260912 |
 
 ## next
-- Future overlay designs can use the T119 asset catalog and docs/design/overlay-presets.md; layout/metric changes must also update the adapter and its manifest contract. Remaining visual-contract gaps are listed in docs/audits/recent-commits-260912.md; the current appearance remains unapproved.
+- Review the T120 shorts example in Downloads/postpilot-shorts-svg-review-jczalhd6; the optional SVG catalog is backend/examples/overlays/shorts-editorial. Shared alignment is corrected under CDS r6; the sample theme awaits visual feedback before default-theme adoption. Other visual-contract gaps remain recorded in the T119 audit.
 - T110 remains owner-blocked: privately load a 9:16 clip with both cards in the Naver picker without publishing, capture the clip-tab overlays and supply the images for CDS-11 measurement. Remaining CDS interpretations are recorded in the results of T107, T108, T109 and T115 (contrast/card geometry, audio seams, exposure and frequency, footage-bound duration).
 - T008 needs the owner present: refresh PUB@5 / ARCH@2, rerun postpilot-agent setup before installation for driver signature smarteditor-one-20260910-a6, and cancel or deliberately reuse the queued 20260905-test job; after completion, update PUB for VIDEO-17 and TMPL-39.
 
 ## log
+- 260912 T120 done (sht); aligned header glyphs and the shared vertical grid, added an opt-in shorts SVG catalog and retained the final 20 s video plus editable/filled SVGs; all eight originals pass at 512 MiB / 2 CPU, 122.571 s render, zero collisions/OOM and $0; local gates and 27 release scenarios pass, no default-theme rollout
+- 260912 create-task and implement-task T120 claimed (sht); measured alignment, common grid and opt-in shorts SVG catalog with real owner-footage review
+- 260912 update-ssot CDS r6 done (sht); shared vertical grid and measured header alignment; T110 must refresh CDS r6 on resume; the SVG example stays an opt-in review asset
+- 260912 update-ssot CDS start (sht); align disclosure and facts on one header row and one shared vertical grid; create an opt-in SVG shorts example and render owner originals for visual review
 - 260912 T119 done (svg); audited 67 commits and corrected CLIP/CDS/PUB/MODEL documentation; file-based SVG catalog preserves default pixels and accepts new trusted presets; all local gates and 27 release scenarios pass, both eight-original videos match the T118 SHA-256 at 512 MiB / 2 CPU, 146.607/135.166 s, no OOM, $0; artifacts retained for review, no new visual approval or deployment
 - 260912 create-task and implement-task T119 claimed (svg); file catalog, typed overlay views and identical-output verification under current visual policy
 - 260912 update-ssot CLIP CDS PUB MODEL done (svg); document existing duration/style/admission/list-refresh behavior and remove stale unbuilt claims; create-task consumed these documentation-only deltas with no code impact; T008 must read PUB r5 metadata correction on resume, and T110 must read CDS r5 style exception on resume
@@ -60,7 +64,3 @@
 - 260912 create-task CDS done (ovl); r4 → T117, overlap advisory throughout delivery
 - 260912 create-task CDS start (ovl)
 - 260912 update-ssot CDS done (ovl); r4 makes overlap advisory throughout delivery, including furniture and manual plans; other checks remain enforced
-- 260912 update-ssot CDS start (ovl); overlap becomes advisory in automatic generation and manual rerendering
-- 260912 clip overlap hotfix start (ovl); investigate caption collision failures and verify non-blocking delivery against the eight local source videos
-- 260912 T116 done (fbl); a compiled plan whose manifest fails a check walks CDS-55's ladder before any download — style → 깔끔하게, anchor → the style's default, drop — at both pre-download verify points (`Render` and `Layout`, which now returns the repaired plan the composer stores); the verifier names the failing caption's slot (`design.Failure`, `clip.LayoutError`), furniture fails at once, a person's plan is refused untouched, the post-sample contrast fallback is rung 1 of the same ladder, every rung is recorded on `Composition.Fallback`, and the post-render verify stays hard (RENDER.md)
-- 260912 T115 done (fbl); CDS-37 is a target: `design.CutBounds(scene, preset)` reads the preset's range, `holdCutLengths` never refuses and `plan_cut_length` is gone, the reconciliation runs a target pass then a footage/fade-floor pass so a reachable timeline is never refused; the recorded single take compiles again. The release gate is GREEN again: the renderer's per-cut source requests are served from one held download (`renderLoader`), the timing fixture reads the 음식점 preset's ends, the workspace bound counts T107's card measurement, and the speech probes map through the persisted plan

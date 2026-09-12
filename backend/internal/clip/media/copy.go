@@ -423,9 +423,10 @@ func keywordValues(candidates [][]string, keyword string) []string {
 // plated, so neither needs brightness sampling (CDS-16), and both are typeset
 // from the same font and the same tokens as copy.
 type chip struct {
-	Label, Value string
-	Region       clip.Region
-	LabelWidth   float64
+	Label, Value             string
+	Region                   clip.Region
+	LabelWidth               float64
+	LabelBounds, ValueBounds clip.Region
 }
 type furniture struct {
 	Badge       clip.Region
@@ -438,25 +439,52 @@ type furniture struct {
 // badgeAndChips measures the phrase and every chip's text, then places them.
 // The measurement is the only impure half, exactly as it is for copy.
 func (r *Rendering) badgeAndChips(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, ratio, phrase string, labels []string, answers map[string]string) (furniture, error) {
-	values := []string{phrase}
-	seen := map[string]bool{phrase: true}
+	groups := map[string][]string{"badge": {phrase}}
 	for _, label := range labels {
-		for _, v := range []string{label, strings.TrimSpace(answers[label])} {
-			if v != "" && !seen[v] {
-				values, seen[v] = append(values, v), true
-			}
+		if value := strings.TrimSpace(answers[label]); value != "" {
+			groups["label"] = append(groups["label"], label)
+			groups["caption"] = append(groups["caption"], value)
 		}
 	}
-	role := design.Type["badge"]
-	if err := r.checkCopy(strings.Join(values, "")+ellipsis, role); err != nil {
-		return furniture{}, err
+	bounds := map[string]clip.Region{}
+	for _, name := range []string{"badge", "label", "caption"} {
+		values := groups[name]
+		if len(values) == 0 {
+			continue
+		}
+		role := design.Type[name]
+		if err := r.checkCopy(strings.Join(values, "")+ellipsis, role); err != nil {
+			return furniture{}, err
+		}
+		measured, err := r.measure(ctx, ws, values, role.Weight, role.Tracking, r.family(role))
+		if err != nil {
+			return furniture{}, err
+		}
+		for text, box := range measured {
+			bounds[furnitureKey(name, text)] = box
+		}
 	}
-	bounds, err := r.measure(ctx, ws, values, role.Weight, role.Tracking, r.family(role))
+	out, err := placeFurniture(canvas, ratio, phrase, labels, answers, bounds)
 	if err != nil {
-		return furniture{}, err
+		return out, err
 	}
-	return placeFurniture(canvas, ratio, phrase, labels, answers, bounds)
+	// Truncation can change the visible ascent/descent. Centre the glyphs that
+	// are actually delivered, while retaining the reserved textLength bound.
+	role := design.Type["caption"]
+	for i, c := range out.Chips {
+		if c.Value == strings.TrimSpace(answers[c.Label]) {
+			continue
+		}
+		measured, err := r.measure(ctx, ws, []string{c.Value}, role.Weight, role.Tracking, r.family(role))
+		if err != nil {
+			return out, err
+		}
+		out.Chips[i].ValueBounds = scaled(measured[c.Value], role.Size/100)
+	}
+	return out, nil
 }
+
+func furnitureKey(role, value string) string { return role + "\x00" + value }
 
 // placeFurniture puts the disclosure badge at its ratio's fixed corner and
 // stacks at most two chips from the priority it was given (CDS-30, CDS-31).
@@ -467,14 +495,15 @@ func placeFurniture(canvas clip.Canvas, ratio, phrase string, labels []string, a
 		return out, clip.ErrInvalid
 	}
 	badgeRole, labelRole, valueRole := design.Type["badge"], design.Type["label"], design.Type["caption"]
-	b := scaled(bounds[phrase], badgeRole.Size/100)
+	b := scaled(bounds[furnitureKey("badge", phrase)], badgeRole.Size/100)
 	out.BadgeBounds = b
-	width, height := math.Ceil(b.Width+2*badgePadH), math.Ceil(b.Height+2*badgePadV)
+	pad, gap := design.Spacing.PadChip, design.Spacing.GapStack
+	rowHeight := math.Ceil(math.Max(badgeRole.Size+2*badgePadV, math.Max(labelRole.Size, valueRole.Size)+2*pad.V))
+	width, height := math.Ceil(b.Width+2*badgePadH), rowHeight
 	out.Badge = clip.Region{X: l.Badge.Right - width, Y: l.Badge.Top, Width: width, Height: height}
 	if out.Badge.X < canvas.Safe.X || out.Badge.Y+height > canvas.Safe.Y+canvas.Safe.Height {
 		return out, clip.ErrInvalid
 	}
-	pad, gap := design.Spacing.PadChip, design.Spacing.GapStack
 	x, y := l.Chip.X, l.Chip.Y
 	for _, label := range labels {
 		if len(out.Chips) >= maxChips {
@@ -484,14 +513,18 @@ func placeFurniture(canvas clip.Canvas, ratio, phrase string, labels []string, a
 		if value == "" {
 			continue
 		}
-		lb := scaled(bounds[label], labelRole.Size/100)
-		vb := scaled(bounds[value], valueRole.Size/100)
+		lb := scaled(bounds[furnitureKey("label", label)], labelRole.Size/100)
+		vb := scaled(bounds[furnitureKey("caption", value)], valueRole.Size/100)
 		// A chip is at most 600 px wide (CDS-30). A value that does not fit is
 		// CUT and given an ellipsis rather than squeezed: the face is fixed
 		// (CDS-18), so distorting its glyphs is the worse failure. The cut is
 		// proportional to the measured width, and textLength in the SVG is the
 		// hard bound that keeps an imperfect estimate inside the pill.
-		room := l.Chip.MaxWidth - 2*pad.H - lb.Width - design.Spacing.GapChip
+		maxWidth := math.Min(l.Chip.MaxWidth, out.Badge.X-gap-x)
+		room := maxWidth - 2*pad.H - lb.Width - design.Spacing.GapChip
+		if room <= 0 {
+			break
+		}
 		if vb.Width > room {
 			runes := []rune(value)
 			keep := int(float64(len(runes)) * room / vb.Width)
@@ -501,9 +534,9 @@ func placeFurniture(canvas clip.Canvas, ratio, phrase string, labels []string, a
 			value = string(runes[:keep]) + ellipsis
 			vb.Width = room
 		}
-		w := math.Min(l.Chip.MaxWidth, math.Ceil(lb.Width+design.Spacing.GapChip+vb.Width+2*pad.H))
-		h := math.Ceil(math.Max(lb.Height, vb.Height) + 2*pad.V)
-		c := chip{Label: label, Value: value, LabelWidth: lb.Width, Region: clip.Region{X: x, Y: y, Width: w, Height: h}}
+		w := math.Min(maxWidth, math.Ceil(lb.Width+design.Spacing.GapChip+vb.Width+2*pad.H))
+		h := rowHeight
+		c := chip{Label: label, Value: value, LabelWidth: lb.Width, LabelBounds: lb, ValueBounds: vb, Region: clip.Region{X: x, Y: y, Width: w, Height: h}}
 		if c.Region.X+w > canvas.Safe.X+canvas.Safe.Width || c.Region.Y+h > canvas.Safe.Y+canvas.Safe.Height {
 			break
 		}

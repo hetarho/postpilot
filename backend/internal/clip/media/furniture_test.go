@@ -1,6 +1,7 @@
 package media
 
 import (
+	"math"
 	"strings"
 	"testing"
 
@@ -8,28 +9,55 @@ import (
 	"github.com/postpilot/backend/internal/clip/design"
 )
 
+func TestHeaderSharesOneRowAndReservesLongDisclosure(t *testing.T) {
+	for _, ratio := range []string{"vertical", "horizontal", "square"} {
+		canvas, _ := clip.ClipCanvas(ratio)
+		phrase := design.Disclosure["paid"]
+		answers := map[string]string{"위치": strings.Repeat("넓은 공간 ", 20)}
+		bounds := furnitureBounds(answers, []string{"위치"})
+		bounds[furnitureKey("badge", phrase)] = clip.Region{X: 2, Y: -71, Width: 1100, Height: 75}
+		bounds[furnitureKey("label", "위치")] = clip.Region{X: 4, Y: -72, Width: 180, Height: 75}
+		bounds[furnitureKey("caption", strings.TrimSpace(answers["위치"]))] = clip.Region{X: 3, Y: -80, Width: 12000, Height: 92}
+		f, err := placeFurniture(canvas, ratio, phrase, []string{"위치"}, answers, bounds)
+		if err != nil || len(f.Chips) != 1 {
+			t.Fatalf("%s: %+v %v", ratio, f, err)
+		}
+		c := f.Chips[0]
+		if c.Region.Y != f.Badge.Y || c.Region.Height != f.Badge.Height || c.Region.X+c.Region.Width+design.Spacing.GapStack > f.Badge.X {
+			t.Fatalf("%s header is misaligned or overlaps: %+v", ratio, f)
+		}
+		v := furnitureView(canvas, f)
+		centre := f.Badge.Y + f.Badge.Height/2
+		for _, actual := range []float64{v.Label.Y + f.BadgeBounds.Y + f.BadgeBounds.Height/2, v.Chips[0].Label.Y + c.LabelBounds.Y + c.LabelBounds.Height/2, v.Chips[0].Value.Y + c.ValueBounds.Y + c.ValueBounds.Height/2} {
+			if math.Abs(actual-centre) > 0.001 {
+				t.Fatalf("%s glyph centre %v, header centre %v", ratio, actual, centre)
+			}
+		}
+	}
+}
+
 // Measured glyph boxes at 100 px, the shape r.measure returns: every label, its
 // value and the disclosure phrase.
 func furnitureBounds(answers map[string]string, labels []string) map[string]clip.Region {
 	out := map[string]clip.Region{}
 	for _, phrase := range design.Disclosure {
-		out[phrase] = clip.Region{X: 2, Y: -70, Width: 300, Height: 90}
+		out[furnitureKey("badge", phrase)] = clip.Region{X: 2, Y: -70, Width: 300, Height: 90}
 	}
 	for _, label := range labels {
-		out[label] = clip.Region{X: 2, Y: -70, Width: 200, Height: 90}
-		out[strings.TrimSpace(answers[label])] = clip.Region{X: 2, Y: -70, Width: 420, Height: 90}
+		out[furnitureKey("label", label)] = clip.Region{X: 2, Y: -70, Width: 200, Height: 90}
+		out[furnitureKey("caption", strings.TrimSpace(answers[label]))] = clip.Region{X: 2, Y: -70, Width: 420, Height: 90}
 	}
 	return out
 }
 
-// The badge's right edge and top are the ratio's own (CDS-31: 888/270 on 9:16,
-// 1824/92 on 16:9 and 1016/92 on 1:1), and the chip stack starts at the ratio's
+// The badge's right edge and top are the ratio's own (CDS-31: 888/290 on 9:16,
+// 1824/112 on 16:9 and 1016/112 on 1:1), and the chip stack starts at the ratio's
 // chip origin, stacked on 9:16 and 1:1 and two across on 16:9 (CDS-30, CDS-47).
 func TestBadgeGeometryAndChipStackPerRatio(t *testing.T) {
 	answers := map[string]string{"위치": "서울 연남동", "가격": "9,900원", "메뉴": "김밥"}
 	labels := []string{"위치", "가격", "메뉴"}
 	bounds := furnitureBounds(answers, labels)
-	for ratio, badge := range map[string][2]float64{"vertical": {888, 270}, "horizontal": {1824, 92}, "square": {1016, 92}} {
+	for ratio, badge := range map[string][2]float64{"vertical": {888, 290}, "horizontal": {1824, 112}, "square": {1016, 112}} {
 		canvas, _ := clip.ClipCanvas(ratio)
 		l, _ := design.Layout(ratio)
 		f, err := placeFurniture(canvas, ratio, design.Disclosure["ad"], labels, answers, bounds)
@@ -94,7 +122,7 @@ func TestLongChipValueIsCutWithAnEllipsis(t *testing.T) {
 	long := strings.TrimSpace(strings.Repeat("서울특별시 마포구 연남동 ", 4))
 	answers := map[string]string{"위치": long}
 	bounds := furnitureBounds(answers, []string{"위치"})
-	bounds[long] = clip.Region{X: 2, Y: -70, Width: 4000, Height: 90}
+	bounds[furnitureKey("caption", long)] = clip.Region{X: 2, Y: -70, Width: 4000, Height: 90}
 	f, err := placeFurniture(canvas, "vertical", design.Disclosure["ad"], []string{"위치"}, answers, bounds)
 	if err != nil {
 		t.Fatal(err)

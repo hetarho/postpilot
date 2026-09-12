@@ -91,11 +91,11 @@ func furnitureView(canvas clip.Canvas, f furniture) overlay.FurnitureView {
 	ink, inkAlpha := paint("ink_900")
 	p := f.Badge
 	v.Badge = overlayBox(p, p.Height/2, badge, badgeAlpha)
-	v.Label = overlayText(design.Type["badge"], f.BadgeText, p.X+badgePadH-f.BadgeBounds.X, p.Y+badgePadV-f.BadgeBounds.Y, white, "")
+	v.Label = overlayText(design.Type["badge"], f.BadgeText, p.X+badgePadH-f.BadgeBounds.X, p.Y+(p.Height-f.BadgeBounds.Height)/2-f.BadgeBounds.Y, white, "")
 	for _, c := range f.Chips {
-		x, baseline := c.Region.X+design.Spacing.PadChip.H, c.Region.Y+c.Region.Height-design.Spacing.PadChip.V
-		label := overlayText(design.Type["label"], c.Label, x, baseline, muted, mutedAlpha)
-		value := overlayText(design.Type["caption"], c.Value, x+c.LabelWidth+design.Spacing.GapChip, baseline, white, "")
+		x := c.Region.X + design.Spacing.PadChip.H
+		label := overlayText(design.Type["label"], c.Label, x-c.LabelBounds.X, c.Region.Y+(c.Region.Height-c.LabelBounds.Height)/2-c.LabelBounds.Y, muted, mutedAlpha)
+		value := overlayText(design.Type["caption"], c.Value, x+c.LabelWidth+design.Spacing.GapChip-c.ValueBounds.X, c.Region.Y+(c.Region.Height-c.ValueBounds.Height)/2-c.ValueBounds.Y, white, "")
 		value.Length = math.Max(1, c.Region.Width-2*design.Spacing.PadChip.H-c.LabelWidth-design.Spacing.GapChip)
 		v.Chips = append(v.Chips, overlay.Chip{Box: overlayBox(c.Region, c.Region.Height/2, ink, inkAlpha), Label: label, Value: value})
 	}

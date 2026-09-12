@@ -178,11 +178,9 @@ func (r *Rendering) measureCard(ctx context.Context, ws clip.MediaWorkspace, can
 		}
 	}
 	card.Bounds = bounds
-	card.Region = clip.Region{X: (float64(canvas.Width) - width) / 2, Y: box.CenterY - math.Ceil(height)/2, Width: width, Height: math.Ceil(height)}
-	// CDS-28 states the 9:16 card as x 144–936, which is sixteen pixels wider
-	// than CDS-9's safe area on each of two sides. The plate may sit there; its
-	// TEXT may not, so what is checked against the safe area is the padded band
-	// the lines are set in, and the plate only against the frame.
+	card.Region = clip.Region{X: l.Anchor.Center - width/2, Y: box.CenterY - math.Ceil(height)/2, Width: width, Height: math.Ceil(height)}
+	// Cards and centred copy share the ratio grid; the padded text band must
+	// remain inside the safe area, and the plate inside the frame.
 	band := clip.Region{X: card.Region.X + pad, Y: card.Region.Y + pad, Width: inner, Height: card.Region.Height - 2*pad}
 	frame := clip.Region{Width: float64(canvas.Width), Height: float64(canvas.Height)}
 	if !inside(band, canvas.Safe) || !inside(card.Region, frame) {

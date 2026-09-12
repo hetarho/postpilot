@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="{{.Width}}" height="{{.Height}}">
+  <defs><filter id="end-shadow" x="-20%" y="-30%" width="140%" height="160%"><feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.75"/></filter></defs>
+  {{if not .Empty}}
+  {{with .Plate}}<rect x="{{.X}}" y="{{.Y}}" width="6" height="{{.Height}}" rx="3" fill="#9BD53A"/>{{end}}
+  {{range .Lines}}{{with .Text}}
+  <text x="{{.X}}" y="{{.Y}}" xml:space="preserve" font-family="{{.Family}}" font-size="{{.Size}}" font-weight="{{.Weight}}" letter-spacing="{{.Tracking}}" fill="{{.Fill}}" fill-opacity="{{.Opacity}}" stroke="#111111" stroke-width="4" stroke-linejoin="round" paint-order="stroke fill" filter="url(#end-shadow)">{{.Value}}</text>
+  {{end}}{{end}}{{end}}
+</svg>

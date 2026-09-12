@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="{{.Width}}" height="{{.Height}}">
+  {{with .Badge}}<rect x="{{.X}}" y="{{.Y}}" width="{{.Width}}" height="{{.Height}}" rx="6" fill="#111111" fill-opacity="0.8"/>{{end}}
+  {{with .Label}}<text x="{{.X}}" y="{{.Y}}" font-family="{{.Family}}" font-size="{{.Size}}" font-weight="{{.Weight}}" letter-spacing="{{.Tracking}}" fill="#FFFFFF">{{.Value}}</text>{{end}}
+  {{range .Chips}}
+  <rect x="{{.X}}" y="{{.Y}}" width="{{.Width}}" height="{{.Height}}" rx="6" fill="#111111" fill-opacity="0.86"/>
+  {{with .Label}}<text x="{{.X}}" y="{{.Y}}" font-family="{{.Family}}" font-size="{{.Size}}" font-weight="{{.Weight}}" letter-spacing="{{.Tracking}}" fill="#FFFFFF" fill-opacity="0.72">{{.Value}}</text>{{end}}
+  {{with .Value}}<text x="{{.X}}" y="{{.Y}}" font-family="{{.Family}}" font-size="{{.Size}}" font-weight="{{.Weight}}" letter-spacing="{{.Tracking}}" fill="#FFFFFF" textLength="{{.Length}}" lengthAdjust="spacingAndGlyphs">{{.Value}}</text>{{end}}
+  {{end}}
+</svg>

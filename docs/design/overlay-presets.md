@@ -1,7 +1,7 @@
 # File-based SVG overlay presets
 
-T119 separates overlay drawing from clip layout and video composition. The
-shipped appearance is unchanged. Caption, disclosure/information and card SVGs
+T119 separates overlay drawing from clip layout and video composition. T119 preserved the
+shipped appearance; T120 subsequently aligned the shared grid and header text. Caption, disclosure/information and card SVGs
 now live in `backend/internal/clip/overlay/presets/`, embedded into the API binary.
 The same loader accepts a complete operator-provided directory at startup.
 
@@ -175,3 +175,19 @@ go test ./internal/clip/overlay ./internal/clip/media ./internal/platform/config
 From the repository root, `docker build --target production -f backend/Dockerfile .`
 includes the real media/preset smoke gate. Test-only sample designs never become
 the shipped bindings.
+
+## Shorts example
+
+`backend/examples/overlays/shorts-editorial/` is a complete opt-in catalog with
+caption, header, opening and ending SVGs. It uses the existing version 1 views,
+compact dark labels, a clear unaccented disclosure, outlined white captions and
+unboxed opening/ending titles over the footage. The demonstration selects the existing lime
+accent; the fonts and measured text positions remain those supplied by the
+renderer. Default embedded bindings do not select this sample theme.
+
+Mount that directory as the API's overlay directory to preview it. The local
+`TestShortsSVGExample` accepts `CLIP_EXAMPLE_ORIGINALS`, `CLIP_EXAMPLE_OUTPUT` and
+`CLIP_EXAMPLE_ASSETS` inside the production media runtime. It uses all eight
+owner originals, checks a collision-free manifest before and after rendering,
+and exports the 20 s video and edit plan. Its title is editorial sample copy,
+not a verified merchant name. No AI provider is involved.

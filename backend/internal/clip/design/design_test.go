@@ -24,7 +24,7 @@ func TestSafeAreasAndAnchorsMatchCDS(t *testing.T) {
 	}
 	// CDS-12 for 9:16; CDS-47 and CDS-48 restate only what the other two change.
 	anchors := map[string]design.Anchor{
-		"vertical":   {Top: 290, UpperMid: 700, LowerMid: 1100, Bottom: 1380, Left: 96, Center: 540, Right: 888},
+		"vertical":   {Top: 290, UpperMid: 700, LowerMid: 1100, Bottom: 1380, Left: 96, Center: 492, Right: 888},
 		"horizontal": {Top: 112, UpperMid: 420, LowerMid: 660, Bottom: 968, Left: 96, Center: 960, Right: 1824},
 		"square":     {Top: 112, UpperMid: 420, LowerMid: 660, Bottom: 968, Left: 64, Center: 540, Right: 1016},
 	}
@@ -73,7 +73,7 @@ func TestRatioLayoutsMatchCDS46To48(t *testing.T) {
 			HookCard: design.CardBox{Width: 792, CenterY: 840},
 			EndCard:  design.CardBox{Width: 792, CenterY: 1040},
 			Chip:     design.ChipStack{X: 96, Y: 290, MaxWidth: 600, Columns: 1},
-			Badge:    design.BadgeBox{Right: 888, Top: 270},
+			Badge:    design.BadgeBox{Right: 888, Top: 290},
 			// CDS-32 states both 9:16 scrim rectangles exactly.
 			ScrimTop:    design.Region{Y: 250, Width: 1080, Height: 310},
 			ScrimBottom: design.Region{Y: 1040, Width: 1080, Height: 380},
@@ -83,7 +83,7 @@ func TestRatioLayoutsMatchCDS46To48(t *testing.T) {
 			HookCard:    design.CardBox{Width: 1120, CenterY: 540},
 			EndCard:     design.CardBox{Width: 1120, CenterY: 540},
 			Chip:        design.ChipStack{X: 96, Y: 112, MaxWidth: 600, Columns: 2},
-			Badge:       design.BadgeBox{Right: 1824, Top: 92},
+			Badge:       design.BadgeBox{Right: 1824, Top: 112},
 			ScrimTop:    design.Region{Y: 72, Width: 1920, Height: 200},
 			ScrimBottom: design.Region{Y: 748, Width: 1920, Height: 260},
 		},
@@ -92,7 +92,7 @@ func TestRatioLayoutsMatchCDS46To48(t *testing.T) {
 			HookCard:    design.CardBox{Width: 880, CenterY: 540},
 			EndCard:     design.CardBox{Width: 880, CenterY: 560},
 			Chip:        design.ChipStack{X: 64, Y: 112, MaxWidth: 600, Columns: 1},
-			Badge:       design.BadgeBox{Right: 1016, Top: 92},
+			Badge:       design.BadgeBox{Right: 1016, Top: 112},
 			ScrimTop:    design.Region{Y: 72, Width: 1080, Height: 200},
 			ScrimBottom: design.Region{Y: 748, Width: 1080, Height: 260},
 		},

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="{{.Width}}" height="{{.Height}}">
+  <defs><filter id="title-shadow" x="-15%" y="-25%" width="130%" height="150%"><feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#000000" flood-opacity="0.7"/></filter></defs>
+  {{if not .Empty}}{{range .Lines}}
+  {{if .Chip}}
+  {{with .Chip}}<rect x="{{.X}}" y="{{.Y}}" width="{{.Width}}" height="{{.Height}}" rx="4" fill="{{.Fill}}"/>{{end}}
+  {{with .Text}}<text x="{{.X}}" y="{{.Y}}" font-family="{{.Family}}" font-size="{{.Size}}" font-weight="{{.Weight}}" letter-spacing="{{.Tracking}}" fill="#111111">{{.Value}}</text>{{end}}
+  {{else}}
+  {{with .Text}}<text x="{{.X}}" y="{{.Y}}" xml:space="preserve" font-family="{{.Family}}" font-size="{{.Size}}" font-weight="{{.Weight}}" letter-spacing="{{.Tracking}}" fill="{{.Fill}}" fill-opacity="{{.Opacity}}" stroke="#111111" stroke-width="4" stroke-linejoin="round" paint-order="stroke fill" filter="url(#title-shadow)">{{.Value}}</text>{{end}}
+  {{end}}{{end}}{{end}}
+</svg>

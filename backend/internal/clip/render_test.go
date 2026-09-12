@@ -149,15 +149,17 @@ func TestSafeCopyPlacement(t *testing.T) {
 			{"free", "center", 1, 1}, {"top", "justify", 1, 1}, {"center", "center", 1, 1},
 			{"top", "left", canvas.Safe.Width + 1, 20}, {"top", "center", 50, math.NaN()},
 			{"top", "center", 50, math.Inf(1)}, {"top", "center", 0, 20},
-			// Nothing may leave the safe area by one pixel (CDS-2), and 9:16's is
-			// deliberately off-centre, so a full-width centred plate misses it.
-			{"bottom", "center", canvas.Safe.Width, 20},
+			// One extra pixel still fails, even on the shared content midpoint.
+			{"bottom", "center", canvas.Safe.Width + 1, 20},
 		} {
-			if ratio != "vertical" && args.w == canvas.Safe.Width {
-				continue // Only 9:16's safe area is asymmetric around the canvas centre.
-			}
 			if _, err := clip.PlaceCopy(canvas, args.anchor, args.align, args.w, args.h); err == nil {
 				t.Fatalf("%s %s/%s %vx%v: unsafe placement", ratio, args.anchor, args.align, args.w, args.h)
+			}
+		}
+		if ratio == "vertical" {
+			placed, err := clip.PlaceCopy(canvas, "bottom", "center", canvas.Safe.Width, 20)
+			if err != nil || placed.X != canvas.Safe.X {
+				t.Fatalf("full-width caption did not use the content midpoint: %+v %v", placed, err)
 			}
 		}
 		anchor, err := clip.PickCopyAnchor(canvas, "bottom", "center", w, h, clip.Region{X: 0, Y: .6, Width: 1, Height: .4})

@@ -56,17 +56,16 @@ func TestCardGeometryAndGoldensPerRatio(t *testing.T) {
 					if kind == "end" {
 						box = l.EndCard
 					}
-					// The ratio's own width, centred on the frame and on its
+					// The ratio's own width, centred on the shared grid and on its
 					// card line, with CDS-28's 40 px padding.
 					region := measured.Region
-					if region.Width != box.Width || region.X != (float64(canvas.Width)-box.Width)/2 {
+					if region.Width != box.Width || region.X != l.Anchor.Center-box.Width/2 {
 						return fmt.Errorf("%s/%s width %+v want %v", ratio, kind, region, box.Width)
 					}
 					if centre := region.Y + region.Height/2; centre != box.CenterY {
 						return fmt.Errorf("%s/%s centred on %v want %v", ratio, kind, centre, box.CenterY)
 					}
-					// The plate may reach past the safe area (CDS-28 states
-					// x 144–936 on 9:16); its text may not.
+					// Every text line remains inside the ratio safe area.
 					for _, e := range measured.Elements(0) {
 						if e.Kind == "card" {
 							continue

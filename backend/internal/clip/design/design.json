@@ -9,7 +9,7 @@
         "lower_mid": 1100,
         "bottom": 1380,
         "left": 96,
-        "center": 540,
+        "center": 492,
         "right": 888
       },
       "copy_max_width": 856,
@@ -17,7 +17,7 @@
       "hook_card": { "width": 792, "center_y": 840 },
       "end_card": { "width": 792, "center_y": 1040 },
       "chip": { "x": 96, "y": 290, "max_width": 600, "columns": 1 },
-      "badge": { "right": 888, "top": 270 },
+      "badge": { "right": 888, "top": 290 },
       "scrim_top": { "x": 0, "y": 250, "width": 1080, "height": 310 },
       "scrim_bottom": { "x": 0, "y": 1040, "width": 1080, "height": 380 }
     },
@@ -38,7 +38,7 @@
       "hook_card": { "width": 1120, "center_y": 540 },
       "end_card": { "width": 1120, "center_y": 540 },
       "chip": { "x": 96, "y": 112, "max_width": 600, "columns": 2 },
-      "badge": { "right": 1824, "top": 92 },
+      "badge": { "right": 1824, "top": 112 },
       "scrim_top": { "x": 0, "y": 72, "width": 1920, "height": 200 },
       "scrim_bottom": { "x": 0, "y": 748, "width": 1920, "height": 260 }
     },
@@ -59,7 +59,7 @@
       "hook_card": { "width": 880, "center_y": 540 },
       "end_card": { "width": 880, "center_y": 560 },
       "chip": { "x": 64, "y": 112, "max_width": 600, "columns": 1 },
-      "badge": { "right": 1016, "top": 92 },
+      "badge": { "right": 1016, "top": 112 },
       "scrim_top": { "x": 0, "y": 72, "width": 1080, "height": 200 },
       "scrim_bottom": { "x": 0, "y": 748, "width": 1080, "height": 260 }
     }

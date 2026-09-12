@@ -78,16 +78,19 @@ text, except the hook sentence itself.
   preset's price note) and the resolved CTA phrase in the accent. A project
   without 상호 renders no card and the manifest says so by carrying none.
 
-Per ratio the card is the ratio's own width centred on the frame and on its own
-card line: 9:16 x 144–936 centred y 840 (hook) and y 1040 (ending), 16:9 width
-1120 centred y 540, 1:1 width 880 centred y 540 and y 560. On 9:16 that plate is
-sixteen pixels wider than CDS-9's safe area on each side, which CDS-28 states
-outright; the plate may sit there but its TEXT may not, so the verifier exempts
-only the `card` kind from V1 and holds every line inside the safe area — the
-40 px padding is what makes both true at once. Copy and chips yield to a card as
-they do to the badge: the composer receives the card regions through
-`CardElements` and drops any anchor that collides, and V7 diagnoses a manifest
-where a caption or chip would show underneath one.
+Per ratio the card is centred on the shared copy grid: 9:16 x 96–888
+(midpoint 492), centred y 840 (hook) and y 1040 (ending); 16:9 width 1120
+centred at (960, 540); 1:1 width 880 centred at (540, 540)/(540, 560).
+The padded text band stays inside the safe area. The compiler can use the card
+regions to select a free caption anchor; any remaining overlap is advisory.
+
+Disclosure and information now share a top edge (290 on 9:16, 112 on the other
+ratios) and a row height derived from font sizes and padding. Each text role is
+measured with its own weight and tracking, including a shortened value after
+truncation. The SVG adapter centres the actual glyph bounds vertically and
+accounts for the left bearing. Chips reserve the badge width and one stack gap
+before fitting a value, including long disclosure phrases. Vertical cards and
+centred captions use the same x 492 midpoint between LEFT 96 and RIGHT 888.
 
 Brightness sampling exists for the two unplated styles only (CDS-16, CDS-44). A
 plated element needs none: `ink.900` at α0.72 under white text stays above the
@@ -244,7 +247,7 @@ SA-C (64, 250, 856, 1170), 16:9 is (96, 72, 1728, 936) and 1:1 is (64, 72, 952,
 936). A caption resolves one of four vertical anchors (top, upper_mid, lower_mid,
 bottom) and one alignment (center, left, right) to a plate region, and a region
 that would leave the safe area by any pixel is refused rather than nudged — 9:16's
-safe area is deliberately off-centre, so a full-width centred plate misses it. An
+safe area is deliberately off-centre; captions now follow its shared content grid. An
 AI avoid region chooses among those same four anchors. Source
 focal points drive cover-cropping, never stretch-to-fit. Times are integer ms until
 the binary boundary.

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="{{.Width}}" height="{{.Height}}">
+  <defs><filter id="copy-shadow" x="-20%" y="-40%" width="140%" height="180%"><feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#000000" flood-opacity="0.8"/></filter></defs>
+  {{range .Lines}}
+  <text x="{{.X}}" y="{{.Y}}" xml:space="preserve" font-family="{{.Family}}" font-size="{{.Size}}" font-weight="{{.Weight}}" letter-spacing="{{.Tracking}}" fill="#FFFFFF" stroke="#111111" stroke-width="5" paint-order="stroke fill" stroke-linejoin="round" filter="url(#copy-shadow)">{{.Value}}</text>
+  {{end}}
+</svg>
