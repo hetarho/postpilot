@@ -631,13 +631,12 @@ func (h *releaseHarness) exercise(mode string) {
 			if persisted.GetDurationMs() != 15000 || len(persisted.GetCuts()) != 4 {
 				t.Fatal("compiled plan was not persisted", persisted)
 			}
-			// The 음식점 preset aims every cut at 2.5–4.0 s (CDS-37 r3, CDS-50): the
-			// first pass grows each cut to that ceiling — 200 ms for the first,
-			// 500 ms for the rest — and the 1.7 s the 15 s target still needs
-			// comes from the second pass, which lets the ceiling yield evenly.
-			for i, end := range []int32{4000, 4500, 4500, 4500} {
+			// The frozen template's guidance and selected source ranges now
+			// own timing. Check reconciliation without reinstating a preset's
+			// old per-cut rhythm as a required native result.
+			for i, start := range []int32{0, 500, 1000, 1000} {
 				cut := persisted.Cuts[i]
-				if cut.EndMs != end || cut.GetCopy().GetEndMs() > cut.EndMs-cut.StartMs {
+				if cut.StartMs != start || cut.EndMs <= cut.StartMs || cut.EndMs > 5000 || cut.GetCopy().GetEndMs() > cut.EndMs-cut.StartMs {
 					t.Fatal("persisted plan still has model timing errors")
 				}
 			}

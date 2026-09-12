@@ -196,31 +196,13 @@ func Resolve(d *Document, in Inputs, l Limits, maxExpandedBytes int) (Timeline, 
 		if omit {
 			return nil
 		}
-		a, b := 0, out.DurationMS
-		switch t.Basis {
-		case "whole":
-		case "output-start":
-			a, b = *t.StartMS, *t.EndMS
-		case "output-end":
-			a, b = out.DurationMS+*t.StartMS, out.DurationMS+*t.EndMS
-		case "cut":
-			if c == nil {
-				return fail(t.ID, t.Span.Line, "binding_scope")
-			}
-			duration := c.EndMS - c.StartMS
-			if t.StartMS == nil {
-				a, b = l.AutoInsetMS, duration-l.AutoInsetMS
-			} else {
-				a, b = *t.StartMS, *t.EndMS
-			}
-			if a < 0 || b > duration || a >= b {
-				return fail(t.ID, t.Span.Line, "interval_outside")
-			}
-			a += cutStart
-			b += cutStart
+		duration := 0
+		if c != nil {
+			duration = c.EndMS - c.StartMS
 		}
-		if a < 0 || b > out.DurationMS || a >= b {
-			return fail(t.ID, t.Span.Line, "interval_outside")
+		a, b, intervalProblem := ResolveInterval(t, out.DurationMS, duration, cutStart, l.AutoInsetMS)
+		if intervalProblem != nil {
+			return intervalProblem
 		}
 		r.StartMS, r.EndMS = a, b
 		budget += len(r.Text)

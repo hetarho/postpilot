@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/clip/composition"
 	"github.com/postpilot/backend/internal/clip/store"
 	"github.com/postpilot/backend/internal/job"
 	jobstore "github.com/postpilot/backend/internal/job/store"
@@ -455,7 +456,7 @@ func TestApprovedGenerationPreparesAllThenUsesFrozenInputs(t *testing.T) {
 	}
 }
 func TestGenerationFailurePreservesOldResultAndCleansInputs(t *testing.T) {
-	for _, mode := range []string{"hold", "probe", "download", "observe", "plan", "render", "save", "partial-upload", "workspace-cleanup"} {
+	for _, mode := range []string{"hold", "probe", "download", "observe", "plan", "render", "authored-element", "save", "partial-upload", "workspace-cleanup"} {
 		t.Run(mode, func(t *testing.T) {
 			h := generationSetup(t)
 			old := clip.Result{Key: clip.ResultPrefix + "alice/old/old.mp4", ContentType: "video/mp4", Bytes: 5, DurationMS: 30000, CreatedAt: time.Now()}
@@ -475,6 +476,8 @@ func TestGenerationFailurePreservesOldResultAndCleansInputs(t *testing.T) {
 				h.planner.errorPlan = llm.ErrBadOutput
 			case "render":
 				h.renderer.fail = errors.New("render failed")
+			case "authored-element":
+				h.renderer.fail = &composition.Problem{ElementID: "literal", Line: 7, Reason: "copy_limit"}
 			case "save":
 				_, err := h.db.Writer.Exec("CREATE TRIGGER fail_clip_swap BEFORE UPDATE OF result_key ON clip_projects BEGIN SELECT RAISE(ABORT,'swap failed'); END;")
 				if err != nil {

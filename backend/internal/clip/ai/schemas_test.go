@@ -86,7 +86,7 @@ func TestPromptsKeepFullContractsAfterOutputProjection(t *testing.T) {
 		t.Fatal("provider output schema was not projected")
 	}
 	native, _ := BuildPlanPrompt(clip.PlanningInput{Composition: &clip.ProjectComposition{}}, 200)
-	if !strings.Contains(native, string(compositionPlanSchema)) || string(CompositionPlanSchema()) == string(compositionPlanSchema) {
+	if !strings.Contains(native, compactContract(compositionPlanSchema)) || string(CompositionPlanSchema()) == string(compositionPlanSchema) {
 		t.Fatal("native contract was weakened")
 	}
 }

@@ -120,10 +120,10 @@ func cardView(canvas clip.Canvas, card cardLayout) overlay.CardView {
 		var out overlay.CardLine
 		if line.Chip {
 			pad := design.Spacing.PadChip
-			out.Chip = &overlay.Box{X: p.X + cardPadding, Y: top, Width: bounds.Width, Height: bounds.Height, Radius: bounds.Height / 2, Fill: design.Accent[card.Accent]}
-			out.Text = overlayText(line.Role, line.Text, p.X+cardPadding+pad.H-bounds.X, top+pad.V-bounds.Y, line.Fill, "")
+			out.Chip = &overlay.Box{X: card.lineX(i), Y: top, Width: bounds.Width, Height: bounds.Height, Radius: bounds.Height / 2, Fill: design.Accent[card.Accent]}
+			out.Text = overlayText(line.Role, line.Text, card.lineX(i)+pad.H-bounds.X, top+pad.V-bounds.Y, line.Fill, "")
 		} else {
-			out.Text = overlayText(line.Role, line.Text, p.X+cardPadding-bounds.X, top-bounds.Y, line.Fill, trimmed(line.Alpha))
+			out.Text = overlayText(line.Role, line.Text, card.lineX(i)-bounds.X, top-bounds.Y, line.Fill, trimmed(line.Alpha))
 		}
 		v.Lines = append(v.Lines, out)
 		top += bounds.Height + design.Spacing.GapStack

@@ -33,6 +33,10 @@ func (r *Rendering) inputArgs(args []string, path string) []string {
 // These nodes carry no audio at all: the track is assembled and measured once
 // beside them and joins only at the final encode, which stays a single AAC pass.
 func (r *Rendering) compositionInputs(ctx context.Context, ws clip.MediaWorkspace, cuts []string, frames, transitions []int, audio string, measured *loudness, cleanup *[]string) ([]string, error) {
+	return r.compositionInputsFormat(ctx, ws, cuts, frames, transitions, audio, measured, cleanup, "yuv420p")
+}
+
+func (r *Rendering) compositionInputsFormat(ctx context.Context, ws clip.MediaWorkspace, cuts []string, frames, transitions []int, audio string, measured *loudness, cleanup *[]string, pixelFormat string) ([]string, error) {
 	branches := make([]videoBranch, len(cuts))
 	for i, path := range cuts {
 		branches[i] = videoBranch{path: path, frames: frames[i], transition: transitions[i]}
@@ -70,7 +74,7 @@ func (r *Rendering) compositionInputs(ctx context.Context, ws clip.MediaWorkspac
 		args = r.inputArgs(args, branch.path)
 		videoFrames[i], videoTransitions[i] = branch.frames, branch.transition
 	}
-	graph := compositionGraph(r.cfg, videoFrames, videoTransitions, "yuv420p")
+	graph := compositionGraph(r.cfg, videoFrames, videoTransitions, pixelFormat)
 	// The audio is already one assembled, measured track by now: the final pass
 	// only normalises it, so the clip is still produced by ONE encode (CDS-35).
 	if audio != "" {

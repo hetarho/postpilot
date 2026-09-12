@@ -27,11 +27,23 @@ type cardLine struct {
 }
 type cardLayout struct {
 	Kind           string // hook | end
+	Align          string // Empty preserves the legacy left-aligned card.
 	Region         clip.Region
 	Lines          []cardLine
 	Bounds         []clip.Region
 	StartMS, EndMS int
 	Accent         string
+}
+
+func (c cardLayout) lineX(index int) float64 {
+	x := c.Region.X + cardPadding
+	room := c.Region.Width - 2*cardPadding - c.Bounds[index].Width
+	if c.Align == "center" {
+		x += room / 2
+	} else if c.Align == "right" {
+		x += room
+	}
+	return x
 }
 
 func (c cardLayout) empty() bool { return len(c.Lines) == 0 }
@@ -234,7 +246,7 @@ func (card cardLayout) Elements(cut int) clip.Manifest {
 		m = append(m, design.Element{
 			Cut: cut, Kind: kind, Text: line.Text, FontSize: line.Role.Size,
 			Fill: line.Fill, Background: background,
-			Region:  design.Region{X: card.Region.X + cardPadding, Y: top, Width: bounds.Width, Height: bounds.Height},
+			Region:  design.Region{X: card.lineX(i), Y: top, Width: bounds.Width, Height: bounds.Height},
 			StartMS: card.StartMS, EndMS: card.EndMS,
 		})
 		top += bounds.Height + design.Spacing.GapStack

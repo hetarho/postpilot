@@ -7,9 +7,18 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/postpilot/backend/internal/clip/composition"
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/plan"
 )
+
+func TestDurableCompositionFailureKeepsElementIdentityWithoutDraftText(t *testing.T) {
+	err := &StageFailure{Stage: "render", Cause: fmt.Errorf("private draft/path: %w", &composition.Problem{ElementID: "price", Line: 7, Reason: "copy_limit"})}
+	failure := err.Failure()
+	if failure.Reason != "CLIP_COMPOSITION_INVALID" || !reflect.DeepEqual(failure.Params, map[string]string{"element_id": "price", "line": "7", "reason": "copy_limit"}) || failure.TechnicalDetail != "" || strings.Contains(err.Error(), "private") {
+		t.Fatal("durable failure lost its safe element identity", failure)
+	}
+}
 
 func TestClipFailureUsesOnlyReasonSpecificParams(t *testing.T) {
 	f := (&StageFailure{Stage: "prepare", Cause: &plan.InsufficientCreditsError{Required: 79, Balance: 12}}).Failure()

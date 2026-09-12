@@ -12,8 +12,84 @@ import (
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/composition"
 	"github.com/postpilot/backend/internal/clip/store"
+	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/platform/config"
 )
+
+type ownedPlanWriter struct{ *plannerFake }
+
+func (ownedPlanWriter) CompositionPlanVersion() int { return clip.CompositionPlanVersion }
+func (p ownedPlanWriter) Plan(ctx context.Context, model llm.ModelRef, in clip.PlanningInput) (clip.EditPlan, llm.Usage, error) {
+	plan, usage, err := p.plannerFake.Plan(ctx, model, in)
+	if err != nil {
+		return plan, usage, err
+	}
+	plan.Cuts[0].Copies = nil
+	doc, problem := composition.Parse(in.Composition.Snapshot.Body, config.ClipCompositionLimits())
+	if problem != nil {
+		return plan, usage, problem
+	}
+	cut := plan.Cuts[0]
+	plan.Styles = doc.Styles
+	plan.Portable = &clip.PortablePlan{Snapshot: in.Composition.Snapshot, Inputs: in.Composition.Inputs, Cuts: []composition.Cut{{ID: cut.ID, SectionID: "shot", SourceID: cut.SourceID, StartMS: cut.StartMS, EndMS: cut.EndMS}}}
+	resolved, problem := composition.Resolve(doc, composition.Inputs{Cuts: plan.Portable.Cuts}, config.ClipCompositionLimits(), 30000)
+	if problem != nil {
+		return plan, usage, problem
+	}
+	for _, e := range resolved.Elements {
+		e.Text = "원래 작성한 문장"
+		plan.Portable.Elements = append(plan.Portable.Elements, clip.PortableText{Resolved: e, Pace: "steady"})
+	}
+	return plan, usage, nil
+}
+
+type ownedPlanRenderer struct{ *rendererFake }
+
+func (ownedPlanRenderer) CompositionPlanVersion() int { return clip.CompositionPlanVersion }
+func (r ownedPlanRenderer) Render(ctx context.Context, ws clip.MediaWorkspace, p clip.EditPlan, sources []clip.RenderSource, load clip.RenderSourceLoader) (clip.RenderedVideo, error) {
+	if p.Portable == nil || p.Disclosure != "" || p.Hook != "" || len(p.Facts) != 0 {
+		return clip.RenderedVideo{}, errors.New("injected legacy content into native render")
+	}
+	video, err := r.rendererFake.Render(ctx, ws, p, sources, load)
+	if err != nil {
+		return video, err
+	}
+	p.Portable.Elements[0].Resolved.Text = "짧은 문장"
+	p.Portable.Elements[0].FallbackReason = "shorter_copy"
+	p.Portable.Elements[0].Placement = &clip.CompositionPlacement{Style: "memo", Position: "top", StartMS: 120, EndMS: 14880}
+	video.Plan = &p
+	return video, nil
+}
+func TestGenerationPersistsTheRenderedOwnedPlanAndItsStyles(t *testing.T) {
+	h := generationSetup(t)
+	h.service = clip.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, ownedPlanWriter{h.planner}, ownedPlanRenderer{h.renderer}, generationJobs{h.queue}, h.cfg).WithCredits(&quotePricing{}, nil)
+	h.projects.SetGeneration(h.service)
+	body := `<clip version="1" styles="memo"><repeat for="scenes"><scene id="shot"><text id="copy" kind="ai" role="caption" basis="cut">Describe the scene.</text></scene></repeat></clip>`
+	template, err := h.projects.CreateTemplate(t.Context(), "alice", clip.Recipe{Name: "owned-render", CompositionBody: body})
+	if err != nil {
+		t.Fatal(err)
+	}
+	p, err := h.projects.UpdateProject(t.Context(), "alice", h.project.ID, clip.ProjectPatch{VideoTemplateID: &template.ID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.project = p
+	h.start(t)
+	if err := h.run(t); err != nil {
+		t.Fatal(err)
+	}
+	p, err = h.store.GetProject(t.Context(), "alice", p.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	plan, styles, err := clip.DecodeEditPlan(p.EditPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(styles, []string{"memo"}) || plan.Portable.Elements[0].Resolved.Text != "짧은 문장" || plan.Portable.Elements[0].Placement.Style != "memo" {
+		t.Fatal("stored pre-render plan or live template styles")
+	}
+}
 
 const nativeBody = `<clip version="1"><field id="a" label="가격"/><field id="b" label="가격" required="true"/><group id="menu"><field id="price" label="가격"/></group><repeat for="scenes"><scene id="shot" scope="scene"><text id="copy" kind="ai" role="caption" basis="cut">장면만 설명</text></scene></repeat></clip>`
 

@@ -9,8 +9,8 @@ The caller owns file lifetime and persistence; no cloud proxy is uploaded or sig
 
 `Service.Plan` makes exactly one `write` call with the frozen recipe, exact answers,
 ratio, target and merged facts. It accepts no source pixels or URLs. Closed schemas
-are always included in the system contract and additionally sent as `JSONSchema`
-only for a registered structured-output model. Both paths use the existing shared
+are checked locally and supplied through the prompt or `JSONSchema` for a registered
+structured-output model. Both paths use the existing shared
 JSON-object fallback; they never issue a repair call or choose a fallback model.
 
 Native compositions use `composition-plan.schema.json` in that same writer stage.
@@ -18,6 +18,10 @@ The frozen XML defines section order, viewpoint, repeated item groups and every
 visible element. The server resolves fixed/answer-bound text exactly and accepts
 generated entries only for declared AI elements. It preserves verified shorter
 alternatives from that response for the renderer; it never requests semantic repair.
+The plain native prompt includes the compact full contract. Structured requests
+carry its closed object grammar once in `JSONSchema` and retain every domain bound
+in the prompt. This preserves all observations at the 20-source/49-chunk ceiling
+without increasing the reserved input limit or paying for a summarization call.
 
 Every cut retains overlapping observation references. Item identity is established
 by an owner range association or a unique supplied name/alias in every overlapping
@@ -37,9 +41,16 @@ omit dependent text, and repeated generated captions are removed without rewriti
 fixed content. Native plans retain version-5 geometry, authored declarations, text,
 source ranges, scoped facts and omission reasons. Placement belongs to the renderer.
 
-The old contract remains a compatibility path for frozen legacy payloads. The
-planner advertises version 5; native execution stays unavailable until the renderer
-also advertises that version (T128), which retires preset seeding on normal paths.
+Every retained composition, including an explicitly converted legacy template,
+uses this contract. The old writer remains only for queued payloads without a
+composition snapshot. Planner and renderer both advertise version 5; the worker
+renders and persists the owned plan without injecting live preset furniture.
+
+The renderer applies output text after source transitions, using bounded overlay
+batches and lossless intermediates before one final lossy video encode. Its shared
+manifest reports element identity, authority, effective style/placement, phrase
+windows, measured bounds and omission reasons. Completed automatic choices are
+retained with the plan, so rerendering cannot silently rewrite an accepted sentence.
 
 Caption time is relative to its trimmed cut. The renderer applies that interval;
 legacy whole-cut captions with both time fields zero retain their behavior.

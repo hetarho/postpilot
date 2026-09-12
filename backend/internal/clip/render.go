@@ -8,6 +8,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/postpilot/backend/internal/clip/composition"
 	"github.com/postpilot/backend/internal/clip/design"
 )
 
@@ -149,15 +150,19 @@ type RenderSource struct {
 // The consumer downloads only the requested source, then removes it after fn.
 type RenderSourceLoader func(context.Context, string, func(MediaSource) error) error
 type RenderedVideo struct {
+	Plan     *EditPlan
 	Path     string
 	Info     MediaInfo
 	Bytes    int64
 	Manifest Manifest
+	Elements []CompositionElement
 }
 type Renderer interface {
 	Render(context.Context, MediaWorkspace, EditPlan, []RenderSource, RenderSourceLoader) (RenderedVideo, error)
 }
 type RenderConfig struct {
+	OverlayBatchSize    int
+	Composition         composition.Limits
 	ResvgPath, FontPath string
 	// Empty uses the embedded preset catalog; a directory is snapshotted at boot.
 	OverlayDir string

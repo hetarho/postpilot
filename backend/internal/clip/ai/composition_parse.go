@@ -85,11 +85,11 @@ func parseCompositionPlan(cfg Config, input clip.PlanningInput, raw string) (cli
 	if err := decode(raw, cfg.MaxResponseBytes, compositionPlanShape, &wire); err != nil {
 		return clip.EditPlan{}, err
 	}
-	doc, problem := composition.Parse(input.Composition.Snapshot.Body, cfg.Template.Composition)
+	doc, problem := composition.Parse(input.Composition.Snapshot.Body, compositionLimits(cfg, input))
 	if problem != nil {
 		return clip.EditPlan{}, problem
 	}
-	if wire.Ratio != input.Ratio || len(wire.Cuts) == 0 || len(wire.Cuts) > min(cfg.Render.MaxCuts, cfg.Template.Composition.Cuts) || len(wire.Generated) > cfg.Template.Composition.Cues {
+	if wire.Ratio != input.Ratio || len(wire.Cuts) == 0 || len(wire.Cuts) > min(cfg.Render.MaxCuts, compositionLimits(cfg, input).Cuts) || len(wire.Generated) > compositionLimits(cfg, input).Cues {
 		return clip.EditPlan{}, outputError("composition_plan_bounds")
 	}
 	sections, order := map[string]composition.Section{}, map[string]int{}
@@ -131,7 +131,7 @@ func parseCompositionPlan(cfg Config, input clip.PlanningInput, raw string) (cli
 	if err := composeTimeline(cfg, input, &plan); err != nil {
 		return clip.EditPlan{}, err
 	}
-	portable := &clip.PortablePlan{Snapshot: input.Composition.Snapshot, Inputs: input.Composition.Inputs}
+	portable := &clip.PortablePlan{Snapshot: input.Composition.Snapshot, Inputs: input.Composition.Inputs, Observations: input.Analyses, TargetDurationMS: input.TargetDurationMS}
 	bindings := map[string]clip.ItemBinding{}
 	evidence := map[string][]clip.ObservedEvidence{}
 	lastItem := map[string]int{}
@@ -164,7 +164,7 @@ func parseCompositionPlan(cfg Config, input clip.PlanningInput, raw string) (cli
 		bindings[cut.ID] = binding
 		portable.Cuts = append(portable.Cuts, composition.Cut{ID: cut.ID, SectionID: section.ID, SourceID: cut.SourceID, GroupID: binding.GroupID, ItemID: binding.ItemID, StartMS: cut.StartMS, EndMS: cut.EndMS, TransitionMS: cut.TransitionMS})
 	}
-	timeline, fallbacks, err := clip.ResolveSelectedComposition(doc, portable.Inputs, portable.Cuts, cfg.Template.Composition, cfg.MaxResponseBytes)
+	timeline, fallbacks, err := clip.ResolveSelectedComposition(doc, portable.Inputs, portable.Cuts, compositionLimits(cfg, input), cfg.MaxResponseBytes)
 	if err != nil {
 		return clip.EditPlan{}, err
 	}

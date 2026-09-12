@@ -538,6 +538,33 @@ func (p *releaseProvider) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	encoded, _ := json.Marshal(content)
+	if _, native := metadata["composition_source"]; native && videoCount == 0 {
+		value := content.(map[string]any)
+		delete(value, "hook")
+		value["generated"] = []any{}
+		analyses := metadata["analyses"].([]any)
+		for _, entry := range value["cuts"].([]any) {
+			cut := entry.(map[string]any)
+			delete(cut, "caption")
+			delete(cut, "chips")
+			cut["template_section_id"], cut["group_id"], cut["item_id"] = "footage", "", ""
+			refs := []string{}
+			for _, entry := range analyses {
+				analysis := entry.(map[string]any)
+				if analysis["source_id"] != cut["source_id"] {
+					continue
+				}
+				for _, entry := range analysis["segments"].([]any) {
+					segment := entry.(map[string]any)
+					if int(segment["start_ms"].(float64)) < cut["end_ms"].(int) && int(segment["end_ms"].(float64)) > cut["start_ms"].(int) {
+						refs = append(refs, segment["observation_id"].(string))
+					}
+				}
+			}
+			cut["observation_refs"] = refs
+		}
+		encoded, _ = json.Marshal(value)
+	}
 	finish := "stop"
 	if p.mode == "malformed" {
 		encoded = []byte(`{"unknown":true}`)

@@ -242,6 +242,9 @@ func (r *Rendering) renderCut(ctx context.Context, ws clip.MediaWorkspace, canva
 	return r.media.sourcePath(ws, path)
 }
 func (r *Rendering) Render(ctx context.Context, ws clip.MediaWorkspace, plan clip.EditPlan, sources []clip.RenderSource, load clip.RenderSourceLoader) (result clip.RenderedVideo, err error) {
+	if plan.Portable != nil {
+		return r.renderComposition(ctx, ws, plan, sources, load)
+	}
 	if err = clip.ValidateEditPlan(r.cfg, plan, sources); err != nil {
 		return result, err
 	}
@@ -396,6 +399,11 @@ func (r *Rendering) Render(ctx context.Context, ws clip.MediaWorkspace, plan cli
 			return result, err
 		}
 	}
+	return r.validateRenderedOutput(ctx, ws, output, plan, audio, manifest)
+}
+
+func (r *Rendering) validateRenderedOutput(ctx context.Context, ws clip.MediaWorkspace, output string, plan clip.EditPlan, audio bool, manifest clip.Manifest) (result clip.RenderedVideo, err error) {
+	canvas, _ := clip.ClipCanvas(plan.Ratio)
 	info, err := r.media.Probe(ctx, ws, output)
 	if err != nil {
 		return result, err
@@ -764,6 +772,14 @@ func answerAccent(plan clip.EditPlan) string {
 // Layout is the same pass on its own workspace, for a caller that wants the
 // manifest without rendering: it downloads nothing and writes no video.
 func (r *Rendering) Layout(ctx context.Context, plan clip.EditPlan, sources []clip.RenderSource) (repaired clip.EditPlan, manifest clip.Manifest, err error) {
+	if plan.Portable != nil {
+		var elements []clip.CompositionElement
+		repaired, elements, err = r.LayoutComposition(ctx, plan, sources)
+		for _, element := range elements {
+			manifest = append(manifest, element.Parts...)
+		}
+		return repaired, manifest, err
+	}
 	if err = clip.ValidateEditPlan(r.cfg, plan, sources); err != nil {
 		return plan, nil, err
 	}

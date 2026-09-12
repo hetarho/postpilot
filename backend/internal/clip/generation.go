@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/postpilot/backend/internal/clip/composition"
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/plan"
 	"io"
@@ -142,7 +143,12 @@ func (e *StageFailure) Failure() llm.Failure {
 	var layout interface{ LayoutReason() string }
 	var facts *MissingFactsError
 	var admission *ModelAdmissionError
+	var element *composition.Problem
 	switch {
+	case errors.As(e.Cause, &element):
+		f = llm.Failure{Reason: "CLIP_COMPOSITION_INVALID", Params: map[string]string{"element_id": element.ElementID, "line": fmt.Sprint(element.Line), "reason": element.Reason}}
+	case errors.Is(e.Cause, ErrCompositionUnavailable):
+		f = llm.Failure{Reason: "CLIP_COMPOSITION_UNAVAILABLE"}
 	// The model's own admission answer comes first: it unwraps to the generic
 	// unsupported error, which must not swallow the specific reason.
 	case errors.As(e.Cause, &admission):
@@ -321,8 +327,8 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 		for i, v := range sources {
 			renderSources[i] = v.RenderSource
 		}
-		// The badge and the chips read the PROJECT, not the plan: always the
-		// owner's current campaign type and current answers.
+		// The retained composition owns every visible element. Only old queued
+		// payloads without that contract enter the compatibility compositor.
 		load, releaseSource := s.renderLoader(ws, func(id string) (SourceLease, MediaInfo, bool) {
 			for i, v := range b.Sources {
 				if v.ID == id {
@@ -331,9 +337,15 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 			}
 			return SourceLease{}, MediaInfo{}, false
 		})
-		video, err := s.renderer.Render(ctx, ws, edit.WithFacts(p.Disclosure, p.Answers, p.Template.Preset, p.CTA, p.Template.Accent, p.HideDisclosure).WithStyles(p.Template.CopyStyles), renderSources, load)
+		if edit.Portable == nil {
+			edit = edit.WithFacts(p.Disclosure, p.Answers, p.Template.Preset, p.CTA, p.Template.Accent, p.HideDisclosure).WithStyles(p.Template.CopyStyles)
+		}
+		video, err := s.renderer.Render(ctx, ws, edit, renderSources, load)
 		if err = errors.Join(err, releaseSource()); err != nil {
 			return err
+		}
+		if video.Plan != nil {
+			edit = *video.Plan
 		}
 		set("save", 0, 1)
 		key := ResultPrefix + url.PathEscape(user) + "/" + url.PathEscape(project) + "/" + newID() + ".mp4"
@@ -351,7 +363,11 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 				return err
 			}
 		}
-		planJSON, err = EncodeEditPlan(edit, p.Template.CopyStyles)
+		styles := p.Template.CopyStyles
+		if edit.Portable != nil {
+			styles = edit.Styles
+		}
+		planJSON, err = EncodeEditPlan(edit, styles)
 		if err != nil {
 			return err
 		}

@@ -351,14 +351,14 @@ func validateSettings(cfg Config, in clip.PlanningInput) error {
 		return err
 	}
 	if nativeComposition(in) {
-		if in.TargetDurationMS < cfg.Render.MinDurationMS || in.TargetDurationMS > cfg.Render.MaxDurationMS || in.Composition.Snapshot.Version != clip.CompositionVersion || !within(in.Template.Name, 1, cfg.Template.NameChars) || in.Template.CompositionBody != in.Composition.Snapshot.Body {
+		if in.TargetDurationMS < cfg.Render.MinDurationMS || in.TargetDurationMS > cfg.Render.MaxDurationMS || in.Composition.Snapshot.Version != clip.CompositionVersion || !within(in.Template.Name, 1, cfg.Template.NameChars) || !in.Composition.Snapshot.Legacy && in.Template.CompositionBody != in.Composition.Snapshot.Body {
 			return clip.ErrInvalid
 		}
-		doc, problem := composition.Parse(in.Composition.Snapshot.Body, cfg.Template.Composition)
+		doc, problem := composition.Parse(in.Composition.Snapshot.Body, compositionLimits(cfg, in))
 		if problem != nil {
 			return problem
 		}
-		return clip.ValidateCompositionInputs(doc, in.Composition.Inputs, cfg.Template.Composition, true)
+		return clip.ValidateCompositionInputs(doc, in.Composition.Inputs, compositionLimits(cfg, in), !in.Composition.Snapshot.Legacy)
 	}
 	if in.TargetDurationMS < cfg.Render.MinDurationMS || in.TargetDurationMS > cfg.Render.MaxDurationMS || !clip.ValidCopyStyles(in.Template.CopyStyles) || !clip.ValidCaptionPace(in.Template.CaptionPace) || !clip.ValidAccent(in.Template.Accent) || !within(in.Template.Name, 1, cfg.Template.NameChars) || !within(in.Template.CutGuidance, 0, cfg.Template.GuidanceChars) || len(in.Template.InformationFields) > cfg.Template.FieldCount || len(in.Answers) != len(in.Template.InformationFields) {
 		return clip.ErrInvalid

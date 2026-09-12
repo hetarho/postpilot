@@ -1,6 +1,7 @@
 package ai_test
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -13,6 +14,55 @@ import (
 	"github.com/postpilot/backend/internal/clip/composition"
 	"github.com/postpilot/backend/internal/llm"
 )
+
+func TestNativeWriterAdmitsAll49ObservationsAtTheSourceCeiling(t *testing.T) {
+	for _, structured := range []bool{false, true} {
+		t.Run(fmt.Sprint(structured), func(t *testing.T) {
+			writer, models, _ := newService(t, "", structured)
+			in := planningInput()
+			in.Template = clip.Recipe{Name: "synthetic release", Preset: "restaurant", CopyStyles: []string{"clean"}, InformationFields: []clip.InformationField{{Label: "상호", Prompt: "가게 이름"}, {Label: "위치", Prompt: "어디"}, {Label: "place", Prompt: "where"}}}
+			p := clip.Project{Disclosure: "ad", Answers: []clip.Answer{{Label: "상호", Text: "연남 김밥"}, {Label: "위치", Text: "서울 연남동"}, {Label: "place", Text: "fixture"}}}
+			owned := clip.LegacyProjectComposition(p, in.Template)
+			in.Composition = &owned
+			in.Analyses = nil
+			for i := 0; i < 20; i++ {
+				duration := 61000
+				if i == 19 {
+					duration = 641000
+				}
+				a := clip.SourceAnalysis{Source: clip.AnalysisSource{RenderSource: clip.RenderSource{ID: fmt.Sprintf("00000000-0000-4000-8000-%012d", i), Fingerprint: fmt.Sprintf("%064x", i), Info: clip.MediaInfo{DurationMS: duration, Width: 1280, Height: 720, HasAudio: true}}, Filename: fmt.Sprintf("fixture-%02d.mp4", i)}}
+				for start := 0; start < duration; start += 60000 {
+					a.Segments = append(a.Segments, clip.Segment{StartMS: start, EndMS: min(start+60000, duration), Event: "synthetic scene", Subjects: []string{"test pattern"}, Speech: "synthetic speech", Quality: "usable", Scene: "scenery", Focal: clip.Point{X: .5, Y: .5}, Subject: clip.Region{X: .3, Y: .3, Width: .4, Height: .4}})
+				}
+				in.Analyses = append(in.Analyses, a)
+			}
+			cuts := []any{}
+			for i := 0; i < 3; i++ {
+				cuts = append(cuts, map[string]any{"id": fmt.Sprintf("fixture-cut-%d", i), "source_id": in.Analyses[0].Source.ID, "template_section_id": "footage", "group_id": "", "item_id": "", "start_ms": i * 5000, "end_ms": (i + 1) * 5000, "focal": map[string]float64{"x": .5, "y": .5}, "volume": 1, "observation_refs": []string{clip.ObservationID(in.Analyses[0].Source.ID, 0)}})
+			}
+			models.response.Text = raw(map[string]any{"ratio": in.Ratio, "duration_ms": 15000, "cuts": cuts, "generated": []any{}})
+			system, user := ai.BuildPlanPrompt(in, 200)
+			var schema json.RawMessage
+			if structured {
+				schema = ai.CompositionPlanSchema()
+			}
+			request, _ := json.Marshal(struct {
+				System, User string
+				Schema       json.RawMessage
+			}{system, user, schema})
+			if strings.Count(user, `"observation_id"`) != 49 {
+				t.Fatal("dropped observations to fit the budget")
+			}
+			if len(request) > llm.ClipInputUnits-2048 {
+				t.Fatalf("complete frozen input exceeds reserved limit: %d bytes (system %d, user %d, schema %d)", len(request), len(system), len(user), len(schema))
+			}
+			plan, _, err := writer.Plan(t.Context(), testRef(), in)
+			if err != nil || len(models.calls) != 1 || len(plan.Portable.Observations) != 20 {
+				t.Fatalf("lost bounded source inventory: %v, calls=%d", err, len(models.calls))
+			}
+		})
+	}
+}
 
 const nativeBody = `<clip version="1" styles="memo" accent="teal">
 <field id="fee" label="입장료"/>

@@ -180,14 +180,16 @@ func (s *GenerationService) RunRender(ctx context.Context, user, job, project st
 	t := VideoTemplate{}
 	if p.Composition != nil && p.Composition.Snapshot.LegacyRecipe != nil {
 		t.Recipe = *p.Composition.Snapshot.LegacyRecipe
-	} else if p.VideoTemplateID != "" {
+	} else if plan.Portable == nil && p.VideoTemplateID != "" {
 		t, err = s.projects.store.GetTemplate(ctx, user, p.VideoTemplateID)
 		if err != nil && !errors.Is(err, ErrNotFound) {
 			return err
 		}
 	}
 
-	plan = plan.WithFacts(p.Disclosure, p.Answers, t.Preset, p.CTA, t.Accent, frozen.HideDisclosure).WithStyles(t.CopyStyles)
+	if plan.Portable == nil {
+		plan = plan.WithFacts(p.Disclosure, p.Answers, t.Preset, p.CTA, t.Accent, frozen.HideDisclosure).WithStyles(t.CopyStyles)
+	}
 	if err = MatchRenderBatch(plan, b); err != nil {
 		return err
 	}

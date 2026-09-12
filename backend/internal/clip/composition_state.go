@@ -53,6 +53,7 @@ type SourceEvidence struct {
 	StartMS, EndMS        int
 }
 type PortableText struct {
+	Placement             *CompositionPlacement
 	Accent, Keyword, Pace string
 	Resolved              composition.ResolvedElement
 	Scope                 string
@@ -62,16 +63,27 @@ type PortableText struct {
 	// renderer may select one for readability without asking a model again.
 	Alternatives []CopyAlternative
 }
+
+// Effective automatic choices are frozen with the rendered draft. The original
+// element still says whether a value was authored or automatically selected.
+type CompositionPlacement struct {
+	Style, Position string
+	StartMS, EndMS  int // Relative to the owned cut, or output time without a cut.
+}
 type CopyAlternative struct {
 	Text string
 	Rows []composition.ResolvedRow
 }
 type PortablePlan struct {
-	Snapshot  CompositionSnapshot
-	Inputs    CompositionInputs
-	Cuts      []composition.Cut
-	Elements  []PortableText
-	Fallbacks []CopyFallback
+	TargetDurationMS int
+	Snapshot         CompositionSnapshot
+	Inputs           CompositionInputs
+	Cuts             []composition.Cut
+	Elements         []PortableText
+	Fallbacks        []CopyFallback
+	// Frozen observations let automatic placement project subject geometry
+	// after ratio/crop changes without observing the source again.
+	Observations []SourceAnalysis
 }
 
 func LegacyFieldID(label string) string {

@@ -2,6 +2,7 @@
 package ai
 
 import (
+	"bytes"
 	_ "embed"
 	"encoding/json"
 )
@@ -14,6 +15,16 @@ var planSchema []byte
 
 //go:embed schemas/composition-plan.schema.json
 var compositionPlanSchema []byte
+
+func compactContract(value []byte) string {
+	var out bytes.Buffer
+	if err := json.Compact(&out, value); err != nil {
+		panic(err)
+	}
+	return out.String()
+}
+
+var compositionPlanPromptSchema = compactContract(compositionPlanSchema)
 
 // Provider grammars receive the closed structural shape, not every domain
 // bound. The full contracts still live in the prompts and are checked locally.

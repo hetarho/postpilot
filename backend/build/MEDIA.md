@@ -167,3 +167,25 @@ Additional option references checked for T084:
 - https://ffmpeg.org/ffmpeg-codecs.html#libx264_002c-libx264rgb — CRF, VBV and lossless encoding
 - https://ffmpeg.org/ffmpeg-filters.html#atrim — exact sample bounds
 - https://ffmpeg.org/ffmpeg-resampler.html — first timestamps and hard gap compensation
+
+## Portable composition renderer
+
+Version-5 plans render only retained declarations. Source cuts and transition-tree
+nodes use lossless H.264 4:4:4; output-relative overlays are applied afterward in
+bounded time windows with at most eight PNG inputs per pass. The final video has
+one CRF encode. Audio stays PCM until final AAC/loudness processing. Layout and
+render return the same element identities, authority, measured geometry, motion,
+phrase windows, effective choices and omission reasons for draft preview.
+
+`TestRenderSmokeComposition` checks all three ratios, exact output boundaries,
+persistent opacity across source joins, last-frame luminance sampling and explicit
+conversion of an old plan. The separate native resource gate renders 100 cuts over
+90 seconds with 200 readable rapid phrases, verifies later-window frame clocks,
+checks intermediate cleanup and reports cgroup peak memory. The 2,400-cue graph
+bound is a regular unit test; that many sequential 300 ms phrases cannot fit into
+a 90-second output.
+
+```sh
+docker build -f backend/Dockerfile --target media-smoke -t postpilot-clip-media:local .
+docker run --rm --network none --memory 1g --memory-swap 1g --cpus 2 -e CLIP_COMPOSITION_STRESS=1 --entrypoint /media.test postpilot-clip-media:local -test.run='^TestRenderCompositionStress$' -test.v -test.timeout=30m
+```
