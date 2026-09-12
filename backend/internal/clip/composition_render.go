@@ -109,5 +109,5 @@ func ResolvePortableIntervals(plan EditPlan, limits composition.Limits) (EditPla
 
 func AutomaticCompositionRepair(text PortableText) bool {
 	e := text.Resolved.Element
-	return text.Placement == nil && e.Kind == "ai" && e.Style == "auto" && e.Position == "auto" && e.Basis == "cut" && e.StartMS == nil && e.EndMS == nil
+	return !text.OwnerEdited && text.Placement == nil && e.Kind == "ai" && e.Style == "auto" && e.Position == "auto" && e.Basis == "cut" && e.StartMS == nil && e.EndMS == nil
 }

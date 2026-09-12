@@ -14,7 +14,8 @@ import (
 var ErrPlanConflict = errors.New("clip edit plan revision conflict")
 
 // The editable representation uses integer thousandths, including its durable JSON.
-// Framing is deliberately not editable: source identity and focal points stay frozen.
+// Source identity remains frozen. Native drafts may supply a normalized focal
+// point; legacy corrections retain their saved framing.
 type CorrectionCut struct {
 	ID, SourceID, Fingerprint string
 	StartMS, EndMS            int
@@ -26,10 +27,13 @@ type CorrectionCut struct {
 	Copies         []Caption
 	Chips          []string
 	VolumePermille int
+	Focal          *Point
 }
 type CorrectionPlan struct {
-	DurationMS int
-	Cuts       []CorrectionCut
+	NativeComposition bool
+	Elements          []CorrectionText
+	DurationMS        int
+	Cuts              []CorrectionCut
 	// The opening card's sentence (CDS-28). Part of the approved composition, so
 	// unlike the disclosure and the facts it IS stored with the plan.
 	Hook string
@@ -117,10 +121,34 @@ func (p legacyCorrectionPlan) upgrade() CorrectionPlan {
 	return out
 }
 
+// Versions 3–4 keep their original strict JSON shape. Editing-only fields
+// (portable text projections and focal controls) never widen that envelope.
+type storedCorrectionCut struct {
+	ID, SourceID, Fingerprint string
+	StartMS, EndMS            int
+	TransitionMS              int
+	Copies                    []Caption
+	Chips                     []string
+	VolumePermille            int
+}
+type storedCorrectionPlan struct {
+	DurationMS int
+	Cuts       []storedCorrectionCut
+	Hook       string
+}
+
+func storedCorrection(p CorrectionPlan) storedCorrectionPlan {
+	out := storedCorrectionPlan{DurationMS: p.DurationMS, Hook: p.Hook}
+	for _, c := range p.Cuts {
+		out.Cuts = append(out.Cuts, storedCorrectionCut{c.ID, c.SourceID, c.Fingerprint, c.StartMS, c.EndMS, c.TransitionMS, c.Copies, c.Chips, c.VolumePermille})
+	}
+	return out
+}
+
 type storedEditPlan struct {
 	Version    int
 	Ratio      string
-	Plan       CorrectionPlan
+	Plan       storedCorrectionPlan
 	Focals     map[string]Point
 	CopyStyles []string
 }
@@ -128,7 +156,17 @@ type storedEditPlan struct {
 func CorrectionFromPlan(p EditPlan) CorrectionPlan {
 	out := CorrectionPlan{DurationMS: p.DurationMS, Hook: p.Hook, Cuts: make([]CorrectionCut, 0, len(p.Cuts))}
 	for _, c := range p.Cuts {
-		out.Cuts = append(out.Cuts, CorrectionCut{c.ID, c.SourceID, c.Fingerprint, c.StartMS, c.EndMS, c.TransitionMS, slices.Clone(c.Copies), slices.Clone(c.Chips), int(math.Round(c.OriginalVolume() * 1000))})
+		out.Cuts = append(out.Cuts, CorrectionCut{ID: c.ID, SourceID: c.SourceID, Fingerprint: c.Fingerprint, StartMS: c.StartMS, EndMS: c.EndMS, TransitionMS: c.TransitionMS, Copies: slices.Clone(c.Copies), Chips: slices.Clone(c.Chips), VolumePermille: int(math.Round(c.OriginalVolume() * 1000))})
+	}
+	for i, c := range p.Cuts {
+		focal := c.Focal
+		out.Cuts[i].Focal = &focal
+	}
+	if p.Portable != nil && !p.Portable.Snapshot.Legacy {
+		out.NativeComposition = true
+		for _, t := range p.Portable.Elements {
+			out.Elements = append(out.Elements, correctionText(t))
+		}
 	}
 	return out
 }
@@ -140,7 +178,7 @@ func EncodeEditPlan(p EditPlan, styles []string) (string, error) {
 	for _, c := range p.Cuts {
 		focals[c.ID] = c.Focal
 	}
-	b, err := json.Marshal(storedEditPlan{storedPlanVersion, p.Ratio, CorrectionFromPlan(p), focals, slices.Clone(styles)})
+	b, err := json.Marshal(storedEditPlan{storedPlanVersion, p.Ratio, storedCorrection(CorrectionFromPlan(p)), focals, slices.Clone(styles)})
 	return string(b), err
 }
 func strictJSON(raw string, out any) error {
@@ -233,7 +271,7 @@ func DecodeEditPlan(raw string) (EditPlan, []string, error) {
 		if err := strictJSON(raw, &legacy); err != nil {
 			return EditPlan{}, nil, ErrInvalid
 		}
-		s = storedEditPlan{legacy.Version, legacy.Ratio, legacy.Plan.upgrade(), legacy.Focals, legacy.CopyStyles}
+		s = storedEditPlan{legacy.Version, legacy.Ratio, storedCorrection(legacy.Plan.upgrade()), legacy.Focals, legacy.CopyStyles}
 	} else if err := strictJSON(raw, &s); err != nil {
 		return EditPlan{}, nil, ErrInvalid
 	}
@@ -310,6 +348,12 @@ func ApplyCorrection(cfg RenderConfig, p Project, input CorrectionPlan) (EditPla
 	sources, err := RetainedSources(p)
 	if err != nil {
 		return EditPlan{}, nil, err
+	}
+	if old.Portable != nil && (input.NativeComposition || !old.Portable.Snapshot.Legacy) {
+		return applyNativeCorrection(cfg, p, old, styles, sources, input)
+	}
+	if input.NativeComposition || len(input.Elements) != 0 {
+		return EditPlan{}, nil, ErrInvalid
 	}
 	known := map[string]Cut{}
 	for _, c := range old.Cuts {

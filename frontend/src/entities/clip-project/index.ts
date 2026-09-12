@@ -101,3 +101,7 @@ export {
 
 export { getClipSources, getClipSourcePlayback } from './api/sources'
 export type { ClipSourceAvailability } from './model/types'
+
+export { ClipDraftPreview } from './ui/ClipDraftPreview'
+export type { ClipEditableText } from './model/edit-plan'
+export { previewTimeline, previewFrame, previewElementIDs } from './model/draft-preview'

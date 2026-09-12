@@ -59,6 +59,7 @@ type ProcessingObjects interface {
 	ListResults(context.Context) ([]StoredObject, error)
 }
 type GenerationConfig struct {
+	Preview                               PreviewConfig
 	Render                                RenderConfig
 	Media                                 MediaConfig
 	Analysis                              AnalysisLimits

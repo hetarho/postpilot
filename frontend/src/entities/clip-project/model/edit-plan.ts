@@ -45,6 +45,7 @@ export const CLIP_TRANSITIONS = [0, CLIP_TRANSITION.fade_ms, CLIP_TRANSITION.bla
 /** What step 2 offers: a hard cut or the fade a scene change earns. */
 export const CLIP_TRANSITION_CHOICES = [0, CLIP_TRANSITION.fade_ms] as const
 export interface ClipEditCut {
+  focal?: { x: number; y: number }
   id: string
   sourceId: string
   fingerprint: string
@@ -58,7 +59,31 @@ export interface ClipEditCut {
   chips: string[]
   volumePermille: number
 }
+export interface ClipEditableText {
+  instanceId: string
+  elementId: string
+  cutId: string
+  kind: string
+  role: string
+  text: string
+  rows: { role: string; text: string }[]
+  style: string
+  position: string
+  align: string
+  basis: string
+  startMs?: number
+  endMs?: number
+  pace: string
+  accent: string
+  keyword: string
+  resolvedStartMs: number
+  resolvedEndMs: number
+  groupId: string
+  itemId: string
+}
 export interface ClipEditPlan {
+  nativeComposition?: boolean
+  elements?: ClipEditableText[]
   durationMs: number
   cuts: ClipEditCut[]
   /** The opening card's one sentence (CDS-28). Empty renders no hook card. */
@@ -85,8 +110,12 @@ export interface ClipEditingState {
 export function copyClipPlan(plan: ClipEditPlan): ClipEditPlan {
   return {
     ...plan,
+    ...(plan.elements
+      ? { elements: plan.elements.map((t) => ({ ...t, rows: t.rows.map((row) => ({ ...row })) })) }
+      : {}),
     cuts: plan.cuts.map((c) => ({
       ...c,
+      ...(c.focal ? { focal: { ...c.focal } } : {}),
       chips: [...c.chips],
       copies: c.copies.map((copy) => ({ ...copy })),
     })),

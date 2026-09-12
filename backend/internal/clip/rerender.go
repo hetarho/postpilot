@@ -38,6 +38,29 @@ func (s *GenerationService) SaveCorrection(ctx context.Context, user, id string,
 	if err != nil {
 		return Project{}, err
 	}
+	if next.Portable != nil {
+		layout, ok := s.renderer.(CompositionLayouter)
+		if !ok {
+			return Project{}, ErrCompositionUnavailable
+		}
+		sources, err := RetainedSources(p)
+		if err != nil {
+			return Project{}, err
+		}
+		refs := make([]RenderSource, 0, len(sources))
+		for _, source := range sources {
+			refs = append(refs, source.RenderSource)
+		}
+		next, _, err = layout.LayoutComposition(ctx, next, refs)
+		if err != nil {
+			return Project{}, err
+		}
+		raw, err := EncodeEditPlan(next, styles)
+		if err != nil {
+			return Project{}, err
+		}
+		return s.store.SaveCorrection(ctx, user, id, revision, raw)
+	}
 	sizer, ok := s.renderer.(CaptionSizer)
 	if !ok {
 		return Project{}, ErrInvalid

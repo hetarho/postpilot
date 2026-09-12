@@ -111,6 +111,7 @@ export function ClipCorrectionWorkspace({
   renderFailure,
   onRender,
   sourcePicker,
+  preview,
   localSources,
   answers,
 }: {
@@ -122,6 +123,7 @@ export function ClipCorrectionWorkspace({
   renderFailure?: AppFailure
   onRender: () => void
   sourcePicker: ReactNode
+  preview?: ReactNode
   localSources: ReadonlyArray<{ fingerprint: string; url: string }>
   /** The project's own answers: a chip can only show a fact the owner gave
    *  (CDS-30), so only labels with an answer are offered. */
@@ -145,6 +147,7 @@ export function ClipCorrectionWorkspace({
     correction.validation?.hook || !groundedInAnswers(correction.draft.hook, answers)
   return (
     <>
+      {preview}
       <section aria-labelledby="clip-correction-heading" className="mt-10">
         <Typography variant="title" id="clip-correction-heading">
           {t('correction.title')}

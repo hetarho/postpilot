@@ -26,6 +26,11 @@ func (s *Store) SaveCorrection(ctx context.Context, user, id string, revision in
 			return clip.Project{}, clip.ErrPlanConflict
 		}
 		// Compare the semantic plan so a formatting-only save does not renew retention.
+		oldPlan, oldStyles, oldErr := clip.DecodeEditPlan(p.EditPlan)
+		newPlan, newStyles, newErr := clip.DecodeEditPlan(raw)
+		if oldErr == nil && newErr == nil && reflect.DeepEqual(oldPlan, newPlan) && reflect.DeepEqual(oldStyles, newStyles) {
+			return p, nil
+		}
 		var oldJSON, newJSON any
 		if p.EditPlan == raw || strictJSON(p.EditPlan, &oldJSON) == nil && strictJSON(raw, &newJSON) == nil && reflect.DeepEqual(oldJSON, newJSON) {
 			return p, nil

@@ -33,6 +33,9 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
+	// ClipServicePrepareClipPreviewProcedure is the fully-qualified name of the ClipService's
+	// PrepareClipPreview RPC.
+	ClipServicePrepareClipPreviewProcedure = "/postpilot.v1.ClipService/PrepareClipPreview"
 	// ClipServiceGetClipCapabilitiesProcedure is the fully-qualified name of the ClipService's
 	// GetClipCapabilities RPC.
 	ClipServiceGetClipCapabilitiesProcedure = "/postpilot.v1.ClipService/GetClipCapabilities"
@@ -100,6 +103,7 @@ const (
 
 // ClipServiceClient is a client for the postpilot.v1.ClipService service.
 type ClipServiceClient interface {
+	PrepareClipPreview(context.Context, *connect.Request[v1.PrepareClipPreviewRequest]) (*connect.Response[v1.PrepareClipPreviewResponse], error)
 	GetClipCapabilities(context.Context, *connect.Request[v1.GetClipCapabilitiesRequest]) (*connect.Response[v1.GetClipCapabilitiesResponse], error)
 	SaveClipEditPlan(context.Context, *connect.Request[v1.SaveClipEditPlanRequest]) (*connect.Response[v1.SaveClipEditPlanResponse], error)
 	StartClipRender(context.Context, *connect.Request[v1.StartClipRenderRequest]) (*connect.Response[v1.StartClipRenderResponse], error)
@@ -136,6 +140,12 @@ func NewClipServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 	baseURL = strings.TrimRight(baseURL, "/")
 	clipServiceMethods := v1.File_postpilot_v1_clip_proto.Services().ByName("ClipService").Methods()
 	return &clipServiceClient{
+		prepareClipPreview: connect.NewClient[v1.PrepareClipPreviewRequest, v1.PrepareClipPreviewResponse](
+			httpClient,
+			baseURL+ClipServicePrepareClipPreviewProcedure,
+			connect.WithSchema(clipServiceMethods.ByName("PrepareClipPreview")),
+			connect.WithClientOptions(opts...),
+		),
 		getClipCapabilities: connect.NewClient[v1.GetClipCapabilitiesRequest, v1.GetClipCapabilitiesResponse](
 			httpClient,
 			baseURL+ClipServiceGetClipCapabilitiesProcedure,
@@ -267,6 +277,7 @@ func NewClipServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 
 // clipServiceClient implements ClipServiceClient.
 type clipServiceClient struct {
+	prepareClipPreview          *connect.Client[v1.PrepareClipPreviewRequest, v1.PrepareClipPreviewResponse]
 	getClipCapabilities         *connect.Client[v1.GetClipCapabilitiesRequest, v1.GetClipCapabilitiesResponse]
 	saveClipEditPlan            *connect.Client[v1.SaveClipEditPlanRequest, v1.SaveClipEditPlanResponse]
 	startClipRender             *connect.Client[v1.StartClipRenderRequest, v1.StartClipRenderResponse]
@@ -288,6 +299,11 @@ type clipServiceClient struct {
 	getClipSources              *connect.Client[v1.GetClipSourcesRequest, v1.GetClipSourcesResponse]
 	getClipSourcePlayback       *connect.Client[v1.GetClipSourcePlaybackRequest, v1.GetClipSourcePlaybackResponse]
 	listClipAnalysisEligibility *connect.Client[v1.ListClipAnalysisEligibilityRequest, v1.ListClipAnalysisEligibilityResponse]
+}
+
+// PrepareClipPreview calls postpilot.v1.ClipService.PrepareClipPreview.
+func (c *clipServiceClient) PrepareClipPreview(ctx context.Context, req *connect.Request[v1.PrepareClipPreviewRequest]) (*connect.Response[v1.PrepareClipPreviewResponse], error) {
+	return c.prepareClipPreview.CallUnary(ctx, req)
 }
 
 // GetClipCapabilities calls postpilot.v1.ClipService.GetClipCapabilities.
@@ -397,6 +413,7 @@ func (c *clipServiceClient) ListClipAnalysisEligibility(ctx context.Context, req
 
 // ClipServiceHandler is an implementation of the postpilot.v1.ClipService service.
 type ClipServiceHandler interface {
+	PrepareClipPreview(context.Context, *connect.Request[v1.PrepareClipPreviewRequest]) (*connect.Response[v1.PrepareClipPreviewResponse], error)
 	GetClipCapabilities(context.Context, *connect.Request[v1.GetClipCapabilitiesRequest]) (*connect.Response[v1.GetClipCapabilitiesResponse], error)
 	SaveClipEditPlan(context.Context, *connect.Request[v1.SaveClipEditPlanRequest]) (*connect.Response[v1.SaveClipEditPlanResponse], error)
 	StartClipRender(context.Context, *connect.Request[v1.StartClipRenderRequest]) (*connect.Response[v1.StartClipRenderResponse], error)
@@ -429,6 +446,12 @@ type ClipServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewClipServiceHandler(svc ClipServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	clipServiceMethods := v1.File_postpilot_v1_clip_proto.Services().ByName("ClipService").Methods()
+	clipServicePrepareClipPreviewHandler := connect.NewUnaryHandler(
+		ClipServicePrepareClipPreviewProcedure,
+		svc.PrepareClipPreview,
+		connect.WithSchema(clipServiceMethods.ByName("PrepareClipPreview")),
+		connect.WithHandlerOptions(opts...),
+	)
 	clipServiceGetClipCapabilitiesHandler := connect.NewUnaryHandler(
 		ClipServiceGetClipCapabilitiesProcedure,
 		svc.GetClipCapabilities,
@@ -557,6 +580,8 @@ func NewClipServiceHandler(svc ClipServiceHandler, opts ...connect.HandlerOption
 	)
 	return "/postpilot.v1.ClipService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
+		case ClipServicePrepareClipPreviewProcedure:
+			clipServicePrepareClipPreviewHandler.ServeHTTP(w, r)
 		case ClipServiceGetClipCapabilitiesProcedure:
 			clipServiceGetClipCapabilitiesHandler.ServeHTTP(w, r)
 		case ClipServiceSaveClipEditPlanProcedure:
@@ -607,6 +632,10 @@ func NewClipServiceHandler(svc ClipServiceHandler, opts ...connect.HandlerOption
 
 // UnimplementedClipServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedClipServiceHandler struct{}
+
+func (UnimplementedClipServiceHandler) PrepareClipPreview(context.Context, *connect.Request[v1.PrepareClipPreviewRequest]) (*connect.Response[v1.PrepareClipPreviewResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipService.PrepareClipPreview is not implemented"))
+}
 
 func (UnimplementedClipServiceHandler) GetClipCapabilities(context.Context, *connect.Request[v1.GetClipCapabilitiesRequest]) (*connect.Response[v1.GetClipCapabilitiesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipService.GetClipCapabilities is not implemented"))

@@ -1,4 +1,27 @@
 export const clips = {
+  preview: {
+    invalidTimeline: 'Enter valid cut ranges to preview footage. Text and timing remain editable.',
+    title: 'Current draft preview',
+    play: 'Play',
+    pause: 'Pause',
+    originalAudio: 'Play original audio',
+    outputTime: 'Output timeline',
+    loadingMedia: 'Loading the original video.',
+    codec: 'This browser cannot play the original format. Text and timing remain editable.',
+    expired: 'The original has expired. Select the matching original to preview it again.',
+    missing: 'The original is missing. Select the matching original again.',
+    mediaFailed: 'The original could not play. Text and timing remain editable.',
+    preparationFailed:
+      'Could not prepare this draft preview. Check its text and visibility intervals.',
+    updating: 'Updating the preview for your edited text.',
+    currentDraft: 'Previewing the current draft.',
+    retry: 'Retry preview preparation',
+    parity:
+      'Browser timing is approximate. Check source-dependent text contrast and final audio normalization in the completed video.',
+    frameApproximate:
+      'Browser playback timing is approximate. Check exact frames in the completed video.',
+    renderedRevision: 'Compare previous render · revision {{revision}}',
+  },
   composition: {
     templateChanged:
       'The template composition changed. Review and apply its current fields. Your previous video result is preserved.',

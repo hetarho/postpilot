@@ -82,6 +82,11 @@ export const errors = {
     '{{model}} 모델의 요금 상한을 확인할 수 없어 생성을 시작하지 않았어요. 다른 모델을 선택하거나 잠시 후 다시 시도해 주세요.',
   CLIP_SOURCE_EXPIRED: '원본 보관 기한이 지났어요. 같은 원본을 다시 선택해 주세요.',
   CLIP_SOURCE_MISSING: '원본을 찾을 수 없어요. 같은 파일을 다시 선택해 주세요.',
+  CLIP_PREVIEW_BUSY: '다른 미리보기를 준비하고 있어요. 잠시 후 다시 시도해 주세요.',
+  CLIP_PREVIEW_TOO_LARGE:
+    '이 구간의 미리보기 이미지가 너무 커요. 문구나 표시 구간을 나누어 주세요.',
+  CLIP_PREVIEW_UNAVAILABLE: '미리보기를 준비할 수 없어요. 잠시 후 다시 시도해 주세요.',
+  CLIP_PREVIEW_TIMEOUT: '미리보기 준비 시간이 초과됐어요. 잠시 후 다시 시도해 주세요.',
   CLIP_SOURCE_UNAVAILABLE:
     '영상이 처리 중이거나 업로드가 만료됐어요. 진행 상태를 확인한 뒤 원본 영상을 다시 선택해 주세요.',
   CLIP_NOT_FOUND: '클립 또는 영상 템플릿을 찾을 수 없어요.',

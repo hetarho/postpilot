@@ -19,6 +19,18 @@ export function toClipEditingState(value: ProtoClipEditingState): ClipEditingSta
     throw new Error('Invalid approved styles')
   return {
     plan: {
+      ...(value.plan.nativeComposition
+        ? {
+            nativeComposition: true,
+            elements: value.plan.elements.map(({ $typeName, rows, ...text }) => {
+              void $typeName
+              return {
+                ...text,
+                rows: rows.map((row) => ({ role: row.role, text: row.text })),
+              }
+            }),
+          }
+        : {}),
       durationMs: value.plan.durationMs,
       hook: value.plan.hook,
       cuts: value.plan.cuts.map((c) => {
@@ -68,6 +80,7 @@ export function toClipEditingState(value: ProtoClipEditingState): ClipEditingSta
           }
         })
         return {
+          ...(c.focal ? { focal: { x: c.focal.x, y: c.focal.y } } : {}),
           id: c.id,
           sourceId: c.sourceId,
           fingerprint: c.fingerprint,
@@ -98,9 +111,12 @@ export function toClipEditingState(value: ProtoClipEditingState): ClipEditingSta
 }
 export function clipPlanToProto(plan: ClipEditPlan) {
   return {
+    nativeComposition: plan.nativeComposition ?? false,
+    elements: plan.elements ?? [],
     durationMs: plan.durationMs,
     hook: plan.hook,
     cuts: plan.cuts.map((c) => ({
+      focal: c.focal,
       id: c.id,
       sourceId: c.sourceId,
       fingerprint: c.fingerprint,

@@ -111,6 +111,12 @@ func toConnectError(err error) error {
 	var problem *composition.Problem
 	var admission *clip.ModelAdmissionError
 	switch {
+	case errors.Is(err, clip.ErrPreviewBusy):
+		return rpcserver.NewAppError(connect.CodeResourceExhausted, "clip preview is busy", "CLIP_PREVIEW_BUSY", nil)
+	case errors.Is(err, clip.ErrPreviewTooLarge):
+		return rpcserver.NewAppError(connect.CodeResourceExhausted, "clip preview is too large", "CLIP_PREVIEW_TOO_LARGE", nil)
+	case errors.Is(err, clip.ErrPreviewUnavailable):
+		return rpcserver.NewAppError(connect.CodeUnavailable, "clip preview unavailable", "CLIP_PREVIEW_UNAVAILABLE", nil)
 	case errors.As(err, &problem):
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid clip composition", "CLIP_COMPOSITION_INVALID", map[string]string{"element_id": problem.ElementID, "line": strconv.Itoa(problem.Line), "reason": problem.Reason})
 	case errors.Is(err, clip.ErrCompositionUnavailable):

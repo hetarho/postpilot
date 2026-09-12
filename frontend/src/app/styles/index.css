@@ -205,6 +205,7 @@
   --interaction-focus: var(--palette-violet-300);
   --physical-scrim: var(--palette-mauve-950);
   --physical-on-scrim: var(--palette-white);
+  --physical-video: var(--palette-black);
   --physical-shadow: var(--palette-black);
 
   /* promotional hues — the ONE place a foundation reaches past the accent family (THEME-37).
@@ -368,6 +369,7 @@
   --focus-ring: var(--interaction-focus);
   --selection-bg: var(--intent-accent);
   --selection-fg: var(--intent-on-accent);
+  --media-canvas-bg: var(--physical-video);
   --media-scrim-bg: var(--physical-scrim);
   --media-scrim-fg: var(--physical-on-scrim);
   --shadow-color: var(--physical-shadow);
@@ -730,6 +732,7 @@
   --color-focus-ring: var(--focus-ring);
   --color-selection-bg: var(--selection-bg);
   --color-selection-fg: var(--selection-fg);
+  --color-media-canvas-bg: var(--media-canvas-bg);
   --color-media-scrim-bg: var(--media-scrim-bg);
   --color-media-scrim-fg: var(--media-scrim-fg);
   --color-shadow: var(--shadow-color);

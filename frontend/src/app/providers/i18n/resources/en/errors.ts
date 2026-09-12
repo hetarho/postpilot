@@ -86,6 +86,11 @@ export const errors = {
     'The price ceiling for {{model}} could not be confirmed, so generation did not start. Choose another model or try again later.',
   CLIP_SOURCE_EXPIRED: 'Original retention expired. Reselect matching originals.',
   CLIP_SOURCE_MISSING: 'The original is missing. Reselect the matching file.',
+  CLIP_PREVIEW_BUSY: 'Another preview is being prepared. Try again shortly.',
+  CLIP_PREVIEW_TOO_LARGE:
+    'The preview assets for this interval are too large. Split its text or visibility intervals.',
+  CLIP_PREVIEW_UNAVAILABLE: 'Preview preparation is unavailable. Try again shortly.',
+  CLIP_PREVIEW_TIMEOUT: 'Preview preparation timed out. Try again shortly.',
   CLIP_SOURCE_UNAVAILABLE:
     'The videos are processing or the upload has expired. Check progress, then select the source videos again.',
   CLIP_NOT_FOUND: 'Could not find the clip or video template.',

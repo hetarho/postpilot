@@ -15,25 +15,27 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 )
 
 var ErrBusy = errors.New("clip busy")
 
 type GenerationService struct {
-	store      GenerationStore
-	projects   *Service
-	sources    *SourceService
-	objects    ProcessingObjects
-	media      Media
-	planner    Planner
-	renderer   Renderer
-	jobs       GenerationJobs
-	cfg        GenerationConfig
-	pricing    QuotePricing
-	accounting AccountingReader
-	admission  AnalysisAdmission
-	now        func() time.Time
+	previewOwners sync.Map
+	store         GenerationStore
+	projects      *Service
+	sources       *SourceService
+	objects       ProcessingObjects
+	media         Media
+	planner       Planner
+	renderer      Renderer
+	jobs          GenerationJobs
+	cfg           GenerationConfig
+	pricing       QuotePricing
+	accounting    AccountingReader
+	admission     AnalysisAdmission
+	now           func() time.Time
 }
 
 func NewGenerationService(store GenerationStore, projects *Service, sources *SourceService, objects ProcessingObjects, media Media, planner Planner, renderer Renderer, jobs GenerationJobs, cfg GenerationConfig) *GenerationService {

@@ -53,6 +53,7 @@ type SourceEvidence struct {
 	StartMS, EndMS        int
 }
 type PortableText struct {
+	OwnerEdited           bool
 	Placement             *CompositionPlacement
 	Accent, Keyword, Pace string
 	Resolved              composition.ResolvedElement

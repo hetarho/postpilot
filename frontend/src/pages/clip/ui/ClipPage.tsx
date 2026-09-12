@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useBlocker, useParams } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { useClipProject, requiredClipSources, type ClipProject } from '@/entities/clip-project'
+import {
+  ClipDraftPreview,
+  useClipProject,
+  requiredClipSources,
+  type ClipProject,
+} from '@/entities/clip-project'
 import { useClipCorrection, ClipCorrectionWorkspace } from '@/features/correct-clip'
 import { useSession } from '@/entities/session'
 import { ClipProjectForm, useClipDraftSave } from '@/features/edit-clip-project'
@@ -257,6 +262,26 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
 
   const refinePanel = plan ? (
     <ClipCorrectionWorkspace
+      preview={
+        <>
+          <ClipDraftPreview
+            projectId={project.id}
+            revision={correction.revision}
+            plan={correction.draft}
+            ratio={project.ratio}
+            sources={plan.sources}
+            resolvePlayback={upload.ensurePlayback}
+          />
+          {project.result && (
+            <details className="mt-4">
+              <summary className="text-content-secondary cursor-pointer">
+                {t('preview.renderedRevision', { revision: project.renderedPlanRevision })}
+              </summary>
+              <ClipResult ownerId={ownerId} project={project} />
+            </details>
+          )}
+        </>
+      }
       correction={correction}
       state={plan}
       answers={project.answers}

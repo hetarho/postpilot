@@ -23,3 +23,15 @@ export const CLIP_COMPOSITION_PREVIEW = {
   expandedBytes: 262144,
   sampleItems: 2,
 } as const
+
+export const CLIP_DRAFT_PREVIEW = {
+  // Mirrors rpcserver.maxRequestBytes; preview never widens the RPC boundary.
+  maxRequestBytes: 256 * 1024,
+  debounceMs: 250,
+  maxAssets: 8,
+  maxAssetBytes: 512 * 1024,
+  maxResponseBytes: 4 * 1024 * 1024,
+  cacheBytes: 32 * 1024 * 1024,
+  frameToleranceMs: 1000 / 30,
+  seekStepMs: 1,
+} as const

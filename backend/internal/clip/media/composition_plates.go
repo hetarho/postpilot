@@ -34,20 +34,29 @@ func (r *Rendering) declaredPlate(ctx context.Context, ws clip.MediaWorkspace, c
 				}
 			}
 		}
-		body, err = r.overlays.Render("copy."+visual.copy.Style, copyView(canvas, visual.copy, visual.caption, visual.ground))
-	case "badge":
-		body, err = r.overlays.Render("furniture", furnitureView(canvas, visual.furniture))
-	case "info":
-		body, err = r.overlays.Render("copy.clean", visual.info)
-	case "hook", "ending":
-		body, err = r.overlays.Render("card."+visual.card.Kind, cardView(canvas, visual.card))
-	default:
-		return "", elementProblem(visual.text, "invalid_role")
 	}
+	body, err = r.declaredSVG(canvas, *visual)
 	if err != nil {
 		return "", err
 	}
 	return r.rasterize(ctx, ws, canvas, body, fmt.Sprintf("declared-%04d", index))
+}
+
+// Both export and preview shape exactly the same escaped, bundled templates.
+// Only export can supply measured source luminance to this pure plate builder.
+func (r *Rendering) declaredSVG(canvas clip.Canvas, visual declaredVisual) (string, error) {
+	switch visual.manifest.Role {
+	case "caption":
+		return r.overlays.Render("copy."+visual.copy.Style, copyView(canvas, visual.copy, visual.caption, visual.ground))
+	case "badge":
+		return r.overlays.Render("furniture", furnitureView(canvas, visual.furniture))
+	case "info":
+		return r.overlays.Render("copy.clean", visual.info)
+	case "hook", "ending":
+		return r.overlays.Render("card."+visual.card.Kind, cardView(canvas, visual.card))
+	default:
+		return "", elementProblem(visual.text, "invalid_role")
+	}
 }
 
 // Seeking past the final frame timestamp yields no image even though it is

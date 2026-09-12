@@ -14,7 +14,7 @@ import (
 type storedPortablePlan struct {
 	Version     int
 	Ratio       string
-	Plan        CorrectionPlan
+	Plan        storedCorrectionPlan
 	Focals      map[string]Point
 	CopyStyles  []string
 	Composition PortablePlan
@@ -28,7 +28,9 @@ func encodePortablePlan(p EditPlan, styles []string) (string, error) {
 	for _, cut := range p.Cuts {
 		focals[cut.ID] = cut.Focal
 	}
-	b, err := json.Marshal(storedPortablePlan{CompositionPlanVersion, p.Ratio, CorrectionFromPlan(p), focals, slices.Clone(styles), *p.Portable})
+	plain := p
+	plain.Portable = nil
+	b, err := json.Marshal(storedPortablePlan{CompositionPlanVersion, p.Ratio, storedCorrection(CorrectionFromPlan(plain)), focals, slices.Clone(styles), *p.Portable})
 	return string(b), err
 }
 
@@ -77,6 +79,15 @@ func validatePortablePlan(p EditPlan) error {
 			valid := false
 			for _, c := range p.Cuts {
 				if c.SourceID == evidence.SourceID && c.Fingerprint == evidence.Fingerprint && evidence.StartMS >= c.StartMS && evidence.EndMS <= c.EndMS && evidence.StartMS < evidence.EndMS {
+					valid = true
+				}
+			}
+			// Trimming changes the selected footage, not its original evidence.
+			// Frozen observations keep the owner/source boundary verifiable even
+			// when an earlier observed range is no longer in a selected cut.
+			for _, observed := range v.Observations {
+				source := observed.Source
+				if source.ID == evidence.SourceID && source.Fingerprint == evidence.Fingerprint && evidence.StartMS >= 0 && evidence.StartMS < evidence.EndMS && evidence.EndMS <= source.Info.DurationMS {
 					valid = true
 				}
 			}
