@@ -102,7 +102,7 @@ func (q *Queries) HasActiveClipJob(ctx context.Context, clipProjectID sql.NullSt
 }
 
 const linkSourceJob = `-- name: LinkSourceJob :execrows
-UPDATE clip_source_batches SET state='consuming',job_id=? WHERE clip_source_batches.id=? AND clip_source_batches.user_id=? AND clip_source_batches.state='ready' AND NOT EXISTS(SELECT 1 FROM clip_source_leases l WHERE l.batch_id=clip_source_batches.id AND (l.cleanup_pending=1 OR l.state!='ready' OR l.retention_expires_at<=?4)) AND EXISTS(SELECT 1 FROM clip_projects p WHERE p.id=clip_source_batches.project_id AND p.user_id=clip_source_batches.user_id AND p.source_batch_id=clip_source_batches.id AND p.deleting=0 AND p.source_access_revoked_at IS NULL)
+UPDATE clip_source_batches SET state='consuming',job_id=? WHERE clip_source_batches.id=? AND clip_source_batches.user_id=? AND clip_source_batches.state='ready' AND NOT EXISTS(SELECT 1 FROM clip_source_leases l WHERE l.batch_id=clip_source_batches.id AND (l.cleanup_pending=1 OR l.state!='ready' OR l.retention_expires_at<=?4)) AND EXISTS(SELECT 1 FROM clip_projects p WHERE p.id=clip_source_batches.project_id AND p.user_id=clip_source_batches.user_id AND p.source_batch_id=clip_source_batches.id AND p.deleting=0 AND p.finalized_at IS NULL AND p.source_access_revoked_at IS NULL)
 `
 
 type LinkSourceJobParams struct {
@@ -207,7 +207,7 @@ func (q *Queries) ResultKeys(ctx context.Context) ([]sql.NullString, error) {
 }
 
 const saveCorrection = `-- name: SaveCorrection :execrows
-UPDATE clip_projects SET edit_plan_json=?,edit_plan_revision=edit_plan_revision+1,updated_at=? WHERE id=? AND user_id=? AND deleting=0 AND edit_plan_revision=?
+UPDATE clip_projects SET edit_plan_json=?,edit_plan_revision=edit_plan_revision+1,updated_at=? WHERE id=? AND user_id=? AND deleting=0 AND finalized_at IS NULL AND edit_plan_revision=?
 `
 
 type SaveCorrectionParams struct {
@@ -233,7 +233,7 @@ func (q *Queries) SaveCorrection(ctx context.Context, arg SaveCorrectionParams) 
 }
 
 const saveGeneration = `-- name: SaveGeneration :execrows
-UPDATE clip_projects SET analysis_json=?,edit_plan_json=?,result_key=?,result_content_type=?,result_bytes=?,result_duration_ms=?,result_created_at=?,updated_at=?,edit_plan_revision=edit_plan_revision+1,rendered_plan_revision=edit_plan_revision+1 WHERE user_id=? AND id=? AND deleting=0
+UPDATE clip_projects SET result_id=lower(hex(randomblob(16))),analysis_json=?,edit_plan_json=?,result_key=?,result_content_type=?,result_bytes=?,result_duration_ms=?,result_created_at=?,updated_at=?,edit_plan_revision=edit_plan_revision+1,rendered_plan_revision=edit_plan_revision+1 WHERE user_id=? AND id=? AND deleting=0 AND finalized_at IS NULL
 `
 
 type SaveGenerationParams struct {
@@ -269,7 +269,7 @@ func (q *Queries) SaveGeneration(ctx context.Context, arg SaveGenerationParams) 
 }
 
 const saveRender = `-- name: SaveRender :execrows
-UPDATE clip_projects SET result_key=?,result_content_type=?,result_bytes=?,result_duration_ms=?,result_created_at=?,updated_at=?,rendered_plan_revision=edit_plan_revision WHERE id=? AND user_id=? AND deleting=0 AND edit_plan_revision=?
+UPDATE clip_projects SET result_id=lower(hex(randomblob(16))),result_key=?,result_content_type=?,result_bytes=?,result_duration_ms=?,result_created_at=?,updated_at=?,rendered_plan_revision=edit_plan_revision WHERE id=? AND user_id=? AND deleting=0 AND finalized_at IS NULL AND edit_plan_revision=?
 `
 
 type SaveRenderParams struct {

@@ -1,7 +1,7 @@
 -- name: SourceProjectAccess :one
-SELECT source_batch_id,source_access_revoked_at,source_retention_expires_at,deleting FROM clip_projects WHERE id=? AND user_id=?;
+SELECT source_batch_id,source_access_revoked_at,source_retention_expires_at,deleting,finalized_at FROM clip_projects WHERE id=? AND user_id=?;
 -- name: SelectSourceBatch :execrows
-UPDATE clip_projects SET source_batch_id=? WHERE id=? AND user_id=? AND deleting=0 AND source_access_revoked_at IS NULL;
+UPDATE clip_projects SET source_batch_id=? WHERE id=? AND user_id=? AND deleting=0 AND finalized_at IS NULL AND source_access_revoked_at IS NULL;
 -- name: FenceSourceAccess :execrows
 UPDATE clip_projects SET source_access_revoked_at=COALESCE(source_access_revoked_at,?) WHERE id=? AND user_id=?;
 -- name: SetSourceRetention :exec

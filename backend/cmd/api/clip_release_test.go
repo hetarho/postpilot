@@ -171,7 +171,13 @@ func TestClipRelease(t *testing.T) {
 		return
 	}
 	for _, mode := range []string{"success", "multi-source", "multi-source-timing", "seeked cut", "delayed audio", "master", "denied", "partial", "overage", "unknown usage", "malformed", "truncated", "oversized response", "save failure", "malformed last source", "oversized proxy", "disk", "unknown prices", "price drift", "legacy client", "expired quote", "changed quote", "aborted client", "restart prepare", "restart hold", "restart partial", "restart save"} {
-		t.Run(mode, func(t *testing.T) { h := newReleaseHarness(t, mode, false); h.exercise(mode) })
+		t.Run(mode, func(t *testing.T) {
+			h := newReleaseHarness(t, mode, false)
+			h.exercise(mode)
+			if mode == "success" {
+				h.verifyFinalization()
+			}
+		})
 	}
 }
 
@@ -241,7 +247,7 @@ func newReleaseHarness(t *testing.T, mode string, stress bool) *releaseHarness {
 	st := clipstore.New(d.Writer, d.Reader)
 	projects := clip.NewService(st, config.ClipLimits())
 	objects := &releaseObjects{root: root, paths: map[string]string{}, downloads: map[string]int{}}
-	if strings.HasPrefix(mode, "multi-source") {
+	if strings.HasPrefix(mode, "multi-source") || mode == "success" {
 		blob := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			key := r.URL.Query().Get("key")
 			objects.mu.Lock()
@@ -268,6 +274,7 @@ func newReleaseHarness(t *testing.T, mode string, stress bool) *releaseHarness {
 	q.GuardClips(releaseClipGuard{guard, admission})
 	g := clip.NewGenerationService(st, projects, sources, objects, media, planner, renderer, clipJobs{q}, config.ClipGeneration(cfg)).WithFinisher(releaseFinisher{clipFinisher{writer: d.Writer, clips: st, jobs: js}, mode}).WithCredits(clipQuotePricing{registry: registry, cfg: config.ClipAI(cfg)}, clipAccounting{ledger: ledger})
 	projects.SetGeneration(g)
+	projects.SetFinalizer(clipFinalizer{writer: d.Writer, clips: st, cfg: config.ClipRender(cfg)})
 	if !strings.HasPrefix(mode, "restart ") {
 		q.Register(job.KindGenerateClip, metered(func(ctx context.Context, j job.Job, p job.Progress) error {
 			return g.Run(ctx, j.UserID, j.ID, j.ClipProjectID, j.Payload, p)
@@ -859,5 +866,39 @@ func (h *releaseHarness) inspectResult() {
 	n, _ := io.ReadFull(f, header)
 	if !strings.Contains(string(header[:n]), "moov") {
 		h.t.Fatal("result lacks fast-start metadata")
+	}
+}
+
+func (h *releaseHarness) verifyFinalization() {
+	t, ctx := h.t, h.t.Context()
+	before, err := h.client.GetClipProject(ctx, releaseRequest(h, &v1.GetClipProjectRequest{Id: h.project}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := before.Msg.Project
+	if !p.GetCanFinalize() || p.Result.GetId() == "" {
+		t.Fatal("render is not finalizable", p.FinalizationRefusal)
+	}
+	balance, calls := h.balance(), h.provider.posts.Load()
+	response, err := h.client.FinalizeClipProject(ctx, releaseRequest(h, &v1.FinalizeClipProjectRequest{ProjectId: h.project, ExpectedRevision: p.EditPlanRevision, ExpectedResultId: p.Result.Id}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	finalized := response.Msg.Project
+	if finalized.FinalizedResultId != p.Result.Id || finalized.GetCanEdit() || finalized.Editing != nil || finalized.Result.DownloadUrl == "" || h.balance() != balance || h.provider.posts.Load() != calls {
+		t.Fatal("finalization changed output, credit or AI work")
+	}
+	keys, err := h.objects.ListSourceKeys(ctx)
+	if err != nil || len(keys) != 0 {
+		t.Fatal("finalization retained originals", keys, err)
+	}
+	result, err := http.Get(finalized.Result.DownloadUrl)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer result.Body.Close()
+	bytes, err := io.Copy(io.Discard, io.LimitReader(result.Body, finalized.Result.Bytes+1))
+	if err != nil || result.StatusCode != http.StatusOK || bytes != finalized.Result.Bytes {
+		t.Fatal("confirmed result download failed", err)
 	}
 }

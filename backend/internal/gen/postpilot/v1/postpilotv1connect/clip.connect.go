@@ -51,6 +51,9 @@ const (
 	// ClipServiceQuoteClipGenerationProcedure is the fully-qualified name of the ClipService's
 	// QuoteClipGeneration RPC.
 	ClipServiceQuoteClipGenerationProcedure = "/postpilot.v1.ClipService/QuoteClipGeneration"
+	// ClipServiceFinalizeClipProjectProcedure is the fully-qualified name of the ClipService's
+	// FinalizeClipProject RPC.
+	ClipServiceFinalizeClipProjectProcedure = "/postpilot.v1.ClipService/FinalizeClipProject"
 	// ClipServiceCancelClipJobProcedure is the fully-qualified name of the ClipService's CancelClipJob
 	// RPC.
 	ClipServiceCancelClipJobProcedure = "/postpilot.v1.ClipService/CancelClipJob"
@@ -112,6 +115,7 @@ type ClipServiceClient interface {
 	StartClipRender(context.Context, *connect.Request[v1.StartClipRenderRequest]) (*connect.Response[v1.StartClipRenderResponse], error)
 	StartClipGeneration(context.Context, *connect.Request[v1.StartClipGenerationRequest]) (*connect.Response[v1.StartClipGenerationResponse], error)
 	QuoteClipGeneration(context.Context, *connect.Request[v1.QuoteClipGenerationRequest]) (*connect.Response[v1.QuoteClipGenerationResponse], error)
+	FinalizeClipProject(context.Context, *connect.Request[v1.FinalizeClipProjectRequest]) (*connect.Response[v1.FinalizeClipProjectResponse], error)
 	CancelClipJob(context.Context, *connect.Request[v1.CancelClipJobRequest]) (*connect.Response[v1.CancelClipJobResponse], error)
 	ListVideoTemplates(context.Context, *connect.Request[v1.ListVideoTemplatesRequest]) (*connect.Response[v1.ListVideoTemplatesResponse], error)
 	CreateVideoTemplate(context.Context, *connect.Request[v1.CreateVideoTemplateRequest]) (*connect.Response[v1.CreateVideoTemplateResponse], error)
@@ -178,6 +182,12 @@ func NewClipServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			httpClient,
 			baseURL+ClipServiceQuoteClipGenerationProcedure,
 			connect.WithSchema(clipServiceMethods.ByName("QuoteClipGeneration")),
+			connect.WithClientOptions(opts...),
+		),
+		finalizeClipProject: connect.NewClient[v1.FinalizeClipProjectRequest, v1.FinalizeClipProjectResponse](
+			httpClient,
+			baseURL+ClipServiceFinalizeClipProjectProcedure,
+			connect.WithSchema(clipServiceMethods.ByName("FinalizeClipProject")),
 			connect.WithClientOptions(opts...),
 		),
 		cancelClipJob: connect.NewClient[v1.CancelClipJobRequest, v1.CancelClipJobResponse](
@@ -293,6 +303,7 @@ type clipServiceClient struct {
 	startClipRender             *connect.Client[v1.StartClipRenderRequest, v1.StartClipRenderResponse]
 	startClipGeneration         *connect.Client[v1.StartClipGenerationRequest, v1.StartClipGenerationResponse]
 	quoteClipGeneration         *connect.Client[v1.QuoteClipGenerationRequest, v1.QuoteClipGenerationResponse]
+	finalizeClipProject         *connect.Client[v1.FinalizeClipProjectRequest, v1.FinalizeClipProjectResponse]
 	cancelClipJob               *connect.Client[v1.CancelClipJobRequest, v1.CancelClipJobResponse]
 	listVideoTemplates          *connect.Client[v1.ListVideoTemplatesRequest, v1.ListVideoTemplatesResponse]
 	createVideoTemplate         *connect.Client[v1.CreateVideoTemplateRequest, v1.CreateVideoTemplateResponse]
@@ -340,6 +351,11 @@ func (c *clipServiceClient) StartClipGeneration(ctx context.Context, req *connec
 // QuoteClipGeneration calls postpilot.v1.ClipService.QuoteClipGeneration.
 func (c *clipServiceClient) QuoteClipGeneration(ctx context.Context, req *connect.Request[v1.QuoteClipGenerationRequest]) (*connect.Response[v1.QuoteClipGenerationResponse], error) {
 	return c.quoteClipGeneration.CallUnary(ctx, req)
+}
+
+// FinalizeClipProject calls postpilot.v1.ClipService.FinalizeClipProject.
+func (c *clipServiceClient) FinalizeClipProject(ctx context.Context, req *connect.Request[v1.FinalizeClipProjectRequest]) (*connect.Response[v1.FinalizeClipProjectResponse], error) {
+	return c.finalizeClipProject.CallUnary(ctx, req)
 }
 
 // CancelClipJob calls postpilot.v1.ClipService.CancelClipJob.
@@ -435,6 +451,7 @@ type ClipServiceHandler interface {
 	StartClipRender(context.Context, *connect.Request[v1.StartClipRenderRequest]) (*connect.Response[v1.StartClipRenderResponse], error)
 	StartClipGeneration(context.Context, *connect.Request[v1.StartClipGenerationRequest]) (*connect.Response[v1.StartClipGenerationResponse], error)
 	QuoteClipGeneration(context.Context, *connect.Request[v1.QuoteClipGenerationRequest]) (*connect.Response[v1.QuoteClipGenerationResponse], error)
+	FinalizeClipProject(context.Context, *connect.Request[v1.FinalizeClipProjectRequest]) (*connect.Response[v1.FinalizeClipProjectResponse], error)
 	CancelClipJob(context.Context, *connect.Request[v1.CancelClipJobRequest]) (*connect.Response[v1.CancelClipJobResponse], error)
 	ListVideoTemplates(context.Context, *connect.Request[v1.ListVideoTemplatesRequest]) (*connect.Response[v1.ListVideoTemplatesResponse], error)
 	CreateVideoTemplate(context.Context, *connect.Request[v1.CreateVideoTemplateRequest]) (*connect.Response[v1.CreateVideoTemplateResponse], error)
@@ -497,6 +514,12 @@ func NewClipServiceHandler(svc ClipServiceHandler, opts ...connect.HandlerOption
 		ClipServiceQuoteClipGenerationProcedure,
 		svc.QuoteClipGeneration,
 		connect.WithSchema(clipServiceMethods.ByName("QuoteClipGeneration")),
+		connect.WithHandlerOptions(opts...),
+	)
+	clipServiceFinalizeClipProjectHandler := connect.NewUnaryHandler(
+		ClipServiceFinalizeClipProjectProcedure,
+		svc.FinalizeClipProject,
+		connect.WithSchema(clipServiceMethods.ByName("FinalizeClipProject")),
 		connect.WithHandlerOptions(opts...),
 	)
 	clipServiceCancelClipJobHandler := connect.NewUnaryHandler(
@@ -615,6 +638,8 @@ func NewClipServiceHandler(svc ClipServiceHandler, opts ...connect.HandlerOption
 			clipServiceStartClipGenerationHandler.ServeHTTP(w, r)
 		case ClipServiceQuoteClipGenerationProcedure:
 			clipServiceQuoteClipGenerationHandler.ServeHTTP(w, r)
+		case ClipServiceFinalizeClipProjectProcedure:
+			clipServiceFinalizeClipProjectHandler.ServeHTTP(w, r)
 		case ClipServiceCancelClipJobProcedure:
 			clipServiceCancelClipJobHandler.ServeHTTP(w, r)
 		case ClipServiceListVideoTemplatesProcedure:
@@ -680,6 +705,10 @@ func (UnimplementedClipServiceHandler) StartClipGeneration(context.Context, *con
 
 func (UnimplementedClipServiceHandler) QuoteClipGeneration(context.Context, *connect.Request[v1.QuoteClipGenerationRequest]) (*connect.Response[v1.QuoteClipGenerationResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipService.QuoteClipGeneration is not implemented"))
+}
+
+func (UnimplementedClipServiceHandler) FinalizeClipProject(context.Context, *connect.Request[v1.FinalizeClipProjectRequest]) (*connect.Response[v1.FinalizeClipProjectResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipService.FinalizeClipProject is not implemented"))
 }
 
 func (UnimplementedClipServiceHandler) CancelClipJob(context.Context, *connect.Request[v1.CancelClipJobRequest]) (*connect.Response[v1.CancelClipJobResponse], error) {

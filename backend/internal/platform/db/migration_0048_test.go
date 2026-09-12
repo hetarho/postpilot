@@ -4,7 +4,6 @@ import (
 	"context"
 	"io/fs"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -73,8 +72,11 @@ func TestMigration0048PreservesJobGuardsAndHistoricalSettlement(t *testing.T) {
 	if err := Migrate(ctx, d.Writer); err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(before, guards()) {
-		t.Fatal("job ownership guards or active-work indexes changed")
+	after := guards()
+	for name, sql := range before {
+		if after[name] != sql {
+			t.Fatalf("existing job guard %s changed", name)
+		}
 	}
 	if err := d.Close(); err != nil {
 		t.Fatal(err)

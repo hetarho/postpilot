@@ -21,6 +21,9 @@ func (s *GenerationService) SaveCorrection(ctx context.Context, user, id string,
 	if err != nil {
 		return Project{}, err
 	}
+	if p.Finalized != nil {
+		return Project{}, ErrFinalized
+	}
 	if err := s.checkComposition(p.Composition); err != nil {
 		return Project{}, err
 	}
@@ -103,6 +106,9 @@ func (s *GenerationService) StartRender(ctx context.Context, user, id, batch str
 	p, err := s.projects.store.GetProject(ctx, user, id)
 	if err != nil {
 		return "", err
+	}
+	if p.Finalized != nil {
+		return "", ErrFinalized
 	}
 	if err := s.checkComposition(p.Composition); err != nil {
 		return "", err

@@ -41,6 +41,9 @@ func validateQuoteInputs(ctx context.Context, q *sqlc.Queries, quote clip.Genera
 	if err != nil {
 		return err
 	}
+	if p.Finalized != nil {
+		return clip.ErrFinalized
+	}
 	t, err := getTemplate(ctx, q, quote.UserID, p.VideoTemplateID)
 	if err != nil {
 		return err

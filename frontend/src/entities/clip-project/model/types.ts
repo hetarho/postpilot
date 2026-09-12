@@ -34,6 +34,12 @@ export interface ClipProjectDraft {
   cta: ClipCTAId | ''
 }
 export interface ClipProject extends ClipProjectDraft {
+  finalized?: { at: string; planRevision: number; resultId: string }
+  canEdit?: boolean
+  canFinalize?: boolean
+  finalizationRefusal?:
+    'finalized' | 'busy' | 'missing_render' | 'stale_render' | 'invalid_plan' | 'unavailable'
+
   composition?: ClipProjectComposition
   id: string
   createdAt: string
@@ -46,6 +52,7 @@ export interface ClipProject extends ClipProjectDraft {
   editing?: ClipEditingState
   observations?: ClipObservations
   result?: {
+    id?: string
     contentType: string
     bytes: number
     durationMs: number

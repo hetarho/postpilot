@@ -61,7 +61,7 @@ func (q *Queries) DeleteVideoTemplate(ctx context.Context, arg DeleteVideoTempla
 }
 
 const getClipProject = `-- name: GetClipProject :one
-SELECT id, user_id, title, video_template_id, ratio, target_duration_ms, analysis_json, edit_plan_json, result_key, result_content_type, result_bytes, result_duration_ms, result_created_at, edit_plan_revision, rendered_plan_revision, created_at, updated_at, deleting, disclosure, cta, hide_disclosure, composition_inputs_json, composition_snapshot_json, source_retention_expires_at, source_access_revoked_at, source_batch_id FROM clip_projects WHERE id = ? AND user_id = ?
+SELECT id, user_id, title, video_template_id, ratio, target_duration_ms, analysis_json, edit_plan_json, result_key, result_content_type, result_bytes, result_duration_ms, result_created_at, edit_plan_revision, rendered_plan_revision, created_at, updated_at, deleting, disclosure, cta, hide_disclosure, composition_inputs_json, composition_snapshot_json, source_retention_expires_at, source_access_revoked_at, source_batch_id, result_id, finalized_at, finalized_plan_revision, finalized_result_key FROM clip_projects WHERE id = ? AND user_id = ?
 `
 
 type GetClipProjectParams struct {
@@ -99,6 +99,10 @@ func (q *Queries) GetClipProject(ctx context.Context, arg GetClipProjectParams) 
 		&i.SourceRetentionExpiresAt,
 		&i.SourceAccessRevokedAt,
 		&i.SourceBatchID,
+		&i.ResultID,
+		&i.FinalizedAt,
+		&i.FinalizedPlanRevision,
+		&i.FinalizedResultKey,
 	)
 	return i, err
 }
@@ -241,7 +245,7 @@ func (q *Queries) ListClipAnswers(ctx context.Context, arg ListClipAnswersParams
 }
 
 const listClipProjects = `-- name: ListClipProjects :many
-SELECT id, user_id, title, video_template_id, ratio, target_duration_ms, analysis_json, edit_plan_json, result_key, result_content_type, result_bytes, result_duration_ms, result_created_at, edit_plan_revision, rendered_plan_revision, created_at, updated_at, deleting, disclosure, cta, hide_disclosure, composition_inputs_json, composition_snapshot_json, source_retention_expires_at, source_access_revoked_at, source_batch_id FROM clip_projects WHERE user_id = ? ORDER BY updated_at DESC, id
+SELECT id, user_id, title, video_template_id, ratio, target_duration_ms, analysis_json, edit_plan_json, result_key, result_content_type, result_bytes, result_duration_ms, result_created_at, edit_plan_revision, rendered_plan_revision, created_at, updated_at, deleting, disclosure, cta, hide_disclosure, composition_inputs_json, composition_snapshot_json, source_retention_expires_at, source_access_revoked_at, source_batch_id, result_id, finalized_at, finalized_plan_revision, finalized_result_key FROM clip_projects WHERE user_id = ? ORDER BY updated_at DESC, id
 `
 
 func (q *Queries) ListClipProjects(ctx context.Context, userID string) ([]ClipProject, error) {
@@ -280,6 +284,10 @@ func (q *Queries) ListClipProjects(ctx context.Context, userID string) ([]ClipPr
 			&i.SourceRetentionExpiresAt,
 			&i.SourceAccessRevokedAt,
 			&i.SourceBatchID,
+			&i.ResultID,
+			&i.FinalizedAt,
+			&i.FinalizedPlanRevision,
+			&i.FinalizedResultKey,
 		); err != nil {
 			return nil, err
 		}
@@ -336,7 +344,7 @@ func (q *Queries) ListVideoTemplates(ctx context.Context, userID string) ([]Vide
 }
 
 const projectsForTemplate = `-- name: ProjectsForTemplate :many
-SELECT id, user_id, title, video_template_id, ratio, target_duration_ms, analysis_json, edit_plan_json, result_key, result_content_type, result_bytes, result_duration_ms, result_created_at, edit_plan_revision, rendered_plan_revision, created_at, updated_at, deleting, disclosure, cta, hide_disclosure, composition_inputs_json, composition_snapshot_json, source_retention_expires_at, source_access_revoked_at, source_batch_id FROM clip_projects WHERE video_template_id = ? AND user_id = ? ORDER BY id
+SELECT id, user_id, title, video_template_id, ratio, target_duration_ms, analysis_json, edit_plan_json, result_key, result_content_type, result_bytes, result_duration_ms, result_created_at, edit_plan_revision, rendered_plan_revision, created_at, updated_at, deleting, disclosure, cta, hide_disclosure, composition_inputs_json, composition_snapshot_json, source_retention_expires_at, source_access_revoked_at, source_batch_id, result_id, finalized_at, finalized_plan_revision, finalized_result_key FROM clip_projects WHERE video_template_id = ? AND user_id = ? ORDER BY id
 `
 
 type ProjectsForTemplateParams struct {
@@ -380,6 +388,10 @@ func (q *Queries) ProjectsForTemplate(ctx context.Context, arg ProjectsForTempla
 			&i.SourceRetentionExpiresAt,
 			&i.SourceAccessRevokedAt,
 			&i.SourceBatchID,
+			&i.ResultID,
+			&i.FinalizedAt,
+			&i.FinalizedPlanRevision,
+			&i.FinalizedResultKey,
 		); err != nil {
 			return nil, err
 		}
@@ -395,7 +407,7 @@ func (q *Queries) ProjectsForTemplate(ctx context.Context, arg ProjectsForTempla
 }
 
 const saveProjectComposition = `-- name: SaveProjectComposition :execrows
-UPDATE clip_projects SET composition_snapshot_json=?,composition_inputs_json=? WHERE id=? AND user_id=?
+UPDATE clip_projects SET composition_snapshot_json=?,composition_inputs_json=? WHERE id=? AND user_id=? AND finalized_at IS NULL
 `
 
 type SaveProjectCompositionParams struct {
@@ -443,7 +455,7 @@ func (q *Queries) SaveTemplateComposition(ctx context.Context, arg SaveTemplateC
 }
 
 const touchClip = `-- name: TouchClip :execrows
-UPDATE clip_projects SET updated_at = ? WHERE id = ? AND user_id = ?
+UPDATE clip_projects SET updated_at = ? WHERE id = ? AND user_id = ? AND finalized_at IS NULL
 `
 
 type TouchClipParams struct {
@@ -461,7 +473,7 @@ func (q *Queries) TouchClip(ctx context.Context, arg TouchClipParams) (int64, er
 }
 
 const touchCompositionRevision = `-- name: TouchCompositionRevision :execrows
-UPDATE clip_projects SET edit_plan_revision=edit_plan_revision+1,updated_at=? WHERE id=? AND user_id=? AND deleting=0
+UPDATE clip_projects SET edit_plan_revision=edit_plan_revision+1,updated_at=? WHERE id=? AND user_id=? AND deleting=0 AND finalized_at IS NULL
 `
 
 type TouchCompositionRevisionParams struct {
@@ -479,7 +491,7 @@ func (q *Queries) TouchCompositionRevision(ctx context.Context, arg TouchComposi
 }
 
 const updateClipCTA = `-- name: UpdateClipCTA :execrows
-UPDATE clip_projects SET cta = ?, updated_at = ? WHERE id = ? AND user_id = ?
+UPDATE clip_projects SET cta = ?, updated_at = ? WHERE id = ? AND user_id = ? AND finalized_at IS NULL
 `
 
 type UpdateClipCTAParams struct {
@@ -503,7 +515,7 @@ func (q *Queries) UpdateClipCTA(ctx context.Context, arg UpdateClipCTAParams) (i
 }
 
 const updateClipDisclosure = `-- name: UpdateClipDisclosure :execrows
-UPDATE clip_projects SET disclosure = ?, updated_at = ? WHERE id = ? AND user_id = ?
+UPDATE clip_projects SET disclosure = ?, updated_at = ? WHERE id = ? AND user_id = ? AND finalized_at IS NULL
 `
 
 type UpdateClipDisclosureParams struct {
@@ -553,7 +565,7 @@ func (q *Queries) UpdateClipHideDisclosure(ctx context.Context, arg UpdateClipHi
 }
 
 const updateClipTargetDurationMS = `-- name: UpdateClipTargetDurationMS :execrows
-UPDATE clip_projects SET target_duration_ms = ?, updated_at = ? WHERE id = ? AND user_id = ?
+UPDATE clip_projects SET target_duration_ms = ?, updated_at = ? WHERE id = ? AND user_id = ? AND finalized_at IS NULL
 `
 
 type UpdateClipTargetDurationMSParams struct {
@@ -577,7 +589,7 @@ func (q *Queries) UpdateClipTargetDurationMS(ctx context.Context, arg UpdateClip
 }
 
 const updateClipTitle = `-- name: UpdateClipTitle :execrows
-UPDATE clip_projects SET title = ?, updated_at = ? WHERE id = ? AND user_id = ?
+UPDATE clip_projects SET title = ?, updated_at = ? WHERE id = ? AND user_id = ? AND finalized_at IS NULL
 `
 
 type UpdateClipTitleParams struct {
@@ -601,7 +613,7 @@ func (q *Queries) UpdateClipTitle(ctx context.Context, arg UpdateClipTitleParams
 }
 
 const updateClipVideoTemplateID = `-- name: UpdateClipVideoTemplateID :execrows
-UPDATE clip_projects SET video_template_id = ?, updated_at = ? WHERE id = ? AND user_id = ?
+UPDATE clip_projects SET video_template_id = ?, updated_at = ? WHERE id = ? AND user_id = ? AND finalized_at IS NULL
 `
 
 type UpdateClipVideoTemplateIDParams struct {

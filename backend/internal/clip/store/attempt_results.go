@@ -80,6 +80,9 @@ func (s *Store) ApplyAttemptResult(ctx context.Context, c clip.AttemptResult) er
 	if err != nil {
 		return dbError(err)
 	}
+	if p.Finalized != nil {
+		return clip.ErrFinalized
+	}
 	if access.Deleting != 0 || access.SourceAccessRevokedAt.Valid {
 		return clip.ErrBusy
 	}

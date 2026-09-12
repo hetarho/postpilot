@@ -61,6 +61,10 @@ type ClipProject struct {
 	SourceRetentionExpiresAt sql.NullString
 	SourceAccessRevokedAt    sql.NullString
 	SourceBatchID            sql.NullString
+	ResultID                 sql.NullString
+	FinalizedAt              sql.NullString
+	FinalizedPlanRevision    sql.NullInt64
+	FinalizedResultKey       sql.NullString
 }
 
 type ClipSourceAttempt struct {

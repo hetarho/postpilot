@@ -186,7 +186,7 @@ func (q *Queries) RestoreSourceBatch(ctx context.Context, id string) error {
 }
 
 const selectSourceBatch = `-- name: SelectSourceBatch :execrows
-UPDATE clip_projects SET source_batch_id=? WHERE id=? AND user_id=? AND deleting=0 AND source_access_revoked_at IS NULL
+UPDATE clip_projects SET source_batch_id=? WHERE id=? AND user_id=? AND deleting=0 AND finalized_at IS NULL AND source_access_revoked_at IS NULL
 `
 
 type SelectSourceBatchParams struct {
@@ -244,7 +244,7 @@ func (q *Queries) SetSourceRetention(ctx context.Context, arg SetSourceRetention
 }
 
 const sourceProjectAccess = `-- name: SourceProjectAccess :one
-SELECT source_batch_id,source_access_revoked_at,source_retention_expires_at,deleting FROM clip_projects WHERE id=? AND user_id=?
+SELECT source_batch_id,source_access_revoked_at,source_retention_expires_at,deleting,finalized_at FROM clip_projects WHERE id=? AND user_id=?
 `
 
 type SourceProjectAccessParams struct {
@@ -257,6 +257,7 @@ type SourceProjectAccessRow struct {
 	SourceAccessRevokedAt    sql.NullString
 	SourceRetentionExpiresAt sql.NullString
 	Deleting                 int64
+	FinalizedAt              sql.NullString
 }
 
 func (q *Queries) SourceProjectAccess(ctx context.Context, arg SourceProjectAccessParams) (SourceProjectAccessRow, error) {
@@ -267,6 +268,7 @@ func (q *Queries) SourceProjectAccess(ctx context.Context, arg SourceProjectAcce
 		&i.SourceAccessRevokedAt,
 		&i.SourceRetentionExpiresAt,
 		&i.Deleting,
+		&i.FinalizedAt,
 	)
 	return i, err
 }

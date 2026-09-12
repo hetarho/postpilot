@@ -15,6 +15,9 @@ func (s *Store) SaveCorrection(ctx context.Context, user, id string, revision in
 		if err != nil {
 			return clip.Project{}, err
 		}
+		if p.Finalized != nil {
+			return clip.Project{}, clip.ErrFinalized
+		}
 		busy, err := q.HasActiveClipJob(ctx, nullable(id))
 		if err != nil {
 			return clip.Project{}, err

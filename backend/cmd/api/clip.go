@@ -31,6 +31,7 @@ func newClipGeneration(ctx context.Context, cfg *config.Config, store *clipstore
 	service.WithCredits(clipQuotePricing{registry: models.Registry, cfg: config.ClipAI(cfg)}, clipAccounting{ledger: models.ledger})
 	service.WithAdmission(clipAdmission{registry: models.Registry, cfg: config.ClipAI(cfg)})
 	projects.SetGeneration(service)
+	projects.SetFinalizer(clipFinalizer{writer: writer, clips: store, cfg: config.ClipRender(cfg)})
 	if _, err = queue.SweepUnactivatedClips(ctx); err != nil {
 		return nil, err
 	}

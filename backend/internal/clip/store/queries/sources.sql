@@ -1,5 +1,5 @@
 -- name: SourceProjectWritable :one
-SELECT CASE WHEN deleting=1 OR source_access_revoked_at IS NOT NULL THEN 1 ELSE 0 END AS deleting FROM clip_projects WHERE id = ? AND user_id = ?;
+SELECT CASE WHEN finalized_at IS NOT NULL OR deleting=1 OR source_access_revoked_at IS NOT NULL THEN 1 ELSE 0 END AS deleting FROM clip_projects WHERE id = ? AND user_id = ?;
 -- name: FenceSourceProjectDeletion :execrows
 UPDATE clip_projects SET deleting=1 WHERE id=? AND user_id=?;
 -- name: ListProjectSourceBatches :many

@@ -111,6 +111,12 @@ func toConnectError(err error) error {
 	var problem *composition.Problem
 	var admission *clip.ModelAdmissionError
 	switch {
+	case errors.Is(err, clip.ErrFinalized):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip is finalized", "CLIP_FINALIZED", nil)
+	case errors.Is(err, clip.ErrFinalizationConflict):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip result changed", "CLIP_FINALIZATION_CONFLICT", nil)
+	case errors.Is(err, clip.ErrFinalizationInvalid):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip cannot be finalized", "CLIP_FINALIZATION_INVALID", nil)
 	case errors.Is(err, clip.ErrPreviewBusy):
 		return rpcserver.NewAppError(connect.CodeResourceExhausted, "clip preview is busy", "CLIP_PREVIEW_BUSY", nil)
 	case errors.Is(err, clip.ErrPreviewTooLarge):
@@ -197,12 +203,19 @@ func templateProto(t clip.VideoTemplate) *v1.VideoTemplate {
 	return out
 }
 func projectProto(p clip.Project) *v1.ClipProject {
-	out := &v1.ClipProject{Composition: compositionProto(p.Composition), Id: p.ID, Title: p.Title, VideoTemplateId: p.VideoTemplateID, Ratio: p.Ratio, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, Cta: p.CTA, TargetDurationMs: int32(p.TargetDurationMS), EditPlanRevision: int32(p.EditPlanRevision), RenderedPlanRevision: int32(p.RenderedPlanRevision), CreatedAt: p.CreatedAt.UTC().Format(time.RFC3339Nano), UpdatedAt: p.UpdatedAt.UTC().Format(time.RFC3339Nano)}
+	canEdit, canFinalize := p.Finalized == nil, false
+	out := &v1.ClipProject{CanEdit: &canEdit, CanFinalize: &canFinalize, Composition: compositionProto(p.Composition), Id: p.ID, Title: p.Title, VideoTemplateId: p.VideoTemplateID, Ratio: p.Ratio, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, Cta: p.CTA, TargetDurationMs: int32(p.TargetDurationMS), EditPlanRevision: int32(p.EditPlanRevision), RenderedPlanRevision: int32(p.RenderedPlanRevision), CreatedAt: p.CreatedAt.UTC().Format(time.RFC3339Nano), UpdatedAt: p.UpdatedAt.UTC().Format(time.RFC3339Nano)}
+	if f := p.Finalized; f != nil {
+		out.FinalizedAt = f.At.UTC().Format(time.RFC3339Nano)
+		out.FinalizedPlanRevision = int32(f.PlanRevision)
+		out.FinalizedResultId = f.ResultID
+		out.FinalizationRefusal = "finalized"
+	}
 	for _, a := range p.Answers {
 		out.Answers = append(out.Answers, &v1.ClipAnswer{Label: a.Label, Text: a.Text})
 	}
 	if r := p.Result; r != nil {
-		out.Result = &v1.ClipResult{ContentType: r.ContentType, Bytes: r.Bytes, DurationMs: int32(r.DurationMS), CreatedAt: r.CreatedAt.UTC().Format(time.RFC3339Nano), ViewUrl: r.ViewURL, DownloadUrl: r.DownloadURL}
+		out.Result = &v1.ClipResult{Id: r.ID, ContentType: r.ContentType, Bytes: r.Bytes, DurationMs: int32(r.DurationMS), CreatedAt: r.CreatedAt.UTC().Format(time.RFC3339Nano), ViewUrl: r.ViewURL, DownloadUrl: r.DownloadURL}
 	}
 	return out
 }
@@ -308,6 +321,7 @@ func (h *Handler) ListClipProjects(ctx context.Context, req *connect.Request[v1.
 			}
 			p.LatestJob = jobrpc.ToProto(j)
 		}
+		h.setFinalizationState(p, v)
 		out = append(out, p)
 	}
 	return connect.NewResponse(&v1.ListClipProjectsResponse{Projects: out}), nil
@@ -334,11 +348,13 @@ func (h *Handler) GetClipProject(ctx context.Context, req *connect.Request[v1.Ge
 		return nil, toConnectError(err)
 	}
 	out := projectProto(value)
-	out.Observations = observationsProto(value)
+	if value.Finalized == nil {
+		out.Observations = observationsProto(value)
+	}
 	if h.generation != nil {
 		// Unreadable evidence must not hide an otherwise downloadable result.
 		// Its dependent correction projection cannot be used in that case.
-		if out.Observations.Status != "unavailable" {
+		if value.Finalized == nil && out.Observations.Status != "unavailable" {
 			state, err := h.generation.EditingState(value)
 			if err != nil {
 				return nil, toConnectError(err)
@@ -369,6 +385,7 @@ func (h *Handler) GetClipProject(ctx context.Context, req *connect.Request[v1.Ge
 			}
 		}
 	}
+	h.setFinalizationState(out, value)
 	return connect.NewResponse(&v1.GetClipProjectResponse{Project: out}), nil
 }
 func (h *Handler) UpdateClipProject(ctx context.Context, req *connect.Request[v1.UpdateClipProjectRequest]) (*connect.Response[v1.UpdateClipProjectResponse], error) {

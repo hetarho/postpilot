@@ -23,8 +23,30 @@ export const clipProjectsKey = (transport: Transport, ownerId: string) =>
 export function toClipProject(value: ProtoClipProject): ClipProject {
   if (!CLIP_RATIOS.includes(value.ratio as ClipRatio)) throw new Error('Invalid clip ratio')
   const composition = toProjectComposition(value.composition)
+  if (
+    (value.finalizedAt || value.finalizedPlanRevision || value.finalizedResultId) &&
+    (!Number.isFinite(Date.parse(value.finalizedAt)) ||
+      value.finalizedPlanRevision <= 0 ||
+      !value.finalizedResultId ||
+      value.result?.id !== value.finalizedResultId)
+  )
+    throw new Error('Invalid clip finalization')
   return {
     ...(composition ? { composition, compositionInputs: composition.inputs } : {}),
+    ...(value.finalizedAt
+      ? {
+          finalized: {
+            at: value.finalizedAt,
+            planRevision: value.finalizedPlanRevision,
+            resultId: value.finalizedResultId,
+          },
+        }
+      : {}),
+    ...(value.canEdit !== undefined ? { canEdit: value.canEdit } : {}),
+    ...(value.canFinalize !== undefined ? { canFinalize: value.canFinalize } : {}),
+    ...(value.finalizationRefusal
+      ? { finalizationRefusal: value.finalizationRefusal as ClipProject['finalizationRefusal'] }
+      : {}),
     id: value.id,
     title: value.title,
     videoTemplateId: value.videoTemplateId,
@@ -54,6 +76,7 @@ export function toClipProject(value: ProtoClipProject): ClipProject {
     observations: value.observations ? toClipObservations(value.observations) : undefined,
     result: value.result
       ? {
+          ...(value.result.id ? { id: value.result.id } : {}),
           contentType: value.result.contentType,
           bytes: Number(value.result.bytes),
           durationMs: value.result.durationMs,
@@ -172,5 +195,22 @@ export function useClipProjectMutations(ownerId: string) {
     mutationFn: (id: string) => client.deleteClipProject({ id }),
     onSuccess: invalidate,
   })
-  return { save, remove }
+  const finalize = useMutation({
+    mutationFn: async (input: {
+      projectId: string
+      expectedRevision: number
+      expectedResultId: string
+    }) => {
+      const response = await client.finalizeClipProject(input)
+      if (!response.project) throw new Error('Missing finalized clip')
+      const project = toClipProject(response.project)
+      if (!project.finalized) throw new Error('Clip finalization was not confirmed')
+      return project
+    },
+    onSuccess: async (project) => {
+      cache.setQueryData([...clipProjectsKey(transport, ownerId), 'detail', project.id], project)
+      await invalidate()
+    },
+  })
+  return { save, remove, finalize }
 }

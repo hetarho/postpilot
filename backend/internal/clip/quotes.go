@@ -158,6 +158,9 @@ func (s *GenerationService) quoteInputs(ctx context.Context, user, id, batch, ob
 	if err != nil {
 		return p, t, b, pricing, err
 	}
+	if p.Finalized != nil {
+		return p, t, b, pricing, ErrFinalized
+	}
 	t, err = s.projects.store.GetTemplate(ctx, user, p.VideoTemplateID)
 	if err != nil {
 		return p, t, b, pricing, err
@@ -235,8 +238,12 @@ func (s *GenerationService) startApproved(ctx context.Context, user, id, batch, 
 	if a.QuoteID == "" || a.MaxCredits == nil || *a.MaxCredits < 0 {
 		return "", ErrQuoteRequired
 	}
-	if _, err := s.projects.store.GetProject(ctx, user, id); err != nil {
+	current, err := s.projects.store.GetProject(ctx, user, id)
+	if err != nil {
 		return "", err
+	}
+	if current.Finalized != nil {
+		return "", ErrFinalized
 	}
 	// The durable snapshot survives transient batch/quote cleanup, including an
 	// ambiguous start response. Returning it never dispatches or reserves again.

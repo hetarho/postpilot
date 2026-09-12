@@ -65,6 +65,11 @@ export const errors = {
   VOICE_INVALID_LIFECYCLE: '현재 말투 상태에서는 이 작업을 할 수 없어요.',
   CLIP_INVALID_INPUT: '클립 또는 영상 템플릿의 입력값과 제한을 확인해 주세요.',
   CLIP_QUOTE_REQUIRED: '생성을 시작하려면 예상 최대 크레딧을 확인하고 승인해 주세요.',
+  CLIP_FINALIZED: '확정된 클립은 수정할 수 없습니다. 결과 영상을 다운로드할 수 있습니다.',
+  CLIP_FINALIZATION_CONFLICT:
+    '저장된 수정본과 결과 영상이 달라졌습니다. 최신 상태를 확인하고 다시 렌더해 주세요.',
+  CLIP_FINALIZATION_INVALID:
+    '확정할 수 있는 결과 영상이 없습니다. 수정본을 저장하고 다시 렌더해 주세요.',
   CLIP_CANCELLATION_POLICY_REQUIRED:
     '새 클립을 생성하려면 새로고침 후 취소 시 차감 정책을 확인해 주세요.',
   CLIP_QUOTE_EXPIRED: '크레딧 견적이 만료됐어요. 새 견적을 확인하고 다시 승인해 주세요.',

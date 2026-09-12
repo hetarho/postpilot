@@ -51,6 +51,7 @@ type TemplatePatch struct {
 }
 type Answer struct{ Label, Text string }
 type Result struct {
+	ID                   string
 	Key, ContentType     string
 	ViewURL, DownloadURL string
 	Bytes                int64
@@ -58,6 +59,7 @@ type Result struct {
 	CreatedAt            time.Time
 }
 type Project struct {
+	Finalized                                 *Finalization
 	Composition                               *ProjectComposition
 	HideDisclosure                            bool
 	ID, UserID, Title, VideoTemplateID, Ratio string

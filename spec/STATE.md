@@ -45,15 +45,16 @@
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T110 | Release QA on the Naver app and the overlay measurement | CDS CLIP | T108 | blocked@260912 |
 | T132 | Verify clip composition quality and editing parity | CLIP CDS QUOTA THEME ARCH | T136 | todo |
-| T135 | Finalize a matching clip result and delete its originals | CLIP ARCH | T134 | todo |
 | T136 | Show focused clip progress and explicit confirmation | CLIP QUOTA THEME POST ARCH | T131 T134 T135 | todo |
 
 ## next
-- implement-task T135, then T136 confirmation UI and T132 integration verification.
+- implement-task T136 confirmation UI, then T132 integration verification.
 - T110 must refresh CLIP@12 / CDS@10 before resuming because mandatory cards, disclosure and fact QA changed; it remains owner-blocked: privately load a 9:16 clip with both cards in the Naver picker without publishing, capture the clip-tab overlays and supply the images for CDS-11 measurement. Remaining CDS interpretations are recorded in the results of T107, T108, T109 and T115 (contrast/card geometry, audio seams, exposure and frequency, footage-bound duration).
 - T008 needs the owner present: refresh PUB@5 / ARCH@2, rerun postpilot-agent setup before installation for driver signature smarteditor-one-20260910-a6, and cancel or deliberately reuse the queued 20260905-test job; after completion, update PUB for VIDEO-17 and TMPL-39.
 
 ## log
+- 260913 T135 done (clip); explicit matching-result confirmation, irreversible source cleanup and result download pass local and production checks; commit then T136 UI
+- 260913 T135 claimed (clip); T134 committed as 1362710 with a clean worktree, implement explicit finalization and durable original deletion
 - 260913 T134 done (clip); durable cancellation, atomic result completion and reservation settlement pass local, production-media and 27 release gates; commit then T135 finalization
 - 260913 T134 claimed (clip); T131 committed as 321a1be with a clean worktree, implement durable cancellation and reservation-based settlement
 - 260913 T131 done (clip); timeline editing, exact phrase windows, autosave/undo/conflicts and 24 mobile browser combinations pass local and production-media gates; commit then T134 cancellation
@@ -72,5 +73,3 @@
 - 260913 T128 resumed (clip); confirmed lifecycle policies remain fully covered by CLIP r12 / QUOTA r10 / THEME r11 and T133–T136; continue the authorized T125–T136 implementation goal
 - 260913 T128 claimed (clip); T127 committed as a987444a with a clean worktree, implement template-owned rendering and activate the complete composition path
 - 260913 T127 done (clip); single-call native writer, scoped scene/item evidence and conservative omission pass all local gates; commit then T128 renderer
-- 260913 T127 resumed (clip); preserve completed T125/T126 and continue the single-call native writer and scoped-evidence checks
-- 260913 T127 claimed (clip); T126 committed as 7fd2337 with a clean worktree, implement bounded scene/item-grounded native composition planning

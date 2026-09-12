@@ -11,9 +11,9 @@ SELECT * FROM clip_projects WHERE video_template_id = ? AND user_id = ? ORDER BY
 -- name: SaveTemplateComposition :execrows
 UPDATE video_templates SET composition_body=?,composition_legacy=? WHERE id=? AND user_id=?;
 -- name: SaveProjectComposition :execrows
-UPDATE clip_projects SET composition_snapshot_json=?,composition_inputs_json=? WHERE id=? AND user_id=?;
+UPDATE clip_projects SET composition_snapshot_json=?,composition_inputs_json=? WHERE id=? AND user_id=? AND finalized_at IS NULL;
 -- name: TouchCompositionRevision :execrows
-UPDATE clip_projects SET edit_plan_revision=edit_plan_revision+1,updated_at=? WHERE id=? AND user_id=? AND deleting=0;
+UPDATE clip_projects SET edit_plan_revision=edit_plan_revision+1,updated_at=? WHERE id=? AND user_id=? AND deleting=0 AND finalized_at IS NULL;
 -- name: DeleteVideoTemplate :execrows
 DELETE FROM video_templates WHERE id = ? AND user_id = ?;
 -- name: ListClipProjects :many
@@ -42,17 +42,17 @@ UPDATE video_templates SET accent = ?, updated_at = ? WHERE id = ? AND user_id =
 -- name: UpdateVideoTemplatePreset :execrows
 UPDATE video_templates SET preset = ?, updated_at = ? WHERE id = ? AND user_id = ?;
 -- name: UpdateClipTitle :execrows
-UPDATE clip_projects SET title = ?, updated_at = ? WHERE id = ? AND user_id = ?;
+UPDATE clip_projects SET title = ?, updated_at = ? WHERE id = ? AND user_id = ? AND finalized_at IS NULL;
 -- name: UpdateClipVideoTemplateID :execrows
-UPDATE clip_projects SET video_template_id = ?, updated_at = ? WHERE id = ? AND user_id = ?;
+UPDATE clip_projects SET video_template_id = ?, updated_at = ? WHERE id = ? AND user_id = ? AND finalized_at IS NULL;
 -- name: UpdateClipTargetDurationMS :execrows
-UPDATE clip_projects SET target_duration_ms = ?, updated_at = ? WHERE id = ? AND user_id = ?;
+UPDATE clip_projects SET target_duration_ms = ?, updated_at = ? WHERE id = ? AND user_id = ? AND finalized_at IS NULL;
 -- name: UpdateClipDisclosure :execrows
-UPDATE clip_projects SET disclosure = ?, updated_at = ? WHERE id = ? AND user_id = ?;
+UPDATE clip_projects SET disclosure = ?, updated_at = ? WHERE id = ? AND user_id = ? AND finalized_at IS NULL;
 -- name: UpdateClipCTA :execrows
-UPDATE clip_projects SET cta = ?, updated_at = ? WHERE id = ? AND user_id = ?;
+UPDATE clip_projects SET cta = ?, updated_at = ? WHERE id = ? AND user_id = ? AND finalized_at IS NULL;
 -- name: TouchClip :execrows
-UPDATE clip_projects SET updated_at = ? WHERE id = ? AND user_id = ?;
+UPDATE clip_projects SET updated_at = ? WHERE id = ? AND user_id = ? AND finalized_at IS NULL;
 
 -- name: UpdateVideoTemplateCaptionPace :execrows
 UPDATE video_templates SET caption_pace = ?, updated_at = ? WHERE id = ? AND user_id = ?;

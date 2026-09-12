@@ -48,6 +48,9 @@ func (s *GenerationService) PreparePreview(ctx context.Context, user, id string,
 	if err != nil {
 		return PreparedPreview{}, err
 	}
+	if p.Finalized != nil {
+		return PreparedPreview{}, ErrFinalized
+	}
 	if revision <= 0 || p.EditPlanRevision != revision {
 		return PreparedPreview{}, ErrPlanConflict
 	}
@@ -98,6 +101,9 @@ func (s *GenerationService) PreparePreview(ctx context.Context, user, id string,
 	current, err := s.projects.store.GetProject(ctx, user, id)
 	if err != nil {
 		return PreparedPreview{}, err
+	}
+	if current.Finalized != nil {
+		return PreparedPreview{}, ErrFinalized
 	}
 	if current.EditPlanRevision != revision {
 		return PreparedPreview{}, ErrPlanConflict

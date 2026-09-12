@@ -15,6 +15,7 @@ import (
 )
 
 type Service struct {
+	finalizer  ProjectFinalizer
 	store      Store
 	limits     Limits
 	sources    *SourceService
@@ -265,6 +266,9 @@ func (s *Service) UpdateProject(ctx context.Context, user, id string, p ProjectP
 	old, err := s.store.GetProject(ctx, user, id)
 	if err != nil {
 		return Project{}, err
+	}
+	if old.Finalized != nil {
+		return Project{}, ErrFinalized
 	}
 	if p.Title != nil {
 		title := strings.TrimSpace(*p.Title)

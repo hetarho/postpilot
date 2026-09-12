@@ -44,6 +44,9 @@ func disclosureFlag(hidden bool) int64 {
 func stamp(t time.Time) string         { return t.UTC().Format(timeLayout) }
 func nullable(s string) sql.NullString { return sql.NullString{String: s, Valid: s != ""} }
 func dbError(err error) error {
+	if err != nil && strings.Contains(err.Error(), "clip finalized") {
+		return clip.ErrFinalized
+	}
 	if err != nil && strings.Contains(err.Error(), "clip busy") {
 		return clip.ErrBusy
 	}
@@ -283,6 +286,9 @@ func (s *Store) DeleteTemplate(ctx context.Context, user, id string) (int, error
 			return 0, e
 		}
 		for _, row := range projects {
+			if row.FinalizedAt.Valid {
+				continue
+			}
 			p, e := getProject(ctx, q, user, row.ID)
 			if e != nil {
 				return 0, e
@@ -312,7 +318,14 @@ func projectRow(r sqlc.ClipProject) (clip.Project, error) {
 		if err != nil {
 			return clip.Project{}, err
 		}
-		p.Result = &clip.Result{Key: r.ResultKey.String, ContentType: r.ResultContentType.String, Bytes: r.ResultBytes.Int64, DurationMS: int(r.ResultDurationMs.Int64), CreatedAt: at}
+		p.Result = &clip.Result{ID: r.ResultID.String, Key: r.ResultKey.String, ContentType: r.ResultContentType.String, Bytes: r.ResultBytes.Int64, DurationMS: int(r.ResultDurationMs.Int64), CreatedAt: at}
+	}
+	if r.FinalizedAt.Valid {
+		at, err := time.Parse(time.RFC3339Nano, r.FinalizedAt.String)
+		if err != nil {
+			return clip.Project{}, err
+		}
+		p.Finalized = &clip.Finalization{At: at, PlanRevision: int(r.FinalizedPlanRevision.Int64), ResultID: r.ResultID.String}
 	}
 	p.Composition, err = decodeComposition(r.CompositionSnapshotJson.String, r.CompositionInputsJson.String)
 	if err != nil {
@@ -385,6 +398,9 @@ func (s *Store) UpdateProject(ctx context.Context, user, id string, p clip.Proje
 		before, err := getProject(ctx, q, user, id)
 		if err != nil {
 			return clip.Project{}, err
+		}
+		if before.Finalized != nil {
+			return clip.Project{}, clip.ErrFinalized
 		}
 		if p.Composition != nil {
 			active, e := q.HasActiveClipJob(ctx, nullable(id))
