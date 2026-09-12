@@ -259,7 +259,8 @@ func (r *Rendering) Render(ctx context.Context, ws clip.MediaWorkspace, plan cli
 	}
 	// A compiled plan that fails here walks CDS-55's ladder — style, anchor,
 	// drop — before any source byte is fetched; a person's plan is refused with
-	// the check named, and a furniture failure fails at once (CDS-52).
+	// the check named, and a blocking furniture failure fails at once (CDS-52).
+	// Overlap is advisory here and at final verification (CDS-56).
 	if err = r.repair(ctx, ws, canvas, &c); err != nil {
 		return result, err
 	}
@@ -619,8 +620,8 @@ const (
 // the ladder is exhausted for a failing caption. It costs at most one full
 // ladder per caption and one layout per rung, and no download. A plan a person
 // corrected is refused with the check named and never moved, and a failure the
-// design system's own furniture caused fails at once: that is a renderer
-// defect, not a composition (CDS-52, CDS-55).
+// design system's own furniture caused fails at once (CDS-52, CDS-55).
+// Overlap never enters the ladder: delivery leaves it for owner review (CDS-56).
 func (r *Rendering) repair(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, c *composed) error {
 	taken := map[[2]int]int{}
 	for {

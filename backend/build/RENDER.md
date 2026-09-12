@@ -80,7 +80,7 @@ outright; the plate may sit there but its TEXT may not, so the verifier exempts
 only the `card` kind from V1 and holds every line inside the safe area — the
 40 px padding is what makes both true at once. Copy and chips yield to a card as
 they do to the badge: the composer receives the card regions through
-`CardElements` and drops any anchor that collides, and V7 refuses a manifest
+`CardElements` and drops any anchor that collides, and V7 diagnoses a manifest
 where a caption or chip would show underneath one.
 
 Brightness sampling exists for the two unplated styles only (CDS-16, CDS-44). A
@@ -117,8 +117,8 @@ once a ground is known, it is verified a second time after the cuts are rendered
 and before they are joined.
 
 There are two verify points and they behave differently on purpose. BEFORE any
-download, a compiled plan whose manifest fails a check walks CDS-55's caption
-repair ladder: the failing caption's style falls back to 깔끔하게 (whose plate
+download, a compiled plan whose manifest fails a blocking check walks CDS-55's
+caption repair ladder: the failing caption's style falls back to 깔끔하게 (whose plate
 answers V2, V3 and V5 by itself), then its anchor falls back to the style's own
 default, then the copy is dropped and the cut shows its footage; the plan is laid
 out and verified again after every rung, at most one ladder per caption and one
@@ -126,13 +126,36 @@ layout per rung, so a plan of N captions costs at most 3N layout passes and no
 source byte. The verifier names WHICH caption failed (cut, copy) — for the
 sequence rules V13 and V14 the later of the pair, the one whose style or anchor
 can change without invalidating what came before — and a failure the design
-system's own furniture caused (badge, chip, card: the furniture slot) fails at
-once as a renderer defect. Every rung taken is recorded on the cut's composition
+system's own furniture caused (badge, chip, card: the furniture slot), other than
+overlap, fails at once as a renderer defect. Every rung taken is recorded on the cut's composition
 (`contrast`, `style`, `anchor`, `dropped`) so step ② can say what happened. A plan
-a PERSON corrected never walks the ladder: it is refused with the failing check
-named and is never silently moved (CDS-52). AFTER the cuts are rendered the
-verify stays a hard failure: the footage is already encoded, and a repair there
+a PERSON corrected never walks the ladder: blocking failures name their check
+and the plan is never silently moved (CDS-52). AFTER the cuts are rendered the
+same delivery checks run: a blocking failure still fails because repairing it
 would mean re-rendering.
+
+Overlap is advisory at BOTH validation points (CDS-56), for generated and manual
+plans alike. Captions, chips, badges and cards may share pixels and timing without
+stopping layout or rendering. In particular, chips on adjacent cuts overlap during
+a crossfade; that previously caused a furniture-slot failure no caption repair
+could fix. An overlap alone now preserves the words, position and timing so the
+owner can preview/download the clip and revise it in step ②. `design.Verify` and
+`VerifyApproved` retain the strict diagnostic; `clip.VerifyLayout` uses
+`design.VerifyRenderable`, which skips only V7 and still runs every other check,
+including the sequence checks AFTER the overlap check. Swallowing the first
+overlap error would incorrectly hide those later failures.
+
+`TestRenderOriginalsOverlap` is the offline regression for the eight short MP4s
+reported with this failure. It uses all eight originals in a 30-second vertical
+plan with chips across fades and captions under cards, then renders it as both a
+generated and a manual plan. Set `CLIP_ORIGINALS_DIR` to a read-only source mount
+and `CLIP_ORIGINALS_OUTPUT` to a separate writable artifact mount when running
+`/media.test -test.run=^TestRenderOriginalsOverlap$ -test.v -test.timeout=15m`
+in the `media-smoke` image, using production's 15-minute operation timeout and
+a 2 GiB / 2 CPU container for these HEVC originals. The separate synthetic
+release gate still runs at 1 GiB / 2 CPU. It makes no model calls and writes `generated.mp4`
+and `manual.mp4` only to the artifact mount. Ordinary test and image-build runs
+skip it; no user footage is included in the repository or image.
 
 The keyword is a caption field, never a marker inside the text, and its highlight
 starts at the measured advance of the prefix before it — `--query-all` on the real
@@ -156,13 +179,13 @@ exactly as given.
 
 The renderer emits a manifest of every element it places (kind, style, anchor,
 region in canvas pixels, output-timeline window, font size, fill, background and
-the motion values) and `design.Verify` gates the render on it BEFORE any source
-byte is fetched and before FFmpeg runs, so a plan that breaks the design system
+the motion values) and `design.VerifyRenderable` gates the render on it BEFORE
+any source byte is fetched and before FFmpeg runs, so a plan that breaks the design system
 costs neither a download nor an encode. It implements V1 safe area, V2 size
-floors, V5 lines and characters, V7 overlap between different cuts whose windows
-meet, V9 the two permitted motions, V13 one anchor step between consecutive cuts
+floors, V5 lines and characters, V9 the two permitted motions, V13 one anchor step
+between consecutive cuts
 and V14 style frequency, and names the failing check as its own stable reason
-(`CLIP_LAYOUT_*`). V3 contrast is implemented on the sampled ground, as described
+(`CLIP_LAYOUT_*`). V7 overlap remains a diagnostic only. V3 contrast is implemented on the sampled ground, as described
 above. V4, V8 and V11 cover components the manifest does not carry yet; V12 is checked
 on the DELIVERED file rather than on the manifest (below). The
 kinds a manifest may name are `copy`, `plate`, `bar`, `highlight`, `badge`,

@@ -289,10 +289,10 @@ func LayoutViolation(v design.Violation, cut, copy int) error {
 	return &LayoutError{planViolation(v), cut, copy}
 }
 
-// VerifyLayout gates a render on the design system (CDS-52) and restates the
-// failure as an invalid plan that names the failing caption (CDS-55).
+// VerifyLayout enforces delivery checks (CDS-52), excluding advisory overlaps
+// (CDS-56), and names the caption a blocking failure belongs to (CDS-55).
 func VerifyLayout(ratio string, approved []string, m Manifest) error {
-	err := design.VerifyApproved(m, ratio, approved)
+	err := design.VerifyRenderable(m, ratio, approved)
 	var f *design.Failure
 	if errors.As(err, &f) {
 		return &LayoutError{planViolation(f.Check), f.Cut, f.Copy}

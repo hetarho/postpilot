@@ -125,9 +125,8 @@ func within(r, safe Region) bool {
 	return r.X >= safe.X && r.Y >= safe.Y && r.X+r.Width <= safe.X+safe.Width && r.Y+r.Height <= safe.Y+safe.Height
 }
 
-// Verify gates a render on the manifest (CDS-52). It runs before FFmpeg and
-// before a single source byte is fetched, so a plan that breaks the design
-// system costs neither credits nor a download.
+// Verify checks every design target for diagnostics, including overlap.
+// Delivery uses VerifyRenderable so overlap alone cannot block a video (CDS-56).
 //
 // V1 safe area · V2 size floors · V3 contrast against the effective background ·
 // V5 lines and characters · V7 overlap between elements of different cuts whose
@@ -142,6 +141,17 @@ func Verify(m Manifest, ratio string) error { return VerifyApproved(m, ratio, ni
 // alternate, so the run is the owner's choice, not a defect. nil approves
 // every style.
 func VerifyApproved(m Manifest, ratio string, approved []string) error {
+	return verify(m, ratio, approved, true)
+}
+
+// VerifyRenderable holds the delivery checks while leaving overlapping text
+// available for owner review (CDS-56). Skip only V7, not the checks after it:
+// accepting an overlap error from VerifyApproved would hide sequence failures.
+func VerifyRenderable(m Manifest, ratio string, approved []string) error {
+	return verify(m, ratio, approved, false)
+}
+
+func verify(m Manifest, ratio string, approved []string, checkOverlap bool) error {
 	safe, ok := Safe(ratio)
 	if !ok {
 		return furniture(ViolationSafeArea)
@@ -219,6 +229,15 @@ func VerifyApproved(m Manifest, ratio string, approved []string) error {
 	if err := verifyDisclosure(m, duration); err != nil {
 		return err
 	}
+	if checkOverlap {
+		if err := verifyOverlap(m); err != nil {
+			return err
+		}
+	}
+	return verifySequence(m, approved)
+}
+
+func verifyOverlap(m Manifest) error {
 	for i, a := range m {
 		for _, b := range m[i+1:] {
 			// A badge or chip shares its window with the copy of whatever cut it
@@ -246,7 +265,7 @@ func VerifyApproved(m Manifest, ratio string, approved []string) error {
 			}
 		}
 	}
-	return verifySequence(m, approved)
+	return nil
 }
 
 // V3: every text is read against its effective background — the plate or card

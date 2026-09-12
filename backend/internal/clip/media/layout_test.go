@@ -255,11 +255,11 @@ func TestTheRepairLadderWalksStyleThenAnchorThenDrop(t *testing.T) {
 	// style is already 깔끔하게, so the first rung has nothing to do.
 	anchorCase := base()
 	anchorCase.Cuts[1].Copies[0].Anchor = "top"
-	// Rung 3: a second copy on one cut sharing the first one's window (V7, the
-	// later copy yields); 깔끔하게 at its default anchor already, so only the drop
-	// is left.
+	// Rung 3: the previous copy is TOP, this one already defaults to BOTTOM.
+	// Neither style nor default anchor can fix the step, so the later copy drops.
+	// Overlap itself no longer walks the ladder (CDS-56).
 	dropCase := base()
-	dropCase.Cuts[0].Copies = append(dropCase.Cuts[0].Copies, clip.Copy{Text: "한 번 더", Style: "clean", Anchor: "bottom", Align: "center"})
+	dropCase.Cuts[0].Copies[0].Anchor = "top"
 	for name, tc := range map[string]struct {
 		plan   clip.EditPlan
 		cut    int
@@ -278,9 +278,9 @@ func TestTheRepairLadderWalksStyleThenAnchorThenDrop(t *testing.T) {
 			}
 			return nil
 		}},
-		"drop": {dropCase, 0, "dropped", func(p clip.EditPlan) error {
-			if p.Cuts[0].Copies[0].Text == "" || p.Cuts[0].Copies[1].Text != "" || len(p.Cuts[0].Placed()) != 1 {
-				return fmt.Errorf("drop rung kept the wrong copy: %+v", p.Cuts[0].Copies)
+		"drop": {dropCase, 1, "dropped", func(p clip.EditPlan) error {
+			if p.Cuts[0].Copies[0].Text == "" || p.Cuts[1].Copies[0].Text != "" || len(p.Cuts[1].Placed()) != 0 {
+				return fmt.Errorf("drop rung kept the wrong copy: %+v", p.Cuts)
 			}
 			return nil
 		}},
