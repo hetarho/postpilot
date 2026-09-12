@@ -37,6 +37,9 @@ func (s *Service) ValidatePreparation(observe llm.ModelRef, in clip.PlanningInpu
 	schema = nil
 	if writer.StructuredOutput {
 		schema = PlanSchema()
+		if nativeComposition(in) {
+			schema = CompositionPlanSchema()
+		}
 	}
 	in.Analyses = nil
 	system, user := BuildPlanPrompt(in, s.cfg.Render.FadeMS)

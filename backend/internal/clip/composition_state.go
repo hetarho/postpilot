@@ -58,6 +58,13 @@ type PortableText struct {
 	Scope                 string
 	Evidence              []SourceEvidence
 	FallbackReason        string
+	// Only grounded alternatives returned by the original writer call. The
+	// renderer may select one for readability without asking a model again.
+	Alternatives []CopyAlternative
+}
+type CopyAlternative struct {
+	Text string
+	Rows []composition.ResolvedRow
 }
 type PortablePlan struct {
 	Snapshot  CompositionSnapshot

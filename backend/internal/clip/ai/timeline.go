@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/clip/composition"
 	"github.com/postpilot/backend/internal/clip/design"
 )
 
@@ -69,11 +70,25 @@ func composeTimeline(cfg Config, in clip.PlanningInput, plan *clip.EditPlan) err
 	// model's: the scene the observer reported and the template's preset decide
 	// both, so the same input joins the same cuts the same way (CDS-7).
 	preset := in.Template.Preset
+	authoredRhythm := false
+	if nativeComposition(in) {
+		preset = ""
+		doc, problem := composition.Parse(in.Composition.Snapshot.Body, cfg.Template.Composition)
+		if problem != nil {
+			return problem
+		}
+		authoredRhythm = len(doc.Guidance) > 0
+		for _, section := range doc.Sections {
+			authoredRhythm = authoredRhythm || len(section.Guidance) > 0
+		}
+	}
 	scenes := make([]string, len(plan.Cuts))
 	for i, c := range plan.Cuts {
 		scenes[i], _ = clip.CutScene(c, analyses[c.SourceID])
 	}
-	holdCutLengths(plan, analyses, scenes, preset)
+	if !authoredRhythm {
+		holdCutLengths(plan, analyses, scenes, preset)
+	}
 	for i, ms := range design.Transitions(scenes) {
 		plan.Cuts[i].TransitionMS = ms
 	}
@@ -97,6 +112,9 @@ func composeTimeline(cfg Config, in clip.PlanningInput, plan *clip.EditPlan) err
 	// when shrinking (the existing plan_cut_fade bound). A reachable timeline is
 	// never refused for a target (CDS-37 r3).
 	for _, hard := range []bool{false, true} {
+		if authoredRhythm && !hard {
+			continue
+		}
 		room := make([]int, len(plan.Cuts))
 		for i, c := range plan.Cuts {
 			minimum, _ := design.CutBounds(scenes[i], preset)
@@ -124,7 +142,7 @@ func composeTimeline(cfg Config, in clip.PlanningInput, plan *clip.EditPlan) err
 			}
 			share := (remaining + active - 1) / active
 			for i := range plan.Cuts {
-				amount := min(room[i], share, remaining)
+				amount := max(0, min(room[i], share, remaining))
 				if grow {
 					plan.Cuts[i].EndMS += amount
 				} else {

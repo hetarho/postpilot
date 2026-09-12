@@ -44,7 +44,6 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T110 | Release QA on the Naver app and the overlay measurement | CDS CLIP | T108 | blocked@260912 |
-| T127 | Ground clip writing in scene and item evidence | CLIP CDS ARCH | T126 | todo |
 | T128 | Render only template-authored timed elements | CLIP CDS ARCH | T127 | todo |
 | T129 | Author video templates through source and composition controls | CLIP CDS ARCH | T128 | todo |
 | T130 | Build bounded draft video preview and overlay preparation | CLIP CDS ARCH | T128 T133 | todo |
@@ -56,11 +55,14 @@
 | T136 | Show focused clip progress and explicit confirmation | CLIP QUOTA THEME POST ARCH | T131 T134 T135 | todo |
 
 ## next
-- implement-task T127; continue composition T128 and retention T133, then preview/editor T129/T130 → T131 plus cancellation/finalization T134 → T135; integrate T136 and verify T132.
+- implement-task T128; continue retention T133, then preview/editor T129/T130 → T131 plus cancellation/finalization T134 → T135; integrate T136 and verify T132.
 - T110 must refresh CLIP@12 / CDS@10 before resuming because mandatory cards, disclosure and fact QA changed; it remains owner-blocked: privately load a 9:16 clip with both cards in the Naver picker without publishing, capture the clip-tab overlays and supply the images for CDS-11 measurement. Remaining CDS interpretations are recorded in the results of T107, T108, T109 and T115 (contrast/card geometry, audio seams, exposure and frequency, footage-bound duration).
 - T008 needs the owner present: refresh PUB@5 / ARCH@2, rerun postpilot-agent setup before installation for driver signature smarteditor-one-20260910-a6, and cancel or deliberately reuse the queued 20260905-test job; after completion, update PUB for VIDEO-17 and TMPL-39.
 
 ## log
+- 260913 T127 done (clip); single-call native writer, scoped scene/item evidence and conservative omission pass all local gates; commit then T128 renderer
+- 260913 T127 resumed (clip); preserve completed T125/T126 and continue the single-call native writer and scoped-evidence checks
+- 260913 T127 claimed (clip); T126 committed as 7fd2337 with a clean worktree, implement bounded scene/item-grounded native composition planning
 - 260913 T126 done (clip); composition storage, frozen quotes, version-5 plan codec and legacy migration pass all local gates; 1,718 FE tests, true migration restart and deterministic codegen verified, commit then T127
 - 260912 T126 resumed (clip); continue the active authorized T125–T136 implementation goal after verifying confirmed lifecycle policy coverage
 - 260912 create-task audit done (check); CLIP r12 / QUOTA r10 / THEME r11 remain consumed by T133–T136 with T130–T132 integration, spec lint passes with 11 existing warnings
@@ -78,6 +80,3 @@
 - 260912 impact (lifecycle); refresh T125–T132 todo bases and preview/editor dependencies; T008 doing and T110 blocked remain untouched
 - 260912 update-ssot CLIP QUOTA THEME start (lifecycle); record owner-approved 24-hour source retention, explicit finalization and cancellation settlement, then create implementation tasks
 - 260912 create-task audit (plan); all 60 pending CLIP/CDS decisions covered by T125–T132, acyclic dependencies and spec lint pass; 4/5 policy interview awaits source-retention period, finalization cleanup and cancellation-credit answers
-- 260912 create-task CLIP r11 / CDS r10 done (plan); T125–T132 cover portable composition, migration, grounded writing, rendering, authoring UI, bounded preview, timeline correction and semantic regressions
-- 260912 T124 commit/push authorized (obs); stage the verified implementation and its CLIP r10 documentation while preserving concurrent planning changes
-- 260912 create-task CLIP CDS start (plan); consume CLIP r11 / CDS r10 into implementation tasks

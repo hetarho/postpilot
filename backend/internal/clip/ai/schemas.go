@@ -12,6 +12,9 @@ var chunkSchema []byte
 //go:embed schemas/plan.schema.json
 var planSchema []byte
 
+//go:embed schemas/composition-plan.schema.json
+var compositionPlanSchema []byte
+
 // Provider grammars receive the closed structural shape, not every domain
 // bound. The full contracts still live in the prompts and are checked locally.
 // Sending nested array/numeric bounds rejected otherwise valid video requests
@@ -42,3 +45,7 @@ var planOutputSchema = structuralSchema(planSchema)
 
 func ChunkSchema() []byte { return append([]byte(nil), chunkOutputSchema...) }
 func PlanSchema() []byte  { return append([]byte(nil), planOutputSchema...) }
+
+var compositionPlanOutputSchema = structuralSchema(compositionPlanSchema)
+
+func CompositionPlanSchema() []byte { return append([]byte(nil), compositionPlanOutputSchema...) }

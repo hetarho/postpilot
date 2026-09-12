@@ -13,6 +13,34 @@ are always included in the system contract and additionally sent as `JSONSchema`
 only for a registered structured-output model. Both paths use the existing shared
 JSON-object fallback; they never issue a repair call or choose a fallback model.
 
+Native compositions use `composition-plan.schema.json` in that same writer stage.
+The frozen XML defines section order, viewpoint, repeated item groups and every
+visible element. The server resolves fixed/answer-bound text exactly and accepts
+generated entries only for declared AI elements. It preserves verified shorter
+alternatives from that response for the renderer; it never requests semantic repair.
+
+Every cut retains overlapping observation references. Item identity is established
+by an owner range association or a unique supplied name/alias in every overlapping
+observation, with identity checked again after timeline resizing. Optional field
+IDs `name`, `alias` and `aliases` supply automatic identity hints; arbitrary fields
+remain valid and can use owner associations. Filenames, shared digits, generic
+subjects, model-proposed item IDs and uncertain observations do not establish a
+match. Unknown item bindings omit dependent elements and retain a typed reason.
+
+Generated numeric claims compare complete number/unit/currency/basis tokens against
+referenced facts in the bound item; global facts require a declared context section.
+Experiential phrases require exact owner-supplied support, so paraphrases can be
+conservatively omitted. These finite checks and traceable references support the
+scene-by-scene semantic QA in T132; they do not prove arbitrary prose true. No
+sentence is admitted by concatenating digits across answers. Blank optional values
+omit dependent text, and repeated generated captions are removed without rewriting
+fixed content. Native plans retain version-5 geometry, authored declarations, text,
+source ranges, scoped facts and omission reasons. Placement belongs to the renderer.
+
+The old contract remains a compatibility path for frozen legacy payloads. The
+planner advertises version 5; native execution stays unavailable until the renderer
+also advertises that version (T128), which retires preset seeding on normal paths.
+
 Caption time is relative to its trimmed cut. The renderer applies that interval;
 legacy whole-cut captions with both time fields zero retain their behavior.
 Real bundled-font glyph measurement drives placement. Source-space avoidance boxes

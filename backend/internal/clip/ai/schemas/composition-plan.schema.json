@@ -1,0 +1,190 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "ratio",
+    "duration_ms",
+    "cuts",
+    "generated"
+  ],
+  "properties": {
+    "ratio": {
+      "type": "string",
+      "enum": [
+        "vertical",
+        "horizontal",
+        "square"
+      ]
+    },
+    "duration_ms": {
+      "type": "integer",
+      "minimum": 15000,
+      "maximum": 90000
+    },
+    "cuts": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "source_id",
+          "template_section_id",
+          "group_id",
+          "item_id",
+          "start_ms",
+          "end_ms",
+          "focal",
+          "volume",
+          "observation_refs"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "source_id": {
+            "type": "string"
+          },
+          "template_section_id": {
+            "type": "string"
+          },
+          "group_id": {
+            "type": "string"
+          },
+          "item_id": {
+            "type": "string"
+          },
+          "start_ms": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "end_ms": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "focal": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "x",
+              "y"
+            ],
+            "properties": {
+              "x": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "y": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              }
+            }
+          },
+          "volume": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "observation_refs": {
+            "type": "array",
+            "maxItems": 120,
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "generated": {
+      "type": "array",
+      "maxItems": 2400,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "element_id",
+          "cut_id",
+          "text",
+          "short_text",
+          "keyword",
+          "rows",
+          "short_rows",
+          "observation_refs",
+          "fact_refs"
+        ],
+        "properties": {
+          "element_id": {
+            "type": "string"
+          },
+          "cut_id": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "short_text": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "keyword": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "rows": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {
+              "type": "string",
+              "maxLength": 500
+            }
+          },
+          "short_rows": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {
+              "type": "string",
+              "maxLength": 500
+            }
+          },
+          "observation_refs": {
+            "type": "array",
+            "maxItems": 120,
+            "items": {
+              "type": "string"
+            }
+          },
+          "fact_refs": {
+            "type": "array",
+            "maxItems": 10,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "field_id",
+                "group_id",
+                "item_id"
+              ],
+              "properties": {
+                "field_id": {
+                  "type": "string"
+                },
+                "group_id": {
+                  "type": "string"
+                },
+                "item_id": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

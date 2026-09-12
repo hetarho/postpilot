@@ -9,6 +9,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/clip/composition"
 	"github.com/postpilot/backend/internal/clip/design"
 	"github.com/postpilot/backend/internal/llm"
 )
@@ -68,6 +69,7 @@ func New(models Models, captions CaptionSizer, cfg Config) (*Service, error) {
 func (s *Service) Budgets() Budgets {
 	return Budgets{Observe: s.cfg.ObserveCompletionTokens, Plan: s.cfg.PlanCompletionTokens}
 }
+func (s *Service) CompositionPlanVersion() int { return clip.CompositionPlanVersion }
 
 type StageError struct {
 	Stage string
@@ -174,6 +176,9 @@ func (s *Service) Plan(ctx context.Context, model llm.ModelRef, input clip.Plann
 			return clip.EditPlan{}, llm.Usage{}, clip.ErrPricingUnavailable
 		}
 		request.JSONSchema = PlanSchema()
+		if nativeComposition(input) {
+			request.JSONSchema = CompositionPlanSchema()
+		}
 	}
 	if !boundedPrompt(system, user, request.JSONSchema, llm.ExecutionTextOnly) {
 		return clip.EditPlan{}, llm.Usage{}, clip.ErrInvalid
@@ -182,12 +187,19 @@ func (s *Service) Plan(ctx context.Context, model llm.ModelRef, input clip.Plann
 	if err != nil {
 		return clip.EditPlan{}, response.Usage, stageError("plan", err)
 	}
-	result, err := parsePlan(s.cfg, input, response.Text)
+	var result clip.EditPlan
+	if nativeComposition(input) {
+		result, err = parseCompositionPlan(s.cfg, input, response.Text)
+	} else {
+		result, err = parsePlan(s.cfg, input, response.Text)
+	}
 	if err != nil {
 		return clip.EditPlan{}, response.Usage, stageError("plan", llm.ResponseParseError(response, err))
 	}
-	if err := s.compose(ctx, input, &result); err != nil {
-		return clip.EditPlan{}, response.Usage, stageError("plan", err)
+	if !nativeComposition(input) {
+		if err := s.compose(ctx, input, &result); err != nil {
+			return clip.EditPlan{}, response.Usage, stageError("plan", err)
+		}
 	}
 	if err := validatePlan(s.cfg, input, result); err != nil {
 		return clip.EditPlan{}, response.Usage, stageError("plan", llm.ResponseParseError(response, err))
@@ -337,6 +349,16 @@ func within(value string, minimum, maximum int) bool {
 func validateSettings(cfg Config, in clip.PlanningInput) error {
 	if _, err := clip.ClipCanvas(in.Ratio); err != nil {
 		return err
+	}
+	if nativeComposition(in) {
+		if in.TargetDurationMS < cfg.Render.MinDurationMS || in.TargetDurationMS > cfg.Render.MaxDurationMS || in.Composition.Snapshot.Version != clip.CompositionVersion || !within(in.Template.Name, 1, cfg.Template.NameChars) || in.Template.CompositionBody != in.Composition.Snapshot.Body {
+			return clip.ErrInvalid
+		}
+		doc, problem := composition.Parse(in.Composition.Snapshot.Body, cfg.Template.Composition)
+		if problem != nil {
+			return problem
+		}
+		return clip.ValidateCompositionInputs(doc, in.Composition.Inputs, cfg.Template.Composition, true)
 	}
 	if in.TargetDurationMS < cfg.Render.MinDurationMS || in.TargetDurationMS > cfg.Render.MaxDurationMS || !clip.ValidCopyStyles(in.Template.CopyStyles) || !clip.ValidCaptionPace(in.Template.CaptionPace) || !clip.ValidAccent(in.Template.Accent) || !within(in.Template.Name, 1, cfg.Template.NameChars) || !within(in.Template.CutGuidance, 0, cfg.Template.GuidanceChars) || len(in.Template.InformationFields) > cfg.Template.FieldCount || len(in.Answers) != len(in.Template.InformationFields) {
 		return clip.ErrInvalid

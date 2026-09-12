@@ -49,6 +49,9 @@ func BuildObservePrompt(in clip.ChunkInput) (string, string) {
 	})
 }
 func BuildPlanPrompt(in clip.PlanningInput, fadeMS int) (string, string) {
+	if nativeComposition(in) {
+		return buildCompositionPlanPrompt(in, fadeMS)
+	}
 	fields := make([]map[string]string, 0, len(in.Template.InformationFields))
 	for _, f := range in.Template.InformationFields {
 		fields = append(fields, map[string]string{"label": f.Label, "prompt": f.Prompt})
@@ -57,18 +60,7 @@ func BuildPlanPrompt(in clip.PlanningInput, fadeMS int) (string, string) {
 	for _, a := range in.Answers {
 		answers = append(answers, map[string]string{"label": a.Label, "text": a.Text})
 	}
-	analyses := make([]map[string]any, 0, len(in.Analyses))
-	for _, a := range in.Analyses {
-		segments := make([]map[string]any, 0, len(a.Segments))
-		for _, s := range a.Segments {
-			segments = append(segments, map[string]any{
-				"start_ms": s.StartMS, "end_ms": s.EndMS, "event": s.Event, "subjects": s.Subjects, "speech": s.Speech, "quality": s.Quality,
-				"focal": map[string]float64{"x": s.Focal.X, "y": s.Focal.Y}, "scene": s.Scene, "readable_text": s.ReadableText,
-				"subject": map[string]float64{"x": s.Subject.X, "y": s.Subject.Y, "width": s.Subject.Width, "height": s.Subject.Height},
-			})
-		}
-		analyses = append(analyses, map[string]any{"source_id": a.Source.ID, "source_name": a.Source.Filename, "duration_ms": a.Source.Info.DurationMS, "width": a.Source.Info.Width, "height": a.Source.Info.Height, "has_audio": a.Source.Info.HasAudio, "segments": segments})
-	}
+	analyses := planObservationPayload(in.Analyses, false)
 	// The chip vocabulary is CDS-30's, read from the design tables so the prompt
 	// can never offer the model a label the parser will not accept.
 	system := strings.ReplaceAll(planPrompt, "{{chips}}", strings.Join(design.Fact.Chips, " · ")) + string(planSchema)
@@ -76,4 +68,24 @@ func BuildPlanPrompt(in clip.PlanningInput, fadeMS int) (string, string) {
 		"template": map[string]any{"name": in.Template.Name, "information_fields": fields, "cut_guidance": in.Template.CutGuidance, "copy_styles": in.Template.CopyStyles, "caption_pace": in.Template.CaptionPace, "accent": in.Template.Accent},
 		"answers":  answers, "ratio": in.Ratio, "target_duration_ms": in.TargetDurationMS, "fade_ms": fadeMS, "analyses": analyses,
 	})
+}
+
+func planObservationPayload(values []clip.SourceAnalysis, refs bool) []map[string]any {
+	analyses := make([]map[string]any, 0, len(values))
+	for _, a := range values {
+		segments := make([]map[string]any, 0, len(a.Segments))
+		for index, s := range a.Segments {
+			entry := map[string]any{
+				"start_ms": s.StartMS, "end_ms": s.EndMS, "event": s.Event, "subjects": s.Subjects, "speech": s.Speech, "quality": s.Quality,
+				"focal": map[string]float64{"x": s.Focal.X, "y": s.Focal.Y}, "scene": s.Scene, "readable_text": s.ReadableText,
+				"subject": map[string]float64{"x": s.Subject.X, "y": s.Subject.Y, "width": s.Subject.Width, "height": s.Subject.Height},
+			}
+			if refs {
+				entry["observation_id"] = clip.ObservationID(a.Source.ID, index)
+			}
+			segments = append(segments, entry)
+		}
+		analyses = append(analyses, map[string]any{"source_id": a.Source.ID, "source_name": a.Source.Filename, "duration_ms": a.Source.Info.DurationMS, "width": a.Source.Info.Width, "height": a.Source.Info.Height, "has_audio": a.Source.Info.HasAudio, "segments": segments})
+	}
+	return analyses
 }

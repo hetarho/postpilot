@@ -13,7 +13,7 @@ func TestOutputSchemasRetainClosedShapeWithoutGrammarBounds(t *testing.T) {
 	for _, fixture := range []struct {
 		name             string
 		contract, output []byte
-	}{{"observe", chunkSchema, ChunkSchema()}, {"plan", planSchema, PlanSchema()}} {
+	}{{"observe", chunkSchema, ChunkSchema()}, {"plan", planSchema, PlanSchema()}, {"composition", compositionPlanSchema, CompositionPlanSchema()}} {
 		t.Run(fixture.name, func(t *testing.T) {
 			var full, wire map[string]any
 			if json.Unmarshal(fixture.contract, &full) != nil || json.Unmarshal(fixture.output, &wire) != nil {
@@ -84,5 +84,9 @@ func TestPromptsKeepFullContractsAfterOutputProjection(t *testing.T) {
 	}
 	if string(ChunkSchema()) == string(chunkSchema) || string(PlanSchema()) == string(planSchema) {
 		t.Fatal("provider output schema was not projected")
+	}
+	native, _ := BuildPlanPrompt(clip.PlanningInput{Composition: &clip.ProjectComposition{}}, 200)
+	if !strings.Contains(native, string(compositionPlanSchema)) || string(CompositionPlanSchema()) == string(compositionPlanSchema) {
+		t.Fatal("native contract was weakened")
 	}
 }
