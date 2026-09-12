@@ -101,27 +101,31 @@ type releaseHarness struct {
 	// The plan the job persisted, so the speech probes below read the OUTPUT
 	// timeline the way the renderer laid it out rather than a mapping tuned to
 	// one compiler version.
-	plan           *v1.ClipEditPlan
-	t              *testing.T
-	d              *db.DB
-	client         postpilotv1connect.ClipServiceClient
-	cookie         string
-	project, batch string
-	service        *clip.GenerationService
-	queue          *job.Queue
-	jobs           *jobstore.Store
-	ledger         *usage.Service
-	objects        *releaseObjects
-	media          *releaseMedia
-	metrics        *releaseMetrics
-	provider       *releaseProvider
-	admission      *releaseAdmission
-	expected       int
-	before         int
-	master         bool
-	sourceKeys     []string
-	firstFixture   string
-	aborted        *releaseAbortTransport
+	plan              *v1.ClipEditPlan
+	t                 *testing.T
+	d                 *db.DB
+	client            postpilotv1connect.ClipServiceClient
+	cookie            string
+	project, batch    string
+	service           *clip.GenerationService
+	sources           *clip.SourceService
+	projects          *clip.Service
+	generationHandler job.Handler
+	renderHandler     job.Handler
+	queue             *job.Queue
+	jobs              *jobstore.Store
+	ledger            *usage.Service
+	objects           *releaseObjects
+	media             *releaseMedia
+	metrics           *releaseMetrics
+	provider          *releaseProvider
+	admission         *releaseAdmission
+	expected          int
+	before            int
+	master            bool
+	sourceKeys        []string
+	firstFixture      string
+	aborted           *releaseAbortTransport
 }
 
 func releaseRequest[T any](h *releaseHarness, msg *T) *connect.Request[T] {
@@ -181,7 +185,7 @@ func TestClipRelease(t *testing.T) {
 	}
 }
 
-func newReleaseHarness(t *testing.T, mode string, stress bool) *releaseHarness {
+func newReleaseHarness(t *testing.T, mode string, stress bool, clocks ...func() time.Time) *releaseHarness {
 	t.Helper()
 	ctx := t.Context()
 	root := t.TempDir()
@@ -263,7 +267,7 @@ func newReleaseHarness(t *testing.T, mode string, stress bool) *releaseHarness {
 		t.Cleanup(blob.Close)
 		objects.readBase = blob.URL
 	}
-	sources := clip.NewSourceService(st, objects, config.ClipSourceLimits(6*time.Hour, 10*time.Minute))
+	sources := clip.NewSourceService(st, objects, config.ClipSourceLimits(6*time.Hour, 10*time.Minute), clocks...)
 	projects.SetSources(sources)
 	js := jobstore.New(d.Writer, d.Reader)
 	q := job.New(js, 10*time.Millisecond)
@@ -275,12 +279,19 @@ func newReleaseHarness(t *testing.T, mode string, stress bool) *releaseHarness {
 	g := clip.NewGenerationService(st, projects, sources, objects, media, planner, renderer, clipJobs{q}, config.ClipGeneration(cfg)).WithFinisher(releaseFinisher{clipFinisher{writer: d.Writer, clips: st, jobs: js}, mode}).WithCredits(clipQuotePricing{registry: registry, cfg: config.ClipAI(cfg)}, clipAccounting{ledger: ledger})
 	projects.SetGeneration(g)
 	projects.SetFinalizer(clipFinalizer{writer: d.Writer, clips: st, cfg: config.ClipRender(cfg)})
+	var h *releaseHarness
 	if !strings.HasPrefix(mode, "restart ") {
 		q.Register(job.KindGenerateClip, metered(func(ctx context.Context, j job.Job, p job.Progress) error {
+			if h.generationHandler != nil {
+				return h.generationHandler(ctx, j, p)
+			}
 			return g.Run(ctx, j.UserID, j.ID, j.ClipProjectID, j.Payload, p)
 		}))
 	}
 	q.Register(job.KindRenderClip, metered(func(ctx context.Context, j job.Job, p job.Progress) error {
+		if h.renderHandler != nil {
+			return h.renderHandler(ctx, j, p)
+		}
 		return g.RunRender(ctx, j.UserID, j.ID, j.ClipProjectID, j.Payload, p)
 	}))
 	for _, kind := range []string{job.KindGenerateClip, job.KindRenderClip} {
@@ -294,7 +305,8 @@ func newReleaseHarness(t *testing.T, mode string, stress bool) *releaseHarness {
 	mux.Handle(path, handler)
 	rpcServer := httptest.NewServer(mux)
 	t.Cleanup(rpcServer.Close)
-	h := &releaseHarness{t: t, d: d, client: postpilotv1connect.NewClipServiceClient(rpcServer.Client(), rpcServer.URL), cookie: cookie, service: g, queue: q, jobs: js, ledger: ledger, objects: objects, media: media, metrics: metrics, provider: provider, admission: admission, master: mode == "master"}
+	h = &releaseHarness{t: t, d: d, client: postpilotv1connect.NewClipServiceClient(rpcServer.Client(), rpcServer.URL), cookie: cookie, service: g, queue: q, jobs: js, ledger: ledger, objects: objects, media: media, metrics: metrics, provider: provider, admission: admission, master: mode == "master"}
+	h.sources, h.projects = sources, projects
 	if mode == "aborted client" {
 		h.aborted = &releaseAbortTransport{RoundTripper: rpcServer.Client().Transport}
 		client := *rpcServer.Client()

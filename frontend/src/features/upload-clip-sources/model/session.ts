@@ -189,6 +189,17 @@ export class ClipSourceSession {
   }
   ensurePlayback = (fingerprint: string, refresh = false): Promise<string> => {
     const entry = this.entries.get(fingerprint)
+    // A reopened editor may request pixels while its retained manifest is still
+    // loading. Wait for that owned read without treating missing metadata as a
+    // permanent playback failure or starting another request.
+    if (this.active && !entry && this.refreshing) {
+      const epoch = this.mediaEpoch
+      return this.refreshing.then(() => {
+        if (!this.active || epoch !== this.mediaEpoch || !this.entries.has(fingerprint))
+          throw new ClipSourceAccessError('unavailable')
+        return this.ensurePlayback(fingerprint, refresh)
+      })
+    }
     if (!this.active || !entry) return Promise.reject(new ClipSourceAccessError('unavailable'))
     if (entry.file && entry.previewURL) return Promise.resolve(entry.previewURL)
     if (this.playbackRequests.has(fingerprint)) return this.playbackRequests.get(fingerprint)!

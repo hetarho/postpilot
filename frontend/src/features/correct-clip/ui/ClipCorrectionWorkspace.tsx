@@ -38,6 +38,7 @@ export interface ClipEditorPreviewProps {
   onDisplayedFrame: (frame: ClipDisplayedFrame) => void
   maxHeight: number
   compact: boolean
+  stickyTop?: number
 }
 export function ClipCorrectionWorkspace({
   correction,
@@ -78,11 +79,21 @@ export function ClipCorrectionWorkspace({
   const previewRoot = useRef<HTMLDivElement>(null)
   const actions = useRef<HTMLDivElement>(null)
   const [pinPreview, setPinPreview] = useState(true)
+  const [previewBudget, setPreviewBudget] = useState<number>()
   const measureEditingRoom = useCallback(() => {
     const available = window.visualViewport?.height ?? innerHeight
-    const previewHeight = previewRoot.current?.getBoundingClientRect().height ?? 0
-    const dockHeight = actions.current?.firstElementChild?.getBoundingClientRect().height ?? 0
-    setPinPreview(available - previewHeight - dockHeight >= CLIP_TIMELINE.minimumEditingRoomPx)
+    const offset = window.visualViewport?.offsetTop ?? 0
+    const dockTop =
+      actions.current?.firstElementChild?.getBoundingClientRect().top ?? available + offset
+    const focused = document.activeElement
+    const fieldRoom =
+      (focused instanceof HTMLInputElement || focused instanceof HTMLTextAreaElement) &&
+      container.current?.contains(focused)
+        ? focused.getBoundingClientRect().height + CLIP_TIMELINE.fieldGapPx * 2
+        : CLIP_TIMELINE.minimumEditingRoomPx
+    const budget = Math.min(available, dockTop - offset) - fieldRoom
+    setPreviewBudget(budget > 0 ? budget : undefined)
+    setPinPreview(budget > 0)
   }, [])
   const revealFocusedField = useCallback(() => {
     const field = document.activeElement
@@ -95,7 +106,8 @@ export function ClipCorrectionWorkspace({
     const top =
       Math.max(
         window.visualViewport?.offsetTop ?? 0,
-        previewRoot.current?.getBoundingClientRect().bottom ?? 0,
+        previewRoot.current?.querySelector('[data-clip-preview-canvas]')?.getBoundingClientRect()
+          .bottom ?? 0,
       ) + gap
     const bottom =
       Math.min(
@@ -113,13 +125,20 @@ export function ClipCorrectionWorkspace({
       revealFocusedField()
     })
     return () => cancelAnimationFrame(frame)
-  }, [viewport.height, viewport.offsetTop, pinPreview, revealFocusedField, measureEditingRoom])
+  }, [
+    viewport.height,
+    viewport.offsetTop,
+    pinPreview,
+    previewBudget,
+    revealFocusedField,
+    measureEditingRoom,
+  ])
   useEffect(() => {
     if (typeof ResizeObserver === 'undefined') return
     let frame = 0
     const observer = new ResizeObserver(() => {
-      // An expired-source explanation or the confirmation notice can occupy more space than
-      // the preview itself. Let that preview scroll when pinning it would hide every field.
+      // Only the frame is pinned. Controls and explanations keep the document
+      // scroller, leaving room for the focused field above the committing action.
       measureEditingRoom()
       cancelAnimationFrame(frame)
       frame = requestAnimationFrame(revealFocusedField)
@@ -162,7 +181,12 @@ export function ClipCorrectionWorkspace({
   return (
     <section
       ref={container}
-      onFocusCapture={() => requestAnimationFrame(revealFocusedField)}
+      onFocusCapture={() =>
+        requestAnimationFrame(() => {
+          measureEditingRoom()
+          revealFocusedField()
+        })
+      }
       className="min-w-0 space-y-4"
       aria-label={t('correction.title')}
       onBlur={() => dispatch({ type: 'endTransaction' })}
@@ -175,21 +199,20 @@ export function ClipCorrectionWorkspace({
       }}
     >
       <Typography variant="title">{t('correction.title')}</Typography>
-      <div
-        ref={previewRoot}
-        className={`bg-surface-lowest z-10 space-y-2 py-2 ${pinPreview ? 'sticky' : ''}`}
-        style={{ top: viewport.offsetTop }}
-      >
+      <div ref={previewRoot} className="contents">
         {preview({
           timeMs: timeline.timeMs,
           onTimeChange: seek,
           onDisplayedFrame: setFrame,
-          maxHeight:
+          maxHeight: Math.min(
+            previewBudget ?? Infinity,
             viewport.height *
-            (viewport.height < CLIP_TIMELINE.compactViewportHeight
-              ? CLIP_TIMELINE.compactPreviewFraction
-              : CLIP_TIMELINE.previewViewportFraction),
+              (viewport.height < CLIP_TIMELINE.compactViewportHeight
+                ? CLIP_TIMELINE.compactPreviewFraction
+                : CLIP_TIMELINE.previewViewportFraction),
+          ),
           compact: true,
+          stickyTop: pinPreview ? viewport.offsetTop : undefined,
         })}
       </div>
       <div className="flex flex-wrap items-center gap-2">

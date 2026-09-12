@@ -1,0 +1,7 @@
+[
+  {"name":"two prices and a silent scene change","mutation":"none","firstItem":"sea","firstText":"해물라면 12,000원","firstFallback":""},
+  {"name":"ambiguous lookalike cannot borrow the named dish","mutation":"lookalike","firstItem":"","firstText":"","firstFallback":"item_unassigned"},
+  {"name":"missing optional price never borrows the other price","mutation":"missing_price","firstItem":"sea","firstText":"","firstFallback":"unavailable_scoped_fact"},
+  {"name":"appearance and silence do not prove tasting experience","mutation":"experience","firstItem":"sea","firstText":"","firstFallback":"unsupported_experience"},
+  {"name":"the same global digits do not establish an item price","mutation":"global_price","firstItem":"sea","firstText":"","firstFallback":"unavailable_scoped_fact"}
+]

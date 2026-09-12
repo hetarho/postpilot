@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useSyncExternalStore } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useSyncExternalStore } from 'react'
 import { useTransport } from '@connectrpc/connect-query'
 import { createClipSourcePipeline } from '../api/pipeline'
 import { ClipSourceSession } from './session'
@@ -18,7 +18,8 @@ export function useClipSourceUpload(
     [projectId, transport],
   )
   const state = useSyncExternalStore(session.subscribe, session.getSnapshot)
-  useEffect(() => {
+  // Own the runtime before child preview effects request retained playback.
+  useLayoutEffect(() => {
     if (!enabled) {
       session.dispose()
       return

@@ -28,12 +28,13 @@ import (
 // All objects and HTTP responses are local synthetic fixtures. This adapter has
 // no cloud credentials, network client or connection to any development stack.
 type releaseObjects struct {
-	mu        sync.Mutex
-	root      string
-	paths     map[string]string
-	downloads map[string]int
-	uploads   int
-	readBase  string
+	mu         sync.Mutex
+	root       string
+	paths      map[string]string
+	downloads  map[string]int
+	uploads    int
+	readBase   string
+	failDelete bool
 }
 
 type releaseLog struct {
@@ -94,6 +95,9 @@ func (o *releaseObjects) HeadSource(_ context.Context, key string) (clip.SourceO
 func (o *releaseObjects) Delete(_ context.Context, key string) error {
 	o.mu.Lock()
 	defer o.mu.Unlock()
+	if o.failDelete {
+		return errors.New("fixture object deletion unavailable")
+	}
 	// Source fixture masters may represent multiple distinct uploads. Removing
 	// the object's mapping, not its reusable test fixture, models cloud deletion.
 	delete(o.paths, key)

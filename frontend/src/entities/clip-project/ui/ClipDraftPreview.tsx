@@ -271,6 +271,7 @@ export function ClipDraftPreview({
   onDisplayedFrame,
   maxHeight,
   compact = false,
+  stickyTop,
 }: {
   projectId: string
   revision: number
@@ -283,6 +284,7 @@ export function ClipDraftPreview({
   onDisplayedFrame?: (frame: ClipDisplayedFrame) => void
   maxHeight?: number
   compact?: boolean
+  stickyTop?: number
 }) {
   const { t } = useTranslation('clips')
   const transport = useTransport()
@@ -375,59 +377,65 @@ export function ClipDraftPreview({
   if (slots.length < 2 && next)
     slots.push({ ...next, sourceMs: next.cut.startMs, opacity: 0, audioGain: 0, master: false })
   return (
-    <section aria-label={t('preview.title')} className="space-y-3">
+    <section aria-label={t('preview.title')} className={compact ? 'contents' : 'space-y-3'}>
       {!compact && <Typography variant="fieldTitle">{t('preview.title')}</Typography>}
       <div
-        className="bg-media-canvas-bg relative mx-auto w-full overflow-hidden rounded-md"
-        style={{
-          aspectRatio: `${canvas.width} / ${canvas.height}`,
-          maxWidth: maxHeight ? (maxHeight * canvas.width) / canvas.height : undefined,
-        }}
+        className={stickyTop === undefined ? 'contents' : 'bg-surface-lowest sticky z-10'}
+        style={{ top: stickyTop }}
       >
-        {slots.map((slot) => (
-          <PreviewVideo
-            key={slot.index % 2}
-            item={slot}
-            source={sources.find(
-              (s) => s.id === slot.cut.sourceId && s.fingerprint === slot.cut.fingerprint,
-            )}
-            access={resolvePlayback}
-            timeMs={timeMs}
-            playing={playing && timeMs >= slot.startMs && timeMs < slot.endMs}
-            muted={muted}
-            opacity={slot.opacity}
-            audioGain={slot.audioGain}
-            master={slot.master}
-            canvas={canvas}
-            onFrame={changeTime}
-            onPrecision={setPrecise}
-            onDisplayedFrame={onDisplayedFrame}
-          />
-        ))}
-        {ready &&
-          snapshot.assets.map((asset, index) => {
-            const motion = previewMotion(asset, timeMs)
-            if (!motion.opacity) return null
-            return (
-              <img
-                key={`${asset.instanceId}-${asset.startMs}-${index}`}
-                src={asset.url}
-                alt=""
-                aria-hidden="true"
-                className="pointer-events-none absolute max-w-none"
-                style={{
-                  width: `${(asset.width / snapshot.canvasWidth) * 100}%`,
-                  height: `${(asset.height / snapshot.canvasHeight) * 100}%`,
-                  left: `${(asset.x / snapshot.canvasWidth) * 100}%`,
-                  top: `${((asset.y + motion.dy) / snapshot.canvasHeight) * 100}%`,
-                  opacity: motion.opacity,
-                  zIndex: timeline.length + asset.layer,
-                }}
-              />
-            )
-          })}
+        <div
+          data-clip-preview-canvas
+          className="bg-media-canvas-bg relative mx-auto w-full overflow-hidden rounded-md"
+          style={{
+            aspectRatio: `${canvas.width} / ${canvas.height}`,
+            maxWidth: maxHeight ? (maxHeight * canvas.width) / canvas.height : undefined,
+          }}
+        >
+          {slots.map((slot) => (
+            <PreviewVideo
+              key={slot.index % 2}
+              item={slot}
+              source={sources.find(
+                (s) => s.id === slot.cut.sourceId && s.fingerprint === slot.cut.fingerprint,
+              )}
+              access={resolvePlayback}
+              timeMs={timeMs}
+              playing={playing && timeMs >= slot.startMs && timeMs < slot.endMs}
+              muted={muted}
+              opacity={slot.opacity}
+              audioGain={slot.audioGain}
+              master={slot.master}
+              canvas={canvas}
+              onFrame={changeTime}
+              onPrecision={setPrecise}
+              onDisplayedFrame={onDisplayedFrame}
+            />
+          ))}
+          {ready &&
+            snapshot.assets.map((asset, index) => {
+              const motion = previewMotion(asset, timeMs)
+              if (!motion.opacity) return null
+              return (
+                <img
+                  key={`${asset.instanceId}-${asset.startMs}-${index}`}
+                  src={asset.url}
+                  alt=""
+                  aria-hidden="true"
+                  className="pointer-events-none absolute max-w-none"
+                  style={{
+                    width: `${(asset.width / snapshot.canvasWidth) * 100}%`,
+                    height: `${(asset.height / snapshot.canvasHeight) * 100}%`,
+                    left: `${(asset.x / snapshot.canvasWidth) * 100}%`,
+                    top: `${((asset.y + motion.dy) / snapshot.canvasHeight) * 100}%`,
+                    opacity: motion.opacity,
+                    zIndex: timeline.length + asset.layer,
+                  }}
+                />
+              )
+            })}
+        </div>
       </div>
-      <div className="flex flex-wrap items-center gap-4">
+      <div className={`flex flex-wrap items-center gap-4 ${compact ? 'mt-3' : ''}`}>
         <Button
           variant="secondary"
           disabled={!timeline.length}
@@ -483,7 +491,7 @@ export function ClipDraftPreview({
           {t('preview.retry')}
         </Button>
       )}
-      <details>
+      <details className={compact ? 'my-3' : undefined}>
         <summary className="text-content-secondary cursor-pointer">
           <Typography as="span" variant="meta">
             {t('preview.parityLabel')}

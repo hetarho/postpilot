@@ -83,6 +83,26 @@ it('rehydrates a reusable manifest without upload and keeps playback URLs out of
   expect(pipeline.revokeURL).not.toHaveBeenCalled()
 })
 
+it('waits for initial retained metadata before a reopened preview requests playback', async () => {
+  const { session, pipeline, metadata } = retainedFixture()
+  const [first, second] = await Promise.all([
+    session.ensurePlayback(metadata.fingerprint),
+    session.ensurePlayback(metadata.fingerprint),
+  ])
+  expect(first).toContain('capability=temporary')
+  expect(second).toBe(first)
+  expect(pipeline.retained).toHaveBeenCalledTimes(1)
+  expect(pipeline.playback).toHaveBeenCalledTimes(1)
+})
+
+it('does not acquire playback if the page leaves while retained metadata loads', async () => {
+  const { session, pipeline, metadata } = retainedFixture()
+  const pending = session.ensurePlayback(metadata.fingerprint)
+  session.dispose()
+  await expect(pending).rejects.toMatchObject({ reason: 'unavailable' })
+  expect(pipeline.playback).not.toHaveBeenCalled()
+})
+
 it('keeps matching local pixels through completion and editable step changes, releasing them on leave', async () => {
   const { session, pipeline, metadata } = retainedFixture()
   await session.refreshRetained()
