@@ -144,7 +144,7 @@ func TestSelectAnchorFollowsCDS38(t *testing.T) {
 	bottom := candidate("bottom", "center", 300, 1270, 400, 110)
 	upper := candidate("upper_mid", "center", 300, 645, 400, 110)
 	lower := candidate("lower_mid", "center", 300, 1045, 400, 110)
-	top := candidate("top", "left", 96, 290, 400, 110)
+	top := candidate("top", "left", 96, 80, 400, 110)
 	none := design.Region{}
 
 	// Without a subject box the first (default) candidate wins.

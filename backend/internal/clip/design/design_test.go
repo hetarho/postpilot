@@ -11,9 +11,9 @@ import (
 // Every number below is quoted from a CDS decision. The test exists so a change
 // to the shared configuration file cannot silently move the design system.
 func TestSafeAreasAndAnchorsMatchCDS(t *testing.T) {
-	// CDS-9 (SA-C) and CDS-13.
+	// CDS-9 (design bounds) and CDS-13.
 	safe := map[string]design.Region{
-		"vertical":   {X: 64, Y: 250, Width: 856, Height: 1170},
+		"vertical":   {X: 64, Y: 40, Width: 856, Height: 1380},
 		"horizontal": {X: 96, Y: 72, Width: 1728, Height: 936},
 		"square":     {X: 64, Y: 72, Width: 952, Height: 936},
 	}
@@ -24,7 +24,7 @@ func TestSafeAreasAndAnchorsMatchCDS(t *testing.T) {
 	}
 	// CDS-12 for 9:16; CDS-47 and CDS-48 restate only what the other two change.
 	anchors := map[string]design.Anchor{
-		"vertical":   {Top: 290, UpperMid: 700, LowerMid: 1100, Bottom: 1380, Left: 96, Center: 492, Right: 888},
+		"vertical":   {Top: 80, UpperMid: 700, LowerMid: 1100, Bottom: 1380, Left: 96, Center: 492, Right: 888},
 		"horizontal": {Top: 112, UpperMid: 420, LowerMid: 660, Bottom: 968, Left: 96, Center: 960, Right: 1824},
 		"square":     {Top: 112, UpperMid: 420, LowerMid: 660, Bottom: 968, Left: 64, Center: 540, Right: 1016},
 	}
@@ -55,8 +55,7 @@ func TestSafeAreasAndAnchorsMatchCDS(t *testing.T) {
 			}
 		}
 	}
-	// CDS-9 records the Naver-only estimate beside SA-C; CDS-10 keeps the
-	// overlay geometry a constant.
+	// CDS-10 keeps the unverified Naver estimate separate from design bounds.
 	if design.SafeNaverEstimate != (design.Region{X: 64, Y: 230, Width: 866, Height: 1210}) {
 		t.Fatal("SA-N", design.SafeNaverEstimate)
 	}
@@ -72,10 +71,10 @@ func TestRatioLayoutsMatchCDS46To48(t *testing.T) {
 			CopyMaxWidth: 856, HookSize: 84,
 			HookCard: design.CardBox{Width: 792, CenterY: 840},
 			EndCard:  design.CardBox{Width: 792, CenterY: 1040},
-			Chip:     design.ChipStack{X: 96, Y: 290, MaxWidth: 600, Columns: 1},
-			Badge:    design.BadgeBox{Right: 888, Top: 290},
+			Chip:     design.ChipStack{X: 96, Y: 80, MaxWidth: 600, Columns: 1},
+			Badge:    design.BadgeBox{Right: 888, Top: 80},
 			// CDS-32 states both 9:16 scrim rectangles exactly.
-			ScrimTop:    design.Region{Y: 250, Width: 1080, Height: 310},
+			ScrimTop:    design.Region{Y: 40, Width: 1080, Height: 310},
 			ScrimBottom: design.Region{Y: 1040, Width: 1080, Height: 380},
 		},
 		"horizontal": {

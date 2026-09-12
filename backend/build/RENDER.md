@@ -84,7 +84,7 @@ centred at (960, 540); 1:1 width 880 centred at (540, 540)/(540, 560).
 The padded text band stays inside the safe area. The compiler can use the card
 regions to select a free caption anchor; any remaining overlap is advisory.
 
-Disclosure and information now share a top edge (290 on 9:16, 112 on the other
+Disclosure and information now share a top edge (80 on 9:16, 112 on the other
 ratios) and a row height derived from font sizes and padding. Each text role is
 measured with its own weight and tracking, including a shortened value after
 truncation. The SVG adapter centres the actual glyph bounds vertically and
@@ -104,7 +104,7 @@ function and no subprocess text is scraped. The crop is the copy's own region,
 taken through the render's scale-and-crop so the pixels measured are the pixels
 the viewer sees. `L` is the WCAG 2.1 relative luminance of the region's mean
 colour and `σ` its deviation across the three frames. `L ≥ 0.6` or `σ ≥ 0.25`
-adds `scrim.top` (0, 250, 1080, 310) or `scrim.bottom` (0, 1040, 1080, 380) —
+adds `scrim.top` (0, 40, 1080, 310) or `scrim.bottom` (0, 1040, 1080, 380) —
 260/200 on the other two ratios — at the copy's own anchor, riding the copy's own
 plate so it shares its window and both fades. `L ≥ 0.6` also turns 크게 강조's
 accent word white; 형광펜's accent is the marker stroke behind white text, so it
@@ -242,8 +242,8 @@ system typeset itself.
 
 The three safe areas and every placement number come from one embedded
 configuration file, `internal/clip/design/design.json`, which the frontend mirrors
-byte for byte; nothing here is a literal. 9:16 is the cross-platform intersection
-SA-C (64, 250, 856, 1170), 16:9 is (96, 72, 1728, 936) and 1:1 is (64, 72, 952,
+byte for byte; nothing here is a literal. 9:16 uses the design
+bounds (64, 40, 856, 1380), 16:9 is (96, 72, 1728, 936) and 1:1 is (64, 72, 952,
 936). A caption resolves one of four vertical anchors (top, upper_mid, lower_mid,
 bottom) and one alignment (center, left, right) to a plate region, and a region
 that would leave the safe area by any pixel is refused rather than nudged — 9:16's

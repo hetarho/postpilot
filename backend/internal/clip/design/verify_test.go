@@ -129,9 +129,9 @@ func TestVerifyRejectsOneFixturePerCheck(t *testing.T) {
 		want   design.Violation
 		mutate func(design.Manifest) design.Manifest
 	}{
-		// V1: one pixel above the 9:16 safe area's y 250 is a breach.
+		// V1: one pixel above the 9:16 safe area's y 40 is a breach.
 		"safe area": {design.ViolationSafeArea, func(m design.Manifest) design.Manifest {
-			m[1].Region.Y = 249
+			m[1].Region.Y = 39
 			return m
 		}},
 		// V2: below the body floor of 48 px.

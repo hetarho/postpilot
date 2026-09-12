@@ -169,7 +169,7 @@ type Canvas struct {
 }
 
 // Every geometry here is a CDS constant, never a literal: the 9:16 safe area is
-// the cross-platform intersection SA-C (CDS-9) and the other two are broadcast
+// the explicit design bounds (CDS-9) and the other two are broadcast
 // title-safe practice plus a player control bar (CDS-13).
 func ClipCanvas(ratio string) (Canvas, error) {
 	l, ok := design.Layout(ratio)

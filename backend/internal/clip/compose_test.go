@@ -111,7 +111,7 @@ func TestComposeGroundingFallback(t *testing.T) {
 func TestComposeShortensPastAStyleLimit(t *testing.T) {
 	canvas, _ := clip.ClipCanvas("vertical")
 	fits := func(clip.Caption) (clip.Region, bool, error) {
-		return clip.Region{X: 96, Y: 290, Width: 400, Height: 90}, true, nil
+		return clip.Region{X: 96, Y: 80, Width: 400, Height: 90}, true, nil
 	}
 	cut := clip.Cut{ID: "one", EndMS: 6000, Focal: clip.Point{X: .5, Y: .5}}
 	// 메모 takes one line of eighteen; nineteen is past it.

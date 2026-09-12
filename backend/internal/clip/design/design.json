@@ -2,9 +2,9 @@
   "ratios": {
     "vertical": {
       "canvas": { "width": 1080, "height": 1920 },
-      "safe": { "x": 64, "y": 250, "width": 856, "height": 1170 },
+      "safe": { "x": 64, "y": 40, "width": 856, "height": 1380 },
       "anchor": {
-        "top": 290,
+        "top": 80,
         "upper_mid": 700,
         "lower_mid": 1100,
         "bottom": 1380,
@@ -16,9 +16,9 @@
       "hook_size": 84,
       "hook_card": { "width": 792, "center_y": 840 },
       "end_card": { "width": 792, "center_y": 1040 },
-      "chip": { "x": 96, "y": 290, "max_width": 600, "columns": 1 },
-      "badge": { "right": 888, "top": 290 },
-      "scrim_top": { "x": 0, "y": 250, "width": 1080, "height": 310 },
+      "chip": { "x": 96, "y": 80, "max_width": 600, "columns": 1 },
+      "badge": { "right": 888, "top": 80 },
+      "scrim_top": { "x": 0, "y": 40, "width": 1080, "height": 310 },
       "scrim_bottom": { "x": 0, "y": 1040, "width": 1080, "height": 380 }
     },
     "horizontal": {

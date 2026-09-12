@@ -191,3 +191,16 @@ Mount that directory as the API's overlay directory to preview it. The local
 owner originals, checks a collision-free manifest before and after rendering,
 and exports the 20 s video and edit plan. Its title is editorial sample copy,
 not a verified merchant name. No AI provider is involved.
+
+## Vertical top placement
+
+CDS r7 sets the 1080×1920 design inset to 40 px plus a further 40 px gap:
+the first information row, disclosure and TOP copy start at y 80. Layout lives
+in `backend/internal/clip/design/design.json`, mirrored in the frontend config.
+The top scrim begins at y 40; the bottom bound stays y 1420. Historical platform
+UI estimates are retained separately and do not control this design inset.
+
+The sample's `header/overlay.svg` draws the menu and disclosure; `caption/overlay.svg`
+draws body captions; `opening/overlay.svg` and `ending/overlay.svg` draw the two
+title windows. Runtime text and measured coordinates fill the template fields,
+resvg converts the SVG to a transparent PNG, and FFmpeg overlays it on footage.
