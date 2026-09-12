@@ -17,7 +17,7 @@
 |---|---|---|---|---|
 | ARCH | 2 | 2 | - | 0 |
 | AUTH | 5 | 5 | - | 0 |
-| QUOTA | 9 | 9 | - | 0 |
+| QUOTA | 10 | 10 | - | 0 |
 | POST | 6 | 6 | - | 0 |
 | VOICE | 3 | 3 | - | 1 |
 | GEN | 6 | 6 | - | 0 |
@@ -27,11 +27,11 @@
 | EXPORT | 2 | 2 | - | 0 |
 | PUB | 5 | 5 | - | 0 |
 | LANG | 3 | 3 | - | 0 |
-| THEME | 10 | 10 | - | 0 |
+| THEME | 11 | 11 | - | 0 |
 | MKT | 4 | 4 | - | 0 |
 | VIDEO | 2 | 2 | - | 1 |
-| CLIP | 10 | 10 | - | 0 |
-| CDS | 9 | 9 | - | 2 |
+| CLIP | 12 | 12 | - | 0 |
+| CDS | 10 | 10 | - | 2 |
 | BILL | 4 | 4 | - | 0 |
 
 ## review
@@ -44,29 +44,41 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T110 | Release QA on the Naver app and the overlay measurement | CDS CLIP | T108 | blocked@260912 |
+| T126 | Persist template compositions and preserve existing clips | CLIP CDS ARCH | T125 | todo |
+| T127 | Ground clip writing in scene and item evidence | CLIP CDS ARCH | T126 | todo |
+| T128 | Render only template-authored timed elements | CLIP CDS ARCH | T127 | todo |
+| T129 | Author video templates through source and composition controls | CLIP CDS ARCH | T128 | todo |
+| T130 | Build bounded draft video preview and overlay preparation | CLIP CDS ARCH | T128 T133 | todo |
+| T131 | Replace cut forms with a preview-led timeline editor | CLIP CDS ARCH | T129 T130 | todo |
+| T132 | Verify clip composition quality and editing parity | CLIP CDS QUOTA THEME ARCH | T136 | todo |
+| T133 | Retain and reuse private clip originals for 24 hours | CLIP ARCH | T126 | todo |
+| T134 | Cancel clip attempts and settle the unused reservation | CLIP QUOTA ARCH | T128 T133 | todo |
+| T135 | Finalize a matching clip result and delete its originals | CLIP ARCH | T134 | todo |
+| T136 | Show focused clip progress and explicit confirmation | CLIP QUOTA THEME POST ARCH | T131 T134 T135 | todo |
 
 ## next
-- T110 remains owner-blocked: privately load a 9:16 clip with both cards in the Naver picker without publishing, capture the clip-tab overlays and supply the images for CDS-11 measurement. Remaining CDS interpretations are recorded in the results of T107, T108, T109 and T115 (contrast/card geometry, audio seams, exposure and frequency, footage-bound duration).
+- implement-task T126; continue composition T127 → T128 and retention T133, then preview/editor T129/T130 → T131 plus cancellation/finalization T134 → T135; integrate T136 and verify T132.
+- T110 must refresh CLIP@12 / CDS@10 before resuming because mandatory cards, disclosure and fact QA changed; it remains owner-blocked: privately load a 9:16 clip with both cards in the Naver picker without publishing, capture the clip-tab overlays and supply the images for CDS-11 measurement. Remaining CDS interpretations are recorded in the results of T107, T108, T109 and T115 (contrast/card geometry, audio seams, exposure and frequency, footage-bound duration).
 - T008 needs the owner present: refresh PUB@5 / ARCH@2, rerun postpilot-agent setup before installation for driver signature smarteditor-one-20260910-a6, and cancel or deliberately reuse the queued 20260905-test job; after completion, update PUB for VIDEO-17 and TMPL-39.
 
 ## log
+- 260912 T125 done (clip); portable Go/TS composition grammar and resolution, 65 shared cases, 70 FE grammar tests and all local gates pass; commit authorized and T126 next
+- 260912 T125 claimed (clip); implement and commit T125–T136 in dependency order under the authorized goal
+- 260912 create-task audit (lifecycle); all 38 changed decisions covered, 12 todo task references/bases and dependency graph valid; spec lint and diff checks pass with 11 pre-existing warnings; documents/tasks only
+- 260912 create-task CLIP r12 / QUOTA r10 / THEME r11 done (lifecycle); T133–T136 cover retained originals, cancellation settlement, finalization and focused progress; T125–T132 bases refreshed with T130/T131/T132 integration updated
+- 260912 create-task CLIP QUOTA THEME start (lifecycle); decompose retention, explicit confirmation, cancellation accounting and focused running UX; refresh overlapping todo tasks
+- 260912 update-ssot CLIP r12 / QUOTA r10 / THEME r11 done (lifecycle); 24-hour reusable originals, explicit finalization, focused running view and reserved-remainder cancellation charge; pending task decomposition
+- 260912 impact (lifecycle); refresh T125–T132 todo bases and preview/editor dependencies; T008 doing and T110 blocked remain untouched
+- 260912 update-ssot CLIP QUOTA THEME start (lifecycle); record owner-approved 24-hour source retention, explicit finalization and cancellation settlement, then create implementation tasks
+- 260912 create-task audit (plan); all 60 pending CLIP/CDS decisions covered by T125–T132, acyclic dependencies and spec lint pass; 4/5 policy interview awaits source-retention period, finalization cleanup and cancellation-credit answers
+- 260912 create-task CLIP r11 / CDS r10 done (plan); T125–T132 cover portable composition, migration, grounded writing, rendering, authoring UI, bounded preview, timeline correction and semantic regressions
 - 260912 T124 commit/push authorized (obs); stage the verified implementation and its CLIP r10 documentation while preserving concurrent planning changes
+- 260912 create-task CLIP CDS start (plan); consume CLIP r11 / CDS r10 into implementation tasks
+- 260912 update-ssot CLIP QUOTA THEME start (flow); interview generation progress, cancellation and reusable source retention while task decomposition proceeds
+- 260912 update-ssot CLIP r11 / CDS r10 done (editor); specification-only changes for preview correction, portable templates, timed exact text and scene/item-grounded copy; generation cancellation and source-retention policies remain outside this change; spec lint and diff checks pass, historical/stale-task warnings retained
+- 260912 impact (editor): T124 completed against CLIP r10 and its read-only observations remain valid; T110 must refresh CLIP@11/CDS@10 before QA; the only doing task T008 is outside the changed decisions
+- 260912 update-ssot CDS r10 written (editor); remove implicit preset content and align template ownership, timed text and scene/item verification
+- 260912 update-ssot CLIP r11 written (editor); preview-led timeline, portable composition and scene/item-bound copy; CDS synchronization in progress
 - 260912 T124 done (obs); CLIP r10 horizontal sources, retained observations and saved-plan cut usage; 1,644 FE tests, backend/agent gates, browser checks, codegen and spec lint pass; local uncommitted changes
 - 260912 T124 scope audit (obs); leave the unrelated DraftEditor hook, historical spec warnings and Vite entry-size warning for separate review; all gates exit successfully
-- 260912 T124 claimed (obs)
-- 260912 create-task CLIP r10 done (obs); T124 covers horizontal source browsing, retained observation API/UI and revision-aware usage
-- 260912 create-task CLIP r10 start (obs)
-- 260912 update-ssot CLIP r10 done (obs); horizontal source browsing and retained read-only observations with saved-plan usage; THEME already permits this pattern; T110 is unaffected by these additional workspace rules
-- 260912 update-ssot CLIP start (obs); approved horizontal sources, retained observation viewing and actual cut usage; then create and implement the task
-- 260912 T123 done (badg); optional disclosure and symmetric header margins verified, both eight-original 20 s renders inspected at 512 MiB / 2 CPUs with no OOM and $0; local checks pass; owner authorized commit/push of T122/T123
-- 260912 T123 checks (badg); persisted visibility, quote invalidation, generation/rerender and active-job guard pass; 1,627 FE tests and backend/agent gates pass; original-footage shown video inspected, hidden and production gates running
-- 260912 T123 claimed (badg); create-task consumed CLIP/CDS r9; implement visibility, header bounds and verified commit/push
-- 260912 create-task CLIP CDS r9 start (badge)
-- 260912 update-ssot CLIP CDS r9 done (badge); optional default-on disclosure and symmetric header margins
-- 260912 update-ssot CLIP CDS start (badge); owner approved T122 video; add optional disclosure visibility and symmetric header edges, then commit and push approved changes
-- 260912 T122 done (pace); final blank-caption correction audit passes; 1,626 FE tests, backend/agent checks and 27 release scenarios pass; local eight-original comparison ready for owner review, $0
-- 260912 T122 final fallback audit (pace); ensure a compiler-dropped caption remains editable without placement metadata
-- 260912 T122 checks passed (pace); independent typography/pace, exact phrase editing, cropped unique cue layers; all local checks + 27 release scenarios pass; eight-original 20 s comparison, 146.884 s render at 512 MiB / 2 CPU, zero OOM, $0
-- 260912 T122 claimed (pace); recipe/caption pace, simple typography, automatic splitting, manual phrase editing and bounded real rendering
-- 260912 create-task CLIP CDS r8 done (pace); deltas consumed by T122
-- 260912 create-task CLIP CDS r8 start (pace)
+- 260912 update-ssot CLIP CDS start (editor); document preview-led correction, portable template content and footage-grounded copy; inspect generation feedback and source retention implications
