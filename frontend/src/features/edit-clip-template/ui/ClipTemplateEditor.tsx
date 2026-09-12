@@ -2,46 +2,48 @@ import { useRef, useState } from 'react'
 import { useBlocker, useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import {
-  CLIP_ACCENTS,
-  CLIP_PRESETS_LIST,
   CLIP_TEMPLATE_LIMITS,
-  COPY_STYLES,
-  CopyStylePreview,
+  CompositionBuilder,
+  CompositionPreview,
+  CompositionProblem,
+  EMPTY_CLIP_COMPOSITION,
+  clipCompositionGuide,
   emptyClipRecipe,
   normalizeRecipe,
+  parseClipComposition,
   recipeOf,
   useClipTemplateMutations,
   validateClipRecipe,
+  type ClipComposition,
   type ClipRecipe,
   type ClipTemplate,
-  type FieldError,
-  type InformationField,
 } from '@/entities/clip-template'
+import { useClipCapabilities } from '@/entities/clip-project'
 import { appFailureFromConnect } from '@/shared/api'
+import { copyText } from '@/shared/lib'
 import {
   ActionBar,
   AppFailureMessage,
   Button,
-  Checkbox,
   Dialog,
   FieldLabel,
   FieldMessage,
-  Listbox,
-  SortableList,
+  SegmentedControl,
+  Sheet,
   TextField,
   Textarea,
   Typography,
 } from '@/shared/ui'
 
 const FORM_ID = 'clip-template-form'
-const textInput = {
-  inputMode: 'text',
-  autoComplete: 'off',
-  autoCapitalize: 'sentences',
-  autoCorrect: 'on',
-  enterKeyHint: 'next',
-} as const
-
+function authoredRecipe(stored?: ClipTemplate): ClipRecipe {
+  const recipe = stored ? recipeOf(stored) : emptyClipRecipe()
+  return {
+    ...recipe,
+    compositionBody: stored?.compositionBody ?? (stored ? '' : EMPTY_CLIP_COMPOSITION),
+    compositionLegacy: false,
+  }
+}
 export function ClipTemplateEditor({
   ownerId,
   stored,
@@ -51,20 +53,19 @@ export function ClipTemplateEditor({
 }) {
   const { t } = useTranslation('clips')
   const navigate = useNavigate()
-  const [draft, setDraft] = useState<ClipRecipe>(() =>
-    stored ? recipeOf(stored) : emptyClipRecipe(),
-  )
+  const [draft, setDraft] = useState(() => authoredRecipe(stored))
   const [baseline, setBaseline] = useState(() =>
-    JSON.stringify(normalizeRecipe(stored ? recipeOf(stored) : emptyClipRecipe())),
+    JSON.stringify(normalizeRecipe(authoredRecipe(stored))),
   )
-  const [pendingSeed, setPendingSeed] = useState<InformationField[] | null>(null)
-  const [fieldIds, setFieldIds] = useState(() =>
-    draft.informationFields.map((_, i) => `field-${i}`),
-  )
+  const [mode, setMode] = useState<'builder' | 'source'>('builder')
   const [saved, setSaved] = useState(false)
-  const { save: saveMutation, seed: seedMutation } = useClipTemplateMutations(ownerId)
-  const submitting = useRef(false)
-  const leaving = useRef(false)
+  const [copyStatus, setCopyStatus] = useState('')
+  const [guide, setGuide] = useState<string | null>(null)
+  const sourceField = useRef<HTMLTextAreaElement>(null)
+  const { save: saveMutation } = useClipTemplateMutations(ownerId)
+  const capabilities = useClipCapabilities(ownerId)
+  const submitting = useRef(false),
+    leaving = useRef(false)
   const errors = validateClipRecipe(draft)
   const dirty = JSON.stringify(normalizeRecipe(draft)) !== baseline
   const pending = saveMutation.isPending
@@ -74,57 +75,26 @@ export function ClipTemplateEditor({
     enableBeforeUnload: guard,
     withResolver: true,
   })
-  const failure = saveMutation.error ? appFailureFromConnect(saveMutation.error) : undefined
-
-  const change = <K extends keyof ClipRecipe>(key: K, value: ClipRecipe[K]) => {
+  const body = draft.compositionBody ?? ''
+  let document: ClipComposition | undefined, problem: CompositionProblem | undefined
+  try {
+    document = parseClipComposition(body)
+  } catch (error) {
+    if (error instanceof CompositionProblem) problem = error
+    else throw error
+  }
+  const change = (patch: Partial<ClipRecipe>) => {
     setSaved(false)
-    setDraft((current) => ({ ...current, [key]: value }))
-  }
-  // Choosing a preset seeds the reserved information fields it needs. Existing
-  // labels are KEPT — the owner's own questions and their answers survive
-  // (CLIP-25) — and only missing reserved ones are added. When the template is
-  // already used by projects, the addition changes what their step ① asks for,
-  // so the owner is told before it happens.
-  const applySeed = (fields: InformationField[]) => {
-    const existing = new Set(draft.informationFields.map((f) => f.label.trim()))
-    const additions = fields.filter((f) => !existing.has(f.label))
-    if (additions.length === 0) return
-    setFieldIds([...fieldIds, ...additions.map(() => crypto.randomUUID())])
-    change('informationFields', [...draft.informationFields, ...additions])
-  }
-  const choosePreset = async (preset: ClipRecipe['preset']) => {
-    change('preset', preset)
-    if (preset === '') return
-    const fields = await seedMutation.mutateAsync(preset)
-    const existing = new Set(draft.informationFields.map((f) => f.label.trim()))
-    const additions = fields.filter((f) => !existing.has(f.label))
-    if (additions.length > 0 && (stored?.projectCount ?? 0) > 0) {
-      setPendingSeed(fields)
-      return
-    }
-    applySeed(fields)
-  }
-  const fieldChange = (index: number, key: keyof InformationField, value: string) =>
-    change(
-      'informationFields',
-      draft.informationFields.map((f, i) => (i === index ? { ...f, [key]: value } : f)),
-    )
-  const reorder = (from: number, to: number) => {
-    if (pending) return
-    const fields = [...draft.informationFields]
-    fields.splice(to, 0, fields.splice(from, 1)[0]!)
-    const ids = [...fieldIds]
-    ids.splice(to, 0, ids.splice(from, 1)[0]!)
-    setFieldIds(ids)
-    change('informationFields', fields)
+    setDraft((current) => ({ ...current, ...patch }))
   }
   const save = async () => {
-    if (!dirty || !errors.valid || submitting.current || pending) return
+    if (!dirty || !errors.valid || pending || submitting.current) return
     submitting.current = true
     try {
       const result = await saveMutation.mutateAsync({ id: stored?.id, recipe: draft })
-      setDraft(recipeOf(result))
-      setBaseline(JSON.stringify(normalizeRecipe(recipeOf(result))))
+      const next = authoredRecipe(result)
+      setDraft(next)
+      setBaseline(JSON.stringify(normalizeRecipe(next)))
       setSaved(true)
       if (!stored) {
         leaving.current = true
@@ -135,265 +105,164 @@ export function ClipTemplateEditor({
         })
       }
     } catch {
-      /* The stable failure is rendered with the original draft intact. */
+      /* Retain the exact draft after a server refusal. */
     } finally {
       submitting.current = false
     }
   }
-  const message = (error: FieldError | undefined, max: number) =>
-    error ? t(`validation.${error}`, { max }) : undefined
-
+  const copy = async (format: boolean) => {
+    setSaved(false)
+    const text = format ? clipCompositionGuide() : body
+    const result = await copyText(text)
+    setCopyStatus(t(result.copied ? 'composition.copied' : 'composition.copyManually'))
+    if (!result.copied) {
+      if (format) setGuide(text)
+      else {
+        setMode('source')
+        requestAnimationFrame(() => {
+          sourceField.current?.focus()
+          sourceField.current?.select()
+        })
+      }
+    }
+  }
   return (
     <>
       <div role="status" aria-live="polite" className="mt-4">
-        {saved && <Typography variant="meta">{t('editor.saved')}</Typography>}
+        <Typography variant="meta">{saved ? t('editor.saved') : copyStatus}</Typography>
       </div>
       <form
         id={FORM_ID}
+        className="mt-6 min-w-0 space-y-6"
         onSubmit={(event) => {
           event.preventDefault()
           void save()
         }}
-        className="mt-6"
       >
-        <fieldset disabled={pending} className="min-w-0 space-y-8">
+        <fieldset disabled={pending} className="min-w-0 space-y-6">
           <div>
             <FieldLabel htmlFor="clip-template-name">{t('editor.name')}</FieldLabel>
             <TextField
               id="clip-template-name"
-              type="text"
-              {...textInput}
               value={draft.name}
+              autoComplete="off"
+              onChange={(e) => change({ name: e.target.value })}
               aria-invalid={!!errors.name}
-              aria-describedby={errors.name ? 'clip-name-error' : undefined}
-              onChange={(e) => change('name', e.target.value)}
             />
             {errors.name && (
-              <FieldMessage id="clip-name-error">
-                {message(errors.name, CLIP_TEMPLATE_LIMITS.name)}
+              <FieldMessage>
+                {t(`validation.${errors.name}`, { max: CLIP_TEMPLATE_LIMITS.name })}
               </FieldMessage>
             )}
           </div>
-          <div>
-            <FieldLabel htmlFor="clip-template-guidance">{t('editor.guidance')}</FieldLabel>
-            <Textarea
-              id="clip-template-guidance"
-              {...textInput}
-              autoGrow
-              value={draft.cutGuidance}
-              aria-invalid={!!errors.guidance}
-              onChange={(e) => change('cutGuidance', e.target.value)}
-            />
-            {errors.guidance && (
-              <FieldMessage>{message(errors.guidance, CLIP_TEMPLATE_LIMITS.guidance)}</FieldMessage>
+          {stored?.compositionLegacy && (
+            <Typography variant="body" className="text-content-secondary">
+              {t('composition.converted')}
+            </Typography>
+          )}
+          {capabilities.data &&
+            (capabilities.data.compositionVersion !== 1 ||
+              capabilities.data.compositionPlanVersion < 5) && (
+              <Typography variant="body" role="status">
+                {t('composition.unavailable')}
+              </Typography>
+            )}
+          <SegmentedControl
+            value={mode}
+            onChange={setMode}
+            ariaLabel={t('composition.mode')}
+            controls="clip-composition-panel"
+            options={[
+              { value: 'builder', label: t('composition.builder') },
+              { value: 'source', label: t('composition.source') },
+            ]}
+          />
+          <div className="flex flex-wrap gap-2">
+            <Button variant="ghost" onClick={() => void copy(false)}>
+              {t('composition.copySource')}
+            </Button>
+            <Button variant="ghost" onClick={() => void copy(true)}>
+              {t('composition.copyGuide')}
+            </Button>
+          </div>
+          {problem && (
+            <div>
+              <FieldMessage>
+                {t('composition.invalid', {
+                  line: problem.line,
+                  element: problem.elementId || 'clip',
+                })}{' '}
+                {t(`composition.errors.${problem.reason}`, {
+                  defaultValue: t('composition.repairSource'),
+                })}
+              </FieldMessage>
+            </div>
+          )}
+          <div
+            id="clip-composition-panel"
+            role="tabpanel"
+            aria-label={t(mode === 'source' ? 'composition.source' : 'composition.builder')}
+            className="min-w-0"
+          >
+            {mode === 'source' ? (
+              <>
+                <FieldLabel htmlFor="clip-composition-source">{t('composition.source')}</FieldLabel>
+                <Textarea
+                  ref={sourceField}
+                  id="clip-composition-source"
+                  value={body}
+                  onChange={(e) => change({ compositionBody: e.target.value })}
+                  rows={16}
+                  spellCheck={false}
+                  aria-invalid={!!problem}
+                />
+              </>
+            ) : (
+              <CompositionBuilder
+                source={body}
+                onChange={(compositionBody) => change({ compositionBody })}
+              />
             )}
           </div>
-          <section aria-labelledby="clip-information-heading">
-            <Typography variant="title" id="clip-information-heading">
-              {t('editor.fields')}
-            </Typography>
-            <Typography variant="body" className="text-content-secondary mt-2">
-              {t('editor.fieldsHelp')}
-            </Typography>
-            <SortableList
-              labels={{ drag: t('editor.drag'), up: t('editor.up'), down: t('editor.down') }}
-              onReorder={reorder}
-              items={draft.informationFields.map((field, index) => ({
-                id: fieldIds[index]!,
-                content: (
-                  <div className="min-w-0 space-y-3">
-                    <div>
-                      <FieldLabel htmlFor={`${fieldIds[index]}-label`}>
-                        {t('editor.fieldLabel', { number: index + 1 })}
-                      </FieldLabel>
-                      <TextField
-                        id={`${fieldIds[index]}-label`}
-                        type="text"
-                        {...textInput}
-                        value={field.label}
-                        aria-invalid={!!errors.fields[index]?.label}
-                        onChange={(e) => fieldChange(index, 'label', e.target.value)}
-                      />
-                      {errors.fields[index]?.label && (
-                        <FieldMessage>
-                          {message(errors.fields[index]?.label, CLIP_TEMPLATE_LIMITS.label)}
-                        </FieldMessage>
-                      )}
-                    </div>
-                    <div>
-                      <FieldLabel htmlFor={`${fieldIds[index]}-prompt`}>
-                        {t('editor.fieldPrompt', { number: index + 1 })}
-                      </FieldLabel>
-                      <Textarea
-                        id={`${fieldIds[index]}-prompt`}
-                        {...textInput}
-                        autoGrow
-                        value={field.prompt}
-                        aria-invalid={!!errors.fields[index]?.prompt}
-                        onChange={(e) => fieldChange(index, 'prompt', e.target.value)}
-                      />
-                      {errors.fields[index]?.prompt && (
-                        <FieldMessage>
-                          {message(errors.fields[index]?.prompt, CLIP_TEMPLATE_LIMITS.prompt)}
-                        </FieldMessage>
-                      )}
-                    </div>
-                    <Button
-                      variant="danger"
-                      onClick={() => {
-                        setFieldIds(fieldIds.filter((_, i) => i !== index))
-                        change(
-                          'informationFields',
-                          draft.informationFields.filter((_, i) => i !== index),
-                        )
-                      }}
-                    >
-                      {t('editor.removeField', { number: index + 1 })}
-                    </Button>
-                  </div>
-                ),
-              }))}
-            />
-            <Button
-              variant="secondary"
-              className="mt-3"
-              disabled={draft.informationFields.length >= CLIP_TEMPLATE_LIMITS.fields}
-              onClick={() => {
-                setFieldIds([...fieldIds, crypto.randomUUID()])
-                change('informationFields', [...draft.informationFields, { label: '', prompt: '' }])
-              }}
-            >
-              {t('editor.addField')}
-            </Button>
-          </section>
-          <div>
-            <FieldLabel id="clip-preset-label" htmlFor="clip-preset">
-              {t('editor.preset')}
-            </FieldLabel>
-            <Typography variant="body" className="text-content-secondary mb-2">
-              {t('editor.presetHelp')}
-            </Typography>
-            <Listbox
-              id="clip-preset"
-              aria-labelledby="clip-preset-label"
-              value={draft.preset}
-              onChange={(value) => choosePreset(value as ClipRecipe['preset'])}
-              options={[
-                { value: '', label: t('editor.presetNone'), disabled: true },
-                ...CLIP_PRESETS_LIST.map((value) => ({ value, label: t(`preset.${value}`) })),
-              ]}
-            />
-            {errors.preset && <FieldMessage>{t('validation.preset')}</FieldMessage>}
-          </div>
-          <div>
-            <FieldLabel id="clip-pace-label" htmlFor="clip-pace">
-              {t('pace.label')}
-            </FieldLabel>
-            <Listbox
-              id="clip-pace"
-              aria-labelledby="clip-pace-label"
-              value={draft.captionPace ?? 'steady'}
-              onChange={(value) => change('captionPace', value)}
-              options={(['steady', 'rapid'] as const).map((value) => ({
-                value,
-                label: t(`pace.${value}`),
-              }))}
-            />
-            <Typography variant="body" className="text-content-secondary mt-2">
-              {t('pace.help')}
-            </Typography>
-          </div>
-          <section aria-labelledby="clip-styles-heading">
-            <Typography variant="title" id="clip-styles-heading">
-              {t('editor.styles')}
-            </Typography>
-            <Typography variant="body" className="text-content-secondary mt-2">
-              {t('editor.stylesHelp')}
-            </Typography>
-            <div className="mt-4 grid gap-6 md:grid-cols-3">
-              {COPY_STYLES.map((style) => (
-                <div key={style} className="min-w-0">
-                  <label className="flex min-h-11 items-center gap-3 px-3">
-                    <Checkbox
-                      checked={style === 'clean' || draft.copyStyles.includes(style)}
-                      disabled={style === 'clean'}
-                      onChange={(e) =>
-                        change(
-                          'copyStyles',
-                          e.target.checked
-                            ? [...draft.copyStyles, style]
-                            : draft.copyStyles.filter((v) => v !== style),
-                        )
-                      }
-                    />
-                    <Typography variant="label">{t(`style.${style}`)}</Typography>
-                  </label>
-                  {style === 'clean' && (
-                    <Typography variant="body" className="text-content-secondary px-3">
-                      {t('editor.styleAlwaysOn')}
-                    </Typography>
-                  )}
-                  <CopyStylePreview
-                    style={style}
-                    accent={draft.accent}
-                    keyword={t('editor.previewKeyword')}
-                    text={t('editor.preview')}
-                  />
-                </div>
-              ))}
-            </div>
-            {errors.styles && <FieldMessage>{t('validation.styles')}</FieldMessage>}
-          </section>
-          <div>
-            <FieldLabel id="clip-accent-label" htmlFor="clip-accent">
-              {t('editor.accent')}
-            </FieldLabel>
-            <Listbox
-              id="clip-accent"
-              aria-labelledby="clip-accent-label"
-              value={draft.accent}
-              onChange={(value) => change('accent', value)}
-              options={CLIP_ACCENTS.map((value) => ({
-                value,
-                label: t(`accent.${value || 'none'}`),
-              }))}
-            />
-          </div>
+          {document && <CompositionPreview document={document} />}
         </fieldset>
       </form>
       <ActionBar className="mt-auto">
-        {failure && (
+        {saveMutation.error && (
           <div role="alert" className="mb-3">
-            <AppFailureMessage failure={failure} />
+            <AppFailureMessage failure={appFailureFromConnect(saveMutation.error)} />
           </div>
         )}
-        {/* One action, like `/templates/$templateId`'s dock: the delete rides the directory row
-            now (CLIP-42). */}
-        <div className="flex flex-wrap items-center justify-end gap-3">
+        <div className="flex justify-end">
           <Button
             type="submit"
             form={FORM_ID}
             variant="cta"
             className="w-full sm:w-auto"
-            pending={saveMutation.isPending}
+            pending={pending}
             disabled={!dirty || !errors.valid || pending}
           >
             {t('editor.save')}
           </Button>
         </div>
       </ActionBar>
-      <Dialog
-        open={pendingSeed !== null}
-        title={t('editor.seedTitle')}
-        confirmLabel={t('editor.seedConfirm')}
-        onClose={() => setPendingSeed(null)}
-        onConfirm={() => {
-          if (pendingSeed) applySeed(pendingSeed)
-          setPendingSeed(null)
-        }}
+      <Sheet
+        open={guide !== null}
+        labelledBy="clip-guide-title"
+        onClose={() => setGuide(null)}
+        header={
+          <Typography id="clip-guide-title" variant="fieldTitle">
+            {t('composition.copyGuide')}
+          </Typography>
+        }
       >
-        {t('editor.seedBody', { count: stored?.projectCount ?? 0 })}
-      </Dialog>
+        <Textarea
+          aria-label={t('composition.copyGuide')}
+          value={guide ?? ''}
+          readOnly
+          onFocus={(e) => e.currentTarget.select()}
+        />
+      </Sheet>
       <Dialog
         open={blocker.status === 'blocked'}
         title={t('editor.leaveTitle')}

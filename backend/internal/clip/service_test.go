@@ -76,41 +76,15 @@ func TestCurrentTemplateControlsRequiredAnswers(t *testing.T) {
 	}
 }
 
-// CDS-1 and CDS-5 are checkable before a credit is reserved: the badge needs a
-// campaign type and the screen needs two of 상호 · 위치 · 가격 · 메뉴.
-func TestApprovalGateNamesWhatIsMissing(t *testing.T) {
-	template := clip.VideoTemplate{}
-	facts := func(pairs ...string) []clip.Answer {
-		out := []clip.Answer{}
-		for i := 0; i < len(pairs); i += 2 {
-			out = append(out, clip.Answer{Label: pairs[i], Text: pairs[i+1]})
-		}
-		return out
+func TestConvertedRecipesHaveNoUndeclaredAdmissionRequirements(t *testing.T) {
+	template := clip.VideoTemplate{Recipe: clip.Recipe{InformationFields: []clip.InformationField{{Label: "경험", Prompt: "한 줄"}}}}
+	p := clip.Project{Answers: []clip.Answer{{Label: "경험", Text: "조용한 산책"}}}
+	if err := clip.RequiredAnswers(template, p); err != nil {
+		t.Fatal("undeclared campaign or business facts required", err)
 	}
-	if err := clip.ApprovalGate(template, clip.Project{Answers: facts("상호", "가게", "위치", "서울")}); !errors.Is(err, clip.ErrDisclosureRequired) {
-		t.Fatal("a clip without a campaign type was approved:", err)
-	}
-	for _, disclosure := range []string{"편집", "AD", " ad"} {
-		if err := clip.ApprovalGate(template, clip.Project{Disclosure: disclosure, Answers: facts("상호", "가게", "위치", "서울")}); !errors.Is(err, clip.ErrDisclosureRequired) {
-			t.Fatalf("%q was accepted as a campaign type", disclosure)
-		}
-	}
-	var missing *clip.MissingFactsError
-	err := clip.ApprovalGate(template, clip.Project{Disclosure: "sponsored", Answers: facts("상호", " ", "위치", "서울", "영업", "매일")})
-	if !errors.As(err, &missing) {
-		t.Fatalf("one fact was enough: %v", err)
-	}
-	// The refusal names the empty labels, and 영업 is not one of the four.
-	if strings.Join(missing.Labels, ",") != "상호,가격,메뉴" {
-		t.Fatalf("missing labels = %v", missing.Labels)
-	}
-	for _, p := range []clip.Project{
-		{Disclosure: "ad", Answers: facts("상호", "가게", "메뉴", "김밥")},
-		{Disclosure: "self", Answers: facts("가격", "9900원", "메뉴", "김밥", "평점", "4.5")},
-	} {
-		if err := clip.ApprovalGate(template, p); err != nil {
-			t.Fatalf("two facts were refused: %v", err)
-		}
+	p.Answers = nil
+	if err := clip.RequiredAnswers(template, p); !errors.Is(err, clip.ErrInvalid) {
+		t.Fatal("declared legacy field became optional", err)
 	}
 	// Every one of the five phrases is a valid campaign type, and every CTA id
 	// plus the empty one (meaning the preset's) is a valid CTA.

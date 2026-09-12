@@ -15,3 +15,11 @@ export const CLIP_COMPOSITION_LIMITS = {
   maxDurationMs: 90000,
   autoInsetMs: 120,
 } as const
+
+export const CLIP_COMPOSITION_PREVIEW = {
+  durationMs: 30000,
+  minDurationMs: 1000,
+  stepMs: 100,
+  expandedBytes: 262144,
+  sampleItems: 2,
+} as const

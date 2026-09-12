@@ -80,6 +80,13 @@ export type {
   ClipObservations,
 } from './model/observations'
 export { ClipSourceStrip } from './ui/ClipSourceStrip'
+export { ClipCompositionInputFields } from './ui/ClipCompositionInputs'
+export {
+  emptyCompositionInputs,
+  matchingCompositionInputs,
+  projectCompositionDocument,
+  validCompositionInputs,
+} from './model/composition-inputs'
 
 export type {
   ClipCompositionInputs,

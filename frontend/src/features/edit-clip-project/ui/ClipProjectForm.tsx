@@ -2,9 +2,11 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useBlocker, useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import {
-  CLIP_CTAS,
-  CLIP_DISCLOSURES,
   CLIP_PROJECT_LIMITS,
+  ClipCompositionInputFields,
+  emptyCompositionInputs,
+  matchingCompositionInputs,
+  projectCompositionDocument,
   CLIP_RATIOS,
   emptyClipProject,
   normalizeClipProject,
@@ -73,7 +75,23 @@ export function ClipProjectForm({
   const submitting = useRef(false)
   const leaving = useRef(false)
   const selected = templates.templates.find((v) => v.id === draft.videoTemplateId)
-  const valid = validClipProject(draft, selected?.informationFields)
+  const bodyFor = (next: ClipProjectDraft) => {
+    const template = templates.templates.find((v) => v.id === next.videoTemplateId)
+    if (template?.compositionBody && !template.compositionLegacy) return template.compositionBody
+    return stored?.videoTemplateId === next.videoTemplateId
+      ? stored.composition?.snapshot.body
+      : template?.compositionBody
+  }
+  const document = projectCompositionDocument(bodyFor(draft))
+  const templateChanged =
+    !!stored?.composition &&
+    selected?.id === stored.videoTemplateId &&
+    !selected.compositionLegacy &&
+    selected.compositionBody !== stored.composition.snapshot.body
+  const inputs = document
+    ? matchingCompositionInputs(document, draft.compositionInputs ?? emptyCompositionInputs())
+    : emptyCompositionInputs()
+  const valid = validClipProject(draft, selected?.informationFields, document)
   const dirty = JSON.stringify(normalizeClipProject(draft)) !== baseline
   const storedJSON = stored ? JSON.stringify(normalizeClipProject(stored)) : baseline
   const synced = storedJSON === baseline
@@ -93,8 +111,8 @@ export function ClipProjectForm({
     withResolver: true,
   })
   useEffect(() => {
-    onUploadAllowed?.(valid && !dirty && synced && !pending)
-  }, [valid, dirty, synced, pending, onUploadAllowed])
+    onUploadAllowed?.(valid && !dirty && synced && !pending && !templateChanged)
+  }, [valid, dirty, synced, pending, templateChanged, onUploadAllowed])
   /** The queue's one way to reach the server, and the one place `baseline` moves for an autosave.
    *  A form unmounted before the answer lands simply does not move it — the next mount derives it
    *  from the refreshed `stored` instead. */
@@ -104,11 +122,21 @@ export function ClipProjectForm({
     setBaseline(JSON.stringify(normalizeClipProject(value)))
   }
   const change = <K extends keyof ClipProjectDraft>(key: K, value: ClipProjectDraft[K]) => {
-    const next = { ...draft, [key]: value }
+    const next =
+      key === 'videoTemplateId' && value !== draft.videoTemplateId
+        ? { ...draft, [key]: value, answers: [], compositionInputs: emptyCompositionInputs() }
+        : { ...draft, [key]: value }
     setDraft(next)
     // An invalid draft is never sent: the server would refuse it, and the field says so itself.
     // It stays local until it is valid again, and then goes out with everything else.
-    if (stored && validClipProject(next, selected?.informationFields))
+    if (
+      stored &&
+      validClipProject(
+        next,
+        templates.templates.find((v) => v.id === next.videoTemplateId)?.informationFields,
+        projectCompositionDocument(bodyFor(next)),
+      )
+    )
       queueClipDraft(stored.id, next, send)
   }
   const failure = save.error
@@ -194,80 +222,79 @@ export function ClipProjectForm({
               <FieldMessage>{t('project.detachedTemplate')}</FieldMessage>
             )}
           </div>
-          <div>
-            <FieldLabel id="clip-disclosure-label" htmlFor="clip-disclosure">
-              {t('project.disclosure')}
-            </FieldLabel>
-            <Typography variant="body" className="text-content-secondary mb-2">
-              {t('project.disclosureHelp')}
-            </Typography>
-            <Listbox
-              id="clip-disclosure"
-              aria-labelledby="clip-disclosure-label"
-              value={draft.disclosure}
-              onChange={(value) => change('disclosure', value as ClipProjectDraft['disclosure'])}
-              options={[
-                { value: '', label: t('project.chooseDisclosure'), disabled: true },
-                ...CLIP_DISCLOSURES.map((value) => ({ value, label: t(`disclosure.${value}`) })),
-              ]}
-              aria-invalid={draft.disclosure === ''}
-            />
-            <label className="mt-4 flex min-h-11 cursor-pointer items-center gap-3">
-              <Checkbox
-                checked={!draft.hideDisclosure}
-                onChange={(event) => change('hideDisclosure', !event.target.checked)}
-              />
-              <Typography variant="body">{t('project.showDisclosure')}</Typography>
-            </label>
-            {draft.disclosure === '' && (
-              <FieldMessage>{t('project.disclosureRequired')}</FieldMessage>
-            )}
-          </div>
-          <div>
-            <FieldLabel id="clip-cta-label" htmlFor="clip-cta">
-              {t('project.cta')}
-            </FieldLabel>
-            <Typography variant="body" className="text-content-secondary mb-2">
-              {t('project.ctaHelp')}
-            </Typography>
-            <Listbox
-              id="clip-cta"
-              aria-labelledby="clip-cta-label"
-              value={draft.cta}
-              onChange={(value) => change('cta', value as ClipProjectDraft['cta'])}
-              options={['' as const, ...CLIP_CTAS].map((value) => ({
-                value,
-                label: t(`cta.${value}`),
-              }))}
-            />
-          </div>
-          {selected?.informationFields.map((field, index) => {
-            const answer = draft.answers.find((a) => a.label === field.label)?.text ?? ''
-            const invalid = !answer.trim() || Array.from(answer).length > CLIP_PROJECT_LIMITS.answer
-            return (
-              <div key={field.label}>
-                <FieldLabel htmlFor={`clip-answer-${index}`}>{field.label}</FieldLabel>
-                <Typography variant="body" className="text-content-secondary mb-2 break-words">
-                  {field.prompt}
+          {stored &&
+            (!stored.composition || stored.composition.snapshot.legacy) &&
+            stored.disclosure && (
+              <section className="space-y-3">
+                <Typography variant="body">
+                  {t('composition.retainedDisclosure', {
+                    text: t(`disclosure.${stored.disclosure}`),
+                  })}
                 </Typography>
-                <Textarea
-                  id={`clip-answer-${index}`}
-                  inputMode="text"
-                  {...INPUT}
-                  autoGrow
-                  value={answer}
-                  aria-invalid={invalid}
-                  onChange={(event) =>
-                    change('answers', [
-                      ...draft.answers.filter((a) => a.label !== field.label),
-                      { label: field.label, text: event.target.value },
-                    ])
-                  }
-                />
-                {invalid && <FieldMessage>{t('project.answerLimit')}</FieldMessage>}
-              </div>
-            )
-          })}
+                <label className="flex min-h-11 items-center gap-3">
+                  <Checkbox
+                    checked={!draft.hideDisclosure}
+                    onChange={(e) => change('hideDisclosure', !e.target.checked)}
+                  />
+                  {t('project.showDisclosure')}
+                </label>
+              </section>
+            )}
+          {templateChanged && (
+            <section className="space-y-3">
+              <Typography variant="body">{t('composition.templateChanged')}</Typography>
+              <Button
+                variant="ghost"
+                disabled={
+                  !document ||
+                  !validClipProject(
+                    { ...draft, compositionInputs: inputs },
+                    selected?.informationFields,
+                    document,
+                  )
+                }
+                onClick={() => change('compositionInputs', inputs)}
+              >
+                {t('composition.applyTemplate')}
+              </Button>
+            </section>
+          )}
+          {document && (
+            <ClipCompositionInputFields
+              document={document}
+              value={inputs}
+              onChange={(inputs) => change('compositionInputs', inputs)}
+            />
+          )}
+          {!document &&
+            selected?.informationFields.map((field, index) => {
+              const answer = draft.answers.find((a) => a.label === field.label)?.text ?? ''
+              const invalid =
+                !answer.trim() || Array.from(answer).length > CLIP_PROJECT_LIMITS.answer
+              return (
+                <div key={field.label}>
+                  <FieldLabel htmlFor={`clip-answer-${index}`}>{field.label}</FieldLabel>
+                  <Typography variant="body" className="text-content-secondary mb-2 break-words">
+                    {field.prompt}
+                  </Typography>
+                  <Textarea
+                    id={`clip-answer-${index}`}
+                    inputMode="text"
+                    {...INPUT}
+                    autoGrow
+                    value={answer}
+                    aria-invalid={invalid}
+                    onChange={(event) =>
+                      change('answers', [
+                        ...draft.answers.filter((a) => a.label !== field.label),
+                        { label: field.label, text: event.target.value },
+                      ])
+                    }
+                  />
+                  {invalid && <FieldMessage>{t('project.answerLimit')}</FieldMessage>}
+                </div>
+              )
+            })}
           <div>
             {stored ? (
               <>
@@ -351,7 +378,7 @@ export function ClipProjectForm({
               {t('project.create')}
             </Button>
           )}
-          {actions?.(valid && !dirty && synced && !pending, dirty)}
+          {actions?.(valid && !dirty && synced && !pending && !templateChanged, dirty)}
         </div>
       </ActionBar>
       <Dialog

@@ -422,4 +422,4 @@ export type {
   ClipDisclosureId,
   ClipCTAId,
 } from './clip-design'
-export { CLIP_COMPOSITION_LIMITS } from './clip-composition'
+export { CLIP_COMPOSITION_LIMITS, CLIP_COMPOSITION_PREVIEW } from './clip-composition'

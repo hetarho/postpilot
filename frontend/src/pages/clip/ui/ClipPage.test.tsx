@@ -56,10 +56,6 @@ async function fillSetup() {
   await user.click(screen.getByRole('combobox', { name: /^영상 템플릿/ }))
   await user.click(await screen.findByRole('option', { name: '여행' }))
   await user.type(await screen.findByLabelText('장소'), '서울')
-  // A clip carries its ad disclosure throughout, so its campaign type is part
-  // of a complete setup (CDS-5).
-  await user.click(screen.getByRole('combobox', { name: /^체험단 유형/ }))
-  await user.click(await screen.findByRole('option', { name: '광고' }))
   return user
 }
 describe('clip directory and setup', () => {
@@ -137,9 +133,10 @@ describe('clip directory and setup', () => {
       title: '새 경험',
       ratio: 'square',
       targetDurationMs: 15000,
-      disclosure: 'ad',
+      disclosure: '',
       cta: '',
-      answers: [{ label: '장소', text: '서울' }],
+      answers: [],
+      compositionInputs: { values: { legacy_field_0: '서울' }, items: {}, associations: [] },
     })
     expect(await screen.findByLabelText('원본 영상 선택')).toBeEnabled()
     // The status line reports the project's own state now; the picker's own button is what says

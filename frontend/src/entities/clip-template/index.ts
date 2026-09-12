@@ -25,6 +25,10 @@ export type {
   FieldError,
 } from './model/types'
 export { CopyStylePreview } from './ui/CopyStylePreview'
+export { CompositionBuilder } from './ui/CompositionBuilder'
+export { CompositionPreview } from './ui/CompositionPreview'
+export { EMPTY_CLIP_COMPOSITION } from './lib/composition-author'
+export { clipCompositionGuide, CLIP_COMPOSITION_EXAMPLE } from './model/composition-guide'
 export {
   parseClipComposition,
   replaceCompositionNode,

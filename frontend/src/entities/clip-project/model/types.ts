@@ -3,6 +3,8 @@ import type { ClipCTAId, ClipDisclosureId } from '@/shared/config'
 import type { ClipProjectComposition, ClipCompositionInputs } from './composition'
 import type { ClipEditingState } from './edit-plan'
 import type { ClipObservations } from './observations'
+import type { ClipComposition } from '@/entities/clip-template/@x/clip-project'
+import { emptyCompositionInputs, validCompositionInputs } from './composition-inputs'
 
 export const CLIP_RATIOS = ['vertical', 'horizontal', 'square'] as const
 /** The five campaign types and three CTAs, read from the design system: the
@@ -129,21 +131,26 @@ export function normalizeClipProject(value: ClipProjectDraft): ClipProjectDraft 
 export function validClipProject(
   value: ClipProjectDraft,
   fields: readonly { label: string }[] | undefined,
+  composition?: ClipComposition,
 ): boolean {
   const length = (s: string) => Array.from(s).length
   return (
     !!value.title.trim() &&
     length(value.title.trim()) <= CLIP_PROJECT_LIMITS.title &&
     !!value.videoTemplateId &&
-    !!fields &&
+    (!!composition || !!fields) &&
     // Campaign identity is required independently of badge visibility.
-    CLIP_DISCLOSURES.includes(value.disclosure as ClipDisclosureId) &&
+    (!!composition || CLIP_DISCLOSURES.includes(value.disclosure as ClipDisclosureId)) &&
     (value.cta === '' || CLIP_CTAS.includes(value.cta as ClipCTAId)) &&
     CLIP_RATIOS.includes(value.ratio) &&
     Number.isInteger(value.targetDurationMs) &&
     value.targetDurationMs >= CLIP_PROJECT_LIMITS.minSeconds * 1000 &&
     value.targetDurationMs <= CLIP_PROJECT_LIMITS.maxSeconds * 1000 &&
     value.answers.every((a) => length(a.text) <= CLIP_PROJECT_LIMITS.answer) &&
-    fields.every((field) => value.answers.some((a) => a.label === field.label && !!a.text.trim()))
+    (composition
+      ? validCompositionInputs(composition, value.compositionInputs ?? emptyCompositionInputs())
+      : fields!.every((field) =>
+          value.answers.some((a) => a.label === field.label && !!a.text.trim()),
+        ))
   )
 }

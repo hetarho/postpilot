@@ -388,3 +388,53 @@ func TestNativeQuoteInvalidatesGroupedValuesAndFreezesAcceptedComposition(t *tes
 	}
 	assertNoQuoteWork(t, h)
 }
+
+func TestApplyingCurrentTemplateInputsPreservesPriorRenderedResult(t *testing.T) {
+	s, raw, _ := setup(t)
+	ctx := t.Context()
+	template, err := s.CreateTemplate(ctx, "alice", clip.Recipe{Name: "editable", CompositionBody: nativeBody})
+	if err != nil {
+		t.Fatal(err)
+	}
+	input := clip.CompositionInputs{Values: map[string]string{"b": "1인분 12000원"}, Items: map[string][]composition.Item{"menu": {{ID: "retained-item", Values: map[string]string{"price": "9000원"}}}}}
+	p, err := s.CreateProject(ctx, "alice", clip.ProjectInput{Title: "before", VideoTemplateID: template.ID, Ratio: "vertical", TargetDurationMS: 15000, CompositionInputs: &input})
+	if err != nil {
+		t.Fatal(err)
+	}
+	result := clip.Result{Key: "prior-result.mp4", ContentType: "video/mp4", Bytes: 123, DurationMS: 15000, CreatedAt: time.Now()}
+	if err = raw.SaveGeneration(ctx, "alice", p.ID, "[]", "prior-plan", result); err != nil {
+		t.Fatal(err)
+	}
+	before, err := s.GetProject(ctx, "alice", p.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	changed := strings.Replace(nativeBody, `label="가격"`, `label="가격 안내"`, 1)
+	changed = strings.Replace(changed, `</clip>`, `<field id="new" label="추가 정보"/></clip>`, 1)
+	if _, err = s.UpdateTemplate(ctx, "alice", template.ID, clip.TemplatePatch{CompositionBody: &changed}); err != nil {
+		t.Fatal(err)
+	}
+	read, err := s.GetProject(ctx, "alice", p.ID)
+	if err != nil || read.Composition.Snapshot.Body != nativeBody {
+		t.Fatal("template read applied unsaved changes", err)
+	}
+	input.Values["new"] = "new fact"
+	updated, err := s.UpdateProject(ctx, "alice", p.ID, clip.ProjectPatch{CompositionInputs: &input})
+	if err != nil {
+		t.Fatal("current field rejected by old snapshot", err)
+	}
+	if updated.Composition.Snapshot.Body != changed || !reflect.DeepEqual(updated.Composition.Inputs, input) || updated.EditPlanRevision <= before.EditPlanRevision {
+		t.Fatal("current inputs were not applied")
+	}
+	if !reflect.DeepEqual(updated.Result, before.Result) || updated.EditPlan != before.EditPlan || updated.RenderedPlanRevision != before.RenderedPlanRevision {
+		t.Fatal("applying inputs replaced previous output")
+	}
+	input.Values["unknown"] = "must not be saved"
+	if _, err = s.UpdateProject(ctx, "alice", p.ID, clip.ProjectPatch{CompositionInputs: &input}); err == nil {
+		t.Fatal("unknown field accepted")
+	}
+	after, err := s.GetProject(ctx, "alice", p.ID)
+	if err != nil || !reflect.DeepEqual(after.Composition, updated.Composition) {
+		t.Fatal("invalid edit replaced saved input", err)
+	}
+}

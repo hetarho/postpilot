@@ -44,7 +44,6 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T110 | Release QA on the Naver app and the overlay measurement | CDS CLIP | T108 | blocked@260912 |
-| T129 | Author video templates through source and composition controls | CLIP CDS ARCH | T128 | todo |
 | T130 | Build bounded draft video preview and overlay preparation | CLIP CDS ARCH | T128 T133 | todo |
 | T131 | Replace cut forms with a preview-led timeline editor | CLIP CDS ARCH | T129 T130 | todo |
 | T132 | Verify clip composition quality and editing parity | CLIP CDS QUOTA THEME ARCH | T136 | todo |
@@ -53,11 +52,13 @@
 | T136 | Show focused clip progress and explicit confirmation | CLIP QUOTA THEME POST ARCH | T131 T134 T135 | todo |
 
 ## next
-- implement-task T129, then preview/editor T130 → T131 plus cancellation/finalization T134 → T135; integrate T136 and verify T132.
+- implement-task T130 → T131, then cancellation/finalization T134 → T135; integrate T136 and verify T132.
 - T110 must refresh CLIP@12 / CDS@10 before resuming because mandatory cards, disclosure and fact QA changed; it remains owner-blocked: privately load a 9:16 clip with both cards in the Naver picker without publishing, capture the clip-tab overlays and supply the images for CDS-11 measurement. Remaining CDS interpretations are recorded in the results of T107, T108, T109 and T115 (contrast/card geometry, audio seams, exposure and frequency, footage-bound duration).
 - T008 needs the owner present: refresh PUB@5 / ARCH@2, rerun postpilot-agent setup before installation for driver signature smarteditor-one-20260910-a6, and cancel or deliberately reuse the queued 20260905-test job; after completion, update PUB for VIDEO-17 and TMPL-39.
 
 ## log
+- 260913 T129 done (clip); composition source/controls, stable grouped inputs and explicit template refresh pass local gates plus ko/en 320–430 px browser checks; commit then T130 preview
+- 260913 T129 claimed (clip); T133 committed as e5b2599 with a clean worktree, implement native composition template authoring
 - 260913 T133 done (clip); reusable private originals, durable 24-hour retention and source playback pass all local and 27 production release gates; commit then T129 authoring
 - 260913 T133 verification (clip); complete FE/BE and build gates pass, finish signing-race and production lifecycle checks before commit
 - 260913 T133 resumed (clip); confirmed policies remain consumed by T133–T136, continue the authorized implementation and commit sequence
@@ -76,5 +77,3 @@
 - 260912 update-ssot CLIP QUOTA THEME verified (check); current CLIP r12 / QUOTA r10 / THEME r11 already match the confirmed policies, no additional content revision
 - 260912 update-ssot CLIP QUOTA THEME start (check); reconcile the confirmed retention, finalization and cancellation policies with existing specifications and tasks
 - 260912 T126 resumed (clip); verified T125 commit and clean code baseline, implement owned composition persistence, conversion and frozen contracts
-- 260912 T126 claimed (clip); T125 committed as 6e4e8ec, implement composition persistence and legacy migration next
-- 260912 T125 done (clip); portable Go/TS composition grammar and resolution, 65 shared cases, 70 FE grammar tests and all local gates pass; commit authorized and T126 next

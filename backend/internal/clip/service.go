@@ -311,6 +311,18 @@ func (s *Service) UpdateProject(ctx context.Context, user, id string, p ProjectP
 		}
 		c := *old.Composition
 		c.Inputs = *p.CompositionInputs
+		// Applying current template inputs is a meaningful setup edit. Keep the
+		// previous rendered plan frozen, but validate new field IDs against the
+		// current authored template rather than the prior generation snapshot.
+		if old.VideoTemplateID != "" {
+			current, e := s.store.GetTemplate(ctx, user, old.VideoTemplateID)
+			if e != nil {
+				return Project{}, e
+			}
+			if current.CompositionBody != "" && !current.CompositionLegacy {
+				c.Snapshot = CompositionSnapshot{Version: CompositionVersion, Body: current.CompositionBody, TemplateID: current.ID}
+			}
+		}
 		limits := s.limits.Composition
 		if c.Snapshot.Legacy {
 			limits = LegacyCompositionLimits(limits)
@@ -377,12 +389,11 @@ func RequiredAnswers(t VideoTemplate, p Project, limits ...composition.Limits) e
 			return fmt.Errorf("%w: missing template answer", ErrInvalid)
 		}
 	}
-	return ApprovalGate(t, p)
+	return nil
 }
 
-// ValidDisclosure and ValidCTA accept only the fixed ids; the phrases themselves
-// are code-owned and never editable (CDS-31), and an empty CTA means "the
-// template preset's" (CDS-29, CDS-51).
+// These identifiers are retained for legacy project conversion only. Authored
+// composition owns the visible text; setup and admission do not require a campaign.
 func ValidDisclosure(s string) bool {
 	_, ok := design.Disclosure[s]
 	return ok
@@ -405,29 +416,4 @@ type MissingFactsError struct{ Labels []string }
 
 func (e *MissingFactsError) Error() string {
 	return "clip needs more on-screen facts: " + strings.Join(e.Labels, ", ")
-}
-
-// ApprovalGate is what CDS-1 and CDS-5 make checkable before a single credit is
-// reserved: a clip renders its disclosure badge and at least two verifiable
-// facts, so a clip without them cannot be started or even quoted.
-func ApprovalGate(t VideoTemplate, p Project) error {
-	if !ValidDisclosure(p.Disclosure) {
-		return ErrDisclosureRequired
-	}
-	answers := map[string]string{}
-	for _, a := range p.Answers {
-		answers[a.Label] = a.Text
-	}
-	present, missing := 0, []string{}
-	for _, label := range design.Fact.Minimum.Labels {
-		if strings.TrimSpace(answers[label]) != "" {
-			present++
-			continue
-		}
-		missing = append(missing, label)
-	}
-	if present < design.Fact.Minimum.Count {
-		return &MissingFactsError{Labels: missing}
-	}
-	return nil
 }

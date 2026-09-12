@@ -60,69 +60,12 @@ describe('video template workflow', () => {
     await user.click(await region.findByRole('link', { name: /여행/ }))
     expect(await screen.findByLabelText('템플릿 이름')).toHaveValue('여행')
     expect(router.state.location.pathname).toBe('/video-templates/owned')
-    expect(screen.getAllByRole('img', { name: '오늘의 좋은 순간' })).toHaveLength(5)
+    expect(
+      screen.getByRole('img', { name: '예시 영상의 안전 영역과 현재 문구 구성' }),
+    ).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
-  it('creates one complete recipe and keeps the saved route clean', async () => {
-    const user = userEvent.setup()
-    const writes: ClipRecipe[] = []
-    const calls: string[] = []
-    const { router } = mount('/video-templates/new', { writes, calls })
-    await user.type(await screen.findByLabelText('템플릿 이름'), ' 새 레시피 ')
-    // A template names its category first: the preset fixes the chip order, the
-    // default CTA and the default accent, and it seeds the reserved fields.
-    expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
-    await user.click(screen.getByRole('combobox', { name: /카테고리 프리셋/ }))
-    await user.click(screen.getByRole('option', { name: '카페' }))
-    await screen.findByDisplayValue('상호')
-    // The four seeded fields come first, so the owner's own question is the fifth.
-    await user.click(screen.getByRole('button', { name: '정보 추가' }))
-    await user.type(screen.getByLabelText('정보 이름 5'), '주제')
-    await user.type(screen.getByLabelText('질문 안내 5'), '어떤 경험인가요?')
-    await user.dblClick(screen.getByRole('button', { name: '저장' }))
-    await waitFor(() =>
-      expect(router.state.location.pathname).toBe('/video-templates/video-template-1'),
-    )
-    expect(calls.filter((v) => v === 'CreateVideoTemplate')).toHaveLength(1)
-    expect(writes[0]).toMatchObject({
-      name: '새 레시피',
-      preset: 'cafe',
-      copyStyles: ['clean'],
-    })
-    // 상호 first, then the preset's own chip priority, each with its
-    // code-owned prompt — the owner types no Korean label exactly.
-    expect(writes[0]!.informationFields.map((f) => f.label)).toEqual([
-      '상호',
-      '위치',
-      '메뉴',
-      '영업',
-      '주제',
-    ])
-    expect(writes[0]!.informationFields[0]!.prompt).not.toBe('')
-  })
-  it('reorders and removes fields, refuses no style and saves the resulting recipe', async () => {
-    const user = userEvent.setup()
-    const writes: ClipRecipe[] = []
-    mount('/video-templates/owned', { writes })
-    await screen.findByLabelText('템플릿 이름')
-    await user.click(screen.getAllByRole('button', { name: '아래로 이동' })[0]!)
-    expect(screen.getByLabelText('정보 이름 1')).toHaveValue('음식')
-    await user.click(screen.getByRole('button', { name: '정보 2 삭제' }))
-    // 깔끔하게 cannot be turned off at all: every CDS fallback lands on it.
-    expect(screen.getByRole('checkbox', { name: '깔끔하게' })).toBeDisabled()
-    expect(screen.getByRole('checkbox', { name: '깔끔하게' })).toBeChecked()
-    await user.click(screen.getByRole('checkbox', { name: '메모' }))
-    await user.click(screen.getByRole('checkbox', { name: '가벼운 텍스트' }))
-    await user.click(screen.getByRole('combobox', { name: /자막 흐름/ }))
-    await user.click(screen.getByRole('option', { name: '빠른 구절형' }))
-    await user.click(screen.getByRole('button', { name: '저장' }))
-    await screen.findByText('저장했어요')
-    expect(writes[0]).toMatchObject({
-      informationFields: [{ label: '음식', prompt: '무엇을 먹었나요?' }],
-      copyStyles: ['clean', 'memo', 'simple'],
-      captionPace: 'rapid',
-    })
-  })
+
   it('keeps edits after a localized server refusal', async () => {
     const user = userEvent.setup()
     mount('/video-templates/owned', { saveFails: true })
@@ -176,43 +119,5 @@ describe('video template workflow', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     expect(router.state.location.pathname).toBe('/video-templates')
     expect(await screen.findByRole('link', { name: /여행/ })).toBeInTheDocument()
-  })
-  it('warns before seeding a template that clips already use, and keeps existing labels', async () => {
-    const user = userEvent.setup()
-    const writes: ClipRecipe[] = []
-    mount('/video-templates/owned', { writes })
-    await screen.findByLabelText('템플릿 이름')
-    // The fixture template is used by two clips, so adding the preset's
-    // reserved fields changes what their step ① asks for.
-    await user.click(screen.getByRole('combobox', { name: /카테고리 프리셋/ }))
-    await user.click(screen.getByRole('option', { name: '카페' }))
-    expect(await screen.findByText(/정보 항목을 추가할까요/)).toBeInTheDocument()
-    expect(screen.queryByDisplayValue('상호')).not.toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: '추가' }))
-    await screen.findByDisplayValue('상호')
-    // The owner's own questions are kept, and only missing reserved labels are
-    // added — 장소 and 음식 are still there, in their own order.
-    expect(screen.getByLabelText('정보 이름 1')).toHaveValue('장소')
-    expect(screen.getByLabelText('정보 이름 2')).toHaveValue('음식')
-    await user.click(screen.getByRole('button', { name: '저장' }))
-    await screen.findByText('저장했어요')
-    expect(writes[0]!.informationFields.map((f) => f.label)).toEqual([
-      '장소',
-      '음식',
-      '상호',
-      '위치',
-      '메뉴',
-      '영업',
-    ])
-    expect(writes[0]!.preset).toBe('cafe')
-  })
-  it('seeds without a dialog when no clip uses the template yet', async () => {
-    const user = userEvent.setup()
-    mount('/video-templates/owned', { templates: [{ ...template, projectCount: 0 }] })
-    await screen.findByLabelText('템플릿 이름')
-    await user.click(screen.getByRole('combobox', { name: /카테고리 프리셋/ }))
-    await user.click(screen.getByRole('option', { name: '카페' }))
-    await screen.findByDisplayValue('상호')
-    expect(screen.queryByText(/정보 항목을 추가할까요/)).not.toBeInTheDocument()
   })
 })
