@@ -9,6 +9,9 @@ import {
 } from '@/entities/clip-project'
 import { useClipCorrection, ClipCorrectionWorkspace } from '@/features/correct-clip'
 import { useSession } from '@/entities/session'
+import { progressLabel, progressRatio } from '@/entities/generation-job'
+import { useFinalizeClip, FinalizeClipAction } from '@/features/finalize-clip'
+import { useCancelClip, CancelClipAction } from '@/features/cancel-clip'
 import { ClipProjectForm, useClipDraftSave } from '@/features/edit-clip-project'
 import { DeleteClipProjectButton } from '@/features/delete-clip-project'
 import { discardClipDraftQueue } from '@/features/edit-clip-project'
@@ -30,6 +33,7 @@ import {
   Button,
   Dialog,
   SegmentedControl,
+  ProgressBar,
   Typography,
   pageStyles,
   typographyStyles,
@@ -71,7 +75,15 @@ function ClipTopRow({ status, actions }: { status: ReactNode; actions?: ReactNod
 /** A step the project has not reached yet. Never a disabled tab: the point of showing all three
  *  from the first screen is that the shape of the flow is visible, so an empty step says what it
  *  is waiting for and offers the way to the step that produces it (THEME-39). */
-function ClipStepWaiting({ message, onGo }: { message: string; onGo: () => void }) {
+function ClipStepWaiting({
+  message,
+  onGo,
+  refine = false,
+}: {
+  message: string
+  onGo: () => void
+  refine?: boolean
+}) {
   const { t } = useTranslation('clips')
   return (
     <div className="mt-8">
@@ -79,7 +91,7 @@ function ClipStepWaiting({ message, onGo }: { message: string; onGo: () => void 
         {message}
       </Typography>
       <Button variant="ghost" onClick={onGo} className="mt-2 -ml-3">
-        {t('steps.goGenerate')}
+        {t(refine ? 'finalization.goRefine' : 'steps.goGenerate')}
       </Button>
     </div>
   )
@@ -135,7 +147,7 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
   // the same rule the retired 보정 진입 toggle had, not something the step bar adds.
   const required =
     step === 'refine' && plan ? requiredClipSources(correction.draft, plan.sources) : undefined
-  const upload = useClipSourceUpload(project.id, required)
+  const upload = useClipSourceUpload(project.id, required, !project.finalized)
   const generation = useGenerateClip(ownerId, project, upload.attempt?.jobId)
   const ownership = {
     begin: upload.beginAttempt,
@@ -152,7 +164,7 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
   // (it is held here), so a guard mounted with the panel would stop warning the moment the owner
   // looked at ③ and let a real navigation throw the edits away silently.
   const leaving = useRef(false)
-  const guard = () => correction.dirty && !leaving.current
+  const guard = () => correction.dirty && !project.finalized && !leaving.current
   const blocker = useBlocker({
     shouldBlockFn: guard,
     enableBeforeUnload: guard,
@@ -160,7 +172,26 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
   })
 
   const uploading = ['reading', 'uploading', 'cancelling'].includes(upload.phase)
-  const pending = generation.busy || uploading
+  const finalization = useFinalizeClip(ownerId, project, async () => {
+    await save.flush(true)
+    return correction.flush()
+  })
+  const cancellation = useCancelClip(ownerId, project.id, job)
+  const focused = !project.finalized && generation.busy
+  const pending = generation.busy || uploading || finalization.busy
+  const progress = job ? progressRatio(job) : undefined
+  const progressTitle = cancellation.cancelling
+    ? t('cancellation.cancelling')
+    : job
+      ? progressLabel(job)
+      : t('generation.running')
+  const focusRoot = useRef<HTMLElement>(null)
+  useEffect(() => {
+    if (focused) focusRoot.current?.focus()
+  }, [focused])
+  useEffect(() => {
+    if (project.finalized) discardClipDraftQueue(project.id)
+  }, [project.finalized, project.id])
   const correctionStatus: CorrectionStatus = correction.dirty
     ? 'dirty'
     : project.editPlanRevision > project.renderedPlanRevision
@@ -209,14 +240,14 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
         />
       )}
     >
-      {(project.result || job?.status === 'failed') && (
+      {(project.result || job?.status === 'failed' || job?.status === 'cancelled') && (
         <Typography variant="body" className="text-content-secondary mt-6">
           {t('generation.reselection')}
         </Typography>
       )}
       <ClipSourcePicker
         upload={upload}
-        disabled={!uploadAllowed || generation.busy}
+        disabled={!uploadAllowed || generation.busy || finalization.busy}
         processing={generation.busy}
       />
       {observationPanel}
@@ -283,6 +314,13 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
       downloadAction={
         project.result?.downloadUrl && <ClipDownloadAction compact project={project} />
       }
+      finalizeAction={
+        <FinalizeClipAction
+          action={finalization}
+          project={project}
+          disabled={uploading || generation.busy || !correction.validation?.saveable}
+        />
+      }
       inputs={project.composition?.inputs}
       observations={project.observations}
       correction={correction}
@@ -323,6 +361,7 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
               correction.dirty ||
               correction.pending ||
               generation.busy ||
+              finalization.busy ||
               !correction.validation?.valid
             }
             processing={generation.busy}
@@ -332,6 +371,7 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
     />
   ) : (
     <>
+      <ClipGenerationFailure failure={generation.failure} />
       <ClipStepWaiting message={t('steps.refineWaiting')} onGo={() => setStep('generate')} />
       {project.result && (
         <>
@@ -341,6 +381,7 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
           <ClipResult ownerId={ownerId} project={project} />
           <ActionBar ariaLabel={t('correction.actions')}>
             <ClipDownloadAction project={project} />
+            <FinalizeClipAction action={finalization} project={project} disabled />
           </ActionBar>
         </>
       )}
@@ -348,52 +389,80 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
     </>
   )
 
-  const finishPanel = project.result ? (
-    <>
-      <ClipResult key={project.result.createdAt} ownerId={ownerId} project={project} />
-      {observationPanel}
-    </>
-  ) : (
-    <>
-      <ClipStepWaiting message={t('steps.finishWaiting')} onGo={() => setStep('generate')} />
-      {observationPanel}
-    </>
-  )
+  const finishPanel =
+    project.finalized && project.result ? (
+      <>
+        <ClipResult key={project.result.createdAt} ownerId={ownerId} project={project} />
+      </>
+    ) : (
+      <>
+        <ClipStepWaiting
+          message={t('finalization.waiting')}
+          refine
+          onGo={() => setStep('refine')}
+        />
+      </>
+    )
 
   return (
     <>
       {/* First child of the flow on purpose: a sticky box can only be pinned by the box it sits
           in, and this one has to hold the page's top edge while the panel scrolls past it. */}
-      <ClipProgressBar job={job} upload={upload} />
+      {!focused && !project.finalized && <ClipProgressBar job={undefined} upload={upload} />}
       <ClipTopRow
         status={
-          <ClipStatusLine
-            project={project}
-            job={job}
-            upload={upload}
-            correction={correctionStatus}
-            save={save}
-          />
+          !focused && (
+            <ClipStatusLine
+              project={project}
+              job={job}
+              upload={upload}
+              correction={correctionStatus}
+              save={save}
+            />
+          )
         }
         actions={
-          <DeleteClipProjectButton
-            ownerId={ownerId}
-            project={project}
-            disabled={pending}
-            // A queue outlives its form, so a retry left running would keep saving an id the
-            // server no longer has. Stopped before the navigation unmounts the page.
-            onDeleted={() => discardClipDraftQueue(project.id)}
-          />
+          !focused && (
+            <DeleteClipProjectButton
+              ownerId={ownerId}
+              project={project}
+              disabled={pending}
+              // A queue outlives its form, so a retry left running would keep saving an id the
+              // server no longer has. Stopped before the navigation unmounts the page.
+              onDeleted={() => discardClipDraftQueue(project.id)}
+            />
+          )
         }
       />
-      <SegmentedControl
-        value={step}
-        options={clipSteps()}
-        onChange={setStep}
-        ariaLabel={t('steps.aria')}
-        controls={STEP_PANEL_ID}
-        className="mt-4"
-      />
+      {!focused && !project.finalized && (
+        <SegmentedControl
+          value={step}
+          options={clipSteps()}
+          onChange={(next) => {
+            if (!finalization.busy) setStep(next)
+          }}
+          ariaLabel={t('steps.aria')}
+          controls={STEP_PANEL_ID}
+          className="mt-4"
+        />
+      )}
+      <section
+        ref={focusRoot}
+        hidden={!focused}
+        tabIndex={-1}
+        aria-label={t('cancellation.progressTitle')}
+        className="my-auto space-y-6 py-10"
+      >
+        <Typography variant="title" role="status" aria-live="polite">
+          {focused ? progressTitle : ''}
+        </Typography>
+        {focused && (
+          <>
+            <ProgressBar label={progressTitle} done={progress?.done} total={progress?.total} />
+            <CancelClipAction action={cancellation} job={job} accounting={generation.accounting} />
+          </>
+        )}
+      </section>
       {/* Both of these are about the ATTEMPT rather than about a step, and both are controls with
           something to press, so they stay outside the panel and outside the status line (which
           says what is true, not what to do — CLIP-38). */}
@@ -407,16 +476,45 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
       )}
       {generation.uncertain && (
         <div className="mt-4 space-y-2">
+          <ClipGenerationFailure failure={generation.failure} />
           <Typography variant="body">{t('credits.uncertain')}</Typography>
           <Button variant="ghost" onClick={generation.checkAgain}>
             {t('credits.checkAttempt')}
           </Button>
         </div>
       )}
-      <ClipCreditSettlement job={job} accounting={generation.accounting} />
-      <div id={STEP_PANEL_ID} role="tabpanel" aria-label={clipStepLabel(step)}>
-        {step === 'generate' ? generatePanel : step === 'refine' ? refinePanel : finishPanel}
-      </div>
+      {!focused && !project.finalized && (
+        <>
+          <ClipCreditSettlement job={job} accounting={generation.accounting} />
+          {job?.status === 'cancelled' && (
+            <Typography variant="body" className="mt-4">
+              {t('cancellation.stopped')}
+            </Typography>
+          )}
+          {(job?.status === 'cancelled' || job?.status === 'failed') &&
+            step === 'refine' &&
+            job.kind === 'generate_clip' && (
+              <Button variant="secondary" onClick={() => setStep('generate')}>
+                {t('generation.retry')}
+              </Button>
+            )}
+        </>
+      )}
+      {!focused && (
+        <div
+          id={STEP_PANEL_ID}
+          role="tabpanel"
+          aria-label={clipStepLabel(project.finalized ? 'finish' : step)}
+        >
+          {project.finalized
+            ? finishPanel
+            : step === 'generate'
+              ? generatePanel
+              : step === 'refine'
+                ? refinePanel
+                : finishPanel}
+        </div>
+      )}
       <Dialog
         open={blocker.status === 'blocked'}
         title={t('correction.leaveTitle')}
@@ -431,7 +529,7 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
       </Dialog>
       {/* ONE dock per step: ① and ② carry their own (the settings form's and the correction
           workspace's), so the page docks only ③'s 다운로드 (CLIP-40). */}
-      {step === 'finish' && project.result?.downloadUrl && (
+      {project.finalized && project.result?.downloadUrl && (
         <ActionBar className="mt-auto" ariaLabel={t('steps.finishDockAria')}>
           <div className="flex flex-wrap justify-end gap-3">
             <ClipDownloadAction project={project} />

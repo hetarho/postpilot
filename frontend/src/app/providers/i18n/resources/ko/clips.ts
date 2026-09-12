@@ -1,4 +1,45 @@
 export const clips = {
+  finalization: {
+    confirm: '확정하기',
+    notice:
+      '확정하면 원본을 삭제하고 수정이 끝나요. 확정된 영상은 계속 재생하고 다운로드할 수 있어요.',
+    waiting: '수정 단계에서 확정하기를 누르면 완성돼요. 다운로드만으로는 확정되지 않아요.',
+    goRefine: '클립 다듬기로 이동',
+    uncertain:
+      '확정 결과를 확인하고 있어요. 서버 상태가 확인될 때까지 수정과 재시도를 잠시 멈춰요.',
+    downloadRevision: '렌더 {{revision}} 다운로드',
+    refusal: {
+      finalized: '이미 확정된 클립이에요.',
+      busy: '작업이 끝난 뒤 확정할 수 있어요.',
+      missing_render: '먼저 영상을 렌더해 주세요.',
+      stale_render: '저장된 수정본을 다시 렌더한 뒤 확정해 주세요.',
+      invalid_plan: '편집 내용의 오류를 수정하고 다시 렌더해 주세요.',
+      unavailable: '확정 가능 여부를 확인하지 못했어요. 화면을 새로고침해 주세요.',
+    },
+  },
+  cancellation: {
+    cancel: '취소',
+    cancelling: '취소 중',
+    cancelled: '취소됨',
+    progressTitle: '클립 작업 진행',
+    rule: '취소하면 확인된 AI 사용분에 이 작업의 남은 예약 크레딧 50%를 추가해 차감해요. 소수점은 올림하며, 계정 전체 잔액을 기준으로 하지 않아요.',
+    beforeReservation:
+      '아직 크레딧을 예약하지 않아 지금 취소하면 무료예요. 예약 후에는 확인된 AI 사용분과 남은 작업 예약량의 50%(소수점 올림)를 차감해요.',
+    free: '다시 렌더는 취소해도 크레딧이 차감되지 않아요.',
+    exempt:
+      '이 계정은 실제 크레딧 차감이 없어요. 참고 정산에는 확인된 AI 사용분과 남은 작업 예약량의 50%(소수점 올림)를 기록해요.',
+    legacy: '이 작업은 이전 요금 정책으로 시작해 취소할 수 없어요.',
+    policyUnavailable: '취소 요금 정책을 확인해야 생성을 시작할 수 있어요.',
+    reservation:
+      '이 작업의 예약량: {{amount}}크레딧. 최종 차감과 반환량은 작업이 멈춘 뒤 확인돼요.',
+    uncertain: '취소 요청 결과를 확인하지 못했어요. 서버 상태를 확인한 뒤 다시 시도할 수 있어요.',
+    stopped: '작업을 취소했어요. 이전 영상은 그대로이며, 재시도는 직접 시작할 수 있어요.',
+    confirmed: '확인된 AI 사용분',
+    cancellationFee: '취소 추가분',
+    shadowConfirmed: '참고 AI 사용분 (차감 없음)',
+    shadowCancellationFee: '참고 취소 추가분 (차감 없음)',
+    shadowTotal: '참고 총액 (차감 없음)',
+  },
   timeline: {
     render: '다시 렌더',
     save: '저장',

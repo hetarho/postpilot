@@ -99,7 +99,7 @@ it('says the upload phase before an unsaved correction', () => {
 it('stays quiet about an idle picker and reports the project instead', () => {
   expect(
     line({ project: project({ editPlanRevision: 2, renderedPlanRevision: 2, result }) }),
-  ).toHaveTextContent('완성')
+  ).toHaveTextContent('다듬는 중')
 })
 
 it('says an unsaved correction before the save state', () => {

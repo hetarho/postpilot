@@ -20,6 +20,19 @@ export function ClipCreditSettlement({
     ['charged', settled ? a?.finalChargeCredits : undefined],
     ['refunded', settled ? a?.refundCredits : undefined],
   ] as const
+  const breakdown = settled
+    ? ([
+        ['confirmed', a?.confirmedChargeCredits],
+        ['cancellationFee', a?.cancellationFeeCredits],
+        ...(a?.status === 'exempt'
+          ? ([
+              ['shadowConfirmed', a.shadowConfirmedChargeCredits],
+              ['shadowCancellationFee', a.shadowCancellationFeeCredits],
+              ['shadowTotal', a.shadowChargeCredits],
+            ] as const)
+          : []),
+      ] as const)
+    : []
   return (
     <section aria-label={t('credits.title')} className="mt-6 space-y-3">
       <Typography variant="title">{t('credits.title')}</Typography>
@@ -39,20 +52,32 @@ export function ClipCreditSettlement({
         )}
       </Typography>
       <dl className="grid grid-cols-2 gap-x-4 gap-y-2">
-        {fields.map(([label, amount]) => (
-          <div key={label} className="min-w-0 space-y-1">
-            <dt>
-              <Typography variant="meta">{t(`credits.${label}`)}</Typography>
-            </dt>
-            <dd>
-              <Typography variant="body">
-                {amount === undefined
-                  ? t('credits.pendingAmount')
-                  : t('credits.amount', { amount })}
-              </Typography>
-            </dd>
-          </div>
-        ))}
+        {[...fields, ...breakdown.filter(([, amount]) => amount !== undefined)].map(
+          ([label, amount]) => (
+            <div key={label} className="min-w-0 space-y-1">
+              <dt>
+                <Typography variant="meta">
+                  {t(
+                    label === 'confirmed' ||
+                      label === 'cancellationFee' ||
+                      label === 'shadowConfirmed' ||
+                      label === 'shadowCancellationFee' ||
+                      label === 'shadowTotal'
+                      ? `cancellation.${label}`
+                      : `credits.${label}`,
+                  )}
+                </Typography>
+              </dt>
+              <dd>
+                <Typography variant="body">
+                  {amount === undefined
+                    ? t('credits.pendingAmount')
+                    : t('credits.amount', { amount })}
+                </Typography>
+              </dd>
+            </div>
+          ),
+        )}
       </dl>
       {settled && job.status === 'failed' && a?.finalChargeCredits === 0 && (
         <Typography variant="body">{t('credits.noCharge')}</Typography>

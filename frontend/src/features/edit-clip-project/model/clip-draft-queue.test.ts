@@ -142,6 +142,21 @@ describe('clip settings autosave queue', () => {
     await expect(flushClipDraft('never-typed-in')).resolves.toBeUndefined()
   })
 
+  it('rejects a confirmation flush on a transient failure while retaining the autosave retry', async () => {
+    const { settle, send, sent } = controllable()
+    queueClipDraft('clip', draft('제주'), send)
+    const caught = flushClipDraft('clip', true).catch(() => 'refused')
+    await vi.advanceTimersByTimeAsync(0)
+    settle[0].reject(new ConnectError('offline', Code.Unavailable))
+    await expect(caught).resolves.toBe('refused')
+    expect(peekPendingClipDraft('clip')?.title).toBe('제주')
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(sent).toEqual(['제주', '제주'])
+    settle[1].resolve()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(clipDraftState('clip')).toBe('saved')
+  })
+
   it('hands a pending draft to the next mount of the form', async () => {
     const { send } = controllable()
     queueClipDraft('clip', draft('제주'), send)

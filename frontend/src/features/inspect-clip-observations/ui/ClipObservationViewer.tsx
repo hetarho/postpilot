@@ -212,7 +212,8 @@ export function ClipObservationViewer({
   }, [fingerprint, resolvePlayback])
   const job = project.latestJob
   const previous =
-    job?.kind === 'generate_clip' && ['queued', 'running', 'failed'].includes(job.status)
+    job?.kind === 'generate_clip' &&
+    ['queued', 'running', 'failed', 'cancelled'].includes(job.status)
   const savedPlan = !project.result || project.editPlanRevision !== project.renderedPlanRevision
   return (
     <section aria-labelledby={`${id}-heading`} className="mt-10 mb-8 min-w-0 space-y-4">

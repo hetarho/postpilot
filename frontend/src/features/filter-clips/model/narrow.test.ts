@@ -3,6 +3,7 @@ import type { ClipProject } from '@/entities/clip-project'
 import { narrowClips } from './narrow'
 
 const result = {
+  id: 'result',
   contentType: 'video/mp4',
   bytes: 1,
   durationMs: 15000,
@@ -32,6 +33,7 @@ const refining = project({
 const finished = project({
   id: 'c',
   title: 'JEJU 다시',
+  finalized: { at: '2026-09-13T00:00:00Z', planRevision: 1, resultId: 'result' },
   editPlanRevision: 1,
   renderedPlanRevision: 1,
   result,

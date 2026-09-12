@@ -52,6 +52,9 @@ export interface FakeClipProject extends ClipProjectDraft {
   id: string
   composition?: ClipProject['composition']
   ownerId?: string
+  finalized?: ClipProject['finalized']
+  canFinalize?: boolean
+  finalizationRefusal?: ClipProject['finalizationRefusal']
   result?: ClipProject['result']
   latestJob?: FakeGenerationJobRow
   latestAttempt?: ClipProject['latestAttempt']
@@ -79,6 +82,14 @@ const ELIGIBILITY_WIRE: Record<FakeClipEligibility, ClipAnalysisEligibility> = {
 }
 
 export interface FakeClipsOptions {
+  finalize?: (
+    input: { projectId: string; expectedRevision: number; expectedResultId: string },
+    project: FakeClipProject,
+  ) => Promise<void>
+  cancel?: (
+    input: { projectId: string; jobId: string },
+    project: FakeClipProject,
+  ) => Promise<FakeGenerationJobRow>
   compositionVersion?: number
   compositionPlanVersion?: number
   projects?: FakeClipProject[]
@@ -134,6 +145,13 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
   const projectProto = (p: FakeClipProject) =>
     create(ClipProjectSchema, {
       ...p,
+      finalizedAt: p.finalized?.at,
+      finalizedPlanRevision: p.finalized?.planRevision,
+      finalizedResultId: p.finalized?.resultId,
+      canEdit: !p.finalized,
+      canFinalize:
+        p.canFinalize ??
+        (!!p.result?.id && !p.finalized && p.editPlanRevision === p.renderedPlanRevision),
       composition: p.composition
         ? {
             snapshot: p.composition.snapshot,
@@ -270,6 +288,36 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       project: projectProto(options.readProject?.(p) ?? p),
     })
   })
+  router.rpc(ClipService.method.finalizeClipProject, async (req) => {
+    options.calls?.push('FinalizeClipProject')
+    const p = projects.get(req.projectId)
+    if (!p) throw connectAppError('CLIP_NOT_FOUND', Code.NotFound)
+    if (options.finalize) await options.finalize(req, p)
+    else {
+      if (
+        req.expectedRevision !== p.editPlanRevision ||
+        req.expectedRevision !== p.renderedPlanRevision ||
+        req.expectedResultId !== p.result?.id
+      )
+        throw connectAppError('CLIP_FINALIZATION_CONFLICT', Code.Aborted)
+      p.finalized = {
+        at: '2026-09-13T00:00:00Z',
+        planRevision: req.expectedRevision,
+        resultId: req.expectedResultId,
+      }
+      p.editing = undefined
+      p.observations = undefined
+    }
+    return { project: projectProto(p) }
+  })
+  router.rpc(ClipService.method.cancelClipJob, async (req) => {
+    options.calls?.push('CancelClipJob')
+    const p = projects.get(req.projectId)
+    if (!p) throw connectAppError('CLIP_NOT_FOUND', Code.NotFound)
+    if (!options.cancel) throw connectAppError('CLIP_BUSY', Code.FailedPrecondition)
+    const job = await options.cancel(req, p)
+    return { job: toFakeProto(job), accepted: !!job.cancelRequestedAt }
+  })
   router.rpc(ClipService.method.createClipProject, (req) => {
     options.calls?.push('CreateClipProject')
     if (options.projectSaveFails) throw connectAppError('CLIP_INVALID_INPUT', Code.InvalidArgument)
@@ -379,6 +427,12 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     return create(QuoteClipGenerationResponseSchema, {
       quoteId: q.id,
       maxCredits: q.max,
+      cancellationPolicy: {
+        version: 1,
+        unusedReservationNumerator: 1,
+        unusedReservationDenominator: 2,
+        rounding: 'ceil',
+      },
       expiresAt: options.quoteExpiresAt ?? '2099-01-01T00:00:00Z',
     })
   })
@@ -450,6 +504,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     return create(StartClipGenerationResponseSchema, { jobId })
   })
   router.rpc(ClipService.method.getClipSources, (req) => {
+    options.calls?.push('GetClipSources')
     if (!projects.has(req.projectId)) throw connectAppError('CLIP_NOT_FOUND', Code.NotFound)
     const p = projects.get(req.projectId)!
     const current = options.readProject?.(p) ?? p
@@ -459,7 +514,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       if (
         b.projectId === req.projectId &&
         b.state === 'consuming' &&
-        (status === 'done' || status === 'failed')
+        (status === 'done' || status === 'failed' || status === 'cancelled')
       )
         b.state = 'ready'
     return { batches: [...batches.values()].filter((b) => b.projectId === req.projectId) }

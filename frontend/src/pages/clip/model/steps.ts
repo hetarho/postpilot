@@ -20,17 +20,10 @@ export function clipStepLabel(step: ClipStep): string {
 const BY_STATE: Record<ClipState, ClipStep> = {
   draft: 'generate',
   refining: 'refine',
-  finished: 'refine',
+  finished: 'finish',
 }
 
-/** Rendering leaves the owner in correction with preview and download available.
- *  Selecting another step changes nothing on the server.
- *
- *  A FAILED attempt is the one case where the state is not the answer: CLIP-26 owes the owner an
- *  explicit retry, and the retry lives on the step that started the work — a generation is
- *  re-approved on ①, a rerender is re-run from ②. The previous result remains available. */
+/** An unreached result tab never implies confirmation. */
 export function stepForProject(project: ClipProject): ClipStep {
-  if (project.latestJob?.status === 'failed')
-    return project.latestJob.kind === 'render_clip' ? 'refine' : 'generate'
   return BY_STATE[clipState(project)]
 }

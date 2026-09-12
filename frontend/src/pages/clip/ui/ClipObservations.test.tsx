@@ -5,14 +5,14 @@ import { renderAppAt } from '@/test/app'
 import { observedClipFixture } from '@/test/clip-observations'
 
 describe('observations in the clip workspace', () => {
-  it('keeps observations available on all three steps without invoking generation', async () => {
+  it('keeps observations available on both editable steps without invoking generation', async () => {
     const calls: string[] = []
     const project = observedClipFixture()
     renderAppAt('/clips/project', { user: { id: 'alice' }, clips: { projects: [project], calls } })
     const user = userEvent.setup()
     expect(await screen.findByRole('heading', { name: 'AI가 관찰한 내용' })).toBeVisible()
     const tabs = within(screen.getByRole('tablist', { name: '클립 단계' }))
-    for (const name of ['클립 생성', '클립 다듬기', '클립 완성']) {
+    for (const name of ['클립 생성', '클립 다듬기']) {
       await user.click(tabs.getByRole('tab', { name: new RegExp(name) }))
       expect(screen.getAllByRole('heading', { name: 'AI가 관찰한 내용' })).toHaveLength(1)
       await user.click(screen.getByRole('button', { name: '관찰 구간 2개 자세히 보기' }))
@@ -23,7 +23,7 @@ describe('observations in the clip workspace', () => {
     expect(calls).not.toContain('CreateClipSourceBatch')
   })
 
-  it.each(['queued', 'running', 'failed'])(
+  it.each(['failed', 'cancelled'])(
     'identifies previous observations during a %s regeneration',
     async (status) => {
       renderAppAt('/clips/project', {
@@ -43,4 +43,16 @@ describe('observations in the clip workspace', () => {
       expect(screen.getByText('맛있어요')).toBeVisible()
     },
   )
+})
+
+it.each(['queued', 'running'])('hides observations during %s work', async (status) => {
+  const job = { id: 'new-run', kind: 'generate_clip', status, stage: 'analyze' }
+  renderAppAt('/clips/project', {
+    user: { id: 'alice' },
+    clips: { projects: [{ ...observedClipFixture(), latestJob: job }] },
+    jobs: { jobs: [job] },
+  })
+  await screen.findByRole('progressbar')
+  expect(screen.queryByRole('heading', { name: 'AI가 관찰한 내용' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('tablist', { name: '클립 단계' })).not.toBeInTheDocument()
 })

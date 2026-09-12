@@ -155,3 +155,41 @@ it('does not save an invalid authored interval and keeps it available for repair
   expect(view.result.current.draft.cuts[0].startMs).toBe(20000)
   expect(view.writes).toEqual([])
 })
+
+it('flushes edits typed during an existing save without relying on another render or debounce', async () => {
+  const view = setup()
+  view.setHold(true)
+  act(() =>
+    view.result.current.change({ type: 'cut', id: 'cut-a', patch: { volumePermille: 800 } }),
+  )
+  await tick()
+  act(() =>
+    view.result.current.change({ type: 'cut', id: 'cut-a', patch: { volumePermille: 600 } }),
+  )
+  let revision: number | undefined
+  const flushed = view.result.current.flush().then((r) => {
+    revision = r
+  })
+  view.setHold(false)
+  await act(async () => {
+    view.release()
+    await flushed
+  })
+  expect(view.writes).toEqual([1, 2])
+  expect(revision).toBe(3)
+  expect(view.result.current.draft.cuts[0].volumePermille).toBe(600)
+  expect(view.result.current.dirty).toBe(false)
+})
+
+it('rejects a failing flush and preserves the local correction', async () => {
+  const view = setup()
+  view.setFail(true)
+  act(() =>
+    view.result.current.change({ type: 'cut', id: 'cut-a', patch: { volumePermille: 500 } }),
+  )
+  await act(async () => {
+    await expect(view.result.current.flush()).rejects.toThrow()
+  })
+  expect(view.result.current.dirty).toBe(true)
+  expect(view.writes).toEqual([1])
+})

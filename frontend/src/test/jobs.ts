@@ -16,6 +16,9 @@ import { connectAppError, durableFailure } from './app-error'
 type ConnectRouter = Parameters<Parameters<typeof createRouterTransport>[0]>[0]
 
 export interface FakeGenerationJobRow {
+  canCancel?: boolean
+  cancelRequestedAt?: string
+  cancellationPolicyVersion?: number
   id: string
   kind?: string
   status?: string

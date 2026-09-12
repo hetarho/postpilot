@@ -6,7 +6,11 @@ import type { RetainedClipSource } from '@/entities/clip-project'
 import { POLL_INTERVAL_MS } from '@/shared/config'
 import { matchClipSources } from './reselection'
 
-export function useClipSourceUpload(projectId: string, required?: readonly RetainedClipSource[]) {
+export function useClipSourceUpload(
+  projectId: string,
+  required?: readonly RetainedClipSource[],
+  enabled = true,
+) {
   const transport = useTransport()
   // A result/plan refetch must not replace the runtime owner of an accepted attempt.
   const session = useMemo(
@@ -15,6 +19,10 @@ export function useClipSourceUpload(projectId: string, required?: readonly Retai
   )
   const state = useSyncExternalStore(session.subscribe, session.getSnapshot)
   useEffect(() => {
+    if (!enabled) {
+      session.dispose()
+      return
+    }
     session.activate()
     const hide = () => session.dispose()
     const show = () => session.activate()
@@ -25,7 +33,7 @@ export function useClipSourceUpload(projectId: string, required?: readonly Retai
       window.removeEventListener('pageshow', show)
       session.dispose()
     }
-  }, [session])
+  }, [session, enabled])
   const requiredKey = JSON.stringify(required ?? null)
   useEffect(() => {
     const sources = JSON.parse(requiredKey) as RetainedClipSource[] | null

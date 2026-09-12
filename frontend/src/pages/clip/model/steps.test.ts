@@ -47,7 +47,7 @@ describe('stepForProject', () => {
     )
   })
 
-  it('sends a failed generation back to the step that re-approves it', () => {
+  it('keeps editing and its previous render available after generation failure', () => {
     expect(
       stepForProject({
         ...base,
@@ -56,7 +56,7 @@ describe('stepForProject', () => {
         result,
         latestJob: failedJob('generate_clip', 'prepare'),
       }),
-    ).toBe('generate')
+    ).toBe('refine')
   })
 
   it('sends a failed rerender back to the correction that re-runs it', () => {

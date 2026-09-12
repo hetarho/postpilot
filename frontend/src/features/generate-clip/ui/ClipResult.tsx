@@ -81,12 +81,19 @@ export function ClipDownloadAction({
   return (
     <a
       href={project.result.downloadUrl}
+      aria-label={
+        project.finalized
+          ? undefined
+          : t('finalization.downloadRevision', { revision: project.renderedPlanRevision })
+      }
       className={buttonStyles({
         variant: compact ? 'secondary' : 'cta',
         className: compact ? undefined : 'w-full sm:w-auto',
       })}
     >
-      {t(compact ? 'timeline.download' : 'generation.download')}
+      {project.finalized
+        ? t(compact ? 'timeline.download' : 'generation.download')
+        : t('finalization.downloadRevision', { revision: project.renderedPlanRevision })}
     </a>
   )
 }

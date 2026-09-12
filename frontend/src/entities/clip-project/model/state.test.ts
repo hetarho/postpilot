@@ -11,11 +11,11 @@ describe('clipState', () => {
   })
 
   it('never hides a rendered result behind the draft step', () => {
-    expect(clipState({ editPlanRevision: 0, renderedPlanRevision: 0, result })).toBe('finished')
+    expect(clipState({ editPlanRevision: 0, renderedPlanRevision: 0, result })).toBe('refining')
   })
 
-  it('is finished when the render matches the plan', () => {
-    expect(clipState({ editPlanRevision: 3, renderedPlanRevision: 3, result })).toBe('finished')
+  it('keeps a matching unconfirmed render editable', () => {
+    expect(clipState({ editPlanRevision: 3, renderedPlanRevision: 3, result })).toBe('refining')
   })
 
   it('is refining when the plan is newer than its render', () => {
@@ -27,4 +27,15 @@ describe('clipState', () => {
       'refining',
     )
   })
+})
+
+it('finishes only after explicit confirmation', () => {
+  expect(
+    clipState({
+      editPlanRevision: 3,
+      renderedPlanRevision: 3,
+      result,
+      finalized: { at: '2026-09-13', planRevision: 3, resultId: 'result' },
+    }),
+  ).toBe('finished')
 })

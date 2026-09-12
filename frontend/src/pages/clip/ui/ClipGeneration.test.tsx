@@ -159,13 +159,13 @@ it('approves once, retains local previews after terminal and refetches the resul
     writeModel: { providerId: 'p', modelId: 'w' },
     quoteId: 'quote-1',
     approvedMaxCredits: 20,
+    cancellationPolicyVersion: 1,
   })
   expect(revoke).not.toHaveBeenCalled()
-  expect(screen.getByText('clip.mp4')).toBeInTheDocument()
-  expect(screen.getByLabelText('clip.mp4')).toHaveAttribute('src', 'blob:clip-source')
-  expect(screen.getByLabelText('클립 제목')).toBeDisabled()
-  expect(screen.getByRole('button', { name: '삭제' })).toBeDisabled()
-  expect(screen.getByRole('combobox', { name: /관찰/ })).toBeDisabled()
+  expect(screen.queryByLabelText('clip.mp4')).not.toBeInTheDocument()
+  expect(screen.queryByLabelText('클립 제목')).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: '삭제' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('combobox', { name: /관찰/ })).not.toBeInTheDocument()
   expect(screen.getAllByRole('progressbar')).toHaveLength(1)
   expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '1')
   expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuemax', '3')
@@ -181,14 +181,14 @@ it('approves once, retains local previews after terminal and refetches the resul
       }),
     })
   })
-  // A finished render describes the project as 완성, so the bar follows to ③ where the result is.
+  // A successful render stays unfinalized in correction.
   const video = await screen.findByLabelText('클립 미리보기')
   expect(revoke).not.toHaveBeenCalled()
   expect(screen.queryByLabelText('clip.mp4')).not.toBeInTheDocument()
   expect(video).toHaveAttribute('src', result.viewUrl)
   expect(video).toHaveAttribute('controls')
   expect(video).toHaveAttribute('preload', 'metadata')
-  expect(screen.getByRole('link', { name: '영상 다운로드' })).toHaveAttribute(
+  expect(screen.getByRole('link', { name: /렌더 \d+ 다운로드/ })).toHaveAttribute(
     'href',
     result.downloadUrl,
   )
@@ -203,6 +203,59 @@ it('approves once, retains local previews after terminal and refetches the resul
     await screen.findByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' }),
   ).toBeEnabled()
 })
+
+it.each(['done', 'failed', 'cancelled'])(
+  'reuses retained originals after %s with a fresh approval and no upload',
+  async (status) => {
+    const starts: unknown[] = [],
+      quotes: unknown[] = [],
+      calls: string[] = []
+    const job: FakeGenerationJobRow = {
+      id: 'clip-job',
+      kind: 'generate_clip',
+      clipProjectId: 'clip',
+      status: 'running',
+      stage: 'analyze',
+    }
+    const view = mount(
+      {
+        generationStarts: starts,
+        quoteRequests: quotes,
+        calls,
+        readProject: (p) => (p.latestJob ? { ...p, latestJob: job } : p),
+        sourceJobStatus: () => job.status,
+      },
+      { jobs: [job] },
+    )
+    const { user } = await selectSource()
+    await user.click(await screen.findByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' }))
+    await screen.findByRole('progressbar', { name: '영상 분석' })
+    job.status = status
+    await act(() =>
+      view.queryClient.refetchQueries({
+        queryKey: createConnectQueryKey({
+          schema: GenerationService.method.getGeneration,
+          input: { id: job.id },
+          transport: view.transport,
+          cardinality: 'finite',
+        }),
+      }),
+    )
+    const approve = await screen.findByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' })
+    await waitFor(() => expect(approve).toBeEnabled())
+    expect(starts).toHaveLength(1)
+    expect(quotes).toHaveLength(2)
+    await user.click(approve)
+    await waitFor(() => expect(starts).toHaveLength(2))
+    expect(starts[0]).toMatchObject({ batchId: 'batch-1', quoteId: 'quote-1' })
+    expect(starts[1]).toMatchObject({
+      batchId: 'batch-1',
+      quoteId: 'quote-2',
+      cancellationPolicyVersion: 1,
+    })
+    expect(calls.filter((c) => c === 'CreateClipSourceBatch')).toHaveLength(1)
+  },
+)
 it('keeps an older result visible on a durable credit refusal and requires a new batch', async () => {
   const job: FakeGenerationJobRow = {
     id: 'clip-job',
@@ -213,13 +266,14 @@ it('keeps an older result visible on a durable credit refusal and requires a new
     failureParams: { required: '79', balance: '12', renews_at: '2026-09-30T15:00:00Z' },
   }
   mount({ projects: [{ ...project, result, latestJob: job }] }, { jobs: [job] })
-  // A failed attempt opens on the step that owns its retry (CLIP-26).
+  await goToStep('클립 생성')
+  // Explicit AI retry is on the generation step; the previous render stays in correction.
   expect(await screen.findByText(/크레딧이 79 필요한데 12만 남았어요/)).toBeInTheDocument()
   expect(screen.getByText('원본 확인 단계에서 실패했어요')).toBeInTheDocument()
   expect(screen.getByRole('link', { name: '크레딧·요금제 확인' })).toHaveAttribute('href', '/plans')
   expect(screen.getByRole('button', { name: '다시 생성' })).toBeDisabled()
   // The previous successful result is untouched, one tab away (CLIP-26).
-  await goToStep('클립 완성')
+  await goToStep('클립 다듬기')
   expect(await screen.findByLabelText('클립 미리보기')).toHaveAttribute('src', result.viewUrl)
   await goToStep('클립 생성')
   await selectSource()
@@ -238,7 +292,7 @@ it('reloads saved results without originals and refreshes an expired preview onl
   })
   const video = await screen.findByLabelText('클립 미리보기')
   expect(screen.queryByText('clip.mp4')).not.toBeInTheDocument()
-  expect(screen.getByRole('link', { name: '영상 다운로드' })).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: /렌더 \d+ 다운로드/ })).toBeInTheDocument()
   const initial = reads
   fireEvent.error(video)
   await waitFor(() => expect(reads).toBe(initial + 1))
@@ -426,8 +480,8 @@ it('resolves a lost accepted response by owned identity reads without replaying 
   await waitFor(() => expect(screen.queryByText(/요청의 접수 여부를 확인/)).not.toBeInTheDocument())
   expect(starts).toHaveLength(1)
   expect(revoke).not.toHaveBeenCalled()
-  expect(screen.getByLabelText('clip.mp4')).toHaveAttribute('src', 'blob:clip-source')
-  expect(screen.getByLabelText(/^원본 영상 (다시 )?선택$/)).toBeDisabled()
+  expect(screen.queryByLabelText('clip.mp4')).not.toBeInTheDocument()
+  expect(screen.queryByLabelText(/^원본 영상 (다시 )?선택$/)).not.toBeInTheDocument()
   view.unmount()
   expect(revoke).toHaveBeenCalledExactlyOnceWith('blob:clip-source')
   expect(calls).not.toContain('DiscardClipSourceBatch')
@@ -460,7 +514,7 @@ it('does not attach an ambiguous selection to a different tab’s terminal job',
   await user.click(screen.getByRole('button', { name: '접수된 작업 다시 확인' }))
   expect(starts).toHaveLength(1)
   expect(revoke).not.toHaveBeenCalled()
-  expect(screen.getByLabelText('clip.mp4')).toBeInTheDocument()
+  expect(screen.queryByLabelText('clip.mp4')).not.toBeInTheDocument()
   view.unmount()
 })
 
@@ -532,7 +586,7 @@ it('finishes the locally owned job even when another tab becomes the latest proj
     view.queryClient.invalidateQueries({ queryKey: clipProjectsKey(view.transport, 'alice') }),
   )
   expect(revoke).not.toHaveBeenCalled()
-  expect(screen.getByLabelText('clip.mp4')).toBeInTheDocument()
+  expect(screen.queryByLabelText('clip.mp4')).not.toBeInTheDocument()
   own.status = 'failed'
   await act(() =>
     view.queryClient.refetchQueries({
@@ -544,11 +598,9 @@ it('finishes the locally owned job even when another tab becomes the latest proj
       }),
     }),
   )
-  await waitFor(() =>
-    expect(screen.getByLabelText('clip.mp4')).toHaveAttribute('src', 'blob:clip-source'),
-  )
+  await waitFor(() => expect(screen.queryByLabelText('clip.mp4')).not.toBeInTheDocument())
   expect(revoke).not.toHaveBeenCalled()
-  expect(screen.getByLabelText(/^원본 영상 (다시 )?선택$/)).toBeDisabled()
+  expect(screen.queryByLabelText(/^원본 영상 (다시 )?선택$/)).not.toBeInTheDocument()
 })
 
 it('replaces source-bound quotes and sends only the newly displayed quote', async () => {
@@ -615,10 +667,10 @@ it.each([false, true])(
 
 it('displays a pricing refusal beside generation while leaving the previous result downloadable', async () => {
   mount({ projects: [{ ...project, result }], quoteFails: 'CLIP_MODEL_PRICING_UNAVAILABLE' })
-  // A saved result opens on ③, where the download is docked; the refusal belongs beside the
+  // A saved result opens in correction; the refusal belongs beside the
   // generation that earned it, on ①.
   expect(await screen.findByLabelText('클립 미리보기')).toHaveAttribute('src', result.viewUrl)
-  expect(screen.getByRole('link', { name: '영상 다운로드' })).toBeEnabled()
+  expect(screen.getByRole('link', { name: /렌더 \d+ 다운로드/ })).toBeEnabled()
   await goToStep('클립 생성')
   await selectSource()
   await screen.findByRole('alert')
@@ -669,8 +721,8 @@ it.each([0, 7])(
     await screen.findByText('크레딧 정산이 완료됐어요.')
     expect(credit.getByText(charge + ' 크레딧')).toBeVisible()
     expect(credit.getAllByText(40 - charge + ' 크레딧').length).toBeGreaterThan(0)
-    // The settlement is reported on every step; the preserved result is on ③.
-    await goToStep('클립 완성')
+    // The settlement and the preserved result remain in correction.
+    await goToStep('클립 다듬기')
     expect(await screen.findByLabelText('클립 미리보기')).toHaveAttribute('src', result.viewUrl)
   },
 )

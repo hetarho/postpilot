@@ -35,7 +35,7 @@ interface Queue {
    *  저장했어요 rather than falling straight back to the project's own state. */
   saved: boolean
   /** Resolvers handed out by `flushClipDraft`, settled when the queue next runs dry. */
-  waiting: { resolve: () => void; reject: (error: unknown) => void }[]
+  waiting: { resolve: () => void; reject: (error: unknown) => void; failFast: boolean }[]
   listeners: Set<() => void>
 }
 
@@ -105,6 +105,9 @@ async function run(projectId: string, queue: Queue) {
     queue.inFlight = false
     queue.failed = true
     publish(queue)
+    const failFast = queue.waiting.filter((one) => one.failFast)
+    queue.waiting = queue.waiting.filter((one) => !one.failFast)
+    for (const one of failFast) one.reject(error)
     if (terminal(error)) {
       // Hand the refusal to whoever is waiting on a flush — an approval must not price a
       // generation on settings the server never took (CLIP-39).
@@ -157,14 +160,16 @@ export function queueClipDraft(
 /** Sends whatever is queued NOW and resolves once the queue is dry. Rejects with the refusal if
  *  the server will not take the draft, so a caller that must not proceed on unsaved settings —
  *  the credit approval — can stop. */
-export function flushClipDraft(projectId: string): Promise<void> {
+export function flushClipDraft(projectId: string, failFast = false): Promise<void> {
   const queue = queues.get(projectId)
   if (!queue || (!queue.pending && !queue.inFlight)) return Promise.resolve()
   if (queue.timer) {
     clearTimeout(queue.timer)
     queue.timer = undefined
   }
-  const settled = new Promise<void>((resolve, reject) => queue.waiting.push({ resolve, reject }))
+  const settled = new Promise<void>((resolve, reject) =>
+    queue.waiting.push({ resolve, reject, failFast }),
+  )
   void run(projectId, queue)
   return settled
 }

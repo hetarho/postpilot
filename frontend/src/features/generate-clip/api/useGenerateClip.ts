@@ -39,6 +39,8 @@ type StartInput =
   | { kind: 'render'; batchId: string; revision: number }
 const DEFINITE_REFUSALS = new Set([
   'CLIP_QUOTE_REQUIRED',
+  'CLIP_FINALIZED',
+  'CLIP_CANCELLATION_POLICY_REQUIRED',
   'CLIP_QUOTE_CHANGED',
   'CLIP_QUOTE_EXPIRED',
   'CLIP_MODEL_PRICING_UNAVAILABLE',
@@ -93,7 +95,7 @@ export function useGenerateClip(ownerId: string, project: ClipProject, ownedJobI
       : eligibility.kind === 'failed'
         ? { kind: 'failed', retry: () => void eligibilityQuery.refetch() }
         : { kind: 'loading' }
-  const [started, setStarted] = useState<{ id: string; previous?: string }>()
+  const [started, setStarted] = useState<{ id: string; previous?: string; batchId: string }>()
   const [localFailure, setLocalFailure] = useState<AppFailure>()
   const [uncertain, setUncertain] = useState<{
     batchId: string
@@ -129,6 +131,7 @@ export function useGenerateClip(ownerId: string, project: ClipProject, ownedJobI
               writeModel: input.write,
               quoteId: input.quote.quoteId,
               approvedMaxCredits: input.quote.maxCredits,
+              cancellationPolicyVersion: input.quote.cancellationPolicy?.version,
             })
       if (!response.jobId) throw new Error('Missing durable clip job')
       return response
@@ -148,6 +151,10 @@ export function useGenerateClip(ownerId: string, project: ClipProject, ownedJobI
   const poll = useJob(id, [clipProjectsKey(transport, ownerId), myPlanQueryKey(transport)])
   const job =
     poll.job?.id === id ? poll.job : project.latestJob?.id === id ? project.latestJob : undefined
+  useEffect(() => {
+    if (started && job?.id === started.id && isTerminal(job))
+      consumed.current.delete(started.batchId)
+  }, [started, job])
   const busy =
     mutation.isPending ||
     !!uncertain ||
@@ -179,7 +186,7 @@ export function useGenerateClip(ownerId: string, project: ClipProject, ownedJobI
       ) {
         unresolved.current = undefined
         uncertain.ownership.owned(uncertain.batchId, attempt.jobId)
-        setStarted({ id: attempt.jobId, previous: project.latestJob?.id })
+        setStarted({ id: attempt.jobId, previous: project.latestJob?.id, batchId: attempt.batchId })
         setUncertain(undefined)
         setLocalFailure(undefined)
         void cache.invalidateQueries({ queryKey: clipProjectsKey(transport, ownerId) })
@@ -212,7 +219,7 @@ export function useGenerateClip(ownerId: string, project: ClipProject, ownedJobI
       const response = await mutation.mutateAsync(input)
       if (!active.current) return
       ownership.owned(input.batchId, response.jobId)
-      setStarted({ id: response.jobId, previous: project.latestJob?.id })
+      setStarted({ id: response.jobId, previous: project.latestJob?.id, batchId: input.batchId })
       void cache.invalidateQueries({ queryKey: clipProjectsKey(transport, ownerId) })
     } catch (error) {
       if (!active.current) return
@@ -245,6 +252,7 @@ export function useGenerateClip(ownerId: string, project: ClipProject, ownedJobI
       starting.current ||
       busy ||
       !settingsReady ||
+      !!project.finalized ||
       !modelsReady ||
       !batch ||
       consumed.current.has(batch.id) ||
@@ -282,6 +290,7 @@ export function useGenerateClip(ownerId: string, project: ClipProject, ownedJobI
       starting.current ||
       busy ||
       !batch ||
+      !!project.finalized ||
       revision !== project.editPlanRevision ||
       !project.editing ||
       consumed.current.has(batch.id)

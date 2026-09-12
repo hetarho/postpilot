@@ -98,22 +98,26 @@ export function ClipStatusLine({
 }) {
   const { t } = useTranslation('clips')
   const running = job && !isTerminal(job)
-  const message = save.failing
-    ? save.label
-    : running
-      ? progressLabel(job)
-      : !SILENT_PHASES.has(upload.phase)
-        ? t(`source.phase.${upload.phase}`)
-        : correction === 'dirty'
-          ? t('correction.dirty')
-          : correction === 'unrendered'
-            ? t('correction.needsRender')
-            : save.label ||
-              (job?.status === 'failed'
-                ? t('generation.failedAt', { stage: progressLabel(job) })
-                : project
-                  ? clipStateLabel(clipState(project))
-                  : '')
+  const message = project?.finalized
+    ? clipStateLabel('finished')
+    : save.failing
+      ? save.label
+      : running
+        ? progressLabel(job)
+        : !SILENT_PHASES.has(upload.phase)
+          ? t(`source.phase.${upload.phase}`)
+          : correction === 'dirty'
+            ? t('correction.dirty')
+            : correction === 'unrendered'
+              ? t('correction.needsRender')
+              : save.label ||
+                (job?.status === 'cancelled'
+                  ? t('cancellation.cancelled')
+                  : job?.status === 'failed'
+                    ? t('generation.failedAt', { stage: progressLabel(job) })
+                    : project
+                      ? clipStateLabel(clipState(project))
+                      : '')
   return (
     <Typography
       variant="meta"

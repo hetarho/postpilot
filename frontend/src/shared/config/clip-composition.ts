@@ -45,6 +45,7 @@ export const CLIP_TIMELINE = {
   compactViewportHeight: 520,
   compactPreviewFraction: 0.2,
   fieldGapPx: 8,
+  minimumEditingRoomPx: 96,
   pixelsPerSecond: 80,
   minWidth: 320,
 } as const

@@ -48,7 +48,7 @@ export function ClipApprovalAction({
   ) : (
     <Button variant="secondary" className="w-full sm:w-auto" disabled pending={pending}>
       {t(
-        project.result || project.latestJob?.status === 'failed'
+        project.result || ['failed', 'cancelled'].includes(project.latestJob?.status ?? '')
           ? 'generation.retry'
           : 'generation.generate',
       )}
@@ -87,6 +87,9 @@ function QuotedAction({
             ? t('credits.expired')
             : t('credits.maximumHelp')}
       </Typography>
+      <Typography variant="body">
+        {t(quote?.cancellationPolicy ? 'cancellation.rule' : 'cancellation.policyUnavailable')}
+      </Typography>
       {myPlan?.balance.unlimited && <Typography variant="body">{t('credits.exempt')}</Typography>}
       {query.error && <ClipGenerationFailure failure={appFailureFromConnect(query.error)} />}
       {insufficient && myPlan && quote && (
@@ -109,10 +112,10 @@ function QuotedAction({
       <Button
         variant="cta"
         className="w-full whitespace-normal"
-        disabled={!quote || !myPlan || insufficient}
+        disabled={!quote?.cancellationPolicy || !myPlan || insufficient}
         pending={query.isFetching}
         onClick={() => {
-          if (quote && !insufficient) onApprove(quote)
+          if (quote?.cancellationPolicy && !insufficient) onApprove(quote)
         }}
       >
         {quote ? t('credits.approve', { amount: quote.maxCredits }) : t('generation.generate')}

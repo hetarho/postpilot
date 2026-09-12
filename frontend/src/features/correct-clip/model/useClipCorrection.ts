@@ -26,7 +26,7 @@ export function useClipCorrection(ownerId: string, project: ClipProject) {
   const [baseline, setBaseline] = useState(() => clipDraftKey(initial))
   const [revision, setRevision] = useState(project.editPlanRevision)
   const [remoteConflict, setRemoteConflict] = useState(false)
-  const saving = useRef<Promise<void> | undefined>(undefined)
+  const saving = useRef<Promise<number> | undefined>(undefined)
   const mounted = useRef(true)
   useEffect(() => {
     mounted.current = true
@@ -37,10 +37,24 @@ export function useClipCorrection(ownerId: string, project: ClipProject) {
   const draft = timeline.plan
   const dirty = clipDraftKey(draft) !== baseline
   const validation = project.editing ? validateTimelinePlan(draft, project.editing) : undefined
-  const current = useRef({ draft, revision, dirty, valid: validation?.saveable, baseline })
+  const current = useRef({
+    draft,
+    revision,
+    dirty,
+    valid: validation?.saveable,
+    baseline,
+    remoteConflict,
+  })
   useLayoutEffect(() => {
-    current.current = { draft, revision, dirty, valid: validation?.saveable, baseline }
-  }, [draft, revision, dirty, validation?.saveable, baseline])
+    current.current = {
+      draft,
+      revision,
+      dirty,
+      valid: validation?.saveable,
+      baseline,
+      remoteConflict,
+    }
+  }, [draft, revision, dirty, validation?.saveable, baseline, remoteConflict])
   const mutation = useMutation({
     mutationFn: async ({
       plan,
@@ -76,15 +90,18 @@ export function useClipCorrection(ownerId: string, project: ClipProject) {
     else if (!remoteConflict) setRemoteConflict(true)
   }
   const change = (edit: TimelineEdit, group?: string) => {
-    if (!project.editing) return
+    if (!project.editing || project.finalized) return
     if (mutation.error && appFailureFromConnect(mutation.error).reason !== 'CLIP_PLAN_CONFLICT')
       mutation.reset()
     dispatch({ type: 'edit', edit, group, at: Date.now() })
   }
-  function save() {
+  function saveOne(): Promise<number> {
     if (saving.current) return saving.current
     const submitted = current.current
-    if (!submitted.dirty || !submitted.valid || remoteConflict) return Promise.resolve()
+    if (submitted.remoteConflict) return Promise.reject(new Error('Conflicting clip draft'))
+    if (!submitted.dirty) return Promise.resolve(submitted.revision)
+    if (!submitted.valid || project.finalized)
+      return Promise.reject(new Error('Invalid clip draft'))
     const snapshot = copyClipPlan(submitted.draft)
     const key = clipDraftKey(snapshot)
     const operation = (async () => {
@@ -93,17 +110,29 @@ export function useClipCorrection(ownerId: string, project: ClipProject) {
           plan: snapshot,
           expectedRevision: submitted.revision,
         })
-        if (!mounted.current || !result.editing) return
+        if (!mounted.current || !result.editing) throw new Error('Correction was unmounted')
         // Typing remains enabled during IO. Accept only the submitted snapshot;
         // newer local edits remain queued against the new optimistic revision.
         if (clipDraftKey(current.current.draft) === key) {
           dispatch({ type: 'adopt', plan: result.editing.plan })
         }
-        setBaseline(clipDraftKey(result.editing.plan))
+        const acceptedKey = clipDraftKey(result.editing.plan)
+        current.current = {
+          ...current.current,
+          draft:
+            clipDraftKey(current.current.draft) === key
+              ? result.editing.plan
+              : current.current.draft,
+          baseline: acceptedKey,
+          revision: result.editPlanRevision,
+          dirty:
+            clipDraftKey(current.current.draft) !== key &&
+            clipDraftKey(current.current.draft) !== acceptedKey,
+        }
+        setBaseline(acceptedKey)
         setRevision(result.editPlanRevision)
         publish(result)
-      } catch {
-        /* Preserve every local edit and wait for an explicit retry. */
+        return result.editPlanRevision
       } finally {
         saving.current = undefined
       }
@@ -111,11 +140,22 @@ export function useClipCorrection(ownerId: string, project: ClipProject) {
     saving.current = operation
     return operation
   }
+  // UI autosave keeps the draft on failure; a committing action must receive the failure.
+  const save = () => saveOne().catch(() => undefined)
+  async function flush(): Promise<number> {
+    if (saving.current) await saving.current
+    while (current.current.dirty) await saveOne()
+    if (current.current.remoteConflict) throw new Error('Conflicting clip draft')
+    return current.current.revision
+  }
   const saveRef = useRef(save)
   useLayoutEffect(() => {
     saveRef.current = save
   })
-  const active = project.latestJob?.status === 'queued' || project.latestJob?.status === 'running'
+  const active =
+    !!project.finalized ||
+    project.latestJob?.status === 'queued' ||
+    project.latestJob?.status === 'running'
   useEffect(() => {
     if (
       !dirty ||
@@ -165,6 +205,7 @@ export function useClipCorrection(ownerId: string, project: ClipProject) {
     validation,
     change,
     save,
+    flush,
     reset: () => {
       adopt(project, true)
       mutation.reset()

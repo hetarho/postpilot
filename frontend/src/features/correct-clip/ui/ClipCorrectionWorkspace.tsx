@@ -52,6 +52,7 @@ export function ClipCorrectionWorkspace({
   localSources,
   comparison,
   downloadAction,
+  finalizeAction,
   inputs,
   observations,
 }: {
@@ -66,6 +67,7 @@ export function ClipCorrectionWorkspace({
   preview: (props: ClipEditorPreviewProps) => ReactNode
   comparison?: ReactNode
   downloadAction?: ReactNode
+  finalizeAction?: ReactNode
   localSources: ReadonlyArray<{ fingerprint: string; url: string }>
   inputs?: ClipCompositionInputs
   observations?: ClipObservations
@@ -75,6 +77,13 @@ export function ClipCorrectionWorkspace({
   const container = useRef<HTMLElement>(null)
   const previewRoot = useRef<HTMLDivElement>(null)
   const actions = useRef<HTMLDivElement>(null)
+  const [pinPreview, setPinPreview] = useState(true)
+  const measureEditingRoom = useCallback(() => {
+    const available = window.visualViewport?.height ?? innerHeight
+    const previewHeight = previewRoot.current?.getBoundingClientRect().height ?? 0
+    const dockHeight = actions.current?.firstElementChild?.getBoundingClientRect().height ?? 0
+    setPinPreview(available - previewHeight - dockHeight >= CLIP_TIMELINE.minimumEditingRoomPx)
+  }, [])
   const revealFocusedField = useCallback(() => {
     const field = document.activeElement
     if (
@@ -83,7 +92,11 @@ export function ClipCorrectionWorkspace({
     )
       return
     const gap = CLIP_TIMELINE.fieldGapPx
-    const top = (previewRoot.current?.getBoundingClientRect().bottom ?? 0) + gap
+    const top =
+      Math.max(
+        window.visualViewport?.offsetTop ?? 0,
+        previewRoot.current?.getBoundingClientRect().bottom ?? 0,
+      ) + gap
     const bottom =
       Math.min(
         (window.visualViewport?.offsetTop ?? 0) + (window.visualViewport?.height ?? innerHeight),
@@ -95,13 +108,19 @@ export function ClipCorrectionWorkspace({
     window.scrollBy({ top: rect.top - target, behavior: 'instant' })
   }, [])
   useEffect(() => {
-    const frame = requestAnimationFrame(revealFocusedField)
+    const frame = requestAnimationFrame(() => {
+      measureEditingRoom()
+      revealFocusedField()
+    })
     return () => cancelAnimationFrame(frame)
-  }, [viewport.height, viewport.offsetTop, revealFocusedField])
+  }, [viewport.height, viewport.offsetTop, pinPreview, revealFocusedField, measureEditingRoom])
   useEffect(() => {
     if (typeof ResizeObserver === 'undefined') return
     let frame = 0
     const observer = new ResizeObserver(() => {
+      // An expired-source explanation or the confirmation notice can occupy more space than
+      // the preview itself. Let that preview scroll when pinning it would hide every field.
+      measureEditingRoom()
       cancelAnimationFrame(frame)
       frame = requestAnimationFrame(revealFocusedField)
     })
@@ -111,7 +130,7 @@ export function ClipCorrectionWorkspace({
       observer.disconnect()
       cancelAnimationFrame(frame)
     }
-  }, [revealFocusedField])
+  }, [revealFocusedField, measureEditingRoom])
   const [frame, setFrame] = useState<ClipDisplayedFrame>()
   const [confirm, setConfirm] = useState(false)
   const { timeline, draft, dispatch, change } = correction
@@ -148,6 +167,7 @@ export function ClipCorrectionWorkspace({
       aria-label={t('correction.title')}
       onBlur={() => dispatch({ type: 'endTransaction' })}
       onKeyDown={(event) => {
+        if (disabled) return
         if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z') {
           event.preventDefault()
           dispatch({ type: event.shiftKey ? 'redo' : 'undo' })
@@ -157,7 +177,7 @@ export function ClipCorrectionWorkspace({
       <Typography variant="title">{t('correction.title')}</Typography>
       <div
         ref={previewRoot}
-        className="bg-surface-lowest sticky z-10 space-y-2 py-2"
+        className={`bg-surface-lowest z-10 space-y-2 py-2 ${pinPreview ? 'sticky' : ''}`}
         style={{ top: viewport.offsetTop }}
       >
         {preview({
@@ -513,6 +533,7 @@ export function ClipCorrectionWorkspace({
               {t('timeline.render')}
             </Button>
           </div>
+          {finalizeAction}
         </ActionBar>
       </div>
       <Dialog

@@ -16,6 +16,7 @@ const template: FakeClipTemplate = {
   preset: 'restaurant',
 }
 const result = {
+  id: 'result',
   contentType: 'video/mp4',
   bytes: 5,
   durationMs: 15000,
@@ -57,6 +58,7 @@ const projects: FakeClipProject[] = [
     ...base,
     id: 'finished',
     title: 'JEJU 다시',
+    finalized: { at: '2026-09-13T00:00:00Z', planRevision: 1, resultId: 'result' },
     editPlanRevision: 1,
     renderedPlanRevision: 1,
     result,
@@ -133,9 +135,9 @@ describe('clip directory', () => {
     expect(screen.queryByRole('link', { name: /제주 여행/ })).not.toBeInTheDocument()
     expect(await row(/부산 바다/)).toBeInTheDocument()
 
-    await user.click(screen.getByRole('tab', { name: '완성' }))
-    await waitFor(() => expect(router.state.location.search).toMatchObject({ status: 'finished' }))
-    // 강릉 바다 is finished AND failed: the filter reads the project's own state, not the badge.
+    await user.click(screen.getByRole('tab', { name: '다듬는 중' }))
+    await waitFor(() => expect(router.state.location.search).toMatchObject({ status: 'refining' }))
+    // 강릉 바다 is refining AND failed: the filter reads the project's own state, not the badge.
     expect(await row(/강릉 바다/)).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /부산 바다/ })).not.toBeInTheDocument()
   })

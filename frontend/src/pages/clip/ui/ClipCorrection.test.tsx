@@ -103,7 +103,7 @@ async function select(ids = ['a', 'b']) {
 it('opens a matching result in refine with one action bar and an available download', async () => {
   await mount()
   expect(screen.getByRole('tab', { name: '클립 다듬기' })).toHaveAttribute('aria-selected', 'true')
-  expect(screen.getByRole('link', { name: '다운로드' })).toHaveAttribute(
+  expect(screen.getByRole('link', { name: '렌더 1 다운로드' })).toHaveAttribute(
     'href',
     'https://private.test/download',
   )
@@ -125,7 +125,7 @@ it('saves exact milliseconds and selected text with a new optimistic revision', 
   expect(writes[0].plan.cuts[0]).toMatchObject({ startMs: 123, endMs: 12345 })
   expect(writes[0].plan.elements![0].text).toBe('오늘 장면')
   expect(writes[0].revision).toBe(1)
-  expect(screen.getByRole('link', { name: '다운로드' })).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: '렌더 1 다운로드' })).toBeInTheDocument()
 })
 
 it('keeps a selected text field mounted while its cut is reordered', async () => {
@@ -219,7 +219,7 @@ it('keeps the local draft on conflict and reloads only after an explicit discard
   await savePlan()
   await screen.findByRole('button', { name: '내 편집을 최신 버전에 적용' })
   expect(screen.getByLabelText('자막 원문')).toHaveValue('내 수정')
-  expect(screen.getByRole('link', { name: '다운로드' })).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: '렌더 1 다운로드' })).toBeInTheDocument()
 })
 
 it('requires matching sources for rerender while text edits and previous video remain usable', async () => {

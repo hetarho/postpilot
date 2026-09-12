@@ -17,7 +17,7 @@ export function useClipDraftSave(projectId: string): {
   state: SaveState
   failing: boolean
   label: string
-  flush: () => Promise<void>
+  flush: (failFast?: boolean) => Promise<void>
 } {
   const { t } = useTranslation('common')
   const subscribe = useCallback(
@@ -52,6 +52,6 @@ export function useClipDraftSave(projectId: string): {
     label: key ? t(key) : '',
     // Keyed by the id it was called with: the workspace is mounted per project, so this identity
     // only changes when the whole page does.
-    flush: useCallback(() => flushClipDraft(projectId), [projectId]),
+    flush: useCallback((failFast = false) => flushClipDraft(projectId, failFast), [projectId]),
   }
 }

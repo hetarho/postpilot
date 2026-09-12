@@ -9,6 +9,7 @@ export {
   validClipProject,
 } from './model/types'
 export { clipState, clipStateLabel } from './model/state'
+export { useClipLifecycleApi } from './api/lifecycle'
 export type { ClipState } from './model/state'
 export type {
   ClipRatio,

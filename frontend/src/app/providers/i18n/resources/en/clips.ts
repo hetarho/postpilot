@@ -1,4 +1,47 @@
 export const clips = {
+  finalization: {
+    confirm: 'Confirm clip',
+    notice:
+      'Confirmation deletes the originals and ends editing. You can still play and download the confirmed video.',
+    waiting:
+      'Confirm the clip in the editing step to finish. Downloading alone does not confirm it.',
+    goRefine: 'Go to clip editing',
+    uncertain:
+      'Checking confirmation. Editing and retries stay paused until the server state is known.',
+    downloadRevision: 'Download render {{revision}}',
+    refusal: {
+      finalized: 'This clip is already confirmed.',
+      busy: 'Wait for the current job before confirming.',
+      missing_render: 'Render a video before confirming.',
+      stale_render: 'Render the saved edits again before confirming.',
+      invalid_plan: 'Fix the editing errors and render again.',
+      unavailable: 'Confirmation availability is unknown. Refresh this page.',
+    },
+  },
+  cancellation: {
+    cancel: 'Cancel',
+    cancelling: 'Cancelling',
+    cancelled: 'Cancelled',
+    progressTitle: 'Clip job progress',
+    rule: 'Cancellation charges confirmed AI use plus 50% of this job’s unused reserved credits, rounded up to a whole credit. It does not use your account balance.',
+    beforeReservation:
+      'No credits are reserved yet, so cancellation is free now. After reservation, cancellation charges confirmed AI use plus 50% of the job’s unused reservation, rounded up.',
+    free: 'Cancelling a rerender costs no credits.',
+    exempt:
+      'No credits are debited from this account. Reference accounting records confirmed AI use plus 50% of the job’s unused reservation, rounded up.',
+    legacy: 'This attempt started under the previous pricing policy and cannot be cancelled.',
+    policyUnavailable: 'The cancellation policy must be available before starting.',
+    reservation:
+      'This job reserved {{amount}} credits. The final debit and refund are known after processing stops.',
+    uncertain: 'The cancellation outcome is unknown. Check the server state before retrying.',
+    stopped:
+      'The job was cancelled. Your previous video is preserved; you can start a retry yourself.',
+    confirmed: 'Confirmed AI use',
+    cancellationFee: 'Cancellation addition',
+    shadowConfirmed: 'Reference AI use (no debit)',
+    shadowCancellationFee: 'Reference cancellation addition (no debit)',
+    shadowTotal: 'Reference total (no debit)',
+  },
   timeline: {
     render: 'Rerender',
     save: 'Save',

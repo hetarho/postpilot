@@ -37,8 +37,15 @@ function rowStatus(
   t: TFunction<'clips'>,
 ): { label: string; tone: BadgeTone } {
   if (project.latestJob && !isTerminal(project.latestJob))
-    return { label: t('state.generating'), tone: 'info' }
+    return {
+      label: t(
+        project.latestJob.cancelRequestedAt ? 'cancellation.cancelling' : 'state.generating',
+      ),
+      tone: 'info',
+    }
   if (project.latestJob?.status === 'failed') return { label: t('state.failed'), tone: 'danger' }
+  if (project.latestJob?.status === 'cancelled')
+    return { label: t('cancellation.cancelled'), tone: 'neutral' }
   const state = clipState(project)
   return { label: clipStateLabel(state), tone: stateTone(state) }
 }
