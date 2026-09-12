@@ -88,13 +88,22 @@ export function toClipSourceBatch(value: ProtoClipSourceBatch): ClipSourceBatch 
 }
 export function useClipProjects(ownerId: string) {
   const transport = useTransport()
-  return useQuery({
+  return useQuery<ClipProject[]>({
     queryKey: [...clipProjectsKey(transport, ownerId), 'list'],
     enabled: !!ownerId,
     staleTime: 0,
     refetchOnMount: 'always',
-    queryFn: async () =>
-      (await createClient(ClipService, transport).listClipProjects({})).projects.map(toClipProject),
+    refetchInterval: (state) =>
+      state.state.data?.some(
+        (project) =>
+          project.latestJob?.status === 'queued' || project.latestJob?.status === 'running',
+      )
+        ? POLL_INTERVAL_MS
+        : false,
+    queryFn: async ({ signal }) =>
+      (await createClient(ClipService, transport).listClipProjects({}, { signal })).projects.map(
+        toClipProject,
+      ),
   })
 }
 export function useClipProject(ownerId: string, id: string | undefined) {

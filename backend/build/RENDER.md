@@ -148,14 +148,50 @@ overlap error would incorrectly hide those later failures.
 `TestRenderOriginalsOverlap` is the offline regression for the eight short MP4s
 reported with this failure. It uses all eight originals in a 30-second vertical
 plan with chips across fades and captions under cards, then renders it as both a
-generated and a manual plan. Set `CLIP_ORIGINALS_DIR` to a read-only source mount
+generated and a manual plan. `CLIP_ORIGINALS_DURATION_MS=20000` exercises the
+20-second target of the production failure. Set `CLIP_ORIGINALS_DIR` to a read-only source mount
 and `CLIP_ORIGINALS_OUTPUT` to a separate writable artifact mount when running
 `/media.test -test.run=^TestRenderOriginalsOverlap$ -test.v -test.timeout=15m`
-in the `media-smoke` image, using production's 15-minute operation timeout and
-a 2 GiB / 2 CPU container for these HEVC originals. The separate synthetic
+in the `media-smoke` image, using production's 15-minute operation timeout.
+T117's 2 GiB success did not qualify the shared 909 MiB production host; T118
+requires the originals to complete at 512 MiB / 2 CPU with swap disabled. The separate synthetic
 release gate still runs at 1 GiB / 2 CPU. It makes no model calls and writes `generated.mp4`
 and `manual.mp4` only to the artifact mount. Ordinary test and image-build runs
 skip it; no user footage is included in the repository or image.
+
+PNG layers are decoded exactly once, with decoder threads explicitly limited on
+every input. The fixed overlay repeats that frame; animated copies and cards use
+FFmpeg's `loop` filter with a one-frame cache and exactly `cutFrames - 1` repeats.
+This preserves every alpha-fade frame while avoiding repeated PNG decoding and
+unbounded image-demuxer inputs. An infinite image input can leave the scheduler
+waiting after an overlay has stopped consuming frames; limiting its decoder
+threads alone reproduces that stall. The sampler also bounds its input decoder
+and simple filter threads, separately from complex-filter threads.
+
+Lossless 4:4:4 composition nodes use x264's `ultrafast` preset at CRF 0. They
+trade temporary file size for less compression work; the same per-file and
+workspace limits still apply. Cut and final output encodes retain `veryfast`,
+CRF 20, H.264 High and yuv420p. The decoded pixels of an intermediate remain
+lossless regardless of its compression preset.
+
+The delivered audio is measured before the final format probe. If AAC or the
+normaliser's dynamic fallback moved a short track outside ±1 LU, up to two
+audio-only corrections apply the measured gain difference, bounded by measured
+true-peak headroom. Each correction reuses the original assembled PCM and
+normalisation filter, encodes a fresh AAC track and copies the finished H.264
+video without encoding it again. The corrected file must pass the original
+loudness and format gates. The 20-second originals fixture exercises this path
+with its initial -14.97 LUFS measurement; the accepted tolerance remains ±1 LU.
+
+Worker logs record stage changes, stage elapsed milliseconds and total elapsed
+milliseconds. A media failure additionally carries code-owned operation and class
+labels (for example `render_cut` / `timeout` or `process_signal`) and its elapsed
+time; paths, captions, raw stderr and provider bodies remain excluded. These
+diagnostics preserve wrapped error identities and do not change settlement or
+the existing failed-attempt contract.
+
+Official option references: [FFmpeg input option scope and thread controls](https://ffmpeg.org/ffmpeg.html)
+and [the single-frame loop filter](https://ffmpeg.org/ffmpeg-filters.html#loop).
 
 The keyword is a caption field, never a marker inside the text, and its highlight
 starts at the measured advance of the prefix before it — `--query-all` on the real
@@ -271,15 +307,17 @@ would run early by more than a frame.
 Loudness is CDS-35's two passes. The first measures the assembled track
 (`loudnorm=I=-16:TP=-1.5:LRA=11:print_format=json`, read from FFmpeg's stderr,
 which is the only place a filter prints its report); the second applies the
-measured values with `linear=true` inside the single final encode, so the clip is
-still produced by one encode. A single dynamic pass drifts on a file this short.
+measured values with `linear=true` inside the final encode. A single dynamic
+pass drifts on a file this short.
 A track of digital silence measures −inf LUFS and is delivered as it is: no gain
 makes silence −16.
 
 V12 is read off the delivered file: the canvas, 30 fps, H.264 High (named on the
 final encode rather than left to libx264's default), 48 kHz AAC, and a third
 `loudnorm` measurement pass whose integrated loudness must sit within 1 LU of
-−16. A miss fails the render exactly as a codec or format mismatch does.
+−16. A miss first gets at most two audio-only corrections from the assembled PCM,
+with the already encoded video stream-copied. The same measurement and format
+checks run on the corrected file; an unrecoverable miss still fails the render.
 
 Source loading is callback-scoped and sequential; render intermediates are bounded
 by the approved 15–90 second timeline. The output remains inside the media workspace

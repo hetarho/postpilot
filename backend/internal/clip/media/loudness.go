@@ -6,8 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/design"
@@ -101,19 +104,48 @@ func (r *Rendering) measureLoudness(ctx context.Context, ws clip.MediaWorkspace,
 	return parseLoudness(log)
 }
 
-// V12's loudness half: the delivered file is measured again and has to sit
-// within 1 LU of the target. A miss fails the render exactly as a codec or a
-// format mismatch does — an off-target clip is not shippable.
-func (r *Rendering) verifyLoudness(ctx context.Context, ws clip.MediaWorkspace, path string) error {
-	measured, err := r.measureLoudness(ctx, ws, path)
-	if err != nil {
-		return err
-	}
-	if measured.Silent {
-		return nil
-	}
-	if math.Abs(measured.I-design.Audio.Loudnorm.I) > loudnessToleranceLU {
-		return fmt.Errorf("rendered clip loudness %.2f LUFS is not within %.0f LU of %.1f", measured.I, loudnessToleranceLU, design.Audio.Loudnorm.I)
+// AAC encoding and loudnorm's dynamic fallback can move a short track outside
+// the measured target. Correct only audio, always from the assembled PCM and
+// the original normalisation filter, while stream-copying the encoded video.
+// No video re-encode or accumulated lossy audio re-encode is needed.
+func (r *Rendering) finishLoudness(ctx context.Context, ws clip.MediaWorkspace, path, assembled string, original loudness, frames int) (err error) {
+	started := time.Now()
+	defer func() {
+		var command *commandFailure
+		if err != nil && !errors.As(err, &command) {
+			err = &commandFailure{error: err, operation: "loudness", class: "validation_failed", elapsed: time.Since(started)}
+		}
+	}()
+	correction := 0.0
+	for attempt := 0; attempt <= 2; attempt++ {
+		measured, err := r.measureLoudness(ctx, ws, path)
+		if err != nil {
+			return err
+		}
+		if measured.Silent || math.Abs(measured.I-design.Audio.Loudnorm.I) <= loudnessToleranceLU {
+			return nil
+		}
+		if attempt == 2 {
+			return fmt.Errorf("rendered clip loudness %.2f LUFS is not within %.0f LU of %.1f", measured.I, loudnessToleranceLU, design.Audio.Loudnorm.I)
+		}
+		// Do not raise a measured true peak above the design ceiling. A downward
+		// correction (the 20 s originals regression) always leaves more headroom.
+		gain := min(design.Audio.Loudnorm.I-measured.I, design.Audio.Loudnorm.TP-measured.TP)
+		if math.Abs(gain) < 0.01 {
+			return fmt.Errorf("clip loudness correction has no peak headroom")
+		}
+		correction += gain
+		temporary := filepath.Join(ws.Path, fmt.Sprintf("audio-correction-%d.mp4", attempt))
+		defer os.Remove(temporary)
+		args := r.inputArgs(r.inputArgs(r.baseArgs(), path), assembled)
+		filter := fmt.Sprintf("[1:a:0]%s,volume=%sdB,aresample=%d,aformat=sample_fmts=fltp:channel_layouts=stereo,atrim=end_sample=%d[a]", loudnormFilter(&original), number(correction), r.cfg.AudioRate, frames*r.cfg.AudioRate/r.cfg.FPS)
+		args = append(args, "-filter_complex", filter, "-map", "0:V:0", "-c:v", "copy", "-map", "[a]", "-c:a", "aac", "-b:a", strconv.Itoa(r.cfg.AudioBitrate), "-ar", strconv.Itoa(r.cfg.AudioRate), "-ac", "2", "-sn", "-dn", "-map_metadata", "-1", "-map_chapters", "-1", "-movflags", "+faststart", "-t", frameSeconds(frames, r.cfg.FPS), "-f", "mp4")
+		if err := r.runRender(ctx, ws, temporary, args); err != nil {
+			return err
+		}
+		if err := os.Rename(temporary, path); err != nil {
+			return err
+		}
 	}
 	return nil
 }

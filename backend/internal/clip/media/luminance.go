@@ -199,7 +199,7 @@ func (r *Rendering) sample(ctx context.Context, ws clip.MediaWorkspace, canvas c
 		if err := r.media.capacity(ws, int64(4*1024*1024)); err != nil {
 			return Luminance{}, err
 		}
-		args := append(r.baseArgs(), "-ss", seconds(cut.StartMS+at), "-i", source.Path, "-frames:v", "1",
+		args := append(r.baseArgs(), "-threads", strconv.Itoa(r.media.cfg.Threads), "-protocol_whitelist", "file,pipe", "-ss", seconds(cut.StartMS+at), "-i", source.Path, "-frames:v", "1",
 			"-vf", coverChain(canvas, cut.Focal), "-c:v", "png", "-threads", "1", path)
 		if _, err := r.media.run(ctx, ws, r.media.cfg.FFmpegPath, args...); err != nil {
 			return Luminance{}, err

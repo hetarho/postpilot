@@ -1,9 +1,10 @@
-import { expect, it, describe } from 'vitest'
-import { screen, waitFor, within } from '@testing-library/react'
+import { expect, it, describe, vi } from 'vitest'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderAppAt } from '@/test/app'
 import type { FakeClipProject, FakeClipsOptions, FakeClipTemplate } from '@/test/clips'
 import type { FakeGenerationJobRow } from '@/test/jobs'
+import { POLL_INTERVAL_MS } from '@/shared/config'
 
 const template: FakeClipTemplate = {
   id: 'template',
@@ -80,6 +81,32 @@ const row = async (name: RegExp) =>
   within(await screen.findByRole('list', { name: '저장된 클립' })).findByRole('link', { name })
 
 describe('clip directory', () => {
+  it('refreshes a running badge to failure without leaving the list and then stops polling', async () => {
+    let finished = false
+    const calls: string[] = []
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+    const view = mount('/clips', {
+      projects: [{ ...base, id: 'running', title: '부산 바다', latestJob: running }],
+      calls,
+      readProject: (p) =>
+        finished ? { ...p, latestJob: { ...running, status: 'failed', stage: 'render' } } : p,
+    })
+    try {
+      expect(await row(/부산 바다/)).toHaveTextContent('생성 중')
+      finished = true
+      await act(() => vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS + 100))
+      await waitFor(() =>
+        expect(screen.getByRole('link', { name: /부산 바다/ })).toHaveTextContent('실패'),
+      )
+      const reads = calls.filter((call) => call === 'ListClipProjects').length
+      await act(() => vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS * 3))
+      expect(calls.filter((call) => call === 'ListClipProjects')).toHaveLength(reads)
+    } finally {
+      view.unmount()
+      vi.useRealTimers()
+    }
+  })
+
   it('badges every row from the project and its latest job', async () => {
     mount()
     // A job in flight and a failed attempt outrank the project's own state (CLIP-41).

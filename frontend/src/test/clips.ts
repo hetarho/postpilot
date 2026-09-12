@@ -213,7 +213,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     options.calls?.push('ListClipProjects')
     if (options.projectListFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
     return create(ListClipProjectsResponseSchema, {
-      projects: [...projects.values()].map(projectProto),
+      projects: [...projects.values()].map((p) => projectProto(options.readProject?.(p) ?? p)),
     })
   })
   router.rpc(ClipService.method.getClipProject, (req) => {

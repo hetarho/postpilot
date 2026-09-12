@@ -24,7 +24,9 @@ from Alpine's `3.24-stable/main/musl/APKBUILD`; zlib's 1.3.2 license is included
 The enabled filter set is an allowlist, not a default build: `fade` is in it
 because the clip design system's only permitted entrance and exit are a 180 ms
 and a 120 ms alpha fade, and the renderer animates the caption plate's alpha
-with it. No nonfree codec option is enabled. Input protocols are file and pipe only; network,
+with it. `loop` reuses one decoded caption/card frame for a finite cut-length
+sequence, avoiding infinite PNG demuxer inputs and repeated image decoding.
+No nonfree codec option is enabled. Input protocols are file and pipe only; network,
 external-device capture and unneeded containers are disabled. Common H.264/HEVC,
 VP8/VP9, MPEG-4, MJPEG and ProRes inputs are supported in the accepted containers;
 unsupported codecs are rejected before observation.
@@ -77,7 +79,8 @@ workspace ownership validation also applies to these checks. Nested caption-only
 workspaces share the subprocess semaphore without locking the outer workspace.
 
 Full-resolution composition uses a balanced tree with at most two video decoders
-per subprocess. Intermediate video nodes are lossless H.264 4:4:4; final rendering
+per subprocess. Intermediate video nodes are lossless H.264 4:4:4 with x264's
+`ultrafast` preset (less CPU compression work, more bounded temporary disk); final rendering
 keeps 30 FPS, CRF 20 and yuv420p. Original cut audio bypasses the intermediate nodes
 and receives the existing one final AAC composition pass. The same bounded path
 serves paid generation and credit-free rerender.

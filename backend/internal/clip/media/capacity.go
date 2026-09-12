@@ -79,7 +79,9 @@ func (a *Adapter) runLog(ctx context.Context, ws clip.MediaWorkspace, binary str
 func (a *Adapter) runBounded(ctx context.Context, ws clip.MediaWorkspace, binary, output string, limit int64, limitError error, args ...string) ([]byte, error) {
 	return a.runCommand(ctx, ws, Command{Binary: binary, Dir: ws.Path, Args: args}, output, limit, limitError)
 }
-func (a *Adapter) runCommand(ctx context.Context, ws clip.MediaWorkspace, command Command, output string, limit int64, limitError error) ([]byte, error) {
+func (a *Adapter) runCommand(ctx context.Context, ws clip.MediaWorkspace, command Command, output string, limit int64, limitError error) (data []byte, err error) {
+	started := time.Now()
+	defer func() { err = commandDiagnostic(err, command, time.Since(started)) }()
 	ctx, cancel := context.WithTimeout(ctx, a.cfg.OperationTimeout)
 	defer cancel()
 	select {
@@ -133,7 +135,7 @@ func (a *Adapter) runCommand(ctx context.Context, ws clip.MediaWorkspace, comman
 	// Always stop the monitor, including a custom runner panic. The outer
 	// workspace defer then owns cleanup after the child has stopped.
 	defer close(done)
-	data, err := a.runner.Run(ctx, command)
+	data, err = a.runner.Run(ctx, command)
 	cancel()
 	monitorErr := <-monitored
 	return data, errors.Join(monitorErr, check(), err)

@@ -351,7 +351,7 @@ func TestRenderFilterGoldens(t *testing.T) {
 	// The fixed layer is its own overlay with no fade and no y expression: the
 	// disclosure badge may not move (CDS-31) while the copy must (CDS-4).
 	both := cutGraph(r.cfg, canvas, c, clip.MediaInfo{}, 228, layers{Fixed: "fixed.png", Copies: []string{"copy.png"}}, false)
-	if !strings.Contains(both, "[base][1:v:0]overlay=0:0:format=auto:shortest=0[fixed];") || !strings.Contains(both, "[2:v:0]format=rgba,fade=") || !strings.Contains(both, "[fixed][plate0]overlay=x=0:y=") {
+	if !strings.Contains(both, "[base][1:v:0]overlay=0:0:format=auto:shortest=0[fixed];") || !strings.Contains(both, "[2:v:0]format=rgba,loop=loop=227:size=1:start=0,fade=") || !strings.Contains(both, "[fixed][plate0]overlay=x=0:y=") {
 		t.Fatalf("fixed and animated layers are not separate: %s", both)
 	}
 	fixedOnly := cutGraph(r.cfg, canvas, clip.EditCut{StartMS: 100, EndMS: 7700}, clip.MediaInfo{}, 228, layers{Fixed: "fixed.png"}, false)
@@ -375,7 +375,7 @@ func TestRenderFilterGoldens(t *testing.T) {
 	hook := cutGraph(r.cfg, canvas, c, clip.MediaInfo{HasAudio: true}, 228, layers{Copies: []string{"copy.png"}, Card: "card.png", Window: cardLayout{Kind: "hook", StartMS: 0, EndMS: 1500}}, true)
 	golden(t, "cut-hook-card.filter", hook+"\n")
 	for _, want := range []string{
-		"[2:v:0]format=rgba,fade=t=out:st=1.300:d=0.200:alpha=1[card];",
+		"[2:v:0]format=rgba,loop=loop=227:size=1:start=0,fade=t=out:st=1.300:d=0.200:alpha=1[card];",
 		"[copy0][card]overlay=0:0:format=auto:shortest=0:enable='gte(t,0.000)*lt(t,1.500)'[carded];[carded]trim=",
 		"volume=volume=-6.000000dB:eval=frame:enable='lt(t,1.500)'",
 	} {

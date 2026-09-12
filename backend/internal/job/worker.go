@@ -47,13 +47,26 @@ func (q *Queue) drain(ctx context.Context) {
 }
 
 func (q *Queue) run(ctx context.Context, found Job) {
+	started := time.Now()
+	stage, stageStarted := "queued", started
+	clipJob := found.Kind == KindGenerateClip || found.Kind == KindRenderClip
+	if clipJob {
+		slog.Info("clip job started", "job", found.ID, "kind", found.Kind)
+		defer func() {
+			slog.Info("clip job stopped", "job", found.ID, "kind", found.Kind, "stage", safeClipStage(stage), "stage_elapsed_ms", time.Since(stageStarted).Milliseconds(), "elapsed_ms", time.Since(started).Milliseconds())
+		}()
+	}
 	handler := q.handler(found.Kind)
 	var runErr error
 	if handler == nil {
 		runErr = errHandlerMissing
 	} else {
-		runErr = callHandler(ctx, handler, found, func(stage string, done, total int) {
-			if err := q.store.UpdateProgress(ctx, found.ID, stage, done, total, q.now()); err != nil && ctx.Err() == nil {
+		runErr = callHandler(ctx, handler, found, func(next string, done, total int) {
+			if clipJob && next != stage {
+				slog.Info("clip stage changed", "job", found.ID, "stage", safeClipStage(next), "previous_stage", safeClipStage(stage), "previous_elapsed_ms", time.Since(stageStarted).Milliseconds(), "elapsed_ms", time.Since(started).Milliseconds())
+				stage, stageStarted = next, time.Now()
+			}
+			if err := q.store.UpdateProgress(ctx, found.ID, next, done, total, q.now()); err != nil && ctx.Err() == nil {
 				slog.Error("update job progress failed", "job", found.ID, "err", err)
 			}
 		})
@@ -96,6 +109,14 @@ func (q *Queue) run(ctx context.Context, found Job) {
 	}
 }
 
+func safeClipStage(stage string) string {
+	switch stage {
+	case "queued", "prepare", "analyze", "plan", "render", "save", "cleanup":
+		return stage
+	}
+	return "unknown"
+}
+
 func callHandler(ctx context.Context, handler Handler, found Job, progress Progress) (err error) {
 	defer func() {
 		if recovered := recover(); recovered != nil {
@@ -117,6 +138,24 @@ func logJobFailure(found Job, failure Failure, err error) {
 	if found.Kind != KindGenerateClip && found.Kind != KindRenderClip {
 		attrs = append(attrs, "err", err)
 	} else {
+		var media interface {
+			MediaOperation() string
+			MediaFailureClass() string
+			MediaElapsedMS() int64
+		}
+		if errors.As(err, &media) {
+			switch operation := media.MediaOperation(); operation {
+			case "typeset", "probe", "loudness", "encode_final", "compose_audio", "correct_audio", "render_cut", "compose_video", "sample", "prepare", "decode":
+				attrs = append(attrs, "media_operation", operation)
+			}
+			switch class := media.MediaFailureClass(); class {
+			case "workspace_limit", "output_limit", "timeout", "canceled", "process_exit", "process_signal", "command_failed", "validation_failed":
+				attrs = append(attrs, "media_error_class", class)
+			}
+			if ms := media.MediaElapsedMS(); ms >= 0 && ms <= (24*time.Hour).Milliseconds() {
+				attrs = append(attrs, "media_elapsed_ms", ms)
+			}
+		}
 		var staged interface{ FailureStage() string }
 		if errors.As(err, &staged) {
 			switch stage := staged.FailureStage(); stage {

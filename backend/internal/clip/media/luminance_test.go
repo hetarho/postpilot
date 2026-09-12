@@ -8,6 +8,7 @@ import (
 	"image/png"
 	"math"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 
@@ -184,6 +185,11 @@ func TestSamplerTakesThreeFramesThroughTheRenderChain(t *testing.T) {
 	frames := []image.Image{fill(0xff), fill(0x80), fill(0x00)}
 	var seeks, filters []string
 	a := newAdapter(t, &fakeRunner{run: func(_ context.Context, c Command) ([]byte, error) {
+		input := slices.Index(c.Args, "-i")
+		before := " " + strings.Join(c.Args[:input], " ") + " "
+		if !strings.Contains(before, " -threads 1 ") || !strings.Contains(before, " -filter_threads 1 ") {
+			t.Fatal("sampler uses unbounded decoder/filter threads", c.Args)
+		}
 		for i, arg := range c.Args {
 			switch arg {
 			case "-ss":

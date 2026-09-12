@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"testing"
 	"time"
 
@@ -37,7 +38,7 @@ func TestRenderOriginalsOverlap(t *testing.T) {
 	// Match CLIP_MEDIA_TIMEOUT's production default. The one-minute unit-test
 	// helper is too short for the final 30 s encode of full-resolution footage.
 	cfg.OperationTimeout = 15 * time.Minute
-	a, err := New(cfg, nil)
+	a, err := New(cfg, originalsRunner{t: t, runner: ExecRunner{StdoutLimit: cfg.StdoutLimit, StderrLimit: cfg.StderrLimit, WaitDelay: cfg.WaitDelay}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,6 +50,14 @@ func TestRenderOriginalsOverlap(t *testing.T) {
 		plan := clip.EditPlan{Ratio: "vertical", DurationMS: 30000, Disclosure: "ad", Preset: "restaurant", Hook: "오늘의 한 끼", Accent: "coral",
 			Facts: []clip.Answer{{Label: "상호", Text: "클립 테스트"}, {Label: "위치", Text: "현장 영상"}}, Styles: []string{"clean", "bold"}}
 		ends := []int{4200, 3700, 1400, 4200, 4200, 4200, 4200, 4300}
+		if requested := os.Getenv("CLIP_ORIGINALS_DURATION_MS"); requested != "" {
+			duration, err := strconv.Atoi(requested)
+			if err != nil || duration != 20000 {
+				return fmt.Errorf("the alternate originals fixture must be 20000 ms")
+			}
+			plan.DurationMS = duration
+			ends = []int{2800, 2800, 1400, 2800, 2800, 2600, 2600, 2600}
+		}
 		sources := []clip.RenderSource{}
 		paths := map[string]string{}
 		for i, file := range files {
@@ -94,6 +103,7 @@ func TestRenderOriginalsOverlap(t *testing.T) {
 				return fmt.Errorf("%s must reproduce overlap: %v", mode, err)
 			}
 			loads := map[string]int{}
+			started := time.Now()
 			result, err := r.Render(t.Context(), ws, laidOut, sources, func(_ context.Context, id string, consume func(clip.MediaSource) error) error {
 				for _, source := range sources {
 					if source.ID == id {
@@ -118,7 +128,7 @@ func TestRenderOriginalsOverlap(t *testing.T) {
 					return err
 				}
 			}
-			t.Logf("%s: %d sources, %dx%d, %d ms, %d bytes; model cost $0", mode, len(loads), result.Info.Width, result.Info.Height, result.Info.DurationMS, result.Bytes)
+			t.Logf("%s: %d sources, %dx%d, %d ms, %d bytes; render elapsed=%s; model cost $0", mode, len(loads), result.Info.Width, result.Info.Height, result.Info.DurationMS, result.Bytes, time.Since(started).Round(time.Millisecond))
 			if err := os.Remove(result.Path); err != nil {
 				return err
 			}
@@ -127,6 +137,21 @@ func TestRenderOriginalsOverlap(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
+}
+
+type originalsRunner struct {
+	t      *testing.T
+	runner Runner
+}
+
+func (r originalsRunner) Run(ctx context.Context, command Command) ([]byte, error) {
+	start := time.Now()
+	output := filepath.Base(command.Args[len(command.Args)-1])
+	r.t.Logf("command start: %s %s", filepath.Base(command.Binary), output)
+	data, err := r.runner.Run(ctx, command)
+	peak, _ := os.ReadFile("/sys/fs/cgroup/memory.peak")
+	r.t.Logf("command end: %s %s elapsed=%s memory_peak=%s error=%v", filepath.Base(command.Binary), output, time.Since(start).Round(time.Millisecond), peak, err)
+	return data, err
 }
 
 func copyOriginal(from, to string) error {

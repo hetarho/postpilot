@@ -68,7 +68,7 @@ func cutGraph(cfg clip.RenderConfig, canvas clip.Canvas, c clip.EditCut, source 
 		start, end := c.CaptionWindow(j)
 		m := design.Motion
 		in, out := float64(m.InMS)/1000, float64(m.OutMS)/1000
-		fmt.Fprintf(&graph, "[%d:v:0]format=rgba,fade=t=in:st=%s:d=%s:alpha=1,fade=t=out:st=%s:d=%s:alpha=1[plate%d];", input, seconds(start), strconv.FormatFloat(in, 'f', 3, 64), seconds(end-m.OutMS), strconv.FormatFloat(out, 'f', 3, 64), j)
+		fmt.Fprintf(&graph, "[%d:v:0]format=rgba,loop=loop=%d:size=1:start=0,fade=t=in:st=%s:d=%s:alpha=1,fade=t=out:st=%s:d=%s:alpha=1[plate%d];", input, frames-1, seconds(start), strconv.FormatFloat(in, 'f', 3, 64), seconds(end-m.OutMS), strconv.FormatFloat(out, 'f', 3, 64), j)
 		fmt.Fprintf(&graph, "%s[plate%d]overlay=x=0:y='%.0f*pow(1-min(1,max(0,(t-%s)/%s)),3)':format=auto:shortest=0", last, j, m.InDY, seconds(start), strconv.FormatFloat(in, 'f', 3, 64))
 		fmt.Fprintf(&graph, ":enable='gte(t,%s)*lt(t,%s)'", seconds(start), seconds(end))
 		fmt.Fprintf(&graph, "[copy%d];", j)
@@ -83,9 +83,9 @@ func cutGraph(cfg clip.RenderConfig, canvas clip.Canvas, c clip.EditCut, source 
 		fade := design.Transition.FadeMS
 		start, end := max(0, card.StartMS), card.EndMS
 		if card.Kind == "hook" {
-			fmt.Fprintf(&graph, "[%d:v:0]format=rgba,fade=t=out:st=%s:d=%s:alpha=1[card];", l.cardInput(), seconds(max(0, end-fade)), seconds(fade))
+			fmt.Fprintf(&graph, "[%d:v:0]format=rgba,loop=loop=%d:size=1:start=0,fade=t=out:st=%s:d=%s:alpha=1[card];", l.cardInput(), frames-1, seconds(max(0, end-fade)), seconds(fade))
 		} else {
-			fmt.Fprintf(&graph, "[%d:v:0]format=rgba,fade=t=in:st=%s:d=%s:alpha=1[card];", l.cardInput(), seconds(start), seconds(fade))
+			fmt.Fprintf(&graph, "[%d:v:0]format=rgba,loop=loop=%d:size=1:start=0,fade=t=in:st=%s:d=%s:alpha=1[card];", l.cardInput(), frames-1, seconds(start), seconds(fade))
 		}
 		fmt.Fprintf(&graph, "%s[card]overlay=0:0:format=auto:shortest=0:enable='gte(t,%s)*lt(t,%s)'[carded];", last, seconds(start), seconds(end))
 		last = "[carded]"
@@ -156,7 +156,14 @@ func (r *Rendering) encodeArgs(audio bool) []string {
 const h264Profile = "High"
 
 func (r *Rendering) encodeProfile(audio bool, crf int, pixelFormat string) []string {
-	a := []string{"-map", "[v]", "-c:v", "libx264", "-preset", "veryfast", "-crf", strconv.Itoa(crf), "-threads", strconv.Itoa(r.media.cfg.Threads), "-r", strconv.Itoa(r.cfg.FPS), "-fps_mode", "cfr", "-pix_fmt", pixelFormat}
+	preset := "veryfast"
+	if crf == 0 {
+		// Intermediate nodes are lossless. Spend disk bytes instead of CPU on
+		// compressing pixels that will be decoded and removed at the next merge.
+		// Delivered video still uses the configured CRF and veryfast preset.
+		preset = "ultrafast"
+	}
+	a := []string{"-map", "[v]", "-c:v", "libx264", "-preset", preset, "-crf", strconv.Itoa(crf), "-threads", strconv.Itoa(r.media.cfg.Threads), "-r", strconv.Itoa(r.cfg.FPS), "-fps_mode", "cfr", "-pix_fmt", pixelFormat}
 	if pixelFormat == "yuv420p" {
 		a = append(a, "-profile:v", strings.ToLower(h264Profile))
 	}
@@ -168,7 +175,7 @@ func (r *Rendering) encodeProfile(audio bool, crf int, pixelFormat string) []str
 	return append(a, "-sn", "-dn", "-map_metadata", "-1", "-map_chapters", "-1", "-metadata:s:v:0", "rotate=0", "-movflags", "+faststart", "-f", "mp4")
 }
 func (r *Rendering) baseArgs() []string {
-	return []string{"-hide_banner", "-nostdin", "-v", "error", "-xerror", "-n", "-filter_complex_threads", strconv.Itoa(r.media.cfg.Threads)}
+	return []string{"-hide_banner", "-nostdin", "-v", "error", "-xerror", "-n", "-filter_threads", strconv.Itoa(r.media.cfg.Threads), "-filter_complex_threads", strconv.Itoa(r.media.cfg.Threads)}
 }
 
 // layers is what a cut overlays: the fixed badge and chips, one animated plate
@@ -207,7 +214,11 @@ func (r *Rendering) renderCut(ctx context.Context, ws clip.MediaWorkspace, canva
 	}
 	args := append(r.baseArgs(), "-threads", strconv.Itoa(r.media.cfg.Threads), "-protocol_whitelist", "file,pipe", "-ss", seconds(cut.StartMS), "-i", source.Path)
 	for _, layer := range l.inputs() {
-		args = append(args, "-loop", "1", "-framerate", strconv.Itoa(r.cfg.FPS), "-i", layer)
+		// Decode each PNG once. The fixed overlay repeats its last frame; the
+		// animated layers loop one cached frame for exactly this cut's duration.
+		// Repeated image decoding both buffers full canvases and can strand the
+		// input scheduler after an overlay stops consuming its infinite input.
+		args = append(args, "-threads", strconv.Itoa(r.media.cfg.Threads), "-framerate", strconv.Itoa(r.cfg.FPS), "-i", layer)
 	}
 	args = append(args, "-filter_complex", cutGraph(r.cfg, canvas, cut, source.Info, frames, l, audio))
 	args = append(args, r.encodeArgs(audio)...)
@@ -359,6 +370,17 @@ func (r *Rendering) Render(ctx context.Context, ws clip.MediaWorkspace, plan cli
 	if err = r.runRender(ctx, ws, output, args); err != nil {
 		return result, err
 	}
+	// Correct small loudness drift before the final probe. The already encoded
+	// picture is copied; the corrected track is encoded from the same PCM.
+	if audio {
+		totalFrames := 0
+		for i, n := range frames {
+			totalFrames += n - transitionFrames(r.cfg, transitions[i])
+		}
+		if err = r.finishLoudness(ctx, ws, output, assembled, measured, totalFrames); err != nil {
+			return result, err
+		}
+	}
 	info, err := r.media.Probe(ctx, ws, output)
 	if err != nil {
 		return result, err
@@ -375,13 +397,6 @@ func (r *Rendering) Render(ctx context.Context, ws clip.MediaWorkspace, plan cli
 	}
 	if audio && info.AudioRate != r.cfg.AudioRate {
 		return result, errors.New("rendered clip codec mismatch")
-	}
-	// The last of CDS-35's passes: what the clip actually measures, after the
-	// encode, is what has to sit inside V12's window.
-	if audio {
-		if err = r.verifyLoudness(ctx, ws, output); err != nil {
-			return result, err
-		}
 	}
 	stat, err := os.Stat(output)
 	if err != nil {

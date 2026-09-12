@@ -49,7 +49,7 @@ func TestCompositionTreeBoundsVideoDecodersAndKeepsAudioForFinalPass(t *testing.
 			}
 			for _, call := range fake.calls {
 				joined := strings.Join(call.Args, " ")
-				if strings.Count(joined, ":v:0]") != 2 || strings.Contains(joined, ":a:0]") || !strings.Contains(joined, "-crf 0") || !strings.Contains(joined, "-pix_fmt yuv444p") || !strings.Contains(joined, "-threads 1") {
+				if strings.Count(joined, ":v:0]") != 2 || strings.Contains(joined, ":a:0]") || !strings.Contains(joined, "-crf 0") || !strings.Contains(joined, "-pix_fmt yuv444p") || !strings.Contains(joined, "-threads 1") || !strings.Contains(joined, "-preset ultrafast") {
 					t.Fatal("unbounded/lossy intermediate", joined)
 				}
 			}
@@ -80,7 +80,7 @@ func TestCompositionTreeBoundsVideoDecodersAndKeepsAudioForFinalPass(t *testing.
 				t.Fatal("consumed tree nodes remain", remaining)
 			}
 			profile := strings.Join(r.encodeArgs(audio), " ")
-			if !strings.Contains(profile, "-crf 20") || !strings.Contains(profile, "-pix_fmt yuv420p") {
+			if !strings.Contains(profile, "-crf 20") || !strings.Contains(profile, "-pix_fmt yuv420p") || !strings.Contains(profile, "-preset veryfast") {
 				t.Fatal("lowered final render settings", profile)
 			}
 			return nil
