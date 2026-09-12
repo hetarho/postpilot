@@ -30,6 +30,7 @@ type CorrectionCut struct {
 	Focal          *Point
 }
 type CorrectionPlan struct {
+	Associations      *[]SourceAssociation
 	NativeComposition bool
 	Elements          []CorrectionText
 	DurationMS        int
@@ -162,8 +163,10 @@ func CorrectionFromPlan(p EditPlan) CorrectionPlan {
 		focal := c.Focal
 		out.Cuts[i].Focal = &focal
 	}
-	if p.Portable != nil && !p.Portable.Snapshot.Legacy {
+	if p.Portable != nil && (!p.Portable.Snapshot.Legacy || p.Portable.NativeEditing) {
 		out.NativeComposition = true
+		associations := slices.Clone(p.Portable.Inputs.Associations)
+		out.Associations = &associations
 		for _, t := range p.Portable.Elements {
 			out.Elements = append(out.Elements, correctionText(t))
 		}
@@ -327,12 +330,24 @@ func RetainedSources(p Project) ([]AnalysisSource, error) {
 	return sources, nil
 }
 func EditingState(p Project, cfg RenderConfig) (*CorrectionState, error) {
+	return editingState(p, cfg, false)
+}
+func editingState(p Project, cfg RenderConfig, exposeNative bool) (*CorrectionState, error) {
 	if p.EditPlan == "" {
 		return nil, nil
 	}
 	plan, styles, err := DecodeEditPlan(p.EditPlan)
 	if err != nil {
 		return nil, err
+	}
+	if exposeNative && plan.Portable == nil && p.Composition != nil && p.Composition.Snapshot.LegacyRecipe != nil {
+		plan.Portable, err = FreezeLegacyPlan(p, plan, *p.Composition.Snapshot.LegacyRecipe, cfg.Composition)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if exposeNative && plan.Portable != nil {
+		plan.Portable.NativeEditing = true
 	}
 	sources, err := RetainedSources(p)
 	if err != nil {
@@ -345,11 +360,17 @@ func ApplyCorrection(cfg RenderConfig, p Project, input CorrectionPlan) (EditPla
 	if err != nil {
 		return EditPlan{}, nil, err
 	}
+	if input.NativeComposition && old.Portable == nil && p.Composition != nil && p.Composition.Snapshot.LegacyRecipe != nil {
+		old.Portable, err = FreezeLegacyPlan(p, old, *p.Composition.Snapshot.LegacyRecipe, cfg.Composition)
+		if err != nil {
+			return EditPlan{}, nil, err
+		}
+	}
 	sources, err := RetainedSources(p)
 	if err != nil {
 		return EditPlan{}, nil, err
 	}
-	if old.Portable != nil && (input.NativeComposition || !old.Portable.Snapshot.Legacy) {
+	if old.Portable != nil && (input.NativeComposition || old.Portable.NativeEditing || !old.Portable.Snapshot.Legacy) {
 		return applyNativeCorrection(cfg, p, old, styles, sources, input)
 	}
 	if input.NativeComposition || len(input.Elements) != 0 {

@@ -68,7 +68,7 @@ func validatePortablePlan(p EditPlan) error {
 	ids := map[string]bool{}
 	for _, text := range v.Elements {
 		r := text.Resolved
-		if r.InstanceID == "" || ids[r.InstanceID] || r.Element.ID == "" || r.StartMS < 0 || r.EndMS <= r.StartMS || r.EndMS > p.DurationMS || (r.CutID != "" && !cuts[r.CutID]) {
+		if r.InstanceID == "" || ids[r.InstanceID] || r.Element.ID == "" || r.StartMS < 0 || r.EndMS <= r.StartMS || r.EndMS > p.DurationMS || (r.Element.Basis == "cut" && r.CutID != "" && !cuts[r.CutID]) {
 			return ErrInvalid
 		}
 		if r.Element.Kind != "fixed" && r.Element.Kind != "ai" {

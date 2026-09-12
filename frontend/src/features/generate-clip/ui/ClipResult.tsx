@@ -68,18 +68,25 @@ export function ClipResult({ project, ownerId }: { project: ClipProject; ownerId
   )
 }
 
-/** ③ 클립 완성's one committing control, docked (CLIP-40). It is an `<a>` rather than a button
- *  because the download IS a navigation to a presigned object; it lives here beside the preview
- *  that mints the same URL, and the page puts it in the step's bar. */
-export function ClipDownloadAction({ project }: { project: ClipProject }) {
+/** Download the identified successful result from the current step's action bar. */
+export function ClipDownloadAction({
+  project,
+  compact = false,
+}: {
+  project: ClipProject
+  compact?: boolean
+}) {
   const { t } = useTranslation('clips')
   if (!project.result?.downloadUrl) return null
   return (
     <a
       href={project.result.downloadUrl}
-      className={buttonStyles({ variant: 'cta', className: 'w-full sm:w-auto' })}
+      className={buttonStyles({
+        variant: compact ? 'secondary' : 'cta',
+        className: compact ? undefined : 'w-full sm:w-auto',
+      })}
     >
-      {t('generation.download')}
+      {t(compact ? 'timeline.download' : 'generation.download')}
     </a>
   )
 }

@@ -71,9 +71,9 @@ describe('stepForProject', () => {
     ).toBe('refine')
   })
 
-  it('opens a rendered project on 클립 완성', () => {
+  it('keeps a rendered unfinalized project on 클립 다듬기', () => {
     expect(stepForProject({ ...base, editPlanRevision: 2, renderedPlanRevision: 2, result })).toBe(
-      'finish',
+      'refine',
     )
   })
 })

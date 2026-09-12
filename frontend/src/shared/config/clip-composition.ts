@@ -35,3 +35,16 @@ export const CLIP_DRAFT_PREVIEW = {
   frameToleranceMs: 1000 / 30,
   seekStepMs: 1,
 } as const
+
+export const CLIP_TIMELINE = {
+  history: 100,
+  coalesceMs: 700,
+  autosaveMs: 750,
+  framesPerSecond: 30,
+  previewViewportFraction: 0.3,
+  compactViewportHeight: 520,
+  compactPreviewFraction: 0.2,
+  fieldGapPx: 8,
+  pixelsPerSecond: 80,
+  minWidth: 320,
+} as const

@@ -40,10 +40,32 @@ func correctionPlan(p *v1.ClipEditPlan) clip.CorrectionPlan {
 	for _, t := range p.GetElements() {
 		out.Elements = append(out.Elements, correctionText(t))
 	}
+	if p.GetAssociations() != nil {
+		values := []clip.SourceAssociation{}
+		for _, a := range p.Associations.Values {
+			values = append(values, clip.SourceAssociation{GroupID: a.GroupId, ItemID: a.ItemId, SourceID: a.SourceId, Fingerprint: a.Fingerprint, StartMS: int(a.StartMs), EndMS: int(a.EndMs)})
+		}
+		out.Associations = &values
+	}
 	return out
 }
 func correctionText(t *v1.ClipEditableText) clip.CorrectionText {
 	out := clip.CorrectionText{InstanceID: t.InstanceId, ElementID: t.ElementId, CutID: t.CutId, Kind: t.Kind, Role: t.Role, Text: t.Text, Style: t.Style, Position: t.Position, Align: t.Align, Basis: t.Basis, Pace: t.Pace, Accent: t.Accent, Keyword: t.Keyword, ResolvedStartMS: int(t.ResolvedStartMs), ResolvedEndMS: int(t.ResolvedEndMs), GroupID: t.GroupId, ItemID: t.ItemId}
+	out.StaleEvidence, out.EvidenceReviewed, out.FallbackReason = t.StaleEvidence, t.EvidenceReviewed, t.FallbackReason
+	for _, p := range t.Phrases {
+		out.Phrases = append(out.Phrases, clip.EditablePhrase{Text: p.Text, StartMS: int(p.StartMs), EndMS: int(p.EndMs)})
+	}
+	for _, e := range t.Evidence {
+		out.Evidence = append(out.Evidence, clip.SourceEvidence{SourceID: e.SourceId, Fingerprint: e.Fingerprint, StartMS: int(e.StartMs), EndMS: int(e.EndMs)})
+	}
+	if t.EffectiveStartMs != nil {
+		v := int(*t.EffectiveStartMs)
+		out.EffectiveStartMS = &v
+	}
+	if t.EffectiveEndMs != nil {
+		v := int(*t.EffectiveEndMs)
+		out.EffectiveEndMS = &v
+	}
 	if t.StartMs != nil {
 		v := int(*t.StartMs)
 		out.StartMS = &v
@@ -59,6 +81,21 @@ func correctionText(t *v1.ClipEditableText) clip.CorrectionText {
 }
 func correctionTextProto(t clip.CorrectionText) *v1.ClipEditableText {
 	out := &v1.ClipEditableText{InstanceId: t.InstanceID, ElementId: t.ElementID, CutId: t.CutID, Kind: t.Kind, Role: t.Role, Text: t.Text, Style: t.Style, Position: t.Position, Align: t.Align, Basis: t.Basis, Pace: t.Pace, Accent: t.Accent, Keyword: t.Keyword, ResolvedStartMs: int32(t.ResolvedStartMS), ResolvedEndMs: int32(t.ResolvedEndMS), GroupId: t.GroupID, ItemId: t.ItemID}
+	out.StaleEvidence, out.EvidenceReviewed, out.FallbackReason = t.StaleEvidence, t.EvidenceReviewed, t.FallbackReason
+	for _, p := range t.Phrases {
+		out.Phrases = append(out.Phrases, &v1.ClipEditablePhrase{Text: p.Text, StartMs: int32(p.StartMS), EndMs: int32(p.EndMS)})
+	}
+	for _, e := range t.Evidence {
+		out.Evidence = append(out.Evidence, &v1.ClipTextEvidence{SourceId: e.SourceID, Fingerprint: e.Fingerprint, StartMs: int32(e.StartMS), EndMs: int32(e.EndMS)})
+	}
+	if t.EffectiveStartMS != nil {
+		v := int32(*t.EffectiveStartMS)
+		out.EffectiveStartMs = &v
+	}
+	if t.EffectiveEndMS != nil {
+		v := int32(*t.EffectiveEndMS)
+		out.EffectiveEndMs = &v
+	}
 	if t.StartMS != nil {
 		v := int32(*t.StartMS)
 		out.StartMs = &v
@@ -77,6 +114,12 @@ func editingProto(s *clip.CorrectionState) *v1.ClipEditingState {
 		return nil
 	}
 	out := &v1.ClipEditingState{Plan: &v1.ClipEditPlan{DurationMs: int32(s.Plan.DurationMS), Hook: s.Plan.Hook, NativeComposition: s.Plan.NativeComposition}, CopyStyles: s.CopyStyles, FadeMs: int32(s.FadeMS), MaxCuts: int32(s.MaxCuts), MaxCopyRunes: int32(s.MaxCopyRunes), MinDurationMs: int32(s.MinDurationMS), MaxDurationMs: int32(s.MaxDurationMS)}
+	if s.Plan.Associations != nil {
+		out.Plan.Associations = &v1.ClipSourceAssociations{}
+		for _, a := range *s.Plan.Associations {
+			out.Plan.Associations.Values = append(out.Plan.Associations.Values, &v1.ClipSourceAssociation{GroupId: a.GroupID, ItemId: a.ItemID, SourceId: a.SourceID, Fingerprint: a.Fingerprint, StartMs: int32(a.StartMS), EndMs: int32(a.EndMS)})
+		}
+	}
 	for _, c := range s.Plan.Cuts {
 		copies := make([]*v1.ClipCaption, 0, len(c.Copies))
 		for _, copy := range c.Copies {

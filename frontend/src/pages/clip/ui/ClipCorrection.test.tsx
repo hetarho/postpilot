@@ -1,15 +1,13 @@
 import { afterEach, expect, it, vi } from 'vitest'
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { createConnectQueryKey } from '@connectrpc/connect-query'
 import { initializeI18n } from '@/app/providers/i18n'
 import { readSourceManifest } from '@/features/upload-clip-sources'
 import { putBlobWithProgress } from '@/shared/lib/upload'
-import { GenerationService } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
-import { clipEditingFixture } from '@/test/clip-editing'
+import { clipTimelineFixture } from '@/test/clip-editing'
 import type { FakeClipProject, FakeClipsOptions } from '@/test/clips'
-import type { FakeGenerationJobRow, FakeJobsOptions } from '@/test/jobs'
+import type { FakeJobsOptions } from '@/test/jobs'
 
 vi.mock('@/features/upload-clip-sources/model/manifest', async (original) => ({
   ...(await original<object>()),
@@ -36,7 +34,7 @@ function fixture(): FakeClipProject {
     cta: '',
     editPlanRevision: 1,
     renderedPlanRevision: 1,
-    editing: clipEditingFixture(),
+    editing: clipTimelineFixture(),
     result: {
       contentType: 'video/mp4',
       bytes: 5,
@@ -68,49 +66,18 @@ async function mount(clips: FakeClipsOptions = {}, jobs: FakeJobsOptions = {}) {
       ...clips,
     },
   })
-  // A rendered result describes the project as 완성, so the workspace opens on ③; the correction
-  // is step ② now, reached from the step bar rather than a 수정 button (CLIP-36).
-  await screen.findByLabelText('클립 미리보기')
-  await goToStep('클립 다듬기')
   await screen.findByRole('heading', { name: '컷·자막 수정' })
   return view
 }
 async function goToStep(name: '클립 생성' | '클립 다듬기' | '클립 완성') {
   await userEvent.click(await screen.findByRole('tab', { name }))
 }
-/** The retained result, checked where it now lives (③): a correction may neither lose it nor
- *  remint its presigned URL. Leaves the caller back on ②. */
-async function expectResultKept() {
-  await goToStep('클립 완성')
-  expect(await screen.findByLabelText('클립 미리보기')).toHaveAttribute(
-    'src',
-    'https://private.test/old',
-  )
-  await goToStep('클립 다듬기')
-}
-it("docks exactly one committing control at a time, the current step's", async () => {
-  await mount()
-  // ② — the correction's own bar. ①'s approval and ③'s download belong to other panels.
-  expect(screen.getByRole('button', { name: '다시 출력 · 크레딧 사용 없음' })).toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: /승인하고 생성|^생성$/ })).not.toBeInTheDocument()
-  expect(screen.queryByRole('link', { name: '영상 다운로드' })).not.toBeInTheDocument()
-
-  await goToStep('클립 완성')
-  expect(await screen.findByRole('link', { name: '영상 다운로드' })).toBeInTheDocument()
-  expect(
-    screen.queryByRole('button', { name: '다시 출력 · 크레딧 사용 없음' }),
-  ).not.toBeInTheDocument()
-
-  await goToStep('클립 생성')
-  expect(await screen.findByRole('button', { name: /생성/ })).toBeInTheDocument()
-  expect(screen.queryByRole('link', { name: '영상 다운로드' })).not.toBeInTheDocument()
-  expect(
-    screen.queryByRole('button', { name: '다시 출력 · 크레딧 사용 없음' }),
-  ).not.toBeInTheDocument()
-})
-const cut = (number = 1) => within(screen.getByRole('region', { name: `컷 ${number}` }))
-const change = (label: string, value: string, number = 1) =>
-  fireEvent.change(cut(number).getByLabelText(label), { target: { value } })
+const timeline = () => within(screen.getByLabelText('편집 타임라인'))
+const selectText = async (name = 'caption a') =>
+  userEvent.click(timeline().getByRole('button', { name }))
+const setField = (label: string, value: string) =>
+  fireEvent.change(screen.getByLabelText(label), { target: { value } })
+const savePlan = async () => userEvent.click(screen.getByRole('button', { name: '저장' }))
 async function select(ids = ['a', 'b']) {
   const files = ids.map((id) => new File(['clip'], `source-${id}.mp4`, { type: 'video/mp4' }))
   vi.mocked(readSourceManifest).mockResolvedValue(
@@ -132,380 +99,210 @@ async function select(ids = ['a', 'b']) {
   await userEvent.upload(input, files)
   return revoke
 }
-it('keeps the result mounted across every edit and saves exact fields with its revision', async () => {
-  const writes: NonNullable<FakeClipsOptions['planWrites']> = []
-  await mount({ planWrites: writes })
-  change('원본 시작 (ms)', '1000')
-  change('원본 끝 (ms)', '16000')
-  change('컷 길이 (ms)', '16000')
-  change('자막 원문', '정확한 한국어 <copy>')
-  change('자막 시작 (컷 내 ms)', '200')
-  change('자막 끝 (컷 내 ms)', '2000')
-  change('원본 소리 (%)', '25')
-  await userEvent.click(cut().getByRole('combobox', { name: /자막 위치/ }))
-  await userEvent.click(screen.getByRole('option', { name: '하단' }))
-  await userEvent.click(cut().getByRole('combobox', { name: /가로 정렬/ }))
-  await userEvent.click(screen.getByRole('option', { name: '왼쪽' }))
-  await userEvent.click(cut().getByRole('combobox', { name: /자막 스타일/ }))
-  await userEvent.click(screen.getByRole('option', { name: '메모' }))
-  await userEvent.click(cut().getByRole('combobox', { name: /강조 색상/ }))
-  await userEvent.click(screen.getByRole('option', { name: '청록' }))
-  await userEvent.click(screen.getAllByRole('button', { name: '아래로 이동' })[0]!)
-  expect(cut(2).getByLabelText('자막 원문')).toHaveValue('정확한 한국어 <copy>')
-  // The fade rode the second cut, which the reorder moved to the front: it
-  // leads in from nothing now, so the owner puts the fade on the cut that
-  // follows it instead (CDS-36).
-  await userEvent.click(cut(2).getByRole('combobox', { name: /앞 컷과의 전환/ }))
-  await userEvent.click(screen.getByRole('option', { name: '페이드 200 ms' }))
-  await userEvent.click(screen.getByRole('button', { name: '수정 저장' }))
-  await screen.findByText('수정됨 · 다시 출력 필요')
-  expect(writes).toHaveLength(1)
-  expect(writes[0]).toMatchObject({
-    revision: 1,
-    plan: {
-      durationMs: 25800,
-      cuts: [
-        { id: 'cut-b', transitionMs: 0 },
-        {
-          id: 'cut-a',
-          startMs: 1000,
-          endMs: 17000,
-          transitionMs: 200,
-          volumePermille: 250,
-          copies: [
-            {
-              text: '정확한 한국어 <copy>',
-              style: 'memo',
-              // The anchor the wire calls `position`; it round-trips through the
-              // proto mapper on the way back, so a lost mapping fails here. 메모
-              // sits LEFT at the top or the bottom (CDS-24).
-              anchor: 'bottom',
-              align: 'left',
-              accent: 'teal',
-              startMs: 200,
-              endMs: 2000,
-            },
-          ],
-        },
-      ],
-    },
-  })
-  await expectResultKept()
-  expect(screen.getByRole('button', { name: '다시 출력 · 크레딧 사용 없음' })).toBeDisabled()
-})
-/** The hook card's sentence is the clip's, not a cut's (CDS-28): it sits above
- *  the cut list, refuses more than two lines of nine, and refuses a number the
- *  owner never gave (CDS-42). */
-it('edits the hook sentence and refuses an ungrounded or over-long one', async () => {
-  const writes: NonNullable<FakeClipsOptions['planWrites']> = []
-  const project = fixture()
-  project.answers = [{ label: '상호', text: '해람 베이커리' }]
-  await mount({ planWrites: writes, projects: [project] })
-  // The hook is the clip's own field, outside every cut region.
-  const hook = (value: string) =>
-    fireEvent.change(screen.getByLabelText('훅 문장'), { target: { value } })
-  hook('갓 구운 빵')
-  expect(screen.getByLabelText('훅 문장')).not.toHaveAttribute('aria-invalid', 'true')
-  hook('가'.repeat(19))
-  expect(screen.getByLabelText('훅 문장')).toHaveAttribute('aria-invalid', 'true')
-  expect(screen.getByText(/훅 문장은 2줄 × 9자까지예요/)).toBeVisible()
-  expect(screen.getByRole('button', { name: '수정 저장' })).toBeDisabled()
-  // A price the owner never answered is not the clip's to claim.
-  hook('9900원 빵집')
-  expect(screen.getByLabelText('훅 문장')).toHaveAttribute('aria-invalid', 'true')
-  hook('갓 구운 빵')
-  await userEvent.click(screen.getByRole('button', { name: '수정 저장' }))
-  await waitFor(() => expect(writes).toHaveLength(1))
-  expect(writes[0]!.plan.hook).toBe('갓 구운 빵')
-})
-it('shows bounds beside fields and never sends an invalid plan', async () => {
-  const writes: NonNullable<FakeClipsOptions['planWrites']> = []
-  await mount({ planWrites: writes })
-  change('원본 끝 (ms)', '50000')
-  expect(cut().getByLabelText('원본 끝 (ms)')).toHaveAttribute('aria-invalid', 'true')
-  expect(cut().getByText(/원본의 0~40000/)).toBeVisible()
-  expect(screen.getByRole('button', { name: '수정 저장' })).toBeDisabled()
-  change('원본 끝 (ms)', '1000')
-  expect(screen.getByText(/최종 길이는/)).toBeVisible()
-  change('자막 끝 (컷 내 ms)', '2000')
-  expect(cut().getByText('자막은 컷 안에서 시작보다 끝이 늦어야 해요.')).toBeVisible()
-  change('원본 소리 (%)', '101')
-  expect(cut().getByText('볼륨은 0~100%로 입력해 주세요.')).toBeVisible()
-  await userEvent.click(screen.getByRole('button', { name: '수정 저장' }))
-  expect(writes).toEqual([])
-})
-// CDS-36 on the screen: the first cut can only be a cut, every later cut chooses
-// between a cut and the fade, and the choice moves the final length.
-it('offers a transition on every cut but the first and shows what it costs', async () => {
-  await mount({})
-  const first = cut().getByRole('combobox', { name: /앞 컷과의 전환/ })
-  expect(first).toBeDisabled()
-  expect(first).toHaveTextContent('컷 (바로 전환)')
-  const second = cut(2).getByRole('combobox', { name: /앞 컷과의 전환/ })
-  expect(second).toBeEnabled()
-  expect(second).toHaveTextContent('페이드 200 ms')
-  // The fixture's two 10 s cuts overlap by one fade; taking it away gives the
-  // clip its 200 ms back.
-  expect(screen.getByText(/19800/)).toBeVisible()
-  await userEvent.click(second)
-  await userEvent.click(screen.getByRole('option', { name: '컷 (바로 전환)' }))
-  expect(screen.getByText(/20000/)).toBeVisible()
-})
-// CDS-43 on the screen: a cut of 4 s or more may state the number its sentence
-// leads to as a second caption, after the first has left and never beside it.
-it('adds and removes the second caption on a long enough cut', async () => {
-  const writes: NonNullable<FakeClipsOptions['planWrites']> = []
-  await mount({ planWrites: writes })
-  // The fixture's cuts are 10 s, so both may carry a second caption.
-  expect(cut().getAllByLabelText('자막 원문')).toHaveLength(1)
-  await userEvent.click(cut().getByRole('button', { name: '자막 추가' }))
-  const fields = cut().getAllByLabelText('자막 원문')
-  expect(fields).toHaveLength(2)
-  // The second one starts empty, a clear 120 ms after the first has left.
-  expect(fields[1]!).toHaveValue('')
-  const starts = cut().getAllByLabelText('자막 시작 (컷 내 ms)')
-  const ends = cut().getAllByLabelText('자막 끝 (컷 내 ms)')
-  expect(Number((starts[1]! as HTMLInputElement).value)).toBe(
-    Number((ends[0]! as HTMLInputElement).value) + 120,
-  )
-  // A description, then the number it leads to (CDS-43), and the plan saves.
-  fireEvent.change(fields[0]!, { target: { value: '조용한 골목을 천천히 걸었어요' } })
-  fireEvent.change(fields[1]!, { target: { value: '9900원' } })
-  await userEvent.click(screen.getByRole('button', { name: '수정 저장' }))
-  await screen.findByText('수정됨 · 다시 출력 필요')
-  expect(writes[0]!.plan.cuts[0]!.copies).toHaveLength(2)
-  expect(writes[0]!.plan.cuts[0]!.copies[1]!.text).toBe('9900원')
-  // Removed again, the first caption takes CDS-27's default window back.
-  await userEvent.click(cut().getByRole('button', { name: '두 번째 자막 삭제' }))
-  expect(cut().getAllByLabelText('자막 원문')).toHaveLength(1)
-  expect(cut().getByLabelText('자막 시작 (컷 내 ms)')).toHaveValue(0)
-})
-it('keeps local edits and video on optimistic conflict, and guards leaving', async () => {
-  const { router } = await mount({ planSaveConflict: true })
-  change('자막 원문', '잃지 않을 수정')
-  await userEvent.click(screen.getByRole('button', { name: '수정 저장' }))
-  await screen.findByText(/저장된 수정본이 변경되었어요/)
-  expect(cut().getByLabelText('자막 원문')).toHaveValue('잃지 않을 수정')
-  await expectResultKept()
-  expect(cut().getByLabelText('자막 원문')).toHaveValue('잃지 않을 수정')
-  // The guard is the PAGE's now, so it still fires after the owner has looked at another step.
-  await goToStep('클립 완성')
-  await userEvent.click(screen.getByRole('link', { name: '클립 목록' }))
-  await screen.findByRole('dialog')
-  expect(router.state.location.pathname).toBe('/clips/clip')
-  await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: '취소' }))
-  // And the draft is still there after the whole round trip through the other steps.
-  await goToStep('클립 다듬기')
-  expect(cut().getByLabelText('자막 원문')).toHaveValue('잃지 않을 수정')
-})
-it('checks every required fingerprint before reserving any batch', async () => {
-  const calls: string[] = []
-  await mount({ calls })
-  await select(['a'])
-  await screen.findByText('아직 필요한 원본: source-b.mp4')
-  expect(calls).not.toContain('CreateClipSourceBatch')
-  await select(['x'])
-  await screen.findByText('일치하지 않거나 필요하지 않은 파일: source-x.mp4')
-  expect(calls).not.toContain('CreateClipSourceBatch')
-})
-it('deletes a cut, reselects only its remaining source and rerenders once with no AI models', async () => {
-  const calls: string[] = [],
-    starts: unknown[] = []
-  const job: FakeGenerationJobRow = {
-    id: 'clip-render-job',
-    kind: 'render_clip',
-    clipProjectId: 'clip',
-    status: 'running',
-    stage: 'render',
-  }
-  let finished = false
-  const view = await mount(
-    {
-      calls,
-      renderStarts: starts,
-      readProject: (p) =>
-        finished
-          ? {
-              ...p,
-              latestJob: job,
-              renderedPlanRevision: p.editPlanRevision,
-              result: {
-                ...p.result!,
-                createdAt: '2026-09-10T01:00:00Z',
-                viewUrl: 'https://private.test/new',
-              },
-            }
-          : p,
-    },
-    {
-      jobs: [job],
-      onRead: (j) => {
-        finished = j.status === 'done'
-      },
-    },
-  )
-  change('원본 끝 (ms)', '20000')
-  await userEvent.click(cut(2).getByRole('button', { name: '컷 삭제' }))
-  await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: '컷 삭제' }))
-  await userEvent.click(screen.getByRole('button', { name: '수정 저장' }))
-  await screen.findByText('수정됨 · 다시 출력 필요')
-  expect(screen.queryByText('source-b.mp4')).not.toBeInTheDocument()
-  const revoke = await select(['a'])
-  await screen.findByText('업로드 확인 완료')
-  await userEvent.click(cut().getByRole('button', { name: '이 구간 원본 확인' }))
-  expect(screen.getByLabelText('선택한 컷의 원본 미리보기')).toHaveAttribute(
-    'src',
-    'blob:source-a.mp4',
-  )
-  const button = screen.getByRole('button', { name: '다시 출력 · 크레딧 사용 없음' })
-  fireEvent.click(button)
-  fireEvent.click(button)
-  await waitFor(() => expect(starts).toHaveLength(1))
-  expect(calls).not.toContain('StartClipGeneration')
-  await screen.findByRole('progressbar', { name: '영상 렌더링' })
-  expect(revoke).not.toHaveBeenCalled()
-  expect(cut().getByLabelText('자막 원문')).toBeDisabled()
-  await expectResultKept()
-  job.status = 'done'
-  job.stage = 'cleanup'
-  await act(() =>
-    view.queryClient.refetchQueries({
-      queryKey: createConnectQueryKey({
-        schema: GenerationService.method.getGeneration,
-        input: { id: job.id },
-        transport: view.transport,
-        cardinality: 'finite',
-      }),
-    }),
-  )
-  await waitFor(() =>
-    expect(screen.getByLabelText('클립 미리보기')).toHaveAttribute(
-      'src',
-      'https://private.test/new',
-    ),
-  )
-  expect(screen.queryByLabelText('선택한 컷의 원본 미리보기')).not.toBeInTheDocument()
-  expect(revoke).not.toHaveBeenCalled()
-  expect(
-    JSON.stringify(
-      view.queryClient
-        .getQueryCache()
-        .getAll()
-        .map((q) => q.state.data),
-    ),
-  ).not.toContain('blob:')
-})
-it('allows correction after template deletion and leaves saved edits without a warning', async () => {
-  const p = fixture()
-  p.videoTemplateId = ''
-  const { router } = await mount({ projects: [p], templates: [] })
-  change('자막 원문', '저장한 수정')
-  await userEvent.click(screen.getByRole('button', { name: '수정 저장' }))
-  await screen.findByText('수정됨 · 다시 출력 필요')
-  await userEvent.click(screen.getByRole('link', { name: '클립 목록' }))
-  await waitFor(() => expect(router.state.location.pathname).toBe('/clips'))
-  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-})
-it('preserves saved corrections and the prior result after a failed free render', async () => {
-  const calls: string[] = []
-  const job: FakeGenerationJobRow = {
-    id: 'clip-render-job',
-    kind: 'render_clip',
-    clipProjectId: 'clip',
-    status: 'failed',
-    stage: 'render',
-    failureReason: 'CLIP_PROCESSING_FAILED',
-  }
-  await mount({ calls }, { jobs: [job] })
-  change('자막 원문', '출력 실패에도 보존')
-  await userEvent.click(screen.getByRole('button', { name: '수정 저장' }))
-  await screen.findByText('수정됨 · 다시 출력 필요')
-  const revoke = await select()
-  await waitFor(() => expect(screen.getAllByText('업로드 확인 완료')).toHaveLength(2))
-  await userEvent.click(screen.getByRole('button', { name: '다시 출력 · 크레딧 사용 없음' }))
-  await waitFor(() => expect(screen.getByRole('alert')).toBeVisible())
-  expect(cut().getByLabelText('자막 원문')).toHaveValue('출력 실패에도 보존')
-  await expectResultKept()
-  expect(screen.getByRole('button', { name: '수정 저장' })).toBeDisabled()
-  expect(screen.getByRole('button', { name: '다시 출력 · 크레딧 사용 없음' })).toBeEnabled()
-  expect(calls.filter((c) => c === 'StartClipRender')).toHaveLength(1)
-  expect(calls).not.toContain('StartClipGeneration')
-  expect(revoke).not.toHaveBeenCalled()
-})
-it('releases local previews on leave and leaves remote cleanup to the durable lease', async () => {
-  const calls: string[] = []
-  const { router } = await mount({ calls })
-  const revoke = await select()
-  await waitFor(() => expect(screen.getAllByText('업로드 확인 완료')).toHaveLength(2))
-  await userEvent.click(screen.getByRole('link', { name: '클립 목록' }))
-  await waitFor(() => expect(router.state.location.pathname).toBe('/clips'))
-  expect(calls).not.toContain('DiscardClipSourceBatch')
-  expect(revoke).toHaveBeenCalledWith('blob:source-a.mp4')
-  expect(revoke).toHaveBeenCalledWith('blob:source-b.mp4')
-})
-it('explicitly discards the batch and local previews when source selection is cancelled', async () => {
-  const calls: string[] = []
-  await mount({ calls })
-  const revoke = await select()
-  await waitFor(() => expect(screen.getAllByText('업로드 확인 완료')).toHaveLength(2))
-  await userEvent.click(screen.getByRole('button', { name: '선택 취소' }))
-  await waitFor(() => expect(calls).toContain('DiscardClipSourceBatch'))
-  expect(revoke).toHaveBeenCalledWith('blob:source-a.mp4')
-  expect(revoke).toHaveBeenCalledWith('blob:source-b.mp4')
-  expect(screen.getByRole('button', { name: '다시 출력 · 크레딧 사용 없음' })).toBeDisabled()
-})
-it('localizes the credit-free correction action and accessible field labels in English', async () => {
+
+it('opens a matching result in refine with one action bar and an available download', async () => {
   await mount()
-  await act(async () => {
-    initializeI18n('en')
-  })
-  expect(screen.getByRole('button', { name: 'Rerender · no credits' })).toBeDisabled()
-  expect(screen.getByRole('heading', { name: 'Edit cuts and captions' })).toBeVisible()
-  expect(screen.getAllByLabelText('Original audio (%)')).toHaveLength(2)
+  expect(screen.getByRole('tab', { name: '클립 다듬기' })).toHaveAttribute('aria-selected', 'true')
+  expect(screen.getByRole('link', { name: '다운로드' })).toHaveAttribute(
+    'href',
+    'https://private.test/download',
+  )
+  expect(screen.getByRole('button', { name: '다시 렌더' })).toBeDisabled()
+  expect(screen.getAllByLabelText('원본 시작 (초)')).toHaveLength(1)
+  await goToStep('클립 생성')
+  expect(screen.queryByRole('button', { name: '다시 렌더' })).not.toBeInTheDocument()
 })
 
-it('splits rapid phrases, edits exact windows, persists them and merges back', async () => {
+it('saves exact milliseconds and selected text with a new optimistic revision', async () => {
   const writes: NonNullable<FakeClipsOptions['planWrites']> = []
   await mount({ planWrites: writes })
-  change('자막 원문', '오늘은 구로디지털단지에 와보았는데요')
-  await userEvent.click(cut().getByRole('combobox', { name: /^자막 흐름/ }))
-  await userEvent.click(screen.getByRole('option', { name: '빠른 구절형' }))
-  expect(cut().getByLabelText('구절 1')).toHaveValue('오늘은')
-  expect(cut().getByLabelText('구절 2')).toHaveValue('구로디지털단지에')
-  expect(
-    cut()
-      .getAllByLabelText('자막 시작 (컷 내 ms)')
-      .map((node) => (node as HTMLInputElement).value),
-  ).toEqual(['120', '420', '920'])
-  fireEvent.change(cut().getAllByLabelText('자막 끝 (컷 내 ms)')[2]!, { target: { value: '2020' } })
-  expect(screen.getByRole('button', { name: '수정 저장' })).toBeDisabled()
-  expect(cut().getByText('각 구절은 300~1000ms 동안 보여 주세요.')).toBeVisible()
-  fireEvent.change(cut().getAllByLabelText('자막 끝 (컷 내 ms)')[2]!, { target: { value: '1420' } })
-  await userEvent.click(screen.getByRole('button', { name: '수정 저장' }))
+  setField('원본 시작 (초)', '0.123')
+  setField('원본 끝 (초)', '12.345')
+  await selectText()
+  setField('자막 원문', '오늘 장면')
+  await savePlan()
   await waitFor(() => expect(writes).toHaveLength(1))
-  expect(writes[0]!.plan.cuts[0]!.copies.map((c) => [c.pace, c.startMs, c.endMs])).toEqual([
-    ['rapid', 120, 420],
-    ['rapid', 420, 920],
-    ['rapid', 920, 1420],
-  ])
-  await userEvent.click(cut().getByRole('combobox', { name: /^자막 흐름/ }))
-  await userEvent.click(screen.getByRole('option', { name: '문장형' }))
-  expect(cut().getByLabelText('자막 원문')).toHaveValue('오늘은 구로디지털단지에 와보았는데요')
+  expect(writes[0].plan.cuts[0]).toMatchObject({ startMs: 123, endMs: 12345 })
+  expect(writes[0].plan.elements![0].text).toBe('오늘 장면')
+  expect(writes[0].revision).toBe(1)
+  expect(screen.getByRole('link', { name: '다운로드' })).toBeInTheDocument()
 })
 
-it.each(['empty', 'unplaced'])(
-  'keeps a %s compiler-dropped caption editable after a pace fallback',
-  async (variant) => {
-    const project = fixture()
-    const caption = project.editing!.plan.cuts[0]!.copies[0]!
-    Object.assign(caption, { text: '', style: '', anchor: '', align: '', keyword: '' })
-    if (variant === 'empty') project.editing!.plan.cuts[0]!.copies = []
-    await mount({ projects: [project] })
-    expect(cut().getByLabelText('자막 원문')).toHaveValue('')
-    change('자막 원문', '오늘은 구로디지털단지에 와보았는데요')
-    await userEvent.click(cut().getByRole('combobox', { name: /자막 흐름/ }))
-    await userEvent.click(screen.getByRole('option', { name: '빠른 구절형' }))
-    expect(cut().getByLabelText('구절 1')).toHaveValue('오늘은')
-    expect(screen.getByRole('button', { name: '수정 저장' })).toBeEnabled()
-  },
-)
+it('keeps a selected text field mounted while its cut is reordered', async () => {
+  const writes: NonNullable<FakeClipsOptions['planWrites']> = []
+  await mount({ planWrites: writes })
+  await selectText()
+  const field = screen.getByLabelText('자막 원문')
+  setField('자막 원문', '선택한 문구')
+  await userEvent.click(screen.getByRole('button', { name: '아래로 이동' }))
+  expect(screen.getByLabelText('자막 원문')).toBe(field)
+  expect(field).toHaveValue('선택한 문구')
+  await savePlan()
+  await waitFor(() => expect(writes).toHaveLength(1))
+  expect(writes[0].plan.cuts.map((c) => c.id)).toEqual(['cut-b', 'cut-a'])
+})
+
+it('preserves invalid authored intervals and disables rerender until repaired', async () => {
+  const calls: string[] = []
+  await mount({ calls })
+  await selectText()
+  setField('표시 끝 (초)', '12')
+  expect(screen.getByLabelText('표시 끝 (초)')).toHaveValue(12)
+  expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
+  expect(screen.getByRole('button', { name: '다시 렌더' })).toBeDisabled()
+  expect(screen.getByText(/이 문구의 내용·위치·시간/)).toBeInTheDocument()
+  expect(calls).not.toContain('SaveClipEditPlan')
+  await userEvent.click(screen.getByRole('button', { name: '실행 취소' }))
+  expect(screen.getByLabelText('표시 끝 (초)')).toHaveValue(3.88)
+})
+
+it('undoes a saved deletion, preserving output-relative fixed text', async () => {
+  const p = fixture()
+  p.editing!.plan.cuts.forEach((c) => {
+    c.endMs = 20000
+  })
+  p.editing!.plan.durationMs = 39800
+  const writes: NonNullable<FakeClipsOptions['planWrites']> = []
+  await mount({ projects: [p], planWrites: writes })
+  await userEvent.click(screen.getByRole('button', { name: '컷 삭제' }))
+  expect(timeline().queryByRole('button', { name: 'caption a' })).not.toBeInTheDocument()
+  expect(timeline().getByRole('button', { name: '정확한 고정 문구' })).toBeInTheDocument()
+  await savePlan()
+  await waitFor(() => expect(writes).toHaveLength(1))
+  await userEvent.click(screen.getByRole('button', { name: '실행 취소' }))
+  expect(timeline().getByRole('button', { name: 'caption a' })).toBeInTheDocument()
+  await savePlan()
+  await waitFor(() => expect(writes).toHaveLength(2))
+  expect(writes.map((w) => w.revision)).toEqual([1, 2])
+})
+
+it('edits fixed global text without requiring legacy campaign facts', async () => {
+  const writes: NonNullable<FakeClipsOptions['planWrites']> = []
+  await mount({ planWrites: writes })
+  await selectText('정확한 고정 문구')
+  setField('자막 원문', '직접 쓴 문구 <그대로>')
+  await savePlan()
+  await waitFor(() => expect(writes).toHaveLength(1))
+  expect(writes[0].plan.elements!.find((t) => t.instanceId === 'global')).toMatchObject({
+    text: '직접 쓴 문구 <그대로>',
+    basis: 'whole',
+    kind: 'fixed',
+  })
+})
+
+it('splits and edits rapid phrase timing in exact milliseconds and merges back', async () => {
+  const writes: NonNullable<FakeClipsOptions['planWrites']> = []
+  await mount({ planWrites: writes })
+  await selectText()
+  setField('자막 원문', '오늘은 구로디지털단지에 와보았는데요')
+  await userEvent.click(screen.getByRole('combobox', { name: /^자막 흐름/ }))
+  await userEvent.click(screen.getByRole('option', { name: '빠른 구절형' }))
+  expect(screen.getByLabelText('구절 1')).toHaveValue('오늘은')
+  const ends = screen.getAllByLabelText('컷 안에서 끝 (초)')
+  fireEvent.change(ends[1], { target: { value: '0.919' } })
+  await savePlan()
+  await waitFor(() => expect(writes).toHaveLength(1))
+  expect(writes[0].plan.elements![0].phrases![1]).toMatchObject({
+    text: '구로디지털단지에',
+    startMs: 420,
+    endMs: 919,
+  })
+  await userEvent.click(screen.getByRole('combobox', { name: /^자막 흐름/ }))
+  await userEvent.click(screen.getByRole('option', { name: '문장형' }))
+  expect(screen.getByLabelText('자막 원문')).toHaveValue('오늘은 구로디지털단지에 와보았는데요')
+})
+
+it('keeps the local draft on conflict and reloads only after an explicit discard', async () => {
+  await mount({ planSaveConflict: true })
+  await selectText()
+  setField('자막 원문', '내 수정')
+  await savePlan()
+  await screen.findByRole('button', { name: '내 편집을 최신 버전에 적용' })
+  expect(screen.getByLabelText('자막 원문')).toHaveValue('내 수정')
+  expect(screen.getByRole('link', { name: '다운로드' })).toBeInTheDocument()
+})
+
+it('requires matching sources for rerender while text edits and previous video remain usable', async () => {
+  const calls: string[] = []
+  await mount({ calls })
+  await selectText()
+  setField('자막 원문', '원본 없이 수정')
+  await savePlan()
+  await waitFor(() => expect(calls).toContain('SaveClipEditPlan'))
+  expect(screen.getByRole('button', { name: '다시 렌더' })).toBeDisabled()
+  await select()
+  await waitFor(() => expect(screen.getByRole('button', { name: '다시 렌더' })).toBeEnabled())
+  expect(calls).not.toContain('StartClipGeneration')
+})
+
+it('uses localized selected-cut controls and shows a single audio control', async () => {
+  await mount()
+  await act(async () => initializeI18n('en'))
+  expect(screen.getByRole('heading', { name: 'Edit cuts and captions' })).toBeInTheDocument()
+  expect(screen.getByLabelText('Source start (seconds)')).toHaveValue(0)
+  expect(screen.getAllByLabelText('Original audio (%)')).toHaveLength(1)
+})
+
+it('links multiple observed ranges to one item without changing prices or observations', async () => {
+  const p = fixture(),
+    source = p.editing!.sources[0]
+  p.composition = {
+    snapshot: { version: 1, body: '<clip version="1"/>', templateId: 'template', legacy: false },
+    inputs: {
+      values: {},
+      items: {
+        menu: [
+          { id: 'a', values: { name: '밥', price: '8000' } },
+          { id: 'b', values: { name: '국', price: '12000' } },
+        ],
+      },
+      associations: [],
+    },
+  }
+  p.observations = {
+    status: 'available',
+    sources: [
+      {
+        source,
+        segments: [
+          { startMs: 0, endMs: 5000, event: '첫 장면', subjects: [], speech: '', quality: '' },
+          {
+            startMs: 5000,
+            endMs: 10000,
+            event: '두 번째 장면',
+            subjects: [],
+            speech: '',
+            quality: '',
+          },
+        ],
+      },
+    ],
+  }
+  const before = structuredClone(p.observations),
+    writes: NonNullable<FakeClipsOptions['planWrites']> = []
+  await mount({ projects: [p], planWrites: writes })
+  await userEvent.click(screen.getByRole('checkbox', { name: /첫 장면/ }))
+  await userEvent.click(screen.getByRole('checkbox', { name: /두 번째 장면/ }))
+  await savePlan()
+  await waitFor(() => expect(writes).toHaveLength(1))
+  expect(writes[0].plan.associations).toHaveLength(2)
+  expect(writes[0].plan.associations!.every((a) => a.itemId === 'a')).toBe(true)
+  await selectText()
+  expect(screen.getByLabelText('자막 원문')).toHaveValue('caption a')
+  expect(screen.getByText(/항목 연결이 바뀌었어요/)).toBeInTheDocument()
+  expect(p.observations).toEqual(before)
+  expect(p.composition.inputs.items.menu.map((i) => i.values.price)).toEqual(['8000', '12000'])
+  await userEvent.click(screen.getByRole('button', { name: '문구와 항목이 맞아요' }))
+  expect(screen.queryByText(/항목 연결이 바뀌었어요/)).not.toBeInTheDocument()
+})
+
+it('snaps range gestures to the output frame grid while precise typing retains milliseconds', async () => {
+  await mount()
+  fireEvent.change(screen.getByRole('slider', { name: '시작 손잡이 · 원본' }), {
+    target: { value: '124' },
+  })
+  expect(screen.getByLabelText('원본 시작 (초)')).toHaveValue(0.133)
+  setField('원본 시작 (초)', '0.124')
+  expect(screen.getByLabelText('원본 시작 (초)')).toHaveValue(0.124)
+  expect(screen.getByRole('button', { name: '현재 프레임을 시작으로' })).toBeDisabled()
+})

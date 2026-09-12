@@ -82,7 +82,7 @@ func ResolvePortableIntervals(plan EditPlan, limits composition.Limits) (EditPla
 	}
 	for _, text := range plan.Portable.Elements {
 		r := &text.Resolved
-		if r.CutID != "" && !seen[r.CutID] {
+		if r.Element.Basis == "cut" && r.CutID != "" && !seen[r.CutID] {
 			continue
 		}
 		a, b, problem := composition.ResolveInterval(r.Element, duration, lengths[r.CutID], starts[r.CutID], limits.AutoInsetMS)

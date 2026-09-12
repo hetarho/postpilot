@@ -19,6 +19,7 @@ import {
 } from '@/entities/clip-template/@x/clip-project'
 
 import { copyChars, splitRapid, isRapidCut, canAddRapid } from './caption-pace'
+import type { ClipSourceAssociation } from './composition'
 export { copyChars } from './caption-pace'
 
 /** A caption's VERTICAL anchor (CDS-12): the proto field is still called
@@ -60,6 +61,13 @@ export interface ClipEditCut {
   volumePermille: number
 }
 export interface ClipEditableText {
+  effectiveStartMs?: number
+  effectiveEndMs?: number
+  phrases?: { text: string; startMs: number; endMs: number }[]
+  staleEvidence?: boolean
+  evidenceReviewed?: boolean
+  evidence?: { sourceId: string; fingerprint: string; startMs: number; endMs: number }[]
+  fallbackReason?: string
   instanceId: string
   elementId: string
   cutId: string
@@ -82,6 +90,7 @@ export interface ClipEditableText {
   itemId: string
 }
 export interface ClipEditPlan {
+  associations?: ClipSourceAssociation[]
   nativeComposition?: boolean
   elements?: ClipEditableText[]
   durationMs: number
@@ -110,8 +119,16 @@ export interface ClipEditingState {
 export function copyClipPlan(plan: ClipEditPlan): ClipEditPlan {
   return {
     ...plan,
+    ...(plan.associations ? { associations: plan.associations.map((a) => ({ ...a })) } : {}),
     ...(plan.elements
-      ? { elements: plan.elements.map((t) => ({ ...t, rows: t.rows.map((row) => ({ ...row })) })) }
+      ? {
+          elements: plan.elements.map((t) => ({
+            ...t,
+            rows: t.rows.map((row) => ({ ...row })),
+            ...(t.phrases ? { phrases: t.phrases.map((p) => ({ ...p })) } : {}),
+            ...(t.evidence ? { evidence: t.evidence.map((e) => ({ ...e })) } : {}),
+          })),
+        }
       : {}),
     cuts: plan.cuts.map((c) => ({
       ...c,

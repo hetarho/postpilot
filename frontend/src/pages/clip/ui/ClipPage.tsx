@@ -111,11 +111,8 @@ function NewClip({ ownerId }: { ownerId: string }) {
 
 function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProject }) {
   const { t } = useTranslation('clips')
-  // The bar FOLLOWS the project's own state: a manual tab choice stands until the project itself
-  // moves on — a finished generation, a saved correction, a completed render — and then the bar
-  // goes to the step that now describes it. Without that, a generation that finished while the
-  // owner was on ① would leave the only copy of the video behind a tab nothing pointed at.
-  // Adjusted DURING render rather than from an effect, so no frame paints the stale step.
+  // Follow a lifecycle change immediately; a successful render stays in correction.
+  // Manual tab selection otherwise stands until the project's derived step changes.
   const derived = stepForProject(project)
   const [step, setStep] = useState<ClipStep>(derived)
   const [followed, setFollowed] = useState(derived)
@@ -262,29 +259,34 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
 
   const refinePanel = plan ? (
     <ClipCorrectionWorkspace
-      preview={
-        <>
-          <ClipDraftPreview
-            projectId={project.id}
-            revision={correction.revision}
-            plan={correction.draft}
-            ratio={project.ratio}
-            sources={plan.sources}
-            resolvePlayback={upload.ensurePlayback}
-          />
-          {project.result && (
-            <details className="mt-4">
-              <summary className="text-content-secondary cursor-pointer">
-                {t('preview.renderedRevision', { revision: project.renderedPlanRevision })}
-              </summary>
-              <ClipResult ownerId={ownerId} project={project} />
-            </details>
-          )}
-        </>
+      preview={(controls) => (
+        <ClipDraftPreview
+          {...controls}
+          projectId={project.id}
+          revision={correction.revision}
+          plan={correction.draft}
+          ratio={project.ratio}
+          sources={plan.sources}
+          resolvePlayback={upload.ensurePlayback}
+        />
+      )}
+      comparison={
+        project.result && (
+          <details className="mt-4">
+            <summary className="text-content-secondary cursor-pointer">
+              {t('preview.renderedRevision', { revision: project.renderedPlanRevision })}
+            </summary>
+            <ClipResult ownerId={ownerId} project={project} />
+          </details>
+        )
       }
+      downloadAction={
+        project.result?.downloadUrl && <ClipDownloadAction compact project={project} />
+      }
+      inputs={project.composition?.inputs}
+      observations={project.observations}
       correction={correction}
       state={plan}
-      answers={project.answers}
       disabled={pending}
       renderReady={!!upload.readyBatch && correction.revision === project.editPlanRevision}
       renderPending={generation.starting}
@@ -331,6 +333,17 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
   ) : (
     <>
       <ClipStepWaiting message={t('steps.refineWaiting')} onGo={() => setStep('generate')} />
+      {project.result && (
+        <>
+          <Typography variant="meta">
+            {t('preview.renderedRevision', { revision: project.renderedPlanRevision })}
+          </Typography>
+          <ClipResult ownerId={ownerId} project={project} />
+          <ActionBar ariaLabel={t('correction.actions')}>
+            <ClipDownloadAction project={project} />
+          </ActionBar>
+        </>
+      )}
       {observationPanel}
     </>
   )

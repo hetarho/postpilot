@@ -103,5 +103,27 @@ export { getClipSources, getClipSourcePlayback } from './api/sources'
 export type { ClipSourceAvailability } from './model/types'
 
 export { ClipDraftPreview } from './ui/ClipDraftPreview'
+export type { ClipDisplayedFrame } from './ui/ClipDraftPreview'
 export type { ClipEditableText } from './model/edit-plan'
 export { previewTimeline, previewFrame, previewElementIDs } from './model/draft-preview'
+export {
+  timelineCuts,
+  textInterval,
+  nativeTextErrors,
+  validateTimelinePlan,
+  applyTimelineEdit,
+  clipDraftKey,
+  selectedTime,
+  snapClipTime,
+  clipSeconds,
+  createClipTimeline,
+  clipTimelineReducer,
+  splitTextPhrases,
+  clipTextTracks,
+} from './model/timeline'
+export type {
+  ClipSelection,
+  TimelineEdit,
+  ClipTimelineState,
+  ClipTimelineAction,
+} from './model/timeline'

@@ -53,6 +53,8 @@ type SourceEvidence struct {
 	StartMS, EndMS        int
 }
 type PortableText struct {
+	Phrases               []EditablePhrase
+	StaleEvidence         bool
 	OwnerEdited           bool
 	Placement             *CompositionPlacement
 	Accent, Keyword, Pace string
@@ -63,6 +65,10 @@ type PortableText struct {
 	// Only grounded alternatives returned by the original writer call. The
 	// renderer may select one for readability without asking a model again.
 	Alternatives []CopyAlternative
+}
+type EditablePhrase struct {
+	Text           string
+	StartMS, EndMS int
 }
 
 // Effective automatic choices are frozen with the rendered draft. The original
@@ -76,6 +82,12 @@ type CopyAlternative struct {
 	Rows []composition.ResolvedRow
 }
 type PortablePlan struct {
+	NativeEditing bool
+	// Retained identities permit session undo after an accepted deletion save.
+	// They are private to this generation; corrections cannot invent identities.
+	RetiredCuts      []Cut
+	RetiredBindings  []composition.Cut
+	RetiredElements  []PortableText
 	TargetDurationMS int
 	Snapshot         CompositionSnapshot
 	Inputs           CompositionInputs

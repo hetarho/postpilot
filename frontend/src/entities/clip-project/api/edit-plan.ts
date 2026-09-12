@@ -22,10 +22,26 @@ export function toClipEditingState(value: ProtoClipEditingState): ClipEditingSta
       ...(value.plan.nativeComposition
         ? {
             nativeComposition: true,
-            elements: value.plan.elements.map(({ $typeName, rows, ...text }) => {
+            associations:
+              value.plan.associations?.values.map((a) => ({
+                groupId: a.groupId,
+                itemId: a.itemId,
+                sourceId: a.sourceId,
+                fingerprint: a.fingerprint,
+                startMs: a.startMs,
+                endMs: a.endMs,
+              })) ?? [],
+            elements: value.plan.elements.map(({ $typeName, rows, phrases, evidence, ...text }) => {
               void $typeName
               return {
                 ...text,
+                phrases: phrases.map((p) => ({ text: p.text, startMs: p.startMs, endMs: p.endMs })),
+                evidence: evidence.map((e) => ({
+                  sourceId: e.sourceId,
+                  fingerprint: e.fingerprint,
+                  startMs: e.startMs,
+                  endMs: e.endMs,
+                })),
                 rows: rows.map((row) => ({ role: row.role, text: row.text })),
               }
             }),
@@ -112,6 +128,7 @@ export function toClipEditingState(value: ProtoClipEditingState): ClipEditingSta
 export function clipPlanToProto(plan: ClipEditPlan) {
   return {
     nativeComposition: plan.nativeComposition ?? false,
+    associations: plan.associations ? { values: plan.associations } : undefined,
     elements: plan.elements ?? [],
     durationMs: plan.durationMs,
     hook: plan.hook,

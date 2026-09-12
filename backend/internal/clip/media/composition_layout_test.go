@@ -47,6 +47,29 @@ func TestDeclaredRapidKeepsOneOwnedSentenceAndMeasuredPhraseWindows(t *testing.T
 	}
 }
 
+func TestManualRapidWindowsSurviveLayoutAndRepeatedPreviewExactly(t *testing.T) {
+	for _, kind := range []string{"ai", "fixed"} {
+		plan := declaredPlan(t, `<clip version="1" pace="rapid" styles="simple"><scene id="scene"><text id="copy" kind="`+kind+`" role="caption" basis="cut">오늘은 밥을 먹어요</text></scene></clip>`, "vertical")
+		expected := []clip.EditablePhrase{{Text: "오늘은", StartMS: 123, EndMS: 456}, {Text: "밥을 먹어요", StartMS: 456, EndMS: 999}}
+		plan.Portable.Elements[0].Resolved.Text = "오늘은 밥을 먹어요"
+		plan.Portable.Elements[0].OwnerEdited = true
+		plan.Portable.Elements[0].Phrases = expected
+		layout := measuredDeclared(t, plan)
+		if !reflect.DeepEqual(layout.plan.Portable.Elements[0].Phrases, expected) {
+			t.Fatalf("rewrote manual windows: %+v", layout.plan.Portable.Elements[0].Phrases)
+		}
+		repeated := measuredDeclared(t, layout.plan)
+		if !reflect.DeepEqual(layout.elements(), repeated.elements()) {
+			t.Fatal("repeated layout changed manual phrases")
+		}
+		for i, cue := range layout.elements()[0].Cues {
+			if cue.StartMS != expected[i].StartMS || cue.EndMS != expected[i].EndMS || cue.Text != expected[i].Text {
+				t.Fatal("actual visual lost manual phrase")
+			}
+		}
+	}
+}
+
 func TestDeclaredSentencesAreSequentialAndExplicitOutputIsIndependent(t *testing.T) {
 	plan := declaredPlan(t, `<clip version="1" styles="clean"><scene id="scene"><text id="first" kind="ai" role="caption" basis="cut">First scene sentence.</text><text id="second" kind="ai" role="caption" basis="cut">Second scene sentence.</text><text id="third" kind="ai" role="caption" basis="cut">Third scene sentence.</text></scene><text id="fixed" kind="fixed" role="badge" basis="whole">직접 쓴 문구</text></clip>`, "vertical")
 	for i := range plan.Portable.Elements {

@@ -17,6 +17,13 @@ import {
 } from '../model/draft-preview'
 import { PreviewAssetCache, PreviewPreparation } from '../model/preview-assets'
 
+export interface ClipDisplayedFrame {
+  cutId: string
+  sourceMs: number
+  outputMs: number
+  precise: boolean
+}
+
 function PreviewVideo({
   item,
   source,
@@ -30,6 +37,7 @@ function PreviewVideo({
   canvas,
   onFrame,
   onPrecision,
+  onDisplayedFrame,
 }: {
   item: PreviewCut
   source?: RetainedClipSource
@@ -43,6 +51,7 @@ function PreviewVideo({
   canvas: { width: number; height: number }
   onFrame: (ms: number) => void
   onPrecision: (precise: boolean) => void
+  onDisplayedFrame?: (frame: ClipDisplayedFrame) => void
 }) {
   const { t } = useTranslation('clips')
   const video = useRef<HTMLVideoElement>(null)
@@ -128,6 +137,13 @@ function PreviewVideo({
     const precise = typeof el.requestVideoFrameCallback === 'function'
     const frame = (mediaMs: number) => {
       if (!active) return
+      if (!el.seeking)
+        onDisplayedFrame?.({
+          cutId: item.cut.id,
+          sourceMs: Math.round(mediaMs),
+          outputMs: item.startMs + mediaMs - item.cut.startMs,
+          precise,
+        })
       onPrecision(
         precise &&
           Math.abs(mediaMs - (playing ? el.currentTime * 1000 : sourceMs)) <=
@@ -160,7 +176,18 @@ function PreviewVideo({
       else cancelAnimationFrame(handle)
       el.removeEventListener('seeked', seeked)
     }
-  }, [url, master, playing, sourceMs, item.startMs, item.cut.startMs, onFrame, onPrecision])
+  }, [
+    url,
+    master,
+    playing,
+    sourceMs,
+    item.startMs,
+    item.cut.startMs,
+    item.cut.id,
+    onFrame,
+    onPrecision,
+    onDisplayedFrame,
+  ])
 
   const failed = async () => {
     const epoch = playbackEpoch.current
@@ -241,6 +268,9 @@ export function ClipDraftPreview({
   resolvePlayback,
   timeMs: controlledTime,
   onTimeChange,
+  onDisplayedFrame,
+  maxHeight,
+  compact = false,
 }: {
   projectId: string
   revision: number
@@ -250,11 +280,20 @@ export function ClipDraftPreview({
   resolvePlayback: PreviewSourceAccess['resolvePlayback']
   timeMs?: number
   onTimeChange?: (ms: number) => void
+  onDisplayedFrame?: (frame: ClipDisplayedFrame) => void
+  maxHeight?: number
+  compact?: boolean
 }) {
   const { t } = useTranslation('clips')
   const transport = useTransport()
   const [localTime, setLocalTime] = useState(0)
   const [playing, setPlaying] = useState(false)
+  // A timeline selection/scrub is an external seek. Frame-driven updates use
+  // changeTime below and already have the same local value, so playback keeps running.
+  if (controlledTime !== undefined && !Object.is(controlledTime, localTime)) {
+    setLocalTime(controlledTime)
+    setPlaying(false)
+  }
   const [muted, setMuted] = useState(true)
   const [precise, setPrecise] = useState(false)
   const [retry, setRetry] = useState(0)
@@ -337,10 +376,13 @@ export function ClipDraftPreview({
     slots.push({ ...next, sourceMs: next.cut.startMs, opacity: 0, audioGain: 0, master: false })
   return (
     <section aria-label={t('preview.title')} className="space-y-3">
-      <Typography variant="fieldTitle">{t('preview.title')}</Typography>
+      {!compact && <Typography variant="fieldTitle">{t('preview.title')}</Typography>}
       <div
         className="bg-media-canvas-bg relative mx-auto w-full overflow-hidden rounded-md"
-        style={{ aspectRatio: `${canvas.width} / ${canvas.height}` }}
+        style={{
+          aspectRatio: `${canvas.width} / ${canvas.height}`,
+          maxWidth: maxHeight ? (maxHeight * canvas.width) / canvas.height : undefined,
+        }}
       >
         {slots.map((slot) => (
           <PreviewVideo
@@ -359,6 +401,7 @@ export function ClipDraftPreview({
             canvas={canvas}
             onFrame={changeTime}
             onPrecision={setPrecise}
+            onDisplayedFrame={onDisplayedFrame}
           />
         ))}
         {ready &&
@@ -402,24 +445,30 @@ export function ClipDraftPreview({
           </Typography>
         </label>
       </div>
-      <Slider
-        label={t('preview.outputTime')}
-        min={0}
-        max={Math.max(1, duration)}
-        step={CLIP_DRAFT_PREVIEW.seekStepMs}
-        value={timeMs}
-        valueText={`${(timeMs / 1000).toFixed(3)} / ${(duration / 1000).toFixed(3)} s`}
-        onChange={(ms) => {
-          setPlaying(false)
-          changeTime(ms)
-        }}
-      />
+      {!compact && (
+        <Slider
+          label={t('preview.outputTime')}
+          min={0}
+          max={Math.max(1, duration)}
+          step={CLIP_DRAFT_PREVIEW.seekStepMs}
+          value={timeMs}
+          valueText={`${(timeMs / 1000).toFixed(3)} / ${(duration / 1000).toFixed(3)} s`}
+          onChange={(ms) => {
+            setPlaying(false)
+            changeTime(ms)
+          }}
+        />
+      )}
       {!timeline.length && (
         <Typography variant="body" role="status" className="text-content-secondary">
           {t('preview.invalidTimeline')}
         </Typography>
       )}
-      <Typography variant="body" role="status" className="text-content-secondary">
+      <Typography
+        variant="body"
+        role="status"
+        className={compact && !failure ? 'sr-only' : 'text-content-secondary'}
+      >
         {failure
           ? t('preview.preparationFailed')
           : !ready || snapshot.status === 'updating'
@@ -434,14 +483,21 @@ export function ClipDraftPreview({
           {t('preview.retry')}
         </Button>
       )}
-      <Typography variant="body" className="text-content-secondary">
-        {t('preview.parity')}
-      </Typography>
-      {!precise && (
+      <details>
+        <summary className="text-content-secondary cursor-pointer">
+          <Typography as="span" variant="meta">
+            {t('preview.parityLabel')}
+          </Typography>
+        </summary>
         <Typography variant="body" className="text-content-secondary">
-          {t('preview.frameApproximate')}
+          {t('preview.parity')}
         </Typography>
-      )}
+        {!precise && (
+          <Typography variant="body" className="text-content-secondary">
+            {t('preview.frameApproximate')}
+          </Typography>
+        )}
+      </details>
     </section>
   )
 }

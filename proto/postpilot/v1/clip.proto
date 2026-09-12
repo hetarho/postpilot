@@ -326,6 +326,8 @@ message ClipEditCut {
 }
 message ClipFocal { double x = 1; double y = 2; }
 message ClipTextRow { string role = 1; string text = 2; }
+message ClipEditablePhrase { string text = 1; int32 start_ms = 2; int32 end_ms = 3; }
+message ClipTextEvidence { string source_id = 1; string fingerprint = 2; int32 start_ms = 3; int32 end_ms = 4; }
 // IDs, kind, role and evidence ownership are read projections. Only the saved
 // declaration can authorize an element; callers cannot create new identities.
 message ClipEditableText {
@@ -349,6 +351,16 @@ message ClipEditableText {
   int32 resolved_end_ms = 18;
   string group_id = 19;
   string item_id = 20;
+  // Phrase times are relative to the owned cut; empty requests automatic splitting.
+  repeated ClipEditablePhrase phrases = 21;
+  bool stale_evidence = 22;
+  // Explicit owner acknowledgement; never changes recorded observations.
+  bool evidence_reviewed = 23;
+  repeated ClipTextEvidence evidence = 24;
+  string fallback_reason = 25;
+  // Frozen automatic interval, relative to the owning cut when present.
+  optional int32 effective_start_ms = 26;
+  optional int32 effective_end_ms = 27;
 }
 message ClipEditPlan {
   int32 duration_ms = 1;
@@ -357,7 +369,9 @@ message ClipEditPlan {
   string hook = 3;
   bool native_composition = 4;
   repeated ClipEditableText elements = 5;
+  ClipSourceAssociations associations = 6;
 }
+message ClipSourceAssociations { repeated ClipSourceAssociation values = 1; }
 
 message PrepareClipPreviewRequest {
   string project_id = 1;

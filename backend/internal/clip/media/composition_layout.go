@@ -197,6 +197,12 @@ func (r *Rendering) layoutComposition(ctx context.Context, ws clip.MediaWorkspac
 	}
 	for _, text := range plan.Portable.Elements {
 		if visual, exists := byID[text.Resolved.InstanceID]; exists {
+			if len(visual.cues) > 0 {
+				visual.text.Phrases = nil
+				for _, cue := range visual.cues {
+					visual.text.Phrases = append(visual.text.Phrases, clip.EditablePhrase{Text: cue.copy.Text, StartMS: cue.manifest.StartMS - cutStarts[text.Resolved.CutID], EndMS: cue.manifest.EndMS - cutStarts[text.Resolved.CutID]})
+				}
+			}
 			if visual.text.Resolved.Element.Kind == "ai" {
 				visual.text.Placement = &clip.CompositionPlacement{Style: visual.manifest.Style, Position: visual.manifest.Position, StartMS: visual.text.Resolved.StartMS - cutStarts[visual.text.Resolved.CutID], EndMS: visual.text.Resolved.EndMS - cutStarts[visual.text.Resolved.CutID]}
 				for i := range visual.cues {
@@ -243,7 +249,7 @@ func declaredManifest(text clip.PortableText) clip.CompositionElement {
 func (r *Rendering) layoutDeclaredElement(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, plan clip.EditPlan, text clip.PortableText, styles []string, history design.StyleHistory, placed clip.Manifest, previous string, phrase bool) (declaredVisual, error) {
 	visual := declaredVisual{text: text, manifest: declaredManifest(text)}
 	e := text.Resolved.Element
-	if e.Role == "caption" && e.Kind == "ai" && text.Pace == "rapid" && !phrase {
+	if e.Role == "caption" && text.Pace == "rapid" && !phrase {
 		return r.layoutDeclaredRapid(ctx, ws, canvas, plan, text, styles, history, placed, previous)
 	}
 	if e.Role != "caption" {

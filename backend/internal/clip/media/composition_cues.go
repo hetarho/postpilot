@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"slices"
+	"strings"
 
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/composition"
@@ -73,6 +74,27 @@ func (r *Rendering) layoutDeclaredRapid(ctx context.Context, ws clip.MediaWorksp
 	}
 	for index, candidate := range candidates {
 		phrases, ok := clip.SplitRapid(clip.Caption{Text: candidate.Text, Keyword: text.Keyword}, text.Resolved.StartMS, text.Resolved.EndMS)
+		if len(text.Phrases) > 0 {
+			if err := clip.ValidateEditablePhrases(plan); err != nil {
+				return declaredVisual{}, err
+			}
+			offset, cutStart := 0, 0
+			for _, cut := range plan.Cuts {
+				offset -= cut.TransitionMS
+				if cut.ID == text.Resolved.CutID {
+					cutStart = offset
+				}
+				offset += cut.EndMS - cut.StartMS
+			}
+			phrases, ok = nil, true
+			for _, p := range text.Phrases {
+				keyword := ""
+				if strings.Contains(p.Text, text.Keyword) {
+					keyword = text.Keyword
+				}
+				phrases = append(phrases, clip.Caption{Text: p.Text, Keyword: keyword, StartMS: cutStart + p.StartMS, EndMS: cutStart + p.EndMS, Pace: "rapid"})
+			}
+		}
 		if !ok {
 			continue
 		}

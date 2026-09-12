@@ -1,5 +1,55 @@
 import type { ClipEditingState } from '@/entities/clip-project'
 
+export function clipTimelineFixture(): ClipEditingState {
+  const state = clipEditingFixture()
+  state.plan.nativeComposition = true
+  state.plan.associations = []
+  state.plan.elements = state.plan.cuts.map((cut, index) => ({
+    instanceId: `caption-${cut.sourceId}`,
+    elementId: 'caption',
+    cutId: cut.id,
+    kind: 'ai',
+    role: 'caption',
+    text: `caption ${cut.sourceId}`,
+    rows: [],
+    style: 'clean',
+    position: 'bottom',
+    align: 'center',
+    basis: 'cut',
+    startMs: 120,
+    endMs: 3880,
+    pace: 'steady',
+    accent: '',
+    keyword: '',
+    resolvedStartMs: index * 9800 + 120,
+    resolvedEndMs: index * 9800 + 3880,
+    groupId: 'menu',
+    itemId: cut.sourceId,
+    evidence: [{ sourceId: cut.sourceId, fingerprint: cut.fingerprint, startMs: 0, endMs: 10000 }],
+  }))
+  state.plan.elements.push({
+    instanceId: 'global',
+    elementId: 'badge',
+    cutId: '',
+    kind: 'fixed',
+    role: 'badge',
+    text: '정확한 고정 문구',
+    rows: [],
+    style: 'auto',
+    position: 'header',
+    align: 'center',
+    basis: 'whole',
+    pace: 'steady',
+    accent: '',
+    keyword: '',
+    resolvedStartMs: 0,
+    resolvedEndMs: 19800,
+    groupId: '',
+    itemId: '',
+  })
+  return state
+}
+
 export function clipEditingFixture(): ClipEditingState {
   return {
     plan: {

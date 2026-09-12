@@ -12,6 +12,11 @@ import (
 // Editable values reference a saved identity. Evidence, binding ownership and
 // the template source remain server-owned even when text is corrected.
 type CorrectionText struct {
+	EffectiveStartMS, EffectiveEndMS         *int
+	Phrases                                  []EditablePhrase
+	StaleEvidence, EvidenceReviewed          bool
+	Evidence                                 []SourceEvidence
+	FallbackReason                           string
 	InstanceID, ElementID, CutID, Kind, Role string
 	Text                                     string
 	Rows                                     []composition.ResolvedRow
@@ -24,7 +29,16 @@ type CorrectionText struct {
 
 func correctionText(t PortableText) CorrectionText {
 	r, e := t.Resolved, t.Resolved.Element
-	return CorrectionText{r.InstanceID, e.ID, r.CutID, e.Kind, e.Role, r.Text, slices.Clone(r.Rows), e.Style, e.Position, e.Align, e.Basis, e.StartMS, e.EndMS, t.Pace, t.Accent, t.Keyword, r.StartMS, r.EndMS, r.GroupID, r.ItemID}
+	result := CorrectionText{InstanceID: r.InstanceID, ElementID: e.ID, CutID: r.CutID, Kind: e.Kind, Role: e.Role,
+		Text: r.Text, Rows: slices.Clone(r.Rows), Style: e.Style, Position: e.Position, Align: e.Align, Basis: e.Basis,
+		StartMS: e.StartMS, EndMS: e.EndMS, Pace: t.Pace, Accent: t.Accent, Keyword: t.Keyword,
+		ResolvedStartMS: r.StartMS, ResolvedEndMS: r.EndMS, GroupID: r.GroupID, ItemID: r.ItemID,
+		Phrases: slices.Clone(t.Phrases), StaleEvidence: t.StaleEvidence, Evidence: slices.Clone(t.Evidence), FallbackReason: t.FallbackReason}
+	if t.Placement != nil {
+		a, b := t.Placement.StartMS, t.Placement.EndMS
+		result.EffectiveStartMS, result.EffectiveEndMS = &a, &b
+	}
+	return result
 }
 
 func applyNativeCorrection(cfg RenderConfig, p Project, old EditPlan, styles []string, sources []AnalysisSource, in CorrectionPlan) (EditPlan, []string, error) {
@@ -35,6 +49,27 @@ func applyNativeCorrection(cfg RenderConfig, p Project, old EditPlan, styles []s
 	}
 	next := old
 	portable := *old.Portable
+	portable.NativeEditing = portable.NativeEditing || portable.Snapshot.Legacy
+
+	changed := []SourceAssociation{}
+	if in.Associations != nil {
+		portable.Inputs.Associations = slices.Clone(*in.Associations)
+		limits := cfg.Composition
+		if portable.Snapshot.Legacy {
+			limits = LegacyCompositionLimits(limits)
+		}
+		doc, problem := composition.Parse(portable.Snapshot.Body, limits)
+		if problem != nil {
+			return EditPlan{}, nil, problem
+		}
+		if err := ValidateCompositionInputs(doc, portable.Inputs, limits, false); err != nil {
+			return EditPlan{}, nil, err
+		}
+		if err := ValidateSourceAssociations(p, portable.Inputs.Associations); err != nil {
+			return EditPlan{}, nil, err
+		}
+		changed = changedAssociations(old.Portable.Inputs.Associations, portable.Inputs.Associations)
+	}
 	portable.Elements = nil
 	portable.TargetDurationMS = 0
 	geometryChanged := len(old.Cuts) != len(in.Cuts)
@@ -55,10 +90,7 @@ func applyNativeCorrection(cfg RenderConfig, p Project, old EditPlan, styles []s
 		}
 	}
 	next.Portable, next.Cuts, next.DurationMS = &portable, nil, in.DurationMS
-	known := map[string]Cut{}
-	for _, c := range old.Cuts {
-		known[c.ID] = c
-	}
+	known, knownText := correctionArchive(old, in, &portable)
 	for _, c := range in.Cuts {
 		prior, ok := known[c.ID]
 		if !ok || c.SourceID != prior.SourceID || c.Fingerprint != prior.Fingerprint || c.VolumePermille < 0 || c.VolumePermille > 1000 {
@@ -79,10 +111,6 @@ func applyNativeCorrection(cfg RenderConfig, p Project, old EditPlan, styles []s
 	}
 	if len(next.Cuts) > 0 {
 		next.Cuts[0].TransitionMS = 0
-	}
-	knownText := map[string]PortableText{}
-	for _, t := range old.Portable.Elements {
-		knownText[t.Resolved.InstanceID] = t
 	}
 	seen := map[string]bool{}
 	for _, edit := range in.Elements {
@@ -107,6 +135,11 @@ func applyNativeCorrection(cfg RenderConfig, p Project, old EditPlan, styles []s
 			return EditPlan{}, nil, ErrInvalid
 		}
 		before := correctionText(t)
+		// Provenance and warnings are server projections, never client authority.
+		edit.Evidence, edit.FallbackReason, edit.StaleEvidence = before.Evidence, before.FallbackReason, before.StaleEvidence
+		edit.EffectiveStartMS, edit.EffectiveEndMS = before.EffectiveStartMS, before.EffectiveEndMS
+		reviewed := edit.EvidenceReviewed
+		edit.EvidenceReviewed = false
 		// Derived intervals are output only and never make a content edit.
 		before.ResolvedStartMS, before.ResolvedEndMS = edit.ResolvedStartMS, edit.ResolvedEndMS
 		if !reflect.DeepEqual(before, edit) {
@@ -118,6 +151,9 @@ func applyNativeCorrection(cfg RenderConfig, p Project, old EditPlan, styles []s
 		e.Style, e.Position, e.Align, e.Basis, e.StartMS, e.EndMS = edit.Style, edit.Position, edit.Align, edit.Basis, edit.StartMS, edit.EndMS
 		t.Resolved.AuthoredTiming = edit.Basis != "cut" || edit.StartMS != nil || edit.EndMS != nil
 		t.Pace, t.Accent, t.Keyword = edit.Pace, edit.Accent, edit.Keyword
+		t.Phrases = slices.Clone(edit.Phrases)
+		contentChanged := before.Text != edit.Text || !reflect.DeepEqual(before.Rows, edit.Rows) || !slices.Equal(before.Phrases, edit.Phrases)
+		t.StaleEvidence = (t.StaleEvidence || associationAffectsText(t, changed)) && !reviewed && !contentChanged
 		if !reflect.DeepEqual(before, edit) {
 			t.OwnerEdited = true
 		}
@@ -129,6 +165,9 @@ func applyNativeCorrection(cfg RenderConfig, p Project, old EditPlan, styles []s
 	}
 	if resolved.DurationMS != in.DurationMS {
 		return EditPlan{}, nil, ErrInvalid
+	}
+	if err := ValidateEditablePhrases(resolved); err != nil {
+		return EditPlan{}, nil, err
 	}
 	geometry := resolved
 	geometry.Hook = ""

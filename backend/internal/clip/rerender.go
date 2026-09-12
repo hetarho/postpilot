@@ -14,7 +14,7 @@ type CaptionSizer interface {
 }
 
 func (s *GenerationService) EditingState(p Project) (*CorrectionState, error) {
-	return EditingState(p, s.cfg.Render)
+	return editingState(p, s.cfg.Render, s.CompositionCapability() >= CompositionPlanVersion)
 }
 func (s *GenerationService) SaveCorrection(ctx context.Context, user, id string, revision int, input CorrectionPlan) (Project, error) {
 	p, err := s.projects.store.GetProject(ctx, user, id)
@@ -123,6 +123,9 @@ func (s *GenerationService) StartRender(ctx context.Context, user, id, batch str
 	}
 	plan, _, err = ApplyCorrection(s.cfg.Render, p, CorrectionFromPlan(plan))
 	if err != nil {
+		return "", err
+	}
+	if err := ValidateCompositionEvidence(plan); err != nil {
 		return "", err
 	}
 	sources, err := RetainedSources(p)
