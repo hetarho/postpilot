@@ -1,0 +1,177 @@
+# File-based SVG overlay presets
+
+T119 separates overlay drawing from clip layout and video composition. The
+shipped appearance is unchanged. Caption, disclosure/information and card SVGs
+now live in `backend/internal/clip/overlay/presets/`, embedded into the API binary.
+The same loader accepts a complete operator-provided directory at startup.
+
+## Add a preset
+
+Copy the built-in directory to a dedicated asset directory, for example
+`/srv/postpilot/overlays`. Add a folder and change the relevant binding:
+
+```text
+overlays/
+  bindings.json
+  caption/preset.json
+  caption/overlay.svg
+  furniture/preset.json
+  furniture/overlay.svg
+  card/preset.json
+  card/overlay.svg
+  editorial/preset.json
+  editorial/overlay.svg
+```
+
+`editorial/preset.json` declares the view contract, not a new product style:
+
+```json
+{"id":"editorial","view":"copy-v1","template":"overlay.svg"}
+```
+
+`bindings.json` selects drawings for existing product slots:
+
+```json
+{
+  "version": 1,
+  "bindings": {
+    "copy.clean": "editorial",
+    "copy.memo": "caption",
+    "copy.bold": "caption",
+    "copy.mark": "caption",
+    "furniture": "furniture",
+    "card.hook": "card",
+    "card.end": "card"
+  }
+}
+```
+
+Start by copying `caption/overlay.svg` into the new folder, then edit the SVG
+drawing. No Go preset registration or switch is needed. A static SVG exported
+from a design tool can supply paths, groups, gradients and decoration; replace
+its variable text and placement with template fields. Keep variable text as
+`<text>`, rather than converting it to paths.
+
+The following small example shows the syntax, not a proposed product design:
+
+```svg
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="{{.Width}}" height="{{.Height}}">
+  {{with .Plate}}
+  <rect x="{{.X}}" y="{{.Y}}" width="{{.Width}}" height="{{.Height}}"
+        rx="{{.Radius}}" fill="{{.Fill}}" fill-opacity="{{.Opacity}}"/>
+  {{end}}
+  {{range .Lines}}
+  <text x="{{.X}}" y="{{.Y}}" xml:space="preserve"
+        font-family="{{.Family}}" font-size="{{.Size}}"
+        font-weight="{{.Weight}}" letter-spacing="{{.Tracking}}"
+        fill="{{.Fill}}">{{.Value}}</text>
+  {{end}}
+</svg>
+```
+
+Templates use Go's `html/template` syntax (`with`, `if`, `range`, `printf`).
+Plain text and attribute values are escaped automatically: a caption containing
+`&` or `<` remains text. Do not pre-escape values or inject raw markup. The
+complete built-in caption asset also handles keyword spans, highlights, scrims
+and shadows; preserve those slots when a selected style requires them.
+
+## Version 1 view contracts
+
+The field definitions live in
+[`view.go`](../../backend/internal/clip/overlay/view.go). All views receive
+full-frame `Width` and `Height`. Geometry is in output pixels, text `Y` is the
+baseline, and tracking is already converted to pixels. Layout has already
+measured and wrapped text using the pinned fonts.
+
+| View | Fields |
+|---|---|
+| `copy-v1` | Optional `Plate`, `Bar`, `Dot`, `Scrim`, `Shadow`; `Lines` of `Text` |
+| `furniture-v1` | `Badge` box, `Label` text; `Chips` with a box and `Label`/`Value` text |
+| `card-v1` | `Empty`, `Plate`, `Shadow`; `Lines` with optional `Chip` box and `Text` |
+
+| Shared value | Fields |
+|---|---|
+| `Box` | `X`, `Y`, `Width`, `Height`, `Radius`, `Fill`, `Opacity` |
+| `Circle` | `X`, `Y`, `Radius`, `Fill` |
+| `Shadow` | `DX`, `DY`, `Deviation` (Gaussian standard deviation), `Fill`, `Opacity` |
+| `Scrim` | Box fields plus gradient opacity `From`, `To` |
+| `Text` | `X`, `Y`, `Size`, `Weight`, `Family`, `Tracking`, `Value`, `Fill`, `Opacity` |
+| Text effects | `Stroke`, `StrokeOpacity`, `StrokeWidth`, `Shadow` flag, optional `Highlight` box |
+| Keyword text | `Colored` flag, `Prefix`, `Keyword`, `Suffix`, `Accent` |
+| Chip value fitting | `Length` for `textLength` with `lengthAdjust="spacingAndGlyphs"` |
+
+Use `with`/`if` for optional slots and `range` for lines/chips. An empty opacity
+means the existing drawing omits that attribute; it is not an opacity of zero.
+`card.hook` and `card.end` can use different files with the same `card-v1` view.
+Incompatible future view shapes need another version. Preset IDs are lowercase
+letters, digits and hyphens, start with a letter and have at most 64 characters.
+
+## Loading and deployment
+
+`CLIP_OVERLAY_DIR` defaults to empty, selecting embedded assets. To use files,
+set it to the complete directory's absolute path **inside the API container**,
+for example `/config/overlays`, and mount the host directory read-only:
+
+```yaml
+services:
+  api:
+    environment:
+      CLIP_OVERLAY_DIR: /config/overlays
+    volumes:
+      - /srv/postpilot/overlays:/config/overlays:ro
+```
+
+Use the API service name from the actual stack; this is only the override
+fragment. Files must be readable and directories traversable by the nonroot API
+user. The entire catalog is loaded once. Restart or roll out the API to activate
+an edit; in-flight jobs keep their startup snapshot. Rollback restores the prior
+asset directory or clears the variable to use embedded assets. Edits to the
+built-in repository assets require rebuilding the API.
+
+A frontend `public/` directory alone does not reach the renderer. It can be the
+authoring source if the deployment copies or mounts that catalog into the API;
+no HTTP fetching is needed. Only trusted deployment files are accepted, with no
+request-controlled paths or upload endpoint.
+
+The constructor checks every discovered preset and required binding against
+representative view data before accepting render work. Unknown fields, invalid
+bindings, malformed templates/SVG and oversized files fail startup. Dynamic
+output is checked again on each render; startup probes cannot exercise every
+conditional branch. Limits: 64 presets, 512 KiB per file, 8 MiB per catalog and
+2 MiB rendered SVG. Symlinks and nested preset directories are rejected.
+
+Use one standalone static SVG root with the SVG namespace. Local fragment
+references such as `url(#shadow)` are supported. Remove XML/DOCTYPE declarations,
+scripts, event handlers, `foreignObject`, animation elements and external
+href/src references from exports. Keep styles and assets self-contained; the
+checks enforce a trusted-asset contract, not a general untrusted-SVG sanitizer.
+
+## Boundaries and verification
+
+The catalog owns markup and asset selection. The media adapter prepares measured
+views; existing design configuration still owns layout, typography, safe regions,
+visibility and time windows. FFmpeg still composes bounded static PNG layers.
+A new drawing does not add a UI style, font, animation or semantic content field.
+Changing those policies remains a separate change at the corresponding layer.
+
+Draw within the supplied layout bounds and use the measured font metrics. The
+manifest describes the layout input; it does not reverse-engineer arbitrary
+paths or text metrics from the SVG. Moving/resizing text or changing its font in
+markup alone can make validation disagree with the pixels. A future layout
+change belongs in the view adapter/design configuration as well as the asset.
+
+Tests cover discovery, binding/version errors, escaping, read/output limits,
+immutable snapshots and constructor failures. Existing SVG goldens remain
+byte-identical. The production image gate additionally rasterizes a new
+file-only preset with real resvg and checks its changed pixels. The renderer
+regression suite and eight original owner videos check unchanged delivery.
+
+```sh
+cd backend
+go test ./internal/clip/overlay ./internal/clip/media ./internal/platform/config
+```
+
+From the repository root, `docker build --target production -f backend/Dockerfile .`
+includes the real media/preset smoke gate. Test-only sample designs never become
+the shipped bindings.

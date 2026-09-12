@@ -30,3 +30,19 @@ func TestClipMediaConfiguration(t *testing.T) {
 		})
 	}
 }
+
+func TestClipOverlayDirectoryConfiguration(t *testing.T) {
+	for _, value := range []string{"", t.TempDir()} {
+		t.Setenv("CLIP_OVERLAY_DIR", value)
+		cfg, err := Load()
+		if err != nil || ClipRender(cfg).OverlayDir != value {
+			t.Fatalf("overlay directory not propagated: %v", err)
+		}
+	}
+	for _, value := range []string{"relative/presets", "/", "$PRESETS/assets", "/tmp/../presets"} {
+		t.Setenv("CLIP_OVERLAY_DIR", value)
+		if _, err := Load(); err == nil {
+			t.Fatalf("invalid directory accepted: %q", value)
+		}
+	}
+}

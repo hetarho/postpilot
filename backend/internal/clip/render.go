@@ -155,6 +155,8 @@ type Renderer interface {
 }
 type RenderConfig struct {
 	ResvgPath, FontPath string
+	// Empty uses the embedded preset catalog; a directory is snapshotted at boot.
+	OverlayDir string
 	// The secondary face (CDS-17): the hook title and 크게 강조 are set in it.
 	DisplayFontPath                                                  string
 	MaxCuts, MaxCopyRunes, FadeMS, FPS, CRF, AudioRate, AudioBitrate int

@@ -17,6 +17,7 @@ import (
 
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/design"
+	"github.com/postpilot/backend/internal/clip/overlay"
 	"github.com/rivo/uniseg"
 	"golang.org/x/image/font/sfnt"
 )
@@ -36,6 +37,7 @@ type Rendering struct {
 	// when it is not configured, which the constructor refuses.
 	display       *sfnt.Font
 	displayFamily string
+	overlays      *overlay.Catalog
 }
 
 var _ clip.Renderer = (*Rendering)(nil)
@@ -55,7 +57,11 @@ func NewRenderer(media *Adapter, cfg clip.RenderConfig) (*Rendering, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Rendering{media, cfg, font, display, design.FontFamily("paperlogy")}, nil
+	catalog, err := loadOverlays(cfg.OverlayDir)
+	if err != nil {
+		return nil, err
+	}
+	return &Rendering{media: media, cfg: cfg, font: font, display: display, displayFamily: design.FontFamily("paperlogy"), overlays: catalog}, nil
 }
 
 // bundledFace loads one pinned face: the size and the checksum both have to
@@ -327,94 +333,6 @@ func paint(token string) (string, string) {
 	return c.Hex, strconv.FormatFloat(c.Alpha, 'f', -1, 64)
 }
 
-// Every colour, radius, stroke and offset below is a CDS token read from the
-// design system; the only arithmetic is placement.
-func copySVG(canvas clip.Canvas, c clip.Copy, l copyLayout, ground Luminance) string {
-	var b strings.Builder
-	fmt.Fprintf(&b, `<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d">`, canvas.Width, canvas.Height)
-	p, s := l.Region, l.Style
-	accent := design.Accent[c.Accent]
-	radius := design.Spacing.RadiusBox
-	// A scrim appears only under an UNPLATED style, only at its own anchor, and
-	// only when the sampled ground demands one (CDS-32, CDS-44). It shares the
-	// copy's own in and out, which it gets by riding the same plate.
-	if s.Plate == "" && ground.Scrim() {
-		if scrim, ok := scrimFor(canvas, c.Anchor); ok {
-			paint := design.Scrim[scrim.Edge]
-			fmt.Fprintf(&b, `<defs><linearGradient id="scrim" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="%s" stop-opacity="%s"/><stop offset="1" stop-color="%s" stop-opacity="%s"/></linearGradient></defs>`,
-				paint.Hex, trimmed(paint.From), paint.Hex, trimmed(paint.To))
-			fmt.Fprintf(&b, `<rect x="%.3f" y="%.3f" width="%.3f" height="%.3f" fill="url(#scrim)"/>`,
-				scrim.Region.X, scrim.Region.Y, scrim.Region.Width, scrim.Region.Height)
-		}
-	}
-	// An accent word turns white on a bright ground (CDS-44). It is 크게 강조's
-	// word that turns, and only it: 형광펜's accent is the marker stroke BEHIND
-	// white text, so whitening that would paint white on white — CDS-26 keeps
-	// the text white precisely so its contrast never depends on the accent.
-	word := accent
-	if ground.AccentWhite() && !s.Highlight {
-		word = design.Color["text_white"].Hex
-	}
-	if s.Shadow != "" {
-		sh := design.Shadow[s.Shadow]
-		// CSS blur radius is twice a Gaussian standard deviation.
-		fmt.Fprintf(&b, `<defs><filter id="shadow" x="-20%%" y="-20%%" width="140%%" height="140%%"><feDropShadow dx="%.3f" dy="%.3f" stdDeviation="%.3f" flood-color="%s" flood-opacity="%s"/></filter></defs>`, sh.DX, sh.DY, sh.Blur/2, sh.Hex, strconv.FormatFloat(sh.Alpha, 'f', -1, 64))
-	}
-	if s.Plate != "" {
-		fill, opacity := paint(s.Plate)
-		// The accent bar is clipped to the plate so its corners cannot escape it.
-		fmt.Fprintf(&b, `<defs><clipPath id="plate"><rect x="%.3f" y="%.3f" width="%.3f" height="%.3f" rx="%.3f"/></clipPath></defs>`, p.X, p.Y, p.Width, p.Height, radius)
-		fmt.Fprintf(&b, `<rect x="%.3f" y="%.3f" width="%.3f" height="%.3f" rx="%.3f" fill="%s" fill-opacity="%s"/>`, p.X, p.Y, p.Width, p.Height, radius, fill, opacity)
-	}
-	if accent != "" && s.Bar {
-		fmt.Fprintf(&b, `<g clip-path="url(#plate)"><rect x="%.3f" y="%.3f" width="%.3f" height="%.3f" fill="%s"/></g>`, p.X, p.Y, design.Spacing.BarAccent, p.Height, accent)
-	}
-	if accent != "" && s.Dot {
-		r := design.Spacing.DotAccent / 2
-		fmt.Fprintf(&b, `<circle cx="%.3f" cy="%.3f" r="%.3f" fill="%s"/>`, p.X+s.Padding.H+r, p.Y+s.Padding.V+r, r, accent)
-	}
-	left, right, vertical := copyInsets(s)
-	inner := p.Width - left - right
-	top := p.Y + vertical
-	for i, line := range l.Lines {
-		bounds := l.Bounds[i]
-		x := p.X + left + (inner-bounds.Width)/2 - bounds.X
-		y := top - bounds.Y
-		if accent != "" && s.Highlight && l.Keyword.Present && l.Keyword.Line == i {
-			u := design.Spacing.UnderlineMark
-			// Drawn behind the text, through it: height 0.42em, its bottom edge
-			// raised 0.28em above the baseline, extended 6 px each side.
-			fmt.Fprintf(&b, `<rect x="%.3f" y="%.3f" width="%.3f" height="%.3f" fill="%s" fill-opacity="0.9"/>`,
-				x+bounds.X+l.Keyword.Offset-u.Extend, y-(u.RaiseEM+u.HeightEM)*l.FontSize, l.Keyword.Width+2*u.Extend, u.HeightEM*l.FontSize, accent)
-		}
-		fill, _ := paint("text_white")
-		if s.Plate == "paper_50" {
-			fill, _ = paint("text_ink")
-		}
-		stroke, strokeOpacity := "none", "1"
-		if s.Stroke != "" {
-			stroke, strokeOpacity = paint("stroke_dark")
-		}
-		filter := ""
-		if s.Shadow != "" {
-			filter = ` filter="url(#shadow)"`
-		}
-		fmt.Fprintf(&b, `<text x="%.3f" y="%.3f" xml:space="preserve" font-family="%s" font-size="%.0f" font-weight="%d" letter-spacing="%.4f" fill="%s" stroke="%s" stroke-opacity="%s" stroke-width="%.3f" stroke-linejoin="round" paint-order="stroke fill"%s>`,
-			x, y, design.FontFamily(l.Role.Face), l.FontSize, l.Role.Weight, l.Role.Tracking*l.FontSize, fill, stroke, strokeOpacity, s.StrokeWidth(), filter)
-		// 크게 강조 colours one word in place, so the line stays one shaped run.
-		if accent != "" && !s.Highlight && s.Stroke != "" && l.Keyword.Present && l.Keyword.Line == i {
-			at := strings.Index(line, l.Keyword.Text)
-			fmt.Fprintf(&b, `%s<tspan fill="%s">%s</tspan>%s`, escaped(line[:at]), word, escaped(l.Keyword.Text), escaped(line[at+len(l.Keyword.Text):]))
-		} else {
-			b.WriteString(escaped(line))
-		}
-		b.WriteString(`</text>`)
-		top += bounds.Height + l.FontSize*(l.Role.LineHeight-1)
-	}
-	b.WriteString(`</svg>`)
-	return b.String()
-}
-
 // Elements returns what this copy places, for the manifest the verifier reads.
 // The window is already on the output timeline.
 func (l copyLayout) Elements(cut, copy int, c clip.Copy, startMS, endMS int) clip.Manifest {
@@ -611,36 +529,6 @@ func scaled(r clip.Region, factor float64) clip.Region {
 	return clip.Region{X: r.X * factor, Y: r.Y * factor, Width: r.Width * factor, Height: r.Height * factor}
 }
 
-// furnitureSVG paints the badge and the chips on one full-canvas plate: they
-// share a window (the whole clip for the badge) and never animate.
-func furnitureSVG(canvas clip.Canvas, f furniture) string {
-	var b strings.Builder
-	fmt.Fprintf(&b, `<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d">`, canvas.Width, canvas.Height)
-	badge, badgeAlpha := paint("badge_ad")
-	white, _ := paint("text_white")
-	muted, mutedAlpha := paint("text_muted")
-	ink, inkAlpha := paint("ink_900")
-	role := design.Type["badge"]
-	p := f.Badge
-	fmt.Fprintf(&b, `<rect x="%.3f" y="%.3f" width="%.3f" height="%.3f" rx="%.3f" fill="%s" fill-opacity="%s"/>`, p.X, p.Y, p.Width, p.Height, p.Height/2, badge, badgeAlpha)
-	fmt.Fprintf(&b, `<text x="%.3f" y="%.3f" xml:space="preserve" font-family="%s" font-size="%.0f" font-weight="%d" letter-spacing="%.4f" fill="%s">%s</text>`,
-		p.X+badgePadH-f.BadgeBounds.X, p.Y+badgePadV-f.BadgeBounds.Y, fontFamily, role.Size, role.Weight, role.Tracking*role.Size, white, escaped(f.BadgeText))
-	label, value := design.Type["label"], design.Type["caption"]
-	for _, c := range f.Chips {
-		fmt.Fprintf(&b, `<rect x="%.3f" y="%.3f" width="%.3f" height="%.3f" rx="%.3f" fill="%s" fill-opacity="%s"/>`, c.Region.X, c.Region.Y, c.Region.Width, c.Region.Height, c.Region.Height/2, ink, inkAlpha)
-		x := c.Region.X + design.Spacing.PadChip.H
-		baseline := c.Region.Y + c.Region.Height - design.Spacing.PadChip.V
-		fmt.Fprintf(&b, `<text x="%.3f" y="%.3f" xml:space="preserve" font-family="%s" font-size="%.0f" font-weight="%d" letter-spacing="%.4f" fill="%s" fill-opacity="%s">%s</text>`,
-			x, baseline, fontFamily, label.Size, label.Weight, label.Tracking*label.Size, muted, mutedAlpha, escaped(c.Label))
-		// The value is cut to the chip's own width; a chip never grows past it.
-		fmt.Fprintf(&b, `<text x="%.3f" y="%.3f" xml:space="preserve" font-family="%s" font-size="%.0f" font-weight="%d" letter-spacing="%.4f" fill="%s" textLength="%.3f" lengthAdjust="spacingAndGlyphs">%s</text>`,
-			x+c.LabelWidth+design.Spacing.GapChip, baseline, fontFamily, value.Size, value.Weight, value.Tracking*value.Size, white,
-			math.Max(1, c.Region.Width-2*design.Spacing.PadChip.H-c.LabelWidth-design.Spacing.GapChip), escaped(c.Value))
-	}
-	b.WriteString(`</svg>`)
-	return b.String()
-}
-
 // Elements places the badge for the whole clip and each chip for its own cut.
 func (f furniture) Elements(duration int, chipCut int, chipStart, chipEnd int) clip.Manifest {
 	m := clip.Manifest{{
@@ -663,7 +551,11 @@ func (r *Rendering) copyPlate(ctx context.Context, ws clip.MediaWorkspace, canva
 	if strings.TrimSpace(c.Text) == "" {
 		return "", nil
 	}
-	return r.rasterize(ctx, ws, canvas, copySVG(canvas, c, layout, ground), fmt.Sprintf("copy-%04d", index))
+	svg, err := r.overlays.Render("copy."+c.Style, copyView(canvas, c, layout, ground))
+	if err != nil {
+		return "", err
+	}
+	return r.rasterize(ctx, ws, canvas, svg, fmt.Sprintf("copy-%04d", index))
 }
 
 // furniturePlate is the fixed layer: the disclosure badge and this cut's chips,
@@ -672,7 +564,11 @@ func (r *Rendering) furniturePlate(ctx context.Context, ws clip.MediaWorkspace, 
 	if f.BadgeText == "" {
 		return "", nil
 	}
-	return r.rasterize(ctx, ws, canvas, furnitureSVG(canvas, f), fmt.Sprintf("fixed-%04d", index))
+	svg, err := r.overlays.Render("furniture", furnitureView(canvas, f))
+	if err != nil {
+		return "", err
+	}
+	return r.rasterize(ctx, ws, canvas, svg, fmt.Sprintf("fixed-%04d", index))
 }
 
 func (r *Rendering) rasterize(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, body, name string) (string, error) {

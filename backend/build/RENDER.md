@@ -1,5 +1,11 @@
 # Deterministic clip rendering
 
+Overlay drawing is loaded from versioned SVG assets. See the
+[preset authoring and deployment guide](../../docs/design/overlay-presets.md)
+for file layout, dynamic text fields and `CLIP_OVERLAY_DIR`. The embedded default
+assets preserve the existing output; layout and visibility policy stay in the
+design configuration and media adapter.
+
 `render-tools.sh` builds the current official resvg release **0.48.1** from
 [its source tag](https://github.com/linebender/resvg/releases/tag/v0.48.1).
 Archive SHA-256: `40dafea6b4b9d01e9d28b6d49f1e912daf3e9055676ad9179a5a2db6e7386945`.

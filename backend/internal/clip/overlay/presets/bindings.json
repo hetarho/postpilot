@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "bindings": {
+    "copy.clean": "caption",
+    "copy.memo": "caption",
+    "copy.bold": "caption",
+    "copy.mark": "caption",
+    "furniture": "furniture",
+    "card.hook": "card",
+    "card.end": "card"
+  }
+}

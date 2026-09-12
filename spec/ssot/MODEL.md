@@ -1,5 +1,5 @@
 # MODEL providers, model catalog, experiments
-> r9 | One vendor-neutral LLM port behind which a single OpenRouter connection serves an operator-curated, purpose-registered model catalog; per-account per-stage selections the app never fills in; blind one-stage A/B experiments with private Elo leaderboards. Migrated from legacy policy/providers.md, policy/model-experiments.md, tech/openrouter-catalog.md, tech/model-experiment-methodology.md, plan/04, plan/09, plan/18; r2 carries legacy change 29 (not yet built).
+> r10 | One vendor-neutral LLM port behind which a single OpenRouter connection serves an operator-curated, purpose-registered model catalog; per-account per-stage selections the app never fills in; blind one-stage A/B experiments with private Elo leaderboards. Migrated from legacy policy/providers.md, policy/model-experiments.md, tech/openrouter-catalog.md, tech/model-experiment-methodology.md, plan/04, plan/09, plan/18.
 
 ## decisions
 - MODEL-1 [o] `backend/internal/llm` is the only way a model is called: no adapter package or provider SDK is imported anywhere except under `internal/llm/…` and in `cmd/api`, enforced by `internal/llm/boundary_test.go` over `go list -deps`; the model is an input to every call (`Registry.Complete(ctx, ref, req)`), the port reads no default, and the observe, write and analyze stages each carry their own ModelRef (I3, →ARCH-9)
@@ -75,9 +75,9 @@
 - placement FE: `entities/model-catalog` · `entities/model-experiment` · `features/select-model` `configure-model-pair` `apply-model-recommendation` `manage-model-catalog` `start-model-experiment` `review-model-experiment` · `widgets/candidate-comparison` `widgets/model-leaderboard` · `pages/ai-models` `pages/model-experiment` `pages/admin`
 - dependencies: `github.com/goccy/go-yaml` (BE, `gopkg.in/yaml.v3` is archived) · `@tanstack/react-virtual` (FE)
 - known gap: `MODEL_PURPOSE_NOT_REGISTERED` and `MODEL_PURPOSE_INELIGIBLE` have no entry in the frontend's normalized reason catalog and render as the generic failure (LANG owns that catalog)
-- not yet built as of 260905: MODEL-46 MODEL-47 MODEL-48 (legacy change 29); land after QUOTA-32 so no window exists where the write budget is raised but still held at 8 192
 
 ## chg
+- r10 260912 MODEL-46 MODEL-47 MODEL-48✎ stale unbuilt status in the summary and constraints→implementation progress owned by STATE and task results; reasoning budgets and truncation behavior unchanged
 - r9 260911 MODEL-57+ 58+ 59+ operator-set per-registration level (가성비·밸런스·고급·최고) badged and ordered on every model list, carried by the paste document; MODEL-20✎ deregistration drops `efforts`→`efforts and levels` · 27✎ level crosses to the browser · 28✎ 등급 Listbox and 등급순 sort · 44✎ selectors badge and order by level · 52✎ document carries `registrations only`→`registrations and levels` · 53✎ bad level token rejects · 54✎ preview reports level changes · 55✎ export emits levels
 - r8 260909 MODEL-53✎ reject causes: `an id no catalog row holds, an unlisted or provider-disabled model`→`an id the merged catalog does not offer, split into uncurated and delisted`; two-sections-for-one-purpose named
 - r7 260909 MODEL-51+ 52+ 53+ 54+ 55+ 56+ a pasted document syncs each named purpose's registrations whole, behind a preview, with the reverse export

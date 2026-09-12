@@ -201,48 +201,16 @@ func inside(r, safe clip.Region) bool {
 	return r.X >= safe.X && r.Y >= safe.Y && r.X+r.Width <= safe.X+safe.Width && r.Y+r.Height <= safe.Y+safe.Height
 }
 
-// cardSVG paints the card and its stack. The card is `ink.900s` at α0.88 with
-// radius.card and shadow.card (CDS-28); nothing in it animates by itself.
-func cardSVG(canvas clip.Canvas, card cardLayout) string {
-	var b strings.Builder
-	fmt.Fprintf(&b, `<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d">`, canvas.Width, canvas.Height)
-	if card.empty() {
-		b.WriteString(`</svg>`)
-		return b.String()
-	}
-	sh := design.Shadow["card"]
-	fmt.Fprintf(&b, `<defs><filter id="card" x="-20%%" y="-20%%" width="140%%" height="140%%"><feDropShadow dx="%.3f" dy="%.3f" stdDeviation="%.3f" flood-color="%s" flood-opacity="%s"/></filter></defs>`,
-		sh.DX, sh.DY, sh.Blur/2, sh.Hex, trimmed(sh.Alpha))
-	plate, alpha := paint("ink_900s")
-	p := card.Region
-	fmt.Fprintf(&b, `<rect x="%.3f" y="%.3f" width="%.3f" height="%.3f" rx="%.3f" fill="%s" fill-opacity="%s" filter="url(#card)"/>`,
-		p.X, p.Y, p.Width, p.Height, design.Spacing.RadiusCard, plate, alpha)
-	top := p.Y + cardPadding
-	for i, line := range card.Lines {
-		bounds := card.Bounds[i]
-		if line.Chip {
-			// The category chip is an accent pill with ink text (CDS-28).
-			pad := design.Spacing.PadChip
-			fmt.Fprintf(&b, `<rect x="%.3f" y="%.3f" width="%.3f" height="%.3f" rx="%.3f" fill="%s"/>`,
-				p.X+cardPadding, top, bounds.Width, bounds.Height, bounds.Height/2, design.Accent[card.Accent])
-			fmt.Fprintf(&b, `<text x="%.3f" y="%.3f" xml:space="preserve" font-family="%s" font-size="%.0f" font-weight="%d" letter-spacing="%.4f" fill="%s">%s</text>`,
-				p.X+cardPadding+pad.H-bounds.X, top+pad.V-bounds.Y, design.FontFamily(line.Role.Face), line.Role.Size, line.Role.Weight, line.Role.Tracking*line.Role.Size, line.Fill, escaped(line.Text))
-		} else {
-			fmt.Fprintf(&b, `<text x="%.3f" y="%.3f" xml:space="preserve" font-family="%s" font-size="%.0f" font-weight="%d" letter-spacing="%.4f" fill="%s" fill-opacity="%s">%s</text>`,
-				p.X+cardPadding-bounds.X, top-bounds.Y, design.FontFamily(line.Role.Face), line.Role.Size, line.Role.Weight, line.Role.Tracking*line.Role.Size, line.Fill, trimmed(line.Alpha), escaped(line.Text))
-		}
-		top += bounds.Height + design.Spacing.GapStack
-	}
-	b.WriteString(`</svg>`)
-	return b.String()
-}
-
 // cardPlate rasterizes the card, or nothing when the clip has none.
 func (r *Rendering) cardPlate(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, card cardLayout, index int) (string, error) {
 	if card.empty() {
 		return "", nil
 	}
-	return r.rasterize(ctx, ws, canvas, cardSVG(canvas, card), fmt.Sprintf("card-%04d", index))
+	svg, err := r.overlays.Render("card."+card.Kind, cardView(canvas, card))
+	if err != nil {
+		return "", err
+	}
+	return r.rasterize(ctx, ws, canvas, svg, fmt.Sprintf("card-%04d", index))
 }
 
 // Elements records the card and its chip for the verifier. The card's window is
