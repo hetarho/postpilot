@@ -11,7 +11,7 @@ import (
 )
 
 func TestQuoteFailuresHaveStableReasons(t *testing.T) {
-	for err, reason := range map[error]string{clip.ErrQuoteRequired: "CLIP_QUOTE_REQUIRED", clip.ErrQuoteExpired: "CLIP_QUOTE_EXPIRED", clip.ErrQuoteChanged: "CLIP_QUOTE_CHANGED", clip.ErrPricingUnavailable: "CLIP_MODEL_PRICING_UNAVAILABLE"} {
+	for err, reason := range map[error]string{clip.ErrCancellationPolicy: "CLIP_CANCELLATION_POLICY_REQUIRED", clip.ErrQuoteRequired: "CLIP_QUOTE_REQUIRED", clip.ErrQuoteExpired: "CLIP_QUOTE_EXPIRED", clip.ErrQuoteChanged: "CLIP_QUOTE_CHANGED", clip.ErrPricingUnavailable: "CLIP_MODEL_PRICING_UNAVAILABLE"} {
 		var ce *connect.Error
 		if e := toConnectError(err); !errors.As(e, &ce) || ce.Code() != connect.CodeFailedPrecondition {
 			t.Fatal(e)

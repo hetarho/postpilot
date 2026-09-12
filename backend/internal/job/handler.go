@@ -18,12 +18,14 @@ type Handler func(ctx context.Context, found Job, progress Progress) error
 type Queue struct {
 	store        Store
 	admitter     Admitter
+	clipGuard    ClipGuard
 	pollInterval time.Duration
 	wake         chan struct{}
 
 	mu       sync.RWMutex
 	handlers map[string]Handler
 	terminal map[string]func(context.Context, Job, time.Time) error
+	running  map[string]context.CancelFunc
 	now      func() time.Time
 	newID    func() string
 }
@@ -34,7 +36,7 @@ func New(store Store, pollInterval time.Duration) *Queue {
 	}
 	return &Queue{
 		store: store, pollInterval: pollInterval, wake: make(chan struct{}, 1),
-		handlers: make(map[string]Handler), terminal: make(map[string]func(context.Context, Job, time.Time) error), now: time.Now, newID: newID,
+		handlers: make(map[string]Handler), terminal: make(map[string]func(context.Context, Job, time.Time) error), running: make(map[string]context.CancelFunc), now: time.Now, newID: newID,
 	}
 }
 
@@ -63,6 +65,8 @@ func (q *Queue) notifyTerminal(ctx context.Context, j Job, at time.Time) error {
 // builds the queue before the usage context it depends on. A queue with no admitter
 // enqueues freely — which is what the queue's own tests want.
 func (q *Queue) Admit(admitter Admitter) { q.admitter = admitter }
+
+func (q *Queue) GuardClips(guard ClipGuard) { q.clipGuard = guard }
 
 // Register binds a kind to its owning context at the composition root.
 func (q *Queue) Register(kind string, handler Handler) {

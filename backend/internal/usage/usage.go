@@ -41,12 +41,13 @@ type Start struct {
 
 // Admission is the durable record of an admitted start and the credits held for it.
 type Admission struct {
-	UserID             string
-	Kind               string
-	JobID              string
-	HoldCredits        int
-	CreatedAt          time.Time
-	ApprovedMaxCredits *int
+	CancellationPolicyVersion int
+	UserID                    string
+	Kind                      string
+	JobID                     string
+	HoldCredits               int
+	CreatedAt                 time.Time
+	ApprovedMaxCredits        *int
 }
 
 // TerminalOutcome is supplied by the job owner after its terminal state is durable.
@@ -56,7 +57,16 @@ type TerminalOutcome string
 const (
 	OutcomeSucceeded TerminalOutcome = "succeeded"
 	OutcomeFailed    TerminalOutcome = "failed"
+	OutcomeCancelled TerminalOutcome = "cancelled"
 )
+
+// Settlement records product charges separately from provider usage. A nil
+// breakdown belongs to a historical or non-clip admission, never measured zero.
+type Settlement struct {
+	Credits                          int
+	Reason                           TerminalOutcome
+	ConfirmedCharge, CancellationFee *int
+}
 
 // JobCost keeps historical total accounting separate from confirmed priced evidence.
 // Unknown provider cost must not become billable merely because a row exists.

@@ -19,11 +19,14 @@ var (
 	ErrQuoteExpired       = errors.New("clip credit quote expired")
 	ErrQuoteChanged       = errors.New("clip credit quote inputs changed")
 	ErrPricingUnavailable = errors.New("clip model pricing unavailable")
+	ErrCancellationPolicy = errors.New("clip cancellation policy requires a supported client approval")
 )
 
 const PricingPolicyVersion = 2
+const CancellationPolicyVersion = 1
 
 type GenerationPricing struct {
+	CancellationPolicyVersion    int
 	Version                      int
 	Observe, Plan                llm.CallPolicy
 	ObservationCalls, MaxCredits int
@@ -32,7 +35,7 @@ type GenerationPricing struct {
 // Both stages must have the complete enforceable profile, not a legacy pair of
 // catalog token prices. This value is frozen in the quote and checked at admission.
 func (p GenerationPricing) Valid() bool {
-	return p.Version == PricingPolicyVersion && p.ObservationCalls >= 1 && p.ObservationCalls <= 49 && p.MaxCredits >= 0 &&
+	return p.Version == PricingPolicyVersion && p.CancellationPolicyVersion >= 0 && p.CancellationPolicyVersion <= CancellationPolicyVersion && p.ObservationCalls >= 1 && p.ObservationCalls <= 49 && p.MaxCredits >= 0 &&
 		p.Observe.Valid() && p.Observe.Pricing.Valid() && p.Observe.Pricing.Delivery == llm.ExecutionInlineStatic && p.Observe.Stage == llm.StageNameObserve && p.Observe.CompletionTokens == 8192 &&
 		p.Plan.Valid() && p.Plan.Pricing.Valid() && p.Plan.Pricing.Delivery == llm.ExecutionTextOnly && p.Plan.Stage == llm.StageNameWrite && p.Plan.CompletionTokens == 32768
 }
@@ -48,8 +51,9 @@ type GenerationApproval struct {
 	Pricing    GenerationPricing
 }
 type QuoteApproval struct {
-	QuoteID    string
-	MaxCredits *int
+	CancellationPolicyVersion int
+	QuoteID                   string
+	MaxCredits                *int
 }
 
 // Pricing has no media or provider-call capability. Its output is server-owned.
@@ -192,6 +196,7 @@ func (s *GenerationService) quoteInputs(ctx context.Context, user, id, batch, ob
 	if err != nil {
 		return p, t, b, pricing, admissionRefusal(modelRef(observe), err)
 	}
+	pricing.CancellationPolicyVersion = CancellationPolicyVersion
 	if pricing.Version != PricingPolicyVersion || pricing.ObservationCalls != count || pricing.MaxCredits < 0 || pricing.Observe.Ref != modelRef(observe) || pricing.Plan.Ref != modelRef(write) || !pricing.Observe.Valid() || !pricing.Plan.Valid() {
 		return p, t, b, pricing, ErrPricingUnavailable
 	}
@@ -237,6 +242,9 @@ func (s *GenerationService) startApproved(ctx context.Context, user, id, batch, 
 	// ambiguous start response. Returning it never dispatches or reserves again.
 	if existing, err := s.acceptedJob(ctx, user, id, batch, observe, write, a); err != nil || existing != "" {
 		return existing, err
+	}
+	if a.CancellationPolicyVersion != CancellationPolicyVersion {
+		return "", ErrCancellationPolicy
 	}
 	store, ok := s.store.(QuoteStore)
 	if !ok {
@@ -300,7 +308,7 @@ func (s *GenerationService) acceptedJob(ctx context.Context, user, id, batch, ob
 	if j.Kind != "generate_clip" || json.Unmarshal(j.Payload, &p) != nil || (p.Version != generationPayloadVersion && p.Version != 3) || p.ProjectID != id || p.Batch.UserID != user || p.Batch.ID != batch || p.Observe != observe || p.Write != write || p.Approval == nil || p.Approval.QuoteID != a.QuoteID {
 		return "", nil
 	}
-	if a.MaxCredits == nil || p.Approval.MaxCredits != *a.MaxCredits {
+	if a.MaxCredits == nil || p.Approval.MaxCredits != *a.MaxCredits || a.CancellationPolicyVersion != p.Approval.Pricing.CancellationPolicyVersion {
 		return "", ErrQuoteChanged
 	}
 	// An unlinked queued row is not an accepted quote yet.

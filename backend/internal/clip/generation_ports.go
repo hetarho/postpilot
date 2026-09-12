@@ -19,13 +19,24 @@ type GenerationStore interface {
 	GetSourceBatch(context.Context, string, string) (SourceBatch, error)
 	LinkRenderSourceJob(context.Context, string, string, string, int, time.Time) error
 	SaveCorrection(context.Context, string, string, int, string) (Project, error)
-	SaveRender(context.Context, string, string, int, Result) error
 	BatchForJob(context.Context, string, string) (SourceBatch, error)
 	ListConsumingBatches(context.Context) ([]SourceBatch, error)
-	SaveGeneration(context.Context, string, string, string, string, Result) error
 	ResultKeys(context.Context) ([]string, error)
 	DeletionKeys(context.Context) ([]string, error)
 	RemoveDeletion(context.Context, string) error
+}
+
+// A candidate stays separate from the project until its job and result can be
+// committed together. The composition root coordinates those owned stores.
+type AttemptResult struct {
+	JobID, UserID, ProjectID string
+	ExpectedRevision         int
+	Analysis, EditPlan       string
+	Result                   Result
+}
+type ClipFinisher interface {
+	Complete(context.Context, AttemptResult) error
+	Recover(context.Context) error
 }
 type GenerationStart struct {
 	UserID, ProjectID, Observe, Write string

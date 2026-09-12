@@ -47,6 +47,7 @@ func (q *Queue) drain(ctx context.Context) {
 }
 
 func (q *Queue) run(ctx context.Context, found Job) {
+	workerCtx := ctx
 	started := time.Now()
 	stage, stageStarted := "queued", started
 	clipJob := found.Kind == KindGenerateClip || found.Kind == KindRenderClip
@@ -58,9 +59,15 @@ func (q *Queue) run(ctx context.Context, found Job) {
 	}
 	handler := q.handler(found.Kind)
 	var runErr error
-	if handler == nil {
+	if clipJob {
+		var cleanup func()
+		ctx, cleanup, runErr = q.registerClipExecution(ctx, found)
+		defer cleanup()
+	}
+	if runErr == nil && handler == nil {
 		runErr = errHandlerMissing
-	} else {
+	}
+	if runErr == nil {
 		runErr = callHandler(ctx, handler, found, func(next string, done, total int) {
 			if clipJob && next != stage {
 				slog.Info("clip stage changed", "job", found.ID, "stage", safeClipStage(next), "previous_stage", safeClipStage(stage), "previous_elapsed_ms", time.Since(stageStarted).Milliseconds(), "elapsed_ms", time.Since(started).Milliseconds())
@@ -76,27 +83,44 @@ func (q *Queue) run(ctx context.Context, found Job) {
 	// leaves the row running for the next boot sweep. A successful handler (or an
 	// ordinary failure) has reached a terminal result even if shutdown raced its return,
 	// so that result must still be committed.
-	if ctx.Err() != nil && errors.Is(runErr, ctx.Err()) {
+	finishCtx, cancel := context.WithTimeout(context.WithoutCancel(workerCtx), finishTimeout)
+	defer cancel()
+	var persisted Job
+	if clipJob {
+		var err error
+		persisted, err = q.store.GetByID(finishCtx, found.ID)
+		if err != nil {
+			return
+		}
+	}
+	ownerCancelled := persisted.CancelRequestedAt != nil
+	if workerCtx.Err() != nil && errors.Is(runErr, workerCtx.Err()) && !ownerCancelled && !Terminal(persisted.Status) {
 		return
 	}
 
 	status := StatusDone
 	var failure *Failure
-	if runErr != nil {
+	if ownerCancelled {
+		status = StatusCancelled
+	} else if runErr != nil {
 		status = StatusFailed
 		normalized := failureFromError(runErr)
 		failure = &normalized
 		logJobFailure(found, normalized, runErr)
 	}
-	finishCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), finishTimeout)
-	defer cancel()
 	terminalAt := q.now()
-	if err := q.store.Finish(finishCtx, found.ID, status, failure, terminalAt); err != nil {
-		slog.Error("finish job failed", "job", found.ID, "status", status, "err", err)
+	var finishErr error
+	if !Terminal(persisted.Status) {
+		finishErr = q.store.Finish(finishCtx, found.ID, status, failure, terminalAt)
+	}
+	if finishErr != nil || clipJob {
+		if finishErr != nil {
+			slog.Error("finish job failed", "job", found.ID, "status", status, "err", finishErr)
+		}
 		// The write may have committed despite returning an error. Only a persisted
 		// terminal outcome can authorize settlement; otherwise recovery owns the hold.
 		persisted, readErr := q.store.GetByID(finishCtx, found.ID)
-		if readErr != nil || (persisted.Status != StatusDone && persisted.Status != StatusFailed) {
+		if readErr != nil || !Terminal(persisted.Status) {
 			return
 		}
 		status = persisted.Status
@@ -104,6 +128,7 @@ func (q *Queue) run(ctx context.Context, found Job) {
 		if persisted.FinishedAt != nil {
 			terminalAt = *persisted.FinishedAt
 		}
+		found.Status, found.FinishedAt, found.CancelRequestedAt = persisted.Status, persisted.FinishedAt, persisted.CancelRequestedAt
 	}
 	// Settling after the terminal write, on the same detached context: the job's ledger
 	// rows are all written by now, so this is the first moment the hold can be reconciled

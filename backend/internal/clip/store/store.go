@@ -28,6 +28,10 @@ func New(writer, reader *sql.DB) *Store {
 	return &Store{writer: writer, read: sqlc.New(reader), write: sqlc.New(writer)}
 }
 
+func NewTx(conn *sql.Conn) *Store {
+	return &Store{read: sqlc.New(conn), write: sqlc.New(conn)}
+}
+
 var _ clip.Store = (*Store)(nil)
 
 func disclosureFlag(hidden bool) int64 {
@@ -64,6 +68,9 @@ func affected(n int64, err error) error {
 	return nil
 }
 func transact[T any](ctx context.Context, s *Store, f func(*sqlc.Queries) (T, error)) (T, error) {
+	if s.writer == nil {
+		return f(s.write)
+	}
 	var zero T
 	tx, err := s.writer.BeginTx(ctx, nil)
 	if err != nil {

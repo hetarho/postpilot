@@ -21,6 +21,17 @@ type ClipStore interface {
 	SweepUnactivatedClips(context.Context, Failure) (int64, error)
 }
 
+func (q *Queue) ClipJobSnapshot(ctx context.Context, user, project, id string) (*Job, error) {
+	j, err := q.store.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if j.UserID != user || j.ClipProjectID != project || (j.Kind != KindGenerateClip && j.Kind != KindRenderClip) {
+		return nil, ErrNotFound
+	}
+	return &j, nil
+}
+
 // LatestClipSnapshot is an internal owner-scoped read for approval recovery. The
 // durable payload is never added to the public job summary or RPC projection.
 func (q *Queue) LatestClipSnapshot(ctx context.Context, user, id string) (*Job, error) {
@@ -100,6 +111,7 @@ type allowance struct {
 	remaining   map[callKey]int
 	policies    map[callKey]llm.CallPolicy
 	approvedMax int
+	authorize   func(context.Context, string, string) error
 }
 
 // ReserveClip is deliberately worker-only: a queued/foreign/different-kind job cannot
@@ -113,7 +125,7 @@ func (q *Queue) ReserveClip(ctx context.Context, user, id string, calls []Planne
 	if err != nil {
 		return nil, err
 	}
-	if j.UserID != user || j.Kind != KindGenerateClip || j.Status != StatusRunning || j.Stage != "prepare" || q.admitter == nil {
+	if j.UserID != user || j.Kind != KindGenerateClip || j.Status != StatusRunning || j.Stage != "prepare" || j.CancelRequestedAt != nil || q.admitter == nil || j.CancellationPolicyVersion != approval[0].CancellationPolicyVersion {
 		return nil, ErrCreditAllowance
 	}
 	remaining := map[callKey]int{}
@@ -153,10 +165,18 @@ func (q *Queue) ReserveClip(ctx context.Context, user, id string, calls []Planne
 	}
 	approved := approval[0]
 	approved.Calls = append([]ClipCall(nil), approved.Calls...)
-	if err := q.admitter.Hold(ctx, Start{UserID: user, Kind: j.Kind, JobID: id, Calls: normalizePlannedCalls(calls), Clip: &approved}); err != nil {
+	start := Start{UserID: user, Kind: j.Kind, JobID: id, Calls: normalizePlannedCalls(calls), Clip: &approved}
+	reserve := q.admitter.Hold
+	var authorize func(context.Context, string, string) error
+	if q.clipGuard != nil {
+		reserve, authorize = q.clipGuard.Reserve, q.clipGuard.Authorize
+	} else if j.CancellationPolicyVersion != 0 {
+		return nil, ErrCancellationUnavailable
+	}
+	if err := reserve(ctx, start); err != nil {
 		return nil, err
 	}
-	return context.WithValue(ctx, allowanceKey{}, &allowance{user: user, job: id, remaining: remaining, policies: policies, approvedMax: approved.ApprovedMaxCredits}), nil
+	return context.WithValue(ctx, allowanceKey{}, &allowance{user: user, job: id, remaining: remaining, policies: policies, approvedMax: approved.ApprovedMaxCredits, authorize: authorize}), nil
 }
 
 // ConsumeClipCall runs at the metered LLM boundary, before any provider invocation.
@@ -187,6 +207,11 @@ func consumeClipPolicy(ctx context.Context, user, id, ref string, budget int, st
 	p, ok := a.policies[key]
 	if a.remaining[key] <= 0 || !ok || !p.Valid() || (stage != "" && p.Stage != stage) {
 		return llm.CallPolicy{}, ErrCreditAllowance
+	}
+	if a.authorize != nil {
+		if err := a.authorize(ctx, user, id); err != nil {
+			return llm.CallPolicy{}, err
+		}
 	}
 	a.remaining[key]--
 	return p, nil

@@ -281,7 +281,11 @@ func (j generationJobs) Enqueue(ctx context.Context, s clip.GenerationStart) (st
 	if s.RenderOnly {
 		kind = job.KindRenderClip
 	}
-	return j.q.Enqueue(ctx, job.NewJob{Kind: kind, NonMetered: s.RenderOnly, UserID: s.UserID, ClipProjectID: s.ProjectID, ObserveModel: s.Observe, WriteModel: s.Write, Payload: s.Payload})
+	policy := 0
+	if s.Quote != nil {
+		policy = s.Quote.Pricing.CancellationPolicyVersion
+	}
+	return j.q.Enqueue(ctx, job.NewJob{CancellationPolicyVersion: policy, Kind: kind, NonMetered: s.RenderOnly, UserID: s.UserID, ClipProjectID: s.ProjectID, ObserveModel: s.Observe, WriteModel: s.Write, Payload: s.Payload})
 }
 func (j generationJobs) Activate(ctx context.Context, user, id string) error {
 	return j.q.ActivateClip(ctx, user, id)
@@ -291,7 +295,7 @@ func (j generationJobs) FailQueued(ctx context.Context, user, id string) (bool, 
 }
 func (j generationJobs) ReserveApproved(ctx context.Context, user, id string, approval clip.GenerationApproval, n int) (context.Context, error) {
 	p := approval.Pricing
-	return j.q.ReserveClip(ctx, user, id, []job.PlannedCall{{Ref: p.Observe.Ref.String(), Count: n, CompletionTokens: p.Observe.CompletionTokens}, {Ref: p.Plan.Ref.String(), Count: 1, CompletionTokens: p.Plan.CompletionTokens}}, job.ClipReservation{ApprovedMaxCredits: approval.MaxCredits, Calls: []job.ClipCall{{Policy: p.Observe, Count: n}, {Policy: p.Plan, Count: 1}}})
+	return j.q.ReserveClip(ctx, user, id, []job.PlannedCall{{Ref: p.Observe.Ref.String(), Count: n, CompletionTokens: p.Observe.CompletionTokens}, {Ref: p.Plan.Ref.String(), Count: 1, CompletionTokens: p.Plan.CompletionTokens}}, job.ClipReservation{CancellationPolicyVersion: p.CancellationPolicyVersion, ApprovedMaxCredits: approval.MaxCredits, Calls: []job.ClipCall{{Policy: p.Observe, Count: n}, {Policy: p.Plan, Count: 1}}})
 }
 func (j generationJobs) Active(ctx context.Context, user, id string) (*clip.ClipJob, error) {
 	found, err := j.q.ActiveForClip(ctx, user, id)
@@ -359,10 +363,11 @@ func generationSetup(t *testing.T) *generationHarness {
 	queue := job.New(jobs, time.Millisecond)
 	admitter := &clipAdmitter{media: media}
 	queue.Admit(admitter)
+	queue.GuardClips(generationGuard{admitter, jobs})
 	cfg := clip.GenerationConfig{Media: clip.MediaConfig{Sources: config.ClipSourceLimits(6*time.Hour, 10*time.Minute), ChunkDurationMS: 60000, DurationToleranceMS: 1000}, Analysis: clip.AnalysisLimits{ChunkMS: 60000, MaxSources: 20, MaxSourceDurationMS: 1800000, MaxSegments: 60, MaxTextRunes: 2000, MaxSubjects: 20}, QuoteTTL: 5 * time.Minute, ReadTTL: time.Minute, CleanupTimeout: time.Second, OrphanMinAge: time.Hour}
 	cfg.Render = config.ClipRender(&config.Config{})
 	cfg.Media.AnalysisMaxBytes, cfg.Media.PreparedMaxBytes, cfg.Media.WorkspaceMaxBytes = 8<<20, 512<<20, 8<<30
-	service := clip.NewGenerationService(st, projects, sources, objects, media, planner, renderer, generationJobs{queue}, cfg).WithCredits(&quotePricing{}, nil)
+	service := clip.NewGenerationService(st, projects, sources, objects, media, planner, renderer, generationJobs{queue}, cfg).WithFinisher(generationFinisher{st}).WithCredits(&quotePricing{}, nil)
 	projects.SetGeneration(service)
 	return &generationHarness{service, projects, st, d, sources, objects, media, planner, renderer, admitter, queue, jobs, template, project, batch, cfg}
 }

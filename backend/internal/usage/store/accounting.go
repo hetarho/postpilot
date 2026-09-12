@@ -33,6 +33,10 @@ func (s *Store) ClipAccountingForJob(ctx context.Context, user, job string) (*us
 	}
 	reserved := int(r.DebitedCredits)
 	out := &usage.ClipAccounting{Approved: optionalCredits(r.ApprovedMaxCredits), Reserved: &reserved, Settled: r.SettledAt.Valid, Exempt: r.HoldCredits > 0 && reserved == 0}
+	nominal := int(r.HoldCredits)
+	out.NominalReservation, out.CancellationPolicyVersion = &nominal, int(r.CancellationPolicyVersion)
+	out.SettlementReason = r.SettlementReason.String
+	out.ConfirmedCharge, out.CancellationFee = optionalCredits(r.ConfirmedChargeCredits), optionalCredits(r.CancellationFeeCredits)
 	if !out.Settled {
 		return out, nil
 	}
@@ -44,6 +48,13 @@ func (s *Store) ClipAccountingForJob(ctx context.Context, user, job string) (*us
 		out.ShadowCharge = &charge
 		zero := 0
 		out.FinalCharge, out.Refund = &zero, &zero
+		out.ShadowConfirmedCharge, out.ShadowCancellationFee = out.ConfirmedCharge, out.CancellationFee
+		if out.ConfirmedCharge != nil {
+			out.ConfirmedCharge = &zero
+		}
+		if out.CancellationFee != nil {
+			out.CancellationFee = &zero
+		}
 	} else {
 		refund := reserved - charge
 		if refund < 0 {

@@ -20,7 +20,7 @@ func quote(t *testing.T, h *generationHarness) clip.GenerationQuote {
 	return q
 }
 func accept(h *generationHarness, q clip.GenerationQuote) (string, error) {
-	return h.service.Start(context.Background(), "alice", h.project.ID, h.batch.ID, "p/o", "p/w", clip.QuoteApproval{QuoteID: q.ID, MaxCredits: &q.Pricing.MaxCredits})
+	return h.service.Start(context.Background(), "alice", h.project.ID, h.batch.ID, "p/o", "p/w", clip.QuoteApproval{CancellationPolicyVersion: clip.CancellationPolicyVersion, QuoteID: q.ID, MaxCredits: &q.Pricing.MaxCredits})
 }
 func assertNoQuoteWork(t *testing.T, h *generationHarness) {
 	t.Helper()
@@ -42,7 +42,7 @@ func TestQuoteIsOwnerScopedFreeAndRefreshInvalidatesPreviousApproval(t *testing.
 		t.Fatal(err)
 	}
 	for _, max := range []int{0, q.Pricing.MaxCredits - 1, q.Pricing.MaxCredits + 1} {
-		if _, err := h.service.Start(context.Background(), "alice", h.project.ID, h.batch.ID, "p/o", "p/w", clip.QuoteApproval{QuoteID: q.ID, MaxCredits: &max}); !errors.Is(err, clip.ErrQuoteChanged) {
+		if _, err := h.service.Start(context.Background(), "alice", h.project.ID, h.batch.ID, "p/o", "p/w", clip.QuoteApproval{CancellationPolicyVersion: clip.CancellationPolicyVersion, QuoteID: q.ID, MaxCredits: &max}); !errors.Is(err, clip.ErrQuoteChanged) {
 			t.Fatal(max, err)
 		}
 	}
@@ -191,4 +191,47 @@ func TestQuoteLinkRollbackDoesNotConsumeApproval(t *testing.T) {
 		t.Fatal("rolled back approval unusable", err)
 	}
 	assertNoQuoteWork(t, h)
+}
+
+func TestClipQuoteRequiresPolicyEchoWithoutChangingLegacyFrozenJobs(t *testing.T) {
+	h := generationSetup(t)
+	q := quote(t, h)
+	if q.Pricing.CancellationPolicyVersion != clip.CancellationPolicyVersion {
+		t.Fatal("quote omitted cancellation contract")
+	}
+	for _, version := range []int{0, 2} {
+		_, err := h.service.Start(t.Context(), "alice", h.project.ID, h.batch.ID, "p/o", "p/w", clip.QuoteApproval{QuoteID: q.ID, MaxCredits: &q.Pricing.MaxCredits, CancellationPolicyVersion: version})
+		if !errors.Is(err, clip.ErrCancellationPolicy) {
+			t.Fatal("unseen policy approved", version, err)
+		}
+	}
+	assertNoQuoteWork(t, h)
+	if j, err := h.queue.LatestForClip(t.Context(), "alice", h.project.ID); err != nil || j != nil {
+		t.Fatal("unsupported client created a job", j, err)
+	}
+	legacy := q.Pricing
+	legacy.CancellationPolicyVersion = 0
+	if !legacy.Valid() {
+		t.Fatal("accepted legacy pricing contract cannot resume")
+	}
+	// Changing the policy invalidates the quote without changing source/model inputs.
+	p, err := h.store.GetProject(t.Context(), "alice", h.project.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tpl, err := h.store.GetTemplate(t.Context(), "alice", h.template.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if clip.QuoteInputDigest(p, tpl, h.batch, legacy) == q.InputDigest {
+		t.Fatal("policy excluded from approval digest")
+	}
+	id, err := accept(h, q)
+	if err != nil {
+		t.Fatal(err)
+	}
+	j, err := h.jobs.GetByID(t.Context(), id)
+	if err != nil || j.CancellationPolicyVersion != clip.CancellationPolicyVersion {
+		t.Fatal("job lost approved policy", j, err)
+	}
 }

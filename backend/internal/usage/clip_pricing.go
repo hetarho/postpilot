@@ -52,8 +52,18 @@ type PricedCall struct {
 	Count  int
 }
 type ClipReservation struct {
-	ApprovedMaxCredits int
-	Calls              []PricedCall
+	CancellationPolicyVersion int
+	ApprovedMaxCredits        int
+	Calls                     []PricedCall
+}
+
+// The fee uses the unused job hold, with upward integer rounding and no overflow.
+func cancelledClipCharge(confirmedMicrousd int64, reservation int) (confirmed, fee int) {
+	if confirmedMicrousd > 0 {
+		confirmed = boundedClipCharge(confirmedMicrousd, reservation)
+	}
+	unused := max(0, reservation-confirmed)
+	return confirmed, unused/2 + unused%2
 }
 
 // ClipCredits is shared by quoting and admission. Unknown/overflowing rates cannot

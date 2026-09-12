@@ -13,6 +13,7 @@ service ClipService {
   rpc StartClipRender(StartClipRenderRequest) returns (StartClipRenderResponse) {}
   rpc StartClipGeneration(StartClipGenerationRequest) returns (StartClipGenerationResponse) {}
   rpc QuoteClipGeneration(QuoteClipGenerationRequest) returns (QuoteClipGenerationResponse) {}
+  rpc CancelClipJob(CancelClipJobRequest) returns (CancelClipJobResponse) {}
   rpc ListVideoTemplates(ListVideoTemplatesRequest) returns (ListVideoTemplatesResponse) {}
   rpc CreateVideoTemplate(CreateVideoTemplateRequest) returns (CreateVideoTemplateResponse) {}
   rpc UpdateVideoTemplate(UpdateVideoTemplateRequest) returns (UpdateVideoTemplateResponse) {}
@@ -149,6 +150,13 @@ message ClipAccounting {
   optional int32 refund_credits = 6;
   optional int32 shadow_charge_credits = 7;
   bool settled = 8;
+  optional int32 nominal_reserved_credits = 9;
+  optional int32 confirmed_charge_credits = 10;
+  optional int32 cancellation_fee_credits = 11;
+  string settlement_reason = 12;
+  int32 cancellation_policy_version = 13;
+  optional int32 shadow_confirmed_charge_credits = 14;
+  optional int32 shadow_cancellation_fee_credits = 15;
 }
 message ListVideoTemplatesRequest {}
 message ListVideoTemplatesResponse { repeated VideoTemplate templates = 1; }
@@ -260,6 +268,7 @@ message StartClipGenerationRequest {
   ModelRef write_model = 4;
   string quote_id = 5;
   optional int32 approved_max_credits = 6;
+  int32 cancellation_policy_version = 7;
 }
 message StartClipGenerationResponse { string job_id = 1; }
 message QuoteClipGenerationRequest {
@@ -283,7 +292,16 @@ message QuoteClipGenerationResponse {
   int32 max_credits = 2;
   string expires_at = 3;
   repeated ClipPricedCall priced_calls = 4;
+  ClipCancellationPolicy cancellation_policy = 5;
 }
+message ClipCancellationPolicy {
+  int32 version = 1;
+  int32 unused_reservation_numerator = 2;
+  int32 unused_reservation_denominator = 3;
+  string rounding = 4;
+}
+message CancelClipJobRequest { string project_id = 1; string job_id = 2; }
+message CancelClipJobResponse { GenerationJob job = 1; ClipAccounting accounting = 2; bool accepted = 3; }
 message ClipCaption {
   string text = 1;
   // The caption's VERTICAL anchor: top, upper_mid, lower_mid or bottom. The

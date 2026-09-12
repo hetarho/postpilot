@@ -9,27 +9,29 @@ import (
 )
 
 type GenerationJob struct {
-	ID              string
-	PostSlug        sql.NullString
-	UserID          string
-	VoiceID         sql.NullString
-	Kind            string
-	Status          string
-	Stage           sql.NullString
-	ProgressDone    int64
-	ProgressTotal   int64
-	Error           sql.NullString
-	ObserveModel    sql.NullString
-	WriteModel      sql.NullString
-	Payload         string
-	CreatedAt       string
-	UpdatedAt       string
-	StartedAt       sql.NullString
-	FinishedAt      sql.NullString
-	TargetLanguage  sql.NullString
-	ErrorReason     sql.NullString
-	ErrorParams     sql.NullString
-	TechnicalDetail sql.NullString
-	ClipProjectID   sql.NullString
-	DispatchReady   int64
+	ID                        string
+	PostSlug                  sql.NullString
+	UserID                    string
+	VoiceID                   sql.NullString
+	Kind                      string
+	Status                    string
+	Stage                     sql.NullString
+	ProgressDone              int64
+	ProgressTotal             int64
+	Error                     sql.NullString
+	ObserveModel              sql.NullString
+	WriteModel                sql.NullString
+	Payload                   string
+	CreatedAt                 string
+	UpdatedAt                 string
+	StartedAt                 sql.NullString
+	FinishedAt                sql.NullString
+	TargetLanguage            sql.NullString
+	ErrorReason               sql.NullString
+	ErrorParams               sql.NullString
+	TechnicalDetail           sql.NullString
+	ClipProjectID             sql.NullString
+	DispatchReady             int64
+	CancelRequestedAt         sql.NullString
+	CancellationPolicyVersion int64
 }

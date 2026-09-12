@@ -155,6 +155,9 @@ func (s *GenerationService) StartRender(ctx context.Context, user, id, batch str
 }
 
 func (s *GenerationService) RunRender(ctx context.Context, user, job, project string, payload []byte, progress func(string, int, int)) (err error) {
+	if s.finisher == nil {
+		return ErrCompositionUnavailable
+	}
 	stage := "prepare"
 	defer func() {
 		if err != nil {
@@ -268,7 +271,7 @@ func (s *GenerationService) RunRender(ctx context.Context, user, job, project st
 	if err != nil {
 		return err
 	}
-	if err = s.store.SaveRender(ctx, user, project, frozen.Revision, result); err != nil {
+	if err = s.finisher.Complete(ctx, AttemptResult{JobID: job, UserID: user, ProjectID: project, ExpectedRevision: frozen.Revision, Result: result}); err != nil {
 		return err
 	}
 	set("cleanup", 0, 1)

@@ -203,6 +203,11 @@ func (s *GenerationService) observe(ctx context.Context, c AnalysisChunk, input 
 }
 
 func (s *GenerationService) Sweep(ctx context.Context) error {
+	if s.finisher != nil {
+		if err := s.finisher.Recover(ctx); err != nil {
+			return err
+		}
+	}
 	batches, err := s.store.ListConsumingBatches(ctx)
 	if err != nil {
 		return err

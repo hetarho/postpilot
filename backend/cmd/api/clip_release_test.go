@@ -43,6 +43,7 @@ type releaseAdmission struct {
 	metrics  *releaseMetrics
 	expected int
 	holds    int
+	hold     func(context.Context, job.Start) error
 }
 
 func (a *releaseAdmission) Hold(ctx context.Context, s job.Start) error {
@@ -64,23 +65,36 @@ func (a *releaseAdmission) Hold(ctx context.Context, s job.Start) error {
 	if len(s.Calls) != 2 || s.Calls[0].Count != a.expected || s.Calls[1].Count != 1 {
 		return errors.New("inexact reserved call count")
 	}
-	err := a.jobAdmission.Hold(ctx, s)
+	hold := a.hold
+	if hold == nil {
+		hold = a.jobAdmission.Hold
+	}
+	err := hold(ctx, s)
 	if err == nil {
 		a.holds++
 	}
 	return err
 }
 
-type releaseSaveStore struct {
-	*clipstore.Store
+type releaseFinisher struct {
+	clipFinisher
 	mode string
 }
 
-func (s releaseSaveStore) SaveGeneration(ctx context.Context, u, p, a, e string, r clip.Result) error {
+func (s releaseFinisher) Complete(ctx context.Context, c clip.AttemptResult) error {
 	if s.mode == "save failure" {
 		return errors.New("private-media-canary result save failed")
 	}
-	return s.Store.SaveGeneration(ctx, u, p, a, e, r)
+	return s.clipFinisher.Complete(ctx, c)
+}
+
+type releaseClipGuard struct {
+	clipGuard
+	admission *releaseAdmission
+}
+
+func (g releaseClipGuard) Reserve(ctx context.Context, start job.Start) error {
+	return g.admission.Hold(ctx, start)
 }
 
 type releaseHarness struct {
@@ -249,7 +263,10 @@ func newReleaseHarness(t *testing.T, mode string, stress bool) *releaseHarness {
 	q := job.New(js, 10*time.Millisecond)
 	admission := &releaseAdmission{jobAdmission: jobAdmission{ledger: ledger, registry: registry, plans: authSvc}, metrics: metrics}
 	q.Admit(admission)
-	g := clip.NewGenerationService(releaseSaveStore{Store: st, mode: mode}, projects, sources, objects, media, planner, renderer, clipJobs{q}, config.ClipGeneration(cfg)).WithCredits(clipQuotePricing{registry: registry, cfg: config.ClipAI(cfg)}, clipAccounting{ledger: ledger})
+	guard := clipGuard{writer: d.Writer, admission: admission.jobAdmission}
+	admission.hold = guard.Reserve
+	q.GuardClips(releaseClipGuard{guard, admission})
+	g := clip.NewGenerationService(st, projects, sources, objects, media, planner, renderer, clipJobs{q}, config.ClipGeneration(cfg)).WithFinisher(releaseFinisher{clipFinisher{writer: d.Writer, clips: st, jobs: js}, mode}).WithCredits(clipQuotePricing{registry: registry, cfg: config.ClipAI(cfg)}, clipAccounting{ledger: ledger})
 	projects.SetGeneration(g)
 	if !strings.HasPrefix(mode, "restart ") {
 		q.Register(job.KindGenerateClip, metered(func(ctx context.Context, j job.Job, p job.Progress) error {
@@ -455,7 +472,7 @@ func (h *releaseHarness) exercise(mode string) {
 		t.Fatal(err)
 	}
 	maxCredits := quote.Msg.MaxCredits
-	req := &v1.StartClipGenerationRequest{ProjectId: h.project, BatchId: h.batch, ObserveModel: model, WriteModel: model, QuoteId: quote.Msg.QuoteId, ApprovedMaxCredits: &maxCredits}
+	req := &v1.StartClipGenerationRequest{CancellationPolicyVersion: quote.Msg.GetCancellationPolicy().GetVersion(), ProjectId: h.project, BatchId: h.batch, ObserveModel: model, WriteModel: model, QuoteId: quote.Msg.QuoteId, ApprovedMaxCredits: &maxCredits}
 	switch mode {
 	case "legacy client":
 		req.QuoteId = ""

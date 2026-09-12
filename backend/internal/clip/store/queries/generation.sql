@@ -17,7 +17,7 @@ SELECT object_key FROM clip_object_deletions ORDER BY created_at,object_key;
 -- name: RemoveDeletion :exec
 DELETE FROM clip_object_deletions WHERE object_key=?;
 -- name: ResultKeys :many
-SELECT result_key FROM clip_projects WHERE result_key IS NOT NULL;
+SELECT result_key FROM clip_projects WHERE result_key IS NOT NULL UNION SELECT result_key FROM clip_attempt_results;
 -- name: SaveCorrection :execrows
 UPDATE clip_projects SET edit_plan_json=?,edit_plan_revision=edit_plan_revision+1,updated_at=? WHERE id=? AND user_id=? AND deleting=0 AND edit_plan_revision=?;
 -- name: SaveRender :execrows

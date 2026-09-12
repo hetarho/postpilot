@@ -59,7 +59,7 @@ export interface ClipUploadState {
     | 'cancelling'
     | 'failed'
   entries: readonly LocalClipSource[]
-  summaries?: readonly { filename: string; status: 'done' | 'failed' }[]
+  summaries?: readonly { filename: string; status: 'done' | 'failed' | 'cancelled' }[]
   attempt?: { batchId: string; jobId?: string }
   readyBatch?: ReadyClipBatch
   error?: unknown
@@ -342,7 +342,7 @@ export class ClipSourceSession {
     this.attempt = undefined
     this.publish('ready', { readyBatch: batch })
   }
-  finishAttempt(jobId: string, status: 'done' | 'failed') {
+  finishAttempt(jobId: string, status: 'done' | 'failed' | 'cancelled') {
     if (!this.active) return
     if (!this.attempt) {
       if (this.lastFinishedJob !== jobId) {

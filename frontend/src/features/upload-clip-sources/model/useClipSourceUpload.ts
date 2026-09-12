@@ -61,7 +61,7 @@ export function useClipSourceUpload(projectId: string, required?: readonly Retai
     beginAttempt: (batchId: string) => session.beginAttempt(batchId),
     markOwned: (batchId: string, jobId: string) => session.markOwned(batchId, jobId),
     rejectAttempt: (batchId: string) => session.rejectAttempt(batchId),
-    finishAttempt: (jobId: string, status: 'done' | 'failed') =>
+    finishAttempt: (jobId: string, status: 'done' | 'failed' | 'cancelled') =>
       session.finishAttempt(jobId, status),
   }
 }

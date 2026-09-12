@@ -235,6 +235,9 @@ message GenerationJob {
   ContentLanguage target_language = 13;
   Failure failure = 14;
   string clip_project_id = 15;
+  string cancel_requested_at = 16;
+  int32 cancellation_policy_version = 17;
+  bool can_cancel = 18;
 }
 
 message GetGenerationRequest {

@@ -7,6 +7,9 @@ export interface ModelRef {
 }
 
 export interface GenerationJob {
+  cancelRequestedAt?: string
+  cancellationPolicyVersion?: number
+  canCancel?: boolean
   id: string
   kind: string
   status: string
@@ -24,7 +27,7 @@ export interface GenerationJob {
 }
 
 export function isTerminal(job: Pick<GenerationJob, 'status'> | undefined): boolean {
-  return job?.status === 'done' || job?.status === 'failed'
+  return job?.status === 'done' || job?.status === 'failed' || job?.status === 'cancelled'
 }
 
 /** The stages that report a MEANINGFUL ratio. `write` and `analyze` are one provider call each —

@@ -31,11 +31,17 @@ type GenerationService struct {
 	planner       Planner
 	renderer      Renderer
 	jobs          GenerationJobs
+	finisher      ClipFinisher
 	cfg           GenerationConfig
 	pricing       QuotePricing
 	accounting    AccountingReader
 	admission     AnalysisAdmission
 	now           func() time.Time
+}
+
+func (s *GenerationService) WithFinisher(finisher ClipFinisher) *GenerationService {
+	s.finisher = finisher
+	return s
 }
 
 func NewGenerationService(store GenerationStore, projects *Service, sources *SourceService, objects ProcessingObjects, media Media, planner Planner, renderer Renderer, jobs GenerationJobs, cfg GenerationConfig) *GenerationService {
@@ -200,6 +206,13 @@ func (e *StageFailure) Failure() llm.Failure {
 	return f
 }
 func (s *GenerationService) Run(ctx context.Context, user, job, project string, payload []byte, progress func(string, int, int)) (err error) {
+	if s.finisher == nil {
+		return ErrCompositionUnavailable
+	}
+	currentProject, err := s.projects.store.GetProject(ctx, user, project)
+	if err != nil {
+		return err
+	}
 	stage := "prepare"
 	// Resolve cleanup from the durable linkage, even if payload decoding fails.
 	defer func() {
@@ -372,7 +385,7 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 	}
 	// A failed attempt never replaces the prior result, including a local cleanup
 	// failure. Uploaded but unpublished output remains recoverable by the sweep.
-	if err = s.store.SaveGeneration(ctx, user, project, string(analysisJSON), planJSON, result); err != nil {
+	if err = s.finisher.Complete(ctx, AttemptResult{JobID: job, UserID: user, ProjectID: project, ExpectedRevision: currentProject.EditPlanRevision, Analysis: string(analysisJSON), EditPlan: planJSON, Result: result}); err != nil {
 		return err
 	}
 	set("cleanup", 0, 1)

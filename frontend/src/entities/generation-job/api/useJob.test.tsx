@@ -14,37 +14,40 @@ async function tick(ms: number) {
   })
 }
 
-it('polls every two seconds and stops after a terminal response', async () => {
-  const calls: string[] = []
-  const transport = createFakeJobsTransport({
-    calls,
-    sequence: [
-      { id: 'job-1', status: 'queued' },
-      { id: 'job-1', status: 'running', stage: 'observe', progressDone: 1, progressTotal: 2 },
-      { id: 'job-1', status: 'done', stage: 'write', progressDone: 1, progressTotal: 1 },
-    ],
-  })
-  const view = renderHook(() => useJob('job-1'), {
-    wrapper: withProviders(transport, createTestQueryClient()),
-  })
+it.each(['done', 'failed', 'cancelled'])(
+  'polls every two seconds and stops after %s',
+  async (status) => {
+    const calls: string[] = []
+    const transport = createFakeJobsTransport({
+      calls,
+      sequence: [
+        { id: 'job-1', status: 'queued' },
+        { id: 'job-1', status: 'running', stage: 'observe', progressDone: 1, progressTotal: 2 },
+        { id: 'job-1', status, stage: 'write', progressDone: 1, progressTotal: 1 },
+      ],
+    })
+    const view = renderHook(() => useJob('job-1'), {
+      wrapper: withProviders(transport, createTestQueryClient()),
+    })
 
-  await tick(1)
-  expect(calls).toHaveLength(1)
-  expect(view.result.current.job?.status).toBe('queued')
+    await tick(1)
+    expect(calls).toHaveLength(1)
+    expect(view.result.current.job?.status).toBe('queued')
 
-  await tick(POLL_INTERVAL_MS)
-  await tick(1)
-  expect(calls).toHaveLength(2)
-  expect(view.result.current.job?.progressDone).toBe(1)
+    await tick(POLL_INTERVAL_MS)
+    await tick(1)
+    expect(calls).toHaveLength(2)
+    expect(view.result.current.job?.progressDone).toBe(1)
 
-  await tick(POLL_INTERVAL_MS)
-  await tick(0)
-  expect(calls).toHaveLength(3)
-  expect(view.result.current.job?.status).toBe('done')
+    await tick(POLL_INTERVAL_MS)
+    await tick(0)
+    expect(calls).toHaveLength(3)
+    expect(view.result.current.job?.status).toBe(status)
 
-  await tick(POLL_INTERVAL_MS * 3)
-  expect(calls).toHaveLength(3)
-})
+    await tick(POLL_INTERVAL_MS * 3)
+    expect(calls).toHaveLength(3)
+  },
+)
 
 it('invalidates the owner query when the job completes', async () => {
   const ownerKey = ['post', 'post-a'] as const

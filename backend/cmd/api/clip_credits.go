@@ -45,7 +45,18 @@ func (a clipAccounting) ForJob(ctx context.Context, user, id string) (*clip.Acco
 	if err != nil || r == nil {
 		return nil, err
 	}
-	return &clip.Accounting{JobID: id, ApprovedMax: r.Approved, Reserved: r.Reserved, FinalCharge: r.FinalCharge, Refund: r.Refund, ShadowCharge: r.ShadowCharge, Exempt: r.Exempt, Settled: r.Settled}, nil
+	return &clip.Accounting{CancellationPolicyVersion: r.CancellationPolicyVersion, SettlementReason: r.SettlementReason, NominalReservation: r.NominalReservation, ConfirmedCharge: r.ConfirmedCharge, CancellationFee: r.CancellationFee, ShadowConfirmedCharge: r.ShadowConfirmedCharge, ShadowCancellationFee: r.ShadowCancellationFee, JobID: id, ApprovedMax: r.Approved, Reserved: r.Reserved, FinalCharge: r.FinalCharge, Refund: r.Refund, ShadowCharge: r.ShadowCharge, Exempt: r.Exempt, Settled: r.Settled}, nil
+}
+
+func (a clipJobs) Snapshot(ctx context.Context, user, project, id string) (*clip.ClipJob, error) {
+	j, err := a.queue.ClipJobSnapshot(ctx, user, project, id)
+	if errors.Is(err, job.ErrNotFound) {
+		return nil, clip.ErrNotFound
+	}
+	if err != nil || j == nil {
+		return nil, err
+	}
+	return &clip.ClipJob{ID: j.ID, Kind: j.Kind, Status: j.Status, Stage: j.Stage, Payload: j.Payload, DispatchReady: j.DispatchReady, FinishedAt: j.FinishedAt}, nil
 }
 
 func (a clipJobs) Latest(ctx context.Context, user, id string) (*clip.ClipJob, error) {
@@ -64,7 +75,7 @@ func (a clipJobs) ReserveApproved(ctx context.Context, user, id string, approval
 		return nil, job.ErrCreditAllowance
 	}
 	calls := clipPricingCalls(p.Observe.Ref.String(), p.Plan.Ref.String(), chunks, clip.CompletionBudgets{Observe: p.Observe.CompletionTokens, Plan: p.Plan.CompletionTokens})
-	return a.queue.ReserveClip(ctx, user, id, calls, job.ClipReservation{ApprovedMaxCredits: approval.MaxCredits, Calls: []job.ClipCall{{Policy: p.Observe, Count: chunks}, {Policy: p.Plan, Count: 1}}})
+	return a.queue.ReserveClip(ctx, user, id, calls, job.ClipReservation{CancellationPolicyVersion: p.CancellationPolicyVersion, ApprovedMaxCredits: approval.MaxCredits, Calls: []job.ClipCall{{Policy: p.Observe, Count: chunks}, {Policy: p.Plan, Count: 1}}})
 }
 
 // clipAdmission is the AnalysisAdmission port over the registry: the observe

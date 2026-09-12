@@ -35,7 +35,7 @@ func startApproved(ctx context.Context, s *clip.GenerationService, user, id, bat
 	if err != nil {
 		return "", err
 	}
-	return s.Start(ctx, user, id, batch, o, w, clip.QuoteApproval{QuoteID: q.ID, MaxCredits: &q.Pricing.MaxCredits})
+	return s.Start(ctx, user, id, batch, o, w, clip.QuoteApproval{CancellationPolicyVersion: clip.CancellationPolicyVersion, QuoteID: q.ID, MaxCredits: &q.Pricing.MaxCredits})
 }
 func (j generationJobs) Latest(ctx context.Context, user, id string) (*clip.ClipJob, error) {
 	r, err := j.q.LatestClipSnapshot(ctx, user, id)

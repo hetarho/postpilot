@@ -7,6 +7,11 @@ import (
 )
 
 func (q *Queue) SweepRunning(ctx context.Context) (int64, error) {
+	if s, ok := q.store.(ClipCancellationStore); ok {
+		if _, err := s.RecoverClipCancellations(ctx, q.now()); err != nil {
+			return 0, fmt.Errorf("recover clip cancellations: %w", err)
+		}
+	}
 	n, err := q.store.SweepRunning(ctx, interruptedFailure, q.now())
 	if err != nil {
 		return 0, fmt.Errorf("sweep running jobs: %w", err)
@@ -51,7 +56,7 @@ func (q *Queue) SweepOpenHolds(ctx context.Context) (int, error) {
 		if err != nil {
 			return settled, fmt.Errorf("read job %s: %w", id, err)
 		}
-		if found.Status != StatusDone && found.Status != StatusFailed {
+		if !Terminal(found.Status) {
 			continue
 		}
 		if found.Kind == KindRenderClip {

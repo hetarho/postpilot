@@ -11,7 +11,7 @@ import (
 )
 
 const activateClip = `-- name: ActivateClip :execrows
-UPDATE generation_jobs SET dispatch_ready=1 WHERE user_id=? AND id=? AND kind IN ('generate_clip','render_clip') AND status='queued' AND dispatch_ready=0
+UPDATE generation_jobs SET dispatch_ready=1 WHERE user_id=? AND id=? AND kind IN ('generate_clip','render_clip') AND status='queued' AND dispatch_ready=0 AND cancel_requested_at IS NULL
 `
 
 type ActivateClipParams struct {
@@ -28,7 +28,7 @@ func (q *Queries) ActivateClip(ctx context.Context, arg ActivateClipParams) (int
 }
 
 const activeForClip = `-- name: ActiveForClip :one
-SELECT id, post_slug, user_id, voice_id, kind, status, stage, progress_done, progress_total, error, observe_model, write_model, payload, created_at, updated_at, started_at, finished_at, target_language, error_reason, error_params, technical_detail, clip_project_id, dispatch_ready FROM generation_jobs WHERE user_id=? AND clip_project_id=? AND status IN ('queued','running') LIMIT 1
+SELECT id, post_slug, user_id, voice_id, kind, status, stage, progress_done, progress_total, error, observe_model, write_model, payload, created_at, updated_at, started_at, finished_at, target_language, error_reason, error_params, technical_detail, clip_project_id, dispatch_ready, cancel_requested_at, cancellation_policy_version FROM generation_jobs WHERE user_id=? AND clip_project_id=? AND status IN ('queued','running') LIMIT 1
 `
 
 type ActiveForClipParams struct {
@@ -63,12 +63,14 @@ func (q *Queries) ActiveForClip(ctx context.Context, arg ActiveForClipParams) (G
 		&i.TechnicalDetail,
 		&i.ClipProjectID,
 		&i.DispatchReady,
+		&i.CancelRequestedAt,
+		&i.CancellationPolicyVersion,
 	)
 	return i, err
 }
 
 const activeForPost = `-- name: ActiveForPost :one
-SELECT id, post_slug, user_id, voice_id, kind, status, stage, progress_done, progress_total, error, observe_model, write_model, payload, created_at, updated_at, started_at, finished_at, target_language, error_reason, error_params, technical_detail, clip_project_id, dispatch_ready FROM generation_jobs
+SELECT id, post_slug, user_id, voice_id, kind, status, stage, progress_done, progress_total, error, observe_model, write_model, payload, created_at, updated_at, started_at, finished_at, target_language, error_reason, error_params, technical_detail, clip_project_id, dispatch_ready, cancel_requested_at, cancellation_policy_version FROM generation_jobs
 WHERE post_slug = ? AND status IN ('queued', 'running')
 ORDER BY created_at DESC, id DESC
 LIMIT 1
@@ -101,12 +103,14 @@ func (q *Queries) ActiveForPost(ctx context.Context, postSlug sql.NullString) (G
 		&i.TechnicalDetail,
 		&i.ClipProjectID,
 		&i.DispatchReady,
+		&i.CancelRequestedAt,
+		&i.CancellationPolicyVersion,
 	)
 	return i, err
 }
 
 const activeForPostUser = `-- name: ActiveForPostUser :one
-SELECT id, post_slug, user_id, voice_id, kind, status, stage, progress_done, progress_total, error, observe_model, write_model, payload, created_at, updated_at, started_at, finished_at, target_language, error_reason, error_params, technical_detail, clip_project_id, dispatch_ready FROM generation_jobs
+SELECT id, post_slug, user_id, voice_id, kind, status, stage, progress_done, progress_total, error, observe_model, write_model, payload, created_at, updated_at, started_at, finished_at, target_language, error_reason, error_params, technical_detail, clip_project_id, dispatch_ready, cancel_requested_at, cancellation_policy_version FROM generation_jobs
 WHERE post_slug = ? AND user_id = ? AND status IN ('queued', 'running')
 ORDER BY created_at DESC, id DESC
 LIMIT 1
@@ -144,12 +148,14 @@ func (q *Queries) ActiveForPostUser(ctx context.Context, arg ActiveForPostUserPa
 		&i.TechnicalDetail,
 		&i.ClipProjectID,
 		&i.DispatchReady,
+		&i.CancelRequestedAt,
+		&i.CancellationPolicyVersion,
 	)
 	return i, err
 }
 
 const activeForUserKind = `-- name: ActiveForUserKind :one
-SELECT id, post_slug, user_id, voice_id, kind, status, stage, progress_done, progress_total, error, observe_model, write_model, payload, created_at, updated_at, started_at, finished_at, target_language, error_reason, error_params, technical_detail, clip_project_id, dispatch_ready FROM generation_jobs
+SELECT id, post_slug, user_id, voice_id, kind, status, stage, progress_done, progress_total, error, observe_model, write_model, payload, created_at, updated_at, started_at, finished_at, target_language, error_reason, error_params, technical_detail, clip_project_id, dispatch_ready, cancel_requested_at, cancellation_policy_version FROM generation_jobs
 WHERE user_id = ? AND kind = ? AND post_slug IS NULL AND clip_project_id IS NULL
   AND status IN ('queued', 'running')
 ORDER BY created_at DESC, id DESC
@@ -188,12 +194,14 @@ func (q *Queries) ActiveForUserKind(ctx context.Context, arg ActiveForUserKindPa
 		&i.TechnicalDetail,
 		&i.ClipProjectID,
 		&i.DispatchReady,
+		&i.CancelRequestedAt,
+		&i.CancellationPolicyVersion,
 	)
 	return i, err
 }
 
 const activeForVoice = `-- name: ActiveForVoice :one
-SELECT id, post_slug, user_id, voice_id, kind, status, stage, progress_done, progress_total, error, observe_model, write_model, payload, created_at, updated_at, started_at, finished_at, target_language, error_reason, error_params, technical_detail, clip_project_id, dispatch_ready FROM generation_jobs
+SELECT id, post_slug, user_id, voice_id, kind, status, stage, progress_done, progress_total, error, observe_model, write_model, payload, created_at, updated_at, started_at, finished_at, target_language, error_reason, error_params, technical_detail, clip_project_id, dispatch_ready, cancel_requested_at, cancellation_policy_version FROM generation_jobs
 WHERE voice_id = ? AND status IN ('queued', 'running')
 ORDER BY created_at DESC, id DESC
 LIMIT 1
@@ -228,12 +236,14 @@ func (q *Queries) ActiveForVoice(ctx context.Context, voiceID sql.NullString) (G
 		&i.TechnicalDetail,
 		&i.ClipProjectID,
 		&i.DispatchReady,
+		&i.CancelRequestedAt,
+		&i.CancellationPolicyVersion,
 	)
 	return i, err
 }
 
 const activeForVoiceKind = `-- name: ActiveForVoiceKind :one
-SELECT id, post_slug, user_id, voice_id, kind, status, stage, progress_done, progress_total, error, observe_model, write_model, payload, created_at, updated_at, started_at, finished_at, target_language, error_reason, error_params, technical_detail, clip_project_id, dispatch_ready FROM generation_jobs
+SELECT id, post_slug, user_id, voice_id, kind, status, stage, progress_done, progress_total, error, observe_model, write_model, payload, created_at, updated_at, started_at, finished_at, target_language, error_reason, error_params, technical_detail, clip_project_id, dispatch_ready, cancel_requested_at, cancellation_policy_version FROM generation_jobs
 WHERE voice_id = ? AND kind = ?
   AND status IN ('queued', 'running')
 ORDER BY created_at DESC, id DESC
@@ -274,12 +284,14 @@ func (q *Queries) ActiveForVoiceKind(ctx context.Context, arg ActiveForVoiceKind
 		&i.TechnicalDetail,
 		&i.ClipProjectID,
 		&i.DispatchReady,
+		&i.CancelRequestedAt,
+		&i.CancellationPolicyVersion,
 	)
 	return i, err
 }
 
 const activeModelExperiment = `-- name: ActiveModelExperiment :one
-SELECT id, post_slug, user_id, voice_id, kind, status, stage, progress_done, progress_total, error, observe_model, write_model, payload, created_at, updated_at, started_at, finished_at, target_language, error_reason, error_params, technical_detail, clip_project_id, dispatch_ready FROM generation_jobs
+SELECT id, post_slug, user_id, voice_id, kind, status, stage, progress_done, progress_total, error, observe_model, write_model, payload, created_at, updated_at, started_at, finished_at, target_language, error_reason, error_params, technical_detail, clip_project_id, dispatch_ready, cancel_requested_at, cancellation_policy_version FROM generation_jobs
 WHERE kind = 'model_experiment' AND payload = ? AND status IN ('queued', 'running')
 ORDER BY created_at DESC, id DESC
 LIMIT 1
@@ -312,15 +324,35 @@ func (q *Queries) ActiveModelExperiment(ctx context.Context, payload string) (Ge
 		&i.TechnicalDetail,
 		&i.ClipProjectID,
 		&i.DispatchReady,
+		&i.CancelRequestedAt,
+		&i.CancellationPolicyVersion,
 	)
 	return i, err
+}
+
+const authorizeClipDispatch = `-- name: AuthorizeClipDispatch :execrows
+UPDATE generation_jobs SET updated_at=updated_at
+WHERE id=? AND user_id=? AND kind='generate_clip' AND status='running' AND cancel_requested_at IS NULL
+`
+
+type AuthorizeClipDispatchParams struct {
+	ID     string
+	UserID string
+}
+
+func (q *Queries) AuthorizeClipDispatch(ctx context.Context, arg AuthorizeClipDispatchParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, authorizeClipDispatch, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const failQueuedJob = `-- name: FailQueuedJob :execrows
 UPDATE generation_jobs
 SET status = 'failed', error = NULL, error_reason = ?, error_params = ?, technical_detail = ?,
     finished_at = ?, updated_at = ?
-WHERE id = ? AND user_id = ? AND status = 'queued'
+WHERE id = ? AND user_id = ? AND status = 'queued' AND cancel_requested_at IS NULL
 `
 
 type FailQueuedJobParams struct {
@@ -351,9 +383,13 @@ func (q *Queries) FailQueuedJob(ctx context.Context, arg FailQueuedJobParams) (i
 
 const finishJob = `-- name: FinishJob :execrows
 UPDATE generation_jobs
-SET status = ?, error = NULL, error_reason = ?, error_params = ?, technical_detail = ?,
-    finished_at = ?, updated_at = ?
-WHERE id = ? AND status = 'running'
+SET status = CASE WHEN cancel_requested_at IS NOT NULL THEN 'cancelled' ELSE ?1 END,
+    error = NULL,
+    error_reason = CASE WHEN cancel_requested_at IS NULL THEN ?2 ELSE NULL END,
+    error_params = CASE WHEN cancel_requested_at IS NULL THEN ?3 ELSE NULL END,
+    technical_detail = CASE WHEN cancel_requested_at IS NULL THEN ?4 ELSE NULL END,
+    finished_at = ?5, updated_at = ?6
+WHERE id = ?7 AND status = 'running'
 `
 
 type FinishJobParams struct {
@@ -383,7 +419,7 @@ func (q *Queries) FinishJob(ctx context.Context, arg FinishJobParams) (int64, er
 }
 
 const getJobByID = `-- name: GetJobByID :one
-SELECT id, post_slug, user_id, voice_id, kind, status, stage, progress_done, progress_total, error, observe_model, write_model, payload, created_at, updated_at, started_at, finished_at, target_language, error_reason, error_params, technical_detail, clip_project_id, dispatch_ready FROM generation_jobs WHERE id = ?
+SELECT id, post_slug, user_id, voice_id, kind, status, stage, progress_done, progress_total, error, observe_model, write_model, payload, created_at, updated_at, started_at, finished_at, target_language, error_reason, error_params, technical_detail, clip_project_id, dispatch_ready, cancel_requested_at, cancellation_policy_version FROM generation_jobs WHERE id = ?
 `
 
 func (q *Queries) GetJobByID(ctx context.Context, id string) (GenerationJob, error) {
@@ -413,32 +449,35 @@ func (q *Queries) GetJobByID(ctx context.Context, id string) (GenerationJob, err
 		&i.TechnicalDetail,
 		&i.ClipProjectID,
 		&i.DispatchReady,
+		&i.CancelRequestedAt,
+		&i.CancellationPolicyVersion,
 	)
 	return i, err
 }
 
 const insertJob = `-- name: InsertJob :exec
 INSERT INTO generation_jobs (
-    id, post_slug, user_id, voice_id, clip_project_id, dispatch_ready, kind, status, stage, progress_done, progress_total,
+    id, post_slug, user_id, voice_id, clip_project_id, dispatch_ready, cancellation_policy_version, kind, status, stage, progress_done, progress_total,
     error, observe_model, write_model, target_language, payload, created_at, updated_at,
     started_at, finished_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, 'queued', NULL, 0, 0, NULL, ?, ?, ?, ?, ?, ?, NULL, NULL)
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'queued', NULL, 0, 0, NULL, ?, ?, ?, ?, ?, ?, NULL, NULL)
 `
 
 type InsertJobParams struct {
-	ID             string
-	PostSlug       sql.NullString
-	UserID         string
-	VoiceID        sql.NullString
-	ClipProjectID  sql.NullString
-	DispatchReady  int64
-	Kind           string
-	ObserveModel   sql.NullString
-	WriteModel     sql.NullString
-	TargetLanguage sql.NullString
-	Payload        string
-	CreatedAt      string
-	UpdatedAt      string
+	ID                        string
+	PostSlug                  sql.NullString
+	UserID                    string
+	VoiceID                   sql.NullString
+	ClipProjectID             sql.NullString
+	DispatchReady             int64
+	CancellationPolicyVersion int64
+	Kind                      string
+	ObserveModel              sql.NullString
+	WriteModel                sql.NullString
+	TargetLanguage            sql.NullString
+	Payload                   string
+	CreatedAt                 string
+	UpdatedAt                 string
 }
 
 func (q *Queries) InsertJob(ctx context.Context, arg InsertJobParams) error {
@@ -449,6 +488,7 @@ func (q *Queries) InsertJob(ctx context.Context, arg InsertJobParams) error {
 		arg.VoiceID,
 		arg.ClipProjectID,
 		arg.DispatchReady,
+		arg.CancellationPolicyVersion,
 		arg.Kind,
 		arg.ObserveModel,
 		arg.WriteModel,
@@ -461,7 +501,7 @@ func (q *Queries) InsertJob(ctx context.Context, arg InsertJobParams) error {
 }
 
 const latestForClip = `-- name: LatestForClip :one
-SELECT id, post_slug, user_id, voice_id, kind, status, stage, progress_done, progress_total, error, observe_model, write_model, payload, created_at, updated_at, started_at, finished_at, target_language, error_reason, error_params, technical_detail, clip_project_id, dispatch_ready FROM generation_jobs WHERE user_id=? AND clip_project_id=? ORDER BY created_at DESC,id DESC LIMIT 1
+SELECT id, post_slug, user_id, voice_id, kind, status, stage, progress_done, progress_total, error, observe_model, write_model, payload, created_at, updated_at, started_at, finished_at, target_language, error_reason, error_params, technical_detail, clip_project_id, dispatch_ready, cancel_requested_at, cancellation_policy_version FROM generation_jobs WHERE user_id=? AND clip_project_id=? ORDER BY created_at DESC,id DESC LIMIT 1
 `
 
 type LatestForClipParams struct {
@@ -496,6 +536,8 @@ func (q *Queries) LatestForClip(ctx context.Context, arg LatestForClipParams) (G
 		&i.TechnicalDetail,
 		&i.ClipProjectID,
 		&i.DispatchReady,
+		&i.CancelRequestedAt,
+		&i.CancellationPolicyVersion,
 	)
 	return i, err
 }
@@ -520,11 +562,11 @@ SET status = 'running',
     updated_at = ?
 WHERE id = (
     SELECT id FROM generation_jobs
-    WHERE status = 'queued' AND dispatch_ready=1
+    WHERE status = 'queued' AND dispatch_ready=1 AND cancel_requested_at IS NULL
     ORDER BY created_at, id
     LIMIT 1
 )
-RETURNING id, post_slug, user_id, voice_id, kind, status, stage, progress_done, progress_total, error, observe_model, write_model, payload, created_at, updated_at, started_at, finished_at, target_language, error_reason, error_params, technical_detail, clip_project_id, dispatch_ready
+RETURNING id, post_slug, user_id, voice_id, kind, status, stage, progress_done, progress_total, error, observe_model, write_model, payload, created_at, updated_at, started_at, finished_at, target_language, error_reason, error_params, technical_detail, clip_project_id, dispatch_ready, cancel_requested_at, cancellation_policy_version
 `
 
 type PickNextQueuedParams struct {
@@ -559,8 +601,54 @@ func (q *Queries) PickNextQueued(ctx context.Context, arg PickNextQueuedParams) 
 		&i.TechnicalDetail,
 		&i.ClipProjectID,
 		&i.DispatchReady,
+		&i.CancelRequestedAt,
+		&i.CancellationPolicyVersion,
 	)
 	return i, err
+}
+
+const recoverClipCancellations = `-- name: RecoverClipCancellations :execrows
+UPDATE generation_jobs SET status='cancelled',finished_at=?1,updated_at=?1,
+ error=NULL,error_reason=NULL,error_params=NULL,technical_detail=NULL
+WHERE status IN ('queued','running') AND cancel_requested_at IS NOT NULL
+ AND kind IN ('generate_clip','render_clip')
+`
+
+func (q *Queries) RecoverClipCancellations(ctx context.Context, now sql.NullString) (int64, error) {
+	result, err := q.db.ExecContext(ctx, recoverClipCancellations, now)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const requestClipCancellation = `-- name: RequestClipCancellation :execrows
+UPDATE generation_jobs SET cancel_requested_at=?1, updated_at=?1,
+ status=CASE WHEN status='queued' THEN 'cancelled' ELSE status END,
+ finished_at=CASE WHEN status='queued' THEN ?1 ELSE finished_at END
+WHERE id=?2 AND user_id=?3 AND clip_project_id=?4
+ AND status IN ('queued','running') AND cancel_requested_at IS NULL
+ AND (kind='render_clip' OR (kind='generate_clip' AND cancellation_policy_version=1))
+`
+
+type RequestClipCancellationParams struct {
+	Now       sql.NullString
+	ID        string
+	UserID    string
+	ProjectID sql.NullString
+}
+
+func (q *Queries) RequestClipCancellation(ctx context.Context, arg RequestClipCancellationParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, requestClipCancellation,
+		arg.Now,
+		arg.ID,
+		arg.UserID,
+		arg.ProjectID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const sweepQueuedPersonalization = `-- name: SweepQueuedPersonalization :execrows
@@ -597,7 +685,7 @@ const sweepRunning = `-- name: SweepRunning :execrows
 UPDATE generation_jobs
 SET status = 'failed', error = NULL, error_reason = ?, error_params = ?, technical_detail = ?,
     finished_at = ?, updated_at = ?
-WHERE status = 'running'
+WHERE status = 'running' AND cancel_requested_at IS NULL
 `
 
 type SweepRunningParams struct {
@@ -623,7 +711,7 @@ func (q *Queries) SweepRunning(ctx context.Context, arg SweepRunningParams) (int
 }
 
 const sweepUnactivatedClips = `-- name: SweepUnactivatedClips :execrows
-UPDATE generation_jobs SET status='failed', error_reason=?, error_params=?, technical_detail=?, finished_at=?, updated_at=? WHERE kind IN ('generate_clip','render_clip') AND status='queued' AND dispatch_ready=0
+UPDATE generation_jobs SET status='failed', error_reason=?, error_params=?, technical_detail=?, finished_at=?, updated_at=? WHERE kind IN ('generate_clip','render_clip') AND status='queued' AND dispatch_ready=0 AND cancel_requested_at IS NULL
 `
 
 type SweepUnactivatedClipsParams struct {
@@ -651,7 +739,7 @@ func (q *Queries) SweepUnactivatedClips(ctx context.Context, arg SweepUnactivate
 const updateProgress = `-- name: UpdateProgress :exec
 UPDATE generation_jobs
 SET stage = ?, progress_done = ?, progress_total = ?, updated_at = ?
-WHERE id = ? AND status = 'running'
+WHERE id = ? AND status = 'running' AND cancel_requested_at IS NULL
 `
 
 type UpdateProgressParams struct {

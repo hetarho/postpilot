@@ -49,6 +49,14 @@ func NewService(store Store, models Models, maxCompletionTokens int64) *Service 
 	}
 }
 
+// WithStore preserves pricing, anchors and clocks inside a composition-owned
+// transaction. The caller owns committing or rolling back that scoped store.
+func (s *Service) WithStore(store Store) *Service {
+	clone := *s
+	clone.store = store
+	return &clone
+}
+
 // SetAnchors attaches the account-specific monthly-window resolver. It is required for
 // every path that renews a balance; an unwired ledger fails instead of silently reverting
 // to a calendar month.
@@ -220,6 +228,7 @@ func (s *Service) Hold(ctx context.Context, start Start) error {
 	now := s.now()
 	required := plan.Charge(s.worstCaseMicrousd(start.Calls))
 	var approved *int
+	policyVersion := 0
 	if start.Kind == "generate_clip" {
 		if start.Clip == nil {
 			return ErrClipApproval
@@ -234,6 +243,10 @@ func (s *Service) Hold(ctx context.Context, start Start) error {
 			return ErrClipApproval
 		}
 		approved = &cap
+		policyVersion = start.Clip.CancellationPolicyVersion
+		if policyVersion < 0 || policyVersion > 1 {
+			return ErrClipApproval
+		}
 	}
 
 	return s.store.InWriteTx(ctx, func(tx Store) error {
@@ -258,6 +271,7 @@ func (s *Service) Hold(ctx context.Context, start Start) error {
 		if err := tx.InsertAdmission(ctx, Admission{
 			UserID: start.UserID, Kind: start.Kind, JobID: start.JobID,
 			HoldCredits: required, CreatedAt: now, ApprovedMaxCredits: approved,
+			CancellationPolicyVersion: policyVersion,
 		}); err != nil {
 			return err
 		}
@@ -389,7 +403,7 @@ func (s *Service) worstCaseMicrousd(calls []PlannedCall) int64 {
 // It is idempotent on the open-hold predicate, so a terminal transition that runs twice —
 // a retry, or the boot sweep meeting a job that just finished — cannot refund twice.
 func (s *Service) Settle(ctx context.Context, jobID string, outcome TerminalOutcome) error {
-	if outcome != OutcomeSucceeded && outcome != OutcomeFailed {
+	if outcome != OutcomeSucceeded && outcome != OutcomeFailed && outcome != OutcomeCancelled {
 		return ErrSettlementOutcome
 	}
 	if jobID == "" {
@@ -405,12 +419,16 @@ func (s *Service) Settle(ctx context.Context, jobID string, outcome TerminalOutc
 		if !found {
 			return nil
 		}
+		if outcome == OutcomeCancelled && (admission.Kind != "generate_clip" || admission.CancellationPolicyVersion != 1) {
+			return ErrSettlementOutcome
+		}
 
 		cost, err := tx.CostForJob(ctx, jobID)
 		if err != nil {
 			return err
 		}
 		actual := plan.Charge(cost.TotalMicrousd)
+		settlement := Settlement{}
 		// A clip reserves its complete run after probing. Never debit another lot for
 		// provider overage: raw cost remains in the ledger, user credit is capped.
 		if admission.Kind == "generate_clip" {
@@ -424,6 +442,13 @@ func (s *Service) Settle(ctx context.Context, jobID string, outcome TerminalOutc
 				// usage stays unknown in the ledger; it is not a reported zero supplier bill.
 				actual = 0
 			}
+			confirmed, fee := cancelledClipCharge(cost.ConfirmedMicrousd, ceiling)
+			if outcome == OutcomeCancelled {
+				actual = confirmed + fee
+			} else {
+				fee = 0
+			}
+			settlement.Reason, settlement.ConfirmedCharge, settlement.CancellationFee = outcome, &confirmed, &fee
 		}
 
 		switch {
@@ -445,7 +470,8 @@ func (s *Service) Settle(ctx context.Context, jobID string, outcome TerminalOutc
 			}
 		}
 
-		return tx.MarkSettled(ctx, jobID, actual, now)
+		settlement.Credits = actual
+		return tx.MarkSettled(ctx, jobID, settlement, now)
 	})
 }
 

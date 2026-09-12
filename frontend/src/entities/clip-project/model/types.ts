@@ -55,6 +55,13 @@ export interface ClipProject extends ClipProjectDraft {
   }
 }
 export interface ClipAccounting {
+  nominalReservedCredits?: number
+  confirmedChargeCredits?: number
+  cancellationFeeCredits?: number
+  shadowConfirmedChargeCredits?: number
+  shadowCancellationFeeCredits?: number
+  settlementReason?: 'succeeded' | 'failed' | 'cancelled'
+  cancellationPolicyVersion?: number
   jobId: string
   status: 'not_reserved' | 'reserved' | 'settling' | 'settled' | 'exempt' | 'unavailable'
   approvedMaxCredits?: number
@@ -65,6 +72,7 @@ export interface ClipAccounting {
   settled: boolean
 }
 export interface ClipQuote {
+  cancellationPolicy?: { version: number; numerator: number; denominator: number; rounding: 'ceil' }
   quoteId: string
   maxCredits: number
   expiresAt: string

@@ -25,9 +25,14 @@ func New(writer, reader *sql.DB) *Store {
 	return &Store{write: sqlc.New(writer), read: sqlc.New(reader)}
 }
 
+func NewTx(conn *sql.Conn) *Store {
+	return &Store{write: sqlc.New(conn), read: sqlc.New(conn)}
+}
+
 func (s *Store) Insert(ctx context.Context, found job.Job) error {
 	err := s.write.InsertJob(ctx, sqlc.InsertJobParams{
-		ID: found.ID, PostSlug: nullStringPtr(found.PostSlug), UserID: found.UserID, VoiceID: nullString(found.VoiceID),
+		CancellationPolicyVersion: int64(found.CancellationPolicyVersion),
+		ID:                        found.ID, PostSlug: nullStringPtr(found.PostSlug), UserID: found.UserID, VoiceID: nullString(found.VoiceID),
 		ClipProjectID: nullString(found.ClipProjectID), DispatchReady: dispatchReady(found.Kind), Kind: found.Kind, ObserveModel: nullString(found.ObserveModel),
 		WriteModel: nullString(found.WriteModel), Payload: string(found.Payload),
 		TargetLanguage: nullString(found.TargetLanguage),
@@ -77,7 +82,7 @@ func (s *Store) Finish(ctx context.Context, id, status string, failure *job.Fail
 	if status == job.StatusFailed && failure == nil {
 		return errors.New("finish job: failed status requires failure")
 	}
-	if status == job.StatusDone && failure != nil {
+	if (status == job.StatusDone || status == job.StatusCancelled) && failure != nil {
 		return errors.New("finish job: done status cannot carry failure")
 	}
 	reason, params, detail, err := failureColumns(failure)
@@ -92,6 +97,10 @@ func (s *Store) Finish(ctx context.Context, id, status string, failure *job.Fail
 		return fmt.Errorf("finish job: %w", err)
 	}
 	if changed != 1 {
+		j, readErr := s.GetByID(ctx, id)
+		if readErr == nil && (j.Kind == job.KindGenerateClip || j.Kind == job.KindRenderClip) && job.Terminal(j.Status) && j.Status == status {
+			return nil
+		}
 		return errors.New("finish job: no running job changed")
 	}
 	return nil
@@ -225,6 +234,10 @@ func (s *Store) GetByID(ctx context.Context, id string) (job.Job, error) {
 }
 
 func toJob(row sqlc.GenerationJob) (job.Job, error) {
+	cancelled, err := parseOptionalTime(row.CancelRequestedAt)
+	if err != nil {
+		return job.Job{}, fmt.Errorf("job %s cancel_requested_at: %w", row.ID, err)
+	}
 	created, err := parseTime(row.CreatedAt)
 	if err != nil {
 		return job.Job{}, fmt.Errorf("job %s created_at: %w", row.ID, err)
@@ -246,6 +259,7 @@ func toJob(row sqlc.GenerationJob) (job.Job, error) {
 		return job.Job{}, fmt.Errorf("job %s failure: %w", row.ID, err)
 	}
 	return job.Job{
+		CancelRequestedAt: cancelled, CancellationPolicyVersion: int(row.CancellationPolicyVersion),
 		ID: row.ID, PostSlug: stringPtr(row.PostSlug), UserID: row.UserID, VoiceID: row.VoiceID.String, Kind: row.Kind, ClipProjectID: row.ClipProjectID.String,
 		DispatchReady: row.DispatchReady != 0,
 		Status:        row.Status, Stage: row.Stage.String, ProgressDone: int(row.ProgressDone),

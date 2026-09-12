@@ -1140,17 +1140,20 @@ type GenerationJob struct {
 	ProgressDone  int32                  `protobuf:"varint,5,opt,name=progress_done,json=progressDone,proto3" json:"progress_done,omitempty"`
 	ProgressTotal int32                  `protobuf:"varint,6,opt,name=progress_total,json=progressTotal,proto3" json:"progress_total,omitempty"`
 	// Deprecated: Marked as deprecated in postpilot/v1/post.proto.
-	Error          string          `protobuf:"bytes,7,opt,name=error,proto3" json:"error,omitempty"`
-	PostSlug       string          `protobuf:"bytes,8,opt,name=post_slug,json=postSlug,proto3" json:"post_slug,omitempty"`
-	ObserveModel   *ModelRef       `protobuf:"bytes,9,opt,name=observe_model,json=observeModel,proto3" json:"observe_model,omitempty"`
-	WriteModel     *ModelRef       `protobuf:"bytes,10,opt,name=write_model,json=writeModel,proto3" json:"write_model,omitempty"`
-	CreatedAt      string          `protobuf:"bytes,11,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt      string          `protobuf:"bytes,12,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	TargetLanguage ContentLanguage `protobuf:"varint,13,opt,name=target_language,json=targetLanguage,proto3,enum=postpilot.v1.ContentLanguage" json:"target_language,omitempty"`
-	Failure        *Failure        `protobuf:"bytes,14,opt,name=failure,proto3" json:"failure,omitempty"`
-	ClipProjectId  string          `protobuf:"bytes,15,opt,name=clip_project_id,json=clipProjectId,proto3" json:"clip_project_id,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	Error                     string          `protobuf:"bytes,7,opt,name=error,proto3" json:"error,omitempty"`
+	PostSlug                  string          `protobuf:"bytes,8,opt,name=post_slug,json=postSlug,proto3" json:"post_slug,omitempty"`
+	ObserveModel              *ModelRef       `protobuf:"bytes,9,opt,name=observe_model,json=observeModel,proto3" json:"observe_model,omitempty"`
+	WriteModel                *ModelRef       `protobuf:"bytes,10,opt,name=write_model,json=writeModel,proto3" json:"write_model,omitempty"`
+	CreatedAt                 string          `protobuf:"bytes,11,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt                 string          `protobuf:"bytes,12,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	TargetLanguage            ContentLanguage `protobuf:"varint,13,opt,name=target_language,json=targetLanguage,proto3,enum=postpilot.v1.ContentLanguage" json:"target_language,omitempty"`
+	Failure                   *Failure        `protobuf:"bytes,14,opt,name=failure,proto3" json:"failure,omitempty"`
+	ClipProjectId             string          `protobuf:"bytes,15,opt,name=clip_project_id,json=clipProjectId,proto3" json:"clip_project_id,omitempty"`
+	CancelRequestedAt         string          `protobuf:"bytes,16,opt,name=cancel_requested_at,json=cancelRequestedAt,proto3" json:"cancel_requested_at,omitempty"`
+	CancellationPolicyVersion int32           `protobuf:"varint,17,opt,name=cancellation_policy_version,json=cancellationPolicyVersion,proto3" json:"cancellation_policy_version,omitempty"`
+	CanCancel                 bool            `protobuf:"varint,18,opt,name=can_cancel,json=canCancel,proto3" json:"can_cancel,omitempty"`
+	unknownFields             protoimpl.UnknownFields
+	sizeCache                 protoimpl.SizeCache
 }
 
 func (x *GenerationJob) Reset() {
@@ -1287,6 +1290,27 @@ func (x *GenerationJob) GetClipProjectId() string {
 		return x.ClipProjectId
 	}
 	return ""
+}
+
+func (x *GenerationJob) GetCancelRequestedAt() string {
+	if x != nil {
+		return x.CancelRequestedAt
+	}
+	return ""
+}
+
+func (x *GenerationJob) GetCancellationPolicyVersion() int32 {
+	if x != nil {
+		return x.CancellationPolicyVersion
+	}
+	return 0
+}
+
+func (x *GenerationJob) GetCanCancel() bool {
+	if x != nil {
+		return x.CanCancel
+	}
+	return false
 }
 
 type GetGenerationRequest struct {
@@ -2949,7 +2973,7 @@ const file_postpilot_v1_post_proto_rawDesc = "" +
 	"\x0ftarget_language\x18\t \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0etargetLanguage\x12H\n" +
 	"\x10content_language\x18\n" +
 	" \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0fcontentLanguage\x12\x12\n" +
-	"\x04tags\x18\v \x03(\tR\x04tags\"\xb9\x04\n" +
+	"\x04tags\x18\v \x03(\tR\x04tags\"\xc8\x05\n" +
 	"\rGenerationJob\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x16\n" +
@@ -2969,7 +2993,11 @@ const file_postpilot_v1_post_proto_rawDesc = "" +
 	"updated_at\x18\f \x01(\tR\tupdatedAt\x12F\n" +
 	"\x0ftarget_language\x18\r \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0etargetLanguage\x12/\n" +
 	"\afailure\x18\x0e \x01(\v2\x15.postpilot.v1.FailureR\afailure\x12&\n" +
-	"\x0fclip_project_id\x18\x0f \x01(\tR\rclipProjectId\"&\n" +
+	"\x0fclip_project_id\x18\x0f \x01(\tR\rclipProjectId\x12.\n" +
+	"\x13cancel_requested_at\x18\x10 \x01(\tR\x11cancelRequestedAt\x12>\n" +
+	"\x1bcancellation_policy_version\x18\x11 \x01(\x05R\x19cancellationPolicyVersion\x12\x1d\n" +
+	"\n" +
+	"can_cancel\x18\x12 \x01(\bR\tcanCancel\"&\n" +
 	"\x14GetGenerationRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"F\n" +
 	"\x15GetGenerationResponse\x12-\n" +

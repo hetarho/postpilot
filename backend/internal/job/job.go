@@ -19,11 +19,16 @@ const (
 	KindValidateVoiceProfile = "validate_voice_profile"
 	KindSeedVoice            = "seed_voice"
 
-	StatusQueued  = "queued"
-	StatusRunning = "running"
-	StatusDone    = "done"
-	StatusFailed  = "failed"
+	StatusQueued    = "queued"
+	StatusRunning   = "running"
+	StatusDone      = "done"
+	StatusFailed    = "failed"
+	StatusCancelled = "cancelled"
 )
+
+func Terminal(status string) bool {
+	return status == StatusDone || status == StatusFailed || status == StatusCancelled
+}
 
 // voiceOwnedKind identifies personalization work whose writes are serialized per voice,
 // even when the job also points at the post or source that caused the work.
@@ -62,6 +67,7 @@ func (e *ErrAlreadyInProgress) Unwrap() error { return ErrActiveConflict }
 // and so voice-owned kinds are guarded per voice rather than per account. The job context
 // only carries the id; it never reads voice tables.
 type NewJob struct {
+	CancellationPolicyVersion int
 	// Only render_clip can opt out, and it must declare no possible model call.
 	NonMetered     bool
 	Kind           string
@@ -162,51 +168,56 @@ func normalizePlannedCalls(input []PlannedCall) []PlannedCall {
 
 // Job is the worker-facing record, including the kind-specific payload.
 type Job struct {
-	DispatchReady  bool
-	ID             string
-	Kind           string
-	UserID         string
-	PostSlug       *string
-	VoiceID        string
-	ClipProjectID  string
-	Status         string
-	Stage          string
-	ProgressDone   int
-	ProgressTotal  int
-	Failure        *Failure
-	ObserveModel   string
-	WriteModel     string
-	TargetLanguage string
-	Payload        []byte
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
-	StartedAt      *time.Time
-	FinishedAt     *time.Time
+	CancelRequestedAt         *time.Time
+	CancellationPolicyVersion int
+	DispatchReady             bool
+	ID                        string
+	Kind                      string
+	UserID                    string
+	PostSlug                  *string
+	VoiceID                   string
+	ClipProjectID             string
+	Status                    string
+	Stage                     string
+	ProgressDone              int
+	ProgressTotal             int
+	Failure                   *Failure
+	ObserveModel              string
+	WriteModel                string
+	TargetLanguage            string
+	Payload                   []byte
+	CreatedAt                 time.Time
+	UpdatedAt                 time.Time
+	StartedAt                 *time.Time
+	FinishedAt                *time.Time
 }
 
 // JobSummary is the public view returned to other contexts and the RPC edge.
 type JobSummary struct {
-	FinishedAt     *time.Time
-	ID             string
-	Kind           string
-	UserID         string
-	PostSlug       *string
-	VoiceID        string
-	ClipProjectID  string
-	Status         string
-	Stage          string
-	ProgressDone   int
-	ProgressTotal  int
-	Failure        *Failure
-	ObserveModel   string
-	WriteModel     string
-	TargetLanguage string
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	CancelRequestedAt         *time.Time
+	CancellationPolicyVersion int
+	FinishedAt                *time.Time
+	ID                        string
+	Kind                      string
+	UserID                    string
+	PostSlug                  *string
+	VoiceID                   string
+	ClipProjectID             string
+	Status                    string
+	Stage                     string
+	ProgressDone              int
+	ProgressTotal             int
+	Failure                   *Failure
+	ObserveModel              string
+	WriteModel                string
+	TargetLanguage            string
+	CreatedAt                 time.Time
+	UpdatedAt                 time.Time
 }
 
 func summarize(found Job) *JobSummary {
 	return &JobSummary{
+		CancelRequestedAt: found.CancelRequestedAt, CancellationPolicyVersion: found.CancellationPolicyVersion,
 		ID: found.ID, Kind: found.Kind, UserID: found.UserID, PostSlug: found.PostSlug, VoiceID: found.VoiceID, ClipProjectID: found.ClipProjectID,
 		Status: found.Status, Stage: found.Stage, ProgressDone: found.ProgressDone,
 		ProgressTotal: found.ProgressTotal, Failure: cloneFailure(found.Failure),

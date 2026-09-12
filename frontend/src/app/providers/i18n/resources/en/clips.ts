@@ -497,7 +497,11 @@ export const clips = {
       'Choose a template, fill in its answers and save the setup before selecting source videos.',
     confirmed: 'Upload confirmed',
     completed: 'Processed source filenames',
-    outcome: { done: 'Completed', failed: 'Failed · retry with retained originals' },
+    outcome: {
+      cancelled: 'Cancelled',
+      done: 'Completed',
+      failed: 'Failed · retry with retained originals',
+    },
     phase: {
       idle: 'Please select the source videos again',
       reading: 'Reading video information',

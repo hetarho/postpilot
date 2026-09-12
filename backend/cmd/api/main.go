@@ -259,6 +259,7 @@ func main() {
 	// rule ARCHITECTURE §2.2 exists to hold.
 	catalogSvc.SetReasoningSpend(catalogReasoningSpend{ledger: ledger, providerID: registry.ProviderID()})
 	jobQueue.Admit(jobAdmission{ledger: ledger, registry: registry, plans: authSvc})
+	jobQueue.GuardClips(clipGuard{writer: handle.Writer, admission: jobAdmission{ledger: ledger, registry: registry, plans: authSvc}})
 
 	// After the admitter is attached, not with the other boot sweeps: an open hold can only
 	// be settled through it, and a sweep that ran first would silently find nothing.
@@ -334,7 +335,7 @@ func main() {
 		slog.Error("clip workspace cleanup failed", "err", err)
 		os.Exit(1)
 	}
-	clipGeneration, err := newClipGeneration(ctx, cfg, clipStore, clipSvc, clipSources, bucket, clipMedia, meteredModels, jobQueue)
+	clipGeneration, err := newClipGeneration(ctx, cfg, clipStore, clipSvc, clipSources, bucket, clipMedia, meteredModels, jobQueue, handle.Writer)
 	if err != nil {
 		slog.Error("clip generation initialization failed", "err", err)
 		os.Exit(1)
@@ -1895,7 +1896,7 @@ func (a jobAdmission) Hold(ctx context.Context, start job.Start) error {
 	}
 	var clipReservation *usage.ClipReservation
 	if start.Clip != nil {
-		clipReservation = &usage.ClipReservation{ApprovedMaxCredits: start.Clip.ApprovedMaxCredits}
+		clipReservation = &usage.ClipReservation{ApprovedMaxCredits: start.Clip.ApprovedMaxCredits, CancellationPolicyVersion: start.Clip.CancellationPolicyVersion}
 		for _, c := range start.Clip.Calls {
 			clipReservation.Calls = append(clipReservation.Calls, usage.PricedCall{Policy: c.Policy, Count: c.Count})
 		}
@@ -1919,6 +1920,8 @@ func (a jobAdmission) Settle(ctx context.Context, jobID, terminalStatus string) 
 		outcome = usage.OutcomeSucceeded
 	case job.StatusFailed:
 		outcome = usage.OutcomeFailed
+	case job.StatusCancelled:
+		outcome = usage.OutcomeCancelled
 	}
 	if err := a.ledger.Settle(ctx, jobID, outcome); err != nil {
 		slog.Error("settle hold failed", "job", jobID, "err", err)

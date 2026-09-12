@@ -9,10 +9,11 @@ import (
 
 type terminalStore struct {
 	Store
-	persisted Job
-	finishErr error
-	readErr   error
-	commit    bool
+	persisted    Job
+	finishErr    error
+	readErr      error
+	commit       bool
+	runningReads int
 }
 
 func (s *terminalStore) Finish(ctx context.Context, id, status string, failure *Failure, at time.Time) error {
@@ -51,6 +52,10 @@ func TestWorkerResourceReleaseUsesOnlyDurableTerminalTime(t *testing.T) {
 }
 
 func (s *terminalStore) GetByID(context.Context, string) (Job, error) {
+	if s.runningReads > 0 {
+		s.runningReads--
+		return Job{Status: StatusRunning}, nil
+	}
 	return s.persisted, s.readErr
 }
 
@@ -91,7 +96,7 @@ func TestWorkerSettlesOnlyPersistedTerminalOutcome(t *testing.T) {
 		{name: "interrupted work stays running", cancelWorker: true, runErr: context.Canceled},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			store := &terminalStore{persisted: Job{Status: tc.persisted}, commit: tc.commit, finishErr: tc.finishErr, readErr: tc.readErr}
+			store := &terminalStore{persisted: Job{Status: tc.persisted}, commit: tc.commit, finishErr: tc.finishErr, readErr: tc.readErr, runningReads: 2}
 			admitter := &terminalAdmitter{}
 			queue := New(store, time.Second)
 			queue.Admit(admitter)
@@ -121,7 +126,7 @@ func TestWorkerSettlesOnlyPersistedTerminalOutcome(t *testing.T) {
 }
 
 func TestRecoveryUsesSamePersistedOutcomeWithoutHandlerReplay(t *testing.T) {
-	for _, status := range []string{StatusQueued, StatusRunning, StatusDone, StatusFailed} {
+	for _, status := range []string{StatusQueued, StatusRunning, StatusDone, StatusFailed, StatusCancelled} {
 		t.Run(status, func(t *testing.T) {
 			store := &terminalStore{persisted: Job{ID: "clip", Kind: KindGenerateClip, Status: status}}
 			admitter := &terminalAdmitter{open: []string{"clip"}}
@@ -133,7 +138,7 @@ func TestRecoveryUsesSamePersistedOutcomeWithoutHandlerReplay(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if status == StatusDone || status == StatusFailed {
+				if Terminal(status) {
 					if n != 1 || admitter.statuses[len(admitter.statuses)-1] != status {
 						t.Fatal(n, admitter.statuses)
 					}

@@ -27,7 +27,7 @@ func TestRenderRejectsRevisionRaceBeforeLinkWithoutConsumingSources(t *testing.T
 			t.Fatal(err)
 		}
 	}}
-	s := clip.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, h.planner, h.renderer, jobs, h.cfg)
+	s := clip.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, h.planner, h.renderer, jobs, h.cfg).WithFinisher(generationFinisher{h.store})
 	if _, err := s.StartRender(ctx, "alice", p.ID, b.ID, 1); !errors.Is(err, clip.ErrPlanConflict) {
 		t.Fatal(err)
 	}

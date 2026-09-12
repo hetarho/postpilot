@@ -253,12 +253,13 @@ func (s *Store) RefundToLot(ctx context.Context, lotID string, credits int) erro
 
 func (s *Store) InsertAdmission(ctx context.Context, admission usage.Admission) error {
 	err := s.write.InsertAdmission(ctx, sqlc.InsertAdmissionParams{
-		UserID:             admission.UserID,
-		Kind:               admission.Kind,
-		JobID:              admission.JobID,
-		HoldCredits:        int64(admission.HoldCredits),
-		CreatedAt:          formatTime(admission.CreatedAt),
-		ApprovedMaxCredits: nullableCredits(admission.ApprovedMaxCredits),
+		UserID:                    admission.UserID,
+		Kind:                      admission.Kind,
+		JobID:                     admission.JobID,
+		HoldCredits:               int64(admission.HoldCredits),
+		CreatedAt:                 formatTime(admission.CreatedAt),
+		ApprovedMaxCredits:        nullableCredits(admission.ApprovedMaxCredits),
+		CancellationPolicyVersion: int64(admission.CancellationPolicyVersion),
 	})
 	if err != nil {
 		return fmt.Errorf("insert admission: %w", err)
@@ -305,15 +306,19 @@ func (s *Store) HoldForJob(
 	return usage.Admission{
 		UserID: row.UserID, Kind: row.Kind, JobID: row.JobID,
 		HoldCredits: int(row.HoldCredits), CreatedAt: created,
-		ApprovedMaxCredits: optionalCredits(row.ApprovedMaxCredits),
+		ApprovedMaxCredits:        optionalCredits(row.ApprovedMaxCredits),
+		CancellationPolicyVersion: int(row.CancellationPolicyVersion),
 	}, debits, true, nil
 }
 
-func (s *Store) MarkSettled(ctx context.Context, jobID string, credits int, at time.Time) error {
+func (s *Store) MarkSettled(ctx context.Context, jobID string, settlement usage.Settlement, at time.Time) error {
 	err := s.write.MarkAdmissionSettled(ctx, sqlc.MarkAdmissionSettledParams{
-		SettledCredits: sql.NullInt64{Int64: int64(credits), Valid: true},
-		SettledAt:      sql.NullString{String: formatTime(at), Valid: true},
-		JobID:          jobID,
+		SettledCredits:         sql.NullInt64{Int64: int64(settlement.Credits), Valid: true},
+		SettledAt:              sql.NullString{String: formatTime(at), Valid: true},
+		SettlementReason:       sql.NullString{String: string(settlement.Reason), Valid: settlement.Reason != ""},
+		ConfirmedChargeCredits: nullableCredits(settlement.ConfirmedCharge),
+		CancellationFeeCredits: nullableCredits(settlement.CancellationFee),
+		JobID:                  jobID,
 	})
 	if err != nil {
 		return fmt.Errorf("mark admission settled: %w", err)

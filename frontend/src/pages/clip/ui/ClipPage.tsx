@@ -144,7 +144,7 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
   }
   const job = generation.job
   useEffect(() => {
-    if (job && (job.status === 'done' || job.status === 'failed'))
+    if (job && (job.status === 'done' || job.status === 'failed' || job.status === 'cancelled'))
       upload.finishAttempt(job.id, job.status)
   }, [job, upload])
 

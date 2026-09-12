@@ -18,6 +18,15 @@ export function toClipAccounting(value: ProtoClipAccounting): ClipAccounting {
   const finalChargeCredits = amount(value.finalChargeCredits),
     refundCredits = amount(value.refundCredits)
   return {
+    nominalReservedCredits: amount(value.nominalReservedCredits),
+    confirmedChargeCredits: amount(value.confirmedChargeCredits),
+    cancellationFeeCredits: amount(value.cancellationFeeCredits),
+    shadowConfirmedChargeCredits: amount(value.shadowConfirmedChargeCredits),
+    shadowCancellationFeeCredits: amount(value.shadowCancellationFeeCredits),
+    settlementReason: ['succeeded', 'failed', 'cancelled'].includes(value.settlementReason)
+      ? (value.settlementReason as ClipAccounting['settlementReason'])
+      : undefined,
+    cancellationPolicyVersion: amount(value.cancellationPolicyVersion),
     jobId: value.jobId,
     status,
     approvedMaxCredits: amount(value.approvedMaxCredits),
@@ -40,7 +49,26 @@ export function toClipQuote(value: ProtoClipQuote, binding: string): ClipQuote {
     !Number.isFinite(Date.parse(value.expiresAt))
   )
     throw new Error('Invalid clip quote')
+  const policy = value.cancellationPolicy
+  if (
+    policy &&
+    (policy.version !== 1 ||
+      policy.unusedReservationNumerator !== 1 ||
+      policy.unusedReservationDenominator !== 2 ||
+      policy.rounding !== 'ceil')
+  )
+    throw new Error('Unsupported clip cancellation policy')
   return {
+    ...(policy
+      ? {
+          cancellationPolicy: {
+            version: policy.version,
+            numerator: policy.unusedReservationNumerator,
+            denominator: policy.unusedReservationDenominator,
+            rounding: 'ceil' as const,
+          },
+        }
+      : {}),
     quoteId: value.quoteId,
     maxCredits: value.maxCredits,
     expiresAt: value.expiresAt,

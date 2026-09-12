@@ -69,6 +69,8 @@ export const errors = {
   VOICE_INVALID_LIFECYCLE: "This action is not available in the voice's current state.",
   CLIP_INVALID_INPUT: 'Check the clip or video template fields and their limits.',
   CLIP_QUOTE_REQUIRED: 'Review and approve the maximum credits before starting generation.',
+  CLIP_CANCELLATION_POLICY_REQUIRED:
+    'Refresh to review the cancellation charge before starting a new clip.',
   CLIP_QUOTE_EXPIRED: 'The credit quote expired. Review and approve a new quote.',
   CLIP_QUOTE_CHANGED:
     'The videos, settings or model pricing changed. Review and approve a new quote.',

@@ -37,7 +37,7 @@ func TestGenerationActivationCompensationNeverDeletesRunningInputs(t *testing.T)
 					}
 				}
 			}
-			s := clip.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, h.planner, h.renderer, jobs, h.cfg).WithCredits(&quotePricing{}, nil)
+			s := clip.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, h.planner, h.renderer, jobs, h.cfg).WithFinisher(generationFinisher{h.store}).WithCredits(&quotePricing{}, nil)
 			id, err := startApproved(context.Background(), s, "alice", h.project.ID, h.batch.ID, "p/o", "p/w")
 			if running {
 				if err != nil || id == "" {

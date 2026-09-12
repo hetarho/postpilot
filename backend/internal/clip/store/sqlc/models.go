@@ -8,6 +8,20 @@ import (
 	"database/sql"
 )
 
+type ClipAttemptResult struct {
+	JobID             string
+	UserID            string
+	ProjectID         string
+	ExpectedRevision  int64
+	AnalysisJson      string
+	EditPlanJson      string
+	ResultKey         string
+	ResultContentType string
+	ResultBytes       int64
+	ResultDurationMs  int64
+	ResultCreatedAt   string
+}
+
 type ClipGenerationQuote struct {
 	ID            string
 	UserID        string

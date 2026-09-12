@@ -58,7 +58,7 @@ type Store interface {
 	// HoldForJob returns the admission and the lots its hold came from. Missing means the
 	// job was never admitted through this gate.
 	HoldForJob(ctx context.Context, jobID string) (Admission, []LotDebit, bool, error)
-	MarkSettled(ctx context.Context, jobID string, credits int, at time.Time) error
+	MarkSettled(ctx context.Context, jobID string, settlement Settlement, at time.Time) error
 	// UnsettledHoldJobs lists job ids whose hold is still open. The boot sweep asks the
 	// job context which of them are terminal — this context never reads another's tables.
 	UnsettledHoldJobs(ctx context.Context) ([]string, error)

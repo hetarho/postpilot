@@ -48,7 +48,7 @@ func (h *Handler) StartClipGeneration(ctx context.Context, req *connect.Request[
 		value := int(*req.Msg.ApprovedMaxCredits)
 		maxCredits = &value
 	}
-	id, err := h.generation.Start(ctx, user, req.Msg.ProjectId, req.Msg.BatchId, observe.String(), write.String(), clip.QuoteApproval{QuoteID: req.Msg.QuoteId, MaxCredits: maxCredits})
+	id, err := h.generation.Start(ctx, user, req.Msg.ProjectId, req.Msg.BatchId, observe.String(), write.String(), clip.QuoteApproval{CancellationPolicyVersion: int(req.Msg.CancellationPolicyVersion), QuoteID: req.Msg.QuoteId, MaxCredits: maxCredits})
 	if err != nil {
 		var admission *clip.ModelAdmissionError
 		if errors.Is(err, llm.ErrUnsupported) && !errors.As(err, &admission) {
@@ -128,6 +128,8 @@ func toConnectError(err error) error {
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip analysis model not eligible", f.Reason, f.Params)
 	case errors.Is(err, clip.ErrQuoteRequired):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip credit approval required", "CLIP_QUOTE_REQUIRED", nil)
+	case errors.Is(err, clip.ErrCancellationPolicy):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip cancellation approval required", "CLIP_CANCELLATION_POLICY_REQUIRED", nil)
 	case errors.Is(err, clip.ErrQuoteExpired):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip credit quote expired", "CLIP_QUOTE_EXPIRED", nil)
 	case errors.Is(err, clip.ErrQuoteChanged):
@@ -360,7 +362,7 @@ func (h *Handler) GetClipProject(ctx context.Context, req *connect.Request[v1.Ge
 			if err != nil {
 				return nil, toConnectError(err)
 			}
-			if snapshot != nil && snapshot.ID == j.ID && (snapshot.DispatchReady || snapshot.Status == job.StatusDone || snapshot.Status == job.StatusFailed) {
+			if snapshot != nil && snapshot.ID == j.ID && (snapshot.DispatchReady || job.Terminal(snapshot.Status)) {
 				if a := clip.IdentifyAttempt(user, value.ID, snapshot.ID, snapshot.Kind, snapshot.Payload); a != nil {
 					out.LatestAttempt = &v1.ClipAttempt{JobId: a.JobID, BatchId: a.BatchID, QuoteId: a.QuoteID}
 				}

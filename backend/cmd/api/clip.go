@@ -2,19 +2,21 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"github.com/postpilot/backend/internal/clip"
 	clipai "github.com/postpilot/backend/internal/clip/ai"
 	clipmedia "github.com/postpilot/backend/internal/clip/media"
 	clipstore "github.com/postpilot/backend/internal/clip/store"
 	"github.com/postpilot/backend/internal/job"
+	jobstore "github.com/postpilot/backend/internal/job/store"
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/platform/config"
 	"github.com/postpilot/backend/internal/storage"
 	"time"
 )
 
-func newClipGeneration(ctx context.Context, cfg *config.Config, store *clipstore.Store, projects *clip.Service, sources *clip.SourceService, bucket *storage.Bucket, media *clipmedia.Adapter, models meteredRegistry, queue *job.Queue) (*clip.GenerationService, error) {
+func newClipGeneration(ctx context.Context, cfg *config.Config, store *clipstore.Store, projects *clip.Service, sources *clip.SourceService, bucket *storage.Bucket, media *clipmedia.Adapter, models meteredRegistry, queue *job.Queue, writer *sql.DB) (*clip.GenerationService, error) {
 	renderer, err := clipmedia.NewRenderer(media, config.ClipRender(cfg))
 	if err != nil {
 		return nil, err
@@ -24,10 +26,15 @@ func newClipGeneration(ctx context.Context, cfg *config.Config, store *clipstore
 		return nil, err
 	}
 	service := clip.NewGenerationService(store, projects, sources, bucket, media, planner, renderer, clipJobs{queue}, config.ClipGeneration(cfg))
+	finisher := clipFinisher{writer: writer, clips: store, jobs: jobstore.New(writer, writer)}
+	service.WithFinisher(finisher)
 	service.WithCredits(clipQuotePricing{registry: models.Registry, cfg: config.ClipAI(cfg)}, clipAccounting{ledger: models.ledger})
 	service.WithAdmission(clipAdmission{registry: models.Registry, cfg: config.ClipAI(cfg)})
 	projects.SetGeneration(service)
 	if _, err = queue.SweepUnactivatedClips(ctx); err != nil {
+		return nil, err
+	}
+	if err := finisher.Recover(ctx); err != nil {
 		return nil, err
 	}
 	queue.Register(job.KindGenerateClip, metered(func(ctx context.Context, j job.Job, progress job.Progress) error {
@@ -54,7 +61,11 @@ func (a clipJobs) Enqueue(ctx context.Context, s clip.GenerationStart) (string, 
 	if s.RenderOnly {
 		kind = job.KindRenderClip
 	}
-	id, err := a.queue.Enqueue(ctx, job.NewJob{Kind: kind, NonMetered: s.RenderOnly, UserID: s.UserID, ClipProjectID: s.ProjectID, ObserveModel: s.Observe, WriteModel: s.Write, Payload: s.Payload})
+	policy := 0
+	if s.Quote != nil {
+		policy = s.Quote.Pricing.CancellationPolicyVersion
+	}
+	id, err := a.queue.Enqueue(ctx, job.NewJob{CancellationPolicyVersion: policy, Kind: kind, NonMetered: s.RenderOnly, UserID: s.UserID, ClipProjectID: s.ProjectID, ObserveModel: s.Observe, WriteModel: s.Write, Payload: s.Payload})
 	if errors.Is(err, job.ErrActiveConflict) {
 		return "", clip.ErrBusy
 	}

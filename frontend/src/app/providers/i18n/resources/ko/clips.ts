@@ -483,7 +483,11 @@ export const clips = {
     saveFirst: '영상 템플릿과 답변을 입력하고 설정을 저장한 뒤 원본 영상을 선택해 주세요.',
     confirmed: '업로드 확인 완료',
     completed: '처리가 끝난 원본 목록',
-    outcome: { done: '처리 완료', failed: '처리 실패 · 보관된 원본으로 재시도 가능' },
+    outcome: {
+      cancelled: '취소됨',
+      done: '처리 완료',
+      failed: '처리 실패 · 보관된 원본으로 재시도 가능',
+    },
     phase: {
       idle: '원본 영상을 다시 선택해 주세요',
       reading: '영상 정보를 읽는 중이에요',

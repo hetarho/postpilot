@@ -117,6 +117,7 @@ export const appFailureSpecs = {
   CLIP_MODEL_INPUT_UNSUPPORTED: {},
   CLIP_PROCESSING_FAILED: {},
   CLIP_QUOTE_REQUIRED: {},
+  CLIP_CANCELLATION_POLICY_REQUIRED: {},
   CLIP_QUOTE_EXPIRED: {},
   CLIP_QUOTE_CHANGED: {},
   CLIP_CREDIT_CEILING_EXCEEDED: { required: ['required', 'approved'] },

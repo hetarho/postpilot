@@ -14,6 +14,9 @@ const releaseTimeout = 5 * time.Second
 // Enqueue persists queued work and only then wakes the worker. It never runs the
 // handler in the caller's request.
 func (q *Queue) Enqueue(ctx context.Context, input NewJob) (string, error) {
+	if input.CancellationPolicyVersion < 0 || input.CancellationPolicyVersion > 1 || (input.CancellationPolicyVersion != 0 && input.Kind != KindGenerateClip) {
+		return "", ErrInvalidTarget
+	}
 	if input.Kind == "" || input.UserID == "" {
 		return "", fmt.Errorf("enqueue job: kind and user are required")
 	}
@@ -46,7 +49,8 @@ func (q *Queue) Enqueue(ctx context.Context, input NewJob) (string, error) {
 
 	now := q.now()
 	found := Job{
-		ID: q.newID(), Kind: input.Kind, UserID: input.UserID, PostSlug: input.PostSlug, VoiceID: input.VoiceID, ClipProjectID: input.ClipProjectID,
+		CancellationPolicyVersion: input.CancellationPolicyVersion,
+		ID:                        q.newID(), Kind: input.Kind, UserID: input.UserID, PostSlug: input.PostSlug, VoiceID: input.VoiceID, ClipProjectID: input.ClipProjectID,
 		Status: StatusQueued, ObserveModel: input.ObserveModel, WriteModel: input.WriteModel,
 		TargetLanguage: input.TargetLanguage,
 		Payload:        append([]byte(nil), input.Payload...), CreatedAt: now, UpdatedAt: now,

@@ -225,8 +225,8 @@ func (f *fakeStore) HoldForJob(_ context.Context, jobID string) (Admission, []Lo
 	return Admission{}, nil, false, nil
 }
 
-func (f *fakeStore) MarkSettled(_ context.Context, jobID string, credits int, _ time.Time) error {
-	f.settled[jobID] = credits
+func (f *fakeStore) MarkSettled(_ context.Context, jobID string, settlement Settlement, _ time.Time) error {
+	f.settled[jobID] = settlement.Credits
 	return nil
 }
 
