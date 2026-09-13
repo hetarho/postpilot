@@ -43,15 +43,15 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
-| T138 | Inspect completed clip work and diagnose timeline failures | CLIP LANG ARCH | T137 | doing@260913.diag |
 | T110 | Release QA on the Naver app and the overlay measurement | CDS CLIP | T108 | blocked@260912 |
 
 ## next
-- implement-task T138, then commit and push after verification.
 - T110 must refresh CLIP@14 / CDS@10 before resuming because mandatory cards, disclosure and fact QA changed; it remains owner-blocked: privately load a 9:16 clip with both cards in the Naver picker without publishing, capture the clip-tab overlays and supply the images for CDS-11 measurement. Remaining CDS interpretations are recorded in the results of T107, T108, T109 and T115 (contrast/card geometry, audio seams, exposure and frequency, footage-bound duration).
 - T008 needs the owner present: refresh PUB@5 / ARCH@2, rerun postpilot-agent setup before installation for driver signature smarteditor-one-20260910-a6, and cancel or deliberately reuse the queued 20260905-test job; after completion, update PUB for VIDEO-17 and TMPL-39.
 
 ## log
+- 260913 T138 done (diag); b4f5b9a shipped, CI/Workers/backend rollout green, migration 50 and live health verified; partial inspection, safe diagnostics and timeline repair pass all gates
+- 260913 T138 verification (diag); local gates and 30 browser cases pass, b4f5b9a pushed; await CI/backend rollout before done
 - 260913 T138 claimed (diag); implement checkpoint inspection, failure diagnostics and timeline repair
 - 260913 create-task CLIP done (diag); T138 consumes CLIP r14 with bounded latest-attempt checkpoints and bidirectional timing repair
 - 260913 create-task CLIP start (diag)
@@ -70,5 +70,3 @@
 - 260913 T136 done (clip); explicit confirmation, focused cancellation and retained-original retries pass local gates and 48 browser cases; commit then T132 integration
 - 260913 T136 claimed (clip); T135 committed as fd9364c with a clean worktree, connect save-flushed confirmation and focused cancellation progress
 - 260913 T135 done (clip); explicit matching-result confirmation, irreversible source cleanup and result download pass local and production checks; commit then T136 UI
-- 260913 T135 claimed (clip); T134 committed as 1362710 with a clean worktree, implement explicit finalization and durable original deletion
-- 260913 T134 done (clip); durable cancellation, atomic result completion and reservation settlement pass local, production-media and 27 release gates; commit then T135 finalization
