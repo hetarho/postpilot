@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"reflect"
 	"time"
 
@@ -64,6 +65,20 @@ func validateQuoteInputs(ctx context.Context, q *sqlc.Queries, quote clip.Genera
 		return clip.ErrSourceState
 	}
 	if quote.ExpiresAt.After(b.ExpiresAt) || quote.InputDigest != clip.QuoteInputDigest(p, t, b, quote.Pricing) {
+		return clip.ErrQuoteChanged
+	}
+	raw, err := q.GetClipRecovery(ctx, sqlc.GetClipRecoveryParams{UserID: quote.UserID, ProjectID: quote.ProjectID})
+	if err != nil && !errors.Is(dbError(err), clip.ErrNotFound) {
+		return err
+	}
+	var recovery *clip.RecoveryState
+	if err == nil {
+		recovery = &clip.RecoveryState{}
+		if json.Unmarshal([]byte(raw.StateJson), recovery) != nil {
+			return clip.ErrQuoteChanged
+		}
+	}
+	if clip.RecoveryDigest(recovery) != quote.Pricing.RecoveryDigest {
 		return clip.ErrQuoteChanged
 	}
 	return clip.RequiredAnswers(t, p, config.ClipCompositionLimits())

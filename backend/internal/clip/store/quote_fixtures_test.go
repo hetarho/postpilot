@@ -72,3 +72,21 @@ func seedCompletedGeneration(t *testing.T, h *generationHarness) {
 	}
 	h.objects.info[r.Key] = clip.SourceObjectInfo{Bytes: 5, ContentType: "video/mp4"}
 }
+
+func (p *quotePricing) FreezeWork(ctx context.Context, o, w llm.ModelRef, count int, skip bool, retries int) (clip.GenerationPricing, error) {
+	pricing, err := p.Freeze(ctx, o, w, count)
+	if err != nil {
+		return pricing, err
+	}
+	// Existing fixture policies stay legacy unless a test explicitly sets retries.
+	pricing.SkipPlan = skip
+	pricing.MaxCredits, err = usage.ClipCredits([]usage.PricedCall{{Policy: pricing.Observe, Count: count}, {Policy: pricing.Plan, Count: pricing.PlanCalls()}})
+	return pricing, err
+}
+func (j generationJobs) Snapshot(ctx context.Context, user, project, id string) (*clip.ClipJob, error) {
+	row, err := j.q.ClipJobSnapshot(ctx, user, project, id)
+	if err != nil || row == nil {
+		return nil, err
+	}
+	return &clip.ClipJob{ID: row.ID, Kind: row.Kind, Status: row.Status, Stage: row.Stage, Payload: row.Payload, DispatchReady: row.DispatchReady, FinishedAt: row.FinishedAt}, nil
+}

@@ -15,7 +15,7 @@ func (r *Rendering) layoutDeclaredRole(ctx context.Context, ws clip.MediaWorkspa
 	e := visual.text.Resolved.Element
 	// Named text styles describe caption visuals. Other roles have their own
 	// CDS typography/plate contract; incompatible authored choices need editing.
-	if e.Style != "auto" {
+	if !composition.ValidRoleStyle(e.Role, e.Style, nil) {
 		return visual, elementProblem(visual.text, "invalid_style")
 	}
 	switch e.Role {
@@ -59,7 +59,7 @@ func (r *Rendering) roleBounds(ctx context.Context, ws clip.MediaWorkspace, text
 	if err := r.checkCopy(text, role); err != nil {
 		return clip.Region{}, err
 	}
-	if strings.TrimSpace(text) == "" || strings.Contains(text, "\n") {
+	if strings.TrimSpace(text) == "" || strings.Contains(text, "\n") || role.Chars > 0 && design.Chars(text) > role.Chars {
 		return clip.Region{}, clip.ErrCopyTooLong
 	}
 	measured, err := r.measure(ctx, ws, []string{text}, role.Weight, role.Tracking, r.family(role))
@@ -100,6 +100,40 @@ func (r *Rendering) layoutDeclaredInfo(ctx context.Context, ws clip.MediaWorkspa
 	if len(rows) == 0 {
 		rows = []composition.ResolvedRow{{Role: "caption", Text: visual.text.Resolved.Text}}
 	}
+	// CDS-20 permits two word-wrapped lines. Preserve every authored word;
+	// a physical line break is layout, never a shortened replacement fact.
+	geometry, _ := design.Layout(ratio)
+	var wrapped []composition.ResolvedRow
+	for _, row := range rows {
+		role, known := design.Type[row.Role]
+		if !known {
+			return visual, elementProblem(visual.text, "invalid_row_role")
+		}
+		fits := func(text string) bool {
+			bounds, err := r.roleBounds(ctx, ws, text, role)
+			return err == nil && bounds.Width <= geometry.Chip.MaxWidth-2*design.Spacing.PadChip.H
+		}
+		if fits(row.Text) {
+			wrapped = append(wrapped, row)
+			continue
+		}
+		words := strings.Fields(row.Text)
+		found := false
+		if !strings.Contains(row.Text, "\n") {
+			for split := len(words) - 1; split > 0; split-- {
+				a, b := strings.Join(words[:split], " "), strings.Join(words[split:], " ")
+				if fits(a) && fits(b) {
+					wrapped = append(wrapped, composition.ResolvedRow{Role: row.Role, Text: a}, composition.ResolvedRow{Role: row.Role, Text: b})
+					found = true
+					break
+				}
+			}
+		}
+		if !found {
+			return visual, elementProblem(visual.text, "copy_limit")
+		}
+	}
+	rows = wrapped
 	pad, gap := design.Spacing.PadChip, design.Spacing.GapChip
 	bounds := make([]clip.Region, len(rows))
 	width, height := 0.0, 0.0

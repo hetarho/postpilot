@@ -113,11 +113,20 @@ func (m *mediaFake) Probe(_ context.Context, ws clip.MediaWorkspace, _ string) (
 	m.probes++
 	return clip.MediaInfo{DurationMS: n, Width: 1920, Height: 1080}, nil
 }
-func (m *mediaFake) PrepareAnalysisChunks(_ context.Context, ws clip.MediaWorkspace, s clip.MediaSource, fn func(clip.AnalysisChunk) error) error {
+func (m *mediaFake) PrepareAnalysisChunks(ctx context.Context, ws clip.MediaWorkspace, s clip.MediaSource, fn func(clip.AnalysisChunk) error) error {
+	return m.PrepareAnalysisChunksExcept(ctx, ws, s, nil, fn)
+}
+func (m *mediaFake) PrepareAnalysisChunksExcept(_ context.Context, ws clip.MediaWorkspace, s clip.MediaSource, skip func(int) bool, fn func(clip.AnalysisChunk) error) error {
 	if m.panicChunks {
 		panic("media panic")
 	}
 	for index, offset := 0, 0; offset < s.Info.DurationMS; index, offset = index+1, offset+60000 {
+		if skip != nil && skip(index) {
+			if err := fn(clip.AnalysisChunk{SourceID: s.SourceID, Fingerprint: s.Fingerprint, Index: index, OffsetMS: offset, DurationMS: min(60000, s.Info.DurationMS-offset)}); err != nil {
+				return err
+			}
+			continue
+		}
 		p := filepath.Join(ws.Path, fmt.Sprintf("proxy-%s-%d.mp4", s.SourceID, index))
 		if err := os.WriteFile(p, []byte("proxy"), 0600); err != nil {
 			return err
@@ -142,6 +151,7 @@ func (m *mediaFake) CleanupStale(context.Context, time.Time) error { return nil 
 type plannerFake struct {
 	id                                          string
 	observe, plans                              int
+	failObserveAt                               int
 	input                                       clip.PlanningInput
 	gate, preparationErr, observeErr, errorPlan error
 }
@@ -179,7 +189,7 @@ func (p *plannerFake) ObserveChunk(ctx context.Context, r llm.ModelRef, c clip.C
 		return clip.ChunkAnalysis{}, llm.Usage{}, errors.New("wrong proxy bytes")
 	}
 	p.observe++
-	if p.observeErr != nil {
+	if p.observeErr != nil && (p.failObserveAt == 0 || p.observe == p.failObserveAt) {
 		return clip.ChunkAnalysis{}, llm.Usage{}, p.observeErr
 	}
 	return clip.ChunkAnalysis{SourceID: c.Source.ID, Fingerprint: c.Source.Fingerprint, Index: c.Index, OffsetMS: c.OffsetMS, DurationMS: c.DurationMS, Segments: []clip.Segment{{StartMS: c.OffsetMS, EndMS: c.OffsetMS + c.DurationMS, Event: "scene", Quality: "usable", Focal: clip.Point{X: .5, Y: .5}}}}, llm.Usage{}, nil
@@ -250,15 +260,31 @@ type clipAdmitter struct {
 }
 
 func (a *clipAdmitter) Hold(_ context.Context, s job.Start) error {
-	if a.media.probes != 2 {
-		return errors.New("reservation preceded full manifest probe")
+	remainingObserve := 0
+	if s.Clip != nil {
+		for _, c := range s.Clip.Calls {
+			if c.Policy.Stage == "observe" {
+				remainingObserve += c.Count
+			}
+		}
 	}
-	if len(a.media.prepared) != 3 {
-		return errors.New("reservation preceded all proxies")
-	}
-	for _, c := range a.media.prepared {
-		if f, err := os.Stat(c.Path); err != nil || f.Size() != c.Bytes {
-			return errors.New("reservation lost a proxy")
+	if remainingObserve > 0 {
+		if a.media.probes < 2 {
+			return errors.New("reservation preceded full manifest probe")
+		}
+		current := []clip.AnalysisChunk{}
+		for _, c := range a.media.prepared {
+			if filepath.Dir(c.Path) == a.media.workspace {
+				current = append(current, c)
+			}
+		}
+		if len(current) != remainingObserve {
+			return errors.New("reservation preceded all proxies")
+		}
+		for _, c := range current {
+			if f, err := os.Stat(c.Path); err != nil || f.Size() != c.Bytes {
+				return errors.New("reservation lost a proxy")
+			}
 		}
 	}
 	if files, _ := filepath.Glob(filepath.Join(a.media.workspace, "source-*")); len(files) != 0 {
@@ -295,7 +321,17 @@ func (j generationJobs) FailQueued(ctx context.Context, user, id string) (bool, 
 }
 func (j generationJobs) ReserveApproved(ctx context.Context, user, id string, approval clip.GenerationApproval, n int) (context.Context, error) {
 	p := approval.Pricing
-	return j.q.ReserveClip(ctx, user, id, []job.PlannedCall{{Ref: p.Observe.Ref.String(), Count: n, CompletionTokens: p.Observe.CompletionTokens}, {Ref: p.Plan.Ref.String(), Count: 1, CompletionTokens: p.Plan.CompletionTokens}}, job.ClipReservation{CancellationPolicyVersion: p.CancellationPolicyVersion, ApprovedMaxCredits: approval.MaxCredits, Calls: []job.ClipCall{{Policy: p.Observe, Count: n}, {Policy: p.Plan, Count: 1}}})
+	calls := []job.PlannedCall{}
+	if n > 0 {
+		calls = append(calls, job.PlannedCall{Ref: p.Observe.Ref.String(), Count: p.ObserveCalls(n), CompletionTokens: p.Observe.CompletionTokens})
+	}
+	if p.PlanCalls() > 0 {
+		calls = append(calls, job.PlannedCall{Ref: p.Plan.Ref.String(), Count: p.PlanCalls(), CompletionTokens: p.Plan.CompletionTokens})
+	}
+	if len(calls) == 0 {
+		return ctx, nil
+	}
+	return j.q.ReserveClip(ctx, user, id, calls, job.ClipReservation{CancellationPolicyVersion: p.CancellationPolicyVersion, ApprovedMaxCredits: approval.MaxCredits, Calls: []job.ClipCall{{Policy: p.Observe, Count: p.ObserveCalls(n)}, {Policy: p.Plan, Count: p.PlanCalls()}}})
 }
 func (j generationJobs) Active(ctx context.Context, user, id string) (*clip.ClipJob, error) {
 	found, err := j.q.ActiveForClip(ctx, user, id)

@@ -62,7 +62,7 @@ func (a *releaseAdmission) Hold(ctx context.Context, s job.Start) error {
 	if len(files) != 0 {
 		return errors.New("original retained at hold")
 	}
-	if len(s.Calls) != 2 || s.Calls[0].Count != a.expected || s.Calls[1].Count != 1 {
+	if len(s.Calls) != 2 || s.Calls[0].Count != a.expected*4 || s.Calls[1].Count != 4 {
 		return errors.New("inexact reserved call count")
 	}
 	hold := a.hold
@@ -147,7 +147,74 @@ func TestClipWriterInputRelease(t *testing.T) {
 		t.Fatal("release regression must run nonroot")
 	}
 	h := newReleaseHarness(t, "detailed-input", false)
-	h.exercise("detailed-input")
+	st := clipstore.New(h.d.Writer, h.d.Reader)
+	finisher := clipFinisher{writer: h.d.Writer, clips: st, jobs: h.jobs}
+	h.service.WithFinisher(releaseFinisher{clipFinisher: finisher, mode: "save failure"})
+	h.exercise("save failure")
+	h.service.WithFinisher(finisher)
+	h.verifyCandidateContinuation()
+}
+
+func (h *releaseHarness) verifyCandidateContinuation() {
+	t, ctx := h.t, h.t.Context()
+	model := &v1.ModelRef{ProviderId: "fixture", ModelId: releaseModel}
+	calls, balance, prepared := h.provider.posts.Load(), h.balance(), len(h.metrics.prepared)
+	quote, err := h.client.QuoteClipGeneration(ctx, releaseRequest(h, &v1.QuoteClipGenerationRequest{ProjectId: h.project, BatchId: h.batch, ObserveModel: model, WriteModel: model}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !quote.Msg.RenderOnly || quote.Msg.MaxCredits != 0 || quote.Msg.RemainingChunks != 0 || int(quote.Msg.ReusedChunks) != h.expected {
+		t.Fatal("candidate did not produce AI-free continuation")
+	}
+	amount := quote.Msg.MaxCredits
+	started, err := h.client.StartClipGeneration(ctx, releaseRequest(h, &v1.StartClipGenerationRequest{ProjectId: h.project, BatchId: h.batch, ObserveModel: model, WriteModel: model, QuoteId: quote.Msg.QuoteId, ApprovedMaxCredits: &amount, CancellationPolicyVersion: quote.Msg.CancellationPolicy.Version}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	workerCtx, cancel := context.WithCancel(ctx)
+	done := make(chan struct{})
+	go func() { defer close(done); h.queue.Run(workerCtx) }()
+	defer func() { cancel(); <-done }()
+	deadline := time.NewTimer(10 * time.Minute)
+	defer deadline.Stop()
+	ticker := time.NewTicker(50 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		p, e := h.client.GetClipProject(ctx, releaseRequest(h, &v1.GetClipProjectRequest{Id: h.project}))
+		if e != nil {
+			t.Fatal(e)
+		}
+		j := p.Msg.Project.LatestJob
+		if j != nil && j.Id == started.Msg.JobId && (j.Status == "done" || j.Status == "failed") {
+			if j.Status != "done" || p.Msg.Project.Result == nil {
+				t.Fatal("retained candidate failed", j.Failure)
+			}
+			break
+		}
+		select {
+		case <-deadline.C:
+			t.Fatal("continuation timeout")
+		case <-ticker.C:
+		}
+	}
+	if h.provider.posts.Load() != calls || h.balance() != balance || len(h.metrics.prepared) != prepared {
+		t.Fatal("continuation repeated paid work or proxies")
+	}
+	template, err := h.projects.CreateTemplate(ctx, "release-user", clip.Recipe{Name: "changed recovery template", CompositionBody: releaseDetailedBody()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = h.projects.UpdateProject(ctx, "release-user", h.project, clip.ProjectPatch{VideoTemplateID: &template.ID}); err != nil {
+		t.Fatal(err)
+	}
+	changed, err := h.client.QuoteClipGeneration(ctx, releaseRequest(h, &v1.QuoteClipGenerationRequest{ProjectId: h.project, BatchId: h.batch, ObserveModel: model, WriteModel: model}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if changed.Msg.RenderOnly || changed.Msg.RemainingChunks != 0 || int(changed.Msg.ReusedChunks) != h.expected || h.provider.posts.Load() != calls {
+		t.Fatal("changed template discarded reusable observations")
+	}
+	t.Logf("candidate continuation: reused_chunks=%d additional_AI_calls=0 additional_proxies=0; changed template retains observations", h.expected)
 }
 
 func TestClipRelease(t *testing.T) {
@@ -643,7 +710,10 @@ func (h *releaseHarness) exercise(mode string) {
 	wantCalls := h.expected + 1
 	wantStatus := "done"
 	switch mode {
-	case "denied", "unknown usage", "malformed", "truncated", "oversized response":
+	case "malformed":
+		wantCalls = 4
+		wantStatus = "failed"
+	case "denied", "unknown usage", "truncated", "oversized response":
 		wantCalls = 1
 		wantStatus = "failed"
 	case "partial":

@@ -74,8 +74,11 @@ func ClipCredits(calls []PricedCall) (int, error) {
 	}
 	var total int64
 	for _, call := range calls {
-		if !call.Policy.Valid() || call.Count <= 0 || call.Count > 49 {
+		if !call.Policy.Valid() || call.Count < 0 || call.Count > 49*(1+call.Policy.ResponseRetries) {
 			return 0, ErrClipPricing
+		}
+		if call.Count == 0 {
+			continue
 		}
 		cost, ok := call.Policy.QuoteMicrousd()
 		if !ok || cost > (math.MaxInt64-total)/int64(call.Count) {
@@ -86,6 +89,15 @@ func ClipCredits(calls []PricedCall) (int, error) {
 	// Charge multiplies in integer space; reject before either int64 or int can wrap.
 	if total > (math.MaxInt64-9999)/int64(plan.ChargeMultiplier) {
 		return 0, ErrClipPricing
+	}
+	if total == 0 {
+		anyCalls := false
+		for _, c := range calls {
+			anyCalls = anyCalls || c.Count > 0
+		}
+		if !anyCalls {
+			return 0, nil
+		}
 	}
 	credits := plan.Charge(total)
 	if credits < plan.ChargeBase || credits > math.MaxInt32 {

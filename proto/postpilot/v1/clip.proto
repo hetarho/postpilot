@@ -306,6 +306,10 @@ message QuoteClipGenerationResponse {
   string expires_at = 3;
   repeated ClipPricedCall priced_calls = 4;
   ClipCancellationPolicy cancellation_policy = 5;
+  int32 reused_chunks = 6;
+  int32 remaining_chunks = 7;
+  bool render_only = 8;
+  int32 response_retries = 9;
 }
 message ClipCancellationPolicy {
   int32 version = 1;

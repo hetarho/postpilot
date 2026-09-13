@@ -265,9 +265,15 @@ func (m *releaseMedia) Probe(ctx context.Context, ws clip.MediaWorkspace, p stri
 	return info, err
 }
 func (m *releaseMedia) PrepareAnalysisChunks(ctx context.Context, ws clip.MediaWorkspace, s clip.MediaSource, fn func(clip.AnalysisChunk) error) error {
+	return m.PrepareAnalysisChunksExcept(ctx, ws, s, nil, fn)
+}
+func (m *releaseMedia) PrepareAnalysisChunksExcept(ctx context.Context, ws clip.MediaWorkspace, s clip.MediaSource, skip func(int) bool, fn func(clip.AnalysisChunk) error) error {
 	start := time.Now()
 	defer func() { m.metrics.mu.Lock(); m.metrics.prepareTime += time.Since(start); m.metrics.mu.Unlock() }()
-	return m.Adapter.PrepareAnalysisChunks(ctx, ws, s, func(c clip.AnalysisChunk) error {
+	return m.Adapter.PrepareAnalysisChunksExcept(ctx, ws, s, skip, func(c clip.AnalysisChunk) error {
+		if c.Path == "" {
+			return fn(c)
+		}
 		if m.metrics.mode == "oversized proxy" && m.metrics.probeCount == 2 {
 			c.Bytes = 8<<20 + 1
 		}
@@ -689,5 +695,5 @@ func releaseCorrelation(a, b []byte) float64 {
 // Synthetic content with the same detailed-template plus twenty-observation
 // failure shape. No customer XML, facts or footage are committed.
 func releaseDetailedBody() string {
-	return `<clip version="1" styles="clean"><guide>` + strings.Repeat("관찰한 장면을 차분히 설명한다. ", 130) + `</guide><guide>` + strings.Repeat("관찰한 사실과 입력한 내용만 사용한다. ", 110) + `</guide><text id="label" kind="fixed" role="badge" position="header" basis="whole">검증용 영상</text><repeat for="scenes"><scene id="footage" scope="scene"/></repeat></clip>`
+	return `<clip version="1" styles="clean"><guide>` + strings.Repeat("관찰한 장면을 차분히 설명한다. ", 130) + `</guide><guide>` + strings.Repeat("관찰한 사실과 입력한 내용만 사용한다. ", 110) + `</guide><text id="label" kind="fixed" role="badge" position="header" basis="whole">검증용 영상</text><text id="place" kind="fixed" role="info" style="auto" position="bottom" basis="output-start" start="0" end="3">서울 식당</text><text id="opening" kind="fixed" role="hook" style="auto" basis="output-start" start="0" end="3">오늘의 기록</text><text id="score" kind="fixed" role="info" style="auto" position="bottom" basis="output-end" start="-4" end="0">제 기준 다시 방문하고 싶은 식당입니다 오늘도/5점</text><text id="closing" kind="fixed" role="ending" style="auto" basis="output-end" start="-4" end="0">다음에 또 만나요</text><repeat for="scenes"><scene id="footage" scope="scene"/></repeat></clip>`
 }

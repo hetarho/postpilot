@@ -30,11 +30,11 @@ func (h *Handler) QuoteClipGeneration(ctx context.Context, req *connect.Request[
 	if err != nil {
 		return nil, toConnectError(err)
 	}
-	return connect.NewResponse(&v1.QuoteClipGenerationResponse{CancellationPolicy: &v1.ClipCancellationPolicy{Version: int32(q.Pricing.CancellationPolicyVersion), UnusedReservationNumerator: 1, UnusedReservationDenominator: 2, Rounding: "ceil"}, QuoteId: q.ID, MaxCredits: int32(q.Pricing.MaxCredits), ExpiresAt: q.ExpiresAt.UTC().Format(time.RFC3339Nano), PricedCalls: []*v1.ClipPricedCall{pricedCallProto(q.Pricing.Observe, q.Pricing.ObservationCalls), pricedCallProto(q.Pricing.Plan, 1)}}), nil
+	return connect.NewResponse(&v1.QuoteClipGenerationResponse{ReusedChunks: int32(q.Pricing.ReusedChunks), RemainingChunks: int32(q.Pricing.ObservationCalls), RenderOnly: q.Pricing.SkipPlan, ResponseRetries: int32(q.Pricing.Plan.ResponseRetries), CancellationPolicy: &v1.ClipCancellationPolicy{Version: int32(q.Pricing.CancellationPolicyVersion), UnusedReservationNumerator: 1, UnusedReservationDenominator: 2, Rounding: "ceil"}, QuoteId: q.ID, MaxCredits: int32(q.Pricing.MaxCredits), ExpiresAt: q.ExpiresAt.UTC().Format(time.RFC3339Nano), PricedCalls: []*v1.ClipPricedCall{pricedCallProto(q.Pricing.Observe, q.Pricing.ObserveCalls(q.Pricing.ObservationCalls)), pricedCallProto(q.Pricing.Plan, q.Pricing.PlanCalls())}}), nil
 }
 
 func pricedCallProto(p llm.CallPolicy, count int) *v1.ClipPricedCall {
-	return &v1.ClipPricedCall{Model: &v1.ModelRef{ProviderId: p.Ref.ProviderID, ModelId: p.Ref.ModelID}, Stage: p.Stage, Calls: int32(count), PromptTokens: 30000, CompletionTokens: int32(p.CompletionTokens), Reasoning: string(p.Reasoning), InputUsdPerMillion: p.InputUSDPerMillion, OutputUsdPerMillion: p.OutputUSDPerMillion}
+	return &v1.ClipPricedCall{Model: &v1.ModelRef{ProviderId: p.Ref.ProviderID, ModelId: p.Ref.ModelID}, Stage: p.Stage, Calls: int32(count), PromptTokens: int32(p.InputTokenLimit()), CompletionTokens: int32(p.CompletionTokens), Reasoning: string(p.Reasoning), InputUsdPerMillion: p.InputUSDPerMillion, OutputUsdPerMillion: p.OutputUSDPerMillion}
 }
 
 func optionalInt32(n *int) *int32 {

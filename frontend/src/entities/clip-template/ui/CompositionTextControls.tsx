@@ -117,14 +117,19 @@ export function CompositionTextControls({
         label={t('composition.roleLabel')}
         value={a.role}
         options={options('role', ['caption', 'info', 'badge', 'hook', 'ending'])}
-        onChange={(v) => attr('role', v)}
+        onChange={(v) =>
+          onChange({
+            ...node,
+            attributes: { ...a, role: v, style: v === 'caption' ? (a.style ?? 'auto') : 'auto' },
+          })
+        }
       />
       <CompositionSelect
         label={t('composition.styleLabel')}
         value={a.style ?? 'auto'}
         options={[
           { value: 'auto', label: t('composition.auto') },
-          ...styles.map((value) => ({
+          ...(a.role === 'caption' ? styles : []).map((value) => ({
             value,
             label: t(`style.${value}`, { defaultValue: t('composition.auto') }),
           })),

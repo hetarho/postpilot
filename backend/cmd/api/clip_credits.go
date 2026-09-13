@@ -17,6 +17,9 @@ type clipQuotePricing struct {
 }
 
 func (p clipQuotePricing) Freeze(ctx context.Context, observe, write llm.ModelRef, count int) (clip.GenerationPricing, error) {
+	return p.FreezeWork(ctx, observe, write, count, false, 3)
+}
+func (p clipQuotePricing) FreezeWork(ctx context.Context, observe, write llm.ModelRef, count int, skipPlan bool, retries int) (clip.GenerationPricing, error) {
 	a, err := p.registry.FreezeExecution(ctx, observe, "observe", p.cfg.ObserveCompletionTokens, p.cfg.ObserveReasoning, llm.ExecutionInlineStatic)
 	if err != nil {
 		// An admission answer keeps its shape so the clip context can name the
@@ -31,11 +34,16 @@ func (p clipQuotePricing) Freeze(ctx context.Context, observe, write llm.ModelRe
 	if err != nil {
 		return clip.GenerationPricing{}, clip.ErrPricingUnavailable
 	}
-	credits, err := usage.ClipCredits([]usage.PricedCall{{Policy: a, Count: count}, {Policy: b, Count: 1}})
+	a.ResponseRetries, b.ResponseRetries = retries, retries
+	planCalls := 1 + retries
+	if skipPlan {
+		planCalls = 0
+	}
+	credits, err := usage.ClipCredits([]usage.PricedCall{{Policy: a, Count: count * (1 + retries)}, {Policy: b, Count: planCalls}})
 	if err != nil {
 		return clip.GenerationPricing{}, clip.ErrPricingUnavailable
 	}
-	return clip.GenerationPricing{Version: clip.PricingPolicyVersion, Observe: a, Plan: b, ObservationCalls: count, MaxCredits: credits}, nil
+	return clip.GenerationPricing{Version: clip.PricingPolicyVersion, SkipPlan: skipPlan, Observe: a, Plan: b, ObservationCalls: count, MaxCredits: credits}, nil
 }
 
 type clipAccounting struct{ ledger *usage.Service }
@@ -71,11 +79,20 @@ func (a clipJobs) Latest(ctx context.Context, user, id string) (*clip.ClipJob, e
 // reach this through a request-supplied price or a client-side duration estimate.
 func (a clipJobs) ReserveApproved(ctx context.Context, user, id string, approval clip.GenerationApproval, chunks int) (context.Context, error) {
 	p := approval.Pricing
-	if chunks < 1 || chunks > p.ObservationCalls || !p.Valid() || approval.MaxCredits != p.MaxCredits || approval.QuoteID == "" {
+	if chunks < 0 || chunks > p.ObservationCalls || !p.Valid() || approval.MaxCredits != p.MaxCredits || approval.QuoteID == "" {
 		return nil, job.ErrCreditAllowance
 	}
-	calls := clipPricingCalls(p.Observe.Ref.String(), p.Plan.Ref.String(), chunks, clip.CompletionBudgets{Observe: p.Observe.CompletionTokens, Plan: p.Plan.CompletionTokens})
-	return a.queue.ReserveClip(ctx, user, id, calls, job.ClipReservation{CancellationPolicyVersion: p.CancellationPolicyVersion, ApprovedMaxCredits: approval.MaxCredits, Calls: []job.ClipCall{{Policy: p.Observe, Count: chunks}, {Policy: p.Plan, Count: 1}}})
+	calls := []job.PlannedCall{}
+	if chunks > 0 {
+		calls = append(calls, job.PlannedCall{Ref: p.Observe.Ref.String(), Count: p.ObserveCalls(chunks), CompletionTokens: p.Observe.CompletionTokens})
+	}
+	if p.PlanCalls() > 0 {
+		calls = append(calls, job.PlannedCall{Ref: p.Plan.Ref.String(), Count: p.PlanCalls(), CompletionTokens: p.Plan.CompletionTokens})
+	}
+	if len(calls) == 0 {
+		return ctx, nil
+	}
+	return a.queue.ReserveClip(ctx, user, id, calls, job.ClipReservation{CancellationPolicyVersion: p.CancellationPolicyVersion, ApprovedMaxCredits: approval.MaxCredits, Calls: []job.ClipCall{{Policy: p.Observe, Count: p.ObserveCalls(chunks)}, {Policy: p.Plan, Count: p.PlanCalls()}}})
 }
 
 // clipAdmission is the AnalysisAdmission port over the registry: the observe

@@ -106,7 +106,7 @@ func decodeComposition(snapshot, inputs string) (*clip.ProjectComposition, error
 	if s.Legacy {
 		limits = clip.LegacyCompositionLimits(limits)
 	}
-	d, e := composition.Parse(s.Body, limits)
+	d, e := composition.ReadStored(s.Body, limits)
 	if e != nil {
 		return nil, e
 	}

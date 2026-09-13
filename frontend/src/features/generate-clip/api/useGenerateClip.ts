@@ -254,7 +254,7 @@ export function useGenerateClip(ownerId: string, project: ClipProject, ownedJobI
       busy ||
       !settingsReady ||
       !!project.finalized ||
-      !modelsReady ||
+      (!modelsReady && !quote.recovery?.renderOnly) ||
       !batch ||
       consumed.current.has(batch.id) ||
       usedQuotes.current.has(quote.quoteId) ||
@@ -312,6 +312,11 @@ export function useGenerateClip(ownerId: string, project: ClipProject, ownedJobI
     job,
     busy,
     modelsReady,
+    canQuote:
+      modelsReady ||
+      (!!observe.selected &&
+        !!write.selected &&
+        ['failed', 'cancelled'].includes(project.latestJob?.status ?? '')),
     availability,
     eligibility,
     observeStatus,

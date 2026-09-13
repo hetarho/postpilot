@@ -81,7 +81,7 @@ func (s *GenerationService) fetchSource(ctx context.Context, ws MediaWorkspace, 
 // cut three times is downloaded once, and never more than one original sits in
 // the workspace beside the proxies — the bound the release gate holds. The
 // returned release drops whatever is still held once the render is over.
-func (s *GenerationService) renderLoader(ws MediaWorkspace, resolve func(string) (SourceLease, MediaInfo, bool)) (RenderSourceLoader, func() error) {
+func (s *GenerationService) renderLoader(ws MediaWorkspace, resolve func(string) (SourceLease, MediaInfo, bool), verifyRetained ...bool) (RenderSourceLoader, func() error) {
 	var heldID string
 	var held MediaSource
 	var drop func() error
@@ -107,6 +107,16 @@ func (s *GenerationService) renderLoader(ws MediaWorkspace, resolve func(string)
 		source, d, err := s.fetchSource(ctx, ws, lease, info)
 		if err != nil {
 			return err
+		}
+		if len(verifyRetained) > 0 && verifyRetained[0] {
+			actual, e := s.media.Probe(ctx, ws, source.Path)
+			if e != nil {
+				return errors.Join(e, d())
+			}
+			if actual.DurationMS != info.DurationMS || actual.Width != info.Width || actual.Height != info.Height || actual.HasAudio != info.HasAudio {
+				return errors.Join(ErrInvalidMedia, d())
+			}
+			source.Info = actual
 		}
 		held, heldID, drop = source, id, d
 		return fn(source)

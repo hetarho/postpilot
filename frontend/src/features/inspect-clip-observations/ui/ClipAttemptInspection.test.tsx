@@ -49,6 +49,26 @@ function failedProject() {
   return p
 }
 
+it.each(['ko', 'en'] as const)(
+  'shows the authoritative historical element error in %s',
+  (language) => {
+    initializeI18n(language)
+    const project = failedProject()
+    project.attemptInspection!.validationCheck = 'unknown'
+    project.latestJob!.failure = {
+      reason: 'CLIP_COMPOSITION_INVALID',
+      params: { element_id: 'disclosure_badge', line: '39', reason: 'invalid_style' },
+    }
+    render(<ClipAttemptInspection project={project} localSources={[]} />)
+    expect(screen.getByText(/disclosure_badge/)).toBeVisible()
+    expect(
+      screen.queryByText(
+        language === 'ko' ? /세부 검증 사유가 기록되지 않은/ : /no detailed validation reason/,
+      ),
+    ).not.toBeInTheDocument()
+  },
+)
+
 it('shows only this attempt evidence, plays original ranges and preserves the previous result', async () => {
   const p = failedProject()
   const before = structuredClone(p.result)

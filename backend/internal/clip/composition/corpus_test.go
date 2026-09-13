@@ -39,6 +39,24 @@ func corpus(t *testing.T) (composition.Limits, []corpusCase) {
 	return f.Limits, f.Cases
 }
 
+func TestRoleStylesAreStrictForExecutionAndRetainedOnlyForReading(t *testing.T) {
+	limits := config.ClipCompositionLimits()
+	for _, role := range []string{"caption", "badge", "info", "hook", "ending"} {
+		for _, style := range []string{"auto", "clean", "memo", "bold", "mark", "simple"} {
+			body := `<clip version="1" styles="clean memo bold mark simple"><text id="text" kind="fixed" role="` + role + `" style="` + style + `" basis="whole">원문</text></clip>`
+			_, problem := composition.Parse(body, limits)
+			valid := role == "caption" || style == "auto"
+			if (problem == nil) != valid {
+				t.Fatalf("role=%s style=%s incorrect admission", role, style)
+			}
+			stored, problem := composition.ReadStored(body, limits)
+			if problem != nil || stored.Elements[0].Style != style {
+				t.Fatal("stored draft was lost or silently rewritten")
+			}
+		}
+	}
+}
+
 // The corpus uses language-neutral lowerCamelCase; production domain types need
 // no serialization tags merely to support an internal grammar test.
 func normalized(t *testing.T, value any) any {

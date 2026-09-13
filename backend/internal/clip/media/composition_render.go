@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/postpilot/backend/internal/clip"
 )
@@ -19,6 +20,19 @@ func removeIntermediate(path string) error {
 }
 
 func (r *Rendering) renderComposition(ctx context.Context, ws clip.MediaWorkspace, plan clip.EditPlan, sources []clip.RenderSource, load clip.RenderSourceLoader) (result clip.RenderedVideo, err error) {
+	substage, started := "render_layout", time.Now()
+	step := func(next string) {
+		clip.ReportMediaStage(ctx, substage, time.Since(started))
+		substage, started = next, time.Now()
+	}
+	defer func() {
+		clip.ReportMediaStage(ctx, substage, time.Since(started))
+		if err != nil {
+			if _, known := clip.DiagnosticFromError(err); !known {
+				err = clip.WithAttemptDiagnostic(err, clip.AttemptDiagnostic{Check: substage, Phase: "render"})
+			}
+		}
+	}()
 	if err = r.media.validWorkspace(ws, true); err != nil {
 		return result, err
 	}
@@ -64,7 +78,9 @@ func (r *Rendering) renderComposition(ctx context.Context, ws clip.MediaWorkspac
 		audio = audio || byID[cut.SourceID].Info.HasAudio
 	}
 	cuts, wavs := []string{}, []string{}
+	step("render_footage")
 	for i, cut := range plan.Cuts {
+		step("render_footage")
 		video := filepath.Join(ws.Path, fmt.Sprintf("bare-%04d.mp4", i))
 		cleanup = append(cleanup, video)
 		cuts = append(cuts, video)
@@ -84,6 +100,7 @@ func (r *Rendering) renderComposition(ctx context.Context, ws clip.MediaWorkspac
 				return err
 			}
 			if audio {
+				step("render_audio")
 				return r.renderBareAudio(ctx, ws, cut, source, frames[i], wav)
 			}
 			return nil
@@ -95,6 +112,7 @@ func (r *Rendering) renderComposition(ctx context.Context, ws clip.MediaWorkspac
 			return result, clip.ErrInvalidMedia
 		}
 	}
+	step("render_encode")
 	raw := filepath.Join(ws.Path, "composition-footage.mp4")
 	cleanup = append(cleanup, raw)
 	mergeStart := len(cleanup)
@@ -114,6 +132,7 @@ func (r *Rendering) renderComposition(ctx context.Context, ws clip.MediaWorkspac
 	// Sample the final, transitioned footage under the authored output window.
 	// The loader's original can already be released at this point.
 	composedSource := clip.MediaSource{Path: raw, Info: clip.MediaInfo{Width: canvas.Width, Height: canvas.Height, DurationMS: totalFrames * 1000 / r.cfg.FPS}}
+	step("render_overlay")
 	plates := make([]string, len(layout.visuals))
 	for i := range layout.visuals {
 		plates[i], err = r.declaredPlate(ctx, ws, canvas, &layout.visuals[i], composedSource, i)
@@ -128,6 +147,7 @@ func (r *Rendering) renderComposition(ctx context.Context, ws clip.MediaWorkspac
 	}
 	assembled, measured := "", loudness{}
 	if audio {
+		step("render_audio")
 		assembled = filepath.Join(ws.Path, "composition-audio.wav")
 		cleanup = append(cleanup, assembled)
 		if err = r.assembleDeclaredAudio(ctx, ws, wavs, frames, transitions, elements, assembled); err != nil {
@@ -143,6 +163,7 @@ func (r *Rendering) renderComposition(ctx context.Context, ws clip.MediaWorkspac
 			return result, err
 		}
 	}
+	step("render_overlay")
 	pieces, pieceFrames, err := r.overlayComposition(ctx, ws, raw, layout.visuals, plates, totalFrames, &cleanup)
 	if err != nil {
 		return result, err
@@ -154,6 +175,7 @@ func (r *Rendering) renderComposition(ctx context.Context, ws clip.MediaWorkspac
 	if err != nil {
 		return result, err
 	}
+	step("render_encode")
 	args = append(args, r.encodeArgs(audio)...)
 	if err = r.runRender(ctx, ws, output, args); err != nil {
 		return result, err
@@ -167,6 +189,7 @@ func (r *Rendering) renderComposition(ctx context.Context, ws clip.MediaWorkspac
 	for _, element := range elements {
 		manifest = append(manifest, element.Parts...)
 	}
+	step("render_validate")
 	result, err = r.validateRenderedOutput(ctx, ws, output, plan, audio, manifest)
 	if err != nil {
 		return result, err

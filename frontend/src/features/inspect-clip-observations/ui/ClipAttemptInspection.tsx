@@ -2,6 +2,7 @@ import { useEffect, useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ClipProject } from '@/entities/clip-project'
 import { Button, Typography } from '@/shared/ui'
+import { formatAppFailure } from '@/shared/lib/localization'
 import { ClipObservationViewer } from './ClipObservationViewer'
 
 type Inspection = NonNullable<ClipProject['attemptInspection']>
@@ -193,8 +194,10 @@ export function ClipAttemptInspection({
           )}
           {job.status === 'failed' && (
             <>
-              <Typography variant="body">{t(explanation)}</Typography>
-              {(!check || check === 'unknown') && (
+              <Typography variant="body">
+                {job.failure ? formatAppFailure(job.failure) : t(explanation)}
+              </Typography>
+              {!job.failure && (!check || check === 'unknown') && (
                 <Typography variant="body" className="text-content-secondary">
                   {t('inspection.detailUnknown')}
                 </Typography>

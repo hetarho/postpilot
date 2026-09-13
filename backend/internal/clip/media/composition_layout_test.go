@@ -25,6 +25,31 @@ func measuredDeclared(t *testing.T, plan clip.EditPlan) declaredLayout {
 	return layout
 }
 
+func TestDeclaredInformationWrapsWithoutChangingAuthoredWords(t *testing.T) {
+	for _, ratio := range []string{"vertical", "horizontal", "square"} {
+		text := "제 기준 다시 방문하고 싶은 식당입니다 오늘도/5점"
+		plan := declaredPlan(t, `<clip version="1"><text id="score" kind="fixed" role="info" position="bottom" basis="whole">`+text+`</text></clip>`, ratio)
+		layout := measuredDeclared(t, plan)
+		got := layout.elements()[0]
+		if got.Text != text || len(layout.visuals[0].info.Lines) != 2 {
+			t.Fatalf("%s lost exact two-line authored content: text=%q lines=%d", ratio, got.Text, len(layout.visuals[0].info.Lines))
+		}
+		var words []string
+		for _, part := range got.Parts {
+			if part.Kind == "copy" {
+				words = append(words, part.Text)
+			}
+		}
+		if strings.Join(words, " ") != text {
+			t.Fatal("typesetting shortened the original words")
+		}
+		repeated := measuredDeclared(t, layout.plan)
+		if !reflect.DeepEqual(layout.elements(), repeated.elements()) {
+			t.Fatal("preview and repeated rendering disagree")
+		}
+	}
+}
+
 func TestDeclaredRapidKeepsOneOwnedSentenceAndMeasuredPhraseWindows(t *testing.T) {
 	plan := declaredPlan(t, `<clip version="1" pace="rapid" styles="simple"><scene id="scene"><text id="copy" kind="ai" role="caption" basis="cut">Describe the scene.</text></scene></clip>`, "vertical")
 	plan.Portable.Elements[0].Resolved.Text = "오늘은 철판 요리를 먹어요"

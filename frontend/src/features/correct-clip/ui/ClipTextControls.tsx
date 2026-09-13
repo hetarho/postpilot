@@ -154,10 +154,12 @@ export function ClipTextControls({
           <Listbox
             aria-labelledby="clip-text-style-label"
             value={text.style}
-            options={(['auto', ...styles] as const).map((value) => ({
-              value,
-              label: value === 'auto' ? t('timeline.auto') : t(`style.${value}`),
-            }))}
+            options={(['auto', ...(text.role === 'caption' ? styles : [])] as const).map(
+              (value) => ({
+                value,
+                label: value === 'auto' ? t('timeline.auto') : t(`style.${value}`),
+              }),
+            )}
             onChange={(style) => patch({ style })}
           />
         </div>

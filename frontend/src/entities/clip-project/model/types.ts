@@ -80,6 +80,12 @@ export interface ClipAccounting {
   settled: boolean
 }
 export interface ClipQuote {
+  recovery?: {
+    reusedChunks: number
+    remainingChunks: number
+    renderOnly: boolean
+    responseRetries: number
+  }
   cancellationPolicy?: { version: number; numerator: number; denominator: number; rounding: 'ceil' }
   quoteId: string
   maxCredits: number

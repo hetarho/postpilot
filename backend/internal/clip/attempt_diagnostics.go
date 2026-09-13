@@ -3,7 +3,9 @@ package clip
 import (
 	"context"
 	"errors"
+	"github.com/postpilot/backend/internal/clip/composition"
 	"log/slog"
+	"regexp"
 )
 
 // Checkpoints contain validated domain evidence, never a raw provider response.
@@ -20,6 +22,8 @@ type AttemptRange struct {
 
 type AttemptDiagnostic struct {
 	Check, Phase string
+	ElementID    string
+	Line         int
 	Values       map[string]int
 	Ranges       []AttemptRange
 }
@@ -59,6 +63,11 @@ func DiagnosticFromError(err error) (AttemptDiagnostic, bool) {
 	if errors.As(err, &e) {
 		return e.AttemptDiagnostic(), true
 	}
+	var problem *composition.Problem
+	if errors.As(err, &problem) {
+		check := SafeAttemptCheck("composition_" + problem.Reason)
+		return AttemptDiagnostic{Check: check, Phase: "composition", ElementID: problem.ElementID, Line: problem.Line}, true
+	}
 	return AttemptDiagnostic{}, false
 }
 
@@ -89,7 +98,7 @@ func AttemptRangeDiagnostics(plan EditPlan, analyses []SourceAnalysis) []Attempt
 // This is the single numeric allowlist shared by persistence and logging.
 func SafeAttemptValues(values map[string]int) map[string]int {
 	out := map[string]int{}
-	for _, key := range []string{"input_bytes", "input_limit_bytes", "system_bytes", "content_bytes", "schema_bytes", "source", "chunk", "cut", "cut_count", "target_ms", "before_ms", "after_ms", "remaining_ms", "min_ms", "max_ms", "transition_ms", "backward_ms", "segment", "segment_count", "duration_ms", "expected_index", "event_runes", "speech_runes", "quality_runes", "subject_count", "subject_runes"} {
+	for _, key := range []string{"retry", "retry_limit", "reused_chunks", "remaining_chunks", "reused_plan", "input_bytes", "input_limit_bytes", "system_bytes", "content_bytes", "schema_bytes", "source", "chunk", "cut", "cut_count", "target_ms", "before_ms", "after_ms", "remaining_ms", "min_ms", "max_ms", "transition_ms", "backward_ms", "segment", "segment_count", "duration_ms", "expected_index", "event_runes", "speech_runes", "quality_runes", "subject_count", "subject_runes"} {
 		if n, ok := values[key]; ok && n >= 0 && n <= 180000000 {
 			out[key] = n
 		}
@@ -104,7 +113,7 @@ func SafeAttemptValues(values map[string]int) map[string]int {
 
 func SafeAttemptPhase(phase string) string {
 	switch phase {
-	case "input", "decode", "selection", "timeline_grow", "timeline_shrink", "timeline_total", "composition", "validation", "observation":
+	case "render", "input", "decode", "selection", "timeline_grow", "timeline_shrink", "timeline_total", "composition", "validation", "observation":
 		return phase
 	}
 	return ""
@@ -122,6 +131,11 @@ func (s *GenerationService) checkpoint(ctx context.Context, user, project string
 	c.Diagnostic.Values = SafeAttemptValues(c.Diagnostic.Values)
 	c.Diagnostic.Phase = SafeAttemptPhase(c.Diagnostic.Phase)
 	if err := store.SaveAttemptCheckpoint(ctx, user, project, c); err != nil {
+		// Preserve interruption identity so the worker leaves recovery to its boot
+		// sweep instead of reporting a storage failure during normal shutdown.
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			return err
+		}
 		slog.Warn("clip checkpoint unavailable", "job", c.JobID, "stage", c.Stage)
 		return ErrAttemptCheckpointUnavailable
 	}
@@ -139,8 +153,16 @@ func (s *GenerationService) AttemptCheckpoint(ctx context.Context, user, project
 	return store.GetAttemptCheckpoint(ctx, user, project, job)
 }
 
+var diagnosticElementID = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_-]{0,63}$`)
+
 func logAttemptDiagnostic(job, stage string, d AttemptDiagnostic) {
 	attrs := []any{"job", job, "stage", stage, "validation_phase", SafeAttemptPhase(d.Phase), "validation_check", SafeAttemptCheck(d.Check)}
+	if d.Line > 0 && d.Line <= 16000 {
+		attrs = append(attrs, "line", d.Line)
+	}
+	if diagnosticElementID.MatchString(d.ElementID) {
+		attrs = append(attrs, "element_id", d.ElementID)
+	}
 	// Check is supplied only by the owned parser; the public diagnostic projection
 	// still normalizes it against its vocabulary before display.
 	for key, value := range SafeAttemptValues(d.Values) {
@@ -154,6 +176,8 @@ func logAttemptDiagnostic(job, stage string, d AttemptDiagnostic) {
 
 func SafeAttemptCheck(check string) string {
 	switch check {
+	case "composition_invalid_style", "composition_invalid_position", "composition_invalid_interval", "composition_invalid_rows", "composition_invalid_role", "composition_copy_limit", "composition_readability", "composition_safe_area", "composition_invalid_manifest", "render_layout", "render_footage", "render_audio", "render_overlay", "render_encode", "render_validate":
+		return check
 	case "input_prompt_limit", "input_settings", "input_sources":
 		return check
 	case "observe_source_identity", "observe_chunk_identity", "observe_segment_fields", "observe_segment_count", "observe_segment_time", "observe_segment_overlap", "observe_focal", "observe_subject_bounds", "observe_text_length", "observe_quality", "observe_subject_count", "observe_subject_text", "observe_description", "observe_scene", "observe_silent_speech":

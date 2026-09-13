@@ -50,6 +50,46 @@ it('treats the server ceiling as opaque, including zero, and rejects malformed q
   }
 })
 
+it('binds the exact remaining work and rejects paid render-only or invalid retry counts', () => {
+  const raw = {
+    quoteId: 'resume',
+    maxCredits: 0,
+    expiresAt: '2099-01-01T00:00:00Z',
+    reusedChunks: 20,
+    remainingChunks: 0,
+    renderOnly: true,
+    responseRetries: 3,
+  }
+  expect(toClipQuote(create(QuoteClipGenerationResponseSchema, raw), 'bound').recovery).toEqual({
+    reusedChunks: 20,
+    remainingChunks: 0,
+    renderOnly: true,
+    responseRetries: 3,
+  })
+  for (const change of [
+    { maxCredits: 1 },
+    { remainingChunks: 1 },
+    { responseRetries: 4 },
+    { reusedChunks: 50 },
+  ]) {
+    expect(() =>
+      toClipQuote(create(QuoteClipGenerationResponseSchema, { ...raw, ...change }), 'bound'),
+    ).toThrow()
+  }
+  expect(
+    toClipQuote(
+      create(QuoteClipGenerationResponseSchema, {
+        ...raw,
+        maxCredits: 20,
+        remainingChunks: 1,
+        reusedChunks: 19,
+        renderOnly: false,
+      }),
+      'bound',
+    ).recovery?.remainingChunks,
+  ).toBe(1)
+})
+
 it('preserves cancellation breakdowns and rejects an undisclosed policy version', () => {
   const old = toClipAccounting(
     create(ClipAccountingSchema, {

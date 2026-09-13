@@ -15,6 +15,7 @@ type CallPolicy struct {
 	CompletionTokens int
 	// Zero is the historical 30,000-token allowance in previously frozen calls.
 	InputTokens      int
+	ResponseRetries  int
 	Reasoning        ReasoningEffort
 	DisableReasoning bool
 	// StructuredOutput is whether the request this policy admits carries a JSON
@@ -53,7 +54,7 @@ func ValidUnitPrice(value string) bool {
 
 func (p CallPolicy) Valid() bool {
 	inputValid := p.InputTokens == 0 || p.InputTokens == ClipInputUnits || p.InputTokens == ClipPlanInputUnits && p.Stage == StageNameWrite
-	return inputValid && p.Ref.ProviderID != "" && p.Ref.ModelID != "" && p.Stage != "" && p.CompletionTokens > 0 && p.Reasoning.Valid() && ValidUnitPrice(p.InputUSDPerMillion) && ValidUnitPrice(p.OutputUSDPerMillion) && (p.Pricing == (CallPricing{}) || p.Pricing.Valid())
+	return (p.ResponseRetries == 0 || p.ResponseRetries == 3) && inputValid && p.Ref.ProviderID != "" && p.Ref.ModelID != "" && p.Stage != "" && p.CompletionTokens > 0 && p.Reasoning.Valid() && ValidUnitPrice(p.InputUSDPerMillion) && ValidUnitPrice(p.OutputUSDPerMillion) && (p.Pricing == (CallPricing{}) || p.Pricing.Valid())
 }
 
 func (p CallPolicy) InputTokenLimit() int {

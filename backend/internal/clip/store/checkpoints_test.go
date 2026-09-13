@@ -59,8 +59,8 @@ func TestInterruptionPreservesCompletedChunksAndFencesCancellation(t *testing.T)
 			cancel()
 		}
 	})
-	if err == nil {
-		t.Fatal("cancelled context unexpectedly succeeded")
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("worker interruption identity lost: %v", err)
 	}
 	c, err := h.store.GetAttemptCheckpoint(t.Context(), "alice", h.project.ID, id)
 	if err != nil || c == nil || c.CompletedChunks != 1 || c.CompletedSources != 0 || len(c.Observations[0].Segments) != 1 || len(c.Observations[1].Segments) != 0 || h.planner.plans != 0 {

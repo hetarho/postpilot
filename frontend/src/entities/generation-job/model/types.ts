@@ -42,13 +42,40 @@ const RATIO_STAGES = new Set(['observe', 'compare_observe', 'compare_write', 'co
  *  An unrecognized or not-yet-set stage is a running job like any other, so it takes the generic
  *  running label rather than announcing that nothing has happened yet. This is also why a voice
  *  `seed` run finally says something true: it hits this branch. */
-export const CLIP_STAGES = ['prepare', 'analyze', 'plan', 'render', 'save', 'cleanup'] as const
+export const CLIP_STAGES = [
+  'prepare',
+  'analyze',
+  'analyze_retry',
+  'plan',
+  'plan_retry',
+  'render',
+  'save',
+  'cleanup',
+] as const
 export function progressLabel(
-  job: Pick<GenerationJob, 'stage'> & Partial<Pick<GenerationJob, 'kind'>>,
+  job: Pick<GenerationJob, 'stage'> &
+    Partial<Pick<GenerationJob, 'kind' | 'progressDone' | 'progressTotal'>>,
 ): string {
   if (job.kind === 'generate_clip' || job.kind === 'render_clip') {
     const stage = CLIP_STAGES.find((stage) => stage === job.stage)
-    return i18next.t(stage ? `generation.stage.${stage}` : 'generation.running', { ns: 'clips' })
+    const label = i18next.t(stage ? `generation.stage.${stage}` : 'generation.running', {
+      ns: 'clips',
+    })
+    if (
+      ['analyze_retry', 'plan_retry'].includes(job.stage) &&
+      job.progressTotal === 3 &&
+      job.progressDone &&
+      job.progressDone >= 1 &&
+      job.progressDone <= 3
+    ) {
+      return i18next.t('generation.responseRetryCount', {
+        ns: 'clips',
+        stage: label,
+        current: job.progressDone,
+        total: job.progressTotal,
+      })
+    }
+    return label
   }
   switch (job.stage) {
     case 'observe':

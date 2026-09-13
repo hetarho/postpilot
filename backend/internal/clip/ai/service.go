@@ -150,16 +150,8 @@ func (s *Service) ObserveChunk(ctx context.Context, model llm.ModelRef, input cl
 	if err := validatePrompt(system, user, request.JSONSchema, llm.ExecutionInlineStatic, input.Policy.InputTokenLimit()); err != nil {
 		return clip.ChunkAnalysis{}, llm.Usage{}, err
 	}
-	response, err := s.models.Complete(ctx, model, request)
-	if err != nil {
-		return clip.ChunkAnalysis{}, response.Usage, stageError("analyze", err)
-	}
-	result, err := parseChunk(s.cfg, input, response.Text)
-	classified := llm.ResponseParseError(response, err)
-	if d, ok := clip.DiagnosticFromError(err); ok {
-		classified = clip.WithAttemptDiagnostic(classified, d)
-	}
-	return result, response.Usage, stageError("analyze", classified)
+	result, usage, err := completeValidated(ctx, s, model, request, user, input.Policy, func(raw string) (clip.ChunkAnalysis, error) { return parseChunk(s.cfg, input, raw) })
+	return result, usage, stageError("analyze", err)
 }
 func (s *Service) Plan(ctx context.Context, model llm.ModelRef, input clip.PlanningInput) (clip.EditPlan, llm.Usage, error) {
 	if err := ctx.Err(); err != nil {
@@ -190,28 +182,24 @@ func (s *Service) Plan(ctx context.Context, model llm.ModelRef, input clip.Plann
 	if err := validatePrompt(system, user, request.JSONSchema, llm.ExecutionTextOnly, input.Policy.InputTokenLimit()); err != nil {
 		return clip.EditPlan{}, llm.Usage{}, err
 	}
-	response, err := s.models.Complete(ctx, model, request)
+	result, usage, err := completeValidated(ctx, s, model, request, user, input.Policy, func(raw string) (clip.EditPlan, error) {
+		if nativeComposition(input) {
+			return parseCompositionPlan(s.cfg, input, raw)
+		}
+		return parsePlan(s.cfg, input, raw)
+	})
 	if err != nil {
-		return clip.EditPlan{}, response.Usage, stageError("plan", err)
-	}
-	var result clip.EditPlan
-	if nativeComposition(input) {
-		result, err = parseCompositionPlan(s.cfg, input, response.Text)
-	} else {
-		result, err = parsePlan(s.cfg, input, response.Text)
-	}
-	if err != nil {
-		return clip.EditPlan{}, response.Usage, stageError("plan", llm.ResponseParseError(response, err))
+		return clip.EditPlan{}, usage, stageError("plan", err)
 	}
 	if !nativeComposition(input) {
 		if err := s.compose(ctx, input, &result); err != nil {
-			return clip.EditPlan{}, response.Usage, stageError("plan", err)
+			return clip.EditPlan{}, usage, stageError("plan", err)
 		}
 	}
 	if err := validatePlan(s.cfg, input, result); err != nil {
-		return clip.EditPlan{}, response.Usage, stageError("plan", planFailure(llm.ResponseParseError(response, err), input, result, "validation", 0))
+		return clip.EditPlan{}, usage, stageError("plan", planFailure(err, input, result, "validation", 0))
 	}
-	return result, response.Usage, nil
+	return result, usage, nil
 }
 
 // compose is where every placement decision is made — by the CDS tables, never

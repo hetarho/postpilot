@@ -62,6 +62,7 @@ func NewGenerationService(store GenerationStore, projects *Service, sources *Sou
 const generationPayloadVersion = 4
 
 type generationPayload struct {
+	Recovery                         *RecoveryState
 	Composition                      *ProjectComposition
 	Version                          int
 	ProjectID, Ratio, Observe, Write string
@@ -224,6 +225,14 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 		checkpoint.Stage = stage
 		if d, ok := DiagnosticFromError(err); ok {
 			d.Values = SafeAttemptValues(d.Values)
+			if len(d.Ranges) == 0 {
+				d.Ranges = checkpoint.Diagnostic.Ranges
+			}
+			for _, key := range []string{"target_ms", "after_ms", "cut_count", "transition_ms", "reused_chunks", "remaining_chunks", "reused_plan"} {
+				if n, ok := checkpoint.Diagnostic.Values[key]; ok {
+					d.Values[key] = n
+				}
+			}
 			if stage == "analyze" {
 				// The worker owns the global source/chunk position; parser indexes
 				// describe a segment inside that chunk and cannot replace it.
@@ -295,6 +304,17 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 	if q.ConsumedJobID != job || q.ProjectID != project || q.BatchID != b.ID || q.Pricing != pricing {
 		return ErrQuoteChanged
 	}
+	recovery := s.selectRecovery(p.Recovery, b, pricing.Observe.Ref)
+	recovery.JobID = job
+	if p.Recovery != nil && len(recovery.Chunks) != pricing.ReusedChunks {
+		return ErrQuoteChanged
+	}
+	if pricing.SkipPlan && (!recovery.PlanReady || recovery.Plan == "" || recovery.PlanDigest != planRecoveryDigest(p)) {
+		return ErrQuoteChanged
+	}
+	if !pricing.SkipPlan {
+		recovery.Plan, recovery.PlanDigest, recovery.PlanReady = "", "", false
+	}
 	checkpoint.TotalSources = len(b.Sources)
 	s.checkpoint(ctx, user, project, checkpoint)
 	set := func(name string, done, total int) {
@@ -311,30 +331,48 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 			progress(name, done, total)
 		}
 	}
-	if err := s.planner.ValidateModels(pricing.Observe.Ref, pricing.Plan.Ref); err != nil {
-		return admissionRefusal(pricing.Observe.Ref, err)
+	if !pricing.SkipPlan {
+		if err := s.planner.ValidateModels(pricing.Observe.Ref, pricing.Plan.Ref); err != nil {
+			return admissionRefusal(pricing.Observe.Ref, err)
+		}
+		if s.planner.Budgets() != (CompletionBudgets{Observe: pricing.Observe.CompletionTokens, Plan: pricing.Plan.CompletionTokens}) {
+			return ErrQuoteChanged
+		}
+		declared := make([]AnalysisSource, 0, len(b.Sources))
+		for _, v := range b.Sources {
+			declared = append(declared, AnalysisSource{RenderSource: RenderSource{ID: v.ID, Fingerprint: v.Fingerprint, Info: MediaInfo{DurationMS: v.DurationMS, Width: v.Width, Height: v.Height}}, Filename: v.Filename})
+		}
+		if err := s.planner.ValidatePreparation(pricing.Observe.Ref, PlanningInput{Composition: p.Composition, Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: p.CTA, Policy: pricing.Plan}, declared); err != nil {
+			return err
+		}
 	}
-	if s.planner.Budgets() != (CompletionBudgets{Observe: pricing.Observe.CompletionTokens, Plan: pricing.Plan.CompletionTokens}) {
-		return ErrQuoteChanged
-	}
-	declared := make([]AnalysisSource, 0, len(b.Sources))
-	for _, v := range b.Sources {
-		declared = append(declared, AnalysisSource{RenderSource: RenderSource{ID: v.ID, Fingerprint: v.Fingerprint, Info: MediaInfo{DurationMS: v.DurationMS, Width: v.Width, Height: v.Height}}, Filename: v.Filename})
-	}
-	if err := s.planner.ValidatePreparation(pricing.Observe.Ref, PlanningInput{Composition: p.Composition, Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: p.CTA, Policy: pricing.Plan}, declared); err != nil {
-		return err
+	if validator, ok := s.renderer.(interface {
+		ValidateAuthoredInput(context.Context, PlanningInput) error
+	}); ok {
+		if err := validator.ValidateAuthoredInput(ctx, PlanningInput{Composition: p.Composition, Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS}); err != nil {
+			return err
+		}
 	}
 	var analysisJSON []byte
 	var planJSON string
 	var result Result
 	err = s.media.WithWorkspace(ctx, job, func(ws MediaWorkspace) error {
 		set("prepare", 0, len(b.Sources))
-		sources, prepared, err := s.prepareBatch(ctx, ws, b, func(n int) { set("prepare", n, len(b.Sources)) })
+		sources, prepared, err := s.prepareRecoveredBatch(ctx, ws, b, recovery, func(n int) { set("prepare", n, len(b.Sources)) })
 		if err != nil {
 			return err
 		}
-		count := len(prepared)
-		checkpoint.TotalChunks = count
+		count := 0
+		for _, v := range prepared {
+			if v.reused == nil {
+				count++
+			}
+		}
+		checkpoint.TotalChunks = len(prepared)
+		recovery.Sources, recovery.Pricing = sources, pricing
+		if err := s.saveRecovery(ctx, user, project, recovery); err != nil {
+			return err
+		}
 		checkpoint.Observations = make([]SourceAnalysis, len(sources))
 		for i, source := range sources {
 			checkpoint.Observations[i].Source = source
@@ -342,26 +380,28 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 		if count > pricing.ObservationCalls {
 			return ErrQuoteChanged
 		}
-		if err = s.planner.ValidateModels(pricing.Observe.Ref, pricing.Plan.Ref); err != nil {
-			return admissionRefusal(pricing.Observe.Ref, err)
-		}
-		if s.planner.Budgets() != (CompletionBudgets{Observe: pricing.Observe.CompletionTokens, Plan: pricing.Plan.CompletionTokens}) {
-			return ErrQuoteChanged
-		}
-		if err = s.planner.ValidatePreparation(pricing.Observe.Ref, PlanningInput{Composition: p.Composition, Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: p.CTA, Policy: pricing.Plan}, sources); err != nil {
-			return err
-		}
-		if s.pricing == nil {
-			return ErrPricingUnavailable
-		}
-		// The same qualification the quote ran, on the current document: a leaf
-		// that drifted refuses here, before the reservation and any model call.
-		current, err := s.pricing.Freeze(ctx, pricing.Observe.Ref, pricing.Plan.Ref, count)
-		if err != nil {
-			return admissionRefusal(pricing.Observe.Ref, err)
-		}
-		if !current.Valid() || current.ObservationCalls != count || current.Observe != pricing.Observe || current.Plan != pricing.Plan || current.MaxCredits > p.Approval.MaxCredits {
-			return ErrQuoteChanged
+		if !pricing.SkipPlan {
+			if err = s.planner.ValidateModels(pricing.Observe.Ref, pricing.Plan.Ref); err != nil {
+				return admissionRefusal(pricing.Observe.Ref, err)
+			}
+			if s.planner.Budgets() != (CompletionBudgets{Observe: pricing.Observe.CompletionTokens, Plan: pricing.Plan.CompletionTokens}) {
+				return ErrQuoteChanged
+			}
+			if err = s.planner.ValidatePreparation(pricing.Observe.Ref, PlanningInput{Composition: p.Composition, Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: p.CTA, Policy: pricing.Plan}, sources); err != nil {
+				return err
+			}
+			if s.pricing == nil {
+				return ErrPricingUnavailable
+			}
+			// The same qualification the quote ran, on the current document: a leaf
+			// that drifted refuses here, before the reservation and any model call.
+			current, err := s.freezeWork(ctx, pricing.Observe.Ref, pricing.Plan.Ref, count, pricing.SkipPlan, pricing.Plan.ResponseRetries)
+			if err != nil {
+				return admissionRefusal(pricing.Observe.Ref, err)
+			}
+			if !current.Valid() || current.ObservationCalls != count || current.Observe != pricing.Observe || current.Plan != pricing.Plan || current.MaxCredits > p.Approval.MaxCredits {
+				return ErrQuoteChanged
+			}
 		}
 		// All source/proxy validation and price/profile checks precede the only
 		// reservation. Subsequent calls can consume only this exact allowance.
@@ -370,15 +410,30 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 			return err
 		}
 		ctx = admitted
-		set("analyze", 0, count)
-		chunks := make([]ChunkAnalysis, 0, count)
+		set("analyze", 0, len(prepared))
+		chunks := make([]ChunkAnalysis, 0, len(prepared))
 		for index, v := range prepared {
 			checkpoint.Diagnostic.Values = map[string]int{"source": v.source + 1, "chunk": index + 1}
 			if err := s.checkpoint(ctx, user, project, checkpoint); err != nil {
 				return err
 			}
-			slog.Info("clip analysis started", "job", job, "source", v.source+1, "chunk", index+1, "total", count)
-			observation, err := s.observe(ctx, v.chunk, sources[v.source], pricing.Observe)
+			slog.Info("clip analysis started", "job", job, "source", v.source+1, "chunk", index+1, "total", len(prepared), "reused", v.reused != nil)
+			var observation ChunkAnalysis
+			var err error
+			if v.reused != nil {
+				observation = *v.reused
+			} else {
+				observeCtx := WithResponseCorrectionObserver(ctx, func(retry, limit int, d AttemptDiagnostic) error {
+					checkpoint.Diagnostic = d
+					checkpoint.Diagnostic.Values["retry"] = retry
+					logAttemptDiagnostic(job, "analyze", d)
+					if progress != nil {
+						progress("analyze_retry", retry, limit)
+					}
+					return s.checkpoint(ctx, user, project, checkpoint)
+				})
+				observation, err = s.observe(observeCtx, v.chunk, sources[v.source], pricing.Observe)
+			}
 			if err != nil {
 				return admissionRefusal(pricing.Observe.Ref, err)
 			}
@@ -391,13 +446,19 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 			if err := ValidateSegments(s.cfg.Analysis, observation.Segments, observation.OffsetMS, observation.OffsetMS+observation.DurationMS); err != nil {
 				return err
 			}
+			if v.reused == nil {
+				recovery.Chunks = append(recovery.Chunks, observation)
+				if err := s.saveRecovery(ctx, user, project, recovery); err != nil {
+					return err
+				}
+			}
 			chunks = append(chunks, observation)
 			checkpoint.Observations[v.source].Segments = append(checkpoint.Observations[v.source].Segments, observation.Segments...)
 			checkpoint.CompletedChunks = len(chunks)
-			if index+1 == count || prepared[index+1].source != v.source {
+			if index+1 == len(prepared) || prepared[index+1].source != v.source {
 				checkpoint.CompletedSources++
 			}
-			set("analyze", len(chunks), count)
+			set("analyze", len(chunks), len(prepared))
 		}
 		analyses, err := MergeAnalyses(s.cfg.Analysis, sources, chunks)
 		if err != nil {
@@ -408,17 +469,62 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 		if err := s.checkpoint(ctx, user, project, checkpoint); err != nil {
 			return err
 		}
-		edit, _, err := s.planner.Plan(ctx, pricing.Plan.Ref, PlanningInput{Composition: p.Composition, Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Analyses: analyses, Policy: pricing.Plan, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: p.CTA})
+		var edit EditPlan
+		if pricing.SkipPlan {
+			edit, _, err = DecodeEditPlan(recovery.Plan)
+		} else {
+			planCtx := WithResponseCorrectionObserver(ctx, func(retry, limit int, d AttemptDiagnostic) error {
+				checkpoint.Diagnostic = d
+				checkpoint.Diagnostic.Values["retry"] = retry
+				logAttemptDiagnostic(job, "plan", d)
+				if progress != nil {
+					progress("plan_retry", retry, limit)
+				}
+				return s.checkpoint(ctx, user, project, checkpoint)
+			})
+			edit, _, err = s.planner.Plan(planCtx, pricing.Plan.Ref, PlanningInput{Composition: p.Composition, Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Analyses: analyses, Policy: pricing.Plan, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: p.CTA})
+		}
 		if err != nil {
 			return err
 		}
+		if edit.Portable == nil {
+			edit = edit.WithFacts(p.Disclosure, p.Answers, p.Template.Preset, p.CTA, p.Template.Accent, p.HideDisclosure).WithStyles(p.Template.CopyStyles)
+		}
+		recovery.Plan, err = EncodeEditPlan(edit, edit.Styles)
+		if err != nil {
+			return err
+		}
+		recovery.PlanDigest = planRecoveryDigest(p)
+		recovery.PlanReady = edit.Portable == nil
+		if err := s.saveRecovery(ctx, user, project, recovery); err != nil {
+			return err
+		}
 		checkpoint.Diagnostic = AttemptDiagnostic{Ranges: AttemptRangeDiagnostics(edit, analyses), Values: map[string]int{"cut_count": len(edit.Cuts), "target_ms": p.TargetDurationMS, "after_ms": edit.DurationMS, "transition_ms": edit.TransitionTotal()}}
-		set("render", 0, 1)
-		logAttemptDiagnostic(job, "render", checkpoint.Diagnostic)
 		renderSources := make([]RenderSource, len(sources))
 		for i, v := range sources {
 			renderSources[i] = v.RenderSource
 		}
+		if edit.Portable != nil {
+			if layout, ok := s.renderer.(interface {
+				LayoutComposition(context.Context, EditPlan, []RenderSource) (EditPlan, []CompositionElement, error)
+			}); ok {
+				set("plan", 0, 1)
+				edit, _, err = layout.LayoutComposition(ctx, edit, renderSources)
+				if err != nil {
+					return err
+				}
+				recovery.Plan, err = EncodeEditPlan(edit, edit.Styles)
+				if err != nil {
+					return err
+				}
+				recovery.PlanReady = true
+				if err := s.saveRecovery(ctx, user, project, recovery); err != nil {
+					return err
+				}
+			}
+		}
+		set("render", 0, 1)
+		logAttemptDiagnostic(job, "render", checkpoint.Diagnostic)
 		// The retained composition owns every visible element. Only old queued
 		// payloads without that contract enter the compatibility compositor.
 		load, releaseSource := s.renderLoader(ws, func(id string) (SourceLease, MediaInfo, bool) {
@@ -428,16 +534,27 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 				}
 			}
 			return SourceLease{}, MediaInfo{}, false
-		})
+		}, pricing.ReusedChunks > 0)
 		if edit.Portable == nil {
 			edit = edit.WithFacts(p.Disclosure, p.Answers, p.Template.Preset, p.CTA, p.Template.Accent, p.HideDisclosure).WithStyles(p.Template.CopyStyles)
 		}
-		video, err := s.renderer.Render(ctx, ws, edit, renderSources, load)
+		renderCtx := WithMediaStageObserver(ctx, func(substage string, elapsed time.Duration) {
+			slog.Info("clip render substage", "job", job, "stage", "render", "substage", substage, "elapsed_ms", elapsed.Milliseconds())
+		})
+		video, err := s.renderer.Render(renderCtx, ws, edit, renderSources, load)
 		if err = errors.Join(err, releaseSource()); err != nil {
 			return err
 		}
+		recovery.PlanReady = true
 		if video.Plan != nil {
 			edit = *video.Plan
+		}
+		recovery.Plan, err = EncodeEditPlan(edit, edit.Styles)
+		if err != nil {
+			return err
+		}
+		if err := s.saveRecovery(ctx, user, project, recovery); err != nil {
+			return err
 		}
 		set("save", 0, 1)
 		key := ResultPrefix + url.PathEscape(user) + "/" + url.PathEscape(project) + "/" + newID() + ".mp4"
@@ -479,11 +596,15 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 }
 
 type preparedChunk struct {
+	reused *ChunkAnalysis
 	source int
 	chunk  AnalysisChunk
 }
 
 func (s *GenerationService) prepareBatch(ctx context.Context, ws MediaWorkspace, b SourceBatch, progress func(int)) ([]AnalysisSource, []preparedChunk, error) {
+	return s.prepareRecoveredBatch(ctx, ws, b, RecoveryState{}, progress)
+}
+func (s *GenerationService) prepareRecoveredBatch(ctx context.Context, ws MediaWorkspace, b SourceBatch, recovery RecoveryState, progress func(int)) ([]AnalysisSource, []preparedChunk, error) {
 	if len(b.Sources) < 1 || len(b.Sources) > s.cfg.Media.Sources.MaxCount {
 		return nil, nil, ErrInvalidMedia
 	}
@@ -494,6 +615,28 @@ func (s *GenerationService) prepareBatch(ctx context.Context, ws MediaWorkspace,
 	seen := map[string]bool{}
 	count := 0
 	for i, v := range b.Sources {
+		if cached, ok := recoverySource(recovery, v.ID); ok {
+			n := (cached.Info.DurationMS + 59999) / 60000
+			complete := true
+			for index := 0; index < n; index++ {
+				complete = complete && recoveryChunk(recovery, v.ID, index) != nil
+			}
+			if complete {
+				probed = append(probed, ProbedSource{Metadata: v.SourceMetadata, Info: cached.Info})
+				var err error
+				count, err = ValidateProbedSources(s.cfg.Media, probed)
+				if err != nil {
+					return nil, nil, err
+				}
+				sources = append(sources, cached)
+				for index := 0; index < n; index++ {
+					c := recoveryChunk(recovery, v.ID, index)
+					prepared = append(prepared, preparedChunk{source: i, chunk: AnalysisChunk{SourceID: c.SourceID, Fingerprint: c.Fingerprint, Index: c.Index, OffsetMS: c.OffsetMS, DurationMS: c.DurationMS}, reused: c})
+				}
+				progress(i + 1)
+				continue
+			}
+		}
 		err := s.withSource(ctx, ws, v, MediaInfo{}, func(source MediaSource) error {
 			info, err := s.media.Probe(ctx, ws, source.Path)
 			if err != nil {
@@ -508,7 +651,15 @@ func (s *GenerationService) prepareBatch(ctx context.Context, ws MediaWorkspace,
 			input := AnalysisSource{RenderSource: RenderSource{ID: v.ID, Fingerprint: v.Fingerprint, Info: info}, Filename: v.Filename}
 			sources = append(sources, input)
 			next := 0
-			return s.media.PrepareAnalysisChunks(ctx, ws, source, func(c AnalysisChunk) error {
+			consume := func(c AnalysisChunk) error {
+				if old := recoveryChunk(recovery, v.ID, c.Index); old != nil && old.OffsetMS == c.OffsetMS && old.DurationMS == c.DurationMS {
+					if c.Index != next {
+						return ErrInvalidMedia
+					}
+					next++
+					prepared = append(prepared, preparedChunk{source: i, chunk: c, reused: old})
+					return nil
+				}
 				if c.SourceID != v.ID || c.Fingerprint != v.Fingerprint || c.Index != next || ValidateChunkInput(s.cfg.Analysis, ChunkInput{Source: input, Index: c.Index, OffsetMS: c.OffsetMS, DurationMS: c.DurationMS}) != nil || filepath.Dir(c.Path) != ws.Path || filepath.Clean(c.Path) != c.Path || seen[c.Path] {
 					return ErrInvalidMedia
 				}
@@ -530,7 +681,13 @@ func (s *GenerationService) prepareBatch(ctx context.Context, ws MediaWorkspace,
 				prepared = append(prepared, preparedChunk{source: i, chunk: c})
 				next++
 				return nil
-			})
+			}
+			if media, ok := s.media.(interface {
+				PrepareAnalysisChunksExcept(context.Context, MediaWorkspace, MediaSource, func(int) bool, func(AnalysisChunk) error) error
+			}); ok {
+				return media.PrepareAnalysisChunksExcept(ctx, ws, source, func(i int) bool { return recoveryChunk(recovery, v.ID, i) != nil }, consume)
+			}
+			return s.media.PrepareAnalysisChunks(ctx, ws, source, consume)
 		})
 		if err != nil {
 			return nil, nil, err
@@ -545,6 +702,9 @@ func (s *GenerationService) prepareBatch(ctx context.Context, ws MediaWorkspace,
 	// availability, not an allocation. Other filesystem users can still consume
 	// space later, so actual writes retain the live guard too.
 	for _, p := range prepared {
+		if p.reused != nil {
+			continue
+		}
 		file, err := os.Lstat(p.chunk.Path)
 		if err != nil || !file.Mode().IsRegular() || file.Size() != p.chunk.Bytes {
 			return nil, nil, ErrInvalidMedia

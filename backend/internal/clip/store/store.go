@@ -159,7 +159,7 @@ func templateRow(r sqlc.VideoTemplate) (clip.VideoTemplate, error) {
 	if t.CompositionLegacy {
 		limits = clip.LegacyCompositionLimits(limits)
 	}
-	if _, e := composition.Parse(t.CompositionBody, limits); e != nil {
+	if _, e := composition.ReadStored(t.CompositionBody, limits); e != nil {
 		return t, e
 	}
 	return t, nil

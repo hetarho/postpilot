@@ -87,6 +87,17 @@ function QuotedAction({
             ? t('credits.expired')
             : t('credits.maximumHelp')}
       </Typography>
+      {quote?.recovery && (
+        <Typography variant="body" role="status">
+          {quote.recovery.renderOnly
+            ? t('credits.renderOnly')
+            : t('credits.reuse', {
+                done: quote.recovery.reusedChunks,
+                remaining: quote.recovery.remainingChunks,
+                retries: quote.recovery.responseRetries,
+              })}
+        </Typography>
+      )}
       <Typography variant="body">
         {t(quote?.cancellationPolicy ? 'cancellation.rule' : 'cancellation.policyUnavailable')}
       </Typography>
@@ -112,13 +123,19 @@ function QuotedAction({
       <Button
         variant="cta"
         className="w-full whitespace-normal"
-        disabled={!quote?.cancellationPolicy || !myPlan || insufficient}
+        disabled={
+          !quote?.cancellationPolicy || (!quote?.recovery?.renderOnly && !myPlan) || insufficient
+        }
         pending={query.isFetching}
         onClick={() => {
           if (quote?.cancellationPolicy && !insufficient) onApprove(quote)
         }}
       >
-        {quote ? t('credits.approve', { amount: quote.maxCredits }) : t('generation.generate')}
+        {quote?.recovery?.renderOnly
+          ? t('credits.resumeRender')
+          : quote
+            ? t('credits.approve', { amount: quote.maxCredits })
+            : t('generation.generate')}
       </Button>
     </div>
   )

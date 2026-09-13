@@ -226,7 +226,7 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
           observe={generation.observeRef}
           write={generation.writeRef}
           observeStatus={generation.observeStatus}
-          ready={ready && generation.modelsReady && !generation.busy}
+          ready={ready && generation.canQuote && !generation.busy}
           pending={generation.starting}
           // The queue is flushed BEFORE the run starts, so an approval can never be committed
           // against settings the server has not taken (CLIP-39). A refusal stops the start; the

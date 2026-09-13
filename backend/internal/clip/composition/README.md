@@ -43,8 +43,8 @@ element's resolved text is the exact output after explicit value substitution.
   `menu.price`. Visible element and scene IDs are unique across the document.
 - A text declares `kind="fixed|ai"`, `role="caption|info|badge|hook|ending"` and
   `basis="whole|output-start|output-end|cut"`. Style defaults to `auto`, position
-  to `auto`, alignment to `center`; explicit styles must belong to the root's
-  approved set. Header placement is only for info/badge. Card rows (hook,
+  to `auto`, alignment to `center`; named styles apply only to caption roles and must belong to the root's
+  approved set. Badge, info, hook and ending require `auto` (or omit style). Header placement is only for info/badge. Card rows (hook,
   ending, info) use `hook|title|mark|body|caption|label|badge` typography roles.
 - `value` is the only substitution. Global fields use their ID; grouped fields
   require `group.field` and the current matched item. Optional blank values omit

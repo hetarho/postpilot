@@ -31,6 +31,7 @@ guide = invisible instructions, inside clip or scene
 scene(id, scope="scene|item|context") children: guide, text
 repeat(for="scenes|GROUP_ID") children: scene; group repetition requires scope=item; no nested repeat
 text(id, kind="fixed|ai", role="caption|info|badge|hook|ending", style="auto|APPROVED_STYLE", position="auto|top|upper_mid|lower_mid|bottom|header", align="left|center|right", basis="whole|output-start|output-end|cut", start, end)
+Style compatibility: only role=caption accepts an APPROVED_STYLE from clip.styles. For badge, info, hook and ending, omit style or use style="auto"; named caption styles are invalid for these roles. Validate this before returning XML.
 text content: exact literal + <value field="FIELD_ID"/> or <value field="GROUP_ID.FIELD_ID"/>
 text rows (hook/ending/info only): <row role="hook|title|mark|body|caption|label|badge">literal + value</row>
 whole: omit start/end. output-start: 0 <= start < end. output-end: start < end <= 0. cut: only inside scene; omit both endpoints for automatic timing or use 0 <= start < end.

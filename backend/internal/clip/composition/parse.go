@@ -94,7 +94,15 @@ func Milliseconds(s string, max int) (int, bool) {
 	return int(ms), true
 }
 
-func Parse(source string, limits Limits) (*Document, *Problem) {
+func Parse(source string, limits Limits) (*Document, *Problem) { return parse(source, limits, false) }
+
+// ReadStored preserves the old role/style vocabulary solely to reopen saved
+// drafts for correction. Every write, quote, preview and render uses strict Parse.
+func ReadStored(source string, limits Limits) (*Document, *Problem) {
+	return parse(source, limits, true)
+}
+
+func parse(source string, limits Limits, stored bool) (*Document, *Problem) {
 	if !validLimits(limits) {
 		return nil, &Problem{"clip", 1, "invalid_limits"}
 	}
@@ -272,7 +280,7 @@ func Parse(source string, limits Limits) (*Document, *Problem) {
 				if e := claim(c, ""); e != nil {
 					return e
 				}
-				v, e := readElement(c, d, scope, repeat, true, limits)
+				v, e := readElement(c, d, scope, repeat, true, limits, stored)
 				if e != nil {
 					return e
 				}
@@ -297,7 +305,7 @@ func Parse(source string, limits Limits) (*Document, *Problem) {
 			if e = claim(n, ""); e != nil {
 				return nil, e
 			}
-			v, e := readElement(n, d, "context", "", false, limits)
+			v, e := readElement(n, d, "context", "", false, limits, stored)
 			if e != nil {
 				return nil, e
 			}
@@ -336,7 +344,7 @@ func Parse(source string, limits Limits) (*Document, *Problem) {
 	return d, nil
 }
 
-func readElement(n *Node, d *Document, scope, repeat string, inScene bool, l Limits) (Element, *Problem) {
+func readElement(n *Node, d *Document, scope, repeat string, inScene bool, l Limits, stored bool) (Element, *Problem) {
 	var t Element
 	if e := attrs(n, "id", "kind", "role", "style", "position", "align", "basis", "start", "end"); e != nil {
 		return t, e
@@ -348,7 +356,7 @@ func readElement(n *Node, d *Document, scope, repeat string, inScene bool, l Lim
 	if !slices.Contains([]string{"caption", "info", "badge", "hook", "ending"}, t.Role) {
 		return t, issue(n, "invalid_role")
 	}
-	if t.Style != "auto" && !slices.Contains(d.Styles, t.Style) {
+	if !ValidRoleStyle(t.Role, t.Style, d.Styles) && !(stored && ValidRoleStyle("caption", t.Style, d.Styles)) {
 		return t, issue(n, "invalid_style")
 	}
 	if !slices.Contains([]string{"auto", "top", "upper_mid", "lower_mid", "bottom", "header"}, t.Position) || t.Position == "header" && t.Role != "info" && t.Role != "badge" {
@@ -463,4 +471,13 @@ func readElement(n *Node, d *Document, scope, repeat string, inScene bool, l Lim
 		}
 	}
 	return t, nil
+}
+
+// ValidRoleStyle is the authored contract shared by parsing and rendering.
+// Named typography describes captions; component roles own their typography.
+func ValidRoleStyle(role, style string, approved []string) bool {
+	if !slices.Contains([]string{"caption", "info", "badge", "hook", "ending"}, role) {
+		return false
+	}
+	return style == "auto" || role == "caption" && slices.Contains(styleNames, style) && slices.Contains(approved, style)
 }

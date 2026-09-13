@@ -76,7 +76,8 @@ function readElement(
   const style = a.style ?? 'auto',
     position = a.position ?? 'auto',
     align = a.align ?? 'center'
-  if (style !== 'auto' && !d.styles.includes(style)) problem(n, 'invalid_style')
+  if (style !== 'auto' && (role !== 'caption' || !d.styles.includes(style)))
+    problem(n, 'invalid_style')
   if (
     !['auto', 'top', 'upper_mid', 'lower_mid', 'bottom', 'header'].includes(position) ||
     (position === 'header' && role !== 'info' && role !== 'badge')

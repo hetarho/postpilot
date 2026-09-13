@@ -274,6 +274,12 @@ export const clips = {
       "Write only postpilot video-template source using the grammar below. Source from an external AI can be pasted into the editor. Authoring, copying, parsing and illustrative preview make no model call and use no credits. Only declared elements appear: no preset, universal price requirement, automatic disclosure or CTA.\n\nGrammar:\n{{grammar}}\n\nBounds (characters are Unicode scalars; Ms means milliseconds):\n{{limits}}\n\nA field label is its visible name; its body is input guidance. Bind by ID so renaming a label preserves identity. A blank optional value omits its entire dependent element; required values block generation when blank. Keep each item's price, currency, units and price basis together. Repetition uses only selected real scenes and invents no unfilmed item footage. AI copy uses facts bound to its scene and item; fixed copy preserves even whitespace except explicit value substitution. Guides are invisible in the output.\n\nSeveral-menu example (add two or more menu items on the input screen):\n{{example}}",
   },
   credits: {
+    renderOnly:
+      'Resume rendering with the completed analysis and edit plan. No AI requests or additional credit charge.',
+    reuse:
+      'Reuse {{done}} completed analyses and analyze {{remaining}} remaining chunks. Invalid responses allow up to {{retries}} additional attempts per request. Unused reservation is refunded.',
+    resumeRender: 'Resume rendering',
+
     title: 'Credits for this attempt',
     quoting: 'Checking the maximum credit charge',
     maximumHelp: 'This is a charge ceiling, not a prediction. The final charge may be lower.',
@@ -371,10 +377,14 @@ export const clips = {
     leaveBody: 'Only your unsaved edits are discarded. The saved plan and previous video remain.',
   },
   generation: {
+    responseRetryCount: '{{stage}} ({{current}}/{{total}})',
     generate: 'Generate',
     retry: 'Generate again',
     running: 'Creating your clip',
     stage: {
+      analyze_retry: 'Correcting the analysis response format',
+      plan_retry: 'Correcting the composition response format',
+
       prepare: 'Preparing originals',
       analyze: 'Analyze footage',
       plan: 'Compose cuts and captions',

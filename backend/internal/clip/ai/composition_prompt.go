@@ -17,7 +17,7 @@ func compositionLimits(cfg Config, in clip.PlanningInput) composition.Limits {
 	return limits
 }
 
-const compositionPlanPrompt = `Compose one video from supplied real footage in ONE writer call: ordered sections/cuts, then their copy. No new footage, analysis, repair call, retry or model fallback.
+const compositionPlanPrompt = `Compose one video from supplied real footage: ordered sections/cuts, then their copy. This response is one complete candidate, never a patch. Do not request new footage, tools, analysis or a different model.
 Frozen XML is the content authority: follow its narrative, viewpoint, guides, section order and repeated-item order. Generate only declared kind="ai" element_ids. The server binds fixed text/rows exactly. Never invent a preset, mandatory fact, campaign/disclosure, card, CTA or caption.
 Copy IDs verbatim. Each cut needs a declared template_section_id (empty only without sections), a real source_id and observation_refs covering its entire source interval without gaps. The server supplies fingerprints/transitions. Nonrepeated sections occur at most once. Unmatched items create no footage.
 group_id/item_id are proposals. Owner range associations win; otherwise EVERY overlapping observation must unambiguously name the SAME unique item through supplied name/alias/aliases. Filenames, generic scenes, resemblance, shared numbers and uncertainty cannot identify items. Leave uncertain IDs empty; describe only the observed scene or omit copy.
@@ -46,7 +46,7 @@ func buildCompositionPlanPrompt(in clip.PlanningInput, fadeMS int) (string, stri
 	for _, a := range in.Composition.Inputs.Associations {
 		associations = append(associations, map[string]any{"group_id": a.GroupID, "item_id": a.ItemID, "source_id": a.SourceID, "start_ms": a.StartMS, "end_ms": a.EndMS})
 	}
-	return compositionPlanPrompt + contract, promptJSON(map[string]any{
+	return compositionPlanPrompt + responseContract + contract, promptJSON(map[string]any{
 		"composition_source": in.Composition.Snapshot.Body,
 		"global_values":      in.Composition.Inputs.Values, "item_groups": groups, "owner_associations": associations,
 		"ratio": in.Ratio, "target_duration_ms": in.TargetDurationMS, "fade_ms": fadeMS,

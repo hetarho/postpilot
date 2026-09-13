@@ -161,3 +161,40 @@ func approvedClipCalls(count int) job.ClipReservation {
 	}
 	return r
 }
+
+func TestClipCorrectionAllowanceCannotExceedFourCallsPerStage(t *testing.T) {
+	h := newHarness(t)
+	h.queue.Admit(&recordingAdmitter{})
+	input := clipInput(t, h, "correction", "alice")
+	id, err := h.queue.Enqueue(t.Context(), input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = h.queue.ActivateClip(t.Context(), "alice", id); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = h.store.PickNextQueued(t.Context(), time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	reservation := approvedClipCalls(4)
+	for i := range reservation.Calls {
+		reservation.Calls[i].Policy.ResponseRetries = 3
+		reservation.Calls[i].Count = 4
+	}
+	calls := []job.PlannedCall{{Ref: "p/observe", Count: 4, CompletionTokens: 8192}, {Ref: "p/write", Count: 4, CompletionTokens: 32768}}
+	ctx, err := h.queue.ReserveClip(t.Context(), "alice", id, calls, reservation)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range reservation.Calls {
+		for range 4 {
+			p, err := job.ConsumeClipPolicy(ctx, "alice", id, c.Policy.Ref.String(), c.Policy.CompletionTokens, c.Policy.Stage)
+			if err != nil || p != c.Policy {
+				t.Fatal("lost frozen correction allowance", err)
+			}
+		}
+		if _, err := job.ConsumeClipPolicy(ctx, "alice", id, c.Policy.Ref.String(), c.Policy.CompletionTokens, c.Policy.Stage); !errors.Is(err, job.ErrCreditAllowance) {
+			t.Fatal("fifth request admitted", err)
+		}
+	}
+}

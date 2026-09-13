@@ -30,14 +30,27 @@ type GenerationPricing struct {
 	Version                      int
 	Observe, Plan                llm.CallPolicy
 	ObservationCalls, MaxCredits int
+	SkipPlan                     bool
+	RecoveryDigest               string
+	ReusedChunks                 int
 }
 
 // Both stages must have the complete enforceable profile, not a legacy pair of
 // catalog token prices. This value is frozen in the quote and checked at admission.
 func (p GenerationPricing) Valid() bool {
-	return p.Version == PricingPolicyVersion && p.CancellationPolicyVersion >= 0 && p.CancellationPolicyVersion <= CancellationPolicyVersion && p.ObservationCalls >= 1 && p.ObservationCalls <= 49 && p.MaxCredits >= 0 &&
+	return p.Version == PricingPolicyVersion && p.CancellationPolicyVersion >= 0 && p.CancellationPolicyVersion <= CancellationPolicyVersion && p.ObservationCalls >= 0 && p.ObservationCalls <= 49 && p.MaxCredits >= 0 && p.ReusedChunks >= 0 && p.ReusedChunks <= 49 && (!p.SkipPlan || p.ObservationCalls == 0) &&
 		p.Observe.Valid() && p.Observe.Pricing.Valid() && p.Observe.Pricing.Delivery == llm.ExecutionInlineStatic && p.Observe.Stage == llm.StageNameObserve && p.Observe.CompletionTokens == 8192 &&
 		p.Plan.Valid() && p.Plan.Pricing.Valid() && p.Plan.Pricing.Delivery == llm.ExecutionTextOnly && p.Plan.Stage == llm.StageNameWrite && p.Plan.CompletionTokens == 32768
+}
+
+func (p GenerationPricing) PlanCalls() int {
+	if p.SkipPlan {
+		return 0
+	}
+	return 1 + p.Plan.ResponseRetries
+}
+func (p GenerationPricing) ObserveCalls(chunks int) int {
+	return chunks * (1 + p.Observe.ResponseRetries)
 }
 
 type GenerationQuote struct {
@@ -69,6 +82,20 @@ type QuoteStore interface {
 func (s *GenerationService) WithCredits(pricing QuotePricing, accounting AccountingReader) *GenerationService {
 	s.pricing, s.accounting = pricing, accounting
 	return s
+}
+
+type remainingQuotePricing interface {
+	FreezeWork(context.Context, llm.ModelRef, llm.ModelRef, int, bool, int) (GenerationPricing, error)
+}
+
+func (s *GenerationService) freezeWork(ctx context.Context, o, w llm.ModelRef, n int, skip bool, retries int) (GenerationPricing, error) {
+	if p, ok := s.pricing.(remainingQuotePricing); ok {
+		return p.FreezeWork(ctx, o, w, n, skip, retries)
+	}
+	if skip {
+		return GenerationPricing{}, ErrPricingUnavailable
+	}
+	return s.pricing.Freeze(ctx, o, w, n)
 }
 
 // ConservativeObservationCount covers the probe tolerance and independent chunk
@@ -175,8 +202,12 @@ func (s *GenerationService) quoteInputs(ctx context.Context, user, id, batch, ob
 	if err = s.checkComposition(c); err != nil {
 		return p, t, b, pricing, err
 	}
-	if err = s.planner.ValidateModels(modelRef(observe), modelRef(write)); err != nil {
-		return p, t, b, pricing, admissionRefusal(modelRef(observe), err)
+	if validator, ok := s.renderer.(interface {
+		ValidateAuthoredInput(context.Context, PlanningInput) error
+	}); ok {
+		if err := validator.ValidateAuthoredInput(ctx, PlanningInput{Composition: c, Template: t.Recipe, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS}); err != nil {
+			return p, t, b, pricing, err
+		}
 	}
 	b, err = s.sources.AvailableBatch(ctx, user, batch)
 	if err != nil {
@@ -195,7 +226,53 @@ func (s *GenerationService) quoteInputs(ctx context.Context, user, id, batch, ob
 	if s.pricing == nil || s.cfg.QuoteTTL <= 0 {
 		return p, t, b, pricing, ErrPricingUnavailable
 	}
-	pricing, err = s.pricing.Freeze(ctx, modelRef(observe), modelRef(write), count)
+	rawRecovery, err := s.loadRecovery(ctx, user, id)
+	if err != nil {
+		return p, t, b, pricing, err
+	}
+	upgraded, err := s.upgradeRecovery(ctx, user, id, rawRecovery)
+	if err != nil {
+		return p, t, b, pricing, err
+	}
+	recovered := s.selectRecovery(upgraded, b, modelRef(observe))
+	seed := generationPayload{Batch: b, Composition: c, Template: t.Recipe, Answers: requiredQuoteAnswers(p, t), Ratio: p.Ratio, Write: write, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: design.DefaultCTA(t.Preset, p.CTA)}
+	skipPlan := recovered.PlanReady && recovered.Plan != "" && recovered.PlanDigest == planRecoveryDigest(seed)
+	upperCount := count
+	// Verified source durations supersede conservative browser estimates only for
+	// the exact retained source identity; count only missing chunks.
+	count = 0
+	for _, v := range b.Sources {
+		one := b
+		one.Sources = []SourceLease{v}
+		n, e := ConservativeObservationCount(s.cfg.Media, one)
+		if e != nil {
+			return p, t, b, pricing, e
+		}
+		if a, ok := recoverySource(recovered, v.ID); ok {
+			n = (a.Info.DurationMS + 59999) / 60000
+		}
+		for _, ch := range recovered.Chunks {
+			if ch.SourceID == v.ID {
+				n--
+			}
+		}
+		count += max(0, n)
+	}
+	count = min(count, max(0, upperCount-len(recovered.Chunks)))
+	if skipPlan && count != 0 {
+		skipPlan = false
+	}
+	if skipPlan && recovered.Pricing.Valid() {
+		pricing = recovered.Pricing
+		pricing.SkipPlan, pricing.ObservationCalls, pricing.MaxCredits = true, 0, 0
+	} else {
+		if err = s.planner.ValidateModels(modelRef(observe), modelRef(write)); err != nil {
+			return p, t, b, pricing, admissionRefusal(modelRef(observe), err)
+		}
+		pricing, err = s.freezeWork(ctx, modelRef(observe), modelRef(write), count, skipPlan, 3)
+	}
+	pricing.RecoveryDigest = RecoveryDigest(rawRecovery)
+	pricing.ReusedChunks = len(recovered.Chunks)
 	if err != nil {
 		return p, t, b, pricing, admissionRefusal(modelRef(observe), err)
 	}
@@ -284,7 +361,19 @@ func (s *GenerationService) startApproved(ctx context.Context, user, id, batch, 
 	if err != nil {
 		return "", err
 	}
-	payload, err := json.Marshal(generationPayload{Composition: c, Version: generationPayloadVersion, ProjectID: id, Ratio: p.Ratio, Observe: observe, Write: write, TargetDurationMS: p.TargetDurationMS, Template: t.Recipe, Answers: requiredQuoteAnswers(p, t), Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: design.DefaultCTA(t.Preset, p.CTA), Batch: b, Approval: &GenerationApproval{QuoteID: q.ID, MaxCredits: q.Pricing.MaxCredits, Pricing: q.Pricing}})
+	rawRecovery, err := s.loadRecovery(ctx, user, id)
+	if err != nil {
+		return "", err
+	}
+	if RecoveryDigest(rawRecovery) != q.Pricing.RecoveryDigest {
+		return "", ErrQuoteChanged
+	}
+	upgraded, err := s.upgradeRecovery(ctx, user, id, rawRecovery)
+	if err != nil {
+		return "", err
+	}
+	recovery := s.selectRecovery(upgraded, b, modelRef(observe))
+	payload, err := json.Marshal(generationPayload{Recovery: &recovery, Composition: c, Version: generationPayloadVersion, ProjectID: id, Ratio: p.Ratio, Observe: observe, Write: write, TargetDurationMS: p.TargetDurationMS, Template: t.Recipe, Answers: requiredQuoteAnswers(p, t), Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: design.DefaultCTA(t.Preset, p.CTA), Batch: b, Approval: &GenerationApproval{QuoteID: q.ID, MaxCredits: q.Pricing.MaxCredits, Pricing: q.Pricing}})
 	if err != nil {
 		return "", err
 	}

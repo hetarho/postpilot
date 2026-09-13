@@ -18,6 +18,43 @@ import (
 
 type ownedPlanWriter struct{ *plannerFake }
 
+func TestOldRoleStyleDraftCanBeReadAndExplicitlyCorrected(t *testing.T) {
+	s, raw, d := setup(t)
+	valid := `<clip version="1" styles="simple"><text id="badge" kind="fixed" role="badge" style="auto" basis="whole">기록</text></clip>`
+	invalid := strings.Replace(valid, `style="auto"`, `style="simple"`, 1)
+	template, err := s.CreateTemplate(t.Context(), "alice", clip.Recipe{Name: "historical style", CompositionBody: valid})
+	if err != nil {
+		t.Fatal(err)
+	}
+	p, err := s.CreateProject(t.Context(), "alice", clip.ProjectInput{Title: "saved draft", VideoTemplateID: template.ID, Ratio: "vertical", TargetDurationMS: 15000})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = d.Writer.Exec("UPDATE video_templates SET composition_body=? WHERE id=?", invalid, template.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = d.Writer.Exec("UPDATE clip_projects SET composition_snapshot_json=json_set(composition_snapshot_json,'$.body',?) WHERE id=?", invalid, p.ID); err != nil {
+		t.Fatal(err)
+	}
+	read, err := s.GetProject(t.Context(), "alice", p.ID)
+	if err != nil || read.Composition.Snapshot.Body != invalid {
+		t.Fatal("historical draft could not reopen", err)
+	}
+	if _, err = raw.GetTemplate(t.Context(), "alice", template.ID); err != nil {
+		t.Fatal("old template not readable", err)
+	}
+	if _, err = s.UpdateTemplate(t.Context(), "alice", template.ID, clip.TemplatePatch{CompositionBody: &invalid}); err == nil {
+		t.Fatal("old conflict could be saved again")
+	}
+	if _, err = s.UpdateTemplate(t.Context(), "alice", template.ID, clip.TemplatePatch{CompositionBody: &valid}); err != nil {
+		t.Fatal("explicit correction failed", err)
+	}
+	fixed, err := s.UpdateProject(t.Context(), "alice", p.ID, clip.ProjectPatch{CompositionInputs: &read.Composition.Inputs})
+	if err != nil || fixed.Composition.Snapshot.Body != valid {
+		t.Fatal("corrected template not applied", err)
+	}
+}
+
 func (ownedPlanWriter) CompositionPlanVersion() int { return clip.CompositionPlanVersion }
 func (p ownedPlanWriter) Plan(ctx context.Context, model llm.ModelRef, in clip.PlanningInput) (clip.EditPlan, llm.Usage, error) {
 	plan, usage, err := p.plannerFake.Plan(ctx, model, in)

@@ -3698,6 +3698,10 @@ type QuoteClipGenerationResponse struct {
 	ExpiresAt          string                  `protobuf:"bytes,3,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
 	PricedCalls        []*ClipPricedCall       `protobuf:"bytes,4,rep,name=priced_calls,json=pricedCalls,proto3" json:"priced_calls,omitempty"`
 	CancellationPolicy *ClipCancellationPolicy `protobuf:"bytes,5,opt,name=cancellation_policy,json=cancellationPolicy,proto3" json:"cancellation_policy,omitempty"`
+	ReusedChunks       int32                   `protobuf:"varint,6,opt,name=reused_chunks,json=reusedChunks,proto3" json:"reused_chunks,omitempty"`
+	RemainingChunks    int32                   `protobuf:"varint,7,opt,name=remaining_chunks,json=remainingChunks,proto3" json:"remaining_chunks,omitempty"`
+	RenderOnly         bool                    `protobuf:"varint,8,opt,name=render_only,json=renderOnly,proto3" json:"render_only,omitempty"`
+	ResponseRetries    int32                   `protobuf:"varint,9,opt,name=response_retries,json=responseRetries,proto3" json:"response_retries,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -3765,6 +3769,34 @@ func (x *QuoteClipGenerationResponse) GetCancellationPolicy() *ClipCancellationP
 		return x.CancellationPolicy
 	}
 	return nil
+}
+
+func (x *QuoteClipGenerationResponse) GetReusedChunks() int32 {
+	if x != nil {
+		return x.ReusedChunks
+	}
+	return 0
+}
+
+func (x *QuoteClipGenerationResponse) GetRemainingChunks() int32 {
+	if x != nil {
+		return x.RemainingChunks
+	}
+	return 0
+}
+
+func (x *QuoteClipGenerationResponse) GetRenderOnly() bool {
+	if x != nil {
+		return x.RenderOnly
+	}
+	return false
+}
+
+func (x *QuoteClipGenerationResponse) GetResponseRetries() int32 {
+	if x != nil {
+		return x.ResponseRetries
+	}
+	return 0
 }
 
 type ClipCancellationPolicy struct {
@@ -6504,7 +6536,7 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\x11completion_tokens\x18\x05 \x01(\x05R\x10completionTokens\x12\x1c\n" +
 	"\treasoning\x18\x06 \x01(\tR\treasoning\x121\n" +
 	"\x15input_usd_per_million\x18\a \x01(\tR\x12inputUsdPerMillion\x123\n" +
-	"\x16output_usd_per_million\x18\b \x01(\tR\x13outputUsdPerMillion\"\x90\x02\n" +
+	"\x16output_usd_per_million\x18\b \x01(\tR\x13outputUsdPerMillion\"\xac\x03\n" +
 	"\x1bQuoteClipGenerationResponse\x12\x19\n" +
 	"\bquote_id\x18\x01 \x01(\tR\aquoteId\x12\x1f\n" +
 	"\vmax_credits\x18\x02 \x01(\x05R\n" +
@@ -6512,7 +6544,12 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\n" +
 	"expires_at\x18\x03 \x01(\tR\texpiresAt\x12?\n" +
 	"\fpriced_calls\x18\x04 \x03(\v2\x1c.postpilot.v1.ClipPricedCallR\vpricedCalls\x12U\n" +
-	"\x13cancellation_policy\x18\x05 \x01(\v2$.postpilot.v1.ClipCancellationPolicyR\x12cancellationPolicy\"\xd6\x01\n" +
+	"\x13cancellation_policy\x18\x05 \x01(\v2$.postpilot.v1.ClipCancellationPolicyR\x12cancellationPolicy\x12#\n" +
+	"\rreused_chunks\x18\x06 \x01(\x05R\freusedChunks\x12)\n" +
+	"\x10remaining_chunks\x18\a \x01(\x05R\x0fremainingChunks\x12\x1f\n" +
+	"\vrender_only\x18\b \x01(\bR\n" +
+	"renderOnly\x12)\n" +
+	"\x10response_retries\x18\t \x01(\x05R\x0fresponseRetries\"\xd6\x01\n" +
 	"\x16ClipCancellationPolicy\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\x05R\aversion\x12@\n" +
 	"\x1cunused_reservation_numerator\x18\x02 \x01(\x05R\x1aunusedReservationNumerator\x12D\n" +

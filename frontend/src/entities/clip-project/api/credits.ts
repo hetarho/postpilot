@@ -46,6 +46,14 @@ export function toClipQuote(value: ProtoClipQuote, binding: string): ClipQuote {
     !value.quoteId ||
     !Number.isSafeInteger(value.maxCredits) ||
     value.maxCredits < 0 ||
+    !Number.isInteger(value.reusedChunks) ||
+    value.reusedChunks < 0 ||
+    value.reusedChunks > 49 ||
+    !Number.isInteger(value.remainingChunks) ||
+    value.remainingChunks < 0 ||
+    value.remainingChunks > 49 ||
+    ![0, 3].includes(value.responseRetries) ||
+    (value.renderOnly && (value.remainingChunks !== 0 || value.maxCredits !== 0)) ||
     !Number.isFinite(Date.parse(value.expiresAt))
   )
     throw new Error('Invalid clip quote')
@@ -66,6 +74,16 @@ export function toClipQuote(value: ProtoClipQuote, binding: string): ClipQuote {
             numerator: policy.unusedReservationNumerator,
             denominator: policy.unusedReservationDenominator,
             rounding: 'ceil' as const,
+          },
+        }
+      : {}),
+    ...(value.reusedChunks || value.remainingChunks || value.renderOnly || value.responseRetries
+      ? {
+          recovery: {
+            reusedChunks: value.reusedChunks,
+            remainingChunks: value.remainingChunks,
+            renderOnly: value.renderOnly,
+            responseRetries: value.responseRetries,
           },
         }
       : {}),

@@ -16,6 +16,9 @@ import (
 // All outputs remain workspace-owned until their individual analysis finishes.
 // The callback collects only verified paths and metadata, never encoded bytes.
 func (a *Adapter) PrepareAnalysisChunks(ctx context.Context, ws clip.MediaWorkspace, source clip.MediaSource, consume func(clip.AnalysisChunk) error) error {
+	return a.PrepareAnalysisChunksExcept(ctx, ws, source, nil, consume)
+}
+func (a *Adapter) PrepareAnalysisChunksExcept(ctx context.Context, ws clip.MediaWorkspace, source clip.MediaSource, skip func(int) bool, consume func(clip.AnalysisChunk) error) error {
 	if err := a.sourcePath(ws, source.Path); err != nil {
 		return err
 	}
@@ -28,6 +31,13 @@ func (a *Adapter) PrepareAnalysisChunks(ctx context.Context, ws clip.MediaWorksp
 			return err
 		}
 		chunk := clip.AnalysisChunk{Path: filepath.Join(ws.Path, fmt.Sprintf("proxy-%x-%04d.mp4", id, index)), SourceID: source.SourceID, Fingerprint: source.Fingerprint, Index: index, OffsetMS: offset, DurationMS: min(a.cfg.ChunkDurationMS, source.Info.DurationMS-offset)}
+		if skip != nil && skip(index) {
+			chunk.Path = ""
+			if err := consume(chunk); err != nil {
+				return err
+			}
+			continue
+		}
 		if err := a.prepareChunk(ctx, ws, source, chunk, consume); err != nil {
 			return err
 		}

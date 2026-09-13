@@ -146,7 +146,7 @@ func (q *Queue) run(ctx context.Context, found Job) {
 
 func safeClipStage(stage string) string {
 	switch stage {
-	case "queued", "prepare", "analyze", "plan", "render", "save", "cleanup":
+	case "queued", "prepare", "analyze", "analyze_retry", "plan", "plan_retry", "render", "save", "cleanup":
 		return stage
 	}
 	return "unknown"

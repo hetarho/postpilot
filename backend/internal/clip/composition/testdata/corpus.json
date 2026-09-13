@@ -5642,6 +5642,186 @@
       },
       "durationMs": 90000,
       "resolvedCount": 0
+    },
+    {
+      "name": "badge rejects caption style clean",
+      "body": "<clip version=\"1\" styles=\"clean memo bold mark simple\">\n<text id=\"element\" kind=\"fixed\" role=\"badge\" style=\"clean\" basis=\"whole\">text</text>\n</clip>",
+      "error": {
+        "elementId": "element",
+        "line": 2,
+        "reason": "invalid_style"
+      }
+    },
+    {
+      "name": "badge rejects caption style memo",
+      "body": "<clip version=\"1\" styles=\"clean memo bold mark simple\">\n<text id=\"element\" kind=\"fixed\" role=\"badge\" style=\"memo\" basis=\"whole\">text</text>\n</clip>",
+      "error": {
+        "elementId": "element",
+        "line": 2,
+        "reason": "invalid_style"
+      }
+    },
+    {
+      "name": "badge rejects caption style bold",
+      "body": "<clip version=\"1\" styles=\"clean memo bold mark simple\">\n<text id=\"element\" kind=\"fixed\" role=\"badge\" style=\"bold\" basis=\"whole\">text</text>\n</clip>",
+      "error": {
+        "elementId": "element",
+        "line": 2,
+        "reason": "invalid_style"
+      }
+    },
+    {
+      "name": "badge rejects caption style mark",
+      "body": "<clip version=\"1\" styles=\"clean memo bold mark simple\">\n<text id=\"element\" kind=\"fixed\" role=\"badge\" style=\"mark\" basis=\"whole\">text</text>\n</clip>",
+      "error": {
+        "elementId": "element",
+        "line": 2,
+        "reason": "invalid_style"
+      }
+    },
+    {
+      "name": "badge rejects caption style simple",
+      "body": "<clip version=\"1\" styles=\"clean memo bold mark simple\">\n<text id=\"element\" kind=\"fixed\" role=\"badge\" style=\"simple\" basis=\"whole\">text</text>\n</clip>",
+      "error": {
+        "elementId": "element",
+        "line": 2,
+        "reason": "invalid_style"
+      }
+    },
+    {
+      "name": "info rejects caption style clean",
+      "body": "<clip version=\"1\" styles=\"clean memo bold mark simple\">\n<text id=\"element\" kind=\"fixed\" role=\"info\" style=\"clean\" basis=\"whole\">text</text>\n</clip>",
+      "error": {
+        "elementId": "element",
+        "line": 2,
+        "reason": "invalid_style"
+      }
+    },
+    {
+      "name": "info rejects caption style memo",
+      "body": "<clip version=\"1\" styles=\"clean memo bold mark simple\">\n<text id=\"element\" kind=\"fixed\" role=\"info\" style=\"memo\" basis=\"whole\">text</text>\n</clip>",
+      "error": {
+        "elementId": "element",
+        "line": 2,
+        "reason": "invalid_style"
+      }
+    },
+    {
+      "name": "info rejects caption style bold",
+      "body": "<clip version=\"1\" styles=\"clean memo bold mark simple\">\n<text id=\"element\" kind=\"fixed\" role=\"info\" style=\"bold\" basis=\"whole\">text</text>\n</clip>",
+      "error": {
+        "elementId": "element",
+        "line": 2,
+        "reason": "invalid_style"
+      }
+    },
+    {
+      "name": "info rejects caption style mark",
+      "body": "<clip version=\"1\" styles=\"clean memo bold mark simple\">\n<text id=\"element\" kind=\"fixed\" role=\"info\" style=\"mark\" basis=\"whole\">text</text>\n</clip>",
+      "error": {
+        "elementId": "element",
+        "line": 2,
+        "reason": "invalid_style"
+      }
+    },
+    {
+      "name": "info rejects caption style simple",
+      "body": "<clip version=\"1\" styles=\"clean memo bold mark simple\">\n<text id=\"element\" kind=\"fixed\" role=\"info\" style=\"simple\" basis=\"whole\">text</text>\n</clip>",
+      "error": {
+        "elementId": "element",
+        "line": 2,
+        "reason": "invalid_style"
+      }
+    },
+    {
+      "name": "hook rejects caption style clean",
+      "body": "<clip version=\"1\" styles=\"clean memo bold mark simple\">\n<text id=\"element\" kind=\"fixed\" role=\"hook\" style=\"clean\" basis=\"whole\">text</text>\n</clip>",
+      "error": {
+        "elementId": "element",
+        "line": 2,
+        "reason": "invalid_style"
+      }
+    },
+    {
+      "name": "hook rejects caption style memo",
+      "body": "<clip version=\"1\" styles=\"clean memo bold mark simple\">\n<text id=\"element\" kind=\"fixed\" role=\"hook\" style=\"memo\" basis=\"whole\">text</text>\n</clip>",
+      "error": {
+        "elementId": "element",
+        "line": 2,
+        "reason": "invalid_style"
+      }
+    },
+    {
+      "name": "hook rejects caption style bold",
+      "body": "<clip version=\"1\" styles=\"clean memo bold mark simple\">\n<text id=\"element\" kind=\"fixed\" role=\"hook\" style=\"bold\" basis=\"whole\">text</text>\n</clip>",
+      "error": {
+        "elementId": "element",
+        "line": 2,
+        "reason": "invalid_style"
+      }
+    },
+    {
+      "name": "hook rejects caption style mark",
+      "body": "<clip version=\"1\" styles=\"clean memo bold mark simple\">\n<text id=\"element\" kind=\"fixed\" role=\"hook\" style=\"mark\" basis=\"whole\">text</text>\n</clip>",
+      "error": {
+        "elementId": "element",
+        "line": 2,
+        "reason": "invalid_style"
+      }
+    },
+    {
+      "name": "hook rejects caption style simple",
+      "body": "<clip version=\"1\" styles=\"clean memo bold mark simple\">\n<text id=\"element\" kind=\"fixed\" role=\"hook\" style=\"simple\" basis=\"whole\">text</text>\n</clip>",
+      "error": {
+        "elementId": "element",
+        "line": 2,
+        "reason": "invalid_style"
+      }
+    },
+    {
+      "name": "ending rejects caption style clean",
+      "body": "<clip version=\"1\" styles=\"clean memo bold mark simple\">\n<text id=\"element\" kind=\"fixed\" role=\"ending\" style=\"clean\" basis=\"whole\">text</text>\n</clip>",
+      "error": {
+        "elementId": "element",
+        "line": 2,
+        "reason": "invalid_style"
+      }
+    },
+    {
+      "name": "ending rejects caption style memo",
+      "body": "<clip version=\"1\" styles=\"clean memo bold mark simple\">\n<text id=\"element\" kind=\"fixed\" role=\"ending\" style=\"memo\" basis=\"whole\">text</text>\n</clip>",
+      "error": {
+        "elementId": "element",
+        "line": 2,
+        "reason": "invalid_style"
+      }
+    },
+    {
+      "name": "ending rejects caption style bold",
+      "body": "<clip version=\"1\" styles=\"clean memo bold mark simple\">\n<text id=\"element\" kind=\"fixed\" role=\"ending\" style=\"bold\" basis=\"whole\">text</text>\n</clip>",
+      "error": {
+        "elementId": "element",
+        "line": 2,
+        "reason": "invalid_style"
+      }
+    },
+    {
+      "name": "ending rejects caption style mark",
+      "body": "<clip version=\"1\" styles=\"clean memo bold mark simple\">\n<text id=\"element\" kind=\"fixed\" role=\"ending\" style=\"mark\" basis=\"whole\">text</text>\n</clip>",
+      "error": {
+        "elementId": "element",
+        "line": 2,
+        "reason": "invalid_style"
+      }
+    },
+    {
+      "name": "ending rejects caption style simple",
+      "body": "<clip version=\"1\" styles=\"clean memo bold mark simple\">\n<text id=\"element\" kind=\"fixed\" role=\"ending\" style=\"simple\" basis=\"whole\">text</text>\n</clip>",
+      "error": {
+        "elementId": "element",
+        "line": 2,
+        "reason": "invalid_style"
+      }
     }
   ]
 }
