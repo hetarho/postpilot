@@ -43,15 +43,15 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
-| T141 | Recover clip validation, completed stages and bounded response correction | CLIP CDS QUOTA ARCH LANG | T139 | doing@260914.fix |
-| T140 | Fix clip writer input admission and verify the complete pipeline | CLIP QUOTA ARCH LANG | T139 | doing@260913.e2e |
 | T110 | Release QA on the Naver app and the overlay measurement | CDS CLIP | T108 | blocked@260912 |
 
 ## next
-- implement-task T141; live verification is authorized up to $0.50 cumulative, then commit/push and verify CI/deployment; T140 remains open until real-input rendering succeeds.
+- No unblocked clip implementation tasks remain; T140/T141 are verified, deployed and archived.
 - T110 remains owner-blocked for Naver picker/overlay measurements and must refresh CLIP@17 / CDS@11 before resuming; T008 remains owner-dependent for its separate local Naver publication verification.
 
 ## log
+- 260914 T141 done (fix); b72298e CI/Workers/backend rollout and exact health pass; seven-style production repair preserves facts/output and 20 analyses; 28 fault scenarios, 40 browser cases and $0.006821 live render/continuation verified
+- 260914 T140 done (e2e); actual-provider and original-footage rendering acceptance fulfilled through T141; final CI/deployment verified, archived
 - 260914 T141 hardening (fix); exact 2 MiB legacy migration boundary reproduced and fixed; original inspection retained, bounded optional recovery copy and startup regression added
 - 260914 T141 verification (fix); actual writer/inline observe cost $0.006821, original render and identical zero-AI continuation pass; 40 browser cases and local suites pass, final fault injection/CI/rollout pending
 - 260914 T141 claimed (fix); implement shared admission, authoritative diagnostics, compatible recovery and bounded response corrections
@@ -70,5 +70,3 @@
 - 260913 clip failure investigation start (e2e); reproduce job 5176c61 planning failure with actual saved inputs before defining the follow-up fix
 - 260913 T139 done (obs); 5f4a9c1 shipped, CI/Workers/backend rollout pass and exact live image/health verified; observation diagnostics and worker location preservation complete
 - 260913 T139 verification (obs); local gates and 16 browser cases pass, prepare push and await CI/Workers/backend rollout before done
-- 260913 T139 claimed (obs); implement observation diagnostic coverage and checkpoint locator preservation
-- 260913 create-task CLIP done (obs); T139 consumes r15, preserve existing rejection and accounting behavior
