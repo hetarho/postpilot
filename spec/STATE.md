@@ -47,11 +47,12 @@
 | T110 | Release QA on the Naver app and the overlay measurement | CDS CLIP | T108 | blocked@260912 |
 
 ## next
-- implement-task T140; verify the saved-input writer and rendered output before reporting completion.
+- T140 code 5c18ab5 is deployed and CI/Workers/runtime verified; keep doing until the pending owner approval for one isolated live writer call (max $0.10) permits actual saved-input planning/original rendering. Synthetic complete-pipeline verification passed; do not ask the owner to repeat the 20 analyses.
 - T110 must refresh CLIP@16 / CDS@10 before resuming because mandatory cards, disclosure and fact QA changed; it remains owner-blocked: privately load a 9:16 clip with both cards in the Naver picker without publishing, capture the clip-tab overlays and supply the images for CDS-11 measurement. Remaining CDS interpretations are recorded in the results of T107, T108, T109 and T115 (contrast/card geometry, audio seams, exposure and frequency, footage-bound duration).
 - T008 needs the owner present: refresh PUB@5 / ARCH@2, rerun postpilot-agent setup before installation for driver signature smarteditor-one-20260910-a6, and cancel or deliberately reuse the queued 20260905-test job; after completion, update PUB for VIDEO-17 and TMPL-39.
 
 ## log
+- 260913 T140 deployed (e2e); 5c18ab5 CI/Workers/backend and exact production health pass; keep doing, actual-input live writer approval still pending
 - 260913 T140 verification (e2e); real-input admission replay and 20-source synthetic full pipeline pass; paid writer preflight capped at $0.08544, owner approval pending
 - 260913 T140 claimed (e2e); implement frozen writer allowance, early input checks and complete pipeline validation
 - 260913 create-task CLIP QUOTA done (e2e); T140 consumes CLIP r16 / QUOTA r11 and requires complete pipeline verification
@@ -71,4 +72,3 @@
 - 260913 T138 claimed (diag); implement checkpoint inspection, failure diagnostics and timeline repair
 - 260913 create-task CLIP done (diag); T138 consumes CLIP r14 with bounded latest-attempt checkpoints and bidirectional timing repair
 - 260913 create-task CLIP start (diag)
-- 260913 update-ssot CLIP r14 done (diag); separate intermediate inspection and bounded diagnostics; CDS/LANG rules remain compatible, T110 must refresh before owner QA
