@@ -43,15 +43,14 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
-| T139 | Diagnose rejected clip observations | CLIP LANG ARCH | T138 | doing@260913.obs |
 | T110 | Release QA on the Naver app and the overlay measurement | CDS CLIP | T108 | blocked@260912 |
 
 ## next
-- implement-task T139, verify and push observation diagnostics.
 - T110 must refresh CLIP@15 / CDS@10 before resuming because mandatory cards, disclosure and fact QA changed; it remains owner-blocked: privately load a 9:16 clip with both cards in the Naver picker without publishing, capture the clip-tab overlays and supply the images for CDS-11 measurement. Remaining CDS interpretations are recorded in the results of T107, T108, T109 and T115 (contrast/card geometry, audio seams, exposure and frequency, footage-bound duration).
 - T008 needs the owner present: refresh PUB@5 / ARCH@2, rerun postpilot-agent setup before installation for driver signature smarteditor-one-20260910-a6, and cancel or deliberately reuse the queued 20260905-test job; after completion, update PUB for VIDEO-17 and TMPL-39.
 
 ## log
+- 260913 T139 done (obs); 5f4a9c1 shipped, CI/Workers/backend rollout pass and exact live image/health verified; observation diagnostics and worker location preservation complete
 - 260913 T139 verification (obs); local gates and 16 browser cases pass, prepare push and await CI/Workers/backend rollout before done
 - 260913 T139 claimed (obs); implement observation diagnostic coverage and checkpoint locator preservation
 - 260913 create-task CLIP done (obs); T139 consumes r15, preserve existing rejection and accounting behavior
@@ -71,4 +70,3 @@
 - 260913 create-task CLIP THEME done (guard); T137 consumes CLIP r13 and THEME r12
 - 260913 update-ssot CLIP r13 THEME r12 done (guard); retained source playback and one cancellation confirmation, no billing formula change
 - 260913 create-task CLIP THEME start (guard)
-- 260913 update-ssot CLIP THEME start (guard); allow source playback during production and require one explicit cancellation confirmation
