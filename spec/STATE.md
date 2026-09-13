@@ -52,6 +52,7 @@
 - T110 remains owner-blocked for Naver picker/overlay measurements and must refresh CLIP@17 / CDS@11 before resuming; T008 remains owner-dependent for its separate local Naver publication verification.
 
 ## log
+- 260914 T141 hardening (fix); exact 2 MiB legacy migration boundary reproduced and fixed; original inspection retained, bounded optional recovery copy and startup regression added
 - 260914 T141 verification (fix); actual writer/inline observe cost $0.006821, original render and identical zero-AI continuation pass; 40 browser cases and local suites pass, final fault injection/CI/rollout pending
 - 260914 T141 claimed (fix); implement shared admission, authoritative diagnostics, compatible recovery and bounded response corrections
 - 260914 create-task CLIP CDS QUOTA done (fix); T141 consumes CLIP r17 / CDS r11 / QUOTA r12 and owns the complete failure/recovery/live verification chain
@@ -71,4 +72,3 @@
 - 260913 T139 verification (obs); local gates and 16 browser cases pass, prepare push and await CI/Workers/backend rollout before done
 - 260913 T139 claimed (obs); implement observation diagnostic coverage and checkpoint locator preservation
 - 260913 create-task CLIP done (obs); T139 consumes r15, preserve existing rejection and accounting behavior
-- 260913 create-task CLIP start (obs)
