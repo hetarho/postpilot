@@ -28,7 +28,12 @@ export const clips = {
     free: '다시 렌더는 취소해도 크레딧이 차감되지 않아요.',
     exempt:
       '이 계정은 실제 크레딧 차감이 없어요. 참고 정산에는 확인된 AI 사용분과 남은 작업 예약량의 50%(소수점 올림)를 기록해요.',
-    legacy: '이 작업은 이전 요금 정책으로 시작해 취소할 수 없어요.',
+    legacy: '이 작업은 취소 기능을 지원하지 않아요.',
+    confirmTitle: '제작을 취소할까요?',
+    continueProduction: '계속 제작',
+    confirmCancel: '제작 취소',
+    confirmHelp:
+      '취소한 작업을 이어서 진행할 수는 없어요. 원본은 보관 기한까지, 이전에 완성한 영상은 그대로 유지돼요.',
     policyUnavailable: '취소 요금 정책을 확인해야 생성을 시작할 수 있어요.',
     reservation:
       '이 작업의 예약량: {{amount}}크레딧. 최종 차감과 반환량은 작업이 멈춘 뒤 확인돼요.',
@@ -361,7 +366,7 @@ export const clips = {
     retry: '다시 생성',
     running: '클립을 만드는 중이에요',
     stage: {
-      prepare: '원본 확인',
+      prepare: '원본 준비 중',
       analyze: '영상 분석',
       plan: '컷·자막 구성',
       render: '영상 렌더링',
@@ -509,6 +514,11 @@ export const clips = {
     position: '선택 {{current}} / {{total}} · 좌우로 넘겨 보세요',
     uploadProgress: '업로드 {{percent}}%',
     title: '원본 영상',
+    runningTitle: '업로드한 원본',
+    runningHelp: '제작 중에도 원본을 볼 수 있어요. 완성 영상은 제작이 끝나면 표시돼요.',
+    previewLoading: '원본 미리보기를 불러오는 중이에요.',
+    previewMissing: '지금 표시할 원본 미리보기가 없어요.',
+    previewUnavailable: '원본 미리보기를 불러올 수 없어요.',
     disclosure:
       '선택한 영상과 들리는 말이 담긴 압축 사본을 OpenRouter를 통해 외부 영상 분석 제공자에게 보내요. 원본은 확인·수정·작업 시작 또는 종료 후 24시간 보관되며, 확정하면 삭제돼요. 분석 사본은 작업 후 삭제해요. 이 안내는 외부 제공자의 보관 정책을 보장하지 않아요. 보관 기한 안에는 다시 접속해도 원본을 재생하고 재사용할 수 있어요.',
     retainedUntil: '원본 보관 기한: {{time}}',

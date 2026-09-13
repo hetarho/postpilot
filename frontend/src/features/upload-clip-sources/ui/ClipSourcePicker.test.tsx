@@ -1,5 +1,5 @@
 import type { ComponentProps } from 'react'
-import { render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { ClipSelectionError } from '../model/manifest'
@@ -84,4 +84,78 @@ describe('horizontal clip source picker', () => {
     )
     expect(screen.getByText(/one.mp4 · 처리 완료/)).toBeVisible()
   })
+})
+
+it.each(['local', 'retained'])(
+  'offers read-only %s playback during production without upload or cancellation',
+  async (kind) => {
+    const upload = fixture()
+    upload.phase = 'owned'
+    upload.entries = upload.entries.map((entry) => ({
+      ...entry,
+      ...(kind === 'retained'
+        ? { file: undefined, previewURL: 'https://private.test/' + entry.metadata.filename }
+        : {}),
+    }))
+    const { container } = render(<ClipSourcePicker upload={upload} processing readOnly />)
+    await screen.findByRole('heading', { name: '업로드한 원본' })
+    expect(container.querySelector('input[type=file]')).toBeNull()
+    expect(screen.queryByRole('button', { name: '선택 취소' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'two.mp4 선택' }))
+    const player = screen.getByLabelText('two.mp4', { selector: 'video' })
+    expect(player).toHaveAttribute('src', upload.entries[1].previewURL)
+    expect(player).not.toHaveAttribute('autoplay')
+    expect(container.querySelectorAll('video[controls]')).toHaveLength(1)
+    expect(upload.ensurePlayback).toHaveBeenCalledWith('two.mp4')
+    expect(upload.select).not.toHaveBeenCalled()
+    expect(upload.cancel).not.toHaveBeenCalled()
+    expect(upload.beginAttempt).not.toHaveBeenCalled()
+  },
+)
+
+it('distinguishes loading and missing originals and surfaces playback failures during production', async () => {
+  const upload = fixture()
+  upload.entries = []
+  let finish!: () => void
+  upload.refreshRetained = vi.fn(
+    () =>
+      new Promise<void>((resolve) => {
+        finish = resolve
+      }),
+  )
+  const { rerender } = render(<ClipSourcePicker upload={upload} processing readOnly />)
+  expect(screen.getByText('원본 미리보기를 불러오는 중이에요.')).toBeVisible()
+  await act(async () => finish())
+  expect(screen.getByText('지금 표시할 원본 미리보기가 없어요.')).toBeVisible()
+  const retained = fixture()
+  retained.entries = [
+    { ...retained.entries[0], file: undefined, previewURL: '', playbackError: 'expired' },
+  ]
+  rerender(<ClipSourcePicker upload={retained} processing readOnly />)
+  expect(screen.getByText('원본 미리보기를 불러올 수 없어요.')).toBeVisible()
+  rerender(<ClipSourcePicker upload={fixture()} processing readOnly />)
+  fireEvent.error(screen.getByLabelText('one.mp4', { selector: 'video' }))
+  expect(screen.getByText('원본 미리보기를 불러올 수 없어요.')).toBeVisible()
+})
+
+it('opens an available original when the first retained entry is missing', async () => {
+  const upload = fixture()
+  upload.entries = upload.entries.map((entry, i) =>
+    i
+      ? entry
+      : {
+          ...entry,
+          file: undefined,
+          previewURL: '',
+          availability: 'missing',
+          playbackError: 'missing',
+        },
+  )
+  render(<ClipSourcePicker upload={upload} processing readOnly />)
+  expect(await screen.findByLabelText('two.mp4', { selector: 'video' })).toHaveAttribute(
+    'src',
+    'blob:two.mp4',
+  )
+  expect(upload.ensurePlayback).not.toHaveBeenCalledWith('one.mp4')
 })

@@ -27,10 +27,10 @@
 | EXPORT | 2 | 2 | - | 0 |
 | PUB | 5 | 5 | - | 0 |
 | LANG | 3 | 3 | - | 0 |
-| THEME | 11 | 11 | - | 0 |
+| THEME | 12 | 12 | - | 0 |
 | MKT | 4 | 4 | - | 0 |
 | VIDEO | 2 | 2 | - | 1 |
-| CLIP | 12 | 12 | - | 0 |
+| CLIP | 13 | 13 | - | 0 |
 | CDS | 10 | 10 | - | 2 |
 | BILL | 4 | 4 | - | 0 |
 
@@ -46,10 +46,17 @@
 | T110 | Release QA on the Naver app and the overlay measurement | CDS CLIP | T108 | blocked@260912 |
 
 ## next
-- T110 must refresh CLIP@12 / CDS@10 before resuming because mandatory cards, disclosure and fact QA changed; it remains owner-blocked: privately load a 9:16 clip with both cards in the Naver picker without publishing, capture the clip-tab overlays and supply the images for CDS-11 measurement. Remaining CDS interpretations are recorded in the results of T107, T108, T109 and T115 (contrast/card geometry, audio seams, exposure and frequency, footage-bound duration).
+- T110 must refresh CLIP@13 / CDS@10 before resuming because mandatory cards, disclosure and fact QA changed; it remains owner-blocked: privately load a 9:16 clip with both cards in the Naver picker without publishing, capture the clip-tab overlays and supply the images for CDS-11 measurement. Remaining CDS interpretations are recorded in the results of T107, T108, T109 and T115 (contrast/card geometry, audio seams, exposure and frequency, footage-bound duration).
 - T008 needs the owner present: refresh PUB@5 / ARCH@2, rerun postpilot-agent setup before installation for driver signature smarteditor-one-20260910-a6, and cancel or deliberately reuse the queued 20260905-test job; after completion, update PUB for VIDEO-17 and TMPL-39.
 
 ## log
+- 260913 T137 done (grd); original playback and one cancellation confirmation pass 1,809 frontend tests, local gates and 40 browser surfaces including readable 200-percent text
+- 260913 T137 verification (grd); visual review found unreadable confirmation labels at 200% text despite geometry checks, restore doing and adapt the narrow footer
+- 260913 T137 claimed (grd); implement original preview and cancellation confirmation
+- 260913 create-task CLIP THEME done (guard); T137 consumes CLIP r13 and THEME r12
+- 260913 update-ssot CLIP r13 THEME r12 done (guard); retained source playback and one cancellation confirmation, no billing formula change
+- 260913 create-task CLIP THEME start (guard)
+- 260913 update-ssot CLIP THEME start (guard); allow source playback during production and require one explicit cancellation confirmation
 - 260913 T132 done (clip); composition/lifecycle quality, retained preview recovery and keyboard layout pass all local, production-media and resource gates; T125–T136 implemented and ready for final commit
 - 260913 T132 verification (clip); offline composition and lifecycle gates pass; fix reopened-source preview hydration and pin only the frame above keyboard/action controls, finish local gates
 - 260913 T132 claimed (clip); T136 committed as 79141fa with a clean worktree, run offline semantic/frame/lifecycle integration and archive review evidence
@@ -63,10 +70,3 @@
 - 260913 T131 claimed (clip); T130 committed as f681f3a with a clean worktree, implement preview-led timeline editing and autosave
 - 260913 T130 done (clip); bounded current-draft playback and server glyph preparation pass local, production-media and browser gates; commit then T131 timeline
 - 260913 T130 verification (clip); bounded source-free preview passes real-font and ko/en browser checks, complete local gates before commit
-- 260913 T130 claimed (clip); T129 committed as 4e376e5 with a clean worktree, implement bounded draft playback and overlay preparation
-- 260913 T129 done (clip); composition source/controls, stable grouped inputs and explicit template refresh pass local gates plus ko/en 320–430 px browser checks; commit then T130 preview
-- 260913 T129 claimed (clip); T133 committed as e5b2599 with a clean worktree, implement native composition template authoring
-- 260913 T133 done (clip); reusable private originals, durable 24-hour retention and source playback pass all local and 27 production release gates; commit then T129 authoring
-- 260913 T133 verification (clip); complete FE/BE and build gates pass, finish signing-race and production lifecycle checks before commit
-- 260913 T133 resumed (clip); confirmed policies remain consumed by T133–T136, continue the authorized implementation and commit sequence
-- 260913 T133 claimed (clip); T128 committed as 828f8f3 with a clean worktree, implement private 24-hour original retention and reuse

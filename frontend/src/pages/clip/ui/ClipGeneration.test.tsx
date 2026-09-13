@@ -162,7 +162,10 @@ it('approves once, retains local previews after terminal and refetches the resul
     cancellationPolicyVersion: 1,
   })
   expect(revoke).not.toHaveBeenCalled()
-  expect(screen.queryByLabelText('clip.mp4')).not.toBeInTheDocument()
+  expect(screen.getByLabelText('clip.mp4', { selector: 'video' })).toHaveAttribute(
+    'src',
+    'blob:clip-source',
+  )
   expect(screen.queryByLabelText('클립 제목')).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: '삭제' })).not.toBeInTheDocument()
   expect(screen.queryByRole('combobox', { name: /관찰/ })).not.toBeInTheDocument()
@@ -269,7 +272,7 @@ it('keeps an older result visible on a durable credit refusal and requires a new
   await goToStep('클립 생성')
   // Explicit AI retry is on the generation step; the previous render stays in correction.
   expect(await screen.findByText(/크레딧이 79 필요한데 12만 남았어요/)).toBeInTheDocument()
-  expect(screen.getByText('원본 확인 단계에서 실패했어요')).toBeInTheDocument()
+  expect(screen.getByText('원본 준비 중 단계에서 실패했어요')).toBeInTheDocument()
   expect(screen.getByRole('link', { name: '크레딧·요금제 확인' })).toHaveAttribute('href', '/plans')
   expect(screen.getByRole('button', { name: '다시 생성' })).toBeDisabled()
   // The previous successful result is untouched, one tab away (CLIP-26).
@@ -480,7 +483,10 @@ it('resolves a lost accepted response by owned identity reads without replaying 
   await waitFor(() => expect(screen.queryByText(/요청의 접수 여부를 확인/)).not.toBeInTheDocument())
   expect(starts).toHaveLength(1)
   expect(revoke).not.toHaveBeenCalled()
-  expect(screen.queryByLabelText('clip.mp4')).not.toBeInTheDocument()
+  expect(screen.getByLabelText('clip.mp4', { selector: 'video' })).toHaveAttribute(
+    'src',
+    'blob:clip-source',
+  )
   expect(screen.queryByLabelText(/^원본 영상 (다시 )?선택$/)).not.toBeInTheDocument()
   view.unmount()
   expect(revoke).toHaveBeenCalledExactlyOnceWith('blob:clip-source')
@@ -514,7 +520,10 @@ it('does not attach an ambiguous selection to a different tab’s terminal job',
   await user.click(screen.getByRole('button', { name: '접수된 작업 다시 확인' }))
   expect(starts).toHaveLength(1)
   expect(revoke).not.toHaveBeenCalled()
-  expect(screen.queryByLabelText('clip.mp4')).not.toBeInTheDocument()
+  expect(screen.getByLabelText('clip.mp4', { selector: 'video' })).toHaveAttribute(
+    'src',
+    'blob:clip-source',
+  )
   view.unmount()
 })
 
@@ -586,7 +595,10 @@ it('finishes the locally owned job even when another tab becomes the latest proj
     view.queryClient.invalidateQueries({ queryKey: clipProjectsKey(view.transport, 'alice') }),
   )
   expect(revoke).not.toHaveBeenCalled()
-  expect(screen.queryByLabelText('clip.mp4')).not.toBeInTheDocument()
+  expect(screen.getByLabelText('clip.mp4', { selector: 'video' })).toHaveAttribute(
+    'src',
+    'blob:clip-source',
+  )
   own.status = 'failed'
   await act(() =>
     view.queryClient.refetchQueries({
@@ -598,7 +610,12 @@ it('finishes the locally owned job even when another tab becomes the latest proj
       }),
     }),
   )
-  await waitFor(() => expect(screen.queryByLabelText('clip.mp4')).not.toBeInTheDocument())
+  await waitFor(() =>
+    expect(screen.getByLabelText('clip.mp4', { selector: 'video' })).toHaveAttribute(
+      'src',
+      'blob:clip-source',
+    ),
+  )
   expect(revoke).not.toHaveBeenCalled()
   expect(screen.queryByLabelText(/^원본 영상 (다시 )?선택$/)).not.toBeInTheDocument()
 })
@@ -745,7 +762,13 @@ it('releases previews immediately on logout and pagehide without discarding an a
   )
   const { user, revoke } = await selectSource()
   await user.click(await screen.findByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' }))
-  await screen.findByRole('progressbar', { name: '원본 확인' })
+  await screen.findByRole('progressbar', { name: '원본 준비 중' })
+  expect(screen.getByLabelText('clip.mp4', { selector: 'video' })).toHaveAttribute(
+    'src',
+    'blob:clip-source',
+  )
+  expect(screen.queryByRole('button', { name: '선택 취소' })).not.toBeInTheDocument()
+  expect(calls).not.toContain('CancelClipJob')
   act(endSession)
   expect(revoke).toHaveBeenCalledExactlyOnceWith('blob:clip-source')
   expect(screen.queryByLabelText('clip.mp4')).not.toBeInTheDocument()

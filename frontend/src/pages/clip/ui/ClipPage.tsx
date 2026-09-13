@@ -451,7 +451,7 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
         hidden={!focused}
         tabIndex={-1}
         aria-label={t('cancellation.progressTitle')}
-        className="my-auto space-y-6 py-10"
+        className="my-auto min-w-0 space-y-4 py-6"
       >
         <Typography variant="title" role="status" aria-live="polite">
           {focused ? progressTitle : ''}
@@ -459,6 +459,7 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
         {focused && (
           <>
             <ProgressBar label={progressTitle} done={progress?.done} total={progress?.total} />
+            <ClipSourcePicker upload={upload} processing readOnly />
             <CancelClipAction action={cancellation} job={job} accounting={generation.accounting} />
           </>
         )}

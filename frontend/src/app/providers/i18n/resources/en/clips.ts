@@ -29,7 +29,12 @@ export const clips = {
     free: 'Cancelling a rerender costs no credits.',
     exempt:
       'No credits are debited from this account. Reference accounting records confirmed AI use plus 50% of the job’s unused reservation, rounded up.',
-    legacy: 'This attempt started under the previous pricing policy and cannot be cancelled.',
+    legacy: 'Cancellation is not supported for this job.',
+    confirmTitle: 'Cancel production?',
+    continueProduction: 'Keep going',
+    confirmCancel: 'Cancel production',
+    confirmHelp:
+      'A cancelled job cannot be resumed. Originals stay until their retention deadline, and any previously completed video is preserved.',
     policyUnavailable: 'The cancellation policy must be available before starting.',
     reservation:
       'This job reserved {{amount}} credits. The final debit and refund are known after processing stops.',
@@ -370,7 +375,7 @@ export const clips = {
     retry: 'Generate again',
     running: 'Creating your clip',
     stage: {
-      prepare: 'Verify sources',
+      prepare: 'Preparing originals',
       analyze: 'Analyze footage',
       plan: 'Compose cuts and captions',
       render: 'Render video',
@@ -524,6 +529,12 @@ export const clips = {
     position: 'Selected {{current}} / {{total}} · Scroll sideways to browse',
     uploadProgress: 'Uploading {{percent}}%',
     title: 'Source videos',
+    runningTitle: 'Uploaded originals',
+    runningHelp:
+      'You can watch the originals while production continues. The completed video appears when production finishes.',
+    previewLoading: 'Loading the original preview.',
+    previewMissing: 'No original preview is available right now.',
+    previewUnavailable: 'The original preview could not be loaded.',
     disclosure:
       'Compressed footage and audible speech are sent through OpenRouter to an external video-analysis provider. Originals remain for 24 hours after confirmation, changes, or an attempt starting or ending, and are deleted when you finalize. Analysis copies are removed after the attempt. This does not guarantee the external provider’s retention policy. Retained originals can be played and reused after reopening the project.',
     retainedUntil: 'Originals retained until {{time}}',

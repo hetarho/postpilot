@@ -18,11 +18,13 @@ export function ClipSourcePicker({
   disabled,
   processing = false,
   correction = false,
+  readOnly = false,
 }: {
   upload: ReturnType<typeof useClipSourceUpload>
   disabled?: boolean
   processing?: boolean
   correction?: boolean
+  readOnly?: boolean
 }) {
   const { t } = useTranslation('clips')
   const inputId = useId()
@@ -30,8 +32,25 @@ export function ClipSourcePicker({
   const locked = disabled || !!upload.attempt
   const error = upload.error
   const [selected, setSelected] = useState('')
+  const [loadingSources, setLoadingSources] = useState(readOnly)
+  const [failedPreview, setFailedPreview] = useState<string>()
+  const refreshRetained = upload.refreshRetained
+  useEffect(() => {
+    if (!readOnly) return
+    let active = true
+    void refreshRetained().finally(() => {
+      if (active) setLoadingSources(false)
+    })
+    return () => {
+      active = false
+    }
+  }, [readOnly, refreshRetained])
+  const initialEntry = readOnly
+    ? (upload.entries.find((entry) => entry.previewURL || entry.availability === 'available') ??
+      upload.entries[0])
+    : upload.entries[0]
   const selectedEntry =
-    upload.entries.find((entry) => entry.metadata.fingerprint === selected) ?? upload.entries[0]
+    upload.entries.find((entry) => entry.metadata.fingerprint === selected) ?? initialEntry
   const restoreTime = useRef(0)
   const fingerprint = selectedEntry?.metadata.fingerprint
   const ensurePlayback = upload.ensurePlayback
@@ -39,56 +58,89 @@ export function ClipSourcePicker({
     restoreTime.current = 0
     if (fingerprint) void ensurePlayback(fingerprint).catch(() => {})
   }, [fingerprint, ensurePlayback])
+  const player =
+    !correction && selectedEntry?.previewURL ? (
+      <video
+        key={selectedEntry.previewURL}
+        controls
+        playsInline
+        preload="metadata"
+        src={selectedEntry.previewURL}
+        onLoadedMetadata={(event) => {
+          if (restoreTime.current) event.currentTarget.currentTime = restoreTime.current
+        }}
+        onError={(event) => {
+          restoreTime.current = event.currentTarget.currentTime
+          setFailedPreview(selectedEntry.previewURL)
+          void upload.ensurePlayback(selectedEntry.metadata.fingerprint, true).catch(() => {})
+        }}
+        width={selectedEntry.metadata.width}
+        height={selectedEntry.metadata.height}
+        aria-label={selectedEntry.metadata.filename}
+        className={`bg-media-canvas-bg aspect-video w-full rounded-md object-contain ${readOnly ? 'max-h-48' : ''}`}
+      />
+    ) : null
   return (
-    <section aria-labelledby={`${inputId}-heading`} className="mt-10 space-y-4">
-      <Typography variant="title" id={`${inputId}-heading`}>
-        {t('source.title')}
+    <section
+      aria-labelledby={`${inputId}-heading`}
+      className={readOnly ? 'min-w-0 space-y-3' : 'mt-10 space-y-4'}
+    >
+      <Typography variant={readOnly ? 'fieldTitle' : 'title'} id={`${inputId}-heading`}>
+        {t(readOnly ? 'source.runningTitle' : 'source.title')}
       </Typography>
       <Typography variant="body" className="text-content-secondary" id={`${inputId}-disclosure`}>
-        {t(correction ? 'correction.sourceDisclosure' : 'source.disclosure')}
+        {t(
+          readOnly
+            ? 'source.runningHelp'
+            : correction
+              ? 'correction.sourceDisclosure'
+              : 'source.disclosure',
+        )}
       </Typography>
-      {disabled && !processing && (
+      {!readOnly && disabled && !processing && (
         <Typography variant="body" className="text-content-secondary">
           {t(correction ? 'correction.saveFirst' : 'source.saveFirst')}
         </Typography>
       )}
-      <div className="flex flex-wrap items-center gap-3">
-        <input
-          id={inputId}
-          type="file"
-          accept={ACCEPT}
-          multiple
-          disabled={locked || busy}
-          aria-describedby={`${inputId}-disclosure`}
-          className="peer/source sr-only"
-          onChange={(event) => {
-            const files = Array.from(event.target.files ?? [])
-            event.target.value = ''
-            void upload.select(files)
-          }}
-        />
-        <label
-          htmlFor={inputId}
-          aria-disabled={locked || busy || undefined}
-          className={buttonStyles({
-            variant: 'secondary',
-            className:
-              'peer-focus-visible/source:outline-focus-ring peer-focus-visible/source:outline-2 peer-focus-visible/source:outline-offset-2',
-          })}
-        >
-          {t(upload.entries.length ? 'source.replace' : 'source.select')}
-        </label>
-        {(busy || upload.phase === 'ready' || upload.phase === 'failed') && (
-          <Button
-            variant="ghost"
-            pending={upload.phase === 'cancelling'}
-            disabled={processing}
-            onClick={() => void upload.cancel()}
+      {!readOnly && (
+        <div className="flex flex-wrap items-center gap-3">
+          <input
+            id={inputId}
+            type="file"
+            accept={ACCEPT}
+            multiple
+            disabled={locked || busy}
+            aria-describedby={`${inputId}-disclosure`}
+            className="peer/source sr-only"
+            onChange={(event) => {
+              const files = Array.from(event.target.files ?? [])
+              event.target.value = ''
+              void upload.select(files)
+            }}
+          />
+          <label
+            htmlFor={inputId}
+            aria-disabled={locked || busy || undefined}
+            className={buttonStyles({
+              variant: 'secondary',
+              className:
+                'peer-focus-visible/source:outline-focus-ring peer-focus-visible/source:outline-2 peer-focus-visible/source:outline-offset-2',
+            })}
           >
-            {t('source.cancel')}
-          </Button>
-        )}
-      </div>
+            {t(upload.entries.length ? 'source.replace' : 'source.select')}
+          </label>
+          {(busy || upload.phase === 'ready' || upload.phase === 'failed') && (
+            <Button
+              variant="ghost"
+              pending={upload.phase === 'cancelling'}
+              disabled={processing}
+              onClick={() => void upload.cancel()}
+            >
+              {t('source.cancel')}
+            </Button>
+          )}
+        </div>
+      )}
       {error !== undefined && (
         <div role="alert">
           {error instanceof ClipSourceMismatchError ? (
@@ -113,8 +165,14 @@ export function ClipSourcePicker({
           )}
         </div>
       )}
+      {readOnly && !selectedEntry && !error && (
+        <Typography variant="body">
+          {t(loadingSources ? 'source.previewLoading' : 'source.previewMissing')}
+        </Typography>
+      )}
       {selectedEntry && (
         <>
+          {readOnly && player}
           <ClipSourceStrip
             label={t('source.selected')}
             selected={selectedEntry.metadata.fingerprint}
@@ -122,44 +180,35 @@ export function ClipSourcePicker({
             sources={upload.entries.map((entry) => ({
               ...entry.metadata,
               previewURL: entry.previewURL,
-              status: entry.confirmed
-                ? t('source.confirmed')
-                : t('source.uploadProgress', { percent: entry.percent }),
+              status: readOnly
+                ? undefined
+                : entry.confirmed
+                  ? t('source.confirmed')
+                  : t('source.uploadProgress', { percent: entry.percent }),
             }))}
           />
-          {selectedEntry.retentionExpiresAt && (
+          {!readOnly && selectedEntry.retentionExpiresAt && (
             <Typography variant="meta" className="text-content-secondary">
               {t('source.retainedUntil', {
                 time: new Date(selectedEntry.retentionExpiresAt).toLocaleString(),
               })}
             </Typography>
           )}
-          {selectedEntry.playbackError && (
+          {(selectedEntry.playbackError ||
+            (readOnly && !!failedPreview && failedPreview === selectedEntry.previewURL)) && (
             <Typography variant="body" role="status">
-              {t(`source.access.${selectedEntry.playbackError}`)}
+              {t(
+                readOnly
+                  ? 'source.previewUnavailable'
+                  : `source.access.${selectedEntry.playbackError ?? 'unavailable'}`,
+              )}
             </Typography>
           )}
-          {!correction && selectedEntry.previewURL && (
-            <video
-              key={selectedEntry.previewURL}
-              controls
-              playsInline
-              preload="metadata"
-              src={selectedEntry.previewURL}
-              onLoadedMetadata={(event) => {
-                if (restoreTime.current) event.currentTarget.currentTime = restoreTime.current
-              }}
-              onError={(event) => {
-                restoreTime.current = event.currentTarget.currentTime
-                void upload.ensurePlayback(selectedEntry.metadata.fingerprint, true).catch(() => {})
-              }}
-              width={selectedEntry.metadata.width}
-              height={selectedEntry.metadata.height}
-              aria-label={selectedEntry.metadata.filename}
-              className="aspect-video w-full rounded-md object-contain"
-            />
+          {readOnly && !selectedEntry.previewURL && !selectedEntry.playbackError && (
+            <Typography variant="body">{t('source.previewLoading')}</Typography>
           )}
-          {!selectedEntry.confirmed && (
+          {!readOnly && player}
+          {!readOnly && !selectedEntry.confirmed && (
             <ProgressBar
               label={selectedEntry.metadata.filename}
               done={selectedEntry.percent}
@@ -168,7 +217,7 @@ export function ClipSourcePicker({
           )}
         </>
       )}
-      {!!upload.summaries?.length && (
+      {!readOnly && !!upload.summaries?.length && (
         <ul
           className="flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain pb-2"
           aria-label={t('source.completed')}

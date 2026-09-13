@@ -1,4 +1,4 @@
-import { act, fireEvent, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it } from 'vitest'
 import { Code } from '@connectrpc/connect'
@@ -150,6 +150,19 @@ it.each(['ko', 'en'] as const)(
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '1')
     expect(screen.getByText(/50%/)).toBeVisible()
     await userEvent.dblClick(cancel)
+    expect(calls).not.toContain('CancelClipJob')
+    const dialog = await screen.findByRole('dialog')
+    expect(within(dialog).getByText(/50%/)).toBeVisible()
+    await userEvent.click(
+      within(dialog).getByRole('button', { name: lang === 'ko' ? '계속 제작' : 'Keep going' }),
+    )
+    expect(calls).not.toContain('CancelClipJob')
+    await userEvent.click(cancel)
+    await userEvent.dblClick(
+      within(await screen.findByRole('dialog')).getByRole('button', {
+        name: lang === 'ko' ? '제작 취소' : 'Cancel production',
+      }),
+    )
     await screen.findByRole('link', {
       name: lang === 'ko' ? '렌더 1 다운로드' : 'Download render 1',
     })
@@ -192,7 +205,7 @@ it('keeps cancellation unavailable for a legacy attempt', async () => {
   }
   mount({ projects: [{ ...project(), latestJob: job }] }, [job])
   expect(await screen.findByRole('button', { name: '취소' })).toBeDisabled()
-  expect(screen.getByText(/이 작업은 이전 요금 정책/)).toBeVisible()
+  expect(screen.getByText(/이 작업은 취소 기능을 지원하지/)).toBeVisible()
 })
 
 it.each([false, true])(

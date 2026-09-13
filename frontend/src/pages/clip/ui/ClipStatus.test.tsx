@@ -128,7 +128,7 @@ it('calls a project whose plan is newer than its render 다듬는 중', () => {
 
 it('names the stage a failed attempt stopped at', () => {
   expect(line({ job: job({ status: 'failed', stage: 'prepare' }) })).toHaveTextContent(
-    '원본 확인 단계에서 실패했어요',
+    '원본 준비 중 단계에서 실패했어요',
   )
 })
 

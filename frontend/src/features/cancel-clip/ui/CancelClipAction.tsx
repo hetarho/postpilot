@@ -1,7 +1,8 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ClipAccounting } from '@/entities/clip-project'
-import type { GenerationJob } from '@/entities/generation-job'
-import { AppFailureMessage, Button, Typography } from '@/shared/ui'
+import { isTerminal, type GenerationJob } from '@/entities/generation-job'
+import { AppFailureMessage, Button, Dialog, Typography } from '@/shared/ui'
 import type { useCancelClip } from '../model/useCancelClip'
 
 export function CancelClipAction({
@@ -14,23 +15,30 @@ export function CancelClipAction({
   accounting?: ClipAccounting
 }) {
   const { t } = useTranslation('clips')
+  const [confirmationJobId, setConfirmationJobId] = useState<string>()
   const a = accounting?.jobId === job?.id ? accounting : undefined
   const legacy = job?.kind === 'generate_clip' && job.cancellationPolicyVersion !== 1
+  const available =
+    !!job?.canCancel &&
+    !legacy &&
+    !isTerminal(job) &&
+    !job?.cancelRequestedAt &&
+    !action.cancelling &&
+    !action.uncertain &&
+    !action.pending
+  const confirming = !!confirmationJobId && confirmationJobId === job?.id && available
+  const rule = legacy
+    ? 'cancellation.legacy'
+    : job?.kind === 'render_clip'
+      ? 'cancellation.free'
+      : a?.status === 'exempt'
+        ? 'cancellation.exempt'
+        : a?.status === 'not_reserved'
+          ? 'cancellation.beforeReservation'
+          : 'cancellation.rule'
   return (
     <div className="space-y-3">
-      <Typography variant="body">
-        {t(
-          legacy
-            ? 'cancellation.legacy'
-            : job?.kind === 'render_clip'
-              ? 'cancellation.free'
-              : a?.status === 'exempt'
-                ? 'cancellation.exempt'
-                : a?.status === 'not_reserved'
-                  ? 'cancellation.beforeReservation'
-                  : 'cancellation.rule',
-        )}
-      </Typography>
+      <Typography variant="body">{t(rule)}</Typography>
       {a?.status === 'reserved' && a.reservedCredits !== undefined && (
         <Typography variant="meta">
           {t('cancellation.reservation', { amount: a.reservedCredits })}
@@ -57,11 +65,33 @@ export function CancelClipAction({
         variant="secondary"
         className="w-full sm:w-auto"
         pending={action.pending}
-        disabled={!job?.canCancel || legacy || action.cancelling || action.uncertain}
-        onClick={() => void action.cancel()}
+        disabled={!available}
+        onClick={() => setConfirmationJobId(job?.id)}
       >
         {t(action.cancelling ? 'cancellation.cancelling' : 'cancellation.cancel')}
       </Button>
+      <Dialog
+        open={confirming}
+        title={t('cancellation.confirmTitle')}
+        cancelLabel={t('cancellation.continueProduction')}
+        confirmLabel={t('cancellation.confirmCancel')}
+        onClose={() => setConfirmationJobId(undefined)}
+        onConfirm={() => {
+          if (!confirming) return
+          setConfirmationJobId(undefined)
+          void action.cancel()
+        }}
+      >
+        <div className="space-y-3">
+          <Typography variant="body">{t('cancellation.confirmHelp')}</Typography>
+          <Typography variant="body">{t(rule)}</Typography>
+          {a?.status === 'reserved' && a.reservedCredits !== undefined && (
+            <Typography variant="body">
+              {t('cancellation.reservation', { amount: a.reservedCredits })}
+            </Typography>
+          )}
+        </div>
+      </Dialog>
     </div>
   )
 }
