@@ -51,7 +51,7 @@ func TestClipWorkerErrorStringCannotLeakMediaPaths(t *testing.T) {
 	}
 }
 func TestPreparationResourceFailuresStayTypedAndRedacted(t *testing.T) {
-	for err, reason := range map[error]string{ErrAnalysisTooLarge: "CLIP_ANALYSIS_TOO_LARGE", ErrWorkspaceLimit: "CLIP_WORKSPACE_LIMIT", ErrModelInputUnsupported: "CLIP_MODEL_INPUT_UNSUPPORTED"} {
+	for err, reason := range map[error]string{ErrInputTooLarge: "CLIP_INPUT_TOO_LARGE", ErrAnalysisTooLarge: "CLIP_ANALYSIS_TOO_LARGE", ErrWorkspaceLimit: "CLIP_WORKSPACE_LIMIT", ErrModelInputUnsupported: "CLIP_MODEL_INPUT_UNSUPPORTED"} {
 		f := (&StageFailure{Stage: "prepare", Cause: err}).Failure()
 		if f.Reason != reason || len(f.Params) != 0 || f.TechnicalDetail != "" {
 			t.Fatal(f)

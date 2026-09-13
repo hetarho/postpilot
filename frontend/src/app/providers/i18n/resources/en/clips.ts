@@ -512,6 +512,11 @@ export const clips = {
     orderInvalid: 'The selected scenes or items did not follow the template order.',
     rangeInvalid: 'A selected cut started or ended outside its original video.',
     captionTimeInvalid: 'A caption interval did not fit inside its cut.',
+    inputTooLarge:
+      'The combined template, inputs and observations exceeded this job’s input allowance, so the next AI request was not sent. Shorten the template or select fewer sources.',
+    inputInvalid:
+      'The video settings or inputs were invalid, so the AI request was not sent. Check the template and input fields.',
+    bytes: '{{value}} bytes',
     validationFailed: 'This stage could not finish. You can inspect the recorded work below.',
     detailUnknown:
       'This attempt has no detailed validation reason. The rejected field cannot be identified from this record.',
@@ -544,6 +549,8 @@ export const clips = {
     observationsHelp:
       'These observations were recorded before failure or cancellation, separately from the completed video.',
     measurements: {
+      input_bytes: 'Request input size',
+      input_limit_bytes: 'Input allowance for this job',
       chunk: 'Analysis chunk',
       segment: 'Observation segment',
       segment_count: 'Returned segments',

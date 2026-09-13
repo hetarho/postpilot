@@ -129,6 +129,8 @@ export const errors = {
     'The saved edit plan changed. Keep your edits and reload the latest revision before saving again.',
   CLIP_INVALID_MEDIA:
     'The source video could not be verified. Select supported, uncorrupted videos again.',
+  CLIP_INPUT_TOO_LARGE:
+    'The template, inputs and observations exceed this job’s input allowance. Shorten the template or select fewer sources.',
   CLIP_ANALYSIS_TOO_LARGE:
     'The analysis video could not be prepared within the safe size limit, so AI generation did not start. Check the sources before retrying.',
   CLIP_WORKSPACE_LIMIT:

@@ -15,6 +15,7 @@ import (
 type quotePricing struct {
 	inputRate   string
 	budgetDelta int
+	writerInput int
 }
 
 func (p *quotePricing) Freeze(_ context.Context, o, w llm.ModelRef, count int) (clip.GenerationPricing, error) {
@@ -25,6 +26,7 @@ func (p *quotePricing) Freeze(_ context.Context, o, w llm.ModelRef, count int) (
 	a := llm.CallPolicy{Ref: o, Stage: "observe", CompletionTokens: 8192 + p.budgetDelta, InputUSDPerMillion: rate, OutputUSDPerMillion: "0.7"}
 	b := llm.CallPolicy{Ref: w, Stage: "write", CompletionTokens: 32768, InputUSDPerMillion: rate, OutputUSDPerMillion: "0.7"}
 	a.Pricing = llm.CallPricing{Version: llm.CallPricingVersion, Fingerprint: strings.Repeat("a", 64), Delivery: llm.ExecutionInlineStatic, Endpoint: "leaf", RequiredParameters: "max_tokens", PromptUSDPerMillion: rate, CompletionUSDPerMillion: "0.7", RequestUSD: "0", ImageUSD: "0", AudioUSDPerToken: "0"}
+	b.InputTokens = p.writerInput
 	b.Pricing = a.Pricing
 	b.Pricing.Delivery = llm.ExecutionTextOnly
 	credits, err := usage.ClipCredits([]usage.PricedCall{{Policy: a, Count: count}, {Policy: b, Count: 1}})

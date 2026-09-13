@@ -140,10 +140,10 @@ func (m *mediaFake) PrepareAnalysisChunks(_ context.Context, ws clip.MediaWorksp
 func (m *mediaFake) CleanupStale(context.Context, time.Time) error { return nil }
 
 type plannerFake struct {
-	id                          string
-	observe, plans              int
-	input                       clip.PlanningInput
-	gate, observeErr, errorPlan error
+	id                                          string
+	observe, plans                              int
+	input                                       clip.PlanningInput
+	gate, preparationErr, observeErr, errorPlan error
 }
 
 func (p *plannerFake) ValidateModels(o, w llm.ModelRef) error {
@@ -158,8 +158,8 @@ func (p *plannerFake) ValidateModels(o, w llm.ModelRef) error {
 func (*plannerFake) Budgets() clip.CompletionBudgets {
 	return clip.CompletionBudgets{Observe: 8192, Plan: 32768}
 }
-func (*plannerFake) ValidatePreparation(llm.ModelRef, clip.PlanningInput, []clip.AnalysisSource) error {
-	return nil
+func (p *plannerFake) ValidatePreparation(llm.ModelRef, clip.PlanningInput, []clip.AnalysisSource) error {
+	return p.preparationErr
 }
 func (p *plannerFake) ObserveChunk(ctx context.Context, r llm.ModelRef, c clip.ChunkInput) (clip.ChunkAnalysis, llm.Usage, error) {
 	frozen, err := job.ConsumeClipPolicy(ctx, "alice", p.id, r.String(), 8192, "observe")
@@ -477,7 +477,7 @@ func TestApprovedGenerationPreparesAllThenUsesFrozenInputs(t *testing.T) {
 	}
 }
 func TestGenerationFailurePreservesOldResultAndCleansInputs(t *testing.T) {
-	for _, mode := range []string{"hold", "probe", "download", "observe", "plan", "render", "authored-element", "save", "partial-upload", "workspace-cleanup"} {
+	for _, mode := range []string{"hold", "probe", "download", "observe", "plan", "input limit", "render", "authored-element", "save", "partial-upload", "workspace-cleanup"} {
 		t.Run(mode, func(t *testing.T) {
 			h := generationSetup(t)
 			old := clip.Result{Key: clip.ResultPrefix + "alice/old/old.mp4", ContentType: "video/mp4", Bytes: 5, DurationMS: 30000, CreatedAt: time.Now()}
@@ -495,6 +495,8 @@ func TestGenerationFailurePreservesOldResultAndCleansInputs(t *testing.T) {
 				h.planner.observeErr = llm.ErrRateLimited
 			case "plan":
 				h.planner.errorPlan = llm.ErrBadOutput
+			case "input limit":
+				h.planner.errorPlan = clip.WithAttemptDiagnostic(clip.ErrInputTooLarge, clip.AttemptDiagnostic{Check: "input_prompt_limit", Phase: "input", Values: map[string]int{"input_bytes": 70000, "input_limit_bytes": 61952}})
 			case "render":
 				h.renderer.fail = errors.New("render failed")
 			case "authored-element":

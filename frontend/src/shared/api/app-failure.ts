@@ -112,6 +112,7 @@ export const appFailureSpecs = {
   CLIP_COMPOSITION_INVALID: { required: ['element_id', 'line', 'reason'] },
   CLIP_COMPOSITION_UNAVAILABLE: {},
   CLIP_INVALID_MEDIA: {},
+  CLIP_INPUT_TOO_LARGE: {},
   CLIP_ANALYSIS_TOO_LARGE: {},
   CLIP_WORKSPACE_LIMIT: {},
   CLIP_MODEL_INPUT_UNSUPPORTED: {},

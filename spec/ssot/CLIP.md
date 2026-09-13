@@ -1,5 +1,5 @@
 # CLIP generated video projects and templates
-> r15 | Account-owned footage becomes a downloadable clip through bounded analysis, template-authored content, scene-grounded copy and preview-led timeline correction, independently of blog posts.
+> r16 | Account-owned footage becomes a downloadable clip through bounded analysis, template-authored content, scene-grounded copy and preview-led timeline correction, independently of blog posts.
 
 ## decisions
 - CLIP-1 [o] a clip project is independent of a post and owns its title, chosen video template, template answers, target duration, aspect ratio, analysis, edit plan and latest successful result
@@ -96,8 +96,11 @@
 - CLIP-85 [o] the latest failed or cancelled attempt exposes completed source observations and validated selected source ranges as read-only intermediate work with its own attempt identity and completion counts; range playback shows the original footage, while an unfinished composition has no generated-video download or finalization action
 - CLIP-86 [o] attempt inspection identifies the failed stage, known check, affected source, observation segment or cut when known, and bounded timing/geometry/count measurements in the active UI language; absent historical checkpoints or unknown locations are stated explicitly rather than inferred from a previous result
 - CLIP-87 [o] completed observation chunks and bounded candidate-range diagnostics survive a later failure or process interruption; only the latest attempt checkpoint is retained beside canonical project state, replaced by the next attempt and removed with the project, and finalized projects expose only their confirmed result
-- CLIP-88 [o] server diagnostics record attempt/stage, source, chunk, observation segment and cut ordinals, completion counts, specific observation/plan validation categories and bounded timing/geometry/count/capacity measurements at meaningful work boundaries; prompts, answers, observed speech, model response bodies, filenames, media bytes, credentials and signed links never enter logs
+- CLIP-88 [o] server diagnostics record attempt/stage, source, chunk, observation segment and cut ordinals, completion counts, specific input/observation/plan validation categories and bounded request-size/timing/geometry/count/capacity measurements at meaningful work boundaries; prompts, answers, observed speech, model response bodies, filenames, media bytes, credentials and signed links never enter logs
 - CLIP-89 [o] intermediate inspection makes no provider call, changes no credit settlement, does not automatically resume work or publish a partial clip, and never extends original retention; expired or missing footage leaves recorded observations and diagnostics readable with playback unavailable
+
+- CLIP-90 [o] clip writing uses a separately frozen input allowance covering the template, exact owner inputs and all completed source observations; known input overflow is refused before expensive media preparation or AI work, and overflow introduced by later observations is reported with measured size and limit while retaining completed work; no observation, authored text or fact is silently dropped to fit
+- CLIP-91 [o] generation-failure fixes are verified against the triggering saved input shape through request admission, planning and rendered output; distinguish actual provider execution from a stubbed provider, and actual original footage from synthetic media when reporting verification
 
 ## flow
 - create: author or paste a video template → define required/optional information and repeated items → choose template, ratio and target duration → fill required facts → select source footage → inspect or correct item associations when available → approve credit ceiling and generate
@@ -130,6 +133,7 @@
 - displayed item identity and scene-to-fact meaning require representative video review; schema validity and a project-wide text match alone do not establish semantic correctness
 
 ## chg
+- r16 260913 CLIP-88✎ observation/plan diagnostics→include input-size admission diagnostics; CLIP-90+ separate frozen writer input allowance and early known-input refusal; CLIP-91+ saved-input pipeline verification with explicit provider/media provenance
 - r15 260913 CLIP-86 CLIP-88✎ source/cut and timing diagnostics→observation-segment locations, specific validation categories and bounded geometry/count measurements; existing rejection, privacy, retention and settlement policies remain unchanged
 - r14 260913 CLIP-7✎ end-only reconciliation→bidirectional observed-range reconciliation; CLIP-26 CLIP-48 CLIP-51✎ successful-result-only inspection→separate latest unsuccessful-attempt work; CLIP-52✎ all partial observations deferred→only live streaming deferred; CLIP-85+ CLIP-86+ CLIP-87+ CLIP-88+ CLIP-89+ bounded checkpoints, original-range inspection and actionable private diagnostics
 - r13 260913 CLIP-78✎ progress-only and hidden source inspection→focused progress with read-only originals; CLIP-83+ one-step cancellation confirmation and job identity fence; CLIP-84+ labelled original playback and visible loading/access failures during work

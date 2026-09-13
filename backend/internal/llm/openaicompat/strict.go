@@ -86,7 +86,7 @@ func (c *Client) strictEnvelope(req llm.Request, endpoint string, limits strictL
 	// Bound unencoded text/schema bytes conservatively within the input allowance.
 	// At most 60 static 1-FPS frames plus audio fit inside the 20k media allowance;
 	// leave an additional 1k units for message/schema wrapper tokens. No truncation.
-	inputLimit := int64(llm.ClipInputUnits - 1024)
+	inputLimit := int64(policy.Call.InputTokenLimit() - 1024)
 	if video != nil {
 		inputLimit -= 20_000
 	}

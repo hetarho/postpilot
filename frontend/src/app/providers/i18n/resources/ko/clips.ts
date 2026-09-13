@@ -499,6 +499,11 @@ export const clips = {
     orderInvalid: '선택된 장면이나 항목의 순서가 템플릿의 순서와 맞지 않았어요.',
     rangeInvalid: '선택된 컷의 시작·끝 시간이 원본 영상 범위를 벗어났어요.',
     captionTimeInvalid: '자막이 표시되는 시간이 해당 컷의 범위와 맞지 않았어요.',
+    inputTooLarge:
+      '템플릿·입력 내용과 분석 결과의 합계가 이번 작업의 입력 한도를 넘어 다음 AI 요청을 보내지 못했어요. 템플릿을 줄이거나 원본 수를 줄여 주세요.',
+    inputInvalid:
+      '영상 설정이나 입력 내용이 올바르지 않아 AI 요청을 보내지 못했어요. 템플릿과 입력 항목을 확인해 주세요.',
+    bytes: '{{value}}바이트',
     validationFailed:
       '이 단계에서 작업을 마치지 못했어요. 아래에 남아 있는 내용부터 확인할 수 있어요.',
     detailUnknown:
@@ -531,6 +536,8 @@ export const clips = {
     observationsHelp:
       '실패하거나 취소되기 전에 기록된 분석이에요. 완성된 영상의 분석과 별도로 표시돼요.',
     measurements: {
+      input_bytes: '요청 입력 크기',
+      input_limit_bytes: '이번 작업의 입력 한도',
       chunk: '분석 구간 번호',
       segment: '확인이 필요한 관찰 구간',
       segment_count: '응답의 관찰 구간 수',

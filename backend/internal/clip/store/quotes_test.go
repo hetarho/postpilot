@@ -60,7 +60,7 @@ func TestQuoteIsOwnerScopedFreeAndRefreshInvalidatesPreviousApproval(t *testing.
 }
 
 func TestChangedQuoteInputsAndPricesRequireNewApproval(t *testing.T) {
-	for _, change := range []string{"recipe", "answer", "duration", "title", "visibility", "rate", "budget", "source"} {
+	for _, change := range []string{"recipe", "answer", "duration", "title", "visibility", "rate", "budget", "input allowance", "source"} {
 		t.Run(change, func(t *testing.T) {
 			h := generationSetup(t)
 			pricing := &quotePricing{}
@@ -87,6 +87,8 @@ func TestChangedQuoteInputsAndPricesRequireNewApproval(t *testing.T) {
 				pricing.inputRate = "0.2"
 			case "budget":
 				pricing.budgetDelta = 1
+			case "input allowance":
+				pricing.writerInput = 64000
 			case "source":
 				_, err = h.db.Writer.Exec("UPDATE clip_source_leases SET fingerprint=? WHERE id=?", "changed", h.batch.Sources[0].ID)
 			}

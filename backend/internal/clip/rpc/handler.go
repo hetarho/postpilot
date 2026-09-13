@@ -146,6 +146,8 @@ func toConnectError(err error) error {
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip model input unsupported", "CLIP_MODEL_INPUT_UNSUPPORTED", nil)
 	case errors.Is(err, clip.ErrWorkspaceLimit):
 		return rpcserver.NewAppError(connect.CodeResourceExhausted, "clip workspace limit", "CLIP_WORKSPACE_LIMIT", nil)
+	case errors.Is(err, clip.ErrInputTooLarge):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "clip input limit", "CLIP_INPUT_TOO_LARGE", nil)
 	case errors.Is(err, clip.ErrAnalysisTooLarge):
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "clip analysis copy limit", "CLIP_ANALYSIS_TOO_LARGE", nil)
 	case errors.Is(err, clip.ErrPlanConflict):

@@ -170,6 +170,8 @@ func (e *StageFailure) Failure() llm.Failure {
 		f = llm.Failure{Reason: "CLIP_MODEL_PRICING_UNAVAILABLE"}
 	case errors.Is(e.Cause, ErrWorkspaceLimit):
 		f = llm.Failure{Reason: "CLIP_WORKSPACE_LIMIT"}
+	case errors.Is(e.Cause, ErrInputTooLarge):
+		f = llm.Failure{Reason: "CLIP_INPUT_TOO_LARGE"}
 	case errors.Is(e.Cause, ErrAnalysisTooLarge):
 		f = llm.Failure{Reason: "CLIP_ANALYSIS_TOO_LARGE"}
 	case errors.Is(e.Cause, ErrModelInputUnsupported):
@@ -309,6 +311,19 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 			progress(name, done, total)
 		}
 	}
+	if err := s.planner.ValidateModels(pricing.Observe.Ref, pricing.Plan.Ref); err != nil {
+		return admissionRefusal(pricing.Observe.Ref, err)
+	}
+	if s.planner.Budgets() != (CompletionBudgets{Observe: pricing.Observe.CompletionTokens, Plan: pricing.Plan.CompletionTokens}) {
+		return ErrQuoteChanged
+	}
+	declared := make([]AnalysisSource, 0, len(b.Sources))
+	for _, v := range b.Sources {
+		declared = append(declared, AnalysisSource{RenderSource: RenderSource{ID: v.ID, Fingerprint: v.Fingerprint, Info: MediaInfo{DurationMS: v.DurationMS, Width: v.Width, Height: v.Height}}, Filename: v.Filename})
+	}
+	if err := s.planner.ValidatePreparation(pricing.Observe.Ref, PlanningInput{Composition: p.Composition, Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: p.CTA, Policy: pricing.Plan}, declared); err != nil {
+		return err
+	}
 	var analysisJSON []byte
 	var planJSON string
 	var result Result
@@ -333,7 +348,7 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 		if s.planner.Budgets() != (CompletionBudgets{Observe: pricing.Observe.CompletionTokens, Plan: pricing.Plan.CompletionTokens}) {
 			return ErrQuoteChanged
 		}
-		if err = s.planner.ValidatePreparation(pricing.Observe.Ref, PlanningInput{Composition: p.Composition, Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Policy: pricing.Plan}, sources); err != nil {
+		if err = s.planner.ValidatePreparation(pricing.Observe.Ref, PlanningInput{Composition: p.Composition, Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: p.CTA, Policy: pricing.Plan}, sources); err != nil {
 			return err
 		}
 		if s.pricing == nil {

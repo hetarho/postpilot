@@ -137,6 +137,19 @@ func releaseRequest[T any](h *releaseHarness, msg *T) *connect.Request[T] {
 // The environment opt-in deliberately isolates real binaries and databases from
 // ordinary unit runs. Docker's release-smoke target has the production runtime,
 // zero credentials and no external network, but loopback HTTP remains available.
+// This specific regression is also a mandatory production-image gate. It uses
+// the strict HTTP adapter, local provider/footage fixtures and the real renderer.
+func TestClipWriterInputRelease(t *testing.T) {
+	if os.Getenv("CLIP_RELEASE_SMOKE") != "1" {
+		t.Skip("run inside the isolated nonroot image")
+	}
+	if os.Getuid() == 0 {
+		t.Fatal("release regression must run nonroot")
+	}
+	h := newReleaseHarness(t, "detailed-input", false)
+	h.exercise("detailed-input")
+}
+
 func TestClipRelease(t *testing.T) {
 	if os.Getenv("CLIP_RELEASE_SMOKE") != "1" {
 		t.Skip("run the isolated nonroot release-smoke image")
@@ -174,7 +187,7 @@ func TestClipRelease(t *testing.T) {
 		t.Run("20-sources-30-minutes", func(t *testing.T) { h := newReleaseHarness(t, "success", true); h.exercise("success") })
 		return
 	}
-	for _, mode := range []string{"success", "multi-source", "multi-source-timing", "seeked cut", "delayed audio", "master", "denied", "partial", "overage", "unknown usage", "malformed", "truncated", "oversized response", "save failure", "malformed last source", "oversized proxy", "disk", "unknown prices", "price drift", "legacy client", "expired quote", "changed quote", "aborted client", "restart prepare", "restart hold", "restart partial", "restart save"} {
+	for _, mode := range []string{"success", "detailed-input", "multi-source", "multi-source-timing", "seeked cut", "delayed audio", "master", "denied", "partial", "overage", "unknown usage", "malformed", "truncated", "oversized response", "save failure", "malformed last source", "oversized proxy", "disk", "unknown prices", "price drift", "legacy client", "expired quote", "changed quote", "aborted client", "restart prepare", "restart hold", "restart partial", "restart save"} {
 		t.Run(mode, func(t *testing.T) {
 			h := newReleaseHarness(t, mode, false)
 			h.exercise(mode)
@@ -323,13 +336,20 @@ func newReleaseHarness(t *testing.T, mode string, stress bool, clocks ...func() 
 	if strings.HasPrefix(mode, "multi-source") {
 		recipe.CopyStyles, recipe.Accent, recipe.CutGuidance, ratio = []string{"clean", "memo"}, "amber", "균등분할", "vertical"
 	}
+	if mode == "detailed-input" {
+		recipe = clip.Recipe{Name: "detailed synthetic input", CompositionBody: releaseDetailedBody()}
+	}
 	template, err := projects.CreateTemplate(ctx, "release-user", recipe)
 	if err != nil {
 		t.Fatal(err)
 	}
-	p, err := projects.CreateProject(ctx, "release-user", clip.ProjectInput{Title: "synthetic release", VideoTemplateID: template.ID, Ratio: ratio, TargetDurationMS: 15000, Disclosure: "ad", Answers: []clip.Answer{
+	projectInput := clip.ProjectInput{Title: "synthetic release", VideoTemplateID: template.ID, Ratio: ratio, TargetDurationMS: 15000, Disclosure: "ad", Answers: []clip.Answer{
 		{Label: "상호", Text: "연남 김밥"}, {Label: "위치", Text: "서울 연남동"}, {Label: "place", Text: "fixture"},
-	}})
+	}}
+	if mode == "detailed-input" {
+		projectInput.Answers = nil
+	}
+	p, err := projects.CreateProject(ctx, "release-user", projectInput)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -338,6 +358,12 @@ func newReleaseHarness(t *testing.T, mode string, stress bool, clocks ...func() 
 		t.Fatal("unauthenticated access", err)
 	}
 	durations := []int{16000, 16000}
+	if mode == "detailed-input" {
+		durations = make([]int, 20)
+		for i := range durations {
+			durations[i] = 16000
+		}
+	}
 	if strings.HasPrefix(mode, "multi-source") {
 		durations = []int{4290, 3744, 1480, 5010, 5108, 4508, 5428, 6702}
 	}

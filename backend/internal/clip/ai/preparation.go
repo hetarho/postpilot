@@ -11,10 +11,10 @@ import (
 // later calls remain bounded separately; no input is silently shortened to fit.
 func (s *Service) ValidatePreparation(observe llm.ModelRef, in clip.PlanningInput, sources []clip.AnalysisSource) error {
 	if err := validateSettings(s.cfg, in); err != nil {
-		return err
+		return inputFailure(err, "input_settings", 0)
 	}
 	if err := clip.ValidateAnalysisSources(s.cfg.Analysis, sources); err != nil {
-		return err
+		return inputFailure(err, "input_sources", 0)
 	}
 	observer, err := s.model(observe, llm.StageNameObserve)
 	if err != nil {
@@ -30,8 +30,8 @@ func (s *Service) ValidatePreparation(observe llm.ModelRef, in clip.PlanningInpu
 	}
 	for _, source := range sources {
 		system, user := BuildObservePrompt(clip.ChunkInput{Source: source, DurationMS: min(s.cfg.Analysis.ChunkMS, source.Info.DurationMS)})
-		if !boundedPrompt(system, user, schema, llm.ExecutionInlineStatic) {
-			return clip.ErrInvalid
+		if err := validatePrompt(system, user, schema, llm.ExecutionInlineStatic, llm.ClipInputUnits); err != nil {
+			return err
 		}
 	}
 	schema = nil
@@ -43,8 +43,8 @@ func (s *Service) ValidatePreparation(observe llm.ModelRef, in clip.PlanningInpu
 	}
 	in.Analyses = nil
 	system, user := BuildPlanPrompt(in, s.cfg.Render.FadeMS)
-	if !boundedPrompt(system, user, schema, llm.ExecutionTextOnly) {
-		return clip.ErrInvalid
+	if err := validatePrompt(system, user, schema, llm.ExecutionTextOnly, in.Policy.InputTokenLimit()); err != nil {
+		return err
 	}
 	return nil
 }

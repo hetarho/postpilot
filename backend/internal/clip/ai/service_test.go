@@ -567,7 +567,7 @@ func TestPreparationChecksKnownPromptSizeBeforeAnyPaidWork(t *testing.T) {
 		in.Template.InformationFields = append(in.Template.InformationFields, clip.InformationField{Label: label, Prompt: strings.Repeat("나", 200)})
 		in.Answers = append(in.Answers, clip.Answer{Label: label, Text: strings.Repeat("다", 500)})
 	}
-	if err := s.ValidatePreparation(testRef(), in, []clip.AnalysisSource{source()}); !errors.Is(err, clip.ErrInvalid) {
+	if err := s.ValidatePreparation(testRef(), in, []clip.AnalysisSource{source()}); !errors.Is(err, clip.ErrInputTooLarge) {
 		t.Fatal("oversized known context accepted", err)
 	}
 	if len(f.calls) != 0 {

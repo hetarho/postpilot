@@ -8,6 +8,8 @@ import (
 
 // Checkpoints contain validated domain evidence, never a raw provider response.
 // They are separate from canonical project content and cannot be rendered/exported.
+var ErrInputTooLarge = errors.New("clip request input exceeds its approved allowance")
+
 const AttemptCheckpointMaxBytes = 2 * 1024 * 1024
 
 type AttemptRange struct {
@@ -87,7 +89,7 @@ func AttemptRangeDiagnostics(plan EditPlan, analyses []SourceAnalysis) []Attempt
 // This is the single numeric allowlist shared by persistence and logging.
 func SafeAttemptValues(values map[string]int) map[string]int {
 	out := map[string]int{}
-	for _, key := range []string{"source", "chunk", "cut", "cut_count", "target_ms", "before_ms", "after_ms", "remaining_ms", "min_ms", "max_ms", "transition_ms", "backward_ms", "segment", "segment_count", "duration_ms", "expected_index", "event_runes", "speech_runes", "quality_runes", "subject_count", "subject_runes"} {
+	for _, key := range []string{"input_bytes", "input_limit_bytes", "system_bytes", "content_bytes", "schema_bytes", "source", "chunk", "cut", "cut_count", "target_ms", "before_ms", "after_ms", "remaining_ms", "min_ms", "max_ms", "transition_ms", "backward_ms", "segment", "segment_count", "duration_ms", "expected_index", "event_runes", "speech_runes", "quality_runes", "subject_count", "subject_runes"} {
 		if n, ok := values[key]; ok && n >= 0 && n <= 180000000 {
 			out[key] = n
 		}
@@ -102,7 +104,7 @@ func SafeAttemptValues(values map[string]int) map[string]int {
 
 func SafeAttemptPhase(phase string) string {
 	switch phase {
-	case "decode", "selection", "timeline_grow", "timeline_shrink", "timeline_total", "composition", "validation", "observation":
+	case "input", "decode", "selection", "timeline_grow", "timeline_shrink", "timeline_total", "composition", "validation", "observation":
 		return phase
 	}
 	return ""
@@ -152,6 +154,8 @@ func logAttemptDiagnostic(job, stage string, d AttemptDiagnostic) {
 
 func SafeAttemptCheck(check string) string {
 	switch check {
+	case "input_prompt_limit", "input_settings", "input_sources":
+		return check
 	case "observe_source_identity", "observe_chunk_identity", "observe_segment_fields", "observe_segment_count", "observe_segment_time", "observe_segment_overlap", "observe_focal", "observe_subject_bounds", "observe_text_length", "observe_quality", "observe_subject_count", "observe_subject_text", "observe_description", "observe_scene", "observe_silent_speech":
 		return check
 	case "caption_measurement", "composition_cut_evidence", "composition_cut_identity", "composition_generated_bounds", "composition_generated_identity", "composition_generated_rows", "composition_item_order", "composition_observation_gap", "composition_plan_bounds", "composition_section_order", "output_encoding_or_size", "output_field_type", "output_json", "output_shape", "plan_accent", "plan_caption_fields", "plan_caption_time", "plan_chip_count", "plan_chip_label", "plan_copy_chars", "plan_copy_classes", "plan_copy_count", "plan_copy_exposure", "plan_copy_format", "plan_copy_keyword", "plan_copy_lines", "plan_copy_second_cut", "plan_copy_sequence", "plan_cut_count", "plan_cut_fade", "plan_cut_fields", "plan_cut_identity", "plan_cut_range", "plan_cut_transition", "plan_duration_limit", "plan_duration_range", "plan_focal", "plan_hook", "plan_ratio", "plan_required", "plan_source", "plan_source_metadata", "plan_style", "plan_target_duration", "plan_timeline", "plan_volume":

@@ -11,6 +11,7 @@ import (
 // queued job is refused and re-quoted rather than read with a guessed route.
 const CallPricingVersion = 2
 const ClipInputUnits = 30_000
+const ClipPlanInputUnits = 64_000
 
 // MaxEndpointTag bounds a frozen provider leaf; the adapter's own tag grammar is
 // stricter, this only keeps a stored envelope readable.
@@ -69,7 +70,7 @@ func (p CallPolicy) QuoteMicrousd() (int64, bool) {
 	}
 	in, _ := new(big.Rat).SetString(p.InputUSDPerMillion)
 	out, _ := new(big.Rat).SetString(p.OutputUSDPerMillion)
-	cost := new(big.Rat).Mul(in, big.NewRat(ClipInputUnits, 1))
+	cost := new(big.Rat).Mul(in, big.NewRat(int64(p.InputTokenLimit()), 1))
 	cost.Add(cost, new(big.Rat).Mul(out, big.NewRat(int64(p.CompletionTokens), 1)))
 	if p.Pricing.Version != 0 {
 		request, _ := new(big.Rat).SetString(p.Pricing.RequestUSD)

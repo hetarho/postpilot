@@ -150,3 +150,33 @@ it.each(['ko', 'en'] as const)(
     ).toBeVisible()
   },
 )
+
+it.each(['ko', 'en'] as const)(
+  'explains input overflow with the actual limit in %s',
+  (language) => {
+    initializeI18n(language)
+    const p = failedProject()
+    Object.assign(p.attemptInspection!, {
+      validationCheck: 'input_prompt_limit',
+      validationPhase: 'input',
+      measurements: { input_bytes: 37198, input_limit_bytes: 27952 },
+      ranges: [],
+    })
+    render(<ClipAttemptInspection project={p} localSources={[]} />)
+    expect(screen.getByText(language === 'ko' ? '37198바이트' : '37198 bytes')).toBeVisible()
+    expect(screen.getByText(language === 'ko' ? '27952바이트' : '27952 bytes')).toBeVisible()
+    expect(
+      screen.getByText(
+        language === 'ko'
+          ? /템플릿을 줄이거나 원본 수를/
+          : /Shorten the template or select fewer sources/,
+      ),
+    ).toBeVisible()
+    expect(
+      screen.queryByText(
+        language === 'ko' ? /세부 검증 사유가 기록되지/ : /no detailed validation reason/,
+      ),
+    ).not.toBeInTheDocument()
+    expect(screen.getAllByText('이번 시도의 관찰')[0]).toBeVisible()
+  },
+)

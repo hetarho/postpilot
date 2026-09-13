@@ -56,6 +56,16 @@ COPY backend/internal/clip/media/testdata/speech.m4a /usr/share/postpilot-media/
 ENV CLIP_RELEASE_SMOKE=1
 ENTRYPOINT ["/clip-release.test", "-test.run=^TestClipRelease$", "-test.v", "-test.timeout=45m"]
 
+# Every production build must prove the detailed-template / 20-source failure
+# shape through queue, strict HTTP admission, planning, rendering and settlement.
+# Provider responses and footage are synthetic; this target has no credentials.
+FROM runtime AS clip-input-smoke
+COPY --from=release-builder /clip-release.test /clip-release.test
+COPY backend/internal/clip/media/testdata/speech.m4a /usr/share/postpilot-media/speech.m4a
+ENV CLIP_RELEASE_SMOKE=1
+RUN ["/clip-release.test", "-test.run=^TestClipWriterInputRelease$", "-test.v", "-test.timeout=15m"]
+
 FROM runtime AS production
 # This dependency makes the real-binary nonroot smoke a mandatory image-build gate.
 COPY --from=media-smoke /usr/local/bin/ffmpeg /usr/local/bin/ffmpeg
+COPY --from=clip-input-smoke /usr/local/bin/ffprobe /usr/local/bin/ffprobe

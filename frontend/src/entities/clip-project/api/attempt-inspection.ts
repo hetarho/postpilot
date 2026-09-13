@@ -50,6 +50,11 @@ export function toClipAttemptInspection(value: ProtoClipAttemptInspection): Clip
     }
   })
   const unsigned = new Set([
+    'input_bytes',
+    'input_limit_bytes',
+    'system_bytes',
+    'content_bytes',
+    'schema_bytes',
     'source',
     'chunk',
     'cut',

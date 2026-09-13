@@ -474,10 +474,17 @@ func (p *releaseProvider) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			"focal": map[string]float64{"x": .5, "y": .5}, "scene": "scenery", "readable_text": false,
 			"subject": map[string]float64{"x": .3, "y": .3, "width": .4, "height": .4},
 		}}}
+		if p.mode == "detailed-input" {
+			content.(map[string]any)["segments"].([]any)[0].(map[string]any)["event"] = strings.Repeat("Synthetic moving test pattern. ", 20)
+		}
 	} else if videoCount == 0 && wire.MaxTokens == 32768 {
 		analyses, ok := metadata["analyses"].([]any)
 		if !ok || len(analyses) == 0 {
 			p.reject(w, "missing structured analyses")
+			return
+		}
+		if p.mode == "detailed-input" && (len(analyses) != 20 || metadata["composition_source"] != releaseDetailedBody() || len(data) <= llm.ClipInputUnits) {
+			p.reject(w, "detailed input regression was truncated or did not exceed the old allowance")
 			return
 		}
 		source := analyses[0].(map[string]any)["source_id"]
@@ -677,4 +684,10 @@ func releaseCorrelation(a, b []byte) float64 {
 		return 0
 	}
 	return ab / math.Sqrt(aa*bb)
+}
+
+// Synthetic content with the same detailed-template plus twenty-observation
+// failure shape. No customer XML, facts or footage are committed.
+func releaseDetailedBody() string {
+	return `<clip version="1" styles="clean"><guide>` + strings.Repeat("관찰한 장면을 차분히 설명한다. ", 130) + `</guide><guide>` + strings.Repeat("관찰한 사실과 입력한 내용만 사용한다. ", 110) + `</guide><text id="label" kind="fixed" role="badge" position="header" basis="whole">검증용 영상</text><repeat for="scenes"><scene id="footage" scope="scene"/></repeat></clip>`
 }

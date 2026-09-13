@@ -370,10 +370,10 @@ func (e pricedEndpoint) route(call llm.CallPolicy) error {
 	if e.MaxCompletionTokens != nil && *e.MaxCompletionTokens < call.CompletionTokens {
 		return llm.ErrInlineEndpointUnavailable
 	}
-	if e.MaxPromptTokens != nil && *e.MaxPromptTokens < llm.ClipInputUnits {
+	if e.MaxPromptTokens != nil && *e.MaxPromptTokens < call.InputTokenLimit() {
 		return llm.ErrInlineEndpointUnavailable
 	}
-	if e.ContextLength != nil && *e.ContextLength > 0 && *e.ContextLength < llm.ClipInputUnits+call.CompletionTokens {
+	if e.ContextLength != nil && *e.ContextLength > 0 && *e.ContextLength < call.InputTokenLimit()+call.CompletionTokens {
 		return llm.ErrInlineEndpointUnavailable
 	}
 	return nil

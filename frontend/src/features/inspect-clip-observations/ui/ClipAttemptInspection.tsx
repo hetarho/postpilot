@@ -8,6 +8,9 @@ type Inspection = NonNullable<ClipProject['attemptInspection']>
 type Candidate = Inspection['ranges'][number]
 
 const observationChecks = {
+  input_prompt_limit: 'inspection.inputTooLarge',
+  input_settings: 'inspection.inputInvalid',
+  input_sources: 'inspection.inputInvalid',
   observe_source_identity: 'inspection.observationIdentity',
   observe_chunk_identity: 'inspection.observationIdentity',
   observe_segment_fields: 'inspection.observationFields',
@@ -201,6 +204,8 @@ export function ClipAttemptInspection({
           <dl className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
             {(
               [
+                'input_bytes',
+                'input_limit_bytes',
                 'target_ms',
                 'before_ms',
                 'after_ms',
@@ -232,7 +237,9 @@ export function ClipAttemptInspection({
                       ? t('inspection.seconds', { value: value / 1000 })
                       : key.endsWith('_ppm')
                         ? t('inspection.percent', { value: value / 10000 })
-                        : value}
+                        : key.endsWith('_bytes')
+                          ? t('inspection.bytes', { value })
+                          : value}
                   </Typography>
                 </div>
               )

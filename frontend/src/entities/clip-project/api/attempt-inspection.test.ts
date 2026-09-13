@@ -20,6 +20,10 @@ it('maps terminal evidence separately and refuses invalid range playback and cou
         { cut: 2, source: 99, startMs: 0, endMs: 90000, valid: true },
       ],
       measurements: {
+        input_bytes: 37198,
+        input_limit_bytes: 27952,
+        content_bytes: -1,
+        schema_bytes: 180000001,
         target_ms: 30000,
         after_ms: -1,
         raw_start_ms: -200,
@@ -35,6 +39,8 @@ it('maps terminal evidence separately and refuses invalid range playback and cou
   expect(p.result).toBeUndefined()
   expect(p.attemptInspection?.ranges.map((r) => r.valid)).toEqual([true, false])
   expect(p.attemptInspection?.measurements).toEqual({
+    input_bytes: 37198,
+    input_limit_bytes: 27952,
     target_ms: 30000,
     raw_start_ms: -200,
     focal_x_ppm: -100000,

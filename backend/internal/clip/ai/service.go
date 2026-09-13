@@ -144,8 +144,11 @@ func (s *Service) ObserveChunk(ctx context.Context, model llm.ModelRef, input cl
 		}
 		request.JSONSchema = ChunkSchema()
 	}
-	if !execution.Matches(model, request) || input.Video.Size > 8<<20 || !boundedPrompt(system, user, request.JSONSchema, llm.ExecutionInlineStatic) {
+	if !execution.Matches(model, request) || input.Video.Size > 8<<20 {
 		return clip.ChunkAnalysis{}, llm.Usage{}, clip.ErrInvalid
+	}
+	if err := validatePrompt(system, user, request.JSONSchema, llm.ExecutionInlineStatic, input.Policy.InputTokenLimit()); err != nil {
+		return clip.ChunkAnalysis{}, llm.Usage{}, err
 	}
 	response, err := s.models.Complete(ctx, model, request)
 	if err != nil {
@@ -184,8 +187,8 @@ func (s *Service) Plan(ctx context.Context, model llm.ModelRef, input clip.Plann
 			request.JSONSchema = CompositionPlanSchema()
 		}
 	}
-	if !boundedPrompt(system, user, request.JSONSchema, llm.ExecutionTextOnly) {
-		return clip.EditPlan{}, llm.Usage{}, clip.ErrInvalid
+	if err := validatePrompt(system, user, request.JSONSchema, llm.ExecutionTextOnly, input.Policy.InputTokenLimit()); err != nil {
+		return clip.EditPlan{}, llm.Usage{}, err
 	}
 	response, err := s.models.Complete(ctx, model, request)
 	if err != nil {
@@ -334,18 +337,35 @@ func executionPolicy(p llm.CallPolicy, ref llm.ModelRef, stage string, budget in
 	return &llm.ExecutionPolicy{Call: p, Delivery: delivery, NoFallback: true, RequireParameters: true}, nil
 }
 
-func boundedPrompt(system, user string, schema json.RawMessage, delivery llm.ExecutionDelivery) bool {
-	// Account for JSON escaping and reserve request/routing overhead. Never
-	// silently truncate observations or make an extra paid summarization call.
+func validatePrompt(system, user string, schema json.RawMessage, delivery llm.ExecutionDelivery, inputLimit int) error {
+	// The conservative encoded-byte bound is part of the approved input budget.
+	// Do not discard completed observations or authored content to make it fit.
 	data, err := json.Marshal(struct {
 		System, User string
 		Schema       json.RawMessage
 	}{system, user, schema})
-	limit := llm.ClipInputUnits - 2048
+	limit := inputLimit - 2048
 	if delivery == llm.ExecutionInlineStatic {
 		limit -= 20000
 	}
-	return err == nil && len(data) <= limit
+	if err != nil || limit < 0 || len(data) > limit {
+		return clip.WithAttemptDiagnostic(clip.ErrInputTooLarge, clip.AttemptDiagnostic{Check: "input_prompt_limit", Phase: "input", Values: clip.SafeAttemptValues(map[string]int{"input_bytes": len(data), "input_limit_bytes": max(0, limit), "system_bytes": len(system), "content_bytes": len(user), "schema_bytes": len(schema)})})
+	}
+	return nil
+}
+func inputFailure(err error, check string, source int) error {
+	if d, ok := clip.DiagnosticFromError(err); ok {
+		d.Values = clip.SafeAttemptValues(d.Values)
+		if source > 0 {
+			d.Values["source"] = source
+		}
+		return clip.WithAttemptDiagnostic(err, d)
+	}
+	values := map[string]int{}
+	if source > 0 {
+		values["source"] = source
+	}
+	return clip.WithAttemptDiagnostic(err, clip.AttemptDiagnostic{Check: check, Phase: "input", Values: values})
 }
 func within(value string, minimum, maximum int) bool {
 	return utf8.ValidString(value) && utf8.RuneCountInString(value) >= minimum && utf8.RuneCountInString(value) <= maximum
@@ -385,20 +405,20 @@ func validateSettings(cfg Config, in clip.PlanningInput) error {
 
 func validateInput(cfg Config, in clip.PlanningInput) error {
 	if err := validateSettings(cfg, in); err != nil {
-		return err
+		return inputFailure(err, "input_settings", 0)
 	}
 	sources := make([]clip.AnalysisSource, 0, len(in.Analyses))
 	for _, a := range in.Analyses {
 		sources = append(sources, a.Source)
 	}
 	if err := clip.ValidateAnalysisSources(cfg.Analysis, sources); err != nil {
-		return err
+		return inputFailure(err, "input_sources", 0)
 	}
-	for _, a := range in.Analyses {
+	for index, a := range in.Analyses {
 		limits := cfg.Analysis
 		limits.MaxSegments *= (a.Source.Info.DurationMS + limits.ChunkMS - 1) / limits.ChunkMS
 		if err := clip.ValidateSegments(limits, a.Segments, 0, a.Source.Info.DurationMS); err != nil {
-			return err
+			return inputFailure(err, "input_sources", index+1)
 		}
 	}
 	return nil

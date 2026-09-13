@@ -137,3 +137,18 @@ func TestPreparationPanicDoesNotRestartOnRecovery(t *testing.T) {
 	}
 	h.assertClean(t)
 }
+
+func TestKnownInputRefusalPrecedesWorkspaceAndPaidWork(t *testing.T) {
+	h := generationSetup(t)
+	h.start(t)
+	h.planner.preparationErr = clip.WithAttemptDiagnostic(clip.ErrInputTooLarge, clip.AttemptDiagnostic{Check: "input_prompt_limit", Phase: "input", Values: map[string]int{"input_bytes": 70000, "input_limit_bytes": 61952}})
+	err := h.run(t)
+	if !errors.Is(err, clip.ErrInputTooLarge) || h.media.workspace != "" || len(h.media.prepared) != 0 || len(h.admitter.calls) != 0 || h.planner.observe != 0 || h.planner.plans != 0 || h.renderer.calls != 0 {
+		t.Fatal("known input failure started costly work", err)
+	}
+	d, ok := clip.DiagnosticFromError(err)
+	if !ok || d.Check != "input_prompt_limit" || d.Values["input_bytes"] != 70000 {
+		t.Fatal("input diagnostic lost")
+	}
+	h.assertClean(t)
+}
