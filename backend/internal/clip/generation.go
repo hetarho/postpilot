@@ -221,6 +221,16 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 		}
 		checkpoint.Stage = stage
 		if d, ok := DiagnosticFromError(err); ok {
+			d.Values = SafeAttemptValues(d.Values)
+			if stage == "analyze" {
+				// The worker owns the global source/chunk position; parser indexes
+				// describe a segment inside that chunk and cannot replace it.
+				for _, key := range []string{"source", "chunk"} {
+					if value, exists := checkpoint.Diagnostic.Values[key]; exists {
+						d.Values[key] = value
+					}
+				}
+			}
 			checkpoint.Diagnostic = d
 		} else if err != nil {
 			var output interface{ OutputValidationCode() string }

@@ -19,7 +19,14 @@ it('maps terminal evidence separately and refuses invalid range playback and cou
         { cut: 1, source: 1, startMs: 3500, endMs: 10500, valid: true },
         { cut: 2, source: 99, startMs: 0, endMs: 90000, valid: true },
       ],
-      measurements: { target_ms: 30000, after_ms: -1 },
+      measurements: {
+        target_ms: 30000,
+        after_ms: -1,
+        raw_start_ms: -200,
+        focal_x_ppm: -100000,
+        subject_width_ppm: 180000001,
+        private_field: 10,
+      },
     },
   })
   const p = toClipProject(proto)
@@ -27,7 +34,11 @@ it('maps terminal evidence separately and refuses invalid range playback and cou
   expect(p.editing).toBeUndefined()
   expect(p.result).toBeUndefined()
   expect(p.attemptInspection?.ranges.map((r) => r.valid)).toEqual([true, false])
-  expect(p.attemptInspection?.measurements).toEqual({ target_ms: 30000 })
+  expect(p.attemptInspection?.measurements).toEqual({
+    target_ms: 30000,
+    raw_start_ms: -200,
+    focal_x_ppm: -100000,
+  })
   proto.attemptInspection!.completedChunks = 4
   expect(toClipProject(proto).attemptInspection?.status).toBe('unavailable')
 })

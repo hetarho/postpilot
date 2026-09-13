@@ -178,20 +178,70 @@ func decode(raw string, maxBytes int, contract *shape, out any) error {
 	}
 	return nil
 }
-func parseChunk(cfg Config, input clip.ChunkInput, raw string) (clip.ChunkAnalysis, error) {
+func parseChunk(cfg Config, input clip.ChunkInput, raw string) (out clip.ChunkAnalysis, err error) {
 	var wire chunkJSON
+	phase := "decode"
+	segment := 0
+	defer func() {
+		if err == nil {
+			return
+		}
+		d, exists := clip.DiagnosticFromError(err)
+		if !exists {
+			check := "unknown"
+			if code, ok := err.(interface{ OutputValidationCode() string }); ok {
+				check = code.OutputValidationCode()
+			}
+			d = clip.AttemptDiagnostic{Check: check, Phase: phase}
+		}
+		d.Values = clip.SafeAttemptValues(d.Values)
+		d.Values["duration_ms"] = input.DurationMS
+		if wire.Segments != nil {
+			d.Values["segment_count"] = len(*wire.Segments)
+		}
+		if n := d.Values["segment"]; n > 0 {
+			segment = n
+		}
+		if segment > 0 && wire.Segments != nil && segment <= len(*wire.Segments) {
+			d.Values["segment"] = segment
+			s := (*wire.Segments)[segment-1]
+			if s.Start != nil {
+				d.Values["raw_start_ms"] = *s.Start
+			}
+			if s.End != nil {
+				d.Values["raw_end_ms"] = *s.End
+			}
+		}
+		d.Values = clip.SafeAttemptValues(d.Values)
+		err = clip.WithAttemptDiagnostic(outputError(clip.SafeAttemptCheck(d.Check)), d)
+	}()
 	if err := decode(raw, cfg.MaxResponseBytes, chunkShape, &wire); err != nil {
 		return clip.ChunkAnalysis{}, err
 	}
-	if wire.SourceID == nil || *wire.SourceID != input.Source.ID || wire.Index == nil || *wire.Index != input.Index || wire.Segments == nil {
-		return clip.ChunkAnalysis{}, llm.ErrBadOutput
+	phase = "observation"
+	if wire.SourceID == nil || *wire.SourceID != input.Source.ID {
+		return clip.ChunkAnalysis{}, outputError("observe_source_identity")
+	}
+	if wire.Index == nil || *wire.Index != input.Index {
+		values := map[string]int{"expected_index": input.Index}
+		if wire.Index != nil {
+			values["actual_index"] = *wire.Index
+		}
+		return clip.ChunkAnalysis{}, clip.WithAttemptDiagnostic(outputError("observe_chunk_identity"), clip.AttemptDiagnostic{Check: "observe_chunk_identity", Phase: phase, Values: values})
+	}
+	if wire.Segments == nil {
+		return clip.ChunkAnalysis{}, outputError("observe_segment_count")
 	}
 	result := clip.ChunkAnalysis{SourceID: input.Source.ID, Fingerprint: input.Source.Fingerprint, Index: input.Index, OffsetMS: input.OffsetMS, DurationMS: input.DurationMS}
-	for _, s := range *wire.Segments {
+	for i, s := range *wire.Segments {
+		segment = i + 1
 		focal, focalOK := s.Focal.domain()
 		subject, subjectOK := s.Subject.domain()
-		if s.Start == nil || s.End == nil || *s.Start >= *s.End || s.Event == nil || s.Subjects == nil || s.Speech == nil || s.Quality == nil || !focalOK || !subjectOK {
-			return clip.ChunkAnalysis{}, llm.ErrBadOutput
+		if s.Start == nil || s.End == nil || s.Event == nil || s.Subjects == nil || s.Speech == nil || s.Quality == nil || !focalOK || !subjectOK {
+			return clip.ChunkAnalysis{}, outputError("observe_segment_fields")
+		}
+		if *s.Start >= *s.End {
+			return clip.ChunkAnalysis{}, outputError("observe_segment_time")
 		}
 		// The model is told the seven scene ids, so an eighth is bad output, not
 		// something to map away. The tolerance for a scene-less segment belongs
@@ -200,7 +250,7 @@ func parseChunk(cfg Config, input clip.ChunkInput, raw string) (clip.ChunkAnalys
 		scene, readable := design.Guards.DefaultScene, false
 		if s.Scene != nil {
 			if _, known := design.SceneStyles[*s.Scene]; !known {
-				return clip.ChunkAnalysis{}, llm.ErrBadOutput
+				return clip.ChunkAnalysis{}, outputError("observe_scene")
 			}
 			scene = *s.Scene
 		}
@@ -208,14 +258,15 @@ func parseChunk(cfg Config, input clip.ChunkInput, raw string) (clip.ChunkAnalys
 			readable = *s.Readable
 		}
 		if !input.Source.Info.HasAudio && strings.TrimSpace(*s.Speech) != "" {
-			return clip.ChunkAnalysis{}, llm.ErrBadOutput
+			return clip.ChunkAnalysis{}, outputError("observe_silent_speech")
 		}
 		// Clamp locally BEFORE adding the authoritative source offset.
 		start, end := max(0, min(input.DurationMS, *s.Start)), max(0, min(input.DurationMS, *s.End))
 		result.Segments = append(result.Segments, clip.Segment{StartMS: input.OffsetMS + start, EndMS: input.OffsetMS + end, Event: *s.Event, Subjects: *s.Subjects, Speech: *s.Speech, Quality: *s.Quality, Focal: focal, Scene: scene, ReadableText: readable, Subject: subject})
 	}
+	segment = 0
 	if err := clip.ValidateSegments(cfg.Analysis, result.Segments, input.OffsetMS, input.OffsetMS+input.DurationMS); err != nil {
-		return clip.ChunkAnalysis{}, llm.ErrBadOutput
+		return clip.ChunkAnalysis{}, err
 	}
 	return result, nil
 }

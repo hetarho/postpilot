@@ -161,3 +161,24 @@ func TestCheckpointFailureStopsBeforeAnotherPaidCall(t *testing.T) {
 		})
 	}
 }
+
+func TestObservationDiagnosticKeepsWorkerLocationAndCompletedWork(t *testing.T) {
+	h := generationSetup(t)
+	id := h.start(t)
+	j, err := h.jobs.PickNextQueued(t.Context(), time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = h.service.Run(t.Context(), "alice", id, h.project.ID, j.Payload, func(stage string, done, total int) {
+		if stage == "analyze" && done == 2 {
+			h.planner.observeErr = clip.WithAttemptDiagnostic(errors.New("private-canary"), clip.AttemptDiagnostic{Check: "observe_subject_bounds", Phase: "observation", Values: map[string]int{"source": 99, "chunk": 99, "segment": 1, "subject_x_ppm": 200000, "subject_width_ppm": 1000000}})
+		}
+	})
+	if err == nil {
+		t.Fatal("expected failure")
+	}
+	c, err := h.store.GetAttemptCheckpoint(t.Context(), "alice", h.project.ID, id)
+	if err != nil || c == nil || c.CompletedChunks != 2 || c.CompletedSources != 1 || c.Diagnostic.Check != "observe_subject_bounds" || c.Diagnostic.Values["source"] != 2 || c.Diagnostic.Values["chunk"] != 3 || c.Diagnostic.Values["segment"] != 1 || c.Diagnostic.Values["subject_width_ppm"] != 1000000 || len(c.Observations[0].Segments) != 2 || len(c.Observations[1].Segments) != 0 || h.planner.plans != 0 {
+		t.Fatalf("lost completed work or authoritative locator: %+v %v", c, err)
+	}
+}

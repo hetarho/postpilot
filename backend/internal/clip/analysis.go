@@ -107,22 +107,41 @@ func ValidateChunkInput(l AnalysisLimits, in ChunkInput) error {
 }
 func ValidateSegments(l AnalysisLimits, segments []Segment, start, end int) error {
 	if len(segments) == 0 || len(segments) > l.MaxSegments {
-		return ErrInvalid
+		return observationViolation("observe_segment_count", 0, map[string]int{"segment_count": len(segments)})
 	}
 	previous := start
-	for _, s := range segments {
-		if s.StartMS < previous || s.EndMS <= s.StartMS || s.EndMS > end || !normalized(s.Focal.X) || !normalized(s.Focal.Y) || !ValidRegion(s.Subject) || !bounded(s.Event, 0, l.MaxTextRunes) || !bounded(s.Speech, 0, l.MaxTextRunes) || !bounded(s.Quality, 1, l.MaxTextRunes) || strings.TrimSpace(s.Quality) == "" || len(s.Subjects) > l.MaxSubjects {
-			return ErrInvalid
+	for i, s := range segments {
+		timing := map[string]int{"start_ms": s.StartMS, "end_ms": s.EndMS, "previous_end_ms": previous, "duration_ms": end - start}
+		if s.StartMS < start || s.EndMS <= s.StartMS || s.EndMS > end {
+			return observationViolation("observe_segment_time", i+1, timing)
+		}
+		if s.StartMS < previous {
+			return observationViolation("observe_segment_overlap", i+1, timing)
+		}
+		if !normalized(s.Focal.X) || !normalized(s.Focal.Y) {
+			return observationViolation("observe_focal", i+1, observationGeometry(s.Focal, s.Subject))
+		}
+		if !ValidRegion(s.Subject) {
+			return observationViolation("observe_subject_bounds", i+1, observationGeometry(s.Focal, s.Subject))
+		}
+		if !bounded(s.Event, 0, l.MaxTextRunes) || !bounded(s.Speech, 0, l.MaxTextRunes) || !bounded(s.Quality, 1, l.MaxTextRunes) {
+			return observationViolation("observe_text_length", i+1, map[string]int{"event_runes": len([]rune(s.Event)), "speech_runes": len([]rune(s.Speech)), "quality_runes": len([]rune(s.Quality))})
+		}
+		if strings.TrimSpace(s.Quality) == "" {
+			return observationViolation("observe_quality", i+1, nil)
+		}
+		if len(s.Subjects) > l.MaxSubjects {
+			return observationViolation("observe_subject_count", i+1, map[string]int{"subject_count": len(s.Subjects)})
 		}
 		description := strings.TrimSpace(s.Event) != "" || strings.TrimSpace(s.Speech) != ""
 		for _, subject := range s.Subjects {
 			if !bounded(subject, 1, l.MaxTextRunes) || strings.TrimSpace(subject) == "" {
-				return ErrInvalid
+				return observationViolation("observe_subject_text", i+1, map[string]int{"subject_runes": len([]rune(subject))})
 			}
 			description = true
 		}
 		if !description {
-			return ErrInvalid
+			return observationViolation("observe_description", i+1, nil)
 		}
 		previous = s.EndMS
 	}

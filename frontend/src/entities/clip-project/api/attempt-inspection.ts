@@ -49,6 +49,43 @@ export function toClipAttemptInspection(value: ProtoClipAttemptInspection): Clip
         r.endMs > r.startMs,
     }
   })
+  const unsigned = new Set([
+    'source',
+    'chunk',
+    'cut',
+    'cut_count',
+    'target_ms',
+    'before_ms',
+    'after_ms',
+    'remaining_ms',
+    'min_ms',
+    'max_ms',
+    'transition_ms',
+    'backward_ms',
+    'segment',
+    'segment_count',
+    'duration_ms',
+    'expected_index',
+    'event_runes',
+    'speech_runes',
+    'quality_runes',
+    'subject_count',
+    'subject_runes',
+  ])
+  const signed = new Set([
+    'actual_index',
+    'start_ms',
+    'end_ms',
+    'previous_end_ms',
+    'raw_start_ms',
+    'raw_end_ms',
+    'focal_x_ppm',
+    'focal_y_ppm',
+    'subject_x_ppm',
+    'subject_y_ppm',
+    'subject_width_ppm',
+    'subject_height_ppm',
+  ])
   return {
     ...out,
     status: 'available',
@@ -64,7 +101,11 @@ export function toClipAttemptInspection(value: ProtoClipAttemptInspection): Clip
       : 'unknown',
     validationPhase: value.validationPhase,
     measurements: Object.fromEntries(
-      Object.entries(value.measurements).filter(([, n]) => bounded(n, 180000000)),
+      Object.entries(value.measurements).filter(([key, n]) =>
+        unsigned.has(key)
+          ? bounded(n, 180000000)
+          : signed.has(key) && Number.isInteger(n) && Math.abs(n) <= 180000000,
+      ),
     ),
   }
 }

@@ -105,3 +105,48 @@ it('keeps completed observations visible when original playback fails and when r
   expect(screen.getByText('Original analysis: 2 of 3 chunks completed')).toBeVisible()
   expect(screen.getAllByText('이번 시도의 관찰')[0]).toBeVisible()
 })
+
+it.each(['ko', 'en'] as const)(
+  'explains observation geometry and preserves historical uncertainty in %s',
+  (language) => {
+    initializeI18n(language)
+    const p = failedProject()
+    p.latestJob!.stage = 'analyze'
+    Object.assign(p.attemptInspection!, {
+      stage: 'analyze',
+      completedChunks: 19,
+      totalChunks: 20,
+      validationPhase: 'observation',
+      validationCheck: 'observe_subject_bounds',
+      measurements: {
+        source: 20,
+        chunk: 20,
+        segment: 1,
+        duration_ms: 3115,
+        subject_x_ppm: -100000,
+        subject_width_ppm: 1200000,
+      },
+    })
+    const { rerender } = render(<ClipAttemptInspection project={p} localSources={[]} />)
+    expect(
+      screen.getByText(
+        language === 'ko'
+          ? 'AI가 표시한 초점이나 등장 대상의 위치·크기가 올바르지 않았어요.'
+          : 'The focal point or the subject’s position or size was invalid.',
+      ),
+    ).toBeVisible()
+    expect(screen.getByText('-10%')).toBeVisible()
+    expect(screen.getByText('120%')).toBeVisible()
+    expect(
+      screen.getByText(language === 'ko' ? '확인이 필요한 관찰 구간' : 'Observation segment'),
+    ).toBeVisible()
+    expect(screen.getAllByText('이번 시도의 관찰')[0]).toBeVisible()
+    p.attemptInspection!.validationCheck = 'unknown'
+    rerender(<ClipAttemptInspection project={p} localSources={[]} />)
+    expect(
+      screen.getByText(
+        language === 'ko' ? /세부 검증 사유가 기록되지 않은/ : /no detailed validation reason/,
+      ),
+    ).toBeVisible()
+  },
+)

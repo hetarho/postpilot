@@ -22,4 +22,10 @@ func TestAttemptInspectionProjectionKeepsProvenanceAndClosedDiagnostics(t *testi
 	if attemptInspectionProto("new-attempt", "prepare", c, nil).Status != "missing" || attemptInspectionProto("attempt", "plan", nil, nil).Status != "missing" || attemptInspectionProto("attempt", "plan", nil, errors.New("private DB detail")).Status != "unavailable" {
 		t.Fatal("absence or cross-attempt identity lost")
 	}
+	c.Diagnostic = clip.AttemptDiagnostic{Check: "observe_focal", Phase: "observation", Values: map[string]int{"source": 2, "chunk": 3, "segment": 1, "focal_x_ppm": -100000, "raw_start_ms": -10, "private-field": 9}}
+	p = attemptInspectionProto("attempt", "analyze", c, nil)
+	raw, err = protojson.Marshal(p)
+	if err != nil || p.ValidationCheck != "observe_focal" || p.ValidationPhase != "observation" || p.Measurements["source"] != 2 || p.Measurements["chunk"] != 3 || p.Measurements["segment"] != 1 || p.Measurements["focal_x_ppm"] != -100000 || p.Measurements["raw_start_ms"] != -10 || len(p.Measurements) != 5 || strings.Contains(string(raw), "private-field") {
+		t.Fatal(p, err)
+	}
 }

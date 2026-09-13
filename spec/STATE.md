@@ -30,7 +30,7 @@
 | THEME | 12 | 12 | - | 0 |
 | MKT | 4 | 4 | - | 0 |
 | VIDEO | 2 | 2 | - | 1 |
-| CLIP | 14 | 14 | - | 0 |
+| CLIP | 15 | 15 | - | 0 |
 | CDS | 10 | 10 | - | 2 |
 | BILL | 4 | 4 | - | 0 |
 
@@ -43,13 +43,21 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
+| T139 | Diagnose rejected clip observations | CLIP LANG ARCH | T138 | doing@260913.obs |
 | T110 | Release QA on the Naver app and the overlay measurement | CDS CLIP | T108 | blocked@260912 |
 
 ## next
-- T110 must refresh CLIP@14 / CDS@10 before resuming because mandatory cards, disclosure and fact QA changed; it remains owner-blocked: privately load a 9:16 clip with both cards in the Naver picker without publishing, capture the clip-tab overlays and supply the images for CDS-11 measurement. Remaining CDS interpretations are recorded in the results of T107, T108, T109 and T115 (contrast/card geometry, audio seams, exposure and frequency, footage-bound duration).
+- implement-task T139, verify and push observation diagnostics.
+- T110 must refresh CLIP@15 / CDS@10 before resuming because mandatory cards, disclosure and fact QA changed; it remains owner-blocked: privately load a 9:16 clip with both cards in the Naver picker without publishing, capture the clip-tab overlays and supply the images for CDS-11 measurement. Remaining CDS interpretations are recorded in the results of T107, T108, T109 and T115 (contrast/card geometry, audio seams, exposure and frequency, footage-bound duration).
 - T008 needs the owner present: refresh PUB@5 / ARCH@2, rerun postpilot-agent setup before installation for driver signature smarteditor-one-20260910-a6, and cancel or deliberately reuse the queued 20260905-test job; after completion, update PUB for VIDEO-17 and TMPL-39.
 
 ## log
+- 260913 T139 verification (obs); local gates and 16 browser cases pass, prepare push and await CI/Workers/backend rollout before done
+- 260913 T139 claimed (obs); implement observation diagnostic coverage and checkpoint locator preservation
+- 260913 create-task CLIP done (obs); T139 consumes r15, preserve existing rejection and accounting behavior
+- 260913 create-task CLIP start (obs)
+- 260913 update-ssot CLIP r15 done (obs); observation diagnostic detail, no validation relaxation or partial-generation policy change
+- 260913 update-ssot CLIP start (obs); close missing observation-validation diagnostics exposed by source 20 failure
 - 260913 T138 done (diag); b4f5b9a shipped, CI/Workers/backend rollout green, migration 50 and live health verified; partial inspection, safe diagnostics and timeline repair pass all gates
 - 260913 T138 verification (diag); local gates and 30 browser cases pass, b4f5b9a pushed; await CI/backend rollout before done
 - 260913 T138 claimed (diag); implement checkpoint inspection, failure diagnostics and timeline repair
@@ -64,9 +72,3 @@
 - 260913 update-ssot CLIP r13 THEME r12 done (guard); retained source playback and one cancellation confirmation, no billing formula change
 - 260913 create-task CLIP THEME start (guard)
 - 260913 update-ssot CLIP THEME start (guard); allow source playback during production and require one explicit cancellation confirmation
-- 260913 T132 done (clip); composition/lifecycle quality, retained preview recovery and keyboard layout pass all local, production-media and resource gates; T125–T136 implemented and ready for final commit
-- 260913 T132 verification (clip); offline composition and lifecycle gates pass; fix reopened-source preview hydration and pin only the frame above keyboard/action controls, finish local gates
-- 260913 T132 claimed (clip); T136 committed as 79141fa with a clean worktree, run offline semantic/frame/lifecycle integration and archive review evidence
-- 260913 T136 done (clip); explicit confirmation, focused cancellation and retained-original retries pass local gates and 48 browser cases; commit then T132 integration
-- 260913 T136 claimed (clip); T135 committed as fd9364c with a clean worktree, connect save-flushed confirmation and focused cancellation progress
-- 260913 T135 done (clip); explicit matching-result confirmation, irreversible source cleanup and result download pass local and production checks; commit then T136 UI

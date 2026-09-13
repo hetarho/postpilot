@@ -214,6 +214,8 @@ func logJobFailure(found Job, failure Failure, err error) {
 		if errors.As(err, &output) {
 			// Do not trust arbitrary error implementations or reflected field names.
 			switch code := output.OutputValidationCode(); code {
+			case "observe_source_identity", "observe_chunk_identity", "observe_segment_fields", "observe_segment_count", "observe_segment_time", "observe_segment_overlap", "observe_focal", "observe_subject_bounds", "observe_text_length", "observe_quality", "observe_subject_count", "observe_subject_text", "observe_description", "observe_scene", "observe_silent_speech":
+				attrs = append(attrs, "output_validation", code)
 			case "output_encoding_or_size", "output_json", "output_shape", "output_field_type",
 				"plan_required", "plan_cut_fields", "plan_caption_fields", "plan_source",
 				"plan_caption_time", "plan_volume", "plan_ratio", "plan_target_duration",

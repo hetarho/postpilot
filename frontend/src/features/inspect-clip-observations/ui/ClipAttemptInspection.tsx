@@ -7,6 +7,24 @@ import { ClipObservationViewer } from './ClipObservationViewer'
 type Inspection = NonNullable<ClipProject['attemptInspection']>
 type Candidate = Inspection['ranges'][number]
 
+const observationChecks = {
+  observe_source_identity: 'inspection.observationIdentity',
+  observe_chunk_identity: 'inspection.observationIdentity',
+  observe_segment_fields: 'inspection.observationFields',
+  observe_segment_count: 'inspection.observationCount',
+  observe_segment_time: 'inspection.observationTime',
+  observe_segment_overlap: 'inspection.observationOverlap',
+  observe_focal: 'inspection.observationGeometry',
+  observe_subject_bounds: 'inspection.observationGeometry',
+  observe_text_length: 'inspection.observationLength',
+  observe_quality: 'inspection.observationQuality',
+  observe_subject_count: 'inspection.observationCount',
+  observe_subject_text: 'inspection.observationFields',
+  observe_description: 'inspection.observationDescription',
+  observe_scene: 'inspection.observationScene',
+  observe_silent_speech: 'inspection.observationAudio',
+} as const
+
 function CandidatePlayback({
   range,
   source,
@@ -111,8 +129,12 @@ export function ClipAttemptInspection({
   const source = active ? inspection?.observations.sources[active.source - 1]?.source : undefined
   const phase = inspection?.validationPhase
   const check = inspection?.validationCheck
+  const observationExplanation = check
+    ? observationChecks[check as keyof typeof observationChecks]
+    : undefined
   const explanation =
-    phase === 'timeline_grow'
+    observationExplanation ??
+    (phase === 'timeline_grow'
       ? 'inspection.tooShort'
       : phase === 'timeline_shrink'
         ? 'inspection.cannotTrim'
@@ -128,7 +150,7 @@ export function ClipAttemptInspection({
                   ? 'inspection.rangeInvalid'
                   : check === 'plan_caption_time'
                     ? 'inspection.captionTimeInvalid'
-                    : 'inspection.validationFailed'
+                    : 'inspection.validationFailed')
   const stage = job.stage
   const knownStage =
     stage && ['prepare', 'analyze', 'plan', 'render', 'save', 'cleanup'].includes(stage)
@@ -166,25 +188,55 @@ export function ClipAttemptInspection({
           {inspection.evidenceLimited && (
             <Typography variant="body">{t('inspection.limited')}</Typography>
           )}
-          {job.status === 'failed' && <Typography variant="body">{t(explanation)}</Typography>}
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-2">
-            {(['target_ms', 'before_ms', 'after_ms', 'remaining_ms', 'cut', 'source'] as const).map(
-              (key) => {
-                const value = inspection.measurements[key]
-                return value === undefined ? null : (
-                  <div key={key} className="min-w-0">
-                    <Typography as="dt" variant="label" className="text-content-secondary">
-                      {t(`inspection.measurements.${key}`)}
-                    </Typography>
-                    <Typography as="dd" variant="body">
-                      {key.endsWith('_ms')
-                        ? t('inspection.seconds', { value: value / 1000 })
+          {job.status === 'failed' && (
+            <>
+              <Typography variant="body">{t(explanation)}</Typography>
+              {(!check || check === 'unknown') && (
+                <Typography variant="body" className="text-content-secondary">
+                  {t('inspection.detailUnknown')}
+                </Typography>
+              )}
+            </>
+          )}
+          <dl className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
+            {(
+              [
+                'target_ms',
+                'before_ms',
+                'after_ms',
+                'remaining_ms',
+                'cut',
+                'source',
+                'chunk',
+                'segment',
+                'segment_count',
+                'duration_ms',
+                'raw_start_ms',
+                'raw_end_ms',
+                'focal_x_ppm',
+                'focal_y_ppm',
+                'subject_x_ppm',
+                'subject_y_ppm',
+                'subject_width_ppm',
+                'subject_height_ppm',
+              ] as const
+            ).map((key) => {
+              const value = inspection.measurements[key]
+              return value === undefined ? null : (
+                <div key={key} className="min-w-0">
+                  <Typography as="dt" variant="label" className="text-content-secondary">
+                    {t(`inspection.measurements.${key}`)}
+                  </Typography>
+                  <Typography as="dd" variant="body">
+                    {key.endsWith('_ms')
+                      ? t('inspection.seconds', { value: value / 1000 })
+                      : key.endsWith('_ppm')
+                        ? t('inspection.percent', { value: value / 10000 })
                         : value}
-                    </Typography>
-                  </div>
-                )
-              },
-            )}
+                  </Typography>
+                </div>
+              )
+            })}
           </dl>
           <Typography variant="fieldTitle">{t('inspection.ranges')}</Typography>
           <Typography variant="body" className="text-content-secondary">

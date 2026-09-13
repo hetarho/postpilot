@@ -89,7 +89,7 @@ func TestClipWorkerLogsOnlyCodeOwnedOutputViolations(t *testing.T) {
 	previous := slog.Default()
 	slog.SetDefault(slog.New(slog.NewJSONHandler(&logs, nil)))
 	t.Cleanup(func() { slog.SetDefault(previous) })
-	for _, code := range []string{"plan_timeline", "plan_cut_range", "plan_caption_time", "output_shape", "private-canary"} {
+	for _, code := range []string{"plan_timeline", "plan_cut_range", "plan_caption_time", "output_shape", "observe_subject_bounds", "observe_segment_overlap", "observe_source_identity", "private-canary"} {
 		logs.Reset()
 		err := diagnosticStageError{stage: "plan", error: fmt.Errorf("private-canary: %w", outputDiagnosticError{error: llm.ErrBadOutput, code: code})}
 		logJobFailure(Job{ID: "owned-job", Kind: KindGenerateClip}, failureFromError(err), err)

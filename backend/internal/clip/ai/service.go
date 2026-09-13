@@ -152,7 +152,11 @@ func (s *Service) ObserveChunk(ctx context.Context, model llm.ModelRef, input cl
 		return clip.ChunkAnalysis{}, response.Usage, stageError("analyze", err)
 	}
 	result, err := parseChunk(s.cfg, input, response.Text)
-	return result, response.Usage, stageError("analyze", llm.ResponseParseError(response, err))
+	classified := llm.ResponseParseError(response, err)
+	if d, ok := clip.DiagnosticFromError(err); ok {
+		classified = clip.WithAttemptDiagnostic(classified, d)
+	}
+	return result, response.Usage, stageError("analyze", classified)
 }
 func (s *Service) Plan(ctx context.Context, model llm.ModelRef, input clip.PlanningInput) (clip.EditPlan, llm.Usage, error) {
 	if err := ctx.Err(); err != nil {
