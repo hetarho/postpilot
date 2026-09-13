@@ -25,7 +25,7 @@ import {
 } from '@/features/generate-clip'
 import { StageModelSelect } from '@/features/select-model'
 import { ClipSourcePicker, useClipSourceUpload } from '@/features/upload-clip-sources'
-import { ClipObservationViewer } from '@/features/inspect-clip-observations'
+import { ClipObservationViewer, ClipAttemptInspection } from '@/features/inspect-clip-observations'
 import { appFailureFromConnect } from '@/shared/api'
 import {
   ActionBar,
@@ -500,6 +500,20 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
               </Button>
             )}
         </>
+      )}
+      {/* Attempt inspection precedes the editor so its preview/action docks cannot
+          cover the evidence, including when enlarged text makes those docks tall. */}
+      {!focused && !project.finalized && step !== 'finish' && (
+        <ClipAttemptInspection
+          key={job?.id}
+          project={project}
+          currentJobId={job?.id}
+          resolvePlayback={upload.ensurePlayback}
+          localSources={upload.entries.map((entry) => ({
+            fingerprint: entry.metadata.fingerprint,
+            url: entry.previewURL,
+          }))}
+        />
       )}
       {!focused && (
         <div

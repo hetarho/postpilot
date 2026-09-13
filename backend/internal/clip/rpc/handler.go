@@ -373,6 +373,10 @@ func (h *Handler) GetClipProject(ctx context.Context, req *connect.Request[v1.Ge
 			return nil, toConnectError(err)
 		}
 		out.LatestJob = jobrpc.ToProto(j)
+		if value.Finalized == nil && h.generation != nil && j != nil && (j.Status == "failed" || j.Status == "cancelled") {
+			c, readErr := h.generation.AttemptCheckpoint(ctx, user, value.ID, j.ID)
+			out.AttemptInspection = attemptInspectionProto(j.ID, j.Stage, c, readErr)
+		}
 		if j != nil {
 			snapshot, err := h.jobs.LatestClipSnapshot(ctx, user, value.ID)
 			if err != nil {

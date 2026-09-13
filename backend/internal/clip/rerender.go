@@ -165,6 +165,22 @@ func (s *GenerationService) RunRender(ctx context.Context, user, job, project st
 		return ErrCompositionUnavailable
 	}
 	stage := "prepare"
+	checkpoint := AttemptCheckpoint{Version: 1, JobID: job, Stage: stage}
+	defer func() {
+		if err == nil {
+			return
+		}
+		checkpoint.Stage = stage
+		if d, ok := DiagnosticFromError(err); ok {
+			checkpoint.Diagnostic = d
+		}
+		if err != nil {
+			logAttemptDiagnostic(job, stage, checkpoint.Diagnostic)
+		}
+		recordCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), s.cfg.CleanupTimeout)
+		defer cancel()
+		s.checkpoint(recordCtx, user, project, checkpoint)
+	}()
 	defer func() {
 		if err != nil {
 			err = &StageFailure{stage, err}
@@ -221,7 +237,24 @@ func (s *GenerationService) RunRender(ctx context.Context, user, job, project st
 		return err
 	}
 	b = renderBatchSources(plan, b)
-	set := func(name string, n, total int) { stage = name; progress(name, n, total) }
+	observations, _ := RetainedObservations(p)
+	for _, a := range observations {
+		checkpoint.Observations = append(checkpoint.Observations, SourceAnalysis{Source: a.Source})
+	}
+	checkpoint.TotalSources = len(b.Sources)
+	checkpoint.Diagnostic = AttemptDiagnostic{Ranges: AttemptRangeDiagnostics(plan, observations), Values: map[string]int{"cut_count": len(plan.Cuts), "target_ms": p.TargetDurationMS, "after_ms": plan.DurationMS}}
+	set := func(name string, n, total int) {
+		stage, checkpoint.Stage = name, name
+		if name == "prepare" {
+			checkpoint.Diagnostic.Values["source"] = min(n+1, total)
+		}
+		if progress != nil {
+			progress(name, n, total)
+		}
+		if name != "cleanup" {
+			s.checkpoint(ctx, user, project, checkpoint)
+		}
+	}
 	var result Result
 	err = s.media.WithWorkspace(ctx, job, func(ws MediaWorkspace) error {
 		set("prepare", 0, len(b.Sources))

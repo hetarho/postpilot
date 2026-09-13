@@ -50,6 +50,7 @@ export interface ClipProject extends ClipProjectDraft {
   latestAttempt?: { jobId: string; batchId: string; quoteId: string }
   accounting?: ClipAccounting
   editing?: ClipEditingState
+  attemptInspection?: ClipAttemptInspection
   observations?: ClipObservations
   result?: {
     id?: string
@@ -168,4 +169,20 @@ export function validClipProject(
           value.answers.some((a) => a.label === field.label && !!a.text.trim()),
         ))
   )
+}
+
+export interface ClipAttemptInspection {
+  evidenceLimited?: boolean
+  jobId: string
+  status: 'available' | 'missing' | 'unavailable'
+  stage: string
+  completedChunks: number
+  totalChunks: number
+  completedSources: number
+  totalSources: number
+  observations: ClipObservations
+  ranges: Array<{ cut: number; source: number; startMs: number; endMs: number; valid: boolean }>
+  validationCheck: string
+  validationPhase: string
+  measurements: Record<string, number>
 }

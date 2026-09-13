@@ -12,6 +12,10 @@ func observationsProto(p clip.Project) *v1.ClipObservations {
 	if err != nil {
 		return &v1.ClipObservations{Status: "unavailable"}
 	}
+	return analysisObservationsProto(analyses)
+}
+
+func analysisObservationsProto(analyses []clip.SourceAnalysis) *v1.ClipObservations {
 	out := &v1.ClipObservations{Status: "empty"}
 	for _, a := range analyses {
 		source := a.Source

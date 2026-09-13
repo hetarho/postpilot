@@ -214,6 +214,27 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 		return err
 	}
 	stage := "prepare"
+	checkpoint := AttemptCheckpoint{Version: 1, JobID: job, Stage: stage}
+	defer func() {
+		if err == nil {
+			return
+		}
+		checkpoint.Stage = stage
+		if d, ok := DiagnosticFromError(err); ok {
+			checkpoint.Diagnostic = d
+		} else if err != nil {
+			var output interface{ OutputValidationCode() string }
+			if errors.As(err, &output) {
+				checkpoint.Diagnostic.Check = output.OutputValidationCode()
+			}
+		}
+		if err != nil {
+			logAttemptDiagnostic(job, stage, checkpoint.Diagnostic)
+		}
+		recordCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), s.cfg.CleanupTimeout)
+		defer cancel()
+		s.checkpoint(recordCtx, user, project, checkpoint)
+	}()
 	// Resolve cleanup from the durable linkage, even if payload decoding fails.
 	defer func() {
 		if err != nil {
@@ -262,8 +283,18 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 	if q.ConsumedJobID != job || q.ProjectID != project || q.BatchID != b.ID || q.Pricing != pricing {
 		return ErrQuoteChanged
 	}
+	checkpoint.TotalSources = len(b.Sources)
+	s.checkpoint(ctx, user, project, checkpoint)
 	set := func(name string, done, total int) {
 		stage = name
+		checkpoint.Stage = name
+		slog.Info("clip work progress", "job", job, "stage", name, "completed", done, "total", total)
+		if name == "prepare" {
+			checkpoint.Diagnostic.Values = map[string]int{"source": min(done+1, total)}
+		}
+		if name != "cleanup" {
+			s.checkpoint(ctx, user, project, checkpoint)
+		}
 		if progress != nil {
 			progress(name, done, total)
 		}
@@ -278,6 +309,11 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 			return err
 		}
 		count := len(prepared)
+		checkpoint.TotalChunks = count
+		checkpoint.Observations = make([]SourceAnalysis, len(sources))
+		for i, source := range sources {
+			checkpoint.Observations[i].Source = source
+		}
 		if count > pricing.ObservationCalls {
 			return ErrQuoteChanged
 		}
@@ -311,24 +347,49 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 		ctx = admitted
 		set("analyze", 0, count)
 		chunks := make([]ChunkAnalysis, 0, count)
-		for _, v := range prepared {
+		for index, v := range prepared {
+			checkpoint.Diagnostic.Values = map[string]int{"source": v.source + 1, "chunk": index + 1}
+			if err := s.checkpoint(ctx, user, project, checkpoint); err != nil {
+				return err
+			}
+			slog.Info("clip analysis started", "job", job, "source", v.source+1, "chunk", index+1, "total", count)
 			observation, err := s.observe(ctx, v.chunk, sources[v.source], pricing.Observe)
 			if err != nil {
 				return admissionRefusal(pricing.Observe.Ref, err)
 			}
+			// The observer validates its chunk; check the identity and range again
+			// before making it durable or allowing the next paid call.
+			source := sources[v.source]
+			if observation.SourceID != source.ID || observation.Fingerprint != source.Fingerprint || observation.Index != v.chunk.Index || observation.OffsetMS != v.chunk.OffsetMS || observation.DurationMS != v.chunk.DurationMS {
+				return ErrInvalid
+			}
+			if err := ValidateSegments(s.cfg.Analysis, observation.Segments, observation.OffsetMS, observation.OffsetMS+observation.DurationMS); err != nil {
+				return err
+			}
 			chunks = append(chunks, observation)
+			checkpoint.Observations[v.source].Segments = append(checkpoint.Observations[v.source].Segments, observation.Segments...)
+			checkpoint.CompletedChunks = len(chunks)
+			if index+1 == count || prepared[index+1].source != v.source {
+				checkpoint.CompletedSources++
+			}
 			set("analyze", len(chunks), count)
 		}
 		analyses, err := MergeAnalyses(s.cfg.Analysis, sources, chunks)
 		if err != nil {
 			return err
 		}
+		checkpoint.Diagnostic = AttemptDiagnostic{}
 		set("plan", 0, 1)
+		if err := s.checkpoint(ctx, user, project, checkpoint); err != nil {
+			return err
+		}
 		edit, _, err := s.planner.Plan(ctx, pricing.Plan.Ref, PlanningInput{Composition: p.Composition, Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Analyses: analyses, Policy: pricing.Plan, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: p.CTA})
 		if err != nil {
 			return err
 		}
+		checkpoint.Diagnostic = AttemptDiagnostic{Ranges: AttemptRangeDiagnostics(edit, analyses), Values: map[string]int{"cut_count": len(edit.Cuts), "target_ms": p.TargetDurationMS, "after_ms": edit.DurationMS, "transition_ms": edit.TransitionTotal()}}
 		set("render", 0, 1)
+		logAttemptDiagnostic(job, "render", checkpoint.Diagnostic)
 		renderSources := make([]RenderSource, len(sources))
 		for i, v := range sources {
 			renderSources[i] = v.RenderSource

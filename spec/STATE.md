@@ -30,7 +30,7 @@
 | THEME | 12 | 12 | - | 0 |
 | MKT | 4 | 4 | - | 0 |
 | VIDEO | 2 | 2 | - | 1 |
-| CLIP | 13 | 13 | - | 0 |
+| CLIP | 14 | 14 | - | 0 |
 | CDS | 10 | 10 | - | 2 |
 | BILL | 4 | 4 | - | 0 |
 
@@ -43,13 +43,20 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
+| T138 | Inspect completed clip work and diagnose timeline failures | CLIP LANG ARCH | T137 | doing@260913.diag |
 | T110 | Release QA on the Naver app and the overlay measurement | CDS CLIP | T108 | blocked@260912 |
 
 ## next
-- T110 must refresh CLIP@13 / CDS@10 before resuming because mandatory cards, disclosure and fact QA changed; it remains owner-blocked: privately load a 9:16 clip with both cards in the Naver picker without publishing, capture the clip-tab overlays and supply the images for CDS-11 measurement. Remaining CDS interpretations are recorded in the results of T107, T108, T109 and T115 (contrast/card geometry, audio seams, exposure and frequency, footage-bound duration).
+- implement-task T138, then commit and push after verification.
+- T110 must refresh CLIP@14 / CDS@10 before resuming because mandatory cards, disclosure and fact QA changed; it remains owner-blocked: privately load a 9:16 clip with both cards in the Naver picker without publishing, capture the clip-tab overlays and supply the images for CDS-11 measurement. Remaining CDS interpretations are recorded in the results of T107, T108, T109 and T115 (contrast/card geometry, audio seams, exposure and frequency, footage-bound duration).
 - T008 needs the owner present: refresh PUB@5 / ARCH@2, rerun postpilot-agent setup before installation for driver signature smarteditor-one-20260910-a6, and cancel or deliberately reuse the queued 20260905-test job; after completion, update PUB for VIDEO-17 and TMPL-39.
 
 ## log
+- 260913 T138 claimed (diag); implement checkpoint inspection, failure diagnostics and timeline repair
+- 260913 create-task CLIP done (diag); T138 consumes CLIP r14 with bounded latest-attempt checkpoints and bidirectional timing repair
+- 260913 create-task CLIP start (diag)
+- 260913 update-ssot CLIP r14 done (diag); separate intermediate inspection and bounded diagnostics; CDS/LANG rules remain compatible, T110 must refresh before owner QA
+- 260913 update-ssot CLIP CDS LANG start (diag); expose completed attempt work and actionable failure diagnostics, repair reproducible timeline failures
 - 260913 T137 done (grd); original playback and one cancellation confirmation pass 1,809 frontend tests, local gates and 40 browser surfaces including readable 200-percent text
 - 260913 T137 verification (grd); visual review found unreadable confirmation labels at 200% text despite geometry checks, restore doing and adapt the narrow footer
 - 260913 T137 claimed (grd); implement original preview and cancellation confirmation
@@ -65,8 +72,3 @@
 - 260913 T135 done (clip); explicit matching-result confirmation, irreversible source cleanup and result download pass local and production checks; commit then T136 UI
 - 260913 T135 claimed (clip); T134 committed as 1362710 with a clean worktree, implement explicit finalization and durable original deletion
 - 260913 T134 done (clip); durable cancellation, atomic result completion and reservation settlement pass local, production-media and 27 release gates; commit then T135 finalization
-- 260913 T134 claimed (clip); T131 committed as 321a1be with a clean worktree, implement durable cancellation and reservation-based settlement
-- 260913 T131 done (clip); timeline editing, exact phrase windows, autosave/undo/conflicts and 24 mobile browser combinations pass local and production-media gates; commit then T134 cancellation
-- 260913 T131 claimed (clip); T130 committed as f681f3a with a clean worktree, implement preview-led timeline editing and autosave
-- 260913 T130 done (clip); bounded current-draft playback and server glyph preparation pass local, production-media and browser gates; commit then T131 timeline
-- 260913 T130 verification (clip); bounded source-free preview passes real-font and ko/en browser checks, complete local gates before commit

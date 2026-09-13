@@ -128,6 +128,8 @@ message ClipProject {
   optional bool can_finalize = 25;
   // Empty when ready; finalized | busy | missing_render | stale_render | invalid_plan | unavailable.
   string finalization_refusal = 26;
+  // Detail only, separate from canonical successful state; no media URLs.
+  ClipAttemptInspection attempt_inspection = 27;
 }
 message ClipObservations {
   // available | empty | unavailable; older servers omit this message.
@@ -500,4 +502,28 @@ message ClipCompositionSnapshot {
 message ClipProjectComposition {
   ClipCompositionSnapshot snapshot = 1;
   ClipCompositionInputs inputs = 2;
+}
+
+message ClipAttemptInspection {
+  string job_id = 1;
+  // available | missing | unavailable
+  string status = 2;
+  string stage = 3;
+  int32 completed_chunks = 4;
+  int32 total_chunks = 5;
+  int32 completed_sources = 6;
+  int32 total_sources = 7;
+  ClipObservations observations = 8;
+  repeated ClipAttemptRange ranges = 9;
+  string validation_check = 10;
+  string validation_phase = 11;
+  map<string, int32> measurements = 12;
+  bool evidence_limited = 13;
+}
+message ClipAttemptRange {
+  int32 cut = 1;
+  int32 source = 2;
+  int32 start_ms = 3;
+  int32 end_ms = 4;
+  bool valid = 5;
 }

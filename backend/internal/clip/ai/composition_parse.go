@@ -80,10 +80,27 @@ func selectedReferences(ids []string, evidence []clip.ObservedEvidence, complete
 	return out, true
 }
 
-func parseCompositionPlan(cfg Config, input clip.PlanningInput, raw string) (clip.EditPlan, error) {
+func parseCompositionPlan(cfg Config, input clip.PlanningInput, raw string) (out clip.EditPlan, err error) {
 	var wire compositionPlanJSON
+	candidate := clip.EditPlan{}
+	failedCut := 0
+	phase := "decode"
+	defer func() {
+		if err != nil {
+			if _, exists := clip.DiagnosticFromError(err); !exists {
+				err = planFailure(err, input, candidate, phase, failedCut)
+			}
+		}
+	}()
 	if err := decode(raw, cfg.MaxResponseBytes, compositionPlanShape, &wire); err != nil {
 		return clip.EditPlan{}, err
+	}
+	phase = "selection"
+	for _, c := range wire.Cuts {
+		if len(candidate.Cuts) >= cfg.Render.MaxCuts {
+			break
+		}
+		candidate.Cuts = append(candidate.Cuts, clip.Cut{SourceID: c.SourceID, StartMS: c.StartMS, EndMS: c.EndMS})
 	}
 	doc, problem := composition.Parse(input.Composition.Snapshot.Body, compositionLimits(cfg, input))
 	if problem != nil {
@@ -105,7 +122,8 @@ func parseCompositionPlan(cfg Config, input clip.PlanningInput, raw string) (cli
 	}
 	plan := clip.EditPlan{Ratio: wire.Ratio, Styles: slices.Clone(doc.Styles)}
 	seen, lastSection := map[string]bool{}, -1
-	for _, proposed := range wire.Cuts {
+	for index, proposed := range wire.Cuts {
+		failedCut = index + 1
 		section, exists := sections[proposed.SectionID]
 		if !exists || order[section.ID] < lastSection || section.Repeat == "" && seen[section.ID] {
 			return clip.EditPlan{}, outputError("composition_section_order")
@@ -126,16 +144,20 @@ func parseCompositionPlan(cfg Config, input clip.PlanningInput, raw string) (cli
 		}
 		plan.Cuts = append(plan.Cuts, cut)
 	}
+	failedCut = 0
 	// No category preset is consulted by the native timeline. Recompute evidence
 	// and item identity after every deterministic range adjustment.
 	if err := composeTimeline(cfg, input, &plan); err != nil {
 		return clip.EditPlan{}, err
 	}
+	candidate = plan
+	phase = "composition"
 	portable := &clip.PortablePlan{Snapshot: input.Composition.Snapshot, Inputs: input.Composition.Inputs, Observations: input.Analyses, TargetDurationMS: input.TargetDurationMS}
 	bindings := map[string]clip.ItemBinding{}
 	evidence := map[string][]clip.ObservedEvidence{}
 	lastItem := map[string]int{}
 	for i, cut := range plan.Cuts {
+		failedCut = i + 1
 		observed, covered := clip.CutEvidence(input.Analyses, cut)
 		if !covered {
 			return clip.EditPlan{}, outputError("composition_observation_gap")
@@ -164,6 +186,7 @@ func parseCompositionPlan(cfg Config, input clip.PlanningInput, raw string) (cli
 		bindings[cut.ID] = binding
 		portable.Cuts = append(portable.Cuts, composition.Cut{ID: cut.ID, SectionID: section.ID, SourceID: cut.SourceID, GroupID: binding.GroupID, ItemID: binding.ItemID, StartMS: cut.StartMS, EndMS: cut.EndMS, TransitionMS: cut.TransitionMS})
 	}
+	failedCut = 0
 	timeline, fallbacks, err := clip.ResolveSelectedComposition(doc, portable.Inputs, portable.Cuts, compositionLimits(cfg, input), cfg.MaxResponseBytes)
 	if err != nil {
 		return clip.EditPlan{}, err

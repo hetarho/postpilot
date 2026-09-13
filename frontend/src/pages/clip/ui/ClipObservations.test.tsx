@@ -5,6 +5,48 @@ import { renderAppAt } from '@/test/app'
 import { observedClipFixture } from '@/test/clip-observations'
 
 describe('observations in the clip workspace', () => {
+  it('reopens failed attempt work on both editable steps without replacing the previous video', async () => {
+    const project = observedClipFixture()
+    const job = { id: 'failed-attempt', kind: 'generate_clip', status: 'failed', stage: 'plan' }
+    const calls: string[] = []
+    renderAppAt('/clips/project', {
+      user: { id: 'alice' },
+      clips: {
+        calls,
+        projects: [
+          {
+            ...project,
+            latestJob: job,
+            attemptInspection: {
+              jobId: job.id,
+              status: 'available',
+              stage: 'plan',
+              completedChunks: 2,
+              totalChunks: 2,
+              completedSources: 2,
+              totalSources: 2,
+              observations: { status: 'empty', sources: [] },
+              ranges: [],
+              validationCheck: 'plan_timeline',
+              validationPhase: 'timeline_grow',
+              measurements: { after_ms: 12000 },
+            },
+          },
+        ],
+      },
+      jobs: { jobs: [job] },
+    })
+    expect(
+      await screen.findByRole('heading', { name: '이번 작업에서 확인할 수 있는 내용' }),
+    ).toBeVisible()
+    expect(screen.getByText('원본 분석 2 / 2 구간 완료')).toBeVisible()
+    const tabs = within(screen.getByRole('tablist', { name: '클립 단계' }))
+    await userEvent.click(tabs.getByRole('tab', { name: /클립 생성/ }))
+    expect(screen.getByRole('heading', { name: '이번 작업에서 확인할 수 있는 내용' })).toBeVisible()
+    expect(calls).not.toContain('StartClipGeneration')
+    expect(calls).not.toContain('StartClipRender')
+    expect(calls).not.toContain('QuoteClipGeneration')
+  })
   it('keeps observations available on both editable steps without invoking generation', async () => {
     const calls: string[] = []
     const project = observedClipFixture()

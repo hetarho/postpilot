@@ -59,6 +59,7 @@ export type {
   ClipProjectComposition as ProtoClipProjectComposition,
   ClipCompositionInputs as ProtoClipCompositionInputs,
   ClipObservations as ProtoClipObservations,
+  ClipAttemptInspection as ProtoClipAttemptInspection,
   ClipEditPlan as ProtoClipEditPlan,
   ClipEditingState as ProtoClipEditingState,
   ClipInformationField as ProtoClipInformationField,

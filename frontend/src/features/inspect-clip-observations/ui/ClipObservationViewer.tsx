@@ -5,6 +5,7 @@ import {
   observationCutUsage,
   observationSummary,
   type ClipEditPlan,
+  type ClipObservations,
   type ClipObservedSegment,
   type ClipProject,
   type ClipSourceObservation,
@@ -195,7 +196,9 @@ export function ClipObservationViewer({
   project,
   localSources,
   resolvePlayback,
+  attemptObservations,
 }: {
+  attemptObservations?: ClipObservations
   project: ClipProject
   localSources: ReadonlyArray<{ fingerprint: string; url: string }>
   resolvePlayback?: (fingerprint: string, refresh?: boolean) => Promise<string>
@@ -203,7 +206,7 @@ export function ClipObservationViewer({
   const { t } = useTranslation('clips')
   const id = useId()
   const [selected, setSelected] = useState('')
-  const observations = project.observations
+  const observations = attemptObservations ?? project.observations
   const sources = observations?.status === 'available' ? observations.sources : []
   const active = sources.find((item) => item.source.fingerprint === selected) ?? sources[0]
   const fingerprint = active?.source.fingerprint
@@ -218,10 +221,10 @@ export function ClipObservationViewer({
   return (
     <section aria-labelledby={`${id}-heading`} className="mt-10 mb-8 min-w-0 space-y-4">
       <Typography variant="title" id={`${id}-heading`}>
-        {t('observation.title')}
+        {t(attemptObservations ? 'inspection.observationsTitle' : 'observation.title')}
       </Typography>
       <Typography variant="body" className="text-content-secondary">
-        {t('observation.description')}
+        {t(attemptObservations ? 'inspection.observationsHelp' : 'observation.description')}
       </Typography>
       {!active ? (
         <Typography variant="body" className="text-content-secondary">
@@ -233,14 +236,16 @@ export function ClipObservationViewer({
         </Typography>
       ) : (
         <>
-          {previous && (
+          {previous && !attemptObservations && (
             <Typography variant="body" className="text-content-secondary">
               {t('observation.previous')}
             </Typography>
           )}
-          <Typography variant="body">
-            {t(savedPlan ? 'observation.savedPlan' : 'observation.renderedPlan')}
-          </Typography>
+          {!attemptObservations && (
+            <Typography variant="body">
+              {t(savedPlan ? 'observation.savedPlan' : 'observation.renderedPlan')}
+            </Typography>
+          )}
           <ClipSourceStrip
             label={t('observation.sources')}
             sources={sources.map(({ source, segments }) => ({
@@ -255,7 +260,7 @@ export function ClipObservationViewer({
           <SourceObservations
             key={active.source.fingerprint}
             observation={active}
-            plan={project.editing?.plan}
+            plan={attemptObservations ? undefined : project.editing?.plan}
             refreshPlayback={
               resolvePlayback ? () => resolvePlayback(active.source.fingerprint, true) : undefined
             }

@@ -476,6 +476,55 @@ export const clips = {
     leaveBody: '저장하지 않은 클립 설정이 사라져요.',
     leave: '나가기',
   },
+  inspection: {
+    title: '이번 작업에서 확인할 수 있는 내용',
+    help: '완료된 분석과 선택된 원본 구간을 확인할 수 있어요. 이전에 완성된 영상은 그대로 유지돼요.',
+    cancelledHelp:
+      '취소 전에 진행한 내용을 확인할 수 있어요. 확인해도 제작이 다시 시작되거나 크레딧이 차감되지 않아요.',
+    stoppedAt: '멈춘 단계: {{stage}}',
+    missing: '이 작업에는 중간 기록이 없어요. 이전 작업의 내용으로 대신 표시하지 않아요.',
+    unavailable: '중간 기록을 불러오지 못했어요. 페이지를 다시 열어 주세요.',
+    limited:
+      '기록량이 많아 일부 분석 내용만 보관됐어요. 완료 횟수와 실패 진단은 전체 작업 기준이에요.',
+    progress: '원본 분석 {{done}} / {{total}} 구간 완료',
+    manualHelp:
+      '이번 다시 렌더에서는 AI 분석을 실행하지 않았어요. 저장된 편집안에서 사용한 원본 구간을 확인할 수 있어요.',
+    tooShort:
+      '선택한 구간을 늘려도 영상의 최소 길이인 15초를 채울 수 없었어요. 아래 원본 구간을 확인해 주세요.',
+    cannotTrim:
+      '선택한 구간을 줄여도 목표 길이에 맞출 수 없었어요. 아래 원본 구간을 확인해 주세요.',
+    lengthMismatch: '컷 길이와 장면 전환 시간을 합산한 값이 영상 길이와 맞지 않았어요.',
+    sourceInvalid: '편집안에 선택하지 않은 원본이나 확인할 수 없는 컷이 포함됐어요.',
+    evidenceGap: '선택된 구간 중 AI가 관찰한 내용으로 확인할 수 없는 부분이 있어요.',
+    orderInvalid: '선택된 장면이나 항목의 순서가 템플릿의 순서와 맞지 않았어요.',
+    rangeInvalid: '선택된 컷의 시작·끝 시간이 원본 영상 범위를 벗어났어요.',
+    captionTimeInvalid: '자막이 표시되는 시간이 해당 컷의 범위와 맞지 않았어요.',
+    validationFailed:
+      '이 단계에서 작업을 마치지 못했어요. 아래에 남아 있는 내용부터 확인할 수 있어요.',
+    seconds: '{{value}}초',
+    ranges: '선택된 원본 구간',
+    rangeHelp:
+      '자막이 합성되기 전의 원본 구간이에요. 검증되지 않은 구간은 재생할 수 없어요. 완성된 영상 다운로드는 제공되지 않아요.',
+    cut: '컷 {{number}} 보기',
+    invalidCut: '컷 {{number}} · 구간 확인 불가',
+    noRanges: '아직 확인 가능한 선택 구간이 없어요.',
+    playing: '컷 {{cut}} · {{name}} · {{start}}–{{end}}초',
+    originalRange: '선택된 원본 구간 재생',
+    mediaMissing:
+      '이 원본을 재생할 수 없어요. 보관 기한이나 원본 파일을 확인해 주세요. 기록된 분석은 계속 볼 수 있어요.',
+    mediaLoading: '원본을 불러오는 중이에요.',
+    observationsTitle: '이번 작업에서 완료된 분석',
+    observationsHelp:
+      '실패하거나 취소되기 전에 기록된 분석이에요. 완성된 영상의 분석과 별도로 표시돼요.',
+    measurements: {
+      target_ms: '목표 길이',
+      before_ms: '보정 전 길이',
+      after_ms: '보정 후 길이',
+      remaining_ms: '조정하지 못한 길이',
+      cut: '확인이 필요한 컷',
+      source: '확인이 필요한 원본',
+    },
+  },
   observation: {
     title: 'AI가 관찰한 내용',
     description:

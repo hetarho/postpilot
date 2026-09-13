@@ -220,6 +220,14 @@ func TestComposeCannotFillTargetFromUnobservedOrReusedFootage(t *testing.T) {
 			if !errors.Is(err, llm.ErrBadOutput) || !errors.As(err, &diagnostic) || diagnostic.OutputValidationCode() != "plan_timeline" || len(models.calls) != 1 || measure.calls != 0 || usage != models.response.Usage {
 				t.Fatalf("unsafe timeline adjustment or paid retry: %v", err)
 			}
+			d, ok := clip.DiagnosticFromError(err)
+			phase := "timeline_grow"
+			if mode == "caption cannot shrink" {
+				phase = "timeline_shrink"
+			}
+			if !ok || d.Phase != phase || d.Values["remaining_ms"] <= 0 || d.Values["after_ms"] <= 0 || d.Values["target_ms"] != 15000 {
+				t.Fatalf("failure lost actionable timing measurements: %+v", d)
+			}
 		})
 	}
 }

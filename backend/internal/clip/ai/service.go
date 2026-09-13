@@ -202,7 +202,7 @@ func (s *Service) Plan(ctx context.Context, model llm.ModelRef, input clip.Plann
 		}
 	}
 	if err := validatePlan(s.cfg, input, result); err != nil {
-		return clip.EditPlan{}, response.Usage, stageError("plan", llm.ResponseParseError(response, err))
+		return clip.EditPlan{}, response.Usage, stageError("plan", planFailure(llm.ResponseParseError(response, err), input, result, "validation", 0))
 	}
 	return result, response.Usage, nil
 }

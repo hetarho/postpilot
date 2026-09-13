@@ -488,6 +488,55 @@ export const clips = {
     leaveBody: 'Your unsaved clip settings will be lost.',
     leave: 'Leave',
   },
+  inspection: {
+    title: 'Work available from this attempt',
+    help: 'Inspect completed observations and selected original ranges. Any previously completed video is preserved.',
+    cancelledHelp:
+      'Inspect work completed before cancellation. Viewing it does not resume production or consume credits.',
+    stoppedAt: 'Stopped at: {{stage}}',
+    missing:
+      'This attempt has no intermediate record. Content from an earlier attempt is not substituted.',
+    unavailable: 'The intermediate record could not be loaded. Reopen the page to try again.',
+    limited:
+      'Only part of the observations fit in the record. Completion counts and failure diagnostics cover the whole attempt.',
+    progress: 'Original analysis: {{done}} of {{total}} chunks completed',
+    manualHelp:
+      'This rerender made no AI analysis calls. You can inspect the original ranges used by the saved edit plan.',
+    tooShort:
+      'The selected ranges could not reach the 15-second minimum, even after extending them. Inspect the original ranges below.',
+    cannotTrim:
+      'The selected ranges could not be shortened to the target duration. Inspect the original ranges below.',
+    lengthMismatch: 'The cut lengths and transition overlaps did not add up to the video duration.',
+    sourceInvalid: 'The plan referenced an unselected original or an unrecognized cut.',
+    evidenceGap: 'Part of a selected range was not supported by recorded observations.',
+    orderInvalid: 'The selected scenes or items did not follow the template order.',
+    rangeInvalid: 'A selected cut started or ended outside its original video.',
+    captionTimeInvalid: 'A caption interval did not fit inside its cut.',
+    validationFailed: 'This stage could not finish. You can inspect the recorded work below.',
+    seconds: '{{value}} seconds',
+    ranges: 'Selected original ranges',
+    rangeHelp:
+      'These are original ranges before captions are composed. Unverified ranges cannot be played. There is no completed video to download from this attempt.',
+    cut: 'View cut {{number}}',
+    invalidCut: 'Cut {{number}} · unverified range',
+    noRanges: 'No inspectable selected ranges have been recorded yet.',
+    playing: 'Cut {{cut}} · {{name}} · {{start}}–{{end}} seconds',
+    originalRange: 'Play selected original range',
+    mediaMissing:
+      'This original cannot be played. Check its retention deadline or source file. Recorded observations remain available.',
+    mediaLoading: 'Loading the original.',
+    observationsTitle: 'Completed observations from this attempt',
+    observationsHelp:
+      'These observations were recorded before failure or cancellation, separately from the completed video.',
+    measurements: {
+      target_ms: 'Target duration',
+      before_ms: 'Duration before adjustment',
+      after_ms: 'Duration after adjustment',
+      remaining_ms: 'Unresolved duration',
+      cut: 'Cut to inspect',
+      source: 'Original to inspect',
+    },
+  },
   observation: {
     title: 'What AI observed',
     description:

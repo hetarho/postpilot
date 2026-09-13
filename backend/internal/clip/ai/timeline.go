@@ -12,7 +12,18 @@ import (
 // composeTimeline compiles model timing hints into an executable timeline. The
 // model selects footage and copy; arithmetic must not require a second paid call.
 // This boundary is used only for fresh AI output, never persisted/manual plans.
-func composeTimeline(cfg Config, in clip.PlanningInput, plan *clip.EditPlan) error {
+func composeTimeline(cfg Config, in clip.PlanningInput, plan *clip.EditPlan) (err error) {
+	phase := "selection"
+	values := map[string]int{"target_ms": in.TargetDurationMS, "cut_count": len(plan.Cuts), "min_ms": cfg.Render.MinDurationMS, "max_ms": cfg.Render.MaxDurationMS}
+	defer func() {
+		if err != nil {
+			check := "plan_timeline"
+			if code, ok := err.(interface{ OutputValidationCode() string }); ok {
+				check = code.OutputValidationCode()
+			}
+			err = clip.WithAttemptDiagnostic(err, clip.AttemptDiagnostic{Check: check, Phase: phase, Values: values, Ranges: clip.AttemptRangeDiagnostics(*plan, in.Analyses)})
+		}
+	}()
 	if plan.Ratio != in.Ratio {
 		return outputError("plan_ratio")
 	}
@@ -28,6 +39,7 @@ func composeTimeline(cfg Config, in clip.PlanningInput, plan *clip.EditPlan) err
 	seen := map[string]bool{}
 	for i := range plan.Cuts {
 		c := &plan.Cuts[i]
+		values["cut"] = i + 1
 		// Identity, focal point and gain are checked HERE, before the design
 		// system measures anything: a plan the model got wrong must not cost a
 		// single glyph measurement.
@@ -96,12 +108,18 @@ func composeTimeline(cfg Config, in clip.PlanningInput, plan *clip.EditPlan) err
 		total += c.EndMS - c.StartMS
 	}
 	total -= plan.TransitionTotal()
+	delete(values, "cut")
+	values["before_ms"], values["transition_ms"] = total, plan.TransitionTotal()
 	if total >= cfg.Render.MinDurationMS && total <= cfg.Render.MaxDurationMS && math.Abs(float64(total)-float64(in.TargetDurationMS)) <= float64(cfg.TargetToleranceMS) {
 		plan.DurationMS = total
 		return nil
 	}
 	remaining := in.TargetDurationMS - total
 	grow := remaining > 0
+	phase = "timeline_grow"
+	if !grow {
+		phase = "timeline_shrink"
+	}
 	if !grow {
 		remaining = -remaining
 	}
@@ -156,6 +174,28 @@ func composeTimeline(cfg Config, in clip.PlanningInput, plan *clip.EditPlan) err
 			break
 		}
 	}
+	// Authored rhythm skips holdCutLengths, so end-only growth used to reject
+	// plans with enough observed footage BEFORE the selected start. Exhaust both
+	// directions without crossing a gap or a neighboring selected range.
+	if grow && remaining > 0 {
+		for i := range plan.Cuts {
+			c := &plan.Cuts[i]
+			amount := max(0, min(remaining, c.StartMS-backwardSceneFloor(plan, analyses, i)))
+			c.StartMS -= amount
+			for j := range c.Copies {
+				c.Copies[j].StartMS += amount
+				c.Copies[j].EndMS += amount
+			}
+			remaining -= amount
+			values["backward_ms"] += amount
+		}
+	}
+	values["remaining_ms"] = remaining
+	values["after_ms"] = 0
+	for _, c := range plan.Cuts {
+		values["after_ms"] += c.EndMS - c.StartMS
+	}
+	values["after_ms"] -= plan.TransitionTotal()
 	for i := range plan.Cuts {
 		c := &plan.Cuts[i]
 		for j := range c.Copies {
@@ -242,6 +282,27 @@ func observedSpan(a clip.SourceAnalysis, c clip.Cut) (int, int) {
 		return c.StartMS, c.EndMS
 	}
 	return start, end
+}
+
+// Backward repair preserves the selected opening scene, and therefore the
+// scene-derived transition. Extending an end cannot change that opening scene.
+func backwardSceneFloor(plan *clip.EditPlan, analyses map[string]clip.SourceAnalysis, i int) int {
+	c := plan.Cuts[i]
+	floor := cutFloor(plan, analyses, i)
+	a := analyses[c.SourceID]
+	scene, _ := clip.CutScene(c, a)
+	start := c.StartMS
+	for j := len(a.Segments) - 1; j >= 0; j-- {
+		segment := a.Segments[j]
+		if segment.StartMS > start {
+			continue
+		}
+		if segment.EndMS < start || design.Scene(segment.Scene) != scene {
+			break
+		}
+		start = segment.StartMS
+	}
+	return max(floor, start)
 }
 
 // cutFloor is the earliest a cut's start may move: the segment it was observed

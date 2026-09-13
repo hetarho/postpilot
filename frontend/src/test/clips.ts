@@ -61,6 +61,7 @@ export interface FakeClipProject extends ClipProjectDraft {
   accounting?: ClipProject['accounting']
   editing?: ClipProject['editing']
   observations?: ClipProject['observations']
+  attemptInspection?: ClipProject['attemptInspection']
   editPlanRevision?: number
   renderedPlanRevision?: number
 }
@@ -163,6 +164,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
         : undefined,
       result: p.result ? { ...p.result, bytes: BigInt(p.result.bytes) } : undefined,
       latestJob: p.latestJob ? toFakeProto(p.latestJob) : undefined,
+      attemptInspection: p.attemptInspection,
       createdAt: '2026-09-10T00:00:00Z',
       updatedAt: '2026-09-10T00:00:00Z',
     })

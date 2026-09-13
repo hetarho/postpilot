@@ -6,6 +6,7 @@ import { toGenerationJob } from '@/entities/generation-job/@x/clip-project'
 import { toClipEditingState } from './edit-plan'
 import { toClipAccounting } from './credits'
 import { toClipObservations } from './observations'
+import { toClipAttemptInspection } from './attempt-inspection'
 import { toProjectComposition, compositionInputsToProto } from './composition'
 import { POLL_INTERVAL_MS } from '@/shared/config'
 import {
@@ -73,6 +74,9 @@ export function toClipProject(value: ProtoClipProject): ClipProject {
         : undefined,
     accounting: value.accounting ? toClipAccounting(value.accounting) : undefined,
     editing: value.editing ? toClipEditingState(value.editing) : undefined,
+    attemptInspection: value.attemptInspection
+      ? toClipAttemptInspection(value.attemptInspection)
+      : undefined,
     observations: value.observations ? toClipObservations(value.observations) : undefined,
     result: value.result
       ? {
