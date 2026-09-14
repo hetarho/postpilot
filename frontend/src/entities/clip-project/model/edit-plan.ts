@@ -91,6 +91,21 @@ export interface ClipEditCut {
   /** The ONE constant rate this cut plays at, as permille (CLIP-98). Zero is a
    *  draft written before rates existed and reads as 1x. */
   playbackRatePermille: number
+  /** One-time provenance for a cut the owner is creating: it authorizes an id
+   *  the saved plan does not contain, and the server drops it on acceptance.
+   *  An id the server already knows must not carry it. */
+  creation?: ClipCutCreation
+}
+/** The two operations that create footage (CLIP-98). Both name the approved cut
+ *  the new one inherits its place in the template from. */
+export interface ClipCutCreation {
+  kind: 'add' | 'split'
+  originCutId: string
+}
+/** The one id shape a cut the owner created may take. The draft proposes the id
+ *  and the server validates its shape before admitting the cut. */
+export function ownerCutId(): string {
+  return `owner-${crypto.randomUUID()}`
 }
 export interface ClipEditableText {
   effectiveStartMs?: number

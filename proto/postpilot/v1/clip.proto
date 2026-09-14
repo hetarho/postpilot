@@ -382,6 +382,16 @@ message ClipEditCut {
   // 1500 or 2000 and nothing else. ABSENT is a client that predates rates and
   // is read as 1x; an explicit 0 is not a rate and is refused.
   optional int32 playback_rate_permille = 12;
+  // Request-only, one-time provenance for a cut the owner is adding. It is
+  // never stored and never returned: an id the server already knows rejects it.
+  ClipCutCreation creation = 13;
+}
+// `kind` is add or split and nothing else. Both need an origin cut, because a
+// new cut inherits its place in the template from one the server already
+// approved rather than from anything the client asserts.
+message ClipCutCreation {
+  string kind = 1;
+  string origin_cut_id = 2;
 }
 // One source's owner-controlled original-sound retention. Source audio is off
 // by default and no template, model or render may turn it on.

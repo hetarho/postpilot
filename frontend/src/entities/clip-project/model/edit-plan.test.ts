@@ -6,6 +6,7 @@ import { clipPlanToProto, toClipEditingState } from '../api/edit-plan'
 import {
   clipPlanDuration,
   cutOutputMs,
+  ownerCutId,
   sourceOverlaps,
   transformedDurationMs,
   copyChars,
@@ -418,4 +419,37 @@ it('carries the rate and the owner audio snapshot across the wire unchanged', ()
   const old = toClipEditingState(legacy)
   expect(old.plan.cuts.map((c) => c.playbackRatePermille)).toEqual([1000, 1000])
   expect(old.sources[0]!.allowedRatePermille).toEqual([1000, 1250, 1500, 2000])
+})
+
+it('sends creation provenance only for an id the saved plan does not contain', () => {
+  const state = clipEditingFixture()
+  const id = ownerCutId()
+  expect(id).toMatch(/^owner-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u)
+  const plan: ClipEditPlan = {
+    ...state.plan,
+    cuts: [
+      ...state.plan.cuts,
+      {
+        ...state.plan.cuts[0]!,
+        id,
+        startMs: 20000,
+        endMs: 30000,
+        creation: { kind: 'add', originCutId: 'cut-a' },
+      },
+    ],
+  }
+  const wire = clipPlanToProto(plan)
+  expect(wire.cuts[2]!.creation).toEqual({ kind: 'add', originCutId: 'cut-a' })
+  // Every cut the server already approved carries none.
+  expect(wire.cuts[0]!.creation).toBeUndefined()
+  expect(wire.cuts[1]!.creation).toBeUndefined()
+  // And a saved plan read back never carries it, so a resave is a correction.
+  const back = toClipEditingState(
+    create(ClipEditingStateSchema, {
+      plan: clipPlanToProto(state.plan),
+      sources: state.sources,
+      copyStyles: state.copyStyles,
+    }),
+  )
+  expect(back.plan.cuts.every((c) => c.creation === undefined)).toBe(true)
 })

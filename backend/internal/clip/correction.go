@@ -32,6 +32,9 @@ type CorrectionCut struct {
 	// from a client that predates rates and reads as 1x; an explicit value must
 	// be a supported rate.
 	PlaybackRatePermille int
+	// Request-only provenance for a cut the plan does not yet contain. It is
+	// never stored and never projected back: a cut is created exactly once.
+	Creation *CutCreation
 }
 type CorrectionPlan struct {
 	// The owner's per-source original-sound snapshot, as a read projection. It
@@ -406,6 +409,12 @@ func ApplyCorrection(cfg RenderConfig, p Project, input CorrectionPlan) (EditPla
 	}
 	for _, c := range input.Cuts {
 		prior, ok := known[c.ID]
+		// Cut creation needs frozen observations and a template binding to check
+		// against; a plan that predates the composition has neither, so it
+		// remains a trim-and-reorder editor.
+		if c.Creation != nil {
+			return EditPlan{}, nil, ErrCompositionUnavailable
+		}
 		if !ok || c.SourceID != prior.SourceID || c.Fingerprint != prior.Fingerprint || c.VolumePermille < 0 || c.VolumePermille > 1000 {
 			return EditPlan{}, nil, ErrInvalid
 		}

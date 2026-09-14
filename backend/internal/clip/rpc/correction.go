@@ -54,7 +54,11 @@ func correctionPlan(p *v1.ClipEditPlan) clip.CorrectionPlan {
 				rate = explicitZeroRate
 			}
 		}
-		out.Cuts = append(out.Cuts, clip.CorrectionCut{Focal: focal, ID: c.GetId(), SourceID: c.GetSourceId(), Fingerprint: c.GetFingerprint(), StartMS: int(c.GetStartMs()), EndMS: int(c.GetEndMs()), TransitionMS: int(c.GetTransitionMs()), VolumePermille: int(c.GetVolumePermille()), Chips: c.GetChips(), Copies: copies, PlaybackRatePermille: rate})
+		var creation *clip.CutCreation
+		if c.GetCreation() != nil {
+			creation = &clip.CutCreation{Kind: c.GetCreation().GetKind(), OriginID: c.GetCreation().GetOriginCutId()}
+		}
+		out.Cuts = append(out.Cuts, clip.CorrectionCut{Creation: creation, Focal: focal, ID: c.GetId(), SourceID: c.GetSourceId(), Fingerprint: c.GetFingerprint(), StartMS: int(c.GetStartMs()), EndMS: int(c.GetEndMs()), TransitionMS: int(c.GetTransitionMs()), VolumePermille: int(c.GetVolumePermille()), Chips: c.GetChips(), Copies: copies, PlaybackRatePermille: rate})
 	}
 	for _, t := range p.GetElements() {
 		out.Elements = append(out.Elements, correctionText(t))

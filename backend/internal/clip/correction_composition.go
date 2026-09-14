@@ -94,9 +94,34 @@ func applyNativeCorrection(cfg RenderConfig, p Project, old EditPlan, styles []s
 	}
 	next.Portable, next.Cuts, next.DurationMS = &portable, nil, in.DurationMS
 	known, knownText := correctionArchive(old, in, &portable)
+	bindings := map[string]composition.Cut{}
+	for _, c := range append(slices.Clone(old.Portable.RetiredBindings), old.Portable.Cuts...) {
+		bindings[c.ID] = c
+	}
+	created := []string{}
 	for _, c := range in.Cuts {
 		prior, ok := known[c.ID]
-		if !ok || c.SourceID != prior.SourceID || c.Fingerprint != prior.Fingerprint || c.VolumePermille < 0 || c.VolumePermille > 1000 {
+		// An id the server already approved is corrected, never created: only a
+		// cut the plan does not contain may carry creation provenance, and only
+		// with it (CLIP-97).
+		if ok == (c.Creation != nil) {
+			return EditPlan{}, nil, cutRefusal(c.ID, "cut_identity")
+		}
+		if !ok {
+			origin, exists := known[c.Creation.OriginID]
+			if !exists {
+				return EditPlan{}, nil, cutRefusal(c.ID, "cut_origin")
+			}
+			admitted, binding, err := admitOwnerCut(c, origin, bindings[c.Creation.OriginID], &portable, in.Cuts)
+			if err != nil {
+				return EditPlan{}, nil, err
+			}
+			created = append(created, c.ID)
+			portable.Cuts = append(portable.Cuts, binding)
+			next.Cuts = append(next.Cuts, admitted)
+			continue
+		}
+		if c.SourceID != prior.SourceID || c.Fingerprint != prior.Fingerprint || c.VolumePermille < 0 || c.VolumePermille > 1000 {
 			return EditPlan{}, nil, ErrInvalid
 		}
 		if c.Focal != nil {
@@ -114,6 +139,11 @@ func applyNativeCorrection(cfg RenderConfig, p Project, old EditPlan, styles []s
 		// The portable declarations are the only visible content authority.
 		prior.Copies, prior.Chips = nil, nil
 		next.Cuts = append(next.Cuts, prior)
+	}
+	// A created cut carries no text of its own: a split leaves the parent's
+	// cut-bound content on the left, where the owner authored it (CDS-64).
+	if err := ValidateOwnerCutContent(created, in.Elements); err != nil {
+		return EditPlan{}, nil, err
 	}
 	if len(next.Cuts) > 0 {
 		next.Cuts[0].TransitionMS = 0

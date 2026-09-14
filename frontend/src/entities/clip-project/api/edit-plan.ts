@@ -164,6 +164,8 @@ export function clipPlanToProto(plan: ClipEditPlan) {
       transitionMs: c.transitionMs,
       volumePermille: c.volumePermille,
       playbackRatePermille: c.playbackRatePermille,
+      // Request-only: the server never returns it, so it is never read back.
+      creation: c.creation,
       chips: [...c.chips],
       // `position` carries the anchor on the wire; the field kept its number
       // through the vocabulary change (CDS-12). `copy` stays populated with the

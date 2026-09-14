@@ -26,6 +26,21 @@ func TestCorrectionWireRoundtripAndConflict(t *testing.T) {
 	if correctionPlan(nil).DurationMS != 0 || editingProto(nil) != nil {
 		t.Fatal("nil presence")
 	}
+	// Creation provenance rides the request only. The editing projection never
+	// carries it, so a saved cut can never be read back as still being created.
+	for _, c := range wire.Plan.Cuts {
+		if c.Creation != nil {
+			t.Fatal("the projection returned creation provenance", c.Id)
+		}
+	}
+	proposed := &v1.ClipEditPlan{Cuts: []*v1.ClipEditCut{{Id: "owner-x", Creation: &v1.ClipCutCreation{Kind: "split", OriginCutId: "cut"}}}}
+	got := correctionPlan(proposed).Cuts[0].Creation
+	if got == nil || got.Kind != clip.CutSplit || got.OriginID != "cut" {
+		t.Fatal("creation provenance was lost on the way in", got)
+	}
+	if correctionPlan(&v1.ClipEditPlan{Cuts: []*v1.ClipEditCut{{Id: "cut"}}}).Cuts[0].Creation != nil {
+		t.Fatal("an ordinary cut arrived with provenance")
+	}
 	// An absent rate is an old client and reads as 1x; an EXPLICIT zero is not a
 	// rate at all and must not be rescued by that compatibility path.
 	absent := &v1.ClipEditPlan{Cuts: []*v1.ClipEditCut{{Id: "cut"}}}
