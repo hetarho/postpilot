@@ -379,6 +379,7 @@ func TestWriterInputCarriesAllowedRatesAndNoAudioAuthority(t *testing.T) {
 	// earns only 1x and faster.
 	in.Analyses[0].Source.Info.FrameRateNumerator, in.Analyses[0].Source.Info.FrameRateDenominator = 60, 1
 	in.Analyses[0].Source.Info.DecodedFrames, in.Analyses[0].Source.Info.DecodedDurationMS = 900, 15000
+	in.Analyses[0].Source.Info.CadenceVerified = true
 	system, user := ai.BuildPlanPrompt(in, 200)
 	var payload map[string]any
 	if err := json.Unmarshal([]byte(user), &payload); err != nil {

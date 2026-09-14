@@ -6,6 +6,7 @@ import (
 	"errors"
 	"math"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -124,7 +125,7 @@ func (a *Adapter) Probe(ctx context.Context, ws clip.MediaWorkspace, path string
 	// A container's duration is only a claim. Decode every selected stream with
 	// xerror, then use the actual output clock. A strict upper bound also prevents
 	// an adversarial header from turning a 30-minute admission into a day of work.
-	data, err = a.run(ctx, ws, a.cfg.FFmpegPath, "-hide_banner", "-nostdin", "-v", "error", "-xerror", "-nostats", "-stats_period", "3600", "-progress", "pipe:1", "-threads", strconv.Itoa(a.cfg.Threads), "-protocol_whitelist", "file,pipe", "-i", path, "-map", "0:V:0", "-map", "0:a?", "-t", seconds(a.cfg.Sources.MaxDurationMS+a.cfg.DurationToleranceMS), "-fps_mode", "passthrough", "-f", "null", "-")
+	data, err = a.runLog(ctx, ws, a.cfg.FFmpegPath, "-hide_banner", "-nostdin", "-v", "info", "-xerror", "-nostats", "-stats_period", "3600", "-progress", "pipe:2", "-threads", strconv.Itoa(a.cfg.Threads), "-protocol_whitelist", "file,pipe", "-i", path, "-map", "0:V:0", "-map", "0:a?", "-vf", "vfrdet", "-t", seconds(a.cfg.Sources.MaxDurationMS+a.cfg.DurationToleranceMS), "-fps_mode", "passthrough", "-f", "null", "-")
 	if err != nil {
 		return clip.MediaInfo{}, errors.Join(clip.ErrInvalidMedia, err)
 	}
@@ -151,6 +152,7 @@ func (a *Adapter) Probe(ctx context.Context, ws clip.MediaWorkspace, path string
 	info.DurationMS = int(math.Round(float64(micros) / 1000))
 	info.DecodedDurationMS = info.DurationMS
 	info.DecodedFrames = int(frames)
+	info.CadenceVerified = constantCadenceReport(data)
 	// MP4 edit lists exclude AAC encoder padding from the playable timeline.
 	// Cross-check every declared selected-stream endpoint against a full decode
 	// before using it; otherwise a 60 s source could produce a spurious 11 ms
@@ -168,3 +170,25 @@ func durationMS(raw string) int {
 	return int(math.Round(n * 1000))
 }
 func seconds(ms int) string { return strconv.FormatFloat(float64(ms)/1000, 'f', 3, 64) }
+
+// vfrdet observes every decoded video timestamp in the same admission pass.
+// Require its final integer counts, not its rounded VFR fraction; a missing,
+// truncated or malformed report remains unknown rather than implying CFR.
+var cadenceReport = regexp.MustCompile(`\[Parsed_vfrdet_[^\]]+\] VFR:[^ ]+ \(([0-9]+)/([0-9]+)\)`)
+
+func constantCadenceReport(log []byte) bool {
+	measured := 0
+	for _, match := range cadenceReport.FindAllSubmatch(log, -1) {
+		varying, e1 := strconv.ParseUint(string(match[1]), 10, 64)
+		constant, e2 := strconv.ParseUint(string(match[2]), 10, 64)
+		if e1 != nil || e2 != nil || varying != 0 {
+			return false
+		}
+		// FFmpeg also closes an unused graph during initial format negotiation.
+		// Its (0/0) report is not evidence; require one actual decoded graph.
+		if constant > 0 {
+			measured++
+		}
+	}
+	return measured == 1
+}

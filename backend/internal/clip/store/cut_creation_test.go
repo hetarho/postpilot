@@ -1,7 +1,11 @@
 package store_test
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"errors"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -98,5 +102,77 @@ func TestOwnerCutCreationRidesTheExistingOptimisticSave(t *testing.T) {
 	// A foreign owner cannot reach the same plan at all.
 	if _, err := h.service.SaveCorrection(ctx, "bob", h.project.ID, after.EditPlanRevision, second); err == nil {
 		t.Fatal("a foreign owner saved a created cut")
+	}
+}
+
+// Rejected owner drafts stay byte-for-byte available to the editor, and no
+// failed validation changes the saved assembly, prior result or provider count.
+func TestAssemblyRejectionsPreserveDraftAndPreviousResult(t *testing.T) {
+	for _, kind := range []string{"unsupported-rate", "insufficient-cadence", "overlap", "authored-interval"} {
+		t.Run(kind, func(t *testing.T) {
+			h := generationSetup(t)
+			h.service = clip.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, ownedPlanWriter{h.planner}, ownedPlanRenderer{h.renderer}, generationJobs{h.queue}, h.cfg).WithFinisher(generationFinisher{h.store}).WithCredits(&quotePricing{}, nil)
+			h.projects.SetGeneration(h.service)
+			template, err := h.projects.CreateTemplate(t.Context(), "alice", clip.Recipe{Name: "assembly-rejections", CompositionBody: `<clip version="1" styles="memo"><repeat for="scenes"><scene id="shot"><text id="copy" kind="ai" role="caption" basis="cut">Describe the scene.</text></scene></repeat></clip>`})
+			if err != nil {
+				t.Fatal(err)
+			}
+			h.project, err = h.projects.UpdateProject(t.Context(), "alice", h.project.ID, clip.ProjectPatch{VideoTemplateID: &template.ID})
+			if err != nil {
+				t.Fatal(err)
+			}
+			h.start(t)
+			if err := h.run(t); err != nil {
+				t.Fatal(err)
+			}
+			h.service = clip.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, compositionPlanner{h.planner}, layoutRenderer{h.renderer}, generationJobs{h.queue}, h.cfg).WithFinisher(generationFinisher{h.store}).WithCredits(&quotePricing{}, nil)
+			h.projects.SetGeneration(h.service)
+			p, err := h.projects.GetProject(t.Context(), "alice", h.project.ID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			state, err := h.service.EditingState(p)
+			if err != nil {
+				t.Fatal(err)
+			}
+			draft := state.Plan
+			switch kind {
+			case "unsupported-rate":
+				draft.Cuts[0].PlaybackRatePermille = 1100
+			case "insufficient-cadence":
+				draft.Cuts[0].PlaybackRatePermille = 500
+				draft.DurationMS = 60000
+			case "overlap":
+				draft.Cuts = append(draft.Cuts, clip.CorrectionCut{ID: ownerCutID, SourceID: draft.Cuts[0].SourceID, Fingerprint: draft.Cuts[0].Fingerprint, StartMS: 0, EndMS: 15000, Creation: &clip.CutCreation{Kind: clip.CutAdd, OriginID: draft.Cuts[0].ID}})
+				draft.DurationMS = 45000
+			case "authored-interval":
+				if len(draft.Elements) == 0 {
+					t.Fatal("fixture has no authored element")
+				}
+				start, end := 2000, 1000
+				draft.Elements[0].StartMS, draft.Elements[0].EndMS = &start, &end
+			}
+			before, _ := json.Marshal(draft)
+			observed, planned := h.planner.observe, h.planner.plans
+			_, err = h.service.SaveCorrection(t.Context(), "alice", h.project.ID, p.EditPlanRevision, draft)
+			if err == nil {
+				t.Fatal("invalid draft was accepted")
+			}
+			var violation interface{ OutputValidationCode() string }
+			if _, ok := clip.DiagnosticFromError(err); !ok && !errors.As(err, &violation) {
+				t.Fatal("untyped rejection", err)
+			}
+			after, _ := json.Marshal(draft)
+			if !bytes.Equal(before, after) {
+				t.Fatal("validation silently rewrote the draft")
+			}
+			stored, err := h.projects.GetProject(t.Context(), "alice", h.project.ID)
+			if err != nil || stored.EditPlan != p.EditPlan || stored.EditPlanRevision != p.EditPlanRevision || !reflect.DeepEqual(stored.Result, p.Result) || stored.RenderedPlanRevision != p.RenderedPlanRevision {
+				t.Fatal("rejection changed the saved assembly or previous result", err)
+			}
+			if h.planner.observe != observed || h.planner.plans != planned {
+				t.Fatal("validation spent an unapproved provider call")
+			}
+		})
 	}
 }

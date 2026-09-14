@@ -87,12 +87,11 @@ type SourceCadence struct {
 // treated conservatively as unverified (CDS-68).
 func (c SourceCadence) Verified() bool { return c.Numerator > 0 && c.Denominator > 0 }
 
-// VerifiedCadence reads the cadence a probe recorded for an ORIGINAL source.
-// The decoded frame count is the authority; the declared average rate must
-// agree with it within one frame over the decoded span, which is what separates
-// constant-rate footage from variable-rate footage the container merely averages.
+// VerifiedCadence requires constant decoded frame intervals as well as a frame
+// count consistent with the declared average. An average alone also describes
+// VFR and is never sufficient evidence for slow playback (CDS-68).
 func VerifiedCadence(info MediaInfo) SourceCadence {
-	if info.FrameRateNumerator <= 0 || info.FrameRateDenominator <= 0 {
+	if !info.CadenceVerified || info.FrameRateNumerator <= 0 || info.FrameRateDenominator <= 0 {
 		return SourceCadence{}
 	}
 	if info.DecodedFrames <= 0 || info.DecodedDurationMS <= 0 {

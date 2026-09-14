@@ -48,6 +48,9 @@ type MediaInfo struct {
 	// Video frames the decode actually produced. The one length reading no
 	// container declaration can inflate, which is what a delivered clip is
 	// judged on (CDS-52 V12).
+	// True only after the full original decode proves constant frame intervals.
+	// Missing evidence (including older stored metadata) cannot authorize slow rates.
+	CadenceVerified          bool
 	DecodedFrames            int
 	AudioChannels, AudioRate int
 	Streams                  []MediaStream

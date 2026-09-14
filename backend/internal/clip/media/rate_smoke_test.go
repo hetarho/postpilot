@@ -143,7 +143,10 @@ func TestRenderSmokeRatesAndSourceAudio(t *testing.T) {
 					}
 					hz := dominantHz(data, 48000)
 					if audio == "mixed" && i%2 == 1 {
-						continue // a disabled cut is silent here
+						if pcmPeak(data) > 2 {
+							t.Fatal("an enabled source without audio contributed sound")
+						}
+						continue
 					}
 					if hz < 400 || hz > 480 {
 						t.Fatalf("%s: cut %d plays at %.0f Hz, want about 440", audio, i, hz)
@@ -158,5 +161,73 @@ func TestRenderSmokeRatesAndSourceAudio(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func pcmPeak(data []byte) int {
+	peak := 0
+	for i := 0; i+1 < len(data); i += 2 {
+		value := int(int16(binary.LittleEndian.Uint16(data[i:])))
+		if value < 0 {
+			value = -value
+		}
+		peak = max(peak, value)
+	}
+	return peak
+}
+
+// Aggregate frame count and average rate alone cannot distinguish CFR from VFR.
+// These originals have real timestamps, including VFR that averages above 40 fps.
+func TestMediaSmokeCadenceAdmission(t *testing.T) {
+	if os.Getenv("CLIP_MEDIA_SMOKE") != "1" {
+		t.Skip("real cadence gate runs inside Docker")
+	}
+	cfg := mediaConfig(t)
+	a, err := New(cfg, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		name string
+		fps  int
+		vfr  bool
+		want []int
+	}{
+		{"cfr30", 30, false, []int{1000, 1250, 1500, 2000}},
+		{"cfr40", 40, false, []int{750, 1000, 1250, 1500, 2000}},
+		{"cfr60", 60, false, clip.PlaybackRates()},
+		{"vfr", 60, true, []int{1000, 1250, 1500, 2000}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := a.WithWorkspace(t.Context(), tc.name, func(ws clip.MediaWorkspace) error {
+				path := filepath.Join(ws.Path, "original.mp4")
+				args := []string{"-v", "error", "-f", "lavfi", "-i", fmt.Sprintf("color=c=blue:s=320x240:r=%d", tc.fps), "-frames:v", fmt.Sprint(tc.fps * 4)}
+				if tc.vfr {
+					args = append(args, "-vf", "setpts=if(lt(N\\,120)\\,N/(40*TB)\\,(3+(N-120)/60)/TB)", "-fps_mode", "vfr")
+				}
+				args = append(args, "-c:v", "libx264", "-threads", "1", "-preset", "ultrafast", "-pix_fmt", "yuv420p", path)
+				if _, err := a.run(t.Context(), ws, cfg.FFmpegPath, args...); err != nil {
+					return err
+				}
+				info, err := a.Probe(t.Context(), ws, path)
+				if err != nil {
+					return err
+				}
+				if info.CadenceVerified == tc.vfr {
+					return fmt.Errorf("wrong decoded cadence evidence: %+v", info)
+				}
+				if got := clip.AllowedPlaybackRates(info); !slices.Equal(got, tc.want) {
+					return fmt.Errorf("cadence admitted %v, want %v: %+v", got, tc.want, info)
+				}
+				info.DecodedFrames = 0
+				if slices.Contains(clip.AllowedPlaybackRates(info), 750) {
+					return fmt.Errorf("unmeasured original admitted slow playback")
+				}
+				return nil
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+		})
 	}
 }

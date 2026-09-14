@@ -10,6 +10,7 @@ import (
 	"image/png"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
@@ -37,17 +38,29 @@ func TestCompositionQualityReview(t *testing.T) {
 		}
 	}
 	t.Cleanup(func() { b, _ := os.ReadFile("/sys/fs/cgroup/memory.peak"); t.Logf("peak memory bytes: %s", b) })
+	assemblyRoot := os.Getenv("CLIP_ASSEMBLY_CORPUS_DIR")
 	for _, ratio := range []string{"vertical", "horizontal", "square"} {
 		paces := []string{"steady", "rapid"}
 		if ratio == "vertical" {
 			paces = append(paces, "steady-extended")
 		}
+		if assemblyRoot != "" {
+			paces = []string{"assembly-steady", "assembly-rapid"}
+		}
 		for _, variant := range paces {
 			t.Run(ratio+"-"+variant, func(t *testing.T) {
-				pace := strings.TrimSuffix(variant, "-extended")
+				pace := strings.TrimPrefix(strings.TrimSuffix(variant, "-extended"), "assembly-")
+				assembly := assemblyRoot != ""
+				audio := "off"
+				if assembly {
+					audio = map[string]string{"vertical-steady": "off", "vertical-rapid": "on", "horizontal-steady": "mixed", "horizontal-rapid": "silent", "square-steady": "zero", "square-rapid": "on"}[ratio+"-"+pace]
+				}
 				duration := 15000
 				if variant == "steady-extended" {
 					duration = 15600
+				}
+				if assembly {
+					duration = 17800
 				}
 				folder := filepath.Join(root, ratio+"-"+variant)
 				if err := os.MkdirAll(folder, 0755); err != nil {
@@ -73,7 +86,22 @@ func TestCompositionQualityReview(t *testing.T) {
 						if err := writeQualityPattern(pattern, i); err != nil {
 							return err
 						}
-						if _, err := a.run(t.Context(), ws, cfg.FFmpegPath, "-v", "error", "-loop", "1", "-framerate", "30", "-i", pattern, "-t", "8", "-an", "-c:v", "libx264", "-threads", "1", "-preset", "ultrafast", "-pix_fmt", "yuv420p", path); err != nil {
+						fps, length := "30", "8"
+						if assembly {
+							fps, length = "60", "16"
+						}
+						args := []string{"-v", "error", "-loop", "1", "-framerate", fps, "-i", pattern}
+						if assembly && audio != "silent" {
+							args = append(args, "-f", "lavfi", "-i", fmt.Sprintf("sine=frequency=%d:sample_rate=48000", 440*(i+1)))
+						} else {
+							args = append(args, "-an")
+						}
+						args = append(args, "-t", length, "-c:v", "libx264", "-threads", "1", "-preset", "ultrafast", "-pix_fmt", "yuv420p")
+						if assembly && audio != "silent" {
+							args = append(args, "-c:a", "aac")
+						}
+						args = append(args, path)
+						if _, err := a.run(t.Context(), ws, cfg.FFmpegPath, args...); err != nil {
 							return err
 						}
 						info, err := a.Probe(t.Context(), ws, path)
@@ -86,34 +114,59 @@ func TestCompositionQualityReview(t *testing.T) {
 							return err
 						}
 					}
-					body := `<clip version="1" styles="simple clean" pace="` + pace + `"><repeat for="scenes"><scene id="scene"><text id="caption" kind="fixed" role="caption" style="simple" position="bottom" basis="cut" start="0" end="7.4">바로 다음</text></scene></repeat><text id="across" kind="fixed" role="info" position="top" basis="output-start" start="1" end="14">두 장면의 기록</text><text id="ending" kind="fixed" role="caption" style="clean" position="upper_mid" basis="output-end" start="-2" end="0">직접 쓴 마무리</text></clip>`
-					cuts := []composition.Cut{{ID: "cut-a", SectionID: "scene", SourceID: "a", EndMS: 7600}, {ID: "cut-b", SectionID: "scene", SourceID: "b", EndMS: 7600, TransitionMS: 200}}
-					for i := range cuts {
-						cuts[i].EndMS = (duration + 200) / 2
-					}
-					doc, problem := composition.Parse(body, renderer.cfg.Composition)
-					if problem != nil {
-						return problem
-					}
-					resolved, problem := composition.Resolve(doc, composition.Inputs{Cuts: cuts}, renderer.cfg.Composition, 30000)
-					if problem != nil {
-						return problem
-					}
-					plan := clip.EditPlan{Ratio: ratio, DurationMS: duration, Portable: &clip.PortablePlan{Snapshot: clip.CompositionSnapshot{Version: 1, Body: body}, Cuts: cuts}}
-					for i, c := range cuts {
-						plan.Cuts = append(plan.Cuts, clip.Cut{ID: c.ID, SourceID: c.SourceID, Fingerprint: sources[i].Fingerprint, EndMS: c.EndMS, TransitionMS: c.TransitionMS, Focal: clip.Point{X: []float64{.25, .75}[i], Y: .5}})
-					}
-					for _, e := range resolved.Elements {
-						text := clip.PortableText{Resolved: e, Pace: pace}
-						if pace == "rapid" && e.Element.ID == "caption" {
-							text.OwnerEdited = true
-							text.Phrases = []clip.EditablePhrase{{Text: "바로", StartMS: 0, EndMS: 300}, {Text: "다음", StartMS: 300, EndMS: 600}}
+					var plan clip.EditPlan
+					if assembly {
+						data, err := os.ReadFile(filepath.Join(assemblyRoot, ratio+"-"+pace+".json"))
+						if err != nil {
+							return err
 						}
-						// Global exact text is independent of the per-cut caption pace.
-						if e.Element.ID != "caption" {
-							text.Pace = "steady"
+						var input struct {
+							Plan     string
+							Analyses []clip.SourceAnalysis
 						}
-						plan.Portable.Elements = append(plan.Portable.Elements, text)
+						if err := json.Unmarshal(data, &input); err != nil {
+							return err
+						}
+						plan, _, err = clip.DecodeEditPlan(input.Plan)
+						if err != nil {
+							return err
+						}
+						for _, source := range sources {
+							plan = clip.ApplySourceAudio(plan, source.ID, source.Fingerprint, audio != "off" && (audio != "mixed" || source.ID == "a"))
+						}
+						if audio == "zero" {
+							plan.Cuts[0].Volume = volume(0)
+						}
+					} else {
+						body := `<clip version="1" styles="simple clean" pace="` + pace + `"><repeat for="scenes"><scene id="scene"><text id="caption" kind="fixed" role="caption" style="simple" position="bottom" basis="cut" start="0" end="7.4">바로 다음</text></scene></repeat><text id="across" kind="fixed" role="info" position="top" basis="output-start" start="1" end="14">두 장면의 기록</text><text id="ending" kind="fixed" role="caption" style="clean" position="upper_mid" basis="output-end" start="-2" end="0">직접 쓴 마무리</text></clip>`
+						cuts := []composition.Cut{{ID: "cut-a", SectionID: "scene", SourceID: "a", EndMS: 7600}, {ID: "cut-b", SectionID: "scene", SourceID: "b", EndMS: 7600, TransitionMS: 200}}
+						for i := range cuts {
+							cuts[i].EndMS = (duration + 200) / 2
+						}
+						doc, problem := composition.Parse(body, renderer.cfg.Composition)
+						if problem != nil {
+							return problem
+						}
+						resolved, problem := composition.Resolve(doc, composition.Inputs{Cuts: cuts}, renderer.cfg.Composition, 30000)
+						if problem != nil {
+							return problem
+						}
+						plan = clip.EditPlan{Ratio: ratio, DurationMS: duration, Portable: &clip.PortablePlan{Snapshot: clip.CompositionSnapshot{Version: 1, Body: body}, Cuts: cuts}}
+						for i, c := range cuts {
+							plan.Cuts = append(plan.Cuts, clip.Cut{ID: c.ID, SourceID: c.SourceID, Fingerprint: sources[i].Fingerprint, EndMS: c.EndMS, TransitionMS: c.TransitionMS, Focal: clip.Point{X: []float64{.25, .75}[i], Y: .5}})
+						}
+						for _, e := range resolved.Elements {
+							text := clip.PortableText{Resolved: e, Pace: pace}
+							if pace == "rapid" && e.Element.ID == "caption" {
+								text.OwnerEdited = true
+								text.Phrases = []clip.EditablePhrase{{Text: "바로", StartMS: 0, EndMS: 300}, {Text: "다음", StartMS: 300, EndMS: 600}}
+							}
+							// Global exact text is independent of the per-cut caption pace.
+							if e.Element.ID != "caption" {
+								text.Pace = "steady"
+							}
+							plan.Portable.Elements = append(plan.Portable.Elements, text)
+						}
 					}
 					runner.lossy = 0
 					result, err := renderer.Render(t.Context(), ws, plan, sources, func(_ context.Context, id string, consume func(clip.MediaSource) error) error {
@@ -127,7 +180,15 @@ func TestCompositionQualityReview(t *testing.T) {
 					if err != nil {
 						return err
 					}
-					if runner.lossy != 1 || result.Info.DurationMS != duration || result.Info.HasAudio || len(result.Elements) != 4 {
+					if assembly && (result.Plan == nil || !reflect.DeepEqual(result.Plan.Cuts, plan.Cuts) || !reflect.DeepEqual(result.Plan.SourceAudio, plan.SourceAudio) || result.Plan.DurationMS != plan.DurationMS) {
+						return fmt.Errorf("render silently changed the saved assembly or owner sound")
+					}
+					wantElements := 4
+					if assembly {
+						wantElements = 13
+					}
+					wantAudio := assembly && audio != "off" && audio != "silent"
+					if runner.lossy != 1 || abs(result.Info.DecodedFrames*1000-duration*30) > 1000 || result.Info.HasAudio != wantAudio || len(result.Elements) != wantElements {
 						return fmt.Errorf("quality output contract: %d encodes, %+v, %d elements", runner.lossy, result.Info, len(result.Elements))
 					}
 					if err := copyQualityFile(result.Path, filepath.Join(folder, "result.mp4")); err != nil {
@@ -137,12 +198,40 @@ func TestCompositionQualityReview(t *testing.T) {
 					if err != nil {
 						return err
 					}
-					if prepared.NextOffset != -1 {
-						return fmt.Errorf("review asset fixture unexpectedly paged")
+					for prepared.NextOffset != -1 {
+						page, err := renderer.PreparePreview(t.Context(), *result.Plan, sources, nil, prepared.NextOffset, clip.PreviewConfig{MaxAssets: 8, MaxAssetBytes: 512 << 10, MaxResponseBytes: 4 << 20, Timeout: 5 * time.Second})
+						if err != nil {
+							return err
+						}
+						prepared.Assets = append(prepared.Assets, page.Assets...)
+						prepared.NextOffset = page.NextOffset
 					}
 					frames := []int{0, 1, 3, 8, 9, 10, 17, 18, 29, 30, 60, 221, 222, 223, 224, 225, 226, 227, 228, 389, 390, 420, 448, 449}
-					if duration != 15000 {
+					if duration != 15000 && !assembly {
 						frames = append(frames, 408, 466, 467)
+					}
+					if assembly {
+						frames = []int{0, 1, 9, 18, 29, 30, 60, 89, 90, 91, 179, 180, 181, 263, 264, 265, 268, 269, 270, 271, 354, 355, 444, 445, 532, 533}
+					}
+					if assembly && wantAudio {
+						clock := 0
+						for i, cut := range result.Plan.Cuts {
+							clock -= cut.TransitionMS
+							data, err := a.run(t.Context(), ws, cfg.FFmpegPath, "-v", "error", "-ss", seconds(clock+1000), "-i", result.Path, "-t", "0.2", "-vn", "-ac", "1", "-ar", "48000", "-c:a", "pcm_s16le", "-f", "s16le", "pipe:1")
+							if err != nil {
+								return err
+							}
+							hz := dominantHz(data, 48000)
+							silent := !plan.RetainsOriginalAudio(cut) || cut.OriginalVolume() == 0
+							expected := 440.0
+							if cut.SourceID == "b" {
+								expected = 880
+							}
+							if silent && pcmPeak(data) > 2 || !silent && (hz < expected-40 || hz > expected+40) {
+								return fmt.Errorf("%s cut %d rate %d: pitch %.1f peak %d silent %v", audio, i, cut.Rate(), hz, pcmPeak(data), silent)
+							}
+							clock += cut.OutputDurationMS()
+						}
 					}
 					for _, frame := range frames {
 						path := filepath.Join(folder, fmt.Sprintf("export-%03d.png", frame))
@@ -151,7 +240,7 @@ func TestCompositionQualityReview(t *testing.T) {
 						}
 					}
 					artifact := struct {
-						Ratio, Pace        string
+						Ratio, Pace, Audio string
 						Plan               clip.CorrectionPlan
 						Sources            []clip.RenderSource
 						Preview            clip.PreparedPreview
@@ -159,7 +248,7 @@ func TestCompositionQualityReview(t *testing.T) {
 						Frames             []int
 						LossyEncodes       int
 						PeakWorkspaceBytes int64
-					}{ratio, pace, clip.CorrectionFromPlan(*result.Plan), sources, prepared, result.Elements, frames, runner.lossy, runner.peakDisk}
+					}{ratio, pace, audio, clip.CorrectionFromPlan(*result.Plan), sources, prepared, result.Elements, frames, runner.lossy, runner.peakDisk}
 					encoded, err := json.MarshalIndent(artifact, "", "  ")
 					if err != nil {
 						return err

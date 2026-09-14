@@ -191,3 +191,14 @@ a 90-second output.
 docker build -f backend/Dockerfile --target media-smoke -t postpilot-clip-media:local .
 docker run --rm --network none --memory 1g --memory-swap 1g --cpus 2 -e CLIP_COMPOSITION_STRESS=1 --entrypoint /media.test postpilot-clip-media:local -test.run='^TestRenderCompositionStress$' -test.v -test.timeout=30m
 ```
+
+### Original cadence evidence
+
+Slow playback requires the original full-decode admission pass to report constant
+video timestamp intervals through `vfrdet`. The bounded stderr report shares that
+pass with decoded frame count and duration; no second decode or per-frame log is
+needed. Average FPS and frame count alone can agree for VFR, so they are only a
+cross-check after this positive evidence. Missing or variable cadence (including
+older stored metadata without the evidence flag) offers 1x and faster rates only.
+Existing plans and result bytes are not rewritten. The production smoke generates
+30/40/60 fps CFR and a VFR original averaging 48 fps to verify the distinction.

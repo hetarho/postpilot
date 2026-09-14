@@ -16,7 +16,7 @@ import (
 func cadence30(durationMS int) clip.MediaInfo {
 	return clip.MediaInfo{DurationMS: durationMS, Width: 1920, Height: 1080,
 		FrameRateNumerator: 30, FrameRateDenominator: 1,
-		DecodedDurationMS: durationMS, DecodedFrames: durationMS * 30 / 1000}
+		DecodedDurationMS: durationMS, CadenceVerified: true, DecodedFrames: durationMS * 30 / 1000}
 }
 
 func ratePlan(t *testing.T, rate int) (clip.Project, clip.EditPlan, []string) {
@@ -124,9 +124,11 @@ func TestSlowRateNeedsVerifiedOriginalCadence(t *testing.T) {
 	// decode counted, are both ineligible for a slow rate rather than 1x.
 	unmeasured := fast
 	unmeasured.DecodedFrames = 0
+	unknown := fast
+	unknown.CadenceVerified = false
 	variable := fast
 	variable.DecodedFrames = 20000 * 24 / 1000
-	for _, info := range []clip.MediaInfo{unmeasured, variable} {
+	for _, info := range []clip.MediaInfo{unmeasured, variable, unknown} {
 		if clip.VerifiedCadence(info).Verified() {
 			t.Fatal("unverified cadence passed as evidence", info)
 		}

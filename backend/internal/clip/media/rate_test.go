@@ -149,7 +149,7 @@ func TestSlowPlaybackIsRecheckedAgainstVerifiedCadence(t *testing.T) {
 		return clip.RenderSource{ID: "s", Fingerprint: "s", Info: clip.MediaInfo{
 			DurationMS: decodedMS, Width: 1920, Height: 1080,
 			FrameRateNumerator: numerator, FrameRateDenominator: denominator,
-			DecodedFrames: frames, DecodedDurationMS: decodedMS}}
+			CadenceVerified: true, DecodedFrames: frames, DecodedDurationMS: decodedMS}}
 	}
 	for _, tc := range []struct {
 		name    string
@@ -263,7 +263,7 @@ func TestAnUnrenderableRateFailsBeforeFFmpegStarts(t *testing.T) {
 	r := testRenderer(t, a)
 	// 30 fps footage cannot be slowed without inventing frames.
 	source := clip.RenderSource{ID: "s", Fingerprint: "s", Info: clip.MediaInfo{DurationMS: 20000, Width: 1920, Height: 1080,
-		FrameRateNumerator: 30, FrameRateDenominator: 1, DecodedFrames: 600, DecodedDurationMS: 20000}}
+		FrameRateNumerator: 30, FrameRateDenominator: 1, CadenceVerified: true, DecodedFrames: 600, DecodedDurationMS: 20000}}
 	plan := clip.EditPlan{Ratio: "vertical", DurationMS: 16000, Cuts: []clip.Cut{ratedCut("cut", "s", 0, 8000, 500)}}
 	before := plan
 	err := a.WithWorkspace(t.Context(), "refused-rate", func(ws clip.MediaWorkspace) error {

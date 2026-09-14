@@ -76,6 +76,26 @@ func TestTheSoundSettingDoesNotInvalidateAnInterruptedCandidate(t *testing.T) {
 	if h.planner.observe != observed || h.planner.plans != planned {
 		t.Fatal("the sound change consulted a model")
 	}
+	h.renderer.fail = nil
+	h.start(t)
+	if err := h.run(t); err != nil {
+		t.Fatal("render-only continuation failed", err)
+	}
+	if h.planner.observe != observed || h.planner.plans != planned || h.renderer.calls != 2 {
+		t.Fatal("continuation repeated completed AI work")
+	}
+	if !h.renderer.plan.RetainsOriginalAudio(h.renderer.plan.Cuts[0]) {
+		t.Fatal("continuation rendered the old source-sound snapshot")
+	}
+	completed, err := h.projects.GetProject(ctx, "alice", h.project.ID)
+	if err != nil || completed.Result == nil {
+		t.Fatal("continuation did not persist a result", err)
+	}
+	plan, _, err := clip.DecodeEditPlan(completed.EditPlan)
+	if err != nil || !plan.RetainsOriginalAudio(plan.Cuts[0]) {
+		t.Fatal("saved assembly lost the latest owner sound setting", err)
+	}
+	h.assertClean(t)
 }
 
 func TestSourceSoundChangeIsAtomicIdempotentAndRenderOnly(t *testing.T) {

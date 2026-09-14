@@ -2,7 +2,9 @@ package ai_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
+	"path/filepath"
 	"reflect"
 	"slices"
 	"strings"
@@ -158,5 +160,130 @@ func TestCompositionQualityManualReorderKeepsFrozenFactsAndExactText(t *testing.
 	decoded, _, err := clip.DecodeEditPlan(stored)
 	if err != nil || decoded.Portable.Snapshot.Body != nativeBody || !strings.Contains(stored, "12,000원") {
 		t.Fatal("frozen content changed", err)
+	}
+}
+
+// The same recorded corpus is handed to the production media review and browser
+// compositor through an optional artifact directory, never through live AI.
+func TestCompositionQualityAssemblyCorpus(t *testing.T) {
+	for _, ratio := range []string{"vertical", "horizontal", "square"} {
+		for _, pace := range []string{"steady", "rapid"} {
+			t.Run(ratio+"-"+pace, func(t *testing.T) {
+				in := nativeInput()
+				in.Ratio, in.TargetDurationMS = ratio, 18000
+				in.Composition.Inputs.Values = nil
+				body := `<clip version="1" styles="simple clean" pace="` + pace + `"><group id="menu"><field id="name" label="이름" required="true"/><field id="price" label="가격"/></group><repeat for="menu"><scene id="dish" scope="item"><text id="copy" kind="ai" role="caption" style="simple" position="bottom" basis="cut">관찰한 <value field="menu.name"/></text><text id="price" kind="fixed" role="info" position="top" basis="cut"><value field="menu.price"/></text></scene></repeat><text id="exact" kind="fixed" role="badge" position="header" basis="output-start" start="1" end="2">직접 작성</text></clip>`
+				setNativeBody(&in, body)
+				in.Analyses = nil
+				writer, models, _ := newService(t, "", true)
+				var recorded []json.RawMessage
+				for i, id := range []string{"a", "b"} {
+					source := clip.AnalysisSource{RenderSource: clip.RenderSource{ID: id, Fingerprint: strings.Repeat(id, 64), Info: clip.MediaInfo{DurationMS: 16000, Width: 1280, Height: 720, HasAudio: true, FrameRateNumerator: 60, FrameRateDenominator: 1, CadenceVerified: true, DecodedFrames: 960, DecodedDurationMS: 16000}}, Filename: id + ".mp4"}
+					response := observation()
+					response["source_id"], response["chunk_index"] = id, 0
+					name := []string{"해물라면", "치즈라면"}[i]
+					segments := []any{}
+					for j, end := range []int{15000, 15500, 16000} {
+						segment := firstSegment(observation())
+						segment["start_ms"], segment["end_ms"] = []int{0, 15000, 15500}[j], end
+						segment["subjects"], segment["event"], segment["speech"] = []string{name}, name+"을 담는다", "합성 음성"
+						if j == 1 {
+							segment["certainty"] = "uncertain"
+						}
+						if j == 2 {
+							segment["certainty"], segment["usability"], segment["quality"] = "unknown", "unusable", "fully obscured"
+							segment["subjects"], segment["event"], segment["speech"], segment["action"], segment["motion"] = []string{}, "", "", "", ""
+						}
+						segments = append(segments, segment)
+					}
+					response["segments"] = segments
+					models.response.Text = raw(response)
+					recorded = append(recorded, json.RawMessage(models.response.Text))
+					chunkInput := chunk()
+					chunkInput.Source, chunkInput.Index, chunkInput.OffsetMS, chunkInput.DurationMS = source, 0, 0, 16000
+					chunkInput.Video.DurationMS = 16000
+					observed, _, err := writer.ObserveChunk(t.Context(), testRef(), chunkInput)
+					if err != nil {
+						d, _ := clip.DiagnosticFromError(err)
+						t.Fatalf("%v: %+v", err, d)
+					}
+					in.Analyses = append(in.Analyses, clip.SourceAnalysis{Source: source, Segments: observed.Segments})
+				}
+				cuts, generated := []any{}, []any{}
+				start := 0
+				for i, rate := range clip.PlaybackRates() {
+					if i == 3 {
+						start = 0
+					}
+					source, item, name := "a", "sea", "해물라면"
+					if i >= 3 {
+						source, item, name = "b", "cheese", "치즈라면"
+					}
+					id, end := fmt.Sprintf("cut-%d", i), start+3*rate
+					refs := []string{clip.ObservationID(source, 0)}
+					cut := map[string]any{"id": id, "source_id": source, "template_section_id": "dish", "group_id": "menu", "item_id": item, "start_ms": start, "end_ms": end, "rate_permille": rate, "volume": 1, "focal": map[string]float64{"x": []float64{.25, .75}[i/3], "y": .5}, "observation_refs": refs}
+					cuts = append(cuts, cut)
+					generated = append(generated, map[string]any{"element_id": "copy", "cut_id": id, "text": name + []string{"을 담는다", "의 모습", "이 보인다"}[i%3], "short_text": "", "keyword": "", "rows": []string{}, "short_rows": []string{}, "observation_refs": refs, "fact_refs": []any{nativeFact("name", "menu", item)}})
+					start = end
+				}
+				response := map[string]any{"ratio": ratio, "duration_ms": 18000, "cuts": cuts, "generated": generated}
+				models.response.Text = raw(response)
+				recorded = append(recorded, json.RawMessage(models.response.Text))
+				plan, _, err := writer.Plan(t.Context(), testRef(), in)
+				if err != nil {
+					d, _ := clip.DiagnosticFromError(err)
+					t.Fatalf("%v: %+v", err, d)
+				}
+				if len(models.calls) != 3 || len(plan.Cuts) != 6 || plan.DurationMS != 18000 || len(plan.Portable.Fallbacks) != 0 {
+					t.Fatalf("corpus silently changed: calls=%d cuts=%d duration=%d fallback=%+v", len(models.calls), len(plan.Cuts), plan.DurationMS, plan.Portable.Fallbacks)
+				}
+				plan.SourceAudio = &clip.SourceAudioSettings{Values: []clip.SourceAudioSetting{{SourceID: "a", Fingerprint: strings.Repeat("a", 64)}, {SourceID: "b", Fingerprint: strings.Repeat("b", 64)}}}
+				encoded, err := clip.EncodeEditPlan(plan, plan.Styles)
+				if err != nil {
+					d, _ := clip.DiagnosticFromError(err)
+					t.Fatalf("%v: %+v", err, d)
+				}
+				analysis, _ := json.Marshal(in.Analyses)
+				project := clip.Project{Ratio: ratio, EditPlan: encoded, Analysis: string(analysis), Composition: in.Composition, EditPlanRevision: 1}
+				draft := clip.CorrectionFromPlan(plan)
+				draft.Cuts[3].TransitionMS = 200
+				draft.DurationMS = 17800
+				// Reorder adjacent same-scene splits without changing ranges, ids or facts.
+				draft.Cuts[0], draft.Cuts[1] = draft.Cuts[1], draft.Cuts[0]
+				corrected, styles, err := clip.ApplyCorrection(config.ClipRender(&config.Config{}), project, draft)
+				if err != nil {
+					d, _ := clip.DiagnosticFromError(err)
+					t.Fatalf("%v: %+v", err, d)
+				}
+				if err = clip.ValidateCompositionEvidence(corrected); err != nil {
+					d, _ := clip.DiagnosticFromError(err)
+					t.Fatalf("%v: %+v", err, d)
+				}
+				if corrected.Cuts[0].ID != "cut-1" || corrected.Cuts[1].ID != "cut-0" || len(corrected.Portable.Elements) != 13 {
+					t.Fatal("correction lost assembly or text")
+				}
+				encoded, err = clip.EncodeEditPlan(corrected, styles)
+				if err != nil {
+					d, _ := clip.DiagnosticFromError(err)
+					t.Fatalf("%v: %+v", err, d)
+				}
+				if root := os.Getenv("CLIP_ASSEMBLY_CORPUS_DIR"); root != "" {
+					artifact := struct {
+						Plan      string
+						Analyses  []clip.SourceAnalysis
+						Responses []json.RawMessage
+					}{encoded, in.Analyses, recorded}
+					data, _ := json.MarshalIndent(artifact, "", "  ")
+					if err := os.MkdirAll(root, 0755); err != nil {
+						d, _ := clip.DiagnosticFromError(err)
+						t.Fatalf("%v: %+v", err, d)
+					}
+					if err := os.WriteFile(filepath.Join(root, ratio+"-"+pace+".json"), data, 0644); err != nil {
+						d, _ := clip.DiagnosticFromError(err)
+						t.Fatalf("%v: %+v", err, d)
+					}
+				}
+			})
+		}
 	}
 }

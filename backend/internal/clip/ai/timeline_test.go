@@ -450,6 +450,7 @@ func TestTheTimelineMeasuresEveryRateOnTransformedOutputTime(t *testing.T) {
 		// 60 fps footage, so even 0.5x reaches the 30 fps output.
 		a.Source.Info.FrameRateNumerator, a.Source.Info.FrameRateDenominator = 60, 1
 		a.Source.Info.DecodedFrames, a.Source.Info.DecodedDurationMS = 3900, 65000
+		a.Source.Info.CadenceVerified = true
 		a.Segments = slices.Clone(base.Segments)
 		in.Analyses = append(in.Analyses, a)
 		// A source span chosen so the OUTPUT length is 3000 ms at every rate.

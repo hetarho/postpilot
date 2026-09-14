@@ -373,6 +373,13 @@ func editingState(p Project, cfg RenderConfig, exposeNative bool) (*CorrectionSt
 	return &CorrectionState{CorrectionFromPlan(plan), sources, styles, cfg.FadeMS, cfg.MaxCuts, cfg.MaxCopyRunes, cfg.MinDurationMS, cfg.MaxDurationMS}, nil
 }
 func ApplyCorrection(cfg RenderConfig, p Project, input CorrectionPlan) (EditPlan, []string, error) {
+	// Reject an unsupported explicit rate before interval resolution turns its
+	// zero transformed length into an unrelated duration error (CLIP-99).
+	for _, cut := range input.Cuts {
+		if !ValidPlaybackRate(cut.Rate()) {
+			return EditPlan{}, nil, cutRefusal(cut.ID, "plan_cut_rate")
+		}
+	}
 	old, styles, err := DecodeEditPlan(p.EditPlan)
 	if err != nil {
 		return EditPlan{}, nil, err

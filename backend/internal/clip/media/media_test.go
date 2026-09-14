@@ -54,7 +54,7 @@ func TestProbeUsesDecodedClockAndRotation(t *testing.T) {
 		if strings.HasSuffix(c.Binary, "ffprobe") {
 			return []byte(probeJSON), nil
 		}
-		return []byte("frame=1830\nout_time_us=61000000\nprogress=end\n"), nil
+		return []byte("frame=1830\nout_time_us=61000000\nprogress=end\n[Parsed_vfrdet_0 @ 0xff] VFR:0.000000 (0/1829)\n"), nil
 	}}
 	a := newAdapter(t, r)
 	err := a.WithWorkspace(t.Context(), "job", func(ws clip.MediaWorkspace) error {
@@ -63,13 +63,13 @@ func TestProbeUsesDecodedClockAndRotation(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		if info.DurationMS != 61000 || info.Width != 1080 || info.Height != 1920 || info.Rotation != 270 || !info.HasAudio || len(info.Streams) != 2 || info.FrameRateNumerator != 30000 || info.FrameRateDenominator != 1001 {
+		if !info.CadenceVerified || info.DurationMS != 61000 || info.Width != 1080 || info.Height != 1920 || info.Rotation != 270 || !info.HasAudio || len(info.Streams) != 2 || info.FrameRateNumerator != 30000 || info.FrameRateDenominator != 1001 {
 			t.Fatalf("probe=%+v", info)
 		}
 		if !reflect.DeepEqual(r.calls[0].Args, []string{"-v", "error", "-protocol_whitelist", "file,pipe", "-show_streams", "-show_format", "-of", "json", p}) {
 			t.Fatal(r.calls[0])
 		}
-		if !strings.Contains(strings.Join(r.calls[1].Args, " "), "-xerror") || !strings.Contains(strings.Join(r.calls[1].Args, " "), "-progress pipe:1") {
+		if !strings.Contains(strings.Join(r.calls[1].Args, " "), "-xerror") || !strings.Contains(strings.Join(r.calls[1].Args, " "), "-progress pipe:2") {
 			t.Fatal(r.calls[1])
 		}
 		return nil
@@ -361,5 +361,25 @@ func TestRejectsUnsafeRootsAndSourcePaths(t *testing.T) {
 	}
 	if len(r.calls) != 0 {
 		t.Fatal("ran binary on unsafe path")
+	}
+}
+
+func TestConstantCadenceRequiresCompleteDecodedIntervalEvidence(t *testing.T) {
+	for _, tc := range []struct {
+		report string
+		want   bool
+	}{
+		{"[Parsed_vfrdet_0 @ 0xff] VFR:0.000000 (0/239)", true},
+		{"[Parsed_vfrdet_0 @ 0xff] VFR:0.004184 (1/238)", false},
+		{"[Parsed_vfrdet_0 @ 0xff] VFR:0.000000 (1/99999999)", false},
+		{"[Parsed_vfrdet_0 @ 0xff] VFR:-nan (0/0)", false},
+		{"[Parsed_vfrdet_0 @ 0xff] VFR:0.000000 (0/", false},
+		{"[Parsed_vfrdet_0 @ 0xff] VFR:nan (0/0)\n[Parsed_vfrdet_0 @ 0xfe] VFR:0.000000 (0/239)", true},
+		{"[Parsed_vfrdet_0 @ 0xff] VFR:0.000000 (0/100)\n[Parsed_vfrdet_0 @ 0xfe] VFR:0.000000 (0/239)", false},
+		{"", false},
+	} {
+		if got := constantCadenceReport([]byte(tc.report)); got != tc.want {
+			t.Fatalf("%q verified=%v, want %v", tc.report, got, tc.want)
+		}
 	}
 }
