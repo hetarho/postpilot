@@ -1,4 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { Code } from '@connectrpc/connect'
+import { initializeI18n } from '@/app/providers/i18n'
+import { connectAppError } from '@/test/app-error'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderAppAt } from '@/test/app'
@@ -49,6 +52,7 @@ afterEach(() => {
   // The settings autosave queue is module state that outlives its form on purpose (CLIP-39), so
   // an unsent draft would leak into the next test the way it would leak into the next session.
   discardClipDraftQueues()
+  initializeI18n('ko')
 })
 async function fillSetup() {
   const user = userEvent.setup()
@@ -291,3 +295,69 @@ describe('clip page local upload lifecycle', () => {
     expect(screen.queryByText('clip.mp4')).not.toBeInTheDocument()
   })
 })
+
+it.each(['ko', 'en'] as const)(
+  'keeps the refused save and the input to fix on the page after leaving settings in %s',
+  async (language) => {
+    initializeI18n(language)
+    const user = userEvent.setup()
+    mount('/clips/project', {
+      projectSaveError: connectAppError('CLIP_COMPOSITION_INVALID', Code.InvalidArgument, {
+        element_id: 'menu',
+        line: '8',
+        reason: 'items_required',
+      }),
+    })
+    const titleLabel = language === 'ko' ? '클립 제목' : 'Clip title'
+    await user.type(await screen.findByLabelText(titleLabel), ' changed')
+    await user.click(
+      screen.getByRole('tab', { name: language === 'ko' ? '클립 다듬기' : 'Refine clip' }),
+    )
+    expect(screen.queryByLabelText(titleLabel)).not.toBeInTheDocument()
+    const status = screen.getByRole('status', {
+      name: language === 'ko' ? '클립 상태' : 'Clip status',
+    })
+    await waitFor(() =>
+      expect(status).toHaveTextContent(language === 'ko' ? '저장이 거절됐어요' : 'Save refused'),
+    )
+    expect(status).toHaveTextContent('menu')
+    expect(status).toHaveTextContent(language === 'ko' ? /항목/ : /item/i)
+    expect(status).not.toHaveTextContent(language === 'ko' ? '다시 시도 중' : 'retrying')
+    expect(status).not.toHaveClass('truncate')
+    expect(status).toHaveClass('text-notice-danger-fg')
+    expect(status).not.toHaveTextContent('private backend prose')
+    await user.click(
+      screen.getByRole('tab', { name: language === 'ko' ? '클립 완성' : 'Finish clip' }),
+    )
+    expect(status).toHaveTextContent('menu')
+    await user.click(
+      screen.getByRole('tab', { name: language === 'ko' ? '클립 생성' : 'Create clip' }),
+    )
+    expect(await screen.findByLabelText(titleLabel)).toHaveValue('제주 여행 changed')
+  },
+)
+
+it.each(['ko', 'en'] as const)(
+  'reports an unavailable autosave as retrying on the page in %s',
+  async (language) => {
+    initializeI18n(language)
+    const user = userEvent.setup()
+    mount('/clips/project', {
+      projectSaveError: connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable),
+    })
+    await user.type(
+      await screen.findByLabelText(language === 'ko' ? '클립 제목' : 'Clip title'),
+      ' changed',
+    )
+    const status = screen.getByRole('status', {
+      name: language === 'ko' ? '클립 상태' : 'Clip status',
+    })
+    await waitFor(() =>
+      expect(status).toHaveTextContent(
+        language === 'ko' ? '저장하지 못했어요 · 다시 시도 중' : 'Could not save · retrying',
+      ),
+    )
+    expect(status).not.toHaveTextContent(language === 'ko' ? '거절' : 'refused')
+    expect(status).toHaveClass('text-notice-danger-fg')
+  },
+)

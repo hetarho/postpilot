@@ -51,6 +51,7 @@ export const common = {
     savePending: 'Waiting to save',
     saveFailed: 'Could not save',
     saveRetrying: 'Could not save · retrying',
+    saveRefused: 'Save refused',
     conflict: 'Edit conflict',
   },
   time: {

@@ -1,8 +1,14 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import { useTranslation } from 'react-i18next'
 import { SAVE_STATUS_SETTLED_MS } from '@/shared/config'
+import type { AppFailure } from '@/shared/api'
 import { resolveSaveStatus, SAVE_STATUS_LABEL_KEYS, type SaveState } from '@/shared/lib'
-import { clipDraftState, flushClipDraft, subscribeClipDraft } from './clip-draft-queue'
+import {
+  clipDraftFailure,
+  clipDraftState,
+  flushClipDraft,
+  subscribeClipDraft,
+} from './clip-draft-queue'
 
 /** What the clip workspace's ONE status line needs to know about the settings' autosave, and the
  *  flush the credit approval owes itself before it prices a run (CLIP-38, CLIP-39).
@@ -16,6 +22,7 @@ import { clipDraftState, flushClipDraft, subscribeClipDraft } from './clip-draft
 export function useClipDraftSave(projectId: string): {
   state: SaveState
   failing: boolean
+  failure: AppFailure | undefined
   label: string
   flush: (failFast?: boolean) => Promise<void>
 } {
@@ -28,6 +35,12 @@ export function useClipDraftSave(projectId: string): {
     subscribe,
     () => clipDraftState(projectId),
     () => 'idle' as SaveState,
+  )
+
+  const failure = useSyncExternalStore(
+    subscribe,
+    () => clipDraftFailure(projectId),
+    () => undefined,
   )
 
   const [settled, setSettled] = useState(false)
@@ -48,7 +61,8 @@ export function useClipDraftSave(projectId: string): {
   const key = SAVE_STATUS_LABEL_KEYS[resolved]
   return {
     state,
-    failing: resolved === 'error',
+    failing: resolved === 'error' || resolved === 'refused',
+    failure,
     label: key ? t(key) : '',
     // Keyed by the id it was called with: the workspace is mounted per project, so this identity
     // only changes when the whole page does.

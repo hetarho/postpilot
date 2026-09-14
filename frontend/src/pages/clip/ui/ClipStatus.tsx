@@ -8,7 +8,8 @@ import {
 } from '@/entities/generation-job'
 import { clipState, clipStateLabel, type ClipProject } from '@/entities/clip-project'
 import type { ClipUploadState } from '@/features/upload-clip-sources'
-import { ProgressBar, Typography } from '@/shared/ui'
+import { AppFailureMessage, ProgressBar, Typography } from '@/shared/ui'
+import type { AppFailure } from '@/shared/api'
 
 /** The clip workspace's ONE status surface (CLIP-38, THEME-39): everything the page has to SAY
  *  about its own state, at the top of the page, and nowhere else. The docked bar below holds
@@ -29,6 +30,7 @@ export type CorrectionStatus = 'clean' | 'dirty' | 'unrendered'
 export interface SaveStatus {
   failing: boolean
   label: string
+  failure?: AppFailure
 }
 
 /** `idle` is the only phase the line stays quiet for: nothing has been picked, so what the screen
@@ -73,7 +75,7 @@ export function ClipProgressBar({
   )
 }
 
-/** One line of `meta` text carrying AT MOST ONE thing, in CLIP-38's precedence: a failing save,
+/** One `meta` status surface carrying AT MOST ONE state, in CLIP-38's precedence: a failing save,
  *  the running job's stage, the source upload's phase, a correction that is unsaved or
  *  unrendered, the save state, then the project's own state.
  *
@@ -118,16 +120,18 @@ export function ClipStatusLine({
                     : project
                       ? clipStateLabel(clipState(project))
                       : '')
+  const failure = !project?.finalized && save.failing ? save.failure : undefined
   return (
     <Typography
       variant="meta"
-      as="p"
+      as="div"
       role="status"
       aria-live="polite"
       aria-label={t('project.statusAria')}
-      className={clsx('min-w-0 truncate', save.failing && 'text-notice-danger-fg')}
+      className={clsx('min-w-0', !failure && 'truncate', save.failing && 'text-notice-danger-fg')}
     >
       {message}
+      {failure && <AppFailureMessage failure={failure} />}
     </Typography>
   )
 }

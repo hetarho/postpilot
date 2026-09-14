@@ -1,5 +1,5 @@
 import { create } from '@bufbuild/protobuf'
-import { Code, type createRouterTransport } from '@connectrpc/connect'
+import { Code, type ConnectError, type createRouterTransport } from '@connectrpc/connect'
 import {
   ClipService,
   ClipAnalysisEligibility,
@@ -122,6 +122,7 @@ export interface FakeClipsOptions {
   planSaveConflict?: boolean
   projectWrites?: ClipProjectDraft[]
   projectSaveFails?: boolean
+  projectSaveError?: ConnectError
   projectListFails?: boolean
   sourceRequests?: unknown[]
   retainedBatches?: ProtoClipSourceBatch[]
@@ -359,6 +360,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
   })
   router.rpc(ClipService.method.updateClipProject, (req) => {
     options.calls?.push('UpdateClipProject')
+    if (options.projectSaveError) throw options.projectSaveError
     if (options.projectSaveFails) throw connectAppError('CLIP_INVALID_INPUT', Code.InvalidArgument)
     const p = projects.get(req.id)
     if (!p) throw connectAppError('CLIP_NOT_FOUND', Code.NotFound)

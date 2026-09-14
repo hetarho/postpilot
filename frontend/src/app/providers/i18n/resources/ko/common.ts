@@ -51,6 +51,7 @@ export const common = {
     savePending: '저장 대기 중',
     saveFailed: '저장하지 못했어요',
     saveRetrying: '저장하지 못했어요 · 다시 시도 중',
+    saveRefused: '저장이 거절됐어요',
     conflict: '수정 충돌',
   },
   time: {

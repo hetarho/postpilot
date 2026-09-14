@@ -1,4 +1,5 @@
 import { Code, ConnectError } from '@connectrpc/connect'
+import { appFailureFromConnect, type AppFailure } from '@/shared/api'
 import {
   AUTOSAVE_DEBOUNCE_MS,
   AUTOSAVE_RETRY_BASE_MS,
@@ -27,8 +28,10 @@ interface Queue {
   send: SendClipDraft
   timer: ReturnType<typeof setTimeout> | undefined
   inFlight: boolean
-  /** Set when the last attempt failed. Cleared by the next accepted save. */
-  failed: boolean
+  /** A retrying failure or a refusal that waits for another edit or explicit flush. */
+  failed: 'error' | 'refused' | undefined
+  /** The server's structured refusal, retained even while the settings panel is unmounted. */
+  failure: AppFailure | undefined
   /** Doubles per consecutive transient failure, reset on success. */
   backoff: number
   /** Whether this queue has ever had a draft accepted, which is what lets the status line say
@@ -56,7 +59,8 @@ function queueFor(projectId: string, send: SendClipDraft): Queue {
     send,
     timer: undefined,
     inFlight: false,
-    failed: false,
+    failed: undefined,
+    failure: undefined,
     backoff: AUTOSAVE_RETRY_BASE_MS,
     saved: false,
     waiting: [],
@@ -69,7 +73,7 @@ function queueFor(projectId: string, send: SendClipDraft): Queue {
 
 function stateOf(queue: Queue | undefined): SaveState {
   if (!queue) return 'idle'
-  if (queue.failed) return 'error'
+  if (queue.failed) return queue.failed
   if (queue.inFlight) return 'saving'
   if (queue.pending) return 'dirty'
   return queue.saved ? 'saved' : 'idle'
@@ -97,18 +101,21 @@ async function run(projectId: string, queue: Queue) {
   if (queue.inFlight || !queue.pending) return
   const draft = queue.pending
   queue.inFlight = true
-  queue.failed = false
+  queue.failed = undefined
+  queue.failure = undefined
   publish(queue)
   try {
     await queue.send(draft)
   } catch (error) {
     queue.inFlight = false
-    queue.failed = true
+    const refused = terminal(error)
+    queue.failed = refused ? 'refused' : 'error'
+    queue.failure = refused ? appFailureFromConnect(error) : undefined
     publish(queue)
     const failFast = queue.waiting.filter((one) => one.failFast)
     queue.waiting = queue.waiting.filter((one) => !one.failFast)
     for (const one of failFast) one.reject(error)
-    if (terminal(error)) {
+    if (refused) {
       // Hand the refusal to whoever is waiting on a flush — an approval must not price a
       // generation on settings the server never took (CLIP-39).
       const waiting = queue.waiting.splice(0)
@@ -148,7 +155,8 @@ export function queueClipDraft(
 ): void {
   const queue = queueFor(projectId, send)
   queue.pending = draft
-  queue.failed = false
+  queue.failed = undefined
+  queue.failure = undefined
   if (queue.timer) clearTimeout(queue.timer)
   queue.timer = setTimeout(() => {
     queue.timer = undefined
@@ -183,6 +191,11 @@ export function peekPendingClipDraft(projectId: string): ClipProjectDraft | unde
 
 export function clipDraftState(projectId: string): SaveState {
   return stateOf(queues.get(projectId))
+}
+
+/** A stable snapshot: reading the refusal never creates a queue or a new object. */
+export function clipDraftFailure(projectId: string): AppFailure | undefined {
+  return queues.get(projectId)?.failure
 }
 
 export function subscribeClipDraft(projectId: string, listener: () => void): () => void {

@@ -135,7 +135,7 @@ it('names the stage a failed attempt stopped at', () => {
 it('is one mounted live region whose text changes rather than a swapped node', () => {
   const status = line({ save: { failing: false, label: '저장했어요' } })
   expect(status).toHaveAttribute('aria-live', 'polite')
-  expect(status.tagName).toBe('P')
+  expect(status.tagName).toBe('DIV')
 })
 
 it('tracks a running stage and then the bytes actually put', () => {

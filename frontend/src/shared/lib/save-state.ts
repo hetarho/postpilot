@@ -1,11 +1,12 @@
 /** What a debounced save queue is doing. Shared because two features now autosave — the post
  *  draft and the clip project's settings — and the one status line each of them reports through
- *  has to speak the same five words (CLIP-38, POST-45). */
-export type SaveState = 'idle' | 'dirty' | 'saving' | 'saved' | 'error'
+ *  has to use the same status vocabulary (CLIP-38, POST-45).
+ *  `error` is retrying; `refused` waits for a new edit or an explicit flush. */
+export type SaveState = 'idle' | 'dirty' | 'saving' | 'saved' | 'error' | 'refused'
 
 /** What a status line has to SAY about that, once `saved` has been allowed to settle. `quiet` is
  *  "nothing", and it is a state no queue itself has. */
-export type SaveStatusState = 'quiet' | 'dirty' | 'saving' | 'saved' | 'error'
+export type SaveStatusState = 'quiet' | 'dirty' | 'saving' | 'saved' | 'error' | 'refused'
 
 /** A queue resolves to `saved` for the whole life of a queue that has ever saved, which is correct
  *  as a fact and wrong as a message: 저장됨 would never come down and the one status line could
@@ -25,4 +26,5 @@ export const SAVE_STATUS_LABEL_KEYS = {
   saving: 'action.saving',
   saved: 'state.saved',
   error: 'state.saveRetrying',
+  refused: 'state.saveRefused',
 } as const satisfies Record<SaveStatusState, string | null>

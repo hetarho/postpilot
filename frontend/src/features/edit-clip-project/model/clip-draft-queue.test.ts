@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Code, ConnectError } from '@connectrpc/connect'
 import type { ClipProjectDraft } from '@/entities/clip-project'
+import { connectAppError } from '@/test/app-error'
 import {
   clipDraftState,
+  clipDraftFailure,
   discardClipDraftQueues,
   flushClipDraft,
   peekPendingClipDraft,
@@ -81,6 +83,7 @@ describe('clip settings autosave queue', () => {
     settle[0].reject(new ConnectError('offline', Code.Unavailable))
     await vi.advanceTimersByTimeAsync(0)
     expect(clipDraftState('clip')).toBe('error')
+    expect(clipDraftFailure('clip')).toBeUndefined()
 
     await vi.advanceTimersByTimeAsync(1000)
     expect(sent).toHaveLength(2)
@@ -97,22 +100,40 @@ describe('clip settings autosave queue', () => {
     expect(clipDraftState('clip')).toBe('saved')
   })
 
-  it('does not retry a refusal the server will repeat', async () => {
-    const { sent, settle, send } = controllable()
-    queueClipDraft('clip', draft('제주'), send)
-    await vi.advanceTimersByTimeAsync(1000)
-    settle[0].reject(new ConnectError('busy', Code.FailedPrecondition))
-    await vi.advanceTimersByTimeAsync(0)
-    expect(clipDraftState('clip')).toBe('error')
+  it.each([Code.InvalidArgument, Code.FailedPrecondition])(
+    'retains refusal %s and its unsaved draft until the owner edits again',
+    async (code) => {
+      const { sent, settle, send } = controllable()
+      const params = { element_id: 'menu', line: '8', reason: 'items_required' }
+      const seen: unknown[] = []
+      const stop = subscribeClipDraft('clip', () => seen.push(clipDraftFailure('clip')))
+      queueClipDraft('clip', draft('제주'), send)
+      await vi.advanceTimersByTimeAsync(1000)
+      settle[0].reject(connectAppError('CLIP_COMPOSITION_INVALID', code, params))
+      await vi.advanceTimersByTimeAsync(0)
+      expect(clipDraftState('clip')).toBe('refused')
+      const failure = clipDraftFailure('clip')
+      expect(failure).toEqual({ reason: 'CLIP_COMPOSITION_INVALID', params })
+      expect(seen.at(-1)).toBe(failure)
+      expect(clipDraftFailure('clip')).toBe(failure)
+      expect(clipDraftFailure('other')).toBeUndefined()
+      expect(peekPendingClipDraft('clip')?.title).toBe('제주')
 
-    await vi.advanceTimersByTimeAsync(60_000)
-    expect(sent).toHaveLength(1)
-    // The owner's next edit starts it again rather than a timer doing it.
-    queueClipDraft('clip', draft('제주도'), send)
-    expect(clipDraftState('clip')).toBe('dirty')
-    await vi.advanceTimersByTimeAsync(1000)
-    expect(sent).toEqual(['제주', '제주도'])
-  })
+      await vi.advanceTimersByTimeAsync(60_000)
+      expect(sent).toHaveLength(1)
+      // The owner's next edit starts it again rather than a timer doing it.
+      queueClipDraft('clip', draft('제주도'), send)
+      expect(clipDraftState('clip')).toBe('dirty')
+      expect(clipDraftFailure('clip')).toBeUndefined()
+      await vi.advanceTimersByTimeAsync(1000)
+      expect(sent).toEqual(['제주', '제주도'])
+      settle[1].resolve()
+      await vi.advanceTimersByTimeAsync(0)
+      expect(clipDraftState('clip')).toBe('saved')
+      expect(clipDraftFailure('clip')).toBeUndefined()
+      stop()
+    },
+  )
 
   it('flushes on demand and resolves once the queue is dry', async () => {
     const { sent, settle, send } = controllable()
@@ -170,6 +191,7 @@ describe('clip settings autosave queue', () => {
     await vi.advanceTimersByTimeAsync(60_000)
     expect(sent).toEqual([])
     expect(clipDraftState('clip')).toBe('idle')
+    expect(clipDraftFailure('clip')).toBeUndefined()
   })
 
   it('tells its subscribers, including one that subscribed before the first keystroke', async () => {
@@ -185,4 +207,15 @@ describe('clip settings autosave queue', () => {
     queueClipDraft('clip', draft('제주도'), send)
     expect(seen).toHaveLength(3)
   })
+})
+
+it('discards a retained refusal when its project is deleted', async () => {
+  queueClipDraft('clip', draft('제주'), async () => {
+    throw connectAppError('CLIP_INVALID_INPUT', Code.InvalidArgument)
+  })
+  await vi.advanceTimersByTimeAsync(1000)
+  expect(clipDraftFailure('clip')?.reason).toBe('CLIP_INVALID_INPUT')
+  discardClipDraftQueues()
+  expect(clipDraftFailure('clip')).toBeUndefined()
+  expect(clipDraftState('clip')).toBe('idle')
 })
