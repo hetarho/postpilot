@@ -280,7 +280,13 @@ func (s *Service) UpdateProject(ctx context.Context, user, id string, p ProjectP
 	if p.TargetDurationMS != nil && !s.duration(*p.TargetDurationMS) {
 		return Project{}, ErrInvalid
 	}
-	if p.Disclosure != nil && !ValidDisclosure(*p.Disclosure) {
+	// The retired picker's value is the campaign identity only where nothing
+	// else declares one, so a legacy project still may not clear it (CDS-5). An
+	// authored composition owns its own disclosure field and leaves this column
+	// empty, and an owner edit has to be able to write that back — otherwise the
+	// project can never be saved again after creation.
+	authored := old.Composition != nil && !old.Composition.Snapshot.Legacy
+	if p.Disclosure != nil && !ValidDisclosure(*p.Disclosure) && !(authored && *p.Disclosure == "") {
 		return Project{}, ErrInvalid
 	}
 	if p.CTA != nil && !ValidCTA(*p.CTA) {

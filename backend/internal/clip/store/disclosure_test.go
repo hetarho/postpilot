@@ -2,8 +2,10 @@ package store_test
 
 import (
 	"errors"
-	"github.com/postpilot/backend/internal/clip"
 	"testing"
+
+	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/clip/composition"
 )
 
 func TestDisclosureVisibilityPersistenceAndRenderRevision(t *testing.T) {
@@ -93,4 +95,30 @@ func TestDisclosureChoiceReachesApprovedGeneration(t *testing.T) {
 		t.Fatal("generation lost visibility")
 	}
 	h.assertClean(t)
+}
+
+// The browser sends the whole draft on every save, so a composition project's
+// empty disclosure comes back on the patch that carries its inputs. Refusing it
+// froze those projects at creation (review/clip-project-update-260914 F1).
+func TestCompositionProjectSavesItsEmptyDisclosure(t *testing.T) {
+	service, _, _ := setup(t)
+	template, err := service.CreateTemplate(t.Context(), "alice", clip.Recipe{Name: "composition", CompositionBody: nativeBody})
+	if err != nil {
+		t.Fatal(err)
+	}
+	inputs := clip.CompositionInputs{Values: map[string]string{"b": "18,000원"}}
+	p, err := service.CreateProject(t.Context(), "alice", clip.ProjectInput{Title: "draft", VideoTemplateID: template.ID, Ratio: "vertical", TargetDurationMS: 15000, CompositionInputs: &inputs})
+	if err != nil || p.Disclosure != "" {
+		t.Fatal(p.Disclosure, err)
+	}
+	empty := ""
+	inputs.Items = map[string][]composition.Item{"menu": {{ID: "dish-a", Values: map[string]string{"price": "9,000원"}}}}
+	saved, err := service.UpdateProject(t.Context(), "alice", p.ID, clip.ProjectPatch{Disclosure: &empty, CompositionInputs: &inputs})
+	if err != nil || saved.Disclosure != "" || len(saved.Composition.Inputs.Items["menu"]) != 1 {
+		t.Fatal(saved, err)
+	}
+	unsupported := "nope"
+	if _, err := service.UpdateProject(t.Context(), "alice", p.ID, clip.ProjectPatch{Disclosure: &unsupported}); !errors.Is(err, clip.ErrInvalid) {
+		t.Fatal("unsupported disclosure admitted", err)
+	}
 }
