@@ -53,7 +53,7 @@ const summary = (d: ClipComposition) => ({
     prompt,
     required,
   })),
-  groups: d.groups,
+  groups: d.groups.map(({ id, label, min, max }) => ({ id, label, min, max })),
   sections: d.sections.map(({ id, scope, repeat }) => ({ id, scope, repeat })),
   elements: d.elements.map((e) => e.id),
   guidance: d.guidance,

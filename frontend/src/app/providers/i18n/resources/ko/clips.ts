@@ -274,6 +274,9 @@ export const clips = {
       text: '화면 문구 추가',
     },
     errors: {
+      items_required: '“{{element}}”의 부족한 항목을 추가한 뒤 클립을 생성해 주세요.',
+      invalid_item_bounds:
+        '“{{element}}”의 항목 개수를 확인해 주세요. 0부터 항목 제한까지의 정수를 사용하고, 최소 개수는 최대 개수 이하여야 해요.',
       invalid_interval: '시작과 끝의 순서, 부호와 소수 자릿수를 확인해 주세요.',
       unknown_field: '연결한 정보가 없어요. 해당 정보를 추가하거나 연결을 바꿔 주세요.',
       binding_scope: '이 문구가 속한 장면의 항목으로 연결해 주세요.',

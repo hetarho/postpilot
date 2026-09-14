@@ -56,8 +56,9 @@ export function resolveClipComposition(
   const items = new Map<string, CompositionItem>()
   for (const group of Object.keys(input.items).sort()) {
     const values = input.items[group]
-    if (!d.groups.includes(group)) fail(group, 1, 'unknown_group')
-    if (values.length > limits.items) fail(group, 1, 'item_limit')
+    const declaration = d.groups.find((g) => g.id === group)
+    if (!declaration) return fail(group, 1, 'unknown_group')
+    if (values.length > Math.min(limits.items, declaration.max)) fail(group, 1, 'item_limit')
     for (const item of values) {
       const key = `${group}/${item.id}`
       if (!compositionIdentifier.test(item.id)) fail(group, 1, 'invalid_id')

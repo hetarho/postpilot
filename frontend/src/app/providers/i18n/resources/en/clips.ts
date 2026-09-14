@@ -279,6 +279,9 @@ export const clips = {
       text: 'Add on-screen copy',
     },
     errors: {
+      items_required: 'Add the missing items in “{{element}}” before generating the clip.',
+      invalid_item_bounds:
+        'Check the item count for “{{element}}”: use whole numbers from zero to the item limit, with the minimum no greater than the maximum.',
       invalid_interval: 'Check the endpoint order, signs and decimal precision.',
       unknown_field: 'The linked field is missing. Add it or change the binding.',
       binding_scope: 'Bind to the item belonging to this scene.',

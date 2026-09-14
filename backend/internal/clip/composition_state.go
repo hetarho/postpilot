@@ -227,12 +227,24 @@ func ValidateCompositionInputs(d *composition.Document, in CompositionInputs, l 
 		return e
 	}
 	items := map[string]bool{}
+	if required {
+		for _, group := range d.Groups {
+			if len(in.Items[group.ID]) < group.Min {
+				name := group.Label
+				if strings.TrimSpace(name) == "" {
+					name = group.ID
+				}
+				return &composition.Problem{ElementID: name, Line: group.Span.Line, Reason: "items_required"}
+			}
+		}
+	}
 	for _, group := range slices.Sorted(maps.Keys(in.Items)) {
 		values := in.Items[group]
-		if !slices.Contains(d.Groups, group) {
+		index := slices.IndexFunc(d.Groups, func(g composition.Group) bool { return g.ID == group })
+		if index < 0 {
 			return &composition.Problem{ElementID: group, Line: 1, Reason: "unknown_group"}
 		}
-		if len(values) > l.Items {
+		if len(values) > min(l.Items, d.Groups[index].Max) {
 			return &composition.Problem{ElementID: group, Line: 1, Reason: "item_limit"}
 		}
 		for _, item := range values {

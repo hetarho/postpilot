@@ -9,6 +9,14 @@ export function formatAppFailure(
   locale: Locale = activeLocale(),
 ): string {
   if (!failure) return ''
+  if (
+    failure.reason === 'CLIP_COMPOSITION_INVALID' &&
+    (failure.params.reason === 'items_required' || failure.params.reason === 'invalid_item_bounds')
+  ) {
+    return i18next.getFixedT(locale, 'clips')(`composition.errors.${failure.params.reason}`, {
+      element: failure.params.element_id,
+    })
+  }
   const translate = i18next.getFixedT(locale, 'errors') as unknown as (
     key: string,
     options: Readonly<Record<string, string>>,

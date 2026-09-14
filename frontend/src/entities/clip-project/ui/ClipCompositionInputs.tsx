@@ -62,7 +62,7 @@ export function ClipCompositionInputFields({
   return (
     <div className="min-w-0 space-y-6">
       {fields('', value.values, 'global', (values) => onChange({ ...value, values }))}
-      {document.groups.map((group, n) => (
+      {document.groups.map(({ id: group }, n) => (
         <section
           key={group}
           className="min-w-0 space-y-4"

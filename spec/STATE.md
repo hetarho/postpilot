@@ -47,17 +47,18 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T110 | Release QA on the Naver app and the overlay measurement | CDS CLIP | T108 | blocked@260912 |
-| T154 | Declare an item group's name and admitted count, and refuse a short one before paid work | CLIP | - | todo |
 | T155 | Call an item group by its name and open it at its minimum | CLIP | T154 | todo |
 | T156 | Show the recorded check beside the failure reason | ARCH | - | todo |
 | T157 | Say a save was refused rather than promising a retry that was abandoned | ARCH | - | todo |
 
 ## next
-- This release batch is complete: T150/T151 are implemented, verified and individually committed.
-- T154/T155 form the next item-group admission batch; T156/T157 remain separate failure-visibility work.
+- T155 completes the item-group admission release batch after T154.
+- T156/T157 remain separate failure-visibility work.
 - T110 stays owner-blocked and T008 owner-dependent.
 
 ## log
+- 260915 T154 done (grp); compatible group declarations and pre-work admission verified
+- 260914 T154 claimed (grp)
 - 260914 T151 done (snd); six assembly exports/156 browser frames, recovery/migrations, original cadence and mandatory production-image gates verified
 - 260914 T151 refreshed to CLIP@19 CDS@13 (snd); compatible item-group defaults and the existing decoded-duration gate preserve this assembly matrix scope
 - 260914 T151 claimed (snd)
@@ -76,5 +77,3 @@
 - 260914 create-task review/clip-release-smoke-260914 start
 - 260914 T147 done (asm); one timestamp-scaling rate chain with pitch-preserved atempo, the whole render clock on transformed time, audio only from owner-enabled sources and a cadence recheck that refuses before FFmpeg
 - 260914 T147 refreshed to CLIP@19 (asm); r19 changes item-group declaration and pre-work admission, none of which this task's rendering decisions
-- 260914 flaky under full-suite load, reproduced on c02fa07 before T145; internal/clip/store generation/recovery tests intermittently fail with "clip sources are not available in this state" while passing in isolation
-- 260914 create-task CLIP review/clip-failure-visibility-260914 done; T154 T155 carry the declared group, T156 T157 carry what a refusal tells the owner

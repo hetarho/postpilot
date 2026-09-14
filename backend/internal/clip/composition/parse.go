@@ -9,6 +9,7 @@ import (
 )
 
 var identifier = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$`)
+var itemCount = regexp.MustCompile(`^[0-9]+$`)
 var seconds = regexp.MustCompile(`^-?[0-9]+(?:\.[0-9]{1,3})?$`)
 var styleNames = []string{"clean", "memo", "bold", "mark", "simple"}
 var rowRoles = []string{"hook", "title", "mark", "body", "caption", "label", "badge"}
@@ -207,7 +208,7 @@ func parse(source string, limits Limits, stored bool) (*Document, *Problem) {
 				return nil, e
 			}
 		case "group":
-			if e = attrs(n, "id"); e != nil {
+			if e = attrs(n, "id", "label", "min", "max"); e != nil {
 				return nil, e
 			}
 			if e = claim(n, ""); e != nil {
@@ -217,7 +218,26 @@ func parse(source string, limits Limits, stored bool) (*Document, *Problem) {
 			if group == "scenes" {
 				return nil, issue(n, "invalid_id")
 			}
-			d.Groups = append(d.Groups, group)
+			declaration := Group{ID: group, Label: n.Attributes["label"], Max: limits.Items, Span: n.Span}
+			if scalar(declaration.Label) > limits.LabelChars {
+				return nil, issue(n, "field_limit")
+			}
+			for _, bound := range []struct {
+				key   string
+				value *int
+			}{{"min", &declaration.Min}, {"max", &declaration.Max}} {
+				if raw, ok := n.Attributes[bound.key]; ok {
+					value, err := strconv.Atoi(raw)
+					if !itemCount.MatchString(raw) || err != nil || value > limits.Items {
+						return nil, issue(n, "invalid_item_bounds")
+					}
+					*bound.value = value
+				}
+			}
+			if declaration.Min > declaration.Max {
+				return nil, issue(n, "invalid_item_bounds")
+			}
+			d.Groups = append(d.Groups, declaration)
 			fs, err := nodes(n)
 			if err != nil {
 				return nil, err
@@ -319,7 +339,7 @@ func parse(source string, limits Limits, stored bool) (*Document, *Problem) {
 				return nil, e
 			}
 			over := n.Attributes["for"]
-			if over != "scenes" && !slices.Contains(d.Groups, over) {
+			if over != "scenes" && !slices.ContainsFunc(d.Groups, func(g Group) bool { return g.ID == over }) {
 				return nil, issue(n, "unknown_repeat")
 			}
 			ns, e := nodes(n)

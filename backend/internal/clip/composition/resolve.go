@@ -56,10 +56,11 @@ func Resolve(d *Document, in Inputs, l Limits, maxExpandedBytes int) (Timeline, 
 	items := map[string]Item{}
 	for _, group := range slices.Sorted(maps.Keys(in.Items)) {
 		values := in.Items[group]
-		if !slices.Contains(d.Groups, group) {
+		index := slices.IndexFunc(d.Groups, func(g Group) bool { return g.ID == group })
+		if index < 0 {
 			return out, fail(group, 1, "unknown_group")
 		}
-		if len(values) > l.Items {
+		if len(values) > min(l.Items, d.Groups[index].Max) {
 			return out, fail(group, 1, "item_limit")
 		}
 		for _, item := range values {

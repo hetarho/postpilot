@@ -7,6 +7,7 @@ import {
   parseClipComposition,
   type ClipRecipe,
 } from '@/entities/clip-template'
+import { CLIP_COMPOSITION_LIMITS } from '@/shared/config'
 import type { FakeClipsOptions } from '@/test/clips'
 
 const body = `<clip version='1' styles='clean memo' pace='steady'>
@@ -103,7 +104,10 @@ describe('composition template authoring', () => {
     const guide = await navigator.clipboard.readText()
     expect(guide).toContain(CLIP_COMPOSITION_EXAMPLE)
     expect(guide).toContain('sourceChars=16000')
-    expect(parseClipComposition(CLIP_COMPOSITION_EXAMPLE).groups).toEqual(['menu'])
+    expect(parseClipComposition(CLIP_COMPOSITION_EXAMPLE).groups).toMatchObject([
+      { id: 'menu', label: '', min: 0, max: CLIP_COMPOSITION_LIMITS.items },
+    ])
+    expect(guide).toContain('group(id, label?, min?, max?)')
     expect(calls.some((c) => /Seed|Quote|Start|Generate|CreateVideo|UpdateVideo/.test(c))).toBe(
       false,
     )

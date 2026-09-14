@@ -24,8 +24,8 @@ export function matchingCompositionInputs(
     )
   const items = Object.fromEntries(
     document.groups
-      .filter((g) => Object.hasOwn(input.items, g))
-      .map((group) => [
+      .filter((g) => Object.hasOwn(input.items, g.id))
+      .map(({ id: group }) => [
         group,
         input.items[group].map((item) => ({ id: item.id, values: values(group, item.values) })),
       ]),
@@ -63,7 +63,7 @@ export function validCompositionInputs(document: ClipComposition, input: ClipCom
     validValues(input.values, '') &&
     Object.entries(input.items).every(
       ([group, items]) =>
-        document.groups.includes(group) &&
+        document.groups.some((g) => g.id === group && items.length <= g.max) &&
         items.length <= CLIP_COMPOSITION_LIMITS.items &&
         new Set(items.map((item) => item.id)).size === items.length &&
         items.every(

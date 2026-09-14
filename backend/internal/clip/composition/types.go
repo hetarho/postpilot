@@ -31,6 +31,11 @@ type Field struct {
 	Required                 bool
 	Span                     Span
 }
+type Group struct {
+	ID, Label string
+	Min, Max  int
+	Span      Span
+}
 type Part struct{ Literal, Field string }
 type Row struct {
 	Role  string
@@ -55,7 +60,7 @@ type Document struct {
 	Styles       []string
 	Accent, Pace string
 	Fields       []Field
-	Groups       []string
+	Groups       []Group
 	Guidance     []string
 	Sections     []Section
 	Elements     []Element

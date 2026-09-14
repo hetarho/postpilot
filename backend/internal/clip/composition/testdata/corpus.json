@@ -5822,6 +5822,496 @@
         "line": 2,
         "reason": "invalid_style"
       }
+    },
+    {
+      "name": "group declaration legacy defaults",
+      "body": "<clip version=\"1\">\n<group id=\"menu\"><field id=\"name\" label=\"Name\"/></group><repeat for=\"menu\"><scene id=\"dish\" scope=\"item\"/></repeat></clip>",
+      "summary": {
+        "styles": [
+          "clean"
+        ],
+        "accent": "",
+        "pace": "steady",
+        "fields": [
+          {
+            "id": "name",
+            "group": "menu",
+            "label": "Name",
+            "prompt": "",
+            "required": false
+          }
+        ],
+        "groups": [
+          {
+            "id": "menu",
+            "label": "",
+            "min": 0,
+            "max": 20
+          }
+        ],
+        "sections": [
+          {
+            "id": "dish",
+            "scope": "item",
+            "repeat": "menu"
+          }
+        ],
+        "elements": [],
+        "guidance": []
+      }
+    },
+    {
+      "name": "group declaration  label=\"메뉴 &amp; 상품\" min=\"1\" max=\"3\"",
+      "body": "<clip version=\"1\">\n<group id=\"menu\" label=\"메뉴 &amp; 상품\" min=\"1\" max=\"3\"><field id=\"name\" label=\"Name\"/></group><repeat for=\"menu\"><scene id=\"dish\" scope=\"item\"/></repeat></clip>",
+      "summary": {
+        "styles": [
+          "clean"
+        ],
+        "accent": "",
+        "pace": "steady",
+        "fields": [
+          {
+            "id": "name",
+            "group": "menu",
+            "label": "Name",
+            "prompt": "",
+            "required": false
+          }
+        ],
+        "groups": [
+          {
+            "id": "menu",
+            "label": "메뉴 & 상품",
+            "min": 1,
+            "max": 3
+          }
+        ],
+        "sections": [
+          {
+            "id": "dish",
+            "scope": "item",
+            "repeat": "menu"
+          }
+        ],
+        "elements": [],
+        "guidance": []
+      }
+    },
+    {
+      "name": "group declaration  min=\"0\" max=\"0\"",
+      "body": "<clip version=\"1\">\n<group id=\"menu\" min=\"0\" max=\"0\"><field id=\"name\" label=\"Name\"/></group><repeat for=\"menu\"><scene id=\"dish\" scope=\"item\"/></repeat></clip>",
+      "summary": {
+        "styles": [
+          "clean"
+        ],
+        "accent": "",
+        "pace": "steady",
+        "fields": [
+          {
+            "id": "name",
+            "group": "menu",
+            "label": "Name",
+            "prompt": "",
+            "required": false
+          }
+        ],
+        "groups": [
+          {
+            "id": "menu",
+            "label": "",
+            "min": 0,
+            "max": 0
+          }
+        ],
+        "sections": [
+          {
+            "id": "dish",
+            "scope": "item",
+            "repeat": "menu"
+          }
+        ],
+        "elements": [],
+        "guidance": []
+      }
+    },
+    {
+      "name": "group declaration  min=\"2\"",
+      "body": "<clip version=\"1\">\n<group id=\"menu\" min=\"2\"><field id=\"name\" label=\"Name\"/></group><repeat for=\"menu\"><scene id=\"dish\" scope=\"item\"/></repeat></clip>",
+      "summary": {
+        "styles": [
+          "clean"
+        ],
+        "accent": "",
+        "pace": "steady",
+        "fields": [
+          {
+            "id": "name",
+            "group": "menu",
+            "label": "Name",
+            "prompt": "",
+            "required": false
+          }
+        ],
+        "groups": [
+          {
+            "id": "menu",
+            "label": "",
+            "min": 2,
+            "max": 20
+          }
+        ],
+        "sections": [
+          {
+            "id": "dish",
+            "scope": "item",
+            "repeat": "menu"
+          }
+        ],
+        "elements": [],
+        "guidance": []
+      }
+    },
+    {
+      "name": "group declaration  max=\"1\"",
+      "body": "<clip version=\"1\">\n<group id=\"menu\" max=\"1\"><field id=\"name\" label=\"Name\"/></group><repeat for=\"menu\"><scene id=\"dish\" scope=\"item\"/></repeat></clip>",
+      "summary": {
+        "styles": [
+          "clean"
+        ],
+        "accent": "",
+        "pace": "steady",
+        "fields": [
+          {
+            "id": "name",
+            "group": "menu",
+            "label": "Name",
+            "prompt": "",
+            "required": false
+          }
+        ],
+        "groups": [
+          {
+            "id": "menu",
+            "label": "",
+            "min": 0,
+            "max": 1
+          }
+        ],
+        "sections": [
+          {
+            "id": "dish",
+            "scope": "item",
+            "repeat": "menu"
+          }
+        ],
+        "elements": [],
+        "guidance": []
+      }
+    },
+    {
+      "name": "group declaration  min=\"01\" max=\"02\"",
+      "body": "<clip version=\"1\">\n<group id=\"menu\" min=\"01\" max=\"02\"><field id=\"name\" label=\"Name\"/></group><repeat for=\"menu\"><scene id=\"dish\" scope=\"item\"/></repeat></clip>",
+      "summary": {
+        "styles": [
+          "clean"
+        ],
+        "accent": "",
+        "pace": "steady",
+        "fields": [
+          {
+            "id": "name",
+            "group": "menu",
+            "label": "Name",
+            "prompt": "",
+            "required": false
+          }
+        ],
+        "groups": [
+          {
+            "id": "menu",
+            "label": "",
+            "min": 1,
+            "max": 2
+          }
+        ],
+        "sections": [
+          {
+            "id": "dish",
+            "scope": "item",
+            "repeat": "menu"
+          }
+        ],
+        "elements": [],
+        "guidance": []
+      }
+    },
+    {
+      "name": "invalid group min '-1'",
+      "body": "<clip version=\"1\">\n<group id=\"menu\" min=\"-1\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "error": {
+        "elementId": "menu",
+        "line": 2,
+        "reason": "invalid_item_bounds"
+      }
+    },
+    {
+      "name": "invalid group min '1.5'",
+      "body": "<clip version=\"1\">\n<group id=\"menu\" min=\"1.5\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "error": {
+        "elementId": "menu",
+        "line": 2,
+        "reason": "invalid_item_bounds"
+      }
+    },
+    {
+      "name": "invalid group min '1e1'",
+      "body": "<clip version=\"1\">\n<group id=\"menu\" min=\"1e1\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "error": {
+        "elementId": "menu",
+        "line": 2,
+        "reason": "invalid_item_bounds"
+      }
+    },
+    {
+      "name": "invalid group min '+1'",
+      "body": "<clip version=\"1\">\n<group id=\"menu\" min=\"+1\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "error": {
+        "elementId": "menu",
+        "line": 2,
+        "reason": "invalid_item_bounds"
+      }
+    },
+    {
+      "name": "invalid group min ''",
+      "body": "<clip version=\"1\">\n<group id=\"menu\" min=\"\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "error": {
+        "elementId": "menu",
+        "line": 2,
+        "reason": "invalid_item_bounds"
+      }
+    },
+    {
+      "name": "invalid group min ' 1'",
+      "body": "<clip version=\"1\">\n<group id=\"menu\" min=\" 1\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "error": {
+        "elementId": "menu",
+        "line": 2,
+        "reason": "invalid_item_bounds"
+      }
+    },
+    {
+      "name": "invalid group min '1 '",
+      "body": "<clip version=\"1\">\n<group id=\"menu\" min=\"1 \"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "error": {
+        "elementId": "menu",
+        "line": 2,
+        "reason": "invalid_item_bounds"
+      }
+    },
+    {
+      "name": "invalid group min 'NaN'",
+      "body": "<clip version=\"1\">\n<group id=\"menu\" min=\"NaN\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "error": {
+        "elementId": "menu",
+        "line": 2,
+        "reason": "invalid_item_bounds"
+      }
+    },
+    {
+      "name": "invalid group min 'Infinity'",
+      "body": "<clip version=\"1\">\n<group id=\"menu\" min=\"Infinity\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "error": {
+        "elementId": "menu",
+        "line": 2,
+        "reason": "invalid_item_bounds"
+      }
+    },
+    {
+      "name": "invalid group min '21'",
+      "body": "<clip version=\"1\">\n<group id=\"menu\" min=\"21\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "error": {
+        "elementId": "menu",
+        "line": 2,
+        "reason": "invalid_item_bounds"
+      }
+    },
+    {
+      "name": "invalid group min '9999999999999999999999'",
+      "body": "<clip version=\"1\">\n<group id=\"menu\" min=\"9999999999999999999999\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "error": {
+        "elementId": "menu",
+        "line": 2,
+        "reason": "invalid_item_bounds"
+      }
+    },
+    {
+      "name": "invalid group min '１'",
+      "body": "<clip version=\"1\">\n<group id=\"menu\" min=\"１\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "error": {
+        "elementId": "menu",
+        "line": 2,
+        "reason": "invalid_item_bounds"
+      }
+    },
+    {
+      "name": "invalid group max '-1'",
+      "body": "<clip version=\"1\">\n<group id=\"menu\" max=\"-1\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "error": {
+        "elementId": "menu",
+        "line": 2,
+        "reason": "invalid_item_bounds"
+      }
+    },
+    {
+      "name": "invalid group max '1.5'",
+      "body": "<clip version=\"1\">\n<group id=\"menu\" max=\"1.5\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "error": {
+        "elementId": "menu",
+        "line": 2,
+        "reason": "invalid_item_bounds"
+      }
+    },
+    {
+      "name": "invalid group max '1e1'",
+      "body": "<clip version=\"1\">\n<group id=\"menu\" max=\"1e1\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "error": {
+        "elementId": "menu",
+        "line": 2,
+        "reason": "invalid_item_bounds"
+      }
+    },
+    {
+      "name": "invalid group max '+1'",
+      "body": "<clip version=\"1\">\n<group id=\"menu\" max=\"+1\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "error": {
+        "elementId": "menu",
+        "line": 2,
+        "reason": "invalid_item_bounds"
+      }
+    },
+    {
+      "name": "invalid group max ''",
+      "body": "<clip version=\"1\">\n<group id=\"menu\" max=\"\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "error": {
+        "elementId": "menu",
+        "line": 2,
+        "reason": "invalid_item_bounds"
+      }
+    },
+    {
+      "name": "invalid group max ' 1'",
+      "body": "<clip version=\"1\">\n<group id=\"menu\" max=\" 1\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "error": {
+        "elementId": "menu",
+        "line": 2,
+        "reason": "invalid_item_bounds"
+      }
+    },
+    {
+      "name": "invalid group max '1 '",
+      "body": "<clip version=\"1\">\n<group id=\"menu\" max=\"1 \"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "error": {
+        "elementId": "menu",
+        "line": 2,
+        "reason": "invalid_item_bounds"
+      }
+    },
+    {
+      "name": "invalid group max 'NaN'",
+      "body": "<clip version=\"1\">\n<group id=\"menu\" max=\"NaN\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "error": {
+        "elementId": "menu",
+        "line": 2,
+        "reason": "invalid_item_bounds"
+      }
+    },
+    {
+      "name": "invalid group max 'Infinity'",
+      "body": "<clip version=\"1\">\n<group id=\"menu\" max=\"Infinity\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "error": {
+        "elementId": "menu",
+        "line": 2,
+        "reason": "invalid_item_bounds"
+      }
+    },
+    {
+      "name": "invalid group max '21'",
+      "body": "<clip version=\"1\">\n<group id=\"menu\" max=\"21\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "error": {
+        "elementId": "menu",
+        "line": 2,
+        "reason": "invalid_item_bounds"
+      }
+    },
+    {
+      "name": "invalid group max '9999999999999999999999'",
+      "body": "<clip version=\"1\">\n<group id=\"menu\" max=\"9999999999999999999999\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "error": {
+        "elementId": "menu",
+        "line": 2,
+        "reason": "invalid_item_bounds"
+      }
+    },
+    {
+      "name": "invalid group max '１'",
+      "body": "<clip version=\"1\">\n<group id=\"menu\" max=\"１\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "error": {
+        "elementId": "menu",
+        "line": 2,
+        "reason": "invalid_item_bounds"
+      }
+    },
+    {
+      "name": "group minimum above maximum",
+      "body": "<clip version=\"1\">\n<group id=\"menu\" min=\"2\" max=\"1\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "error": {
+        "elementId": "menu",
+        "line": 2,
+        "reason": "invalid_item_bounds"
+      }
+    },
+    {
+      "name": "declared group maximum limits resolution",
+      "body": "<clip version=\"1\"><group id=\"menu\" max=\"1\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "inputs": {
+        "values": {},
+        "items": {
+          "menu": [
+            {
+              "id": "a",
+              "values": {}
+            },
+            {
+              "id": "b",
+              "values": {}
+            }
+          ]
+        },
+        "cuts": []
+      },
+      "error": {
+        "elementId": "menu",
+        "line": 1,
+        "reason": "item_limit"
+      }
+    },
+    {
+      "name": "group count rejects trailing newline min",
+      "body": "<clip version=\"1\">\n<group id=\"menu\" min=\"1\n\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "error": {
+        "elementId": "menu",
+        "line": 2,
+        "reason": "invalid_item_bounds"
+      }
+    },
+    {
+      "name": "group count rejects trailing newline max",
+      "body": "<clip version=\"1\">\n<group id=\"menu\" max=\"1\n\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "error": {
+        "elementId": "menu",
+        "line": 2,
+        "reason": "invalid_item_bounds"
+      }
     }
   ]
 }

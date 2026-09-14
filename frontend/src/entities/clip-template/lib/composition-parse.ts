@@ -229,11 +229,24 @@ export function parseClipComposition(
   for (const n of ns) {
     if (n.name === 'field') field(n)
     if (n.name === 'group') {
-      attributes(n, 'id')
+      attributes(n, 'id', 'label', 'min', 'max')
       claim(n)
       const group = n.attributes.id
       if (group === 'scenes') problem(n, 'invalid_id')
-      d.groups.push(group)
+      const label = n.attributes.label ?? ''
+      if (scalarLength(label) > limits.labelChars) problem(n, 'field_limit')
+      const bound = (key: string, fallback: number) => {
+        const raw = n.attributes[key]
+        if (raw === undefined) return fallback
+        const value = Number(raw)
+        if (!raw || /[^0-9]/.test(raw) || !Number.isSafeInteger(value) || value > limits.items)
+          problem(n, 'invalid_item_bounds')
+        return value
+      }
+      const min = bound('min', 0),
+        max = bound('max', limits.items)
+      if (min > max) problem(n, 'invalid_item_bounds')
+      d.groups.push({ id: group, label, min, max, span: n.span })
       const fs = children(n)
       if (!fs.length) problem(n, 'empty_group')
       for (const f of fs) {
@@ -292,7 +305,7 @@ export function parseClipComposition(
       case 'repeat': {
         attributes(n, 'for')
         const over = n.attributes.for
-        if (over !== 'scenes' && !d.groups.includes(over)) problem(n, 'unknown_repeat')
+        if (over !== 'scenes' && !d.groups.some((g) => g.id === over)) problem(n, 'unknown_repeat')
         const scenes = children(n)
         if (!scenes.length) problem(n, 'empty_repeat')
         for (const c of scenes) {

@@ -193,6 +193,7 @@ export function ClipTemplateEditor({
                   element: problem.elementId || 'clip',
                 })}{' '}
                 {t(`composition.errors.${problem.reason}`, {
+                  element: problem.elementId,
                   defaultValue: t('composition.repairSource'),
                 })}
               </FieldMessage>

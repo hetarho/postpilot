@@ -13,16 +13,19 @@ export function sampleClipComposition(
     )
   const input: CompositionInputs = { values: values('', 1), items: {}, cuts: [] }
   for (const group of doc.groups)
-    input.items[group] = Array.from({ length: CLIP_COMPOSITION_PREVIEW.sampleItems }, (_, i) => ({
-      id: `sample_${i + 1}`,
-      values: values(group, i + 1),
-    }))
+    input.items[group.id] = Array.from(
+      { length: Math.min(group.max, Math.max(group.min, CLIP_COMPOSITION_PREVIEW.sampleItems)) },
+      (_, i) => ({
+        id: `sample_${i + 1}`,
+        values: values(group.id, i + 1),
+      }),
+    )
   for (const section of doc.sections) {
     const group =
       section.repeat && section.repeat !== 'scenes'
         ? section.repeat
         : section.scope === 'item'
-          ? (doc.groups[0] ?? '')
+          ? (doc.groups[0]?.id ?? '')
           : ''
     const items = group ? input.items[group] : [{ id: '' }]
     for (const item of items)

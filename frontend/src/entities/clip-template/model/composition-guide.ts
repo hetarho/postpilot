@@ -26,7 +26,7 @@ export const CLIP_COMPOSITION_EXAMPLE = `<clip version="1" styles="clean memo si
 const GRAMMAR = `clip(version="1", styles="clean memo bold mark simple", accent="coral|amber|lime|teal|blue|violet|pink|", pace="steady|rapid")
 clip children: field, group, guide, scene, repeat, text
 field(id, label, required="true|false") = prompt text; default required=false
-group(id) children: field; group ID "scenes" is reserved
+group(id, label?, min?, max?) children: field; group ID "scenes" is reserved. label is the owner-visible group name (default: generic). min/max are non-negative integers, min <= max <= items limit; defaults: min=0, max=items limit. Generation requires at least min items; incomplete drafts can still be saved.
 guide = invisible instructions, inside clip or scene
 scene(id, scope="scene|item|context") children: guide, text
 repeat(for="scenes|GROUP_ID") children: scene; group repetition requires scope=item; no nested repeat

@@ -48,6 +48,8 @@ export type CompositionReason =
   | 'unexpected_child'
   | 'unexpected_text'
   | 'empty_group'
+  | 'invalid_item_bounds'
+  | 'items_required'
   | 'guide_limit'
   | 'invalid_scope'
   | 'unknown_repeat'
@@ -96,6 +98,13 @@ export interface CompositionField {
   required: boolean
   span: CompositionSpan
 }
+export interface CompositionGroup {
+  id: string
+  label: string
+  min: number
+  max: number
+  span: CompositionSpan
+}
 export interface CompositionPart {
   literal: string
   field: string
@@ -133,7 +142,7 @@ export interface ClipComposition {
   accent: string
   pace: string
   fields: CompositionField[]
-  groups: string[]
+  groups: CompositionGroup[]
   guidance: string[]
   sections: CompositionSection[]
   elements: CompositionElement[]
