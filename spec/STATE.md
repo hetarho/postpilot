@@ -47,16 +47,17 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T110 | Release QA on the Naver app and the overlay measurement | CDS CLIP | T108 | blocked@260912 |
-| T155 | Call an item group by its name and open it at its minimum | CLIP | T154 | todo |
 | T156 | Show the recorded check beside the failure reason | ARCH | - | todo |
 | T157 | Say a save was refused rather than promising a retry that was abandoned | ARCH | - | todo |
 
 ## next
-- T155 completes the item-group admission release batch after T154.
-- T156/T157 remain separate failure-visibility work.
+- T154/T155 complete the item-group admission release batch, verified and individually committed.
+- T156 is the next todo; T156/T157 form the separate failure-visibility batch.
 - T110 stays owner-blocked and T008 owner-dependent.
 
 ## log
+- 260915 T155 done (grp); named controls, minimum display without opening writes, maximum and editor round trips verified
+- 260915 T155 claimed (grp)
 - 260915 T154 done (grp); compatible group declarations and pre-work admission verified
 - 260914 T154 claimed (grp)
 - 260914 T151 done (snd); six assembly exports/156 browser frames, recovery/migrations, original cadence and mandatory production-image gates verified
@@ -75,5 +76,3 @@
 - 260914 T158 claimed (smk)
 - 260914 create-task review/clip-release-smoke-260914 done; T158 repairs the production-image gate, F2 left open for ARCH
 - 260914 create-task review/clip-release-smoke-260914 start
-- 260914 T147 done (asm); one timestamp-scaling rate chain with pitch-preserved atempo, the whole render clock on transformed time, audio only from owner-enabled sources and a cadence recheck that refuses before FFmpeg
-- 260914 T147 refreshed to CLIP@19 (asm); r19 changes item-group declaration and pre-work admission, none of which this task's rendering decisions

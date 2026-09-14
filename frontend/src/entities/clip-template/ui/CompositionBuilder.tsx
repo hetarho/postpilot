@@ -40,19 +40,21 @@ export function CompositionBuilder({
     .filter((r) => r.node.name === 'group')
     .map((r, i) => ({
       value: r.node.attributes.id,
-      label: t('composition.groupNumber', { n: i + 1 }),
+      label: r.node.attributes.label?.trim() || t('composition.groupNumber', { n: i + 1 }),
     }))
   const labelFor = (node: CompositionNode, i: number) =>
-    node.name === 'field'
-      ? node.attributes.label || t('composition.newField')
-      : node.name === 'text'
-        ? t(`composition.role.${node.attributes.role}`, {
-            defaultValue: t('composition.role.caption'),
-          })
-        : t(`composition.node.${node.name}`, {
-            n: i + 1,
-            defaultValue: t('composition.repairSource'),
-          })
+    node.name === 'group' && node.attributes.label?.trim()
+      ? node.attributes.label
+      : node.name === 'field'
+        ? node.attributes.label || t('composition.newField')
+        : node.name === 'text'
+          ? t(`composition.role.${node.attributes.role}`, {
+              defaultValue: t('composition.role.caption'),
+            })
+          : t(`composition.node.${node.name}`, {
+              n: i + 1,
+              defaultValue: t('composition.repairSource'),
+            })
   const styles = (root.attributes.styles ?? 'clean').split(/\s+/).filter(Boolean)
   const patch = (node: CompositionNode, next: CompositionNode | null) =>
     onChange(patchCompositionSource(source, node, next))
@@ -82,6 +84,21 @@ export function CompositionBuilder({
     )
     return (
       <section className="my-3 min-w-0 space-y-4" aria-label={label}>
+        {name === 'group' && (
+          <>
+            <CompositionInput
+              label={t('composition.groupLabel')}
+              value={node.attributes.label ?? ''}
+              onChange={(v) => attr('label', v)}
+            />
+            <CompositionInput
+              label={t('composition.groupMinimum')}
+              value={node.attributes.min ?? '0'}
+              numeric
+              onChange={(v) => attr('min', v)}
+            />
+          </>
+        )}
         {name === 'field' && (
           <>
             <CompositionInput

@@ -4,11 +4,11 @@ import type { ClipComposition } from '@/entities/clip-template/@x/clip-project'
 import { CLIP_COMPOSITION_LIMITS } from '@/shared/config'
 import { Button, FieldLabel, FieldMessage, Textarea, Typography } from '@/shared/ui'
 import type { ClipCompositionInputs as Inputs } from '../model/composition'
-import { removeCompositionItem } from '../model/composition-inputs'
+import { compositionInputsAtMinimum, removeCompositionItem } from '../model/composition-inputs'
 
 export function ClipCompositionInputFields({
   document,
-  value,
+  value: stored,
   onChange,
 }: {
   document: ClipComposition
@@ -17,6 +17,7 @@ export function ClipCompositionInputFields({
 }) {
   const { t } = useTranslation('clips')
   const id = useId()
+  const value = compositionInputsAtMinimum(document, stored)
   const fields = (
     group: string,
     values: Record<string, string>,
@@ -62,14 +63,14 @@ export function ClipCompositionInputFields({
   return (
     <div className="min-w-0 space-y-6">
       {fields('', value.values, 'global', (values) => onChange({ ...value, values }))}
-      {document.groups.map(({ id: group }, n) => (
+      {document.groups.map(({ id: group, label, min, max }, n) => (
         <section
           key={group}
           className="min-w-0 space-y-4"
-          aria-label={t('composition.groupNumber', { n: n + 1 })}
+          aria-label={label.trim() || t('composition.groupNumber', { n: n + 1 })}
         >
           <Typography variant="fieldTitle" as="h2">
-            {t('composition.groupNumber', { n: n + 1 })}
+            {label.trim() || t('composition.groupNumber', { n: n + 1 })}
           </Typography>
           <Typography variant="body" className="text-content-secondary">
             {t('composition.itemsHelp')}
@@ -77,7 +78,9 @@ export function ClipCompositionInputFields({
           {(value.items[group] ?? []).map((item, i) => (
             <fieldset key={item.id} className="min-w-0 space-y-4">
               <Typography variant="label" as="legend">
-                {t('composition.itemNumber', { n: i + 1 })}
+                {label.trim()
+                  ? t('composition.namedItemNumber', { name: label, n: i + 1 })
+                  : t('composition.itemNumber', { n: i + 1 })}
               </Typography>
               {fields(group, item.values, `${group}-${item.id}`, (values) =>
                 onChange({
@@ -90,17 +93,21 @@ export function ClipCompositionInputFields({
                   },
                 }),
               )}
-              <Button
-                variant="ghost"
-                onClick={() => onChange(removeCompositionItem(value, group, item.id))}
-              >
-                {t('composition.removeItem', { n: i + 1 })}
-              </Button>
+              {value.items[group].length > min && (
+                <Button
+                  variant="ghost"
+                  onClick={() => onChange(removeCompositionItem(value, group, item.id))}
+                >
+                  {label.trim()
+                    ? t('composition.removeNamedItem', { name: label, n: i + 1 })
+                    : t('composition.removeItem', { n: i + 1 })}
+                </Button>
+              )}
             </fieldset>
           ))}
           <Button
             variant="ghost"
-            disabled={(value.items[group]?.length ?? 0) >= CLIP_COMPOSITION_LIMITS.items}
+            disabled={(value.items[group]?.length ?? 0) >= max}
             onClick={() =>
               onChange({
                 ...value,
@@ -111,7 +118,9 @@ export function ClipCompositionInputFields({
               })
             }
           >
-            {t('composition.addItem')}
+            {label.trim()
+              ? t('composition.addNamedItem', { name: label })
+              : t('composition.addItem')}
           </Button>
         </section>
       ))}

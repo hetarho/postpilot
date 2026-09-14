@@ -6,10 +6,20 @@ import {
   compositionDraftTree,
   compositionOutline,
   patchCompositionSource,
+  newCompositionNode,
 } from './composition-author'
+import { serializeCompositionNode } from './composition-xml'
 import { sampleClipComposition } from './composition-sample'
 
 describe('composition authoring contract', () => {
+  it('creates a group with editable name and minimum defaults', () => {
+    const group = newCompositionNode('group', '새 정보')
+    const doc = parseClipComposition(`<clip version="1">${serializeCompositionNode(group)}</clip>`)
+    expect(doc.groups[0]).toMatchObject({ id: group.attributes.id, label: '', min: 0 })
+    expect(group.attributes).toMatchObject({ label: '', min: '0' })
+    expect(doc.fields[0].label).toBe('새 정보')
+  })
+
   it('bounds syntax-only builder input before building a tree', () => {
     expect(() => compositionDraftTree(`<clip version="1">${'x'.repeat(16000)}</clip>`)).toThrow(
       'source_limit',

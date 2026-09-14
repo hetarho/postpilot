@@ -11,6 +11,27 @@ export const emptyCompositionInputs = (): ClipCompositionInputs => ({
   associations: [],
 })
 
+/** Display missing minimum items without changing the saved draft. Stable local
+ * IDs become real item IDs only when the owner edits the inputs. */
+export function compositionInputsAtMinimum(
+  document: ClipComposition,
+  input: ClipCompositionInputs,
+): ClipCompositionInputs {
+  const items = { ...input.items }
+  for (const group of document.groups) {
+    const stored = items[group.id] ?? []
+    if (stored.length >= group.min) continue
+    const shown = [...stored]
+    const ids = new Set(stored.map((item) => item.id))
+    for (let n = 1; shown.length < group.min; n++) {
+      const id = `minimum_item_${n}`
+      if (!ids.has(id)) shown.push({ id, values: {} })
+    }
+    items[group.id] = shown
+  }
+  return { ...input, items }
+}
+
 /** Project only IDs still declared by the same template; never match labels or item offsets. */
 export function matchingCompositionInputs(
   document: ClipComposition,

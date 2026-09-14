@@ -34,6 +34,31 @@ const source = async () => {
 }
 
 describe('composition template authoring', () => {
+  it('round-trips the group name and minimum through the builder, source and save', async () => {
+    const user = userEvent.setup(),
+      writes: ClipRecipe[] = []
+    const original = `<clip version='1'>\n<group id="menu" max="3"><field id="name" label="메뉴 이름"/></group>\n<guide>  keep &amp; spacing  </guide>\n</clip>`
+    mount({ templates: [{ ...template, compositionBody: original }], writes })
+    await user.click(await screen.findByRole('button', { name: '항목 묶음 1' }))
+    expect(screen.getByLabelText('항목 묶음 이름')).toHaveValue('')
+    expect(screen.getByLabelText('최소 항목 개수')).toHaveValue('0')
+    fireEvent.change(screen.getByLabelText('항목 묶음 이름'), { target: { value: '메뉴 & 음료' } })
+    fireEvent.change(screen.getByLabelText('최소 항목 개수'), { target: { value: '2' } })
+    const edited = ((await source()) as HTMLTextAreaElement).value
+    expect(parseClipComposition(edited).groups).toMatchObject([
+      { id: 'menu', label: '메뉴 & 음료', min: 2, max: 3 },
+    ])
+    expect(edited).toContain('<guide>  keep &amp; spacing  </guide>')
+    await user.click(screen.getByRole('tab', { name: '구성 편집' }))
+    await user.click(screen.getByRole('button', { name: '메뉴 & 음료' }))
+    expect(screen.getByLabelText('항목 묶음 이름')).toHaveValue('메뉴 & 음료')
+    expect(screen.getByLabelText('최소 항목 개수')).toHaveValue('2')
+    await user.click(screen.getByRole('button', { name: '저장' }))
+    await screen.findByText('저장했어요')
+    expect(writes).toHaveLength(1)
+    expect(writes[0].compositionBody).toBe(edited)
+  })
+
   it('keeps untouched source byte-exact across keyboard mode switches and never saves on open', async () => {
     const calls: string[] = []
     mount({ calls })

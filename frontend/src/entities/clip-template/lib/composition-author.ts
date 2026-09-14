@@ -80,7 +80,9 @@ export function newCompositionNode(name: string, label: string, inScene = false)
     case 'field':
       return compositionNode(name, { id, label, required: 'false' })
     case 'group':
-      return compositionNode(name, { id }, [newCompositionNode('field', label)])
+      return compositionNode(name, { id, label: '', min: '0' }, [
+        newCompositionNode('field', label),
+      ])
     case 'scene':
       return compositionNode(name, { id, scope: 'scene' })
     case 'repeat':

@@ -20,6 +20,54 @@ const template = {
 afterEach(() => discardClipDraftQueues())
 
 describe('template-defined project inputs', () => {
+  it('opens an older short group at its minimum and saves the stable items only after editing', async () => {
+    const writes: ClipProjectDraft[] = []
+    const body =
+      '<clip version="1"><group id="menu" label="메뉴" min="2" max="3"><field id="name" label="메뉴 이름" required="true"/></group></clip>'
+    const composition = {
+      snapshot: { version: 1, body, templateId: template.id, legacy: false },
+      inputs: {
+        values: {},
+        items: { menu: [{ id: 'retained', values: { name: '파스타' } }] },
+        associations: [],
+      },
+    }
+    renderAppAt('/clips/owned', {
+      user: { id: 'alice' },
+      clips: {
+        templates: [{ ...template, compositionBody: body }],
+        projectWrites: writes,
+        projects: [
+          {
+            id: 'owned',
+            title: '내 클립',
+            videoTemplateId: template.id,
+            ratio: 'vertical',
+            targetDurationMs: 30000,
+            answers: [],
+            disclosure: '',
+            cta: '',
+            composition,
+            compositionInputs: composition.inputs,
+          },
+        ],
+      },
+    })
+    const names = await screen.findAllByLabelText('메뉴 이름')
+    expect(names).toHaveLength(2)
+    expect(names[0]).toHaveValue('파스타')
+    expect(names[1]).toHaveValue('')
+    expect(screen.queryByRole('button', { name: '메뉴 1 삭제' })).not.toBeInTheDocument()
+    expect(writes).toHaveLength(0)
+    fireEvent.change(names[1], { target: { value: '피자' } })
+    await waitFor(() => expect(writes).toHaveLength(1))
+    expect(writes[0].compositionInputs?.items.menu).toEqual([
+      { id: 'retained', values: { name: '파스타' } },
+      { id: 'minimum_item_1', values: { name: '피자' } },
+    ])
+    expect(composition.inputs.items.menu).toEqual([{ id: 'retained', values: { name: '파스타' } }])
+  })
+
   it('keeps item facts and stable IDs together when another item is removed; blank prices are optional', async () => {
     const user = userEvent.setup(),
       writes: ClipProjectDraft[] = []
