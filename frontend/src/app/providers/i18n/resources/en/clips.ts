@@ -546,9 +546,66 @@ export const clips = {
     lengthMismatch: 'The cut lengths and transition overlaps did not add up to the video duration.',
     sourceInvalid: 'The plan referenced an unselected original or an unrecognized cut.',
     evidenceGap: 'Part of a selected range was not supported by recorded observations.',
-    orderInvalid: 'The selected scenes or items did not follow the template order.',
+    orderInvalid: 'The plan did not follow the template’s section or item order.',
     rangeInvalid: 'A selected cut started or ended outside its original video.',
     captionTimeInvalid: 'A caption interval did not fit inside its cut.',
+    compositionStyle: 'A caption style in the template or plan was not allowed.',
+    compositionPosition: 'A template element had an invalid on-screen position.',
+    compositionInterval: 'A template element had an invalid display interval or timing reference.',
+    compositionRows: 'The caption rows did not match the structure declared by the template.',
+    compositionRole: 'A template element used an unsupported role.',
+    compositionCopyLimit:
+      'Caption text or references exceeded the template’s length or count limits.',
+    compositionReadability:
+      'A caption did not meet the size or display-time requirements for readability.',
+    compositionSafeArea: 'A caption or on-screen element fell outside the safe display area.',
+    compositionManifest:
+      'The template’s on-screen element definition could not be read or had invalid required information.',
+    compositionIdentity:
+      'A generated caption referenced an undeclared element or cut, or repeated one.',
+    compositionBounds:
+      'The plan’s aspect ratio or number of cuts or captions did not meet the template’s requirements.',
+    captionMeasurement: 'The on-screen area occupied by a caption could not be measured.',
+    responseEncoding:
+      'The AI response had invalid text encoding or exceeded the response size limit.',
+    responseFields:
+      'The AI response had field types or a structure that did not match the required format.',
+    responseJSON: 'The AI response could not be read as valid JSON.',
+    planAccent: 'The plan’s accent color did not match the selected color.',
+    planFields: 'Required plan, cut or caption information was missing or invalid.',
+    planChipCount: 'A cut had too many information chips.',
+    planChipLabel: 'The plan used an unsupported information chip label.',
+    planCopyChars: 'A caption line exceeded the style’s character limit.',
+    planCopyClasses: 'The two captions did not follow the required description-then-number order.',
+    planCopyCount: 'A cut had too many captions.',
+    planCopyExposure:
+      'A caption’s display time did not meet the requirements for its text length or pace.',
+    planCopyFormat: 'A caption’s text, style or pace settings were invalid.',
+    planCopyKeyword: 'The word to highlight was not present in its caption.',
+    planCopyLines: 'A caption exceeded the style’s line limit.',
+    planCopySecondCut: 'A cut was too short to show two captions.',
+    planCopySequence: 'Captions overlapped or had too little time between them.',
+    planCutCount: 'The plan’s cut count was outside the allowed range.',
+    planCutFade: 'A cut was too short for its transition effects.',
+    planCutTransition:
+      'A cut’s transition duration or the first cut’s transition setting was invalid.',
+    planDuration: 'The plan’s video duration was outside the allowed range.',
+    planFocal: 'A cut’s focal point was outside the original frame.',
+    planHook: 'The opening text exceeded its character or line limit.',
+    planRatio: 'The plan’s aspect ratio was unsupported or did not match the selected ratio.',
+    planSourceMetadata:
+      'An original video’s identity, duration or frame size could not be verified.',
+    planTargetDuration: 'The plan’s target duration did not match the selected video duration.',
+    planVolume: 'A cut’s original sound volume was outside the allowed range.',
+    planCutRate:
+      'A cut’s playback speed was not allowed or could not be supported by the original frame rate.',
+    planCutScene: 'A cut did not match the selected original’s scene boundaries.',
+    planCutUsability:
+      'The recorded observations did not allow this source range at the selected playback speed.',
+    planSourceOverlap:
+      'Selected ranges from the same original overlapped or broke the allowed order.',
+    planSourceAudio:
+      'The plan’s original sound settings did not match the selected sources or cut volumes.',
     inputTooLarge:
       'The combined template, inputs and observations exceeded this job’s input allowance, so the next AI request was not sent. Shorten the template or select fewer sources.',
     inputInvalid:

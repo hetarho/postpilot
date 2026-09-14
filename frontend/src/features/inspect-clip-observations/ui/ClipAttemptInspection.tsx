@@ -8,7 +8,7 @@ import { ClipObservationViewer } from './ClipObservationViewer'
 type Inspection = NonNullable<ClipProject['attemptInspection']>
 type Candidate = Inspection['ranges'][number]
 
-const observationChecks = {
+const checkExplanations = {
   input_prompt_limit: 'inspection.inputTooLarge',
   input_settings: 'inspection.inputInvalid',
   input_sources: 'inspection.inputInvalid',
@@ -31,11 +31,7 @@ const observationChecks = {
   observe_coverage_gap: 'inspection.observationCoverage',
   observe_coverage_end: 'inspection.observationCoverage',
   observe_status: 'inspection.observationStatus',
-} as const
-
-// The render stage owns two vocabularies: the substage that was running, and —
-// once a finished encode is refused — the delivered property that missed.
-const renderChecks = {
+  // Render substages and the delivered properties checked after encoding.
   render_layout: 'inspection.renderLayout',
   render_footage: 'inspection.renderFootage',
   render_audio: 'inspection.renderAudio',
@@ -51,6 +47,66 @@ const renderChecks = {
   render_output_duration: 'inspection.outputDuration',
   render_output_codec: 'inspection.outputCodec',
   render_output_audio_rate: 'inspection.outputAudioRate',
+  composition_cut_identity: 'inspection.sourceInvalid',
+  plan_source: 'inspection.sourceInvalid',
+  plan_cut_identity: 'inspection.sourceInvalid',
+  composition_observation_gap: 'inspection.evidenceGap',
+  composition_cut_evidence: 'inspection.evidenceGap',
+  composition_section_order: 'inspection.orderInvalid',
+  composition_item_order: 'inspection.orderInvalid',
+  plan_cut_range: 'inspection.rangeInvalid',
+  plan_caption_time: 'inspection.captionTimeInvalid',
+  composition_invalid_style: 'inspection.compositionStyle',
+  plan_style: 'inspection.compositionStyle',
+  composition_invalid_position: 'inspection.compositionPosition',
+  composition_invalid_interval: 'inspection.compositionInterval',
+  composition_invalid_rows: 'inspection.compositionRows',
+  composition_generated_rows: 'inspection.compositionRows',
+  composition_invalid_role: 'inspection.compositionRole',
+  composition_copy_limit: 'inspection.compositionCopyLimit',
+  composition_generated_bounds: 'inspection.compositionCopyLimit',
+  composition_readability: 'inspection.compositionReadability',
+  composition_safe_area: 'inspection.compositionSafeArea',
+  composition_invalid_manifest: 'inspection.compositionManifest',
+  composition_generated_identity: 'inspection.compositionIdentity',
+  composition_plan_bounds: 'inspection.compositionBounds',
+  caption_measurement: 'inspection.captionMeasurement',
+  output_encoding_or_size: 'inspection.responseEncoding',
+  output_field_type: 'inspection.responseFields',
+  output_shape: 'inspection.responseFields',
+  output_json: 'inspection.responseJSON',
+  plan_accent: 'inspection.planAccent',
+  plan_required: 'inspection.planFields',
+  plan_cut_fields: 'inspection.planFields',
+  plan_caption_fields: 'inspection.planFields',
+  plan_chip_count: 'inspection.planChipCount',
+  plan_chip_label: 'inspection.planChipLabel',
+  plan_copy_chars: 'inspection.planCopyChars',
+  plan_copy_classes: 'inspection.planCopyClasses',
+  plan_copy_count: 'inspection.planCopyCount',
+  plan_copy_exposure: 'inspection.planCopyExposure',
+  plan_copy_format: 'inspection.planCopyFormat',
+  plan_copy_keyword: 'inspection.planCopyKeyword',
+  plan_copy_lines: 'inspection.planCopyLines',
+  plan_copy_second_cut: 'inspection.planCopySecondCut',
+  plan_copy_sequence: 'inspection.planCopySequence',
+  plan_cut_count: 'inspection.planCutCount',
+  plan_cut_fade: 'inspection.planCutFade',
+  plan_cut_transition: 'inspection.planCutTransition',
+  plan_duration_limit: 'inspection.planDuration',
+  plan_duration_range: 'inspection.planDuration',
+  plan_focal: 'inspection.planFocal',
+  plan_hook: 'inspection.planHook',
+  plan_ratio: 'inspection.planRatio',
+  plan_source_metadata: 'inspection.planSourceMetadata',
+  plan_target_duration: 'inspection.planTargetDuration',
+  plan_timeline: 'inspection.lengthMismatch',
+  plan_volume: 'inspection.planVolume',
+  plan_cut_rate: 'inspection.planCutRate',
+  plan_cut_scene: 'inspection.planCutScene',
+  plan_cut_usability: 'inspection.planCutUsability',
+  plan_source_overlap: 'inspection.planSourceOverlap',
+  plan_source_audio: 'inspection.planSourceAudio',
 } as const
 
 function CandidatePlayback({
@@ -157,29 +213,21 @@ export function ClipAttemptInspection({
   const source = active ? inspection?.observations.sources[active.source - 1]?.source : undefined
   const phase = inspection?.validationPhase
   const check = inspection?.validationCheck
-  const namedExplanation = check
-    ? (observationChecks[check as keyof typeof observationChecks] ??
-      renderChecks[check as keyof typeof renderChecks])
-    : undefined
-  const explanation =
-    namedExplanation ??
-    (phase === 'timeline_grow'
+  const timelineExplanation =
+    phase === 'timeline_grow'
       ? 'inspection.tooShort'
       : phase === 'timeline_shrink'
         ? 'inspection.cannotTrim'
         : phase === 'timeline_total'
           ? 'inspection.lengthMismatch'
-          : check === 'composition_cut_identity' || check === 'plan_source'
-            ? 'inspection.sourceInvalid'
-            : check === 'composition_observation_gap' || check === 'composition_cut_evidence'
-              ? 'inspection.evidenceGap'
-              : check === 'composition_section_order' || check === 'composition_item_order'
-                ? 'inspection.orderInvalid'
-                : check === 'plan_cut_range'
-                  ? 'inspection.rangeInvalid'
-                  : check === 'plan_caption_time'
-                    ? 'inspection.captionTimeInvalid'
-                    : 'inspection.validationFailed')
+          : undefined
+  const namedExplanation =
+    check === 'plan_timeline'
+      ? (timelineExplanation ?? checkExplanations.plan_timeline)
+      : check
+        ? checkExplanations[check as keyof typeof checkExplanations]
+        : undefined
+  const explanation = namedExplanation ?? timelineExplanation ?? 'inspection.validationFailed'
   const stage = job.stage
   const knownStage =
     stage && ['prepare', 'analyze', 'plan', 'render', 'save', 'cleanup'].includes(stage)

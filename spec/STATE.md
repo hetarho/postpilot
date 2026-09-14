@@ -47,15 +47,15 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T110 | Release QA on the Naver app and the overlay measurement | CDS CLIP | T108 | blocked@260912 |
-| T156 | Show the recorded check beside the failure reason | ARCH | - | todo |
 | T157 | Say a save was refused rather than promising a retry that was abandoned | ARCH | - | todo |
 
 ## next
-- T154/T155 complete the item-group admission release batch, verified and individually committed.
-- T156 is the next todo; T156/T157 form the separate failure-visibility batch.
+- T156 is complete and verified; T157 completes the failure-visibility release batch.
 - T110 stays owner-blocked and T008 owner-dependent.
 
 ## log
+- 260915 T156 done (vis); all 97 public checks explained beside failures in ko/en
+- 260915 T156 claimed (vis)
 - 260915 T155 done (grp); named controls, minimum display without opening writes, maximum and editor round trips verified
 - 260915 T155 claimed (grp)
 - 260915 T154 done (grp); compatible group declarations and pre-work admission verified
@@ -74,5 +74,3 @@
 - 260914 T148 claimed (prv)
 - 260914 T158 done (smk); the release smoke's synthetic answers now state the v2 observation fields and CLIP-98's per-cut rate, so the production-image gate stops refusing at the first chunk — the image gate itself did not run here (no Docker daemon), CI's build is the proof
 - 260914 T158 claimed (smk)
-- 260914 create-task review/clip-release-smoke-260914 done; T158 repairs the production-image gate, F2 left open for ARCH
-- 260914 create-task review/clip-release-smoke-260914 start

@@ -1,3 +1,6 @@
+/// <reference types="node" />
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it, vi } from 'vitest'
@@ -230,3 +233,102 @@ it.each(['ko', 'en'] as const)(
     expect(screen.getByText(language === 'ko' ? '편집안의 길이' : 'Planned duration')).toBeVisible()
   },
 )
+
+// Exercise the public diagnostic vocabulary itself, so a newly projected backend
+// check cannot silently fall back to a generic failure again.
+const safeChecks = [
+  ...readFileSync(
+    resolve(import.meta.dirname, '../../../../../backend/internal/clip/attempt_diagnostics.go'),
+    'utf8',
+  )
+    .split('func SafeAttemptCheck(check string) string {')[1]!
+    .matchAll(/"([a-z_]+)"/g),
+]
+  .map((match) => match[1]!)
+  .filter((check) => check !== 'unknown')
+
+it.each(['ko', 'en'] as const)(
+  'shows a localized checkpoint beside a structured failure for every public check in %s',
+  (language) => {
+    initializeI18n(language)
+    expect(safeChecks.length).toBeGreaterThan(80)
+    const project = failedProject()
+    project.latestJob!.failure = { reason: 'CLIP_PROCESSING_FAILED', params: {} }
+    project.attemptInspection!.validationPhase = 'validation'
+    project.attemptInspection!.observations.sources = []
+    const { rerender } = render(<ClipAttemptInspection project={project} localSources={[]} />)
+    for (const check of safeChecks) {
+      project.attemptInspection!.validationCheck = check
+      rerender(<ClipAttemptInspection project={project} localSources={[]} />)
+      const reason = screen.getByText(
+        language === 'ko' ? /클립 처리에 실패했어요/ : /Clip processing failed/,
+      )
+      const explanation = reason.nextElementSibling
+      expect(explanation?.tagName, check).toBe('P')
+      expect(explanation, check).toHaveClass('text-content-secondary')
+      expect(explanation?.textContent, check).not.toMatch(/inspection\.|validationFailed/)
+      expect(explanation?.textContent?.length, check).toBeGreaterThan(10)
+      expect(explanation, check).toBeVisible()
+    }
+  },
+)
+
+it.each(
+  (['ko', 'en'] as const).flatMap((language) =>
+    (['CLIP_PROCESSING_FAILED', 'MODEL_OUTPUT_INVALID'] as const).map((reason) => ({
+      language,
+      reason,
+    })),
+  ),
+)('keeps $reason and the template section order together in $language', ({ language, reason }) => {
+  initializeI18n(language)
+  const project = failedProject()
+  project.latestJob!.failure = { reason, params: {} }
+  project.attemptInspection!.validationCheck = 'composition_section_order'
+  project.attemptInspection!.validationPhase = 'selection'
+  project.attemptInspection!.measurements = { cut: 2 }
+  render(<ClipAttemptInspection project={project} localSources={[]} />)
+  expect(
+    screen.getByText(
+      reason === 'CLIP_PROCESSING_FAILED'
+        ? language === 'ko'
+          ? /클립 처리에 실패했어요/
+          : /Clip processing failed/
+        : language === 'ko'
+          ? 'AI 결과 형식을 읽을 수 없어요.'
+          : 'The AI response format could not be read.',
+    ),
+  ).toBeVisible()
+  expect(
+    screen.getByText(
+      language === 'ko'
+        ? '편집안의 섹션이나 항목 순서가 템플릿에 정해진 순서와 맞지 않았어요.'
+        : 'The plan did not follow the template’s section or item order.',
+    ),
+  ).toBeVisible()
+  expect(screen.getByText('2')).toBeVisible()
+})
+
+it.each(['unknown', 'future_check'])(
+  'preserves structured failure wording for an unrecognized check: %s',
+  (check) => {
+    const project = failedProject()
+    project.latestJob!.failure = { reason: 'MODEL_OUTPUT_INVALID', params: {} }
+    project.attemptInspection!.validationCheck = check
+    render(<ClipAttemptInspection project={project} localSources={[]} />)
+    expect(screen.getByText('AI 결과 형식을 읽을 수 없어요.')).toBeVisible()
+    expect(screen.queryByText(/세부 검증 사유가 기록되지 않은/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/선택한 구간을 늘려도/)).not.toBeInTheDocument()
+  },
+)
+
+it.each([
+  ['timeline_grow', /15초/],
+  ['timeline_shrink', /선택한 구간을 줄여도 목표 길이/],
+  ['timeline_total', /전환/],
+] as const)('keeps phase-specific timeline guidance for %s', (phase, message) => {
+  const project = failedProject()
+  project.attemptInspection!.validationPhase = phase
+  render(<ClipAttemptInspection project={project} localSources={[]} />)
+  expect(screen.getByText(message)).toBeVisible()
+})
