@@ -1,11 +1,11 @@
 # CLIP generated video projects and templates
-> r21 | Account-owned footage becomes a downloadable, reviewable clip through bounded full-timeline scene observation, a template-grounded assembly document, deterministic source transforms and preview-led correction, independently of blog posts.
+> r22 | Account-owned footage becomes a downloadable, reviewable clip through bounded full-timeline scene observation, a template-grounded assembly document, deterministic source transforms and preview-led correction, independently of blog posts.
 
 ## decisions
 - CLIP-1 [o] a clip project is independent of a post and owns its title, chosen video template, template answers, target duration, aspect ratio, analysis, edit plan and latest successful result
 - CLIP-2 [o] only the authenticated owner may list, view, change, generate, cancel, finalize, download or delete a clip project or video template; an unknown or foreign id is presented as not found
 - CLIP-3 [o] navigation groups 글 · 말투 · 글 템플릿 · 지침 under 글 and 클립 · 영상 템플릿 under 영상; account, plan, billing and administration remain common destinations
-- CLIP-4 [o] a video template is a reusable account-owned composition with authored footage sections, generated and fixed text, information fields, repeated item groups, copy guidance, approved visual styles and independent caption pace; category presets do not govern its content
+- CLIP-4 [o] a video template is a reusable account-owned composition with authored footage sections, generated and fixed text, information fields, repeated item groups, copy guidance and independent caption pace; category presets do not govern its content
 - CLIP-5 [o] every generation selects exactly one valid video template and collects only the information that template explicitly marks required before it can start
 - CLIP-6 [o] a project accepts up to 20 source videos whose combined duration is at most 30 minutes
 - CLIP-7 [o] the owner chooses a target result duration from 15 to 90 seconds before generation; composition measures every cut, transition and result on the playback-rate-transformed output timeline, may split or reconcile multiple non-overlapping ranges only within their observed source scenes, and may deliver a shorter result of at least 15 seconds when no valid assembly can reach the target; insufficient selected footage remains inspectable under CLIP-85 instead of being presented as a completed clip
@@ -15,7 +15,7 @@
 - CLIP-11 [o] the composition model uses the template narrative, exact owner facts and completed source observations to produce one validated edit plan containing ordered source-bound cuts, supported transforms and transitions, scene-grounded exact copy and its timing; it owns narrative and edit choices but never observes pixels or executes media work (→CLIP-61 →CLIP-63 →CLIP-64 →CLIP-97)
 - CLIP-12 [o] generated copy is rendered as exact typeset text through approved visual templates ← AI-drawn Korean lettering can be misspelled or visually inconsistent
 - CLIP-13 [o] the copy renderer uses only product-bundled, fixed-version fonts — Pretendard Variable as the primary face, Paperlogy for hook and emphasis text, Noto Sans KR as the fallback (→CDS-17) — and never a device or host system font ← the same project must render identically across environments
-- CLIP-14 [o] the copy styles are the five CDS defines — 깔끔하게 · 메모 · 크게 강조 · 형광펜 · 가벼운 텍스트 (→CDS-22) — with one project accent from the approved seven-colour palette (→CDS-15)
+- CLIP-14 [o] a template declares no style: a clip's text sits in the three CDS regions — intro, caption, outro — whose size and placement are fixed, and the template supplies each slot's text and one project accent from the approved seven-colour palette (→CDS-22 →CDS-70 →CDS-15)
 - CLIP-15 [o] template-authored text uses the CDS safe areas and supported anchors, with header-role elements using the symmetric header bounds; automatic placement applies only where the template leaves placement automatic (→CDS-9 →CDS-12 →CDS-13 →CDS-57)
 - CLIP-16 [o] cuts join with a hard cut by default and a short fade only where the scene type changes (→CDS-36)
 - CLIP-17 [o] step ② 클립 다듬기 is a preview-led timeline editor for cut creation, splitting, order, range and fixed playback rate, generated or fixed text, approved placement and style, phrase timing, per-source original-sound retention and per-cut volume (→CLIP-53 →CLIP-54 →CLIP-55)
@@ -157,6 +157,7 @@
 - displayed item identity and scene-to-fact meaning require representative video review; schema validity and a project-wide text match alone do not establish semantic correctness
 
 ## chg
+- r22 260915 CLIP-14✎ five declared copy styles→no declared style with three fixed CDS regions; CLIP-4✎ template authority includes approved visual styles→excludes them
 - r21 260915 CLIP-64✎ reason inspectable in step ②→reason recorded as a CLIP-108 notice; CLIP-94✎ three correction attempts for any malformed or invalid response→three attempts only for a response that cannot be read, repairable rule breaks resolved without a further attempt; CLIP-97✎ invalid plans follow CLIP-94→plans made deliverable under CLIP-106 before freezing; CLIP-106+ CLIP-107+ CLIP-108+ CLIP-109+ deliver-with-notice tolerance, repair bounded to the already admissible, stored owner notices and their placement; CLIP-110? credit-free rerender for a substantially reduced clip
 - r20 260915 CLIP-104+ fixed observation language joined to the analysis contract; CLIP-105+ observed caption-safe regions; CLIP-93✎ reuse key without observation language→including it; CLIP-62✎ item association cites the observation language
 - r19 260914 CLIP-61✎ unnamed uncounted item groups→declared owner-visible name and admitted item count with a generic fallback; CLIP-102+ structural admission refusal before paid work; CLIP-103? writer cut budget derived from admitted sections

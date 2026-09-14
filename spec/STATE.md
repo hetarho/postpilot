@@ -30,8 +30,8 @@
 | THEME | 12 | 12 | - | 0 |
 | MKT | 4 | 4 | - | 0 |
 | VIDEO | 2 | 2 | - | 1 |
-| CLIP | 21 | 21 | - | 2 |
-| CDS | 14 | 14 | - | 2 |
+| CLIP | 22 | 22 | - | 2 |
+| CDS | 15 | 15 | - | 2 |
 | BILL | 4 | 4 | - | 0 |
 
 ## review
@@ -47,17 +47,27 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T110 | Release QA on the Naver app and the overlay measurement | CDS CLIP | T108 | blocked@260912 |
+| T166 | Collapse the style system to one caption treatment and add the region tokens | CDS | - | todo |
+| T167 | Render the intro and outro blocks instead of the hook and ending cards | CDS | T166 | todo |
+| T168 | Replace the information frame with an unplated label/value pair and retune the disclosure pill | CDS | T166 | todo |
+| T169 | Stop accepting a declared style and migrate every stored template | CDS CLIP | T166 | todo |
+| T170 | Fail when a text renders in a face it did not ask for | CDS | T166 | todo |
+| T171 | Remove the style controls and draw the regions in the preview | CLIP CDS | T166 T167 T168 | todo |
 
 ## next
-- T159–T165 are complete as one coordinated frontend/backend release.
-- No unclaimed implementation task remains; T110 stays owner-blocked and T008 owner-dependent.
+- implement-task T166 — every other task in this batch waits on its constants.
+- T167 T168 T169 T170 run in parallel after it; T171 closes the surfaces last.
+- T163's drawn frame family is removed by T168, retired by r15 before it ever rendered.
+- T110 stays owner-blocked and T008 owner-dependent.
 
 ## log
+- 260915 create-task CDS CLIP done; T166 T167 T168 T169 T170 T171 from the r15/r22 delta
 - 260915 T165 done
 - 260915 T164 done
 - 260915 T163 done
 - 260915 T165 claimed (frm); T164 parser and notice contract tests pass, coordinated release gates remain
-- 260915 update-ssot CDS start (owner design direction from clip_sample_tmp review)
+- 260915 update-ssot CDS r15 CLIP r22 done; three fixed regions replace five caption styles, cards and pills; only the disclosure keeps a pill
+- 260915 warn: T163 finished during this update and its CDS-69 frame family is retired by r15 — CDS-30's unplated label/value pair replaces it
 - 260915 T164 claimed (frm); T163–T165 selected for a coordinated release
 - 260915 T163 claimed (frm)
 - 260915 T162 done; T159–T162 form the verified caption-placement release
