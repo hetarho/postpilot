@@ -7,6 +7,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 	"time"
 
@@ -54,11 +55,11 @@ func TestRenderSmokeRatesAndSourceAudio(t *testing.T) {
 		// 60 fps so the slow rates have the cadence CDS-68 asks for, and a
 		// steady 440 Hz tone so pitch preservation is measurable.
 		loud := filepath.Join(ws.Path, "loud.mp4")
-		if _, err := a.run(t.Context(), ws, cfg.FFmpegPath, "-v", "error", "-f", "lavfi", "-i", "testsrc=s=1280x720:r=60", "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=48000", "-t", "40", "-c:v", "libx264", "-preset", "ultrafast", "-threads", "1", "-pix_fmt", "yuv420p", "-r", "60", "-c:a", "aac", loud); err != nil {
+		if _, err := a.run(t.Context(), ws, cfg.FFmpegPath, "-v", "error", "-f", "lavfi", "-i", "color=c=blue:s=1280x720:r=60", "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=48000", "-t", "40", "-c:v", "libx264", "-preset", "ultrafast", "-threads", "1", "-pix_fmt", "yuv420p", "-r", "60", "-c:a", "aac", loud); err != nil {
 			return err
 		}
 		quiet := filepath.Join(ws.Path, "quiet.mp4")
-		if _, err := a.run(t.Context(), ws, cfg.FFmpegPath, "-v", "error", "-f", "lavfi", "-i", "testsrc=s=1280x720:r=60", "-t", "40", "-c:v", "libx264", "-preset", "ultrafast", "-threads", "1", "-pix_fmt", "yuv420p", "-r", "60", "-c:a", "aac", quiet); err != nil {
+		if _, err := a.run(t.Context(), ws, cfg.FFmpegPath, "-v", "error", "-f", "lavfi", "-i", "color=c=blue:s=1280x720:r=60", "-t", "40", "-c:v", "libx264", "-preset", "ultrafast", "-threads", "1", "-pix_fmt", "yuv420p", "-r", "60", "-c:a", "aac", quiet); err != nil {
 			return err
 		}
 		loudInfo, err := a.Probe(t.Context(), ws, loud)
@@ -99,7 +100,15 @@ func TestRenderSmokeRatesAndSourceAudio(t *testing.T) {
 						Focal: clip.Point{X: .5, Y: .5}, Volume: volume(1)})
 					start += span
 				}
-				for _, key := range []string{"loud", "quiet"} {
+				// The snapshot is exactly the identities the cuts use: a
+				// foreign source is as invalid as a forgotten one (CDS-35).
+				used := []string{}
+				for _, cut := range plan.Cuts {
+					if !slices.Contains(used, cut.SourceID) {
+						used = append(used, cut.SourceID)
+					}
+				}
+				for _, key := range used {
 					retain := audio == "on" || audio == "mixed"
 					settings.Values = append(settings.Values, clip.SourceAudioSetting{SourceID: key, Fingerprint: key, RetainOriginal: retain})
 				}

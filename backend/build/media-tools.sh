@@ -41,7 +41,7 @@ PKG_CONFIG_PATH=/opt/media/lib/pkgconfig ./configure \
   --enable-parser=h264,hevc,vp8,vp9,mpeg4video,mjpeg,aac,mpegaudio,opus,vorbis \
   --enable-decoder=png --enable-encoder=libx264,aac,wrapped_avframe,pcm_s16le,png --enable-muxer=mp4,null,image2,image2pipe,pcm_s16le,wav \
   --enable-bsf=aac_adtstoasc,h264_mp4toannexb,hevc_mp4toannexb \
-  --enable-filter=scale,setsar,fps,format,transpose,hflip,vflip,aresample,aformat,anull,null,trim,atrim,setpts,asetpts \
+  --enable-filter=scale,setsar,fps,format,transpose,hflip,vflip,aresample,atempo,aformat,anull,null,trim,atrim,setpts,asetpts \
   --enable-filter=crop,overlay,xfade,acrossfade,concat,volume,apad,settb,asettb,fade,afade,loudnorm,loop \
   --enable-indev=lavfi --enable-filter=color,sine,anullsrc
 make -j2
