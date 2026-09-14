@@ -1,0 +1,1 @@
+[0:a:0]aresample=48000:async=1:min_hard_comp=0:first_pts=0,atrim=duration=3.750,atempo=1.250000,aformat=sample_fmts=fltp:channel_layouts=stereo,volume=1.000000,apad,atrim=end_sample=144000,asetpts=PTS-STARTPTS[a]

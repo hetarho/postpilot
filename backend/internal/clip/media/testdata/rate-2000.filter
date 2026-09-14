@@ -1,0 +1,1 @@
+[0:V:0]trim=duration=6.000,setpts=(PTS-STARTPTS)*1000/2000,fps=30,scale=1080:1920:force_original_aspect_ratio=increase:force_divisible_by=2:reset_sar=1,crop=1080:1920:x='max(0,min(iw-ow,iw*0.500000-ow/2))':y='max(0,min(ih-oh,ih*0.500000-oh/2))',setsar=1,trim=end_frame=90,setpts=PTS-STARTPTS,format=yuv444p[v]

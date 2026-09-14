@@ -193,7 +193,7 @@ func (r *Rendering) layoutComposition(ctx context.Context, ws clip.MediaWorkspac
 	for _, cut := range plan.Cuts {
 		offset -= cut.TransitionMS
 		cutStarts[cut.ID] = offset
-		offset += cut.EndMS - cut.StartMS
+		offset += cut.OutputDurationMS()
 	}
 	for _, text := range plan.Portable.Elements {
 		if visual, exists := byID[text.Resolved.InstanceID]; exists {

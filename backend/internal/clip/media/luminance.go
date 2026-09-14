@@ -190,7 +190,14 @@ func ratioOf(canvas clip.Canvas) (string, bool) {
 func (r *Rendering) sample(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, source clip.MediaSource, cut clip.EditCut, window [2]int, region clip.Region, index int) (Luminance, error) {
 	// The last frame is the one BEFORE the window closes; asking for the closing
 	// instant itself can land past the cut.
+	// The window is CUT-RELATIVE OUTPUT time; the seek below is SOURCE time, so
+	// each offset is converted back through the cut's own rate. A 1x cut — and
+	// the synthetic cut the composition path uses over already-transformed
+	// footage — converts to itself (CDS-62).
 	offsets := []int{window[0], (window[0] + window[1]) / 2, max(window[0], window[1]-1)}
+	for i, at := range offsets {
+		offsets[i] = at * cut.Rate() / clip.RateUnitPermille
+	}
 	values, colours := make([]float64, 0, len(offsets)), make([][3]float64, 0, len(offsets))
 	for i, at := range offsets {
 		path := filepath.Join(ws.Path, "sample-"+strconv.Itoa(index)+"-"+strconv.Itoa(i)+".png")

@@ -39,7 +39,7 @@ func TestEachRenderInputHasItsOwnResourceLimits(t *testing.T) {
 		canvas, _ := clip.ClipCanvas("vertical")
 		cut := clip.EditCut{EndMS: 4200, Focal: clip.Point{X: .5, Y: .5}}
 		l := layers{Fixed: "fixed.png", Copies: []string{"copy1.png", "copy2.png"}, Card: "card.png", Window: cardLayout{Kind: "hook", EndMS: 1500}}
-		return r.renderCut(t.Context(), ws, canvas, cut, clip.MediaSource{Path: sourceFile(t, ws)}, 126, l, filepath.Join(ws.Path, "render-cut-0000.mp4"), false)
+		return r.renderCut(t.Context(), ws, canvas, cut, clip.MediaSource{Path: sourceFile(t, ws)}, 126, l, filepath.Join(ws.Path, "render-cut-0000.mp4"), false, false)
 	})
 	if err != nil {
 		t.Fatal(err)

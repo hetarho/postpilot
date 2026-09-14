@@ -311,7 +311,7 @@ func TestRenderFilterGoldens(t *testing.T) {
 	r := testRenderer(t, newAdapter(t, &fakeRunner{}))
 	canvas, _ := clip.ClipCanvas("horizontal")
 	c := clip.EditCut{StartMS: 100, EndMS: 7700, Focal: clip.Point{X: .25, Y: .75}, Volume: volume(.5)}
-	golden(t, "cut.filter", cutGraph(r.cfg, canvas, c, clip.MediaInfo{HasAudio: true}, 228, layers{Copies: []string{"copy.png"}}, true)+"\n")
+	golden(t, "cut.filter", cutGraph(r.cfg, canvas, c, clip.MediaInfo{HasAudio: true}, 228, layers{Copies: []string{"copy.png"}}, true, true)+"\n")
 	// CDS-36 on one timeline: a hard cut CONCATENATES and a scene change
 	// dissolves, so the same three cuts join three different ways. The audio
 	// graph is golden beside each one because its boundaries are CDS-35's, not
@@ -329,15 +329,15 @@ func TestRenderFilterGoldens(t *testing.T) {
 		golden(t, "composition-"+plan.name+".filter", compositionGraph(r.cfg, []int{156, 150, 156}, plan.transitions, "yuv420p")+"\n")
 		golden(t, "composition-"+plan.name+".audio.filter", compositionAudioGraph(r.cfg, []int{156, 150, 156}, plan.transitions, 3)+"\n")
 	}
-	if strings.Contains(cutGraph(r.cfg, canvas, c, clip.MediaInfo{}, 228, layers{}, false), "[a]") {
+	if strings.Contains(cutGraph(r.cfg, canvas, c, clip.MediaInfo{}, 228, layers{}, false, false), "[a]") {
 		t.Fatal("invented audio")
 	}
-	if !strings.Contains(cutGraph(r.cfg, canvas, c, clip.MediaInfo{}, 228, layers{}, true), "anullsrc=r=48000:cl=stereo") {
+	if !strings.Contains(cutGraph(r.cfg, canvas, c, clip.MediaInfo{}, 228, layers{}, true, true), "anullsrc=r=48000:cl=stereo") {
 		t.Fatal("missing synthesized silence")
 	}
 	// CDS-4 and CDS-27: exactly one 180 ms fade-in settling 12 px, one 120 ms
 	// fade-out that does not move, and a window inset 120 ms at both ends.
-	graph := cutGraph(r.cfg, canvas, c, clip.MediaInfo{HasAudio: true}, 228, layers{Copies: []string{"copy.png"}}, true)
+	graph := cutGraph(r.cfg, canvas, c, clip.MediaInfo{HasAudio: true}, 228, layers{Copies: []string{"copy.png"}}, true, true)
 	for _, want := range []string{
 		"fade=t=in:st=0.120:d=0.180:alpha=1",
 		"fade=t=out:st=7.360:d=0.120:alpha=1",
@@ -350,11 +350,11 @@ func TestRenderFilterGoldens(t *testing.T) {
 	}
 	// The fixed layer is its own overlay with no fade and no y expression: the
 	// disclosure badge may not move (CDS-31) while the copy must (CDS-4).
-	both := cutGraph(r.cfg, canvas, c, clip.MediaInfo{}, 228, layers{Fixed: "fixed.png", Copies: []string{"copy.png"}}, false)
+	both := cutGraph(r.cfg, canvas, c, clip.MediaInfo{}, 228, layers{Fixed: "fixed.png", Copies: []string{"copy.png"}}, false, false)
 	if !strings.Contains(both, "[base][1:v:0]overlay=0:0:format=auto:shortest=0[fixed];") || !strings.Contains(both, "[2:v:0]format=rgba,loop=loop=227:size=1:start=0,fade=") || !strings.Contains(both, "[fixed][plate0]overlay=x=0:y=") {
 		t.Fatalf("fixed and animated layers are not separate: %s", both)
 	}
-	fixedOnly := cutGraph(r.cfg, canvas, clip.EditCut{StartMS: 100, EndMS: 7700}, clip.MediaInfo{}, 228, layers{Fixed: "fixed.png"}, false)
+	fixedOnly := cutGraph(r.cfg, canvas, clip.EditCut{StartMS: 100, EndMS: 7700}, clip.MediaInfo{}, 228, layers{Fixed: "fixed.png"}, false, false)
 	if strings.Contains(fixedOnly, "fade=") || !strings.Contains(fixedOnly, "[fixed]trim=") {
 		t.Fatalf("a cut with no copy animated its badge: %s", fixedOnly)
 	}
@@ -367,12 +367,12 @@ func TestRenderFilterGoldens(t *testing.T) {
 	// An explicit window is exactly what the plan asked for, not re-inset.
 	explicit := c
 	explicit.Copies = []clip.Copy{{Text: "x", StartMS: 1000, EndMS: 4000}}
-	if !strings.Contains(cutGraph(r.cfg, canvas, explicit, clip.MediaInfo{}, 228, layers{Copies: []string{"copy.png"}}, false), "enable='gte(t,1.000)*lt(t,4.000)'") {
+	if !strings.Contains(cutGraph(r.cfg, canvas, explicit, clip.MediaInfo{}, 228, layers{Copies: []string{"copy.png"}}, false, false), "enable='gte(t,1.000)*lt(t,4.000)'") {
 		t.Fatal("an explicit caption window was moved")
 	}
 	// The card is the last layer, fades the way its own kind fades, and dips the
 	// original audio 6 dB for its own window while it is up (CDS-28, CDS-35).
-	hook := cutGraph(r.cfg, canvas, c, clip.MediaInfo{HasAudio: true}, 228, layers{Copies: []string{"copy.png"}, Card: "card.png", Window: cardLayout{Kind: "hook", StartMS: 0, EndMS: 1500}}, true)
+	hook := cutGraph(r.cfg, canvas, c, clip.MediaInfo{HasAudio: true}, 228, layers{Copies: []string{"copy.png"}, Card: "card.png", Window: cardLayout{Kind: "hook", StartMS: 0, EndMS: 1500}}, true, true)
 	golden(t, "cut-hook-card.filter", hook+"\n")
 	for _, want := range []string{
 		"[2:v:0]format=rgba,loop=loop=227:size=1:start=0,fade=t=out:st=1.300:d=0.200:alpha=1[card];",
@@ -384,7 +384,7 @@ func TestRenderFilterGoldens(t *testing.T) {
 		}
 	}
 	// The ending card fades IN and never dips the audio (CDS-29).
-	end := cutGraph(r.cfg, canvas, c, clip.MediaInfo{HasAudio: true}, 228, layers{Card: "card.png", Window: cardLayout{Kind: "end", StartMS: 5100, EndMS: 7600}}, true)
+	end := cutGraph(r.cfg, canvas, c, clip.MediaInfo{HasAudio: true}, 228, layers{Card: "card.png", Window: cardLayout{Kind: "end", StartMS: 5100, EndMS: 7600}}, true, true)
 	golden(t, "cut-end-card.filter", end+"\n")
 	if !strings.Contains(end, "fade=t=in:st=5.100:d=0.200:alpha=1[card];") || strings.Contains(end, "volume=volume=") {
 		t.Fatalf("ending card: %s", end)
@@ -399,7 +399,7 @@ func TestCaptionExposureUsesOnlyValidatedCutRelativeTimes(t *testing.T) {
 	r := testRenderer(t, newAdapter(t, &fakeRunner{}))
 	canvas, _ := clip.ClipCanvas("vertical")
 	c := clip.Cut{EndMS: 15000, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Caption{{StartMS: 1000, EndMS: 12000}}}
-	graph := cutGraph(r.cfg, canvas, c, clip.MediaInfo{}, 450, layers{Copies: []string{"copy.png"}}, false)
+	graph := cutGraph(r.cfg, canvas, c, clip.MediaInfo{}, 450, layers{Copies: []string{"copy.png"}}, false, false)
 	if !strings.Contains(graph, ":enable='gte(t,1.000)*lt(t,12.000)'") {
 		t.Fatal(graph)
 	}

@@ -306,13 +306,24 @@ func ValidateSourceRanges(plan EditPlan, grandfathered map[overlapKey]int) error
 	return nil
 }
 
-// RefuseUnsupportedRates names the first cut whose fixed rate an executor cannot
-// yet materialize. It is the boundary CLIP-99 asks for: an unsuitable transform
-// is identified before rendering, never simulated and never silently changed
-// back to 1x. Removing it is the renderer's job, not the contract's.
-func RefuseUnsupportedRates(plan EditPlan) error {
+// RefuseUnrenderableRates names the first cut whose fixed rate this footage
+// cannot actually be played at. It is CLIP-99's boundary, checked against the
+// ORIGINAL's verified cadence — not the analysis copy's re-encoded frame rate
+// and not an unverified container declaration — immediately before encoding:
+// an unsuitable transform is identified, never simulated and never silently
+// changed back to 1x. A cut whose source is absent is refused too, because
+// nothing has proved its cadence (CDS-68).
+func RefuseUnrenderableRates(plan EditPlan, sources []RenderSource) error {
+	byID := map[string]RenderSource{}
+	for _, s := range sources {
+		byID[s.ID] = s
+	}
 	for _, c := range plan.Cuts {
-		if c.Rate() != RateUnitPermille {
+		source, ok := byID[c.SourceID]
+		if !ok || source.Fingerprint != c.Fingerprint {
+			return planViolation("plan_source")
+		}
+		if !slices.Contains(AllowedPlaybackRates(source.Info), c.Rate()) {
 			return planViolation("plan_cut_rate")
 		}
 	}

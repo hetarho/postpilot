@@ -13,7 +13,9 @@ import (
 // Native cut nodes contain only footage. Text is applied after every source
 // transition, so an output-level element cannot be faded or composited twice.
 func bareFootageGraph(cfg clip.RenderConfig, canvas clip.Canvas, cut clip.Cut, frames int) string {
-	return fmt.Sprintf("[0:V:0]trim=duration=%s,setpts=PTS-STARTPTS,fps=%d,%s,setsar=1,trim=end_frame=%d,setpts=PTS-STARTPTS,format=yuv444p[v]", seconds(cut.EndMS-cut.StartMS), cfg.FPS, coverChain(canvas, cut.Focal), frames)
+	// The trim takes the ORIGINAL source range; the rate is applied to the
+	// frames it decoded to, and the cumulative frame budget closes the cut.
+	return fmt.Sprintf("[0:V:0]trim=duration=%s,%s,%s,setsar=1,trim=end_frame=%d,setpts=PTS-STARTPTS,format=yuv444p[v]", seconds(cut.SourceSpanMS()), rateChain(cut.Rate(), cfg.FPS), coverChain(canvas, cut.Focal), frames)
 }
 
 func (r *Rendering) renderBareFootage(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, cut clip.Cut, source clip.MediaSource, frames int, output string) error {
@@ -27,10 +29,14 @@ func (r *Rendering) renderBareFootage(ctx context.Context, ws clip.MediaWorkspac
 	return r.runRender(ctx, ws, output, args)
 }
 
+// A cut contributes real sound only when its source is ENABLED and actually
+// carries audio. Every other cut contributes explicit silence of its own
+// transformed length, which is what keeps the mix and the seams aligned with
+// the picture in a clip where only some sources are on (CDS-6, CDS-35).
 func bareAudioGraph(cfg clip.RenderConfig, cut clip.Cut, hasAudio bool, frames int) string {
 	var graph strings.Builder
 	if hasAudio {
-		fmt.Fprintf(&graph, "[0:a:0]aresample=%d:async=1:min_hard_comp=0:first_pts=0,atrim=duration=%s,aformat=sample_fmts=fltp:channel_layouts=stereo,volume=%.6f", cfg.AudioRate, seconds(cut.EndMS-cut.StartMS), cut.OriginalVolume())
+		fmt.Fprintf(&graph, "[0:a:0]aresample=%d:async=1:min_hard_comp=0:first_pts=0,atrim=duration=%s%s,aformat=sample_fmts=fltp:channel_layouts=stereo,volume=%.6f", cfg.AudioRate, seconds(cut.SourceSpanMS()), audioRateChain(cut.Rate()), cut.OriginalVolume())
 	} else {
 		fmt.Fprintf(&graph, "anullsrc=r=%d:cl=stereo", cfg.AudioRate)
 	}
@@ -40,15 +46,18 @@ func bareAudioGraph(cfg clip.RenderConfig, cut clip.Cut, hasAudio bool, frames i
 
 // Audio is retained as PCM until the final AAC encode. The hook dip belongs to
 // the assembled output clock, not the first source cut or a preset window.
-func (r *Rendering) renderBareAudio(ctx context.Context, ws clip.MediaWorkspace, cut clip.Cut, source clip.MediaSource, frames int, output string) error {
+func (r *Rendering) renderBareAudio(ctx context.Context, ws clip.MediaWorkspace, cut clip.Cut, source clip.MediaSource, frames int, output string, sourceAudio bool) error {
 	if err := r.media.sourcePath(ws, source.Path); err != nil {
 		return err
 	}
+	// A disabled source is never even opened, so its sound cannot reach the mix
+	// through any later stage.
+	retained := sourceAudio && source.Info.HasAudio
 	args := r.baseArgs()
-	if source.Info.HasAudio {
+	if retained {
 		args = append(args, "-threads", strconv.Itoa(r.media.cfg.Threads), "-protocol_whitelist", "file,pipe", "-ss", seconds(cut.StartMS), "-i", source.Path)
 	}
-	args = append(args, "-filter_complex", bareAudioGraph(r.cfg, cut, source.Info.HasAudio, frames), "-map", "[a]", "-vn", "-c:a", "pcm_s16le", "-ar", strconv.Itoa(r.cfg.AudioRate), "-ac", "2", "-f", "wav")
+	args = append(args, "-filter_complex", bareAudioGraph(r.cfg, cut, retained, frames), "-map", "[a]", "-vn", "-c:a", "pcm_s16le", "-ar", strconv.Itoa(r.cfg.AudioRate), "-ac", "2", "-f", "wav")
 	return r.runRender(ctx, ws, output, args)
 }
 

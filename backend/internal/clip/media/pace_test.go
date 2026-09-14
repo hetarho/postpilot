@@ -52,7 +52,7 @@ func TestRapidLayersHaveUniquePathsCroppedExtentsAndNoMotion(t *testing.T) {
 			l.Copies = append(l.Copies, path)
 			l.CopyRegions = append(l.CopyRegions, region)
 		}
-		graph := cutGraph(r.cfg, canvas, cut, clip.MediaInfo{}, 90, l, false)
+		graph := cutGraph(r.cfg, canvas, cut, clip.MediaInfo{}, 90, l, false, false)
 		if strings.Contains(graph, "fade=") || strings.Contains(graph, "pow(") {
 			t.Fatal(graph)
 		}

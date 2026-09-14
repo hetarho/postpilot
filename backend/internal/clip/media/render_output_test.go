@@ -177,3 +177,47 @@ func TestRenderedOutputRejectionNamesTheProperty(t *testing.T) {
 func video(doc map[string]any) map[string]any {
 	return doc["streams"].([]any)[0].(map[string]any)
 }
+
+// A clip whose sources are all disabled or silent delivers a video-only MP4.
+// V12's AAC 48 kHz checks apply only where an audio stream exists, and an
+// unexpected audio stream is still a rejection either way (CDS-35, CDS-52).
+func TestVideoOnlyDeliveryIsAcceptedAndAnUnexpectedTrackIsNot(t *testing.T) {
+	for _, tc := range []struct {
+		name          string
+		audio, stream bool
+		check         string
+	}{
+		{"audio expected and present", true, true, ""},
+		{"no audio expected and none delivered", false, false, ""},
+		{"audio expected but missing", true, false, "render_output_audio"},
+		{"audio delivered but none authorized", false, true, "render_output_audio"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			doc := deliveredProbe(t)
+			if !tc.stream {
+				doc["streams"] = []any{video(doc)}
+			}
+			a := newAdapter(t, probeRunner(t, doc, 25333333, 760))
+			r := testRenderer(t, a)
+			plan := clip.EditPlan{Ratio: "vertical", DurationMS: 25334}
+			err := a.WithWorkspace(t.Context(), "validate", func(ws clip.MediaWorkspace) error {
+				output := filepath.Join(ws.Path, "clip-result.mp4")
+				if err := os.WriteFile(output, []byte("delivered"), 0600); err != nil {
+					return err
+				}
+				_, err := r.validateRenderedOutput(t.Context(), ws, output, plan, tc.audio, nil)
+				return err
+			})
+			if tc.check == "" {
+				if err != nil {
+					t.Fatalf("conforming delivery rejected: %v", err)
+				}
+				return
+			}
+			d, _ := clip.DiagnosticFromError(err)
+			if err == nil || d.Check != tc.check {
+				t.Fatalf("got %v (%q), want %q", err, d.Check, tc.check)
+			}
+		})
+	}
+}

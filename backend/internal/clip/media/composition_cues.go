@@ -84,7 +84,7 @@ func (r *Rendering) layoutDeclaredRapid(ctx context.Context, ws clip.MediaWorksp
 				if cut.ID == text.Resolved.CutID {
 					cutStart = offset
 				}
-				offset += cut.EndMS - cut.StartMS
+				offset += cut.OutputDurationMS()
 			}
 			phrases, ok = nil, true
 			for _, p := range text.Phrases {

@@ -73,9 +73,12 @@ func (r *Rendering) renderComposition(ctx context.Context, ws clip.MediaWorkspac
 	for _, source := range sources {
 		byID[source.ID] = source
 	}
+	// The clip has an audio track when at least one selected cut comes from a
+	// source the owner ENABLED that actually carries sound; otherwise the MP4
+	// gets no audio stream at all rather than a synthetic silent one (CDS-35).
 	audio := false
 	for _, cut := range plan.Cuts {
-		audio = audio || byID[cut.SourceID].Info.HasAudio
+		audio = audio || plan.RetainsOriginalAudio(cut) && byID[cut.SourceID].Info.HasAudio
 	}
 	cuts, wavs := []string{}, []string{}
 	step("render_footage")
@@ -101,7 +104,7 @@ func (r *Rendering) renderComposition(ctx context.Context, ws clip.MediaWorkspac
 			}
 			if audio {
 				step("render_audio")
-				return r.renderBareAudio(ctx, ws, cut, source, frames[i], wav)
+				return r.renderBareAudio(ctx, ws, cut, source, frames[i], wav, plan.RetainsOriginalAudio(cut))
 			}
 			return nil
 		})

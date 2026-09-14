@@ -30,7 +30,7 @@
 | THEME | 12 | 12 | - | 0 |
 | MKT | 4 | 4 | - | 0 |
 | VIDEO | 2 | 2 | - | 1 |
-| CLIP | 18 | 18 | - | 0 |
+| CLIP | 19 | 19 | - | 1 |
 | CDS | 13 | 13 | - | 2 |
 | BILL | 4 | 4 | - | 0 |
 
@@ -39,24 +39,37 @@
 |---|---|
 | diff-260908 | converted@260908 |
 | clip-project-update-260914 | converted@260914 |
+| clip-failure-visibility-260914 | converted@260914 |
 
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T110 | Release QA on the Naver app and the overlay measurement | CDS CLIP | T108 | blocked@260912 |
-| T147 | Render fixed-rate cuts and opted-in source audio | CLIP CDS ARCH | T142 T143 | todo |
 | T148 | Preview the transformed assembly timeline | CLIP CDS ARCH | T142 T143 | todo |
 | T149 | Add cut, split and fixed-rate editing controls | CLIP CDS ARCH | T144 T148 | todo |
 | T150 | Add per-source original-sound toggles | CLIP CDS ARCH | T143 T148 | todo |
 | T151 | Verify review-clip assembly end to end | CLIP CDS ARCH | T146 T147 T149 T150 | todo |
+| T154 | Declare an item group's name and admitted count, and refuse a short one before paid work | CLIP | - | todo |
+| T155 | Call an item group by its name and open it at its minimum | CLIP | T154 | todo |
+| T156 | Show the recorded check beside the failure reason | ARCH | - | todo |
+| T157 | Say a save was refused rather than promising a retry that was abandoned | ARCH | - | todo |
 
 ## next
-- T153 is deployed-ready; composition-project editing was blocked in production until it ships
-- T146 is done but MUST NOT ship alone: the renderer still refuses a non-1x plan until T147 lifts that gate
-- T110 remains owner-blocked and must refresh CLIP@18 / CDS@13 before resuming; T008 remains owner-dependent for its separate local Naver publication verification.
+- implement-task T154, then T155; T156 and T157 are independent and can go first if the screen matters more than the refusal
+- T146+T147 are done and deployable together: the writer states rates and the renderer performs them; T148 is the next unblocked assembly task
+- T110 remains owner-blocked and must refresh CLIP@19 / CDS@13 before resuming; T008 remains owner-dependent for its separate local Naver publication verification.
 
 ## log
+- 260914 T147 done (asm); one timestamp-scaling rate chain with pitch-preserved atempo, the whole render clock on transformed time, audio only from owner-enabled sources and a cadence recheck that refuses before FFmpeg
+- 260914 T147 refreshed to CLIP@19 (asm); r19 changes item-group declaration and pre-work admission, none of which this task's rendering decisions
+- 260914 flaky under full-suite load, reproduced on c02fa07 before T145; internal/clip/store generation/recovery tests intermittently fail with "clip sources are not available in this state" while passing in isolation
+- 260914 create-task CLIP review/clip-failure-visibility-260914 done; T154 T155 carry the declared group, T156 T157 carry what a refusal tells the owner
+- 260914 create-task CLIP review/clip-failure-visibility-260914 start
+- 260914 update-ssot CLIP r19 done; an item group declares its name and admitted count, and admission refuses a structurally unsatisfiable input set before paid work
+- 260914 warning; T147 doing is based on CLIP@18 and must refresh to CLIP@19, though r19 touches admission and item groups rather than rendering
+- 260914 T147 refreshed to CDS@13 (asm); the r13 CDS-52 delta is V12's decoded video-track duration, already shipped by T152, and this task extends that same check rather than contradicting it
+- 260914 T147 claimed (asm)
 - 260914 T146 done (asm); one rate per cut from the source's own allowed set, same-scene-only splits with no reuse, the whole timeline on transformed output time and the owner sound snapshot stamped after validation
 - 260914 update-ssot CLIP start
 - 260914 T153 done; composition projects can be saved again, legacy campaign identity still required
@@ -68,12 +81,3 @@
 - 260914 create-task review/clip-project-update-260914 done; T153 fixes composition-project update admission
 - 260914 create-task review/clip-project-update-260914 start
 - 260914 T145 claimed (asm)
-- 260914 T144 done (rate); request-only creation provenance admits owner add and split through the existing optimistic save, with observed-scene evidence, server-owned defaults and named refusals
-- 260914 T144 claimed (rate)
-- 260914 T143 done (rate); migration 0052 backfills legacy audio meaning, one writer transaction owns the lease/plan/revision/retention change, and the setting stays outside every paid identity
-- 260914 T143 claimed (rate)
-- 260914 T142 done (rate); v6 assembly envelope with per-cut fixed rates and the complete owner source-audio snapshot, one checked transformed-duration helper, cadence-verified slow rates and legacy-overlap grandfathering
-- 260914 T152 done; delivered length read from the decoded video track, production job b12a4bcd output verified accepted
-- 260914 T142 refreshed to CDS@13 (rate); the r13 V12 decoded-length delta is T152 render conformance and does not touch the assembly contract; T143 T144 rebased too
-- 260914 T152 claimed (vdur)
-- 260914 create-task CDS done; T152 moves the delivered-length measure onto the decoded video track

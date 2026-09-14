@@ -16,17 +16,42 @@ import (
 )
 
 // Rounding cumulative cut time (not every individual cut independently) keeps
-// the final CFR duration within half a frame of the millisecond plan.
+// the final CFR duration within half a frame of the millisecond plan. The clock
+// it rounds is the TRANSFORMED output timeline, so a cut's frame budget already
+// carries its fixed rate and no individually rounded clip can drift away from
+// the captions and transitions placed on that same timeline (CDS-62).
 func cutFrames(plan clip.EditPlan, fps int) []int {
 	frames := make([]int, len(plan.Cuts))
 	elapsed, previous := 0, 0
 	for i, c := range plan.Cuts {
-		elapsed += c.EndMS - c.StartMS
+		elapsed += c.OutputDurationMS()
 		next := int(math.Round(float64(elapsed*fps) / 1000))
 		frames[i] = next - previous
 		previous = next
 	}
 	return frames
+}
+
+// rateChain is the ONE way a fixed rate becomes pixels: the decoded timestamps
+// are scaled and the result is converted to the output cadence by ordinary
+// frame-rate conversion. There is no interpolation, synthesis, reverse or
+// freeze anywhere in it, and 1x emits exactly the graph it always did so an
+// existing result re-renders byte-for-byte (CLIP-28, CLIP-99, CLIP-101).
+func rateChain(ratePermille, fps int) string {
+	if ratePermille == clip.RateUnitPermille {
+		return fmt.Sprintf("setpts=PTS-STARTPTS,fps=%d", fps)
+	}
+	return fmt.Sprintf("setpts=(PTS-STARTPTS)*%d/%d,fps=%d", clip.RateUnitPermille, ratePermille, fps)
+}
+
+// audioRateChain is the same transform for sound, pitch-preserved. Every
+// CLIP-98 rate lies inside atempo's single-stage 0.5-2.0 range, so one stage is
+// always enough and no chain of stages can compound rounding.
+func audioRateChain(ratePermille int) string {
+	if ratePermille == clip.RateUnitPermille {
+		return ""
+	}
+	return fmt.Sprintf(",atempo=%s", strconv.FormatFloat(float64(ratePermille)/float64(clip.RateUnitPermille), 'f', 6, 64))
 }
 
 // coverChain is the one definition of how a source becomes canvas pixels: scaled
@@ -46,9 +71,11 @@ func frameSeconds(frames, fps int) string {
 // layer (the disclosure badge and this cut's chips, which never move) and then
 // the caption layers. They are separate overlay inputs because
 // the badge stays fixed (CDS-31) while captions follow their pace (CDS-4).
-func cutGraph(cfg clip.RenderConfig, canvas clip.Canvas, c clip.EditCut, source clip.MediaInfo, frames int, l layers, withAudio bool) string {
+func cutGraph(cfg clip.RenderConfig, canvas clip.Canvas, c clip.EditCut, source clip.MediaInfo, frames int, l layers, withAudio, sourceAudio bool) string {
 	var graph strings.Builder
-	fmt.Fprintf(&graph, "[0:V:0]trim=duration=%s,setpts=PTS-STARTPTS,fps=%d,%s,setsar=1,format=yuv420p[base];", seconds(c.EndMS-c.StartMS), cfg.FPS, coverChain(canvas, c.Focal))
+	// The trim is the cut's ORIGINAL source range; the rate is applied to the
+	// frames that range decoded to, never to the range itself.
+	fmt.Fprintf(&graph, "[0:V:0]trim=duration=%s,%s,%s,setsar=1,format=yuv420p[base];", seconds(c.SourceSpanMS()), rateChain(c.Rate(), cfg.FPS), coverChain(canvas, c.Focal))
 	last, input := "[base]", 1
 	if l.Fixed != "" {
 		fmt.Fprintf(&graph, "%s[%d:v:0]overlay=0:0:format=auto:shortest=0[fixed];", last, input)
@@ -105,11 +132,14 @@ func cutGraph(cfg clip.RenderConfig, canvas clip.Canvas, c clip.EditCut, source 
 	graph.WriteString(last)
 	fmt.Fprintf(&graph, "trim=end_frame=%d,setpts=PTS-STARTPTS,format=yuv420p[v]", frames)
 	if withAudio {
-		if source.HasAudio {
+		// Only an ENABLED source is decoded at all. A disabled or silent cut
+		// contributes explicit silence of its transformed length, so the mix and
+		// every transition stay aligned with the picture (CDS-6, CDS-35).
+		if sourceAudio && source.HasAudio {
 			// Preserve the seek-relative audio clock before resetting timestamps.
 			// An AAC frame can start one packet after video; resetting STARTPTS
 			// first pulled speech ~21 ms earlier and closed real timestamp gaps.
-			fmt.Fprintf(&graph, ";[0:a:0]aresample=%d:async=1:min_hard_comp=0:first_pts=0,atrim=duration=%s,aformat=sample_fmts=fltp:channel_layouts=stereo,volume=%.6f", cfg.AudioRate, seconds(c.EndMS-c.StartMS), c.OriginalVolume())
+			fmt.Fprintf(&graph, ";[0:a:0]aresample=%d:async=1:min_hard_comp=0:first_pts=0,atrim=duration=%s%s,aformat=sample_fmts=fltp:channel_layouts=stereo,volume=%.6f", cfg.AudioRate, seconds(c.SourceSpanMS()), audioRateChain(c.Rate()), c.OriginalVolume())
 			// The original audio dips under the hook card so its title is not
 			// fighting the footage (CDS-35). The dip is the card's window, not
 			// the cut's, and normalisation happens after it (T108).
@@ -221,7 +251,7 @@ func (l layers) cardInput() int {
 	return len(l.inputs())
 }
 
-func (r *Rendering) renderCut(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, cut clip.EditCut, source clip.MediaSource, frames int, l layers, path string, audio bool) error {
+func (r *Rendering) renderCut(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, cut clip.EditCut, source clip.MediaSource, frames int, l layers, path string, audio, sourceAudio bool) error {
 	if err := r.media.sourcePath(ws, source.Path); err != nil {
 		return err
 	}
@@ -233,7 +263,7 @@ func (r *Rendering) renderCut(ctx context.Context, ws clip.MediaWorkspace, canva
 		// input scheduler after an overlay stops consuming its infinite input.
 		args = append(args, "-threads", strconv.Itoa(r.media.cfg.Threads), "-framerate", strconv.Itoa(r.cfg.FPS), "-i", layer)
 	}
-	args = append(args, "-filter_complex", cutGraph(r.cfg, canvas, cut, source.Info, frames, l, audio))
+	args = append(args, "-filter_complex", cutGraph(r.cfg, canvas, cut, source.Info, frames, l, audio, sourceAudio))
 	args = append(args, r.encodeArgs(audio)...)
 	args = append(args, "-t", frameSeconds(frames, r.cfg.FPS))
 	if err := r.runRender(ctx, ws, path, args); err != nil {
@@ -242,10 +272,10 @@ func (r *Rendering) renderCut(ctx context.Context, ws clip.MediaWorkspace, canva
 	return r.media.sourcePath(ws, path)
 }
 func (r *Rendering) Render(ctx context.Context, ws clip.MediaWorkspace, plan clip.EditPlan, sources []clip.RenderSource, load clip.RenderSourceLoader) (result clip.RenderedVideo, err error) {
-	// The contract carries fixed playback rates; this executor still materializes
-	// footage at 1x. An unsupported transform is IDENTIFIED rather than simulated
-	// or quietly replaced by 1x (CLIP-99), until the renderer performs it.
-	if err = clip.RefuseUnsupportedRates(plan); err != nil {
+	// Every rate is rechecked against the ORIGINAL's own verified cadence before
+	// a single FFmpeg process starts. An unsuitable one is IDENTIFIED, never
+	// simulated and never quietly replaced by 1x (CLIP-99, CDS-68).
+	if err = clip.RefuseUnrenderableRates(plan, sources); err != nil {
 		return result, err
 	}
 	if plan.Portable != nil {
@@ -272,8 +302,11 @@ func (r *Rendering) Render(ctx context.Context, ws clip.MediaWorkspace, plan cli
 	for _, source := range sources {
 		byID[source.ID] = source
 	}
+	// The clip has an audio track when at least one SELECTED cut comes from a
+	// source the owner enabled that actually carries sound. Per-cut volume is a
+	// gain applied afterwards, never a permission (CDS-6, CDS-35).
 	for _, cut := range plan.Cuts {
-		audio = audio || byID[cut.SourceID].Info.HasAudio
+		audio = audio || plan.RetainsOriginalAudio(cut) && byID[cut.SourceID].Info.HasAudio
 	}
 	paths := []string{}
 	defer func() {
@@ -342,7 +375,7 @@ func (r *Rendering) Render(ctx context.Context, ws clip.MediaWorkspace, plan cli
 					paths = append(paths, plate)
 				}
 			}
-			return r.renderCut(ctx, ws, canvas, c.plan.Cuts[i], source, frames[i], layers{Fixed: fixed[i], Copies: plates, CopyRegions: regions, Card: cardPlates[i], Window: c.cards[i].relativeTo(offsets[i])}, cutPaths[i], audio)
+			return r.renderCut(ctx, ws, canvas, c.plan.Cuts[i], source, frames[i], layers{Fixed: fixed[i], Copies: plates, CopyRegions: regions, Card: cardPlates[i], Window: c.cards[i].relativeTo(offsets[i])}, cutPaths[i], audio, plan.RetainsOriginalAudio(c.plan.Cuts[i]))
 		})
 		if err != nil {
 			return result, err
@@ -476,7 +509,7 @@ func cutOffsets(plan clip.EditPlan) []int {
 	offsets, elapsed := make([]int, len(plan.Cuts)), 0
 	for i, c := range plan.Cuts {
 		offsets[i] = elapsed - c.TransitionMS
-		elapsed = offsets[i] + c.EndMS - c.StartMS
+		elapsed = offsets[i] + c.OutputDurationMS()
 	}
 	return offsets
 }
@@ -524,7 +557,7 @@ func (r *Rendering) layout(ctx context.Context, ws clip.MediaWorkspace, canvas c
 			return composed{}, err
 		}
 		plates[i] = f
-		start, end := offsets[i], offsets[i]+cut.EndMS-cut.StartMS
+		start, end := offsets[i], offsets[i]+cut.OutputDurationMS()
 		elements := f.Elements(plan.DurationMS, i, start, end)
 		if badged && phrase != "" {
 			elements = elements[1:] // one badge in the manifest, one disclosure
