@@ -200,3 +200,33 @@ it.each(['ko', 'en'] as const)(
     expect(screen.getAllByText('이번 시도의 관찰')[0]).toBeVisible()
   },
 )
+
+it.each(['ko', 'en'] as const)(
+  'names the delivered property a refused render missed in %s',
+  (language) => {
+    initializeI18n(language)
+    const project = failedProject()
+    project.latestJob!.stage = 'render'
+    project.latestJob!.failure = { reason: 'CLIP_PROCESSING_FAILED', params: {} }
+    project.attemptInspection!.stage = 'render'
+    project.attemptInspection!.validationCheck = 'render_output_duration'
+    project.attemptInspection!.validationPhase = 'render'
+    project.attemptInspection!.measurements = {
+      duration_ms: 24000,
+      expected_duration_ms: 25334,
+      decoded_duration_ms: 24000,
+      container_duration_ms: 24000,
+    }
+    render(<ClipAttemptInspection project={project} localSources={[]} />)
+    // The generic reason stays: it is what tells the owner what to do next.
+    expect(
+      screen.getByText(language === 'ko' ? /클립 처리에 실패했어요/ : /Clip processing failed/),
+    ).toBeVisible()
+    expect(
+      screen.getByText(
+        language === 'ko' ? /완성된 영상의 길이가 편집안의 길이와/ : /more than one frame away/,
+      ),
+    ).toBeVisible()
+    expect(screen.getByText(language === 'ko' ? '편집안의 길이' : 'Planned duration')).toBeVisible()
+  },
+)

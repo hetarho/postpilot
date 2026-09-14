@@ -402,24 +402,56 @@ func (r *Rendering) Render(ctx context.Context, ws clip.MediaWorkspace, plan cli
 	return r.validateRenderedOutput(ctx, ws, output, plan, audio, manifest)
 }
 
+var errOutputValidation = errors.New("rendered clip failed output validation")
+
+// A rejected delivery names the property that missed and carries what was
+// measured against what was required. One combined verdict cannot say whether
+// the clip came back the wrong size, the wrong length or the wrong codec, and
+// that is the whole question once a finished encode is refused (CDS-52).
+func outputRejection(check string, values map[string]int) error {
+	return clip.WithAttemptDiagnostic(errOutputValidation, clip.AttemptDiagnostic{Check: check, Phase: "render", Values: values})
+}
+
 func (r *Rendering) validateRenderedOutput(ctx context.Context, ws clip.MediaWorkspace, output string, plan clip.EditPlan, audio bool, manifest clip.Manifest) (result clip.RenderedVideo, err error) {
 	canvas, _ := clip.ClipCanvas(plan.Ratio)
 	info, err := r.media.Probe(ctx, ws, output)
 	if err != nil {
 		return result, err
 	}
-	if info.Width != canvas.Width || info.Height != canvas.Height || info.Rotation != 0 || info.PixelFormat != "yuv420p" || info.SampleAspectRatio != "1:1" || info.FrameRateNumerator != r.cfg.FPS*info.FrameRateDenominator || info.HasAudio != audio || math.Abs(float64(info.DurationMS-plan.DurationMS)) > 1000/float64(r.cfg.FPS) {
-		return result, errors.New("rendered clip failed output validation")
+	if info.Width != canvas.Width || info.Height != canvas.Height {
+		return result, outputRejection("render_output_canvas", map[string]int{"width": info.Width, "height": info.Height, "expected_width": canvas.Width, "expected_height": canvas.Height})
+	}
+	if info.Rotation != 0 {
+		return result, outputRejection("render_output_rotation", map[string]int{"rotation": info.Rotation})
+	}
+	if info.PixelFormat != "yuv420p" {
+		return result, outputRejection("render_output_pixel_format", nil)
+	}
+	if info.SampleAspectRatio != "1:1" {
+		return result, outputRejection("render_output_aspect", nil)
+	}
+	if info.FrameRateNumerator != r.cfg.FPS*info.FrameRateDenominator {
+		return result, outputRejection("render_output_frame_rate", map[string]int{"frame_rate_numerator": info.FrameRateNumerator, "frame_rate_denominator": info.FrameRateDenominator, "expected_fps": r.cfg.FPS})
+	}
+	if info.HasAudio != audio {
+		return result, outputRejection("render_output_audio", nil)
+	}
+	// Half a frame either side of the millisecond plan is what a CFR timeline
+	// can land on; anything beyond it is a clip of the wrong length. The three
+	// clocks are reported together because they disagree exactly when a
+	// container declaration and a decode disagree.
+	if math.Abs(float64(info.DurationMS-plan.DurationMS)) > 1000/float64(r.cfg.FPS) {
+		return result, outputRejection("render_output_duration", map[string]int{"duration_ms": info.DurationMS, "expected_duration_ms": plan.DurationMS, "decoded_duration_ms": info.DecodedDurationMS, "container_duration_ms": info.ContainerDurationMS})
 	}
 	// V12 reads the DELIVERED file, not the arguments that produced it: the
 	// canvas, 30 fps, H.264 High and 48 kHz AAC (CDS-52).
 	for _, s := range info.Streams {
 		if s.Kind == "video" && (s.Codec != "h264" || s.Profile != h264Profile) || s.Kind == "audio" && s.Codec != "aac" {
-			return result, errors.New("rendered clip codec mismatch")
+			return result, outputRejection("render_output_codec", map[string]int{"stream_index": s.Index})
 		}
 	}
 	if audio && info.AudioRate != r.cfg.AudioRate {
-		return result, errors.New("rendered clip codec mismatch")
+		return result, outputRejection("render_output_audio_rate", map[string]int{"audio_rate": info.AudioRate, "expected_audio_rate": r.cfg.AudioRate})
 	}
 	stat, err := os.Stat(output)
 	if err != nil {

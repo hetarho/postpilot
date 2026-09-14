@@ -98,7 +98,7 @@ func AttemptRangeDiagnostics(plan EditPlan, analyses []SourceAnalysis) []Attempt
 // This is the single numeric allowlist shared by persistence and logging.
 func SafeAttemptValues(values map[string]int) map[string]int {
 	out := map[string]int{}
-	for _, key := range []string{"retry", "retry_limit", "reused_chunks", "remaining_chunks", "reused_plan", "input_bytes", "input_limit_bytes", "system_bytes", "content_bytes", "schema_bytes", "source", "chunk", "cut", "cut_count", "target_ms", "before_ms", "after_ms", "remaining_ms", "min_ms", "max_ms", "transition_ms", "backward_ms", "segment", "segment_count", "duration_ms", "expected_index", "event_runes", "speech_runes", "quality_runes", "subject_count", "subject_runes"} {
+	for _, key := range []string{"retry", "retry_limit", "reused_chunks", "remaining_chunks", "reused_plan", "input_bytes", "input_limit_bytes", "system_bytes", "content_bytes", "schema_bytes", "source", "chunk", "cut", "cut_count", "target_ms", "before_ms", "after_ms", "remaining_ms", "min_ms", "max_ms", "transition_ms", "backward_ms", "segment", "segment_count", "duration_ms", "expected_index", "event_runes", "speech_runes", "quality_runes", "subject_count", "subject_runes", "width", "height", "expected_width", "expected_height", "frame_rate_numerator", "frame_rate_denominator", "expected_fps", "expected_duration_ms", "decoded_duration_ms", "container_duration_ms", "audio_rate", "expected_audio_rate", "stream_index", "rotation"} {
 		if n, ok := values[key]; ok && n >= 0 && n <= 180000000 {
 			out[key] = n
 		}
@@ -177,6 +177,8 @@ func logAttemptDiagnostic(job, stage string, d AttemptDiagnostic) {
 func SafeAttemptCheck(check string) string {
 	switch check {
 	case "composition_invalid_style", "composition_invalid_position", "composition_invalid_interval", "composition_invalid_rows", "composition_invalid_role", "composition_copy_limit", "composition_readability", "composition_safe_area", "composition_invalid_manifest", "render_layout", "render_footage", "render_audio", "render_overlay", "render_encode", "render_validate":
+		return check
+	case "render_output_canvas", "render_output_rotation", "render_output_pixel_format", "render_output_aspect", "render_output_frame_rate", "render_output_audio", "render_output_duration", "render_output_codec", "render_output_audio_rate":
 		return check
 	case "input_prompt_limit", "input_settings", "input_sources":
 		return check

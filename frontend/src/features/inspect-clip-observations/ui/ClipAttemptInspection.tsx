@@ -29,6 +29,26 @@ const observationChecks = {
   observe_silent_speech: 'inspection.observationAudio',
 } as const
 
+// The render stage owns two vocabularies: the substage that was running, and —
+// once a finished encode is refused — the delivered property that missed.
+const renderChecks = {
+  render_layout: 'inspection.renderLayout',
+  render_footage: 'inspection.renderFootage',
+  render_audio: 'inspection.renderAudio',
+  render_overlay: 'inspection.renderOverlay',
+  render_encode: 'inspection.renderEncode',
+  render_validate: 'inspection.renderValidate',
+  render_output_canvas: 'inspection.outputCanvas',
+  render_output_rotation: 'inspection.outputRotation',
+  render_output_pixel_format: 'inspection.outputPixelFormat',
+  render_output_aspect: 'inspection.outputAspect',
+  render_output_frame_rate: 'inspection.outputFrameRate',
+  render_output_audio: 'inspection.outputAudioTrack',
+  render_output_duration: 'inspection.outputDuration',
+  render_output_codec: 'inspection.outputCodec',
+  render_output_audio_rate: 'inspection.outputAudioRate',
+} as const
+
 function CandidatePlayback({
   range,
   source,
@@ -133,11 +153,12 @@ export function ClipAttemptInspection({
   const source = active ? inspection?.observations.sources[active.source - 1]?.source : undefined
   const phase = inspection?.validationPhase
   const check = inspection?.validationCheck
-  const observationExplanation = check
-    ? observationChecks[check as keyof typeof observationChecks]
+  const namedExplanation = check
+    ? (observationChecks[check as keyof typeof observationChecks] ??
+      renderChecks[check as keyof typeof renderChecks])
     : undefined
   const explanation =
-    observationExplanation ??
+    namedExplanation ??
     (phase === 'timeline_grow'
       ? 'inspection.tooShort'
       : phase === 'timeline_shrink'
@@ -197,6 +218,13 @@ export function ClipAttemptInspection({
               <Typography variant="body">
                 {job.failure ? formatAppFailure(job.failure) : t(explanation)}
               </Typography>
+              {/* A reason code says what to do next; the recorded check says which
+                  property missed. The second is the only one a generic reason carries. */}
+              {job.failure && namedExplanation && (
+                <Typography variant="body" className="text-content-secondary">
+                  {t(namedExplanation)}
+                </Typography>
+              )}
               {!job.failure && (!check || check === 'unknown') && (
                 <Typography variant="body" className="text-content-secondary">
                   {t('inspection.detailUnknown')}
@@ -227,6 +255,20 @@ export function ClipAttemptInspection({
                 'subject_y_ppm',
                 'subject_width_ppm',
                 'subject_height_ppm',
+                'width',
+                'height',
+                'expected_width',
+                'expected_height',
+                'rotation',
+                'frame_rate_numerator',
+                'frame_rate_denominator',
+                'expected_fps',
+                'expected_duration_ms',
+                'decoded_duration_ms',
+                'container_duration_ms',
+                'audio_rate',
+                'expected_audio_rate',
+                'stream_index',
               ] as const
             ).map((key) => {
               const value = inspection.measurements[key]
