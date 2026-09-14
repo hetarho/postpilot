@@ -604,6 +604,7 @@ export const clips = {
       frame_rate_numerator: 'Measured frame rate numerator',
       frame_rate_denominator: 'Measured frame rate denominator',
       expected_fps: 'Required frames per second',
+      video_frames: 'Delivered video frames',
       expected_duration_ms: 'Planned duration',
       decoded_duration_ms: 'Decoded duration',
       container_duration_ms: 'Declared duration',

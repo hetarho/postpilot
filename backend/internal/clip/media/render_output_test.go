@@ -29,7 +29,7 @@ func deliveredProbe(t *testing.T) map[string]any {
 	}
 }
 
-func probeRunner(t *testing.T, doc map[string]any, decodedMicros int) *fakeRunner {
+func probeRunner(t *testing.T, doc map[string]any, decodedMicros, frames int) *fakeRunner {
 	t.Helper()
 	encoded, err := json.Marshal(doc)
 	if err != nil {
@@ -39,7 +39,7 @@ func probeRunner(t *testing.T, doc map[string]any, decodedMicros int) *fakeRunne
 		if filepath.Base(c.Binary) == "ffprobe" {
 			return encoded, nil
 		}
-		return fmt.Appendf(nil, "frame=760\nout_time_us=%d\nprogress=end\n", decodedMicros), nil
+		return fmt.Appendf(nil, "frame=%d\nout_time_us=%d\nprogress=end\n", frames, decodedMicros), nil
 	}}
 }
 
@@ -48,13 +48,26 @@ func TestRenderedOutputRejectionNamesTheProperty(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// 760 frames at 30 fps is the 25334 ms plan every case below is judged
+	// against; a case only says otherwise when the delivery is genuinely short.
 	for _, tc := range []struct {
 		name, check string
 		micros      int
+		frames      int
 		values      map[string]int
 		break_      func(map[string]any)
 	}{
 		{name: "conforming", micros: 25333333},
+		{
+			// The production refusal: an AAC track declares its codec padding,
+			// so the container reads 66 ms longer than the clip plays while the
+			// video track is exact. Jobs b12a4bcd and d66ec47e.
+			name: "padded audio declaration", micros: 25400000,
+			break_: func(d map[string]any) {
+				d["format"].(map[string]any)["duration"] = "25.400000"
+				d["streams"].([]any)[1].(map[string]any)["duration"] = "25.400000"
+			},
+		},
 		{
 			name: "canvas", check: "render_output_canvas", micros: 25333333,
 			values: map[string]int{"width": 720, "height": canvas.Height, "expected_width": canvas.Width, "expected_height": canvas.Height},
@@ -88,12 +101,12 @@ func TestRenderedOutputRejectionNamesTheProperty(t *testing.T) {
 			break_: func(d map[string]any) { d["streams"] = []any{video(d)} },
 		},
 		{
-			name: "duration", check: "render_output_duration", micros: 24000000,
-			values: map[string]int{"duration_ms": 24000, "expected_duration_ms": 25334, "decoded_duration_ms": 24000, "container_duration_ms": 24000},
+			name: "short video track", check: "render_output_duration", micros: 23333333, frames: 700,
+			values: map[string]int{"duration_ms": 23333, "expected_duration_ms": 25334, "video_frames": 700, "decoded_duration_ms": 23333, "container_duration_ms": 23333},
 			break_: func(d map[string]any) {
-				d["format"].(map[string]any)["duration"] = "24.000000"
-				video(d)["duration"] = "24.000000"
-				d["streams"].([]any)[1].(map[string]any)["duration"] = "24.000000"
+				d["format"].(map[string]any)["duration"] = "23.333333"
+				video(d)["duration"] = "23.333333"
+				d["streams"].([]any)[1].(map[string]any)["duration"] = "23.333333"
 			},
 		},
 		{
@@ -112,7 +125,11 @@ func TestRenderedOutputRejectionNamesTheProperty(t *testing.T) {
 			if tc.break_ != nil {
 				tc.break_(doc)
 			}
-			a := newAdapter(t, probeRunner(t, doc, tc.micros))
+			frames := tc.frames
+			if frames == 0 {
+				frames = 760
+			}
+			a := newAdapter(t, probeRunner(t, doc, tc.micros, frames))
 			r := testRenderer(t, a)
 			plan := clip.EditPlan{Ratio: "vertical", DurationMS: 25334}
 			err := a.WithWorkspace(t.Context(), "validate", func(ws clip.MediaWorkspace) error {

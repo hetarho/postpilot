@@ -45,8 +45,12 @@ type MediaInfo struct {
 	HasAudio                                              bool
 	ContainerDurationMS, VideoDurationMS, AudioDurationMS int
 	DecodedDurationMS                                     int
-	AudioChannels, AudioRate                              int
-	Streams                                               []MediaStream
+	// Video frames the decode actually produced. The one length reading no
+	// container declaration can inflate, which is what a delivered clip is
+	// judged on (CDS-52 V12).
+	DecodedFrames            int
+	AudioChannels, AudioRate int
+	Streams                  []MediaStream
 }
 type ProbedSource struct {
 	Metadata SourceMetadata

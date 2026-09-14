@@ -150,6 +150,7 @@ func (a *Adapter) Probe(ctx context.Context, ws clip.MediaWorkspace, path string
 	}
 	info.DurationMS = int(math.Round(float64(micros) / 1000))
 	info.DecodedDurationMS = info.DurationMS
+	info.DecodedFrames = int(frames)
 	// MP4 edit lists exclude AAC encoder padding from the playable timeline.
 	// Cross-check every declared selected-stream endpoint against a full decode
 	// before using it; otherwise a 60 s source could produce a spurious 11 ms

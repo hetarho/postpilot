@@ -589,6 +589,7 @@ export const clips = {
       frame_rate_numerator: '측정된 프레임레이트 분자',
       frame_rate_denominator: '측정된 프레임레이트 분모',
       expected_fps: '기준 초당 프레임 수',
+      video_frames: '완성된 영상의 프레임 수',
       expected_duration_ms: '편집안의 길이',
       decoded_duration_ms: '재생해 측정한 길이',
       container_duration_ms: '파일이 표시한 길이',

@@ -442,12 +442,16 @@ func (r *Rendering) validateRenderedOutput(ctx context.Context, ws clip.MediaWor
 	if info.HasAudio != audio {
 		return result, outputRejection("render_output_audio", nil)
 	}
-	// Half a frame either side of the millisecond plan is what a CFR timeline
-	// can land on; anything beyond it is a clip of the wrong length. The three
-	// clocks are reported together because they disagree exactly when a
-	// container declaration and a decode disagree.
-	if math.Abs(float64(info.DurationMS-plan.DurationMS)) > 1000/float64(r.cfg.FPS) {
-		return result, outputRejection("render_output_duration", map[string]int{"duration_ms": info.DurationMS, "expected_duration_ms": plan.DurationMS, "decoded_duration_ms": info.DecodedDurationMS, "container_duration_ms": info.ContainerDurationMS})
+	// The delivered length is the decoded video track and nothing else: an AAC
+	// track declares its own codec padding, so a container or audio reading is
+	// always at least as long as the clip actually plays (CDS-52 V12). The rate
+	// check above has already pinned the output to cfg.FPS, which is what makes
+	// the frame count an exact clock here. One frame either side is where a CFR
+	// timeline can land; the other two readings ride along because a diagnosis
+	// is exactly the comparison between them.
+	delivered := float64(info.DecodedFrames) * 1000 / float64(r.cfg.FPS)
+	if math.Abs(delivered-float64(plan.DurationMS)) > 1000/float64(r.cfg.FPS) {
+		return result, outputRejection("render_output_duration", map[string]int{"duration_ms": int(math.Round(delivered)), "expected_duration_ms": plan.DurationMS, "video_frames": info.DecodedFrames, "decoded_duration_ms": info.DecodedDurationMS, "container_duration_ms": info.ContainerDurationMS})
 	}
 	// V12 reads the DELIVERED file, not the arguments that produced it: the
 	// canvas, 30 fps, H.264 High and 48 kHz AAC (CDS-52).

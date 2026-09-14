@@ -263,6 +263,7 @@ export function ClipAttemptInspection({
                 'frame_rate_numerator',
                 'frame_rate_denominator',
                 'expected_fps',
+                'video_frames',
                 'expected_duration_ms',
                 'decoded_duration_ms',
                 'container_duration_ms',
