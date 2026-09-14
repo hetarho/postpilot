@@ -4,6 +4,7 @@ import {
   type ClipAccent,
   type CopyStyle,
 } from '@/entities/clip-template/@x/clip-project'
+import { CLIP_PLAYBACK, CLIP_RATES } from '@/shared/config'
 import type { ProtoClipEditingState } from '@/shared/api'
 import {
   COPY_ALIGNS,
@@ -45,6 +46,15 @@ export function toClipEditingState(value: ProtoClipEditingState): ClipEditingSta
                 rows: rows.map((row) => ({ role: row.role, text: row.text })),
               }
             }),
+          }
+        : {}),
+      ...(value.plan.sourceAudio
+        ? {
+            sourceAudio: value.plan.sourceAudio.values.map((v) => ({
+              sourceId: v.sourceId,
+              fingerprint: v.fingerprint,
+              retainOriginalAudio: v.retainOriginalAudio,
+            })),
           }
         : {}),
       durationMs: value.plan.durationMs,
@@ -104,6 +114,9 @@ export function toClipEditingState(value: ProtoClipEditingState): ClipEditingSta
           endMs: c.endMs,
           transitionMs: c.transitionMs,
           volumePermille: c.volumePermille,
+          // An absent rate is a server that predates them, read as 1x; an
+          // explicit value is carried exactly so the editor cannot round it.
+          playbackRatePermille: c.playbackRatePermille ?? CLIP_PLAYBACK.unit_permille,
           chips: [...c.chips],
           copies,
         }
@@ -116,6 +129,12 @@ export function toClipEditingState(value: ProtoClipEditingState): ClipEditingSta
       durationMs: s.durationMs,
       width: s.width,
       height: s.height,
+      // A server that predates the rate set offers 1x and faster only, which is
+      // exactly what an unverified cadence earns.
+      allowedRatePermille:
+        s.allowedRatePermille.length > 0
+          ? [...s.allowedRatePermille]
+          : CLIP_RATES.filter((rate) => rate >= CLIP_PLAYBACK.unit_permille),
     })),
     copyStyles: value.copyStyles as CopyStyle[],
     fadeMs: value.fadeMs,
@@ -128,6 +147,9 @@ export function toClipEditingState(value: ProtoClipEditingState): ClipEditingSta
 export function clipPlanToProto(plan: ClipEditPlan) {
   return {
     nativeComposition: plan.nativeComposition ?? false,
+    // Returned unchanged: the owner changes source sound through its own action,
+    // and the server refuses a plan save that disagrees with the saved setting.
+    sourceAudio: plan.sourceAudio ? { values: plan.sourceAudio } : undefined,
     associations: plan.associations ? { values: plan.associations } : undefined,
     elements: plan.elements ?? [],
     durationMs: plan.durationMs,
@@ -141,6 +163,7 @@ export function clipPlanToProto(plan: ClipEditPlan) {
       endMs: c.endMs,
       transitionMs: c.transitionMs,
       volumePermille: c.volumePermille,
+      playbackRatePermille: c.playbackRatePermille,
       chips: [...c.chips],
       // `position` carries the anchor on the wire; the field kept its number
       // through the vocabulary change (CDS-12). `copy` stays populated with the

@@ -48,7 +48,11 @@ func TestCorrectionMutationsAndIntegerPersistence(t *testing.T) {
 		t.Fatal(raw)
 	}
 	reloaded, _, err := clip.DecodeEditPlan(raw)
-	if err != nil || !reflect.DeepEqual(clip.CorrectionFromPlan(reloaded), draft) {
+	// The snapshot is the server's, never the draft's: saving derives it from
+	// the plan's existing audio meaning and hands it back on the projection.
+	expected := draft
+	expected.SourceAudio = []clip.SourceAudioSetting{{SourceID: "a", Fingerprint: "fa", RetainOriginal: true}, {SourceID: "b", Fingerprint: "fb", RetainOriginal: true}}
+	if err != nil || !reflect.DeepEqual(clip.CorrectionFromPlan(reloaded), expected) {
 		t.Fatal(reloaded, err)
 	}
 	draft.Cuts = draft.Cuts[:1]
@@ -203,10 +207,18 @@ func TestStoredPlanBeforeTwoCopiesUpgradesToAList(t *testing.T) {
 	if plan.Cuts[0].FirstCopy().Text != "조용한 골목" || plan.Cuts[1].FirstCopy().Style != "memo" {
 		t.Fatalf("the stored copy changed: %+v", plan.Cuts)
 	}
-	// Saved again, it is a version-4 plan and reads back identically.
+	// Saved again, it is a version-6 assembly plan: the same result, now stating
+	// its 1x rate and the original audio meaning its per-cut volume carried.
 	next, err := clip.EncodeEditPlan(plan, styles)
-	if err != nil || !strings.Contains(next, `"Version":4`) || !strings.Contains(next, `"Copies":[`) {
+	if err != nil || !strings.Contains(next, `"Version":6`) || !strings.Contains(next, `"Copies":[`) ||
+		!strings.Contains(next, `"Rates":{"one":1000,"two":1000}`) ||
+		!strings.Contains(next, `"SourceAudio":[{"SourceID":"s","Fingerprint":"f","RetainOriginal":true}]`) {
 		t.Fatalf("%s %v", next, err)
+	}
+	// The two cuts select the same footage twice. A plan saved before the rule
+	// keeps that overlap and stays readable; only a correction is refused.
+	if len(clip.SourceOverlaps(plan.Cuts)) != 1 {
+		t.Fatal("legacy overlap lost")
 	}
 	again, _, err := clip.DecodeEditPlan(next)
 	if err != nil || !reflect.DeepEqual(plan, again) {

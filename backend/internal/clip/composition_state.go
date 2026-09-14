@@ -14,7 +14,15 @@ import (
 )
 
 const CompositionVersion = 1
-const CompositionPlanVersion = 5
+
+// The envelope version 5 wrote. It is a portable reader in its own right, not a
+// legacy one, which is why decoding dispatches on the exact stored version and
+// never compares it numerically against CompositionPlanVersion.
+const portablePlanVersion = 5
+
+// Version 6 adds each cut's fixed playback rate and the complete owner-owned
+// source-audio snapshot (CLIP-98, CLIP-18). New plans are written in it.
+const CompositionPlanVersion = 6
 
 var ErrCompositionUnavailable = errors.New("clip composition execution unavailable")
 

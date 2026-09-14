@@ -5,6 +5,9 @@ import { clipEditingFixture } from '@/test/clip-editing'
 import { clipPlanToProto, toClipEditingState } from '../api/edit-plan'
 import {
   clipPlanDuration,
+  cutOutputMs,
+  sourceOverlaps,
+  transformedDurationMs,
   copyChars,
   copyClipPlan,
   editClipPlan,
@@ -311,4 +314,108 @@ it.each([
   expect(validateClipPlan(state.plan, state).timeline).toBe(false)
   // One millisecond either way is a timeline the renderer cannot make.
   expect(validateClipPlan({ ...state.plan, durationMs: durationMs + 1 }, state).timeline).toBe(true)
+})
+
+it('measures a rate-changed cut on the transformed output timeline', () => {
+  const state = clipEditingFixture()
+  // 10 s of footage at 2x is 5 s of output; the source range is untouched.
+  const plan = editClipPlan(state.plan, {
+    type: 'cut',
+    id: 'cut-a',
+    patch: { playbackRatePermille: 2000 },
+  })
+  expect(plan.cuts[0]!.startMs).toBe(0)
+  expect(plan.cuts[0]!.endMs).toBe(10000)
+  expect(cutOutputMs(plan.cuts[0]!)).toBe(5000)
+  // The clip is now 5 s + 10 s less cut-b's own 200 ms fade.
+  expect(plan.durationMs).toBe(14800)
+  expect(clipPlanDuration(plan.cuts)).toBe(14800)
+  // 0.75x of 10 s is 13333 ms, to the nearest millisecond and no float drift.
+  expect(transformedDurationMs(10000, 750)).toBe(13333)
+  expect(transformedDurationMs(3, 2000)).toBe(2)
+  // Not a rate at all: zero, an unsupported value and an empty span.
+  for (const [span, rate] of [
+    [10000, 0],
+    [10000, 900],
+    [0, 1000],
+    [-1, 1000],
+  ])
+    expect(transformedDurationMs(span!, rate!)).toBe(0)
+})
+
+it('refuses an unsupported rate, an inadmissible slow rate and a new overlap', () => {
+  const state = clipEditingFixture()
+  // 30 fps footage cannot reach the output at 0.75x, so the server never offers it.
+  state.sources = state.sources.map((s) => ({ ...s, allowedRatePermille: [1000, 1250, 2000] }))
+  const slow = editClipPlan(state.plan, {
+    type: 'cut',
+    id: 'cut-a',
+    patch: { playbackRatePermille: 750 },
+  })
+  expect(validateClipPlan(slow, state).cuts[0]!.rate).toBe(true)
+  // The rate is named, never replaced by 1x.
+  expect(slow.cuts[0]!.playbackRatePermille).toBe(750)
+  const bad = editClipPlan(state.plan, {
+    type: 'cut',
+    id: 'cut-a',
+    patch: { playbackRatePermille: 900 },
+  })
+  expect(validateClipPlan(bad, state).cuts[0]!.rate).toBe(true)
+  const fine = editClipPlan(state.plan, {
+    type: 'cut',
+    id: 'cut-a',
+    patch: { playbackRatePermille: 1250 },
+  })
+  expect(validateClipPlan(fine, state).cuts[0]!.rate).toBe(false)
+
+  // Two cuts of one source: touching endpoints are adjacent, sharing is not.
+  const shared = copyClipPlan(state.plan)
+  shared.cuts[1] = {
+    ...shared.cuts[1]!,
+    sourceId: 'a',
+    fingerprint: shared.cuts[0]!.fingerprint,
+    startMs: 10000,
+    endMs: 20000,
+  }
+  expect(sourceOverlaps(shared.cuts).size).toBe(0)
+  shared.cuts[1] = { ...shared.cuts[1]!, startMs: 5000, endMs: 15000 }
+  expect([...sourceOverlaps(shared.cuts).values()]).toEqual([5000])
+  const report = validateClipPlan(shared, state)
+  expect(report.cuts[0]!.overlap).toBe(true)
+  expect(report.valid).toBe(false)
+})
+
+it('carries the rate and the owner audio snapshot across the wire unchanged', () => {
+  const state = clipEditingFixture()
+  const wire = create(ClipEditingStateSchema, {
+    plan: {
+      ...clipPlanToProto(state.plan),
+      sourceAudio: {
+        values: [{ sourceId: 'a', fingerprint: 'a'.repeat(64), retainOriginalAudio: true }],
+      },
+    },
+    sources: state.sources,
+    copyStyles: state.copyStyles,
+  })
+  const back = toClipEditingState(wire)
+  expect(back.plan.cuts.map((c) => c.playbackRatePermille)).toEqual([1000, 1000])
+  expect(back.plan.sourceAudio).toEqual([
+    { sourceId: 'a', fingerprint: 'a'.repeat(64), retainOriginalAudio: true },
+  ])
+  expect(back.sources[0]!.allowedRatePermille).toEqual([500, 750, 1000, 1250, 1500, 2000])
+  // A server that predates rates sends neither: 1x, and the fast rates only.
+  const legacy = create(ClipEditingStateSchema, {
+    plan: {
+      ...clipPlanToProto(state.plan),
+      cuts: clipPlanToProto(state.plan).cuts.map((c) => ({
+        ...c,
+        playbackRatePermille: undefined,
+      })),
+    },
+    sources: state.sources.map((s) => ({ ...s, allowedRatePermille: [] })),
+    copyStyles: state.copyStyles,
+  })
+  const old = toClipEditingState(legacy)
+  expect(old.plan.cuts.map((c) => c.playbackRatePermille)).toEqual([1000, 1000])
+  expect(old.sources[0]!.allowedRatePermille).toEqual([1000, 1250, 1500, 2000])
 })

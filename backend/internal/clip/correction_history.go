@@ -96,7 +96,7 @@ func ValidateEditablePhrases(plan EditPlan) error {
 	for _, c := range plan.Cuts {
 		offset -= c.TransitionMS
 		starts[c.ID] = offset
-		offset += c.EndMS - c.StartMS
+		offset += c.OutputDurationMS()
 	}
 	for _, t := range plan.Portable.Elements {
 		if len(t.Phrases) == 0 {

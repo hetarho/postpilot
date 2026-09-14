@@ -35,7 +35,7 @@ func ExtendCompositionReadingWindows(plan EditPlan, limits composition.Limits) (
 			need += n
 			count++
 		}
-		extra := need + 2*limits.AutoInsetMS - (cut.EndMS - cut.StartMS)
+		extra := need + 2*limits.AutoInsetMS - cut.OutputDurationMS()
 		if need == 0 || extra <= 0 || extra > target-plan.DurationMS {
 			continue
 		}

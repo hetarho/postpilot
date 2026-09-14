@@ -46,6 +46,7 @@ function fixture(): ClipEditPlan {
       copies: [],
       chips: [],
       volumePermille: 1000,
+      playbackRatePermille: 1000,
     })),
     elements: [
       text('caption'),
@@ -69,6 +70,7 @@ const editing = (plan: ClipEditPlan): ClipEditingState => ({
     durationMs: 20000,
     width: 1920,
     height: 1080,
+    allowedRatePermille: [500, 750, 1000, 1250, 1500, 2000],
   })),
   copyStyles: ['clean'],
   fadeMs: 200,

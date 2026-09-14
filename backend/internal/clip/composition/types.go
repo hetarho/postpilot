@@ -67,7 +67,20 @@ type Item struct {
 type Cut struct {
 	ID, SectionID, SourceID, GroupID, ItemID string
 	StartMS, EndMS, TransitionMS             int
+	// The ONE fixed rate this cut plays at, as permille (CLIP-98). Zero is a
+	// binding written before rates existed and means 1x; the clip domain
+	// normalizes it on decode, so nothing downstream reads a bare zero.
+	PlaybackRatePermille int
 }
+
+// Rate is the cut's fixed playback rate, reading a pre-rate binding as 1x.
+func (c Cut) Rate() int {
+	if c.PlaybackRatePermille == 0 {
+		return RateUnitPermille
+	}
+	return c.PlaybackRatePermille
+}
+
 type Inputs struct {
 	Values map[string]string
 	Items  map[string][]Item

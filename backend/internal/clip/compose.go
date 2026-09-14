@@ -219,7 +219,7 @@ func Compose(
 // a second sentence, which is not what CDS-43 offers.
 func secondCopy(cut Cut, written Written, allowed []string, history design.StyleHistory, accent string, measure func(Caption) (Region, bool, error)) (Caption, Caption, bool) {
 	first := cut.FirstCopy()
-	if cut.EndMS-cut.StartMS < design.Copy.SecondMinCutMS() || design.Classify(first.Text) != design.ClassDesc {
+	if cut.OutputDurationMS() < design.Copy.SecondMinCutMS() || design.Classify(first.Text) != design.ClassDesc {
 		return Caption{}, Caption{}, false
 	}
 	text := numericClause(first.Text, written)
@@ -233,7 +233,7 @@ func secondCopy(cut Cut, written Written, allowed []string, history design.Style
 	// Both windows come out of the one CDS-27 window, split by what each
 	// sentence earns and parted by the same 120 ms lead (CDS-41, CDS-43).
 	lead := design.Timing.CopyLeadMS
-	room := cut.EndMS - cut.StartMS - 3*lead
+	room := cut.OutputDurationMS() - 3*lead
 	a, b := MinExposureMS(first.Text), MinExposureMS(text)
 	if a+b > room {
 		return Caption{}, Caption{}, false
@@ -249,7 +249,7 @@ func secondCopy(cut Cut, written Written, allowed []string, history design.Style
 			continue
 		}
 		c := Caption{Text: text, Anchor: anchor, Align: rule.Align, Style: style, Accent: accent,
-			Keyword: keywordIn(text, written.Keyword), StartMS: first.EndMS + lead, EndMS: cut.EndMS - cut.StartMS - lead}
+			Keyword: keywordIn(text, written.Keyword), StartMS: first.EndMS + lead, EndMS: cut.OutputDurationMS() - lead}
 		// A measurement failure here is not worth the whole plan: the cut keeps
 		// the one copy it already has.
 		if _, ok, err := measure(c); err == nil && ok {

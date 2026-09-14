@@ -105,8 +105,10 @@ func Resolve(d *Document, in Inputs, l Limits, maxExpandedBytes int) (Timeline, 
 				return out, fail(c.ID, 1, "unknown_item")
 			}
 		}
-		duration := c.EndMS - c.StartMS
-		if c.StartMS < 0 || c.EndMS <= c.StartMS || duration <= 0 || duration > l.MaxDurationMS || c.TransitionMS < 0 || i == 0 && c.TransitionMS != 0 || i > 0 && (c.TransitionMS >= duration || c.TransitionMS >= lastDuration) {
+		// Every interval below resolves on the rate-transformed OUTPUT timeline
+		// (CDS-62); the source span keeps its own original timestamps.
+		duration, ok := TransformedDurationMS(c.EndMS-c.StartMS, c.Rate())
+		if !ok || c.StartMS < 0 || c.EndMS <= c.StartMS || duration > l.MaxDurationMS || c.TransitionMS < 0 || i == 0 && c.TransitionMS != 0 || i > 0 && (c.TransitionMS >= duration || c.TransitionMS >= lastDuration) {
 			return out, fail(c.ID, 1, "invalid_cut")
 		}
 		starts[i] = out.DurationMS - c.TransitionMS
@@ -198,7 +200,9 @@ func Resolve(d *Document, in Inputs, l Limits, maxExpandedBytes int) (Timeline, 
 		}
 		duration := 0
 		if c != nil {
-			duration = c.EndMS - c.StartMS
+			// A cut-relative interval is measured against the cut's transformed
+			// output length, not against the source span it was taken from.
+			duration, _ = TransformedDurationMS(c.EndMS-c.StartMS, c.Rate())
 		}
 		a, b, intervalProblem := ResolveInterval(t, out.DurationMS, duration, cutStart, l.AutoInsetMS)
 		if intervalProblem != nil {

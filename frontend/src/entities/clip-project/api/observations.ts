@@ -1,3 +1,4 @@
+import { CLIP_PLAYBACK, CLIP_RATES } from '@/shared/config'
 import type { ProtoClipObservations } from '@/shared/api'
 import type { ClipObservations } from '../model/observations'
 
@@ -20,6 +21,12 @@ export function toClipObservations(value: ProtoClipObservations): ClipObservatio
         durationMs: item.source!.durationMs,
         width: item.source!.width,
         height: item.source!.height,
+        // A server that predates the rate set offers 1x and faster only, which
+        // is exactly what an unverified cadence earns.
+        allowedRatePermille:
+          item.source!.allowedRatePermille.length > 0
+            ? [...item.source!.allowedRatePermille]
+            : CLIP_RATES.filter((rate) => rate >= CLIP_PLAYBACK.unit_permille),
       },
       segments: item.segments.map((segment) => ({
         startMs: segment.startMs,

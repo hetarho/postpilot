@@ -274,6 +274,14 @@ type RapidTokens struct {
 	MaxPerCut   int `json:"max_per_cut"`
 }
 
+// CLIP-98's six fixed playback rates, as integer permille, and the output
+// cadence CDS-68 asks a slow rate to still produce without invented frames.
+type PlaybackTokens struct {
+	RatesPermille []int `json:"rates_permille"`
+	UnitPermille  int   `json:"unit_permille"`
+	OutputFPS     int   `json:"output_fps"`
+}
+
 type CopyTokens struct {
 	MaxPerCut      int     `json:"max_per_cut"`
 	SecondMinCutS  float64 `json:"second_min_cut_s"`
@@ -322,6 +330,7 @@ type system struct {
 	Motion            MotionTokens                 `json:"motion"`
 	Timing            TimingTokens                 `json:"timing"`
 	Transition        TransitionTokens             `json:"transition"`
+	Playback          PlaybackTokens               `json:"playback"`
 	Copy              CopyTokens                   `json:"copy"`
 	Audio             AudioTokens                  `json:"audio"`
 	Luma              LumaTokens                   `json:"luma"`
@@ -374,6 +383,7 @@ var (
 	Motion            = loaded.Motion
 	Timing            = loaded.Timing
 	Transition        = loaded.Transition
+	Playback          = loaded.Playback
 	Copy              = loaded.Copy
 	Audio             = loaded.Audio
 	Luma              = loaded.Luma

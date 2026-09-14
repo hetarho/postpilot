@@ -43,6 +43,11 @@ export const CLIP_GUARDS = design.guards
 /** CDS-36's transitions: the default, the fade a scene change earns and the
  *  fade-through-black nothing offers yet. */
 export const CLIP_TRANSITION = design.transition
+/** CLIP-98's six fixed playback rates as integer permille, the 1x unit and the
+ *  output cadence a slow rate still has to reach (CDS-68). */
+export const CLIP_PLAYBACK = design.playback
+/** The rates a cut may carry, ascending. Nothing else is a rate. */
+export const CLIP_RATES = design.playback.rates_permille as readonly number[]
 /** CDS-43: how many copies a cut may carry, the cut length the second one needs
  *  and how short the second sentence has to be to stand alone. */
 export const CLIP_COPY = design.copy

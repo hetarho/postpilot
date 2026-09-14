@@ -20,36 +20,141 @@ type storedPortablePlan struct {
 	Composition PortablePlan
 }
 
-func encodePortablePlan(p EditPlan, styles []string) (string, error) {
-	if err := validatePortablePlan(p); err != nil {
-		return "", err
+// Version 6 is the assembly envelope every new plan is written in. It keeps
+// version 5's fields and adds the two the assembly contract made explicit: each
+// cut's fixed playback rate and the complete owner-owned source-audio snapshot.
+// The rates ride their own map beside the focals, exactly so the version-5
+// reader's structs stay byte-compatible and keep reading what they wrote.
+//
+// The composition is a POINTER here, unlike version 5's value: a project old
+// enough to have no composition at all still gets a version-6 plan rather than
+// a sixth shape nobody reads.
+type storedAssemblyPlan struct {
+	Version     int
+	Ratio       string
+	Plan        storedCorrectionPlan
+	Focals      map[string]Point
+	CopyStyles  []string
+	Composition *PortablePlan
+	Rates       map[string]int
+	SourceAudio []storedSourceAudio
+}
+type storedSourceAudio struct {
+	SourceID, Fingerprint string
+	RetainOriginal        bool
+}
+
+func encodeAssemblyPlan(p EditPlan, styles []string) (string, error) {
+	if p.Portable != nil {
+		if err := validatePortablePlan(p); err != nil {
+			return "", err
+		}
 	}
 	focals := map[string]Point{}
+	rates := map[string]int{}
 	for _, cut := range p.Cuts {
 		focals[cut.ID] = cut.Focal
+		rates[cut.ID] = cut.Rate()
 	}
 	plain := p
 	plain.Portable = nil
-	b, err := json.Marshal(storedPortablePlan{CompositionPlanVersion, p.Ratio, storedCorrection(CorrectionFromPlan(plain)), focals, slices.Clone(styles), *p.Portable})
+	audio := []storedSourceAudio{}
+	settings := p.SourceAudio
+	if settings == nil {
+		// A correction saved on top of a legacy plan still writes the complete
+		// snapshot: the plan's existing audio meaning, made explicit (CLIP-101).
+		settings = LegacySourceAudio(p.Cuts)
+	}
+	for _, v := range settings.Values {
+		audio = append(audio, storedSourceAudio{v.SourceID, v.Fingerprint, v.RetainOriginal})
+	}
+	envelope := storedAssemblyPlan{CompositionPlanVersion, p.Ratio, storedCorrection(CorrectionFromPlan(plain)), focals, slices.Clone(styles), p.Portable, rates, audio}
+	b, err := json.Marshal(envelope)
 	return string(b), err
+}
+
+// decodeAssemblyPlan reads the version-6 envelope. The version-5 and earlier
+// readers stay untouched, so a plan written before rates existed is still read
+// by the exact code that wrote it.
+func decodeAssemblyPlan(raw string) (EditPlan, []string, error) {
+	var s storedAssemblyPlan
+	if strictJSON(raw, &s) != nil || s.Version != CompositionPlanVersion {
+		return EditPlan{}, nil, ErrInvalid
+	}
+	p, styles, err := portableFromStored(storedPortablePlan{s.Version, s.Ratio, s.Plan, s.Focals, s.CopyStyles, PortablePlan{}})
+	if err != nil {
+		return p, styles, err
+	}
+	p.Portable = s.Composition
+	// A version-6 plan states every rate explicitly. An absent or zero entry is
+	// not a 1x default here: this envelope was written after rates existed.
+	if len(s.Rates) != len(p.Cuts) {
+		return EditPlan{}, nil, ErrInvalid
+	}
+	for i := range p.Cuts {
+		rate, ok := s.Rates[p.Cuts[i].ID]
+		if !ok || !ValidPlaybackRate(rate) {
+			return EditPlan{}, nil, ErrInvalid
+		}
+		p.Cuts[i].PlaybackRatePermille = rate
+	}
+	settings := &SourceAudioSettings{}
+	for _, v := range s.SourceAudio {
+		settings.Values = append(settings.Values, SourceAudioSetting{v.SourceID, v.Fingerprint, v.RetainOriginal})
+	}
+	p.SourceAudio = settings
+	if err := ValidateSourceAudioSettings(p); err != nil {
+		return EditPlan{}, nil, err
+	}
+	if p.Portable == nil {
+		return p, styles, nil
+	}
+	return p, styles, validatePortablePlan(p)
 }
 
 func decodePortablePlan(raw string) (EditPlan, []string, error) {
 	var s storedPortablePlan
-	if strictJSON(raw, &s) != nil || s.Version != CompositionPlanVersion {
+	if strictJSON(raw, &s) != nil || s.Version != portablePlanVersion {
 		return EditPlan{}, nil, ErrInvalid
 	}
+	p, styles, err := portableFromStored(s)
+	if err != nil {
+		return p, styles, err
+	}
+	p.Portable = &s.Composition
+	// Nothing in a version-5 plan ever chose a rate or a source-audio setting,
+	// so it reads at 1x with its original audio meaning made explicit.
+	upgradeLegacyAssembly(&p)
+	return p, styles, validatePortablePlan(p)
+}
+
+func portableFromStored(s storedPortablePlan) (EditPlan, []string, error) {
 	// Reuse existing correction geometry validation without widening its reader.
 	b, err := json.Marshal(storedEditPlan{storedPlanVersion, s.Ratio, s.Plan, s.Focals, s.CopyStyles})
 	if err != nil {
 		return EditPlan{}, nil, err
 	}
-	p, styles, err := DecodeEditPlan(string(b))
-	if err != nil {
-		return p, styles, err
+	return DecodeEditPlan(string(b))
+}
+
+// upgradeLegacyAssembly is the ONE compatibility path that reads an absent rate
+// as 1x and derives the audio snapshot from saved per-cut volume (CLIP-101).
+func upgradeLegacyAssembly(p *EditPlan) {
+	for i := range p.Cuts {
+		p.Cuts[i].PlaybackRatePermille = RateUnitPermille
 	}
-	p.Portable = &s.Composition
-	return p, styles, validatePortablePlan(p)
+	if p.Portable != nil {
+		for i := range p.Portable.Cuts {
+			p.Portable.Cuts[i].PlaybackRatePermille = RateUnitPermille
+		}
+		for i := range p.Portable.RetiredCuts {
+			p.Portable.RetiredCuts[i].PlaybackRatePermille = RateUnitPermille
+		}
+		for i := range p.Portable.RetiredBindings {
+			p.Portable.RetiredBindings[i].PlaybackRatePermille = RateUnitPermille
+		}
+	}
+	p.SourceAudio = LegacySourceAudio(p.Cuts)
 }
 
 func validatePortablePlan(p EditPlan) error {
@@ -60,7 +165,7 @@ func validatePortablePlan(p EditPlan) error {
 	cuts := map[string]bool{}
 	for i, c := range v.Cuts {
 		old := p.Cuts[i]
-		if c.ID == "" || cuts[c.ID] || c.ID != old.ID || c.SourceID != old.SourceID || c.StartMS != old.StartMS || c.EndMS != old.EndMS || c.TransitionMS != old.TransitionMS {
+		if c.ID == "" || cuts[c.ID] || c.ID != old.ID || c.SourceID != old.SourceID || c.StartMS != old.StartMS || c.EndMS != old.EndMS || c.TransitionMS != old.TransitionMS || c.Rate() != old.Rate() {
 			return ErrInvalid
 		}
 		cuts[c.ID] = true
@@ -153,7 +258,7 @@ func LegacyPortablePlan(p Project, plan EditPlan, limits composition.Limits) (*P
 	offset := 0
 	for _, cut := range plan.Cuts {
 		offset -= cut.TransitionMS
-		out.Cuts = append(out.Cuts, composition.Cut{ID: cut.ID, SectionID: "footage", SourceID: cut.SourceID, StartMS: cut.StartMS, EndMS: cut.EndMS, TransitionMS: cut.TransitionMS})
+		out.Cuts = append(out.Cuts, composition.Cut{ID: cut.ID, SectionID: "footage", SourceID: cut.SourceID, StartMS: cut.StartMS, EndMS: cut.EndMS, TransitionMS: cut.TransitionMS, PlaybackRatePermille: cut.Rate()})
 		for index, copy := range cut.Copies {
 			if copy.Text == "" {
 				continue
@@ -167,13 +272,13 @@ func LegacyPortablePlan(p Project, plan EditPlan, limits composition.Limits) (*P
 			out.Elements = append(out.Elements, PortableText{Accent: copy.Accent, Keyword: copy.Keyword, Pace: copy.Pace, Resolved: composition.ResolvedElement{InstanceID: id, CutID: cut.ID, Element: e, Text: copy.Text, StartMS: offset + start, EndMS: offset + end, AuthoredTiming: copy.StartMS != 0 || copy.EndMS != 0}, Scope: "scene", Evidence: []SourceEvidence{{cut.SourceID, cut.Fingerprint, cut.StartMS, cut.EndMS}}})
 		}
 		for _, label := range factsPlan.ChipLabels(cut) {
-			start, end := 0, cut.EndMS-cut.StartMS
+			start, end := 0, cut.OutputDurationMS()
 			id := "legacy-info-" + cut.ID + "-" + strings.TrimPrefix(LegacyFieldID(label), "field-")
 			text := label + " " + values[label]
 			element := composition.Element{ID: id, Kind: "fixed", Role: "info", Style: "auto", Position: "header", Align: "center", Basis: "cut", StartMS: &start, EndMS: &end, Parts: []composition.Part{{Literal: text}}}
 			out.Elements = append(out.Elements, PortableText{Resolved: composition.ResolvedElement{InstanceID: id, CutID: cut.ID, Element: element, Text: text, StartMS: offset, EndMS: offset + end, AuthoredTiming: true, Facts: []composition.Fact{{FieldID: LegacyFieldID(label), Value: values[label]}}}, Scope: "scene", Accent: legacyRecipe.Accent, Evidence: []SourceEvidence{{cut.SourceID, cut.Fingerprint, cut.StartMS, cut.EndMS}}})
 		}
-		offset += cut.EndMS - cut.StartMS
+		offset += cut.OutputDurationMS()
 	}
 	return out, nil
 }

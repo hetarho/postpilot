@@ -33,12 +33,12 @@ func TestLegacyPortablePlanPreservesTextAndCardAbsence(t *testing.T) {
 	}
 	plan.Portable = portable
 	raw, err := clip.EncodeEditPlan(plan, styles)
-	if err != nil || !strings.Contains(raw, `"Version":5`) {
+	if err != nil || !strings.Contains(raw, `"Version":6`) {
 		t.Fatal(raw, err)
 	}
 	again, againStyles, err := clip.DecodeEditPlan(raw)
 	if err != nil || !reflect.DeepEqual(plan, again) || !reflect.DeepEqual(styles, againStyles) {
-		t.Fatal("version 5 lost snapshot/evidence", err, again.Portable)
+		t.Fatal("version 6 lost snapshot/evidence", err, again.Portable)
 	}
 	for _, mutate := range []func(*clip.EditPlan){
 		func(p *clip.EditPlan) { p.Portable.Elements[0].Resolved.EndMS = p.DurationMS + 1 },

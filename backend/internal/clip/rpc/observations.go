@@ -35,6 +35,13 @@ func analysisObservationsProto(analyses []clip.SourceAnalysis) *v1.ClipObservati
 }
 
 func retainedSourceProto(s clip.AnalysisSource) *v1.ClipRetainedSource {
+	// The rate set is the server's own reading of this source's verified
+	// cadence; an editor offers exactly these and never invents a slow one.
+	allowed := []int32{}
+	for _, rate := range clip.AllowedPlaybackRates(s.Info) {
+		allowed = append(allowed, int32(rate))
+	}
 	return &v1.ClipRetainedSource{Id: s.ID, Fingerprint: s.Fingerprint, Filename: s.Filename,
-		DurationMs: int32(s.Info.DurationMS), Width: int32(s.Info.Width), Height: int32(s.Info.Height)}
+		DurationMs: int32(s.Info.DurationMS), Width: int32(s.Info.Width), Height: int32(s.Info.Height),
+		AllowedRatePermille: allowed}
 }

@@ -93,7 +93,7 @@ func composeRapid(cut Cut, written Written, text, accent string, allowed []strin
 			continue
 		}
 		copies, ok := SplitRapid(Caption{Text: value, Anchor: rule.Anchor, Align: rule.Align, Style: style, Accent: accent},
-			design.Timing.CopyLeadMS, cut.EndMS-cut.StartMS-design.Timing.CopyLeadMS)
+			design.Timing.CopyLeadMS, cut.OutputDurationMS()-design.Timing.CopyLeadMS)
 		if !ok {
 			continue
 		}

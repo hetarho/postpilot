@@ -47,6 +47,9 @@ func applyNativeCorrection(cfg RenderConfig, p Project, old EditPlan, styles []s
 	if !in.NativeComposition {
 		return EditPlan{}, nil, ErrCompositionUnavailable
 	}
+	if err := matchOwnerAudio(old, in); err != nil {
+		return EditPlan{}, nil, err
+	}
 	next := old
 	portable := *old.Portable
 	portable.NativeEditing = portable.NativeEditing || portable.Snapshot.Legacy
@@ -105,6 +108,9 @@ func applyNativeCorrection(cfg RenderConfig, p Project, old EditPlan, styles []s
 		}
 		volume := float64(c.VolumePermille) / 1000
 		prior.StartMS, prior.EndMS, prior.TransitionMS, prior.Volume = c.StartMS, c.EndMS, c.TransitionMS, &volume
+		// One fixed rate per cut; the plan validator below decides whether this
+		// source's verified cadence actually admits it (CDS-68).
+		prior.PlaybackRatePermille = c.Rate()
 		// The portable declarations are the only visible content authority.
 		prior.Copies, prior.Chips = nil, nil
 		next.Cuts = append(next.Cuts, prior)
@@ -112,6 +118,7 @@ func applyNativeCorrection(cfg RenderConfig, p Project, old EditPlan, styles []s
 	if len(next.Cuts) > 0 {
 		next.Cuts[0].TransitionMS = 0
 	}
+	next.SourceAudio = ReconcileSourceAudio(old.SourceAudio, next.Cuts)
 	seen := map[string]bool{}
 	for _, edit := range in.Elements {
 		t, ok := knownText[edit.InstanceID]
@@ -171,11 +178,17 @@ func applyNativeCorrection(cfg RenderConfig, p Project, old EditPlan, styles []s
 	}
 	geometry := resolved
 	geometry.Hook = ""
+	geometry.SourceAudio = nil
 	refs := make([]RenderSource, 0, len(sources))
 	for _, s := range sources {
 		refs = append(refs, s.RenderSource)
 	}
 	if err := ValidateEditPlan(cfg, geometry, refs); err != nil {
+		return EditPlan{}, nil, err
+	}
+	// A legacy plan's existing overlap stays exactly as saved; a correction may
+	// neither create a new one nor enlarge it (CLIP-98).
+	if err := ValidateSourceRanges(resolved, SourceOverlaps(old.Cuts)); err != nil {
 		return EditPlan{}, nil, err
 	}
 	return resolved, styles, nil

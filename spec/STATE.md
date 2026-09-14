@@ -30,8 +30,8 @@
 | THEME | 12 | 12 | - | 0 |
 | MKT | 4 | 4 | - | 0 |
 | VIDEO | 2 | 2 | - | 1 |
-| CLIP | 17 | 17 | - | 0 |
-| CDS | 11 | 11 | - | 2 |
+| CLIP | 18 | 18 | - | 0 |
+| CDS | 13 | 13 | - | 2 |
 | BILL | 4 | 4 | - | 0 |
 
 ## review
@@ -44,29 +44,40 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T110 | Release QA on the Naver app and the overlay measurement | CDS CLIP | T108 | blocked@260912 |
+| T143 | Persist owner-controlled source sound atomically | CLIP CDS ARCH | T142 | todo |
+| T144 | Admit provenance-checked owner cut creation and split | CLIP CDS ARCH | T142 | todo |
+| T145 | Record complete clip scenes with explicit uncertainty | CLIP ARCH | T141 | todo |
+| T146 | Compose validated split and fixed-rate clip assemblies | CLIP CDS ARCH | T142 T143 T145 | todo |
+| T147 | Render fixed-rate cuts and opted-in source audio | CLIP CDS ARCH | T142 T143 | todo |
+| T148 | Preview the transformed assembly timeline | CLIP CDS ARCH | T142 T143 | todo |
+| T149 | Add cut, split and fixed-rate editing controls | CLIP CDS ARCH | T144 T148 | todo |
+| T150 | Add per-source original-sound toggles | CLIP CDS ARCH | T143 T148 | todo |
+| T151 | Verify review-clip assembly end to end | CLIP CDS ARCH | T146 T147 T149 T150 | todo |
 
 ## next
-- No unblocked clip implementation tasks remain; T140/T141 are verified, deployed and archived.
-- T110 remains owner-blocked for Naver picker/overlay measurements and must refresh CLIP@17 / CDS@11 before resuming; T008 remains owner-dependent for its separate local Naver publication verification.
+- T152 is done; deploy it before the next owner generation attempt, since production still refuses correct renders until it ships
+- T143 and T144 are next (T142 done); T145 is also unblocked
+- T110 remains owner-blocked and must refresh CLIP@18 / CDS@13 before resuming; T008 remains owner-dependent for its separate local Naver publication verification.
 
 ## log
+- 260914 T142 done (rate); v6 assembly envelope with per-cut fixed rates and the complete owner source-audio snapshot, one checked transformed-duration helper, cadence-verified slow rates and legacy-overlap grandfathering
+- 260914 T152 done; delivered length read from the decoded video track, production job b12a4bcd output verified accepted
+- 260914 T142 refreshed to CDS@13 (rate); the r13 V12 decoded-length delta is T152 render conformance and does not touch the assembly contract; T143 T144 rebased too
+- 260914 T152 claimed (vdur)
+- 260914 create-task CDS done; T152 moves the delivered-length measure onto the decoded video track
+- 260914 create-task CDS start
+- 260914 update-ssot CDS r13 done; delivered clip length is read from the decoded video track, not the padded container or audio declaration
+- 260914 warning; T142 doing is based on CDS@12 and T147 todo carries the V12 render check, both must refresh to CDS@13
+- 260914 update-ssot CDS start
+- 260914 T142 claimed (rate)
+- 260914 create-task CLIP CDS done; T142-T151 cover versioned rate/audio contracts, complete observation, assembly writing, deterministic render, owner editing and release QA
+- 260914 create-task CLIP CDS start
+- 260914 update-ssot CLIP r18 CDS r12 done; bounded full-scene observation, authoritative split/rate assembly, source-audio opt-in and transformed-time validation
+- 260914 warning; T110 blocked depends on CLIP/CDS and must refresh r18/r12 before resuming; T008 is unaffected
+- 260914 update-ssot CLIP CDS decision; original audio default off and preserved only by an explicit per-source toggle, stable review output over aspirational semantic perfection
+- 260914 update-ssot CLIP CDS review pending; define scene coverage, assembly-tool bounds, transformed-time audio/caption rules and editable controls
+- 260914 update-ssot CLIP start
 - 260914 T141 done (fix); b72298e CI/Workers/backend rollout and exact health pass; seven-style production repair preserves facts/output and 20 analyses; 28 fault scenarios, 40 browser cases and $0.006821 live render/continuation verified
 - 260914 T140 done (e2e); actual-provider and original-footage rendering acceptance fulfilled through T141; final CI/deployment verified, archived
 - 260914 T141 hardening (fix); exact 2 MiB legacy migration boundary reproduced and fixed; original inspection retained, bounded optional recovery copy and startup regression added
 - 260914 T141 verification (fix); actual writer/inline observe cost $0.006821, original render and identical zero-AI continuation pass; 40 browser cases and local suites pass, final fault injection/CI/rollout pending
-- 260914 T141 claimed (fix); implement shared admission, authoritative diagnostics, compatible recovery and bounded response corrections
-- 260914 create-task CLIP CDS QUOTA done (fix); T141 consumes CLIP r17 / CDS r11 / QUOTA r12 and owns the complete failure/recovery/live verification chain
-- 260914 create-task CLIP CDS QUOTA start (fix)
-- 260914 update-ssot CLIP r17 CDS r11 QUOTA r12 done (fix); shared early contract, authoritative diagnostics, durable continuation and three reserved response corrections
-- 260914 warning (fix); T140 doing is affected by CLIP/QUOTA deltas; new follow-up tasks own behavioral changes and T140 retains its unfinished real-input acceptance
-- 260914 update-ssot CLIP CDS QUOTA start (fix); audit specification/implementation divergence and define complete recovery with live verification capped at $0.50
-- 260913 T140 deployed (e2e); 5c18ab5 CI/Workers/backend and exact production health pass; keep doing, actual-input live writer approval still pending
-- 260913 T140 verification (e2e); real-input admission replay and 20-source synthetic full pipeline pass; paid writer preflight capped at $0.08544, owner approval pending
-- 260913 T140 claimed (e2e); implement frozen writer allowance, early input checks and complete pipeline validation
-- 260913 create-task CLIP QUOTA done (e2e); T140 consumes CLIP r16 / QUOTA r11 and requires complete pipeline verification
-- 260913 create-task CLIP QUOTA start (e2e)
-- 260913 update-ssot CLIP r16 QUOTA r11 done (e2e); separate immutable writer allowance, early validation and real-input verification
-- 260913 update-ssot CLIP QUOTA start (e2e); freeze a separate writer input allowance and require real-input pipeline verification
-- 260913 clip failure investigation start (e2e); reproduce job 5176c61 planning failure with actual saved inputs before defining the follow-up fix
-- 260913 T139 done (obs); 5f4a9c1 shipped, CI/Workers/backend rollout pass and exact live image/health verified; observation diagnostics and worker location preservation complete
-- 260913 T139 verification (obs); local gates and 16 browser cases pass, prepare push and await CI/Workers/backend rollout before done

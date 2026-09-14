@@ -358,7 +358,22 @@ message ClipEditCut {
   // sequential short phrases with explicit times (CDS-59).
   repeated ClipCaption copies = 10;
   ClipFocal focal = 11;
+  // The ONE constant rate this cut plays at, as permille: 500, 750, 1000, 1250,
+  // 1500 or 2000 and nothing else. ABSENT is a client that predates rates and
+  // is read as 1x; an explicit 0 is not a rate and is refused.
+  optional int32 playback_rate_permille = 12;
 }
+// One source's owner-controlled original-sound retention. Source audio is off
+// by default and no template, model or render may turn it on.
+message ClipSourceAudioSetting {
+  string source_id = 1;
+  string fingerprint = 2;
+  bool retain_original_audio = 3;
+}
+// The complete snapshot for every source the plan's cuts draw on. The wrapper
+// exists so an ABSENT value (a plan written before the setting) stays different
+// from a present snapshot in which every source is off.
+message ClipSourceAudioSettings { repeated ClipSourceAudioSetting values = 1; }
 message ClipFocal { double x = 1; double y = 2; }
 message ClipTextRow { string role = 1; string text = 2; }
 message ClipEditablePhrase { string text = 1; int32 start_ms = 2; int32 end_ms = 3; }
@@ -405,6 +420,9 @@ message ClipEditPlan {
   bool native_composition = 4;
   repeated ClipEditableText elements = 5;
   ClipSourceAssociations associations = 6;
+  // A read projection: the owner changes it through its own action, never by
+  // saving a plan. A draft may return it unchanged; anything else is refused.
+  ClipSourceAudioSettings source_audio = 7;
 }
 message ClipSourceAssociations { repeated ClipSourceAssociation values = 1; }
 
@@ -454,6 +472,10 @@ message ClipRetainedSource {
   int32 duration_ms = 4;
   int32 width = 5;
   int32 height = 6;
+  // The rates this source may actually be cut at, computed by the server from
+  // its verified original cadence. A slow rate is absent when the source cannot
+  // reach the output cadence without invented frames.
+  repeated int32 allowed_rate_permille = 7;
 }
 message ClipEditingState {
   ClipEditPlan plan = 1;

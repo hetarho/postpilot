@@ -242,6 +242,12 @@ func (r *Rendering) renderCut(ctx context.Context, ws clip.MediaWorkspace, canva
 	return r.media.sourcePath(ws, path)
 }
 func (r *Rendering) Render(ctx context.Context, ws clip.MediaWorkspace, plan clip.EditPlan, sources []clip.RenderSource, load clip.RenderSourceLoader) (result clip.RenderedVideo, err error) {
+	// The contract carries fixed playback rates; this executor still materializes
+	// footage at 1x. An unsupported transform is IDENTIFIED rather than simulated
+	// or quietly replaced by 1x (CLIP-99), until the renderer performs it.
+	if err = clip.RefuseUnsupportedRates(plan); err != nil {
+		return result, err
+	}
 	if plan.Portable != nil {
 		return r.renderComposition(ctx, ws, plan, sources, load)
 	}

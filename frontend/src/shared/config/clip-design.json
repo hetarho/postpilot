@@ -420,6 +420,11 @@
     "sub_occupancy_min": 0.6
   },
   "transition": { "default": "cut", "fade_ms": 200, "black_ms": 300, "fade_ratio_max": 0.4 },
+  "playback": {
+    "rates_permille": [500, 750, 1000, 1250, 1500, 2000],
+    "unit_permille": 1000,
+    "output_fps": 30
+  },
   "copy": { "max_per_cut": 2, "second_min_cut_s": 4, "second_max_chars": 16 },
   "audio": {
     "loudnorm": { "i": -16, "tp": -1.5, "lra": 11 },

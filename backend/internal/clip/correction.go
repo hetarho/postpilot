@@ -28,8 +28,16 @@ type CorrectionCut struct {
 	Chips          []string
 	VolumePermille int
 	Focal          *Point
+	// The cut's ONE fixed playback rate, as permille (CLIP-98). Zero is a draft
+	// from a client that predates rates and reads as 1x; an explicit value must
+	// be a supported rate.
+	PlaybackRatePermille int
 }
 type CorrectionPlan struct {
+	// The owner's per-source original-sound snapshot, as a read projection. It
+	// is changed through its own owner-scoped action, never by saving a plan, so
+	// a draft that carries it back must carry it back unchanged (CLIP-100).
+	SourceAudio       []SourceAudioSetting
 	Associations      *[]SourceAssociation
 	NativeComposition bool
 	Elements          []CorrectionText
@@ -157,11 +165,14 @@ type storedEditPlan struct {
 func CorrectionFromPlan(p EditPlan) CorrectionPlan {
 	out := CorrectionPlan{DurationMS: p.DurationMS, Hook: p.Hook, Cuts: make([]CorrectionCut, 0, len(p.Cuts))}
 	for _, c := range p.Cuts {
-		out.Cuts = append(out.Cuts, CorrectionCut{ID: c.ID, SourceID: c.SourceID, Fingerprint: c.Fingerprint, StartMS: c.StartMS, EndMS: c.EndMS, TransitionMS: c.TransitionMS, Copies: slices.Clone(c.Copies), Chips: slices.Clone(c.Chips), VolumePermille: int(math.Round(c.OriginalVolume() * 1000))})
+		out.Cuts = append(out.Cuts, CorrectionCut{ID: c.ID, SourceID: c.SourceID, Fingerprint: c.Fingerprint, StartMS: c.StartMS, EndMS: c.EndMS, TransitionMS: c.TransitionMS, Copies: slices.Clone(c.Copies), Chips: slices.Clone(c.Chips), VolumePermille: int(math.Round(c.OriginalVolume() * 1000)), PlaybackRatePermille: c.Rate()})
 	}
 	for i, c := range p.Cuts {
 		focal := c.Focal
 		out.Cuts[i].Focal = &focal
+	}
+	if p.SourceAudio != nil {
+		out.SourceAudio = slices.Clone(p.SourceAudio.Values)
 	}
 	if p.Portable != nil && (!p.Portable.Snapshot.Legacy || p.Portable.NativeEditing) {
 		out.NativeComposition = true
@@ -173,16 +184,11 @@ func CorrectionFromPlan(p EditPlan) CorrectionPlan {
 	}
 	return out
 }
+
+// Every plan this build writes is a version-6 assembly envelope, composition or
+// not. The version-4 writer below it is gone; its READER stays exactly as it was.
 func EncodeEditPlan(p EditPlan, styles []string) (string, error) {
-	if p.Portable != nil {
-		return encodePortablePlan(p, styles)
-	}
-	focals := map[string]Point{}
-	for _, c := range p.Cuts {
-		focals[c.ID] = c.Focal
-	}
-	b, err := json.Marshal(storedEditPlan{storedPlanVersion, p.Ratio, storedCorrection(CorrectionFromPlan(p)), focals, slices.Clone(styles)})
-	return string(b), err
+	return encodeAssemblyPlan(p, styles)
 }
 func strictJSON(raw string, out any) error {
 	d := json.NewDecoder(strings.NewReader(raw))
@@ -233,7 +239,13 @@ func DecodeEditPlan(raw string) (EditPlan, []string, error) {
 	if json.Unmarshal([]byte(raw), &marker) != nil {
 		return EditPlan{}, nil, ErrInvalid
 	}
-	if marker.Version == CompositionPlanVersion {
+	// Dispatch on the EXACT stored version. Version 5 is a portable envelope in
+	// its own right and version 6 is the current one, so a numeric comparison
+	// against CompositionPlanVersion would read one of them with the wrong reader.
+	switch marker.Version {
+	case CompositionPlanVersion:
+		return decodeAssemblyPlan(raw)
+	case portablePlanVersion:
 		return decodePortablePlan(raw)
 	}
 	raw = migrateStoredPlan(raw)
@@ -266,6 +278,7 @@ func DecodeEditPlan(raw string) (EditPlan, []string, error) {
 				}
 			}
 		}
+		upgradeLegacyAssembly(&p)
 		return p, styles, nil
 	}
 	var s storedEditPlan
@@ -303,6 +316,7 @@ func DecodeEditPlan(raw string) (EditPlan, []string, error) {
 		v := float64(c.VolumePermille) / 1000
 		p.Cuts = append(p.Cuts, Cut{ID: c.ID, SourceID: c.SourceID, Fingerprint: c.Fingerprint, StartMS: c.StartMS, EndMS: c.EndMS, TransitionMS: c.TransitionMS, Focal: f, Copies: c.Copies, Chips: c.Chips, Volume: &v})
 	}
+	upgradeLegacyAssembly(&p)
 	return p, s.CopyStyles, nil
 }
 
@@ -380,7 +394,10 @@ func ApplyCorrection(cfg RenderConfig, p Project, input CorrectionPlan) (EditPla
 	for _, c := range old.Cuts {
 		known[c.ID] = c
 	}
-	next := EditPlan{Ratio: p.Ratio, DurationMS: input.DurationMS, Hook: strings.TrimSpace(input.Hook)}
+	next := EditPlan{Ratio: p.Ratio, DurationMS: input.DurationMS, Hook: strings.TrimSpace(input.Hook), SourceAudio: old.SourceAudio}
+	if err := matchOwnerAudio(old, input); err != nil {
+		return EditPlan{}, nil, err
+	}
 	// The hook is the one text on a corrected plan the owner wrote for the clip
 	// rather than for a cut, so it answers to CDS-42 here: it may only state
 	// numbers and names the owner's own answers already carry.
@@ -399,6 +416,9 @@ func ApplyCorrection(cfg RenderConfig, p Project, input CorrectionPlan) (EditPla
 		}
 		v := float64(c.VolumePermille) / 1000
 		prior.StartMS, prior.EndMS, prior.TransitionMS, prior.Copies, prior.Chips, prior.Volume = c.StartMS, c.EndMS, c.TransitionMS, c.Copies, c.Chips, &v
+		// Per-cut volume is a gain, never a permission: it cannot turn a source's
+		// original sound on, and the rate cannot change it either (CLIP-18).
+		prior.PlaybackRatePermille = c.Rate()
 		next.Cuts = append(next.Cuts, prior)
 	}
 	// A reorder carries each cut's own transition with it (CDS-36), so whichever
@@ -406,6 +426,10 @@ func ApplyCorrection(cfg RenderConfig, p Project, input CorrectionPlan) (EditPla
 	if len(next.Cuts) > 0 {
 		next.Cuts[0].TransitionMS = 0
 	}
+	// Deleting or restoring a cut changes which sources the plan draws on, so
+	// the snapshot is rebuilt around the new set with every existing owner
+	// choice kept exactly as it was.
+	next.SourceAudio = ReconcileSourceAudio(old.SourceAudio, next.Cuts)
 	refs := make([]RenderSource, 0, len(sources))
 	for _, s := range sources {
 		refs = append(refs, s.RenderSource)
@@ -413,7 +437,39 @@ func ApplyCorrection(cfg RenderConfig, p Project, input CorrectionPlan) (EditPla
 	if err = ValidateEditPlan(cfg, next, refs); err != nil {
 		return EditPlan{}, nil, err
 	}
+	if err = ValidateSourceRanges(next, SourceOverlaps(old.Cuts)); err != nil {
+		return EditPlan{}, nil, err
+	}
 	return next, styles, nil
+}
+
+// matchOwnerAudio keeps the per-source original-sound snapshot out of the plan
+// save. The editing projection carries it so a draft can show it, so a draft
+// may hand it back — but only as the same answer. Every source the draft and the
+// saved plan both name must agree; stating anything else is a contradiction, not
+// an edit, and is refused (CLIP-100).
+//
+// A source only one side names is NOT a contradiction: deleting a cut, undoing
+// that deletion or adding footage legitimately changes which sources the plan
+// draws on, and the server rebuilds the complete snapshot itself afterwards.
+func matchOwnerAudio(old EditPlan, in CorrectionPlan) error {
+	if len(in.SourceAudio) == 0 || old.SourceAudio == nil {
+		return nil
+	}
+	seen := map[sourceKey]bool{}
+	for _, v := range in.SourceAudio {
+		key := sourceKey{v.SourceID, v.Fingerprint}
+		if seen[key] {
+			return planViolation("plan_source_audio")
+		}
+		seen[key] = true
+		for _, saved := range old.SourceAudio.Values {
+			if saved.SourceID == v.SourceID && saved.Fingerprint == v.Fingerprint && saved.RetainOriginal != v.RetainOriginal {
+				return planViolation("plan_source_audio")
+			}
+		}
+	}
+	return nil
 }
 
 // Every remaining source must match. A retained manifest may also hold unused originals.

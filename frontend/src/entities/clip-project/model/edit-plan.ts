@@ -7,6 +7,8 @@ import {
   CLIP_GUARDS,
   CLIP_TIMING,
   CLIP_TRANSITION,
+  CLIP_PLAYBACK,
+  CLIP_RATES,
   CLIP_TYPE,
   CLIP_VOICE,
   clipStyle,
@@ -45,6 +47,33 @@ export interface ClipCaption {
 export const CLIP_TRANSITIONS = [0, CLIP_TRANSITION.fade_ms, CLIP_TRANSITION.black_ms] as const
 /** What step 2 offers: a hard cut or the fade a scene change earns. */
 export const CLIP_TRANSITION_CHOICES = [0, CLIP_TRANSITION.fade_ms] as const
+/** One source's owner-controlled original-sound retention (CLIP-18). Read only
+ *  here: the owner changes it through its own action, never by saving a plan. */
+export interface ClipSourceAudioSetting {
+  sourceId: string
+  fingerprint: string
+  retainOriginalAudio: boolean
+}
+/** CLIP-98's six fixed rates, as integer permille. */
+export const CLIP_PLAYBACK_RATES = CLIP_RATES
+/** The pre-transition OUTPUT length of a source span at a fixed rate (CDS-62),
+ *  to the nearest millisecond. The same formula the server computes, so preview
+ *  and export cannot disagree by a millisecond. */
+export function transformedDurationMs(spanMs: number, ratePermille: number): number {
+  if (!Number.isSafeInteger(spanMs) || spanMs <= 0 || !CLIP_RATES.includes(ratePermille)) return 0
+  return Math.floor(
+    (spanMs * CLIP_PLAYBACK.unit_permille + Math.floor(ratePermille / 2)) / ratePermille,
+  )
+}
+/** A cut's fixed rate, reading a draft written before rates existed as 1x. */
+export function cutRate(cut: Pick<ClipEditCut, 'playbackRatePermille'>): number {
+  return cut.playbackRatePermille || CLIP_PLAYBACK.unit_permille
+}
+/** How long the cut occupies the edited output timeline, before its transition
+ *  overlap is taken off. */
+export function cutOutputMs(cut: ClipEditCut): number {
+  return transformedDurationMs(cut.endMs - cut.startMs, cutRate(cut))
+}
 export interface ClipEditCut {
   focal?: { x: number; y: number }
   id: string
@@ -59,6 +88,9 @@ export interface ClipEditCut {
   /** Reserved fact labels whose chips belong on this cut, at most two. */
   chips: string[]
   volumePermille: number
+  /** The ONE constant rate this cut plays at, as permille (CLIP-98). Zero is a
+   *  draft written before rates existed and reads as 1x. */
+  playbackRatePermille: number
 }
 export interface ClipEditableText {
   effectiveStartMs?: number
@@ -90,6 +122,9 @@ export interface ClipEditableText {
   itemId: string
 }
 export interface ClipEditPlan {
+  /** The server's complete per-source original-sound snapshot. Absent is a plan
+   *  written before the setting existed. */
+  sourceAudio?: ClipSourceAudioSetting[]
   associations?: ClipSourceAssociation[]
   nativeComposition?: boolean
   elements?: ClipEditableText[]
@@ -105,6 +140,10 @@ export interface RetainedClipSource {
   durationMs: number
   width: number
   height: number
+  /** The rates this source may actually be cut at, computed by the server from
+   *  its verified original cadence. A slow rate is absent when the source cannot
+   *  reach the output cadence without invented frames (CDS-68). */
+  allowedRatePermille: number[]
 }
 export interface ClipEditingState {
   plan: ClipEditPlan
@@ -130,6 +169,7 @@ export function copyClipPlan(plan: ClipEditPlan): ClipEditPlan {
           })),
         }
       : {}),
+    ...(plan.sourceAudio ? { sourceAudio: plan.sourceAudio.map((v) => ({ ...v })) } : {}),
     cuts: plan.cuts.map((c) => ({
       ...c,
       ...(c.focal ? { focal: { ...c.focal } } : {}),
@@ -145,7 +185,7 @@ export function firstCopy(cut: ClipEditCut): ClipCaption {
 }
 /** CDS-43: a cut of 4 s or more may carry a second copy. */
 export function allowsSecondCopy(cut: ClipEditCut): boolean {
-  return cut.endMs - cut.startMs >= CLIP_COPY.second_min_cut_s * 1000
+  return cutOutputMs(cut) >= CLIP_COPY.second_min_cut_s * 1000
 }
 export type ClipEdit =
   | { type: 'move'; from: number; to: number }
@@ -153,7 +193,12 @@ export type ClipEdit =
   | {
       type: 'cut'
       id: string
-      patch: Partial<Pick<ClipEditCut, 'startMs' | 'endMs' | 'volumePermille' | 'transitionMs'>>
+      patch: Partial<
+        Pick<
+          ClipEditCut,
+          'startMs' | 'endMs' | 'volumePermille' | 'transitionMs' | 'playbackRatePermille'
+        >
+      >
     }
   | { type: 'copy'; id: string; index?: number; patch: Partial<ClipCaption> }
   | { type: 'addCopy'; id: string }
@@ -164,7 +209,7 @@ export type ClipEdit =
 /** The clip is its footage less what each cut's own transition overlaps
  *  (CDS-36) — never one fade times the boundaries. */
 export function clipPlanDuration(cuts: readonly ClipEditCut[]): number {
-  return cuts.reduce((sum, c, i) => sum + c.endMs - c.startMs - (i === 0 ? 0 : c.transitionMs), 0)
+  return cuts.reduce((sum, c, i) => sum + cutOutputMs(c) - (i === 0 ? 0 : c.transitionMs), 0)
 }
 export function editClipPlan(plan: ClipEditPlan, edit: ClipEdit): ClipEditPlan {
   const next = copyClipPlan(plan)
@@ -199,7 +244,7 @@ export function editClipPlan(plan: ClipEditPlan, edit: ClipEdit): ClipEditPlan {
         const copies = splitRapid(
           merged,
           CLIP_TIMING.copy_lead_ms,
-          c.endMs - c.startMs - CLIP_TIMING.copy_lead_ms,
+          cutOutputMs(c) - CLIP_TIMING.copy_lead_ms,
         )
         return copies ? { ...c, copies } : c
       }
@@ -221,7 +266,7 @@ export function editClipPlan(plan: ClipEditPlan, edit: ClipEdit): ClipEditPlan {
                 startMs: last.endMs,
                 endMs: Math.min(
                   last.endMs + CLIP_RAPID.medium_ms,
-                  c.endMs - c.startMs - CLIP_TIMING.copy_lead_ms,
+                  cutOutputMs(c) - CLIP_TIMING.copy_lead_ms,
                 ),
               },
             ],
@@ -269,7 +314,9 @@ function copyWindow(cut: ClipEditCut, index: number) {
   const whole = copy.startMs === 0 && copy.endMs === 0
   const lead = CLIP_TIMING.copy_lead_ms
   const start = whole ? lead : copy.startMs
-  const end = whole ? cut.endMs - cut.startMs - lead : copy.endMs
+  // Cut-relative windows are OUTPUT time: the default inset is measured against
+  // the transformed length, not the source span (CDS-27, CDS-62).
+  const end = whole ? cutOutputMs(cut) - lead : copy.endMs
   return { start, end, length: end - start }
 }
 /** The style's own line and character limits (CDS-20, CDS-23..26). */
@@ -352,11 +399,30 @@ export function requiredClipSources(plan: ClipEditPlan, sources: readonly Retain
   const needed = new Set(plan.cuts.map((c) => c.fingerprint))
   return sources.filter((s) => needed.has(s.fingerprint))
 }
+/** Every pair of cuts taken from the SAME source that shares footage, and how
+ *  many milliseconds each pair shares. Source ranges are half-open, so touching
+ *  endpoints are adjacent rather than overlapping (CLIP-98). */
+export function sourceOverlaps(cuts: readonly ClipEditCut[]): Map<string, number> {
+  const out = new Map<string, number>()
+  cuts.forEach((a, i) =>
+    cuts.slice(i + 1).forEach((b) => {
+      if (a.sourceId !== b.sourceId || a.fingerprint !== b.fingerprint) return
+      const shared = Math.min(a.endMs, b.endMs) - Math.max(a.startMs, b.startMs)
+      if (shared > 0) out.set([a.id, b.id].sort().join('\u0000'), shared)
+    }),
+  )
+  return out
+}
 export function validateClipPlan(plan: ClipEditPlan, state: ClipEditingState) {
   const integer = Number.isSafeInteger
+  // A plan saved before the rule may keep the overlap it already has, but an
+  // edit may neither create a new one nor enlarge it.
+  const grandfathered = sourceOverlaps(state.plan.cuts)
+  const overlaps = sourceOverlaps(plan.cuts)
   const cuts = plan.cuts.map((c, index) => {
     const source = state.sources.find((s) => s.id === c.sourceId && s.fingerprint === c.fingerprint)
-    const duration = c.endMs - c.startMs
+    // Every limit below is OUTPUT time; the source span keeps its own ms.
+    const duration = cutOutputMs(c)
     const rapid = isRapidCut(c)
     // One entry per copy: a cut of 4 s or more may carry two (CDS-43), and every
     // per-caption rule is the copy's, not the cut's.
@@ -433,6 +499,20 @@ export function validateClipPlan(plan: ClipEditPlan, state: ClipEditingState) {
         c.chips.length > 2 ||
         c.chips.some((label) => !(CLIP_FACTS.chips as readonly string[]).includes(label)),
       volume: !integer(c.volumePermille) || c.volumePermille < 0 || c.volumePermille > 1000,
+      // Exactly one CLIP-98 rate, and only one this source's verified cadence
+      // actually admits (CDS-68). An unsupported rate is named, never replaced.
+      rate:
+        !integer(c.playbackRatePermille) ||
+        !CLIP_RATES.includes(cutRate(c)) ||
+        duration <= 0 ||
+        !(source?.allowedRatePermille ?? []).includes(cutRate(c)),
+      overlap: plan.cuts.some((other) => {
+        if (other === c || other.sourceId !== c.sourceId || other.fingerprint !== c.fingerprint)
+          return false
+        const key = [c.id, other.id].sort().join('\u0000')
+        const shared = overlaps.get(key)
+        return shared !== undefined && shared > (grandfathered.get(key) ?? 0)
+      }),
       copies,
     }
   })

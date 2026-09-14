@@ -23,6 +23,7 @@ const draft: ClipEditPlan = {
       copies: [],
       chips: [],
       volumePermille: 1000,
+      playbackRatePermille: 1000,
       focal: { x: 0, y: 0.5 },
     },
     {
@@ -35,6 +36,7 @@ const draft: ClipEditPlan = {
       copies: [],
       chips: [],
       volumePermille: 500,
+      playbackRatePermille: 1000,
     },
   ],
 }
@@ -45,6 +47,7 @@ const sources = draft.cuts.map((c) => ({
   durationMs: 30000,
   width: 1920,
   height: 1080,
+  allowedRatePermille: [500, 750, 1000, 1250, 1500, 2000],
 }))
 beforeEach(() => {
   vi.stubGlobal('crypto', webcrypto)

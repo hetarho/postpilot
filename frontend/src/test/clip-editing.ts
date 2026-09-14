@@ -79,6 +79,7 @@ export function clipEditingFixture(): ClipEditingState {
         ],
         chips: [],
         volumePermille: 1000,
+        playbackRatePermille: 1000,
       })),
     },
     sources: ['a', 'b'].map((id) => ({
@@ -88,6 +89,8 @@ export function clipEditingFixture(): ClipEditingState {
       durationMs: 40000,
       width: 1920,
       height: 1080,
+      // 30 fps footage: every rate including the two slow ones is reachable.
+      allowedRatePermille: [500, 750, 1000, 1250, 1500, 2000],
     })),
     copyStyles: ['clean', 'memo', 'bold'],
     fadeMs: 200,

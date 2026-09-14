@@ -10,7 +10,7 @@ import (
 )
 
 func TestCorrectionWireRoundtripAndConflict(t *testing.T) {
-	s := &clip.CorrectionState{Plan: clip.CorrectionPlan{DurationMS: 15000, Cuts: []clip.CorrectionCut{{ID: "cut", SourceID: "source", Fingerprint: "fingerprint", StartMS: 500, EndMS: 15500, VolumePermille: 123, Copies: []clip.Caption{{Text: "정확한 <한글>", Anchor: "lower_mid", Align: "center", Style: "memo", Accent: "teal", StartMS: 200, EndMS: 3000}}}}}, Sources: []clip.AnalysisSource{{RenderSource: clip.RenderSource{ID: "source", Fingerprint: "fingerprint", Info: clip.MediaInfo{DurationMS: 30000, Width: 1920, Height: 1080}}, Filename: "travel.mp4"}}, CopyStyles: []string{"clean", "memo"}, FadeMS: 200, MaxCuts: 100, MaxCopyRunes: 500, MinDurationMS: 15000, MaxDurationMS: 90000}
+	s := &clip.CorrectionState{Plan: clip.CorrectionPlan{DurationMS: 15000, Cuts: []clip.CorrectionCut{{ID: "cut", SourceID: "source", Fingerprint: "fingerprint", StartMS: 500, EndMS: 15500, VolumePermille: 123, PlaybackRatePermille: 1000, Copies: []clip.Caption{{Text: "정확한 <한글>", Anchor: "lower_mid", Align: "center", Style: "memo", Accent: "teal", StartMS: 200, EndMS: 3000}}}}}, Sources: []clip.AnalysisSource{{RenderSource: clip.RenderSource{ID: "source", Fingerprint: "fingerprint", Info: clip.MediaInfo{DurationMS: 30000, Width: 1920, Height: 1080}}, Filename: "travel.mp4"}}, CopyStyles: []string{"clean", "memo"}, FadeMS: 200, MaxCuts: 100, MaxCopyRunes: 500, MinDurationMS: 15000, MaxDurationMS: 90000}
 	wire := editingProto(s)
 	raw, err := protojson.Marshal(wire)
 	if err != nil {
@@ -25,6 +25,14 @@ func TestCorrectionWireRoundtripAndConflict(t *testing.T) {
 	}
 	if correctionPlan(nil).DurationMS != 0 || editingProto(nil) != nil {
 		t.Fatal("nil presence")
+	}
+	// An absent rate is an old client and reads as 1x; an EXPLICIT zero is not a
+	// rate at all and must not be rescued by that compatibility path.
+	absent := &v1.ClipEditPlan{Cuts: []*v1.ClipEditCut{{Id: "cut"}}}
+	zero := int32(0)
+	stated := &v1.ClipEditPlan{Cuts: []*v1.ClipEditCut{{Id: "cut", PlaybackRatePermille: &zero}}}
+	if correctionPlan(absent).Cuts[0].Rate() != 1000 || clip.ValidPlaybackRate(correctionPlan(stated).Cuts[0].Rate()) {
+		t.Fatal("explicit zero rate was read as 1x")
 	}
 	err = toConnectError(clip.ErrPlanConflict)
 	if connect.CodeOf(err) != connect.CodeAborted {
@@ -42,7 +50,7 @@ func TestCorrectionWireRoundtripAndConflict(t *testing.T) {
 
 func TestRapidCorrectionWireKeepsEveryCue(t *testing.T) {
 	copies, _ := clip.SplitRapid(clip.Caption{Text: "오늘은 구로디지털단지에 와보았는데요", Style: "simple", Anchor: "bottom", Align: "center"}, 120, 1420)
-	s := &clip.CorrectionState{Plan: clip.CorrectionPlan{Cuts: []clip.CorrectionCut{{ID: "one", Copies: copies}}}, CopyStyles: []string{"clean", "simple"}}
+	s := &clip.CorrectionState{Plan: clip.CorrectionPlan{Cuts: []clip.CorrectionCut{{ID: "one", PlaybackRatePermille: 1000, Copies: copies}}}, CopyStyles: []string{"clean", "simple"}}
 	raw, err := protojson.Marshal(editingProto(s))
 	if err != nil {
 		t.Fatal(err)

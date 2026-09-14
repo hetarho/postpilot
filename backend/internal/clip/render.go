@@ -48,6 +48,10 @@ type Cut struct {
 	// at a time. Part of the approved composition, so it is stored with it.
 	Chips  []string
 	Volume *float64 // nil keeps original audio; explicit zero mutes it
+	// The ONE constant rate this cut plays at, as permille (CLIP-98). Zero is
+	// the absence a plan written before rates carried, read as 1x through
+	// Rate(); every stored plan is normalized on decode.
+	PlaybackRatePermille int
 }
 type EditCut = Cut
 
@@ -82,7 +86,9 @@ func (c Cut) CaptionWindow(index int) (int, int) {
 		copy = c.Copies[index]
 	}
 	if copy.StartMS == 0 && copy.EndMS == 0 {
-		return CopyLeadMS, c.EndMS - c.StartMS - CopyLeadMS
+		// Cut-relative windows are OUTPUT time, so the default inset is measured
+		// against the transformed length, not the source span (CDS-27, CDS-62).
+		return CopyLeadMS, c.OutputDurationMS() - CopyLeadMS
 	}
 	return copy.StartMS, copy.EndMS
 }
@@ -112,7 +118,12 @@ func (c EditCut) OriginalVolume() float64 {
 }
 
 type EditPlan struct {
-	Portable       *PortablePlan
+	Portable *PortablePlan
+	// The complete owner-controlled original-sound snapshot for the sources this
+	// plan draws on (CLIP-18). Nil is a plan written before the setting existed,
+	// whose audio meaning still lives in per-cut volume — a different thing from
+	// a snapshot that says every source is off.
+	SourceAudio    *SourceAudioSettings
 	HideDisclosure bool
 	Ratio          string
 	DurationMS     int
@@ -351,7 +362,7 @@ func (p EditPlan) ChipLabels(c Cut) []string {
 	out := []string{}
 	// A chip is shown for the whole cut it belongs to and for at least 2.0 s, so
 	// a shorter cut carries none rather than flashing one (CDS-30).
-	if c.EndMS-c.StartMS < int(design.Timing.ChipMinS*1000) {
+	if c.OutputDurationMS() < int(design.Timing.ChipMinS*1000) {
 		return out
 	}
 	for _, label := range design.ChipPriority(p.Preset) {
@@ -384,6 +395,9 @@ func ValidateEditPlan(cfg RenderConfig, plan EditPlan, sources []RenderSource) e
 		}
 		byID[s.ID] = s
 	}
+	if err := ValidateSourceAudioSettings(plan); err != nil {
+		return err
+	}
 	total := 0
 	seen := map[string]bool{}
 	for i, c := range plan.Cuts {
@@ -402,6 +416,17 @@ func ValidateEditPlan(cfg RenderConfig, plan EditPlan, sources []RenderSource) e
 		if c.StartMS < 0 || c.StartMS >= c.EndMS || c.EndMS > s.Info.DurationMS {
 			return planViolation("plan_cut_range")
 		}
+		// Exactly one CLIP-98 rate, and a slow one only where the source's own
+		// verified cadence still reaches the output without invented frames.
+		if !ValidPlaybackRate(c.Rate()) || !slices.Contains(AllowedPlaybackRates(s.Info), c.Rate()) {
+			return planViolation("plan_cut_rate")
+		}
+		// Everything below this line is OUTPUT time (CDS-62). The source span
+		// above keeps its own original milliseconds.
+		length := c.OutputDurationMS()
+		if length <= 0 {
+			return planViolation("plan_cut_rate")
+		}
 		// A transition belongs to the cut it leads into and the first cut has
 		// none: a clip does not fade in from nothing (CDS-36).
 		if !ValidTransition(c.TransitionMS) || (i == 0 && c.TransitionMS != 0) {
@@ -413,7 +438,7 @@ func ValidateEditPlan(cfg RenderConfig, plan EditPlan, sources []RenderSource) e
 		if i+1 < len(plan.Cuts) {
 			overlap += plan.Cuts[i+1].TransitionMS
 		}
-		if c.EndMS-c.StartMS <= max(2*design.Transition.FadeMS, overlap) {
+		if length <= max(2*design.Transition.FadeMS, overlap) {
 			return planViolation("plan_cut_fade")
 		}
 		if !normalized(c.Focal.X) || !normalized(c.Focal.Y) {
@@ -431,7 +456,7 @@ func ValidateEditPlan(cfg RenderConfig, plan EditPlan, sources []RenderSource) e
 		if len(c.Copies) > maxCopies {
 			return planViolation("plan_copy_count")
 		}
-		if !rapid && len(c.Copies) > 1 && c.EndMS-c.StartMS < design.Copy.SecondMinCutMS() {
+		if !rapid && len(c.Copies) > 1 && length < design.Copy.SecondMinCutMS() {
 			return planViolation("plan_copy_second_cut")
 		}
 		for _, copy := range c.Copies {
@@ -453,7 +478,7 @@ func ValidateEditPlan(cfg RenderConfig, plan EditPlan, sources []RenderSource) e
 		previousEnd := 0
 		for j, copy := range c.Copies {
 			captionStart, captionEnd := c.CaptionWindow(j)
-			if captionStart < 0 || captionEnd <= captionStart || captionEnd > c.EndMS-c.StartMS {
+			if captionStart < 0 || captionEnd <= captionStart || captionEnd > length {
 				return planViolation("plan_caption_time")
 			}
 			// Never both at once: the second copy starts a clear 120 ms after
@@ -503,10 +528,10 @@ func ValidateEditPlan(cfg RenderConfig, plan EditPlan, sources []RenderSource) e
 			(design.Classify(placed[0].Text) != design.ClassDesc || design.Classify(placed[1].Text) != design.ClassNum) {
 			return planViolation("plan_copy_classes")
 		}
-		if c.EndMS-c.StartMS > cfg.MaxDurationMS+plan.TransitionTotal()-total {
+		if length > cfg.MaxDurationMS+plan.TransitionTotal()-total {
 			return planViolation("plan_duration_limit")
 		}
-		total += c.EndMS - c.StartMS
+		total += length
 	}
 	// Overlap is part of the approved timeline, not extra trimming after approval.
 	if total-plan.TransitionTotal() != plan.DurationMS {

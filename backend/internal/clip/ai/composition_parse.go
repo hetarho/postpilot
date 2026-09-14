@@ -184,7 +184,7 @@ func parseCompositionPlan(cfg Config, input clip.PlanningInput, raw string) (out
 			}
 		}
 		bindings[cut.ID] = binding
-		portable.Cuts = append(portable.Cuts, composition.Cut{ID: cut.ID, SectionID: section.ID, SourceID: cut.SourceID, GroupID: binding.GroupID, ItemID: binding.ItemID, StartMS: cut.StartMS, EndMS: cut.EndMS, TransitionMS: cut.TransitionMS})
+		portable.Cuts = append(portable.Cuts, composition.Cut{ID: cut.ID, SectionID: section.ID, SourceID: cut.SourceID, GroupID: binding.GroupID, ItemID: binding.ItemID, StartMS: cut.StartMS, EndMS: cut.EndMS, TransitionMS: cut.TransitionMS, PlaybackRatePermille: cut.Rate()})
 	}
 	failedCut = 0
 	timeline, fallbacks, err := clip.ResolveSelectedComposition(doc, portable.Inputs, portable.Cuts, compositionLimits(cfg, input), cfg.MaxResponseBytes)

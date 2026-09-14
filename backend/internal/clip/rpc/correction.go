@@ -19,8 +19,21 @@ func captionProto(c clip.Caption) *v1.ClipCaption {
 	return &v1.ClipCaption{Pace: c.Pace, Text: c.Text, Position: c.Anchor, Align: c.Align, Keyword: c.Keyword,
 		Style: c.Style, Accent: c.Accent, StartMs: int32(c.StartMS), EndMs: int32(c.EndMS)}
 }
+
+// explicitZeroRate is what an explicitly sent `playback_rate_permille = 0`
+// becomes. Zero is not a rate, and only the ABSENCE of the field may be read as
+// the legacy 1x; a client that states zero is stating a rate that does not
+// exist, so it must reach the domain as a value no compatibility path rescues.
+const explicitZeroRate = -1
+
 func correctionPlan(p *v1.ClipEditPlan) clip.CorrectionPlan {
 	out := clip.CorrectionPlan{DurationMS: int(p.GetDurationMs()), Hook: p.GetHook(), NativeComposition: p.GetNativeComposition()}
+	if p.GetSourceAudio() != nil {
+		out.SourceAudio = []clip.SourceAudioSetting{}
+		for _, v := range p.GetSourceAudio().GetValues() {
+			out.SourceAudio = append(out.SourceAudio, clip.SourceAudioSetting{SourceID: v.GetSourceId(), Fingerprint: v.GetFingerprint(), RetainOriginal: v.GetRetainOriginalAudio()})
+		}
+	}
 	for _, c := range p.GetCuts() {
 		copies := make([]clip.Caption, 0, len(c.GetCopies()))
 		for _, copy := range c.GetCopies() {
@@ -35,7 +48,13 @@ func correctionPlan(p *v1.ClipEditPlan) clip.CorrectionPlan {
 		if c.Focal != nil {
 			focal = &clip.Point{X: c.Focal.X, Y: c.Focal.Y}
 		}
-		out.Cuts = append(out.Cuts, clip.CorrectionCut{Focal: focal, ID: c.GetId(), SourceID: c.GetSourceId(), Fingerprint: c.GetFingerprint(), StartMS: int(c.GetStartMs()), EndMS: int(c.GetEndMs()), TransitionMS: int(c.GetTransitionMs()), VolumePermille: int(c.GetVolumePermille()), Chips: c.GetChips(), Copies: copies})
+		rate := 0
+		if c.PlaybackRatePermille != nil {
+			if rate = int(*c.PlaybackRatePermille); rate == 0 {
+				rate = explicitZeroRate
+			}
+		}
+		out.Cuts = append(out.Cuts, clip.CorrectionCut{Focal: focal, ID: c.GetId(), SourceID: c.GetSourceId(), Fingerprint: c.GetFingerprint(), StartMS: int(c.GetStartMs()), EndMS: int(c.GetEndMs()), TransitionMS: int(c.GetTransitionMs()), VolumePermille: int(c.GetVolumePermille()), Chips: c.GetChips(), Copies: copies, PlaybackRatePermille: rate})
 	}
 	for _, t := range p.GetElements() {
 		out.Elements = append(out.Elements, correctionText(t))
@@ -114,6 +133,13 @@ func editingProto(s *clip.CorrectionState) *v1.ClipEditingState {
 		return nil
 	}
 	out := &v1.ClipEditingState{Plan: &v1.ClipEditPlan{DurationMs: int32(s.Plan.DurationMS), Hook: s.Plan.Hook, NativeComposition: s.Plan.NativeComposition}, CopyStyles: s.CopyStyles, FadeMs: int32(s.FadeMS), MaxCuts: int32(s.MaxCuts), MaxCopyRunes: int32(s.MaxCopyRunes), MinDurationMs: int32(s.MinDurationMS), MaxDurationMs: int32(s.MaxDurationMS)}
+	if s.Plan.SourceAudio != nil {
+		settings := &v1.ClipSourceAudioSettings{}
+		for _, v := range s.Plan.SourceAudio {
+			settings.Values = append(settings.Values, &v1.ClipSourceAudioSetting{SourceId: v.SourceID, Fingerprint: v.Fingerprint, RetainOriginalAudio: v.RetainOriginal})
+		}
+		out.Plan.SourceAudio = settings
+	}
 	if s.Plan.Associations != nil {
 		out.Plan.Associations = &v1.ClipSourceAssociations{}
 		for _, a := range *s.Plan.Associations {
@@ -135,7 +161,8 @@ func editingProto(s *clip.CorrectionState) *v1.ClipEditingState {
 		if c.Focal != nil {
 			focal = &v1.ClipFocal{X: c.Focal.X, Y: c.Focal.Y}
 		}
-		out.Plan.Cuts = append(out.Plan.Cuts, &v1.ClipEditCut{Focal: focal, Id: c.ID, SourceId: c.SourceID, Fingerprint: c.Fingerprint, StartMs: int32(c.StartMS), EndMs: int32(c.EndMS), TransitionMs: int32(c.TransitionMS), VolumePermille: int32(c.VolumePermille), Chips: c.Chips, Copy: first, Copies: copies})
+		rate := int32(c.Rate())
+		out.Plan.Cuts = append(out.Plan.Cuts, &v1.ClipEditCut{Focal: focal, Id: c.ID, SourceId: c.SourceID, Fingerprint: c.Fingerprint, StartMs: int32(c.StartMS), EndMs: int32(c.EndMS), TransitionMs: int32(c.TransitionMS), VolumePermille: int32(c.VolumePermille), Chips: c.Chips, Copy: first, Copies: copies, PlaybackRatePermille: &rate})
 	}
 	for _, t := range s.Plan.Elements {
 		out.Plan.Elements = append(out.Plan.Elements, correctionTextProto(t))

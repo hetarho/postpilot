@@ -64,7 +64,7 @@ func ResolvePortableIntervals(plan EditPlan, limits composition.Limits) (EditPla
 	duration := 0
 	for i, cut := range plan.Cuts {
 		c, exists := oldCuts[cut.ID]
-		length := cut.EndMS - cut.StartMS
+		length := cut.OutputDurationMS()
 		if !exists || seen[cut.ID] || c.SourceID != cut.SourceID || cut.StartMS < 0 || cut.EndMS <= cut.StartMS || length > limits.MaxDurationMS || !ValidTransition(cut.TransitionMS) || i == 0 && cut.TransitionMS != 0 || cut.TransitionMS >= length {
 			return plan, ErrInvalid
 		}
@@ -74,7 +74,7 @@ func ResolvePortableIntervals(plan EditPlan, limits composition.Limits) (EditPla
 			return plan, ErrInvalid
 		}
 		starts[cut.ID], lengths[cut.ID], duration = start, length, start+length
-		c.StartMS, c.EndMS, c.TransitionMS = cut.StartMS, cut.EndMS, cut.TransitionMS
+		c.StartMS, c.EndMS, c.TransitionMS, c.PlaybackRatePermille = cut.StartMS, cut.EndMS, cut.TransitionMS, cut.Rate()
 		v.Cuts = append(v.Cuts, c)
 	}
 	if duration <= 0 || len(v.Cuts) > limits.Cuts || len(plan.Portable.Elements) > limits.Cues {

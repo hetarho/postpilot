@@ -22,6 +22,7 @@ const plan: ClipEditPlan = {
       copies: [],
       chips: [],
       volumePermille: 1000,
+      playbackRatePermille: 1000,
     },
     {
       id: 'b',
@@ -33,6 +34,7 @@ const plan: ClipEditPlan = {
       copies: [],
       chips: [],
       volumePermille: 1000,
+      playbackRatePermille: 1000,
     },
   ],
 }
