@@ -620,3 +620,61 @@ func TestReconciliationCannotReachAnotherItemsFootage(t *testing.T) {
 		t.Fatalf("the cut was not grown inside its own scene: %+v", d.Values)
 	}
 }
+
+// A section's guide may ask for several cuts — the restaurant template's arrival
+// splits an exterior and an entrance shot — and repetition is about which item a
+// section speaks for, not about how many cuts it may hold (CLIP-59, CLIP-98).
+// Only ORDER is the template's: the plan never returns to a section it left.
+func TestNativeWriterAdmitsConsecutiveCutsInOneNonrepeatedSection(t *testing.T) {
+	const body = `<clip version="1"><field id="fee" label="입장료"/><guide>긴 장면으로 설명</guide>` +
+		`<scene id="arrival" scope="context"><text id="copy" kind="ai" role="caption" basis="cut">도착을 설명</text></scene>` +
+		`<scene id="closing" scope="context"><text id="ending" kind="ai" role="caption" basis="cut">마무리를 설명</text></scene></clip>`
+	sectionOf := func(p map[string]any, i int, id string) {
+		p["cuts"].([]any)[i].(map[string]any)["template_section_id"] = id
+	}
+	for _, tc := range []struct {
+		name     string
+		sections [2]string
+		valid    bool
+	}{
+		{"both_in_arrival", [2]string{"arrival", "arrival"}, true},
+		{"arrival_then_closing", [2]string{"arrival", "closing"}, true},
+		{"closing_then_arrival", [2]string{"closing", "arrival"}, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			in, p := nativeInput(), nativePlan()
+			setNativeBody(&in, body)
+			in.Composition.Inputs.Items = nil
+			for i, id := range tc.sections {
+				sectionOf(p, i, id)
+				g := nativeGenerated(p, i)
+				g["element_id"] = map[string]string{"arrival": "copy", "closing": "ending"}[id]
+				g["text"] = []string{"입장료 12,000원", "안내된 비용은 12,000원"}[i]
+				g["fact_refs"] = []any{nativeFact("fee", "", "")}
+			}
+			s, models, _ := newService(t, raw(p), true)
+			plan, _, err := s.Plan(t.Context(), testRef(), in)
+			if len(models.calls) != 1 {
+				t.Fatalf("not one writer call: %d", len(models.calls))
+			}
+			if !tc.valid {
+				d, ok := clip.DiagnosticFromError(err)
+				if !errors.Is(err, llm.ErrBadOutput) || !ok || d.Check != "composition_section_order" {
+					t.Fatalf("wanted composition_section_order, got %v (%+v)", err, d)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(plan.Cuts) != 2 || len(plan.Portable.Elements) != 2 {
+				t.Fatalf("lost a cut or its copy: %d cuts, %+v", len(plan.Cuts), plan.Portable.Elements)
+			}
+			for i, cut := range plan.Portable.Cuts {
+				if cut.SectionID != tc.sections[i] || cut.ItemID != "" {
+					t.Fatalf("cut %d bound to %q/%q", i+1, cut.SectionID, cut.ItemID)
+				}
+			}
+		})
+	}
+}

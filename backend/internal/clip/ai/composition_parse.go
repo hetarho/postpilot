@@ -122,14 +122,21 @@ func parseCompositionPlan(cfg Config, input clip.PlanningInput, raw string) (out
 		analyses[analysis.Source.ID] = analysis
 	}
 	plan := clip.EditPlan{Ratio: wire.Ratio, Styles: slices.Clone(doc.Styles)}
-	seen, lastSection := map[string]bool{}, -1
+	// The template owns narration ORDER, not the cut count of a section: a
+	// section's cuts stay together and the plan never returns to a section it
+	// left. How many cuts a section holds is the footage's answer — one observed
+	// scene may supply several distinct cuts (CLIP-98), a section's own guide may
+	// ask for them, and the resolver binds that section's elements to each cut
+	// alike. Repetition (CLIP-59) selects which item a section speaks for; it was
+	// never a licence to hold more than one cut.
+	lastSection := -1
 	for index, proposed := range wire.Cuts {
 		failedCut = index + 1
 		section, exists := sections[proposed.SectionID]
-		if !exists || order[section.ID] < lastSection || section.Repeat == "" && seen[section.ID] {
+		if !exists || order[section.ID] < lastSection {
 			return clip.EditPlan{}, outputError("composition_section_order")
 		}
-		seen[section.ID], lastSection = true, order[section.ID]
+		lastSection = order[section.ID]
 		focal, valid := proposed.Focal.domain()
 		analysis, exists := analyses[proposed.SourceID]
 		if !exists || !valid || !writerIdentity.MatchString(proposed.ID) {
