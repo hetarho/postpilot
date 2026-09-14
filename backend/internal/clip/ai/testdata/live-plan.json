@@ -10,6 +10,7 @@
    },
    "chips": [],
    "end_ms": 15000,
+   "rate_permille": 1000,
    "focal": {
     "x": 0.5,
     "y": 0.5

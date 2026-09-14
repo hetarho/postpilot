@@ -16,6 +16,7 @@ type compositionCutJSON struct {
 	ItemID       string     `json:"item_id"`
 	StartMS      int        `json:"start_ms"`
 	EndMS        int        `json:"end_ms"`
+	Rate         int        `json:"rate_permille"`
 	Focal        *pointJSON `json:"focal"`
 	Volume       float64    `json:"volume"`
 	Observations []string   `json:"observation_refs"`
@@ -100,7 +101,7 @@ func parseCompositionPlan(cfg Config, input clip.PlanningInput, raw string) (out
 		if len(candidate.Cuts) >= cfg.Render.MaxCuts {
 			break
 		}
-		candidate.Cuts = append(candidate.Cuts, clip.Cut{SourceID: c.SourceID, StartMS: c.StartMS, EndMS: c.EndMS})
+		candidate.Cuts = append(candidate.Cuts, clip.Cut{SourceID: c.SourceID, StartMS: c.StartMS, EndMS: c.EndMS, PlaybackRatePermille: c.Rate})
 	}
 	doc, problem := composition.Parse(input.Composition.Snapshot.Body, compositionLimits(cfg, input))
 	if problem != nil {
@@ -134,7 +135,7 @@ func parseCompositionPlan(cfg Config, input clip.PlanningInput, raw string) (out
 		if !exists || !valid || !writerIdentity.MatchString(proposed.ID) {
 			return clip.EditPlan{}, outputError("composition_cut_identity")
 		}
-		cut := clip.Cut{ID: proposed.ID, SourceID: proposed.SourceID, Fingerprint: analysis.Source.Fingerprint, StartMS: proposed.StartMS, EndMS: proposed.EndMS, Focal: focal, Volume: &proposed.Volume}
+		cut := clip.Cut{ID: proposed.ID, SourceID: proposed.SourceID, Fingerprint: analysis.Source.Fingerprint, StartMS: proposed.StartMS, EndMS: proposed.EndMS, PlaybackRatePermille: proposed.Rate, Focal: focal, Volume: &proposed.Volume}
 		evidence, covered := clip.CutEvidence(input.Analyses, cut)
 		if !covered {
 			return clip.EditPlan{}, outputError("composition_observation_gap")

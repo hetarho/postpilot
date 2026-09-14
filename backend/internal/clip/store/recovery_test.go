@@ -158,6 +158,29 @@ func TestRecoveryDoesNotResumeACandidateThatNeverPassedLayout(t *testing.T) {
 	}
 }
 
+// The candidate plan's digest is SEMANTIC. A plan written under a different
+// observation or assembly contract is no longer the plan for this input, so it
+// is discarded and rewritten — while the observations it was written from stay
+// reusable and unpaid (CLIP-93).
+func TestAnIncompatibleCandidatePlanIsRewrittenWithoutRepeatingAnalysis(t *testing.T) {
+	h := generationSetup(t)
+	h.renderer.fail = clip.ErrInvalidMedia
+	h.start(t)
+	if err := h.run(t); err == nil {
+		t.Fatal("expected the injected rendering failure")
+	}
+	if _, err := h.db.Writer.Exec("UPDATE clip_recovery_states SET state_json=json_set(state_json,'$.PlanDigest','written-under-another-contract') WHERE project_id=?", h.project.ID); err != nil {
+		t.Fatal(err)
+	}
+	q, err := h.service.Quote(context.Background(), "alice", h.project.ID, h.batch.ID, "p/o", "p/w")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if q.Pricing.SkipPlan || q.Pricing.ReusedChunks != 3 || q.Pricing.ObservationCalls != 0 || q.Pricing.PlanCalls() != 1 {
+		t.Fatalf("an incompatible candidate was reused or its observations repaid: %+v", q.Pricing)
+	}
+}
+
 func TestRecoveryPartialAnalysisRepeatsOnlyTheMissingChunks(t *testing.T) {
 	h := generationSetup(t)
 	h.planner.observeErr = llm.ErrBadOutput

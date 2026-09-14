@@ -90,3 +90,42 @@ func TestPromptsKeepFullContractsAfterOutputProjection(t *testing.T) {
 		t.Fatal("native contract was weakened")
 	}
 }
+
+// Both writer contracts offer exactly CLIP-98's rate set, so a prompt can never
+// name a rate the parser would refuse and no rate the product supports can be
+// missing from the grammar the model answers in.
+func TestWriterSchemasOfferExactlyTheSupportedRates(t *testing.T) {
+	for _, fixture := range []struct {
+		name     string
+		contract []byte
+	}{{"plan", planSchema}, {"composition", compositionPlanSchema}} {
+		t.Run(fixture.name, func(t *testing.T) {
+			var document map[string]any
+			if err := json.Unmarshal(fixture.contract, &document); err != nil {
+				t.Fatal(err)
+			}
+			cut := document["properties"].(map[string]any)["cuts"].(map[string]any)["items"].(map[string]any)
+			rate, declared := cut["properties"].(map[string]any)["rate_permille"].(map[string]any)
+			if !declared {
+				t.Fatal("the contract states no rate")
+			}
+			required := false
+			for _, key := range cut["required"].([]any) {
+				required = required || key == "rate_permille"
+			}
+			if !required {
+				t.Fatal("a cut may omit its rate")
+			}
+			want := clip.PlaybackRates()
+			values := rate["enum"].([]any)
+			if len(values) != len(want) {
+				t.Fatalf("the contract offers %v, the product supports %v", values, want)
+			}
+			for i, value := range values {
+				if int(value.(float64)) != want[i] {
+					t.Fatalf("the contract offers %v, the product supports %v", values, want)
+				}
+			}
+		})
+	}
+}

@@ -81,6 +81,7 @@ type cutJSON struct {
 	SourceID *string         `json:"source_id"`
 	Start    *int            `json:"start_ms"`
 	End      *int            `json:"end_ms"`
+	Rate     *int            `json:"rate_permille"`
 	Focal    *pointJSON      `json:"focal"`
 	Caption  *captionJSON    `json:"caption"`
 	Chips    *[]string       `json:"chips"`
@@ -297,7 +298,7 @@ func parsePlan(cfg Config, input clip.PlanningInput, raw string) (clip.EditPlan,
 	result := clip.EditPlan{Ratio: *wire.Ratio, DurationMS: *wire.Duration, Hook: optional(wire.Hook)}
 	for _, c := range *wire.Cuts {
 		focal, ok := c.Focal.domain()
-		if !ok || c.ID == nil || utf8.RuneCountInString(*c.ID) > cfg.MaxCutIDRunes || c.SourceID == nil || c.Start == nil || c.End == nil || c.Caption == nil {
+		if !ok || c.ID == nil || utf8.RuneCountInString(*c.ID) > cfg.MaxCutIDRunes || c.SourceID == nil || c.Start == nil || c.End == nil || c.Rate == nil || c.Caption == nil {
 			return clip.EditPlan{}, outputError("plan_cut_fields")
 		}
 		source, exists := byID[*c.SourceID]
@@ -340,7 +341,7 @@ func parsePlan(cfg Config, input clip.PlanningInput, raw string) (clip.EditPlan,
 		}
 		// The caption arrives as WORDS only; the compiler places it.
 		written := clip.Written{Text: *p.Text, ShortText: optional(p.ShortText), Keyword: optional(p.Keyword)}
-		result.Cuts = append(result.Cuts, clip.Cut{ID: *c.ID, SourceID: source.ID, Fingerprint: source.Fingerprint, StartMS: *c.Start, EndMS: *c.End, Focal: focal, Volume: &volume, Chips: chips, Copies: []clip.Caption{{Text: written.Text, StartMS: *p.Start, EndMS: *p.End}}})
+		result.Cuts = append(result.Cuts, clip.Cut{ID: *c.ID, SourceID: source.ID, Fingerprint: source.Fingerprint, StartMS: *c.Start, EndMS: *c.End, PlaybackRatePermille: *c.Rate, Focal: focal, Volume: &volume, Chips: chips, Copies: []clip.Caption{{Text: written.Text, StartMS: *p.Start, EndMS: *p.End}}})
 		result.Written = append(result.Written, written)
 	}
 	// The timeline is compiled here; the design system's own decisions and the

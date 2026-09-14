@@ -119,9 +119,12 @@ func TestComposeCorrectsArithmeticAndExposureButKeepsValidTiming(t *testing.T) {
 				if mode == "extend" {
 					length = 3000
 				}
-				for _, value := range wire["cuts"].([]any) {
+				// Keep the three same-source cuts on distinct ranges: a longer
+				// cut may not be made to overlap the next one (CLIP-98).
+				for i, value := range wire["cuts"].([]any) {
 					v := value.(map[string]any)
-					v["end_ms"] = v["start_ms"].(int) + length
+					v["start_ms"] = i * length
+					v["end_ms"] = i*length + length
 				}
 			}
 			s, models, _ := newService(t, raw(wire), true)
@@ -166,7 +169,7 @@ func TestComposeCannotFillTargetFromUnobservedOrReusedFootage(t *testing.T) {
 		return in
 	}
 	shortCut := func(id, source string, start, end int) map[string]any {
-		return map[string]any{"id": id, "source_id": source, "start_ms": start, "end_ms": end, "focal": map[string]any{"x": .5, "y": .5}, "chips": []string{},
+		return map[string]any{"id": id, "source_id": source, "start_ms": start, "end_ms": end, "rate_permille": 1000, "focal": map[string]any{"x": .5, "y": .5}, "chips": []string{},
 			"caption": map[string]any{"text": "여행", "start_ms": 200, "end_ms": end - start - 200, "short_text": "여행", "keyword": ""}}
 	}
 	// Neither an unobserved gap nor a truncated observation belongs here any
@@ -174,7 +177,7 @@ func TestComposeCannotFillTargetFromUnobservedOrReusedFootage(t *testing.T) {
 	// refused as writer INPUT instead. The backward repair's own gap and scene
 	// rules are pinned directly in
 	// TestBackwardRepairPreservesCopySourceTimeAndScene.
-	for _, mode := range []string{"unblocked", "source exhausted", "next selected cut", "existing overlap", "caption cannot shrink"} {
+	for _, mode := range []string{"unblocked", "source exhausted", "next selected cut", "caption cannot shrink"} {
 		t.Run(mode, func(t *testing.T) {
 			in := shortInput()
 			// 1.5 s + 6.0 s + 4.5 s = 12 s against a 15 s target: only the first
@@ -190,17 +193,12 @@ func TestComposeCannotFillTargetFromUnobservedOrReusedFootage(t *testing.T) {
 				// room, and the source itself ends there.
 				cuts = []any{cuts[0], shortCut("next", "source-0", 1500, 7500)}
 				a.Source.Info.DurationMS, a.Segments[0].EndMS = 7500, 7500
-			case "existing overlap":
-				// The same source range is reused by a longer cut, so the short
-				// one may not be expanded into it.
-				cuts = []any{cuts[0], shortCut("reused", "source-0", 0, 6000)}
-				a.Source.Info.DurationMS, a.Segments[0].EndMS = 6000, 6000
 			case "caption cannot shrink":
 				// The other direction: four cuts over the target, each holding
 				// its copy so late that almost nothing may be trimmed.
 				cuts = nil
-				for i := 0; i < 4; i++ {
-					c := shortCut(fmt.Sprint("late-", i), fmt.Sprintf("source-%d", i%2), 0, 6000)
+				for i, r := range [][3]any{{"source-0", 0, 6000}, {"source-0", 6000, 12000}, {"source-0", 12000, 18000}, {"source-1", 0, 6000}} {
+					c := shortCut(fmt.Sprint("late-", i), r[0].(string), r[1].(int), r[2].(int))
 					c["caption"].(map[string]any)["start_ms"] = 5000
 					c["caption"].(map[string]any)["end_ms"] = 5900
 					cuts = append(cuts, c)
@@ -248,7 +246,7 @@ func TestCompilerJoinsScenesAndHoldsCutLengths(t *testing.T) {
 		in.Analyses = append(in.Analyses, a)
 		// A 9 s cut on a food close-up is more than twice CDS-37's ceiling for
 		// one, and the others are over the shared ceiling.
-		cuts = append(cuts, map[string]any{"id": fmt.Sprint("cut-", i), "source_id": a.Source.ID, "start_ms": 0, "end_ms": 9000, "focal": map[string]any{"x": .5, "y": .5}, "chips": []string{},
+		cuts = append(cuts, map[string]any{"id": fmt.Sprint("cut-", i), "source_id": a.Source.ID, "start_ms": 0, "end_ms": 9000, "rate_permille": 1000, "focal": map[string]any{"x": .5, "y": .5}, "chips": []string{},
 			"caption": map[string]any{"text": "여행", "start_ms": 200, "end_ms": 1500, "short_text": "여행", "keyword": ""}})
 	}
 	in.TargetDurationMS = 30000
@@ -295,7 +293,7 @@ func TestACutThatCannotReachTheTargetIsKeptAndThePlanCompiles(t *testing.T) {
 	// 900 ms of footage in all: under every target, and nowhere to grow.
 	in.Analyses[0].Source.Info.DurationMS, in.Analyses[0].Segments[0].EndMS = 900, 900
 	cut := func(id, source string, start, end int) map[string]any {
-		return map[string]any{"id": id, "source_id": source, "start_ms": start, "end_ms": end, "focal": map[string]any{"x": .5, "y": .5}, "chips": []string{},
+		return map[string]any{"id": id, "source_id": source, "start_ms": start, "end_ms": end, "rate_permille": 1000, "focal": map[string]any{"x": .5, "y": .5}, "chips": []string{},
 			"caption": map[string]any{"text": "여행", "start_ms": 100, "end_ms": end - start - 100, "short_text": "여행", "keyword": ""}}
 	}
 	wire := map[string]any{"ratio": "vertical", "duration_ms": 15000, "hook": "정확한 여행",
@@ -327,7 +325,7 @@ func TestPresetTargetYieldsToTheApprovedDuration(t *testing.T) {
 		in.Analyses = append(in.Analyses, a)
 		// 4.2 s each: 16.8 s, outside the tolerance of a 15 s target, and the
 		// preset's floor holds only 800 ms of the 1.8 s that has to go.
-		cuts = append(cuts, map[string]any{"id": fmt.Sprint("cut-", i), "source_id": a.Source.ID, "start_ms": 0, "end_ms": 4200, "focal": map[string]any{"x": .5, "y": .5}, "chips": []string{},
+		cuts = append(cuts, map[string]any{"id": fmt.Sprint("cut-", i), "source_id": a.Source.ID, "start_ms": 0, "end_ms": 4200, "rate_permille": 1000, "focal": map[string]any{"x": .5, "y": .5}, "chips": []string{},
 			"caption": map[string]any{"text": "여행", "start_ms": 200, "end_ms": 1500, "short_text": "여행", "keyword": ""}})
 	}
 	s, _, _ := newService(t, raw(map[string]any{"ratio": "vertical", "duration_ms": 16800, "hook": "정확한 여행", "cuts": cuts}), true)
@@ -373,7 +371,7 @@ func TestFootageBoundClipShipsAtTheLengthItHolds(t *testing.T) {
 	scene, _ := clip.CutScene(clip.Cut{SourceID: "source-0"}, in.Analyses[0])
 	_, ceiling := design.CutBounds(scene, "")
 	cut := func(id, source string, start, end int) map[string]any {
-		return map[string]any{"id": id, "source_id": source, "start_ms": start, "end_ms": end, "focal": map[string]any{"x": .5, "y": .5}, "chips": []string{},
+		return map[string]any{"id": id, "source_id": source, "start_ms": start, "end_ms": end, "rate_permille": 1000, "focal": map[string]any{"x": .5, "y": .5}, "chips": []string{},
 			"caption": map[string]any{"text": "여행", "start_ms": 200, "end_ms": end - start - 200, "short_text": "여행", "keyword": ""}}
 	}
 	// Every source is used to its last observed frame: the footage holds
@@ -395,10 +393,10 @@ func TestFootageBoundClipShipsAtTheLengthItHolds(t *testing.T) {
 	}
 }
 
-// The observer reports one segment per event, so a cut across a boundary sits
-// in observed footage on both sides; only a gap is unobserved. Growth may run
-// on into the touching segment.
-func TestACutMayGrowAcrossTouchingSegments(t *testing.T) {
+// A cut belongs to ONE observed scene. Two scenes that merely touch in time are
+// still two scenes, so a selection spanning both is refused rather than grown
+// across the boundary (CLIP-7, CLIP-98).
+func TestACutMayNotCrossTouchingScenes(t *testing.T) {
 	in := planningInput()
 	base := in.Analyses[0]
 	in.Analyses = nil
@@ -415,19 +413,109 @@ func TestACutMayGrowAcrossTouchingSegments(t *testing.T) {
 	first.EndMS, second.StartMS = 2800, 2800
 	in.Analyses[0].Segments = []clip.Segment{first, second}
 	cut := func(id, source string, start, end int) map[string]any {
-		return map[string]any{"id": id, "source_id": source, "start_ms": start, "end_ms": end, "focal": map[string]any{"x": .5, "y": .5}, "chips": []string{},
+		return map[string]any{"id": id, "source_id": source, "start_ms": start, "end_ms": end, "rate_permille": 1000, "focal": map[string]any{"x": .5, "y": .5}, "chips": []string{},
 			"caption": map[string]any{"text": "여행", "start_ms": 200, "end_ms": end - start - 200, "short_text": "여행", "keyword": ""}}
 	}
-	// Only the straddling cut has room; it must reach its ceiling to meet the target.
 	in.TargetDurationMS = 2*ceiling + ceiling
 	wire := map[string]any{"ratio": "vertical", "duration_ms": in.TargetDurationMS, "hook": "정확한 여행",
 		"cuts": []any{cut("straddle", "source-0", 1000, 4000), cut("b", "source-1", 0, ceiling), cut("c", "source-2", 0, ceiling)}}
-	s, _, _ := newService(t, raw(wire), true)
-	plan, _, err := s.Plan(t.Context(), testRef(), in)
-	if err != nil {
-		t.Fatalf("growth across touching segments refused: %v", err)
+	s, models, _ := newService(t, raw(wire), true)
+	_, _, err := s.Plan(t.Context(), testRef(), in)
+	d, ok := clip.DiagnosticFromError(err)
+	if err == nil || !ok || d.Check != "plan_cut_scene" || len(models.calls) != 1 {
+		t.Fatalf("a cut crossing two scenes was accepted: %v %+v", err, d)
 	}
-	if got := plan.Cuts[0].EndMS; got != 1000+ceiling {
-		t.Fatalf("straddling cut ends at %d, want %d", got, 1000+ceiling)
+	// The same cut inside ONE of those scenes is fine.
+	wire["cuts"].([]any)[0] = cut("straddle", "source-0", 0, 2800)
+	s, _, _ = newService(t, raw(wire), true)
+	if _, _, err = s.Plan(t.Context(), testRef(), in); err != nil {
+		t.Fatalf("a contained cut was refused: %v", err)
+	}
+}
+
+// Every length the timeline reasons about is OUTPUT time after the rate. Six
+// cuts at the six supported rates compile to the sum of their transformed
+// durations, and their ORIGINAL source ranges are untouched (CDS-62, CLIP-98).
+func TestTheTimelineMeasuresEveryRateOnTransformedOutputTime(t *testing.T) {
+	in := planningInput()
+	base := in.Analyses[0]
+	in.Analyses = nil
+	rates := clip.PlaybackRates()
+	cuts := []any{}
+	total := 0
+	for i, rate := range rates {
+		a := base
+		a.Source.ID = fmt.Sprintf("source-%d", i)
+		a.Source.Fingerprint = fmt.Sprintf("hash-%d", i)
+		// 60 fps footage, so even 0.5x reaches the 30 fps output.
+		a.Source.Info.FrameRateNumerator, a.Source.Info.FrameRateDenominator = 60, 1
+		a.Source.Info.DecodedFrames, a.Source.Info.DecodedDurationMS = 3900, 65000
+		a.Segments = slices.Clone(base.Segments)
+		in.Analyses = append(in.Analyses, a)
+		// A source span chosen so the OUTPUT length is 3000 ms at every rate.
+		span := 3000 * rate / clip.RateUnitPermille
+		cuts = append(cuts, map[string]any{"id": fmt.Sprint("rate-", rate), "source_id": a.Source.ID,
+			"start_ms": 0, "end_ms": span, "rate_permille": rate, "focal": map[string]any{"x": .5, "y": .5}, "chips": []string{},
+			"caption": map[string]any{"text": "여행", "start_ms": 200, "end_ms": 2800, "short_text": "여행", "keyword": ""}})
+		total += 3000
+	}
+	in.TargetDurationMS = total
+	wire := map[string]any{"ratio": "vertical", "duration_ms": total, "hook": "정확한 여행", "cuts": cuts}
+	s, models, _ := newService(t, raw(wire), true)
+	plan, _, err := s.Plan(t.Context(), testRef(), in)
+	if err != nil || len(models.calls) != 1 {
+		t.Fatalf("rate-aware timeline refused: %v", err)
+	}
+	sum := 0
+	for i, c := range plan.Cuts {
+		if c.Rate() != rates[i] {
+			t.Fatalf("cut %d changed rate to %d", i, c.Rate())
+		}
+		if c.StartMS != 0 || c.EndMS != 3000*rates[i]/clip.RateUnitPermille {
+			t.Fatalf("cut %d source range moved to %d..%d", i, c.StartMS, c.EndMS)
+		}
+		if c.OutputDurationMS() != 3000 {
+			t.Fatalf("cut %d occupies %d ms of output, want 3000", i, c.OutputDurationMS())
+		}
+		sum += c.OutputDurationMS()
+	}
+	if plan.DurationMS != sum-plan.TransitionTotal() {
+		t.Fatalf("timeline %d, want %d output ms less %d of transitions", plan.DurationMS, sum, plan.TransitionTotal())
+	}
+}
+
+// Reconciliation is stated in OUTPUT milliseconds and converted back to the
+// source footage that produces them, so a sped-up cut gives up twice the source
+// footage for the same output second.
+func TestReconciliationConvertsOutputDeltaBackToSourceDelta(t *testing.T) {
+	for _, rate := range []int{1000, 2000} {
+		in := planningInput()
+		in.Analyses[0].Source.Info.DurationMS = 65000
+		in.Analyses[0].Segments[0].EndMS = 65000
+		in.TargetDurationMS = 15000
+		span := 6000 * rate / clip.RateUnitPermille
+		cuts := []any{}
+		for i := 0; i < 3; i++ {
+			cuts = append(cuts, map[string]any{"id": fmt.Sprint("cut-", i), "source_id": "source",
+				"start_ms": i * span, "end_ms": i*span + span, "rate_permille": rate,
+				"focal": map[string]any{"x": .5, "y": .5}, "chips": []string{},
+				"caption": map[string]any{"text": "여행", "start_ms": 0, "end_ms": 1000, "short_text": "여행", "keyword": ""}})
+		}
+		wire := map[string]any{"ratio": "vertical", "duration_ms": 15000, "hook": "정확한 여행", "cuts": cuts}
+		s, _, _ := newService(t, raw(wire), true)
+		plan, _, err := s.Plan(t.Context(), testRef(), in)
+		if err != nil || plan.DurationMS != 15000 {
+			t.Fatalf("rate %d: %v %d", rate, err, plan.DurationMS)
+		}
+		// Three 6 s cuts must shrink to 5 s of OUTPUT each, which is 5 s of
+		// source at 1x and 10 s of source at 2x.
+		for _, c := range plan.Cuts {
+			if c.OutputDurationMS() != 5000 {
+				t.Fatalf("rate %d: cut occupies %d output ms, want 5000", rate, c.OutputDurationMS())
+			}
+			if c.SourceSpanMS() != 5000*rate/clip.RateUnitPermille {
+				t.Fatalf("rate %d: cut gave up %d source ms", rate, c.SourceSpanMS())
+			}
+		}
 	}
 }

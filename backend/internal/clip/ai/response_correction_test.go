@@ -126,6 +126,63 @@ func TestIncompleteCoverageUsesTheReservedCorrectionAllowance(t *testing.T) {
 	}
 }
 
+// An invalid rate, an overlapping selection and an unusable one are all things
+// the MODEL got wrong, so each enters the same bounded same-model correction
+// with its own typed cut diagnostic — never a silent drop and never a quiet
+// fall back to 1x. Insufficient footage is NOT one of them: it is a fact about
+// the material, and TestReconciliationCannotReachAnotherItemsFootage pins that
+// it stops after one call (CLIP-94, CLIP-95, CLIP-99).
+func TestInvalidRateOverlapAndUnusableSelectionAreCorrectedOnce(t *testing.T) {
+	for _, tc := range []struct {
+		name, check string
+		break_      func(*clip.PlanningInput, map[string]any)
+	}{
+		{"rate", "plan_cut_rate", func(_ *clip.PlanningInput, p map[string]any) {
+			firstCut(p)["rate_permille"] = 500
+		}},
+		{"overlap", "plan_source_overlap", func(_ *clip.PlanningInput, p map[string]any) {
+			second := p["cuts"].([]any)[1].(map[string]any)
+			second["start_ms"], second["end_ms"] = 0, 5000
+		}},
+		{"unusable", "plan_cut_usability", func(in *clip.PlanningInput, p map[string]any) {
+			// The second half of the source is unknowable; only the bad
+			// response reaches into it.
+			in.Analyses[0].Segments[0].EndMS = 20000
+			unknown := in.Analyses[0].Segments[0]
+			unknown.StartMS, unknown.EndMS = 20000, 65000
+			unknown.Certainty, unknown.Usability = clip.CertaintyUnknown, clip.UsabilityUsable
+			in.Analyses[0].Segments = append(in.Analyses[0].Segments, unknown)
+			for i, value := range p["cuts"].([]any) {
+				c := value.(map[string]any)
+				c["start_ms"], c["end_ms"] = 20000+i*5000, 25000+i*5000
+			}
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			in, good := planningInput(), plan()
+			bad := plan()
+			tc.break_(&in, bad)
+			_, base, sizer := newService(t, raw(good), true)
+			// The corrected attempt answers with the valid plan, so a working
+			// correction shows up as exactly two calls.
+			models := &correctionModels{fakeModels: base, validAfter: 2, invalid: raw(bad)}
+			service, err := ai.New(models, sizer, config.ClipAI(&config.Config{LLMReasoning: config.LLMReasoningPolicy{Observe: llm.ReasoningLow, Write: llm.ReasoningLow}}))
+			if err != nil {
+				t.Fatal(err)
+			}
+			var checks []string
+			ctx := clip.WithResponseCorrectionObserver(t.Context(), func(_, _ int, d clip.AttemptDiagnostic) error {
+				checks = append(checks, d.Check)
+				return nil
+			})
+			in.Policy.ResponseRetries = 3
+			if _, _, err = service.Plan(ctx, testRef(), in); err != nil || len(base.calls) != 2 || len(checks) != 1 || checks[0] != tc.check {
+				t.Fatalf("not corrected once: calls=%d checks=%v err=%v", len(base.calls), checks, err)
+			}
+		})
+	}
+}
+
 func TestResponseCorrectionStopsOnCancellationProviderAndLegacyLimits(t *testing.T) {
 	for _, kind := range []string{"legacy", "cancel", "provider", "length", "authored", "unreported"} {
 		t.Run(kind, func(t *testing.T) {

@@ -150,7 +150,7 @@ func plan() map[string]any {
 	// Three cuts, because CDS-37 holds every cut to 6.0 s while a clip is at
 	// least 15 s (CLIP-19): one long take is not a clip any more.
 	cut := func(id string, start, end int, text string) map[string]any {
-		return map[string]any{"id": id, "source_id": "source", "start_ms": start, "end_ms": end, "focal": map[string]any{"x": .5, "y": .5}, "chips": []string{},
+		return map[string]any{"id": id, "source_id": "source", "start_ms": start, "end_ms": end, "rate_permille": 1000, "focal": map[string]any{"x": .5, "y": .5}, "chips": []string{},
 			"caption": map[string]any{"text": text, "start_ms": 1000, "end_ms": end - start - 1000, "short_text": "한글 여행", "keyword": ""}}
 	}
 	return map[string]any{"ratio": "vertical", "duration_ms": 15000, "hook": "정확한 여행", "cuts": []any{
@@ -651,7 +651,10 @@ func TestPlanTwentySourcesNinetySecondsAndDistinctRangeReuse(t *testing.T) {
 		c := firstCut(plan())
 		c["id"] = fmt.Sprintf("cut-%d", i)
 		c["source_id"] = fmt.Sprintf("source-%d", i%20)
-		c["end_ms"] = 1800
+		// A source may supply several cuts, but each is its own DISTINCT range:
+		// the same footage is never selected twice (CLIP-98).
+		c["start_ms"] = (i / 20) * 1800
+		c["end_ms"] = (i/20)*1800 + 1800
 		p := c["caption"].(map[string]any)
 		// A 1.8 s cut pays for two characters of exposure and little more
 		// (CDS-41); this fixture is about the cut count, not about copy.

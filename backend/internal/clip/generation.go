@@ -490,6 +490,10 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 		if edit.Portable == nil {
 			edit = edit.WithFacts(p.Disclosure, p.Answers, p.Template.Preset, p.CTA, p.Template.Accent, p.HideDisclosure).WithStyles(p.Template.CopyStyles)
 		}
+		// The owner's source-sound choice is the SERVER's to state, and it is
+		// stated only now — after the model's own output has been validated, so
+		// no prompt, response or plan digest ever carried it (CLIP-100, CDS-6).
+		edit.SourceAudio = FreezeSourceAudio(b, edit.Cuts)
 		recovery.Plan, err = EncodeEditPlan(edit, edit.Styles)
 		if err != nil {
 			return err
@@ -513,6 +517,7 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 				if err != nil {
 					return err
 				}
+				edit.SourceAudio = FreezeSourceAudio(b, edit.Cuts)
 				recovery.Plan, err = EncodeEditPlan(edit, edit.Styles)
 				if err != nil {
 					return err

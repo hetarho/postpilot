@@ -38,7 +38,7 @@ func TestNativeWriterAdmitsAll49ObservationsAtTheSourceCeiling(t *testing.T) {
 			}
 			cuts := []any{}
 			for i := 0; i < 3; i++ {
-				cuts = append(cuts, map[string]any{"id": fmt.Sprintf("fixture-cut-%d", i), "source_id": in.Analyses[0].Source.ID, "template_section_id": "footage", "group_id": "", "item_id": "", "start_ms": i * 5000, "end_ms": (i + 1) * 5000, "focal": map[string]float64{"x": .5, "y": .5}, "volume": 1, "observation_refs": []string{clip.ObservationID(in.Analyses[0].Source.ID, 0)}})
+				cuts = append(cuts, map[string]any{"id": fmt.Sprintf("fixture-cut-%d", i), "source_id": in.Analyses[0].Source.ID, "template_section_id": "footage", "group_id": "", "item_id": "", "start_ms": i * 5000, "end_ms": (i + 1) * 5000, "rate_permille": 1000, "focal": map[string]float64{"x": .5, "y": .5}, "volume": 1, "observation_refs": []string{clip.ObservationID(in.Analyses[0].Source.ID, 0)}})
 			}
 			models.response.Text = raw(map[string]any{"ratio": in.Ratio, "duration_ms": 15000, "cuts": cuts, "generated": []any{}})
 			system, user := ai.BuildPlanPrompt(in, 200)
@@ -98,7 +98,7 @@ func nativePlan() map[string]any {
 		cutID := "cut-" + id
 		observation := []string{clip.ObservationID("source", i)}
 		text := []string{"해물라면 12,000원", "치즈라면 $12 per serving"}[i]
-		cuts = append(cuts, map[string]any{"id": cutID, "source_id": "source", "template_section_id": "dish", "group_id": "menu", "item_id": id, "start_ms": i * 7500, "end_ms": (i + 1) * 7500, "focal": map[string]any{"x": .5, "y": .5}, "volume": 1, "observation_refs": observation})
+		cuts = append(cuts, map[string]any{"id": cutID, "source_id": "source", "template_section_id": "dish", "group_id": "menu", "item_id": id, "start_ms": i * 7500, "end_ms": (i + 1) * 7500, "rate_permille": 1000, "focal": map[string]any{"x": .5, "y": .5}, "volume": 1, "observation_refs": observation})
 		generated = append(generated, map[string]any{"element_id": "copy", "cut_id": cutID, "text": text, "short_text": "", "keyword": "", "rows": []string{}, "short_rows": []string{}, "observation_refs": observation, "fact_refs": []any{nativeFact("name", "menu", id), nativeFact("price", "menu", id)}})
 	}
 	return map[string]any{"ratio": "vertical", "duration_ms": 15000, "cuts": cuts, "generated": generated}
@@ -210,9 +210,6 @@ func TestNativeWriterRejectsCrossItemClaimsWithoutExtraCalls(t *testing.T) {
 		{"uncertain_status", func(in *clip.PlanningInput, _ map[string]any) {
 			in.Analyses[0].Segments[0].Certainty = clip.CertaintyUncertain
 		}, "item_uncertain"},
-		{"unusable_status", func(in *clip.PlanningInput, _ map[string]any) {
-			in.Analyses[0].Segments[0].Usability = clip.UsabilityUnusable
-		}, "item_uncertain"},
 		// A v2 scene that says it is certain keeps its item even when its prose
 		// happens to contain the legacy keyword.
 		{"v2_prose_does_not_override_status", func(in *clip.PlanningInput, _ map[string]any) {
@@ -308,6 +305,155 @@ func TestObservationGapIsRefusedBeforeTheWriterIsPaid(t *testing.T) {
 	}
 	if !ok || d.Check != "observe_coverage_gap" || d.Values["segment"] != 2 || d.Values["previous_end_ms"] != 7499 {
 		t.Fatalf("lost the coverage diagnostic: %+v", d)
+	}
+}
+
+// One observed scene may supply SEVERAL cuts, as distinct half-open ranges that
+// touch but never overlap. Reordering them changes the timeline and nothing
+// else: each keeps its own identity, evidence, item binding and ORIGINAL source
+// timestamps (CLIP-7, CLIP-98, CDS-62).
+func TestSameSceneSplitsKeepIdentityAndSourceTimeThroughReordering(t *testing.T) {
+	build := func(reversed bool) (clip.PlanningInput, map[string]any) {
+		in, p := nativeInput(), nativePlan()
+		cuts := p["cuts"].([]any)
+		sea := cuts[0].(map[string]any)
+		second := map[string]any{}
+		for k, v := range sea {
+			second[k] = v
+		}
+		// Two cuts out of the SAME observed scene 0..7500: [0,3000) and
+		// [3000,7500). Touching ends are adjacent, not overlapping.
+		sea["end_ms"], second["start_ms"], second["end_ms"] = 3000, 3000, 7500
+		second["id"] = "cut-sea-2"
+		p["cuts"] = []any{sea, second, cuts[1]}
+		generated := p["generated"].([]any)
+		p["generated"] = []any{generated[0], generated[1]}
+		if reversed {
+			p["cuts"] = []any{second, sea, cuts[1]}
+		}
+		return in, p
+	}
+	for _, reversed := range []bool{false, true} {
+		in, p := build(reversed)
+		s, models, _ := newService(t, raw(p), true)
+		plan, _, err := s.Plan(t.Context(), testRef(), in)
+		if err != nil || len(models.calls) != 1 {
+			t.Fatalf("same-scene split refused: %v", err)
+		}
+		ranges := map[string][2]int{}
+		items := map[string]string{}
+		for _, c := range plan.Portable.Cuts {
+			ranges[c.ID], items[c.ID] = [2]int{c.StartMS, c.EndMS}, c.ItemID
+		}
+		if ranges["cut-sea"] != [2]int{0, 3000} || ranges["cut-sea-2"] != [2]int{3000, 7500} {
+			t.Fatalf("original source timestamps changed: %v", ranges)
+		}
+		if items["cut-sea"] != "sea" || items["cut-sea-2"] != "sea" || items["cut-cheese"] != "cheese" {
+			t.Fatalf("item bindings moved with the order: %v", items)
+		}
+		for _, c := range plan.Cuts {
+			if evidence, covered := clip.CutEvidence(in.Analyses, c); !covered || len(evidence) != 1 {
+				t.Fatalf("cut %s lost its single-scene evidence", c.ID)
+			}
+		}
+	}
+	// The same two ranges overlapping by one millisecond are refused outright.
+	in, p := build(false)
+	p["cuts"].([]any)[1].(map[string]any)["start_ms"] = 2999
+	s, models, _ := newService(t, raw(p), true)
+	_, _, err := s.Plan(t.Context(), testRef(), in)
+	d, _ := clip.DiagnosticFromError(err)
+	if err == nil || d.Check != "plan_source_overlap" || len(models.calls) != 1 {
+		t.Fatalf("overlapping selection accepted: %v %+v", err, d)
+	}
+}
+
+// The writer receives the frozen narrative, the owner's exact facts, the
+// complete observations, source metadata and the SERVER's own allowed-rate
+// list — and nothing else. No pixels, no URL, and no authority over sound:
+// the owner's source-sound setting is not in the request at all (CLIP-31,
+// CLIP-100, CDS-68).
+func TestWriterInputCarriesAllowedRatesAndNoAudioAuthority(t *testing.T) {
+	in := nativeInput()
+	// A 60 fps original earns the slow rates; the fixture's unmeasured source
+	// earns only 1x and faster.
+	in.Analyses[0].Source.Info.FrameRateNumerator, in.Analyses[0].Source.Info.FrameRateDenominator = 60, 1
+	in.Analyses[0].Source.Info.DecodedFrames, in.Analyses[0].Source.Info.DecodedDurationMS = 900, 15000
+	system, user := ai.BuildPlanPrompt(in, 200)
+	var payload map[string]any
+	if err := json.Unmarshal([]byte(user), &payload); err != nil {
+		t.Fatal(err)
+	}
+	analysis := payload["analyses"].([]any)[0].(map[string]any)
+	got := analysis["allowed_rate_permille"].([]any)
+	want := clip.AllowedPlaybackRates(in.Analyses[0].Source.Info)
+	if len(got) != len(want) {
+		t.Fatalf("allowed rates lost: %v, want %v", got, want)
+	}
+	for i, rate := range want {
+		if int(got[i].(float64)) != rate {
+			t.Fatalf("allowed rates changed: %v, want %v", got, want)
+		}
+	}
+	for _, forbidden := range []string{"retain", "original_audio", "original_sound", "source_audio", "http://", "https://", "object_key", "signature"} {
+		if strings.Contains(strings.ToLower(system+user), forbidden) {
+			t.Fatalf("the writer request carried %q", forbidden)
+		}
+	}
+	// Each observed scene reaches the writer with its recorded status, so the
+	// model can obey the selection rules it is given.
+	segment := analysis["segments"].([]any)[0].(map[string]any)
+	if segment["certainty"] != "certain" || segment["usability"] != "usable" || segment["action"] == nil || segment["motion"] == nil {
+		t.Fatalf("observation status lost on the way to the writer: %v", segment)
+	}
+}
+
+// Automatic assembly may not select footage the observer called unusable or
+// unknown, and uncertain footage only at 1x. An unsuitable rate is NAMED, never
+// quietly replaced (CLIP-99, CDS-68).
+func TestUnusableAndUnknownFootageCannotBeSelectedAutomatically(t *testing.T) {
+	for _, tc := range []struct {
+		name, check          string
+		certainty, usability string
+		rate                 int
+	}{
+		{"unusable", "plan_cut_usability", clip.CertaintyCertain, clip.UsabilityUnusable, 1000},
+		{"unknown", "plan_cut_usability", clip.CertaintyUnknown, clip.UsabilityUsable, 1000},
+		{"uncertain at 1x", "", clip.CertaintyUncertain, clip.UsabilityUsable, 1000},
+		{"uncertain sped up", "plan_cut_usability", clip.CertaintyUncertain, clip.UsabilityUsable, 2000},
+		{"certain sped up", "", clip.CertaintyCertain, clip.UsabilityUsable, 2000},
+		{"rate outside the source's own set", "plan_cut_rate", clip.CertaintyCertain, clip.UsabilityUsable, 500},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			in, p := nativeInput(), nativePlan()
+			// Scale the FOOTAGE by the rate so every case still produces the
+			// same 15 s output: what is under test is the selection rule, not
+			// whether the target happens to be reachable.
+			scale := func(ms int) int { return ms * tc.rate / clip.RateUnitPermille }
+			in.Analyses[0].Source.Info.DurationMS = scale(15000)
+			for i := range in.Analyses[0].Segments {
+				seg := &in.Analyses[0].Segments[i]
+				seg.StartMS, seg.EndMS = scale(seg.StartMS), scale(seg.EndMS)
+				seg.Certainty, seg.Usability = tc.certainty, tc.usability
+			}
+			for _, value := range p["cuts"].([]any) {
+				c := value.(map[string]any)
+				c["rate_permille"] = tc.rate
+				c["start_ms"], c["end_ms"] = scale(c["start_ms"].(int)), scale(c["end_ms"].(int))
+			}
+			s, models, _ := newService(t, raw(p), true)
+			_, _, err := s.Plan(t.Context(), testRef(), in)
+			d, _ := clip.DiagnosticFromError(err)
+			if tc.check == "" {
+				if err != nil {
+					t.Fatalf("selectable footage was refused: %v %+v", err, d)
+				}
+				return
+			}
+			if err == nil || d.Check != tc.check || len(models.calls) != 1 {
+				t.Fatalf("unsuitable selection accepted or retried: %v %+v calls=%d", err, d, len(models.calls))
+			}
+		})
 	}
 }
 
@@ -453,19 +599,23 @@ func TestNativeWriterRepetitionAndAuthoredRowRoles(t *testing.T) {
 	}
 }
 
-func TestNativeWriterRechecksIdentityAfterTimelineGrowth(t *testing.T) {
+// Reconciliation stays inside the cut's OWN observed scene, so a cut can never
+// be grown into the next item's footage to reach the target. The shortfall is
+// reported instead — with no format retry, because insufficient footage is not
+// a malformed response (CLIP-7, CLIP-95).
+func TestReconciliationCannotReachAnotherItemsFootage(t *testing.T) {
 	in, p := nativeInput(), nativePlan()
-	// One item section initially selects only its named scene. Extending to
-	// the approved duration reaches a different item, so every dependent fact
-	// and caption must lose its binding instead of leaking over the new range.
 	p["cuts"] = []any{p["cuts"].([]any)[0]}
 	p["generated"] = []any{p["generated"].([]any)[0]}
-	s, _, _ := newService(t, raw(p), true)
-	plan, _, err := s.Plan(t.Context(), testRef(), in)
-	if err != nil {
-		t.Fatal(err)
+	s, models, _ := newService(t, raw(p), true)
+	_, _, err := s.Plan(t.Context(), testRef(), in)
+	d, ok := clip.DiagnosticFromError(err)
+	if err == nil || !ok || d.Check != "plan_timeline" || d.Phase != "timeline_grow" || len(models.calls) != 1 {
+		t.Fatalf("a cut reached past its own scene: %v %+v calls=%d", err, d, len(models.calls))
 	}
-	if plan.DurationMS != 15000 || plan.Portable.Cuts[0].ItemID != "" || findNativeCopy(t, plan, "cut-sea") != nil || !hasFallback(plan, "cut-sea", "item_binding_conflict") {
-		t.Fatalf("identity persisted across new footage: %+v", plan.Portable)
+	// The same cut IS grown, up to its own scene's end, before the shortfall is
+	// measured: the footage it may have, it takes.
+	if d.Values["after_ms"] != 7500 || d.Values["remaining_ms"] != 7500 {
+		t.Fatalf("the cut was not grown inside its own scene: %+v", d.Values)
 	}
 }

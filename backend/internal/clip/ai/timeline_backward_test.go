@@ -29,8 +29,12 @@ func TestBackwardRepairPreservesCopySourceTimeAndScene(t *testing.T) {
 					in.Analyses[i].Segments = []clip.Segment{{StartMS: 0, EndMS: 1000, Scene: "scenery"}, {StartMS: 2000, EndMS: 8000, Scene: "scenery"}}
 				}
 			case "neighbor":
-				// Same-source overlapping selection must not borrow that footage.
+				// The second cut takes the footage immediately after the first,
+				// off the same source: adjacent, not overlapping, so the first
+				// has nowhere to grow forward and nothing to borrow.
 				plan.Cuts[1].SourceID, plan.Cuts[1].Fingerprint = "a", "a"
+				plan.Cuts[1].StartMS, plan.Cuts[1].EndMS = 0, 2000
+				plan.Cuts[1].Copies = []clip.Copy{{StartMS: 200, EndMS: 1000}}
 			}
 			err := composeTimeline(cfg, in, &plan)
 			if boundary == "none" {
@@ -46,8 +50,15 @@ func TestBackwardRepairPreservesCopySourceTimeAndScene(t *testing.T) {
 					}
 				}
 			} else {
+				// The neighbour case hands four seconds of the second cut back
+				// to the first's own source, so its shortfall is larger; what
+				// every case shares is that nothing was taken backward.
+				want := 3000
+				if boundary == "neighbor" {
+					want = 7000
+				}
 				d, ok := clip.DiagnosticFromError(err)
-				if !ok || d.Phase != "timeline_grow" || d.Values["remaining_ms"] != 3000 || d.Values["backward_ms"] != 0 {
+				if !ok || d.Phase != "timeline_grow" || d.Values["remaining_ms"] != want || d.Values["backward_ms"] != 0 {
 					t.Fatalf("unsafe expansion across %s: %v %+v", boundary, err, d)
 				}
 			}

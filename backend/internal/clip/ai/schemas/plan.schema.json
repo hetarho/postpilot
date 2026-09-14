@@ -9,12 +9,13 @@
       "type": "array", "minItems": 1, "maxItems": 100,
       "items": {
         "type": "object", "additionalProperties": false,
-        "required": ["id", "source_id", "start_ms", "end_ms", "focal", "caption", "chips"],
+        "required": ["id", "source_id", "start_ms", "end_ms", "rate_permille", "focal", "caption", "chips"],
         "properties": {
           "id": { "type": "string", "minLength": 1, "maxLength": 100 },
           "source_id": { "type": "string" },
           "start_ms": { "type": "integer", "minimum": 0 },
           "end_ms": { "type": "integer", "minimum": 1 },
+          "rate_permille": { "type": "integer", "enum": [500, 750, 1000, 1250, 1500, 2000] },
           "volume": { "type": "number", "minimum": 0, "maximum": 1, "default": 1 },
           "focal": {
             "type": "object", "additionalProperties": false, "required": ["x", "y"],

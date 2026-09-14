@@ -44,7 +44,7 @@ func TestSchemaWorstCaseFitsTheCompletionBudgets(t *testing.T) {
 	short := strings.Repeat("한", 40)
 	cut := map[string]any{
 		"id": strings.Repeat("a", cfg.MaxCutIDRunes), "source_id": strings.Repeat("a", 64),
-		"start_ms": 1, "end_ms": 2, "volume": 1, "focal": map[string]float64{"x": .5, "y": .5},
+		"start_ms": 1, "end_ms": 2, "rate_permille": 1000, "volume": 1, "focal": map[string]float64{"x": .5, "y": .5},
 		"chips":   []string{"위치", "가격"},
 		"caption": map[string]any{"text": strings.Repeat("한", cfg.Render.MaxCopyRunes), "start_ms": 1, "end_ms": 2, "short_text": short, "keyword": short},
 	}
@@ -136,7 +136,7 @@ func realisticPlan() []byte {
 	for i := range cuts {
 		cuts[i] = map[string]any{
 			"id": "cut-" + strings.Repeat("a", 8), "source_id": strings.Repeat("a", 32),
-			"start_ms": 0, "end_ms": 3000, "volume": 1, "focal": map[string]float64{"x": .5, "y": .5},
+			"start_ms": 0, "end_ms": 3000, "rate_permille": 1000, "volume": 1, "focal": map[string]float64{"x": .5, "y": .5},
 			"chips":   []string{"위치"},
 			"caption": map[string]any{"text": "연남동에서 제일 조용한 자리", "start_ms": 0, "end_ms": 3000, "short_text": "조용한 자리", "keyword": ""},
 		}

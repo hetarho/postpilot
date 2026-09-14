@@ -2,6 +2,7 @@ package ai
 
 import (
 	"math"
+	"slices"
 	"strings"
 
 	"github.com/postpilot/backend/internal/clip"
@@ -61,7 +62,30 @@ func composeTimeline(cfg Config, in clip.PlanningInput, plan *clip.EditPlan) (er
 		if c.StartMS < 0 || c.EndMS <= c.StartMS || c.EndMS > a.Source.Info.DurationMS {
 			return outputError("plan_cut_range")
 		}
-		length := c.EndMS - c.StartMS
+		// Exactly one fixed rate per cut, and only one this SOURCE can actually
+		// be played at: a slow rate needs verified original cadence, and an
+		// unsupported one is named rather than replaced by 1x (CDS-68, CLIP-99).
+		if !slices.Contains(clip.AllowedPlaybackRates(a.Source.Info), c.Rate()) {
+			values["rate_permille"] = c.Rate()
+			return outputError("plan_cut_rate")
+		}
+		// One cut comes from ONE observed scene. Two scenes that merely touch in
+		// time are still two scenes, and a selection spanning them answers for
+		// neither (CLIP-7, CLIP-98).
+		scene, contained := clip.ContainedScene(in.Analyses, *c)
+		if !contained {
+			return outputError("plan_cut_scene")
+		}
+		if !clip.SelectableScene(scene, c.Rate()) {
+			return outputError("plan_cut_usability")
+		}
+		// Every length below is measured on the transformed OUTPUT timeline,
+		// which is what the viewer sees and what every caption resolves against
+		// (CDS-62). The source span keeps its own original timestamps.
+		length := c.OutputDurationMS()
+		if length <= 0 {
+			return outputError("plan_cut_rate")
+		}
 		if length <= 2*cfg.Render.FadeMS {
 			return outputError("plan_cut_fade")
 		}
@@ -77,6 +101,16 @@ func composeTimeline(cfg Config, in clip.PlanningInput, plan *clip.EditPlan) (er
 			// empty exposure.
 			copy.EndMS = min(copy.EndMS, length)
 		}
+	}
+	delete(values, "cut")
+	delete(values, "rate_permille")
+	// The same footage may be split into several cuts, but never selected twice:
+	// a fresh plan inherits no grandfathered overlap (CLIP-98).
+	if clip.ValidateSourceRanges(*plan, nil) != nil {
+		// The same rule, stated in the WRITER's own vocabulary: an overlap in a
+		// generated plan is bad model output and earns a bounded correction,
+		// while that rule refuses an owner's edit as an invalid request.
+		return outputError("plan_source_overlap")
 	}
 	// CDS-37's length targets and CDS-36's transitions are the caller's, not the
 	// model's: the scene the observer reported and the template's preset decide
@@ -105,10 +139,9 @@ func composeTimeline(cfg Config, in clip.PlanningInput, plan *clip.EditPlan) (er
 		plan.Cuts[i].TransitionMS = ms
 	}
 	for _, c := range plan.Cuts {
-		total += c.EndMS - c.StartMS
+		total += c.OutputDurationMS()
 	}
 	total -= plan.TransitionTotal()
-	delete(values, "cut")
 	values["before_ms"], values["transition_ms"] = total, plan.TransitionTotal()
 	if total >= cfg.Render.MinDurationMS && total <= cfg.Render.MaxDurationMS && math.Abs(float64(total)-float64(in.TargetDurationMS)) <= float64(cfg.TargetToleranceMS) {
 		plan.DurationMS = total
@@ -137,13 +170,16 @@ func composeTimeline(cfg Config, in clip.PlanningInput, plan *clip.EditPlan) (er
 		for i, c := range plan.Cuts {
 			minimum, _ := design.CutBounds(scenes[i], preset)
 			if grow {
-				room[i] = cutCeiling(plan, analyses, scenes, preset, i, hard) - c.EndMS
+				// The room is what the extra SOURCE footage is worth on the
+				// output timeline, which is what the target is measured in.
+				ceiling := cutCeiling(plan, analyses, scenes, preset, i, hard)
+				room[i] = outputSpan(ceiling-c.StartMS, c.Rate()) - c.OutputDurationMS()
 			} else {
 				floor := max(2*cfg.Render.FadeMS+1, c.FirstCopy().StartMS+1)
 				if !hard {
 					floor = max(floor, minimum)
 				}
-				room[i] = c.EndMS - c.StartMS - floor
+				room[i] = c.OutputDurationMS() - floor
 			}
 		}
 		// Distribute the adjustment evenly, redistributing when a cut reaches
@@ -160,12 +196,17 @@ func composeTimeline(cfg Config, in clip.PlanningInput, plan *clip.EditPlan) (er
 			}
 			share := (remaining + active - 1) / active
 			for i := range plan.Cuts {
+				c := &plan.Cuts[i]
 				amount := max(0, min(room[i], share, remaining))
+				// The share is an OUTPUT delta; convert it back to the source
+				// footage that produces it before moving the selected range.
+				output := c.OutputDurationMS()
 				if grow {
-					plan.Cuts[i].EndMS += amount
+					output += amount
 				} else {
-					plan.Cuts[i].EndMS -= amount
+					output -= amount
 				}
+				c.EndMS = c.StartMS + sourceSpan(output, c.Rate())
 				room[i] -= amount
 				remaining -= amount
 			}
@@ -180,8 +221,9 @@ func composeTimeline(cfg Config, in clip.PlanningInput, plan *clip.EditPlan) (er
 	if grow && remaining > 0 {
 		for i := range plan.Cuts {
 			c := &plan.Cuts[i]
-			amount := max(0, min(remaining, c.StartMS-backwardSceneFloor(plan, analyses, i)))
-			c.StartMS -= amount
+			floor := backwardSceneFloor(plan, analyses, i)
+			amount := max(0, min(remaining, outputSpan(c.StartMS-floor, c.Rate())))
+			c.StartMS = max(floor, c.StartMS-sourceSpan(amount, c.Rate()))
 			for j := range c.Copies {
 				c.Copies[j].StartMS += amount
 				c.Copies[j].EndMS += amount
@@ -193,13 +235,13 @@ func composeTimeline(cfg Config, in clip.PlanningInput, plan *clip.EditPlan) (er
 	values["remaining_ms"] = remaining
 	values["after_ms"] = 0
 	for _, c := range plan.Cuts {
-		values["after_ms"] += c.EndMS - c.StartMS
+		values["after_ms"] += c.OutputDurationMS()
 	}
 	values["after_ms"] -= plan.TransitionTotal()
 	for i := range plan.Cuts {
 		c := &plan.Cuts[i]
 		for j := range c.Copies {
-			c.Copies[j].EndMS = min(c.Copies[j].EndMS, c.EndMS-c.StartMS)
+			c.Copies[j].EndMS = min(c.Copies[j].EndMS, c.OutputDurationMS())
 		}
 	}
 	if remaining == 0 {
@@ -248,61 +290,26 @@ func cutCeiling(plan *clip.EditPlan, analyses map[string]clip.SourceAnalysis, sc
 	return min(end, c.StartMS+maximum)
 }
 
-// observedSpan is the footage a cut may grow into: the run of segments that
-// touch each other around it. The observer reports one segment per event, so a
-// cut that spans a boundary sits in observed footage on both sides; only a GAP
-// between two segments is unobserved. A cut no segment covers keeps its own
-// range.
+// observedSpan is the footage a cut may grow into: the ONE observed scene that
+// contains it. Reconciliation may move either end inside that scene and no
+// further — a neighbouring scene shows something else, so footage taken from it
+// would not be the scene the cut was selected, bound and written for (CLIP-7).
+// A cut no single scene contains gets no room either way.
 func observedSpan(a clip.SourceAnalysis, c clip.Cut) (int, int) {
-	start, end := c.StartMS, c.EndMS
-	covered := false
 	for _, segment := range a.Segments {
-		if segment.StartMS <= c.StartMS && segment.EndMS >= c.StartMS {
-			start, end, covered = segment.StartMS, segment.EndMS, true
-			break
+		if segment.StartMS <= c.StartMS && c.EndMS <= segment.EndMS {
+			return segment.StartMS, segment.EndMS
 		}
 	}
-	if !covered {
-		return c.StartMS, c.EndMS
-	}
-	for extended := true; extended; {
-		extended = false
-		for _, segment := range a.Segments {
-			if segment.StartMS <= end && segment.EndMS > end {
-				end, extended = segment.EndMS, true
-			}
-			if segment.EndMS >= start && segment.StartMS < start {
-				start, extended = segment.StartMS, true
-			}
-		}
-	}
-	if end < c.EndMS {
-		// The cut runs past every observed segment: it is not grounded, so it
-		// gets no room either way.
-		return c.StartMS, c.EndMS
-	}
-	return start, end
+	return c.StartMS, c.EndMS
 }
 
 // Backward repair preserves the selected opening scene, and therefore the
-// scene-derived transition. Extending an end cannot change that opening scene.
+// scene-derived transition: the floor is the containing scene's own start,
+// never back over a neighbouring scene or another selected range.
 func backwardSceneFloor(plan *clip.EditPlan, analyses map[string]clip.SourceAnalysis, i int) int {
-	c := plan.Cuts[i]
-	floor := cutFloor(plan, analyses, i)
-	a := analyses[c.SourceID]
-	scene, _ := clip.CutScene(c, a)
-	start := c.StartMS
-	for j := len(a.Segments) - 1; j >= 0; j-- {
-		segment := a.Segments[j]
-		if segment.StartMS > start {
-			continue
-		}
-		if segment.EndMS < start || design.Scene(segment.Scene) != scene {
-			break
-		}
-		start = segment.StartMS
-	}
-	return max(floor, start)
+	start, _ := observedSpan(analyses[plan.Cuts[i].SourceID], plan.Cuts[i])
+	return max(cutFloor(plan, analyses, i), start)
 }
 
 // cutFloor is the earliest a cut's start may move: the segment it was observed
@@ -331,21 +338,41 @@ func cutFloor(plan *clip.EditPlan, analyses map[string]clip.SourceAnalysis, i in
 func holdCutLengths(plan *clip.EditPlan, analyses map[string]clip.SourceAnalysis, scenes []string, preset string) {
 	for i := range plan.Cuts {
 		c := &plan.Cuts[i]
+		// CDS-37's targets are OUTPUT durations, so the source span that holds
+		// them depends on the cut's own rate.
 		minimum, maximum := design.CutBounds(scenes[i], preset)
-		if c.EndMS-c.StartMS > maximum {
-			c.EndMS = c.StartMS + maximum
+		if c.OutputDurationMS() > maximum {
+			c.EndMS = c.StartMS + sourceSpan(maximum, c.Rate())
 		}
-		if c.EndMS-c.StartMS < minimum {
-			c.EndMS = min(c.StartMS+minimum, cutCeiling(plan, analyses, scenes, preset, i, false))
-			if c.EndMS-c.StartMS < minimum {
-				c.StartMS = max(c.EndMS-minimum, cutFloor(plan, analyses, i))
+		if c.OutputDurationMS() < minimum {
+			c.EndMS = min(c.StartMS+sourceSpan(minimum, c.Rate()), cutCeiling(plan, analyses, scenes, preset, i, false))
+			if c.OutputDurationMS() < minimum {
+				c.StartMS = max(c.EndMS-sourceSpan(minimum, c.Rate()), cutFloor(plan, analyses, i))
 			}
 		}
 		// Whichever end moved, the caption still lives inside the cut.
-		length := c.EndMS - c.StartMS
+		length := c.OutputDurationMS()
 		for j := range c.Copies {
 			c.Copies[j].StartMS = min(c.Copies[j].StartMS, length-1)
 			c.Copies[j].EndMS = min(c.Copies[j].EndMS, length)
 		}
 	}
+}
+
+// outputSpan is what a stretch of SOURCE footage is worth on the transformed
+// output timeline; sourceSpan is the inverse, the footage an output length
+// needs. Both go through the one shared helper, so reconciliation cannot drift
+// from the timeline the resolver, preview and renderer build (CDS-62).
+func outputSpan(sourceMS, rate int) int {
+	out, ok := clip.TransformedDuration(sourceMS, rate)
+	if !ok {
+		return 0
+	}
+	return out
+}
+func sourceSpan(outputMS, rate int) int {
+	if outputMS <= 0 {
+		return 0
+	}
+	return (outputMS*rate + clip.RateUnitPermille/2) / clip.RateUnitPermille
 }

@@ -46,6 +46,12 @@ func planRecoveryDigest(p generationPayload) string {
 	for _, source := range p.Batch.Sources {
 		sources = append(sources, [2]string{source.ID, source.Fingerprint})
 	}
+	// The digest is SEMANTIC: it says which candidate plan is still the plan
+	// for this input. The observation contract belongs in it because a plan
+	// written against v1 scenes was never checked for complete coverage, a
+	// contained scene or a scene status; the observations themselves stay
+	// reusable under CLIP-93. The owner's source-sound setting is deliberately
+	// absent — it is render-only and rides the render revision instead.
 	raw, _ := json.Marshal(struct {
 		Composition                   *ProjectComposition
 		Template                      Recipe
@@ -54,8 +60,9 @@ func planRecoveryDigest(p generationPayload) string {
 		Target                        int
 		Hide                          bool
 		Version                       int
+		Analysis                      string
 		Sources                       [][2]string
-	}{p.Composition, p.Template, p.Answers, p.Ratio, p.Write, p.Disclosure, p.CTA, p.TargetDurationMS, p.HideDisclosure, CompositionPlanVersion, sources})
+	}{p.Composition, p.Template, p.Answers, p.Ratio, p.Write, p.Disclosure, p.CTA, p.TargetDurationMS, p.HideDisclosure, CompositionPlanVersion, AnalysisContractVersion, sources})
 	sum := sha256.Sum256(raw)
 	return hex.EncodeToString(sum[:])
 }

@@ -15,6 +15,69 @@ func audioChange(h *generationHarness, p clip.Project, retain bool) clip.SourceA
 	return clip.SourceAudioChange{ProjectID: h.project.ID, BatchID: h.batch.ID, SourceID: s.ID, Fingerprint: s.Fingerprint, RetainOriginal: retain, ExpectedRevision: p.EditPlanRevision}
 }
 
+// A freshly generated plan carries the owner's COMPLETE source-sound snapshot,
+// stated by the server after the model's output was validated. The model never
+// saw the setting, so changing it afterwards leaves the validated assembly
+// reusable: continuation renders again without another AI call or charge
+// (CLIP-100, CLIP-93).
+func TestGenerationStatesTheOwnerSnapshotAndTheSettingDoesNotInvalidateThePlan(t *testing.T) {
+	_, p, _ := completedClip(t)
+	plan, _, err := clip.DecodeEditPlan(p.EditPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.SourceAudio == nil {
+		t.Fatal("the generated plan carries no source-sound snapshot")
+	}
+	used := map[string]bool{}
+	for _, c := range plan.Cuts {
+		used[c.SourceID+"\x00"+c.Fingerprint] = true
+	}
+	if len(plan.SourceAudio.Values) != len(used) {
+		t.Fatalf("the snapshot names %d sources, the cuts use %d", len(plan.SourceAudio.Values), len(used))
+	}
+	for _, v := range plan.SourceAudio.Values {
+		if !used[v.SourceID+"\x00"+v.Fingerprint] || v.RetainOriginal {
+			t.Fatalf("snapshot entry is foreign or defaulted to audible: %+v", v)
+		}
+	}
+}
+
+// An interrupted attempt keeps its validated candidate through a sound change:
+// the setting was never part of the model's input or of the plan's semantic
+// digest, so continuation resumes at rendering with no AI call and no charge.
+func TestTheSoundSettingDoesNotInvalidateAnInterruptedCandidate(t *testing.T) {
+	h := generationSetup(t)
+	ctx := context.Background()
+	h.renderer.fail = clip.ErrInvalidMedia
+	h.start(t)
+	if err := h.run(t); err == nil {
+		t.Fatal("expected the injected rendering failure")
+	}
+	before, err := h.service.Quote(ctx, "alice", h.project.ID, h.batch.ID, "p/o", "p/w")
+	if err != nil || !before.Pricing.SkipPlan || before.Pricing.ReusedChunks != 3 {
+		t.Fatalf("the fixture has no reusable candidate: %+v %v", before.Pricing, err)
+	}
+	p, err := h.projects.GetProject(ctx, "alice", h.project.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	observed, planned := h.planner.observe, h.planner.plans
+	if _, _, err = h.sources.SetOriginalSound(ctx, "alice", audioChange(h, p, true)); err != nil {
+		t.Fatal(err)
+	}
+	after, err := h.service.Quote(ctx, "alice", h.project.ID, h.batch.ID, "p/o", "p/w")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !after.Pricing.SkipPlan || after.Pricing.ObservationCalls != 0 || after.Pricing.ReusedChunks != 3 || after.Pricing.MaxCredits != 0 {
+		t.Fatalf("the sound setting invalidated observation or assembly work: %+v", after.Pricing)
+	}
+	if h.planner.observe != observed || h.planner.plans != planned {
+		t.Fatal("the sound change consulted a model")
+	}
+}
+
 func TestSourceSoundChangeIsAtomicIdempotentAndRenderOnly(t *testing.T) {
 	h, p, _ := completedClip(t)
 	ctx := context.Background()
