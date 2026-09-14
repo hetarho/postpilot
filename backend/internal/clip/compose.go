@@ -190,7 +190,7 @@ func Compose(
 		candidates = append(candidates, design.Candidate{Anchor: anchor, Align: rule.Align, Plate: design.Region(plate), Fits: ok})
 		captions = append(captions, c)
 	}
-	chosen := design.SelectAnchor(candidates, design.Region(subject), placed, readableText, previousAnchor)
+	chosen := design.SelectAnchor(candidates, design.Region(subject), placed, readableText, previousAnchor, nil)
 	if chosen < 0 {
 		decision.Fallback = "dropped"
 		out.Copies, out.EndMS = nil, cut.EndMS

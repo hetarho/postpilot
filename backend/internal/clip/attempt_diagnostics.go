@@ -176,6 +176,8 @@ func logAttemptDiagnostic(job, stage string, d AttemptDiagnostic) {
 
 func SafeAttemptCheck(check string) string {
 	switch check {
+	case "composition_caption_overlap":
+		return check
 	case "composition_invalid_style", "composition_invalid_position", "composition_invalid_interval", "composition_invalid_rows", "composition_invalid_role", "composition_copy_limit", "composition_readability", "composition_safe_area", "composition_invalid_manifest", "render_layout", "render_footage", "render_audio", "render_overlay", "render_encode", "render_validate":
 		return check
 	case "render_output_canvas", "render_output_rotation", "render_output_pixel_format", "render_output_aspect", "render_output_frame_rate", "render_output_audio", "render_output_duration", "render_output_codec", "render_output_audio_rate":

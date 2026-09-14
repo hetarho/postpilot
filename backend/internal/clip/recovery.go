@@ -19,6 +19,7 @@ const AnalysisContractVersion = "clip-observation-v2"
 const LegacyAnalysisContractVersion = "clip-observation-v1"
 
 type RecoveryState struct {
+	Language                          string
 	Version                           int
 	JobID, Contract, PlanDigest, Plan string
 	Observe                           llm.ModelRef
@@ -53,16 +54,16 @@ func planRecoveryDigest(p generationPayload) string {
 	// reusable under CLIP-93. The owner's source-sound setting is deliberately
 	// absent — it is render-only and rides the render revision instead.
 	raw, _ := json.Marshal(struct {
-		Composition                   *ProjectComposition
-		Template                      Recipe
-		Answers                       []Answer
-		Ratio, Write, Disclosure, CTA string
-		Target                        int
-		Hide                          bool
-		Version                       int
-		Analysis                      string
-		Sources                       [][2]string
-	}{p.Composition, p.Template, p.Answers, p.Ratio, p.Write, p.Disclosure, p.CTA, p.TargetDurationMS, p.HideDisclosure, CompositionPlanVersion, AnalysisContractVersion, sources})
+		Composition                             *ProjectComposition
+		Template                                Recipe
+		Answers                                 []Answer
+		Ratio, Write, Disclosure, CTA, Language string
+		Target                                  int
+		Hide                                    bool
+		Version                                 int
+		Analysis                                string
+		Sources                                 [][2]string
+	}{p.Composition, p.Template, p.Answers, p.Ratio, p.Write, p.Disclosure, p.CTA, p.Language, p.TargetDurationMS, p.HideDisclosure, CompositionPlanVersion, AnalysisContractVersion, sources})
 	sum := sha256.Sum256(raw)
 	return hex.EncodeToString(sum[:])
 }
@@ -100,9 +101,9 @@ func absRecovery(v int) int {
 	}
 	return v
 }
-func (s *GenerationService) selectRecovery(r *RecoveryState, b SourceBatch, observe llm.ModelRef) RecoveryState {
-	out := RecoveryState{Version: 1, Contract: AnalysisContractVersion, Observe: observe}
-	if r == nil || r.Version != 1 || r.Contract != AnalysisContractVersion || r.Observe != observe {
+func (s *GenerationService) selectRecovery(r *RecoveryState, b SourceBatch, observe llm.ModelRef, language string) RecoveryState {
+	out := RecoveryState{Version: 1, Contract: AnalysisContractVersion, Observe: observe, Language: language}
+	if r == nil || r.Version != 1 || r.Contract != AnalysisContractVersion || r.Observe != observe || r.Language != language || !ValidLanguage(language) {
 		return out
 	}
 	out.JobID, out.Pricing = r.JobID, r.Pricing

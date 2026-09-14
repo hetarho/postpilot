@@ -8,6 +8,8 @@
     "copy.mark": "caption",
     "furniture": "furniture",
     "card.hook": "card",
-    "card.end": "card"
+    "card.end": "card",
+    "info.emphasis": "info-emphasis",
+    "info.compact": "info-compact"
   }
 }

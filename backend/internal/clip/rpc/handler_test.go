@@ -160,3 +160,14 @@ func TestResultWireExposesURLsButNoPrivateObjectKey(t *testing.T) {
 		}
 	}
 }
+
+func TestCreateProjectRefusesAbsentAndUnknownWireLanguages(t *testing.T) {
+	h := NewHandler(clip.NewService(&rpcStore{}, config.ClipLimits()))
+	ctx := auth.WithUser(t.Context(), "alice")
+	for _, language := range []v1.ContentLanguage{v1.ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED, v1.ContentLanguage(99)} {
+		_, err := h.CreateClipProject(ctx, connect.NewRequest(&v1.CreateClipProjectRequest{Language: language}))
+		if connect.CodeOf(err) != connect.CodeInvalidArgument {
+			t.Fatalf("accepted absent/unknown language: %v", err)
+		}
+	}
+}

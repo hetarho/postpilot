@@ -30,14 +30,16 @@ type storedPortablePlan struct {
 // enough to have no composition at all still gets a version-6 plan rather than
 // a sixth shape nobody reads.
 type storedAssemblyPlan struct {
-	Version     int
-	Ratio       string
-	Plan        storedCorrectionPlan
-	Focals      map[string]Point
-	CopyStyles  []string
-	Composition *PortablePlan
-	Rates       map[string]int
-	SourceAudio []storedSourceAudio
+	Notices            []PlanNotice
+	NoticeCutRevisions map[string]int
+	Version            int
+	Ratio              string
+	Plan               storedCorrectionPlan
+	Focals             map[string]Point
+	CopyStyles         []string
+	Composition        *PortablePlan
+	Rates              map[string]int
+	SourceAudio        []storedSourceAudio
 }
 type storedSourceAudio struct {
 	SourceID, Fingerprint string
@@ -69,7 +71,7 @@ func encodeAssemblyPlan(p EditPlan, styles []string) (string, error) {
 	for _, v := range settings.Values {
 		audio = append(audio, storedSourceAudio{v.SourceID, v.Fingerprint, v.RetainOriginal})
 	}
-	envelope := storedAssemblyPlan{CompositionPlanVersion, p.Ratio, storedCorrection(CorrectionFromPlan(plain)), focals, slices.Clone(styles), p.Portable, rates, audio}
+	envelope := storedAssemblyPlan{Version: CompositionPlanVersion, Ratio: p.Ratio, Plan: storedCorrection(CorrectionFromPlan(plain)), Focals: focals, CopyStyles: slices.Clone(styles), Composition: p.Portable, Rates: rates, SourceAudio: audio, Notices: p.Notices, NoticeCutRevisions: p.NoticeCutRevisions}
 	b, err := json.Marshal(envelope)
 	return string(b), err
 }
@@ -87,6 +89,7 @@ func decodeAssemblyPlan(raw string) (EditPlan, []string, error) {
 		return p, styles, err
 	}
 	p.Portable = s.Composition
+	p.Notices, p.NoticeCutRevisions = s.Notices, s.NoticeCutRevisions
 	// A version-6 plan states every rate explicitly. An absent or zero entry is
 	// not a 1x default here: this envelope was written after rates existed.
 	if len(s.Rates) != len(p.Cuts) {

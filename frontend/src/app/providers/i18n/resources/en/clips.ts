@@ -1,4 +1,45 @@
 export const clips = {
+  notices: {
+    label: 'About this clip',
+    marker: 'Note',
+    text: 'Text',
+    omittedCut: 'Omitted cut',
+    sceneTrimmed: 'This cut was shortened to one observed scene.',
+    normalSpeed: 'This cut uses its original 1× speed.',
+    approvedStyle: 'This text uses a style approved by the template.',
+    approvedAccent: 'This text uses the template’s accent colour.',
+    cropAdjusted: 'The crop centre was moved inside this frame.',
+    volumeAdjusted: 'This cut’s volume was kept within 0–100% of the original.',
+    hardCut: 'This cut joins directly without a fade.',
+    durationTrimmed: 'The end of this cut was trimmed to fit the selected duration.',
+    captionTime: 'This text appears within its cut’s running time.',
+    evidenceMatched: 'This cut is linked to the observations of its selected footage.',
+    projectRatio: 'The clip uses your selected aspect ratio.',
+    sectionOmitted: 'A cut that returned to an earlier part of the story was left out.',
+    itemOmitted: 'A cut that moved backwards through the template’s items was left out.',
+    overlapOmitted: 'A later cut that reused selected footage was left out.',
+    duplicateOmitted: 'The duplicate selection of this cut was left out.',
+    sourceOmitted: 'A cut that could not be matched to a selected source was left out.',
+    rangeOmitted: 'A cut outside its source’s time range was left out.',
+    unobservedOmitted: 'Footage without matching observations was left out.',
+    unusableOmitted: 'A cut whose content could not be reliably identified was left out.',
+    excessCutsOmitted: 'Cuts beyond the supported count were left out of the end of the plan.',
+    textOmitted: 'This text was left out of the clip.',
+    longTextOmitted: 'Text too long to fit legibly was left out.',
+    extraTextOmitted: 'Extra text was left out so this cut has time for its captions.',
+    unreadableOmitted: 'Text without enough reading time in its cut was left out.',
+    ownerAudio: 'Original sound follows your source-audio choices.',
+    itemTextOmitted: 'Item-specific text was left out because the item could not be identified.',
+    ungroundedText: 'Text unsupported by observations or your own facts was left out.',
+    groundedAlternative: 'A supported alternative from the generated text was used.',
+    repeatedTextOmitted: 'A repeated caption was left out.',
+    shorterText: 'A shorter version of the same supported text was used.',
+    sentencePace: 'This caption appears as a sentence instead of rapid phrases.',
+    extendedCut: 'This cut was extended within its observed scene to allow reading time.',
+    shorterResult:
+      'The clip is shorter than your selected duration because only usable footage was included.',
+  },
+
   finalization: {
     confirm: 'Confirm clip',
     notice:
@@ -558,6 +599,8 @@ export const clips = {
       'Caption text or references exceeded the template’s length or count limits.',
     compositionReadability:
       'A caption did not meet the size or display-time requirements for readability.',
+    captionOverlap:
+      'Two captions on the same cut appear at the same time. Give them separate display windows.',
     compositionSafeArea: 'A caption or on-screen element fell outside the safe display area.',
     compositionManifest:
       'The template’s on-screen element definition could not be read or had invalid required information.',

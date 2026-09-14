@@ -1,7 +1,14 @@
 import { createClient, type Transport } from '@connectrpc/connect'
 import { useTransport } from '@connectrpc/connect-query'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ClipService, type ProtoClipProject, type ProtoClipSourceBatch } from '@/shared/api'
+import {
+  ClipService,
+  contentLanguageToProto,
+  contentLanguageFromProto,
+  type ProtoClipProject,
+  type ProtoClipSourceBatch,
+} from '@/shared/api'
+import { activeLocale } from '@/shared/lib/localization'
 import { toGenerationJob } from '@/entities/generation-job/@x/clip-project'
 import { toClipEditingState } from './edit-plan'
 import { toClipAccounting } from './credits'
@@ -48,6 +55,13 @@ export function toClipProject(value: ProtoClipProject): ClipProject {
     ...(value.finalizationRefusal
       ? { finalizationRefusal: value.finalizationRefusal as ClipProject['finalizationRefusal'] }
       : {}),
+    notices: value.notices?.map(({ code, cutId, elementId, action }) => ({
+      code,
+      cutId,
+      elementId,
+      action,
+    })),
+    language: contentLanguageFromProto(value.language),
     id: value.id,
     title: value.title,
     videoTemplateId: value.videoTemplateId,
@@ -190,7 +204,12 @@ export function useClipProjectMutations(ownerId: string) {
       const inputs = compositionInputs ? compositionInputsToProto(compositionInputs) : undefined
       const response = id
         ? await client.updateClipProject({ id, ...fields, compositionInputs: inputs })
-        : await client.createClipProject({ ...fields, ratio, compositionInputs: inputs })
+        : await client.createClipProject({
+            ...fields,
+            ratio,
+            compositionInputs: inputs,
+            language: contentLanguageToProto(activeLocale()),
+          })
       if (!response.project) throw new Error('Missing saved clip')
       return toClipProject(response.project)
     },

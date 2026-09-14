@@ -41,7 +41,7 @@ func TestDisclosureVisibilityPersistenceAndRenderRevision(t *testing.T) {
 	if err != nil || !got.HideDisclosure {
 		t.Fatal("older update reset flag", got, err)
 	}
-	created, err := service.CreateProject(t.Context(), "alice", clip.ProjectInput{Title: "hidden", VideoTemplateID: template.ID, Ratio: "vertical", TargetDurationMS: 15000, Disclosure: "sponsored", HideDisclosure: true})
+	created, err := service.CreateProject(t.Context(), "alice", clip.ProjectInput{Language: "ko", Title: "hidden", VideoTemplateID: template.ID, Ratio: "vertical", TargetDurationMS: 15000, Disclosure: "sponsored", HideDisclosure: true})
 	if err != nil || !created.HideDisclosure {
 		t.Fatal(created, err)
 	}
@@ -107,7 +107,7 @@ func TestCompositionProjectSavesItsEmptyDisclosure(t *testing.T) {
 		t.Fatal(err)
 	}
 	inputs := clip.CompositionInputs{Values: map[string]string{"b": "18,000원"}}
-	p, err := service.CreateProject(t.Context(), "alice", clip.ProjectInput{Title: "draft", VideoTemplateID: template.ID, Ratio: "vertical", TargetDurationMS: 15000, CompositionInputs: &inputs})
+	p, err := service.CreateProject(t.Context(), "alice", clip.ProjectInput{Language: "ko", Title: "draft", VideoTemplateID: template.ID, Ratio: "vertical", TargetDurationMS: 15000, CompositionInputs: &inputs})
 	if err != nil || p.Disclosure != "" {
 		t.Fatal(p.Disclosure, err)
 	}

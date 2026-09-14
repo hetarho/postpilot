@@ -38,20 +38,21 @@ func (r *regionJSON) domain() (clip.Region, bool) {
 }
 
 type segmentJSON struct {
-	Start     *int        `json:"start_ms"`
-	End       *int        `json:"end_ms"`
-	Event     *string     `json:"event"`
-	Action    *string     `json:"action"`
-	Motion    *string     `json:"motion"`
-	Subjects  *[]string   `json:"subjects"`
-	Speech    *string     `json:"speech"`
-	Quality   *string     `json:"quality"`
-	Focal     *pointJSON  `json:"focal"`
-	Scene     *string     `json:"scene"`
-	Readable  *bool       `json:"readable_text"`
-	Subject   *regionJSON `json:"subject"`
-	Certainty *string     `json:"certainty"`
-	Usability *string     `json:"usability"`
+	Start       *int         `json:"start_ms"`
+	End         *int         `json:"end_ms"`
+	Event       *string      `json:"event"`
+	Action      *string      `json:"action"`
+	Motion      *string      `json:"motion"`
+	Subjects    *[]string    `json:"subjects"`
+	Speech      *string      `json:"speech"`
+	Quality     *string      `json:"quality"`
+	Focal       *pointJSON   `json:"focal"`
+	Scene       *string      `json:"scene"`
+	Readable    *bool        `json:"readable_text"`
+	Subject     *regionJSON  `json:"subject"`
+	CaptionSafe []regionJSON `json:"caption_safe"`
+	Certainty   *string      `json:"certainty"`
+	Usability   *string      `json:"usability"`
 }
 type chunkJSON struct {
 	SourceID *string        `json:"source_id"`
@@ -242,6 +243,14 @@ func parseChunk(cfg Config, input clip.ChunkInput, raw string) (out clip.ChunkAn
 		segment = i + 1
 		focal, focalOK := s.Focal.domain()
 		subject, subjectOK := s.Subject.domain()
+		var captionSafe []clip.Region
+		for _, box := range s.CaptionSafe {
+			region, ok := box.domain()
+			if !ok {
+				return clip.ChunkAnalysis{}, outputError("observe_segment_fields")
+			}
+			captionSafe = append(captionSafe, region)
+		}
 		if s.Start == nil || s.End == nil || s.Event == nil || s.Subjects == nil || s.Speech == nil || s.Quality == nil || s.Action == nil || s.Motion == nil || s.Certainty == nil || s.Usability == nil || !focalOK || !subjectOK {
 			return clip.ChunkAnalysis{}, outputError("observe_segment_fields")
 		}
@@ -266,7 +275,7 @@ func parseChunk(cfg Config, input clip.ChunkInput, raw string) (out clip.ChunkAn
 		// negative, overflowing or out-of-order value is refused below rather
 		// than clamped into something the model never said, so the correction
 		// feedback describes the response that actually failed.
-		result.Segments = append(result.Segments, clip.Segment{StartMS: *s.Start, EndMS: *s.End, Event: *s.Event, Action: *s.Action, Motion: *s.Motion, Subjects: *s.Subjects, Speech: *s.Speech, Quality: *s.Quality, Focal: focal, Scene: scene, ReadableText: readable, Subject: subject, Certainty: *s.Certainty, Usability: *s.Usability})
+		result.Segments = append(result.Segments, clip.Segment{StartMS: *s.Start, EndMS: *s.End, Event: *s.Event, Action: *s.Action, Motion: *s.Motion, Subjects: *s.Subjects, Speech: *s.Speech, Quality: *s.Quality, Focal: focal, Scene: scene, ReadableText: readable, Subject: subject, CaptionSafe: captionSafe, Certainty: *s.Certainty, Usability: *s.Usability})
 	}
 	segment = 0
 	if err := clip.ValidateSegments(cfg.Analysis, result.Segments, 0, input.DurationMS); err != nil {
@@ -292,37 +301,34 @@ func parsePlan(cfg Config, input clip.PlanningInput, raw string) (clip.EditPlan,
 	for _, analysis := range input.Analyses {
 		byID[analysis.Source.ID] = analysis.Source
 	}
-	if utf8.RuneCountInString(optional(wire.Hook)) > cfg.Render.MaxCopyRunes {
-		return clip.EditPlan{}, clip.ErrCopyTooLong
-	}
 	result := clip.EditPlan{Ratio: *wire.Ratio, DurationMS: *wire.Duration, Hook: optional(wire.Hook)}
+	if utf8.RuneCountInString(result.Hook) > cfg.Render.MaxCopyRunes || design.Chars(result.Hook) > 2*design.Type["hook"].Chars || strings.Count(result.Hook, "\n") > 1 {
+		result.Hook = ""
+		recordGeneratedNotice(&result, "plan_hook", "", "hook", "removal")
+	}
 	for _, c := range *wire.Cuts {
 		focal, ok := c.Focal.domain()
-		if !ok || c.ID == nil || utf8.RuneCountInString(*c.ID) > cfg.MaxCutIDRunes || c.SourceID == nil || c.Start == nil || c.End == nil || c.Rate == nil || c.Caption == nil {
+		if !ok || c.ID == nil || c.SourceID == nil || c.Start == nil || c.End == nil || c.Rate == nil || c.Caption == nil {
 			return clip.EditPlan{}, outputError("plan_cut_fields")
 		}
-		source, exists := byID[*c.SourceID]
-		p := c.Caption
-		if !exists {
-			return clip.EditPlan{}, outputError("plan_source")
+		if utf8.RuneCountInString(*c.ID) > cfg.MaxCutIDRunes {
+			recordGeneratedNotice(&result, "plan_cut_identity", *c.ID, "", "removal")
+			continue
 		}
+		source := byID[*c.SourceID]
+		source.ID = *c.SourceID
+		p := c.Caption
 		if p.Text == nil || p.Start == nil || p.End == nil {
 			return clip.EditPlan{}, outputError("plan_caption_fields")
 		}
-		if *p.End <= *p.Start {
-			return clip.EditPlan{}, outputError("plan_caption_time")
-		}
-		// The 500-rune ceiling is the contract's, not a design fallback: text
-		// past it is refused outright rather than shortened or dropped.
+		oversized := false
 		for _, text := range []string{*p.Text, optional(p.ShortText), optional(p.Keyword)} {
-			if utf8.RuneCountInString(text) > cfg.Render.MaxCopyRunes {
-				return clip.EditPlan{}, clip.ErrCopyTooLong
-			}
+			oversized = oversized || utf8.RuneCountInString(text) > cfg.Render.MaxCopyRunes
 		}
 		volume := 1.0
 		if len(c.Volume) != 0 {
 			if string(c.Volume) == "null" || json.Unmarshal(c.Volume, &volume) != nil {
-				return clip.EditPlan{}, outputError("plan_volume")
+				return clip.EditPlan{}, outputError("output_field_type")
 			}
 		}
 		// A chip is one of CDS-30's reserved labels and at most two show at
@@ -334,6 +340,11 @@ func parsePlan(cfg Config, input clip.PlanningInput, raw string) (clip.EditPlan,
 		if c.Chips != nil {
 			for _, label := range *c.Chips {
 				if !slices.Contains(design.Fact.Chips, label) || slices.Contains(chips, label) || len(chips) >= 2 {
+					check := "plan_chip_label"
+					if len(chips) >= 2 {
+						check = "plan_chip_count"
+					}
+					recordGeneratedNotice(&result, check, *c.ID, "chips", "removal")
 					continue
 				}
 				chips = append(chips, label)
@@ -341,6 +352,10 @@ func parsePlan(cfg Config, input clip.PlanningInput, raw string) (clip.EditPlan,
 		}
 		// The caption arrives as WORDS only; the compiler places it.
 		written := clip.Written{Text: *p.Text, ShortText: optional(p.ShortText), Keyword: optional(p.Keyword)}
+		if oversized {
+			written = clip.Written{}
+			recordGeneratedNotice(&result, "plan_copy_chars", *c.ID, "caption", "removal")
+		}
 		result.Cuts = append(result.Cuts, clip.Cut{ID: *c.ID, SourceID: source.ID, Fingerprint: source.Fingerprint, StartMS: *c.Start, EndMS: *c.End, PlaybackRatePermille: *c.Rate, Focal: focal, Volume: &volume, Chips: chips, Copies: []clip.Caption{{Text: written.Text, StartMS: *p.Start, EndMS: *p.End}}})
 		result.Written = append(result.Written, written)
 	}

@@ -269,7 +269,7 @@ func (q *Queries) SaveGeneration(ctx context.Context, arg SaveGenerationParams) 
 }
 
 const saveRender = `-- name: SaveRender :execrows
-UPDATE clip_projects SET result_id=lower(hex(randomblob(16))),result_key=?,result_content_type=?,result_bytes=?,result_duration_ms=?,result_created_at=?,updated_at=?,rendered_plan_revision=edit_plan_revision WHERE id=? AND user_id=? AND deleting=0 AND finalized_at IS NULL AND edit_plan_revision=?
+UPDATE clip_projects SET result_id=lower(hex(randomblob(16))),result_key=?,result_content_type=?,result_bytes=?,result_duration_ms=?,result_created_at=?,updated_at=?,edit_plan_json=?,rendered_plan_revision=edit_plan_revision WHERE id=? AND user_id=? AND deleting=0 AND finalized_at IS NULL AND edit_plan_revision=?
 `
 
 type SaveRenderParams struct {
@@ -279,6 +279,7 @@ type SaveRenderParams struct {
 	ResultDurationMs  sql.NullInt64
 	ResultCreatedAt   sql.NullString
 	UpdatedAt         string
+	EditPlanJson      sql.NullString
 	ID                string
 	UserID            string
 	EditPlanRevision  int64
@@ -292,6 +293,7 @@ func (q *Queries) SaveRender(ctx context.Context, arg SaveRenderParams) (int64, 
 		arg.ResultDurationMs,
 		arg.ResultCreatedAt,
 		arg.UpdatedAt,
+		arg.EditPlanJson,
 		arg.ID,
 		arg.UserID,
 		arg.EditPlanRevision,

@@ -56,3 +56,10 @@ type CardView struct {
 	Plate  Box
 	Lines  []CardLine
 }
+
+// InfoView keeps the frame separate from its optional background plate.
+type InfoView struct {
+	CopyView
+	Frame         Box
+	Right, Bottom float64
+}

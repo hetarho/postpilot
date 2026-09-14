@@ -66,6 +66,7 @@ const checkExplanations = {
   composition_copy_limit: 'inspection.compositionCopyLimit',
   composition_generated_bounds: 'inspection.compositionCopyLimit',
   composition_readability: 'inspection.compositionReadability',
+  composition_caption_overlap: 'inspection.captionOverlap',
   composition_safe_area: 'inspection.compositionSafeArea',
   composition_invalid_manifest: 'inspection.compositionManifest',
   composition_generated_identity: 'inspection.compositionIdentity',

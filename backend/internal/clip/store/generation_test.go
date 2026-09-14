@@ -149,6 +149,8 @@ func (m *mediaFake) PrepareAnalysisChunksExcept(_ context.Context, ws clip.Media
 func (m *mediaFake) CleanupStale(context.Context, time.Time) error { return nil }
 
 type plannerFake struct {
+	languages                                   []string
+	captionSafe                                 []clip.Region
 	id                                          string
 	observe, plans                              int
 	failObserveAt                               int
@@ -188,11 +190,12 @@ func (p *plannerFake) ObserveChunk(ctx context.Context, r llm.ModelRef, c clip.C
 	if err != nil || string(data) != "proxy" {
 		return clip.ChunkAnalysis{}, llm.Usage{}, errors.New("wrong proxy bytes")
 	}
+	p.languages = append(p.languages, c.Language)
 	p.observe++
 	if p.observeErr != nil && (p.failObserveAt == 0 || p.observe == p.failObserveAt) {
 		return clip.ChunkAnalysis{}, llm.Usage{}, p.observeErr
 	}
-	return clip.ChunkAnalysis{SourceID: c.Source.ID, Fingerprint: c.Source.Fingerprint, Index: c.Index, OffsetMS: c.OffsetMS, DurationMS: c.DurationMS, Segments: []clip.Segment{{StartMS: c.OffsetMS, EndMS: c.OffsetMS + c.DurationMS, Event: "scene", Quality: "usable", Focal: clip.Point{X: .5, Y: .5}, Certainty: clip.CertaintyCertain, Usability: clip.UsabilityUsable}}}, llm.Usage{}, nil
+	return clip.ChunkAnalysis{SourceID: c.Source.ID, Fingerprint: c.Source.Fingerprint, Index: c.Index, OffsetMS: c.OffsetMS, DurationMS: c.DurationMS, Segments: []clip.Segment{{StartMS: c.OffsetMS, EndMS: c.OffsetMS + c.DurationMS, Event: "scene", CaptionSafe: p.captionSafe, Quality: "usable", Focal: clip.Point{X: .5, Y: .5}, Certainty: clip.CertaintyCertain, Usability: clip.UsabilityUsable}}}, llm.Usage{}, nil
 }
 func (p *plannerFake) Plan(ctx context.Context, r llm.ModelRef, in clip.PlanningInput) (clip.EditPlan, llm.Usage, error) {
 	frozen, err := job.ConsumeClipPolicy(ctx, "alice", p.id, r.String(), 32768, "write")
@@ -479,13 +482,14 @@ func TestApprovedGenerationPreparesAllThenUsesFrozenInputs(t *testing.T) {
 		t.Fatal(err)
 	}
 	var snapshot struct {
+		Language    string
 		Version     int
 		Composition *clip.ProjectComposition
 		Template    clip.Recipe
 		Answers     []clip.Answer
 		Approval    *clip.GenerationApproval
 	}
-	if json.Unmarshal(j.Payload, &snapshot) != nil || snapshot.Version != 4 || snapshot.Composition == nil || snapshot.Composition.Snapshot.Version != 1 || snapshot.Approval == nil || snapshot.Approval.MaxCredits <= 0 || snapshot.Approval.Pricing.ObservationCalls != 3 {
+	if json.Unmarshal(j.Payload, &snapshot) != nil || snapshot.Version != 5 || snapshot.Language != "ko" || snapshot.Composition == nil || snapshot.Composition.Snapshot.Version != 1 || snapshot.Approval == nil || snapshot.Approval.MaxCredits <= 0 || snapshot.Approval.Pricing.ObservationCalls != 3 {
 		t.Fatal(string(j.Payload))
 	}
 	guidance := "changed after enqueue"

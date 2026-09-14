@@ -11,14 +11,14 @@ import (
 	"github.com/postpilot/backend/internal/clip/design"
 )
 
-// Only automatic sentence elements share a cut's reading window. Output text,
+// Automatic captions at every pace share a cut's reading window. Output text,
 // authored offsets and explicit visuals are independent and never rescheduled.
 func scheduleDeclaredCaptions(elements []clip.PortableText) ([]clip.PortableText, []clip.CopyFallback) {
 	result := slices.Clone(elements)
 	groups := map[string][]int{}
 	order := []string{}
 	for i, text := range result {
-		if text.Resolved.Element.Role == "caption" && text.Pace != "rapid" && clip.AutomaticCompositionRepair(text) {
+		if text.Resolved.Element.Role == "caption" && clip.AutomaticCompositionRepair(text) {
 			if _, seen := groups[text.Resolved.CutID]; !seen {
 				order = append(order, text.Resolved.CutID)
 			}
@@ -38,10 +38,14 @@ func scheduleDeclaredCaptions(elements []clip.PortableText) ([]clip.PortableText
 		a, b := &result[indices[0]], &result[indices[1]]
 		start, end := max(a.Resolved.StartMS, b.Resolved.StartMS), min(a.Resolved.EndMS, b.Resolved.EndMS)
 		minimum := func(t clip.PortableText) int {
-			n := clip.MinExposureMS(t.Resolved.Text)
+			floor := clip.MinExposureMS
+			if t.Pace == "rapid" {
+				floor = func(text string) int { return len(clip.RapidPhrases(text)) * design.Rapid.MinMS }
+			}
+			n := floor(t.Resolved.Text)
 			for _, alternative := range t.Alternatives {
 				if alternative.Text != "" {
-					n = min(n, clip.MinExposureMS(alternative.Text))
+					n = min(n, floor(alternative.Text))
 				}
 			}
 			return n

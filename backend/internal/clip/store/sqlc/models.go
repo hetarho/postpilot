@@ -65,6 +65,7 @@ type ClipProject struct {
 	FinalizedAt              sql.NullString
 	FinalizedPlanRevision    sql.NullInt64
 	FinalizedResultKey       sql.NullString
+	Language                 string
 }
 
 type ClipSourceAttempt struct {

@@ -58,10 +58,12 @@ func NewGenerationService(store GenerationStore, projects *Service, sources *Sou
 // rather than run with fields it never carried. Version 3 added the disclosure
 // and the resolved CTA, so a job approved before the owner could choose a
 // campaign type cannot render a clip that carries one. Version 4 freezes the
-// project composition. Already accepted version-3 legacy jobs remain readable.
-const generationPayloadVersion = 4
+// project composition. Version 5 freezes the observation language; accepted
+// version-3/4 jobs retain Korean, the legacy project language.
+const generationPayloadVersion = 5
 
 type generationPayload struct {
+	Language                         string
 	Recovery                         *RecoveryState
 	Composition                      *ProjectComposition
 	Version                          int
@@ -278,7 +280,7 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 	if p.Template.CompositionBody != "" && !p.Template.CompositionLegacy && p.Composition == nil {
 		return ErrInvalid
 	}
-	if (p.Version != generationPayloadVersion && p.Version != 3) || (p.Version == generationPayloadVersion && p.Composition == nil) || p.Approval == nil {
+	if !supportedGenerationPayload(p.Version) || (p.Version >= 4 && p.Composition == nil) || p.Approval == nil {
 		return ErrQuoteRequired
 	}
 	if p.ProjectID != project || p.Batch.ProjectID != project || p.Batch.ID != b.ID || p.Batch.UserID != user || !SameSourceManifest(p.Batch.Sources, b.Sources) {
@@ -304,7 +306,7 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 	if q.ConsumedJobID != job || q.ProjectID != project || q.BatchID != b.ID || q.Pricing != pricing {
 		return ErrQuoteChanged
 	}
-	recovery := s.selectRecovery(p.Recovery, b, pricing.Observe.Ref)
+	recovery := s.selectRecovery(p.Recovery, b, pricing.Observe.Ref, p.Language)
 	recovery.JobID = job
 	if p.Recovery != nil && len(recovery.Chunks) != pricing.ReusedChunks {
 		return ErrQuoteChanged
@@ -342,14 +344,14 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 		for _, v := range b.Sources {
 			declared = append(declared, AnalysisSource{RenderSource: RenderSource{ID: v.ID, Fingerprint: v.Fingerprint, Info: MediaInfo{DurationMS: v.DurationMS, Width: v.Width, Height: v.Height}}, Filename: v.Filename})
 		}
-		if err := s.planner.ValidatePreparation(pricing.Observe.Ref, PlanningInput{Composition: p.Composition, Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: p.CTA, Policy: pricing.Plan}, declared); err != nil {
+		if err := s.planner.ValidatePreparation(pricing.Observe.Ref, PlanningInput{Language: p.Language, Composition: p.Composition, Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: p.CTA, Policy: pricing.Plan}, declared); err != nil {
 			return err
 		}
 	}
 	if validator, ok := s.renderer.(interface {
 		ValidateAuthoredInput(context.Context, PlanningInput) error
 	}); ok {
-		if err := validator.ValidateAuthoredInput(ctx, PlanningInput{Composition: p.Composition, Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS}); err != nil {
+		if err := validator.ValidateAuthoredInput(ctx, PlanningInput{Language: p.Language, Composition: p.Composition, Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS}); err != nil {
 			return err
 		}
 	}
@@ -387,7 +389,7 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 			if s.planner.Budgets() != (CompletionBudgets{Observe: pricing.Observe.CompletionTokens, Plan: pricing.Plan.CompletionTokens}) {
 				return ErrQuoteChanged
 			}
-			if err = s.planner.ValidatePreparation(pricing.Observe.Ref, PlanningInput{Composition: p.Composition, Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: p.CTA, Policy: pricing.Plan}, sources); err != nil {
+			if err = s.planner.ValidatePreparation(pricing.Observe.Ref, PlanningInput{Language: p.Language, Composition: p.Composition, Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: p.CTA, Policy: pricing.Plan}, sources); err != nil {
 				return err
 			}
 			if s.pricing == nil {
@@ -432,7 +434,7 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 					}
 					return s.checkpoint(ctx, user, project, checkpoint)
 				})
-				observation, err = s.observe(observeCtx, v.chunk, sources[v.source], pricing.Observe)
+				observation, err = s.observe(observeCtx, v.chunk, sources[v.source], pricing.Observe, p.Language)
 			}
 			if err != nil {
 				return admissionRefusal(pricing.Observe.Ref, err)
@@ -482,7 +484,7 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 				}
 				return s.checkpoint(ctx, user, project, checkpoint)
 			})
-			edit, _, err = s.planner.Plan(planCtx, pricing.Plan.Ref, PlanningInput{Composition: p.Composition, Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Analyses: analyses, Policy: pricing.Plan, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: p.CTA})
+			edit, _, err = s.planner.Plan(planCtx, pricing.Plan.Ref, PlanningInput{Language: p.Language, Composition: p.Composition, Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Analyses: analyses, Policy: pricing.Plan, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: p.CTA})
 		}
 		if err != nil {
 			return err

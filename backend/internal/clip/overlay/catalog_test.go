@@ -173,7 +173,7 @@ func TestBuiltinCatalogUsesDiscovery(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := c.Presets(); len(got) != 3 || got[0].ID != "caption" || got[1].ID != "card" || got[2].ID != "furniture" {
+	if got := c.Presets(); len(got) != 5 || got[0].ID != "caption" || got[1].ID != "card" || got[2].ID != "furniture" {
 		t.Fatal(got)
 	}
 }

@@ -132,7 +132,7 @@ func TestIncompleteCoverageUsesTheReservedCorrectionAllowance(t *testing.T) {
 // fall back to 1x. Insufficient footage is NOT one of them: it is a fact about
 // the material, and TestReconciliationCannotReachAnotherItemsFootage pins that
 // it stops after one call (CLIP-94, CLIP-95, CLIP-99).
-func TestInvalidRateOverlapAndUnusableSelectionAreCorrectedOnce(t *testing.T) {
+func TestReadableRuleBreaksNeverSpendCorrectionCalls(t *testing.T) {
 	for _, tc := range []struct {
 		name, check string
 		break_      func(*clip.PlanningInput, map[string]any)
@@ -176,9 +176,19 @@ func TestInvalidRateOverlapAndUnusableSelectionAreCorrectedOnce(t *testing.T) {
 				return nil
 			})
 			in.Policy.ResponseRetries = 3
-			if _, _, err = service.Plan(ctx, testRef(), in); err != nil || len(base.calls) != 2 || len(checks) != 1 || checks[0] != tc.check {
-				t.Fatalf("not corrected once: calls=%d checks=%v err=%v", len(base.calls), checks, err)
+			delivered, _, err := service.Plan(ctx, testRef(), in)
+			if len(base.calls) != 1 || len(checks) != 0 {
+				t.Fatalf("readable plan consumed retries: calls=%d checks=%v", len(base.calls), checks)
 			}
+			if tc.name == "unusable" {
+				d, ok := clip.DiagnosticFromError(err)
+				if err == nil || !ok || d.Check != "plan_cut_count" {
+					t.Fatal("empty remainder must fail", err)
+				}
+			} else if err != nil || !hasNotice(delivered, tc.check) {
+				t.Fatalf("repair/removal missing: %v %+v", err, delivered.Notices)
+			}
+
 		})
 	}
 }
@@ -236,8 +246,8 @@ func TestNativeGeneratedFieldErrorsAreCorrectedWithoutRetryingAuthoredInput(t *t
 		}
 		in := nativeInput()
 		in.Policy.ResponseRetries = 3
-		if _, _, err = service.Plan(t.Context(), testRef(), in); err != nil || len(base.calls) != validAfter {
-			t.Fatal("generated identity was not corrected", err)
+		if _, _, err = service.Plan(t.Context(), testRef(), in); err != nil || len(base.calls) != 1 {
+			t.Fatal("generated identity was not removed without retry", err)
 		}
 		setNativeBody(&in, strings.Replace(nativeBody, `role="badge"`, `role="badge" style="memo"`, 1))
 		before := len(base.calls)

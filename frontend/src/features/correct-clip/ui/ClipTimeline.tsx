@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { Film } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import {
+  type ClipNotice,
   clipSeconds,
   timelineCuts,
   clipTextTracks,
@@ -18,7 +19,9 @@ export function ClipTimeline({
   timeMs,
   onSelect,
   localSources,
+  notices = [],
 }: {
+  notices?: readonly ClipNotice[]
   plan: ClipEditPlan
   selection?: ClipSelection
   timeMs: number
@@ -105,6 +108,7 @@ export function ClipTimeline({
                     </Typography>
                     <Typography as="span" variant="meta">
                       {cutRate(cut) / 1000}×
+                      {notices.some((n) => n.cutId === cut.id) && ` · ${t('notices.marker')}`}
                     </Typography>
                   </span>
                 </Button>

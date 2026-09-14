@@ -68,7 +68,7 @@ func arrangeDeclaredHeader(ratio string, visuals []declaredVisual) {
 					placed = append(placed, i)
 					break
 				}
-				// A too-wide authored pill is rejected by the shared safe-area
+				// A too-wide authored frame is rejected by the shared safe-area
 				// verifier; never truncate it or loop while looking for a slot.
 				if row > len(group) {
 					resizeHeader(v, x, y, height)
@@ -96,7 +96,11 @@ func resizeHeader(v *declaredVisual, x, y, height float64) {
 	if v.manifest.Role == "badge" {
 		v.furniture.Badge = v.manifest.Region
 	} else {
-		v.info.Plate.X, v.info.Plate.Y, v.info.Plate.Height, v.info.Plate.Radius = x, y, height, height/2
+		v.info.Frame.X, v.info.Frame.Y, v.info.Frame.Height = x, y, height
+		v.info.Right, v.info.Bottom = x+old.Width, y+height
+		if v.info.Plate != nil {
+			v.info.Plate.X, v.info.Plate.Y, v.info.Plate.Height = x, y, height
+		}
 		for i := range v.info.Lines {
 			v.info.Lines[i].X += dx
 			v.info.Lines[i].Y += dy + (height-old.Height)/2

@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import type { ClipProject } from '@/entities/clip-project'
+import { ClipNoticeList, type ClipProject } from '@/entities/clip-project'
 import { AppFailureMessage, Button, Typography } from '@/shared/ui'
 import type { useFinalizeClip } from '../model/useFinalizeClip'
 
@@ -17,6 +17,12 @@ export function FinalizeClipAction({
   return (
     <div className="w-full min-w-0 space-y-2">
       <Typography variant="meta">{t('finalization.notice')}</Typography>
+      <ClipNoticeList
+        notices={project.notices}
+        language={project.language}
+        cuts={project.editing?.plan.cuts}
+        withTargets
+      />
       {refusal && <Typography variant="body">{t(`finalization.refusal.${refusal}`)}</Typography>}
       {action.failure && (
         <div role="alert">

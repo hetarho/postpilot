@@ -51,6 +51,7 @@ func applyNativeCorrection(cfg RenderConfig, p Project, old EditPlan, styles []s
 		return EditPlan{}, nil, err
 	}
 	next := old
+
 	portable := *old.Portable
 	portable.NativeEditing = portable.NativeEditing || portable.Snapshot.Legacy
 
@@ -149,6 +150,7 @@ func applyNativeCorrection(cfg RenderConfig, p Project, old EditPlan, styles []s
 		next.Cuts[0].TransitionMS = 0
 	}
 	next.SourceAudio = ReconcileSourceAudio(old.SourceAudio, next.Cuts)
+	trackNoticeCutEdits(old, &next)
 	seen := map[string]bool{}
 	for _, edit := range in.Elements {
 		t, ok := knownText[edit.InstanceID]

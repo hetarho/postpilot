@@ -1,5 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import {
+  ClipNoticeList,
+  type ClipNotice,
   clipSeconds,
   textInterval,
   splitTextPhrases,
@@ -26,7 +28,11 @@ export function ClipTextControls({
   styles,
   change,
   invalid,
+  notices = [],
+  language,
 }: {
+  notices?: readonly ClipNotice[]
+  language?: 'ko' | 'en'
   plan: ClipEditPlan
   text: ClipEditableText
   styles: readonly CopyStyle[]
@@ -34,6 +40,16 @@ export function ClipTextControls({
   invalid: boolean
 }) {
   const { t } = useTranslation('clips')
+  const textNotices = notices.filter(
+    (n) => n.elementId === text.elementId && n.cutId === text.cutId,
+  )
+  if (text.fallbackReason && !textNotices.some((n) => n.code === text.fallbackReason))
+    textNotices.push({
+      code: text.fallbackReason,
+      elementId: text.elementId,
+      cutId: text.cutId,
+      action: 'repair',
+    })
   const interval = textInterval(plan, text)
   const patch = (value: Partial<ClipEditableText>, group?: string) =>
     change(
@@ -67,11 +83,7 @@ export function ClipTextControls({
           </Button>
         </div>
       )}
-      {text.fallbackReason && (
-        <Typography variant="meta">
-          {t('timeline.fallback', { reason: text.fallbackReason })}
-        </Typography>
-      )}
+      <ClipNoticeList notices={textNotices} language={language} />
       <div>
         <FieldLabel htmlFor="clip-selected-text">{t('correction.copy')}</FieldLabel>
         <Textarea

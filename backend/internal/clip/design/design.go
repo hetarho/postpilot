@@ -112,6 +112,18 @@ type Underline struct {
 	RaiseEM  float64 `json:"raise_em"`
 	Extend   float64 `json:"extend"`
 }
+
+// InfoFrame binds measured role typography to a versioned drawn asset.
+type InfoFrame struct {
+	Binding string `json:"binding"`
+	Type    string `json:"type"`
+	Face    string `json:"face"`
+	Padding Pad    `json:"padding"`
+	Plate   string `json:"plate"`
+	Stroke  string `json:"stroke"`
+	Shadow  string `json:"shadow"`
+}
+
 type SpacingTokens struct {
 	PadBox        Pad       `json:"pad_box"`
 	PadChip       Pad       `json:"pad_chip"`
@@ -316,6 +328,7 @@ type system struct {
 	Shadow            map[string]ShadowPaint       `json:"shadow"`
 	Scrim             map[string]ScrimPaint        `json:"scrim"`
 	Accent            map[string]string            `json:"accent"`
+	InfoFrames        map[string]InfoFrame         `json:"info_frames"`
 	Spacing           SpacingTokens                `json:"spacing"`
 	Styles            map[string]StyleRule         `json:"styles"`
 	Presets           map[string]Preset            `json:"presets"`
@@ -369,6 +382,7 @@ var (
 	Shadow            = loaded.Shadow
 	Scrim             = loaded.Scrim
 	Accent            = loaded.Accent
+	InfoFrames        = loaded.InfoFrames
 	Spacing           = loaded.Spacing
 	Styles            = loaded.Styles
 	Presets           = loaded.Presets

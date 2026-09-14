@@ -352,6 +352,8 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
           disabled={uploading || generation.busy || !correction.validation?.saveable}
         />
       }
+      notices={project.notices}
+      language={project.language}
       inputs={project.composition?.inputs}
       observations={project.observations}
       correction={correction}

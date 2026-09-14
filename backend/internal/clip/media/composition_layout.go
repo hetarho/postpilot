@@ -13,15 +13,16 @@ import (
 )
 
 type declaredVisual struct {
-	text      clip.PortableText
-	manifest  clip.CompositionElement
-	copy      clip.Copy
-	caption   copyLayout
-	card      cardLayout
-	furniture furniture
-	info      overlay.CopyView
-	ground    Luminance
-	cues      []declaredVisual
+	text        clip.PortableText
+	manifest    clip.CompositionElement
+	copy        clip.Copy
+	caption     copyLayout
+	card        cardLayout
+	furniture   furniture
+	info        overlay.InfoView
+	infoVariant string
+	ground      Luminance
+	cues        []declaredVisual
 }
 type declaredLayout struct {
 	plan    clip.EditPlan
@@ -277,6 +278,7 @@ func (r *Rendering) layoutDeclaredElement(ctx context.Context, ws clip.MediaWork
 	scene := ""
 	readable := false
 	subject := clip.Region{}
+	var captionSafe []design.Region
 	for _, cut := range plan.Cuts {
 		if cut.ID != text.Resolved.CutID {
 			continue
@@ -285,6 +287,9 @@ func (r *Rendering) layoutDeclaredElement(ctx context.Context, ws clip.MediaWork
 			if a.Source.ID == cut.SourceID {
 				scene, readable = clip.CutScene(cut, a)
 				subject = clip.CutSubject(canvas, cut, a)
+				for _, box := range clip.CutCaptionSafe(canvas, cut, a) {
+					captionSafe = append(captionSafe, design.Region(box))
+				}
 			}
 		}
 	}
@@ -376,7 +381,7 @@ func (r *Rendering) layoutDeclaredElement(ctx context.Context, ws clip.MediaWork
 				fits = append(fits, visual)
 				placements = append(placements, design.Candidate{Anchor: anchor, Align: e.Align, Plate: design.Region(layout.Region), Fits: true})
 			}
-			chosen := design.SelectAnchor(placements, design.Region(subject), placed, readable, previous)
+			chosen := design.SelectAnchor(placements, design.Region(subject), placed, readable, previous, captionSafe)
 			if chosen >= 0 {
 				return fits[chosen], nil
 			}

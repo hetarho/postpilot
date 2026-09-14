@@ -87,7 +87,7 @@ func TestEightShortSourcesComposeWithExactTransitionTimeline(t *testing.T) {
 		s, models, captions := newService(t, raw(wire), structured)
 		in.Policy = testPolicy("write")
 		got, usage, err := s.Plan(t.Context(), testRef(), in)
-		if err != nil || len(got.Cuts) != 8 || got.DurationMS != 15000 || got.Ratio != in.Ratio {
+		if err != nil || len(got.Cuts) != 8 || got.DurationMS != 15760 || !hasNotice(got, "plan_target_duration") || got.Ratio != in.Ratio {
 			t.Fatalf("multi-source plan: %+v %v", got, err)
 		}
 		// One paid call, and at most one measurement per candidate anchor: the
@@ -151,7 +151,14 @@ func TestMultiSourceOutputDiagnosticsPreserveFailureAndUsage(t *testing.T) {
 			in, wire := multiSourcePlan()
 			tc.mutate(wire)
 			s, models, captions := newService(t, raw(wire), true)
-			_, usage, err := s.Plan(t.Context(), testRef(), in)
+			delivered, usage, err := s.Plan(t.Context(), testRef(), in)
+			if !strings.HasPrefix(tc.code, "output_") {
+				if err != nil || !hasNotice(delivered, tc.code) || usage != models.response.Usage || len(models.calls) != 1 {
+					t.Fatalf("readable correction lost its notice or usage: %v %+v", err, delivered.Notices)
+				}
+				assertExecutableTimeline(t, in, delivered)
+				return
+			}
 			var diagnostic interface{ OutputValidationCode() string }
 			if !errors.Is(err, llm.ErrBadOutput) || !errors.As(err, &diagnostic) || diagnostic.OutputValidationCode() != tc.code {
 				t.Fatalf("missing exact safe failure: %v", err)

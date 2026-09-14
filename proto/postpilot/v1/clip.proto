@@ -4,6 +4,7 @@ option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;post
 
 import "postpilot/v1/post.proto";
 import "postpilot/v1/provider.proto";
+import "postpilot/v1/language.proto";
 
 // All procedures derive the owner from the authenticated session.
 service ClipService {
@@ -133,6 +134,16 @@ message ClipProject {
   string finalization_refusal = 26;
   // Detail only, separate from canonical successful state; no media URLs.
   ClipAttemptInspection attempt_inspection = 27;
+  ContentLanguage language = 28;
+  // Read-only delivery notices, filtered against owner edits.
+  repeated ClipNotice notices = 29;
+}
+message ClipNotice {
+  string code = 1;
+  string cut_id = 2;
+  string element_id = 3;
+  // repair | removal | shortfall; notices never block owner actions.
+  string action = 4;
 }
 message ClipObservations {
   // available | empty | unavailable; older servers omit this message.
@@ -225,6 +236,8 @@ message CreateClipProjectRequest {
   string cta = 7;
   bool hide_disclosure = 8;
   ClipCompositionInputs composition_inputs = 9;
+  // Required concrete UI language; UNSPECIFIED is refused.
+  ContentLanguage language = 10;
 }
 message CreateClipProjectResponse { ClipProject project = 1; }
 message GetClipProjectRequest { string id = 1; }

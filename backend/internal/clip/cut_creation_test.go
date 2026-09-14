@@ -224,7 +224,9 @@ func TestOwnerCutCreationRefusesForgedIdentityAndUnevidencedFootage(t *testing.T
 			d.Cuts = slices.Insert(d.Cuts, 1, clip.CorrectionCut{ID: ownerCut, StartMS: 4000, EndMS: 14000, Creation: &clip.CutCreation{Kind: clip.CutSplit, OriginID: "first"}})
 			d.DurationMS = 24000
 		},
-		"split too short to survive its own fades": func(d *clip.CorrectionPlan) {
+		"split too short to survive the next fade": func(d *clip.CorrectionPlan) {
+			d.Cuts[1].TransitionMS = 200
+			d.DurationMS -= 200
 			d.Cuts[0].EndMS = 9900
 			d.Cuts = slices.Insert(d.Cuts, 1, clip.CorrectionCut{ID: ownerCut, StartMS: 9900, EndMS: 10000, Creation: &clip.CutCreation{Kind: clip.CutSplit, OriginID: "first"}})
 		},

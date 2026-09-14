@@ -263,10 +263,10 @@ func TestNativeWriterRespectsItemOrderAndRejectsStructuralInventions(t *testing.
 			slices.Reverse(p["cuts"].([]any))
 		}, true},
 		{"reordered_cuts_only", func(_ *clip.PlanningInput, p map[string]any) { slices.Reverse(p["cuts"].([]any)) }, false},
-		{"invented_element", func(_ *clip.PlanningInput, p map[string]any) { nativeGenerated(p, 0)["element_id"] = "cta" }, false},
-		{"fixed_rewrite", func(_ *clip.PlanningInput, p map[string]any) { nativeGenerated(p, 0)["element_id"] = "sticker" }, false},
+		{"invented_element", func(_ *clip.PlanningInput, p map[string]any) { nativeGenerated(p, 0)["element_id"] = "cta" }, true},
+		{"fixed_rewrite", func(_ *clip.PlanningInput, p map[string]any) { nativeGenerated(p, 0)["element_id"] = "sticker" }, true},
 		{"unknown_section", func(_ *clip.PlanningInput, p map[string]any) { firstCut(p)["template_section_id"] = "invention" }, false},
-		{"missing_cut_reference", func(_ *clip.PlanningInput, p map[string]any) { firstCut(p)["observation_refs"] = []string{} }, false},
+		{"missing_cut_reference", func(_ *clip.PlanningInput, p map[string]any) { firstCut(p)["observation_refs"] = []string{} }, true},
 		{"case_key", func(_ *clip.PlanningInput, p map[string]any) {
 			firstCut(p)["Source_ID"] = "source"
 			delete(firstCut(p), "source_id")
@@ -361,10 +361,9 @@ func TestSameSceneSplitsKeepIdentityAndSourceTimeThroughReordering(t *testing.T)
 	in, p := build(false)
 	p["cuts"].([]any)[1].(map[string]any)["start_ms"] = 2999
 	s, models, _ := newService(t, raw(p), true)
-	_, _, err := s.Plan(t.Context(), testRef(), in)
-	d, _ := clip.DiagnosticFromError(err)
-	if err == nil || d.Check != "plan_source_overlap" || len(models.calls) != 1 {
-		t.Fatalf("overlapping selection accepted: %v %+v", err, d)
+	delivered, _, err := s.Plan(t.Context(), testRef(), in)
+	if err != nil || len(models.calls) != 1 || len(delivered.Cuts) != 2 || !hasNotice(delivered, "plan_source_overlap") || clip.ValidateSourceRanges(delivered, nil) != nil {
+		t.Fatalf("overlapping cut not removed with a notice: %v %+v", err, delivered)
 	}
 }
 
@@ -418,12 +417,12 @@ func TestUnusableAndUnknownFootageCannotBeSelectedAutomatically(t *testing.T) {
 		certainty, usability string
 		rate                 int
 	}{
-		{"unusable", "plan_cut_usability", clip.CertaintyCertain, clip.UsabilityUnusable, 1000},
-		{"unknown", "plan_cut_usability", clip.CertaintyUnknown, clip.UsabilityUsable, 1000},
+		{"unusable", "plan_cut_count", clip.CertaintyCertain, clip.UsabilityUnusable, 1000},
+		{"unknown", "plan_cut_count", clip.CertaintyUnknown, clip.UsabilityUsable, 1000},
 		{"uncertain at 1x", "", clip.CertaintyUncertain, clip.UsabilityUsable, 1000},
-		{"uncertain sped up", "plan_cut_usability", clip.CertaintyUncertain, clip.UsabilityUsable, 2000},
+		{"uncertain sped up", "", clip.CertaintyUncertain, clip.UsabilityUsable, 2000},
 		{"certain sped up", "", clip.CertaintyCertain, clip.UsabilityUsable, 2000},
-		{"rate outside the source's own set", "plan_cut_rate", clip.CertaintyCertain, clip.UsabilityUsable, 500},
+		{"rate outside the source's own set", "plan_timeline", clip.CertaintyCertain, clip.UsabilityUsable, 500},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			in, p := nativeInput(), nativePlan()
@@ -659,8 +658,8 @@ func TestNativeWriterAdmitsConsecutiveCutsInOneNonrepeatedSection(t *testing.T) 
 			}
 			if !tc.valid {
 				d, ok := clip.DiagnosticFromError(err)
-				if !errors.Is(err, llm.ErrBadOutput) || !ok || d.Check != "composition_section_order" {
-					t.Fatalf("wanted composition_section_order, got %v (%+v)", err, d)
+				if !errors.Is(err, llm.ErrBadOutput) || !ok || d.Check != "plan_timeline" {
+					t.Fatalf("wanted a below-floor remainder, got %v (%+v)", err, d)
 				}
 				return
 			}

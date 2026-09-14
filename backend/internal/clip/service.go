@@ -222,6 +222,9 @@ func (s *Service) duration(ms int) bool {
 	return ms >= s.limits.MinDurationMS && ms <= s.limits.MaxDurationMS
 }
 func (s *Service) CreateProject(ctx context.Context, user string, input ProjectInput) (Project, error) {
+	if !ValidLanguage(input.Language) {
+		return Project{}, ErrInvalid
+	}
 	template, err := s.store.GetTemplate(ctx, user, input.VideoTemplateID)
 	if err != nil {
 		return Project{}, err
@@ -240,7 +243,7 @@ func (s *Service) CreateProject(ctx context.Context, user string, input ProjectI
 		return Project{}, err
 	}
 	now := time.Now()
-	p := Project{ID: newID(), UserID: user, Title: title, VideoTemplateID: input.VideoTemplateID, Ratio: input.Ratio, Disclosure: input.Disclosure, HideDisclosure: input.HideDisclosure, CTA: input.CTA, TargetDurationMS: input.TargetDurationMS, Answers: answers, CreatedAt: now, UpdatedAt: now}
+	p := Project{ID: newID(), UserID: user, Title: title, VideoTemplateID: input.VideoTemplateID, Ratio: input.Ratio, Language: input.Language, Disclosure: input.Disclosure, HideDisclosure: input.HideDisclosure, CTA: input.CTA, TargetDurationMS: input.TargetDurationMS, Answers: answers, CreatedAt: now, UpdatedAt: now}
 	p.Composition, err = s.projectComposition(template, input.CompositionInputs, p)
 	if err != nil {
 		return Project{}, err

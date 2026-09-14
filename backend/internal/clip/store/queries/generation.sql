@@ -21,6 +21,6 @@ SELECT result_key FROM clip_projects WHERE result_key IS NOT NULL UNION SELECT r
 -- name: SaveCorrection :execrows
 UPDATE clip_projects SET edit_plan_json=?,edit_plan_revision=edit_plan_revision+1,updated_at=? WHERE id=? AND user_id=? AND deleting=0 AND finalized_at IS NULL AND edit_plan_revision=?;
 -- name: SaveRender :execrows
-UPDATE clip_projects SET result_id=lower(hex(randomblob(16))),result_key=?,result_content_type=?,result_bytes=?,result_duration_ms=?,result_created_at=?,updated_at=?,rendered_plan_revision=edit_plan_revision WHERE id=? AND user_id=? AND deleting=0 AND finalized_at IS NULL AND edit_plan_revision=?;
+UPDATE clip_projects SET result_id=lower(hex(randomblob(16))),result_key=?,result_content_type=?,result_bytes=?,result_duration_ms=?,result_created_at=?,updated_at=?,edit_plan_json=?,rendered_plan_revision=edit_plan_revision WHERE id=? AND user_id=? AND deleting=0 AND finalized_at IS NULL AND edit_plan_revision=?;
 -- name: HasActiveClipJob :one
 SELECT COUNT(*) FROM generation_jobs WHERE clip_project_id=? AND status IN ('queued','running');

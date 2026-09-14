@@ -185,7 +185,9 @@ type Candidate struct {
 //	readable text allows only TOP or BOTTOM, whichever is farther from the
 //	subject. Consecutive cuts move at most one anchor step, except under that
 //	readable-text rule.
-func SelectAnchor(candidates []Candidate, subject Region, placed []Element, readableText bool, previous string) int {
+//	Observed empty-space containment ranks the remaining candidates without
+//	overriding their subject-coverage preference or the one-step restriction.
+func SelectAnchor(candidates []Candidate, subject Region, placed []Element, readableText bool, previous string, captionSafe []Region) int {
 	viable, near := []int{}, []int{}
 	for i, c := range candidates {
 		if !c.Fits {
@@ -213,6 +215,24 @@ func SelectAnchor(candidates []Candidate, subject Region, placed []Element, read
 	}
 	if len(viable) == 0 {
 		return -1
+	}
+	if len(captionSafe) > 0 {
+		inside := func(i int) bool {
+			plate := candidates[i].Plate
+			return slices.ContainsFunc(captionSafe, func(box Region) bool {
+				return box.Width > 0 && box.Height > 0 && plate.X >= box.X && plate.Y >= box.Y && plate.X+plate.Width <= box.X+box.Width && plate.Y+plate.Height <= box.Y+box.Height
+			})
+		}
+		slices.SortStableFunc(viable, func(a, b int) int {
+			left, right := inside(a), inside(b)
+			if left == right {
+				return 0
+			}
+			if left {
+				return -1
+			}
+			return 1
+		})
 	}
 	if subject.Width <= 0 || subject.Height <= 0 {
 		if readableText {

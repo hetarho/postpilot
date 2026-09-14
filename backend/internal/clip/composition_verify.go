@@ -39,6 +39,7 @@ func VerifyCompositionManifest(plan EditPlan, elements []CompositionElement, lim
 		return ErrInvalid
 	}
 	seen := map[string]bool{}
+	captionWindows := map[string][]CompositionElement{}
 	totalCues := 0
 	for _, element := range elements {
 		text, exists := expected[element.InstanceID]
@@ -72,6 +73,16 @@ func VerifyCompositionManifest(plan EditPlan, elements []CompositionElement, lim
 			return fail("invalid_visual")
 		}
 		if element.Role == "caption" {
+			// V18 concerns cut-relative captions. Output-level authored text has
+			// no cut identity and remains independent of per-cut sequencing.
+			if element.CutID != "" {
+				for _, other := range captionWindows[element.CutID] {
+					if element.StartMS < other.EndMS && other.StartMS < element.EndMS {
+						return fail("caption_overlap")
+					}
+				}
+				captionWindows[element.CutID] = append(captionWindows[element.CutID], element)
+			}
 			motion := design.CaptionMotion(text.Pace)
 			if element.InMS != motion.InMS || element.OutMS != motion.OutMS || element.DY != motion.InDY {
 				return fail("motion")

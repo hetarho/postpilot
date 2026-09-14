@@ -21,7 +21,7 @@ SELECT * FROM clip_projects WHERE user_id = ? ORDER BY updated_at DESC, id;
 -- name: GetClipProject :one
 SELECT * FROM clip_projects WHERE id = ? AND user_id = ?;
 -- name: InsertClipProject :exec
-INSERT INTO clip_projects(id, user_id, title, video_template_id, ratio, target_duration_ms, disclosure, cta, hide_disclosure, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+INSERT INTO clip_projects(id, user_id, title, video_template_id, ratio, language, target_duration_ms, disclosure, cta, hide_disclosure, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 -- name: DeleteClipProject :execrows
 DELETE FROM clip_projects WHERE id = ? AND user_id = ?;
 -- name: ListClipAnswers :many

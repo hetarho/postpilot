@@ -14,6 +14,7 @@ import (
 // model selects footage and copy; arithmetic must not require a second paid call.
 // This boundary is used only for fresh AI output, never persisted/manual plans.
 func composeTimeline(cfg Config, in clip.PlanningInput, plan *clip.EditPlan) (err error) {
+	narrowGeneratedCuts(cfg, in, plan)
 	phase := "selection"
 	values := map[string]int{"target_ms": in.TargetDurationMS, "cut_count": len(plan.Cuts), "min_ms": cfg.Render.MinDurationMS, "max_ms": cfg.Render.MaxDurationMS}
 	defer func() {
@@ -64,7 +65,7 @@ func composeTimeline(cfg Config, in clip.PlanningInput, plan *clip.EditPlan) (er
 		}
 		// Exactly one fixed rate per cut, and only one this SOURCE can actually
 		// be played at: a slow rate needs verified original cadence, and an
-		// unsupported one is named rather than replaced by 1x (CDS-68, CLIP-99).
+		// unsupported one has already fallen back to 1x (CLIP-107).
 		if !slices.Contains(clip.AllowedPlaybackRates(a.Source.Info), c.Rate()) {
 			values["rate_permille"] = c.Rate()
 			return outputError("plan_cut_rate")
@@ -86,9 +87,7 @@ func composeTimeline(cfg Config, in clip.PlanningInput, plan *clip.EditPlan) (er
 		if length <= 0 {
 			return outputError("plan_cut_rate")
 		}
-		if length <= 2*cfg.Render.FadeMS {
-			return outputError("plan_cut_fade")
-		}
+
 		// The model writes one caption per cut; CDS-43's second one is the
 		// compiler's, and is placed after this timeline is settled.
 		for j := range c.Copies {
@@ -108,8 +107,7 @@ func composeTimeline(cfg Config, in clip.PlanningInput, plan *clip.EditPlan) (er
 	// a fresh plan inherits no grandfathered overlap (CLIP-98).
 	if clip.ValidateSourceRanges(*plan, nil) != nil {
 		// The same rule, stated in the WRITER's own vocabulary: an overlap in a
-		// generated plan is bad model output and earns a bounded correction,
-		// while that rule refuses an owner's edit as an invalid request.
+		// generated plan must have been removed by the selection ladder.
 		return outputError("plan_source_overlap")
 	}
 	// CDS-37's length targets and CDS-36's transitions are the caller's, not the
@@ -138,6 +136,7 @@ func composeTimeline(cfg Config, in clip.PlanningInput, plan *clip.EditPlan) (er
 	for i, ms := range design.Transitions(scenes) {
 		plan.Cuts[i].TransitionMS = ms
 	}
+	repairTransitions(plan)
 	for _, c := range plan.Cuts {
 		total += c.OutputDurationMS()
 	}
@@ -147,40 +146,26 @@ func composeTimeline(cfg Config, in clip.PlanningInput, plan *clip.EditPlan) (er
 		plan.DurationMS = total
 		return nil
 	}
+	if total > in.TargetDurationMS {
+		trimGeneratedOverrun(plan, in.TargetDurationMS)
+		if plan.DurationMS < cfg.Render.MinDurationMS || plan.DurationMS > cfg.Render.MaxDurationMS {
+			return outputError("plan_timeline")
+		}
+		return nil
+	}
 	remaining := in.TargetDurationMS - total
-	grow := remaining > 0
 	phase = "timeline_grow"
-	if !grow {
-		phase = "timeline_shrink"
-	}
-	if !grow {
-		remaining = -remaining
-	}
 	// Two passes. The first keeps every cut inside its CDS-37 target; when no
-	// cut has room left there, the target yields — it is rhythm, not
-	// correctness — and the second pass uses the bounds that actually hold:
-	// the observed footage when growing, the transitions and the copy's start
-	// when shrinking (the existing plan_cut_fade bound). A reachable timeline is
-	// never refused for a target (CDS-37 r3).
+	// cut has room left there, the second pass uses all the observed footage.
+	// A reachable timeline is never refused for a rhythm target (CDS-37).
 	for _, hard := range []bool{false, true} {
 		if authoredRhythm && !hard {
 			continue
 		}
 		room := make([]int, len(plan.Cuts))
 		for i, c := range plan.Cuts {
-			minimum, _ := design.CutBounds(scenes[i], preset)
-			if grow {
-				// The room is what the extra SOURCE footage is worth on the
-				// output timeline, which is what the target is measured in.
-				ceiling := cutCeiling(plan, analyses, scenes, preset, i, hard)
-				room[i] = outputSpan(ceiling-c.StartMS, c.Rate()) - c.OutputDurationMS()
-			} else {
-				floor := max(2*cfg.Render.FadeMS+1, c.FirstCopy().StartMS+1)
-				if !hard {
-					floor = max(floor, minimum)
-				}
-				room[i] = c.OutputDurationMS() - floor
-			}
+			ceiling := cutCeiling(plan, analyses, scenes, preset, i, hard)
+			room[i] = outputSpan(ceiling-c.StartMS, c.Rate()) - c.OutputDurationMS()
 		}
 		// Distribute the adjustment evenly, redistributing when a cut reaches
 		// its bound. Every pass finishes or exhausts a cut; work is bounded by cuts².
@@ -200,12 +185,7 @@ func composeTimeline(cfg Config, in clip.PlanningInput, plan *clip.EditPlan) (er
 				amount := max(0, min(room[i], share, remaining))
 				// The share is an OUTPUT delta; convert it back to the source
 				// footage that produces it before moving the selected range.
-				output := c.OutputDurationMS()
-				if grow {
-					output += amount
-				} else {
-					output -= amount
-				}
+				output := c.OutputDurationMS() + amount
 				c.EndMS = c.StartMS + sourceSpan(output, c.Rate())
 				room[i] -= amount
 				remaining -= amount
@@ -218,7 +198,7 @@ func composeTimeline(cfg Config, in clip.PlanningInput, plan *clip.EditPlan) (er
 	// Authored rhythm skips holdCutLengths, so end-only growth used to reject
 	// plans with enough observed footage BEFORE the selected start. Exhaust both
 	// directions without crossing a gap or a neighboring selected range.
-	if grow && remaining > 0 {
+	if remaining > 0 {
 		for i := range plan.Cuts {
 			c := &plan.Cuts[i]
 			floor := backwardSceneFloor(plan, analyses, i)
@@ -248,11 +228,7 @@ func composeTimeline(cfg Config, in clip.PlanningInput, plan *clip.EditPlan) (er
 		plan.DurationMS = in.TargetDurationMS
 		return nil
 	}
-	if !grow {
-		// Even at the fade floor the cuts hold more than the target: the model
-		// picked footage that cannot be trimmed to it.
-		return outputError("plan_timeline")
-	}
+
 	// Every cut sits at the end of its observed footage. The target is the
 	// owner's, but the footage is what it is: a clip the length floor accepts
 	// ships at the length the footage holds rather than being refused for the

@@ -30,6 +30,9 @@ type Segment struct {
 	Scene        string
 	ReadableText bool
 	Subject      Region
+	// Factual empty source-space regions, never an editorial placement choice.
+	// Optional in v2 observations so existing recorded work remains reusable.
+	CaptionSafe []Region
 	// How far the record can be trusted and whether the footage can be used at
 	// all. A black, obscured, static or unreadable span is RECORDED with these
 	// two fields rather than omitted, so the writer sees the whole timeline
@@ -71,6 +74,7 @@ type SourceAnalysis struct {
 	Segments []Segment
 }
 type ChunkInput struct {
+	Language                    string
 	Source                      AnalysisSource
 	Index, OffsetMS, DurationMS int
 	Video                       llm.InlineVideo
@@ -85,6 +89,7 @@ type AnalysisLimits struct {
 	ChunkMS, MaxSources, MaxSourceDurationMS, MaxSegments, MaxTextRunes, MaxSubjects int
 }
 type PlanningInput struct {
+	Language         string
 	Composition      *ProjectComposition
 	Template         Recipe
 	Answers          []Answer
@@ -194,6 +199,14 @@ func validateSegments(l AnalysisLimits, segments []Segment, start, end int, comp
 		}
 		if !ValidRegion(s.Subject) {
 			return observationViolation("observe_subject_bounds", i+1, observationGeometry(s.Focal, s.Subject))
+		}
+		if len(s.CaptionSafe) > 4 {
+			return observationViolation("observe_subject_bounds", i+1, nil)
+		}
+		for _, box := range s.CaptionSafe {
+			if !ValidRegion(box) || box.Width <= 0 || box.Height <= 0 {
+				return observationViolation("observe_subject_bounds", i+1, observationGeometry(s.Focal, box))
+			}
 		}
 		if !bounded(s.Event, 0, l.MaxTextRunes) || !bounded(s.Speech, 0, l.MaxTextRunes) || !bounded(s.Quality, 1, l.MaxTextRunes) || !bounded(s.Action, 0, l.MaxTextRunes) || !bounded(s.Motion, 0, l.MaxTextRunes) {
 			return observationViolation("observe_text_length", i+1, map[string]int{"event_runes": len([]rune(s.Event)), "speech_runes": len([]rune(s.Speech)), "quality_runes": len([]rune(s.Quality)), "action_runes": len([]rune(s.Action)), "motion_runes": len([]rune(s.Motion))})

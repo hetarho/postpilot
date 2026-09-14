@@ -16,7 +16,9 @@ func TestRenderSmokeFilePreset(t *testing.T) {
 	}
 	dir := t.TempDir()
 	files := map[string]string{
-		"bindings.json":         `{"version":1,"bindings":{"copy.clean":"proof","copy.memo":"proof","copy.bold":"proof","copy.mark":"proof","furniture":"furniture","card.hook":"card","card.end":"card"}}`,
+		"bindings.json":         `{"version":1,"bindings":{"copy.clean":"proof","copy.memo":"proof","copy.bold":"proof","copy.mark":"proof","furniture":"furniture","card.hook":"card","card.end":"card","info.emphasis":"info","info.compact":"info"}}`,
+		"info/preset.json":      `{"id":"info","view":"info-v1","template":"overlay.svg"}`,
+		"info/overlay.svg":      `<svg xmlns="http://www.w3.org/2000/svg"/>`,
 		"proof/preset.json":     `{"id":"proof","view":"copy-v1","template":"overlay.svg"}`,
 		"proof/overlay.svg":     `<svg xmlns="http://www.w3.org/2000/svg" width="{{.Width}}" height="{{.Height}}">{{with .Plate}}<rect x="{{.X}}" y="{{.Y}}" width="{{.Width}}" height="{{.Height}}" rx="{{.Radius}}" fill="#FF00FF"/>{{end}}{{range .Lines}}<text x="{{.X}}" y="{{.Y}}" font-family="{{.Family}}" font-size="{{.Size}}" font-weight="{{.Weight}}" letter-spacing="{{.Tracking}}" fill="{{.Fill}}">{{.Value}}</text>{{end}}</svg>`,
 		"furniture/preset.json": `{"id":"furniture","view":"furniture-v1","template":"overlay.svg"}`,

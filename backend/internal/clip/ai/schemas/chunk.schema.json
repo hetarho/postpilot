@@ -27,6 +27,19 @@
           "readable_text": { "type": "boolean" },
           "certainty": { "type": "string", "enum": ["certain", "uncertain", "unknown"] },
           "usability": { "type": "string", "enum": ["usable", "unusable"] },
+          "caption_safe": {
+            "type": "array", "maxItems": 4,
+            "description": "Factual empty space, not an anchor, style or placement choice.",
+            "items": {
+              "type": "object", "additionalProperties": false, "required": ["x", "y", "width", "height"],
+              "properties": {
+                "x": { "type": "number", "minimum": 0, "maximum": 1 },
+                "y": { "type": "number", "minimum": 0, "maximum": 1 },
+                "width": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 },
+                "height": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 }
+              }
+            }
+          },
           "subject": {
             "type": "object", "additionalProperties": false, "required": ["x", "y", "width", "height"],
             "properties": {

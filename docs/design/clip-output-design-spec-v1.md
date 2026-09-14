@@ -708,3 +708,39 @@
 24. W3C WCAG 2.1 (대비 기준, 표준 지식) — https://www.w3.org/TR/WCAG21/
 
 > 미확인·추정 항목 재확인 요청: (1) 네이버 클립 UI 실측 geometry(§1.1), (2) 16:9·1:1 업로드 시 클립 표시 방식(§1.4·§6), (3) 정보 태그 칩이 차지하는 하단 높이. 실측 후 `safe` 상수만 갱신하면 나머지 규칙은 그대로 동작한다.
+
+## Information frame family — CDS-69 (v1)
+
+Information frames now use two bundled SVG drawings, selected from the resolved
+content shape. One short name uses **emphasis**: Pretendard 800 at t.title (72 px,
+64 px minimum), a 6 px round dark text stroke and shadow.text, with no plate.
+A label/value pair uses **compact**: t.label (36 px) and t.caption (44 px) on
+ink.900, a 16 px corner radius and inset corner strokes. Long exact single values
+retain compact word wrapping. Neither variant changes an authored word or binds a
+reserved fact label. The disclosure badge keeps its separate drawing and 40 px
+font contract.
+
+The versioned drawing assets live in
+`backend/internal/clip/overlay/presets/info-emphasis` and `info-compact`; bindings
+and typography/padding live in `design/design.json` (`info_frames`). Both variants
+reserve 28 px horizontally; emphasis reserves 18 px vertically, compact 16 px.
+Corner strokes occupy the outer 4–16 px and never enter the text rectangle.
+Measurement uses the bundled glyph bounds at the actual face, weight and tracking,
+then adds that padding, rounds the outer dimensions upward and enforces the
+600 px width limit. Shared header row height centres the glyphs and resizes the
+frame without changing the badge's font, padding minimum, colour or radius rule.
+
+Worked SVG plates (same measurements used by preview and export):
+
+| Ratio | Emphasis | Compact |
+|---|---|---|
+| 9:16 | [Name](../../backend/internal/clip/media/testdata/information-emphasis-vertical.svg) | [Label/value](../../backend/internal/clip/media/testdata/information-compact-vertical.svg) |
+| 16:9 | [Name](../../backend/internal/clip/media/testdata/information-emphasis-horizontal.svg) | [Label/value](../../backend/internal/clip/media/testdata/information-compact-horizontal.svg) |
+| 1:1 | [Name](../../backend/internal/clip/media/testdata/information-emphasis-square.svg) | [Label/value](../../backend/internal/clip/media/testdata/information-compact-square.svg) |
+
+Export samples the emphasis region on the first, middle and last frames of its
+visible window. Mean Rec.709 luminance ≥ 0.6 or deviation ≥ 0.25 adds the existing
+anchor scrim. V3 includes the dark outline over the sampled/scrimmed ground.
+Compact requires no sampling: its white-frame worst case includes the 0.72 ink
+plate and the label's 0.72 white alpha when checking 4.5:1. Tests cover both
+variants in all ratios, dark/bright backgrounds and simultaneous disclosure.

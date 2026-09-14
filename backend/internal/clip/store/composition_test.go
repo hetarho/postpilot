@@ -26,7 +26,7 @@ func TestOldRoleStyleDraftCanBeReadAndExplicitlyCorrected(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	p, err := s.CreateProject(t.Context(), "alice", clip.ProjectInput{Title: "saved draft", VideoTemplateID: template.ID, Ratio: "vertical", TargetDurationMS: 15000})
+	p, err := s.CreateProject(t.Context(), "alice", clip.ProjectInput{Language: "ko", Title: "saved draft", VideoTemplateID: template.ID, Ratio: "vertical", TargetDurationMS: 15000})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -139,7 +139,7 @@ func TestNativeCompositionOwnedRoundTripAndRequiredIDs(t *testing.T) {
 		t.Fatal(template, err)
 	}
 	inputs := clip.CompositionInputs{Values: map[string]string{"a": "  12,000원 🥣\n", "b": ""}, Items: map[string][]composition.Item{"menu": {{ID: "dish-a", Values: map[string]string{"price": "9,000원"}}, {ID: "dish-b", Values: map[string]string{"price": "15,000원"}}}}}
-	p, err := s.CreateProject(ctx, "alice", clip.ProjectInput{Title: "draft", VideoTemplateID: template.ID, Ratio: "vertical", TargetDurationMS: 15000, CompositionInputs: &inputs})
+	p, err := s.CreateProject(ctx, "alice", clip.ProjectInput{Language: "ko", Title: "draft", VideoTemplateID: template.ID, Ratio: "vertical", TargetDurationMS: 15000, CompositionInputs: &inputs})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -162,7 +162,7 @@ func TestNativeCompositionOwnedRoundTripAndRequiredIDs(t *testing.T) {
 	if _, err := s.UpdateProject(ctx, "bob", p.ID, clip.ProjectPatch{CompositionInputs: &inputs}); !errors.Is(err, clip.ErrNotFound) {
 		t.Fatal("foreign update", err)
 	}
-	if _, err := s.CreateProject(ctx, "bob", clip.ProjectInput{Title: "foreign", VideoTemplateID: template.ID, Ratio: "vertical", TargetDurationMS: 15000}); !errors.Is(err, clip.ErrNotFound) {
+	if _, err := s.CreateProject(ctx, "bob", clip.ProjectInput{Language: "ko", Title: "foreign", VideoTemplateID: template.ID, Ratio: "vertical", TargetDurationMS: 15000}); !errors.Is(err, clip.ErrNotFound) {
 		t.Fatal("foreign template", err)
 	}
 	cleared := clip.CompositionInputs{Values: map[string]string{}, Items: map[string][]composition.Item{}}
@@ -184,7 +184,7 @@ func TestNativeSnapshotSurvivesTemplateEditAndDeletion(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	p, err := s.CreateProject(ctx, "alice", clip.ProjectInput{Title: "draft", VideoTemplateID: template.ID, Ratio: "vertical", TargetDurationMS: 15000})
+	p, err := s.CreateProject(ctx, "alice", clip.ProjectInput{Language: "ko", Title: "draft", VideoTemplateID: template.ID, Ratio: "vertical", TargetDurationMS: 15000})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -210,7 +210,7 @@ func TestLegacyConversionKeepsProjectChoicesResultsAndFrozenRecipe(t *testing.T)
 	s, raw, d := setup(t)
 	ctx := context.Background()
 	template, first := create(t, s)
-	second, err := s.CreateProject(ctx, "alice", clip.ProjectInput{Title: "hidden", VideoTemplateID: template.ID, Ratio: "vertical", TargetDurationMS: 30000, Disclosure: "ad", HideDisclosure: true})
+	second, err := s.CreateProject(ctx, "alice", clip.ProjectInput{Language: "ko", Title: "hidden", VideoTemplateID: template.ID, Ratio: "vertical", TargetDurationMS: 30000, Disclosure: "ad", HideDisclosure: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -309,7 +309,7 @@ func TestUnsupportedCompositionRefusesQuoteBeforeMediaOrCreditWork(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	p, err := h.projects.CreateProject(ctx, "alice", clip.ProjectInput{Title: "native", VideoTemplateID: template.ID, Ratio: "vertical", TargetDurationMS: 15000})
+	p, err := h.projects.CreateProject(ctx, "alice", clip.ProjectInput{Language: "ko", Title: "native", VideoTemplateID: template.ID, Ratio: "vertical", TargetDurationMS: 15000})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -333,7 +333,7 @@ func TestLegacyEscapingKeepsMaximumValidGuidanceReadable(t *testing.T) {
 	if err != nil || len(values) != 1 || values[0].CompositionBody != template.CompositionBody {
 		t.Fatal("XML expansion hid an existing template", err)
 	}
-	p, err := s.CreateProject(ctx, "alice", clip.ProjectInput{Title: "maximum guide", VideoTemplateID: template.ID, Ratio: "vertical", TargetDurationMS: 15000})
+	p, err := s.CreateProject(ctx, "alice", clip.ProjectInput{Language: "ko", Title: "maximum guide", VideoTemplateID: template.ID, Ratio: "vertical", TargetDurationMS: 15000})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -412,7 +412,7 @@ func TestNativeQuoteInvalidatesGroupedValuesAndFreezesAcceptedComposition(t *tes
 		Version     int
 		Composition *clip.ProjectComposition
 	}
-	if json.Unmarshal(j.Payload, &payload) != nil || payload.Version != 4 || payload.Composition == nil || payload.Composition.Snapshot.Body != nativeBody || payload.Composition.Snapshot.Legacy || payload.Composition.Inputs.Items["menu"][0].Values["price"] != "12,000원" {
+	if json.Unmarshal(j.Payload, &payload) != nil || payload.Version != 5 || payload.Composition == nil || payload.Composition.Snapshot.Body != nativeBody || payload.Composition.Snapshot.Legacy || payload.Composition.Inputs.Items["menu"][0].Values["price"] != "12,000원" {
 		t.Fatal("accepted payload lost composition")
 	}
 	changed := strings.Replace(nativeBody, "장면만 설명", "새 구성", 1)
@@ -434,7 +434,7 @@ func TestApplyingCurrentTemplateInputsPreservesPriorRenderedResult(t *testing.T)
 		t.Fatal(err)
 	}
 	input := clip.CompositionInputs{Values: map[string]string{"b": "1인분 12000원"}, Items: map[string][]composition.Item{"menu": {{ID: "retained-item", Values: map[string]string{"price": "9000원"}}}}}
-	p, err := s.CreateProject(ctx, "alice", clip.ProjectInput{Title: "before", VideoTemplateID: template.ID, Ratio: "vertical", TargetDurationMS: 15000, CompositionInputs: &input})
+	p, err := s.CreateProject(ctx, "alice", clip.ProjectInput{Language: "ko", Title: "before", VideoTemplateID: template.ID, Ratio: "vertical", TargetDurationMS: 15000, CompositionInputs: &input})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -410,7 +410,7 @@ func newReleaseHarness(t *testing.T, mode string, stress bool, clocks ...func() 
 	if err != nil {
 		t.Fatal(err)
 	}
-	projectInput := clip.ProjectInput{Title: "synthetic release", VideoTemplateID: template.ID, Ratio: ratio, TargetDurationMS: 15000, Disclosure: "ad", Answers: []clip.Answer{
+	projectInput := clip.ProjectInput{Language: "ko", Title: "synthetic release", VideoTemplateID: template.ID, Ratio: ratio, TargetDurationMS: 15000, Disclosure: "ad", Answers: []clip.Answer{
 		{Label: "상호", Text: "연남 김밥"}, {Label: "위치", Text: "서울 연남동"}, {Label: "place", Text: "fixture"},
 	}}
 	if mode == "detailed-input" {

@@ -59,6 +59,7 @@ type Result struct {
 	CreatedAt            time.Time
 }
 type Project struct {
+	Language                                  string
 	Finalized                                 *Finalization
 	Composition                               *ProjectComposition
 	HideDisclosure                            bool
@@ -76,6 +77,7 @@ type Project struct {
 	CreatedAt, UpdatedAt                   time.Time
 }
 type ProjectInput struct {
+	Language                      string
 	CompositionInputs             *CompositionInputs
 	HideDisclosure                bool
 	Title, VideoTemplateID, Ratio string

@@ -69,7 +69,7 @@ func TestNativeInvalidSelectionKeepsOnlySafeRangeDiagnostics(t *testing.T) {
 	s, models, _ := newService(t, raw(wire), true)
 	_, _, err := s.Plan(t.Context(), testRef(), in)
 	d, ok := clip.DiagnosticFromError(err)
-	if !ok || len(models.calls) != 1 || d.Values["cut"] != 2 || len(d.Ranges) != 2 || !d.Ranges[0].Valid || d.Ranges[1].Valid || d.Ranges[1].Source != 0 {
+	if !ok || len(models.calls) != 1 || d.Check != "plan_timeline" || len(d.Ranges) != 1 || !d.Ranges[0].Valid || d.Values["after_ms"] != 7500 {
 		t.Fatalf("unsafe selection diagnostic: %v %+v", err, d)
 	}
 }

@@ -9,6 +9,7 @@ import (
 	"math"
 	"os"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -185,7 +186,7 @@ func TestObservationContractPlainFallbackOffsetAndSpeech(t *testing.T) {
 				t.Fatalf("%+v %+v %v", got, usage, err)
 			}
 			request := f.calls[0]
-			if len(f.calls) != 1 || f.refs[0] != ref || request.Stage != llm.StageNameObserve || request.MaxTokens != s.Budgets().Observe || request.Reasoning != llm.ReasoningLow || (len(request.JSONSchema) > 0) != structured || !strings.Contains(request.System, `"maxLength": 2000`) {
+			if len(f.calls) != 1 || f.refs[0] != ref || request.Stage != llm.StageNameObserve || request.MaxTokens != s.Budgets().Observe || request.Reasoning != llm.ReasoningLow || (len(request.JSONSchema) > 0) != structured || !strings.Contains(request.System, `"maxLength":2000`) {
 				t.Fatalf("bad request %+v", request)
 			}
 			parts := request.Messages[0].Parts
@@ -370,12 +371,10 @@ func TestStructuralOutputStillEnforcesDomainBounds(t *testing.T) {
 		}
 		v := plan()
 		firstCut(v)["caption"].(map[string]any)["text"] = strings.Repeat("한", 501)
-		s, f, c := newService(t, raw(v), structured)
-		if _, _, err := s.Plan(t.Context(), testRef(), planningInput()); !errors.Is(err, clip.ErrCopyTooLong) {
-			t.Fatalf("accepted oversized caption: %v", err)
-		}
-		if len(f.calls) != 1 || c.calls != 0 {
-			t.Fatal("invalid result reached repair or rendering")
+		s, f, _ := newService(t, raw(v), structured)
+		delivered, _, err := s.Plan(t.Context(), testRef(), planningInput())
+		if err != nil || !hasNotice(delivered, "plan_copy_chars") || len(delivered.Cuts[0].Copies) != 0 || len(f.calls) != 1 {
+			t.Fatalf("oversized generated caption was not removed: %v", err)
 		}
 	}
 }
@@ -427,7 +426,7 @@ func TestPlanIsGroundedMeasuredAndPreservesExactAnswers(t *testing.T) {
 		}
 	}
 }
-func TestPlanRejectsEveryInvalidBoundaryWithoutRepair(t *testing.T) {
+func TestPlanRepairsReadableBoundariesAndRefusesDecodeBreaks(t *testing.T) {
 	for _, mode := range []string{"unknown source", "empty cuts", "duplicate id", "empty id", "long id", "negative start", "outside source", "backwards", "short cut", "wrong ratio", "caption negative", "caption outside cut", "caption backwards", "caption missing", "free position", "disallowed style", "disallowed accent", "free coordinates", "music", "gain over", "gain under", "gain null", "fractional"} {
 		t.Run(mode, func(t *testing.T) {
 			v := plan()
@@ -484,8 +483,20 @@ func TestPlanRejectsEveryInvalidBoundaryWithoutRepair(t *testing.T) {
 				cut["start_ms"] = 1.5
 			}
 			s, f, c := newService(t, raw(v), false)
-			if _, _, err := s.Plan(t.Context(), testRef(), planningInput()); !errors.Is(err, llm.ErrBadOutput) {
-				t.Fatalf("accepted bad plan: %v", err)
+			delivered, _, err := s.Plan(t.Context(), testRef(), planningInput())
+			readable := slices.Contains([]string{"unknown source", "duplicate id", "empty id", "long id", "negative start", "outside source", "backwards", "short cut", "wrong ratio", "caption negative", "caption outside cut", "caption backwards", "gain over", "gain under"}, mode)
+			if readable {
+				if err != nil || len(f.calls) != 1 {
+					t.Fatalf("readable plan failed: %v", err)
+				}
+				assertExecutableTimeline(t, planningInput(), delivered)
+				if mode != "short cut" && len(delivered.Notices) == 0 {
+					t.Fatal("repair/removal lost its notice")
+				}
+				return
+			}
+			if !errors.Is(err, llm.ErrBadOutput) {
+				t.Fatalf("unreadable plan accepted: %v", err)
 			}
 			if len(f.calls) != 1 || c.calls != 0 {
 				t.Fatal("invalid plan reached repair or renderer")
@@ -725,10 +736,17 @@ func TestCutBoundsRejectIntegerWraparoundBeforeRendering(t *testing.T) {
 	c := firstCut(v)
 	c["start_ms"] = math.MaxInt - 10000
 	c["end_ms"] = math.MinInt + 4999
-	s, f, measure := newService(t, raw(v), true)
-	if _, _, err := s.Plan(t.Context(), testRef(), planningInput()); !errors.Is(err, llm.ErrBadOutput) || len(f.calls) != 1 || measure.calls != 0 {
-		t.Fatalf("overflowed source range accepted: %v", err)
+	s, f, _ := newService(t, raw(v), true)
+	delivered, _, err := s.Plan(t.Context(), testRef(), planningInput())
+	if err != nil || len(f.calls) != 1 || !hasNotice(delivered, "plan_cut_range") {
+		t.Fatalf("overflowed cut was not removed: %v", err)
 	}
+	for _, cut := range delivered.Cuts {
+		if cut.ID == c["id"] {
+			t.Fatal("overflowed source range survived")
+		}
+	}
+	assertExecutableTimeline(t, planningInput(), delivered)
 }
 
 // splitRecordedCut cuts one recorded take into n consecutive cuts of the same

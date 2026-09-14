@@ -209,7 +209,14 @@ func templateProto(t clip.VideoTemplate) *v1.VideoTemplate {
 }
 func projectProto(p clip.Project) *v1.ClipProject {
 	canEdit, canFinalize := p.Finalized == nil, false
-	out := &v1.ClipProject{CanEdit: &canEdit, CanFinalize: &canFinalize, Composition: compositionProto(p.Composition), Id: p.ID, Title: p.Title, VideoTemplateId: p.VideoTemplateID, Ratio: p.Ratio, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, Cta: p.CTA, TargetDurationMs: int32(p.TargetDurationMS), EditPlanRevision: int32(p.EditPlanRevision), RenderedPlanRevision: int32(p.RenderedPlanRevision), CreatedAt: p.CreatedAt.UTC().Format(time.RFC3339Nano), UpdatedAt: p.UpdatedAt.UTC().Format(time.RFC3339Nano)}
+	out := &v1.ClipProject{CanEdit: &canEdit, CanFinalize: &canFinalize, Composition: compositionProto(p.Composition), Id: p.ID, Title: p.Title, VideoTemplateId: p.VideoTemplateID, Ratio: p.Ratio, Language: languageToProto(p.Language), Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, Cta: p.CTA, TargetDurationMs: int32(p.TargetDurationMS), EditPlanRevision: int32(p.EditPlanRevision), RenderedPlanRevision: int32(p.RenderedPlanRevision), CreatedAt: p.CreatedAt.UTC().Format(time.RFC3339Nano), UpdatedAt: p.UpdatedAt.UTC().Format(time.RFC3339Nano)}
+	if p.EditPlan != "" {
+		if plan, _, err := clip.DecodeEditPlan(p.EditPlan); err == nil {
+			for _, n := range clip.ActivePlanNotices(plan) {
+				out.Notices = append(out.Notices, &v1.ClipNotice{Code: n.Reason, CutId: n.CutID, ElementId: n.ElementID, Action: n.Action})
+			}
+		}
+	}
 	if f := p.Finalized; f != nil {
 		out.FinalizedAt = f.At.UTC().Format(time.RFC3339Nano)
 		out.FinalizedPlanRevision = int32(f.PlanRevision)
@@ -337,7 +344,11 @@ func (h *Handler) CreateClipProject(ctx context.Context, req *connect.Request[v1
 		return nil, err
 	}
 	m := req.Msg
-	value, err := h.service.CreateProject(ctx, user, clip.ProjectInput{CompositionInputs: compositionInputs(m.CompositionInputs), Title: m.Title, VideoTemplateID: m.VideoTemplateId, Ratio: m.Ratio, TargetDurationMS: int(m.TargetDurationMs), Disclosure: m.Disclosure, HideDisclosure: m.HideDisclosure, CTA: m.Cta, Answers: answers(m.Answers)})
+	language, err := languageFromProto(m.Language)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+	value, err := h.service.CreateProject(ctx, user, clip.ProjectInput{Language: language, CompositionInputs: compositionInputs(m.CompositionInputs), Title: m.Title, VideoTemplateID: m.VideoTemplateId, Ratio: m.Ratio, TargetDurationMS: int(m.TargetDurationMs), Disclosure: m.Disclosure, HideDisclosure: m.HideDisclosure, CTA: m.Cta, Answers: answers(m.Answers)})
 	if err != nil {
 		return nil, toConnectError(err)
 	}

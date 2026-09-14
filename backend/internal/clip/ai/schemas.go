@@ -25,6 +25,7 @@ func compactContract(value []byte) string {
 }
 
 var compositionPlanPromptSchema = compactContract(compositionPlanSchema)
+var chunkPromptSchema = compactContract(chunkSchema)
 
 // Provider grammars receive the closed structural shape, not every domain
 // bound. The full contracts still live in the prompts and are checked locally.

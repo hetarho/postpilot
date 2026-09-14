@@ -46,7 +46,7 @@ func TestItemGroupMinimumRefusesQuoteBeforeWorkButAllowsDrafts(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			p, err := h.projects.CreateProject(t.Context(), "alice", clip.ProjectInput{Title: "incomplete", VideoTemplateID: template.ID, Ratio: "vertical", TargetDurationMS: 15000})
+			p, err := h.projects.CreateProject(t.Context(), "alice", clip.ProjectInput{Language: "ko", Title: "incomplete", VideoTemplateID: template.ID, Ratio: "vertical", TargetDurationMS: 15000})
 			if err != nil {
 				t.Fatal("empty draft refused", err)
 			}

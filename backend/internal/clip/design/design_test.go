@@ -197,7 +197,7 @@ func TestColourAndSpacingTokensMatchCDS14And15And21(t *testing.T) {
 func TestStylesMotionTimingTransitionAudioAndLuma(t *testing.T) {
 	// CDS-22 through CDS-26: four styles, one per role.
 	styles := map[string]design.StyleRule{
-		"simple": {Type: "simple", Lines: 2, Chars: 14, Anchor: "bottom", Align: "center", Stroke: "mark", Shadow: "text"},
+		"simple": {Type: "simple", Lines: 2, Chars: 14, Anchor: "bottom", AnchorAlt: "top", Align: "center", Stroke: "mark", Shadow: "text"},
 		// CDS-23: plate, bar, pad.box with the bar inside a 40 px left inset.
 		"clean": {Type: "body", Plate: "ink_900", Lines: 2, Chars: 14, Anchor: "bottom", Align: "center",
 			Padding: design.Pad{V: 22, H: 32}, PadLeft: 40, Bar: true},

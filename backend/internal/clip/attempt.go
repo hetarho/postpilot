@@ -191,7 +191,7 @@ func (s *GenerationService) uploadPath(ctx context.Context, key, path string, by
 	}
 	return nil
 }
-func (s *GenerationService) observe(ctx context.Context, c AnalysisChunk, input AnalysisSource, policy llm.CallPolicy) (out ChunkAnalysis, err error) {
+func (s *GenerationService) observe(ctx context.Context, c AnalysisChunk, input AnalysisSource, policy llm.CallPolicy, language string) (out ChunkAnalysis, err error) {
 	defer func() { err = errors.Join(err, os.Remove(c.Path)) }()
 	video := llm.InlineVideo{MIME: "video/mp4", Size: c.Bytes, DurationMS: int64(c.Info.ContainerDurationMS), Sampling: llm.VideoSamplingFixed, Open: func(ctx context.Context) (io.ReadCloser, error) {
 		if err := ctx.Err(); err != nil {
@@ -208,7 +208,7 @@ func (s *GenerationService) observe(ctx context.Context, c AnalysisChunk, input 
 		}
 		return f, nil
 	}}
-	out, _, err = s.planner.ObserveChunk(ctx, policy.Ref, ChunkInput{Source: input, Index: c.Index, OffsetMS: c.OffsetMS, DurationMS: c.DurationMS, Video: video, Policy: policy})
+	out, _, err = s.planner.ObserveChunk(ctx, policy.Ref, ChunkInput{Source: input, Index: c.Index, OffsetMS: c.OffsetMS, DurationMS: c.DurationMS, Video: video, Policy: policy, Language: language})
 	return out, err
 }
 

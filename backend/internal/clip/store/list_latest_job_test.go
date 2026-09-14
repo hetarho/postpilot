@@ -20,7 +20,7 @@ func TestListClipProjectsCarriesEachProjectsLatestJob(t *testing.T) {
 	handler := cliprpc.NewHandler(h.projects).WithGeneration(h.service, h.queue)
 	ctx := auth.WithUser(context.Background(), "alice")
 
-	idle, err := h.projects.CreateProject(ctx, "alice", clip.ProjectInput{
+	idle, err := h.projects.CreateProject(ctx, "alice", clip.ProjectInput{Language: "ko",
 		Title:            "no attempt yet",
 		VideoTemplateID:  h.template.ID,
 		Ratio:            "vertical",

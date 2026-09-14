@@ -118,7 +118,9 @@ func (c EditCut) OriginalVolume() float64 {
 }
 
 type EditPlan struct {
-	Portable *PortablePlan
+	Notices            []PlanNotice
+	NoticeCutRevisions map[string]int
+	Portable           *PortablePlan
 	// The complete owner-controlled original-sound snapshot for the sources this
 	// plan draws on (CLIP-18). Nil is a plan written before the setting existed,
 	// whose audio meaning still lives in per-cut volume — a different thing from
@@ -438,7 +440,7 @@ func ValidateEditPlan(cfg RenderConfig, plan EditPlan, sources []RenderSource) e
 		if i+1 < len(plan.Cuts) {
 			overlap += plan.Cuts[i+1].TransitionMS
 		}
-		if length <= max(2*design.Transition.FadeMS, overlap) {
+		if length <= overlap {
 			return planViolation("plan_cut_fade")
 		}
 		if !normalized(c.Focal.X) || !normalized(c.Focal.Y) {

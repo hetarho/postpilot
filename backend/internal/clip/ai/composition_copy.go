@@ -31,25 +31,40 @@ func attachCompositionCopy(cfg Config, doc *composition.Document, generated []ge
 		// range that the finished timeline does not contain.
 		evidence[""] = append(evidence[""], evidence[cut.ID]...)
 	}
+
 	entries := map[string]generatedJSON{}
-	for _, g := range generated {
+	removed := map[string]string{}
+	seen := map[string]bool{}
+	for index, g := range generated {
 		key := copyKey(g.ElementID, g.CutID)
 		element, exists := declared[key]
-		if _, duplicate := entries[key]; duplicate || !exists || element.Kind != "ai" {
-			return outputError("composition_generated_identity")
+		reason := ""
+		switch {
+		case seen[key] || !exists || element.Kind != "ai":
+			reason = "composition_generated_identity"
+		case index >= cfg.Template.Composition.Cues || !within(g.Text, 0, cfg.Template.Composition.CopyChars) || !within(g.ShortText, 0, cfg.Template.Composition.CopyChars) || !within(g.Keyword, 0, cfg.Template.Composition.LabelChars) || len(g.Facts) > cfg.Template.Composition.Fields || len(g.Observations) > 120:
+			reason = "composition_generated_bounds"
+		case len(g.Rows) != len(element.Rows) || len(g.ShortRows) != 0 && len(g.ShortRows) != len(element.Rows) || len(element.Rows) > 0 && (g.Text != "" || g.ShortText != ""):
+			reason = "composition_generated_rows"
 		}
-		if !within(g.Text, 0, cfg.Template.Composition.CopyChars) || !within(g.ShortText, 0, cfg.Template.Composition.CopyChars) || !within(g.Keyword, 0, cfg.Template.Composition.LabelChars) || len(g.Facts) > cfg.Template.Composition.Fields || len(g.Observations) > 120 {
-			return outputError("composition_generated_bounds")
-		}
-		if len(g.Rows) != len(element.Rows) || len(g.ShortRows) != 0 && len(g.ShortRows) != len(element.Rows) || len(element.Rows) > 0 && (g.Text != "" || g.ShortText != "") {
-			return outputError("composition_generated_rows")
-		}
+		seen[key] = true
 		for _, row := range append(slices.Clone(g.Rows), g.ShortRows...) {
 			if !within(row, 0, cfg.Template.Composition.CopyChars) {
-				return outputError("composition_generated_bounds")
+				reason = "composition_generated_bounds"
 			}
 		}
-		entries[key] = g
+		if reason != "" {
+			delete(entries, key)
+			removed[key] = reason
+			f := clip.CopyFallback{ElementID: g.ElementID, CutID: g.CutID, Reason: reason}
+			if !slices.Contains(plan.Fallbacks, f) {
+				plan.Fallbacks = append(plan.Fallbacks, f)
+			}
+			continue
+		}
+		if removed[key] == "" {
+			entries[key] = g
+		}
 	}
 	used := map[string]bool{}
 	for _, resolved := range timeline.Elements {
@@ -60,6 +75,9 @@ func attachCompositionCopy(cfg Config, doc *composition.Document, generated []ge
 		}
 		if resolved.Element.Kind == "fixed" {
 			plan.Elements = append(plan.Elements, text)
+			continue
+		}
+		if removed[key] != "" {
 			continue
 		}
 		entry, exists := entries[key]

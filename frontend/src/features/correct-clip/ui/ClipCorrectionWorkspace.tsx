@@ -1,3 +1,4 @@
+import { ClipNoticeList, type ClipNotice } from '@/entities/clip-project'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
@@ -60,6 +61,8 @@ export function ClipCorrectionWorkspace({
   finalizeAction,
   inputs,
   observations,
+  notices = [],
+  language,
 }: {
   correction: Correction
   state: ClipEditingState
@@ -76,6 +79,8 @@ export function ClipCorrectionWorkspace({
   localSources: ReadonlyArray<{ fingerprint: string; url: string }>
   inputs?: ClipCompositionInputs
   observations?: ClipObservations
+  notices?: readonly ClipNotice[]
+  language?: 'ko' | 'en'
 }) {
   const { t } = useTranslation('clips')
   const viewport = useVisualViewport()
@@ -219,6 +224,10 @@ export function ClipCorrectionWorkspace({
           stickyTop: pinPreview ? viewport.offsetTop : undefined,
         })}
       </div>
+      <ClipNoticeList
+        notices={notices.filter((n) => !n.cutId && !n.elementId)}
+        language={language}
+      />
       <div className="flex flex-wrap items-center gap-2">
         <Button
           variant="secondary"
@@ -278,6 +287,18 @@ export function ClipCorrectionWorkspace({
         timeMs={timeline.timeMs}
         onSelect={(selection) => dispatch({ type: 'select', selection })}
         localSources={localSources}
+        notices={notices}
+      />
+      <ClipNoticeList
+        notices={notices.filter(
+          (n) =>
+            (n.cutId && !draft.cuts.some((c) => c.id === n.cutId)) ||
+            (n.elementId &&
+              !draft.elements?.some((e) => e.elementId === n.elementId && e.cutId === n.cutId)),
+        )}
+        language={language}
+        cuts={draft.cuts}
+        withTargets
       />
       <Slider
         label={t('preview.outputTime')}
@@ -532,10 +553,18 @@ export function ClipCorrectionWorkspace({
             )}
           </div>
         )}
+        {cut && (
+          <ClipNoticeList
+            notices={notices.filter((n) => n.cutId === cut.id && !n.elementId)}
+            language={language}
+          />
+        )}
         {text && (
           <ClipTextControls
             plan={draft}
             text={text}
+            notices={notices}
+            language={language}
             styles={state.copyStyles}
             change={change}
             invalid={

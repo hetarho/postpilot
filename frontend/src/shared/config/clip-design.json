@@ -201,7 +201,7 @@
       "lines": 2,
       "chars": 14,
       "anchor": "bottom",
-      "anchor_alt": "",
+      "anchor_alt": "top",
       "align": "center",
       "padding": {
         "v": 0,
@@ -277,6 +277,26 @@
       "stroke": "mark",
       "shadow": "text",
       "highlight": true
+    }
+  },
+  "info_frames": {
+    "emphasis": {
+      "binding": "info.emphasis",
+      "type": "title",
+      "face": "pretendard",
+      "padding": { "v": 18, "h": 28 },
+      "plate": "",
+      "stroke": "text",
+      "shadow": "text"
+    },
+    "compact": {
+      "binding": "info.compact",
+      "type": "caption",
+      "face": "pretendard",
+      "padding": { "v": 16, "h": 28 },
+      "plate": "ink_900",
+      "stroke": "",
+      "shadow": ""
     }
   },
   "presets": {

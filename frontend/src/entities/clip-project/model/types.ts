@@ -1,3 +1,4 @@
+import type { ClipNotice } from './notices'
 import type { GenerationJob } from '@/entities/generation-job/@x/clip-project'
 import type { ClipCTAId, ClipDisclosureId } from '@/shared/config'
 import type { ClipProjectComposition, ClipCompositionInputs } from './composition'
@@ -34,6 +35,8 @@ export interface ClipProjectDraft {
   cta: ClipCTAId | ''
 }
 export interface ClipProject extends ClipProjectDraft {
+  notices?: ClipNotice[]
+  language?: 'ko' | 'en'
   finalized?: { at: string; planRevision: number; resultId: string }
   canEdit?: boolean
   canFinalize?: boolean

@@ -8,12 +8,23 @@ import (
 
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/design"
+	"github.com/postpilot/backend/internal/clip/overlay"
 )
 
 func (r *Rendering) declaredPlate(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, visual *declaredVisual, source clip.MediaSource, index int) (string, error) {
 	var body string
 	var err error
 	switch visual.manifest.Role {
+	case "info":
+		if visual.infoVariant == "emphasis" {
+			cut := clip.Cut{StartMS: 0, EndMS: source.Info.DurationMS, Focal: clip.Point{X: .5, Y: .5}}
+			window := declaredSampleWindow(visual.manifest.StartMS, visual.manifest.EndMS, source.Info.DurationMS, r.cfg.FPS)
+			visual.ground, err = r.sample(ctx, ws, canvas, source, cut, window, visual.manifest.Region, index)
+			if err != nil {
+				return "", err
+			}
+			applyInfoGround(canvas, visual)
+		}
 	case "caption":
 		if visual.caption.Style.Plate == "" && visual.copy.Style != "simple" {
 			cut := clip.Cut{StartMS: 0, EndMS: source.Info.DurationMS, Focal: clip.Point{X: .5, Y: .5}}
@@ -51,7 +62,8 @@ func (r *Rendering) declaredSVG(canvas clip.Canvas, visual declaredVisual) (stri
 	case "badge":
 		return r.overlays.Render("furniture", furnitureView(canvas, visual.furniture))
 	case "info":
-		return r.overlays.Render("copy.clean", visual.info)
+		applyInfoGround(canvas, &visual)
+		return r.overlays.Render(design.InfoFrames[visual.infoVariant].Binding, visual.info)
 	case "hook", "ending":
 		return r.overlays.Render("card."+visual.card.Kind, cardView(canvas, visual.card))
 	default:
@@ -108,4 +120,32 @@ func (r *Rendering) overlayComposition(ctx context.Context, ws clip.MediaWorkspa
 		frames = append(frames, window.EndFrame-window.StartFrame)
 	}
 	return paths, frames, nil
+}
+
+func applyInfoGround(canvas clip.Canvas, visual *declaredVisual) {
+	if visual.infoVariant != "emphasis" {
+		return
+	}
+	anchor := visual.manifest.Position
+	if anchor == "header" || anchor == "auto" {
+		anchor = "top"
+	}
+	for i := range visual.manifest.Parts {
+		p := &visual.manifest.Parts[i]
+		if p.Kind == "copy" && visual.ground.Sampled() {
+			p.Background = visual.ground.Background(canvas, design.StyleRule{Stroke: "text"}, anchor, clip.Region(p.Region))
+		}
+	}
+	if visual.ground.Scrim() {
+		if s, ok := scrimFor(canvas, anchor); ok {
+			paint := design.Scrim[s.Edge]
+			visual.info.Scrim = &overlay.Scrim{Box: overlayBox(s.Region, 0, paint.Hex, ""), From: trimmed(paint.From), To: trimmed(paint.To)}
+			for _, p := range visual.manifest.Parts {
+				if p.Kind == "scrim" {
+					return
+				}
+			}
+			visual.manifest.Parts = append(visual.manifest.Parts, design.Element{Kind: "scrim", Region: design.Region(s.Region), StartMS: visual.manifest.StartMS, EndMS: visual.manifest.EndMS})
+		}
+	}
 }

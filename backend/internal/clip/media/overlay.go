@@ -158,7 +158,7 @@ func loadOverlays(directory string) (*overlay.Catalog, error) {
 			return nil, err
 		}
 	}
-	for _, binding := range []string{"furniture", "card.hook", "card.end"} {
+	for _, binding := range []string{"furniture", "card.hook", "card.end", "info.emphasis", "info.compact"} {
 		kind, _, _ := strings.Cut(binding, ".")
 		if _, err := catalog.Render(binding, overlayProbe(kind+"-v1")); err != nil {
 			return nil, err
@@ -176,6 +176,8 @@ func overlayProbe(view string) any {
 	switch view {
 	case "copy-v1":
 		return overlay.CopyView{Canvas: canvas, Plate: &box, Bar: &box, Dot: &overlay.Circle{Radius: 1, Fill: "#111111"}, Shadow: &overlay.Shadow{Fill: "#111111", Opacity: "1"}, Scrim: &overlay.Scrim{Box: box, From: "0", To: "1"}, Lines: []overlay.Text{text}}
+	case "info-v1":
+		return overlay.InfoView{CopyView: overlayProbe("copy-v1").(overlay.CopyView), Frame: box, Right: box.Width, Bottom: box.Height}
 	case "furniture-v1":
 		return overlay.FurnitureView{Canvas: canvas, Badge: &box, Label: &text, Chips: []overlay.Chip{{Box: box, Label: text, Value: text}}}
 	default:

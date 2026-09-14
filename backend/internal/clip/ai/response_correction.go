@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/llm"
+	"strings"
 )
 
 const responseContract = `
@@ -21,7 +22,14 @@ func responseCorrection(err error, response llm.Response) bool {
 	if ok && (d.Phase == "timeline_grow" || d.Phase == "timeline_shrink" || d.Phase == "timeline_total" || d.Phase == "input") {
 		return false
 	}
-	return true
+	var code interface{ OutputValidationCode() string }
+	check := d.Check
+	if errors.As(err, &code) {
+		check = code.OutputValidationCode()
+	}
+	// Observation retains its existing correction contract. Composition retries
+	// are strictly limited to unreadable responses and missing required fields.
+	return strings.HasPrefix(check, "observe_") || strings.HasPrefix(check, "output_") || check == "plan_required" || check == "plan_cut_fields" || check == "plan_caption_fields"
 }
 
 func completeValidated[T any](ctx context.Context, s *Service, model llm.ModelRef, request llm.Request, user string, policy llm.CallPolicy, parse func(string) (T, error)) (T, llm.Usage, error) {

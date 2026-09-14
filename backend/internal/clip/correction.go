@@ -456,6 +456,7 @@ func ApplyCorrection(cfg RenderConfig, p Project, input CorrectionPlan) (EditPla
 	if err = ValidateSourceRanges(next, SourceOverlaps(old.Cuts)); err != nil {
 		return EditPlan{}, nil, err
 	}
+	trackNoticeCutEdits(old, &next)
 	return next, styles, nil
 }
 

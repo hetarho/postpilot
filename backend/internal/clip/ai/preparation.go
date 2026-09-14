@@ -29,7 +29,7 @@ func (s *Service) ValidatePreparation(observe llm.ModelRef, in clip.PlanningInpu
 		schema = ChunkSchema()
 	}
 	for _, source := range sources {
-		system, user := BuildObservePrompt(clip.ChunkInput{Source: source, DurationMS: min(s.cfg.Analysis.ChunkMS, source.Info.DurationMS)})
+		system, user := BuildObservePrompt(clip.ChunkInput{Source: source, DurationMS: min(s.cfg.Analysis.ChunkMS, source.Info.DurationMS), Language: in.Language})
 		if err := validatePrompt(system, user, schema, llm.ExecutionInlineStatic, llm.ClipInputUnits); err != nil {
 			return err
 		}

@@ -196,6 +196,11 @@ func (s *Service) Plan(ctx context.Context, model llm.ModelRef, input clip.Plann
 			return clip.EditPlan{}, usage, stageError("plan", err)
 		}
 	}
+	if !nativeComposition(input) && result.DurationMS-input.TargetDurationMS > s.cfg.TargetToleranceMS {
+		trimGeneratedOverrun(&result, input.TargetDurationMS)
+	}
+	removeInvalidGeneratedCopies(s.cfg, input, &result)
+	clip.RecomputePlanNotices(&result, input.TargetDurationMS, s.cfg.TargetToleranceMS)
 	if err := validatePlan(s.cfg, input, result); err != nil {
 		return clip.EditPlan{}, usage, stageError("plan", planFailure(err, input, result, "validation", 0))
 	}

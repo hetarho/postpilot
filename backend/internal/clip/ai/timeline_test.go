@@ -207,7 +207,7 @@ func TestComposeCannotFillTargetFromUnobservedOrReusedFootage(t *testing.T) {
 			wire := map[string]any{"ratio": "vertical", "duration_ms": 15000, "hook": "정확한 여행", "cuts": cuts}
 			s, models, measure := newService(t, raw(wire), true)
 			_, usage, err := s.Plan(t.Context(), testRef(), in)
-			if mode == "unblocked" {
+			if mode == "unblocked" || mode == "caption cannot shrink" {
 				if err != nil {
 					t.Fatalf("the same plan must compile when nothing blocks it: %v", err)
 				}
@@ -334,17 +334,24 @@ func TestPresetTargetYieldsToTheApprovedDuration(t *testing.T) {
 		t.Fatalf("the preset's floor refused a reachable timeline: %v", err)
 	}
 	total := 0
-	for _, c := range plan.Cuts {
-		total += c.EndMS - c.StartMS
-		if minimum, _ := design.CutBounds("scenery", "cafe"); c.EndMS-c.StartMS >= minimum {
-			t.Fatalf("cut %s kept the preset floor at the target's expense: %+v", c.ID, c)
+	for i, c := range plan.Cuts {
+		total += c.SourceSpanMS()
+		want := 4200
+		if i == 3 {
+			want = 2400
 		}
+		if c.SourceSpanMS() != want {
+			t.Fatalf("tail trim changed cut %d: %+v", i, c)
+		}
+	}
+	if !hasNotice(plan, "plan_target_duration") {
+		t.Fatal("tail trim lost its notice")
 	}
 	if plan.DurationMS != 15000 || total-plan.TransitionTotal() != 15000 {
 		t.Fatalf("duration %d total %d", plan.DurationMS, total)
 	}
 	// The same four cuts under the shared range hold their 1.2 s floor and shrink
-	// evenly inside the first pass.
+	// from the last cut.
 	in.Template.Preset = ""
 	s, _, _ = newService(t, raw(map[string]any{"ratio": "vertical", "duration_ms": 16800, "hook": "정확한 여행", "cuts": cuts}), true)
 	if plan, _, err = s.Plan(t.Context(), testRef(), in); err != nil || plan.DurationMS != 15000 {
@@ -420,10 +427,12 @@ func TestACutMayNotCrossTouchingScenes(t *testing.T) {
 	wire := map[string]any{"ratio": "vertical", "duration_ms": in.TargetDurationMS, "hook": "정확한 여행",
 		"cuts": []any{cut("straddle", "source-0", 1000, 4000), cut("b", "source-1", 0, ceiling), cut("c", "source-2", 0, ceiling)}}
 	s, models, _ := newService(t, raw(wire), true)
-	_, _, err := s.Plan(t.Context(), testRef(), in)
-	d, ok := clip.DiagnosticFromError(err)
-	if err == nil || !ok || d.Check != "plan_cut_scene" || len(models.calls) != 1 {
-		t.Fatalf("a cut crossing two scenes was accepted: %v %+v", err, d)
+	delivered, _, err := s.Plan(t.Context(), testRef(), in)
+	if err != nil || !hasNotice(delivered, "plan_cut_scene") || len(models.calls) != 1 {
+		t.Fatalf("scene narrowing failed: %v", err)
+	}
+	if delivered.Cuts[0].EndMS > 2800 {
+		t.Fatal("repair crossed into the next observed scene")
 	}
 	// The same cut inside ONE of those scenes is fine.
 	wire["cuts"].([]any)[0] = cut("straddle", "source-0", 0, 2800)
@@ -508,13 +517,16 @@ func TestReconciliationConvertsOutputDeltaBackToSourceDelta(t *testing.T) {
 		if err != nil || plan.DurationMS != 15000 {
 			t.Fatalf("rate %d: %v %d", rate, err, plan.DurationMS)
 		}
-		// Three 6 s cuts must shrink to 5 s of OUTPUT each, which is 5 s of
-		// source at 1x and 10 s of source at 2x.
-		for _, c := range plan.Cuts {
-			if c.OutputDurationMS() != 5000 {
-				t.Fatalf("rate %d: cut occupies %d output ms, want 5000", rate, c.OutputDurationMS())
+		// The last cut gives up 3 s of output: 3 s of source at 1x, 6 s at 2x.
+		for i, c := range plan.Cuts {
+			want := 6000
+			if i == 2 {
+				want = 3000
 			}
-			if c.SourceSpanMS() != 5000*rate/clip.RateUnitPermille {
+			if c.OutputDurationMS() != want {
+				t.Fatalf("rate %d: cut occupies %d output ms, want %d", rate, c.OutputDurationMS(), want)
+			}
+			if c.SourceSpanMS() != want*rate/clip.RateUnitPermille {
 				t.Fatalf("rate %d: cut gave up %d source ms", rate, c.SourceSpanMS())
 			}
 		}

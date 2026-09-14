@@ -47,17 +47,20 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T110 | Release QA on the Naver app and the overlay measurement | CDS CLIP | T108 | blocked@260912 |
-| T162 | Rank automatic anchors by the observed caption-safe regions | CDS CLIP | T161 | doing@260915.cap |
-| T163 | Replace the information pill with a product-drawn frame family | CDS | - | todo |
-| T164 | Repair or narrow a generated plan and record its notices instead of refusing it | CLIP | - | todo |
-| T165 | Show a delivered clip's notices with the result, in step ② and at finalization | CLIP | T164 | todo |
 
 ## next
-- implement-task T164 — the ladder and the stored notices; T165 surfaces them and waits on it.
-- T162 implements observed-space anchor ranking (cap); T159 T160 T161 are complete.
-- T163 remains a separate information-frame design change; T110 stays owner-blocked and T008 owner-dependent.
+- T159–T165 are complete as one coordinated frontend/backend release.
+- No unclaimed implementation task remains; T110 stays owner-blocked and T008 owner-dependent.
 
 ## log
+- 260915 T165 done
+- 260915 T164 done
+- 260915 T163 done
+- 260915 T165 claimed (frm); T164 parser and notice contract tests pass, coordinated release gates remain
+- 260915 update-ssot CDS start (owner design direction from clip_sample_tmp review)
+- 260915 T164 claimed (frm); T163–T165 selected for a coordinated release
+- 260915 T163 claimed (frm)
+- 260915 T162 done; T159–T162 form the verified caption-placement release
 - 260915 T160 done
 - 260915 T162 claimed (cap); base refreshed to CLIP@21 because the notice-policy delta does not change anchor ranking
 - 260915 T161 done
@@ -70,11 +73,3 @@
 - 260915 update-ssot CLIP r21 done; deliver-with-notice tolerance, retries narrowed to unreadable responses, notices stored with the project; CDS unchanged — notices are product surface, not rendered output
 - 260915 warn: T160 T161 are doing on CLIP but sit outside the r21 decisions (observation language, caption-safe regions); no refresh needed
 - 260915 create-task CLIP CDS done; T159 T160 T161 T162 T163 from the r20/r14 delta
-- 260915 update-ssot CLIP r20 CDS r14 done; observation language, caption-safe regions, information frame family, pace-independent caption sequencing; free vertical placement dropped by the owner
-- 260915 T157 done (vis); refused saves retain actionable page-level reasons across steps; retry backoff preserved
-- 260915 T157 claimed (vis)
-- 260915 T156 done (vis); all 97 public checks explained beside failures in ko/en
-- 260915 T156 claimed (vis)
-- 260915 T155 done (grp); named controls, minimum display without opening writes, maximum and editor round trips verified
-- 260915 T155 claimed (grp)
-- 260915 T154 done (grp); compatible group declarations and pre-work admission verified

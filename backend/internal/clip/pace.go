@@ -104,7 +104,7 @@ func composeRapid(cut Cut, written Written, text, accent string, allowed []strin
 				return cut, false, err
 			}
 			candidate := design.Candidate{Anchor: copy.Anchor, Align: copy.Align, Plate: design.Region(bounds), Fits: ok}
-			if design.SelectAnchor([]design.Candidate{candidate}, design.Region(subject), placed, readable, previous) < 0 {
+			if design.SelectAnchor([]design.Candidate{candidate}, design.Region(subject), placed, readable, previous, nil) < 0 {
 				fits = false
 				break
 			}

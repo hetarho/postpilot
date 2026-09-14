@@ -19,7 +19,7 @@ func IdentifyAttempt(user, project, job, kind string, payload []byte) *AttemptId
 	a := &AttemptIdentity{JobID: job, BatchID: p.Batch.ID}
 	switch kind {
 	case "generate_clip":
-		if p.Version != generationPayloadVersion || p.Approval == nil || p.Approval.QuoteID == "" {
+		if !supportedGenerationPayload(p.Version) || p.Approval == nil || p.Approval.QuoteID == "" {
 			return nil
 		}
 		a.QuoteID = p.Approval.QuoteID

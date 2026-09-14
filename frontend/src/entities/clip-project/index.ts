@@ -140,3 +140,7 @@ export type {
   ClipTimelineState,
   ClipTimelineAction,
 } from './model/timeline'
+
+export type { ClipNotice } from './model/notices'
+export { clipNoticeKey, clipNoticeKeys } from './model/notices'
+export { ClipNoticeList } from './ui/ClipNoticeList'

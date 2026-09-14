@@ -73,7 +73,15 @@ func (s *Store) SaveRender(ctx context.Context, user, id string, revision int, r
 				return struct{}{}, err
 			}
 		}
-		n, err := q.SaveRender(ctx, sqlc.SaveRenderParams{ResultKey: nullable(r.Key), ResultContentType: nullable(r.ContentType), ResultBytes: sql.NullInt64{Int64: r.Bytes, Valid: true}, ResultDurationMs: sql.NullInt64{Int64: int64(r.DurationMS), Valid: true}, ResultCreatedAt: nullable(stamp(r.CreatedAt)), UpdatedAt: stamp(r.CreatedAt), ID: id, UserID: user, EditPlanRevision: int64(revision)})
+		raw := p.EditPlan
+		if plan, styles, decodeErr := clip.DecodeEditPlan(raw); decodeErr == nil {
+			clip.RecomputePlanNotices(&plan, p.TargetDurationMS, 0)
+			raw, err = clip.EncodeEditPlan(plan, styles)
+			if err != nil {
+				return struct{}{}, err
+			}
+		}
+		n, err := q.SaveRender(ctx, sqlc.SaveRenderParams{EditPlanJson: nullable(raw), ResultKey: nullable(r.Key), ResultContentType: nullable(r.ContentType), ResultBytes: sql.NullInt64{Int64: r.Bytes, Valid: true}, ResultDurationMs: sql.NullInt64{Int64: int64(r.DurationMS), Valid: true}, ResultCreatedAt: nullable(stamp(r.CreatedAt)), UpdatedAt: stamp(r.CreatedAt), ID: id, UserID: user, EditPlanRevision: int64(revision)})
 		if err != nil {
 			return struct{}{}, err
 		}

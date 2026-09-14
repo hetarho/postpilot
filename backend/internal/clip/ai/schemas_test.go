@@ -120,7 +120,7 @@ func TestOutputProjectionKeepsConstraintNamedProperties(t *testing.T) {
 func TestPromptsKeepFullContractsAfterOutputProjection(t *testing.T) {
 	observe, _ := BuildObservePrompt(clip.ChunkInput{})
 	plan, _ := BuildPlanPrompt(clip.PlanningInput{}, 200)
-	if !strings.Contains(observe, string(chunkSchema)) || !strings.Contains(plan, string(planSchema)) {
+	if !strings.Contains(observe, compactContract(chunkSchema)) || !strings.Contains(plan, string(planSchema)) {
 		t.Fatal("provider projection weakened the full prompt contracts")
 	}
 	if string(ChunkSchema()) == string(chunkSchema) || string(PlanSchema()) == string(planSchema) {
@@ -168,5 +168,30 @@ func TestWriterSchemasOfferExactlyTheSupportedRates(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestCaptionSafeIsOptionalBoundedFactualSpace(t *testing.T) {
+	var schema map[string]any
+	if err := json.Unmarshal(chunkSchema, &schema); err != nil {
+		t.Fatal(err)
+	}
+	segment := schema["properties"].(map[string]any)["segments"].(map[string]any)["items"].(map[string]any)
+	for _, key := range segment["required"].([]any) {
+		if key == "caption_safe" {
+			t.Fatal("legacy observations invalidated")
+		}
+	}
+	field := segment["properties"].(map[string]any)["caption_safe"].(map[string]any)
+	if field["type"] != "array" || field["maxItems"] != float64(4) || strings.Count(string(chunkSchema), `"caption_safe"`) != 1 {
+		t.Fatal("missing or duplicate contract")
+	}
+	for _, text := range []string{"Make NO editing decision", "no principal subject", "no readable footage text", "never an anchor, style, placement or exposure choice"} {
+		if !strings.Contains(observePrompt, text) {
+			t.Fatalf("lost observation boundary: %s", text)
+		}
+	}
+	if clip.AnalysisContractVersion != "clip-observation-v2" {
+		t.Fatal("additive evidence invalidated stored observations")
 	}
 }

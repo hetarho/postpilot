@@ -150,7 +150,7 @@ func QuoteInputDigest(p Project, t VideoTemplate, b SourceBatch, pricing Generat
 	}
 	input := struct {
 		User, Project, Batch, Title, TemplateID, Ratio string
-		Disclosure, CTA                                string
+		Disclosure, CTA, Language                      string
 		HideDisclosure                                 bool
 		Target                                         int
 		Recipe                                         Recipe
@@ -158,7 +158,7 @@ func QuoteInputDigest(p Project, t VideoTemplate, b SourceBatch, pricing Generat
 		Sources                                        []source
 		Pricing                                        GenerationPricing
 		Composition                                    *ProjectComposition
-	}{p.UserID, p.ID, b.ID, p.Title, p.VideoTemplateID, p.Ratio, p.Disclosure, p.CTA, p.HideDisclosure, p.TargetDurationMS, t.Recipe, requiredQuoteAnswers(p, t), sources, pricing, p.Composition}
+	}{p.UserID, p.ID, b.ID, p.Title, p.VideoTemplateID, p.Ratio, p.Disclosure, p.CTA, p.Language, p.HideDisclosure, p.TargetDurationMS, t.Recipe, requiredQuoteAnswers(p, t), sources, pricing, p.Composition}
 	data, _ := json.Marshal(input) // All fields are concrete JSON-safe values.
 	sum := sha256.Sum256(data)
 	return hex.EncodeToString(sum[:])
@@ -234,8 +234,8 @@ func (s *GenerationService) quoteInputs(ctx context.Context, user, id, batch, ob
 	if err != nil {
 		return p, t, b, pricing, err
 	}
-	recovered := s.selectRecovery(upgraded, b, modelRef(observe))
-	seed := generationPayload{Batch: b, Composition: c, Template: t.Recipe, Answers: requiredQuoteAnswers(p, t), Ratio: p.Ratio, Write: write, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: design.DefaultCTA(t.Preset, p.CTA)}
+	recovered := s.selectRecovery(upgraded, b, modelRef(observe), p.Language)
+	seed := generationPayload{Language: p.Language, Batch: b, Composition: c, Template: t.Recipe, Answers: requiredQuoteAnswers(p, t), Ratio: p.Ratio, Write: write, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: design.DefaultCTA(t.Preset, p.CTA)}
 	skipPlan := recovered.PlanReady && recovered.Plan != "" && recovered.PlanDigest == planRecoveryDigest(seed)
 	upperCount := count
 	// Verified source durations supersede conservative browser estimates only for
@@ -372,8 +372,8 @@ func (s *GenerationService) startApproved(ctx context.Context, user, id, batch, 
 	if err != nil {
 		return "", err
 	}
-	recovery := s.selectRecovery(upgraded, b, modelRef(observe))
-	payload, err := json.Marshal(generationPayload{Recovery: &recovery, Composition: c, Version: generationPayloadVersion, ProjectID: id, Ratio: p.Ratio, Observe: observe, Write: write, TargetDurationMS: p.TargetDurationMS, Template: t.Recipe, Answers: requiredQuoteAnswers(p, t), Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: design.DefaultCTA(t.Preset, p.CTA), Batch: b, Approval: &GenerationApproval{QuoteID: q.ID, MaxCredits: q.Pricing.MaxCredits, Pricing: q.Pricing}})
+	recovery := s.selectRecovery(upgraded, b, modelRef(observe), p.Language)
+	payload, err := json.Marshal(generationPayload{Language: p.Language, Recovery: &recovery, Composition: c, Version: generationPayloadVersion, ProjectID: id, Ratio: p.Ratio, Observe: observe, Write: write, TargetDurationMS: p.TargetDurationMS, Template: t.Recipe, Answers: requiredQuoteAnswers(p, t), Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: design.DefaultCTA(t.Preset, p.CTA), Batch: b, Approval: &GenerationApproval{QuoteID: q.ID, MaxCredits: q.Pricing.MaxCredits, Pricing: q.Pricing}})
 	if err != nil {
 		return "", err
 	}
@@ -401,7 +401,7 @@ func (s *GenerationService) acceptedJob(ctx context.Context, user, id, batch, ob
 		return "", err
 	}
 	var p generationPayload
-	if j.Kind != "generate_clip" || json.Unmarshal(j.Payload, &p) != nil || (p.Version != generationPayloadVersion && p.Version != 3) || p.ProjectID != id || p.Batch.UserID != user || p.Batch.ID != batch || p.Observe != observe || p.Write != write || p.Approval == nil || p.Approval.QuoteID != a.QuoteID {
+	if j.Kind != "generate_clip" || json.Unmarshal(j.Payload, &p) != nil || !supportedGenerationPayload(p.Version) || p.ProjectID != id || p.Batch.UserID != user || p.Batch.ID != batch || p.Observe != observe || p.Write != write || p.Approval == nil || p.Approval.QuoteID != a.QuoteID {
 		return "", nil
 	}
 	if a.MaxCredits == nil || p.Approval.MaxCredits != *a.MaxCredits || a.CancellationPolicyVersion != p.Approval.Pricing.CancellationPolicyVersion {

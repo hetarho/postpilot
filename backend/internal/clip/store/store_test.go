@@ -49,7 +49,7 @@ func create(t *testing.T, s *clip.Service) (clip.VideoTemplate, clip.Project) {
 	}
 	// A campaign type and two of the four reserved facts: without them the
 	// approval gate refuses the quote and the start (CDS-1, CDS-5).
-	p, err := s.CreateProject(ctx, "alice", clip.ProjectInput{Title: " 여행 기록 ", VideoTemplateID: v.ID, Ratio: "vertical", TargetDurationMS: 30000, Disclosure: "sponsored", Answers: []clip.Answer{{Label: "장소", Text: "서울"}, {Label: "이전 질문", Text: "보존"}, {Label: "상호", Text: "연남 스테이"}, {Label: "위치", Text: "서울 연남동"}}})
+	p, err := s.CreateProject(ctx, "alice", clip.ProjectInput{Language: "ko", Title: " 여행 기록 ", VideoTemplateID: v.ID, Ratio: "vertical", TargetDurationMS: 30000, Disclosure: "sponsored", Answers: []clip.Answer{{Label: "장소", Text: "서울"}, {Label: "이전 질문", Text: "보존"}, {Label: "상호", Text: "연남 스테이"}, {Label: "위치", Text: "서울 연남동"}}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,7 +78,7 @@ func TestOwnedLifecyclePresenceAndTemplateDetach(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if _, err := s.CreateProject(ctx, "bob", clip.ProjectInput{Title: "foreign", VideoTemplateID: v.ID, Ratio: "square", TargetDurationMS: 15000}); !errors.Is(err, clip.ErrNotFound) {
+	if _, err := s.CreateProject(ctx, "bob", clip.ProjectInput{Language: "ko", Title: "foreign", VideoTemplateID: v.ID, Ratio: "square", TargetDurationMS: 15000}); !errors.Is(err, clip.ErrNotFound) {
 		t.Fatal(err)
 	}
 	if _, err := s.CreateTemplate(ctx, "alice", recipe()); !errors.Is(err, clip.ErrDuplicateName) {
@@ -200,14 +200,14 @@ func TestValidationAndIncompleteAnswers(t *testing.T) {
 	for _, mutate := range []func(*clip.ProjectInput){func(p *clip.ProjectInput) { p.Title = " " }, func(p *clip.ProjectInput) { p.Title = strings.Repeat("한", 101) }, func(p *clip.ProjectInput) { p.Ratio = "9:16" }, func(p *clip.ProjectInput) { p.TargetDurationMS = 14999 }, func(p *clip.ProjectInput) { p.TargetDurationMS = 90001 }, func(p *clip.ProjectInput) {
 		p.Answers = []clip.Answer{{Label: "장소", Text: strings.Repeat("한", 501)}}
 	}} {
-		p := clip.ProjectInput{Title: "valid", VideoTemplateID: v.ID, Ratio: "square", TargetDurationMS: 15000}
+		p := clip.ProjectInput{Language: "ko", Title: "valid", VideoTemplateID: v.ID, Ratio: "square", TargetDurationMS: 15000}
 		mutate(&p)
 		if _, err := s.CreateProject(ctx, "alice", p); !errors.Is(err, clip.ErrInvalid) {
 			t.Fatalf("accepted project %+v: %v", p, err)
 		}
 	}
 	for _, ratio := range []string{"vertical", "horizontal", "square"} {
-		p, err := s.CreateProject(ctx, "alice", clip.ProjectInput{Title: "incomplete", VideoTemplateID: v.ID, Ratio: ratio, TargetDurationMS: 90000})
+		p, err := s.CreateProject(ctx, "alice", clip.ProjectInput{Language: "ko", Title: "incomplete", VideoTemplateID: v.ID, Ratio: ratio, TargetDurationMS: 90000})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -263,11 +263,11 @@ func TestPresetDisclosureAndCTARoundTrip(t *testing.T) {
 	}
 	// A project may be created without a campaign type; the gate is what
 	// refuses one at approval.
-	blank, err := s.CreateProject(ctx, "alice", clip.ProjectInput{Title: "미정", VideoTemplateID: v.ID, Ratio: "square", TargetDurationMS: 15000})
+	blank, err := s.CreateProject(ctx, "alice", clip.ProjectInput{Language: "ko", Title: "미정", VideoTemplateID: v.ID, Ratio: "square", TargetDurationMS: 15000})
 	if err != nil || blank.Disclosure != "" {
 		t.Fatalf("%+v %v", blank, err)
 	}
-	if _, err := s.CreateProject(ctx, "alice", clip.ProjectInput{Title: "잘못된", VideoTemplateID: v.ID, Ratio: "square", TargetDurationMS: 15000, Disclosure: "편집"}); !errors.Is(err, clip.ErrInvalid) {
+	if _, err := s.CreateProject(ctx, "alice", clip.ProjectInput{Language: "ko", Title: "잘못된", VideoTemplateID: v.ID, Ratio: "square", TargetDurationMS: 15000, Disclosure: "편집"}); !errors.Is(err, clip.ErrInvalid) {
 		t.Fatal(err)
 	}
 }
