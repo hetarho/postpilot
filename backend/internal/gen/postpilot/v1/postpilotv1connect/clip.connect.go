@@ -102,6 +102,9 @@ const (
 	// ClipServiceGetClipSourcePlaybackProcedure is the fully-qualified name of the ClipService's
 	// GetClipSourcePlayback RPC.
 	ClipServiceGetClipSourcePlaybackProcedure = "/postpilot.v1.ClipService/GetClipSourcePlayback"
+	// ClipServiceSetClipSourceOriginalSoundProcedure is the fully-qualified name of the ClipService's
+	// SetClipSourceOriginalSound RPC.
+	ClipServiceSetClipSourceOriginalSoundProcedure = "/postpilot.v1.ClipService/SetClipSourceOriginalSound"
 	// ClipServiceListClipAnalysisEligibilityProcedure is the fully-qualified name of the ClipService's
 	// ListClipAnalysisEligibility RPC.
 	ClipServiceListClipAnalysisEligibilityProcedure = "/postpilot.v1.ClipService/ListClipAnalysisEligibility"
@@ -132,6 +135,9 @@ type ClipServiceClient interface {
 	DiscardClipSourceBatch(context.Context, *connect.Request[v1.DiscardClipSourceBatchRequest]) (*connect.Response[v1.DiscardClipSourceBatchResponse], error)
 	GetClipSources(context.Context, *connect.Request[v1.GetClipSourcesRequest]) (*connect.Response[v1.GetClipSourcesResponse], error)
 	GetClipSourcePlayback(context.Context, *connect.Request[v1.GetClipSourcePlaybackRequest]) (*connect.Response[v1.GetClipSourcePlaybackResponse], error)
+	// Owner-only. Source audio is off by default and this is the ONLY way it
+	// changes: no template, model, render or plan save may reach it.
+	SetClipSourceOriginalSound(context.Context, *connect.Request[v1.SetClipSourceOriginalSoundRequest]) (*connect.Response[v1.SetClipSourceOriginalSoundResponse], error)
 	// Read-only: every registered observe model with its current clip-analysis
 	// eligibility (CLIP-30, CLIP-44). No model call, no write, no provider detail.
 	ListClipAnalysisEligibility(context.Context, *connect.Request[v1.ListClipAnalysisEligibilityRequest]) (*connect.Response[v1.ListClipAnalysisEligibilityResponse], error)
@@ -286,6 +292,12 @@ func NewClipServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(clipServiceMethods.ByName("GetClipSourcePlayback")),
 			connect.WithClientOptions(opts...),
 		),
+		setClipSourceOriginalSound: connect.NewClient[v1.SetClipSourceOriginalSoundRequest, v1.SetClipSourceOriginalSoundResponse](
+			httpClient,
+			baseURL+ClipServiceSetClipSourceOriginalSoundProcedure,
+			connect.WithSchema(clipServiceMethods.ByName("SetClipSourceOriginalSound")),
+			connect.WithClientOptions(opts...),
+		),
 		listClipAnalysisEligibility: connect.NewClient[v1.ListClipAnalysisEligibilityRequest, v1.ListClipAnalysisEligibilityResponse](
 			httpClient,
 			baseURL+ClipServiceListClipAnalysisEligibilityProcedure,
@@ -320,6 +332,7 @@ type clipServiceClient struct {
 	discardClipSourceBatch      *connect.Client[v1.DiscardClipSourceBatchRequest, v1.DiscardClipSourceBatchResponse]
 	getClipSources              *connect.Client[v1.GetClipSourcesRequest, v1.GetClipSourcesResponse]
 	getClipSourcePlayback       *connect.Client[v1.GetClipSourcePlaybackRequest, v1.GetClipSourcePlaybackResponse]
+	setClipSourceOriginalSound  *connect.Client[v1.SetClipSourceOriginalSoundRequest, v1.SetClipSourceOriginalSoundResponse]
 	listClipAnalysisEligibility *connect.Client[v1.ListClipAnalysisEligibilityRequest, v1.ListClipAnalysisEligibilityResponse]
 }
 
@@ -438,6 +451,11 @@ func (c *clipServiceClient) GetClipSourcePlayback(ctx context.Context, req *conn
 	return c.getClipSourcePlayback.CallUnary(ctx, req)
 }
 
+// SetClipSourceOriginalSound calls postpilot.v1.ClipService.SetClipSourceOriginalSound.
+func (c *clipServiceClient) SetClipSourceOriginalSound(ctx context.Context, req *connect.Request[v1.SetClipSourceOriginalSoundRequest]) (*connect.Response[v1.SetClipSourceOriginalSoundResponse], error) {
+	return c.setClipSourceOriginalSound.CallUnary(ctx, req)
+}
+
 // ListClipAnalysisEligibility calls postpilot.v1.ClipService.ListClipAnalysisEligibility.
 func (c *clipServiceClient) ListClipAnalysisEligibility(ctx context.Context, req *connect.Request[v1.ListClipAnalysisEligibilityRequest]) (*connect.Response[v1.ListClipAnalysisEligibilityResponse], error) {
 	return c.listClipAnalysisEligibility.CallUnary(ctx, req)
@@ -468,6 +486,9 @@ type ClipServiceHandler interface {
 	DiscardClipSourceBatch(context.Context, *connect.Request[v1.DiscardClipSourceBatchRequest]) (*connect.Response[v1.DiscardClipSourceBatchResponse], error)
 	GetClipSources(context.Context, *connect.Request[v1.GetClipSourcesRequest]) (*connect.Response[v1.GetClipSourcesResponse], error)
 	GetClipSourcePlayback(context.Context, *connect.Request[v1.GetClipSourcePlaybackRequest]) (*connect.Response[v1.GetClipSourcePlaybackResponse], error)
+	// Owner-only. Source audio is off by default and this is the ONLY way it
+	// changes: no template, model, render or plan save may reach it.
+	SetClipSourceOriginalSound(context.Context, *connect.Request[v1.SetClipSourceOriginalSoundRequest]) (*connect.Response[v1.SetClipSourceOriginalSoundResponse], error)
 	// Read-only: every registered observe model with its current clip-analysis
 	// eligibility (CLIP-30, CLIP-44). No model call, no write, no provider detail.
 	ListClipAnalysisEligibility(context.Context, *connect.Request[v1.ListClipAnalysisEligibilityRequest]) (*connect.Response[v1.ListClipAnalysisEligibilityResponse], error)
@@ -618,6 +639,12 @@ func NewClipServiceHandler(svc ClipServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(clipServiceMethods.ByName("GetClipSourcePlayback")),
 		connect.WithHandlerOptions(opts...),
 	)
+	clipServiceSetClipSourceOriginalSoundHandler := connect.NewUnaryHandler(
+		ClipServiceSetClipSourceOriginalSoundProcedure,
+		svc.SetClipSourceOriginalSound,
+		connect.WithSchema(clipServiceMethods.ByName("SetClipSourceOriginalSound")),
+		connect.WithHandlerOptions(opts...),
+	)
 	clipServiceListClipAnalysisEligibilityHandler := connect.NewUnaryHandler(
 		ClipServiceListClipAnalysisEligibilityProcedure,
 		svc.ListClipAnalysisEligibility,
@@ -672,6 +699,8 @@ func NewClipServiceHandler(svc ClipServiceHandler, opts ...connect.HandlerOption
 			clipServiceGetClipSourcesHandler.ServeHTTP(w, r)
 		case ClipServiceGetClipSourcePlaybackProcedure:
 			clipServiceGetClipSourcePlaybackHandler.ServeHTTP(w, r)
+		case ClipServiceSetClipSourceOriginalSoundProcedure:
+			clipServiceSetClipSourceOriginalSoundHandler.ServeHTTP(w, r)
 		case ClipServiceListClipAnalysisEligibilityProcedure:
 			clipServiceListClipAnalysisEligibilityHandler.ServeHTTP(w, r)
 		default:
@@ -773,6 +802,10 @@ func (UnimplementedClipServiceHandler) GetClipSources(context.Context, *connect.
 
 func (UnimplementedClipServiceHandler) GetClipSourcePlayback(context.Context, *connect.Request[v1.GetClipSourcePlaybackRequest]) (*connect.Response[v1.GetClipSourcePlaybackResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipService.GetClipSourcePlayback is not implemented"))
+}
+
+func (UnimplementedClipServiceHandler) SetClipSourceOriginalSound(context.Context, *connect.Request[v1.SetClipSourceOriginalSoundRequest]) (*connect.Response[v1.SetClipSourceOriginalSoundResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipService.SetClipSourceOriginalSound is not implemented"))
 }
 
 func (UnimplementedClipServiceHandler) ListClipAnalysisEligibility(context.Context, *connect.Request[v1.ListClipAnalysisEligibilityRequest]) (*connect.Response[v1.ListClipAnalysisEligibilityResponse], error) {

@@ -39,6 +39,11 @@ type SourceLease struct {
 	ExpiresAt      time.Time
 	CleanupPending bool
 	Availability   string
+	// The owner's 원본 소리 유지 choice for this source (CLIP-18). It is OWNER
+	// data, not metadata: it is deliberately outside SourceMetadata so it can
+	// never enter the quote digest or the planning recovery identity, and so
+	// changing it never looks like a different source to a model.
+	RetainOriginalAudio bool
 }
 type SourceBatch struct {
 	ID, UserID, ProjectID, State, JobID string
@@ -81,6 +86,16 @@ type SourceStore interface {
 	RemoveProxy(context.Context, string) error
 	ReleaseSourceAttempt(context.Context, string, string, time.Time) error
 	ProjectSourceBatches(context.Context, string, string) ([]SourceBatch, error)
+	SetSourceOriginalAudio(context.Context, string, SourceAudioChange) (SourceBatch, Project, error)
+}
+
+// SourceAudioChange is one owner decision about one exact file. The fingerprint
+// pins the file the choice was made about and the expected revision pins the
+// plan the owner was looking at — zero before a plan exists (CLIP-100).
+type SourceAudioChange struct {
+	ProjectID, BatchID, SourceID, Fingerprint string
+	RetainOriginal                            bool
+	ExpectedRevision                          int
 }
 type ObjectStore interface {
 	PresignSource(context.Context, string, string, time.Duration) (SignedSourcePut, error)

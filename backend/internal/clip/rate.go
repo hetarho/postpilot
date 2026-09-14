@@ -198,10 +198,12 @@ func LegacySourceAudio(cuts []Cut) *SourceAudioSettings {
 // gives every new source. The server always owns this value — no correction,
 // template or model reaches it.
 func ReconcileSourceAudio(saved *SourceAudioSettings, cuts []Cut) *SourceAudioSettings {
-	if saved == nil {
-		return LegacySourceAudio(cuts)
-	}
 	out := &SourceAudioSettings{}
+	if saved == nil {
+		// Nothing has authorized any audio, which is CLIP-18's default. Reading
+		// a legacy plan's per-cut volume as consent happens on decode alone.
+		saved = &SourceAudioSettings{}
+	}
 	for _, key := range cutSourceKeys(cuts) {
 		retain := false
 		for _, v := range saved.Values {

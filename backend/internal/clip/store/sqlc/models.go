@@ -89,23 +89,24 @@ type ClipSourceBatch struct {
 }
 
 type ClipSourceLease struct {
-	ID                 string
-	BatchID            string
-	UserID             string
-	ObjectKey          string
-	Filename           string
-	ContentType        string
-	Fingerprint        string
-	DeclaredBytes      int64
-	ActualBytes        int64
-	DurationMs         int64
-	Width              int64
-	Height             int64
-	State              string
-	Ordinal            int64
-	CanonicalID        string
-	RetentionExpiresAt sql.NullString
-	CleanupPending     int64
+	ID                  string
+	BatchID             string
+	UserID              string
+	ObjectKey           string
+	Filename            string
+	ContentType         string
+	Fingerprint         string
+	DeclaredBytes       int64
+	ActualBytes         int64
+	DurationMs          int64
+	Width               int64
+	Height              int64
+	State               string
+	Ordinal             int64
+	CanonicalID         string
+	RetentionExpiresAt  sql.NullString
+	CleanupPending      int64
+	RetainOriginalAudio int64
 }
 
 type VideoTemplate struct {

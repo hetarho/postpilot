@@ -2679,8 +2679,10 @@ type ClipSource struct {
 	ActualBytes        int64                  `protobuf:"varint,4,opt,name=actual_bytes,json=actualBytes,proto3" json:"actual_bytes,omitempty"`
 	RetentionExpiresAt string                 `protobuf:"bytes,5,opt,name=retention_expires_at,json=retentionExpiresAt,proto3" json:"retention_expires_at,omitempty"`
 	Availability       string                 `protobuf:"bytes,6,opt,name=availability,proto3" json:"availability,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	// The owner's 원본 소리 유지 choice for this source. Off for every new source.
+	RetainOriginalAudio bool `protobuf:"varint,7,opt,name=retain_original_audio,json=retainOriginalAudio,proto3" json:"retain_original_audio,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *ClipSource) Reset() {
@@ -2753,6 +2755,13 @@ func (x *ClipSource) GetAvailability() string {
 		return x.Availability
 	}
 	return ""
+}
+
+func (x *ClipSource) GetRetainOriginalAudio() bool {
+	if x != nil {
+		return x.RetainOriginalAudio
+	}
+	return false
 }
 
 type ClipSourceBatch struct {
@@ -3867,6 +3876,145 @@ func (x *ClipCancellationPolicy) GetRounding() string {
 	return ""
 }
 
+// The expected revision is the plan revision the owner was looking at, or 0
+// before a plan exists. The fingerprint pins the exact file the choice was made
+// about, so a replaced source never inherits a decision made about another one.
+type SetClipSourceOriginalSoundRequest struct {
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	ProjectId           string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	BatchId             string                 `protobuf:"bytes,2,opt,name=batch_id,json=batchId,proto3" json:"batch_id,omitempty"`
+	SourceId            string                 `protobuf:"bytes,3,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
+	ExpectedFingerprint string                 `protobuf:"bytes,4,opt,name=expected_fingerprint,json=expectedFingerprint,proto3" json:"expected_fingerprint,omitempty"`
+	RetainOriginalAudio bool                   `protobuf:"varint,5,opt,name=retain_original_audio,json=retainOriginalAudio,proto3" json:"retain_original_audio,omitempty"`
+	ExpectedRevision    int32                  `protobuf:"varint,6,opt,name=expected_revision,json=expectedRevision,proto3" json:"expected_revision,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *SetClipSourceOriginalSoundRequest) Reset() {
+	*x = SetClipSourceOriginalSoundRequest{}
+	mi := &file_postpilot_v1_clip_proto_msgTypes[57]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetClipSourceOriginalSoundRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetClipSourceOriginalSoundRequest) ProtoMessage() {}
+
+func (x *SetClipSourceOriginalSoundRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_clip_proto_msgTypes[57]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetClipSourceOriginalSoundRequest.ProtoReflect.Descriptor instead.
+func (*SetClipSourceOriginalSoundRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{57}
+}
+
+func (x *SetClipSourceOriginalSoundRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *SetClipSourceOriginalSoundRequest) GetBatchId() string {
+	if x != nil {
+		return x.BatchId
+	}
+	return ""
+}
+
+func (x *SetClipSourceOriginalSoundRequest) GetSourceId() string {
+	if x != nil {
+		return x.SourceId
+	}
+	return ""
+}
+
+func (x *SetClipSourceOriginalSoundRequest) GetExpectedFingerprint() string {
+	if x != nil {
+		return x.ExpectedFingerprint
+	}
+	return ""
+}
+
+func (x *SetClipSourceOriginalSoundRequest) GetRetainOriginalAudio() bool {
+	if x != nil {
+		return x.RetainOriginalAudio
+	}
+	return false
+}
+
+func (x *SetClipSourceOriginalSoundRequest) GetExpectedRevision() int32 {
+	if x != nil {
+		return x.ExpectedRevision
+	}
+	return 0
+}
+
+type SetClipSourceOriginalSoundResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Batch         *ClipSourceBatch       `protobuf:"bytes,1,opt,name=batch,proto3" json:"batch,omitempty"`
+	Project       *ClipProject           `protobuf:"bytes,2,opt,name=project,proto3" json:"project,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetClipSourceOriginalSoundResponse) Reset() {
+	*x = SetClipSourceOriginalSoundResponse{}
+	mi := &file_postpilot_v1_clip_proto_msgTypes[58]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetClipSourceOriginalSoundResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetClipSourceOriginalSoundResponse) ProtoMessage() {}
+
+func (x *SetClipSourceOriginalSoundResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_clip_proto_msgTypes[58]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetClipSourceOriginalSoundResponse.ProtoReflect.Descriptor instead.
+func (*SetClipSourceOriginalSoundResponse) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{58}
+}
+
+func (x *SetClipSourceOriginalSoundResponse) GetBatch() *ClipSourceBatch {
+	if x != nil {
+		return x.Batch
+	}
+	return nil
+}
+
+func (x *SetClipSourceOriginalSoundResponse) GetProject() *ClipProject {
+	if x != nil {
+		return x.Project
+	}
+	return nil
+}
+
 type CancelClipJobRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ProjectId     string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
@@ -3877,7 +4025,7 @@ type CancelClipJobRequest struct {
 
 func (x *CancelClipJobRequest) Reset() {
 	*x = CancelClipJobRequest{}
-	mi := &file_postpilot_v1_clip_proto_msgTypes[57]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[59]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3889,7 +4037,7 @@ func (x *CancelClipJobRequest) String() string {
 func (*CancelClipJobRequest) ProtoMessage() {}
 
 func (x *CancelClipJobRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_clip_proto_msgTypes[57]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[59]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3902,7 +4050,7 @@ func (x *CancelClipJobRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelClipJobRequest.ProtoReflect.Descriptor instead.
 func (*CancelClipJobRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{57}
+	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{59}
 }
 
 func (x *CancelClipJobRequest) GetProjectId() string {
@@ -3930,7 +4078,7 @@ type CancelClipJobResponse struct {
 
 func (x *CancelClipJobResponse) Reset() {
 	*x = CancelClipJobResponse{}
-	mi := &file_postpilot_v1_clip_proto_msgTypes[58]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[60]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3942,7 +4090,7 @@ func (x *CancelClipJobResponse) String() string {
 func (*CancelClipJobResponse) ProtoMessage() {}
 
 func (x *CancelClipJobResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_clip_proto_msgTypes[58]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[60]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3955,7 +4103,7 @@ func (x *CancelClipJobResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelClipJobResponse.ProtoReflect.Descriptor instead.
 func (*CancelClipJobResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{58}
+	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{60}
 }
 
 func (x *CancelClipJobResponse) GetJob() *GenerationJob {
@@ -4004,7 +4152,7 @@ type ClipCaption struct {
 
 func (x *ClipCaption) Reset() {
 	*x = ClipCaption{}
-	mi := &file_postpilot_v1_clip_proto_msgTypes[59]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[61]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4016,7 +4164,7 @@ func (x *ClipCaption) String() string {
 func (*ClipCaption) ProtoMessage() {}
 
 func (x *ClipCaption) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_clip_proto_msgTypes[59]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[61]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4029,7 +4177,7 @@ func (x *ClipCaption) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClipCaption.ProtoReflect.Descriptor instead.
 func (*ClipCaption) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{59}
+	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{61}
 }
 
 func (x *ClipCaption) GetText() string {
@@ -4126,7 +4274,7 @@ type ClipEditCut struct {
 
 func (x *ClipEditCut) Reset() {
 	*x = ClipEditCut{}
-	mi := &file_postpilot_v1_clip_proto_msgTypes[60]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[62]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4138,7 +4286,7 @@ func (x *ClipEditCut) String() string {
 func (*ClipEditCut) ProtoMessage() {}
 
 func (x *ClipEditCut) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_clip_proto_msgTypes[60]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[62]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4151,7 +4299,7 @@ func (x *ClipEditCut) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClipEditCut.ProtoReflect.Descriptor instead.
 func (*ClipEditCut) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{60}
+	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{62}
 }
 
 func (x *ClipEditCut) GetId() string {
@@ -4251,7 +4399,7 @@ type ClipSourceAudioSetting struct {
 
 func (x *ClipSourceAudioSetting) Reset() {
 	*x = ClipSourceAudioSetting{}
-	mi := &file_postpilot_v1_clip_proto_msgTypes[61]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[63]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4263,7 +4411,7 @@ func (x *ClipSourceAudioSetting) String() string {
 func (*ClipSourceAudioSetting) ProtoMessage() {}
 
 func (x *ClipSourceAudioSetting) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_clip_proto_msgTypes[61]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[63]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4276,7 +4424,7 @@ func (x *ClipSourceAudioSetting) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClipSourceAudioSetting.ProtoReflect.Descriptor instead.
 func (*ClipSourceAudioSetting) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{61}
+	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{63}
 }
 
 func (x *ClipSourceAudioSetting) GetSourceId() string {
@@ -4312,7 +4460,7 @@ type ClipSourceAudioSettings struct {
 
 func (x *ClipSourceAudioSettings) Reset() {
 	*x = ClipSourceAudioSettings{}
-	mi := &file_postpilot_v1_clip_proto_msgTypes[62]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[64]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4324,7 +4472,7 @@ func (x *ClipSourceAudioSettings) String() string {
 func (*ClipSourceAudioSettings) ProtoMessage() {}
 
 func (x *ClipSourceAudioSettings) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_clip_proto_msgTypes[62]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[64]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4337,7 +4485,7 @@ func (x *ClipSourceAudioSettings) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClipSourceAudioSettings.ProtoReflect.Descriptor instead.
 func (*ClipSourceAudioSettings) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{62}
+	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{64}
 }
 
 func (x *ClipSourceAudioSettings) GetValues() []*ClipSourceAudioSetting {
@@ -4357,7 +4505,7 @@ type ClipFocal struct {
 
 func (x *ClipFocal) Reset() {
 	*x = ClipFocal{}
-	mi := &file_postpilot_v1_clip_proto_msgTypes[63]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[65]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4369,7 +4517,7 @@ func (x *ClipFocal) String() string {
 func (*ClipFocal) ProtoMessage() {}
 
 func (x *ClipFocal) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_clip_proto_msgTypes[63]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[65]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4382,7 +4530,7 @@ func (x *ClipFocal) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClipFocal.ProtoReflect.Descriptor instead.
 func (*ClipFocal) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{63}
+	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{65}
 }
 
 func (x *ClipFocal) GetX() float64 {
@@ -4409,7 +4557,7 @@ type ClipTextRow struct {
 
 func (x *ClipTextRow) Reset() {
 	*x = ClipTextRow{}
-	mi := &file_postpilot_v1_clip_proto_msgTypes[64]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[66]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4421,7 +4569,7 @@ func (x *ClipTextRow) String() string {
 func (*ClipTextRow) ProtoMessage() {}
 
 func (x *ClipTextRow) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_clip_proto_msgTypes[64]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[66]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4434,7 +4582,7 @@ func (x *ClipTextRow) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClipTextRow.ProtoReflect.Descriptor instead.
 func (*ClipTextRow) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{64}
+	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{66}
 }
 
 func (x *ClipTextRow) GetRole() string {
@@ -4462,7 +4610,7 @@ type ClipEditablePhrase struct {
 
 func (x *ClipEditablePhrase) Reset() {
 	*x = ClipEditablePhrase{}
-	mi := &file_postpilot_v1_clip_proto_msgTypes[65]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[67]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4474,7 +4622,7 @@ func (x *ClipEditablePhrase) String() string {
 func (*ClipEditablePhrase) ProtoMessage() {}
 
 func (x *ClipEditablePhrase) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_clip_proto_msgTypes[65]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[67]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4487,7 +4635,7 @@ func (x *ClipEditablePhrase) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClipEditablePhrase.ProtoReflect.Descriptor instead.
 func (*ClipEditablePhrase) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{65}
+	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{67}
 }
 
 func (x *ClipEditablePhrase) GetText() string {
@@ -4523,7 +4671,7 @@ type ClipTextEvidence struct {
 
 func (x *ClipTextEvidence) Reset() {
 	*x = ClipTextEvidence{}
-	mi := &file_postpilot_v1_clip_proto_msgTypes[66]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[68]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4535,7 +4683,7 @@ func (x *ClipTextEvidence) String() string {
 func (*ClipTextEvidence) ProtoMessage() {}
 
 func (x *ClipTextEvidence) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_clip_proto_msgTypes[66]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[68]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4548,7 +4696,7 @@ func (x *ClipTextEvidence) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClipTextEvidence.ProtoReflect.Descriptor instead.
 func (*ClipTextEvidence) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{66}
+	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{68}
 }
 
 func (x *ClipTextEvidence) GetSourceId() string {
@@ -4619,7 +4767,7 @@ type ClipEditableText struct {
 
 func (x *ClipEditableText) Reset() {
 	*x = ClipEditableText{}
-	mi := &file_postpilot_v1_clip_proto_msgTypes[67]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[69]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4631,7 +4779,7 @@ func (x *ClipEditableText) String() string {
 func (*ClipEditableText) ProtoMessage() {}
 
 func (x *ClipEditableText) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_clip_proto_msgTypes[67]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[69]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4644,7 +4792,7 @@ func (x *ClipEditableText) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClipEditableText.ProtoReflect.Descriptor instead.
 func (*ClipEditableText) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{67}
+	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{69}
 }
 
 func (x *ClipEditableText) GetInstanceId() string {
@@ -4854,7 +5002,7 @@ type ClipEditPlan struct {
 
 func (x *ClipEditPlan) Reset() {
 	*x = ClipEditPlan{}
-	mi := &file_postpilot_v1_clip_proto_msgTypes[68]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[70]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4866,7 +5014,7 @@ func (x *ClipEditPlan) String() string {
 func (*ClipEditPlan) ProtoMessage() {}
 
 func (x *ClipEditPlan) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_clip_proto_msgTypes[68]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[70]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4879,7 +5027,7 @@ func (x *ClipEditPlan) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClipEditPlan.ProtoReflect.Descriptor instead.
 func (*ClipEditPlan) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{68}
+	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{70}
 }
 
 func (x *ClipEditPlan) GetDurationMs() int32 {
@@ -4940,7 +5088,7 @@ type ClipSourceAssociations struct {
 
 func (x *ClipSourceAssociations) Reset() {
 	*x = ClipSourceAssociations{}
-	mi := &file_postpilot_v1_clip_proto_msgTypes[69]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[71]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4952,7 +5100,7 @@ func (x *ClipSourceAssociations) String() string {
 func (*ClipSourceAssociations) ProtoMessage() {}
 
 func (x *ClipSourceAssociations) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_clip_proto_msgTypes[69]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[71]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4965,7 +5113,7 @@ func (x *ClipSourceAssociations) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClipSourceAssociations.ProtoReflect.Descriptor instead.
 func (*ClipSourceAssociations) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{69}
+	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{71}
 }
 
 func (x *ClipSourceAssociations) GetValues() []*ClipSourceAssociation {
@@ -4990,7 +5138,7 @@ type PrepareClipPreviewRequest struct {
 
 func (x *PrepareClipPreviewRequest) Reset() {
 	*x = PrepareClipPreviewRequest{}
-	mi := &file_postpilot_v1_clip_proto_msgTypes[70]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[72]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5002,7 +5150,7 @@ func (x *PrepareClipPreviewRequest) String() string {
 func (*PrepareClipPreviewRequest) ProtoMessage() {}
 
 func (x *PrepareClipPreviewRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_clip_proto_msgTypes[70]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[72]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5015,7 +5163,7 @@ func (x *PrepareClipPreviewRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PrepareClipPreviewRequest.ProtoReflect.Descriptor instead.
 func (*PrepareClipPreviewRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{70}
+	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{72}
 }
 
 func (x *PrepareClipPreviewRequest) GetProjectId() string {
@@ -5081,7 +5229,7 @@ type ClipPreviewAsset struct {
 
 func (x *ClipPreviewAsset) Reset() {
 	*x = ClipPreviewAsset{}
-	mi := &file_postpilot_v1_clip_proto_msgTypes[71]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[73]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5093,7 +5241,7 @@ func (x *ClipPreviewAsset) String() string {
 func (*ClipPreviewAsset) ProtoMessage() {}
 
 func (x *ClipPreviewAsset) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_clip_proto_msgTypes[71]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[73]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5106,7 +5254,7 @@ func (x *ClipPreviewAsset) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClipPreviewAsset.ProtoReflect.Descriptor instead.
 func (*ClipPreviewAsset) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{71}
+	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{73}
 }
 
 func (x *ClipPreviewAsset) GetKey() string {
@@ -5215,7 +5363,7 @@ type PrepareClipPreviewResponse struct {
 
 func (x *PrepareClipPreviewResponse) Reset() {
 	*x = PrepareClipPreviewResponse{}
-	mi := &file_postpilot_v1_clip_proto_msgTypes[72]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[74]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5227,7 +5375,7 @@ func (x *PrepareClipPreviewResponse) String() string {
 func (*PrepareClipPreviewResponse) ProtoMessage() {}
 
 func (x *PrepareClipPreviewResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_clip_proto_msgTypes[72]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[74]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5240,7 +5388,7 @@ func (x *PrepareClipPreviewResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PrepareClipPreviewResponse.ProtoReflect.Descriptor instead.
 func (*PrepareClipPreviewResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{72}
+	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{74}
 }
 
 func (x *PrepareClipPreviewResponse) GetDraftHash() string {
@@ -5303,7 +5451,7 @@ type ClipRetainedSource struct {
 
 func (x *ClipRetainedSource) Reset() {
 	*x = ClipRetainedSource{}
-	mi := &file_postpilot_v1_clip_proto_msgTypes[73]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[75]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5315,7 +5463,7 @@ func (x *ClipRetainedSource) String() string {
 func (*ClipRetainedSource) ProtoMessage() {}
 
 func (x *ClipRetainedSource) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_clip_proto_msgTypes[73]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[75]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5328,7 +5476,7 @@ func (x *ClipRetainedSource) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClipRetainedSource.ProtoReflect.Descriptor instead.
 func (*ClipRetainedSource) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{73}
+	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{75}
 }
 
 func (x *ClipRetainedSource) GetId() string {
@@ -5398,7 +5546,7 @@ type ClipEditingState struct {
 
 func (x *ClipEditingState) Reset() {
 	*x = ClipEditingState{}
-	mi := &file_postpilot_v1_clip_proto_msgTypes[74]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[76]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5410,7 +5558,7 @@ func (x *ClipEditingState) String() string {
 func (*ClipEditingState) ProtoMessage() {}
 
 func (x *ClipEditingState) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_clip_proto_msgTypes[74]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[76]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5423,7 +5571,7 @@ func (x *ClipEditingState) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClipEditingState.ProtoReflect.Descriptor instead.
 func (*ClipEditingState) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{74}
+	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{76}
 }
 
 func (x *ClipEditingState) GetPlan() *ClipEditPlan {
@@ -5493,7 +5641,7 @@ type SaveClipEditPlanRequest struct {
 
 func (x *SaveClipEditPlanRequest) Reset() {
 	*x = SaveClipEditPlanRequest{}
-	mi := &file_postpilot_v1_clip_proto_msgTypes[75]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[77]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5505,7 +5653,7 @@ func (x *SaveClipEditPlanRequest) String() string {
 func (*SaveClipEditPlanRequest) ProtoMessage() {}
 
 func (x *SaveClipEditPlanRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_clip_proto_msgTypes[75]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[77]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5518,7 +5666,7 @@ func (x *SaveClipEditPlanRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SaveClipEditPlanRequest.ProtoReflect.Descriptor instead.
 func (*SaveClipEditPlanRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{75}
+	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{77}
 }
 
 func (x *SaveClipEditPlanRequest) GetProjectId() string {
@@ -5551,7 +5699,7 @@ type SaveClipEditPlanResponse struct {
 
 func (x *SaveClipEditPlanResponse) Reset() {
 	*x = SaveClipEditPlanResponse{}
-	mi := &file_postpilot_v1_clip_proto_msgTypes[76]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[78]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5563,7 +5711,7 @@ func (x *SaveClipEditPlanResponse) String() string {
 func (*SaveClipEditPlanResponse) ProtoMessage() {}
 
 func (x *SaveClipEditPlanResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_clip_proto_msgTypes[76]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[78]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5576,7 +5724,7 @@ func (x *SaveClipEditPlanResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SaveClipEditPlanResponse.ProtoReflect.Descriptor instead.
 func (*SaveClipEditPlanResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{76}
+	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{78}
 }
 
 func (x *SaveClipEditPlanResponse) GetProject() *ClipProject {
@@ -5597,7 +5745,7 @@ type StartClipRenderRequest struct {
 
 func (x *StartClipRenderRequest) Reset() {
 	*x = StartClipRenderRequest{}
-	mi := &file_postpilot_v1_clip_proto_msgTypes[77]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[79]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5609,7 +5757,7 @@ func (x *StartClipRenderRequest) String() string {
 func (*StartClipRenderRequest) ProtoMessage() {}
 
 func (x *StartClipRenderRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_clip_proto_msgTypes[77]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[79]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5622,7 +5770,7 @@ func (x *StartClipRenderRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartClipRenderRequest.ProtoReflect.Descriptor instead.
 func (*StartClipRenderRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{77}
+	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{79}
 }
 
 func (x *StartClipRenderRequest) GetProjectId() string {
@@ -5655,7 +5803,7 @@ type StartClipRenderResponse struct {
 
 func (x *StartClipRenderResponse) Reset() {
 	*x = StartClipRenderResponse{}
-	mi := &file_postpilot_v1_clip_proto_msgTypes[78]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[80]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5667,7 +5815,7 @@ func (x *StartClipRenderResponse) String() string {
 func (*StartClipRenderResponse) ProtoMessage() {}
 
 func (x *StartClipRenderResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_clip_proto_msgTypes[78]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[80]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5680,7 +5828,7 @@ func (x *StartClipRenderResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartClipRenderResponse.ProtoReflect.Descriptor instead.
 func (*StartClipRenderResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{78}
+	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{80}
 }
 
 func (x *StartClipRenderResponse) GetJobId() string {
@@ -5699,7 +5847,7 @@ type GetClipCapabilitiesRequest struct {
 
 func (x *GetClipCapabilitiesRequest) Reset() {
 	*x = GetClipCapabilitiesRequest{}
-	mi := &file_postpilot_v1_clip_proto_msgTypes[79]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[81]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5711,7 +5859,7 @@ func (x *GetClipCapabilitiesRequest) String() string {
 func (*GetClipCapabilitiesRequest) ProtoMessage() {}
 
 func (x *GetClipCapabilitiesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_clip_proto_msgTypes[79]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[81]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5724,7 +5872,7 @@ func (x *GetClipCapabilitiesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetClipCapabilitiesRequest.ProtoReflect.Descriptor instead.
 func (*GetClipCapabilitiesRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{79}
+	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{81}
 }
 
 type GetClipCapabilitiesResponse struct {
@@ -5737,7 +5885,7 @@ type GetClipCapabilitiesResponse struct {
 
 func (x *GetClipCapabilitiesResponse) Reset() {
 	*x = GetClipCapabilitiesResponse{}
-	mi := &file_postpilot_v1_clip_proto_msgTypes[80]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[82]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5749,7 +5897,7 @@ func (x *GetClipCapabilitiesResponse) String() string {
 func (*GetClipCapabilitiesResponse) ProtoMessage() {}
 
 func (x *GetClipCapabilitiesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_clip_proto_msgTypes[80]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[82]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5762,7 +5910,7 @@ func (x *GetClipCapabilitiesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetClipCapabilitiesResponse.ProtoReflect.Descriptor instead.
 func (*GetClipCapabilitiesResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{80}
+	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{82}
 }
 
 func (x *GetClipCapabilitiesResponse) GetCompositionVersion() int32 {
@@ -5789,7 +5937,7 @@ type ClipCompositionItem struct {
 
 func (x *ClipCompositionItem) Reset() {
 	*x = ClipCompositionItem{}
-	mi := &file_postpilot_v1_clip_proto_msgTypes[81]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[83]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5801,7 +5949,7 @@ func (x *ClipCompositionItem) String() string {
 func (*ClipCompositionItem) ProtoMessage() {}
 
 func (x *ClipCompositionItem) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_clip_proto_msgTypes[81]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[83]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5814,7 +5962,7 @@ func (x *ClipCompositionItem) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClipCompositionItem.ProtoReflect.Descriptor instead.
 func (*ClipCompositionItem) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{81}
+	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{83}
 }
 
 func (x *ClipCompositionItem) GetId() string {
@@ -5840,7 +5988,7 @@ type ClipCompositionItems struct {
 
 func (x *ClipCompositionItems) Reset() {
 	*x = ClipCompositionItems{}
-	mi := &file_postpilot_v1_clip_proto_msgTypes[82]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[84]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5852,7 +6000,7 @@ func (x *ClipCompositionItems) String() string {
 func (*ClipCompositionItems) ProtoMessage() {}
 
 func (x *ClipCompositionItems) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_clip_proto_msgTypes[82]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[84]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5865,7 +6013,7 @@ func (x *ClipCompositionItems) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClipCompositionItems.ProtoReflect.Descriptor instead.
 func (*ClipCompositionItems) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{82}
+	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{84}
 }
 
 func (x *ClipCompositionItems) GetItems() []*ClipCompositionItem {
@@ -5889,7 +6037,7 @@ type ClipSourceAssociation struct {
 
 func (x *ClipSourceAssociation) Reset() {
 	*x = ClipSourceAssociation{}
-	mi := &file_postpilot_v1_clip_proto_msgTypes[83]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[85]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5901,7 +6049,7 @@ func (x *ClipSourceAssociation) String() string {
 func (*ClipSourceAssociation) ProtoMessage() {}
 
 func (x *ClipSourceAssociation) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_clip_proto_msgTypes[83]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[85]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5914,7 +6062,7 @@ func (x *ClipSourceAssociation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClipSourceAssociation.ProtoReflect.Descriptor instead.
 func (*ClipSourceAssociation) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{83}
+	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{85}
 }
 
 func (x *ClipSourceAssociation) GetGroupId() string {
@@ -5971,7 +6119,7 @@ type ClipCompositionInputs struct {
 
 func (x *ClipCompositionInputs) Reset() {
 	*x = ClipCompositionInputs{}
-	mi := &file_postpilot_v1_clip_proto_msgTypes[84]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[86]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5983,7 +6131,7 @@ func (x *ClipCompositionInputs) String() string {
 func (*ClipCompositionInputs) ProtoMessage() {}
 
 func (x *ClipCompositionInputs) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_clip_proto_msgTypes[84]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[86]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5996,7 +6144,7 @@ func (x *ClipCompositionInputs) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClipCompositionInputs.ProtoReflect.Descriptor instead.
 func (*ClipCompositionInputs) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{84}
+	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{86}
 }
 
 func (x *ClipCompositionInputs) GetValues() map[string]string {
@@ -6032,7 +6180,7 @@ type ClipCompositionSnapshot struct {
 
 func (x *ClipCompositionSnapshot) Reset() {
 	*x = ClipCompositionSnapshot{}
-	mi := &file_postpilot_v1_clip_proto_msgTypes[85]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[87]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6044,7 +6192,7 @@ func (x *ClipCompositionSnapshot) String() string {
 func (*ClipCompositionSnapshot) ProtoMessage() {}
 
 func (x *ClipCompositionSnapshot) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_clip_proto_msgTypes[85]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[87]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6057,7 +6205,7 @@ func (x *ClipCompositionSnapshot) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClipCompositionSnapshot.ProtoReflect.Descriptor instead.
 func (*ClipCompositionSnapshot) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{85}
+	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{87}
 }
 
 func (x *ClipCompositionSnapshot) GetVersion() int32 {
@@ -6098,7 +6246,7 @@ type ClipProjectComposition struct {
 
 func (x *ClipProjectComposition) Reset() {
 	*x = ClipProjectComposition{}
-	mi := &file_postpilot_v1_clip_proto_msgTypes[86]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[88]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6110,7 +6258,7 @@ func (x *ClipProjectComposition) String() string {
 func (*ClipProjectComposition) ProtoMessage() {}
 
 func (x *ClipProjectComposition) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_clip_proto_msgTypes[86]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[88]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6123,7 +6271,7 @@ func (x *ClipProjectComposition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClipProjectComposition.ProtoReflect.Descriptor instead.
 func (*ClipProjectComposition) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{86}
+	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{88}
 }
 
 func (x *ClipProjectComposition) GetSnapshot() *ClipCompositionSnapshot {
@@ -6162,7 +6310,7 @@ type ClipAttemptInspection struct {
 
 func (x *ClipAttemptInspection) Reset() {
 	*x = ClipAttemptInspection{}
-	mi := &file_postpilot_v1_clip_proto_msgTypes[87]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[89]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6174,7 +6322,7 @@ func (x *ClipAttemptInspection) String() string {
 func (*ClipAttemptInspection) ProtoMessage() {}
 
 func (x *ClipAttemptInspection) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_clip_proto_msgTypes[87]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[89]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6187,7 +6335,7 @@ func (x *ClipAttemptInspection) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClipAttemptInspection.ProtoReflect.Descriptor instead.
 func (*ClipAttemptInspection) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{87}
+	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{89}
 }
 
 func (x *ClipAttemptInspection) GetJobId() string {
@@ -6294,7 +6442,7 @@ type ClipAttemptRange struct {
 
 func (x *ClipAttemptRange) Reset() {
 	*x = ClipAttemptRange{}
-	mi := &file_postpilot_v1_clip_proto_msgTypes[88]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[90]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6306,7 +6454,7 @@ func (x *ClipAttemptRange) String() string {
 func (*ClipAttemptRange) ProtoMessage() {}
 
 func (x *ClipAttemptRange) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_clip_proto_msgTypes[88]
+	mi := &file_postpilot_v1_clip_proto_msgTypes[90]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6319,7 +6467,7 @@ func (x *ClipAttemptRange) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClipAttemptRange.ProtoReflect.Descriptor instead.
 func (*ClipAttemptRange) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{88}
+	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{90}
 }
 
 func (x *ClipAttemptRange) GetCut() int32 {
@@ -6593,7 +6741,7 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"durationMs\x12\x14\n" +
 	"\x05width\x18\x05 \x01(\x05R\x05width\x12\x16\n" +
 	"\x06height\x18\x06 \x01(\x05R\x06height\x12 \n" +
-	"\vfingerprint\x18\a \x01(\tR\vfingerprint\"\xe9\x01\n" +
+	"\vfingerprint\x18\a \x01(\tR\vfingerprint\"\x9d\x02\n" +
 	"\n" +
 	"ClipSource\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12<\n" +
@@ -6601,7 +6749,8 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\x05state\x18\x03 \x01(\tR\x05state\x12!\n" +
 	"\factual_bytes\x18\x04 \x01(\x03R\vactualBytes\x120\n" +
 	"\x14retention_expires_at\x18\x05 \x01(\tR\x12retentionExpiresAt\x12\"\n" +
-	"\favailability\x18\x06 \x01(\tR\favailability\"\xc3\x01\n" +
+	"\favailability\x18\x06 \x01(\tR\favailability\x122\n" +
+	"\x15retain_original_audio\x18\a \x01(\bR\x13retainOriginalAudio\"\xc3\x01\n" +
 	"\x0fClipSourceBatch\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -6695,7 +6844,18 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\aversion\x18\x01 \x01(\x05R\aversion\x12@\n" +
 	"\x1cunused_reservation_numerator\x18\x02 \x01(\x05R\x1aunusedReservationNumerator\x12D\n" +
 	"\x1eunused_reservation_denominator\x18\x03 \x01(\x05R\x1cunusedReservationDenominator\x12\x1a\n" +
-	"\brounding\x18\x04 \x01(\tR\brounding\"L\n" +
+	"\brounding\x18\x04 \x01(\tR\brounding\"\x8e\x02\n" +
+	"!SetClipSourceOriginalSoundRequest\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x19\n" +
+	"\bbatch_id\x18\x02 \x01(\tR\abatchId\x12\x1b\n" +
+	"\tsource_id\x18\x03 \x01(\tR\bsourceId\x121\n" +
+	"\x14expected_fingerprint\x18\x04 \x01(\tR\x13expectedFingerprint\x122\n" +
+	"\x15retain_original_audio\x18\x05 \x01(\bR\x13retainOriginalAudio\x12+\n" +
+	"\x11expected_revision\x18\x06 \x01(\x05R\x10expectedRevision\"\x8e\x01\n" +
+	"\"SetClipSourceOriginalSoundResponse\x123\n" +
+	"\x05batch\x18\x01 \x01(\v2\x1d.postpilot.v1.ClipSourceBatchR\x05batch\x123\n" +
+	"\aproject\x18\x02 \x01(\v2\x19.postpilot.v1.ClipProjectR\aproject\"L\n" +
 	"\x14CancelClipJobRequest\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x15\n" +
@@ -6940,7 +7100,7 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\x1fCLIP_PREVIEW_PARITY_UNSPECIFIED\x10\x00\x122\n" +
 	".CLIP_PREVIEW_PARITY_SOURCE_CONTRAST_FINAL_ONLY\x10\x01\x126\n" +
 	"2CLIP_PREVIEW_PARITY_AUDIO_NORMALIZATION_FINAL_ONLY\x10\x02\x12,\n" +
-	"(CLIP_PREVIEW_PARITY_BROWSER_FRAME_TIMING\x10\x032\x96\x14\n" +
+	"(CLIP_PREVIEW_PARITY_BROWSER_FRAME_TIMING\x10\x032\x9a\x15\n" +
 	"\vClipService\x12i\n" +
 	"\x12PrepareClipPreview\x12'.postpilot.v1.PrepareClipPreviewRequest\x1a(.postpilot.v1.PrepareClipPreviewResponse\"\x00\x12l\n" +
 	"\x13GetClipCapabilities\x12(.postpilot.v1.GetClipCapabilitiesRequest\x1a).postpilot.v1.GetClipCapabilitiesResponse\"\x00\x12c\n" +
@@ -6964,7 +7124,8 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\x11ConfirmClipSource\x12&.postpilot.v1.ConfirmClipSourceRequest\x1a'.postpilot.v1.ConfirmClipSourceResponse\"\x00\x12u\n" +
 	"\x16DiscardClipSourceBatch\x12+.postpilot.v1.DiscardClipSourceBatchRequest\x1a,.postpilot.v1.DiscardClipSourceBatchResponse\"\x00\x12]\n" +
 	"\x0eGetClipSources\x12#.postpilot.v1.GetClipSourcesRequest\x1a$.postpilot.v1.GetClipSourcesResponse\"\x00\x12r\n" +
-	"\x15GetClipSourcePlayback\x12*.postpilot.v1.GetClipSourcePlaybackRequest\x1a+.postpilot.v1.GetClipSourcePlaybackResponse\"\x00\x12\x84\x01\n" +
+	"\x15GetClipSourcePlayback\x12*.postpilot.v1.GetClipSourcePlaybackRequest\x1a+.postpilot.v1.GetClipSourcePlaybackResponse\"\x00\x12\x81\x01\n" +
+	"\x1aSetClipSourceOriginalSound\x12/.postpilot.v1.SetClipSourceOriginalSoundRequest\x1a0.postpilot.v1.SetClipSourceOriginalSoundResponse\"\x00\x12\x84\x01\n" +
 	"\x1bListClipAnalysisEligibility\x120.postpilot.v1.ListClipAnalysisEligibilityRequest\x1a1.postpilot.v1.ListClipAnalysisEligibilityResponse\"\x00BDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
 
 var (
@@ -6980,7 +7141,7 @@ func file_postpilot_v1_clip_proto_rawDescGZIP() []byte {
 }
 
 var file_postpilot_v1_clip_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_postpilot_v1_clip_proto_msgTypes = make([]protoimpl.MessageInfo, 94)
+var file_postpilot_v1_clip_proto_msgTypes = make([]protoimpl.MessageInfo, 96)
 var file_postpilot_v1_clip_proto_goTypes = []any{
 	(ClipAnalysisEligibility)(0),                // 0: postpilot.v1.ClipAnalysisEligibility
 	(ClipPreviewParity)(0),                      // 1: postpilot.v1.ClipPreviewParity
@@ -7041,48 +7202,50 @@ var file_postpilot_v1_clip_proto_goTypes = []any{
 	(*ClipPricedCall)(nil),                      // 56: postpilot.v1.ClipPricedCall
 	(*QuoteClipGenerationResponse)(nil),         // 57: postpilot.v1.QuoteClipGenerationResponse
 	(*ClipCancellationPolicy)(nil),              // 58: postpilot.v1.ClipCancellationPolicy
-	(*CancelClipJobRequest)(nil),                // 59: postpilot.v1.CancelClipJobRequest
-	(*CancelClipJobResponse)(nil),               // 60: postpilot.v1.CancelClipJobResponse
-	(*ClipCaption)(nil),                         // 61: postpilot.v1.ClipCaption
-	(*ClipEditCut)(nil),                         // 62: postpilot.v1.ClipEditCut
-	(*ClipSourceAudioSetting)(nil),              // 63: postpilot.v1.ClipSourceAudioSetting
-	(*ClipSourceAudioSettings)(nil),             // 64: postpilot.v1.ClipSourceAudioSettings
-	(*ClipFocal)(nil),                           // 65: postpilot.v1.ClipFocal
-	(*ClipTextRow)(nil),                         // 66: postpilot.v1.ClipTextRow
-	(*ClipEditablePhrase)(nil),                  // 67: postpilot.v1.ClipEditablePhrase
-	(*ClipTextEvidence)(nil),                    // 68: postpilot.v1.ClipTextEvidence
-	(*ClipEditableText)(nil),                    // 69: postpilot.v1.ClipEditableText
-	(*ClipEditPlan)(nil),                        // 70: postpilot.v1.ClipEditPlan
-	(*ClipSourceAssociations)(nil),              // 71: postpilot.v1.ClipSourceAssociations
-	(*PrepareClipPreviewRequest)(nil),           // 72: postpilot.v1.PrepareClipPreviewRequest
-	(*ClipPreviewAsset)(nil),                    // 73: postpilot.v1.ClipPreviewAsset
-	(*PrepareClipPreviewResponse)(nil),          // 74: postpilot.v1.PrepareClipPreviewResponse
-	(*ClipRetainedSource)(nil),                  // 75: postpilot.v1.ClipRetainedSource
-	(*ClipEditingState)(nil),                    // 76: postpilot.v1.ClipEditingState
-	(*SaveClipEditPlanRequest)(nil),             // 77: postpilot.v1.SaveClipEditPlanRequest
-	(*SaveClipEditPlanResponse)(nil),            // 78: postpilot.v1.SaveClipEditPlanResponse
-	(*StartClipRenderRequest)(nil),              // 79: postpilot.v1.StartClipRenderRequest
-	(*StartClipRenderResponse)(nil),             // 80: postpilot.v1.StartClipRenderResponse
-	(*GetClipCapabilitiesRequest)(nil),          // 81: postpilot.v1.GetClipCapabilitiesRequest
-	(*GetClipCapabilitiesResponse)(nil),         // 82: postpilot.v1.GetClipCapabilitiesResponse
-	(*ClipCompositionItem)(nil),                 // 83: postpilot.v1.ClipCompositionItem
-	(*ClipCompositionItems)(nil),                // 84: postpilot.v1.ClipCompositionItems
-	(*ClipSourceAssociation)(nil),               // 85: postpilot.v1.ClipSourceAssociation
-	(*ClipCompositionInputs)(nil),               // 86: postpilot.v1.ClipCompositionInputs
-	(*ClipCompositionSnapshot)(nil),             // 87: postpilot.v1.ClipCompositionSnapshot
-	(*ClipProjectComposition)(nil),              // 88: postpilot.v1.ClipProjectComposition
-	(*ClipAttemptInspection)(nil),               // 89: postpilot.v1.ClipAttemptInspection
-	(*ClipAttemptRange)(nil),                    // 90: postpilot.v1.ClipAttemptRange
-	nil,                                         // 91: postpilot.v1.ClipSourceUpload.HeadersEntry
-	nil,                                         // 92: postpilot.v1.ClipCompositionItem.ValuesEntry
-	nil,                                         // 93: postpilot.v1.ClipCompositionInputs.ValuesEntry
-	nil,                                         // 94: postpilot.v1.ClipCompositionInputs.ItemsEntry
-	nil,                                         // 95: postpilot.v1.ClipAttemptInspection.MeasurementsEntry
-	(*ModelRef)(nil),                            // 96: postpilot.v1.ModelRef
-	(*GenerationJob)(nil),                       // 97: postpilot.v1.GenerationJob
+	(*SetClipSourceOriginalSoundRequest)(nil),   // 59: postpilot.v1.SetClipSourceOriginalSoundRequest
+	(*SetClipSourceOriginalSoundResponse)(nil),  // 60: postpilot.v1.SetClipSourceOriginalSoundResponse
+	(*CancelClipJobRequest)(nil),                // 61: postpilot.v1.CancelClipJobRequest
+	(*CancelClipJobResponse)(nil),               // 62: postpilot.v1.CancelClipJobResponse
+	(*ClipCaption)(nil),                         // 63: postpilot.v1.ClipCaption
+	(*ClipEditCut)(nil),                         // 64: postpilot.v1.ClipEditCut
+	(*ClipSourceAudioSetting)(nil),              // 65: postpilot.v1.ClipSourceAudioSetting
+	(*ClipSourceAudioSettings)(nil),             // 66: postpilot.v1.ClipSourceAudioSettings
+	(*ClipFocal)(nil),                           // 67: postpilot.v1.ClipFocal
+	(*ClipTextRow)(nil),                         // 68: postpilot.v1.ClipTextRow
+	(*ClipEditablePhrase)(nil),                  // 69: postpilot.v1.ClipEditablePhrase
+	(*ClipTextEvidence)(nil),                    // 70: postpilot.v1.ClipTextEvidence
+	(*ClipEditableText)(nil),                    // 71: postpilot.v1.ClipEditableText
+	(*ClipEditPlan)(nil),                        // 72: postpilot.v1.ClipEditPlan
+	(*ClipSourceAssociations)(nil),              // 73: postpilot.v1.ClipSourceAssociations
+	(*PrepareClipPreviewRequest)(nil),           // 74: postpilot.v1.PrepareClipPreviewRequest
+	(*ClipPreviewAsset)(nil),                    // 75: postpilot.v1.ClipPreviewAsset
+	(*PrepareClipPreviewResponse)(nil),          // 76: postpilot.v1.PrepareClipPreviewResponse
+	(*ClipRetainedSource)(nil),                  // 77: postpilot.v1.ClipRetainedSource
+	(*ClipEditingState)(nil),                    // 78: postpilot.v1.ClipEditingState
+	(*SaveClipEditPlanRequest)(nil),             // 79: postpilot.v1.SaveClipEditPlanRequest
+	(*SaveClipEditPlanResponse)(nil),            // 80: postpilot.v1.SaveClipEditPlanResponse
+	(*StartClipRenderRequest)(nil),              // 81: postpilot.v1.StartClipRenderRequest
+	(*StartClipRenderResponse)(nil),             // 82: postpilot.v1.StartClipRenderResponse
+	(*GetClipCapabilitiesRequest)(nil),          // 83: postpilot.v1.GetClipCapabilitiesRequest
+	(*GetClipCapabilitiesResponse)(nil),         // 84: postpilot.v1.GetClipCapabilitiesResponse
+	(*ClipCompositionItem)(nil),                 // 85: postpilot.v1.ClipCompositionItem
+	(*ClipCompositionItems)(nil),                // 86: postpilot.v1.ClipCompositionItems
+	(*ClipSourceAssociation)(nil),               // 87: postpilot.v1.ClipSourceAssociation
+	(*ClipCompositionInputs)(nil),               // 88: postpilot.v1.ClipCompositionInputs
+	(*ClipCompositionSnapshot)(nil),             // 89: postpilot.v1.ClipCompositionSnapshot
+	(*ClipProjectComposition)(nil),              // 90: postpilot.v1.ClipProjectComposition
+	(*ClipAttemptInspection)(nil),               // 91: postpilot.v1.ClipAttemptInspection
+	(*ClipAttemptRange)(nil),                    // 92: postpilot.v1.ClipAttemptRange
+	nil,                                         // 93: postpilot.v1.ClipSourceUpload.HeadersEntry
+	nil,                                         // 94: postpilot.v1.ClipCompositionItem.ValuesEntry
+	nil,                                         // 95: postpilot.v1.ClipCompositionInputs.ValuesEntry
+	nil,                                         // 96: postpilot.v1.ClipCompositionInputs.ItemsEntry
+	nil,                                         // 97: postpilot.v1.ClipAttemptInspection.MeasurementsEntry
+	(*ModelRef)(nil),                            // 98: postpilot.v1.ModelRef
+	(*GenerationJob)(nil),                       // 99: postpilot.v1.GenerationJob
 }
 var file_postpilot_v1_clip_proto_depIdxs = []int32{
-	96,  // 0: postpilot.v1.ClipAnalysisModelEligibility.model:type_name -> postpilot.v1.ModelRef
+	98,  // 0: postpilot.v1.ClipAnalysisModelEligibility.model:type_name -> postpilot.v1.ModelRef
 	0,   // 1: postpilot.v1.ClipAnalysisModelEligibility.status:type_name -> postpilot.v1.ClipAnalysisEligibility
 	2,   // 2: postpilot.v1.ListClipAnalysisEligibilityResponse.models:type_name -> postpilot.v1.ClipAnalysisModelEligibility
 	5,   // 3: postpilot.v1.ClipInformationFields.values:type_name -> postpilot.v1.ClipInformationField
@@ -7091,15 +7254,15 @@ var file_postpilot_v1_clip_proto_depIdxs = []int32{
 	15,  // 6: postpilot.v1.FinalizeClipProjectResponse.project:type_name -> postpilot.v1.ClipProject
 	9,   // 7: postpilot.v1.ClipProject.answers:type_name -> postpilot.v1.ClipAnswer
 	14,  // 8: postpilot.v1.ClipProject.result:type_name -> postpilot.v1.ClipResult
-	97,  // 9: postpilot.v1.ClipProject.latest_job:type_name -> postpilot.v1.GenerationJob
-	76,  // 10: postpilot.v1.ClipProject.editing:type_name -> postpilot.v1.ClipEditingState
+	99,  // 9: postpilot.v1.ClipProject.latest_job:type_name -> postpilot.v1.GenerationJob
+	78,  // 10: postpilot.v1.ClipProject.editing:type_name -> postpilot.v1.ClipEditingState
 	20,  // 11: postpilot.v1.ClipProject.accounting:type_name -> postpilot.v1.ClipAccounting
 	19,  // 12: postpilot.v1.ClipProject.latest_attempt:type_name -> postpilot.v1.ClipAttempt
 	16,  // 13: postpilot.v1.ClipProject.observations:type_name -> postpilot.v1.ClipObservations
-	88,  // 14: postpilot.v1.ClipProject.composition:type_name -> postpilot.v1.ClipProjectComposition
-	89,  // 15: postpilot.v1.ClipProject.attempt_inspection:type_name -> postpilot.v1.ClipAttemptInspection
+	90,  // 14: postpilot.v1.ClipProject.composition:type_name -> postpilot.v1.ClipProjectComposition
+	91,  // 15: postpilot.v1.ClipProject.attempt_inspection:type_name -> postpilot.v1.ClipAttemptInspection
 	17,  // 16: postpilot.v1.ClipObservations.sources:type_name -> postpilot.v1.ClipSourceObservation
-	75,  // 17: postpilot.v1.ClipSourceObservation.source:type_name -> postpilot.v1.ClipRetainedSource
+	77,  // 17: postpilot.v1.ClipSourceObservation.source:type_name -> postpilot.v1.ClipRetainedSource
 	18,  // 18: postpilot.v1.ClipSourceObservation.segments:type_name -> postpilot.v1.ClipObservedSegment
 	8,   // 19: postpilot.v1.ListVideoTemplatesResponse.templates:type_name -> postpilot.v1.VideoTemplate
 	5,   // 20: postpilot.v1.CreateVideoTemplateRequest.information_fields:type_name -> postpilot.v1.ClipInformationField
@@ -7109,112 +7272,116 @@ var file_postpilot_v1_clip_proto_depIdxs = []int32{
 	8,   // 24: postpilot.v1.UpdateVideoTemplateResponse.template:type_name -> postpilot.v1.VideoTemplate
 	15,  // 25: postpilot.v1.ListClipProjectsResponse.projects:type_name -> postpilot.v1.ClipProject
 	9,   // 26: postpilot.v1.CreateClipProjectRequest.answers:type_name -> postpilot.v1.ClipAnswer
-	86,  // 27: postpilot.v1.CreateClipProjectRequest.composition_inputs:type_name -> postpilot.v1.ClipCompositionInputs
+	88,  // 27: postpilot.v1.CreateClipProjectRequest.composition_inputs:type_name -> postpilot.v1.ClipCompositionInputs
 	15,  // 28: postpilot.v1.CreateClipProjectResponse.project:type_name -> postpilot.v1.ClipProject
 	15,  // 29: postpilot.v1.GetClipProjectResponse.project:type_name -> postpilot.v1.ClipProject
 	9,   // 30: postpilot.v1.UpdateClipProjectRequest.answers:type_name -> postpilot.v1.ClipAnswer
-	86,  // 31: postpilot.v1.UpdateClipProjectRequest.composition_inputs:type_name -> postpilot.v1.ClipCompositionInputs
+	88,  // 31: postpilot.v1.UpdateClipProjectRequest.composition_inputs:type_name -> postpilot.v1.ClipCompositionInputs
 	15,  // 32: postpilot.v1.UpdateClipProjectResponse.project:type_name -> postpilot.v1.ClipProject
 	39,  // 33: postpilot.v1.ClipSource.metadata:type_name -> postpilot.v1.ClipSourceMetadata
 	40,  // 34: postpilot.v1.ClipSourceBatch.sources:type_name -> postpilot.v1.ClipSource
-	91,  // 35: postpilot.v1.ClipSourceUpload.headers:type_name -> postpilot.v1.ClipSourceUpload.HeadersEntry
+	93,  // 35: postpilot.v1.ClipSourceUpload.headers:type_name -> postpilot.v1.ClipSourceUpload.HeadersEntry
 	39,  // 36: postpilot.v1.CreateClipSourceBatchRequest.sources:type_name -> postpilot.v1.ClipSourceMetadata
 	41,  // 37: postpilot.v1.CreateClipSourceBatchResponse.batch:type_name -> postpilot.v1.ClipSourceBatch
 	42,  // 38: postpilot.v1.CreateClipSourceBatchResponse.uploads:type_name -> postpilot.v1.ClipSourceUpload
 	41,  // 39: postpilot.v1.ConfirmClipSourceResponse.batch:type_name -> postpilot.v1.ClipSourceBatch
 	41,  // 40: postpilot.v1.GetClipSourcesResponse.batches:type_name -> postpilot.v1.ClipSourceBatch
-	96,  // 41: postpilot.v1.StartClipGenerationRequest.observe_model:type_name -> postpilot.v1.ModelRef
-	96,  // 42: postpilot.v1.StartClipGenerationRequest.write_model:type_name -> postpilot.v1.ModelRef
-	96,  // 43: postpilot.v1.QuoteClipGenerationRequest.observe_model:type_name -> postpilot.v1.ModelRef
-	96,  // 44: postpilot.v1.QuoteClipGenerationRequest.write_model:type_name -> postpilot.v1.ModelRef
-	96,  // 45: postpilot.v1.ClipPricedCall.model:type_name -> postpilot.v1.ModelRef
+	98,  // 41: postpilot.v1.StartClipGenerationRequest.observe_model:type_name -> postpilot.v1.ModelRef
+	98,  // 42: postpilot.v1.StartClipGenerationRequest.write_model:type_name -> postpilot.v1.ModelRef
+	98,  // 43: postpilot.v1.QuoteClipGenerationRequest.observe_model:type_name -> postpilot.v1.ModelRef
+	98,  // 44: postpilot.v1.QuoteClipGenerationRequest.write_model:type_name -> postpilot.v1.ModelRef
+	98,  // 45: postpilot.v1.ClipPricedCall.model:type_name -> postpilot.v1.ModelRef
 	56,  // 46: postpilot.v1.QuoteClipGenerationResponse.priced_calls:type_name -> postpilot.v1.ClipPricedCall
 	58,  // 47: postpilot.v1.QuoteClipGenerationResponse.cancellation_policy:type_name -> postpilot.v1.ClipCancellationPolicy
-	97,  // 48: postpilot.v1.CancelClipJobResponse.job:type_name -> postpilot.v1.GenerationJob
-	20,  // 49: postpilot.v1.CancelClipJobResponse.accounting:type_name -> postpilot.v1.ClipAccounting
-	61,  // 50: postpilot.v1.ClipEditCut.copy:type_name -> postpilot.v1.ClipCaption
-	61,  // 51: postpilot.v1.ClipEditCut.copies:type_name -> postpilot.v1.ClipCaption
-	65,  // 52: postpilot.v1.ClipEditCut.focal:type_name -> postpilot.v1.ClipFocal
-	63,  // 53: postpilot.v1.ClipSourceAudioSettings.values:type_name -> postpilot.v1.ClipSourceAudioSetting
-	66,  // 54: postpilot.v1.ClipEditableText.rows:type_name -> postpilot.v1.ClipTextRow
-	67,  // 55: postpilot.v1.ClipEditableText.phrases:type_name -> postpilot.v1.ClipEditablePhrase
-	68,  // 56: postpilot.v1.ClipEditableText.evidence:type_name -> postpilot.v1.ClipTextEvidence
-	62,  // 57: postpilot.v1.ClipEditPlan.cuts:type_name -> postpilot.v1.ClipEditCut
-	69,  // 58: postpilot.v1.ClipEditPlan.elements:type_name -> postpilot.v1.ClipEditableText
-	71,  // 59: postpilot.v1.ClipEditPlan.associations:type_name -> postpilot.v1.ClipSourceAssociations
-	64,  // 60: postpilot.v1.ClipEditPlan.source_audio:type_name -> postpilot.v1.ClipSourceAudioSettings
-	85,  // 61: postpilot.v1.ClipSourceAssociations.values:type_name -> postpilot.v1.ClipSourceAssociation
-	70,  // 62: postpilot.v1.PrepareClipPreviewRequest.plan:type_name -> postpilot.v1.ClipEditPlan
-	73,  // 63: postpilot.v1.PrepareClipPreviewResponse.assets:type_name -> postpilot.v1.ClipPreviewAsset
-	1,   // 64: postpilot.v1.PrepareClipPreviewResponse.parity:type_name -> postpilot.v1.ClipPreviewParity
-	70,  // 65: postpilot.v1.ClipEditingState.plan:type_name -> postpilot.v1.ClipEditPlan
-	75,  // 66: postpilot.v1.ClipEditingState.sources:type_name -> postpilot.v1.ClipRetainedSource
-	70,  // 67: postpilot.v1.SaveClipEditPlanRequest.plan:type_name -> postpilot.v1.ClipEditPlan
-	15,  // 68: postpilot.v1.SaveClipEditPlanResponse.project:type_name -> postpilot.v1.ClipProject
-	92,  // 69: postpilot.v1.ClipCompositionItem.values:type_name -> postpilot.v1.ClipCompositionItem.ValuesEntry
-	83,  // 70: postpilot.v1.ClipCompositionItems.items:type_name -> postpilot.v1.ClipCompositionItem
-	93,  // 71: postpilot.v1.ClipCompositionInputs.values:type_name -> postpilot.v1.ClipCompositionInputs.ValuesEntry
-	94,  // 72: postpilot.v1.ClipCompositionInputs.items:type_name -> postpilot.v1.ClipCompositionInputs.ItemsEntry
-	85,  // 73: postpilot.v1.ClipCompositionInputs.associations:type_name -> postpilot.v1.ClipSourceAssociation
-	87,  // 74: postpilot.v1.ClipProjectComposition.snapshot:type_name -> postpilot.v1.ClipCompositionSnapshot
-	86,  // 75: postpilot.v1.ClipProjectComposition.inputs:type_name -> postpilot.v1.ClipCompositionInputs
-	16,  // 76: postpilot.v1.ClipAttemptInspection.observations:type_name -> postpilot.v1.ClipObservations
-	90,  // 77: postpilot.v1.ClipAttemptInspection.ranges:type_name -> postpilot.v1.ClipAttemptRange
-	95,  // 78: postpilot.v1.ClipAttemptInspection.measurements:type_name -> postpilot.v1.ClipAttemptInspection.MeasurementsEntry
-	84,  // 79: postpilot.v1.ClipCompositionInputs.ItemsEntry.value:type_name -> postpilot.v1.ClipCompositionItems
-	72,  // 80: postpilot.v1.ClipService.PrepareClipPreview:input_type -> postpilot.v1.PrepareClipPreviewRequest
-	81,  // 81: postpilot.v1.ClipService.GetClipCapabilities:input_type -> postpilot.v1.GetClipCapabilitiesRequest
-	77,  // 82: postpilot.v1.ClipService.SaveClipEditPlan:input_type -> postpilot.v1.SaveClipEditPlanRequest
-	79,  // 83: postpilot.v1.ClipService.StartClipRender:input_type -> postpilot.v1.StartClipRenderRequest
-	53,  // 84: postpilot.v1.ClipService.StartClipGeneration:input_type -> postpilot.v1.StartClipGenerationRequest
-	55,  // 85: postpilot.v1.ClipService.QuoteClipGeneration:input_type -> postpilot.v1.QuoteClipGenerationRequest
-	12,  // 86: postpilot.v1.ClipService.FinalizeClipProject:input_type -> postpilot.v1.FinalizeClipProjectRequest
-	59,  // 87: postpilot.v1.ClipService.CancelClipJob:input_type -> postpilot.v1.CancelClipJobRequest
-	21,  // 88: postpilot.v1.ClipService.ListVideoTemplates:input_type -> postpilot.v1.ListVideoTemplatesRequest
-	23,  // 89: postpilot.v1.ClipService.CreateVideoTemplate:input_type -> postpilot.v1.CreateVideoTemplateRequest
-	25,  // 90: postpilot.v1.ClipService.UpdateVideoTemplate:input_type -> postpilot.v1.UpdateVideoTemplateRequest
-	27,  // 91: postpilot.v1.ClipService.DeleteVideoTemplate:input_type -> postpilot.v1.DeleteVideoTemplateRequest
-	10,  // 92: postpilot.v1.ClipService.SeedPresetFields:input_type -> postpilot.v1.SeedPresetFieldsRequest
-	29,  // 93: postpilot.v1.ClipService.ListClipProjects:input_type -> postpilot.v1.ListClipProjectsRequest
-	31,  // 94: postpilot.v1.ClipService.CreateClipProject:input_type -> postpilot.v1.CreateClipProjectRequest
-	33,  // 95: postpilot.v1.ClipService.GetClipProject:input_type -> postpilot.v1.GetClipProjectRequest
-	35,  // 96: postpilot.v1.ClipService.UpdateClipProject:input_type -> postpilot.v1.UpdateClipProjectRequest
-	37,  // 97: postpilot.v1.ClipService.DeleteClipProject:input_type -> postpilot.v1.DeleteClipProjectRequest
-	43,  // 98: postpilot.v1.ClipService.CreateClipSourceBatch:input_type -> postpilot.v1.CreateClipSourceBatchRequest
-	45,  // 99: postpilot.v1.ClipService.ConfirmClipSource:input_type -> postpilot.v1.ConfirmClipSourceRequest
-	47,  // 100: postpilot.v1.ClipService.DiscardClipSourceBatch:input_type -> postpilot.v1.DiscardClipSourceBatchRequest
-	49,  // 101: postpilot.v1.ClipService.GetClipSources:input_type -> postpilot.v1.GetClipSourcesRequest
-	51,  // 102: postpilot.v1.ClipService.GetClipSourcePlayback:input_type -> postpilot.v1.GetClipSourcePlaybackRequest
-	3,   // 103: postpilot.v1.ClipService.ListClipAnalysisEligibility:input_type -> postpilot.v1.ListClipAnalysisEligibilityRequest
-	74,  // 104: postpilot.v1.ClipService.PrepareClipPreview:output_type -> postpilot.v1.PrepareClipPreviewResponse
-	82,  // 105: postpilot.v1.ClipService.GetClipCapabilities:output_type -> postpilot.v1.GetClipCapabilitiesResponse
-	78,  // 106: postpilot.v1.ClipService.SaveClipEditPlan:output_type -> postpilot.v1.SaveClipEditPlanResponse
-	80,  // 107: postpilot.v1.ClipService.StartClipRender:output_type -> postpilot.v1.StartClipRenderResponse
-	54,  // 108: postpilot.v1.ClipService.StartClipGeneration:output_type -> postpilot.v1.StartClipGenerationResponse
-	57,  // 109: postpilot.v1.ClipService.QuoteClipGeneration:output_type -> postpilot.v1.QuoteClipGenerationResponse
-	13,  // 110: postpilot.v1.ClipService.FinalizeClipProject:output_type -> postpilot.v1.FinalizeClipProjectResponse
-	60,  // 111: postpilot.v1.ClipService.CancelClipJob:output_type -> postpilot.v1.CancelClipJobResponse
-	22,  // 112: postpilot.v1.ClipService.ListVideoTemplates:output_type -> postpilot.v1.ListVideoTemplatesResponse
-	24,  // 113: postpilot.v1.ClipService.CreateVideoTemplate:output_type -> postpilot.v1.CreateVideoTemplateResponse
-	26,  // 114: postpilot.v1.ClipService.UpdateVideoTemplate:output_type -> postpilot.v1.UpdateVideoTemplateResponse
-	28,  // 115: postpilot.v1.ClipService.DeleteVideoTemplate:output_type -> postpilot.v1.DeleteVideoTemplateResponse
-	11,  // 116: postpilot.v1.ClipService.SeedPresetFields:output_type -> postpilot.v1.SeedPresetFieldsResponse
-	30,  // 117: postpilot.v1.ClipService.ListClipProjects:output_type -> postpilot.v1.ListClipProjectsResponse
-	32,  // 118: postpilot.v1.ClipService.CreateClipProject:output_type -> postpilot.v1.CreateClipProjectResponse
-	34,  // 119: postpilot.v1.ClipService.GetClipProject:output_type -> postpilot.v1.GetClipProjectResponse
-	36,  // 120: postpilot.v1.ClipService.UpdateClipProject:output_type -> postpilot.v1.UpdateClipProjectResponse
-	38,  // 121: postpilot.v1.ClipService.DeleteClipProject:output_type -> postpilot.v1.DeleteClipProjectResponse
-	44,  // 122: postpilot.v1.ClipService.CreateClipSourceBatch:output_type -> postpilot.v1.CreateClipSourceBatchResponse
-	46,  // 123: postpilot.v1.ClipService.ConfirmClipSource:output_type -> postpilot.v1.ConfirmClipSourceResponse
-	48,  // 124: postpilot.v1.ClipService.DiscardClipSourceBatch:output_type -> postpilot.v1.DiscardClipSourceBatchResponse
-	50,  // 125: postpilot.v1.ClipService.GetClipSources:output_type -> postpilot.v1.GetClipSourcesResponse
-	52,  // 126: postpilot.v1.ClipService.GetClipSourcePlayback:output_type -> postpilot.v1.GetClipSourcePlaybackResponse
-	4,   // 127: postpilot.v1.ClipService.ListClipAnalysisEligibility:output_type -> postpilot.v1.ListClipAnalysisEligibilityResponse
-	104, // [104:128] is the sub-list for method output_type
-	80,  // [80:104] is the sub-list for method input_type
-	80,  // [80:80] is the sub-list for extension type_name
-	80,  // [80:80] is the sub-list for extension extendee
-	0,   // [0:80] is the sub-list for field type_name
+	41,  // 48: postpilot.v1.SetClipSourceOriginalSoundResponse.batch:type_name -> postpilot.v1.ClipSourceBatch
+	15,  // 49: postpilot.v1.SetClipSourceOriginalSoundResponse.project:type_name -> postpilot.v1.ClipProject
+	99,  // 50: postpilot.v1.CancelClipJobResponse.job:type_name -> postpilot.v1.GenerationJob
+	20,  // 51: postpilot.v1.CancelClipJobResponse.accounting:type_name -> postpilot.v1.ClipAccounting
+	63,  // 52: postpilot.v1.ClipEditCut.copy:type_name -> postpilot.v1.ClipCaption
+	63,  // 53: postpilot.v1.ClipEditCut.copies:type_name -> postpilot.v1.ClipCaption
+	67,  // 54: postpilot.v1.ClipEditCut.focal:type_name -> postpilot.v1.ClipFocal
+	65,  // 55: postpilot.v1.ClipSourceAudioSettings.values:type_name -> postpilot.v1.ClipSourceAudioSetting
+	68,  // 56: postpilot.v1.ClipEditableText.rows:type_name -> postpilot.v1.ClipTextRow
+	69,  // 57: postpilot.v1.ClipEditableText.phrases:type_name -> postpilot.v1.ClipEditablePhrase
+	70,  // 58: postpilot.v1.ClipEditableText.evidence:type_name -> postpilot.v1.ClipTextEvidence
+	64,  // 59: postpilot.v1.ClipEditPlan.cuts:type_name -> postpilot.v1.ClipEditCut
+	71,  // 60: postpilot.v1.ClipEditPlan.elements:type_name -> postpilot.v1.ClipEditableText
+	73,  // 61: postpilot.v1.ClipEditPlan.associations:type_name -> postpilot.v1.ClipSourceAssociations
+	66,  // 62: postpilot.v1.ClipEditPlan.source_audio:type_name -> postpilot.v1.ClipSourceAudioSettings
+	87,  // 63: postpilot.v1.ClipSourceAssociations.values:type_name -> postpilot.v1.ClipSourceAssociation
+	72,  // 64: postpilot.v1.PrepareClipPreviewRequest.plan:type_name -> postpilot.v1.ClipEditPlan
+	75,  // 65: postpilot.v1.PrepareClipPreviewResponse.assets:type_name -> postpilot.v1.ClipPreviewAsset
+	1,   // 66: postpilot.v1.PrepareClipPreviewResponse.parity:type_name -> postpilot.v1.ClipPreviewParity
+	72,  // 67: postpilot.v1.ClipEditingState.plan:type_name -> postpilot.v1.ClipEditPlan
+	77,  // 68: postpilot.v1.ClipEditingState.sources:type_name -> postpilot.v1.ClipRetainedSource
+	72,  // 69: postpilot.v1.SaveClipEditPlanRequest.plan:type_name -> postpilot.v1.ClipEditPlan
+	15,  // 70: postpilot.v1.SaveClipEditPlanResponse.project:type_name -> postpilot.v1.ClipProject
+	94,  // 71: postpilot.v1.ClipCompositionItem.values:type_name -> postpilot.v1.ClipCompositionItem.ValuesEntry
+	85,  // 72: postpilot.v1.ClipCompositionItems.items:type_name -> postpilot.v1.ClipCompositionItem
+	95,  // 73: postpilot.v1.ClipCompositionInputs.values:type_name -> postpilot.v1.ClipCompositionInputs.ValuesEntry
+	96,  // 74: postpilot.v1.ClipCompositionInputs.items:type_name -> postpilot.v1.ClipCompositionInputs.ItemsEntry
+	87,  // 75: postpilot.v1.ClipCompositionInputs.associations:type_name -> postpilot.v1.ClipSourceAssociation
+	89,  // 76: postpilot.v1.ClipProjectComposition.snapshot:type_name -> postpilot.v1.ClipCompositionSnapshot
+	88,  // 77: postpilot.v1.ClipProjectComposition.inputs:type_name -> postpilot.v1.ClipCompositionInputs
+	16,  // 78: postpilot.v1.ClipAttemptInspection.observations:type_name -> postpilot.v1.ClipObservations
+	92,  // 79: postpilot.v1.ClipAttemptInspection.ranges:type_name -> postpilot.v1.ClipAttemptRange
+	97,  // 80: postpilot.v1.ClipAttemptInspection.measurements:type_name -> postpilot.v1.ClipAttemptInspection.MeasurementsEntry
+	86,  // 81: postpilot.v1.ClipCompositionInputs.ItemsEntry.value:type_name -> postpilot.v1.ClipCompositionItems
+	74,  // 82: postpilot.v1.ClipService.PrepareClipPreview:input_type -> postpilot.v1.PrepareClipPreviewRequest
+	83,  // 83: postpilot.v1.ClipService.GetClipCapabilities:input_type -> postpilot.v1.GetClipCapabilitiesRequest
+	79,  // 84: postpilot.v1.ClipService.SaveClipEditPlan:input_type -> postpilot.v1.SaveClipEditPlanRequest
+	81,  // 85: postpilot.v1.ClipService.StartClipRender:input_type -> postpilot.v1.StartClipRenderRequest
+	53,  // 86: postpilot.v1.ClipService.StartClipGeneration:input_type -> postpilot.v1.StartClipGenerationRequest
+	55,  // 87: postpilot.v1.ClipService.QuoteClipGeneration:input_type -> postpilot.v1.QuoteClipGenerationRequest
+	12,  // 88: postpilot.v1.ClipService.FinalizeClipProject:input_type -> postpilot.v1.FinalizeClipProjectRequest
+	61,  // 89: postpilot.v1.ClipService.CancelClipJob:input_type -> postpilot.v1.CancelClipJobRequest
+	21,  // 90: postpilot.v1.ClipService.ListVideoTemplates:input_type -> postpilot.v1.ListVideoTemplatesRequest
+	23,  // 91: postpilot.v1.ClipService.CreateVideoTemplate:input_type -> postpilot.v1.CreateVideoTemplateRequest
+	25,  // 92: postpilot.v1.ClipService.UpdateVideoTemplate:input_type -> postpilot.v1.UpdateVideoTemplateRequest
+	27,  // 93: postpilot.v1.ClipService.DeleteVideoTemplate:input_type -> postpilot.v1.DeleteVideoTemplateRequest
+	10,  // 94: postpilot.v1.ClipService.SeedPresetFields:input_type -> postpilot.v1.SeedPresetFieldsRequest
+	29,  // 95: postpilot.v1.ClipService.ListClipProjects:input_type -> postpilot.v1.ListClipProjectsRequest
+	31,  // 96: postpilot.v1.ClipService.CreateClipProject:input_type -> postpilot.v1.CreateClipProjectRequest
+	33,  // 97: postpilot.v1.ClipService.GetClipProject:input_type -> postpilot.v1.GetClipProjectRequest
+	35,  // 98: postpilot.v1.ClipService.UpdateClipProject:input_type -> postpilot.v1.UpdateClipProjectRequest
+	37,  // 99: postpilot.v1.ClipService.DeleteClipProject:input_type -> postpilot.v1.DeleteClipProjectRequest
+	43,  // 100: postpilot.v1.ClipService.CreateClipSourceBatch:input_type -> postpilot.v1.CreateClipSourceBatchRequest
+	45,  // 101: postpilot.v1.ClipService.ConfirmClipSource:input_type -> postpilot.v1.ConfirmClipSourceRequest
+	47,  // 102: postpilot.v1.ClipService.DiscardClipSourceBatch:input_type -> postpilot.v1.DiscardClipSourceBatchRequest
+	49,  // 103: postpilot.v1.ClipService.GetClipSources:input_type -> postpilot.v1.GetClipSourcesRequest
+	51,  // 104: postpilot.v1.ClipService.GetClipSourcePlayback:input_type -> postpilot.v1.GetClipSourcePlaybackRequest
+	59,  // 105: postpilot.v1.ClipService.SetClipSourceOriginalSound:input_type -> postpilot.v1.SetClipSourceOriginalSoundRequest
+	3,   // 106: postpilot.v1.ClipService.ListClipAnalysisEligibility:input_type -> postpilot.v1.ListClipAnalysisEligibilityRequest
+	76,  // 107: postpilot.v1.ClipService.PrepareClipPreview:output_type -> postpilot.v1.PrepareClipPreviewResponse
+	84,  // 108: postpilot.v1.ClipService.GetClipCapabilities:output_type -> postpilot.v1.GetClipCapabilitiesResponse
+	80,  // 109: postpilot.v1.ClipService.SaveClipEditPlan:output_type -> postpilot.v1.SaveClipEditPlanResponse
+	82,  // 110: postpilot.v1.ClipService.StartClipRender:output_type -> postpilot.v1.StartClipRenderResponse
+	54,  // 111: postpilot.v1.ClipService.StartClipGeneration:output_type -> postpilot.v1.StartClipGenerationResponse
+	57,  // 112: postpilot.v1.ClipService.QuoteClipGeneration:output_type -> postpilot.v1.QuoteClipGenerationResponse
+	13,  // 113: postpilot.v1.ClipService.FinalizeClipProject:output_type -> postpilot.v1.FinalizeClipProjectResponse
+	62,  // 114: postpilot.v1.ClipService.CancelClipJob:output_type -> postpilot.v1.CancelClipJobResponse
+	22,  // 115: postpilot.v1.ClipService.ListVideoTemplates:output_type -> postpilot.v1.ListVideoTemplatesResponse
+	24,  // 116: postpilot.v1.ClipService.CreateVideoTemplate:output_type -> postpilot.v1.CreateVideoTemplateResponse
+	26,  // 117: postpilot.v1.ClipService.UpdateVideoTemplate:output_type -> postpilot.v1.UpdateVideoTemplateResponse
+	28,  // 118: postpilot.v1.ClipService.DeleteVideoTemplate:output_type -> postpilot.v1.DeleteVideoTemplateResponse
+	11,  // 119: postpilot.v1.ClipService.SeedPresetFields:output_type -> postpilot.v1.SeedPresetFieldsResponse
+	30,  // 120: postpilot.v1.ClipService.ListClipProjects:output_type -> postpilot.v1.ListClipProjectsResponse
+	32,  // 121: postpilot.v1.ClipService.CreateClipProject:output_type -> postpilot.v1.CreateClipProjectResponse
+	34,  // 122: postpilot.v1.ClipService.GetClipProject:output_type -> postpilot.v1.GetClipProjectResponse
+	36,  // 123: postpilot.v1.ClipService.UpdateClipProject:output_type -> postpilot.v1.UpdateClipProjectResponse
+	38,  // 124: postpilot.v1.ClipService.DeleteClipProject:output_type -> postpilot.v1.DeleteClipProjectResponse
+	44,  // 125: postpilot.v1.ClipService.CreateClipSourceBatch:output_type -> postpilot.v1.CreateClipSourceBatchResponse
+	46,  // 126: postpilot.v1.ClipService.ConfirmClipSource:output_type -> postpilot.v1.ConfirmClipSourceResponse
+	48,  // 127: postpilot.v1.ClipService.DiscardClipSourceBatch:output_type -> postpilot.v1.DiscardClipSourceBatchResponse
+	50,  // 128: postpilot.v1.ClipService.GetClipSources:output_type -> postpilot.v1.GetClipSourcesResponse
+	52,  // 129: postpilot.v1.ClipService.GetClipSourcePlayback:output_type -> postpilot.v1.GetClipSourcePlaybackResponse
+	60,  // 130: postpilot.v1.ClipService.SetClipSourceOriginalSound:output_type -> postpilot.v1.SetClipSourceOriginalSoundResponse
+	4,   // 131: postpilot.v1.ClipService.ListClipAnalysisEligibility:output_type -> postpilot.v1.ListClipAnalysisEligibilityResponse
+	107, // [107:132] is the sub-list for method output_type
+	82,  // [82:107] is the sub-list for method input_type
+	82,  // [82:82] is the sub-list for extension type_name
+	82,  // [82:82] is the sub-list for extension extendee
+	0,   // [0:82] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_clip_proto_init() }
@@ -7230,15 +7397,15 @@ func file_postpilot_v1_clip_proto_init() {
 	file_postpilot_v1_clip_proto_msgTypes[23].OneofWrappers = []any{}
 	file_postpilot_v1_clip_proto_msgTypes[33].OneofWrappers = []any{}
 	file_postpilot_v1_clip_proto_msgTypes[51].OneofWrappers = []any{}
-	file_postpilot_v1_clip_proto_msgTypes[60].OneofWrappers = []any{}
-	file_postpilot_v1_clip_proto_msgTypes[67].OneofWrappers = []any{}
+	file_postpilot_v1_clip_proto_msgTypes[62].OneofWrappers = []any{}
+	file_postpilot_v1_clip_proto_msgTypes[69].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_postpilot_v1_clip_proto_rawDesc), len(file_postpilot_v1_clip_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   94,
+			NumMessages:   96,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

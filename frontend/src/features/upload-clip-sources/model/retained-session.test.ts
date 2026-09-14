@@ -29,6 +29,7 @@ function retainedFixture() {
         id: 'source',
         state: 'ready',
         actualBytes: 100,
+        retainOriginalAudio: false,
         metadata,
         availability: 'available',
         retentionExpiresAt: expiresAt,

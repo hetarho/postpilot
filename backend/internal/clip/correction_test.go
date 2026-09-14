@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/platform/config"
+	"math"
 	"reflect"
 	"strings"
 	"testing"
@@ -15,12 +16,47 @@ func correctionFixture(t *testing.T) (clip.Project, clip.CorrectionPlan) {
 	sources := []clip.SourceAnalysis{{Source: clip.AnalysisSource{RenderSource: clip.RenderSource{ID: "a", Fingerprint: "fa", Info: clip.MediaInfo{DurationMS: 40000, Width: 1920, Height: 1080}}, Filename: "a.mp4"}}, {Source: clip.AnalysisSource{RenderSource: clip.RenderSource{ID: "b", Fingerprint: "fb", Info: clip.MediaInfo{DurationMS: 40000, Width: 1920, Height: 1080}}, Filename: "b.mp4"}}}
 	plan := clip.EditPlan{Ratio: "vertical", DurationMS: 19800, Cuts: []clip.Cut{{ID: "first", SourceID: "a", Fingerprint: "fa", EndMS: 10000, Focal: clip.Point{X: .3, Y: .4}, Copies: []clip.Caption{{Text: "hello", Anchor: "bottom", Align: "center", Style: "clean"}}}, {ID: "second", SourceID: "b", Fingerprint: "fb", EndMS: 10000, TransitionMS: 200, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Caption{{Text: "서울", Anchor: "top", Align: "left", Style: "memo"}}}}}
 	a, _ := json.Marshal(sources)
-	raw, err := clip.EncodeEditPlan(plan, []string{"clean", "memo"})
+	// A genuinely legacy stored row, which is what these tests are about: the
+	// version-4 envelope this build still reads but no longer writes.
+	raw := legacyStoredPlan(plan, []string{"clean", "memo"})
+	stored, _, err := clip.DecodeEditPlan(raw)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return clip.Project{Ratio: "vertical", Analysis: string(a), EditPlan: raw, EditPlanRevision: 1}, clip.CorrectionFromPlan(plan)
+	return clip.Project{Ratio: "vertical", Analysis: string(a), EditPlan: raw, EditPlanRevision: 1}, clip.CorrectionFromPlan(stored)
 }
+
+// legacyStoredPlan writes the version-4 envelope by hand. EncodeEditPlan writes
+// version 6 now, so a test that needs a legacy row has to build one.
+func legacyStoredPlan(p clip.EditPlan, styles []string) string {
+	type storedCut struct {
+		ID, SourceID, Fingerprint string
+		StartMS, EndMS            int
+		TransitionMS              int
+		Copies                    []clip.Caption
+		Chips                     []string
+		VolumePermille            int
+	}
+	out := struct {
+		Version int
+		Ratio   string
+		Plan    struct {
+			DurationMS int
+			Cuts       []storedCut
+			Hook       string
+		}
+		Focals     map[string]clip.Point
+		CopyStyles []string
+	}{Version: 4, Ratio: p.Ratio, Focals: map[string]clip.Point{}, CopyStyles: styles}
+	out.Plan.DurationMS, out.Plan.Hook = p.DurationMS, p.Hook
+	for _, c := range p.Cuts {
+		out.Plan.Cuts = append(out.Plan.Cuts, storedCut{c.ID, c.SourceID, c.Fingerprint, c.StartMS, c.EndMS, c.TransitionMS, c.Copies, c.Chips, int(math.Round(c.OriginalVolume() * 1000))})
+		out.Focals[c.ID] = c.Focal
+	}
+	raw, _ := json.Marshal(out)
+	return string(raw)
+}
+
 func TestCorrectionMutationsAndIntegerPersistence(t *testing.T) {
 	p, draft := correctionFixture(t)
 	cfg := config.ClipRender(&config.Config{})

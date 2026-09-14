@@ -321,7 +321,7 @@ func TestOwnerAudioSnapshotSurvivesCorrectionAndRefusesContradiction(t *testing.
 		t.Fatal("saving a plan changed the owner's source-sound choice", next.SourceAudio)
 	}
 	contradiction := draft
-	contradiction.SourceAudio = []clip.SourceAudioSetting{{SourceID: "a", Fingerprint: "fa", RetainOriginal: false}}
+	contradiction.SourceAudio = []clip.SourceAudioSetting{{SourceID: "a", Fingerprint: "fa", RetainOriginal: !saved.RetainsOriginalAudio(saved.Cuts[0])}}
 	if _, _, err := clip.ApplyCorrection(cfg, p, contradiction); err == nil {
 		t.Fatal("a plan save was allowed to change source sound")
 	}
@@ -336,5 +336,39 @@ func TestOwnerAudioSnapshotSurvivesCorrectionAndRefusesContradiction(t *testing.
 	}
 	if len(fewer.SourceAudio.Values) != 1 || fewer.SourceAudio.Values[0].SourceID != "a" {
 		t.Fatal("the snapshot did not follow the remaining sources", fewer.SourceAudio)
+	}
+}
+
+// An owner sound change must be invisible to everything that spends credits or
+// reuses model output: the quote digest, the planning recovery identity and the
+// frozen job manifest all read the source, never the choice made about it.
+func TestOwnerSoundIsOutsideEveryPaidIdentity(t *testing.T) {
+	lease := clip.SourceLease{ID: "a", Key: "clip-inputs/alice/a", State: "ready", ActualBytes: 1,
+		SourceMetadata: clip.SourceMetadata{Filename: "a.mp4", ContentType: "video/mp4", Fingerprint: "fa", Bytes: 1, DurationMS: 10000, Width: 1920, Height: 1080}}
+	silent := clip.SourceBatch{ID: "batch", UserID: "alice", ProjectID: "project", State: "ready", Sources: []clip.SourceLease{lease}}
+	audible := silent
+	audible.Sources = []clip.SourceLease{lease}
+	audible.Sources[0].RetainOriginalAudio = true
+	if !clip.SameSourceManifest(silent.Sources, audible.Sources) {
+		t.Fatal("a sound change invalidated a frozen job manifest")
+	}
+	p := clip.Project{ID: "project", Ratio: "vertical", TargetDurationMS: 30000, Disclosure: "sponsored"}
+	pricing := clip.GenerationPricing{}
+	if clip.QuoteInputDigest(p, clip.VideoTemplate{}, silent, pricing) != clip.QuoteInputDigest(p, clip.VideoTemplate{}, audible, pricing) {
+		t.Fatal("a sound change changed the approved quote")
+	}
+	// And the render payload freezes the LEASES, so the executor is handed what
+	// the owner has chosen right now.
+	cuts := []clip.Cut{{ID: "one", SourceID: "a", Fingerprint: "fa", EndMS: 10000}}
+	if clip.FreezeSourceAudio(silent, cuts).Values[0].RetainOriginal {
+		t.Fatal("a silent source was frozen as audible")
+	}
+	if !clip.FreezeSourceAudio(audible, cuts).Values[0].RetainOriginal {
+		t.Fatal("the owner's choice was lost on the way to the renderer")
+	}
+	// A source the batch does not carry has authorized nothing.
+	foreign := clip.FreezeSourceAudio(audible, []clip.Cut{{ID: "two", SourceID: "b", Fingerprint: "fb", EndMS: 10000}})
+	if foreign.Values[0].RetainOriginal {
+		t.Fatal("an unleased source contributed audio")
 	}
 }

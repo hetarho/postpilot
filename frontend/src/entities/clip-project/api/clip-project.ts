@@ -117,6 +117,7 @@ export function toClipSourceBatch(value: ProtoClipSourceBatch): ClipSourceBatch 
         retentionExpiresAt: source.retentionExpiresAt || undefined,
         availability: (source.availability as ClipSourceAvailability) || undefined,
         actualBytes: Number(source.actualBytes),
+        retainOriginalAudio: source.retainOriginalAudio,
         metadata: {
           filename: m.filename,
           contentType: m.contentType,

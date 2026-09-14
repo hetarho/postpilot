@@ -80,24 +80,25 @@ func (q *Queries) InsertSourceBatch(ctx context.Context, arg InsertSourceBatchPa
 }
 
 const insertSourceLease = `-- name: InsertSourceLease :exec
-INSERT INTO clip_source_leases(id,canonical_id,batch_id,user_id,object_key,filename,content_type,fingerprint,declared_bytes,duration_ms,width,height,state,ordinal) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+INSERT INTO clip_source_leases(id,canonical_id,batch_id,user_id,object_key,filename,content_type,fingerprint,declared_bytes,duration_ms,width,height,state,ordinal,retain_original_audio) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 `
 
 type InsertSourceLeaseParams struct {
-	ID            string
-	CanonicalID   string
-	BatchID       string
-	UserID        string
-	ObjectKey     string
-	Filename      string
-	ContentType   string
-	Fingerprint   string
-	DeclaredBytes int64
-	DurationMs    int64
-	Width         int64
-	Height        int64
-	State         string
-	Ordinal       int64
+	ID                  string
+	CanonicalID         string
+	BatchID             string
+	UserID              string
+	ObjectKey           string
+	Filename            string
+	ContentType         string
+	Fingerprint         string
+	DeclaredBytes       int64
+	DurationMs          int64
+	Width               int64
+	Height              int64
+	State               string
+	Ordinal             int64
+	RetainOriginalAudio int64
 }
 
 func (q *Queries) InsertSourceLease(ctx context.Context, arg InsertSourceLeaseParams) error {
@@ -116,6 +117,7 @@ func (q *Queries) InsertSourceLease(ctx context.Context, arg InsertSourceLeasePa
 		arg.Height,
 		arg.State,
 		arg.Ordinal,
+		arg.RetainOriginalAudio,
 	)
 	return err
 }
@@ -225,7 +227,7 @@ func (q *Queries) ListSourceCleanup(ctx context.Context) ([]ClipSourceBatch, err
 }
 
 const listSourceLeases = `-- name: ListSourceLeases :many
-SELECT id, batch_id, user_id, object_key, filename, content_type, fingerprint, declared_bytes, actual_bytes, duration_ms, width, height, state, ordinal, canonical_id, retention_expires_at, cleanup_pending FROM clip_source_leases WHERE batch_id=? AND user_id=? ORDER BY ordinal
+SELECT id, batch_id, user_id, object_key, filename, content_type, fingerprint, declared_bytes, actual_bytes, duration_ms, width, height, state, ordinal, canonical_id, retention_expires_at, cleanup_pending, retain_original_audio FROM clip_source_leases WHERE batch_id=? AND user_id=? ORDER BY ordinal
 `
 
 type ListSourceLeasesParams struct {
@@ -260,6 +262,7 @@ func (q *Queries) ListSourceLeases(ctx context.Context, arg ListSourceLeasesPara
 			&i.CanonicalID,
 			&i.RetentionExpiresAt,
 			&i.CleanupPending,
+			&i.RetainOriginalAudio,
 		); err != nil {
 			return nil, err
 		}
@@ -314,6 +317,49 @@ func (q *Queries) MarkSourceCleanup(ctx context.Context, arg MarkSourceCleanupPa
 	return result.RowsAffected()
 }
 
+const projectSourceAudioChoices = `-- name: ProjectSourceAudioChoices :many
+SELECT l.canonical_id, l.fingerprint, l.retain_original_audio FROM clip_source_leases l
+JOIN clip_source_batches b ON b.id=l.batch_id AND b.user_id=l.user_id
+WHERE b.project_id=? AND b.user_id=? ORDER BY b.created_at, b.id, l.ordinal
+`
+
+type ProjectSourceAudioChoicesParams struct {
+	ProjectID string
+	UserID    string
+}
+
+type ProjectSourceAudioChoicesRow struct {
+	CanonicalID         string
+	Fingerprint         string
+	RetainOriginalAudio int64
+}
+
+// ProjectSourceAudioChoices is what the owner already decided about this
+// project's footage, newest batch last, so reselecting a canonical source by
+// fingerprint inherits its resolved choice instead of starting over.
+func (q *Queries) ProjectSourceAudioChoices(ctx context.Context, arg ProjectSourceAudioChoicesParams) ([]ProjectSourceAudioChoicesRow, error) {
+	rows, err := q.db.QueryContext(ctx, projectSourceAudioChoices, arg.ProjectID, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ProjectSourceAudioChoicesRow
+	for rows.Next() {
+		var i ProjectSourceAudioChoicesRow
+		if err := rows.Scan(&i.CanonicalID, &i.Fingerprint, &i.RetainOriginalAudio); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const removeSourceBatch = `-- name: RemoveSourceBatch :exec
 DELETE FROM clip_source_batches WHERE clip_source_batches.id=? AND clip_source_batches.user_id=? AND state='cleanup_pending' AND put_expires_at<=? AND NOT EXISTS (SELECT 1 FROM clip_source_attempts a WHERE a.batch_id=clip_source_batches.id AND a.released_at IS NULL)
 `
@@ -346,6 +392,36 @@ func (q *Queries) SetSourceLeaseReady(ctx context.Context, arg SetSourceLeaseRea
 		arg.ActualBytes,
 		arg.RetentionExpiresAt,
 		arg.CanonicalID,
+		arg.BatchID,
+		arg.UserID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const setSourceOriginalAudio = `-- name: SetSourceOriginalAudio :execrows
+UPDATE clip_source_leases SET retain_original_audio=?1
+WHERE canonical_id=?2 AND fingerprint=?3 AND batch_id=?4 AND user_id=?5
+  AND state='ready' AND cleanup_pending=0
+`
+
+type SetSourceOriginalAudioParams struct {
+	RetainOriginalAudio int64
+	CanonicalID         string
+	Fingerprint         string
+	BatchID             string
+	UserID              string
+}
+
+// SetSourceOriginalAudio is owner-scoped and pins the exact file: a source whose
+// fingerprint changed is a different file and keeps its own default.
+func (q *Queries) SetSourceOriginalAudio(ctx context.Context, arg SetSourceOriginalAudioParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, setSourceOriginalAudio,
+		arg.RetainOriginalAudio,
+		arg.CanonicalID,
+		arg.Fingerprint,
 		arg.BatchID,
 		arg.UserID,
 	)

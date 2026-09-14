@@ -30,6 +30,9 @@ service ClipService {
   rpc DiscardClipSourceBatch(DiscardClipSourceBatchRequest) returns (DiscardClipSourceBatchResponse) {}
   rpc GetClipSources(GetClipSourcesRequest) returns (GetClipSourcesResponse) {}
   rpc GetClipSourcePlayback(GetClipSourcePlaybackRequest) returns (GetClipSourcePlaybackResponse) {}
+  // Owner-only. Source audio is off by default and this is the ONLY way it
+  // changes: no template, model, render or plan save may reach it.
+  rpc SetClipSourceOriginalSound(SetClipSourceOriginalSoundRequest) returns (SetClipSourceOriginalSoundResponse) {}
   // Read-only: every registered observe model with its current clip-analysis
   // eligibility (CLIP-30, CLIP-44). No model call, no write, no provider detail.
   rpc ListClipAnalysisEligibility(ListClipAnalysisEligibilityRequest) returns (ListClipAnalysisEligibilityResponse) {}
@@ -249,6 +252,8 @@ message ClipSource {
   int64 actual_bytes = 4;
   string retention_expires_at = 5;
   string availability = 6;
+  // The owner's 원본 소리 유지 choice for this source. Off for every new source.
+  bool retain_original_audio = 7;
 }
 message ClipSourceBatch {
   string id = 1;
@@ -316,6 +321,21 @@ message ClipCancellationPolicy {
   int32 unused_reservation_numerator = 2;
   int32 unused_reservation_denominator = 3;
   string rounding = 4;
+}
+// The expected revision is the plan revision the owner was looking at, or 0
+// before a plan exists. The fingerprint pins the exact file the choice was made
+// about, so a replaced source never inherits a decision made about another one.
+message SetClipSourceOriginalSoundRequest {
+  string project_id = 1;
+  string batch_id = 2;
+  string source_id = 3;
+  string expected_fingerprint = 4;
+  bool retain_original_audio = 5;
+  int32 expected_revision = 6;
+}
+message SetClipSourceOriginalSoundResponse {
+  ClipSourceBatch batch = 1;
+  ClipProject project = 2;
 }
 message CancelClipJobRequest { string project_id = 1; string job_id = 2; }
 message CancelClipJobResponse { GenerationJob job = 1; ClipAccounting accounting = 2; bool accepted = 3; }

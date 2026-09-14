@@ -19,7 +19,7 @@ func sourceBatchProto(b clip.SourceBatch) *v1.ClipSourceBatch {
 		if availability == "" {
 			availability = clip.SourceAvailability(b, v, time.Now())
 		}
-		out.Sources = append(out.Sources, &v1.ClipSource{Id: v.ID, State: v.State, ActualBytes: v.ActualBytes, RetentionExpiresAt: expires, Availability: availability, Metadata: &v1.ClipSourceMetadata{Filename: v.Filename, ContentType: v.ContentType, Bytes: v.Bytes, DurationMs: int32(v.DurationMS), Width: int32(v.Width), Height: int32(v.Height), Fingerprint: v.Fingerprint}})
+		out.Sources = append(out.Sources, &v1.ClipSource{Id: v.ID, State: v.State, ActualBytes: v.ActualBytes, RetentionExpiresAt: expires, Availability: availability, RetainOriginalAudio: v.RetainOriginalAudio, Metadata: &v1.ClipSourceMetadata{Filename: v.Filename, ContentType: v.ContentType, Bytes: v.Bytes, DurationMs: int32(v.DurationMS), Width: int32(v.Width), Height: int32(v.Height), Fingerprint: v.Fingerprint}})
 	}
 	return out
 }
@@ -108,4 +108,30 @@ func (h *Handler) DiscardClipSourceBatch(ctx context.Context, req *connect.Reque
 		return nil, toConnectError(err)
 	}
 	return connect.NewResponse(&v1.DiscardClipSourceBatchResponse{}), nil
+}
+
+// SetClipSourceOriginalSound is the ONE owner action that changes source audio.
+// The actor comes from the session interceptor, never from the payload.
+func (h *Handler) SetClipSourceOriginalSound(ctx context.Context, req *connect.Request[v1.SetClipSourceOriginalSoundRequest]) (*connect.Response[v1.SetClipSourceOriginalSoundResponse], error) {
+	user, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if h.sources == nil {
+		return nil, toConnectError(clip.ErrSourceState)
+	}
+	batch, project, err := h.sources.SetOriginalSound(ctx, user, clip.SourceAudioChange{
+		ProjectID:        req.Msg.ProjectId,
+		BatchID:          req.Msg.BatchId,
+		SourceID:         req.Msg.SourceId,
+		Fingerprint:      req.Msg.ExpectedFingerprint,
+		RetainOriginal:   req.Msg.RetainOriginalAudio,
+		ExpectedRevision: int(req.Msg.ExpectedRevision),
+	})
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+	response := connect.NewResponse(&v1.SetClipSourceOriginalSoundResponse{Batch: sourceBatchProto(batch), Project: projectProto(project)})
+	response.Header().Set("Cache-Control", "private, no-store")
+	return response, nil
 }

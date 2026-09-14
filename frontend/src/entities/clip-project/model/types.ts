@@ -116,6 +116,9 @@ export interface ClipSourceBatch {
     retentionExpiresAt?: string
     availability?: ClipSourceAvailability
     actualBytes: number
+    /** The owner's 원본 소리 유지 choice (CLIP-18). Off for every new source, and
+     *  changed only through its own owner action — never by saving a plan. */
+    retainOriginalAudio: boolean
     metadata: ClipSourceMetadata
   }>
 }

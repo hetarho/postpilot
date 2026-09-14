@@ -576,6 +576,10 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 		if edit.Portable != nil {
 			styles = edit.Styles
 		}
+		// The owner owns source sound, not the writer: the snapshot is taken
+		// from the live leases, so a reselected source keeps the choice already
+		// made about it and a new one stays silent (CLIP-18, CLIP-100).
+		edit.SourceAudio = FreezeSourceAudio(b, edit.Cuts)
 		planJSON, err = EncodeEditPlan(edit, styles)
 		if err != nil {
 			return err

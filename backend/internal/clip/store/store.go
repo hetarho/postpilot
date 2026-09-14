@@ -34,8 +34,11 @@ func NewTx(conn *sql.Conn) *Store {
 
 var _ clip.Store = (*Store)(nil)
 
-func disclosureFlag(hidden bool) int64 {
-	if hidden {
+func disclosureFlag(hidden bool) int64 { return flag(hidden) }
+
+// flag is the one bool→SQLite encoding; every such column is CHECKed to 0 or 1.
+func flag(on bool) int64 {
+	if on {
 		return 1
 	}
 	return 0

@@ -7,7 +7,20 @@ SELECT * FROM clip_source_batches WHERE project_id=? AND user_id=? ORDER BY crea
 -- name: InsertSourceBatch :exec
 INSERT INTO clip_source_batches(id,user_id,project_id,state,created_at,expires_at,put_expires_at) VALUES (?,?,?,?,?,?,?);
 -- name: InsertSourceLease :exec
-INSERT INTO clip_source_leases(id,canonical_id,batch_id,user_id,object_key,filename,content_type,fingerprint,declared_bytes,duration_ms,width,height,state,ordinal) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?);
+INSERT INTO clip_source_leases(id,canonical_id,batch_id,user_id,object_key,filename,content_type,fingerprint,declared_bytes,duration_ms,width,height,state,ordinal,retain_original_audio) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);
+-- ProjectSourceAudioChoices is what the owner already decided about this
+-- project's footage, newest batch last, so reselecting a canonical source by
+-- fingerprint inherits its resolved choice instead of starting over.
+-- name: ProjectSourceAudioChoices :many
+SELECT l.canonical_id, l.fingerprint, l.retain_original_audio FROM clip_source_leases l
+JOIN clip_source_batches b ON b.id=l.batch_id AND b.user_id=l.user_id
+WHERE b.project_id=? AND b.user_id=? ORDER BY b.created_at, b.id, l.ordinal;
+-- SetSourceOriginalAudio is owner-scoped and pins the exact file: a source whose
+-- fingerprint changed is a different file and keeps its own default.
+-- name: SetSourceOriginalAudio :execrows
+UPDATE clip_source_leases SET retain_original_audio=sqlc.arg(retain_original_audio)
+WHERE canonical_id=sqlc.arg(canonical_id) AND fingerprint=sqlc.arg(fingerprint) AND batch_id=sqlc.arg(batch_id) AND user_id=sqlc.arg(user_id)
+  AND state='ready' AND cleanup_pending=0;
 -- name: GetSourceBatch :one
 SELECT * FROM clip_source_batches WHERE id=? AND user_id=?;
 -- name: ListSourceLeases :many

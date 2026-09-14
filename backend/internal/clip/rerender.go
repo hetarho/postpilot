@@ -145,6 +145,10 @@ func (s *GenerationService) StartRender(ctx context.Context, user, id, batch str
 	if b.ProjectID != id || b.State != "ready" || !time.Now().Before(b.ExpiresAt) {
 		return "", ErrSourceState
 	}
+	// The owner's per-source sound choice is frozen HERE, from the leases that
+	// own it, so the job payload carries what the owner has chosen right now
+	// rather than whatever a plan was last saved with (CLIP-100).
+	plan.SourceAudio = FreezeSourceAudio(b, plan.Cuts)
 	for _, v := range b.Sources {
 		if v.State != "ready" || v.ActualBytes != v.Bytes {
 			return "", ErrSourceState

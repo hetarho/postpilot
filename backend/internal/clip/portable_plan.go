@@ -61,9 +61,10 @@ func encodeAssemblyPlan(p EditPlan, styles []string) (string, error) {
 	audio := []storedSourceAudio{}
 	settings := p.SourceAudio
 	if settings == nil {
-		// A correction saved on top of a legacy plan still writes the complete
-		// snapshot: the plan's existing audio meaning, made explicit (CLIP-101).
-		settings = LegacySourceAudio(p.Cuts)
+		// Nothing has authorized any audio. A legacy plan reaches here with its
+		// snapshot already derived on decode (CLIP-101); a plan built today has
+		// simply not been given one, and CLIP-18's default is off.
+		settings = ReconcileSourceAudio(nil, p.Cuts)
 	}
 	for _, v := range settings.Values {
 		audio = append(audio, storedSourceAudio{v.SourceID, v.Fingerprint, v.RetainOriginal})

@@ -44,7 +44,6 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T110 | Release QA on the Naver app and the overlay measurement | CDS CLIP | T108 | blocked@260912 |
-| T143 | Persist owner-controlled source sound atomically | CLIP CDS ARCH | T142 | todo |
 | T144 | Admit provenance-checked owner cut creation and split | CLIP CDS ARCH | T142 | todo |
 | T145 | Record complete clip scenes with explicit uncertainty | CLIP ARCH | T141 | todo |
 | T146 | Compose validated split and fixed-rate clip assemblies | CLIP CDS ARCH | T142 T143 T145 | todo |
@@ -56,10 +55,12 @@
 
 ## next
 - T152 is done; deploy it before the next owner generation attempt, since production still refuses correct renders until it ships
-- T143 and T144 are next (T142 done); T145 is also unblocked
+- T144 is next (T142 T143 done); T145 and T150 are also unblocked
 - T110 remains owner-blocked and must refresh CLIP@18 / CDS@13 before resuming; T008 remains owner-dependent for its separate local Naver publication verification.
 
 ## log
+- 260914 T143 done (rate); migration 0052 backfills legacy audio meaning, one writer transaction owns the lease/plan/revision/retention change, and the setting stays outside every paid identity
+- 260914 T143 claimed (rate)
 - 260914 T142 done (rate); v6 assembly envelope with per-cut fixed rates and the complete owner source-audio snapshot, one checked transformed-duration helper, cadence-verified slow rates and legacy-overlap grandfathering
 - 260914 T152 done; delivered length read from the decoded video track, production job b12a4bcd output verified accepted
 - 260914 T142 refreshed to CDS@13 (rate); the r13 V12 decoded-length delta is T152 render conformance and does not touch the assembly contract; T143 T144 rebased too
@@ -78,6 +79,3 @@
 - 260914 update-ssot CLIP CDS review pending; define scene coverage, assembly-tool bounds, transformed-time audio/caption rules and editable controls
 - 260914 update-ssot CLIP start
 - 260914 T141 done (fix); b72298e CI/Workers/backend rollout and exact health pass; seven-style production repair preserves facts/output and 20 analyses; 28 fault scenarios, 40 browser cases and $0.006821 live render/continuation verified
-- 260914 T140 done (e2e); actual-provider and original-footage rendering acceptance fulfilled through T141; final CI/deployment verified, archived
-- 260914 T141 hardening (fix); exact 2 MiB legacy migration boundary reproduced and fixed; original inspection retained, bounded optional recovery copy and startup regression added
-- 260914 T141 verification (fix); actual writer/inline observe cost $0.006821, original render and identical zero-AI continuation pass; 40 browser cases and local suites pass, final fault injection/CI/rollout pending

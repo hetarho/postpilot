@@ -27,6 +27,7 @@ function fixture() {
       id: `source-${i}`,
       state: 'pending',
       actualBytes: 0,
+      retainOriginalAudio: false,
       metadata,
     })),
   }
