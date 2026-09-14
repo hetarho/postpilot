@@ -5,6 +5,7 @@ package store
 import (
 	"context"
 	"database/sql"
+	"database/sql/driver"
 	"errors"
 	"fmt"
 	"time"
@@ -59,17 +60,39 @@ func (s *Store) InWriteTx(ctx context.Context, fn func(usage.Store) error) error
 	if _, err := conn.ExecContext(ctx, "BEGIN IMMEDIATE"); err != nil {
 		return fmt.Errorf("begin write transaction: %w", err)
 	}
+	committed := false
+	defer func() { finishWriteTx(ctx, conn, committed) }()
 	scoped := &Store{write: sqlc.New(conn), read: sqlc.New(conn)}
 	if err := fn(scoped); err != nil {
-		if _, rollbackErr := conn.ExecContext(ctx, "ROLLBACK"); rollbackErr != nil {
-			return errors.Join(err, fmt.Errorf("rollback: %w", rollbackErr))
-		}
 		return err
 	}
 	if _, err := conn.ExecContext(ctx, "COMMIT"); err != nil {
 		return fmt.Errorf("commit write transaction: %w", err)
 	}
+	committed = true
 	return nil
+}
+
+// writeTxUndoTimeout bounds the undo of a transaction whose caller has already given up.
+const writeTxUndoTimeout = 5 * time.Second
+
+// finishWriteTx undoes a transaction its caller did not commit, on a context the caller's
+// cancellation cannot reach.
+//
+// The writer pool holds exactly one connection (ARCHITECTURE §2.4), so a connection returned
+// to it mid-transaction fails every later write in the process with "cannot start a
+// transaction within a transaction" until a restart. A cancelled request used to do exactly
+// that: fn failed with context.Canceled and the ROLLBACK, issued on the same dead context,
+// failed too. If the undo still does not land, the connection is retired instead of reused.
+func finishWriteTx(ctx context.Context, conn *sql.Conn, committed bool) {
+	if committed {
+		return
+	}
+	undo, cancel := context.WithTimeout(context.WithoutCancel(ctx), writeTxUndoTimeout)
+	defer cancel()
+	if _, err := conn.ExecContext(undo, "ROLLBACK"); err != nil {
+		_ = conn.Raw(func(any) error { return driver.ErrBadConn })
+	}
 }
 
 func (s *Store) LotsInConsumptionOrder(
