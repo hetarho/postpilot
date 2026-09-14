@@ -61,18 +61,51 @@ export const CLIP_PLAYBACK_RATES = CLIP_RATES
  *  and export cannot disagree by a millisecond. */
 export function transformedDurationMs(spanMs: number, ratePermille: number): number {
   if (!Number.isSafeInteger(spanMs) || spanMs <= 0 || !CLIP_RATES.includes(ratePermille)) return 0
-  return Math.floor(
-    (spanMs * CLIP_PLAYBACK.unit_permille + Math.floor(ratePermille / 2)) / ratePermille,
-  )
+  const numerator = spanMs * CLIP_PLAYBACK.unit_permille + Math.floor(ratePermille / 2)
+  return Number.isSafeInteger(numerator) ? Math.floor(numerator / ratePermille) : 0
 }
 /** A cut's fixed rate, reading a draft written before rates existed as 1x. */
 export function cutRate(cut: Pick<ClipEditCut, 'playbackRatePermille'>): number {
-  return cut.playbackRatePermille || CLIP_PLAYBACK.unit_permille
+  return cut.playbackRatePermille ?? CLIP_PLAYBACK.unit_permille
 }
 /** How long the cut occupies the edited output timeline, before its transition
  *  overlap is taken off. */
 export function cutOutputMs(cut: ClipEditCut): number {
   return transformedDurationMs(cut.endMs - cut.startMs, cutRate(cut))
+}
+export interface ClipTimelineCut {
+  cut: ClipEditCut
+  index: number
+  startMs: number
+  endMs: number
+}
+/** Keep invalid coordinates visible to the editor; playback validates them first. */
+export function timelineCuts(plan: Pick<ClipEditPlan, 'cuts'>): ClipTimelineCut[] {
+  let offset = 0
+  return plan.cuts.map((cut, index) => {
+    const startMs = offset - (index ? cut.transitionMs : 0)
+    const endMs = startMs + cutOutputMs(cut)
+    offset = endMs
+    return { cut, index, startMs, endMs }
+  })
+}
+/** Convert only at the boundary. Evidence and authored output windows never move. */
+export function outputToSourceMs(item: ClipTimelineCut, outputMs: number): number {
+  return item.cut.startMs + Math.round(((outputMs - item.startMs) * cutRate(item.cut)) / 1000)
+}
+export function sourceToOutputMs(item: ClipTimelineCut, sourceMs: number): number {
+  return item.startMs + Math.round(((sourceMs - item.cut.startMs) * 1000) / cutRate(item.cut))
+}
+export function sourceAudioEnabled(plan: ClipEditPlan, cut: ClipEditCut): boolean {
+  if (plan.sourceAudio !== undefined)
+    return plan.sourceAudio.some(
+      (s) =>
+        s.sourceId === cut.sourceId && s.fingerprint === cut.fingerprint && s.retainOriginalAudio,
+    )
+  // Only legacy plans lack the snapshot; match the server's legacy inference.
+  return plan.cuts.some(
+    (c) => c.sourceId === cut.sourceId && c.fingerprint === cut.fingerprint && c.volumePermille > 0,
+  )
 }
 export interface ClipEditCut {
   focal?: { x: number; y: number }
@@ -88,8 +121,8 @@ export interface ClipEditCut {
   /** Reserved fact labels whose chips belong on this cut, at most two. */
   chips: string[]
   volumePermille: number
-  /** The ONE constant rate this cut plays at, as permille (CLIP-98). Zero is a
-   *  draft written before rates existed and reads as 1x. */
+  /** The ONE constant rate this cut plays at, as permille (CLIP-98).
+   * Legacy absence is normalized to 1x by the API mapper; explicit zero is invalid. */
   playbackRatePermille: number
   /** One-time provenance for a cut the owner is creating: it authorizes an id
    *  the saved plan does not contain, and the server drops it on acceptance.
@@ -224,7 +257,7 @@ export type ClipEdit =
 /** The clip is its footage less what each cut's own transition overlaps
  *  (CDS-36) — never one fade times the boundaries. */
 export function clipPlanDuration(cuts: readonly ClipEditCut[]): number {
-  return cuts.reduce((sum, c, i) => sum + cutOutputMs(c) - (i === 0 ? 0 : c.transitionMs), 0)
+  return timelineCuts({ cuts: [...cuts] }).at(-1)?.endMs ?? 0
 }
 export function editClipPlan(plan: ClipEditPlan, edit: ClipEdit): ClipEditPlan {
   const next = copyClipPlan(plan)
@@ -317,6 +350,17 @@ export function editClipPlan(plan: ClipEditPlan, edit: ClipEdit): ClipEditPlan {
   // in front leads in from nothing — the same normalisation the server makes.
   if (next.cuts[0]) next.cuts[0] = { ...next.cuts[0], transitionMs: 0 }
   next.durationMs = clipPlanDuration(next.cuts)
+  if (
+    edit.type === 'move' ||
+    edit.type === 'remove' ||
+    (edit.type === 'cut' &&
+      ['startMs', 'endMs', 'playbackRatePermille', 'transitionMs'].some((key) => key in edit.patch))
+  )
+    next.elements = next.elements?.map((text) => ({
+      ...text,
+      effectiveStartMs: undefined,
+      effectiveEndMs: undefined,
+    }))
   return next
 }
 /** CDS-41's minimum exposure for a copy of this length. */

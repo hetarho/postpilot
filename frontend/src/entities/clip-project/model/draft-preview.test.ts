@@ -109,3 +109,38 @@ describe('output preview geometry and timing', () => {
     expect(opposite.top + opposite.height).toBeCloseTo(100)
   })
 })
+
+it.each([500, 750, 1000, 1250, 1500, 2000])(
+  'shares cumulative geometry and seek inverses at %i permille',
+  async (rate) => {
+    const { timelineCuts, clipPlanDuration, outputToSourceMs, sourceToOutputMs } =
+      await import('./edit-plan')
+    const cuts = plan.cuts.map((c) => ({ ...c, playbackRatePermille: rate }))
+    const changed = { ...plan, cuts, durationMs: clipPlanDuration(cuts) }
+    const timeline = previewTimeline(changed)
+    expect(timeline).toEqual(timelineCuts(changed))
+    expect(timeline[0].endMs).toBe(Math.floor((10000 * 1000 + rate / 2) / rate))
+    expect(timeline[1].startMs).toBe(timeline[0].endMs - 200)
+    expect(timeline[1].endMs).toBe(changed.durationMs)
+    for (const item of timeline)
+      for (const delta of [0, 100, 300, 1000]) {
+        const output = item.startMs + delta
+        expect(
+          Math.abs(sourceToOutputMs(item, outputToSourceMs(item, output)) - output),
+        ).toBeLessThanOrEqual(1)
+      }
+    const frames = previewFrame(timeline, timeline[1].startMs + 100)
+    expect(frames.map((f) => f.audioGain)).toEqual([0.5, 0.5])
+    expect(frames[1].sourceMs).toBe(3000 + rate / 10)
+    expect(previewFrame(timeline, timeline[0].endMs).map((f) => f.cut.id)).toEqual(['b'])
+  },
+)
+
+it('refuses explicit invalid rates and checked-integer overflow instead of previewing 1x', async () => {
+  const { transformedDurationMs } = await import('./edit-plan')
+  for (const rate of [0, 600, NaN])
+    expect(
+      previewTimeline({ ...plan, cuts: [{ ...plan.cuts[0], playbackRatePermille: rate }] }),
+    ).toEqual([])
+  expect(transformedDurationMs(Number.MAX_SAFE_INTEGER, 500)).toBe(0)
+})

@@ -47,7 +47,6 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T110 | Release QA on the Naver app and the overlay measurement | CDS CLIP | T108 | blocked@260912 |
-| T148 | Preview the transformed assembly timeline | CLIP CDS ARCH | T142 T143 | todo |
 | T149 | Add cut, split and fixed-rate editing controls | CLIP CDS ARCH | T144 T148 | todo |
 | T150 | Add per-source original-sound toggles | CLIP CDS ARCH | T143 T148 | todo |
 | T151 | Verify review-clip assembly end to end | CLIP CDS ARCH | T146 T147 T149 T150 | todo |
@@ -57,11 +56,14 @@
 | T157 | Say a save was refused rather than promising a retry that was abandoned | ARCH | - | todo |
 
 ## next
-- implement-task T154, then T155; T156 and T157 are independent and can go first if the screen matters more than the refusal
-- T146+T147 are done and deployable together: the writer states rates and the renderer performs them; T148 is the next unblocked assembly task
-- T110 remains owner-blocked and must refresh CLIP@19 / CDS@13 before resuming; T008 remains owner-dependent for its separate local Naver publication verification.
+- implement-task T149 next for cut creation/split/rate controls; T150 source-sound controls are an independent follow-up after T148.
+- T154 then T155 remain the item-group admission batch; T156/T157 are independent.
+- T110 remains owner-blocked and T008 remains owner-dependent; T151 follows T149/T150.
 
 ## log
+- 260914 T148 done (prv); transformed browser timeline and native rate/pitch/source-audio gating verified
+- 260914 T148 refreshed to CLIP@19 CDS@13 (prv); item-group admission and decoded export duration do not change the draft-preview decisions
+- 260914 T148 claimed (prv)
 - 260914 T158 done (smk); the release smoke's synthetic answers now state the v2 observation fields and CLIP-98's per-cut rate, so the production-image gate stops refusing at the first chunk — the image gate itself did not run here (no Docker daemon), CI's build is the proof
 - 260914 T158 claimed (smk)
 - 260914 create-task review/clip-release-smoke-260914 done; T158 repairs the production-image gate, F2 left open for ARCH
@@ -79,6 +81,3 @@
 - 260914 update-ssot CLIP start
 - 260914 T153 done; composition projects can be saved again, legacy campaign identity still required
 - 260914 flaky under full-suite load, not in T153 scope; FE ClipCorrection 'saves exact milliseconds' and BE store recovery-restart fail intermittently while passing in isolation
-- 260914 T146 refreshed to CDS@13 (asm); the r13 CDS-52 delta is delivered-length render conformance and touches no assembly-writer decision
-- 260914 T146 claimed (asm)
-- 260914 T145 done (asm); clip-observation-v2 records every chunk completely with action/motion and an explicit certainty/usability, refuses instead of clamping model times, and never promotes v1 evidence into a v2 generation

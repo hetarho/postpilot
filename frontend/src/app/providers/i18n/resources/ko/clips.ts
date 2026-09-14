@@ -112,7 +112,7 @@ export const clips = {
     title: '편집 중인 영상',
     play: '재생',
     pause: '일시 정지',
-    originalAudio: '원본 소리 듣기',
+    originalAudio: '미리보기 소리 듣기',
     outputTime: '완성 영상 기준 시간',
     loadingMedia: '원본 영상을 불러오고 있어요.',
     codec: '이 브라우저에서는 원본 형식을 재생할 수 없어요. 글과 시간은 계속 수정할 수 있어요.',

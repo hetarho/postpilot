@@ -187,3 +187,36 @@ describe('timeline transactions', () => {
     expect(changed.elements![0].phrases![1].startMs).toBe(400)
   })
 })
+
+it('recomputes automatic placement at a new rate and preserves explicit phrase and caption milliseconds', () => {
+  const initial = fixture()
+  initial.elements![0] = text('caption', {
+    startMs: 100,
+    endMs: 6000,
+    phrases: [{ text: '오늘', startMs: 5400, endMs: 6000 }],
+    pace: 'rapid',
+  })
+  initial.elements!.push(text('auto', { effectiveStartMs: 120, effectiveEndMs: 9880 }))
+  const changed = applyTimelineEdit(initial, {
+    type: 'cut',
+    id: 'a',
+    patch: { playbackRatePermille: 2000 },
+  })
+  expect(changed.durationMs).toBe(14800)
+  expect(changed.elements![0]).toMatchObject({
+    startMs: 100,
+    endMs: 6000,
+    phrases: initial.elements![0].phrases,
+  })
+  expect(textInterval(changed, changed.elements!.at(-1)!)).toMatchObject({
+    startMs: 120,
+    endMs: 4880,
+    valid: true,
+  })
+  expect(validateTimelinePlan(changed, editing(initial))).toMatchObject({
+    valid: false,
+    saveable: false,
+    elements: [{ interval: true }, {}, {}, {}],
+  })
+  expect(changed.elements![2].evidence).toEqual(initial.elements![2].evidence)
+})

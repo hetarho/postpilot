@@ -4,6 +4,7 @@ import {
   copyClipPlan,
   editClipPlan,
   validateClipPlan,
+  timelineCuts,
   type ClipEdit,
   type ClipEditPlan,
   type ClipEditableText,
@@ -41,16 +42,7 @@ export type TimelineEdit =
   | { type: 'removeText'; id: string }
   | { type: 'associations'; associations: ClipSourceAssociation[] }
 
-/** A draft may be invalid. Preserve its coordinates so the owner can repair it. */
-export function timelineCuts(plan: ClipEditPlan) {
-  let offset = 0
-  return plan.cuts.map((cut, index) => {
-    const startMs = offset - (index ? cut.transitionMs : 0)
-    const endMs = startMs + cut.endMs - cut.startMs
-    offset = endMs
-    return { cut, index, startMs, endMs }
-  })
-}
+export { timelineCuts } from './edit-plan'
 
 export function textInterval(plan: ClipEditPlan, text: ClipEditableText) {
   const cut = timelineCuts(plan).find((c) => c.cut.id === text.cutId)
@@ -146,9 +138,8 @@ export function validateTimelinePlan(plan: ClipEditPlan, state: ClipEditingState
   const elements = nativeTextErrors(plan, state)
   const geometry = timelineCuts(plan)
   const invalidSeam = geometry.some(
-    ({ cut }, i) =>
-      cut.endMs - cut.startMs <=
-      Math.max(400, cut.transitionMs + (geometry[i + 1]?.cut.transitionMs ?? 0)),
+    ({ cut, startMs, endMs }, i) =>
+      endMs - startMs <= Math.max(400, cut.transitionMs + (geometry[i + 1]?.cut.transitionMs ?? 0)),
   )
   const saveable =
     !legacy.count &&

@@ -1,12 +1,13 @@
 import { CLIP_DRAFT_PREVIEW, CLIP_TRANSITION } from '@/shared/config'
-import type { ClipEditCut, ClipEditPlan } from './edit-plan'
+import {
+  cutOutputMs,
+  outputToSourceMs,
+  timelineCuts,
+  type ClipEditPlan,
+  type ClipTimelineCut,
+} from './edit-plan'
 
-export interface PreviewCut {
-  cut: ClipEditCut
-  index: number
-  startMs: number
-  endMs: number
-}
+export type PreviewCut = ClipTimelineCut
 export function previewTimeline(plan: ClipEditPlan): PreviewCut[] {
   if (
     plan.cuts.some(
@@ -14,7 +15,7 @@ export function previewTimeline(plan: ClipEditPlan): PreviewCut[] {
         !Number.isSafeInteger(c.startMs) ||
         !Number.isSafeInteger(c.endMs) ||
         c.startMs < 0 ||
-        c.endMs - c.startMs <=
+        cutOutputMs(c) <=
           Math.max(
             2 * CLIP_TRANSITION.fade_ms,
             c.transitionMs + (plan.cuts[index + 1]?.transitionMs ?? 0),
@@ -23,12 +24,7 @@ export function previewTimeline(plan: ClipEditPlan): PreviewCut[] {
     )
   )
     return []
-  let end = 0
-  return plan.cuts.map((cut, index) => {
-    const startMs = end - (index === 0 ? 0 : cut.transitionMs)
-    end = startMs + cut.endMs - cut.startMs
-    return { cut, index, startMs, endMs: end }
-  })
+  return timelineCuts(plan)
 }
 
 /** Half-open output intervals; an exact cut boundary belongs to the new cut.
@@ -55,7 +51,7 @@ export function previewFrame(timeline: readonly PreviewCut[], requestedMs: numbe
       : 1
     return {
       ...item,
-      sourceMs: item.cut.startMs + time - item.startMs,
+      sourceMs: outputToSourceMs(item, time),
       opacity,
       audioGain: incoming ? (index === 0 ? 1 - progress : progress) : 1,
     }

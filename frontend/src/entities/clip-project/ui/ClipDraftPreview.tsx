@@ -5,7 +5,14 @@ import { CLIP_DRAFT_PREVIEW, CLIP_DESIGN, type ClipRatioId } from '@/shared/conf
 import { appFailureFromConnect, normalizeAppFailure } from '@/shared/api'
 import { AppFailureMessage, Button, Checkbox, Slider, Typography } from '@/shared/ui'
 import { clipPreviewRequest } from '../api/preview'
-import type { ClipEditPlan, RetainedClipSource } from '../model/edit-plan'
+import {
+  cutRate,
+  outputToSourceMs,
+  sourceToOutputMs,
+  sourceAudioEnabled,
+  type ClipEditPlan,
+  type RetainedClipSource,
+} from '../model/edit-plan'
 import {
   previewCrop,
   previewElementIDs,
@@ -61,12 +68,10 @@ function PreviewVideo({
   const refreshing = useRef(false)
   const playbackEpoch = useRef(0)
   const fp = item.cut.fingerprint
-  const sourceMs = Math.max(
-    item.cut.startMs,
-    Math.min(
-      item.cut.endMs - CLIP_DRAFT_PREVIEW.frameToleranceMs,
-      item.cut.startMs + timeMs - item.startMs,
-    ),
+  const rate = cutRate(item.cut) / 1000
+  const sourceMs = outputToSourceMs(
+    item,
+    Math.max(item.startMs, Math.min(item.endMs - CLIP_DRAFT_PREVIEW.frameToleranceMs, timeMs)),
   )
   const url = media.fingerprint === fp ? media.url : undefined
   const error = media.fingerprint === fp ? media.error : undefined
@@ -99,10 +104,15 @@ function PreviewVideo({
     const el = video.current
     if (!el || !url) return
     const sync = () => {
+      el.playbackRate = rate
+      if ('preservesPitch' in el) el.preservesPitch = true
+      if ('webkitPreservesPitch' in el) el.webkitPreservesPitch = true
+      if ('mozPreservesPitch' in el) el.mozPreservesPitch = true
       if (
         el.readyState &&
         (!playing ||
-          Math.abs(el.currentTime * 1000 - sourceMs) > CLIP_DRAFT_PREVIEW.frameToleranceMs * 2)
+          Math.abs(el.currentTime * 1000 - sourceMs) / rate >
+            CLIP_DRAFT_PREVIEW.frameToleranceMs * 2)
       )
         el.currentTime = sourceMs / 1000
       el.volume = Number.isFinite(item.cut.volumePermille)
@@ -114,7 +124,7 @@ function PreviewVideo({
     return () => {
       el.removeEventListener('loadedmetadata', sync)
     }
-  }, [url, sourceMs, playing, item.cut.volumePermille, audioGain])
+  }, [url, sourceMs, playing, item.cut.volumePermille, audioGain, rate])
 
   useEffect(() => {
     const el = video.current
@@ -141,16 +151,15 @@ function PreviewVideo({
         onDisplayedFrame?.({
           cutId: item.cut.id,
           sourceMs: Math.round(mediaMs),
-          outputMs: item.startMs + mediaMs - item.cut.startMs,
+          outputMs: sourceToOutputMs(item, mediaMs),
           precise,
         })
       onPrecision(
         precise &&
-          Math.abs(mediaMs - (playing ? el.currentTime * 1000 : sourceMs)) <=
+          Math.abs(mediaMs - (playing ? el.currentTime * 1000 : sourceMs)) / rate <=
             CLIP_DRAFT_PREVIEW.frameToleranceMs,
       )
-      if (playing && !el.seeking)
-        onFrame(Math.max(item.startMs, item.startMs + mediaMs - item.cut.startMs))
+      if (playing && !el.seeking) onFrame(Math.max(item.startMs, sourceToOutputMs(item, mediaMs)))
     }
     const tick = () => {
       if (!active) return
@@ -176,18 +185,7 @@ function PreviewVideo({
       else cancelAnimationFrame(handle)
       el.removeEventListener('seeked', seeked)
     }
-  }, [
-    url,
-    master,
-    playing,
-    sourceMs,
-    item.startMs,
-    item.cut.startMs,
-    item.cut.id,
-    onFrame,
-    onPrecision,
-    onDisplayedFrame,
-  ])
+  }, [url, master, playing, sourceMs, item, rate, onFrame, onPrecision, onDisplayedFrame])
 
   const failed = async () => {
     const epoch = playbackEpoch.current
@@ -401,7 +399,7 @@ export function ClipDraftPreview({
               access={resolvePlayback}
               timeMs={timeMs}
               playing={playing && timeMs >= slot.startMs && timeMs < slot.endMs}
-              muted={muted}
+              muted={muted || !sourceAudioEnabled(plan, slot.cut)}
               opacity={slot.opacity}
               audioGain={slot.audioGain}
               master={slot.master}

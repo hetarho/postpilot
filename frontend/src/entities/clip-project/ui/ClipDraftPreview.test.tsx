@@ -1,8 +1,9 @@
 import { webcrypto } from 'node:crypto'
+import type { ComponentProps } from 'react'
 import { create } from '@bufbuild/protobuf'
 import { Code, createRouterTransport } from '@connectrpc/connect'
 import { TransportProvider } from '@connectrpc/connect-query'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { ClipService, PrepareClipPreviewResponseSchema } from '@/shared/api'
 import { connectAppError } from '@/test/app-error'
@@ -64,6 +65,10 @@ beforeEach(() => {
 })
 afterEach(() => {
   cleanup()
+  Reflect.deleteProperty(HTMLVideoElement.prototype, 'requestVideoFrameCallback')
+  Reflect.deleteProperty(HTMLVideoElement.prototype, 'cancelVideoFrameCallback')
+  Reflect.deleteProperty(HTMLMediaElement.prototype, 'preservesPitch')
+  Reflect.deleteProperty(HTMLMediaElement.prototype, 'webkitPreservesPitch')
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
 })
@@ -74,6 +79,7 @@ function mount(
     void refresh
     return `blob:${fp}`
   }),
+  props: Partial<ComponentProps<typeof ClipDraftPreview>> = {},
 ) {
   const prepare = vi.fn(async (hash: string) =>
     create(PrepareClipPreviewResponseSchema, {
@@ -106,11 +112,98 @@ function mount(
         ratio={ratio}
         sources={sources}
         resolvePlayback={access}
+        {...props}
       />
     </TransportProvider>,
   )
   return { ...view, access, prepare }
 }
+
+it.each([500, 750, 1000, 1250, 1500, 2000])(
+  'sets native rate and supported pitch preservation at %i without granting audio permission',
+  async (rate) => {
+    const enabled = {
+      ...draft,
+      cuts: draft.cuts.map((c) => ({ ...c, playbackRatePermille: rate })),
+      sourceAudio: draft.cuts.map((c, i) => ({
+        sourceId: c.sourceId,
+        fingerprint: c.fingerprint,
+        retainOriginalAudio: i === 1,
+      })),
+    }
+    Object.defineProperty(HTMLMediaElement.prototype, 'preservesPitch', {
+      configurable: true,
+      writable: true,
+      value: false,
+    })
+    Object.defineProperty(HTMLMediaElement.prototype, 'webkitPreservesPitch', {
+      configurable: true,
+      writable: true,
+      value: false,
+    })
+    const view = mount('vertical', undefined, { plan: enabled, timeMs: 1000 })
+    await waitFor(() => expect(view.container.querySelectorAll('video')).toHaveLength(2))
+    const [off, on] = [...view.container.querySelectorAll('video')]
+    Object.defineProperty(off, 'readyState', { value: 4 })
+    fireEvent.loadedMetadata(off)
+    expect(off.currentTime).toBe(2 + rate / 1000)
+    expect(off.playbackRate).toBe(rate / 1000)
+    expect(off.preservesPitch).toBe(true)
+    expect((off as HTMLVideoElement & { webkitPreservesPitch: boolean }).webkitPreservesPitch).toBe(
+      true,
+    )
+    fireEvent.click(screen.getByRole('checkbox', { name: '미리보기 소리 듣기' }))
+    expect(off.muted).toBe(true)
+    expect(on.muted).toBe(false)
+    expect(off.volume).toBe(1)
+    expect(on.volume).toBe(0) // preloaded neighbour has no transition gain yet
+    expect(enabled.sourceAudio[0].retainOriginalAudio).toBe(false)
+  },
+)
+
+it('corrects transition-player drift on the transformed clock and reports inverse source time', async () => {
+  const frames = new Map<HTMLVideoElement, VideoFrameRequestCallback>()
+  Object.defineProperty(HTMLVideoElement.prototype, 'requestVideoFrameCallback', {
+    configurable: true,
+    value: function (this: HTMLVideoElement, callback: VideoFrameRequestCallback) {
+      frames.set(this, callback)
+      return 1
+    },
+  })
+  Object.defineProperty(HTMLVideoElement.prototype, 'cancelVideoFrameCallback', {
+    configurable: true,
+    value: () => {},
+  })
+  const onDisplayedFrame = vi.fn()
+  const plan = {
+    ...draft,
+    cuts: draft.cuts.map((c, i) => ({ ...c, playbackRatePermille: i ? 2000 : 500 })),
+    sourceAudio: draft.cuts.map((c) => ({
+      sourceId: c.sourceId,
+      fingerprint: c.fingerprint,
+      retainOriginalAudio: true,
+    })),
+  }
+  const view = mount('vertical', undefined, { plan, timeMs: 19900, onDisplayedFrame })
+  await waitFor(() => expect(view.container.querySelectorAll('video')).toHaveLength(2))
+  const [left, right] = [...view.container.querySelectorAll('video')]
+  for (const video of [left, right]) {
+    Object.defineProperty(video, 'readyState', { value: 4 })
+    video.currentTime = 0
+    fireEvent.loadedMetadata(video)
+  }
+  expect(left.currentTime).toBe(11.95)
+  expect(right.currentTime).toBe(3.2)
+  expect(left.volume).toBe(0.5)
+  expect(right.volume).toBe(0.25)
+  act(() => frames.get(right)!(0, { mediaTime: 3.2 } as VideoFrameCallbackMetadata))
+  expect(onDisplayedFrame).toHaveBeenCalledWith({
+    cutId: 'b',
+    sourceMs: 3200,
+    outputMs: 19900,
+    precise: true,
+  })
+})
 
 it.each(['vertical', 'horizontal', 'square'])(
   'prepares %s current draft overlays with at most two source players',

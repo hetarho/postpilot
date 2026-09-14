@@ -4,6 +4,9 @@ import {
   clipSeconds,
   snapClipTime,
   timelineCuts,
+  cutOutputMs,
+  outputToSourceMs,
+  sourceToOutputMs,
   type ClipDisplayedFrame,
   type ClipEditingState,
   type ClipCompositionInputs,
@@ -172,10 +175,10 @@ export function ClipCorrectionWorkspace({
     frame.cutId === cut.id &&
     frame.sourceMs >= cut.startMs &&
     frame.sourceMs < cut.endMs &&
-    Math.abs(frame.sourceMs - (cut.startMs + timeline.timeMs - cutTime!.startMs)) <=
+    Math.abs(sourceToOutputMs(cutTime!, frame.sourceMs) - timeline.timeMs) <=
       CLIP_DRAFT_PREVIEW.frameToleranceMs &&
     Math.abs(frame.outputMs - timeline.timeMs) <= CLIP_DRAFT_PREVIEW.frameToleranceMs
-      ? frame.sourceMs
+      ? outputToSourceMs(cutTime!, snapClipTime(frame.outputMs))
       : undefined
   const failure = correction.failure ?? renderFailure
   return (
@@ -338,7 +341,11 @@ export function ClipCorrectionWorkspace({
                   cutTime!.startMs +
                     (start !== cut.startMs
                       ? 0
-                      : Math.max(0, endMs - startMs - CLIP_DRAFT_PREVIEW.frameToleranceMs)),
+                      : Math.max(
+                          0,
+                          cutOutputMs({ ...cut, startMs, endMs }) -
+                            CLIP_DRAFT_PREVIEW.frameToleranceMs,
+                        )),
                 )
               }}
             />
@@ -382,7 +389,8 @@ export function ClipCorrectionWorkspace({
                     cutTime!.startMs +
                       Math.max(
                         0,
-                        currentFrame! - cut.startMs - CLIP_DRAFT_PREVIEW.frameToleranceMs,
+                        cutOutputMs({ ...cut, endMs: currentFrame! }) -
+                          CLIP_DRAFT_PREVIEW.frameToleranceMs,
                       ),
                   )
                 }}

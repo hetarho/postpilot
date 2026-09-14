@@ -116,7 +116,7 @@ export const clips = {
     title: 'Current draft preview',
     play: 'Play',
     pause: 'Pause',
-    originalAudio: 'Play original audio',
+    originalAudio: 'Enable preview audio',
     outputTime: 'Output timeline',
     loadingMedia: 'Loading the original video.',
     codec: 'This browser cannot play the original format. Text and timing remain editable.',
