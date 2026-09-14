@@ -157,6 +157,8 @@ message ClipObservedSegment {
   // rather than inventing a status.
   string certainty = 9;
   string usability = 10;
+  // Server-projected focal/default used when adding footage from this scene.
+  ClipFocal focal = 11;
 }
 message ClipAttempt {
   string job_id = 1;

@@ -42,6 +42,8 @@ export {
   clipPlanDuration,
   cutOutputMs,
   cutRate,
+  ownerCutId,
+  CLIP_PLAYBACK_RATES,
   outputToSourceMs,
   sourceToOutputMs,
   copyClipPlan,
@@ -81,6 +83,7 @@ export { isRapidCut, canSplitRapid, canAddRapid } from './model/caption-pace'
 export { observationCutUsage, observationSummary } from './model/observations'
 export type {
   ClipObservedSegment,
+  ClipAddCutSelection,
   ClipObservationCertainty,
   ClipObservationUsability,
   ClipSourceObservation,
@@ -119,6 +122,7 @@ export {
   nativeTextErrors,
   validateTimelinePlan,
   applyTimelineEdit,
+  acknowledgeClipCuts,
   clipDraftKey,
   selectedTime,
   snapClipTime,

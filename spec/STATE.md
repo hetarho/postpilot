@@ -47,7 +47,6 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T110 | Release QA on the Naver app and the overlay measurement | CDS CLIP | T108 | blocked@260912 |
-| T149 | Add cut, split and fixed-rate editing controls | CLIP CDS ARCH | T144 T148 | todo |
 | T150 | Add per-source original-sound toggles | CLIP CDS ARCH | T143 T148 | todo |
 | T151 | Verify review-clip assembly end to end | CLIP CDS ARCH | T146 T147 T149 T150 | todo |
 | T154 | Declare an item group's name and admitted count, and refuse a short one before paid work | CLIP | - | todo |
@@ -56,11 +55,14 @@
 | T157 | Say a save was refused rather than promising a retry that was abandoned | ARCH | - | todo |
 
 ## next
-- implement-task T149 next for cut creation/split/rate controls; T150 source-sound controls are an independent follow-up after T148.
-- T154 then T155 remain the item-group admission batch; T156/T157 are independent.
-- T110 remains owner-blocked and T008 remains owner-dependent; T151 follows T149/T150.
+- implement-task T150 next for per-source sound controls, then T151 for assembly end-to-end verification.
+- T148+T149 form the completed preview/cut-editing batch; each has its own local commit.
+- T154/T155 and T156/T157 remain separate work; T110 stays owner-blocked and T008 owner-dependent.
 
 ## log
+- 260914 T149 done (prv); observed-cut creation, split, fixed-rate editing and revision-safe undo verified
+- 260914 T149 refreshed to CLIP@19 CDS@13 (prv); item-group admission and decoded export duration do not alter owner cut editing
+- 260914 T149 claimed (prv)
 - 260914 T148 done (prv); transformed browser timeline and native rate/pitch/source-audio gating verified
 - 260914 T148 refreshed to CLIP@19 CDS@13 (prv); item-group admission and decoded export duration do not change the draft-preview decisions
 - 260914 T148 claimed (prv)
@@ -78,6 +80,3 @@
 - 260914 T147 refreshed to CDS@13 (asm); the r13 CDS-52 delta is V12's decoded video-track duration, already shipped by T152, and this task extends that same check rather than contradicting it
 - 260914 T147 claimed (asm)
 - 260914 T146 done (asm); one rate per cut from the source's own allowed set, same-scene-only splits with no reuse, the whole timeline on transformed output time and the owner sound snapshot stamped after validation
-- 260914 update-ssot CLIP start
-- 260914 T153 done; composition projects can be saved again, legacy campaign identity still required
-- 260914 flaky under full-suite load, not in T153 scope; FE ClipCorrection 'saves exact milliseconds' and BE store recovery-restart fail intermittently while passing in isolation

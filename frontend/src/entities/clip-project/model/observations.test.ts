@@ -18,12 +18,12 @@ describe('recorded observation usage', () => {
       { ...a, id: 'overlapping', startMs: 9000, endMs: 11000 },
     ]
     expect(observationCutUsage(segment, observation.source, plan)).toEqual([
-      { cutId: 'trimmed', number: 5, startMs: 4000, endMs: 8000 },
-      { cutId: 'overlapping', number: 6, startMs: 9000, endMs: 10500 },
+      { playbackRatePermille: 1000, cutId: 'trimmed', number: 5, startMs: 4000, endMs: 8000 },
+      { playbackRatePermille: 1000, cutId: 'overlapping', number: 6, startMs: 9000, endMs: 10500 },
     ])
     plan.cuts = [plan.cuts[5]!]
     expect(observationCutUsage(segment, observation.source, plan)).toEqual([
-      { cutId: 'overlapping', number: 1, startMs: 9000, endMs: 10500 },
+      { playbackRatePermille: 1000, cutId: 'overlapping', number: 1, startMs: 9000, endMs: 10500 },
     ])
     expect(observationCutUsage(segment, observation.source, undefined)).toEqual([])
   })

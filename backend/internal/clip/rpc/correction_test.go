@@ -81,3 +81,16 @@ func TestRapidCorrectionWireKeepsEveryCue(t *testing.T) {
 		t.Fatal(got)
 	}
 }
+
+func TestCutRefusalKeepsIdentityAtTheRPCBoundary(t *testing.T) {
+	cut := &clip.CutError{CutID: "owner-00000000-0000-4000-8000-000000000001"}
+	err := toConnectError(cut).(*connect.Error)
+	detail, e := err.Details()[0].Value()
+	if e != nil {
+		t.Fatal(e)
+	}
+	got := detail.(*v1.AppErrorDetail)
+	if got.Reason != "CLIP_INVALID_INPUT" || got.Params["cut_id"] != cut.CutID {
+		t.Fatal(got)
+	}
+}

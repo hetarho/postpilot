@@ -33,6 +33,7 @@ import { ClipTimeline } from './ClipTimeline'
 import { ClipTimeField } from './ClipTimeField'
 import { ClipTextControls } from './ClipTextControls'
 import { ClipAssociationControls } from './ClipAssociationControls'
+import { ClipCutAssemblyControls } from './ClipCutAssemblyControls'
 
 type Correction = ReturnType<typeof useClipCorrection>
 export interface ClipEditorPreviewProps {
@@ -288,6 +289,29 @@ export function ClipCorrectionWorkspace({
         onChange={(ms) => seek(snapClipTime(ms))}
       />
       {!correction.validation?.valid && <FieldMessage>{t('timeline.invalid')}</FieldMessage>}
+      {correction.validation?.cuts.map((error, number) => {
+        const reason = error.rate
+          ? 'assembly.cadenceRefused'
+          : error.overlap
+            ? 'assembly.overlap'
+            : error.start || error.end || error.duration || error.identity
+              ? 'assembly.invalidRange'
+              : ('evidence' in error && error.evidence) ||
+                  failure?.params.cut_id === draft.cuts[number].id
+                ? 'assembly.invalidCreation'
+                : undefined
+        return reason ? (
+          <Button
+            key={draft.cuts[number].id}
+            variant="ghost"
+            onClick={() =>
+              dispatch({ type: 'select', selection: { kind: 'cut', id: draft.cuts[number].id } })
+            }
+          >
+            {t('assembly.cutIssue', { number: number + 1, reason: t(reason) })}
+          </Button>
+        ) : null
+      })}
       {correction.validation?.timeline && (
         <FieldMessage>
           {t('correction.timelineError', { min: state.minDurationMs, max: state.maxDurationMs })}
@@ -324,7 +348,17 @@ export function ClipCorrectionWorkspace({
                 {t('correction.deleteCut')}
               </Button>
             </div>
+            <ClipCutAssemblyControls
+              key={cut.id}
+              cut={cut}
+              allowedRates={source?.allowedRatePermille ?? []}
+              playheadMs={outputToSourceMs(cutTime!, snapClipTime(timeline.timeMs))}
+              native={!!draft.nativeComposition}
+              onChange={change}
+              onSplit={(sourceMs) => correction.splitCut(cut.id, sourceMs)}
+            />
             <RangeSlider
+              disabled={!!cut.creation}
               startLabel={t('timeline.trimStart')}
               endLabel={t('timeline.trimEnd')}
               value={[cut.startMs, cut.endMs]}
@@ -352,6 +386,7 @@ export function ClipCorrectionWorkspace({
             <div className="grid grid-cols-2 gap-3">
               <ClipTimeField
                 id={`clip-cut-${cut.id}-start`}
+                disabled={!!cut.creation}
                 label={t('timeline.sourceStart')}
                 value={cut.startMs}
                 error={errors?.start ? t('timeline.rangeInvalid') : undefined}
@@ -361,6 +396,7 @@ export function ClipCorrectionWorkspace({
               />
               <ClipTimeField
                 id={`clip-cut-${cut.id}-end`}
+                disabled={!!cut.creation}
                 label={t('timeline.sourceEnd')}
                 value={cut.endMs}
                 error={errors?.end ? t('timeline.rangeInvalid') : undefined}
@@ -372,7 +408,7 @@ export function ClipCorrectionWorkspace({
             <div className="flex flex-wrap gap-2">
               <Button
                 variant="secondary"
-                disabled={currentFrame === undefined}
+                disabled={currentFrame === undefined || !!cut.creation}
                 onClick={() => {
                   change({ type: 'cut', id: cut.id, patch: { startMs: currentFrame! } })
                   seek(cutTime!.startMs)
@@ -382,7 +418,7 @@ export function ClipCorrectionWorkspace({
               </Button>
               <Button
                 variant="secondary"
-                disabled={currentFrame === undefined}
+                disabled={currentFrame === undefined || !!cut.creation}
                 onClick={() => {
                   change({ type: 'cut', id: cut.id, patch: { endMs: currentFrame! } })
                   seek(
@@ -406,7 +442,7 @@ export function ClipCorrectionWorkspace({
               <Listbox
                 aria-labelledby="clip-cut-transition-label"
                 value={String(cut.transitionMs)}
-                disabled={index === 0}
+                disabled={index === 0 || !!cut.creation}
                 options={[
                   { value: '0', label: t('correction.transitions.cut') },
                   { value: '200', label: t('correction.transitions.fade', { ms: 200 }) },
@@ -417,17 +453,19 @@ export function ClipCorrectionWorkspace({
                 }
               />
             </div>
-            <Slider
-              label={t('correction.volume')}
-              min={0}
-              max={1000}
-              step={1}
-              value={cut.volumePermille}
-              valueText={`${cut.volumePermille / 10}%`}
-              onChange={(volumePermille) =>
-                change({ type: 'cut', id: cut.id, patch: { volumePermille } }, `volume-${cut.id}`)
-              }
-            />
+            <fieldset disabled={!!cut.creation}>
+              <Slider
+                label={t('correction.volume')}
+                min={0}
+                max={1000}
+                step={1}
+                value={cut.volumePermille}
+                valueText={`${cut.volumePermille / 10}%`}
+                onChange={(volumePermille) =>
+                  change({ type: 'cut', id: cut.id, patch: { volumePermille } }, `volume-${cut.id}`)
+                }
+              />
+            </fieldset>
             {!draft.nativeComposition &&
               cut.copies.map((copy, i) => (
                 <div key={i} className="space-y-2">

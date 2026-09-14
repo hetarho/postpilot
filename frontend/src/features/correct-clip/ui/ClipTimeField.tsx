@@ -6,17 +6,20 @@ export function ClipTimeField({
   value,
   onChange,
   error,
+  disabled,
 }: {
   id: string
   label: string
   value: number
   onChange: (ms: number) => void
   error?: string
+  disabled?: boolean
 }) {
   return (
     <div>
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
       <TextField
+        disabled={disabled}
         id={id}
         type="number"
         inputMode="decimal"

@@ -110,7 +110,10 @@ func toConnectError(err error) error {
 	var facts *clip.MissingFactsError
 	var problem *composition.Problem
 	var admission *clip.ModelAdmissionError
+	var cut *clip.CutError
 	switch {
+	case errors.As(err, &cut):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid clip cut", "CLIP_INVALID_INPUT", map[string]string{"cut_id": cut.CutID, "check": cut.OutputValidationCode()})
 	case errors.Is(err, clip.ErrFinalized):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip is finalized", "CLIP_FINALIZED", nil)
 	case errors.Is(err, clip.ErrFinalizationConflict):

@@ -203,6 +203,20 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
   const observationPanel = (
     <ClipObservationViewer
       project={project}
+      onAddCut={
+        step === 'refine' && !pending && plan?.plan.nativeComposition
+          ? (selection) =>
+              correction.addCut(
+                selection,
+                upload.readyBatch?.sources.find(
+                  (source) =>
+                    source.id === selection.source.id &&
+                    source.metadata.fingerprint === selection.source.fingerprint,
+                )?.retainOriginalAudio,
+              )
+          : undefined
+      }
+      draftPlan={step === 'refine' ? correction.draft : undefined}
       resolvePlayback={upload.ensurePlayback}
       localSources={upload.entries.map((entry) => ({
         fingerprint: entry.metadata.fingerprint,

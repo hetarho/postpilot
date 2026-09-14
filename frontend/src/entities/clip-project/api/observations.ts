@@ -45,6 +45,7 @@ export function toClipObservations(value: ProtoClipObservations): ClipObservatio
             : CLIP_RATES.filter((rate) => rate >= CLIP_PLAYBACK.unit_permille),
       },
       segments: item.segments.map((segment) => ({
+        ...(segment.focal ? { focal: { x: segment.focal.x, y: segment.focal.y } } : {}),
         startMs: segment.startMs,
         endMs: segment.endMs,
         event: segment.event,

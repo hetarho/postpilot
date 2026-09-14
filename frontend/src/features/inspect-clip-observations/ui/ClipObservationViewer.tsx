@@ -9,9 +9,11 @@ import {
   type ClipObservedSegment,
   type ClipProject,
   type ClipSourceObservation,
+  type ClipAddCutSelection,
 } from '@/entities/clip-project'
 import { formatDuration } from '@/shared/lib/video'
 import { Button, Sheet, Typography } from '@/shared/ui'
+import { AddObservedCut } from './AddObservedCut'
 
 function timecode(ms: number) {
   const fraction = ms % 1000
@@ -26,11 +28,15 @@ function ObservationRange({
   observation,
   plan,
   onPreview,
+  onAddCut,
+  draftPlan,
 }: {
   segment: ClipObservedSegment
   observation: ClipSourceObservation
   plan?: ClipEditPlan
   onPreview?: () => void
+  onAddCut?: (selection: ClipAddCutSelection) => Promise<void>
+  draftPlan?: ClipEditPlan
 }) {
   const { t } = useTranslation('clips')
   const usage = observationCutUsage(segment, observation.source, plan)
@@ -72,6 +78,7 @@ function ObservationRange({
                 {t('observation.usedCut', {
                   number: cut.number,
                   range: range(cut.startMs, cut.endMs),
+                  rate: cut.playbackRatePermille / 1000,
                 })}
               </Typography>
             </li>
@@ -87,6 +94,14 @@ function ObservationRange({
           {t('observation.previewRange', { range: range(segment.startMs, segment.endMs) })}
         </Button>
       )}
+      {onAddCut && (
+        <AddObservedCut
+          observation={observation}
+          segment={segment}
+          plan={draftPlan ?? plan}
+          onAddCut={onAddCut}
+        />
+      )}
     </li>
   )
 }
@@ -96,11 +111,15 @@ function SourceObservations({
   plan,
   localURL,
   refreshPlayback,
+  onAddCut,
+  draftPlan,
 }: {
   observation: ClipSourceObservation
   plan?: ClipEditPlan
   localURL?: string
   refreshPlayback?: () => Promise<string>
+  onAddCut?: (selection: ClipAddCutSelection) => Promise<void>
+  draftPlan?: ClipEditPlan
 }) {
   const { t } = useTranslation('clips')
   const id = useId()
@@ -142,6 +161,8 @@ function SourceObservations({
                 observation={observation}
                 plan={plan}
                 onPreview={localURL ? () => setPreview(segment) : undefined}
+                onAddCut={onAddCut}
+                draftPlan={draftPlan}
               />
             ))}
           </ol>
@@ -203,11 +224,15 @@ export function ClipObservationViewer({
   localSources,
   resolvePlayback,
   attemptObservations,
+  onAddCut,
+  draftPlan,
 }: {
   attemptObservations?: ClipObservations
   project: ClipProject
   localSources: ReadonlyArray<{ fingerprint: string; url: string }>
   resolvePlayback?: (fingerprint: string, refresh?: boolean) => Promise<string>
+  onAddCut?: (selection: ClipAddCutSelection) => Promise<void>
+  draftPlan?: ClipEditPlan
 }) {
   const { t } = useTranslation('clips')
   const id = useId()
@@ -267,6 +292,14 @@ export function ClipObservationViewer({
             key={active.source.fingerprint}
             observation={active}
             plan={attemptObservations ? undefined : project.editing?.plan}
+            onAddCut={
+              !attemptObservations &&
+              !project.finalized &&
+              !['queued', 'running'].includes(project.latestJob?.status ?? '')
+                ? onAddCut
+                : undefined
+            }
+            draftPlan={draftPlan}
             refreshPlayback={
               resolvePlayback ? () => resolvePlayback(active.source.fingerprint, true) : undefined
             }

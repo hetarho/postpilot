@@ -9,14 +9,15 @@ import {
   toClipProject,
   type ClipProject,
 } from '@/entities/clip-project'
-import { clipEditingFixture } from '@/test/clip-editing'
+import { clipEditingFixture, clipTimelineFixture } from '@/test/clip-editing'
 import { connectAppError } from '@/test/app-error'
 import { createTestQueryClient, withProviders } from '@/test/session'
 import { CLIP_TIMELINE } from '@/shared/config'
 import { useClipCorrection } from './useClipCorrection'
 
-function setup() {
-  const editing = clipEditingFixture()
+function setup(editing = clipEditingFixture()) {
+  const identity = vi.fn(() => 'owner-00000000-0000-4000-8000-000000000001')
+  const creationRequests: string[][] = []
   const wire = () =>
     create(ClipProjectSchema, {
       id: 'clip',
@@ -35,6 +36,7 @@ function setup() {
     router.rpc(ClipService.method.getClipProject, () => ({ project: wire() }))
     router.rpc(ClipService.method.saveClipEditPlan, async (req) => {
       writes.push(req.expectedRevision)
+      creationRequests.push(req.plan?.cuts.filter((c) => c.creation).map((c) => c.id) ?? [])
       if (hold)
         await new Promise<void>((resolve) => {
           release = resolve
@@ -51,12 +53,14 @@ function setup() {
   })
   const project = toClipProject(wire())
   const view = renderHook(
-    ({ project }: { project: ClipProject }) => useClipCorrection('alice', project),
+    ({ project }: { project: ClipProject }) => useClipCorrection('alice', project, identity),
     { wrapper: withProviders(transport, createTestQueryClient()), initialProps: { project } },
   )
   return {
     ...view,
     writes,
+    identity,
+    creationRequests,
     project,
     setFail: (value: boolean) => {
       fail = value
@@ -192,4 +196,95 @@ it('rejects a failing flush and preserves the local correction', async () => {
   })
   expect(view.result.current.dirty).toBe(true)
   expect(view.writes).toEqual([1])
+})
+
+it('creates one injected UUID and strips provenance from saved undo/redo at new revisions', async () => {
+  const view = setup(clipTimelineFixture())
+  const source = view.project.editing!.sources[0]
+  await act(async () =>
+    view.result.current.addCut({
+      source,
+      startMs: 12000,
+      endMs: 15000,
+      segment: {
+        startMs: 12000,
+        endMs: 15000,
+        event: '',
+        action: '',
+        motion: '',
+        speech: '',
+        subjects: [],
+        quality: '',
+        certainty: 'certain',
+        usability: 'usable',
+        focal: { x: 0.2, y: 0.7 },
+      },
+    }),
+  )
+  const id = view.identity.mock.results[0].value
+  expect(view.identity).toHaveBeenCalledTimes(1)
+  expect(view.result.current.draft.cuts[1]).toMatchObject({ id, creation: { kind: 'add' } })
+  await tick()
+  expect(view.creationRequests).toEqual([[id]])
+  expect(view.result.current.draft.cuts[1].creation).toBeUndefined()
+  act(() => view.result.current.dispatch({ type: 'undo' }))
+  await tick()
+  act(() => view.result.current.dispatch({ type: 'redo' }))
+  await tick()
+  expect(view.writes).toEqual([1, 2, 3])
+  expect(view.creationRequests).toEqual([[id], [], []])
+  expect(view.result.current.revision).toBe(4)
+  expect(view.result.current.draft.cuts[1].id).toBe(id)
+  expect(view.identity).toHaveBeenCalledTimes(1)
+})
+
+it('keeps a split and its exact left caption available when the authored window no longer fits', async () => {
+  const view = setup(clipTimelineFixture())
+  await act(async () => view.result.current.splitCut('cut-a', 2000))
+  await tick(5000)
+  expect(view.result.current.draft.cuts).toHaveLength(3)
+  expect(view.result.current.draft.elements![0]).toMatchObject({
+    cutId: 'cut-a',
+    startMs: 120,
+    endMs: 3880,
+  })
+  expect(view.result.current.validation?.saveable).toBe(false)
+  expect(view.writes).toEqual([])
+})
+
+it('acknowledges creation while another cut is edited during its save', async () => {
+  const view = setup(clipTimelineFixture())
+  const source = view.project.editing!.sources[0]
+  await act(async () =>
+    view.result.current.addCut({
+      source,
+      startMs: 12000,
+      endMs: 15000,
+      segment: {
+        startMs: 12000,
+        endMs: 15000,
+        event: '',
+        action: '',
+        motion: '',
+        speech: '',
+        subjects: [],
+        quality: '',
+        certainty: 'certain',
+        usability: 'usable',
+        focal: { x: 0.2, y: 0.7 },
+      },
+    }),
+  )
+  view.setHold(true)
+  await tick()
+  act(() =>
+    view.result.current.change({ type: 'cut', id: 'cut-a', patch: { volumePermille: 300 } }),
+  )
+  view.setHold(false)
+  await act(async () => view.release())
+  await tick()
+  expect(view.creationRequests).toEqual([[view.identity.mock.results[0].value], []])
+  expect(view.result.current.draft.cuts[0].volumePermille).toBe(300)
+  expect(view.result.current.revision).toBe(3)
+  expect(view.result.current.dirty).toBe(false)
 })

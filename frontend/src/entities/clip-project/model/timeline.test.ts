@@ -220,3 +220,149 @@ it('recomputes automatic placement at a new rate and preserves explicit phrase a
   })
   expect(changed.elements![2].evidence).toEqual(initial.elements![2].evidence)
 })
+
+it('adds footage with stable identity, then splits without copying left-side claims or sound authority', () => {
+  const initial = fixture()
+  initial.sourceAudio = [
+    { sourceId: 'a', fingerprint: 'a', retainOriginalAudio: false },
+    { sourceId: 'b', fingerprint: 'b', retainOriginalAudio: true },
+  ]
+  let state = createClipTimeline(initial)
+  const id = 'owner-00000000-0000-4000-8000-000000000001'
+  state = clipTimelineReducer(state, {
+    type: 'edit',
+    at: 1,
+    edit: {
+      type: 'addCut',
+      id,
+      originCutId: 'a',
+      sourceId: 'a',
+      fingerprint: 'a',
+      startMs: 11000,
+      endMs: 15000,
+      focal: { x: 0.25, y: 0.75 },
+    },
+  })
+  expect(state.plan.cuts.map((c) => c.id)).toEqual(['a', id, 'b'])
+  expect(state.plan.cuts[1]).toMatchObject({
+    playbackRatePermille: 1000,
+    transitionMs: 0,
+    volumePermille: 1000,
+    copies: [],
+    chips: [],
+    creation: { kind: 'add', originCutId: 'a' },
+  })
+  expect(state.plan.sourceAudio).toEqual(initial.sourceAudio)
+  expect(state.selection).toEqual({ kind: 'cut', id })
+  expect(state.timeMs).toBe(10000)
+  state = clipTimelineReducer(state, { type: 'undo' })
+  expect(state.plan.cuts).toEqual(initial.cuts)
+  state = clipTimelineReducer(state, { type: 'redo' })
+  expect(state.plan.cuts[1].id).toBe(id)
+  const accepted = {
+    ...state.plan,
+    cuts: state.plan.cuts.map((c) => ({ ...c, creation: undefined })),
+  }
+  state = clipTimelineReducer(state, { type: 'adopt', plan: accepted })
+  state = clipTimelineReducer(state, { type: 'undo' })
+  state = clipTimelineReducer(state, { type: 'redo' })
+  expect(state.plan.cuts[1].creation).toBeUndefined()
+  state = clipTimelineReducer(state, { type: 'edit', at: 2, edit: { type: 'remove', id } })
+  state = clipTimelineReducer(state, { type: 'adopt', plan: state.plan })
+  state = clipTimelineReducer(state, { type: 'undo' })
+  expect(state.plan.cuts[1]).toEqual(accepted.cuts[1])
+
+  initial.cuts[0].playbackRatePermille = 500
+  initial.cuts[0].volumePermille = 300
+  initial.elements![0] = text('caption', { startMs: 120, endMs: 15000 })
+  const split = applyTimelineEdit(initial, { type: 'splitCut', id: 'a', newId: id, sourceMs: 6000 })
+  expect(split.cuts[0]).toMatchObject({ id: 'a', endMs: 6000, playbackRatePermille: 500 })
+  expect(split.cuts[1]).toMatchObject({
+    id,
+    startMs: 6000,
+    endMs: 11000,
+    playbackRatePermille: 500,
+    volumePermille: 300,
+    transitionMs: 0,
+    copies: [],
+    chips: [],
+    creation: { kind: 'split', originCutId: 'a' },
+  })
+  expect(split.elements?.find((t) => t.instanceId === 'caption')).toMatchObject({
+    cutId: 'a',
+    endMs: 15000,
+  })
+  expect(split.elements?.some((t) => t.cutId === id)).toBe(false)
+  expect(validateTimelinePlan(split, editing(initial)).saveable).toBe(false)
+  expect(split.sourceAudio).toEqual(initial.sourceAudio)
+})
+
+it('keeps the source frame under the playhead through rate changes and identifies observation gaps', () => {
+  const initial = fixture()
+  let state = createClipTimeline(initial)
+  state = clipTimelineReducer(state, { type: 'seek', timeMs: 4000 })
+  state = clipTimelineReducer(state, {
+    type: 'edit',
+    at: 1,
+    edit: { type: 'rate', id: 'a', ratePermille: 500 },
+  })
+  expect(state.timeMs).toBe(8000)
+  state = clipTimelineReducer(state, { type: 'undo' })
+  expect(state.timeMs).toBe(4000)
+  const changed = applyTimelineEdit(initial, { type: 'cut', id: 'a', patch: { endMs: 12000 } })
+  const observations = {
+    status: 'available' as const,
+    sources: [
+      {
+        source: editing(initial).sources[0],
+        segments: [
+          {
+            startMs: 1000,
+            endMs: 11000,
+            event: '',
+            action: '',
+            motion: '',
+            speech: '',
+            quality: '',
+            subjects: [],
+            certainty: 'certain' as const,
+            usability: 'usable' as const,
+          },
+        ],
+      },
+    ],
+  }
+  const checked = validateTimelinePlan(changed, editing(initial), observations)
+  expect(checked).toMatchObject({
+    saveable: false,
+    cuts: [{ evidence: true }, { evidence: false }],
+  })
+  expect(changed.cuts[0].endMs).toBe(12000)
+})
+
+it('copies a newly used source permission from its retained lease without changing other sound settings', () => {
+  const initial = fixture()
+  initial.sourceAudio = [
+    { sourceId: 'a', fingerprint: 'a', retainOriginalAudio: false },
+    { sourceId: 'b', fingerprint: 'b', retainOriginalAudio: true },
+  ]
+  for (const retainedSound of [false, true]) {
+    const added = applyTimelineEdit(initial, {
+      type: 'addCut',
+      id: 'owner-00000000-0000-4000-8000-000000000001',
+      originCutId: 'a',
+      sourceId: 'c',
+      fingerprint: 'c',
+      startMs: 0,
+      endMs: 5000,
+      focal: { x: 0.5, y: 0.5 },
+      retainedSound,
+    })
+    expect(added.sourceAudio).toEqual([
+      ...initial.sourceAudio,
+      { sourceId: 'c', fingerprint: 'c', retainOriginalAudio: retainedSound },
+    ])
+    expect(initial.sourceAudio).toHaveLength(2)
+    expect(added.cuts[1].volumePermille).toBe(1000)
+  }
+})

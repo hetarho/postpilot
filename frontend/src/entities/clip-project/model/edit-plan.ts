@@ -236,6 +236,20 @@ export function allowsSecondCopy(cut: ClipEditCut): boolean {
   return cutOutputMs(cut) >= CLIP_COPY.second_min_cut_s * 1000
 }
 export type ClipEdit =
+  | {
+      type: 'addCut'
+      id: string
+      originCutId: string
+      sourceId: string
+      fingerprint: string
+      startMs: number
+      endMs: number
+      focal: { x: number; y: number }
+      /** Read from the retained owner lease, never a cut-authoring control. */
+      retainedSound?: boolean
+    }
+  | { type: 'splitCut'; id: string; newId: string; sourceMs: number }
+  | { type: 'rate'; id: string; ratePermille: number }
   | { type: 'move'; from: number; to: number }
   | { type: 'remove'; id: string }
   | {
@@ -261,7 +275,63 @@ export function clipPlanDuration(cuts: readonly ClipEditCut[]): number {
 }
 export function editClipPlan(plan: ClipEditPlan, edit: ClipEdit): ClipEditPlan {
   const next = copyClipPlan(plan)
-  if (edit.type === 'move') {
+  if (edit.type === 'addCut') {
+    const index = next.cuts.findIndex((c) => c.id === edit.originCutId)
+    if (!next.nativeComposition || index < 0 || next.cuts.some((c) => c.id === edit.id)) return plan
+    next.cuts.splice(index + 1, 0, {
+      id: edit.id,
+      sourceId: edit.sourceId,
+      fingerprint: edit.fingerprint,
+      startMs: edit.startMs,
+      endMs: edit.endMs,
+      focal: { ...edit.focal },
+      playbackRatePermille: 1000,
+      transitionMs: 0,
+      volumePermille: 1000,
+      copies: [],
+      chips: [],
+      creation: { kind: 'add', originCutId: edit.originCutId },
+    })
+    if (
+      edit.retainedSound !== undefined &&
+      next.sourceAudio &&
+      !next.sourceAudio.some(
+        (s) => s.sourceId === edit.sourceId && s.fingerprint === edit.fingerprint,
+      )
+    )
+      next.sourceAudio.push({
+        sourceId: edit.sourceId,
+        fingerprint: edit.fingerprint,
+        retainOriginalAudio: edit.retainedSound,
+      })
+  } else if (edit.type === 'splitCut') {
+    const index = next.cuts.findIndex((c) => c.id === edit.id),
+      parent = next.cuts[index]
+    if (
+      !next.nativeComposition ||
+      !parent ||
+      parent.creation ||
+      next.cuts.some((c) => c.id === edit.newId) ||
+      !Number.isSafeInteger(edit.sourceMs) ||
+      edit.sourceMs <= parent.startMs ||
+      edit.sourceMs >= parent.endMs
+    )
+      return plan
+    next.cuts.splice(
+      index,
+      1,
+      { ...parent, endMs: edit.sourceMs },
+      {
+        ...parent,
+        id: edit.newId,
+        startMs: edit.sourceMs,
+        transitionMs: 0,
+        copies: [],
+        chips: [],
+        creation: { kind: 'split', originCutId: parent.id },
+      },
+    )
+  } else if (edit.type === 'move') {
     if (
       !Number.isInteger(edit.from) ||
       !Number.isInteger(edit.to) ||
@@ -278,6 +348,7 @@ export function editClipPlan(plan: ClipEditPlan, edit: ClipEdit): ClipEditPlan {
   else
     next.cuts = next.cuts.map((c) => {
       if (c.id !== edit.id) return c
+      if (edit.type === 'rate') return { ...c, playbackRatePermille: edit.ratePermille }
       if (edit.type === 'cut') return { ...c, ...edit.patch }
       if (edit.type === 'chips') return { ...c, chips: [...edit.chips] }
       if (edit.type === 'pace') {
@@ -353,6 +424,9 @@ export function editClipPlan(plan: ClipEditPlan, edit: ClipEdit): ClipEditPlan {
   if (
     edit.type === 'move' ||
     edit.type === 'remove' ||
+    edit.type === 'addCut' ||
+    edit.type === 'splitCut' ||
+    edit.type === 'rate' ||
     (edit.type === 'cut' &&
       ['startMs', 'endMs', 'playbackRatePermille', 'transitionMs'].some((key) => key in edit.patch))
   )

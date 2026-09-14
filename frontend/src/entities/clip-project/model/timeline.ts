@@ -5,6 +5,8 @@ import {
   editClipPlan,
   validateClipPlan,
   timelineCuts,
+  outputToSourceMs,
+  sourceToOutputMs,
   type ClipEdit,
   type ClipEditPlan,
   type ClipEditableText,
@@ -12,6 +14,7 @@ import {
 } from './edit-plan'
 import type { ClipSourceAssociation } from './composition'
 import { splitRapid } from './caption-pace'
+import type { ClipObservations } from './observations'
 
 export type ClipSelection =
   { kind: 'cut'; id: string } | { kind: 'text'; id: string; phrase?: number }
@@ -120,7 +123,11 @@ export function nativeTextErrors(plan: ClipEditPlan, state: ClipEditingState) {
   })
 }
 
-export function validateTimelinePlan(plan: ClipEditPlan, state: ClipEditingState) {
+export function validateTimelinePlan(
+  plan: ClipEditPlan,
+  state: ClipEditingState,
+  observations?: ClipObservations,
+) {
   const legacy = validateClipPlan(plan, state)
   if (!plan.nativeComposition)
     return {
@@ -128,8 +135,29 @@ export function validateTimelinePlan(plan: ClipEditPlan, state: ClipEditingState
       saveable: legacy.valid,
       elements: [] as ReturnType<typeof nativeTextErrors>,
     }
-  const cuts = legacy.cuts.map((cut) => ({
+  const cuts = legacy.cuts.map((cut, index) => ({
     ...cut,
+    evidence:
+      observations?.status === 'available' &&
+      !state.plan.cuts.some(
+        (c) =>
+          c.id === plan.cuts[index].id &&
+          c.sourceId === plan.cuts[index].sourceId &&
+          c.fingerprint === plan.cuts[index].fingerprint &&
+          c.startMs === plan.cuts[index].startMs &&
+          c.endMs === plan.cuts[index].endMs,
+      ) &&
+      !observations.sources.some(
+        (o) =>
+          o.source.id === plan.cuts[index].sourceId &&
+          o.source.fingerprint === plan.cuts[index].fingerprint &&
+          o.segments.some(
+            (s) =>
+              s.usability !== 'unusable' &&
+              s.startMs <= plan.cuts[index].startMs &&
+              s.endMs >= plan.cuts[index].endMs,
+          ),
+      ),
     copyCount: false,
     copyClasses: false,
     chips: false,
@@ -366,6 +394,37 @@ export type ClipTimelineAction =
   | { type: 'redo' }
   | { type: 'endTransaction' }
   | { type: 'adopt'; plan: ClipEditPlan; clearHistory?: boolean }
+  | { type: 'acknowledge'; plan: ClipEditPlan }
+
+/** Once accepted, an identity stays known even after delete/save/undo. */
+export function acknowledgeClipCuts(plan: ClipEditPlan, accepted: ClipEditPlan): ClipEditPlan {
+  const ids = new Set(accepted.cuts.map((c) => c.id))
+  return {
+    ...plan,
+    cuts: plan.cuts.map((c) => (c.creation && ids.has(c.id) ? { ...c, creation: undefined } : c)),
+  }
+}
+
+function movedPlayhead(before: ClipEditPlan, next: ClipEditPlan, timeMs: number) {
+  const current = timelineCuts(before)
+    .filter((c) => timeMs >= c.startMs && timeMs < c.endMs)
+    .at(-1)
+  const sourceMs = current ? outputToSourceMs(current, timeMs) : undefined
+  const candidates = timelineCuts(next)
+  const same = current && candidates.find((c) => c.cut.id === current.cut.id)
+  const contains = (c: (typeof candidates)[number]) =>
+    sourceMs !== undefined &&
+    c.cut.sourceId === current?.cut.sourceId &&
+    c.cut.fingerprint === current.cut.fingerprint &&
+    c.cut.startMs <= sourceMs &&
+    sourceMs < c.cut.endMs
+  const target = same && contains(same) ? same : (candidates.find(contains) ?? same)
+  const mapped =
+    target && sourceMs !== undefined
+      ? Math.max(target.startMs, Math.min(target.endMs, sourceToOutputMs(target, sourceMs)))
+      : timeMs
+  return Math.max(0, Math.min(Math.max(0, next.durationMs), Number.isFinite(mapped) ? mapped : 0))
+}
 
 function survivingSelection(
   before: ClipEditPlan,
@@ -400,13 +459,21 @@ export function clipTimelineReducer(
     }
   }
   if (action.type === 'endTransaction') return { ...state, group: undefined }
-  if (action.type === 'adopt')
+  if (action.type === 'adopt' || action.type === 'acknowledge')
     return {
       ...state,
-      plan: copyClipPlan(action.plan),
-      selection: survivingSelection(state.plan, action.plan, state.selection),
+      plan:
+        action.type === 'adopt'
+          ? copyClipPlan(action.plan)
+          : acknowledgeClipCuts(state.plan, action.plan),
+      selection:
+        action.type === 'adopt'
+          ? survivingSelection(state.plan, action.plan, state.selection)
+          : state.selection,
       group: undefined,
-      ...(action.clearHistory ? { past: [], future: [] } : {}),
+      past: state.past.map((s) => ({ ...s, plan: acknowledgeClipCuts(s.plan, action.plan) })),
+      future: state.future.map((s) => ({ ...s, plan: acknowledgeClipCuts(s.plan, action.plan) })),
+      ...(action.type === 'adopt' && action.clearHistory ? { past: [], future: [] } : {}),
     }
   if (action.type === 'undo' || action.type === 'redo') {
     const stack = action.type === 'undo' ? state.past : state.future
@@ -416,6 +483,7 @@ export function clipTimelineReducer(
     return {
       ...state,
       ...next,
+      timeMs: movedPlayhead(state.plan, next.plan, state.timeMs),
       group: undefined,
       past: action.type === 'undo' ? state.past.slice(0, -1) : [...state.past, current],
       future: action.type === 'undo' ? [...state.future, current] : state.future.slice(0, -1),
@@ -431,7 +499,14 @@ export function clipTimelineReducer(
   return {
     ...state,
     plan,
-    selection: survivingSelection(state.plan, plan, state.selection),
+    selection:
+      action.edit.type === 'addCut'
+        ? { kind: 'cut', id: action.edit.id }
+        : survivingSelection(state.plan, plan, state.selection),
+    timeMs:
+      action.edit.type === 'addCut'
+        ? selectedTime(plan, { kind: 'cut', id: action.edit.id })
+        : movedPlayhead(state.plan, plan, state.timeMs),
     past: coalesced
       ? state.past
       : [...state.past, { plan: state.plan, selection: state.selection }].slice(

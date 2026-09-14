@@ -62,6 +62,14 @@ func observedScene(observations []SourceAnalysis, sourceID, fingerprint string, 
 	return Segment{}, false
 }
 
+// ObservedCutFocal is the canonical initial crop for owner-added footage.
+func ObservedCutFocal(scene Segment) Point {
+	if !normalized(scene.Focal.X) || !normalized(scene.Focal.Y) || scene.Focal == (Point{}) {
+		return Point{X: .5, Y: .5}
+	}
+	return scene.Focal
+}
+
 // ownerItemBinding re-derives the group and item a NEW cut belongs to from the
 // owner's own associations, never from anything the client asserted. Exactly one
 // answer binds it; none or several leave it unassigned, because an uncertain
@@ -122,10 +130,7 @@ func admitOwnerCut(c CorrectionCut, origin Cut, binding composition.Cut, portabl
 		}
 		// The focal point is the one the observation recorded, not one a client
 		// chose; an observation that recorded none centres the frame.
-		out.Focal = scene.Focal
-		if !normalized(out.Focal.X) || !normalized(out.Focal.Y) || out.Focal == (Point{}) {
-			out.Focal = Point{X: .5, Y: .5}
-		}
+		out.Focal = ObservedCutFocal(scene)
 		// The new cut takes its place in the template from the origin and its
 		// item from the owner's own associations, re-derived for this scene.
 		next.SourceID = c.SourceID

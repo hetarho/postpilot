@@ -21,7 +21,7 @@ describe('clip observation inspection', () => {
     expect(screen.getByText('맛있어요')).toBeVisible()
     expect(screen.getByText('음식, 접시')).toBeVisible()
     expect(screen.getByText('선명하고 흔들림이 적음')).toBeVisible()
-    expect(screen.getByText('1번 컷에 사용 · 원본 0:03.500–0:10')).toBeVisible()
+    expect(screen.getByText('1번 컷에 사용 · 1× · 원본 0:03.500–0:10')).toBeVisible()
     expect(screen.getByText('이 관찰 구간은 편집안에 사용되지 않았어요.')).toBeVisible()
     expect(screen.queryByRole('button', { name: /원본 .* 구간 보기/ })).not.toBeInTheDocument()
     await user.click(details)
@@ -70,7 +70,7 @@ describe('clip observation inspection', () => {
     project.editing!.plan.cuts[1]!.endMs = 5000
     rerender(<ClipObservationViewer project={{ ...project }} localSources={[]} />)
     expect(screen.getByText(/사용 구간은 저장된 편집안 기준/)).toBeVisible()
-    expect(screen.getByText('2번 컷에 사용 · 원본 0:03.500–0:05')).toBeVisible()
+    expect(screen.getByText('2번 컷에 사용 · 1× · 원본 0:03.500–0:05')).toBeVisible()
     project.editing!.plan.cuts.pop()
     rerender(<ClipObservationViewer project={{ ...project }} localSources={[]} />)
     expect(screen.queryByText(/번 컷에 사용/)).not.toBeInTheDocument()

@@ -21,6 +21,7 @@ func analysisObservationsProto(analyses []clip.SourceAnalysis) *v1.ClipObservati
 		source := a.Source
 		item := &v1.ClipSourceObservation{Source: retainedSourceProto(source)}
 		for _, s := range a.Segments {
+			focal := clip.ObservedCutFocal(s)
 			// Action, motion and the two status fields are carried through
 			// exactly as recorded; a legacy record sends them empty rather than
 			// borrowing a certainty it never had (CLIP-51).
@@ -28,6 +29,7 @@ func analysisObservationsProto(analyses []clip.SourceAnalysis) *v1.ClipObservati
 				StartMs: int32(s.StartMS), EndMs: int32(s.EndMS), Event: s.Event,
 				Subjects: s.Subjects, Speech: s.Speech, Quality: s.Quality,
 				Action: s.Action, Motion: s.Motion, Certainty: s.Certainty, Usability: s.Usability,
+				Focal: &v1.ClipFocal{X: focal.X, Y: focal.Y},
 			})
 		}
 		out.Sources = append(out.Sources, item)

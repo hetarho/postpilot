@@ -58,7 +58,7 @@ describe('observations in the clip workspace', () => {
       await user.click(tabs.getByRole('tab', { name: new RegExp(name) }))
       expect(screen.getAllByRole('heading', { name: 'AI가 관찰한 내용' })).toHaveLength(1)
       await user.click(screen.getByRole('button', { name: '관찰 구간 2개 자세히 보기' }))
-      expect(screen.getByText('1번 컷에 사용 · 원본 0:03.500–0:10')).toBeVisible()
+      expect(screen.getByText('1번 컷에 사용 · 1× · 원본 0:03.500–0:10')).toBeVisible()
     }
     expect(calls).not.toContain('StartClipGeneration')
     expect(calls).not.toContain('QuoteClipGeneration')

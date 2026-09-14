@@ -31,3 +31,18 @@ describe('clip observation mapping', () => {
     })
   })
 })
+
+it('carries the canonical scene focal into an owner add without changing evidence time', () => {
+  const source = clipObservationsFixture().sources[0]
+  const wire = create(ClipObservationsSchema, {
+    status: 'available',
+    sources: [
+      { source: source.source, segments: [{ ...source.segments[0], focal: { x: 0.23, y: 0.67 } }] },
+    ],
+  })
+  expect(toClipObservations(wire).sources[0].segments[0]).toMatchObject({
+    startMs: 3500,
+    endMs: 10500,
+    focal: { x: 0.23, y: 0.67 },
+  })
+})

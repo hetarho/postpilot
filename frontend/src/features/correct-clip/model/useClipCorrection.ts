@@ -9,16 +9,19 @@ import {
   copyClipPlan,
   createClipTimeline,
   clipTimelineReducer,
+  acknowledgeClipCuts,
+  ownerCutId,
   toClipProject,
   validateTimelinePlan,
   type ClipProject,
   type ClipEditPlan,
   type TimelineEdit,
+  type ClipAddCutSelection,
 } from '@/entities/clip-project'
 import { ClipService, appFailureFromConnect } from '@/shared/api'
 import { CLIP_TIMELINE } from '@/shared/config'
 
-export function useClipCorrection(ownerId: string, project: ClipProject) {
+export function useClipCorrection(ownerId: string, project: ClipProject, createCutId = ownerCutId) {
   const transport = useTransport()
   const cache = useQueryClient()
   const initial = project.editing?.plan ?? { durationMs: 0, cuts: [], hook: '' }
@@ -36,7 +39,9 @@ export function useClipCorrection(ownerId: string, project: ClipProject) {
   }, [])
   const draft = timeline.plan
   const dirty = clipDraftKey(draft) !== baseline
-  const validation = project.editing ? validateTimelinePlan(draft, project.editing) : undefined
+  const validation = project.editing
+    ? validateTimelinePlan(draft, project.editing, project.observations)
+    : undefined
   const current = useRef({
     draft,
     revision,
@@ -115,19 +120,16 @@ export function useClipCorrection(ownerId: string, project: ClipProject) {
         // newer local edits remain queued against the new optimistic revision.
         if (clipDraftKey(current.current.draft) === key) {
           dispatch({ type: 'adopt', plan: result.editing.plan })
-        }
+        } else dispatch({ type: 'acknowledge', plan: result.editing.plan })
+        const queued = acknowledgeClipCuts(current.current.draft, result.editing.plan)
         const acceptedKey = clipDraftKey(result.editing.plan)
         current.current = {
           ...current.current,
-          draft:
-            clipDraftKey(current.current.draft) === key
-              ? result.editing.plan
-              : current.current.draft,
+          draft: clipDraftKey(current.current.draft) === key ? result.editing.plan : queued,
           baseline: acceptedKey,
           revision: result.editPlanRevision,
           dirty:
-            clipDraftKey(current.current.draft) !== key &&
-            clipDraftKey(current.current.draft) !== acceptedKey,
+            clipDraftKey(current.current.draft) !== key && clipDraftKey(queued) !== acceptedKey,
         }
         setBaseline(acceptedKey)
         setRevision(result.editPlanRevision)
@@ -197,6 +199,39 @@ export function useClipCorrection(ownerId: string, project: ClipProject) {
     },
   })
   return {
+    addCut: async (selection: ClipAddCutSelection, retainedSound?: boolean) => {
+      await flush()
+      const plan = current.current.draft
+      const selected = timeline.selection
+      const originId =
+        selected?.kind === 'cut'
+          ? selected.id
+          : plan.elements?.find((text) => text.instanceId === selected?.id)?.cutId
+      const origin = plan.cuts.find((c) => c.id === originId) ?? plan.cuts[0]
+      if (
+        !origin ||
+        !selection.segment.focal ||
+        selection.segment.usability === 'unusable' ||
+        selection.startMs < selection.segment.startMs ||
+        selection.endMs > selection.segment.endMs
+      )
+        return
+      change({
+        type: 'addCut',
+        id: createCutId(),
+        originCutId: origin.id,
+        sourceId: selection.source.id,
+        fingerprint: selection.source.fingerprint,
+        startMs: selection.startMs,
+        endMs: selection.endMs,
+        focal: selection.segment.focal,
+        retainedSound,
+      })
+    },
+    splitCut: async (id: string, sourceMs: number) => {
+      await flush()
+      change({ type: 'splitCut', id, newId: createCutId(), sourceMs })
+    },
     draft,
     timeline,
     dispatch,

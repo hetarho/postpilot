@@ -75,9 +75,15 @@ func TestRetainedObservationDetailIsOwnerScopedAndStructured(t *testing.T) {
 		t.Fatalf("a legacy record was given an invented status: %v", legacy)
 	}
 	wire, _ := protojson.Marshal(got)
-	for _, forbidden := range []string{"private-result-key", "Focal", "focal", "readableText", "https://", "analysisJson", "confidence"} {
+	for _, forbidden := range []string{"private-result-key", "readableText", "https://", "analysisJson", "confidence"} {
 		if strings.Contains(string(wire), forbidden) {
 			t.Fatalf("private/unsupported detail %q", forbidden)
+		}
+	}
+	for i, scene := range a[0].Segments {
+		want := clip.ObservedCutFocal(scene)
+		if got.Sources[0].Segments[i].GetFocal().GetX() != want.X || got.Sources[0].Segments[i].GetFocal().GetY() != want.Y {
+			t.Fatal("owner add preview lost canonical focal", got.Sources[0].Segments[i])
 		}
 	}
 	listed, err := h.ListClipProjects(ctx, connect.NewRequest(&v1.ListClipProjectsRequest{}))

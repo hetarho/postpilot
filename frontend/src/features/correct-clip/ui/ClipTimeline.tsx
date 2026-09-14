@@ -5,6 +5,7 @@ import {
   clipSeconds,
   timelineCuts,
   clipTextTracks,
+  cutRate,
   type ClipEditPlan,
   type ClipSelection,
 } from '@/entities/clip-project'
@@ -101,6 +102,9 @@ export function ClipTimeline({
                     )}
                     <Typography as="span" variant="meta" className="truncate">
                       {t('correction.cut', { number: index + 1 })}
+                    </Typography>
+                    <Typography as="span" variant="meta">
+                      {cutRate(cut) / 1000}×
                     </Typography>
                   </span>
                 </Button>

@@ -1,4 +1,4 @@
-import type { ClipEditPlan, RetainedClipSource } from './edit-plan'
+import { cutRate, type ClipEditPlan, type RetainedClipSource } from './edit-plan'
 
 /** certain | uncertain | unknown, and usable | unusable, exactly as recorded.
  * 'unspecified' is what a record written before the v2 contract carries: the
@@ -7,6 +7,7 @@ export type ClipObservationCertainty = 'certain' | 'uncertain' | 'unknown' | 'un
 export type ClipObservationUsability = 'usable' | 'unusable' | 'unspecified'
 
 export interface ClipObservedSegment {
+  focal?: { x: number; y: number }
   startMs: number
   endMs: number
   event: string
@@ -21,6 +22,12 @@ export interface ClipObservedSegment {
 export interface ClipSourceObservation {
   source: RetainedClipSource
   segments: ClipObservedSegment[]
+}
+export interface ClipAddCutSelection {
+  source: RetainedClipSource
+  segment: ClipObservedSegment
+  startMs: number
+  endMs: number
 }
 export interface ClipObservations {
   status: 'available' | 'empty' | 'unavailable'
@@ -38,7 +45,9 @@ export function observationCutUsage(
     if (cut.sourceId !== source.id || cut.fingerprint !== source.fingerprint) return []
     const startMs = Math.max(segment.startMs, cut.startMs)
     const endMs = Math.min(segment.endMs, cut.endMs)
-    return startMs < endMs ? [{ cutId: cut.id, number: index + 1, startMs, endMs }] : []
+    return startMs < endMs
+      ? [{ cutId: cut.id, number: index + 1, startMs, endMs, playbackRatePermille: cutRate(cut) }]
+      : []
   })
 }
 

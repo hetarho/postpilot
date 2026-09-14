@@ -63,7 +63,7 @@ export function toClipEditingState(value: ProtoClipEditingState): ClipEditingSta
         // `copies` is the authority; a server that still sends only the one
         // `copy` is read exactly as it was before CDS-43.
         const wire =
-          c.copies.length > 0
+          value.plan!.nativeComposition || c.copies.length > 0
             ? c.copies
             : [
                 c.copy ?? {

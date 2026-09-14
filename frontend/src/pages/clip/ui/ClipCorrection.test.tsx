@@ -321,3 +321,69 @@ it('snaps range gestures to the output frame grid while precise typing retains m
   expect(screen.getByLabelText('원본 시작 (초)')).toHaveValue(0.124)
   expect(screen.getByRole('button', { name: '현재 프레임을 시작으로' })).toBeDisabled()
 })
+
+it('adds observed footage through the page, then saves split/rate operations and their undo', async () => {
+  const project = fixture()
+  const source = project.editing!.sources[0]
+  project.observations = {
+    status: 'available',
+    sources: [
+      {
+        source,
+        segments: [
+          {
+            startMs: 12000,
+            endMs: 15000,
+            event: 'extra footage',
+            action: '',
+            motion: '',
+            speech: '',
+            subjects: [],
+            quality: '',
+            certainty: 'certain',
+            usability: 'usable',
+            focal: { x: 0.3, y: 0.6 },
+          },
+        ],
+      },
+    ],
+  }
+  const planWrites: NonNullable<FakeClipsOptions['planWrites']> = []
+  await mount({ projects: [project], planWrites })
+  await userEvent.click(screen.getByRole('button', { name: /관찰 구간 1개 자세히 보기/ }))
+  await userEvent.click(screen.getByRole('button', { name: '이 구간을 컷으로 추가' }))
+  await waitFor(() => expect(planWrites).toHaveLength(1))
+  const added = planWrites[0].plan.cuts[1]
+  expect(added.id).toMatch(
+    /^owner-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+  )
+  expect(added).toMatchObject({
+    startMs: 12000,
+    endMs: 15000,
+    playbackRatePermille: 1000,
+    copies: [],
+    chips: [],
+    focal: { x: 0.3, y: 0.6 },
+  })
+  expect(screen.getByText(/2번 컷에 사용 · 1× · 원본 0:12–0:15/)).toBeVisible()
+  await userEvent.click(screen.getByRole('combobox', { name: /재생 속도/ }))
+  await userEvent.click(screen.getByRole('option', { name: '2×' }))
+  await waitFor(() => expect(planWrites).toHaveLength(2))
+  expect(planWrites[1].plan.cuts[1].playbackRatePermille).toBe(2000)
+  fireEvent.change(screen.getByRole('spinbutton', { name: '나눌 원본 시간 (초)' }), {
+    target: { value: '13.5' },
+  })
+  await userEvent.click(screen.getByRole('button', { name: '입력한 시간에서 나누기' }))
+  await waitFor(() => expect(planWrites).toHaveLength(3))
+  expect(planWrites[2].plan.cuts).toHaveLength(4)
+  expect(planWrites[2].plan.cuts[2]).toMatchObject({
+    startMs: 13500,
+    endMs: 15000,
+    playbackRatePermille: 2000,
+    transitionMs: 0,
+  })
+  await userEvent.click(screen.getByRole('button', { name: '실행 취소' }))
+  await waitFor(() => expect(planWrites).toHaveLength(4))
+  expect(planWrites[3].plan.cuts).toHaveLength(3)
+  expect(planWrites.map((w) => w.revision)).toEqual([1, 2, 3, 4])
+})
