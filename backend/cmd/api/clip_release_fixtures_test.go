@@ -476,9 +476,13 @@ func (p *releaseProvider) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// what the design system reads to place a caption (T105).
 		content = map[string]any{"source_id": metadata["source_id"], "chunk_index": metadata["chunk_index"], "segments": []any{map[string]any{
 			"start_ms": 0, "end_ms": metadata["chunk_duration_ms"], "event": "synthetic scene",
+			"action": "the pattern moves steadily", "motion": "slow horizontal drift",
 			"subjects": []string{"test pattern"}, "speech": "synthetic speech", "quality": "usable",
 			"focal": map[string]float64{"x": .5, "y": .5}, "scene": "scenery", "readable_text": false,
 			"subject": map[string]float64{"x": .3, "y": .3, "width": .4, "height": .4},
+			// A legible moving pattern: anything less certain or less usable would
+			// authorize no item fact and change what the rest of the smoke exercises.
+			"certainty": "certain", "usability": "usable",
 		}}}
 		if p.mode == "detailed-input" {
 			content.(map[string]any)["segments"].([]any)[0].(map[string]any)["event"] = strings.Repeat("Synthetic moving test pattern. ", 20)
@@ -505,11 +509,13 @@ func (p *releaseProvider) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if p.mode == "seeked cut" {
 			offset = 1000
 		}
+		// Every cut states its own fixed playback rate since CLIP-98; 1x is the
+		// rate this synthetic footage is recorded at and compared against.
 		var fixtureCuts []any
 		for i := 0; i < 3; i++ {
 			fixtureCuts = append(fixtureCuts, map[string]any{
 				"id": fmt.Sprintf("fixture-cut-%d", i), "source_id": source,
-				"start_ms": offset + i*5000, "end_ms": offset + (i+1)*5000, "volume": 1,
+				"start_ms": offset + i*5000, "end_ms": offset + (i+1)*5000, "volume": 1, "rate_permille": 1000,
 				"focal": map[string]float64{"x": .5, "y": .5}, "chips": []string{},
 				"caption": map[string]any{"text": "", "start_ms": 0, "end_ms": 5000, "short_text": "", "keyword": ""},
 			})
@@ -527,7 +533,7 @@ func (p *releaseProvider) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			for i, analysis := range analyses {
 				cuts = append(cuts, map[string]any{
 					"id": fmt.Sprintf("cut-%d", i), "source_id": analysis.(map[string]any)["source_id"],
-					"start_ms": 0, "end_ms": lengths[i], "volume": 1,
+					"start_ms": 0, "end_ms": lengths[i], "volume": 1, "rate_permille": 1000,
 					"focal": map[string]float64{"x": .5, "y": .5}, "chips": []string{"위치"},
 					"caption": map[string]any{"text": fmt.Sprintf("한글 장면 %d", i+1), "start_ms": 0, "end_ms": lengths[i], "short_text": fmt.Sprintf("장면 %d", i+1), "keyword": ""},
 				})

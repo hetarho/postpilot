@@ -40,6 +40,7 @@
 | diff-260908 | converted@260908 |
 | clip-project-update-260914 | converted@260914 |
 | clip-failure-visibility-260914 | converted@260914 |
+| clip-release-smoke-260914 | ready@260914 |
 
 ## tasks
 | id | title | ssot | dep | st |
@@ -61,6 +62,10 @@
 - T110 remains owner-blocked and must refresh CLIP@19 / CDS@13 before resuming; T008 remains owner-dependent for its separate local Naver publication verification.
 
 ## log
+- 260914 T158 done (smk); the release smoke's synthetic answers now state the v2 observation fields and CLIP-98's per-cut rate, so the production-image gate stops refusing at the first chunk — the image gate itself did not run here (no Docker daemon), CI's build is the proof
+- 260914 T158 claimed (smk)
+- 260914 create-task review/clip-release-smoke-260914 done; T158 repairs the production-image gate, F2 left open for ARCH
+- 260914 create-task review/clip-release-smoke-260914 start
 - 260914 T147 done (asm); one timestamp-scaling rate chain with pitch-preserved atempo, the whole render clock on transformed time, audio only from owner-enabled sources and a cadence recheck that refuses before FFmpeg
 - 260914 T147 refreshed to CLIP@19 (asm); r19 changes item-group declaration and pre-work admission, none of which this task's rendering decisions
 - 260914 flaky under full-suite load, reproduced on c02fa07 before T145; internal/clip/store generation/recovery tests intermittently fail with "clip sources are not available in this state" while passing in isolation
@@ -77,7 +82,3 @@
 - 260914 T146 refreshed to CDS@13 (asm); the r13 CDS-52 delta is delivered-length render conformance and touches no assembly-writer decision
 - 260914 T146 claimed (asm)
 - 260914 T145 done (asm); clip-observation-v2 records every chunk completely with action/motion and an explicit certainty/usability, refuses instead of clamping model times, and never promotes v1 evidence into a v2 generation
-- 260914 T153 claimed (disc)
-- 260914 create-task review/clip-project-update-260914 done; T153 fixes composition-project update admission
-- 260914 create-task review/clip-project-update-260914 start
-- 260914 T145 claimed (asm)
