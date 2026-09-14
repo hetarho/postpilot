@@ -32,6 +32,7 @@ import type { ClipRecipe } from '@/entities/clip-template'
 import { CLIP_DESIGN } from '@/shared/config'
 import {
   clipPlanToProto,
+  withSourceSound,
   compositionInputsToProto,
   toProjectComposition,
   toClipEditingState,
@@ -116,6 +117,8 @@ export interface FakeClipsOptions {
   /** A verifier refusal, as the server's stable reason (CDS-52, LANG-21). */
   renderRefusal?: AppFailureReason
   planWrites?: Array<{ revision: number; plan: ClipEditPlan }>
+  soundWrites?: Array<{ sourceId: string; expectedRevision: number; retainOriginalAudio: boolean }>
+  soundFails?: boolean
   planSaveConflict?: boolean
   projectWrites?: ClipProjectDraft[]
   projectSaveFails?: boolean
@@ -437,6 +440,32 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       },
       expiresAt: options.quoteExpiresAt ?? '2099-01-01T00:00:00Z',
     })
+  })
+  router.rpc(ClipService.method.setClipSourceOriginalSound, (req) => {
+    options.calls?.push('SetClipSourceOriginalSound')
+    options.soundWrites?.push(req)
+    const p = projects.get(req.projectId),
+      b = batches.get(req.batchId)
+    const source = b?.sources.find(
+      (s) => s.id === req.sourceId && s.metadata?.fingerprint === req.expectedFingerprint,
+    )
+    if (!p || !b?.current || !source) throw connectAppError('CLIP_NOT_FOUND', Code.NotFound)
+    if (options.soundFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
+    if (req.expectedRevision !== (p.editPlanRevision ?? 0))
+      throw connectAppError('CLIP_PLAN_CONFLICT', Code.Aborted)
+    if (source.retainOriginalAudio !== req.retainOriginalAudio) {
+      source.retainOriginalAudio = req.retainOriginalAudio
+      if (p.editing) {
+        if (p.editing.plan.cuts.some((c) => c.sourceId === source.id))
+          p.editing.plan = withSourceSound(p.editing.plan, {
+            sourceId: source.id,
+            fingerprint: req.expectedFingerprint,
+            retainOriginalAudio: req.retainOriginalAudio,
+          })
+        p.editPlanRevision = (p.editPlanRevision ?? 0) + 1
+      }
+    }
+    return { project: projectProto(p), batch: b }
   })
   router.rpc(ClipService.method.saveClipEditPlan, (req) => {
     options.calls?.push('SaveClipEditPlan')

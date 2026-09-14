@@ -148,6 +148,10 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
   const required =
     step === 'refine' && plan ? requiredClipSources(correction.draft, plan.sources) : undefined
   const upload = useClipSourceUpload(project.id, required, !project.finalized)
+  const acceptSoundBatch = upload.acceptSoundBatch
+  useEffect(() => {
+    if (correction.soundBatch) acceptSoundBatch(correction.soundBatch)
+  }, [correction.soundBatch, acceptSoundBatch])
   const generation = useGenerateClip(ownerId, project, upload.attempt?.jobId)
   const ownership = {
     begin: upload.beginAttempt,
@@ -192,6 +196,17 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
   useEffect(() => {
     if (project.finalized) discardClipDraftQueue(project.id)
   }, [project.finalized, project.id])
+  const soundControl = {
+    value: correction.soundValue,
+    change: correction.setSourceSound,
+    disabled: pending || !!project.finalized,
+    pending: correction.pending,
+    failed: correction.hasUnsavedSound && !!correction.failure,
+    retry: () => {
+      if (correction.failure?.reason === 'CLIP_PLAN_CONFLICT') correction.reapply()
+      else void correction.save()
+    },
+  }
   const correctionStatus: CorrectionStatus = correction.dirty
     ? 'dirty'
     : project.editPlanRevision > project.renderedPlanRevision
@@ -248,6 +263,7 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
           onApprove={(quote) => {
             void save
               .flush()
+              .then(() => correction.flush())
               .then(() => generation.start(upload.readyBatch, ready, quote, ownership))
               .catch(() => undefined)
           }}
@@ -261,6 +277,7 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
       )}
       <ClipSourcePicker
         upload={upload}
+        sound={soundControl}
         disabled={!uploadAllowed || generation.busy || finalization.busy}
         processing={generation.busy}
       />
@@ -309,7 +326,7 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
           {...controls}
           projectId={project.id}
           revision={correction.revision}
-          plan={correction.draft}
+          plan={correction.previewPlan}
           ratio={project.ratio}
           sources={plan.sources}
           resolvePlayback={upload.ensurePlayback}
@@ -370,6 +387,7 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
           </section>
           <ClipSourcePicker
             upload={upload}
+            sound={soundControl}
             correction
             disabled={
               correction.dirty ||

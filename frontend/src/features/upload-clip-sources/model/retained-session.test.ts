@@ -206,3 +206,50 @@ it('keeps an in-flight playback request valid across metadata refresh and accept
   expect(session.getSnapshot().phase).toBe('owned')
   expect(session.getSnapshot().entries[0]?.previewURL).toContain('/live')
 })
+
+it('projects default/reopened/inherited sound and applies only an owned matching batch acknowledgment', async () => {
+  const { session, batch, metadata } = retainedFixture()
+  await session.refreshRetained()
+  expect(session.getSnapshot().entries[0]).toMatchObject({
+    batchId: batch.id,
+    current: true,
+    retainOriginalAudio: false,
+  })
+  batch.sources[0].retainOriginalAudio = true
+  await session.refreshRetained()
+  expect(session.getSnapshot().entries[0].retainOriginalAudio).toBe(true)
+  await session.select([new File(['video'], metadata.filename)])
+  expect(session.getSnapshot().entries[0]).toMatchObject({
+    sourceId: 'source',
+    retainOriginalAudio: true,
+  })
+  const changed = structuredClone(batch)
+  changed.sources[0].retainOriginalAudio = false
+  session.acceptSoundBatch({ ...changed, projectId: 'foreign' })
+  expect(session.getSnapshot().entries[0].retainOriginalAudio).toBe(true)
+  session.acceptSoundBatch(changed)
+  expect(session.getSnapshot().entries[0].retainOriginalAudio).toBe(false)
+  expect(session.getSnapshot().readyBatch?.sources[0].retainOriginalAudio).toBe(false)
+  expect(session.getSnapshot().entries[0].previewURL).toBe('blob:local-original')
+})
+
+it('does not let a retained read started before a sound acknowledgment restore the old setting', async () => {
+  const { session, pipeline, batch } = retainedFixture()
+  await session.refreshRetained()
+  const old = structuredClone(batch)
+  let finish!: (value: ClipSourceBatch[]) => void
+  pipeline.retained.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve
+      }),
+  )
+  const read = session.refreshRetained()
+  const changed = structuredClone(batch)
+  changed.sources[0].retainOriginalAudio = true
+  session.acceptSoundBatch(changed)
+  finish([old])
+  await read
+  expect(session.getSnapshot().entries[0].retainOriginalAudio).toBe(true)
+  expect(session.getSnapshot().readyBatch?.sources[0].retainOriginalAudio).toBe(true)
+})

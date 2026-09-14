@@ -38,6 +38,9 @@ export interface SourcePipeline {
 export interface LocalClipSource {
   file?: File
   sourceId?: string
+  batchId?: string
+  current?: boolean
+  retainOriginalAudio?: boolean
   retentionExpiresAt?: string
   playbackExpiresAt?: string
   availability?: ClipSourceAvailability
@@ -82,6 +85,7 @@ export class ClipSourceSession {
   private active = false
   private epoch = 0
   private mediaEpoch = 0
+  private soundEpoch = 0
   private playbackController = new AbortController()
   private controller?: AbortController
   private batchId?: string
@@ -122,16 +126,17 @@ export class ClipSourceSession {
       return Promise.resolve()
     if (this.refreshing) return this.refreshing
     const epoch = this.epoch
+    const soundEpoch = this.soundEpoch
     const controller = new AbortController()
     this.retainedController?.abort()
     this.retainedController = controller
     const request = (async () => {
       try {
         const batches = await this.pipeline.retained!(this.projectId, controller.signal)
-        if (!this.current(epoch) || this.attempt) return
+        if (!this.current(epoch) || this.attempt || soundEpoch !== this.soundEpoch) return
         const current = batches.find((b) => b.current)
         const seen = new Set<string>()
-        for (const batch of batches)
+        for (const batch of [...batches].sort((a, b) => Number(b.current) - Number(a.current)))
           for (const source of batch.sources) {
             const fp = source.metadata.fingerprint
             if (seen.has(fp)) continue
@@ -141,6 +146,9 @@ export class ClipSourceSession {
               ...prior,
               metadata: source.metadata,
               sourceId: source.id,
+              batchId: batch.id,
+              current: batch.current,
+              retainOriginalAudio: source.retainOriginalAudio,
               previewURL:
                 prior?.file || prior?.sourceId === source.id ? (prior?.previewURL ?? '') : '',
               percent: source.state === 'ready' ? 100 : 0,
@@ -186,6 +194,28 @@ export class ClipSourceSession {
     })
     this.refreshing = request
     return request
+  }
+  acceptSoundBatch = (batch: ClipSourceBatch) => {
+    if (!this.active || batch.projectId !== this.projectId) return
+    this.soundEpoch++
+    for (const source of batch.sources) {
+      const entry = this.entries.get(source.metadata.fingerprint)
+      if (entry?.batchId !== batch.id || entry.sourceId !== source.id) continue
+      this.entries.set(source.metadata.fingerprint, {
+        ...entry,
+        retainOriginalAudio: source.retainOriginalAudio,
+        retentionExpiresAt: source.retentionExpiresAt,
+        availability: source.availability,
+      })
+    }
+    this.publish(this.state.phase, {
+      summaries: this.state.summaries,
+      error: this.state.error,
+      readyBatch:
+        this.state.readyBatch?.id === batch.id && batch.state === 'ready'
+          ? { ...batch, state: 'ready' }
+          : this.state.readyBatch,
+    })
   }
   ensurePlayback = (fingerprint: string, refresh = false): Promise<string> => {
     const entry = this.entries.get(fingerprint)
@@ -454,6 +484,9 @@ export class ClipSourceSession {
         this.entries.set(source.metadata.fingerprint, {
           ...entry,
           sourceId: source.id,
+          batchId: confirmed.id,
+          current: confirmed.current,
+          retainOriginalAudio: lease?.retainOriginalAudio,
           percent: 100,
           confirmed: true,
           retentionExpiresAt: lease?.retentionExpiresAt,

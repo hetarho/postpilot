@@ -19,12 +19,34 @@ export function ClipSourcePicker({
   processing = false,
   correction = false,
   readOnly = false,
+  sound,
 }: {
   upload: ReturnType<typeof useClipSourceUpload>
   disabled?: boolean
   processing?: boolean
   correction?: boolean
   readOnly?: boolean
+  sound?: {
+    value: (source: {
+      batchId: string
+      sourceId: string
+      fingerprint: string
+      retainOriginalAudio: boolean
+    }) => boolean
+    change: (
+      source: {
+        batchId: string
+        sourceId: string
+        fingerprint: string
+        retainOriginalAudio: boolean
+      },
+      enabled: boolean,
+    ) => void
+    disabled?: boolean
+    pending?: boolean
+    failed?: boolean
+    retry: () => void
+  }
 }) {
   const { t } = useTranslation('clips')
   const inputId = useId()
@@ -32,6 +54,22 @@ export function ClipSourcePicker({
   const locked = disabled || !!upload.attempt
   const error = upload.error
   const [selected, setSelected] = useState('')
+  const [now, setNow] = useState(Date.now)
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const refresh = () => {
+      const time = Date.now()
+      setNow(time)
+      const expires = upload.entries
+        .map((e) => Date.parse(e.retentionExpiresAt ?? ''))
+        .filter((at) => at > time)
+      if (!expires.length) return
+      const delay = Math.min(...expires) - time
+      if (delay <= 2 ** 31 - 1) timer = setTimeout(refresh, delay)
+    }
+    refresh()
+    return () => clearTimeout(timer)
+  }, [upload.entries])
   const [loadingSources, setLoadingSources] = useState(readOnly)
   const [failedPreview, setFailedPreview] = useState<string>()
   const refreshRetained = upload.refreshRetained
@@ -177,9 +215,57 @@ export function ClipSourcePicker({
             label={t('source.selected')}
             selected={selectedEntry.metadata.fingerprint}
             onSelect={setSelected}
+            onSoundChange={
+              !readOnly && sound
+                ? (fingerprint, enabled) => {
+                    const entry = upload.entries.find((e) => e.metadata.fingerprint === fingerprint)
+                    if (
+                      !entry?.sourceId ||
+                      !entry.batchId ||
+                      !entry.current ||
+                      sound.disabled ||
+                      busy ||
+                      upload.attempt ||
+                      entry.availability !== 'available' ||
+                      !entry.retentionExpiresAt ||
+                      Date.parse(entry.retentionExpiresAt) <= Date.now()
+                    )
+                      return
+                    sound.change(
+                      {
+                        batchId: entry.batchId,
+                        sourceId: entry.sourceId,
+                        fingerprint,
+                        retainOriginalAudio: entry.retainOriginalAudio ?? false,
+                      },
+                      enabled,
+                    )
+                  }
+                : undefined
+            }
             sources={upload.entries.map((entry) => ({
               ...entry.metadata,
               previewURL: entry.previewURL,
+              retainOriginalAudio:
+                entry.sourceId && entry.batchId && sound
+                  ? sound.value({
+                      batchId: entry.batchId,
+                      sourceId: entry.sourceId,
+                      fingerprint: entry.metadata.fingerprint,
+                      retainOriginalAudio: entry.retainOriginalAudio ?? false,
+                    })
+                  : (entry.retainOriginalAudio ?? false),
+              soundDisabled:
+                sound?.disabled ||
+                busy ||
+                !!upload.attempt ||
+                !entry.current ||
+                !entry.confirmed ||
+                !entry.sourceId ||
+                !entry.batchId ||
+                entry.availability !== 'available' ||
+                !entry.retentionExpiresAt ||
+                Date.parse(entry.retentionExpiresAt) <= now,
               status: readOnly
                 ? undefined
                 : entry.confirmed
@@ -187,6 +273,14 @@ export function ClipSourcePicker({
                   : t('source.uploadProgress', { percent: entry.percent }),
             }))}
           />
+          {!readOnly && sound?.failed && (
+            <div role="alert" className="space-y-2">
+              <Typography variant="body">{t('source.soundFailed')}</Typography>
+              <Button variant="secondary" pending={sound.pending} onClick={sound.retry}>
+                {t('source.soundRetry')}
+              </Button>
+            </div>
+          )}
           {!readOnly && selectedEntry.retentionExpiresAt && (
             <Typography variant="meta" className="text-content-secondary">
               {t('source.retainedUntil', {

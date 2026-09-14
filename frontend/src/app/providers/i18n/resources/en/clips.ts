@@ -687,6 +687,11 @@ export const clips = {
     closePreview: 'Close',
   },
   source: {
+    originalSound: 'Keep original sound',
+    originalSoundName: 'Keep original sound for {{filename}}',
+    soundFailed:
+      'The sound setting could not be saved. The previous setting is shown; your edits and intended setting are kept for retry.',
+    soundRetry: 'Retry sound setting',
     inspect: 'Select {{filename}}',
     selected: 'Selected source videos',
     position: 'Selected {{current}} / {{total}} · Scroll sideways to browse',

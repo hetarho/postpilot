@@ -7,6 +7,7 @@ import {
   timelineCuts,
   outputToSourceMs,
   sourceToOutputMs,
+  type ClipSourceAudioSetting,
   type ClipEdit,
   type ClipEditPlan,
   type ClipEditableText,
@@ -20,6 +21,7 @@ export type ClipSelection =
   { kind: 'cut'; id: string } | { kind: 'text'; id: string; phrase?: number }
 export type TimelineEdit =
   | ClipEdit
+  | { type: 'sourceSound'; setting: ClipSourceAudioSetting }
   | {
       type: 'text'
       id: string
@@ -207,7 +209,9 @@ export function associationAffectsText(text: ClipEditableText, changed: ClipSour
 
 export function applyTimelineEdit(plan: ClipEditPlan, edit: TimelineEdit): ClipEditPlan {
   const next = copyClipPlan(plan)
-  if (edit.type === 'text') {
+  if (edit.type === 'sourceSound') {
+    next.sourceAudio = withSourceSound(plan, edit.setting).sourceAudio
+  } else if (edit.type === 'text') {
     next.elements = next.elements?.map((text) => {
       if (text.instanceId !== edit.id) return text
       const changedContent =
@@ -257,6 +261,54 @@ export function applyTimelineEdit(plan: ClipEditPlan, edit: TimelineEdit): ClipE
   return next
 }
 
+/** Missing snapshots retain legacy inference; a new, unused source defaults off. */
+export function clipSourceSound(
+  plan: ClipEditPlan,
+  source: { sourceId: string; fingerprint: string },
+  fallback = false,
+) {
+  const setting = plan.sourceAudio?.find(
+    (s) => s.sourceId === source.sourceId && s.fingerprint === source.fingerprint,
+  )
+  if (setting) return setting.retainOriginalAudio
+  if (plan.sourceAudio) return fallback
+  const cuts = plan.cuts.filter(
+    (c) => c.sourceId === source.sourceId && c.fingerprint === source.fingerprint,
+  )
+  return cuts.length ? cuts.some((c) => c.volumePermille > 0) : fallback
+}
+
+export function withSourceSound(plan: ClipEditPlan, setting: ClipSourceAudioSetting): ClipEditPlan {
+  setting = {
+    sourceId: setting.sourceId,
+    fingerprint: setting.fingerprint,
+    retainOriginalAudio: setting.retainOriginalAudio,
+  }
+  const settings = plan.sourceAudio ?? [
+    ...new Map(
+      plan.cuts.map((c) => [
+        c.fingerprint,
+        {
+          sourceId: c.sourceId,
+          fingerprint: c.fingerprint,
+          retainOriginalAudio: clipSourceSound(plan, c),
+        },
+      ]),
+    ).values(),
+  ]
+  const found = settings.some(
+    (s) => s.sourceId === setting.sourceId && s.fingerprint === setting.fingerprint,
+  )
+  return {
+    ...plan,
+    sourceAudio: found
+      ? settings.map((s) =>
+          s.sourceId === setting.sourceId && s.fingerprint === setting.fingerprint ? setting : s,
+        )
+      : [...settings, setting],
+  }
+}
+
 export function clipDraftKey(plan: ClipEditPlan) {
   return JSON.stringify(plan, (key, value: unknown) => {
     if (
@@ -270,6 +322,10 @@ export function clipDraftKey(plan: ClipEditPlan) {
       ].includes(key)
     )
       return undefined
+    // Object insertion order can change across a transport round trip or clone.
+    // Only semantic changes should enter history or schedule another save.
+    if (value && typeof value === 'object' && !Array.isArray(value))
+      return Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b)))
     return typeof value === 'number' && !Number.isFinite(value) ? String(value) : value
   })
 }

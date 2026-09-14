@@ -667,6 +667,11 @@ export const clips = {
     closePreview: '닫기',
   },
   source: {
+    originalSound: '원본 소리 유지',
+    originalSoundName: '{{filename}} 원본 소리 유지',
+    soundFailed:
+      '소리 설정을 저장하지 못했어요. 이전 설정으로 돌아갔으며, 편집 내용과 변경할 설정은 다시 시도할 때까지 보관해요.',
+    soundRetry: '소리 설정 다시 저장',
     inspect: '{{filename}} 선택',
     selected: '선택한 원본 영상',
     position: '선택 {{current}} / {{total}} · 좌우로 넘겨 보세요',

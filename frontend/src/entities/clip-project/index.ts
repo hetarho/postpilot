@@ -109,7 +109,7 @@ export {
   useClipCapabilities,
 } from './api/composition'
 
-export { getClipSources, getClipSourcePlayback } from './api/sources'
+export { getClipSources, getClipSourcePlayback, setClipSourceOriginalSound } from './api/sources'
 export type { ClipSourceAvailability } from './model/types'
 
 export { ClipDraftPreview } from './ui/ClipDraftPreview'
@@ -124,6 +124,8 @@ export {
   applyTimelineEdit,
   acknowledgeClipCuts,
   clipDraftKey,
+  clipSourceSound,
+  withSourceSound,
   selectedTime,
   snapClipTime,
   clipSeconds,

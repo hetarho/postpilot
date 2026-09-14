@@ -1,4 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest'
+import { create } from '@bufbuild/protobuf'
+import { ClipSourceBatchSchema } from '@/shared/api'
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { initializeI18n } from '@/app/providers/i18n'
@@ -386,4 +388,49 @@ it('adds observed footage through the page, then saves split/rate operations and
   await waitFor(() => expect(planWrites).toHaveLength(4))
   expect(planWrites[3].plan.cuts).toHaveLength(3)
   expect(planWrites.map((w) => w.revision)).toEqual([1, 2, 3, 4])
+})
+
+it('shares retained sound across both steps, stales the old render and offers credit-free rerender', async () => {
+  const project = fixture()
+  project.editing!.plan.sourceAudio = project.editing!.plan.cuts.map((c) => ({
+    sourceId: c.sourceId,
+    fingerprint: c.fingerprint,
+    retainOriginalAudio: false,
+  }))
+  const batch = create(ClipSourceBatchSchema, {
+    id: 'retained',
+    projectId: 'clip',
+    current: true,
+    state: 'ready',
+    expiresAt: '2099-01-01T00:00:00Z',
+    sources: project.editing!.sources.map((s) => ({
+      id: s.id,
+      state: 'ready',
+      availability: 'available',
+      retentionExpiresAt: '2099-01-01T00:00:00Z',
+      metadata: { ...s, contentType: 'video/mp4', bytes: 5n },
+    })),
+  })
+  const soundWrites: NonNullable<FakeClipsOptions['soundWrites']> = [],
+    calls: string[] = []
+  await mount({ projects: [project], retainedBatches: [batch], soundWrites, calls })
+  const toggle = await screen.findByRole('switch', { name: /source-a.mp4 원본 소리 유지/ })
+  await waitFor(() => expect(toggle).toBeEnabled())
+  expect(toggle).not.toBeChecked()
+  await userEvent.click(toggle)
+  await waitFor(() => expect(soundWrites).toHaveLength(1))
+  await waitFor(() => expect(screen.getByRole('button', { name: '다시 렌더' })).toBeEnabled())
+  expect(screen.getByRole('link', { name: '렌더 1 다운로드' })).toBeVisible()
+  expect(calls).not.toContain('SaveClipEditPlan')
+  await goToStep('클립 생성')
+  expect(screen.getByRole('switch', { name: /source-a.mp4 원본 소리 유지/ })).toBeChecked()
+  await userEvent.click(screen.getByRole('switch', { name: /source-a.mp4 원본 소리 유지/ }))
+  await waitFor(() => expect(soundWrites).toHaveLength(2))
+  expect(soundWrites.map((w) => w.expectedRevision)).toEqual([1, 2])
+  expect(calls).not.toContain('StartClipGeneration')
+  expect(calls).not.toContain('QuoteClipGeneration')
+  await goToStep('클립 다듬기')
+  await userEvent.click(screen.getByRole('button', { name: '실행 취소' }))
+  await waitFor(() => expect(soundWrites).toHaveLength(3))
+  expect(soundWrites[2]).toMatchObject({ expectedRevision: 3, retainOriginalAudio: true })
 })

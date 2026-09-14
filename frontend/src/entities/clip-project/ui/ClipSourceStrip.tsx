@@ -1,7 +1,7 @@
 import { Film } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { formatDuration } from '@/shared/lib/video'
-import { Button, Typography } from '@/shared/ui'
+import { Button, Switch, Typography } from '@/shared/ui'
 
 interface SourceTile {
   fingerprint: string
@@ -9,6 +9,8 @@ interface SourceTile {
   durationMs: number
   previewURL?: string
   status?: string
+  retainOriginalAudio?: boolean
+  soundDisabled?: boolean
 }
 
 /** The same source selector serves current uploads and retained observations.
@@ -18,11 +20,13 @@ export function ClipSourceStrip({
   selected,
   onSelect,
   label,
+  onSoundChange,
 }: {
   sources: readonly SourceTile[]
   selected: string
   onSelect: (fingerprint: string) => void
   label: string
+  onSoundChange?: (fingerprint: string, enabled: boolean) => void
 }) {
   const { t } = useTranslation('clips')
   return (
@@ -70,6 +74,20 @@ export function ClipSourceStrip({
                 )}
               </span>
             </Button>
+            {onSoundChange && (
+              <label className="flex min-h-11 cursor-pointer items-center gap-2 px-2 py-3">
+                <Switch
+                  checked={source.retainOriginalAudio ?? false}
+                  aria-checked={source.retainOriginalAudio ?? false}
+                  aria-label={t('source.originalSoundName', { filename: source.filename })}
+                  disabled={source.soundDisabled}
+                  onChange={(event) => onSoundChange(source.fingerprint, event.target.checked)}
+                />
+                <Typography variant="meta" className="min-w-0 break-words">
+                  {t('source.originalSound')}
+                </Typography>
+              </label>
+            )}
           </li>
         ))}
       </ul>

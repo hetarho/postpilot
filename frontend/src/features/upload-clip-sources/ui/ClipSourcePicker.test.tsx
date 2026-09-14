@@ -8,6 +8,7 @@ import { ClipSourcePicker } from './ClipSourcePicker'
 function fixture(): ComponentProps<typeof ClipSourcePicker>['upload'] {
   return {
     phase: 'uploading',
+    acceptSoundBatch: vi.fn(),
     ensurePlayback: vi.fn(async () => 'blob:test'),
     refreshRetained: vi.fn(async () => {}),
     entries: ['one.mp4', 'two.mp4', 'three.mp4'].map((filename, index) => ({
@@ -159,3 +160,74 @@ it('opens an available original when the first retained entry is missing', async
   )
   expect(upload.ensurePlayback).not.toHaveBeenCalledWith('one.mp4')
 })
+
+it('keeps source selection/playback independent of the sibling keyboard sound switch and reports retry', async () => {
+  const upload = fixture()
+  upload.phase = 'ready'
+  upload.entries = upload.entries.map((entry, i) => ({
+    ...entry,
+    batchId: 'batch',
+    sourceId: String(i),
+    current: true,
+    confirmed: true,
+    availability: 'available',
+    retentionExpiresAt: '2099-01-01T00:00:00Z',
+    retainOriginalAudio: i === 1,
+  }))
+  const sound = {
+    value: (s: { retainOriginalAudio: boolean }) => s.retainOriginalAudio,
+    change: vi.fn(),
+    retry: vi.fn(),
+    failed: false,
+  }
+  const { rerender, container } = render(<ClipSourcePicker upload={upload} sound={sound} />)
+  const second = screen.getByRole('switch', { name: 'two.mp4 원본 소리 유지' })
+  expect(second).toBeChecked()
+  expect(second.closest('button')).toBeNull()
+  expect(screen.getByRole('switch', { name: 'one.mp4 원본 소리 유지' })).not.toBeChecked()
+  second.focus()
+  await userEvent.keyboard(' ')
+  expect(sound.change).toHaveBeenCalledWith(
+    expect.objectContaining({ sourceId: '1', batchId: 'batch', fingerprint: 'two.mp4' }),
+    false,
+  )
+  expect(screen.getByRole('button', { name: 'one.mp4 선택' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+  expect(container.querySelector('video[controls]')).toHaveAttribute('src', 'blob:one.mp4')
+  rerender(<ClipSourcePicker upload={upload} sound={{ ...sound, failed: true }} />)
+  await userEvent.click(screen.getByRole('button', { name: '소리 설정 다시 저장' }))
+  expect(sound.retry).toHaveBeenCalledOnce()
+  rerender(<ClipSourcePicker upload={upload} sound={sound} readOnly />)
+  expect(screen.queryByRole('switch')).not.toBeInTheDocument()
+})
+
+it.each(['running', 'unavailable', 'not-current', 'expired'])(
+  'refuses the %s source sound control',
+  async (reason) => {
+    const upload = fixture()
+    upload.phase = 'ready'
+    upload.entries = [
+      {
+        ...upload.entries[0],
+        batchId: 'batch',
+        sourceId: 'source',
+        current: reason !== 'not-current',
+        confirmed: true,
+        availability: reason === 'unavailable' ? 'missing' : 'available',
+        retentionExpiresAt: reason === 'expired' ? '2000-01-01T00:00:00Z' : '2099-01-01T00:00:00Z',
+      },
+    ]
+    const sound = {
+      value: () => false,
+      change: vi.fn(),
+      retry: vi.fn(),
+      disabled: reason === 'running',
+    }
+    render(<ClipSourcePicker upload={upload} sound={sound} />)
+    expect(screen.getByRole('switch')).toBeDisabled()
+    await userEvent.click(screen.getByRole('switch'))
+    expect(sound.change).not.toHaveBeenCalled()
+  },
+)

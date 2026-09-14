@@ -4,6 +4,10 @@ import { useTransport } from '@connectrpc/connect-query'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   clipPlanToProto,
+  clipSourceSound,
+  withSourceSound,
+  setClipSourceOriginalSound,
+  getClipSources,
   clipProjectsKey,
   clipDraftKey,
   copyClipPlan,
@@ -14,12 +18,20 @@ import {
   toClipProject,
   validateTimelinePlan,
   type ClipProject,
+  type ClipSourceBatch,
   type ClipEditPlan,
   type TimelineEdit,
   type ClipAddCutSelection,
 } from '@/entities/clip-project'
 import { ClipService, appFailureFromConnect } from '@/shared/api'
 import { CLIP_TIMELINE } from '@/shared/config'
+
+export interface ClipSoundSource {
+  sourceId: string
+  fingerprint: string
+  batchId: string
+  retainOriginalAudio: boolean
+}
 
 export function useClipCorrection(ownerId: string, project: ClipProject, createCutId = ownerCutId) {
   const transport = useTransport()
@@ -29,6 +41,8 @@ export function useClipCorrection(ownerId: string, project: ClipProject, createC
   const [baseline, setBaseline] = useState(() => clipDraftKey(initial))
   const [revision, setRevision] = useState(project.editPlanRevision)
   const [remoteConflict, setRemoteConflict] = useState(false)
+  const [soundBatch, setSoundBatch] = useState<ClipSourceBatch>()
+  const soundSources = useRef(new Map<string, ClipSoundSource>())
   const saving = useRef<Promise<number> | undefined>(undefined)
   const mounted = useRef(true)
   useEffect(() => {
@@ -64,14 +78,35 @@ export function useClipCorrection(ownerId: string, project: ClipProject, createC
     mutationFn: async ({
       plan,
       expectedRevision,
+      sound,
     }: {
       plan: ClipEditPlan
       expectedRevision: number
+      sound?: ClipSoundSource
     }) => {
+      if (sound) {
+        const { project: next, batch } = await setClipSourceOriginalSound(transport, {
+          projectId: project.id,
+          batchId: sound.batchId,
+          sourceId: sound.sourceId,
+          expectedFingerprint: sound.fingerprint,
+          retainOriginalAudio: sound.retainOriginalAudio,
+          expectedRevision,
+        })
+        if (mounted.current) setSoundBatch(batch)
+        return next
+      }
       const result = await createClient(ClipService, transport).saveClipEditPlan({
         projectId: project.id,
         expectedRevision,
-        plan: clipPlanToProto(plan),
+        plan: clipPlanToProto({
+          ...plan,
+          sourceAudio: plan.sourceAudio?.filter((setting) =>
+            plan.cuts.some(
+              (cut) => cut.sourceId === setting.sourceId && cut.fingerprint === setting.fingerprint,
+            ),
+          ),
+        }),
       })
       if (!result.project?.editing) throw new Error('Missing saved correction')
       return toClipProject(result.project)
@@ -90,12 +125,17 @@ export function useClipCorrection(ownerId: string, project: ClipProject, createC
     setRemoteConflict(false)
   }
   // Never let an older query response replace a newer accepted save or draft.
-  if (!mutation.isPending && project.editing && project.editPlanRevision > revision) {
+  if (
+    !saving.current &&
+    !mutation.isPending &&
+    project.editing &&
+    project.editPlanRevision > revision
+  ) {
     if (!dirty) adopt(project)
     else if (!remoteConflict) setRemoteConflict(true)
   }
   const change = (edit: TimelineEdit, group?: string) => {
-    if (!project.editing || project.finalized) return
+    if ((!project.editing && edit.type !== 'sourceSound') || active) return
     if (mutation.error && appFailureFromConnect(mutation.error).reason !== 'CLIP_PLAN_CONFLICT')
       mutation.reset()
     dispatch({ type: 'edit', edit, group, at: Date.now() })
@@ -105,8 +145,20 @@ export function useClipCorrection(ownerId: string, project: ClipProject, createC
     const submitted = current.current
     if (submitted.remoteConflict) return Promise.reject(new Error('Conflicting clip draft'))
     if (!submitted.dirty) return Promise.resolve(submitted.revision)
-    if (!submitted.valid || project.finalized)
+    const accepted = JSON.parse(submitted.baseline) as ClipEditPlan
+    const source = [...soundSources.current.values()].find(
+      (source) =>
+        clipSourceSound(submitted.draft, source, source.retainOriginalAudio) !==
+        clipSourceSound(accepted, source, source.retainOriginalAudio),
+    )
+    if ((!submitted.valid && !source) || active)
       return Promise.reject(new Error('Invalid clip draft'))
+    const sound = source
+      ? {
+          ...source,
+          retainOriginalAudio: clipSourceSound(submitted.draft, source, source.retainOriginalAudio),
+        }
+      : undefined
     const snapshot = copyClipPlan(submitted.draft)
     const key = clipDraftKey(snapshot)
     const operation = (async () => {
@@ -114,22 +166,43 @@ export function useClipCorrection(ownerId: string, project: ClipProject, createC
         const result = await mutation.mutateAsync({
           plan: snapshot,
           expectedRevision: submitted.revision,
+          sound,
         })
-        if (!mounted.current || !result.editing) throw new Error('Correction was unmounted')
-        // Typing remains enabled during IO. Accept only the submitted snapshot;
-        // newer local edits remain queued against the new optimistic revision.
-        if (clipDraftKey(current.current.draft) === key) {
-          dispatch({ type: 'adopt', plan: result.editing.plan })
-        } else dispatch({ type: 'acknowledge', plan: result.editing.plan })
-        const queued = acknowledgeClipCuts(current.current.draft, result.editing.plan)
-        const acceptedKey = clipDraftKey(result.editing.plan)
+        if (!mounted.current) throw new Error('Correction was unmounted')
+        let acceptedPlan = result.editing?.plan ?? accepted
+        // Unused current sources have durable settings too, but are absent from
+        // the server's cut-only render snapshot. Keep them in local history only.
+        for (const setting of accepted.sourceAudio ?? []) {
+          if (
+            !acceptedPlan.cuts.some(
+              (c) => c.sourceId === setting.sourceId && c.fingerprint === setting.fingerprint,
+            )
+          )
+            acceptedPlan = withSourceSound(acceptedPlan, setting)
+        }
+        if (sound) acceptedPlan = withSourceSound(acceptedPlan, sound)
+        let queued = current.current.draft
+        if (sound) {
+          // The audio RPC saves only permission. Preserve cuts/text typed before or
+          // during IO, and any newer permission intent (including undo during IO).
+          const intended = [...soundSources.current.values()].map((source) => ({
+            ...source,
+            retainOriginalAudio: clipSourceSound(queued, source, source.retainOriginalAudio),
+          }))
+          queued = { ...queued, sourceAudio: acceptedPlan.sourceAudio }
+          for (const setting of intended) queued = withSourceSound(queued, setting)
+        } else {
+          queued =
+            clipDraftKey(queued) === key ? acceptedPlan : acknowledgeClipCuts(queued, acceptedPlan)
+        }
+        dispatch({ type: 'adopt', plan: queued })
+        const acceptedKey = clipDraftKey(acceptedPlan)
         current.current = {
           ...current.current,
-          draft: clipDraftKey(current.current.draft) === key ? result.editing.plan : queued,
+          draft: queued,
           baseline: acceptedKey,
           revision: result.editPlanRevision,
-          dirty:
-            clipDraftKey(current.current.draft) !== key && clipDraftKey(queued) !== acceptedKey,
+          dirty: clipDraftKey(queued) !== acceptedKey,
         }
         setBaseline(acceptedKey)
         setRevision(result.editPlanRevision)
@@ -143,7 +216,7 @@ export function useClipCorrection(ownerId: string, project: ClipProject, createC
     return operation
   }
   // UI autosave keeps the draft on failure; a committing action must receive the failure.
-  const save = () => saveOne().catch(() => undefined)
+  const save = () => flush().catch(() => undefined)
   async function flush(): Promise<number> {
     if (saving.current) await saving.current
     while (current.current.dirty) await saveOne()
@@ -161,7 +234,16 @@ export function useClipCorrection(ownerId: string, project: ClipProject, createC
   useEffect(() => {
     if (
       !dirty ||
-      !validation?.saveable ||
+      (!validation?.saveable &&
+        ![...soundSources.current.values()].some(
+          (source) =>
+            clipSourceSound(draft, source, source.retainOriginalAudio) !==
+            clipSourceSound(
+              JSON.parse(baseline) as ClipEditPlan,
+              source,
+              source.retainOriginalAudio,
+            ),
+        )) ||
       mutation.isPending ||
       mutation.error ||
       remoteConflict ||
@@ -174,6 +256,7 @@ export function useClipCorrection(ownerId: string, project: ClipProject, createC
     return () => clearTimeout(timer)
   }, [
     draft,
+    baseline,
     dirty,
     validation?.saveable,
     mutation.isPending,
@@ -184,21 +267,86 @@ export function useClipCorrection(ownerId: string, project: ClipProject, createC
   const reload = useMutation({
     mutationFn: async (keepDraft: boolean) => {
       const result = await createClient(ClipService, transport).getClipProject({ id: project.id })
-      if (!result.project?.editing) throw new Error('Missing current correction')
-      return { next: toClipProject(result.project), keepDraft }
+      if (!result.project) throw new Error('Missing current correction')
+      const batches = soundSources.current.size ? await getClipSources(transport, project.id) : []
+      const next = toClipProject(result.project)
+      let accepted = next.editing?.plan ?? { durationMs: 0, cuts: [], hook: '' }
+      for (const batch of batches.filter((b) => b.current))
+        for (const source of batch.sources)
+          if (soundSources.current.has(source.metadata.fingerprint))
+            accepted = withSourceSound(accepted, {
+              sourceId: source.id,
+              fingerprint: source.metadata.fingerprint,
+              retainOriginalAudio: source.retainOriginalAudio,
+            })
+      return { next, keepDraft, accepted }
     },
     retry: false,
-    onSuccess: ({ next, keepDraft }) => {
+    onSuccess: ({ next, keepDraft, accepted }) => {
       if (keepDraft) {
         setRevision(next.editPlanRevision)
-        setBaseline(clipDraftKey(next.editing!.plan))
+        setBaseline(clipDraftKey(accepted))
         setRemoteConflict(false)
-      } else adopt(next, true)
+      } else {
+        dispatch({ type: 'adopt', plan: accepted, clearHistory: true })
+        setRevision(next.editPlanRevision)
+        setBaseline(clipDraftKey(accepted))
+        setRemoteConflict(false)
+      }
       mutation.reset()
       publish(next)
     },
   })
+  const audioPlan =
+    mutation.error || remoteConflict
+      ? { ...draft, sourceAudio: (JSON.parse(baseline) as ClipEditPlan).sourceAudio }
+      : draft
   return {
+    soundBatch,
+    previewPlan: {
+      ...audioPlan,
+      sourceAudio: audioPlan.sourceAudio?.filter((setting) =>
+        audioPlan.cuts.some(
+          (cut) => cut.sourceId === setting.sourceId && cut.fingerprint === setting.fingerprint,
+        ),
+      ),
+    },
+    hasUnsavedSound: [...soundSources.current.values()].some(
+      (source) =>
+        clipSourceSound(draft, source, source.retainOriginalAudio) !==
+        clipSourceSound(JSON.parse(baseline) as ClipEditPlan, source, source.retainOriginalAudio),
+    ),
+    soundValue: (source: ClipSoundSource) =>
+      clipSourceSound(
+        audioPlan,
+        source,
+        soundSources.current.get(source.fingerprint)?.retainOriginalAudio ??
+          source.retainOriginalAudio,
+      ),
+    setSourceSound: (source: ClipSoundSource, enabled: boolean) => {
+      if (active) return
+      const prior = soundSources.current.get(source.fingerprint)
+      soundSources.current.set(source.fingerprint, {
+        ...source,
+        retainOriginalAudio: prior?.retainOriginalAudio ?? source.retainOriginalAudio,
+      })
+      if (
+        clipSourceSound(
+          current.current.draft,
+          source,
+          prior?.retainOriginalAudio ?? source.retainOriginalAudio,
+        ) === enabled
+      )
+        return
+      change({
+        type: 'sourceSound',
+        setting: {
+          sourceId: source.sourceId,
+          fingerprint: source.fingerprint,
+          retainOriginalAudio: enabled,
+        },
+      })
+    },
     addCut: async (selection: ClipAddCutSelection, retainedSound?: boolean) => {
       await flush()
       const plan = current.current.draft
