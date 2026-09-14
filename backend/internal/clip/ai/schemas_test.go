@@ -22,10 +22,18 @@ func TestOutputSchemasRetainClosedShapeWithoutGrammarBounds(t *testing.T) {
 			removed := 0
 			var compare func(map[string]any, map[string]any)
 			compare = func(contract, output map[string]any) {
-				for _, key := range []string{"type", "required", "enum", "additionalProperties"} {
+				for _, key := range []string{"type", "required", "additionalProperties"} {
 					if !reflect.DeepEqual(contract[key], output[key]) {
 						t.Fatalf("changed structural keyword %s", key)
 					}
+				}
+				// A string enum is the one bound the provider grammar can carry.
+				want := contract["enum"]
+				if contract["type"] != "string" {
+					want = nil
+				}
+				if !reflect.DeepEqual(want, output["enum"]) {
+					t.Fatalf("changed enum on a %v", contract["type"])
 				}
 				for _, key := range []string{"minimum", "maximum", "minItems", "maxItems", "minLength", "maxLength", "default"} {
 					if _, exists := output[key]; exists {
@@ -60,6 +68,39 @@ func TestOutputSchemasRetainClosedShapeWithoutGrammarBounds(t *testing.T) {
 			if removed == 0 {
 				t.Fatal("fixture does not exercise domain bounds")
 			}
+		})
+	}
+}
+
+// CLIP-98's rates reach the model as prompt text and are enforced by the plan
+// validator. Sent as a provider enum they take Gemini's whole cut object with
+// them: it answers {} for every cut and the run dies at output_shape.
+func TestOutputProjectionSendsNoNonStringEnum(t *testing.T) {
+	for _, fixture := range []struct {
+		name   string
+		output []byte
+	}{{"observe", ChunkSchema()}, {"plan", PlanSchema()}, {"composition", CompositionPlanSchema()}} {
+		t.Run(fixture.name, func(t *testing.T) {
+			var wire map[string]any
+			if json.Unmarshal(fixture.output, &wire) != nil {
+				t.Fatal("invalid schema")
+			}
+			var walk func(string, map[string]any)
+			walk = func(path string, node map[string]any) {
+				if _, carries := node["enum"]; carries && node["type"] != "string" {
+					t.Fatalf("%s sends a %v enum to the provider", path, node["type"])
+				}
+				properties, _ := node["properties"].(map[string]any)
+				for key, value := range properties {
+					if child, ok := value.(map[string]any); ok {
+						walk(path+"/"+key, child)
+					}
+				}
+				if items, ok := node["items"].(map[string]any); ok {
+					walk(path+"[]", items)
+				}
+			}
+			walk("", wire)
 		})
 	}
 }

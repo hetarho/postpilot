@@ -39,11 +39,29 @@ type outputShape struct {
 	AdditionalProperties *bool                   `json:"additionalProperties,omitempty"`
 }
 
+// Google's schema subset accepts enum only on a string. A numeric enum does not
+// merely lose its bound there: the object carrying it comes back EMPTY, which
+// reaches us as an output_shape refusal the model cannot correct. The allowed
+// set stays in the prompt and in the local validator, where it is enforced.
+func (s *outputShape) dropUnsupportedEnums() {
+	if s == nil {
+		return
+	}
+	if s.Type != "string" {
+		s.Enum = nil
+	}
+	for _, child := range s.Properties {
+		child.dropUnsupportedEnums()
+	}
+	s.Items.dropUnsupportedEnums()
+}
+
 func structuralSchema(contract []byte) []byte {
 	var shape outputShape
 	if err := json.Unmarshal(contract, &shape); err != nil {
 		panic(err) // Embedded, code-owned contracts; never provider/user input.
 	}
+	shape.dropUnsupportedEnums()
 	out, err := json.Marshal(shape)
 	if err != nil {
 		panic(err)
