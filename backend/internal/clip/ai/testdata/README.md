@@ -12,6 +12,14 @@ The [Gemini structured-output contract](https://ai.google.dev/gemini-api/docs/st
 
 Production now sends only type, properties, required, items, enum and additionalProperties to the output grammar. The full embedded contracts remain in the prompts, and server parsing still checks counts, ranges, string lengths, source grounding, enums and timing before rendering. Non-clip requests, model choices, pricing, completion ceilings and retry policies are unchanged.
 
+Both recorded observations were MECHANICALLY migrated again for T145's
+clip-observation-v2 contract: each segment gained an empty `action` and `motion`
+and the status pair its own recorded quality text already states — the captured
+footage is a clean, high-contrast synthetic pattern, so `certainty` is `certain`
+and `usability` is `usable`. Each recorded span already covered its whole chunk,
+so no time was changed, nothing was edited beyond those four fields, and no new
+paid call was made.
+
 Both recorded responses were MECHANICALLY migrated when T105 moved style and
 position out of the model's hands: each segment's keep-out box became the
 principal-subject box it was already measuring, `scene` and `readable_text` took

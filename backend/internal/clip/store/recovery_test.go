@@ -10,7 +10,11 @@ import (
 	"github.com/postpilot/backend/internal/llm"
 )
 
-func TestRecoveryUsesOnlyProvableCompleteLegacyObservations(t *testing.T) {
+// Legacy attempt evidence predates clip-observation-v2's complete-coverage and
+// scene-status rules, so it is never promoted into a v2 generation: the
+// successor re-observes and pays for every chunk, whatever the legacy record
+// claimed to have completed (CLIP-93).
+func TestLegacyAttemptEvidenceIsNeverReusedForNewGeneration(t *testing.T) {
 	for _, limited := range []bool{false, true} {
 		t.Run(map[bool]string{false: "complete", true: "limited"}[limited], func(t *testing.T) {
 			h := generationSetup(t)
@@ -33,12 +37,8 @@ func TestRecoveryUsesOnlyProvableCompleteLegacyObservations(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			want := 3
-			if limited {
-				want = 0
-			}
-			if q.Pricing.ReusedChunks != want || q.Pricing.SkipPlan {
-				t.Fatal("legacy evidence was guessed or discarded")
+			if q.Pricing.ReusedChunks != 0 || q.Pricing.SkipPlan || q.Pricing.ObservationCalls != 3 {
+				t.Fatalf("v1 evidence entered a v2 generation: reused=%d observe=%d skip=%v", q.Pricing.ReusedChunks, q.Pricing.ObservationCalls, q.Pricing.SkipPlan)
 			}
 		})
 	}

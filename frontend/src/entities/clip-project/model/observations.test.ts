@@ -31,7 +31,13 @@ describe('recorded observation usage', () => {
     const [a, b] = clipObservationsFixture().sources
     expect(observationSummary(a!)).toBe(a!.segments[0]!.event)
     expect(observationSummary(b!)).toBe('')
+    // The recorded action is a fact of the same standing as the event, so it is
+    // the next thing a summary reuses — never a new sentence.
     a!.segments[0]!.event = ''
+    expect(observationSummary(a!)).toBe('젓가락으로 음식을 집는다')
+    a!.segments[0]!.action = ''
     expect(observationSummary(a!)).toBe('맛있어요')
+    a!.segments[0]!.speech = ''
+    expect(observationSummary(a!)).toBe('음식, 접시')
   })
 })

@@ -77,6 +77,8 @@ export { isRapidCut, canSplitRapid, canAddRapid } from './model/caption-pace'
 export { observationCutUsage, observationSummary } from './model/observations'
 export type {
   ClipObservedSegment,
+  ClipObservationCertainty,
+  ClipObservationUsability,
   ClipSourceObservation,
   ClipObservations,
 } from './model/observations'

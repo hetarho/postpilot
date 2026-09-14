@@ -27,6 +27,10 @@ const observationChecks = {
   observe_description: 'inspection.observationDescription',
   observe_scene: 'inspection.observationScene',
   observe_silent_speech: 'inspection.observationAudio',
+  observe_coverage_start: 'inspection.observationCoverage',
+  observe_coverage_gap: 'inspection.observationCoverage',
+  observe_coverage_end: 'inspection.observationCoverage',
+  observe_status: 'inspection.observationStatus',
 } as const
 
 // The render stage owns two vocabularies: the substage that was running, and —

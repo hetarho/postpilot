@@ -1258,13 +1258,20 @@ func (x *ClipSourceObservation) GetSegments() []*ClipObservedSegment {
 }
 
 type ClipObservedSegment struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	StartMs       int32                  `protobuf:"varint,1,opt,name=start_ms,json=startMs,proto3" json:"start_ms,omitempty"`
-	EndMs         int32                  `protobuf:"varint,2,opt,name=end_ms,json=endMs,proto3" json:"end_ms,omitempty"`
-	Event         string                 `protobuf:"bytes,3,opt,name=event,proto3" json:"event,omitempty"`
-	Subjects      []string               `protobuf:"bytes,4,rep,name=subjects,proto3" json:"subjects,omitempty"`
-	Speech        string                 `protobuf:"bytes,5,opt,name=speech,proto3" json:"speech,omitempty"`
-	Quality       string                 `protobuf:"bytes,6,opt,name=quality,proto3" json:"quality,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	StartMs  int32                  `protobuf:"varint,1,opt,name=start_ms,json=startMs,proto3" json:"start_ms,omitempty"`
+	EndMs    int32                  `protobuf:"varint,2,opt,name=end_ms,json=endMs,proto3" json:"end_ms,omitempty"`
+	Event    string                 `protobuf:"bytes,3,opt,name=event,proto3" json:"event,omitempty"`
+	Subjects []string               `protobuf:"bytes,4,rep,name=subjects,proto3" json:"subjects,omitempty"`
+	Speech   string                 `protobuf:"bytes,5,opt,name=speech,proto3" json:"speech,omitempty"`
+	Quality  string                 `protobuf:"bytes,6,opt,name=quality,proto3" json:"quality,omitempty"`
+	Action   string                 `protobuf:"bytes,7,opt,name=action,proto3" json:"action,omitempty"`
+	Motion   string                 `protobuf:"bytes,8,opt,name=motion,proto3" json:"motion,omitempty"`
+	// certain | uncertain | unknown, and usable | unusable. Both are empty in a
+	// record written under clip-observation-v1; a reader labels those unspecified
+	// rather than inventing a status.
+	Certainty     string `protobuf:"bytes,9,opt,name=certainty,proto3" json:"certainty,omitempty"`
+	Usability     string `protobuf:"bytes,10,opt,name=usability,proto3" json:"usability,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1337,6 +1344,34 @@ func (x *ClipObservedSegment) GetSpeech() string {
 func (x *ClipObservedSegment) GetQuality() string {
 	if x != nil {
 		return x.Quality
+	}
+	return ""
+}
+
+func (x *ClipObservedSegment) GetAction() string {
+	if x != nil {
+		return x.Action
+	}
+	return ""
+}
+
+func (x *ClipObservedSegment) GetMotion() string {
+	if x != nil {
+		return x.Motion
+	}
+	return ""
+}
+
+func (x *ClipObservedSegment) GetCertainty() string {
+	if x != nil {
+		return x.Certainty
+	}
+	return ""
+}
+
+func (x *ClipObservedSegment) GetUsability() string {
+	if x != nil {
+		return x.Usability
 	}
 	return ""
 }
@@ -6676,14 +6711,19 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\asources\x18\x02 \x03(\v2#.postpilot.v1.ClipSourceObservationR\asources\"\x90\x01\n" +
 	"\x15ClipSourceObservation\x128\n" +
 	"\x06source\x18\x01 \x01(\v2 .postpilot.v1.ClipRetainedSourceR\x06source\x12=\n" +
-	"\bsegments\x18\x02 \x03(\v2!.postpilot.v1.ClipObservedSegmentR\bsegments\"\xab\x01\n" +
+	"\bsegments\x18\x02 \x03(\v2!.postpilot.v1.ClipObservedSegmentR\bsegments\"\x97\x02\n" +
 	"\x13ClipObservedSegment\x12\x19\n" +
 	"\bstart_ms\x18\x01 \x01(\x05R\astartMs\x12\x15\n" +
 	"\x06end_ms\x18\x02 \x01(\x05R\x05endMs\x12\x14\n" +
 	"\x05event\x18\x03 \x01(\tR\x05event\x12\x1a\n" +
 	"\bsubjects\x18\x04 \x03(\tR\bsubjects\x12\x16\n" +
 	"\x06speech\x18\x05 \x01(\tR\x06speech\x12\x18\n" +
-	"\aquality\x18\x06 \x01(\tR\aquality\"Z\n" +
+	"\aquality\x18\x06 \x01(\tR\aquality\x12\x16\n" +
+	"\x06action\x18\a \x01(\tR\x06action\x12\x16\n" +
+	"\x06motion\x18\b \x01(\tR\x06motion\x12\x1c\n" +
+	"\tcertainty\x18\t \x01(\tR\tcertainty\x12\x1c\n" +
+	"\tusability\x18\n" +
+	" \x01(\tR\tusability\"Z\n" +
 	"\vClipAttempt\x12\x15\n" +
 	"\x06job_id\x18\x01 \x01(\tR\x05jobId\x12\x19\n" +
 	"\bbatch_id\x18\x02 \x01(\tR\abatchId\x12\x19\n" +

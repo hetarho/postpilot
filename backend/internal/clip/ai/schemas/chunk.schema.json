@@ -9,11 +9,13 @@
       "type": "array", "minItems": 1, "maxItems": 60,
       "items": {
         "type": "object", "additionalProperties": false,
-        "required": ["start_ms", "end_ms", "event", "subjects", "speech", "quality", "focal", "scene", "readable_text", "subject"],
+        "required": ["start_ms", "end_ms", "event", "action", "motion", "subjects", "speech", "quality", "focal", "scene", "readable_text", "subject", "certainty", "usability"],
         "properties": {
           "start_ms": { "type": "integer" },
           "end_ms": { "type": "integer" },
           "event": { "type": "string", "maxLength": 2000 },
+          "action": { "type": "string", "maxLength": 2000 },
+          "motion": { "type": "string", "maxLength": 2000 },
           "subjects": { "type": "array", "maxItems": 20, "items": { "type": "string", "minLength": 1, "maxLength": 2000 } },
           "speech": { "type": "string", "maxLength": 2000 },
           "quality": { "type": "string", "minLength": 1, "maxLength": 2000 },
@@ -23,6 +25,8 @@
           },
           "scene": { "type": "string", "enum": ["food", "exterior", "interior", "menu", "person", "product", "scenery"] },
           "readable_text": { "type": "boolean" },
+          "certainty": { "type": "string", "enum": ["certain", "uncertain", "unknown"] },
+          "usability": { "type": "string", "enum": ["usable", "unusable"] },
           "subject": {
             "type": "object", "additionalProperties": false, "required": ["x", "y", "width", "height"],
             "properties": {

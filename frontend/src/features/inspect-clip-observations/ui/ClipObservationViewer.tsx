@@ -43,9 +43,15 @@ function ObservationRange({
         {(
           [
             ['event', segment.event],
+            ['action', segment.action],
+            ['motion', segment.motion],
             ['subjects', segment.subjects.join(', ')],
             ['speech', segment.speech],
             ['quality', segment.quality],
+            // A record written before the v2 contract carries no status at all,
+            // and says so: it is never shown as if it had been judged certain.
+            ['certainty', t(`observation.certaintyValue.${segment.certainty}`)],
+            ['usability', t(`observation.usabilityValue.${segment.usability}`)],
           ] as const
         ).map(([field, value]) => (
           <div key={field}>

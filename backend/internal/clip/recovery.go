@@ -10,7 +10,13 @@ import (
 	"slices"
 )
 
-const AnalysisContractVersion = "clip-observation-v1"
+const AnalysisContractVersion = "clip-observation-v2"
+
+// Records written under the first contract stay READABLE — a finished project
+// keeps showing them — but none is ever relabelled v2 or reused for new paid
+// generation, because v1 never recorded complete coverage or a scene status
+// (CLIP-93).
+const LegacyAnalysisContractVersion = "clip-observation-v1"
 
 type RecoveryState struct {
 	Version                           int
@@ -67,68 +73,17 @@ func (s *GenerationService) loadRecovery(ctx context.Context, user, project stri
 	return store.GetRecovery(ctx, user, project)
 }
 
-// Convert only completed legacy source evidence whose originating payload proves
-// the same model and manifest. Incomplete legacy sources are never guessed.
-func (s *GenerationService) upgradeRecovery(ctx context.Context, user, project string, r *RecoveryState) (*RecoveryState, error) {
+// Legacy attempt evidence was recorded under clip-observation-v1, which never
+// proved complete source coverage and never carried a scene status. It is kept
+// READABLE for inspection, but it is never converted, relabelled or reused for
+// new generation: a successor re-observes instead (CLIP-87, CLIP-93).
+func (s *GenerationService) upgradeRecovery(_ context.Context, _, _ string, r *RecoveryState) (*RecoveryState, error) {
 	if r == nil || r.Legacy == nil {
 		return r, nil
 	}
-	reader, ok := s.jobs.(interface {
-		Snapshot(context.Context, string, string, string) (*ClipJob, error)
-	})
-	if !ok {
-		return nil, nil
-	}
-	job, err := reader.Snapshot(ctx, user, project, r.JobID)
-	if err != nil {
-		return nil, err
-	}
-	if job == nil {
-		return nil, nil
-	}
-	var p generationPayload
-	if json.Unmarshal(job.Payload, &p) != nil || p.ProjectID != project || p.Batch.UserID != user || r.Legacy.EvidenceLimited {
-		return nil, nil
-	}
-	out := &RecoveryState{Version: 1, JobID: r.JobID, Contract: AnalysisContractVersion, Observe: modelRef(p.Observe)}
-	if p.Approval != nil {
-		out.Pricing = p.Approval.Pricing
-	}
-	remaining := r.Legacy.CompletedChunks
-	for _, a := range r.Legacy.Observations {
-		count := (a.Source.Info.DurationMS + 59999) / 60000
-		if count < 1 || remaining < count {
-			break
-		}
-		remaining -= count
-		lease, ok := sourceLease(p.Batch, a.Source.ID)
-		if !ok || !recoverySourceMatches(a.Source, lease) {
-			return nil, nil
-		}
-		out.Sources = append(out.Sources, a.Source)
-		for index := 0; index < count; index++ {
-			c := ChunkAnalysis{SourceID: a.Source.ID, Fingerprint: a.Source.Fingerprint, Index: index, OffsetMS: index * 60000, DurationMS: min(60000, a.Source.Info.DurationMS-index*60000)}
-			for _, seg := range a.Segments {
-				if seg.StartMS >= c.OffsetMS && seg.EndMS <= c.OffsetMS+c.DurationMS {
-					c.Segments = append(c.Segments, seg)
-				}
-			}
-			if ValidateSegments(s.cfg.Analysis, c.Segments, c.OffsetMS, c.OffsetMS+c.DurationMS) != nil {
-				return nil, nil
-			}
-			out.Chunks = append(out.Chunks, c)
-		}
-	}
-	return out, nil
+	return nil, nil
 }
-func sourceLease(b SourceBatch, id string) (SourceLease, bool) {
-	for _, v := range b.Sources {
-		if v.ID == id {
-			return v, true
-		}
-	}
-	return SourceLease{}, false
-}
+
 func recoverySourceMatches(a AnalysisSource, v SourceLease) bool {
 	return a.ID == v.ID && a.Fingerprint == v.Fingerprint && a.Fingerprint != "" && a.Info.Width == v.Width && a.Info.Height == v.Height && a.Info.DurationMS > 0 && absRecovery(a.Info.DurationMS-v.DurationMS) <= 1000
 }

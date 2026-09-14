@@ -150,6 +150,13 @@ message ClipObservedSegment {
   repeated string subjects = 4;
   string speech = 5;
   string quality = 6;
+  string action = 7;
+  string motion = 8;
+  // certain | uncertain | unknown, and usable | unusable. Both are empty in a
+  // record written under clip-observation-v1; a reader labels those unspecified
+  // rather than inventing a status.
+  string certainty = 9;
+  string usability = 10;
 }
 message ClipAttempt {
   string job_id = 1;

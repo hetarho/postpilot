@@ -82,6 +82,50 @@ func TestBoundedResponseCorrections(t *testing.T) {
 		}
 	}
 }
+
+// A coverage or status failure is the model's own output problem, so it uses the
+// SAME reserved same-model correction allowance as a malformed response — no new
+// budget, no extra provider, and it stops the moment a complete record arrives
+// (CLIP-94, CLIP-95).
+func TestIncompleteCoverageUsesTheReservedCorrectionAllowance(t *testing.T) {
+	for _, broken := range []string{"missing end", "internal gap", "status"} {
+		t.Run(broken, func(t *testing.T) {
+			bad := observation()
+			switch broken {
+			case "missing end":
+				firstSegment(bad)["end_ms"] = 4000
+			case "internal gap":
+				first, second := firstSegment(bad), firstSegment(observation())
+				first["end_ms"], second["start_ms"], second["end_ms"] = 2000, 2001, 5000
+				bad["segments"] = []any{first, second}
+			case "status":
+				firstSegment(bad)["certainty"] = "probably"
+			}
+			_, base, sizer := newService(t, raw(observation()), true)
+			models := &correctionModels{fakeModels: base, validAfter: 3, invalid: raw(bad)}
+			service, err := ai.New(models, sizer, config.ClipAI(&config.Config{LLMReasoning: config.LLMReasoningPolicy{Observe: llm.ReasoningLow, Write: llm.ReasoningLow}}))
+			if err != nil {
+				t.Fatal(err)
+			}
+			var checks []string
+			ctx := clip.WithResponseCorrectionObserver(t.Context(), func(_, _ int, d clip.AttemptDiagnostic) error {
+				checks = append(checks, d.Check)
+				return nil
+			})
+			in := chunk()
+			in.Policy.ResponseRetries = 3
+			got, _, err := service.ObserveChunk(ctx, testRef(), in)
+			want := map[string]string{"missing end": "observe_coverage_end", "internal gap": "observe_coverage_gap", "status": "observe_status"}[broken]
+			if err != nil || len(base.calls) != 3 || len(checks) != 2 || checks[0] != want || checks[1] != want {
+				t.Fatalf("wrong correction path: calls=%d checks=%v err=%v", len(base.calls), checks, err)
+			}
+			if got.Segments[0].StartMS != 60000 || got.Segments[0].EndMS != 65000 {
+				t.Fatalf("the accepted record lost its frozen offset: %+v", got.Segments[0])
+			}
+		})
+	}
+}
+
 func TestResponseCorrectionStopsOnCancellationProviderAndLegacyLimits(t *testing.T) {
 	for _, kind := range []string{"legacy", "cancel", "provider", "length", "authored", "unreported"} {
 		t.Run(kind, func(t *testing.T) {

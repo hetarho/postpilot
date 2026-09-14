@@ -73,7 +73,7 @@ func multiSourcePlan() (clip.PlanningInput, map[string]any) {
 		}
 		in.Analyses = append(in.Analyses, clip.SourceAnalysis{
 			Source:   clip.AnalysisSource{RenderSource: clip.RenderSource{ID: id, Fingerprint: id, Info: clip.MediaInfo{DurationMS: duration, Width: width, Height: height, HasAudio: true}}, Filename: fmt.Sprintf("synthetic-%d.mp4", i)},
-			Segments: []clip.Segment{{EndMS: duration, Event: "합성 도형이 움직인다", Subjects: []string{"도형"}, Quality: "sharp", Focal: clip.Point{X: .5, Y: .5}, Scene: "scenery"}},
+			Segments: []clip.Segment{{EndMS: duration, Event: "합성 도형이 움직인다", Subjects: []string{"도형"}, Quality: "sharp", Focal: clip.Point{X: .5, Y: .5}, Scene: "scenery", Certainty: clip.CertaintyCertain, Usability: clip.UsabilityUsable}},
 		})
 		cuts = append(cuts, map[string]any{"id": fmt.Sprintf("cut-%d", i), "source_id": id, "start_ms": 0, "end_ms": lengths[i], "volume": 1, "chips": []string{},
 			"focal": map[string]any{"x": .5, "y": .5}, "caption": map[string]any{"text": "조용한 장면", "start_ms": 0, "end_ms": lengths[i], "short_text": "장면", "keyword": ""}})

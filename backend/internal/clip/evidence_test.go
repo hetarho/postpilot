@@ -47,8 +47,32 @@ func TestItemBindingUsesAllObservationsOrOwnerAssociation(t *testing.T) {
 		{"conflicting_adjacent_item", func(_ *clip.CompositionInputs, a []clip.SourceAnalysis) {
 			a[0].Segments[1].Subjects = []string{"치즈라면"}
 		}, "", "item_binding_conflict"},
-		{"uncertain", func(_ *clip.CompositionInputs, a []clip.SourceAnalysis) {
+		// The fixture carries no status, so it is a legacy record and the prose
+		// heuristic still reads it (CLIP-93).
+		{"legacy_uncertain_prose", func(_ *clip.CompositionInputs, a []clip.SourceAnalysis) {
 			a[0].Segments[0].Quality = "uncertain identity"
+		}, "", "item_uncertain"},
+		// A v2 record states its own status, so the same prose no longer decides.
+		{"v2_certain_beats_prose", func(_ *clip.CompositionInputs, a []clip.SourceAnalysis) {
+			a[0].Segments[0].Quality = "uncertain identity"
+			for i := range a[0].Segments {
+				a[0].Segments[i].Certainty, a[0].Segments[i].Usability = clip.CertaintyCertain, clip.UsabilityUsable
+			}
+		}, "sea", ""},
+		{"v2_uncertain", func(_ *clip.CompositionInputs, a []clip.SourceAnalysis) {
+			for i := range a[0].Segments {
+				a[0].Segments[i].Certainty, a[0].Segments[i].Usability = clip.CertaintyUncertain, clip.UsabilityUsable
+			}
+		}, "", "item_uncertain"},
+		{"v2_unknown", func(_ *clip.CompositionInputs, a []clip.SourceAnalysis) {
+			for i := range a[0].Segments {
+				a[0].Segments[i].Certainty, a[0].Segments[i].Usability = clip.CertaintyUnknown, clip.UsabilityUsable
+			}
+		}, "", "item_uncertain"},
+		{"v2_unusable", func(_ *clip.CompositionInputs, a []clip.SourceAnalysis) {
+			for i := range a[0].Segments {
+				a[0].Segments[i].Certainty, a[0].Segments[i].Usability = clip.CertaintyCertain, clip.UsabilityUnusable
+			}
 		}, "", "item_uncertain"},
 		{"shared_alias", func(in *clip.CompositionInputs, _ []clip.SourceAnalysis) {
 			in.Items["menu"][1].Values["alias"] = "해물라면"

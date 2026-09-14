@@ -4,12 +4,15 @@
    {
     "Segments": [
      {
+      "Action": "",
+      "Certainty": "certain",
       "EndMS": 4300,
       "Event": "Animated test pattern with moving lines and geometric shapes over color bars",
       "Focal": {
        "X": 0.5,
        "Y": 0.5
       },
+      "Motion": "",
       "Quality": "Clear synthetic motion graphics test feed",
       "ReadableText": false,
       "Scene": "scenery",
@@ -24,7 +27,8 @@
       "Subjects": [
        "color bars",
        "geometric patterns"
-      ]
+      ],
+      "Usability": "usable"
      }
     ],
     "Source": {
@@ -42,12 +46,15 @@
    {
     "Segments": [
      {
+      "Action": "",
+      "Certainty": "certain",
       "EndMS": 3744,
       "Event": "A synthetic multi-colored test pattern with bouncing lines, shifting geometric bars, and dot patterns animates continuously.",
       "Focal": {
        "X": 0.5,
        "Y": 0.5
       },
+      "Motion": "",
       "Quality": "Computer generated graphics with sharp lines and solid colors.",
       "ReadableText": false,
       "Scene": "scenery",
@@ -63,7 +70,8 @@
        "geometric animation",
        "color bars",
        "bouncing line"
-      ]
+      ],
+      "Usability": "usable"
      }
     ],
     "Source": {
@@ -81,12 +89,15 @@
    {
     "Segments": [
      {
+      "Action": "",
+      "Certainty": "certain",
       "EndMS": 1480,
       "Event": "Color bars with animated geometric lines, a dotted grid box, and changing shapes.",
       "Focal": {
        "X": 0.5,
        "Y": 0.5
       },
+      "Motion": "",
       "Quality": "Synthetic digital test pattern video, steady with clear colors.",
       "ReadableText": false,
       "Scene": "scenery",
@@ -101,7 +112,8 @@
       "Subjects": [
        "geometric shapes",
        "color bars"
-      ]
+      ],
+      "Usability": "usable"
      }
     ],
     "Source": {
@@ -119,12 +131,15 @@
    {
     "Segments": [
      {
+      "Action": "",
+      "Certainty": "certain",
       "EndMS": 5010,
       "Event": "Animated vertical colored bars and moving geometric shapes, lines, and patterns.",
       "Focal": {
        "X": 0.5,
        "Y": 0.5
       },
+      "Motion": "",
       "Quality": "Computer-generated abstract graphics, high clarity.",
       "ReadableText": false,
       "Scene": "scenery",
@@ -139,7 +154,8 @@
       "Subjects": [
        "geometric patterns",
        "colored stripes"
-      ]
+      ],
+      "Usability": "usable"
      }
     ],
     "Source": {
@@ -157,12 +173,15 @@
    {
     "Segments": [
      {
+      "Action": "",
+      "Certainty": "certain",
       "EndMS": 5108,
       "Event": "Animated vertical colored bars with shifting geometric shapes, lines, and dotted patterns.",
       "Focal": {
        "X": 0.5,
        "Y": 0.5
       },
+      "Motion": "",
       "Quality": "Computer-generated synthetic graphics, high contrast and sharp lines, no camera motion.",
       "ReadableText": false,
       "Scene": "scenery",
@@ -177,7 +196,8 @@
       "Subjects": [
        "geometric patterns",
        "color bars"
-      ]
+      ],
+      "Usability": "usable"
      }
     ],
     "Source": {
@@ -195,12 +215,15 @@
    {
     "Segments": [
      {
+      "Action": "",
+      "Certainty": "certain",
       "EndMS": 4508,
       "Event": "Geometric animation with moving lines, bars, and shapes across multicolored vertical stripes.",
       "Focal": {
        "X": 0.5,
        "Y": 0.5
       },
+      "Motion": "",
       "Quality": "Computer-generated digital graphic, sharp and stable.",
       "ReadableText": false,
       "Scene": "scenery",
@@ -216,7 +239,8 @@
        "geometric shapes",
        "colored stripes",
        "moving lines"
-      ]
+      ],
+      "Usability": "usable"
      }
     ],
     "Source": {
@@ -234,12 +258,15 @@
    {
     "Segments": [
      {
+      "Action": "",
+      "Certainty": "certain",
       "EndMS": 5433,
       "Event": "Animated test pattern with moving lines and geometric shapes across vertical color bars.",
       "Focal": {
        "X": 0.5,
        "Y": 0.5
       },
+      "Motion": "",
       "Quality": "Synthetic motion graphics animation with clear digital rendering.",
       "ReadableText": false,
       "Scene": "scenery",
@@ -254,7 +281,8 @@
       "Subjects": [
        "geometric patterns",
        "color bars"
-      ]
+      ],
+      "Usability": "usable"
      }
     ],
     "Source": {
@@ -272,12 +300,15 @@
    {
     "Segments": [
      {
+      "Action": "",
+      "Certainty": "certain",
       "EndMS": 6702,
       "Event": "Abstract geometric shapes and lines moving across vertical colored stripes.",
       "Focal": {
        "X": 0.5,
        "Y": 0.5
       },
+      "Motion": "",
       "Quality": "Digital animation, clear lines, high saturation, sharp contrast.",
       "ReadableText": false,
       "Scene": "scenery",
@@ -292,7 +323,8 @@
       "Subjects": [
        "geometric shapes",
        "moving lines"
-      ]
+      ],
+      "Usability": "usable"
      }
     ],
     "Source": {

@@ -28,6 +28,27 @@ describe('clip observation inspection', () => {
     expect(screen.getByText('맛있어요')).not.toBeVisible()
   })
 
+  it('shows the recorded status and labels a record that never carried one', async () => {
+    const user = userEvent.setup()
+    const project = observedClipFixture()
+    render(<ClipObservationViewer project={project} localSources={[]} />)
+    await user.click(screen.getByRole('button', { name: /자세히 보기/ }))
+    expect(screen.getByText('젓가락으로 음식을 집는다')).toBeVisible()
+    expect(screen.getByText('카메라가 천천히 다가간다')).toBeVisible()
+    expect(screen.getByText('분명하게 확인됨')).toBeVisible()
+    expect(screen.getByText('보이지만 확정할 수 없음')).toBeVisible()
+    expect(screen.getAllByText('사용할 수 있는 화면')).toHaveLength(2)
+    // A record written before the v2 contract says so, instead of borrowing a
+    // certainty nothing ever judged.
+    const legacy = observedClipFixture()
+    legacy.observations!.sources[0]!.segments = legacy.observations!.sources[0]!.segments.map(
+      (segment) => ({ ...segment, certainty: 'unspecified', usability: 'unspecified' }),
+    )
+    render(<ClipObservationViewer project={legacy} localSources={[]} />)
+    await user.click(screen.getAllByRole('button', { name: /자세히 보기/ })[1]!)
+    expect(screen.getAllByText('이 분석에는 기록되지 않음')).toHaveLength(4)
+  })
+
   it('selects sources by keyboard and reports a source with no observed ranges', async () => {
     const user = userEvent.setup()
     render(<ClipObservationViewer project={observedClipFixture()} localSources={[]} />)

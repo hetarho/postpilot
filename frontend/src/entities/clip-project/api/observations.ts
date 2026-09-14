@@ -1,6 +1,22 @@
 import { CLIP_PLAYBACK, CLIP_RATES } from '@/shared/config'
 import type { ProtoClipObservations } from '@/shared/api'
-import type { ClipObservations } from '../model/observations'
+import type {
+  ClipObservationCertainty,
+  ClipObservations,
+  ClipObservationUsability,
+} from '../model/observations'
+
+// A status the server did not record — an older record, or an older server —
+// reads as unspecified. Nothing here promotes a blank to 'certain'.
+const CERTAINTY: ClipObservationCertainty[] = ['certain', 'uncertain', 'unknown']
+const USABILITY: ClipObservationUsability[] = ['usable', 'unusable']
+
+function certainty(value: string): ClipObservationCertainty {
+  return CERTAINTY.find((known) => known === value) ?? 'unspecified'
+}
+function usability(value: string): ClipObservationUsability {
+  return USABILITY.find((known) => known === value) ?? 'unspecified'
+}
 
 export function toClipObservations(value: ProtoClipObservations): ClipObservations {
   if (value.status === 'empty') return { status: 'empty', sources: [] }
@@ -32,9 +48,13 @@ export function toClipObservations(value: ProtoClipObservations): ClipObservatio
         startMs: segment.startMs,
         endMs: segment.endMs,
         event: segment.event,
+        action: segment.action,
+        motion: segment.motion,
         subjects: [...segment.subjects],
         speech: segment.speech,
         quality: segment.quality,
+        certainty: certainty(segment.certainty),
+        usability: usability(segment.usability),
       })),
     })),
   }

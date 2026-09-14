@@ -2,12 +2,15 @@
  "chunk_index": 0,
  "segments": [
   {
+   "action": "",
+   "certainty": "certain",
    "end_ms": 15000,
    "event": "Synthetic test video with colorful vertical bars, moving geometric shapes, shifting diagonal lines, noise patterns, and a digital timer overlay.",
    "focal": {
     "x": 0.5,
     "y": 0.5
    },
+   "motion": "",
    "quality": "Synthetic pixel-art test pattern, high-contrast, constant digital rendering with clean geometry and digital noise blocks.",
    "readable_text": false,
    "scene": "scenery",
@@ -23,7 +26,8 @@
     "geometric shapes",
     "digital test pattern",
     "timer overlay"
-   ]
+   ],
+   "usability": "usable"
   }
  ],
  "source_id": "synthetic"

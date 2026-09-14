@@ -1,12 +1,22 @@
 import type { ClipEditPlan, RetainedClipSource } from './edit-plan'
 
+/** certain | uncertain | unknown, and usable | unusable, exactly as recorded.
+ * 'unspecified' is what a record written before the v2 contract carries: the
+ * viewer says so rather than showing an invented certainty (CLIP-51). */
+export type ClipObservationCertainty = 'certain' | 'uncertain' | 'unknown' | 'unspecified'
+export type ClipObservationUsability = 'usable' | 'unusable' | 'unspecified'
+
 export interface ClipObservedSegment {
   startMs: number
   endMs: number
   event: string
+  action: string
+  motion: string
   subjects: string[]
   speech: string
   quality: string
+  certainty: ClipObservationCertainty
+  usability: ClipObservationUsability
 }
 export interface ClipSourceObservation {
   source: RetainedClipSource
@@ -35,7 +45,11 @@ export function observationCutUsage(
 /** Reuse recorded evidence, without making another model call to summarize it. */
 export function observationSummary(observation: ClipSourceObservation): string {
   for (const segment of observation.segments) {
-    const summary = segment.event.trim() || segment.speech.trim() || segment.subjects.join(', ')
+    const summary =
+      segment.event.trim() ||
+      segment.action.trim() ||
+      segment.speech.trim() ||
+      segment.subjects.join(', ')
     if (summary) return summary
   }
   return ''

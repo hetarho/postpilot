@@ -21,9 +21,13 @@ func analysisObservationsProto(analyses []clip.SourceAnalysis) *v1.ClipObservati
 		source := a.Source
 		item := &v1.ClipSourceObservation{Source: retainedSourceProto(source)}
 		for _, s := range a.Segments {
+			// Action, motion and the two status fields are carried through
+			// exactly as recorded; a legacy record sends them empty rather than
+			// borrowing a certainty it never had (CLIP-51).
 			item.Segments = append(item.Segments, &v1.ClipObservedSegment{
 				StartMs: int32(s.StartMS), EndMs: int32(s.EndMS), Event: s.Event,
 				Subjects: s.Subjects, Speech: s.Speech, Quality: s.Quality,
+				Action: s.Action, Motion: s.Motion, Certainty: s.Certainty, Usability: s.Usability,
 			})
 		}
 		out.Sources = append(out.Sources, item)

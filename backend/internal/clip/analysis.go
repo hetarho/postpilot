@@ -16,8 +16,12 @@ type AnalysisSource struct {
 type Segment struct {
 	StartMS, EndMS         int
 	Event, Speech, Quality string
-	Subjects               []string
-	Focal                  Point
+	// What the subject does and how the frame itself moves, recorded apart from
+	// Event so a still subject under a panning camera stays distinguishable from
+	// a moving subject under a locked one (CLIP-10). Either may be empty.
+	Action, Motion string
+	Subjects       []string
+	Focal          Point
 	// What the segment shows (CDS-40's rows), whether legible footage text fills
 	// the frame (CDS-38), and the ONE principal subject box in normalized source
 	// coordinates — zero-size when the frame has none. The box replaced a
@@ -26,7 +30,42 @@ type Segment struct {
 	Scene        string
 	ReadableText bool
 	Subject      Region
+	// How far the record can be trusted and whether the footage can be used at
+	// all. A black, obscured, static or unreadable span is RECORDED with these
+	// two fields rather than omitted, so the writer sees the whole timeline
+	// (CLIP-10, CLIP-99). Both are empty in a record written under
+	// clip-observation-v1; nothing invents a status for it.
+	Certainty, Usability string
 }
+
+const (
+	CertaintyCertain   = "certain"
+	CertaintyUncertain = "uncertain"
+	CertaintyUnknown   = "unknown"
+	UsabilityUsable    = "usable"
+	UsabilityUnusable  = "unusable"
+)
+
+func validCertainty(v string) bool {
+	return v == CertaintyCertain || v == CertaintyUncertain || v == CertaintyUnknown
+}
+func validUsability(v string) bool { return v == UsabilityUsable || v == UsabilityUnusable }
+
+// Observed reports whether the record carries the v2 status pair at all. A
+// legacy record has neither and is never given an invented one.
+func (s Segment) Observed() bool { return s.Certainty != "" && s.Usability != "" }
+
+// Confident is the only recorded state that may authorize a derived fact.
+func (s Segment) Confident() bool {
+	return s.Certainty == CertaintyCertain && s.Usability == UsabilityUsable
+}
+
+// Unknowable footage owes a quality reason instead of a factual description:
+// there is nothing truthful to say about a black or obscured span.
+func (s Segment) Unknowable() bool {
+	return s.Certainty == CertaintyUnknown || s.Usability == UsabilityUnusable
+}
+
 type SourceAnalysis struct {
 	Source   AnalysisSource
 	Segments []Segment
@@ -105,7 +144,24 @@ func ValidateChunkInput(l AnalysisLimits, in ChunkInput) error {
 	}
 	return nil
 }
+
+// ValidateSegments holds a clip-observation-v2 record to the complete-coverage
+// contract: the scenes open at start, each one continues exactly where the last
+// ended, the final one closes at end, and every scene states how far it can be
+// trusted and whether its footage is usable (CLIP-10).
 func ValidateSegments(l AnalysisLimits, segments []Segment, start, end int) error {
+	return validateSegments(l, segments, start, end, true)
+}
+
+// ValidateLegacySegments reads a record written under clip-observation-v1: its
+// scenes are ordered and non-overlapping but may leave an unobserved gap and
+// carry no status at all. It exists so stored v1 work stays readable; no v1
+// record may enter a v2 writer input (CLIP-93).
+func ValidateLegacySegments(l AnalysisLimits, segments []Segment, start, end int) error {
+	return validateSegments(l, segments, start, end, false)
+}
+
+func validateSegments(l AnalysisLimits, segments []Segment, start, end int, complete bool) error {
 	if len(segments) == 0 || len(segments) > l.MaxSegments {
 		return observationViolation("observe_segment_count", 0, map[string]int{"segment_count": len(segments)})
 	}
@@ -118,14 +174,29 @@ func ValidateSegments(l AnalysisLimits, segments []Segment, start, end int) erro
 		if s.StartMS < previous {
 			return observationViolation("observe_segment_overlap", i+1, timing)
 		}
+		// A missing opening scene and an unobserved span between two scenes are
+		// separate facts about the response, so correction feedback can say
+		// which one to fix rather than asking for the whole chunk again.
+		if complete && s.StartMS != previous {
+			check := "observe_coverage_gap"
+			if i == 0 {
+				check = "observe_coverage_start"
+			}
+			return observationViolation(check, i+1, timing)
+		}
+		if complete || s.Certainty != "" || s.Usability != "" {
+			if !validCertainty(s.Certainty) || !validUsability(s.Usability) {
+				return observationViolation("observe_status", i+1, nil)
+			}
+		}
 		if !normalized(s.Focal.X) || !normalized(s.Focal.Y) {
 			return observationViolation("observe_focal", i+1, observationGeometry(s.Focal, s.Subject))
 		}
 		if !ValidRegion(s.Subject) {
 			return observationViolation("observe_subject_bounds", i+1, observationGeometry(s.Focal, s.Subject))
 		}
-		if !bounded(s.Event, 0, l.MaxTextRunes) || !bounded(s.Speech, 0, l.MaxTextRunes) || !bounded(s.Quality, 1, l.MaxTextRunes) {
-			return observationViolation("observe_text_length", i+1, map[string]int{"event_runes": len([]rune(s.Event)), "speech_runes": len([]rune(s.Speech)), "quality_runes": len([]rune(s.Quality))})
+		if !bounded(s.Event, 0, l.MaxTextRunes) || !bounded(s.Speech, 0, l.MaxTextRunes) || !bounded(s.Quality, 1, l.MaxTextRunes) || !bounded(s.Action, 0, l.MaxTextRunes) || !bounded(s.Motion, 0, l.MaxTextRunes) {
+			return observationViolation("observe_text_length", i+1, map[string]int{"event_runes": len([]rune(s.Event)), "speech_runes": len([]rune(s.Speech)), "quality_runes": len([]rune(s.Quality)), "action_runes": len([]rune(s.Action)), "motion_runes": len([]rune(s.Motion))})
 		}
 		if strings.TrimSpace(s.Quality) == "" {
 			return observationViolation("observe_quality", i+1, nil)
@@ -133,17 +204,23 @@ func ValidateSegments(l AnalysisLimits, segments []Segment, start, end int) erro
 		if len(s.Subjects) > l.MaxSubjects {
 			return observationViolation("observe_subject_count", i+1, map[string]int{"subject_count": len(s.Subjects)})
 		}
-		description := strings.TrimSpace(s.Event) != "" || strings.TrimSpace(s.Speech) != ""
+		description := strings.TrimSpace(s.Event) != "" || strings.TrimSpace(s.Speech) != "" || strings.TrimSpace(s.Action) != "" || strings.TrimSpace(s.Motion) != ""
 		for _, subject := range s.Subjects {
 			if !bounded(subject, 1, l.MaxTextRunes) || strings.TrimSpace(subject) == "" {
 				return observationViolation("observe_subject_text", i+1, map[string]int{"subject_runes": len([]rune(subject))})
 			}
 			description = true
 		}
-		if !description {
+		// Black, obscured or unreadable footage has nothing truthful to
+		// describe, so its bounded quality reason IS the record. Everything
+		// else still owes a fact.
+		if !description && !s.Unknowable() {
 			return observationViolation("observe_description", i+1, nil)
 		}
 		previous = s.EndMS
+	}
+	if complete && previous != end {
+		return observationViolation("observe_coverage_end", len(segments), map[string]int{"previous_end_ms": previous, "duration_ms": end - start})
 	}
 	return nil
 }

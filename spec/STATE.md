@@ -38,26 +38,32 @@
 | id | st |
 |---|---|
 | diff-260908 | converted@260908 |
+| clip-project-update-260914 | converted@260914 |
 
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T110 | Release QA on the Naver app and the overlay measurement | CDS CLIP | T108 | blocked@260912 |
-| T145 | Record complete clip scenes with explicit uncertainty | CLIP ARCH | T141 | todo |
 | T146 | Compose validated split and fixed-rate clip assemblies | CLIP CDS ARCH | T142 T143 T145 | todo |
 | T147 | Render fixed-rate cuts and opted-in source audio | CLIP CDS ARCH | T142 T143 | todo |
 | T148 | Preview the transformed assembly timeline | CLIP CDS ARCH | T142 T143 | todo |
 | T149 | Add cut, split and fixed-rate editing controls | CLIP CDS ARCH | T144 T148 | todo |
 | T150 | Add per-source original-sound toggles | CLIP CDS ARCH | T143 T148 | todo |
 | T151 | Verify review-clip assembly end to end | CLIP CDS ARCH | T146 T147 T149 T150 | todo |
+| T153 | Admit the empty legacy disclosure a composition project saves with | ARCH | - | doing@260914.disc |
 
 ## next
 - T152 is done; deploy it before the next owner generation attempt, since production still refuses correct renders until it ships
-- T145 T146 T147 T148 T149 T150 are all unblocked now that T142 T143 T144 are done
+- T145 is done, so T146 is unblocked; T147 T148 T149 T150 were already unblocked
 - T110 remains owner-blocked and must refresh CLIP@18 / CDS@13 before resuming; T008 remains owner-dependent for its separate local Naver publication verification.
 
 ## log
+- 260914 T145 done (asm); clip-observation-v2 records every chunk completely with action/motion and an explicit certainty/usability, refuses instead of clamping model times, and never promotes v1 evidence into a v2 generation
+- 260914 T153 claimed (disc)
+- 260914 create-task review/clip-project-update-260914 done; T153 fixes composition-project update admission
+- 260914 create-task review/clip-project-update-260914 start
+- 260914 T145 claimed (asm)
 - 260914 T144 done (rate); request-only creation provenance admits owner add and split through the existing optimistic save, with observed-scene evidence, server-owned defaults and named refusals
 - 260914 T144 claimed (rate)
 - 260914 T143 done (rate); migration 0052 backfills legacy audio meaning, one writer transaction owns the lease/plan/revision/retention change, and the setting stays outside every paid identity
@@ -73,8 +79,3 @@
 - 260914 update-ssot CDS start
 - 260914 T142 claimed (rate)
 - 260914 create-task CLIP CDS done; T142-T151 cover versioned rate/audio contracts, complete observation, assembly writing, deterministic render, owner editing and release QA
-- 260914 create-task CLIP CDS start
-- 260914 update-ssot CLIP r18 CDS r12 done; bounded full-scene observation, authoritative split/rate assembly, source-audio opt-in and transformed-time validation
-- 260914 warning; T110 blocked depends on CLIP/CDS and must refresh r18/r12 before resuming; T008 is unaffected
-- 260914 update-ssot CLIP CDS decision; original audio default off and preserved only by an explicit per-source toggle, stable review output over aspirational semantic perfection
-- 260914 update-ssot CLIP CDS review pending; define scene coverage, assembly-tool bounds, transformed-time audio/caption rules and editable controls

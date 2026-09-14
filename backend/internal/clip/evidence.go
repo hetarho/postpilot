@@ -97,7 +97,15 @@ func containsIdentity(text, name string) bool {
 	return false
 }
 
+// A v2 record STATES how far it can be trusted, so nothing is inferred from its
+// prose: only certain and usable footage may authorize an item fact, and an
+// unknown or unusable scene never can (CLIP-10, CLIP-99). The keyword heuristic
+// below survives only for legacy successful content, which carries no status
+// and would otherwise lose the caution it was read with.
 func uncertainObservation(s Segment) bool {
+	if s.Observed() {
+		return !s.Confident()
+	}
 	text := strings.ToLower(strings.Join(append([]string{s.Event, s.Speech, s.Quality}, s.Subjects...), " "))
 	for _, marker := range []string{"불확실", "추정", "확인 불가", "확인할 수 없", "아마", "maybe", "possibly", "uncertain", "cannot identify", "unidentified"} {
 		if strings.Contains(text, marker) {

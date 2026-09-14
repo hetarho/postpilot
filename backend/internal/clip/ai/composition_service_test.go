@@ -32,7 +32,7 @@ func TestNativeWriterAdmitsAll49ObservationsAtTheSourceCeiling(t *testing.T) {
 				}
 				a := clip.SourceAnalysis{Source: clip.AnalysisSource{RenderSource: clip.RenderSource{ID: fmt.Sprintf("00000000-0000-4000-8000-%012d", i), Fingerprint: fmt.Sprintf("%064x", i), Info: clip.MediaInfo{DurationMS: duration, Width: 1280, Height: 720, HasAudio: true}}, Filename: fmt.Sprintf("fixture-%02d.mp4", i)}}
 				for start := 0; start < duration; start += 60000 {
-					a.Segments = append(a.Segments, clip.Segment{StartMS: start, EndMS: min(start+60000, duration), Event: "synthetic scene", Subjects: []string{"test pattern"}, Speech: "synthetic speech", Quality: "usable", Scene: "scenery", Focal: clip.Point{X: .5, Y: .5}, Subject: clip.Region{X: .3, Y: .3, Width: .4, Height: .4}})
+					a.Segments = append(a.Segments, clip.Segment{StartMS: start, EndMS: min(start+60000, duration), Event: "synthetic scene", Action: "moves", Motion: "static", Subjects: []string{"test pattern"}, Speech: "synthetic speech", Quality: "usable", Scene: "scenery", Focal: clip.Point{X: .5, Y: .5}, Subject: clip.Region{X: .3, Y: .3, Width: .4, Height: .4}, Certainty: clip.CertaintyCertain, Usability: clip.UsabilityUsable})
 				}
 				in.Analyses = append(in.Analyses, a)
 			}
@@ -53,7 +53,7 @@ func TestNativeWriterAdmitsAll49ObservationsAtTheSourceCeiling(t *testing.T) {
 			if strings.Count(user, `"observation_id"`) != 49 {
 				t.Fatal("dropped observations to fit the budget")
 			}
-			if len(request) > llm.ClipInputUnits-2048 {
+			if len(request) > llm.ClipPlanInputUnits-2048 {
 				t.Fatalf("complete frozen input exceeds reserved limit: %d bytes (system %d, user %d, schema %d)", len(request), len(system), len(user), len(schema))
 			}
 			plan, _, err := writer.Plan(t.Context(), testRef(), in)
@@ -86,8 +86,8 @@ func nativeInput() clip.PlanningInput {
 	in.Analyses[0].Source.Info.DurationMS = 15000
 	in.Analyses[0].Source.Info.HasAudio = false
 	in.Analyses[0].Segments = []clip.Segment{
-		{StartMS: 0, EndMS: 7500, Event: "해물라면을 담는다", Subjects: []string{"해물라면"}, Quality: "clear", Focal: clip.Point{X: .5, Y: .5}, Scene: "food"},
-		{StartMS: 7500, EndMS: 15000, Event: "치즈라면을 담는다", Subjects: []string{"치즈라면"}, Quality: "clear", Focal: clip.Point{X: .5, Y: .5}, Scene: "food"},
+		{StartMS: 0, EndMS: 7500, Event: "해물라면을 담는다", Subjects: []string{"해물라면"}, Quality: "clear", Focal: clip.Point{X: .5, Y: .5}, Scene: "food", Certainty: clip.CertaintyCertain, Usability: clip.UsabilityUsable},
+		{StartMS: 7500, EndMS: 15000, Event: "치즈라면을 담는다", Subjects: []string{"치즈라면"}, Quality: "clear", Focal: clip.Point{X: .5, Y: .5}, Scene: "food", Certainty: clip.CertaintyCertain, Usability: clip.UsabilityUsable},
 	}
 	return in
 }
@@ -205,7 +205,21 @@ func TestNativeWriterRejectsCrossItemClaimsWithoutExtraCalls(t *testing.T) {
 			in.Analyses[0].Segments[0].Event = "음식을 담는다"
 			in.Analyses[0].Segments[0].Subjects = []string{"접시"}
 		}, "item_unassigned"},
-		{"uncertain_match", func(in *clip.PlanningInput, _ map[string]any) { in.Analyses[0].Segments[0].Quality = "uncertain" }, "item_uncertain"},
+		// The recorded status decides for a v2 scene; the prose heuristic decides
+		// only for a legacy record that never carried one.
+		{"uncertain_status", func(in *clip.PlanningInput, _ map[string]any) {
+			in.Analyses[0].Segments[0].Certainty = clip.CertaintyUncertain
+		}, "item_uncertain"},
+		{"unusable_status", func(in *clip.PlanningInput, _ map[string]any) {
+			in.Analyses[0].Segments[0].Usability = clip.UsabilityUnusable
+		}, "item_uncertain"},
+		// A v2 scene that says it is certain keeps its item even when its prose
+		// happens to contain the legacy keyword.
+		{"v2_prose_does_not_override_status", func(in *clip.PlanningInput, _ map[string]any) {
+			in.Analyses[0].Segments[0].Quality = "uncertain"
+			in.Analyses[0].Segments[0].Event = "음식을 담는다"
+			in.Analyses[0].Segments[0].Subjects = []string{"접시"}
+		}, "item_unassigned"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			in, p := nativeInput(), nativePlan()
@@ -255,7 +269,6 @@ func TestNativeWriterRespectsItemOrderAndRejectsStructuralInventions(t *testing.
 		{"invented_element", func(_ *clip.PlanningInput, p map[string]any) { nativeGenerated(p, 0)["element_id"] = "cta" }, false},
 		{"fixed_rewrite", func(_ *clip.PlanningInput, p map[string]any) { nativeGenerated(p, 0)["element_id"] = "sticker" }, false},
 		{"unknown_section", func(_ *clip.PlanningInput, p map[string]any) { firstCut(p)["template_section_id"] = "invention" }, false},
-		{"source_gap", func(in *clip.PlanningInput, _ map[string]any) { in.Analyses[0].Segments[0].EndMS = 7499 }, false},
 		{"missing_cut_reference", func(_ *clip.PlanningInput, p map[string]any) { firstCut(p)["observation_refs"] = []string{} }, false},
 		{"case_key", func(_ *clip.PlanningInput, p map[string]any) {
 			firstCut(p)["Source_ID"] = "source"
@@ -278,6 +291,23 @@ func TestNativeWriterRespectsItemOrderAndRejectsStructuralInventions(t *testing.
 				t.Fatalf("wrong failure %v", err)
 			}
 		})
+	}
+}
+
+// A v2 record covers its whole source, so an unobserved gap is refused as INPUT
+// — before the writer is paid — rather than caught afterwards on a cut that
+// crossed it (CLIP-10, CLIP-92).
+func TestObservationGapIsRefusedBeforeTheWriterIsPaid(t *testing.T) {
+	in, p := nativeInput(), nativePlan()
+	in.Analyses[0].Segments[0].EndMS = 7499
+	s, models, _ := newService(t, raw(p), true)
+	_, _, err := s.Plan(t.Context(), testRef(), in)
+	d, ok := clip.DiagnosticFromError(err)
+	if err == nil || len(models.calls) != 0 {
+		t.Fatalf("a gapped observation reached the writer: %v calls=%d", err, len(models.calls))
+	}
+	if !ok || d.Check != "observe_coverage_gap" || d.Values["segment"] != 2 || d.Values["previous_end_ms"] != 7499 {
+		t.Fatalf("lost the coverage diagnostic: %+v", d)
 	}
 }
 

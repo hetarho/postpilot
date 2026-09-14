@@ -37,8 +37,13 @@ func TestRetainedObservationDetailIsOwnerScopedAndStructured(t *testing.T) {
 	a := []clip.SourceAnalysis{{
 		Source: clip.AnalysisSource{RenderSource: clip.RenderSource{ID: "source-a", Fingerprint: "fingerprint-a",
 			Info: clip.MediaInfo{DurationMS: 12000, Width: 1920, Height: 1080}}, Filename: "a.mp4"},
-		Segments: []clip.Segment{{StartMS: 3500, EndMS: 10500, Event: "음식을 촬영", Subjects: []string{"접시"},
-			Speech: "맛있어요", Quality: "선명함", Focal: clip.Point{X: .5, Y: .5}, Scene: "food", ReadableText: true}},
+		Segments: []clip.Segment{{StartMS: 3500, EndMS: 10500, Event: "음식을 촬영", Action: "접시를 든다",
+			Motion: "카메라가 다가간다", Subjects: []string{"접시"},
+			Speech: "맛있어요", Quality: "선명함", Focal: clip.Point{X: .5, Y: .5}, Scene: "food", ReadableText: true,
+			Certainty: clip.CertaintyUncertain, Usability: clip.UsabilityUsable},
+			// A record stored before the v2 contract keeps its two empty status
+			// fields all the way to the owner; nothing invents one for it.
+			{StartMS: 10500, EndMS: 12000, Event: "테이블", Quality: "흔들림"}},
 	}, {
 		Source: clip.AnalysisSource{RenderSource: clip.RenderSource{ID: "source-b", Fingerprint: "fingerprint-b",
 			Info: clip.MediaInfo{DurationMS: 20000}}, Filename: "empty.mp4"},
@@ -62,6 +67,12 @@ func TestRetainedObservationDetailIsOwnerScopedAndStructured(t *testing.T) {
 	segment := got.Sources[0].Segments[0]
 	if segment.StartMs != 3500 || segment.EndMs != 10500 || segment.Event != "음식을 촬영" || segment.Speech != "맛있어요" || segment.Quality != "선명함" || strings.Join(segment.Subjects, ",") != "접시" {
 		t.Fatalf("evidence changed: %v", segment)
+	}
+	if segment.Action != "접시를 든다" || segment.Motion != "카메라가 다가간다" || segment.Certainty != "uncertain" || segment.Usability != "usable" {
+		t.Fatalf("recorded action, motion or status lost: %v", segment)
+	}
+	if legacy := got.Sources[0].Segments[1]; legacy.Certainty != "" || legacy.Usability != "" || legacy.Action != "" || legacy.Motion != "" {
+		t.Fatalf("a legacy record was given an invented status: %v", legacy)
 	}
 	wire, _ := protojson.Marshal(got)
 	for _, forbidden := range []string{"private-result-key", "Focal", "focal", "readableText", "https://", "analysisJson", "confidence"} {

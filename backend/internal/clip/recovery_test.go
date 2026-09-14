@@ -11,7 +11,7 @@ func TestRecoverySelectionBindsEveryAnalysisIdentity(t *testing.T) {
 	for _, change := range []string{"same", "source", "fingerprint", "model", "contract", "duration", "invalid-segment", "duplicate"} {
 		t.Run(change, func(t *testing.T) {
 			source := AnalysisSource{RenderSource: RenderSource{ID: "source", Fingerprint: "fingerprint", Info: MediaInfo{Width: 1920, Height: 1080, DurationMS: 15000}}, Filename: "fixture.mp4"}
-			chunk := ChunkAnalysis{SourceID: source.ID, Fingerprint: source.Fingerprint, DurationMS: 15000, Segments: []Segment{{StartMS: 0, EndMS: 15000, Event: "scene", Quality: "clear", Focal: Point{X: .5, Y: .5}}}}
+			chunk := ChunkAnalysis{SourceID: source.ID, Fingerprint: source.Fingerprint, DurationMS: 15000, Segments: []Segment{{StartMS: 0, EndMS: 15000, Event: "scene", Quality: "clear", Focal: Point{X: .5, Y: .5}, Certainty: CertaintyCertain, Usability: UsabilityUsable}}}
 			r := RecoveryState{Version: 1, Contract: AnalysisContractVersion, Observe: ref, Sources: []AnalysisSource{source}, Chunks: []ChunkAnalysis{chunk}, Plan: "saved", PlanDigest: "digest"}
 			batch := SourceBatch{Sources: []SourceLease{{ID: source.ID, SourceMetadata: SourceMetadata{Fingerprint: source.Fingerprint, Width: 1920, Height: 1080, DurationMS: 15000}}}}
 			model := ref

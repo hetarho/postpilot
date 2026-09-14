@@ -38,16 +38,20 @@ func (r *regionJSON) domain() (clip.Region, bool) {
 }
 
 type segmentJSON struct {
-	Start    *int        `json:"start_ms"`
-	End      *int        `json:"end_ms"`
-	Event    *string     `json:"event"`
-	Subjects *[]string   `json:"subjects"`
-	Speech   *string     `json:"speech"`
-	Quality  *string     `json:"quality"`
-	Focal    *pointJSON  `json:"focal"`
-	Scene    *string     `json:"scene"`
-	Readable *bool       `json:"readable_text"`
-	Subject  *regionJSON `json:"subject"`
+	Start     *int        `json:"start_ms"`
+	End       *int        `json:"end_ms"`
+	Event     *string     `json:"event"`
+	Action    *string     `json:"action"`
+	Motion    *string     `json:"motion"`
+	Subjects  *[]string   `json:"subjects"`
+	Speech    *string     `json:"speech"`
+	Quality   *string     `json:"quality"`
+	Focal     *pointJSON  `json:"focal"`
+	Scene     *string     `json:"scene"`
+	Readable  *bool       `json:"readable_text"`
+	Subject   *regionJSON `json:"subject"`
+	Certainty *string     `json:"certainty"`
+	Usability *string     `json:"usability"`
 }
 type chunkJSON struct {
 	SourceID *string        `json:"source_id"`
@@ -237,11 +241,8 @@ func parseChunk(cfg Config, input clip.ChunkInput, raw string) (out clip.ChunkAn
 		segment = i + 1
 		focal, focalOK := s.Focal.domain()
 		subject, subjectOK := s.Subject.domain()
-		if s.Start == nil || s.End == nil || s.Event == nil || s.Subjects == nil || s.Speech == nil || s.Quality == nil || !focalOK || !subjectOK {
+		if s.Start == nil || s.End == nil || s.Event == nil || s.Subjects == nil || s.Speech == nil || s.Quality == nil || s.Action == nil || s.Motion == nil || s.Certainty == nil || s.Usability == nil || !focalOK || !subjectOK {
 			return clip.ChunkAnalysis{}, outputError("observe_segment_fields")
-		}
-		if *s.Start >= *s.End {
-			return clip.ChunkAnalysis{}, outputError("observe_segment_time")
 		}
 		// The model is told the seven scene ids, so an eighth is bad output, not
 		// something to map away. The tolerance for a scene-less segment belongs
@@ -260,13 +261,21 @@ func parseChunk(cfg Config, input clip.ChunkInput, raw string) (out clip.ChunkAn
 		if !input.Source.Info.HasAudio && strings.TrimSpace(*s.Speech) != "" {
 			return clip.ChunkAnalysis{}, outputError("observe_silent_speech")
 		}
-		// Clamp locally BEFORE adding the authoritative source offset.
-		start, end := max(0, min(input.DurationMS, *s.Start)), max(0, min(input.DurationMS, *s.End))
-		result.Segments = append(result.Segments, clip.Segment{StartMS: input.OffsetMS + start, EndMS: input.OffsetMS + end, Event: *s.Event, Subjects: *s.Subjects, Speech: *s.Speech, Quality: *s.Quality, Focal: focal, Scene: scene, ReadableText: readable, Subject: subject})
+		// Times stay CHUNK-LOCAL here, exactly as the model returned them: a
+		// negative, overflowing or out-of-order value is refused below rather
+		// than clamped into something the model never said, so the correction
+		// feedback describes the response that actually failed.
+		result.Segments = append(result.Segments, clip.Segment{StartMS: *s.Start, EndMS: *s.End, Event: *s.Event, Action: *s.Action, Motion: *s.Motion, Subjects: *s.Subjects, Speech: *s.Speech, Quality: *s.Quality, Focal: focal, Scene: scene, ReadableText: readable, Subject: subject, Certainty: *s.Certainty, Usability: *s.Usability})
 	}
 	segment = 0
-	if err := clip.ValidateSegments(cfg.Analysis, result.Segments, input.OffsetMS, input.OffsetMS+input.DurationMS); err != nil {
+	if err := clip.ValidateSegments(cfg.Analysis, result.Segments, 0, input.DurationMS); err != nil {
 		return clip.ChunkAnalysis{}, err
+	}
+	// The frozen source offset is added ONCE, after the chunk-local record has
+	// been proved complete and in order.
+	for i := range result.Segments {
+		result.Segments[i].StartMS += input.OffsetMS
+		result.Segments[i].EndMS += input.OffsetMS
 	}
 	return result, nil
 }

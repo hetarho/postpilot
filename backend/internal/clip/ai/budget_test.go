@@ -5,8 +5,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/ai"
 	"github.com/postpilot/backend/internal/clip/design"
+	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/platform/config"
 )
 
@@ -23,9 +25,9 @@ func TestSchemaWorstCaseFitsTheCompletionBudgets(t *testing.T) {
 		subjects[i] = long
 	}
 	segment := map[string]any{
-		"start_ms": 60000, "end_ms": 60000, "event": long, "subjects": subjects,
+		"start_ms": 60000, "end_ms": 60000, "event": long, "action": long, "motion": long, "subjects": subjects,
 		"speech": long, "quality": long, "focal": map[string]float64{"x": .5, "y": .5},
-		"scene": "interior", "readable_text": true,
+		"scene": "interior", "readable_text": true, "certainty": "uncertain", "usability": "unusable",
 		"subject": map[string]float64{"x": .1, "y": .1, "width": .1, "height": .1},
 	}
 	segments := make([]any, cfg.Analysis.MaxSegments)
@@ -54,8 +56,10 @@ func TestSchemaWorstCaseFitsTheCompletionBudgets(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// What T105 added to each shape, at its own maximum.
-	segmentAdded := len(`"scene":"interior","readable_text":true,`)
+	// What T105 and then T145 added to each shape, at its own maximum. The two
+	// status fields are enum-bounded, so their worst case is their longest
+	// member; action and motion are bounded like every other observation field.
+	segmentAdded := len(`"scene":"interior","readable_text":true,"certainty":"uncertain","usability":"unusable",`)
 	cutAdded := len(`"chips":["위치","가격"],"short_text":"","keyword":"",`) + 2*len(short)
 	// A conservative 3 bytes per token for Korean UTF-8 output.
 	const bytesPerToken = 3
@@ -67,7 +71,7 @@ func TestSchemaWorstCaseFitsTheCompletionBudgets(t *testing.T) {
 	// bytes — and is bounded in practice by the provider's own MaxTokens and by
 	// MaxResponseBytes at the parser. What matters is that T105's own fields are
 	// a small part of each shape, so they cannot be what truncates a response.
-	if segmentAdded > 100 {
+	if segmentAdded > 200 {
 		t.Fatalf("the new segment fields cost %d bytes", segmentAdded)
 	}
 	// Against the most cuts CDS-37 actually allows — the longest clip divided by
@@ -91,14 +95,36 @@ func TestSchemaWorstCaseFitsTheCompletionBudgets(t *testing.T) {
 	}
 }
 
+// The observe REQUEST rides beside a bounded inline MP4, so its own allowance is
+// the smallest one in the system: 20,000 units of the 30,000 are reserved for the
+// media. T145's coverage and status rules made the prompt longer, and it still
+// has to fit without dropping a rule or shortening the schema (CLIP-92).
+func TestObservePromptFitsTheInlineInputAllowance(t *testing.T) {
+	in := clip.ChunkInput{Source: clip.AnalysisSource{RenderSource: clip.RenderSource{ID: strings.Repeat("a", 64), Info: clip.MediaInfo{DurationMS: 60000, Width: 1920, Height: 1080, HasAudio: true}}, Filename: strings.Repeat("원", 80) + ".mp4"}, DurationMS: 60000}
+	system, user := ai.BuildObservePrompt(in)
+	request, err := json.Marshal(struct {
+		System, User string
+		Schema       json.RawMessage
+	}{system, user, ai.ChunkSchema()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	limit := llm.ClipInputUnits - 2048 - 20000
+	t.Logf("observe request %d bytes of %d (system %d, user %d, schema %d)", len(request), limit, len(system), len(user), len(ai.ChunkSchema()))
+	if len(request) > limit {
+		t.Fatalf("the observe prompt no longer fits its reserved inline allowance: %d > %d", len(request), limit)
+	}
+}
+
 func realisticChunk(maxSubjects int) []byte {
 	segments := make([]any, 10)
 	for i := range segments {
 		segments[i] = map[string]any{
 			"start_ms": i * 6000, "end_ms": (i + 1) * 6000,
-			"event": "접시에 김밥을 담고 카메라가 천천히 다가간다", "subjects": []string{"김밥", "접시"},
+			"event": "접시에 김밥을 담고 카메라가 천천히 다가간다", "action": "김밥을 접시에 옮겨 담는다",
+			"motion": "카메라가 천천히 앞으로 다가간다", "subjects": []string{"김밥", "접시"},
 			"speech": "", "quality": "steady and sharp", "focal": map[string]float64{"x": .5, "y": .5},
-			"scene": "food", "readable_text": false,
+			"scene": "food", "readable_text": false, "certainty": "certain", "usability": "usable",
 			"subject": map[string]float64{"x": .2, "y": .3, "width": .5, "height": .4},
 		}
 	}

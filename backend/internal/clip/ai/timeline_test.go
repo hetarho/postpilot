@@ -169,7 +169,12 @@ func TestComposeCannotFillTargetFromUnobservedOrReusedFootage(t *testing.T) {
 		return map[string]any{"id": id, "source_id": source, "start_ms": start, "end_ms": end, "focal": map[string]any{"x": .5, "y": .5}, "chips": []string{},
 			"caption": map[string]any{"text": "여행", "start_ms": 200, "end_ms": end - start - 200, "short_text": "여행", "keyword": ""}}
 	}
-	for _, mode := range []string{"unblocked", "source exhausted", "scene boundary", "observation gap", "next selected cut", "existing overlap", "caption cannot shrink"} {
+	// Neither an unobserved gap nor a truncated observation belongs here any
+	// more: a v2 record covers its source completely, so such an analysis is
+	// refused as writer INPUT instead. The backward repair's own gap and scene
+	// rules are pinned directly in
+	// TestBackwardRepairPreservesCopySourceTimeAndScene.
+	for _, mode := range []string{"unblocked", "source exhausted", "next selected cut", "existing overlap", "caption cannot shrink"} {
 		t.Run(mode, func(t *testing.T) {
 			in := shortInput()
 			// 1.5 s + 6.0 s + 4.5 s = 12 s against a 15 s target: only the first
@@ -179,23 +184,17 @@ func TestComposeCannotFillTargetFromUnobservedOrReusedFootage(t *testing.T) {
 			switch mode {
 			case "source exhausted":
 				a.Source.Info.DurationMS, a.Segments[0].EndMS = 1500, 1500
-			case "scene boundary":
-				a.Segments[0].EndMS = 1500
-			case "observation gap":
-				// The cut starts before anything was observed, so its segment
-				// never contains it and lends it nothing.
-				a.Segments[0].StartMS = 100
 			case "next selected cut":
 				// Both cuts come off the one source: the second already occupies
 				// everything observed past the first, which therefore has no
-				// room, and the second is itself at the end of its segment.
+				// room, and the source itself ends there.
 				cuts = []any{cuts[0], shortCut("next", "source-0", 1500, 7500)}
-				a.Segments[0].EndMS = 7500
+				a.Source.Info.DurationMS, a.Segments[0].EndMS = 7500, 7500
 			case "existing overlap":
 				// The same source range is reused by a longer cut, so the short
 				// one may not be expanded into it.
 				cuts = []any{cuts[0], shortCut("reused", "source-0", 0, 6000)}
-				a.Segments[0].EndMS = 6000
+				a.Source.Info.DurationMS, a.Segments[0].EndMS = 6000, 6000
 			case "caption cannot shrink":
 				// The other direction: four cuts over the target, each holding
 				// its copy so late that almost nothing may be trimmed.
@@ -245,7 +244,7 @@ func TestCompilerJoinsScenesAndHoldsCutLengths(t *testing.T) {
 		a.Source.ID = fmt.Sprintf("source-%d", i)
 		a.Source.Fingerprint = fmt.Sprintf("hash-%d", i)
 		a.Source.Info.DurationMS = 65000
-		a.Segments = []clip.Segment{{StartMS: 0, EndMS: 65000, Event: "장면", Subjects: []string{"접시"}, Quality: "steady", Focal: clip.Point{X: .5, Y: .5}, Scene: scene}}
+		a.Segments = []clip.Segment{{StartMS: 0, EndMS: 65000, Event: "장면", Subjects: []string{"접시"}, Quality: "steady", Focal: clip.Point{X: .5, Y: .5}, Scene: scene, Certainty: clip.CertaintyCertain, Usability: clip.UsabilityUsable}}
 		in.Analyses = append(in.Analyses, a)
 		// A 9 s cut on a food close-up is more than twice CDS-37's ceiling for
 		// one, and the others are over the shared ceiling.
