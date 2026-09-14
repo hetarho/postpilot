@@ -18,8 +18,8 @@ type clipFinalizer struct {
 
 func (f clipFinalizer) Finalize(ctx context.Context, req clip.FinalizationRequest) (clip.Project, error) {
 	var result clip.Project
-	err := clipWriteTx(ctx, f.writer, func(conn *sql.Conn) error {
-		clips, jobs := clipstore.NewTx(conn), jobstore.NewTx(conn)
+	err := clipWriteTx(ctx, f.writer, func(tx *sql.Tx) error {
+		clips, jobs := clipstore.NewTx(tx), jobstore.NewTx(tx)
 		p, err := clips.GetProject(ctx, req.UserID, req.ProjectID)
 		if err != nil {
 			return err

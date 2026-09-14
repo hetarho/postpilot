@@ -4,7 +4,6 @@ package store
 import (
 	"context"
 	"database/sql"
-	"database/sql/driver"
 	"errors"
 	"fmt"
 	"time"
@@ -21,9 +20,9 @@ type Store struct {
 	write        *sqlc.Queries
 	read         *sqlc.Queries
 	credits      billing.Credits
-	creditsForTx func(*sql.Conn) billing.Credits
+	creditsForTx func(*sql.Tx) billing.Credits
 	plans        billing.Plans
-	plansForTx   func(*sql.Conn) billing.Plans
+	plansForTx   func(*sql.Tx) billing.Plans
 }
 
 func New(writer, reader *sql.DB) *Store {
@@ -33,11 +32,11 @@ func New(writer, reader *sql.DB) *Store {
 // SetCreditsForTx attaches the usage adapter at the composition root. The factory binds
 // that adapter to this store's transaction connection, so billing can atomically record a
 // method registration and its once-only credit lot without either store importing the other.
-func (s *Store) SetCreditsForTx(factory func(*sql.Conn) billing.Credits) {
+func (s *Store) SetCreditsForTx(factory func(*sql.Tx) billing.Credits) {
 	s.creditsForTx = factory
 }
 
-func (s *Store) SetPlansForTx(factory func(*sql.Conn) billing.Plans) {
+func (s *Store) SetPlansForTx(factory func(*sql.Tx) billing.Plans) {
 	s.plansForTx = factory
 }
 
@@ -51,52 +50,26 @@ func (s *Store) InWriteTx(ctx context.Context, fn func(billing.Store, billing.Cr
 	if s.creditsForTx == nil || s.plansForTx == nil {
 		return errors.New("billing transaction adapter factories are not configured")
 	}
-	conn, err := s.writer.Conn(ctx)
+	tx, err := s.writer.BeginTx(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("acquire billing writer: %w", err)
-	}
-	defer conn.Close()
-	if _, err := conn.ExecContext(ctx, "BEGIN IMMEDIATE"); err != nil {
 		return fmt.Errorf("begin billing transaction: %w", err)
 	}
-	committed := false
-	defer func() { finishWriteTx(ctx, conn, committed) }()
-	credits := s.creditsForTx(conn)
-	plans := s.plansForTx(conn)
+	// See usage/store.InWriteTx: database/sql undoes the transaction when the caller's
+	// context dies, which hand-written ROLLBACK on that same dead context could not.
+	defer func() { _ = tx.Rollback() }()
+	credits := s.creditsForTx(tx)
+	plans := s.plansForTx(tx)
 	if credits == nil || plans == nil {
 		return errors.New("billing transaction adapter factory returned nil")
 	}
-	scoped := &Store{write: sqlc.New(conn), read: sqlc.New(conn), credits: credits, plans: plans}
+	scoped := &Store{write: sqlc.New(tx), read: sqlc.New(tx), credits: credits, plans: plans}
 	if err := fn(scoped, credits, plans); err != nil {
 		return err
 	}
-	if _, err := conn.ExecContext(ctx, "COMMIT"); err != nil {
+	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit billing transaction: %w", err)
 	}
-	committed = true
 	return nil
-}
-
-// writeTxUndoTimeout bounds the undo of a transaction whose caller has already given up.
-const writeTxUndoTimeout = 5 * time.Second
-
-// finishWriteTx undoes a transaction its caller did not commit, on a context the caller's
-// cancellation cannot reach.
-//
-// The writer pool holds exactly one connection (ARCHITECTURE §2.4), so a connection returned
-// to it mid-transaction fails every later write in the process with "cannot start a
-// transaction within a transaction" until a restart. A cancelled request used to do exactly
-// that: fn failed with context.Canceled and the ROLLBACK, issued on the same dead context,
-// failed too. If the undo still does not land, the connection is retired instead of reused.
-func finishWriteTx(ctx context.Context, conn *sql.Conn, committed bool) {
-	if committed {
-		return
-	}
-	undo, cancel := context.WithTimeout(context.WithoutCancel(ctx), writeTxUndoTimeout)
-	defer cancel()
-	if _, err := conn.ExecContext(undo, "ROLLBACK"); err != nil {
-		_ = conn.Raw(func(any) error { return driver.ErrBadConn })
-	}
 }
 
 func (s *Store) UpsertPaymentMethod(ctx context.Context, method billing.PaymentMethod) error {

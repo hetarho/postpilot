@@ -29,6 +29,11 @@ type DB struct {
 
 // Open prepares the database file's directory and returns the writer/reader pair with
 // WAL, foreign keys, and a busy timeout applied to every connection in both pools.
+//
+// Only the writer asks for immediate transactions. SQLite's default BEGIN takes its write
+// lock at the first write, which is the window in which two admissions could both read the
+// same count and both pass; a reader that grabbed a write lock per transaction would be the
+// opposite mistake.
 func Open(path string) (*DB, error) {
 	if dir := filepath.Dir(path); dir != "" && dir != "." {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -36,7 +41,7 @@ func Open(path string) (*DB, error) {
 		}
 	}
 
-	writer, err := open(path)
+	writer, err := open(path, "&_txlock=immediate")
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +49,7 @@ func Open(path string) (*DB, error) {
 	// racing for the file lock.
 	writer.SetMaxOpenConns(1)
 
-	reader, err := open(path)
+	reader, err := open(path, "")
 	if err != nil {
 		writer.Close()
 		return nil, err
@@ -63,13 +68,13 @@ func (d *DB) Close() error {
 	return rerr
 }
 
-func open(path string) (*sql.DB, error) {
+func open(path, txlock string) (*sql.DB, error) {
 	// The pragmas ride the DSN so they apply to every connection the pool opens, not
 	// just the first — a pragma run once as a statement would be lost when the pool
 	// reconnects. modernc's `_pragma=name(value)` form takes the value in parentheses.
 	dsn := fmt.Sprintf(
-		"file:%s?_pragma=journal_mode(WAL)&_pragma=foreign_keys(ON)&_pragma=busy_timeout(%d)",
-		path, busyTimeoutMillis,
+		"file:%s?_pragma=journal_mode(WAL)&_pragma=foreign_keys(ON)&_pragma=busy_timeout(%d)%s",
+		path, busyTimeoutMillis, txlock,
 	)
 
 	handle, err := sql.Open("sqlite", dsn)

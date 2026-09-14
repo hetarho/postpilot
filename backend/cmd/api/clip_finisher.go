@@ -47,8 +47,8 @@ func (f clipFinisher) Complete(ctx context.Context, c clip.AttemptResult) error 
 			return errors.Join(err, readErr)
 		}
 	}
-	err = clipWriteTx(ctx, f.writer, func(conn *sql.Conn) error {
-		jobs, clips := jobstore.NewTx(conn), clipstore.NewTx(conn)
+	err = clipWriteTx(ctx, f.writer, func(tx *sql.Tx) error {
+		jobs, clips := jobstore.NewTx(tx), clipstore.NewTx(tx)
 		j, err := jobs.GetByID(ctx, c.JobID)
 		if err != nil {
 			return err

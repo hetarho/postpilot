@@ -35,10 +35,10 @@ func TestRegistrationReplacesTheCardAndPersistsOneNonExpiringBonus(t *testing.T)
 	}
 
 	store := billingstore.New(handle.Writer, handle.Reader)
-	store.SetCreditsForTx(func(conn *sql.Conn) billing.Credits {
-		return usage.NewService(usagestore.NewTx(conn), nil, 0)
+	store.SetCreditsForTx(func(tx *sql.Tx) billing.Credits {
+		return usage.NewService(usagestore.NewTx(tx), nil, 0)
 	})
-	store.SetPlansForTx(func(*sql.Conn) billing.Plans { return registrationPlans{} })
+	store.SetPlansForTx(func(*sql.Tx) billing.Plans { return registrationPlans{} })
 	provider := &registrationProvider{label: "11 1234"}
 	service := billing.NewService(store, provider, registrationRates{}, nil, nil, registrationAccounts{}, nil)
 
@@ -99,11 +99,11 @@ func TestSubscribePersistsSubscriptionTierEventsAndMonthlyLotTogether(t *testing
 	}
 
 	store := billingstore.New(handle.Writer, handle.Reader)
-	store.SetCreditsForTx(func(conn *sql.Conn) billing.Credits {
-		return usage.NewService(usagestore.NewTx(conn), nil, 0)
+	store.SetCreditsForTx(func(tx *sql.Tx) billing.Credits {
+		return usage.NewService(usagestore.NewTx(tx), nil, 0)
 	})
-	store.SetPlansForTx(func(conn *sql.Conn) billing.Plans {
-		return auth.NewService(authstore.NewTx(conn), time.Hour)
+	store.SetPlansForTx(func(tx *sql.Tx) billing.Plans {
+		return auth.NewService(authstore.NewTx(tx), time.Hour)
 	})
 	if err := store.UpsertPaymentMethod(ctx, billing.PaymentMethod{
 		UserID: "alice", Provider: "toss", BillingKey: "billing-key",
@@ -156,10 +156,10 @@ func TestPurchaseAndRefundPersistOneMoneyLedgerAndOneCreditLot(t *testing.T) {
 	usageStore := usagestore.New(handle.Writer, handle.Reader)
 	ledger := usage.NewService(usageStore, nil, 0)
 	store := billingstore.New(handle.Writer, handle.Reader)
-	store.SetCreditsForTx(func(conn *sql.Conn) billing.Credits {
-		return usage.NewService(usagestore.NewTx(conn), nil, 0)
+	store.SetCreditsForTx(func(tx *sql.Tx) billing.Credits {
+		return usage.NewService(usagestore.NewTx(tx), nil, 0)
 	})
-	store.SetPlansForTx(func(*sql.Conn) billing.Plans { return registrationPlans{} })
+	store.SetPlansForTx(func(*sql.Tx) billing.Plans { return registrationPlans{} })
 	if err := store.UpsertPaymentMethod(ctx, billing.PaymentMethod{
 		UserID: "alice", Provider: "toss", BillingKey: "billing-key",
 		CustomerKey: billing.CustomerKey("alice"), CardLabel: "11 1234", RegisteredAt: now,

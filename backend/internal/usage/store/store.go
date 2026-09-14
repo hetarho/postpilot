@@ -5,7 +5,6 @@ package store
 import (
 	"context"
 	"database/sql"
-	"database/sql/driver"
 	"errors"
 	"fmt"
 	"time"
@@ -38,61 +37,36 @@ func New(writer, reader *sql.DB) *Store {
 // NewTx binds usage operations to a transaction connection owned by a composition-level
 // coordinator. It exists for money flows that must update billing rows and credit lots in
 // one SQLite transaction without either context reading the other's tables.
-func NewTx(conn *sql.Conn) *Store {
-	return &Store{write: sqlc.New(conn), read: sqlc.New(conn)}
+func NewTx(tx *sql.Tx) *Store {
+	return &Store{write: sqlc.New(tx), read: sqlc.New(tx)}
 }
 
 // InWriteTx runs fn against a store bound to one write transaction.
 //
-// BEGIN IMMEDIATE is the point: SQLite would otherwise start a deferred transaction that
-// takes its write lock only at the first write, which is exactly the window in which two
-// admissions could both read the same count and both pass.
+// The writer pool opens immediate transactions (platform/db), so the write lock is held
+// from BEGIN — SQLite's deferred default would take it only at the first write, which is
+// exactly the window in which two admissions could both read the same count and both pass.
 func (s *Store) InWriteTx(ctx context.Context, fn func(usage.Store) error) error {
 	if s.writer == nil {
 		// Already inside a transaction — nesting would deadlock on the single writer.
 		return fn(s)
 	}
-	conn, err := s.writer.Conn(ctx)
+	tx, err := s.writer.BeginTx(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("acquire writer: %w", err)
-	}
-	defer conn.Close()
-	if _, err := conn.ExecContext(ctx, "BEGIN IMMEDIATE"); err != nil {
 		return fmt.Errorf("begin write transaction: %w", err)
 	}
-	committed := false
-	defer func() { finishWriteTx(ctx, conn, committed) }()
-	scoped := &Store{write: sqlc.New(conn), read: sqlc.New(conn)}
-	if err := fn(scoped); err != nil {
+	// database/sql owns the undo: it rolls the transaction back when the caller's context
+	// dies, and this deferred call is a no-op once Commit has landed. Issuing ROLLBACK by
+	// hand on the request's own context was what left the single writer connection inside
+	// an open transaction, failing every later write in the process until a restart.
+	defer func() { _ = tx.Rollback() }()
+	if err := fn(&Store{write: sqlc.New(tx), read: sqlc.New(tx)}); err != nil {
 		return err
 	}
-	if _, err := conn.ExecContext(ctx, "COMMIT"); err != nil {
+	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit write transaction: %w", err)
 	}
-	committed = true
 	return nil
-}
-
-// writeTxUndoTimeout bounds the undo of a transaction whose caller has already given up.
-const writeTxUndoTimeout = 5 * time.Second
-
-// finishWriteTx undoes a transaction its caller did not commit, on a context the caller's
-// cancellation cannot reach.
-//
-// The writer pool holds exactly one connection (ARCHITECTURE §2.4), so a connection returned
-// to it mid-transaction fails every later write in the process with "cannot start a
-// transaction within a transaction" until a restart. A cancelled request used to do exactly
-// that: fn failed with context.Canceled and the ROLLBACK, issued on the same dead context,
-// failed too. If the undo still does not land, the connection is retired instead of reused.
-func finishWriteTx(ctx context.Context, conn *sql.Conn, committed bool) {
-	if committed {
-		return
-	}
-	undo, cancel := context.WithTimeout(context.WithoutCancel(ctx), writeTxUndoTimeout)
-	defer cancel()
-	if _, err := conn.ExecContext(undo, "ROLLBACK"); err != nil {
-		_ = conn.Raw(func(any) error { return driver.ErrBadConn })
-	}
 }
 
 func (s *Store) LotsInConsumptionOrder(

@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"time"
 
 	"github.com/postpilot/backend/internal/job"
 	jobstore "github.com/postpilot/backend/internal/job/store"
@@ -13,25 +12,19 @@ import (
 
 // clipWriteTx coordinates context-owned operations on the single writer. No
 // provider, media, storage or cleanup call belongs inside this callback.
-func clipWriteTx(ctx context.Context, writer *sql.DB, fn func(*sql.Conn) error) error {
-	conn, err := writer.Conn(ctx)
+func clipWriteTx(ctx context.Context, writer *sql.DB, fn func(*sql.Tx) error) error {
+	tx, err := writer.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
-	if _, err = conn.ExecContext(ctx, "BEGIN IMMEDIATE"); err != nil {
+	// A no-op once Commit has landed, and the undo when it has not. database/sql also rolls
+	// back on its own when ctx is cancelled, which is the part a hand-written ROLLBACK on
+	// that same cancelled context could never do.
+	defer func() { _ = tx.Rollback() }()
+	if err = fn(tx); err != nil {
 		return err
 	}
-	defer func() {
-		cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
-		defer cancel()
-		_, _ = conn.ExecContext(cleanup, "ROLLBACK")
-	}()
-	if err = fn(conn); err != nil {
-		return err
-	}
-	_, err = conn.ExecContext(ctx, "COMMIT")
-	return err
+	return tx.Commit()
 }
 
 type clipGuard struct {
@@ -40,8 +33,8 @@ type clipGuard struct {
 }
 
 func (a clipGuard) Reserve(ctx context.Context, start job.Start) error {
-	return clipWriteTx(ctx, a.writer, func(conn *sql.Conn) error {
-		j, err := jobstore.NewTx(conn).GetByID(ctx, start.JobID)
+	return clipWriteTx(ctx, a.writer, func(tx *sql.Tx) error {
+		j, err := jobstore.NewTx(tx).GetByID(ctx, start.JobID)
 		if err != nil {
 			return err
 		}
@@ -52,7 +45,7 @@ func (a clipGuard) Reserve(ctx context.Context, start job.Start) error {
 		if admission.ledger == nil {
 			return errors.New("clip ledger unavailable")
 		}
-		admission.ledger = admission.ledger.WithStore(usagestore.NewTx(conn))
+		admission.ledger = admission.ledger.WithStore(usagestore.NewTx(tx))
 		return admission.Hold(ctx, start)
 	})
 }

@@ -50,11 +50,11 @@ func newLedgerHarness(t *testing.T, name string, createdAt time.Time, anchor tim
 	ledger.SetAnchors(fixedAnchor{at: anchor})
 
 	store := billingstore.New(handle.Writer, handle.Reader)
-	store.SetCreditsForTx(func(conn *sql.Conn) billing.Credits {
-		return usage.NewService(usagestore.NewTx(conn), nil, 0)
+	store.SetCreditsForTx(func(tx *sql.Tx) billing.Credits {
+		return usage.NewService(usagestore.NewTx(tx), nil, 0)
 	})
-	store.SetPlansForTx(func(conn *sql.Conn) billing.Plans {
-		return auth.NewService(authstore.NewTx(conn), time.Hour)
+	store.SetPlansForTx(func(tx *sql.Tx) billing.Plans {
+		return auth.NewService(authstore.NewTx(tx), time.Hour)
 	})
 	if err := store.UpsertPaymentMethod(ctx, billing.PaymentMethod{
 		UserID: "alice", Provider: "toss", BillingKey: "billing-key",

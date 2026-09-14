@@ -43,8 +43,8 @@ func New(writer, reader *sql.DB) *Store {
 // NewTx binds both reads and writes to a transaction connection owned by the composition
 // root. Billing uses this adapter to change the tier in the same SQLite transaction as the
 // subscription row and credit lot, without either domain importing the other's store.
-func NewTx(conn *sql.Conn) *Store {
-	return &Store{write: sqlc.New(conn), read: sqlc.New(conn)}
+func NewTx(tx *sql.Tx) *Store {
+	return &Store{write: sqlc.New(tx), read: sqlc.New(tx)}
 }
 
 func (s *Store) CreateUser(ctx context.Context, u auth.User) error {

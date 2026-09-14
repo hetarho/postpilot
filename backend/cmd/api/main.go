@@ -220,11 +220,11 @@ func main() {
 	)
 	ledger.SetAnchors(usageAnchors{auth: authSvc})
 	billingStore := billingstore.New(handle.Writer, handle.Reader)
-	billingStore.SetCreditsForTx(func(conn *sql.Conn) billing.Credits {
-		return usage.NewService(usagestore.NewTx(conn), nil, 0)
+	billingStore.SetCreditsForTx(func(tx *sql.Tx) billing.Credits {
+		return usage.NewService(usagestore.NewTx(tx), nil, 0)
 	})
-	billingStore.SetPlansForTx(func(conn *sql.Conn) billing.Plans {
-		return auth.NewService(authstore.NewTx(conn), cfg.SessionTTL)
+	billingStore.SetPlansForTx(func(tx *sql.Tx) billing.Plans {
+		return auth.NewService(authstore.NewTx(tx), cfg.SessionTTL)
 	})
 	var paymentProvider billing.Provider
 	var exchangeRates billing.Rates

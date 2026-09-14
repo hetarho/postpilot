@@ -25,8 +25,8 @@ func New(writer, reader *sql.DB) *Store {
 	return &Store{write: sqlc.New(writer), read: sqlc.New(reader)}
 }
 
-func NewTx(conn *sql.Conn) *Store {
-	return &Store{write: sqlc.New(conn), read: sqlc.New(conn)}
+func NewTx(tx *sql.Tx) *Store {
+	return &Store{write: sqlc.New(tx), read: sqlc.New(tx)}
 }
 
 func (s *Store) Insert(ctx context.Context, found job.Job) error {
