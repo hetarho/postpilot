@@ -42,6 +42,12 @@ func TestMigration0054PreservesAuthoredBytesAndFrozenContent(t *testing.T) {
 	if _, err = d.Writer.Exec(`INSERT INTO clip_projects(id,user_id,title,ratio,target_duration_ms,edit_plan_json,created_at,updated_at) VALUES('plan','alice','fixture','vertical',15000,?,'2026-09-15T00:00:00Z','2026-09-15T00:00:00Z')`, plan); err != nil {
 		t.Fatal(err)
 	}
+	// Production also contains confirmed results: their exact plan is immutable,
+	// including retired style fields. A migration must leave the guard intact.
+	if _, err = d.Writer.Exec(`INSERT INTO clip_projects(id,user_id,title,ratio,target_duration_ms,edit_plan_json,edit_plan_revision,rendered_plan_revision,result_key,result_id,finalized_at,finalized_plan_revision,finalized_result_key,source_access_revoked_at,created_at,updated_at)
+		VALUES('frozen','alice','confirmed','vertical',15000,?,1,1,'results/frozen.mp4','frozen-result','2026-09-15T00:00:00Z',1,'results/frozen.mp4','2026-09-15T00:00:00Z','2026-09-15T00:00:00Z','2026-09-15T00:00:00Z')`, plan); err != nil {
+		t.Fatal(err)
+	}
 	if _, err = provider.UpTo(t.Context(), 54); err != nil {
 		t.Fatal(err)
 	}
@@ -85,5 +91,14 @@ func TestMigration0054PreservesAuthoredBytesAndFrozenContent(t *testing.T) {
 	}
 	if strings.Contains(got, `"CopyStyles"`) || strings.Contains(got, `"Styles"`) || !strings.Contains(got, `"Hook":"Styles literal"`) {
 		t.Fatal(got)
+	}
+	if err = d.Reader.QueryRow(`SELECT edit_plan_json FROM clip_projects WHERE id='frozen'`).Scan(&got); err != nil || got != plan {
+		t.Fatalf("confirmed plan changed: %q: %v", got, err)
+	}
+	if _, err = d.Writer.Exec(`UPDATE clip_projects SET edit_plan_json='{}' WHERE id='frozen'`); err == nil || !strings.Contains(err.Error(), "clip finalized") {
+		t.Fatalf("confirmation guard lost: %v", err)
+	}
+	if err = Migrate(t.Context(), d.Writer); err != nil {
+		t.Fatalf("restart after migration: %v", err)
 	}
 }

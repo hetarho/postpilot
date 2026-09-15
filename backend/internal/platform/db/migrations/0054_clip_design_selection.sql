@@ -32,8 +32,10 @@ UPDATE video_templates SET composition_body = (SELECT body FROM converted WHERE 
 WHERE composition_body IS NOT NULL;
 
 UPDATE video_templates SET copy_styles = '[]';
+-- Confirmed results retain their exact authored plan; clip_finalized_content
+-- intentionally rejects any update to it, including retired metadata removal.
 UPDATE clip_projects SET edit_plan_json = json_remove(edit_plan_json, '$.CopyStyles', '$.Styles')
-WHERE edit_plan_json IS NOT NULL AND json_valid(edit_plan_json)
+WHERE finalized_at IS NULL AND edit_plan_json IS NOT NULL AND json_valid(edit_plan_json)
   AND (json_type(edit_plan_json, '$.CopyStyles') IS NOT NULL OR json_type(edit_plan_json, '$.Styles') IS NOT NULL);
 
 -- +goose Down
