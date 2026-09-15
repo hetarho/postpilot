@@ -26,7 +26,13 @@ func TestMediaProfileSmoke(t *testing.T) {
 	if os.Getenv("CLIP_MEDIA_SMOKE") != "1" {
 		t.Skip("real binaries inside the nonroot runtime")
 	}
-	t.Parallel()
+	// Deliberately NOT t.Parallel(), unlike its neighbours in this gate. What this
+	// test reports is a resource profile against the 2-core/1GB VPS budget, and the
+	// elapsed/preparation/render durations below only mean that when nothing else is
+	// competing for the machine: running it alongside the other smoke renders
+	// inflated them 2.2x (152.8s -> 337.2s, measured on run 34990364581) without any
+	// change to the work it does. Leaving it serial costs wall clock on a gate that
+	// is otherwise parallel, and that is the trade this test exists to buy.
 	if os.Getuid() == 0 {
 		t.Fatal("media smoke must run as nonroot")
 	}
