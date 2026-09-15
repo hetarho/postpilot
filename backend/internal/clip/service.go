@@ -57,16 +57,18 @@ func ValidAccent(s string) bool {
 	return ok
 }
 
-// A template approves a subset of the four CDS-22 styles and must always keep
-// 깔끔하게: every CDS fallback — a 메모 over its limit, a third 크게 강조, a
-// 형광펜 with two keywords, a pairing under 4.5:1 — lands on it.
+// ValidCopyStyles accepts the fixed caption treatment and legacy stored sets.
+// The transport fields remain until the design-selection migration (T169).
 func ValidCopyStyles(values []string) bool {
-	if len(values) == 0 || len(values) > len(design.Styles) || !slices.Contains(values, "clean") {
+	if len(values) == 1 && values[0] == "bold" {
+		return true
+	}
+	if len(values) == 0 || len(values) > 5 || !slices.Contains(values, "clean") {
 		return false
 	}
 	seen := map[string]bool{}
 	for _, s := range values {
-		if _, ok := design.Styles[s]; seen[s] || !ok {
+		if seen[s] || !slices.Contains([]string{"clean", "memo", "bold", "mark", "simple"}, s) {
 			return false
 		}
 		seen[s] = true

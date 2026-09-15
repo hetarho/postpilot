@@ -62,7 +62,7 @@ func TestDeclaredRapidKeepsOneOwnedSentenceAndMeasuredPhraseWindows(t *testing.T
 		t.Fatal("lost short opening beat")
 	}
 	for i, cue := range elements[0].Cues {
-		if cue.Style != "simple" || i > 0 && cue.StartMS != elements[0].Cues[i-1].EndMS {
+		if cue.Style != "bold" || i > 0 && cue.StartMS != elements[0].Cues[i-1].EndMS {
 			t.Fatal("changed style or left a gap")
 		}
 	}

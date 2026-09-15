@@ -13,7 +13,7 @@ const template = {
     { label: '장소', prompt: '어디인가요?' },
     { label: '음식', prompt: '무엇을 먹었나요?' },
   ],
-  copyStyles: ['clean'] as ClipRecipe['copyStyles'],
+  copyStyles: ['bold'] as ClipRecipe['copyStyles'],
   accent: '' as const,
   preset: 'restaurant' as const,
   projectCount: 2,

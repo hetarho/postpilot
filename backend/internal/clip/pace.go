@@ -81,37 +81,35 @@ func SplitRapid(seed Caption, start, end int) ([]Caption, bool) {
 	return out, true
 }
 
-func composeRapid(cut Cut, written Written, text, accent string, allowed []string, placed Manifest, subject Region, readable bool, previous string, measure func(Caption) (Region, bool, error)) (Cut, bool, error) {
-	style := design.SelectStyle("", design.ClassDesc, allowed, nil, 0)
-	// A rapid run keeps one drawing/anchor for all of its phrases.
-	if style != "simple" {
-		style = "clean"
-	}
-	rule := design.Styles[style]
+func composeRapid(cut Cut, written Written, text, accent string, placed Manifest, subject Region, readable bool, previous string, measure func(Caption) (Region, bool, error)) (Cut, bool, error) {
+	style := "bold"
+	rule := design.Caption()
 	for _, value := range []string{text, strings.TrimSpace(written.ShortText)} {
 		if value == "" || !Grounded(value, written.Answers) {
 			continue
 		}
-		copies, ok := SplitRapid(Caption{Text: value, Anchor: rule.Anchor, Align: rule.Align, Style: style, Accent: accent},
-			design.Timing.CopyLeadMS, cut.OutputDurationMS()-design.Timing.CopyLeadMS)
-		if !ok {
-			continue
-		}
-		fits := true
-		for _, copy := range copies {
-			bounds, ok, err := measure(copy)
-			if err != nil {
-				return cut, false, err
+		for _, anchor := range []string{rule.Anchor, rule.AnchorAlt} {
+			copies, ok := SplitRapid(Caption{Text: value, Anchor: anchor, Align: rule.Align, Style: style, Accent: accent},
+				design.Timing.CopyLeadMS, cut.OutputDurationMS()-design.Timing.CopyLeadMS)
+			if !ok {
+				continue
 			}
-			candidate := design.Candidate{Anchor: copy.Anchor, Align: copy.Align, Plate: design.Region(bounds), Fits: ok}
-			if design.SelectAnchor([]design.Candidate{candidate}, design.Region(subject), placed, readable, previous, nil) < 0 {
-				fits = false
-				break
+			fits := true
+			for _, copy := range copies {
+				bounds, ok, err := measure(copy)
+				if err != nil {
+					return cut, false, err
+				}
+				candidate := design.Candidate{Anchor: copy.Anchor, Align: copy.Align, Plate: design.Bounds(bounds), Fits: ok}
+				if design.SelectAnchor([]design.Candidate{candidate}, design.Bounds(subject), placed, readable, previous, nil) < 0 {
+					fits = false
+					break
+				}
 			}
-		}
-		if fits {
-			cut.Copies = copies
-			return cut, true, nil
+			if fits {
+				cut.Copies = copies
+				return cut, true, nil
+			}
 		}
 	}
 	return cut, false, nil

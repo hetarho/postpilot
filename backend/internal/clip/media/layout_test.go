@@ -119,56 +119,21 @@ func TestTheRenderedPlanVerifiesOnEveryRatio(t *testing.T) {
 // The fallback CDS-44 names, exercised on its own: with today's tokens a stroked
 // style always clears V3 (see RENDER.md), so the mechanism is tested here rather
 // than through a ground that cannot fail it.
-func TestAContrastFallbackPutsTheSentenceBackOnAPlate(t *testing.T) {
+func TestCaptionDoesNotChangeTreatmentAfterSampling(t *testing.T) {
 	a, r := measured(t)
-	plan := clip.EditPlan{Ratio: "vertical", DurationMS: 15000, Disclosure: "ad", Preset: "restaurant", Accent: "coral", Cuts: []clip.EditCut{
-		{ID: "one", SourceID: "s", Fingerprint: "s", EndMS: 7600, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{Text: "기록처럼 오늘", Style: "memo", Anchor: "top", Align: "left", Accent: "teal"}}},
-		{ID: "two", SourceID: "s", Fingerprint: "s", EndMS: 7600, TransitionMS: 200, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{Text: "다시 오고 싶은 곳", Style: "bold", Anchor: "upper_mid", Align: "center", Accent: "amber"}}},
-	}, Decisions: []clip.Composition{{Class: "EMOTION"}, {Class: "EMOTION"}}}
 	canvas, _ := clip.ClipCanvas("vertical")
-	if !plan.Compiled() {
-		t.Fatal("a plan carrying one decision per cut came from the compiler")
-	}
-	stored := plan
-	stored.Decisions = nil
-	if stored.Compiled() {
-		t.Fatal("a plan decoded from storage carries no decisions, so a person owns its styles")
-	}
-	if err := a.WithWorkspace(t.Context(), "fallback", func(ws clip.MediaWorkspace) error {
+	plan := clip.EditPlan{Ratio: "vertical", DurationMS: 15000, Disclosure: "ad", Cuts: []clip.EditCut{{ID: "one", SourceID: "s", Fingerprint: "s", EndMS: 15000, Copies: []clip.Copy{{Text: "오늘 장면", Style: "bold", Anchor: "upper_mid", Align: "center"}}}}}
+	if err := a.WithWorkspace(t.Context(), "caption", func(ws clip.MediaWorkspace) error {
 		c, err := r.layout(t.Context(), ws, canvas, plan)
 		if err != nil {
 			return err
 		}
-		c.grounds[1][0] = Luminance{Mean: 0.95, R: 1, G: 1, B: 1, Frames: []float64{0.95}}
-		c.resolve(canvas)
-		if _, err := r.rung(t.Context(), ws, canvas, &c, 1, 0, rungStyle, "contrast"); err != nil {
-			return err
+		c.grounds[0][0] = Luminance{Mean: .95, R: 1, G: 1, B: 1, Frames: []float64{.95}}
+		changed, err := r.rung(t.Context(), ws, canvas, &c, 0, 0, rungStyle, "contrast")
+		if changed || err != nil || !c.grounds[0][0].Sampled() || c.plan.Cuts[0].FirstCopy() != plan.Cuts[0].FirstCopy() {
+			t.Fatal("changed fixed caption treatment", err)
 		}
-		// 깔끔하게 at its own anchor, because CDS-24 does not let it stand where
-		// 크게 강조 stood and V6 would refuse the copy there.
-		got := c.plan.Cuts[1].FirstCopy()
-		if got.Style != "clean" || got.Anchor != design.Styles["clean"].Anchor || got.Align != design.Styles["clean"].Align {
-			return fmt.Errorf("fallback placed %+v", got)
-		}
-		if c.plan.Decisions[1].Fallback != "contrast" {
-			return fmt.Errorf("the decision does not say why: %+v", c.plan.Decisions[1])
-		}
-		// The plate needs no ground, so the sample is no longer part of what the
-		// cut draws — and no scrim is left behind on a plated style (CDS-32).
-		if c.grounds[1][0].Sampled() {
-			return fmt.Errorf("kept a ground a plate does not read: %+v", c.grounds[1][0])
-		}
-		for _, e := range c.manifest {
-			if e.Kind == "scrim" {
-				return fmt.Errorf("a plated style kept a scrim: %+v", e)
-			}
-		}
-		// The caller's own plan is untouched: the cuts are cloned, never patched
-		// through the slice the caller still holds.
-		if plan.Cuts[1].Copies[0].Style != "bold" {
-			t.Fatal("the caller's plan was mutated")
-		}
-		return clip.VerifyLayout("vertical", nil, c.manifest)
+		return nil
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -232,7 +197,7 @@ func TestTwoCopiesOnOneCutLayOutAndVerify(t *testing.T) {
 // download: the caption's style falls back to 깔끔하게, then its anchor to the
 // style's own default, then the copy is dropped — and each rung is recorded on
 // the cut so step ② can say what happened.
-func TestTheRepairLadderWalksStyleThenAnchorThenDrop(t *testing.T) {
+func TestTheRepairLadderWalksAnchorThenDrop(t *testing.T) {
 	a, r := measured(t)
 	canvas, _ := clip.ClipCanvas("vertical")
 	base := func() clip.EditPlan {
@@ -241,44 +206,30 @@ func TestTheRepairLadderWalksStyleThenAnchorThenDrop(t *testing.T) {
 			{ID: "two", SourceID: "s", Fingerprint: "s", EndMS: 7600, TransitionMS: 200, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{Text: "다시 오고 싶은 곳", Style: "clean", Anchor: "bottom", Align: "center"}}},
 		}, Decisions: []clip.Composition{{Class: "DESC"}, {Class: "DESC"}}}
 	}
-	// Rung 1: a third 크게 강조 in one clip is one more than CDS-40 allows (V14);
-	// the later caption yields its style and everything else stands.
-	styleCase := base()
-	styleCase.Cuts = append(styleCase.Cuts, clip.EditCut{ID: "three", SourceID: "s", Fingerprint: "s", EndMS: 7600, TransitionMS: 200, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{Text: "또 오고 싶다", Style: "bold", Anchor: "upper_mid", Align: "center", Accent: "amber"}}})
-	styleCase.Decisions = append(styleCase.Decisions, clip.Composition{Class: "EMOTION"})
-	styleCase.DurationMS = 22400
-	for i := 0; i < 2; i++ {
-		styleCase.Cuts[i].Copies[0] = clip.Copy{Text: "또 오고 싶다", Style: "bold", Anchor: "upper_mid", Align: "center", Accent: "amber"}
-	}
-	long := "또 오고 싶다"
 	// Rung 2: two 깔끔하게 cuts whose anchors are three steps apart (V13); the
 	// style is already 깔끔하게, so the first rung has nothing to do.
 	anchorCase := base()
-	anchorCase.Cuts[1].Copies[0].Anchor = "top"
+	anchorCase.Cuts[0].Copies[0].Anchor = "upper_mid"
+	anchorCase.Cuts[1].Copies[0].Anchor = "bottom"
 	// Rung 3: the previous copy is TOP, this one already defaults to BOTTOM.
 	// Neither style nor default anchor can fix the step, so the later copy drops.
 	// Overlap itself no longer walks the ladder (CDS-56).
 	dropCase := base()
-	dropCase.Cuts[0].Copies[0].Anchor = "top"
+	dropCase.Cuts[0].Copies[0].Anchor = "bottom"
+	dropCase.Cuts[1].Copies[0].Anchor = "top"
 	for name, tc := range map[string]struct {
 		plan   clip.EditPlan
 		cut    int
 		record string
 		check  func(clip.EditPlan) error
 	}{
-		"style": {styleCase, 2, "style", func(p clip.EditPlan) error {
-			if c := p.Cuts[2].FirstCopy(); c.Style != "clean" || c.Text != long || p.Cuts[0].FirstCopy().Style != "bold" || p.Cuts[1].FirstCopy().Style != "bold" {
-				return fmt.Errorf("style rung placed %+v", p.Cuts)
-			}
-			return nil
-		}},
 		"anchor": {anchorCase, 1, "anchor", func(p clip.EditPlan) error {
-			if c := p.Cuts[1].FirstCopy(); c.Anchor != design.Styles["clean"].Anchor || c.Style != "clean" {
+			if c := p.Cuts[1].FirstCopy(); c.Anchor != design.Caption().Anchor || c.Style != "clean" {
 				return fmt.Errorf("anchor rung placed %+v", c)
 			}
 			return nil
 		}},
-		"drop": {dropCase, 1, "dropped", func(p clip.EditPlan) error {
+		"drop": {dropCase, 1, "anchor,dropped", func(p clip.EditPlan) error {
 			if p.Cuts[0].Copies[0].Text == "" || p.Cuts[1].Copies[0].Text != "" || len(p.Cuts[1].Placed()) != 0 {
 				return fmt.Errorf("drop rung kept the wrong copy: %+v", p.Cuts)
 			}

@@ -82,7 +82,7 @@ func (r *Rendering) layoutDeclaredBadge(ctx context.Context, ws clip.MediaWorksp
 	}
 	visual.furniture = furniture{Badge: box, BadgeText: text, BadgeBounds: bounds}
 	visual.manifest.Region, visual.manifest.Position = box, position
-	visual.manifest.Parts = clip.Manifest{{Kind: "badge", Text: text, Region: design.Region(box), FontSize: design.Type["badge"].Size, Fill: design.Color["text_white"].Hex, Background: design.Color["badge_ad"].Hex, StartMS: visual.manifest.StartMS, EndMS: visual.manifest.EndMS}}
+	visual.manifest.Parts = clip.Manifest{{Kind: "badge", Text: text, Region: design.Bounds(box), FontSize: design.Type["badge"].Size, Fill: design.Color["text_white"].Hex, Background: design.Color["badge_ad"].Hex, StartMS: visual.manifest.StartMS, EndMS: visual.manifest.EndMS}}
 	return visual, nil
 }
 
@@ -204,7 +204,7 @@ func (r *Rendering) layoutDeclaredInfo(ctx context.Context, ws clip.MediaWorkspa
 		visual.info.Plate = &plate
 		// Certify the actual worst-case composite, including muted label alpha.
 		fill, _ = design.Over(colour, design.Color[frame.Plate].Alpha, "#FFFFFF")
-		visual.manifest.Parts = clip.Manifest{{Kind: "plate", Region: design.Region(box), Background: fill, StartMS: visual.manifest.StartMS, EndMS: visual.manifest.EndMS}}
+		visual.manifest.Parts = clip.Manifest{{Kind: "plate", Region: design.Bounds(box), Background: fill, StartMS: visual.manifest.StartMS, EndMS: visual.manifest.EndMS}}
 	}
 	if frame.Shadow != "" {
 		shadow := overlayShadow(frame.Shadow)
@@ -242,7 +242,7 @@ func (r *Rendering) layoutDeclaredInfo(ctx context.Context, ws clip.MediaWorkspa
 		if row.Role == "label" {
 			colour, _ = design.Over(colour, design.Color["text_muted"].Alpha, fill)
 		}
-		visual.manifest.Parts = append(visual.manifest.Parts, design.Element{Kind: "copy", Text: row.Text, Region: design.Region{X: lineX, Y: baselineY + b.Y, Width: b.Width, Height: b.Height}, FontSize: role.Size, Fill: colour, Background: fill, StartMS: visual.manifest.StartMS, EndMS: visual.manifest.EndMS})
+		visual.manifest.Parts = append(visual.manifest.Parts, design.Element{Kind: "copy", Text: row.Text, Region: design.Bounds{X: lineX, Y: baselineY + b.Y, Width: b.Width, Height: b.Height}, FontSize: role.Size, Fill: colour, Background: fill, StartMS: visual.manifest.StartMS, EndMS: visual.manifest.EndMS})
 		if horizontal {
 			x += b.Width + gap
 		} else {
@@ -295,7 +295,7 @@ func (r *Rendering) layoutDeclaredCard(ctx context.Context, ws clip.MediaWorkspa
 				colour = design.Color["text_muted"]
 			}
 			if chip {
-				colour = design.Color["ink_900"]
+				colour = design.Color["badge_ad"]
 			}
 			if kind == "end" && row.Role == "label" && rowIndex == len(rows)-1 && text.Accent != "" {
 				colour.Hex, colour.Alpha = design.Accent[text.Accent], 1

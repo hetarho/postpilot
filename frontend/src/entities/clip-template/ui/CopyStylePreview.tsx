@@ -1,4 +1,4 @@
-import { CLIP_DESIGN, CLIP_SHADOW, CLIP_SPACING, clipPaint } from '@/shared/config'
+import { CLIP_DESIGN, CLIP_SHADOW } from '@/shared/config'
 import { copyStyleMeasurements, type ClipAccent, type CopyStyle } from '../model/types'
 
 const accentClasses: Record<ClipAccent, string> = {
@@ -11,11 +11,6 @@ const accentClasses: Record<ClipAccent, string> = {
   violet: 'fill-clip-violet',
   pink: 'fill-clip-pink',
 }
-const plateClasses: Record<string, string> = {
-  ink_900: 'fill-clip-ink-900',
-  paper_50: 'fill-clip-paper-50',
-}
-
 /** A static crop of the renderer's 1080-wide canvas, with exact text rather than
  *  generated art. Every size, radius, opacity, stroke and offset comes from the
  *  design system the renderer embeds (`shared/config/clip-design.json`), so the
@@ -32,10 +27,8 @@ export function CopyStylePreview({
   keyword?: string
   text: string
 }) {
-  const recipe = copyStyleMeasurements(style)
-  const plate = recipe.plate ? clipPaint(recipe.plate as 'ink_900') : null
-  const accented =
-    style !== 'simple' && accent !== '' && (recipe.highlight || recipe.stroke > 0) && keyword !== ''
+  const recipe = copyStyleMeasurements()
+  const accented = accent !== '' && (recipe.highlight || recipe.stroke > 0) && keyword !== ''
   const baseline = 120 + recipe.fontSize / 3
   return (
     <svg
@@ -59,53 +52,11 @@ export function CopyStylePreview({
         </defs>
       )}
       <rect width="1080" height="240" className="fill-surface-recessed" />
-      {plate && (
-        <rect
-          x="72"
-          y="48"
-          width="936"
-          height="144"
-          rx={recipe.radius}
-          className={plateClasses[recipe.plate] ?? 'fill-clip-ink-900'}
-          fillOpacity={plate.alpha}
-        />
-      )}
-      {accent !== '' && recipe.bar && (
-        <rect
-          x="72"
-          y="48"
-          width={CLIP_SPACING.bar_accent}
-          height="144"
-          className={accentClasses[accent]}
-        />
-      )}
-      {accent !== '' && recipe.dot && (
-        <circle
-          cx={72 + recipe.padding.h + CLIP_SPACING.dot_accent / 2}
-          cy={48 + recipe.padding.v + CLIP_SPACING.dot_accent / 2}
-          r={CLIP_SPACING.dot_accent / 2}
-          className={accentClasses[accent]}
-        />
-      )}
-      {accented && recipe.highlight && (
-        <rect
-          x={540 - recipe.fontSize * 1.2}
-          y={
-            baseline -
-            (CLIP_SPACING.underline_mark.raise_em + CLIP_SPACING.underline_mark.height_em) *
-              recipe.fontSize
-          }
-          width={recipe.fontSize * 2.4}
-          height={CLIP_SPACING.underline_mark.height_em * recipe.fontSize}
-          className={accentClasses[accent]}
-          fillOpacity={0.9}
-        />
-      )}
       <text
         x="540"
         y={baseline}
         textAnchor="middle"
-        fontFamily={style === 'simple' ? CLIP_DESIGN.faces.pretendard : undefined}
+        fontFamily={CLIP_DESIGN.faces.paperlogy}
         fontSize={recipe.fontSize}
         fontWeight={recipe.weight}
         letterSpacing={recipe.tracking * recipe.fontSize}

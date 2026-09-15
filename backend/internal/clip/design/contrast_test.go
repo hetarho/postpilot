@@ -44,7 +44,7 @@ func TestContrastArithmeticAndTheTokenPromises(t *testing.T) {
 
 	// CDS-16: a plated element needs no sampling, because the plate over even a
 	// WHITE frame keeps its text above the 4.5:1 floor.
-	for style, rule := range design.Styles {
+	for style, rule := range map[string]design.StyleRule{"bold": design.Caption()} {
 		if rule.Plate == "" {
 			continue
 		}
@@ -52,7 +52,7 @@ func TestContrastArithmeticAndTheTokenPromises(t *testing.T) {
 		over, _ := design.Over(plate.Hex, plate.Alpha, "#FFFFFF")
 		fill := design.Color["text_white"].Hex
 		if rule.Plate == "paper_50" {
-			fill = design.Color["text_ink"].Hex
+			fill = design.Color["badge_ad"].Hex
 		}
 		ratio, _ := design.Contrast(fill, over)
 		if ratio < design.Luma.ContrastMin {
@@ -66,13 +66,13 @@ func TestContrastArithmeticAndTheTokenPromises(t *testing.T) {
 		if hex == "" {
 			continue
 		}
-		ratio, ok := design.Contrast(hex, design.Color["ink_900"].Hex)
+		ratio, ok := design.Contrast(hex, design.Color["badge_ad"].Hex)
 		if !ok || ratio < design.Luma.ContrastMin {
 			t.Fatalf("accent %s on ink is %.2f:1", name, ratio)
 		}
 		// CDS-28 asks for #111 on the chip, not the slightly lighter text.ink:
 		// #1A1A1A on violet is 4.40:1 and would fail V3.
-		if ink, _ := design.Contrast(design.Color["ink_900"].Hex, hex); ink < design.Luma.ContrastMin {
+		if ink, _ := design.Contrast(design.Color["badge_ad"].Hex, hex); ink < design.Luma.ContrastMin {
 			t.Fatalf("ink on accent %s is %.2f:1", name, ink)
 		}
 	}

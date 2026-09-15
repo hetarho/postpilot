@@ -30,8 +30,8 @@
 | THEME | 12 | 12 | - | 0 |
 | MKT | 4 | 4 | - | 0 |
 | VIDEO | 2 | 2 | - | 1 |
-| CLIP | 22 | 22 | - | 2 |
-| CDS | 15 | 15 | - | 2 |
+| CLIP | 23 | 23 | - | 2 |
+| CDS | 16 | 16 | - | 2 |
 | BILL | 4 | 4 | - | 0 |
 
 ## review
@@ -47,20 +47,27 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T110 | Release QA on the Naver app and the overlay measurement | CDS CLIP | T108 | blocked@260912 |
-| T166 | Collapse the style system to one caption treatment and add the region tokens | CDS | - | todo |
-| T167 | Render the intro and outro blocks instead of the hook and ending cards | CDS | T166 | todo |
-| T168 | Replace the information frame with an unplated label/value pair and retune the disclosure pill | CDS | T166 | todo |
-| T169 | Stop accepting a declared style and migrate every stored template | CDS CLIP | T166 | todo |
+| T167 | Render the intro and outro presets instead of the hook and ending cards | CDS CLIP | T166 | todo |
+| T168 | Replace the information frame with an unplated label/value pair and retune the disclosure pill | CDS CLIP | T166 T167 | todo |
+| T169 | Replace the declared styles with the design selection and migrate every stored template | CLIP CDS | T166 | todo |
 | T170 | Fail when a text renders in a face it did not ask for | CDS | T166 | todo |
-| T171 | Remove the style controls and draw the regions in the preview | CLIP CDS | T166 T167 T168 | todo |
+| T171 | Remove the style controls and draw the presets in the previews | CLIP CDS | T166 T167 T168 T169 | todo |
+| T172 | Author templates design first with fixed intro and outro skeletons | CLIP CDS | T169 T171 | todo |
+| T173 | Keep generated slot text to one line through the plan ladder | CDS CLIP | T167 T169 | todo |
 
 ## next
-- implement-task T166 — every other task in this batch waits on its constants.
-- T167 T168 T169 T170 run in parallel after it; T171 closes the surfaces last.
-- T163's drawn frame family is removed by T168, retired by r15 before it ever rendered.
+- implement-task T170, then T167 and T169; T166 tokens and presets are complete.
+- Continue sequentially with T168 and T173 after T167/T169; T171 closes the FE style controls and T172 adds the design-first editor last.
 - T110 stays owner-blocked and T008 owner-dependent.
 
 ## log
+- 260915 T166 done; backend/agent gates, frontend regression with corrected autosave assertion, lint/style/build, native code generation and real resvg smoke pass
+- 260915 T166 claimed (dsg)
+- 260915 create-task CDS CLIP done; T166 T167 T168 T169 T171 refreshed to CDS@16 CLIP@23 and T172 T173 added from the r16/r23 delta; T170 base only
+- 260915 create-task CDS CLIP start
+- 260915 update-ssot CDS r16 CLIP r23 done; intro A|B and outro B|E presets chosen per template, outro E label lifted, score tracked wider and its bar white, accent confined to the caption word, badge 36/800 pad 16/28, design-first template authoring with fixed intro/outro skeletons
+- 260915 warn: T166 T167 T168 T169 T171 (todo, base CDS@15 CLIP@22) sit inside the r16/r23 delta and must be refreshed by create-task before implementation; T170 is untouched
+- 260915 update-ssot CDS CLIP start
 - 260915 create-task CDS CLIP done; T166 T167 T168 T169 T170 T171 from the r15/r22 delta
 - 260915 T165 done
 - 260915 T164 done
@@ -74,12 +81,3 @@
 - 260915 T160 done
 - 260915 T162 claimed (cap); base refreshed to CLIP@21 because the notice-policy delta does not change anchor ranking
 - 260915 T161 done
-- 260915 T159 done
-- 260915 T160 T161 refreshed to CLIP@21 (cap); deliver-with-notice decisions do not change observation language or factual caption-safe regions
-- 260915 create-task CLIP done; T164 T165 from the r21 delta (tolerance ladder, then its surface)
-- 260915 T161 claimed (cap)
-- 260915 T160 claimed (cap)
-- 260915 T159 claimed (cap)
-- 260915 update-ssot CLIP r21 done; deliver-with-notice tolerance, retries narrowed to unreadable responses, notices stored with the project; CDS unchanged — notices are product surface, not rendered output
-- 260915 warn: T160 T161 are doing on CLIP but sit outside the r21 decisions (observation language, caption-safe regions); no refresh needed
-- 260915 create-task CLIP CDS done; T159 T160 T161 T162 T163 from the r20/r14 delta

@@ -128,7 +128,7 @@ func TestScrimGeometryAndEffectiveBackground(t *testing.T) {
 	// pairing clears V3 on footage as bright as a white frame.
 	bright := Luminance{Mean: 0.95, R: 1, G: 1, B: 1, Frames: []float64{0.95}}
 	copyAt := func(y float64) clip.Region { return clip.Region{X: 300, Y: y, Width: 400, Height: 110} }
-	mark, clean := design.Styles["mark"], design.Styles["clean"]
+	mark, clean := design.Caption(), design.Caption()
 	washed := bright.Background(canvas, mark, "bottom", copyAt(1270))
 	white := design.Color["text_white"].Hex
 	if ratio, _ := design.Contrast(white, washed); ratio < design.Luma.ContrastMin {

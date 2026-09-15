@@ -672,7 +672,7 @@ func (c *composed) resolve(canvas clip.Canvas) {
 			start, end := cut.CaptionWindow(j)
 			kept = append(kept, design.Element{
 				Cut: i, Copy: j, Kind: "scrim", Style: copy.Style, Anchor: copy.Anchor, Pace: copy.Pace,
-				Region: design.Region(s.Region), StartMS: offsets[i] + start, EndMS: offsets[i] + end,
+				Region: design.Bounds(s.Region), StartMS: offsets[i] + start, EndMS: offsets[i] + end,
 				Background: design.Scrim[s.Edge].Hex,
 				InMS:       design.CaptionMotion(copy.Pace).InMS, OutMS: design.CaptionMotion(copy.Pace).OutMS, DY: design.CaptionMotion(copy.Pace).InDY,
 			})
@@ -782,22 +782,10 @@ func (r *Rendering) rung(ctx context.Context, ws clip.MediaWorkspace, canvas cli
 	copied := plan.Cuts[index].Copies[copyIndex]
 	switch step {
 	case rungStyle:
-		if copied.Style == "clean" {
-			return false, nil
-		}
-		copied.Style = "clean"
-		// The anchor is kept when 깔끔하게 may stand there and is otherwise its own
-		// (CDS-24 is the law on which anchors a style takes).
-		if !slices.Contains(design.StyleAnchors("clean"), copied.Anchor) {
-			copied.Anchor = design.Styles["clean"].Anchor
-		}
-		copied.Align = design.Styles["clean"].Align
-		if record == "" {
-			record = "style"
-		}
+		return false, nil
 	case rungAnchor:
-		style, ok := design.Styles[copied.Style]
-		if !ok || (copied.Anchor == style.Anchor && copied.Align == style.Align) {
+		style := design.Caption()
+		if copied.Anchor == style.Anchor && copied.Align == style.Align {
 			return false, nil
 		}
 		copied.Anchor, copied.Align = style.Anchor, style.Align

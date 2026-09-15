@@ -114,7 +114,7 @@ func TestCopyLayoutAndSVGGolden(t *testing.T) {
 	bounds := map[string]clip.Region{text: {X: 1, Y: -80, Width: 500, Height: 100}}
 	for _, ratio := range []string{"vertical", "horizontal", "square"} {
 		canvas, _ := clip.ClipCanvas(ratio)
-		for style, rule := range design.Styles {
+		for style, rule := range map[string]design.StyleRule{"bold": design.Caption()} {
 			c := clip.Copy{Text: text, Anchor: rule.Anchor, Align: rule.Align, Style: style, Accent: "coral"}
 			l, err := fitCopy(canvas, c, [][]string{{text}}, bounds)
 			if err != nil {
@@ -149,7 +149,7 @@ func TestCopyLayoutAndSVGGolden(t *testing.T) {
 	}
 	canvas, _ := clip.ClipCanvas("vertical")
 	// Neutral: no accent means no bar, no dot and no highlight anywhere.
-	for style := range design.Styles {
+	for style := range map[string]design.StyleRule{"bold": design.Caption()} {
 		c := clip.Copy{Text: text, Anchor: "bottom", Align: "center", Style: style}
 		l, err := fitCopy(canvas, c, [][]string{{text}}, bounds)
 		if err != nil {
@@ -165,8 +165,8 @@ func TestCopyLayoutAndSVGGolden(t *testing.T) {
 	// prefix's advance and still may not cross the safe area's right edge (920).
 	keyed := "가격 9900원"
 	kb := map[string]clip.Region{keyed: {X: 1, Y: -80, Width: 700, Height: 100}, "가격 ": {X: 1, Y: -80, Width: 220, Height: 100}, "9900원": {X: 1, Y: -80, Width: 470, Height: 100}}
-	for _, style := range []string{"bold", "mark"} {
-		c := clip.Copy{Text: keyed, Keyword: "9900원", Anchor: design.Styles[style].Anchor, Align: "right", Style: style, Accent: "amber"}
+	for _, style := range []string{"bold"} {
+		c := clip.Copy{Text: keyed, Keyword: "9900원", Anchor: design.Caption().Anchor, Align: "right", Style: style, Accent: "amber"}
 		l, err := fitCopy(canvas, c, [][]string{{keyed}}, kb)
 		if err != nil {
 			t.Fatal(err)
@@ -181,7 +181,7 @@ func TestCopyLayoutAndSVGGolden(t *testing.T) {
 				t.Fatalf("%s %s crossed x %v: %+v", style, e.Kind, canvas.Safe.X+canvas.Safe.Width, e.Region)
 			}
 		}
-		if strings.Contains(svg, `fill-opacity="0.9"`) != design.Styles[style].Highlight {
+		if strings.Contains(svg, `fill-opacity="0.9"`) != design.Caption().Highlight {
 			t.Fatalf("%s highlight", style)
 		}
 		// 크게 강조 colours the word in place instead (CDS-25).
@@ -193,10 +193,10 @@ func TestCopyLayoutAndSVGGolden(t *testing.T) {
 	c := clip.Copy{Text: "one two", Style: "clean", Anchor: "top", Align: "left"}
 	b := map[string]clip.Region{"one two": {Width: 2500, Height: 100}, "one ": {Width: 800, Height: 100}, "two": {Width: 800, Height: 100}}
 	l, err := fitCopy(canvas, c, [][]string{{"one two"}, {"one ", "two"}}, b)
-	if err != nil || len(l.Lines) != 2 || l.FontSize != design.Type["body"].Size {
+	if err != nil || len(l.Lines) != 2 || l.FontSize != design.Type["title"].Size {
 		t.Fatalf("%+v %v", l, err)
 	}
-	for style, rule := range design.Styles {
+	for style, rule := range map[string]design.StyleRule{"bold": design.Caption()} {
 		wide := map[string]clip.Region{text: {Width: 100000, Height: 100}}
 		c := clip.Copy{Text: text, Anchor: rule.Anchor, Align: rule.Align, Style: style}
 		if _, err := fitCopy(canvas, c, [][]string{{text}}, wide); !errors.Is(err, clip.ErrCopyTooLong) {
@@ -253,8 +253,8 @@ func TestScrimAndAccentOnASampledGround(t *testing.T) {
 	bright := Luminance{Mean: 0.8, R: 0.9, G: 0.9, B: 0.9, Frames: []float64{0.8}}
 	busy := Luminance{Mean: 0.2, Sigma: 0.4, R: 0.2, G: 0.2, B: 0.2, Frames: []float64{0.2}}
 	dark := Luminance{Mean: 0.1, R: 0.1, G: 0.1, B: 0.1, Frames: []float64{0.1}}
-	for _, style := range []string{"clean", "memo", "bold", "mark"} {
-		rule := design.Styles[style]
+	for _, style := range []string{"bold"} {
+		rule := design.Caption()
 		c := clip.Copy{Text: keyed, Keyword: "9900원", Anchor: rule.Anchor, Align: rule.Align, Style: style, Accent: "amber"}
 		l, err := fitCopy(canvas, c, [][]string{{keyed}}, bounds)
 		if err != nil {

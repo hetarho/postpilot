@@ -80,7 +80,7 @@ func TestInformationFramesAllRatios(t *testing.T) {
 					}
 				}
 				svg, err := renderer.declaredSVG(canvas, badge)
-				if err != nil || strings.Contains(svg, "data-frame") || badge.furniture.BadgeText != "광고" || badge.manifest.Parts[0].FontSize != 40 {
+				if err != nil || strings.Contains(svg, "data-frame") || badge.furniture.BadgeText != "광고" || badge.manifest.Parts[0].FontSize != design.Type["badge"].Size {
 					t.Fatal("disclosure adopted information styling", err)
 				}
 			})

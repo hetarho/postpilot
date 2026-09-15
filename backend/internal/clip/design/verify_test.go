@@ -15,7 +15,7 @@ func conformant() design.Manifest {
 	// ratio's badge box with its right edge at x 888 and its top at y 270.
 	m := design.Manifest{{
 		Kind: "badge", Text: design.Disclosure["ad"], FontSize: design.Type["badge"].Size,
-		Background: design.Color["badge_ad"].Hex, Region: design.Region{X: 768, Y: 270, Width: 120, Height: 60},
+		Background: design.Color["badge_ad"].Hex, Region: design.Bounds{X: 768, Y: 270, Width: 120, Height: 60},
 		StartMS: 0, EndMS: 10120, // the clip's own end: cut 1 runs 7120..10120
 	}}
 	for i, anchor := range []string{"bottom", "lower_mid"} {
@@ -25,9 +25,9 @@ func conformant() design.Manifest {
 		}
 		start := 120 + i*7000
 		for _, e := range []design.Element{
-			{Kind: "plate", Region: design.Region{X: 300, Y: y, Width: 400, Height: 110}},
-			{Kind: "bar", Region: design.Region{X: 300, Y: y, Width: 8, Height: 110}},
-			{Kind: "copy", Region: design.Region{X: 340, Y: y + 22, Width: 320, Height: 66}, FontSize: 56, Text: "열네 글자까지"},
+			{Kind: "plate", Region: design.Bounds{X: 300, Y: y, Width: 400, Height: 110}},
+			{Kind: "bar", Region: design.Bounds{X: 300, Y: y, Width: 8, Height: 110}},
+			{Kind: "copy", Region: design.Bounds{X: 340, Y: y + 22, Width: 320, Height: 66}, FontSize: 72, Text: "열네 글자까지"},
 		} {
 			e.Cut, e.Style, e.Anchor = i, "clean", anchor
 			e.StartMS, e.EndMS = start, start+3000
@@ -43,16 +43,16 @@ func conformant() design.Manifest {
 // itself (CDS-28).
 func card() design.Manifest {
 	m := design.Manifest{{
-		Cut: 0, Kind: "card", Text: "hook", Region: design.Region{X: 144, Y: 640, Width: 792, Height: 300},
-		StartMS: 0, EndMS: 1500, Background: design.Color["ink_900s"].Hex,
+		Cut: 0, Kind: "card", Text: "hook", Region: design.Bounds{X: 144, Y: 640, Width: 792, Height: 300},
+		StartMS: 0, EndMS: 1500, Background: design.Color["badge_ad"].Hex,
 	}}
 	for i, e := range []design.Element{
-		{Kind: "chip-category", Text: "카페", FontSize: design.Type["label"].Size, Fill: design.Color["ink_900"].Hex, Background: design.Accent["coral"]},
-		{Kind: "copy", Text: "갓 구운 빵", FontSize: design.Type["hook"].Size, Fill: design.Color["text_white"].Hex, Background: design.Color["ink_900s"].Hex},
-		{Kind: "copy", Text: "해람 베이커리", FontSize: design.Type["body"].Size, Fill: design.Color["text_muted"].Hex, Background: design.Color["ink_900s"].Hex},
+		{Kind: "chip-category", Text: "카페", FontSize: design.Type["label"].Size, Fill: design.Color["badge_ad"].Hex, Background: design.Accent["coral"]},
+		{Kind: "copy", Text: "갓 구운 빵", FontSize: design.Type["hook"].Size, Fill: design.Color["text_white"].Hex, Background: design.Color["badge_ad"].Hex},
+		{Kind: "copy", Text: "해람 베이커리", FontSize: design.Type["body"].Size, Fill: design.Color["text_muted"].Hex, Background: design.Color["badge_ad"].Hex},
 	} {
 		e.Cut, e.StartMS, e.EndMS = 0, 0, 1500
-		e.Region = design.Region{X: 184, Y: 680 + float64(i)*80, Width: 400, Height: 60}
+		e.Region = design.Bounds{X: 184, Y: 680 + float64(i)*80, Width: 400, Height: 60}
 		m = append(m, e)
 	}
 	return m
@@ -63,7 +63,7 @@ func card() design.Manifest {
 func scrim() design.Element {
 	l, _ := design.Layout("vertical")
 	return design.Element{
-		Cut: 0, Kind: "scrim", Style: "mark", Anchor: "bottom", Region: design.Region(l.ScrimBottom),
+		Cut: 0, Kind: "scrim", Style: "mark", Anchor: "bottom", Region: design.Bounds(l.ScrimBottom),
 		StartMS: 120, EndMS: 3120, Background: design.Scrim["bottom"].Hex,
 		InMS: design.Motion.InMS, OutMS: design.Motion.OutMS, DY: design.Motion.InDY,
 	}
@@ -97,7 +97,7 @@ func TestVerifyAcceptsAScrimOnlyUnderAnUnplatedStyle(t *testing.T) {
 	badge.EndMS = 3120
 	m := design.Manifest{badge, {
 		Cut: 0, Kind: "copy", Style: "mark", Anchor: "bottom", Text: "열여섯 글자까지",
-		Region: design.Region{X: 300, Y: 1310, Width: 400, Height: 70}, FontSize: design.Type["mark"].Size,
+		Region: design.Bounds{X: 300, Y: 1310, Width: 400, Height: 70}, FontSize: design.Type["title"].Size,
 		StartMS: 120, EndMS: 3120, Fill: design.Color["text_white"].Hex, Background: "#737373",
 		InMS: design.Motion.InMS, OutMS: design.Motion.OutMS, DY: design.Motion.InDY,
 	}, scrim()}
@@ -108,12 +108,6 @@ func TestVerifyAcceptsAScrimOnlyUnderAnUnplatedStyle(t *testing.T) {
 	// collides with none of them: it is the ground they are read against.
 	if l, _ := design.Layout("vertical"); float64(l.ScrimBottom.X) != 0 {
 		t.Fatal("CDS-32's scrim is full-bleed")
-	}
-	// A scrim under a plate would darken nothing (CDS-32).
-	plated := append(design.Manifest{}, m...)
-	plated[2].Style = "clean"
-	if err := design.Verify(plated, "vertical"); !errors.Is(err, design.ViolationKind) {
-		t.Fatal("a scrim under a plated style is not an element CDS allows:", err)
 	}
 	// And the copy it protects still has to clear V3 against the washed ground.
 	dim := append(design.Manifest{}, m...)
@@ -140,7 +134,7 @@ func TestVerifyRejectsOneFixturePerCheck(t *testing.T) {
 			return m
 		}},
 		"size over nominal": {design.ViolationSize, func(m design.Manifest) design.Manifest {
-			m[3].FontSize = 57
+			m[3].FontSize = 73
 			return m
 		}},
 		// V5: 깔끔하게 takes fourteen characters a line and two lines.
@@ -190,10 +184,6 @@ func TestVerifyRejectsOneFixturePerCheck(t *testing.T) {
 			m[0].DY = design.Motion.InDY
 			return m
 		}},
-		"unknown style": {design.ViolationSize, func(m design.Manifest) design.Manifest {
-			m[1].Style = "neon"
-			return m
-		}},
 		// V7: two cuts whose windows meet may not share a pixel.
 		"overlap": {design.ViolationOverlap, func(m design.Manifest) design.Manifest {
 			m[4].StartMS, m[4].EndMS = m[1].StartMS, m[1].EndMS
@@ -217,30 +207,7 @@ func TestVerifyRejectsOneFixturePerCheck(t *testing.T) {
 			return m
 		}},
 		// V14: a third 크게 강조 in one clip.
-		"bold frequency": {design.ViolationFrequency, func(m design.Manifest) design.Manifest {
-			out := design.Manifest{m[0]}
-			out[0].EndMS = 3120 + 2*7000
-			for i := range 3 {
-				e := m[3]
-				e.Cut, e.Style, e.Anchor, e.FontSize, e.Region.Y = i, "bold", "upper_mid", 72, 700
-				e.StartMS, e.EndMS = 120+i*7000, 3120+i*7000
-				out = append(out, e)
-			}
-			return out
-		}},
 		// V14: a fourth consecutive 깔끔하게 must have alternated.
-		"style run": {design.ViolationFrequency, func(m design.Manifest) design.Manifest {
-			out := design.Manifest{m[0]}
-			out[0].EndMS = 3120 + 3*7000
-			for i := range 4 {
-				e := m[3]
-				e.Cut, e.Anchor = i, []string{"bottom", "lower_mid", "bottom", "lower_mid"}[i]
-				e.Region.Y = []float64{1292, 1067, 1292, 1067}[i]
-				e.StartMS, e.EndMS = 120+i*7000, 3120+i*7000
-				out = append(out, e)
-			}
-			return out
-		}},
 		// V3: white on a ground the scrim could not darken enough. This is the
 		// one check that needs the footage, so it is the sampled background that
 		// fails it, never a token pairing (CDS-44).
@@ -269,11 +236,6 @@ func TestVerifyRejectsOneFixturePerCheck(t *testing.T) {
 			return append(m, e)
 		}},
 		// One cut carries one style at one anchor.
-		"two styles in a cut": {design.ViolationFrequency, func(m design.Manifest) design.Manifest {
-			m[3].Style = "memo"
-			m[3].FontSize = 44
-			return m
-		}},
 	} {
 		t.Run(name, func(t *testing.T) {
 			got := design.Verify(tc.mutate(conformant()), "vertical")
@@ -293,24 +255,20 @@ func TestVerifyRejectsOneFixturePerCheck(t *testing.T) {
 // and 메모. A template that approved only one of the two gave the composer no
 // alternate, so the run is the owner's choice and the verifier lets it through;
 // with both approved, or with nothing said, the run is still a defect.
-func TestSingleApprovedStyleMayRun(t *testing.T) {
+func TestCaptionHasNoFrequencyLimit(t *testing.T) {
 	m := conformant()
 	run := design.Manifest{m[0]}
-	run[0].EndMS = 3120 + 3*7000
-	for i := range 4 {
+	run[0].EndMS = 3120 + 5*7000
+	for i := range 6 {
 		e := m[3]
-		e.Cut, e.Anchor = i, []string{"bottom", "lower_mid", "bottom", "lower_mid"}[i]
-		e.Region.Y = []float64{1292, 1067, 1292, 1067}[i]
-		e.StartMS, e.EndMS = 120+i*7000, 3120+i*7000
+		e.Cut = i
+		e.Style = "bold"
+		e.Anchor = "upper_mid"
+		e.StartMS = 120 + i*7000
+		e.EndMS = 3120 + i*7000
 		run = append(run, e)
 	}
-	if err := design.Verify(run, "vertical"); !errors.Is(err, design.ViolationFrequency) {
-		t.Fatalf("an avoidable run passed: %v", err)
-	}
-	if err := design.VerifyApproved(run, "vertical", []string{"clean", "memo"}); !errors.Is(err, design.ViolationFrequency) {
-		t.Fatalf("a run the approved set could have broken passed: %v", err)
-	}
-	if err := design.VerifyApproved(run, "vertical", []string{"clean"}); err != nil {
-		t.Fatalf("a single approved style cannot alternate, yet the run was refused: %v", err)
+	if err := design.Verify(run, "vertical"); err != nil {
+		t.Fatal(err)
 	}
 }

@@ -8,25 +8,24 @@ import design from './clip-design.json'
 
 export const CLIP_DESIGN = design
 
-export type ClipStyleId = 'clean' | 'memo' | 'bold' | 'mark' | 'simple'
+export type ClipStyleId = 'bold'
 export type ClipRatioId = 'vertical' | 'horizontal' | 'square'
 export type ClipPresetId = keyof typeof design.presets
 export type ClipDisclosureId = keyof typeof design.disclosure
 export type ClipCTAId = keyof typeof design.cta
 
-export const CLIP_STYLES = Object.keys(design.styles) as ClipStyleId[]
+export const CLIP_STYLES = Object.keys(design.regions.caption) as ClipStyleId[]
 export const CLIP_PRESETS = Object.keys(design.presets) as ClipPresetId[]
 export const CLIP_DISCLOSURES = Object.keys(design.disclosure) as ClipDisclosureId[]
 export const CLIP_CTAS = Object.keys(design.cta) as ClipCTAId[]
 
-/** The style's own drawing rule: plate, padding, stroke, shadow, limits and
- *  default placement (CDS-22 through CDS-26). */
-export function clipStyle(style: ClipStyleId) {
-  return design.styles[style]
+export const CLIP_REGIONS = design.regions
+export const CLIP_RULES = design.rule
+export function clipCaption() {
+  return design.regions.caption.bold
 }
-/** The type scale entry a style typesets in (CDS-19). */
-export function clipType(style: ClipStyleId) {
-  return design.type[design.styles[style].type as keyof typeof design.type]
+export function clipRegion(kind: 'intro' | 'outro', id: string) {
+  return Object.entries(design.regions[kind]).find(([key]) => key === id)?.[1]
 }
 /** A CDS colour token's hex and alpha, for an SVG attribute that takes neither a
  *  Tailwind class nor a CSS variable — a plate's fill opacity, say. The hex
@@ -39,7 +38,6 @@ export function clipPaint(token: keyof typeof design.color) {
 export const CLIP_SHADOW = design.shadow
 export const CLIP_SPACING = design.spacing
 export const CLIP_TIMING = design.timing
-export const CLIP_GUARDS = design.guards
 /** CDS-36's transitions: the default, the fade a scene change earns and the
  *  fade-through-black nothing offers yet. */
 export const CLIP_TRANSITION = design.transition
@@ -51,8 +49,6 @@ export const CLIP_RATES = design.playback.rates_permille as readonly number[]
 /** CDS-43: how many copies a cut may carry, the cut length the second one needs
  *  and how short the second sentence has to be to stand alone. */
 export const CLIP_COPY = design.copy
-export const CLIP_CLASSES = design.classes
-export const CLIP_SCENE_STYLES = design.scene_styles
 export const CLIP_FACTS = design.facts
 export const CLIP_ACCENT_HEX = design.accent
 /** The voice CDS-42 refuses: emoji and these tokens. */

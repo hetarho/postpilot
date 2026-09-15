@@ -84,7 +84,7 @@ func TestRendererUsesNewPresetFromFilesWithoutAnotherStyleSwitch(t *testing.T) {
 	if err := json.Unmarshal(data, &bindings); err != nil {
 		t.Fatal(err)
 	}
-	bindings.Bindings["copy.clean"] = "editorial"
+	bindings.Bindings["copy.bold"] = "editorial"
 	data, err = json.Marshal(bindings)
 	if err != nil {
 		t.Fatal(err)
@@ -124,7 +124,7 @@ func TestRendererUsesNewPresetFromFilesWithoutAnotherStyleSwitch(t *testing.T) {
 	if !strings.Contains(drawn, `data-preset="editorial"`) || !strings.Contains(drawn, `한글 &amp; &lt;여행&gt;`) {
 		t.Fatal("preset or plain text was not used", drawn)
 	}
-	if l.Style != design.Styles["clean"] {
+	if l.Style != design.Caption() {
 		t.Fatal("asset changed layout policy")
 	}
 	if _, err := NewRenderer(a, cfg); err == nil {

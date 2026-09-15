@@ -100,11 +100,8 @@ type Composition struct {
 	Second bool
 }
 
-// Compose turns one written cut into a placed one: it classifies the sentence,
-// selects the style and the anchor from the CDS tables, fits the exposure and
-// drops what it cannot ground. Every decision is the design system's; nothing
-// here is a judgement, which is what makes the same input render the same clip
-// (CDS-7).
+// Compose grounds the copy, applies the fixed caption treatment, selects its
+// anchor and fits its exposure. It records shortening or omission for review.
 //
 // measure returns the plate a candidate would occupy, or ok=false when the copy
 // cannot be placed there at all.
@@ -116,9 +113,7 @@ func Compose(
 	readableText bool,
 	subject Region,
 	placed Manifest,
-	allowed []string,
 	accent string,
-	history design.StyleHistory,
 	previousAnchor string,
 	limit int,
 	measure func(Caption) (Region, bool, error),
@@ -143,12 +138,11 @@ func Compose(
 		}
 	}
 	if written.Pace == "rapid" {
-		rapid, ok, err := composeRapid(cut, written, text, accent, allowed, placed, subject, readableText, previousAnchor, measure)
+		rapid, ok, err := composeRapid(cut, written, text, accent, placed, subject, readableText, previousAnchor, measure)
 		if err != nil {
 			return out, decision, err
 		}
 		if ok {
-			decision.Class = design.Classify(text)
 			return rapid, decision, nil
 		}
 		decision.Fallback = "sentence_pace"
@@ -166,14 +160,14 @@ func Compose(
 	// second thing short_text is for: a sentence past them is shortened, not
 	// regenerated — the credit ceiling counted every planned call, so there is
 	// no second call to make (CLIP-19, QUOTA-45).
-	text, style, decision := selectFitting(text, written, allowed, history, decision)
+	text, style, decision := selectFitting(text, written, decision)
 	if text == "" {
 		decision.Fallback = "dropped"
 		return out, decision, nil
 	}
 	written.Keyword = keywordIn(text, written.Keyword)
 	// Anchor: the style's own candidates, measured, then CDS-38's walk.
-	rule := design.Styles[style]
+	rule := design.Caption()
 	candidates, captions := []design.Candidate{}, []Caption{}
 	for _, anchor := range []string{rule.Anchor, rule.AnchorAlt} {
 		if anchor == "" {
@@ -187,10 +181,10 @@ func Compose(
 			// caller's problem, not a design-system fallback.
 			return out, decision, err
 		}
-		candidates = append(candidates, design.Candidate{Anchor: anchor, Align: rule.Align, Plate: design.Region(plate), Fits: ok})
+		candidates = append(candidates, design.Candidate{Anchor: anchor, Align: rule.Align, Plate: design.Bounds(plate), Fits: ok})
 		captions = append(captions, c)
 	}
-	chosen := design.SelectAnchor(candidates, design.Region(subject), placed, readableText, previousAnchor, nil)
+	chosen := design.SelectAnchor(candidates, design.Bounds(subject), placed, readableText, previousAnchor, nil)
 	if chosen < 0 {
 		decision.Fallback = "dropped"
 		out.Copies, out.EndMS = nil, cut.EndMS
@@ -203,7 +197,7 @@ func Compose(
 	// CDS-43's second copy, on a long enough cut and only from words the model
 	// already wrote. It never costs another call: the number is lifted out of
 	// the sentence the compiler was handed, or is the short alternative itself.
-	if first, second, ok := secondCopy(out, written, allowed, append(history, captions[chosen].Style), accent, measure); ok {
+	if first, second, ok := secondCopy(out, written, accent, measure); ok {
 		// Both windows become explicit: two CDS-27 defaults would run over each
 		// other, and CDS-43 admits no overlap.
 		out.Copies = []Caption{first, second}
@@ -217,17 +211,17 @@ func Compose(
 // beside it. The number has to stand alone — the short alternative, or a clause
 // of the sentence — in the style's own handful of characters; anything longer is
 // a second sentence, which is not what CDS-43 offers.
-func secondCopy(cut Cut, written Written, allowed []string, history design.StyleHistory, accent string, measure func(Caption) (Region, bool, error)) (Caption, Caption, bool) {
+func secondCopy(cut Cut, written Written, accent string, measure func(Caption) (Region, bool, error)) (Caption, Caption, bool) {
 	first := cut.FirstCopy()
-	if cut.OutputDurationMS() < design.Copy.SecondMinCutMS() || design.Classify(first.Text) != design.ClassDesc {
+	if cut.OutputDurationMS() < design.Copy.SecondMinCutMS() {
 		return Caption{}, Caption{}, false
 	}
 	text := numericClause(first.Text, written)
 	if text == "" || !Grounded(text, written.Answers) {
 		return Caption{}, Caption{}, false
 	}
-	style := design.SelectStyle(design.Scene(""), design.ClassNum, allowed, history, keywords(text, written.Keyword))
-	if !withinStyle(text, style) {
+	style := "bold"
+	if !withinCaption(text) {
 		return Caption{}, Caption{}, false
 	}
 	// Both windows come out of the one CDS-27 window, split by what each
@@ -243,7 +237,7 @@ func secondCopy(cut Cut, written Written, allowed []string, history design.Style
 		share = room - b
 	}
 	first.StartMS, first.EndMS = lead, lead+share
-	rule := design.Styles[style]
+	rule := design.Caption()
 	for _, anchor := range []string{rule.Anchor, rule.AnchorAlt} {
 		if anchor == "" {
 			continue
@@ -279,25 +273,21 @@ func numericClause(text string, written Written) string {
 		if candidate == "" || candidate == text || design.Chars(candidate) > design.Copy.SecondMaxChars {
 			continue
 		}
-		if design.Classify(candidate) == design.ClassNum {
+		if len(numbers(candidate)) > 0 {
 			return candidate
 		}
 	}
 	return ""
 }
 
-// selectFitting chooses the style for the text, and shortens the text when its
-// style's own limits refuse it — re-selecting the style for the shorter words,
-// because a shorter sentence can be a different class.
-func selectFitting(text string, written Written, allowed []string, history design.StyleHistory, decision Composition) (string, string, Composition) {
+// selectFitting uses a grounded shorter candidate when the caption limits require it.
+func selectFitting(text string, written Written, decision Composition) (string, string, Composition) {
 	for _, candidate := range []string{text, strings.TrimSpace(written.ShortText)} {
 		if candidate == "" || (candidate != text && !Grounded(candidate, written.Answers)) {
 			continue
 		}
-		class := design.Classify(candidate)
-		style := design.SelectStyle(decision.Scene, class, allowed, history, keywords(candidate, written.Keyword))
-		if withinStyle(candidate, style) {
-			decision.Class = class
+		style := "bold"
+		if withinCaption(candidate) {
 			if candidate != text {
 				decision.Fallback = "short_text"
 			}
@@ -307,9 +297,9 @@ func selectFitting(text string, written Written, allowed []string, history desig
 	return "", "", decision
 }
 
-// withinStyle is the style's own line and character limit.
-func withinStyle(text, style string) bool {
-	rule := design.Styles[style]
+// withinCaption checks the fixed caption line and character limits.
+func withinCaption(text string) bool {
+	rule := design.Caption()
 	lines := strings.Split(text, "\n")
 	if len(lines) > rule.Lines {
 		return false
@@ -320,12 +310,6 @@ func withinStyle(text, style string) bool {
 		}
 	}
 	return true
-}
-func keywords(text, keyword string) int {
-	if keywordIn(text, keyword) == "" {
-		return 0
-	}
-	return 1
 }
 
 // A keyword the text no longer carries is not a keyword.

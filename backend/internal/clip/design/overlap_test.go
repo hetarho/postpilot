@@ -12,7 +12,7 @@ func TestOverlapDoesNotHideOtherDeliveryFailures(t *testing.T) {
 		t.Run(mode, func(t *testing.T) {
 			m := conformant()
 			// Identical chips on successive cuts share their crossfade window.
-			chip := design.Element{Kind: "chip", Cut: 0, Text: "위치 서울", Region: design.Region{X: 96, Y: 380, Width: 300, Height: 70}, StartMS: 0, EndMS: 7400}
+			chip := design.Element{Kind: "chip", Cut: 0, Text: "위치 서울", Region: design.Bounds{X: 96, Y: 380, Width: 300, Height: 70}, StartMS: 0, EndMS: 7400}
 			m = append(m, chip)
 			chip.Cut, chip.StartMS, chip.EndMS = 1, 7200, 10120
 			m = append(m, chip)

@@ -4,11 +4,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ClipService, type ProtoVideoTemplate } from '@/shared/api'
 import {
   CLIP_ACCENTS,
-  COPY_STYLES,
   normalizeRecipe,
   type ClipTemplate,
   type ClipRecipe,
-  type CopyStyle,
   type ClipAccent,
 } from '../model/types'
 
@@ -17,7 +15,6 @@ export const clipTemplatesKey = (transport: Transport, ownerId: string) =>
 export function toClipTemplate(value: ProtoVideoTemplate): ClipTemplate {
   if (
     !['', 'steady', 'rapid'].includes(value.captionPace) ||
-    value.copyStyles.some((s) => !COPY_STYLES.includes(s as CopyStyle)) ||
     !CLIP_ACCENTS.includes(value.accent as ClipAccent)
   )
     throw new Error('Invalid clip template contract')
@@ -32,7 +29,7 @@ export function toClipTemplate(value: ProtoVideoTemplate): ClipTemplate {
     name: value.name,
     cutGuidance: value.cutGuidance,
     informationFields: value.informationFields.map((f) => ({ label: f.label, prompt: f.prompt })),
-    copyStyles: value.copyStyles as CopyStyle[],
+    copyStyles: ['bold'],
     accent: value.accent as ClipAccent,
     // Retained only for reading and converting legacy recipes.
     preset: value.preset as ClipRecipe['preset'],

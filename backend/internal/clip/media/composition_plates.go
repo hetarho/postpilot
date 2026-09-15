@@ -41,7 +41,7 @@ func (r *Rendering) declaredPlate(ctx context.Context, ws clip.MediaWorkspace, c
 			}
 			if visual.ground.Scrim() {
 				if scrim, ok := scrimFor(canvas, visual.copy.Anchor); ok {
-					visual.manifest.Parts = append(visual.manifest.Parts, design.Element{Kind: "scrim", Region: design.Region(scrim.Region), StartMS: visual.manifest.StartMS, EndMS: visual.manifest.EndMS})
+					visual.manifest.Parts = append(visual.manifest.Parts, design.Element{Kind: "scrim", Region: design.Bounds(scrim.Region), StartMS: visual.manifest.StartMS, EndMS: visual.manifest.EndMS})
 				}
 			}
 		}
@@ -145,7 +145,7 @@ func applyInfoGround(canvas clip.Canvas, visual *declaredVisual) {
 					return
 				}
 			}
-			visual.manifest.Parts = append(visual.manifest.Parts, design.Element{Kind: "scrim", Region: design.Region(s.Region), StartMS: visual.manifest.StartMS, EndMS: visual.manifest.EndMS})
+			visual.manifest.Parts = append(visual.manifest.Parts, design.Element{Kind: "scrim", Region: design.Bounds(s.Region), StartMS: visual.manifest.StartMS, EndMS: visual.manifest.EndMS})
 		}
 	}
 }

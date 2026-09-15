@@ -130,7 +130,6 @@ func (r *Rendering) layoutComposition(ctx context.Context, ws clip.MediaWorkspac
 	portable.TargetDurationMS = 0
 	result.plan.Portable = &portable
 	result.plan.Portable.Elements = nil
-	history := design.StyleHistory{}
 	ordered, timingFallbacks := scheduleDeclaredCaptions(plan.Portable.Elements)
 	result.plan.Portable.Fallbacks = append(result.plan.Portable.Fallbacks, timingFallbacks...)
 	rank := func(role string) int {
@@ -163,7 +162,7 @@ func (r *Rendering) layoutComposition(ctx context.Context, ws clip.MediaWorkspac
 				placed = append(placed, prior.manifest.Parts...)
 			}
 		}
-		visual, err := r.layoutDeclaredElement(ctx, ws, canvas, plan, text, doc.Styles, history, placed, previous, false)
+		visual, err := r.layoutDeclaredElement(ctx, ws, canvas, plan, text, placed, previous, false)
 		if err != nil {
 			var problem *composition.Problem
 			if !clip.AutomaticCompositionRepair(text) || !errors.As(err, &problem) {
@@ -177,7 +176,6 @@ func (r *Rendering) layoutComposition(ctx context.Context, ws clip.MediaWorkspac
 			result.plan.Portable.Fallbacks = append(result.plan.Portable.Fallbacks, clip.CopyFallback{ElementID: text.Resolved.Element.ID, CutID: text.Resolved.CutID, Reason: visual.text.FallbackReason})
 		}
 		if text.Resolved.Element.Role == "caption" {
-			history = append(history, visual.manifest.Style)
 			previous = visual.manifest.Position
 		}
 	}
@@ -247,11 +245,11 @@ func declaredManifest(text clip.PortableText) clip.CompositionElement {
 	return result
 }
 
-func (r *Rendering) layoutDeclaredElement(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, plan clip.EditPlan, text clip.PortableText, styles []string, history design.StyleHistory, placed clip.Manifest, previous string, phrase bool) (declaredVisual, error) {
+func (r *Rendering) layoutDeclaredElement(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, plan clip.EditPlan, text clip.PortableText, placed clip.Manifest, previous string, phrase bool) (declaredVisual, error) {
 	visual := declaredVisual{text: text, manifest: declaredManifest(text)}
 	e := text.Resolved.Element
 	if e.Role == "caption" && text.Pace == "rapid" && !phrase {
-		return r.layoutDeclaredRapid(ctx, ws, canvas, plan, text, styles, history, placed, previous)
+		return r.layoutDeclaredRapid(ctx, ws, canvas, plan, text, placed, previous)
 	}
 	if e.Role != "caption" {
 		result, err := r.layoutDeclaredRole(ctx, ws, canvas, plan.Ratio, visual)
@@ -275,43 +273,24 @@ func (r *Rendering) layoutDeclaredElement(ctx context.Context, ws clip.MediaWork
 		}
 		return visual, err
 	}
-	scene := ""
 	readable := false
 	subject := clip.Region{}
-	var captionSafe []design.Region
+	var captionSafe []design.Bounds
 	for _, cut := range plan.Cuts {
 		if cut.ID != text.Resolved.CutID {
 			continue
 		}
 		for _, a := range plan.Portable.Observations {
 			if a.Source.ID == cut.SourceID {
-				scene, readable = clip.CutScene(cut, a)
+				_, readable = clip.CutScene(cut, a)
 				subject = clip.CutSubject(canvas, cut, a)
 				for _, box := range clip.CutCaptionSafe(canvas, cut, a) {
-					captionSafe = append(captionSafe, design.Region(box))
+					captionSafe = append(captionSafe, design.Bounds(box))
 				}
 			}
 		}
 	}
-	style := e.Style
-	if style == "auto" && text.Placement != nil {
-		style = text.Placement.Style
-	}
-	if style == "auto" {
-		keyword := 0
-		if text.Keyword != "" {
-			keyword = 1
-		}
-		style = design.SelectStyle(scene, design.Classify(text.Resolved.Text), styles, history, keyword)
-	}
-	candidates := []string{style}
-	if clip.AutomaticCompositionRepair(text) {
-		for _, other := range styles {
-			if other != style {
-				candidates = append(candidates, other)
-			}
-		}
-	}
+	candidates := []string{"bold"}
 	texts := []clip.CopyAlternative{{Text: text.Resolved.Text, Rows: text.Resolved.Rows}}
 	if clip.AutomaticCompositionRepair(text) {
 		texts = append(texts, text.Alternatives...)
@@ -326,10 +305,7 @@ func (r *Rendering) layoutDeclaredElement(ctx context.Context, ws clip.MediaWork
 			continue
 		}
 		for _, style := range candidates {
-			rule, known := design.Styles[style]
-			if !known {
-				return visual, elementProblem(text, "invalid_style")
-			}
+			rule := design.Caption()
 			anchors := []string{e.Position}
 			pinned := e.Position != "auto" || text.Placement != nil
 			if text.Placement != nil && e.Position == "auto" {
@@ -379,9 +355,9 @@ func (r *Rendering) layoutDeclaredElement(ctx context.Context, ws clip.MediaWork
 					return visual, nil
 				}
 				fits = append(fits, visual)
-				placements = append(placements, design.Candidate{Anchor: anchor, Align: e.Align, Plate: design.Region(layout.Region), Fits: true})
+				placements = append(placements, design.Candidate{Anchor: anchor, Align: e.Align, Plate: design.Bounds(layout.Region), Fits: true})
 			}
-			chosen := design.SelectAnchor(placements, design.Region(subject), placed, readable, previous, captionSafe)
+			chosen := design.SelectAnchor(placements, design.Bounds(subject), placed, readable, previous, captionSafe)
 			if chosen >= 0 {
 				return fits[chosen], nil
 			}

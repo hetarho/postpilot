@@ -30,10 +30,7 @@ func TestPresetsMatchCDS50(t *testing.T) {
 			t.Fatalf("%s has no category label for its hook card", id)
 		}
 		total := 0
-		for style, share := range p.Styles {
-			if _, ok := design.Styles[style]; !ok {
-				t.Fatalf("%s mixes an unknown style %q", id, style)
-			}
+		for _, share := range p.Styles {
 			total += share
 		}
 		if total != 100 {

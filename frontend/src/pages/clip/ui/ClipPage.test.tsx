@@ -24,7 +24,7 @@ const template = {
   name: '여행',
   informationFields: [{ label: '장소', prompt: '어디인가요?' }],
   cutGuidance: '',
-  copyStyles: ['clean'] as const,
+  copyStyles: ['bold'] as const,
   accent: '' as const,
   preset: 'restaurant' as const,
 }
@@ -42,7 +42,7 @@ const mount = (path: string, clips: FakeClipsOptions = {}) =>
   renderAppAt(path, {
     user: { id: 'alice' },
     clips: {
-      templates: [{ ...template, copyStyles: [...template.copyStyles] }],
+      templates: [{ ...template, copyStyles: ['bold'] }],
       projects: [project],
       ...clips,
     },

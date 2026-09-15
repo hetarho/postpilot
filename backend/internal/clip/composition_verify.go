@@ -19,7 +19,7 @@ func VerifyCompositionManifest(plan EditPlan, elements []CompositionElement, lim
 	if plan.Portable.Snapshot.Legacy {
 		limits = LegacyCompositionLimits(limits)
 	}
-	doc, problem := composition.Parse(plan.Portable.Snapshot.Body, limits)
+	_, problem := composition.Parse(plan.Portable.Snapshot.Body, limits)
 	if problem != nil {
 		return problem
 	}
@@ -57,17 +57,11 @@ func VerifyCompositionManifest(plan EditPlan, elements []CompositionElement, lim
 		if element.StartMS < r.StartMS || element.EndMS > r.EndMS || element.StartMS >= element.EndMS || r.AuthoredTiming && (element.StartMS != r.StartMS || element.EndMS != r.EndMS) {
 			return fail("interval_outside")
 		}
-		if r.Element.Style != "auto" && element.Style != r.Element.Style {
-			return fail("invalid_style")
-		}
 		if r.Element.Position != "auto" && element.Position != r.Element.Position {
 			return fail("invalid_position")
 		}
 		if element.Align != r.Element.Align {
 			return fail("invalid_align")
-		}
-		if element.Role == "caption" && !slices.Contains(doc.Styles, element.Style) {
-			return fail("invalid_style")
 		}
 		if element.Layer != CompositionLayer(element.Role) {
 			return fail("invalid_visual")
@@ -112,7 +106,7 @@ func VerifyCompositionManifest(plan EditPlan, elements []CompositionElement, lim
 			if part.FontSize > 0 {
 				minimum := design.MinTypeSize()
 				if element.Role == "caption" {
-					minimum = design.Styles[element.Style].Role().Min
+					minimum = design.Caption().Role().Min
 				}
 				if element.Role == "badge" {
 					minimum = design.Type["badge"].Size

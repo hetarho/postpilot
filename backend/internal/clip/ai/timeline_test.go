@@ -66,7 +66,7 @@ func TestComposeActualFailureTimingWithoutAnotherPaidCall(t *testing.T) {
 			if c.FirstCopy().Text != p["text"] && c.FirstCopy().Text != p["short_text"] {
 				t.Fatalf("copy %q is neither what was written nor its alternative", c.FirstCopy().Text)
 			}
-			if c.FirstCopy().Accent != "amber" || !slices.Contains(in.Template.CopyStyles, c.FirstCopy().Style) {
+			if c.FirstCopy().Accent != "amber" || c.FirstCopy().Style != "bold" {
 				t.Fatalf("cut %d styling: %+v", i, c.FirstCopy())
 			}
 			if start, end := c.CaptionWindow(0); start != 120 || end != c.EndMS-c.StartMS-120 {

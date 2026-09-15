@@ -70,7 +70,7 @@ func hookCard(ratio, hook, preset, name, accent string, durationMS int) cardLayo
 	white, muted := design.Color["text_white"], design.Color["text_muted"]
 	lines := []cardLine{}
 	if label := design.Presets[preset].Label; label != "" && accent != "" {
-		lines = append(lines, cardLine{Text: label, Role: design.Type["label"], Fill: design.Color["ink_900"].Hex, Alpha: 1, Chip: true})
+		lines = append(lines, cardLine{Text: label, Role: design.Type["label"], Fill: design.Color["badge_ad"].Hex, Alpha: 1, Chip: true})
 	}
 	role := design.Type["hook"]
 	role.Size, role.Min = l.HookSize, math.Min(role.Min, l.HookSize)
@@ -78,7 +78,7 @@ func hookCard(ratio, hook, preset, name, accent string, durationMS int) cardLayo
 		lines = append(lines, cardLine{Text: line, Role: role, Fill: white.Hex, Alpha: white.Alpha})
 	}
 	lines = append(lines, cardLine{Text: name, Role: design.Type["body"], Fill: muted.Hex, Alpha: muted.Alpha})
-	end := int(design.Timing.HookCardS * 1000)
+	end := int(design.Timing.IntroDefaultS * 1000)
 	return cardLayout{Kind: "hook", Lines: lines, StartMS: 0, EndMS: min(end, durationMS), Accent: accent}
 }
 
@@ -144,7 +144,7 @@ func endingCard(ratio, preset, cta string, answers map[string]string, accent str
 	if phrase := design.CTA[design.DefaultCTA(preset, cta)]; phrase != "" && accent != "" {
 		lines = append(lines, cardLine{Text: phrase, Role: design.Type["label"], Fill: design.Accent[accent], Alpha: 1})
 	}
-	start := durationMS - int(design.Timing.EndCardS*1000)
+	start := durationMS - int(design.Timing.OutroDefaultS*1000)
 	return cardLayout{Kind: "end", Lines: lines, StartMS: max(0, start), EndMS: durationMS, Accent: accent}
 }
 
@@ -230,14 +230,14 @@ func (card cardLayout) Elements(cut int) clip.Manifest {
 		return nil
 	}
 	m := clip.Manifest{{
-		Cut: cut, Kind: "card", Text: card.Kind, Region: design.Region(card.Region),
+		Cut: cut, Kind: "card", Text: card.Kind, Region: design.Bounds(card.Region),
 		StartMS: card.StartMS, EndMS: card.EndMS,
-		Background: design.Color["ink_900s"].Hex,
+		Background: design.Color["badge_ad"].Hex,
 	}}
 	top := card.Region.Y + cardPadding
 	for i, line := range card.Lines {
 		bounds := card.Bounds[i]
-		kind, background := "copy", design.Color["ink_900s"].Hex
+		kind, background := "copy", design.Color["badge_ad"].Hex
 		if line.Chip {
 			// The category chip is an opaque accent pill, so its ink is read
 			// against the accent and not against the card (CDS-28).
@@ -246,7 +246,7 @@ func (card cardLayout) Elements(cut int) clip.Manifest {
 		m = append(m, design.Element{
 			Cut: cut, Kind: kind, Text: line.Text, FontSize: line.Role.Size,
 			Fill: line.Fill, Background: background,
-			Region:  design.Region{X: card.lineX(i), Y: top, Width: bounds.Width, Height: bounds.Height},
+			Region:  design.Bounds{X: card.lineX(i), Y: top, Width: bounds.Width, Height: bounds.Height},
 			StartMS: card.StartMS, EndMS: card.EndMS,
 		})
 		top += bounds.Height + design.Spacing.GapStack

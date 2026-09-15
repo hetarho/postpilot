@@ -3,8 +3,8 @@ import {
   CLIP_PRESETS,
   CLIP_SPACING,
   CLIP_STYLES,
-  clipStyle,
-  clipType,
+  clipCaption,
+  CLIP_TYPE,
   type ClipPresetId,
   type ClipStyleId,
   type ClipCaptionPace,
@@ -61,9 +61,9 @@ export interface ClipTemplate extends ClipRecipe {
 
 /** What the preview needs to draw a style, taken from the design system: the
  *  renderer reads the same bytes, so a preview cannot drift from a render. */
-export function copyStyleMeasurements(style: CopyStyle) {
-  const rule = clipStyle(style)
-  const role = clipType(style)
+export function copyStyleMeasurements() {
+  const rule = clipCaption()
+  const role = CLIP_TYPE.title
   return {
     fontSize: role.size,
     minFontSize: role.min,
@@ -71,16 +71,11 @@ export function copyStyleMeasurements(style: CopyStyle) {
     tracking: role.tracking,
     padding: rule.padding,
     padLeft: rule.pad_left,
-    radius: rule.plate === '' ? 0 : CLIP_SPACING.radius_box,
+    radius: 0,
     plate: rule.plate,
     bar: rule.bar,
     dot: rule.dot,
-    stroke:
-      rule.stroke === 'mark'
-        ? CLIP_SPACING.stroke_mark
-        : rule.stroke === ''
-          ? 0
-          : CLIP_SPACING.stroke_text,
+    stroke: CLIP_SPACING.stroke_text,
     shadow: rule.shadow !== '',
     highlight: rule.highlight,
     lines: rule.lines,
@@ -92,7 +87,7 @@ export function copyStyleMeasurements(style: CopyStyle) {
 
 /** An unplated style paints its text with a stroke instead of a box (CDS-25, CDS-26). */
 export const PLATED_COPY_STYLES: readonly CopyStyle[] = COPY_STYLES.filter(
-  (style) => clipStyle(style).plate !== '',
+  () => clipCaption().plate !== '',
 )
 
 export function emptyClipRecipe(): ClipRecipe {
@@ -100,7 +95,7 @@ export function emptyClipRecipe(): ClipRecipe {
     name: '',
     informationFields: [],
     cutGuidance: '',
-    copyStyles: ['clean'],
+    copyStyles: ['bold'],
     accent: '',
     preset: '',
   }
@@ -126,7 +121,7 @@ export function recipeOf(value: ClipRecipe): ClipRecipe {
     name: value.name,
     informationFields: value.informationFields.map((f) => ({ ...f })),
     cutGuidance: value.cutGuidance,
-    copyStyles: [...value.copyStyles],
+    copyStyles: ['bold'],
     accent: value.accent,
     preset: value.preset,
     ...(value.captionPace ? { captionPace: value.captionPace } : {}),
@@ -173,9 +168,8 @@ export function validateClipRecipe(value: ClipRecipe) {
     fieldCount: recipe.informationFields.length > CLIP_TEMPLATE_LIMITS.fields,
     styles:
       recipe.copyStyles.length === 0 ||
-      // Every CDS fallback lands on 깔끔하게, so an approved set without it
-      // cannot render; the server refuses one too.
-      !recipe.copyStyles.includes('clean') ||
+      // The fixed caption treatment is the only authorable value.
+      !recipe.copyStyles.includes('bold') ||
       new Set(recipe.copyStyles).size !== recipe.copyStyles.length ||
       recipe.copyStyles.some((v) => !COPY_STYLES.includes(v)),
     accent: !CLIP_ACCENTS.includes(recipe.accent),

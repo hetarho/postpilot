@@ -149,8 +149,8 @@ func LegacyCompositionBody(recipe Recipe) string {
 		fields[f.Label] = true
 	}
 	if fields["상호"] {
-		root.Children = append(root.Children, node("text", map[string]string{"id": "legacy-template-hook", "kind": "ai", "role": "hook", "basis": "output-start", "start": "0", "end": seconds(int(design.Timing.HookCardS * 1000))}, literal("Write a grounded opening sentence for "), node("value", map[string]string{"field": LegacyFieldID("상호")})))
-		root.Children = append(root.Children, node("text", map[string]string{"id": "legacy-template-ending", "kind": "fixed", "role": "ending", "basis": "output-end", "start": seconds(-int(design.Timing.EndCardS * 1000)), "end": "0"}, node("row", map[string]string{"role": "body"}, node("value", map[string]string{"field": LegacyFieldID("상호")})), node("row", map[string]string{"role": "label"}, literal(design.CTA[design.DefaultCTA(recipe.Preset, "")]))))
+		root.Children = append(root.Children, node("text", map[string]string{"id": "legacy-template-hook", "kind": "ai", "role": "hook", "basis": "output-start", "start": "0", "end": seconds(int(design.Timing.IntroDefaultS * 1000))}, literal("Write a grounded opening sentence for "), node("value", map[string]string{"field": LegacyFieldID("상호")})))
+		root.Children = append(root.Children, node("text", map[string]string{"id": "legacy-template-ending", "kind": "fixed", "role": "ending", "basis": "output-end", "start": seconds(-int(design.Timing.OutroDefaultS * 1000)), "end": "0"}, node("row", map[string]string{"role": "body"}, node("value", map[string]string{"field": LegacyFieldID("상호")})), node("row", map[string]string{"role": "label"}, literal(design.CTA[design.DefaultCTA(recipe.Preset, "")]))))
 	}
 	return composition.SerializeNode(root)
 }
@@ -494,7 +494,7 @@ func legacyProjectFurniture(body string, p Project, recipe Recipe, planOverride 
 					rows = append(rows, row("label", label))
 				}
 				rows = append(rows, row("hook", strings.TrimSpace(plan.Hook)), row("body", values["상호"]))
-				add("legacy-hook", "hook", "output-start", 0, min(int(design.Timing.HookCardS*1000), plan.DurationMS), rows...)
+				add("legacy-hook", "hook", "output-start", 0, min(int(design.Timing.IntroDefaultS*1000), plan.DurationMS), rows...)
 			}
 			rows := []*composition.Node{row("body", values["상호"])}
 			if values["위치"] != "" {
@@ -512,7 +512,7 @@ func legacyProjectFurniture(body string, p Project, recipe Recipe, planOverride 
 			if accent != "" {
 				rows = append(rows, row("label", design.CTA[design.DefaultCTA(recipe.Preset, p.CTA)]))
 			}
-			add("legacy-ending", "ending", "output-end", -min(int(design.Timing.EndCardS*1000), plan.DurationMS), 0, rows...)
+			add("legacy-ending", "ending", "output-end", -min(int(design.Timing.OutroDefaultS*1000), plan.DurationMS), 0, rows...)
 		}
 	}
 	return body[:rootEnd] + extra.String() + body[rootEnd:]

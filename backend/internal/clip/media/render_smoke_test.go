@@ -24,7 +24,7 @@ func renderConfig(t *testing.T) clip.RenderConfig {
 	// Pretendard fails the constructor rather than any render.
 	font := path("CLIP_FONT_PATH", "/usr/share/postpilot-fonts/pretendard/PretendardVariable.ttf")
 	display := path("CLIP_FONT_PAPERLOGY_PATH", "/usr/share/postpilot-fonts/paperlogy/Paperlogy-8ExtraBold.ttf")
-	return config.ClipRender(&config.Config{ClipResvgPath: "/usr/local/bin/resvg", ClipFontPath: font, ClipDisplayFontPath: display})
+	return config.ClipRender(&config.Config{ClipResvgPath: path("CLIP_RESVG_PATH", "/usr/local/bin/resvg"), ClipFontPath: font, ClipDisplayFontPath: display})
 }
 func path(key, fallback string) string {
 	if value := os.Getenv(key); value != "" {
@@ -79,7 +79,7 @@ func TestRenderSmoke(t *testing.T) {
 		// where CDS puts it, an unplated one paints the stroke instead, and
 		// 형광펜's highlight sits where the measured advance puts it (CDS-23..26).
 		amber := design.Accent["amber"]
-		for style, rule := range design.Styles {
+		for style, rule := range map[string]design.StyleRule{"bold": design.Caption()} {
 			c := clip.Copy{Text: "가격 9900원", Keyword: "9900원", Style: style, Anchor: rule.Anchor, Align: rule.Align, Accent: "amber"}
 			l, err := r.layoutCopy(t.Context(), ws, canvas, c)
 			if err != nil {

@@ -71,7 +71,7 @@ func scheduleDeclaredCaptions(elements []clip.PortableText) ([]clip.PortableText
 	return kept, fallbacks
 }
 
-func (r *Rendering) layoutDeclaredRapid(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, plan clip.EditPlan, text clip.PortableText, styles []string, history design.StyleHistory, placed clip.Manifest, previous string) (declaredVisual, error) {
+func (r *Rendering) layoutDeclaredRapid(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, plan clip.EditPlan, text clip.PortableText, placed clip.Manifest, previous string) (declaredVisual, error) {
 	candidates := []clip.CopyAlternative{{Text: text.Resolved.Text}}
 	if clip.AutomaticCompositionRepair(text) {
 		candidates = append(candidates, text.Alternatives...)
@@ -116,7 +116,7 @@ func (r *Rendering) layoutDeclaredRapid(ctx context.Context, ws clip.MediaWorksp
 			if style != "" {
 				part.Resolved.Element.Style, part.Resolved.Element.Position = style, position
 			}
-			visual, err := r.layoutDeclaredElement(ctx, ws, canvas, plan, part, styles, history, placed, previous, true)
+			visual, err := r.layoutDeclaredElement(ctx, ws, canvas, plan, part, placed, previous, true)
 			if err != nil {
 				var problem *composition.Problem
 				if !errors.As(err, &problem) {
@@ -143,7 +143,7 @@ func (r *Rendering) layoutDeclaredRapid(ctx context.Context, ws clip.MediaWorksp
 	}
 	if clip.AutomaticCompositionRepair(text) {
 		text.Pace = "steady"
-		visual, err := r.layoutDeclaredElement(ctx, ws, canvas, plan, text, styles, history, placed, previous, true)
+		visual, err := r.layoutDeclaredElement(ctx, ws, canvas, plan, text, placed, previous, true)
 		if err == nil {
 			visual.text.FallbackReason, visual.manifest.FallbackReason = "steady_copy", "steady_copy"
 		}

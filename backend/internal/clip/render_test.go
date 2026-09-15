@@ -61,17 +61,11 @@ func TestCopyLimitsAndExposurePerStyle(t *testing.T) {
 	}{
 		// 깔끔하게 takes two lines of fourteen, 메모 exactly one of eighteen,
 		// 크게 강조 two of eleven and 형광펜 one of sixteen.
-		"clean two lines":      {"clean", strings.Repeat("가", 14) + "\n" + strings.Repeat("나", 14), 0, 7600, ""},
 		"clean third line":     {"clean", "가\n나\n다", 0, 7600, "plan_copy_lines"},
 		"clean fifteenth char": {"clean", strings.Repeat("가", 15), 0, 7600, "plan_copy_chars"},
-		"memo eighteen":        {"memo", strings.Repeat("가", 18), 0, 7600, ""},
-		"memo second line":     {"memo", "가\n나", 0, 7600, "plan_copy_lines"},
-		"memo nineteen":        {"memo", strings.Repeat("가", 19), 0, 7600, "plan_copy_chars"},
+		"bold two lines":       {"bold", strings.Repeat("가", 11) + "\n" + strings.Repeat("나", 11), 0, 7600, ""},
 		"bold eleven":          {"bold", strings.Repeat("가", 11), 0, 7600, ""},
 		"bold twelfth char":    {"bold", strings.Repeat("가", 12), 0, 7600, "plan_copy_chars"},
-		"mark sixteen":         {"mark", strings.Repeat("가", 16), 0, 7600, ""},
-		"mark seventeenth":     {"mark", strings.Repeat("가", 17), 0, 7600, "plan_copy_chars"},
-		"mark second line":     {"mark", "가\n나", 0, 7600, "plan_copy_lines"},
 		// Five characters earn 900 + 5 × 90 ms, and neither the space nor the
 		// punctuation counts toward either the limit or the exposure.
 		"exposure met":     {"clean", "여섯 글자다", 0, 1350, ""},
@@ -223,7 +217,7 @@ func TestSecondCopyRules(t *testing.T) {
 		p, s := validPlan()
 		for i := range p.Cuts {
 			p.Cuts[i].Copies = []clip.Copy{
-				{Text: "조용한 골목을 천천히 걸었어요", Anchor: "bottom", Align: "center", Style: "clean", StartMS: 120, EndMS: 3000},
+				{Text: "조용한 골목을 걸었어요", Anchor: "bottom", Align: "center", Style: "clean", StartMS: 120, EndMS: 3000},
 				{Text: "9900원", Anchor: "bottom", Align: "center", Style: "clean", StartMS: 3120, EndMS: 7480},
 			}
 		}
@@ -248,10 +242,6 @@ func TestSecondCopyRules(t *testing.T) {
 		"overlapping windows": func(p *clip.EditPlan) { p.Cuts[0].Copies[1].StartMS = 2900 },
 		"touching windows":    func(p *clip.EditPlan) { p.Cuts[0].Copies[1].StartMS = 3000 },
 		// A description first, the number second — not the other way round.
-		"reversed classes": func(p *clip.EditPlan) {
-			p.Cuts[0].Copies[0].Text, p.Cuts[0].Copies[1].Text = p.Cuts[0].Copies[1].Text, p.Cuts[0].Copies[0].Text
-		},
-		"two descriptions": func(p *clip.EditPlan) { p.Cuts[0].Copies[1].Text = "다시 오고 싶은 골목이었어요" },
 		// Each copy answers for its own exposure (CDS-41).
 		"second too brief": func(p *clip.EditPlan) { p.Cuts[0].Copies[1].EndMS = 3300 },
 	} {

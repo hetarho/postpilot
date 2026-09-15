@@ -22,7 +22,7 @@ const template = {
   compositionLegacy: false,
   informationFields: [],
   cutGuidance: '',
-  copyStyles: ['clean'] as ClipRecipe['copyStyles'],
+  copyStyles: ['bold'] as ClipRecipe['copyStyles'],
   accent: '' as const,
   preset: '' as const,
 }
@@ -137,20 +137,18 @@ describe('composition template authoring', () => {
       false,
     )
   })
-  it('creates a native template with one save and no preset, allowing any approved style set', async () => {
+  it('creates a native template with one save and the caption treatment', async () => {
     const user = userEvent.setup(),
       writes: ClipRecipe[] = []
     const { router } = mount({ writes }, '/video-templates/new')
     await user.type(await screen.findByLabelText('템플릿 이름'), '새 구성')
-    await user.click(screen.getByRole('checkbox', { name: '메모' }))
-    await user.click(screen.getByRole('checkbox', { name: '깔끔하게' }))
-    expect(screen.getByRole('checkbox', { name: '깔끔하게' })).not.toBeDisabled()
+    expect(screen.getByRole('checkbox', { name: '크게 강조' })).toBeInTheDocument()
     await user.dblClick(screen.getByRole('button', { name: '저장' }))
     await waitFor(() =>
       expect(router.state.location.pathname).toBe('/video-templates/video-template-1'),
     )
     expect(writes).toHaveLength(1)
-    expect(parseClipComposition(writes[0].compositionBody!).styles).toEqual(['memo'])
+    expect(parseClipComposition(writes[0].compositionBody!).styles).toEqual(['bold'])
   })
   it('opens converted content without writing and reports unavailable generation capability', async () => {
     const calls: string[] = []

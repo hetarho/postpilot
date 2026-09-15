@@ -10,7 +10,7 @@ import (
 )
 
 func TestRapidPhraseTimingAndLosslessFallback(t *testing.T) {
-	seed := clip.Caption{Text: "오늘은 구로디지털단지에 와보았는데요", Style: "simple", Anchor: "bottom", Align: "center"}
+	seed := clip.Caption{Text: "오늘은 구로디지털단지에 와보았는데요", Style: "bold", Anchor: "upper_mid", Align: "center"}
 	copies, ok := clip.SplitRapid(seed, 120, 1420)
 	if !ok || len(copies) != 3 {
 		t.Fatal(copies, ok)
@@ -47,13 +47,13 @@ func TestRapidPhraseTimingAndLosslessFallback(t *testing.T) {
 		return clip.Region{X: 100, Y: 1270, Width: 400, Height: 100}, true, nil
 	}
 	cut := clip.Cut{ID: "one", EndMS: 1540, Focal: clip.Point{X: .5, Y: .5}}
-	got, _, err := clip.Compose(canvas, cut, clip.Written{Text: seed.Text, Pace: "rapid"}, "food", false, clip.Region{}, nil, []string{"clean", "simple"}, "", nil, "", 1540, fit)
+	got, _, err := clip.Compose(canvas, cut, clip.Written{Text: seed.Text, Pace: "rapid"}, "food", false, clip.Region{}, nil, "", "", 1540, fit)
 	if err != nil || !reflect.DeepEqual(got.Copies, copies) {
 		t.Fatal(got, err)
 	}
 	// No room for every phrase: the existing short grounded wording is used.
 	cut.EndMS = 740
-	got, _, err = clip.Compose(canvas, cut, clip.Written{Text: seed.Text, ShortText: "오늘은", Pace: "rapid"}, "food", false, clip.Region{}, nil, []string{"clean", "simple"}, "", nil, "", 740, fit)
+	got, _, err = clip.Compose(canvas, cut, clip.Written{Text: seed.Text, ShortText: "오늘은", Pace: "rapid"}, "food", false, clip.Region{}, nil, "", "", 740, fit)
 	if err != nil || len(got.Copies) != 1 || got.FirstCopy().Text != "오늘은" || !got.Rapid() {
 		t.Fatal(got, err)
 	}

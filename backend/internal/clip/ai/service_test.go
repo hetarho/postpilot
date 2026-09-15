@@ -69,12 +69,12 @@ func (f *fakeSizer) FixedElements(_ context.Context, _, disclosure string, label
 	if f.fixedErr != nil {
 		return nil, f.fixedErr
 	}
-	out := clip.Manifest{{Kind: "badge", Region: design.Region{X: 768, Y: 270, Width: 120, Height: 60}}}
+	out := clip.Manifest{{Kind: "badge", Region: design.Bounds{X: 768, Y: 270, Width: 120, Height: 60}}}
 	if len(hideDisclosure) > 0 && hideDisclosure[0] {
 		out = nil
 	}
 	for i := range labels {
-		out = append(out, design.Element{Kind: "chip", Region: design.Region{X: 96, Y: 290 + float64(i)*76, Width: 300, Height: 60}})
+		out = append(out, design.Element{Kind: "chip", Region: design.Bounds{X: 96, Y: 290 + float64(i)*76, Width: 300, Height: 60}})
 	}
 	return out, nil
 }
@@ -94,8 +94,8 @@ func (f *fakeSizer) CardElements(_ context.Context, plan clip.EditPlan) (clip.Ma
 		return nil, nil
 	}
 	const height = 400
-	box := func(width, centre float64) design.Region {
-		return design.Region{X: (float64(layout.Canvas.Width) - width) / 2, Y: centre - height/2, Width: width, Height: height}
+	box := func(width, centre float64) design.Bounds {
+		return design.Bounds{X: (float64(layout.Canvas.Width) - width) / 2, Y: centre - height/2, Width: width, Height: height}
 	}
 	return clip.Manifest{
 		{Cut: 0, Kind: "card", Region: box(layout.HookCard.Width, layout.HookCard.CenterY)},
@@ -323,7 +323,7 @@ func TestRecordedLiveClipResponses(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cut := result.Cuts[0]
+	cut := result.Cuts[1]
 	start, end := cut.CaptionWindow(0)
 	if result.DurationMS != 15000 || len(result.Cuts) != 3 || cut.FirstCopy().Text != "영상 생성 확인" || start != 120 || end != 4880 {
 		t.Fatalf("unexpected plan: %+v", result)
@@ -334,7 +334,7 @@ func TestRecordedLiveClipResponses(t *testing.T) {
 	}
 	// The recorded response named no style or position; the design system chose
 	// both from the scene and the sentence (CDS-39, CDS-40).
-	if cut.FirstCopy().Style != "clean" || cut.FirstCopy().Anchor != "bottom" || cut.FirstCopy().Align != "center" || result.Decisions[0].Class != "FACT" {
+	if cut.FirstCopy().Style != "bold" || cut.FirstCopy().Anchor != "upper_mid" || cut.FirstCopy().Align != "center" {
 		t.Fatalf("placement was not the design system's: %+v %+v", cut.FirstCopy(), result.Decisions)
 	}
 	if len(models.calls) != 3 || models.calls[0].MaxTokens != 8192 || models.calls[1].MaxTokens != 32768 {
@@ -391,7 +391,7 @@ func TestPlanIsGroundedMeasuredAndPreservesExactAnswers(t *testing.T) {
 		// Nothing here was chosen by the model: a noun-led sentence on a food
 		// close-up is 메모 by CDS-40, and 메모's own first candidate is TOP/LEFT
 		// (CDS-24) — which clears the subject box at the bottom of the frame.
-		if cut.FirstCopy().Style != "memo" || cut.FirstCopy().Align != "left" || cut.FirstCopy().Anchor != "top" || cut.Fingerprint != in.Analyses[0].Source.Fingerprint || cut.Volume == nil || *cut.Volume != 1 {
+		if cut.FirstCopy().Style != "bold" || cut.FirstCopy().Align != "center" || cut.FirstCopy().Anchor != "lower_mid" || cut.Fingerprint != in.Analyses[0].Source.Fingerprint || cut.Volume == nil || *cut.Volume != 1 {
 			t.Fatalf("%+v", cut)
 		}
 		// 메모 has two candidate anchors (CDS-24), so the selector measures the
@@ -421,7 +421,7 @@ func TestPlanIsGroundedMeasuredAndPreservesExactAnswers(t *testing.T) {
 		// decides, and the box only ever moves it off a subject (CDS-38).
 		in.Analyses[0].Segments[0].Subject = clip.Region{}
 		got, _, err = s.Plan(t.Context(), testRef(), in)
-		if err != nil || got.Cuts[0].FirstCopy().Anchor != "top" || got.Cuts[0].FirstCopy().Align != "left" {
+		if err != nil || got.Cuts[0].FirstCopy().Anchor != "lower_mid" || got.Cuts[0].FirstCopy().Align != "center" {
 			t.Fatalf("the default anchor moved: %+v %v", got, err)
 		}
 	}

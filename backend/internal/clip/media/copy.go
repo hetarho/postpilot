@@ -293,7 +293,7 @@ func keywordOn(lines []string, keyword string, bounds map[string]clip.Region, fa
 // The fit loop searches only between the role's nominal size and its minimum
 // (CDS-19); below the minimum the copy does not fit and is refused, never shrunk.
 func fitCopy(canvas clip.Canvas, c clip.Copy, candidates [][]string, bounds map[string]clip.Region) (copyLayout, error) {
-	style := design.Styles[c.Style]
+	style := design.Caption()
 	role := style.Role()
 	left, right, vertical := copyInsets(style)
 	for size := role.Size; size >= role.Min; size-- {
@@ -344,7 +344,7 @@ func paint(token string) (string, string) {
 func (l copyLayout) Elements(cut, copy int, c clip.Copy, startMS, endMS int) clip.Manifest {
 	m := clip.Manifest{}
 	add := func(kind string, region clip.Region, size float64, fill, background string) {
-		m = append(m, design.Element{Cut: cut, Copy: copy, Kind: kind, Style: c.Style, Anchor: c.Anchor, Pace: c.Pace, Region: design.Region(region),
+		m = append(m, design.Element{Cut: cut, Copy: copy, Kind: kind, Style: c.Style, Anchor: c.Anchor, Pace: c.Pace, Region: design.Bounds(region),
 			StartMS: startMS, EndMS: endMS, FontSize: size, Fill: fill, Background: background,
 			InMS: design.CaptionMotion(c.Pace).InMS, OutMS: design.CaptionMotion(c.Pace).OutMS, DY: design.CaptionMotion(c.Pace).InDY})
 	}
@@ -365,7 +365,7 @@ func (l copyLayout) Elements(cut, copy int, c clip.Copy, startMS, endMS int) cli
 	top := p.Y + vertical
 	fill := design.Color["text_white"].Hex
 	if s.Plate == "paper_50" {
-		fill = design.Color["text_ink"].Hex
+		fill = design.Color["badge_ad"].Hex
 	}
 	for i, line := range l.Lines {
 		bounds := l.Bounds[i]
@@ -375,7 +375,7 @@ func (l copyLayout) Elements(cut, copy int, c clip.Copy, startMS, endMS int) cli
 			add("highlight", clip.Region{X: x + l.Keyword.Offset - u.Extend, Y: top + (1-u.RaiseEM-u.HeightEM)*l.FontSize, Width: l.Keyword.Width + 2*u.Extend, Height: u.HeightEM * l.FontSize}, 0, accent, "")
 		}
 		background := design.Color[s.Plate].Hex
-		if c.Style == "simple" {
+		if s.Stroke != "" {
 			stroke := design.Color["stroke_dark"]
 			background, _ = design.Over(stroke.Hex, stroke.Alpha, "#FFFFFF")
 		}
@@ -390,7 +390,7 @@ func (l copyLayout) Elements(cut, copy int, c clip.Copy, startMS, endMS int) cli
 // keyword, the prefix that precedes it on each line that holds it: its advance
 // is where the highlight starts (CDS-26), never an estimated width.
 func (r *Rendering) layoutCopy(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, c clip.Copy) (copyLayout, error) {
-	style := design.Styles[c.Style]
+	style := design.Caption()
 	if err := r.checkCopy(c.Text, style.Role()); err != nil {
 		return copyLayout{}, err
 	}
@@ -589,14 +589,14 @@ func (f furniture) Elements(duration int, chipCut int, chipStart, chipEnd int) c
 		m = append(m, design.Element{
 			Kind: "badge", Text: f.BadgeText, FontSize: design.Type["badge"].Size,
 			Background: design.Color["badge_ad"].Hex, Fill: design.Color["text_white"].Hex,
-			Region: design.Region(f.Badge), StartMS: 0, EndMS: duration,
+			Region: design.Bounds(f.Badge), StartMS: 0, EndMS: duration,
 		})
 	}
 	for _, c := range f.Chips {
 		m = append(m, design.Element{
 			Cut: chipCut, Kind: "chip", Text: c.Label + " " + c.Value,
-			FontSize: design.Type["caption"].Size, Background: design.Color["ink_900"].Hex,
-			Fill: design.Color["text_white"].Hex, Region: design.Region(c.Region),
+			FontSize: design.Type["caption"].Size, Background: design.Color["badge_ad"].Hex,
+			Fill: design.Color["text_white"].Hex, Region: design.Bounds(c.Region),
 			StartMS: chipStart, EndMS: chipEnd,
 		})
 	}
@@ -607,7 +607,7 @@ func (r *Rendering) copyPlate(ctx context.Context, ws clip.MediaWorkspace, canva
 	if strings.TrimSpace(c.Text) == "" {
 		return "", nil
 	}
-	svg, err := r.overlays.Render("copy."+c.Style, copyView(canvas, c, layout, ground))
+	svg, err := r.overlays.Render("copy.bold", copyView(canvas, c, layout, ground))
 	if err != nil {
 		return "", err
 	}
@@ -695,7 +695,7 @@ func (r *Rendering) CaptionSize(ctx context.Context, ratio string, c clip.Captio
 	if strings.TrimSpace(c.Text) == "" {
 		return 0, 0, nil
 	}
-	if err := r.checkCopy(c.Text, design.Styles[c.Style].Role()); err != nil {
+	if err := r.checkCopy(c.Text, design.Caption().Role()); err != nil {
 		return 0, 0, err
 	}
 	err = r.media.WithWorkspace(ctx, "clip-caption-size", func(ws clip.MediaWorkspace) error {

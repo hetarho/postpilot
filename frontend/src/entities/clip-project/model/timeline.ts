@@ -358,7 +358,7 @@ export function splitTextPhrases(plan: ClipEditPlan, text: ClipEditableText) {
         anchor: 'bottom',
         align: 'center',
         keyword: text.keyword,
-        style: 'clean',
+        style: 'bold',
         accent: '',
         startMs: 0,
         endMs: 0,

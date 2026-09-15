@@ -11,7 +11,7 @@ const template: FakeClipTemplate = {
   name: '여행',
   informationFields: [],
   cutGuidance: '',
-  copyStyles: ['clean'],
+  copyStyles: ['bold'],
   accent: '',
   preset: 'restaurant',
 }

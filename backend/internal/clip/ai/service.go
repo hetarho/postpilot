@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"slices"
 	"unicode/utf8"
 
 	"github.com/postpilot/backend/internal/clip"
@@ -249,7 +248,7 @@ func (s *Service) compose(ctx context.Context, input clip.PlanningInput, plan *c
 	if err != nil {
 		return err
 	}
-	history, previous := design.StyleHistory{}, ""
+	previous := ""
 	// The badge and the chips are placed before any copy, and copy yields to
 	// them (CDS-45); T107's cards join this list.
 	for i, cut := range plan.Cuts {
@@ -285,7 +284,7 @@ func (s *Service) compose(ctx context.Context, input clip.PlanningInput, plan *c
 			}
 		}
 		written.Pace = input.Template.CaptionPace
-		composed, decision, err := clip.Compose(canvas, cut, written, scene, readable, clip.CutSubject(canvas, cut, analysis), placed, input.Template.CopyStyles, input.Template.Accent, history, previous, limit, measured)
+		composed, decision, err := clip.Compose(canvas, cut, written, scene, readable, clip.CutSubject(canvas, cut, analysis), placed, input.Template.Accent, previous, limit, measured)
 		if err != nil {
 			return err
 		}
@@ -293,10 +292,8 @@ func (s *Service) compose(ctx context.Context, input clip.PlanningInput, plan *c
 		slack, plan.DurationMS = slack-grown, plan.DurationMS+grown
 		plan.Cuts[i] = composed
 		plan.Decisions = append(plan.Decisions, decision)
-		// Both copies count against CDS-40's frequency guards, and the anchor a
-		// later cut steps from is the LAST one this cut showed.
+		// The next cut steps from the last caption this cut showed.
 		for _, copy := range composed.Placed() {
-			history = append(history, copy.Style)
 			previous = copy.Anchor
 		}
 	}
@@ -439,9 +436,6 @@ func validatePlan(cfg Config, in clip.PlanningInput, plan clip.EditPlan) error {
 		// A cut whose copy the compiler dropped has no style and no accent to
 		// check (CDS-41's last fallback).
 		for _, copy := range cut.Placed() {
-			if !slices.Contains(in.Template.CopyStyles, copy.Style) {
-				return outputError("plan_style")
-			}
 			if copy.Accent != "" && copy.Accent != in.Template.Accent {
 				return outputError("plan_accent")
 			}

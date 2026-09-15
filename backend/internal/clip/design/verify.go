@@ -44,7 +44,7 @@ type Element struct {
 	Style            string
 	Anchor           string
 	Text             string
-	Region           Region
+	Region           Bounds
 	StartMS, EndMS   int
 	FontSize         float64
 	Fill, Background string
@@ -119,10 +119,10 @@ func MinTypeSize() float64 {
 	return smallest
 }
 
-func overlaps(a, b Region) bool {
+func overlaps(a, b Bounds) bool {
 	return a.X < b.X+b.Width && b.X < a.X+a.Width && a.Y < b.Y+b.Height && b.Y < a.Y+a.Height
 }
-func within(r, safe Region) bool {
+func within(r, safe Bounds) bool {
 	return r.X >= safe.X && r.Y >= safe.Y && r.X+r.Width <= safe.X+safe.Width && r.Y+r.Height <= safe.Y+safe.Height
 }
 
@@ -172,7 +172,7 @@ func verify(m Manifest, ratio string, approved []string, checkOverlap, hideDiscl
 		elementSafe := safe
 		if e.Kind == "badge" {
 			l, _ := Layout(ratio)
-			elementSafe = Region{X: l.Chip.X, Y: safe.Y, Width: l.Badge.Right - l.Chip.X, Height: safe.Height}
+			elementSafe = Bounds{X: l.Chip.X, Y: safe.Y, Width: l.Badge.Right - l.Chip.X, Height: safe.Height}
 		}
 		if e.Kind != "scrim" && e.Kind != "card" && !within(e.Region, elementSafe) {
 			return at(ViolationSafeArea, e)
@@ -196,10 +196,7 @@ func verify(m Manifest, ratio string, approved []string, checkOverlap, hideDiscl
 			}
 			continue
 		}
-		style, known := Styles[e.Style]
-		if !known {
-			return at(ViolationSize, e)
-		}
+		style := Caption()
 		motion := CaptionMotion(e.Pace)
 		if !ValidPace(e.Pace) || e.InMS != motion.InMS || e.OutMS != motion.OutMS || e.DY != motion.InDY {
 			return at(ViolationMotion, e)
@@ -222,7 +219,7 @@ func verify(m Manifest, ratio string, approved []string, checkOverlap, hideDiscl
 		lines[slotOf(e)]++
 	}
 	for where, n := range lines {
-		if n > Styles[styleOf(m, where)].Lines {
+		if n > Caption().Lines {
 			return &Failure{Check: ViolationSize, Cut: where.Cut, Copy: where.Copy}
 		}
 	}
@@ -394,7 +391,6 @@ func styleOf(m Manifest, at slot) string {
 
 // The per-clip rules of CDS-38 and CDS-40, read off the cut order.
 func verifySequence(m Manifest, approved []string) error {
-	alternates := canAlternate(approved)
 	cuts := []slot{}
 	style, anchor, pace := map[slot]string{}, map[slot]string{}, map[slot]string{}
 	for _, e := range m {
@@ -418,25 +414,7 @@ func verifySequence(m Manifest, approved []string) error {
 		}
 		return a.Copy - b.Copy
 	})
-	bold, run := 0, 0
 	for i, cut := range cuts {
-		if style[cut] == "bold" && pace[cut] != "rapid" {
-			bold++
-		}
-		if pace[cut] == "rapid" || style[cut] == "simple" {
-			run = 0
-		} else if i > 0 && style[cut] == style[cuts[i-1]] && pace[cuts[i-1]] != "rapid" {
-			run++
-		} else {
-			run = 1
-		}
-		// A fourth consecutive use of one style must have alternated (CDS-40).
-		// A sequence rule has no single failing element: the LATER of the pair is
-		// reported, the one whose style or anchor can change without invalidating
-		// what came before (CDS-55).
-		if (run > Guards.RunMax && alternates && pace[cut] != "rapid" && style[cut] != "simple") || bold > Guards.BoldMax {
-			return &Failure{Check: ViolationFrequency, Cut: cut.Cut, Copy: cut.Copy}
-		}
 		if i == 0 {
 			continue
 		}
@@ -461,19 +439,4 @@ func verifySequence(m Manifest, approved []string) error {
 // which may be the owner's own words.
 func (m Manifest) String() string {
 	return fmt.Sprintf("clip layout manifest: %d elements", len(m))
-}
-
-// canAlternate reports whether the approved set holds both styles CDS-40
-// alternates between, which is what makes a long run avoidable.
-func canAlternate(approved []string) bool {
-	if approved == nil {
-		return true
-	}
-	n := 0
-	for _, style := range Guards.RunAlternate {
-		if slices.Contains(approved, style) {
-			n++
-		}
-	}
-	return n >= 2
 }

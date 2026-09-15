@@ -258,9 +258,9 @@ func parseChunk(cfg Config, input clip.ChunkInput, raw string) (out clip.ChunkAn
 		// something to map away. The tolerance for a scene-less segment belongs
 		// to STORED analyses written before scenes existed, and lives in
 		// design.Scene where the domain reads them.
-		scene, readable := design.Guards.DefaultScene, false
+		scene, readable := design.DefaultScene, false
 		if s.Scene != nil {
-			if _, known := design.SceneStyles[*s.Scene]; !known {
+			if !slices.Contains(design.Scenes, *s.Scene) {
 				return clip.ChunkAnalysis{}, outputError("observe_scene")
 			}
 			scene = *s.Scene

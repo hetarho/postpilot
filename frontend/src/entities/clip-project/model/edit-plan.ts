@@ -1,17 +1,15 @@
 import {
-  CLIP_CLASSES,
   CLIP_COPY,
   CLIP_RAPID,
   type ClipCaptionPace,
   CLIP_FACTS,
-  CLIP_GUARDS,
   CLIP_TIMING,
   CLIP_TRANSITION,
   CLIP_PLAYBACK,
   CLIP_RATES,
   CLIP_TYPE,
   CLIP_VOICE,
-  clipStyle,
+  clipCaption,
 } from '@/shared/config'
 import {
   CLIP_ACCENTS,
@@ -453,8 +451,8 @@ function copyWindow(cut: ClipEditCut, index: number) {
   return { start, end, length: end - start }
 }
 /** The style's own line and character limits (CDS-20, CDS-23..26). */
-function withinStyleLimits(text: string, style: ClipCaption['style']): boolean {
-  const rule = clipStyle(style)
+function withinCaptionLimits(text: string): boolean {
+  const rule = clipCaption()
   const lines = text.split('\n')
   return lines.length <= rule.lines && lines.every((line) => copyChars(line) <= rule.chars)
 }
@@ -486,27 +484,6 @@ export function groundedInAnswers(
   for (const token of text.match(/\p{Lu}[\p{L}']+/gu) ?? [])
     if (!haystack.toLowerCase().includes(token.toLowerCase())) return false
   return true
-}
-
-/** CDS-39's sentence classes, in the priority the table is read in: a number
- *  with a unit first, then a hook, then a short noun-led fact, then everything
- *  else. The server's own classifier is the authority; this mirrors it so the
- *  screen can say why a second copy is refused where it is typed (CDS-43). */
-export function classifyCopy(text: string): 'NUM' | 'HOOK' | 'FACT' | 'DESC' {
-  const trimmed = text.trim()
-  if (trimmed === '') return 'DESC'
-  const units = CLIP_CLASSES.num_units.map((u: string) => u.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&'))
-  if (new RegExp(`[\\d,]*\\d\\s*(${units.join('|')})`, 'u').test(trimmed)) return 'NUM'
-  const chars = copyChars(trimmed)
-  if (
-    chars <= CLIP_CLASSES.hook_max_chars &&
-    (/[?!]$/u.test(trimmed) || CLIP_CLASSES.hook_markers.some((m: string) => trimmed.includes(m)))
-  )
-    return 'HOOK'
-  const last = Array.from(trimmed.replace(/[\s\p{P}\p{S}]+$/u, '')).at(-1) ?? ''
-  if (chars <= CLIP_CLASSES.fact_max_chars && !CLIP_CLASSES.fact_verb_endings.includes(last))
-    return 'FACT'
-  return 'DESC'
 }
 
 /** Every copy that actually shows, in clip order: a cut's second copy follows
@@ -571,7 +548,7 @@ export function validateClipPlan(plan: ClipEditPlan, state: ClipEditingState) {
           Array.from(copy.text).length > state.maxCopyRunes ||
           (rapid &&
             (!placed || copy.text.includes('\n') || copyChars(copy.text) > CLIP_RAPID.max_chars)) ||
-          (placed && !withinStyleLimits(copy.text, copy.style)),
+          (placed && !withinCaptionLimits(copy.text)),
         exposure:
           placed &&
           (rapid
@@ -598,10 +575,6 @@ export function validateClipPlan(plan: ClipEditPlan, state: ClipEditingState) {
           placed &&
           (!COPY_ANCHORS.includes(copy.anchor) ||
             !COPY_ALIGNS.includes(copy.align) ||
-            // 메모 is LEFT-aligned at TOP or BOTTOM (CDS-24), and consecutive
-            // copies move at most one anchor step when they share a style.
-            (copy.style === 'memo' &&
-              (copy.align !== 'left' || !['top', 'bottom'].includes(copy.anchor))) ||
             !withinAnchorStep(plan.cuts, index, j)),
         keyword: copy.keyword !== '' && !copy.text.includes(copy.keyword),
         style:
@@ -624,10 +597,7 @@ export function validateClipPlan(plan: ClipEditPlan, state: ClipEditingState) {
         c.copies.length === 0 ||
         c.copies.length > (rapid ? CLIP_RAPID.max_per_cut : CLIP_COPY.max_per_cut) ||
         (!rapid && c.copies.length > 1 && !allowsSecondCopy(c)),
-      copyClasses:
-        !rapid &&
-        c.copies.filter((copy) => copy.text.trim() !== '').length > 1 &&
-        !(classifyCopy(c.copies[0]!.text) === 'DESC' && classifyCopy(c.copies[1]!.text) === 'NUM'),
+      copyClasses: false,
       chips:
         c.chips.length > 2 ||
         c.chips.some((label) => !(CLIP_FACTS.chips as readonly string[]).includes(label)),
@@ -649,24 +619,7 @@ export function validateClipPlan(plan: ClipEditPlan, state: ClipEditingState) {
       copies,
     }
   })
-  // CDS-40's per-clip guards: 크게 강조 at most twice, and no style four times
-  // in a row — counted over every copy that shows, not every cut.
-  const placed = placedCopies(plan.cuts).map((p) => p.copy)
-  const frequency =
-    placed.filter((copy) => copy.style === 'bold' && copy.pace !== 'rapid').length >
-      CLIP_GUARDS.bold_max ||
-    // A run LONGER than run_max is the violation: the fourth consecutive use of
-    // one style must have alternated (CDS-40).
-    placed.some(
-      (copy, i) =>
-        copy.pace !== 'rapid' &&
-        copy.style !== 'simple' &&
-        CLIP_GUARDS.run_alternate.every((style) => state.copyStyles.includes(style as CopyStyle)) &&
-        i >= CLIP_GUARDS.run_max &&
-        placed
-          .slice(i - CLIP_GUARDS.run_max, i + 1)
-          .every((v) => v.pace !== 'rapid' && v.style === copy.style),
-    )
+  const frequency = false
   const duration = clipPlanDuration(plan.cuts)
   const timeline =
     !integer(plan.durationMs) ||

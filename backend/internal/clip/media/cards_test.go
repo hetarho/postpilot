@@ -80,10 +80,10 @@ func TestCardGeometryAndGoldensPerRatio(t *testing.T) {
 				}
 				// The hook card's window is the first 1.5 s and the ending
 				// card's the last 2.5 s (CDS-28, CDS-29).
-				if h := cards["hook"]; h.StartMS != 0 || h.EndMS != 1500 {
+				if h := cards["hook"]; h.StartMS != 0 || h.EndMS != int(design.Timing.IntroDefaultS*1000) {
 					return fmt.Errorf("hook window %d..%d", h.StartMS, h.EndMS)
 				}
-				if e := cards["end"]; e.StartMS != 17300 || e.EndMS != 19800 {
+				if e := cards["end"]; e.StartMS != 19800-int(design.Timing.OutroDefaultS*1000) || e.EndMS != 19800 {
 					return fmt.Errorf("ending window %d..%d", e.StartMS, e.EndMS)
 				}
 				// The price line appears only when the owner gave one, and the
@@ -171,7 +171,7 @@ func withBadge(m clip.Manifest, ratio string, duration int) clip.Manifest {
 	badge := design.Element{
 		Kind: "badge", Text: design.Disclosure["ad"], FontSize: design.Type["badge"].Size,
 		Background: design.Color["badge_ad"].Hex,
-		Region:     design.Region{X: l.Badge.Right - 120, Y: l.Badge.Top, Width: 120, Height: 60},
+		Region:     design.Bounds{X: l.Badge.Right - 120, Y: l.Badge.Top, Width: 120, Height: 60},
 		StartMS:    0, EndMS: duration,
 	}
 	return append(clip.Manifest{badge}, m...)

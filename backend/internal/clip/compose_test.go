@@ -50,26 +50,26 @@ func TestComposeExposureFallbacksInOrder(t *testing.T) {
 	fits := func(clip.Caption) (clip.Region, bool, error) {
 		return clip.Region{X: 100, Y: 1270, Width: 400, Height: 110}, true, nil
 	}
-	long := "서울 연남동에서 제일 조용한 자리"                                             // 14 characters → 2160 ms
+	long := "서울 연남동의 조용한 자리"                                                 // 14 characters → 2160 ms
 	cut := clip.Cut{ID: "one", EndMS: 2600, Focal: clip.Point{X: .5, Y: .5}} // window 2360 ms
 	written := clip.Written{Text: long, ShortText: "조용한 자리", Answers: answers()}
 
 	// ① it fits as written.
-	got, decision, err := clip.Compose(canvas, cut, written, "scenery", false, clip.Region{}, nil, []string{"clean", "memo"}, "coral", nil, "", cut.EndMS, fits)
+	got, decision, err := clip.Compose(canvas, cut, written, "scenery", false, clip.Region{}, nil, "coral", "", cut.EndMS, fits)
 	if err != nil || got.FirstCopy().Text != long || decision.Fallback != "" {
 		t.Fatalf("%+v %+v %v", got.FirstCopy(), decision, err)
 	}
 	// ② too short for the sentence, long enough for the alternative.
 	short := cut
 	short.EndMS = 1600 // window 1360 ms; 조용한 자리 needs 1350
-	got, decision, err = clip.Compose(canvas, short, written, "scenery", false, clip.Region{}, nil, []string{"clean", "memo"}, "coral", nil, "", short.EndMS, fits)
+	got, decision, err = clip.Compose(canvas, short, written, "scenery", false, clip.Region{}, nil, "coral", "", short.EndMS, fits)
 	if err != nil || got.FirstCopy().Text != "조용한 자리" || decision.Fallback != "short_text" {
 		t.Fatalf("%+v %+v %v", got.FirstCopy(), decision, err)
 	}
 	// ③ too short for both, but the source has room: the cut is extended.
 	tiny := cut
 	tiny.EndMS = 1200
-	got, decision, err = clip.Compose(canvas, tiny, written, "scenery", false, clip.Region{}, nil, []string{"clean", "memo"}, "coral", nil, "", 6000, fits)
+	got, decision, err = clip.Compose(canvas, tiny, written, "scenery", false, clip.Region{}, nil, "coral", "", 6000, fits)
 	if err != nil || decision.Fallback != "extended_cut" || got.EndMS <= tiny.EndMS {
 		t.Fatalf("%+v %+v %v", got.FirstCopy(), decision, err)
 	}
@@ -77,7 +77,7 @@ func TestComposeExposureFallbacksInOrder(t *testing.T) {
 		t.Fatalf("the extended cut still does not fit its copy: %d..%d", start, end)
 	}
 	// ④ no room anywhere: the copy is dropped, and the cut keeps its footage.
-	got, decision, err = clip.Compose(canvas, tiny, written, "scenery", false, clip.Region{}, nil, []string{"clean", "memo"}, "coral", nil, "", tiny.EndMS, fits)
+	got, decision, err = clip.Compose(canvas, tiny, written, "scenery", false, clip.Region{}, nil, "coral", "", tiny.EndMS, fits)
 	if err != nil || got.FirstCopy().Text != "" || decision.Fallback != "dropped" || got.EndMS != tiny.EndMS {
 		t.Fatalf("%+v %+v %v", got.FirstCopy(), decision, err)
 	}
@@ -95,12 +95,12 @@ func TestComposeGroundingFallback(t *testing.T) {
 	}
 	cut := clip.Cut{ID: "one", EndMS: 6000, Focal: clip.Point{X: .5, Y: .5}}
 	invented := clip.Written{Text: "12,000원에 두 그릇", ShortText: "9,900원", Answers: answers()}
-	got, decision, err := clip.Compose(canvas, cut, invented, "food", false, clip.Region{}, nil, []string{"clean", "memo", "mark"}, "coral", nil, "", cut.EndMS, fits)
+	got, decision, err := clip.Compose(canvas, cut, invented, "food", false, clip.Region{}, nil, "coral", "", cut.EndMS, fits)
 	if err != nil || got.FirstCopy().Text != "9,900원" || decision.Fallback != "short_text" {
 		t.Fatalf("%+v %+v %v", got.FirstCopy(), decision, err)
 	}
 	hopeless := clip.Written{Text: "12,000원", ShortText: "15,000원", Answers: answers()}
-	got, decision, err = clip.Compose(canvas, cut, hopeless, "food", false, clip.Region{}, nil, []string{"clean"}, "coral", nil, "", cut.EndMS, fits)
+	got, decision, err = clip.Compose(canvas, cut, hopeless, "food", false, clip.Region{}, nil, "coral", "", cut.EndMS, fits)
 	if err != nil || got.FirstCopy().Text != "" || decision.Fallback != "dropped" {
 		t.Fatalf("%+v %+v %v", got.FirstCopy(), decision, err)
 	}
@@ -116,14 +116,14 @@ func TestComposeShortensPastAStyleLimit(t *testing.T) {
 	cut := clip.Cut{ID: "one", EndMS: 6000, Focal: clip.Point{X: .5, Y: .5}}
 	// 메모 takes one line of eighteen; nineteen is past it.
 	long := strings.Repeat("가", 19)
-	written := clip.Written{Text: long, ShortText: strings.Repeat("가", 12), Answers: answers()}
-	got, decision, err := clip.Compose(canvas, cut, written, "food", false, clip.Region{}, nil, []string{"clean", "memo"}, "", nil, "", cut.EndMS, fits)
-	if err != nil || decision.Fallback != "short_text" || design.Chars(got.FirstCopy().Text) > design.Styles[got.FirstCopy().Style].Chars {
+	written := clip.Written{Text: long, ShortText: strings.Repeat("가", 10), Answers: answers()}
+	got, decision, err := clip.Compose(canvas, cut, written, "food", false, clip.Region{}, nil, "", "", cut.EndMS, fits)
+	if err != nil || decision.Fallback != "short_text" || design.Chars(got.FirstCopy().Text) > design.Caption().Chars {
 		t.Fatalf("%+v %+v %v", got.FirstCopy(), decision, err)
 	}
 	// A measurement that FAILED is surfaced, never read as "does not fit".
 	broken := func(clip.Caption) (clip.Region, bool, error) { return clip.Region{}, false, clip.ErrCopyTooLong }
-	if _, _, err := clip.Compose(canvas, cut, clip.Written{Text: "조용한 자리", Answers: answers()}, "food", false, clip.Region{}, nil, []string{"clean", "memo"}, "", nil, "", cut.EndMS, broken); err == nil {
+	if _, _, err := clip.Compose(canvas, cut, clip.Written{Text: "조용한 자리", Answers: answers()}, "food", false, clip.Region{}, nil, "", "", cut.EndMS, broken); err == nil {
 		t.Fatal("a measurement failure was swallowed")
 	}
 }
@@ -152,7 +152,7 @@ func TestCutSceneAndSubjectProjection(t *testing.T) {
 	// with no subject box, never as an unknown scene.
 	legacy := clip.SourceAnalysis{Source: analysis.Source, Segments: []clip.Segment{{StartMS: 0, EndMS: 20000}}}
 	scene, readable = clip.CutScene(cut, legacy)
-	if scene != design.Guards.DefaultScene || readable {
+	if scene != design.DefaultScene || readable {
 		t.Fatalf("legacy scene=%s readable=%v", scene, readable)
 	}
 	if got := clip.CutSubject(canvas, cut, legacy); got != (clip.Region{}) {
@@ -174,8 +174,8 @@ func TestCompilerPlacesTheSecondCopyOnlyWhenCDS43Allows(t *testing.T) {
 	// CDS-39 reads a number FIRST, so a sentence that states one is never DESC:
 	// the number CDS-43 splits out is the short alternative the model wrote
 	// beside the description.
-	written := clip.Written{Text: "조용한 골목을 천천히 걸었어요", ShortText: "9900원", Answers: answers}
-	got, decision, err := clip.Compose(canvas, long, written, "scenery", false, clip.Region{}, nil, []string{"clean", "memo"}, "coral", nil, "", long.EndMS, fits)
+	written := clip.Written{Text: "조용한 골목을 걸었어요", ShortText: "9900원", Answers: answers}
+	got, decision, err := clip.Compose(canvas, long, written, "scenery", false, clip.Region{}, nil, "coral", "", long.EndMS, fits)
 	if err != nil || len(got.Copies) != 2 || !decision.Second {
 		t.Fatalf("%+v %+v %v", got.Copies, decision, err)
 	}
@@ -204,7 +204,7 @@ func TestCompilerPlacesTheSecondCopyOnlyWhenCDS43Allows(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			cut, w := long, written
 			change(&cut, &w)
-			got, decision, err := clip.Compose(canvas, cut, w, "scenery", false, clip.Region{}, nil, []string{"clean", "memo"}, "coral", nil, "", cut.EndMS, fits)
+			got, decision, err := clip.Compose(canvas, cut, w, "scenery", false, clip.Region{}, nil, "coral", "", cut.EndMS, fits)
 			if err != nil || decision.Second || len(got.Copies) > 1 {
 				t.Fatalf("%+v %+v %v", got.Copies, decision, err)
 			}

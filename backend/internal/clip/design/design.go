@@ -4,8 +4,7 @@
 // proto, SQL, transport or media imports — and every number in it is a CDS
 // decision, never a literal spelled again at a call site.
 //
-// `chars` is 0 where CDS-20 states no per-line count for that type role; a
-// style's own limit (CDS-23..26) lives in Styles instead.
+// `chars` is 0 only for the disclosure, whose exact phrase has its own contract.
 package design
 
 import (
@@ -19,7 +18,7 @@ var files embed.FS
 
 // JSON tags exist because this package parses the shared configuration file.
 // They stop at this boundary: the clip domain's own types stay tag-free.
-type Region struct {
+type Bounds struct {
 	X      float64 `json:"x"`
 	Y      float64 `json:"y"`
 	Width  float64 `json:"width"`
@@ -57,7 +56,7 @@ type BadgeBox struct {
 // through CDS-48 restate only the positions and widths the other two change.
 type RatioLayout struct {
 	Canvas       Size      `json:"canvas"`
-	Safe         Region    `json:"safe"`
+	Safe         Bounds    `json:"safe"`
 	Anchor       Anchor    `json:"anchor"`
 	CopyMaxWidth float64   `json:"copy_max_width"`
 	HookSize     float64   `json:"hook_size"`
@@ -65,8 +64,8 @@ type RatioLayout struct {
 	EndCard      CardBox   `json:"end_card"`
 	Chip         ChipStack `json:"chip"`
 	Badge        BadgeBox  `json:"badge"`
-	ScrimTop     Region    `json:"scrim_top"`
-	ScrimBottom  Region    `json:"scrim_bottom"`
+	ScrimTop     Bounds    `json:"scrim_top"`
+	ScrimBottom  Bounds    `json:"scrim_bottom"`
 }
 
 // The estimated Naver overlay geometry behind SA-N (CDS-10). It is an estimate
@@ -134,7 +133,7 @@ type SpacingTokens struct {
 	RadiusCard    float64   `json:"radius_card"`
 	BarAccent     float64   `json:"bar_accent"`
 	StrokeText    float64   `json:"stroke_text"`
-	StrokeMark    float64   `json:"stroke_mark"`
+	StrokeSmall   float64   `json:"stroke_small"`
 	DotAccent     float64   `json:"dot_accent"`
 	UnderlineMark Underline `json:"underline_mark"`
 }
@@ -159,14 +158,13 @@ type StyleRule struct {
 	Highlight bool    `json:"highlight"`
 }
 
-// StrokeWidth is the round-joined stroke painted under an unplated style's fill:
-// 6 px for 크게 강조 and 4 px for 형광펜 (CDS-21, CDS-25, CDS-26).
+// StrokeWidth resolves the Paperlogy and small Pretendard outlines (CDS-21).
 func (s StyleRule) StrokeWidth() float64 {
 	switch s.Stroke {
 	case "text":
 		return Spacing.StrokeText
-	case "mark":
-		return Spacing.StrokeMark
+	case "small":
+		return Spacing.StrokeSmall
 	}
 	return 0
 }
@@ -214,28 +212,6 @@ type Facts struct {
 	} `json:"defaults"`
 }
 
-// CDS-39's sentence classes, as data: the units that make a number a NUM, the
-// markers and length that make a sentence a HOOK, and the length and endings
-// that keep one a FACT.
-type ClassRules struct {
-	NumUnits        []string `json:"num_units"`
-	HookMarkers     []string `json:"hook_markers"`
-	HookMaxChars    int      `json:"hook_max_chars"`
-	FactMaxChars    int      `json:"fact_max_chars"`
-	FactVerbEndings []string `json:"fact_verb_endings"`
-}
-
-// CDS-40's guards. Every value is a rule, not a tuning knob.
-type GuardRules struct {
-	Fallback        string   `json:"fallback"`
-	BoldMax         int      `json:"bold_max"`
-	BoldFirstCut    int      `json:"bold_first_cut"`
-	RunMax          int      `json:"run_max"`
-	RunAlternate    []string `json:"run_alternate"`
-	MenuAnchors     []string `json:"menu_anchors"`
-	SubjectCoverMax float64  `json:"subject_cover_max"`
-	DefaultScene    string   `json:"default_scene"`
-}
 type VoiceRules struct {
 	Banned []string `json:"banned"`
 }
@@ -254,8 +230,8 @@ type TimingTokens struct {
 	// CDS-37's own ceiling for a food close-up, which holds a plate on screen
 	// long enough to read and no longer.
 	CutMaxFoodS     float64 `json:"cut_max_food_s"`
-	HookCardS       float64 `json:"hook_card_s"`
-	EndCardS        float64 `json:"end_card_s"`
+	IntroDefaultS   float64 `json:"intro_default_s"`
+	OutroDefaultS   float64 `json:"outro_default_s"`
 	BadgeMinHeadS   float64 `json:"badge_min_head_s"`
 	BadgeMinTailS   float64 `json:"badge_min_tail_s"`
 	ChipMinS        float64 `json:"chip_min_s"`
@@ -318,35 +294,61 @@ type LumaTokens struct {
 	SigmaThreshold float64 `json:"sigma_threshold"`
 	ContrastMin    float64 `json:"contrast_min"`
 }
+type RuleToken struct {
+	Width  float64 `json:"w"`
+	Height float64 `json:"h"`
+	Alpha  float64 `json:"alpha"`
+}
+type RegionSlot struct {
+	Type     string   `json:"type"`
+	Y        float64  `json:"y"`
+	Fill     string   `json:"fill"`
+	Alpha    *float64 `json:"alpha,omitempty"`
+	Tracking *float64 `json:"tracking,omitempty"`
+	Stroke   string   `json:"stroke"`
+	Shadow   string   `json:"shadow"`
+}
+type RegionRule struct {
+	Kind string  `json:"kind"`
+	Y    float64 `json:"y"`
+}
+type RegionPreset struct {
+	Slots []RegionSlot `json:"slots"`
+	Rules []RegionRule `json:"rules"`
+}
+type RegionTokens struct {
+	Intro   map[string]RegionPreset `json:"intro"`
+	Outro   map[string]RegionPreset `json:"outro"`
+	Caption map[string]StyleRule    `json:"caption"`
+}
+
 type system struct {
-	Rapid             RapidTokens                  `json:"rapid"`
-	Ratios            map[string]RatioLayout       `json:"ratios"`
-	SafeNaverEstimate Region                       `json:"safe_naver_estimate"`
-	OverlayEstimate   OverlayEstimate              `json:"overlay_estimate"`
-	Type              map[string]TypeRole          `json:"type"`
-	Color             map[string]Paint             `json:"color"`
-	Shadow            map[string]ShadowPaint       `json:"shadow"`
-	Scrim             map[string]ScrimPaint        `json:"scrim"`
-	Accent            map[string]string            `json:"accent"`
-	InfoFrames        map[string]InfoFrame         `json:"info_frames"`
-	Spacing           SpacingTokens                `json:"spacing"`
-	Styles            map[string]StyleRule         `json:"styles"`
-	Presets           map[string]Preset            `json:"presets"`
-	Disclosure        map[string]string            `json:"disclosure"`
-	CTA               map[string]string            `json:"cta"`
-	Facts             Facts                        `json:"facts"`
-	Faces             map[string]string            `json:"faces"`
-	Classes           ClassRules                   `json:"classes"`
-	SceneStyles       map[string]map[string]string `json:"scene_styles"`
-	Guards            GuardRules                   `json:"guards"`
-	Voice             VoiceRules                   `json:"voice"`
-	Motion            MotionTokens                 `json:"motion"`
-	Timing            TimingTokens                 `json:"timing"`
-	Transition        TransitionTokens             `json:"transition"`
-	Playback          PlaybackTokens               `json:"playback"`
-	Copy              CopyTokens                   `json:"copy"`
-	Audio             AudioTokens                  `json:"audio"`
-	Luma              LumaTokens                   `json:"luma"`
+	Regions           RegionTokens           `json:"regions"`
+	Rules             map[string]RuleToken   `json:"rule"`
+	Rapid             RapidTokens            `json:"rapid"`
+	Ratios            map[string]RatioLayout `json:"ratios"`
+	SafeNaverEstimate Bounds                 `json:"safe_naver_estimate"`
+	OverlayEstimate   OverlayEstimate        `json:"overlay_estimate"`
+	Type              map[string]TypeRole    `json:"type"`
+	Color             map[string]Paint       `json:"color"`
+	Shadow            map[string]ShadowPaint `json:"shadow"`
+	Scrim             map[string]ScrimPaint  `json:"scrim"`
+	Accent            map[string]string      `json:"accent"`
+	InfoFrames        map[string]InfoFrame   `json:"info_frames"`
+	Spacing           SpacingTokens          `json:"spacing"`
+	Presets           map[string]Preset      `json:"presets"`
+	Disclosure        map[string]string      `json:"disclosure"`
+	CTA               map[string]string      `json:"cta"`
+	Facts             Facts                  `json:"facts"`
+	Faces             map[string]string      `json:"faces"`
+	Voice             VoiceRules             `json:"voice"`
+	Motion            MotionTokens           `json:"motion"`
+	Timing            TimingTokens           `json:"timing"`
+	Transition        TransitionTokens       `json:"transition"`
+	Playback          PlaybackTokens         `json:"playback"`
+	Copy              CopyTokens             `json:"copy"`
+	Audio             AudioTokens            `json:"audio"`
+	Luma              LumaTokens             `json:"luma"`
 }
 
 var loaded = parse()
@@ -373,6 +375,7 @@ func JSON() []byte {
 }
 
 var (
+	Rules             = loaded.Rules
 	Rapid             = loaded.Rapid
 	Ratios            = loaded.Ratios
 	SafeNaverEstimate = loaded.SafeNaverEstimate
@@ -384,15 +387,11 @@ var (
 	Accent            = loaded.Accent
 	InfoFrames        = loaded.InfoFrames
 	Spacing           = loaded.Spacing
-	Styles            = loaded.Styles
 	Presets           = loaded.Presets
 	Disclosure        = loaded.Disclosure
 	CTA               = loaded.CTA
 	Fact              = loaded.Facts
 	Faces             = loaded.Faces
-	Classes           = loaded.Classes
-	SceneStyles       = loaded.SceneStyles
-	Guards            = loaded.Guards
 	Voice             = loaded.Voice
 	Motion            = loaded.Motion
 	Timing            = loaded.Timing
@@ -455,7 +454,7 @@ func Canvas(ratio string) (Size, bool) {
 	l, ok := Ratios[ratio]
 	return l.Canvas, ok
 }
-func Safe(ratio string) (Region, bool) {
+func Safe(ratio string) (Bounds, bool) {
 	l, ok := Ratios[ratio]
 	return l.Safe, ok
 }
@@ -464,15 +463,34 @@ func Anchors(ratio string) (Anchor, bool) {
 	return l.Anchor, ok
 }
 
-// StyleAnchors is where CDS-24 lets a style stand: its default anchor and, when
-// it has one, its alternative. V6 refuses the copy at any other.
-func StyleAnchors(style string) []string {
-	s, ok := Styles[style]
-	if !ok {
-		return nil
+// Caption is the one fixed caption treatment (CDS-25).
+func Caption() StyleRule { return loaded.Regions.Caption["bold"] }
+
+// Region returns a template-selected intro or outro preset.
+func Region(kind, id string) (RegionPreset, bool) {
+	var choices map[string]RegionPreset
+	switch kind {
+	case "intro":
+		choices = loaded.Regions.Intro
+	case "outro":
+		choices = loaded.Regions.Outro
+	default:
+		return RegionPreset{}, false
 	}
-	if s.AnchorAlt == "" {
-		return []string{s.Anchor}
+	value, ok := choices[id]
+	// A caller cannot mutate the embedded preset by editing a returned slice.
+	value.Slots = append([]RegionSlot(nil), value.Slots...)
+	for i := range value.Slots {
+		s := &value.Slots[i]
+		if s.Alpha != nil {
+			v := *s.Alpha
+			s.Alpha = &v
+		}
+		if s.Tracking != nil {
+			v := *s.Tracking
+			s.Tracking = &v
+		}
 	}
-	return []string{s.Anchor, s.AnchorAlt}
+	value.Rules = append([]RegionRule(nil), value.Rules...)
+	return value, ok
 }

@@ -28,7 +28,7 @@ it('refuses an oversized Connect JSON body before sending or truncating the curr
       role: 'caption',
       text: '한'.repeat(60),
       rows: [],
-      style: 'clean',
+      style: 'bold',
       position: 'bottom',
       align: 'center',
       basis: 'cut',

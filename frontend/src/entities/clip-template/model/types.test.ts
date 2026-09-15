@@ -28,14 +28,14 @@ describe('clip recipe bounds', () => {
     { name: '' },
     { cutGuidance: '가'.repeat(4001) },
     { copyStyles: [] },
-    { copyStyles: ['clean', 'clean'] },
-    { copyStyles: ['unknown'] },
+    { copyStyles: ['bold', 'bold'] },
+    { copyStyles: ['neon'] },
     { accent: 'custom' },
     // A save must name one of the five presets, and every approved style set
     // keeps 깔끔하게 (CDS-50, and T102's ValidCopyStyles).
     { preset: '' },
     { preset: 'bakery' },
-    { copyStyles: ['memo'] },
+    { copyStyles: ['clean'] },
     { informationFields: [{ label: '', prompt: 'p' }] },
     { informationFields: [{ label: 'a'.repeat(41), prompt: 'p' }] },
     { informationFields: [{ label: 'a', prompt: 'p'.repeat(201) }] },

@@ -243,7 +243,7 @@ func ValidCopy(c Copy, maxRunes int) bool {
 	if strings.TrimSpace(c.Text) == "" && c.Anchor == "" && c.Align == "" && c.Style == "" {
 		return c.Keyword == ""
 	}
-	_, known := design.Styles[c.Style]
+	known := slices.Contains([]string{"clean", "memo", "bold", "mark", "simple"}, c.Style)
 	return slices.Contains(CopyAnchors, c.Anchor) && slices.Contains(CopyAligns, c.Align) && known
 }
 
@@ -496,7 +496,7 @@ func ValidateEditPlan(cfg RenderConfig, plan EditPlan, sources []RenderSource) e
 			// The style's own line and character limits (CDS-20, CDS-23..26) and
 			// the exposure its length earns (CDS-41). An empty copy is a cut with
 			// no text, not a copy that breaks them.
-			style := design.Styles[copy.Style]
+			style := design.Caption()
 			if strings.TrimSpace(copy.Text) == "" {
 				continue
 			}
@@ -523,12 +523,6 @@ func ValidateEditPlan(cfg RenderConfig, plan EditPlan, sources []RenderSource) e
 			if copy.Keyword != "" && !strings.Contains(copy.Text, copy.Keyword) {
 				return planViolation("plan_copy_keyword")
 			}
-		}
-		// A second copy is a description followed by the number it leads to, in
-		// that order and no other (CDS-43).
-		if placed := c.Placed(); !rapid && len(placed) > 1 &&
-			(design.Classify(placed[0].Text) != design.ClassDesc || design.Classify(placed[1].Text) != design.ClassNum) {
-			return planViolation("plan_copy_classes")
 		}
 		if length > cfg.MaxDurationMS+plan.TransitionTotal()-total {
 			return planViolation("plan_duration_limit")

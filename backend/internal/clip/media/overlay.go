@@ -60,7 +60,7 @@ func copyView(canvas clip.Canvas, c clip.Copy, l copyLayout, ground Luminance) o
 		x, y := p.X+left+(inner-bounds.Width)/2-bounds.X, top-bounds.Y
 		fill, _ := paint("text_white")
 		if s.Plate == "paper_50" {
-			fill, _ = paint("text_ink")
+			fill, _ = paint("text_white")
 		}
 		t := overlayText(l.Role, line, x, y, fill, "")
 		t.Size, t.Tracking = l.FontSize, l.Role.Tracking*l.FontSize
@@ -73,7 +73,7 @@ func copyView(canvas clip.Canvas, c clip.Copy, l copyLayout, ground Luminance) o
 			u := design.Spacing.UnderlineMark
 			t.Highlight = &overlay.Box{X: x + bounds.X + l.Keyword.Offset - u.Extend, Y: y - (u.RaiseEM+u.HeightEM)*l.FontSize, Width: l.Keyword.Width + 2*u.Extend, Height: u.HeightEM * l.FontSize, Fill: accent, Opacity: "0.9"}
 		}
-		if c.Style != "simple" && accent != "" && !s.Highlight && s.Stroke != "" && l.Keyword.Present && l.Keyword.Line == i {
+		if accent != "" && !s.Highlight && s.Stroke != "" && l.Keyword.Present && l.Keyword.Line == i {
 			at := strings.Index(line, l.Keyword.Text)
 			t.Colored, t.Prefix, t.Keyword, t.Suffix, t.Accent = true, line[:at], l.Keyword.Text, line[at+len(l.Keyword.Text):], word
 		}
@@ -88,7 +88,7 @@ func furnitureView(canvas clip.Canvas, f furniture) overlay.FurnitureView {
 	badge, badgeAlpha := paint("badge_ad")
 	white, _ := paint("text_white")
 	muted, mutedAlpha := paint("text_muted")
-	ink, inkAlpha := paint("ink_900")
+	ink, inkAlpha := paint("badge_ad")
 	p := f.Badge
 	if f.BadgeText != "" {
 		box := overlayBox(p, p.Height/2, badge, badgeAlpha)
@@ -111,7 +111,7 @@ func cardView(canvas clip.Canvas, card cardLayout) overlay.CardView {
 		return v
 	}
 	v.Shadow = overlayShadow("card")
-	fill, alpha := paint("ink_900s")
+	fill, alpha := paint("badge_ad")
 	p := card.Region
 	v.Plate = overlayBox(p, design.Spacing.RadiusCard, fill, alpha)
 	top := p.Y + cardPadding
@@ -153,7 +153,7 @@ func loadOverlays(directory string) (*overlay.Catalog, error) {
 			return nil, err
 		}
 	}
-	for style := range design.Styles {
+	for _, style := range []string{"bold"} {
 		if _, err := catalog.Render("copy."+style, overlayProbe("copy-v1")); err != nil {
 			return nil, err
 		}

@@ -20,7 +20,7 @@ func TestRenderSmokeFilePreset(t *testing.T) {
 		"info/preset.json":      `{"id":"info","view":"info-v1","template":"overlay.svg"}`,
 		"info/overlay.svg":      `<svg xmlns="http://www.w3.org/2000/svg"/>`,
 		"proof/preset.json":     `{"id":"proof","view":"copy-v1","template":"overlay.svg"}`,
-		"proof/overlay.svg":     `<svg xmlns="http://www.w3.org/2000/svg" width="{{.Width}}" height="{{.Height}}">{{with .Plate}}<rect x="{{.X}}" y="{{.Y}}" width="{{.Width}}" height="{{.Height}}" rx="{{.Radius}}" fill="#FF00FF"/>{{end}}{{range .Lines}}<text x="{{.X}}" y="{{.Y}}" font-family="{{.Family}}" font-size="{{.Size}}" font-weight="{{.Weight}}" letter-spacing="{{.Tracking}}" fill="{{.Fill}}">{{.Value}}</text>{{end}}</svg>`,
+		"proof/overlay.svg":     `<svg xmlns="http://www.w3.org/2000/svg" width="{{.Width}}" height="{{.Height}}">{{with .Plate}}<rect x="{{.X}}" y="{{.Y}}" width="{{.Width}}" height="{{.Height}}" rx="{{.Radius}}" fill="#FF00FF"/>{{end}}{{range .Lines}}<text x="{{.X}}" y="{{.Y}}" font-family="{{.Family}}" font-size="{{.Size}}" font-weight="{{.Weight}}" letter-spacing="{{.Tracking}}" fill="#FF00FF">{{.Value}}</text>{{end}}</svg>`,
 		"furniture/preset.json": `{"id":"furniture","view":"furniture-v1","template":"overlay.svg"}`,
 		"furniture/overlay.svg": `<svg xmlns="http://www.w3.org/2000/svg"/>`,
 		"card/preset.json":      `{"id":"card","view":"card-v1","template":"overlay.svg"}`,
@@ -61,9 +61,10 @@ func TestRenderSmokeFilePreset(t *testing.T) {
 			return err
 		}
 		p := layout.Region
-		red, green, blue, alpha := img.At(int(p.X+p.Width/2), int(p.Y+2)).RGBA()
-		if red != 0xffff || green != 0 || blue != 0xffff || alpha != 0xffff {
-			t.Fatalf("file preset was not rasterized: rgba=%x,%x,%x,%x", red, green, blue, alpha)
+		if !scan(img, p, func(red, green, blue, alpha uint32) bool {
+			return alpha > 0xf000 && red > 0xf000 && green == 0 && blue > 0xf000
+		}) {
+			t.Fatal("file preset did not rasterize its magenta glyphs")
 		}
 		if _, _, _, alpha := img.At(0, 0).RGBA(); alpha != 0 {
 			t.Fatal("file preset lost canvas transparency")

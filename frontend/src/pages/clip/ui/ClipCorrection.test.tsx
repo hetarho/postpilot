@@ -59,7 +59,7 @@ async function mount(clips: FakeClipsOptions = {}, jobs: FakeJobsOptions = {}) {
           name: '여행',
           informationFields: [],
           cutGuidance: '',
-          copyStyles: ['clean'],
+          copyStyles: ['bold'],
           accent: '',
           preset: 'restaurant',
         },
@@ -123,10 +123,11 @@ it('saves exact milliseconds and selected text with a new optimistic revision', 
   await selectText()
   setField('자막 원문', '오늘 장면')
   await savePlan()
-  await waitFor(() => expect(writes).toHaveLength(1))
-  expect(writes[0].plan.cuts[0]).toMatchObject({ startMs: 123, endMs: 12345 })
-  expect(writes[0].plan.elements![0].text).toBe('오늘 장면')
-  expect(writes[0].revision).toBe(1)
+  // An autosave may finish while the owner switches from the cut to its text.
+  // Every accepted write advances the optimistic revision; the last holds both edits.
+  await waitFor(() => expect(writes.at(-1)?.plan.elements?.[0].text).toBe('오늘 장면'))
+  expect(writes.at(-1)!.plan.cuts[0]).toMatchObject({ startMs: 123, endMs: 12345 })
+  expect(writes.map((write) => write.revision)).toEqual(writes.map((_, index) => index + 1))
   expect(screen.getByRole('link', { name: '렌더 1 다운로드' })).toBeInTheDocument()
 })
 

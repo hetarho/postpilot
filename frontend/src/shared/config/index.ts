@@ -394,6 +394,10 @@ export const GUIDELINE_TEXT_MAX_CHARS = positiveIntEnv(
 export {
   CLIP_DESIGN,
   CLIP_STYLES,
+  CLIP_REGIONS,
+  CLIP_RULES,
+  clipRegion,
+  clipCaption,
   CLIP_PRESETS,
   CLIP_DISCLOSURES,
   CLIP_CTAS,
@@ -405,15 +409,10 @@ export {
   CLIP_RATES,
   CLIP_COPY,
   CLIP_RAPID,
-  CLIP_GUARDS,
-  CLIP_CLASSES,
-  CLIP_SCENE_STYLES,
   CLIP_FACTS,
   CLIP_ACCENT_HEX,
   CLIP_TYPE,
   CLIP_VOICE,
-  clipStyle,
-  clipType,
   clipPaint,
 } from './clip-design'
 export type {

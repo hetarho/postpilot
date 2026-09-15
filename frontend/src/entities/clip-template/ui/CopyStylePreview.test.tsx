@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { render } from '@testing-library/react'
 import { readFileSync } from 'node:fs'
-import { CLIP_DESIGN, CLIP_STYLES, clipStyle, clipType } from '@/shared/config'
+import { CLIP_DESIGN, CLIP_STYLES, clipCaption, CLIP_TYPE } from '@/shared/config'
 import { CopyStylePreview } from './CopyStylePreview'
 
 /** The attributes the preview draws, per style: not pixels, and not a copy of
@@ -11,32 +11,18 @@ describe('copy style preview', () => {
     const { container } = render(<CopyStylePreview style={style} accent="coral" text="오늘" />)
     const svg = container.querySelector(`[data-copy-style="${style}"]`)!
     const text = svg.querySelector('text')!
-    const rule = clipStyle(style)
-    const role = clipType(style)
+    const rule = clipCaption()
+    const role = CLIP_TYPE.title
     expect(text.getAttribute('font-size')).toBe(String(role.size))
     expect(text.getAttribute('font-weight')).toBe(String(role.weight))
     expect(text.getAttribute('letter-spacing')).toBe(String(role.tracking * role.size))
     // A plated style paints its plate at the token's own opacity and radius; an
     // unplated one paints the stroke and the drop shadow instead.
     const plate = svg.querySelector('rect[fill-opacity]')
-    if (rule.plate === '') {
-      expect(plate).toBeNull()
-      expect(text.getAttribute('stroke-width')).toBe(
-        String(
-          rule.stroke === 'mark'
-            ? CLIP_DESIGN.spacing.stroke_mark
-            : CLIP_DESIGN.spacing.stroke_text,
-        ),
-      )
-      expect(svg.querySelector('feDropShadow')).not.toBeNull()
-    } else {
-      expect(plate!.getAttribute('fill-opacity')).toBe(
-        String(CLIP_DESIGN.color[rule.plate as 'ink_900'].alpha),
-      )
-      expect(plate!.getAttribute('rx')).toBe(String(CLIP_DESIGN.spacing.radius_box))
-      expect(text.getAttribute('stroke-width')).toBe('0')
-      expect(svg.querySelector('feDropShadow')).toBeNull()
-    }
+    expect(plate).toBeNull()
+    expect(text.getAttribute('stroke-width')).toBe(String(CLIP_DESIGN.spacing.stroke_text))
+    expect(text.getAttribute('font-family')).toBe(CLIP_DESIGN.faces.paperlogy)
+    expect(svg.querySelector('feDropShadow')).not.toBeNull()
     // 깔끔하게 carries the accent bar and 메모 the accent dot (CDS-23, CDS-24).
     expect(svg.querySelectorAll('circle').length).toBe(rule.dot ? 1 : 0)
   })
@@ -47,9 +33,9 @@ describe('copy style preview', () => {
       )
       const svg = container.querySelector(`[data-copy-style="${style}"]`)!
       const highlighted = svg.querySelector('rect[fill-opacity="0.9"]') !== null
-      expect(highlighted).toBe(clipStyle(style).highlight)
+      expect(highlighted).toBe(clipCaption().highlight)
       expect(svg.querySelector('tspan') !== null).toBe(
-        style !== 'simple' && !clipStyle(style).highlight && clipStyle(style).stroke !== '',
+        !clipCaption().highlight && clipCaption().stroke !== '',
       )
     }
   })
@@ -74,8 +60,6 @@ describe('clip palette', () => {
       expect(declared(accent)).toBe(hex.toLowerCase())
     }
     for (const [name, token] of Object.entries({
-      'ink-900': CLIP_DESIGN.color.ink_900,
-      'paper-50': CLIP_DESIGN.color.paper_50,
       stroke: CLIP_DESIGN.color.stroke_dark,
       badge: CLIP_DESIGN.color.badge_ad,
     })) {

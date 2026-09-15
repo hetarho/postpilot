@@ -47,7 +47,7 @@ it('immutably edits every field, reorders/deletes and recalculates transition ov
       // a placement the verifier refuses.
       anchor: 'bottom',
       align: 'left',
-      style: 'memo',
+      style: 'bold',
       accent: 'teal',
     },
   })
@@ -170,14 +170,14 @@ it('accepts muted/full source audio and refuses a non-approved style', () => {
   const state = clipEditingFixture()
   state.plan.cuts[0]!.volumePermille = 0
   expect(validateClipPlan(state.plan, state).valid).toBe(true)
-  state.copyStyles = ['clean', 'memo']
-  state.plan.cuts[0]!.copies[0]!.style = 'bold'
+  state.copyStyles = ['bold']
+  state.plan.cuts[0]!.copies[0]!.style = 'unknown' as ClipCaption['style']
   expect(validateClipPlan(state.plan, state).cuts[0]!.copies[0]!.style).toBe(true)
 })
 
 /** The design system's own rules, mirrored here for immediacy. The server's
  *  verifier stays the authority; these are what let a field say so first. */
-it('mirrors the per-style limits, the exposure minimum and the per-clip guards', () => {
+it('checks caption limits and exposure without retired frequency guards', () => {
   const state = clipEditingFixture()
   const cut = (over: Partial<ClipEditCut> = {}, copy: Partial<ClipCaption> = {}) => ({
     ...state.plan.cuts[0]!,
@@ -188,8 +188,8 @@ it('mirrors the per-style limits, the exposure minimum and the per-clip guards',
     validateClipPlan({ ...state.plan, cuts, durationMs: 19800 }, state)
 
   // 깔끔하게 takes two lines of fourteen; fifteen on one line is past it.
-  expect(check([cut({ id: 'a' }, { text: '가'.repeat(14) })]).cuts[0]!.copies[0]!.text).toBe(false)
-  expect(check([cut({ id: 'a' }, { text: '가'.repeat(15) })]).cuts[0]!.copies[0]!.text).toBe(true)
+  expect(check([cut({ id: 'a' }, { text: '가'.repeat(11) })]).cuts[0]!.copies[0]!.text).toBe(false)
+  expect(check([cut({ id: 'a' }, { text: '가'.repeat(12) })]).cuts[0]!.copies[0]!.text).toBe(true)
   expect(check([cut({ id: 'a' }, { text: '가\n나\n다' })]).cuts[0]!.copies[0]!.text).toBe(true)
 
   // CDS-41: 900 ms plus 90 ms a character, inside the copy's own window.
@@ -202,20 +202,6 @@ it('mirrors the per-style limits, the exposure minimum and the per-clip guards',
   expect(check([tight]).cuts[0]!.copies[0]!.exposure).toBe(true)
   expect(check([{ ...tight, endMs: 1590 }]).cuts[0]!.copies[0]!.exposure).toBe(false)
 
-  // 메모 sits LEFT at the top or the bottom (CDS-24).
-  expect(
-    check([cut({ id: 'a' }, { style: 'memo', anchor: 'top', align: 'left' })]).cuts[0]!.copies[0]!
-      .anchor,
-  ).toBe(false)
-  expect(
-    check([cut({ id: 'a' }, { style: 'memo', anchor: 'top', align: 'center' })]).cuts[0]!.copies[0]!
-      .anchor,
-  ).toBe(true)
-  expect(
-    check([cut({ id: 'a' }, { style: 'memo', anchor: 'lower_mid', align: 'left' })]).cuts[0]!
-      .copies[0]!.anchor,
-  ).toBe(true)
-
   // CDS-38: one anchor step between consecutive cuts of the SAME style, and any
   // distance when the style changes.
   const stepped = [
@@ -225,9 +211,6 @@ it('mirrors the per-style limits, the exposure minimum and the per-clip guards',
   expect(check(stepped).cuts[1]!.copies[0]!.anchor).toBe(true)
   stepped[1] = cut({ id: 'b' }, { anchor: 'lower_mid' })
   expect(check(stepped).cuts[1]!.copies[0]!.anchor).toBe(false)
-  stepped[1] = cut({ id: 'b' }, { style: 'memo', anchor: 'top', align: 'left' })
-  expect(check(stepped).cuts[1]!.copies[0]!.anchor).toBe(false)
-
   // At most two chips, from the reserved labels (CDS-30).
   expect(check([cut({ id: 'a', chips: ['위치', '가격'] })]).cuts[0]!.chips).toBe(false)
   expect(check([cut({ id: 'a', chips: ['위치', '가격', '메뉴'] })]).cuts[0]!.chips).toBe(true)
@@ -237,18 +220,18 @@ it('mirrors the per-style limits, the exposure minimum and the per-clip guards',
   const bolds = ['a', 'b', 'c'].map((id, i) =>
     cut({ id }, { style: 'bold', anchor: i === 0 ? 'upper_mid' : 'upper_mid', align: 'center' }),
   )
-  expect(check(bolds).frequency).toBe(true)
+  expect(check(bolds).frequency).toBe(false)
   expect(check(bolds.slice(0, 2)).frequency).toBe(false)
-  const run = ['a', 'b', 'c', 'd'].map((id) => cut({ id }, { style: 'clean' }))
-  expect(check(run).frequency).toBe(true)
+  const run = ['a', 'b', 'c', 'd'].map((id) => cut({ id }, { style: 'bold' }))
+  expect(check(run).frequency).toBe(false)
   expect(check(run.slice(0, 3)).frequency).toBe(false)
 
   // The accent word has to appear in the caption it accents.
   expect(
-    check([cut({ id: 'a' }, { style: 'mark', keyword: '없음' })]).cuts[0]!.copies[0]!.keyword,
+    check([cut({ id: 'a' }, { style: 'bold', keyword: '없음' })]).cuts[0]!.copies[0]!.keyword,
   ).toBe(true)
   expect(
-    check([cut({ id: 'a' }, { style: 'mark', text: '가격 9900원', keyword: '9900원' })]).cuts[0]!
+    check([cut({ id: 'a' }, { style: 'bold', text: '가격 9900원', keyword: '9900원' })]).cuts[0]!
       .copies[0]!.keyword,
   ).toBe(false)
 })

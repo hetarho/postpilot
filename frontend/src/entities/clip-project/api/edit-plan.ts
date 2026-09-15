@@ -1,9 +1,4 @@
-import {
-  CLIP_ACCENTS,
-  COPY_STYLES,
-  type ClipAccent,
-  type CopyStyle,
-} from '@/entities/clip-template/@x/clip-project'
+import { CLIP_ACCENTS, type ClipAccent } from '@/entities/clip-template/@x/clip-project'
 import { CLIP_PLAYBACK, CLIP_RATES } from '@/shared/config'
 import type { ProtoClipEditingState } from '@/shared/api'
 import {
@@ -16,8 +11,6 @@ import {
 
 export function toClipEditingState(value: ProtoClipEditingState): ClipEditingState {
   if (!value.plan) throw new Error('Missing clip edit plan')
-  if (value.copyStyles.some((s) => !COPY_STYLES.includes(s as CopyStyle)))
-    throw new Error('Invalid approved styles')
   return {
     plan: {
       ...(value.plan.nativeComposition
@@ -88,8 +81,7 @@ export function toClipEditingState(value: ProtoClipEditingState): ClipEditingSta
             !['', 'steady', 'rapid'].includes(copy.pace) ||
             (placed &&
               (!COPY_ANCHORS.includes(copy.position as ClipCaption['anchor']) ||
-                !COPY_ALIGNS.includes(copy.align as ClipCaption['align']) ||
-                !COPY_STYLES.includes(copy.style as CopyStyle))) ||
+                !COPY_ALIGNS.includes(copy.align as ClipCaption['align']))) ||
             !CLIP_ACCENTS.includes(copy.accent as ClipAccent)
           )
             throw new Error('Invalid clip caption')
@@ -101,7 +93,7 @@ export function toClipEditingState(value: ProtoClipEditingState): ClipEditingSta
             anchor: (copy.position || 'bottom') as ClipCaption['anchor'],
             align: (copy.align || 'center') as ClipCaption['align'],
             keyword: copy.keyword,
-            style: (copy.style || 'clean') as CopyStyle,
+            style: 'bold' as const,
             accent: copy.accent as ClipAccent,
           }
         })
@@ -136,7 +128,7 @@ export function toClipEditingState(value: ProtoClipEditingState): ClipEditingSta
           ? [...s.allowedRatePermille]
           : CLIP_RATES.filter((rate) => rate >= CLIP_PLAYBACK.unit_permille),
     })),
-    copyStyles: value.copyStyles as CopyStyle[],
+    copyStyles: ['bold'],
     fadeMs: value.fadeMs,
     maxCuts: value.maxCuts,
     maxCopyRunes: value.maxCopyRunes,

@@ -13,7 +13,7 @@ const template = {
   compositionLegacy: false,
   informationFields: [],
   cutGuidance: '',
-  copyStyles: ['clean'] as ClipRecipe['copyStyles'],
+  copyStyles: ['bold'] as ClipRecipe['copyStyles'],
   accent: '' as const,
   preset: '' as const,
 }
