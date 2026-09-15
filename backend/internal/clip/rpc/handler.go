@@ -356,6 +356,19 @@ func (h *Handler) GetClipProject(ctx context.Context, req *connect.Request[v1.Ge
 	if err != nil {
 		return nil, err
 	}
+	// The job status and the project snapshot are separate reads, so their ORDER
+	// decides which way they may skew. The finisher commits the result and the
+	// terminal job row in one transaction, so a job read FIRST is always paired
+	// with a project read that already carries what that job produced. The other
+	// order reports a done job whose result the snapshot has not seen yet, and a
+	// poller then shows a finished clip with nothing to play.
+	var latest *job.JobSummary
+	if h.jobs != nil {
+		latest, err = h.jobs.LatestForClip(ctx, user, req.Msg.Id)
+		if err != nil {
+			return nil, toConnectError(err)
+		}
+	}
 	value, err := h.service.GetProject(ctx, user, req.Msg.Id)
 	if err != nil {
 		return nil, toConnectError(err)
@@ -381,10 +394,7 @@ func (h *Handler) GetClipProject(ctx context.Context, req *connect.Request[v1.Ge
 		out.Accounting = accountingProto(accounting)
 	}
 	if h.jobs != nil {
-		j, err := h.jobs.LatestForClip(ctx, user, value.ID)
-		if err != nil {
-			return nil, toConnectError(err)
-		}
+		j := latest
 		out.LatestJob = jobrpc.ToProto(j)
 		if value.Finalized == nil && h.generation != nil && j != nil && (j.Status == "failed" || j.Status == "cancelled") {
 			c, readErr := h.generation.AttemptCheckpoint(ctx, user, value.ID, j.ID)
