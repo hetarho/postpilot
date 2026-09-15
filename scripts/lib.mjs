@@ -50,3 +50,14 @@ export function fail(msg) {
   console.error(`\n\x1b[31m✗ ${msg}\x1b[0m`)
   process.exit(1)
 }
+
+/** Run a command and return its stdout, failing the same way `run` does. */
+export function capture(cmd, args, opts = {}) {
+  const r = spawnSync(cmd, args, { cwd: repoRoot, shell: false, encoding: 'utf8', ...opts })
+  if (r.error) {
+    if (r.error.code === 'ENOENT') fail(`'${cmd}' 를 찾을 수 없어요. 설치/PATH를 확인하세요.`)
+    throw r.error
+  }
+  if (r.status) fail(`'${cmd} ${args.join(' ')}' 가 코드 ${r.status} 로 실패했어요.`)
+  return r.stdout ?? ''
+}

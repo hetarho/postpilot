@@ -23,8 +23,11 @@
     "lint:style": "node scripts/lint-style-escapes.mjs",
     "lint:style:probe": "node scripts/lint-style-escapes.mjs --probe",
     "test": "pnpm --filter ./frontend test",
-    "smoke": "docker build --progress=plain --target production -f backend/Dockerfile .",
-    "smoke:media": "docker build --progress=plain --target media-smoke -f backend/Dockerfile .",
+    "smoke": "docker build --progress=plain --target production -t postpilot:gate -f backend/Dockerfile .",
+    "smoke:media": "docker build --progress=plain --target media-smoke -t postpilot:gate-media -f backend/Dockerfile .",
+    "smoke:input": "docker build --progress=plain --target clip-input-smoke -t postpilot:gate-input -f backend/Dockerfile .",
+    "smoke:release": "docker build --progress=plain --target release-smoke -t postpilot:gate-release -f backend/Dockerfile . && docker run --rm --network none --memory 1g --cpus 2 postpilot:gate-release",
+    "docker:gc": "node scripts/docker-gc.mjs",
     "infra:up": "docker compose up -d",
     "infra:down": "docker compose down"
   },

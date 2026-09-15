@@ -98,6 +98,31 @@ sqlc가 읽는 스키마는 `backend/internal/platform/db/migrations/` — 기�
 
 생성물은 커밋한다(빌드가 buf/sqlc에 의존하지 않게). 손으로 고치지 않는다.
 
+## 이미지 게이트
+
+clip의 media/render 게이트는 호스트에서 돌지 않는다 — 번들 ffmpeg·resvg·폰트가 들어 있는
+프로덕션 이미지 안에서만 돈다. 그래서 검증할 때마다 이미지가 하나씩 남는다.
+
+```bash
+pnpm smoke           # production — media/input 스모크가 빌드 중에 강제로 돈다
+pnpm smoke:media     # media-smoke 타깃만
+pnpm smoke:input     # clip-input-smoke 타깃만
+pnpm smoke:release   # release-smoke 빌드 + 실행 (--memory 1g --cpus 2 를 테스트가 검사한다)
+pnpm docker:gc       # 남은 게이트 이미지 정리 (목록만; 지우려면 --yes)
+```
+
+**게이트 이미지는 위 고정 태그(`postpilot:gate*`)를 쓴다. 태스크마다 새 태그를 만들지
+않는다.** 태그가 매번 다르면 이전 이미지가 계속 참조된 상태로 남아 `docker image prune`이
+영원히 빈손으로 돌고, 실제로 그렇게 60개 18 GB가 쌓여 디스크가 찼다. 고정 태그면 새 빌드가
+이전 것을 밀어내고, 밀려난 것은 `pnpm docker:gc`가 쓸어간다.
+
+태스크 파일에 남기는 증거는 태그 이름이 아니라 **무엇이 통과했는지**다 — 이미지는 지워도 된다.
+
+`pnpm docker:gc`는 실행 중이든 멈췄든 컨테이너가 참조하는 이미지, 최근 24시간 안에 빌드된
+이미지(다른 세션이 쓰는 중일 수 있다), `postpilot*`/`pp-builder` 밖의 리포지토리는 건드리지
+않는다. 빌드 캐시는 `--cache`를 줘야 비우는데, 비우면 다음 빌드가 ffmpeg/resvg 소스 빌드부터
+다시 도니 디스크가 급할 때만 쓴다.
+
 ## 리포 구조
 
 ```
@@ -111,11 +136,12 @@ backend/
   internal/gen/         buf 생성물 (수정 금지)
 frontend/src/           FSD: app / pages / widgets / features / entities / shared
 deploy/edge/            VPS 공유 Caddy (80/443 단일 소유자)
-scripts/                codegen 래퍼 (Docker 경유)
+scripts/                codegen 래퍼 (Docker 경유) · docker-gc
 ```
 
 ## 규칙
 
+- **도커 게이트 이미지는 고정 태그.** `postpilot:gate*`만 쓰고 태스크별 태그를 만들지 않는다 (`pnpm docker:gc`).
 - **로직은 `internal/<도메인>`, 조립은 `cmd/api`.** `rpcserver`에 비즈니스 로직을 넣지 않는다.
 - **프론트는 FSD.** 슬라이스는 `index.ts`로만 노출한다 (`pnpm --filter ./frontend lint:fsd`).
 - **프론트 포맷은 Prettier가 결정한다** (`pnpm format:check`, `pnpm lint`와 CI에 포함). 고치려면
