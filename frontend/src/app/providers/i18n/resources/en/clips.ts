@@ -539,9 +539,9 @@ export const clips = {
     failed: 'Failed',
   },
   ratioGuidance: {
-    vertical: "Naver Clip's default. It goes straight into the mobile feed.",
-    horizontal: 'For PC upload or a blog embed. It does not suit the mobile feed.',
-    square: 'Suits blog and Instagram feeds; Clip support is unconfirmed.',
+    vertical: 'The short-form default. It goes straight into a mobile feed.',
+    horizontal: 'For PC upload or a blog or site embed. It does not suit a mobile feed.',
+    square: 'Suits square feeds and blog bodies.',
   },
   ratio: { vertical: 'Vertical 9:16', horizontal: 'Horizontal 16:9', square: 'Square 1:1' },
   project: {

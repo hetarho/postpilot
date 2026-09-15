@@ -525,9 +525,9 @@ export const clips = {
     failed: '실패',
   },
   ratioGuidance: {
-    vertical: '네이버 클립 기본이에요. 모바일 피드에 그대로 올라가요.',
-    horizontal: 'PC 업로드나 블로그 임베드용이에요. 모바일 피드에는 어울리지 않아요.',
-    square: '블로그와 인스타그램 피드에 어울려요. 클립 지원은 확인되지 않았어요.',
+    vertical: '숏폼 피드 기본이에요. 모바일 화면에 그대로 올라가요.',
+    horizontal: 'PC 업로드나 블로그·사이트 임베드용이에요. 모바일 피드에는 어울리지 않아요.',
+    square: '정방형 피드와 블로그 본문에 어울려요.',
   },
   ratio: { vertical: '세로 9:16', horizontal: '가로 16:9', square: '정방형 1:1' },
   project: {

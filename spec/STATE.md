@@ -30,8 +30,8 @@
 | THEME | 12 | 12 | - | 0 |
 | MKT | 4 | 4 | - | 0 |
 | VIDEO | 2 | 2 | - | 1 |
-| CLIP | 23 | 23 | - | 2 |
-| CDS | 16 | 16 | - | 2 |
+| CLIP | 24 | 24 | - | 2 |
+| CDS | 17 | 17 | - | 1 |
 | BILL | 4 | 4 | - | 0 |
 
 ## review
@@ -46,13 +46,23 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
-| T110 | Release QA on the Naver app and the overlay measurement | CDS CLIP | T108 | blocked@260912 |
 
 ## next
-- T166–T173 implementation and per-task commits are complete; the release package is verified locally.
-- T110 stays owner-blocked and T008 owner-dependent.
+- No clip task is outstanding; the CDS@17 CLIP@24 delta is fully implemented.
+- CDS-53's viewing checklist lost its carrier when T110 went void; it needs its own task when release QA is next scheduled.
+- 1:1 outro E overlaps its own slots (CDS-46 keeps the sizes, CDS-48 scales the baselines) — update-ssot CDS before it can be tasked.
+- T008 stays owner-dependent.
 
 ## log
+- 260915 T175 done; ratio guidance and the design spec reference no longer name one platform
+- 260915 T175 claimed (wrd)
+- 260915 T174 done; 9:16 centres on the canvas, SA-N retired, goldens and the frontend mirror regenerated
+- 260915 T174 claimed (sym)
+- 260915 create-task CDS CLIP done; T174 T175 from the CDS@17 CLIP@24 delta, T110 retired void with CDS-10 CDS-11
+- 260915 create-task CDS CLIP start
+- 260915 update-ssot CDS CLIP done; CDS@17 CLIP@24 — 9:16 safe area and CENTER/RIGHT anchors symmetric, SA-N retired, clip defined platform-neutral
+- 260915 warn T110 (blocked) targets the retired CDS-10 CDS-11 and needs retiring in create-task
+- 260915 update-ssot CDS CLIP start
 - 260915 T172 done; design-first authoring, lossless skeleton rebuilding, shared examples and final frontend/backend checks pass
 - 260915 T171 done; canvas font metadata now passes the style scanner, browser check and final build
 - 260915 T171 reopened (dsg); final style scanner flags canvas attribute reads, fix before committing T172
@@ -64,12 +74,3 @@
 - 260915 T173 claimed (dsg); T168 implementation is frozen for verification
 - 260915 T169 done; strict/tolerant grammar, byte-preserving migration and retired style permissions verified
 - 260915 T168 claimed (dsg); T169 implementation is frozen for verification
-- 260915 T167 done; twelve region/font fixtures and backend gates pass; one clock-reversal failure passed three isolated repeats
-- 260915 T169 claimed (dsg); T167 implementation is frozen for verification
-- 260915 T170 done; named-face startup guard and full backend gates pass
-- 260915 T167 claimed (dsg); T170 implementation is frozen for verification
-- 260915 T170 claimed (dsg)
-- 260915 T166 done; backend/agent gates, frontend regression with corrected autosave assertion, lint/style/build, native code generation and real resvg smoke pass
-- 260915 T166 claimed (dsg)
-- 260915 create-task CDS CLIP done; T166 T167 T168 T169 T171 refreshed to CDS@16 CLIP@23 and T172 T173 added from the r16/r23 delta; T170 base only
-- 260915 create-task CDS CLIP start
