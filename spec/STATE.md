@@ -30,7 +30,7 @@
 | THEME | 12 | 12 | - | 0 |
 | MKT | 4 | 4 | - | 0 |
 | VIDEO | 2 | 2 | - | 1 |
-| CLIP | 25 | 24 | CLIP-60✎ CLIP-102✎ CLIP-116+ CLIP-117+ CLIP-118+ | 2 |
+| CLIP | 25 | 25 | - | 2 |
 | CDS | 19 | 19 | - | 1 |
 | BILL | 4 | 4 | - | 0 |
 
@@ -47,14 +47,19 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
+| T179 | A template position declares its character maximum | CLIP CDS | - | todo |
+| T180 | Author a character maximum in the template editor | CLIP | T179 | todo |
+| T181 | An answer cannot be typed past its maximum | CLIP | T179 | todo |
+| T182 | Generated text obeys its declared maximum | CLIP CDS | T179 | todo |
 
 ## next
-- create-task CLIP for the r25 character-maxima delta.
+- implement-task T179, then T180 T181 T182 in any order.
 - T177 is blocked on the owner's viewing answers; the three review clips are rendered and the checklist is open. T008 stays owner-dependent.
 
 ## log
 - 260916 production migration/rollback fix shipped; deploy f7362b9a green, prod health 200
 - 260916 T177 blocked; three review clips rendered with every CDS-53 assembly case, checklist open, recall questions need real footage
+- 260916 create-task CLIP done; T179 carries the grammar and both mirrors, T180 T181 T182 the authoring, answer and generated surfaces
 - 260916 create-task CLIP start
 - 260916 update-ssot CLIP done; CLIP@25 — a template declares character maxima and the answer form enforces the effective one
 - 260916 T177 (doing) unaffected — the maxima change authoring and admission, not the render checklist
@@ -72,4 +77,3 @@
 - 260915 create-task CDS start
 - 260915 update-ssot CDS done; CDS@18 — a region block keeps its 9:16 spacing and moves only its centre
 - 260915 update-ssot CDS start
-- 260915 T175 done; ratio guidance and the design spec reference no longer name one platform
