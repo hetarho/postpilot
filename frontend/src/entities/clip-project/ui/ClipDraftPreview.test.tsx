@@ -119,6 +119,25 @@ function mount(
   return { ...view, access, prepare }
 }
 
+// The players render before their signed URLs resolve, and the sync effect that attaches the
+// loadedmetadata listener runs only after `src` commits. Waiting on the element count alone
+// races both steps, so callers name a property the effect writes and we wait until it lands.
+async function syncedPlayers(
+  container: HTMLElement,
+  count: number,
+  synced: (player: HTMLVideoElement, index: number) => void,
+) {
+  await waitFor(() => {
+    const players = [...container.querySelectorAll('video')]
+    expect(players).toHaveLength(count)
+    players.forEach((player, index) => {
+      expect(player).toHaveAttribute('src')
+      synced(player, index)
+    })
+  })
+  return [...container.querySelectorAll('video')]
+}
+
 it.each([500, 750, 1000, 1250, 1500, 2000])(
   'sets native rate and supported pitch preservation at %i without granting audio permission',
   async (rate) => {
@@ -142,8 +161,9 @@ it.each([500, 750, 1000, 1250, 1500, 2000])(
       value: false,
     })
     const view = mount('vertical', undefined, { plan: enabled, timeMs: 1000 })
-    await waitFor(() => expect(view.container.querySelectorAll('video')).toHaveLength(2))
-    const [off, on] = [...view.container.querySelectorAll('video')]
+    const [off, on] = await syncedPlayers(view.container, 2, (player) =>
+      expect(player.preservesPitch).toBe(true),
+    )
     Object.defineProperty(off, 'readyState', { value: 4 })
     fireEvent.loadedMetadata(off)
     expect(off.currentTime).toBe(2 + rate / 1000)
@@ -185,8 +205,9 @@ it('corrects transition-player drift on the transformed clock and reports invers
     })),
   }
   const view = mount('vertical', undefined, { plan, timeMs: 19900, onDisplayedFrame })
-  await waitFor(() => expect(view.container.querySelectorAll('video')).toHaveLength(2))
-  const [left, right] = [...view.container.querySelectorAll('video')]
+  const [left, right] = await syncedPlayers(view.container, 2, (player, i) =>
+    expect(player.playbackRate).toBe(i ? 2 : 0.5),
+  )
   for (const video of [left, right]) {
     Object.defineProperty(video, 'readyState', { value: 4 })
     video.currentTime = 0
