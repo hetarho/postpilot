@@ -31,7 +31,7 @@
 | MKT | 4 | 4 | - | 0 |
 | VIDEO | 2 | 2 | - | 1 |
 | CLIP | 24 | 24 | - | 2 |
-| CDS | 17 | 17 | - | 1 |
+| CDS | 18 | 18 | - | 1 |
 | BILL | 4 | 4 | - | 0 |
 
 ## review
@@ -46,14 +46,18 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
+| T176 | Region blocks keep their spacing on every ratio | CDS | - | todo |
+| T177 | Release QA viewing checklist | CDS CLIP | T176 | todo |
 
 ## next
-- No clip task is outstanding; the CDS@17 CLIP@24 delta is fully implemented.
-- CDS-53's viewing checklist lost its carrier when T110 went void; it needs its own task when release QA is next scheduled.
-- 1:1 outro E overlaps its own slots (CDS-46 keeps the sizes, CDS-48 scales the baselines) — update-ssot CDS before it can be tasked.
+- implement-task T176, then T177 with the owner watching.
 - T008 stays owner-dependent.
 
 ## log
+- 260915 create-task CDS done; T176 from the r18 delta and T177 carrying CDS-53's viewing checklist from the void T110
+- 260915 create-task CDS start
+- 260915 update-ssot CDS done; CDS@18 — a region block keeps its 9:16 spacing and moves only its centre
+- 260915 update-ssot CDS start
 - 260915 T175 done; ratio guidance and the design spec reference no longer name one platform
 - 260915 T175 claimed (wrd)
 - 260915 T174 done; 9:16 centres on the canvas, SA-N retired, goldens and the frontend mirror regenerated
@@ -70,7 +74,3 @@
 - 260915 T172 claimed (dsg); T171 implementation is frozen for verification
 - 260915 T173 done; grounded single-line slot repair, owner notices and backend/frontend gates pass
 - 260915 T171 claimed (dsg); T173 implementation is frozen for verification
-- 260915 T168 done; unplated information, fixed disclosure height and sampled contrast notices verified
-- 260915 T173 claimed (dsg); T168 implementation is frozen for verification
-- 260915 T169 done; strict/tolerant grammar, byte-preserving migration and retired style permissions verified
-- 260915 T168 claimed (dsg); T169 implementation is frozen for verification
