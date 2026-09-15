@@ -36,11 +36,12 @@ push가 가면 `deploy-backend.yml`이 이 순서로 돈다.
 
 ```
 build    Compose 검증 → 이미지 빌드 → GHCR push (:<sha> + :prod 두 태그)
-rollout  compose 파일을 VPS로 동기화
+rollout  compose 파일과 deploy/backend-rollout.sh를 VPS로 동기화
          → .env 백업, API_UPSTREAM·CORS_ORIGIN 비어 있으면 손대기 전에 중단
          → pull (실패해도 다운타임 없음)
          → up -d  (SQLite는 단일 라이터라 컨테이너를 교체한다)
-         → /health 게이트 (재시도 15회)  ✗ 이면 이전 IMAGE_TAG로 되돌리고 실패
+         → /health 게이트 (재시도 15회)  ✗ 이면 기동 로그를 남기고 이전 IMAGE_TAG로 복구
+         → 롤백한 이미지의 /health도 확인한 뒤 배포 실패 보고
 verify   브라우저 origin으로 API CORS preflight 확인 (credentials 포함)
          → 같은 origin으로 R2 버킷의 GET preflight 확인 (사진 복사가 여기 달려 있다)
 ```
@@ -282,8 +283,15 @@ LaunchAgent를 설치한다. 운영 롤백은 migration 0015를 내리지 않는
 ## 6. 롤백
 
 - **백엔드**: VPS `/srv/postpilot-<env>/.env`의 `IMAGE_TAG=<이전 SHA>`로 바꾸고
-  `docker compose -f docker-compose.prod.yml pull && … up -d`.
+  해당 디렉터리에서 `unset IMAGE_TAG` 후
+  `docker compose -f docker-compose.prod.yml pull api && docker compose -f docker-compose.prod.yml up -d api`.
   (GHCR 이미지는 커밋 SHA로 태깅돼 있다.)
+  셸에 export된 `IMAGE_TAG`는 `.env`보다 우선하므로 반드시 해제한다. 자동 배포는
+  입력 SHA를 `TARGET_IMAGE_TAG`에 보관한 뒤 해제하고 `.env`만으로 이미지를 선택한다.
+  복구 후 `/health` 응답과 `docker compose -f docker-compose.prod.yml ps -a`의 실행 이미지를 확인한다.
+- **기동 실패 진단**: `docker compose -f docker-compose.prod.yml logs --no-color --tail 80 api`.
+  `migration failed`가 있으면 DB의 `goose_db_version`과 해당 마이그레이션을 확인한다.
+  확정된 클립은 변경할 수 없으므로 데이터 정리 마이그레이션에서도 보존해야 한다.
 - **프론트**: Worker → Deployments → 이전 버전으로 rollback/promote.
 
 ## 7. 아직 없는 것 (의도적)

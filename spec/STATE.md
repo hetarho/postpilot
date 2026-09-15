@@ -49,10 +49,13 @@
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | todo |
 
 ## next
+- Ship the tested production migration/rollback fix; production currently runs the recovered ef94ac0b image.
 - implement-task T177 with the owner watching.
 - T008 stays owner-dependent.
 
 ## log
+- 260916 Production recovered to ef94ac0b after DB backup (schema 53, quick_check ok); health/GetMe/CORS verified; local migration 54 + rollout fixes pass BE vet/build/tests and 5 rollout regressions, not deployed (ops).
+- 260916 Production incident: investigate API 502 and failed backend rollout; repair startup/rollback and verify recovery (ops).
 - 260916 T176 done; one shared offset moves a region block as one piece, real-ink overlap and safe-area pinned, eight goldens and the frontend mirror regenerated
 - 260916 T176 claimed (rgn)
 - 260915 create-task CDS done; T176 from the r18 delta and T177 carrying CDS-53's viewing checklist from the void T110
@@ -71,5 +74,3 @@
 - 260915 T172 done; design-first authoring, lossless skeleton rebuilding, shared examples and final frontend/backend checks pass
 - 260915 T171 done; canvas font metadata now passes the style scanner, browser check and final build
 - 260915 T171 reopened (dsg); final style scanner flags canvas attribute reads, fix before committing T172
-- 260915 T171 done; style controls removed, preset previews and all corrected frontend regression gates pass
-- 260915 T172 claimed (dsg); T171 implementation is frozen for verification

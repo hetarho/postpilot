@@ -20,6 +20,8 @@ on:
     paths:
       - 'backend/**'
       - 'docker-compose.prod.yml'
+      - 'deploy/backend-rollout.sh'
+      - 'deploy/backend_rollout_test.py'
       - '.github/workflows/deploy-backend.yml'
 
 # Serialize deploys per environment (never roll two images at once).
@@ -54,6 +56,9 @@ jobs:
           cp .env.production.example .env
           trap 'rm -f .env' EXIT
           docker compose -f docker-compose.prod.yml config --quiet --no-env-resolution
+
+      - name: Verify rollout failure recovery
+        run: python3 -m unittest discover -s deploy -p 'backend_rollout_test.py' -v
 
       # Login only needed when we actually push (DEPLOY_ENABLED). GITHUB_TOKEN is automatic.
       - name: Log in to GHCR
@@ -99,7 +104,7 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
-          source: 'docker-compose.prod.yml'
+          source: 'docker-compose.prod.yml,deploy/backend-rollout.sh'
           target: '/srv/postpilot-${{ env.ENV_NAME }}'
 
       - name: Pull → swap → health gate → roll back on failure
@@ -115,83 +120,7 @@ jobs:
           script: |
             set -eu
             cd "/srv/postpilot-${ENV_NAME}"
-
-            compose() {
-              docker compose -f docker-compose.prod.yml "$@"
-            }
-
-            # Read values through Compose itself, so quoted empties and inline comments
-            # mean here exactly what they will mean inside the container.
-            resolved_runtime_env="$(compose config --environment)"
-            runtime_env_value() {
-              printf '%s\n' "$resolved_runtime_env" | sed -n "s/^$1=//p" | tail -n 1
-            }
-            require_nonempty_env() {
-              if [ -z "$(runtime_env_value "$1")" ]; then
-                echo "required runtime env $1 is missing or empty" >&2
-                exit 1
-              fi
-            }
-
-            # Fail BEFORE touching the running stack when the stack .env is incomplete.
-            # API_UPSTREAM wrong = Caddy cannot find this api; CORS_ORIGIN wrong = every
-            # browser call fails auth (the session cookie needs an exact-origin CORS
-            # allow with credentials — PRD F-1).
-            require_nonempty_env API_UPSTREAM
-            require_nonempty_env CORS_ORIGIN
-
-            if [ -z "${API_ORIGIN:-}" ]; then
-              echo "repo variable API_ORIGIN is required for the health gate" >&2
-              exit 1
-            fi
-
-            set_image_tag() {
-              if grep -q '^IMAGE_TAG=' .env; then
-                sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=$1|" .env
-              else
-                echo "IMAGE_TAG=$1" >> .env
-              fi
-            }
-
-            # Keep the whole untracked env file, so a rollback restores the previous image
-            # selection without disturbing any other runtime secret.
-            ENV_BACKUP=.env.deploy-backup
-            cp -p .env "$ENV_BACKUP"
-            trap 'rm -f "$ENV_BACKUP"' EXIT
-
-            PREVIOUS_TAG="$(runtime_env_value IMAGE_TAG)"
-
-            # 1) Pull the new image BEFORE stopping anything. A pull failure must not cost
-            #    downtime.
-            set_image_tag "$IMAGE_TAG"
-            if ! compose pull api; then
-              cp -p "$ENV_BACKUP" .env
-              exit 1
-            fi
-
-            # 2) Swap. SQLite is a single-writer file in this stack's volume, so the old
-            #    container must be gone before the new one opens it — `up -d` replaces the
-            #    container rather than running both.
-            #    --remove-orphans drops containers for services deleted from the compose
-            #    file instead of leaving them running.
-            compose up -d --remove-orphans api
-
-            # 3) Health gate. The new binary runs its embedded migrations at startup, so
-            #    this is also the migration gate: a bad migration means the process never
-            #    serves /health. Retry generously — the container has to start, migrate,
-            #    and Caddy has to notice the new upstream.
-            if ! curl --retry 15 --retry-all-errors --retry-delay 2 \
-                 --fail --silent --show-error \
-                 --output /dev/null "${API_ORIGIN}/health"; then
-              echo "new image failed the health gate; rolling back to ${PREVIOUS_TAG}" >&2
-              cp -p "$ENV_BACKUP" .env
-              if [ -n "$PREVIOUS_TAG" ]; then
-                compose up -d api || true
-              fi
-              exit 1
-            fi
-
-            docker image prune -f
+            sh deploy/backend-rollout.sh
 
       # Separate from the rollout on purpose: a CORS mismatch is a stack .env problem, not
       # a bad image, so rolling the image back would not fix it — it must fail loudly

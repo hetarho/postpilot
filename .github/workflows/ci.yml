@@ -46,6 +46,9 @@ jobs:
         with:
           go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
+      - name: Verify deployment recovery
+        working-directory: .
+        run: python3 -m unittest discover -s deploy -p 'backend_rollout_test.py' -v
       - run: go vet ./...
       - run: go build ./...
       - run: go test ./...
