@@ -63,6 +63,9 @@ func NewRenderer(media *Adapter, cfg clip.RenderConfig) (*Rendering, error) {
 	if err != nil {
 		return nil, err
 	}
+	if err := validateFontFamilies(map[string]*sfnt.Font{"pretendard": font, "paperlogy": display}); err != nil {
+		return nil, err
+	}
 	catalog, err := loadOverlays(cfg.OverlayDir)
 	if err != nil {
 		return nil, err
