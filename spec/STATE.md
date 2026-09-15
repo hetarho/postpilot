@@ -30,7 +30,7 @@
 | THEME | 12 | 12 | - | 0 |
 | MKT | 4 | 4 | - | 0 |
 | VIDEO | 2 | 2 | - | 1 |
-| CLIP | 24 | 24 | - | 2 |
+| CLIP | 25 | 24 | CLIP-60✎ CLIP-102✎ CLIP-116+ CLIP-117+ CLIP-118+ | 2 |
 | CDS | 19 | 19 | - | 1 |
 | BILL | 4 | 4 | - | 0 |
 
@@ -49,11 +49,13 @@
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | doing@260916.qa |
 
 ## next
+- create-task CLIP for the r25 character-maxima delta.
+- implement-task T177 with the owner watching; T008 stays owner-dependent.
 - Ship the tested production migration/rollback fix; production currently runs the recovered ef94ac0b image.
-- implement-task T177 with the owner watching.
-- T008 stays owner-dependent.
 
 ## log
+- 260916 update-ssot CLIP done; CLIP@25 — a template declares character maxima and the answer form enforces the effective one
+- 260916 T177 (doing) unaffected — the maxima change authoring and admission, not the render checklist
 - 260916 update-ssot CLIP start
 - 260916 T178 done; the disclosure is a 12 px rounded rectangle, pinned by the token test and read by both renderer and preview
 - 260916 T178 claimed (bdg)
@@ -72,6 +74,3 @@
 - 260915 T175 claimed (wrd)
 - 260915 T174 done; 9:16 centres on the canvas, SA-N retired, goldens and the frontend mirror regenerated
 - 260915 T174 claimed (sym)
-- 260915 create-task CDS CLIP done; T174 T175 from the CDS@17 CLIP@24 delta, T110 retired void with CDS-10 CDS-11
-- 260915 create-task CDS CLIP start
-- 260915 update-ssot CDS CLIP done; CDS@17 CLIP@24 — 9:16 safe area and CENTER/RIGHT anchors symmetric, SA-N retired, clip defined platform-neutral
