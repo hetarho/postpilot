@@ -31,7 +31,7 @@
 | MKT | 4 | 4 | - | 0 |
 | VIDEO | 2 | 2 | - | 1 |
 | CLIP | 24 | 24 | - | 2 |
-| CDS | 18 | 18 | - | 1 |
+| CDS | 19 | 18 | CDS-21✎ CDS-31✎ | 1 |
 | BILL | 4 | 4 | - | 0 |
 
 ## review
@@ -46,14 +46,17 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
-| T177 | Release QA viewing checklist | CDS CLIP | T176 | todo |
+| T177 | Release QA viewing checklist | CDS CLIP | T176 | doing@260916.qa |
 
 ## next
 - Ship the tested production migration/rollback fix; production currently runs the recovered ef94ac0b image.
 - implement-task T177 with the owner watching.
+- create-task CDS for the r19 badge shape.
 - T008 stays owner-dependent.
 
 ## log
+- 260916 update-ssot CDS r19; T177 (doing) reviews the badge — its checklist sees the new shape
+- 260916 T177 claimed (qa)
 - 260916 Production recovered to ef94ac0b after DB backup (schema 53, quick_check ok); health/GetMe/CORS verified; local migration 54 + rollout fixes pass BE vet/build/tests and 5 rollout regressions, not deployed (ops).
 - 260916 Production incident: investigate API 502 and failed backend rollout; repair startup/rollback and verify recovery (ops).
 - 260916 T176 done; one shared offset moves a region block as one piece, real-ink overlap and safe-area pinned, eight goldens and the frontend mirror regenerated
@@ -73,4 +76,3 @@
 - 260915 update-ssot CDS CLIP start
 - 260915 T172 done; design-first authoring, lossless skeleton rebuilding, shared examples and final frontend/backend checks pass
 - 260915 T171 done; canvas font metadata now passes the style scanner, browser check and final build
-- 260915 T171 reopened (dsg); final style scanner flags canvas attribute reads, fix before committing T172
