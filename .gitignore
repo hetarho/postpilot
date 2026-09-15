@@ -24,3 +24,8 @@ tmp/gallery/*.svg
 tmp/gallery/*.png
 tmp/gallery/*.ttf
 tmp/gallery/index.html
+
+# Footage preview generator output (the generator itself is tracked)
+tmp/footage/*.mp4
+tmp/footage/*.jpg
+tmp/footage/*.png

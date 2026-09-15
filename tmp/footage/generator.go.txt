@@ -1,0 +1,201 @@
+package media
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/clip/composition"
+	"github.com/postpilot/backend/internal/clip/design"
+	"github.com/postpilot/backend/internal/platform/config"
+)
+
+// TEMPORARY preview generator. Not part of the suite: it renders the real
+// declared-composition path over owner-supplied footage with host binaries, so
+// the output design can be watched as video without the production image.
+func previewPath(t *testing.T, key, fallback string) string {
+	t.Helper()
+	value := fallback
+	if env := os.Getenv(key); env != "" {
+		value = env
+	}
+	abs, err := filepath.Abs(value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return abs
+}
+
+// The storyboard: one shot per cut, each a span of its own original. Scene IDs
+// bind a cut to the template scene whose text it carries.
+type previewShot struct {
+	file, scene            string
+	startMS, endMS, fadeMS int
+}
+
+var previewShots = []previewShot{
+	{file: "20260910_191822.mp4", scene: "front", startMS: 500, endMS: 3500},
+	{file: "20260910_193208.mp4", scene: "plate", startMS: 400, endMS: 3400},
+	{file: "20260910_193303.mp4", scene: "grill", startMS: 1000, endMS: 4200, fadeMS: design.Transition.FadeMS},
+	{file: "20260910_195420.mp4", scene: "turn", startMS: 1000, endMS: 4000},
+	{file: "20260910_201321.mp4", scene: "leave", startMS: 1000, endMS: 4000},
+}
+
+// One template, authored the way CDS-1 means it: the disclosure, an opening and
+// closing region block, one information pair and scene-bound captions.
+// A region block fills its preset's slots and no more: outro b is a hook over a
+// body, outro e a label over a display over a caption (CDS-22).
+func closingRows(outro string) string {
+	if outro == "b" {
+		return `<row>또 오고 싶은 자리</row><row>오늘의 기록을 남겨요</row>`
+	}
+	return `<row>오늘의 자리</row><row>해미</row><row>다시 앉고 싶은 불판</row>`
+}
+
+func previewBody(intro, outro string) string {
+	return `<clip version="1" intro="` + intro + `" caption="bold" outro="` + outro + `" accent="coral" pace="steady">` +
+		`<field id="place" label="상호">촬영한 가게</field>` +
+		`<field id="menu" label="메뉴">주문한 메뉴</field>` +
+		`<field id="price" label="가격">가격</field>` +
+		`<text id="disclosure" kind="fixed" role="badge" position="header" basis="whole">광고</text>` +
+		`<text id="opening" kind="fixed" role="hook" basis="output-start" start="0" end="3"><row>불판 앞에서</row><row>직접 다녀온 기록</row></text>` +
+		`<scene id="front" scope="scene">` +
+		`<text id="where" kind="fixed" role="info" position="bottom" basis="cut"><row role="label">위치</row><row role="caption"><value field="place"/></row></text>` +
+		`</scene>` +
+		`<scene id="plate" scope="scene">` +
+		`<text id="served" kind="fixed" role="caption" position="upper_mid" basis="cut">상에 오른 그대로</text>` +
+		`<text id="menuinfo" kind="fixed" role="info" position="bottom" basis="cut"><row role="label"><value field="menu"/></row><row role="caption"><value field="price"/></row></text>` +
+		`</scene>` +
+		`<scene id="grill" scope="scene">` +
+		`<text id="oncoals" kind="fixed" role="caption" position="upper_mid" basis="cut">숯불 위에 올리면</text>` +
+		`</scene>` +
+		`<scene id="turn" scope="scene">` +
+		`<text id="turning" kind="fixed" role="caption" position="upper_mid" basis="cut">가장자리가 익어갈 때</text>` +
+		`</scene>` +
+		`<scene id="leave" scope="scene">` +
+		`<guide>마지막 장면은 닫는 블록이 덮으므로 자막을 두지 않는다.</guide>` +
+		`</scene>` +
+		`<text id="closing" kind="fixed" role="ending" basis="output-end" start="-3" end="0">` + closingRows(outro) + `</text>` +
+		`</clip>`
+}
+
+func TestRenderFootagePreview(t *testing.T) {
+	if os.Getenv("CLIP_FOOTAGE_PREVIEW") != "1" {
+		t.Skip("temporary footage preview generator")
+	}
+	root := os.Getenv("CLIP_FOOTAGE_DIR")
+	if root == "" {
+		t.Fatal("set CLIP_FOOTAGE_DIR to the folder holding the originals")
+	}
+	out := previewPath(t, "CLIP_FOOTAGE_OUT", "../../../../tmp/footage")
+	if err := os.MkdirAll(out, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	cfg := config.ClipMedia(&config.Config{
+		ClipWorkRoot:    filepath.Join(t.TempDir(), "work"),
+		ClipFFmpegPath:  previewPath(t, "CLIP_FFMPEG_PATH", "/opt/homebrew/bin/ffmpeg"),
+		ClipFFprobePath: previewPath(t, "CLIP_FFPROBE_PATH", "/opt/homebrew/bin/ffprobe"),
+		ClipWorkStaleAge: time.Hour, ClipMediaTimeout: 20 * time.Minute,
+		ClipSourceBatchTTL: 6 * time.Hour, PresignPutTTL: 10 * time.Minute,
+	})
+	render := config.ClipRender(&config.Config{
+		ClipResvgPath:       previewPath(t, "CLIP_RESVG_PATH", "/opt/homebrew/bin/resvg"),
+		ClipFontPath:        previewPath(t, "CLIP_FONT_PATH", "../../../assets/fonts/pretendard/PretendardVariable.ttf"),
+		ClipDisplayFontPath: previewPath(t, "CLIP_FONT_PAPERLOGY_PATH", "../../../assets/fonts/paperlogy/Paperlogy-8ExtraBold.ttf"),
+	})
+	values := map[string]string{"place": "해미 한우", "menu": "한우갈비살", "price": "49,000원"}
+	limits := config.ClipCompositionLimits()
+	for _, variant := range []struct{ ratio, intro, outro string }{
+		{"vertical", "a", "e"},
+		{"vertical-b", "b", "b"},
+		{"square", "a", "e"},
+		{"horizontal", "b", "b"},
+	} {
+		t.Run(variant.ratio, func(t *testing.T) {
+			ratio := strings.TrimSuffix(variant.ratio, "-b")
+			var runner Runner
+			if os.Getenv("CLIP_FOOTAGE_VERBOSE") == "1" {
+				runner = originalsRunner{t: t, runner: ExecRunner{StdoutLimit: cfg.StdoutLimit, StderrLimit: cfg.StderrLimit, WaitDelay: cfg.WaitDelay}}
+			}
+			a, err := New(cfg, runner)
+			if err != nil {
+				t.Fatal(err)
+			}
+			r, err := NewRenderer(a, render)
+			if err != nil {
+				t.Fatal(err)
+			}
+			body := previewBody(variant.intro, variant.outro)
+			doc, problem := composition.ReadStored(body, limits)
+			if problem != nil {
+				t.Fatal(problem)
+			}
+			err = a.WithWorkspace(t.Context(), "footage-"+variant.ratio, func(ws clip.MediaWorkspace) error {
+				var sources []clip.RenderSource
+				var bindings []composition.Cut
+				var cuts []clip.Cut
+				paths := map[string]string{}
+				total := 0
+				for i, shot := range previewShots {
+					id := fmt.Sprintf("source-%02d", i)
+					path := filepath.Join(ws.Path, id+".mp4")
+					if err := copyOriginal(filepath.Join(root, shot.file), path); err != nil {
+						return err
+					}
+					info, err := a.Probe(t.Context(), ws, path)
+					if err != nil {
+						return err
+					}
+					sources = append(sources, clip.RenderSource{ID: id, Fingerprint: strings.Repeat(fmt.Sprint(i), 64)[:64], Info: info})
+					paths[id] = path
+					cutID := fmt.Sprintf("cut-%02d", i)
+					bindings = append(bindings, composition.Cut{ID: cutID, SectionID: shot.scene, SourceID: id, StartMS: shot.startMS, EndMS: shot.endMS, TransitionMS: shot.fadeMS})
+					cuts = append(cuts, clip.Cut{ID: cutID, SourceID: id, Fingerprint: sources[i].Fingerprint, StartMS: shot.startMS, EndMS: shot.endMS, TransitionMS: shot.fadeMS, Focal: clip.Point{X: .5, Y: .5}})
+					total += shot.endMS - shot.startMS - shot.fadeMS
+				}
+				resolved, problem := composition.Resolve(doc, composition.Inputs{Values: values, Cuts: bindings}, limits, 30000)
+				if problem != nil {
+					return problem
+				}
+				plan := clip.EditPlan{Ratio: ratio, DurationMS: total, Disclosure: "ad", Cuts: cuts,
+					Portable: &clip.PortablePlan{Snapshot: clip.CompositionSnapshot{Version: 1, Body: body}, Cuts: bindings}}
+				for _, element := range resolved.Elements {
+					plan.Portable.Elements = append(plan.Portable.Elements, clip.PortableText{Resolved: element, Pace: doc.Pace, Accent: doc.Accent})
+				}
+				started := time.Now()
+				result, err := r.Render(t.Context(), ws, plan, sources, func(_ context.Context, id string, consume func(clip.MediaSource) error) error {
+					for _, source := range sources {
+						if source.ID == id {
+							return consume(clip.MediaSource{SourceID: id, Fingerprint: source.Fingerprint, Info: source.Info, Path: paths[id]})
+						}
+					}
+					return clip.ErrNotFound
+				})
+				if err != nil {
+					return err
+				}
+				t.Logf("%s: %dx%d %d ms %d bytes in %s", variant.ratio, result.Info.Width, result.Info.Height, result.Info.DurationMS, result.Bytes, time.Since(started).Round(time.Millisecond))
+				for _, e := range result.Elements {
+					t.Logf("  %-8s %-10s %5d..%-5d %+v %q", e.Role, e.Position, e.StartMS, e.EndMS, e.Region, e.Text)
+				}
+				final := filepath.Join(out, variant.ratio+".mp4")
+				if err := os.Remove(final); err != nil && !os.IsNotExist(err) {
+					return err
+				}
+				return copyOriginal(result.Path, final)
+			})
+			if err != nil {
+				if d, ok := clip.DiagnosticFromError(err); ok {
+					t.Fatalf("%v: %+v (unwrapped: %v)", err, d, errors.Unwrap(err))
+				}
+				t.Fatal(err)
+			}
+		})
+	}
+}

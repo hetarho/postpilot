@@ -1,0 +1,35 @@
+<!doctype html><meta charset="utf-8"><title>클립 디자인 미리보기 · 실제 촬영본</title>
+<style>
+:root{color-scheme:dark}
+body{background:#101216;color:#e9eaee;font-family:system-ui,-apple-system,sans-serif;margin:0;padding:32px 24px 64px}
+h1{font-size:20px;font-weight:700;margin:0 0 8px}
+p.lead{color:#9598a0;font-size:13px;line-height:1.7;max-width:780px;margin:0 0 28px}
+.row{display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start}
+figure{margin:0;background:#191c22;border:1px solid #242832;border-radius:12px;padding:12px}
+figure video{display:block;border-radius:8px;background:#000}
+figure.v video{width:300px}
+figure.s video{width:420px}
+figure.h video{width:560px}
+figcaption{font-size:12px;color:#9598a0;margin-top:10px;line-height:1.6}
+figcaption b{color:#e9eaee;font-weight:600;font-size:13px}
+</style>
+<h1>클립 출력 디자인 미리보기 — 실제 촬영본</h1>
+<p class="lead">
+같은 스토리보드(가게 앞 → 한우갈비살 한 상 → 숯불 → 굽는 중 → 자리 정리)를
+인트로·아웃트로 프리셋과 비율만 바꿔 렌더한 것입니다. 컷·전환·자막 페이드·
+밝기 샘플링과 스크림 판정까지 전부 실제 렌더 코드가 돌았고, 도커 대신 호스트의
+ffmpeg·resvg를 썼습니다. 재생이 안 되면 mp4를 직접 열어보세요.
+</p>
+<div class="row">
+<figure class="v"><video src="vertical.mp4" controls loop muted playsinline></video>
+<figcaption><b>9:16 · 인트로 a · 아웃트로 e</b><br>헤드라인+라벨로 열고, 라벨·디스플레이·캡션 3단과 바로 닫습니다.</figcaption></figure>
+<figure class="v"><video src="vertical-b.mp4" controls loop muted playsinline></video>
+<figcaption><b>9:16 · 인트로 b · 아웃트로 b</b><br>훅을 헤어라인 두 줄 사이에 두고 열고, 훅+바디로 닫습니다.</figcaption></figure>
+<figure class="s"><video src="square.mp4" controls loop muted playsinline></video>
+<figcaption><b>1:1 · 인트로 a · 아웃트로 e</b><br>같은 글자 크기에 위치만 재정의(CDS-48).</figcaption></figure>
+<figure class="h"><video src="horizontal.mp4" controls loop muted playsinline></video>
+<figcaption><b>16:9 · 인트로 b · 아웃트로 b</b><br>본문 폭 960, 배지 우측 x1824(CDS-47).<br>
+※ 이 편은 아직 없습니다 — 16:9는 원본(1920×1440)을 업스케일 없이 크롭해서 중간 파일이
+크고, 렌더 도중 디스크 여유가 모자라 인코드가 멈췄습니다. 공간을 비운 뒤 같은 명령으로
+다시 구우면 됩니다.</figcaption></figure>
+</div>
