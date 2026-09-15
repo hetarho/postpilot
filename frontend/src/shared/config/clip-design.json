@@ -8,7 +8,7 @@
       "safe": {
         "x": 64,
         "y": 40,
-        "width": 856,
+        "width": 952,
         "height": 1380
       },
       "anchor": {
@@ -17,8 +17,8 @@
         "lower_mid": 1100,
         "bottom": 1380,
         "left": 96,
-        "center": 492,
-        "right": 888
+        "center": 540,
+        "right": 984
       },
       "copy_max_width": 856,
       "hook_size": 84,
@@ -117,19 +117,6 @@
         "height": 260
       }
     }
-  },
-  "safe_naver_estimate": {
-    "x": 64,
-    "y": 230,
-    "width": 866,
-    "height": 1210
-  },
-  "overlay_estimate": {
-    "top": 230,
-    "bottom": 1440,
-    "right": 930,
-    "right_from_y": 1000,
-    "left": 64
   },
   "type": {
     "display": {

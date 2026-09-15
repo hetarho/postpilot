@@ -13,7 +13,7 @@ import (
 func TestSafeAreasAndAnchorsMatchCDS(t *testing.T) {
 	// CDS-9 (design bounds) and CDS-13.
 	safe := map[string]design.Bounds{
-		"vertical":   {X: 64, Y: 40, Width: 856, Height: 1380},
+		"vertical":   {X: 64, Y: 40, Width: 952, Height: 1380},
 		"horizontal": {X: 96, Y: 72, Width: 1728, Height: 936},
 		"square":     {X: 64, Y: 72, Width: 952, Height: 936},
 	}
@@ -24,7 +24,7 @@ func TestSafeAreasAndAnchorsMatchCDS(t *testing.T) {
 	}
 	// CDS-12 for 9:16; CDS-47 and CDS-48 restate only what the other two change.
 	anchors := map[string]design.Anchor{
-		"vertical":   {Top: 80, UpperMid: 700, LowerMid: 1100, Bottom: 1380, Left: 96, Center: 492, Right: 888},
+		"vertical":   {Top: 80, UpperMid: 700, LowerMid: 1100, Bottom: 1380, Left: 96, Center: 540, Right: 984},
 		"horizontal": {Top: 112, UpperMid: 420, LowerMid: 660, Bottom: 968, Left: 96, Center: 960, Right: 1824},
 		"square":     {Top: 112, UpperMid: 420, LowerMid: 660, Bottom: 968, Left: 64, Center: 540, Right: 1016},
 	}
@@ -55,12 +55,17 @@ func TestSafeAreasAndAnchorsMatchCDS(t *testing.T) {
 			}
 		}
 	}
-	// CDS-10 keeps the unverified Naver estimate separate from design bounds.
-	if design.SafeNaverEstimate != (design.Bounds{X: 64, Y: 230, Width: 866, Height: 1210}) {
-		t.Fatal("SA-N", design.SafeNaverEstimate)
-	}
-	if design.Overlay != (design.OverlayEstimate{Top: 230, Bottom: 1440, Right: 930, RightFromY: 1000, Left: 64}) {
-		t.Fatal("overlay estimate", design.Overlay)
+	// CDS-78: every ratio centres on its own canvas, with no platform inset.
+	for ratio, layout := range design.Ratios {
+		if layout.Anchor.Center != float64(layout.Canvas.Width)/2 {
+			t.Fatalf("%s centre %v is not the canvas centre %v", ratio, layout.Anchor.Center, float64(layout.Canvas.Width)/2)
+		}
+		if layout.Safe.X != float64(layout.Canvas.Width)-(layout.Safe.X+layout.Safe.Width) {
+			t.Fatalf("%s safe area insets %v and %v are not equal", ratio, layout.Safe.X, float64(layout.Canvas.Width)-(layout.Safe.X+layout.Safe.Width))
+		}
+		if layout.Anchor.Left != float64(layout.Canvas.Width)-layout.Anchor.Right {
+			t.Fatalf("%s LEFT %v and RIGHT %v are not symmetric", ratio, layout.Anchor.Left, layout.Anchor.Right)
+		}
 	}
 }
 

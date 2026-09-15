@@ -2,6 +2,7 @@ package media
 
 import (
 	"errors"
+	"math"
 	"reflect"
 	"strings"
 	"testing"
@@ -139,6 +140,37 @@ func TestAutomaticRepairUsesOnlyRetainedGroundedAlternatives(t *testing.T) {
 	}
 	if plan.Portable.Elements[0].Resolved.Text == "현재 장면" {
 		t.Fatal("mutated original plan")
+	}
+}
+
+// CDS-78: centred text is centred on the canvas, not on a safe area shaped
+// around one platform's UI. The 9:16 centre sat 48 px left for three revisions
+// because every check compared it with the token rather than with the frame.
+func TestCentredPartsSitOnTheCanvasCentre(t *testing.T) {
+	body := `<clip version="1" intro="a" caption="bold" outro="e">` +
+		`<text id="intro" kind="fixed" role="hook" basis="output-start" start="0" end="3"><row>오늘의 장면</row><row>직접 남긴 기록</row></text>` +
+		`<text id="info" kind="fixed" role="info" position="bottom" basis="output-start" start="4" end="8"><row role="label">가격</row><row role="caption">9,900원</row></text>` +
+		`<text id="copy" kind="fixed" role="caption" position="upper_mid" basis="output-start" start="9" end="12">겉은 바삭했어요</text>` +
+		`<text id="outro" kind="fixed" role="ending" basis="output-end" start="-3" end="0"><row>오늘의 점수</row><row>9.5</row><row>다시 보고 싶은 장면</row></text>` +
+		`</clip>`
+	for _, ratio := range []string{"vertical", "horizontal", "square"} {
+		canvas, _ := clip.ClipCanvas(ratio)
+		centre := float64(canvas.Width) / 2
+		checked := 0
+		for _, element := range measuredDeclared(t, declaredPlan(t, body, ratio)).elements() {
+			for _, part := range element.Parts {
+				if part.Kind != "copy" && part.Kind != "plate" {
+					continue
+				}
+				if got := part.Region.X + part.Region.Width/2; math.Abs(got-centre) > 0.5 {
+					t.Errorf("%s %s %q centred on %v, canvas centre %v", ratio, element.Role, part.Text, got, centre)
+				}
+				checked++
+			}
+		}
+		if checked == 0 {
+			t.Fatal(ratio, "laid out nothing to check")
+		}
 	}
 }
 

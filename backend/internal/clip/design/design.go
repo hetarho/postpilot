@@ -55,15 +55,6 @@ type RatioLayout struct {
 	ScrimBottom  Bounds   `json:"scrim_bottom"`
 }
 
-// The estimated Naver overlay geometry behind SA-N (CDS-10). It is an estimate
-// until CDS-11 is measured, which is why it is a constant and never a literal.
-type OverlayEstimate struct {
-	Top        float64 `json:"top"`
-	Bottom     float64 `json:"bottom"`
-	Right      float64 `json:"right"`
-	RightFromY float64 `json:"right_from_y"`
-	Left       float64 `json:"left"`
-}
 type TypeRole struct {
 	Size       float64 `json:"size"`
 	Min        float64 `json:"min"`
@@ -302,32 +293,30 @@ type RegionTokens struct {
 }
 
 type system struct {
-	Regions           RegionTokens           `json:"regions"`
-	Rules             map[string]RuleToken   `json:"rule"`
-	Rapid             RapidTokens            `json:"rapid"`
-	Ratios            map[string]RatioLayout `json:"ratios"`
-	SafeNaverEstimate Bounds                 `json:"safe_naver_estimate"`
-	OverlayEstimate   OverlayEstimate        `json:"overlay_estimate"`
-	Type              map[string]TypeRole    `json:"type"`
-	Color             map[string]Paint       `json:"color"`
-	Shadow            map[string]ShadowPaint `json:"shadow"`
-	Scrim             map[string]ScrimPaint  `json:"scrim"`
-	Accent            map[string]string      `json:"accent"`
-	Information       InformationTokens      `json:"information"`
-	Spacing           SpacingTokens          `json:"spacing"`
-	Presets           map[string]Preset      `json:"presets"`
-	Disclosure        map[string]string      `json:"disclosure"`
-	CTA               map[string]string      `json:"cta"`
-	Facts             Facts                  `json:"facts"`
-	Faces             map[string]string      `json:"faces"`
-	Voice             VoiceRules             `json:"voice"`
-	Motion            MotionTokens           `json:"motion"`
-	Timing            TimingTokens           `json:"timing"`
-	Transition        TransitionTokens       `json:"transition"`
-	Playback          PlaybackTokens         `json:"playback"`
-	Copy              CopyTokens             `json:"copy"`
-	Audio             AudioTokens            `json:"audio"`
-	Luma              LumaTokens             `json:"luma"`
+	Regions     RegionTokens           `json:"regions"`
+	Rules       map[string]RuleToken   `json:"rule"`
+	Rapid       RapidTokens            `json:"rapid"`
+	Ratios      map[string]RatioLayout `json:"ratios"`
+	Type        map[string]TypeRole    `json:"type"`
+	Color       map[string]Paint       `json:"color"`
+	Shadow      map[string]ShadowPaint `json:"shadow"`
+	Scrim       map[string]ScrimPaint  `json:"scrim"`
+	Accent      map[string]string      `json:"accent"`
+	Information InformationTokens      `json:"information"`
+	Spacing     SpacingTokens          `json:"spacing"`
+	Presets     map[string]Preset      `json:"presets"`
+	Disclosure  map[string]string      `json:"disclosure"`
+	CTA         map[string]string      `json:"cta"`
+	Facts       Facts                  `json:"facts"`
+	Faces       map[string]string      `json:"faces"`
+	Voice       VoiceRules             `json:"voice"`
+	Motion      MotionTokens           `json:"motion"`
+	Timing      TimingTokens           `json:"timing"`
+	Transition  TransitionTokens       `json:"transition"`
+	Playback    PlaybackTokens         `json:"playback"`
+	Copy        CopyTokens             `json:"copy"`
+	Audio       AudioTokens            `json:"audio"`
+	Luma        LumaTokens             `json:"luma"`
 }
 
 var loaded = parse()
@@ -354,31 +343,29 @@ func JSON() []byte {
 }
 
 var (
-	Rules             = loaded.Rules
-	Rapid             = loaded.Rapid
-	Ratios            = loaded.Ratios
-	SafeNaverEstimate = loaded.SafeNaverEstimate
-	Overlay           = loaded.OverlayEstimate
-	Type              = loaded.Type
-	Color             = loaded.Color
-	Shadow            = loaded.Shadow
-	Scrim             = loaded.Scrim
-	Accent            = loaded.Accent
-	Information       = loaded.Information
-	Spacing           = loaded.Spacing
-	Presets           = loaded.Presets
-	Disclosure        = loaded.Disclosure
-	CTA               = loaded.CTA
-	Fact              = loaded.Facts
-	Faces             = loaded.Faces
-	Voice             = loaded.Voice
-	Motion            = loaded.Motion
-	Timing            = loaded.Timing
-	Transition        = loaded.Transition
-	Playback          = loaded.Playback
-	Copy              = loaded.Copy
-	Audio             = loaded.Audio
-	Luma              = loaded.Luma
+	Rules       = loaded.Rules
+	Rapid       = loaded.Rapid
+	Ratios      = loaded.Ratios
+	Type        = loaded.Type
+	Color       = loaded.Color
+	Shadow      = loaded.Shadow
+	Scrim       = loaded.Scrim
+	Accent      = loaded.Accent
+	Information = loaded.Information
+	Spacing     = loaded.Spacing
+	Presets     = loaded.Presets
+	Disclosure  = loaded.Disclosure
+	CTA         = loaded.CTA
+	Fact        = loaded.Facts
+	Faces       = loaded.Faces
+	Voice       = loaded.Voice
+	Motion      = loaded.Motion
+	Timing      = loaded.Timing
+	Transition  = loaded.Transition
+	Playback    = loaded.Playback
+	Copy        = loaded.Copy
+	Audio       = loaded.Audio
+	Luma        = loaded.Luma
 )
 
 // PresetFields are the reserved information fields a preset needs, in the order
