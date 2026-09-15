@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/clip/design"
 )
 
 type planTier string
@@ -31,6 +32,8 @@ var planCheckTiers = map[string]planTier{
 	"composition_generated_identity": removePlan, "composition_generated_rows": removePlan,
 	"composition_generated_bounds": removePlan, "composition_plan_bounds": removePlan, "plan_cut_count": removePlan,
 	"plan_cut_range": removePlan, "plan_source_metadata": removePlan, "plan_hook": removePlan,
+	"intro_slot_shortened": repairPlan, "outro_slot_shortened": repairPlan,
+	"intro_slot_omitted": removePlan, "outro_slot_omitted": removePlan,
 	"plan_chip_count": removePlan, "plan_chip_label": removePlan, "plan_copy_chars": removePlan,
 	"plan_copy_classes": removePlan, "plan_copy_count": removePlan, "plan_copy_exposure": removePlan,
 	"plan_copy_format": removePlan, "plan_copy_keyword": removePlan, "plan_copy_lines": removePlan,
@@ -255,4 +258,21 @@ func removeInvalidGeneratedCopies(cfg Config, in clip.PlanningInput, plan *clip.
 			cut.Copies = kept
 		}
 	}
+}
+
+// Alternatives reaching this rung already passed the same scoped grounding as
+// the original. Keep slot indices and typography; never wrap or shrink a slot.
+func repairGeneratedSlot(text string, alternatives []clip.CopyAlternative, limit int) (string, string) {
+	fits := func(value string) bool {
+		return strings.TrimSpace(value) != "" && !strings.ContainsAny(value, "\r\n") && design.Chars(value) <= limit
+	}
+	if fits(text) {
+		return text, ""
+	}
+	for _, candidate := range alternatives {
+		if fits(candidate.Text) {
+			return candidate.Text, "repair"
+		}
+	}
+	return "", "removal"
 }

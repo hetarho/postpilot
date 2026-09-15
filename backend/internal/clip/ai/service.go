@@ -155,7 +155,7 @@ func (s *Service) Plan(ctx context.Context, model llm.ModelRef, input clip.Plann
 	if err != nil {
 		return clip.EditPlan{}, llm.Usage{}, err
 	}
-	system, user := BuildPlanPrompt(input, s.cfg.Render.FadeMS)
+	system, user := BuildPlanPrompt(input, s.cfg.Render.FadeMS, compositionLimits(s.cfg, input))
 	request := llm.Request{System: system, Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(user)}}}, Stage: llm.StageNameWrite, Reasoning: input.Policy.Reasoning, DisableReasoning: input.Policy.DisableReasoning, MaxTokens: input.Policy.CompletionTokens, Execution: execution}
 	if execution.Call.StructuredOutput {
 		if !info.StructuredOutput {
@@ -225,13 +225,6 @@ func (s *Service) compose(ctx context.Context, input clip.PlanningInput, plan *c
 	// reconciled to the owner's approved target, so the extension may only use
 	// the slack that target still allows.
 	slack := min(s.cfg.TargetToleranceMS-abs(plan.DurationMS-input.TargetDurationMS), s.cfg.Render.MaxDurationMS-plan.DurationMS)
-	// The hook is dropped rather than shown ungrounded (CDS-42), and it has to be
-	// settled before the cards are measured, since a card without a hook
-	// sentence is no card at all (CDS-28).
-	// Two lines of nine, which is what the hook card sets (CDS-28).
-	if !clip.Grounded(plan.Hook, input.Answers) || clip.CopyChars(plan.Hook) > 2*design.Type["hook"].Chars {
-		plan.Hook = ""
-	}
 	previous := ""
 	// The badge and the chips are placed before any copy, and copy yields to
 	// them (CDS-45); T107's cards join this list.

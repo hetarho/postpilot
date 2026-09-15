@@ -52,7 +52,7 @@ func TestSchemaWorstCaseFitsTheCompletionBudgets(t *testing.T) {
 	for i := range cuts {
 		cuts[i] = cut
 	}
-	plan, err := json.Marshal(map[string]any{"ratio": "vertical", "duration_ms": 90000, "hook": short, "cuts": cuts})
+	plan, err := json.Marshal(map[string]any{"ratio": "vertical", "duration_ms": 90000, "cuts": cuts})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -141,6 +141,6 @@ func realisticPlan() []byte {
 			"caption": map[string]any{"text": "연남동에서 제일 조용한 자리", "start_ms": 0, "end_ms": 3000, "short_text": "조용한 자리", "keyword": ""},
 		}
 	}
-	out, _ := json.Marshal(map[string]any{"ratio": "vertical", "duration_ms": 60000, "hook": "여기 왜 유명할까", "cuts": cuts})
+	out, _ := json.Marshal(map[string]any{"ratio": "vertical", "duration_ms": 60000, "cuts": cuts})
 	return out
 }

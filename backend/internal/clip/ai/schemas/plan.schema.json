@@ -1,9 +1,8 @@
 {
   "type": "object", "additionalProperties": false,
-  "required": ["ratio", "duration_ms", "hook", "cuts"],
+  "required": ["ratio", "duration_ms", "cuts"],
   "properties": {
     "ratio": { "type": "string", "enum": ["vertical", "horizontal", "square"] },
-    "hook": { "type": "string", "maxLength": 40 },
     "duration_ms": { "type": "integer", "minimum": 15000, "maximum": 90000 },
     "cuts": {
       "type": "array", "minItems": 1, "maxItems": 100,

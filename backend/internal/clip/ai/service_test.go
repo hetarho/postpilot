@@ -124,7 +124,7 @@ func plan() map[string]any {
 		return map[string]any{"id": id, "source_id": "source", "start_ms": start, "end_ms": end, "rate_permille": 1000, "focal": map[string]any{"x": .5, "y": .5}, "chips": []string{},
 			"caption": map[string]any{"text": text, "start_ms": 1000, "end_ms": end - start - 1000, "short_text": "한글 여행", "keyword": ""}}
 	}
-	return map[string]any{"ratio": "vertical", "duration_ms": 15000, "hook": "정확한 여행", "cuts": []any{
+	return map[string]any{"ratio": "vertical", "duration_ms": 15000, "cuts": []any{
 		cut("cut-one", 0, 5000, "정확한 한글 & 여행"),
 		cut("cut-two", 5000, 10000, "조용한 한글 & 여행"),
 		cut("cut-three", 10000, 15000, "천천히 걷는 골목"),
@@ -270,7 +270,7 @@ func TestRecordedLiveClipResponses(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	models.response.Text = string(planJSON)
+	models.response.Text = currentRecordedPlan(t, string(planJSON))
 	input := clip.PlanningInput{Policy: testPolicy("write"), Template: clip.Recipe{Name: "합성 영상 검증", CutGuidance: "15초 한 컷으로 구성하고 자막은 '영상 생성 확인'으로 해주세요.", Accent: "coral"}, Ratio: "horizontal", TargetDurationMS: 15000, Analyses: analyses}
 	// The recorded response is ONE fifteen-second take. CDS-37's 6.0 s is a
 	// target, not a gate (r3): the compiler trims to it, finds the approved
@@ -287,6 +287,7 @@ func TestRecordedLiveClipResponses(t *testing.T) {
 	if err = json.Unmarshal(planJSON, &recorded); err != nil {
 		t.Fatal(err)
 	}
+	delete(recorded, "hook")
 	recorded["cuts"] = splitRecordedCut(recorded["cuts"].([]any)[0].(map[string]any), 3, 5000)
 	models.response.Text = raw(recorded)
 	result, _, err := s.Plan(t.Context(), testRef(), input)
@@ -760,4 +761,15 @@ func TestRapidPlanningUsesOneWriterCall(t *testing.T) {
 			t.Fatal(cut)
 		}
 	}
+}
+
+// Keep recorded provider evidence intact while adapting its retired output key.
+func currentRecordedPlan(t *testing.T, original string) string {
+	t.Helper()
+	var body map[string]any
+	if err := json.Unmarshal([]byte(original), &body); err != nil {
+		t.Fatal(err)
+	}
+	delete(body, "hook")
+	return raw(body)
 }

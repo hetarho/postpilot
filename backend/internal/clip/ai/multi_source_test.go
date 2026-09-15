@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/postpilot/backend/internal/platform/config"
 	"os"
 	"strings"
 	"testing"
@@ -34,6 +35,7 @@ func TestRecordedMultiSourcePlans(t *testing.T) {
 	fixture.Input.Policy = testPolicy("write")
 	for i, response := range fixture.Responses {
 		t.Run(fmt.Sprint(i), func(t *testing.T) {
+			response.Text = currentRecordedPlan(t, response.Text)
 			s, models, captions := newService(t, response.Text, true)
 			models.response = response
 			got, usage, err := s.Plan(t.Context(), testRef(), fixture.Input)
@@ -77,7 +79,7 @@ func multiSourcePlan() (clip.PlanningInput, map[string]any) {
 		cuts = append(cuts, map[string]any{"id": fmt.Sprintf("cut-%d", i), "source_id": id, "start_ms": 0, "end_ms": lengths[i], "rate_permille": 1000, "volume": 1, "chips": []string{},
 			"focal": map[string]any{"x": .5, "y": .5}, "caption": map[string]any{"text": "조용한 장면", "start_ms": 0, "end_ms": lengths[i], "short_text": "장면", "keyword": ""}})
 	}
-	return in, map[string]any{"ratio": "vertical", "duration_ms": 15000, "hook": "여덟 장면", "cuts": cuts}
+	return in, map[string]any{"ratio": "vertical", "duration_ms": 15000, "cuts": cuts}
 }
 
 func TestEightShortSourcesComposeWithExactTransitionTimeline(t *testing.T) {
@@ -183,7 +185,7 @@ func TestUnknownChipLabelsAreDroppedNotRefused(t *testing.T) {
 	if got := plan.Cuts[0].Chips; len(got) != 2 || got[0] != "위치" || got[1] != "가격" {
 		t.Fatalf("chips = %v, want the two reserved labels in order", got)
 	}
-	system, _ := ai.BuildPlanPrompt(in, 200)
+	system, _ := ai.BuildPlanPrompt(in, 200, config.ClipCompositionLimits())
 	if !strings.Contains(system, strings.Join(design.Fact.Chips, " · ")) || strings.Contains(system, "상호 · 위치") {
 		t.Fatal("the prompt's chip vocabulary is not the design table's")
 	}

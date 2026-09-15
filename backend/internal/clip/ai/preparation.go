@@ -42,7 +42,7 @@ func (s *Service) ValidatePreparation(observe llm.ModelRef, in clip.PlanningInpu
 		}
 	}
 	in.Analyses = nil
-	system, user := BuildPlanPrompt(in, s.cfg.Render.FadeMS)
+	system, user := BuildPlanPrompt(in, s.cfg.Render.FadeMS, compositionLimits(s.cfg, in))
 	if err := validatePrompt(system, user, schema, llm.ExecutionTextOnly, in.Policy.InputTokenLimit()); err != nil {
 		return err
 	}

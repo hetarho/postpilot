@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/clip/composition"
 )
 
 func TestOutputSchemasRetainClosedShapeWithoutGrammarBounds(t *testing.T) {
@@ -119,14 +120,14 @@ func TestOutputProjectionKeepsConstraintNamedProperties(t *testing.T) {
 
 func TestPromptsKeepFullContractsAfterOutputProjection(t *testing.T) {
 	observe, _ := BuildObservePrompt(clip.ChunkInput{})
-	plan, _ := BuildPlanPrompt(clip.PlanningInput{}, 200)
+	plan, _ := BuildPlanPrompt(clip.PlanningInput{}, 200, composition.Limits{})
 	if !strings.Contains(observe, compactContract(chunkSchema)) || !strings.Contains(plan, string(planSchema)) {
 		t.Fatal("provider projection weakened the full prompt contracts")
 	}
 	if string(ChunkSchema()) == string(chunkSchema) || string(PlanSchema()) == string(planSchema) {
 		t.Fatal("provider output schema was not projected")
 	}
-	native, _ := BuildPlanPrompt(clip.PlanningInput{Composition: &clip.ProjectComposition{}}, 200)
+	native, _ := BuildPlanPrompt(clip.PlanningInput{Composition: &clip.ProjectComposition{}}, 200, composition.Limits{})
 	if !strings.Contains(native, compactContract(compositionPlanSchema)) || string(CompositionPlanSchema()) == string(compositionPlanSchema) {
 		t.Fatal("native contract was weakened")
 	}

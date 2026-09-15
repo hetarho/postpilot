@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/clip/composition"
 	"github.com/postpilot/backend/internal/clip/design"
 )
 
@@ -29,8 +30,7 @@ Never select a segment whose usability is unusable or whose certainty is unknown
 Every duration you state is OUTPUT time after the rate: a cut using [start_ms, end_ms) at rate r occupies (end_ms - start_ms) / r × 1000 ms of the result. Caption start_ms/end_ms are relative to the trimmed cut in that same OUTPUT time, satisfy 0 <= start_ms < end_ms <= cut output duration and define its exposure. Copy is at most two short lines of supported Korean/Latin text, no emoji. Preserve names, numbers and ko/en answer text faithfully; infer the copy language from the supplied recipe and answers, never translate quoted facts without instruction.
 You do NOT choose the caption's style, position or accent: the caller decides all three from the scene and the sentence, so the same input always gives the same clip. Write the words only.
 short_text is the SAME fact in 14 characters or fewer, used when the cut is too short to show the full sentence; keyword is the one number or word the sentence turns on, copied EXACTLY from text, or empty.
-chips names which of {{chips}} this cut states on screen, at most two and only labels the answers actually carry; the business name is not a chip, the opening card carries it.
-hook is the opening card's title: at most two lines of 9 characters, in the template preset's tone.
+chips names which of {{chips}} this cut states on screen, at most two and only labels the answers actually carry.
 Voice: first person and experiential. No emoji, no ㅋㅋ, no ㄹㅇ, no 최고 or 역대급. EVERY number and every proper noun — 상호, 메뉴, 가격, 인원, 시간 — must appear in the answers; a sentence that invents one is dropped, so never invent one.
 Cut OUTPUT length is 1.2 to 6.0 seconds, and a food close-up at most 4.0.
 Each cut is longer than twice fade_ms. You do NOT choose transitions: the caller joins the cuts and subtracts the overlap it chooses. duration_ms is the sum of the cuts' OUTPUT durations, must lie between 15000 and 90000, and must be within 1000 ms of target_duration_ms. Preserve the exact frozen ratio. volume is a per-cut gain only; it is 1.0 by default and an explicit value may only be 0..1. You do NOT decide whether a source's original sound is heard — the owner does, and the server applies that choice after this response.
@@ -59,9 +59,9 @@ func BuildObservePrompt(in clip.ChunkInput) (string, string) {
 		"absolute_offset_ms": in.OffsetMS, "chunk_duration_ms": in.DurationMS, "has_audio": in.Source.Info.HasAudio,
 	})
 }
-func BuildPlanPrompt(in clip.PlanningInput, fadeMS int) (string, string) {
+func BuildPlanPrompt(in clip.PlanningInput, fadeMS int, limits composition.Limits) (string, string) {
 	if nativeComposition(in) {
-		return buildCompositionPlanPrompt(in, fadeMS)
+		return buildCompositionPlanPrompt(in, fadeMS, limits)
 	}
 	fields := make([]map[string]string, 0, len(in.Template.InformationFields))
 	for _, f := range in.Template.InformationFields {

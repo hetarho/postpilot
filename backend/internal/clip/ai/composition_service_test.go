@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/postpilot/backend/internal/platform/config"
 	"reflect"
 	"slices"
 	"strings"
@@ -41,7 +42,7 @@ func TestNativeWriterAdmitsAll49ObservationsAtTheSourceCeiling(t *testing.T) {
 				cuts = append(cuts, map[string]any{"id": fmt.Sprintf("fixture-cut-%d", i), "source_id": in.Analyses[0].Source.ID, "template_section_id": "footage", "group_id": "", "item_id": "", "start_ms": i * 5000, "end_ms": (i + 1) * 5000, "rate_permille": 1000, "focal": map[string]float64{"x": .5, "y": .5}, "volume": 1, "observation_refs": []string{clip.ObservationID(in.Analyses[0].Source.ID, 0)}})
 			}
 			models.response.Text = raw(map[string]any{"ratio": in.Ratio, "duration_ms": 15000, "cuts": cuts, "generated": []any{}})
-			system, user := ai.BuildPlanPrompt(in, 200)
+			system, user := ai.BuildPlanPrompt(in, 200, config.ClipCompositionLimits())
 			var schema json.RawMessage
 			if structured {
 				schema = ai.CompositionPlanSchema()
@@ -379,7 +380,7 @@ func TestWriterInputCarriesAllowedRatesAndNoAudioAuthority(t *testing.T) {
 	in.Analyses[0].Source.Info.FrameRateNumerator, in.Analyses[0].Source.Info.FrameRateDenominator = 60, 1
 	in.Analyses[0].Source.Info.DecodedFrames, in.Analyses[0].Source.Info.DecodedDurationMS = 900, 15000
 	in.Analyses[0].Source.Info.CadenceVerified = true
-	system, user := ai.BuildPlanPrompt(in, 200)
+	system, user := ai.BuildPlanPrompt(in, 200, config.ClipCompositionLimits())
 	var payload map[string]any
 	if err := json.Unmarshal([]byte(user), &payload); err != nil {
 		t.Fatal(err)

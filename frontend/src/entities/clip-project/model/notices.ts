@@ -7,6 +7,10 @@ export interface ClipNotice {
 
 // Messages describe delivered content, independent of the failed-attempt vocabulary.
 export const clipNoticeKeys = {
+  intro_slot_shortened: 'introSlotShortened',
+  outro_slot_shortened: 'outroSlotShortened',
+  intro_slot_omitted: 'introSlotOmitted',
+  outro_slot_omitted: 'outroSlotOmitted',
   composition_contrast: 'contrastReview',
   plan_cut_scene: 'sceneTrimmed',
   plan_cut_rate: 'normalSpeed',

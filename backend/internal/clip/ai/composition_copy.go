@@ -7,11 +7,12 @@ import (
 
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/composition"
+	"github.com/postpilot/backend/internal/clip/design"
 )
 
 func copyKey(element, cut string) string { return element + "/" + cut }
 
-func attachCompositionCopy(cfg Config, doc *composition.Document, generated []generatedJSON, timeline composition.Timeline, plan *clip.PortablePlan, bindings map[string]clip.ItemBinding, evidence map[string][]clip.ObservedEvidence) error {
+func attachCompositionCopy(cfg Config, doc *composition.Document, generated []generatedJSON, timeline composition.Timeline, plan *clip.PortablePlan, bindings map[string]clip.ItemBinding, evidence map[string][]clip.ObservedEvidence, owner *clip.EditPlan) error {
 	declared, scopes := map[string]composition.Element{}, map[string]string{}
 	for _, element := range doc.Elements {
 		key := copyKey(element.ID, "")
@@ -40,7 +41,7 @@ func attachCompositionCopy(cfg Config, doc *composition.Document, generated []ge
 		element, exists := declared[key]
 		reason := ""
 		switch {
-		case seen[key] || !exists || element.Kind != "ai":
+		case seen[key] || !exists || !generatesText(element):
 			reason = "composition_generated_identity"
 		case index >= cfg.Template.Composition.Cues || !within(g.Text, 0, cfg.Template.Composition.CopyChars) || !within(g.ShortText, 0, cfg.Template.Composition.CopyChars) || !within(g.Keyword, 0, cfg.Template.Composition.LabelChars) || len(g.Facts) > cfg.Template.Composition.Fields || len(g.Observations) > 120:
 			reason = "composition_generated_bounds"
@@ -72,6 +73,14 @@ func attachCompositionCopy(cfg Config, doc *composition.Document, generated []ge
 		text := clip.PortableText{Resolved: resolved, Scope: scopes[key], Accent: doc.Accent, Pace: doc.Pace}
 		for _, observed := range evidence[resolved.CutID] {
 			text.Evidence = append(text.Evidence, observed.Source)
+		}
+		if region, _ := regionSelection(doc, resolved.Element); region != "" && len(resolved.Element.Rows) > 0 {
+			entry, exists := entries[key]
+			attachRegionRows(doc, plan.Inputs, entry, exists && removed[key] == "", bindings[resolved.CutID], evidence[resolved.CutID], &text, owner)
+			if slices.ContainsFunc(text.Resolved.Rows, func(row composition.ResolvedRow) bool { return strings.TrimSpace(row.Text) != "" }) {
+				plan.Elements = append(plan.Elements, text)
+			}
+			continue
 		}
 		if resolved.Element.Kind == "fixed" {
 			plan.Elements = append(plan.Elements, text)
@@ -169,4 +178,80 @@ func resolveGeneratedCopy(doc *composition.Document, inputs clip.CompositionInpu
 		used[sentenceKey(combined)] = true
 	}
 	return ""
+}
+
+func generatesText(e composition.Element) bool {
+	if len(e.Rows) == 0 {
+		return e.Kind == "ai"
+	}
+	return slices.ContainsFunc(e.Rows, func(row composition.Row) bool { return composition.RowKind(e, row) == "ai" })
+}
+
+func regionSelection(doc *composition.Document, e composition.Element) (string, string) {
+	switch e.Role {
+	case "hook":
+		return "intro", doc.Design.Intro
+	case "ending":
+		return "outro", doc.Design.Outro
+	}
+	return "", ""
+}
+
+// Ground and repair AI rows individually. A missing or malformed response can
+// empty generated slots, but can never replace their fixed neighbours.
+func attachRegionRows(doc *composition.Document, inputs clip.CompositionInputs, entry generatedJSON, exists bool, binding clip.ItemBinding, observed []clip.ObservedEvidence, out *clip.PortableText, owner *clip.EditPlan) {
+	e := out.Resolved.Element
+	region, id := regionSelection(doc, e)
+	preset, _ := design.Region(region, id)
+	out.Resolved.Rows = slices.Clone(out.Resolved.Rows)
+	if generatesText(e) {
+		out.Evidence = nil
+	}
+	for i, row := range e.Rows {
+		if composition.RowKind(e, row) != "ai" {
+			continue
+		}
+		value, action := "", "removal"
+		if exists && i < len(entry.Rows) && i < len(preset.Slots) {
+			one := *out
+			one.Resolved.Element.Rows = nil
+			one.Resolved.Rows = nil
+			one.Alternatives = nil
+			one.FallbackReason = ""
+			g := entry
+			g.Text, g.Rows = entry.Rows[i], nil
+			g.ShortText, g.ShortRows = "", nil
+			if i < len(entry.ShortRows) {
+				g.ShortText = entry.ShortRows[i]
+			}
+			reason := resolveGeneratedCopy(doc, inputs, g, binding, observed, &one, map[string]bool{})
+			if reason == "" {
+				value, action = repairGeneratedSlot(one.Resolved.Text, one.Alternatives, design.Type[preset.Slots[i].Type].Chars)
+				if action == "" && one.FallbackReason != "" {
+					action = "repair"
+				}
+				for _, ref := range one.Evidence {
+					if !slices.Contains(out.Evidence, ref) {
+						out.Evidence = append(out.Evidence, ref)
+					}
+				}
+				for _, fact := range one.Resolved.Facts {
+					if !slices.Contains(out.Resolved.Facts, fact) {
+						out.Resolved.Facts = append(out.Resolved.Facts, fact)
+					}
+				}
+			}
+		}
+		out.Resolved.Rows[i].Text = value
+		if action != "" {
+			suffix := "slot_shortened"
+			if action == "removal" {
+				suffix = "slot_omitted"
+			}
+			clip.AddPlanNotice(owner, region+"_"+suffix, out.Resolved.CutID, e.ID, action)
+		}
+	}
+	out.Resolved.Text = ""
+	out.Keyword = ""
+	out.Alternatives = nil
 }

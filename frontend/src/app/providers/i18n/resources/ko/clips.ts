@@ -1,5 +1,9 @@
 export const clips = {
   notices: {
+    introSlotShortened: '인트로 문구를 한 줄에 들어가는 짧은 표현으로 담았어요.',
+    outroSlotShortened: '아웃트로 문구를 한 줄에 들어가는 짧은 표현으로 담았어요.',
+    introSlotOmitted: '인트로에서 한 줄로 담기 어려운 AI 문구를 뺐어요.',
+    outroSlotOmitted: '아웃트로에서 한 줄로 담기 어려운 AI 문구를 뺐어요.',
     contrastReview: '배경과 문구의 대비가 낮은 구간이 있어요. 게시 전에 확인해 주세요.',
     label: '클립에 반영된 내용',
     marker: '안내',

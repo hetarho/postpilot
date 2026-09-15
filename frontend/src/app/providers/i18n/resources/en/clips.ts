@@ -1,5 +1,9 @@
 export const clips = {
   notices: {
+    introSlotShortened: 'The intro uses a shorter phrase that fits one line.',
+    outroSlotShortened: 'The outro uses a shorter phrase that fits one line.',
+    introSlotOmitted: 'An AI phrase that could not fit one line was left out of the intro.',
+    outroSlotOmitted: 'An AI phrase that could not fit one line was left out of the outro.',
     contrastReview:
       'Some text has low contrast against its background. Review it before publishing.',
     label: 'About this clip',

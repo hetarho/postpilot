@@ -204,7 +204,7 @@ func TestComposeCannotFillTargetFromUnobservedOrReusedFootage(t *testing.T) {
 					cuts = append(cuts, c)
 				}
 			}
-			wire := map[string]any{"ratio": "vertical", "duration_ms": 15000, "hook": "정확한 여행", "cuts": cuts}
+			wire := map[string]any{"ratio": "vertical", "duration_ms": 15000, "cuts": cuts}
 			s, models, measure := newService(t, raw(wire), true)
 			_, usage, err := s.Plan(t.Context(), testRef(), in)
 			if mode == "unblocked" || mode == "caption cannot shrink" {
@@ -250,7 +250,7 @@ func TestCompilerJoinsScenesAndHoldsCutLengths(t *testing.T) {
 			"caption": map[string]any{"text": "여행", "start_ms": 200, "end_ms": 1500, "short_text": "여행", "keyword": ""}})
 	}
 	in.TargetDurationMS = 30000
-	s, _, _ := newService(t, raw(map[string]any{"ratio": "vertical", "duration_ms": 30000, "hook": "정확한 여행", "cuts": cuts}), true)
+	s, _, _ := newService(t, raw(map[string]any{"ratio": "vertical", "duration_ms": 30000, "cuts": cuts}), true)
 	got, _, err := s.Plan(t.Context(), testRef(), in)
 	if err != nil {
 		t.Fatal(err)
@@ -296,7 +296,7 @@ func TestACutThatCannotReachTheTargetIsKeptAndThePlanCompiles(t *testing.T) {
 		return map[string]any{"id": id, "source_id": source, "start_ms": start, "end_ms": end, "rate_permille": 1000, "focal": map[string]any{"x": .5, "y": .5}, "chips": []string{},
 			"caption": map[string]any{"text": "여행", "start_ms": 100, "end_ms": end - start - 100, "short_text": "여행", "keyword": ""}}
 	}
-	wire := map[string]any{"ratio": "vertical", "duration_ms": 15000, "hook": "정확한 여행",
+	wire := map[string]any{"ratio": "vertical", "duration_ms": 15000,
 		"cuts": []any{cut("short", "source-0", 0, 900), cut("b", "source-1", 0, 6000), cut("c", "source-2", 0, 6000)}}
 	s, _, _ := newService(t, raw(wire), true)
 	plan, _, err := s.Plan(t.Context(), testRef(), in)
@@ -328,7 +328,7 @@ func TestPresetTargetYieldsToTheApprovedDuration(t *testing.T) {
 		cuts = append(cuts, map[string]any{"id": fmt.Sprint("cut-", i), "source_id": a.Source.ID, "start_ms": 0, "end_ms": 4200, "rate_permille": 1000, "focal": map[string]any{"x": .5, "y": .5}, "chips": []string{},
 			"caption": map[string]any{"text": "여행", "start_ms": 200, "end_ms": 1500, "short_text": "여행", "keyword": ""}})
 	}
-	s, _, _ := newService(t, raw(map[string]any{"ratio": "vertical", "duration_ms": 16800, "hook": "정확한 여행", "cuts": cuts}), true)
+	s, _, _ := newService(t, raw(map[string]any{"ratio": "vertical", "duration_ms": 16800, "cuts": cuts}), true)
 	plan, _, err := s.Plan(t.Context(), testRef(), in)
 	if err != nil {
 		t.Fatalf("the preset's floor refused a reachable timeline: %v", err)
@@ -353,7 +353,7 @@ func TestPresetTargetYieldsToTheApprovedDuration(t *testing.T) {
 	// The same four cuts under the shared range hold their 1.2 s floor and shrink
 	// from the last cut.
 	in.Template.Preset = ""
-	s, _, _ = newService(t, raw(map[string]any{"ratio": "vertical", "duration_ms": 16800, "hook": "정확한 여행", "cuts": cuts}), true)
+	s, _, _ = newService(t, raw(map[string]any{"ratio": "vertical", "duration_ms": 16800, "cuts": cuts}), true)
 	if plan, _, err = s.Plan(t.Context(), testRef(), in); err != nil || plan.DurationMS != 15000 {
 		t.Fatalf("shared range: %+v %v", plan.DurationMS, err)
 	}
@@ -388,7 +388,7 @@ func TestFootageBoundClipShipsAtTheLengthItHolds(t *testing.T) {
 	in.Analyses[2].Source.Info.DurationMS, in.Analyses[2].Segments[0].EndMS = 4500, 4500
 	held := 2*ceiling + 4500
 	in.TargetDurationMS = held + 3000
-	wire := map[string]any{"ratio": "vertical", "duration_ms": in.TargetDurationMS, "hook": "정확한 여행",
+	wire := map[string]any{"ratio": "vertical", "duration_ms": in.TargetDurationMS,
 		"cuts": []any{cut("a", "source-0", 0, ceiling), cut("b", "source-1", 0, ceiling), cut("c", "source-2", 0, 4500)}}
 	s, _, _ := newService(t, raw(wire), true)
 	plan, _, err := s.Plan(t.Context(), testRef(), in)
@@ -424,7 +424,7 @@ func TestACutMayNotCrossTouchingScenes(t *testing.T) {
 			"caption": map[string]any{"text": "여행", "start_ms": 200, "end_ms": end - start - 200, "short_text": "여행", "keyword": ""}}
 	}
 	in.TargetDurationMS = 2*ceiling + ceiling
-	wire := map[string]any{"ratio": "vertical", "duration_ms": in.TargetDurationMS, "hook": "정확한 여행",
+	wire := map[string]any{"ratio": "vertical", "duration_ms": in.TargetDurationMS,
 		"cuts": []any{cut("straddle", "source-0", 1000, 4000), cut("b", "source-1", 0, ceiling), cut("c", "source-2", 0, ceiling)}}
 	s, models, _ := newService(t, raw(wire), true)
 	delivered, _, err := s.Plan(t.Context(), testRef(), in)
@@ -470,7 +470,7 @@ func TestTheTimelineMeasuresEveryRateOnTransformedOutputTime(t *testing.T) {
 		total += 3000
 	}
 	in.TargetDurationMS = total
-	wire := map[string]any{"ratio": "vertical", "duration_ms": total, "hook": "정확한 여행", "cuts": cuts}
+	wire := map[string]any{"ratio": "vertical", "duration_ms": total, "cuts": cuts}
 	s, models, _ := newService(t, raw(wire), true)
 	plan, _, err := s.Plan(t.Context(), testRef(), in)
 	if err != nil || len(models.calls) != 1 {
@@ -511,7 +511,7 @@ func TestReconciliationConvertsOutputDeltaBackToSourceDelta(t *testing.T) {
 				"focal": map[string]any{"x": .5, "y": .5}, "chips": []string{},
 				"caption": map[string]any{"text": "여행", "start_ms": 0, "end_ms": 1000, "short_text": "여행", "keyword": ""}})
 		}
-		wire := map[string]any{"ratio": "vertical", "duration_ms": 15000, "hook": "정확한 여행", "cuts": cuts}
+		wire := map[string]any{"ratio": "vertical", "duration_ms": 15000, "cuts": cuts}
 		s, _, _ := newService(t, raw(wire), true)
 		plan, _, err := s.Plan(t.Context(), testRef(), in)
 		if err != nil || plan.DurationMS != 15000 {

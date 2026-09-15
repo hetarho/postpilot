@@ -89,10 +89,10 @@ type cutJSON struct {
 	Volume   json.RawMessage `json:"volume"`
 }
 type planJSON struct {
-	Ratio    *string    `json:"ratio"`
-	Duration *int       `json:"duration_ms"`
-	Hook     *string    `json:"hook"`
-	Cuts     *[]cutJSON `json:"cuts"`
+	Ratio    *string `json:"ratio"`
+	Duration *int    `json:"duration_ms"`
+
+	Cuts *[]cutJSON `json:"cuts"`
 }
 
 // The embedded closed contract also guards exact key spelling and nulls: Go's
@@ -301,11 +301,7 @@ func parsePlan(cfg Config, input clip.PlanningInput, raw string) (clip.EditPlan,
 	for _, analysis := range input.Analyses {
 		byID[analysis.Source.ID] = analysis.Source
 	}
-	result := clip.EditPlan{Ratio: *wire.Ratio, DurationMS: *wire.Duration, Hook: optional(wire.Hook)}
-	if utf8.RuneCountInString(result.Hook) > cfg.Render.MaxCopyRunes || design.Chars(result.Hook) > 2*design.Type["hook"].Chars || strings.Count(result.Hook, "\n") > 1 {
-		result.Hook = ""
-		recordGeneratedNotice(&result, "plan_hook", "", "hook", "removal")
-	}
+	result := clip.EditPlan{Ratio: *wire.Ratio, DurationMS: *wire.Duration}
 	for _, c := range *wire.Cuts {
 		focal, ok := c.Focal.domain()
 		if !ok || c.ID == nil || c.SourceID == nil || c.Start == nil || c.End == nil || c.Rate == nil || c.Caption == nil {
