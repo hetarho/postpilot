@@ -47,15 +47,15 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | doing@260916.qa |
-| T178 | The disclosure badge is a rounded rectangle | CDS | - | todo |
 
 ## next
 - Ship the tested production migration/rollback fix; production currently runs the recovered ef94ac0b image.
 - implement-task T177 with the owner watching.
-- implement-task T178.
 - T008 stays owner-dependent.
 
 ## log
+- 260916 T178 done; the disclosure is a 12 px rounded rectangle, pinned by the token test and read by both renderer and preview
+- 260916 T178 claimed (bdg)
 - 260916 create-task CDS r19 done; T178 carries the badge shape
 - 260916 update-ssot CDS r19; T177 (doing) reviews the badge — its checklist sees the new shape
 - 260916 T177 claimed (qa)
@@ -74,7 +74,3 @@
 - 260915 create-task CDS CLIP done; T174 T175 from the CDS@17 CLIP@24 delta, T110 retired void with CDS-10 CDS-11
 - 260915 create-task CDS CLIP start
 - 260915 update-ssot CDS CLIP done; CDS@17 CLIP@24 — 9:16 safe area and CENTER/RIGHT anchors symmetric, SA-N retired, clip defined platform-neutral
-- 260915 warn T110 (blocked) targets the retired CDS-10 CDS-11 and needs retiring in create-task
-- 260915 update-ssot CDS CLIP start
-- 260915 T172 done; design-first authoring, lossless skeleton rebuilding, shared examples and final frontend/backend checks pass
-- 260915 T171 done; canvas font metadata now passes the style scanner, browser check and final build

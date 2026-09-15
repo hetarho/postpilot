@@ -171,7 +171,7 @@ func TestColourAndSpacingTokensMatchCDS14And15And21(t *testing.T) {
 	if !reflect.DeepEqual(design.Accent, accent) {
 		t.Fatalf("accent palette %+v", design.Accent)
 	}
-	spacing := design.SpacingTokens{PadChip: design.Pad{V: 16, H: 28}, GapStack: 16, RadiusChip: 999, StrokeText: 6, StrokeSmall: 4}
+	spacing := design.SpacingTokens{PadChip: design.Pad{V: 16, H: 28}, GapStack: 16, RadiusChip: 12, StrokeText: 6, StrokeSmall: 4}
 	if design.Spacing != spacing {
 		t.Fatalf("spacing tokens %+v", design.Spacing)
 	}

@@ -63,9 +63,9 @@ it.each(['vertical', 'horizontal', 'square'] as const)(
           })
           expect(group.querySelector('tspan')).toBeNull()
         }
-        const pill = view.container.querySelector('[data-disclosure]')!
-        expect(pill).toHaveAttribute('height', '68')
-        expect(pill).toHaveAttribute('rx', '999')
+        const badge = view.container.querySelector('[data-disclosure]')!
+        expect(badge).toHaveAttribute('height', '68')
+        expect(badge).toHaveAttribute('rx', String(CLIP_DESIGN.spacing.radius_chip))
         expect(view.container.querySelectorAll('[rx]')).toHaveLength(1)
         const info = view.container.querySelector('[data-role="info"]')!
         expect(info.querySelectorAll('text')[0]).toHaveAttribute(

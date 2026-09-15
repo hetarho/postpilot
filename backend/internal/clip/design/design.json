@@ -246,7 +246,7 @@
       "h": 28
     },
     "gap_stack": 16,
-    "radius_chip": 999,
+    "radius_chip": 12,
     "stroke_text": 6,
     "stroke_small": 4
   },

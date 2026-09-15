@@ -79,7 +79,7 @@ func TestInformationPairAllRatios(t *testing.T) {
 				}
 			}
 			svg, err := r.declaredSVG(canvas, badge)
-			if err != nil || !strings.Contains(svg, `height="68.000"`) || !strings.Contains(svg, `rx="999.000"`) || !strings.Contains(svg, `font-weight="800"`) {
+			if err != nil || !strings.Contains(svg, `height="68.000"`) || !strings.Contains(svg, `rx="12.000"`) || !strings.Contains(svg, `font-weight="800"`) {
 				t.Fatal(svg, err)
 			}
 		})
