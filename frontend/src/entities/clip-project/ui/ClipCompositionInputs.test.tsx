@@ -115,3 +115,55 @@ describe('declared item group controls', () => {
     expect(screen.queryByLabelText('Name')).not.toBeInTheDocument()
   })
 })
+
+describe('answers bounded by their field maximum', () => {
+  // The caption row holds 18 characters (CDS-20) and this field declares 6, so
+  // the effective maximum the control enforces is 6 (CLIP-117).
+  const bounded =
+    '<clip version="1" intro="a" caption="bold" outro="e">' +
+    '<field id="place" label="상호" chars="6">상호명</field>' +
+    '<text id="pair" kind="fixed" role="info" position="bottom" basis="whole">' +
+    '<row role="label">위치</row><row role="caption"><value field="place"/></row></text>' +
+    '<text id="opening" kind="fixed" role="hook" basis="output-start"><row>여는 문구</row><row>작은 문구</row></text>' +
+    '<text id="closing" kind="fixed" role="ending" basis="output-end"><row>라벨</row><row>큰 글씨</row><row>닫는 문구</row></text></clip>'
+
+  function BoundedField({ initial = '' }: { initial?: string }) {
+    const [value, setValue] = useState<ClipCompositionInputs>({
+      ...emptyCompositionInputs(),
+      values: { place: initial },
+    })
+    return (
+      <ClipCompositionInputFields
+        document={parseClipComposition(bounded)}
+        value={value}
+        onChange={setValue}
+      />
+    )
+  }
+
+  it('accepts no character past the maximum and truncates a paste to it', () => {
+    render(<BoundedField />)
+    const input = screen.getByLabelText('상호') as HTMLTextAreaElement
+    fireEvent.change(input, { target: { value: '해미한우집' } })
+    expect(input.value).toBe('해미한우집')
+    // The sixth character still fits; the seventh is simply not accepted.
+    fireEvent.change(input, { target: { value: '해미한우집이' } })
+    expect(input.value).toBe('해미한우집이')
+    fireEvent.change(input, { target: { value: '해미한우집이다' } })
+    expect(input.value).toBe('해미한우집이')
+    // A paste is cut to the same bound rather than refused whole.
+    fireEvent.change(input, { target: { value: '아주 긴 상호를 붙여넣었을 때' } })
+    expect(input.value).toBe('아주 긴 상호를 ')
+  })
+
+  it('counts against the field maximum, not the grammar ceiling', () => {
+    render(<BoundedField initial="해미" />)
+    expect(screen.getByText(/4/)).toBeInTheDocument()
+  })
+
+  it('marks an answer stored before the maximum tightened', () => {
+    render(<BoundedField initial="일곱글자입니다" />)
+    const input = screen.getByLabelText('상호')
+    expect(input).toHaveAttribute('aria-invalid', 'true')
+  })
+})

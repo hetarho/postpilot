@@ -56,7 +56,14 @@ export function resolveClipComposition(
       if (scalarLength(v) > limits.answerChars) fail(id, 1, 'answer_limit')
       const bound = d.maxima[key]
       if (bound !== undefined && compositionCharacters(v) > bound)
-        fail(key, f.span.line, 'answer_limit')
+        throw new CompositionProblem(
+          key,
+          f.span.line,
+          'answer_limit',
+          f.label,
+          bound,
+          compositionCharacters(v),
+        )
     }
     for (const f of d.fields)
       if (f.group === group && f.required && !trimCompositionSpace(valueOf(values, f.id)))

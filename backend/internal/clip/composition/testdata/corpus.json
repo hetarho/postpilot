@@ -6733,7 +6733,10 @@
       "error": {
         "reason": "answer_limit",
         "elementId": "place",
-        "line": 1
+        "line": 1,
+        "label": "상호",
+        "max": 6,
+        "actual": 7
       },
       "inputs": {
         "values": {

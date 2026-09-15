@@ -32,7 +32,11 @@ const corpus = JSON.parse(
   cases: {
     name: string
     body: string
-    error?: { reason: string; elementId: string; line: number }
+    error?: { reason: string; elementId: string; line: number } & Partial<{
+      label: string
+      max: number
+      actual: number
+    }>
     summary?: unknown
     rootSpan?: unknown
     inputs?: CompositionInputs
@@ -113,9 +117,16 @@ describe('shared portable composition contract', () => {
       if (c.error) {
         expect(caught).toBeInstanceOf(CompositionProblem)
         const error = caught as CompositionProblem
-        expect({ elementId: error.elementId, line: error.line, reason: error.reason }).toEqual(
-          c.error,
-        )
+        // A bounded answer also carries the field's label and counts; every
+        // other reason carries only the three both owners have always had.
+        expect({
+          elementId: error.elementId,
+          line: error.line,
+          reason: error.reason,
+          ...(c.error.label === undefined
+            ? {}
+            : { label: error.label, max: error.max, actual: error.actual }),
+        }).toEqual(c.error)
         return
       }
       expect(caught).toBeUndefined()

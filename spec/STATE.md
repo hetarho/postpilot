@@ -47,7 +47,6 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
-| T181 | An answer cannot be typed past its maximum | CLIP | T179 | todo |
 | T182 | Generated text obeys its declared maximum | CLIP CDS | T179 | todo |
 
 ## next
@@ -56,6 +55,8 @@
 - T177 is blocked on the owner's viewing answers; the three review clips are rendered and the checklist is open. T008 stays owner-dependent.
 
 ## log
+- 260916 T181 done; answers bounded where they are typed, and a stored over-long one refused by field label with its counts
+- 260916 T181 claimed (max)
 - 260916 T180 done; a bounded 최대 글자 수 control on field, element and slot rows, the cap stated from the parser
 - 260916 T180 claimed (max)
 - 260916 T179 done; chars on field/text/row, derived caps per position and one effective maximum per field, agreed by both grammar owners
@@ -74,5 +75,3 @@
 - 260916 create-task CDS r19 done; T178 carries the badge shape
 - 260916 update-ssot CDS r19; T177 (doing) reviews the badge — its checklist sees the new shape
 - 260916 T177 claimed (qa)
-- 260916 Production recovered to ef94ac0b after DB backup (schema 53, quick_check ok); health/GetMe/CORS verified; local migration 54 + rollout fixes pass BE vet/build/tests and 5 rollout regressions, not deployed (ops).
-- 260916 Production incident: investigate API 502 and failed backend rollout; repair startup/rollback and verify recovery (ops).

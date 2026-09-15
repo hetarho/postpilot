@@ -1,6 +1,6 @@
 export { CLIP_ACCENTS } from '../model/types'
 export type { ClipAccent } from '../model/types'
-export { parseClipComposition } from '../lib/composition-parse'
+export { parseClipComposition, compositionCharacters } from '../lib/composition-parse'
 export { resolveClipComposition } from '../lib/composition-resolve'
 export type {
   ClipComposition,

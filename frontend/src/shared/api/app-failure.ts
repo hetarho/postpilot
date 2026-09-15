@@ -109,7 +109,10 @@ export const appFailureSpecs = {
   CLIP_SOURCE_MISSING: {},
   CLIP_BUSY: {},
   CLIP_PLAN_CONFLICT: {},
-  CLIP_COMPOSITION_INVALID: { required: ['element_id', 'line', 'reason'] },
+  CLIP_COMPOSITION_INVALID: {
+    required: ['element_id', 'line', 'reason'],
+    optional: ['label', 'max', 'actual'],
+  },
   CLIP_COMPOSITION_UNAVAILABLE: {},
   CLIP_INVALID_MEDIA: {},
   CLIP_INPUT_TOO_LARGE: {},

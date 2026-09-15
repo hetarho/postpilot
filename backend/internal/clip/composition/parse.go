@@ -63,7 +63,7 @@ func issue(n *Node, reason string) *Problem {
 	if id == "" {
 		id = n.Name
 	}
-	return &Problem{id, n.Span.Line, reason}
+	return &Problem{ElementID: id, Line: n.Span.Line, Reason: reason}
 }
 func attrs(n *Node, allowed ...string) *Problem {
 	for k := range n.Attributes {
@@ -149,17 +149,17 @@ func ReadStored(source string, limits Limits) (*Document, *Problem) {
 
 func parse(source string, limits Limits, stored bool) (*Document, *Problem) {
 	if !validLimits(limits) {
-		return nil, &Problem{"clip", 1, "invalid_limits"}
+		return nil, &Problem{ElementID: "clip", Line: 1, Reason: "invalid_limits"}
 	}
 	if !utf8.ValidString(source) {
-		return nil, &Problem{"clip", 1, "invalid_unicode"}
+		return nil, &Problem{ElementID: "clip", Line: 1, Reason: "invalid_unicode"}
 	}
 	if scalar(source) > limits.SourceChars {
-		return nil, &Problem{"clip", 1, "source_limit"}
+		return nil, &Problem{ElementID: "clip", Line: 1, Reason: "source_limit"}
 	}
 	for _, c := range source {
 		if !xmlRune(c) {
-			return nil, &Problem{"clip", 1, "invalid_unicode"}
+			return nil, &Problem{ElementID: "clip", Line: 1, Reason: "invalid_unicode"}
 		}
 	}
 	r := reader{source: []rune(source), limits: limits}
@@ -422,7 +422,7 @@ func parse(source string, limits Limits, stored bool) (*Document, *Problem) {
 					count++
 				}
 				if element.Role == role && count > 1 {
-					return nil, &Problem{element.ID, element.Span.Line, "invalid_skeleton"}
+					return nil, &Problem{ElementID: element.ID, Line: element.Span.Line, Reason: "invalid_skeleton"}
 				}
 			}
 			if count != 1 {

@@ -2,6 +2,8 @@
 // It has no storage, transport, model, or rendering dependency.
 package composition
 
+import "strconv"
+
 type Limits struct {
 	SourceChars, Nodes, Fields, Items, Cuts, Cues               int
 	LabelChars, PromptChars, AnswerChars, CopyChars, GuideChars int
@@ -15,9 +17,25 @@ type Problem struct {
 	ElementID string
 	Line      int
 	Reason    string
+	// The refused answer's field label and counts. Only answer_limit carries
+	// them, so a refusal can say which answer is too long and by how much
+	// rather than point at a line the owner never sees (CLIP-102).
+	Label       string
+	Max, Actual int
 }
 
 func (p *Problem) Error() string { return p.Reason }
+
+// FailureParams is the ONE mapping of a problem to the stable failure contract,
+// so the durable generation failure and the RPC boundary cannot describe the
+// same refusal differently (CLIP-102).
+func (p *Problem) FailureParams() map[string]string {
+	params := map[string]string{"element_id": p.ElementID, "line": strconv.Itoa(p.Line), "reason": p.Reason}
+	if p.Reason == "answer_limit" && p.Label != "" {
+		params["label"], params["max"], params["actual"] = p.Label, strconv.Itoa(p.Max), strconv.Itoa(p.Actual)
+	}
+	return params
+}
 
 type Node struct {
 	Name       string

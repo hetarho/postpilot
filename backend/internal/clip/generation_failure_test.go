@@ -20,6 +20,22 @@ func TestDurableCompositionFailureKeepsElementIdentityWithoutDraftText(t *testin
 	}
 }
 
+// A bounded answer is the one composition refusal an owner can hit without ever
+// seeing the template body, so it names the field instead of a line (CLIP-102).
+func TestBoundedAnswerFailureNamesTheFieldAndItsCounts(t *testing.T) {
+	problem := &composition.Problem{ElementID: "place", Line: 3, Reason: "answer_limit", Label: "상호", Max: 6, Actual: 9}
+	failure := (&StageFailure{Stage: "prepare", Cause: fmt.Errorf("private draft: %w", problem)}).Failure()
+	want := map[string]string{"element_id": "place", "line": "3", "reason": "answer_limit", "label": "상호", "max": "6", "actual": "9"}
+	if failure.Reason != "CLIP_COMPOSITION_INVALID" || !reflect.DeepEqual(failure.Params, want) {
+		t.Fatal("bounded answer lost its label or counts", failure)
+	}
+	// Every other reason keeps the three parameters it always had.
+	plain := (&StageFailure{Stage: "render", Cause: &composition.Problem{ElementID: "price", Line: 7, Reason: "copy_limit"}}).Failure()
+	if !reflect.DeepEqual(plain.Params, map[string]string{"element_id": "price", "line": "7", "reason": "copy_limit"}) {
+		t.Fatal("unbounded reason gained parameters", plain)
+	}
+}
+
 func TestClipFailureUsesOnlyReasonSpecificParams(t *testing.T) {
 	f := (&StageFailure{Stage: "prepare", Cause: &plan.InsufficientCreditsError{Required: 79, Balance: 12}}).Failure()
 	if f.Reason != "INSUFFICIENT_CREDITS" || len(f.Params) != 3 || f.Params["required"] != "79" || f.Params["stage"] != "" {

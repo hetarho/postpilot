@@ -15,7 +15,6 @@ import (
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/platform/rpcserver"
 	"log/slog"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -127,7 +126,10 @@ func toConnectError(err error) error {
 	case errors.Is(err, clip.ErrPreviewUnavailable):
 		return rpcserver.NewAppError(connect.CodeUnavailable, "clip preview unavailable", "CLIP_PREVIEW_UNAVAILABLE", nil)
 	case errors.As(err, &problem):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid clip composition", "CLIP_COMPOSITION_INVALID", map[string]string{"element_id": problem.ElementID, "line": strconv.Itoa(problem.Line), "reason": problem.Reason})
+		// A bounded answer names what the owner typed and by how much it is over,
+		// because a line number in a template body means nothing in the answer
+		// form (CLIP-102).
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid clip composition", "CLIP_COMPOSITION_INVALID", problem.FailureParams())
 	case errors.Is(err, clip.ErrCompositionUnavailable):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip composition execution unavailable", "CLIP_COMPOSITION_UNAVAILABLE", nil)
 	// The model's admission answer first: it unwraps to the generic unsupported

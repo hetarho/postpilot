@@ -87,6 +87,12 @@ export class CompositionProblem extends Error {
     public elementId: string,
     public line: number,
     public reason: CompositionReason,
+    /** The refused answer's field label and counts. Only answer_limit carries
+     * them, so a refusal can say which answer is too long and by how much
+     * rather than point at a line the owner never sees (CLIP-102). */
+    public label = '',
+    public max = 0,
+    public actual = 0,
   ) {
     super(reason)
     this.name = 'CompositionProblem'

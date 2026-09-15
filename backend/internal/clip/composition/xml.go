@@ -28,7 +28,7 @@ func (r *reader) problem(reason string, n *Node) *Problem {
 			id = n.Name
 		}
 	}
-	return &Problem{id, line, reason}
+	return &Problem{ElementID: id, Line: line, Reason: reason}
 }
 func white(c rune) bool { return c == ' ' || c == '\n' || c == '\r' || c == '\t' }
 func (r *reader) skip() {
@@ -290,7 +290,7 @@ func ReplaceNode(d *Document, id string, replacement *Node, limits Limits) (*Doc
 	}
 	walk(d.Root, "")
 	if target == nil {
-		return nil, &Problem{id, 1, "unknown_element"}
+		return nil, &Problem{ElementID: id, Line: 1, Reason: "unknown_element"}
 	}
 	return ReplaceSpan(d, target.Span, replacement, limits)
 }
@@ -310,7 +310,7 @@ func ReplaceSpan(d *Document, span Span, replacement *Node, limits Limits) (*Doc
 	}
 	walk(d.Root)
 	if !found {
-		return nil, &Problem{"clip", span.Line, "unknown_element"}
+		return nil, &Problem{ElementID: "clip", Line: span.Line, Reason: "unknown_element"}
 	}
 	s := []rune(d.Source)
 	return Parse(string(s[:span.Start])+SerializeNode(replacement)+string(s[span.End:]), limits)

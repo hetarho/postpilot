@@ -1,11 +1,30 @@
 import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { ClipComposition } from '@/entities/clip-template/@x/clip-project'
+import {
+  compositionCharacters,
+  type ClipComposition,
+} from '@/entities/clip-template/@x/clip-project'
 import { CLIP_COMPOSITION_LIMITS } from '@/shared/config'
-import { Button, FieldLabel, FieldMessage, Textarea, Typography } from '@/shared/ui'
+import { Button, FieldCount, FieldLabel, FieldMessage, Textarea, Typography } from '@/shared/ui'
 import type { ClipCompositionInputs as Inputs } from '../model/composition'
 import { compositionInputsAtMinimum, removeCompositionItem } from '../model/composition-inputs'
 
+/** The longest prefix of an answer that fits its maximum, counted CDS-20's way
+ *  (CLIP-117). Typing simply stops accepting characters at the bound; a paste
+ *  is cut to it, which is the one place characters are dropped — in front of
+ *  the counter, rather than behind the owner's back at generation. */
+function boundedAnswer(text: string, max: number) {
+  if (compositionCharacters(text) <= max) return text
+  const characters = Array.from(text)
+  let kept = 0
+  for (let i = 0; i < characters.length; i++) {
+    if (compositionCharacters(characters[i]) > 0) {
+      if (kept === max) return characters.slice(0, i).join('')
+      kept += 1
+    }
+  }
+  return text
+}
 export function ClipCompositionInputFields({
   document,
   value: stored,
@@ -30,7 +49,16 @@ export function ClipCompositionInputFields({
         const fieldId = `${id}-${key}-${f.id}`
         const text = values[f.id] ?? ''
         const missing = f.required && !text.trim()
-        const tooLong = Array.from(text).length > CLIP_COMPOSITION_LIMITS.answerChars
+        // The maximum every position this answer reaches agrees on, computed by
+        // the parser (CLIP-117). A field that reaches no bounded position still
+        // has the grammar's own ceiling, so no field loses its counter.
+        const max =
+          document.maxima[f.group ? `${f.group}.${f.id}` : f.id] ??
+          CLIP_COMPOSITION_LIMITS.answerChars
+        const count = compositionCharacters(text)
+        // Only an answer stored before its template tightened this number can be
+        // over it: nothing typed here gets past the bound.
+        const tooLong = count > max
         return (
           <div key={f.id} className="min-w-0 space-y-2">
             <FieldLabel htmlFor={fieldId}>
@@ -49,14 +77,11 @@ export function ClipCompositionInputFields({
               value={text}
               autoGrow
               aria-invalid={missing || tooLong}
-              onChange={(e) => change({ ...values, [f.id]: e.target.value })}
+              onChange={(e) => change({ ...values, [f.id]: boundedAnswer(e.target.value, max) })}
             />
+            <FieldCount left={max - count} />
             {missing && <FieldMessage>{t('validation.required')}</FieldMessage>}
-            {tooLong && (
-              <FieldMessage>
-                {t('validation.tooLong', { max: CLIP_COMPOSITION_LIMITS.answerChars })}
-              </FieldMessage>
-            )}
+            {tooLong && <FieldMessage>{t('validation.tooLong', { max })}</FieldMessage>}
           </div>
         )
       })

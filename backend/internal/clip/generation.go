@@ -156,7 +156,7 @@ func (e *StageFailure) Failure() llm.Failure {
 	var element *composition.Problem
 	switch {
 	case errors.As(e.Cause, &element):
-		f = llm.Failure{Reason: "CLIP_COMPOSITION_INVALID", Params: map[string]string{"element_id": element.ElementID, "line": fmt.Sprint(element.Line), "reason": element.Reason}}
+		f = llm.Failure{Reason: "CLIP_COMPOSITION_INVALID", Params: element.FailureParams()}
 	case errors.Is(e.Cause, ErrCompositionUnavailable):
 		f = llm.Failure{Reason: "CLIP_COMPOSITION_UNAVAILABLE"}
 	// The model's own admission answer comes first: it unwraps to the generic

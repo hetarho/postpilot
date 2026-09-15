@@ -17,6 +17,19 @@ export function formatAppFailure(
       element: failure.params.element_id,
     })
   }
+  // A bounded answer says which answer, its maximum and what was stored — the
+  // only refusal in this family that names a field rather than a line.
+  if (
+    failure.reason === 'CLIP_COMPOSITION_INVALID' &&
+    failure.params.reason === 'answer_limit' &&
+    failure.params.label
+  ) {
+    return i18next.getFixedT(locale, 'clips')('composition.errors.answer_limit_field', {
+      label: failure.params.label,
+      max: failure.params.max,
+      actual: failure.params.actual,
+    })
+  }
   const translate = i18next.getFixedT(locale, 'errors') as unknown as (
     key: string,
     options: Readonly<Record<string, string>>,

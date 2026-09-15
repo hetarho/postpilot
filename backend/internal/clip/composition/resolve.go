@@ -14,7 +14,9 @@ func fieldKey(f Field) string {
 	}
 	return f.ID
 }
-func fail(id string, line int, reason string) *Problem { return &Problem{id, line, reason} }
+func fail(id string, line int, reason string) *Problem {
+	return &Problem{ElementID: id, Line: line, Reason: reason}
+}
 
 // Resolve binds already-selected real cuts and explicit answers. It never selects
 // footage, invents an item association, or calls a writer. maxExpandedBytes is the
@@ -50,7 +52,7 @@ func Resolve(d *Document, in Inputs, l Limits, maxExpandedBytes int) (Timeline, 
 				return fail(id, 1, "answer_limit")
 			}
 			if bound, capped := d.Maxima[key]; capped && design.Chars(v) > bound {
-				return fail(key, f.Span.Line, "answer_limit")
+				return &Problem{ElementID: key, Line: f.Span.Line, Reason: "answer_limit", Label: f.Label, Max: bound, Actual: design.Chars(v)}
 			}
 		}
 		for _, f := range d.Fields {
