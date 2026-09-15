@@ -22,6 +22,7 @@ import (
 	authstore "github.com/postpilot/backend/internal/auth/store"
 	"github.com/postpilot/backend/internal/clip"
 	clipai "github.com/postpilot/backend/internal/clip/ai"
+	"github.com/postpilot/backend/internal/clip/composition"
 	clipmedia "github.com/postpilot/backend/internal/clip/media"
 	cliprpc "github.com/postpilot/backend/internal/clip/rpc"
 	clipstore "github.com/postpilot/backend/internal/clip/store"
@@ -132,6 +133,16 @@ func releaseRequest[T any](h *releaseHarness, msg *T) *connect.Request[T] {
 	r := connect.NewRequest(msg)
 	r.Header().Set("Cookie", auth.SessionCookieName+"="+h.cookie)
 	return r
+}
+
+func TestReleaseDetailedBodyUsesCurrentGrammar(t *testing.T) {
+	doc, problem := composition.Parse(releaseDetailedBody(), config.ClipCompositionLimits())
+	if problem != nil {
+		t.Fatal(problem)
+	}
+	if doc.Design.Intro != "b" || doc.Design.Caption != "bold" || doc.Design.Outro != "e" {
+		t.Fatalf("unexpected release design: %+v", doc.Design)
+	}
 }
 
 // The environment opt-in deliberately isolates real binaries and databases from
