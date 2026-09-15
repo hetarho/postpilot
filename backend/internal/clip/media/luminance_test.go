@@ -228,3 +228,48 @@ func TestSamplerTakesThreeFramesThroughTheRenderChain(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// Each unplated role samples the glyph union, including region slots with no
+// stroke. A bright canvas outside that union must not trigger a scrim.
+func TestDeclaredRolesSampleOnlyTheirTextBounds(t *testing.T) {
+	body := `<clip version="1"><text id="caption" kind="fixed" role="caption" basis="whole">현재 장면</text><text id="intro" kind="fixed" role="hook" basis="output-start"><row>첫 장면</row><row>기록</row></text><text id="outro" kind="fixed" role="ending" basis="output-end"><row>평점</row><row>4.5</row><row>또 올 곳</row></text><text id="info" kind="fixed" role="info" basis="whole"><row role="label">메뉴</row><row role="caption">된장찌개</row></text></clip>`
+	layout := measuredDeclared(t, declaredPlan(t, body, "vertical"))
+	canvas, _ := clip.ClipCanvas("vertical")
+	for _, visual := range layout.visuals {
+		t.Run(visual.manifest.Role, func(t *testing.T) {
+			bounds := regionBounds(visual)
+			banded := image.NewRGBA(image.Rect(0, 0, canvas.Width, canvas.Height))
+			for y := 0; y < canvas.Height; y++ {
+				for x := 0; x < canvas.Width; x++ {
+					level := uint8(255)
+					if x >= int(bounds.X) && x < int(bounds.X+bounds.Width) && y >= int(bounds.Y) && y < int(bounds.Y+bounds.Height) {
+						level = 0
+					}
+					banded.SetRGBA(x, y, color.RGBA{level, level, level, 255})
+				}
+			}
+			samples := 0
+			a := newAdapter(t, &fakeRunner{run: func(_ context.Context, c Command) ([]byte, error) {
+				if slices.Contains(c.Args, "-ss") {
+					samples++
+				}
+				f, err := os.Create(c.Args[len(c.Args)-1])
+				if err != nil {
+					return nil, err
+				}
+				defer f.Close()
+				return nil, png.Encode(f, banded)
+			}})
+			r := testRenderer(t, a)
+			if err := a.WithWorkspace(t.Context(), "role-sample", func(ws clip.MediaWorkspace) error {
+				_, err := r.declaredPlate(t.Context(), ws, canvas, &visual, clip.MediaSource{Path: sourceFile(t, ws), Info: clip.MediaInfo{DurationMS: 15000}}, 0)
+				return err
+			}); err != nil {
+				t.Fatal(err)
+			}
+			if samples != 3 || visual.ground.Mean != 0 || visual.ground.Scrim() {
+				t.Fatal(samples, visual.ground)
+			}
+		})
+	}
+}

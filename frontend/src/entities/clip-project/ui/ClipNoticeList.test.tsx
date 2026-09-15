@@ -5,6 +5,7 @@ import { ClipNoticeList } from './ClipNoticeList'
 import { clipNoticeKey, clipNoticeKeys, type ClipNotice } from '../model/notices'
 
 const notices: ClipNotice[] = [
+  { code: 'composition_contrast', cutId: 'cut-a', elementId: 'information', action: 'shortfall' },
   { code: 'plan_cut_rate', cutId: 'cut-a', elementId: '', action: 'repair' },
   { code: 'shorter_copy', cutId: 'cut-a', elementId: 'caption', action: 'repair' },
   { code: 'plan_target_duration', cutId: '', elementId: '', action: 'shortfall' },
@@ -27,7 +28,7 @@ it.each(['ko', 'en'] as const)(
 
 it('renders no placeholder for an ordinary delivered clip and clears on a refreshed response', () => {
   const view = render(<ClipNoticeList notices={notices} />)
-  expect(screen.getAllByRole('listitem')).toHaveLength(3)
+  expect(screen.getAllByRole('listitem')).toHaveLength(4)
   view.rerender(<ClipNoticeList notices={[]} />)
   expect(view.container).toBeEmptyDOMElement()
 })

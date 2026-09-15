@@ -51,15 +51,15 @@ func arrangeDeclaredHeader(ratio string, visuals []declaredVisual) {
 					for _, j := range group {
 						b := visuals[j].manifest
 						if b.Role == "badge" && visibleTogether(v.manifest, b) {
-							right = math.Min(right, b.Region.X-design.Spacing.GapChip)
+							right = math.Min(right, b.Region.X-design.Spacing.GapStack)
 						}
 					}
 				}
-				x, count := l.Chip.X, 0
+				x, count := l.Anchor.Left, 0
 				for _, j := range placed {
 					p := visuals[j].manifest
-					if p.Region.Y == y && visibleTogether(v.manifest, p) {
-						x = math.Max(x, p.Region.X+p.Region.Width+design.Spacing.GapChip)
+					if math.Abs(p.Region.Y+p.Region.Height/2-(y+height/2)) < .01 && visibleTogether(v.manifest, p) {
+						x = math.Max(x, p.Region.X+p.Region.Width+design.Spacing.GapStack)
 						count++
 					}
 				}
@@ -80,30 +80,25 @@ func arrangeDeclaredHeader(ratio string, visuals []declaredVisual) {
 	}
 }
 
+// Align centers without stretching the disclosure's token-defined pill height.
 func resizeHeader(v *declaredVisual, x, y, height float64) {
 	old := v.manifest.Region
-	dx, dy := x-old.X, y-old.Y
-	v.manifest.Region.X, v.manifest.Region.Y, v.manifest.Region.Height = x, y, height
+	dx, dy := x-old.X, y+(height-old.Height)/2-old.Y
+	v.manifest.Region.X = x
+	v.manifest.Region.Y = y
+	v.manifest.Region.Height = height
 	for i := range v.manifest.Parts {
 		p := &v.manifest.Parts[i]
-		p.Region.X, p.Region.Y = p.Region.X+dx, p.Region.Y+dy
-		if p.Kind == "plate" || p.Kind == "badge" {
-			p.Region.Height = height
-		} else {
-			p.Region.Y += (height - old.Height) / 2
-		}
+		p.Region.X += dx
+		p.Region.Y += dy
 	}
 	if v.manifest.Role == "badge" {
-		v.furniture.Badge = v.manifest.Region
+		v.furniture.Badge.X += dx
+		v.furniture.Badge.Y += dy
 	} else {
-		v.info.Frame.X, v.info.Frame.Y, v.info.Frame.Height = x, y, height
-		v.info.Right, v.info.Bottom = x+old.Width, y+height
-		if v.info.Plate != nil {
-			v.info.Plate.X, v.info.Plate.Y, v.info.Plate.Height = x, y, height
-		}
 		for i := range v.info.Lines {
 			v.info.Lines[i].X += dx
-			v.info.Lines[i].Y += dy + (height-old.Height)/2
+			v.info.Lines[i].Y += dy
 		}
 	}
 }

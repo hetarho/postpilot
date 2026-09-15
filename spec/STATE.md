@@ -47,17 +47,18 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T110 | Release QA on the Naver app and the overlay measurement | CDS CLIP | T108 | blocked@260912 |
-| T168 | Replace the information frame with an unplated label/value pair and retune the disclosure pill | CDS CLIP | T166 T167 | doing@260915.dsg |
 | T171 | Remove the style controls and draw the presets in the previews | CLIP CDS | T166 T167 T168 T169 | todo |
 | T172 | Author templates design first with fixed intro and outro skeletons | CLIP CDS | T169 T171 | todo |
-| T173 | Keep generated slot text to one line through the plan ladder | CDS CLIP | T167 T169 | todo |
+| T173 | Keep generated slot text to one line through the plan ladder | CDS CLIP | T167 T169 | doing@260915.dsg |
 
 ## next
-- Finish T168 (dsg); T166, T167, T169 and T170 are complete.
+- Finish T173 (dsg); T166–T170 are complete.
 - Continue with T173, T171 and T172, one commit per task.
 - T110 stays owner-blocked and T008 owner-dependent.
 
 ## log
+- 260915 T168 done; unplated information, fixed disclosure height and sampled contrast notices verified
+- 260915 T173 claimed (dsg); T168 implementation is frozen for verification
 - 260915 T169 done; strict/tolerant grammar, byte-preserving migration and retired style permissions verified
 - 260915 T168 claimed (dsg); T169 implementation is frozen for verification
 - 260915 T167 done; twelve region/font fixtures and backend gates pass; one clock-reversal failure passed three isolated repeats
@@ -76,5 +77,3 @@
 - 260915 T165 done
 - 260915 T164 done
 - 260915 T163 done
-- 260915 T165 claimed (frm); T164 parser and notice contract tests pass, coordinated release gates remain
-- 260915 update-ssot CDS r15 CLIP r22 done; three fixed regions replace five caption styles, cards and pills; only the disclosure keeps a pill

@@ -1,5 +1,7 @@
 export const clips = {
   notices: {
+    contrastReview:
+      'Some text has low contrast against its background. Review it before publishing.',
     label: 'About this clip',
     marker: 'Note',
     text: 'Text',

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"slices"
 	"strconv"
 
 	"github.com/postpilot/backend/internal/clip"
@@ -15,35 +16,16 @@ func (r *Rendering) declaredPlate(ctx context.Context, ws clip.MediaWorkspace, c
 	var body string
 	var err error
 	switch visual.manifest.Role {
-	case "info":
-		if visual.infoVariant == "emphasis" {
-			cut := clip.Cut{StartMS: 0, EndMS: source.Info.DurationMS, Focal: clip.Point{X: .5, Y: .5}}
+	case "caption", "info", "hook", "ending":
+		bounds := regionBounds(*visual)
+		if bounds.Width > 0 && bounds.Height > 0 {
+			cut := clip.Cut{EndMS: source.Info.DurationMS, Focal: clip.Point{X: .5, Y: .5}}
 			window := declaredSampleWindow(visual.manifest.StartMS, visual.manifest.EndMS, source.Info.DurationMS, r.cfg.FPS)
-			visual.ground, err = r.sample(ctx, ws, canvas, source, cut, window, visual.manifest.Region, index)
+			visual.ground, err = r.sample(ctx, ws, canvas, source, cut, window, bounds, index)
 			if err != nil {
 				return "", err
 			}
-			applyInfoGround(canvas, visual)
-		}
-	case "caption":
-		if visual.caption.Style.Plate == "" && visual.copy.Style != "simple" {
-			cut := clip.Cut{StartMS: 0, EndMS: source.Info.DurationMS, Focal: clip.Point{X: .5, Y: .5}}
-			window := declaredSampleWindow(visual.manifest.StartMS, visual.manifest.EndMS, source.Info.DurationMS, r.cfg.FPS)
-			visual.ground, err = r.sample(ctx, ws, canvas, source, cut, window, visual.caption.Region, index)
-			if err != nil {
-				return "", err
-			}
-			for i := range visual.manifest.Parts {
-				part := &visual.manifest.Parts[i]
-				if part.Kind == "copy" {
-					part.Background = visual.ground.Background(canvas, visual.caption.Style, visual.copy.Anchor, clip.Region(part.Region))
-				}
-			}
-			if visual.ground.Scrim() {
-				if scrim, ok := scrimFor(canvas, visual.copy.Anchor); ok {
-					visual.manifest.Parts = append(visual.manifest.Parts, design.Element{Kind: "scrim", Region: design.Bounds(scrim.Region), StartMS: visual.manifest.StartMS, EndMS: visual.manifest.EndMS})
-				}
-			}
+			applyDeclaredGround(canvas, visual)
 		}
 	}
 	body, err = r.declaredSVG(canvas, *visual)
@@ -62,9 +44,10 @@ func (r *Rendering) declaredSVG(canvas clip.Canvas, visual declaredVisual) (stri
 	case "badge":
 		return r.overlays.Render("furniture", furnitureView(canvas, visual.furniture))
 	case "info":
-		applyInfoGround(canvas, &visual)
-		return r.overlays.Render(design.InfoFrames[visual.infoVariant].Binding, visual.info)
+		applyDeclaredGround(canvas, &visual)
+		return r.overlays.Render("info", visual.info)
 	case "hook", "ending":
+		applyDeclaredGround(canvas, &visual)
 		return r.overlays.Render("region", visual.region)
 	default:
 		return "", elementProblem(visual.text, "invalid_role")
@@ -122,30 +105,63 @@ func (r *Rendering) overlayComposition(ctx context.Context, ws clip.MediaWorkspa
 	return paths, frames, nil
 }
 
-func applyInfoGround(canvas clip.Canvas, visual *declaredVisual) {
-	if visual.infoVariant != "emphasis" {
+// Source contrast changes only the backdrop and its delivery notice. Region
+// slot fills remain their declared white/alpha so V20 can verify them unchanged.
+func applyDeclaredGround(canvas clip.Canvas, visual *declaredVisual) {
+	if !visual.ground.Sampled() {
 		return
 	}
+	visual.manifest.Parts = slices.DeleteFunc(slices.Clone(visual.manifest.Parts), func(p design.Element) bool { return p.Kind == "scrim" })
 	anchor := visual.manifest.Position
 	if anchor == "header" || anchor == "auto" {
 		anchor = "top"
-	}
-	for i := range visual.manifest.Parts {
-		p := &visual.manifest.Parts[i]
-		if p.Kind == "copy" && visual.ground.Sampled() {
-			p.Background = visual.ground.Background(canvas, design.StyleRule{Stroke: "text"}, anchor, clip.Region(p.Region))
+		bounds := regionBounds(*visual)
+		if bounds.Y+bounds.Height/2 > float64(canvas.Height)/2 {
+			anchor = "bottom"
 		}
 	}
+	var view *overlay.CopyView
+	switch visual.manifest.Role {
+	case "info":
+		view = &visual.info
+	case "hook", "ending":
+		view = &visual.region.CopyView
+	}
+	if view != nil {
+		view.Scrim = nil
+	}
 	if visual.ground.Scrim() {
-		if s, ok := scrimFor(canvas, anchor); ok {
-			paint := design.Scrim[s.Edge]
-			visual.info.Scrim = &overlay.Scrim{Box: overlayBox(s.Region, 0, paint.Hex, ""), From: trimmed(paint.From), To: trimmed(paint.To)}
-			for _, p := range visual.manifest.Parts {
-				if p.Kind == "scrim" {
-					return
-				}
+		if scrim, ok := scrimFor(canvas, anchor); ok {
+			colour := design.Scrim[scrim.Edge]
+			if view != nil {
+				view.Scrim = &overlay.Scrim{Box: overlayBox(scrim.Region, 0, colour.Hex, ""), From: trimmed(colour.From), To: trimmed(colour.To)}
 			}
-			visual.manifest.Parts = append(visual.manifest.Parts, design.Element{Kind: "scrim", Region: design.Bounds(s.Region), StartMS: visual.manifest.StartMS, EndMS: visual.manifest.EndMS})
+			visual.manifest.Parts = append(visual.manifest.Parts, design.Element{Kind: "scrim", Region: design.Bounds(scrim.Region), StartMS: visual.manifest.StartMS, EndMS: visual.manifest.EndMS})
+		}
+	}
+	line := 0
+	for i := range visual.manifest.Parts {
+		p := &visual.manifest.Parts[i]
+		if p.Kind != "copy" {
+			continue
+		}
+		stroke := design.Caption().Stroke
+		if view != nil {
+			stroke = ""
+			if line < len(view.Lines) && view.Lines[line].StrokeWidth > 0 {
+				stroke = "small"
+			}
+		}
+		p.Background = visual.ground.Background(canvas, design.StyleRule{Stroke: stroke}, anchor, clip.Region(p.Region))
+		p.ContrastNotice = !design.Legible(design.Manifest{*p})
+		line++
+	}
+}
+
+func (layout *declaredLayout) recordContrastNotices() {
+	for _, visual := range layout.visuals {
+		if visual.ground.Sampled() && !design.Legible(visual.manifest.Parts) {
+			clip.AddPlanNotice(&layout.plan, "composition_contrast", visual.manifest.CutID, visual.manifest.ElementID, "shortfall")
 		}
 	}
 }

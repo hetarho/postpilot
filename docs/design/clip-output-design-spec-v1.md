@@ -687,38 +687,29 @@ For 16:9 and 1:1, multiply every baseline and rule y by canvas height / 1920. Ke
 
 > 미확인·추정 항목 재확인 요청: (1) 네이버 클립 UI 실측 geometry(§1.1), (2) 16:9·1:1 업로드 시 클립 표시 방식(§1.4·§6), (3) 정보 태그 칩이 차지하는 하단 높이. 실측 후 `safe` 상수만 갱신하면 나머지 규칙은 그대로 동작한다.
 
-## Information frame family — CDS-69 (v1)
+## Unplated information and disclosure — CDS-30/31/44
 
-Information frames now use two bundled SVG drawings, selected from the resolved
-content shape. One short name uses **emphasis**: Pretendard 800 at t.title (72 px,
-64 px minimum), a 6 px round dark text stroke and shadow.text, with no plate.
-A label/value pair uses **compact**: t.label (36 px) and t.caption (44 px) on
-ink.900, a 16 px corner radius and inset corner strokes. Long exact single values
-retain compact word wrapping. Neither variant changes an authored word or binds a
-reserved fact label. The disclosure badge keeps its separate drawing and 40 px
-font contract.
+Information is a centered label/value stack with no frame or plate. The label uses
+Pretendard 600 at 36 px, 0.72 white and +0.08em tracking; the value uses Pretendard
+600 at 44 px in white. Both use the 4 px dark stroke and text shadow. A literal
+without rows is a value. Exact authored values can wrap at word boundaries without
+shortening their content; values that cannot fit are identified for correction.
 
-The versioned drawing assets live in
-`backend/internal/clip/overlay/presets/info-emphasis` and `info-compact`; bindings
-and typography/padding live in `design/design.json` (`info_frames`). Both variants
-reserve 28 px horizontally; emphasis reserves 18 px vertically, compact 16 px.
-Corner strokes occupy the outer 4–16 px and never enter the text rectangle.
-Measurement uses the bundled glyph bounds at the actual face, weight and tracking,
-then adds that padding, rounds the outer dimensions upward and enforces the
-600 px width limit. Shared header row height centres the glyphs and resizes the
-frame without changing the badge's font, padding minimum, colour or radius rule.
+The single information drawing is `backend/internal/clip/overlay/presets/info`.
+The disclosure is the only pill: 36 px/800, 16 px vertical and 28 px horizontal
+padding, radius 999, white on `badge_ad`. Its measured height is exactly 68 px in
+all ratios. A shared header container vertically centers this pill beside the
+information stack without stretching it; adjacent elements use `gap_stack`.
 
-Worked SVG plates (same measurements used by preview and export):
+| Ratio | Information pair |
+|---|---|
+| 9:16 | [Label/value](../../backend/internal/clip/media/testdata/information-pair-vertical.svg) |
+| 16:9 | [Label/value](../../backend/internal/clip/media/testdata/information-pair-horizontal.svg) |
+| 1:1 | [Label/value](../../backend/internal/clip/media/testdata/information-pair-square.svg) |
 
-| Ratio | Emphasis | Compact |
-|---|---|---|
-| 9:16 | [Name](../../backend/internal/clip/media/testdata/information-emphasis-vertical.svg) | [Label/value](../../backend/internal/clip/media/testdata/information-compact-vertical.svg) |
-| 16:9 | [Name](../../backend/internal/clip/media/testdata/information-emphasis-horizontal.svg) | [Label/value](../../backend/internal/clip/media/testdata/information-compact-horizontal.svg) |
-| 1:1 | [Name](../../backend/internal/clip/media/testdata/information-emphasis-square.svg) | [Label/value](../../backend/internal/clip/media/testdata/information-compact-square.svg) |
-
-Export samples the emphasis region on the first, middle and last frames of its
-visible window. Mean Rec.709 luminance ≥ 0.6 or deviation ≥ 0.25 adds the existing
-anchor scrim. V3 includes the dark outline over the sampled/scrimmed ground.
-Compact requires no sampling: its white-frame worst case includes the 0.72 ink
-plate and the label's 0.72 white alpha when checking 4.5:1. Tests cover both
-variants in all ratios, dark/bright backgrounds and simultaneous disclosure.
+Export samples the text bounds of captions, intro/outro slots and information on
+the first, middle and last visible frames. Mean luminance ≥ 0.6 or deviation ≥ 0.25
+adds the anchor scrim. V3 reads stroked text against the dark outline composited
+over that ground, including the label's opacity. A remaining contrast shortfall
+is delivered with an element notice for owner review. Geometric preview does not
+claim to sample footage; export returns the measured notices in its retained plan.

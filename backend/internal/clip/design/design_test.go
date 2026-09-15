@@ -69,7 +69,6 @@ func TestRatioLayoutsMatchCDS46To48(t *testing.T) {
 	want := map[string]design.RatioLayout{
 		"vertical": {
 			CopyMaxWidth: 856, HookSize: 84,
-			Chip:  design.ChipStack{X: 96, Y: 80, MaxWidth: 600, Columns: 1},
 			Badge: design.BadgeBox{Right: 984, Top: 80},
 			// CDS-32 states both 9:16 scrim rectangles exactly.
 			ScrimTop:    design.Bounds{Y: 40, Width: 1080, Height: 310},
@@ -77,14 +76,12 @@ func TestRatioLayoutsMatchCDS46To48(t *testing.T) {
 		},
 		"horizontal": {
 			CopyMaxWidth: 960, HookSize: 72,
-			Chip:        design.ChipStack{X: 96, Y: 112, MaxWidth: 600, Columns: 2},
 			Badge:       design.BadgeBox{Right: 1824, Top: 112},
 			ScrimTop:    design.Bounds{Y: 72, Width: 1920, Height: 200},
 			ScrimBottom: design.Bounds{Y: 748, Width: 1920, Height: 260},
 		},
 		"square": {
 			CopyMaxWidth: 952, HookSize: 76,
-			Chip:        design.ChipStack{X: 64, Y: 112, MaxWidth: 600, Columns: 1},
 			Badge:       design.BadgeBox{Right: 1016, Top: 112},
 			ScrimTop:    design.Bounds{Y: 72, Width: 1080, Height: 200},
 			ScrimBottom: design.Bounds{Y: 748, Width: 1080, Height: 260},

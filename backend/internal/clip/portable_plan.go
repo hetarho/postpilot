@@ -291,9 +291,8 @@ func LegacyPortablePlan(p Project, plan EditPlan, limits composition.Limits) (*P
 		for _, label := range factsPlan.ChipLabels(cut) {
 			start, end := 0, cut.OutputDurationMS()
 			id := "legacy-info-" + cut.ID + "-" + strings.TrimPrefix(LegacyFieldID(label), "field-")
-			text := label + " " + values[label]
-			element := composition.Element{ID: id, Kind: "fixed", Role: "info", Style: "auto", Position: "header", Align: "center", Basis: "cut", StartMS: &start, EndMS: &end, Parts: []composition.Part{{Literal: text}}}
-			out.Elements = append(out.Elements, PortableText{Resolved: composition.ResolvedElement{InstanceID: id, CutID: cut.ID, Element: element, Text: text, StartMS: offset, EndMS: offset + end, AuthoredTiming: true, Facts: []composition.Fact{{FieldID: LegacyFieldID(label), Value: values[label]}}}, Scope: "scene", Accent: legacyRecipe.Accent, Evidence: []SourceEvidence{{cut.SourceID, cut.Fingerprint, cut.StartMS, cut.EndMS}}})
+			element := composition.Element{ID: id, Kind: "fixed", Role: "info", Style: "auto", Position: "header", Align: "center", Basis: "cut", StartMS: &start, EndMS: &end, Rows: []composition.Row{{Role: "label", Kind: "fixed", Parts: []composition.Part{{Literal: label}}}, {Role: "caption", Kind: "fixed", Parts: []composition.Part{{Literal: values[label]}}}}}
+			out.Elements = append(out.Elements, PortableText{Resolved: composition.ResolvedElement{InstanceID: id, CutID: cut.ID, Element: element, Rows: []composition.ResolvedRow{{Role: "label", Text: label}, {Role: "caption", Text: values[label]}}, StartMS: offset, EndMS: offset + end, AuthoredTiming: true, Facts: []composition.Fact{{FieldID: LegacyFieldID(label), Value: values[label]}}}, Scope: "scene", Accent: legacyRecipe.Accent, Evidence: []SourceEvidence{{cut.SourceID, cut.Fingerprint, cut.StartMS, cut.EndMS}}})
 		}
 		offset += cut.OutputDurationMS()
 	}

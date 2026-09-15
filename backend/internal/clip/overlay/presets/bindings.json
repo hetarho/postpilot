@@ -7,8 +7,7 @@
     "copy.bold": "caption",
     "copy.mark": "caption",
     "furniture": "furniture",
-    "info.emphasis": "info-emphasis",
-    "info.compact": "info-compact",
-    "region": "region"
+    "region": "region",
+    "info": "info"
   }
 }

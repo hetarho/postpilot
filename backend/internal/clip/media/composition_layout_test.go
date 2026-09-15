@@ -123,7 +123,7 @@ func TestDeclaredHeaderSharesOpticalHeightOnlyWhileVisible(t *testing.T) {
 		if a.manifest.Region.Y != b.manifest.Region.Y || a.manifest.Region.Height != b.manifest.Region.Height || b.manifest.Region.X+b.manifest.Region.Width >= a.manifest.Region.X || c.manifest.Region.X != b.manifest.Region.X || c.manifest.Region.Y != b.manifest.Region.Y {
 			t.Fatal("header reserves absent furniture or overlaps")
 		}
-		if a.furniture.Badge.Height != a.manifest.Region.Height || b.info.Plate.Height != a.manifest.Region.Height {
+		if a.furniture.Badge.Height != 68 || b.info.Plate != nil || a.furniture.Badge.Y+34 != b.manifest.Region.Y+b.manifest.Region.Height/2 {
 			t.Fatal("manifest and raster header geometry differ")
 		}
 	}

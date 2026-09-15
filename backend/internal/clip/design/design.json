@@ -22,12 +22,6 @@
       },
       "copy_max_width": 856,
       "hook_size": 84,
-      "chip": {
-        "x": 96,
-        "y": 80,
-        "max_width": 600,
-        "columns": 1
-      },
       "badge": {
         "right": 984,
         "top": 80
@@ -67,12 +61,6 @@
       },
       "copy_max_width": 960,
       "hook_size": 72,
-      "chip": {
-        "x": 96,
-        "y": 112,
-        "max_width": 600,
-        "columns": 2
-      },
       "badge": {
         "right": 1824,
         "top": 112
@@ -112,12 +100,6 @@
       },
       "copy_max_width": 952,
       "hook_size": 76,
-      "chip": {
-        "x": 64,
-        "y": 112,
-        "max_width": 600,
-        "columns": 1
-      },
       "badge": {
         "right": 1016,
         "top": 112
@@ -280,32 +262,6 @@
     "radius_chip": 999,
     "stroke_text": 6,
     "stroke_small": 4
-  },
-  "info_frames": {
-    "emphasis": {
-      "binding": "info.emphasis",
-      "type": "title",
-      "face": "pretendard",
-      "padding": {
-        "v": 18,
-        "h": 28
-      },
-      "plate": "",
-      "stroke": "text",
-      "shadow": "text"
-    },
-    "compact": {
-      "binding": "info.compact",
-      "type": "caption",
-      "face": "pretendard",
-      "padding": {
-        "v": 16,
-        "h": 28
-      },
-      "plate": "badge_ad",
-      "stroke": "",
-      "shadow": ""
-    }
   },
   "presets": {
     "restaurant": {
@@ -645,5 +601,8 @@
         "highlight": false
       }
     }
+  },
+  "information": {
+    "label_tracking": 0.08
   }
 }

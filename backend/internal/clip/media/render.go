@@ -248,7 +248,7 @@ func (r *Rendering) Render(ctx context.Context, ws clip.MediaWorkspace, plan cli
 	if err = clip.RefuseUnrenderableRates(plan, sources); err != nil {
 		return result, err
 	}
-	if plan.Portable == nil && (plan.Hook != "" || slices.ContainsFunc(plan.Facts, func(a clip.Answer) bool { return a.Label == "상호" && a.Text != "" })) {
+	if plan.Portable == nil && (plan.Hook != "" || len(plan.Facts) > 0 || slices.ContainsFunc(plan.Cuts, func(c clip.Cut) bool { return len(c.Chips) > 0 })) {
 		if strings.ContainsAny(plan.Hook, "\r\n") || design.Chars(plan.Hook) > design.Type["hook"].Chars {
 			return result, &composition.Problem{ElementID: "legacy-hook", Line: 1, Reason: "copy_limit"}
 		}
@@ -413,7 +413,9 @@ func (r *Rendering) Render(ctx context.Context, ws clip.MediaWorkspace, plan cli
 			return result, err
 		}
 	}
-	return r.validateRenderedOutput(ctx, ws, output, plan, audio, manifest)
+	result, err = r.validateRenderedOutput(ctx, ws, output, c.plan, audio, manifest)
+	result.Plan = &c.plan
+	return result, err
 }
 
 var errOutputValidation = errors.New("rendered clip failed output validation")
@@ -608,6 +610,10 @@ func (c *composed) resolve(canvas clip.Canvas) {
 			for k := range kept {
 				if kept[k].Cut == i && kept[k].Copy == j && kept[k].Kind == "copy" && kept[k].Style != "" {
 					kept[k].Background = background
+					kept[k].ContrastNotice = !design.Legible(design.Manifest{kept[k]})
+					if kept[k].ContrastNotice {
+						clip.AddPlanNotice(&c.plan, "composition_contrast", cut.ID, fmt.Sprintf("legacy-copy-%s-%d", cut.ID, j), "shortfall")
+					}
 				}
 			}
 			s, ok := scrimFor(canvas, copy.Anchor)
@@ -640,9 +646,6 @@ func (r *Rendering) copyLayer(ctx context.Context, ws clip.MediaWorkspace, canva
 	if strings.TrimSpace(copy.Text) == "" {
 		return "", nil
 	}
-	if c.layouts[index][copyIndex].Style.Plate != "" || copy.Style == "simple" {
-		return r.copyPlate(ctx, ws, canvas, copy, c.layouts[index][copyIndex], index*design.Rapid.MaxPerCut+copyIndex, Luminance{})
-	}
 	start, end := cut.CaptionWindow(copyIndex)
 	ground, err := r.sample(ctx, ws, canvas, source, cut, [2]int{start, end}, c.layouts[index][copyIndex].Region, index)
 	if err != nil {
@@ -650,17 +653,6 @@ func (r *Rendering) copyLayer(ctx context.Context, ws clip.MediaWorkspace, canva
 	}
 	c.grounds[index][copyIndex] = ground
 	c.resolve(canvas)
-	if !design.Legible(c.cutElements(index, copyIndex)) {
-		if !c.plan.Compiled() {
-			return "", clip.LayoutViolation(design.ViolationContrast, index, copyIndex)
-		}
-		// CDS-44's last clause is rung 1 of the one ladder: 깔끔하게, whose plate
-		// needs no ground at all (CDS-16). It is recorded as the contrast fallback
-		// it is, so step ② can say the footage, not the words, moved the style.
-		if _, err := r.rung(ctx, ws, canvas, c, index, copyIndex, rungStyle, "contrast"); err != nil {
-			return "", err
-		}
-	}
 	return r.copyPlate(ctx, ws, canvas, c.plan.Cuts[index].Copies[copyIndex], c.layouts[index][copyIndex], index*design.Rapid.MaxPerCut+copyIndex, c.grounds[index][copyIndex])
 }
 

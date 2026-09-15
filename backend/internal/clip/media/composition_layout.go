@@ -13,16 +13,15 @@ import (
 )
 
 type declaredVisual struct {
-	text        clip.PortableText
-	manifest    clip.CompositionElement
-	copy        clip.Copy
-	caption     copyLayout
-	region      overlay.RegionView
-	furniture   furniture
-	info        overlay.InfoView
-	infoVariant string
-	ground      Luminance
-	cues        []declaredVisual
+	text      clip.PortableText
+	manifest  clip.CompositionElement
+	copy      clip.Copy
+	caption   copyLayout
+	region    overlay.RegionView
+	furniture furniture
+	info      overlay.CopyView
+	ground    Luminance
+	cues      []declaredVisual
 }
 type declaredLayout struct {
 	plan    clip.EditPlan

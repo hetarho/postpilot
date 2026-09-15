@@ -84,23 +84,28 @@ func copyView(canvas clip.Canvas, c clip.Copy, l copyLayout, ground Luminance) o
 }
 
 func furnitureView(canvas clip.Canvas, f furniture) overlay.FurnitureView {
-	v := overlay.FurnitureView{Canvas: overlay.Canvas{Width: canvas.Width, Height: canvas.Height}}
+	shadow := overlayShadow("text")
+	v := overlay.FurnitureView{Canvas: overlay.Canvas{Width: canvas.Width, Height: canvas.Height}, Shadow: &shadow}
 	badge, badgeAlpha := paint("badge_ad")
 	white, _ := paint("text_white")
 	muted, mutedAlpha := paint("text_muted")
-	ink, inkAlpha := paint("badge_ad")
 	p := f.Badge
 	if f.BadgeText != "" {
-		box := overlayBox(p, p.Height/2, badge, badgeAlpha)
-		label := overlayText(design.Type["badge"], f.BadgeText, p.X+badgePadH-f.BadgeBounds.X, p.Y+(p.Height-f.BadgeBounds.Height)/2-f.BadgeBounds.Y, white, "")
+		box := overlayBox(p, design.Spacing.RadiusChip, badge, badgeAlpha)
+		label := overlayText(design.Type["badge"], f.BadgeText, p.X+design.Spacing.PadChip.H-f.BadgeBounds.X, p.Y+(p.Height-f.BadgeBounds.Height)/2-f.BadgeBounds.Y, white, "")
 		v.Badge, v.Label = &box, &label
 	}
 	for _, c := range f.Chips {
-		x := c.Region.X + design.Spacing.PadChip.H
-		label := overlayText(design.Type["label"], c.Label, x-c.LabelBounds.X, c.Region.Y+(c.Region.Height-c.LabelBounds.Height)/2-c.LabelBounds.Y, muted, mutedAlpha)
-		value := overlayText(design.Type["caption"], c.Value, x+c.LabelWidth+design.Spacing.GapChip-c.ValueBounds.X, c.Region.Y+(c.Region.Height-c.ValueBounds.Height)/2-c.ValueBounds.Y, white, "")
-		value.Length = math.Max(1, c.Region.Width-2*design.Spacing.PadChip.H-c.LabelWidth-design.Spacing.GapChip)
-		v.Chips = append(v.Chips, overlay.Chip{Box: overlayBox(c.Region, c.Region.Height/2, ink, inkAlpha), Label: label, Value: value})
+		labelRole := design.Type["label"]
+		labelRole.Tracking = design.Information.LabelTracking
+		x := c.Region.X + c.Region.Width/2
+		label := overlayText(labelRole, c.Label, x-c.LabelBounds.Width/2-c.LabelBounds.X, c.Region.Y-c.LabelBounds.Y, muted, mutedAlpha)
+		value := overlayText(design.Type["caption"], c.Value, x-c.ValueBounds.Width/2-c.ValueBounds.X, c.Region.Y+math.Max(labelRole.Size, c.LabelBounds.Height)+design.Spacing.GapStack-c.ValueBounds.Y, white, "")
+		label.Stroke, label.StrokeOpacity = paint("stroke_dark")
+		value.Stroke, value.StrokeOpacity = label.Stroke, label.StrokeOpacity
+		label.StrokeWidth, value.StrokeWidth = design.Spacing.StrokeSmall, design.Spacing.StrokeSmall
+		label.Shadow, value.Shadow = true, true
+		v.Chips = append(v.Chips, overlay.Chip{Label: label, Value: value})
 	}
 	return v
 }
@@ -132,7 +137,7 @@ func loadOverlays(directory string) (*overlay.Catalog, error) {
 			return nil, err
 		}
 	}
-	for _, binding := range []string{"furniture", "region", "info.emphasis", "info.compact"} {
+	for _, binding := range []string{"furniture", "region", "info"} {
 		kind, _, _ := strings.Cut(binding, ".")
 		if _, err := catalog.Render(binding, overlayProbe(kind+"-v1")); err != nil {
 			return nil, err
@@ -151,7 +156,7 @@ func overlayProbe(view string) any {
 	case "copy-v1":
 		return overlay.CopyView{Canvas: canvas, Plate: &box, Bar: &box, Dot: &overlay.Circle{Radius: 1, Fill: "#111111"}, Shadow: &overlay.Shadow{Fill: "#111111", Opacity: "1"}, Scrim: &overlay.Scrim{Box: box, From: "0", To: "1"}, Lines: []overlay.Text{text}}
 	case "info-v1":
-		return overlay.InfoView{CopyView: overlayProbe("copy-v1").(overlay.CopyView), Frame: box, Right: box.Width, Bottom: box.Height}
+		return overlayProbe("copy-v1").(overlay.CopyView)
 	case "furniture-v1":
 		return overlay.FurnitureView{Canvas: canvas, Badge: &box, Label: &text, Chips: []overlay.Chip{{Box: box, Label: text, Value: text}}}
 	default:

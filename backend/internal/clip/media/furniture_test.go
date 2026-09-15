@@ -1,40 +1,13 @@
 package media
 
 import (
-	"math"
+	"errors"
 	"strings"
 	"testing"
 
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/design"
 )
-
-func TestHeaderSharesOneRowAndReservesLongDisclosure(t *testing.T) {
-	for _, ratio := range []string{"vertical", "horizontal", "square"} {
-		canvas, _ := clip.ClipCanvas(ratio)
-		phrase := design.Disclosure["paid"]
-		answers := map[string]string{"위치": strings.Repeat("넓은 공간 ", 20)}
-		bounds := furnitureBounds(answers, []string{"위치"})
-		bounds[furnitureKey("badge", phrase)] = clip.Region{X: 2, Y: -71, Width: 1100, Height: 75}
-		bounds[furnitureKey("label", "위치")] = clip.Region{X: 4, Y: -72, Width: 180, Height: 75}
-		bounds[furnitureKey("caption", strings.TrimSpace(answers["위치"]))] = clip.Region{X: 3, Y: -80, Width: 12000, Height: 92}
-		f, err := placeFurniture(canvas, ratio, phrase, []string{"위치"}, answers, bounds)
-		if err != nil || len(f.Chips) != 1 {
-			t.Fatalf("%s: %+v %v", ratio, f, err)
-		}
-		c := f.Chips[0]
-		if c.Region.Y != f.Badge.Y || c.Region.Height != f.Badge.Height || c.Region.X+c.Region.Width+design.Spacing.GapStack > f.Badge.X {
-			t.Fatalf("%s header is misaligned or overlaps: %+v", ratio, f)
-		}
-		v := furnitureView(canvas, f)
-		centre := f.Badge.Y + f.Badge.Height/2
-		for _, actual := range []float64{v.Label.Y + f.BadgeBounds.Y + f.BadgeBounds.Height/2, v.Chips[0].Label.Y + c.LabelBounds.Y + c.LabelBounds.Height/2, v.Chips[0].Value.Y + c.ValueBounds.Y + c.ValueBounds.Height/2} {
-			if math.Abs(actual-centre) > 0.001 {
-				t.Fatalf("%s glyph centre %v, header centre %v", ratio, actual, centre)
-			}
-		}
-	}
-}
 
 // Measured glyph boxes at 100 px, the shape r.measure returns: every label, its
 // value and the disclosure phrase.
@@ -64,20 +37,18 @@ func TestBadgeGeometryAndChipStackPerRatio(t *testing.T) {
 		if err != nil {
 			t.Fatalf("%s: %v", ratio, err)
 		}
-		if f.Badge.X+f.Badge.Width != badge[0] || f.Badge.Y != badge[1] {
+		if f.Badge.X+f.Badge.Width != badge[0] || f.Chips[0].Region.Y != badge[1] || f.Badge.Height != 68 || f.Badge.Y+f.Badge.Height/2 != badge[1]+f.Chips[0].Region.Height/2 {
 			t.Fatalf("%s badge at %+v want right %v top %v", ratio, f.Badge, badge[0], badge[1])
 		}
 		// CDS-30 shows at most two chips at once, in the priority it was given.
 		if len(f.Chips) != 2 || f.Chips[0].Label != "위치" || f.Chips[1].Label != "가격" {
 			t.Fatalf("%s chips %+v", ratio, f.Chips)
 		}
-		if f.Chips[0].Region.X != l.Chip.X || f.Chips[0].Region.Y != l.Chip.Y {
+		if f.Chips[0].Region.X != l.Anchor.Left || f.Chips[0].Region.Y != l.Badge.Top {
 			t.Fatalf("%s chip origin %+v", ratio, f.Chips[0].Region)
 		}
 		across := f.Chips[1].Region.Y == f.Chips[0].Region.Y
-		if across != (l.Chip.Columns > 1) {
-			t.Fatalf("%s stacked=%v with %d columns", ratio, !across, l.Chip.Columns)
-		}
+
 		if across && f.Chips[1].Region.X <= f.Chips[0].Region.X {
 			t.Fatalf("%s two-across did not advance x", ratio)
 		}
@@ -85,8 +56,8 @@ func TestBadgeGeometryAndChipStackPerRatio(t *testing.T) {
 			t.Fatalf("%s gap.stack lost: %+v", ratio, f.Chips)
 		}
 		for _, c := range f.Chips {
-			if c.Region.Width > l.Chip.MaxWidth {
-				t.Fatalf("%s chip wider than %v: %+v", ratio, l.Chip.MaxWidth, c.Region)
+			if c.Region.Width > l.CopyMaxWidth {
+				t.Fatalf("%s chip wider than %v: %+v", ratio, l.CopyMaxWidth, c.Region)
 			}
 			if c.Region.X < canvas.Safe.X || c.Region.X+c.Region.Width > canvas.Safe.X+canvas.Safe.Width {
 				t.Fatalf("%s chip left the safe area: %+v", ratio, c.Region)
@@ -98,7 +69,7 @@ func TestBadgeGeometryAndChipStackPerRatio(t *testing.T) {
 		if m[0].Kind != "badge" || m[0].StartMS != 0 || m[0].EndMS != 20000 || m[0].Text != "광고" {
 			t.Fatalf("%s badge element %+v", ratio, m[0])
 		}
-		if len(m) != 3 || m[1].Kind != "chip" || m[1].Cut != 2 || m[1].StartMS != 5000 || m[1].EndMS != 9000 {
+		if len(m) != 5 || m[1].Kind != "chip" || m[1].Cut != 2 || m[1].StartMS != 5000 || m[1].EndMS != 9000 {
 			t.Fatalf("%s chip elements %+v", ratio, m[1:])
 		}
 		svg := furnitureSVG(canvas, f)
@@ -106,39 +77,25 @@ func TestBadgeGeometryAndChipStackPerRatio(t *testing.T) {
 			t.Fatalf("%s missing text: %s", ratio, svg)
 		}
 		// textLength is the hard bound that keeps the value inside its pill.
-		if !strings.Contains(svg, "lengthAdjust=") {
-			t.Fatal("chip value is not bounded to its pill")
+		if strings.Contains(svg, "lengthAdjust=") {
+			t.Fatal("information glyphs were distorted")
 		}
-		if strings.Count(svg, "<rect") != 1+len(f.Chips) {
+		if strings.Count(svg, "<rect") != 1 {
 			t.Fatalf("%s plate count: %s", ratio, svg)
 		}
 	}
 }
 
-// A value too wide for its 600 px pill is cut and given an ellipsis, and the
-// manifest records what was actually drawn (CDS-30).
-func TestLongChipValueIsCutWithAnEllipsis(t *testing.T) {
+// Authored information cannot silently lose its words to fit.
+func TestLongInformationValueRefusesTruncation(t *testing.T) {
 	canvas, _ := clip.ClipCanvas("vertical")
-	long := strings.TrimSpace(strings.Repeat("서울특별시 마포구 연남동 ", 4))
+	long := strings.Repeat("서울특별시", 20)
 	answers := map[string]string{"위치": long}
 	bounds := furnitureBounds(answers, []string{"위치"})
-	bounds[furnitureKey("caption", long)] = clip.Region{X: 2, Y: -70, Width: 4000, Height: 90}
-	f, err := placeFurniture(canvas, "vertical", design.Disclosure["ad"], []string{"위치"}, answers, bounds)
-	if err != nil {
+	bounds[furnitureKey("caption", long)] = clip.Region{Width: 4000, Height: 90}
+	_, err := placeFurniture(canvas, "vertical", design.Disclosure["ad"], []string{"위치"}, answers, bounds)
+	if !errors.Is(err, clip.ErrCopyTooLong) {
 		t.Fatal(err)
-	}
-	l, _ := design.Layout("vertical")
-	c := f.Chips[0]
-	if c.Region.Width > l.Chip.MaxWidth {
-		t.Fatalf("chip grew past %v: %+v", l.Chip.MaxWidth, c.Region)
-	}
-	if !strings.HasSuffix(c.Value, "…") || c.Value == "…" || len([]rune(c.Value)) >= len([]rune(long)) {
-		t.Fatalf("value not cut: %q", c.Value)
-	}
-	// The manifest carries the drawn value, not the whole answer.
-	m := f.Elements(20000, 0, 0, 4000)
-	if !strings.Contains(m[1].Text, c.Value) || strings.Contains(m[1].Text, long) {
-		t.Fatalf("manifest text = %q", m[1].Text)
 	}
 }
 
@@ -218,9 +175,9 @@ func TestHiddenDisclosureRetainsChipsAndExplicitVerification(t *testing.T) {
 				t.Fatal("visibility mismatch passed", ratio, hidden)
 			}
 			svg := furnitureSVG(canvas, f)
-			want := 2
+			want := 1
 			if hidden {
-				want = 1
+				want = 0
 			}
 			if strings.Count(svg, "<rect") != want || strings.Contains(svg, "광고") == hidden || !strings.Contains(svg, "철판 요리") {
 				t.Fatal(svg)

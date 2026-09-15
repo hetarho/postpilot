@@ -37,12 +37,6 @@ type Anchor struct {
 	Center   float64 `json:"center"`
 	Right    float64 `json:"right"`
 }
-type ChipStack struct {
-	X        float64 `json:"x"`
-	Y        float64 `json:"y"`
-	MaxWidth float64 `json:"max_width"`
-	Columns  int     `json:"columns"`
-}
 type BadgeBox struct {
 	Right float64 `json:"right"`
 	Top   float64 `json:"top"`
@@ -51,15 +45,14 @@ type BadgeBox struct {
 // One ratio's whole geometry. CDS-8 states every dimension on 9:16; CDS-46
 // through CDS-48 restate only the positions and widths the other two change.
 type RatioLayout struct {
-	Canvas       Size      `json:"canvas"`
-	Safe         Bounds    `json:"safe"`
-	Anchor       Anchor    `json:"anchor"`
-	CopyMaxWidth float64   `json:"copy_max_width"`
-	HookSize     float64   `json:"hook_size"`
-	Chip         ChipStack `json:"chip"`
-	Badge        BadgeBox  `json:"badge"`
-	ScrimTop     Bounds    `json:"scrim_top"`
-	ScrimBottom  Bounds    `json:"scrim_bottom"`
+	Canvas       Size     `json:"canvas"`
+	Safe         Bounds   `json:"safe"`
+	Anchor       Anchor   `json:"anchor"`
+	CopyMaxWidth float64  `json:"copy_max_width"`
+	HookSize     float64  `json:"hook_size"`
+	Badge        BadgeBox `json:"badge"`
+	ScrimTop     Bounds   `json:"scrim_top"`
+	ScrimBottom  Bounds   `json:"scrim_bottom"`
 }
 
 // The estimated Naver overlay geometry behind SA-N (CDS-10). It is an estimate
@@ -106,22 +99,14 @@ type Underline struct {
 	Extend   float64 `json:"extend"`
 }
 
-// InfoFrame binds measured role typography to a versioned drawn asset.
-type InfoFrame struct {
-	Binding string `json:"binding"`
-	Type    string `json:"type"`
-	Face    string `json:"face"`
-	Padding Pad    `json:"padding"`
-	Plate   string `json:"plate"`
-	Stroke  string `json:"stroke"`
-	Shadow  string `json:"shadow"`
+type InformationTokens struct {
+	LabelTracking float64 `json:"label_tracking"`
 }
 
 type SpacingTokens struct {
 	PadBox        Pad       `json:"pad_box"`
 	PadChip       Pad       `json:"pad_chip"`
 	GapStack      float64   `json:"gap_stack"`
-	GapChip       float64   `json:"gap_chip"`
 	RadiusBox     float64   `json:"radius_box"`
 	RadiusChip    float64   `json:"radius_chip"`
 	RadiusCard    float64   `json:"radius_card"`
@@ -328,7 +313,7 @@ type system struct {
 	Shadow            map[string]ShadowPaint `json:"shadow"`
 	Scrim             map[string]ScrimPaint  `json:"scrim"`
 	Accent            map[string]string      `json:"accent"`
-	InfoFrames        map[string]InfoFrame   `json:"info_frames"`
+	Information       InformationTokens      `json:"information"`
 	Spacing           SpacingTokens          `json:"spacing"`
 	Presets           map[string]Preset      `json:"presets"`
 	Disclosure        map[string]string      `json:"disclosure"`
@@ -379,7 +364,7 @@ var (
 	Shadow            = loaded.Shadow
 	Scrim             = loaded.Scrim
 	Accent            = loaded.Accent
-	InfoFrames        = loaded.InfoFrames
+	Information       = loaded.Information
 	Spacing           = loaded.Spacing
 	Presets           = loaded.Presets
 	Disclosure        = loaded.Disclosure

@@ -60,7 +60,7 @@ func VerifyCompositionManifest(plan EditPlan, elements []CompositionElement, lim
 		if r.Element.Position != "auto" && element.Position != r.Element.Position {
 			return fail("invalid_position")
 		}
-		if element.Align != r.Element.Align {
+		if element.Align != r.Element.Align && !(element.Role == "info" && element.Align == "center") {
 			return fail("invalid_align")
 		}
 		if element.Layer != CompositionLayer(element.Role) {
@@ -105,7 +105,7 @@ func VerifyCompositionManifest(plan EditPlan, elements []CompositionElement, lim
 		safe := canvas.Safe
 		if element.Role == "badge" && element.Position == "header" {
 			layout, _ := design.Layout(plan.Ratio)
-			safe.X, safe.Width = layout.Chip.X, layout.Badge.Right-layout.Chip.X
+			safe.X, safe.Width = layout.Anchor.Left, layout.Badge.Right-layout.Anchor.Left
 		}
 		if !compositionInside(element.Region, safe) {
 			return fail("safe_area")
@@ -125,6 +125,13 @@ func VerifyCompositionManifest(plan EditPlan, elements []CompositionElement, lim
 			}
 			if part.FontSize > 0 {
 				minimum := design.MinTypeSize()
+				if part.TypeRole != "" {
+					role, known := design.Type[part.TypeRole]
+					if !known {
+						return fail("text_size")
+					}
+					minimum = role.Min
+				}
 				if element.Role == "caption" {
 					minimum = design.Caption().Role().Min
 				}
@@ -135,11 +142,8 @@ func VerifyCompositionManifest(plan EditPlan, elements []CompositionElement, lim
 					return fail("text_size")
 				}
 			}
-			if part.Fill != "" && part.Background != "" {
-				contrast, valid := design.Contrast(part.Fill, part.Background)
-				if !valid || contrast < 4.5 {
-					return fail("contrast")
-				}
+			if !part.ContrastNotice && !design.Legible(design.Manifest{part}) {
+				return fail("contrast")
 			}
 		}
 		if element.Role == "caption" {

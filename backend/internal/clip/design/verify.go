@@ -40,6 +40,8 @@ type Element struct {
 	Slot                             int
 	BaselineY, GlyphOffsetY, Opacity float64
 	Rule                             string
+	TypeRole                         string
+	ContrastNotice                   bool
 	// Which of the cut's copies this element belongs to (CDS-43): 0 for the one
 	// copy a cut usually carries, and for every piece of furniture.
 	Copy             int
@@ -132,7 +134,8 @@ func within(r, safe Bounds) bool {
 // Verify checks every design target for diagnostics, including overlap.
 // Delivery uses VerifyRenderable so overlap alone cannot block a video (CDS-56).
 //
-// V1 safe area · V2 size floors · V3 contrast against the effective background ·
+// V1 safe area · V2 size floors · V3 effective contrast (sampled shortfalls
+// carry a delivery notice and remain measurable through Legible) ·
 // V5 lines and characters · V7 overlap between elements of different cuts whose
 // windows meet · V9 the two permitted motions · V13 one anchor step between
 // consecutive cuts · V19 named font family (checked at renderer construction) ·
@@ -169,13 +172,22 @@ func verify(m Manifest, ratio string, checkOverlap, hideDisclosure bool) error {
 		elementSafe := safe
 		if e.Kind == "badge" {
 			l, _ := Layout(ratio)
-			elementSafe = Bounds{X: l.Chip.X, Y: safe.Y, Width: l.Badge.Right - l.Chip.X, Height: safe.Height}
+			elementSafe = Bounds{X: l.Anchor.Left, Y: safe.Y, Width: l.Badge.Right - l.Anchor.Left, Height: safe.Height}
 		}
 		if e.Kind != "scrim" && e.Kind != "card" && !within(e.Region, elementSafe) {
 			return at(ViolationSafeArea, e)
 		}
-		if err := verifyContrast(e); err != nil {
+		if err := verifyContrast(e); err != nil && !e.ContrastNotice {
 			return at(ViolationContrast, e)
+		}
+		if e.Kind == "badge" && e.FontSize != Type["badge"].Size {
+			return at(ViolationSize, e)
+		}
+		if e.TypeRole != "" {
+			role, known := Type[e.TypeRole]
+			if !known || e.FontSize < role.Min {
+				return at(ViolationSize, e)
+			}
 		}
 		// The badge never moves, a chip does not settle and a card only fades:
 		// only a caption's own elements carry the two permitted motions (CDS-31,
@@ -265,12 +277,9 @@ func verifyOverlap(m Manifest) error {
 	return nil
 }
 
-// V3: every text is read against its effective background — the plate or card
-// under it, or, for an unplated style, the scrim and the sampled footage the
-// renderer resolved (CDS-44) — and no pairing may fall under 4.5:1 (CDS-16).
-// An element whose background is unknown carries no pairing to check: an
-// unplated caption before the sampler has run, and every element the design
-// system already certified against its token (CDS-16's plated α ≥ 0.72).
+// V3 measures the effective stroke/scrim background. The renderer records a
+// measured shortfall as a notice and marks that pairing for delivery. Legible
+// still reports the shortfall, so an advisory never erases the measurement.
 func verifyContrast(e Element) error {
 	if e.Kind != "copy" && e.Kind != "chip-category" {
 		return nil
@@ -278,7 +287,11 @@ func verifyContrast(e Element) error {
 	if e.Fill == "" || e.Background == "" {
 		return nil
 	}
-	ratio, ok := Contrast(e.Fill, e.Background)
+	fill := e.Fill
+	if e.Opacity > 0 && e.Opacity < 1 {
+		fill, _ = Over(fill, e.Opacity, e.Background)
+	}
+	ratio, ok := Contrast(fill, e.Background)
 	if !ok || ratio < Luma.ContrastMin {
 		return ViolationContrast
 	}

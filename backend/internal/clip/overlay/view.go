@@ -41,18 +41,12 @@ type Chip struct {
 }
 type FurnitureView struct {
 	Canvas
-	Badge *Box
-	Label *Text
-	Chips []Chip
+	Shadow *Shadow
+	Badge  *Box
+	Label  *Text
+	Chips  []Chip
 }
 type RegionView struct {
 	CopyView
 	Rules []Box
-}
-
-// InfoView keeps the frame separate from its optional background plate.
-type InfoView struct {
-	CopyView
-	Frame         Box
-	Right, Bottom float64
 }

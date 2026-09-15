@@ -2,6 +2,7 @@ package design
 
 import (
 	"math"
+	"slices"
 	"strings"
 )
 
@@ -29,6 +30,7 @@ func RegionScale(ratio string) float64 {
 // slot/rule must match the selected preset. Glyph offsets are recorded during
 // shaping so a moved text box cannot keep an unchanged declared baseline.
 func VerifyRegion(kind, id, ratio string, rows []string, parts Manifest) error {
+	parts = slices.DeleteFunc(slices.Clone(parts), func(p Element) bool { return p.Kind == "scrim" })
 	preset, ok := Region(kind, id)
 	if !ok || len(rows) > len(preset.Slots) {
 		return ViolationRegion

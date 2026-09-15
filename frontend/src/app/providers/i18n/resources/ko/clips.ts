@@ -1,5 +1,6 @@
 export const clips = {
   notices: {
+    contrastReview: '배경과 문구의 대비가 낮은 구간이 있어요. 게시 전에 확인해 주세요.',
     label: '클립에 반영된 내용',
     marker: '안내',
     text: '문구',

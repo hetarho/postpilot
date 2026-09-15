@@ -144,6 +144,8 @@ func (r *Rendering) renderComposition(ctx context.Context, ws clip.MediaWorkspac
 		}
 		cleanup = append(cleanup, plates[i])
 	}
+	layout.recordContrastNotices()
+	plan = layout.plan
 	elements := layout.elements()
 	if err = clip.VerifyCompositionManifest(plan, elements, r.cfg.Composition); err != nil {
 		return result, err

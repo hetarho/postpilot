@@ -14,9 +14,7 @@ import (
 	"github.com/postpilot/backend/internal/clip/design"
 )
 
-// Brightness sampling (CDS-44). It exists only for the two unplated styles: a
-// plated element needs none, because ink at α ≥ 0.72 under white text stays
-// above 5.9:1 even over a white frame (CDS-16).
+// Brightness sampling covers captions, intro/outro slots and information pairs.
 //
 // The three frames CDS-44 names — first, middle and last of the copy window —
 // are extracted as PNGs and read in Go rather than parsed out of FFmpeg's
@@ -52,14 +50,8 @@ func (l Luminance) Sampled() bool { return len(l.Frames) > 0 }
 // Background is the effective background of one text on this ground: what the
 // eye actually reads it against (V3).
 //
-// For an unplated style that is its own STROKE, composited over the footage —
-// the scrim-washed footage when CDS-44 asked for a scrim. The stroke is the
-// mechanism CDS-25 and CDS-26 give these styles for exactly this: a 6 px (4 px
-// for 형광펜) `stroke.dark` at α0.85 keeps white text at 13.2:1 over a WHITE
-// frame, where the bare footage would be 1:1. Crediting only the footage would
-// mean no unplated copy could ever stand on daylight footage — the two styles
-// CDS defines would be unusable — and CDS-26 says the opposite in as many
-// words: the text stays white so contrast never depends on what is behind it.
+// Stroked text is measured against stroke.dark composited over the sampled
+// ground, after the scrim when present. Unstroked slots use the ground itself.
 //
 // The scrim is a vertical gradient, so what it contributes where the text sits
 // is its own opacity at the copy's vertical centre, and zero when the copy lies

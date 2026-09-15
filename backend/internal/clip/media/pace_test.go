@@ -3,6 +3,7 @@ package media
 import (
 	"context"
 	"fmt"
+	"image/png"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,7 +16,12 @@ import (
 func TestRapidLayersHaveUniquePathsCroppedExtentsAndNoMotion(t *testing.T) {
 	runner := &fakeRunner{run: func(_ context.Context, c Command) ([]byte, error) {
 		if filepath.Base(c.Binary) != "resvg" {
-			return nil, fmt.Errorf("simple style sampled footage: %s", c.Binary)
+			f, err := os.Create(c.Args[len(c.Args)-1])
+			if err != nil {
+				return nil, err
+			}
+			defer f.Close()
+			return nil, png.Encode(f, fill(0))
 		}
 		return nil, os.WriteFile(c.Args[len(c.Args)-1], []byte("png"), 0600)
 	}}

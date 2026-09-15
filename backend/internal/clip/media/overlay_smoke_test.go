@@ -16,7 +16,7 @@ func TestRenderSmokeFilePreset(t *testing.T) {
 	}
 	dir := t.TempDir()
 	files := map[string]string{
-		"bindings.json":         `{"version":1,"bindings":{"copy.clean":"proof","copy.memo":"proof","copy.bold":"proof","copy.mark":"proof","furniture":"furniture","region":"region","info.emphasis":"info","info.compact":"info"}}`,
+		"bindings.json":         `{"version":1,"bindings":{"copy.clean":"proof","copy.memo":"proof","copy.bold":"proof","copy.mark":"proof","furniture":"furniture","region":"region","info":"info"}}`,
 		"info/preset.json":      `{"id":"info","view":"info-v1","template":"overlay.svg"}`,
 		"info/overlay.svg":      `<svg xmlns="http://www.w3.org/2000/svg"/>`,
 		"proof/preset.json":     `{"id":"proof","view":"copy-v1","template":"overlay.svg"}`,

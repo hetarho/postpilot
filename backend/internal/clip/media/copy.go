@@ -433,9 +433,8 @@ func keywordValues(candidates [][]string, keyword string) []string {
 	return out
 }
 
-// The disclosure badge (CDS-31) and the information chips (CDS-30). Both are
-// plated, so neither needs brightness sampling (CDS-16), and both are typeset
-// from the same font and the same tokens as copy.
+// The disclosure badge (CDS-31) and legacy information pairs (CDS-30).
+// Plans with information are routed through the sampled composition renderer.
 type chip struct {
 	Label, Value             string
 	Region                   clip.Region
@@ -470,7 +469,10 @@ func (r *Rendering) badgeAndChips(ctx context.Context, ws clip.MediaWorkspace, c
 			continue
 		}
 		role := design.Type[name]
-		if err := r.checkCopy(strings.Join(values, "")+ellipsis, role); err != nil {
+		if name == "label" {
+			role.Tracking = design.Information.LabelTracking
+		}
+		if err := r.checkCopy(strings.Join(values, ""), role); err != nil {
 			return furniture{}, err
 		}
 		measured, err := r.measure(ctx, ws, values, role.Weight, role.Tracking, r.family(role))
@@ -481,24 +483,7 @@ func (r *Rendering) badgeAndChips(ctx context.Context, ws clip.MediaWorkspace, c
 			bounds[furnitureKey(name, text)] = box
 		}
 	}
-	out, err := placeFurniture(canvas, ratio, phrase, labels, answers, bounds)
-	if err != nil {
-		return out, err
-	}
-	// Truncation can change the visible ascent/descent. Centre the glyphs that
-	// are actually delivered, while retaining the reserved textLength bound.
-	role := design.Type["caption"]
-	for i, c := range out.Chips {
-		if c.Value == strings.TrimSpace(answers[c.Label]) {
-			continue
-		}
-		measured, err := r.measure(ctx, ws, []string{c.Value}, role.Weight, role.Tracking, r.family(role))
-		if err != nil {
-			return out, err
-		}
-		out.Chips[i].ValueBounds = scaled(measured[c.Value], role.Size/100)
-	}
-	return out, nil
+	return placeFurniture(canvas, ratio, phrase, labels, answers, bounds)
 }
 
 func furnitureKey(role, value string) string { return role + "\x00" + value }
@@ -515,15 +500,15 @@ func placeFurniture(canvas clip.Canvas, ratio, phrase string, labels []string, a
 	b := scaled(bounds[furnitureKey("badge", phrase)], badgeRole.Size/100)
 	out.BadgeBounds = b
 	pad, gap := design.Spacing.PadChip, design.Spacing.GapStack
-	rowHeight := math.Ceil(math.Max(badgeRole.Size+2*badgePadV, math.Max(labelRole.Size, valueRole.Size)+2*pad.V))
-	width, height := math.Ceil(b.Width+2*badgePadH), rowHeight
+	badgeHeight := badgeRole.Size + 2*pad.V
+	width := math.Ceil(b.Width + 2*pad.H)
 	if phrase != "" {
-		out.Badge = clip.Region{X: l.Badge.Right - width, Y: l.Badge.Top, Width: width, Height: height}
+		out.Badge = clip.Region{X: l.Badge.Right - width, Y: l.Badge.Top, Width: width, Height: badgeHeight}
 	}
-	if phrase != "" && (out.Badge.X < l.Chip.X || out.Badge.Y+height > canvas.Safe.Y+canvas.Safe.Height) {
+	if phrase != "" && !inside(out.Badge, clip.Region{X: l.Anchor.Left, Y: canvas.Safe.Y, Width: l.Badge.Right - l.Anchor.Left, Height: canvas.Safe.Height}) {
 		return out, clip.ErrInvalid
 	}
-	x, y := l.Chip.X, l.Chip.Y
+	x, y := l.Anchor.Left, l.Badge.Top
 	for _, label := range labels {
 		if len(out.Chips) >= maxChips {
 			break
@@ -534,52 +519,41 @@ func placeFurniture(canvas clip.Canvas, ratio, phrase string, labels []string, a
 		}
 		lb := scaled(bounds[furnitureKey("label", label)], labelRole.Size/100)
 		vb := scaled(bounds[furnitureKey("caption", value)], valueRole.Size/100)
-		// A chip is at most 600 px wide (CDS-30). A value that does not fit is
-		// CUT and given an ellipsis rather than squeezed: the face is fixed
-		// (CDS-18), so distorting its glyphs is the worse failure. The cut is
-		// proportional to the measured width, and textLength in the SVG is the
-		// hard bound that keeps an imperfect estimate inside the pill.
+		w := math.Ceil(math.Max(lb.Width, vb.Width))
+		h := math.Ceil(math.Max(lb.Height, labelRole.Size) + gap + math.Max(vb.Height, valueRole.Size))
+		if w > l.CopyMaxWidth {
+			return out, clip.ErrCopyTooLong
+		}
 		right := canvas.Safe.X + canvas.Safe.Width
-		if phrase != "" {
+		if phrase != "" && y < out.Badge.Y+out.Badge.Height {
 			right = math.Min(right, out.Badge.X-gap)
 		}
-		maxWidth := math.Min(l.Chip.MaxWidth, right-x)
-		room := maxWidth - 2*pad.H - lb.Width - design.Spacing.GapChip
-		if room <= 0 {
-			break
+		if x+w > right {
+			x = l.Anchor.Left
+			y += h + gap
 		}
-		if vb.Width > room {
-			runes := []rune(value)
-			keep := int(float64(len(runes)) * room / vb.Width)
-			if keep > 0 {
-				keep--
-			}
-			value = string(runes[:keep]) + ellipsis
-			vb.Width = room
+		box := clip.Region{X: x, Y: y, Width: w, Height: h}
+		if !inside(box, canvas.Safe) {
+			return out, clip.ErrCopyTooLong
 		}
-		w := math.Min(maxWidth, math.Ceil(lb.Width+design.Spacing.GapChip+vb.Width+2*pad.H))
-		h := rowHeight
-		c := chip{Label: label, Value: value, LabelWidth: lb.Width, LabelBounds: lb, ValueBounds: vb, Region: clip.Region{X: x, Y: y, Width: w, Height: h}}
-		if c.Region.X+w > canvas.Safe.X+canvas.Safe.Width || c.Region.Y+h > canvas.Safe.Y+canvas.Safe.Height {
-			break
-		}
-		out.Chips = append(out.Chips, c)
-		if l.Chip.Columns > 1 && len(out.Chips) == 1 {
-			x += w + gap
-			continue
-		}
-		y += h + gap
+		out.Chips = append(out.Chips, chip{Label: label, Value: value, LabelWidth: lb.Width, LabelBounds: lb, ValueBounds: vb, Region: box})
+		x += w + gap
 	}
+	rowHeight := badgeHeight
+	for _, c := range out.Chips {
+		if c.Region.Y == l.Badge.Top {
+			rowHeight = math.Max(rowHeight, c.Region.Height)
+		}
+	}
+	if phrase != "" {
+		out.Badge.Y += (rowHeight - badgeHeight) / 2
+	}
+
 	return out, nil
 }
 
 // CDS-30 shows at most two chips at once, and CDS-31 fixes the badge's padding.
 const maxChips = 2
-const badgePadV, badgePadH = 10, 18
-
-// What a cut chip value ends with. Checked against the bundled font like every
-// other glyph, so an unsupported ellipsis is an error rather than a blank.
-const ellipsis = "…"
 
 func scaled(r clip.Region, factor float64) clip.Region {
 	return clip.Region{X: r.X * factor, Y: r.Y * factor, Width: r.Width * factor, Height: r.Height * factor}
@@ -596,12 +570,15 @@ func (f furniture) Elements(duration int, chipCut int, chipStart, chipEnd int) c
 		})
 	}
 	for _, c := range f.Chips {
-		m = append(m, design.Element{
-			Cut: chipCut, Kind: "chip", Text: c.Label + " " + c.Value,
-			FontSize: design.Type["caption"].Size, Background: design.Color["badge_ad"].Hex,
-			Fill: design.Color["text_white"].Hex, Region: design.Bounds(c.Region),
-			StartMS: chipStart, EndMS: chipEnd,
-		})
+		for i, role := range []string{"label", "caption"} {
+			text, b, alpha, y := c.Label, c.LabelBounds, design.Color["text_muted"].Alpha, c.Region.Y
+			if i == 1 {
+				text, b, alpha, y = c.Value, c.ValueBounds, 1, y+math.Max(design.Type["label"].Size, c.LabelBounds.Height)+design.Spacing.GapStack
+			}
+			m = append(m, design.Element{Cut: chipCut, Kind: "chip", TypeRole: role, Text: text,
+				FontSize: design.Type[role].Size, Fill: design.Color["text_white"].Hex, Opacity: alpha,
+				Region: design.Bounds{X: c.Region.X + (c.Region.Width-b.Width)/2, Y: y, Width: b.Width, Height: b.Height}, StartMS: chipStart, EndMS: chipEnd})
+		}
 	}
 	return m
 }

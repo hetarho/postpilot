@@ -163,7 +163,7 @@ func TestVerifyRejectsOneFixturePerCheck(t *testing.T) {
 			m[0].Text = "광고입니다"
 			return m
 		}},
-		"badge shrunk": {design.ViolationDisclosure, func(m design.Manifest) design.Manifest {
+		"badge shrunk": {design.ViolationSize, func(m design.Manifest) design.Manifest {
 			m[0].FontSize = 34
 			return m
 		}},
@@ -270,5 +270,25 @@ func TestCaptionHasNoFrequencyLimit(t *testing.T) {
 	}
 	if err := design.Verify(run, "vertical"); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestTypeRoleFloorsAndExactBadgeSize(t *testing.T) {
+	for _, name := range []string{"body", "caption", "label", "badge"} {
+		role := design.Type[name]
+		for _, size := range []float64{role.Min - 1, role.Min, role.Size + 1} {
+			e := design.Element{Kind: "chip", TypeRole: name, Text: "text", FontSize: size, Region: design.Bounds{X: 100, Y: 400, Width: 200, Height: 80}, StartMS: 0, EndMS: 4000}
+			if name == "badge" {
+				e.Kind = "badge"
+				e.Text = design.Disclosure["ad"]
+				e.Background = design.Color["badge_ad"].Hex
+			}
+			hidden := name != "badge"
+			err := design.VerifyRenderable(design.Manifest{e}, "vertical", hidden)
+			valid := size >= role.Min && (name != "badge" || size == role.Size)
+			if (err == nil) != valid {
+				t.Fatal(name, size, err)
+			}
+		}
 	}
 }
