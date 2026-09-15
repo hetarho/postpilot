@@ -31,7 +31,7 @@
 | MKT | 4 | 4 | - | 0 |
 | VIDEO | 2 | 2 | - | 1 |
 | CLIP | 24 | 24 | - | 2 |
-| CDS | 19 | 18 | CDS-21✎ CDS-31✎ | 1 |
+| CDS | 19 | 19 | - | 1 |
 | BILL | 4 | 4 | - | 0 |
 
 ## review
@@ -47,14 +47,16 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | doing@260916.qa |
+| T178 | The disclosure badge is a rounded rectangle | CDS | - | todo |
 
 ## next
 - Ship the tested production migration/rollback fix; production currently runs the recovered ef94ac0b image.
 - implement-task T177 with the owner watching.
-- create-task CDS for the r19 badge shape.
+- implement-task T178.
 - T008 stays owner-dependent.
 
 ## log
+- 260916 create-task CDS r19 done; T178 carries the badge shape
 - 260916 update-ssot CDS r19; T177 (doing) reviews the badge — its checklist sees the new shape
 - 260916 T177 claimed (qa)
 - 260916 Production recovered to ef94ac0b after DB backup (schema 53, quick_check ok); health/GetMe/CORS verified; local migration 54 + rollout fixes pass BE vet/build/tests and 5 rollout regressions, not deployed (ops).
