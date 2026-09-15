@@ -47,14 +47,14 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
-| T182 | Generated text obeys its declared maximum | CLIP CDS | T179 | todo |
 
 ## next
 - create-task CLIP for the r26 delta (required-field group minimum, length-floor failure cause, writer cut budget).
-- implement-task T179, then T180 T181 T182 in any order.
 - T177 is blocked on the owner's viewing answers; the three review clips are rendered and the checklist is open. T008 stays owner-dependent.
 
 ## log
+- 260916 T182 done; the writer is told each declared maximum and an over-long answer takes the shorten-then-omit ladder
+- 260916 T182 claimed (max)
 - 260916 T181 done; answers bounded where they are typed, and a stored over-long one refused by field label with its counts
 - 260916 T181 claimed (max)
 - 260916 T180 done; a bounded 최대 글자 수 control on field, element and slot rows, the cap stated from the parser
@@ -73,5 +73,3 @@
 - 260916 T178 done; the disclosure is a 12 px rounded rectangle, pinned by the token test and read by both renderer and preview
 - 260916 T178 claimed (bdg)
 - 260916 create-task CDS r19 done; T178 carries the badge shape
-- 260916 update-ssot CDS r19; T177 (doing) reviews the badge — its checklist sees the new shape
-- 260916 T177 claimed (qa)

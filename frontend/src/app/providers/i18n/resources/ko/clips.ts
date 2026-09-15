@@ -30,6 +30,7 @@ export const clips = {
     unusableOmitted: '내용을 확인하기 어려운 장면은 넣지 않았어요.',
     excessCutsOmitted: '담을 수 있는 장면 수를 넘긴 마지막 장면들은 넣지 않았어요.',
     textOmitted: '이 문구는 클립에 넣지 않았어요.',
+    textShortened: '자리에 맞게 더 짧은 문구로 바꿨어요.',
     longTextOmitted: '화면에 읽기 좋게 담기 어려운 긴 문구는 넣지 않았어요.',
     extraTextOmitted: '같은 장면에 문구가 너무 많아 추가 문구는 넣지 않았어요.',
     unreadableOmitted: '장면 안에서 읽을 시간이 부족한 문구는 넣지 않았어요.',

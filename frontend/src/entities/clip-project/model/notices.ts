@@ -37,6 +37,8 @@ export const clipNoticeKeys = {
   composition_generated_identity: 'textOmitted',
   composition_generated_rows: 'textOmitted',
   composition_generated_bounds: 'longTextOmitted',
+  composition_text_shortened: 'textShortened',
+  composition_text_omitted: 'longTextOmitted',
   composition_plan_bounds: 'excessCutsOmitted',
   plan_cut_count: 'excessCutsOmitted',
   plan_hook: 'textOmitted',

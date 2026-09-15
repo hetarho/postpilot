@@ -101,6 +101,11 @@ func attachCompositionCopy(cfg Config, doc *composition.Document, generated []ge
 		if text.FallbackReason != "" {
 			plan.Fallbacks = append(plan.Fallbacks, clip.CopyFallback{ElementID: resolved.Element.ID, CutID: resolved.CutID, Reason: text.FallbackReason})
 		}
+		// The notice is the record, the way the region ladder records its own;
+		// a second fallback entry would report the same omission twice.
+		if boundGeneratedText(&text, owner) {
+			continue
+		}
 		plan.Elements = append(plan.Elements, text)
 	}
 	return nil
@@ -180,6 +185,56 @@ func resolveGeneratedCopy(doc *composition.Document, inputs clip.CompositionInpu
 	return ""
 }
 
+// A declared maximum is a bound the model is told and the server then measures
+// itself (CLIP-118). Over it, the repair is the ladder region slots already
+// take: the grounded shorter alternative, then omission with its notice — never
+// a silent truncation, which would deliver a sentence nobody wrote.
+//
+// Only an over-long text enters the ladder, so an element inside its maximum is
+// passed through exactly as it was generated.
+func boundGeneratedText(text *clip.PortableText, owner *clip.EditPlan) bool {
+	e := text.Resolved.Element
+	notice := func(action, element string) {
+		suffix := "text_shortened"
+		if action == "removal" {
+			suffix = "text_omitted"
+		}
+		clip.AddPlanNotice(owner, "composition_"+suffix, text.Resolved.CutID, element, action)
+	}
+	if len(e.Rows) == 0 {
+		if e.Chars <= 0 || design.Chars(text.Resolved.Text) <= e.Chars {
+			return false
+		}
+		value, action := repairGeneratedSlot(text.Resolved.Text, text.Alternatives, e.Chars)
+		notice(action, e.ID)
+		text.Resolved.Text = value
+		return action == "removal"
+	}
+	emptied := 0
+	for i, row := range e.Rows {
+		if row.Chars <= 0 || i >= len(text.Resolved.Rows) || composition.RowKind(e, row) != "ai" {
+			continue
+		}
+		if design.Chars(text.Resolved.Rows[i].Text) <= row.Chars {
+			continue
+		}
+		var alternatives []clip.CopyAlternative
+		for _, candidate := range text.Alternatives {
+			if i < len(candidate.Rows) {
+				alternatives = append(alternatives, clip.CopyAlternative{Text: candidate.Rows[i].Text})
+			}
+		}
+		value, action := repairGeneratedSlot(text.Resolved.Rows[i].Text, alternatives, row.Chars)
+		notice(action, e.ID)
+		text.Resolved.Rows[i].Text = value
+		if action == "removal" {
+			emptied++
+		}
+	}
+	// An element whose every row emptied carries nothing to render.
+	return emptied > 0 && emptied == len(text.Resolved.Rows)
+}
+
 func generatesText(e composition.Element) bool {
 	if len(e.Rows) == 0 {
 		return e.Kind == "ai"
@@ -226,7 +281,13 @@ func attachRegionRows(doc *composition.Document, inputs clip.CompositionInputs, 
 			}
 			reason := resolveGeneratedCopy(doc, inputs, g, binding, observed, &one, map[string]bool{})
 			if reason == "" {
-				value, action = repairGeneratedSlot(one.Resolved.Text, one.Alternatives, design.Type[preset.Slots[i].Type].Chars)
+				// The slot's own count, or the smaller one this row declares
+				// (CLIP-116); the parser has already refused a larger one.
+				limit := design.Type[preset.Slots[i].Type].Chars
+				if row.Chars > 0 && row.Chars < limit {
+					limit = row.Chars
+				}
+				value, action = repairGeneratedSlot(one.Resolved.Text, one.Alternatives, limit)
 				if action == "" && one.FallbackReason != "" {
 					action = "repair"
 				}

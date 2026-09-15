@@ -176,7 +176,7 @@ func logAttemptDiagnostic(job, stage string, d AttemptDiagnostic) {
 
 func SafeAttemptCheck(check string) string {
 	switch check {
-	case "intro_slot_shortened", "outro_slot_shortened", "intro_slot_omitted", "outro_slot_omitted", "composition_caption_overlap":
+	case "intro_slot_shortened", "outro_slot_shortened", "intro_slot_omitted", "outro_slot_omitted", "composition_caption_overlap", "composition_text_shortened", "composition_text_omitted":
 		return check
 	case "composition_invalid_design", "composition_invalid_skeleton", "composition_unknown_attribute", "composition_invalid_style", "composition_invalid_position", "composition_invalid_interval", "composition_invalid_rows", "composition_invalid_role", "composition_copy_limit", "composition_readability", "composition_safe_area", "composition_invalid_manifest", "render_layout", "render_footage", "render_audio", "render_overlay", "render_encode", "render_validate":
 		return check

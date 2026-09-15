@@ -31,6 +31,7 @@ export const clips = {
     unusableOmitted: 'A cut whose content could not be reliably identified was left out.',
     excessCutsOmitted: 'Cuts beyond the supported count were left out of the end of the plan.',
     textOmitted: 'This text was left out of the clip.',
+    textShortened: 'Replaced with a shorter line that fits its position.',
     longTextOmitted: 'Text too long to fit legibly was left out.',
     extraTextOmitted: 'Extra text was left out so this cut has time for its captions.',
     unreadableOmitted: 'Text without enough reading time in its cut was left out.',

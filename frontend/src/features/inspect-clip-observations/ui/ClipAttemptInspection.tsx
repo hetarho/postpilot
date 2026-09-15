@@ -16,6 +16,8 @@ const checkExplanations = {
   outro_slot_shortened: 'notices.outroSlotShortened',
   intro_slot_omitted: 'notices.introSlotOmitted',
   outro_slot_omitted: 'notices.outroSlotOmitted',
+  composition_text_shortened: 'notices.textShortened',
+  composition_text_omitted: 'notices.longTextOmitted',
   input_prompt_limit: 'inspection.inputTooLarge',
   input_settings: 'inspection.inputInvalid',
   input_sources: 'inspection.inputInvalid',
