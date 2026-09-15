@@ -97,3 +97,17 @@ export function newCompositionNode(name: string, label: string, inScene = false)
       )
   }
 }
+
+/** The 최대 글자 수 control's value, held inside what the position allows.
+ *
+ *  Clamping here rather than letting the parser refuse: a number the author
+ *  cannot use is a number the control should not have accepted, and CLIP-116's
+ *  invalid_max stays for a body that arrives already written — a pasted 원문.
+ *  An empty value is 자동 and stays empty, because 자동 is the attribute's
+ *  ABSENCE rather than a zero (CLIP-71). */
+export function boundedChars(value: string, max: number): string {
+  const digits = value.replace(/[^0-9]/g, '').replace(/^0+/, '')
+  if (digits === '') return ''
+  const bound = max > 0 ? Math.min(Number(digits), max) : Number(digits)
+  return String(bound)
+}

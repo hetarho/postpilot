@@ -2,7 +2,8 @@ import { CLIP_TIMING } from '@/shared/config'
 import { useTranslation } from 'react-i18next'
 import { Button, Checkbox, Typography } from '@/shared/ui'
 import type { CompositionNode } from '../model/composition'
-import { compositionLiteral, compositionNode } from '../lib/composition-author'
+import { boundedChars, compositionLiteral, compositionNode } from '../lib/composition-author'
+import { compositionPositionChars } from '../lib/composition-parse'
 import {
   compositionSlotCount,
   regionRows,
@@ -11,6 +12,36 @@ import {
 import { CompositionInput, CompositionSelect } from './CompositionFields'
 
 export type CompositionBindingOption = { value: string; label: string }
+/** 자동 is the ABSENCE of the attribute, not a zero: the draft has to stay the
+ *  body the author would have typed (CLIP-71). */
+function patchChars(n: CompositionNode, chars: string) {
+  const next = { ...n.attributes }
+  if (chars.trim() === '') delete next.chars
+  else next.chars = chars.trim()
+  return next
+}
+/** The 최대 글자 수 control. The bound is the one the parser enforces for this
+ *  position (CLIP-116); an empty value is 자동, which keeps that derived cap. */
+function CharsInput({
+  max,
+  value,
+  onChange,
+}: {
+  max: number
+  value: string
+  onChange: (value: string) => void
+}) {
+  const { t } = useTranslation('clips')
+  return (
+    <CompositionInput
+      label={t('composition.charsLabel')}
+      value={value}
+      numeric
+      hint={max > 0 ? t('composition.charsHint', { max }) : t('composition.charsFreeHint')}
+      onChange={(v) => onChange(boundedChars(v, max))}
+    />
+  )
+}
 function Parts({
   nodes,
   bindings,
@@ -152,7 +183,12 @@ export function CompositionTextControls({
               label={t('composition.design.slotKind', { n: i + 1 })}
               value={row.attributes.kind}
               options={options('kind', ['fixed', 'ai'])}
-              onChange={(kind) => patchRow(i, { ...row, attributes: { kind } })}
+              onChange={(kind) => patchRow(i, { ...row, attributes: { ...row.attributes, kind } })}
+            />
+            <CharsInput
+              max={compositionPositionChars(design, a.role, { index: i })}
+              value={row.attributes.chars ?? ''}
+              onChange={(chars) => patchRow(i, { ...row, attributes: patchChars(row, chars) })}
             />
             <Parts
               nodes={row.children}
@@ -205,6 +241,13 @@ export function CompositionTextControls({
         options={options('align', ['left', 'center', 'right'])}
         onChange={(v) => attr('align', v)}
       />
+      {!rows.length && (
+        <CharsInput
+          max={compositionPositionChars(design, a.role)}
+          value={a.chars ?? ''}
+          onChange={(chars) => onChange({ ...node, attributes: patchChars(node, chars) })}
+        />
+      )}
       <CompositionSelect
         label={t('composition.timingLabel')}
         value={a.basis}
@@ -258,7 +301,24 @@ export function CompositionTextControls({
               onChange={(role) =>
                 onChange({
                   ...node,
-                  children: rows.map((r, j) => (i === j ? { ...r, attributes: { role } } : r)),
+                  children: rows.map((r, j) =>
+                    i === j ? { ...r, attributes: { ...r.attributes, role } } : r,
+                  ),
+                })
+              }
+            />
+            <CharsInput
+              max={compositionPositionChars(design, a.role, {
+                role: row.attributes.role,
+                index: i,
+              })}
+              value={row.attributes.chars ?? ''}
+              onChange={(chars) =>
+                onChange({
+                  ...node,
+                  children: rows.map((r, j) =>
+                    i === j ? { ...r, attributes: patchChars(r, chars) } : r,
+                  ),
                 })
               }
             />

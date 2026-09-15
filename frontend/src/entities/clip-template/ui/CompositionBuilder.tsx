@@ -1,9 +1,11 @@
 import { useState } from 'react'
+import { CLIP_COMPOSITION_LIMITS } from '@/shared/config'
 import { useTranslation } from 'react-i18next'
 import { Button, Checkbox, SortableList, Typography } from '@/shared/ui'
 import type { CompositionNode } from '../model/composition'
 import { CLIP_ACCENTS } from '../model/types'
 import {
+  boundedChars,
   compositionDraftTree,
   compositionLiteral,
   compositionOutline,
@@ -19,6 +21,14 @@ import {
 import { CompositionInput, CompositionSelect } from './CompositionFields'
 import { CompositionTextControls } from './CompositionTextControls'
 
+/** An empty value REMOVES the attribute: 자동 is its absence, and the draft has
+ *  to stay the body the author would have typed (CLIP-71). */
+function withoutEmpty(attributes: Record<string, string>, key: string, value: string) {
+  const next = { ...attributes }
+  if (value.trim() === '') delete next[key]
+  else next[key] = value.trim()
+  return next
+}
 export function CompositionBuilder({
   source,
   onChange,
@@ -139,6 +149,22 @@ export function CompositionBuilder({
               />
               {t('composition.required')}
             </label>
+            <CompositionInput
+              label={t('composition.charsLabel')}
+              value={node.attributes.chars ?? ''}
+              numeric
+              hint={t('composition.charsFieldHint')}
+              onChange={(v) =>
+                change({
+                  ...node,
+                  attributes: withoutEmpty(
+                    node.attributes,
+                    'chars',
+                    boundedChars(v, CLIP_COMPOSITION_LIMITS.answerChars),
+                  ),
+                })
+              }
+            />
           </>
         )}
         {name === 'guide' && (

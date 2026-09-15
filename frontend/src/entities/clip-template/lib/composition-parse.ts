@@ -40,20 +40,31 @@ function declaredChars(n: CompositionNode, blame: CompositionNode, limit: number
   if (limit > 0 && value > limit) problem(blame, 'invalid_max')
   return value
 }
-/** The CDS-20 count of the preset slot a region row lands in. A ratio changes
- * the hook's size but not its characters (CDS-46). */
-function regionSlotChars(d: ClipComposition, role: string, index: number) {
+const typeChars = (type: string) =>
+  CLIP_DESIGN.type[type as keyof typeof CLIP_DESIGN.type]?.chars ?? 0
+/** The CDS-20 count a rendered position already imposes, and 0 for a position
+ * that imposes none of its own — a badge or a caption, whose line and wrap rules
+ * are CDS-25's and the repair ladder's rather than a character ceiling.
+ *
+ * A region row takes its preset slot's type (a ratio changes the hook's size but
+ * not its characters, CDS-46), an information row its row role, and an element
+ * without rows reads as a caption when it carries information. One derivation,
+ * exported so the editor bounds its control by the number the parser enforces
+ * rather than one of its own (CLIP-116). */
+export function compositionPositionChars(
+  design: ClipComposition['design'],
+  role: string,
+  row?: { role?: string; index: number },
+) {
+  if (!row) return role === 'info' ? typeChars('caption') : 0
+  if (role === 'info') return typeChars(row.role ?? '')
   const preset =
     role === 'ending'
-      ? CLIP_DESIGN.regions.outro[d.design.outro]
-      : CLIP_DESIGN.regions.intro[d.design.intro]
-  const slot = preset?.slots[index]
-  return slot ? (CLIP_DESIGN.type[slot.type as keyof typeof CLIP_DESIGN.type]?.chars ?? 0) : 0
+      ? CLIP_DESIGN.regions.outro[design.outro]
+      : CLIP_DESIGN.regions.intro[design.intro]
+  const slot = preset?.slots[row.index]
+  return slot ? typeChars(slot.type) : 0
 }
-/** The count an element's own text position imposes when it carries no rows: an
- * information value reads as a caption, while a badge and a caption impose none
- * of their own. */
-const elementChars = (role: string) => (role === 'info' ? CLIP_DESIGN.type.caption.chars : 0)
 export function validCompositionLimits(l: CompositionLimits) {
   return (Object.keys(CLIP_COMPOSITION_LIMITS) as (keyof CompositionLimits)[]).every((key) => {
     const value = l[key]
@@ -138,7 +149,7 @@ function readElement(
   if (basis !== 'whole' && basis !== 'output-start' && basis !== 'output-end' && basis !== 'cut')
     problem(n, 'invalid_basis')
   if (basis === 'cut' && !inScene) problem(n, 'invalid_basis')
-  const ownLimit = elementChars(role) || l.copyChars
+  const ownLimit = compositionPositionChars(d.design, role) || l.copyChars
   const chars = declaredChars(n, n, ownLimit)
   const hasStart = Object.hasOwn(a, 'start'),
     hasEnd = Object.hasOwn(a, 'end')
@@ -221,10 +232,7 @@ function readElement(
       if (rowKind !== 'fixed' && rowKind !== 'ai') problem(n, 'invalid_kind')
       // A row's position is its preset slot in a region block, and its own row
       // role inside an information pair.
-      const slot =
-        (region
-          ? regionSlotChars(d, role, index)
-          : (CLIP_DESIGN.type[rowRole as keyof typeof CLIP_DESIGN.type]?.chars ?? 0)) || l.copyChars
+      const slot = compositionPositionChars(d.design, role, { role: rowRole, index }) || l.copyChars
       return { role: rowRole, kind: rowKind, chars: declaredChars(c, n, slot), parts: parts(c) }
     })
   } else t.parts = parts(n)
@@ -460,14 +468,11 @@ function fieldMaxima(d: ClipComposition, l: CompositionLimits) {
       if (p.field && p.field in out && limit < out[p.field]) out[p.field] = limit
   }
   const visit = (t: CompositionElement) => {
-    if (!t.rows.length) return fold(t.parts, t.chars || elementChars(t.role))
+    if (!t.rows.length) return fold(t.parts, t.chars || compositionPositionChars(d.design, t.role))
     t.rows.forEach((row, index) =>
       fold(
         row.parts,
-        row.chars ||
-          (t.role === 'info'
-            ? (CLIP_DESIGN.type[row.role as keyof typeof CLIP_DESIGN.type]?.chars ?? 0)
-            : regionSlotChars(d, t.role, index)),
+        row.chars || compositionPositionChars(d.design, t.role, { role: row.role, index }),
       ),
     )
   }

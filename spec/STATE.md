@@ -47,7 +47,6 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
-| T180 | Author a character maximum in the template editor | CLIP | T179 | todo |
 | T181 | An answer cannot be typed past its maximum | CLIP | T179 | todo |
 | T182 | Generated text obeys its declared maximum | CLIP CDS | T179 | todo |
 
@@ -57,6 +56,8 @@
 - T177 is blocked on the owner's viewing answers; the three review clips are rendered and the checklist is open. T008 stays owner-dependent.
 
 ## log
+- 260916 T180 done; a bounded 최대 글자 수 control on field, element and slot rows, the cap stated from the parser
+- 260916 T180 claimed (max)
 - 260916 T179 done; chars on field/text/row, derived caps per position and one effective maximum per field, agreed by both grammar owners
 - 260916 update-ssot CLIP done; CLIP@26 — an empty required group is refused at admission and a plan under the length floor stops calling itself unreadable
 - 260916 warn: r26 edits CLIP-102, the same admission line T179's family (T180 T181) builds on
@@ -75,5 +76,3 @@
 - 260916 T177 claimed (qa)
 - 260916 Production recovered to ef94ac0b after DB backup (schema 53, quick_check ok); health/GetMe/CORS verified; local migration 54 + rollout fixes pass BE vet/build/tests and 5 rollout regressions, not deployed (ops).
 - 260916 Production incident: investigate API 502 and failed backend rollout; repair startup/rollback and verify recovery (ops).
-- 260916 T176 done; one shared offset moves a region block as one piece, real-ink overlap and safe-area pinned, eight goldens and the frontend mirror regenerated
-- 260916 T176 claimed (rgn)

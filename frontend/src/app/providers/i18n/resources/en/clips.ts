@@ -271,6 +271,10 @@ export const clips = {
     addLiteral: 'Add text',
     addBinding: 'Link an answer',
     rowRole: 'Card row {{n}} purpose',
+    charsLabel: 'Maximum characters',
+    charsHint: 'This position holds {{max}} characters. Leave it empty to follow that.',
+    charsFreeHint: 'This position has no character limit. Leave it empty for none.',
+    charsFieldHint: 'Follows the positions this answer reaches. Set one only to ask for less.',
     removeRow: 'Remove text row {{n}}',
     addRow: 'Add text row',
     scopeLabel: 'Scene evidence',
@@ -366,6 +370,7 @@ export const clips = {
       unknown_attribute: 'Unsupported attribute. Check the format guide.',
       duplicate_id: 'Element identifiers must be distinct.',
       invalid_rows: 'Rows are supported only for intro, outro and information text.',
+      invalid_max: 'A maximum must be at least 1 and no larger than the position allows.',
     },
     guide:
       "Write only postpilot video-template source using the grammar below. Source from an external AI can be pasted into the editor. Authoring, copying, parsing and illustrative preview make no model call and use no credits. Choose the root intro, caption and outro first. The intro/outro skeletons fix slot order and appearance; only slot text and the content region are authorable. No universal price requirement, automatic disclosure or CTA is added.\n\nGrammar:\n{{grammar}}\n\nBounds (characters are Unicode scalars; Ms means milliseconds):\n{{limits}}\n\nA field label is its visible name; its body is input guidance. Bind by ID so renaming a label preserves identity. A blank optional value omits its dependent text; in the intro/outro it clears only that slot and preserves the other slot positions; required values block generation when blank. Keep each item's price, currency, units and price basis together. Repetition uses only selected real scenes and invents no unfilmed item footage. AI copy uses facts bound to its scene and item; fixed copy preserves even whitespace except explicit value substitution. Guides are invisible in the output.\n\nSeveral-menu example (add two or more menu items on the input screen):\n{{example}}",

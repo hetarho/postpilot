@@ -27,16 +27,17 @@ export const CLIP_COMPOSITION_EXAMPLE = `<clip version="1" intro="b" caption="bo
 /** Closed grammar shared by both localized guides; examples are parsed in tests. */
 const GRAMMAR = `clip(version="1", intro="a|b", caption="bold", outro="b|e", accent="coral|amber|lime|teal|blue|violet|pink|", pace="steady|rapid")
 clip children: field, group, guide, scene, repeat, text
-field(id, label, required="true|false") = prompt text; default required=false
+field(id, label, required="true|false", chars?) = prompt text; default required=false. chars is the maximum number of characters the answer may hold.
 group(id, label?, min?, max?) children: field; group ID "scenes" is reserved. label is the owner-visible group name (default: generic). min/max are non-negative integers, min <= max <= items limit; defaults: min=0, max=items limit. Generation requires at least min items; incomplete drafts can still be saved.
 guide = invisible instructions, inside clip or scene
 scene(id, scope="scene|item|context") children: guide, text
 repeat(for="scenes|GROUP_ID") children: scene; group repetition requires scope=item; no nested repeat
-text(id, kind="fixed|ai", role="caption|info|badge|hook|ending", position="auto|top|upper_mid|lower_mid|bottom|header", align="left|center|right", basis="whole|output-start|output-end|cut", start, end)
+text(id, kind="fixed|ai", role="caption|info|badge|hook|ending", position="auto|top|upper_mid|lower_mid|bottom|header", align="left|center|right", basis="whole|output-start|output-end|cut", start, end, chars?)
 Exactly one hook and one ending must be direct clip children. Hook basis=output-start, ending basis=output-end; omit position and align. Hook/ending contain only rows, without role. Omitted intervals default to 0–2.5 seconds and -3–0 seconds respectively. At most 2 intro rows, 2 outro-B rows or 3 outro-E rows. Empty slots keep their positions; overflow is invalid_skeleton. All three root design attributes are required. Only slot text/authorship and the content region are authorable; never change slot order, count, type, position or decoration.
 text content: exact literal + <value field="FIELD_ID"/> or <value field="GROUP_ID.FIELD_ID"/>
-hook/ending rows: <row kind="fixed|ai">literal + value</row>; kind defaults to the parent. Fixed and answer-bound values are exact. AI rows are separate one-line slots. Character limits: intro A 8/22, intro B 9/22, outro B 9/14, outro E 22/6/18. Never add manual newlines or an extra row.
-info rows: <row role="label|caption">literal + value</row>.
+hook/ending rows: <row kind="fixed|ai" chars?>literal + value</row>; kind defaults to the parent. Fixed and answer-bound values are exact. AI rows are separate one-line slots. Character limits: intro A 8/22, intro B 9/22, outro B 9/14, outro E 22/6/18. Never add manual newlines or an extra row.
+info rows: <row role="label|caption" chars?>literal + value</row>.
+chars is a positive integer and may only be SMALLER than what the position already holds; a larger one is invalid_max. Undeclared means the position's own number. Those numbers, counted as Korean syllables excluding spaces and punctuation: intro A 8/22, intro B 9/22, outro B 9/14, outro E 22/6/18; info rows label 22 and caption 18; an info text without rows 18; a field without a declared number follows the positions its answer reaches; badge and caption text have no number of their own.
 whole: omit start/end. output-start: 0 <= start < end. output-end: start < end <= 0. cut: only inside scene; omit both endpoints for automatic timing or use 0 <= start < end.
 Seconds have up to 3 decimal places. Explicit intervals must fit the output/cut, without clamping. Header is only for info/badge. Defaults: position=auto, align=center (caption/info/badge only).
 IDs: 1–64 ASCII letters/digits/_/-, first letter or digit. Group field IDs are qualified; other IDs are unique.
