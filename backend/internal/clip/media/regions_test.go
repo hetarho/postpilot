@@ -50,7 +50,7 @@ func checkRegionPresets(t *testing.T, a *Adapter, r *Rendering, raster bool) {
 					}
 					preset, _ := design.Region(choice.kind, choice.id)
 					for i, line := range v.region.Lines {
-						if line.Y != preset.Slots[i].Y*design.RegionScale(ratio) || line.Size != design.RegionType(preset.Slots[i], ratio).Size {
+						if line.Y != design.RegionBaseline(preset, ratio, preset.Slots[i].Y) || line.Size != design.RegionType(preset.Slots[i], ratio).Size {
 							t.Fatal("changed baseline or size", line)
 						}
 					}

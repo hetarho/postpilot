@@ -113,6 +113,16 @@ export function CompositionDesignFrame({
 }) {
   const shape = CLIP_DESIGN.ratios[ratio]
   const scale = shape.canvas.height / CLIP_DESIGN.ratios.vertical.canvas.height
+  /** CDS-79: a region block keeps its 9:16 spacing on every ratio and moves as
+   * one piece — its centre, the midpoint of the preset's own y values, lands on
+   * the same fraction of canvas height. The renderer resolves every region y
+   * through the same offset, so the preview cannot drift from the export. */
+  const regionOffset = (v: Visual) => {
+    const ys = [...(v.slots ?? []).map((s) => s.y), ...(v.rules ?? []).map((r) => r.y)]
+    if (!ys.length) return 0
+    const centre = (Math.min(...ys) + Math.max(...ys)) / 2
+    return centre * scale - centre
+  }
   const shadowID = useId()
   const visuals: Visual[] = entries.map((entry) => {
     const e = entry.element
@@ -243,7 +253,7 @@ export function CompositionDesignFrame({
     .flatMap((v) => [
       ...v.lines.map((line) => ({
         x: shape.anchor.center - ink(line).width / 2,
-        y: v.slots![line.slot!].y * scale + ink(line).y,
+        y: v.slots![line.slot!].y + regionOffset(v) + ink(line).y,
         width: ink(line).width,
         height: ink(line).height,
       })),
@@ -251,7 +261,7 @@ export function CompositionDesignFrame({
         const rule = CLIP_RULES[line.kind as keyof typeof CLIP_RULES]
         return {
           x: shape.anchor.center - rule.w / 2,
-          y: line.y * scale,
+          y: line.y + regionOffset(v),
           width: rule.w,
           height: rule.h,
         }
@@ -343,7 +353,7 @@ export function CompositionDesignFrame({
               data-preset={document.design[v.kind]}
             >
               {v.lines.map((line) =>
-                paintedText(line, shape.anchor.center, v.slots![line.slot!].y * scale),
+                paintedText(line, shape.anchor.center, v.slots![line.slot!].y + regionOffset(v)),
               )}
               {v.rules?.map((r, i) => {
                 const rule = CLIP_RULES[r.kind as keyof typeof CLIP_RULES]
@@ -352,7 +362,7 @@ export function CompositionDesignFrame({
                     key={i}
                     data-rule={r.kind}
                     x={shape.anchor.center - rule.w / 2}
-                    y={r.y * scale}
+                    y={r.y + regionOffset(v)}
                     width={rule.w}
                     height={rule.h}
                     fill={CLIP_DESIGN.color.text_white.hex}

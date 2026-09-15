@@ -62,7 +62,7 @@ func (r *Rendering) layoutDeclaredRegion(ctx context.Context, ws clip.MediaWorks
 		if err != nil {
 			return visual, declaredRoleError(visual.text, err)
 		}
-		baseline := slot.Y * design.RegionScale(ratio)
+		baseline := design.RegionBaseline(preset, ratio, slot.Y)
 		box := clip.Region{X: geometry.Anchor.Center - bounds.Width/2, Y: baseline + bounds.Y, Width: bounds.Width, Height: bounds.Height}
 		if !inside(box, canvas.Safe) {
 			return visual, elementProblem(visual.text, "safe_area")
@@ -87,7 +87,7 @@ func (r *Rendering) layoutDeclaredRegion(ctx context.Context, ws clip.MediaWorks
 	if len(visual.region.Lines) > 0 {
 		for _, line := range preset.Rules {
 			rule := design.Rules[line.Kind]
-			box := clip.Region{X: geometry.Anchor.Center - rule.Width/2, Y: line.Y * design.RegionScale(ratio), Width: rule.Width, Height: rule.Height}
+			box := clip.Region{X: geometry.Anchor.Center - rule.Width/2, Y: design.RegionBaseline(preset, ratio, line.Y), Width: rule.Width, Height: rule.Height}
 			visual.region.Rules = append(visual.region.Rules, overlayBox(box, 0, design.Color["text_white"].Hex, trimmed(rule.Alpha)))
 			visual.manifest.Parts = append(visual.manifest.Parts, design.Element{Kind: "plate", Rule: line.Kind, Fill: design.Color["text_white"].Hex, Opacity: rule.Alpha, Region: design.Bounds(box), StartMS: visual.manifest.StartMS, EndMS: visual.manifest.EndMS})
 		}

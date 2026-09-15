@@ -3,6 +3,7 @@ package design_test
 import (
 	"bytes"
 	"encoding/json"
+	"math"
 	"reflect"
 	"testing"
 
@@ -81,5 +82,49 @@ func TestRegionPresetsMatchCDS(t *testing.T) {
 	changed := bytes.Replace(design.JSON(), []byte(`940`), []byte(`941`), 1)
 	if bytes.Equal(changed, design.JSON()) {
 		t.Fatal("mirror comparison missed a preset edit")
+	}
+}
+
+// CDS-79: the block moves as one piece. Every slot baseline and every rule
+// offset differs from its 9:16 value by one constant per preset and ratio, so
+// consecutive spacing is identical on all three canvases.
+func TestRegionBlocksKeepTheirSpacingOnEveryRatio(t *testing.T) {
+	// The offsets both 1080-high canvases must produce, from the preset's own
+	// midpoint: a preset that drifts from these has changed its geometry.
+	offsets := map[string]float64{"intro.a": -428.75, "intro.b": -423.5, "outro.b": -424.375, "outro.e": -425.6875}
+	for _, choice := range []struct{ kind, id string }{{"intro", "a"}, {"intro", "b"}, {"outro", "b"}, {"outro", "e"}} {
+		preset, ok := design.Region(choice.kind, choice.id)
+		if !ok {
+			t.Fatal("missing preset", choice)
+		}
+		base := make([]float64, 0, len(preset.Slots)+len(preset.Rules))
+		for _, slot := range preset.Slots {
+			base = append(base, slot.Y)
+		}
+		for _, rule := range preset.Rules {
+			base = append(base, rule.Y)
+		}
+		for _, ratio := range []string{"vertical", "horizontal", "square"} {
+			name := choice.kind + "." + choice.id
+			t.Run(name+"/"+ratio, func(t *testing.T) {
+				want := offsets[name]
+				if ratio == "vertical" {
+					// 9:16 is the authored canvas: nothing may move there.
+					want = 0
+				}
+				if got := design.RegionOffset(preset, ratio); math.Abs(got-want) > 1e-9 {
+					t.Fatalf("offset = %v, want %v", got, want)
+				}
+				for i, y := range base {
+					moved := design.RegionBaseline(preset, ratio, y)
+					if math.Abs(moved-(y+want)) > 1e-9 {
+						t.Fatalf("y %v moved to %v, want one constant %v", y, moved, want)
+					}
+					if i > 0 && math.Abs((moved-design.RegionBaseline(preset, ratio, base[i-1]))-(y-base[i-1])) > 1e-9 {
+						t.Fatalf("spacing after y %v changed on %s", base[i-1], ratio)
+					}
+				}
+			})
+		}
 	}
 }

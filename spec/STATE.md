@@ -46,14 +46,15 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
-| T176 | Region blocks keep their spacing on every ratio | CDS | - | todo |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | todo |
 
 ## next
-- implement-task T176, then T177 with the owner watching.
+- implement-task T177 with the owner watching.
 - T008 stays owner-dependent.
 
 ## log
+- 260916 T176 done; one shared offset moves a region block as one piece, real-ink overlap and safe-area pinned, eight goldens and the frontend mirror regenerated
+- 260916 T176 claimed (rgn)
 - 260915 create-task CDS done; T176 from the r18 delta and T177 carrying CDS-53's viewing checklist from the void T110
 - 260915 create-task CDS start
 - 260915 update-ssot CDS done; CDS@18 — a region block keeps its 9:16 spacing and moves only its centre
@@ -72,5 +73,3 @@
 - 260915 T171 reopened (dsg); final style scanner flags canvas attribute reads, fix before committing T172
 - 260915 T171 done; style controls removed, preset previews and all corrected frontend regression gates pass
 - 260915 T172 claimed (dsg); T171 implementation is frozen for verification
-- 260915 T173 done; grounded single-line slot repair, owner notices and backend/frontend gates pass
-- 260915 T171 claimed (dsg); T173 implementation is frozen for verification
