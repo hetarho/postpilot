@@ -44,7 +44,7 @@ pass comes first — CDS-53's recall questions are about what the picture alone 
 | 1 | which two facts do you recall without rewinding? | one of two — "위치 성수동", the authored information pair. The second fact is missing: first pass was "그냥 단색이라 기억나는 사실이 없다", so what the picture carries beyond the authored text is nothing |
 | 2 | is the subject known within 1.5 s? | not answerable — "내용은 안 봤어": synthetic footage has no subject to recognise |
 | 3 | does the copy read as editor-placed rather than auto-dropped? | confirmed |
-| 4 | is the tone constant from first cut to end card? | |
+| 4 | is the tone constant from first cut to end card? | yes — "일정해" |
 | 5 | is the disclosure legible for its whole interval? | confirmed |
 
 Question 1 is answered by the authored information pair alone — the footage adds no
@@ -55,23 +55,31 @@ are not separated here because the owner reviewed the clip in one sitting.
 
 ### Clip 2 — intro B / outro E
 
-| # | question | muted pass | source-audio pass |
-|---|---|---|---|
-| 1 | which two facts do you recall without rewinding? | | |
-| 2 | is the subject known within 1.5 s? | | |
-| 3 | does the copy read as editor-placed rather than auto-dropped? | | |
-| 4 | is the tone constant from first cut to end card? | | |
-| 5 | is the disclosure legible for its whole interval? | | |
+| # | question | answer |
+|---|---|---|
+| 1 | which two facts do you recall without rewinding? | not answerable on this footage — see Findings |
+| 2 | is the subject known within 1.5 s? | not answerable on this footage — see Findings |
+| 3 | does the copy read as editor-placed rather than auto-dropped? | yes — "괜찮아" |
+| 4 | is the tone constant from first cut to end card? | yes — "일정해" |
+| 5 | is the disclosure legible for its whole interval? | yes — "보여" |
+
+Nothing was reported at the cut boundaries the owner was asked to watch (5.0 s and
+9.8 s), at the rate changes, or in the outro block's spacing. That is the owner's
+observation on this viewing, not a measurement.
 
 ### Clip 3 — intro A / outro E
 
-| # | question | muted pass | source-audio pass |
-|---|---|---|---|
-| 1 | which two facts do you recall without rewinding? | | |
-| 2 | is the subject known within 1.5 s? | | |
-| 3 | does the copy read as editor-placed rather than auto-dropped? | | |
-| 4 | is the tone constant from first cut to end card? | | |
-| 5 | is the disclosure legible for its whole interval? | | |
+| # | question | answer |
+|---|---|---|
+| 1 | which two facts do you recall without rewinding? | not answerable on this footage — see Findings |
+| 2 | is the subject known within 1.5 s? | not answerable on this footage — see Findings |
+| 3 | does the copy read as editor-placed rather than auto-dropped? | yes — "좋아" |
+| 4 | is the tone constant from first cut to end card? | yes — "일정해" |
+| 5 | is the disclosure legible for its whole interval? | yes — "보여" |
+
+Nothing was reported at the cut boundaries the owner was asked to watch (5.0 s and
+9.8 s), at the rate changes, or in the outro block's spacing. That is the owner's
+observation on this viewing, not a measurement.
 
 ## Assembly cases
 
@@ -93,7 +101,8 @@ or silent repair.
 |---|---|---|---|
 | 1 | all three | synthetic flat-colour footage cannot answer CDS-53's recall and subject questions (1 and 2). The copy, placement, timing and disclosure questions it answers fine. | a later review run over real recorded footage, numbered separately — the clips themselves are not at fault |
 
-Clips 2 and 3 were opened but not reviewed in this sitting, and clip 1's question 4 is
-unanswered. This round therefore stands as a partial run: what it does establish is that
-the copy reads as placed and the disclosure is legible on clip 1, and that flat-colour
-footage cannot carry CDS-53's recall and subject questions at all.
+All three clips are now answered on questions 3, 4 and 5, and none of them was reported
+to show an unintended sound, a temporal gap, a stale caption or invented text at the cut
+boundaries, the rate changes or the outro spacing. What this round cannot establish is
+questions 1 and 2: flat-colour footage carries no fact to recall and no subject to
+recognise, which is finding 1 and belongs to a later run over real material.
