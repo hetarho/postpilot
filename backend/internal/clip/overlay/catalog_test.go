@@ -75,7 +75,7 @@ func TestCatalogRejectsInvalidRegistration(t *testing.T) {
 		{"version", "bindings.json", `{"version":2,"bindings":{"copy.clean":"custom"}}`},
 		{"unknown-field", "bindings.json", `{"version":1,"bindings":{"copy.clean":"custom"},"secret":true}`},
 		{"missing-preset", "bindings.json", `{"version":1,"bindings":{"copy.clean":"absent"}}`},
-		{"wrong-view", "bindings.json", `{"version":1,"bindings":{"card.hook":"custom"}}`},
+		{"wrong-view", "bindings.json", `{"version":1,"bindings":{"region":"custom"}}`},
 		{"wrong-id", "custom/preset.json", `{"id":"other","view":"copy-v1","template":"overlay.svg"}`},
 		{"path", "custom/preset.json", `{"id":"custom","view":"copy-v1","template":"../private.svg"}`},
 		{"bad-template", "custom/overlay.svg", `{{if .Missing}}`},
@@ -173,7 +173,7 @@ func TestBuiltinCatalogUsesDiscovery(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := c.Presets(); len(got) != 5 || got[0].ID != "caption" || got[1].ID != "card" || got[2].ID != "furniture" {
+	if got := c.Presets(); len(got) != 5 || got[0].ID != "caption" || got[1].ID != "furniture" || got[4].ID != "region" {
 		t.Fatal(got)
 	}
 }

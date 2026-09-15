@@ -12,7 +12,7 @@ import (
 	"github.com/postpilot/backend/internal/clip/overlay"
 )
 
-func (r *Rendering) layoutDeclaredRole(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, ratio string, visual declaredVisual) (declaredVisual, error) {
+func (r *Rendering) layoutDeclaredRole(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, ratio string, visual declaredVisual, selection ...composition.DesignSelection) (declaredVisual, error) {
 	e := visual.text.Resolved.Element
 	// Named text styles describe caption visuals. Other roles have their own
 	// CDS typography/plate contract; incompatible authored choices need editing.
@@ -25,7 +25,15 @@ func (r *Rendering) layoutDeclaredRole(ctx context.Context, ws clip.MediaWorkspa
 	case "info":
 		return r.layoutDeclaredInfo(ctx, ws, canvas, ratio, visual)
 	case "hook", "ending":
-		return r.layoutDeclaredCard(ctx, ws, canvas, ratio, visual)
+		choice := composition.DefaultDesign()
+		if len(selection) > 0 {
+			choice = selection[0]
+		}
+		kind, id := "intro", choice.Intro
+		if e.Role == "ending" {
+			kind, id = "outro", choice.Outro
+		}
+		return r.layoutDeclaredRegion(ctx, ws, canvas, ratio, visual, kind, id)
 	default:
 		return visual, elementProblem(visual.text, "invalid_role")
 	}
@@ -249,77 +257,5 @@ func (r *Rendering) layoutDeclaredInfo(ctx context.Context, ws clip.MediaWorkspa
 			y += math.Max(b.Height, role.Size) + design.Spacing.GapStack
 		}
 	}
-	return visual, nil
-}
-
-func (r *Rendering) layoutDeclaredCard(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, ratio string, visual declaredVisual) (declaredVisual, error) {
-	text := visual.text
-	rows := text.Resolved.Rows
-	if len(rows) == 0 {
-		role := "body"
-		if text.Resolved.Element.Role == "hook" {
-			role = "hook"
-		}
-		rows = []composition.ResolvedRow{{Role: role, Text: text.Resolved.Text}}
-	}
-	kind := "hook"
-	if text.Resolved.Element.Role == "ending" {
-		kind = "end"
-	}
-	card := cardLayout{Kind: kind, Align: text.Resolved.Element.Align, StartMS: text.Resolved.StartMS, EndMS: text.Resolved.EndMS, Accent: text.Accent}
-	for rowIndex, row := range rows {
-		role, known := design.Type[row.Role]
-		if !known {
-			return visual, elementProblem(text, "invalid_row_role")
-		}
-		if row.Role == "hook" {
-			geometry, _ := design.Layout(ratio)
-			role.Size, role.Min = geometry.HookSize, math.Min(role.Min, geometry.HookSize)
-		}
-		lines := []string{row.Text}
-		if strings.Contains(row.Text, "\n") {
-			lines = strings.Split(row.Text, "\n")
-		} else if row.Role == "hook" && design.Chars(row.Text) > role.Chars && design.Chars(row.Text) <= 2*role.Chars {
-			lines = hookLines(row.Text)
-		}
-		if row.Role == "hook" && len(lines) > 2 {
-			return visual, elementProblem(text, "copy_limit")
-		}
-		for _, line := range lines {
-			if strings.TrimSpace(line) == "" || role.Chars > 0 && design.Chars(line) > role.Chars {
-				return visual, elementProblem(text, "copy_limit")
-			}
-			colour := design.Color["text_white"]
-			chip := kind == "hook" && row.Role == "label" && text.Accent != ""
-			if kind == "hook" && row.Role == "body" || kind == "end" && row.Role == "label" {
-				colour = design.Color["text_muted"]
-			}
-			if chip {
-				colour = design.Color["badge_ad"]
-			}
-			if kind == "end" && row.Role == "label" && rowIndex == len(rows)-1 && text.Accent != "" {
-				colour.Hex, colour.Alpha = design.Accent[text.Accent], 1
-			}
-			card.Lines = append(card.Lines, cardLine{Text: line, Role: role, Fill: colour.Hex, Alpha: colour.Alpha, Chip: chip})
-		}
-	}
-	card, err := r.measureCard(ctx, ws, canvas, ratio, card)
-	if err != nil {
-		return visual, declaredRoleError(text, err)
-	}
-	for _, bounds := range card.Bounds {
-		if bounds.Width > card.Region.Width-2*cardPadding {
-			return visual, elementProblem(text, "copy_limit")
-		}
-	}
-	if text.Resolved.Element.Position != "auto" {
-		box, _, err := rolePosition(canvas, ratio, text.Resolved.Element, card.Region.Width, card.Region.Height)
-		if err != nil {
-			return visual, elementProblem(text, "safe_area")
-		}
-		card.Region = box
-	}
-	visual.card, visual.manifest.Region = card, card.Region
-	visual.manifest.Parts = card.Elements(0)
 	return visual, nil
 }

@@ -105,32 +105,6 @@ func furnitureView(canvas clip.Canvas, f furniture) overlay.FurnitureView {
 	return v
 }
 
-func cardView(canvas clip.Canvas, card cardLayout) overlay.CardView {
-	v := overlay.CardView{Canvas: overlay.Canvas{Width: canvas.Width, Height: canvas.Height}, Empty: card.empty()}
-	if v.Empty {
-		return v
-	}
-	v.Shadow = overlayShadow("card")
-	fill, alpha := paint("badge_ad")
-	p := card.Region
-	v.Plate = overlayBox(p, design.Spacing.RadiusCard, fill, alpha)
-	top := p.Y + cardPadding
-	for i, line := range card.Lines {
-		bounds := card.Bounds[i]
-		var out overlay.CardLine
-		if line.Chip {
-			pad := design.Spacing.PadChip
-			out.Chip = &overlay.Box{X: card.lineX(i), Y: top, Width: bounds.Width, Height: bounds.Height, Radius: bounds.Height / 2, Fill: design.Accent[card.Accent]}
-			out.Text = overlayText(line.Role, line.Text, card.lineX(i)+pad.H-bounds.X, top+pad.V-bounds.Y, line.Fill, "")
-		} else {
-			out.Text = overlayText(line.Role, line.Text, card.lineX(i)-bounds.X, top-bounds.Y, line.Fill, trimmed(line.Alpha))
-		}
-		v.Lines = append(v.Lines, out)
-		top += bounds.Height + design.Spacing.GapStack
-	}
-	return v
-}
-
 func loadOverlays(directory string) (*overlay.Catalog, error) {
 	var catalog *overlay.Catalog
 	var err error
@@ -158,7 +132,7 @@ func loadOverlays(directory string) (*overlay.Catalog, error) {
 			return nil, err
 		}
 	}
-	for _, binding := range []string{"furniture", "card.hook", "card.end", "info.emphasis", "info.compact"} {
+	for _, binding := range []string{"furniture", "region", "info.emphasis", "info.compact"} {
 		kind, _, _ := strings.Cut(binding, ".")
 		if _, err := catalog.Render(binding, overlayProbe(kind+"-v1")); err != nil {
 			return nil, err
@@ -181,7 +155,7 @@ func overlayProbe(view string) any {
 	case "furniture-v1":
 		return overlay.FurnitureView{Canvas: canvas, Badge: &box, Label: &text, Chips: []overlay.Chip{{Box: box, Label: text, Value: text}}}
 	default:
-		return overlay.CardView{Canvas: canvas, Plate: box, Shadow: overlay.Shadow{Fill: "#111111", Opacity: "1"}, Lines: []overlay.CardLine{{Chip: &box, Text: text}, {Text: text}}}
+		return overlay.RegionView{CopyView: overlayProbe("copy-v1").(overlay.CopyView), Rules: []overlay.Box{box}}
 	}
 }
 

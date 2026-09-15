@@ -69,8 +69,8 @@ func TestTheRenderedPlanVerifiesOnEveryRatio(t *testing.T) {
 					cards++
 				}
 			}
-			if cards != 2 {
-				return fmt.Errorf("%s placed %d cards", ratio, cards)
+			if cards != 0 {
+				return fmt.Errorf("%s retained %d retired cards", ratio, cards)
 			}
 			// A bright ground on the unplated cut adds CDS-32's scrim, turns the
 			// accent word white and still verifies — the second pass the render

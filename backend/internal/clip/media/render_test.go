@@ -370,25 +370,6 @@ func TestRenderFilterGoldens(t *testing.T) {
 	if !strings.Contains(cutGraph(r.cfg, canvas, explicit, clip.MediaInfo{}, 228, layers{Copies: []string{"copy.png"}}, false, false), "enable='gte(t,1.000)*lt(t,4.000)'") {
 		t.Fatal("an explicit caption window was moved")
 	}
-	// The card is the last layer, fades the way its own kind fades, and dips the
-	// original audio 6 dB for its own window while it is up (CDS-28, CDS-35).
-	hook := cutGraph(r.cfg, canvas, c, clip.MediaInfo{HasAudio: true}, 228, layers{Copies: []string{"copy.png"}, Card: "card.png", Window: cardLayout{Kind: "hook", StartMS: 0, EndMS: 1500}}, true, true)
-	golden(t, "cut-hook-card.filter", hook+"\n")
-	for _, want := range []string{
-		"[2:v:0]format=rgba,loop=loop=227:size=1:start=0,fade=t=out:st=1.300:d=0.200:alpha=1[card];",
-		"[copy0][card]overlay=0:0:format=auto:shortest=0:enable='gte(t,0.000)*lt(t,1.500)'[carded];[carded]trim=",
-		"volume=volume=-6.000000dB:eval=frame:enable='lt(t,1.500)'",
-	} {
-		if !strings.Contains(hook, want) {
-			t.Fatalf("hook card: lost %s in %s", want, hook)
-		}
-	}
-	// The ending card fades IN and never dips the audio (CDS-29).
-	end := cutGraph(r.cfg, canvas, c, clip.MediaInfo{HasAudio: true}, 228, layers{Card: "card.png", Window: cardLayout{Kind: "end", StartMS: 5100, EndMS: 7600}}, true, true)
-	golden(t, "cut-end-card.filter", end+"\n")
-	if !strings.Contains(end, "fade=t=in:st=5.100:d=0.200:alpha=1[card];") || strings.Contains(end, "volume=volume=") {
-		t.Fatalf("ending card: %s", end)
-	}
 	frames := cutFrames(clip.EditPlan{Cuts: []clip.EditCut{{EndMS: 5011}, {EndMS: 5022}, {EndMS: 5367}}}, 30)
 	if !reflect.DeepEqual(frames, []int{150, 151, 161}) {
 		t.Fatal(frames)

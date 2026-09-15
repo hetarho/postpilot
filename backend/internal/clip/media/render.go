@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/clip/composition"
 	"github.com/postpilot/backend/internal/clip/design"
 )
 
@@ -114,21 +115,6 @@ func cutGraph(cfg clip.RenderConfig, canvas clip.Canvas, c clip.EditCut, source 
 		last = fmt.Sprintf("[copy%d]", j)
 		input++
 	}
-	// The card is the last layer over the footage: nothing shows under it
-	// (CDS-45). It carries no motion of its own beyond the fade CDS-28 and
-	// CDS-29 name — out for the hook, in for the ending, and no movement.
-	if l.Card != "" {
-		card := l.Window
-		fade := design.Transition.FadeMS
-		start, end := max(0, card.StartMS), card.EndMS
-		if card.Kind == "hook" {
-			fmt.Fprintf(&graph, "[%d:v:0]format=rgba,loop=loop=%d:size=1:start=0,fade=t=out:st=%s:d=%s:alpha=1[card];", l.cardInput(), frames-1, seconds(max(0, end-fade)), seconds(fade))
-		} else {
-			fmt.Fprintf(&graph, "[%d:v:0]format=rgba,loop=loop=%d:size=1:start=0,fade=t=in:st=%s:d=%s:alpha=1[card];", l.cardInput(), frames-1, seconds(start), seconds(fade))
-		}
-		fmt.Fprintf(&graph, "%s[card]overlay=0:0:format=auto:shortest=0:enable='gte(t,%s)*lt(t,%s)'[carded];", last, seconds(start), seconds(end))
-		last = "[carded]"
-	}
 	graph.WriteString(last)
 	fmt.Fprintf(&graph, "trim=end_frame=%d,setpts=PTS-STARTPTS,format=yuv420p[v]", frames)
 	if withAudio {
@@ -140,12 +126,7 @@ func cutGraph(cfg clip.RenderConfig, canvas clip.Canvas, c clip.EditCut, source 
 			// An AAC frame can start one packet after video; resetting STARTPTS
 			// first pulled speech ~21 ms earlier and closed real timestamp gaps.
 			fmt.Fprintf(&graph, ";[0:a:0]aresample=%d:async=1:min_hard_comp=0:first_pts=0,atrim=duration=%s%s,aformat=sample_fmts=fltp:channel_layouts=stereo,volume=%.6f", cfg.AudioRate, seconds(c.SourceSpanMS()), audioRateChain(c.Rate()), c.OriginalVolume())
-			// The original audio dips under the hook card so its title is not
-			// fighting the footage (CDS-35). The dip is the card's window, not
-			// the cut's, and normalisation happens after it (T108).
-			if l.Card != "" && l.Window.Kind == "hook" {
-				fmt.Fprintf(&graph, ",volume=volume=%.6fdB:eval=frame:enable='lt(t,%s)'", design.Audio.HookDipDB, seconds(l.Window.EndMS))
-			}
+
 		} else {
 			fmt.Fprintf(&graph, ";anullsrc=r=%d:cl=stereo", cfg.AudioRate)
 		}
@@ -220,14 +201,12 @@ func (r *Rendering) baseArgs() []string {
 	return []string{"-hide_banner", "-nostdin", "-v", "error", "-xerror", "-n", "-filter_threads", strconv.Itoa(r.media.cfg.Threads), "-filter_complex_threads", strconv.Itoa(r.media.cfg.Threads)}
 }
 
-// layers is what a cut overlays: the fixed badge and chips, one animated plate
-// per copy, and a card whose window is CUT-RELATIVE by the time it gets here.
+// layers is what a cut overlays: fixed disclosure/information and a plate per caption.
+// Intro and outro blocks use the shared composition renderer.
 type layers struct {
 	Fixed       string
 	Copies      []string
 	CopyRegions []clip.Region
-	Card        string
-	Window      cardLayout
 }
 
 // inputs is every layer image this cut hands FFmpeg, in the order renderCut adds
@@ -239,16 +218,7 @@ func (l layers) inputs() []string {
 			out = append(out, layer)
 		}
 	}
-	if l.Card != "" {
-		out = append(out, l.Card)
-	}
 	return out
-}
-
-// cardInput is the card image's own ffmpeg input index: the source is 0 and each
-// present layer takes the next one.
-func (l layers) cardInput() int {
-	return len(l.inputs())
 }
 
 func (r *Rendering) renderCut(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, cut clip.EditCut, source clip.MediaSource, frames int, l layers, path string, audio, sourceAudio bool) error {
@@ -278,6 +248,20 @@ func (r *Rendering) Render(ctx context.Context, ws clip.MediaWorkspace, plan cli
 	if err = clip.RefuseUnrenderableRates(plan, sources); err != nil {
 		return result, err
 	}
+	if plan.Portable == nil && (plan.Hook != "" || slices.ContainsFunc(plan.Facts, func(a clip.Answer) bool { return a.Label == "상호" && a.Text != "" })) {
+		if strings.ContainsAny(plan.Hook, "\r\n") || design.Chars(plan.Hook) > design.Type["hook"].Chars {
+			return result, &composition.Problem{ElementID: "legacy-hook", Line: 1, Reason: "copy_limit"}
+		}
+		p := clip.Project{Answers: plan.Facts, Disclosure: plan.Disclosure, HideDisclosure: plan.HideDisclosure, CTA: plan.CTA}
+		recipe := clip.Recipe{Preset: plan.Preset, Accent: plan.Accent, CopyStyles: plan.Styles}
+		if len(recipe.CopyStyles) == 0 {
+			recipe.CopyStyles = []string{"bold"}
+		}
+		plan.Portable, err = clip.FreezeLegacyPlan(p, plan, recipe, r.cfg.Composition)
+		if err != nil {
+			return result, err
+		}
+	}
 	if plan.Portable != nil {
 		return r.renderComposition(ctx, ws, plan, sources, load)
 	}
@@ -296,7 +280,6 @@ func (r *Rendering) Render(ctx context.Context, ws clip.MediaWorkspace, plan cli
 	canvas, _ := clip.ClipCanvas(plan.Ratio)
 	frames := cutFrames(plan, r.cfg.FPS)
 	transitions := planTransitions(plan)
-	offsets := cutOffsets(plan)
 	byID := map[string]clip.RenderSource{}
 	audio := false
 	for _, source := range sources {
@@ -332,21 +315,16 @@ func (r *Rendering) Render(ctx context.Context, ws clip.MediaWorkspace, plan cli
 	}
 	plan = c.plan
 	// The layers that need no source pixels: the fixed one (the disclosure badge
-	// and this cut's chips, which never move) and the card. The copy's own plate
+	// and this cut's information, which never moves). The copy's own plate
 	// waits for the cut's own callback, because an unplated style does not know
 	// what it draws until the footage under it has been sampled (CDS-44).
-	fixed, cardPlates := make([]string, len(plan.Cuts)), make([]string, len(plan.Cuts))
+	fixed := make([]string, len(plan.Cuts))
 	for i := range plan.Cuts {
 		if fixed[i], err = r.furniturePlate(ctx, ws, canvas, c.furniture[i], i); err != nil {
 			return result, err
 		}
-		if cardPlates[i], err = r.cardPlate(ctx, ws, canvas, c.cards[i], i); err != nil {
-			return result, err
-		}
-		for _, layer := range []string{fixed[i], cardPlates[i]} {
-			if layer != "" {
-				paths = append(paths, layer)
-			}
+		if fixed[i] != "" {
+			paths = append(paths, fixed[i])
 		}
 	}
 	cutPaths := make([]string, len(plan.Cuts))
@@ -375,7 +353,7 @@ func (r *Rendering) Render(ctx context.Context, ws clip.MediaWorkspace, plan cli
 					paths = append(paths, plate)
 				}
 			}
-			return r.renderCut(ctx, ws, canvas, c.plan.Cuts[i], source, frames[i], layers{Fixed: fixed[i], Copies: plates, CopyRegions: regions, Card: cardPlates[i], Window: c.cards[i].relativeTo(offsets[i])}, cutPaths[i], audio, plan.RetainsOriginalAudio(c.plan.Cuts[i]))
+			return r.renderCut(ctx, ws, canvas, c.plan.Cuts[i], source, frames[i], layers{Fixed: fixed[i], Copies: plates, CopyRegions: regions}, cutPaths[i], audio, plan.RetainsOriginalAudio(c.plan.Cuts[i]))
 		})
 		if err != nil {
 			return result, err
@@ -528,7 +506,6 @@ func planTransitions(plan clip.EditPlan) []int {
 // before any download.
 func (r *Rendering) layout(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, plan clip.EditPlan) (composed, error) {
 	layouts, plates, manifest := make([][]copyLayout, len(plan.Cuts)), make([]furniture, len(plan.Cuts)), clip.Manifest{}
-	cards := make([]cardLayout, len(plan.Cuts))
 	offsets := cutOffsets(plan)
 	answers := map[string]string{}
 	for _, a := range plan.Facts {
@@ -542,10 +519,6 @@ func (r *Rendering) layout(ctx context.Context, ws clip.MediaWorkspace, canvas c
 	if plan.HideDisclosure {
 		phrase = ""
 	}
-	// The two cards, on the first and the last cut (CDS-28, CDS-29). A cut can
-	// hold only one, which is why a single-cut clip renders the hook card and
-	// then the ending card over the same footage.
-	accent := answerAccent(plan)
 	badged := false
 	for i, cut := range plan.Cuts {
 		labels := plan.ChipLabels(cut)
@@ -580,35 +553,11 @@ func (r *Rendering) layout(ctx context.Context, ws clip.MediaWorkspace, canvas c
 			manifest = append(manifest, l.Elements(i, j, copy, offsets[i]+copyStart, offsets[i]+copyEnd)...)
 		}
 	}
-	// The cards are measured last so the copy they hide is already placed: no
-	// copy or chip shows under either card (CDS-45).
-	for i, kind := range map[int]string{0: "hook", len(plan.Cuts) - 1: "end"} {
-		card := hookCard(plan.Ratio, plan.Hook, plan.Preset, answers["상호"], accent, plan.DurationMS)
-		if kind == "end" {
-			card = endingCard(plan.Ratio, plan.Preset, plan.CTA, answers, accent, plan.DurationMS)
-		}
-		if card.empty() {
-			continue
-		}
-		measured, err := r.measureCard(ctx, ws, canvas, plan.Ratio, card)
-		if err != nil {
-			return composed{}, err
-		}
-		// One cut can carry both cards only by drawing them on one plate; the
-		// hook's window ends long before the ending card's begins.
-		if !cards[i].empty() {
-			cards[i].Lines = append(cards[i].Lines, measured.Lines...)
-			cards[i].Bounds = append(cards[i].Bounds, measured.Bounds...)
-		} else {
-			cards[i] = measured
-		}
-		manifest = append(manifest, measured.Elements(i)...)
-	}
 	grounds := make([][]Luminance, len(plan.Cuts))
 	for i, cut := range plan.Cuts {
 		grounds[i] = make([]Luminance, len(cut.Copies))
 	}
-	return composed{plan: plan, layouts: layouts, furniture: plates, cards: cards, manifest: manifest,
+	return composed{plan: plan, layouts: layouts, furniture: plates, manifest: manifest,
 		grounds: grounds}, nil
 }
 
@@ -620,7 +569,6 @@ type composed struct {
 	plan      clip.EditPlan
 	layouts   [][]copyLayout
 	furniture []furniture
-	cards     []cardLayout
 	manifest  clip.Manifest
 	// What the sampler measured under each COPY, empty for one whose style is
 	// plated or which was dropped. Parallel to the cut's own copies (CDS-43).

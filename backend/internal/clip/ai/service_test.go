@@ -39,15 +39,9 @@ type fakeSizer struct {
 	err       error
 	fixedErr  error
 	layoutErr error
-	cardErr   error
 	calls     int
 	fixed     int
-	cards     int
 	layouts   int
-	// The cards the composer is told to keep copy off, in the shape the real
-	// renderer returns them: the hook card over the first cut and the ending
-	// card over the last.
-	cardPlan clip.EditPlan
 }
 
 // The composer verifies its own result through this port (CDS-52).
@@ -77,30 +71,6 @@ func (f *fakeSizer) FixedElements(_ context.Context, _, disclosure string, label
 		out = append(out, design.Element{Kind: "chip", Region: design.Bounds{X: 96, Y: 290 + float64(i)*76, Width: 300, Height: 60}})
 	}
 	return out, nil
-}
-
-// The two cards, measured at their ratio's own geometry (CDS-28, CDS-29): a
-// 400 px stack centred on the ratio's card line. They cover the middle of the
-// frame, which is the band a mid-frame anchor wants, so a copy on the first or
-// the last cut has to move.
-func (f *fakeSizer) CardElements(_ context.Context, plan clip.EditPlan) (clip.Manifest, error) {
-	f.cards++
-	f.cardPlan = plan
-	if f.cardErr != nil {
-		return nil, f.cardErr
-	}
-	layout, ok := design.Layout(plan.Ratio)
-	if !ok || len(plan.Cuts) == 0 || plan.Hook == "" {
-		return nil, nil
-	}
-	const height = 400
-	box := func(width, centre float64) design.Bounds {
-		return design.Bounds{X: (float64(layout.Canvas.Width) - width) / 2, Y: centre - height/2, Width: width, Height: height}
-	}
-	return clip.Manifest{
-		{Cut: 0, Kind: "card", Region: box(layout.HookCard.Width, layout.HookCard.CenterY)},
-		{Cut: len(plan.Cuts) - 1, Kind: "card", Region: box(layout.EndCard.Width, layout.EndCard.CenterY)},
-	}, nil
 }
 
 // structuredFixture is what testPolicy freezes as the request's schema
@@ -388,10 +358,8 @@ func TestPlanIsGroundedMeasuredAndPreservesExactAnswers(t *testing.T) {
 			t.Fatalf("%+v %v", got, err)
 		}
 		cut := got.Cuts[0]
-		// Nothing here was chosen by the model: a noun-led sentence on a food
-		// close-up is 메모 by CDS-40, and 메모's own first candidate is TOP/LEFT
-		// (CDS-24) — which clears the subject box at the bottom of the frame.
-		if cut.FirstCopy().Style != "bold" || cut.FirstCopy().Align != "center" || cut.FirstCopy().Anchor != "lower_mid" || cut.Fingerprint != in.Analyses[0].Source.Fingerprint || cut.Volume == nil || *cut.Volume != 1 {
+		// The fixed caption uses the CENTER column and clears the observed subject.
+		if cut.FirstCopy().Style != "bold" || cut.FirstCopy().Align != "center" || cut.FirstCopy().Anchor != "upper_mid" || cut.Fingerprint != in.Analyses[0].Source.Fingerprint || cut.Volume == nil || *cut.Volume != 1 {
 			t.Fatalf("%+v", cut)
 		}
 		// 메모 has two candidate anchors (CDS-24), so the selector measures the
@@ -421,7 +389,7 @@ func TestPlanIsGroundedMeasuredAndPreservesExactAnswers(t *testing.T) {
 		// decides, and the box only ever moves it off a subject (CDS-38).
 		in.Analyses[0].Segments[0].Subject = clip.Region{}
 		got, _, err = s.Plan(t.Context(), testRef(), in)
-		if err != nil || got.Cuts[0].FirstCopy().Anchor != "lower_mid" || got.Cuts[0].FirstCopy().Align != "center" {
+		if err != nil || got.Cuts[0].FirstCopy().Anchor != "upper_mid" || got.Cuts[0].FirstCopy().Align != "center" {
 			t.Fatalf("the default anchor moved: %+v %v", got, err)
 		}
 	}

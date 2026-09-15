@@ -38,7 +38,7 @@ func TestEachRenderInputHasItsOwnResourceLimits(t *testing.T) {
 	err := a.WithWorkspace(t.Context(), "bounds", func(ws clip.MediaWorkspace) error {
 		canvas, _ := clip.ClipCanvas("vertical")
 		cut := clip.EditCut{EndMS: 4200, Focal: clip.Point{X: .5, Y: .5}}
-		l := layers{Fixed: "fixed.png", Copies: []string{"copy1.png", "copy2.png"}, Card: "card.png", Window: cardLayout{Kind: "hook", EndMS: 1500}}
+		l := layers{Fixed: "fixed.png", Copies: []string{"copy1.png", "copy2.png"}}
 		return r.renderCut(t.Context(), ws, canvas, cut, clip.MediaSource{Path: sourceFile(t, ws)}, 126, l, filepath.Join(ws.Path, "render-cut-0000.mp4"), false, false)
 	})
 	if err != nil {
@@ -56,10 +56,10 @@ func TestEachRenderInputHasItsOwnResourceLimits(t *testing.T) {
 		}
 		previous, inputs = i+2, inputs+1
 	}
-	if inputs != 5 {
-		t.Fatalf("expected source and four layers, got %d", inputs)
+	if inputs != 4 {
+		t.Fatalf("expected source and three layers, got %d", inputs)
 	}
-	if strings.Count(strings.Join(args, " "), "loop=loop=125:size=1:start=0") != 3 {
-		t.Fatal("animated copies and card must each reuse one frame for only 126 frames", args)
+	if strings.Count(strings.Join(args, " "), "loop=loop=125:size=1:start=0") != 2 {
+		t.Fatal("animated copies must each reuse one frame for only 126 frames", args)
 	}
 }

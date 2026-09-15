@@ -137,7 +137,7 @@ func TestNativeWriterOneCallPreservesAuthoredContentAndEvidence(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if len(models.calls) != 1 || sizer.calls+sizer.fixed+sizer.cards+sizer.layouts != 0 || usage != models.response.Usage || s.CompositionPlanVersion() != 6 {
+		if len(models.calls) != 1 || sizer.calls+sizer.fixed+sizer.layouts != 0 || usage != models.response.Usage || s.CompositionPlanVersion() != 6 {
 			t.Fatal("native stage repeated or called legacy compositor")
 		}
 		if plan.Portable.Snapshot.Body != nativeBody || plan.Hook != "" || plan.CTA != "" || plan.Disclosure != "" || len(plan.Cuts[0].Copies) != 0 {

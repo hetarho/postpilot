@@ -69,18 +69,14 @@ func TestRatioLayoutsMatchCDS46To48(t *testing.T) {
 	want := map[string]design.RatioLayout{
 		"vertical": {
 			CopyMaxWidth: 856, HookSize: 84,
-			HookCard: design.CardBox{Width: 792, CenterY: 840},
-			EndCard:  design.CardBox{Width: 792, CenterY: 1040},
-			Chip:     design.ChipStack{X: 96, Y: 80, MaxWidth: 600, Columns: 1},
-			Badge:    design.BadgeBox{Right: 984, Top: 80},
+			Chip:  design.ChipStack{X: 96, Y: 80, MaxWidth: 600, Columns: 1},
+			Badge: design.BadgeBox{Right: 984, Top: 80},
 			// CDS-32 states both 9:16 scrim rectangles exactly.
 			ScrimTop:    design.Bounds{Y: 40, Width: 1080, Height: 310},
 			ScrimBottom: design.Bounds{Y: 1040, Width: 1080, Height: 380},
 		},
 		"horizontal": {
 			CopyMaxWidth: 960, HookSize: 72,
-			HookCard:    design.CardBox{Width: 1120, CenterY: 540},
-			EndCard:     design.CardBox{Width: 1120, CenterY: 540},
 			Chip:        design.ChipStack{X: 96, Y: 112, MaxWidth: 600, Columns: 2},
 			Badge:       design.BadgeBox{Right: 1824, Top: 112},
 			ScrimTop:    design.Bounds{Y: 72, Width: 1920, Height: 200},
@@ -88,8 +84,6 @@ func TestRatioLayoutsMatchCDS46To48(t *testing.T) {
 		},
 		"square": {
 			CopyMaxWidth: 952, HookSize: 76,
-			HookCard:    design.CardBox{Width: 880, CenterY: 540},
-			EndCard:     design.CardBox{Width: 880, CenterY: 560},
 			Chip:        design.ChipStack{X: 64, Y: 112, MaxWidth: 600, Columns: 1},
 			Badge:       design.BadgeBox{Right: 1016, Top: 112},
 			ScrimTop:    design.Bounds{Y: 72, Width: 1080, Height: 200},
@@ -156,7 +150,6 @@ func TestColourAndSpacingTokensMatchCDS14And15And21(t *testing.T) {
 	}
 	shadow := map[string]design.ShadowPaint{
 		"text": {Hex: "#000000", Alpha: 0.55, Blur: 12, DY: 4},
-		"card": {Hex: "#000000", Alpha: 0.35, Blur: 32, DY: 8},
 	}
 	if !reflect.DeepEqual(design.Shadow, shadow) {
 		t.Fatalf("shadows %+v", design.Shadow)

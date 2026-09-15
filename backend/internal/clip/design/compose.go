@@ -22,6 +22,7 @@ func Scene(scene string) string {
 // Candidate is one placement the selector may choose: an anchor and alignment
 // with the plate the copy would actually occupy there, already measured.
 type Candidate struct {
+	AuthoredAlign bool
 	Anchor, Align string
 	Plate         Bounds
 	Fits          bool
@@ -43,7 +44,7 @@ type Candidate struct {
 func SelectAnchor(candidates []Candidate, subject Bounds, placed []Element, readableText bool, previous string, captionSafe []Bounds) int {
 	viable, near := []int{}, []int{}
 	for i, c := range candidates {
-		if !c.Fits {
+		if !c.Fits || c.Align != "" && c.Align != "center" && !c.AuthoredAlign {
 			continue
 		}
 		if readableText && c.Anchor != "top" && c.Anchor != "bottom" {

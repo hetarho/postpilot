@@ -131,13 +131,17 @@ func parse(source string, limits Limits, stored bool) (*Document, *Problem) {
 	if root.Name != "clip" {
 		return nil, issue(root, "unknown_tag")
 	}
-	if e = attrs(root, "version", "styles", "accent", "pace"); e != nil {
+	if e = attrs(root, "version", "styles", "accent", "pace", "intro", "caption", "outro"); e != nil {
 		return nil, e
 	}
 	if root.Attributes["version"] != "1" {
 		return nil, issue(root, "unknown_version")
 	}
 	d := &Document{Source: source, Root: root, Styles: strings.Fields(optional(root, "styles", "clean")), Accent: optional(root, "accent", ""), Pace: optional(root, "pace", "steady")}
+	d.Design = DesignSelection{Intro: optional(root, "intro", "b"), Caption: optional(root, "caption", "bold"), Outro: optional(root, "outro", "e")}
+	if !slices.Contains([]string{"a", "b"}, d.Design.Intro) || d.Design.Caption != "bold" || !slices.Contains([]string{"b", "e"}, d.Design.Outro) {
+		return nil, issue(root, "invalid_design")
+	}
 	if len(d.Styles) == 0 {
 		return nil, issue(root, "invalid_style")
 	}

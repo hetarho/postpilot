@@ -37,10 +37,6 @@ type Anchor struct {
 	Center   float64 `json:"center"`
 	Right    float64 `json:"right"`
 }
-type CardBox struct {
-	Width   float64 `json:"width"`
-	CenterY float64 `json:"center_y"`
-}
 type ChipStack struct {
 	X        float64 `json:"x"`
 	Y        float64 `json:"y"`
@@ -60,8 +56,6 @@ type RatioLayout struct {
 	Anchor       Anchor    `json:"anchor"`
 	CopyMaxWidth float64   `json:"copy_max_width"`
 	HookSize     float64   `json:"hook_size"`
-	HookCard     CardBox   `json:"hook_card"`
-	EndCard      CardBox   `json:"end_card"`
 	Chip         ChipStack `json:"chip"`
 	Badge        BadgeBox  `json:"badge"`
 	ScrimTop     Bounds    `json:"scrim_top"`

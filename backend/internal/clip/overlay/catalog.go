@@ -125,7 +125,7 @@ func Load(fsys fs.FS) (*Catalog, error) {
 		if err := decode(data, &p); err != nil {
 			return nil, fmt.Errorf("overlay preset %s: %w", dir.Name(), err)
 		}
-		if p.ID != dir.Name() || !slices.Contains([]string{"copy-v1", "furniture-v1", "card-v1", "info-v1"}, p.View) || p.Template != "overlay.svg" {
+		if p.ID != dir.Name() || !slices.Contains([]string{"copy-v1", "furniture-v1", "region-v1", "info-v1"}, p.View) || p.Template != "overlay.svg" {
 			return nil, fmt.Errorf("unsupported overlay preset contract: %s", dir.Name())
 		}
 		data, err = read(path.Join(dir.Name(), p.Template))

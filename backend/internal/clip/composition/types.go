@@ -54,7 +54,12 @@ type Section struct {
 	Elements          []Element
 	Span              Span
 }
+type DesignSelection struct{ Intro, Caption, Outro string }
+
+func DefaultDesign() DesignSelection { return DesignSelection{Intro: "b", Caption: "bold", Outro: "e"} }
+
 type Document struct {
+	Design       DesignSelection
 	Source       string
 	Root         *Node
 	Styles       []string

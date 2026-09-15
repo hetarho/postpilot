@@ -195,7 +195,7 @@ func TestDeclaredBadgeInfoAndCardUseOnlyAuthoredText(t *testing.T) {
 				if err != nil {
 					return err
 				}
-				if len(layout.visuals) != 3 || layout.visuals[0].furniture.BadgeText != "  제작비 일부 지원  " || len(layout.visuals[2].card.Lines) != 2 {
+				if len(layout.visuals) != 3 || layout.visuals[0].furniture.BadgeText != "  제작비 일부 지원  " || len(layout.visuals[2].region.Lines) != 2 {
 					t.Fatalf("changed authored content: %+v", layout.elements())
 				}
 				if !reflect.DeepEqual(before, *plan.Portable) {

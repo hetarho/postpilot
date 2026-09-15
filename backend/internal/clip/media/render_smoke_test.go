@@ -217,15 +217,12 @@ func TestRenderSmoke(t *testing.T) {
 				}
 				// Every clip carries its disclosure badge, and the first cut
 				// carries the chips its facts earn (CDS-5, CDS-30).
-				// The clip opens on a hook card and closes on a CTA card
-				// (CDS-28, CDS-29). The last cut's copy leaves before the
-				// ending card arrives, because nothing shows under a card
-				// (CDS-45) — which the verifier would otherwise refuse.
+				// Fixed region presets have their own real-font smoke matrix.
 				// The second cut joins with a hard cut and the third fades, so
 				// one render exercises both boundaries CDS-36 admits and the
 				// audio has to stay locked to the picture across each of them.
-				plan := clip.EditPlan{Ratio: ratio, DurationMS: 15200, Disclosure: "ad", Preset: "restaurant", Hook: "정확한 한글", Accent: "coral", Facts: []clip.Answer{
-					{Label: "상호", Text: "연남 김밥"}, {Label: "위치", Text: "서울 연남동"}, {Label: "가격", Text: "9,900원"},
+				plan := clip.EditPlan{Ratio: ratio, DurationMS: 15200, Disclosure: "ad", Preset: "restaurant", Accent: "coral", Facts: []clip.Answer{
+					{Label: "위치", Text: "서울 연남동"}, {Label: "가격", Text: "9,900원"},
 				}, Cuts: []clip.EditCut{
 					{ID: "one", SourceID: "audio", Fingerprint: "audio", EndMS: 5200, Focal: clip.Point{X: .5, Y: .5}, Chips: []string{"위치", "가격"}, Copies: []clip.Copy{{Text: "정확한 한글 & 여행", Style: "clean", Anchor: "bottom", Align: "center", Accent: "coral"}}},
 					{ID: "two", SourceID: "rotated", Fingerprint: "rotated", EndMS: 5000, Focal: clip.Point{X: .5, Y: .5}, Volume: volume(.5), Copies: []clip.Copy{{Text: "기록처럼 <오늘>", Style: "memo", Anchor: "lower_mid", Align: "left", Accent: "teal"}}},
@@ -427,50 +424,6 @@ func TestRenderSmoke(t *testing.T) {
 						}
 					}
 					if err := exportRenderSmoke(ratio+"-"+plan.Cuts[i].Copies[0].Style+".png", path); err != nil {
-						return err
-					}
-					if err := os.Remove(path); err != nil {
-						return err
-					}
-				}
-				// The two cards, in pixels: the hook card is up at the very first
-				// frames and the ending card in the last second, each an ink
-				// plate over the footage carrying its accent (CDS-28, CDS-29).
-				for _, want := range []struct {
-					kind, at string
-					second   float64
-				}{{"hook", "0.5", 0.5}, {"end", fmt.Sprintf("%.1f", float64(plan.DurationMS)/1000-1), float64(plan.DurationMS)/1000 - 1}} {
-					var region clip.Region
-					for _, e := range result.Manifest {
-						if e.Kind == "card" && e.Text == want.kind {
-							region = clip.Region(e.Region)
-						}
-					}
-					if region.Width == 0 {
-						t.Fatalf("%s card is not in the manifest", want.kind)
-					}
-					path := filepath.Join(ws.Path, "card-"+want.kind+".png")
-					if _, err := a.run(t.Context(), ws, a.cfg.FFmpegPath, "-v", "error", "-ss", want.at, "-i", result.Path, "-frames:v", "1", "-c:v", "png", "-threads", "1", path); err != nil {
-						return err
-					}
-					frame, err := readPNG(path)
-					if err != nil {
-						return err
-					}
-					// The footage is flat blue, so the plate is visible as blue
-					// the ink took away: inside the card the blue channel is a
-					// fraction of what the bare frame has beside it.
-					inside := blueAt(frame, int(region.X+region.Width/2), int(region.Y+4))
-					outside := blueAt(frame, int(region.X+region.Width/2), int(region.Y)-20)
-					if inside > outside/2 {
-						t.Fatalf("%s card plate is not on the frame: blue %d inside, %d outside", want.kind, inside, outside)
-					}
-					// And its own accent is on it: the category pill on the hook
-					// card, the CTA line on the ending one.
-					if !scan(frame, region, func(r, g, b, a uint32) bool { return r > 40000 && r > 2*b }) {
-						t.Fatalf("%s card lost its accent", want.kind)
-					}
-					if err := exportRenderSmoke(ratio+"-card-"+want.kind+".png", path); err != nil {
 						return err
 					}
 					if err := os.Remove(path); err != nil {

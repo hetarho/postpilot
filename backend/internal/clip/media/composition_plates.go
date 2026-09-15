@@ -65,7 +65,7 @@ func (r *Rendering) declaredSVG(canvas clip.Canvas, visual declaredVisual) (stri
 		applyInfoGround(canvas, &visual)
 		return r.overlays.Render(design.InfoFrames[visual.infoVariant].Binding, visual.info)
 	case "hook", "ending":
-		return r.overlays.Render("card."+visual.card.Kind, cardView(canvas, visual.card))
+		return r.overlays.Render("region", visual.region)
 	default:
 		return "", elementProblem(visual.text, "invalid_role")
 	}

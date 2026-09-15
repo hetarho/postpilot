@@ -158,27 +158,6 @@ func TestScrimGeometryAndEffectiveBackground(t *testing.T) {
 	}
 }
 
-// CDS-28's two lines of nine, and what the renderer does with a longer one.
-func TestHookLinesBreakAtTwoLinesOfNine(t *testing.T) {
-	for hook, want := range map[string][]string{
-		"갓 구운 빵":   {"갓 구운 빵"},
-		"아홉 글자까지는": {"아홉 글자까지는"},
-		"여기 열여덟 글자까지 되는 문장이라고요": {"여기 열여덟 글자까지", "되는 문장이라고요"},
-		"열여덟글자가하나의단어라면이렇게":      {"열여덟글자가하나의", "단어라면이렇게"},
-		"한 줄\n두 줄": {"한 줄", "두 줄"},
-	} {
-		got := hookLines(hook)
-		if strings.Join(got, "|") != strings.Join(want, "|") {
-			t.Fatalf("%q broke as %q, want %q", hook, got, want)
-		}
-		for _, line := range got {
-			if design.Chars(line) > design.Type["hook"].Chars {
-				t.Fatalf("%q: line %q is longer than nine", hook, line)
-			}
-		}
-	}
-}
-
 // The sampler itself: three frames from the cut's own source, taken through the
 // same cover-crop chain the render uses, read in Go (CDS-44).
 func TestSamplerTakesThreeFramesThroughTheRenderChain(t *testing.T) {

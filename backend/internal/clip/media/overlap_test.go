@@ -13,7 +13,7 @@ func TestOverlappingPlansRemainReviewable(t *testing.T) {
 	_, r := measured(t)
 	for _, ratio := range []string{"vertical", "horizontal", "square"} {
 		for _, compiled := range []bool{false, true} {
-			for _, collision := range []string{"chips across fade", "caption under card", "captions across fade"} {
+			for _, collision := range []string{"chips across fade", "captions across fade"} {
 				t.Run(ratio+"/"+map[bool]string{false: "manual", true: "compiled"}[compiled]+"/"+collision, func(t *testing.T) {
 					plan := clip.EditPlan{Ratio: ratio, DurationMS: 15000, Disclosure: "ad", Accent: "coral",
 						Facts: []clip.Answer{{Label: "위치", Text: "서울"}}, Styles: []string{"clean", "bold"},
@@ -29,11 +29,6 @@ func TestOverlappingPlansRemainReviewable(t *testing.T) {
 						for i := range plan.Cuts {
 							plan.Cuts[i].Chips = []string{"위치"}
 						}
-					case "caption under card":
-						plan.Hook = "오늘의 한 끼"
-						plan.Facts = append(plan.Facts, clip.Answer{Label: "상호", Text: "오늘 식당"})
-						plan.Cuts[0].Copies[0].Style, plan.Cuts[0].Copies[0].Anchor = "bold", "upper_mid"
-						plan.Cuts[1].Copies[0].Anchor = "lower_mid"
 					case "captions across fade":
 						plan.Cuts[0].Copies[0].EndMS = 7600
 						plan.Cuts[1].Copies[0].EndMS = 7480

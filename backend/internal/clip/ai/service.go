@@ -23,18 +23,6 @@ type CaptionSizer interface {
 	// Copy yields to them and never displaces them (CDS-45), so the selector has
 	// to see them before it chooses an anchor.
 	FixedElements(ctx context.Context, ratio, disclosure string, labels []string, answers []clip.Answer, hideDisclosure ...bool) (clip.Manifest, error)
-	// CardElements is the hook and ending cards, measured and placed. Copy
-	// yields to them exactly as it does to the badge (CDS-28, CDS-29, CDS-45):
-	// nothing shows under a card, so the selector needs their regions before it
-	// chooses an anchor for the first and the last cut.
-	CardElements(ctx context.Context, plan clip.EditPlan) (clip.Manifest, error)
-	// Layout lays the whole composed plan out and gates it on the design
-	// system's verifier (CDS-52), touching no source pixel. The composer runs it
-	// on its own result so a residual violation is a COMPOSITION failure with
-	// the check named, not a surprise at render time.
-	// Layout measures and verifies the whole plan without rendering. A compiled
-	// plan whose manifest fails a check walks CDS-55's repair ladder inside it,
-	// and the plan that verified is the one returned.
 	Layout(ctx context.Context, plan clip.EditPlan, sources []clip.RenderSource) (clip.EditPlan, clip.Manifest, error)
 }
 type Config struct {
@@ -244,10 +232,6 @@ func (s *Service) compose(ctx context.Context, input clip.PlanningInput, plan *c
 	if !clip.Grounded(plan.Hook, input.Answers) || clip.CopyChars(plan.Hook) > 2*design.Type["hook"].Chars {
 		plan.Hook = ""
 	}
-	cards, err := s.captions.CardElements(ctx, *plan)
-	if err != nil {
-		return err
-	}
 	previous := ""
 	// The badge and the chips are placed before any copy, and copy yields to
 	// them (CDS-45); T107's cards join this list.
@@ -275,13 +259,6 @@ func (s *Service) compose(ctx context.Context, input clip.PlanningInput, plan *c
 		placed, err := s.captions.FixedElements(ctx, input.Ratio, input.Disclosure, plan.ChipLabels(cut), input.Answers, input.HideDisclosure)
 		if err != nil {
 			return err
-		}
-		// The two cards cover the middle of the first and the last cut, so a
-		// copy on those cuts has to go somewhere else (CDS-45).
-		for _, e := range cards {
-			if e.Cut == i {
-				placed = append(placed, e)
-			}
 		}
 		written.Pace = input.Template.CaptionPace
 		composed, decision, err := clip.Compose(canvas, cut, written, scene, readable, clip.CutSubject(canvas, cut, analysis), placed, input.Template.Accent, previous, limit, measured)

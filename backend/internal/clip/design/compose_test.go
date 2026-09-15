@@ -15,7 +15,7 @@ func TestSelectAnchorFollowsCDS38(t *testing.T) {
 	bottom := candidate("bottom", "center", 300, 1270, 400, 110)
 	upper := candidate("upper_mid", "center", 300, 645, 400, 110)
 	lower := candidate("lower_mid", "center", 300, 1045, 400, 110)
-	top := candidate("top", "left", 96, 80, 400, 110)
+	top := candidate("top", "center", 96, 80, 400, 110)
 	none := design.Bounds{}
 
 	// Without a subject box the first (default) candidate wins.
@@ -212,5 +212,17 @@ func TestObservedSpaceRanksOnlyAfterPlacementGuards(t *testing.T) {
 	safeMid := []design.Bounds{upper.Plate, lower.Plate}
 	if got := design.SelectAnchor([]design.Candidate{upper, lower}, none, nil, false, "", safeMid); got != 0 {
 		t.Fatal("unstable equal evidence")
+	}
+}
+
+func TestAutomaticCaptionUsesCenterOnly(t *testing.T) {
+	left := candidate("upper_mid", "left", 100, 800, 300, 100)
+	center := candidate("lower_mid", "center", 300, 1000, 300, 100)
+	if got := design.SelectAnchor([]design.Candidate{left, center}, design.Bounds{}, nil, false, "", nil); got != 1 {
+		t.Fatalf("automatic caption used a side column: %d", got)
+	}
+	left.AuthoredAlign = true
+	if got := design.SelectAnchor([]design.Candidate{left, center}, design.Bounds{}, nil, false, "", nil); got != 0 {
+		t.Fatalf("authored side column was refused: %d", got)
 	}
 }

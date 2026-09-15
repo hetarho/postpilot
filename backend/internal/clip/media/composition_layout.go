@@ -17,7 +17,7 @@ type declaredVisual struct {
 	manifest    clip.CompositionElement
 	copy        clip.Copy
 	caption     copyLayout
-	card        cardLayout
+	region      overlay.RegionView
 	furniture   furniture
 	info        overlay.InfoView
 	infoVariant string
@@ -252,7 +252,15 @@ func (r *Rendering) layoutDeclaredElement(ctx context.Context, ws clip.MediaWork
 		return r.layoutDeclaredRapid(ctx, ws, canvas, plan, text, placed, previous)
 	}
 	if e.Role != "caption" {
-		result, err := r.layoutDeclaredRole(ctx, ws, canvas, plan.Ratio, visual)
+		selection := composition.DefaultDesign()
+		if plan.Portable != nil {
+			doc, problem := composition.ReadStored(plan.Portable.Snapshot.Body, clip.LegacyCompositionLimits(r.cfg.Composition))
+			if problem != nil {
+				return visual, problem
+			}
+			selection = doc.Design
+		}
+		result, err := r.layoutDeclaredRole(ctx, ws, canvas, plan.Ratio, visual, selection)
 		var problem *composition.Problem
 		if err == nil || !clip.AutomaticCompositionRepair(text) || !errors.As(err, &problem) {
 			return result, err
@@ -261,7 +269,7 @@ func (r *Rendering) layoutDeclaredElement(ctx context.Context, ws clip.MediaWork
 			candidate := visual
 			candidate.text.Resolved.Text, candidate.text.Resolved.Rows = alternative.Text, slices.Clone(alternative.Rows)
 			candidate.manifest.Text, candidate.manifest.Rows = alternative.Text, slices.Clone(alternative.Rows)
-			result, alternativeError := r.layoutDeclaredRole(ctx, ws, canvas, plan.Ratio, candidate)
+			result, alternativeError := r.layoutDeclaredRole(ctx, ws, canvas, plan.Ratio, candidate, selection)
 			if alternativeError == nil {
 				result.text.FallbackReason = "shorter_copy"
 				result.manifest.FallbackReason = "shorter_copy"
@@ -355,7 +363,7 @@ func (r *Rendering) layoutDeclaredElement(ctx context.Context, ws clip.MediaWork
 					return visual, nil
 				}
 				fits = append(fits, visual)
-				placements = append(placements, design.Candidate{Anchor: anchor, Align: e.Align, Plate: design.Bounds(layout.Region), Fits: true})
+				placements = append(placements, design.Candidate{AuthoredAlign: e.Align != "center", Anchor: anchor, Align: e.Align, Plate: design.Bounds(layout.Region), Fits: true})
 			}
 			chosen := design.SelectAnchor(placements, design.Bounds(subject), placed, readable, previous, captionSafe)
 			if chosen >= 0 {

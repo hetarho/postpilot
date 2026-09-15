@@ -36,6 +36,10 @@ var ElementKinds = []string{"copy", "plate", "bar", "highlight", "badge", "chip"
 
 type Element struct {
 	Cut int
+	// Fixed region geometry carried alongside glyph bounds for V20.
+	Slot                             int
+	BaselineY, GlyphOffsetY, Opacity float64
+	Rule                             string
 	// Which of the cut's copies this element belongs to (CDS-43): 0 for the one
 	// copy a cut usually carries, and for every piece of furniture.
 	Copy             int
@@ -132,7 +136,8 @@ func within(r, safe Bounds) bool {
 // V1 safe area · V2 size floors · V3 contrast against the effective background ·
 // V5 lines and characters · V7 overlap between elements of different cuts whose
 // windows meet · V9 the two permitted motions · V13 one anchor step between
-// consecutive cuts · V19 named font family (checked at renderer construction).
+// consecutive cuts · V19 named font family (checked at renderer construction) ·
+// V20 selected intro/outro preset geometry (VerifyRegion).
 // V4, V8, V11 and V12 belong to components this manifest does not carry yet.
 func Verify(m Manifest, ratio string) error { return VerifyApproved(m, ratio, nil) }
 

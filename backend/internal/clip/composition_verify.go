@@ -19,7 +19,7 @@ func VerifyCompositionManifest(plan EditPlan, elements []CompositionElement, lim
 	if plan.Portable.Snapshot.Legacy {
 		limits = LegacyCompositionLimits(limits)
 	}
-	_, problem := composition.Parse(plan.Portable.Snapshot.Body, limits)
+	doc, problem := composition.Parse(plan.Portable.Snapshot.Body, limits)
 	if problem != nil {
 		return problem
 	}
@@ -80,6 +80,26 @@ func VerifyCompositionManifest(plan EditPlan, elements []CompositionElement, lim
 			motion := design.CaptionMotion(text.Pace)
 			if element.InMS != motion.InMS || element.OutMS != motion.OutMS || element.DY != motion.InDY {
 				return fail("motion")
+			}
+		}
+		region := element.Role == "hook" || element.Role == "ending"
+		if region {
+			kind, preset := "intro", doc.Design.Intro
+			if element.Role == "ending" {
+				kind, preset = "outro", doc.Design.Outro
+			}
+			rows := []string{}
+			for _, row := range r.Rows {
+				rows = append(rows, row.Text)
+			}
+			if len(rows) == 0 {
+				rows = []string{r.Text}
+			}
+			if err := design.VerifyRegion(kind, preset, plan.Ratio, rows, element.Parts); err != nil {
+				return fail("preset_mismatch")
+			}
+			if len(element.Parts) == 0 {
+				continue
 			}
 		}
 		safe := canvas.Safe

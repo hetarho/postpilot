@@ -33,9 +33,6 @@ func copySVG(canvas clip.Canvas, c clip.Copy, l copyLayout, ground Luminance) st
 func furnitureSVG(canvas clip.Canvas, f furniture) string {
 	return builtinSVG("furniture", furnitureView(canvas, f))
 }
-func cardSVG(canvas clip.Canvas, c cardLayout) string {
-	return builtinSVG("card."+c.Kind, cardView(canvas, c))
-}
 
 func overlayDirectory(t *testing.T) string {
 	t.Helper()

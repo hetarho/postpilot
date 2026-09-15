@@ -57,7 +57,7 @@ func (r *Rendering) ValidateAuthoredInput(ctx context.Context, in clip.PlanningI
 					}
 					text := clip.PortableText{Resolved: element, Pace: doc.Pace, Accent: doc.Accent}
 					if element.Element.Role != "caption" {
-						_, err := r.layoutDeclaredRole(ctx, ws, canvas, in.Ratio, declaredVisual{text: text, manifest: declaredManifest(text)})
+						_, err := r.layoutDeclaredRole(ctx, ws, canvas, in.Ratio, declaredVisual{text: text, manifest: declaredManifest(text)}, doc.Design)
 						if err != nil {
 							return err
 						}

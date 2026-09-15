@@ -326,56 +326,34 @@
 
 채택 기준: 광고주 채택률에 기여한다는 리서치 근거가 있는 것만. 각 항목에 근거·사양·SVG·난도·정책 표기.
 
-### 4.1 훅 타이틀 카드 (첫 컷, 0~1.5초) — **[A] [정책 변경 제안: 인트로 카드]**
+### 4.1 Intro presets — A and B (CDS-70, CDS-71, CDS-75)
 
-- 근거: 5초 내 관심 확보 실패 시 이탈(F8), 정보의 명확성이 완주율을 만든다(F8), 상호가 첫 화면에 있어야 정보 태그·검색과 맞물린다(F2·P1).
-- 형태: 첫 컷 영상 **위에 겹치는 반투명 카드**(별도 검은 화면 아님 → 영상 첫 프레임이 썸네일로도 보이도록). 노출 0.0~**1.5s**, 등장 모션 없음(0프레임부터 존재), 퇴장 fade 200ms.
-- 구성(위→아래, `gap.stack` 16): ① 카테고리 칩(`t.label` 36, 강조색 배경 α1.0, 글자 `#111`) ② 훅 문장 `t.hook` 84 Paperlogy 8, 최대 2줄×9자 ③ 상호 `t.body` 56 Pretendard 700 `text.muted`
-- 카드: `ink.900s` α0.88, `radius.card` 24, 패딩 40, 폭 = SA-C 폭 856(x 64~920)… 단 우측 컬럼 회피를 위해 **x 96~888(폭 792)**, 세로 중심 y=**840**(UPPER_MID와 LOWER_MID 사이, 하단 UI와 무관).
-- 사용자 입력 필드: 훅 문장은 AI 생성(§5.3 규칙), 상호·카테고리는 사용자 입력값 그대로(환각 금지).
+The template selects `intro="a"` or `intro="b"`. The default interval is output start through 2.5 seconds. Slots are centered on the ratio's CENTER column.
 
-```svg
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1920" width="1080" height="1920">
-  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8a6a52"/><stop offset="1" stop-color="#2a1f18"/></linearGradient>
-  <filter id="cs" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#000" flood-opacity="0.35"/></filter></defs>
-  <rect width="1080" height="1920" fill="url(#bg)"/>
-  <rect x="64" y="250" width="856" height="1170" fill="none" stroke="#00E5FF" stroke-dasharray="12 12" stroke-width="2" opacity="0.6"/>
-  <!-- 카드: 폭 792, 높이 = 40+44+16+(84*1.15*2=193)+16+73+40 = 422 → y = 840-211 = 629 -->
-  <rect x="144" y="629" width="792" height="422" rx="24" fill="#111111" fill-opacity="0.88" filter="url(#cs)"/>
-  <!-- ① 카테고리 칩 -->
-  <rect x="184" y="669" width="120" height="44" rx="999" fill="#FF6B57"/>
-  <text x="244" y="700" text-anchor="middle" font-family="Pretendard Variable, Pretendard, Noto Sans KR, sans-serif" font-weight="600" font-size="36" letter-spacing="0.72" fill="#111111">카페</text>
-  <!-- ② 훅 -->
-  <text font-family="Paperlogy, Pretendard Variable, Noto Sans KR, sans-serif" font-weight="800" font-size="84" fill="#FFFFFF" letter-spacing="-1.68">
-    <tspan x="184" y="805">성수동에서</tspan>
-    <tspan x="184" y="902">줄 서는 크루아상</tspan>
-  </text>
-  <!-- ③ 상호 -->
-  <text x="184" y="985" font-family="Pretendard Variable, Pretendard, Noto Sans KR, sans-serif" font-weight="700" font-size="56" fill="#FFFFFF" fill-opacity="0.72">카페 밀도</text>
-</svg>
-```
+| Preset | Slot | Type | Baseline y | Fill | Stroke / shadow |
+|---|---|---|---:|---|---|
+| A | 1 | headline 96 / Paperlogy 800 | 940 | white | text / text |
+| A | 2 | label 36 / Pretendard 600, +0.02em | 1020 | muted white | small / text |
+| B | 1 | hook 84 / Paperlogy 800 | 960 | white | none / text |
+| B | 2 | label 36 / Pretendard 600, +0.02em | 1090 | muted white | none / text |
 
-### 4.2 엔딩 CTA 카드 (마지막 컷, 끝 2.5초) — **[A] [정책 변경 제안: 아웃트로 카드]**
+A has no rule. B has white hairlines at y 846 and 1010: width 520, height 2, alpha 0.55. The template supplies slot text only. No background card, category chip, accent or padding is added.
 
-- 근거: 클립→블로그·플레이스 연결이 네이버 보상·광고주 전환의 핵심(F2·F3). 상호·위치의 고정 노출은 광고주가 가장 먼저 확인하는 "제품 노출 방식".
-- 형태: 마지막 컷 영상 위 반투명 카드. 노출 종료 **2.5s 전 ~ 끝**, 등장 fade 200ms, 퇴장 없음.
-- 구성: ① 상호 `t.body` 56/700 ② 위치(도로명 또는 "지역·역") `t.label` 36/600 `text.muted` ③ 가격 또는 대표 메뉴 1줄 `t.caption` 44/600 (있을 때만) ④ CTA 문구 고정 3종 중 사용자 선택: 「자세한 후기는 블로그에」 / 「위치는 프로필 정보 태그에서」 / 「저장해두고 방문해보세요」 — `t.label` 36, 강조색 글자.
-- 카드 위치: 세로 중심 y=**1040**, x 144~936. **하단 UI(y≥1440)와 겹치지 않음**을 §9 검증.
-- "자세한 후기는 블로그에"는 광고 표기 배지(§4.4)와 함께 나올 때 배지가 카드 위쪽 TOP 위치에 있어야 한다(겹침 방지).
+### 4.2 Outro presets — B and E (CDS-70, CDS-72, CDS-76)
 
-```svg
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1920" width="1080" height="1920">
-  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4d5a6b"/><stop offset="1" stop-color="#1b1f26"/></linearGradient></defs>
-  <rect width="1080" height="1920" fill="url(#bg)"/>
-  <rect x="64" y="250" width="856" height="1170" fill="none" stroke="#00E5FF" stroke-dasharray="12 12" stroke-width="2" opacity="0.6"/>
-  <!-- 카드 높이 = 40+73+8+47+16+57+24+47+40 = 352 → y = 1040-176 = 864 -->
-  <rect x="144" y="864" width="792" height="352" rx="24" fill="#111111" fill-opacity="0.88"/>
-  <text x="184" y="937" font-family="Pretendard Variable, Pretendard, Noto Sans KR, sans-serif" font-weight="700" font-size="56" fill="#FFFFFF" letter-spacing="-0.56">카페 밀도</text>
-  <text x="184" y="992" font-family="Pretendard Variable, Pretendard, Noto Sans KR, sans-serif" font-weight="600" font-size="36" fill="#FFFFFF" fill-opacity="0.72" letter-spacing="0.72">성수동 · 서울숲역 4번 출구 5분</text>
-  <text x="184" y="1065" font-family="Pretendard Variable, Pretendard, Noto Sans KR, sans-serif" font-weight="600" font-size="44" fill="#FFFFFF">시그니처 크루아상 5,800원</text>
-  <text x="184" y="1160" font-family="Pretendard Variable, Pretendard, Noto Sans KR, sans-serif" font-weight="600" font-size="36" fill="#2BB8A6" letter-spacing="0.72">자세한 후기는 블로그에 →</text>
-</svg>
-```
+The template selects `outro="b"` or `outro="e"`. The default interval is the final 3 seconds of the output.
+
+| Preset | Slot | Type | Baseline y | Fill | Stroke / shadow |
+|---|---|---|---:|---|---|
+| B | 1 | hook 84 / Paperlogy 800 | 900 | white | none / text |
+| B | 2 | body 56 / Pretendard 700 | 1040 | white | small / text |
+| E | 1 | label 36 / Pretendard 600, +0.08em | 836 | muted white | small / text |
+| E | 2 | display 132 / Paperlogy 800, +0.04em | 980 | white | text / text |
+| E | 3 | caption 44 / Pretendard 600 | 1110 | white, alpha 0.8 | small / text |
+
+B has a white 520 × 2 hairline at y 950, alpha 0.55. E has a white 160 × 6 bar at y 1030, alpha 1. Neither reads the project accent.
+
+For 16:9 and 1:1, multiply every baseline and rule y by canvas height / 1920. Keep font sizes and rule dimensions; only hook changes to 72 on 16:9 and 76 on 1:1. Every slot holds one line, limited by its type's `chars`. Authored overflow is an element-specific `copy_limit` error. Empty slots are omitted without moving the remaining slots; an all-empty block emits no text or rules. V20 verifies slot identity, count, baseline, size, fill and rule geometry against the selected preset. Automatic captions use CENTER; LEFT and RIGHT require an authored choice.
 
 ### 4.3 정보 칩 (상호·위치·가격·메뉴·평점) — **[A] [정책 내: 자막의 확장으로 취급]**
 

@@ -45,16 +45,9 @@ type FurnitureView struct {
 	Label *Text
 	Chips []Chip
 }
-type CardLine struct {
-	Chip *Box
-	Text Text
-}
-type CardView struct {
-	Canvas
-	Empty  bool
-	Shadow Shadow
-	Plate  Box
-	Lines  []CardLine
+type RegionView struct {
+	CopyView
+	Rules []Box
 }
 
 // InfoView keeps the frame separate from its optional background plate.
