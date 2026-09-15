@@ -39,13 +39,19 @@ pass comes first — CDS-53's recall questions are about what the picture alone 
 
 ### Clip 1 — intro A / outro B
 
-| # | question | muted pass | source-audio pass |
-|---|---|---|---|
-| 1 | which two facts do you recall without rewinding? | | |
-| 2 | is the subject known within 1.5 s? | | |
-| 3 | does the copy read as editor-placed rather than auto-dropped? | | |
-| 4 | is the tone constant from first cut to end card? | | |
-| 5 | is the disclosure legible for its whole interval? | | |
+| # | question | answer |
+|---|---|---|
+| 1 | which two facts do you recall without rewinding? | one of two — "위치 성수동", the authored information pair. The second fact is missing: first pass was "그냥 단색이라 기억나는 사실이 없다", so what the picture carries beyond the authored text is nothing |
+| 2 | is the subject known within 1.5 s? | not answerable — "내용은 안 봤어": synthetic footage has no subject to recognise |
+| 3 | does the copy read as editor-placed rather than auto-dropped? | confirmed |
+| 4 | is the tone constant from first cut to end card? | |
+| 5 | is the disclosure legible for its whole interval? | confirmed |
+
+Question 1 is answered by the authored information pair alone — the footage adds no
+second fact — and question 2 is about a subject this footage does not have, so both wait
+on the real-footage run (see Findings). Questions 3, 4 and 5 are about type, placement and
+timing, which this footage shows as well as any other. The muted and source-audio passes
+are not separated here because the owner reviewed the clip in one sitting.
 
 ### Clip 2 — intro B / outro E
 
@@ -85,5 +91,9 @@ or silent repair.
 
 | # | clip | what was seen | where it goes |
 |---|---|---|---|
+| 1 | all three | synthetic flat-colour footage cannot answer CDS-53's recall and subject questions (1 and 2). The copy, placement, timing and disclosure questions it answers fine. | a later review run over real recorded footage, numbered separately — the clips themselves are not at fault |
 
-_No findings recorded yet._
+Clips 2 and 3 were opened but not reviewed in this sitting, and clip 1's question 4 is
+unanswered. This round therefore stands as a partial run: what it does establish is that
+the copy reads as placed and the disclosure is legible on clip 1, and that flat-colour
+footage cannot carry CDS-53's recall and subject questions at all.

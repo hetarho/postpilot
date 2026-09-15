@@ -46,14 +46,16 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
-| T177 | Release QA viewing checklist | CDS CLIP | T176 | doing@260916.qa |
+| T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
 
 ## next
 - create-task CLIP for the r25 character-maxima delta.
-- implement-task T177 with the owner watching; T008 stays owner-dependent.
-- Ship the tested production migration/rollback fix; production currently runs the recovered ef94ac0b image.
+- T177 is blocked on the owner's viewing answers; the three review clips are rendered and the checklist is open. T008 stays owner-dependent.
 
 ## log
+- 260916 production migration/rollback fix shipped; deploy f7362b9a green, prod health 200
+- 260916 T177 blocked; three review clips rendered with every CDS-53 assembly case, checklist open, recall questions need real footage
+- 260916 create-task CLIP start
 - 260916 update-ssot CLIP done; CLIP@25 — a template declares character maxima and the answer form enforces the effective one
 - 260916 T177 (doing) unaffected — the maxima change authoring and admission, not the render checklist
 - 260916 update-ssot CLIP start
@@ -71,6 +73,3 @@
 - 260915 update-ssot CDS done; CDS@18 — a region block keeps its 9:16 spacing and moves only its centre
 - 260915 update-ssot CDS start
 - 260915 T175 done; ratio guidance and the design spec reference no longer name one platform
-- 260915 T175 claimed (wrd)
-- 260915 T174 done; 9:16 centres on the canvas, SA-N retired, goldens and the frontend mirror regenerated
-- 260915 T174 claimed (sym)
