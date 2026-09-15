@@ -26,6 +26,7 @@ func TestMediaProfileSmoke(t *testing.T) {
 	if os.Getenv("CLIP_MEDIA_SMOKE") != "1" {
 		t.Skip("real binaries inside the nonroot runtime")
 	}
+	t.Parallel()
 	if os.Getuid() == 0 {
 		t.Fatal("media smoke must run as nonroot")
 	}

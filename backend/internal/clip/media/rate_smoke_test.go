@@ -41,6 +41,7 @@ func TestRenderSmokeRatesAndSourceAudio(t *testing.T) {
 	if os.Getenv("CLIP_MEDIA_SMOKE") != "1" {
 		t.Skip("real renderer gate runs inside Docker")
 	}
+	t.Parallel()
 	cfg := mediaConfig(t)
 	cfg.OperationTimeout = 15 * time.Minute
 	a, err := New(cfg, nil)
@@ -182,6 +183,7 @@ func TestMediaSmokeCadenceAdmission(t *testing.T) {
 	if os.Getenv("CLIP_MEDIA_SMOKE") != "1" {
 		t.Skip("real cadence gate runs inside Docker")
 	}
+	t.Parallel()
 	cfg := mediaConfig(t)
 	a, err := New(cfg, nil)
 	if err != nil {

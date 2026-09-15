@@ -36,6 +36,7 @@ func TestRenderSmoke(t *testing.T) {
 	if os.Getenv("CLIP_MEDIA_SMOKE") != "1" {
 		t.Skip("real renderer gate runs inside Docker")
 	}
+	t.Parallel()
 	a, err := New(mediaConfig(t), nil)
 	if err != nil {
 		t.Fatal(err)

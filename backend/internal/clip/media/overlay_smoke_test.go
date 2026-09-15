@@ -14,6 +14,7 @@ func TestRenderSmokeFilePreset(t *testing.T) {
 	if os.Getenv("CLIP_MEDIA_SMOKE") != "1" {
 		t.Skip("real renderer gate runs inside Docker")
 	}
+	t.Parallel()
 	dir := t.TempDir()
 	files := map[string]string{
 		"bindings.json":         `{"version":1,"bindings":{"copy.clean":"proof","copy.memo":"proof","copy.bold":"proof","copy.mark":"proof","furniture":"furniture","region":"region","info":"info"}}`,

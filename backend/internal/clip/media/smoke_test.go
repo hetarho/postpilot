@@ -17,6 +17,7 @@ func TestMediaSmoke(t *testing.T) {
 	if os.Getenv("CLIP_MEDIA_SMOKE") != "1" {
 		t.Skip("real media gate runs inside Docker")
 	}
+	t.Parallel()
 	cfg := mediaConfig(t)
 	a, err := New(cfg, nil)
 	if err != nil {

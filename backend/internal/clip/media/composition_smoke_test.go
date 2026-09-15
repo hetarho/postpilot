@@ -20,6 +20,7 @@ func TestRenderSmokeComposition(t *testing.T) {
 	if os.Getenv("CLIP_MEDIA_SMOKE") != "1" {
 		t.Skip("real renderer gate runs inside Docker")
 	}
+	t.Parallel()
 	for _, variant := range []string{"vertical", "horizontal", "square", "converted"} {
 		t.Run(variant, func(t *testing.T) {
 			ratio := variant

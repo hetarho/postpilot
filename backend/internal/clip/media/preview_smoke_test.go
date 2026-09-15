@@ -15,6 +15,7 @@ func TestRenderSmokePreview(t *testing.T) {
 	if os.Getenv("CLIP_MEDIA_SMOKE") != "1" {
 		t.Skip("real preview gate runs inside Docker")
 	}
+	t.Parallel()
 	for _, ratio := range []string{"vertical", "horizontal", "square"} {
 		t.Run(ratio, func(t *testing.T) {
 			a, err := New(mediaConfig(t), nil)

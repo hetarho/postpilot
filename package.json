@@ -23,6 +23,8 @@
     "lint:style": "node scripts/lint-style-escapes.mjs",
     "lint:style:probe": "node scripts/lint-style-escapes.mjs --probe",
     "test": "pnpm --filter ./frontend test",
+    "smoke": "docker build --progress=plain --target production -f backend/Dockerfile .",
+    "smoke:media": "docker build --progress=plain --target media-smoke -f backend/Dockerfile .",
     "infra:up": "docker compose up -d",
     "infra:down": "docker compose down"
   },
