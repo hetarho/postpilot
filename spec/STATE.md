@@ -47,7 +47,6 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
-| T179 | A template position declares its character maximum | CLIP CDS | - | doing@260916.max |
 | T180 | Author a character maximum in the template editor | CLIP | T179 | todo |
 | T181 | An answer cannot be typed past its maximum | CLIP | T179 | todo |
 | T182 | Generated text obeys its declared maximum | CLIP CDS | T179 | todo |
@@ -58,6 +57,7 @@
 - T177 is blocked on the owner's viewing answers; the three review clips are rendered and the checklist is open. T008 stays owner-dependent.
 
 ## log
+- 260916 T179 done; chars on field/text/row, derived caps per position and one effective maximum per field, agreed by both grammar owners
 - 260916 update-ssot CLIP done; CLIP@26 — an empty required group is refused at admission and a plan under the length floor stops calling itself unreadable
 - 260916 warn: r26 edits CLIP-102, the same admission line T179's family (T180 T181) builds on
 - 260916 T179 claimed (max)
@@ -77,6 +77,3 @@
 - 260916 Production incident: investigate API 502 and failed backend rollout; repair startup/rollback and verify recovery (ops).
 - 260916 T176 done; one shared offset moves a region block as one piece, real-ink overlap and safe-area pinned, eight goldens and the frontend mirror regenerated
 - 260916 T176 claimed (rgn)
-- 260915 create-task CDS done; T176 from the r18 delta and T177 carrying CDS-53's viewing checklist from the void T110
-- 260915 create-task CDS start
-- 260915 update-ssot CDS done; CDS@18 — a region block keeps its 9:16 spacing and moves only its centre

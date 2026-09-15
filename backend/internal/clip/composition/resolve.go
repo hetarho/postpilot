@@ -4,6 +4,8 @@ import (
 	"maps"
 	"slices"
 	"strings"
+
+	"github.com/postpilot/backend/internal/clip/design"
 )
 
 func fieldKey(f Field) string {
@@ -36,11 +38,19 @@ func Resolve(d *Document, in Inputs, l Limits, maxExpandedBytes int) (Timeline, 
 			if group != "" {
 				key = group + "." + k
 			}
-			if _, ok := fields[key]; !ok {
+			f, ok := fields[key]
+			if !ok {
 				return fail(id, 1, "unknown_field")
 			}
+			// Two ceilings, in the units each is stated in: the grammar's own
+			// scalar bound on a stored answer, then the field's effective
+			// maximum, which is a CDS-20 character count (CLIP-117). The second
+			// names the field, because that is the control the owner typed into.
 			if scalar(v) > l.AnswerChars {
 				return fail(id, 1, "answer_limit")
+			}
+			if bound, capped := d.Maxima[key]; capped && design.Chars(v) > bound {
+				return fail(key, f.Span.Line, "answer_limit")
 			}
 		}
 		for _, f := range d.Fields {

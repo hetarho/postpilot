@@ -29,7 +29,11 @@ type Node struct {
 type Field struct {
 	ID, Group, Label, Prompt string
 	Required                 bool
-	Span                     Span
+	// Authored maximum character count (CLIP-116), 0 when undeclared. The
+	// number a position actually enforces is Document.Maxima, which also folds
+	// in the caps of the positions this field's answer reaches.
+	Chars int
+	Span  Span
 }
 type Group struct {
 	ID, Label string
@@ -39,14 +43,19 @@ type Group struct {
 type Part struct{ Literal, Field string }
 type Row struct {
 	Role, Kind string
-	Parts      []Part
+	// Authored maximum for this slot, 0 when undeclared (CLIP-116).
+	Chars int
+	Parts []Part
 }
 type Element struct {
 	ID, Kind, Role, Style, Position, Align, Basis string
 	StartMS, EndMS                                *int
-	Parts                                         []Part
-	Rows                                          []Row
-	Span                                          Span
+	// Authored maximum for the element's own text, 0 when undeclared
+	// (CLIP-116). An element with rows carries its maxima on the rows.
+	Chars int
+	Parts []Part
+	Rows  []Row
+	Span  Span
 }
 type Section struct {
 	ID, Scope, Repeat string
@@ -68,6 +77,12 @@ type Document struct {
 	Guidance     []string
 	Sections     []Section
 	Elements     []Element
+	// Each field's effective maximum, keyed the way fieldKey keys a field
+	// (CLIP-117): the smallest of its authored maximum, the cap of every
+	// position its value reaches, and the grammar's AnswerChars. Computed once
+	// here so the input control, the admission check and the writer read one
+	// number rather than three derivations of it.
+	Maxima map[string]int
 }
 type Item struct {
 	ID     string

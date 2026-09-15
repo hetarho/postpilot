@@ -46,12 +46,14 @@ const summary = (d: ClipComposition) => ({
   design: d.design,
   accent: d.accent,
   pace: d.pace,
-  fields: d.fields.map(({ id, group, label, prompt, required }) => ({
+  fields: d.fields.map(({ id, group, label, prompt, required, chars }) => ({
     id,
     group,
     label,
     prompt,
     required,
+    chars,
+    max: d.maxima[group ? `${group}.${id}` : id],
   })),
   groups: d.groups.map(({ id, label, min, max }) => ({ id, label, min, max })),
   sections: d.sections.map(({ id, scope, repeat }) => ({ id, scope, repeat })),

@@ -65,6 +65,7 @@ export type CompositionReason =
   | 'unknown_field'
   | 'invalid_rows'
   | 'invalid_row_role'
+  | 'invalid_max'
   | 'copy_limit'
   | 'unknown_element'
   | 'cut_limit'
@@ -97,6 +98,9 @@ export interface CompositionField {
   label: string
   prompt: string
   required: boolean
+  /** Authored maximum character count (CLIP-116), 0 when undeclared. The number
+   * a position actually enforces is ClipComposition.maxima. */
+  chars: number
   span: CompositionSpan
 }
 export interface CompositionGroup {
@@ -113,6 +117,8 @@ export interface CompositionPart {
 export interface CompositionRow {
   kind: 'fixed' | 'ai'
   role: string
+  /** Authored maximum for this slot (CLIP-116), 0 when undeclared. */
+  chars: number
   parts: CompositionPart[]
 }
 export interface CompositionElement {
@@ -125,6 +131,9 @@ export interface CompositionElement {
   basis: 'whole' | 'output-start' | 'output-end' | 'cut'
   startMs: number | null
   endMs: number | null
+  /** Authored maximum for the element's own text (CLIP-116), 0 when undeclared.
+   * An element with rows carries its maxima on the rows. */
+  chars: number
   parts: CompositionPart[]
   rows: CompositionRow[]
   span: CompositionSpan
@@ -148,6 +157,10 @@ export interface ClipComposition {
   guidance: string[]
   sections: CompositionSection[]
   elements: CompositionElement[]
+  /** Each field's effective maximum, keyed as the qualified field reference
+   * (CLIP-117): the smallest of its authored maximum, the cap of every position
+   * its value reaches, and the grammar's answerChars. */
+  maxima: Record<string, number>
 }
 export interface CompositionItem {
   id: string

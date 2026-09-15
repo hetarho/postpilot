@@ -23,6 +23,37 @@ export const compositionSpace =
 export const trimCompositionSpace = (s: string) =>
   s.split(compositionSpace).filter(Boolean).join(' ')
 const rowRoles = ['caption', 'label']
+/** CDS-20's count: Korean syllables, excluding spaces, punctuation and symbols.
+ * The same rule the renderer counts by, so the template's number, the owner's
+ * counter and the rendered line are one measurement. */
+export const compositionCharacters = (s: string) =>
+  Array.from(s.replace(/[\s\p{P}\p{S}]/gu, '')).length
+/** Reads a `chars` attribute (CLIP-116): a positive integer no larger than the
+ * count the position already imposes. Absent is 0, meaning the position keeps
+ * its derived cap. A limit of 0 is a position that imposes none. */
+function declaredChars(n: CompositionNode, blame: CompositionNode, limit: number) {
+  const raw = n.attributes.chars
+  if (raw === undefined) return 0
+  const value = Number(raw)
+  if (!raw || /[^0-9]/.test(raw) || !Number.isSafeInteger(value) || value <= 0)
+    problem(blame, 'invalid_max')
+  if (limit > 0 && value > limit) problem(blame, 'invalid_max')
+  return value
+}
+/** The CDS-20 count of the preset slot a region row lands in. A ratio changes
+ * the hook's size but not its characters (CDS-46). */
+function regionSlotChars(d: ClipComposition, role: string, index: number) {
+  const preset =
+    role === 'ending'
+      ? CLIP_DESIGN.regions.outro[d.design.outro]
+      : CLIP_DESIGN.regions.intro[d.design.intro]
+  const slot = preset?.slots[index]
+  return slot ? (CLIP_DESIGN.type[slot.type as keyof typeof CLIP_DESIGN.type]?.chars ?? 0) : 0
+}
+/** The count an element's own text position imposes when it carries no rows: an
+ * information value reads as a caption, while a badge and a caption impose none
+ * of their own. */
+const elementChars = (role: string) => (role === 'info' ? CLIP_DESIGN.type.caption.chars : 0)
 export function validCompositionLimits(l: CompositionLimits) {
   return (Object.keys(CLIP_COMPOSITION_LIMITS) as (keyof CompositionLimits)[]).every((key) => {
     const value = l[key]
@@ -69,6 +100,7 @@ function readElement(
     'basis',
     'start',
     'end',
+    'chars',
     ...(stored ? ['style'] : []),
   )
   const a = n.attributes,
@@ -106,6 +138,8 @@ function readElement(
   if (basis !== 'whole' && basis !== 'output-start' && basis !== 'output-end' && basis !== 'cut')
     problem(n, 'invalid_basis')
   if (basis === 'cut' && !inScene) problem(n, 'invalid_basis')
+  const ownLimit = elementChars(role) || l.copyChars
+  const chars = declaredChars(n, n, ownLimit)
   const hasStart = Object.hasOwn(a, 'start'),
     hasEnd = Object.hasOwn(a, 'end')
   if (
@@ -160,15 +194,21 @@ function readElement(
           ? CLIP_DESIGN.timing.intro_default_s * 1000
           : 0
         : endMs,
+    chars,
     parts: [],
     rows: [],
     span: n.span,
   }
   if (n.children.some((c) => c.name === 'row')) {
     if (!['hook', 'ending', 'info'].includes(role)) problem(n, 'invalid_rows')
-    t.rows = children(n).map((c) => {
+    t.rows = children(n).map((c, index) => {
       if (c.name !== 'row') problem(n, 'invalid_rows')
-      const allowed = region && !stored ? ['kind'] : region ? ['role', 'kind'] : ['role']
+      const allowed =
+        region && !stored
+          ? ['kind', 'chars']
+          : region
+            ? ['role', 'kind', 'chars']
+            : ['role', 'chars']
       if (Object.keys(c.attributes).some((k) => !allowed.includes(k)))
         problem(n, region ? 'invalid_skeleton' : 'unknown_attribute')
       const rowRole = region
@@ -179,7 +219,13 @@ function readElement(
       if (!region && !rowRoles.includes(rowRole)) problem(n, 'invalid_row_role')
       const rowKind = c.attributes.kind ?? kind
       if (rowKind !== 'fixed' && rowKind !== 'ai') problem(n, 'invalid_kind')
-      return { role: rowRole, kind: rowKind, parts: parts(c) }
+      // A row's position is its preset slot in a region block, and its own row
+      // role inside an information pair.
+      const slot =
+        (region
+          ? regionSlotChars(d, role, index)
+          : (CLIP_DESIGN.type[rowRole as keyof typeof CLIP_DESIGN.type]?.chars ?? 0)) || l.copyChars
+      return { role: rowRole, kind: rowKind, chars: declaredChars(c, n, slot), parts: parts(c) }
     })
   } else t.parts = parts(n)
   if (region && !stored) {
@@ -259,6 +305,7 @@ function readClipComposition(
     guidance: [],
     sections: [],
     elements: [],
+    maxima: {},
   }
   if (!['', 'coral', 'amber', 'lime', 'teal', 'blue', 'violet', 'pink'].includes(d.accent))
     problem(root, 'invalid_accent')
@@ -272,7 +319,7 @@ function readClipComposition(
     ids.add(prefix + id)
   }
   const field = (n: CompositionNode, group = '') => {
-    attributes(n, 'id', 'label', 'required')
+    attributes(n, 'id', 'label', 'required', 'chars')
     claim(n, group ? `${group}.` : '')
     const prompt = content(n),
       label = n.attributes.label ?? '',
@@ -290,6 +337,7 @@ function readClipComposition(
       label,
       prompt,
       required: required === 'true',
+      chars: declaredChars(n, n, limits.answerChars),
       span: n.span,
     })
     if (d.fields.length > limits.fields) problem(n, 'field_limit')
@@ -393,7 +441,39 @@ function readClipComposition(
         throw new CompositionProblem(elements[1].id, elements[1].span.line, 'invalid_skeleton')
       if (elements.length !== 1) problem(root, 'invalid_skeleton')
     }
+  d.maxima = fieldMaxima(d, limits)
   return d
+}
+
+/** Folds every position a field's value reaches into one number (CLIP-117). A
+ * position contributes the maximum it actually enforces — its authored value
+ * when it declares one, otherwise the count its rendered position imposes — and
+ * a position that imposes none contributes nothing. */
+function fieldMaxima(d: ClipComposition, l: CompositionLimits) {
+  const out: Record<string, number> = {}
+  for (const f of d.fields)
+    out[f.group ? `${f.group}.${f.id}` : f.id] =
+      f.chars > 0 ? Math.min(f.chars, l.answerChars) : l.answerChars
+  const fold = (parts: CompositionPart[], limit: number) => {
+    if (limit <= 0) return
+    for (const p of parts)
+      if (p.field && p.field in out && limit < out[p.field]) out[p.field] = limit
+  }
+  const visit = (t: CompositionElement) => {
+    if (!t.rows.length) return fold(t.parts, t.chars || elementChars(t.role))
+    t.rows.forEach((row, index) =>
+      fold(
+        row.parts,
+        row.chars ||
+          (t.role === 'info'
+            ? (CLIP_DESIGN.type[row.role as keyof typeof CLIP_DESIGN.type]?.chars ?? 0)
+            : regionSlotChars(d, t.role, index)),
+      ),
+    )
+  }
+  d.elements.forEach(visit)
+  for (const section of d.sections) section.elements.forEach(visit)
+  return out
 }
 
 export function replaceCompositionNode(

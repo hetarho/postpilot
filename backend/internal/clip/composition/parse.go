@@ -15,6 +15,49 @@ var itemCount = regexp.MustCompile(`^[0-9]+$`)
 var seconds = regexp.MustCompile(`^-?[0-9]+(?:\.[0-9]{1,3})?$`)
 var rowRoles = []string{"caption", "label"}
 
+// declaredChars reads a `chars` attribute (CLIP-116): a positive integer no
+// larger than the count the position already imposes. Absent is 0, meaning the
+// position keeps its derived cap. A limit of 0 is a position that imposes none.
+// blame is the node the failure names, which for a row is the element that
+// carries it — the same node every other row failure names.
+func declaredChars(n, blame *Node, limit int) (int, *Problem) {
+	raw, ok := n.Attributes["chars"]
+	if !ok {
+		return 0, nil
+	}
+	value, err := strconv.Atoi(raw)
+	if !itemCount.MatchString(raw) || err != nil || value <= 0 || limit > 0 && value > limit {
+		return 0, issue(blame, "invalid_max")
+	}
+	return value, nil
+}
+
+// regionSlotChars is the CDS-20 count of the preset slot a region row lands in.
+// A ratio changes the hook's size but not its characters (CDS-46), so the
+// selection alone answers it.
+func regionSlotChars(selection DesignSelection, role string, index int) int {
+	kind, id := "intro", selection.Intro
+	if role == "ending" {
+		kind, id = "outro", selection.Outro
+	}
+	preset, ok := design.Region(kind, id)
+	if !ok || index < 0 || index >= len(preset.Slots) {
+		return 0
+	}
+	return design.Type[preset.Slots[index].Type].Chars
+}
+
+// elementChars is the count an element's own text position imposes when it
+// carries no rows: an information value reads as a caption, while a badge and a
+// caption impose none of their own — their line and wrap rules are CDS-25's and
+// the repair ladder's, not a character ceiling.
+func elementChars(role string) int {
+	if role == "info" {
+		return design.Type["caption"].Chars
+	}
+	return 0
+}
+
 func issue(n *Node, reason string) *Problem {
 	id := n.Attributes["id"]
 	if id == "" {
@@ -178,7 +221,7 @@ func parse(source string, limits Limits, stored bool) (*Document, *Problem) {
 		return nil
 	}
 	readField := func(n *Node, group string) *Problem {
-		if e := attrs(n, "id", "label", "required"); e != nil {
+		if e := attrs(n, "id", "label", "required", "chars"); e != nil {
 			return e
 		}
 		prefix := ""
@@ -200,7 +243,11 @@ func parse(source string, limits Limits, stored bool) (*Document, *Problem) {
 		if required != "true" && required != "false" {
 			return issue(n, "invalid_required")
 		}
-		d.Fields = append(d.Fields, Field{n.Attributes["id"], group, label, prompt, required == "true", n.Span})
+		chars, e := declaredChars(n, n, limits.AnswerChars)
+		if e != nil {
+			return e
+		}
+		d.Fields = append(d.Fields, Field{ID: n.Attributes["id"], Group: group, Label: label, Prompt: prompt, Required: required == "true", Chars: chars, Span: n.Span})
 		if len(d.Fields) > limits.Fields {
 			return issue(n, "field_limit")
 		}
@@ -383,12 +430,67 @@ func parse(source string, limits Limits, stored bool) (*Document, *Problem) {
 			}
 		}
 	}
+	d.Maxima = fieldMaxima(d, limits)
 	return d, nil
+}
+
+// fieldMaxima folds every position a field's value reaches into one number
+// (CLIP-117). A position contributes the maximum it actually enforces — its
+// authored value when it declares one, otherwise the count its rendered
+// position imposes — and a position that imposes none contributes nothing.
+func fieldMaxima(d *Document, l Limits) map[string]int {
+	out := make(map[string]int, len(d.Fields))
+	for _, f := range d.Fields {
+		value := l.AnswerChars
+		if f.Chars > 0 && f.Chars < value {
+			value = f.Chars
+		}
+		out[fieldKey(f)] = value
+	}
+	fold := func(parts []Part, limit int) {
+		if limit <= 0 {
+			return
+		}
+		for _, p := range parts {
+			if current, ok := out[p.Field]; p.Field != "" && ok && limit < current {
+				out[p.Field] = limit
+			}
+		}
+	}
+	visit := func(t Element) {
+		if len(t.Rows) == 0 {
+			limit := t.Chars
+			if limit == 0 {
+				limit = elementChars(t.Role)
+			}
+			fold(t.Parts, limit)
+			return
+		}
+		for i, row := range t.Rows {
+			limit := row.Chars
+			if limit == 0 {
+				limit = regionSlotChars(d.Design, t.Role, i)
+				if t.Role == "info" {
+					limit = design.Type[row.Role].Chars
+				}
+			}
+			fold(row.Parts, limit)
+		}
+	}
+	for _, t := range d.Elements {
+		visit(t)
+	}
+	for _, section := range d.Sections {
+		for _, t := range section.Elements {
+			visit(t)
+		}
+	}
+	return out
 }
 
 func readElement(n *Node, d *Document, scope, repeat string, inScene bool, l Limits, stored bool) (Element, *Problem) {
 	var t Element
-	allowed := []string{"id", "kind", "role", "position", "align", "basis", "start", "end"}
+	allowed := []string{"id", "kind", "role", "position", "align", "basis", "start", "end", "chars"}
 	if stored {
 		allowed = append(allowed, "style")
 	}
@@ -419,6 +521,17 @@ func readElement(n *Node, d *Document, scope, repeat string, inScene bool, l Lim
 	if !slices.Contains([]string{"whole", "output-start", "output-end", "cut"}, t.Basis) || t.Basis == "cut" && !inScene {
 		return t, issue(n, "invalid_basis")
 	}
+	// The element's own text position. A position with no count of its own is
+	// still bounded by the grammar's copy ceiling.
+	limit := elementChars(t.Role)
+	if limit == 0 {
+		limit = l.CopyChars
+	}
+	chars, problem := declaredChars(n, n, limit)
+	if problem != nil {
+		return t, problem
+	}
+	t.Chars = chars
 	start, hasStart := n.Attributes["start"]
 	end, hasEnd := n.Attributes["end"]
 	if hasStart != hasEnd || t.Basis == "whole" && hasStart || (t.Basis == "output-start" || t.Basis == "output-end") && !hasStart && !region {
@@ -495,12 +608,12 @@ func readElement(n *Node, d *Document, scope, repeat string, inScene bool, l Lim
 			if c.Name != "row" {
 				return t, issue(n, "invalid_rows")
 			}
-			rowAttrs := []string{"role"}
+			rowAttrs := []string{"role", "chars"}
 			if region {
 				rowAttrs = append(rowAttrs, "kind")
 			}
 			if region && !stored {
-				rowAttrs = []string{"kind"}
+				rowAttrs = []string{"kind", "chars"}
 			}
 			if e := attrs(c, rowAttrs...); e != nil {
 				if region {
@@ -524,7 +637,20 @@ func readElement(n *Node, d *Document, scope, repeat string, inScene bool, l Lim
 			if e != nil {
 				return t, e
 			}
-			t.Rows = append(t.Rows, Row{Role: role, Kind: kind, Parts: p})
+			// A row's position is its preset slot when the element is a region
+			// block, and its own row role inside an information pair.
+			slot := regionSlotChars(d.Design, t.Role, len(t.Rows))
+			if !region {
+				slot = design.Type[role].Chars
+			}
+			if slot == 0 {
+				slot = l.CopyChars
+			}
+			rowChars, e := declaredChars(c, n, slot)
+			if e != nil {
+				return t, e
+			}
+			t.Rows = append(t.Rows, Row{Role: role, Kind: kind, Chars: rowChars, Parts: p})
 		}
 	} else {
 		p, e := parts(n)

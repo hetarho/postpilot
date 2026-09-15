@@ -13,6 +13,7 @@ import {
   type ResolvedCompositionElement,
 } from '../model/composition'
 import {
+  compositionCharacters,
   compositionIdentifier,
   validCompositionLimits,
   trimCompositionSpace,
@@ -44,9 +45,18 @@ export function resolveClipComposition(
   const fields = new Map(d.fields.map((f) => [fieldKey(f), f]))
   const validateValues = (values: Record<string, string>, group: string, id: string) => {
     for (const k of Object.keys(values).sort()) {
-      const v = values[k]
-      if (!fields.has(group ? `${group}.${k}` : k)) fail(id, 1, 'unknown_field')
+      const v = values[k],
+        key = group ? `${group}.${k}` : k
+      const f = fields.get(key)
+      if (!f) return fail(id, 1, 'unknown_field')
+      // Two ceilings, in the units each is stated in: the grammar's own scalar
+      // bound on a stored answer, then the field's effective maximum, which is a
+      // CDS-20 character count (CLIP-117). The second names the field, because
+      // that is the control the owner typed into.
       if (scalarLength(v) > limits.answerChars) fail(id, 1, 'answer_limit')
+      const bound = d.maxima[key]
+      if (bound !== undefined && compositionCharacters(v) > bound)
+        fail(key, f.span.line, 'answer_limit')
     }
     for (const f of d.fields)
       if (f.group === group && f.required && !trimCompositionSpace(valueOf(values, f.id)))

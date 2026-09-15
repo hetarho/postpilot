@@ -90,7 +90,11 @@ func normalized(t *testing.T, value any) any {
 func summary(d *composition.Document) map[string]any {
 	fields := []map[string]any{}
 	for _, f := range d.Fields {
-		fields = append(fields, map[string]any{"id": f.ID, "group": f.Group, "label": f.Label, "prompt": f.Prompt, "required": f.Required})
+		key := f.ID
+		if f.Group != "" {
+			key = f.Group + "." + f.ID
+		}
+		fields = append(fields, map[string]any{"id": f.ID, "group": f.Group, "label": f.Label, "prompt": f.Prompt, "required": f.Required, "chars": f.Chars, "max": d.Maxima[key]})
 	}
 	groups := []map[string]any{}
 	for _, g := range d.Groups {
