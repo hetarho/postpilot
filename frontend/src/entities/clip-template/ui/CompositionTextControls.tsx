@@ -62,13 +62,11 @@ function Parts({
 
 export function CompositionTextControls({
   node,
-  styles,
   inScene,
   bindings,
   onChange,
 }: {
   node: CompositionNode
-  styles: string[]
   inScene: boolean
   bindings: CompositionBindingOption[]
   onChange: (node: CompositionNode) => void
@@ -120,21 +118,9 @@ export function CompositionTextControls({
         onChange={(v) =>
           onChange({
             ...node,
-            attributes: { ...a, role: v, style: v === 'caption' ? (a.style ?? 'auto') : 'auto' },
+            attributes: { ...a, role: v },
           })
         }
-      />
-      <CompositionSelect
-        label={t('composition.styleLabel')}
-        value={a.style ?? 'auto'}
-        options={[
-          { value: 'auto', label: t('composition.auto') },
-          ...(a.role === 'caption' ? styles : []).map((value) => ({
-            value,
-            label: t(`style.${value}`, { defaultValue: t('composition.auto') }),
-          })),
-        ]}
-        onChange={(v) => attr('style', v)}
       />
       <CompositionSelect
         label={t('composition.positionLabel')}

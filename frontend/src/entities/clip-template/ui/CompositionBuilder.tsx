@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button, Checkbox, SortableList, Typography } from '@/shared/ui'
 import type { CompositionNode } from '../model/composition'
-import { CLIP_ACCENTS, COPY_STYLES } from '../model/types'
+import { CLIP_ACCENTS } from '../model/types'
 import {
   compositionDraftTree,
   compositionLiteral,
@@ -55,7 +55,6 @@ export function CompositionBuilder({
               n: i + 1,
               defaultValue: t('composition.repairSource'),
             })
-  const styles = (root.attributes.styles ?? 'clean').split(/\s+/).filter(Boolean)
   const patch = (node: CompositionNode, next: CompositionNode | null) =>
     onChange(patchCompositionSource(source, node, next))
   const add = (parent: CompositionNode, name: string, inScene: boolean) => {
@@ -165,7 +164,6 @@ export function CompositionBuilder({
         {name === 'text' && (
           <CompositionTextControls
             node={node}
-            styles={styles}
             inScene={!!scope}
             bindings={bindings}
             onChange={change}
@@ -245,31 +243,6 @@ export function CompositionBuilder({
   return (
     <div className="min-w-0 space-y-6">
       <fieldset className="min-w-0 space-y-3">
-        <Typography as="legend" variant="fieldTitle">
-          {t('editor.styles')}
-        </Typography>
-        <div className="flex flex-wrap gap-x-5 gap-y-2">
-          {COPY_STYLES.map((style) => (
-            <label key={style} className="flex min-h-11 items-center gap-3">
-              <Checkbox
-                checked={styles.includes(style)}
-                onChange={(e) =>
-                  patch(root, {
-                    ...root,
-                    attributes: {
-                      ...root.attributes,
-                      styles: (e.target.checked
-                        ? [...styles, style]
-                        : styles.filter((s) => s !== style)
-                      ).join(' '),
-                    },
-                  })
-                }
-              />
-              {t(`style.${style}`)}
-            </label>
-          ))}
-        </div>
         <CompositionSelect
           label={t('editor.accent')}
           value={root.attributes.accent ?? ''}
@@ -278,6 +251,7 @@ export function CompositionBuilder({
             patch(root, { ...root, attributes: { ...root.attributes, accent: value } })
           }
         />
+        <Typography variant="meta">{t('editor.accentHelp')}</Typography>
         <CompositionSelect
           label={t('pace.label')}
           value={root.attributes.pace ?? 'steady'}

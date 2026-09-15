@@ -72,7 +72,7 @@ const editing = (plan: ClipEditPlan): ClipEditingState => ({
     height: 1080,
     allowedRatePermille: [500, 750, 1000, 1250, 1500, 2000],
   })),
-  copyStyles: ['bold'],
+
   fadeMs: 200,
   maxCuts: 100,
   maxCopyRunes: 500,

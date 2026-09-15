@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { fireEvent, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderAppAt } from '@/test/app'
-import { CLIP_COMPOSITION_EXAMPLE, type ClipRecipe } from '@/entities/clip-template'
+import { CLIP_COMPOSITION_EXAMPLE } from '@/entities/clip-template'
 import type { ClipProjectDraft } from '@/entities/clip-project'
 import { discardClipDraftQueues } from '@/features/edit-clip-project'
 
@@ -13,7 +13,7 @@ const template = {
   compositionLegacy: false,
   informationFields: [],
   cutGuidance: '',
-  copyStyles: ['bold'] as ClipRecipe['copyStyles'],
+
   accent: '' as const,
   preset: '' as const,
 }
@@ -23,7 +23,7 @@ describe('template-defined project inputs', () => {
   it('opens an older short group at its minimum and saves the stable items only after editing', async () => {
     const writes: ClipProjectDraft[] = []
     const body =
-      '<clip version="1"><group id="menu" label="메뉴" min="2" max="3"><field id="name" label="메뉴 이름" required="true"/></group></clip>'
+      '<clip version="1" intro="b" caption="bold" outro="e"><group id="menu" label="메뉴" min="2" max="3"><field id="name" label="메뉴 이름" required="true"/></group><text id="intro" kind="fixed" role="hook" basis="output-start"/><text id="outro" kind="fixed" role="ending" basis="output-end"/></clip>'
     const composition = {
       snapshot: { version: 1, body, templateId: template.id, legacy: false },
       inputs: {
@@ -100,7 +100,7 @@ describe('template-defined project inputs', () => {
     const user = userEvent.setup(),
       writes: ClipProjectDraft[] = []
     const body =
-      '<clip version="1"><field id="place" label="바뀐 장소 이름" required="true"/><scene id="scene"/></clip>'
+      '<clip version="1" intro="b" caption="bold" outro="e"><field id="place" label="바뀐 장소 이름" required="true"/><scene id="scene"/><text id="intro" kind="fixed" role="hook" basis="output-start"/><text id="outro" kind="fixed" role="ending" basis="output-end"/></clip>'
     const first = { ...template, id: 'first', name: '첫 구성', compositionBody: body }
     const second = { ...template, id: 'second', name: '다른 구성', compositionBody: body }
     const composition = {
@@ -147,7 +147,8 @@ describe('template-defined project inputs', () => {
   it('applies a changed template explicitly without a save on opening or losing stable inputs', async () => {
     const user = userEvent.setup(),
       writes: ClipProjectDraft[] = []
-    const oldBody = '<clip version="1"><field id="place" label="장소"/><scene id="scene"/></clip>'
+    const oldBody =
+      '<clip version="1" intro="b" caption="bold" outro="e"><field id="place" label="장소"/><scene id="scene"/><text id="intro" kind="fixed" role="hook" basis="output-start"/><text id="outro" kind="fixed" role="ending" basis="output-end"/></clip>'
     const body = oldBody
       .replace('label="장소"', 'label="촬영 장소"')
       .replace('</clip>', '<field id="extra" label="추가 정보"/></clip>')

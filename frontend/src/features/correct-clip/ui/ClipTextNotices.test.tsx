@@ -1,4 +1,5 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import { clipTimelineFixture } from '@/test/clip-editing'
 import { ClipTextControls } from './ClipTextControls'
@@ -10,7 +11,6 @@ it('reuses one localized fallback line and removes it after the owner-edited res
   const props = {
     plan: state.plan,
     text,
-    styles: state.copyStyles,
     change: vi.fn(),
     invalid: false,
     language: 'ko' as const,
@@ -33,4 +33,35 @@ it('reuses one localized fallback line and removes it after the owner-edited res
     />,
   )
   expect(screen.queryByText('같은 내용을 담은 더 짧은 문구를 사용했어요.')).not.toBeInTheDocument()
+})
+
+it('offers text, placement and timing edits without a style control', async () => {
+  const state = clipTimelineFixture(),
+    change = vi.fn()
+  render(
+    <ClipTextControls
+      plan={state.plan}
+      text={state.plan.elements![0]}
+      change={change}
+      invalid={false}
+    />,
+  )
+  expect(screen.queryByLabelText(/스타일|style/i)).not.toBeInTheDocument()
+  expect(screen.getByLabelText('자막 원문')).toBeEnabled()
+  fireEvent.change(screen.getByLabelText('자막 원문'), { target: { value: '새 문구' } })
+  expect(change).toHaveBeenLastCalledWith(
+    expect.objectContaining({ patch: { text: '새 문구' } }),
+    expect.any(String),
+  )
+  await userEvent.click(screen.getByRole('combobox', { name: /^자막 위치/ }))
+  await userEvent.click(screen.getByRole('option', { name: '위' }))
+  expect(change).toHaveBeenLastCalledWith(
+    expect.objectContaining({ patch: { position: 'top' } }),
+    undefined,
+  )
+  fireEvent.change(screen.getByLabelText('표시 끝 (초)'), { target: { value: '2' } })
+  expect(change).toHaveBeenLastCalledWith(
+    expect.objectContaining({ patch: expect.objectContaining({ endMs: 2000 }) }),
+    expect.any(String),
+  )
 })

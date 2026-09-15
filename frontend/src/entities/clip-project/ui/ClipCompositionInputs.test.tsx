@@ -8,7 +8,7 @@ import { emptyCompositionInputs } from '../model/composition-inputs'
 import { ClipCompositionInputFields } from './ClipCompositionInputs'
 
 const source = (attributes: string) =>
-  `<clip version="1"><group id="menu" ${attributes}><field id="name" label="Name"/></group></clip>`
+  `<clip version="1" intro="b" caption="bold" outro="e"><group id="menu" ${attributes}><field id="name" label="Name"/></group><text id="intro" kind="fixed" role="hook" basis="output-start"/><text id="outro" kind="fixed" role="ending" basis="output-end"/></clip>`
 
 function Editable({
   attributes,

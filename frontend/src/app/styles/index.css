@@ -8,6 +8,14 @@
   src: url('/fonts/clip/PretendardVariable.ttf') format('truetype');
 }
 
+@font-face {
+  font-family: 'Paperlogy';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url('/fonts/clip/Paperlogy-8ExtraBold.ttf') format('truetype');
+}
+
 /*
  * The colour system has THREE LAYERS. The rules this file carries are written up in
  * spec/legacy/tech/design-language.md; this header only says how the layers fit together.

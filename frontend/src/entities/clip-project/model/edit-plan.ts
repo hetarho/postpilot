@@ -11,12 +11,7 @@ import {
   CLIP_VOICE,
   clipCaption,
 } from '@/shared/config'
-import {
-  CLIP_ACCENTS,
-  COPY_STYLES,
-  type ClipAccent,
-  type CopyStyle,
-} from '@/entities/clip-template/@x/clip-project'
+import { CLIP_ACCENTS, type ClipAccent } from '@/entities/clip-template/@x/clip-project'
 
 import { copyChars, splitRapid, isRapidCut, canAddRapid } from './caption-pace'
 import type { ClipSourceAssociation } from './composition'
@@ -34,7 +29,7 @@ export interface ClipCaption {
   align: (typeof COPY_ALIGNS)[number]
   /** The one word 크게 강조 colours and 형광펜 highlights; a substring of `text`. */
   keyword: string
-  style: CopyStyle
+  style: 'bold'
   accent: ClipAccent
   startMs: number
   endMs: number
@@ -194,7 +189,7 @@ export interface RetainedClipSource {
 export interface ClipEditingState {
   plan: ClipEditPlan
   sources: RetainedClipSource[]
-  copyStyles: CopyStyle[]
+
   fadeMs: number
   maxCuts: number
   maxCopyRunes: number
@@ -577,8 +572,7 @@ export function validateClipPlan(plan: ClipEditPlan, state: ClipEditingState) {
             !COPY_ALIGNS.includes(copy.align) ||
             !withinAnchorStep(plan.cuts, index, j)),
         keyword: copy.keyword !== '' && !copy.text.includes(copy.keyword),
-        style:
-          placed && (!COPY_STYLES.includes(copy.style) || !state.copyStyles.includes(copy.style)),
+        style: placed && copy.style !== 'bold',
         accent: !CLIP_ACCENTS.includes(copy.accent),
       }
     })

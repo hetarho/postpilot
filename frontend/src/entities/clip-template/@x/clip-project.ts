@@ -1,5 +1,5 @@
-export { COPY_STYLES, CLIP_ACCENTS } from '../model/types'
-export type { CopyStyle, ClipAccent } from '../model/types'
+export { CLIP_ACCENTS } from '../model/types'
+export type { ClipAccent } from '../model/types'
 export { parseClipComposition } from '../lib/composition-parse'
 export { resolveClipComposition } from '../lib/composition-resolve'
 export type {

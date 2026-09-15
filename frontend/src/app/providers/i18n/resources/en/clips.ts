@@ -12,7 +12,7 @@ export const clips = {
     omittedCut: 'Omitted cut',
     sceneTrimmed: 'This cut was shortened to one observed scene.',
     normalSpeed: 'This cut uses its original 1× speed.',
-    approvedStyle: 'This text uses a style approved by the template.',
+    approvedStyle: 'This text follows the template’s selected design.',
     approvedAccent: 'This text uses the template’s accent colour.',
     cropAdjusted: 'The crop centre was moved inside this frame.',
     volumeAdjusted: 'This cut’s volume was kept within 0–100% of the original.',
@@ -201,6 +201,7 @@ export const clips = {
     renderedRevision: 'Compare previous render · revision {{revision}}',
   },
   composition: {
+    sampleShortAI: 'Scene',
     templateChanged:
       'The template composition changed. Review and apply its current fields. Your previous video result is preserved.',
     applyTemplate: 'Apply current template',
@@ -232,7 +233,6 @@ export const clips = {
     guidance: 'Instructions hidden from the output',
     kindLabel: 'Copy authoring',
     roleLabel: 'Copy purpose',
-    styleLabel: 'Copy style',
     positionLabel: 'Screen position',
     alignLabel: 'Text alignment',
     timingLabel: 'Visibility reference',
@@ -249,15 +249,15 @@ export const clips = {
     addLiteral: 'Add text',
     addBinding: 'Link an answer',
     rowRole: 'Card row {{n}} purpose',
-    removeRow: 'Remove card row {{n}}',
-    addRow: 'Add card row',
+    removeRow: 'Remove text row {{n}}',
+    addRow: 'Add text row',
     scopeLabel: 'Scene evidence',
     repeatLabel: 'Repeat over',
     selectedScenes: 'Selected scenes',
     remove: 'Remove {{label}}',
     preview: 'Composition preview',
     previewHelp:
-      'Check visibility with illustrative answers and cuts. This is not footage or an AI result. Automatic styles and final layout can be checked after generation.',
+      'Check visibility with illustrative answers and cuts. This is not footage or an AI result. The final layout can be checked after generation.',
     sampleDuration: 'Sample duration',
     sampleTime: 'Preview time',
     seconds: '{{value}} seconds',
@@ -280,8 +280,8 @@ export const clips = {
       caption: 'Caption',
       info: 'Information',
       badge: 'Disclosure',
-      hook: 'Opening card',
-      ending: 'Closing card',
+      hook: 'Intro',
+      ending: 'Outro',
     },
     position: {
       auto: 'Automatic',
@@ -337,7 +337,6 @@ export const clips = {
       invalid_interval: 'Check the endpoint order, signs and decimal precision.',
       unknown_field: 'The linked field is missing. Add it or change the binding.',
       binding_scope: 'Bind to the item belonging to this scene.',
-      invalid_style: 'Choose a style approved by this template.',
       invalid_design: 'Choose the intro, caption and outro designs.',
       invalid_skeleton: 'Check the intro and outro structure for the selected designs.',
       field_limit: 'Check the field count, label and prompt limits.',
@@ -405,7 +404,6 @@ export const clips = {
     align: 'Horizontal alignment',
     anchorStepError:
       'This caption is too far from the previous cut. Within one style, move one step at a time. 메모 sits left at the top or the bottom.',
-    styleLimit: 'This style takes {{lines}} line(s) of {{chars}} characters. Shorten the text.',
     keyword: 'Accent word',
     keywordError: 'The accent word has to appear in the caption.',
     chips: 'Information chips',
@@ -417,7 +415,7 @@ export const clips = {
       'One style was used too often. Bold takes at most two per clip, and one style at most three in a row.',
     hook: 'Hook sentence',
     hookHelp:
-      'The one line on the opening card, for the first 1.5 seconds. Up to {{lines}} lines of {{chars}} characters, written from the facts you gave in step ①. Leave it empty to open on the footage itself.',
+      'The intro text. Up to {{lines}} lines of {{chars}} characters, written from the facts you gave in step ①. Leave it empty to open on the footage itself.',
     hookError:
       'The hook takes at most {{lines}} lines of {{chars}} characters, and any number or Latin word in it has to appear in the facts from step ①.',
     anchors: { top: 'Top', upper_mid: 'Upper middle', lower_mid: 'Lower middle', bottom: 'Bottom' },
@@ -866,7 +864,7 @@ export const clips = {
   },
   directory: {
     title: 'Video templates',
-    description: 'Save the information to collect, cut guidance and caption styles.',
+    description: 'Save the information to collect, cut guidance and video design.',
     saved: 'Saved video templates',
     empty: 'No video templates yet',
     emptyHelp:
@@ -879,6 +877,7 @@ export const clips = {
     updated: 'Updated {{date}}',
   },
   editor: {
+    accentHelp: 'The accent colours one caption word only.',
     create: 'New video template',
     edit: 'Edit video template',
     back: 'Video templates',
@@ -894,15 +893,11 @@ export const clips = {
     presetHelp:
       'A category fixes the chip order, the default CTA, the default accent and the cut rhythm.',
     presetNone: 'Choose a category',
-    styleAlwaysOn: 'Always on. Every other style falls back to this one.',
     previewKeyword: 'good',
     seedTitle: 'Add the information fields?',
     seedBody:
       'This preset needs a few information fields. Step ① of the {{count}} clip(s) using this template will ask for them, and answers already given are kept.',
     seedConfirm: 'Add',
-    styles: 'Caption styles',
-    stylesHelp:
-      'Select Light text to prefer plain white lettering. You can keep the existing styles available too.',
     accent: 'Accent colour',
     preview: 'A moment to remember',
     saved: 'Saved',
@@ -916,12 +911,11 @@ export const clips = {
     leaveBody: 'Your unsaved video template changes will be lost.',
     leave: 'Leave',
   },
-  style: { clean: 'Clean', memo: 'Memo', bold: 'Bold', mark: 'Highlight', simple: 'Light text' },
   pace: {
     label: 'Caption pace',
     steady: 'Sentence',
     rapid: 'Rapid phrases',
-    help: 'Choose pace independently of style. Rapid phrases appear for 0.3–1 second each.',
+    help: 'Choose how the captions appear. Rapid phrases appear for 0.3–1 second each.',
     editHelp:
       'Switch to rapid phrases to split the text, or sentence to merge it. Timing is editable and is not automatically aligned to speech.',
     splitError: 'Enter caption text or extend the cut to split it.',
@@ -971,7 +965,6 @@ export const clips = {
     duplicate: 'Information labels must be unique.',
     invalid: 'Check this value.',
     preset: 'Choose a category.',
-    styles: 'Select at least one caption style.',
   },
   delete: {
     title: 'Delete this video template?',

@@ -10,11 +10,8 @@ import {
 import { CLIP_COMPOSITION_LIMITS } from '@/shared/config'
 import type { FakeClipsOptions } from '@/test/clips'
 
-const body = `<clip version='1' styles='clean memo' pace='steady'>
-  <field id="place" label="장소" required="false">어디인가요?</field>
-  <scene id="scene" scope="scene"/>
-  <text id="caption" kind="fixed" role="caption" basis="output-start" start="0" end="3">  🌿 A &amp; B  </text>
-</clip>`
+const body =
+  '<clip version=\'1\' intro="b" caption="bold" outro="e" pace=\'steady\'>\n  <field id="place" label="장소" required="false">어디인가요?</field>\n  <scene id="scene" scope="scene"/>\n  <text id="caption" kind="fixed" role="caption" basis="output-start" start="0" end="3">  🌿 A &amp; B  </text>\n<text id="intro" kind="fixed" role="hook" basis="output-start"/><text id="outro" kind="fixed" role="ending" basis="output-end"/></clip>'
 const template = {
   id: 'owned',
   name: '장면 템플릿',
@@ -22,7 +19,7 @@ const template = {
   compositionLegacy: false,
   informationFields: [],
   cutGuidance: '',
-  copyStyles: ['bold'] as ClipRecipe['copyStyles'],
+
   accent: '' as const,
   preset: '' as const,
 }
@@ -37,7 +34,8 @@ describe('composition template authoring', () => {
   it('round-trips the group name and minimum through the builder, source and save', async () => {
     const user = userEvent.setup(),
       writes: ClipRecipe[] = []
-    const original = `<clip version='1'>\n<group id="menu" max="3"><field id="name" label="메뉴 이름"/></group>\n<guide>  keep &amp; spacing  </guide>\n</clip>`
+    const original =
+      '<clip version=\'1\' intro="b" caption="bold" outro="e">\n<group id="menu" max="3"><field id="name" label="메뉴 이름"/></group>\n<guide>  keep &amp; spacing  </guide>\n<text id="intro" kind="fixed" role="hook" basis="output-start"/><text id="outro" kind="fixed" role="ending" basis="output-end"/></clip>'
     mount({ templates: [{ ...template, compositionBody: original }], writes })
     await user.click(await screen.findByRole('button', { name: '항목 묶음 1' }))
     expect(screen.getByLabelText('항목 묶음 이름')).toHaveValue('')
@@ -56,6 +54,7 @@ describe('composition template authoring', () => {
     await user.click(screen.getByRole('button', { name: '저장' }))
     await screen.findByText('저장했어요')
     expect(writes).toHaveLength(1)
+    expect(writes[0]).not.toHaveProperty('copyStyles')
     expect(writes[0].compositionBody).toBe(edited)
   })
 
@@ -85,11 +84,14 @@ describe('composition template authoring', () => {
     const edited = ((await source()) as HTMLTextAreaElement).value
     const doc = parseClipComposition(edited)
     expect(doc.fields[0]).toMatchObject({ id: 'place', label: '촬영 장소', required: true })
-    expect(edited).toContain(`<clip version='1' styles='clean memo' pace='steady'>`)
+    expect(edited).toContain(
+      '<clip version=\'1\' intro="b" caption="bold" outro="e" pace=\'steady\'>',
+    )
     expect(edited).toContain('>  🌿 A &amp; B  </text>')
     await user.click(screen.getByRole('button', { name: '저장' }))
     await screen.findByText('저장했어요')
     expect(writes).toHaveLength(1)
+    expect(writes[0]).not.toHaveProperty('copyStyles')
     expect(writes[0].compositionBody).toBe(edited)
   })
   it('preserves malformed pasted source, rejects save and recovers after correction', async () => {
@@ -142,12 +144,13 @@ describe('composition template authoring', () => {
       writes: ClipRecipe[] = []
     const { router } = mount({ writes }, '/video-templates/new')
     await user.type(await screen.findByLabelText('템플릿 이름'), '새 구성')
-    expect(screen.getByRole('checkbox', { name: '크게 강조' })).toBeInTheDocument()
+    expect(screen.queryByLabelText(/스타일|style/i)).not.toBeInTheDocument()
     await user.dblClick(screen.getByRole('button', { name: '저장' }))
     await waitFor(() =>
       expect(router.state.location.pathname).toBe('/video-templates/video-template-1'),
     )
     expect(writes).toHaveLength(1)
+    expect(writes[0]).not.toHaveProperty('copyStyles')
     expect(parseClipComposition(writes[0].compositionBody!).design).toEqual({
       intro: 'b',
       caption: 'bold',
@@ -166,7 +169,7 @@ describe('composition template authoring', () => {
     expect(await source()).toHaveValue(body)
     expect(calls).not.toContain('UpdateVideoTemplate')
   })
-  it('edits repeated item scenes and card rows through supported controls', async () => {
+  it('edits repeated item scenes and text rows through supported controls', async () => {
     const user = userEvent.setup()
     mount({ templates: [{ ...template, compositionBody: CLIP_COMPOSITION_EXAMPLE }] })
     await user.click(await screen.findByRole('button', { name: /반복 구성/ }))
@@ -177,15 +180,14 @@ describe('composition template authoring', () => {
       repeated.sections.every((section) => section.scope === 'item' && section.repeat === 'menu'),
     ).toBe(true)
     await user.click(screen.getByRole('tab', { name: '구성 편집' }))
-    await user.click(screen.getByRole('button', { name: '엔딩 카드' }))
-    await user.click(screen.getByRole('combobox', { name: /^화면 위치/ }))
-    await user.click(screen.getByRole('option', { name: '아래쪽' }))
-    await user.click(screen.getByRole('button', { name: '카드 행 추가' }))
+    await user.click(screen.getByRole('button', { name: '아웃트로' }))
+    fireEvent.change(screen.getByRole('textbox', { name: '시작 (초)' }), {
+      target: { value: '-4' },
+    })
     const changed = parseClipComposition(((await source()) as HTMLTextAreaElement).value)
     const ending = changed.elements.find((element) => element.id === 'closing')!
-    expect(ending.position).toBe('bottom')
     expect(ending.rows).toHaveLength(3)
     expect(ending.basis).toBe('output-end')
-    expect(ending.startMs).toBe(-3000)
+    expect(ending.startMs).toBe(-4000)
   })
 })

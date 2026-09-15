@@ -1,5 +1,5 @@
 import { CLIP_COMPOSITION_LIMITS, CLIP_RAPID, CLIP_TIMELINE } from '@/shared/config'
-import { COPY_STYLES, CLIP_ACCENTS } from '@/entities/clip-template/@x/clip-project'
+import { CLIP_ACCENTS } from '@/entities/clip-template/@x/clip-project'
 import {
   copyClipPlan,
   editClipPlan,
@@ -81,7 +81,7 @@ export function textInterval(plan: ClipEditPlan, text: ClipEditableText) {
   return { startMs, endMs, valid, cutOffsetMs: cut?.startMs ?? 0 }
 }
 
-export function nativeTextErrors(plan: ClipEditPlan, state: ClipEditingState) {
+export function nativeTextErrors(plan: ClipEditPlan) {
   return (plan.elements ?? []).map((text) => {
     const interval = textInterval(plan, text)
     const phrases = text.phrases ?? []
@@ -95,10 +95,6 @@ export function nativeTextErrors(plan: ClipEditPlan, state: ClipEditingState) {
       text:
         length(text.text) > CLIP_COMPOSITION_LIMITS.copyChars ||
         text.rows.some((r) => length(r.text) > CLIP_COMPOSITION_LIMITS.copyChars),
-      style:
-        text.style !== 'auto' &&
-        (!COPY_STYLES.some((s) => s === text.style) ||
-          !state.copyStyles.some((s) => s === text.style)),
       position: !['auto', 'header', 'top', 'upper_mid', 'lower_mid', 'bottom', 'center'].includes(
         text.position,
       ),
@@ -165,7 +161,7 @@ export function validateTimelinePlan(
     chips: false,
     copies: [],
   }))
-  const elements = nativeTextErrors(plan, state)
+  const elements = nativeTextErrors(plan)
   const geometry = timelineCuts(plan)
   const invalidSeam = geometry.some(
     ({ cut, startMs, endMs }, i) =>

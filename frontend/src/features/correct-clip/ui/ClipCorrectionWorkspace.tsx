@@ -565,7 +565,6 @@ export function ClipCorrectionWorkspace({
             text={text}
             notices={notices}
             language={language}
-            styles={state.copyStyles}
             change={change}
             invalid={
               !!correction.validation?.elements.some(

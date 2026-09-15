@@ -9,6 +9,13 @@ type Inspection = NonNullable<ClipProject['attemptInspection']>
 type Candidate = Inspection['ranges'][number]
 
 const checkExplanations = {
+  composition_invalid_design: 'composition.errors.invalid_design',
+  composition_invalid_skeleton: 'composition.errors.invalid_skeleton',
+  composition_unknown_attribute: 'composition.errors.unknown_attribute',
+  intro_slot_shortened: 'notices.introSlotShortened',
+  outro_slot_shortened: 'notices.outroSlotShortened',
+  intro_slot_omitted: 'notices.introSlotOmitted',
+  outro_slot_omitted: 'notices.outroSlotOmitted',
   input_prompt_limit: 'inspection.inputTooLarge',
   input_settings: 'inspection.inputInvalid',
   input_sources: 'inspection.inputInvalid',

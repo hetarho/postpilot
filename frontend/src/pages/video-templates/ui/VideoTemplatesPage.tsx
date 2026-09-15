@@ -125,8 +125,6 @@ function TemplateRow({ ownerId, template }: { ownerId: string; template: ClipTem
       </Link>
       <Typography variant="meta" as="span" className="min-w-0 flex-1 truncate">
         {t('directory.fields', { count: template.informationFields.length })}
-        {template.copyStyles.length > 0 &&
-          ` · ${template.copyStyles.map((style) => t(`style.${style}`)).join(' · ')}`}
       </Typography>
       <div className="relative ml-auto flex shrink-0 items-center gap-2">
         <Badge tone="neutral">

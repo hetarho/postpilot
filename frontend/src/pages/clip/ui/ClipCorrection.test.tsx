@@ -59,7 +59,7 @@ async function mount(clips: FakeClipsOptions = {}, jobs: FakeJobsOptions = {}) {
           name: '여행',
           informationFields: [],
           cutGuidance: '',
-          copyStyles: ['bold'],
+
           accent: '',
           preset: 'restaurant',
         },
@@ -250,7 +250,12 @@ it('links multiple observed ranges to one item without changing prices or observ
   const p = fixture(),
     source = p.editing!.sources[0]
   p.composition = {
-    snapshot: { version: 1, body: '<clip version="1"/>', templateId: 'template', legacy: false },
+    snapshot: {
+      version: 1,
+      body: '<clip version="1" intro="b" caption="bold" outro="e"/>',
+      templateId: 'template',
+      legacy: false,
+    },
     inputs: {
       values: {},
       items: {

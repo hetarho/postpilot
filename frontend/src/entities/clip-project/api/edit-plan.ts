@@ -128,7 +128,7 @@ export function toClipEditingState(value: ProtoClipEditingState): ClipEditingSta
           ? [...s.allowedRatePermille]
           : CLIP_RATES.filter((rate) => rate >= CLIP_PLAYBACK.unit_permille),
     })),
-    copyStyles: ['bold'],
+
     fadeMs: value.fadeMs,
     maxCuts: value.maxCuts,
     maxCopyRunes: value.maxCopyRunes,

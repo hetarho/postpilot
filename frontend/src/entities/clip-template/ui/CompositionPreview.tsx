@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next'
 import {
   CLIP_COMPOSITION_LIMITS,
   CLIP_COMPOSITION_PREVIEW,
-  CLIP_DESIGN,
   type ClipRatioId,
 } from '@/shared/config'
 import { Slider, Typography } from '@/shared/ui'
@@ -14,6 +13,7 @@ import {
 } from '../model/composition'
 import { sampleClipComposition } from '../lib/composition-sample'
 import { CompositionSelect } from './CompositionFields'
+import { CompositionDesignFrame } from './CompositionDesignFrame'
 
 export function CompositionPreview({ document }: { document: ClipComposition }) {
   const { t } = useTranslation('clips')
@@ -29,7 +29,6 @@ export function CompositionPreview({ document }: { document: ClipComposition }) 
     if (e instanceof CompositionProblem) error = e
     else throw e
   }
-  const shape = CLIP_DESIGN.ratios[ratio]
   const active = timeline?.elements.filter((e) => e.startMs <= time && time < e.endMs) ?? []
   return (
     <section className="min-w-0 space-y-4" aria-label={t('composition.preview')}>
@@ -75,40 +74,13 @@ export function CompositionPreview({ document }: { document: ClipComposition }) 
         </Typography>
       ) : (
         <>
-          <svg
-            viewBox={`0 0 ${shape.canvas.width} ${shape.canvas.height}`}
-            className="mx-auto max-h-80 w-full"
-            role="img"
-            aria-label={t('composition.sampleFrame')}
-          >
-            <rect
-              width={shape.canvas.width}
-              height={shape.canvas.height}
-              className="fill-surface-recessed"
-            />
-            <rect {...shape.safe} className="fill-surface-raised" />
-            <text
-              x={shape.canvas.width / 2}
-              y={shape.canvas.height / 2}
-              textAnchor="middle"
-              fontSize={CLIP_DESIGN.type.caption.size}
-              className="fill-content-secondary"
-            >
-              {t('composition.sampleOnly')}
-            </text>
-            {active.map((entry, i) => (
-              <text
-                key={entry.instanceId}
-                x={shape.anchor.center}
-                y={shape.anchor.top + (i + 1) * CLIP_DESIGN.type.caption.size}
-                textAnchor="middle"
-                fontSize={CLIP_DESIGN.type.caption.size}
-                className="fill-content-primary"
-              >
-                {t(`composition.role.${entry.element.role}`)}
-              </text>
-            ))}
-          </svg>
+          <CompositionDesignFrame
+            document={document}
+            entries={active}
+            ratio={ratio}
+            label={t('composition.sampleFrame')}
+            sampleAI={t('composition.sampleShortAI')}
+          />
           <ul className="space-y-2">
             {active.map((entry) => (
               <li key={entry.instanceId} className="break-words">

@@ -5,6 +5,7 @@ import { ClipService, type ProtoVideoTemplate } from '@/shared/api'
 import {
   CLIP_ACCENTS,
   normalizeRecipe,
+  recipeOf,
   type ClipTemplate,
   type ClipRecipe,
   type ClipAccent,
@@ -29,7 +30,7 @@ export function toClipTemplate(value: ProtoVideoTemplate): ClipTemplate {
     name: value.name,
     cutGuidance: value.cutGuidance,
     informationFields: value.informationFields.map((f) => ({ label: f.label, prompt: f.prompt })),
-    copyStyles: ['bold'],
+
     accent: value.accent as ClipAccent,
     // Retained only for reading and converting legacy recipes.
     preset: value.preset as ClipRecipe['preset'],
@@ -66,7 +67,7 @@ export function useClipTemplateMutations(ownerId: string) {
   const save = useMutation({
     mutationFn: async ({ id, recipe }: { id?: string; recipe: ClipRecipe }) => {
       const { compositionBody, compositionLegacy, ...recipeFields } = normalizeRecipe(recipe)
-      const fields = { ...recipeFields, captionPace: recipe.captionPace ?? 'steady' }
+      const fields = { ...recipeOf(recipeFields), captionPace: recipe.captionPace ?? 'steady' }
       const authored = compositionBody !== undefined && !compositionLegacy
       const response = authored
         ? id
@@ -77,7 +78,6 @@ export function useClipTemplateMutations(ownerId: string) {
               id,
               ...fields,
               informationFields: { values: fields.informationFields },
-              copyStyles: { values: fields.copyStyles },
             })
           : await client.createVideoTemplate(fields)
       if (!response.template?.id) throw new Error('Missing saved video template')

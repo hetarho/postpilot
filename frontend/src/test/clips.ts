@@ -181,14 +181,14 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     const escape = (v: string) =>
       v.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('"', '&quot;')
     return (
-      `<clip version="1" styles="${row.copyStyles.join(' ')}" pace="${row.captionPace ?? 'steady'}">` +
+      `<clip version="1" intro="b" caption="bold" outro="e" pace="${row.captionPace ?? 'steady'}">` +
       row.informationFields
         .map(
           (f, i) =>
             `<field id="legacy_field_${i}" label="${escape(f.label)}" required="true">${escape(f.prompt)}</field>`,
         )
         .join('') +
-      `<guide>${escape(row.cutGuidance)}</guide><scene id="legacy-scene" scope="scene"><text id="legacy-caption" kind="ai" role="caption" basis="cut">Describe the selected scene.</text></scene></clip>`
+      `<guide>${escape(row.cutGuidance)}</guide><scene id="legacy-scene" scope="scene"><text id="legacy-caption" kind="ai" role="caption" basis="cut">Describe the selected scene.</text></scene><text id="intro" kind="fixed" role="hook" basis="output-start"/><text id="outro" kind="fixed" role="ending" basis="output-end"/></clip>`
     )
   }
   const toProto = (row: FakeClipTemplate) =>
@@ -223,7 +223,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       compositionLegacy: false,
       cutGuidance: req.cutGuidance,
       informationFields: req.informationFields.map(({ label, prompt }) => ({ label, prompt })),
-      copyStyles: req.copyStyles as ClipRecipe['copyStyles'],
+
       accent: req.accent as ClipRecipe['accent'],
       preset: req.preset as ClipRecipe['preset'],
       captionPace: (req.captionPace || 'steady') as ClipRecipe['captionPace'],
@@ -248,7 +248,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
         label,
         prompt,
       }))
-    if (req.copyStyles) row.copyStyles = req.copyStyles.values as ClipRecipe['copyStyles']
+
     if (req.accent !== undefined) row.accent = req.accent as ClipRecipe['accent']
     if (req.preset !== undefined) row.preset = req.preset as ClipRecipe['preset']
     if (req.captionPace !== undefined)

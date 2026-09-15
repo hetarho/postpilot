@@ -6,10 +6,7 @@ export {
 } from './api/clip-template'
 export {
   CLIP_TEMPLATE_LIMITS,
-  COPY_STYLES,
   CLIP_ACCENTS,
-  copyStyleMeasurements,
-  PLATED_COPY_STYLES,
   CLIP_PRESETS_LIST,
   emptyClipRecipe,
   normalizeRecipe,
@@ -20,11 +17,9 @@ export type {
   ClipTemplate,
   ClipRecipe,
   InformationField,
-  CopyStyle,
   ClipAccent,
   FieldError,
 } from './model/types'
-export { CopyStylePreview } from './ui/CopyStylePreview'
 export { CompositionBuilder } from './ui/CompositionBuilder'
 export { CompositionPreview } from './ui/CompositionPreview'
 export { EMPTY_CLIP_COMPOSITION } from './lib/composition-author'

@@ -393,7 +393,6 @@ export const GUIDELINE_TEXT_MAX_CHARS = positiveIntEnv(
  *  copied. See shared/config/clip-design.ts. */
 export {
   CLIP_DESIGN,
-  CLIP_STYLES,
   CLIP_REGIONS,
   CLIP_RULES,
   clipRegion,
@@ -416,7 +415,6 @@ export {
   clipPaint,
 } from './clip-design'
 export type {
-  ClipStyleId,
   ClipCaptionPace,
   ClipRatioId,
   ClipPresetId,

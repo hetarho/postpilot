@@ -1,14 +1,5 @@
 import { parseClipComposition } from '../lib/composition-parse'
-import {
-  CLIP_PRESETS,
-  CLIP_SPACING,
-  CLIP_STYLES,
-  clipCaption,
-  CLIP_TYPE,
-  type ClipPresetId,
-  type ClipStyleId,
-  type ClipCaptionPace,
-} from '@/shared/config'
+import { CLIP_PRESETS, type ClipPresetId, type ClipCaptionPace } from '@/shared/config'
 
 export const CLIP_TEMPLATE_LIMITS = {
   name: 40,
@@ -20,8 +11,6 @@ export const CLIP_TEMPLATE_LIMITS = {
 
 /** The CDS copy styles and five category presets — both
  *  read from the design system rather than listed again here. */
-export const COPY_STYLES = CLIP_STYLES
-export type CopyStyle = ClipStyleId
 export const CLIP_PRESETS_LIST = CLIP_PRESETS
 export type ClipPreset = ClipPresetId
 export const CLIP_ACCENTS = [
@@ -46,7 +35,7 @@ export interface ClipRecipe {
   name: string
   informationFields: InformationField[]
   cutGuidance: string
-  copyStyles: CopyStyle[]
+
   accent: ClipAccent
   /** One of the five category presets. Empty is only ever a template written
    *  before presets existed; a save must name one (CDS-50). */
@@ -59,43 +48,12 @@ export interface ClipTemplate extends ClipRecipe {
   updatedAt: string
 }
 
-/** What the preview needs to draw a style, taken from the design system: the
- *  renderer reads the same bytes, so a preview cannot drift from a render. */
-export function copyStyleMeasurements() {
-  const rule = clipCaption()
-  const role = CLIP_TYPE.title
-  return {
-    fontSize: role.size,
-    minFontSize: role.min,
-    weight: role.weight,
-    tracking: role.tracking,
-    padding: rule.padding,
-    padLeft: rule.pad_left,
-    radius: 0,
-    plate: rule.plate,
-    bar: rule.bar,
-    dot: rule.dot,
-    stroke: CLIP_SPACING.stroke_text,
-    shadow: rule.shadow !== '',
-    highlight: rule.highlight,
-    lines: rule.lines,
-    chars: rule.chars,
-    anchor: rule.anchor,
-    align: rule.align,
-  }
-}
-
-/** An unplated style paints its text with a stroke instead of a box (CDS-25, CDS-26). */
-export const PLATED_COPY_STYLES: readonly CopyStyle[] = COPY_STYLES.filter(
-  () => clipCaption().plate !== '',
-)
-
 export function emptyClipRecipe(): ClipRecipe {
   return {
     name: '',
     informationFields: [],
     cutGuidance: '',
-    copyStyles: ['bold'],
+
     accent: '',
     preset: '',
   }
@@ -121,7 +79,7 @@ export function recipeOf(value: ClipRecipe): ClipRecipe {
     name: value.name,
     informationFields: value.informationFields.map((f) => ({ ...f })),
     cutGuidance: value.cutGuidance,
-    copyStyles: ['bold'],
+
     accent: value.accent,
     preset: value.preset,
     ...(value.captionPace ? { captionPace: value.captionPace } : {}),
@@ -146,7 +104,6 @@ export function validateClipRecipe(value: ClipRecipe) {
       guidance: undefined,
       fields: [],
       fieldCount: false,
-      styles: false,
       accent: false,
       pace: false,
       preset: false,
@@ -166,12 +123,6 @@ export function validateClipRecipe(value: ClipRecipe) {
     guidance: textError(recipe.cutGuidance, CLIP_TEMPLATE_LIMITS.guidance, false),
     fields,
     fieldCount: recipe.informationFields.length > CLIP_TEMPLATE_LIMITS.fields,
-    styles:
-      recipe.copyStyles.length === 0 ||
-      // The fixed caption treatment is the only authorable value.
-      !recipe.copyStyles.includes('bold') ||
-      new Set(recipe.copyStyles).size !== recipe.copyStyles.length ||
-      recipe.copyStyles.some((v) => !COPY_STYLES.includes(v)),
     accent: !CLIP_ACCENTS.includes(recipe.accent),
     pace: recipe.captionPace !== undefined && !['steady', 'rapid'].includes(recipe.captionPace),
     // A template names its category, which fixes chip priority, CTA and accent.
@@ -183,7 +134,6 @@ export function validateClipRecipe(value: ClipRecipe) {
       !errors.name &&
       !errors.guidance &&
       !errors.fieldCount &&
-      !errors.styles &&
       !errors.accent &&
       !errors.pace &&
       !errors.preset &&

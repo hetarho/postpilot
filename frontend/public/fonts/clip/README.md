@@ -1,7 +1,7 @@
-# Caption preview font
+# Clip preview fonts
 
-Pretendard Variable 1.3.9, unchanged from `backend/assets/fonts/pretendard/`.
-The SIL Open Font License 1.1 is included as `LICENSE`.
+- Pretendard Variable 1.3.9: unchanged from `backend/assets/fonts/pretendard/`, license `LICENSE`.
+- Paperlogy ExtraBold: unchanged from `backend/assets/fonts/paperlogy/`, license `LICENSE-Paperlogy`.
 
-This face is self-hosted and requested only by the lightweight caption preview.
-Rendering uses the same original font with system-font discovery disabled.
+The SVG preview loads these same bundled faces and measures their glyph bounds
+before placing information, captions and preset slots. Export disables system-font discovery.

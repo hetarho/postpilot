@@ -92,7 +92,7 @@ export function clipEditingFixture(): ClipEditingState {
       // 30 fps footage: every rate including the two slow ones is reachable.
       allowedRatePermille: [500, 750, 1000, 1250, 1500, 2000],
     })),
-    copyStyles: ['bold'],
+
     fadeMs: 200,
     maxCuts: 100,
     maxCopyRunes: 500,

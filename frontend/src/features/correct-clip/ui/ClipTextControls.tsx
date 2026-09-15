@@ -9,7 +9,7 @@ import {
   type ClipEditableText,
   type TimelineEdit,
 } from '@/entities/clip-project'
-import { CLIP_ACCENTS, type CopyStyle } from '@/entities/clip-template'
+import { CLIP_ACCENTS } from '@/entities/clip-template'
 import { CLIP_RAPID } from '@/shared/config'
 import {
   Button,
@@ -25,7 +25,6 @@ import { ClipTimeField } from './ClipTimeField'
 export function ClipTextControls({
   plan,
   text,
-  styles,
   change,
   invalid,
   notices = [],
@@ -35,7 +34,6 @@ export function ClipTextControls({
   language?: 'ko' | 'en'
   plan: ClipEditPlan
   text: ClipEditableText
-  styles: readonly CopyStyle[]
   change: (edit: TimelineEdit, group?: string) => void
   invalid: boolean
 }) {
@@ -162,20 +160,6 @@ export function ClipTextControls({
       )}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
-          <FieldLabel id="clip-text-style-label">{t('editor.styles')}</FieldLabel>
-          <Listbox
-            aria-labelledby="clip-text-style-label"
-            value={text.style}
-            options={(['auto', ...(text.role === 'caption' ? styles : [])] as const).map(
-              (value) => ({
-                value,
-                label: value === 'auto' ? t('timeline.auto') : t(`style.${value}`),
-              }),
-            )}
-            onChange={(style) => patch({ style })}
-          />
-        </div>
-        <div>
           <FieldLabel id="clip-text-position-label">{t('correction.position')}</FieldLabel>
           <Listbox
             aria-labelledby="clip-text-position-label"
@@ -198,27 +182,34 @@ export function ClipTextControls({
             onChange={(align) => patch({ align })}
           />
         </div>
-        <div>
-          <FieldLabel id="clip-text-accent-label">{t('editor.accent')}</FieldLabel>
-          <Listbox
-            aria-labelledby="clip-text-accent-label"
-            value={text.accent}
-            options={CLIP_ACCENTS.map((value) => ({
-              value,
-              label: t(`accent.${value || 'none'}`),
-            }))}
-            onChange={(accent) => patch({ accent })}
-          />
-        </div>
+        {text.role === 'caption' && (
+          <div>
+            <FieldLabel id="clip-text-accent-label">{t('editor.accent')}</FieldLabel>
+            <Listbox
+              aria-labelledby="clip-text-accent-label"
+              value={text.accent}
+              options={CLIP_ACCENTS.map((value) => ({
+                value,
+                label: t(`accent.${value || 'none'}`),
+              }))}
+              onChange={(accent) => patch({ accent })}
+            />
+          </div>
+        )}
       </div>
-      <div>
-        <FieldLabel htmlFor="clip-text-keyword">{t('correction.keyword')}</FieldLabel>
-        <TextField
-          id="clip-text-keyword"
-          value={text.keyword}
-          onChange={(e) => patch({ keyword: e.target.value }, 'keyword')}
-        />
-      </div>
+      {text.role === 'caption' && (
+        <>
+          <Typography variant="meta">{t('editor.accentHelp')}</Typography>
+          <div>
+            <FieldLabel htmlFor="clip-text-keyword">{t('correction.keyword')}</FieldLabel>
+            <TextField
+              id="clip-text-keyword"
+              value={text.keyword}
+              onChange={(e) => patch({ keyword: e.target.value }, 'keyword')}
+            />
+          </div>
+        </>
+      )}
       {text.role === 'caption' && (
         <div className="space-y-3">
           <FieldLabel id="clip-text-pace-label">{t('pace.label')}</FieldLabel>

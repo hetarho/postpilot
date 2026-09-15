@@ -8,13 +8,11 @@ import design from './clip-design.json'
 
 export const CLIP_DESIGN = design
 
-export type ClipStyleId = 'bold'
 export type ClipRatioId = 'vertical' | 'horizontal' | 'square'
 export type ClipPresetId = keyof typeof design.presets
 export type ClipDisclosureId = keyof typeof design.disclosure
 export type ClipCTAId = keyof typeof design.cta
 
-export const CLIP_STYLES = Object.keys(design.regions.caption) as ClipStyleId[]
 export const CLIP_PRESETS = Object.keys(design.presets) as ClipPresetId[]
 export const CLIP_DISCLOSURES = Object.keys(design.disclosure) as ClipDisclosureId[]
 export const CLIP_CTAS = Object.keys(design.cta) as ClipCTAId[]

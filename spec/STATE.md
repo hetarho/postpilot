@@ -47,15 +47,18 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T110 | Release QA on the Naver app and the overlay measurement | CDS CLIP | T108 | blocked@260912 |
-| T171 | Remove the style controls and draw the presets in the previews | CLIP CDS | T166 T167 T168 T169 | doing@260915.dsg |
-| T172 | Author templates design first with fixed intro and outro skeletons | CLIP CDS | T169 T171 | todo |
+| T172 | Author templates design first with fixed intro and outro skeletons | CLIP CDS | T169 T171 | doing@260915.dsg |
 
 ## next
-- Finish T171 (dsg); T166–T170 and T173 are complete.
-- Continue with T171 and T172, one commit per task.
+- Finish T172 (dsg); T166–T171 and T173 are complete.
+- Finish the design-first editor verification and commit T172 separately.
 - T110 stays owner-blocked and T008 owner-dependent.
 
 ## log
+- 260915 T171 done; canvas font metadata now passes the style scanner, browser check and final build
+- 260915 T171 reopened (dsg); final style scanner flags canvas attribute reads, fix before committing T172
+- 260915 T171 done; style controls removed, preset previews and all corrected frontend regression gates pass
+- 260915 T172 claimed (dsg); T171 implementation is frozen for verification
 - 260915 T173 done; grounded single-line slot repair, owner notices and backend/frontend gates pass
 - 260915 T171 claimed (dsg); T173 implementation is frozen for verification
 - 260915 T168 done; unplated information, fixed disclosure height and sampled contrast notices verified
@@ -72,7 +75,3 @@
 - 260915 create-task CDS CLIP done; T166 T167 T168 T169 T171 refreshed to CDS@16 CLIP@23 and T172 T173 added from the r16/r23 delta; T170 base only
 - 260915 create-task CDS CLIP start
 - 260915 update-ssot CDS r16 CLIP r23 done; intro A|B and outro B|E presets chosen per template, outro E label lifted, score tracked wider and its bar white, accent confined to the caption word, badge 36/800 pad 16/28, design-first template authoring with fixed intro/outro skeletons
-- 260915 warn: T166 T167 T168 T169 T171 (todo, base CDS@15 CLIP@22) sit inside the r16/r23 delta and must be refreshed by create-task before implementation; T170 is untouched
-- 260915 update-ssot CDS CLIP start
-- 260915 create-task CDS CLIP done; T166 T167 T168 T169 T170 T171 from the r15/r22 delta
-- 260915 T165 done

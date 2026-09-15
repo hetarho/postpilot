@@ -170,7 +170,7 @@ it('accepts muted/full source audio and refuses a non-approved style', () => {
   const state = clipEditingFixture()
   state.plan.cuts[0]!.volumePermille = 0
   expect(validateClipPlan(state.plan, state).valid).toBe(true)
-  state.copyStyles = ['bold']
+
   state.plan.cuts[0]!.copies[0]!.style = 'unknown' as ClipCaption['style']
   expect(validateClipPlan(state.plan, state).cuts[0]!.copies[0]!.style).toBe(true)
 })
@@ -379,7 +379,6 @@ it('carries the rate and the owner audio snapshot across the wire unchanged', ()
       },
     },
     sources: state.sources,
-    copyStyles: state.copyStyles,
   })
   const back = toClipEditingState(wire)
   expect(back.plan.cuts.map((c) => c.playbackRatePermille)).toEqual([1000, 1000])
@@ -397,7 +396,6 @@ it('carries the rate and the owner audio snapshot across the wire unchanged', ()
       })),
     },
     sources: state.sources.map((s) => ({ ...s, allowedRatePermille: [] })),
-    copyStyles: state.copyStyles,
   })
   const old = toClipEditingState(legacy)
   expect(old.plan.cuts.map((c) => c.playbackRatePermille)).toEqual([1000, 1000])
@@ -431,7 +429,6 @@ it('sends creation provenance only for an id the saved plan does not contain', (
     create(ClipEditingStateSchema, {
       plan: clipPlanToProto(state.plan),
       sources: state.sources,
-      copyStyles: state.copyStyles,
     }),
   )
   expect(back.plan.cuts.every((c) => c.creation === undefined)).toBe(true)

@@ -82,17 +82,23 @@ describe('output preview geometry and timing', () => {
   })
   it('keeps output-level elements in every selected and next cut page', () => {
     const elements = [
-      { instanceId: 'global', cutId: '' },
+      { instanceId: 'intro', role: 'hook', cutId: '' },
+      { instanceId: 'outro', role: 'ending', cutId: '' },
       { instanceId: 'a-copy', cutId: 'a' },
       { instanceId: 'b-copy', cutId: 'b' },
     ] as NonNullable<ClipEditPlan['elements']>
     const draft = { ...plan, elements }
     expect(previewElementIDs(draft, previewTimeline(draft), 0)).toEqual([
-      'global',
+      'intro',
+      'outro',
       'a-copy',
       'b-copy',
     ])
-    expect(previewElementIDs(draft, previewTimeline(draft), 12000)).toEqual(['global', 'b-copy'])
+    expect(previewElementIDs(draft, previewTimeline(draft), 12000)).toEqual([
+      'intro',
+      'outro',
+      'b-copy',
+    ])
   })
   it.each([
     [1080, 1920],
