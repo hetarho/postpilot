@@ -18,3 +18,9 @@ backend/data/
 .vscode/
 .idea/
 .DS_Store
+
+# Clip preview generator output (the generators themselves are tracked)
+tmp/gallery/*.svg
+tmp/gallery/*.png
+tmp/gallery/*.ttf
+tmp/gallery/index.html

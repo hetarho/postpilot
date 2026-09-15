@@ -1,0 +1,250 @@
+package media
+
+import (
+	"context"
+	"fmt"
+	"html"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strconv"
+	"strings"
+	"testing"
+
+	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/clip/design"
+	"golang.org/x/image/font"
+	"golang.org/x/image/font/sfnt"
+	"golang.org/x/image/math/fixed"
+)
+
+// TEMPORARY preview generator. Not part of the suite: it writes a static HTML
+// gallery of the real render SVGs over the flat green fixture so the design can
+// be reviewed without Docker.
+func loadFace(t *testing.T, rel string) *sfnt.Font {
+	t.Helper()
+	path, err := filepath.Abs(rel)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f, err := sfnt.Parse(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return f
+}
+
+var attrRE = regexp.MustCompile(`([a-z-]+)="([^"]*)"`)
+
+// inkBox walks the string with the bundled face's own advances and glyph boxes,
+// which is what resvg reports back from --query-all.
+func inkBox(f *sfnt.Font, text string, tracking float64) (x, top, w, h float64) {
+	var b sfnt.Buffer
+	ppem := fixed.I(100)
+	pen := 0.0
+	minX, minY, maxX, maxY := 1e9, 1e9, -1e9, -1e9
+	for _, r := range text {
+		idx, err := f.GlyphIndex(&b, r)
+		if err != nil || idx == 0 {
+			pen += 50 + tracking
+			continue
+		}
+		bounds, advance, err := f.GlyphBounds(&b, idx, ppem, font.HintingNone)
+		if err != nil {
+			pen += 50 + tracking
+			continue
+		}
+		x0, y0 := pen+float64(bounds.Min.X)/64, float64(bounds.Min.Y)/64
+		x1, y1 := pen+float64(bounds.Max.X)/64, float64(bounds.Max.Y)/64
+		if x1 > x0 {
+			minX, maxX = min(minX, x0), max(maxX, x1)
+			minY, maxY = min(minY, y0), max(maxY, y1)
+		}
+		pen += float64(advance)/64 + tracking
+	}
+	if maxX <= minX {
+		return 0, -70, 1, 1
+	}
+	return minX, minY, maxX - minX, maxY - minY
+}
+
+func galleryRenderer(t *testing.T) (*Adapter, *Rendering) {
+	t.Helper()
+	pretendard := loadFace(t, "../../../assets/fonts/pretendard/PretendardVariable.ttf")
+	paperlogy := loadFace(t, "../../../assets/fonts/paperlogy/Paperlogy-8ExtraBold.ttf")
+	a := newAdapter(t, &fakeRunner{run: func(_ context.Context, c Command) ([]byte, error) {
+		data, err := os.ReadFile(c.Args[len(c.Args)-1])
+		if err != nil {
+			return nil, err
+		}
+		out := ""
+		for i, part := range strings.Split(string(data), `id="m`)[1:] {
+			head := part[:strings.Index(part, ">")]
+			raw := part[strings.Index(part, ">")+1 : strings.Index(part, "</text>")]
+			text := html.UnescapeString(raw)
+			family, tracking := "", 0.0
+			for _, m := range attrRE.FindAllStringSubmatch(head, -1) {
+				switch m[1] {
+				case "font-family":
+					family = m[2]
+				case "letter-spacing":
+					tracking, _ = strconv.ParseFloat(m[2], 64)
+				}
+			}
+			face := pretendard
+			if family == design.FontFamily("paperlogy") {
+				face = paperlogy
+			}
+			x, top, w, h := inkBox(face, text, tracking)
+			out += fmt.Sprintf("m%d,%.3f,%.3f,%.3f,%.3f\n", i, x, 200+top, w, h)
+		}
+		return []byte(out), nil
+	}})
+	return a, testRenderer(t, a)
+}
+
+// Each layer keeps its own filter and gradient ids once they share one document.
+var idRE = regexp.MustCompile(`(id="|url\(#)(shadow|scrim)`)
+
+func TestWriteGreenGallery(t *testing.T) {
+	if os.Getenv("CLIP_PREVIEW_GALLERY") != "1" {
+		t.Skip("temporary preview generator")
+	}
+	out := "../../../../tmp/gallery"
+	if err := os.MkdirAll(out, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	type scene struct {
+		name, ratio, body string
+		frames            []int
+	}
+	intro := func(id string) string {
+		return `<text id="intro" kind="fixed" role="hook" basis="output-start" start="0" end="3"><row>연남 김밥</row><row>직접 다녀온 기록</row></text>`
+	}
+	_ = intro
+	scenes := []scene{
+		{name: "vertical-intro-a", ratio: "vertical", frames: []int{1500, 6000, 10000, 13500},
+			body: `<clip version="1" intro="a" caption="bold" outro="b">` +
+				`<text id="badge" kind="fixed" role="badge" position="header" basis="whole">광고</text>` +
+				`<text id="intro" kind="fixed" role="hook" basis="output-start" start="0" end="3"><row>연남 김밥</row><row>직접 다녀온 기록</row></text>` +
+				`<text id="info" kind="fixed" role="info" position="bottom" basis="output-start" start="4" end="8"><row role="label">가격</row><row role="caption">9,900원</row></text>` +
+				`<text id="copy" kind="fixed" role="caption" position="upper_mid" basis="output-start" start="9" end="12">겉은 바삭했어요</text>` +
+				`<text id="outro" kind="fixed" role="ending" basis="output-end" start="-3" end="0"><row>다시 만나자</row><row>오늘의 기록을 남겨요</row></text>` +
+				`</clip>`},
+		{name: "vertical-intro-b", ratio: "vertical", frames: []int{1500, 6000, 10000, 13500},
+			body: `<clip version="1" intro="b" caption="bold" outro="e">` +
+				`<text id="badge" kind="fixed" role="badge" position="header" basis="whole">제품 제공</text>` +
+				`<text id="intro" kind="fixed" role="hook" basis="output-start" start="0" end="3"><row>오늘의 장면</row><row>직접 남긴 기록</row></text>` +
+				`<text id="info" kind="fixed" role="info" position="bottom" basis="output-start" start="4" end="8"><row role="label">메뉴</row><row role="caption">철판 김치볶음밥</row></text>` +
+				`<text id="copy" kind="fixed" role="caption" position="upper_mid" basis="output-start" start="9" end="12">국물이 진하고 깔끔해요</text>` +
+				`<text id="outro" kind="fixed" role="ending" basis="output-end" start="-3" end="0"><row>오늘의 점수</row><row>9.5</row><row>다시 보고 싶은 장면</row></text>` +
+				`</clip>`},
+		{name: "square", ratio: "square", frames: []int{1500, 6000, 10000, 13500},
+			body: `<clip version="1" intro="a" caption="bold" outro="e">` +
+				`<text id="badge" kind="fixed" role="badge" position="header" basis="whole">광고</text>` +
+				`<text id="intro" kind="fixed" role="hook" basis="output-start" start="0" end="3"><row>연남 김밥</row><row>직접 다녀온 기록</row></text>` +
+				`<text id="info" kind="fixed" role="info" position="bottom" basis="output-start" start="4" end="8"><row role="label">위치</row><row role="caption">서울 연남동</row></text>` +
+				`<text id="copy" kind="fixed" role="caption" position="upper_mid" basis="output-start" start="9" end="12">1인분 9,900원</text>` +
+				`<text id="outro" kind="fixed" role="ending" basis="output-end" start="-3" end="0"><row>오늘의 점수</row><row>9.5</row><row>다시 보고 싶은 장면</row></text>` +
+				`</clip>`},
+		{name: "horizontal", ratio: "horizontal", frames: []int{1500, 6000, 10000, 13500},
+			body: `<clip version="1" intro="b" caption="bold" outro="b">` +
+				`<text id="badge" kind="fixed" role="badge" position="header" basis="whole">협찬</text>` +
+				`<text id="intro" kind="fixed" role="hook" basis="output-start" start="0" end="3"><row>오늘의 장면</row><row>직접 남긴 기록</row></text>` +
+				`<text id="info" kind="fixed" role="info" position="bottom" basis="output-start" start="4" end="8"><row role="label">영업</row><row role="caption">매주 월요일 휴무</row></text>` +
+				`<text id="copy" kind="fixed" role="caption" position="upper_mid" basis="output-start" start="9" end="12">지글지글 익어가면 한 입 더</text>` +
+				`<text id="outro" kind="fixed" role="ending" basis="output-end" start="-3" end="0"><row>다시 만나자</row><row>오늘의 기록을 남겨요</row></text>` +
+				`</clip>`},
+	}
+	// The flat green fixture measured the way r.sample would measure it, so the
+	// scrim rule and the accent rule see the ground the clip is actually on.
+	const gr, gg, gb = 0x1F / 255.0, 0x7A / 255.0, 0x3D / 255.0
+	green := Luminance{Mean: relativeLuminance(gr, gg, gb), R: gr, G: gg, B: gb, Frames: []float64{relativeLuminance(gr, gg, gb), relativeLuminance(gr, gg, gb), relativeLuminance(gr, gg, gb)}}
+	a, r := galleryRenderer(t)
+	page := &strings.Builder{}
+	page.WriteString(`<!doctype html><meta charset="utf-8"><title>클립 디자인 미리보기</title>
+<style>
+body{background:#14161a;color:#e8e8ea;font-family:system-ui,sans-serif;margin:0;padding:32px}
+h1{font-size:20px;font-weight:700} h2{font-size:15px;font-weight:600;color:#a6a8ad;margin:36px 0 12px}
+.row{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start}
+.card{background:#1d2026;border-radius:10px;padding:10px}
+.card img{display:block;border-radius:6px;width:270px;height:auto;background:#1F7A3D}
+.card .t{font-size:12px;color:#8e9096;margin-top:8px}
+p{color:#8e9096;font-size:13px;line-height:1.7;max-width:760px}
+</style>
+<h1>클립 출력 디자인 미리보기 (초록 단색 배경)</h1>
+<p>실제 렌더 경로가 만드는 SVG 그대로이고, 배경만 스모크 테스트와 같은 단색 초록(#1F7A3D)으로 깔았습니다. 글자 폭 측정은 resvg 대신 번들 폰트(Pretendard Variable, Paperlogy)의 글리프 메트릭으로 대신했기 때문에, 가로 위치가 실제 렌더와 1px 안팎으로 다를 수 있습니다.</p>
+`)
+	for _, s := range scenes {
+		plan := declaredPlan(t, s.body, s.ratio)
+		plan.Accent = "coral"
+		var layout declaredLayout
+		if err := a.WithWorkspace(t.Context(), "gallery", func(ws clip.MediaWorkspace) error {
+			var err error
+			layout, err = r.layoutComposition(t.Context(), ws, plan)
+			return err
+		}); err != nil {
+			t.Fatalf("%s: %v", s.name, err)
+		}
+		canvas, _ := clip.ClipCanvas(s.ratio)
+		fmt.Fprintf(page, "<h2>%s · %s</h2><div class=\"row\">", s.name, s.ratio)
+		for _, at := range s.frames {
+			frame := &strings.Builder{}
+			fmt.Fprintf(frame, `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 %d %d" width="%d" height="%d"><rect width="%d" height="%d" fill="#1F7A3D"/>`, canvas.Width, canvas.Height, canvas.Width, canvas.Height, canvas.Width, canvas.Height)
+			shown := []string{}
+			for i, visual := range layout.visuals {
+				if visual.manifest.StartMS > at || visual.manifest.EndMS <= at {
+					continue
+				}
+				visual.ground = green
+				body, err := r.declaredSVG(canvas, visual)
+				if err != nil {
+					t.Fatalf("%s %s: %v", s.name, visual.manifest.Role, err)
+				}
+				body = idRE.ReplaceAllString(body, "${1}${2}-"+strconv.Itoa(i))
+				inner := body[strings.Index(body, ">")+1 : strings.LastIndex(body, "</svg>")]
+				frame.WriteString(inner)
+				shown = append(shown, visual.manifest.Role)
+			}
+			frame.WriteString("</svg>")
+			for _, visual := range layout.visuals {
+				if visual.manifest.StartMS > at || visual.manifest.EndMS <= at {
+					continue
+				}
+				parts := []design.Element{}
+				for _, p := range visual.manifest.Parts {
+					if p.Kind == "copy" || p.Kind == "plate" {
+						parts = append(parts, p)
+					}
+				}
+				for i := range parts {
+					for j := i + 1; j < len(parts); j++ {
+						a, b := parts[i].Region, parts[j].Region
+						if a.Y < b.Y+b.Height && b.Y < a.Y+a.Height && a.X < b.X+b.Width && b.X < a.X+a.Width {
+							t.Errorf("OVERLAP %s %s %s: %q(%s) %+v vs %q(%s) %+v", s.name, s.ratio, visual.manifest.Role, parts[i].Text, parts[i].Rule, a, parts[j].Text, parts[j].Rule, b)
+						}
+					}
+				}
+				for _, p := range parts {
+					if p.Kind == "copy" {
+						t.Logf("CENTRE %s %s %s %q ink-centre=%.1f canvas-centre=%.1f", s.name, s.ratio, visual.manifest.Role, p.Text, p.Region.X+p.Region.Width/2, float64(canvas.Width)/2)
+					}
+				}
+			}
+			name := fmt.Sprintf("%s-%dms.svg", s.name, at)
+			if err := os.WriteFile(filepath.Join(out, name), []byte(frame.String()), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			fmt.Fprintf(page, `<div class="card"><img src="%s" alt="%s"><div class="t">%.1fs · %s</div></div>`, strings.Replace(name, ".svg", ".png", 1), name, float64(at)/1000, strings.Join(shown, ", "))
+		}
+		page.WriteString("</div>")
+	}
+	if err := os.WriteFile(filepath.Join(out, "index.html"), []byte(page.String()), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Log("wrote", out)
+}
