@@ -29,3 +29,6 @@ tmp/gallery/index.html
 tmp/footage/*.mp4
 tmp/footage/*.jpg
 tmp/footage/*.png
+
+# Release QA render output (the harness itself is tracked)
+tmp/release-qa/clips/*.mp4
