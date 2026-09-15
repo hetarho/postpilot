@@ -398,10 +398,10 @@ func newReleaseHarness(t *testing.T, mode string, stress bool, clocks ...func() 
 	// before a credit is reserved (CDS-1, CDS-5).
 	recipe := clip.Recipe{Name: "synthetic release", Preset: "restaurant", InformationFields: []clip.InformationField{
 		{Label: "상호", Prompt: "가게 이름"}, {Label: "위치", Prompt: "어디"}, {Label: "place", Prompt: "where"},
-	}, CopyStyles: []string{"clean"}}
+	}}
 	ratio := "horizontal"
 	if strings.HasPrefix(mode, "multi-source") {
-		recipe.CopyStyles, recipe.Accent, recipe.CutGuidance, ratio = []string{"clean", "memo"}, "amber", "균등분할", "vertical"
+		recipe.Accent, recipe.CutGuidance, ratio = "amber", "균등분할", "vertical"
 	}
 	if mode == "detailed-input" {
 		recipe = clip.Recipe{Name: "detailed synthetic input", CompositionBody: releaseDetailedBody()}

@@ -93,7 +93,7 @@ func TestRegionPresetsOnEveryRatio(t *testing.T) {
 }
 
 func TestDeclaredRegionsUseDocumentSelection(t *testing.T) {
-	plan := declaredPlan(t, `<clip version="1" intro="a" caption="bold" outro="b"><text id="intro" kind="fixed" role="hook" basis="output-start" start="0" end="2.5"><row role="hook">오늘의 장면</row><row role="label">남긴 기록</row></text><text id="outro" kind="fixed" role="ending" basis="output-end" start="-3" end="0"><row role="hook">다시 만나자</row><row role="body">오늘을 남겨요</row></text></clip>`, "vertical")
+	plan := declaredPlan(t, `<clip version="1" intro="a" caption="bold" outro="b"><text id="intro" kind="fixed" role="hook" basis="output-start" start="0" end="2.5"><row>오늘의 장면</row><row>남긴 기록</row></text><text id="outro" kind="fixed" role="ending" basis="output-end" start="-3" end="0"><row>다시 만나자</row><row>오늘을 남겨요</row></text></clip>`, "vertical")
 	layout := measuredDeclared(t, plan)
 	if len(layout.visuals) != 2 || layout.visuals[0].region.Lines[0].Y != 940 || layout.visuals[1].region.Lines[0].Y != 900 {
 		t.Fatal("document design selection was ignored", layout.elements())
@@ -103,7 +103,7 @@ func TestDeclaredRegionsUseDocumentSelection(t *testing.T) {
 func TestAuthoredAdmissionUsesSelectedRegionLimits(t *testing.T) {
 	_, r := measured(t)
 	for _, intro := range []string{"a", "b"} {
-		body := `<clip version="1" intro="` + intro + `" caption="bold" outro="e"><text id="intro" kind="fixed" role="hook" basis="output-start" start="0" end="2.5"><row role="hook">하나둘셋넷다섯여섯</row></text></clip>`
+		body := `<clip version="1" intro="` + intro + `" caption="bold" outro="e"><text id="intro" kind="fixed" role="hook" basis="output-start" start="0" end="2.5"><row>하나둘셋넷다섯여섯</row></text><text id="outro" kind="fixed" role="ending" basis="output-end"/></clip>`
 		err := r.ValidateAuthoredInput(t.Context(), clip.PlanningInput{Ratio: "vertical", TargetDurationMS: 15000, Composition: &clip.ProjectComposition{Snapshot: clip.CompositionSnapshot{Body: body}}})
 		if intro == "b" {
 			if err != nil {
@@ -180,6 +180,22 @@ func TestLegacyHookOverflowIsIdentifiedBeforeRerender(t *testing.T) {
 			}
 			return nil
 		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func TestAuthoredRegionAdmissionChecksOnlyFixedRows(t *testing.T) {
+	_, r := measured(t)
+	for _, kind := range []string{"fixed", "ai"} {
+		body := `<clip version="1" intro="b" caption="bold" outro="e"><text id="intro" kind="` + kind + `" role="hook" basis="output-start"><row kind="fixed">직접 입력</row><row kind="ai">Write a grounded phrase that is much longer than the generated slot limit.</row></text><text id="outro" kind="fixed" role="ending" basis="output-end"/></clip>`
+		in := clip.PlanningInput{Ratio: "vertical", TargetDurationMS: 15000, Composition: &clip.ProjectComposition{Snapshot: clip.CompositionSnapshot{Body: body}}}
+		if err := r.ValidateAuthoredInput(t.Context(), in); err != nil {
+			t.Fatal(err)
+		}
+		in.Composition.Snapshot.Body = strings.Replace(body, "직접 입력", "하나둘셋넷다섯여섯일곱", 1)
+		var problem *composition.Problem
+		if err := r.ValidateAuthoredInput(t.Context(), in); !errors.As(err, &problem) || problem.ElementID != "intro" || problem.Reason != "copy_limit" {
 			t.Fatal(err)
 		}
 	}

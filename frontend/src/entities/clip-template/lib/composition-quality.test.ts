@@ -5,16 +5,14 @@ import { parseClipComposition } from './composition-parse'
 import { resolveClipComposition } from './composition-resolve'
 import type { CompositionInputs } from '../model/composition'
 
-const pasted = `<clip version="1" styles="clean">
-<group id="menu"><field id="name" label="메뉴" required="true"/><field id="price" label="가격"/></group>
-<repeat for="menu"><scene id="dish" scope="item">
-<text id="name" kind="fixed" role="caption" basis="cut"><value field="menu.name"/></text>
-<text id="price" kind="fixed" role="info" basis="cut"><value field="menu.price"/></text>
-</scene></repeat><text id="end" kind="fixed" role="caption" basis="output-end" start="-2" end="0">  직접 기록  </text></clip>`
+const pasted =
+  '<clip version="1" intro="b" caption="bold" outro="e">\n<group id="menu"><field id="name" label="메뉴" required="true"/><field id="price" label="가격"/></group>\n<repeat for="menu"><scene id="dish" scope="item">\n<text id="name" kind="fixed" role="caption" basis="cut"><value field="menu.name"/></text>\n<text id="price" kind="fixed" role="info" basis="cut"><value field="menu.price"/></text>\n</scene></repeat><text id="end" kind="fixed" role="caption" basis="output-end" start="-2" end="0">  직접 기록  </text><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>'
 
 // The same tree constructors and serializer used by CompositionBuilder's controls.
 const built = serializeCompositionNode(
-  node('clip', { version: '1', styles: 'clean' }, [
+  node('clip', { version: '1', intro: 'b', caption: 'bold', outro: 'e' }, [
+    node('text', { id: 'empty-hook', kind: 'fixed', role: 'hook', basis: 'output-start' }),
+    node('text', { id: 'empty-ending', kind: 'fixed', role: 'ending', basis: 'output-end' }),
     node('group', { id: 'menu' }, [
       node('field', { id: 'name', label: '메뉴', required: 'true' }),
       node('field', { id: 'price', label: '가격', required: 'false' }),

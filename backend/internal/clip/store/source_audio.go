@@ -90,11 +90,11 @@ func (s *Store) SetSourceOriginalAudio(ctx context.Context, user string, change 
 		}
 		now := time.Now()
 		if p.EditPlan != "" {
-			plan, styles, e := clip.DecodeEditPlan(p.EditPlan)
+			plan, e := clip.DecodeEditPlan(p.EditPlan)
 			if e != nil {
 				return result{}, e
 			}
-			raw, e := clip.EncodeEditPlan(clip.ApplySourceAudio(plan, change.SourceID, change.Fingerprint, change.RetainOriginal), styles)
+			raw, e := clip.EncodeEditPlan(clip.ApplySourceAudio(plan, change.SourceID, change.Fingerprint, change.RetainOriginal))
 			if e != nil {
 				return result{}, e
 			}

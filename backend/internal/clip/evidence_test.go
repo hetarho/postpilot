@@ -130,7 +130,7 @@ func TestScopedNumbersCurrencyUnitBasisAndExperience(t *testing.T) {
 }
 
 func TestFactScopeRequiresCorrectItemOrDeclaredContext(t *testing.T) {
-	doc, problem := composition.Parse(`<clip version="1"><field id="price" label="입장료"/><group id="menu"><field id="price" label="가격"/></group></clip>`, config.ClipCompositionLimits())
+	doc, problem := composition.Parse(`<clip version="1" intro="b" caption="bold" outro="e"><field id="price" label="입장료"/><group id="menu"><field id="price" label="가격"/></group><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`, config.ClipCompositionLimits())
 	if problem != nil {
 		t.Fatal(problem)
 	}

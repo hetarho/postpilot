@@ -64,9 +64,9 @@ func TestStyleGalleryExample(t *testing.T) {
 		plan := clip.EditPlan{
 			Ratio: "vertical", DurationMS: total,
 			Disclosure: "ad", Preset: "restaurant", Accent: "coral", CTA: "save",
-			Hook:   "스타일 비교",
-			Styles: []string{"clean", "memo", "bold", "mark", "simple"},
-			Facts:  []clip.Answer{{Label: "상호", Text: "스타일 갤러리"}, {Label: "메뉴", Text: "철판 요리"}},
+			Hook: "스타일 비교",
+
+			Facts: []clip.Answer{{Label: "상호", Text: "스타일 갤러리"}, {Label: "메뉴", Text: "철판 요리"}},
 		}
 		sources := []clip.RenderSource{}
 		paths := map[string]string{}

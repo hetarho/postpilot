@@ -19,7 +19,7 @@ func cadence30(durationMS int) clip.MediaInfo {
 		DecodedDurationMS: durationMS, CadenceVerified: true, DecodedFrames: durationMS * 30 / 1000}
 }
 
-func ratePlan(t *testing.T, rate int) (clip.Project, clip.EditPlan, []string) {
+func ratePlan(t *testing.T, rate int) (clip.Project, clip.EditPlan) {
 	t.Helper()
 	sources := []clip.SourceAnalysis{{Source: clip.AnalysisSource{RenderSource: clip.RenderSource{ID: "a", Fingerprint: "fa", Info: cadence30(60000)}, Filename: "a.mp4"}}}
 	volume := 1.0
@@ -30,21 +30,21 @@ func ratePlan(t *testing.T, rate int) (clip.Project, clip.EditPlan, []string) {
 	// carries the same derived value a reload will.
 	plan.SourceAudio = clip.LegacySourceAudio(plan.Cuts)
 	a, _ := json.Marshal(sources)
-	raw, err := clip.EncodeEditPlan(plan, []string{"clean"})
+	raw, err := clip.EncodeEditPlan(plan)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return clip.Project{Ratio: "vertical", Analysis: string(a), EditPlan: raw, EditPlanRevision: 1}, plan, []string{"clean"}
+	return clip.Project{Ratio: "vertical", Analysis: string(a), EditPlan: raw, EditPlanRevision: 1}, plan
 }
 
 func TestEverySupportedRateRoundTripsThroughVersionSix(t *testing.T) {
 	for _, rate := range clip.PlaybackRates() {
-		p, plan, styles := ratePlan(t, rate)
+		p, plan := ratePlan(t, rate)
 		if !strings.Contains(p.EditPlan, `"Version":6`) {
 			t.Fatal("new plan was not written as an assembly envelope", p.EditPlan)
 		}
-		again, gotStyles, err := clip.DecodeEditPlan(p.EditPlan)
-		if err != nil || !reflect.DeepEqual(again, plan) || !reflect.DeepEqual(gotStyles, styles) {
+		again, err := clip.DecodeEditPlan(p.EditPlan)
+		if err != nil || !reflect.DeepEqual(again, plan) {
 			t.Fatal(rate, again, err)
 		}
 		if again.Cuts[0].Rate() != rate {
@@ -89,7 +89,7 @@ func TestTransformedDurationIsExactAndSeparateFromSourceTime(t *testing.T) {
 
 func TestFasterCutValidatesOnTheTransformedTimeline(t *testing.T) {
 	cfg := config.ClipRender(&config.Config{})
-	_, plan, _ := ratePlan(t, 2000)
+	_, plan := ratePlan(t, 2000)
 	refs := []clip.RenderSource{{ID: "a", Fingerprint: "fa", Info: cadence30(60000)}}
 	if plan.DurationMS != 10000 {
 		t.Fatal("20 s at 2x was not a 10 s cut", plan.DurationMS)
@@ -138,7 +138,7 @@ func TestSlowRateNeedsVerifiedOriginalCadence(t *testing.T) {
 	}
 	// The plan refuses the rate outright; it is never substituted by 1x.
 	cfg := config.ClipRender(&config.Config{})
-	_, plan, _ := ratePlan(t, 750)
+	_, plan := ratePlan(t, 750)
 	err := clip.ValidateEditPlan(cfg, plan, []clip.RenderSource{{ID: "a", Fingerprint: "fa", Info: cadence30(60000)}})
 	if err == nil || plan.Cuts[0].Rate() != 750 {
 		t.Fatal("an inadmissible slow rate was accepted or quietly replaced", err)
@@ -146,7 +146,7 @@ func TestSlowRateNeedsVerifiedOriginalCadence(t *testing.T) {
 }
 
 func TestUnsupportedRateAndMalformedAudioSettingsAreRejected(t *testing.T) {
-	p, plan, styles := ratePlan(t, 1000)
+	p, plan := ratePlan(t, 1000)
 	for _, bad := range []int{0, 1, 900, 2500, -1000} {
 		broken := plan
 		broken.Cuts = []clip.Cut{plan.Cuts[0]}
@@ -154,19 +154,19 @@ func TestUnsupportedRateAndMalformedAudioSettingsAreRejected(t *testing.T) {
 		if bad != 0 && clip.ValidPlaybackRate(bad) {
 			t.Fatal("unsupported rate admitted", bad)
 		}
-		raw, err := clip.EncodeEditPlan(broken, styles)
+		raw, err := clip.EncodeEditPlan(broken)
 		if err != nil {
 			continue
 		}
-		if _, _, err := clip.DecodeEditPlan(raw); bad != 0 && err == nil {
+		if _, err := clip.DecodeEditPlan(raw); bad != 0 && err == nil {
 			t.Fatal("a stored plan kept an unsupported rate", bad)
 		}
 	}
 	// A version-6 plan whose rate map does not name every cut is not readable.
-	if _, _, err := clip.DecodeEditPlan(strings.Replace(p.EditPlan, `"Rates":{"one":1000}`, `"Rates":{}`, 1)); err == nil {
+	if _, err := clip.DecodeEditPlan(strings.Replace(p.EditPlan, `"Rates":{"one":1000}`, `"Rates":{}`, 1)); err == nil {
 		t.Fatal("a version-6 plan without a stated rate was accepted")
 	}
-	if _, _, err := clip.DecodeEditPlan(strings.Replace(p.EditPlan, `"Rates":{"one":1000}`, `"Rates":{"one":0}`, 1)); err == nil {
+	if _, err := clip.DecodeEditPlan(strings.Replace(p.EditPlan, `"Rates":{"one":1000}`, `"Rates":{"one":0}`, 1)); err == nil {
 		t.Fatal("an explicit zero rate was read as 1x")
 	}
 	audio := `"SourceAudio":[{"SourceID":"a","Fingerprint":"fa","RetainOriginal":true}]`
@@ -179,7 +179,7 @@ func TestUnsupportedRateAndMalformedAudioSettingsAreRejected(t *testing.T) {
 		`"SourceAudio":[{"SourceID":"a","Fingerprint":"foreign","RetainOriginal":true}]`,
 		`"SourceAudio":[{"SourceID":"","Fingerprint":"fa","RetainOriginal":true}]`,
 	} {
-		if _, _, err := clip.DecodeEditPlan(strings.Replace(p.EditPlan, audio, broken, 1)); err == nil {
+		if _, err := clip.DecodeEditPlan(strings.Replace(p.EditPlan, audio, broken, 1)); err == nil {
 			t.Fatal("malformed source-audio settings accepted", broken)
 		}
 	}
@@ -187,7 +187,7 @@ func TestUnsupportedRateAndMalformedAudioSettingsAreRejected(t *testing.T) {
 
 func TestLegacyPlansReadAtOneTimesWithTheirOriginalAudioMeaning(t *testing.T) {
 	p, _ := correctionFixture(t)
-	base, styles, err := clip.DecodeEditPlan(p.EditPlan)
+	base, err := clip.DecodeEditPlan(p.EditPlan)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -221,7 +221,7 @@ func TestLegacyPlansReadAtOneTimesWithTheirOriginalAudioMeaning(t *testing.T) {
 		name, raw string
 		retain    bool
 	}{{"v0 nil volume", string(rawV0), true}, {"v4 muted", silent, false}} {
-		decoded, _, err := clip.DecodeEditPlan(c.raw)
+		decoded, err := clip.DecodeEditPlan(c.raw)
 		if err != nil {
 			t.Fatal(c.name, err)
 		}
@@ -244,11 +244,11 @@ func TestLegacyPlansReadAtOneTimesWithTheirOriginalAudioMeaning(t *testing.T) {
 		}
 	}
 	// Encoding it again is version 6, and reading that back is identical.
-	rewritten, err := clip.EncodeEditPlan(base, styles)
+	rewritten, err := clip.EncodeEditPlan(base)
 	if err != nil || !strings.Contains(rewritten, `"Version":6`) {
 		t.Fatal(rewritten, err)
 	}
-	again, _, err := clip.DecodeEditPlan(rewritten)
+	again, err := clip.DecodeEditPlan(rewritten)
 	if err != nil || !reflect.DeepEqual(again, base) {
 		t.Fatal("rewriting a legacy plan changed it", err)
 	}
@@ -264,12 +264,12 @@ func TestLegacyOverlapSurvivesButCannotGrow(t *testing.T) {
 		{ID: "one", SourceID: "a", Fingerprint: "fa", StartMS: 0, EndMS: 10000, Copies: copies},
 		{ID: "two", SourceID: "a", Fingerprint: "fa", StartMS: 8000, EndMS: 18000, Copies: copies},
 	}}
-	raw, err := clip.EncodeEditPlan(overlapping, []string{"clean"})
+	raw, err := clip.EncodeEditPlan(overlapping)
 	if err != nil {
 		t.Fatal(err)
 	}
 	p := clip.Project{Ratio: "vertical", Analysis: string(analysis), EditPlan: raw, EditPlanRevision: 1}
-	saved, _, err := clip.DecodeEditPlan(raw)
+	saved, err := clip.DecodeEditPlan(raw)
 	if err != nil {
 		t.Fatal("a saved overlap stopped being readable", err)
 	}
@@ -289,20 +289,20 @@ func TestLegacyOverlapSurvivesButCannotGrow(t *testing.T) {
 	}
 	draft := clip.CorrectionFromPlan(saved)
 	// Saving it unchanged keeps the existing overlap.
-	if _, _, err := clip.ApplyCorrection(cfg, p, draft); err != nil {
+	if _, err := clip.ApplyCorrection(cfg, p, draft); err != nil {
 		t.Fatal("an unchanged legacy overlap was refused", err)
 	}
 	// Enlarging it is refused, and so is a new one elsewhere.
 	grown := clip.CorrectionFromPlan(saved)
 	grown.Cuts[1].StartMS = 6000
 	grown.DurationMS = 22000
-	if _, _, err := clip.ApplyCorrection(cfg, p, grown); err == nil {
+	if _, err := clip.ApplyCorrection(cfg, p, grown); err == nil {
 		t.Fatal("an existing overlap was allowed to grow")
 	}
 	shrunk := clip.CorrectionFromPlan(saved)
 	shrunk.Cuts[1].StartMS = 9000
 	shrunk.DurationMS = 19000
-	if _, _, err := clip.ApplyCorrection(cfg, p, shrunk); err != nil {
+	if _, err := clip.ApplyCorrection(cfg, p, shrunk); err != nil {
 		t.Fatal("shrinking an existing overlap was refused", err)
 	}
 }
@@ -310,12 +310,12 @@ func TestLegacyOverlapSurvivesButCannotGrow(t *testing.T) {
 func TestOwnerAudioSnapshotSurvivesCorrectionAndRefusesContradiction(t *testing.T) {
 	cfg := config.ClipRender(&config.Config{})
 	p, draft := correctionFixture(t)
-	saved, _, err := clip.DecodeEditPlan(p.EditPlan)
+	saved, err := clip.DecodeEditPlan(p.EditPlan)
 	if err != nil {
 		t.Fatal(err)
 	}
 	draft.SourceAudio = saved.SourceAudio.Values
-	next, _, err := clip.ApplyCorrection(cfg, p, draft)
+	next, err := clip.ApplyCorrection(cfg, p, draft)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -324,7 +324,7 @@ func TestOwnerAudioSnapshotSurvivesCorrectionAndRefusesContradiction(t *testing.
 	}
 	contradiction := draft
 	contradiction.SourceAudio = []clip.SourceAudioSetting{{SourceID: "a", Fingerprint: "fa", RetainOriginal: !saved.RetainsOriginalAudio(saved.Cuts[0])}}
-	if _, _, err := clip.ApplyCorrection(cfg, p, contradiction); err == nil {
+	if _, err := clip.ApplyCorrection(cfg, p, contradiction); err == nil {
 		t.Fatal("a plan save was allowed to change source sound")
 	}
 	// Deleting a cut rebuilds the snapshot around the sources that remain.
@@ -332,7 +332,7 @@ func TestOwnerAudioSnapshotSurvivesCorrectionAndRefusesContradiction(t *testing.
 	deleted.Cuts = []clip.CorrectionCut{draft.Cuts[0]}
 	deleted.Cuts[0].EndMS = 20000
 	deleted.DurationMS = 20000
-	fewer, _, err := clip.ApplyCorrection(cfg, p, deleted)
+	fewer, err := clip.ApplyCorrection(cfg, p, deleted)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -62,7 +62,7 @@ func TestPresenceActorAndNotFound(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if s.templatePatch.InformationFields == nil || len(*s.templatePatch.InformationFields) != 0 || s.templatePatch.CopyStyles != nil || s.templatePatch.Name != nil || s.templatePatch.Accent == nil || s.templatePatch.Preset != nil {
+	if s.templatePatch.InformationFields == nil || len(*s.templatePatch.InformationFields) != 0 || s.templatePatch.Name != nil || s.templatePatch.Accent == nil || s.templatePatch.Preset != nil {
 		t.Fatal("wrapper presence lost")
 	}
 	// The preset, the disclosure and the CTA carry the same presence semantics:

@@ -99,4 +99,4 @@ export function newCompositionNode(name: string, label: string, inScene = false)
 }
 
 export const EMPTY_CLIP_COMPOSITION =
-  '<clip version="1" styles="bold" pace="steady">\n  <scene id="footage" scope="scene"/>\n</clip>'
+  '<clip version="1" intro="b" caption="bold" outro="e" pace="steady">\n  <scene id="footage" scope="scene"/>\n  <text id="intro" role="hook" kind="fixed" basis="output-start"/>\n  <text id="outro" role="ending" kind="fixed" basis="output-end"/>\n</clip>'

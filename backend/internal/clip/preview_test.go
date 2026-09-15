@@ -118,48 +118,48 @@ func TestPreviewOwnerAdmissionCancellationAndConcurrentSave(t *testing.T) {
 
 func TestNativeCorrectionKeepsContentAndRejectsForgedIdentities(t *testing.T) {
 	p, _ := correctionFixture(t)
-	original, styles, err := clip.DecodeEditPlan(p.EditPlan)
+	original, err := clip.DecodeEditPlan(p.EditPlan)
 	if err != nil {
 		t.Fatal(err)
 	}
-	original.Portable, err = clip.FreezeLegacyPlan(p, original, clip.Recipe{CopyStyles: styles}, config.ClipCompositionLimits())
+	original.Portable, err = clip.FreezeLegacyPlan(p, original, clip.Recipe{}, config.ClipCompositionLimits())
 	if err != nil {
 		t.Fatal(err)
 	}
 	original.Portable.Snapshot.Legacy = false
-	p.EditPlan, err = clip.EncodeEditPlan(original, styles)
+	p.EditPlan, err = clip.EncodeEditPlan(original)
 	if err != nil {
 		t.Fatal(err)
 	}
 	draft := clip.CorrectionFromPlan(original)
 	draft.Elements[0].Text = "수정한 문구"
 	draft.Cuts[0].Focal = &clip.Point{X: .1, Y: .8}
-	next, _, err := clip.ApplyCorrection(config.ClipRender(&config.Config{}), p, draft)
+	next, err := clip.ApplyCorrection(config.ClipRender(&config.Config{}), p, draft)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if next.Portable.Elements[0].Resolved.Text != "수정한 문구" || !next.Portable.Elements[0].OwnerEdited || next.Cuts[0].Focal.X != .1 || clip.AutomaticCompositionRepair(next.Portable.Elements[0]) {
 		t.Fatal("lost authored correction")
 	}
-	raw, err := clip.EncodeEditPlan(next, styles)
+	raw, err := clip.EncodeEditPlan(next)
 	if err != nil {
 		t.Fatal(err)
 	}
-	again, _, err := clip.DecodeEditPlan(raw)
+	again, err := clip.DecodeEditPlan(raw)
 	if err != nil || again.Portable.Elements[0].Resolved.Text != "수정한 문구" {
 		t.Fatal(err)
 	}
 	draft.Cuts[0].StartMS = 100
 	draft.DurationMS -= 100
-	trimmed, _, err := clip.ApplyCorrection(config.ClipRender(&config.Config{}), p, draft)
+	trimmed, err := clip.ApplyCorrection(config.ClipRender(&config.Config{}), p, draft)
 	if err != nil {
 		t.Fatal("trim", err)
 	}
-	if _, err := clip.EncodeEditPlan(trimmed, styles); err != nil {
+	if _, err := clip.EncodeEditPlan(trimmed); err != nil {
 		t.Fatal("trim lost frozen evidence", err)
 	}
 	draft.Elements[0].InstanceID = "forged"
-	if _, _, err := clip.ApplyCorrection(config.ClipRender(&config.Config{}), p, draft); err == nil {
+	if _, err := clip.ApplyCorrection(config.ClipRender(&config.Config{}), p, draft); err == nil {
 		t.Fatal("accepted foreign element")
 	}
 }
@@ -167,7 +167,7 @@ func TestNativeCorrectionKeepsContentAndRejectsForgedIdentities(t *testing.T) {
 func TestLegacyPreviewUsesTheCurrentHookInsteadOfThePreviousSnapshot(t *testing.T) {
 	service, store, render, draft := previewSetup(t)
 	store.project.Answers = []clip.Answer{{Label: "상호", Text: "카페"}, {Label: "위치", Text: "서울"}}
-	previous := clip.LegacyProjectComposition(store.project, clip.Recipe{CopyStyles: []string{"clean", "memo"}})
+	previous := clip.LegacyProjectComposition(store.project, clip.Recipe{})
 	store.project.Composition = &previous
 	draft.Hook = "서울 카페"
 	if _, err := service.PreparePreview(t.Context(), "alice", "owned", 1, "hook", draft, nil, 0); err != nil {

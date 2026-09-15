@@ -3,9 +3,10 @@ package media
 import (
 	"context"
 	"fmt"
+	"slices"
+
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/composition"
-	"slices"
 )
 
 // ValidateAuthoredInput checks content already known before source work. Each
@@ -52,10 +53,19 @@ func (r *Rendering) ValidateAuthoredInput(ctx context.Context, in clip.PlanningI
 					return problem
 				}
 				for _, element := range timeline.Elements {
-					if element.Element.Kind != "fixed" {
+					region := element.Element.Role == "hook" || element.Element.Role == "ending"
+					if !region && element.Element.Kind != "fixed" {
 						continue
 					}
 					text := clip.PortableText{Resolved: element, Pace: doc.Pace, Accent: doc.Accent}
+					if region {
+						text.Resolved.Rows = slices.Clone(element.Rows)
+						for i, row := range element.Element.Rows {
+							if composition.RowKind(element.Element, row) == "ai" {
+								text.Resolved.Rows[i].Text = ""
+							}
+						}
+					}
 					if element.Element.Role != "caption" {
 						_, err := r.layoutDeclaredRole(ctx, ws, canvas, in.Ratio, declaredVisual{text: text, manifest: declaredManifest(text)}, doc.Design)
 						if err != nil {
@@ -63,28 +73,15 @@ func (r *Rendering) ValidateAuthoredInput(ctx context.Context, in clip.PlanningI
 						}
 						continue
 					}
-					styles := []string{element.Element.Style}
-					if styles[0] == "auto" {
-						styles = slices.Clone(doc.Styles)
-					}
-					valid := false
-					for _, style := range styles {
-						c := clip.Copy{Text: element.Text, Style: style, Align: element.Element.Align, Anchor: element.Element.Position, Accent: doc.Accent}
-						layout, err := r.layoutCopy(ctx, ws, canvas, c)
-						if err != nil {
-							continue
-						}
-						if c.Anchor == "auto" {
-							valid = true
-							break
-						}
-						if _, err := clip.PlaceCopy(canvas, c.Anchor, c.Align, layout.Region.Width, layout.Region.Height); err == nil {
-							valid = true
-							break
-						}
-					}
-					if !valid {
+					c := clip.Copy{Text: element.Text, Style: "bold", Align: element.Element.Align, Anchor: element.Element.Position, Accent: doc.Accent}
+					layout, err := r.layoutCopy(ctx, ws, canvas, c)
+					if err != nil {
 						return elementProblem(text, "copy_limit")
+					}
+					if c.Anchor != "auto" {
+						if _, err := clip.PlaceCopy(canvas, c.Anchor, c.Align, layout.Region.Width, layout.Region.Height); err != nil {
+							return elementProblem(text, "copy_limit")
+						}
 					}
 				}
 			}

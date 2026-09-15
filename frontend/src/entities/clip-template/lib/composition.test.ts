@@ -43,7 +43,7 @@ const corpus = JSON.parse(
   }[]
 }
 const summary = (d: ClipComposition) => ({
-  styles: d.styles,
+  design: d.design,
   accent: d.accent,
   pace: d.pace,
   fields: d.fields.map(({ id, group, label, prompt, required }) => ({
@@ -72,7 +72,7 @@ const resolution = (t: CompositionTimeline) =>
 describe('shared portable composition contract', () => {
   it('addresses repeated field names by group and guides by exact node span', () => {
     const source =
-      '<clip version="1"><guide>keep</guide><group id="a"><field id="price" label="A"/></group><group id="b"><field id="price" label="B"/></group></clip>'
+      '<clip version="1" intro="b" caption="bold" outro="e"><guide>keep</guide><group id="a"><field id="price" label="A"/></group><group id="b"><field id="price" label="B"/></group><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>'
     let d = parseClipComposition(source)
     const replacement: CompositionNode = {
       name: 'field',
@@ -136,7 +136,7 @@ describe('shared portable composition contract', () => {
     })
   it('changes only the selected subtree, preserving original Unicode, quotes and whitespace', () => {
     const source =
-      " \n<clip version='1'>\n <guide>🧑‍🍳 keep &amp; spacing</guide>\n <text id='copy' kind='fixed' role='caption' basis='whole'>old</text>\n</clip>\n"
+      ' \n<clip version=\'1\' intro="b" caption="bold" outro="e">\n <guide>🧑‍🍳 keep &amp; spacing</guide>\n <text id=\'copy\' kind=\'fixed\' role=\'caption\' basis=\'whole\'>old</text>\n<text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>\n'
     const d = parseClipComposition(source),
       node = d.root.children.find((n) => n.name === 'text')!
     const replacement: CompositionNode = {
@@ -170,7 +170,7 @@ describe('shared portable composition contract', () => {
       'invalid_unicode',
     )
     const d = parseClipComposition(
-      '<clip version="1"><field id="constructor" label="값" required="true"/></clip>',
+      '<clip version="1" intro="b" caption="bold" outro="e"><field id="constructor" label="값" required="true"/><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>',
     )
     expect(() =>
       resolveClipComposition(d, { values: {}, items: {}, cuts: [] }, 10000),

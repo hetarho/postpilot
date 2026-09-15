@@ -11,7 +11,7 @@ import (
 // the cut keeps stating the original source range it was taken from (CDS-62).
 func TestCutIntervalsResolveOnTheTransformedOutputTimeline(t *testing.T) {
 	l := config.ClipCompositionLimits()
-	d, problem := composition.Parse(`<clip version="1"><scene id="s"><text id="c" kind="fixed" role="caption" basis="cut">x</text></scene></clip>`, l)
+	d, problem := composition.Parse(`<clip version="1" intro="b" caption="bold" outro="e"><scene id="s"><text id="c" kind="fixed" role="caption" basis="cut">x</text></scene><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`, l)
 	if problem != nil {
 		t.Fatal(problem)
 	}
@@ -41,7 +41,7 @@ func TestCutIntervalsResolveOnTheTransformedOutputTimeline(t *testing.T) {
 // on the transformed value, not on the source span it came from.
 func TestTransitionIsMeasuredAgainstTheTransformedLength(t *testing.T) {
 	l := config.ClipCompositionLimits()
-	d, problem := composition.Parse(`<clip version="1"><scene id="s"><text id="c" kind="fixed" role="caption" basis="cut">x</text></scene></clip>`, l)
+	d, problem := composition.Parse(`<clip version="1" intro="b" caption="bold" outro="e"><scene id="s"><text id="c" kind="fixed" role="caption" basis="cut">x</text></scene><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`, l)
 	if problem != nil {
 		t.Fatal(problem)
 	}

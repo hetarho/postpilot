@@ -16,7 +16,7 @@ const otherOwnerCut = "owner-6ba7b810-9dad-41d1-80b4-00c04fd430c8"
 
 // creationFixture is a native project whose two cuts come from one observed
 // source: the shape every add, split and undo case below starts from.
-func creationFixture(t *testing.T) (clip.Project, clip.EditPlan, []string) {
+func creationFixture(t *testing.T) (clip.Project, clip.EditPlan) {
 	t.Helper()
 	info := cadence30(60000)
 	segments := []clip.Segment{
@@ -31,23 +31,23 @@ func creationFixture(t *testing.T) (clip.Project, clip.EditPlan, []string) {
 		{ID: "second", SourceID: "a", Fingerprint: "fa", StartMS: 10000, EndMS: 20000, TransitionMS: 0, Focal: clip.Point{X: .5, Y: .5}, Copies: copies},
 	}}
 	p := clip.Project{Ratio: "vertical", Analysis: string(analysis), EditPlanRevision: 1}
-	portable, err := clip.FreezeLegacyPlan(p, plan, clip.Recipe{CopyStyles: []string{"clean"}, Accent: "teal"}, config.ClipCompositionLimits())
+	portable, err := clip.FreezeLegacyPlan(p, plan, clip.Recipe{Accent: "teal"}, config.ClipCompositionLimits())
 	if err != nil {
 		t.Fatal(err)
 	}
 	plan.Portable = portable
 	plan.Portable.NativeEditing = true
-	raw, err := clip.EncodeEditPlan(plan, []string{"clean"})
+	raw, err := clip.EncodeEditPlan(plan)
 	if err != nil {
 		t.Fatal(err)
 	}
 	p.EditPlan = raw
-	saved, styles, err := clip.DecodeEditPlan(raw)
+	saved, err := clip.DecodeEditPlan(raw)
 	if err != nil {
 		t.Fatal(err)
 	}
 	saved.Portable.NativeEditing = true
-	return p, saved, styles
+	return p, saved
 }
 
 func creationDraft(plan clip.EditPlan) clip.CorrectionPlan {
@@ -63,12 +63,12 @@ func addedCut(id, origin string, start, end int) clip.CorrectionCut {
 
 func TestOwnerAddCreatesFootageWithServerOwnedDefaults(t *testing.T) {
 	cfg := config.ClipRender(&config.Config{})
-	p, plan, _ := creationFixture(t)
+	p, plan := creationFixture(t)
 	draft := creationDraft(plan)
 	// A second look at the same observed scene the first cut came from.
 	draft.Cuts = append(draft.Cuts, addedCut(ownerCut, "first", 20000, 30000))
 	draft.DurationMS = 30000
-	next, _, err := clip.ApplyCorrection(cfg, p, draft)
+	next, err := clip.ApplyCorrection(cfg, p, draft)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,7 +97,7 @@ func TestOwnerAddCreatesFootageWithServerOwnedDefaults(t *testing.T) {
 	if !ok || binding.SectionID != "footage" {
 		t.Fatal("the new cut did not inherit the template section", binding)
 	}
-	raw, err := clip.EncodeEditPlan(next, []string{"clean"})
+	raw, err := clip.EncodeEditPlan(next)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -115,14 +115,14 @@ func TestOwnerAddCreatesFootageWithServerOwnedDefaults(t *testing.T) {
 
 func TestOwnerSplitDividesFootageAndLeavesTextOnTheLeft(t *testing.T) {
 	cfg := config.ClipRender(&config.Config{})
-	p, plan, _ := creationFixture(t)
+	p, plan := creationFixture(t)
 	draft := creationDraft(plan)
 	// The parent keeps its id and its content; the right side is new footage.
 	draft.Cuts[0].EndMS = 4000
 	right := clip.CorrectionCut{ID: ownerCut, StartMS: 4000, EndMS: 10000, VolumePermille: 0,
 		Creation: &clip.CutCreation{Kind: clip.CutSplit, OriginID: "first"}}
 	draft.Cuts = slices.Insert(draft.Cuts, 1, right)
-	next, _, err := clip.ApplyCorrection(cfg, p, draft)
+	next, err := clip.ApplyCorrection(cfg, p, draft)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -154,7 +154,7 @@ func TestOwnerSplitDividesFootageAndLeavesTextOnTheLeft(t *testing.T) {
 
 func TestOwnerCutCreationRefusesForgedIdentityAndUnevidencedFootage(t *testing.T) {
 	cfg := config.ClipRender(&config.Config{})
-	p, plan, _ := creationFixture(t)
+	p, plan := creationFixture(t)
 	// The reason each refusal must give, so a case cannot pass because some
 	// unrelated check happened to fail first.
 	reasons := map[string]string{
@@ -242,7 +242,7 @@ func TestOwnerCutCreationRefusesForgedIdentityAndUnevidencedFootage(t *testing.T
 		t.Run(name, func(t *testing.T) {
 			draft := creationDraft(plan)
 			mutate(&draft)
-			_, _, err := clip.ApplyCorrection(cfg, p, draft)
+			_, err := clip.ApplyCorrection(cfg, p, draft)
 			if err == nil {
 				t.Fatal("an invented cut was accepted")
 			}
@@ -263,19 +263,19 @@ func TestOwnerCutCreationRefusesForgedIdentityAndUnevidencedFootage(t *testing.T
 
 func TestCreatedCutJoinsIdentityHistoryAndSurvivesUndo(t *testing.T) {
 	cfg := config.ClipRender(&config.Config{})
-	p, plan, styles := creationFixture(t)
+	p, plan := creationFixture(t)
 	draft := creationDraft(plan)
 	draft.Cuts = append(draft.Cuts, addedCut(ownerCut, "first", 20000, 30000))
 	draft.DurationMS = 30000
-	added, _, err := clip.ApplyCorrection(cfg, p, draft)
+	added, err := clip.ApplyCorrection(cfg, p, draft)
 	if err != nil {
 		t.Fatal(err)
 	}
-	p.EditPlan, err = clip.EncodeEditPlan(added, styles)
+	p.EditPlan, err = clip.EncodeEditPlan(added)
 	if err != nil {
 		t.Fatal(err)
 	}
-	saved, _, err := clip.DecodeEditPlan(p.EditPlan)
+	saved, err := clip.DecodeEditPlan(p.EditPlan)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -284,19 +284,19 @@ func TestCreatedCutJoinsIdentityHistoryAndSurvivesUndo(t *testing.T) {
 	deleted := creationDraft(saved)
 	deleted.Cuts = deleted.Cuts[:2]
 	deleted.DurationMS = 20000
-	gone, _, err := clip.ApplyCorrection(cfg, p, deleted)
+	gone, err := clip.ApplyCorrection(cfg, p, deleted)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(gone.Portable.RetiredCuts) != 1 || gone.Portable.RetiredCuts[0].ID != ownerCut {
 		t.Fatal("the created identity was not retired", gone.Portable.RetiredCuts)
 	}
-	p.EditPlan, err = clip.EncodeEditPlan(gone, styles)
+	p.EditPlan, err = clip.EncodeEditPlan(gone)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Undo restores exactly the validated cut, with no creation metadata.
-	restored, _, err := clip.ApplyCorrection(cfg, p, creationDraft(saved))
+	restored, err := clip.ApplyCorrection(cfg, p, creationDraft(saved))
 	if err != nil {
 		t.Fatal("undo after save", err)
 	}
@@ -309,7 +309,7 @@ func TestCreatedCutJoinsIdentityHistoryAndSurvivesUndo(t *testing.T) {
 	// A retired identity cannot be resurrected by claiming to create it again.
 	forged := creationDraft(saved)
 	forged.Cuts[2].Creation = &clip.CutCreation{Kind: clip.CutAdd, OriginID: "first"}
-	if _, _, err := clip.ApplyCorrection(cfg, p, forged); err == nil {
+	if _, err := clip.ApplyCorrection(cfg, p, forged); err == nil {
 		t.Fatal("a retired identity was re-created")
 	}
 }
@@ -318,7 +318,7 @@ func TestCreatedCutJoinsIdentityHistoryAndSurvivesUndo(t *testing.T) {
 // rather than moving, shortening or dropping it (CLIP-67, CDS-64).
 func TestSplitRefusesRatherThanRetimingAuthoredText(t *testing.T) {
 	cfg := config.ClipRender(&config.Config{})
-	p, plan, _ := creationFixture(t)
+	p, plan := creationFixture(t)
 	draft := creationDraft(plan)
 	authored := 0
 	for i, e := range draft.Elements {
@@ -335,7 +335,7 @@ func TestSplitRefusesRatherThanRetimingAuthoredText(t *testing.T) {
 	draft.Cuts[0].EndMS = 4000
 	draft.Cuts = slices.Insert(draft.Cuts, 1, clip.CorrectionCut{ID: ownerCut, StartMS: 4000, EndMS: 10000,
 		Creation: &clip.CutCreation{Kind: clip.CutSplit, OriginID: "first"}})
-	if _, _, err := clip.ApplyCorrection(cfg, p, draft); err == nil {
+	if _, err := clip.ApplyCorrection(cfg, p, draft); err == nil {
 		t.Fatal("an out-of-range authored window was silently retimed")
 	}
 	if *draft.Elements[0].EndMS != before {

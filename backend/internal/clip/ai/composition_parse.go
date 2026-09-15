@@ -2,7 +2,6 @@ package ai
 
 import (
 	"regexp"
-	"slices"
 
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/composition"
@@ -119,7 +118,7 @@ func parseCompositionPlan(cfg Config, input clip.PlanningInput, raw string) (out
 	for _, a := range input.Analyses {
 		analyses[a.Source.ID] = a
 	}
-	plan := clip.EditPlan{Ratio: wire.Ratio, Styles: slices.Clone(doc.Styles)}
+	plan := clip.EditPlan{Ratio: wire.Ratio}
 	proposals := map[string]compositionCutJSON{}
 	limit := min(cfg.Render.MaxCuts, compositionLimits(cfg, input).Cuts)
 	for index, proposed := range wire.Cuts {
@@ -241,7 +240,7 @@ func parseCompositionPlan(cfg Config, input clip.PlanningInput, raw string) (out
 	}
 	plan.Portable = portable
 	clip.RecomputePlanNotices(&plan, input.TargetDurationMS, cfg.TargetToleranceMS)
-	if _, err := clip.EncodeEditPlan(plan, doc.Styles); err != nil {
+	if _, err := clip.EncodeEditPlan(plan); err != nil {
 		return clip.EditPlan{}, err
 	}
 	return plan, nil

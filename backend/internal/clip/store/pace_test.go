@@ -9,7 +9,6 @@ import (
 func TestTemplatePacePersistsAndPatchPresence(t *testing.T) {
 	service, store, _ := setup(t)
 	r := recipe()
-	r.CopyStyles = []string{"clean", "simple"}
 	r.CaptionPace = "rapid"
 	created, err := service.CreateTemplate(t.Context(), "alice", r)
 	if err != nil {

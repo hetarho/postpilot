@@ -9,14 +9,14 @@ import (
 
 func TestStoredNoticesSurviveReloadAndRerenderRecomputesPlanScope(t *testing.T) {
 	h, p, _ := completedClip(t)
-	plan, styles, err := clip.DecodeEditPlan(p.EditPlan)
+	plan, err := clip.DecodeEditPlan(p.EditPlan)
 	if err != nil {
 		t.Fatal(err)
 	}
 	clip.AddPlanNotice(&plan, "plan_cut_rate", plan.Cuts[0].ID, "", "repair")
 	// Stale plan-level notice must be recomputed from the saved target on render.
 	clip.AddPlanNotice(&plan, "plan_target_duration", "", "", "shortfall")
-	raw, err := clip.EncodeEditPlan(plan, styles)
+	raw, err := clip.EncodeEditPlan(plan)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -24,7 +24,7 @@ func TestStoredNoticesSurviveReloadAndRerenderRecomputesPlanScope(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	stored, _, err := clip.DecodeEditPlan(saved.EditPlan)
+	stored, err := clip.DecodeEditPlan(saved.EditPlan)
 	if err != nil || len(clip.ActivePlanNotices(stored)) != 2 {
 		t.Fatal("stored notices lost", err)
 	}
@@ -37,7 +37,7 @@ func TestStoredNoticesSurviveReloadAndRerenderRecomputesPlanScope(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	after, _, err := clip.DecodeEditPlan(reloaded.EditPlan)
+	after, err := clip.DecodeEditPlan(reloaded.EditPlan)
 	if err != nil {
 		t.Fatal(err)
 	}

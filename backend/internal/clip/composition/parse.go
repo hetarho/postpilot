@@ -6,13 +6,14 @@ import (
 	"strconv"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/postpilot/backend/internal/clip/design"
 )
 
 var identifier = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$`)
 var itemCount = regexp.MustCompile(`^[0-9]+$`)
 var seconds = regexp.MustCompile(`^-?[0-9]+(?:\.[0-9]{1,3})?$`)
-var styleNames = []string{"clean", "memo", "bold", "mark", "simple"}
-var rowRoles = []string{"hook", "title", "mark", "body", "caption", "label", "badge"}
+var rowRoles = []string{"caption", "label"}
 
 func issue(n *Node, reason string) *Problem {
 	id := n.Attributes["id"]
@@ -131,26 +132,27 @@ func parse(source string, limits Limits, stored bool) (*Document, *Problem) {
 	if root.Name != "clip" {
 		return nil, issue(root, "unknown_tag")
 	}
-	if e = attrs(root, "version", "styles", "accent", "pace", "intro", "caption", "outro"); e != nil {
+	rootAttrs := []string{"version", "accent", "pace", "intro", "caption", "outro"}
+	if stored {
+		rootAttrs = append(rootAttrs, "styles")
+	}
+	if e = attrs(root, rootAttrs...); e != nil {
 		return nil, e
 	}
 	if root.Attributes["version"] != "1" {
 		return nil, issue(root, "unknown_version")
 	}
-	d := &Document{Source: source, Root: root, Styles: strings.Fields(optional(root, "styles", "clean")), Accent: optional(root, "accent", ""), Pace: optional(root, "pace", "steady")}
+	d := &Document{Source: source, Root: root, Accent: optional(root, "accent", ""), Pace: optional(root, "pace", "steady")}
 	d.Design = DesignSelection{Intro: optional(root, "intro", "b"), Caption: optional(root, "caption", "bold"), Outro: optional(root, "outro", "e")}
 	if !slices.Contains([]string{"a", "b"}, d.Design.Intro) || d.Design.Caption != "bold" || !slices.Contains([]string{"b", "e"}, d.Design.Outro) {
 		return nil, issue(root, "invalid_design")
 	}
-	if len(d.Styles) == 0 {
-		return nil, issue(root, "invalid_style")
-	}
-	seenStyle := map[string]bool{}
-	for _, v := range d.Styles {
-		if !slices.Contains(styleNames, v) || seenStyle[v] {
-			return nil, issue(root, "invalid_style")
+	if !stored {
+		for _, attr := range []string{"intro", "caption", "outro"} {
+			if _, present := root.Attributes[attr]; !present {
+				return nil, issue(root, "invalid_design")
+			}
 		}
-		seenStyle[v] = true
 	}
 	if !slices.Contains([]string{"", "coral", "amber", "lime", "teal", "blue", "violet", "pink"}, d.Accent) {
 		return nil, issue(root, "invalid_accent")
@@ -365,23 +367,48 @@ func parse(source string, limits Limits, stored bool) (*Document, *Problem) {
 			return nil, issue(n, "unknown_tag")
 		}
 	}
+	if !stored {
+		for _, role := range []string{"hook", "ending"} {
+			count := 0
+			for _, element := range d.Elements {
+				if element.Role == role {
+					count++
+				}
+				if element.Role == role && count > 1 {
+					return nil, &Problem{element.ID, element.Span.Line, "invalid_skeleton"}
+				}
+			}
+			if count != 1 {
+				return nil, issue(root, "invalid_skeleton")
+			}
+		}
+	}
 	return d, nil
 }
 
 func readElement(n *Node, d *Document, scope, repeat string, inScene bool, l Limits, stored bool) (Element, *Problem) {
 	var t Element
-	if e := attrs(n, "id", "kind", "role", "style", "position", "align", "basis", "start", "end"); e != nil {
+	allowed := []string{"id", "kind", "role", "position", "align", "basis", "start", "end"}
+	if stored {
+		allowed = append(allowed, "style")
+	}
+	if e := attrs(n, allowed...); e != nil {
 		return t, e
 	}
-	t = Element{ID: n.Attributes["id"], Kind: n.Attributes["kind"], Role: n.Attributes["role"], Style: optional(n, "style", "auto"), Position: optional(n, "position", "auto"), Align: optional(n, "align", "center"), Basis: n.Attributes["basis"], Span: n.Span}
+	t = Element{ID: n.Attributes["id"], Kind: n.Attributes["kind"], Role: n.Attributes["role"], Style: "auto", Position: optional(n, "position", "auto"), Align: optional(n, "align", "center"), Basis: n.Attributes["basis"], Span: n.Span}
 	if t.Kind != "fixed" && t.Kind != "ai" {
 		return t, issue(n, "invalid_kind")
 	}
 	if !slices.Contains([]string{"caption", "info", "badge", "hook", "ending"}, t.Role) {
 		return t, issue(n, "invalid_role")
 	}
-	if !ValidRoleStyle(t.Role, t.Style, d.Styles) && !(stored && ValidRoleStyle("caption", t.Style, d.Styles)) {
-		return t, issue(n, "invalid_style")
+	region := t.Role == "hook" || t.Role == "ending"
+	if region && !stored {
+		_, hasPosition := n.Attributes["position"]
+		_, hasAlign := n.Attributes["align"]
+		if inScene || hasPosition || hasAlign || t.Role == "hook" && t.Basis != "output-start" || t.Role == "ending" && t.Basis != "output-end" {
+			return t, issue(n, "invalid_skeleton")
+		}
 	}
 	if !slices.Contains([]string{"auto", "top", "upper_mid", "lower_mid", "bottom", "header"}, t.Position) || t.Position == "header" && t.Role != "info" && t.Role != "badge" {
 		return t, issue(n, "invalid_position")
@@ -394,7 +421,7 @@ func readElement(n *Node, d *Document, scope, repeat string, inScene bool, l Lim
 	}
 	start, hasStart := n.Attributes["start"]
 	end, hasEnd := n.Attributes["end"]
-	if hasStart != hasEnd || t.Basis == "whole" && hasStart || (t.Basis == "output-start" || t.Basis == "output-end") && !hasStart {
+	if hasStart != hasEnd || t.Basis == "whole" && hasStart || (t.Basis == "output-start" || t.Basis == "output-end") && !hasStart && !region {
 		return t, issue(n, "invalid_interval")
 	}
 	if hasStart {
@@ -405,6 +432,13 @@ func readElement(n *Node, d *Document, scope, repeat string, inScene bool, l Lim
 		}
 		t.StartMS = &a
 		t.EndMS = &b
+	}
+	if region && !hasStart && (t.Basis == "output-start" || t.Basis == "output-end") {
+		a, b := 0, int(design.Timing.IntroDefaultS*1000)
+		if t.Role == "ending" {
+			a, b = -int(design.Timing.OutroDefaultS*1000), 0
+		}
+		t.StartMS, t.EndMS = &a, &b
 	}
 	parts := func(parent *Node) ([]Part, *Problem) {
 		var out []Part
@@ -461,18 +495,36 @@ func readElement(n *Node, d *Document, scope, repeat string, inScene bool, l Lim
 			if c.Name != "row" {
 				return t, issue(n, "invalid_rows")
 			}
-			if e := attrs(c, "role"); e != nil {
+			rowAttrs := []string{"role"}
+			if region {
+				rowAttrs = append(rowAttrs, "kind")
+			}
+			if region && !stored {
+				rowAttrs = []string{"kind"}
+			}
+			if e := attrs(c, rowAttrs...); e != nil {
+				if region {
+					return t, issue(n, "invalid_skeleton")
+				}
 				return t, issue(n, e.Reason)
 			}
 			role := c.Attributes["role"]
-			if !slices.Contains(rowRoles, role) {
+			if region {
+				role = ""
+			} else if stored && role != "label" {
+				role = "caption"
+			} else if !slices.Contains(rowRoles, role) {
 				return t, issue(n, "invalid_row_role")
+			}
+			kind := optional(c, "kind", t.Kind)
+			if kind != "fixed" && kind != "ai" {
+				return t, issue(n, "invalid_kind")
 			}
 			p, e := parts(c)
 			if e != nil {
 				return t, e
 			}
-			t.Rows = append(t.Rows, Row{role, p})
+			t.Rows = append(t.Rows, Row{Role: role, Kind: kind, Parts: p})
 		}
 	} else {
 		p, e := parts(n)
@@ -481,11 +533,26 @@ func readElement(n *Node, d *Document, scope, repeat string, inScene bool, l Lim
 		}
 		t.Parts = p
 	}
-	max := l.CopyChars
-	if t.Kind == "ai" {
-		max = l.GuideChars
+	if region && !stored {
+		kind, id := "intro", d.Design.Intro
+		if t.Role == "ending" {
+			kind, id = "outro", d.Design.Outro
+		}
+		preset, _ := design.Region(kind, id)
+		if len(t.Rows) > len(preset.Slots) {
+			return t, issue(n, "invalid_skeleton")
+		}
+		for _, p := range t.Parts {
+			if p.Field != "" || strings.TrimSpace(p.Literal) != "" {
+				return t, issue(n, "invalid_skeleton")
+			}
+		}
 	}
-	for _, p := range append([]Row{{Parts: t.Parts}}, t.Rows...) {
+	for _, p := range append([]Row{{Kind: t.Kind, Parts: t.Parts}}, t.Rows...) {
+		max := l.CopyChars
+		if p.Kind == "ai" {
+			max = l.GuideChars
+		}
 		count := 0
 		for _, part := range p.Parts {
 			count += scalar(part.Literal)
@@ -495,13 +562,4 @@ func readElement(n *Node, d *Document, scope, repeat string, inScene bool, l Lim
 		}
 	}
 	return t, nil
-}
-
-// ValidRoleStyle is the authored contract shared by parsing and rendering.
-// Named typography describes captions; component roles own their typography.
-func ValidRoleStyle(role, style string, approved []string) bool {
-	if !slices.Contains([]string{"caption", "info", "badge", "hook", "ending"}, role) {
-		return false
-	}
-	return style == "auto" || role == "caption" && slices.Contains(styleNames, style) && slices.Contains(approved, style)
 }

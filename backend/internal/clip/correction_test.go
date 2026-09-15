@@ -19,7 +19,7 @@ func correctionFixture(t *testing.T) (clip.Project, clip.CorrectionPlan) {
 	// A genuinely legacy stored row, which is what these tests are about: the
 	// version-4 envelope this build still reads but no longer writes.
 	raw := legacyStoredPlan(plan, []string{"clean", "memo"})
-	stored, _, err := clip.DecodeEditPlan(raw)
+	stored, err := clip.DecodeEditPlan(raw)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,21 +69,21 @@ func TestCorrectionMutationsAndIntegerPersistence(t *testing.T) {
 	draft.Cuts[0].TransitionMS, draft.Cuts[1].TransitionMS = 0, 200
 	draft.Cuts[0].Copies[0] = clip.Caption{Text: "정확한 글자 & <copy>", Anchor: "lower_mid", Align: "center", Style: "clean", Accent: "coral", StartMS: 200, EndMS: 2000}
 	draft.DurationMS = 28800
-	next, styles, err := clip.ApplyCorrection(cfg, p, draft)
+	next, err := clip.ApplyCorrection(cfg, p, draft)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if next.Ratio != "vertical" || next.Cuts[0].ID != "second" || next.Cuts[0].OriginalVolume() != .123 {
 		t.Fatal(next)
 	}
-	raw, err := clip.EncodeEditPlan(next, styles)
+	raw, err := clip.EncodeEditPlan(next)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if strings.Contains(raw, `"Volume":`) || !strings.Contains(raw, `"VolumePermille":123`) {
 		t.Fatal(raw)
 	}
-	reloaded, _, err := clip.DecodeEditPlan(raw)
+	reloaded, err := clip.DecodeEditPlan(raw)
 	// The snapshot is the server's, never the draft's: saving derives it from
 	// the plan's existing audio meaning and hands it back on the projection.
 	expected := draft
@@ -93,7 +93,7 @@ func TestCorrectionMutationsAndIntegerPersistence(t *testing.T) {
 	}
 	draft.Cuts = draft.Cuts[:1]
 	draft.DurationMS = 19000
-	if _, _, err = clip.ApplyCorrection(cfg, p, draft); err != nil {
+	if _, err = clip.ApplyCorrection(cfg, p, draft); err != nil {
 		t.Fatal("delete", err)
 	}
 	if err = clip.MatchRenderBatch(next, clip.SourceBatch{Sources: []clip.SourceLease{{SourceMetadata: clip.SourceMetadata{Fingerprint: "fa"}}, {SourceMetadata: clip.SourceMetadata{Fingerprint: "fb"}}}}); err != nil {
@@ -101,13 +101,13 @@ func TestCorrectionMutationsAndIntegerPersistence(t *testing.T) {
 	}
 }
 func TestCorrectionRejectsEveryInvalidMutationWithoutChangingInput(t *testing.T) {
-	cases := map[string]func(*clip.CorrectionPlan){"empty": func(p *clip.CorrectionPlan) { p.Cuts = nil }, "new id": func(p *clip.CorrectionPlan) { p.Cuts[0].ID = "new" }, "duplicate": func(p *clip.CorrectionPlan) { p.Cuts[1] = p.Cuts[0] }, "source": func(p *clip.CorrectionPlan) { p.Cuts[0].SourceID = "b" }, "fingerprint": func(p *clip.CorrectionPlan) { p.Cuts[0].Fingerprint = "forged" }, "negative": func(p *clip.CorrectionPlan) { p.Cuts[0].StartMS = -1 }, "too long": func(p *clip.CorrectionPlan) { p.Cuts[0].EndMS = 40001 }, "empty cut": func(p *clip.CorrectionPlan) { p.Cuts[0].EndMS = 0 }, "fade": func(p *clip.CorrectionPlan) { p.Cuts[0].EndMS = 400 }, "duration": func(p *clip.CorrectionPlan) { p.DurationMS++ }, "min": func(p *clip.CorrectionPlan) { p.DurationMS = 14999 }, "max": func(p *clip.CorrectionPlan) { p.DurationMS = 90001 }, "caption before": func(p *clip.CorrectionPlan) { p.Cuts[0].Copies[0].StartMS = -1 }, "caption after": func(p *clip.CorrectionPlan) { p.Cuts[0].Copies[0].EndMS = 10001 }, "position": func(p *clip.CorrectionPlan) { p.Cuts[0].Copies[0].Anchor = "free" }, "style": func(p *clip.CorrectionPlan) { p.Cuts[0].Copies[0].Style = "bold" }, "accent": func(p *clip.CorrectionPlan) { p.Cuts[0].Copies[0].Accent = "red" }, "volume low": func(p *clip.CorrectionPlan) { p.Cuts[0].VolumePermille = -1 }, "volume high": func(p *clip.CorrectionPlan) { p.Cuts[0].VolumePermille = 1001 }, "text": func(p *clip.CorrectionPlan) { p.Cuts[0].Copies[0].Text = strings.Repeat("가", 501) }}
+	cases := map[string]func(*clip.CorrectionPlan){"empty": func(p *clip.CorrectionPlan) { p.Cuts = nil }, "new id": func(p *clip.CorrectionPlan) { p.Cuts[0].ID = "new" }, "duplicate": func(p *clip.CorrectionPlan) { p.Cuts[1] = p.Cuts[0] }, "source": func(p *clip.CorrectionPlan) { p.Cuts[0].SourceID = "b" }, "fingerprint": func(p *clip.CorrectionPlan) { p.Cuts[0].Fingerprint = "forged" }, "negative": func(p *clip.CorrectionPlan) { p.Cuts[0].StartMS = -1 }, "too long": func(p *clip.CorrectionPlan) { p.Cuts[0].EndMS = 40001 }, "empty cut": func(p *clip.CorrectionPlan) { p.Cuts[0].EndMS = 0 }, "fade": func(p *clip.CorrectionPlan) { p.Cuts[0].EndMS = 400 }, "duration": func(p *clip.CorrectionPlan) { p.DurationMS++ }, "min": func(p *clip.CorrectionPlan) { p.DurationMS = 14999 }, "max": func(p *clip.CorrectionPlan) { p.DurationMS = 90001 }, "caption before": func(p *clip.CorrectionPlan) { p.Cuts[0].Copies[0].StartMS = -1 }, "caption after": func(p *clip.CorrectionPlan) { p.Cuts[0].Copies[0].EndMS = 10001 }, "position": func(p *clip.CorrectionPlan) { p.Cuts[0].Copies[0].Anchor = "free" }, "accent": func(p *clip.CorrectionPlan) { p.Cuts[0].Copies[0].Accent = "red" }, "volume low": func(p *clip.CorrectionPlan) { p.Cuts[0].VolumePermille = -1 }, "volume high": func(p *clip.CorrectionPlan) { p.Cuts[0].VolumePermille = 1001 }, "text": func(p *clip.CorrectionPlan) { p.Cuts[0].Copies[0].Text = strings.Repeat("가", 501) }}
 	for name, mutate := range cases {
 		t.Run(name, func(t *testing.T) {
 			p, input := correctionFixture(t)
 			raw := p.EditPlan
 			mutate(&input)
-			_, _, err := clip.ApplyCorrection(config.ClipRender(&config.Config{}), p, input)
+			_, err := clip.ApplyCorrection(config.ClipRender(&config.Config{}), p, input)
 			if !errors.Is(err, clip.ErrInvalid) && !errors.Is(err, clip.ErrCopyTooLong) {
 				t.Fatal(err)
 			}
@@ -120,7 +120,7 @@ func TestCorrectionRejectsEveryInvalidMutationWithoutChangingInput(t *testing.T)
 
 func TestRenderBatchRequiresMatchingSubsetAndAllowsRetainedSuperset(t *testing.T) {
 	p, _ := correctionFixture(t)
-	plan, _, _ := clip.DecodeEditPlan(p.EditPlan)
+	plan, _ := clip.DecodeEditPlan(p.EditPlan)
 	plan.Cuts = plan.Cuts[:1]
 	for _, values := range [][]string{nil, {"wrong"}, {"fa", "fa"}} {
 		b := clip.SourceBatch{}
@@ -142,7 +142,7 @@ func TestRenderBatchRequiresMatchingSubsetAndAllowsRetainedSuperset(t *testing.T
 
 func TestLegacyGeneratedPlanRemainsReadableAndMigratesOnSave(t *testing.T) {
 	p, _ := correctionFixture(t)
-	plan, _, err := clip.DecodeEditPlan(p.EditPlan)
+	plan, err := clip.DecodeEditPlan(p.EditPlan)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -167,16 +167,16 @@ func TestLegacyGeneratedPlanRemainsReadableAndMigratesOnSave(t *testing.T) {
 		old.Cuts = append(old.Cuts, legacyCut{c.ID, c.SourceID, c.Fingerprint, c.StartMS, c.EndMS, c.TransitionMS, c.Focal, c.FirstCopy(), c.Chips, c.Volume})
 	}
 	legacy, _ := json.Marshal(old)
-	decoded, styles, err := clip.DecodeEditPlan(string(legacy))
-	if err != nil || !reflect.DeepEqual(plan, decoded) || !reflect.DeepEqual(styles, []string{"clean", "memo"}) {
-		t.Fatal(decoded, styles, err)
+	decoded, err := clip.DecodeEditPlan(string(legacy))
+	if err != nil || !reflect.DeepEqual(plan, decoded) {
+		t.Fatal(decoded, err)
 	}
-	next, err := clip.EncodeEditPlan(decoded, styles)
+	next, err := clip.EncodeEditPlan(decoded)
 	if err != nil || strings.Contains(next, `"Volume":`) {
 		t.Fatal(next, err)
 	}
 	for _, bad := range []string{"null", `{"Version":99}`, next + " {}"} {
-		if _, _, err = clip.DecodeEditPlan(bad); err == nil {
+		if _, err = clip.DecodeEditPlan(bad); err == nil {
 			t.Fatal("invalid persisted version accepted", bad)
 		}
 	}
@@ -193,7 +193,7 @@ func TestDecodeMapsTheRetiredPlanVocabularyOnRead(t *testing.T) {
 		`"Copy":{"Text":"diary","Position":"top","Style":"emphasis","Accent":"","StartMS":0,"EndMS":0},"VolumePermille":1000}` +
 		`]},"Focals":{"one":{"X":0.5,"Y":0.5},"two":{"X":0.5,"Y":0.5}},` +
 		`"CopyStyles":["clean","diary","emphasis"]}`
-	plan, styles, err := clip.DecodeEditPlan(legacy)
+	plan, err := clip.DecodeEditPlan(legacy)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -209,17 +209,14 @@ func TestDecodeMapsTheRetiredPlanVocabularyOnRead(t *testing.T) {
 	if first.Text != "center" || second.Text != "diary" {
 		t.Fatalf("caption text was rewritten: %q %q", first.Text, second.Text)
 	}
-	if !reflect.DeepEqual(styles, []string{"clean", "memo", "bold"}) {
-		t.Fatalf("approved styles = %v", styles)
-	}
 	// Re-encoding what was read leaves nothing of the old vocabulary behind.
-	raw, err := clip.EncodeEditPlan(plan, styles)
+	raw, err := clip.EncodeEditPlan(plan)
 	for _, token := range []string{`"Position":"`, `"Style":"diary"`, `"Style":"emphasis"`, `,"diary"`, `,"emphasis"`} {
 		if err != nil || strings.Contains(raw, token) {
 			t.Fatalf("re-encoded plan still carries %s: %v\n%s", token, err, raw)
 		}
 	}
-	if !strings.Contains(raw, `"CopyStyles":["clean","memo","bold"]`) {
+	if strings.Contains(raw, `"CopyStyles"`) {
 		t.Fatalf("re-encoded approved set: %s", raw)
 	}
 }
@@ -233,7 +230,7 @@ func TestStoredPlanBeforeTwoCopiesUpgradesToAList(t *testing.T) {
 		`{"ID":"two","SourceID":"s","Fingerprint":"f","StartMS":0,"EndMS":10000,"TransitionMS":0,` +
 		`"Copy":{"Text":"9900원","Anchor":"top","Align":"left","Style":"memo","Accent":"","Keyword":"","StartMS":0,"EndMS":0},"Chips":null,"VolumePermille":1000}]},` +
 		`"Focals":{"one":{"X":0.5,"Y":0.5},"two":{"X":0.5,"Y":0.5}},"CopyStyles":["clean","memo"]}`
-	plan, styles, err := clip.DecodeEditPlan(legacy)
+	plan, err := clip.DecodeEditPlan(legacy)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -245,7 +242,7 @@ func TestStoredPlanBeforeTwoCopiesUpgradesToAList(t *testing.T) {
 	}
 	// Saved again, it is a version-6 assembly plan: the same result, now stating
 	// its 1x rate and the original audio meaning its per-cut volume carried.
-	next, err := clip.EncodeEditPlan(plan, styles)
+	next, err := clip.EncodeEditPlan(plan)
 	if err != nil || !strings.Contains(next, `"Version":6`) || !strings.Contains(next, `"Copies":[`) ||
 		!strings.Contains(next, `"Rates":{"one":1000,"two":1000}`) ||
 		!strings.Contains(next, `"SourceAudio":[{"SourceID":"s","Fingerprint":"f","RetainOriginal":true}]`) {
@@ -256,7 +253,7 @@ func TestStoredPlanBeforeTwoCopiesUpgradesToAList(t *testing.T) {
 	if len(clip.SourceOverlaps(plan.Cuts)) != 1 {
 		t.Fatal("legacy overlap lost")
 	}
-	again, _, err := clip.DecodeEditPlan(next)
+	again, err := clip.DecodeEditPlan(next)
 	if err != nil || !reflect.DeepEqual(plan, again) {
 		t.Fatalf("%+v %v", again, err)
 	}

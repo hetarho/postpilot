@@ -44,7 +44,7 @@ func TestRenderCompositionStress(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		body := `<clip version="1" pace="rapid" styles="simple"><repeat for="scenes"><scene id="scene"><text id="copy" kind="ai" role="caption" basis="cut">Describe the scene.</text></scene></repeat></clip>`
+		body := `<clip version="1" intro="b" caption="bold" outro="e" pace="rapid"><repeat for="scenes"><scene id="scene"><text id="copy" kind="ai" role="caption" basis="cut">Describe the scene.</text></scene></repeat><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`
 		doc, problem := composition.Parse(body, r.cfg.Composition)
 		if problem != nil {
 			return problem

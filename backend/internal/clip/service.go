@@ -57,24 +57,6 @@ func ValidAccent(s string) bool {
 	return ok
 }
 
-// ValidCopyStyles accepts the fixed caption treatment and legacy stored sets.
-// The transport fields remain until the design-selection migration (T169).
-func ValidCopyStyles(values []string) bool {
-	if len(values) == 1 && values[0] == "bold" {
-		return true
-	}
-	if len(values) == 0 || len(values) > 5 || !slices.Contains(values, "clean") {
-		return false
-	}
-	seen := map[string]bool{}
-	for _, s := range values {
-		if seen[s] || !slices.Contains([]string{"clean", "memo", "bold", "mark", "simple"}, s) {
-			return false
-		}
-		seen[s] = true
-	}
-	return true
-}
 func (s *Service) fields(values []InformationField) ([]InformationField, error) {
 	if len(values) > s.limits.FieldCount {
 		return nil, ErrInvalid
@@ -126,7 +108,7 @@ func (s *Service) CreateTemplate(ctx context.Context, user string, recipe Recipe
 		}
 		return t, nil
 	}
-	if !bounded(recipe.Name, 1, s.limits.NameChars) || !bounded(recipe.CutGuidance, 0, s.limits.GuidanceChars) || !ValidCopyStyles(recipe.CopyStyles) || !ValidAccent(recipe.Accent) || !ValidPreset(recipe.Preset) || !ValidCaptionPace(recipe.CaptionPace) {
+	if !bounded(recipe.Name, 1, s.limits.NameChars) || !bounded(recipe.CutGuidance, 0, s.limits.GuidanceChars) || !ValidAccent(recipe.Accent) || !ValidPreset(recipe.Preset) || !ValidCaptionPace(recipe.CaptionPace) {
 		return VideoTemplate{}, ErrInvalid
 	}
 	fields, err := s.fields(recipe.InformationFields)
@@ -167,11 +149,10 @@ func (s *Service) UpdateTemplate(ctx context.Context, user, id string, p Templat
 		p.Preset = &r.Preset
 		p.CaptionPace = &r.CaptionPace
 		p.InformationFields = &r.InformationFields
-		p.CopyStyles = &r.CopyStyles
 		return s.store.UpdateTemplate(ctx, user, id, p, time.Now())
 	}
 	if old.CompositionBody != "" && !old.CompositionLegacy {
-		if p.CutGuidance != nil || p.Accent != nil || p.Preset != nil || p.CaptionPace != nil || p.InformationFields != nil || p.CopyStyles != nil {
+		if p.CutGuidance != nil || p.Accent != nil || p.Preset != nil || p.CaptionPace != nil || p.InformationFields != nil {
 			return VideoTemplate{}, ErrInvalid
 		}
 		return s.store.UpdateTemplate(ctx, user, id, p, time.Now())
@@ -183,9 +164,6 @@ func (s *Service) UpdateTemplate(ctx context.Context, user, id string, p Templat
 		return VideoTemplate{}, ErrInvalid
 	}
 	if p.CaptionPace != nil && !ValidCaptionPace(*p.CaptionPace) {
-		return VideoTemplate{}, ErrInvalid
-	}
-	if p.CopyStyles != nil && !ValidCopyStyles(*p.CopyStyles) {
 		return VideoTemplate{}, ErrInvalid
 	}
 	// The empty preset is readable but never writable: a template that names one

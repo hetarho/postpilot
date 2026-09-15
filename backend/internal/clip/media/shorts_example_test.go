@@ -46,7 +46,7 @@ func renderShortsExample(t *testing.T, paceExample bool) {
 		t.Fatal(err)
 	}
 	if err := a.WithWorkspace(t.Context(), "shorts-example", func(ws clip.MediaWorkspace) error {
-		plan := clip.EditPlan{Ratio: "vertical", DurationMS: 20000, Disclosure: "ad", HideDisclosure: os.Getenv("CLIP_EXAMPLE_HIDE_DISCLOSURE") == "1", Preset: "restaurant", Hook: "이 소리, 못 참지", Accent: "lime", CTA: "save", Styles: []string{"clean"},
+		plan := clip.EditPlan{Ratio: "vertical", DurationMS: 20000, Disclosure: "ad", HideDisclosure: os.Getenv("CLIP_EXAMPLE_HIDE_DISCLOSURE") == "1", Preset: "restaurant", Hook: "이 소리, 못 참지", Accent: "lime", CTA: "save",
 			Facts: []clip.Answer{{Label: "상호", Text: "철판 한 끼"}, {Label: "메뉴", Text: "철판 요리 · 볶음밥"}}}
 		// These are editorial sample words about visible footage. The title is
 		// not a claimed merchant name, and no unknown price/location is invented.
@@ -54,7 +54,6 @@ func renderShortsExample(t *testing.T, paceExample bool) {
 		ends := []int{2800, 2800, 2600, 1400, 2800, 4000, 1400, 2600}
 		captions := []string{"", "자리부터 잡고", "창밖은 초록", "시작", "양념과 함께", "노릇해질 때까지", "한 쌈", ""}
 		if paceExample {
-			plan.Styles = []string{"clean", "simple"}
 		}
 		var sources []clip.RenderSource
 		paths := map[string]string{}
@@ -111,7 +110,7 @@ func renderShortsExample(t *testing.T, paceExample bool) {
 		if err != nil {
 			return err
 		}
-		if err := design.VerifyApproved(manifest, plan.Ratio, plan.Styles, plan.HideDisclosure); err != nil {
+		if err := design.Verify(manifest, plan.Ratio, plan.HideDisclosure); err != nil {
 			return fmt.Errorf("example must be free of layout collisions: %w", err)
 		}
 		started := time.Now()
@@ -126,7 +125,7 @@ func renderShortsExample(t *testing.T, paceExample bool) {
 		if err != nil {
 			return err
 		}
-		if err := design.VerifyApproved(result.Manifest, plan.Ratio, plan.Styles, plan.HideDisclosure); err != nil {
+		if err := design.Verify(result.Manifest, plan.Ratio, plan.HideDisclosure); err != nil {
 			return err
 		}
 		if result.Info.DurationMS != 20000 || result.Bytes == 0 {

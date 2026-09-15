@@ -39,6 +39,8 @@ export type CompositionReason =
   | 'unknown_attribute'
   | 'unknown_version'
   | 'invalid_style'
+  | 'invalid_design'
+  | 'invalid_skeleton'
   | 'invalid_accent'
   | 'invalid_pace'
   | 'invalid_id'
@@ -110,6 +112,7 @@ export interface CompositionPart {
   field: string
 }
 export interface CompositionRow {
+  kind: 'fixed' | 'ai'
   role: string
   parts: CompositionPart[]
 }
@@ -138,7 +141,7 @@ export interface CompositionSection {
 export interface ClipComposition {
   source: string
   root: CompositionNode
-  styles: string[]
+  design: { intro: 'a' | 'b'; caption: 'bold'; outro: 'b' | 'e' }
   accent: string
   pace: string
   fields: CompositionField[]

@@ -129,7 +129,7 @@ export function resolveClipComposition(
       authoredTiming: t.basis !== 'cut' || t.startMs !== null,
     }
     let omit = false
-    const bind = (parts: CompositionPart[]) => {
+    const bind = (parts: CompositionPart[], kind: string) => {
       const text = parts
         .map((p) => {
           if (!p.field) return p.literal
@@ -144,12 +144,21 @@ export function resolveClipComposition(
           return value
         })
         .join('')
-      if (scalarLength(text) > (t.kind === 'ai' ? limits.guideChars : limits.copyChars))
+      if (scalarLength(text) > (kind === 'ai' ? limits.guideChars : limits.copyChars))
         fail(t.id, t.span.line, 'copy_limit')
       return text
     }
-    r.text = bind(t.parts)
-    r.rows = t.rows.map((row) => ({ role: row.role, text: bind(row.parts) }))
+    r.text = bind(t.parts, t.kind)
+    const region = t.role === 'hook' || t.role === 'ending'
+    r.rows = t.rows.map((row) => {
+      let text = bind(row.parts, row.kind ?? t.kind)
+      if (region && omit) {
+        text = ''
+        omit = false
+      }
+      return { role: row.role, text }
+    })
+    if (region && !r.text.trim() && r.rows.every((row) => !row.text.trim())) return
     if (omit) return
     let start = 0,
       end = output.durationMs

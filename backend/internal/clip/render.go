@@ -145,9 +145,6 @@ type EditPlan struct {
 	// The closing call to action, already resolved against the preset, and the
 	// project accent both cards paint with (CDS-29, CLIP-14).
 	CTA, Accent string
-	// Styles is the template's approved copy styles, set at render time like
-	// the facts above: the verifier reads CDS-40's run rule against it.
-	Styles []string
 	// What the model wrote per cut, parallel to Cuts, before the compiler placed
 	// it. It is the compiler's input and is never stored with the plan.
 	Written []Written
@@ -270,7 +267,6 @@ const (
 	reasonLayoutOverlap    = "CLIP_LAYOUT_OVERLAP"
 	reasonLayoutMotion     = "CLIP_LAYOUT_MOTION"
 	reasonLayoutAnchorStep = "CLIP_LAYOUT_ANCHOR_STEP"
-	reasonLayoutFrequency  = "CLIP_LAYOUT_FREQUENCY"
 	reasonLayoutDisclosure = "CLIP_LAYOUT_DISCLOSURE"
 	reasonLayoutKind       = "CLIP_LAYOUT_KIND"
 	reasonLayoutContrast   = "CLIP_LAYOUT_CONTRAST"
@@ -282,7 +278,6 @@ var layoutReasons = map[string]string{
 	string(design.ViolationOverlap):    reasonLayoutOverlap,
 	string(design.ViolationMotion):     reasonLayoutMotion,
 	string(design.ViolationAnchorStep): reasonLayoutAnchorStep,
-	string(design.ViolationFrequency):  reasonLayoutFrequency,
 	string(design.ViolationDisclosure): reasonLayoutDisclosure,
 	string(design.ViolationKind):       reasonLayoutKind,
 	string(design.ViolationContrast):   reasonLayoutContrast,
@@ -315,8 +310,8 @@ func LayoutViolation(v design.Violation, cut, copy int) error {
 
 // VerifyLayout enforces delivery checks (CDS-52), excluding advisory overlaps
 // (CDS-56), and names the caption a blocking failure belongs to (CDS-55).
-func VerifyLayout(ratio string, approved []string, m Manifest, hideDisclosure ...bool) error {
-	err := design.VerifyRenderable(m, ratio, approved, hideDisclosure...)
+func VerifyLayout(ratio string, m Manifest, hideDisclosure ...bool) error {
+	err := design.VerifyRenderable(m, ratio, hideDisclosure...)
 	var f *design.Failure
 	if errors.As(err, &f) {
 		return &LayoutError{planViolation(f.Check), f.Cut, f.Copy}
@@ -345,12 +340,6 @@ func (p EditPlan) WithFacts(disclosure string, facts []Answer, preset, cta, acce
 	p.HideDisclosure = len(hideDisclosure) > 0 && hideDisclosure[0]
 	p.Disclosure, p.Facts, p.Preset = disclosure, facts, preset
 	p.CTA, p.Accent = cta, accent
-	return p
-}
-
-// WithStyles records the template's approved copy styles for the verifier.
-func (p EditPlan) WithStyles(styles []string) EditPlan {
-	p.Styles = styles
 	return p
 }
 

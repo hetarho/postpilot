@@ -20,7 +20,7 @@ func (s *nativeRPCStore) GetProject(_ context.Context, user, id string) (clip.Pr
 	if id != "owned" || user != "alice" {
 		return clip.Project{}, clip.ErrNotFound
 	}
-	return clip.Project{ID: id, UserID: user, Composition: &clip.ProjectComposition{Snapshot: clip.CompositionSnapshot{Version: 1, Body: `<clip version="1"><field id="a" label="同名"/><field id="b" label="同名"/></clip>`}, Inputs: clip.CompositionInputs{Values: map[string]string{"a": "old"}}}}, nil
+	return clip.Project{ID: id, UserID: user, Composition: &clip.ProjectComposition{Snapshot: clip.CompositionSnapshot{Version: 1, Body: `<clip version="1" intro="b" caption="bold" outro="e"><field id="a" label="同名"/><field id="b" label="同名"/><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`}, Inputs: clip.CompositionInputs{Values: map[string]string{"a": "old"}}}}, nil
 }
 
 func TestCompositionRPCPresenceAndCapabilities(t *testing.T) {

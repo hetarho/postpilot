@@ -148,7 +148,11 @@ describe('composition template authoring', () => {
       expect(router.state.location.pathname).toBe('/video-templates/video-template-1'),
     )
     expect(writes).toHaveLength(1)
-    expect(parseClipComposition(writes[0].compositionBody!).styles).toEqual(['bold'])
+    expect(parseClipComposition(writes[0].compositionBody!).design).toEqual({
+      intro: 'b',
+      caption: 'bold',
+      outro: 'e',
+    })
   })
   it('opens converted content without writing and reports unavailable generation capability', async () => {
     const calls: string[] = []

@@ -17,33 +17,34 @@
   "cases": [
     {
       "name": "empty composition",
-      "body": "<clip version=\"1\"></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "summary": {
-        "styles": [
-          "clean"
-        ],
         "accent": "",
         "pace": "steady",
         "fields": [],
         "groups": [],
         "sections": [],
-        "elements": [],
-        "guidance": []
+        "elements": [
+          "empty-hook",
+          "empty-ending"
+        ],
+        "guidance": [],
+        "design": {
+          "intro": "b",
+          "caption": "bold",
+          "outro": "e"
+        }
       },
       "rootSpan": {
         "start": 0,
-        "end": 25,
+        "end": 200,
         "line": 1
       }
     },
     {
       "name": "Unicode exact text and scalar spans",
-      "body": " \n<clip version=\"1\" styles=\"clean memo\" accent=\"teal\" pace=\"rapid\">\n  <field id=\"brand\" label=\"상호\" required=\"true\">상호명</field>\n  <guide>화면에 쓰지 않는 지침</guide>\n  <text id=\"exact\" kind=\"fixed\" role=\"badge\" position=\"header\" basis=\"whole\">  🥘 &lt;협찬&gt;\r\n<value field=\"brand\"/> &amp; 그대로  </text>\n</clip>\n",
+      "body": " \n<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\" accent=\"teal\" pace=\"rapid\">\n  <field id=\"brand\" label=\"상호\" required=\"true\">상호명</field>\n  <guide>화면에 쓰지 않는 지침</guide>\n  <text id=\"exact\" kind=\"fixed\" role=\"badge\" position=\"header\" basis=\"whole\">  🥘 &lt;협찬&gt;\r\n<value field=\"brand\"/> &amp; 그대로  </text>\n<text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>\n",
       "summary": {
-        "styles": [
-          "clean",
-          "memo"
-        ],
         "accent": "teal",
         "pace": "rapid",
         "fields": [
@@ -58,11 +59,18 @@
         "groups": [],
         "sections": [],
         "elements": [
-          "exact"
+          "exact",
+          "empty-hook",
+          "empty-ending"
         ],
         "guidance": [
           "화면에 쓰지 않는 지침"
-        ]
+        ],
+        "design": {
+          "intro": "b",
+          "caption": "bold",
+          "outro": "e"
+        }
       },
       "inputs": {
         "values": {
@@ -103,13 +111,13 @@
       ],
       "rootSpan": {
         "start": 2,
-        "end": 299,
+        "end": 454,
         "line": 2
       }
     },
     {
       "name": "item facts and overlapping cuts",
-      "body": "<clip version=\"1\" styles=\"clean memo bold\">\n<field id=\"city\" label=\"지역\" required=\"true\">지역</field>\n<group id=\"menu\"><field id=\"name\" label=\"메뉴\" required=\"true\"/><field id=\"price\" label=\"가격\" required=\"true\"/><field id=\"extra\" label=\"추가 정보\"/></group>\n<text id=\"context\" kind=\"fixed\" role=\"info\" position=\"header\" basis=\"output-start\" start=\"0\" end=\"3\"><value field=\"city\"/></text>\n<text id=\"bye\" kind=\"fixed\" role=\"ending\" basis=\"output-end\" start=\"-1.5\" end=\"0\"><row role=\"title\">다시 만나요</row><row role=\"body\">저장해 두세요</row></text>\n<repeat for=\"menu\"><scene id=\"dish\" scope=\"item\"><guide>보이는 메뉴만 설명</guide><text id=\"price\" kind=\"fixed\" role=\"caption\" style=\"memo\" basis=\"cut\" start=\"0.5\" end=\"2.5\"><value field=\"menu.name\"/>: <value field=\"menu.price\"/></text><text id=\"extra\" kind=\"fixed\" role=\"info\" basis=\"cut\"><value field=\"menu.extra\"/></text><text id=\"copy\" kind=\"ai\" role=\"caption\" basis=\"cut\">보이는 <value field=\"menu.name\"/> 설명</text></scene></repeat>\n</clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<field id=\"city\" label=\"지역\" required=\"true\">지역</field>\n<group id=\"menu\"><field id=\"name\" label=\"메뉴\" required=\"true\"/><field id=\"price\" label=\"가격\" required=\"true\"/><field id=\"extra\" label=\"추가 정보\"/></group>\n<text id=\"context\" kind=\"fixed\" role=\"info\" position=\"header\" basis=\"output-start\" start=\"0\" end=\"3\"><value field=\"city\"/></text>\n<text id=\"bye\" kind=\"fixed\" role=\"ending\" basis=\"output-end\" start=\"-1.5\" end=\"0\"><row>다시 만나요</row><row>저장해 두세요</row></text>\n<repeat for=\"menu\"><scene id=\"dish\" scope=\"item\"><guide>보이는 메뉴만 설명</guide><text id=\"price\" kind=\"fixed\" role=\"caption\" basis=\"cut\" start=\"0.5\" end=\"2.5\"><value field=\"menu.name\"/>: <value field=\"menu.price\"/></text><text id=\"extra\" kind=\"fixed\" role=\"info\" basis=\"cut\"><value field=\"menu.extra\"/></text><text id=\"copy\" kind=\"ai\" role=\"caption\" basis=\"cut\">보이는 <value field=\"menu.name\"/> 설명</text></scene></repeat>\n<text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/></clip>",
       "inputs": {
         "values": {
           "city": "서울"
@@ -189,11 +197,11 @@
           "facts": [],
           "rows": [
             {
-              "role": "title",
+              "role": "",
               "text": "다시 만나요"
             },
             {
-              "role": "body",
+              "role": "",
               "text": "저장해 두세요"
             }
           ]
@@ -277,13 +285,13 @@
       ],
       "rootSpan": {
         "start": 0,
-        "end": 963,
+        "end": 1004,
         "line": 1
       }
     },
     {
       "name": "reorder follows stable cut and item identity",
-      "body": "<clip version=\"1\" styles=\"clean memo bold\">\n<field id=\"city\" label=\"지역\" required=\"true\">지역</field>\n<group id=\"menu\"><field id=\"name\" label=\"메뉴\" required=\"true\"/><field id=\"price\" label=\"가격\" required=\"true\"/><field id=\"extra\" label=\"추가 정보\"/></group>\n<text id=\"context\" kind=\"fixed\" role=\"info\" position=\"header\" basis=\"output-start\" start=\"0\" end=\"3\"><value field=\"city\"/></text>\n<text id=\"bye\" kind=\"fixed\" role=\"ending\" basis=\"output-end\" start=\"-1.5\" end=\"0\"><row role=\"title\">다시 만나요</row><row role=\"body\">저장해 두세요</row></text>\n<repeat for=\"menu\"><scene id=\"dish\" scope=\"item\"><guide>보이는 메뉴만 설명</guide><text id=\"price\" kind=\"fixed\" role=\"caption\" style=\"memo\" basis=\"cut\" start=\"0.5\" end=\"2.5\"><value field=\"menu.name\"/>: <value field=\"menu.price\"/></text><text id=\"extra\" kind=\"fixed\" role=\"info\" basis=\"cut\"><value field=\"menu.extra\"/></text><text id=\"copy\" kind=\"ai\" role=\"caption\" basis=\"cut\">보이는 <value field=\"menu.name\"/> 설명</text></scene></repeat>\n</clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<field id=\"city\" label=\"지역\" required=\"true\">지역</field>\n<group id=\"menu\"><field id=\"name\" label=\"메뉴\" required=\"true\"/><field id=\"price\" label=\"가격\" required=\"true\"/><field id=\"extra\" label=\"추가 정보\"/></group>\n<text id=\"context\" kind=\"fixed\" role=\"info\" position=\"header\" basis=\"output-start\" start=\"0\" end=\"3\"><value field=\"city\"/></text>\n<text id=\"bye\" kind=\"fixed\" role=\"ending\" basis=\"output-end\" start=\"-1.5\" end=\"0\"><row>다시 만나요</row><row>저장해 두세요</row></text>\n<repeat for=\"menu\"><scene id=\"dish\" scope=\"item\"><guide>보이는 메뉴만 설명</guide><text id=\"price\" kind=\"fixed\" role=\"caption\" basis=\"cut\" start=\"0.5\" end=\"2.5\"><value field=\"menu.name\"/>: <value field=\"menu.price\"/></text><text id=\"extra\" kind=\"fixed\" role=\"info\" basis=\"cut\"><value field=\"menu.extra\"/></text><text id=\"copy\" kind=\"ai\" role=\"caption\" basis=\"cut\">보이는 <value field=\"menu.name\"/> 설명</text></scene></repeat>\n<text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/></clip>",
       "inputs": {
         "values": {
           "city": "서울"
@@ -363,11 +371,11 @@
           "facts": [],
           "rows": [
             {
-              "role": "title",
+              "role": "",
               "text": "다시 만나요"
             },
             {
-              "role": "body",
+              "role": "",
               "text": "저장해 두세요"
             }
           ]
@@ -451,13 +459,13 @@
       ],
       "rootSpan": {
         "start": 0,
-        "end": 963,
+        "end": 1004,
         "line": 1
       }
     },
     {
       "name": "delete removes only the deleted cut elements",
-      "body": "<clip version=\"1\" styles=\"clean memo bold\">\n<field id=\"city\" label=\"지역\" required=\"true\">지역</field>\n<group id=\"menu\"><field id=\"name\" label=\"메뉴\" required=\"true\"/><field id=\"price\" label=\"가격\" required=\"true\"/><field id=\"extra\" label=\"추가 정보\"/></group>\n<text id=\"context\" kind=\"fixed\" role=\"info\" position=\"header\" basis=\"output-start\" start=\"0\" end=\"3\"><value field=\"city\"/></text>\n<text id=\"bye\" kind=\"fixed\" role=\"ending\" basis=\"output-end\" start=\"-1.5\" end=\"0\"><row role=\"title\">다시 만나요</row><row role=\"body\">저장해 두세요</row></text>\n<repeat for=\"menu\"><scene id=\"dish\" scope=\"item\"><guide>보이는 메뉴만 설명</guide><text id=\"price\" kind=\"fixed\" role=\"caption\" style=\"memo\" basis=\"cut\" start=\"0.5\" end=\"2.5\"><value field=\"menu.name\"/>: <value field=\"menu.price\"/></text><text id=\"extra\" kind=\"fixed\" role=\"info\" basis=\"cut\"><value field=\"menu.extra\"/></text><text id=\"copy\" kind=\"ai\" role=\"caption\" basis=\"cut\">보이는 <value field=\"menu.name\"/> 설명</text></scene></repeat>\n</clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<field id=\"city\" label=\"지역\" required=\"true\">지역</field>\n<group id=\"menu\"><field id=\"name\" label=\"메뉴\" required=\"true\"/><field id=\"price\" label=\"가격\" required=\"true\"/><field id=\"extra\" label=\"추가 정보\"/></group>\n<text id=\"context\" kind=\"fixed\" role=\"info\" position=\"header\" basis=\"output-start\" start=\"0\" end=\"3\"><value field=\"city\"/></text>\n<text id=\"bye\" kind=\"fixed\" role=\"ending\" basis=\"output-end\" start=\"-1.5\" end=\"0\"><row>다시 만나요</row><row>저장해 두세요</row></text>\n<repeat for=\"menu\"><scene id=\"dish\" scope=\"item\"><guide>보이는 메뉴만 설명</guide><text id=\"price\" kind=\"fixed\" role=\"caption\" basis=\"cut\" start=\"0.5\" end=\"2.5\"><value field=\"menu.name\"/>: <value field=\"menu.price\"/></text><text id=\"extra\" kind=\"fixed\" role=\"info\" basis=\"cut\"><value field=\"menu.extra\"/></text><text id=\"copy\" kind=\"ai\" role=\"caption\" basis=\"cut\">보이는 <value field=\"menu.name\"/> 설명</text></scene></repeat>\n<text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/></clip>",
       "inputs": {
         "values": {
           "city": "서울"
@@ -527,11 +535,11 @@
           "facts": [],
           "rows": [
             {
-              "role": "title",
+              "role": "",
               "text": "다시 만나요"
             },
             {
-              "role": "body",
+              "role": "",
               "text": "저장해 두세요"
             }
           ]
@@ -577,13 +585,13 @@
       ],
       "rootSpan": {
         "start": 0,
-        "end": 963,
+        "end": 1004,
         "line": 1
       }
     },
     {
       "name": "trim refuses authored interval instead of clamping",
-      "body": "<clip version=\"1\" styles=\"clean memo bold\">\n<field id=\"city\" label=\"지역\" required=\"true\">지역</field>\n<group id=\"menu\"><field id=\"name\" label=\"메뉴\" required=\"true\"/><field id=\"price\" label=\"가격\" required=\"true\"/><field id=\"extra\" label=\"추가 정보\"/></group>\n<text id=\"context\" kind=\"fixed\" role=\"info\" position=\"header\" basis=\"output-start\" start=\"0\" end=\"1\"><value field=\"city\"/></text>\n<text id=\"bye\" kind=\"fixed\" role=\"ending\" basis=\"output-end\" start=\"-1.5\" end=\"0\"><row role=\"title\">다시 만나요</row><row role=\"body\">저장해 두세요</row></text>\n<repeat for=\"menu\"><scene id=\"dish\" scope=\"item\"><guide>보이는 메뉴만 설명</guide><text id=\"price\" kind=\"fixed\" role=\"caption\" style=\"memo\" basis=\"cut\" start=\"0.5\" end=\"2.5\"><value field=\"menu.name\"/>: <value field=\"menu.price\"/></text><text id=\"extra\" kind=\"fixed\" role=\"info\" basis=\"cut\"><value field=\"menu.extra\"/></text><text id=\"copy\" kind=\"ai\" role=\"caption\" basis=\"cut\">보이는 <value field=\"menu.name\"/> 설명</text></scene></repeat>\n</clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<field id=\"city\" label=\"지역\" required=\"true\">지역</field>\n<group id=\"menu\"><field id=\"name\" label=\"메뉴\" required=\"true\"/><field id=\"price\" label=\"가격\" required=\"true\"/><field id=\"extra\" label=\"추가 정보\"/></group>\n<text id=\"context\" kind=\"fixed\" role=\"info\" position=\"header\" basis=\"output-start\" start=\"0\" end=\"1\"><value field=\"city\"/></text>\n<text id=\"bye\" kind=\"fixed\" role=\"ending\" basis=\"output-end\" start=\"-1.5\" end=\"0\"><row>다시 만나요</row><row>저장해 두세요</row></text>\n<repeat for=\"menu\"><scene id=\"dish\" scope=\"item\"><guide>보이는 메뉴만 설명</guide><text id=\"price\" kind=\"fixed\" role=\"caption\" basis=\"cut\" start=\"0.5\" end=\"2.5\"><value field=\"menu.name\"/>: <value field=\"menu.price\"/></text><text id=\"extra\" kind=\"fixed\" role=\"info\" basis=\"cut\"><value field=\"menu.extra\"/></text><text id=\"copy\" kind=\"ai\" role=\"caption\" basis=\"cut\">보이는 <value field=\"menu.name\"/> 설명</text></scene></repeat>\n<text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/></clip>",
       "error": {
         "reason": "interval_outside",
         "elementId": "price",
@@ -634,7 +642,7 @@
     },
     {
       "name": "required item price never comes from another item",
-      "body": "<clip version=\"1\" styles=\"clean memo bold\">\n<field id=\"city\" label=\"지역\" required=\"true\">지역</field>\n<group id=\"menu\"><field id=\"name\" label=\"메뉴\" required=\"true\"/><field id=\"price\" label=\"가격\" required=\"true\"/><field id=\"extra\" label=\"추가 정보\"/></group>\n<text id=\"context\" kind=\"fixed\" role=\"info\" position=\"header\" basis=\"output-start\" start=\"0\" end=\"3\"><value field=\"city\"/></text>\n<text id=\"bye\" kind=\"fixed\" role=\"ending\" basis=\"output-end\" start=\"-1.5\" end=\"0\"><row role=\"title\">다시 만나요</row><row role=\"body\">저장해 두세요</row></text>\n<repeat for=\"menu\"><scene id=\"dish\" scope=\"item\"><guide>보이는 메뉴만 설명</guide><text id=\"price\" kind=\"fixed\" role=\"caption\" style=\"memo\" basis=\"cut\" start=\"0.5\" end=\"2.5\"><value field=\"menu.name\"/>: <value field=\"menu.price\"/></text><text id=\"extra\" kind=\"fixed\" role=\"info\" basis=\"cut\"><value field=\"menu.extra\"/></text><text id=\"copy\" kind=\"ai\" role=\"caption\" basis=\"cut\">보이는 <value field=\"menu.name\"/> 설명</text></scene></repeat>\n</clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<field id=\"city\" label=\"지역\" required=\"true\">지역</field>\n<group id=\"menu\"><field id=\"name\" label=\"메뉴\" required=\"true\"/><field id=\"price\" label=\"가격\" required=\"true\"/><field id=\"extra\" label=\"추가 정보\"/></group>\n<text id=\"context\" kind=\"fixed\" role=\"info\" position=\"header\" basis=\"output-start\" start=\"0\" end=\"3\"><value field=\"city\"/></text>\n<text id=\"bye\" kind=\"fixed\" role=\"ending\" basis=\"output-end\" start=\"-1.5\" end=\"0\"><row>다시 만나요</row><row>저장해 두세요</row></text>\n<repeat for=\"menu\"><scene id=\"dish\" scope=\"item\"><guide>보이는 메뉴만 설명</guide><text id=\"price\" kind=\"fixed\" role=\"caption\" basis=\"cut\" start=\"0.5\" end=\"2.5\"><value field=\"menu.name\"/>: <value field=\"menu.price\"/></text><text id=\"extra\" kind=\"fixed\" role=\"info\" basis=\"cut\"><value field=\"menu.extra\"/></text><text id=\"copy\" kind=\"ai\" role=\"caption\" basis=\"cut\">보이는 <value field=\"menu.name\"/> 설명</text></scene></repeat>\n<text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/></clip>",
       "error": {
         "reason": "required_binding",
         "elementId": "menu.price",
@@ -688,7 +696,7 @@
     },
     {
       "name": "selected scene repetition and auto timing",
-      "body": "<clip version=\"1\"><repeat for=\"scenes\"><scene id=\"shot\" scope=\"scene\"><text id=\"look\" kind=\"ai\" role=\"caption\" basis=\"cut\">보이는 장면만</text></scene></repeat></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><repeat for=\"scenes\"><scene id=\"shot\" scope=\"scene\"><text id=\"look\" kind=\"ai\" role=\"caption\" basis=\"cut\">보이는 장면만</text></scene></repeat><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "inputs": {
         "values": {},
         "items": {},
@@ -719,13 +727,13 @@
       ],
       "rootSpan": {
         "start": 0,
-        "end": 161,
+        "end": 336,
         "line": 1
       }
     },
     {
       "name": "global fixed overlay spans a transition",
-      "body": "<clip version=\"1\"><text id=\"copy\" kind=\"fixed\" role=\"caption\" basis=\"whole\">안내</text></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><text id=\"copy\" kind=\"fixed\" role=\"caption\" basis=\"whole\">안내</text><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "inputs": {
         "values": {},
         "items": {},
@@ -766,13 +774,13 @@
       ],
       "rootSpan": {
         "start": 0,
-        "end": 92,
+        "end": 267,
         "line": 1
       }
     },
     {
       "name": "optional global element omitted",
-      "body": "<clip version=\"1\"><field id=\"price\" label=\"가격\"/><text id=\"copy\" kind=\"fixed\" role=\"caption\" basis=\"whole\"><value field=\"price\"/></text></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><field id=\"price\" label=\"가격\"/><text id=\"copy\" kind=\"fixed\" role=\"caption\" basis=\"whole\"><value field=\"price\"/></text><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "inputs": {
         "values": {},
         "items": {},
@@ -793,13 +801,13 @@
       "resolved": [],
       "rootSpan": {
         "start": 0,
-        "end": 142,
+        "end": 317,
         "line": 1
       }
     },
     {
       "name": "numeric entities preserve Unicode",
-      "body": "<clip version=\"1\"><text id=\"copy\" kind=\"fixed\" role=\"caption\" basis=\"whole\">&#x1F600; &#54620; &#38;</text></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><text id=\"copy\" kind=\"fixed\" role=\"caption\" basis=\"whole\">&#x1F600; &#54620; &#38;</text><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "inputs": {
         "values": {},
         "items": {},
@@ -830,7 +838,7 @@
       ],
       "rootSpan": {
         "start": 0,
-        "end": 114,
+        "end": 289,
         "line": 1
       }
     },
@@ -845,7 +853,7 @@
     },
     {
       "name": "DTD",
-      "body": "<!DOCTYPE clip><clip version=\"1\"/>",
+      "body": "<!DOCTYPE clip><clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"/>",
       "error": {
         "reason": "unsafe_construct",
         "elementId": "clip",
@@ -854,7 +862,7 @@
     },
     {
       "name": "external entity",
-      "body": "<clip version=\"1\"><text id=\"copy\" kind=\"fixed\" role=\"caption\" basis=\"whole\">&remote;</text></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><text id=\"copy\" kind=\"fixed\" role=\"caption\" basis=\"whole\">&remote;</text><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "reason": "invalid_entity",
         "elementId": "copy",
@@ -863,7 +871,7 @@
     },
     {
       "name": "invalid numeric entity",
-      "body": "<clip version=\"1\"><text id=\"copy\" kind=\"fixed\" role=\"caption\" basis=\"whole\">&#xD800;</text></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><text id=\"copy\" kind=\"fixed\" role=\"caption\" basis=\"whole\">&#xD800;</text><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "reason": "invalid_entity",
         "elementId": "copy",
@@ -872,7 +880,7 @@
     },
     {
       "name": "processing instruction",
-      "body": "<?xml version=\"1.0\"?><clip version=\"1\"/>",
+      "body": "<?xml version=\"1.0\"?><clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"/>",
       "error": {
         "reason": "unsafe_construct",
         "elementId": "clip",
@@ -881,7 +889,7 @@
     },
     {
       "name": "script",
-      "body": "<clip version=\"1\"><script/></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><script/><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "reason": "unknown_tag",
         "elementId": "script",
@@ -890,7 +898,7 @@
     },
     {
       "name": "unknown attribute",
-      "body": "<clip version=\"1\"><text onclick=\"foo\" id=\"copy\" kind=\"fixed\" role=\"caption\" basis=\"whole\">안내</text></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><text onclick=\"foo\" id=\"copy\" kind=\"fixed\" role=\"caption\" basis=\"whole\">안내</text><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "reason": "unknown_attribute",
         "elementId": "copy",
@@ -899,7 +907,7 @@
     },
     {
       "name": "duplicate attribute",
-      "body": "<clip version=\"1\"><text id=\"copy\" id=\"other\"/></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><text id=\"copy\" id=\"other\"/><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "reason": "duplicate_attribute",
         "elementId": "copy",
@@ -908,7 +916,7 @@
     },
     {
       "name": "mismatched close",
-      "body": "<clip version=\"1\"><guide>text</clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><guide>text<text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "reason": "syntax",
         "elementId": "guide",
@@ -917,7 +925,7 @@
     },
     {
       "name": "trailing source",
-      "body": "<clip version=\"1\"/>oops",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"/>oops",
       "error": {
         "reason": "syntax",
         "elementId": "clip",
@@ -926,7 +934,7 @@
     },
     {
       "name": "missing attribute space",
-      "body": "<clip version=\"1\"styles=\"clean\"/>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"styles=\"clean\"/>",
       "error": {
         "reason": "syntax",
         "elementId": "clip",
@@ -935,7 +943,7 @@
     },
     {
       "name": "duplicate ids",
-      "body": "<clip version=\"1\"><text id=\"copy\" kind=\"fixed\" role=\"caption\" basis=\"whole\">안내</text><text id=\"copy\" kind=\"fixed\" role=\"caption\" basis=\"whole\">안내</text></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><text id=\"copy\" kind=\"fixed\" role=\"caption\" basis=\"whole\">안내</text><text id=\"copy\" kind=\"fixed\" role=\"caption\" basis=\"whole\">안내</text><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "reason": "duplicate_id",
         "elementId": "copy",
@@ -944,7 +952,7 @@
     },
     {
       "name": "unknown field",
-      "body": "<clip version=\"1\"><text id=\"copy\" kind=\"fixed\" role=\"caption\" basis=\"whole\"><value field=\"missing\"/></text></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><text id=\"copy\" kind=\"fixed\" role=\"caption\" basis=\"whole\"><value field=\"missing\"/></text><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "reason": "unknown_field",
         "elementId": "copy",
@@ -953,7 +961,7 @@
     },
     {
       "name": "group binding outside item",
-      "body": "<clip version=\"1\"><group id=\"g\"><field id=\"v\" label=\"값\"/></group><text id=\"copy\" kind=\"fixed\" role=\"caption\" basis=\"whole\"><value field=\"g.v\"/></text></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><group id=\"g\"><field id=\"v\" label=\"값\"/></group><text id=\"copy\" kind=\"fixed\" role=\"caption\" basis=\"whole\"><value field=\"g.v\"/></text><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "reason": "binding_scope",
         "elementId": "copy",
@@ -962,7 +970,7 @@
     },
     {
       "name": "unknown repeated group",
-      "body": "<clip version=\"1\"><repeat for=\"missing\"><scene id=\"s\"/></repeat></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><repeat for=\"missing\"><scene id=\"s\"/></repeat><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "reason": "unknown_repeat",
         "elementId": "repeat",
@@ -971,7 +979,7 @@
     },
     {
       "name": "nested repetition",
-      "body": "<clip version=\"1\"><repeat for=\"scenes\"><repeat for=\"scenes\"/></repeat></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><repeat for=\"scenes\"><repeat for=\"scenes\"/></repeat><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "reason": "unknown_tag",
         "elementId": "repeat",
@@ -980,25 +988,25 @@
     },
     {
       "name": "unknown styles",
-      "body": "<clip version=\"1\" styles=\"comic\"/>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\" styles=\"comic\"/>",
       "error": {
-        "reason": "invalid_style",
+        "reason": "unknown_attribute",
         "elementId": "clip",
         "line": 1
       }
     },
     {
       "name": "unapproved text style",
-      "body": "<clip version=\"1\"><text id=\"copy\" kind=\"fixed\" role=\"caption\" basis=\"whole\" style=\"bold\">안내</text></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><text id=\"copy\" kind=\"fixed\" role=\"caption\" basis=\"whole\" style=\"bold\">안내</text><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
-        "reason": "invalid_style",
+        "reason": "unknown_attribute",
         "elementId": "copy",
         "line": 1
       }
     },
     {
       "name": "caption header",
-      "body": "<clip version=\"1\"><text id=\"copy\" kind=\"fixed\" role=\"caption\" basis=\"whole\" position=\"header\">안내</text></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><text id=\"copy\" kind=\"fixed\" role=\"caption\" basis=\"whole\" position=\"header\">안내</text><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "reason": "invalid_position",
         "elementId": "copy",
@@ -1007,7 +1015,7 @@
     },
     {
       "name": "root cut binding",
-      "body": "<clip version=\"1\"><text id=\"copy\" kind=\"fixed\" role=\"caption\" basis=\"cut\">안내</text></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><text id=\"copy\" kind=\"fixed\" role=\"caption\" basis=\"cut\">안내</text><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "reason": "invalid_basis",
         "elementId": "copy",
@@ -1016,7 +1024,7 @@
     },
     {
       "name": "unknown row role",
-      "body": "<clip version=\"1\"><text id=\"card\" kind=\"fixed\" role=\"hook\" basis=\"whole\"><row role=\"css\">text</row></text></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><text id=\"card\" kind=\"fixed\" role=\"info\" basis=\"whole\"><row role=\"css\">text</row></text><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "reason": "invalid_row_role",
         "elementId": "card",
@@ -1025,7 +1033,7 @@
     },
     {
       "name": "time precision",
-      "body": "<clip version=\"1\"><text id=\"copy\" kind=\"fixed\" role=\"caption\" basis=\"output-start\" start=\"0.0001\" end=\"2\">안내</text></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><text id=\"copy\" kind=\"fixed\" role=\"caption\" basis=\"output-start\" start=\"0.0001\" end=\"2\">안내</text><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "reason": "invalid_interval",
         "elementId": "copy",
@@ -1034,7 +1042,7 @@
     },
     {
       "name": "positive end offset",
-      "body": "<clip version=\"1\"><text id=\"copy\" kind=\"fixed\" role=\"caption\" basis=\"output-end\" start=\"-1\" end=\"1\">안내</text></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><text id=\"copy\" kind=\"fixed\" role=\"caption\" basis=\"output-end\" start=\"-1\" end=\"1\">안내</text><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "reason": "invalid_interval",
         "elementId": "copy",
@@ -1043,7 +1051,7 @@
     },
     {
       "name": "inverted time",
-      "body": "<clip version=\"1\"><text id=\"copy\" kind=\"fixed\" role=\"caption\" basis=\"output-start\" start=\"2\" end=\"1\">안내</text></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><text id=\"copy\" kind=\"fixed\" role=\"caption\" basis=\"output-start\" start=\"2\" end=\"1\">안내</text><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "reason": "invalid_interval",
         "elementId": "copy",
@@ -1052,7 +1060,7 @@
     },
     {
       "name": "whole time endpoints",
-      "body": "<clip version=\"1\"><text id=\"copy\" kind=\"fixed\" role=\"caption\" basis=\"whole\" start=\"0\" end=\"1\">안내</text></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><text id=\"copy\" kind=\"fixed\" role=\"caption\" basis=\"whole\" start=\"0\" end=\"1\">안내</text><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "reason": "invalid_interval",
         "elementId": "copy",
@@ -1070,7 +1078,7 @@
     },
     {
       "name": "node bound",
-      "body": "<clip version=\"1\"><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "reason": "node_limit",
         "elementId": "guide",
@@ -1079,7 +1087,7 @@
     },
     {
       "name": "field bound",
-      "body": "<clip version=\"1\"><field id=\"f0\" label=\"값\"/><field id=\"f1\" label=\"값\"/><field id=\"f2\" label=\"값\"/><field id=\"f3\" label=\"값\"/><field id=\"f4\" label=\"값\"/><field id=\"f5\" label=\"값\"/><field id=\"f6\" label=\"값\"/><field id=\"f7\" label=\"값\"/><field id=\"f8\" label=\"값\"/><field id=\"f9\" label=\"값\"/><field id=\"f10\" label=\"값\"/></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><field id=\"f0\" label=\"값\"/><field id=\"f1\" label=\"값\"/><field id=\"f2\" label=\"값\"/><field id=\"f3\" label=\"값\"/><field id=\"f4\" label=\"값\"/><field id=\"f5\" label=\"값\"/><field id=\"f6\" label=\"값\"/><field id=\"f7\" label=\"값\"/><field id=\"f8\" label=\"값\"/><field id=\"f9\" label=\"값\"/><field id=\"f10\" label=\"값\"/><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "reason": "field_limit",
         "elementId": "f10",
@@ -1088,7 +1096,7 @@
     },
     {
       "name": "label bound",
-      "body": "<clip version=\"1\"><field id=\"f\" label=\"한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한\"/></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><field id=\"f\" label=\"한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한\"/><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "reason": "field_limit",
         "elementId": "f",
@@ -1097,7 +1105,7 @@
     },
     {
       "name": "prompt bound",
-      "body": "<clip version=\"1\"><field id=\"f\" label=\"값\">한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한</field></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><field id=\"f\" label=\"값\">한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한</field><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "reason": "field_limit",
         "elementId": "f",
@@ -1106,7 +1114,7 @@
     },
     {
       "name": "guide bound",
-      "body": "<clip version=\"1\"><guide>한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한</guide></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><guide>한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한</guide><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "reason": "guide_limit",
         "elementId": "guide",
@@ -1115,7 +1123,7 @@
     },
     {
       "name": "literal bound",
-      "body": "<clip version=\"1\"><text id=\"copy\" kind=\"fixed\" role=\"caption\" basis=\"whole\">한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한</text></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><text id=\"copy\" kind=\"fixed\" role=\"caption\" basis=\"whole\">한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한</text><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "reason": "copy_limit",
         "elementId": "copy",
@@ -1124,7 +1132,7 @@
     },
     {
       "name": "item bound",
-      "body": "<clip version=\"1\"><group id=\"g\"><field id=\"v\" label=\"값\"/></group></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><group id=\"g\"><field id=\"v\" label=\"값\"/></group><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "reason": "item_limit",
         "elementId": "g",
@@ -1236,7 +1244,7 @@
     },
     {
       "name": "answer bound",
-      "body": "<clip version=\"1\"><field id=\"v\" label=\"값\"/></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><field id=\"v\" label=\"값\"/><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "reason": "answer_limit",
         "elementId": "clip",
@@ -1263,7 +1271,7 @@
     },
     {
       "name": "cut bound",
-      "body": "<clip version=\"1\"></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "reason": "cut_limit",
         "elementId": "clip",
@@ -2288,7 +2296,7 @@
     },
     {
       "name": "expanded cue bound",
-      "body": "<clip version=\"1\"><repeat for=\"scenes\"><scene id=\"s\"><text id=\"t0\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t1\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t2\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t3\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t4\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t5\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t6\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t7\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t8\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t9\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t10\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t11\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t12\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t13\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t14\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t15\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t16\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t17\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t18\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t19\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t20\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t21\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t22\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t23\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t24\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text></scene></repeat></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><repeat for=\"scenes\"><scene id=\"s\"><text id=\"t0\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t1\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t2\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t3\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t4\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t5\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t6\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t7\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t8\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t9\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t10\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t11\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t12\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t13\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t14\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t15\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t16\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t17\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t18\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t19\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t20\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t21\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t22\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t23\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t24\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text></scene></repeat><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "reason": "cue_limit",
         "elementId": "t0",
@@ -3273,7 +3281,7 @@
     },
     {
       "name": "UTF8 expanded budget",
-      "body": "<clip version=\"1\"><text id=\"copy\" kind=\"fixed\" role=\"caption\" basis=\"whole\">한글</text></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><text id=\"copy\" kind=\"fixed\" role=\"caption\" basis=\"whole\">한글</text><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "reason": "expansion_limit",
         "elementId": "copy",
@@ -3299,7 +3307,7 @@
     },
     {
       "name": "duration bound",
-      "body": "<clip version=\"1\"></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "reason": "duration_limit",
         "elementId": "b",
@@ -3334,7 +3342,7 @@
     },
     {
       "name": "missing footage",
-      "body": "<clip version=\"1\"><text id=\"copy\" kind=\"fixed\" role=\"caption\" basis=\"whole\">안내</text></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><text id=\"copy\" kind=\"fixed\" role=\"caption\" basis=\"whole\">안내</text><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "reason": "missing_footage",
         "elementId": "clip",
@@ -3348,7 +3356,7 @@
     },
     {
       "name": "unknown selected item",
-      "body": "<clip version=\"1\" styles=\"clean memo bold\">\n<field id=\"city\" label=\"지역\" required=\"true\">지역</field>\n<group id=\"menu\"><field id=\"name\" label=\"메뉴\" required=\"true\"/><field id=\"price\" label=\"가격\" required=\"true\"/><field id=\"extra\" label=\"추가 정보\"/></group>\n<text id=\"context\" kind=\"fixed\" role=\"info\" position=\"header\" basis=\"output-start\" start=\"0\" end=\"3\"><value field=\"city\"/></text>\n<text id=\"bye\" kind=\"fixed\" role=\"ending\" basis=\"output-end\" start=\"-1.5\" end=\"0\"><row role=\"title\">다시 만나요</row><row role=\"body\">저장해 두세요</row></text>\n<repeat for=\"menu\"><scene id=\"dish\" scope=\"item\"><guide>보이는 메뉴만 설명</guide><text id=\"price\" kind=\"fixed\" role=\"caption\" style=\"memo\" basis=\"cut\" start=\"0.5\" end=\"2.5\"><value field=\"menu.name\"/>: <value field=\"menu.price\"/></text><text id=\"extra\" kind=\"fixed\" role=\"info\" basis=\"cut\"><value field=\"menu.extra\"/></text><text id=\"copy\" kind=\"ai\" role=\"caption\" basis=\"cut\">보이는 <value field=\"menu.name\"/> 설명</text></scene></repeat>\n</clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<field id=\"city\" label=\"지역\" required=\"true\">지역</field>\n<group id=\"menu\"><field id=\"name\" label=\"메뉴\" required=\"true\"/><field id=\"price\" label=\"가격\" required=\"true\"/><field id=\"extra\" label=\"추가 정보\"/></group>\n<text id=\"context\" kind=\"fixed\" role=\"info\" position=\"header\" basis=\"output-start\" start=\"0\" end=\"3\"><value field=\"city\"/></text>\n<text id=\"bye\" kind=\"fixed\" role=\"ending\" basis=\"output-end\" start=\"-1.5\" end=\"0\"><row>다시 만나요</row><row>저장해 두세요</row></text>\n<repeat for=\"menu\"><scene id=\"dish\" scope=\"item\"><guide>보이는 메뉴만 설명</guide><text id=\"price\" kind=\"fixed\" role=\"caption\" basis=\"cut\" start=\"0.5\" end=\"2.5\"><value field=\"menu.name\"/>: <value field=\"menu.price\"/></text><text id=\"extra\" kind=\"fixed\" role=\"info\" basis=\"cut\"><value field=\"menu.extra\"/></text><text id=\"copy\" kind=\"ai\" role=\"caption\" basis=\"cut\">보이는 <value field=\"menu.name\"/> 설명</text></scene></repeat>\n<text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/></clip>",
       "error": {
         "reason": "unknown_item",
         "elementId": "a",
@@ -3385,7 +3393,7 @@
     },
     {
       "name": "Go and JS share Unicode whitespace",
-      "body": "<clip version=\"1\" styles=\"cleanmemo\"><field id=\"v\" label=\"値\" required=\"true\"/></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><field id=\"v\" label=\"値\" required=\"true\"/><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "inputs": {
         "values": {
           "v": ""
@@ -3401,7 +3409,7 @@
     },
     {
       "name": "reserved repetition identifier",
-      "body": "<clip version=\"1\"><group id=\"scenes\"><field id=\"name\" label=\"名前\"/></group></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><group id=\"scenes\"><field id=\"name\" label=\"名前\"/></group><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "elementId": "scenes",
         "line": 1,
@@ -3410,7 +3418,7 @@
     },
     {
       "name": "unknown groups have deterministic error order",
-      "body": "<clip version=\"1\"/>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "inputs": {
         "values": {},
         "items": {
@@ -3427,27 +3435,27 @@
     },
     {
       "name": "source bound inclusive",
-      "body": "                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             <clip version=\"1\"/>"
+      "body": "                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        <clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>"
     },
     {
       "name": "node bound inclusive",
-      "body": "<clip version=\"1\"><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/></clip>"
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><guide/><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>"
     },
     {
       "name": "field label prompt bounds inclusive",
-      "body": "<clip version=\"1\"><field id=\"f0\" label=\"値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値\">問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問</field><field id=\"f1\" label=\"値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値\">問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問</field><field id=\"f2\" label=\"値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値\">問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問</field><field id=\"f3\" label=\"値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値\">問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問</field><field id=\"f4\" label=\"値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値\">問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問</field><field id=\"f5\" label=\"値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値\">問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問</field><field id=\"f6\" label=\"値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値\">問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問</field><field id=\"f7\" label=\"値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値\">問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問</field><field id=\"f8\" label=\"値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値\">問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問</field><field id=\"f9\" label=\"値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値\">問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問</field></clip>"
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><field id=\"f0\" label=\"値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値\">問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問</field><field id=\"f1\" label=\"値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値\">問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問</field><field id=\"f2\" label=\"値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値\">問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問</field><field id=\"f3\" label=\"値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値\">問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問</field><field id=\"f4\" label=\"値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値\">問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問</field><field id=\"f5\" label=\"値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値\">問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問</field><field id=\"f6\" label=\"値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値\">問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問</field><field id=\"f7\" label=\"値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値\">問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問</field><field id=\"f8\" label=\"値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値\">問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問</field><field id=\"f9\" label=\"値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値値\">問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問問</field><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>"
     },
     {
       "name": "guide bound inclusive",
-      "body": "<clip version=\"1\"><guide>한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한</guide></clip>"
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><guide>한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한</guide><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>"
     },
     {
       "name": "literal bound inclusive",
-      "body": "<clip version=\"1\"><text id=\"t\" kind=\"fixed\" role=\"caption\" basis=\"whole\">한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한</text></clip>"
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><text id=\"t\" kind=\"fixed\" role=\"caption\" basis=\"whole\">한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한</text><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>"
     },
     {
       "name": "answer bound inclusive",
-      "body": "<clip version=\"1\"><field id=\"v\" label=\"값\"/></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><field id=\"v\" label=\"값\"/><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "inputs": {
         "values": {
           "v": "한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한한"
@@ -3471,7 +3479,7 @@
     },
     {
       "name": "item bound inclusive",
-      "body": "<clip version=\"1\"><group id=\"g\"><field id=\"v\" label=\"값\"/></group></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><group id=\"g\"><field id=\"v\" label=\"값\"/></group><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "inputs": {
         "values": {},
         "items": {
@@ -3576,7 +3584,7 @@
     },
     {
       "name": "cut bound inclusive",
-      "body": "<clip version=\"1\"></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "inputs": {
         "values": {},
         "items": {},
@@ -4588,7 +4596,7 @@
     },
     {
       "name": "cue bound inclusive",
-      "body": "<clip version=\"1\"><repeat for=\"scenes\"><scene id=\"s\"><text id=\"t0\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t1\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t2\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t3\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t4\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t5\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t6\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t7\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t8\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t9\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t10\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t11\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t12\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t13\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t14\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t15\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t16\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t17\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t18\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t19\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t20\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t21\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t22\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t23\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text></scene></repeat></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><repeat for=\"scenes\"><scene id=\"s\"><text id=\"t0\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t1\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t2\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t3\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t4\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t5\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t6\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t7\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t8\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t9\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t10\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t11\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t12\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t13\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t14\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t15\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t16\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t17\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t18\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t19\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t20\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t21\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t22\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text><text id=\"t23\" kind=\"fixed\" role=\"caption\" basis=\"cut\">한</text></scene></repeat><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "inputs": {
         "values": {},
         "items": {},
@@ -5600,7 +5608,7 @@
     },
     {
       "name": "UTF8 expanded budget inclusive",
-      "body": "<clip version=\"1\"><text id=\"t\" kind=\"fixed\" role=\"caption\" basis=\"whole\">한글</text></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><text id=\"t\" kind=\"fixed\" role=\"caption\" basis=\"whole\">한글</text><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "inputs": {
         "values": {},
         "items": {},
@@ -5623,7 +5631,7 @@
     },
     {
       "name": "output duration bound inclusive",
-      "body": "<clip version=\"1\"></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "inputs": {
         "values": {},
         "items": {},
@@ -5645,191 +5653,188 @@
     },
     {
       "name": "badge rejects caption style clean",
-      "body": "<clip version=\"1\" styles=\"clean memo bold mark simple\">\n<text id=\"element\" kind=\"fixed\" role=\"badge\" style=\"clean\" basis=\"whole\">text</text>\n</clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<text id=\"element\" kind=\"fixed\" role=\"badge\" style=\"clean\" basis=\"whole\">text</text>\n<text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "elementId": "element",
         "line": 2,
-        "reason": "invalid_style"
+        "reason": "unknown_attribute"
       }
     },
     {
       "name": "badge rejects caption style memo",
-      "body": "<clip version=\"1\" styles=\"clean memo bold mark simple\">\n<text id=\"element\" kind=\"fixed\" role=\"badge\" style=\"memo\" basis=\"whole\">text</text>\n</clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<text id=\"element\" kind=\"fixed\" role=\"badge\" style=\"memo\" basis=\"whole\">text</text>\n<text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "elementId": "element",
         "line": 2,
-        "reason": "invalid_style"
+        "reason": "unknown_attribute"
       }
     },
     {
       "name": "badge rejects caption style bold",
-      "body": "<clip version=\"1\" styles=\"clean memo bold mark simple\">\n<text id=\"element\" kind=\"fixed\" role=\"badge\" style=\"bold\" basis=\"whole\">text</text>\n</clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<text id=\"element\" kind=\"fixed\" role=\"badge\" style=\"bold\" basis=\"whole\">text</text>\n<text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "elementId": "element",
         "line": 2,
-        "reason": "invalid_style"
+        "reason": "unknown_attribute"
       }
     },
     {
       "name": "badge rejects caption style mark",
-      "body": "<clip version=\"1\" styles=\"clean memo bold mark simple\">\n<text id=\"element\" kind=\"fixed\" role=\"badge\" style=\"mark\" basis=\"whole\">text</text>\n</clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<text id=\"element\" kind=\"fixed\" role=\"badge\" style=\"mark\" basis=\"whole\">text</text>\n<text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "elementId": "element",
         "line": 2,
-        "reason": "invalid_style"
+        "reason": "unknown_attribute"
       }
     },
     {
       "name": "badge rejects caption style simple",
-      "body": "<clip version=\"1\" styles=\"clean memo bold mark simple\">\n<text id=\"element\" kind=\"fixed\" role=\"badge\" style=\"simple\" basis=\"whole\">text</text>\n</clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<text id=\"element\" kind=\"fixed\" role=\"badge\" style=\"simple\" basis=\"whole\">text</text>\n<text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "elementId": "element",
         "line": 2,
-        "reason": "invalid_style"
+        "reason": "unknown_attribute"
       }
     },
     {
       "name": "info rejects caption style clean",
-      "body": "<clip version=\"1\" styles=\"clean memo bold mark simple\">\n<text id=\"element\" kind=\"fixed\" role=\"info\" style=\"clean\" basis=\"whole\">text</text>\n</clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<text id=\"element\" kind=\"fixed\" role=\"info\" style=\"clean\" basis=\"whole\">text</text>\n<text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "elementId": "element",
         "line": 2,
-        "reason": "invalid_style"
+        "reason": "unknown_attribute"
       }
     },
     {
       "name": "info rejects caption style memo",
-      "body": "<clip version=\"1\" styles=\"clean memo bold mark simple\">\n<text id=\"element\" kind=\"fixed\" role=\"info\" style=\"memo\" basis=\"whole\">text</text>\n</clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<text id=\"element\" kind=\"fixed\" role=\"info\" style=\"memo\" basis=\"whole\">text</text>\n<text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "elementId": "element",
         "line": 2,
-        "reason": "invalid_style"
+        "reason": "unknown_attribute"
       }
     },
     {
       "name": "info rejects caption style bold",
-      "body": "<clip version=\"1\" styles=\"clean memo bold mark simple\">\n<text id=\"element\" kind=\"fixed\" role=\"info\" style=\"bold\" basis=\"whole\">text</text>\n</clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<text id=\"element\" kind=\"fixed\" role=\"info\" style=\"bold\" basis=\"whole\">text</text>\n<text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "elementId": "element",
         "line": 2,
-        "reason": "invalid_style"
+        "reason": "unknown_attribute"
       }
     },
     {
       "name": "info rejects caption style mark",
-      "body": "<clip version=\"1\" styles=\"clean memo bold mark simple\">\n<text id=\"element\" kind=\"fixed\" role=\"info\" style=\"mark\" basis=\"whole\">text</text>\n</clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<text id=\"element\" kind=\"fixed\" role=\"info\" style=\"mark\" basis=\"whole\">text</text>\n<text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "elementId": "element",
         "line": 2,
-        "reason": "invalid_style"
+        "reason": "unknown_attribute"
       }
     },
     {
       "name": "info rejects caption style simple",
-      "body": "<clip version=\"1\" styles=\"clean memo bold mark simple\">\n<text id=\"element\" kind=\"fixed\" role=\"info\" style=\"simple\" basis=\"whole\">text</text>\n</clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<text id=\"element\" kind=\"fixed\" role=\"info\" style=\"simple\" basis=\"whole\">text</text>\n<text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "elementId": "element",
         "line": 2,
-        "reason": "invalid_style"
+        "reason": "unknown_attribute"
       }
     },
     {
       "name": "hook rejects caption style clean",
-      "body": "<clip version=\"1\" styles=\"clean memo bold mark simple\">\n<text id=\"element\" kind=\"fixed\" role=\"hook\" style=\"clean\" basis=\"whole\">text</text>\n</clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<text id=\"element\" kind=\"fixed\" role=\"hook\" style=\"clean\" basis=\"whole\">text</text>\n<text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "elementId": "element",
         "line": 2,
-        "reason": "invalid_style"
+        "reason": "unknown_attribute"
       }
     },
     {
       "name": "hook rejects caption style memo",
-      "body": "<clip version=\"1\" styles=\"clean memo bold mark simple\">\n<text id=\"element\" kind=\"fixed\" role=\"hook\" style=\"memo\" basis=\"whole\">text</text>\n</clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<text id=\"element\" kind=\"fixed\" role=\"hook\" style=\"memo\" basis=\"whole\">text</text>\n<text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "elementId": "element",
         "line": 2,
-        "reason": "invalid_style"
+        "reason": "unknown_attribute"
       }
     },
     {
       "name": "hook rejects caption style bold",
-      "body": "<clip version=\"1\" styles=\"clean memo bold mark simple\">\n<text id=\"element\" kind=\"fixed\" role=\"hook\" style=\"bold\" basis=\"whole\">text</text>\n</clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<text id=\"element\" kind=\"fixed\" role=\"hook\" style=\"bold\" basis=\"whole\">text</text>\n<text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "elementId": "element",
         "line": 2,
-        "reason": "invalid_style"
+        "reason": "unknown_attribute"
       }
     },
     {
       "name": "hook rejects caption style mark",
-      "body": "<clip version=\"1\" styles=\"clean memo bold mark simple\">\n<text id=\"element\" kind=\"fixed\" role=\"hook\" style=\"mark\" basis=\"whole\">text</text>\n</clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<text id=\"element\" kind=\"fixed\" role=\"hook\" style=\"mark\" basis=\"whole\">text</text>\n<text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "elementId": "element",
         "line": 2,
-        "reason": "invalid_style"
+        "reason": "unknown_attribute"
       }
     },
     {
       "name": "hook rejects caption style simple",
-      "body": "<clip version=\"1\" styles=\"clean memo bold mark simple\">\n<text id=\"element\" kind=\"fixed\" role=\"hook\" style=\"simple\" basis=\"whole\">text</text>\n</clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<text id=\"element\" kind=\"fixed\" role=\"hook\" style=\"simple\" basis=\"whole\">text</text>\n<text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "elementId": "element",
         "line": 2,
-        "reason": "invalid_style"
+        "reason": "unknown_attribute"
       }
     },
     {
       "name": "ending rejects caption style clean",
-      "body": "<clip version=\"1\" styles=\"clean memo bold mark simple\">\n<text id=\"element\" kind=\"fixed\" role=\"ending\" style=\"clean\" basis=\"whole\">text</text>\n</clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<text id=\"element\" kind=\"fixed\" role=\"ending\" style=\"clean\" basis=\"whole\">text</text>\n<text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/></clip>",
       "error": {
         "elementId": "element",
         "line": 2,
-        "reason": "invalid_style"
+        "reason": "unknown_attribute"
       }
     },
     {
       "name": "ending rejects caption style memo",
-      "body": "<clip version=\"1\" styles=\"clean memo bold mark simple\">\n<text id=\"element\" kind=\"fixed\" role=\"ending\" style=\"memo\" basis=\"whole\">text</text>\n</clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<text id=\"element\" kind=\"fixed\" role=\"ending\" style=\"memo\" basis=\"whole\">text</text>\n<text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/></clip>",
       "error": {
         "elementId": "element",
         "line": 2,
-        "reason": "invalid_style"
+        "reason": "unknown_attribute"
       }
     },
     {
       "name": "ending rejects caption style bold",
-      "body": "<clip version=\"1\" styles=\"clean memo bold mark simple\">\n<text id=\"element\" kind=\"fixed\" role=\"ending\" style=\"bold\" basis=\"whole\">text</text>\n</clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<text id=\"element\" kind=\"fixed\" role=\"ending\" style=\"bold\" basis=\"whole\">text</text>\n<text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/></clip>",
       "error": {
         "elementId": "element",
         "line": 2,
-        "reason": "invalid_style"
+        "reason": "unknown_attribute"
       }
     },
     {
       "name": "ending rejects caption style mark",
-      "body": "<clip version=\"1\" styles=\"clean memo bold mark simple\">\n<text id=\"element\" kind=\"fixed\" role=\"ending\" style=\"mark\" basis=\"whole\">text</text>\n</clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<text id=\"element\" kind=\"fixed\" role=\"ending\" style=\"mark\" basis=\"whole\">text</text>\n<text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/></clip>",
       "error": {
         "elementId": "element",
         "line": 2,
-        "reason": "invalid_style"
+        "reason": "unknown_attribute"
       }
     },
     {
       "name": "ending rejects caption style simple",
-      "body": "<clip version=\"1\" styles=\"clean memo bold mark simple\">\n<text id=\"element\" kind=\"fixed\" role=\"ending\" style=\"simple\" basis=\"whole\">text</text>\n</clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<text id=\"element\" kind=\"fixed\" role=\"ending\" style=\"simple\" basis=\"whole\">text</text>\n<text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/></clip>",
       "error": {
         "elementId": "element",
         "line": 2,
-        "reason": "invalid_style"
+        "reason": "unknown_attribute"
       }
     },
     {
       "name": "group declaration legacy defaults",
-      "body": "<clip version=\"1\">\n<group id=\"menu\"><field id=\"name\" label=\"Name\"/></group><repeat for=\"menu\"><scene id=\"dish\" scope=\"item\"/></repeat></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<group id=\"menu\"><field id=\"name\" label=\"Name\"/></group><repeat for=\"menu\"><scene id=\"dish\" scope=\"item\"/></repeat><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "summary": {
-        "styles": [
-          "clean"
-        ],
         "accent": "",
         "pace": "steady",
         "fields": [
@@ -5856,17 +5861,22 @@
             "repeat": "menu"
           }
         ],
-        "elements": [],
-        "guidance": []
+        "elements": [
+          "empty-hook",
+          "empty-ending"
+        ],
+        "guidance": [],
+        "design": {
+          "intro": "b",
+          "caption": "bold",
+          "outro": "e"
+        }
       }
     },
     {
       "name": "group declaration  label=\"메뉴 &amp; 상품\" min=\"1\" max=\"3\"",
-      "body": "<clip version=\"1\">\n<group id=\"menu\" label=\"메뉴 &amp; 상품\" min=\"1\" max=\"3\"><field id=\"name\" label=\"Name\"/></group><repeat for=\"menu\"><scene id=\"dish\" scope=\"item\"/></repeat></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<group id=\"menu\" label=\"메뉴 &amp; 상품\" min=\"1\" max=\"3\"><field id=\"name\" label=\"Name\"/></group><repeat for=\"menu\"><scene id=\"dish\" scope=\"item\"/></repeat><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "summary": {
-        "styles": [
-          "clean"
-        ],
         "accent": "",
         "pace": "steady",
         "fields": [
@@ -5893,17 +5903,22 @@
             "repeat": "menu"
           }
         ],
-        "elements": [],
-        "guidance": []
+        "elements": [
+          "empty-hook",
+          "empty-ending"
+        ],
+        "guidance": [],
+        "design": {
+          "intro": "b",
+          "caption": "bold",
+          "outro": "e"
+        }
       }
     },
     {
       "name": "group declaration  min=\"0\" max=\"0\"",
-      "body": "<clip version=\"1\">\n<group id=\"menu\" min=\"0\" max=\"0\"><field id=\"name\" label=\"Name\"/></group><repeat for=\"menu\"><scene id=\"dish\" scope=\"item\"/></repeat></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<group id=\"menu\" min=\"0\" max=\"0\"><field id=\"name\" label=\"Name\"/></group><repeat for=\"menu\"><scene id=\"dish\" scope=\"item\"/></repeat><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "summary": {
-        "styles": [
-          "clean"
-        ],
         "accent": "",
         "pace": "steady",
         "fields": [
@@ -5930,17 +5945,22 @@
             "repeat": "menu"
           }
         ],
-        "elements": [],
-        "guidance": []
+        "elements": [
+          "empty-hook",
+          "empty-ending"
+        ],
+        "guidance": [],
+        "design": {
+          "intro": "b",
+          "caption": "bold",
+          "outro": "e"
+        }
       }
     },
     {
       "name": "group declaration  min=\"2\"",
-      "body": "<clip version=\"1\">\n<group id=\"menu\" min=\"2\"><field id=\"name\" label=\"Name\"/></group><repeat for=\"menu\"><scene id=\"dish\" scope=\"item\"/></repeat></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<group id=\"menu\" min=\"2\"><field id=\"name\" label=\"Name\"/></group><repeat for=\"menu\"><scene id=\"dish\" scope=\"item\"/></repeat><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "summary": {
-        "styles": [
-          "clean"
-        ],
         "accent": "",
         "pace": "steady",
         "fields": [
@@ -5967,17 +5987,22 @@
             "repeat": "menu"
           }
         ],
-        "elements": [],
-        "guidance": []
+        "elements": [
+          "empty-hook",
+          "empty-ending"
+        ],
+        "guidance": [],
+        "design": {
+          "intro": "b",
+          "caption": "bold",
+          "outro": "e"
+        }
       }
     },
     {
       "name": "group declaration  max=\"1\"",
-      "body": "<clip version=\"1\">\n<group id=\"menu\" max=\"1\"><field id=\"name\" label=\"Name\"/></group><repeat for=\"menu\"><scene id=\"dish\" scope=\"item\"/></repeat></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<group id=\"menu\" max=\"1\"><field id=\"name\" label=\"Name\"/></group><repeat for=\"menu\"><scene id=\"dish\" scope=\"item\"/></repeat><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "summary": {
-        "styles": [
-          "clean"
-        ],
         "accent": "",
         "pace": "steady",
         "fields": [
@@ -6004,17 +6029,22 @@
             "repeat": "menu"
           }
         ],
-        "elements": [],
-        "guidance": []
+        "elements": [
+          "empty-hook",
+          "empty-ending"
+        ],
+        "guidance": [],
+        "design": {
+          "intro": "b",
+          "caption": "bold",
+          "outro": "e"
+        }
       }
     },
     {
       "name": "group declaration  min=\"01\" max=\"02\"",
-      "body": "<clip version=\"1\">\n<group id=\"menu\" min=\"01\" max=\"02\"><field id=\"name\" label=\"Name\"/></group><repeat for=\"menu\"><scene id=\"dish\" scope=\"item\"/></repeat></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<group id=\"menu\" min=\"01\" max=\"02\"><field id=\"name\" label=\"Name\"/></group><repeat for=\"menu\"><scene id=\"dish\" scope=\"item\"/></repeat><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "summary": {
-        "styles": [
-          "clean"
-        ],
         "accent": "",
         "pace": "steady",
         "fields": [
@@ -6041,13 +6071,21 @@
             "repeat": "menu"
           }
         ],
-        "elements": [],
-        "guidance": []
+        "elements": [
+          "empty-hook",
+          "empty-ending"
+        ],
+        "guidance": [],
+        "design": {
+          "intro": "b",
+          "caption": "bold",
+          "outro": "e"
+        }
       }
     },
     {
       "name": "invalid group min '-1'",
-      "body": "<clip version=\"1\">\n<group id=\"menu\" min=\"-1\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<group id=\"menu\" min=\"-1\"><field id=\"name\" label=\"Name\"/></group><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "elementId": "menu",
         "line": 2,
@@ -6056,7 +6094,7 @@
     },
     {
       "name": "invalid group min '1.5'",
-      "body": "<clip version=\"1\">\n<group id=\"menu\" min=\"1.5\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<group id=\"menu\" min=\"1.5\"><field id=\"name\" label=\"Name\"/></group><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "elementId": "menu",
         "line": 2,
@@ -6065,7 +6103,7 @@
     },
     {
       "name": "invalid group min '1e1'",
-      "body": "<clip version=\"1\">\n<group id=\"menu\" min=\"1e1\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<group id=\"menu\" min=\"1e1\"><field id=\"name\" label=\"Name\"/></group><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "elementId": "menu",
         "line": 2,
@@ -6074,7 +6112,7 @@
     },
     {
       "name": "invalid group min '+1'",
-      "body": "<clip version=\"1\">\n<group id=\"menu\" min=\"+1\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<group id=\"menu\" min=\"+1\"><field id=\"name\" label=\"Name\"/></group><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "elementId": "menu",
         "line": 2,
@@ -6083,7 +6121,7 @@
     },
     {
       "name": "invalid group min ''",
-      "body": "<clip version=\"1\">\n<group id=\"menu\" min=\"\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<group id=\"menu\" min=\"\"><field id=\"name\" label=\"Name\"/></group><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "elementId": "menu",
         "line": 2,
@@ -6092,7 +6130,7 @@
     },
     {
       "name": "invalid group min ' 1'",
-      "body": "<clip version=\"1\">\n<group id=\"menu\" min=\" 1\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<group id=\"menu\" min=\" 1\"><field id=\"name\" label=\"Name\"/></group><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "elementId": "menu",
         "line": 2,
@@ -6101,7 +6139,7 @@
     },
     {
       "name": "invalid group min '1 '",
-      "body": "<clip version=\"1\">\n<group id=\"menu\" min=\"1 \"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<group id=\"menu\" min=\"1 \"><field id=\"name\" label=\"Name\"/></group><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "elementId": "menu",
         "line": 2,
@@ -6110,7 +6148,7 @@
     },
     {
       "name": "invalid group min 'NaN'",
-      "body": "<clip version=\"1\">\n<group id=\"menu\" min=\"NaN\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<group id=\"menu\" min=\"NaN\"><field id=\"name\" label=\"Name\"/></group><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "elementId": "menu",
         "line": 2,
@@ -6119,7 +6157,7 @@
     },
     {
       "name": "invalid group min 'Infinity'",
-      "body": "<clip version=\"1\">\n<group id=\"menu\" min=\"Infinity\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<group id=\"menu\" min=\"Infinity\"><field id=\"name\" label=\"Name\"/></group><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "elementId": "menu",
         "line": 2,
@@ -6128,7 +6166,7 @@
     },
     {
       "name": "invalid group min '21'",
-      "body": "<clip version=\"1\">\n<group id=\"menu\" min=\"21\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<group id=\"menu\" min=\"21\"><field id=\"name\" label=\"Name\"/></group><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "elementId": "menu",
         "line": 2,
@@ -6137,7 +6175,7 @@
     },
     {
       "name": "invalid group min '9999999999999999999999'",
-      "body": "<clip version=\"1\">\n<group id=\"menu\" min=\"9999999999999999999999\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<group id=\"menu\" min=\"9999999999999999999999\"><field id=\"name\" label=\"Name\"/></group><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "elementId": "menu",
         "line": 2,
@@ -6146,7 +6184,7 @@
     },
     {
       "name": "invalid group min '１'",
-      "body": "<clip version=\"1\">\n<group id=\"menu\" min=\"１\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<group id=\"menu\" min=\"１\"><field id=\"name\" label=\"Name\"/></group><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "elementId": "menu",
         "line": 2,
@@ -6155,7 +6193,7 @@
     },
     {
       "name": "invalid group max '-1'",
-      "body": "<clip version=\"1\">\n<group id=\"menu\" max=\"-1\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<group id=\"menu\" max=\"-1\"><field id=\"name\" label=\"Name\"/></group><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "elementId": "menu",
         "line": 2,
@@ -6164,7 +6202,7 @@
     },
     {
       "name": "invalid group max '1.5'",
-      "body": "<clip version=\"1\">\n<group id=\"menu\" max=\"1.5\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<group id=\"menu\" max=\"1.5\"><field id=\"name\" label=\"Name\"/></group><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "elementId": "menu",
         "line": 2,
@@ -6173,7 +6211,7 @@
     },
     {
       "name": "invalid group max '1e1'",
-      "body": "<clip version=\"1\">\n<group id=\"menu\" max=\"1e1\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<group id=\"menu\" max=\"1e1\"><field id=\"name\" label=\"Name\"/></group><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "elementId": "menu",
         "line": 2,
@@ -6182,7 +6220,7 @@
     },
     {
       "name": "invalid group max '+1'",
-      "body": "<clip version=\"1\">\n<group id=\"menu\" max=\"+1\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<group id=\"menu\" max=\"+1\"><field id=\"name\" label=\"Name\"/></group><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "elementId": "menu",
         "line": 2,
@@ -6191,7 +6229,7 @@
     },
     {
       "name": "invalid group max ''",
-      "body": "<clip version=\"1\">\n<group id=\"menu\" max=\"\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<group id=\"menu\" max=\"\"><field id=\"name\" label=\"Name\"/></group><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "elementId": "menu",
         "line": 2,
@@ -6200,7 +6238,7 @@
     },
     {
       "name": "invalid group max ' 1'",
-      "body": "<clip version=\"1\">\n<group id=\"menu\" max=\" 1\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<group id=\"menu\" max=\" 1\"><field id=\"name\" label=\"Name\"/></group><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "elementId": "menu",
         "line": 2,
@@ -6209,7 +6247,7 @@
     },
     {
       "name": "invalid group max '1 '",
-      "body": "<clip version=\"1\">\n<group id=\"menu\" max=\"1 \"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<group id=\"menu\" max=\"1 \"><field id=\"name\" label=\"Name\"/></group><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "elementId": "menu",
         "line": 2,
@@ -6218,7 +6256,7 @@
     },
     {
       "name": "invalid group max 'NaN'",
-      "body": "<clip version=\"1\">\n<group id=\"menu\" max=\"NaN\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<group id=\"menu\" max=\"NaN\"><field id=\"name\" label=\"Name\"/></group><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "elementId": "menu",
         "line": 2,
@@ -6227,7 +6265,7 @@
     },
     {
       "name": "invalid group max 'Infinity'",
-      "body": "<clip version=\"1\">\n<group id=\"menu\" max=\"Infinity\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<group id=\"menu\" max=\"Infinity\"><field id=\"name\" label=\"Name\"/></group><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "elementId": "menu",
         "line": 2,
@@ -6236,7 +6274,7 @@
     },
     {
       "name": "invalid group max '21'",
-      "body": "<clip version=\"1\">\n<group id=\"menu\" max=\"21\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<group id=\"menu\" max=\"21\"><field id=\"name\" label=\"Name\"/></group><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "elementId": "menu",
         "line": 2,
@@ -6245,7 +6283,7 @@
     },
     {
       "name": "invalid group max '9999999999999999999999'",
-      "body": "<clip version=\"1\">\n<group id=\"menu\" max=\"9999999999999999999999\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<group id=\"menu\" max=\"9999999999999999999999\"><field id=\"name\" label=\"Name\"/></group><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "elementId": "menu",
         "line": 2,
@@ -6254,7 +6292,7 @@
     },
     {
       "name": "invalid group max '１'",
-      "body": "<clip version=\"1\">\n<group id=\"menu\" max=\"１\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<group id=\"menu\" max=\"１\"><field id=\"name\" label=\"Name\"/></group><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "elementId": "menu",
         "line": 2,
@@ -6263,7 +6301,7 @@
     },
     {
       "name": "group minimum above maximum",
-      "body": "<clip version=\"1\">\n<group id=\"menu\" min=\"2\" max=\"1\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<group id=\"menu\" min=\"2\" max=\"1\"><field id=\"name\" label=\"Name\"/></group><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "elementId": "menu",
         "line": 2,
@@ -6272,7 +6310,7 @@
     },
     {
       "name": "declared group maximum limits resolution",
-      "body": "<clip version=\"1\"><group id=\"menu\" max=\"1\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><group id=\"menu\" max=\"1\"><field id=\"name\" label=\"Name\"/></group><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "inputs": {
         "values": {},
         "items": {
@@ -6297,7 +6335,7 @@
     },
     {
       "name": "group count rejects trailing newline min",
-      "body": "<clip version=\"1\">\n<group id=\"menu\" min=\"1\n\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<group id=\"menu\" min=\"1\n\"><field id=\"name\" label=\"Name\"/></group><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "elementId": "menu",
         "line": 2,
@@ -6306,12 +6344,153 @@
     },
     {
       "name": "group count rejects trailing newline max",
-      "body": "<clip version=\"1\">\n<group id=\"menu\" max=\"1\n\"><field id=\"name\" label=\"Name\"/></group></clip>",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<group id=\"menu\" max=\"1\n\"><field id=\"name\" label=\"Name\"/></group><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
       "error": {
         "elementId": "menu",
         "line": 2,
         "reason": "invalid_item_bounds"
       }
+    },
+    {
+      "name": "missing design",
+      "body": "<clip version=\"1\"><text id=\"intro\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"outro\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
+      "error": {
+        "elementId": "clip",
+        "line": 1,
+        "reason": "invalid_design"
+      }
+    },
+    {
+      "name": "missing intro",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<text id=\"outro\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
+      "error": {
+        "elementId": "clip",
+        "line": 1,
+        "reason": "invalid_skeleton"
+      }
+    },
+    {
+      "name": "duplicate intro",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<text id=\"intro\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"another\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"outro\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
+      "error": {
+        "elementId": "another",
+        "line": 2,
+        "reason": "invalid_skeleton"
+      }
+    },
+    {
+      "name": "ending inside scene",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<text id=\"intro\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><scene id=\"scene\"><text id=\"outro\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></scene></clip>",
+      "error": {
+        "elementId": "outro",
+        "line": 2,
+        "reason": "invalid_skeleton"
+      }
+    },
+    {
+      "name": "fourth outro E row",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<text id=\"intro\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"outro\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"><row/><row/><row/><row/></text></clip>",
+      "error": {
+        "elementId": "outro",
+        "line": 2,
+        "reason": "invalid_skeleton"
+      }
+    },
+    {
+      "name": "third intro row",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<text id=\"intro\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"><row/><row/><row/></text><text id=\"outro\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
+      "error": {
+        "elementId": "intro",
+        "line": 2,
+        "reason": "invalid_skeleton"
+      }
+    },
+    {
+      "name": "row role in region",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<text id=\"intro\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"><row role=\"hook\">one</row></text><text id=\"outro\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
+      "error": {
+        "elementId": "intro",
+        "line": 2,
+        "reason": "invalid_skeleton"
+      }
+    },
+    {
+      "name": "hook position",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<text id=\"intro\" kind=\"fixed\" role=\"hook\" basis=\"output-start\" position=\"top\"/><text id=\"outro\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
+      "error": {
+        "elementId": "intro",
+        "line": 2,
+        "reason": "invalid_skeleton"
+      }
+    },
+    {
+      "name": "hook align",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<text id=\"intro\" kind=\"fixed\" role=\"hook\" basis=\"output-start\" align=\"left\"/><text id=\"outro\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
+      "error": {
+        "elementId": "intro",
+        "line": 2,
+        "reason": "invalid_skeleton"
+      }
+    },
+    {
+      "name": "hook wrong basis",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<text id=\"intro\" kind=\"fixed\" role=\"hook\" basis=\"whole\"/><text id=\"outro\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
+      "error": {
+        "elementId": "intro",
+        "line": 2,
+        "reason": "invalid_skeleton"
+      }
+    },
+    {
+      "name": "literal outside slot",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<text id=\"intro\" kind=\"fixed\" role=\"hook\" basis=\"output-start\">text</text><text id=\"outro\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
+      "error": {
+        "elementId": "intro",
+        "line": 2,
+        "reason": "invalid_skeleton"
+      }
+    },
+    {
+      "name": "mixed region row kinds and default intervals",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<text id=\"intro\" kind=\"ai\" role=\"hook\" basis=\"output-start\"><row kind=\"fixed\">정확한 말</row><row>짧은 문구</row></text><text id=\"outro\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
+      "inputs": {
+        "values": {},
+        "items": {},
+        "cuts": [
+          {
+            "id": "a",
+            "sourceId": "s",
+            "startMs": 0,
+            "endMs": 10000,
+            "sectionId": "",
+            "groupId": "",
+            "itemId": "",
+            "transitionMs": 0
+          }
+        ]
+      },
+      "durationMs": 10000,
+      "resolvedCount": 1,
+      "resolved": [
+        {
+          "instanceId": "intro",
+          "text": "",
+          "startMs": 0,
+          "endMs": 2500,
+          "authoredTiming": true,
+          "facts": [],
+          "rows": [
+            {
+              "role": "",
+              "text": "정확한 말"
+            },
+            {
+              "role": "",
+              "text": "짧은 문구"
+            }
+          ]
+        }
+      ]
     }
   ]
 }

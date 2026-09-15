@@ -127,7 +127,7 @@ func TestCompositionQualityReview(t *testing.T) {
 						if err := json.Unmarshal(data, &input); err != nil {
 							return err
 						}
-						plan, _, err = clip.DecodeEditPlan(input.Plan)
+						plan, err = clip.DecodeEditPlan(input.Plan)
 						if err != nil {
 							return err
 						}

@@ -1,4 +1,4 @@
-import { CLIP_COMPOSITION_LIMITS } from '@/shared/config'
+import { CLIP_COMPOSITION_LIMITS, CLIP_DESIGN } from '@/shared/config'
 import {
   CompositionProblem,
   type ClipComposition,
@@ -18,12 +18,11 @@ import {
 } from './composition-xml'
 
 export const compositionIdentifier = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/
-const styles = ['clean', 'memo', 'bold', 'mark', 'simple']
 export const compositionSpace =
   /[\t\n\v\f\r \u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]+/u
 export const trimCompositionSpace = (s: string) =>
   s.split(compositionSpace).filter(Boolean).join(' ')
-const rowRoles = ['hook', 'title', 'mark', 'body', 'caption', 'label', 'badge']
+const rowRoles = ['caption', 'label']
 export function validCompositionLimits(l: CompositionLimits) {
   return (Object.keys(CLIP_COMPOSITION_LIMITS) as (keyof CompositionLimits)[]).every((key) => {
     const value = l[key]
@@ -58,8 +57,20 @@ function readElement(
   repeat: string,
   inScene: boolean,
   l: CompositionLimits,
+  stored: boolean,
 ): CompositionElement {
-  attributes(n, 'id', 'kind', 'role', 'style', 'position', 'align', 'basis', 'start', 'end')
+  attributes(
+    n,
+    'id',
+    'kind',
+    'role',
+    'position',
+    'align',
+    'basis',
+    'start',
+    'end',
+    ...(stored ? ['style'] : []),
+  )
   const a = n.attributes,
     kind = a.kind,
     role = a.role,
@@ -73,11 +84,19 @@ function readElement(
     role !== 'ending'
   )
     problem(n, 'invalid_role')
-  const style = a.style ?? 'auto',
+  const region = role === 'hook' || role === 'ending'
+  if (
+    region &&
+    !stored &&
+    (inScene ||
+      Object.hasOwn(a, 'position') ||
+      Object.hasOwn(a, 'align') ||
+      (role === 'hook' ? basis !== 'output-start' : basis !== 'output-end'))
+  )
+    problem(n, 'invalid_skeleton')
+  const style = 'auto',
     position = a.position ?? 'auto',
     align = a.align ?? 'center'
-  if (style !== 'auto' && (role !== 'caption' || !d.styles.includes(style)))
-    problem(n, 'invalid_style')
   if (
     !['auto', 'top', 'upper_mid', 'lower_mid', 'bottom', 'header'].includes(position) ||
     (position === 'header' && role !== 'info' && role !== 'badge')
@@ -92,7 +111,7 @@ function readElement(
   if (
     hasStart !== hasEnd ||
     (basis === 'whole' && hasStart) ||
-    ((basis === 'output-start' || basis === 'output-end') && !hasStart)
+    ((basis === 'output-start' || basis === 'output-end') && !hasStart && !region)
   )
     problem(n, 'invalid_interval')
   const startMs = hasStart ? compositionMilliseconds(a.start, l.maxDurationMs) : null,
@@ -129,8 +148,18 @@ function readElement(
     style,
     position,
     align,
-    startMs,
-    endMs,
+    startMs:
+      region && !hasStart && (basis === 'output-start' || basis === 'output-end')
+        ? role === 'hook'
+          ? 0
+          : -CLIP_DESIGN.timing.outro_default_s * 1000
+        : startMs,
+    endMs:
+      region && !hasEnd && (basis === 'output-start' || basis === 'output-end')
+        ? role === 'hook'
+          ? CLIP_DESIGN.timing.intro_default_s * 1000
+          : 0
+        : endMs,
     parts: [],
     rows: [],
     span: n.span,
@@ -139,24 +168,53 @@ function readElement(
     if (!['hook', 'ending', 'info'].includes(role)) problem(n, 'invalid_rows')
     t.rows = children(n).map((c) => {
       if (c.name !== 'row') problem(n, 'invalid_rows')
-      if (Object.keys(c.attributes).some((k) => k !== 'role')) problem(n, 'unknown_attribute')
-      if (!rowRoles.includes(c.attributes.role)) problem(n, 'invalid_row_role')
-      return { role: c.attributes.role, parts: parts(c) }
+      const allowed = region && !stored ? ['kind'] : region ? ['role', 'kind'] : ['role']
+      if (Object.keys(c.attributes).some((k) => !allowed.includes(k)))
+        problem(n, region ? 'invalid_skeleton' : 'unknown_attribute')
+      const rowRole = region
+        ? ''
+        : stored && c.attributes.role !== 'label'
+          ? 'caption'
+          : c.attributes.role
+      if (!region && !rowRoles.includes(rowRole)) problem(n, 'invalid_row_role')
+      const rowKind = c.attributes.kind ?? kind
+      if (rowKind !== 'fixed' && rowKind !== 'ai') problem(n, 'invalid_kind')
+      return { role: rowRole, kind: rowKind, parts: parts(c) }
     })
   } else t.parts = parts(n)
-  const max = kind === 'ai' ? l.guideChars : l.copyChars
-  if (
-    [t.parts, ...t.rows.map((r) => r.parts)].some(
-      (ps) => ps.reduce((n, p) => n + scalarLength(p.literal), 0) > max,
-    )
-  )
-    problem(n, 'copy_limit')
+  if (region && !stored) {
+    const count =
+      role === 'hook'
+        ? CLIP_DESIGN.regions.intro[d.design.intro].slots.length
+        : CLIP_DESIGN.regions.outro[d.design.outro].slots.length
+    if (t.rows.length > count || t.parts.some((p) => p.field || trimCompositionSpace(p.literal)))
+      problem(n, 'invalid_skeleton')
+  }
+  for (const row of [{ kind, parts: t.parts }, ...t.rows]) {
+    const max = row.kind === 'ai' ? l.guideChars : l.copyChars
+    if (row.parts.reduce((n, p) => n + scalarLength(p.literal), 0) > max) problem(n, 'copy_limit')
+  }
   return t
 }
 
 export function parseClipComposition(
   source: string,
   limits: CompositionLimits = CLIP_COMPOSITION_LIMITS,
+): ClipComposition {
+  return readClipComposition(source, limits, false)
+}
+
+export function readStoredClipComposition(
+  source: string,
+  limits: CompositionLimits = CLIP_COMPOSITION_LIMITS,
+): ClipComposition {
+  return readClipComposition(source, limits, true)
+}
+
+function readClipComposition(
+  source: string,
+  limits: CompositionLimits,
+  stored: boolean,
 ): ClipComposition {
   if (!validCompositionLimits(limits)) throw new CompositionProblem('clip', 1, 'invalid_limits')
   if (
@@ -172,12 +230,28 @@ export function parseClipComposition(
     throw new CompositionProblem('clip', 1, 'invalid_unicode')
   const root = readCompositionXML(source, limits)
   if (root.name !== 'clip') problem(root, 'unknown_tag')
-  attributes(root, 'version', 'styles', 'accent', 'pace')
+  attributes(
+    root,
+    'version',
+    'intro',
+    'caption',
+    'outro',
+    'accent',
+    'pace',
+    ...(stored ? ['styles'] : []),
+  )
   if (root.attributes.version !== '1') problem(root, 'unknown_version')
+  const intro = root.attributes.intro ?? 'b',
+    caption = root.attributes.caption ?? 'bold',
+    outro = root.attributes.outro ?? 'e'
+  if ((intro !== 'a' && intro !== 'b') || caption !== 'bold' || (outro !== 'b' && outro !== 'e'))
+    problem(root, 'invalid_design')
+  if (!stored && ['intro', 'caption', 'outro'].some((key) => !Object.hasOwn(root.attributes, key)))
+    problem(root, 'invalid_design')
   const d: ClipComposition = {
     source,
     root,
-    styles: (root.attributes.styles ?? 'clean').split(compositionSpace).filter(Boolean),
+    design: { intro, caption, outro },
     accent: root.attributes.accent ?? '',
     pace: root.attributes.pace ?? 'steady',
     fields: [],
@@ -186,12 +260,6 @@ export function parseClipComposition(
     sections: [],
     elements: [],
   }
-  if (
-    !d.styles.length ||
-    new Set(d.styles).size !== d.styles.length ||
-    d.styles.some((s) => !styles.includes(s))
-  )
-    problem(root, 'invalid_style')
   if (!['', 'coral', 'amber', 'lime', 'teal', 'blue', 'violet', 'pink'].includes(d.accent))
     problem(root, 'invalid_accent')
   if (!['steady', 'rapid'].includes(d.pace)) problem(root, 'invalid_pace')
@@ -282,7 +350,7 @@ export function parseClipComposition(
       if (c.name === 'guide') s.guidance.push(guide(c))
       else if (c.name === 'text') {
         claim(c)
-        s.elements.push(readElement(c, d, scope, repeat, true, limits))
+        s.elements.push(readElement(c, d, scope, repeat, true, limits, stored))
       } else problem(c, 'unknown_tag')
     }
     d.sections.push(s)
@@ -297,7 +365,7 @@ export function parseClipComposition(
         break
       case 'text':
         claim(n)
-        d.elements.push(readElement(n, d, 'context', '', false, limits))
+        d.elements.push(readElement(n, d, 'context', '', false, limits, stored))
         break
       case 'scene':
         section(n)
@@ -318,6 +386,13 @@ export function parseClipComposition(
         problem(n, 'unknown_tag')
     }
   }
+  if (!stored)
+    for (const role of ['hook', 'ending']) {
+      const elements = d.elements.filter((e) => e.role === role)
+      if (elements.length > 1)
+        throw new CompositionProblem(elements[1].id, elements[1].span.line, 'invalid_skeleton')
+      if (elements.length !== 1) problem(root, 'invalid_skeleton')
+    }
   return d
 }
 

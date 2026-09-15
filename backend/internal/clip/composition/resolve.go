@@ -145,7 +145,7 @@ func Resolve(d *Document, in Inputs, l Limits, maxExpandedBytes int) (Timeline, 
 		}
 		r := ResolvedElement{InstanceID: id, CutID: cutID, GroupID: group, ItemID: itemID, Element: t, AuthoredTiming: t.Basis != "cut" || t.StartMS != nil}
 		omit := false
-		bind := func(parts []Part) (string, *Problem) {
+		bind := func(parts []Part, kind string) (string, *Problem) {
 			var b strings.Builder
 			for _, p := range parts {
 				if p.Field == "" {
@@ -176,7 +176,7 @@ func Resolve(d *Document, in Inputs, l Limits, maxExpandedBytes int) (Timeline, 
 			}
 			text := b.String()
 			max := l.CopyChars
-			if t.Kind == "ai" {
+			if kind == "ai" {
 				max = l.GuideChars
 			}
 			if scalar(text) > max {
@@ -185,16 +185,24 @@ func Resolve(d *Document, in Inputs, l Limits, maxExpandedBytes int) (Timeline, 
 			return text, nil
 		}
 		var e *Problem
-		r.Text, e = bind(t.Parts)
+		r.Text, e = bind(t.Parts, t.Kind)
 		if e != nil {
 			return e
 		}
+		region := t.Role == "hook" || t.Role == "ending"
 		for _, row := range t.Rows {
-			text, e := bind(row.Parts)
+			text, e := bind(row.Parts, RowKind(t, row))
 			if e != nil {
 				return e
 			}
+			if region && omit {
+				text = ""
+				omit = false
+			}
 			r.Rows = append(r.Rows, ResolvedRow{row.Role, text})
+		}
+		if region && strings.TrimSpace(r.Text) == "" && !slices.ContainsFunc(r.Rows, func(row ResolvedRow) bool { return strings.TrimSpace(row.Text) != "" }) {
+			return nil
 		}
 		if omit {
 			return nil

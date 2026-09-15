@@ -38,7 +38,7 @@ func setup(t *testing.T) (*clip.Service, *store.Store, *db.DB) {
 	return clip.NewService(s, config.ClipLimits()), s, d
 }
 func recipe() clip.Recipe {
-	return clip.Recipe{Name: " 여행 ", Preset: "stay", InformationFields: []clip.InformationField{{Label: " 장소 ", Prompt: " 어디였나요? "}}, CopyStyles: []string{"clean", "memo"}, Accent: "teal"}
+	return clip.Recipe{Name: " 여행 ", Preset: "stay", InformationFields: []clip.InformationField{{Label: " 장소 ", Prompt: " 어디였나요? "}}, Accent: "teal"}
 }
 func create(t *testing.T, s *clip.Service) (clip.VideoTemplate, clip.Project) {
 	t.Helper()
@@ -106,7 +106,7 @@ func TestOwnedLifecyclePresenceAndTemplateDetach(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if vt.Name != name || vt.ProjectCount != 1 || len(vt.InformationFields) != 0 || len(vt.CopyStyles) != 2 || vt.Accent != "" {
+	if vt.Name != name || vt.ProjectCount != 1 || len(vt.InformationFields) != 0 || vt.Accent != "" {
 		t.Fatalf("patch: %+v", vt)
 	}
 	if _, err := d.Writer.Exec("UPDATE clip_projects SET analysis_json='analysis', edit_plan_json='plan', result_key='result', result_content_type='video/mp4', result_bytes=123, result_duration_ms=30000, result_created_at=?, edit_plan_revision=2, rendered_plan_revision=1 WHERE id=?", time.Now().UTC().Format(time.RFC3339Nano), p.ID); err != nil {
@@ -154,8 +154,8 @@ func TestMalformedStoredRecipeFailsRead(t *testing.T) {
 	if _, err := d.Writer.Exec("UPDATE video_templates SET copy_styles='null' WHERE id=?", v.ID); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.ListTemplates(context.Background(), "alice"); err == nil {
-		t.Fatal("null styles accepted")
+	if _, err := s.ListTemplates(context.Background(), "alice"); err != nil {
+		t.Fatal("retired styles prevented opening a template", err)
 	}
 }
 func TestSchemaOwnerConstraintsAndUserCascade(t *testing.T) {
@@ -185,7 +185,7 @@ func TestValidationAndIncompleteAnswers(t *testing.T) {
 	ctx := context.Background()
 	for _, mutate := range []func(*clip.Recipe){
 		func(r *clip.Recipe) { r.Name = " " }, func(r *clip.Recipe) { r.Name = strings.Repeat("한", 41) }, func(r *clip.Recipe) { r.CutGuidance = strings.Repeat("한", 4001) },
-		func(r *clip.Recipe) { r.CopyStyles = nil }, func(r *clip.Recipe) { r.CopyStyles = []string{"unknown"} }, func(r *clip.Recipe) { r.CopyStyles = []string{"clean", "clean"} }, func(r *clip.Recipe) { r.Accent = "#123456" },
+		func(r *clip.Recipe) { r.Accent = "#123456" },
 		func(r *clip.Recipe) {
 			r.InformationFields = append(r.InformationFields, clip.InformationField{Label: "장소", Prompt: "duplicate"})
 		}, func(r *clip.Recipe) { r.InformationFields[0].Label = strings.Repeat("한", 41) }, func(r *clip.Recipe) { r.InformationFields[0].Prompt = strings.Repeat("한", 201) }, func(r *clip.Recipe) { r.InformationFields = make([]clip.InformationField, 11) },

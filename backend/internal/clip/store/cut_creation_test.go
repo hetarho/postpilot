@@ -61,7 +61,7 @@ func TestOwnerCutCreationRidesTheExistingOptimisticSave(t *testing.T) {
 	if strings.Contains(next.EditPlan, "Creation") {
 		t.Fatal("creation metadata was stored")
 	}
-	saved, _, err := clip.DecodeEditPlan(next.EditPlan)
+	saved, err := clip.DecodeEditPlan(next.EditPlan)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,7 +88,7 @@ func TestOwnerCutCreationRidesTheExistingOptimisticSave(t *testing.T) {
 	if err != nil {
 		t.Fatal("a split beside a reorder was refused", err)
 	}
-	split, _, err := clip.DecodeEditPlan(after.EditPlan)
+	split, err := clip.DecodeEditPlan(after.EditPlan)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -113,7 +113,7 @@ func TestAssemblyRejectionsPreserveDraftAndPreviousResult(t *testing.T) {
 			h := generationSetup(t)
 			h.service = clip.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, ownedPlanWriter{h.planner}, ownedPlanRenderer{h.renderer}, generationJobs{h.queue}, h.cfg).WithFinisher(generationFinisher{h.store}).WithCredits(&quotePricing{}, nil)
 			h.projects.SetGeneration(h.service)
-			template, err := h.projects.CreateTemplate(t.Context(), "alice", clip.Recipe{Name: "assembly-rejections", CompositionBody: `<clip version="1" styles="memo"><repeat for="scenes"><scene id="shot"><text id="copy" kind="ai" role="caption" basis="cut">Describe the scene.</text></scene></repeat></clip>`})
+			template, err := h.projects.CreateTemplate(t.Context(), "alice", clip.Recipe{Name: "assembly-rejections", CompositionBody: `<clip version="1" intro="b" caption="bold" outro="e"><repeat for="scenes"><scene id="shot"><text id="copy" kind="ai" role="caption" basis="cut">Describe the scene.</text></scene></repeat><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`})
 			if err != nil {
 				t.Fatal(err)
 			}

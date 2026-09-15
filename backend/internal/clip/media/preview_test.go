@@ -53,7 +53,7 @@ func TestPreviewCropsTransparentAssetsWithExportIntervalsOnAllRatios(t *testing.
 	for _, ratio := range []string{"vertical", "horizontal", "square"} {
 		t.Run(ratio, func(t *testing.T) {
 			a, r, runner := previewMeasured(t, ratio)
-			plan := declaredPlan(t, `<clip version="1"><text id="fixed" kind="fixed" role="badge" basis="whole">정확한 문구</text></clip>`, ratio)
+			plan := declaredPlan(t, `<clip version="1" intro="b" caption="bold" outro="e"><text id="fixed" kind="fixed" role="badge" basis="whole">정확한 문구</text><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`, ratio)
 			sources := []clip.RenderSource{{ID: "source", Fingerprint: "fp", Info: clip.MediaInfo{DurationMS: 15000, Width: 1920, Height: 1080}}}
 			result, err := r.PreparePreview(t.Context(), plan, sources, []string{"fixed"}, 0, cfg)
 			if err != nil {
@@ -92,7 +92,7 @@ func TestPreviewCropsTransparentAssetsWithExportIntervalsOnAllRatios(t *testing.
 }
 func TestPreviewRapidPageUsesExactCuesAndCancellation(t *testing.T) {
 	_, r, _ := previewMeasured(t, "vertical")
-	plan := declaredPlan(t, `<clip version="1" pace="rapid" styles="simple"><scene id="scene"><text id="copy" kind="ai" role="caption" basis="cut">Describe the scene.</text></scene></clip>`, "vertical")
+	plan := declaredPlan(t, `<clip version="1" intro="b" caption="bold" outro="e" pace="rapid"><scene id="scene"><text id="copy" kind="ai" role="caption" basis="cut">Describe the scene.</text></scene><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`, "vertical")
 	plan.Portable.Elements[0].Resolved.Text = "오늘은 철판 요리를 먹어요"
 	cfg := clip.PreviewConfig{MaxAssets: 1, MaxAssetBytes: 512 << 10, MaxResponseBytes: 4 << 20, Timeout: 5 * time.Second}
 	sources := []clip.RenderSource{{ID: "source", Fingerprint: "fp", Info: clip.MediaInfo{DurationMS: 15000, Width: 1920, Height: 1080}}}

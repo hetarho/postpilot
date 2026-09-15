@@ -53,7 +53,6 @@ type CorrectionPlan struct {
 type CorrectionState struct {
 	Plan                                                        CorrectionPlan
 	Sources                                                     []AnalysisSource
-	CopyStyles                                                  []string
 	FadeMS, MaxCuts, MaxCopyRunes, MinDurationMS, MaxDurationMS int
 }
 
@@ -190,8 +189,8 @@ func CorrectionFromPlan(p EditPlan) CorrectionPlan {
 
 // Every plan this build writes is a version-6 assembly envelope, composition or
 // not. The version-4 writer below it is gone; its READER stays exactly as it was.
-func EncodeEditPlan(p EditPlan, styles []string) (string, error) {
-	return encodeAssemblyPlan(p, styles)
+func EncodeEditPlan(p EditPlan) (string, error) {
+	return encodeAssemblyPlan(p)
 }
 func strictJSON(raw string, out any) error {
 	d := json.NewDecoder(strings.NewReader(raw))
@@ -237,10 +236,10 @@ func migrateStoredPlan(raw string) string {
 	}
 	return raw
 }
-func DecodeEditPlan(raw string) (EditPlan, []string, error) {
+func DecodeEditPlan(raw string) (EditPlan, error) {
 	var marker struct{ Version int }
 	if json.Unmarshal([]byte(raw), &marker) != nil {
-		return EditPlan{}, nil, ErrInvalid
+		return EditPlan{}, ErrInvalid
 	}
 	// Dispatch on the EXACT stored version. Version 5 is a portable envelope in
 	// its own right and version 6 is the current one, so a numeric comparison
@@ -257,14 +256,14 @@ func DecodeEditPlan(raw string) (EditPlan, []string, error) {
 		// that format: only styles already present in the retained plan are approved.
 		var legacy legacyEditPlan
 		if err := strictJSON(raw, &legacy); err != nil {
-			return EditPlan{}, nil, err
+			return EditPlan{}, err
 		}
 		p := legacy.upgrade()
 		if len(p.Cuts) == 0 || p.DurationMS <= 0 {
-			return EditPlan{}, nil, ErrInvalid
+			return EditPlan{}, ErrInvalid
 		}
 		if _, err := ClipCanvas(p.Ratio); err != nil {
-			return EditPlan{}, nil, err
+			return EditPlan{}, err
 		}
 		// T076 predates CDS-36 too: every boundary was a fade, and the stored
 		// duration only adds up if it is read back as one.
@@ -282,20 +281,20 @@ func DecodeEditPlan(raw string) (EditPlan, []string, error) {
 			}
 		}
 		upgradeLegacyAssembly(&p)
-		return p, styles, nil
+		return p, nil
 	}
 	var s storedEditPlan
 	if marker.Version < 3 {
 		var legacy legacyStoredEditPlan
 		if err := strictJSON(raw, &legacy); err != nil {
-			return EditPlan{}, nil, ErrInvalid
+			return EditPlan{}, ErrInvalid
 		}
 		s = storedEditPlan{legacy.Version, legacy.Ratio, storedCorrection(legacy.Plan.upgrade()), legacy.Focals, legacy.CopyStyles}
 	} else if err := strictJSON(raw, &s); err != nil {
-		return EditPlan{}, nil, ErrInvalid
+		return EditPlan{}, ErrInvalid
 	}
 	if s.Version < 1 || s.Version > storedPlanVersion {
-		return EditPlan{}, nil, ErrInvalid
+		return EditPlan{}, ErrInvalid
 	}
 	if s.Version < 2 {
 		for i := range s.Plan.Cuts {
@@ -305,22 +304,22 @@ func DecodeEditPlan(raw string) (EditPlan, []string, error) {
 		}
 	}
 	if len(s.Plan.Cuts) == 0 || s.Plan.DurationMS <= 0 {
-		return EditPlan{}, nil, ErrInvalid
+		return EditPlan{}, ErrInvalid
 	}
 	if _, err := ClipCanvas(s.Ratio); err != nil {
-		return EditPlan{}, nil, err
+		return EditPlan{}, err
 	}
 	p := EditPlan{Ratio: s.Ratio, DurationMS: s.Plan.DurationMS, Hook: s.Plan.Hook}
 	for _, c := range s.Plan.Cuts {
 		f, ok := s.Focals[c.ID]
 		if !ok || c.VolumePermille < 0 || c.VolumePermille > 1000 {
-			return EditPlan{}, nil, ErrInvalid
+			return EditPlan{}, ErrInvalid
 		}
 		v := float64(c.VolumePermille) / 1000
 		p.Cuts = append(p.Cuts, Cut{ID: c.ID, SourceID: c.SourceID, Fingerprint: c.Fingerprint, StartMS: c.StartMS, EndMS: c.EndMS, TransitionMS: c.TransitionMS, Focal: f, Copies: c.Copies, Chips: c.Chips, Volume: &v})
 	}
 	upgradeLegacyAssembly(&p)
-	return p, s.CopyStyles, nil
+	return p, nil
 }
 
 // RetainedObservations reads the same recorded evidence used by correction.
@@ -353,7 +352,7 @@ func editingState(p Project, cfg RenderConfig, exposeNative bool) (*CorrectionSt
 	if p.EditPlan == "" {
 		return nil, nil
 	}
-	plan, styles, err := DecodeEditPlan(p.EditPlan)
+	plan, err := DecodeEditPlan(p.EditPlan)
 	if err != nil {
 		return nil, err
 	}
@@ -370,35 +369,35 @@ func editingState(p Project, cfg RenderConfig, exposeNative bool) (*CorrectionSt
 	if err != nil {
 		return nil, err
 	}
-	return &CorrectionState{CorrectionFromPlan(plan), sources, styles, cfg.FadeMS, cfg.MaxCuts, cfg.MaxCopyRunes, cfg.MinDurationMS, cfg.MaxDurationMS}, nil
+	return &CorrectionState{CorrectionFromPlan(plan), sources, cfg.FadeMS, cfg.MaxCuts, cfg.MaxCopyRunes, cfg.MinDurationMS, cfg.MaxDurationMS}, nil
 }
-func ApplyCorrection(cfg RenderConfig, p Project, input CorrectionPlan) (EditPlan, []string, error) {
+func ApplyCorrection(cfg RenderConfig, p Project, input CorrectionPlan) (EditPlan, error) {
 	// Reject an unsupported explicit rate before interval resolution turns its
 	// zero transformed length into an unrelated duration error (CLIP-99).
 	for _, cut := range input.Cuts {
 		if !ValidPlaybackRate(cut.Rate()) {
-			return EditPlan{}, nil, cutRefusal(cut.ID, "plan_cut_rate")
+			return EditPlan{}, cutRefusal(cut.ID, "plan_cut_rate")
 		}
 	}
-	old, styles, err := DecodeEditPlan(p.EditPlan)
+	old, err := DecodeEditPlan(p.EditPlan)
 	if err != nil {
-		return EditPlan{}, nil, err
+		return EditPlan{}, err
 	}
 	if input.NativeComposition && old.Portable == nil && p.Composition != nil && p.Composition.Snapshot.LegacyRecipe != nil {
 		old.Portable, err = FreezeLegacyPlan(p, old, *p.Composition.Snapshot.LegacyRecipe, cfg.Composition)
 		if err != nil {
-			return EditPlan{}, nil, err
+			return EditPlan{}, err
 		}
 	}
 	sources, err := RetainedSources(p)
 	if err != nil {
-		return EditPlan{}, nil, err
+		return EditPlan{}, err
 	}
 	if old.Portable != nil && (input.NativeComposition || old.Portable.NativeEditing || !old.Portable.Snapshot.Legacy) {
-		return applyNativeCorrection(cfg, p, old, styles, sources, input)
+		return applyNativeCorrection(cfg, p, old, sources, input)
 	}
 	if input.NativeComposition || len(input.Elements) != 0 {
-		return EditPlan{}, nil, ErrInvalid
+		return EditPlan{}, ErrInvalid
 	}
 	known := map[string]Cut{}
 	for _, c := range old.Cuts {
@@ -406,13 +405,13 @@ func ApplyCorrection(cfg RenderConfig, p Project, input CorrectionPlan) (EditPla
 	}
 	next := EditPlan{Ratio: p.Ratio, DurationMS: input.DurationMS, Hook: strings.TrimSpace(input.Hook), SourceAudio: old.SourceAudio}
 	if err := matchOwnerAudio(old, input); err != nil {
-		return EditPlan{}, nil, err
+		return EditPlan{}, err
 	}
 	// The hook is the one text on a corrected plan the owner wrote for the clip
 	// rather than for a cut, so it answers to CDS-42 here: it may only state
 	// numbers and names the owner's own answers already carry.
 	if !Grounded(next.Hook, p.Answers) {
-		return EditPlan{}, nil, planViolation("plan_hook")
+		return EditPlan{}, planViolation("plan_hook")
 	}
 	for _, c := range input.Cuts {
 		prior, ok := known[c.ID]
@@ -420,15 +419,10 @@ func ApplyCorrection(cfg RenderConfig, p Project, input CorrectionPlan) (EditPla
 		// against; a plan that predates the composition has neither, so it
 		// remains a trim-and-reorder editor.
 		if c.Creation != nil {
-			return EditPlan{}, nil, ErrCompositionUnavailable
+			return EditPlan{}, ErrCompositionUnavailable
 		}
 		if !ok || c.SourceID != prior.SourceID || c.Fingerprint != prior.Fingerprint || c.VolumePermille < 0 || c.VolumePermille > 1000 {
-			return EditPlan{}, nil, ErrInvalid
-		}
-		for _, copy := range c.Copies {
-			if !slices.Contains(styles, copy.Style) {
-				return EditPlan{}, nil, ErrInvalid
-			}
+			return EditPlan{}, ErrInvalid
 		}
 		v := float64(c.VolumePermille) / 1000
 		prior.StartMS, prior.EndMS, prior.TransitionMS, prior.Copies, prior.Chips, prior.Volume = c.StartMS, c.EndMS, c.TransitionMS, c.Copies, c.Chips, &v
@@ -451,13 +445,13 @@ func ApplyCorrection(cfg RenderConfig, p Project, input CorrectionPlan) (EditPla
 		refs = append(refs, s.RenderSource)
 	}
 	if err = ValidateEditPlan(cfg, next, refs); err != nil {
-		return EditPlan{}, nil, err
+		return EditPlan{}, err
 	}
 	if err = ValidateSourceRanges(next, SourceOverlaps(old.Cuts)); err != nil {
-		return EditPlan{}, nil, err
+		return EditPlan{}, err
 	}
 	trackNoticeCutEdits(old, &next)
-	return next, styles, nil
+	return next, nil
 }
 
 // matchOwnerAudio keeps the per-source original-sound snapshot out of the plan

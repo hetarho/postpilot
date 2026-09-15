@@ -9,7 +9,7 @@ func TestProjectNoticeProjectionFiltersEditedCutAndKeepsStableCode(t *testing.T)
 	plan := clip.EditPlan{Ratio: "vertical", DurationMS: 15000, Cuts: []clip.Cut{{ID: "cut", SourceID: "source", Fingerprint: "fp", EndMS: 15000}}}
 	clip.AddPlanNotice(&plan, "plan_cut_rate", "cut", "", "repair")
 	clip.AddPlanNotice(&plan, "plan_target_duration", "", "", "shortfall")
-	raw, err := clip.EncodeEditPlan(plan, nil)
+	raw, err := clip.EncodeEditPlan(plan)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -18,7 +18,7 @@ func TestProjectNoticeProjectionFiltersEditedCutAndKeepsStableCode(t *testing.T)
 		t.Fatal(got.Notices)
 	}
 	plan.NoticeCutRevisions = map[string]int{"cut": 1}
-	raw, err = clip.EncodeEditPlan(plan, nil)
+	raw, err = clip.EncodeEditPlan(plan)
 	if err != nil {
 		t.Fatal(err)
 	}

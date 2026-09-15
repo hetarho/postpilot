@@ -114,7 +114,7 @@ func observation() map[string]any {
 	return map[string]any{"source_id": "source", "chunk_index": 1, "segments": []any{map[string]any{"start_ms": 0, "end_ms": 5000, "event": "음식을 담는다", "action": "담는다", "motion": "static", "subjects": []string{"접시"}, "speech": "", "quality": "steady and sharp", "focal": map[string]any{"x": .5, "y": .5}, "scene": "food", "readable_text": false, "subject": map[string]any{"x": .2, "y": .6, "width": .6, "height": .3}, "certainty": "certain", "usability": "usable"}}}
 }
 func planningInput() clip.PlanningInput {
-	return clip.PlanningInput{Policy: testPolicy("write"), Template: clip.Recipe{Name: "제주 & Seoul", InformationFields: []clip.InformationField{{Label: "장소 / Place", Prompt: "어디인가요?"}}, CutGuidance: "현장 소리를 남겨줘. Keep the original sound.", CopyStyles: []string{"clean", "memo"}, Accent: "coral"}, Answers: []clip.Answer{{Label: "장소 / Place", Text: "한글 <그대로> & O'Brien\nKeep 10:30 unchanged."}}, Ratio: "vertical", TargetDurationMS: 15000, Analyses: []clip.SourceAnalysis{{Source: source(), Segments: []clip.Segment{{StartMS: 0, EndMS: 65000, Event: "음식을 담는다", Subjects: []string{"접시"}, Speech: "", Quality: "steady", Focal: clip.Point{X: .5, Y: .5}, Subject: clip.Region{X: .2, Y: .6, Width: .6, Height: .3}, Certainty: clip.CertaintyCertain, Usability: clip.UsabilityUsable}}}}}
+	return clip.PlanningInput{Policy: testPolicy("write"), Template: clip.Recipe{Name: "제주 & Seoul", InformationFields: []clip.InformationField{{Label: "장소 / Place", Prompt: "어디인가요?"}}, CutGuidance: "현장 소리를 남겨줘. Keep the original sound.", Accent: "coral"}, Answers: []clip.Answer{{Label: "장소 / Place", Text: "한글 <그대로> & O'Brien\nKeep 10:30 unchanged."}}, Ratio: "vertical", TargetDurationMS: 15000, Analyses: []clip.SourceAnalysis{{Source: source(), Segments: []clip.Segment{{StartMS: 0, EndMS: 65000, Event: "음식을 담는다", Subjects: []string{"접시"}, Speech: "", Quality: "steady", Focal: clip.Point{X: .5, Y: .5}, Subject: clip.Region{X: .2, Y: .6, Width: .6, Height: .3}, Certainty: clip.CertaintyCertain, Usability: clip.UsabilityUsable}}}}}
 }
 func plan() map[string]any {
 	// Words only: the model no longer names a position, a style or an accent.
@@ -271,7 +271,7 @@ func TestRecordedLiveClipResponses(t *testing.T) {
 		t.Fatal(err)
 	}
 	models.response.Text = string(planJSON)
-	input := clip.PlanningInput{Policy: testPolicy("write"), Template: clip.Recipe{Name: "합성 영상 검증", CutGuidance: "15초 한 컷으로 구성하고 자막은 '영상 생성 확인'으로 해주세요.", CopyStyles: []string{"clean"}, Accent: "coral"}, Ratio: "horizontal", TargetDurationMS: 15000, Analyses: analyses}
+	input := clip.PlanningInput{Policy: testPolicy("write"), Template: clip.Recipe{Name: "합성 영상 검증", CutGuidance: "15초 한 컷으로 구성하고 자막은 '영상 생성 확인'으로 해주세요.", Accent: "coral"}, Ratio: "horizontal", TargetDurationMS: 15000, Analyses: analyses}
 	// The recorded response is ONE fifteen-second take. CDS-37's 6.0 s is a
 	// target, not a gate (r3): the compiler trims to it, finds the approved
 	// fifteen seconds unreachable that way, lets the target yield and ships the
@@ -748,7 +748,6 @@ func TestRapidPlanningUsesOneWriterCall(t *testing.T) {
 	service, models, _ := newService(t, raw(value), true)
 	input := planningInput()
 	input.Template.CaptionPace = "rapid"
-	input.Template.CopyStyles = []string{"clean", "simple"}
 	result, _, err := service.Plan(t.Context(), testRef(), input)
 	if err != nil {
 		t.Fatal(err)

@@ -40,7 +40,7 @@ func TestOverlapDoesNotHideOtherDeliveryFailures(t *testing.T) {
 				m[3].Fill, m[3].Background = "#FFFFFF", "#FFFFFF"
 				want = design.ViolationContrast
 			}
-			if err := design.VerifyRenderable(m, "vertical", nil); !errors.Is(err, want) {
+			if err := design.VerifyRenderable(m, "vertical"); !errors.Is(err, want) {
 				t.Fatalf("delivery check = %v, want %v", err, want)
 			}
 		})

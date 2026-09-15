@@ -37,7 +37,7 @@ func (previewRPCRenderer) PreparePreview(context.Context, clip.EditPlan, []clip.
 }
 func TestPreviewRPCAuthenticatesHashOwnerAndReadOnlyResponse(t *testing.T) {
 	plan := clip.EditPlan{Ratio: "vertical", DurationMS: 15000, Cuts: []clip.Cut{{ID: "cut", SourceID: "source", Fingerprint: "fp", EndMS: 15000, Focal: clip.Point{X: .5, Y: .5}}}}
-	raw, err := clip.EncodeEditPlan(plan, []string{"clean"})
+	raw, err := clip.EncodeEditPlan(plan)
 	if err != nil {
 		t.Fatal(err)
 	}

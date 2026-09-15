@@ -48,7 +48,7 @@ func TestRenderOriginalsOverlap(t *testing.T) {
 	}
 	if err := a.WithWorkspace(t.Context(), "originals-overlap", func(ws clip.MediaWorkspace) error {
 		plan := clip.EditPlan{Ratio: "vertical", DurationMS: 30000, Disclosure: "ad", Preset: "restaurant", Hook: "오늘의 한 끼", Accent: "coral",
-			Facts: []clip.Answer{{Label: "상호", Text: "클립 테스트"}, {Label: "위치", Text: "현장 영상"}}, Styles: []string{"clean", "bold"}}
+			Facts: []clip.Answer{{Label: "상호", Text: "클립 테스트"}, {Label: "위치", Text: "현장 영상"}}}
 		ends := []int{4200, 3700, 1400, 4200, 4200, 4200, 4200, 4300}
 		if requested := os.Getenv("CLIP_ORIGINALS_DURATION_MS"); requested != "" {
 			duration, err := strconv.Atoi(requested)
@@ -99,7 +99,7 @@ func TestRenderOriginalsOverlap(t *testing.T) {
 			if !reflect.DeepEqual(laidOut, plan) {
 				return fmt.Errorf("%s changed a caption for overlap", mode)
 			}
-			if err := design.VerifyApproved(manifest, plan.Ratio, plan.Styles); !errors.Is(err, design.ViolationOverlap) {
+			if err := design.Verify(manifest, plan.Ratio); !errors.Is(err, design.ViolationOverlap) {
 				return fmt.Errorf("%s must reproduce overlap: %v", mode, err)
 			}
 			loads := map[string]int{}
@@ -120,7 +120,7 @@ func TestRenderOriginalsOverlap(t *testing.T) {
 			if len(loads) != len(sources) || result.Info.DurationMS != plan.DurationMS || result.Bytes <= 0 {
 				return fmt.Errorf("%s did not deliver all eight sources: loads=%d duration=%d bytes=%d", mode, len(loads), result.Info.DurationMS, result.Bytes)
 			}
-			if err := design.VerifyApproved(result.Manifest, plan.Ratio, plan.Styles); !errors.Is(err, design.ViolationOverlap) {
+			if err := design.Verify(result.Manifest, plan.Ratio); !errors.Is(err, design.ViolationOverlap) {
 				return fmt.Errorf("%s final manifest lost the overlap fixture: %v", mode, err)
 			}
 			if output := os.Getenv("CLIP_ORIGINALS_OUTPUT"); output != "" {

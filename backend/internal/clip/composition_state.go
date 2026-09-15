@@ -116,15 +116,11 @@ func node(name string, attrs map[string]string, children ...*composition.Node) *
 }
 func literal(text string) *composition.Node { return &composition.Node{Name: "#text", Text: text} }
 func legacyCompositionRoot(recipe Recipe) *composition.Node {
-	styles := recipe.CopyStyles
-	if len(styles) == 0 {
-		styles = []string{"clean"}
-	}
 	pace := recipe.CaptionPace
 	if pace == "" {
 		pace = "steady"
 	}
-	root := node("clip", map[string]string{"version": "1", "styles": strings.Join(styles, " "), "accent": recipe.Accent, "pace": pace})
+	root := node("clip", map[string]string{"version": "1", "intro": "b", "caption": "bold", "outro": "e", "accent": recipe.Accent, "pace": pace})
 	for _, f := range recipe.InformationFields {
 		root.Children = append(root.Children, node("field", map[string]string{"id": LegacyFieldID(f.Label), "label": f.Label, "required": "true"}, literal(f.Prompt)))
 	}
@@ -144,23 +140,21 @@ func legacyCompositionRoot(recipe Recipe) *composition.Node {
 
 func LegacyCompositionBody(recipe Recipe) string {
 	root := legacyCompositionRoot(recipe)
-	fields := map[string]bool{}
-	for _, f := range recipe.InformationFields {
-		fields[f.Label] = true
+	hook := node("text", map[string]string{"id": "legacy-template-hook", "kind": "ai", "role": "hook", "basis": "output-start"})
+	ending := node("text", map[string]string{"id": "legacy-template-ending", "kind": "fixed", "role": "ending", "basis": "output-end"})
+	for _, field := range recipe.InformationFields {
+		if field.Label == "상호" {
+			hook.Children = append(hook.Children, node("row", nil, literal("Write a grounded opening phrase for "), node("value", map[string]string{"field": LegacyFieldID(field.Label)})))
+			ending.Children = append(ending.Children, node("row", nil, node("value", map[string]string{"field": LegacyFieldID(field.Label)})))
+		}
 	}
-	if fields["상호"] {
-		root.Children = append(root.Children, node("text", map[string]string{"id": "legacy-template-hook", "kind": "ai", "role": "hook", "basis": "output-start", "start": "0", "end": seconds(int(design.Timing.IntroDefaultS * 1000))}, literal("Write a grounded opening sentence for "), node("value", map[string]string{"field": LegacyFieldID("상호")})))
-		root.Children = append(root.Children, node("text", map[string]string{"id": "legacy-template-ending", "kind": "fixed", "role": "ending", "basis": "output-end", "start": seconds(-int(design.Timing.OutroDefaultS * 1000)), "end": "0"}, node("row", map[string]string{"role": "body"}, node("value", map[string]string{"field": LegacyFieldID("상호")})), node("row", map[string]string{"role": "label"}, literal(design.CTA[design.DefaultCTA(recipe.Preset, "")]))))
-	}
+	root.Children = append(root.Children, hook, ending)
 	return composition.SerializeNode(root)
 }
 
 // Legacy project furniture is frozen independently from its reusable template.
 func LegacyProjectComposition(p Project, recipe Recipe) ProjectComposition {
-	if retained, styles, err := DecodeEditPlan(p.EditPlan); err == nil {
-		if len(styles) > 0 {
-			recipe.CopyStyles = slices.Clone(styles)
-		}
+	if retained, err := DecodeEditPlan(p.EditPlan); err == nil {
 		foundAccent := false
 		for _, cut := range retained.Cuts {
 			for _, copy := range cut.Copies {
@@ -184,7 +178,6 @@ func LegacyProjectComposition(p Project, recipe Recipe) ProjectComposition {
 	recipe.CompositionBody = ""
 	recipe.CompositionLegacy = true
 	recipe.InformationFields = slices.Clone(recipe.InformationFields)
-	recipe.CopyStyles = slices.Clone(recipe.CopyStyles)
 	return ProjectComposition{Snapshot: CompositionSnapshot{Version: CompositionVersion, Body: body, TemplateID: p.VideoTemplateID, Legacy: true, LegacyRecipe: &recipe}, Inputs: in}
 }
 
@@ -355,7 +348,6 @@ func (s *Service) authoredRecipe(r Recipe) (Recipe, error) {
 		return r, e
 	}
 	r.CompositionLegacy = false
-	r.CopyStyles = slices.Clone(d.Styles)
 	r.Accent = d.Accent
 	r.CaptionPace = d.Pace
 	r.Preset = ""
@@ -374,7 +366,7 @@ func (s *Service) projectComposition(t VideoTemplate, in *CompositionInputs, p P
 	if t.CompositionBody == "" || t.CompositionLegacy {
 		c := LegacyProjectComposition(p, t.Recipe)
 		if in != nil {
-			d, problem := composition.Parse(c.Snapshot.Body, LegacyCompositionLimits(s.limits.Composition))
+			d, problem := composition.ReadStored(c.Snapshot.Body, LegacyCompositionLimits(s.limits.Composition))
 			if problem != nil {
 				return nil, problem
 			}
@@ -467,54 +459,32 @@ func legacyProjectFurniture(body string, p Project, recipe Recipe, planOverride 
 	}
 	plan := planOverride
 	if plan == nil && p.EditPlan != "" {
-		if v, _, err := DecodeEditPlan(p.EditPlan); err == nil {
+		if v, err := DecodeEditPlan(p.EditPlan); err == nil {
 			plan = &v
 		}
 	}
+	values := map[string]string{}
 	if plan != nil {
-		values := map[string]string{}
-		for _, a := range p.Answers {
-			values[a.Label] = strings.TrimSpace(a.Text)
-		}
-		accent := recipe.Accent
-		for _, cut := range plan.Cuts {
-			for _, copy := range cut.Copies {
-				if copy.Accent != "" && accent == "" {
-					accent = copy.Accent
-				}
-			}
-		}
-		row := func(role, text string) *composition.Node {
-			return node("row", map[string]string{"role": role}, literal(text))
-		}
-		if values["상호"] != "" {
-			if strings.TrimSpace(plan.Hook) != "" {
-				rows := []*composition.Node{}
-				if label := design.Presets[recipe.Preset].Label; label != "" && accent != "" {
-					rows = append(rows, row("label", label))
-				}
-				rows = append(rows, row("hook", strings.TrimSpace(plan.Hook)), row("body", values["상호"]))
-				add("legacy-hook", "hook", "output-start", 0, min(int(design.Timing.IntroDefaultS*1000), plan.DurationMS), rows...)
-			}
-			rows := []*composition.Node{row("body", values["상호"])}
-			if values["위치"] != "" {
-				rows = append(rows, row("label", values["위치"]))
-			}
-			for _, label := range []string{"가격", "메뉴"} {
-				if value := values[label]; value != "" {
-					if label == "가격" && design.Presets[recipe.Preset].PriceNote != "" {
-						value += " " + design.Presets[recipe.Preset].PriceNote
-					}
-					rows = append(rows, row("caption", value))
-					break
-				}
-			}
-			if accent != "" {
-				rows = append(rows, row("label", design.CTA[design.DefaultCTA(recipe.Preset, p.CTA)]))
-			}
-			add("legacy-ending", "ending", "output-end", -min(int(design.Timing.OutroDefaultS*1000), plan.DurationMS), 0, rows...)
+		for _, answer := range p.Answers {
+			values[answer.Label] = strings.TrimSpace(answer.Text)
 		}
 	}
+	row := func(text string) *composition.Node { return node("row", nil, literal(text)) }
+	hook := ""
+	if plan != nil {
+		hook = strings.TrimSpace(plan.Hook)
+	}
+	add("legacy-hook", "hook", "output-start", 0, int(design.Timing.IntroDefaultS*1000), row(hook), row(func() string {
+		if hook != "" {
+			return values["상호"]
+		}
+		return ""
+	}()))
+	detail := values["가격"]
+	if detail == "" {
+		detail = values["메뉴"]
+	}
+	add("legacy-ending", "ending", "output-end", -int(design.Timing.OutroDefaultS*1000), 0, row(values["상호"]), row(values["위치"]), row(detail))
 	return body[:rootEnd] + extra.String() + body[rootEnd:]
 }
 func seconds(ms int) string { return strconv.FormatFloat(float64(ms)/1000, 'f', -1, 64) }

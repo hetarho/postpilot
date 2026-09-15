@@ -29,9 +29,9 @@ func (s *Store) SaveCorrection(ctx context.Context, user, id string, revision in
 			return clip.Project{}, clip.ErrPlanConflict
 		}
 		// Compare the semantic plan so a formatting-only save does not renew retention.
-		oldPlan, oldStyles, oldErr := clip.DecodeEditPlan(p.EditPlan)
-		newPlan, newStyles, newErr := clip.DecodeEditPlan(raw)
-		if oldErr == nil && newErr == nil && reflect.DeepEqual(oldPlan, newPlan) && reflect.DeepEqual(oldStyles, newStyles) {
+		oldPlan, oldErr := clip.DecodeEditPlan(p.EditPlan)
+		newPlan, newErr := clip.DecodeEditPlan(raw)
+		if oldErr == nil && newErr == nil && reflect.DeepEqual(oldPlan, newPlan) {
 			return p, nil
 		}
 		var oldJSON, newJSON any
@@ -47,7 +47,7 @@ func (s *Store) SaveCorrection(ctx context.Context, user, id string, revision in
 		if n != 1 {
 			return clip.Project{}, clip.ErrPlanConflict
 		}
-		if decoded, _, e := clip.DecodeEditPlan(raw); e == nil && decoded.Portable != nil {
+		if decoded, e := clip.DecodeEditPlan(raw); e == nil && decoded.Portable != nil {
 			p.Composition = &clip.ProjectComposition{Snapshot: decoded.Portable.Snapshot, Inputs: decoded.Portable.Inputs}
 			if e = saveComposition(ctx, q, p); e != nil {
 				return clip.Project{}, e
@@ -74,9 +74,9 @@ func (s *Store) SaveRender(ctx context.Context, user, id string, revision int, r
 			}
 		}
 		raw := p.EditPlan
-		if plan, styles, decodeErr := clip.DecodeEditPlan(raw); decodeErr == nil {
+		if plan, decodeErr := clip.DecodeEditPlan(raw); decodeErr == nil {
 			clip.RecomputePlanNotices(&plan, p.TargetDurationMS, 0)
-			raw, err = clip.EncodeEditPlan(plan, styles)
+			raw, err = clip.EncodeEditPlan(plan)
 			if err != nil {
 				return struct{}{}, err
 			}

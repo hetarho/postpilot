@@ -41,14 +41,14 @@ func correctionText(t PortableText) CorrectionText {
 	return result
 }
 
-func applyNativeCorrection(cfg RenderConfig, p Project, old EditPlan, styles []string, sources []AnalysisSource, in CorrectionPlan) (EditPlan, []string, error) {
+func applyNativeCorrection(cfg RenderConfig, p Project, old EditPlan, sources []AnalysisSource, in CorrectionPlan) (EditPlan, error) {
 	// An older client must never silently replace the portable plan with its
 	// legacy caption projection. Reload with the native editing contract.
 	if !in.NativeComposition {
-		return EditPlan{}, nil, ErrCompositionUnavailable
+		return EditPlan{}, ErrCompositionUnavailable
 	}
 	if err := matchOwnerAudio(old, in); err != nil {
-		return EditPlan{}, nil, err
+		return EditPlan{}, err
 	}
 	next := old
 
@@ -62,15 +62,15 @@ func applyNativeCorrection(cfg RenderConfig, p Project, old EditPlan, styles []s
 		if portable.Snapshot.Legacy {
 			limits = LegacyCompositionLimits(limits)
 		}
-		doc, problem := composition.Parse(portable.Snapshot.Body, limits)
+		doc, problem := composition.ReadStored(portable.Snapshot.Body, limits)
 		if problem != nil {
-			return EditPlan{}, nil, problem
+			return EditPlan{}, problem
 		}
 		if err := ValidateCompositionInputs(doc, portable.Inputs, limits, false); err != nil {
-			return EditPlan{}, nil, err
+			return EditPlan{}, err
 		}
 		if err := ValidateSourceAssociations(p, portable.Inputs.Associations); err != nil {
-			return EditPlan{}, nil, err
+			return EditPlan{}, err
 		}
 		changed = changedAssociations(old.Portable.Inputs.Associations, portable.Inputs.Associations)
 	}
@@ -90,7 +90,7 @@ func applyNativeCorrection(cfg RenderConfig, p Project, old EditPlan, styles []s
 		var err error
 		portable.Observations, err = RetainedObservations(p)
 		if err != nil {
-			return EditPlan{}, nil, err
+			return EditPlan{}, err
 		}
 	}
 	next.Portable, next.Cuts, next.DurationMS = &portable, nil, in.DurationMS
@@ -106,16 +106,16 @@ func applyNativeCorrection(cfg RenderConfig, p Project, old EditPlan, styles []s
 		// cut the plan does not contain may carry creation provenance, and only
 		// with it (CLIP-97).
 		if ok == (c.Creation != nil) {
-			return EditPlan{}, nil, cutRefusal(c.ID, "cut_identity")
+			return EditPlan{}, cutRefusal(c.ID, "cut_identity")
 		}
 		if !ok {
 			origin, exists := known[c.Creation.OriginID]
 			if !exists {
-				return EditPlan{}, nil, cutRefusal(c.ID, "cut_origin")
+				return EditPlan{}, cutRefusal(c.ID, "cut_origin")
 			}
 			admitted, binding, err := admitOwnerCut(c, origin, bindings[c.Creation.OriginID], &portable, in.Cuts)
 			if err != nil {
-				return EditPlan{}, nil, err
+				return EditPlan{}, err
 			}
 			created = append(created, c.ID)
 			portable.Cuts = append(portable.Cuts, binding)
@@ -123,12 +123,12 @@ func applyNativeCorrection(cfg RenderConfig, p Project, old EditPlan, styles []s
 			continue
 		}
 		if c.SourceID != prior.SourceID || c.Fingerprint != prior.Fingerprint || c.VolumePermille < 0 || c.VolumePermille > 1000 {
-			return EditPlan{}, nil, ErrInvalid
+			return EditPlan{}, ErrInvalid
 		}
 		if c.Focal != nil {
 			f := *c.Focal
 			if math.IsNaN(f.X) || math.IsNaN(f.Y) || math.IsInf(f.X, 0) || math.IsInf(f.Y, 0) || f.X < 0 || f.X > 1 || f.Y < 0 || f.Y > 1 {
-				return EditPlan{}, nil, ErrInvalid
+				return EditPlan{}, ErrInvalid
 			}
 			prior.Focal = f
 		}
@@ -144,7 +144,7 @@ func applyNativeCorrection(cfg RenderConfig, p Project, old EditPlan, styles []s
 	// A created cut carries no text of its own: a split leaves the parent's
 	// cut-bound content on the left, where the owner authored it (CDS-64).
 	if err := ValidateOwnerCutContent(created, in.Elements); err != nil {
-		return EditPlan{}, nil, err
+		return EditPlan{}, err
 	}
 	if len(next.Cuts) > 0 {
 		next.Cuts[0].TransitionMS = 0
@@ -156,22 +156,22 @@ func applyNativeCorrection(cfg RenderConfig, p Project, old EditPlan, styles []s
 		t, ok := knownText[edit.InstanceID]
 		r := t.Resolved
 		if !ok || seen[edit.InstanceID] || edit.ElementID != r.Element.ID || edit.CutID != r.CutID || edit.Kind != r.Element.Kind || edit.Role != r.Element.Role || edit.GroupID != r.GroupID || edit.ItemID != r.ItemID {
-			return EditPlan{}, nil, ErrInvalid
+			return EditPlan{}, ErrInvalid
 		}
 		seen[edit.InstanceID] = true
 		if len([]rune(edit.Text)) > cfg.Composition.CopyChars || len(edit.Rows) > cfg.Composition.Nodes {
-			return EditPlan{}, nil, ErrInvalid
+			return EditPlan{}, ErrInvalid
 		}
 		for _, row := range edit.Rows {
-			if len([]rune(row.Text)) > cfg.Composition.CopyChars || !slices.Contains([]string{"label", "hook", "body", "caption"}, row.Role) {
-				return EditPlan{}, nil, ErrInvalid
+			if len([]rune(row.Text)) > cfg.Composition.CopyChars || !slices.Contains([]string{"", "label", "hook", "body", "caption"}, row.Role) {
+				return EditPlan{}, ErrInvalid
 			}
 		}
-		if !slices.Contains(append(slices.Clone(styles), "auto"), edit.Style) || !slices.Contains([]string{"auto", "header", "top", "upper_mid", "lower_mid", "bottom", "center"}, edit.Position) || !slices.Contains([]string{"left", "center", "right"}, edit.Align) || !slices.Contains([]string{"steady", "rapid", ""}, edit.Pace) {
-			return EditPlan{}, nil, ErrInvalid
+		if !slices.Contains([]string{"auto", "header", "top", "upper_mid", "lower_mid", "bottom", "center"}, edit.Position) || !slices.Contains([]string{"left", "center", "right"}, edit.Align) || !slices.Contains([]string{"steady", "rapid", ""}, edit.Pace) {
+			return EditPlan{}, ErrInvalid
 		}
 		if !ValidAccent(edit.Accent) || edit.Keyword != "" && !strings.Contains(edit.Text, edit.Keyword) {
-			return EditPlan{}, nil, ErrInvalid
+			return EditPlan{}, ErrInvalid
 		}
 		before := correctionText(t)
 		// Provenance and warnings are server projections, never client authority.
@@ -200,13 +200,13 @@ func applyNativeCorrection(cfg RenderConfig, p Project, old EditPlan, styles []s
 	}
 	resolved, err := ResolvePortableIntervals(next, cfg.Composition)
 	if err != nil {
-		return EditPlan{}, nil, err
+		return EditPlan{}, err
 	}
 	if resolved.DurationMS != in.DurationMS {
-		return EditPlan{}, nil, ErrInvalid
+		return EditPlan{}, ErrInvalid
 	}
 	if err := ValidateEditablePhrases(resolved); err != nil {
-		return EditPlan{}, nil, err
+		return EditPlan{}, err
 	}
 	geometry := resolved
 	geometry.Hook = ""
@@ -216,12 +216,12 @@ func applyNativeCorrection(cfg RenderConfig, p Project, old EditPlan, styles []s
 		refs = append(refs, s.RenderSource)
 	}
 	if err := ValidateEditPlan(cfg, geometry, refs); err != nil {
-		return EditPlan{}, nil, err
+		return EditPlan{}, err
 	}
 	// A legacy plan's existing overlap stays exactly as saved; a correction may
 	// neither create a new one nor enlarge it (CLIP-98).
 	if err := ValidateSourceRanges(resolved, SourceOverlaps(old.Cuts)); err != nil {
-		return EditPlan{}, nil, err
+		return EditPlan{}, err
 	}
-	return resolved, styles, nil
+	return resolved, nil
 }

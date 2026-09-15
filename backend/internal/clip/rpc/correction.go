@@ -136,7 +136,7 @@ func editingProto(s *clip.CorrectionState) *v1.ClipEditingState {
 	if s == nil {
 		return nil
 	}
-	out := &v1.ClipEditingState{Plan: &v1.ClipEditPlan{DurationMs: int32(s.Plan.DurationMS), Hook: s.Plan.Hook, NativeComposition: s.Plan.NativeComposition}, CopyStyles: s.CopyStyles, FadeMs: int32(s.FadeMS), MaxCuts: int32(s.MaxCuts), MaxCopyRunes: int32(s.MaxCopyRunes), MinDurationMs: int32(s.MinDurationMS), MaxDurationMs: int32(s.MaxDurationMS)}
+	out := &v1.ClipEditingState{Plan: &v1.ClipEditPlan{DurationMs: int32(s.Plan.DurationMS), Hook: s.Plan.Hook, NativeComposition: s.Plan.NativeComposition}, FadeMs: int32(s.FadeMS), MaxCuts: int32(s.MaxCuts), MaxCopyRunes: int32(s.MaxCopyRunes), MinDurationMs: int32(s.MinDurationMS), MaxDurationMs: int32(s.MaxDurationMS)}
 	if s.Plan.SourceAudio != nil {
 		settings := &v1.ClipSourceAudioSettings{}
 		for _, v := range s.Plan.SourceAudio {

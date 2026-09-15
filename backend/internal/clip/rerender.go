@@ -37,7 +37,7 @@ func (s *GenerationService) SaveCorrection(ctx context.Context, user, id string,
 	if active != nil {
 		return Project{}, ErrBusy
 	}
-	next, styles, err := ApplyCorrection(s.cfg.Render, p, input)
+	next, err := ApplyCorrection(s.cfg.Render, p, input)
 	if err != nil {
 		return Project{}, err
 	}
@@ -58,7 +58,7 @@ func (s *GenerationService) SaveCorrection(ctx context.Context, user, id string,
 		if err != nil {
 			return Project{}, err
 		}
-		raw, err := EncodeEditPlan(next, styles)
+		raw, err := EncodeEditPlan(next)
 		if err != nil {
 			return Project{}, err
 		}
@@ -85,7 +85,7 @@ func (s *GenerationService) SaveCorrection(ctx context.Context, user, id string,
 			return Project{}, err
 		}
 	}
-	raw, err := EncodeEditPlan(next, styles)
+	raw, err := EncodeEditPlan(next)
 	if err != nil {
 		return Project{}, err
 	}
@@ -123,11 +123,11 @@ func (s *GenerationService) StartRender(ctx context.Context, user, id, batch str
 	if active != nil {
 		return "", ErrBusy
 	}
-	plan, _, err := DecodeEditPlan(p.EditPlan)
+	plan, err := DecodeEditPlan(p.EditPlan)
 	if err != nil {
 		return "", err
 	}
-	plan, _, err = ApplyCorrection(s.cfg.Render, p, CorrectionFromPlan(plan))
+	plan, err = ApplyCorrection(s.cfg.Render, p, CorrectionFromPlan(plan))
 	if err != nil {
 		return "", err
 	}
@@ -212,7 +212,7 @@ func (s *GenerationService) RunRender(ctx context.Context, user, job, project st
 	if e != nil || !reflect.DeepEqual(retained, frozen.Sources) {
 		return ErrInvalid
 	}
-	plan, _, err := DecodeEditPlan(frozen.PlanJSON)
+	plan, err := DecodeEditPlan(frozen.PlanJSON)
 	if err != nil {
 		return err
 	}
@@ -235,7 +235,7 @@ func (s *GenerationService) RunRender(ctx context.Context, user, job, project st
 	}
 
 	if plan.Portable == nil {
-		plan = plan.WithFacts(p.Disclosure, p.Answers, t.Preset, p.CTA, t.Accent, frozen.HideDisclosure).WithStyles(t.CopyStyles)
+		plan = plan.WithFacts(p.Disclosure, p.Answers, t.Preset, p.CTA, t.Accent, frozen.HideDisclosure)
 	}
 	if err = MatchRenderBatch(plan, b); err != nil {
 		return err

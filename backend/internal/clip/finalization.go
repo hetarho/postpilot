@@ -52,11 +52,11 @@ func ValidateFinalization(p Project, req FinalizationRequest, cfg RenderConfig) 
 	if p.Result.ID != req.ExpectedResultID {
 		return ErrFinalizationConflict
 	}
-	plan, _, err := DecodeEditPlan(p.EditPlan)
+	plan, err := DecodeEditPlan(p.EditPlan)
 	if err != nil || ValidateCompositionEvidence(plan) != nil {
 		return ErrFinalizationInvalid
 	}
-	validated, _, err := ApplyCorrection(cfg, p, CorrectionFromPlan(plan))
+	validated, err := ApplyCorrection(cfg, p, CorrectionFromPlan(plan))
 	if err != nil || ValidateCompositionEvidence(validated) != nil {
 		return ErrFinalizationInvalid
 	}

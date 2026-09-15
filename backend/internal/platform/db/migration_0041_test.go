@@ -60,7 +60,7 @@ func TestMigration0041RewritesStoredPlansAndTemplatesIntoTheCDSVocabulary(t *tes
 	); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := provider.Up(ctx); err != nil {
+	if _, err := provider.UpTo(ctx, 41); err != nil {
 		t.Fatal(err)
 	}
 
@@ -76,16 +76,13 @@ func TestMigration0041RewritesStoredPlansAndTemplatesIntoTheCDSVocabulary(t *tes
 		if got != want {
 			t.Fatalf("%s copy_styles = %s want %s", id, got, want)
 		}
-		var styles []string
-		if err := jsonInto(got, &styles); err != nil || !clip.ValidCopyStyles(styles) {
-			t.Fatalf("%s is not an approved style set: %s (%v)", id, got, err)
-		}
+
 	}
 	var stored string
 	if err := handle.Reader.QueryRow(`SELECT edit_plan_json FROM clip_projects WHERE id='project'`).Scan(&stored); err != nil {
 		t.Fatal(err)
 	}
-	plan, styles, err := clip.DecodeEditPlan(stored)
+	plan, err := clip.DecodeEditPlan(stored)
 	if err != nil {
 		t.Fatalf("migrated plan no longer decodes: %v\n%s", err, stored)
 	}
@@ -103,11 +100,8 @@ func TestMigration0041RewritesStoredPlansAndTemplatesIntoTheCDSVocabulary(t *tes
 	if first.Text != `오늘 "여기"` {
 		t.Fatalf("caption text was rewritten: %q", first.Text)
 	}
-	if len(styles) != 3 || styles[0] != "clean" || styles[1] != "memo" || styles[2] != "bold" {
-		t.Fatalf("approved styles = %v", styles)
-	}
 	// The read-time belt is idempotent over an already migrated row.
-	again, _, err := clip.DecodeEditPlan(stored)
+	again, err := clip.DecodeEditPlan(stored)
 	if err != nil || again.Cuts[0].Copies[0].Anchor != "lower_mid" {
 		t.Fatalf("second decode changed the plan: %v", err)
 	}

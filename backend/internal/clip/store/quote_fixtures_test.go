@@ -58,7 +58,7 @@ func seedCompletedGeneration(t *testing.T, h *generationHarness) {
 	}
 	s := h.batch.Sources[0]
 	p := clip.EditPlan{Ratio: h.project.Ratio, DurationMS: h.project.TargetDurationMS, Cuts: []clip.Cut{{ID: "cut", SourceID: s.ID, Fingerprint: s.Fingerprint, EndMS: h.project.TargetDurationMS, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{Text: "서울", Style: "clean", Anchor: "bottom", Align: "center"}}}}}
-	encoded, err := clip.EncodeEditPlan(p, h.template.CopyStyles)
+	encoded, err := clip.EncodeEditPlan(p)
 	if err != nil {
 		t.Fatal(err)
 	}

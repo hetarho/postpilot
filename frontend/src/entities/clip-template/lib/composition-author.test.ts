@@ -14,7 +14,9 @@ import { sampleClipComposition } from './composition-sample'
 describe('composition authoring contract', () => {
   it('creates a group with editable name and minimum defaults', () => {
     const group = newCompositionNode('group', '새 정보')
-    const doc = parseClipComposition(`<clip version="1">${serializeCompositionNode(group)}</clip>`)
+    const doc = parseClipComposition(
+      `<clip version="1" intro="b" caption="bold" outro="e">${serializeCompositionNode(group)}<text id="intro" kind="fixed" role="hook" basis="output-start"/><text id="outro" kind="fixed" role="ending" basis="output-end"/></clip>`,
+    )
     expect(doc.groups[0]).toMatchObject({ id: group.attributes.id, label: '', min: 0 })
     expect(group.attributes).toMatchObject({ label: '', min: '0' })
     expect(doc.fields[0].label).toBe('새 정보')
@@ -48,7 +50,7 @@ describe('composition authoring contract', () => {
   )
   it('does not discard an invalid interval when editing its syntax tree', () => {
     const source =
-      '<clip version="1">\n<text id="x" kind="fixed" role="info" basis="output-end" start="-1" end="-4">💡 exact &amp; text</text>\n</clip>'
+      '<clip version="1" intro="b" caption="bold" outro="e">\n<text id="x" kind="fixed" role="info" basis="output-end" start="-1" end="-4">💡 exact &amp; text</text>\n<text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>'
     const node = compositionOutline(compositionDraftTree(source))[0].node
     expect(() => parseClipComposition(source)).toThrow('invalid_interval')
     const corrected = patchCompositionSource(source, node, {

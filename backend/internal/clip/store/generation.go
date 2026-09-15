@@ -122,7 +122,7 @@ func (s *Store) SaveGeneration(ctx context.Context, user, id, analysis, plan str
 		if e := affected(n, err); e != nil {
 			return struct{}{}, e
 		}
-		if decoded, _, e := clip.DecodeEditPlan(plan); e == nil && decoded.Portable != nil {
+		if decoded, e := clip.DecodeEditPlan(plan); e == nil && decoded.Portable != nil {
 			old.Composition = &clip.ProjectComposition{Snapshot: decoded.Portable.Snapshot, Inputs: decoded.Portable.Inputs}
 			if e = saveComposition(ctx, q, old); e != nil {
 				return struct{}{}, e

@@ -39,11 +39,11 @@ func TestDeliveredNativePlanNoticesRoundTripAndNoRetries(t *testing.T) {
 			if err != nil || len(models.calls) != 1 || !hasNotice(plan, code) {
 				t.Fatalf("notice/retry contract: %v %+v", err, plan.Notices)
 			}
-			encoded, err := clip.EncodeEditPlan(plan, plan.Styles)
+			encoded, err := clip.EncodeEditPlan(plan)
 			if err != nil {
 				t.Fatal(err)
 			}
-			restored, _, err := clip.DecodeEditPlan(encoded)
+			restored, err := clip.DecodeEditPlan(encoded)
 			if err != nil || !reflect.DeepEqual(clip.ActivePlanNotices(plan), clip.ActivePlanNotices(restored)) {
 				t.Fatal("notices lost in assembly round trip", err)
 			}
@@ -61,7 +61,7 @@ func TestDeliveredNativePlanNoticesRoundTripAndNoRetries(t *testing.T) {
 
 func TestBackwardSectionRemovesOnlyOffendingCut(t *testing.T) {
 	in, wire := nativeInput(), nativePlan()
-	body := `<clip version="1"><guide>Keep selected lengths.</guide><scene id="arrival" scope="context"/><scene id="closing" scope="context"/></clip>`
+	body := `<clip version="1" intro="b" caption="bold" outro="e"><guide>Keep selected lengths.</guide><scene id="arrival" scope="context"/><scene id="closing" scope="context"/><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`
 	setNativeBody(&in, body)
 	in.Composition.Inputs = clip.CompositionInputs{}
 	in.Analyses[0].Source.Info.DurationMS = 30000

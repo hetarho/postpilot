@@ -101,7 +101,7 @@ func newFinalizationHarness(t *testing.T) *finalizationHarness {
 		t.Fatal(err)
 	}
 	plan := clip.EditPlan{Ratio: "square", DurationMS: 15000, Cuts: []clip.Cut{{ID: "cut", SourceID: src.ID, Fingerprint: src.Fingerprint, EndMS: 15000, Focal: clip.Point{X: .5, Y: .5}}}}
-	raw, err := clip.EncodeEditPlan(plan, []string{"clean"})
+	raw, err := clip.EncodeEditPlan(plan)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -350,14 +350,14 @@ func TestClipFinalizationCompetesWithEditStartAndDelete(t *testing.T) {
 					var err error
 					switch action {
 					case "edit":
-						plan, styles, e := clip.DecodeEditPlan(h.project.EditPlan)
+						plan, e := clip.DecodeEditPlan(h.project.EditPlan)
 						if e != nil {
 							results <- e
 							return
 						}
 						volume := .5
 						plan.Cuts[0].Volume = &volume
-						raw, e := clip.EncodeEditPlan(plan, styles)
+						raw, e := clip.EncodeEditPlan(plan)
 						if e != nil {
 							results <- e
 							return
@@ -422,7 +422,7 @@ func TestClipFinalizationResultIdentityDistinguishesSameRevisionRenders(t *testi
 
 func TestClipFinalizationSurvivesReusableTemplateDeletion(t *testing.T) {
 	h := newFinalizationHarness(t)
-	template, err := h.service.CreateTemplate(t.Context(), "alice", clip.Recipe{Name: "template", Preset: "restaurant", CopyStyles: []string{"clean"}})
+	template, err := h.service.CreateTemplate(t.Context(), "alice", clip.Recipe{Name: "template", Preset: "restaurant"})
 	if err != nil {
 		t.Fatal(err)
 	}

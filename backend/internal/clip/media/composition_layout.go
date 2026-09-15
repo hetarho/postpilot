@@ -106,7 +106,7 @@ func (r *Rendering) layoutComposition(ctx context.Context, ws clip.MediaWorkspac
 	if plan.Portable.Snapshot.Legacy {
 		limits = clip.LegacyCompositionLimits(limits)
 	}
-	doc, problem := composition.Parse(plan.Portable.Snapshot.Body, limits)
+	_, problem := composition.ReadStored(plan.Portable.Snapshot.Body, limits)
 	if problem != nil {
 		return declaredLayout{}, problem
 	}
@@ -118,7 +118,6 @@ func (r *Rendering) layoutComposition(ctx context.Context, ws clip.MediaWorkspac
 	if err != nil {
 		return declaredLayout{}, err
 	}
-	plan.Styles = slices.Clone(doc.Styles)
 	canvas, err := clip.ClipCanvas(plan.Ratio)
 	if err != nil {
 		return declaredLayout{}, err

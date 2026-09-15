@@ -12,12 +12,12 @@ import (
 
 func TestLegacyPortablePlanPreservesTextAndCardAbsence(t *testing.T) {
 	p, _ := correctionFixture(t)
-	plan, styles, err := clip.DecodeEditPlan(p.EditPlan)
+	plan, err := clip.DecodeEditPlan(p.EditPlan)
 	if err != nil {
 		t.Fatal(err)
 	}
 	plan.Cuts[0].Copies[0].Text = "정확한 <한글> & 🥣"
-	r := clip.Recipe{CopyStyles: styles, Accent: "teal"}
+	r := clip.Recipe{Accent: "teal"}
 	portable, err := clip.FreezeLegacyPlan(p, plan, r, config.ClipCompositionLimits())
 	if err != nil {
 		t.Fatal(err)
@@ -32,12 +32,12 @@ func TestLegacyPortablePlanPreservesTextAndCardAbsence(t *testing.T) {
 		t.Fatal("automatic timing became authored")
 	}
 	plan.Portable = portable
-	raw, err := clip.EncodeEditPlan(plan, styles)
+	raw, err := clip.EncodeEditPlan(plan)
 	if err != nil || !strings.Contains(raw, `"Version":6`) {
 		t.Fatal(raw, err)
 	}
-	again, againStyles, err := clip.DecodeEditPlan(raw)
-	if err != nil || !reflect.DeepEqual(plan, again) || !reflect.DeepEqual(styles, againStyles) {
+	again, err := clip.DecodeEditPlan(raw)
+	if err != nil || !reflect.DeepEqual(plan, again) {
 		t.Fatal("version 6 lost snapshot/evidence", err, again.Portable)
 	}
 	for _, mutate := range []func(*clip.EditPlan){
@@ -48,12 +48,12 @@ func TestLegacyPortablePlanPreservesTextAndCardAbsence(t *testing.T) {
 			p.Portable.Elements[1].Resolved.InstanceID = p.Portable.Elements[0].Resolved.InstanceID
 		},
 	} {
-		v, _, e := clip.DecodeEditPlan(raw)
+		v, e := clip.DecodeEditPlan(raw)
 		if e != nil {
 			t.Fatal(e)
 		}
 		mutate(&v)
-		if _, e := clip.EncodeEditPlan(v, styles); e == nil {
+		if _, e := clip.EncodeEditPlan(v); e == nil {
 			t.Fatal("inconsistent portable plan accepted")
 		}
 	}
@@ -63,10 +63,10 @@ func TestLegacyCardsBecomeExplicitWithoutSharedDisclosure(t *testing.T) {
 	p, _ := correctionFixture(t)
 	p.Disclosure = "sponsored"
 	p.Answers = []clip.Answer{{Label: "상호", Text: "카페"}, {Label: "위치", Text: "서울"}, {Label: "가격", Text: "7,000원"}}
-	plan, styles, _ := clip.DecodeEditPlan(p.EditPlan)
+	plan, _ := clip.DecodeEditPlan(p.EditPlan)
 	plan.Hook = "서울 카페"
 	plan.Cuts[0].Chips = []string{"위치"}
-	r := clip.Recipe{Preset: "cafe", Accent: "teal", CopyStyles: styles, InformationFields: []clip.InformationField{{Label: "상호", Prompt: "이름"}}}
+	r := clip.Recipe{Preset: "cafe", Accent: "teal", InformationFields: []clip.InformationField{{Label: "상호", Prompt: "이름"}}}
 	body := clip.LegacyCompositionBody(r)
 	if strings.Contains(body, "협찬") || strings.Contains(body, "legacy-disclosure") {
 		t.Fatal("shared template copied campaign", body)
@@ -97,13 +97,27 @@ func TestLegacyCardsBecomeExplicitWithoutSharedDisclosure(t *testing.T) {
 	}
 }
 
-func TestDetachedLegacyProjectKeepsItsRecordedStylePermissions(t *testing.T) {
+func TestDetachedLegacyProjectUsesDefaultDesignSelection(t *testing.T) {
 	p, _ := correctionFixture(t)
-	c := clip.LegacyProjectComposition(p, clip.Recipe{CopyStyles: []string{"clean"}})
-	if !reflect.DeepEqual(c.Snapshot.LegacyRecipe.CopyStyles, []string{"clean", "memo"}) {
-		t.Fatal("detached project lost retained style", c)
+	c := clip.LegacyProjectComposition(p, clip.Recipe{})
+	if strings.Contains(c.Snapshot.Body, `styles=`) || !strings.Contains(c.Snapshot.Body, `intro="b"`) || !strings.Contains(c.Snapshot.Body, `outro="e"`) {
+		t.Fatal(c.Snapshot.Body)
 	}
-	if !strings.Contains(c.Snapshot.Body, `styles="clean memo"`) {
-		t.Fatal("source disagrees with retained style", c.Snapshot.Body)
+}
+
+func TestVersionSixIgnoresRetiredStylePermissions(t *testing.T) {
+	project, _ := correctionFixture(t)
+	plan, err := clip.DecodeEditPlan(project.EditPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, err := clip.EncodeEditPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	legacy := strings.Replace(raw, `{`, `{"Styles":["simple"],"CopyStyles":["clean"],`, 1)
+	restored, err := clip.DecodeEditPlan(legacy)
+	if err != nil || !reflect.DeepEqual(plan, restored) {
+		t.Fatal("retired permissions changed saved content", err)
 	}
 }

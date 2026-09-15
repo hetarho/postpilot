@@ -31,6 +31,7 @@ export { EMPTY_CLIP_COMPOSITION } from './lib/composition-author'
 export { clipCompositionGuide, CLIP_COMPOSITION_EXAMPLE } from './model/composition-guide'
 export {
   parseClipComposition,
+  readStoredClipComposition,
   replaceCompositionNode,
   replaceCompositionSpan,
   compositionMilliseconds,

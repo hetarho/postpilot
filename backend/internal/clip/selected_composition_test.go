@@ -10,7 +10,7 @@ import (
 
 func TestUnassignedSelectedFootagePreservesLiteralTextAndOptionalBindings(t *testing.T) {
 	limits := config.ClipCompositionLimits()
-	doc, problem := composition.Parse(`<clip version="1"><group id="menu"><field id="name" label="이름" required="true"/></group><repeat for="menu"><scene id="dish" scope="item"><text id="literal" kind="fixed" role="caption" basis="cut">  그대로  </text><text id="bound" kind="fixed" role="info" basis="cut"><value field="menu.name"/></text><text id="copy" kind="ai" role="caption" basis="cut">메뉴 설명</text></scene></repeat></clip>`, limits)
+	doc, problem := composition.Parse(`<clip version="1" intro="b" caption="bold" outro="e"><group id="menu"><field id="name" label="이름" required="true"/></group><repeat for="menu"><scene id="dish" scope="item"><text id="literal" kind="fixed" role="caption" basis="cut">  그대로  </text><text id="bound" kind="fixed" role="info" basis="cut"><value field="menu.name"/></text><text id="copy" kind="ai" role="caption" basis="cut">메뉴 설명</text></scene></repeat><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`, limits)
 	if problem != nil {
 		t.Fatal(problem)
 	}

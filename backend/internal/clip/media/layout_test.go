@@ -55,7 +55,7 @@ func TestTheRenderedPlanVerifiesOnEveryRatio(t *testing.T) {
 			if err != nil {
 				return fmt.Errorf("%s layout: %w", ratio, err)
 			}
-			if err := clip.VerifyLayout(ratio, nil, c.manifest); err != nil {
+			if err := clip.VerifyLayout(ratio, c.manifest); err != nil {
 				for _, e := range c.manifest {
 					t.Logf("%s cut%d %-13s %-6s %+v %d..%d", ratio, e.Cut, e.Kind, e.Style, e.Region, e.StartMS, e.EndMS)
 				}
@@ -99,7 +99,7 @@ func TestTheRenderedPlanVerifiesOnEveryRatio(t *testing.T) {
 					return fmt.Errorf("%s left a sampled copy without its ground", ratio)
 				}
 			}
-			if err := clip.VerifyLayout(ratio, nil, c.manifest); err != nil {
+			if err := clip.VerifyLayout(ratio, c.manifest); err != nil {
 				return fmt.Errorf("%s after sampling: %w", ratio, err)
 			}
 			// Resolving twice is the same manifest: a fallback re-measures the
@@ -158,7 +158,7 @@ func TestTwoCopiesOnOneCutLayOutAndVerify(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		if err := clip.VerifyLayout("vertical", nil, c.manifest); err != nil {
+		if err := clip.VerifyLayout("vertical", c.manifest); err != nil {
 			return err
 		}
 		if len(c.layouts[0]) != 2 || len(c.grounds[0]) != 2 {
@@ -242,13 +242,13 @@ func TestTheRepairLadderWalksAnchorThenDrop(t *testing.T) {
 				if err != nil {
 					return err
 				}
-				if clip.VerifyLayout("vertical", nil, c.manifest) == nil {
+				if clip.VerifyLayout("vertical", c.manifest) == nil {
 					return fmt.Errorf("the fixture verifies before repair")
 				}
 				if err := r.repair(t.Context(), ws, canvas, &c); err != nil {
 					return fmt.Errorf("the ladder gave up: %w", err)
 				}
-				if err := clip.VerifyLayout("vertical", nil, c.manifest); err != nil {
+				if err := clip.VerifyLayout("vertical", c.manifest); err != nil {
 					return fmt.Errorf("repaired manifest still fails: %w", err)
 				}
 				if err := tc.check(c.plan); err != nil {

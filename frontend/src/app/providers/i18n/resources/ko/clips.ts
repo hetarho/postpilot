@@ -326,6 +326,8 @@ export const clips = {
       unknown_field: '연결한 정보가 없어요. 해당 정보를 추가하거나 연결을 바꿔 주세요.',
       binding_scope: '이 문구가 속한 장면의 항목으로 연결해 주세요.',
       invalid_style: '템플릿에서 허용한 문구 스타일을 선택해 주세요.',
+      invalid_design: '인트로·자막·아웃트로 디자인을 선택해 주세요.',
+      invalid_skeleton: '선택한 디자인의 인트로·아웃트로 구조를 확인해 주세요.',
       field_limit: '정보 이름·질문 길이나 정보 개수 제한을 확인해 주세요.',
       unknown_tag: '지원하지 않는 태그예요. 형식 안내를 확인해 주세요.',
       unknown_attribute: '지원하지 않는 속성이 있어요. 형식 안내를 확인해 주세요.',

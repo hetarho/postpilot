@@ -70,12 +70,12 @@ func (s *GenerationService) PreparePreview(ctx context.Context, user, id string,
 	defer s.previewOwners.Delete(user)
 	ctx, cancel := context.WithTimeout(ctx, cfg.Timeout)
 	defer cancel()
-	next, styles, err := ApplyCorrection(s.cfg.Render, p, draft)
+	next, err := ApplyCorrection(s.cfg.Render, p, draft)
 	if err != nil {
 		return PreparedPreview{}, err
 	}
 	if next.Portable == nil {
-		recipe := Recipe{CopyStyles: styles}
+		recipe := Recipe{}
 		if p.Composition != nil && p.Composition.Snapshot.LegacyRecipe != nil {
 			recipe = *p.Composition.Snapshot.LegacyRecipe
 		}

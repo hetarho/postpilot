@@ -211,10 +211,10 @@ func TestHiddenDisclosureRetainsChipsAndExplicitVerification(t *testing.T) {
 				t.Fatal("asymmetric header", ratio, f)
 			}
 			manifest := f.Elements(15000, 0, 0, 15000)
-			if err := design.VerifyApproved(manifest, ratio, nil, hidden); err != nil {
+			if err := design.Verify(manifest, ratio, hidden); err != nil {
 				t.Fatal(ratio, hidden, err)
 			}
-			if err := design.VerifyApproved(manifest, ratio, nil, !hidden); err == nil {
+			if err := design.Verify(manifest, ratio, !hidden); err == nil {
 				t.Fatal("visibility mismatch passed", ratio, hidden)
 			}
 			svg := furnitureSVG(canvas, f)

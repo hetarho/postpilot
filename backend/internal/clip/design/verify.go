@@ -98,7 +98,6 @@ const (
 	ViolationOverlap    Violation = "plan_layout_overlap"
 	ViolationMotion     Violation = "plan_layout_motion"
 	ViolationAnchorStep Violation = "plan_layout_anchor_step"
-	ViolationFrequency  Violation = "plan_layout_frequency"
 	ViolationDisclosure Violation = "plan_layout_disclosure"
 	ViolationKind       Violation = "plan_layout_kind"
 	ViolationContrast   Violation = "plan_layout_contrast"
@@ -139,25 +138,18 @@ func within(r, safe Bounds) bool {
 // consecutive cuts · V19 named font family (checked at renderer construction) ·
 // V20 selected intro/outro preset geometry (VerifyRegion).
 // V4, V8, V11 and V12 belong to components this manifest does not carry yet.
-func Verify(m Manifest, ratio string) error { return VerifyApproved(m, ratio, nil) }
-
-// VerifyApproved is Verify for a clip whose template approved only some styles.
-// CDS-40's run rule asks a fourth consecutive use to alternate between 깔끔하게
-// and 메모; a template that approved only one of the two left the composer no
-// alternate, so the run is the owner's choice, not a defect. nil approves
-// every style.
-func VerifyApproved(m Manifest, ratio string, approved []string, hideDisclosure ...bool) error {
-	return verify(m, ratio, approved, true, len(hideDisclosure) > 0 && hideDisclosure[0])
+func Verify(m Manifest, ratio string, hideDisclosure ...bool) error {
+	return verify(m, ratio, true, len(hideDisclosure) > 0 && hideDisclosure[0])
 }
 
 // VerifyRenderable holds the delivery checks while leaving overlapping text
 // available for owner review (CDS-56). Skip only V7, not the checks after it:
-// accepting an overlap error from VerifyApproved would hide sequence failures.
-func VerifyRenderable(m Manifest, ratio string, approved []string, hideDisclosure ...bool) error {
-	return verify(m, ratio, approved, false, len(hideDisclosure) > 0 && hideDisclosure[0])
+// accepting an overlap error from Verify would hide sequence failures.
+func VerifyRenderable(m Manifest, ratio string, hideDisclosure ...bool) error {
+	return verify(m, ratio, false, len(hideDisclosure) > 0 && hideDisclosure[0])
 }
 
-func verify(m Manifest, ratio string, approved []string, checkOverlap, hideDisclosure bool) error {
+func verify(m Manifest, ratio string, checkOverlap, hideDisclosure bool) error {
 	safe, ok := Safe(ratio)
 	if !ok {
 		return furniture(ViolationSafeArea)
@@ -239,7 +231,7 @@ func verify(m Manifest, ratio string, approved []string, checkOverlap, hideDiscl
 			return err
 		}
 	}
-	return verifySequence(m, approved)
+	return verifySequence(m)
 }
 
 func verifyOverlap(m Manifest) error {
@@ -383,36 +375,24 @@ func verifyDisclosure(m Manifest, duration int, hidden bool) error {
 	return nil
 }
 
-// The badge is its own layer and a chip carries no style, so neither answers for
-// the cut it happens to sit on.
-func styleOf(m Manifest, at slot) string {
-	for _, e := range m {
-		if slotOf(e) == at && caption(e) {
-			return e.Style
-		}
-	}
-	return ""
-}
-
-// The per-clip rules of CDS-38 and CDS-40, read off the cut order.
-func verifySequence(m Manifest, approved []string) error {
+// Enforce the caption anchor step in output order.
+func verifySequence(m Manifest) error {
 	cuts := []slot{}
-	style, anchor, pace := map[slot]string{}, map[slot]string{}, map[slot]string{}
+	anchor, style := map[slot]string{}, map[slot]string{}
 	for _, e := range m {
 		if !caption(e) {
 			continue
 		}
 		at := slotOf(e)
-		if _, seen := style[at]; !seen {
+		if _, seen := anchor[at]; !seen {
 			cuts = append(cuts, at)
-			style[at], anchor[at], pace[at] = e.Style, e.Anchor, e.Pace
+			anchor[at], style[at] = e.Anchor, e.Style
 		}
-		if style[at] != e.Style || anchor[at] != e.Anchor {
-			return &Failure{Check: ViolationFrequency, Cut: at.Cut, Copy: at.Copy}
+		if anchor[at] != e.Anchor {
+			return &Failure{Check: ViolationAnchorStep, Cut: at.Cut, Copy: at.Copy}
 		}
 	}
-	// In clip order: a cut's second copy follows its first, and CDS-40's run and
-	// CDS-38's step are read over that sequence.
+	// A cut's second copy follows its first on the output timeline.
 	slices.SortFunc(cuts, func(a, b slot) int {
 		if a.Cut != b.Cut {
 			return a.Cut - b.Cut
@@ -427,9 +407,8 @@ func verifySequence(m Manifest, approved []string) error {
 		if from < 0 || to < 0 {
 			return &Failure{Check: ViolationAnchorStep, Cut: cut.Cut, Copy: cut.Copy}
 		}
-		// Only between cuts that share a style: a style change is a deliberate
-		// visual change, and CDS-40 can demand one whose anchors are further
-		// apart than a step (see SelectAnchor).
+		// Retained legacy styles preserve their historical anchor changes.
+		// Current captions all use the fixed bold treatment.
 		if style[cut] != style[cuts[i-1]] {
 			continue
 		}

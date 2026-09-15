@@ -126,14 +126,10 @@ func strictJSON(value string, out any) error {
 }
 func templateRow(r sqlc.VideoTemplate) (clip.VideoTemplate, error) {
 	var fields []fieldJSON
-	var styles []string
 	if err := strictJSON(r.InformationFields, &fields); err != nil {
 		return clip.VideoTemplate{}, fmt.Errorf("stored information fields: %w", err)
 	}
-	if err := strictJSON(r.CopyStyles, &styles); err != nil {
-		return clip.VideoTemplate{}, fmt.Errorf("stored copy styles: %w", err)
-	}
-	if fields == nil || (!r.CompositionBody.Valid || r.CompositionLegacy != 0) && !clip.ValidCopyStyles(styles) || !clip.ValidAccent(r.Accent.String) || !clip.ValidCaptionPace(r.CaptionPace) {
+	if fields == nil || !clip.ValidAccent(r.Accent.String) || !clip.ValidCaptionPace(r.CaptionPace) {
 		return clip.VideoTemplate{}, errors.New("stored recipe must contain JSON arrays")
 	}
 	created, err := time.Parse(time.RFC3339Nano, r.CreatedAt)
@@ -144,7 +140,7 @@ func templateRow(r sqlc.VideoTemplate) (clip.VideoTemplate, error) {
 	if err != nil {
 		return clip.VideoTemplate{}, err
 	}
-	t := clip.VideoTemplate{ID: r.ID, UserID: r.UserID, Recipe: clip.Recipe{Name: r.Name, CutGuidance: r.CutGuidance, CopyStyles: styles, Accent: r.Accent.String, Preset: r.Preset, CaptionPace: r.CaptionPace}, CreatedAt: created, UpdatedAt: updated}
+	t := clip.VideoTemplate{ID: r.ID, UserID: r.UserID, Recipe: clip.Recipe{Name: r.Name, CutGuidance: r.CutGuidance, Accent: r.Accent.String, Preset: r.Preset, CaptionPace: r.CaptionPace}, CreatedAt: created, UpdatedAt: updated}
 	seen := make(map[string]bool, len(fields))
 	for _, f := range fields {
 		if (!r.CompositionBody.Valid || r.CompositionLegacy != 0) && (strings.TrimSpace(f.Label) == "" || strings.TrimSpace(f.Prompt) == "" || seen[f.Label]) {
@@ -205,7 +201,7 @@ func (s *Store) ListTemplates(ctx context.Context, user string) ([]clip.VideoTem
 }
 func (s *Store) InsertTemplate(ctx context.Context, t clip.VideoTemplate) error {
 	_, err := transact(ctx, s, func(q *sqlc.Queries) (struct{}, error) {
-		if e := q.InsertVideoTemplate(ctx, sqlc.InsertVideoTemplateParams{ID: t.ID, UserID: t.UserID, Name: t.Name, InformationFields: encodeFields(t.InformationFields), CutGuidance: t.CutGuidance, CopyStyles: encodeStyles(t.CopyStyles), Accent: nullable(t.Accent), Preset: t.Preset, CaptionPace: t.CaptionPace, CreatedAt: stamp(t.CreatedAt), UpdatedAt: stamp(t.UpdatedAt)}); e != nil {
+		if e := q.InsertVideoTemplate(ctx, sqlc.InsertVideoTemplateParams{ID: t.ID, UserID: t.UserID, Name: t.Name, InformationFields: encodeFields(t.InformationFields), CutGuidance: t.CutGuidance, CopyStyles: "[]", Accent: nullable(t.Accent), Preset: t.Preset, CaptionPace: t.CaptionPace, CreatedAt: stamp(t.CreatedAt), UpdatedAt: stamp(t.UpdatedAt)}); e != nil {
 			return struct{}{}, e
 		}
 		if t.CompositionBody != "" {
@@ -242,11 +238,6 @@ func (s *Store) UpdateTemplate(ctx context.Context, user, id string, p clip.Temp
 		}
 		if p.CaptionPace != nil {
 			if err := affected(q.UpdateVideoTemplateCaptionPace(ctx, sqlc.UpdateVideoTemplateCaptionPaceParams{CaptionPace: *p.CaptionPace, UpdatedAt: stamp(now), ID: id, UserID: user})); err != nil {
-				return clip.VideoTemplate{}, err
-			}
-		}
-		if p.CopyStyles != nil {
-			if err := affected(q.UpdateVideoTemplateCopyStyles(ctx, sqlc.UpdateVideoTemplateCopyStylesParams{CopyStyles: encodeStyles(*p.CopyStyles), UpdatedAt: stamp(now), ID: id, UserID: user})); err != nil {
 				return clip.VideoTemplate{}, err
 			}
 		}
@@ -467,7 +458,7 @@ func (s *Store) UpdateProject(ctx context.Context, user, id string, p clip.Proje
 				}
 			}
 		} else if next.Composition != nil && next.Composition.Snapshot.Legacy && (len(p.Answers) > 0 || p.Disclosure != nil || p.HideDisclosure != nil || p.CTA != nil) {
-			recipe := clip.Recipe{CopyStyles: []string{"clean"}}
+			recipe := clip.Recipe{}
 			if before.Composition != nil && before.Composition.Snapshot.LegacyRecipe != nil {
 				recipe = *before.Composition.Snapshot.LegacyRecipe
 			}

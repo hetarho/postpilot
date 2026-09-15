@@ -201,7 +201,7 @@ func answers(values []*v1.ClipAnswer) []clip.Answer {
 	return out
 }
 func templateProto(t clip.VideoTemplate) *v1.VideoTemplate {
-	out := &v1.VideoTemplate{CompositionBody: t.CompositionBody, CompositionLegacy: t.CompositionLegacy, Id: t.ID, Name: t.Name, CutGuidance: t.CutGuidance, CopyStyles: t.CopyStyles, CaptionPace: t.CaptionPace, Accent: t.Accent, Preset: t.Preset, ProjectCount: int32(t.ProjectCount), CreatedAt: t.CreatedAt.UTC().Format(time.RFC3339Nano), UpdatedAt: t.UpdatedAt.UTC().Format(time.RFC3339Nano)}
+	out := &v1.VideoTemplate{CompositionBody: t.CompositionBody, CompositionLegacy: t.CompositionLegacy, Id: t.ID, Name: t.Name, CutGuidance: t.CutGuidance, CaptionPace: t.CaptionPace, Accent: t.Accent, Preset: t.Preset, ProjectCount: int32(t.ProjectCount), CreatedAt: t.CreatedAt.UTC().Format(time.RFC3339Nano), UpdatedAt: t.UpdatedAt.UTC().Format(time.RFC3339Nano)}
 	for _, f := range t.InformationFields {
 		out.InformationFields = append(out.InformationFields, &v1.ClipInformationField{Label: f.Label, Prompt: f.Prompt})
 	}
@@ -211,7 +211,7 @@ func projectProto(p clip.Project) *v1.ClipProject {
 	canEdit, canFinalize := p.Finalized == nil, false
 	out := &v1.ClipProject{CanEdit: &canEdit, CanFinalize: &canFinalize, Composition: compositionProto(p.Composition), Id: p.ID, Title: p.Title, VideoTemplateId: p.VideoTemplateID, Ratio: p.Ratio, Language: languageToProto(p.Language), Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, Cta: p.CTA, TargetDurationMs: int32(p.TargetDurationMS), EditPlanRevision: int32(p.EditPlanRevision), RenderedPlanRevision: int32(p.RenderedPlanRevision), CreatedAt: p.CreatedAt.UTC().Format(time.RFC3339Nano), UpdatedAt: p.UpdatedAt.UTC().Format(time.RFC3339Nano)}
 	if p.EditPlan != "" {
-		if plan, _, err := clip.DecodeEditPlan(p.EditPlan); err == nil {
+		if plan, err := clip.DecodeEditPlan(p.EditPlan); err == nil {
 			for _, n := range clip.ActivePlanNotices(plan) {
 				out.Notices = append(out.Notices, &v1.ClipNotice{Code: n.Reason, CutId: n.CutID, ElementId: n.ElementID, Action: n.Action})
 			}
@@ -255,7 +255,7 @@ func (h *Handler) CreateVideoTemplate(ctx context.Context, req *connect.Request[
 	if m.CompositionBody != nil && *m.CompositionBody == "" {
 		return nil, toConnectError(&composition.Problem{ElementID: "clip", Line: 1, Reason: "root"})
 	}
-	value, err := h.service.CreateTemplate(ctx, user, clip.Recipe{CompositionBody: m.GetCompositionBody(), Name: m.Name, InformationFields: fields(m.InformationFields), CutGuidance: m.CutGuidance, CopyStyles: m.CopyStyles, CaptionPace: m.CaptionPace, Accent: m.Accent, Preset: m.Preset})
+	value, err := h.service.CreateTemplate(ctx, user, clip.Recipe{CompositionBody: m.GetCompositionBody(), Name: m.Name, InformationFields: fields(m.InformationFields), CutGuidance: m.CutGuidance, CaptionPace: m.CaptionPace, Accent: m.Accent, Preset: m.Preset})
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -273,9 +273,6 @@ func (h *Handler) UpdateVideoTemplate(ctx context.Context, req *connect.Request[
 		p.InformationFields = &v
 	}
 	p.CaptionPace = m.CaptionPace
-	if m.CopyStyles != nil {
-		p.CopyStyles = &m.CopyStyles.Values
-	}
 	value, err := h.service.UpdateTemplate(ctx, user, m.Id, p)
 	if err != nil {
 		return nil, toConnectError(err)

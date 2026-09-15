@@ -280,7 +280,6 @@ func (s *Service) compose(ctx context.Context, input clip.PlanningInput, plan *c
 	for _, a := range input.Analyses {
 		sources = append(sources, a.Source.RenderSource)
 	}
-	plan.Styles = input.Template.CopyStyles
 	repaired, _, err := s.captions.Layout(ctx, *plan, sources)
 	if err != nil {
 		return err
@@ -351,7 +350,7 @@ func validateSettings(cfg Config, in clip.PlanningInput) error {
 		}
 		return clip.ValidateCompositionInputs(doc, in.Composition.Inputs, compositionLimits(cfg, in), !in.Composition.Snapshot.Legacy)
 	}
-	if in.TargetDurationMS < cfg.Render.MinDurationMS || in.TargetDurationMS > cfg.Render.MaxDurationMS || !clip.ValidCopyStyles(in.Template.CopyStyles) || !clip.ValidCaptionPace(in.Template.CaptionPace) || !clip.ValidAccent(in.Template.Accent) || !within(in.Template.Name, 1, cfg.Template.NameChars) || !within(in.Template.CutGuidance, 0, cfg.Template.GuidanceChars) || len(in.Template.InformationFields) > cfg.Template.FieldCount || len(in.Answers) != len(in.Template.InformationFields) {
+	if in.TargetDurationMS < cfg.Render.MinDurationMS || in.TargetDurationMS > cfg.Render.MaxDurationMS || !clip.ValidCaptionPace(in.Template.CaptionPace) || !clip.ValidAccent(in.Template.Accent) || !within(in.Template.Name, 1, cfg.Template.NameChars) || !within(in.Template.CutGuidance, 0, cfg.Template.GuidanceChars) || len(in.Template.InformationFields) > cfg.Template.FieldCount || len(in.Answers) != len(in.Template.InformationFields) {
 		return clip.ErrInvalid
 	}
 	fields := map[string]bool{}

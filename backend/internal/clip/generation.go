@@ -473,7 +473,7 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 		}
 		var edit EditPlan
 		if pricing.SkipPlan {
-			edit, _, err = DecodeEditPlan(recovery.Plan)
+			edit, err = DecodeEditPlan(recovery.Plan)
 		} else {
 			planCtx := WithResponseCorrectionObserver(ctx, func(retry, limit int, d AttemptDiagnostic) error {
 				checkpoint.Diagnostic = d
@@ -490,13 +490,13 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 			return err
 		}
 		if edit.Portable == nil {
-			edit = edit.WithFacts(p.Disclosure, p.Answers, p.Template.Preset, p.CTA, p.Template.Accent, p.HideDisclosure).WithStyles(p.Template.CopyStyles)
+			edit = edit.WithFacts(p.Disclosure, p.Answers, p.Template.Preset, p.CTA, p.Template.Accent, p.HideDisclosure)
 		}
 		// The owner's source-sound choice is the SERVER's to state, and it is
 		// stated only now — after the model's own output has been validated, so
 		// no prompt, response or plan digest ever carried it (CLIP-100, CDS-6).
 		edit.SourceAudio = FreezeSourceAudio(b, edit.Cuts)
-		recovery.Plan, err = EncodeEditPlan(edit, edit.Styles)
+		recovery.Plan, err = EncodeEditPlan(edit)
 		if err != nil {
 			return err
 		}
@@ -520,7 +520,7 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 					return err
 				}
 				edit.SourceAudio = FreezeSourceAudio(b, edit.Cuts)
-				recovery.Plan, err = EncodeEditPlan(edit, edit.Styles)
+				recovery.Plan, err = EncodeEditPlan(edit)
 				if err != nil {
 					return err
 				}
@@ -543,7 +543,7 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 			return SourceLease{}, MediaInfo{}, false
 		}, pricing.ReusedChunks > 0)
 		if edit.Portable == nil {
-			edit = edit.WithFacts(p.Disclosure, p.Answers, p.Template.Preset, p.CTA, p.Template.Accent, p.HideDisclosure).WithStyles(p.Template.CopyStyles)
+			edit = edit.WithFacts(p.Disclosure, p.Answers, p.Template.Preset, p.CTA, p.Template.Accent, p.HideDisclosure)
 		}
 		renderCtx := WithMediaStageObserver(ctx, func(substage string, elapsed time.Duration) {
 			slog.Info("clip render substage", "job", job, "stage", "render", "substage", substage, "elapsed_ms", elapsed.Milliseconds())
@@ -556,7 +556,7 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 		if video.Plan != nil {
 			edit = *video.Plan
 		}
-		recovery.Plan, err = EncodeEditPlan(edit, edit.Styles)
+		recovery.Plan, err = EncodeEditPlan(edit)
 		if err != nil {
 			return err
 		}
@@ -579,15 +579,11 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 				return err
 			}
 		}
-		styles := p.Template.CopyStyles
-		if edit.Portable != nil {
-			styles = edit.Styles
-		}
 		// The owner owns source sound, not the writer: the snapshot is taken
 		// from the live leases, so a reselected source keeps the choice already
 		// made about it and a new one stays silent (CLIP-18, CLIP-100).
 		edit.SourceAudio = FreezeSourceAudio(b, edit.Cuts)
-		planJSON, err = EncodeEditPlan(edit, styles)
+		planJSON, err = EncodeEditPlan(edit)
 		if err != nil {
 			return err
 		}

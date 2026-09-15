@@ -47,18 +47,19 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T110 | Release QA on the Naver app and the overlay measurement | CDS CLIP | T108 | blocked@260912 |
-| T168 | Replace the information frame with an unplated label/value pair and retune the disclosure pill | CDS CLIP | T166 T167 | todo |
-| T169 | Replace the declared styles with the design selection and migrate every stored template | CLIP CDS | T166 | doing@260915.dsg |
+| T168 | Replace the information frame with an unplated label/value pair and retune the disclosure pill | CDS CLIP | T166 T167 | doing@260915.dsg |
 | T171 | Remove the style controls and draw the presets in the previews | CLIP CDS | T166 T167 T168 T169 | todo |
 | T172 | Author templates design first with fixed intro and outro skeletons | CLIP CDS | T169 T171 | todo |
 | T173 | Keep generated slot text to one line through the plan ladder | CDS CLIP | T167 T169 | todo |
 
 ## next
-- Finish T169 (dsg); T166 tokens, T167 region rendering and T170 font validation are complete.
-- Continue sequentially with T168 and T173 after T167/T169; T171 closes the FE style controls and T172 adds the design-first editor last.
+- Finish T168 (dsg); T166, T167, T169 and T170 are complete.
+- Continue with T173, T171 and T172, one commit per task.
 - T110 stays owner-blocked and T008 owner-dependent.
 
 ## log
+- 260915 T169 done; strict/tolerant grammar, byte-preserving migration and retired style permissions verified
+- 260915 T168 claimed (dsg); T169 implementation is frozen for verification
 - 260915 T167 done; twelve region/font fixtures and backend gates pass; one clock-reversal failure passed three isolated repeats
 - 260915 T169 claimed (dsg); T167 implementation is frozen for verification
 - 260915 T170 done; named-face startup guard and full backend gates pass
@@ -77,5 +78,3 @@
 - 260915 T163 done
 - 260915 T165 claimed (frm); T164 parser and notice contract tests pass, coordinated release gates remain
 - 260915 update-ssot CDS r15 CLIP r22 done; three fixed regions replace five caption styles, cards and pills; only the disclosure keeps a pill
-- 260915 warn: T163 finished during this update and its CDS-69 frame family is retired by r15 — CDS-30's unplated label/value pair replaces it
-- 260915 T164 claimed (frm); T163–T165 selected for a coordinated release

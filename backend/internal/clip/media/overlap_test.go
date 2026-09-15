@@ -16,7 +16,7 @@ func TestOverlappingPlansRemainReviewable(t *testing.T) {
 			for _, collision := range []string{"chips across fade", "captions across fade"} {
 				t.Run(ratio+"/"+map[bool]string{false: "manual", true: "compiled"}[compiled]+"/"+collision, func(t *testing.T) {
 					plan := clip.EditPlan{Ratio: ratio, DurationMS: 15000, Disclosure: "ad", Accent: "coral",
-						Facts: []clip.Answer{{Label: "위치", Text: "서울"}}, Styles: []string{"clean", "bold"},
+						Facts: []clip.Answer{{Label: "위치", Text: "서울"}},
 						Cuts: []clip.EditCut{
 							{ID: "one", SourceID: "s", Fingerprint: "s", EndMS: 7600, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{Text: "오늘의 한 끼", Style: "clean", Anchor: "bottom", Align: "center"}}},
 							{ID: "two", SourceID: "s", Fingerprint: "s", EndMS: 7600, TransitionMS: 200, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{Text: "함께한 시간", Style: "clean", Anchor: "bottom", Align: "center"}}},
@@ -41,10 +41,10 @@ func TestOverlappingPlansRemainReviewable(t *testing.T) {
 					if !reflect.DeepEqual(got, plan) {
 						t.Fatalf("overlap changed the owner's words or composition: %+v", got)
 					}
-					if err := design.VerifyApproved(manifest, ratio, plan.Styles); !errors.Is(err, design.ViolationOverlap) {
+					if err := design.Verify(manifest, ratio); !errors.Is(err, design.ViolationOverlap) {
 						t.Fatalf("strict diagnosis must still find the collision: %v", err)
 					}
-					if err := clip.VerifyLayout(ratio, plan.Styles, manifest); err != nil {
+					if err := clip.VerifyLayout(ratio, manifest); err != nil {
 						t.Fatalf("final delivery verification refused the manifest: %v", err)
 					}
 				})

@@ -9,7 +9,7 @@ import (
 )
 
 func TestNoticesRetainStorageAndClearOnlyEditedTargets(t *testing.T) {
-	p, plan, styles := nativeHistoryFixture(t)
+	p, plan := nativeHistoryFixture(t)
 	text := &plan.Portable.Elements[0]
 	text.FallbackReason = "shorter_copy"
 	plan.Portable.Fallbacks = []clip.CopyFallback{{ElementID: text.Resolved.Element.ID, CutID: text.Resolved.CutID, Reason: "shorter_copy"}}
@@ -20,26 +20,26 @@ func TestNoticesRetainStorageAndClearOnlyEditedTargets(t *testing.T) {
 	if len(original) != 4 {
 		t.Fatal(original)
 	}
-	p.EditPlan, _ = clip.EncodeEditPlan(plan, styles)
-	noOp, _, err := clip.ApplyCorrection(config.ClipRender(&config.Config{}), p, clip.CorrectionFromPlan(plan))
+	p.EditPlan, _ = clip.EncodeEditPlan(plan)
+	noOp, err := clip.ApplyCorrection(config.ClipRender(&config.Config{}), p, clip.CorrectionFromPlan(plan))
 	if err != nil || !reflect.DeepEqual(clip.ActivePlanNotices(noOp), original) {
 		t.Fatal("no-op cleared a notice", err)
 	}
 	draft := clip.CorrectionFromPlan(plan)
 	draft.Cuts[0].Focal = &clip.Point{X: .1, Y: .2}
 	draft.Elements[0].Text = "직접 쓴 문구"
-	next, _, err := clip.ApplyCorrection(config.ClipRender(&config.Config{}), p, draft)
+	next, err := clip.ApplyCorrection(config.ClipRender(&config.Config{}), p, draft)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(clip.ActivePlanNotices(next)) != 2 || len(next.Notices) != len(plan.Notices) || len(next.Portable.Fallbacks) != 1 {
 		t.Fatal("edits did not filter targets without deleting records", clip.ActivePlanNotices(next))
 	}
-	encoded, err := clip.EncodeEditPlan(next, styles)
+	encoded, err := clip.EncodeEditPlan(next)
 	if err != nil {
 		t.Fatal(err)
 	}
-	restored, _, err := clip.DecodeEditPlan(encoded)
+	restored, err := clip.DecodeEditPlan(encoded)
 	if err != nil || !reflect.DeepEqual(clip.ActivePlanNotices(next), clip.ActivePlanNotices(restored)) {
 		t.Fatal("owner edit filtering lost on reload", err)
 	}
@@ -51,22 +51,22 @@ func TestNoticesRetainStorageAndClearOnlyEditedTargets(t *testing.T) {
 
 func TestLegacyCorrectionKeepsNoticesUntilTheCutChanges(t *testing.T) {
 	p, _ := correctionFixture(t)
-	plan, styles, err := clip.DecodeEditPlan(p.EditPlan)
+	plan, err := clip.DecodeEditPlan(p.EditPlan)
 	if err != nil {
 		t.Fatal(err)
 	}
 	clip.AddPlanNotice(&plan, "plan_cut_rate", plan.Cuts[0].ID, "", "repair")
-	p.EditPlan, err = clip.EncodeEditPlan(plan, styles)
+	p.EditPlan, err = clip.EncodeEditPlan(plan)
 	if err != nil {
 		t.Fatal(err)
 	}
 	draft := clip.CorrectionFromPlan(plan)
-	next, _, err := clip.ApplyCorrection(config.ClipRender(&config.Config{}), p, draft)
+	next, err := clip.ApplyCorrection(config.ClipRender(&config.Config{}), p, draft)
 	if err != nil || len(clip.ActivePlanNotices(next)) != 1 {
 		t.Fatal("no-op lost history", err)
 	}
 	draft.Cuts[0].VolumePermille = 500
-	next, _, err = clip.ApplyCorrection(config.ClipRender(&config.Config{}), p, draft)
+	next, err = clip.ApplyCorrection(config.ClipRender(&config.Config{}), p, draft)
 	if err != nil || len(clip.ActivePlanNotices(next)) != 0 || len(next.Notices) != 1 {
 		t.Fatal("edit did not filter stored history", err)
 	}

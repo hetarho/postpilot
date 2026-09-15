@@ -38,8 +38,8 @@ type Group struct {
 }
 type Part struct{ Literal, Field string }
 type Row struct {
-	Role  string
-	Parts []Part
+	Role, Kind string
+	Parts      []Part
 }
 type Element struct {
 	ID, Kind, Role, Style, Position, Align, Basis string
@@ -62,7 +62,6 @@ type Document struct {
 	Design       DesignSelection
 	Source       string
 	Root         *Node
-	Styles       []string
 	Accent, Pace string
 	Fields       []Field
 	Groups       []Group
@@ -110,4 +109,12 @@ type ResolvedElement struct {
 type Timeline struct {
 	DurationMS int
 	Elements   []ResolvedElement
+}
+
+// RowKind also preserves the meaning of frozen rows saved before row-level kinds.
+func RowKind(element Element, row Row) string {
+	if row.Kind != "" {
+		return row.Kind
+	}
+	return element.Kind
 }

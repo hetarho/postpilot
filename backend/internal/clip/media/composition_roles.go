@@ -14,11 +14,6 @@ import (
 
 func (r *Rendering) layoutDeclaredRole(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, ratio string, visual declaredVisual, selection ...composition.DesignSelection) (declaredVisual, error) {
 	e := visual.text.Resolved.Element
-	// Named text styles describe caption visuals. Other roles have their own
-	// CDS typography/plate contract; incompatible authored choices need editing.
-	if !composition.ValidRoleStyle(e.Role, e.Style, nil) {
-		return visual, elementProblem(visual.text, "invalid_style")
-	}
 	switch e.Role {
 	case "badge":
 		return r.layoutDeclaredBadge(ctx, ws, canvas, ratio, visual)

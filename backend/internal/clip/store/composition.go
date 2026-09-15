@@ -14,7 +14,7 @@ type legacyRecipeJSON struct {
 	Name     string      `json:"name"`
 	Fields   []fieldJSON `json:"fields"`
 	Guidance string      `json:"guidance"`
-	Styles   []string    `json:"styles"`
+	Styles   []string    `json:"styles,omitempty"`
 	Accent   string      `json:"accent"`
 	Preset   string      `json:"preset"`
 	Pace     string      `json:"pace"`
@@ -51,7 +51,7 @@ func encodeComposition(c *clip.ProjectComposition) (string, string, error) {
 	}
 	s := compositionSnapshotJSON{Version: c.Snapshot.Version, Body: c.Snapshot.Body, TemplateID: c.Snapshot.TemplateID, Legacy: c.Snapshot.Legacy}
 	if r := c.Snapshot.LegacyRecipe; r != nil {
-		s.LegacyRecipe = &legacyRecipeJSON{Name: r.Name, Guidance: r.CutGuidance, Styles: r.CopyStyles, Accent: r.Accent, Preset: r.Preset, Pace: r.CaptionPace}
+		s.LegacyRecipe = &legacyRecipeJSON{Name: r.Name, Guidance: r.CutGuidance, Accent: r.Accent, Preset: r.Preset, Pace: r.CaptionPace}
 		for _, f := range r.InformationFields {
 			s.LegacyRecipe.Fields = append(s.LegacyRecipe.Fields, fieldJSON{f.Label, f.Prompt})
 		}
@@ -87,7 +87,7 @@ func decodeComposition(snapshot, inputs string) (*clip.ProjectComposition, error
 	}
 	c := &clip.ProjectComposition{Snapshot: clip.CompositionSnapshot{Version: s.Version, Body: s.Body, TemplateID: s.TemplateID, Legacy: s.Legacy}, Inputs: clip.CompositionInputs{Values: in.Values, Items: map[string][]composition.Item{}}}
 	if r := s.LegacyRecipe; r != nil {
-		recipe := &clip.Recipe{Name: r.Name, CutGuidance: r.Guidance, CopyStyles: r.Styles, Accent: r.Accent, Preset: r.Preset, CaptionPace: r.Pace, CompositionLegacy: true}
+		recipe := &clip.Recipe{Name: r.Name, CutGuidance: r.Guidance, Accent: r.Accent, Preset: r.Preset, CaptionPace: r.Pace, CompositionLegacy: true}
 		for _, f := range r.Fields {
 			recipe.InformationFields = append(recipe.InformationFields, clip.InformationField{Label: f.Label, Prompt: f.Prompt})
 		}
@@ -129,7 +129,7 @@ func hydrateComposition(ctx context.Context, q *sqlc.Queries, p *clip.Project) e
 	if p.Composition != nil {
 		return nil
 	}
-	r := clip.Recipe{CopyStyles: []string{"clean"}}
+	r := clip.Recipe{}
 	if p.VideoTemplateID != "" {
 		t, e := getTemplate(ctx, q, p.UserID, p.VideoTemplateID)
 		if e != nil {

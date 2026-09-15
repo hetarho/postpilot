@@ -117,7 +117,7 @@ func TestCompositionQualityManualReorderKeepsFrozenFactsAndExactText(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	encoded, err := clip.EncodeEditPlan(plan, plan.Styles)
+	encoded, err := clip.EncodeEditPlan(plan)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -129,7 +129,7 @@ func TestCompositionQualityManualReorderKeepsFrozenFactsAndExactText(t *testing.
 	for _, text := range draft.Elements {
 		before[text.InstanceID] = text
 	}
-	corrected, styles, err := clip.ApplyCorrection(config.ClipRender(&config.Config{}), p, draft)
+	corrected, err := clip.ApplyCorrection(config.ClipRender(&config.Config{}), p, draft)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -151,13 +151,13 @@ func TestCompositionQualityManualReorderKeepsFrozenFactsAndExactText(t *testing.
 			}
 		}
 	}
-	stored, err := clip.EncodeEditPlan(corrected, styles)
+	stored, err := clip.EncodeEditPlan(corrected)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Editing the reusable source after persistence cannot rewrite this project's snapshot.
 	in.Template.CompositionBody = `<clip version="1"/>`
-	decoded, _, err := clip.DecodeEditPlan(stored)
+	decoded, err := clip.DecodeEditPlan(stored)
 	if err != nil || decoded.Portable.Snapshot.Body != nativeBody || !strings.Contains(stored, "12,000원") {
 		t.Fatal("frozen content changed", err)
 	}
@@ -172,7 +172,7 @@ func TestCompositionQualityAssemblyCorpus(t *testing.T) {
 				in := nativeInput()
 				in.Ratio, in.TargetDurationMS = ratio, 18000
 				in.Composition.Inputs.Values = nil
-				body := `<clip version="1" styles="simple clean" pace="` + pace + `"><group id="menu"><field id="name" label="이름" required="true"/><field id="price" label="가격"/></group><repeat for="menu"><scene id="dish" scope="item"><text id="copy" kind="ai" role="caption" style="simple" position="bottom" basis="cut">관찰한 <value field="menu.name"/></text><text id="price" kind="fixed" role="info" position="top" basis="cut"><value field="menu.price"/></text></scene></repeat><text id="exact" kind="fixed" role="badge" position="header" basis="output-start" start="1" end="2">직접 작성</text></clip>`
+				body := `<clip version="1" intro="b" caption="bold" outro="e" pace="` + pace + `"><group id="menu"><field id="name" label="이름" required="true"/><field id="price" label="가격"/></group><repeat for="menu"><scene id="dish" scope="item"><text id="copy" kind="ai" role="caption" position="bottom" basis="cut">관찰한 <value field="menu.name"/></text><text id="price" kind="fixed" role="info" position="top" basis="cut"><value field="menu.price"/></text></scene></repeat><text id="exact" kind="fixed" role="badge" position="header" basis="output-start" start="1" end="2">직접 작성</text><text id="intro" kind="fixed" role="hook" basis="output-start"/><text id="outro" kind="fixed" role="ending" basis="output-end"/></clip>`
 				setNativeBody(&in, body)
 				in.Analyses = nil
 				writer, models, _ := newService(t, "", true)
@@ -238,7 +238,7 @@ func TestCompositionQualityAssemblyCorpus(t *testing.T) {
 					t.Fatalf("corpus silently changed: calls=%d cuts=%d duration=%d fallback=%+v", len(models.calls), len(plan.Cuts), plan.DurationMS, plan.Portable.Fallbacks)
 				}
 				plan.SourceAudio = &clip.SourceAudioSettings{Values: []clip.SourceAudioSetting{{SourceID: "a", Fingerprint: strings.Repeat("a", 64)}, {SourceID: "b", Fingerprint: strings.Repeat("b", 64)}}}
-				encoded, err := clip.EncodeEditPlan(plan, plan.Styles)
+				encoded, err := clip.EncodeEditPlan(plan)
 				if err != nil {
 					d, _ := clip.DiagnosticFromError(err)
 					t.Fatalf("%v: %+v", err, d)
@@ -250,7 +250,7 @@ func TestCompositionQualityAssemblyCorpus(t *testing.T) {
 				draft.DurationMS = 17800
 				// Reorder adjacent same-scene splits without changing ranges, ids or facts.
 				draft.Cuts[0], draft.Cuts[1] = draft.Cuts[1], draft.Cuts[0]
-				corrected, styles, err := clip.ApplyCorrection(config.ClipRender(&config.Config{}), project, draft)
+				corrected, err := clip.ApplyCorrection(config.ClipRender(&config.Config{}), project, draft)
 				if err != nil {
 					d, _ := clip.DiagnosticFromError(err)
 					t.Fatalf("%v: %+v", err, d)
@@ -262,7 +262,7 @@ func TestCompositionQualityAssemblyCorpus(t *testing.T) {
 				if corrected.Cuts[0].ID != "cut-1" || corrected.Cuts[1].ID != "cut-0" || len(corrected.Portable.Elements) != 13 {
 					t.Fatal("correction lost assembly or text")
 				}
-				encoded, err = clip.EncodeEditPlan(corrected, styles)
+				encoded, err = clip.EncodeEditPlan(corrected)
 				if err != nil {
 					d, _ := clip.DiagnosticFromError(err)
 					t.Fatalf("%v: %+v", err, d)

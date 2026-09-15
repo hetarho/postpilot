@@ -45,7 +45,7 @@ func TestRenderSmokeComposition(t *testing.T) {
 				if err != nil {
 					return err
 				}
-				body := `<clip version="1" styles="clean bold"><text id="disclosure" kind="fixed" role="badge" position="header" basis="output-start" start="1" end="14">제작비 일부 지원</text><text id="first" kind="fixed" role="info" position="bottom" basis="output-start" start="2" end="7">A 9,900원</text><text id="second" kind="fixed" role="info" position="bottom" basis="output-start" start="8" end="13">B 12,000원</text><text id="throughout" kind="fixed" role="caption" style="bold" position="upper_mid" basis="whole">끝까지 표시</text></clip>`
+				body := `<clip version="1" intro="b" caption="bold" outro="e"><text id="disclosure" kind="fixed" role="badge" position="header" basis="output-start" start="1" end="14">제작비 일부 지원</text><text id="first" kind="fixed" role="info" position="bottom" basis="output-start" start="2" end="7">A 9,900원</text><text id="second" kind="fixed" role="info" position="bottom" basis="output-start" start="8" end="13">B 12,000원</text><text id="throughout" kind="fixed" role="caption" position="upper_mid" basis="whole">끝까지 표시</text><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`
 				plan := declaredPlan(t, body, ratio)
 				plan.Disclosure, plan.Hook, plan.Preset, plan.CTA = "ad", "must not appear", "restaurant", "profile"
 				plan.Cuts = []clip.Cut{{ID: "a", SourceID: "source", Fingerprint: "fp", EndMS: 7600, Focal: clip.Point{X: .5, Y: .5}}, {ID: "b", SourceID: "source", Fingerprint: "fp", StartMS: 7600, EndMS: 15200, TransitionMS: 200, Focal: clip.Point{X: .5, Y: .5}}}
@@ -54,7 +54,7 @@ func TestRenderSmokeComposition(t *testing.T) {
 					plan.Portable = nil
 					plan.Hook, plan.CTA, plan.Preset = "", "", ""
 					plan.Cuts[0].Copies = []clip.Copy{{Text: "이전에 저장한 문장", Style: "clean", Anchor: "bottom", Align: "center", StartMS: 1000, EndMS: 6000}}
-					plan.Portable, err = clip.FreezeLegacyPlan(clip.Project{Disclosure: "ad"}, plan, clip.Recipe{CopyStyles: []string{"clean"}}, r.cfg.Composition)
+					plan.Portable, err = clip.FreezeLegacyPlan(clip.Project{Disclosure: "ad"}, plan, clip.Recipe{}, r.cfg.Composition)
 					if err != nil {
 						return err
 					}

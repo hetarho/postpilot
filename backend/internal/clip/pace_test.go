@@ -64,15 +64,15 @@ func TestRapidCorrectionRoundtripAndBoundaries(t *testing.T) {
 	copies, _ := clip.SplitRapid(clip.Caption{Text: "오늘은 구로디지털단지에 와보았는데요", Style: "clean", Anchor: "bottom", Align: "center"}, 120, 1420)
 	draft.Cuts[0].Copies = copies
 	cfg := config.ClipRender(&config.Config{})
-	next, styles, err := clip.ApplyCorrection(cfg, p, draft)
+	next, err := clip.ApplyCorrection(cfg, p, draft)
 	if err != nil {
 		t.Fatal(err)
 	}
-	raw, err := clip.EncodeEditPlan(next, styles)
+	raw, err := clip.EncodeEditPlan(next)
 	if err != nil {
 		t.Fatal(err)
 	}
-	again, _, err := clip.DecodeEditPlan(raw)
+	again, err := clip.DecodeEditPlan(raw)
 	if err != nil || !reflect.DeepEqual(again.Cuts[0].Copies, copies) {
 		t.Fatal(again, err)
 	}
@@ -91,7 +91,7 @@ func TestRapidCorrectionRoundtripAndBoundaries(t *testing.T) {
 			d.Cuts = append([]clip.CorrectionCut(nil), draft.Cuts...)
 			d.Cuts[0].Copies = append([]clip.Caption(nil), copies...)
 			mutate(d.Cuts[0].Copies)
-			if _, _, err := clip.ApplyCorrection(cfg, p, d); err == nil {
+			if _, err := clip.ApplyCorrection(cfg, p, d); err == nil {
 				t.Fatal("invalid rapid cue accepted")
 			}
 		})

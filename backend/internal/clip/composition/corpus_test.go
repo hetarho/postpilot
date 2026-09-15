@@ -39,20 +39,15 @@ func corpus(t *testing.T) (composition.Limits, []corpusCase) {
 	return f.Limits, f.Cases
 }
 
-func TestRoleStylesAreStrictForExecutionAndRetainedOnlyForReading(t *testing.T) {
-	limits := config.ClipCompositionLimits()
-	for _, role := range []string{"caption", "badge", "info", "hook", "ending"} {
-		for _, style := range []string{"auto", "clean", "memo", "bold", "mark", "simple"} {
-			body := `<clip version="1" styles="clean memo bold mark simple"><text id="text" kind="fixed" role="` + role + `" style="` + style + `" basis="whole">원문</text></clip>`
-			_, problem := composition.Parse(body, limits)
-			valid := role == "caption" || style == "auto"
-			if (problem == nil) != valid {
-				t.Fatalf("role=%s style=%s incorrect admission", role, style)
-			}
-			stored, problem := composition.ReadStored(body, limits)
-			if problem != nil || stored.Elements[0].Style != style {
-				t.Fatal("stored draft was lost or silently rewritten")
-			}
+func TestOldStyleAttributesOnlyOpenForReading(t *testing.T) {
+	for _, body := range []string{`<clip version="1" styles="simple"><text id="text" kind="fixed" role="caption" basis="whole">원문</text></clip>`, `<clip version="1" intro="b" caption="bold" outro="e"><text id="text" kind="fixed" role="caption" style="simple" basis="whole">원문</text></clip>`} {
+		_, p := composition.Parse(body, config.ClipCompositionLimits())
+		if p == nil || p.Reason != "unknown_attribute" {
+			t.Fatal(p)
+		}
+		d, p := composition.ReadStored(body, config.ClipCompositionLimits())
+		if p != nil || d.Design != composition.DefaultDesign() || d.Elements[0].Style != "auto" || d.Elements[0].Parts[0].Literal != "원문" {
+			t.Fatal(d, p)
 		}
 	}
 }
@@ -109,7 +104,7 @@ func summary(d *composition.Document) map[string]any {
 	for _, e := range d.Elements {
 		elements = append(elements, e.ID)
 	}
-	return map[string]any{"styles": d.Styles, "accent": d.Accent, "pace": d.Pace, "fields": fields, "groups": groups, "sections": sections, "elements": elements, "guidance": append([]string{}, d.Guidance...)}
+	return map[string]any{"design": map[string]any{"intro": d.Design.Intro, "caption": d.Design.Caption, "outro": d.Design.Outro}, "accent": d.Accent, "pace": d.Pace, "fields": fields, "groups": groups, "sections": sections, "elements": elements, "guidance": append([]string{}, d.Guidance...)}
 }
 func resolution(t *testing.T, out composition.Timeline) []map[string]any {
 	t.Helper()
@@ -181,7 +176,7 @@ func TestSharedCorpus(t *testing.T) {
 }
 func TestSubtreeEditPreservesUntouchedSource(t *testing.T) {
 	l := config.ClipCompositionLimits()
-	source := " \n<clip version='1'>\n <guide>🧑‍🍳 keep &amp; spacing</guide>\n <text id='copy' kind='fixed' role='caption' basis='whole'>old</text>\n</clip>\n"
+	source := " \n<clip version='1' intro=\"b\" caption=\"bold\" outro=\"e\">\n <guide>🧑‍🍳 keep &amp; spacing</guide>\n <text id='copy' kind='fixed' role='caption' basis='whole'>old</text>\n<text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>\n"
 	d, e := composition.Parse(source, l)
 	if e != nil {
 		t.Fatal(e)
@@ -217,7 +212,7 @@ func TestExactSecondsAndAutomaticShortCutRefusal(t *testing.T) {
 		}
 	}
 	l := config.ClipCompositionLimits()
-	d, e := composition.Parse(`<clip version="1"><scene id="s"><text id="c" kind="fixed" role="caption" basis="cut">x</text></scene></clip>`, l)
+	d, e := composition.Parse(`<clip version="1" intro="b" caption="bold" outro="e"><scene id="s"><text id="c" kind="fixed" role="caption" basis="cut">x</text></scene><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`, l)
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -228,7 +223,7 @@ func TestExactSecondsAndAutomaticShortCutRefusal(t *testing.T) {
 }
 func FuzzCompositionParser(f *testing.F) {
 	f.Add(`<clip version="1"/>`)
-	f.Add(`<clip version="1"><text id="x" kind="fixed" role="caption" basis="whole">한 &amp; 😀</text></clip>`)
+	f.Add(`<clip version="1" intro="b" caption="bold" outro="e"><text id="x" kind="fixed" role="caption" basis="whole">한 &amp; 😀</text><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`)
 	f.Add(`<!DOCTYPE clip [<!ENTITY a SYSTEM "file:///secret">]>`)
 	f.Fuzz(func(t *testing.T, s string) {
 		d, e := composition.Parse(s, config.ClipCompositionLimits())
@@ -248,7 +243,7 @@ func FuzzCompositionParser(f *testing.F) {
 
 func TestQualifiedFieldEditAndUnlabelledGuide(t *testing.T) {
 	l := config.ClipCompositionLimits()
-	source := `<clip version="1"><guide>keep</guide><group id="a"><field id="price" label="A"/></group><group id="b"><field id="price" label="B"/></group></clip>`
+	source := `<clip version="1" intro="b" caption="bold" outro="e"><guide>keep</guide><group id="a"><field id="price" label="A"/></group><group id="b"><field id="price" label="B"/></group><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`
 	d, e := composition.Parse(source, l)
 	if e != nil {
 		t.Fatal(e)

@@ -19,7 +19,7 @@ func VerifyCompositionManifest(plan EditPlan, elements []CompositionElement, lim
 	if plan.Portable.Snapshot.Legacy {
 		limits = LegacyCompositionLimits(limits)
 	}
-	doc, problem := composition.Parse(plan.Portable.Snapshot.Body, limits)
+	doc, problem := composition.ReadStored(plan.Portable.Snapshot.Body, limits)
 	if problem != nil {
 		return problem
 	}

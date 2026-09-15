@@ -36,7 +36,6 @@ type storedAssemblyPlan struct {
 	Ratio              string
 	Plan               storedCorrectionPlan
 	Focals             map[string]Point
-	CopyStyles         []string
 	Composition        *PortablePlan
 	Rates              map[string]int
 	SourceAudio        []storedSourceAudio
@@ -46,7 +45,7 @@ type storedSourceAudio struct {
 	RetainOriginal        bool
 }
 
-func encodeAssemblyPlan(p EditPlan, styles []string) (string, error) {
+func encodeAssemblyPlan(p EditPlan) (string, error) {
 	if p.Portable != nil {
 		if err := validatePortablePlan(p); err != nil {
 			return "", err
@@ -71,7 +70,7 @@ func encodeAssemblyPlan(p EditPlan, styles []string) (string, error) {
 	for _, v := range settings.Values {
 		audio = append(audio, storedSourceAudio{v.SourceID, v.Fingerprint, v.RetainOriginal})
 	}
-	envelope := storedAssemblyPlan{Version: CompositionPlanVersion, Ratio: p.Ratio, Plan: storedCorrection(CorrectionFromPlan(plain)), Focals: focals, CopyStyles: slices.Clone(styles), Composition: p.Portable, Rates: rates, SourceAudio: audio, Notices: p.Notices, NoticeCutRevisions: p.NoticeCutRevisions}
+	envelope := storedAssemblyPlan{Version: CompositionPlanVersion, Ratio: p.Ratio, Plan: storedCorrection(CorrectionFromPlan(plain)), Focals: focals, Composition: p.Portable, Rates: rates, SourceAudio: audio, Notices: p.Notices, NoticeCutRevisions: p.NoticeCutRevisions}
 	b, err := json.Marshal(envelope)
 	return string(b), err
 }
@@ -79,26 +78,37 @@ func encodeAssemblyPlan(p EditPlan, styles []string) (string, error) {
 // decodeAssemblyPlan reads the version-6 envelope. The version-5 and earlier
 // readers stay untouched, so a plan written before rates existed is still read
 // by the exact code that wrote it.
-func decodeAssemblyPlan(raw string) (EditPlan, []string, error) {
+func decodeAssemblyPlan(raw string) (EditPlan, error) {
+	var legacy map[string]json.RawMessage
+	if json.Unmarshal([]byte(raw), &legacy) != nil {
+		return EditPlan{}, ErrInvalid
+	}
+	delete(legacy, "CopyStyles")
+	delete(legacy, "Styles")
+	clean, err := json.Marshal(legacy)
+	if err != nil {
+		return EditPlan{}, ErrInvalid
+	}
+	raw = string(clean)
 	var s storedAssemblyPlan
 	if strictJSON(raw, &s) != nil || s.Version != CompositionPlanVersion {
-		return EditPlan{}, nil, ErrInvalid
+		return EditPlan{}, ErrInvalid
 	}
-	p, styles, err := portableFromStored(storedPortablePlan{s.Version, s.Ratio, s.Plan, s.Focals, s.CopyStyles, PortablePlan{}})
+	p, err := portableFromStored(storedPortablePlan{s.Version, s.Ratio, s.Plan, s.Focals, nil, PortablePlan{}})
 	if err != nil {
-		return p, styles, err
+		return p, err
 	}
 	p.Portable = s.Composition
 	p.Notices, p.NoticeCutRevisions = s.Notices, s.NoticeCutRevisions
 	// A version-6 plan states every rate explicitly. An absent or zero entry is
 	// not a 1x default here: this envelope was written after rates existed.
 	if len(s.Rates) != len(p.Cuts) {
-		return EditPlan{}, nil, ErrInvalid
+		return EditPlan{}, ErrInvalid
 	}
 	for i := range p.Cuts {
 		rate, ok := s.Rates[p.Cuts[i].ID]
 		if !ok || !ValidPlaybackRate(rate) {
-			return EditPlan{}, nil, ErrInvalid
+			return EditPlan{}, ErrInvalid
 		}
 		p.Cuts[i].PlaybackRatePermille = rate
 	}
@@ -108,35 +118,35 @@ func decodeAssemblyPlan(raw string) (EditPlan, []string, error) {
 	}
 	p.SourceAudio = settings
 	if err := ValidateSourceAudioSettings(p); err != nil {
-		return EditPlan{}, nil, err
+		return EditPlan{}, err
 	}
 	if p.Portable == nil {
-		return p, styles, nil
+		return p, nil
 	}
-	return p, styles, validatePortablePlan(p)
+	return p, validatePortablePlan(p)
 }
 
-func decodePortablePlan(raw string) (EditPlan, []string, error) {
+func decodePortablePlan(raw string) (EditPlan, error) {
 	var s storedPortablePlan
 	if strictJSON(raw, &s) != nil || s.Version != portablePlanVersion {
-		return EditPlan{}, nil, ErrInvalid
+		return EditPlan{}, ErrInvalid
 	}
-	p, styles, err := portableFromStored(s)
+	p, err := portableFromStored(s)
 	if err != nil {
-		return p, styles, err
+		return p, err
 	}
 	p.Portable = &s.Composition
 	// Nothing in a version-5 plan ever chose a rate or a source-audio setting,
 	// so it reads at 1x with its original audio meaning made explicit.
 	upgradeLegacyAssembly(&p)
-	return p, styles, validatePortablePlan(p)
+	return p, validatePortablePlan(p)
 }
 
-func portableFromStored(s storedPortablePlan) (EditPlan, []string, error) {
+func portableFromStored(s storedPortablePlan) (EditPlan, error) {
 	// Reuse existing correction geometry validation without widening its reader.
 	b, err := json.Marshal(storedEditPlan{storedPlanVersion, s.Ratio, s.Plan, s.Focals, s.CopyStyles})
 	if err != nil {
-		return EditPlan{}, nil, err
+		return EditPlan{}, err
 	}
 	return DecodeEditPlan(string(b))
 }
@@ -216,14 +226,14 @@ func LegacyPortablePlan(p Project, plan EditPlan, limits composition.Limits) (*P
 	}
 	c := p.Composition
 	if c == nil {
-		value := LegacyProjectComposition(p, Recipe{CopyStyles: []string{"clean"}})
+		value := LegacyProjectComposition(p, Recipe{})
 		c = &value
 	}
 	out := &PortablePlan{Snapshot: c.Snapshot, Inputs: c.Inputs}
 	if c.Snapshot.Legacy {
 		limits = LegacyCompositionLimits(limits)
 	}
-	doc, problem := composition.Parse(c.Snapshot.Body, limits)
+	doc, problem := composition.ReadStored(c.Snapshot.Body, limits)
 	if problem != nil {
 		return nil, problem
 	}
@@ -241,6 +251,9 @@ func LegacyPortablePlan(p Project, plan EditPlan, limits composition.Limits) (*P
 				text += part.Literal
 			}
 			r.Rows = append(r.Rows, composition.ResolvedRow{Role: row.Role, Text: text})
+		}
+		if (element.Role == "hook" || element.Role == "ending") && strings.TrimSpace(r.Text) == "" && !slices.ContainsFunc(r.Rows, func(row composition.ResolvedRow) bool { return strings.TrimSpace(row.Text) != "" }) {
+			continue
 		}
 		switch element.Basis {
 		case "output-start":
@@ -290,7 +303,7 @@ func LegacyPortablePlan(p Project, plan EditPlan, limits composition.Limits) (*P
 func FreezeLegacyPlan(p Project, plan EditPlan, recipe Recipe, limits composition.Limits) (*PortablePlan, error) {
 	plain := plan
 	plain.Portable = nil
-	raw, err := EncodeEditPlan(plain, recipe.CopyStyles)
+	raw, err := EncodeEditPlan(plain)
 	if err != nil {
 		return nil, err
 	}

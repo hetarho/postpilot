@@ -31,7 +31,6 @@ type Recipe struct {
 	Name              string
 	InformationFields []InformationField
 	CutGuidance       string
-	CopyStyles        []string
 	Accent            string
 	// One of the five CDS category presets. Empty is a template written before
 	// presets existed and reads as the shared defaults, never as a category.
@@ -47,7 +46,6 @@ type TemplatePatch struct {
 	CompositionBody                                *string
 	Name, CutGuidance, Accent, Preset, CaptionPace *string
 	InformationFields                              *[]InformationField
-	CopyStyles                                     *[]string
 }
 type Answer struct{ Label, Text string }
 type Result struct {

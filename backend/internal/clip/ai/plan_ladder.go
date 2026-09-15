@@ -22,7 +22,7 @@ const (
 // only decoding or an unrenderable remainder can fail a generation.
 var planCheckTiers = map[string]planTier{
 	"plan_cut_scene": repairPlan, "plan_cut_rate": repairPlan, "plan_cut_usability": repairPlan,
-	"plan_style": repairPlan, "plan_accent": repairPlan, "plan_focal": repairPlan, "plan_volume": repairPlan,
+	"plan_accent": repairPlan, "plan_focal": repairPlan, "plan_volume": repairPlan,
 	"plan_cut_fade": repairPlan, "plan_cut_transition": repairPlan, "plan_target_duration": repairPlan,
 	"plan_caption_time": repairPlan, "composition_cut_evidence": repairPlan, "plan_ratio": repairPlan,
 	"composition_section_order": removePlan, "composition_item_order": removePlan,
@@ -139,10 +139,6 @@ func narrowGeneratedCuts(cfg Config, in clip.PlanningInput, plan *clip.EditPlan)
 			p.EndMS = max(p.StartMS+1, min(p.EndMS, c.OutputDurationMS()))
 			if p.StartMS != start || p.EndMS != end {
 				notice("plan_caption_time", "repair")
-			}
-			if p.Style != "" && !slices.Contains(in.Template.CopyStyles, p.Style) && len(in.Template.CopyStyles) > 0 {
-				p.Style = in.Template.CopyStyles[0]
-				notice("plan_style", "repair")
 			}
 			if p.Accent != "" && p.Accent != in.Template.Accent {
 				p.Accent = in.Template.Accent

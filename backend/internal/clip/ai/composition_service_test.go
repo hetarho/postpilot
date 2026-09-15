@@ -20,7 +20,7 @@ func TestNativeWriterAdmitsAll49ObservationsAtTheSourceCeiling(t *testing.T) {
 		t.Run(fmt.Sprint(structured), func(t *testing.T) {
 			writer, models, _ := newService(t, "", structured)
 			in := planningInput()
-			in.Template = clip.Recipe{Name: "synthetic release", Preset: "restaurant", CopyStyles: []string{"clean"}, InformationFields: []clip.InformationField{{Label: "상호", Prompt: "가게 이름"}, {Label: "위치", Prompt: "어디"}, {Label: "place", Prompt: "where"}}}
+			in.Template = clip.Recipe{Name: "synthetic release", Preset: "restaurant", InformationFields: []clip.InformationField{{Label: "상호", Prompt: "가게 이름"}, {Label: "위치", Prompt: "어디"}, {Label: "place", Prompt: "where"}}}
 			p := clip.Project{Disclosure: "ad", Answers: []clip.Answer{{Label: "상호", Text: "연남 김밥"}, {Label: "위치", Text: "서울 연남동"}, {Label: "place", Text: "fixture"}}}
 			owned := clip.LegacyProjectComposition(p, in.Template)
 			in.Composition = &owned
@@ -64,7 +64,7 @@ func TestNativeWriterAdmitsAll49ObservationsAtTheSourceCeiling(t *testing.T) {
 	}
 }
 
-const nativeBody = `<clip version="1" styles="memo" accent="teal">
+const nativeBody = `<clip version="1" intro="b" caption="bold" outro="e" accent="teal">
 <field id="fee" label="입장료"/>
 <group id="menu"><field id="name" label="메뉴" required="true"/><field id="price" label="가격"/><field id="extra" label="설명"/><field id="experience" label="경험"/></group>
 <guide>음식을 긴 장면으로 차분하게 설명한다. 방문한 척하지 않는다.</guide>
@@ -73,7 +73,7 @@ const nativeBody = `<clip version="1" styles="memo" accent="teal">
 <text id="sticker" kind="fixed" role="info" basis="cut"><value field="menu.name"/>: <value field="menu.price"/></text>
 <text id="optional" kind="fixed" role="info" basis="cut"><value field="menu.extra"/></text>
 <text id="copy" kind="ai" role="caption" basis="cut">관찰한 <value field="menu.name"/>을 설명한다.</text>
-</scene></repeat></clip>`
+</scene></repeat><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`
 
 func nativeInput() clip.PlanningInput {
 	in := planningInput()
@@ -165,11 +165,11 @@ func TestNativeWriterOneCallPreservesAuthoredContentAndEvidence(t *testing.T) {
 		if !strings.Contains(request.Messages[0].Parts[0].Text, `"observation_id":"source/0"`) || !strings.Contains(request.Messages[0].Parts[0].Text, `"item_groups"`) {
 			t.Fatal("missing source references or grouped inputs")
 		}
-		encoded, err := clip.EncodeEditPlan(plan, plan.Styles)
+		encoded, err := clip.EncodeEditPlan(plan)
 		if err != nil {
 			t.Fatal(err)
 		}
-		decoded, _, err := clip.DecodeEditPlan(encoded)
+		decoded, err := clip.DecodeEditPlan(encoded)
 		if err != nil || !reflect.DeepEqual(decoded.Portable, plan.Portable) {
 			t.Fatalf("portable round trip: %v", err)
 		}
@@ -483,7 +483,7 @@ func TestNativeWriterKeepsGroundedAlternativeWithoutRepairCall(t *testing.T) {
 
 func TestNativeWriterAllowsExplicitContextAndNoAuthoredFurniture(t *testing.T) {
 	in, p := nativeInput(), nativePlan()
-	setNativeBody(&in, `<clip version="1"><field id="fee" label="입장료"/><guide>긴 장면으로 설명</guide><repeat for="scenes"><scene id="context" scope="context"><text id="copy" kind="ai" role="caption" basis="cut">프로젝트 정보</text></scene></repeat></clip>`)
+	setNativeBody(&in, `<clip version="1" intro="b" caption="bold" outro="e"><field id="fee" label="입장료"/><guide>긴 장면으로 설명</guide><repeat for="scenes"><scene id="context" scope="context"><text id="copy" kind="ai" role="caption" basis="cut">프로젝트 정보</text></scene></repeat><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`)
 	in.Composition.Inputs.Items = nil
 	for _, c := range p["cuts"].([]any) {
 		c.(map[string]any)["template_section_id"] = "context"
@@ -506,7 +506,7 @@ func TestNativeWriterAllowsExplicitContextAndNoAuthoredFurniture(t *testing.T) {
 	if err != nil || !hasFallback(plan, "cut-sea", "context_item_claim") {
 		t.Fatalf("%+v %v", plan.Portable, err)
 	}
-	setNativeBody(&in, `<clip version="1"><guide>긴 장면으로 보여 준다</guide></clip>`)
+	setNativeBody(&in, `<clip version="1" intro="b" caption="bold" outro="e"><guide>긴 장면으로 보여 준다</guide><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`)
 	in.Composition.Inputs.Values = nil
 	for _, c := range p["cuts"].([]any) {
 		c.(map[string]any)["template_section_id"] = ""
@@ -565,7 +565,7 @@ func TestNativeWriterBoundsAndFrozenAdmissionBeforeProvider(t *testing.T) {
 
 func TestNativeWriterRepetitionAndAuthoredRowRoles(t *testing.T) {
 	in, p := nativeInput(), nativePlan()
-	setNativeBody(&in, `<clip version="1"><guide>긴 장면으로 보여 준다</guide><repeat for="scenes"><scene id="dish" scope="scene"><text id="copy" kind="ai" role="caption" basis="cut">관찰 설명</text></scene></repeat></clip>`)
+	setNativeBody(&in, `<clip version="1" intro="b" caption="bold" outro="e"><guide>긴 장면으로 보여 준다</guide><repeat for="scenes"><scene id="dish" scope="scene"><text id="copy" kind="ai" role="caption" basis="cut">관찰 설명</text></scene></repeat><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`)
 	in.Composition.Inputs = clip.CompositionInputs{}
 	for i := range 2 {
 		nativeGenerated(p, i)["text"] = "접시를 담는다"
@@ -576,7 +576,7 @@ func TestNativeWriterRepetitionAndAuthoredRowRoles(t *testing.T) {
 	if err != nil || len(models.calls) != 1 || len(plan.Portable.Elements) != 1 || !hasFallback(plan, "cut-cheese", "repeated_copy") {
 		t.Fatalf("repeated promotional filler: %+v %v", plan.Portable, err)
 	}
-	setNativeBody(&in, `<clip version="1"><field id="fee" label="입장료"/><guide>긴 장면으로 보여 준다</guide><text id="card" kind="ai" role="hook" basis="output-start" start="0" end="3"><row role="title">관찰한 장소</row><row role="body">입장료</row></text></clip>`)
+	setNativeBody(&in, `<clip version="1" intro="b" caption="bold" outro="e"><field id="fee" label="입장료"/><guide>긴 장면으로 보여 준다</guide><text id="card" kind="ai" role="hook" basis="output-start" start="0" end="3"><row>관찰한 장소</row><row>입장료</row></text><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`)
 	in.Composition.Inputs.Values = map[string]string{"fee": "12,000원"}
 	for _, c := range p["cuts"].([]any) {
 		c.(map[string]any)["template_section_id"] = ""
@@ -594,7 +594,7 @@ func TestNativeWriterRepetitionAndAuthoredRowRoles(t *testing.T) {
 		t.Fatal(err)
 	}
 	e := plan.Portable.Elements[0].Resolved
-	if len(plan.Portable.Elements) != 1 || e.Rows[0].Role != "title" || e.Rows[1].Role != "body" || e.StartMS != 0 || e.EndMS != 3000 {
+	if len(plan.Portable.Elements) != 1 || e.Rows[0].Role != "" || e.Rows[1].Role != "" || e.StartMS != 0 || e.EndMS != 3000 {
 		t.Fatalf("authored rows/timing lost: %+v", e)
 	}
 }
@@ -625,7 +625,7 @@ func TestReconciliationCannotReachAnotherItemsFootage(t *testing.T) {
 // section speaks for, not about how many cuts it may hold (CLIP-59, CLIP-98).
 // Only ORDER is the template's: the plan never returns to a section it left.
 func TestNativeWriterAdmitsConsecutiveCutsInOneNonrepeatedSection(t *testing.T) {
-	const body = `<clip version="1"><field id="fee" label="입장료"/><guide>긴 장면으로 설명</guide>` +
+	const body = `<clip version="1" intro="b" caption="bold" outro="e"><text id="intro" kind="fixed" role="hook" basis="output-start"/><text id="outro" kind="fixed" role="ending" basis="output-end"/><field id="fee" label="입장료"/><guide>긴 장면으로 설명</guide>` +
 		`<scene id="arrival" scope="context"><text id="copy" kind="ai" role="caption" basis="cut">도착을 설명</text></scene>` +
 		`<scene id="closing" scope="context"><text id="ending" kind="ai" role="caption" basis="cut">마무리를 설명</text></scene></clip>`
 	sectionOf := func(p map[string]any, i int, id string) {

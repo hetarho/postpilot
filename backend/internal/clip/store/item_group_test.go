@@ -12,7 +12,7 @@ import (
 
 func TestItemGroupBoundsRefusedAtTemplateSave(t *testing.T) {
 	s, raw, _ := setup(t)
-	body := `<clip version="1"><group id="menu" min="1" max="2"><field id="name" label="Name"/></group></clip>`
+	body := `<clip version="1" intro="b" caption="bold" outro="e"><group id="menu" min="1" max="2"><field id="name" label="Name"/></group><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`
 	template, err := s.CreateTemplate(t.Context(), "alice", clip.Recipe{Name: "menu", CompositionBody: body})
 	if err != nil {
 		t.Fatal(err)
@@ -41,7 +41,7 @@ func TestItemGroupMinimumRefusesQuoteBeforeWorkButAllowsDrafts(t *testing.T) {
 	for name, label := range map[string]string{"named": "메뉴", "undeclared_name": ""} {
 		t.Run(name, func(t *testing.T) {
 			h := generationSetup(t)
-			body := "<clip version=\"1\">\n<group id=\"menu\" label=\"" + label + "\" min=\"2\" max=\"2\"><field id=\"name\" label=\"Name\" required=\"true\"/></group></clip>"
+			body := "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><text id=\"intro\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"outro\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/>\n<group id=\"menu\" label=\"" + label + "\" min=\"2\" max=\"2\"><field id=\"name\" label=\"Name\" required=\"true\"/></group></clip>"
 			template, err := h.projects.CreateTemplate(t.Context(), "alice", clip.Recipe{Name: "menu", CompositionBody: body})
 			if err != nil {
 				t.Fatal(err)

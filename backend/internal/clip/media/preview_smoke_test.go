@@ -25,7 +25,7 @@ func TestRenderSmokePreview(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			plan := declaredPlan(t, `<clip version="1" styles="simple" pace="rapid"><text id="badge" kind="fixed" role="badge" basis="whole">직접 방문</text><scene id="scene"><text id="copy" kind="ai" role="caption" basis="cut">Describe the scene.</text></scene></clip>`, ratio)
+			plan := declaredPlan(t, `<clip version="1" intro="b" caption="bold" outro="e" pace="rapid"><text id="badge" kind="fixed" role="badge" basis="whole">직접 방문</text><scene id="scene"><text id="copy" kind="ai" role="caption" basis="cut">Describe the scene.</text></scene><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`, ratio)
 			for i := range plan.Portable.Elements {
 				if plan.Portable.Elements[i].Resolved.Element.Kind == "ai" {
 					plan.Portable.Elements[i].Resolved.Text = "오늘은 철판 요리를 먹어요"

@@ -98,7 +98,7 @@ func TestRenderSmokeRapidCaptions(t *testing.T) {
 			}
 			cut.Copies = append(cut.Copies, clip.Caption{Pace: "rapid", Text: text, Style: "simple", Anchor: "bottom", Align: "center", StartMS: i * 300, EndMS: (i + 1) * 300})
 		}
-		plan := clip.EditPlan{Ratio: "vertical", DurationMS: 15000, Disclosure: "ad", Styles: []string{"clean", "simple"}, Cuts: []clip.Cut{cut}}
+		plan := clip.EditPlan{Ratio: "vertical", DurationMS: 15000, Disclosure: "ad", Cuts: []clip.Cut{cut}}
 		sources := []clip.RenderSource{{ID: "source", Fingerprint: "source", Info: info}}
 		result, err := r.Render(t.Context(), ws, plan, sources, func(_ context.Context, _ string, consume func(clip.MediaSource) error) error {
 			return consume(clip.MediaSource{SourceID: "source", Fingerprint: "source", Path: source, Info: info})
@@ -109,7 +109,7 @@ func TestRenderSmokeRapidCaptions(t *testing.T) {
 		if result.Info.DurationMS != 15000 {
 			return fmt.Errorf("wrong duration: %+v", result.Info)
 		}
-		if err := design.VerifyApproved(result.Manifest, "vertical", plan.Styles); err != nil {
+		if err := design.Verify(result.Manifest, "vertical"); err != nil {
 			return err
 		}
 		// Adjacent frame 8 / 9 crosses precisely 300 ms. A later frame of the

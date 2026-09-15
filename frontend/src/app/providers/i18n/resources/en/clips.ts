@@ -332,6 +332,8 @@ export const clips = {
       unknown_field: 'The linked field is missing. Add it or change the binding.',
       binding_scope: 'Bind to the item belonging to this scene.',
       invalid_style: 'Choose a style approved by this template.',
+      invalid_design: 'Choose the intro, caption and outro designs.',
+      invalid_skeleton: 'Check the intro and outro structure for the selected designs.',
       field_limit: 'Check the field count, label and prompt limits.',
       unknown_tag: 'Unsupported tag. Check the format guide.',
       unknown_attribute: 'Unsupported attribute. Check the format guide.',

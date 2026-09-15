@@ -56,7 +56,7 @@ func TestRecordedMultiSourcePlans(t *testing.T) {
 }
 
 func multiSourcePlan() (clip.PlanningInput, map[string]any) {
-	in := clip.PlanningInput{Policy: testPolicy("write"), Template: clip.Recipe{Name: "여덟 장면", CopyStyles: []string{"clean", "memo"}, Accent: "amber"}, Ratio: "vertical", TargetDurationMS: 15000}
+	in := clip.PlanningInput{Policy: testPolicy("write"), Template: clip.Recipe{Name: "여덟 장면", Accent: "amber"}, Ratio: "vertical", TargetDurationMS: 15000}
 	durations := []int{4290, 3744, 1480, 5010, 5108, 4508, 5428, 6702}
 	// The third cut is 1200 ms, not 1000: a three-character copy earns 1170 ms of
 	// exposure (CDS-41) and a cut cannot be shorter than the copy it carries —

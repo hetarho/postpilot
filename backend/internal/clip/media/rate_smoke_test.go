@@ -86,7 +86,7 @@ func TestRenderSmokeRatesAndSourceAudio(t *testing.T) {
 				// Six adjacent cuts off the SAME source, one per rate, each
 				// three seconds of output: 18 s of clip in total.
 				plan := clip.EditPlan{Ratio: "vertical", DurationMS: 18000, Disclosure: "ad", Preset: "restaurant",
-					Facts: []clip.Answer{{Label: "상호", Text: "속도 테스트"}}, Styles: []string{"clean"}}
+					Facts: []clip.Answer{{Label: "상호", Text: "속도 테스트"}}}
 				start := 0
 				settings := &clip.SourceAudioSettings{}
 				for i, rate := range clip.PlaybackRates() {

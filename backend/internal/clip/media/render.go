@@ -253,10 +253,7 @@ func (r *Rendering) Render(ctx context.Context, ws clip.MediaWorkspace, plan cli
 			return result, &composition.Problem{ElementID: "legacy-hook", Line: 1, Reason: "copy_limit"}
 		}
 		p := clip.Project{Answers: plan.Facts, Disclosure: plan.Disclosure, HideDisclosure: plan.HideDisclosure, CTA: plan.CTA}
-		recipe := clip.Recipe{Preset: plan.Preset, Accent: plan.Accent, CopyStyles: plan.Styles}
-		if len(recipe.CopyStyles) == 0 {
-			recipe.CopyStyles = []string{"bold"}
-		}
+		recipe := clip.Recipe{Preset: plan.Preset, Accent: plan.Accent}
 		plan.Portable, err = clip.FreezeLegacyPlan(p, plan, recipe, r.cfg.Composition)
 		if err != nil {
 			return result, err
@@ -368,7 +365,7 @@ func (r *Rendering) Render(ctx context.Context, ws clip.MediaWorkspace, plan cli
 	// what has to hold, so the whole manifest is verified again before they
 	// become one clip (CDS-52).
 	manifest := c.manifest
-	if err = clip.VerifyLayout(plan.Ratio, plan.Styles, manifest, plan.HideDisclosure); err != nil {
+	if err = clip.VerifyLayout(plan.Ratio, manifest, plan.HideDisclosure); err != nil {
 		return result, err
 	}
 	output := filepath.Join(ws.Path, "clip-result.mp4")
@@ -688,7 +685,7 @@ const (
 func (r *Rendering) repair(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, c *composed) error {
 	taken := map[[2]int]int{}
 	for {
-		err := clip.VerifyLayout(c.plan.Ratio, c.plan.Styles, c.manifest, c.plan.HideDisclosure)
+		err := clip.VerifyLayout(c.plan.Ratio, c.manifest, c.plan.HideDisclosure)
 		if err == nil {
 			return nil
 		}

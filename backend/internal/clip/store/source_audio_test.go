@@ -22,7 +22,7 @@ func audioChange(h *generationHarness, p clip.Project, retain bool) clip.SourceA
 // (CLIP-100, CLIP-93).
 func TestGenerationStatesTheOwnerSnapshotAndTheSettingDoesNotInvalidateThePlan(t *testing.T) {
 	_, p, _ := completedClip(t)
-	plan, _, err := clip.DecodeEditPlan(p.EditPlan)
+	plan, err := clip.DecodeEditPlan(p.EditPlan)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -91,7 +91,7 @@ func TestTheSoundSettingDoesNotInvalidateAnInterruptedCandidate(t *testing.T) {
 	if err != nil || completed.Result == nil {
 		t.Fatal("continuation did not persist a result", err)
 	}
-	plan, _, err := clip.DecodeEditPlan(completed.EditPlan)
+	plan, err := clip.DecodeEditPlan(completed.EditPlan)
 	if err != nil || !plan.RetainsOriginalAudio(plan.Cuts[0]) {
 		t.Fatal("saved assembly lost the latest owner sound setting", err)
 	}
@@ -101,7 +101,7 @@ func TestTheSoundSettingDoesNotInvalidateAnInterruptedCandidate(t *testing.T) {
 func TestSourceSoundChangeIsAtomicIdempotentAndRenderOnly(t *testing.T) {
 	h, p, _ := completedClip(t)
 	ctx := context.Background()
-	before, _, err := clip.DecodeEditPlan(p.EditPlan)
+	before, err := clip.DecodeEditPlan(p.EditPlan)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,7 +140,7 @@ func TestSourceSoundChangeIsAtomicIdempotentAndRenderOnly(t *testing.T) {
 	if !batch.Sources[0].ExpiresAt.After(retention) {
 		t.Fatal("retention was not renewed")
 	}
-	after, _, err := clip.DecodeEditPlan(project.EditPlan)
+	after, err := clip.DecodeEditPlan(project.EditPlan)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -165,7 +165,7 @@ func TestSourceSoundChangeIsAtomicIdempotentAndRenderOnly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	silent, _, err := clip.DecodeEditPlan(project.EditPlan)
+	silent, err := clip.DecodeEditPlan(project.EditPlan)
 	if err != nil {
 		t.Fatal(err)
 	}
