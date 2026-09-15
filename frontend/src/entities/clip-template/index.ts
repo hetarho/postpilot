@@ -22,7 +22,6 @@ export type {
 } from './model/types'
 export { CompositionBuilder } from './ui/CompositionBuilder'
 export { CompositionPreview } from './ui/CompositionPreview'
-export { EMPTY_CLIP_COMPOSITION } from './lib/composition-author'
 export { clipCompositionGuide, CLIP_COMPOSITION_EXAMPLE } from './model/composition-guide'
 export {
   parseClipComposition,
@@ -51,3 +50,11 @@ export type {
   ResolvedCompositionElement,
   CompositionLimits,
 } from './model/composition'
+
+export {
+  compositionSkeleton,
+  compositionDesign,
+  rebuildCompositionSkeleton,
+} from './lib/composition-skeleton'
+export type { CompositionDesign } from './lib/composition-skeleton'
+export { CompositionDesignStep } from './ui/CompositionDesignStep'

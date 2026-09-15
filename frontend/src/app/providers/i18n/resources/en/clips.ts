@@ -201,6 +201,28 @@ export const clips = {
     renderedRevision: 'Compare previous render · revision {{revision}}',
   },
   composition: {
+    design: {
+      selectedSource:
+        'Current template — keep its selected design and edit only slot text and the content region.',
+      title: 'Video design',
+      help: 'Choose the intro, caption and outro before editing the body.',
+      intro: 'Intro design',
+      caption: 'Caption design',
+      outro: 'Outro design',
+      intro_a: 'A Size only',
+      intro_b: 'B Lines above and below',
+      caption_bold: 'Large emphasis',
+      outro_b: 'B Divider line',
+      outro_e: 'E Score emphasis',
+      rebuild: 'Rebuild with this preset',
+      slotsHelp:
+        'Set each slot’s text or information binding. The selected design fixes the slot order and appearance.',
+      slot: 'Slot {{n}}',
+      slotKind: 'Slot {{n}} authorship',
+      excess:
+        'This design has no room for this row. Move its text to another slot or clear it, then rebuild the preset.',
+      metadata: 'Intro {{intro}} · Outro {{outro}}',
+    },
     sampleShortAI: 'Scene',
     templateChanged:
       'The template composition changed. Review and apply its current fields. Your previous video result is preserved.',
@@ -343,10 +365,10 @@ export const clips = {
       unknown_tag: 'Unsupported tag. Check the format guide.',
       unknown_attribute: 'Unsupported attribute. Check the format guide.',
       duplicate_id: 'Element identifiers must be distinct.',
-      invalid_rows: 'Card rows are supported only for opening, closing and information copy.',
+      invalid_rows: 'Rows are supported only for intro, outro and information text.',
     },
     guide:
-      "Write only postpilot video-template source using the grammar below. Source from an external AI can be pasted into the editor. Authoring, copying, parsing and illustrative preview make no model call and use no credits. Only declared elements appear: no preset, universal price requirement, automatic disclosure or CTA.\n\nGrammar:\n{{grammar}}\n\nBounds (characters are Unicode scalars; Ms means milliseconds):\n{{limits}}\n\nA field label is its visible name; its body is input guidance. Bind by ID so renaming a label preserves identity. A blank optional value omits its entire dependent element; required values block generation when blank. Keep each item's price, currency, units and price basis together. Repetition uses only selected real scenes and invents no unfilmed item footage. AI copy uses facts bound to its scene and item; fixed copy preserves even whitespace except explicit value substitution. Guides are invisible in the output.\n\nSeveral-menu example (add two or more menu items on the input screen):\n{{example}}",
+      "Write only postpilot video-template source using the grammar below. Source from an external AI can be pasted into the editor. Authoring, copying, parsing and illustrative preview make no model call and use no credits. Choose the root intro, caption and outro first. The intro/outro skeletons fix slot order and appearance; only slot text and the content region are authorable. No universal price requirement, automatic disclosure or CTA is added.\n\nGrammar:\n{{grammar}}\n\nBounds (characters are Unicode scalars; Ms means milliseconds):\n{{limits}}\n\nA field label is its visible name; its body is input guidance. Bind by ID so renaming a label preserves identity. A blank optional value omits its dependent text; in the intro/outro it clears only that slot and preserves the other slot positions; required values block generation when blank. Keep each item's price, currency, units and price basis together. Repetition uses only selected real scenes and invents no unfilmed item footage. AI copy uses facts bound to its scene and item; fixed copy preserves even whitespace except explicit value substitution. Guides are invisible in the output.\n\nSeveral-menu example (add two or more menu items on the input screen):\n{{example}}",
   },
   credits: {
     renderOnly:

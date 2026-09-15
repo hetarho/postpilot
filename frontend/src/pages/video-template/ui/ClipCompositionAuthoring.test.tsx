@@ -1,5 +1,7 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { fireEvent, screen, waitFor } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderAppAt } from '@/test/app'
 import {
@@ -145,6 +147,21 @@ describe('composition template authoring', () => {
     const { router } = mount({ writes }, '/video-templates/new')
     await user.type(await screen.findByLabelText('템플릿 이름'), '새 구성')
     expect(screen.queryByLabelText(/스타일|style/i)).not.toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: '구성 편집' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
+    await user.click(screen.getByRole('tab', { name: 'B 위아래 가로선' }))
+    await user.click(screen.getByRole('tab', { name: '크게 강조' }))
+    expect(screen.queryByRole('tab', { name: '원문' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('tab', { name: 'E 점수 강조' }))
+    expect(
+      parseClipComposition(((await source()) as HTMLTextAreaElement).value).elements.map((e) => [
+        e.role,
+        e.rows.length,
+      ]),
+    ).toEqual([
+      ['hook', 2],
+      ['ending', 3],
+    ])
     await user.dblClick(screen.getByRole('button', { name: '저장' }))
     await waitFor(() =>
       expect(router.state.location.pathname).toBe('/video-templates/video-template-1'),
@@ -181,6 +198,13 @@ describe('composition template authoring', () => {
     ).toBe(true)
     await user.click(screen.getByRole('tab', { name: '구성 편집' }))
     await user.click(screen.getByRole('button', { name: '아웃트로' }))
+    expect(screen.queryByRole('combobox', { name: /^화면 위치/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('combobox', { name: /^문구 용도/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '텍스트 행 추가' })).not.toBeInTheDocument()
+    const slot = within(screen.getByRole('region', { name: '슬롯 1' }))
+    fireEvent.change(slot.getByRole('textbox', { name: '문구 1' }), {
+      target: { value: '다음 이야기' },
+    })
     fireEvent.change(screen.getByRole('textbox', { name: '시작 (초)' }), {
       target: { value: '-4' },
     })
@@ -190,4 +214,78 @@ describe('composition template authoring', () => {
     expect(ending.basis).toBe('output-end')
     expect(ending.startMs).toBe(-4000)
   })
+})
+
+it('keeps a populated excess outro slot visible until the owner resolves it', async () => {
+  const user = userEvent.setup()
+  mount({
+    templates: [
+      {
+        ...template,
+        compositionBody: body.replace(
+          '<text id="outro" kind="fixed" role="ending" basis="output-end"/>',
+          '<text id="outro" kind="fixed" role="ending" basis="output-end"><row>첫 줄</row><row>둘째 줄</row><row>남겨 둘 문구</row></text>',
+        ),
+      },
+    ],
+  })
+  await user.click(await screen.findByRole('tab', { name: 'B 가로선 구분' }))
+  expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
+  await user.click(screen.getByRole('button', { name: '아웃트로' }))
+  const third = within(screen.getByRole('region', { name: '슬롯 3' }))
+  expect(third.getByRole('textbox', { name: '문구 1' })).toHaveValue('남겨 둘 문구')
+  expect(third.getByRole('status')).toHaveTextContent('담을 수 없는 줄')
+  const second = within(screen.getByRole('region', { name: '슬롯 2' }))
+  fireEvent.change(second.getByRole('textbox', { name: '문구 1' }), {
+    target: { value: '둘째 줄 남겨 둘 문구' },
+  })
+  fireEvent.change(third.getByRole('textbox', { name: '문구 1' }), { target: { value: '' } })
+  await user.click(screen.getAllByRole('button', { name: '프리셋 형태로 다시 만들기' })[0])
+  const document = parseClipComposition(((await source()) as HTMLTextAreaElement).value)
+  expect(document.design.outro).toBe('b')
+  expect(
+    document.elements
+      .find((e) => e.role === 'ending')!
+      .rows.map((r) => r.parts.map((p) => p.literal).join('')),
+  ).toEqual(['첫 줄', '둘째 줄 남겨 둘 문구'])
+  expect(screen.getByRole('button', { name: '저장' })).toBeEnabled()
+})
+
+it('explicitly rebuilds the restaurant legacy ending without losing its row text', async () => {
+  const user = userEvent.setup(),
+    calls: string[] = []
+  const legacy = readFileSync(
+    resolve(
+      import.meta.dirname,
+      '../../../../../backend/internal/platform/db/testdata/restaurant-v2-before-design-selection.xml',
+    ),
+    'utf8',
+  )
+    .replace(/ styles="[^"]*"| style="[^"]*"/g, '')
+    .replace('version="1"', 'version="1" intro="b" caption="bold" outro="e"')
+  mount({
+    calls,
+    templates: [
+      { ...template, name: '맛집 테스트', compositionBody: legacy, compositionLegacy: true },
+    ],
+  })
+  expect(await screen.findByRole('tab', { name: 'B 위아래 가로선' })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  )
+  expect(screen.getByRole('tab', { name: 'E 점수 강조' })).toHaveAttribute('aria-selected', 'true')
+  expect(screen.getByRole('alert')).toHaveTextContent('인트로·아웃트로 구조')
+  expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
+  await user.click(screen.getByRole('button', { name: '프리셋 형태로 다시 만들기' }))
+  const rebuilt = ((await source()) as HTMLTextAreaElement).value
+  const doc = parseClipComposition(rebuilt),
+    ending = doc.elements.find((e) => e.id === 'closing_verdict')!
+  expect(ending.basis).toBe('output-end')
+  expect(ending.rows[0].kind).toBe('ai')
+  expect(ending.rows[0].parts.map((p) => p.literal).join('')).toContain(
+    '새로운 추천이나 인사말을 덧붙이지 마세요.',
+  )
+  expect(doc.root.children.some((n) => n.attributes.id === ending.id)).toBe(true)
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  expect(calls.some((c) => /Seed|Quote|Start|Generate|CreateVideo|UpdateVideo/.test(c))).toBe(false)
 })

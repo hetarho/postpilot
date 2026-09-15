@@ -10,6 +10,12 @@ import {
   newCompositionNode,
   patchCompositionSource,
 } from '../lib/composition-author'
+import {
+  compositionDesign,
+  compositionSlotCount,
+  isCompositionRegion,
+  rebuildCompositionSkeleton,
+} from '../lib/composition-skeleton'
 import { CompositionInput, CompositionSelect } from './CompositionFields'
 import { CompositionTextControls } from './CompositionTextControls'
 
@@ -28,6 +34,7 @@ export function CompositionBuilder({
   } catch {
     return <Typography variant="body">{t('composition.repairSource')}</Typography>
   }
+  const design = compositionDesign(source)
   const all = compositionOutline(root)
   const fields = all
     .filter((r) => r.node.name === 'field')
@@ -74,6 +81,20 @@ export function CompositionBuilder({
   )
   const renderEditor = (node: CompositionNode, label: string, scope: string, repeat: string) => {
     const name = node.name
+    const region = isCompositionRegion(node)
+    const invalidRegion =
+      region &&
+      (!!scope ||
+        node.attributes.basis !==
+          (node.attributes.role === 'hook' ? 'output-start' : 'output-end') ||
+        'position' in node.attributes ||
+        'align' in node.attributes ||
+        'style' in node.attributes ||
+        node.children.some((n) =>
+          n.name === 'row' ? 'role' in n.attributes : n.name !== '#text' || !!n.text.trim(),
+        ) ||
+        node.children.filter((n) => n.name === 'row').length >
+          compositionSlotCount(node.attributes.role, design))
     const change = (next: CompositionNode) => patch(node, next)
     const attr = (field: string, value: string) =>
       change({ ...node, attributes: { ...node.attributes, [field]: value } })
@@ -165,6 +186,7 @@ export function CompositionBuilder({
           <CompositionTextControls
             node={node}
             inScene={!!scope}
+            design={design}
             bindings={bindings}
             onChange={change}
           />
@@ -172,20 +194,44 @@ export function CompositionBuilder({
         {name === 'group' && addButtons(node, ['field'])}
         {name === 'repeat' && addButtons(node, ['scene'])}
         {name === 'scene' && addButtons(node, ['guide', 'text'], true)}
-        <Button
-          variant="ghost"
-          onClick={() => {
-            patch(node, null)
-            setExpanded('')
-          }}
-        >
-          {t('composition.remove', { label })}
-        </Button>
+        {invalidRegion && (
+          <div>
+            <Typography variant="body" role="status">
+              {t('composition.invalid', { line: node.span.line, element: node.attributes.id })}{' '}
+              {t('composition.errors.invalid_skeleton')}
+            </Typography>
+            <Button
+              variant="secondary"
+              onClick={() =>
+                onChange(
+                  rebuildCompositionSkeleton(
+                    source,
+                    design,
+                    node.attributes.role as 'hook' | 'ending',
+                  ),
+                )
+              }
+            >
+              {t('composition.design.rebuild')}
+            </Button>
+          </div>
+        )}
+        {!region && (
+          <Button
+            variant="ghost"
+            onClick={() => {
+              patch(node, null)
+              setExpanded('')
+            }}
+          >
+            {t('composition.remove', { label })}
+          </Button>
+        )}
       </section>
     )
   }
   const list = (parent: CompositionNode, path: string, scope = '', repeat = '') => {
-    const nodes = parent.children.filter((n) => n.name !== '#text')
+    const nodes = parent.children.filter((n) => n.name !== '#text' && !isCompositionRegion(n))
     return (
       <SortableList
         labels={{ drag: t('editor.drag'), up: t('editor.up'), down: t('editor.down') }}
@@ -265,6 +311,20 @@ export function CompositionBuilder({
         />
       </fieldset>
       {activeEditor}
+      <div className="flex flex-wrap gap-2">
+        {all
+          .filter((row) => isCompositionRegion(row.node))
+          .map((row) => (
+            <Button
+              key={row.key}
+              variant="ghost"
+              aria-expanded={expanded === row.key}
+              onClick={() => setExpanded(expanded === row.key ? '' : row.key)}
+            >
+              {labelFor(row.node, 0)}
+            </Button>
+          ))}
+      </div>
       {outline}
       {addButtons(root, ['field', 'group', 'guide', 'scene', 'repeat', 'text'])}
     </div>

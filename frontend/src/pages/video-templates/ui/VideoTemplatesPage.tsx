@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { useClipTemplates, type ClipTemplate } from '@/entities/clip-template'
+import { compositionDesign, useClipTemplates, type ClipTemplate } from '@/entities/clip-template'
 import { useSession } from '@/entities/session'
 import { DeleteClipTemplateButton } from '@/features/delete-clip-template'
 import {
@@ -109,6 +109,7 @@ function EmptyState() {
  *  without navigating — a row is one target, not a row with a button inside it (§4.1). */
 function TemplateRow({ ownerId, template }: { ownerId: string; template: ClipTemplate }) {
   const { t } = useTranslation('clips')
+  const design = compositionDesign(template.compositionBody ?? '')
   return (
     // `min-h-16` and `py-2`, not the list row's usual `min-h-11`/`py-3`: every row carries the
     // delete, which keeps the 44px floor, so the row is 44 plus its own padding (§4.2).
@@ -124,7 +125,11 @@ function TemplateRow({ ownerId, template }: { ownerId: string; template: ClipTem
         {template.name}
       </Link>
       <Typography variant="meta" as="span" className="min-w-0 flex-1 truncate">
-        {t('directory.fields', { count: template.informationFields.length })}
+        {t('composition.design.metadata', {
+          intro: design.intro.toUpperCase(),
+          outro: design.outro.toUpperCase(),
+        })}{' '}
+        · {t('directory.fields', { count: template.informationFields.length })}
       </Typography>
       <div className="relative ml-auto flex shrink-0 items-center gap-2">
         <Badge tone="neutral">

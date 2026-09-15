@@ -1,10 +1,11 @@
-import { type KeyboardEvent } from 'react'
+import { type KeyboardEvent, type ReactNode } from 'react'
 import { clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 
 export interface SegmentedOption<T extends string> {
   value: T
   label: string
+  preview?: ReactNode
 }
 
 interface SegmentedControlProps<T extends string> {
@@ -64,15 +65,20 @@ export function SegmentedControl<T extends string>({
         className,
       )}
     >
-      {options.map((option) => (
+      {options.map((option, index) => (
         <button
           key={option.value}
           type="button"
           role="tab"
           aria-selected={option.value === value}
+          aria-label={option.preview ? option.label : undefined}
           aria-controls={controls}
           disabled={disabled}
-          tabIndex={option.value === value ? 0 : -1}
+          tabIndex={
+            option.value === value || (!options.some((o) => o.value === value) && index === 0)
+              ? 0
+              : -1
+          }
           onClick={() => onChange(option.value)}
           // No `focus-visible:ring-*` here: the global `:focus-visible` outline in
           // app/styles/index.css is the app's one focus indicator (§9), and a second ring stacked
@@ -84,6 +90,7 @@ export function SegmentedControl<T extends string>({
               : 'text-content-secondary hover:bg-row-bg-hover active:bg-row-bg-active',
           )}
         >
+          {option.preview}
           {option.label}
         </button>
       ))}

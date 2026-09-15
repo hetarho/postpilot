@@ -9,7 +9,7 @@ export const CLIP_COMPOSITION_EXAMPLE = `<clip version="1" intro="b" caption="bo
   </group>
   <guide>선택한 영상 속 장면과 각 메뉴의 정보를 연결하세요. 없는 장면이나 숫자는 만들지 마세요.</guide>
   <text id="disclosure" kind="fixed" role="badge" position="header" basis="whole">직접 구매한 메뉴입니다</text>
-  <text id="opening" kind="ai" role="hook" basis="output-start"><row>관찰한 음식의 특징을 9자 이내로 설명하세요.</row></text>
+  <text id="opening" kind="ai" role="hook" basis="output-start"><row kind="ai">관찰한 음식의 특징을 9자 이내로 설명하세요.</row><row kind="fixed"><value field="place"/></row></text>
   <repeat for="menu">
     <scene id="dish" scope="item">
       <guide>이 메뉴가 실제로 보이는 장면을 사용하세요.</guide>
@@ -33,17 +33,17 @@ guide = invisible instructions, inside clip or scene
 scene(id, scope="scene|item|context") children: guide, text
 repeat(for="scenes|GROUP_ID") children: scene; group repetition requires scope=item; no nested repeat
 text(id, kind="fixed|ai", role="caption|info|badge|hook|ending", position="auto|top|upper_mid|lower_mid|bottom|header", align="left|center|right", basis="whole|output-start|output-end|cut", start, end)
-Exactly one hook and one ending must be direct clip children. Hook basis=output-start, ending basis=output-end; omit position and align. Hook/ending contain only rows, without role. Omitted intervals default to 0–2.5 seconds and -3–0 seconds respectively. At most 2 intro rows, 2 outro-B rows or 3 outro-E rows. Empty slots keep their positions; overflow is invalid_skeleton. All three root design attributes are required.
+Exactly one hook and one ending must be direct clip children. Hook basis=output-start, ending basis=output-end; omit position and align. Hook/ending contain only rows, without role. Omitted intervals default to 0–2.5 seconds and -3–0 seconds respectively. At most 2 intro rows, 2 outro-B rows or 3 outro-E rows. Empty slots keep their positions; overflow is invalid_skeleton. All three root design attributes are required. Only slot text/authorship and the content region are authorable; never change slot order, count, type, position or decoration.
 text content: exact literal + <value field="FIELD_ID"/> or <value field="GROUP_ID.FIELD_ID"/>
-hook/ending rows: <row kind="fixed|ai">literal + value</row>; kind defaults to the parent. Fixed and answer-bound values are exact. AI rows are separate one-line slots. Character limits: intro A 8/8, intro B 9/9, outro B 9/9, outro E 16/8/16. Never add manual newlines or an extra row.
+hook/ending rows: <row kind="fixed|ai">literal + value</row>; kind defaults to the parent. Fixed and answer-bound values are exact. AI rows are separate one-line slots. Character limits: intro A 8/22, intro B 9/22, outro B 9/14, outro E 22/6/18. Never add manual newlines or an extra row.
 info rows: <row role="label|caption">literal + value</row>.
 whole: omit start/end. output-start: 0 <= start < end. output-end: start < end <= 0. cut: only inside scene; omit both endpoints for automatic timing or use 0 <= start < end.
 Seconds have up to 3 decimal places. Explicit intervals must fit the output/cut, without clamping. Header is only for info/badge. Defaults: position=auto, align=center (caption/info/badge only).
 IDs: 1–64 ASCII letters/digits/_/-, first letter or digit. Group field IDs are qualified; other IDs are unique.
 XML escaping: &amp; &lt; &gt; &quot; &apos; and valid numeric entities. No HTML, scripts, expressions, CSS, DTD, processing instructions, remote references, unknown tags or attributes.`
 
-export function clipCompositionGuide() {
-  return i18next.t('composition.guide', {
+export function clipCompositionGuide(currentSource?: string) {
+  const guide = i18next.t('composition.guide', {
     ns: 'clips',
     grammar: GRAMMAR,
     example: CLIP_COMPOSITION_EXAMPLE,
@@ -52,4 +52,11 @@ export function clipCompositionGuide() {
       .join(', '),
     interpolation: { escapeValue: false },
   })
+  return currentSource
+    ? guide +
+        '\n\n' +
+        i18next.t('composition.design.selectedSource', { ns: 'clips' }) +
+        '\n' +
+        currentSource
+    : guide
 }

@@ -1,7 +1,13 @@
+import { CLIP_TIMING } from '@/shared/config'
 import { useTranslation } from 'react-i18next'
 import { Button, Checkbox, Typography } from '@/shared/ui'
 import type { CompositionNode } from '../model/composition'
 import { compositionLiteral, compositionNode } from '../lib/composition-author'
+import {
+  compositionSlotCount,
+  regionRows,
+  type CompositionDesign,
+} from '../lib/composition-skeleton'
 import { CompositionInput, CompositionSelect } from './CompositionFields'
 
 export type CompositionBindingOption = { value: string; label: string }
@@ -63,11 +69,13 @@ function Parts({
 export function CompositionTextControls({
   node,
   inScene,
+  design,
   bindings,
   onChange,
 }: {
   node: CompositionNode
   inScene: boolean
+  design: CompositionDesign
   bindings: CompositionBindingOption[]
   onChange: (node: CompositionNode) => void
 }) {
@@ -81,7 +89,7 @@ export function CompositionTextControls({
       label: t(`composition.${key}.${value}`, { defaultValue: t('composition.auto') }),
     }))
   const rows = node.children.filter((c) => c.name === 'row')
-  const card = ['hook', 'ending', 'info'].includes(a.role)
+  const card = a.role === 'info'
   const timing =
     a.basis === 'output-start' ||
     a.basis === 'output-end' ||
@@ -100,6 +108,62 @@ export function CompositionTextControls({
     }
     onChange({ ...node, attributes: next })
   }
+  if (a.role === 'hook' || a.role === 'ending') {
+    const start = a.start ?? (a.role === 'hook' ? '0' : String(-CLIP_TIMING.outro_default_s))
+    const end = a.end ?? (a.role === 'hook' ? String(CLIP_TIMING.intro_default_s) : '0')
+    const interval = (key: string, value: string) =>
+      onChange({ ...node, attributes: { ...a, start, end, [key]: value } })
+    const count = compositionSlotCount(a.role, design)
+    const slots = regionRows([node], count)
+    const patchRow = (i: number, row: CompositionNode) =>
+      onChange({ ...node, children: slots.map((r, j) => (i === j ? row : r)) })
+    return (
+      <div className="space-y-4">
+        <Typography variant="body">{t('composition.design.slotsHelp')}</Typography>
+        <div className="grid min-w-0 gap-3 sm:grid-cols-2">
+          <CompositionInput
+            label={t('composition.start')}
+            value={start}
+            numeric
+            onChange={(v) => interval('start', v)}
+          />
+          <CompositionInput
+            label={t('composition.end')}
+            value={end}
+            numeric
+            onChange={(v) => interval('end', v)}
+          />
+        </div>
+        {slots.map((row, i) => (
+          <section
+            key={i}
+            className="space-y-3"
+            aria-label={t('composition.design.slot', { n: i + 1 })}
+          >
+            <Typography variant="fieldTitle">
+              {t('composition.design.slot', { n: i + 1 })}
+            </Typography>
+            {i >= count && (
+              <Typography variant="body" role="status">
+                {t('composition.design.excess')}
+              </Typography>
+            )}
+            <CompositionSelect
+              label={t('composition.design.slotKind', { n: i + 1 })}
+              value={row.attributes.kind}
+              options={options('kind', ['fixed', 'ai'])}
+              onChange={(kind) => patchRow(i, { ...row, attributes: { kind } })}
+            />
+            <Parts
+              nodes={row.children}
+              bindings={bindings}
+              onChange={(children) => patchRow(i, { ...row, children })}
+            />
+          </section>
+        ))}
+      </div>
+    )
+  }
   return (
     <div className="space-y-4">
       <CompositionSelect
@@ -114,7 +178,7 @@ export function CompositionTextControls({
       <CompositionSelect
         label={t('composition.roleLabel')}
         value={a.role}
-        options={options('role', ['caption', 'info', 'badge', 'hook', 'ending'])}
+        options={options('role', ['caption', 'info', 'badge'])}
         onChange={(v) =>
           onChange({
             ...node,
@@ -190,15 +254,7 @@ export function CompositionTextControls({
             <CompositionSelect
               label={t('composition.rowRole', { n: i + 1 })}
               value={row.attributes.role}
-              options={options('row', [
-                'hook',
-                'title',
-                'mark',
-                'body',
-                'caption',
-                'label',
-                'badge',
-              ])}
+              options={options('row', ['label', 'caption'])}
               onChange={(role) =>
                 onChange({
                   ...node,
@@ -241,9 +297,9 @@ export function CompositionTextControls({
                 ...(rows.length
                   ? rows
                   : node.children.length
-                    ? [compositionNode('row', { role: 'title' }, node.children)]
+                    ? [compositionNode('row', { role: 'label' }, node.children)]
                     : []),
-                compositionNode('row', { role: 'body' }, [compositionLiteral('')]),
+                compositionNode('row', { role: 'caption' }, [compositionLiteral('')]),
               ],
             })
           }

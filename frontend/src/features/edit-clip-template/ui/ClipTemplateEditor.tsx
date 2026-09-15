@@ -6,7 +6,11 @@ import {
   CompositionBuilder,
   CompositionPreview,
   CompositionProblem,
-  EMPTY_CLIP_COMPOSITION,
+  CompositionDesignStep,
+  compositionSkeleton,
+  compositionDesign,
+  rebuildCompositionSkeleton,
+  type CompositionDesign,
   clipCompositionGuide,
   emptyClipRecipe,
   normalizeRecipe,
@@ -40,7 +44,7 @@ function authoredRecipe(stored?: ClipTemplate): ClipRecipe {
   const recipe = stored ? recipeOf(stored) : emptyClipRecipe()
   return {
     ...recipe,
-    compositionBody: stored?.compositionBody ?? (stored ? '' : EMPTY_CLIP_COMPOSITION),
+    compositionBody: stored?.compositionBody ?? '',
     compositionLegacy: false,
   }
 }
@@ -58,6 +62,9 @@ export function ClipTemplateEditor({
     JSON.stringify(normalizeRecipe(authoredRecipe(stored))),
   )
   const [mode, setMode] = useState<'builder' | 'source'>('builder')
+  const [selection, setSelection] = useState<Partial<CompositionDesign>>(() =>
+    stored ? compositionDesign(stored.compositionBody ?? '') : {},
+  )
   const [saved, setSaved] = useState(false)
   const [copyStatus, setCopyStatus] = useState('')
   const [guide, setGuide] = useState<string | null>(null)
@@ -76,11 +83,17 @@ export function ClipTemplateEditor({
     withResolver: true,
   })
   const body = draft.compositionBody ?? ''
+  const designReady = !!selection.intro && !!selection.caption && !!selection.outro
+  const design = body ? compositionDesign(body) : selection
   let document: ClipComposition | undefined, problem: CompositionProblem | undefined
   try {
     document = parseClipComposition(body)
   } catch (error) {
-    if (error instanceof CompositionProblem) problem = error
+    if (error instanceof CompositionProblem)
+      problem =
+        stored?.compositionLegacy && error.reason === 'invalid_design'
+          ? new CompositionProblem(error.elementId, error.line, 'invalid_skeleton')
+          : error
     else throw error
   }
   const change = (patch: Partial<ClipRecipe>) => {
@@ -88,7 +101,7 @@ export function ClipTemplateEditor({
     setDraft((current) => ({ ...current, ...patch }))
   }
   const save = async () => {
-    if (!dirty || !errors.valid || pending || submitting.current) return
+    if (!designReady || !dirty || !errors.valid || pending || submitting.current) return
     submitting.current = true
     try {
       const result = await saveMutation.mutateAsync({ id: stored?.id, recipe: draft })
@@ -112,7 +125,7 @@ export function ClipTemplateEditor({
   }
   const copy = async (format: boolean) => {
     setSaved(false)
-    const text = format ? clipCompositionGuide() : body
+    const text = format ? clipCompositionGuide(body) : body
     const result = await copyText(text)
     setCopyStatus(t(result.copied ? 'composition.copied' : 'composition.copyManually'))
     if (!result.copied) {
@@ -167,65 +180,106 @@ export function ClipTemplateEditor({
                 {t('composition.unavailable')}
               </Typography>
             )}
-          <SegmentedControl
-            value={mode}
-            onChange={setMode}
-            ariaLabel={t('composition.mode')}
-            controls="clip-composition-panel"
-            options={[
-              { value: 'builder', label: t('composition.builder') },
-              { value: 'source', label: t('composition.source') },
-            ]}
+          <CompositionDesignStep
+            value={design}
+            onChange={(next) => {
+              setSelection(next)
+              if (next.intro && next.caption && next.outro) {
+                const chosen = next as CompositionDesign
+                const role =
+                  chosen.intro !== design.intro
+                    ? 'hook'
+                    : chosen.outro !== design.outro
+                      ? 'ending'
+                      : undefined
+                if (body && !role) return
+                try {
+                  change({
+                    compositionBody: body
+                      ? rebuildCompositionSkeleton(body, chosen, role)
+                      : compositionSkeleton(chosen.intro, chosen.outro),
+                  })
+                } catch (error) {
+                  if (!(error instanceof CompositionProblem)) throw error
+                  setCopyStatus(t('composition.repairSource'))
+                }
+              }
+            }}
           />
-          <div className="flex flex-wrap gap-2">
-            <Button variant="ghost" onClick={() => void copy(false)}>
-              {t('composition.copySource')}
-            </Button>
-            <Button variant="ghost" onClick={() => void copy(true)}>
-              {t('composition.copyGuide')}
-            </Button>
-          </div>
-          {problem && (
-            <div>
-              <FieldMessage>
-                {t('composition.invalid', {
-                  line: problem.line,
-                  element: problem.elementId || 'clip',
-                })}{' '}
-                {t(`composition.errors.${problem.reason}`, {
-                  element: problem.elementId,
-                  defaultValue: t('composition.repairSource'),
-                })}
-              </FieldMessage>
-            </div>
-          )}
-          <div
-            id="clip-composition-panel"
-            role="tabpanel"
-            aria-label={t(mode === 'source' ? 'composition.source' : 'composition.builder')}
-            className="min-w-0"
-          >
-            {mode === 'source' ? (
-              <>
-                <FieldLabel htmlFor="clip-composition-source">{t('composition.source')}</FieldLabel>
-                <Textarea
-                  ref={sourceField}
-                  id="clip-composition-source"
-                  value={body}
-                  onChange={(e) => change({ compositionBody: e.target.value })}
-                  rows={16}
-                  spellCheck={false}
-                  aria-invalid={!!problem}
-                />
-              </>
-            ) : (
-              <CompositionBuilder
-                source={body}
-                onChange={(compositionBody) => change({ compositionBody })}
+          {designReady && (
+            <>
+              <SegmentedControl
+                value={mode}
+                onChange={setMode}
+                ariaLabel={t('composition.mode')}
+                controls="clip-composition-panel"
+                options={[
+                  { value: 'builder', label: t('composition.builder') },
+                  { value: 'source', label: t('composition.source') },
+                ]}
               />
-            )}
-          </div>
-          {document && <CompositionPreview document={document} />}
+              <div className="flex flex-wrap gap-2">
+                <Button variant="ghost" onClick={() => void copy(false)}>
+                  {t('composition.copySource')}
+                </Button>
+                <Button variant="ghost" onClick={() => void copy(true)}>
+                  {t('composition.copyGuide')}
+                </Button>
+              </div>
+              {problem && (
+                <div>
+                  <FieldMessage>
+                    {t('composition.invalid', {
+                      line: problem.line,
+                      element: problem.elementId || 'clip',
+                    })}{' '}
+                    {t(`composition.errors.${problem.reason}`, {
+                      element: problem.elementId,
+                      defaultValue: t('composition.repairSource'),
+                    })}
+                  </FieldMessage>
+                  {(problem.reason === 'invalid_skeleton' ||
+                    problem.reason === 'invalid_design') && (
+                    <Button
+                      variant="secondary"
+                      onClick={() => change({ compositionBody: rebuildCompositionSkeleton(body) })}
+                    >
+                      {t('composition.design.rebuild')}
+                    </Button>
+                  )}
+                </div>
+              )}
+              <div
+                id="clip-composition-panel"
+                role="tabpanel"
+                aria-label={t(mode === 'source' ? 'composition.source' : 'composition.builder')}
+                className="min-w-0"
+              >
+                {mode === 'source' ? (
+                  <>
+                    <FieldLabel htmlFor="clip-composition-source">
+                      {t('composition.source')}
+                    </FieldLabel>
+                    <Textarea
+                      ref={sourceField}
+                      id="clip-composition-source"
+                      value={body}
+                      onChange={(e) => change({ compositionBody: e.target.value })}
+                      rows={16}
+                      spellCheck={false}
+                      aria-invalid={!!problem}
+                    />
+                  </>
+                ) : (
+                  <CompositionBuilder
+                    source={body}
+                    onChange={(compositionBody) => change({ compositionBody })}
+                  />
+                )}
+              </div>
+              {document && <CompositionPreview document={document} />}
+            </>
+          )}
         </fieldset>
       </form>
       <ActionBar className="mt-auto">
@@ -241,7 +295,7 @@ export function ClipTemplateEditor({
             variant="cta"
             className="w-full sm:w-auto"
             pending={pending}
-            disabled={!dirty || !errors.valid || pending}
+            disabled={!designReady || !dirty || !errors.valid || pending}
           >
             {t('editor.save')}
           </Button>
