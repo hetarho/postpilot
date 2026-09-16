@@ -186,7 +186,7 @@ func (r *Rendering) encodeProfile(audio bool, crf int, pixelFormat string) []str
 		// Delivered video still uses the configured CRF and veryfast preset.
 		preset = "ultrafast"
 	}
-	a := []string{"-map", "[v]", "-c:v", "libx264", "-preset", preset, "-crf", strconv.Itoa(crf), "-threads", strconv.Itoa(r.media.cfg.Threads), "-r", strconv.Itoa(r.cfg.FPS), "-fps_mode", "cfr", "-pix_fmt", pixelFormat}
+	a := []string{"-map", "[v]", "-c:v", "libx264", "-preset", preset, "-crf", strconv.Itoa(crf), "-threads", strconv.Itoa(r.media.cfg.EncodeThreads), "-r", strconv.Itoa(r.cfg.FPS), "-fps_mode", "cfr", "-pix_fmt", pixelFormat}
 	if pixelFormat == "yuv420p" {
 		a = append(a, "-profile:v", strings.ToLower(h264Profile))
 	}
@@ -198,7 +198,7 @@ func (r *Rendering) encodeProfile(audio bool, crf int, pixelFormat string) []str
 	return append(a, "-sn", "-dn", "-map_metadata", "-1", "-map_chapters", "-1", "-metadata:s:v:0", "rotate=0", "-movflags", "+faststart", "-f", "mp4")
 }
 func (r *Rendering) baseArgs() []string {
-	return []string{"-hide_banner", "-nostdin", "-v", "error", "-xerror", "-n", "-filter_threads", strconv.Itoa(r.media.cfg.Threads), "-filter_complex_threads", strconv.Itoa(r.media.cfg.Threads)}
+	return []string{"-hide_banner", "-nostdin", "-v", "error", "-xerror", "-n", "-filter_threads", strconv.Itoa(r.media.cfg.EncodeThreads), "-filter_complex_threads", strconv.Itoa(r.media.cfg.EncodeThreads)}
 }
 
 // layers is what a cut overlays: fixed disclosure/information and a plate per caption.
@@ -225,13 +225,13 @@ func (r *Rendering) renderCut(ctx context.Context, ws clip.MediaWorkspace, canva
 	if err := r.media.sourcePath(ws, source.Path); err != nil {
 		return err
 	}
-	args := append(r.baseArgs(), "-threads", strconv.Itoa(r.media.cfg.Threads), "-protocol_whitelist", "file,pipe", "-ss", seconds(cut.StartMS), "-i", source.Path)
+	args := append(r.baseArgs(), "-threads", strconv.Itoa(r.media.cfg.DecodeThreads), "-protocol_whitelist", "file,pipe", "-ss", seconds(cut.StartMS), "-i", source.Path)
 	for _, layer := range l.inputs() {
 		// Decode each PNG once. The fixed overlay repeats its last frame; the
 		// animated layers loop one cached frame for exactly this cut's duration.
 		// Repeated image decoding both buffers full canvases and can strand the
 		// input scheduler after an overlay stops consuming its infinite input.
-		args = append(args, "-threads", strconv.Itoa(r.media.cfg.Threads), "-framerate", strconv.Itoa(r.cfg.FPS), "-i", layer)
+		args = append(args, "-threads", strconv.Itoa(r.media.cfg.DecodeThreads), "-framerate", strconv.Itoa(r.cfg.FPS), "-i", layer)
 	}
 	args = append(args, "-filter_complex", cutGraph(r.cfg, canvas, cut, source.Info, frames, l, audio, sourceAudio))
 	args = append(args, r.encodeArgs(audio)...)

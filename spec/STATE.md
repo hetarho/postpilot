@@ -47,7 +47,6 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
-| T192 | Decoding uses the cores the encode cannot | CLIP | T191 | todo |
 | T193 | The cuts become one timeline in a single pass | CLIP | T191 | todo |
 | T194 | The overlay and the delivery encode become one | CLIP | T191 | todo |
 | T195 | A plate's sample frames come from one decode | CLIP | T191 | todo |
@@ -60,6 +59,9 @@
 - implement-task T197, then T198 — r29's rate work, held behind T191 because it moves delivered frames on purpose.
 - T177 is blocked on the owner's viewing answers; T008 stays owner-dependent.
 ## log
+- 260916 T192 done; decoding takes 2 threads while every encoder and the filters stay at 1, the delivered clip still matching T191's baseline and the analysis copies identical at either decoder count
+- 260916 update-ssot CLIP start
+- 260916 T192 claimed (perf)
 - 260916 T191 done; one fixed plan renders byte-identically twice, and its digest, player-visible properties and one frame per second are pinned as the baseline T192-T195 must hold (docker target identity-smoke, 112 s)
 - 260916 T191 claimed (perf)
 - 260916 T190 done; every media command reports its operation, outcome and elapsed time on success too, labelled with the stage it ran in, through the sink the render substages already used
@@ -77,6 +79,3 @@
 - 260916 T187 claimed (grp)
 - 260916 T186 done; a clip project stores one bounded instruction beside its answers and freezes it into every attempt (docker came back, so proto/sqlc were regenerated properly)
 - 260916 T186 claimed (grp)
-- 260916 T185 done; the writer is told which sections this project's answers admit and how many instances each has, the cut ceiling unchanged (owner's choice — update-ssot candidate on CLIP-103)
-- 260916 T185 claimed (grp)
-- 260916 T184 done; a validated plan under the 15 s floor fails as CLIP_INSUFFICIENT_FOOTAGE with its own plan_length_floor check, never as an unreadable response

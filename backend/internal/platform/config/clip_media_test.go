@@ -15,7 +15,7 @@ func TestClipMediaConfiguration(t *testing.T) {
 	if r.FadeMS != 200 || r.FPS != 30 || r.MinDurationMS != 15000 || r.MaxDurationMS != 90000 || r.ResvgPath != "/usr/local/bin/resvg" || r.FontPath != "/usr/share/postpilot-fonts/pretendard/PretendardVariable.ttf" {
 		t.Fatalf("%+v", r)
 	}
-	if m.ChunkDurationMS != 60000 || m.LongEdge != 720 || m.FPS != 15 || m.Threads != 1 || m.AudioBitrate != 64000 || m.DurationToleranceMS != 1000 || m.Sources.MaxCount != 20 || m.Sources.MaxDurationMS != 1800000 || m.OperationTimeout != 15*time.Minute {
+	if m.ChunkDurationMS != 60000 || m.LongEdge != 720 || m.FPS != 15 || m.DecodeThreads != 2 || m.EncodeThreads != 1 || m.AudioBitrate != 64000 || m.DurationToleranceMS != 1000 || m.Sources.MaxCount != 20 || m.Sources.MaxDurationMS != 1800000 || m.OperationTimeout != 15*time.Minute {
 		t.Fatalf("%+v", m)
 	}
 	if WorkerConcurrency != 1 || m.AnalysisMaxBytes != 8<<20 || m.PreparedMaxBytes != 512<<20 || m.WorkspaceMaxBytes != 8<<30 || m.VideoMaxRate != 900000 || m.VideoBufferSize != 1800000 || m.RetryMaxRate != 650000 || m.RetryBufferSize != 1300000 || m.DiskCheckInterval != 100*time.Millisecond {

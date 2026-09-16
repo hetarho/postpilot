@@ -71,7 +71,7 @@ func (r *Rendering) renderOverlayWindow(ctx context.Context, ws clip.MediaWorksp
 	}
 	args = r.inputArgs(args, input)
 	for _, index := range window.Layers {
-		args = append(args, "-threads", strconv.Itoa(r.media.cfg.Threads), "-framerate", strconv.Itoa(r.cfg.FPS), "-i", plates[index])
+		args = append(args, "-threads", strconv.Itoa(r.media.cfg.DecodeThreads), "-framerate", strconv.Itoa(r.cfg.FPS), "-i", plates[index])
 	}
 	args = append(args, "-filter_complex", declaredOverlayGraph(r.cfg, window, visuals, firstPass))
 	args = append(args, r.encodeProfile(false, 0, "yuv444p")...)

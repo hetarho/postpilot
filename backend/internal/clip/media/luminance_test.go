@@ -166,8 +166,11 @@ func TestSamplerTakesThreeFramesThroughTheRenderChain(t *testing.T) {
 	a := newAdapter(t, &fakeRunner{run: func(_ context.Context, c Command) ([]byte, error) {
 		input := slices.Index(c.Args, "-i")
 		before := " " + strings.Join(c.Args[:input], " ") + " "
-		if !strings.Contains(before, " -threads 1 ") || !strings.Contains(before, " -filter_threads 1 ") {
-			t.Fatal("sampler uses unbounded decoder/filter threads", c.Args)
+		// The decoder may use the cores the encode cannot; filter threads are
+		// untouched by that split and the PNG is still written single-threaded.
+		after := " " + strings.Join(c.Args[input:], " ") + " "
+		if !strings.Contains(before, " -threads 2 ") || !strings.Contains(before, " -filter_threads 1 ") || !strings.Contains(after, " -threads 1 ") {
+			t.Fatal("sampler uses the wrong decoder/filter/encoder threads", c.Args)
 		}
 		for i, arg := range c.Args {
 			switch arg {

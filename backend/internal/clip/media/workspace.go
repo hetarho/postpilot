@@ -48,7 +48,7 @@ func New(cfg clip.MediaConfig, runner Runner) (*Adapter, error) {
 	if home != "" && filepath.Clean(home) == cfg.WorkRoot {
 		return nil, errors.New("clip work root must not be a home directory")
 	}
-	if cfg.StaleAge <= 0 || cfg.OperationTimeout <= 0 || cfg.WaitDelay <= 0 || cfg.ChunkDurationMS <= 0 || cfg.ChunkDurationMS > 60000 || cfg.LongEdge <= 0 || cfg.LongEdge > 720 || cfg.FPS != 15 || cfg.Threads != 1 || cfg.StdoutLimit <= 0 || cfg.StderrLimit <= 0 || cfg.MaxStreams <= 0 || cfg.MaxDimension <= 0 || cfg.FFmpegPath == "" || cfg.FFprobePath == "" {
+	if cfg.StaleAge <= 0 || cfg.OperationTimeout <= 0 || cfg.WaitDelay <= 0 || cfg.ChunkDurationMS <= 0 || cfg.ChunkDurationMS > 60000 || cfg.LongEdge <= 0 || cfg.LongEdge > 720 || cfg.FPS != 15 || cfg.EncodeThreads != 1 || cfg.DecodeThreads < 1 || cfg.DecodeThreads > 8 || cfg.StdoutLimit <= 0 || cfg.StderrLimit <= 0 || cfg.MaxStreams <= 0 || cfg.MaxDimension <= 0 || cfg.FFmpegPath == "" || cfg.FFprobePath == "" {
 		return nil, errors.New("invalid clip media configuration")
 	}
 	if cfg.AnalysisMaxBytes <= 0 || cfg.AnalysisMaxBytes > 8<<20 || cfg.PreparedMaxBytes < cfg.AnalysisMaxBytes || cfg.PreparedMaxBytes > 512<<20 || cfg.WorkspaceMaxBytes < cfg.PreparedMaxBytes || cfg.WorkspaceMaxBytes > 8<<30 || cfg.VideoMaxRate <= 0 || cfg.VideoBufferSize <= 0 || cfg.RetryMaxRate <= 0 || cfg.RetryMaxRate >= cfg.VideoMaxRate || cfg.RetryBufferSize <= 0 || cfg.DiskCheckInterval <= 0 {

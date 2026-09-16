@@ -23,7 +23,7 @@ type videoBranch struct {
 }
 
 func (r *Rendering) inputArgs(args []string, path string) []string {
-	return append(args, "-threads", strconv.Itoa(r.media.cfg.Threads), "-protocol_whitelist", "file,pipe", "-i", path)
+	return append(args, "-threads", strconv.Itoa(r.media.cfg.DecodeThreads), "-protocol_whitelist", "file,pipe", "-i", path)
 }
 
 // Decode at most two full-resolution video inputs per process. A linear xfade

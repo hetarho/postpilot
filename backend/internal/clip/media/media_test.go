@@ -411,3 +411,53 @@ func TestConstantCadenceRequiresCompleteDecodedIntervalEvidence(t *testing.T) {
 		}
 	}
 }
+
+// The decode/encode split, asserted where each stage builds its own arguments:
+// an input decodes on the decoder's count while every encode and the filters
+// stay at the encoder's, so decode-bound work speeds up and no delivered or
+// analysed byte moves (CLIP-124, CLIP-125).
+func TestDecodingUsesTheCoresTheEncodeCannot(t *testing.T) {
+	r := &fakeRunner{run: func(_ context.Context, c Command) ([]byte, error) {
+		if strings.HasSuffix(c.Binary, "ffprobe") {
+			return []byte(probeJSON), nil
+		}
+		return []byte("frame=1830\nout_time_us=61000000\nprogress=end\n[Parsed_vfrdet_0 @ 0xff] VFR:0.000000 (0/1829)\n"), nil
+	}}
+	a := newAdapter(t, r)
+	if a.cfg.DecodeThreads <= a.cfg.EncodeThreads || a.cfg.EncodeThreads != 1 {
+		t.Fatalf("decode %d encode %d", a.cfg.DecodeThreads, a.cfg.EncodeThreads)
+	}
+	if err := a.WithWorkspace(t.Context(), "threads", func(ws clip.MediaWorkspace) error {
+		_, err := a.Probe(t.Context(), ws, sourceFile(t, ws))
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	// The container read carries no thread option at all; the decode pass after it
+	// is the one that has to use them.
+	assertThreadRoles(t, a, r.calls[len(r.calls)-1].Args)
+	source := clip.MediaSource{Path: "/work/source.mp4", SourceID: "one", Fingerprint: "hash", Info: clip.MediaInfo{DurationMS: 61000, Width: 1280, Height: 720, HasAudio: true}}
+	assertThreadRoles(t, a, a.chunkArgs(source, clip.AnalysisChunk{Path: "/work/proxy-one-0.mp4", DurationMS: 60000}, a.cfg.VideoMaxRate, a.cfg.VideoBufferSize))
+}
+
+func assertThreadRoles(t *testing.T, a *Adapter, args []string) {
+	t.Helper()
+	first := slices.Index(args, "-i")
+	if first < 0 {
+		t.Fatalf("no input to decode: %v", args)
+	}
+	before, after := " "+strings.Join(args[:first], " ")+" ", " "+strings.Join(args[first:], " ")+" "
+	decode, encode := fmt.Sprintf(" -threads %d ", a.cfg.DecodeThreads), fmt.Sprintf(" -threads %d ", a.cfg.EncodeThreads)
+	if !strings.Contains(before, decode) {
+		t.Fatalf("the input does not decode on %d threads: %v", a.cfg.DecodeThreads, args)
+	}
+	if strings.Contains(after, decode) {
+		t.Fatalf("an output carries the decoder's thread count: %v", args)
+	}
+	if strings.Contains(after, " -c:v ") && !strings.Contains(after, encode) {
+		t.Fatalf("the encoder is not pinned to %d thread: %v", a.cfg.EncodeThreads, args)
+	}
+	if strings.Contains(before, " -filter_threads ") && !strings.Contains(before, fmt.Sprintf(" -filter_threads %d ", a.cfg.EncodeThreads)) {
+		t.Fatalf("filter threads moved: %v", args)
+	}
+}

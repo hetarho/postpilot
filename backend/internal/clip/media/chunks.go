@@ -112,7 +112,7 @@ func (a *Adapter) chunkArgs(source clip.MediaSource, chunk clip.AnalysisChunk, m
 	scale := math.Min(1, float64(a.cfg.LongEdge)/float64(max(source.Info.Width, source.Info.Height)))
 	w, h := max(2, int(float64(source.Info.Width)*scale)/2*2), max(2, int(float64(source.Info.Height)*scale)/2*2)
 	filter := fmt.Sprintf("scale=%d:%d,setsar=1,fps=%d,format=yuv420p", w, h, a.cfg.FPS)
-	args := []string{"-hide_banner", "-nostdin", "-v", "error", "-xerror", "-n", "-filter_threads", "1", "-filter_complex_threads", "1", "-threads", "1", "-protocol_whitelist", "file,pipe", "-ss", seconds(chunk.OffsetMS), "-i", source.Path, "-t", seconds(chunk.DurationMS), "-map", "0:V:0"}
+	args := []string{"-hide_banner", "-nostdin", "-v", "error", "-xerror", "-n", "-filter_threads", strconv.Itoa(a.cfg.EncodeThreads), "-filter_complex_threads", strconv.Itoa(a.cfg.EncodeThreads), "-threads", strconv.Itoa(a.cfg.DecodeThreads), "-protocol_whitelist", "file,pipe", "-ss", seconds(chunk.OffsetMS), "-i", source.Path, "-t", seconds(chunk.DurationMS), "-map", "0:V:0"}
 	if source.Info.HasAudio {
 		// Trim exact samples before AAC packetization. Output -t alone can leave
 		// an extra partial AAC packet in the MP4 (60.011 s for a 60 s interval).
@@ -122,7 +122,7 @@ func (a *Adapter) chunkArgs(source clip.MediaSource, chunk clip.AnalysisChunk, m
 	} else {
 		args = append(args, "-an")
 	}
-	return append(args, "-sn", "-dn", "-vf", filter, "-c:v", "libx264", "-preset", "veryfast", "-crf", strconv.Itoa(a.cfg.CRF), "-maxrate", strconv.Itoa(maxRate), "-bufsize", strconv.Itoa(buffer), "-threads", "1", "-fps_mode", "cfr", "-map_metadata", "-1", "-map_chapters", "-1", "-metadata:s:v:0", "rotate=0", "-movflags", "+faststart", "-fs", strconv.FormatInt(a.cfg.AnalysisMaxBytes, 10), "-f", "mp4", chunk.Path)
+	return append(args, "-sn", "-dn", "-vf", filter, "-c:v", "libx264", "-preset", "veryfast", "-crf", strconv.Itoa(a.cfg.CRF), "-maxrate", strconv.Itoa(maxRate), "-bufsize", strconv.Itoa(buffer), "-threads", strconv.Itoa(a.cfg.EncodeThreads), "-fps_mode", "cfr", "-map_metadata", "-1", "-map_chapters", "-1", "-metadata:s:v:0", "rotate=0", "-movflags", "+faststart", "-fs", strconv.FormatInt(a.cfg.AnalysisMaxBytes, 10), "-f", "mp4", chunk.Path)
 }
 
 func (a *Adapter) validChunk(source clip.MediaSource, chunk clip.AnalysisChunk) bool {

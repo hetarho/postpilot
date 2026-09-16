@@ -70,15 +70,19 @@ type AnalysisChunk struct {
 	Info                        MediaInfo
 }
 type MediaConfig struct {
-	WorkRoot, FFmpegPath, FFprobePath                                     string
-	StaleAge, OperationTimeout, WaitDelay                                 time.Duration
-	ChunkDurationMS, LongEdge, FPS, Threads, CRF, AudioRate, AudioBitrate int
-	StdoutLimit, StderrLimit, MaxStreams, MaxDimension                    int
-	DurationToleranceMS                                                   int
-	AnalysisMaxBytes, PreparedMaxBytes, WorkspaceMaxBytes                 int64
-	VideoMaxRate, VideoBufferSize, RetryMaxRate, RetryBufferSize          int
-	DiskCheckInterval                                                     time.Duration
-	Sources                                                               SourceConfig
+	WorkRoot, FFmpegPath, FFprobePath                            string
+	StaleAge, OperationTimeout, WaitDelay                        time.Duration
+	ChunkDurationMS, LongEdge, FPS, CRF, AudioRate, AudioBitrate int
+	// Decoding is bit-exact whatever its thread count, so it may use the cores
+	// an encode cannot: libx264 above one thread is not bit-exact and would move
+	// delivered bytes (CLIP-124, CLIP-125). Filter threads follow the encoder.
+	DecodeThreads, EncodeThreads                                 int
+	StdoutLimit, StderrLimit, MaxStreams, MaxDimension           int
+	DurationToleranceMS                                          int
+	AnalysisMaxBytes, PreparedMaxBytes, WorkspaceMaxBytes        int64
+	VideoMaxRate, VideoBufferSize, RetryMaxRate, RetryBufferSize int
+	DiskCheckInterval                                            time.Duration
+	Sources                                                      SourceConfig
 }
 
 // ValidateProbedSources is called after every source has been independently probed

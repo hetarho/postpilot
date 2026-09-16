@@ -51,10 +51,16 @@ func TestEachRenderInputHasItsOwnResourceLimits(t *testing.T) {
 			continue
 		}
 		options := " " + strings.Join(args[previous:i], " ") + " "
-		if !strings.Contains(options, " -threads 1 ") || strings.Contains(options, " -loop ") {
+		// Every input decodes on the decoder's own thread count, which may exceed
+		// the encoder's; nothing loops a layer for the whole cut.
+		if !strings.Contains(options, " -threads 2 ") || strings.Contains(options, " -loop ") {
 			t.Fatalf("unbounded input %d: %s", inputs, options)
 		}
 		previous, inputs = i+2, inputs+1
+	}
+	// The encode this cut ends in stays single-threaded, so its bytes do not move.
+	if output := " " + strings.Join(args[previous:], " ") + " "; !strings.Contains(output, " -threads 1 ") || strings.Contains(output, " -threads 2 ") {
+		t.Fatalf("the encoder did not stay single-threaded: %s", output)
 	}
 	if inputs != 4 {
 		t.Fatalf("expected source and three layers, got %d", inputs)

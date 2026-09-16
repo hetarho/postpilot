@@ -322,3 +322,52 @@ func TestIdentityMismatchNamesTheFrameAndTheProperty(t *testing.T) {
 		t.Fatalf("identical fingerprints differ: %v", d)
 	}
 }
+
+// The other half of CLIP-125 for the decode split: an analysis copy is produced
+// by decoding an original and encoding a proxy, and only the decoder's thread
+// count changes here. Decoding is bit-exact whatever that count is, so the
+// proxies have to come out identical.
+func TestAnalysisCopyIdentityAcrossDecoderThreads(t *testing.T) {
+	if os.Getenv("CLIP_MEDIA_SMOKE") != "1" {
+		t.Skip("real renderer gate runs inside Docker")
+	}
+	cfg := mediaConfig(t)
+	if cfg.DecodeThreads < 2 {
+		t.Fatalf("nothing to compare at %d decoder threads", cfg.DecodeThreads)
+	}
+	prepare := func(threads int) []string {
+		t.Helper()
+		with := cfg
+		with.DecodeThreads = threads
+		a, err := New(with, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var digests []string
+		if err := a.WithWorkspace(t.Context(), fmt.Sprintf("proxy-%d", threads), func(ws clip.MediaWorkspace) error {
+			original := filepath.Join(ws.Path, "original.mp4")
+			if _, err := a.run(t.Context(), ws, with.FFmpegPath, "-hide_banner", "-nostdin", "-v", "error",
+				"-f", "lavfi", "-i", "color=c=0x2E4C8A:s=1280x720:r=30",
+				"-f", "lavfi", "-i", "sine=frequency=440:sample_rate=48000",
+				"-t", "20", "-c:v", "libx264", "-preset", "ultrafast", "-threads", "2", "-pix_fmt", "yuv420p",
+				"-c:a", "aac", original); err != nil {
+				return err
+			}
+			info, err := a.Probe(t.Context(), ws, original)
+			if err != nil {
+				return err
+			}
+			return a.PrepareAnalysisChunks(t.Context(), ws, clip.MediaSource{Path: original, SourceID: "one", Fingerprint: "hash", Info: info}, func(chunk clip.AnalysisChunk) error {
+				digests = append(digests, fileDigest(t, chunk.Path))
+				return nil
+			})
+		}); err != nil {
+			t.Fatal(err)
+		}
+		return digests
+	}
+	single, parallel := prepare(1), prepare(cfg.DecodeThreads)
+	if len(single) == 0 || !slices.Equal(single, parallel) {
+		t.Fatalf("the analysis copies moved with the decoder thread count: %v vs %v", single, parallel)
+	}
+}

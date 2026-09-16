@@ -22,7 +22,7 @@ func (r *Rendering) renderBareFootage(ctx context.Context, ws clip.MediaWorkspac
 	if err := r.media.sourcePath(ws, source.Path); err != nil {
 		return err
 	}
-	args := append(r.baseArgs(), "-threads", strconv.Itoa(r.media.cfg.Threads), "-protocol_whitelist", "file,pipe", "-ss", seconds(cut.StartMS), "-i", source.Path)
+	args := append(r.baseArgs(), "-threads", strconv.Itoa(r.media.cfg.DecodeThreads), "-protocol_whitelist", "file,pipe", "-ss", seconds(cut.StartMS), "-i", source.Path)
 	args = append(args, "-filter_complex", bareFootageGraph(r.cfg, canvas, cut, frames))
 	args = append(args, r.encodeProfile(false, 0, "yuv444p")...)
 	args = append(args, "-t", frameSeconds(frames, r.cfg.FPS))
@@ -55,7 +55,7 @@ func (r *Rendering) renderBareAudio(ctx context.Context, ws clip.MediaWorkspace,
 	retained := sourceAudio && source.Info.HasAudio
 	args := r.baseArgs()
 	if retained {
-		args = append(args, "-threads", strconv.Itoa(r.media.cfg.Threads), "-protocol_whitelist", "file,pipe", "-ss", seconds(cut.StartMS), "-i", source.Path)
+		args = append(args, "-threads", strconv.Itoa(r.media.cfg.DecodeThreads), "-protocol_whitelist", "file,pipe", "-ss", seconds(cut.StartMS), "-i", source.Path)
 	}
 	args = append(args, "-filter_complex", bareAudioGraph(r.cfg, cut, retained, frames), "-map", "[a]", "-vn", "-c:a", "pcm_s16le", "-ar", strconv.Itoa(r.cfg.AudioRate), "-ac", "2", "-f", "wav")
 	return r.runRender(ctx, ws, output, args)

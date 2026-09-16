@@ -96,7 +96,7 @@ func (r *Rendering) measureLoudness(ctx context.Context, ws clip.MediaWorkspace,
 	}
 	log, err := r.media.runLog(ctx, ws, r.media.cfg.FFmpegPath,
 		"-hide_banner", "-nostdin", "-nostats", "-v", "info", "-xerror", "-protocol_whitelist", "file,pipe",
-		"-threads", strconv.Itoa(r.media.cfg.Threads), "-i", path,
+		"-threads", strconv.Itoa(r.media.cfg.DecodeThreads), "-i", path,
 		"-map", "0:a:0", "-af", loudnormFilter(nil), "-f", "null", "-")
 	if err != nil {
 		return loudness{}, err
