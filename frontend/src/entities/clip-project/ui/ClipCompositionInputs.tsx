@@ -8,23 +8,8 @@ import { CLIP_COMPOSITION_LIMITS } from '@/shared/config'
 import { Button, FieldCount, FieldLabel, FieldMessage, Textarea, Typography } from '@/shared/ui'
 import type { ClipCompositionInputs as Inputs } from '../model/composition'
 import { compositionInputsAtMinimum, removeCompositionItem } from '../model/composition-inputs'
+import { boundedText } from '../lib/bounded-text'
 
-/** The longest prefix of an answer that fits its maximum, counted CDS-20's way
- *  (CLIP-117). Typing simply stops accepting characters at the bound; a paste
- *  is cut to it, which is the one place characters are dropped — in front of
- *  the counter, rather than behind the owner's back at generation. */
-function boundedAnswer(text: string, max: number) {
-  if (compositionCharacters(text) <= max) return text
-  const characters = Array.from(text)
-  let kept = 0
-  for (let i = 0; i < characters.length; i++) {
-    if (compositionCharacters(characters[i]) > 0) {
-      if (kept === max) return characters.slice(0, i).join('')
-      kept += 1
-    }
-  }
-  return text
-}
 export function ClipCompositionInputFields({
   document,
   value: stored,
@@ -77,7 +62,7 @@ export function ClipCompositionInputFields({
               value={text}
               autoGrow
               aria-invalid={missing || tooLong}
-              onChange={(e) => change({ ...values, [f.id]: boundedAnswer(e.target.value, max) })}
+              onChange={(e) => change({ ...values, [f.id]: boundedText(e.target.value, max) })}
             />
             <FieldCount left={max - count} />
             {missing && <FieldMessage>{t('validation.required')}</FieldMessage>}

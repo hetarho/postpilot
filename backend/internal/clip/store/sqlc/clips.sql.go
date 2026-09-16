@@ -61,7 +61,7 @@ func (q *Queries) DeleteVideoTemplate(ctx context.Context, arg DeleteVideoTempla
 }
 
 const getClipProject = `-- name: GetClipProject :one
-SELECT id, user_id, title, video_template_id, ratio, target_duration_ms, analysis_json, edit_plan_json, result_key, result_content_type, result_bytes, result_duration_ms, result_created_at, edit_plan_revision, rendered_plan_revision, created_at, updated_at, deleting, disclosure, cta, hide_disclosure, composition_inputs_json, composition_snapshot_json, source_retention_expires_at, source_access_revoked_at, source_batch_id, result_id, finalized_at, finalized_plan_revision, finalized_result_key, language FROM clip_projects WHERE id = ? AND user_id = ?
+SELECT id, user_id, title, video_template_id, ratio, target_duration_ms, analysis_json, edit_plan_json, result_key, result_content_type, result_bytes, result_duration_ms, result_created_at, edit_plan_revision, rendered_plan_revision, created_at, updated_at, deleting, disclosure, cta, hide_disclosure, composition_inputs_json, composition_snapshot_json, source_retention_expires_at, source_access_revoked_at, source_batch_id, result_id, finalized_at, finalized_plan_revision, finalized_result_key, language, instruction FROM clip_projects WHERE id = ? AND user_id = ?
 `
 
 type GetClipProjectParams struct {
@@ -104,6 +104,7 @@ func (q *Queries) GetClipProject(ctx context.Context, arg GetClipProjectParams) 
 		&i.FinalizedPlanRevision,
 		&i.FinalizedResultKey,
 		&i.Language,
+		&i.Instruction,
 	)
 	return i, err
 }
@@ -139,7 +140,7 @@ func (q *Queries) GetVideoTemplate(ctx context.Context, arg GetVideoTemplatePara
 }
 
 const insertClipProject = `-- name: InsertClipProject :exec
-INSERT INTO clip_projects(id, user_id, title, video_template_id, ratio, language, target_duration_ms, disclosure, cta, hide_disclosure, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO clip_projects(id, user_id, title, video_template_id, ratio, language, target_duration_ms, disclosure, cta, hide_disclosure, instruction, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `
 
 type InsertClipProjectParams struct {
@@ -153,6 +154,7 @@ type InsertClipProjectParams struct {
 	Disclosure       string
 	Cta              string
 	HideDisclosure   int64
+	Instruction      string
 	CreatedAt        string
 	UpdatedAt        string
 }
@@ -169,6 +171,7 @@ func (q *Queries) InsertClipProject(ctx context.Context, arg InsertClipProjectPa
 		arg.Disclosure,
 		arg.Cta,
 		arg.HideDisclosure,
+		arg.Instruction,
 		arg.CreatedAt,
 		arg.UpdatedAt,
 	)
@@ -248,7 +251,7 @@ func (q *Queries) ListClipAnswers(ctx context.Context, arg ListClipAnswersParams
 }
 
 const listClipProjects = `-- name: ListClipProjects :many
-SELECT id, user_id, title, video_template_id, ratio, target_duration_ms, analysis_json, edit_plan_json, result_key, result_content_type, result_bytes, result_duration_ms, result_created_at, edit_plan_revision, rendered_plan_revision, created_at, updated_at, deleting, disclosure, cta, hide_disclosure, composition_inputs_json, composition_snapshot_json, source_retention_expires_at, source_access_revoked_at, source_batch_id, result_id, finalized_at, finalized_plan_revision, finalized_result_key, language FROM clip_projects WHERE user_id = ? ORDER BY updated_at DESC, id
+SELECT id, user_id, title, video_template_id, ratio, target_duration_ms, analysis_json, edit_plan_json, result_key, result_content_type, result_bytes, result_duration_ms, result_created_at, edit_plan_revision, rendered_plan_revision, created_at, updated_at, deleting, disclosure, cta, hide_disclosure, composition_inputs_json, composition_snapshot_json, source_retention_expires_at, source_access_revoked_at, source_batch_id, result_id, finalized_at, finalized_plan_revision, finalized_result_key, language, instruction FROM clip_projects WHERE user_id = ? ORDER BY updated_at DESC, id
 `
 
 func (q *Queries) ListClipProjects(ctx context.Context, userID string) ([]ClipProject, error) {
@@ -292,6 +295,7 @@ func (q *Queries) ListClipProjects(ctx context.Context, userID string) ([]ClipPr
 			&i.FinalizedPlanRevision,
 			&i.FinalizedResultKey,
 			&i.Language,
+			&i.Instruction,
 		); err != nil {
 			return nil, err
 		}
@@ -348,7 +352,7 @@ func (q *Queries) ListVideoTemplates(ctx context.Context, userID string) ([]Vide
 }
 
 const projectsForTemplate = `-- name: ProjectsForTemplate :many
-SELECT id, user_id, title, video_template_id, ratio, target_duration_ms, analysis_json, edit_plan_json, result_key, result_content_type, result_bytes, result_duration_ms, result_created_at, edit_plan_revision, rendered_plan_revision, created_at, updated_at, deleting, disclosure, cta, hide_disclosure, composition_inputs_json, composition_snapshot_json, source_retention_expires_at, source_access_revoked_at, source_batch_id, result_id, finalized_at, finalized_plan_revision, finalized_result_key, language FROM clip_projects WHERE video_template_id = ? AND user_id = ? ORDER BY id
+SELECT id, user_id, title, video_template_id, ratio, target_duration_ms, analysis_json, edit_plan_json, result_key, result_content_type, result_bytes, result_duration_ms, result_created_at, edit_plan_revision, rendered_plan_revision, created_at, updated_at, deleting, disclosure, cta, hide_disclosure, composition_inputs_json, composition_snapshot_json, source_retention_expires_at, source_access_revoked_at, source_batch_id, result_id, finalized_at, finalized_plan_revision, finalized_result_key, language, instruction FROM clip_projects WHERE video_template_id = ? AND user_id = ? ORDER BY id
 `
 
 type ProjectsForTemplateParams struct {
@@ -397,6 +401,7 @@ func (q *Queries) ProjectsForTemplate(ctx context.Context, arg ProjectsForTempla
 			&i.FinalizedPlanRevision,
 			&i.FinalizedResultKey,
 			&i.Language,
+			&i.Instruction,
 		); err != nil {
 			return nil, err
 		}
@@ -559,6 +564,30 @@ type UpdateClipHideDisclosureParams struct {
 func (q *Queries) UpdateClipHideDisclosure(ctx context.Context, arg UpdateClipHideDisclosureParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, updateClipHideDisclosure,
 		arg.HideDisclosure,
+		arg.UpdatedAt,
+		arg.ID,
+		arg.UserID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const updateClipInstruction = `-- name: UpdateClipInstruction :execrows
+UPDATE clip_projects SET instruction = ?, updated_at = ? WHERE id = ? AND user_id = ? AND finalized_at IS NULL
+`
+
+type UpdateClipInstructionParams struct {
+	Instruction string
+	UpdatedAt   string
+	ID          string
+	UserID      string
+}
+
+func (q *Queries) UpdateClipInstruction(ctx context.Context, arg UpdateClipInstructionParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateClipInstruction,
+		arg.Instruction,
 		arg.UpdatedAt,
 		arg.ID,
 		arg.UserID,

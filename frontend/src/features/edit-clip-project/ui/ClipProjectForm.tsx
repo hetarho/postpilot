@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useBlocker, useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import {
+  boundedText,
   CLIP_PROJECT_LIMITS,
   ClipCompositionInputFields,
   emptyCompositionInputs,
@@ -16,7 +17,7 @@ import {
   type ClipProject,
   type ClipProjectDraft,
 } from '@/entities/clip-project'
-import { useClipTemplates } from '@/entities/clip-template'
+import { compositionCharacters, useClipTemplates } from '@/entities/clip-template'
 import { appFailureFromConnect } from '@/shared/api'
 import { peekPendingClipDraft, queueClipDraft } from '../model/clip-draft-queue'
 import {
@@ -25,6 +26,7 @@ import {
   Button,
   Checkbox,
   Dialog,
+  FieldCount,
   FieldLabel,
   FieldMessage,
   Listbox,
@@ -295,6 +297,35 @@ export function ClipProjectForm({
                 </div>
               )
             })}
+          {/* The owner's own instruction sits with the answers it accompanies
+              and is optional; an empty one is indistinguishable from never
+              having written one (CLIP-121). */}
+          <div>
+            <FieldLabel htmlFor="clip-instruction">
+              {t('project.instruction')} {t('composition.optionalSuffix')}
+            </FieldLabel>
+            <Typography variant="body" className="text-content-secondary mt-2 mb-2 break-words">
+              {t('project.instructionPrompt')}
+            </Typography>
+            <Textarea
+              id="clip-instruction"
+              inputMode="text"
+              {...INPUT}
+              autoGrow
+              value={draft.instruction ?? ''}
+              onChange={(event) =>
+                change(
+                  'instruction',
+                  boundedText(event.target.value, CLIP_PROJECT_LIMITS.instruction),
+                )
+              }
+            />
+            <FieldCount
+              left={
+                CLIP_PROJECT_LIMITS.instruction - compositionCharacters(draft.instruction ?? '')
+              }
+            />
+          </div>
           <div>
             {stored ? (
               <>

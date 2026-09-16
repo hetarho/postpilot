@@ -4,7 +4,10 @@ import type { ClipCTAId, ClipDisclosureId } from '@/shared/config'
 import type { ClipProjectComposition, ClipCompositionInputs } from './composition'
 import type { ClipEditingState } from './edit-plan'
 import type { ClipObservations } from './observations'
-import type { ClipComposition } from '@/entities/clip-template/@x/clip-project'
+import {
+  compositionCharacters,
+  type ClipComposition,
+} from '@/entities/clip-template/@x/clip-project'
 import { emptyCompositionInputs, validCompositionInputs } from './composition-inputs'
 
 export const CLIP_RATIOS = ['vertical', 'horizontal', 'square'] as const
@@ -17,6 +20,8 @@ export type ClipRatio = (typeof CLIP_RATIOS)[number]
 export const CLIP_PROJECT_LIMITS = {
   title: 100,
   answer: 500,
+  /** The project instruction's maximum, counted CDS-20's way (CLIP-121). */
+  instruction: 1000,
   minSeconds: 15,
   maxSeconds: 90,
 } as const
@@ -33,6 +38,9 @@ export interface ClipProjectDraft {
   hideDisclosure?: boolean
   /** The closing call to action, or empty for the template preset's (CDS-29). */
   cta: ClipCTAId | ''
+  /** The owner's own instruction for this clip (CLIP-121). Optional, and an
+   *  empty string is indistinguishable from never having written one. */
+  instruction?: string
 }
 export interface ClipProject extends ClipProjectDraft {
   notices?: ClipNotice[]
@@ -136,6 +144,7 @@ export function emptyClipProject(): ClipProjectDraft {
     disclosure: '',
     hideDisclosure: false,
     cta: '',
+    instruction: '',
   }
 }
 export function projectDraft(value: ClipProjectDraft): ClipProjectDraft {
@@ -151,6 +160,7 @@ export function projectDraft(value: ClipProjectDraft): ClipProjectDraft {
     disclosure: value.disclosure,
     hideDisclosure: value.hideDisclosure ?? false,
     cta: value.cta,
+    instruction: value.instruction ?? '',
   }
 }
 export function normalizeClipProject(value: ClipProjectDraft): ClipProjectDraft {
@@ -175,6 +185,7 @@ export function validClipProject(
     value.targetDurationMs >= CLIP_PROJECT_LIMITS.minSeconds * 1000 &&
     value.targetDurationMs <= CLIP_PROJECT_LIMITS.maxSeconds * 1000 &&
     value.answers.every((a) => length(a.text) <= CLIP_PROJECT_LIMITS.answer) &&
+    compositionCharacters(value.instruction ?? '') <= CLIP_PROJECT_LIMITS.instruction &&
     (composition
       ? validCompositionInputs(composition, value.compositionInputs ?? emptyCompositionInputs())
       : fields!.every((field) =>

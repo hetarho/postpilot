@@ -337,6 +337,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       disclosure: req.disclosure as ClipProjectDraft['disclosure'],
       hideDisclosure: req.hideDisclosure,
       cta: req.cta as ClipProjectDraft['cta'],
+      instruction: req.instruction,
     }
     if (req.compositionInputs) {
       const template = rows.get(p.videoTemplateId)!
@@ -371,6 +372,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     if (req.disclosure !== undefined)
       p.disclosure = req.disclosure as ClipProjectDraft['disclosure']
     if (req.cta !== undefined) p.cta = req.cta as ClipProjectDraft['cta']
+    if (req.instruction !== undefined) p.instruction = req.instruction
     for (const answer of req.answers)
       p.answers = [
         ...p.answers.filter((a) => a.label !== answer.label),

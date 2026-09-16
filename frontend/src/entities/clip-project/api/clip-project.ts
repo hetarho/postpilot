@@ -72,6 +72,7 @@ export function toClipProject(value: ProtoClipProject): ClipProject {
     disclosure: value.disclosure as ClipProject['disclosure'],
     hideDisclosure: value.hideDisclosure,
     cta: value.cta as ClipProject['cta'],
+    instruction: value.instruction,
     answers: value.answers.map((a) => ({ label: a.label, text: a.text })),
     createdAt: value.createdAt,
     updatedAt: value.updatedAt,

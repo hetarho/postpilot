@@ -576,6 +576,9 @@ export const clips = {
     disclosureRequired: 'A clip needs a campaign type before it can be generated.',
     cta: 'Closing line',
     ctaHelp: "One line at the end of the clip. Leave it empty for the template preset's own.",
+    instruction: 'What this clip should say',
+    instructionPrompt:
+      'Write freely about what you want this clip to emphasize. What you write here takes precedence over the template’s guidance, while the template keeps the scene structure and where the text sits.',
     ratio: 'Aspect ratio',
     duration: 'Target duration (seconds)',
     durationHelp: 'Choose between 15 and 90 seconds.',

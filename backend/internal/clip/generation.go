@@ -76,9 +76,13 @@ type generationPayload struct {
 	// them — a job approved before the disclosure was a choice cannot render a
 	// clip that carries one, and is refused rather than rendered without it.
 	Disclosure, CTA string
-	HideDisclosure  bool
-	Batch           SourceBatch
-	Approval        *GenerationApproval
+	// The project's own instruction (CLIP-121), frozen with the answers and the
+	// composition so editing it mid-flight changes nothing in flight. A payload
+	// written before it existed decodes as none, which is today's behaviour.
+	Instruction    string
+	HideDisclosure bool
+	Batch          SourceBatch
+	Approval       *GenerationApproval
 }
 
 func modelRef(s string) llm.ModelRef {

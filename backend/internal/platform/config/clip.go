@@ -26,6 +26,7 @@ const (
 	ClipPromptChars             = 200
 	ClipTitleChars              = 100
 	ClipAnswerChars             = 500
+	ClipInstructionChars        = 1000
 	ClipMinDurationMS           = 15000
 	ClipMaxDurationMS           = 90000
 	ClipSourceCount             = 20
@@ -44,5 +45,5 @@ func ClipSourceLimits(batchTTL, putTTL time.Duration) clip.SourceConfig {
 const ClipOriginalRetention = 24 * time.Hour
 
 func ClipLimits() clip.Limits {
-	return clip.Limits{Composition: ClipCompositionLimits(), NameChars: ClipTemplateNameChars, GuidanceChars: ClipGuidanceChars, FieldCount: ClipInformationFields, LabelChars: ClipLabelChars, PromptChars: ClipPromptChars, TitleChars: ClipTitleChars, AnswerChars: ClipAnswerChars, MinDurationMS: ClipMinDurationMS, MaxDurationMS: ClipMaxDurationMS}
+	return clip.Limits{Composition: ClipCompositionLimits(), NameChars: ClipTemplateNameChars, GuidanceChars: ClipGuidanceChars, FieldCount: ClipInformationFields, LabelChars: ClipLabelChars, PromptChars: ClipPromptChars, TitleChars: ClipTitleChars, AnswerChars: ClipAnswerChars, InstructionChars: ClipInstructionChars, MinDurationMS: ClipMinDurationMS, MaxDurationMS: ClipMaxDurationMS}
 }

@@ -21,7 +21,7 @@ SELECT * FROM clip_projects WHERE user_id = ? ORDER BY updated_at DESC, id;
 -- name: GetClipProject :one
 SELECT * FROM clip_projects WHERE id = ? AND user_id = ?;
 -- name: InsertClipProject :exec
-INSERT INTO clip_projects(id, user_id, title, video_template_id, ratio, language, target_duration_ms, disclosure, cta, hide_disclosure, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+INSERT INTO clip_projects(id, user_id, title, video_template_id, ratio, language, target_duration_ms, disclosure, cta, hide_disclosure, instruction, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 -- name: DeleteClipProject :execrows
 DELETE FROM clip_projects WHERE id = ? AND user_id = ?;
 -- name: ListClipAnswers :many
@@ -51,6 +51,8 @@ UPDATE clip_projects SET target_duration_ms = ?, updated_at = ? WHERE id = ? AND
 UPDATE clip_projects SET disclosure = ?, updated_at = ? WHERE id = ? AND user_id = ? AND finalized_at IS NULL;
 -- name: UpdateClipCTA :execrows
 UPDATE clip_projects SET cta = ?, updated_at = ? WHERE id = ? AND user_id = ? AND finalized_at IS NULL;
+-- name: UpdateClipInstruction :execrows
+UPDATE clip_projects SET instruction = ?, updated_at = ? WHERE id = ? AND user_id = ? AND finalized_at IS NULL;
 -- name: TouchClip :execrows
 UPDATE clip_projects SET updated_at = ? WHERE id = ? AND user_id = ? AND finalized_at IS NULL;
 

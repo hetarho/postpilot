@@ -931,7 +931,11 @@ type ClipProject struct {
 	AttemptInspection *ClipAttemptInspection `protobuf:"bytes,27,opt,name=attempt_inspection,json=attemptInspection,proto3" json:"attempt_inspection,omitempty"`
 	Language          ContentLanguage        `protobuf:"varint,28,opt,name=language,proto3,enum=postpilot.v1.ContentLanguage" json:"language,omitempty"`
 	// Read-only delivery notices, filtered against owner edits.
-	Notices       []*ClipNotice `protobuf:"bytes,29,rep,name=notices,proto3" json:"notices,omitempty"`
+	Notices []*ClipNotice `protobuf:"bytes,29,rep,name=notices,proto3" json:"notices,omitempty"`
+	// The owner's own free-text instruction for this project, empty when none was
+	// written. On content it outranks the template's authored guidance; the
+	// declared structure stays the template's.
+	Instruction   string `protobuf:"bytes,30,opt,name=instruction,proto3" json:"instruction,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1167,6 +1171,13 @@ func (x *ClipProject) GetNotices() []*ClipNotice {
 		return x.Notices
 	}
 	return nil
+}
+
+func (x *ClipProject) GetInstruction() string {
+	if x != nil {
+		return x.Instruction
+	}
+	return ""
 }
 
 type ClipNotice struct {
@@ -2247,7 +2258,9 @@ type CreateClipProjectRequest struct {
 	HideDisclosure    bool                   `protobuf:"varint,8,opt,name=hide_disclosure,json=hideDisclosure,proto3" json:"hide_disclosure,omitempty"`
 	CompositionInputs *ClipCompositionInputs `protobuf:"bytes,9,opt,name=composition_inputs,json=compositionInputs,proto3" json:"composition_inputs,omitempty"`
 	// Required concrete UI language; UNSPECIFIED is refused.
-	Language      ContentLanguage `protobuf:"varint,10,opt,name=language,proto3,enum=postpilot.v1.ContentLanguage" json:"language,omitempty"`
+	Language ContentLanguage `protobuf:"varint,10,opt,name=language,proto3,enum=postpilot.v1.ContentLanguage" json:"language,omitempty"`
+	// Optional; empty is indistinguishable from never having written one.
+	Instruction   string `protobuf:"bytes,11,opt,name=instruction,proto3" json:"instruction,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2350,6 +2363,13 @@ func (x *CreateClipProjectRequest) GetLanguage() ContentLanguage {
 		return x.Language
 	}
 	return ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED
+}
+
+func (x *CreateClipProjectRequest) GetInstruction() string {
+	if x != nil {
+		return x.Instruction
+	}
+	return ""
 }
 
 type CreateClipProjectResponse struct {
@@ -2496,8 +2516,10 @@ type UpdateClipProjectRequest struct {
 	Cta               *string                `protobuf:"bytes,7,opt,name=cta,proto3,oneof" json:"cta,omitempty"`
 	HideDisclosure    *bool                  `protobuf:"varint,8,opt,name=hide_disclosure,json=hideDisclosure,proto3,oneof" json:"hide_disclosure,omitempty"`
 	CompositionInputs *ClipCompositionInputs `protobuf:"bytes,9,opt,name=composition_inputs,json=compositionInputs,proto3" json:"composition_inputs,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// Supplied only when it changes; an empty string clears it.
+	Instruction   *string `protobuf:"bytes,10,opt,name=instruction,proto3,oneof" json:"instruction,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UpdateClipProjectRequest) Reset() {
@@ -2591,6 +2613,13 @@ func (x *UpdateClipProjectRequest) GetCompositionInputs() *ClipCompositionInputs
 		return x.CompositionInputs
 	}
 	return nil
+}
+
+func (x *UpdateClipProjectRequest) GetInstruction() string {
+	if x != nil && x.Instruction != nil {
+		return *x.Instruction
+	}
+	return ""
 }
 
 type UpdateClipProjectResponse struct {
@@ -6770,8 +6799,7 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x04 \x01(\tR\tcreatedAt\x12\x19\n" +
 	"\bview_url\x18\x05 \x01(\tR\aviewUrl\x12!\n" +
-	"\fdownload_url\x18\x06 \x01(\tR\vdownloadUrl\"\xef\n" +
-	"\n" +
+	"\fdownload_url\x18\x06 \x01(\tR\vdownloadUrl\"\x91\v\n" +
 	"\vClipProject\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12*\n" +
@@ -6809,7 +6837,8 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\x14finalization_refusal\x18\x1a \x01(\tR\x13finalizationRefusal\x12R\n" +
 	"\x12attempt_inspection\x18\x1b \x01(\v2#.postpilot.v1.ClipAttemptInspectionR\x11attemptInspection\x129\n" +
 	"\blanguage\x18\x1c \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\blanguage\x122\n" +
-	"\anotices\x18\x1d \x03(\v2\x18.postpilot.v1.ClipNoticeR\anoticesB\v\n" +
+	"\anotices\x18\x1d \x03(\v2\x18.postpilot.v1.ClipNoticeR\anotices\x12 \n" +
+	"\vinstruction\x18\x1e \x01(\tR\vinstructionB\v\n" +
 	"\t_can_editB\x0f\n" +
 	"\r_can_finalize\"n\n" +
 	"\n" +
@@ -6910,7 +6939,7 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\x11detached_projects\x18\x01 \x01(\x05R\x10detachedProjects\"\x19\n" +
 	"\x17ListClipProjectsRequest\"Q\n" +
 	"\x18ListClipProjectsResponse\x125\n" +
-	"\bprojects\x18\x01 \x03(\v2\x19.postpilot.v1.ClipProjectR\bprojects\"\xbe\x03\n" +
+	"\bprojects\x18\x01 \x03(\v2\x19.postpilot.v1.ClipProjectR\bprojects\"\xe0\x03\n" +
 	"\x18CreateClipProjectRequest\x12\x14\n" +
 	"\x05title\x18\x01 \x01(\tR\x05title\x12*\n" +
 	"\x11video_template_id\x18\x02 \x01(\tR\x0fvideoTemplateId\x12\x14\n" +
@@ -6924,13 +6953,14 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\x0fhide_disclosure\x18\b \x01(\bR\x0ehideDisclosure\x12R\n" +
 	"\x12composition_inputs\x18\t \x01(\v2#.postpilot.v1.ClipCompositionInputsR\x11compositionInputs\x129\n" +
 	"\blanguage\x18\n" +
-	" \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\blanguage\"P\n" +
+	" \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\blanguage\x12 \n" +
+	"\vinstruction\x18\v \x01(\tR\vinstruction\"P\n" +
 	"\x19CreateClipProjectResponse\x123\n" +
 	"\aproject\x18\x01 \x01(\v2\x19.postpilot.v1.ClipProjectR\aproject\"'\n" +
 	"\x15GetClipProjectRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"M\n" +
 	"\x16GetClipProjectResponse\x123\n" +
-	"\aproject\x18\x01 \x01(\v2\x19.postpilot.v1.ClipProjectR\aproject\"\xfd\x03\n" +
+	"\aproject\x18\x01 \x01(\v2\x19.postpilot.v1.ClipProjectR\aproject\"\xb4\x04\n" +
 	"\x18UpdateClipProjectRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\x05title\x18\x02 \x01(\tH\x00R\x05title\x88\x01\x01\x12/\n" +
@@ -6942,13 +6972,16 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"disclosure\x88\x01\x01\x12\x15\n" +
 	"\x03cta\x18\a \x01(\tH\x04R\x03cta\x88\x01\x01\x12,\n" +
 	"\x0fhide_disclosure\x18\b \x01(\bH\x05R\x0ehideDisclosure\x88\x01\x01\x12R\n" +
-	"\x12composition_inputs\x18\t \x01(\v2#.postpilot.v1.ClipCompositionInputsR\x11compositionInputsB\b\n" +
+	"\x12composition_inputs\x18\t \x01(\v2#.postpilot.v1.ClipCompositionInputsR\x11compositionInputs\x12%\n" +
+	"\vinstruction\x18\n" +
+	" \x01(\tH\x06R\vinstruction\x88\x01\x01B\b\n" +
 	"\x06_titleB\x14\n" +
 	"\x12_video_template_idB\x15\n" +
 	"\x13_target_duration_msB\r\n" +
 	"\v_disclosureB\x06\n" +
 	"\x04_ctaB\x12\n" +
-	"\x10_hide_disclosure\"P\n" +
+	"\x10_hide_disclosureB\x0e\n" +
+	"\f_instruction\"P\n" +
 	"\x19UpdateClipProjectResponse\x123\n" +
 	"\aproject\x18\x01 \x01(\v2\x19.postpilot.v1.ClipProjectR\aproject\"*\n" +
 	"\x18DeleteClipProjectRequest\x12\x0e\n" +

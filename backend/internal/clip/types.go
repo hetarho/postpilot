@@ -20,6 +20,9 @@ type Limits struct {
 	Composition                                                   composition.Limits
 	NameChars, GuidanceChars, FieldCount, LabelChars, PromptChars int
 	TitleChars, AnswerChars, MinDurationMS, MaxDurationMS         int
+	// The project instruction's own maximum (CLIP-121), counted CDS-20's way
+	// like every other bounded text.
+	InstructionChars int
 }
 
 type InformationField struct{ Label, Prompt string }
@@ -66,7 +69,11 @@ type Project struct {
 	// phrases are code-owned so the renderer can never be handed an edited
 	// disclosure. Empty disclosure is what the generation gate refuses; an empty
 	// CTA falls back to the template's preset.
-	Disclosure, CTA                        string
+	Disclosure, CTA string
+	// The owner's own free-text instruction for this project (CLIP-121), empty
+	// when none was written. It belongs to the project, not to the answers the
+	// template declared.
+	Instruction                            string
 	TargetDurationMS                       int
 	Answers                                []Answer
 	Analysis, EditPlan                     string
@@ -80,6 +87,7 @@ type ProjectInput struct {
 	HideDisclosure                bool
 	Title, VideoTemplateID, Ratio string
 	Disclosure, CTA               string
+	Instruction                   string
 	TargetDurationMS              int
 	Answers                       []Answer
 }
@@ -92,6 +100,7 @@ type ProjectPatch struct {
 	Composition                             *ProjectComposition
 	HideDisclosure                          *bool
 	Title, VideoTemplateID, Disclosure, CTA *string
+	Instruction                             *string
 	TargetDurationMS                        *int
 	Answers                                 []Answer
 }

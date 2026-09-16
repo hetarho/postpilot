@@ -26,7 +26,7 @@ func (s *Service) SetGeneration(g *GenerationService) { s.generation = g }
 func (s *Service) SetSources(sources *SourceService)  { s.sources = sources }
 
 func NewService(store Store, limits Limits) *Service {
-	for _, n := range []int{limits.NameChars, limits.GuidanceChars, limits.FieldCount, limits.LabelChars, limits.PromptChars, limits.TitleChars, limits.AnswerChars, limits.MinDurationMS, limits.MaxDurationMS} {
+	for _, n := range []int{limits.NameChars, limits.GuidanceChars, limits.FieldCount, limits.LabelChars, limits.PromptChars, limits.TitleChars, limits.AnswerChars, limits.InstructionChars, limits.MinDurationMS, limits.MaxDurationMS} {
 		if n <= 0 {
 			panic("clip: limits must be positive")
 		}
@@ -218,12 +218,15 @@ func (s *Service) CreateProject(ctx context.Context, user string, input ProjectI
 	if input.Disclosure != "" && !ValidDisclosure(input.Disclosure) || !ValidCTA(input.CTA) {
 		return Project{}, ErrInvalid
 	}
+	if !bounded(input.Instruction, 0, s.limits.InstructionChars) {
+		return Project{}, ErrInvalid
+	}
 	answers, err := s.answers(input.Answers)
 	if err != nil {
 		return Project{}, err
 	}
 	now := time.Now()
-	p := Project{ID: newID(), UserID: user, Title: title, VideoTemplateID: input.VideoTemplateID, Ratio: input.Ratio, Language: input.Language, Disclosure: input.Disclosure, HideDisclosure: input.HideDisclosure, CTA: input.CTA, TargetDurationMS: input.TargetDurationMS, Answers: answers, CreatedAt: now, UpdatedAt: now}
+	p := Project{ID: newID(), UserID: user, Title: title, VideoTemplateID: input.VideoTemplateID, Ratio: input.Ratio, Language: input.Language, Disclosure: input.Disclosure, HideDisclosure: input.HideDisclosure, CTA: input.CTA, Instruction: input.Instruction, TargetDurationMS: input.TargetDurationMS, Answers: answers, CreatedAt: now, UpdatedAt: now}
 	p.Composition, err = s.projectComposition(template, input.CompositionInputs, p)
 	if err != nil {
 		return Project{}, err
@@ -261,6 +264,10 @@ func (s *Service) UpdateProject(ctx context.Context, user, id string, p ProjectP
 		p.Title = &title
 	}
 	if p.TargetDurationMS != nil && !s.duration(*p.TargetDurationMS) {
+		return Project{}, ErrInvalid
+	}
+	// An instruction is optional and clearable; only its length is refused.
+	if p.Instruction != nil && !bounded(*p.Instruction, 0, s.limits.InstructionChars) {
 		return Project{}, ErrInvalid
 	}
 	// The retired picker's value is the campaign identity only where nothing

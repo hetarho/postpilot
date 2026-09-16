@@ -137,6 +137,10 @@ message ClipProject {
   ContentLanguage language = 28;
   // Read-only delivery notices, filtered against owner edits.
   repeated ClipNotice notices = 29;
+  // The owner's own free-text instruction for this project, empty when none was
+  // written. On content it outranks the template's authored guidance; the
+  // declared structure stays the template's.
+  string instruction = 30;
 }
 message ClipNotice {
   string code = 1;
@@ -238,6 +242,8 @@ message CreateClipProjectRequest {
   ClipCompositionInputs composition_inputs = 9;
   // Required concrete UI language; UNSPECIFIED is refused.
   ContentLanguage language = 10;
+  // Optional; empty is indistinguishable from never having written one.
+  string instruction = 11;
 }
 message CreateClipProjectResponse { ClipProject project = 1; }
 message GetClipProjectRequest { string id = 1; }
@@ -253,6 +259,8 @@ message UpdateClipProjectRequest {
   optional string cta = 7;
   optional bool hide_disclosure = 8;
   ClipCompositionInputs composition_inputs = 9;
+  // Supplied only when it changes; an empty string clears it.
+  optional string instruction = 10;
 }
 message UpdateClipProjectResponse { ClipProject project = 1; }
 message DeleteClipProjectRequest { string id = 1; }

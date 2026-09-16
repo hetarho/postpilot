@@ -562,6 +562,9 @@ export const clips = {
     disclosureRequired: '체험단 유형을 선택해야 클립을 만들 수 있어요.',
     cta: '마무리 문구',
     ctaHelp: '클립 끝에 한 줄로 들어가요. 비워 두면 템플릿 프리셋의 기본값을 써요.',
+    instruction: '클립에 담고 싶은 내용',
+    instructionPrompt:
+      '이 클립에서 어떤 점을 강조하고 싶은지 자유롭게 적어 주세요. 여기에 적은 내용이 템플릿의 안내보다 우선합니다. 장면 구성과 문구 위치는 템플릿이 정한 대로 유지돼요.',
     ratio: '화면 비율',
     duration: '목표 길이 (초)',
     durationHelp: '15초부터 90초까지 선택할 수 있어요.',

@@ -29,6 +29,7 @@ export {
   replaceCompositionNode,
   replaceCompositionSpan,
   compositionMilliseconds,
+  compositionCharacters,
 } from './lib/composition-parse'
 export { serializeCompositionNode } from './lib/composition-xml'
 export { resolveClipComposition } from './lib/composition-resolve'
