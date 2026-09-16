@@ -3,6 +3,7 @@ import { Link, useBlocker, useParams } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import {
   ClipDraftPreview,
+  ClipFailureNotice,
   useClipProject,
   requiredClipSources,
   reorderClipSources,
@@ -10,7 +11,7 @@ import {
 } from '@/entities/clip-project'
 import { useClipCorrection, ClipCorrectionWorkspace } from '@/features/correct-clip'
 import { useSession } from '@/entities/session'
-import { progressLabel, progressRatio } from '@/entities/generation-job'
+import { isTerminal, progressLabel, progressRatio } from '@/entities/generation-job'
 import { useFinalizeClip, FinalizeClipAction } from '@/features/finalize-clip'
 import { useCancelClip, CancelClipAction } from '@/features/cancel-clip'
 import { ClipProjectForm, useClipDraftSave } from '@/features/edit-clip-project'
@@ -20,10 +21,10 @@ import {
   ClipApprovalAction,
   ClipCreditSettlement,
   ClipDownloadAction,
-  ClipGenerationFailure,
   ClipResult,
   useGenerateClip,
 } from '@/features/generate-clip'
+import { ClipRevisionRequest } from '@/features/revise-clip'
 import { StageModelSelect } from '@/features/select-model'
 import { ClipSourcePicker, useClipSourceUpload } from '@/features/upload-clip-sources'
 import { useClipSourceBinding } from '@/features/bind-clip-source-item'
@@ -192,7 +193,11 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
     return correction.flush()
   })
   const cancellation = useCancelClip(ownerId, project.id, job)
-  const focused = !project.finalized && generation.busy
+  // A revision runs WITHOUT the focused job view: it rewrites the plan the owner
+  // is looking at, and ② is where that change shows up (CLIP-131). Every other
+  // clip job still takes the whole screen (CLIP-78).
+  const revising = job?.kind === 'revise_clip' && !isTerminal(job)
+  const focused = !project.finalized && generation.busy && !revising
   const pending = generation.busy || uploading || finalization.busy
   const progress = job ? progressRatio(job) : undefined
   const progressTitle = cancellation.cancelling
@@ -275,7 +280,7 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
       stored={project}
       disabled={pending}
       onUploadAllowed={setUploadAllowed}
-      refusal={<ClipGenerationFailure failure={generation.failure} />}
+      refusal={<ClipFailureNotice failure={generation.failure} />}
       actions={(ready) => (
         <ClipApprovalAction
           ownerId={ownerId}
@@ -375,6 +380,29 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
           </details>
         )
       }
+      revision={
+        <ClipRevisionRequest
+          ownerId={ownerId}
+          project={project}
+          observe={generation.observeRef}
+          write={generation.writeRef}
+          job={job}
+          // A revision is refused while any other clip job holds the project, and
+          // after finalization; its own run is not a reason, since the panel then
+          // shows that run instead of the field.
+          disabled={uploading || finalization.busy || (generation.busy && !revising)}
+          // The same chain a generation runs before it starts (CLIP-39): the
+          // writer answers from the SAVED plan, so an unflushed edit would be
+          // silently dropped from what it rewrites.
+          flush={async () => {
+            await save.flush()
+            return correction.flush()
+          }}
+          cancelAction={
+            <CancelClipAction action={cancellation} job={job} accounting={generation.accounting} />
+          }
+        />
+      }
       downloadAction={
         project.result?.downloadUrl && <ClipDownloadAction compact project={project} />
       }
@@ -392,7 +420,9 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
       disabled={pending}
       renderReady={!!upload.readyBatch && correction.revision === project.editPlanRevision}
       renderPending={generation.starting}
-      renderFailure={generation.failure}
+      // A revision states its own refusal in its own panel, in one voice: the
+      // dock's alert is about the render it commits.
+      renderFailure={job?.kind === 'revise_clip' ? undefined : generation.failure}
       onRender={() => {
         if (!correction.dirty && !correction.pending)
           void generation.render(upload.readyBatch, correction.revision, ownership)
@@ -436,7 +466,7 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
     />
   ) : (
     <>
-      <ClipGenerationFailure failure={generation.failure} />
+      <ClipFailureNotice failure={generation.failure} />
       <ClipStepWaiting message={t('steps.refineWaiting')} onGo={() => setStep('generate')} />
       {project.result && (
         <>
@@ -542,7 +572,7 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
       )}
       {generation.uncertain && (
         <div className="mt-4 space-y-2">
-          <ClipGenerationFailure failure={generation.failure} />
+          <ClipFailureNotice failure={generation.failure} />
           <Typography variant="body">{t('credits.uncertain')}</Typography>
           <Button variant="ghost" onClick={generation.checkAgain}>
             {t('credits.checkAttempt')}

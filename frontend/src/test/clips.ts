@@ -21,6 +21,8 @@ import {
   DiscardClipSourceBatchResponseSchema,
   StartClipGenerationResponseSchema,
   QuoteClipGenerationResponseSchema,
+  QuoteClipRevisionResponseSchema,
+  StartClipRevisionResponseSchema,
   ReorderClipSourcesResponseSchema,
   SaveClipEditPlanResponseSchema,
   StartClipRenderResponseSchema,
@@ -110,6 +112,13 @@ export interface FakeClipsOptions {
   quotePricedCalls?: { label: string; stage: string; calls: number }[]
   quoteExpiresAt?: string
   quoteFails?: AppFailureReason
+  /** Every QuoteClipRevision/StartClipRevision request, in order. */
+  revisionQuotes?: unknown[]
+  revisionStarts?: unknown[]
+  revisionJobId?: string
+  revisionMaxCredits?: number
+  revisionQuoteFails?: AppFailureReason
+  revisionReject?: AppFailureReason
   /** T111's live eligibility answer, one row per registered observe model. Absent means the
    *  server names nobody, which the page must read as "unresolved", never as eligible. */
   eligibility?: Array<{ providerId: string; modelId: string; status: FakeClipEligibility }>
@@ -420,6 +429,10 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     (options.retainedBatches ?? []).map((b) => [b.id, b]),
   )
   const quotes = new Map<string, { id: string; max: number }>()
+  const revisionQuotes = new Map<
+    string,
+    { id: string; max: number; request: string; target: string; revision: number }
+  >()
   let quoteNumber = 0
   router.rpc(ClipService.method.listClipAnalysisEligibility, () => {
     options.calls?.push('ListClipAnalysisEligibility')
@@ -461,6 +474,80 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
         { label: 'narration', stage: 'write', calls: 1 },
       ],
     })
+  })
+  // A revision is quoted and started like a generation, but against the SAVED
+  // PLAN rather than a batch: the quote binds the plan revision it was taken
+  // against, and the narration target pays for one writing call instead of two.
+  router.rpc(ClipService.method.quoteClipRevision, (req) => {
+    options.calls?.push('QuoteClipRevision')
+    options.revisionQuotes?.push(req)
+    if (options.revisionQuoteFails)
+      throw connectAppError(options.revisionQuoteFails, Code.FailedPrecondition)
+    const p = projects.get(req.projectId)
+    if (!p?.editing) throw connectAppError('CLIP_NOT_FOUND', Code.NotFound)
+    if (p.latestJob && !['done', 'failed', 'cancelled'].includes(p.latestJob.status ?? ''))
+      throw connectAppError('CLIP_BUSY', Code.FailedPrecondition)
+    if (!req.request.trim() || !['flow', 'narration', 'both'].includes(req.target))
+      throw connectAppError('CLIP_INVALID_INPUT', Code.InvalidArgument)
+    const q = {
+      id: `revision-quote-${++quoteNumber}`,
+      max: options.revisionMaxCredits ?? (req.target === 'narration' ? 8 : 16),
+      request: req.request,
+      target: req.target,
+      revision: p.editPlanRevision ?? 0,
+    }
+    revisionQuotes.set(q.id, q)
+    return create(QuoteClipRevisionResponseSchema, {
+      quoteId: q.id,
+      maxCredits: q.max,
+      planRevision: q.revision,
+      cancellationPolicy: {
+        version: 1,
+        unusedReservationNumerator: 1,
+        unusedReservationDenominator: 2,
+        rounding: 'ceil',
+      },
+      expiresAt: options.quoteExpiresAt ?? '2099-01-01T00:00:00Z',
+      pricedCalls:
+        req.target === 'narration'
+          ? [{ label: 'narration', stage: 'write', calls: 1 }]
+          : [
+              { label: 'flow', stage: 'write', calls: 1 },
+              { label: 'narration', stage: 'write', calls: 1 },
+            ],
+    })
+  })
+  router.rpc(ClipService.method.startClipRevision, (req) => {
+    options.calls?.push('StartClipRevision')
+    options.revisionStarts?.push(req)
+    if (options.revisionReject)
+      throw connectAppError(options.revisionReject, Code.FailedPrecondition)
+    const p = projects.get(req.projectId)
+    if (!p?.editing) throw connectAppError('CLIP_NOT_FOUND', Code.NotFound)
+    const quote = revisionQuotes.get(req.quoteId)
+    if (!quote || quote.max !== req.approvedMaxCredits)
+      throw connectAppError('CLIP_QUOTE_REQUIRED', Code.FailedPrecondition)
+    if (quote.request !== req.request || quote.target !== req.target)
+      throw connectAppError('CLIP_QUOTE_CHANGED', Code.FailedPrecondition)
+    if (quote.revision !== (p.editPlanRevision ?? 0))
+      throw connectAppError('CLIP_QUOTE_CHANGED', Code.FailedPrecondition)
+    const jobId = options.revisionJobId ?? 'clip-revision-job'
+    p.latestJob = {
+      id: jobId,
+      kind: 'revise_clip',
+      status: 'queued',
+      stage: 'flow',
+      clipProjectId: p.id,
+    }
+    p.latestAttempt = { jobId, batchId: '', quoteId: quote.id }
+    p.accounting = {
+      jobId,
+      status: 'not_reserved',
+      approvedMaxCredits: quote.max,
+      reservedCredits: 0,
+      settled: false,
+    }
+    return create(StartClipRevisionResponseSchema, { jobId })
   })
   router.rpc(ClipService.method.reorderClipSources, (req) => {
     options.calls?.push('ReorderClipSources')

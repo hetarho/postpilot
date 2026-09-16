@@ -38,6 +38,13 @@ export const CLIP_DRAFT_PREVIEW = {
   seekStepMs: 1,
 } as const
 
+/** How long the revision request waits after the last keystroke before it is
+ *  priced. A quote binds the exact words it was taken against (CLIP-131), so the
+ *  text is part of its key; without this every character would ask the server. */
+export const CLIP_REVISION = {
+  quoteDebounceMs: 700,
+} as const
+
 export const CLIP_TIMELINE = {
   history: 100,
   coalesceMs: 700,

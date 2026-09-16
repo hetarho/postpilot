@@ -35,6 +35,11 @@ export function isTerminal(job: Pick<GenerationJob, 'status'> | undefined): bool
  *  and says nothing on the way (see `progressRatio`). */
 const RATIO_STAGES = new Set(['observe', 'compare_observe', 'compare_write', 'compare_analyze'])
 
+/** The clip jobs: they report the clip stages and are read in the clips
+ *  namespace. A revision is one of them — it makes the same writing calls a
+ *  generation does, just over a plan that already exists (CLIP-131). */
+const CLIP_KINDS = new Set(['generate_clip', 'render_clip', 'revise_clip'])
+
 /** WHICH STAGE is running, and nothing else. The numbers are the progress bar's value
  *  (`progressRatio`), so spelling them out here would print the same fact twice in two
  *  grammars — and in a container sized for a warning (change 15).
@@ -62,7 +67,7 @@ export function progressLabel(
   job: Pick<GenerationJob, 'stage'> &
     Partial<Pick<GenerationJob, 'kind' | 'progressDone' | 'progressTotal'>>,
 ): string {
-  if (job.kind === 'generate_clip' || job.kind === 'render_clip') {
+  if (CLIP_KINDS.has(job.kind ?? '')) {
     const stage = CLIP_STAGES.find((stage) => stage === job.stage)
     const label = i18next.t(stage ? `generation.stage.${stage}` : 'generation.running', {
       ns: 'clips',
@@ -108,9 +113,7 @@ export function progressRatio(
   job: Pick<GenerationJob, 'stage' | 'progressDone' | 'progressTotal'> &
     Partial<Pick<GenerationJob, 'kind'>>,
 ): { done: number; total: number } | undefined {
-  const clipRatio =
-    (job.kind === 'generate_clip' || job.kind === 'render_clip') &&
-    ['prepare', 'analyze'].includes(job.stage)
+  const clipRatio = CLIP_KINDS.has(job.kind ?? '') && ['prepare', 'analyze'].includes(job.stage)
   if ((!RATIO_STAGES.has(job.stage) && !clipRatio) || job.progressTotal <= 0) return undefined
   return { done: job.progressDone, total: job.progressTotal }
 }

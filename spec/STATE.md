@@ -47,13 +47,14 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
-| T203 | ② asks for a revision in its own panel | CLIP | T202 | todo |
 | T204 | What the owner asked for is kept | CLIP | T202 | todo |
 
 ## next
-- implement-task T203 next (dep T202 done), then T204; nothing else is free — T209, T214, T215 and T216 all change clip.proto, so run them one after another in one tree; then the revision tasks T201 → T202 → T203/T204 (deps T212/T213 done)
-- T200 and ARCH's T205 T206 are done; T177 is blocked on the owner's viewing answers; T008 stays owner-dependent
+- implement-task T204 next (dep T202 done) — the last of the revision chain and the last free task
+- T177 is blocked on the owner's viewing answers; T008 stays owner-dependent
 ## log
+- 260917 T203 done; ② asks the writer for a revision from its own panel — a bounded request with its count, a target defaulting to 자막, the ceiling and its priced writing calls re-quoted whenever either changes, and the run reported in place with 취소 while the timeline goes read-only and no focused job view opens; the approval surface came down to entities/clip-project so the revision reuses it instead of writing a second one, and a flush that moves the plan re-quotes rather than sending against a ceiling nobody approved
+- 260917 T203 claimed (rui)
 - 260917 T202 done; a revision is the third clip job kind — quoted for the writing calls its target needs and no observation, bound to the saved plan by its own digest, reserved at the start of its run, saved with SaveRevisedPlan so the plan revision advances while the rendered one stays behind; migration 0059 lets its job consume a quote, and every clip-kind check now asks job.ClipKind
 - 260917 T201 done; the two writing contracts gained a revision mode — the saved plan as the owner's edits left it plus their request, appended to the same prompts and answered on the same schemas; a flow target rewrites the footage then the narration, a narration target is told the flow is final, and the three writing calls now share one `write` helper
 - 260917 T216 done; the owner arranges the footage in ① (migration 0058 position, ReorderClipSources for the whole batch or nothing, ORDER BY position then ordinal) and the flow call reads that order; the strip moves a tile by grip-drag or by two buttons with a live announcement, the item control says it is an optional hint, and the instruction help says it directs order, rhythm and what the captions say
@@ -72,5 +73,3 @@
 - 260916 T206 done; the media package declares the filters, decoders, encoders and muxers it names, the image proves the bundled ffmpeg carries them in 0.01 s before the deploy pushes it, and the graph fixtures keep the list honest without Docker
 - 260916 T206 claimed (dply)
 - 260916 T205 done; the pushed image is the `runtime` target and the rollout no longer waits — the smokes run on the same commit in their own job and still fail the run, with a deploy check that catches the gate being removed rather than moved
-- 260916 T207 claimed (tmpl)
-- 260916 T205 claimed (dply)

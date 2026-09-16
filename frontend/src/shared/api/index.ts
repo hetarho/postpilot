@@ -48,6 +48,8 @@ export {
   DiscardClipSourceBatchResponseSchema,
   StartClipGenerationResponseSchema,
   QuoteClipGenerationResponseSchema,
+  QuoteClipRevisionResponseSchema,
+  StartClipRevisionResponseSchema,
   ClipAccountingSchema,
   ClipAttemptSchema,
   ClipAnalysisEligibility,
@@ -71,6 +73,7 @@ export type {
   ClipSourceUpload as ProtoClipSourceUpload,
   ClipAccounting as ProtoClipAccounting,
   QuoteClipGenerationResponse as ProtoClipQuote,
+  QuoteClipRevisionResponse as ProtoClipRevisionQuote,
 } from './gen/postpilot/v1/clip_pb'
 export {
   contentLanguages,

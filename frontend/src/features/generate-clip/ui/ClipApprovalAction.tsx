@@ -1,16 +1,16 @@
 import { useTranslation } from 'react-i18next'
-import type {
-  ClipEligibilityStatus,
-  ClipProject,
-  ClipQuote,
-  ReadyClipBatch,
+import {
+  ClipQuoteApproval,
+  type ClipEligibilityStatus,
+  type ClipProject,
+  type ClipQuote,
+  type ReadyClipBatch,
 } from '@/entities/clip-project'
 import type { ModelRef } from '@/entities/model-catalog'
 import { useMyPlan } from '@/entities/plan'
 import { appFailureFromConnect } from '@/shared/api'
 import { Button, Typography } from '@/shared/ui'
 import { useClipQuote } from '../api/useClipQuote'
-import { ClipGenerationFailure } from './ClipGenerationFailure'
 
 export function ClipApprovalAction({
   ownerId,
@@ -76,32 +76,24 @@ function QuotedAction({
   const query = useClipQuote(ownerId, project, batch, observe, write, observeStatus)
   const { myPlan } = useMyPlan()
   const quote = query.quote
-  const insufficient =
-    !!quote && !!myPlan && !myPlan.balance.unlimited && quote.maxCredits > myPlan.balance.credits
   return (
-    <div className="w-full min-w-0 space-y-2">
-      <Typography variant="meta" role="status">
-        {query.isFetching
-          ? t('credits.quoting')
-          : query.expired
-            ? t('credits.expired')
-            : t('credits.maximumHelp')}
-      </Typography>
-      {quote && quote.calls.some((call) => call.label !== 'observe' && call.calls > 0) && (
-        <ul className="space-y-1" aria-label={t('credits.writingCalls')}>
-          {quote.calls
-            .filter((call) => call.label !== 'observe' && call.calls > 0)
-            .map((call) => (
-              <li key={call.label}>
-                <Typography variant="meta">
-                  {call.label === 'flow'
-                    ? t('credits.call.flow', { calls: call.calls })
-                    : t('credits.call.narration', { calls: call.calls })}
-                </Typography>
-              </li>
-            ))}
-        </ul>
-      )}
+    <ClipQuoteApproval
+      quote={quote}
+      quoting={query.isFetching}
+      expired={query.expired}
+      balance={myPlan?.balance}
+      error={query.error ? appFailureFromConnect(query.error) : undefined}
+      approveDisabled={!quote?.recovery?.renderOnly && !myPlan}
+      approveLabel={
+        quote?.recovery?.renderOnly
+          ? t('credits.resumeRender')
+          : quote
+            ? t('credits.approve', { amount: quote.maxCredits })
+            : t('generation.generate')
+      }
+      onRefresh={() => void query.refetch()}
+      onApprove={onApprove}
+    >
       {quote?.recovery && (
         <Typography variant="body" role="status">
           {quote.recovery.renderOnly
@@ -113,45 +105,6 @@ function QuotedAction({
               })}
         </Typography>
       )}
-      <Typography variant="body">
-        {t(quote?.cancellationPolicy ? 'cancellation.rule' : 'cancellation.policyUnavailable')}
-      </Typography>
-      {myPlan?.balance.unlimited && <Typography variant="body">{t('credits.exempt')}</Typography>}
-      {query.error && <ClipGenerationFailure failure={appFailureFromConnect(query.error)} />}
-      {insufficient && myPlan && quote && (
-        <ClipGenerationFailure
-          failure={{
-            reason: 'INSUFFICIENT_CREDITS',
-            params: {
-              required: String(quote.maxCredits),
-              balance: String(myPlan.balance.credits),
-              renews_at: myPlan.balance.renewsAt,
-            },
-          }}
-        />
-      )}
-      {(query.expired || query.isError) && (
-        <Button variant="secondary" pending={query.isFetching} onClick={() => void query.refetch()}>
-          {t('credits.refresh')}
-        </Button>
-      )}
-      <Button
-        variant="cta"
-        className="w-full whitespace-normal"
-        disabled={
-          !quote?.cancellationPolicy || (!quote?.recovery?.renderOnly && !myPlan) || insufficient
-        }
-        pending={query.isFetching}
-        onClick={() => {
-          if (quote?.cancellationPolicy && !insufficient) onApprove(quote)
-        }}
-      >
-        {quote?.recovery?.renderOnly
-          ? t('credits.resumeRender')
-          : quote
-            ? t('credits.approve', { amount: quote.maxCredits })
-            : t('generation.generate')}
-      </Button>
-    </div>
+    </ClipQuoteApproval>
   )
 }

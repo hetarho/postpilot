@@ -54,6 +54,7 @@ export function ClipCorrectionWorkspace({
   preview,
   localSources,
   comparison,
+  revision,
   downloadAction,
   finalizeAction,
   notices = [],
@@ -69,6 +70,10 @@ export function ClipCorrectionWorkspace({
   sourcePicker: ReactNode
   preview: (props: ClipEditorPreviewProps) => ReactNode
   comparison?: ReactNode
+  /** The owner's written revision request and its approval (CLIP-131). It sits in
+   *  the PANEL: ②'s dock is full, and a charged action would not belong beside
+   *  three credit-free ones in any case (CLIP-40). */
+  revision?: ReactNode
   downloadAction?: ReactNode
   finalizeAction?: ReactNode
   localSources: ReadonlyArray<{ fingerprint: string; url: string }>
@@ -566,6 +571,7 @@ export function ClipCorrectionWorkspace({
           />
         )}
       </fieldset>
+      {revision}
       {comparison}
       {sourcePicker}
       <div ref={actions} className="contents">

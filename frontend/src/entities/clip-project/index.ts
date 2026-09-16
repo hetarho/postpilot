@@ -64,7 +64,7 @@ export type {
   ClipEdit,
 } from './model/edit-plan'
 export { toClipEditingState, clipPlanToProto } from './api/edit-plan'
-export { toClipQuote, toClipAccounting } from './api/credits'
+export { toClipQuote, toClipRevisionQuote, toClipAccounting } from './api/credits'
 export {
   CLIP_ELIGIBILITY_STATUSES,
   clipEligibilityOf,
@@ -91,6 +91,10 @@ export type {
   ClipSourceObservation,
   ClipObservations,
 } from './model/observations'
+export { CLIP_REVISION_TARGETS } from './model/revision'
+export type { ClipRevisionTarget } from './model/revision'
+export { ClipFailureNotice } from './ui/ClipFailureNotice'
+export { ClipQuoteApproval } from './ui/ClipQuoteApproval'
 export { ClipSourceStrip } from './ui/ClipSourceStrip'
 export { ClipCompositionInputFields } from './ui/ClipCompositionInputs'
 export {

@@ -437,6 +437,24 @@ export const clips = {
       'Checking whether your request was accepted without submitting it again. Leaving this page does not stop an accepted job.',
     checkAttempt: 'Check accepted work again',
   },
+  revision: {
+    title: 'Ask the AI to revise',
+    help: 'Write what to change and the AI rewrites the edit plan. The clip you already made stays as it is, so make a new one with re-render.',
+    request: 'What to change',
+    count: '{{used}} / {{max}} characters',
+    target: 'What to revise',
+    targets: {
+      flow: 'Footage flow',
+      narration: 'Captions',
+      both: 'Both',
+    },
+    send: 'Ask the AI to revise',
+    approve: 'Up to {{amount, number}} credits · approve and ask',
+    running: 'Writing the revision',
+    readOnly:
+      'The timeline is read-only until the revision finishes. The preview and the sources stay open.',
+    cancelled: 'The revision was stopped. The edit plan and the clip are unchanged.',
+  },
   correction: {
     title: 'Edit cuts and captions',
     help: 'Adjust cut order, ranges, exact captions and original audio. Manual edits and rerendering use no credits.',

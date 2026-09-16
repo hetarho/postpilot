@@ -1,4 +1,4 @@
-import type { ProtoClipAccounting, ProtoClipQuote } from '@/shared/api'
+import type { ProtoClipAccounting, ProtoClipQuote, ProtoClipRevisionQuote } from '@/shared/api'
 import type { ClipAccounting, ClipPricedCall, ClipQuote } from '../model/types'
 
 const STATUSES = [
@@ -84,6 +84,53 @@ export function toClipQuote(value: ProtoClipQuote, binding: string): ClipQuote {
             remainingChunks: value.remainingChunks,
             renderOnly: value.renderOnly,
             responseRetries: value.responseRetries,
+          },
+        }
+      : {}),
+    calls: value.pricedCalls
+      .filter((call): call is typeof call & { label: ClipPricedCall['label'] } =>
+        ['observe', 'flow', 'narration'].includes(call.label),
+      )
+      .map((call) => ({ label: call.label, calls: call.calls })),
+    quoteId: value.quoteId,
+    maxCredits: value.maxCredits,
+    expiresAt: value.expiresAt,
+    binding,
+  }
+}
+
+/** A revision is quoted on its own message: no chunk recovery to report, because
+ *  it does no media work at all, and a plan revision it is bound to (CLIP-131).
+ *  Everything else — the ceiling, the writing calls, the cancellation rule — is
+ *  the generation's contract, so it is read the same way. */
+export function toClipRevisionQuote(value: ProtoClipRevisionQuote, binding: string): ClipQuote {
+  if (
+    !value.quoteId ||
+    !Number.isSafeInteger(value.maxCredits) ||
+    value.maxCredits < 0 ||
+    ![0, 3].includes(value.responseRetries) ||
+    !Number.isInteger(value.planRevision) ||
+    value.planRevision <= 0 ||
+    !Number.isFinite(Date.parse(value.expiresAt))
+  )
+    throw new Error('Invalid clip revision quote')
+  const policy = value.cancellationPolicy
+  if (
+    policy &&
+    (policy.version !== 1 ||
+      policy.unusedReservationNumerator !== 1 ||
+      policy.unusedReservationDenominator !== 2 ||
+      policy.rounding !== 'ceil')
+  )
+    throw new Error('Unsupported clip cancellation policy')
+  return {
+    ...(policy
+      ? {
+          cancellationPolicy: {
+            version: policy.version,
+            numerator: policy.unusedReservationNumerator,
+            denominator: policy.unusedReservationDenominator,
+            rounding: 'ceil' as const,
           },
         }
       : {}),
