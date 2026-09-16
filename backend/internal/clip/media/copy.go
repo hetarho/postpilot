@@ -46,7 +46,7 @@ var _ clip.CompositionExecutor = (*Rendering)(nil)
 func (r *Rendering) CompositionPlanVersion() int { return clip.CompositionPlanVersion }
 
 func NewRenderer(media *Adapter, cfg clip.RenderConfig) (*Rendering, error) {
-	if cfg.OverlayBatchSize <= 0 || cfg.OverlayBatchSize > 16 || cfg.Composition.Cues <= 0 || cfg.MergeInputs < 2 || cfg.MergeInputs > 8 {
+	if cfg.OverlayBatchSize <= 0 || cfg.OverlayBatchSize > 16 || cfg.Composition.Cues <= 0 || cfg.MergeInputs < 2 || cfg.MergeInputs > 8 || cfg.SampleBatch < 3 || cfg.SampleBatch > 48 {
 		return nil, errors.New("invalid clip composition renderer configuration")
 	}
 	if media == nil || cfg.FadeMS != design.Transition.FadeMS || cfg.FPS != 30 || cfg.MaxCuts <= 0 || cfg.MaxCopyRunes <= 0 || cfg.MinDurationMS != 15000 || cfg.MaxDurationMS != 90000 || !filepath.IsAbs(cfg.ResvgPath) || !filepath.IsAbs(cfg.FontPath) {

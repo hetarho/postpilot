@@ -47,10 +47,8 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
-| T195 | A plate's sample frames come from one decode | CLIP | T191 | todo |
 | T197 | A cut's rate is read from its own observation | CLIP | T191 | todo |
 | T198 | Speech a retained source lets through stays at 1x | CLIP | T197 | todo |
-| T199 | An instruction change invalidates the reusable plan | CLIP | - | doing@260916.inst |
 | T200 | The creation screen settles only the ratio | CLIP | - | todo |
 | T201 | The writer rewrites a saved plan from a written request | CLIP | - | todo |
 | T202 | A revision request runs as its own job and charges one writing call | CLIP | T201 | todo |
@@ -59,9 +57,12 @@
 
 ## next
 - create-task CLIP then CDS — r31/r20 shrink the template to what every clip must carry, write the flow and then a narration of captions on the absolute output timeline in two calls, ground numbers on collected facts only, retire the information pair and record no notice for the writer's choices; T197 T198 (r29 single writing call) and T200-T204 (r30 whole-plan revision, one call) must be re-cut against r31 before implementing, T199 stands.
-- implement-task T199 first — it alone fixes the reported defect, where a changed instruction re-renders the plan written without it; then T196, T195 against T191's identity baseline (docker --target identity-smoke). T177 is blocked on the owner's viewing answers; T008 stays owner-dependent.
+- r28's pass budget is done: T190-T196 all landed against T191's identity baseline (docker --target identity-smoke), which none of them moved. T197 T198 and T200-T204 are held for create-task against r31; T177 is blocked on the owner's viewing answers and T008 stays owner-dependent.
 - create-task ARCH — r3 sets the deploy smoke gate: the smokes stay image stages outside ARCH-26 (ARCH-36 ARCH-37), they move beside the deploy until closed beta (ARCH-38), and the bundled ffmpeg is checked against the names the render code emits (ARCH-39); both tasks wait on T198.
 ## log
+- 260916 T195 done; every element's CDS-44 frames come from one read of the composed footage (output-side seeks select the same frames), the measurements and the delivered clip unchanged
+- 260916 T199 done; the owner instruction now rides both reuse digests, so a changed instruction re-plans on the stored observations instead of re-rendering the plan written without it
+- 260916 T195 claimed (perf)
 - 260916 update-ssot CDS done; CDS@20 — rhythm and voice follow the instruction, captions hold disjoint absolute windows on the output timeline whatever cut lies beneath, the information pair is retired, numbers match any collected fact, and the accent is chosen in ①
 - 260916 T197 T198 (base CLIP@29) and T200-T204 (base CLIP@30) affected — r31 rebuilds the writing contract into two calls and targets the revision request; re-cut under create-task before implementing
 - 260916 update-ssot CLIP done; CLIP@31 — the template shrinks to what every clip must carry (design, slots, badge, fields, groups, optional guide), the instruction directs footage order and narration, two writing calls write the flow and then a narration of captions on the absolute output timeline, numbers ground on collected facts only, and an unwritten caption is no notice
@@ -79,6 +80,3 @@
 - 260916 update-ssot CLIP done; CLIP@30 — the creation screen keeps only title/template/ratio, ② gains a written revision request charged as one writing call and stopping at the plan, every instruction and request is kept verbatim, and an instruction change now invalidates the candidate plan
 - 260916 T193 claimed (perf)
 - 260916 T192 done; decoding takes 2 threads while every encoder and the filters stay at 1, the delivered clip still matching T191's baseline and the analysis copies identical at either decoder count
-- 260916 update-ssot CLIP start
-- 260916 T192 claimed (perf)
-- 260916 T191 done; one fixed plan renders byte-identically twice, and its digest, player-visible properties and one frame per second are pinned as the baseline T192-T195 must hold (docker target identity-smoke, 112 s)

@@ -186,6 +186,11 @@ type RenderConfig struct {
 	DisplayFontPath                                                  string
 	MaxCuts, MaxCopyRunes, FadeMS, FPS, CRF, AudioRate, AudioBitrate int
 	MinDurationMS, MaxDurationMS                                     int
+	// How many sampled frames one read of the footage may produce at once.
+	// Each output carries its own scale/crop chain, so a whole plan's frames are
+	// taken in as few reads as this allows rather than one read per frame
+	// (CLIP-124).
+	SampleBatch int
 	// How many full-resolution video inputs one merge may open at once. A
 	// linear graph over every cut opens every decoder for the whole clip, which
 	// the shared service cannot hold; merging in rounds of this many is what

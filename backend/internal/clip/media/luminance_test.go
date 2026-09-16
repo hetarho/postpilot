@@ -163,7 +163,9 @@ func TestScrimGeometryAndEffectiveBackground(t *testing.T) {
 func TestSamplerTakesThreeFramesThroughTheRenderChain(t *testing.T) {
 	frames := []image.Image{fill(0xff), fill(0x80), fill(0x00)}
 	var seeks, filters []string
+	reads := 0
 	a := newAdapter(t, &fakeRunner{run: func(_ context.Context, c Command) ([]byte, error) {
+		reads++
 		input := slices.Index(c.Args, "-i")
 		before := " " + strings.Join(c.Args[:input], " ") + " "
 		// The decoder may use the cores the encode cannot; filter threads are
@@ -180,13 +182,23 @@ func TestSamplerTakesThreeFramesThroughTheRenderChain(t *testing.T) {
 				filters = append(filters, c.Args[i+1])
 			}
 		}
-		out := c.Args[len(c.Args)-1]
-		f, err := os.Create(out)
-		if err != nil {
-			return nil, err
+		written := 0
+		for _, arg := range c.Args {
+			if !strings.HasSuffix(arg, ".png") {
+				continue
+			}
+			f, err := os.Create(arg)
+			if err != nil {
+				return nil, err
+			}
+			err = png.Encode(f, frames[min(written, len(frames)-1)])
+			_ = f.Close()
+			if err != nil {
+				return nil, err
+			}
+			written++
 		}
-		defer f.Close()
-		return nil, png.Encode(f, frames[min(len(seeks)-1, len(frames)-1)])
+		return nil, nil
 	}})
 	r := testRenderer(t, a)
 	canvas, _ := clip.ClipCanvas("vertical")
@@ -198,9 +210,13 @@ func TestSamplerTakesThreeFramesThroughTheRenderChain(t *testing.T) {
 			return err
 		}
 		// The first, middle and last frame of the copy window, on the SOURCE's
-		// own clock: the cut's start plus the window's own offset.
+		// own clock: the cut's start plus the window's own offset — and all three
+		// from ONE read of the footage rather than a seek and decode each.
 		if strings.Join(seeks, " ") != "2.120 5.500 8.879" {
 			return fmt.Errorf("seeks %q", seeks)
+		}
+		if reads != 1 {
+			return fmt.Errorf("%d reads of the footage for three frames", reads)
 		}
 		// Each through the render's scale-and-crop, so the luminance measured is
 		// the luminance the viewer sees.
@@ -253,25 +269,32 @@ func TestDeclaredRolesSampleOnlyTheirTextBounds(t *testing.T) {
 			}
 			samples := 0
 			a := newAdapter(t, &fakeRunner{run: func(_ context.Context, c Command) ([]byte, error) {
-				if slices.Contains(c.Args, "-ss") {
+				for _, arg := range c.Args {
+					if !strings.HasSuffix(arg, ".png") {
+						continue
+					}
 					samples++
+					f, err := os.Create(arg)
+					if err != nil {
+						return nil, err
+					}
+					err = png.Encode(f, banded)
+					_ = f.Close()
+					if err != nil {
+						return nil, err
+					}
 				}
-				f, err := os.Create(c.Args[len(c.Args)-1])
-				if err != nil {
-					return nil, err
-				}
-				defer f.Close()
-				return nil, png.Encode(f, banded)
+				return nil, nil
 			}})
 			r := testRenderer(t, a)
+			visuals := []declaredVisual{visual}
 			if err := a.WithWorkspace(t.Context(), "role-sample", func(ws clip.MediaWorkspace) error {
-				_, err := r.declaredPlate(t.Context(), ws, canvas, &visual, clip.MediaSource{Path: sourceFile(t, ws), Info: clip.MediaInfo{DurationMS: 15000}}, 0)
-				return err
+				return r.sampleDeclaredGrounds(t.Context(), ws, canvas, clip.MediaSource{Path: sourceFile(t, ws), Info: clip.MediaInfo{DurationMS: 15000}}, visuals)
 			}); err != nil {
 				t.Fatal(err)
 			}
-			if samples != 3 || visual.ground.Mean != 0 || visual.ground.Scrim() {
-				t.Fatal(samples, visual.ground)
+			if samples != 3 || visuals[0].ground.Mean != 0 || visuals[0].ground.Scrim() {
+				t.Fatal(samples, visuals[0].ground)
 			}
 		})
 	}

@@ -55,7 +55,7 @@ RUN ["/media.test", "-test.run=Test(MediaSmoke|MediaProfileSmoke|RenderSmoke)", 
 FROM runtime AS identity-smoke
 COPY --from=builder /media.test /media.test
 ENV CLIP_MEDIA_SMOKE=1
-ENTRYPOINT ["/media.test", "-test.run=^Test(DeliveredClipIdentity|AnalysisCopyIdentityAcrossDecoderThreads|PreparationDecodesEachOriginalOnce)$", "-test.v", "-test.timeout=45m"]
+ENTRYPOINT ["/media.test", "-test.run=^Test(DeliveredClipIdentity|AnalysisCopyIdentityAcrossDecoderThreads|PreparationDecodesEachOriginalOnce|SampledGroundsSurviveTheBatchedRead)$", "-test.v", "-test.timeout=45m"]
 
 # Explicit local regression target: never contacts a real provider or stack.
 FROM runtime AS release-smoke

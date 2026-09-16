@@ -16,12 +16,22 @@ import (
 func TestRapidLayersHaveUniquePathsCroppedExtentsAndNoMotion(t *testing.T) {
 	runner := &fakeRunner{run: func(_ context.Context, c Command) ([]byte, error) {
 		if filepath.Base(c.Binary) != "resvg" {
-			f, err := os.Create(c.Args[len(c.Args)-1])
-			if err != nil {
-				return nil, err
+			// A sampling read writes every frame of its batch, not just a last one.
+			for _, arg := range c.Args {
+				if !strings.HasSuffix(arg, ".png") {
+					continue
+				}
+				f, err := os.Create(arg)
+				if err != nil {
+					return nil, err
+				}
+				err = png.Encode(f, fill(0))
+				_ = f.Close()
+				if err != nil {
+					return nil, err
+				}
 			}
-			defer f.Close()
-			return nil, png.Encode(f, fill(0))
+			return nil, nil
 		}
 		return nil, os.WriteFile(c.Args[len(c.Args)-1], []byte("png"), 0600)
 	}}

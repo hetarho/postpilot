@@ -13,23 +13,54 @@ import (
 	"github.com/postpilot/backend/internal/clip/overlay"
 )
 
-func (r *Rendering) declaredPlate(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, visual *declaredVisual, source clip.MediaSource, index int) (string, error) {
-	var body string
-	var err error
-	switch visual.manifest.Role {
-	case "caption", "info", "hook", "ending":
-		bounds := regionBounds(*visual)
-		if bounds.Width > 0 && bounds.Height > 0 {
-			cut := clip.Cut{EndMS: source.Info.DurationMS, Focal: clip.Point{X: .5, Y: .5}}
-			window := declaredSampleWindow(visual.manifest.StartMS, visual.manifest.EndMS, source.Info.DurationMS, r.cfg.FPS)
-			visual.ground, err = r.sample(ctx, ws, canvas, source, cut, window, bounds, index)
-			if err != nil {
-				return "", err
-			}
-			applyDeclaredGround(canvas, visual)
+// sampleDeclaredGrounds measures every element's ground BEFORE any plate is
+// built, so the frames CDS-44 names for the whole plan come from as few reads of
+// the composed footage as the batch allows rather than one read per frame
+// (CLIP-124). Each element is still measured on exactly its own three frames
+// and its own region.
+func (r *Rendering) sampleDeclaredGrounds(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, source clip.MediaSource, visuals []declaredVisual) error {
+	cut := clip.Cut{EndMS: source.Info.DurationMS, Focal: clip.Point{X: .5, Y: .5}}
+	var wanted []int
+	var regions []clip.Region
+	var sampled []int
+	for i := range visuals {
+		switch visuals[i].manifest.Role {
+		case "caption", "info", "hook", "ending":
+		default:
+			continue
+		}
+		bounds := regionBounds(visuals[i])
+		if bounds.Width <= 0 || bounds.Height <= 0 {
+			continue
+		}
+		window := declaredSampleWindow(visuals[i].manifest.StartMS, visuals[i].manifest.EndMS, source.Info.DurationMS, r.cfg.FPS)
+		offsets := sampleOffsets(cut, window)
+		sampled = append(sampled, i)
+		wanted = append(wanted, offsets...)
+		for range offsets {
+			regions = append(regions, bounds)
 		}
 	}
-	body, err = r.declaredSVG(canvas, *visual)
+	if len(wanted) == 0 {
+		return nil
+	}
+	frames, err := r.sampleFrames(ctx, ws, canvas, source, cut.Focal, wanted, 0)
+	if err != nil {
+		return err
+	}
+	if len(frames) != len(wanted) {
+		return clip.ErrInvalidMedia
+	}
+	for at, index := range sampled {
+		from := at * 3
+		visuals[index].ground = measureFrames(frames[from:from+3], regions[from:from+3])
+		applyDeclaredGround(canvas, &visuals[index])
+	}
+	return nil
+}
+
+func (r *Rendering) declaredPlate(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, visual *declaredVisual, source clip.MediaSource, index int) (string, error) {
+	body, err := r.declaredSVG(canvas, *visual)
 	if err != nil {
 		return "", err
 	}

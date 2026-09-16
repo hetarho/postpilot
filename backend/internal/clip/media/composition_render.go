@@ -136,6 +136,9 @@ func (r *Rendering) renderComposition(ctx context.Context, ws clip.MediaWorkspac
 	// The loader's original can already be released at this point.
 	composedSource := clip.MediaSource{Path: raw, Info: clip.MediaInfo{Width: canvas.Width, Height: canvas.Height, DurationMS: totalFrames * 1000 / r.cfg.FPS}}
 	step("render_overlay")
+	if err = r.sampleDeclaredGrounds(ctx, ws, canvas, composedSource, layout.visuals); err != nil {
+		return result, err
+	}
 	plates := make([]string, len(layout.visuals))
 	for i := range layout.visuals {
 		plates[i], err = r.declaredPlate(ctx, ws, canvas, &layout.visuals[i], composedSource, i)

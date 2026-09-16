@@ -176,42 +176,80 @@ func ratioOf(canvas clip.Canvas) (string, bool) {
 	return "", false
 }
 
-// sample extracts the first, middle and last frame of a window from the cut's
-// own source and measures the plate region on each. It runs inside the source
-// callback that renders the cut, so no second download happens (CLIP-33).
-func (r *Rendering) sample(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, source clip.MediaSource, cut clip.EditCut, window [2]int, region clip.Region, index int) (Luminance, error) {
-	// The last frame is the one BEFORE the window closes; asking for the closing
-	// instant itself can land past the cut.
-	// The window is CUT-RELATIVE OUTPUT time; the seek below is SOURCE time, so
-	// each offset is converted back through the cut's own rate. A 1x cut — and
-	// the synthetic cut the composition path uses over already-transformed
-	// footage — converts to itself (CDS-62).
+// sampleOffsets is the first, middle and last frame of a window, in the SOURCE
+// time the seek needs. The window is CUT-RELATIVE OUTPUT time, so each offset
+// is converted back through the cut's own rate; a 1x cut — and the synthetic
+// cut the composition path uses over already-transformed footage — converts to
+// itself (CDS-62). The last frame is the one BEFORE the window closes, because
+// asking for the closing instant itself can land past the cut.
+func sampleOffsets(cut clip.EditCut, window [2]int) []int {
 	offsets := []int{window[0], (window[0] + window[1]) / 2, max(window[0], window[1]-1)}
 	for i, at := range offsets {
-		offsets[i] = at * cut.Rate() / clip.RateUnitPermille
+		offsets[i] = cut.StartMS + at*cut.Rate()/clip.RateUnitPermille
 	}
-	values, colours := make([]float64, 0, len(offsets)), make([][3]float64, 0, len(offsets))
-	for i, at := range offsets {
-		path := filepath.Join(ws.Path, "sample-"+strconv.Itoa(index)+"-"+strconv.Itoa(i)+".png")
-		// A single frame at an absolute source timestamp: the cut's own start
-		// plus the window's offset inside it.
-		if err := r.media.capacity(ws, int64(4*1024*1024)); err != nil {
-			return Luminance{}, err
+	return offsets
+}
+
+// sample measures one element's plate region on its own three frames. It runs
+// inside the source callback that renders the cut, so no second download
+// happens (CLIP-33).
+func (r *Rendering) sample(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, source clip.MediaSource, cut clip.EditCut, window [2]int, region clip.Region, index int) (Luminance, error) {
+	frames, err := r.sampleFrames(ctx, ws, canvas, source, cut.Focal, sampleOffsets(cut, window), index)
+	if err != nil {
+		return Luminance{}, err
+	}
+	return measureFrames(frames, []clip.Region{region, region, region}), nil
+}
+
+// sampleFrames extracts every requested timestamp in ONE read of the footage.
+// A per-frame command seeks and decodes the whole intermediate again each time;
+// output-side seeks share a single decode and select the very same frames
+// (CLIP-124, CLIP-125). The batch is bounded because each output carries its own
+// scale/crop chain.
+func (r *Rendering) sampleFrames(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, source clip.MediaSource, focal clip.Point, offsets []int, index int) ([]image.Image, error) {
+	frames := make([]image.Image, 0, len(offsets))
+	for start := 0; start < len(offsets); start += r.cfg.SampleBatch {
+		batch := offsets[start:min(len(offsets), start+r.cfg.SampleBatch)]
+		if err := r.media.capacity(ws, int64(len(batch))*4*1024*1024); err != nil {
+			return nil, err
 		}
-		args := append(r.baseArgs(), "-threads", strconv.Itoa(r.media.cfg.DecodeThreads), "-protocol_whitelist", "file,pipe", "-ss", seconds(cut.StartMS+at), "-i", source.Path, "-frames:v", "1",
-			"-vf", coverChain(canvas, cut.Focal), "-c:v", "png", "-threads", "1", path)
-		if _, err := r.media.run(ctx, ws, r.media.cfg.FFmpegPath, args...); err != nil {
-			return Luminance{}, err
+		args := append(r.baseArgs(), "-threads", strconv.Itoa(r.media.cfg.DecodeThreads), "-protocol_whitelist", "file,pipe", "-i", source.Path)
+		paths := make([]string, len(batch))
+		for i, at := range batch {
+			paths[i] = filepath.Join(ws.Path, "sample-"+strconv.Itoa(index)+"-"+strconv.Itoa(start+i)+".png")
+			args = append(args, "-ss", seconds(at), "-frames:v", "1", "-vf", coverChain(canvas, focal), "-c:v", "png", "-threads", strconv.Itoa(r.media.cfg.EncodeThreads), paths[i])
 		}
-		frame, err := readFrame(path)
-		_ = os.Remove(path)
+		_, err := r.media.run(ctx, ws, r.media.cfg.FFmpegPath, args...)
+		for _, path := range paths {
+			if err != nil {
+				_ = os.Remove(path)
+				continue
+			}
+			frame, e := readFrame(path)
+			_ = os.Remove(path)
+			if e != nil {
+				err = e
+				continue
+			}
+			frames = append(frames, frame)
+		}
 		if err != nil {
-			return Luminance{}, err
+			return nil, err
 		}
-		value, cr, cg, cb := regionLuminance(frame, region)
+	}
+	return frames, nil
+}
+
+// measureFrames is CDS-44's measurement over frames already in memory: one
+// region per frame, so a batch shared between elements measures each element on
+// its own region.
+func measureFrames(frames []image.Image, regions []clip.Region) Luminance {
+	values, colours := make([]float64, 0, len(frames)), make([][3]float64, 0, len(frames))
+	for i, frame := range frames {
+		value, cr, cg, cb := regionLuminance(frame, regions[i])
 		values, colours = append(values, value), append(colours, [3]float64{cr, cg, cb})
 	}
-	return summarize(values, colours), nil
+	return summarize(values, colours)
 }
 
 // summarize is CDS-44's L and σ over the sampled frames.
