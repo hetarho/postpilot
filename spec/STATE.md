@@ -47,7 +47,6 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
-| T191 | A delivered-clip identity baseline the speed work must hold | CLIP | - | todo |
 | T192 | Decoding uses the cores the encode cannot | CLIP | T191 | todo |
 | T193 | The cuts become one timeline in a single pass | CLIP | T191 | todo |
 | T194 | The overlay and the delivery encode become one | CLIP | T191 | todo |
@@ -57,10 +56,12 @@
 | T198 | Speech a retained source lets through stays at 1x | CLIP | T197 | todo |
 
 ## next
-- implement-task T191 — it gates T192 T193 T194 T195 T197, and T190's per-operation durations now make each one's effect measurable; T193 T194 T196 carry most of the 1225 s a prod generation took.
+- implement-task T193, then T194 T196 — they carry most of the 1225 s a prod generation took; T190's per-operation durations measure each one and T191's identity baseline (docker --target identity-smoke) is what none of them may move.
 - implement-task T197, then T198 — r29's rate work, held behind T191 because it moves delivered frames on purpose.
 - T177 is blocked on the owner's viewing answers; T008 stays owner-dependent.
 ## log
+- 260916 T191 done; one fixed plan renders byte-identically twice, and its digest, player-visible properties and one frame per second are pinned as the baseline T192-T195 must hold (docker target identity-smoke, 112 s)
+- 260916 T191 claimed (perf)
 - 260916 T190 done; every media command reports its operation, outcome and elapsed time on success too, labelled with the stage it ran in, through the sink the render substages already used
 - 260916 create-task CLIP done; T197 T198 carry r29 — the observed rate rules and the 40 % share into both writing contracts, then the per-source sound setting the speech rule needs
 - 260916 create-task CLIP start
@@ -79,5 +80,3 @@
 - 260916 T185 done; the writer is told which sections this project's answers admit and how many instances each has, the cut ceiling unchanged (owner's choice — update-ssot candidate on CLIP-103)
 - 260916 T185 claimed (grp)
 - 260916 T184 done; a validated plan under the 15 s floor fails as CLIP_INSUFFICIENT_FOOTAGE with its own plan_length_floor check, never as an unreadable response
-- 260916 flake: internal/clip/store fails one differing test per full-suite run on clip source expiry (reproduced on unmodified HEAD) — review-code candidate
-- 260916 T184 claimed (grp)

@@ -49,6 +49,14 @@ COPY --from=builder /media.test /media.test
 ENV CLIP_MEDIA_SMOKE=1
 RUN ["/media.test", "-test.run=Test(MediaSmoke|MediaProfileSmoke|RenderSmoke)", "-test.v"]
 
+# The delivered-clip identity baseline every speed change is measured against
+# (CLIP-125). Run on purpose rather than on every build: it renders one fixed
+# plan twice and compares the delivered files.
+FROM runtime AS identity-smoke
+COPY --from=builder /media.test /media.test
+ENV CLIP_MEDIA_SMOKE=1
+ENTRYPOINT ["/media.test", "-test.run=^TestDeliveredClipIdentity$", "-test.v", "-test.timeout=45m"]
+
 # Explicit local regression target: never contacts a real provider or stack.
 FROM runtime AS release-smoke
 COPY --from=release-builder /clip-release.test /clip-release.test
