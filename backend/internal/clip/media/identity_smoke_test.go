@@ -20,6 +20,14 @@ import (
 // recorded against the pinned media image (CLIP-125). A change that only moves
 // work around must reproduce it byte for byte; a deliberate change to the
 // picture re-records it and says so.
+//
+// The digests are HOST-dependent: the same commit delivers one clip on the
+// machine this baseline was recorded on and a different one on another
+// architecture, and both are internally consistent (the two renders of a run
+// agree, which is what the check above proves first). On a host whose digests
+// differ, compare a change against the SAME host's result before and after it
+// rather than re-recording this constant, which would only move the mismatch to
+// the machine that owns it.
 const deliveredIdentityBaseline = `{
  "digest": "ba5a3fb91b6787cc5c1be4347967a599b427449f1c2eeb3f72c5fcd1ee6edeae",
  "frames": [

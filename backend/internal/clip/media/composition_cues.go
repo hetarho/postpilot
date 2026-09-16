@@ -13,24 +13,110 @@ import (
 
 // Automatic captions at every pace share a cut's reading window. Output text,
 // authored offsets and explicit visuals are independent and never rescheduled.
-func scheduleDeclaredCaptions(elements []clip.PortableText) ([]clip.PortableText, []clip.CopyFallback) {
-	result := slices.Clone(elements)
+func scheduleDeclaredCaptions(plan clip.EditPlan) ([]clip.PortableText, []clip.CopyFallback) {
+	result := slices.Clone(plan.Portable.Elements)
+	dropped, fallbacks := map[int]bool{}, []clip.CopyFallback{}
+	scheduleNarration(plan, result, dropped, &fallbacks)
+	scheduleCutCaptions(result, dropped, &fallbacks)
+	kept := result[:0]
+	for i, text := range result {
+		if !dropped[i] {
+			kept = append(kept, text)
+		}
+	}
+	return kept, fallbacks
+}
+
+// readingFloor is the time a caption needs to be read: CDS-41's sentence floor,
+// or the room its own phrases need when it plays as rapid.
+func readingFloor(t clip.PortableText, text string) int {
+	if t.Pace == "rapid" {
+		return len(clip.RapidPhrases(text)) * design.Rapid.MinMS
+	}
+	return clip.MinExposureMS(text)
+}
+
+// scheduleNarration places the narration on the OUTPUT timeline, where it
+// lives: captions are taken in start order, hold windows disjoint from one
+// another whatever cut lies beneath them, and each one owns enough time to be
+// read — through the grounded shorter sentence, then the room its neighbour
+// leaves, then omission with its reason (CDS-41, CDS-43, CLIP-134).
+//
+// An owner-written or owner-edited caption keeps its own window exactly: a
+// manual interval is a decision, not a proposal (CDS-60, CDS-64).
+func scheduleNarration(plan clip.EditPlan, result []clip.PortableText, dropped map[int]bool, fallbacks *[]clip.CopyFallback) {
+	order := []int{}
+	for i, text := range result {
+		if text.Scope == clip.NarrationScope && text.Resolved.Element.Role == "caption" {
+			order = append(order, i)
+		}
+	}
+	slices.SortStableFunc(order, func(a, b int) int { return result[a].Resolved.StartMS - result[b].Resolved.StartMS })
+	drop := func(i int, reason string) {
+		dropped[i] = true
+		*fallbacks = append(*fallbacks, clip.CopyFallback{ElementID: result[i].Resolved.Element.ID, CutID: result[i].Resolved.CutID, Reason: reason})
+	}
+	previousEnd := 0
+	for at, i := range order {
+		text := &result[i]
+		if text.Resolved.StartMS < previousEnd {
+			drop(i, clip.NoticeCaptionOverlap)
+			continue
+		}
+		previousEnd = text.Resolved.EndMS
+		if text.OwnerEdited || text.Placement != nil {
+			continue
+		}
+		// The room this caption may take is what the next one leaves free.
+		room := plan.DurationMS
+		for _, next := range order[at+1:] {
+			if !dropped[next] {
+				room = min(room, result[next].Resolved.StartMS)
+				break
+			}
+		}
+		window := text.Resolved.EndMS - text.Resolved.StartMS
+		if window >= readingFloor(*text, text.Resolved.Text) {
+			continue
+		}
+		shorter := ""
+		for _, alternative := range text.Alternatives {
+			if alternative.Text != "" && window >= readingFloor(*text, alternative.Text) {
+				shorter = alternative.Text
+				break
+			}
+		}
+		if shorter != "" {
+			text.Resolved.Text, text.FallbackReason = shorter, "shorter_copy"
+			continue
+		}
+		if end := text.Resolved.StartMS + readingFloor(*text, text.Resolved.Text); end <= room {
+			text.Resolved.EndMS, previousEnd = end, end
+			continue
+		}
+		drop(i, clip.NoticeCaptionFloor)
+	}
+}
+
+// scheduleCutCaptions is the sequencing a FROZEN legacy plan was written under:
+// its captions belong to a cut, at most two of them, sharing that cut's window.
+// Nothing written today takes this path — the narration owns its own interval.
+func scheduleCutCaptions(result []clip.PortableText, dropped map[int]bool, fallbacks *[]clip.CopyFallback) {
 	groups := map[string][]int{}
 	order := []string{}
 	for i, text := range result {
-		if text.Resolved.Element.Role == "caption" && clip.AutomaticCompositionRepair(text) {
+		if text.Scope != clip.NarrationScope && text.Resolved.Element.Role == "caption" && clip.AutomaticCompositionRepair(text) {
 			if _, seen := groups[text.Resolved.CutID]; !seen {
 				order = append(order, text.Resolved.CutID)
 			}
 			groups[text.Resolved.CutID] = append(groups[text.Resolved.CutID], i)
 		}
 	}
-	dropped, fallbacks := map[int]bool{}, []clip.CopyFallback{}
 	for _, id := range order {
 		indices := groups[id]
 		for _, i := range indices[min(2, len(indices)):] {
 			dropped[i] = true
-			fallbacks = append(fallbacks, clip.CopyFallback{ElementID: result[i].Resolved.Element.ID, CutID: result[i].Resolved.CutID, Reason: "sentence_count"})
+			*fallbacks = append(*fallbacks, clip.CopyFallback{ElementID: result[i].Resolved.Element.ID, CutID: result[i].Resolved.CutID, Reason: "sentence_count"})
 		}
 		if len(indices) < 2 {
 			continue
@@ -38,14 +124,10 @@ func scheduleDeclaredCaptions(elements []clip.PortableText) ([]clip.PortableText
 		a, b := &result[indices[0]], &result[indices[1]]
 		start, end := max(a.Resolved.StartMS, b.Resolved.StartMS), min(a.Resolved.EndMS, b.Resolved.EndMS)
 		minimum := func(t clip.PortableText) int {
-			floor := clip.MinExposureMS
-			if t.Pace == "rapid" {
-				floor = func(text string) int { return len(clip.RapidPhrases(text)) * design.Rapid.MinMS }
-			}
-			n := floor(t.Resolved.Text)
+			n := readingFloor(t, t.Resolved.Text)
 			for _, alternative := range t.Alternatives {
 				if alternative.Text != "" {
-					n = min(n, floor(alternative.Text))
+					n = min(n, readingFloor(t, alternative.Text))
 				}
 			}
 			return n
@@ -53,7 +135,7 @@ func scheduleDeclaredCaptions(elements []clip.PortableText) ([]clip.PortableText
 		first, second := minimum(*a), minimum(*b)
 		if first+second > end-start {
 			dropped[indices[1]] = true
-			fallbacks = append(fallbacks, clip.CopyFallback{ElementID: b.Resolved.Element.ID, CutID: b.Resolved.CutID, Reason: "readability"})
+			*fallbacks = append(*fallbacks, clip.CopyFallback{ElementID: b.Resolved.Element.ID, CutID: b.Resolved.CutID, Reason: "readability"})
 			continue
 		}
 		// Allocate excess in proportion to the full sentence's reading need.
@@ -62,13 +144,6 @@ func scheduleDeclaredCaptions(elements []clip.PortableText) ([]clip.PortableText
 		a.Resolved.StartMS, a.Resolved.EndMS = start, boundary
 		b.Resolved.StartMS, b.Resolved.EndMS = boundary, end
 	}
-	kept := result[:0]
-	for i, text := range result {
-		if !dropped[i] {
-			kept = append(kept, text)
-		}
-	}
-	return kept, fallbacks
 }
 
 func (r *Rendering) layoutDeclaredRapid(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, plan clip.EditPlan, text clip.PortableText, placed clip.Manifest, previous string) (declaredVisual, error) {

@@ -40,6 +40,10 @@ func VerifyCompositionManifest(plan EditPlan, elements []CompositionElement, lim
 	}
 	seen := map[string]bool{}
 	captionWindows := map[string][]CompositionElement{}
+	// V18 on the whole timeline: a narration caption belongs to no cut, so its
+	// window is checked against every other caption (CDS-43).
+	narrationWindows := []CompositionElement{}
+	facts := collectedCompositionFacts(plan.Portable.Inputs)
 	totalCues := 0
 	for _, element := range elements {
 		text, exists := expected[element.InstanceID]
@@ -67,12 +71,20 @@ func VerifyCompositionManifest(plan EditPlan, elements []CompositionElement, lim
 			return fail("invalid_visual")
 		}
 		if element.Role == "caption" {
-			// V18 concerns cut-relative captions. Output-level authored text has
-			// no cut identity and remains independent of per-cut sequencing.
-			if element.CutID != "" {
+			// A frozen legacy plan's captions belong to cuts and keep the
+			// per-cut reading they were rendered under; a narration caption
+			// holds its window against every caption on the timeline.
+			if text.Scope == NarrationScope {
+				for _, other := range narrationWindows {
+					if element.StartMS < other.EndMS && other.StartMS < element.EndMS {
+						return fail(NoticeCaptionOverlap)
+					}
+				}
+				narrationWindows = append(narrationWindows, element)
+			} else if element.CutID != "" {
 				for _, other := range captionWindows[element.CutID] {
 					if element.StartMS < other.EndMS && other.StartMS < element.EndMS {
-						return fail("caption_overlap")
+						return fail(NoticeCaptionOverlap)
 					}
 				}
 				captionWindows[element.CutID] = append(captionWindows[element.CutID], element)
@@ -173,8 +185,44 @@ func VerifyCompositionManifest(plan EditPlan, elements []CompositionElement, lim
 		if element.Role == "caption" && text.Pace != "rapid" && element.EndMS-element.StartMS < MinExposureMS(element.Text) {
 			return fail("readability")
 		}
+		// V16: every interval lies ON the output timeline this plan produces.
+		if element.StartMS < 0 || element.EndMS > plan.DurationMS {
+			return fail("interval_outside")
+		}
+		// V11: a collected fact behind every number the narration states, from
+		// any item — a caption belongs to none (CLIP-137). Owner-written text is
+		// the owner's own claim and is not ground checked (CLIP-122).
+		if text.Scope == NarrationScope && !text.OwnerEdited {
+			// `instructed` is true here: whether an experiential sentence was
+			// asked for was settled when it was written, and the instruction
+			// itself is not part of a rendered plan.
+			if reason := GroundNarration(element.Text, facts, true); reason != "" {
+				return fail(reason)
+			}
+		}
 	}
 	return nil
+}
+
+// collectedCompositionFacts is every fact the project collected, which is what
+// a narration number is checked against.
+func collectedCompositionFacts(inputs CompositionInputs) []composition.Fact {
+	var out []composition.Fact
+	for id, value := range inputs.Values {
+		if strings.TrimSpace(value) != "" {
+			out = append(out, composition.Fact{FieldID: id, Value: value})
+		}
+	}
+	for group, items := range inputs.Items {
+		for _, item := range items {
+			for field, value := range item.Values {
+				if strings.TrimSpace(value) != "" {
+					out = append(out, composition.Fact{FieldID: field, GroupID: group, ItemID: item.ID, Value: value})
+				}
+			}
+		}
+	}
+	return out
 }
 
 func compositionInside(box, safe Region) bool {

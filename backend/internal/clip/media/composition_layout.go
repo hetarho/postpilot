@@ -128,7 +128,7 @@ func (r *Rendering) layoutComposition(ctx context.Context, ws clip.MediaWorkspac
 	portable.TargetDurationMS = 0
 	result.plan.Portable = &portable
 	result.plan.Portable.Elements = nil
-	ordered, timingFallbacks := scheduleDeclaredCaptions(plan.Portable.Elements)
+	ordered, timingFallbacks := scheduleDeclaredCaptions(plan)
 	result.plan.Portable.Fallbacks = append(result.plan.Portable.Fallbacks, timingFallbacks...)
 	rank := func(role string) int {
 		switch role {
@@ -279,23 +279,7 @@ func (r *Rendering) layoutDeclaredElement(ctx context.Context, ws clip.MediaWork
 		}
 		return visual, err
 	}
-	readable := false
-	subject := clip.Region{}
-	var captionSafe []design.Bounds
-	for _, cut := range plan.Cuts {
-		if cut.ID != text.Resolved.CutID {
-			continue
-		}
-		for _, a := range plan.Portable.Observations {
-			if a.Source.ID == cut.SourceID {
-				_, readable = clip.CutScene(cut, a)
-				subject = clip.CutSubject(canvas, cut, a)
-				for _, box := range clip.CutCaptionSafe(canvas, cut, a) {
-					captionSafe = append(captionSafe, design.Bounds(box))
-				}
-			}
-		}
-	}
+	subject, readable, captionSafe := coveredFootage(canvas, plan, text)
 	candidates := []string{"bold"}
 	texts := []clip.CopyAlternative{{Text: text.Resolved.Text, Rows: text.Resolved.Rows}}
 	if clip.AutomaticCompositionRepair(text) {
@@ -377,4 +361,68 @@ func (r *Rendering) layoutDeclaredElement(ctx context.Context, ws clip.MediaWork
 		}
 	}
 	return visual, elementProblem(text, last)
+}
+
+// coveredFootage is the scene evidence a caption is placed against: the cut it
+// belongs to, or — for a narration caption, which belongs to none — every cut
+// it plays over (CDS-38, CLIP-66). A caption spanning cuts is placed ONCE, so
+// the evidence is folded: the subject box covers every subject it could hide,
+// readable text anywhere under it holds the caption to the top or bottom, and a
+// caption-safe box counts only where it is safe throughout.
+func coveredFootage(canvas clip.Canvas, plan clip.EditPlan, text clip.PortableText) (clip.Region, bool, []design.Bounds) {
+	subject, readable, safe := clip.Region{}, false, []design.Bounds(nil)
+	covered := 0
+	offset := 0
+	for _, cut := range plan.Cuts {
+		offset -= cut.TransitionMS
+		start, end := offset, offset+cut.OutputDurationMS()
+		offset = end
+		if text.Resolved.CutID != "" {
+			if cut.ID != text.Resolved.CutID {
+				continue
+			}
+		} else if start >= text.Resolved.EndMS || end <= text.Resolved.StartMS {
+			continue
+		}
+		for _, a := range plan.Portable.Observations {
+			if a.Source.ID != cut.SourceID {
+				continue
+			}
+			_, cutReadable := clip.CutScene(cut, a)
+			readable = readable || cutReadable
+			box := clip.CutSubject(canvas, cut, a)
+			if covered == 0 {
+				subject = box
+			} else if box != (clip.Region{}) {
+				subject = unionRegion(subject, box)
+			}
+			boxes := []design.Bounds{}
+			for _, region := range clip.CutCaptionSafe(canvas, cut, a) {
+				boxes = append(boxes, design.Bounds(region))
+			}
+			if covered == 0 {
+				safe = boxes
+			} else {
+				safe = sharedBounds(safe, boxes)
+			}
+			covered++
+		}
+	}
+	return subject, readable, safe
+}
+
+// sharedBounds keeps only the area two cuts agree is free. A caption placed
+// across them may use nothing else.
+func sharedBounds(a, b []design.Bounds) []design.Bounds {
+	out := []design.Bounds{}
+	for _, one := range a {
+		for _, other := range b {
+			x, y := max(one.X, other.X), max(one.Y, other.Y)
+			width, height := min(one.X+one.Width, other.X+other.Width)-x, min(one.Y+one.Height, other.Y+other.Height)-y
+			if width > 0 && height > 0 {
+				out = append(out, design.Bounds{X: x, Y: y, Width: width, Height: height})
+			}
+		}
+	}
+	return out
 }

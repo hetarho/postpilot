@@ -56,7 +56,7 @@ func TestCaptionSchedulerPaceFloorsAndCountLimits(t *testing.T) {
 		{"rapid", 3000, 2}, {"steady", 3000, 1}, {"rapid", 400, 1}, {"steady", 5000, 2},
 	} {
 		plan := captionPair(t, tc.pace, tc.duration)
-		kept, drops := scheduleDeclaredCaptions(plan.Portable.Elements)
+		kept, drops := scheduleDeclaredCaptions(plan)
 		if len(kept) != tc.keep || len(drops) != 3-tc.keep || drops[0].Reason != "sentence_count" || drops[0].ElementID != "third" {
 			t.Fatalf("%+v kept=%d drops=%+v", tc, len(kept), drops)
 		}
