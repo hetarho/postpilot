@@ -151,6 +151,7 @@ func QuoteInputDigest(p Project, t VideoTemplate, b SourceBatch, pricing Generat
 	input := struct {
 		User, Project, Batch, Title, TemplateID, Ratio string
 		Disclosure, CTA, Language                      string
+		Instruction                                    string
 		HideDisclosure                                 bool
 		Target                                         int
 		Recipe                                         Recipe
@@ -158,7 +159,7 @@ func QuoteInputDigest(p Project, t VideoTemplate, b SourceBatch, pricing Generat
 		Sources                                        []source
 		Pricing                                        GenerationPricing
 		Composition                                    *ProjectComposition
-	}{p.UserID, p.ID, b.ID, p.Title, p.VideoTemplateID, p.Ratio, p.Disclosure, p.CTA, p.Language, p.HideDisclosure, p.TargetDurationMS, t.Recipe, requiredQuoteAnswers(p, t), sources, pricing, p.Composition}
+	}{p.UserID, p.ID, b.ID, p.Title, p.VideoTemplateID, p.Ratio, p.Disclosure, p.CTA, p.Language, p.Instruction, p.HideDisclosure, p.TargetDurationMS, t.Recipe, requiredQuoteAnswers(p, t), sources, pricing, p.Composition}
 	data, _ := json.Marshal(input) // All fields are concrete JSON-safe values.
 	sum := sha256.Sum256(data)
 	return hex.EncodeToString(sum[:])

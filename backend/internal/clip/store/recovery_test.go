@@ -80,7 +80,7 @@ func TestRecoveryRenderRestartSkipsCompletedWork(t *testing.T) {
 }
 
 func TestRecoveryChangedInputsKeepAnalysisAndInvalidatePlan(t *testing.T) {
-	for _, change := range []string{"facts", "target", "template"} {
+	for _, change := range []string{"facts", "target", "template", "instruction"} {
 		t.Run(change, func(t *testing.T) {
 			h := generationSetup(t)
 			h.renderer.fail = clip.ErrInvalidMedia
@@ -96,6 +96,9 @@ func TestRecoveryChangedInputsKeepAnalysisAndInvalidatePlan(t *testing.T) {
 			case "target":
 				v := 45000
 				patch.TargetDurationMS = &v
+			case "instruction":
+				v := "강조하고 싶은 점: 보습력"
+				patch.Instruction = &v
 			case "template":
 				name := "Original template"
 				if _, err := h.projects.UpdateTemplate(t.Context(), "alice", h.template.ID, clip.TemplatePatch{Name: &name}); err != nil {
