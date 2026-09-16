@@ -135,6 +135,7 @@ export {
   clipTimelineReducer,
   splitTextPhrases,
   clipTextTracks,
+  narrationSlot,
 } from './model/timeline'
 export type {
   ClipSelection,

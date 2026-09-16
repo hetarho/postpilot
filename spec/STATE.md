@@ -52,13 +52,13 @@
 | T203 | ② asks for a revision in its own panel | CLIP | T202 | todo |
 | T204 | What the owner asked for is kept | CLIP | T202 | todo |
 | T209 | Caption pace and accent are project settings | CLIP CDS | - | todo |
-| T215 | ② edits captions on their own track | CLIP CDS | T210 | todo |
 | T216 | ① arranges the sources and hints the writer | CLIP | - | todo |
 
 ## next
-- implement-task T215 next (dep T210 done), with T209 and T216 free beside it — T209, T214, T215 and T216 all change clip.proto, so run them one after another in one tree; then the revision tasks T201 → T202 → T203/T204 (deps T212/T213 done)
+- implement-task T209 or T216 next (both free), then the revision tasks T201 → T202 → T203/T204 — T209, T214, T215 and T216 all change clip.proto, so run them one after another in one tree; then the revision tasks T201 → T202 → T203/T204 (deps T212/T213 done)
 - T200 and ARCH's T205 T206 are done; T177 is blocked on the owner's viewing answers; T008 stays owner-dependent
 ## log
+- 260916 T215 done; ② edits the narration on its own lane — one bar per caption whatever cut lies beneath, absolute start/end fields, add at the playhead into free room (≥900 ms), remove, undo/redo, an overlap or an out-of-output caption blocks 다시 렌더 without retiming anything, the three caption notices read in ko/en, and the item-binding controls left ② for ①
 - 260916 T214 done; the renderer schedules the narration on the output timeline (order by start, overlap omitted, CDS-41 floor through the shorter text then the free room, owner windows untouched), places a spanning caption against every cut it covers, and verifies V18 timeline-wide, V16 against the duration and V11 on every collected fact; the identity baseline was NOT re-pinned — measured, the delivered clip is identical at the commit that recorded it, at HEAD and here, so that constant belongs to another host
 - 260916 a caption over readable_text footage has no admissible anchor (readable allows top/bottom, the caption rule offers upper_mid/lower_mid) and is always dropped with copy_limit — pre-existing, found under T214, worth a review-code finding
 - 260916 T213 done; a generation quotes, reserves, runs and resumes TWO writing calls — pricing v3 carries Narration beside Plan with SkipFlow/SkipNarration, the run stages are flow → narrate → layout → render, the written flow is kept with FlowReady so a narration failure resumes on it for one call, the quote lists both writing lines by label and ② shows them; the job reservation's writing line now admits two calls, and preparation measures the larger of the two requests
@@ -78,4 +78,3 @@
 - 260916 T200 claimed (mint)
 - 260916 T205-T214 (CLIP, this session) renumbered to T207-T216 — create-task ARCH minted T205 T206 at the same moment; ARCH T205 dep T198→T211 since T198 was folded into T211
 - 260916 create-task CLIP done; T207-T216 carry r31 — the template grammar shrinks to fixed regions with legacy conversion, pace/accent move to the project, the plan gains a narration, two writing calls (flow, narration) replace the single writer, the renderer and ② schedule captions on the whole timeline, ① orders sources; T197 T198 folded into T211 (numbers retired), T201-T204 re-cut for the targeted revision, T200 rebased; CDS r20 is consumed by T207 T209 T210 T211 T212 T214 T215
-- 260916 create-task ARCH done; T205 T206 carry r3 — the smokes move beside the deploy and the bundled ffmpeg is checked against the names the render code emits; ARCH-36 ARCH-37 are no-op (they state what already holds and what a task owes before done, no code follows)

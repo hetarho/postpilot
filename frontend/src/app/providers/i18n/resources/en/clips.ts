@@ -1,5 +1,8 @@
 export const clips = {
   notices: {
+    captionOverlap: 'An overlapping caption was removed',
+    captionOutsideOutput: 'A caption past the end of the clip was removed',
+    captionFloor: 'A caption with too little time to read was removed',
     introSlotShortened: 'The intro uses a shorter phrase that fits one line.',
     outroSlotShortened: 'The outro uses a shorter phrase that fits one line.',
     introSlotOmitted: 'An AI phrase that could not fit one line was left out of the intro.',
@@ -115,6 +118,11 @@ export const clips = {
     invalidCreation: 'Check the observed scene and creation details for this new cut.',
   },
   timeline: {
+    addCaption: 'Add a caption here',
+    captionTrack: 'Caption track',
+    captionOverlap: 'This caption overlaps another. Move one of them.',
+    narrationStart: 'Caption start (whole clip)',
+    narrationEnd: 'Caption end (whole clip)',
     render: 'Rerender',
     save: 'Save',
     download: 'Download',

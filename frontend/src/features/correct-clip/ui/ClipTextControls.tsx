@@ -49,6 +49,10 @@ export function ClipTextControls({
       action: 'repair',
     })
   const interval = textInterval(plan, text)
+  // A caption of the narration carries its own absolute window and no placement
+  // of any kind: the server chooses the anchor, the project the pace and accent
+  // (CLIP-134, CDS-60).
+  const narration = !!text.narration
   const patch = (value: Partial<ClipEditableText>, group?: string) =>
     change(
       { type: 'text', id: text.instanceId, patch: value },
@@ -111,28 +115,50 @@ export function ClipTextControls({
           />
         </div>
       ))}
-      <div>
-        <FieldLabel id="clip-basis-label">{t('timeline.basis')}</FieldLabel>
-        <Listbox
-          aria-labelledby="clip-basis-label"
-          value={text.basis}
-          options={(['whole', 'output-start', 'output-end', 'cut'] as const).map((value) => ({
-            value,
-            label: t(`timeline.bases.${value}`),
-            disabled: value === 'cut' && !plan.cuts.some((c) => c.id === text.cutId),
-          }))}
-          onChange={(basis) => {
-            const offset =
-              basis === 'output-end' ? plan.durationMs : basis === 'cut' ? interval.cutOffsetMs : 0
-            patch({
-              basis,
-              startMs: basis === 'whole' ? undefined : interval.startMs - offset,
-              endMs: basis === 'whole' ? undefined : interval.endMs - offset,
-            })
-          }}
-        />
-      </div>
-      {text.basis !== 'whole' && (
+      {narration && (
+        <div className="grid grid-cols-2 gap-3">
+          <ClipTimeField
+            id="clip-text-start"
+            label={t('timeline.narrationStart')}
+            value={text.startMs ?? interval.startMs}
+            onChange={(startMs) => patch({ startMs, endMs: text.endMs ?? interval.endMs }, 'start')}
+          />
+          <ClipTimeField
+            id="clip-text-end"
+            label={t('timeline.narrationEnd')}
+            value={text.endMs ?? interval.endMs}
+            onChange={(endMs) => patch({ startMs: text.startMs ?? interval.startMs, endMs }, 'end')}
+          />
+        </div>
+      )}
+      {!narration && (
+        <div>
+          <FieldLabel id="clip-basis-label">{t('timeline.basis')}</FieldLabel>
+          <Listbox
+            aria-labelledby="clip-basis-label"
+            value={text.basis}
+            options={(['whole', 'output-start', 'output-end', 'cut'] as const).map((value) => ({
+              value,
+              label: t(`timeline.bases.${value}`),
+              disabled: value === 'cut' && !plan.cuts.some((c) => c.id === text.cutId),
+            }))}
+            onChange={(basis) => {
+              const offset =
+                basis === 'output-end'
+                  ? plan.durationMs
+                  : basis === 'cut'
+                    ? interval.cutOffsetMs
+                    : 0
+              patch({
+                basis,
+                startMs: basis === 'whole' ? undefined : interval.startMs - offset,
+                endMs: basis === 'whole' ? undefined : interval.endMs - offset,
+              })
+            }}
+          />
+        </div>
+      )}
+      {!narration && text.basis !== 'whole' && (
         <div className="grid grid-cols-2 gap-3">
           <ClipTimeField
             id="clip-text-start"
@@ -158,46 +184,48 @@ export function ClipTextControls({
           />
         </div>
       )}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div>
-          <FieldLabel id="clip-text-position-label">{t('correction.position')}</FieldLabel>
-          <Listbox
-            aria-labelledby="clip-text-position-label"
-            value={text.position}
-            options={(
-              ['auto', 'header', 'top', 'upper_mid', 'lower_mid', 'bottom', 'center'] as const
-            ).map((value) => ({ value, label: t(`timeline.positions.${value}`) }))}
-            onChange={(position) => patch({ position })}
-          />
-        </div>
-        <div>
-          <FieldLabel id="clip-text-align-label">{t('correction.align')}</FieldLabel>
-          <Listbox
-            aria-labelledby="clip-text-align-label"
-            value={text.align}
-            options={(['left', 'center', 'right'] as const).map((value) => ({
-              value,
-              label: t(`aligns.${value}`),
-            }))}
-            onChange={(align) => patch({ align })}
-          />
-        </div>
-        {text.role === 'caption' && (
+      {!narration && (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <FieldLabel id="clip-text-accent-label">{t('editor.accent')}</FieldLabel>
+            <FieldLabel id="clip-text-position-label">{t('correction.position')}</FieldLabel>
             <Listbox
-              aria-labelledby="clip-text-accent-label"
-              value={text.accent}
-              options={CLIP_ACCENTS.map((value) => ({
-                value,
-                label: t(`accent.${value || 'none'}`),
-              }))}
-              onChange={(accent) => patch({ accent })}
+              aria-labelledby="clip-text-position-label"
+              value={text.position}
+              options={(
+                ['auto', 'header', 'top', 'upper_mid', 'lower_mid', 'bottom', 'center'] as const
+              ).map((value) => ({ value, label: t(`timeline.positions.${value}`) }))}
+              onChange={(position) => patch({ position })}
             />
           </div>
-        )}
-      </div>
-      {text.role === 'caption' && (
+          <div>
+            <FieldLabel id="clip-text-align-label">{t('correction.align')}</FieldLabel>
+            <Listbox
+              aria-labelledby="clip-text-align-label"
+              value={text.align}
+              options={(['left', 'center', 'right'] as const).map((value) => ({
+                value,
+                label: t(`aligns.${value}`),
+              }))}
+              onChange={(align) => patch({ align })}
+            />
+          </div>
+          {text.role === 'caption' && (
+            <div>
+              <FieldLabel id="clip-text-accent-label">{t('editor.accent')}</FieldLabel>
+              <Listbox
+                aria-labelledby="clip-text-accent-label"
+                value={text.accent}
+                options={CLIP_ACCENTS.map((value) => ({
+                  value,
+                  label: t(`accent.${value || 'none'}`),
+                }))}
+                onChange={(accent) => patch({ accent })}
+              />
+            </div>
+          )}
+        </div>
+      )}
+      {!narration && text.role === 'caption' && (
         <>
           <Typography variant="meta">{t('editor.accentHelp')}</Typography>
           <div>
@@ -212,18 +240,29 @@ export function ClipTextControls({
       )}
       {text.role === 'caption' && (
         <div className="space-y-3">
-          <FieldLabel id="clip-text-pace-label">{t('pace.label')}</FieldLabel>
-          <Listbox
-            aria-labelledby="clip-text-pace-label"
-            value={text.pace || 'steady'}
-            options={[
-              { value: 'steady', label: t('pace.steady') },
-              { value: 'rapid', label: t('pace.rapid'), disabled: !splitTextPhrases(plan, text) },
-            ]}
-            onChange={(pace) =>
-              patch({ pace, phrases: pace === 'rapid' ? (splitTextPhrases(plan, text) ?? []) : [] })
-            }
-          />
+          {!narration && (
+            <>
+              <FieldLabel id="clip-text-pace-label">{t('pace.label')}</FieldLabel>
+              <Listbox
+                aria-labelledby="clip-text-pace-label"
+                value={text.pace || 'steady'}
+                options={[
+                  { value: 'steady', label: t('pace.steady') },
+                  {
+                    value: 'rapid',
+                    label: t('pace.rapid'),
+                    disabled: !splitTextPhrases(plan, text),
+                  },
+                ]}
+                onChange={(pace) =>
+                  patch({
+                    pace,
+                    phrases: pace === 'rapid' ? (splitTextPhrases(plan, text) ?? []) : [],
+                  })
+                }
+              />
+            </>
+          )}
           {text.pace === 'rapid' &&
             phrases.map((phrase, index) => (
               <div key={index} className="space-y-2">

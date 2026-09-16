@@ -1,5 +1,8 @@
 export const clips = {
   notices: {
+    captionOverlap: '겹치는 자막을 하나 뺐어요',
+    captionOutsideOutput: '영상 밖으로 나간 자막을 뺐어요',
+    captionFloor: '읽을 시간이 모자란 자막을 뺐어요',
     introSlotShortened: '인트로 문구를 한 줄에 들어가는 짧은 표현으로 담았어요.',
     outroSlotShortened: '아웃트로 문구를 한 줄에 들어가는 짧은 표현으로 담았어요.',
     introSlotOmitted: '인트로에서 한 줄로 담기 어려운 AI 문구를 뺐어요.',
@@ -111,6 +114,11 @@ export const clips = {
     invalidCreation: '새 컷의 원본 장면과 생성 정보를 확인해 주세요.',
   },
   timeline: {
+    addCaption: '이 지점에 자막 추가',
+    captionTrack: '자막 트랙',
+    captionOverlap: '다른 자막과 겹쳐요. 시간을 옮겨 주세요.',
+    narrationStart: '자막 시작 (전체 기준)',
+    narrationEnd: '자막 끝 (전체 기준)',
     render: '다시 렌더',
     save: '저장',
     download: '다운로드',

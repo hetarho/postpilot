@@ -50,6 +50,42 @@ export function clipTimelineFixture(): ClipEditingState {
   return state
 }
 
+/** The timeline fixture with its captions written as the NARRATION: they belong
+ *  to no cut, carry absolute output times, and one of them crosses the cut
+ *  boundary at 9.8 s (CLIP-134). */
+export function clipNarrationFixture(): ClipEditingState {
+  const state = clipTimelineFixture()
+  const caption = (n: number, text: string, startMs: number, endMs: number) => ({
+    narration: true,
+    instanceId: `narration-${n}`,
+    elementId: `narration-${n}`,
+    cutId: '',
+    kind: 'ai',
+    role: 'caption',
+    text,
+    rows: [],
+    style: 'auto',
+    position: 'auto',
+    align: 'center',
+    basis: 'output-start',
+    startMs,
+    endMs,
+    pace: '',
+    accent: '',
+    keyword: '',
+    resolvedStartMs: startMs,
+    resolvedEndMs: endMs,
+    groupId: '',
+    itemId: '',
+  })
+  state.plan.elements = [
+    caption(1, '첫 자막', 1000, 5000),
+    caption(2, '컷을 건너가는 자막', 8000, 12000),
+    state.plan.elements!.find((text) => text.role === 'badge')!,
+  ]
+  return state
+}
+
 export function clipEditingFixture(): ClipEditingState {
   return {
     plan: {

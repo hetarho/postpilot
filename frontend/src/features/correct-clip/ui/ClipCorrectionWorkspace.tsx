@@ -10,8 +10,6 @@ import {
   sourceToOutputMs,
   type ClipDisplayedFrame,
   type ClipEditingState,
-  type ClipCompositionInputs,
-  type ClipObservations,
 } from '@/entities/clip-project'
 import type { AppFailure } from '@/shared/api'
 import { CLIP_DRAFT_PREVIEW, CLIP_TIMELINE } from '@/shared/config'
@@ -33,7 +31,6 @@ import type { useClipCorrection } from '../model/useClipCorrection'
 import { ClipTimeline } from './ClipTimeline'
 import { ClipTimeField } from './ClipTimeField'
 import { ClipTextControls } from './ClipTextControls'
-import { ClipAssociationControls } from './ClipAssociationControls'
 import { ClipCutAssemblyControls } from './ClipCutAssemblyControls'
 
 type Correction = ReturnType<typeof useClipCorrection>
@@ -59,8 +56,6 @@ export function ClipCorrectionWorkspace({
   comparison,
   downloadAction,
   finalizeAction,
-  inputs,
-  observations,
   notices = [],
   language,
 }: {
@@ -77,8 +72,6 @@ export function ClipCorrectionWorkspace({
   downloadAction?: ReactNode
   finalizeAction?: ReactNode
   localSources: ReadonlyArray<{ fingerprint: string; url: string }>
-  inputs?: ClipCompositionInputs
-  observations?: ClipObservations
   notices?: readonly ClipNotice[]
   language?: 'ko' | 'en'
 }) {
@@ -286,6 +279,12 @@ export function ClipCorrectionWorkspace({
         selection={timeline.selection}
         timeMs={timeline.timeMs}
         onSelect={(selection) => dispatch({ type: 'select', selection })}
+        onAddCaption={(slot) => {
+          // A local identity until the save returns the server-minted one.
+          const id = `new-caption-${Date.now()}`
+          change({ type: 'addNarration', id, ...slot })
+          dispatch({ type: 'select', selection: { kind: 'text', id } })
+        }}
         localSources={localSources}
         notices={notices}
       />
@@ -541,15 +540,6 @@ export function ClipCorrectionWorkspace({
                     </Button>
                   ))}
               </div>
-            )}
-            {inputs && (
-              <ClipAssociationControls
-                inputs={inputs}
-                associations={draft.associations ?? []}
-                observations={observations}
-                sourceId={cut.sourceId}
-                change={change}
-              />
             )}
           </div>
         )}

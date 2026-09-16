@@ -1,4 +1,4 @@
-import { CLIP_COMPOSITION_LIMITS, CLIP_RAPID, CLIP_TIMELINE } from '@/shared/config'
+import { CLIP_COMPOSITION_LIMITS, CLIP_RAPID, CLIP_TIMELINE, CLIP_TIMING } from '@/shared/config'
 import { CLIP_ACCENTS } from '@/entities/clip-template/@x/clip-project'
 import {
   copyClipPlan,
@@ -45,6 +45,7 @@ export type TimelineEdit =
       >
     }
   | { type: 'removeText'; id: string }
+  | { type: 'addNarration'; id: string; startMs: number; endMs: number }
   | { type: 'associations'; associations: ClipSourceAssociation[] }
 
 export { timelineCuts } from './edit-plan'
@@ -102,6 +103,21 @@ export function nativeTextErrors(plan: ClipEditPlan) {
       keyword: !!text.keyword && !text.text.includes(text.keyword),
       accent: !CLIP_ACCENTS.some((a) => a === text.accent),
       stale: !!text.staleEvidence && !text.evidenceReviewed,
+      // A caption of the narration owns its own window: the output must hold
+      // it and no other caption may claim the same moment (CLIP-66, CLIP-67).
+      // Nothing is retimed for the owner — they move it themselves.
+      overlap:
+        !!text.narration &&
+        (plan.elements ?? []).some((other) => {
+          if (!other.narration || other.instanceId === text.instanceId) return false
+          const window = textInterval(plan, other)
+          return (
+            window.valid &&
+            interval.valid &&
+            interval.startMs < window.endMs &&
+            window.startMs < interval.endMs
+          )
+        }),
       phrases:
         phrases.length > CLIP_RAPID.max_per_cut ||
         phrases.some(
@@ -119,6 +135,32 @@ export function nativeTextErrors(plan: ClipEditPlan) {
         ),
     }
   })
+}
+
+/** The window a new caption may take at `atMs`: the default length, cut short
+ *  by the caption that follows and pushed after the one before it. Undefined
+ *  when the narration already fills that moment — a caption never displaces
+ *  another (CLIP-66). */
+export function narrationSlot(plan: ClipEditPlan, atMs: number, defaultMs = 2000) {
+  const windows = (plan.elements ?? [])
+    .filter((text) => text.narration)
+    .map((text) => textInterval(plan, text))
+    .filter((window) => window.valid)
+    .sort((a, b) => a.startMs - b.startMs)
+  const duration = plan.durationMs
+  let startMs = Math.max(0, Math.min(atMs, duration - 1))
+  for (const window of windows) {
+    if (window.startMs <= startMs && startMs < window.endMs) startMs = window.endMs
+  }
+  let endMs = Math.min(duration, startMs + defaultMs)
+  for (const window of windows) {
+    if (window.startMs > startMs) {
+      endMs = Math.min(endMs, window.startMs)
+      break
+    }
+  }
+  // Room too short to read an empty caption in is no room at all (CDS-41).
+  return endMs - startMs >= CLIP_TIMING.sub_min_base_ms ? { startMs, endMs } : undefined
 }
 
 export function validateTimelinePlan(
@@ -230,6 +272,36 @@ export function applyTimelineEdit(plan: ClipEditPlan, edit: TimelineEdit): ClipE
           : {}),
       }
     })
+  } else if (edit.type === 'addNarration') {
+    // The owner writes the caption; the server mints its identity when the plan
+    // is saved, so it carries a local one until then (CLIP-97).
+    next.elements = [
+      ...(next.elements ?? []),
+      {
+        narration: true,
+        creation: { kind: 'add' },
+        instanceId: edit.id,
+        elementId: edit.id,
+        cutId: '',
+        kind: 'ai',
+        role: 'caption',
+        text: '',
+        rows: [],
+        style: 'auto',
+        position: 'auto',
+        align: 'center',
+        basis: 'output-start',
+        startMs: edit.startMs,
+        endMs: edit.endMs,
+        pace: '',
+        accent: '',
+        keyword: '',
+        resolvedStartMs: edit.startMs,
+        resolvedEndMs: edit.endMs,
+        groupId: '',
+        itemId: '',
+      },
+    ]
   } else if (edit.type === 'removeText') {
     next.elements = next.elements?.filter((text) => text.instanceId !== edit.id)
   } else if (edit.type === 'associations') {
@@ -410,13 +482,25 @@ export function clipTextTracks(plan: ClipEditPlan): ClipTextBar[][] {
         : bar,
     )
   bars.sort((a, b) => a.startMs - b.startMs || b.endMs - a.endMs)
-  const tracks: ClipTextBar[][] = []
+  // The narration is ONE lane of its own across the whole output: a caption
+  // that crosses cuts is one bar, and the template's fixed regions keep their
+  // own lanes below it (CLIP-17, CLIP-134).
+  const narration = new Set(
+    (plan.elements ?? []).filter((text) => text.narration).map((text) => text.instanceId),
+  )
+  const tracks: ClipTextBar[][] = narration.size > 0 ? [[]] : []
   for (const bar of bars) {
-    const track = tracks.find((row) => row.at(-1)!.endMs <= bar.startMs)
+    if (narration.has(bar.id)) {
+      tracks[0].push(bar)
+      continue
+    }
+    const track = tracks.find(
+      (row, lane) => (lane > 0 || narration.size === 0) && (row.at(-1)?.endMs ?? 0) <= bar.startMs,
+    )
     if (track) track.push(bar)
     else tracks.push([bar])
   }
-  return tracks
+  return tracks.filter((track) => track.length > 0)
 }
 
 interface TimelineSnapshot {

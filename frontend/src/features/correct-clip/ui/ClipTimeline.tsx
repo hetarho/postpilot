@@ -6,6 +6,7 @@ import {
   clipSeconds,
   timelineCuts,
   clipTextTracks,
+  narrationSlot,
   cutRate,
   type ClipEditPlan,
   type ClipSelection,
@@ -18,6 +19,7 @@ export function ClipTimeline({
   selection,
   timeMs,
   onSelect,
+  onAddCaption,
   localSources,
   notices = [],
 }: {
@@ -26,6 +28,9 @@ export function ClipTimeline({
   selection?: ClipSelection
   timeMs: number
   onSelect: (selection: ClipSelection) => void
+  /** Adds a caption to the narration at the playhead. Absent where the plan
+   *  carries no narration to edit. */
+  onAddCaption?: (slot: { startMs: number; endMs: number }) => void
   localSources: ReadonlyArray<{ fingerprint: string; url: string }>
 }) {
   const { t } = useTranslation('clips')
@@ -49,6 +54,8 @@ export function ClipTimeline({
     }
   }, [selection?.id, selection?.kind, phrase, order])
   const tracks = clipTextTracks(plan)
+  const captions = (plan.elements ?? []).some((text) => text.narration)
+  const slot = onAddCaption && captions ? narrationSlot(plan, timeMs) : undefined
   return (
     <div
       ref={strip}
@@ -116,8 +123,17 @@ export function ClipTimeline({
             )
           })}
         </ul>
+        {onAddCaption && captions && (
+          <Button variant="secondary" disabled={!slot} onClick={() => slot && onAddCaption(slot)}>
+            {t('timeline.addCaption')}
+          </Button>
+        )}
         {tracks.map((track, lane) => (
-          <ul key={lane} className="relative h-11">
+          <ul
+            key={lane}
+            className="relative h-11"
+            aria-label={lane === 0 && captions ? t('timeline.captionTrack') : undefined}
+          >
             {track.map((bar) => (
               <li
                 key={`${bar.id}-${bar.phrase ?? 'text'}`}

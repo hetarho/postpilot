@@ -29,6 +29,7 @@ export function toClipEditingState(value: ProtoClipEditingState): ClipEditingSta
               void $typeName
               return {
                 ...text,
+                narration: text.narration,
                 phrases: phrases.map((p) => ({ text: p.text, startMs: p.startMs, endMs: p.endMs })),
                 evidence: evidence.map((e) => ({
                   sourceId: e.sourceId,
@@ -143,7 +144,13 @@ export function clipPlanToProto(plan: ClipEditPlan) {
     // and the server refuses a plan save that disagrees with the saved setting.
     sourceAudio: plan.sourceAudio ? { values: plan.sourceAudio } : undefined,
     associations: plan.associations ? { values: plan.associations } : undefined,
-    elements: plan.elements ?? [],
+    // `creation` rides the request only, for a caption the plan does not hold
+    // yet; the server mints its identity and returns it as an ordinary one.
+    elements: (plan.elements ?? []).map((text) => ({
+      ...text,
+      narration: text.narration ?? false,
+      creation: text.creation,
+    })),
     durationMs: plan.durationMs,
     hook: plan.hook,
     cuts: plan.cuts.map((c) => ({

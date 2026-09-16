@@ -366,8 +366,6 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
       }
       notices={project.notices}
       language={project.language}
-      inputs={project.composition?.inputs}
-      observations={project.observations}
       correction={correction}
       state={plan}
       disabled={pending}
