@@ -1,0 +1,6 @@
+pass inputs=6
+[0:v:0]settb=AVTB,setpts=PTS-STARTPTS[v0];[1:v:0]settb=AVTB,setpts=PTS-STARTPTS[v1];[2:v:0]settb=AVTB,setpts=PTS-STARTPTS[v2];[3:v:0]settb=AVTB,setpts=PTS-STARTPTS[v3];[4:v:0]settb=AVTB,setpts=PTS-STARTPTS[v4];[5:v:0]settb=AVTB,setpts=PTS-STARTPTS[v5];[v0][v1]xfade=transition=fade:duration=0.200:offset=1.800000000[vx1];[vx1][v2]concat=n=2:v=1:a=0[vx2];[vx2][v3]xfade=transition=fade:duration=0.200:offset=5.700000000[vx3];[vx3][v4]concat=n=2:v=1:a=0[vx4];[vx4][v5]xfade=transition=fade:duration=0.200:offset=9.733333333[vx5];[vx5]trim=end_frame=357,setpts=PTS-STARTPTS,format=yuv444p[v]
+pass inputs=5
+[0:v:0]settb=AVTB,setpts=PTS-STARTPTS[v0];[1:v:0]settb=AVTB,setpts=PTS-STARTPTS[v1];[2:v:0]settb=AVTB,setpts=PTS-STARTPTS[v2];[3:v:0]settb=AVTB,setpts=PTS-STARTPTS[v3];[4:v:0]settb=AVTB,setpts=PTS-STARTPTS[v4];[v0][v1]xfade=transition=fade:duration=0.200:offset=2.000000000[vx1];[vx1][v2]concat=n=2:v=1:a=0[vx2];[vx2][v3]xfade=transition=fade:duration=0.200:offset=6.300000000[vx3];[vx3][v4]concat=n=2:v=1:a=0[vx4];[vx4]trim=end_frame=328,setpts=PTS-STARTPTS,format=yuv444p[v]
+pass inputs=2
+[0:v:0]settb=AVTB,setpts=PTS-STARTPTS[v0];[1:v:0]settb=AVTB,setpts=PTS-STARTPTS[v1];[v0][v1]concat=n=2:v=1:a=0[vx1];[vx1]trim=end_frame=685,setpts=PTS-STARTPTS,format=yuv420p[v]

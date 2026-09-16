@@ -26,12 +26,15 @@ func (r *Rendering) inputArgs(args []string, path string) []string {
 	return append(args, "-threads", strconv.Itoa(r.media.cfg.DecodeThreads), "-protocol_whitelist", "file,pipe", "-i", path)
 }
 
-// Decode at most two full-resolution video inputs per process. A linear xfade
-// graph opens every future video decoder at once and exceeds the shared-service
-// memory budget on long plans. Internal tree nodes are lossless H.264 4:4:4:
-// there is no extra lossy encode or repeated chroma downsampling per tree level.
-// These nodes carry no audio at all: the track is assembled and measured once
-// beside them and joins only at the final encode, which stays a single AAC pass.
+// Decode at most cfg.MergeInputs full-resolution video inputs per process. A
+// linear xfade graph opens every future video decoder at once and exceeds the
+// shared-service memory budget on long plans, so the cuts are merged in rounds
+// of that many rather than one clip-length pass per pair: a plan at or below
+// the bound reaches the delivery encode with no intermediate pass at all.
+// Intermediate nodes are lossless H.264 4:4:4 — no extra lossy encode and no
+// repeated chroma downsampling — and carry no audio at all: the track is
+// assembled and measured once beside them and joins only at the final encode,
+// which stays a single AAC pass.
 func (r *Rendering) compositionInputs(ctx context.Context, ws clip.MediaWorkspace, cuts []string, frames, transitions []int, audio string, measured *loudness, cleanup *[]string) ([]string, error) {
 	return r.compositionInputsFormat(ctx, ws, cuts, frames, transitions, audio, measured, cleanup, "yuv420p")
 }
@@ -41,30 +44,45 @@ func (r *Rendering) compositionInputsFormat(ctx context.Context, ws clip.MediaWo
 	for i, path := range cuts {
 		branches[i] = videoBranch{path: path, frames: frames[i], transition: transitions[i]}
 	}
-	for level := 0; len(branches) > 2; level++ {
-		next := make([]videoBranch, 0, (len(branches)+1)/2)
-		for i := 0; i < len(branches); i += 2 {
-			if i+1 == len(branches) {
-				next = append(next, branches[i])
+	bound := r.cfg.MergeInputs
+	for level := 0; len(branches) > bound; level++ {
+		next := make([]videoBranch, 0, (len(branches)+bound-1)/bound)
+		for i := 0; i < len(branches); i += bound {
+			group := branches[i:min(i+bound, len(branches))]
+			if len(group) == 1 {
+				next = append(next, group[0])
 				continue
 			}
-			a, b := branches[i], branches[i+1]
-			path := filepath.Join(ws.Path, fmt.Sprintf("compose-%02d-%04d.mp4", level, i/2))
+			path := filepath.Join(ws.Path, fmt.Sprintf("compose-%02d-%04d.mp4", level, i/bound))
 			*cleanup = append(*cleanup, path)
-			args := r.inputArgs(r.inputArgs(r.baseArgs(), a.path), b.path)
-			args = append(args, "-filter_complex", compositionGraph(r.cfg, []int{a.frames, b.frames}, []int{0, b.transition}, "yuv444p"))
+			args := r.baseArgs()
+			frames, transitions := make([]int, len(group)), make([]int, len(group))
+			for j, branch := range group {
+				args = r.inputArgs(args, branch.path)
+				frames[j], transitions[j] = branch.frames, branch.transition
+			}
+			// The group's own leading transition joins it to what comes BEFORE
+			// it, so it is carried up unapplied exactly as the pairwise merge
+			// carried it; only the seams inside the group are joined here.
+			merged := frames[0]
+			for j := 1; j < len(group); j++ {
+				merged += frames[j] - transitionFrames(r.cfg, transitions[j])
+			}
+			leading := transitions[0]
+			transitions[0] = 0
+			args = append(args, "-filter_complex", compositionGraph(r.cfg, frames, transitions, "yuv444p"))
 			args = append(args, r.encodeProfile(false, 0, "yuv444p")...)
 			if err := r.runRender(ctx, ws, path, args); err != nil {
 				return nil, err
 			}
-			for _, input := range []videoBranch{a, b} {
+			for _, input := range group {
 				if input.temporary {
 					if err := os.Remove(input.path); err != nil {
 						return nil, err
 					}
 				}
 			}
-			next = append(next, videoBranch{path: path, frames: a.frames + b.frames - transitionFrames(r.cfg, b.transition), transition: a.transition, temporary: true})
+			next = append(next, videoBranch{path: path, frames: merged, transition: leading, temporary: true})
 		}
 		branches = next
 	}

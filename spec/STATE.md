@@ -30,7 +30,7 @@
 | THEME | 12 | 12 | - | 0 |
 | MKT | 4 | 4 | - | 0 |
 | VIDEO | 2 | 2 | - | 1 |
-| CLIP | 29 | 29 | - | 2 |
+| CLIP | 30 | 29 | CLIP-130+ CLIP-131+ CLIP-132+ CLIP-133+ CLIP-1✎ CLIP-17✎ CLIP-20✎ CLIP-35✎ CLIP-36✎ CLIP-40✎ CLIP-93✎ | 2 |
 | CDS | 19 | 19 | - | 1 |
 | BILL | 4 | 4 | - | 0 |
 
@@ -47,7 +47,6 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
-| T193 | The cuts become one timeline in a single pass | CLIP | T191 | todo |
 | T194 | The overlay and the delivery encode become one | CLIP | T191 | todo |
 | T195 | A plate's sample frames come from one decode | CLIP | T191 | todo |
 | T196 | Preparation decodes each original once | CLIP | - | todo |
@@ -55,10 +54,13 @@
 | T198 | Speech a retained source lets through stays at 1x | CLIP | T197 | todo |
 
 ## next
-- implement-task T193, then T194 T196 — they carry most of the 1225 s a prod generation took; T190's per-operation durations measure each one and T191's identity baseline (docker --target identity-smoke) is what none of them may move.
-- implement-task T197, then T198 — r29's rate work, held behind T191 because it moves delivered frames on purpose.
+- create-task CLIP — r30 moves every setting but title/template/ratio into ①, gives ② a written revision request that rewrites the current plan for one writing call, and keeps every instruction and request verbatim; CLIP-93's instruction clause is the one that fixes today's defect, where a changed instruction reuses the old plan because neither the plan-reuse nor the quote digest carries it.
+- implement-task T194, then T196, then T197 T198 — T194/T196 carry the rest of the 1225 s a prod generation took (T193 already collapsed the merge passes), measured by T190's per-operation durations against T191's identity baseline (docker --target identity-smoke) that none of them may move; T197/T198 are r29's rate work and move delivered frames on purpose.
 - T177 is blocked on the owner's viewing answers; T008 stays owner-dependent.
 ## log
+- 260916 T193 done; the cuts merge in rounds of six instead of a pairwise tree (100 cuts 98 passes→2, ordinary plans none at all) and the delivered clip still matches T191's baseline
+- 260916 update-ssot CLIP done; CLIP@30 — the creation screen keeps only title/template/ratio, ② gains a written revision request charged as one writing call and stopping at the plan, every instruction and request is kept verbatim, and an instruction change now invalidates the candidate plan
+- 260916 T193 claimed (perf)
 - 260916 T192 done; decoding takes 2 threads while every encoder and the filters stay at 1, the delivered clip still matching T191's baseline and the analysis copies identical at either decoder count
 - 260916 update-ssot CLIP start
 - 260916 T192 claimed (perf)
@@ -76,6 +78,3 @@
 - 260916 T188 done; with an instruction present the experiential-marker check stands down on presence alone, every figure still needing a referenced fact
 - 260916 T188 claimed (grp)
 - 260916 T187 done; the writer reads project_instruction and the contract names it the content authority above authored guidance, structure still the template's; no instruction leaves the request byte-identical
-- 260916 T187 claimed (grp)
-- 260916 T186 done; a clip project stores one bounded instruction beside its answers and freezes it into every attempt (docker came back, so proto/sqlc were regenerated properly)
-- 260916 T186 claimed (grp)

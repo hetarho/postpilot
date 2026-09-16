@@ -186,6 +186,12 @@ type RenderConfig struct {
 	DisplayFontPath                                                  string
 	MaxCuts, MaxCopyRunes, FadeMS, FPS, CRF, AudioRate, AudioBitrate int
 	MinDurationMS, MaxDurationMS                                     int
+	// How many full-resolution video inputs one merge may open at once. A
+	// linear graph over every cut opens every decoder for the whole clip, which
+	// the shared service cannot hold; merging in rounds of this many is what
+	// keeps the memory bounded without re-encoding the clip per tree level
+	// (CLIP-124).
+	MergeInputs int
 }
 type Canvas struct {
 	Width, Height int
