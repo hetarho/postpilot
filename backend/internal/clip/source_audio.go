@@ -46,6 +46,17 @@ func FreezeSourceAudio(batch SourceBatch, cuts []Cut) *SourceAudioSettings {
 	return out
 }
 
+// batchSourceAudio states every declared source's original-sound choice for the
+// writer to read (CLIP-129). It is the batch's own snapshot, not a plan's: it
+// is stated before any cut exists.
+func batchSourceAudio(batch SourceBatch) []SourceAudioSetting {
+	out := make([]SourceAudioSetting, 0, len(batch.Sources))
+	for _, lease := range batch.Sources {
+		out = append(out, SourceAudioSetting{lease.ID, lease.Fingerprint, lease.RetainOriginalAudio})
+	}
+	return out
+}
+
 // ApplySourceAudio returns the plan with ONE source's setting changed and the
 // snapshot left complete. It changes nothing else: cut ranges, rates, per-cut
 // volume, captions, evidence and the frozen composition are untouched, which is

@@ -7,12 +7,17 @@ import (
 	"time"
 )
 
-type CompletionBudgets struct{ Observe, Plan int }
+// One budget per call the generation makes: the observation, then the two
+// writing calls the assembly contract names (CLIP-135).
+type CompletionBudgets struct{ Observe, Flow, Narration int }
 type Planner interface {
 	ValidateModels(llm.ModelRef, llm.ModelRef) error
 	ValidatePreparation(llm.ModelRef, PlanningInput, []AnalysisSource) error
 	Budgets() CompletionBudgets
 	ObserveChunk(context.Context, llm.ModelRef, ChunkInput) (ChunkAnalysis, llm.Usage, error)
+	// The composition writer: the flow call, then the narration over it
+	// (CLIP-135). Plan is what a payload without a composition snapshot uses.
+	Flow(context.Context, llm.ModelRef, PlanningInput) (EditPlan, llm.Usage, error)
 	Plan(context.Context, llm.ModelRef, PlanningInput) (EditPlan, llm.Usage, error)
 }
 type GenerationStore interface {

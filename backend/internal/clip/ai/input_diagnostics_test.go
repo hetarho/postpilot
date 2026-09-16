@@ -25,7 +25,7 @@ func TestObservedPromptOverflowKeepsPrivateBoundedMeasurements(t *testing.T) {
 		next.Source.Fingerprint = fmt.Sprintf("fingerprint-%d", i)
 		in.Analyses = append(in.Analyses, next)
 	}
-	_, usage, err := s.Plan(t.Context(), testRef(), in)
+	_, usage, err := s.Flow(t.Context(), testRef(), in)
 	d, ok := clip.DiagnosticFromError(err)
 	if !errors.Is(err, clip.ErrInputTooLarge) || !ok || d.Check != "input_prompt_limit" || d.Phase != "input" || d.Values["input_bytes"] <= d.Values["input_limit_bytes"] || d.Values["input_limit_bytes"] != 61952 || len(models.calls) != 0 || usage != (llm.Usage{}) {
 		t.Fatalf("oversized aggregate not refused before dispatch: %v %+v", err, d)

@@ -16,6 +16,9 @@ var planSchema []byte
 //go:embed schemas/composition-plan.schema.json
 var compositionPlanSchema []byte
 
+//go:embed schemas/flow.schema.json
+var flowSchema []byte
+
 func compactContract(value []byte) string {
 	var out bytes.Buffer
 	if err := json.Compact(&out, value); err != nil {
@@ -25,6 +28,7 @@ func compactContract(value []byte) string {
 }
 
 var compositionPlanPromptSchema = compactContract(compositionPlanSchema)
+var flowPromptSchema = compactContract(flowSchema)
 var chunkPromptSchema = compactContract(chunkSchema)
 
 // Provider grammars receive the closed structural shape, not every domain
@@ -79,3 +83,7 @@ func PlanSchema() []byte  { return append([]byte(nil), planOutputSchema...) }
 var compositionPlanOutputSchema = structuralSchema(compositionPlanSchema)
 
 func CompositionPlanSchema() []byte { return append([]byte(nil), compositionPlanOutputSchema...) }
+
+var flowOutputSchema = structuralSchema(flowSchema)
+
+func FlowSchema() []byte { return append([]byte(nil), flowOutputSchema...) }

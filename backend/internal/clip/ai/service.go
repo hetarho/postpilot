@@ -30,7 +30,10 @@ type Config struct {
 	Render                                                                                            clip.RenderConfig
 	Template                                                                                          clip.Limits
 	ObserveCompletionTokens, PlanCompletionTokens, MaxResponseBytes, MaxCutIDRunes, TargetToleranceMS int
-	ObserveReasoning, PlanReasoning                                                                   llm.ReasoningEffort
+	// One budget per writing call (CLIP-135). Both are generous first and come
+	// down on measured usage; PlanCompletionTokens stays for the legacy writer.
+	FlowCompletionTokens, NarrationCompletionTokens int
+	ObserveReasoning, PlanReasoning                 llm.ReasoningEffort
 }
 
 // Budgets is copied into the durable job's planned calls before any provider work.
@@ -43,7 +46,7 @@ type Service struct {
 }
 
 func New(models Models, captions CaptionSizer, cfg Config) (*Service, error) {
-	for _, n := range []int{cfg.Analysis.ChunkMS, cfg.Analysis.MaxSources, cfg.Analysis.MaxSourceDurationMS, cfg.Analysis.MaxSegments, cfg.Analysis.MaxTextRunes, cfg.Analysis.MaxSubjects, cfg.ObserveCompletionTokens, cfg.PlanCompletionTokens, cfg.MaxResponseBytes, cfg.MaxCutIDRunes, cfg.TargetToleranceMS, cfg.Render.MaxCuts, cfg.Render.MaxCopyRunes, cfg.Template.NameChars, cfg.Template.AnswerChars} {
+	for _, n := range []int{cfg.Analysis.ChunkMS, cfg.Analysis.MaxSources, cfg.Analysis.MaxSourceDurationMS, cfg.Analysis.MaxSegments, cfg.Analysis.MaxTextRunes, cfg.Analysis.MaxSubjects, cfg.ObserveCompletionTokens, cfg.PlanCompletionTokens, cfg.FlowCompletionTokens, cfg.NarrationCompletionTokens, cfg.MaxResponseBytes, cfg.MaxCutIDRunes, cfg.TargetToleranceMS, cfg.Render.MaxCuts, cfg.Render.MaxCopyRunes, cfg.Template.NameChars, cfg.Template.AnswerChars} {
 		if n <= 0 {
 			return nil, errors.New("invalid clip AI configuration")
 		}
@@ -54,7 +57,7 @@ func New(models Models, captions CaptionSizer, cfg Config) (*Service, error) {
 	return &Service{models, captions, cfg}, nil
 }
 func (s *Service) Budgets() Budgets {
-	return Budgets{Observe: s.cfg.ObserveCompletionTokens, Plan: s.cfg.PlanCompletionTokens}
+	return Budgets{Observe: s.cfg.ObserveCompletionTokens, Flow: s.cfg.FlowCompletionTokens, Narration: s.cfg.NarrationCompletionTokens}
 }
 func (s *Service) CompositionPlanVersion() int { return clip.CompositionPlanVersion }
 
@@ -140,9 +143,62 @@ func (s *Service) ObserveChunk(ctx context.Context, model llm.ModelRef, input cl
 	result, usage, err := completeValidated(ctx, s, model, request, user, input.Policy, func(raw string) (clip.ChunkAnalysis, error) { return parseChunk(s.cfg, input, raw) })
 	return result, usage, stageError("analyze", err)
 }
+
+// Flow is the FIRST writing call of a generation (CLIP-135): it writes the
+// footage flow — which observed spans play, in what order, at what rate — and
+// returns a plan holding those cuts and the template regions the server can
+// already state in full. It writes no caption: the narration is written over
+// this flow once the server has resolved it into exact output intervals.
+func (s *Service) Flow(ctx context.Context, model llm.ModelRef, input clip.PlanningInput) (clip.EditPlan, llm.Usage, error) {
+	if err := ctx.Err(); err != nil {
+		return clip.EditPlan{}, llm.Usage{}, err
+	}
+	if !nativeComposition(input) {
+		return clip.EditPlan{}, llm.Usage{}, stageError("flow", clip.ErrInvalid)
+	}
+	if err := validateInput(s.cfg, input); err != nil {
+		return clip.EditPlan{}, llm.Usage{}, err
+	}
+	info, err := s.model(model, llm.StageNameWrite)
+	if err != nil {
+		return clip.EditPlan{}, llm.Usage{}, stageError("flow", err)
+	}
+	execution, err := executionPolicy(input.Policy, model, llm.StageNameWrite, s.cfg.FlowCompletionTokens, llm.ExecutionTextOnly)
+	if err != nil {
+		return clip.EditPlan{}, llm.Usage{}, err
+	}
+	system, user := buildFlowPrompt(input, s.cfg.Render.FadeMS, compositionLimits(s.cfg, input))
+	request := llm.Request{System: system, Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(user)}}}, Stage: llm.StageNameWrite, Reasoning: input.Policy.Reasoning, DisableReasoning: input.Policy.DisableReasoning, MaxTokens: input.Policy.CompletionTokens, Execution: execution}
+	if execution.Call.StructuredOutput {
+		if !info.StructuredOutput {
+			return clip.EditPlan{}, llm.Usage{}, clip.ErrPricingUnavailable
+		}
+		request.JSONSchema = FlowSchema()
+	}
+	if err := validatePrompt(system, user, request.JSONSchema, llm.ExecutionTextOnly, input.Policy.InputTokenLimit()); err != nil {
+		return clip.EditPlan{}, llm.Usage{}, err
+	}
+	result, usage, err := completeValidated(ctx, s, model, request, user, input.Policy, func(raw string) (clip.EditPlan, error) {
+		return parseFlowPlan(s.cfg, input, raw)
+	})
+	if err != nil {
+		return clip.EditPlan{}, usage, stageError("flow", err)
+	}
+	if err := validatePlan(s.cfg, input, result); err != nil {
+		return clip.EditPlan{}, usage, stageError("flow", planFailure(err, input, result, "validation", 0))
+	}
+	return result, usage, nil
+}
+
 func (s *Service) Plan(ctx context.Context, model llm.ModelRef, input clip.PlanningInput) (clip.EditPlan, llm.Usage, error) {
 	if err := ctx.Err(); err != nil {
 		return clip.EditPlan{}, llm.Usage{}, err
+	}
+	// A composition is written by the two calls the assembly contract names —
+	// Flow, then Narrate (CLIP-135). This writer is what remains for the legacy
+	// non-native payloads, which carry no composition snapshot at all.
+	if nativeComposition(input) {
+		return clip.EditPlan{}, llm.Usage{}, stageError("plan", clip.ErrCompositionUnavailable)
 	}
 	if err := validateInput(s.cfg, input); err != nil {
 		return clip.EditPlan{}, llm.Usage{}, err

@@ -56,7 +56,7 @@ func TestOldRoleStyleDraftCanBeReadAndExplicitlyCorrected(t *testing.T) {
 }
 
 func (ownedPlanWriter) CompositionPlanVersion() int { return clip.CompositionPlanVersion }
-func (p ownedPlanWriter) Plan(ctx context.Context, model llm.ModelRef, in clip.PlanningInput) (clip.EditPlan, llm.Usage, error) {
+func (p ownedPlanWriter) Flow(ctx context.Context, model llm.ModelRef, in clip.PlanningInput) (clip.EditPlan, llm.Usage, error) {
 	plan, usage, err := p.plannerFake.Plan(ctx, model, in)
 	if err != nil {
 		return plan, usage, err

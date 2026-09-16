@@ -7,9 +7,11 @@ import (
 
 // T076 uses the verified probe count, never the browser's declared duration. The
 // completion caps are precisely the budgets used by the clip AI service itself.
+// Both writing budgets hold the same value, and the quote prices the one writing
+// call the generation makes today.
 func clipPricingCalls(observe, write string, chunks int, budget ai.Budgets) []job.PlannedCall {
 	return []job.PlannedCall{
 		{Ref: observe, Count: chunks, CompletionTokens: budget.Observe},
-		{Ref: write, Count: 1, CompletionTokens: budget.Plan},
+		{Ref: write, Count: 1, CompletionTokens: budget.Flow},
 	}
 }

@@ -11,6 +11,9 @@ func ClipAI(cfg *Config) clipai.Config {
 	return clipai.Config{
 		Analysis: clip.AnalysisLimits{ChunkMS: 60000, MaxSources: ClipSourceCount, MaxSourceDurationMS: ClipSourceDurationMS, MaxSegments: 60, MaxTextRunes: 2000, MaxSubjects: 20},
 		Render:   ClipRender(cfg), Template: ClipLimits(), ObserveCompletionTokens: 8192, PlanCompletionTokens: 32768,
+		// One ceiling per writing call, generous first and lowered on measured
+		// usage rather than guessed down before anything has been measured.
+		FlowCompletionTokens: 32768, NarrationCompletionTokens: 32768,
 		MaxResponseBytes: 2 * 1024 * 1024, MaxCutIDRunes: 100, TargetToleranceMS: 1000,
 		ObserveReasoning: cfg.LLMReasoning.Observe, PlanReasoning: cfg.LLMReasoning.Write,
 	}

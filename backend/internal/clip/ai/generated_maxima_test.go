@@ -5,56 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/ai"
 	"github.com/postpilot/backend/internal/platform/config"
 )
-
-// A declared maximum is stated to the writer and measured again on the answer,
-// and an over-long one takes the same ladder a region slot takes: the grounded
-// shorter alternative, then omission with its notice (CLIP-118, CDS-55).
-func TestGeneratedTextObeysItsDeclaredMaximum(t *testing.T) {
-	for _, tc := range []struct{ name, full, short, want, notice string }{
-		{"shorter alternative", strings.Repeat("가", 12), "영상 속 모습", "영상 속 모습", "composition_text_shortened"},
-		{"no alternative", strings.Repeat("가", 12), "", "", "composition_text_omitted"},
-		{"within its maximum", "영상 속 모습", "영상 속", "영상 속 모습", ""},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			in, p := nativeInput(), nativePlan()
-			setNativeBody(&in, `<clip version="1" intro="b" caption="bold" outro="e"><guide>긴 장면으로 보여 준다</guide><text id="line" kind="ai" role="caption" basis="whole" chars="6">관찰한 모습</text><text id="opening" kind="fixed" role="hook" basis="output-start"/><text id="closing" kind="fixed" role="ending" basis="output-end"/></clip>`)
-			in.Composition.Inputs = clip.CompositionInputs{}
-			for _, c := range p["cuts"].([]any) {
-				c.(map[string]any)["template_section_id"] = ""
-			}
-			g := nativeGenerated(p, 0)
-			g["element_id"], g["cut_id"], g["text"], g["short_text"] = "line", "", tc.full, tc.short
-			g["rows"], g["short_rows"], g["fact_refs"] = []string{}, []string{}, []any{}
-			p["generated"] = []any{g}
-			s, _, _ := newService(t, raw(p), true)
-			plan, _, err := s.Plan(t.Context(), testRef(), in)
-			if err != nil {
-				t.Fatal(err)
-			}
-			notices := clip.ActivePlanNotices(plan)
-			if tc.notice == "" {
-				if len(notices) != 0 {
-					t.Fatal("a text inside its maximum was repaired", notices)
-				}
-			} else if len(notices) != 1 || notices[0].Reason != tc.notice || notices[0].ElementID != "line" {
-				t.Fatal(notices)
-			}
-			if tc.want == "" {
-				if len(plan.Portable.Elements) != 0 {
-					t.Fatal("an omitted text still reached the plan", plan.Portable.Elements)
-				}
-				return
-			}
-			if len(plan.Portable.Elements) != 1 || plan.Portable.Elements[0].Resolved.Text != tc.want {
-				t.Fatal(plan.Portable.Elements)
-			}
-		})
-	}
-}
 
 func TestWriterIsToldEachDeclaredTextMaximum(t *testing.T) {
 	in := nativeInput()

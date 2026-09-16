@@ -175,7 +175,7 @@ func (p *plannerFake) ValidateModels(o, w llm.ModelRef) error {
 	return nil
 }
 func (*plannerFake) Budgets() clip.CompletionBudgets {
-	return clip.CompletionBudgets{Observe: 8192, Plan: 32768}
+	return clip.CompletionBudgets{Observe: 8192, Flow: 32768, Narration: 32768}
 }
 func (p *plannerFake) ValidatePreparation(llm.ModelRef, clip.PlanningInput, []clip.AnalysisSource) error {
 	return p.preparationErr
@@ -203,6 +203,12 @@ func (p *plannerFake) ObserveChunk(ctx context.Context, r llm.ModelRef, c clip.C
 		return clip.ChunkAnalysis{}, llm.Usage{}, p.observeErr
 	}
 	return clip.ChunkAnalysis{SourceID: c.Source.ID, Fingerprint: c.Source.Fingerprint, Index: c.Index, OffsetMS: c.OffsetMS, DurationMS: c.DurationMS, Segments: []clip.Segment{{StartMS: c.OffsetMS, EndMS: c.OffsetMS + c.DurationMS, Event: "scene", CaptionSafe: p.captionSafe, Quality: "usable", Focal: clip.Point{X: .5, Y: .5}, Certainty: clip.CertaintyCertain, Usability: clip.UsabilityUsable}}}, llm.Usage{}, nil
+}
+
+// The flow call and the single writer share one fake: what the generation is
+// tested for here is the stage around them, not which contract wrote the cuts.
+func (p *plannerFake) Flow(ctx context.Context, r llm.ModelRef, in clip.PlanningInput) (clip.EditPlan, llm.Usage, error) {
+	return p.Plan(ctx, r, in)
 }
 func (p *plannerFake) Plan(ctx context.Context, r llm.ModelRef, in clip.PlanningInput) (clip.EditPlan, llm.Usage, error) {
 	frozen, err := job.ConsumeClipPolicy(ctx, "alice", p.id, r.String(), 32768, "write")

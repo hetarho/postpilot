@@ -8,20 +8,27 @@ returns no partial result when an id, range, fingerprint or sequence is invalid.
 The caller owns file lifetime and persistence; no cloud proxy is uploaded or signed.
 
 `Service.Plan` makes exactly one `write` call with the frozen recipe, exact answers,
-ratio, target and merged facts. It accepts no source pixels or URLs. Closed schemas
+ratio, target and merged facts. It serves the legacy non-composition payloads only. It accepts no source pixels or URLs. Closed schemas
 are checked locally and supplied through the prompt or `JSONSchema` for a registered
 structured-output model. Both paths use the existing shared
 JSON-object fallback; they never issue a repair call or choose a fallback model.
 
-Native compositions use `composition-plan.schema.json` in that same writer stage.
-The frozen XML defines section order, viewpoint, repeated item groups and every
-visible element. The server resolves fixed/answer-bound text exactly and accepts
-generated entries only for declared AI elements. It preserves verified shorter
-alternatives from that response for the renderer; it never requests semantic repair.
-The plain native prompt includes the compact full contract. Structured requests
-carry its closed object grammar once in `JSONSchema` and retain every domain bound
-in the prompt. This preserves all observations at the 20-source/49-chunk ceiling
-without increasing the reserved input limit or paying for a summarization call.
+A composition is written by `Service.Flow`, the first of the two writing calls
+the assembly contract names. It uses `flow.schema.json` and returns the footage
+flow alone: ordered cuts with their source ranges, rates, focal points and
+observation references, and no text of any kind. The server resolves that flow —
+rates, transitions, reconciliation — and the template's own fixed regions; the
+narration is written over the resolved flow by the second call. Nothing in the
+flow request names a section, an item's place or a sentence: the template
+declares only fixed regions, fields, groups and a guide, and the owner's
+instruction is the content authority above that guide. The plain prompt includes
+the compact full contract; a structured request carries its closed object grammar
+once in `JSONSchema` and keeps every domain bound in the prompt. This preserves
+all observations at the 20-source/49-chunk ceiling without increasing the
+reserved input limit or paying for a summarization call.
+
+`Service.Plan` and `composition-plan.schema.json` remain for payloads that carry
+no composition snapshot at all; a composition reaching that writer is refused.
 
 Every cut retains overlapping observation references. Item identity is established
 by an owner range association or a unique supplied name/alias in every overlapping
@@ -59,7 +66,7 @@ are projected through the focal cover crop and can move copy only among the thre
 approved positions. Manually edited plans do not invoke this automatic placement.
 
 The worker freezes `Service.Budgets()` into its actual `PlannedCall.CompletionTokens`:
-8192 for each probed 60-second chunk and 32768 for the single composition call.
+8192 for each probed 60-second chunk and 32768 for each writing call.
 There is no provider call at enqueue time here. Every runtime request passes the
 same explicit budget and stage through the metered registry; the worker owns credit
 admission, settlement, durable stage progress and previous-result retention. Old

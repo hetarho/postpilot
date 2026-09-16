@@ -347,7 +347,7 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 		if err := s.planner.ValidateModels(pricing.Observe.Ref, pricing.Plan.Ref); err != nil {
 			return admissionRefusal(pricing.Observe.Ref, err)
 		}
-		if s.planner.Budgets() != (CompletionBudgets{Observe: pricing.Observe.CompletionTokens, Plan: pricing.Plan.CompletionTokens}) {
+		if s.planner.Budgets() != (CompletionBudgets{Observe: pricing.Observe.CompletionTokens, Flow: pricing.Plan.CompletionTokens, Narration: pricing.Plan.CompletionTokens}) {
 			return ErrQuoteChanged
 		}
 		declared := make([]AnalysisSource, 0, len(b.Sources))
@@ -406,7 +406,7 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 			if err = s.planner.ValidateModels(pricing.Observe.Ref, pricing.Plan.Ref); err != nil {
 				return admissionRefusal(pricing.Observe.Ref, err)
 			}
-			if s.planner.Budgets() != (CompletionBudgets{Observe: pricing.Observe.CompletionTokens, Plan: pricing.Plan.CompletionTokens}) {
+			if s.planner.Budgets() != (CompletionBudgets{Observe: pricing.Observe.CompletionTokens, Flow: pricing.Plan.CompletionTokens, Narration: pricing.Plan.CompletionTokens}) {
 				return ErrQuoteChanged
 			}
 			if err = s.planner.ValidatePreparation(pricing.Observe.Ref, PlanningInput{Language: p.Language, Composition: p.Composition, Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: p.CTA, Instruction: p.Instruction, Policy: pricing.Plan}, sources); err != nil {
@@ -504,7 +504,15 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 				}
 				return s.checkpoint(ctx, user, project, checkpoint)
 			})
-			edit, _, err = s.planner.Plan(planCtx, pricing.Plan.Ref, PlanningInput{Language: p.Language, Composition: p.Composition, Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Analyses: analyses, Policy: pricing.Plan, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: p.CTA, Instruction: p.Instruction})
+			in := PlanningInput{Language: p.Language, Composition: p.Composition, Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Analyses: analyses, Policy: pricing.Plan, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: p.CTA, Instruction: p.Instruction, SourceAudio: batchSourceAudio(b)}
+			// A composition is written by the flow call and then the narration
+			// over it (CLIP-135); the single writer is what a payload with no
+			// composition snapshot still uses.
+			if p.Composition != nil {
+				edit, _, err = s.planner.Flow(planCtx, pricing.Plan.Ref, in)
+			} else {
+				edit, _, err = s.planner.Plan(planCtx, pricing.Plan.Ref, in)
+			}
 		}
 		if err != nil {
 			return err

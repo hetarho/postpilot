@@ -375,7 +375,7 @@ func TestPlanIsGroundedMeasuredAndPreservesExactAnswers(t *testing.T) {
 			t.Fatalf("caption window %d..%d", start, end)
 		}
 		request := f.calls[0]
-		if len(f.calls) != 1 || request.HasVideos() || request.HasImages() || request.MaxTokens != s.Budgets().Plan || request.Stage != llm.StageNameWrite || (request.JSONSchema != nil) != structured || !strings.Contains(request.System, `"maxLength": 500`) {
+		if len(f.calls) != 1 || request.HasVideos() || request.HasImages() || request.MaxTokens != config.ClipAI(&config.Config{}).PlanCompletionTokens || request.Stage != llm.StageNameWrite || (request.JSONSchema != nil) != structured || !strings.Contains(request.System, `"maxLength": 500`) {
 			t.Fatal(request)
 		}
 		var data struct {
