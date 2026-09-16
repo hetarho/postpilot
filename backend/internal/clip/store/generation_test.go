@@ -117,38 +117,41 @@ func (m *mediaFake) Probe(ctx context.Context, ws clip.MediaWorkspace, _ string)
 	m.probes++
 	return clip.MediaInfo{DurationMS: n, Width: 1920, Height: 1080}, nil
 }
-func (m *mediaFake) PrepareAnalysisChunks(ctx context.Context, ws clip.MediaWorkspace, s clip.MediaSource, fn func(clip.AnalysisChunk) error) error {
+func (m *mediaFake) PrepareAnalysisChunks(ctx context.Context, ws clip.MediaWorkspace, s clip.MediaSource, fn func(clip.AnalysisChunk) error) (clip.MediaInfo, error) {
 	return m.PrepareAnalysisChunksExcept(ctx, ws, s, nil, fn)
 }
-func (m *mediaFake) PrepareAnalysisChunksExcept(_ context.Context, ws clip.MediaWorkspace, s clip.MediaSource, skip func(int) bool, fn func(clip.AnalysisChunk) error) error {
+
+// The real adapter measures the original while it writes the copies and returns
+// what that decode settled; the fake reports the length it was handed.
+func (m *mediaFake) PrepareAnalysisChunksExcept(_ context.Context, ws clip.MediaWorkspace, s clip.MediaSource, skip func(int) bool, fn func(clip.AnalysisChunk) error) (clip.MediaInfo, error) {
 	if m.panicChunks {
 		panic("media panic")
 	}
 	for index, offset := 0, 0; offset < s.Info.DurationMS; index, offset = index+1, offset+60000 {
 		if skip != nil && skip(index) {
 			if err := fn(clip.AnalysisChunk{SourceID: s.SourceID, Fingerprint: s.Fingerprint, Index: index, OffsetMS: offset, DurationMS: min(60000, s.Info.DurationMS-offset)}); err != nil {
-				return err
+				return clip.MediaInfo{}, err
 			}
 			continue
 		}
 		p := filepath.Join(ws.Path, fmt.Sprintf("proxy-%s-%d.mp4", s.SourceID, index))
 		if err := os.WriteFile(p, []byte("proxy"), 0600); err != nil {
-			return err
+			return clip.MediaInfo{}, err
 		}
 		duration := min(60000, s.Info.DurationMS-offset)
 		c := clip.AnalysisChunk{Path: p, SourceID: s.SourceID, Fingerprint: s.Fingerprint, Index: index, OffsetMS: offset, DurationMS: duration, Bytes: 5, Info: clip.MediaInfo{ContainerDurationMS: duration, Width: 720, Height: 404}}
 		if m.chunkHook != nil {
 			if err := m.chunkHook(&c); err != nil {
-				return err
+				return clip.MediaInfo{}, err
 			}
 		}
 		err := fn(c)
 		if err != nil {
-			return err
+			return clip.MediaInfo{}, err
 		}
 		m.prepared = append(m.prepared, c)
 	}
-	return nil
+	return s.Info, nil
 }
 func (m *mediaFake) CleanupStale(context.Context, time.Time) error { return nil }
 

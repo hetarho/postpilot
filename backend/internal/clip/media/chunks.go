@@ -15,39 +15,59 @@ import (
 
 // All outputs remain workspace-owned until their individual analysis finishes.
 // The callback collects only verified paths and metadata, never encoded bytes.
-func (a *Adapter) PrepareAnalysisChunks(ctx context.Context, ws clip.MediaWorkspace, source clip.MediaSource, consume func(clip.AnalysisChunk) error) error {
+func (a *Adapter) PrepareAnalysisChunks(ctx context.Context, ws clip.MediaWorkspace, source clip.MediaSource, consume func(clip.AnalysisChunk) error) (clip.MediaInfo, error) {
 	return a.PrepareAnalysisChunksExcept(ctx, ws, source, nil, consume)
 }
-func (a *Adapter) PrepareAnalysisChunksExcept(ctx context.Context, ws clip.MediaWorkspace, source clip.MediaSource, skip func(int) bool, consume func(clip.AnalysisChunk) error) error {
+
+// The copies are produced by decoding the original, and that same decode carries
+// a verification output beside each copy, so the source is measured without a
+// second full pass over it (CLIP-33, CLIP-124). The returned info is the
+// source's, settled against that decode — the caller's container claim is a
+// claim until this returns.
+func (a *Adapter) PrepareAnalysisChunksExcept(ctx context.Context, ws clip.MediaWorkspace, source clip.MediaSource, skip func(int) bool, consume func(clip.AnalysisChunk) error) (clip.MediaInfo, error) {
 	if err := a.sourcePath(ws, source.Path); err != nil {
-		return err
+		return clip.MediaInfo{}, err
 	}
 	if consume == nil || source.SourceID == "" || source.Fingerprint == "" || source.Info.DurationMS <= 0 || source.Info.DurationMS > a.cfg.Sources.MaxDurationMS || source.Info.Width <= 0 || source.Info.Height <= 0 {
-		return clip.ErrInvalidMedia
+		return clip.MediaInfo{}, clip.ErrInvalidMedia
 	}
 	id := sha256.Sum256([]byte(source.SourceID))
+	total, reused := decoded{Constant: true}, false
 	for index, offset := 0, 0; offset < source.Info.DurationMS; index, offset = index+1, offset+a.cfg.ChunkDurationMS {
 		if err := ctx.Err(); err != nil {
-			return err
+			return clip.MediaInfo{}, err
 		}
 		chunk := clip.AnalysisChunk{Path: filepath.Join(ws.Path, fmt.Sprintf("proxy-%x-%04d.mp4", id, index)), SourceID: source.SourceID, Fingerprint: source.Fingerprint, Index: index, OffsetMS: offset, DurationMS: min(a.cfg.ChunkDurationMS, source.Info.DurationMS-offset)}
 		if skip != nil && skip(index) {
 			chunk.Path = ""
+			reused = true
 			if err := consume(chunk); err != nil {
-				return err
+				return clip.MediaInfo{}, err
 			}
 			continue
 		}
-		if err := a.prepareChunk(ctx, ws, source, chunk, consume); err != nil {
-			return err
+		measured, err := a.prepareChunk(ctx, ws, source, chunk, consume)
+		if err != nil {
+			return clip.MediaInfo{}, err
 		}
+		// The seeks are accurate, so the chunks tile the source exactly and their
+		// own measurements sum to the whole original's.
+		total.Frames += measured.Frames
+		total.Micros += measured.Micros
+		total.Constant = total.Constant && measured.Constant
 	}
-	return nil
+	if reused {
+		// A reused copy is not decoded here, so its part of the source was never
+		// measured. Fall back to the separate verification pass rather than
+		// settle a length on the intervals that happened to be re-prepared.
+		return a.Probe(ctx, ws, source.Path)
+	}
+	return a.measuredInfo(source.Info, total)
 }
 
-func (a *Adapter) prepareChunk(ctx context.Context, ws clip.MediaWorkspace, source clip.MediaSource, chunk clip.AnalysisChunk, consume func(clip.AnalysisChunk) error) (err error) {
+func (a *Adapter) prepareChunk(ctx context.Context, ws clip.MediaWorkspace, source clip.MediaSource, chunk clip.AnalysisChunk, consume func(clip.AnalysisChunk) error) (measured decoded, err error) {
 	if _, e := os.Lstat(chunk.Path); !os.IsNotExist(e) {
-		return errors.New("clip proxy path already exists")
+		return measured, errors.New("clip proxy path already exists")
 	}
 	retained := false
 	defer func() {
@@ -58,27 +78,34 @@ func (a *Adapter) prepareChunk(ctx context.Context, ws clip.MediaWorkspace, sour
 		}
 	}()
 	if err = a.capacity(ws, a.cfg.AnalysisMaxBytes); err != nil {
-		return err
+		return measured, err
 	}
 	for attempt := 0; attempt < 2; attempt++ {
 		maxRate, buffer := a.cfg.VideoMaxRate, a.cfg.VideoBufferSize
 		if attempt == 1 {
 			maxRate, buffer = a.cfg.RetryMaxRate, a.cfg.RetryBufferSize
 			if err = os.Remove(chunk.Path); err != nil && !os.IsNotExist(err) {
-				return err
+				return measured, err
 			}
 		}
 		args := a.chunkArgs(source, chunk, maxRate, buffer)
-		_, err = a.runBounded(ctx, ws, a.cfg.FFmpegPath, chunk.Path, a.cfg.AnalysisMaxBytes, clip.ErrAnalysisTooLarge, args...)
+		// The command's own log is the source decode's measurement, so it is
+		// captured here rather than measured again by a separate pass.
+		var log []byte
+		log, err = a.runBoundedLog(ctx, ws, a.cfg.FFmpegPath, chunk.Path, a.cfg.AnalysisMaxBytes, clip.ErrAnalysisTooLarge, args...)
 		if errors.Is(err, clip.ErrAnalysisTooLarge) && ctx.Err() == nil && !errors.Is(err, clip.ErrWorkspaceLimit) {
 			continue
 		}
 		if err != nil {
-			return err
+			return measured, err
+		}
+		reported, complete := decodeMeasurement(log)
+		if !complete {
+			return measured, clip.ErrInvalidMedia
 		}
 		file, e := os.Lstat(chunk.Path)
 		if e != nil || !file.Mode().IsRegular() || file.Size() <= 0 {
-			return clip.ErrInvalidMedia
+			return measured, clip.ErrInvalidMedia
 		}
 		chunk.Bytes = file.Size()
 		if chunk.Bytes >= a.cfg.AnalysisMaxBytes {
@@ -89,21 +116,21 @@ func (a *Adapter) prepareChunk(ctx context.Context, ws clip.MediaWorkspace, sour
 		}
 		chunk.Info, err = a.Probe(ctx, ws, chunk.Path)
 		if err != nil {
-			return err
+			return measured, err
 		}
 		if !a.validChunk(source, chunk) {
-			return fmt.Errorf("%w: analysis interval %d+%d ms, measured %+v", clip.ErrInvalidMedia, chunk.OffsetMS, chunk.DurationMS, chunk.Info)
+			return measured, fmt.Errorf("%w: analysis interval %d+%d ms, measured %+v", clip.ErrInvalidMedia, chunk.OffsetMS, chunk.DurationMS, chunk.Info)
 		}
 		if err = ctx.Err(); err != nil {
-			return err
+			return measured, err
 		}
 		if err = consume(chunk); err != nil {
-			return err
+			return measured, err
 		}
 		retained = true
-		return nil
+		return reported, nil
 	}
-	return clip.ErrAnalysisTooLarge
+	return measured, clip.ErrAnalysisTooLarge
 }
 
 func (a *Adapter) chunkArgs(source clip.MediaSource, chunk clip.AnalysisChunk, maxRate, buffer int) []string {
@@ -112,7 +139,14 @@ func (a *Adapter) chunkArgs(source clip.MediaSource, chunk clip.AnalysisChunk, m
 	scale := math.Min(1, float64(a.cfg.LongEdge)/float64(max(source.Info.Width, source.Info.Height)))
 	w, h := max(2, int(float64(source.Info.Width)*scale)/2*2), max(2, int(float64(source.Info.Height)*scale)/2*2)
 	filter := fmt.Sprintf("scale=%d:%d,setsar=1,fps=%d,format=yuv420p", w, h, a.cfg.FPS)
-	args := []string{"-hide_banner", "-nostdin", "-v", "error", "-xerror", "-n", "-filter_threads", strconv.Itoa(a.cfg.EncodeThreads), "-filter_complex_threads", strconv.Itoa(a.cfg.EncodeThreads), "-threads", strconv.Itoa(a.cfg.DecodeThreads), "-protocol_whitelist", "file,pipe", "-ss", seconds(chunk.OffsetMS), "-i", source.Path, "-t", seconds(chunk.DurationMS), "-map", "0:V:0"}
+	// Two outputs from ONE decode of the original: the verification pass that used
+	// to be its own full decode, and this interval's analysis copy. The
+	// verification output comes FIRST because -progress reports frame= for the
+	// first output, so the source decode is measured exactly as before while
+	// out_time_us stays the maximum across both (CLIP-33, CLIP-124).
+	args := []string{"-hide_banner", "-nostdin", "-v", "info", "-xerror", "-n", "-nostats", "-stats_period", "3600", "-progress", "pipe:2", "-filter_threads", strconv.Itoa(a.cfg.EncodeThreads), "-filter_complex_threads", strconv.Itoa(a.cfg.EncodeThreads), "-threads", strconv.Itoa(a.cfg.DecodeThreads), "-protocol_whitelist", "file,pipe", "-ss", seconds(chunk.OffsetMS), "-i", source.Path,
+		"-map", "0:V:0", "-vf", "vfrdet", "-fps_mode", "passthrough", "-an", "-sn", "-dn", "-t", seconds(chunk.DurationMS), "-f", "null", "-",
+		"-t", seconds(chunk.DurationMS), "-map", "0:V:0"}
 	if source.Info.HasAudio {
 		// Trim exact samples before AAC packetization. Output -t alone can leave
 		// an extra partial AAC packet in the MP4 (60.011 s for a 60 s interval).

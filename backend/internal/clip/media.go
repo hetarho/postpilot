@@ -22,7 +22,9 @@ var ErrModelInputUnsupported = errors.New("clip model input is unsupported")
 type Media interface {
 	WithWorkspace(context.Context, string, func(MediaWorkspace) error) error
 	Probe(context.Context, MediaWorkspace, string) (MediaInfo, error)
-	PrepareAnalysisChunks(context.Context, MediaWorkspace, MediaSource, func(AnalysisChunk) error) error
+	// Preparing the analysis copies also measures the original it decodes, so
+	// the caller settles a source's length here rather than in a second pass.
+	PrepareAnalysisChunks(context.Context, MediaWorkspace, MediaSource, func(AnalysisChunk) error) (MediaInfo, error)
 	CleanupStale(context.Context, time.Time) error
 }
 

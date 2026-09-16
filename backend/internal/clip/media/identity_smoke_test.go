@@ -357,10 +357,11 @@ func TestAnalysisCopyIdentityAcrossDecoderThreads(t *testing.T) {
 			if err != nil {
 				return err
 			}
-			return a.PrepareAnalysisChunks(t.Context(), ws, clip.MediaSource{Path: original, SourceID: "one", Fingerprint: "hash", Info: info}, func(chunk clip.AnalysisChunk) error {
+			_, err = a.PrepareAnalysisChunks(t.Context(), ws, clip.MediaSource{Path: original, SourceID: "one", Fingerprint: "hash", Info: info}, func(chunk clip.AnalysisChunk) error {
 				digests = append(digests, fileDigest(t, chunk.Path))
 				return nil
 			})
+			return err
 		}); err != nil {
 			t.Fatal(err)
 		}

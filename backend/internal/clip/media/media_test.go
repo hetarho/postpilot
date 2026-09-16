@@ -151,13 +151,19 @@ func chunkRunner() func(context.Context, Command) ([]byte, error) {
 			}
 			return []byte(fmt.Sprintf(`{"streams":[{"index":0,"codec_type":"video","codec_name":"h264","width":720,"height":404,"avg_frame_rate":"15/1","sample_aspect_ratio":"1:1","pix_fmt":"yuv420p","duration":%q}%s],"format":{"format_name":"mov,mp4","duration":%q}}`, v.duration, audio, v.duration)), nil
 		}
-		if slices.Contains(c.Args, "-progress") {
+		if last == "-" {
+			// A verification decode of its own: the whole file it was handed.
 			v := files[c.Args[slices.Index(c.Args, "-i")+1]]
 			d, _ := strconv.ParseFloat(v.duration, 64)
 			return []byte(fmt.Sprintf("frame=%d\nout_time_us=%d\nprogress=end\n", int(d*15), int64(d*1000000))), nil
 		}
-		files[last] = encoded{c.Args[slices.Index(c.Args, "-t")+1], slices.Contains(c.Args, "-c:a")}
-		return nil, os.WriteFile(last, []byte("proxy"), 0600)
+		// An analysis copy, which now carries the source interval's verification
+		// output beside it and reports that decode rather than the copy's own.
+		interval := c.Args[slices.Index(c.Args, "-t")+1]
+		files[last] = encoded{interval, slices.Contains(c.Args, "-c:a")}
+		d, _ := strconv.ParseFloat(interval, 64)
+		log := fmt.Sprintf("frame=%d\nout_time_us=%d\nprogress=end\n[Parsed_vfrdet_0 @ 0x1] VFR:0.000000 (0/%d)\n", int(d*30), int64(d*1000000), int(d*30))
+		return []byte(log), os.WriteFile(last, []byte("proxy"), 0600)
 	}
 }
 
@@ -168,7 +174,7 @@ func TestChunksAreSequentialBoundedAndRetained(t *testing.T) {
 			a := newAdapter(t, r)
 			var chunks []clip.AnalysisChunk
 			err := a.WithWorkspace(t.Context(), "job", func(ws clip.MediaWorkspace) error {
-				return a.PrepareAnalysisChunks(t.Context(), ws, clip.MediaSource{Path: sourceFile(t, ws), SourceID: "one", Fingerprint: "hash", Info: clip.MediaInfo{DurationMS: 61000, Width: 1280, Height: 720, HasAudio: audio}}, func(c clip.AnalysisChunk) error {
+				_, err := a.PrepareAnalysisChunks(t.Context(), ws, clip.MediaSource{Path: sourceFile(t, ws), SourceID: "one", Fingerprint: "hash", Info: clip.MediaInfo{DurationMS: 61000, Width: 1280, Height: 720, HasAudio: audio}}, func(c clip.AnalysisChunk) error {
 					files, err := os.ReadDir(ws.Path)
 					if err != nil {
 						return err
@@ -184,6 +190,7 @@ func TestChunksAreSequentialBoundedAndRetained(t *testing.T) {
 					chunks = append(chunks, c)
 					return nil
 				})
+				return err
 			})
 			if err != nil {
 				t.Fatal(err)
@@ -278,12 +285,13 @@ func TestCancellationAndChunkFailureCleanup(t *testing.T) {
 				defer func() { _ = recover() }()
 				err := a.WithWorkspace(ctx, "job", func(ws clip.MediaWorkspace) error {
 					path = ws.Path
-					return a.PrepareAnalysisChunks(ctx, ws, clip.MediaSource{Path: sourceFile(t, ws), SourceID: "one", Fingerprint: "hash", Info: clip.MediaInfo{DurationMS: 61000, Width: 1280, Height: 720}}, func(clip.AnalysisChunk) error {
+					_, err := a.PrepareAnalysisChunks(ctx, ws, clip.MediaSource{Path: sourceFile(t, ws), SourceID: "one", Fingerprint: "hash", Info: clip.MediaInfo{DurationMS: 61000, Width: 1280, Height: 720}}, func(clip.AnalysisChunk) error {
 						if failure == "panic" {
 							panic("consumer")
 						}
 						return errors.New("observation failed")
 					})
+					return err
 				})
 				if err == nil {
 					t.Fatal("accepted failure")

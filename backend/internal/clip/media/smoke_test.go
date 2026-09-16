@@ -68,7 +68,7 @@ func TestMediaSmoke(t *testing.T) {
 					t.Fatalf("source probe=%+v", info)
 				}
 				var chunks []clip.AnalysisChunk
-				err = a.PrepareAnalysisChunks(t.Context(), ws, clip.MediaSource{Path: path, SourceID: fixture.name, Fingerprint: fixture.name, Info: info}, func(chunk clip.AnalysisChunk) error {
+				_, err = a.PrepareAnalysisChunks(t.Context(), ws, clip.MediaSource{Path: path, SourceID: fixture.name, Fingerprint: fixture.name, Info: info}, func(chunk clip.AnalysisChunk) error {
 					probe, err := a.Probe(t.Context(), ws, chunk.Path)
 					if err != nil {
 						return err

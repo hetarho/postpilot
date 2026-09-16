@@ -660,10 +660,14 @@ func (s *GenerationService) prepareRecoveredBatch(ctx context.Context, ws MediaW
 			}
 		}
 		err := s.withSource(ctx, ws, v, MediaInfo{}, func(source MediaSource) error {
-			info, err := s.media.Probe(ctx, ws, source.Path)
+			// The container read is the cheap one and decides how many analysis
+			// copies this source needs; producing those copies decodes it once and
+			// settles its real length below (CLIP-33, CLIP-124).
+			info, err := s.probeSource(ctx, ws, source.Path)
 			if err != nil {
 				return err
 			}
+			claimed := info.DurationMS
 			probed = append(probed, ProbedSource{Metadata: v.SourceMetadata, Info: info})
 			count, err = ValidateProbedSources(s.cfg.Media, probed)
 			if err != nil {
@@ -704,12 +708,30 @@ func (s *GenerationService) prepareRecoveredBatch(ctx context.Context, ws MediaW
 				next++
 				return nil
 			}
+			verified := MediaInfo{}
 			if media, ok := s.media.(interface {
-				PrepareAnalysisChunksExcept(context.Context, MediaWorkspace, MediaSource, func(int) bool, func(AnalysisChunk) error) error
+				PrepareAnalysisChunksExcept(context.Context, MediaWorkspace, MediaSource, func(int) bool, func(AnalysisChunk) error) (MediaInfo, error)
 			}); ok {
-				return media.PrepareAnalysisChunksExcept(ctx, ws, source, func(i int) bool { return recoveryChunk(recovery, v.ID, i) != nil }, consume)
+				verified, err = media.PrepareAnalysisChunksExcept(ctx, ws, source, func(i int) bool { return recoveryChunk(recovery, v.ID, i) != nil }, consume)
+			} else {
+				verified, err = s.media.PrepareAnalysisChunks(ctx, ws, source, consume)
 			}
-			return s.media.PrepareAnalysisChunks(ctx, ws, source, consume)
+			if err != nil {
+				return err
+			}
+			// The decode has now confirmed or refused the container's claim. A
+			// claim that would have produced a different set of copies is refused
+			// as invalid media, exactly as an unreadable source is; anything else
+			// carries the measured length into observation and planning.
+			if verified.DurationMS <= 0 || chunkCount(s.cfg.Media, verified.DurationMS) != chunkCount(s.cfg.Media, claimed) {
+				return ErrInvalidMedia
+			}
+			probed[len(probed)-1].Info = verified
+			if _, err = ValidateProbedSources(s.cfg.Media, probed); err != nil {
+				return err
+			}
+			sources[len(sources)-1].Info = verified
+			return nil
 		})
 		if err != nil {
 			return nil, nil, err
@@ -736,4 +758,24 @@ func (s *GenerationService) prepareRecoveredBatch(ctx context.Context, ws MediaW
 		return nil, nil, err
 	}
 	return sources, prepared, nil
+}
+
+// probeSource reads only what a container claims when the adapter can, so the
+// decode that produces the analysis copies is the source's only decode.
+func (s *GenerationService) probeSource(ctx context.Context, ws MediaWorkspace, path string) (MediaInfo, error) {
+	if media, ok := s.media.(interface {
+		ProbeContainer(context.Context, MediaWorkspace, string) (MediaInfo, error)
+	}); ok {
+		return media.ProbeContainer(ctx, ws, path)
+	}
+	return s.media.Probe(ctx, ws, path)
+}
+
+// chunkCount is how many analysis copies a length of footage needs — the same
+// walk PrepareAnalysisChunks takes.
+func chunkCount(cfg MediaConfig, durationMS int) int {
+	if cfg.ChunkDurationMS <= 0 {
+		return 0
+	}
+	return (durationMS + cfg.ChunkDurationMS - 1) / cfg.ChunkDurationMS
 }

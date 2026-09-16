@@ -36,7 +36,8 @@ func TestOversizeRetriesExactlySameIntervalOnce(t *testing.T) {
 			}}
 			a := newAdapter(t, r)
 			err := a.WithWorkspace(t.Context(), "oversize", func(ws clip.MediaWorkspace) error {
-				return a.PrepareAnalysisChunks(t.Context(), ws, clip.MediaSource{Path: sourceFile(t, ws), SourceID: "one", Fingerprint: "hash", Info: clip.MediaInfo{Width: 1280, Height: 720, DurationMS: 60000}}, func(clip.AnalysisChunk) error { consumed++; return nil })
+				_, err := a.PrepareAnalysisChunks(t.Context(), ws, clip.MediaSource{Path: sourceFile(t, ws), SourceID: "one", Fingerprint: "hash", Info: clip.MediaInfo{Width: 1280, Height: 720, DurationMS: 60000}}, func(clip.AnalysisChunk) error { consumed++; return nil })
+				return err
 			})
 			if twice && !errors.Is(err, clip.ErrAnalysisTooLarge) || !twice && err != nil {
 				t.Fatal(err)

@@ -15,7 +15,7 @@
 ## ssot
 | id | rev | tasked | pending | [?] |
 |---|---|---|---|---|
-| ARCH | 2 | 2 | - | 0 |
+| ARCH | 3 | 2 | ARCH-36+ ARCH-37+ ARCH-38+ ARCH-39+ | 0 |
 | AUTH | 5 | 5 | - | 0 |
 | QUOTA | 12 | 12 | - | 0 |
 | POST | 6 | 6 | - | 0 |
@@ -30,8 +30,8 @@
 | THEME | 12 | 12 | - | 0 |
 | MKT | 4 | 4 | - | 0 |
 | VIDEO | 2 | 2 | - | 1 |
-| CLIP | 30 | 29 | CLIP-130+ CLIP-131+ CLIP-132+ CLIP-133+ CLIP-1✎ CLIP-17✎ CLIP-20✎ CLIP-35✎ CLIP-36✎ CLIP-40✎ CLIP-93✎ | 2 |
-| CDS | 19 | 19 | - | 1 |
+| CLIP | 31 | 30 | CLIP-134+ CLIP-135+ CLIP-136+ CLIP-137+ CLIP-138+ CLIP-139+ CLIP-140+ CLIP-1✎ CLIP-4✎ CLIP-11✎ CLIP-14✎ CLIP-15✎ CLIP-17✎ CLIP-31✎ CLIP-45✎ CLIP-59✎ CLIP-61✎ CLIP-63✎ CLIP-64✎ CLIP-65✎ CLIP-66✎ CLIP-67✎ CLIP-72✎ CLIP-90✎ CLIP-97✎ CLIP-111✎ CLIP-112✎ CLIP-113✎ CLIP-121✎ CLIP-123✎ CLIP-130✎ CLIP-131✎ CLIP-132✎ CLIP-62x CLIP-103x | 2 |
+| CDS | 20 | 19 | CDS-1✎ CDS-15✎ CDS-27✎ CDS-37✎ CDS-38✎ CDS-41✎ CDS-42✎ CDS-43✎ CDS-44✎ CDS-45✎ CDS-52✎ CDS-53✎ CDS-56✎ CDS-57✎ CDS-59✎ CDS-60✎ CDS-61✎ CDS-62✎ CDS-63✎ CDS-30x | 1 |
 | BILL | 4 | 4 | - | 0 |
 
 ## review
@@ -40,7 +40,7 @@
 | diff-260908 | converted@260908 |
 | clip-project-update-260914 | converted@260914 |
 | clip-failure-visibility-260914 | converted@260914 |
-| clip-release-smoke-260914 | ready@260914 |
+| clip-release-smoke-260914 | converted@260916 |
 
 ## tasks
 | id | title | ssot | dep | st |
@@ -48,15 +48,30 @@
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
 | T195 | A plate's sample frames come from one decode | CLIP | T191 | todo |
-| T196 | Preparation decodes each original once | CLIP | - | todo |
 | T197 | A cut's rate is read from its own observation | CLIP | T191 | todo |
 | T198 | Speech a retained source lets through stays at 1x | CLIP | T197 | todo |
+| T199 | An instruction change invalidates the reusable plan | CLIP | - | doing@260916.inst |
+| T200 | The creation screen settles only the ratio | CLIP | - | todo |
+| T201 | The writer rewrites a saved plan from a written request | CLIP | - | todo |
+| T202 | A revision request runs as its own job and charges one writing call | CLIP | T201 | todo |
+| T203 | ② asks for a revision in its own panel | CLIP | T202 | todo |
+| T204 | What the owner asked for is kept | CLIP | T202 | todo |
 
 ## next
-- create-task CLIP — r30 moves every setting but title/template/ratio into ①, gives ② a written revision request that rewrites the current plan for one writing call, and keeps every instruction and request verbatim; CLIP-93's instruction clause is the one that fixes today's defect, where a changed instruction reuses the old plan because neither the plan-reuse nor the quote digest carries it.
-- implement-task T196, then T195, then T197 T198 — T196 is the last of r28's pass budget (T193 collapsed the merge, T194 fused the overlay into delivery), measured by T190's durations against T191's identity baseline (docker --target identity-smoke); T197/T198 are r29's rate work and move delivered frames on purpose.
-- T177 is blocked on the owner's viewing answers; T008 stays owner-dependent.
+- create-task CLIP then CDS — r31/r20 shrink the template to what every clip must carry, write the flow and then a narration of captions on the absolute output timeline in two calls, ground numbers on collected facts only, retire the information pair and record no notice for the writer's choices; T197 T198 (r29 single writing call) and T200-T204 (r30 whole-plan revision, one call) must be re-cut against r31 before implementing, T199 stands.
+- implement-task T199 first — it alone fixes the reported defect, where a changed instruction re-renders the plan written without it; then T196, T195 against T191's identity baseline (docker --target identity-smoke). T177 is blocked on the owner's viewing answers; T008 stays owner-dependent.
+- create-task ARCH — r3 sets the deploy smoke gate: the smokes stay image stages outside ARCH-26 (ARCH-36 ARCH-37), they move beside the deploy until closed beta (ARCH-38), and the bundled ffmpeg is checked against the names the render code emits (ARCH-39); both tasks wait on T198.
 ## log
+- 260916 update-ssot CDS done; CDS@20 — rhythm and voice follow the instruction, captions hold disjoint absolute windows on the output timeline whatever cut lies beneath, the information pair is retired, numbers match any collected fact, and the accent is chosen in ①
+- 260916 T197 T198 (base CLIP@29) and T200-T204 (base CLIP@30) affected — r31 rebuilds the writing contract into two calls and targets the revision request; re-cut under create-task before implementing
+- 260916 update-ssot CLIP done; CLIP@31 — the template shrinks to what every clip must carry (design, slots, badge, fields, groups, optional guide), the instruction directs footage order and narration, two writing calls write the flow and then a narration of captions on the absolute output timeline, numbers ground on collected facts only, and an unwritten caption is no notice
+- 260916 T196 done; the analysis copies carry the source's verification output from their own decode, so an original is decoded once in preparation (partial-recovery reuse still falls back to the separate pass)
+- 260916 T199 claimed (inst)
+- 260916 create-task ARCH start
+- 260916 update-ssot ARCH done; ARCH@3 — the media smokes stay image stages a media task runs locally before done, they move beside the deploy until closed beta, and the bundled ffmpeg is checked against the filter/codec/muxer names the render code emits; review clip-release-smoke-260914 F2 closed by ARCH-37
+- 260916 create-task CLIP done; T199-T204 carry r30 — the instruction into both reuse digests, the creation screen down to title/template/ratio, then the revise contract, its job and credits, ②'s request panel and the kept record of what was asked for
+- 260916 update-ssot ARCH start (deploy smoke gate)
+- 260916 T196 claimed (perf)
 - 260916 T194 done; a single-window clip is overlaid and delivered in one encode with no lossless intermediate between them, the delivered clip still matching T191's baseline
 - 260916 create-task CLIP start
 - 260916 T194 claimed (perf)
@@ -67,13 +82,3 @@
 - 260916 update-ssot CLIP start
 - 260916 T192 claimed (perf)
 - 260916 T191 done; one fixed plan renders byte-identically twice, and its digest, player-visible properties and one frame per second are pinned as the baseline T192-T195 must hold (docker target identity-smoke, 112 s)
-- 260916 T191 claimed (perf)
-- 260916 T190 done; every media command reports its operation, outcome and elapsed time on success too, labelled with the stage it ran in, through the sink the render substages already used
-- 260916 create-task CLIP done; T197 T198 carry r29 — the observed rate rules and the 40 % share into both writing contracts, then the per-source sound setting the speech rule needs
-- 260916 create-task CLIP start
-- 260916 T190 claimed (perf)
-- 260916 update-ssot CLIP done; CLIP@29 — a cut's rate read from its own observation, a 40 % transformed share bounding the writing, and 1x wherever a retained source lets speech through
-- 260916 T191-T196 (todo) unaffected but ordered first — r29 moves delivered frames deliberately, so the CLIP-125 identity baseline must be taken against today's clip before a rate change rewrites it
-- 260916 T189 done; the owner binds a whole source to an item where sources are selected, every cut inherits it, and a binding with no matching observation is ignored rather than refused
-- 260916 update-ssot CLIP start
-- 260916 T189 claimed (grp)

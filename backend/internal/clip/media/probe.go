@@ -53,7 +53,29 @@ func ratio(value string, separator string) (int, int) {
 	}
 	return n, d
 }
-func (a *Adapter) Probe(ctx context.Context, ws clip.MediaWorkspace, path string) (clip.MediaInfo, error) {
+
+// ProbeContainer is the cheap first read: what the container and its stream
+// headers claim, with no decode at all. It decides how many analysis copies a
+// source needs; the decode that produces those copies then confirms or refuses
+// the claim, so an original is never decoded twice (CLIP-33, CLIP-124).
+func (a *Adapter) ProbeContainer(ctx context.Context, ws clip.MediaWorkspace, path string) (clip.MediaInfo, error) {
+	info, err := a.probeContainer(ctx, ws, path)
+	if err != nil {
+		return clip.MediaInfo{}, err
+	}
+	// A claim only, and the shorter of the two a header can carry: a container
+	// that outruns its video track never adds a copy the footage cannot fill.
+	info.DurationMS = info.ContainerDurationMS
+	if info.VideoDurationMS > 0 && info.VideoDurationMS < info.DurationMS {
+		info.DurationMS = info.VideoDurationMS
+	}
+	if info.DurationMS <= 0 || info.DurationMS > a.cfg.Sources.MaxDurationMS {
+		return clip.MediaInfo{}, clip.ErrInvalidMedia
+	}
+	return info, nil
+}
+
+func (a *Adapter) probeContainer(ctx context.Context, ws clip.MediaWorkspace, path string) (clip.MediaInfo, error) {
 	if err := a.sourcePath(ws, path); err != nil {
 		return clip.MediaInfo{}, err
 	}
@@ -122,16 +144,40 @@ func (a *Adapter) Probe(ctx context.Context, ws clip.MediaWorkspace, path string
 	if !found || info.Width <= 0 || info.Height <= 0 || info.Width > a.cfg.MaxDimension || info.Height > a.cfg.MaxDimension || info.FrameRateNumerator == 0 {
 		return clip.MediaInfo{}, clip.ErrInvalidMedia
 	}
-	// A container's duration is only a claim. Decode every selected stream with
-	// xerror, then use the actual output clock. A strict upper bound also prevents
-	// an adversarial header from turning a 30-minute admission into a day of work.
-	data, err = a.runLog(ctx, ws, a.cfg.FFmpegPath, "-hide_banner", "-nostdin", "-v", "info", "-xerror", "-nostats", "-stats_period", "3600", "-progress", "pipe:2", "-threads", strconv.Itoa(a.cfg.DecodeThreads), "-protocol_whitelist", "file,pipe", "-i", path, "-map", "0:V:0", "-map", "0:a?", "-vf", "vfrdet", "-t", seconds(a.cfg.Sources.MaxDurationMS+a.cfg.DurationToleranceMS), "-fps_mode", "passthrough", "-f", "null", "-")
+	return info, nil
+}
+
+// A container's duration is only a claim. Decode every selected stream with
+// xerror, then use the actual output clock. A strict upper bound also prevents
+// an adversarial header from turning a 30-minute admission into a day of work.
+func (a *Adapter) Probe(ctx context.Context, ws clip.MediaWorkspace, path string) (clip.MediaInfo, error) {
+	info, err := a.probeContainer(ctx, ws, path)
+	if err != nil {
+		return clip.MediaInfo{}, err
+	}
+	data, err := a.runLog(ctx, ws, a.cfg.FFmpegPath, "-hide_banner", "-nostdin", "-v", "info", "-xerror", "-nostats", "-stats_period", "3600", "-progress", "pipe:2", "-threads", strconv.Itoa(a.cfg.DecodeThreads), "-protocol_whitelist", "file,pipe", "-i", path, "-map", "0:V:0", "-map", "0:a?", "-vf", "vfrdet", "-t", seconds(a.cfg.Sources.MaxDurationMS+a.cfg.DurationToleranceMS), "-fps_mode", "passthrough", "-f", "null", "-")
 	if err != nil {
 		return clip.MediaInfo{}, errors.Join(clip.ErrInvalidMedia, err)
 	}
-	frames, micros := int64(0), int64(0)
+	measured, ok := decodeMeasurement(data)
+	if !ok {
+		return clip.MediaInfo{}, clip.ErrInvalidMedia
+	}
+	return a.measuredInfo(info, measured)
+}
+
+// decodeMeasurement reads what -progress reports about a decode: the frames and
+// the output clock of its FIRST output, and whether every measured graph saw a
+// constant cadence. A run that did not reach progress=end measured nothing.
+type decoded struct {
+	Frames, Micros int64
+	Constant       bool
+}
+
+func decodeMeasurement(log []byte) (decoded, bool) {
+	var out decoded
 	complete := false
-	for _, line := range strings.Split(string(data), "\n") {
+	for _, line := range strings.Split(string(log), "\n") {
 		key, value, ok := strings.Cut(line, "=")
 		if !ok {
 			continue
@@ -139,20 +185,27 @@ func (a *Adapter) Probe(ctx context.Context, ws clip.MediaWorkspace, path string
 		n, _ := strconv.ParseInt(strings.TrimSpace(value), 10, 64)
 		switch key {
 		case "frame":
-			frames = max(frames, n)
+			out.Frames = max(out.Frames, n)
 		case "out_time_us":
-			micros = max(micros, n)
+			out.Micros = max(out.Micros, n)
 		case "progress":
 			complete = value == "end"
 		}
 	}
-	if !complete || frames <= 0 || micros <= 0 || micros > int64(a.cfg.Sources.MaxDurationMS)*1000 {
+	out.Constant = constantCadenceReport(log)
+	return out, complete
+}
+
+// measuredInfo settles a source's length against an actual decode — one whole
+// pass, or the analysis copies' own passes summed — by today's rules.
+func (a *Adapter) measuredInfo(info clip.MediaInfo, measured decoded) (clip.MediaInfo, error) {
+	if measured.Frames <= 0 || measured.Micros <= 0 || measured.Micros > int64(a.cfg.Sources.MaxDurationMS)*1000 {
 		return clip.MediaInfo{}, clip.ErrInvalidMedia
 	}
-	info.DurationMS = int(math.Round(float64(micros) / 1000))
+	info.DurationMS = int(math.Round(float64(measured.Micros) / 1000))
 	info.DecodedDurationMS = info.DurationMS
-	info.DecodedFrames = int(frames)
-	info.CadenceVerified = constantCadenceReport(data)
+	info.DecodedFrames = int(measured.Frames)
+	info.CadenceVerified = measured.Constant
 	// MP4 edit lists exclude AAC encoder padding from the playable timeline.
 	// Cross-check every declared selected-stream endpoint against a full decode
 	// before using it; otherwise a 60 s source could produce a spurious 11 ms

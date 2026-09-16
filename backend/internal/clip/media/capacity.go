@@ -74,6 +74,12 @@ func (a *Adapter) runLog(ctx context.Context, ws clip.MediaWorkspace, binary str
 	return a.runCommand(ctx, ws, Command{Binary: binary, Dir: ws.Path, Args: args, CaptureStderr: true}, "", 0, nil)
 }
 
+// runBoundedLog is runBounded for a command whose own log is a result: the
+// analysis-copy pass carries the source's verification output beside the copy.
+func (a *Adapter) runBoundedLog(ctx context.Context, ws clip.MediaWorkspace, binary, output string, limit int64, limitError error, args ...string) ([]byte, error) {
+	return a.runCommand(ctx, ws, Command{Binary: binary, Dir: ws.Path, Args: args, CaptureStderr: true}, output, limit, limitError)
+}
+
 // Only subprocess execution is serialized: caption measurement can open a nested
 // workspace during planning, so a workspace-wide semaphore would deadlock.
 func (a *Adapter) runBounded(ctx context.Context, ws clip.MediaWorkspace, binary, output string, limit int64, limitError error, args ...string) ([]byte, error) {

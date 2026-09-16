@@ -115,7 +115,7 @@ func TestMediaProfileSmoke(t *testing.T) {
 					t.Fatal("fixture is not variable rate")
 				}
 				chunks := 0
-				err = a.PrepareAnalysisChunks(t.Context(), ws, clip.MediaSource{Path: original, SourceID: "profile", Fingerprint: "synthetic", Info: info}, func(c clip.AnalysisChunk) error {
+				_, err = a.PrepareAnalysisChunks(t.Context(), ws, clip.MediaSource{Path: original, SourceID: "profile", Fingerprint: "synthetic", Info: info}, func(c clip.AnalysisChunk) error {
 					chunks++
 					if c.Bytes > 8<<20 || c.Info.ContainerDurationMS > 60000 || abs(c.Info.ContainerDurationMS-duration) > 67 || c.Info.AudioChannels != 1 {
 						t.Fatalf("profile=%+v", c)

@@ -264,10 +264,10 @@ func (m *releaseMedia) Probe(ctx context.Context, ws clip.MediaWorkspace, p stri
 	m.metrics.scan(m.root)
 	return info, err
 }
-func (m *releaseMedia) PrepareAnalysisChunks(ctx context.Context, ws clip.MediaWorkspace, s clip.MediaSource, fn func(clip.AnalysisChunk) error) error {
+func (m *releaseMedia) PrepareAnalysisChunks(ctx context.Context, ws clip.MediaWorkspace, s clip.MediaSource, fn func(clip.AnalysisChunk) error) (clip.MediaInfo, error) {
 	return m.PrepareAnalysisChunksExcept(ctx, ws, s, nil, fn)
 }
-func (m *releaseMedia) PrepareAnalysisChunksExcept(ctx context.Context, ws clip.MediaWorkspace, s clip.MediaSource, skip func(int) bool, fn func(clip.AnalysisChunk) error) error {
+func (m *releaseMedia) PrepareAnalysisChunksExcept(ctx context.Context, ws clip.MediaWorkspace, s clip.MediaSource, skip func(int) bool, fn func(clip.AnalysisChunk) error) (clip.MediaInfo, error) {
 	start := time.Now()
 	defer func() { m.metrics.mu.Lock(); m.metrics.prepareTime += time.Since(start); m.metrics.mu.Unlock() }()
 	return m.Adapter.PrepareAnalysisChunksExcept(ctx, ws, s, skip, func(c clip.AnalysisChunk) error {
