@@ -3,6 +3,7 @@ import {
   emptyClipProject,
   normalizeClipProject,
   validClipProject,
+  validNewClipProject,
   type ClipProjectDraft,
 } from './types'
 const draft = (): ClipProjectDraft => ({
@@ -12,6 +13,9 @@ const draft = (): ClipProjectDraft => ({
   // Every clip carries its ad disclosure, so the campaign type is part of a
   // complete setup (CDS-5, CDS-31).
   disclosure: 'sponsored',
+  // The length is chosen in ① (CLIP-130), so a complete setup carries one even
+  // though the draft a project is minted from does not.
+  targetDurationMs: 30000,
   answers: [{ label: '장소', text: '제주' }],
 })
 const fields = [{ label: '장소' }]
@@ -20,6 +24,7 @@ describe('clip setup validation', () => {
     { title: '' },
     { title: '😀'.repeat(101) },
     { videoTemplateId: '' },
+    { targetDurationMs: 0 },
     { targetDurationMs: 14999 },
     { targetDurationMs: 90001 },
     { targetDurationMs: NaN },
@@ -32,6 +37,18 @@ describe('clip setup validation', () => {
     { cta: 'subscribe' as ClipProjectDraft['cta'] },
   ])('rejects invalid setup %j', (patch) => {
     expect(validClipProject({ ...draft(), ...patch }, fields)).toBe(false)
+  })
+  // Minting settles the ratio and nothing else (CLIP-130): a draft with no answers,
+  // no campaign type and no length is what `/clips/new` sends.
+  it('mints from the title, the template and the ratio alone', () => {
+    const minting = { ...emptyClipProject(), title: '새 경험', videoTemplateId: 'owned' }
+    expect(validNewClipProject(minting)).toBe(true)
+    expect(validClipProject(minting, fields)).toBe(false)
+    expect(validNewClipProject({ ...minting, title: ' ' })).toBe(false)
+    expect(validNewClipProject({ ...minting, videoTemplateId: '' })).toBe(false)
+    expect(validNewClipProject({ ...minting, ratio: 'wide' as ClipProjectDraft['ratio'] })).toBe(
+      false,
+    )
   })
   it('requires the currently owned template and its current questions', () => {
     expect(validClipProject(draft(), undefined)).toBe(false)

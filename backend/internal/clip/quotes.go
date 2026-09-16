@@ -196,6 +196,9 @@ func (s *GenerationService) quoteInputs(ctx context.Context, user, id, batch, ob
 	if err = RequiredAnswers(t, p, s.projects.limits.Composition); err != nil {
 		return p, t, b, pricing, err
 	}
+	if !s.projects.duration(p.TargetDurationMS) {
+		return p, t, b, pricing, ErrTargetDurationRequired
+	}
 	c, err := GenerationComposition(t, p, s.projects.limits.Composition)
 	if err != nil {
 		return p, t, b, pricing, err

@@ -139,7 +139,7 @@ export function emptyClipProject(): ClipProjectDraft {
     title: '',
     videoTemplateId: '',
     ratio: 'vertical',
-    targetDurationMs: 30000,
+    targetDurationMs: 0,
     answers: [],
     disclosure: '',
     hideDisclosure: false,
@@ -165,6 +165,39 @@ export function projectDraft(value: ClipProjectDraft): ClipProjectDraft {
 }
 export function normalizeClipProject(value: ClipProjectDraft): ClipProjectDraft {
   return { ...projectDraft(value), title: value.title.trim() }
+}
+/** `/clips/new` settles the ratio and nothing else (CLIP-130): the answers, the instruction and
+ *  the length are written in ① beside the sources they describe, so minting asks only for what a
+ *  project cannot exist without — and for the one value it can never change again (CLIP-9). */
+export function validNewClipProject(value: ClipProjectDraft): boolean {
+  const title = value.title.trim()
+  return (
+    !!title &&
+    Array.from(title).length <= CLIP_PROJECT_LIMITS.title &&
+    !!value.videoTemplateId &&
+    CLIP_RATIOS.includes(value.ratio)
+  )
+}
+/** What the server will accept for an EXISTING project: every bound it enforces on a patch, and
+ *  nothing it only enforces at generation. ① is where the setup is completed now (CLIP-130), so a
+ *  half-written project is an ordinary state that must keep saving and keep accepting sources —
+ *  the missing answers and the missing length are refused at approval instead (CLIP-102, CLIP-7). */
+export function savableClipProject(value: ClipProjectDraft): boolean {
+  const length = (s: string) => Array.from(s).length
+  const title = value.title.trim()
+  return (
+    !!title &&
+    length(title) <= CLIP_PROJECT_LIMITS.title &&
+    !!value.videoTemplateId &&
+    CLIP_RATIOS.includes(value.ratio) &&
+    (value.targetDurationMs === 0 ||
+      (Number.isInteger(value.targetDurationMs) &&
+        value.targetDurationMs >= CLIP_PROJECT_LIMITS.minSeconds * 1000 &&
+        value.targetDurationMs <= CLIP_PROJECT_LIMITS.maxSeconds * 1000)) &&
+    (value.cta === '' || CLIP_CTAS.includes(value.cta as ClipCTAId)) &&
+    value.answers.every((a) => length(a.text) <= CLIP_PROJECT_LIMITS.answer) &&
+    compositionCharacters(value.instruction ?? '') <= CLIP_PROJECT_LIMITS.instruction
+  )
 }
 export function validClipProject(
   value: ClipProjectDraft,

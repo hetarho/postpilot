@@ -159,6 +159,8 @@ func toConnectError(err error) error {
 		return rpcserver.NewAppError(connect.CodeAborted, "clip edit plan changed", "CLIP_PLAN_CONFLICT", nil)
 	case errors.Is(err, clip.ErrDisclosureRequired):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip disclosure is required", "CLIP_DISCLOSURE_REQUIRED", nil)
+	case errors.Is(err, clip.ErrTargetDurationRequired):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip target duration is required", "CLIP_TARGET_DURATION_REQUIRED", nil)
 	case errors.As(err, &facts):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip needs more on-screen facts", "CLIP_FACTS_REQUIRED", map[string]string{"labels": strings.Join(facts.Labels, ", ")})
 	case errors.Is(err, clip.ErrBusy):
@@ -203,7 +205,7 @@ func answers(values []*v1.ClipAnswer) []clip.Answer {
 	return out
 }
 func templateProto(t clip.VideoTemplate) *v1.VideoTemplate {
-	out := &v1.VideoTemplate{CompositionBody: t.CompositionBody, CompositionLegacy: t.CompositionLegacy, Id: t.ID, Name: t.Name, CutGuidance: t.CutGuidance, CaptionPace: t.CaptionPace, Accent: t.Accent, Preset: t.Preset, ProjectCount: int32(t.ProjectCount), CreatedAt: t.CreatedAt.UTC().Format(time.RFC3339Nano), UpdatedAt: t.UpdatedAt.UTC().Format(time.RFC3339Nano)}
+	out := &v1.VideoTemplate{CompositionBody: t.CompositionBody, CompositionLegacy: t.CompositionLegacy, CompositionConverted: t.CompositionConverted, Id: t.ID, Name: t.Name, CutGuidance: t.CutGuidance, CaptionPace: t.CaptionPace, Accent: t.Accent, Preset: t.Preset, ProjectCount: int32(t.ProjectCount), CreatedAt: t.CreatedAt.UTC().Format(time.RFC3339Nano), UpdatedAt: t.UpdatedAt.UTC().Format(time.RFC3339Nano)}
 	for _, f := range t.InformationFields {
 		out.InformationFields = append(out.InformationFields, &v1.ClipInformationField{Label: f.Label, Prompt: f.Prompt})
 	}
@@ -244,7 +246,7 @@ func (h *Handler) ListVideoTemplates(ctx context.Context, req *connect.Request[v
 	}
 	out := make([]*v1.VideoTemplate, 0, len(values))
 	for _, v := range values {
-		out = append(out, templateProto(v))
+		out = append(out, templateProto(h.service.TemplateProjection(v)))
 	}
 	return connect.NewResponse(&v1.ListVideoTemplatesResponse{Templates: out}), nil
 }

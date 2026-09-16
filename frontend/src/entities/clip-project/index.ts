@@ -6,7 +6,9 @@ export {
   emptyClipProject,
   projectDraft,
   normalizeClipProject,
+  savableClipProject,
   validClipProject,
+  validNewClipProject,
 } from './model/types'
 export { clipState, clipStateLabel } from './model/state'
 export { boundedText } from './lib/bounded-text'

@@ -14,6 +14,10 @@ var (
 	// The owner has not chosen a campaign type, so the clip has no disclosure
 	// phrase to show when disclosure visibility is enabled (CDS-5).
 	ErrDisclosureRequired = errors.New("clip disclosure required")
+	// The owner has not chosen how long the clip should be. The choice belongs
+	// beside the sources it measures (CLIP-130), so the project is minted
+	// without it and generation is what refuses it (CLIP-7).
+	ErrTargetDurationRequired = errors.New("clip target duration required")
 )
 
 type Limits struct {
@@ -44,6 +48,10 @@ type VideoTemplate struct {
 	Recipe
 	ProjectCount         int
 	CreatedAt, UpdatedAt time.Time
+	// True only on a read projection whose CompositionBody has been converted
+	// from the old grammar (CLIP-140); the stored body is untouched until the
+	// owner saves. Never set on a template read for generation.
+	CompositionConverted bool
 }
 type TemplatePatch struct {
 	CompositionBody                                *string

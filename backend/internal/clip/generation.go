@@ -189,6 +189,8 @@ func (e *StageFailure) Failure() llm.Failure {
 		f = llm.Failure{Reason: "CLIP_INVALID_MEDIA", TechnicalDetail: "Source verification failed before analysis."}
 	case errors.Is(e.Cause, ErrDisclosureRequired):
 		f = llm.Failure{Reason: reasonDisclosureRequired}
+	case errors.Is(e.Cause, ErrTargetDurationRequired):
+		f = llm.Failure{Reason: reasonTargetDuration}
 	case errors.As(e.Cause, &facts):
 		f = llm.Failure{Reason: reasonFactsRequired, Params: map[string]string{"labels": strings.Join(facts.Labels, ", ")}}
 	case errors.Is(e.Cause, ErrCopyTooLong):

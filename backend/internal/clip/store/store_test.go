@@ -267,6 +267,19 @@ func TestPresetDisclosureAndCTARoundTrip(t *testing.T) {
 	if err != nil || blank.Disclosure != "" {
 		t.Fatalf("%+v %v", blank, err)
 	}
+	// The same is true of the target duration: the creation screen settles the
+	// ratio alone, and the length is chosen in ① beside the sources (CLIP-130).
+	unset, err := s.CreateProject(ctx, "alice", clip.ProjectInput{Language: "ko", Title: "길이 미정", VideoTemplateID: v.ID, Ratio: "square"})
+	if err != nil || unset.TargetDurationMS != 0 {
+		t.Fatalf("%+v %v", unset, err)
+	}
+	written, err := s.UpdateProject(ctx, "alice", unset.ID, clip.ProjectPatch{TargetDurationMS: ptr(45000)})
+	if err != nil || written.TargetDurationMS != 45000 {
+		t.Fatalf("%+v %v", written, err)
+	}
+	if _, err := s.UpdateProject(ctx, "alice", unset.ID, clip.ProjectPatch{TargetDurationMS: ptr(14999)}); !errors.Is(err, clip.ErrInvalid) {
+		t.Fatal("a written duration escaped its bounds", err)
+	}
 	if _, err := s.CreateProject(ctx, "alice", clip.ProjectInput{Language: "ko", Title: "잘못된", VideoTemplateID: v.ID, Ratio: "square", TargetDurationMS: 15000, Disclosure: "편집"}); !errors.Is(err, clip.ErrInvalid) {
 		t.Fatal(err)
 	}

@@ -121,6 +121,7 @@ export const errors = {
   CLIP_LAYOUT_CONTRAST:
     'A caption did not stand out enough from the footage behind it, so rendering stopped. Set that cut to 깔끔하게 or choose a different scene.',
   CLIP_DISCLOSURE_REQUIRED: 'Choose a campaign type first. Every clip carries its ad disclosure.',
+  CLIP_TARGET_DURATION_REQUIRED: 'Choose how long the clip should be before generating it.',
   CLIP_FACTS_REQUIRED:
     'The clip needs more on-screen information: fill in at least two of 상호, 위치, 가격 and 메뉴. (Empty: {{labels}})',
   CLIP_BUSY: 'A clip job is still running. Wait for it to finish.',

@@ -275,6 +275,7 @@ func (e planViolation) OutputValidationCode() string { return string(e) }
 // (internal/platform/rpcserver/failure_reasons_test.go).
 const (
 	reasonDisclosureRequired  = "CLIP_DISCLOSURE_REQUIRED"
+	reasonTargetDuration      = "CLIP_TARGET_DURATION_REQUIRED"
 	reasonFactsRequired       = "CLIP_FACTS_REQUIRED"
 	reasonInsufficientFootage = "CLIP_INSUFFICIENT_FOOTAGE"
 )

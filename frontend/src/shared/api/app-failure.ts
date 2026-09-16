@@ -100,6 +100,7 @@ export const appFailureSpecs = {
   CLIP_LAYOUT_KIND: {},
   CLIP_LAYOUT_CONTRAST: {},
   CLIP_DISCLOSURE_REQUIRED: {},
+  CLIP_TARGET_DURATION_REQUIRED: {},
   CLIP_FACTS_REQUIRED: { required: ['labels'] },
   CLIP_PREVIEW_BUSY: {},
   CLIP_PREVIEW_TOO_LARGE: {},

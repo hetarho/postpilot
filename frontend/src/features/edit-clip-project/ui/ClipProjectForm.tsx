@@ -13,7 +13,9 @@ import {
   normalizeClipProject,
   projectDraft,
   useClipProjectMutations,
+  savableClipProject,
   validClipProject,
+  validNewClipProject,
   type ClipProject,
   type ClipProjectDraft,
 } from '@/entities/clip-project'
@@ -69,7 +71,9 @@ export function ClipProjectForm({
   const [draft, setDraft] = useState<ClipProjectDraft>(
     () => queued ?? (stored ? projectDraft(stored) : emptyClipProject()),
   )
-  const [seconds, setSeconds] = useState(String(draft.targetDurationMs / 1000))
+  const [seconds, setSeconds] = useState(
+    draft.targetDurationMs ? String(draft.targetDurationMs / 1000) : '',
+  )
   const [baseline, setBaseline] = useState(
     JSON.stringify(normalizeClipProject(stored ? projectDraft(stored) : draft)),
   )
@@ -93,7 +97,13 @@ export function ClipProjectForm({
   const inputs = document
     ? matchingCompositionInputs(document, draft.compositionInputs ?? emptyCompositionInputs())
     : emptyCompositionInputs()
-  const valid = validClipProject(draft, selected?.informationFields, document)
+  // `/clips/new` mints from the title, the template and the ratio; every other setting is
+  // written in ① beside the sources it describes (CLIP-130).
+  const creating = !stored
+  const valid = creating
+    ? validNewClipProject(draft)
+    : validClipProject(draft, selected?.informationFields, document)
+  const savable = savableClipProject(draft)
   const dirty = JSON.stringify(normalizeClipProject(draft)) !== baseline
   const storedJSON = stored ? JSON.stringify(normalizeClipProject(stored)) : baseline
   const synced = storedJSON === baseline
@@ -101,7 +111,7 @@ export function ClipProjectForm({
   if (!synced && !dirty && !save.isPending) {
     const refreshed = JSON.parse(storedJSON) as ClipProjectDraft
     setDraft(refreshed)
-    setSeconds(String(refreshed.targetDurationMs / 1000))
+    setSeconds(refreshed.targetDurationMs ? String(refreshed.targetDurationMs / 1000) : '')
     setBaseline(storedJSON)
   }
   // `/clips/new` only. A minted project autosaves, so there is nothing to lose by leaving it —
@@ -113,8 +123,8 @@ export function ClipProjectForm({
     withResolver: true,
   })
   useEffect(() => {
-    onUploadAllowed?.(valid && !dirty && synced && !pending && !templateChanged)
-  }, [valid, dirty, synced, pending, templateChanged, onUploadAllowed])
+    onUploadAllowed?.(savable && !dirty && synced && !pending && !templateChanged)
+  }, [savable, dirty, synced, pending, templateChanged, onUploadAllowed])
   /** The queue's one way to reach the server, and the one place `baseline` moves for an autosave.
    *  A form unmounted before the answer lands simply does not move it — the next mount derives it
    *  from the refreshed `stored` instead. */
@@ -131,15 +141,7 @@ export function ClipProjectForm({
     setDraft(next)
     // An invalid draft is never sent: the server would refuse it, and the field says so itself.
     // It stays local until it is valid again, and then goes out with everything else.
-    if (
-      stored &&
-      validClipProject(
-        next,
-        templates.templates.find((v) => v.id === next.videoTemplateId)?.informationFields,
-        projectCompositionDocument(bodyFor(next)),
-      )
-    )
-      queueClipDraft(stored.id, next, send)
+    if (stored && savableClipProject(next)) queueClipDraft(stored.id, next, send)
   }
   const failure = save.error
   /** `/clips/new`'s one committing action. An existing project has no submit — the queue saves it
@@ -261,14 +263,15 @@ export function ClipProjectForm({
               </Button>
             </section>
           )}
-          {document && (
+          {!creating && document && (
             <ClipCompositionInputFields
               document={document}
               value={inputs}
               onChange={(inputs) => change('compositionInputs', inputs)}
             />
           )}
-          {!document &&
+          {!creating &&
+            !document &&
             selected?.informationFields.map((field, index) => {
               const answer = draft.answers.find((a) => a.label === field.label)?.text ?? ''
               const invalid =
@@ -300,32 +303,34 @@ export function ClipProjectForm({
           {/* The owner's own instruction sits with the answers it accompanies
               and is optional; an empty one is indistinguishable from never
               having written one (CLIP-121). */}
-          <div>
-            <FieldLabel htmlFor="clip-instruction">
-              {t('project.instruction')} {t('composition.optionalSuffix')}
-            </FieldLabel>
-            <Typography variant="body" className="text-content-secondary mt-2 mb-2 break-words">
-              {t('project.instructionPrompt')}
-            </Typography>
-            <Textarea
-              id="clip-instruction"
-              inputMode="text"
-              {...INPUT}
-              autoGrow
-              value={draft.instruction ?? ''}
-              onChange={(event) =>
-                change(
-                  'instruction',
-                  boundedText(event.target.value, CLIP_PROJECT_LIMITS.instruction),
-                )
-              }
-            />
-            <FieldCount
-              left={
-                CLIP_PROJECT_LIMITS.instruction - compositionCharacters(draft.instruction ?? '')
-              }
-            />
-          </div>
+          {!creating && (
+            <div>
+              <FieldLabel htmlFor="clip-instruction">
+                {t('project.instruction')} {t('composition.optionalSuffix')}
+              </FieldLabel>
+              <Typography variant="body" className="text-content-secondary mt-2 mb-2 break-words">
+                {t('project.instructionPrompt')}
+              </Typography>
+              <Textarea
+                id="clip-instruction"
+                inputMode="text"
+                {...INPUT}
+                autoGrow
+                value={draft.instruction ?? ''}
+                onChange={(event) =>
+                  change(
+                    'instruction',
+                    boundedText(event.target.value, CLIP_PROJECT_LIMITS.instruction),
+                  )
+                }
+              />
+              <FieldCount
+                left={
+                  CLIP_PROJECT_LIMITS.instruction - compositionCharacters(draft.instruction ?? '')
+                }
+              />
+            </div>
+          )}
           <div>
             {stored ? (
               <>
@@ -359,31 +364,33 @@ export function ClipProjectForm({
               </>
             )}
           </div>
-          <div>
-            <FieldLabel htmlFor="clip-duration">{t('project.duration')}</FieldLabel>
-            <TextField
-              id="clip-duration"
-              type="number"
-              inputMode="decimal"
-              {...INPUT}
-              min={CLIP_PROJECT_LIMITS.minSeconds}
-              max={CLIP_PROJECT_LIMITS.maxSeconds}
-              step="any"
-              value={seconds}
-              onChange={(event) => {
-                setSeconds(event.target.value)
-                change('targetDurationMs', Math.round(Number(event.target.value) * 1000))
-              }}
-              aria-invalid={
-                !Number.isFinite(draft.targetDurationMs) ||
-                draft.targetDurationMs < CLIP_PROJECT_LIMITS.minSeconds * 1000 ||
-                draft.targetDurationMs > CLIP_PROJECT_LIMITS.maxSeconds * 1000
-              }
-            />
-            <Typography variant="body" className="text-content-secondary mt-2">
-              {t('project.durationHelp')}
-            </Typography>
-          </div>
+          {!creating && (
+            <div>
+              <FieldLabel htmlFor="clip-duration">{t('project.duration')}</FieldLabel>
+              <TextField
+                id="clip-duration"
+                type="number"
+                inputMode="decimal"
+                {...INPUT}
+                min={CLIP_PROJECT_LIMITS.minSeconds}
+                max={CLIP_PROJECT_LIMITS.maxSeconds}
+                step="any"
+                value={seconds}
+                onChange={(event) => {
+                  setSeconds(event.target.value)
+                  change('targetDurationMs', Math.round(Number(event.target.value) * 1000))
+                }}
+                aria-invalid={
+                  !Number.isFinite(draft.targetDurationMs) ||
+                  draft.targetDurationMs < CLIP_PROJECT_LIMITS.minSeconds * 1000 ||
+                  draft.targetDurationMs > CLIP_PROJECT_LIMITS.maxSeconds * 1000
+                }
+              />
+              <Typography variant="body" className="text-content-secondary mt-2">
+                {t('project.durationHelp')}
+              </Typography>
+            </div>
+          )}
         </fieldset>
       </form>
       {children}

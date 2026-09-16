@@ -642,6 +642,28 @@ func TestGenerationOwnerAndModelGatesBeforeEnqueue(t *testing.T) {
 	}
 }
 
+// The length is chosen in ① rather than at creation (CLIP-130), so generation
+// is the gate that refuses a project without one — before preparation, before
+// any paid call and with its own owner-facing cause (CLIP-7).
+func TestGenerationRefusesAnUnsetTargetDuration(t *testing.T) {
+	h := generationSetup(t)
+	if _, err := h.projects.UpdateProject(t.Context(), "alice", h.project.ID, clip.ProjectPatch{TargetDurationMS: ptr(0)}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.service.Quote(t.Context(), "alice", h.project.ID, h.batch.ID, "p/o", "p/w"); !errors.Is(err, clip.ErrTargetDurationRequired) {
+		t.Fatal("quoted a clip with no chosen length", err)
+	}
+	if _, err := startApproved(t.Context(), h.service, "alice", h.project.ID, h.batch.ID, "p/o", "p/w"); !errors.Is(err, clip.ErrTargetDurationRequired) {
+		t.Fatal("started a clip with no chosen length", err)
+	}
+	if h.planner.observe != 0 || h.planner.plans != 0 || h.media.probes != 0 {
+		t.Fatal("refusal ran preparation or a model call")
+	}
+	if n, err := h.queue.ActiveForClip(t.Context(), "alice", h.project.ID); err != nil || n != nil {
+		t.Fatal(n, err)
+	}
+}
+
 func TestMediaOperationsAreTimedInEveryStageNotOnlyRender(t *testing.T) {
 	var logs bytes.Buffer
 	previous := slog.Default()

@@ -201,6 +201,9 @@ func (s *Service) GetProject(ctx context.Context, user, id string) (Project, err
 func (s *Service) duration(ms int) bool {
 	return ms >= s.limits.MinDurationMS && ms <= s.limits.MaxDurationMS
 }
+
+// 0 means the owner has not chosen yet; any written value stays bounded.
+func (s *Service) durationOrUnset(ms int) bool { return ms == 0 || s.duration(ms) }
 func (s *Service) CreateProject(ctx context.Context, user string, input ProjectInput) (Project, error) {
 	if !ValidLanguage(input.Language) {
 		return Project{}, ErrInvalid
@@ -210,7 +213,10 @@ func (s *Service) CreateProject(ctx context.Context, user string, input ProjectI
 		return Project{}, err
 	}
 	title := strings.TrimSpace(input.Title)
-	if !bounded(title, 1, s.limits.TitleChars) || !s.duration(input.TargetDurationMS) || !slices.Contains([]string{"vertical", "horizontal", "square"}, input.Ratio) {
+	// An unset duration is allowed at creation — the owner chooses it in ①
+	// beside the sources it measures, and the generation gate is what refuses a
+	// clip without one (CLIP-130, CLIP-7).
+	if !bounded(title, 1, s.limits.TitleChars) || !s.durationOrUnset(input.TargetDurationMS) || !slices.Contains([]string{"vertical", "horizontal", "square"}, input.Ratio) {
 		return Project{}, ErrInvalid
 	}
 	// Empty disclosure is allowed at creation — the owner chooses it before
@@ -263,7 +269,7 @@ func (s *Service) UpdateProject(ctx context.Context, user, id string, p ProjectP
 		}
 		p.Title = &title
 	}
-	if p.TargetDurationMS != nil && !s.duration(*p.TargetDurationMS) {
+	if p.TargetDurationMS != nil && !s.durationOrUnset(*p.TargetDurationMS) {
 		return Project{}, ErrInvalid
 	}
 	// An instruction is optional and clearable; only its length is refused.

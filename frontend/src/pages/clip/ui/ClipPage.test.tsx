@@ -59,7 +59,6 @@ async function fillSetup() {
   await user.type(await screen.findByLabelText('클립 제목'), ' 새 경험 ')
   await user.click(screen.getByRole('combobox', { name: /^영상 템플릿/ }))
   await user.click(await screen.findByRole('option', { name: '여행' }))
-  await user.type(await screen.findByLabelText('장소'), '서울')
   return user
 }
 describe('clip directory and setup', () => {
@@ -122,12 +121,11 @@ describe('clip directory and setup', () => {
     expect(await screen.findByRole('button', { name: '클립 만들기' })).toBeDisabled()
     expect(screen.queryByLabelText('원본 영상 선택')).not.toBeInTheDocument()
     const user = await fillSetup()
-    const duration = screen.getByLabelText('목표 길이 (초)')
-    await user.clear(duration)
-    await user.type(duration, '91')
-    expect(screen.getByRole('button', { name: '클립 만들기' })).toBeDisabled()
-    await user.clear(duration)
-    await user.type(duration, '15')
+    // The answers, the instruction and the length are not here: they are written in ① beside
+    // the sources they describe (CLIP-130). Only the ratio has to be settled now (CLIP-9).
+    expect(screen.queryByLabelText('목표 길이 (초)')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('장소')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/클립에 담고 싶은 내용/)).not.toBeInTheDocument()
     await user.click(screen.getByRole('combobox', { name: /^화면 비율/ }))
     await user.click(screen.getByRole('option', { name: '정방형 1:1' }))
     await user.dblClick(screen.getByRole('button', { name: '클립 만들기' }))
@@ -136,12 +134,14 @@ describe('clip directory and setup', () => {
     expect(projectWrites[0]).toMatchObject({
       title: '새 경험',
       ratio: 'square',
-      targetDurationMs: 15000,
+      targetDurationMs: 0,
       disclosure: '',
       cta: '',
       answers: [],
-      compositionInputs: { values: { legacy_field_0: '서울' }, items: {}, associations: [] },
     })
+    // ① is where the rest is asked for, and the length it was minted without is empty there.
+    expect(await screen.findByLabelText('목표 길이 (초)')).toHaveValue(null)
+    expect(await screen.findByLabelText('장소')).toBeInTheDocument()
     expect(await screen.findByLabelText('원본 영상 선택')).toBeEnabled()
     // The status line reports the project's own state now; the picker's own button is what says
     // to select sources (CLIP-38).
@@ -165,7 +165,7 @@ describe('clip directory and setup', () => {
       await screen.findByText('클립 또는 영상 템플릿의 입력값과 제한을 확인해 주세요.'),
     ).toBeInTheDocument()
     expect(screen.getByLabelText('클립 제목')).toHaveValue(' 새 경험 ')
-    expect(screen.getByLabelText('장소')).toHaveValue('서울')
+    expect(screen.getByRole('combobox', { name: /^영상 템플릿/ })).toHaveTextContent('여행')
     expect(router.state.location.pathname).toBe('/clips/new')
   })
   it('updates title and answers without changing ratio, and preserves stale-template answers', async () => {
@@ -178,6 +178,8 @@ describe('clip directory and setup', () => {
     })
     const user = userEvent.setup()
     const title = await screen.findByLabelText('클립 제목')
+    // A project minted before this opens ① with the length it already had (CLIP-130).
+    expect(screen.getByLabelText('목표 길이 (초)')).toHaveValue(30)
     await user.type(title, ' 기록')
     // Nothing is pressed: the settings save themselves a beat after the typing stops (CLIP-39),
     // and the picker simply waits for the server to have them.

@@ -71,33 +71,57 @@ describe('template-defined project inputs', () => {
   it('keeps item facts and stable IDs together when another item is removed; blank prices are optional', async () => {
     const user = userEvent.setup(),
       writes: ClipProjectDraft[] = []
-    renderAppAt('/clips/new', {
+    // The template's inputs are filled in ① beside the sources they describe (CLIP-130).
+    const composition = {
+      snapshot: {
+        version: 1,
+        body: CLIP_COMPOSITION_EXAMPLE,
+        templateId: template.id,
+        legacy: false,
+      },
+      inputs: { values: {}, items: {}, associations: [] },
+    }
+    renderAppAt('/clips/owned', {
       user: { id: 'alice' },
-      clips: { templates: [template], projectWrites: writes },
+      clips: {
+        templates: [template],
+        projectWrites: writes,
+        projects: [
+          {
+            id: 'owned',
+            title: '여러 메뉴',
+            videoTemplateId: template.id,
+            ratio: 'vertical',
+            targetDurationMs: 30000,
+            answers: [],
+            disclosure: '',
+            cta: '',
+            composition,
+            compositionInputs: composition.inputs,
+          },
+        ],
+      },
     })
-    await user.type(await screen.findByLabelText('클립 제목'), '여러 메뉴')
-    await user.click(screen.getByRole('combobox', { name: /^영상 템플릿/ }))
-    await user.click(await screen.findByRole('option', { name: '여러 메뉴' }))
+    await screen.findByLabelText('클립 제목')
     expect(screen.queryByRole('combobox', { name: /체험단|프리셋/ })).not.toBeInTheDocument()
     // The group holds a required field, so it opens at one item (CLIP-119) and
     // that item cannot be removed; one more makes the pair this case removes from.
     expect(screen.getAllByLabelText('메뉴 이름')).toHaveLength(1)
-    expect(screen.queryByRole('button', { name: '항목 1 삭제' })).not.toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: '항목 추가' }))
+    expect(screen.queryByRole('button', { name: '메뉴 1 삭제' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '메뉴 추가' }))
     fireEvent.change(screen.getAllByLabelText('메뉴 이름')[0], { target: { value: '파스타' } })
     fireEvent.change(screen.getAllByLabelText('메뉴 이름')[1], { target: { value: '피자' } })
     const secondId = screen.getAllByLabelText('메뉴 이름')[1].id
-    await user.click(screen.getByRole('button', { name: '항목 1 삭제' }))
+    await user.click(screen.getByRole('button', { name: '메뉴 1 삭제' }))
     expect(screen.getByLabelText('메뉴 이름')).toHaveValue('피자')
     expect(screen.getByLabelText('메뉴 이름').id).toBe(secondId)
     expect(screen.getByLabelText('가격')).toHaveValue('')
-    await user.click(screen.getByRole('button', { name: '클립 만들기' }))
-    await waitFor(() => expect(writes).toHaveLength(1))
-    expect(writes[0].compositionInputs?.items.menu).toEqual([
+    await waitFor(() => expect(writes.length).toBeGreaterThan(0), { timeout: 4000 })
+    expect(writes.at(-1)?.compositionInputs?.items.menu).toEqual([
       { id: expect.any(String), values: { name: '피자' } },
     ])
-    expect(writes[0].compositionInputs?.values).toEqual({})
-    expect(writes[0].disclosure).toBe('')
+    expect(writes.at(-1)?.compositionInputs?.values).toEqual({})
+    expect(writes.at(-1)?.disclosure).toBe('')
   })
   it('uses field IDs when a label changes and never remaps inputs across template selection', async () => {
     const user = userEvent.setup(),
