@@ -118,13 +118,15 @@ func TestScopedNumbersCurrencyUnitBasisAndExperience(t *testing.T) {
 		{"I tried it", "색상이 밝다", false}, {"I tried it", "I tried it", true},
 	} {
 		t.Run(tc.text+"/"+tc.fact, func(t *testing.T) {
-			reason := clip.GroundScopedText(tc.text, []composition.Fact{{Value: tc.fact}}, clip.CompositionInputs{}, clip.ItemBinding{}, "scene")
+			// No instruction: every case below is the rule exactly as it
+			// stands today (CLIP-64).
+			reason := clip.GroundScopedText(tc.text, []composition.Fact{{Value: tc.fact}}, clip.CompositionInputs{}, clip.ItemBinding{}, "scene", false)
 			if (reason == "") != tc.allowed {
 				t.Fatalf("allowed %v reason %s", tc.allowed, reason)
 			}
 		})
 	}
-	if reason := clip.GroundScopedText("1234원", []composition.Fact{{Value: "12"}, {Value: "34원"}}, clip.CompositionInputs{}, clip.ItemBinding{}, "scene"); reason == "" {
+	if reason := clip.GroundScopedText("1234원", []composition.Fact{{Value: "12"}, {Value: "34원"}}, clip.CompositionInputs{}, clip.ItemBinding{}, "scene", false); reason == "" {
 		t.Fatal("concatenated distinct facts")
 	}
 }
@@ -154,8 +156,45 @@ func TestFactScopeRequiresCorrectItemOrDeclaredContext(t *testing.T) {
 		}
 	}
 	for _, text := range []string{"치즈라면", "이 메뉴 12,000원"} {
-		if reason := clip.GroundScopedText(text, []composition.Fact{{Value: "12,000원"}}, inputs, clip.ItemBinding{}, "context"); reason == "" {
+		if reason := clip.GroundScopedText(text, []composition.Fact{{Value: "12,000원"}}, inputs, clip.ItemBinding{}, "context", false); reason == "" {
 			t.Fatalf("context labeled item: %s", text)
 		}
+	}
+}
+
+// An owner instruction is owner-authored fact in CDS-42's sense: where one is
+// present the writer may state the experiential claims it asks for without the
+// instruction repeating the words, while every figure still needs a referenced
+// fact and every other rule stands (CLIP-122).
+func TestInstructionAdmitsExperienceButNeverAFigure(t *testing.T) {
+	for _, tc := range []struct {
+		name               string
+		text, fact         string
+		instructed, absent bool
+	}{
+		{"experience with an instruction", "직접 먹어보니 고소했어요", "삼겹살", true, false},
+		{"the same sentence without one", "직접 먹어보니 고소했어요", "삼겹살", false, true},
+		{"english experience with an instruction", "I tried it and loved it", "pork belly", true, false},
+		{"english experience without one", "I tried it and loved it", "pork belly", false, true},
+		{"a figure with an instruction", "직접 먹어보니 12,000원", "삼겹살", true, true},
+		{"a figure without one", "직접 먹어보니 12,000원", "삼겹살", false, true},
+		{"a supported figure with an instruction", "먹어보니 12,000원", "12,000원", true, false},
+		{"a description needs no instruction", "노릇하게 구워진 고기", "삼겹살", false, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			reason := clip.GroundScopedText(tc.text, []composition.Fact{{Value: tc.fact}}, clip.CompositionInputs{}, clip.ItemBinding{}, "scene", tc.instructed)
+			if (reason != "") != tc.absent {
+				t.Fatalf("refused %v (%s)", tc.absent, reason)
+			}
+		})
+	}
+	// The instruction lifts only the appearance rule: a cross-item identity and
+	// a context claim about the depicted item are refused with one present.
+	inputs, _, _ := bindingFixture()
+	if reason := clip.GroundScopedText("치즈라면도 맛있어요", nil, inputs, clip.ItemBinding{GroupID: "menu", ItemID: "sea"}, "scene", true); reason != "cross_item_identity" {
+		t.Fatalf("an instruction admitted another item's identity: %s", reason)
+	}
+	if reason := clip.GroundScopedText("이 메뉴 12,000원", []composition.Fact{{Value: "12,000원"}}, inputs, clip.ItemBinding{}, "context", true); reason != "context_item_claim" {
+		t.Fatalf("an instruction admitted a context item claim: %s", reason)
 	}
 }

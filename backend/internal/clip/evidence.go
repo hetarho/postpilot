@@ -323,11 +323,24 @@ func bases(text string) []string {
 	return out
 }
 
+// The phrases that make a sentence a claim about having tasted, used or visited
+// something. They gate CLIP-64's appearance rule, which an owner instruction
+// lifts under CLIP-122 — the list itself never changes with one.
+var experientialMarkers = []string{"맛있", "맛없", "고소", "먹어", "먹었", "다녀왔", "써봤", "사용해보니", "느꼈", "만족", "효능", "효과", "치료", "i tried", "i loved", "i tasted", "i visited", "i ate", "i felt", "we tried", "we visited", "delicious", "tasty", "my experience", "cured", "effective"}
+
 // GroundScopedText deliberately checks each numeric token against one referenced
 // fact. It never concatenates digits, borrows another item's price, or treats a
 // missing currency/basis as measured evidence. Fixed authored text bypasses AI
 // grounding entirely.
-func GroundScopedText(text string, facts []composition.Fact, inputs CompositionInputs, binding ItemBinding, scope string) string {
+//
+// `instructed` is whether the project carries an owner instruction, and only
+// that: the instruction's own words are never read here. Where one is present
+// the experiential marker check stands down (CLIP-122) — the owner asked for
+// those sentences and reviews the clip before publishing — while every numeric
+// claim keeps needing a referenced fact, because a figure on screen is the one
+// claim a viewer acts on without checking it. A rule that scanned the text for
+// the owner's phrasing would refuse exactly the paraphrases they asked for.
+func GroundScopedText(text string, facts []composition.Fact, inputs CompositionInputs, binding ItemBinding, scope string, instructed bool) string {
 	for _, claim := range measuredClaims(text) {
 		supported := false
 		for _, fact := range facts {
@@ -359,8 +372,8 @@ func GroundScopedText(text string, facts []composition.Fact, inputs CompositionI
 		}
 	}
 	lower := strings.ToLower(text)
-	for _, marker := range []string{"맛있", "맛없", "고소", "먹어", "먹었", "다녀왔", "써봤", "사용해보니", "느꼈", "만족", "효능", "효과", "치료", "i tried", "i loved", "i tasted", "i visited", "i ate", "i felt", "we tried", "we visited", "delicious", "tasty", "my experience", "cured", "effective"} {
-		if !strings.Contains(lower, marker) {
+	for _, marker := range experientialMarkers {
+		if instructed || !strings.Contains(lower, marker) {
 			continue
 		}
 		supported := false

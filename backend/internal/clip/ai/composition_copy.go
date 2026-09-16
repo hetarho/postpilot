@@ -12,7 +12,9 @@ import (
 
 func copyKey(element, cut string) string { return element + "/" + cut }
 
-func attachCompositionCopy(cfg Config, doc *composition.Document, generated []generatedJSON, timeline composition.Timeline, plan *clip.PortablePlan, bindings map[string]clip.ItemBinding, evidence map[string][]clip.ObservedEvidence, owner *clip.EditPlan) error {
+// instructed is whether the project carries an owner instruction, and travels
+// unread to the one check it changes (CLIP-122).
+func attachCompositionCopy(cfg Config, doc *composition.Document, generated []generatedJSON, timeline composition.Timeline, plan *clip.PortablePlan, bindings map[string]clip.ItemBinding, evidence map[string][]clip.ObservedEvidence, owner *clip.EditPlan, instructed bool) error {
 	declared, scopes := map[string]composition.Element{}, map[string]string{}
 	for _, element := range doc.Elements {
 		key := copyKey(element.ID, "")
@@ -76,7 +78,7 @@ func attachCompositionCopy(cfg Config, doc *composition.Document, generated []ge
 		}
 		if region, _ := regionSelection(doc, resolved.Element); region != "" && len(resolved.Element.Rows) > 0 {
 			entry, exists := entries[key]
-			attachRegionRows(doc, plan.Inputs, entry, exists && removed[key] == "", bindings[resolved.CutID], evidence[resolved.CutID], &text, owner)
+			attachRegionRows(doc, plan.Inputs, entry, exists && removed[key] == "", bindings[resolved.CutID], evidence[resolved.CutID], &text, owner, instructed)
 			if slices.ContainsFunc(text.Resolved.Rows, func(row composition.ResolvedRow) bool { return strings.TrimSpace(row.Text) != "" }) {
 				plan.Elements = append(plan.Elements, text)
 			}
@@ -92,7 +94,7 @@ func attachCompositionCopy(cfg Config, doc *composition.Document, generated []ge
 		entry, exists := entries[key]
 		reason := "copy_not_generated"
 		if exists {
-			reason = resolveGeneratedCopy(doc, plan.Inputs, entry, bindings[resolved.CutID], evidence[resolved.CutID], &text, used)
+			reason = resolveGeneratedCopy(doc, plan.Inputs, entry, bindings[resolved.CutID], evidence[resolved.CutID], &text, used, instructed)
 		}
 		if reason != "" {
 			plan.Fallbacks = append(plan.Fallbacks, clip.CopyFallback{ElementID: resolved.Element.ID, CutID: resolved.CutID, Reason: reason})
@@ -120,7 +122,7 @@ func sentenceKey(text string) string {
 	}, text)
 }
 
-func resolveGeneratedCopy(doc *composition.Document, inputs clip.CompositionInputs, entry generatedJSON, binding clip.ItemBinding, observed []clip.ObservedEvidence, out *clip.PortableText, used map[string]bool) string {
+func resolveGeneratedCopy(doc *composition.Document, inputs clip.CompositionInputs, entry generatedJSON, binding clip.ItemBinding, observed []clip.ObservedEvidence, out *clip.PortableText, used map[string]bool, instructed bool) string {
 	evidence, valid := selectedReferences(entry.Observations, observed, false)
 	if !valid || out.Scope != "context" && len(evidence) == 0 || len(evidence) == 0 && len(entry.Facts) == 0 {
 		return "missing_scene_evidence"
@@ -151,7 +153,7 @@ func resolveGeneratedCopy(doc *composition.Document, inputs clip.CompositionInpu
 		if strings.TrimSpace(combined) == "" {
 			return "copy_omitted"
 		}
-		if reason := clip.GroundScopedText(combined, facts, inputs, binding, out.Scope); reason != "" {
+		if reason := clip.GroundScopedText(combined, facts, inputs, binding, out.Scope, instructed); reason != "" {
 			return reason
 		}
 		if out.Resolved.Element.Role == "caption" && used[sentenceKey(combined)] {
@@ -254,7 +256,7 @@ func regionSelection(doc *composition.Document, e composition.Element) (string, 
 
 // Ground and repair AI rows individually. A missing or malformed response can
 // empty generated slots, but can never replace their fixed neighbours.
-func attachRegionRows(doc *composition.Document, inputs clip.CompositionInputs, entry generatedJSON, exists bool, binding clip.ItemBinding, observed []clip.ObservedEvidence, out *clip.PortableText, owner *clip.EditPlan) {
+func attachRegionRows(doc *composition.Document, inputs clip.CompositionInputs, entry generatedJSON, exists bool, binding clip.ItemBinding, observed []clip.ObservedEvidence, out *clip.PortableText, owner *clip.EditPlan, instructed bool) {
 	e := out.Resolved.Element
 	region, id := regionSelection(doc, e)
 	preset, _ := design.Region(region, id)
@@ -279,7 +281,7 @@ func attachRegionRows(doc *composition.Document, inputs clip.CompositionInputs, 
 			if i < len(entry.ShortRows) {
 				g.ShortText = entry.ShortRows[i]
 			}
-			reason := resolveGeneratedCopy(doc, inputs, g, binding, observed, &one, map[string]bool{})
+			reason := resolveGeneratedCopy(doc, inputs, g, binding, observed, &one, map[string]bool{}, instructed)
 			if reason == "" {
 				// The slot's own count, or the smaller one this row declares
 				// (CLIP-116); the parser has already refused a larger one.

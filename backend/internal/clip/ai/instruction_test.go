@@ -111,3 +111,41 @@ func TestOverlongInstructionIsRefusedBeforePaidWork(t *testing.T) {
 		t.Fatalf("the refusal lost its measurements: %+v", d)
 	}
 }
+
+// End to end: the same generated sentence survives the writer path when the
+// project carries an instruction and is omitted when it does not, while a
+// figure with no fact behind it is omitted either way (CLIP-122, CLIP-63).
+func TestInstructionAdmitsExperientialCopyThroughTheWriter(t *testing.T) {
+	for _, tc := range []struct {
+		name, text, reason string
+		instructed         bool
+	}{
+		{"experience with an instruction", "먹어보니 고소했어요", "", true},
+		{"experience without one", "먹어보니 고소했어요", "unsupported_experience", false},
+		{"an unsupported figure with an instruction", "먹어보니 9,900원", "unsupported_number_unit", true},
+		{"an unsupported figure without one", "먹어보니 9,900원", "unsupported_number_unit", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			in, p := nativeInput(), nativePlan()
+			if tc.instructed {
+				in.Instruction = "직접 먹어본 느낌을 살려 주세요."
+			}
+			nativeGenerated(p, 0)["text"] = tc.text
+			s, models, _ := newService(t, raw(p), true)
+			plan, _, err := s.Plan(t.Context(), testRef(), in)
+			if err != nil || len(models.calls) != 1 {
+				t.Fatalf("plan: %v calls=%d", err, len(models.calls))
+			}
+			copy := findNativeCopy(t, plan, "cut-sea")
+			if tc.reason == "" {
+				if copy == nil || copy.Resolved.Text != tc.text {
+					t.Fatalf("the instructed sentence was omitted: %+v", plan.Portable)
+				}
+				return
+			}
+			if copy != nil || !hasFallback(plan, "cut-sea", tc.reason) {
+				t.Fatalf("wrong omission: %+v", plan.Portable)
+			}
+		})
+	}
+}
