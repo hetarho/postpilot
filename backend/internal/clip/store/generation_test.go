@@ -16,6 +16,7 @@ import (
 	"github.com/postpilot/backend/internal/platform/config"
 	"github.com/postpilot/backend/internal/platform/db"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -106,7 +107,10 @@ func (m *mediaFake) WithWorkspace(ctx context.Context, _ string, fn func(clip.Me
 	}
 	return m.cleanupErr
 }
-func (m *mediaFake) Probe(_ context.Context, ws clip.MediaWorkspace, _ string) (clip.MediaInfo, error) {
+func (m *mediaFake) Probe(ctx context.Context, ws clip.MediaWorkspace, _ string) (clip.MediaInfo, error) {
+	// The real adapter times every command it runs; the fake reports the one it
+	// stands in for so a caller's sink is exercised outside the render stage.
+	clip.ReportMediaOperation(ctx, "probe", "ok", time.Millisecond)
 	files, _ := filepath.Glob(filepath.Join(ws.Path, "source-*"))
 	m.maxSources = max(m.maxSources, len(files))
 	n := m.durations[m.probes%len(m.durations)]
@@ -632,5 +636,31 @@ func TestGenerationOwnerAndModelGatesBeforeEnqueue(t *testing.T) {
 	}
 	if n, err := h.queue.ActiveForClip(context.Background(), "alice", h.project.ID); err != nil || n != nil {
 		t.Fatal(n, err)
+	}
+}
+
+func TestMediaOperationsAreTimedInEveryStageNotOnlyRender(t *testing.T) {
+	var logs bytes.Buffer
+	previous := slog.Default()
+	slog.SetDefault(slog.New(slog.NewJSONHandler(&logs, nil)))
+	t.Cleanup(func() { slog.SetDefault(previous) })
+	h := generationSetup(t)
+	h.start(t)
+	if err := h.run(t); err != nil {
+		t.Fatal(err)
+	}
+	stages := map[string]int{}
+	for _, line := range strings.Split(strings.TrimSpace(logs.String()), "\n") {
+		var got map[string]any
+		if json.Unmarshal([]byte(line), &got) != nil || got["msg"] != "clip media operation" {
+			continue
+		}
+		if got["operation"] != "probe" || got["outcome"] != "ok" || got["elapsed_ms"] != float64(1) {
+			t.Fatal("operation record incomplete", line)
+		}
+		stages[fmt.Sprint(got["stage"])]++
+	}
+	if stages["prepare"] != h.media.probes || h.media.probes == 0 {
+		t.Fatal("work outside the render stage went untimed", stages)
 	}
 }

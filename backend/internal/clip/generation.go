@@ -366,6 +366,16 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 	var analysisJSON []byte
 	var planJSON string
 	var result Result
+	// Every media command is timed, the successful ones included, and each
+	// record is attributed to the stage running when it started, so a stage
+	// total is explained by the operations inside it (CLIP-88).
+	ctx = WithMediaStageObserver(ctx, func(r MediaRecord) {
+		if r.Operation != "" {
+			slog.Info("clip media operation", "job", job, "stage", stage, "operation", r.Operation, "outcome", r.Outcome, "elapsed_ms", r.Elapsed.Milliseconds())
+			return
+		}
+		slog.Info("clip render substage", "job", job, "stage", stage, "substage", r.Substage, "elapsed_ms", r.Elapsed.Milliseconds())
+	})
 	err = s.media.WithWorkspace(ctx, job, func(ws MediaWorkspace) error {
 		set("prepare", 0, len(b.Sources))
 		sources, prepared, err := s.prepareRecoveredBatch(ctx, ws, b, recovery, func(n int) { set("prepare", n, len(b.Sources)) })
@@ -553,10 +563,7 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 		if edit.Portable == nil {
 			edit = edit.WithFacts(p.Disclosure, p.Answers, p.Template.Preset, p.CTA, p.Template.Accent, p.HideDisclosure)
 		}
-		renderCtx := WithMediaStageObserver(ctx, func(substage string, elapsed time.Duration) {
-			slog.Info("clip render substage", "job", job, "stage", "render", "substage", substage, "elapsed_ms", elapsed.Milliseconds())
-		})
-		video, err := s.renderer.Render(renderCtx, ws, edit, renderSources, load)
+		video, err := s.renderer.Render(ctx, ws, edit, renderSources, load)
 		if err = errors.Join(err, releaseSource()); err != nil {
 			return err
 		}

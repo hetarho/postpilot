@@ -63,3 +63,48 @@ func TestEachRenderInputHasItsOwnResourceLimits(t *testing.T) {
 		t.Fatal("animated copies must each reuse one frame for only 126 frames", args)
 	}
 }
+
+func TestEveryCommandRecordsItsDurationOnSuccessAndFailure(t *testing.T) {
+	fail := errors.New("private-canary")
+	a := newAdapter(t, &fakeRunner{run: func(_ context.Context, c Command) ([]byte, error) {
+		if filepath.Base(c.Binary) == "ffprobe" {
+			return []byte(probeJSON), nil
+		}
+		return nil, fail
+	}})
+	var records []clip.MediaRecord
+	ctx := clip.WithMediaStageObserver(t.Context(), func(r clip.MediaRecord) { records = append(records, r) })
+	var failed error
+	if err := a.WithWorkspace(ctx, "durations", func(ws clip.MediaWorkspace) error {
+		source := sourceFile(t, ws)
+		if _, err := a.run(ctx, ws, "/usr/local/bin/ffprobe", "-i", source); err != nil {
+			return err
+		}
+		_, failed = a.run(ctx, ws, "/usr/local/bin/ffmpeg", "-i", source, "render-cut-0000.mp4")
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if len(records) != 2 {
+		t.Fatalf("a successful command went untimed: %+v", records)
+	}
+	if records[0] != (clip.MediaRecord{Operation: "probe", Outcome: "ok", Elapsed: records[0].Elapsed}) || records[0].Elapsed < 0 {
+		t.Fatalf("success record: %+v", records[0])
+	}
+	if records[1] != (clip.MediaRecord{Operation: "render_cut", Outcome: "command_failed", Elapsed: records[1].Elapsed}) {
+		t.Fatalf("failure record: %+v", records[1])
+	}
+	var d *commandFailure
+	if !errors.Is(failed, fail) || !errors.As(failed, &d) || d.MediaOperation() != "render_cut" || d.MediaFailureClass() != "command_failed" {
+		t.Fatalf("typed failure changed: %v", failed)
+	}
+}
+
+func TestOperationRecordsCarryCodeOwnedLabelsOnly(t *testing.T) {
+	var records []clip.MediaRecord
+	ctx := clip.WithMediaStageObserver(t.Context(), func(r clip.MediaRecord) { records = append(records, r) })
+	clip.ReportMediaOperation(ctx, "/private/canary.mp4", "private-canary", time.Second)
+	if len(records) != 1 || records[0] != (clip.MediaRecord{Operation: "unknown", Outcome: "unknown", Elapsed: time.Second}) {
+		t.Fatalf("private label reached the sink: %+v", records)
+	}
+}

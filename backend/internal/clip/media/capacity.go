@@ -80,8 +80,14 @@ func (a *Adapter) runBounded(ctx context.Context, ws clip.MediaWorkspace, binary
 	return a.runCommand(ctx, ws, Command{Binary: binary, Dir: ws.Path, Args: args}, output, limit, limitError)
 }
 func (a *Adapter) runCommand(ctx context.Context, ws clip.MediaWorkspace, command Command, output string, limit int64, limitError error) (data []byte, err error) {
-	started := time.Now()
-	defer func() { err = commandDiagnostic(err, command, time.Since(started)) }()
+	// Report against the caller's context: the timed one below is cancelled by
+	// the time the record is written, and a Value read must still find the sink.
+	started, caller := time.Now(), ctx
+	defer func() {
+		elapsed := time.Since(started)
+		err = commandDiagnostic(err, command, elapsed)
+		clip.ReportMediaOperation(caller, commandOperation(command), commandOutcome(err), elapsed)
+	}()
 	ctx, cancel := context.WithTimeout(ctx, a.cfg.OperationTimeout)
 	defer cancel()
 	select {

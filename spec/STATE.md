@@ -30,7 +30,7 @@
 | THEME | 12 | 12 | - | 0 |
 | MKT | 4 | 4 | - | 0 |
 | VIDEO | 2 | 2 | - | 1 |
-| CLIP | 28 | 28 | - | 2 |
+| CLIP | 29 | 29 | - | 2 |
 | CDS | 19 | 19 | - | 1 |
 | BILL | 4 | 4 | - | 0 |
 
@@ -47,19 +47,26 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
-| T190 | Media-operation durations for successful work | CLIP | - | todo |
 | T191 | A delivered-clip identity baseline the speed work must hold | CLIP | - | todo |
 | T192 | Decoding uses the cores the encode cannot | CLIP | T191 | todo |
 | T193 | The cuts become one timeline in a single pass | CLIP | T191 | todo |
 | T194 | The overlay and the delivery encode become one | CLIP | T191 | todo |
 | T195 | A plate's sample frames come from one decode | CLIP | T191 | todo |
 | T196 | Preparation decodes each original once | CLIP | - | todo |
+| T197 | A cut's rate is read from its own observation | CLIP | T191 | todo |
+| T198 | Speech a retained source lets through stays at 1x | CLIP | T197 | todo |
 
 ## next
-- implement-task T191, then T190 — T191 gates T192 T193 T194 T195 and T190 makes each one's effect measurable; T193 T194 T196 carry most of the 1225 s a prod generation took.
-- implement-task T191, then T190 — T191 gates T192 T193 T194 T195 and T190 makes each one measurable; the r26/r27 delta is fully implemented.
+- implement-task T191 — it gates T192 T193 T194 T195 T197, and T190's per-operation durations now make each one's effect measurable; T193 T194 T196 carry most of the 1225 s a prod generation took.
+- implement-task T197, then T198 — r29's rate work, held behind T191 because it moves delivered frames on purpose.
 - T177 is blocked on the owner's viewing answers; T008 stays owner-dependent.
 ## log
+- 260916 T190 done; every media command reports its operation, outcome and elapsed time on success too, labelled with the stage it ran in, through the sink the render substages already used
+- 260916 create-task CLIP done; T197 T198 carry r29 — the observed rate rules and the 40 % share into both writing contracts, then the per-source sound setting the speech rule needs
+- 260916 create-task CLIP start
+- 260916 T190 claimed (perf)
+- 260916 update-ssot CLIP done; CLIP@29 — a cut's rate read from its own observation, a 40 % transformed share bounding the writing, and 1x wherever a retained source lets speech through
+- 260916 T191-T196 (todo) unaffected but ordered first — r29 moves delivered frames deliberately, so the CLIP-125 identity baseline must be taken against today's clip before a rate change rewrites it
 - 260916 T189 done; the owner binds a whole source to an item where sources are selected, every cut inherits it, and a binding with no matching observation is ignored rather than refused
 - 260916 update-ssot CLIP start
 - 260916 T189 claimed (grp)
@@ -74,9 +81,3 @@
 - 260916 T184 done; a validated plan under the 15 s floor fails as CLIP_INSUFFICIENT_FOOTAGE with its own plan_length_floor check, never as an unreadable response
 - 260916 flake: internal/clip/store fails one differing test per full-suite run on clip source expiry (reproduced on unmodified HEAD) — review-code candidate
 - 260916 T184 claimed (grp)
-- 260916 T183 done; one effective minimum per group in both grammars, admission refusing an empty required group by name with its counts, and the owner's controls opened there
-- 260916 create-task CLIP done; T190 T191 instrument duration and delivered-clip identity, T192 T193 T194 T195 T196 carry r28's pass budget
-- 260916 prod measurement behind r28: generation 1225 s — prepare 285, analyze 69, plan 13, render 857 (encode 461, overlay 304); the box is one physical core
-- 260916 create-task CLIP start
-- 260916 update-ssot CLIP done; CLIP@28 — no repeated full-resolution pass, an identical clip from any speed change, and one read/decode per original
-- 260916 T177 (blocked) unaffected — CLIP-125 holds the delivered clip identical, so its rendered review clips stay valid

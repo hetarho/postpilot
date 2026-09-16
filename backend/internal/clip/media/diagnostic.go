@@ -48,6 +48,19 @@ func commandDiagnostic(err error, c Command, elapsed time.Duration) error {
 	return &commandFailure{error: err, operation: commandOperation(c), class: class, elapsed: elapsed}
 }
 
+// The same class the failure path names, plus the success case a duration
+// record needs. Nothing else describes how a command ended.
+func commandOutcome(err error) string {
+	var failure *commandFailure
+	switch {
+	case err == nil:
+		return "ok"
+	case errors.As(err, &failure):
+		return failure.class
+	}
+	return "command_failed"
+}
+
 func commandOperation(c Command) string {
 	switch filepath.Base(c.Binary) {
 	case "resvg":
