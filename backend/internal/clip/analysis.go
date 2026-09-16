@@ -113,6 +113,31 @@ type PlanningInput struct {
 	SourceAudio []SourceAudioSetting
 }
 
+// RevisionInput is one owner-written revision request (CLIP-131): the plan as
+// their own edits left it, what they asked for, and which document the request
+// is about. The observations are the ones already stored, and the template's
+// declared structure is untouched.
+type RevisionInput struct {
+	PlanningInput
+	Current EditPlan
+	Request string
+	// RevisionFlow, RevisionNarration or RevisionBoth.
+	Target string
+}
+
+// The three documents a request may name. A flow target is followed by a
+// narration over the rewritten flow, because captions timed against cuts that
+// moved are timed against nothing (CLIP-135).
+const (
+	RevisionFlow      = "flow"
+	RevisionNarration = "narration"
+	RevisionBoth      = "both"
+)
+
+func ValidRevisionTarget(target string) bool {
+	return target == RevisionFlow || target == RevisionNarration || target == RevisionBoth
+}
+
 // NarrationInput is the second writing call's input: the same planning input,
 // and the flow the server has already resolved into exact output intervals. The
 // narration is written over that flow and may not change it (CLIP-135).

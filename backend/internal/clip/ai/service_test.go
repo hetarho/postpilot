@@ -26,12 +26,20 @@ type fakeModels struct {
 	err      error
 	calls    []llm.Request
 	refs     []llm.ModelRef
+	// One body per call, for the paths that make more than one (a revision's
+	// flow and then its narration). Empty falls back to `response`.
+	responses []string
 }
 
 func (f *fakeModels) Resolve(llm.ModelRef) (llm.ModelInfo, bool) { return f.info, true }
 func (f *fakeModels) Complete(_ context.Context, ref llm.ModelRef, request llm.Request) (llm.Response, error) {
 	f.calls = append(f.calls, request)
 	f.refs = append(f.refs, ref)
+	if at := len(f.calls) - 1; at < len(f.responses) {
+		out := f.response
+		out.Text = f.responses[at]
+		return out, f.err
+	}
 	return f.response, f.err
 }
 

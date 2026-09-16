@@ -164,6 +164,7 @@ type plannerFake struct {
 	failObserveAt                                           int
 	input                                                   clip.PlanningInput
 	stages                                                  []string
+	revisions                                               []clip.RevisionInput
 	gate, preparationErr, observeErr, errorPlan, narrateErr error
 	// A flow the narration call can be written over: the standard fixture is a
 	// legacy plan, and only the tests about the two calls need a portable one.
@@ -224,6 +225,20 @@ func (p *plannerFake) Flow(ctx context.Context, r llm.ModelRef, in clip.Planning
 	plan.Portable = &clip.PortablePlan{Snapshot: in.Composition.Snapshot, Inputs: in.Composition.Inputs,
 		Cuts: []composition.Cut{{ID: cut.ID, SourceID: cut.SourceID, StartMS: cut.StartMS, EndMS: cut.EndMS, PlaybackRatePermille: cut.Rate()}}}
 	return plan, usage, nil
+}
+
+// A revision is the same two calls over a saved plan; the stage around them is
+// what these tests are for.
+func (p *plannerFake) Revise(ctx context.Context, r llm.ModelRef, in clip.RevisionInput) (clip.EditPlan, llm.Usage, error) {
+	p.revisions = append(p.revisions, in)
+	if in.Target == clip.RevisionNarration {
+		return p.Narrate(ctx, r, clip.NarrationInput{PlanningInput: in.PlanningInput, Flow: in.Current})
+	}
+	flow, _, err := p.Flow(ctx, r, in.PlanningInput)
+	if err != nil {
+		return clip.EditPlan{}, llm.Usage{}, err
+	}
+	return p.Narrate(ctx, r, clip.NarrationInput{PlanningInput: in.PlanningInput, Flow: flow})
 }
 
 // The narration writes over the flow it is given and changes nothing else.

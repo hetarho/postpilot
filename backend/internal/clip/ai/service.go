@@ -190,7 +190,90 @@ func (s *Service) Flow(ctx context.Context, model llm.ModelRef, input clip.Plann
 	return result, usage, nil
 }
 
-// Narrate is the SECOND writing call of a generation (CLIP-135): it writes what
+// Revise answers one owner-written revision request (CLIP-131). It is the same
+// two writing calls, on the same contracts, given the plan as the owner's own
+// edits left it: a flow target rewrites the footage and then the narration over
+// it, because captions timed against cuts that moved are timed against nothing;
+// a narration target rewrites what is said and leaves every cut alone.
+func (s *Service) Revise(ctx context.Context, model llm.ModelRef, input clip.RevisionInput) (clip.EditPlan, llm.Usage, error) {
+	if err := ctx.Err(); err != nil {
+		return clip.EditPlan{}, llm.Usage{}, err
+	}
+	if !nativeComposition(input.PlanningInput) || !clip.ValidRevisionTarget(input.Target) ||
+		input.Current.Portable == nil || len(input.Current.Cuts) == 0 || input.Current.DurationMS <= 0 ||
+		!within(input.Request, 1, s.cfg.Template.InstructionChars) {
+		return clip.EditPlan{}, llm.Usage{}, stageError("flow", clip.ErrInvalid)
+	}
+	usage := llm.Usage{}
+	flow := input.Current
+	if input.Target != clip.RevisionNarration {
+		written, spent, err := s.write(ctx, model, input.PlanningInput, "flow", s.cfg.FlowCompletionTokens, FlowSchema(), func() (string, string) {
+			return buildFlowRevisionPrompt(input, s.cfg.Render.FadeMS, compositionLimits(s.cfg, input.PlanningInput))
+		}, func(raw string) (clip.EditPlan, error) { return parseFlowPlan(s.cfg, input.PlanningInput, raw) })
+		usage = addUsage(usage, spent)
+		if err != nil {
+			return clip.EditPlan{}, usage, err
+		}
+		flow = written
+	}
+	result, spent, err := s.write(ctx, model, input.PlanningInput, "narrate", s.cfg.NarrationCompletionTokens, NarrationSchema(), func() (string, string) {
+		return buildNarrationRevisionPrompt(input, flow, compositionLimits(s.cfg, input.PlanningInput))
+	}, func(raw string) (clip.EditPlan, error) {
+		return parseNarration(s.cfg, clip.NarrationInput{PlanningInput: input.PlanningInput, Flow: flow}, raw)
+	})
+	usage = addUsage(usage, spent)
+	if err != nil {
+		return clip.EditPlan{}, usage, err
+	}
+	if err := validatePlan(s.cfg, input.PlanningInput, result); err != nil {
+		return clip.EditPlan{}, usage, stageError("narrate", planFailure(err, input.PlanningInput, result, "validation", 0))
+	}
+	return result, usage, nil
+}
+
+// addUsage sums what two calls of one revision spent. A provider that reported
+// no cost for either leaves the pair reporting none, rather than claiming zero.
+func addUsage(a, b llm.Usage) llm.Usage {
+	return llm.Usage{
+		PromptTokens:     a.PromptTokens + b.PromptTokens,
+		CompletionTokens: a.CompletionTokens + b.CompletionTokens,
+		ReasoningTokens:  a.ReasoningTokens + b.ReasoningTokens,
+		CostMicrousd:     a.CostMicrousd + b.CostMicrousd,
+		CostReported:     a.CostReported || b.CostReported,
+	}
+}
+
+// write is the one path every writing call takes: the frozen policy, the model's
+// own structured-output capability, the input allowance, and CLIP-94's bounded
+// correction loop around one parse.
+func (s *Service) write(ctx context.Context, model llm.ModelRef, in clip.PlanningInput, stage string, budget int, schema []byte, prompt func() (string, string), parse func(string) (clip.EditPlan, error)) (clip.EditPlan, llm.Usage, error) {
+	if err := validateInput(s.cfg, in); err != nil {
+		return clip.EditPlan{}, llm.Usage{}, err
+	}
+	info, err := s.model(model, llm.StageNameWrite)
+	if err != nil {
+		return clip.EditPlan{}, llm.Usage{}, stageError(stage, err)
+	}
+	execution, err := executionPolicy(in.Policy, model, llm.StageNameWrite, budget, llm.ExecutionTextOnly)
+	if err != nil {
+		return clip.EditPlan{}, llm.Usage{}, err
+	}
+	system, user := prompt()
+	request := llm.Request{System: system, Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(user)}}}, Stage: llm.StageNameWrite, Reasoning: in.Policy.Reasoning, DisableReasoning: in.Policy.DisableReasoning, MaxTokens: in.Policy.CompletionTokens, Execution: execution}
+	if execution.Call.StructuredOutput {
+		if !info.StructuredOutput {
+			return clip.EditPlan{}, llm.Usage{}, clip.ErrPricingUnavailable
+		}
+		request.JSONSchema = schema
+	}
+	if err := validatePrompt(system, user, request.JSONSchema, llm.ExecutionTextOnly, in.Policy.InputTokenLimit()); err != nil {
+		return clip.EditPlan{}, llm.Usage{}, err
+	}
+	result, usage, err := completeValidated(ctx, s, model, request, user, in.Policy, parse)
+	return result, usage, stageError(stage, err)
+}
+
+// Narrate is the SECOND writing call of a generation// Narrate is the SECOND writing call of a generation (CLIP-135): it writes what
 // is said over the flow the server has already resolved — captions on absolute
 // output intervals, and the template's own generated slot rows. It may not
 // change a cut, and the flow it is given is the flow it writes over.

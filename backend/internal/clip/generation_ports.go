@@ -19,6 +19,9 @@ type Planner interface {
 	// (CLIP-135). Plan is what a payload without a composition snapshot uses.
 	Flow(context.Context, llm.ModelRef, PlanningInput) (EditPlan, llm.Usage, error)
 	Narrate(context.Context, llm.ModelRef, NarrationInput) (EditPlan, llm.Usage, error)
+	// One owner-written revision of a saved plan (CLIP-131), through the same
+	// two contracts.
+	Revise(context.Context, llm.ModelRef, RevisionInput) (EditPlan, llm.Usage, error)
 	Plan(context.Context, llm.ModelRef, PlanningInput) (EditPlan, llm.Usage, error)
 }
 type GenerationStore interface {

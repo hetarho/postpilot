@@ -42,6 +42,15 @@ then omission with its own reason. The server mints every caption identity
 moment left without a caption, a fact the narration did not state and a source
 it did not use record nothing.
 
+`Service.Revise` answers one owner-written revision of a saved plan. It is the
+same two calls on the same contracts and the same response schemas, with one
+block appended: the plan as the owner's own edits left it, what they asked for,
+and the sentence that says a response replaces the document that call writes,
+whole. A flow target rewrites the footage and then the narration over it; a
+narration target is told the flow is final and rewrites only what is said.
+Nothing about the cuts, the rates, the grounding or the caption windows is
+restated there — a rule written twice is a rule that can disagree with itself.
+
 `Service.Plan` and `composition-plan.schema.json` remain for payloads that carry
 no composition snapshot at all; a composition reaching that writer is refused.
 

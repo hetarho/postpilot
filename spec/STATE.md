@@ -47,15 +47,15 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
-| T201 | The writer rewrites a saved plan from a written request | CLIP | T212 | todo |
 | T202 | A revision request runs as its own job and charges the writing calls its target needs | CLIP | T201 T213 | todo |
 | T203 | ② asks for a revision in its own panel | CLIP | T202 | todo |
 | T204 | What the owner asked for is kept | CLIP | T202 | todo |
 
 ## next
-- implement-task T201 next, then T202 → T203/T204 (the targeted revision); nothing else is free — T209, T214, T215 and T216 all change clip.proto, so run them one after another in one tree; then the revision tasks T201 → T202 → T203/T204 (deps T212/T213 done)
+- implement-task T202 next (dep T201 T213 done), then T203 and T204; nothing else is free — T209, T214, T215 and T216 all change clip.proto, so run them one after another in one tree; then the revision tasks T201 → T202 → T203/T204 (deps T212/T213 done)
 - T200 and ARCH's T205 T206 are done; T177 is blocked on the owner's viewing answers; T008 stays owner-dependent
 ## log
+- 260917 T201 done; the two writing contracts gained a revision mode — the saved plan as the owner's edits left it plus their request, appended to the same prompts and answered on the same schemas; a flow target rewrites the footage then the narration, a narration target is told the flow is final, and the three writing calls now share one `write` helper
 - 260917 T216 done; the owner arranges the footage in ① (migration 0058 position, ReorderClipSources for the whole batch or nothing, ORDER BY position then ordinal) and the flow call reads that order; the strip moves a tile by grip-drag or by two buttons with a live announcement, the item control says it is an optional hint, and the instruction help says it directs order, rhythm and what the captions say
 - 260916 T209 done; the caption pace and the accent are the project's (migration 0057, seeded from the template at creation, chosen in ① and gone from ②) — the render reads them through EditPlan.WithCaptions and applies them once at layout, a change bumps only the plan revision so the result goes stale without repaying a writing call, and the accent row draws its dots from the design system's own hex because CDS's palette has no FE theme tokens
 - 260916 T215 done; ② edits the narration on its own lane — one bar per caption whatever cut lies beneath, absolute start/end fields, add at the playhead into free room (≥900 ms), remove, undo/redo, an overlap or an out-of-output caption blocks 다시 렌더 without retiming anything, the three caption notices read in ko/en, and the item-binding controls left ② for ①
@@ -75,4 +75,3 @@
 - 260916 T207 claimed (tmpl)
 - 260916 T205 claimed (dply)
 - 260916 T205 dep T211→- ; the original dep:T198 meant "after the pass-budget work that changes ffmpeg's filter set" (T193 T194), which is done, and r31's re-cut moved it onto a writing-call task T205 does not touch
-- 260916 T200 claimed (mint)
