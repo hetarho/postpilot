@@ -24,7 +24,8 @@ Do not choose a style, a position, an accent or a transition: the server places 
 Return only one JSON object following this closed contract:
 `
 
-func buildNarrationPrompt(in clip.NarrationInput, limits composition.Limits) (string, string) {
+// BuildNarrationPrompt is the narration call's request, measured the same way.
+func BuildNarrationPrompt(in clip.NarrationInput, limits composition.Limits) (string, string) {
 	contract := narrationPromptSchema
 	if in.Policy.StructuredOutput {
 		contract = "Use the supplied response schema. Additional bounds: captions at most 100 and slots at most 100; observation_refs at most 120 per entry, fact_refs at most 10, rows/short_rows at most 8. text/short_text at most 500 characters, keyword at most 40."

@@ -19,6 +19,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -156,13 +157,17 @@ func (m *mediaFake) PrepareAnalysisChunksExcept(_ context.Context, ws clip.Media
 func (m *mediaFake) CleanupStale(context.Context, time.Time) error { return nil }
 
 type plannerFake struct {
-	languages                                   []string
-	captionSafe                                 []clip.Region
-	id                                          string
-	observe, plans                              int
-	failObserveAt                               int
-	input                                       clip.PlanningInput
-	gate, preparationErr, observeErr, errorPlan error
+	languages                                               []string
+	captionSafe                                             []clip.Region
+	id                                                      string
+	observe, plans, flows, narrations                       int
+	failObserveAt                                           int
+	input                                                   clip.PlanningInput
+	stages                                                  []string
+	gate, preparationErr, observeErr, errorPlan, narrateErr error
+	// A flow the narration call can be written over: the standard fixture is a
+	// legacy plan, and only the tests about the two calls need a portable one.
+	portableFlow bool
 }
 
 func (p *plannerFake) ValidateModels(o, w llm.ModelRef) error {
@@ -208,12 +213,31 @@ func (p *plannerFake) ObserveChunk(ctx context.Context, r llm.ModelRef, c clip.C
 // The flow call and the single writer share one fake: what the generation is
 // tested for here is the stage around them, not which contract wrote the cuts.
 func (p *plannerFake) Flow(ctx context.Context, r llm.ModelRef, in clip.PlanningInput) (clip.EditPlan, llm.Usage, error) {
-	return p.Plan(ctx, r, in)
+	p.flows++
+	p.stages = append(p.stages, "flow")
+	plan, usage, err := p.Plan(ctx, r, in)
+	if err != nil || !p.portableFlow || in.Composition == nil {
+		return plan, usage, err
+	}
+	plan.Cuts[0].Copies = nil
+	cut := plan.Cuts[0]
+	plan.Portable = &clip.PortablePlan{Snapshot: in.Composition.Snapshot, Inputs: in.Composition.Inputs,
+		Cuts: []composition.Cut{{ID: cut.ID, SourceID: cut.SourceID, StartMS: cut.StartMS, EndMS: cut.EndMS, PlaybackRatePermille: cut.Rate()}}}
+	return plan, usage, nil
 }
 
-// The narration writes over the flow; this fake has no text to add to it.
+// The narration writes over the flow it is given and changes nothing else.
 func (p *plannerFake) Narrate(ctx context.Context, r llm.ModelRef, in clip.NarrationInput) (clip.EditPlan, llm.Usage, error) {
-	return in.Flow, llm.Usage{}, nil
+	p.narrations++
+	p.stages = append(p.stages, "narrate")
+	if p.narrateErr != nil {
+		return clip.EditPlan{}, llm.Usage{}, p.narrateErr
+	}
+	plan := in.Flow
+	portable := *plan.Portable
+	portable.Elements = append(slices.Clone(portable.Elements), clip.NarrationCaption("narration-1", "자막", 0, min(3000, plan.DurationMS)))
+	plan.Portable = &portable
+	return plan, llm.Usage{}, nil
 }
 func (p *plannerFake) Plan(ctx context.Context, r llm.ModelRef, in clip.PlanningInput) (clip.EditPlan, llm.Usage, error) {
 	frozen, err := job.ConsumeClipPolicy(ctx, "alice", p.id, r.String(), 32768, "write")

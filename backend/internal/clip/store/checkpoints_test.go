@@ -23,7 +23,7 @@ func TestFailedAttemptKeepsEvidenceWithoutReplacingSuccessfulState(t *testing.T)
 	// A new store instance models a reopened page/process, not an in-memory cache.
 	reopened := store.New(h.db.Writer, h.db.Reader)
 	c, err := reopened.GetAttemptCheckpoint(t.Context(), "alice", h.project.ID, id)
-	if err != nil || c == nil || c.Stage != "plan" || c.CompletedChunks != 3 || c.TotalChunks != 3 || c.CompletedSources != 2 || len(c.Observations) != 2 || len(c.Observations[0].Segments) != 2 || c.Diagnostic.Values["after_ms"] != 12000 {
+	if err != nil || c == nil || c.Stage != "flow" || c.CompletedChunks != 3 || c.TotalChunks != 3 || c.CompletedSources != 2 || len(c.Observations) != 2 || len(c.Observations[0].Segments) != 2 || c.Diagnostic.Values["after_ms"] != 12000 {
 		t.Fatalf("checkpoint: %+v %v", c, err)
 	}
 	p, err := h.projects.GetProject(t.Context(), "alice", h.project.ID)

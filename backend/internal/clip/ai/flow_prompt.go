@@ -29,7 +29,9 @@ Write no caption, title, label or sentence of any kind: this response carries no
 Return only one JSON object following this closed contract:
 `
 
-func buildFlowPrompt(in clip.PlanningInput, fadeMS int, limits composition.Limits) (string, string) {
+// BuildFlowPrompt is the flow call's request, exported so the frozen input
+// allowance can be measured on the exact bytes the call will send (CLIP-90).
+func BuildFlowPrompt(in clip.PlanningInput, fadeMS int, limits composition.Limits) (string, string) {
 	contract := flowPromptSchema
 	if in.Policy.StructuredOutput {
 		// The request already carries the closed structural schema; only the

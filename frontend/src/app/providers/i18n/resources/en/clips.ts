@@ -392,6 +392,11 @@ export const clips = {
       "Write only postpilot video-template source using the grammar below. Source from an external AI can be pasted into the editor. Authoring, copying, parsing and illustrative preview make no model call and use no credits. Choose the root intro, caption and outro first. The intro/outro skeletons fix slot order and appearance; only slot text, the badge, information fields, item groups and one guide are authorable. A template declares only what every clip made from it must carry. Footage order, cut rhythm and every caption are decided at generation from the project instruction and the observed footage; caption pace and accent are chosen per project. No universal price requirement, automatic disclosure or CTA is added.\n\nGrammar:\n{{grammar}}\n\nBounds (characters are Unicode scalars; Ms means milliseconds):\n{{limits}}\n\nA field label is its visible name; its body is input guidance. Bind by ID so renaming a label preserves identity. A blank optional value omits its dependent text; in the intro/outro it clears only that slot and preserves the other slot positions; required values block generation when blank. Keep each item's price, currency, units and price basis together. An item's name and price are facts the narration states rather than on-screen labels, and a number enters a caption only when it matches the entered value exactly. Fixed copy preserves even whitespace except explicit value substitution. Guides are invisible in the output and hold what is tedious to repeat every time, such as voice and viewpoint; the project instruction comes first and the guide follows it.\n\nExample (add two or more menu items on the input screen):\n{{example}}",
   },
   credits: {
+    writingCalls: 'Writing calls',
+    call: {
+      flow: 'Footage flow ×{{calls}}',
+      narration: 'Narration ×{{calls}}',
+    },
     renderOnly:
       'Resume rendering with the completed analysis and edit plan. No AI requests or additional credit charge.',
     reuse:
@@ -499,6 +504,10 @@ export const clips = {
     retry: 'Generate again',
     running: 'Creating your clip',
     stage: {
+      flow_retry: 'Correcting the flow response format',
+      narrate_retry: 'Correcting the narration response format',
+      flow: 'Footage flow',
+      narrate: 'Narration',
       analyze_retry: 'Correcting the analysis response format',
       plan_retry: 'Correcting the composition response format',
 

@@ -321,11 +321,15 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 	if p.Recovery != nil && len(recovery.Chunks) != pricing.ReusedChunks {
 		return ErrQuoteChanged
 	}
-	if pricing.SkipPlan && (!recovery.PlanReady || recovery.Plan == "" || recovery.PlanDigest != planRecoveryDigest(p)) {
+	if pricing.SkipNarration && (!recovery.PlanReady || recovery.Plan == "" || recovery.PlanDigest != planRecoveryDigest(p)) {
 		return ErrQuoteChanged
 	}
-	if !pricing.SkipPlan {
-		recovery.Plan, recovery.PlanDigest, recovery.PlanReady = "", "", false
+	// A narration-only resume still needs the flow it will write over.
+	if pricing.SkipFlow && (recovery.Plan == "" || recovery.PlanDigest != planRecoveryDigest(p) || !recovery.FlowReady && !recovery.PlanReady) {
+		return ErrQuoteChanged
+	}
+	if !pricing.SkipFlow {
+		recovery.Plan, recovery.PlanDigest, recovery.PlanReady, recovery.FlowReady = "", "", false, false
 	}
 	checkpoint.TotalSources = len(b.Sources)
 	s.checkpoint(ctx, user, project, checkpoint)
@@ -343,11 +347,11 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 			progress(name, done, total)
 		}
 	}
-	if !pricing.SkipPlan {
+	if !pricing.RenderOnly() {
 		if err := s.planner.ValidateModels(pricing.Observe.Ref, pricing.Plan.Ref); err != nil {
 			return admissionRefusal(pricing.Observe.Ref, err)
 		}
-		if s.planner.Budgets() != (CompletionBudgets{Observe: pricing.Observe.CompletionTokens, Flow: pricing.Plan.CompletionTokens, Narration: pricing.Plan.CompletionTokens}) {
+		if s.planner.Budgets() != (CompletionBudgets{Observe: pricing.Observe.CompletionTokens, Flow: pricing.Plan.CompletionTokens, Narration: pricing.Narration.CompletionTokens}) {
 			return ErrQuoteChanged
 		}
 		declared := make([]AnalysisSource, 0, len(b.Sources))
@@ -402,11 +406,11 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 		if count > pricing.ObservationCalls {
 			return ErrQuoteChanged
 		}
-		if !pricing.SkipPlan {
+		if !pricing.RenderOnly() {
 			if err = s.planner.ValidateModels(pricing.Observe.Ref, pricing.Plan.Ref); err != nil {
 				return admissionRefusal(pricing.Observe.Ref, err)
 			}
-			if s.planner.Budgets() != (CompletionBudgets{Observe: pricing.Observe.CompletionTokens, Flow: pricing.Plan.CompletionTokens, Narration: pricing.Plan.CompletionTokens}) {
+			if s.planner.Budgets() != (CompletionBudgets{Observe: pricing.Observe.CompletionTokens, Flow: pricing.Plan.CompletionTokens, Narration: pricing.Narration.CompletionTokens}) {
 				return ErrQuoteChanged
 			}
 			if err = s.planner.ValidatePreparation(pricing.Observe.Ref, PlanningInput{Language: p.Language, Composition: p.Composition, Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: p.CTA, Instruction: p.Instruction, Policy: pricing.Plan}, sources); err != nil {
@@ -417,11 +421,11 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 			}
 			// The same qualification the quote ran, on the current document: a leaf
 			// that drifted refuses here, before the reservation and any model call.
-			current, err := s.freezeWork(ctx, pricing.Observe.Ref, pricing.Plan.Ref, count, pricing.SkipPlan, pricing.Plan.ResponseRetries)
+			current, err := s.freezeWork(ctx, pricing.Observe.Ref, pricing.Plan.Ref, count, pricing.SkipFlow, pricing.SkipNarration, pricing.Plan.ResponseRetries)
 			if err != nil {
 				return admissionRefusal(pricing.Observe.Ref, err)
 			}
-			if !current.Valid() || current.ObservationCalls != count || current.Observe != pricing.Observe || current.Plan != pricing.Plan || current.MaxCredits > p.Approval.MaxCredits {
+			if !current.Valid() || current.ObservationCalls != count || current.Observe != pricing.Observe || current.Plan != pricing.Plan || current.Narration != pricing.Narration || current.MaxCredits > p.Approval.MaxCredits {
 				return ErrQuoteChanged
 			}
 		}
@@ -487,32 +491,43 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 			return err
 		}
 		checkpoint.Diagnostic = AttemptDiagnostic{}
-		set("plan", 0, 1)
+		// The writer's own context: one retry observer per stage, so a
+		// correction says which of the two calls is being corrected.
+		writing := func(stage string) context.Context {
+			return WithResponseCorrectionObserver(ctx, func(retry, limit int, d AttemptDiagnostic) error {
+				checkpoint.Diagnostic = d
+				checkpoint.Diagnostic.Values["retry"] = retry
+				logAttemptDiagnostic(job, stage, d)
+				if progress != nil {
+					progress(stage+"_retry", retry, limit)
+				}
+				return s.checkpoint(ctx, user, project, checkpoint)
+			})
+		}
+		keep := func(edit *EditPlan, flowReady, planReady bool) error {
+			raw, err := EncodeEditPlan(*edit)
+			if err != nil {
+				return err
+			}
+			recovery.Plan, recovery.PlanDigest = raw, planRecoveryDigest(p)
+			recovery.FlowReady, recovery.PlanReady = flowReady, planReady
+			return s.saveRecovery(ctx, user, project, recovery)
+		}
+		in := PlanningInput{Language: p.Language, Composition: p.Composition, Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Analyses: analyses, Policy: pricing.Plan, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: p.CTA, Instruction: p.Instruction, SourceAudio: batchSourceAudio(b)}
+		set("flow", 0, 1)
 		if err := s.checkpoint(ctx, user, project, checkpoint); err != nil {
 			return err
 		}
 		var edit EditPlan
-		if pricing.SkipPlan {
+		if pricing.SkipFlow {
 			edit, err = DecodeEditPlan(recovery.Plan)
-		} else {
-			planCtx := WithResponseCorrectionObserver(ctx, func(retry, limit int, d AttemptDiagnostic) error {
-				checkpoint.Diagnostic = d
-				checkpoint.Diagnostic.Values["retry"] = retry
-				logAttemptDiagnostic(job, "plan", d)
-				if progress != nil {
-					progress("plan_retry", retry, limit)
-				}
-				return s.checkpoint(ctx, user, project, checkpoint)
-			})
-			in := PlanningInput{Language: p.Language, Composition: p.Composition, Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Analyses: analyses, Policy: pricing.Plan, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: p.CTA, Instruction: p.Instruction, SourceAudio: batchSourceAudio(b)}
+		} else if p.Composition != nil {
 			// A composition is written by the flow call and then the narration
 			// over it (CLIP-135); the single writer is what a payload with no
 			// composition snapshot still uses.
-			if p.Composition != nil {
-				edit, _, err = s.planner.Flow(planCtx, pricing.Plan.Ref, in)
-			} else {
-				edit, _, err = s.planner.Plan(planCtx, pricing.Plan.Ref, in)
-			}
+			edit, _, err = s.planner.Flow(writing("flow"), pricing.Plan.Ref, in)
+		} else {
+			edit, _, err = s.planner.Plan(writing("flow"), pricing.Plan.Ref, in)
 		}
 		if err != nil {
 			return err
@@ -521,17 +536,33 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 			edit = edit.WithFacts(p.Disclosure, p.Answers, p.Template.Preset, p.CTA, p.Template.Accent, p.HideDisclosure)
 		}
 		// The owner's source-sound choice is the SERVER's to state, and it is
-		// stated only now — after the model's own output has been validated, so
-		// no prompt, response or plan digest ever carried it (CLIP-100, CDS-6).
+		// stated only here — after the model's own output has been validated, so
+		// no prompt, response or plan digest ever carried it, and a resumed plan
+		// takes the setting as it stands now (CLIP-100, CDS-6).
 		edit.SourceAudio = FreezeSourceAudio(b, edit.Cuts)
-		recovery.Plan, err = EncodeEditPlan(edit)
-		if err != nil {
-			return err
+		// The written flow is kept before the narration is asked for, so a
+		// failure or a cancellation in the narration resumes on it and pays for
+		// one writing call rather than two (CLIP-87, CLIP-93).
+		if !pricing.SkipFlow {
+			// The flow is written either way: a payload with no composition gets
+			// its whole plan from the one writer, and is ready to render at once.
+			if err := keep(&edit, true, edit.Portable == nil); err != nil {
+				return err
+			}
 		}
-		recovery.PlanDigest = planRecoveryDigest(p)
-		recovery.PlanReady = edit.Portable == nil
-		if err := s.saveRecovery(ctx, user, project, recovery); err != nil {
-			return err
+		if !pricing.SkipNarration && edit.Portable != nil {
+			set("narrate", 0, 1)
+			if err := s.checkpoint(ctx, user, project, checkpoint); err != nil {
+				return err
+			}
+			edit, _, err = s.planner.Narrate(writing("narrate"), pricing.Narration.Ref, NarrationInput{PlanningInput: in, Flow: edit})
+			if err != nil {
+				return err
+			}
+			edit.SourceAudio = FreezeSourceAudio(b, edit.Cuts)
+			if err := keep(&edit, true, false); err != nil {
+				return err
+			}
 		}
 		checkpoint.Diagnostic = AttemptDiagnostic{Ranges: AttemptRangeDiagnostics(edit, analyses), Values: map[string]int{"cut_count": len(edit.Cuts), "target_ms": p.TargetDurationMS, "after_ms": edit.DurationMS, "transition_ms": edit.TransitionTotal()}}
 		renderSources := make([]RenderSource, len(sources))
@@ -542,7 +573,7 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 			if layout, ok := s.renderer.(interface {
 				LayoutComposition(context.Context, EditPlan, []RenderSource) (EditPlan, []CompositionElement, error)
 			}); ok {
-				set("plan", 0, 1)
+				set("narrate", 0, 1)
 				edit, _, err = layout.LayoutComposition(ctx, edit, renderSources)
 				if err != nil {
 					return err

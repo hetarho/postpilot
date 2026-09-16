@@ -8,7 +8,7 @@ import { CLIP_STAGES, progressLabel, progressRatio } from './types'
 afterEach(() => initializeI18n('ko'))
 it.each(['ko', 'en'] as const)('shows the bounded correction attempt in %s', (locale) => {
   initializeI18n(locale)
-  for (const stage of ['analyze_retry', 'plan_retry']) {
+  for (const stage of ['analyze_retry', 'flow_retry', 'narrate_retry']) {
     expect(
       progressLabel({ kind: 'generate_clip', stage, progressDone: 2, progressTotal: 3 }),
     ).toContain('(2/3)')

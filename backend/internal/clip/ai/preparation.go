@@ -2,6 +2,7 @@ package ai
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/llm"
@@ -34,17 +35,53 @@ func (s *Service) ValidatePreparation(observe llm.ModelRef, in clip.PlanningInpu
 			return err
 		}
 	}
+	in.Analyses = nil
+	if nativeComposition(in) {
+		// BOTH writing calls are checked, the narration against the largest
+		// flow the flow call may hand it: the allowance has to hold the bigger
+		// of the two requests, not the smaller one (CLIP-90, CLIP-135).
+		limits := compositionLimits(s.cfg, in)
+		requests := [][2]string{}
+		system, user := BuildFlowPrompt(in, s.cfg.Render.FadeMS, limits)
+		requests = append(requests, [2]string{system, user})
+		system, user = BuildNarrationPrompt(clip.NarrationInput{PlanningInput: in, Flow: WidestFlow(s.cfg, in)}, limits)
+		requests = append(requests, [2]string{system, user})
+		for i, request := range requests {
+			schema := json.RawMessage(nil)
+			if writer.StructuredOutput {
+				schema = FlowSchema()
+				if i == 1 {
+					schema = NarrationSchema()
+				}
+			}
+			if err := validatePrompt(request[0], request[1], schema, llm.ExecutionTextOnly, in.Policy.InputTokenLimit()); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
 	schema = nil
 	if writer.StructuredOutput {
 		schema = PlanSchema()
-		if nativeComposition(in) {
-			schema = CompositionPlanSchema()
-		}
 	}
-	in.Analyses = nil
 	system, user := BuildPlanPrompt(in, s.cfg.Render.FadeMS, compositionLimits(s.cfg, in))
-	if err := validatePrompt(system, user, schema, llm.ExecutionTextOnly, in.Policy.InputTokenLimit()); err != nil {
-		return err
+	return validatePrompt(system, user, schema, llm.ExecutionTextOnly, in.Policy.InputTokenLimit())
+}
+
+// widestFlow is the largest footage flow the narration request can be asked to
+// carry: the cut ceiling, each cut with the longest identity a writer may mint.
+// The frozen allowance is checked against that, never against the flow one
+// particular generation happens to produce.
+func WidestFlow(cfg Config, in clip.PlanningInput) clip.EditPlan {
+	source := clip.AnalysisSource{}
+	if len(in.Analyses) > 0 {
+		source = in.Analyses[0].Source
 	}
-	return nil
+	flow := clip.EditPlan{Ratio: in.Ratio, DurationMS: cfg.Render.MaxDurationMS}
+	length := max(1, cfg.Render.MaxDurationMS/max(1, cfg.Render.MaxCuts))
+	for i := range cfg.Render.MaxCuts {
+		flow.Cuts = append(flow.Cuts, clip.Cut{ID: strings.Repeat("c", 64), SourceID: source.ID, Fingerprint: source.Fingerprint,
+			StartMS: i * length, EndMS: (i + 1) * length, PlaybackRatePermille: clip.RateUnitPermille})
+	}
+	return flow
 }

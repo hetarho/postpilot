@@ -22,33 +22,61 @@ var (
 	ErrCancellationPolicy = errors.New("clip cancellation policy requires a supported client approval")
 )
 
-const PricingPolicyVersion = 2
+const PricingPolicyVersion = 3
 const CancellationPolicyVersion = 1
 
 type GenerationPricing struct {
-	CancellationPolicyVersion    int
-	Version                      int
-	Observe, Plan                llm.CallPolicy
+	CancellationPolicyVersion int
+	Version                   int
+	// The observation, then the two writing calls a generation makes: `Plan`
+	// prices the flow call and `Narration` the narration over it (CLIP-135).
+	// The flow keeps the field name it has always had, so the quote, the
+	// reservation and the durable job read one shape; the label, not the field,
+	// tells the owner which call is which.
+	Observe, Plan, Narration     llm.CallPolicy
 	ObservationCalls, MaxCredits int
-	SkipPlan                     bool
-	RecoveryDigest               string
-	ReusedChunks                 int
+	// A resumed generation skips the writing calls whose result it already
+	// holds. The narration cannot be kept over a flow that is being rewritten,
+	// so skipping it implies skipping the flow.
+	SkipFlow, SkipNarration bool
+	RecoveryDigest          string
+	ReusedChunks            int
 }
 
 // Both stages must have the complete enforceable profile, not a legacy pair of
 // catalog token prices. This value is frozen in the quote and checked at admission.
 func (p GenerationPricing) Valid() bool {
-	return p.Version == PricingPolicyVersion && p.CancellationPolicyVersion >= 0 && p.CancellationPolicyVersion <= CancellationPolicyVersion && p.ObservationCalls >= 0 && p.ObservationCalls <= 49 && p.MaxCredits >= 0 && p.ReusedChunks >= 0 && p.ReusedChunks <= 49 && (!p.SkipPlan || p.ObservationCalls == 0) &&
+	writing := func(c llm.CallPolicy) bool {
+		return c.Valid() && c.Pricing.Valid() && c.Pricing.Delivery == llm.ExecutionTextOnly && c.Stage == llm.StageNameWrite && c.CompletionTokens == 32768
+	}
+	return p.Version == PricingPolicyVersion && p.CancellationPolicyVersion >= 0 && p.CancellationPolicyVersion <= CancellationPolicyVersion && p.ObservationCalls >= 0 && p.ObservationCalls <= 49 && p.MaxCredits >= 0 && p.ReusedChunks >= 0 && p.ReusedChunks <= 49 && (!p.SkipFlow || p.ObservationCalls == 0) && (!p.SkipNarration || p.SkipFlow) &&
 		p.Observe.Valid() && p.Observe.Pricing.Valid() && p.Observe.Pricing.Delivery == llm.ExecutionInlineStatic && p.Observe.Stage == llm.StageNameObserve && p.Observe.CompletionTokens == 8192 &&
-		p.Plan.Valid() && p.Plan.Pricing.Valid() && p.Plan.Pricing.Delivery == llm.ExecutionTextOnly && p.Plan.Stage == llm.StageNameWrite && p.Plan.CompletionTokens == 32768
+		writing(p.Plan) && writing(p.Narration) && p.Plan.Ref == p.Narration.Ref
 }
 
-func (p GenerationPricing) PlanCalls() int {
-	if p.SkipPlan {
+// FlowCalls and NarrationCalls are what each writing call may cost, its own
+// response corrections included. A call whose result the recovery already
+// holds costs nothing.
+func (p GenerationPricing) FlowCalls() int {
+	if p.SkipFlow {
 		return 0
 	}
 	return 1 + p.Plan.ResponseRetries
 }
+func (p GenerationPricing) NarrationCalls() int {
+	if p.SkipNarration {
+		return 0
+	}
+	return 1 + p.Narration.ResponseRetries
+}
+
+// RenderOnly is a resume that writes nothing at all: both calls are answered by
+// the plan the recovery already holds.
+func (p GenerationPricing) RenderOnly() bool { return p.SkipFlow && p.SkipNarration }
+
+// PlanCalls is every writing call this generation still has to pay for. Both
+// are the same model at the same budget, so they reserve as one priced line.
+func (p GenerationPricing) PlanCalls() int { return p.FlowCalls() + p.NarrationCalls() }
 func (p GenerationPricing) ObserveCalls(chunks int) int {
 	return chunks * (1 + p.Observe.ResponseRetries)
 }
@@ -85,14 +113,14 @@ func (s *GenerationService) WithCredits(pricing QuotePricing, accounting Account
 }
 
 type remainingQuotePricing interface {
-	FreezeWork(context.Context, llm.ModelRef, llm.ModelRef, int, bool, int) (GenerationPricing, error)
+	FreezeWork(context.Context, llm.ModelRef, llm.ModelRef, int, bool, bool, int) (GenerationPricing, error)
 }
 
-func (s *GenerationService) freezeWork(ctx context.Context, o, w llm.ModelRef, n int, skip bool, retries int) (GenerationPricing, error) {
+func (s *GenerationService) freezeWork(ctx context.Context, o, w llm.ModelRef, n int, skipFlow, skipNarration bool, retries int) (GenerationPricing, error) {
 	if p, ok := s.pricing.(remainingQuotePricing); ok {
-		return p.FreezeWork(ctx, o, w, n, skip, retries)
+		return p.FreezeWork(ctx, o, w, n, skipFlow, skipNarration, retries)
 	}
-	if skip {
+	if skipFlow || skipNarration {
 		return GenerationPricing{}, ErrPricingUnavailable
 	}
 	return s.pricing.Freeze(ctx, o, w, n)
@@ -240,7 +268,13 @@ func (s *GenerationService) quoteInputs(ctx context.Context, user, id, batch, ob
 	}
 	recovered := s.selectRecovery(upgraded, b, modelRef(observe), p.Language)
 	seed := generationPayload{Language: p.Language, Batch: b, Composition: c, Template: t.Recipe, Answers: requiredQuoteAnswers(p, t), Ratio: p.Ratio, Write: write, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: design.DefaultCTA(t.Preset, p.CTA), Instruction: p.Instruction}
-	skipPlan := recovered.PlanReady && recovered.Plan != "" && recovered.PlanDigest == planRecoveryDigest(seed)
+	// A resume reuses exactly what the recovery holds: a complete plan answers
+	// both writing calls, a written flow answers only the first. A recovery
+	// saved before the flow was its own call carries a complete plan, so it
+	// still resumes at rendering.
+	written := recovered.Plan != "" && recovered.PlanDigest == planRecoveryDigest(seed)
+	skipFlow := written && (recovered.FlowReady || recovered.PlanReady)
+	skipNarration := skipFlow && recovered.PlanReady
 	upperCount := count
 	// Verified source durations supersede conservative browser estimates only for
 	// the exact retained source identity; count only missing chunks.
@@ -263,17 +297,17 @@ func (s *GenerationService) quoteInputs(ctx context.Context, user, id, batch, ob
 		count += max(0, n)
 	}
 	count = min(count, max(0, upperCount-len(recovered.Chunks)))
-	if skipPlan && count != 0 {
-		skipPlan = false
+	if skipFlow && count != 0 {
+		skipFlow, skipNarration = false, false
 	}
-	if skipPlan && recovered.Pricing.Valid() {
+	if skipNarration && recovered.Pricing.Valid() {
 		pricing = recovered.Pricing
-		pricing.SkipPlan, pricing.ObservationCalls, pricing.MaxCredits = true, 0, 0
+		pricing.SkipFlow, pricing.SkipNarration, pricing.ObservationCalls, pricing.MaxCredits = true, true, 0, 0
 	} else {
 		if err = s.planner.ValidateModels(modelRef(observe), modelRef(write)); err != nil {
 			return p, t, b, pricing, admissionRefusal(modelRef(observe), err)
 		}
-		pricing, err = s.freezeWork(ctx, modelRef(observe), modelRef(write), count, skipPlan, 3)
+		pricing, err = s.freezeWork(ctx, modelRef(observe), modelRef(write), count, skipFlow, skipNarration, 3)
 	}
 	pricing.RecoveryDigest = RecoveryDigest(rawRecovery)
 	pricing.ReusedChunks = len(recovered.Chunks)

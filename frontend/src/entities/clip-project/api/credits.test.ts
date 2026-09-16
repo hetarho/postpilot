@@ -36,8 +36,25 @@ it('treats the server ceiling as opaque, including zero, and rejects malformed q
   const raw = { quoteId: 'quote', maxCredits: 0, expiresAt: '2099-01-01T00:00:00Z' }
   expect(toClipQuote(create(QuoteClipGenerationResponseSchema, raw), 'bound')).toEqual({
     ...raw,
+    calls: [],
     binding: 'bound',
   })
+  // The two writing calls are listed by label; a line the server does not name
+  // is not a call this client knows how to show.
+  const priced = {
+    ...raw,
+    pricedCalls: [
+      { label: 'observe', calls: 3 },
+      { label: 'flow', calls: 1 },
+      { label: 'narration', calls: 1 },
+      { label: 'invented', calls: 9 },
+    ],
+  }
+  expect(toClipQuote(create(QuoteClipGenerationResponseSchema, priced), 'bound').calls).toEqual([
+    { label: 'observe', calls: 3 },
+    { label: 'flow', calls: 1 },
+    { label: 'narration', calls: 1 },
+  ])
   for (const change of [
     { quoteId: '' },
     { maxCredits: -1 },

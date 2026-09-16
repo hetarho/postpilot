@@ -55,7 +55,7 @@ func TestTheSoundSettingDoesNotInvalidateAnInterruptedCandidate(t *testing.T) {
 		t.Fatal("expected the injected rendering failure")
 	}
 	before, err := h.service.Quote(ctx, "alice", h.project.ID, h.batch.ID, "p/o", "p/w")
-	if err != nil || !before.Pricing.SkipPlan || before.Pricing.ReusedChunks != 3 {
+	if err != nil || !before.Pricing.RenderOnly() || before.Pricing.ReusedChunks != 3 {
 		t.Fatalf("the fixture has no reusable candidate: %+v %v", before.Pricing, err)
 	}
 	p, err := h.projects.GetProject(ctx, "alice", h.project.ID)
@@ -70,7 +70,7 @@ func TestTheSoundSettingDoesNotInvalidateAnInterruptedCandidate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !after.Pricing.SkipPlan || after.Pricing.ObservationCalls != 0 || after.Pricing.ReusedChunks != 3 || after.Pricing.MaxCredits != 0 {
+	if !after.Pricing.RenderOnly() || after.Pricing.ObservationCalls != 0 || after.Pricing.ReusedChunks != 3 || after.Pricing.MaxCredits != 0 {
 		t.Fatalf("the sound setting invalidated observation or assembly work: %+v", after.Pricing)
 	}
 	if h.planner.observe != observed || h.planner.plans != planned {

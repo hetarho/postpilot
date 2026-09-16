@@ -167,7 +167,7 @@ func (s *Service) Flow(ctx context.Context, model llm.ModelRef, input clip.Plann
 	if err != nil {
 		return clip.EditPlan{}, llm.Usage{}, err
 	}
-	system, user := buildFlowPrompt(input, s.cfg.Render.FadeMS, compositionLimits(s.cfg, input))
+	system, user := BuildFlowPrompt(input, s.cfg.Render.FadeMS, compositionLimits(s.cfg, input))
 	request := llm.Request{System: system, Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(user)}}}, Stage: llm.StageNameWrite, Reasoning: input.Policy.Reasoning, DisableReasoning: input.Policy.DisableReasoning, MaxTokens: input.Policy.CompletionTokens, Execution: execution}
 	if execution.Call.StructuredOutput {
 		if !info.StructuredOutput {
@@ -212,7 +212,7 @@ func (s *Service) Narrate(ctx context.Context, model llm.ModelRef, input clip.Na
 	if err != nil {
 		return clip.EditPlan{}, llm.Usage{}, err
 	}
-	system, user := buildNarrationPrompt(input, compositionLimits(s.cfg, input.PlanningInput))
+	system, user := BuildNarrationPrompt(input, compositionLimits(s.cfg, input.PlanningInput))
 	request := llm.Request{System: system, Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(user)}}}, Stage: llm.StageNameWrite, Reasoning: input.Policy.Reasoning, DisableReasoning: input.Policy.DisableReasoning, MaxTokens: input.Policy.CompletionTokens, Execution: execution}
 	if execution.Call.StructuredOutput {
 		if !info.StructuredOutput {

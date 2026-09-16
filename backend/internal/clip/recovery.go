@@ -24,10 +24,12 @@ type RecoveryState struct {
 	JobID, Contract, PlanDigest, Plan string
 	Observe                           llm.ModelRef
 	Pricing                           GenerationPricing
-	PlanReady                         bool
-	Sources                           []AnalysisSource
-	Chunks                            []ChunkAnalysis
-	Legacy                            *AttemptCheckpoint
+	// PlanReady is a complete plan that resumes at rendering; FlowReady is the
+	// written footage flow the narration call has still to write over.
+	PlanReady, FlowReady bool
+	Sources              []AnalysisSource
+	Chunks               []ChunkAnalysis
+	Legacy               *AttemptCheckpoint
 }
 type RecoveryStore interface {
 	GetRecovery(context.Context, string, string) (*RecoveryState, error)
@@ -136,7 +138,7 @@ func (s *GenerationService) selectRecovery(r *RecoveryState, b SourceBatch, obse
 		return cmp.Compare(a.SourceID, b.SourceID)
 	})
 	if len(out.Chunks) == len(r.Chunks) && len(out.Sources) == len(r.Sources) {
-		out.PlanDigest, out.Plan, out.PlanReady = r.PlanDigest, r.Plan, r.PlanReady
+		out.PlanDigest, out.Plan, out.PlanReady, out.FlowReady = r.PlanDigest, r.Plan, r.PlanReady, r.FlowReady
 	}
 	return out
 }

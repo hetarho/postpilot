@@ -105,6 +105,7 @@ export interface FakeClipsOptions {
   generationReject?: AppFailureReason
   quoteRequests?: unknown[]
   quoteMaxCredits?: number
+  quotePricedCalls?: { label: string; stage: string; calls: number }[]
   quoteExpiresAt?: string
   quoteFails?: AppFailureReason
   /** T111's live eligibility answer, one row per registered observe model. Absent means the
@@ -448,6 +449,12 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
         rounding: 'ceil',
       },
       expiresAt: options.quoteExpiresAt ?? '2099-01-01T00:00:00Z',
+      // The observation and the two writing calls a generation makes.
+      pricedCalls: options.quotePricedCalls ?? [
+        { label: 'observe', stage: 'observe', calls: 3 },
+        { label: 'flow', stage: 'write', calls: 1 },
+        { label: 'narration', stage: 'write', calls: 1 },
+      ],
     })
   })
   router.rpc(ClipService.method.setClipSourceOriginalSound, (req) => {

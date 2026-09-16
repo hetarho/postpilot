@@ -90,7 +90,14 @@ export interface ClipAccounting {
   shadowChargeCredits?: number
   settled: boolean
 }
+/** One priced line of the quote. A generation makes two writing calls on the
+ *  same model, so the label — not the stage — says which line is which. */
+export interface ClipPricedCall {
+  label: 'observe' | 'flow' | 'narration'
+  calls: number
+}
 export interface ClipQuote {
+  calls: ClipPricedCall[]
   recovery?: {
     reusedChunks: number
     remainingChunks: number

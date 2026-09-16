@@ -3789,8 +3789,12 @@ type ClipPricedCall struct {
 	Reasoning           string                 `protobuf:"bytes,6,opt,name=reasoning,proto3" json:"reasoning,omitempty"`
 	InputUsdPerMillion  string                 `protobuf:"bytes,7,opt,name=input_usd_per_million,json=inputUsdPerMillion,proto3" json:"input_usd_per_million,omitempty"`
 	OutputUsdPerMillion string                 `protobuf:"bytes,8,opt,name=output_usd_per_million,json=outputUsdPerMillion,proto3" json:"output_usd_per_million,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	// Which call of its stage this is: `observe`, `flow` or `narration`. A
+	// generation makes two writing calls of the same stage on the same model, so
+	// the label, not the stage, tells the owner which line is which.
+	Label         string `protobuf:"bytes,9,opt,name=label,proto3" json:"label,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ClipPricedCall) Reset() {
@@ -3875,6 +3879,13 @@ func (x *ClipPricedCall) GetInputUsdPerMillion() string {
 func (x *ClipPricedCall) GetOutputUsdPerMillion() string {
 	if x != nil {
 		return x.OutputUsdPerMillion
+	}
+	return ""
+}
+
+func (x *ClipPricedCall) GetLabel() string {
+	if x != nil {
+		return x.Label
 	}
 	return ""
 }
@@ -7152,7 +7163,7 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\bbatch_id\x18\x02 \x01(\tR\abatchId\x12;\n" +
 	"\robserve_model\x18\x03 \x01(\v2\x16.postpilot.v1.ModelRefR\fobserveModel\x127\n" +
 	"\vwrite_model\x18\x04 \x01(\v2\x16.postpilot.v1.ModelRefR\n" +
-	"writeModel\"\xc2\x02\n" +
+	"writeModel\"\xd8\x02\n" +
 	"\x0eClipPricedCall\x12,\n" +
 	"\x05model\x18\x01 \x01(\v2\x16.postpilot.v1.ModelRefR\x05model\x12\x14\n" +
 	"\x05stage\x18\x02 \x01(\tR\x05stage\x12\x14\n" +
@@ -7161,7 +7172,8 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\x11completion_tokens\x18\x05 \x01(\x05R\x10completionTokens\x12\x1c\n" +
 	"\treasoning\x18\x06 \x01(\tR\treasoning\x121\n" +
 	"\x15input_usd_per_million\x18\a \x01(\tR\x12inputUsdPerMillion\x123\n" +
-	"\x16output_usd_per_million\x18\b \x01(\tR\x13outputUsdPerMillion\"\xac\x03\n" +
+	"\x16output_usd_per_million\x18\b \x01(\tR\x13outputUsdPerMillion\x12\x14\n" +
+	"\x05label\x18\t \x01(\tR\x05label\"\xac\x03\n" +
 	"\x1bQuoteClipGenerationResponse\x12\x19\n" +
 	"\bquote_id\x18\x01 \x01(\tR\aquoteId\x12\x1f\n" +
 	"\vmax_credits\x18\x02 \x01(\x05R\n" +

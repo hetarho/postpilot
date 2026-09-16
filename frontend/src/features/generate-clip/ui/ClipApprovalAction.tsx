@@ -87,6 +87,21 @@ function QuotedAction({
             ? t('credits.expired')
             : t('credits.maximumHelp')}
       </Typography>
+      {quote && quote.calls.some((call) => call.label !== 'observe' && call.calls > 0) && (
+        <ul className="space-y-1" aria-label={t('credits.writingCalls')}>
+          {quote.calls
+            .filter((call) => call.label !== 'observe' && call.calls > 0)
+            .map((call) => (
+              <li key={call.label}>
+                <Typography variant="meta">
+                  {call.label === 'flow'
+                    ? t('credits.call.flow', { calls: call.calls })
+                    : t('credits.call.narration', { calls: call.calls })}
+                </Typography>
+              </li>
+            ))}
+        </ul>
+      )}
       {quote?.recovery && (
         <Typography variant="body" role="status">
           {quote.recovery.renderOnly

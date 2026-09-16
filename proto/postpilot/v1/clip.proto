@@ -338,6 +338,10 @@ message ClipPricedCall {
   string reasoning = 6;
   string input_usd_per_million = 7;
   string output_usd_per_million = 8;
+  // Which call of its stage this is: `observe`, `flow` or `narration`. A
+  // generation makes two writing calls of the same stage on the same model, so
+  // the label, not the stage, tells the owner which line is which.
+  string label = 9;
 }
 message QuoteClipGenerationResponse {
   string quote_id = 1;

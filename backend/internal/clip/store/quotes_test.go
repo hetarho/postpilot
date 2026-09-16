@@ -32,7 +32,8 @@ func assertNoQuoteWork(t *testing.T, h *generationHarness) {
 func TestQuoteIsOwnerScopedFreeAndRefreshInvalidatesPreviousApproval(t *testing.T) {
 	h := generationSetup(t)
 	q := quote(t, h)
-	if q.Pricing.MaxCredits != 18 || q.Pricing.ObservationCalls != 3 || time.Until(q.ExpiresAt) > 5*time.Minute {
+	// Three observations and the two writing calls a generation makes.
+	if q.Pricing.MaxCredits != 26 || q.Pricing.ObservationCalls != 3 || time.Until(q.ExpiresAt) > 5*time.Minute {
 		t.Fatal(q)
 	}
 	if _, err := h.store.GetQuote(context.Background(), "bob", q.ID); !errors.Is(err, clip.ErrNotFound) {

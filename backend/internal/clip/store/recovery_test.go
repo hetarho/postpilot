@@ -37,8 +37,8 @@ func TestLegacyAttemptEvidenceIsNeverReusedForNewGeneration(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if q.Pricing.ReusedChunks != 0 || q.Pricing.SkipPlan || q.Pricing.ObservationCalls != 3 {
-				t.Fatalf("v1 evidence entered a v2 generation: reused=%d observe=%d skip=%v", q.Pricing.ReusedChunks, q.Pricing.ObservationCalls, q.Pricing.SkipPlan)
+			if q.Pricing.ReusedChunks != 0 || q.Pricing.RenderOnly() || q.Pricing.ObservationCalls != 3 {
+				t.Fatalf("v1 evidence entered a v2 generation: reused=%d observe=%d skip=%v", q.Pricing.ReusedChunks, q.Pricing.ObservationCalls, q.Pricing.RenderOnly())
 			}
 		})
 	}
@@ -66,7 +66,7 @@ func TestRecoveryRenderRestartSkipsCompletedWork(t *testing.T) {
 	if err != nil {
 		t.Fatal("AI-free continuation consulted unavailable models", err)
 	}
-	if !q.Pricing.SkipPlan || q.Pricing.MaxCredits != 0 || q.Pricing.ObservationCalls != 0 || q.Pricing.ReusedChunks != 3 {
+	if !q.Pricing.RenderOnly() || q.Pricing.MaxCredits != 0 || q.Pricing.ObservationCalls != 0 || q.Pricing.ReusedChunks != 3 {
 		t.Fatal("wrong remaining work quote")
 	}
 	h.start(t)
@@ -114,7 +114,9 @@ func TestRecoveryChangedInputsKeepAnalysisAndInvalidatePlan(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if q.Pricing.SkipPlan || q.Pricing.ObservationCalls != 0 || q.Pricing.ReusedChunks != 3 || q.Pricing.PlanCalls() != 1 {
+			// A changed input invalidates the whole assembly, so both writing
+			// calls are priced again.
+			if q.Pricing.RenderOnly() || q.Pricing.ObservationCalls != 0 || q.Pricing.ReusedChunks != 3 || q.Pricing.PlanCalls() != 2 {
 				t.Fatal("changed input reused an incompatible plan")
 			}
 			h.renderer.fail = nil
@@ -156,7 +158,7 @@ func TestRecoveryDoesNotResumeACandidateThatNeverPassedLayout(t *testing.T) {
 		t.Fatal(err)
 	}
 	q, err := h.service.Quote(t.Context(), "alice", h.project.ID, h.batch.ID, "p/o", "p/w")
-	if err != nil || q.Pricing.SkipPlan || q.Pricing.ReusedChunks != 3 || q.Pricing.ObservationCalls != 0 || q.Pricing.PlanCalls() != 1 {
+	if err != nil || q.Pricing.RenderOnly() || q.Pricing.ReusedChunks != 3 || q.Pricing.ObservationCalls != 0 || q.Pricing.PlanCalls() != 1 {
 		t.Fatal("unvalidated candidate was reused as render-ready", err)
 	}
 }
@@ -179,7 +181,7 @@ func TestAnIncompatibleCandidatePlanIsRewrittenWithoutRepeatingAnalysis(t *testi
 	if err != nil {
 		t.Fatal(err)
 	}
-	if q.Pricing.SkipPlan || q.Pricing.ReusedChunks != 3 || q.Pricing.ObservationCalls != 0 || q.Pricing.PlanCalls() != 1 {
+	if q.Pricing.RenderOnly() || q.Pricing.ReusedChunks != 3 || q.Pricing.ObservationCalls != 0 || q.Pricing.PlanCalls() != 2 {
 		t.Fatalf("an incompatible candidate was reused or its observations repaid: %+v", q.Pricing)
 	}
 }
@@ -197,7 +199,7 @@ func TestRecoveryPartialAnalysisRepeatsOnlyTheMissingChunks(t *testing.T) {
 		t.Fatal("lost first completed chunk", err)
 	}
 	q, err := h.service.Quote(t.Context(), "alice", h.project.ID, h.batch.ID, "p/o", "p/w")
-	if err != nil || q.Pricing.ReusedChunks != 1 || q.Pricing.ObservationCalls != 2 || q.Pricing.SkipPlan {
+	if err != nil || q.Pricing.ReusedChunks != 1 || q.Pricing.ObservationCalls != 2 || q.Pricing.RenderOnly() {
 		t.Fatal("wrong partial continuation quote", err)
 	}
 	h.planner.observeErr = nil

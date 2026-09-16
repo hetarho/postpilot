@@ -150,6 +150,13 @@ it('approves once, retains local previews after terminal and refetches the resul
   const { user, revoke } = await selectSource()
   const generate = await screen.findByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' })
   await waitFor(() => expect(generate).toBeEnabled())
+  // The owner approves TWO writing calls: the footage flow, then the narration.
+  const writing = screen.getByRole('list', { name: '작성 호출' })
+  expect(
+    within(writing)
+      .getAllByRole('listitem')
+      .map((row) => row.textContent),
+  ).toEqual(['컷 구성 1회', '자막 작성 1회'])
   await user.dblClick(generate)
   await screen.findByText('영상 분석')
   expect(starts).toHaveLength(1)

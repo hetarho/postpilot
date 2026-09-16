@@ -29,8 +29,9 @@ func (p *quotePricing) Freeze(_ context.Context, o, w llm.ModelRef, count int) (
 	b.InputTokens = p.writerInput
 	b.Pricing = a.Pricing
 	b.Pricing.Delivery = llm.ExecutionTextOnly
-	credits, err := usage.ClipCredits([]usage.PricedCall{{Policy: a, Count: count}, {Policy: b, Count: 1}})
-	return clip.GenerationPricing{Version: clip.PricingPolicyVersion, Observe: a, Plan: b, ObservationCalls: count, MaxCredits: credits}, err
+	// Both writing calls are the same model at the same budget (CLIP-135).
+	credits, err := usage.ClipCredits([]usage.PricedCall{{Policy: a, Count: count}, {Policy: b, Count: 2}})
+	return clip.GenerationPricing{Version: clip.PricingPolicyVersion, Observe: a, Plan: b, Narration: b, ObservationCalls: count, MaxCredits: credits}, err
 }
 func startApproved(ctx context.Context, s *clip.GenerationService, user, id, batch, o, w string) (string, error) {
 	q, err := s.Quote(ctx, user, id, batch, o, w)
@@ -73,13 +74,13 @@ func seedCompletedGeneration(t *testing.T, h *generationHarness) {
 	h.objects.info[r.Key] = clip.SourceObjectInfo{Bytes: 5, ContentType: "video/mp4"}
 }
 
-func (p *quotePricing) FreezeWork(ctx context.Context, o, w llm.ModelRef, count int, skip bool, retries int) (clip.GenerationPricing, error) {
+func (p *quotePricing) FreezeWork(ctx context.Context, o, w llm.ModelRef, count int, skipFlow, skipNarration bool, retries int) (clip.GenerationPricing, error) {
 	pricing, err := p.Freeze(ctx, o, w, count)
 	if err != nil {
 		return pricing, err
 	}
 	// Existing fixture policies stay legacy unless a test explicitly sets retries.
-	pricing.SkipPlan = skip
+	pricing.SkipFlow, pricing.SkipNarration = skipFlow, skipNarration
 	pricing.MaxCredits, err = usage.ClipCredits([]usage.PricedCall{{Policy: pricing.Observe, Count: count}, {Policy: pricing.Plan, Count: pricing.PlanCalls()}})
 	return pricing, err
 }

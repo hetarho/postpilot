@@ -146,7 +146,9 @@ func (q *Queue) run(ctx context.Context, found Job) {
 
 func safeClipStage(stage string) string {
 	switch stage {
-	case "queued", "prepare", "analyze", "analyze_retry", "plan", "plan_retry", "render", "save", "cleanup":
+	// `plan` and `plan_retry` are the single writing call this build no longer
+	// makes; a job queued before it split keeps a readable stage.
+	case "queued", "prepare", "analyze", "analyze_retry", "flow", "flow_retry", "narrate", "narrate_retry", "plan", "plan_retry", "render", "save", "cleanup":
 		return stage
 	}
 	return "unknown"
@@ -194,7 +196,7 @@ func logJobFailure(found Job, failure Failure, err error) {
 		var staged interface{ FailureStage() string }
 		if errors.As(err, &staged) {
 			switch stage := staged.FailureStage(); stage {
-			case "prepare", "analyze", "plan", "render", "save", "cleanup":
+			case "prepare", "analyze", "flow", "narrate", "plan", "render", "save", "cleanup":
 				attrs = append(attrs, "stage", stage)
 			}
 		}

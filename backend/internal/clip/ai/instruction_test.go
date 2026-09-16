@@ -10,34 +10,30 @@ import (
 	"github.com/postpilot/backend/internal/platform/config"
 )
 
-// A project with no instruction produces exactly the request it produced before
-// the instruction existed: the original authority line, and no key for a value
-// it does not have.
-func TestNoInstructionLeavesTheRequestByteIdentical(t *testing.T) {
+// The instruction is the ONE thing it changes in a writing request, and a
+// project that carries none leaves no residue of one.
+func TestAnInstructionChangesOnlyItsOwnValue(t *testing.T) {
 	l, fade := config.ClipCompositionLimits(), 200
-	base := nativeInput()
-	systemBefore, userBefore := ai.BuildPlanPrompt(base, fade, l)
+	base := flowInput()
+	systemBefore, userBefore := ai.BuildFlowPrompt(base, fade, l)
 
 	written := base
 	written.Instruction = "고기 굽는 소리를 살려 주세요."
-	systemWith, userWith := ai.BuildPlanPrompt(written, fade, l)
-	if systemWith == systemBefore || userWith == userBefore {
-		t.Fatal("an instruction changed nothing in the request")
+	systemWith, userWith := ai.BuildFlowPrompt(written, fade, l)
+	if systemWith != systemBefore || userWith == userBefore {
+		t.Fatal("the instruction moved the contract instead of its own payload value")
 	}
 
-	// Clearing it returns the original bytes, so the instruction path leaves no
-	// residue on a project that carries none.
 	cleared := written
 	cleared.Instruction = ""
-	systemAfter, userAfter := ai.BuildPlanPrompt(cleared, fade, l)
+	systemAfter, userAfter := ai.BuildFlowPrompt(cleared, fade, l)
 	if systemAfter != systemBefore || userAfter != userBefore {
 		t.Fatal("a cleared instruction did not restore the original request")
 	}
-	if !strings.Contains(systemBefore, "Frozen XML is the content authority") || strings.Contains(systemBefore, "project_instruction") {
-		t.Fatal("the uninstructed contract changed")
-	}
-	if strings.Contains(userBefore, "project_instruction") {
-		t.Fatal("the uninstructed payload carries an instruction key")
+	// The contract states the instruction's authority whether or not this
+	// project wrote one, and the payload always carries the key.
+	if !strings.Contains(systemBefore, "project_instruction is the CONTENT authority") || !strings.Contains(userBefore, `"project_instruction":""`) {
+		t.Fatal("the uninstructed request lost the instruction's place")
 	}
 }
 
@@ -45,18 +41,20 @@ func TestNoInstructionLeavesTheRequestByteIdentical(t *testing.T) {
 // instruction overflows it is refused before any paid work, with its measured
 // size (CLIP-90).
 func TestOverlongInstructionIsRefusedBeforePaidWork(t *testing.T) {
-	l, fade := config.ClipCompositionLimits(), 200
-	base := nativeInput()
+	l := config.ClipCompositionLimits()
+	base := flowInput()
 	base.Analyses = nil
 	withInstruction := base
 	withInstruction.Instruction = strings.Repeat("가", config.ClipInstructionChars)
-	// An allowance that exactly admits the request without the instruction: the
-	// instruction is then the only thing that can overflow it.
-	system, user := ai.BuildPlanPrompt(base, fade, l)
-	allowance := ai.PromptBytes(system, user, ai.CompositionPlanSchema()) + 2048
+	// An allowance that exactly admits the LARGER of the two writing requests
+	// without the instruction: the instruction is then the only thing that can
+	// overflow it (CLIP-90).
+	cfg := config.ClipAI(&config.Config{})
+	system, user := ai.BuildNarrationPrompt(clip.NarrationInput{PlanningInput: base, Flow: ai.WidestFlow(cfg, base)}, l)
+	allowance := ai.PromptBytes(system, user, ai.NarrationSchema()) + 2048
 
-	s, models, _ := newService(t, raw(nativePlan()), true)
-	sources := []clip.AnalysisSource{nativeInput().Analyses[0].Source}
+	s, models, _ := newService(t, defaultFlow(), true)
+	sources := []clip.AnalysisSource{flowInput().Analyses[0].Source}
 	base.Policy.InputTokens, withInstruction.Policy.InputTokens = allowance, allowance
 	if err := s.ValidatePreparation(testRef(), base, sources); err != nil {
 		t.Fatalf("the same request without an instruction was refused: %v", err)

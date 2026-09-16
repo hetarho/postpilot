@@ -46,6 +46,12 @@ export const CLIP_STAGES = [
   'prepare',
   'analyze',
   'analyze_retry',
+  'flow',
+  'flow_retry',
+  'narrate',
+  'narrate_retry',
+  // The single writing call this build no longer makes: a job queued before it
+  // split into two still shows a stage the owner can read.
   'plan',
   'plan_retry',
   'render',
@@ -62,7 +68,7 @@ export function progressLabel(
       ns: 'clips',
     })
     if (
-      ['analyze_retry', 'plan_retry'].includes(job.stage) &&
+      ['analyze_retry', 'flow_retry', 'narrate_retry', 'plan_retry'].includes(job.stage) &&
       job.progressTotal === 3 &&
       job.progressDone &&
       job.progressDone >= 1 &&

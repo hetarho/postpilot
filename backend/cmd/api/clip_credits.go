@@ -17,9 +17,14 @@ type clipQuotePricing struct {
 }
 
 func (p clipQuotePricing) Freeze(ctx context.Context, observe, write llm.ModelRef, count int) (clip.GenerationPricing, error) {
-	return p.FreezeWork(ctx, observe, write, count, false, 3)
+	return p.FreezeWork(ctx, observe, write, count, false, false, 3)
 }
-func (p clipQuotePricing) FreezeWork(ctx context.Context, observe, write llm.ModelRef, count int, skipPlan bool, retries int) (clip.GenerationPricing, error) {
+
+// FreezeWork prices the calls this generation still has to make: the remaining
+// observations and each writing call the recovery cannot answer. Both writing
+// calls are the same model at its own budget, so each is frozen on its own
+// allowance and priced by its own count (CLIP-135).
+func (p clipQuotePricing) FreezeWork(ctx context.Context, observe, write llm.ModelRef, count int, skipFlow, skipNarration bool, retries int) (clip.GenerationPricing, error) {
 	a, err := p.registry.FreezeExecution(ctx, observe, "observe", p.cfg.ObserveCompletionTokens, p.cfg.ObserveReasoning, llm.ExecutionInlineStatic)
 	if err != nil {
 		// An admission answer keeps its shape so the clip context can name the
@@ -30,20 +35,22 @@ func (p clipQuotePricing) FreezeWork(ctx context.Context, observe, write llm.Mod
 		}
 		return clip.GenerationPricing{}, clip.ErrPricingUnavailable
 	}
-	b, err := p.registry.FreezeExecution(ctx, write, "write", p.cfg.PlanCompletionTokens, p.cfg.PlanReasoning, llm.ExecutionTextOnly)
+	b, err := p.registry.FreezeExecution(ctx, write, "write", p.cfg.FlowCompletionTokens, p.cfg.PlanReasoning, llm.ExecutionTextOnly)
 	if err != nil {
 		return clip.GenerationPricing{}, clip.ErrPricingUnavailable
 	}
-	a.ResponseRetries, b.ResponseRetries = retries, retries
-	planCalls := 1 + retries
-	if skipPlan {
-		planCalls = 0
-	}
-	credits, err := usage.ClipCredits([]usage.PricedCall{{Policy: a, Count: count * (1 + retries)}, {Policy: b, Count: planCalls}})
+	c, err := p.registry.FreezeExecution(ctx, write, "write", p.cfg.NarrationCompletionTokens, p.cfg.PlanReasoning, llm.ExecutionTextOnly)
 	if err != nil {
 		return clip.GenerationPricing{}, clip.ErrPricingUnavailable
 	}
-	return clip.GenerationPricing{Version: clip.PricingPolicyVersion, SkipPlan: skipPlan, Observe: a, Plan: b, ObservationCalls: count, MaxCredits: credits}, nil
+	a.ResponseRetries, b.ResponseRetries, c.ResponseRetries = retries, retries, retries
+	pricing := clip.GenerationPricing{Version: clip.PricingPolicyVersion, SkipFlow: skipFlow, SkipNarration: skipNarration, Observe: a, Plan: b, Narration: c, ObservationCalls: count}
+	credits, err := usage.ClipCredits([]usage.PricedCall{{Policy: a, Count: count * (1 + retries)}, {Policy: b, Count: pricing.FlowCalls()}, {Policy: c, Count: pricing.NarrationCalls()}})
+	if err != nil {
+		return clip.GenerationPricing{}, clip.ErrPricingUnavailable
+	}
+	pricing.MaxCredits = credits
+	return pricing, nil
 }
 
 type clipAccounting struct{ ledger *usage.Service }

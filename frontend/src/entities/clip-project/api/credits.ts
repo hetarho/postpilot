@@ -1,5 +1,5 @@
 import type { ProtoClipAccounting, ProtoClipQuote } from '@/shared/api'
-import type { ClipAccounting, ClipQuote } from '../model/types'
+import type { ClipAccounting, ClipPricedCall, ClipQuote } from '../model/types'
 
 const STATUSES = [
   'not_reserved',
@@ -87,6 +87,11 @@ export function toClipQuote(value: ProtoClipQuote, binding: string): ClipQuote {
           },
         }
       : {}),
+    calls: value.pricedCalls
+      .filter((call): call is typeof call & { label: ClipPricedCall['label'] } =>
+        ['observe', 'flow', 'narration'].includes(call.label),
+      )
+      .map((call) => ({ label: call.label, calls: call.calls })),
     quoteId: value.quoteId,
     maxCredits: value.maxCredits,
     expiresAt: value.expiresAt,

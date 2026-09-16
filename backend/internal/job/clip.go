@@ -151,7 +151,10 @@ func (q *Queue) ReserveClip(ctx context.Context, user, id string, calls []Planne
 		if i == 0 && (p.Stage != "observe" || p.Ref.String() != j.ObserveModel || p.CompletionTokens != 8192 || p.Pricing.Delivery != llm.ExecutionInlineStatic) {
 			return nil, ErrCreditAllowance
 		}
-		if i == 1 && (p.Stage != "write" || p.Ref.String() != j.WriteModel || c.Count > 1+p.ResponseRetries || p.CompletionTokens != 32768 || p.Pricing.Delivery != llm.ExecutionTextOnly) {
+		// One clip makes TWO writing calls on the same model at the same budget —
+		// the footage flow, then the narration over it — so the writing line
+		// carries both, each with its own response corrections.
+		if i == 1 && (p.Stage != "write" || p.Ref.String() != j.WriteModel || c.Count > 2*(1+p.ResponseRetries) || p.CompletionTokens != 32768 || p.Pricing.Delivery != llm.ExecutionTextOnly) {
 			return nil, ErrCreditAllowance
 		}
 		if c.Count == 0 {
