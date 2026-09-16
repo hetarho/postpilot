@@ -266,3 +266,37 @@ func TestQualifiedFieldEditAndUnlabelledGuide(t *testing.T) {
 		t.Fatal("arbitrary span accepted")
 	}
 }
+
+// The number of section instances a project admits comes from its own answers
+// (CLIP-103): a repeated group gives one per item it holds, an unanswered group
+// gives none however much prose describes it, a section bound to no group gives
+// one, and `scenes` repetition is bound to no item at all.
+func TestAdmittedSectionsCountTheAnswersNotTheProse(t *testing.T) {
+	l := config.ClipCompositionLimits()
+	body := `<clip version="1" intro="b" caption="bold" outro="e"><group id="menu"><field id="name" label="메뉴" required="true"/></group><group id="extra"><field id="note" label="메모"/></group><guide>두 묶음을 모두 길게 설명한다.</guide><scene id="opening" scope="scene"/><repeat for="menu"><scene id="dish" scope="item"/></repeat><repeat for="extra"><scene id="note" scope="item"/></repeat><repeat for="scenes"><scene id="loose" scope="scene"/></repeat><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`
+	d, p := composition.Parse(body, l)
+	if p != nil {
+		t.Fatal(p)
+	}
+	items := map[string][]composition.Item{"menu": {{ID: "one"}, {ID: "two"}}}
+	want := []composition.AdmittedSection{
+		{ID: "opening", Scope: "scene", Instances: 1},
+		{ID: "dish", Scope: "item", Repeat: "menu", Instances: 2},
+		{ID: "loose", Scope: "scene", Repeat: "scenes", Instances: l.Cuts},
+	}
+	if got := composition.AdmittedSections(d, items, l); !reflect.DeepEqual(got, want) {
+		t.Fatalf("admitted %+v, want %+v", got, want)
+	}
+	// Answering the second group admits its section; answering neither admits
+	// neither, and no section is ever reported at zero instances.
+	items["extra"] = []composition.Item{{ID: "memo"}}
+	got := composition.AdmittedSections(d, items, l)
+	if len(got) != 4 || got[2].ID != "note" || got[2].Instances != 1 {
+		t.Fatalf("an answered optional section was not admitted: %+v", got)
+	}
+	for _, s := range composition.AdmittedSections(d, map[string][]composition.Item{}, l) {
+		if s.Repeat != "" && s.Repeat != "scenes" {
+			t.Fatalf("an unanswered group was still admitted: %+v", s)
+		}
+	}
+}

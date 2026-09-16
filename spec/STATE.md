@@ -47,7 +47,6 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
-| T185 | The writer's cut budget follows the sections the answers admit | CLIP | T183 | todo |
 | T186 | A project carries its own instruction | CLIP | - | todo |
 | T187 | The writer reads the instruction and lets it outrank guidance | CLIP | T186 | todo |
 | T188 | An instruction lets the writer speak from experience | CLIP | T186 | todo |
@@ -62,9 +61,11 @@
 
 ## next
 - implement-task T191, then T190 — T191 gates T192 T193 T194 T195 and T190 makes each one's effect measurable; T193 T194 T196 carry most of the 1225 s a prod generation took.
-- implement-task T185, then T186 T187 T188 — the writer's cut budget closes the r26 delta and the instruction path is what the owner is waiting on; T189 removes the binding failure that emptied every meat caption.
+- implement-task T186, then T187 T188 — the instruction path the owner is waiting on; T189 removes the binding failure that emptied every meat caption.
 - T177 is blocked on the owner's viewing answers; T008 stays owner-dependent.
 ## log
+- 260916 T185 done; the writer is told which sections this project's answers admit and how many instances each has, the cut ceiling unchanged (owner's choice — update-ssot candidate on CLIP-103)
+- 260916 T185 claimed (grp)
 - 260916 T184 done; a validated plan under the 15 s floor fails as CLIP_INSUFFICIENT_FOOTAGE with its own plan_length_floor check, never as an unreadable response
 - 260916 flake: internal/clip/store fails one differing test per full-suite run on clip source expiry (reproduced on unmodified HEAD) — review-code candidate
 - 260916 T184 claimed (grp)
@@ -83,5 +84,3 @@
 - 260916 T177 (blocked) unaffected — it reads CLIP-27 download shape, not the writer's inputs
 - 260916 update-ssot CLIP start
 - 260916 T182 done; the writer is told each declared maximum and an over-long answer takes the shorten-then-omit ladder
-- 260916 T182 claimed (max)
-- 260916 T181 done; answers bounded where they are typed, and a stored over-long one refused by field label with its counts

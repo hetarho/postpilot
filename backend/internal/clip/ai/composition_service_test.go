@@ -732,3 +732,83 @@ func TestUnassignedCutKeepsSceneCopyThatCitesNoItemFact(t *testing.T) {
 		})
 	}
 }
+
+const admittedBody = `<clip version="1" intro="b" caption="bold" outro="e">
+<group id="menu"><field id="name" label="메뉴" required="true"/></group>
+<group id="extra"><field id="note" label="메모"/></group>
+<guide>음식을 차분하게 설명한다.</guide>
+<repeat for="menu"><scene id="dish" scope="item">
+<text id="copy" kind="ai" role="caption" basis="cut">관찰한 <value field="menu.name"/>을 설명한다.</text>
+</scene></repeat>
+<repeat for="extra"><scene id="note" scope="item">
+<text id="notecopy" kind="ai" role="caption" basis="cut">관찰한 장면을 설명한다.</text>
+</scene></repeat>
+<text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`
+
+// The writer's bound follows the answers, not the authored prose (CLIP-103):
+// the same template admits a different number of section instances for a
+// different set of answers, and a repeated group the answers left empty admits
+// no section at all however much the guides describe it.
+func TestAdmittedSectionsFollowTheAnswersNotTheAuthoredProse(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		menu  int
+		extra int
+		want  []map[string]any
+	}{
+		{"repeated group at its minimum", 1, 0, []map[string]any{{"id": "dish", "scope": "item", "repeat": "menu", "instances": float64(1)}}},
+		{"repeated group above its minimum", 3, 0, []map[string]any{{"id": "dish", "scope": "item", "repeat": "menu", "instances": float64(3)}}},
+		{"the optional group answered", 2, 1, []map[string]any{
+			{"id": "dish", "scope": "item", "repeat": "menu", "instances": float64(2)},
+			{"id": "note", "scope": "item", "repeat": "extra", "instances": float64(1)},
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			in := nativeInput()
+			in.Template = clip.Recipe{Name: "admitted", CompositionBody: admittedBody}
+			items := map[string][]composition.Item{"menu": {}, "extra": {}}
+			segments, cuts, generated := []clip.Segment{}, []any{}, []any{}
+			span := 15000 / tc.menu
+			for i := range tc.menu {
+				id := fmt.Sprint("item-", i)
+				items["menu"] = append(items["menu"], composition.Item{ID: id, Values: map[string]string{"name": id}})
+				start, end := i*span, (i+1)*span
+				if i == tc.menu-1 {
+					end = 15000
+				}
+				segments = append(segments, clip.Segment{StartMS: start, EndMS: end, Event: "담는다", Subjects: []string{id}, Quality: "clear", Focal: clip.Point{X: .5, Y: .5}, Scene: "food", Certainty: clip.CertaintyCertain, Usability: clip.UsabilityUsable})
+				refs := []string{clip.ObservationID("source", i)}
+				cuts = append(cuts, map[string]any{"id": "cut-" + id, "source_id": "source", "template_section_id": "dish", "group_id": "menu", "item_id": id, "start_ms": start, "end_ms": end, "rate_permille": 1000, "focal": map[string]any{"x": .5, "y": .5}, "volume": 1, "observation_refs": refs})
+				generated = append(generated, map[string]any{"element_id": "copy", "cut_id": "cut-" + id, "text": "관찰한 장면", "short_text": "", "keyword": "", "rows": []string{}, "short_rows": []string{}, "observation_refs": refs, "fact_refs": []any{nativeFact("name", "menu", id)}})
+			}
+			for i := range tc.extra {
+				id := fmt.Sprint("extra-", i)
+				items["extra"] = append(items["extra"], composition.Item{ID: id, Values: map[string]string{"note": id}})
+			}
+			in.Composition = &clip.ProjectComposition{Snapshot: clip.CompositionSnapshot{Version: 1, Body: admittedBody, TemplateID: "admitted"}, Inputs: clip.CompositionInputs{Values: map[string]string{}, Items: items}}
+			in.Analyses[0].Segments = segments
+			s, models, _ := newService(t, raw(map[string]any{"ratio": "vertical", "duration_ms": 15000, "cuts": cuts, "generated": generated}), true)
+			plan, _, err := s.Plan(t.Context(), testRef(), in)
+			if err != nil {
+				t.Fatalf("the admitted sections could not be filled: %v", err)
+			}
+			var payload struct {
+				Admitted []map[string]any `json:"admitted_sections"`
+			}
+			if e := json.Unmarshal([]byte(models.calls[0].Messages[0].Parts[0].Text), &payload); e != nil {
+				t.Fatal(e)
+			}
+			if !reflect.DeepEqual(payload.Admitted, tc.want) {
+				t.Fatalf("admitted sections %+v, want %+v", payload.Admitted, tc.want)
+			}
+			if !strings.Contains(models.calls[0].System, "admitted_sections lists every section") {
+				t.Fatal("the bound was not stated to the writer")
+			}
+			// The bound is not a quota: the plan filled only the sections it had
+			// footage for, and that plan is valid (CLIP-99).
+			if len(plan.Cuts) != tc.menu {
+				t.Fatalf("plan cuts %d, want %d", len(plan.Cuts), tc.menu)
+			}
+		})
+	}
+}

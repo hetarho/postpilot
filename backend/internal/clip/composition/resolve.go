@@ -263,3 +263,37 @@ func Resolve(d *Document, in Inputs, l Limits, maxExpandedBytes int) (Timeline, 
 	}
 	return out, nil
 }
+
+// AdmittedSection is one section a project's own answers admit, with the number
+// of instances those answers give it (CLIP-103).
+type AdmittedSection struct {
+	ID, Scope, Repeat string
+	Instances         int
+}
+
+// AdmittedSections is every section a project's answers actually admit, in
+// document order (CLIP-103). A section repeating a declared group takes one
+// instance per item the answers hold, so a group the answers left empty admits
+// none and drops out; a section repeating `scenes` is bound to no item and
+// takes the grammar's own cut ceiling; every other section takes one. A blank
+// optional field omits its dependent element under CLIP-60 without removing the
+// section that holds it — the scene still selects footage.
+//
+// It is a bound on what the writer may fill, never a quota to reach.
+func AdmittedSections(d *Document, items map[string][]Item, l Limits) []AdmittedSection {
+	out := []AdmittedSection{}
+	for _, s := range d.Sections {
+		instances := 1
+		switch {
+		case s.Repeat == "scenes":
+			instances = l.Cuts
+		case s.Repeat != "":
+			instances = len(items[s.Repeat])
+		}
+		if instances <= 0 {
+			continue
+		}
+		out = append(out, AdmittedSection{ID: s.ID, Scope: s.Scope, Repeat: s.Repeat, Instances: instances})
+	}
+	return out
+}
