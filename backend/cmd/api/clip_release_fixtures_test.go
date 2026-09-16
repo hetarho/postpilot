@@ -565,7 +565,14 @@ func (p *releaseProvider) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	encoded, _ := json.Marshal(content)
-	if _, native := metadata["composition_source"]; native && videoCount == 0 {
+	if source, native := metadata["composition_source"].(string); native && videoCount == 0 {
+		// A template declares no footage section any more, so the writer names
+		// none: the compiler's own single section carries every cut. A legacy
+		// snapshot still declares `footage` and the writer must name it.
+		sectionID := ""
+		if strings.Contains(source, "<scene") {
+			sectionID = "footage"
+		}
 		value := content.(map[string]any)
 		delete(value, "hook")
 		value["generated"] = []any{}
@@ -574,7 +581,7 @@ func (p *releaseProvider) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			cut := entry.(map[string]any)
 			delete(cut, "caption")
 			delete(cut, "chips")
-			cut["template_section_id"], cut["group_id"], cut["item_id"] = "footage", "", ""
+			cut["template_section_id"], cut["group_id"], cut["item_id"] = sectionID, "", ""
 			refs := []string{}
 			for _, entry := range analyses {
 				analysis := entry.(map[string]any)
@@ -699,7 +706,10 @@ func releaseCorrelation(a, b []byte) float64 {
 }
 
 // Synthetic content with the same detailed-template plus twenty-observation
-// failure shape. No customer XML, facts or footage are committed.
+// failure shape, written under the grammar a template must satisfy today: the
+// design selection, two long guides, the badge and the two slots, with no
+// footage section, caption or information element of its own (CLIP-4, CLIP-59).
+// No customer XML, facts or footage are committed.
 func releaseDetailedBody() string {
-	return `<clip version="1" intro="b" caption="bold" outro="e"><guide>` + strings.Repeat("관찰한 장면을 차분히 설명한다. ", 130) + `</guide><guide>` + strings.Repeat("관찰한 사실과 입력한 내용만 사용한다. ", 110) + `</guide><text id="label" kind="fixed" role="badge" position="header" basis="whole">검증용 영상</text><text id="place" kind="fixed" role="info" position="bottom" basis="output-start" start="0" end="3">서울 식당</text><text id="opening" kind="fixed" role="hook" basis="output-start" start="0" end="3"><row>오늘의 기록</row></text><text id="score" kind="fixed" role="info" position="bottom" basis="output-end" start="-4" end="0">제 기준 다시 방문하고 싶은 식당입니다 오늘도/5점</text><text id="closing" kind="fixed" role="ending" basis="output-end" start="-4" end="0"><row>다음에 또 만나요</row></text><repeat for="scenes"><scene id="footage" scope="scene"/></repeat></clip>`
+	return `<clip version="1" intro="b" caption="bold" outro="e"><guide>` + strings.Repeat("관찰한 장면을 차분히 설명한다. ", 130) + `</guide><guide>` + strings.Repeat("관찰한 사실과 입력한 내용만 사용한다. ", 110) + `</guide><text id="label" kind="fixed" role="badge" position="header" basis="whole">검증용 영상</text><text id="opening" kind="fixed" role="hook" basis="output-start" start="0" end="3"><row>오늘의 기록</row><row>직접 남긴 장면</row></text><text id="closing" kind="fixed" role="ending" basis="output-end" start="-4" end="0"><row>다음에 또 만나요</row><row>또 오고 싶은 곳</row></text></clip>`
 }

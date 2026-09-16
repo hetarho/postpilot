@@ -135,8 +135,11 @@ func releaseRequest[T any](h *releaseHarness, msg *T) *connect.Request[T] {
 	return r
 }
 
+// The release smoke saves this body as a TEMPLATE, so it must satisfy the
+// template grammar, not only the wider snapshot one. Checking it here keeps the
+// break inside `go test ./...` instead of the Docker gate beside the deploy.
 func TestReleaseDetailedBodyUsesCurrentGrammar(t *testing.T) {
-	doc, problem := composition.Parse(releaseDetailedBody(), config.ClipCompositionLimits())
+	doc, problem := composition.ParseTemplate(releaseDetailedBody(), config.ClipCompositionLimits())
 	if problem != nil {
 		t.Fatal(problem)
 	}
