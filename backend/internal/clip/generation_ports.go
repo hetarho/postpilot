@@ -51,7 +51,10 @@ type GenerationStart struct {
 	UserID, ProjectID, Observe, Write string
 	Payload                           []byte
 	RenderOnly                        bool
-	Quote                             *GenerationQuote
+	// One owner-written revision of the saved plan (CLIP-131): charged work
+	// with no media in it.
+	Revise bool
+	Quote  *GenerationQuote
 }
 type ClipJob struct {
 	FinishedAt              *time.Time

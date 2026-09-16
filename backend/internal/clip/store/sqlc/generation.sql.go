@@ -101,6 +101,25 @@ func (q *Queries) HasActiveClipJob(ctx context.Context, clipProjectID sql.NullSt
 	return count, err
 }
 
+const hasOtherActiveClipJob = `-- name: HasOtherActiveClipJob :one
+SELECT COUNT(*) FROM generation_jobs WHERE clip_project_id=?1 AND id!=?2 AND status IN ('queued','running')
+`
+
+type HasOtherActiveClipJobParams struct {
+	ProjectID sql.NullString
+	JobID     string
+}
+
+// Every active clip job EXCEPT the one asking. A revision saves the plan it
+// just rewrote from inside its own run, and would otherwise be refused as busy
+// by itself (CLIP-131).
+func (q *Queries) HasOtherActiveClipJob(ctx context.Context, arg HasOtherActiveClipJobParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, hasOtherActiveClipJob, arg.ProjectID, arg.JobID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const linkSourceJob = `-- name: LinkSourceJob :execrows
 UPDATE clip_source_batches SET state='consuming',job_id=? WHERE clip_source_batches.id=? AND clip_source_batches.user_id=? AND clip_source_batches.state='ready' AND NOT EXISTS(SELECT 1 FROM clip_source_leases l WHERE l.batch_id=clip_source_batches.id AND (l.cleanup_pending=1 OR l.state!='ready' OR l.retention_expires_at<=?4)) AND EXISTS(SELECT 1 FROM clip_projects p WHERE p.id=clip_source_batches.project_id AND p.user_id=clip_source_batches.user_id AND p.source_batch_id=clip_source_batches.id AND p.deleting=0 AND p.finalized_at IS NULL AND p.source_access_revoked_at IS NULL)
 `

@@ -34,7 +34,7 @@ func (f clipFinisher) Complete(ctx context.Context, c clip.AttemptResult) error 
 	if err != nil {
 		return err
 	}
-	if j.UserID != c.UserID || j.ClipProjectID != c.ProjectID || (j.Kind != job.KindGenerateClip && j.Kind != job.KindRenderClip) {
+	if j.UserID != c.UserID || j.ClipProjectID != c.ProjectID || !job.ClipKind(j.Kind) {
 		return clip.ErrNotFound
 	}
 	if f.resultCommitted(cleanup, c) {

@@ -10,6 +10,17 @@ import (
 )
 
 func (s *Store) SaveCorrection(ctx context.Context, user, id string, revision int, raw string) (clip.Project, error) {
+	return s.saveCorrection(ctx, user, id, "", revision, raw)
+}
+
+// SaveRevisedPlan is the same save, performed by the revision job that wrote the
+// plan: every other active job still refuses it, but the job doing the writing
+// is not "busy" against itself (CLIP-131).
+func (s *Store) SaveRevisedPlan(ctx context.Context, user, id, job string, revision int, raw string) (clip.Project, error) {
+	return s.saveCorrection(ctx, user, id, job, revision, raw)
+}
+
+func (s *Store) saveCorrection(ctx context.Context, user, id, job string, revision int, raw string) (clip.Project, error) {
 	return transact(ctx, s, func(q *sqlc.Queries) (clip.Project, error) {
 		p, err := getProject(ctx, q, user, id)
 		if err != nil {
@@ -18,7 +29,7 @@ func (s *Store) SaveCorrection(ctx context.Context, user, id string, revision in
 		if p.Finalized != nil {
 			return clip.Project{}, clip.ErrFinalized
 		}
-		busy, err := q.HasActiveClipJob(ctx, nullable(id))
+		busy, err := q.HasOtherActiveClipJob(ctx, sqlc.HasOtherActiveClipJobParams{ProjectID: nullable(id), JobID: job})
 		if err != nil {
 			return clip.Project{}, err
 		}

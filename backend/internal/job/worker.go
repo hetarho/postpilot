@@ -50,7 +50,7 @@ func (q *Queue) run(ctx context.Context, found Job) {
 	workerCtx := ctx
 	started := time.Now()
 	stage, stageStarted := "queued", started
-	clipJob := found.Kind == KindGenerateClip || found.Kind == KindRenderClip
+	clipJob := ClipKind(found.Kind)
 	if clipJob {
 		slog.Info("clip job started", "job", found.ID, "kind", found.Kind)
 		defer func() {
@@ -158,7 +158,7 @@ func callHandler(ctx context.Context, handler Handler, found Job, progress Progr
 	defer func() {
 		if recovered := recover(); recovered != nil {
 			attrs := []any{"job", found.ID, "kind", found.Kind}
-			if found.Kind != KindGenerateClip && found.Kind != KindRenderClip {
+			if !ClipKind(found.Kind) {
 				attrs = append(attrs, "panic", recovered)
 			}
 			slog.Error("job handler panicked", attrs...)
@@ -172,7 +172,7 @@ func callHandler(ctx context.Context, handler Handler, found Job, progress Progr
 // only normalized metadata even if an unexpected handler bypasses StageFailure.
 func logJobFailure(found Job, failure Failure, err error) {
 	attrs := []any{"job", found.ID, "kind", found.Kind, "reason", failure.Reason}
-	if found.Kind != KindGenerateClip && found.Kind != KindRenderClip {
+	if !ClipKind(found.Kind) {
 		attrs = append(attrs, "err", err)
 	} else {
 		var media interface {

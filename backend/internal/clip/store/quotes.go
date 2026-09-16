@@ -85,9 +85,25 @@ func validateQuoteInputs(ctx context.Context, q *sqlc.Queries, quote clip.Genera
 }
 
 func (s *Store) SaveQuote(ctx context.Context, quote clip.GenerationQuote, now time.Time) error {
+	return s.saveQuote(ctx, quote, now, true)
+}
+
+// SaveRevisionQuote stores a REVISION's quote. Its digest binds the saved plan
+// and the owner's words rather than the generation inputs, so the generation's
+// own input check would refuse a perfectly good quote; the service has already
+// checked what this quote is about (CLIP-131).
+func (s *Store) SaveRevisionQuote(ctx context.Context, quote clip.GenerationQuote, now time.Time) error {
+	return s.saveQuote(ctx, quote, now, false)
+}
+
+func (s *Store) saveQuote(ctx context.Context, quote clip.GenerationQuote, now time.Time, generation bool) error {
 	_, err := transact(ctx, s, func(q *sqlc.Queries) (struct{}, error) {
-		if err := validateQuoteInputs(ctx, q, quote, now); err != nil {
-			return struct{}{}, err
+		if generation {
+			if err := validateQuoteInputs(ctx, q, quote, now); err != nil {
+				return struct{}{}, err
+			}
+		} else if !now.Before(quote.ExpiresAt) {
+			return struct{}{}, clip.ErrQuoteExpired
 		}
 		pricing, err := json.Marshal(quote.Pricing)
 		if err != nil {
@@ -98,6 +114,45 @@ func (s *Store) SaveQuote(ctx context.Context, quote clip.GenerationQuote, now t
 			err = clip.ErrQuoteChanged
 		}
 		return struct{}{}, err
+	})
+	return err
+}
+
+// LinkRevisionJob consumes a REVISION's quote and renews the originals'
+// retention (CLIP-73). It repeats none of the generation's input check: a
+// revision's quote binds the saved plan and the owner's words, which the
+// service verified against the current project before it enqueued anything,
+// and neither the batch nor the template decides what this job rewrites.
+func (s *Store) LinkRevisionJob(ctx context.Context, quote clip.GenerationQuote, job string, now time.Time) error {
+	_, err := transact(ctx, s, func(q *sqlc.Queries) (struct{}, error) {
+		r, err := q.GetClipQuote(ctx, sqlc.GetClipQuoteParams{UserID: quote.UserID, ID: quote.ID})
+		if err != nil {
+			return struct{}{}, err
+		}
+		stored, err := quoteRow(r)
+		if err != nil {
+			return struct{}{}, err
+		}
+		if stored.ConsumedJobID != "" {
+			if stored.ConsumedJobID == job {
+				return struct{}{}, nil
+			}
+			return struct{}{}, clip.ErrQuoteChanged
+		}
+		if !reflect.DeepEqual(stored, quote) {
+			return struct{}{}, clip.ErrQuoteChanged
+		}
+		if !now.Before(stored.ExpiresAt) {
+			return struct{}{}, clip.ErrQuoteExpired
+		}
+		n, err := q.ConsumeClipQuote(ctx, sqlc.ConsumeClipQuoteParams{ConsumedJobID: nullable(job), UserID: quote.UserID, ID: quote.ID, ExpiresAt: stamp(now)})
+		if err != nil {
+			return struct{}{}, err
+		}
+		if n != 1 {
+			return struct{}{}, clip.ErrQuoteChanged
+		}
+		return struct{}{}, bindSourceAttempt(ctx, q, quote.UserID, quote.BatchID, job, now)
 	})
 	return err
 }

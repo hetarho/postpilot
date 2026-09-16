@@ -108,6 +108,12 @@ const (
 	// ClipServiceReorderClipSourcesProcedure is the fully-qualified name of the ClipService's
 	// ReorderClipSources RPC.
 	ClipServiceReorderClipSourcesProcedure = "/postpilot.v1.ClipService/ReorderClipSources"
+	// ClipServiceQuoteClipRevisionProcedure is the fully-qualified name of the ClipService's
+	// QuoteClipRevision RPC.
+	ClipServiceQuoteClipRevisionProcedure = "/postpilot.v1.ClipService/QuoteClipRevision"
+	// ClipServiceStartClipRevisionProcedure is the fully-qualified name of the ClipService's
+	// StartClipRevision RPC.
+	ClipServiceStartClipRevisionProcedure = "/postpilot.v1.ClipService/StartClipRevision"
 	// ClipServiceListClipAnalysisEligibilityProcedure is the fully-qualified name of the ClipService's
 	// ListClipAnalysisEligibility RPC.
 	ClipServiceListClipAnalysisEligibilityProcedure = "/postpilot.v1.ClipService/ListClipAnalysisEligibility"
@@ -144,6 +150,10 @@ type ClipServiceClient interface {
 	// Owner-only. The order the footage plays in when no instruction says
 	// otherwise; the whole batch or nothing.
 	ReorderClipSources(context.Context, *connect.Request[v1.ReorderClipSourcesRequest]) (*connect.Response[v1.ReorderClipSourcesResponse], error)
+	// The single charged action of step ②: one written revision of the saved
+	// plan, priced for the writing calls its target needs.
+	QuoteClipRevision(context.Context, *connect.Request[v1.QuoteClipRevisionRequest]) (*connect.Response[v1.QuoteClipRevisionResponse], error)
+	StartClipRevision(context.Context, *connect.Request[v1.StartClipRevisionRequest]) (*connect.Response[v1.StartClipRevisionResponse], error)
 	// Read-only: every registered observe model with its current clip-analysis
 	// eligibility (CLIP-30, CLIP-44). No model call, no write, no provider detail.
 	ListClipAnalysisEligibility(context.Context, *connect.Request[v1.ListClipAnalysisEligibilityRequest]) (*connect.Response[v1.ListClipAnalysisEligibilityResponse], error)
@@ -310,6 +320,18 @@ func NewClipServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(clipServiceMethods.ByName("ReorderClipSources")),
 			connect.WithClientOptions(opts...),
 		),
+		quoteClipRevision: connect.NewClient[v1.QuoteClipRevisionRequest, v1.QuoteClipRevisionResponse](
+			httpClient,
+			baseURL+ClipServiceQuoteClipRevisionProcedure,
+			connect.WithSchema(clipServiceMethods.ByName("QuoteClipRevision")),
+			connect.WithClientOptions(opts...),
+		),
+		startClipRevision: connect.NewClient[v1.StartClipRevisionRequest, v1.StartClipRevisionResponse](
+			httpClient,
+			baseURL+ClipServiceStartClipRevisionProcedure,
+			connect.WithSchema(clipServiceMethods.ByName("StartClipRevision")),
+			connect.WithClientOptions(opts...),
+		),
 		listClipAnalysisEligibility: connect.NewClient[v1.ListClipAnalysisEligibilityRequest, v1.ListClipAnalysisEligibilityResponse](
 			httpClient,
 			baseURL+ClipServiceListClipAnalysisEligibilityProcedure,
@@ -346,6 +368,8 @@ type clipServiceClient struct {
 	getClipSourcePlayback       *connect.Client[v1.GetClipSourcePlaybackRequest, v1.GetClipSourcePlaybackResponse]
 	setClipSourceOriginalSound  *connect.Client[v1.SetClipSourceOriginalSoundRequest, v1.SetClipSourceOriginalSoundResponse]
 	reorderClipSources          *connect.Client[v1.ReorderClipSourcesRequest, v1.ReorderClipSourcesResponse]
+	quoteClipRevision           *connect.Client[v1.QuoteClipRevisionRequest, v1.QuoteClipRevisionResponse]
+	startClipRevision           *connect.Client[v1.StartClipRevisionRequest, v1.StartClipRevisionResponse]
 	listClipAnalysisEligibility *connect.Client[v1.ListClipAnalysisEligibilityRequest, v1.ListClipAnalysisEligibilityResponse]
 }
 
@@ -474,6 +498,16 @@ func (c *clipServiceClient) ReorderClipSources(ctx context.Context, req *connect
 	return c.reorderClipSources.CallUnary(ctx, req)
 }
 
+// QuoteClipRevision calls postpilot.v1.ClipService.QuoteClipRevision.
+func (c *clipServiceClient) QuoteClipRevision(ctx context.Context, req *connect.Request[v1.QuoteClipRevisionRequest]) (*connect.Response[v1.QuoteClipRevisionResponse], error) {
+	return c.quoteClipRevision.CallUnary(ctx, req)
+}
+
+// StartClipRevision calls postpilot.v1.ClipService.StartClipRevision.
+func (c *clipServiceClient) StartClipRevision(ctx context.Context, req *connect.Request[v1.StartClipRevisionRequest]) (*connect.Response[v1.StartClipRevisionResponse], error) {
+	return c.startClipRevision.CallUnary(ctx, req)
+}
+
 // ListClipAnalysisEligibility calls postpilot.v1.ClipService.ListClipAnalysisEligibility.
 func (c *clipServiceClient) ListClipAnalysisEligibility(ctx context.Context, req *connect.Request[v1.ListClipAnalysisEligibilityRequest]) (*connect.Response[v1.ListClipAnalysisEligibilityResponse], error) {
 	return c.listClipAnalysisEligibility.CallUnary(ctx, req)
@@ -510,6 +544,10 @@ type ClipServiceHandler interface {
 	// Owner-only. The order the footage plays in when no instruction says
 	// otherwise; the whole batch or nothing.
 	ReorderClipSources(context.Context, *connect.Request[v1.ReorderClipSourcesRequest]) (*connect.Response[v1.ReorderClipSourcesResponse], error)
+	// The single charged action of step ②: one written revision of the saved
+	// plan, priced for the writing calls its target needs.
+	QuoteClipRevision(context.Context, *connect.Request[v1.QuoteClipRevisionRequest]) (*connect.Response[v1.QuoteClipRevisionResponse], error)
+	StartClipRevision(context.Context, *connect.Request[v1.StartClipRevisionRequest]) (*connect.Response[v1.StartClipRevisionResponse], error)
 	// Read-only: every registered observe model with its current clip-analysis
 	// eligibility (CLIP-30, CLIP-44). No model call, no write, no provider detail.
 	ListClipAnalysisEligibility(context.Context, *connect.Request[v1.ListClipAnalysisEligibilityRequest]) (*connect.Response[v1.ListClipAnalysisEligibilityResponse], error)
@@ -672,6 +710,18 @@ func NewClipServiceHandler(svc ClipServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(clipServiceMethods.ByName("ReorderClipSources")),
 		connect.WithHandlerOptions(opts...),
 	)
+	clipServiceQuoteClipRevisionHandler := connect.NewUnaryHandler(
+		ClipServiceQuoteClipRevisionProcedure,
+		svc.QuoteClipRevision,
+		connect.WithSchema(clipServiceMethods.ByName("QuoteClipRevision")),
+		connect.WithHandlerOptions(opts...),
+	)
+	clipServiceStartClipRevisionHandler := connect.NewUnaryHandler(
+		ClipServiceStartClipRevisionProcedure,
+		svc.StartClipRevision,
+		connect.WithSchema(clipServiceMethods.ByName("StartClipRevision")),
+		connect.WithHandlerOptions(opts...),
+	)
 	clipServiceListClipAnalysisEligibilityHandler := connect.NewUnaryHandler(
 		ClipServiceListClipAnalysisEligibilityProcedure,
 		svc.ListClipAnalysisEligibility,
@@ -730,6 +780,10 @@ func NewClipServiceHandler(svc ClipServiceHandler, opts ...connect.HandlerOption
 			clipServiceSetClipSourceOriginalSoundHandler.ServeHTTP(w, r)
 		case ClipServiceReorderClipSourcesProcedure:
 			clipServiceReorderClipSourcesHandler.ServeHTTP(w, r)
+		case ClipServiceQuoteClipRevisionProcedure:
+			clipServiceQuoteClipRevisionHandler.ServeHTTP(w, r)
+		case ClipServiceStartClipRevisionProcedure:
+			clipServiceStartClipRevisionHandler.ServeHTTP(w, r)
 		case ClipServiceListClipAnalysisEligibilityProcedure:
 			clipServiceListClipAnalysisEligibilityHandler.ServeHTTP(w, r)
 		default:
@@ -839,6 +893,14 @@ func (UnimplementedClipServiceHandler) SetClipSourceOriginalSound(context.Contex
 
 func (UnimplementedClipServiceHandler) ReorderClipSources(context.Context, *connect.Request[v1.ReorderClipSourcesRequest]) (*connect.Response[v1.ReorderClipSourcesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipService.ReorderClipSources is not implemented"))
+}
+
+func (UnimplementedClipServiceHandler) QuoteClipRevision(context.Context, *connect.Request[v1.QuoteClipRevisionRequest]) (*connect.Response[v1.QuoteClipRevisionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipService.QuoteClipRevision is not implemented"))
+}
+
+func (UnimplementedClipServiceHandler) StartClipRevision(context.Context, *connect.Request[v1.StartClipRevisionRequest]) (*connect.Response[v1.StartClipRevisionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipService.StartClipRevision is not implemented"))
 }
 
 func (UnimplementedClipServiceHandler) ListClipAnalysisEligibility(context.Context, *connect.Request[v1.ListClipAnalysisEligibilityRequest]) (*connect.Response[v1.ListClipAnalysisEligibilityResponse], error) {

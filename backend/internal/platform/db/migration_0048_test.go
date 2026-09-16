@@ -74,6 +74,14 @@ func TestMigration0048PreservesJobGuardsAndHistoricalSettlement(t *testing.T) {
 	}
 	after := guards()
 	for name, sql := range before {
+		// 0059 rewrites this one on purpose: a revision job may consume a quote
+		// too (CLIP-131). Everything the guard checks is otherwise unchanged.
+		if name == "clip_quote_job_owner" {
+			if !strings.Contains(after[name], "revise_clip") || !strings.Contains(after[name], "dispatch_ready=0") {
+				t.Fatalf("the quote job guard lost what it checks: %s", after[name])
+			}
+			continue
+		}
 		if after[name] != sql {
 			t.Fatalf("existing job guard %s changed", name)
 		}

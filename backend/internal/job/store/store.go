@@ -98,7 +98,7 @@ func (s *Store) Finish(ctx context.Context, id, status string, failure *job.Fail
 	}
 	if changed != 1 {
 		j, readErr := s.GetByID(ctx, id)
-		if readErr == nil && (j.Kind == job.KindGenerateClip || j.Kind == job.KindRenderClip) && job.Terminal(j.Status) && j.Status == status {
+		if readErr == nil && job.ClipKind(j.Kind) && job.Terminal(j.Status) && j.Status == status {
 			return nil
 		}
 		return errors.New("finish job: no running job changed")
@@ -380,7 +380,7 @@ func parseOptionalTime(value sql.NullString) (*time.Time, error) {
 }
 
 func dispatchReady(kind string) int64 {
-	if kind == job.KindGenerateClip || kind == job.KindRenderClip {
+	if job.ClipKind(kind) {
 		return 0
 	}
 	return 1

@@ -25,13 +25,13 @@ func (q *Queue) CancelClipJob(ctx context.Context, user, project, id string) (*J
 	if err != nil {
 		return nil, err
 	}
-	if j.UserID != user || j.ClipProjectID != project || project == "" || (j.Kind != KindGenerateClip && j.Kind != KindRenderClip) {
+	if j.UserID != user || j.ClipProjectID != project || project == "" || !ClipKind(j.Kind) {
 		return nil, ErrNotFound
 	}
 	if Terminal(j.Status) {
 		return summarize(j), nil
 	}
-	if j.Kind == KindGenerateClip && (j.CancellationPolicyVersion != 1 || q.clipGuard == nil) {
+	if j.Kind != KindRenderClip && (j.CancellationPolicyVersion != 1 || q.clipGuard == nil) {
 		return nil, ErrCancellationUnavailable
 	}
 	requestErr := s.RequestClipCancellation(ctx, user, project, id, q.now())

@@ -11,6 +11,16 @@ import (
 const KindGenerateClip = "generate_clip"
 const KindRenderClip = "render_clip"
 
+// ClipKind reports whether a job belongs to the clip surface at all.
+func ClipKind(kind string) bool {
+	return kind == KindGenerateClip || kind == KindRenderClip || kind == KindReviseClip
+}
+
+// One owner-written revision of a saved plan (CLIP-131). It is charged work
+// like a generation — it calls the writing model — and does no media work at
+// all, which is why it is its own kind rather than a generation with a flag.
+const KindReviseClip = "revise_clip"
+
 var ErrCreditAllowance = errors.New("clip call has no reserved credit allowance")
 
 // ClipStore is the extension used only by the deferred-admission clip queue path.
@@ -26,7 +36,7 @@ func (q *Queue) ClipJobSnapshot(ctx context.Context, user, project, id string) (
 	if err != nil {
 		return nil, err
 	}
-	if j.UserID != user || j.ClipProjectID != project || (j.Kind != KindGenerateClip && j.Kind != KindRenderClip) {
+	if j.UserID != user || j.ClipProjectID != project || !ClipKind(j.Kind) {
 		return nil, ErrNotFound
 	}
 	return &j, nil
@@ -125,7 +135,7 @@ func (q *Queue) ReserveClip(ctx context.Context, user, id string, calls []Planne
 	if err != nil {
 		return nil, err
 	}
-	if j.UserID != user || j.Kind != KindGenerateClip || j.Status != StatusRunning || j.Stage != "prepare" || j.CancelRequestedAt != nil || q.admitter == nil || j.CancellationPolicyVersion != approval[0].CancellationPolicyVersion {
+	if j.UserID != user || j.Kind == KindRenderClip || !ClipKind(j.Kind) || j.Status != StatusRunning || j.Stage != "prepare" || j.CancelRequestedAt != nil || q.admitter == nil || j.CancellationPolicyVersion != approval[0].CancellationPolicyVersion {
 		return nil, ErrCreditAllowance
 	}
 	remaining := map[callKey]int{}

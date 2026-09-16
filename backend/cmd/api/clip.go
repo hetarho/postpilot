@@ -44,7 +44,10 @@ func newClipGeneration(ctx context.Context, cfg *config.Config, store *clipstore
 	queue.Register(job.KindRenderClip, metered(func(ctx context.Context, j job.Job, progress job.Progress) error {
 		return service.RunRender(ctx, j.UserID, j.ID, j.ClipProjectID, j.Payload, progress)
 	}))
-	for _, kind := range []string{job.KindGenerateClip, job.KindRenderClip} {
+	queue.Register(job.KindReviseClip, metered(func(ctx context.Context, j job.Job, progress job.Progress) error {
+		return service.RunRevision(ctx, j.UserID, j.ID, j.ClipProjectID, j.Payload, progress)
+	}))
+	for _, kind := range []string{job.KindGenerateClip, job.KindRenderClip, job.KindReviseClip} {
 		queue.OnTerminal(kind, func(ctx context.Context, j job.Job, at time.Time) error {
 			return sources.ReleaseAttempt(ctx, j.UserID, j.ID, at)
 		})
@@ -61,6 +64,9 @@ func (a clipJobs) Enqueue(ctx context.Context, s clip.GenerationStart) (string, 
 	kind := job.KindGenerateClip
 	if s.RenderOnly {
 		kind = job.KindRenderClip
+	}
+	if s.Revise {
+		kind = job.KindReviseClip
 	}
 	policy := 0
 	if s.Quote != nil {

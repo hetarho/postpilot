@@ -10,6 +10,7 @@ UPDATE generation_jobs
 SET status = 'running',
     stage = CASE kind
         WHEN 'generate_clip' THEN 'prepare'
+        WHEN 'revise_clip' THEN 'prepare'
         WHEN 'analyze_voice' THEN 'analyze'
         WHEN 'learn_voice' THEN 'learn'
         WHEN 'compare_voice_rule' THEN 'compare_rule'
@@ -115,9 +116,9 @@ SELECT * FROM generation_jobs WHERE user_id=? AND clip_project_id=? AND status I
 -- name: LatestForClip :one
 SELECT * FROM generation_jobs WHERE user_id=? AND clip_project_id=? ORDER BY created_at DESC,id DESC LIMIT 1;
 -- name: ActivateClip :execrows
-UPDATE generation_jobs SET dispatch_ready=1 WHERE user_id=? AND id=? AND kind IN ('generate_clip','render_clip') AND status='queued' AND dispatch_ready=0 AND cancel_requested_at IS NULL;
+UPDATE generation_jobs SET dispatch_ready=1 WHERE user_id=? AND id=? AND kind IN ('generate_clip','render_clip','revise_clip') AND status='queued' AND dispatch_ready=0 AND cancel_requested_at IS NULL;
 -- name: SweepUnactivatedClips :execrows
-UPDATE generation_jobs SET status='failed', error_reason=?, error_params=?, technical_detail=?, finished_at=?, updated_at=? WHERE kind IN ('generate_clip','render_clip') AND status='queued' AND dispatch_ready=0 AND cancel_requested_at IS NULL;
+UPDATE generation_jobs SET status='failed', error_reason=?, error_params=?, technical_detail=?, finished_at=?, updated_at=? WHERE kind IN ('generate_clip','render_clip','revise_clip') AND status='queued' AND dispatch_ready=0 AND cancel_requested_at IS NULL;
 
 -- name: RequestClipCancellation :execrows
 UPDATE generation_jobs SET cancel_requested_at=sqlc.arg(now), updated_at=sqlc.arg(now),
@@ -125,12 +126,12 @@ UPDATE generation_jobs SET cancel_requested_at=sqlc.arg(now), updated_at=sqlc.ar
  finished_at=CASE WHEN status='queued' THEN sqlc.arg(now) ELSE finished_at END
 WHERE id=sqlc.arg(id) AND user_id=sqlc.arg(user_id) AND clip_project_id=sqlc.arg(project_id)
  AND status IN ('queued','running') AND cancel_requested_at IS NULL
- AND (kind='render_clip' OR (kind='generate_clip' AND cancellation_policy_version=1));
+ AND (kind='render_clip' OR (kind IN ('generate_clip','revise_clip') AND cancellation_policy_version=1));
 -- name: RecoverClipCancellations :execrows
 UPDATE generation_jobs SET status='cancelled',finished_at=sqlc.arg(now),updated_at=sqlc.arg(now),
  error=NULL,error_reason=NULL,error_params=NULL,technical_detail=NULL
 WHERE status IN ('queued','running') AND cancel_requested_at IS NOT NULL
- AND kind IN ('generate_clip','render_clip');
+ AND kind IN ('generate_clip','render_clip','revise_clip');
 -- name: AuthorizeClipDispatch :execrows
 UPDATE generation_jobs SET updated_at=updated_at
-WHERE id=? AND user_id=? AND kind='generate_clip' AND status='running' AND cancel_requested_at IS NULL;
+WHERE id=? AND user_id=? AND kind IN ('generate_clip','revise_clip') AND status='running' AND cancel_requested_at IS NULL;

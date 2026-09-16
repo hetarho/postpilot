@@ -11,7 +11,7 @@ import (
 )
 
 const activateClip = `-- name: ActivateClip :execrows
-UPDATE generation_jobs SET dispatch_ready=1 WHERE user_id=? AND id=? AND kind IN ('generate_clip','render_clip') AND status='queued' AND dispatch_ready=0 AND cancel_requested_at IS NULL
+UPDATE generation_jobs SET dispatch_ready=1 WHERE user_id=? AND id=? AND kind IN ('generate_clip','render_clip','revise_clip') AND status='queued' AND dispatch_ready=0 AND cancel_requested_at IS NULL
 `
 
 type ActivateClipParams struct {
@@ -332,7 +332,7 @@ func (q *Queries) ActiveModelExperiment(ctx context.Context, payload string) (Ge
 
 const authorizeClipDispatch = `-- name: AuthorizeClipDispatch :execrows
 UPDATE generation_jobs SET updated_at=updated_at
-WHERE id=? AND user_id=? AND kind='generate_clip' AND status='running' AND cancel_requested_at IS NULL
+WHERE id=? AND user_id=? AND kind IN ('generate_clip','revise_clip') AND status='running' AND cancel_requested_at IS NULL
 `
 
 type AuthorizeClipDispatchParams struct {
@@ -547,6 +547,7 @@ UPDATE generation_jobs
 SET status = 'running',
     stage = CASE kind
         WHEN 'generate_clip' THEN 'prepare'
+        WHEN 'revise_clip' THEN 'prepare'
         WHEN 'analyze_voice' THEN 'analyze'
         WHEN 'learn_voice' THEN 'learn'
         WHEN 'compare_voice_rule' THEN 'compare_rule'
@@ -611,7 +612,7 @@ const recoverClipCancellations = `-- name: RecoverClipCancellations :execrows
 UPDATE generation_jobs SET status='cancelled',finished_at=?1,updated_at=?1,
  error=NULL,error_reason=NULL,error_params=NULL,technical_detail=NULL
 WHERE status IN ('queued','running') AND cancel_requested_at IS NOT NULL
- AND kind IN ('generate_clip','render_clip')
+ AND kind IN ('generate_clip','render_clip','revise_clip')
 `
 
 func (q *Queries) RecoverClipCancellations(ctx context.Context, now sql.NullString) (int64, error) {
@@ -628,7 +629,7 @@ UPDATE generation_jobs SET cancel_requested_at=?1, updated_at=?1,
  finished_at=CASE WHEN status='queued' THEN ?1 ELSE finished_at END
 WHERE id=?2 AND user_id=?3 AND clip_project_id=?4
  AND status IN ('queued','running') AND cancel_requested_at IS NULL
- AND (kind='render_clip' OR (kind='generate_clip' AND cancellation_policy_version=1))
+ AND (kind='render_clip' OR (kind IN ('generate_clip','revise_clip') AND cancellation_policy_version=1))
 `
 
 type RequestClipCancellationParams struct {
@@ -711,7 +712,7 @@ func (q *Queries) SweepRunning(ctx context.Context, arg SweepRunningParams) (int
 }
 
 const sweepUnactivatedClips = `-- name: SweepUnactivatedClips :execrows
-UPDATE generation_jobs SET status='failed', error_reason=?, error_params=?, technical_detail=?, finished_at=?, updated_at=? WHERE kind IN ('generate_clip','render_clip') AND status='queued' AND dispatch_ready=0 AND cancel_requested_at IS NULL
+UPDATE generation_jobs SET status='failed', error_reason=?, error_params=?, technical_detail=?, finished_at=?, updated_at=? WHERE kind IN ('generate_clip','render_clip','revise_clip') AND status='queued' AND dispatch_ready=0 AND cancel_requested_at IS NULL
 `
 
 type SweepUnactivatedClipsParams struct {

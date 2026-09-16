@@ -19,7 +19,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -231,14 +230,27 @@ func (p *plannerFake) Flow(ctx context.Context, r llm.ModelRef, in clip.Planning
 // what these tests are for.
 func (p *plannerFake) Revise(ctx context.Context, r llm.ModelRef, in clip.RevisionInput) (clip.EditPlan, llm.Usage, error) {
 	p.revisions = append(p.revisions, in)
-	if in.Target == clip.RevisionNarration {
-		return p.Narrate(ctx, r, clip.NarrationInput{PlanningInput: in.PlanningInput, Flow: in.Current})
-	}
-	flow, _, err := p.Flow(ctx, r, in.PlanningInput)
+	written, usage, err := func() (clip.EditPlan, llm.Usage, error) {
+		if in.Target == clip.RevisionNarration {
+			return p.Narrate(ctx, r, clip.NarrationInput{PlanningInput: in.PlanningInput, Flow: in.Current})
+		}
+		flow, _, err := p.Flow(ctx, r, in.PlanningInput)
+		if err != nil {
+			return clip.EditPlan{}, llm.Usage{}, err
+		}
+		return p.Narrate(ctx, r, clip.NarrationInput{PlanningInput: in.PlanningInput, Flow: flow})
+	}()
 	if err != nil {
 		return clip.EditPlan{}, llm.Usage{}, err
 	}
-	return p.Narrate(ctx, r, clip.NarrationInput{PlanningInput: in.PlanningInput, Flow: flow})
+	// A revision answers the request: this fake writes it into the caption, so
+	// the saved plan differs from the one it was asked about.
+	for i := range written.Portable.Elements {
+		if written.Portable.Elements[i].Scope == clip.NarrationScope {
+			written.Portable.Elements[i].Resolved.Text = in.Request
+		}
+	}
+	return written, usage, nil
 }
 
 // The narration writes over the flow it is given and changes nothing else.
@@ -250,7 +262,14 @@ func (p *plannerFake) Narrate(ctx context.Context, r llm.ModelRef, in clip.Narra
 	}
 	plan := in.Flow
 	portable := *plan.Portable
-	portable.Elements = append(slices.Clone(portable.Elements), clip.NarrationCaption("narration-1", "자막", 0, min(3000, plan.DurationMS)))
+	// The narration REPLACES what was said before, the way the real call does.
+	kept := []clip.PortableText{}
+	for _, text := range portable.Elements {
+		if text.Scope != clip.NarrationScope {
+			kept = append(kept, text)
+		}
+	}
+	portable.Elements = append(kept, clip.NarrationCaption("narration-1", "자막", 0, min(3000, plan.DurationMS)))
 	plan.Portable = &portable
 	return plan, llm.Usage{}, nil
 }
@@ -366,6 +385,9 @@ func (j generationJobs) Enqueue(ctx context.Context, s clip.GenerationStart) (st
 	kind := job.KindGenerateClip
 	if s.RenderOnly {
 		kind = job.KindRenderClip
+	}
+	if s.Revise {
+		kind = job.KindReviseClip
 	}
 	policy := 0
 	if s.Quote != nil {
@@ -483,7 +505,15 @@ func (h *generationHarness) run(t *testing.T) error {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = h.service.Run(ctx, j.UserID, j.ID, j.ClipProjectID, j.Payload, func(stage string, done, total int) {
+	// The dispatcher picks the runner by kind, exactly as cmd/api registers it.
+	run := h.service.Run
+	switch j.Kind {
+	case job.KindRenderClip:
+		run = h.service.RunRender
+	case job.KindReviseClip:
+		run = h.service.RunRevision
+	}
+	err = run(ctx, j.UserID, j.ID, j.ClipProjectID, j.Payload, func(stage string, done, total int) {
 		if e := h.jobs.UpdateProgress(ctx, j.ID, stage, done, total, time.Now()); e != nil {
 			t.Fatal(e)
 		}

@@ -111,6 +111,16 @@ func (s *GenerationService) enqueue(ctx context.Context, input GenerationStart, 
 	// A queued row is invisible to the dispatcher until its source lease is linked.
 	if input.RenderOnly {
 		err = s.store.LinkRenderSourceJob(ctx, user, batch, job, revision, time.Now())
+	} else if input.Revise && input.Quote != nil {
+		// A revision's quote binds the saved plan and the owner's words, which
+		// StartRevision has just checked; the link consumes it and renews the
+		// originals' retention (CLIP-73).
+		store, ok := s.store.(RevisionQuoteStore)
+		if !ok {
+			err = ErrQuoteRequired
+		} else {
+			err = store.LinkRevisionJob(ctx, *input.Quote, job, s.now())
+		}
 	} else if input.Quote != nil {
 		store, ok := s.store.(QuoteStore)
 		if !ok {
