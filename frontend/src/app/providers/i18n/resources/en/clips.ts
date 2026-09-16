@@ -359,6 +359,8 @@ export const clips = {
     },
     errors: {
       items_required: 'Add the missing items in “{{element}}” before generating the clip.',
+      items_required_count:
+        '“{{element}}” needs at least {{min}} item(s) but has {{actual}}. Add the missing items before generating the clip.',
       invalid_item_bounds:
         'Check the item count for “{{element}}”: use whole numbers from zero to the item limit, with the minimum no greater than the maximum.',
       invalid_interval: 'Check the endpoint order, signs and decimal precision.',

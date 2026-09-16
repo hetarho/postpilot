@@ -5855,7 +5855,188 @@
             "id": "menu",
             "label": "",
             "min": 0,
-            "max": 20
+            "max": 20,
+            "effectiveMin": 0
+          }
+        ],
+        "sections": [
+          {
+            "id": "dish",
+            "scope": "item",
+            "repeat": "menu"
+          }
+        ],
+        "elements": [
+          "empty-hook",
+          "empty-ending"
+        ],
+        "guidance": [],
+        "design": {
+          "intro": "b",
+          "caption": "bold",
+          "outro": "e"
+        }
+      }
+    },
+    {
+      "name": "group holding a required field admits one item with no declared minimum",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<group id=\"menu\"><field id=\"name\" label=\"Name\" required=\"true\"/></group><repeat for=\"menu\"><scene id=\"dish\" scope=\"item\"/></repeat><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
+      "summary": {
+        "accent": "",
+        "pace": "steady",
+        "fields": [
+          {
+            "id": "name",
+            "group": "menu",
+            "label": "Name",
+            "prompt": "",
+            "required": true,
+            "chars": 0,
+            "max": 500
+          }
+        ],
+        "groups": [
+          {
+            "id": "menu",
+            "label": "",
+            "min": 0,
+            "max": 20,
+            "effectiveMin": 1
+          }
+        ],
+        "sections": [
+          {
+            "id": "dish",
+            "scope": "item",
+            "repeat": "menu"
+          }
+        ],
+        "elements": [
+          "empty-hook",
+          "empty-ending"
+        ],
+        "guidance": [],
+        "design": {
+          "intro": "b",
+          "caption": "bold",
+          "outro": "e"
+        }
+      }
+    },
+    {
+      "name": "group holding a required field keeps a larger declared minimum",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<group id=\"menu\" min=\"2\"><field id=\"name\" label=\"Name\" required=\"true\"/></group><repeat for=\"menu\"><scene id=\"dish\" scope=\"item\"/></repeat><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
+      "summary": {
+        "accent": "",
+        "pace": "steady",
+        "fields": [
+          {
+            "id": "name",
+            "group": "menu",
+            "label": "Name",
+            "prompt": "",
+            "required": true,
+            "chars": 0,
+            "max": 500
+          }
+        ],
+        "groups": [
+          {
+            "id": "menu",
+            "label": "",
+            "min": 2,
+            "max": 20,
+            "effectiveMin": 2
+          }
+        ],
+        "sections": [
+          {
+            "id": "dish",
+            "scope": "item",
+            "repeat": "menu"
+          }
+        ],
+        "elements": [
+          "empty-hook",
+          "empty-ending"
+        ],
+        "guidance": [],
+        "design": {
+          "intro": "b",
+          "caption": "bold",
+          "outro": "e"
+        }
+      }
+    },
+    {
+      "name": "group holding a required field keeps a declared minimum of zero at one",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<group id=\"menu\" min=\"0\"><field id=\"name\" label=\"Name\" required=\"true\"/></group><repeat for=\"menu\"><scene id=\"dish\" scope=\"item\"/></repeat><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
+      "summary": {
+        "accent": "",
+        "pace": "steady",
+        "fields": [
+          {
+            "id": "name",
+            "group": "menu",
+            "label": "Name",
+            "prompt": "",
+            "required": true,
+            "chars": 0,
+            "max": 500
+          }
+        ],
+        "groups": [
+          {
+            "id": "menu",
+            "label": "",
+            "min": 0,
+            "max": 20,
+            "effectiveMin": 1
+          }
+        ],
+        "sections": [
+          {
+            "id": "dish",
+            "scope": "item",
+            "repeat": "menu"
+          }
+        ],
+        "elements": [
+          "empty-hook",
+          "empty-ending"
+        ],
+        "guidance": [],
+        "design": {
+          "intro": "b",
+          "caption": "bold",
+          "outro": "e"
+        }
+      }
+    },
+    {
+      "name": "group holding only optional fields admits no item",
+      "body": "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\">\n<group id=\"menu\"><field id=\"name\" label=\"Name\"/></group><repeat for=\"menu\"><scene id=\"dish\" scope=\"item\"/></repeat><text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>",
+      "summary": {
+        "accent": "",
+        "pace": "steady",
+        "fields": [
+          {
+            "id": "name",
+            "group": "menu",
+            "label": "Name",
+            "prompt": "",
+            "required": false,
+            "chars": 0,
+            "max": 500
+          }
+        ],
+        "groups": [
+          {
+            "id": "menu",
+            "label": "",
+            "min": 0,
+            "max": 20,
+            "effectiveMin": 0
           }
         ],
         "sections": [
@@ -5899,7 +6080,8 @@
             "id": "menu",
             "label": "메뉴 & 상품",
             "min": 1,
-            "max": 3
+            "max": 3,
+            "effectiveMin": 1
           }
         ],
         "sections": [
@@ -5943,7 +6125,8 @@
             "id": "menu",
             "label": "",
             "min": 0,
-            "max": 0
+            "max": 0,
+            "effectiveMin": 0
           }
         ],
         "sections": [
@@ -5987,7 +6170,8 @@
             "id": "menu",
             "label": "",
             "min": 2,
-            "max": 20
+            "max": 20,
+            "effectiveMin": 2
           }
         ],
         "sections": [
@@ -6031,7 +6215,8 @@
             "id": "menu",
             "label": "",
             "min": 0,
-            "max": 1
+            "max": 1,
+            "effectiveMin": 0
           }
         ],
         "sections": [
@@ -6075,7 +6260,8 @@
             "id": "menu",
             "label": "",
             "min": 1,
-            "max": 2
+            "max": 2,
+            "effectiveMin": 1
           }
         ],
         "sections": [

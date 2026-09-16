@@ -88,67 +88,75 @@ export function ClipCompositionInputFields({
   return (
     <div className="min-w-0 space-y-6">
       {fields('', value.values, 'global', (values) => onChange({ ...value, values }))}
-      {document.groups.map(({ id: group, label, min, max }, n) => (
-        <section
-          key={group}
-          className="min-w-0 space-y-4"
-          aria-label={label.trim() || t('composition.groupNumber', { n: n + 1 })}
-        >
-          <Typography variant="fieldTitle" as="h2">
-            {label.trim() || t('composition.groupNumber', { n: n + 1 })}
-          </Typography>
-          <Typography variant="body" className="text-content-secondary">
-            {t('composition.itemsHelp')}
-          </Typography>
-          {(value.items[group] ?? []).map((item, i) => (
-            <fieldset key={item.id} className="min-w-0 space-y-4">
-              <Typography variant="label" as="legend">
-                {label.trim()
-                  ? t('composition.namedItemNumber', { name: label, n: i + 1 })
-                  : t('composition.itemNumber', { n: i + 1 })}
-              </Typography>
-              {fields(group, item.values, `${group}-${item.id}`, (values) =>
+      {document.groups.map(({ id: group, label, min, max }, n) => {
+        // The number the group actually admits (CLIP-119), so an item carrying
+        // a required field cannot be removed down to nothing.
+        const minimum = document.minima[group] ?? min
+        return (
+          <section
+            key={group}
+            className="min-w-0 space-y-4"
+            aria-label={label.trim() || t('composition.groupNumber', { n: n + 1 })}
+          >
+            <Typography variant="fieldTitle" as="h2">
+              {label.trim() || t('composition.groupNumber', { n: n + 1 })}
+            </Typography>
+            <Typography variant="body" className="text-content-secondary">
+              {t('composition.itemsHelp')}
+            </Typography>
+            {(value.items[group] ?? []).map((item, i) => (
+              <fieldset key={item.id} className="min-w-0 space-y-4">
+                <Typography variant="label" as="legend">
+                  {label.trim()
+                    ? t('composition.namedItemNumber', { name: label, n: i + 1 })
+                    : t('composition.itemNumber', { n: i + 1 })}
+                </Typography>
+                {fields(group, item.values, `${group}-${item.id}`, (values) =>
+                  onChange({
+                    ...value,
+                    items: {
+                      ...value.items,
+                      [group]: value.items[group].map((other) =>
+                        other.id === item.id ? { ...item, values } : other,
+                      ),
+                    },
+                  }),
+                )}
+                {value.items[group].length > minimum && (
+                  <Button
+                    variant="ghost"
+                    onClick={() => onChange(removeCompositionItem(value, group, item.id))}
+                  >
+                    {label.trim()
+                      ? t('composition.removeNamedItem', { name: label, n: i + 1 })
+                      : t('composition.removeItem', { n: i + 1 })}
+                  </Button>
+                )}
+              </fieldset>
+            ))}
+            <Button
+              variant="ghost"
+              disabled={(value.items[group]?.length ?? 0) >= max}
+              onClick={() =>
                 onChange({
                   ...value,
                   items: {
                     ...value.items,
-                    [group]: value.items[group].map((other) =>
-                      other.id === item.id ? { ...item, values } : other,
-                    ),
+                    [group]: [
+                      ...(value.items[group] ?? []),
+                      { id: crypto.randomUUID(), values: {} },
+                    ],
                   },
-                }),
-              )}
-              {value.items[group].length > min && (
-                <Button
-                  variant="ghost"
-                  onClick={() => onChange(removeCompositionItem(value, group, item.id))}
-                >
-                  {label.trim()
-                    ? t('composition.removeNamedItem', { name: label, n: i + 1 })
-                    : t('composition.removeItem', { n: i + 1 })}
-                </Button>
-              )}
-            </fieldset>
-          ))}
-          <Button
-            variant="ghost"
-            disabled={(value.items[group]?.length ?? 0) >= max}
-            onClick={() =>
-              onChange({
-                ...value,
-                items: {
-                  ...value.items,
-                  [group]: [...(value.items[group] ?? []), { id: crypto.randomUUID(), values: {} }],
-                },
-              })
-            }
-          >
-            {label.trim()
-              ? t('composition.addNamedItem', { name: label })
-              : t('composition.addItem')}
-          </Button>
-        </section>
-      ))}
+                })
+              }
+            >
+              {label.trim()
+                ? t('composition.addNamedItem', { name: label })
+                : t('composition.addItem')}
+            </Button>
+          </section>
+        )
+      })}
     </div>
   )
 }

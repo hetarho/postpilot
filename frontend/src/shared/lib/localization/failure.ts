@@ -9,6 +9,19 @@ export function formatAppFailure(
   locale: Locale = activeLocale(),
 ): string {
   if (!failure) return ''
+  // A group below its effective minimum says how many items it admits and how
+  // many were given; a refusal carrying no count keeps the plain wording.
+  if (
+    failure.reason === 'CLIP_COMPOSITION_INVALID' &&
+    failure.params.reason === 'items_required' &&
+    failure.params.min
+  ) {
+    return i18next.getFixedT(locale, 'clips')('composition.errors.items_required_count', {
+      element: failure.params.element_id,
+      min: failure.params.min,
+      actual: failure.params.actual,
+    })
+  }
   if (
     failure.reason === 'CLIP_COMPOSITION_INVALID' &&
     (failure.params.reason === 'items_required' || failure.params.reason === 'invalid_item_bounds')

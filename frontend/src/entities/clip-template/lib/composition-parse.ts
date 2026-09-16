@@ -314,6 +314,7 @@ function readClipComposition(
     sections: [],
     elements: [],
     maxima: {},
+    minima: {},
   }
   if (!['', 'coral', 'amber', 'lime', 'teal', 'blue', 'violet', 'pink'].includes(d.accent))
     problem(root, 'invalid_accent')
@@ -450,7 +451,20 @@ function readClipComposition(
       if (elements.length !== 1) problem(root, 'invalid_skeleton')
     }
   d.maxima = fieldMaxima(d, limits)
+  d.minima = groupMinima(d)
   return d
+}
+
+/** Gives every repeated item group the number of items it actually admits
+ * (CLIP-119): its declared minimum, else one when any field of the group is
+ * required, else zero. A required field that no item carries is satisfied by
+ * nothing, so a group holding one admits at least one item even when the
+ * template that saved it declared no minimum. */
+function groupMinima(d: ClipComposition) {
+  const required = new Set(d.fields.filter((f) => f.group && f.required).map((f) => f.group))
+  const out: Record<string, number> = {}
+  for (const g of d.groups) out[g.id] = g.min || (required.has(g.id) ? 1 : 0)
+  return out
 }
 
 /** Folds every position a field's value reaches into one number (CLIP-117). A

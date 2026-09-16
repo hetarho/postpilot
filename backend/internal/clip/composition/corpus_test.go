@@ -98,7 +98,7 @@ func summary(d *composition.Document) map[string]any {
 	}
 	groups := []map[string]any{}
 	for _, g := range d.Groups {
-		groups = append(groups, map[string]any{"id": g.ID, "label": g.Label, "min": g.Min, "max": g.Max})
+		groups = append(groups, map[string]any{"id": g.ID, "label": g.Label, "min": g.Min, "max": g.Max, "effectiveMin": d.Minima[g.ID]})
 	}
 	sections := []map[string]any{}
 	for _, s := range d.Sections {

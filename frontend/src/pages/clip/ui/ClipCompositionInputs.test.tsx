@@ -79,7 +79,10 @@ describe('template-defined project inputs', () => {
     await user.click(screen.getByRole('combobox', { name: /^영상 템플릿/ }))
     await user.click(await screen.findByRole('option', { name: '여러 메뉴' }))
     expect(screen.queryByRole('combobox', { name: /체험단|프리셋/ })).not.toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: '항목 추가' }))
+    // The group holds a required field, so it opens at one item (CLIP-119) and
+    // that item cannot be removed; one more makes the pair this case removes from.
+    expect(screen.getAllByLabelText('메뉴 이름')).toHaveLength(1)
+    expect(screen.queryByRole('button', { name: '항목 1 삭제' })).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '항목 추가' }))
     fireEvent.change(screen.getAllByLabelText('메뉴 이름')[0], { target: { value: '파스타' } })
     fireEvent.change(screen.getAllByLabelText('메뉴 이름')[1], { target: { value: '피자' } })

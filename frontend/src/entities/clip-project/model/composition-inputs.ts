@@ -11,19 +11,22 @@ export const emptyCompositionInputs = (): ClipCompositionInputs => ({
   associations: [],
 })
 
-/** Display missing minimum items without changing the saved draft. Stable local
- * IDs become real item IDs only when the owner edits the inputs. */
+/** Display missing minimum items without changing the saved draft. The number
+ * opened is the group's effective minimum (CLIP-119), not its declared one, so
+ * a group holding a required field opens an item to carry it. Stable local IDs
+ * become real item IDs only when the owner edits the inputs. */
 export function compositionInputsAtMinimum(
   document: ClipComposition,
   input: ClipCompositionInputs,
 ): ClipCompositionInputs {
   const items = { ...input.items }
   for (const group of document.groups) {
+    const minimum = document.minima[group.id] ?? group.min
     const stored = items[group.id] ?? []
-    if (stored.length >= group.min) continue
+    if (stored.length >= minimum) continue
     const shown = [...stored]
     const ids = new Set(stored.map((item) => item.id))
-    for (let n = 1; shown.length < group.min; n++) {
+    for (let n = 1; shown.length < minimum; n++) {
       const id = `minimum_item_${n}`
       if (!ids.has(id)) shown.push({ id, values: {} })
     }

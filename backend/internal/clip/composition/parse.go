@@ -431,7 +431,31 @@ func parse(source string, limits Limits, stored bool) (*Document, *Problem) {
 		}
 	}
 	d.Maxima = fieldMaxima(d, limits)
+	d.Minima = groupMinima(d)
 	return d, nil
+}
+
+// groupMinima gives every repeated item group the number of items it actually
+// admits (CLIP-119): its declared minimum, else one when any field of the group
+// is required, else zero. A required field that no item carries is satisfied by
+// nothing, so a group holding one admits at least one item even when the
+// template that saved it declared no minimum.
+func groupMinima(d *Document) map[string]int {
+	required := map[string]bool{}
+	for _, f := range d.Fields {
+		if f.Group != "" && f.Required {
+			required[f.Group] = true
+		}
+	}
+	out := make(map[string]int, len(d.Groups))
+	for _, g := range d.Groups {
+		value := g.Min
+		if value == 0 && required[g.ID] {
+			value = 1
+		}
+		out[g.ID] = value
+	}
+	return out
 }
 
 // fieldMaxima folds every position a field's value reaches into one number

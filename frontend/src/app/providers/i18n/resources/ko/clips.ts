@@ -351,6 +351,8 @@ export const clips = {
     },
     errors: {
       items_required: '“{{element}}”의 부족한 항목을 추가한 뒤 클립을 생성해 주세요.',
+      items_required_count:
+        '“{{element}}”에는 항목이 최소 {{min}}개 필요한데 지금 {{actual}}개예요. 항목을 추가한 뒤 클립을 생성해 주세요.',
       invalid_item_bounds:
         '“{{element}}”의 항목 개수를 확인해 주세요. 0부터 항목 제한까지의 정수를 사용하고, 최소 개수는 최대 개수 이하여야 해요.',
       invalid_interval: '시작과 끝의 순서, 부호와 소수 자릿수를 확인해 주세요.',

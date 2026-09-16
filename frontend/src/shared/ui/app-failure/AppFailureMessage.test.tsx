@@ -22,6 +22,29 @@ describe('AppFailureMessage', () => {
     expect(screen.getByText(message)).toBeInTheDocument()
   })
 
+  it.each([
+    ['ko', /최소 1개 필요한데 지금 0개/],
+    ['en', /at least 1 item\(s\) but has 0/],
+  ])('says how many items the group admits and how many were given in %s', async (locale, text) => {
+    await i18next.changeLanguage(locale)
+    render(
+      <AppFailureMessage
+        failure={{
+          reason: 'CLIP_COMPOSITION_INVALID',
+          params: {
+            element_id: '메뉴',
+            label: '메뉴',
+            line: '2',
+            reason: 'items_required',
+            min: '1',
+            actual: '0',
+          },
+        }}
+      />,
+    )
+    expect(screen.getByText(text)).toHaveTextContent('메뉴')
+  })
+
   it.each(['ko', 'en'])('explains invalid group bounds in %s', async (locale) => {
     await i18next.changeLanguage(locale)
     render(

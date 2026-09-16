@@ -17,11 +17,12 @@ type Problem struct {
 	ElementID string
 	Line      int
 	Reason    string
-	// The refused answer's field label and counts. Only answer_limit carries
-	// them, so a refusal can say which answer is too long and by how much
-	// rather than point at a line the owner never sees (CLIP-102).
-	Label       string
-	Max, Actual int
+	// The refused input's owner-visible label and counts. answer_limit carries
+	// Max, items_required carries Min, so a refusal can say what was asked for
+	// and what was given rather than point at a line the owner never sees
+	// (CLIP-102).
+	Label            string
+	Min, Max, Actual int
 }
 
 func (p *Problem) Error() string { return p.Reason }
@@ -31,8 +32,13 @@ func (p *Problem) Error() string { return p.Reason }
 // same refusal differently (CLIP-102).
 func (p *Problem) FailureParams() map[string]string {
 	params := map[string]string{"element_id": p.ElementID, "line": strconv.Itoa(p.Line), "reason": p.Reason}
-	if p.Reason == "answer_limit" && p.Label != "" {
-		params["label"], params["max"], params["actual"] = p.Label, strconv.Itoa(p.Max), strconv.Itoa(p.Actual)
+	if p.Label != "" {
+		switch p.Reason {
+		case "answer_limit":
+			params["label"], params["max"], params["actual"] = p.Label, strconv.Itoa(p.Max), strconv.Itoa(p.Actual)
+		case "items_required":
+			params["label"], params["min"], params["actual"] = p.Label, strconv.Itoa(p.Min), strconv.Itoa(p.Actual)
+		}
 	}
 	return params
 }
@@ -101,6 +107,11 @@ type Document struct {
 	// here so the input control, the admission check and the writer read one
 	// number rather than three derivations of it.
 	Maxima map[string]int
+	// Each group's effective minimum, keyed by group ID (CLIP-119): the
+	// declared min, else one when any field of that group is required, else
+	// zero. Computed here for the same reason Maxima is — the owner's item
+	// controls and the admission check read one number, not two rules.
+	Minima map[string]int
 }
 type Item struct {
 	ID     string

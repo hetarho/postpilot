@@ -167,6 +167,9 @@ export interface ClipComposition {
    * (CLIP-117): the smallest of its authored maximum, the cap of every position
    * its value reaches, and the grammar's answerChars. */
   maxima: Record<string, number>
+  /** Each group's effective minimum, keyed by group id (CLIP-119): the declared
+   * min, else one when any field of that group is required, else zero. */
+  minima: Record<string, number>
 }
 export interface CompositionItem {
   id: string

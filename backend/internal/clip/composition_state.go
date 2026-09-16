@@ -222,12 +222,16 @@ func ValidateCompositionInputs(d *composition.Document, in CompositionInputs, l 
 	items := map[string]bool{}
 	if required {
 		for _, group := range d.Groups {
-			if len(in.Items[group.ID]) < group.Min {
+			// The effective minimum the grammar derived, never the declared
+			// one — a group holding a required field admits an item even when
+			// the template saved no minimum (CLIP-119).
+			minimum, count := d.Minima[group.ID], len(in.Items[group.ID])
+			if count < minimum {
 				name := group.Label
 				if strings.TrimSpace(name) == "" {
 					name = group.ID
 				}
-				return &composition.Problem{ElementID: name, Line: group.Span.Line, Reason: "items_required"}
+				return &composition.Problem{ElementID: name, Line: group.Span.Line, Reason: "items_required", Label: name, Min: minimum, Actual: count}
 			}
 		}
 	}
