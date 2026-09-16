@@ -3,7 +3,11 @@ package job
 import (
 	"context"
 	"errors"
+	"fmt"
+	"io/fs"
 	"log/slog"
+	"strings"
+	"syscall"
 	"time"
 
 	"github.com/postpilot/backend/internal/llm"
@@ -234,6 +238,54 @@ func logJobFailure(found Job, failure Failure, err error) {
 				attrs = append(attrs, "output_validation", code)
 			}
 		}
+		// CLIP-88 asks every failed clip stage for a typed failure category. An
+		// error none of the checks above recognized reaches this line as the
+		// catch-all reason and nothing else, which is how a render failure became
+		// undiagnosable from the box at all: the stage and the check were known
+		// and the cause was not. Categories only — a type name, a file operation
+		// and an errno carry no path, body, prompt or answer, while the error's
+		// own message may carry all four.
+		if failure.Reason == "CLIP_PROCESSING_FAILED" {
+			if classes := errorCategories(err); classes != "" {
+				attrs = append(attrs, "error_types", classes)
+			}
+		}
 	}
 	slog.Error("job failed", attrs...)
+}
+
+// errorCategories walks the unwrap chain, nearest cause first, and names what
+// each link IS. It is bounded: a joined or deeply wrapped error cannot grow the
+// log line without limit.
+func errorCategories(err error) string {
+	out := []string{}
+	var walk func(error, int)
+	walk = func(err error, depth int) {
+		if err == nil || depth > 4 || len(out) >= 8 {
+			return
+		}
+		name := fmt.Sprintf("%T", err)
+		var path *fs.PathError
+		var errno syscall.Errno
+		switch {
+		case errors.As(err, &path) && path == err:
+			// The operation is a category; the path it names is content.
+			name += "(" + path.Op + ")"
+		case errors.As(err, &errno) && errno == err:
+			name = errno.Error()
+		}
+		if len(out) == 0 || out[len(out)-1] != name {
+			out = append(out, name)
+		}
+		switch u := err.(type) {
+		case interface{ Unwrap() error }:
+			walk(u.Unwrap(), depth+1)
+		case interface{ Unwrap() []error }:
+			for _, e := range u.Unwrap() {
+				walk(e, depth+1)
+			}
+		}
+	}
+	walk(err, 0)
+	return strings.Join(out, "<-")
 }

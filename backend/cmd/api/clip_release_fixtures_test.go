@@ -274,8 +274,16 @@ func (m *releaseMedia) PrepareAnalysisChunksExcept(ctx context.Context, ws clip.
 		if c.Path == "" {
 			return fn(c)
 		}
-		if m.metrics.mode == "oversized proxy" && m.metrics.probeCount == 2 {
-			c.Bytes = 8<<20 + 1
+		if m.metrics.mode == "oversized proxy" {
+			m.metrics.mu.Lock()
+			second := len(m.metrics.prepared) == 1
+			m.metrics.mu.Unlock()
+			// The second proxy this run prepares is the oversized one. Counting
+			// PREPARED chunks rather than probes: preparation decodes each
+			// original once now (T196), so the probe count names no chunk.
+			if second {
+				c.Bytes = 8<<20 + 1
+			}
 		}
 		if err := fn(c); err != nil {
 			return err
@@ -493,71 +501,116 @@ func (p *releaseProvider) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			p.reject(w, "missing structured analyses")
 			return
 		}
-		if p.mode == "detailed-input" && (len(analyses) != 20 || metadata["composition_source"] != releaseDetailedBody() || len(data) <= llm.ClipInputUnits) {
-			p.reject(w, "detailed input regression was truncated or did not exceed the old allowance")
-			return
-		}
-		source := analyses[0].(map[string]any)["source_id"]
-		// The writing contract of T105: the model writes WORDS — the sentence, a
-		// shorter alternative, the one word to accent and the cut's own chips —
-		// and the design system chooses the style, the anchor and the accent.
-		// Three contiguous cuts of one source, not one long take: CDS-37 holds
-		// every cut to 6.0 s, so fifteen seconds is three cuts at the least. They
-		// are adjacent and show one scene, so the output timeline still maps
-		// one-to-one onto the source and the speech comparison below holds.
-		offset := 0
-		if p.mode == "seeked cut" {
-			offset = 1000
-		}
-		// Every cut states its own fixed playback rate since CLIP-98; 1x is the
-		// rate this synthetic footage is recorded at and compared against.
-		var fixtureCuts []any
-		for i := 0; i < 3; i++ {
-			fixtureCuts = append(fixtureCuts, map[string]any{
-				"id": fmt.Sprintf("fixture-cut-%d", i), "source_id": source,
-				"start_ms": offset + i*5000, "end_ms": offset + (i+1)*5000, "volume": 1, "rate_permille": 1000,
-				"focal": map[string]float64{"x": .5, "y": .5}, "chips": []string{},
-				"caption": map[string]any{"text": "", "start_ms": 0, "end_ms": 5000, "short_text": "", "keyword": ""},
-			})
-		}
-		content = map[string]any{"ratio": metadata["ratio"], "duration_ms": 15000, "hook": "", "cuts": fixtureCuts}
-		if strings.HasPrefix(p.mode, "multi-source") {
-			// The recorded lengths, 1000 ms third cut included: CDS-37 r3 aims at
-			// 1.2 s (2.5 s under the 음식점 preset) and never refuses for it.
-			lengths := []int{2000, 2000, 1000, 2400, 2300, 2300, 2200, 2200}
-			if len(analyses) != len(lengths) {
-				p.reject(w, "multi-source fixture requires eight analyses")
+		// Two writing calls per generation (CLIP-135). The narration call is the
+		// one carrying the RESOLVED flow, so the payload's own `cuts` tell the
+		// two apart; the flow call carries the target duration instead.
+		if _, narration := metadata["cuts"]; narration {
+			// One caption over the whole clip, stated on the OUTPUT timeline the
+			// resolved flow defines (CLIP-134): the gate has to see a written
+			// caption reach the delivered file, which is the path a caption that
+			// no anchor can hold silently drops. No number and no unit, so it is
+			// grounded by construction (CLIP-137), and its window is far wider
+			// than CDS-41's reading floor for nine characters.
+			// The observations the RESOLVED CUTS carry, which is the only evidence
+			// a caption may cite: the payload states them per cut beside the
+			// output window each one occupies.
+			// Each cited observation appears ONCE: consecutive cuts of one source
+			// are backed by the same observation, and citing it twice is refused.
+			refs, cited := []string{}, map[string]bool{}
+			for _, entry := range metadata["cuts"].([]any) {
+				for _, value := range entry.(map[string]any)["observation_ids"].([]any) {
+					if id := value.(string); !cited[id] {
+						cited[id] = true
+						refs = append(refs, id)
+					}
+				}
+			}
+			content = map[string]any{"slots": []any{}, "captions": []any{map[string]any{
+				"id": "", "text": releaseCaption, "short_text": "흐르는 장면", "keyword": "",
+				"start_ms": 1000, "end_ms": 6000, "observation_refs": refs, "fact_refs": []any{},
+			}}}
+		} else {
+			// The template's own prose now reaches the writer as `template_guide`
+			// rather than as the composition body, so that is what the detailed
+			// input is measured on.
+			if p.mode == "detailed-input" && (len(analyses) != 20 || !strings.Contains(fmt.Sprint(metadata["template_guide"]), "관찰한 장면을 차분히 설명한다") || len(data) <= llm.ClipInputUnits) {
+				p.reject(w, "detailed input regression was truncated or did not exceed the old allowance")
 				return
 			}
-			var cuts []any
-			for i, analysis := range analyses {
-				cuts = append(cuts, map[string]any{
-					"id": fmt.Sprintf("cut-%d", i), "source_id": analysis.(map[string]any)["source_id"],
-					"start_ms": 0, "end_ms": lengths[i], "volume": 1, "rate_permille": 1000,
-					"focal": map[string]float64{"x": .5, "y": .5}, "chips": []string{"위치"},
-					"caption": map[string]any{"text": fmt.Sprintf("한글 장면 %d", i+1), "start_ms": 0, "end_ms": lengths[i], "short_text": fmt.Sprintf("장면 %d", i+1), "keyword": ""},
+			source := analyses[0].(map[string]any)["source_id"]
+			// The flow contract of CLIP-134: the writer orders the footage and
+			// nothing else — no text at all, which the narration call writes over
+			// the resolved result. Three contiguous cuts of one source, not one
+			// long take: CDS-37 holds every cut to 6.0 s, so fifteen seconds is
+			// three cuts at the least. They are adjacent and show one scene, so the
+			// output timeline still maps one-to-one onto the source and the speech
+			// comparison below holds.
+			offset := 0
+			if p.mode == "seeked cut" {
+				offset = 1000
+			}
+			// Every cut states its own fixed playback rate since CLIP-98; 1x is the
+			// rate this synthetic footage is recorded at and compared against.
+			var fixtureCuts []any
+			for i := 0; i < 3; i++ {
+				fixtureCuts = append(fixtureCuts, map[string]any{
+					"id": fmt.Sprintf("fixture-cut-%d", i), "source_id": source,
+					"start_ms": offset + i*5000, "end_ms": offset + (i+1)*5000, "volume": 1, "rate_permille": 1000,
+					"focal": map[string]float64{"x": .5, "y": .5},
 				})
 			}
-			content.(map[string]any)["cuts"] = cuts
-			content.(map[string]any)["hook"] = "연남 김밥 한 줄"
-			if p.mode == "multi-source-timing" {
-				// The real failing response's timing shape, with synthetic copy
-				// and source IDs. Exercise compilation through the actual queue.
-				selected := []int{0, 3, 6, 7}
-				starts, ends := []int{0, 500, 1000, 1000}, []int{3800, 4000, 4000, 4000}
-				var timingCuts []any
-				for i, index := range selected {
-					cut := cuts[index].(map[string]any)
-					cut["start_ms"], cut["end_ms"] = starts[i], ends[i]
-					caption := cut["caption"].(map[string]any)
-					caption["start_ms"], caption["end_ms"] = 400, 3600
-					if i == 0 {
-						caption["start_ms"], caption["end_ms"] = 500, 3500
-					}
-					timingCuts = append(timingCuts, cut)
+			content = map[string]any{"ratio": metadata["ratio"], "duration_ms": 15000, "cuts": fixtureCuts}
+			if strings.HasPrefix(p.mode, "multi-source") {
+				// The recorded lengths, 1000 ms third cut included: CDS-37 r3 aims at
+				// 1.2 s (2.5 s under the 음식점 preset) and never refuses for it.
+				lengths := []int{2000, 2000, 1000, 2400, 2300, 2300, 2200, 2200}
+				if len(analyses) != len(lengths) {
+					p.reject(w, "multi-source fixture requires eight analyses")
+					return
 				}
-				content.(map[string]any)["cuts"] = timingCuts
-				content.(map[string]any)["duration_ms"] = 15200
+				var cuts []any
+				for i, analysis := range analyses {
+					cuts = append(cuts, map[string]any{
+						"id": fmt.Sprintf("cut-%d", i), "source_id": analysis.(map[string]any)["source_id"],
+						"start_ms": 0, "end_ms": lengths[i], "volume": 1, "rate_permille": 1000,
+						"focal": map[string]float64{"x": .5, "y": .5},
+					})
+				}
+				content.(map[string]any)["cuts"] = cuts
+				if p.mode == "multi-source-timing" {
+					// The real failing response's timing shape, with synthetic source
+					// IDs. Exercise compilation through the actual queue.
+					selected := []int{0, 3, 6, 7}
+					starts, ends := []int{0, 500, 1000, 1000}, []int{3800, 4000, 4000, 4000}
+					var timingCuts []any
+					for i, index := range selected {
+						cut := cuts[index].(map[string]any)
+						cut["start_ms"], cut["end_ms"] = starts[i], ends[i]
+						timingCuts = append(timingCuts, cut)
+					}
+					content.(map[string]any)["cuts"] = timingCuts
+					content.(map[string]any)["duration_ms"] = 15200
+				}
+			}
+			// Each cut cites the observations its own source range covers: the flow
+			// is answered from the evidence, and the narration is then grounded in
+			// the same ids (CLIP-137).
+			for _, entry := range content.(map[string]any)["cuts"].([]any) {
+				cut := entry.(map[string]any)
+				refs := []string{}
+				for _, entry := range analyses {
+					analysis := entry.(map[string]any)
+					if analysis["source_id"] != cut["source_id"] {
+						continue
+					}
+					for _, entry := range analysis["segments"].([]any) {
+						segment := entry.(map[string]any)
+						if int(segment["start_ms"].(float64)) < cut["end_ms"].(int) && int(segment["end_ms"].(float64)) > cut["start_ms"].(int) {
+							refs = append(refs, segment["observation_id"].(string))
+						}
+					}
+				}
+				cut["observation_refs"] = refs
 			}
 		}
 	} else {
@@ -565,40 +618,6 @@ func (p *releaseProvider) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	encoded, _ := json.Marshal(content)
-	if source, native := metadata["composition_source"].(string); native && videoCount == 0 {
-		// A template declares no footage section any more, so the writer names
-		// none: the compiler's own single section carries every cut. A legacy
-		// snapshot still declares `footage` and the writer must name it.
-		sectionID := ""
-		if strings.Contains(source, "<scene") {
-			sectionID = "footage"
-		}
-		value := content.(map[string]any)
-		delete(value, "hook")
-		value["generated"] = []any{}
-		analyses := metadata["analyses"].([]any)
-		for _, entry := range value["cuts"].([]any) {
-			cut := entry.(map[string]any)
-			delete(cut, "caption")
-			delete(cut, "chips")
-			cut["template_section_id"], cut["group_id"], cut["item_id"] = sectionID, "", ""
-			refs := []string{}
-			for _, entry := range analyses {
-				analysis := entry.(map[string]any)
-				if analysis["source_id"] != cut["source_id"] {
-					continue
-				}
-				for _, entry := range analysis["segments"].([]any) {
-					segment := entry.(map[string]any)
-					if int(segment["start_ms"].(float64)) < cut["end_ms"].(int) && int(segment["end_ms"].(float64)) > cut["start_ms"].(int) {
-						refs = append(refs, segment["observation_id"].(string))
-					}
-				}
-			}
-			cut["observation_refs"] = refs
-		}
-		encoded, _ = json.Marshal(value)
-	}
 	finish := "stop"
 	if p.mode == "malformed" {
 		encoded = []byte(`{"unknown":true}`)
@@ -710,6 +729,9 @@ func releaseCorrelation(a, b []byte) float64 {
 // design selection, two long guides, the badge and the two slots, with no
 // footage section, caption or information element of its own (CLIP-4, CLIP-59).
 // No customer XML, facts or footage are committed.
+// The one caption every release fixture writes over its footage.
+const releaseCaption = "천천히 흐르는 장면"
+
 func releaseDetailedBody() string {
 	return `<clip version="1" intro="b" caption="bold" outro="e"><guide>` + strings.Repeat("관찰한 장면을 차분히 설명한다. ", 130) + `</guide><guide>` + strings.Repeat("관찰한 사실과 입력한 내용만 사용한다. ", 110) + `</guide><text id="label" kind="fixed" role="badge" position="header" basis="whole">검증용 영상</text><text id="opening" kind="fixed" role="hook" basis="output-start" start="0" end="3"><row>오늘의 기록</row><row>직접 남긴 장면</row></text><text id="closing" kind="fixed" role="ending" basis="output-end" start="-4" end="0"><row>다음에 또 만나요</row><row>또 오고 싶은 곳</row></text></clip>`
 }

@@ -63,7 +63,10 @@ func (a *releaseAdmission) Hold(ctx context.Context, s job.Start) error {
 	if len(files) != 0 {
 		return errors.New("original retained at hold")
 	}
-	if len(s.Calls) != 2 || s.Calls[0].Count != a.expected*4 || s.Calls[1].Count != 4 {
+	// One observation line and one writing line. The writing line is BOTH
+	// writing calls a generation makes — the flow and the narration over it
+	// (CLIP-135) — each with its three response corrections.
+	if len(s.Calls) != 2 || s.Calls[0].Count != a.expected*4 || s.Calls[1].Count != 8 {
 		return errors.New("inexact reserved call count")
 	}
 	hold := a.hold
@@ -508,6 +511,12 @@ func newReleaseHarness(t *testing.T, mode string, stress bool, clocks ...func() 
 		if _, err = h.client.ConfirmClipSource(ctx, releaseRequest(h, &v1.ConfirmClipSourceRequest{BatchId: h.batch, SourceId: s.ID})); err != nil {
 			t.Fatal(err)
 		}
+		// Source audio is off until the owner turns it on (CLIP-18), and the
+		// delivered clip's speech is what this gate exists to prove: every
+		// fixture source is opted in the way ①'s strip does it.
+		if _, err = h.client.SetClipSourceOriginalSound(ctx, releaseRequest(h, &v1.SetClipSourceOriginalSoundRequest{ProjectId: p.ID, BatchId: h.batch, SourceId: s.ID, ExpectedFingerprint: s.Fingerprint, RetainOriginalAudio: true})); err != nil {
+			t.Fatal(err)
+		}
 	}
 	h.firstFixture = inputPaths[0]
 	if mode == "malformed last source" {
@@ -721,7 +730,9 @@ func (h *releaseHarness) exercise(mode string) {
 		case <-ticker.C:
 		}
 	}
-	wantCalls := h.expected + 1
+	// Every observation, then the two writing calls a generation makes — the
+	// flow and the narration written over it (CLIP-135).
+	wantCalls := h.expected + 2
 	wantStatus := "done"
 	switch mode {
 	case "malformed":
@@ -807,6 +818,22 @@ func (h *releaseHarness) exercise(mode string) {
 			}
 		}
 		h.plan = got.GetEditing().GetPlan()
+		// The caption the narration call wrote is IN the delivered plan, on the
+		// output timeline and with the owner's text intact (CLIP-134). A caption
+		// the layout cannot place is dropped with a notice, so the gate asserts
+		// the one it asked for survived rather than assuming it did.
+		narrated := 0
+		for _, text := range h.plan.GetElements() {
+			if text.GetBasis() == "output-start" && text.GetText() == releaseCaption {
+				narrated++
+				if text.GetStartMs() != 1000 || text.GetEndMs() != 6000 {
+					t.Fatal("the delivered caption was retimed", text.GetStartMs(), text.GetEndMs())
+				}
+			}
+		}
+		if narrated != 1 {
+			t.Fatalf("the delivered plan carries %d narration captions, want 1", narrated)
+		}
 		h.inspectResult()
 		h.objects.mu.Lock()
 		for i, key := range h.sourceKeys {

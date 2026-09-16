@@ -45,7 +45,11 @@ func (p clipQuotePricing) FreezeWork(ctx context.Context, observe, write llm.Mod
 	}
 	a.ResponseRetries, b.ResponseRetries, c.ResponseRetries = retries, retries, retries
 	pricing := clip.GenerationPricing{Version: clip.PricingPolicyVersion, SkipFlow: skipFlow, SkipNarration: skipNarration, Observe: a, Plan: b, Narration: c, ObservationCalls: count}
-	credits, err := usage.ClipCredits([]usage.PricedCall{{Policy: a, Count: count * (1 + retries)}, {Policy: b, Count: pricing.FlowCalls()}, {Policy: c, Count: pricing.NarrationCalls()}})
+	// Both writing calls run on the same model at the same budget, so they price
+	// as one line — the shape the reservation and the settlement already use
+	// (clipJobs.ReserveApproved). Quoting them as a third call instead made every
+	// quote fail: usage.ClipCredits takes at most two.
+	credits, err := usage.ClipCredits([]usage.PricedCall{{Policy: a, Count: count * (1 + retries)}, {Policy: b, Count: pricing.PlanCalls()}})
 	if err != nil {
 		return clip.GenerationPricing{}, clip.ErrPricingUnavailable
 	}
