@@ -22,6 +22,8 @@ export const CLIP_COMPOSITION_PREVIEW = {
   stepMs: 100,
   expandedBytes: 262144,
   sampleItems: 2,
+  /** How long the preview's one sample narration line stays on screen. */
+  narrationMs: 3000,
 } as const
 
 export const CLIP_DRAFT_PREVIEW = {

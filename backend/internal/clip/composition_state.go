@@ -357,8 +357,27 @@ func (s *GenerationService) checkComposition(c *ProjectComposition) error {
 	return nil
 }
 
+// TemplateProjection is what the owner reads and edits: a body still written
+// under the old grammar comes back converted, flagged so the editor can say so,
+// while the stored body waits for the owner's own save (CLIP-140). Generation
+// and project freezing read the stored template directly and never this.
+func (s *Service) TemplateProjection(t VideoTemplate) VideoTemplate {
+	if t.CompositionBody == "" {
+		return t
+	}
+	// The converted body is what the owner will save, so it is read and bounded
+	// by the template's own limits; a body that cannot be read under them is left
+	// exactly as it is stored.
+	converted, changed, problem := composition.ConvertLegacyTemplate(t.CompositionBody, s.limits.Composition)
+	if problem != nil || !changed {
+		return t
+	}
+	t.CompositionBody, t.CompositionConverted = converted, true
+	return t
+}
+
 func (s *Service) authoredRecipe(r Recipe) (Recipe, error) {
-	d, e := composition.Parse(r.CompositionBody, s.limits.Composition)
+	d, e := composition.ParseTemplate(r.CompositionBody, s.limits.Composition)
 	if e != nil {
 		return r, e
 	}

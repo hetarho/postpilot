@@ -427,8 +427,12 @@ type VideoTemplate struct {
 	CaptionPace       string `protobuf:"bytes,11,opt,name=caption_pace,json=captionPace,proto3" json:"caption_pace,omitempty"`
 	CompositionBody   string `protobuf:"bytes,12,opt,name=composition_body,json=compositionBody,proto3" json:"composition_body,omitempty"`
 	CompositionLegacy bool   `protobuf:"varint,13,opt,name=composition_legacy,json=compositionLegacy,proto3" json:"composition_legacy,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// True when the stored body still declared footage sections or scene-bound
+	// text and composition_body is the converted read projection; the stored body
+	// changes only when the owner saves (CLIP-140).
+	CompositionConverted bool `protobuf:"varint,14,opt,name=composition_converted,json=compositionConverted,proto3" json:"composition_converted,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *VideoTemplate) Reset() {
@@ -548,6 +552,13 @@ func (x *VideoTemplate) GetCompositionBody() string {
 func (x *VideoTemplate) GetCompositionLegacy() bool {
 	if x != nil {
 		return x.CompositionLegacy
+	}
+	return false
+}
+
+func (x *VideoTemplate) GetCompositionConverted() bool {
+	if x != nil {
+		return x.CompositionConverted
 	}
 	return false
 }
@@ -6755,7 +6766,7 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\x15ClipInformationFields\x12:\n" +
 	"\x06values\x18\x01 \x03(\v2\".postpilot.v1.ClipInformationFieldR\x06values\"(\n" +
 	"\x0eClipCopyStyles\x12\x16\n" +
-	"\x06values\x18\x01 \x03(\tR\x06values\"\xda\x03\n" +
+	"\x06values\x18\x01 \x03(\tR\x06values\"\x8f\x04\n" +
 	"\rVideoTemplate\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12Q\n" +
@@ -6773,7 +6784,8 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	" \x01(\tR\x06preset\x12!\n" +
 	"\fcaption_pace\x18\v \x01(\tR\vcaptionPace\x12)\n" +
 	"\x10composition_body\x18\f \x01(\tR\x0fcompositionBody\x12-\n" +
-	"\x12composition_legacy\x18\r \x01(\bR\x11compositionLegacy\"6\n" +
+	"\x12composition_legacy\x18\r \x01(\bR\x11compositionLegacy\x123\n" +
+	"\x15composition_converted\x18\x0e \x01(\bR\x14compositionConverted\"6\n" +
 	"\n" +
 	"ClipAnswer\x12\x14\n" +
 	"\x05label\x18\x01 \x01(\tR\x05label\x12\x12\n" +

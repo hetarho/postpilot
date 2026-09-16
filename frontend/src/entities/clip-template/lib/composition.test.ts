@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { CLIP_COMPOSITION_LIMITS } from '@/shared/config'
+import { CLIP_COMPOSITION_EXAMPLE } from '../model/composition-guide'
 import {
   CompositionProblem,
   type ClipComposition,
@@ -13,6 +14,7 @@ import {
 import {
   compositionMilliseconds,
   parseClipComposition,
+  parseClipTemplate,
   replaceCompositionNode,
   replaceCompositionSpan,
 } from './composition-parse'
@@ -32,6 +34,11 @@ const corpus = JSON.parse(
   cases: {
     name: string
     body: string
+    /** Runs through parseClipTemplate, the grammar a saved template must satisfy. */
+    template?: boolean
+    /** Server-only conversion expectations (ConvertLegacyTemplate); ignored here. */
+    converted?: string
+    changed?: boolean
     error?: { reason: string; elementId: string; line: number } & Partial<{
       label: string
       max: number
@@ -105,6 +112,13 @@ describe('shared portable composition contract', () => {
       replaceCompositionSpan(d, { start: 1, end: 3, line: 1 }, replacement),
     ).toThrowError('unknown_element')
   })
+  it('the authoring example satisfies the template grammar', () => {
+    const d = parseClipTemplate(CLIP_COMPOSITION_EXAMPLE)
+    expect(d.sections).toEqual([])
+    expect(d.elements.map((e) => e.id)).toEqual(['disclosure_badge', 'intro', 'closing'])
+    expect(d.groups.map((g) => g.id)).toEqual(['menu'])
+    expect(d.guidance).toHaveLength(1)
+  })
   it('uses the same finite configuration as the backend corpus', () => {
     expect(CLIP_COMPOSITION_LIMITS).toEqual(corpus.limits)
   })
@@ -114,7 +128,7 @@ describe('shared portable composition contract', () => {
         timeline: CompositionTimeline | undefined,
         caught: unknown
       try {
-        document = parseClipComposition(c.body)
+        document = c.template ? parseClipTemplate(c.body) : parseClipComposition(c.body)
         if (c.inputs)
           timeline = resolveClipComposition(document, c.inputs, c.maxExpandedBytes ?? 1 << 20)
       } catch (error) {

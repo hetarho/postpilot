@@ -100,6 +100,7 @@ function readElement(
   inScene: boolean,
   l: CompositionLimits,
   stored: boolean,
+  template = false,
 ): CompositionElement {
   attributes(
     n,
@@ -127,6 +128,12 @@ function readElement(
     role !== 'ending'
   )
     problem(n, 'invalid_role')
+  // A template carries no caption or information element of its own any more:
+  // captions are the narration's and cut-bound information went with the
+  // sections (CLIP-4, CLIP-65). The role is named before the basis so a legacy
+  // caption is refused for what it is, not for when it showed.
+  if (template && (role === 'caption' || role === 'info')) problem(n, 'unsupported_role')
+  if (template && basis === 'cut') problem(n, 'unsupported_basis')
   const region = role === 'hook' || role === 'ending'
   if (
     region &&
@@ -265,10 +272,23 @@ export function readStoredClipComposition(
   return readClipComposition(source, limits, true)
 }
 
+/** The grammar a TEMPLATE body must satisfy before it is saved (CLIP-4,
+ * CLIP-59): fixed regions, the badge, fields, groups and guides. Footage
+ * sections, scene-bound text and cut-relative timing are refused with the
+ * construct named, mirroring the server's ParseTemplate; frozen project
+ * snapshots keep reading through parseClipComposition (CLIP-140). */
+export function parseClipTemplate(
+  source: string,
+  limits: CompositionLimits = CLIP_COMPOSITION_LIMITS,
+): ClipComposition {
+  return readClipComposition(source, limits, false, true)
+}
+
 function readClipComposition(
   source: string,
   limits: CompositionLimits,
   stored: boolean,
+  template = false,
 ): ClipComposition {
   if (!validCompositionLimits(limits)) throw new CompositionProblem('clip', 1, 'invalid_limits')
   if (
@@ -407,7 +427,7 @@ function readClipComposition(
       if (c.name === 'guide') s.guidance.push(guide(c))
       else if (c.name === 'text') {
         claim(c)
-        s.elements.push(readElement(c, d, scope, repeat, true, limits, stored))
+        s.elements.push(readElement(c, d, scope, repeat, true, limits, stored, template))
       } else problem(c, 'unknown_tag')
     }
     d.sections.push(s)
@@ -422,12 +442,14 @@ function readClipComposition(
         break
       case 'text':
         claim(n)
-        d.elements.push(readElement(n, d, 'context', '', false, limits, stored))
+        d.elements.push(readElement(n, d, 'context', '', false, limits, stored, template))
         break
       case 'scene':
+        if (template) problem(n, 'unsupported_section')
         section(n)
         break
       case 'repeat': {
+        if (template) problem(n, 'unsupported_section')
         attributes(n, 'for')
         const over = n.attributes.for
         if (over !== 'scenes' && !d.groups.some((g) => g.id === over)) problem(n, 'unknown_repeat')

@@ -14,7 +14,7 @@ import {
   clipCompositionGuide,
   emptyClipRecipe,
   normalizeRecipe,
-  parseClipComposition,
+  parseClipTemplate,
   recipeOf,
   useClipTemplateMutations,
   validateClipRecipe,
@@ -87,7 +87,7 @@ export function ClipTemplateEditor({
   const design = body ? compositionDesign(body) : selection
   let document: ClipComposition | undefined, problem: CompositionProblem | undefined
   try {
-    document = parseClipComposition(body)
+    document = parseClipTemplate(body)
   } catch (error) {
     if (error instanceof CompositionProblem)
       problem =
@@ -171,6 +171,11 @@ export function ClipTemplateEditor({
           {stored?.compositionLegacy && (
             <Typography variant="body" className="text-content-secondary">
               {t('composition.converted')}
+            </Typography>
+          )}
+          {stored?.compositionConverted && !dirty && (
+            <Typography variant="body" role="status" className="text-content-secondary">
+              {t('composition.sectionsMoved')}
             </Typography>
           )}
           {capabilities.data &&

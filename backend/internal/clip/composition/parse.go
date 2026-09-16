@@ -139,15 +139,28 @@ func Milliseconds(s string, max int) (int, bool) {
 	return int(ms), true
 }
 
-func Parse(source string, limits Limits) (*Document, *Problem) { return parse(source, limits, false) }
+func Parse(source string, limits Limits) (*Document, *Problem) {
+	return parse(source, limits, false, false)
+}
 
 // ReadStored preserves the old role/style vocabulary solely to reopen saved
 // drafts for correction. Every write, quote, preview and render uses strict Parse.
 func ReadStored(source string, limits Limits) (*Document, *Problem) {
-	return parse(source, limits, true)
+	return parse(source, limits, true, false)
 }
 
-func parse(source string, limits Limits, stored bool) (*Document, *Problem) {
+// ParseTemplate is the grammar a TEMPLATE body must satisfy before it is saved
+// (CLIP-4, CLIP-59): the fixed regions — intro and outro slots and the badge —
+// plus fields, groups and invisible guides. Footage sections, scene-bound text
+// and cut-relative timing belong to the flow and the narration now, so a body
+// still declaring them is refused with the construct named. Frozen project
+// snapshots keep reading through Parse and ReadStored exactly as before
+// (CLIP-140), which is why this is a third entry and not a change to either.
+func ParseTemplate(source string, limits Limits) (*Document, *Problem) {
+	return parse(source, limits, false, true)
+}
+
+func parse(source string, limits Limits, stored, template bool) (*Document, *Problem) {
 	if !validLimits(limits) {
 		return nil, &Problem{ElementID: "clip", Line: 1, Reason: "invalid_limits"}
 	}
@@ -353,7 +366,7 @@ func parse(source string, limits Limits, stored bool) (*Document, *Problem) {
 				if e := claim(c, ""); e != nil {
 					return e
 				}
-				v, e := readElement(c, d, scope, repeat, true, limits, stored)
+				v, e := readElement(c, d, scope, repeat, true, limits, stored, template)
 				if e != nil {
 					return e
 				}
@@ -378,16 +391,22 @@ func parse(source string, limits Limits, stored bool) (*Document, *Problem) {
 			if e = claim(n, ""); e != nil {
 				return nil, e
 			}
-			v, e := readElement(n, d, "context", "", false, limits, stored)
+			v, e := readElement(n, d, "context", "", false, limits, stored, template)
 			if e != nil {
 				return nil, e
 			}
 			d.Elements = append(d.Elements, v)
 		case "scene":
+			if template {
+				return nil, issue(n, "unsupported_section")
+			}
 			if e = section(n, ""); e != nil {
 				return nil, e
 			}
 		case "repeat":
+			if template {
+				return nil, issue(n, "unsupported_section")
+			}
 			if e = attrs(n, "for"); e != nil {
 				return nil, e
 			}
@@ -512,7 +531,7 @@ func fieldMaxima(d *Document, l Limits) map[string]int {
 	return out
 }
 
-func readElement(n *Node, d *Document, scope, repeat string, inScene bool, l Limits, stored bool) (Element, *Problem) {
+func readElement(n *Node, d *Document, scope, repeat string, inScene bool, l Limits, stored, template bool) (Element, *Problem) {
 	var t Element
 	allowed := []string{"id", "kind", "role", "position", "align", "basis", "start", "end", "chars"}
 	if stored {
@@ -527,6 +546,16 @@ func readElement(n *Node, d *Document, scope, repeat string, inScene bool, l Lim
 	}
 	if !slices.Contains([]string{"caption", "info", "badge", "hook", "ending"}, t.Role) {
 		return t, issue(n, "invalid_role")
+	}
+	// A template carries no caption or information element of its own any
+	// more: captions are the narration's and cut-bound information went with
+	// the sections (CLIP-4, CLIP-65). The role is named before the basis so a
+	// legacy caption is refused for what it is, not for when it showed.
+	if template && (t.Role == "caption" || t.Role == "info") {
+		return t, issue(n, "unsupported_role")
+	}
+	if template && t.Basis == "cut" {
+		return t, issue(n, "unsupported_basis")
 	}
 	region := t.Role == "hook" || t.Role == "ending"
 	if region && !stored {

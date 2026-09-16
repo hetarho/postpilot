@@ -289,6 +289,7 @@ export const clips = {
     sampleTime: 'Preview time',
     seconds: '{{value}} seconds',
     sampleValue: 'Sample {{label}} {{n}}',
+    sampleNarration: 'A caption reads like this',
     previewError:
       'For this sample duration, check the binding or interval at line {{line}}, element {{element}}.',
     sampleFrame: 'Illustrative safe area and current composition',
@@ -349,6 +350,10 @@ export const clips = {
       repeat: 'Repetition {{n}}',
       guide: 'Guidance {{n}}',
     },
+    projectSettings:
+      'Caption pace and the accent are chosen per project when a clip is made. A template holds only what every clip must carry.',
+    sectionsMoved:
+      "This template's scenes were moved into its guide. Footage order and captions now come from the clip instruction. Saving keeps the moved text.",
     add: {
       field: 'Add field',
       group: 'Add item group',
@@ -370,6 +375,13 @@ export const clips = {
       invalid_skeleton: 'Check the intro and outro structure for the selected designs.',
       field_limit: 'Check the field count, label and prompt limits.',
       unknown_tag: 'Unsupported tag. Check the format guide.',
+      unsupported_section:
+        'Scenes (scene, repeat) are no longer part of a template. Put footage order and scene guidance in the clip instruction.',
+      unsupported_role:
+        'Caption and info texts are no longer part of a template. Captions come from the clip instruction and the footage at generation.',
+      unsupported_basis:
+        'Cut-relative timing (basis="cut") is no longer supported. Use whole or an output-start/output-end interval.',
+      guide_limit: 'The guide is too long. Shorten it to the guide limit.',
       unknown_attribute: 'Unsupported attribute. Check the format guide.',
       duplicate_id: 'Element identifiers must be distinct.',
       invalid_rows: 'Rows are supported only for intro, outro and information text.',
@@ -377,7 +389,7 @@ export const clips = {
       answer_limit_field: '{{label}} holds {{max}} characters and currently has {{actual}}.',
     },
     guide:
-      "Write only postpilot video-template source using the grammar below. Source from an external AI can be pasted into the editor. Authoring, copying, parsing and illustrative preview make no model call and use no credits. Choose the root intro, caption and outro first. The intro/outro skeletons fix slot order and appearance; only slot text and the content region are authorable. No universal price requirement, automatic disclosure or CTA is added.\n\nGrammar:\n{{grammar}}\n\nBounds (characters are Unicode scalars; Ms means milliseconds):\n{{limits}}\n\nA field label is its visible name; its body is input guidance. Bind by ID so renaming a label preserves identity. A blank optional value omits its dependent text; in the intro/outro it clears only that slot and preserves the other slot positions; required values block generation when blank. Keep each item's price, currency, units and price basis together. Repetition uses only selected real scenes and invents no unfilmed item footage. AI copy uses facts bound to its scene and item; fixed copy preserves even whitespace except explicit value substitution. Guides are invisible in the output.\n\nSeveral-menu example (add two or more menu items on the input screen):\n{{example}}",
+      "Write only postpilot video-template source using the grammar below. Source from an external AI can be pasted into the editor. Authoring, copying, parsing and illustrative preview make no model call and use no credits. Choose the root intro, caption and outro first. The intro/outro skeletons fix slot order and appearance; only slot text, the badge, information fields, item groups and one guide are authorable. A template declares only what every clip made from it must carry. Footage order, cut rhythm and every caption are decided at generation from the project instruction and the observed footage; caption pace and accent are chosen per project. No universal price requirement, automatic disclosure or CTA is added.\n\nGrammar:\n{{grammar}}\n\nBounds (characters are Unicode scalars; Ms means milliseconds):\n{{limits}}\n\nA field label is its visible name; its body is input guidance. Bind by ID so renaming a label preserves identity. A blank optional value omits its dependent text; in the intro/outro it clears only that slot and preserves the other slot positions; required values block generation when blank. Keep each item's price, currency, units and price basis together. An item's name and price are facts the narration states rather than on-screen labels, and a number enters a caption only when it matches the entered value exactly. Fixed copy preserves even whitespace except explicit value substitution. Guides are invisible in the output and hold what is tedious to repeat every time, such as voice and viewpoint; the project instruction comes first and the guide follows it.\n\nExample (add two or more menu items on the input screen):\n{{example}}",
   },
   credits: {
     renderOnly:

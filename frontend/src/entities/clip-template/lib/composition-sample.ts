@@ -2,10 +2,15 @@ import { CLIP_COMPOSITION_PREVIEW } from '@/shared/config'
 import type { ClipComposition, CompositionInputs } from '../model/composition'
 import { resolveClipComposition } from './composition-resolve'
 
+/** The illustrative resolution the template preview draws. `narration` is the
+ *  one sample caption sentence: a template declares none any more, and the
+ *  preview still has to show the caption treatment against the skeleton and the
+ *  badge, because that is the design decision the owner is making (CLIP-4). */
 export function sampleClipComposition(
   doc: ClipComposition,
   durationMs: number,
   sample: (label: string, n: number) => string,
+  narration = '',
 ) {
   const values = (group: string, n: number) =>
     Object.fromEntries(
@@ -56,5 +61,41 @@ export function sampleClipComposition(
       Math.floor((durationMs * (i + 1)) / input.cuts.length) -
       Math.floor((durationMs * i) / input.cuts.length)
   })
-  return resolveClipComposition(doc, input, CLIP_COMPOSITION_PREVIEW.expandedBytes)
+  const timeline = resolveClipComposition(doc, input, CLIP_COMPOSITION_PREVIEW.expandedBytes)
+  if (!narration) return timeline
+  const start = Math.round(timeline.durationMs / 3),
+    end = Math.min(timeline.durationMs, start + CLIP_COMPOSITION_PREVIEW.narrationMs)
+  return {
+    ...timeline,
+    elements: [
+      ...timeline.elements,
+      {
+        instanceId: 'sample-narration',
+        cutId: '',
+        groupId: '',
+        itemId: '',
+        element: {
+          id: 'sample-narration',
+          kind: 'fixed' as const,
+          role: 'caption' as const,
+          style: 'auto',
+          position: 'auto',
+          align: 'center',
+          basis: 'whole' as const,
+          startMs: null,
+          endMs: null,
+          chars: 0,
+          parts: [{ literal: narration, field: '' }],
+          rows: [],
+          span: { start: 0, end: 0, line: 1 },
+        },
+        text: narration,
+        rows: [],
+        facts: [],
+        startMs: start,
+        endMs: end,
+        authoredTiming: false,
+      },
+    ],
+  }
 }

@@ -21,7 +21,11 @@ export function toClipTemplate(value: ProtoVideoTemplate): ClipTemplate {
     throw new Error('Invalid clip template contract')
   return {
     ...(value.compositionBody
-      ? { compositionBody: value.compositionBody, compositionLegacy: value.compositionLegacy }
+      ? {
+          compositionBody: value.compositionBody,
+          compositionLegacy: value.compositionLegacy,
+          ...(value.compositionConverted ? { compositionConverted: true } : {}),
+        }
       : {}),
     ...(value.captionPace
       ? { captionPace: value.captionPace as NonNullable<ClipRecipe['captionPace']> }

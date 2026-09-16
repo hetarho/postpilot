@@ -155,7 +155,7 @@ func TestWholeSourceBindingSurvivesSaveAndGeneration(t *testing.T) {
 	h.service = clip.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, compositionPlanner{h.planner}, compositionRenderer{h.renderer}, generationJobs{h.queue}, h.cfg).WithFinisher(generationFinisher{h.store}).WithCredits(&quotePricing{}, nil)
 	h.projects.SetGeneration(h.service)
 	body := "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><text id=\"intro\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"outro\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/>\n<group id=\"menu\" label=\"고기\"><field id=\"name\" label=\"부위\" required=\"true\"/></group><repeat for=\"menu\"><scene id=\"cut\" scope=\"item\"><text id=\"copy\" kind=\"ai\" role=\"caption\" basis=\"cut\">설명</text></scene></repeat></clip>"
-	template, err := h.projects.CreateTemplate(ctx, "alice", clip.Recipe{Name: "meat", CompositionBody: body})
+	template, err := legacyTemplate(t, h.store, "alice", "meat", body), error(nil)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -25,6 +25,7 @@ export { CompositionPreview } from './ui/CompositionPreview'
 export { clipCompositionGuide, CLIP_COMPOSITION_EXAMPLE } from './model/composition-guide'
 export {
   parseClipComposition,
+  parseClipTemplate,
   readStoredClipComposition,
   replaceCompositionNode,
   replaceCompositionSpan,

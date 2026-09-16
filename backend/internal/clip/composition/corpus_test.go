@@ -12,7 +12,13 @@ import (
 )
 
 type corpusCase struct {
-	Name, Body       string
+	Name, Body string
+	// Template runs the case through ParseTemplate, the grammar a saved template
+	// must satisfy, instead of the snapshot grammar Parse.
+	Template bool
+	// Converted/Changed pin ConvertLegacyTemplate's projection of Body.
+	Converted        string
+	Changed          *bool
 	Error            *composition.Problem
 	Inputs           *composition.Inputs
 	Summary          map[string]any
@@ -125,7 +131,30 @@ func TestSharedCorpus(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
+			if c.Changed != nil {
+				converted, changed, problem := composition.ConvertLegacyTemplate(c.Body, l)
+				if problem != nil || changed != *c.Changed || converted != c.Converted {
+					t.Fatalf("conversion: %+v changed=%v\n%s", problem, changed, converted)
+				}
+				// The carry-over is what the conversion owes; an authoring error the
+				// owner still has to fix stays visible (CLIP-114, CLIP-140).
+				read, problem := composition.ReadStored(converted, l)
+				if problem != nil {
+					t.Fatalf("converted body unreadable: %+v", problem)
+				}
+				if len(read.Sections) > 0 {
+					t.Fatalf("converted body kept %d sections", len(read.Sections))
+				}
+				for _, e := range read.Elements {
+					if e.Role == "caption" || e.Role == "info" || e.Basis == "cut" {
+						t.Fatalf("converted body kept %s as %s/%s", e.ID, e.Role, e.Basis)
+					}
+				}
+			}
 			d, e := composition.Parse(c.Body, l)
+			if c.Template {
+				d, e = composition.ParseTemplate(c.Body, l)
+			}
 			var timeline composition.Timeline
 			if e == nil && c.Inputs != nil {
 				budget := c.MaxExpandedBytes

@@ -3,7 +3,6 @@ import { CLIP_COMPOSITION_LIMITS } from '@/shared/config'
 import { useTranslation } from 'react-i18next'
 import { Button, Checkbox, SortableList, Typography } from '@/shared/ui'
 import type { CompositionNode } from '../model/composition'
-import { CLIP_ACCENTS } from '../model/types'
 import {
   boundedChars,
   compositionDraftTree,
@@ -18,7 +17,7 @@ import {
   isCompositionRegion,
   rebuildCompositionSkeleton,
 } from '../lib/composition-skeleton'
-import { CompositionInput, CompositionSelect } from './CompositionFields'
+import { CompositionInput } from './CompositionFields'
 import { CompositionTextControls } from './CompositionTextControls'
 
 /** An empty value REMOVES the attribute: 자동 is its absence, and the draft has
@@ -53,12 +52,6 @@ export function CompositionBuilder({
       value: r.group ? `${r.group}.${r.node.attributes.id}` : r.node.attributes.id,
       label: r.node.attributes.label,
     }))
-  const groups = all
-    .filter((r) => r.node.name === 'group')
-    .map((r, i) => ({
-      value: r.node.attributes.id,
-      label: r.node.attributes.label?.trim() || t('composition.groupNumber', { n: i + 1 }),
-    }))
   const labelFor = (node: CompositionNode, i: number) =>
     node.name === 'group' && node.attributes.label?.trim()
       ? node.attributes.label
@@ -66,7 +59,7 @@ export function CompositionBuilder({
         ? node.attributes.label || t('composition.newField')
         : node.name === 'text'
           ? t(`composition.role.${node.attributes.role}`, {
-              defaultValue: t('composition.role.caption'),
+              defaultValue: t('composition.role.badge'),
             })
           : t(`composition.node.${node.name}`, {
               n: i + 1,
@@ -74,29 +67,28 @@ export function CompositionBuilder({
             })
   const patch = (node: CompositionNode, next: CompositionNode | null) =>
     onChange(patchCompositionSource(source, node, next))
-  const add = (parent: CompositionNode, name: string, inScene: boolean) => {
-    const child = newCompositionNode(name, t('composition.newField'), inScene)
-    if (name === 'scene' && parent.name === 'repeat' && parent.attributes.for !== 'scenes')
-      child.attributes.scope = 'item'
-    patch(parent, { ...parent, children: [...parent.children, child] })
+  const add = (parent: CompositionNode, name: string) => {
+    patch(parent, {
+      ...parent,
+      children: [...parent.children, newCompositionNode(name, t('composition.newField'))],
+    })
   }
-  const addButtons = (parent: CompositionNode, names: string[], inScene = false) => (
+  const addButtons = (parent: CompositionNode, names: string[]) => (
     <div className="flex flex-wrap gap-2">
       {names.map((name) => (
-        <Button key={name} variant="ghost" onClick={() => add(parent, name, inScene)}>
+        <Button key={name} variant="ghost" onClick={() => add(parent, name)}>
           {t(`composition.add.${name}`, { defaultValue: t('composition.add.text') })}
         </Button>
       ))}
     </div>
   )
-  const renderEditor = (node: CompositionNode, label: string, scope: string, repeat: string) => {
+  const renderEditor = (node: CompositionNode, label: string) => {
     const name = node.name
     const region = isCompositionRegion(node)
     const invalidRegion =
       region &&
-      (!!scope ||
-        node.attributes.basis !==
-          (node.attributes.role === 'hook' ? 'output-start' : 'output-end') ||
+      (node.attributes.basis !==
+        (node.attributes.role === 'hook' ? 'output-start' : 'output-end') ||
         'position' in node.attributes ||
         'align' in node.attributes ||
         'style' in node.attributes ||
@@ -108,10 +100,9 @@ export function CompositionBuilder({
     const change = (next: CompositionNode) => patch(node, next)
     const attr = (field: string, value: string) =>
       change({ ...node, attributes: { ...node.attributes, [field]: value } })
-    const bindings = fields.filter(
-      (f) =>
-        !f.group || (scope === 'item' && (!repeat || repeat === 'scenes' || repeat === f.group)),
-    )
+    // A template's visible text binds only GLOBAL answers now: an item's facts
+    // are what the narration states, never an on-screen label (CLIP-59, CLIP-61).
+    const bindings = fields.filter((f) => !f.group)
     return (
       <section className="my-3 min-w-0 space-y-4" aria-label={label}>
         {name === 'group' && (
@@ -175,51 +166,15 @@ export function CompositionBuilder({
             onChange={(v) => change({ ...node, children: [compositionLiteral(v)] })}
           />
         )}
-        {name === 'scene' && (
-          <CompositionSelect
-            label={t('composition.scopeLabel')}
-            value={node.attributes.scope ?? 'scene'}
-            options={(repeat && repeat !== 'scenes' ? ['item'] : ['scene', 'item', 'context']).map(
-              (value) => ({
-                value,
-                label: t(`composition.scope.${value}`, {
-                  defaultValue: t('composition.scope.scene'),
-                }),
-              }),
-            )}
-            onChange={(v) => attr('scope', v)}
-          />
-        )}
-        {name === 'repeat' && (
-          <CompositionSelect
-            label={t('composition.repeatLabel')}
-            value={node.attributes.for}
-            options={[{ value: 'scenes', label: t('composition.selectedScenes') }, ...groups]}
-            onChange={(value) =>
-              change({
-                ...node,
-                attributes: { for: value },
-                children: node.children.map((n) =>
-                  n.name === 'scene' && value !== 'scenes'
-                    ? { ...n, attributes: { ...n.attributes, scope: 'item' } }
-                    : n,
-                ),
-              })
-            }
-          />
-        )}
         {name === 'text' && (
           <CompositionTextControls
             node={node}
-            inScene={!!scope}
             design={design}
             bindings={bindings}
             onChange={change}
           />
         )}
         {name === 'group' && addButtons(node, ['field'])}
-        {name === 'repeat' && addButtons(node, ['scene'])}
-        {name === 'scene' && addButtons(node, ['guide', 'text'], true)}
         {invalidRegion && (
           <div>
             <Typography variant="body" role="status">
@@ -256,7 +211,7 @@ export function CompositionBuilder({
       </section>
     )
   }
-  const list = (parent: CompositionNode, path: string, scope = '', repeat = '') => {
+  const list = (parent: CompositionNode, path: string) => {
     const nodes = parent.children.filter((n) => n.name !== '#text' && !isCompositionRegion(n))
     return (
       <SortableList
@@ -285,13 +240,7 @@ export function CompositionBuilder({
                 >
                   {label}
                 </Button>
-                {['group', 'scene', 'repeat'].includes(name) &&
-                  list(
-                    node,
-                    key,
-                    name === 'scene' ? (node.attributes.scope ?? 'scene') : scope,
-                    name === 'repeat' ? node.attributes.for : repeat,
-                  )}
+                {name === 'group' && list(node, key)}
               </div>
             ),
           }
@@ -307,35 +256,12 @@ export function CompositionBuilder({
           selected.node,
           selected.parent.children.filter((n) => n.name !== '#text').indexOf(selected.node),
         ),
-        selected.scope,
-        selected.repeat,
       )
     : null
   const outline = list(root, 'clip')
   return (
     <div className="min-w-0 space-y-6">
-      <fieldset className="min-w-0 space-y-3">
-        <CompositionSelect
-          label={t('editor.accent')}
-          value={root.attributes.accent ?? ''}
-          options={CLIP_ACCENTS.map((value) => ({ value, label: t(`accent.${value || 'none'}`) }))}
-          onChange={(value) =>
-            patch(root, { ...root, attributes: { ...root.attributes, accent: value } })
-          }
-        />
-        <Typography variant="meta">{t('editor.accentHelp')}</Typography>
-        <CompositionSelect
-          label={t('pace.label')}
-          value={root.attributes.pace ?? 'steady'}
-          options={['steady', 'rapid'].map((value) => ({
-            value,
-            label: t(`pace.${value}`, { defaultValue: t('pace.steady') }),
-          }))}
-          onChange={(value) =>
-            patch(root, { ...root, attributes: { ...root.attributes, pace: value } })
-          }
-        />
-      </fieldset>
+      <Typography variant="meta">{t('composition.projectSettings')}</Typography>
       {activeEditor}
       <div className="flex flex-wrap gap-2">
         {all
@@ -352,7 +278,7 @@ export function CompositionBuilder({
           ))}
       </div>
       {outline}
-      {addButtons(root, ['field', 'group', 'guide', 'scene', 'repeat', 'text'])}
+      {addButtons(root, ['field', 'group', 'guide', 'text'])}
     </div>
   )
 }

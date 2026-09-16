@@ -2,6 +2,20 @@
 
 `Parse` validates source into a typed `Document`; `Resolve` binds explicit answers
 and selected footage cuts. Neither function chooses footage, calls AI or renders.
+
+Three entries read the same grammar at different strictness. `ParseTemplate` is
+what a saved TEMPLATE body must satisfy (CLIP-4, CLIP-59): fields, groups,
+invisible guides, the intro/outro slots and the badge. It refuses `scene`,
+`repeat` (`unsupported_section`), a content text whose role is `caption` or
+`info` (`unsupported_role`) and `basis="cut"` (`unsupported_basis`). `Parse`
+still accepts every construct below so a project's frozen snapshot keeps
+resolving and rendering exactly as it was frozen (CLIP-140), and `ReadStored`
+additionally tolerates retired attributes. `ConvertLegacyTemplate` carries a
+section body's guides and scene-bound texts into one root `guide` as prose for
+the template read projection; the stored body changes only when the owner saves.
+The example below therefore shows the full snapshot grammar, not what a new
+template may declare.
+
 An AI element's resolved text is its **writer instruction**, while a fixed
 element's resolved text is the exact output after explicit value substitution.
 

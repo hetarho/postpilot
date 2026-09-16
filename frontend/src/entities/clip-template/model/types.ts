@@ -1,4 +1,4 @@
-import { parseClipComposition } from '../lib/composition-parse'
+import { parseClipTemplate } from '../lib/composition-parse'
 import { CLIP_PRESETS, type ClipPresetId, type ClipCaptionPace } from '@/shared/config'
 
 export const CLIP_TEMPLATE_LIMITS = {
@@ -43,6 +43,9 @@ export interface ClipRecipe {
 }
 export interface ClipTemplate extends ClipRecipe {
   id: string
+  /** The body came back converted from the old section grammar (CLIP-140); the
+   * stored body changes only when the owner saves. */
+  compositionConverted?: boolean
   projectCount: number
   createdAt: string
   updatedAt: string
@@ -95,7 +98,7 @@ export function validateClipRecipe(value: ClipRecipe) {
     const name = textError(recipe.name, CLIP_TEMPLATE_LIMITS.name)
     let composition: 'invalid' | undefined
     try {
-      parseClipComposition(recipe.compositionBody)
+      parseClipTemplate(recipe.compositionBody)
     } catch {
       composition = 'invalid'
     }

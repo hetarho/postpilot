@@ -74,7 +74,10 @@ export function compositionOutline(root: CompositionNode): CompositionOutlineRow
   return rows
 }
 
-export function newCompositionNode(name: string, label: string, inScene = false): CompositionNode {
+/** The nodes the palette can add. A template declares the information to
+ *  collect, one invisible guide and the disclosure badge — the only visible
+ *  element outside the intro/outro skeleton (CLIP-4, CLIP-59). */
+export function newCompositionNode(name: string, label: string): CompositionNode {
   const id = `${name}_${crypto.randomUUID().replaceAll('-', '')}`
   switch (name) {
     case 'field':
@@ -83,18 +86,12 @@ export function newCompositionNode(name: string, label: string, inScene = false)
       return compositionNode(name, { id, label: '', min: '0' }, [
         newCompositionNode('field', label),
       ])
-    case 'scene':
-      return compositionNode(name, { id, scope: 'scene' })
-    case 'repeat':
-      return compositionNode(name, { for: 'scenes' }, [newCompositionNode('scene', label)])
     case 'guide':
       return compositionNode(name, {}, [compositionLiteral('')])
     default:
-      return compositionNode(
-        'text',
-        { id, kind: 'fixed', role: 'caption', basis: inScene ? 'cut' : 'whole' },
-        [compositionLiteral('')],
-      )
+      return compositionNode('text', { id, kind: 'fixed', role: 'badge', basis: 'whole' }, [
+        compositionLiteral(''),
+      ])
   }
 }
 

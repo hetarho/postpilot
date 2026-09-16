@@ -79,6 +79,10 @@ message VideoTemplate {
   string caption_pace = 11;
   string composition_body = 12;
   bool composition_legacy = 13;
+  // True when the stored body still declared footage sections or scene-bound
+  // text and composition_body is the converted read projection; the stored body
+  // changes only when the owner saves (CLIP-140).
+  bool composition_converted = 14;
 }
 message ClipAnswer { string label = 1; string text = 2; }
 // The reserved information fields a preset needs, in the order a form shows

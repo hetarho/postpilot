@@ -101,7 +101,7 @@ func TestGenerationPersistsTheRenderedOwnedPlanAndItsStyles(t *testing.T) {
 	h.service = clip.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, ownedPlanWriter{h.planner}, ownedPlanRenderer{h.renderer}, generationJobs{h.queue}, h.cfg).WithFinisher(generationFinisher{h.store}).WithCredits(&quotePricing{}, nil)
 	h.projects.SetGeneration(h.service)
 	body := `<clip version="1" intro="b" caption="bold" outro="e"><repeat for="scenes"><scene id="shot"><text id="copy" kind="ai" role="caption" basis="cut">Describe the scene.</text></scene></repeat><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`
-	template, err := h.projects.CreateTemplate(t.Context(), "alice", clip.Recipe{Name: "owned-render", CompositionBody: body})
+	template, err := legacyTemplate(t, h.store, "alice", "owned-render", body), error(nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -130,10 +130,10 @@ func TestGenerationPersistsTheRenderedOwnedPlanAndItsStyles(t *testing.T) {
 const nativeBody = `<clip version="1" intro="b" caption="bold" outro="e"><field id="a" label="가격"/><field id="b" label="가격" required="true"/><group id="menu"><field id="price" label="가격"/></group><repeat for="scenes"><scene id="shot" scope="scene"><text id="copy" kind="ai" role="caption" basis="cut">장면만 설명</text></scene></repeat><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`
 
 func TestNativeCompositionOwnedRoundTripAndRequiredIDs(t *testing.T) {
-	s, _, d := setup(t)
+	s, st, d := setup(t)
 	ctx := context.Background()
 	body := "\n" + nativeBody + "\n"
-	template, err := s.CreateTemplate(ctx, "alice", clip.Recipe{Name: "native", CompositionBody: body})
+	template, err := legacyTemplate(t, st, "alice", "native", body), error(nil)
 	if err != nil || template.CompositionBody != body || template.CompositionLegacy {
 		t.Fatal(template, err)
 	}
@@ -177,9 +177,9 @@ func TestNativeCompositionOwnedRoundTripAndRequiredIDs(t *testing.T) {
 }
 
 func TestNativeSnapshotSurvivesTemplateEditAndDeletion(t *testing.T) {
-	s, _, _ := setup(t)
+	s, st, _ := setup(t)
 	ctx := context.Background()
-	template, err := s.CreateTemplate(ctx, "alice", clip.Recipe{Name: "native", CompositionBody: nativeBody})
+	template, err := legacyTemplate(t, st, "alice", "native", nativeBody), error(nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -189,7 +189,7 @@ func TestNativeSnapshotSurvivesTemplateEditAndDeletion(t *testing.T) {
 	}
 	before := p.Composition
 	changed := strings.Replace(nativeBody, "장면만 설명", "다른 구성", 1)
-	if _, err = s.UpdateTemplate(ctx, "alice", template.ID, clip.TemplatePatch{CompositionBody: &changed}); err != nil {
+	if _, err = st.UpdateTemplate(ctx, "alice", template.ID, clip.TemplatePatch{CompositionBody: &changed}, time.Now()); err != nil {
 		t.Fatal(err)
 	}
 	got, err := s.GetProject(ctx, "alice", p.ID)
@@ -309,7 +309,7 @@ func TestUnsupportedCompositionRefusesQuoteBeforeMediaOrCreditWork(t *testing.T)
 	h := generationSetup(t)
 	ctx := context.Background()
 	body := `<clip version="1" intro="b" caption="bold" outro="e"><repeat for="scenes"><scene id="shot" scope="scene"/></repeat><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`
-	if _, err := h.projects.UpdateTemplate(ctx, "alice", h.template.ID, clip.TemplatePatch{CompositionBody: &body}); err != nil {
+	if _, err := h.store.UpdateTemplate(ctx, "alice", h.template.ID, clip.TemplatePatch{CompositionBody: &body}, time.Now()); err != nil {
 		t.Fatal(err)
 	}
 	_, err := h.service.Quote(ctx, "alice", h.project.ID, h.batch.ID, "p/o", "p/w")
@@ -318,7 +318,7 @@ func TestUnsupportedCompositionRefusesQuoteBeforeMediaOrCreditWork(t *testing.T)
 	if err == nil {
 		t.Fatal("unsupported native workflow was quoted")
 	}
-	template, err := h.projects.CreateTemplate(ctx, "alice", clip.Recipe{Name: "native-capability", CompositionBody: body})
+	template, err := legacyTemplate(t, h.store, "alice", "native-capability", body), error(nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -394,7 +394,7 @@ func TestNativeQuoteInvalidatesGroupedValuesAndFreezesAcceptedComposition(t *tes
 	ctx := context.Background()
 	h.service = clip.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, compositionPlanner{h.planner}, compositionRenderer{h.renderer}, generationJobs{h.queue}, h.cfg).WithFinisher(generationFinisher{h.store}).WithCredits(&quotePricing{}, nil)
 	h.projects.SetGeneration(h.service)
-	template, err := h.projects.CreateTemplate(ctx, "alice", clip.Recipe{Name: "native-quote", CompositionBody: nativeBody})
+	template, err := legacyTemplate(t, h.store, "alice", "native-quote", nativeBody), error(nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -429,7 +429,7 @@ func TestNativeQuoteInvalidatesGroupedValuesAndFreezesAcceptedComposition(t *tes
 		t.Fatal("accepted payload lost composition")
 	}
 	changed := strings.Replace(nativeBody, "장면만 설명", "새 구성", 1)
-	if _, err = h.projects.UpdateTemplate(ctx, "alice", template.ID, clip.TemplatePatch{CompositionBody: &changed}); err != nil {
+	if _, err = h.store.UpdateTemplate(ctx, "alice", template.ID, clip.TemplatePatch{CompositionBody: &changed}, time.Now()); err != nil {
 		t.Fatal(err)
 	}
 	again, err := h.jobs.GetByID(ctx, jobID)
@@ -442,7 +442,7 @@ func TestNativeQuoteInvalidatesGroupedValuesAndFreezesAcceptedComposition(t *tes
 func TestApplyingCurrentTemplateInputsPreservesPriorRenderedResult(t *testing.T) {
 	s, raw, _ := setup(t)
 	ctx := t.Context()
-	template, err := s.CreateTemplate(ctx, "alice", clip.Recipe{Name: "editable", CompositionBody: nativeBody})
+	template, err := legacyTemplate(t, raw, "alice", "editable", nativeBody), error(nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -461,7 +461,7 @@ func TestApplyingCurrentTemplateInputsPreservesPriorRenderedResult(t *testing.T)
 	}
 	changed := strings.Replace(nativeBody, `label="가격"`, `label="가격 안내"`, 1)
 	changed = strings.Replace(changed, `</clip>`, `<field id="new" label="추가 정보"/></clip>`, 1)
-	if _, err = s.UpdateTemplate(ctx, "alice", template.ID, clip.TemplatePatch{CompositionBody: &changed}); err != nil {
+	if _, err = raw.UpdateTemplate(ctx, "alice", template.ID, clip.TemplatePatch{CompositionBody: &changed}, time.Now()); err != nil {
 		t.Fatal(err)
 	}
 	read, err := s.GetProject(ctx, "alice", p.ID)

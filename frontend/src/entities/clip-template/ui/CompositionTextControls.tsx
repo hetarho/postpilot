@@ -1,6 +1,6 @@
 import { CLIP_TIMING } from '@/shared/config'
 import { useTranslation } from 'react-i18next'
-import { Button, Checkbox, Typography } from '@/shared/ui'
+import { Button, Typography } from '@/shared/ui'
 import type { CompositionNode } from '../model/composition'
 import { boundedChars, compositionLiteral, compositionNode } from '../lib/composition-author'
 import { compositionPositionChars } from '../lib/composition-parse'
@@ -99,13 +99,11 @@ function Parts({
 
 export function CompositionTextControls({
   node,
-  inScene,
   design,
   bindings,
   onChange,
 }: {
   node: CompositionNode
-  inScene: boolean
   design: CompositionDesign
   bindings: CompositionBindingOption[]
   onChange: (node: CompositionNode) => void
@@ -119,12 +117,7 @@ export function CompositionTextControls({
       value,
       label: t(`composition.${key}.${value}`, { defaultValue: t('composition.auto') }),
     }))
-  const rows = node.children.filter((c) => c.name === 'row')
-  const card = a.role === 'info'
-  const timing =
-    a.basis === 'output-start' ||
-    a.basis === 'output-end' ||
-    (a.basis === 'cut' && a.start !== undefined)
+  const timing = a.basis === 'output-start' || a.basis === 'output-end'
   const setBasis = (basis: string) => {
     const next: Record<string, string> = { ...a, basis }
     delete next.start
@@ -212,27 +205,9 @@ export function CompositionTextControls({
         {t(a.kind === 'ai' ? 'composition.aiHelp' : 'composition.fixedHelp')}
       </Typography>
       <CompositionSelect
-        label={t('composition.roleLabel')}
-        value={a.role}
-        options={options('role', ['caption', 'info', 'badge'])}
-        onChange={(v) =>
-          onChange({
-            ...node,
-            attributes: { ...a, role: v },
-          })
-        }
-      />
-      <CompositionSelect
         label={t('composition.positionLabel')}
         value={a.position ?? 'auto'}
-        options={options('position', [
-          'auto',
-          'top',
-          'upper_mid',
-          'lower_mid',
-          'bottom',
-          ...(['info', 'badge'].includes(a.role) ? ['header'] : []),
-        ])}
+        options={options('position', ['auto', 'top', 'upper_mid', 'lower_mid', 'bottom', 'header'])}
         onChange={(v) => attr('position', v)}
       />
       <CompositionSelect
@@ -241,37 +216,17 @@ export function CompositionTextControls({
         options={options('align', ['left', 'center', 'right'])}
         onChange={(v) => attr('align', v)}
       />
-      {!rows.length && (
-        <CharsInput
-          max={compositionPositionChars(design, a.role)}
-          value={a.chars ?? ''}
-          onChange={(chars) => onChange({ ...node, attributes: patchChars(node, chars) })}
-        />
-      )}
+      <CharsInput
+        max={compositionPositionChars(design, a.role)}
+        value={a.chars ?? ''}
+        onChange={(chars) => onChange({ ...node, attributes: patchChars(node, chars) })}
+      />
       <CompositionSelect
         label={t('composition.timingLabel')}
         value={a.basis}
-        options={options('basis', [
-          'whole',
-          'output-start',
-          'output-end',
-          ...(inScene ? ['cut'] : []),
-        ])}
+        options={options('basis', ['whole', 'output-start', 'output-end'])}
         onChange={setBasis}
       />
-      {a.basis === 'cut' && (
-        <label className="flex min-h-11 items-center gap-3">
-          <Checkbox
-            checked={a.start !== undefined}
-            onChange={(e) =>
-              e.target.checked
-                ? onChange({ ...node, attributes: { ...a, start: '0', end: '3' } })
-                : setBasis('cut')
-            }
-          />
-          {t('composition.explicitCut')}
-        </label>
-      )}
       {timing && (
         <div className="grid min-w-0 gap-3 sm:grid-cols-2">
           <CompositionInput
@@ -291,82 +246,11 @@ export function CompositionTextControls({
       {a.basis === 'output-end' && (
         <Typography variant="body">{t('composition.endHelp')}</Typography>
       )}
-      {rows.length ? (
-        rows.map((row, i) => (
-          <section key={i} className="space-y-3">
-            <CompositionSelect
-              label={t('composition.rowRole', { n: i + 1 })}
-              value={row.attributes.role}
-              options={options('row', ['label', 'caption'])}
-              onChange={(role) =>
-                onChange({
-                  ...node,
-                  children: rows.map((r, j) =>
-                    i === j ? { ...r, attributes: { ...r.attributes, role } } : r,
-                  ),
-                })
-              }
-            />
-            <CharsInput
-              max={compositionPositionChars(design, a.role, {
-                role: row.attributes.role,
-                index: i,
-              })}
-              value={row.attributes.chars ?? ''}
-              onChange={(chars) =>
-                onChange({
-                  ...node,
-                  children: rows.map((r, j) =>
-                    i === j ? { ...r, attributes: patchChars(r, chars) } : r,
-                  ),
-                })
-              }
-            />
-            <Parts
-              nodes={row.children}
-              bindings={bindings}
-              onChange={(children) =>
-                onChange({
-                  ...node,
-                  children: rows.map((r, j) => (i === j ? { ...r, children } : r)),
-                })
-              }
-            />
-            <Button
-              variant="ghost"
-              onClick={() => onChange({ ...node, children: rows.filter((_, j) => i !== j) })}
-            >
-              {t('composition.removeRow', { n: i + 1 })}
-            </Button>
-          </section>
-        ))
-      ) : (
-        <Parts
-          nodes={node.children}
-          bindings={bindings}
-          onChange={(children) => onChange({ ...node, children })}
-        />
-      )}
-      {card && (
-        <Button
-          variant="ghost"
-          onClick={() =>
-            onChange({
-              ...node,
-              children: [
-                ...(rows.length
-                  ? rows
-                  : node.children.length
-                    ? [compositionNode('row', { role: 'label' }, node.children)]
-                    : []),
-                compositionNode('row', { role: 'caption' }, [compositionLiteral('')]),
-              ],
-            })
-          }
-        >
-          {t('composition.addRow')}
-        </Button>
-      )}
+      <Parts
+        nodes={node.children}
+        bindings={bindings}
+        onChange={(children) => onChange({ ...node, children })}
+      />
     </div>
   )
 }

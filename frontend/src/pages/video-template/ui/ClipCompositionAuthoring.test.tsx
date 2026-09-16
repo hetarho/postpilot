@@ -7,13 +7,14 @@ import { renderAppAt } from '@/test/app'
 import {
   CLIP_COMPOSITION_EXAMPLE,
   parseClipComposition,
+  parseClipTemplate,
   type ClipRecipe,
 } from '@/entities/clip-template'
 import { CLIP_COMPOSITION_LIMITS } from '@/shared/config'
 import type { FakeClipsOptions } from '@/test/clips'
 
 const body =
-  '<clip version=\'1\' intro="b" caption="bold" outro="e" pace=\'steady\'>\n  <field id="place" label="장소" required="false">어디인가요?</field>\n  <scene id="scene" scope="scene"/>\n  <text id="caption" kind="fixed" role="caption" basis="output-start" start="0" end="3">  🌿 A &amp; B  </text>\n<text id="intro" kind="fixed" role="hook" basis="output-start"/><text id="outro" kind="fixed" role="ending" basis="output-end"/></clip>'
+  '<clip version=\'1\' intro="b" caption="bold" outro="e">\n  <field id="place" label="장소" required="false">어디인가요?</field>\n  <text id="badge" kind="fixed" role="badge" basis="output-start" start="0" end="3">  🌿 A &amp; B  </text>\n<text id="intro" kind="fixed" role="hook" basis="output-start"/><text id="outro" kind="fixed" role="ending" basis="output-end"/></clip>'
 const template = {
   id: 'owned',
   name: '장면 템플릿',
@@ -86,9 +87,7 @@ describe('composition template authoring', () => {
     const edited = ((await source()) as HTMLTextAreaElement).value
     const doc = parseClipComposition(edited)
     expect(doc.fields[0]).toMatchObject({ id: 'place', label: '촬영 장소', required: true })
-    expect(edited).toContain(
-      '<clip version=\'1\' intro="b" caption="bold" outro="e" pace=\'steady\'>',
-    )
+    expect(edited).toContain('<clip version=\'1\' intro="b" caption="bold" outro="e">')
     expect(edited).toContain('>  🌿 A &amp; B  </text>')
     await user.click(screen.getByRole('button', { name: '저장' }))
     await screen.findByText('저장했어요')
@@ -102,10 +101,20 @@ describe('composition template authoring', () => {
     const input = await source()
     const invalid = body.replace('end="3"', 'end="-1"')
     fireEvent.change(input, { target: { value: invalid } })
-    expect(screen.getByRole('alert')).toHaveTextContent('caption')
+    expect(screen.getByRole('alert')).toHaveTextContent('badge')
     expect(screen.getByRole('alert')).toHaveTextContent('순서')
     expect(input).toHaveValue(invalid)
     expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
+    // A construct the template grammar no longer holds says so by name.
+    fireEvent.change(input, {
+      target: {
+        value: body.replace(
+          '<text id="badge"',
+          '<scene id="footage" scope="scene"/><text id="badge"',
+        ),
+      },
+    })
+    expect(screen.getByRole('alert')).toHaveTextContent('장면(scene·repeat)은 더 이상')
     fireEvent.change(input, { target: { value: body.replace('end="3"', 'end="4"') } })
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: '저장' })).toBeEnabled()
@@ -114,14 +123,14 @@ describe('composition template authoring', () => {
   it('keeps incomplete timing edits in controls and exposes the same invalid source', async () => {
     const user = userEvent.setup()
     mount()
-    await user.click(await screen.findByRole('button', { name: '자막' }))
+    await user.click(await screen.findByRole('button', { name: '공개 문구' }))
     fireEvent.change(screen.getByRole('textbox', { name: '시작 (초)' }), { target: { value: '5' } })
     expect(screen.getByRole('textbox', { name: '시작 (초)' })).toHaveValue('5')
     expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
     const pasted = ((await source()) as HTMLTextAreaElement).value
     expect(pasted).toContain('start="5"')
     expect(pasted).toContain('>  🌿 A &amp; B  </text>')
-    expect(() => parseClipComposition(pasted)).toThrow('invalid_interval')
+    expect(() => parseClipTemplate(pasted)).toThrow('invalid_interval')
   })
   it('copies exact source and a parseable external-AI guide without paid calls', async () => {
     const user = userEvent.setup(),
@@ -134,7 +143,7 @@ describe('composition template authoring', () => {
     expect(guide).toContain(CLIP_COMPOSITION_EXAMPLE)
     expect(guide).toContain('sourceChars=16000')
     expect(parseClipComposition(CLIP_COMPOSITION_EXAMPLE).groups).toMatchObject([
-      { id: 'menu', label: '', min: 0, max: CLIP_COMPOSITION_LIMITS.items },
+      { id: 'menu', label: '메뉴', min: 1, max: CLIP_COMPOSITION_LIMITS.items },
     ])
     expect(guide).toContain('group(id, label?, min?, max?)')
     expect(calls.some((c) => /Seed|Quote|Start|Generate|CreateVideo|UpdateVideo/.test(c))).toBe(
@@ -186,33 +195,53 @@ describe('composition template authoring', () => {
     expect(await source()).toHaveValue(body)
     expect(calls).not.toContain('UpdateVideoTemplate')
   })
-  it('edits repeated item scenes and text rows through supported controls', async () => {
+  it('offers only the information, guide and badge a template may declare', async () => {
     const user = userEvent.setup()
-    mount({ templates: [{ ...template, compositionBody: CLIP_COMPOSITION_EXAMPLE }] })
-    await user.click(await screen.findByRole('button', { name: /반복 구성/ }))
-    await user.click(screen.getAllByRole('button', { name: '장면 추가' })[0])
-    const repeated = parseClipComposition(((await source()) as HTMLTextAreaElement).value)
-    expect(repeated.sections).toHaveLength(2)
-    expect(
-      repeated.sections.every((section) => section.scope === 'item' && section.repeat === 'menu'),
-    ).toBe(true)
-    await user.click(screen.getByRole('tab', { name: '구성 편집' }))
-    await user.click(screen.getByRole('button', { name: '아웃트로' }))
-    expect(screen.queryByRole('combobox', { name: /^화면 위치/ })).not.toBeInTheDocument()
+    mount()
+    await screen.findByRole('button', { name: '장소' })
+    for (const name of ['정보 추가', '항목 묶음 추가', '구성 안내 추가', '화면 문구 추가'])
+      expect(screen.getByRole('button', { name })).toBeInTheDocument()
+    for (const name of ['장면 추가', '반복 추가'])
+      expect(screen.queryByRole('button', { name })).not.toBeInTheDocument()
+    // Caption pace and the accent belong to the project now (CLIP-139).
+    expect(screen.queryByRole('combobox', { name: /강조색/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('combobox', { name: /자막 속도/ })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '화면 문구 추가' }))
+    const added = parseClipTemplate(((await source()) as HTMLTextAreaElement).value)
+    expect(added.elements.map((e) => e.role)).toEqual(['badge', 'hook', 'ending', 'badge'])
+    expect(added.sections).toEqual([])
+  })
+  it('a text carries no caption or information role and no cut timing', async () => {
+    const user = userEvent.setup()
+    mount()
+    await user.click(await screen.findByRole('button', { name: '공개 문구' }))
     expect(screen.queryByRole('combobox', { name: /^문구 용도/ })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '텍스트 행 추가' })).not.toBeInTheDocument()
-    const slot = within(screen.getByRole('region', { name: '슬롯 1' }))
-    fireEvent.change(slot.getByRole('textbox', { name: '문구 1' }), {
-      target: { value: '다음 이야기' },
+    await user.click(screen.getByRole('combobox', { name: /표시 구간 기준/ }))
+    expect(screen.getByRole('option', { name: '영상 전체' })).toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: '해당 컷 안에서' })).not.toBeInTheDocument()
+  })
+  it('says a legacy template kept its scenes as guidance and clears the notice on save', async () => {
+    const user = userEvent.setup(),
+      writes: ClipRecipe[] = []
+    const converted =
+      '<clip version="1" intro="b" caption="bold" outro="e"><field id="place" label="장소"/><guide>가장 이른 클립으로 시작</guide><text id="intro" kind="fixed" role="hook" basis="output-start"/><text id="outro" kind="fixed" role="ending" basis="output-end"/></clip>'
+    mount({
+      templates: [{ ...template, compositionBody: converted, compositionConverted: true }],
+      writes,
     })
-    fireEvent.change(screen.getByRole('textbox', { name: '시작 (초)' }), {
-      target: { value: '-4' },
+    expect(await screen.findByText(/구성 안내로 옮겼어요/)).toBeInTheDocument()
+    expect(await source()).toHaveValue(converted)
+    await user.click(screen.getByRole('tab', { name: '구성 편집' }))
+    await user.click(screen.getByRole('button', { name: '장소' }))
+    fireEvent.change(screen.getByRole('textbox', { name: '정보 이름' }), {
+      target: { value: '촬영 장소' },
     })
-    const changed = parseClipComposition(((await source()) as HTMLTextAreaElement).value)
-    const ending = changed.elements.find((element) => element.id === 'closing')!
-    expect(ending.rows).toHaveLength(3)
-    expect(ending.basis).toBe('output-end')
-    expect(ending.startMs).toBe(-4000)
+    await waitFor(() => expect(screen.queryByText(/구성 안내로 옮겼어요/)).not.toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: '저장' }))
+    await screen.findByText('저장했어요')
+    expect(parseClipTemplate(writes[0].compositionBody!).guidance).toEqual([
+      '가장 이른 클립으로 시작',
+    ])
   })
 })
 
@@ -254,19 +283,30 @@ it('keeps a populated excess outro slot visible until the owner resolves it', as
 it('explicitly rebuilds the restaurant legacy ending without losing its row text', async () => {
   const user = userEvent.setup(),
     calls: string[] = []
-  const legacy = readFileSync(
-    resolve(
-      import.meta.dirname,
-      '../../../../../backend/internal/platform/db/testdata/restaurant-v2-before-design-selection.xml',
+  // What the server hands the editor for that template: its scenes carried into
+  // the guide, its ending still departing from the preset (CLIP-114, CLIP-140).
+  const corpus = JSON.parse(
+    readFileSync(
+      resolve(
+        import.meta.dirname,
+        '../../../../../backend/internal/clip/composition/testdata/corpus.json',
+      ),
+      'utf8',
     ),
-    'utf8',
-  )
-    .replace(/ styles="[^"]*"| style="[^"]*"/g, '')
-    .replace('version="1"', 'version="1" intro="b" caption="bold" outro="e"')
+  ) as { cases: { name: string; converted?: string }[] }
+  const legacy = corpus.cases.find(
+    (c) => c.name === 'restaurant v2 legacy template converts for the editor',
+  )!.converted!
   mount({
     calls,
     templates: [
-      { ...template, name: '맛집 테스트', compositionBody: legacy, compositionLegacy: true },
+      {
+        ...template,
+        name: '맛집 테스트',
+        compositionBody: legacy,
+        compositionLegacy: true,
+        compositionConverted: true,
+      },
     ],
   })
   expect(await screen.findByRole('tab', { name: 'B 위아래 가로선' })).toHaveAttribute(
@@ -274,18 +314,20 @@ it('explicitly rebuilds the restaurant legacy ending without losing its row text
     'true',
   )
   expect(screen.getByRole('tab', { name: 'E 점수 강조' })).toHaveAttribute('aria-selected', 'true')
+  expect(screen.getByText(/구성 안내로 옮겼어요/)).toBeInTheDocument()
   expect(screen.getByRole('alert')).toHaveTextContent('인트로·아웃트로 구조')
   expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
   await user.click(screen.getByRole('button', { name: '프리셋 형태로 다시 만들기' }))
   const rebuilt = ((await source()) as HTMLTextAreaElement).value
-  const doc = parseClipComposition(rebuilt),
+  const doc = parseClipTemplate(rebuilt),
     ending = doc.elements.find((e) => e.id === 'closing_verdict')!
   expect(ending.basis).toBe('output-end')
   expect(ending.rows[0].kind).toBe('ai')
   expect(ending.rows[0].parts.map((p) => p.literal).join('')).toContain(
     '새로운 추천이나 인사말을 덧붙이지 마세요.',
   )
-  expect(doc.root.children.some((n) => n.attributes.id === ending.id)).toBe(true)
+  expect(doc.sections).toEqual([])
+  expect(doc.guidance.join('\n')).toContain('arrival')
   expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   expect(calls.some((c) => /Seed|Quote|Start|Generate|CreateVideo|UpdateVideo/.test(c))).toBe(false)
 })

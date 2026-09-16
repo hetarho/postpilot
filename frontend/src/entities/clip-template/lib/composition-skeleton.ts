@@ -91,9 +91,8 @@ export function compositionSkeleton(
 ) {
   const design: CompositionDesign = { intro, caption: 'bold', outro }
   return serializeCompositionNode(
-    compositionNode('clip', { version: '1', ...design, pace: 'steady' }, [
+    compositionNode('clip', { version: '1', ...design }, [
       region('hook', design, 'intro'),
-      compositionNode('scene', { id: 'footage', scope: 'scene' }),
       region('ending', design, 'outro'),
     ]),
   )

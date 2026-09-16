@@ -22,8 +22,11 @@ export function CompositionPreview({ document }: { document: ClipComposition }) 
   const [ratio, setRatio] = useState<ClipRatioId>('vertical')
   let timeline: CompositionTimeline | undefined, error: CompositionProblem | undefined
   try {
-    timeline = sampleClipComposition(document, duration, (label, n) =>
-      t('composition.sampleValue', { label, n }),
+    timeline = sampleClipComposition(
+      document,
+      duration,
+      (label, n) => t('composition.sampleValue', { label, n }),
+      t('composition.sampleNarration'),
     )
   } catch (e) {
     if (e instanceof CompositionProblem) error = e

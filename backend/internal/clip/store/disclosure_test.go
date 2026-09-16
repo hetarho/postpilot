@@ -101,8 +101,8 @@ func TestDisclosureChoiceReachesApprovedGeneration(t *testing.T) {
 // empty disclosure comes back on the patch that carries its inputs. Refusing it
 // froze those projects at creation (review/clip-project-update-260914 F1).
 func TestCompositionProjectSavesItsEmptyDisclosure(t *testing.T) {
-	service, _, _ := setup(t)
-	template, err := service.CreateTemplate(t.Context(), "alice", clip.Recipe{Name: "composition", CompositionBody: nativeBody})
+	service, st, _ := setup(t)
+	template, err := legacyTemplate(t, st, "alice", "composition", nativeBody), error(nil)
 	if err != nil {
 		t.Fatal(err)
 	}
