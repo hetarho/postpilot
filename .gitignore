@@ -32,3 +32,6 @@ tmp/footage/*.png
 
 # Release QA render output (the harness itself is tracked)
 tmp/release-qa/clips/*.mp4
+
+# Python bytecode from the deploy tests (the tests themselves are tracked)
+__pycache__/

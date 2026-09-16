@@ -73,7 +73,22 @@ COPY backend/internal/clip/media/testdata/speech.m4a /usr/share/postpilot-media/
 ENV CLIP_RELEASE_SMOKE=1
 RUN ["/clip-release.test", "-test.run=^TestClipWriterInputRelease$", "-test.v", "-test.timeout=15m"]
 
-FROM runtime AS production
+# ARCH-39. Seconds, not minutes: it runs the test binary the media smoke already built
+# and only reads what the binaries report. The bundled ffmpeg is a --disable-everything
+# build, so a filter, codec or muxer this code names correctly can still be absent from
+# it — `atempo` shipped missing that way and broke every rated cut's audio in production.
+FROM runtime AS media-tooling
+COPY --from=builder /media.test /media.test
+ENV CLIP_MEDIA_SMOKE=1
+RUN ["/media.test", "-test.run=^TestBundledToolingCoverage$", "-test.v"]
+
+# What the deploy pushes. Unlike the smokes, which run beside the deploy until closed beta
+# (ARCH-38), the tooling check gates the image: it is cheap enough to hold the critical
+# path, and what it catches cannot be caught anywhere else.
+FROM runtime AS deployable
+COPY --from=media-tooling /usr/local/bin/ffmpeg /usr/local/bin/ffmpeg
+
+FROM deployable AS production
 # This dependency makes the real-binary nonroot smoke a mandatory image-build gate.
 COPY --from=media-smoke /usr/local/bin/ffmpeg /usr/local/bin/ffmpeg
 COPY --from=clip-input-smoke /usr/local/bin/ffprobe /usr/local/bin/ffprobe

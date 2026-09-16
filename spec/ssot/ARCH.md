@@ -1,5 +1,5 @@
 # ARCH postpilot architecture
-> r2 | Where code goes, which way dependencies point, and the gates every task must pass. Supersedes spec/legacy/ARCHITECTURE.md, legacy 00.overview.md §3, PRD.md §6, and the retired be-architecture / fe-architecture / library-setup skills.
+> r3 | Where code goes, which way dependencies point, and the gates every task must pass. Supersedes spec/legacy/ARCHITECTURE.md, legacy 00.overview.md §3, PRD.md §6, and the retired be-architecture / fe-architecture / library-setup skills.
 
 ## decisions
 - ARCH-1 [o] product: a paid product anyone may sign up for (→AUTH-1, →BILL) — photos + notes → a blog draft in the user's own voice → per-platform copy export, or an explicit Naver publish through a paired Mac agent; ko/en UI. Behavior lives in the domain SSOTs; root PRD.md is the historical v1.4 brief and ssot/ wins on conflict
@@ -37,14 +37,19 @@
 - ARCH-33 [o] dependencies: before adding, upgrading, or configuring any library or service, read the current official docs (context7 MCP first, otherwise the official site), install through the package manager's latest resolver (`pnpm add`, `go get`), confirm the resolved version in the lockfile, copy env-var and config names verbatim from those docs, and use official scaffolds only when they target this exact stack (Vite SPA + TanStack Router, connect-go) ← stale-memory setups fail only at runtime
 - ARCH-34 [o] invariants no task may break silently (stop and resolve with the owner first): I1 publishing is explicit, local-capability-bound, and a durable server job (PUB) · I2 the canonical post is a block array and every platform output is derived from it (POST) · I3 generation separates observe from write with every model choice explicit — ordinary generation observes once and calls one writer, only the explicit A/B action fans out (GEN, MODEL) · I4 voices are mutually isolated per account and every post selects exactly one (VOICE) · I5 long work is a job record (ARCH-11) · I6 image work happens in the browser (ARCH-19) · I7 migrations are embedded and run at boot (ARCH-10)
 - ARCH-35 [o] doc truth order: behavior → `ssot/<DOMAIN>.md`, placement and gates → this file, progress → STATE.md; `spec/legacy/` is read-only history; root PRD.md and DEPLOY.md are reference docs and ssot/ wins on conflict
+- ARCH-36 [o] the media path is proved with real binaries: the media and clip-input smokes run as stages of `backend/Dockerfile` in the distroless nonroot runtime, env-gated (`CLIP_MEDIA_SMOKE`, `CLIP_RELEASE_SMOKE`) so ARCH-26 stays a fast host run ← a missing filter, codec, font or static link is invisible to `go test` on a host that carries a full ffmpeg
+- ARCH-37 [o] a task that changes media behavior is done only when the matching image stage has been built and run locally (`docker buildx build --target <stage> -f backend/Dockerfile .`); the smokes never join ARCH-26 ← the gate has to be reproducible before a push without making every backend task pay ten minutes
+- ARCH-38 [o] until closed beta opens, the smokes run beside the deploy instead of upstream of it: the pushed image does not depend on them, the rollout does not wait, and a failure is reported rather than withheld from production; the blocking gate returns when closed beta opens ← the smokes are ten of the deploy's twelve minutes while the owner is the only user, and ARCH-32's health gate and rollback still stand
+- ARCH-39 [o] the bundled ffmpeg is checked at build time against every filter, decoder, encoder and muxer the render code names ← the build is `--disable-everything`, so a name the code emits correctly can still be absent from the binary
 
 ## constraints
 - Node is pinned by `.node-version` (24.18.0); run FE verify on that version (fnm/nvm read the file) — newer local Node versions break the jsdom-based tests
-- Docker is required for `pnpm gen:*` (buf, sqlc) and `pnpm dev:api`; Go 1.26 for BE and agent
+- Docker is required for `pnpm gen:*` (buf, sqlc), `pnpm dev:api`, and the media smokes (ARCH-37); Go 1.26 for BE and agent
 - BE self-audit before done: the domain imports no proto/sql/transport · dependencies point inward · both mappers sit at the edges · ports are consumer-declared and actually consumed · no shape-only packages · writes go through the single writer, no transaction across a provider call, a new migration is embedded · no inline config literal
 - FE self-audit before done: every file sits in layer/slice/segment (ARCH-14, ARCH-15) · no loose files under `app/` (ARCH-16) · one-way imports and a single `index.ts` per slice · no `shared/api/gen` import outside `shared/api` · no inline config literal · every control from `shared/ui`, tokens only (ARCH-20)
 - dev ports: web 2564, api 7678 (compose maps 7678 → 8080; containers use 8080)
 
 ## chg
+- r3 260916 ARCH-36+ media smokes are image stages outside ARCH-26 · ARCH-37+ a media task runs its stage locally before done · ARCH-38+ smokes run beside the deploy until closed beta · ARCH-39+ the bundled ffmpeg is checked against the names the render code emits
 - r2 260907 ARCH-1✎ product "a two-user personal tool"→"a paid product anyone may sign up for" · ARCH-5✎ contexts +`billing` · ARCH-23✎ auth "operator-created accounts only"→self-signup with email verification and Google sign-in beside the operator CLI
 - r1 260905 initial (migrated from legacy ARCHITECTURE.md, 00.overview.md §3, PRD.md §6, the be-/fe-architecture + library-setup skills, ci.yml, deploy-backend.yml, README.md)
