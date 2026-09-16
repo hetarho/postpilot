@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/design"
@@ -79,8 +80,32 @@ func (r *Rendering) renderOverlayWindow(ctx context.Context, ws clip.MediaWorksp
 	return r.runRender(ctx, ws, output, args)
 }
 
-func (r *Rendering) overlayComposition(ctx context.Context, ws clip.MediaWorkspace, input string, visuals []declaredVisual, plates []string, totalFrames int, cleanup *[]string) ([]string, []int, error) {
-	windows := compositionWindows(visuals, totalFrames, r.cfg.FPS, r.cfg.OverlayBatchSize)
+// deliveredOverlayArgs fuses the two passes a single-window clip used to take.
+// The overlay's own output IS the delivered picture there, so the graph carries
+// on into the delivery format and the already-measured track joins it here:
+// no full-length lossless intermediate is written and read back (CLIP-124).
+//
+// The tail repeats what the windowed path's delivery pass does to its piece —
+// the timebase reset, the trim and the conversion, in that order — so only the
+// lossless round trip is removed and no delivered pixel moves (CLIP-125).
+func (r *Rendering) deliveredOverlayArgs(input string, window overlayWindow, visuals []declaredVisual, plates []string, audio string, measured *loudness) []string {
+	args := r.baseArgs()
+	args = append(args, "-ss", strconv.Itoa(window.StartFrame/r.cfg.FPS))
+	args = r.inputArgs(args, input)
+	for _, index := range window.Layers {
+		args = append(args, "-threads", strconv.Itoa(r.media.cfg.DecodeThreads), "-framerate", strconv.Itoa(r.cfg.FPS), "-i", plates[index])
+	}
+	frames := window.EndFrame - window.StartFrame
+	graph := strings.TrimSuffix(declaredOverlayGraph(r.cfg, window, visuals, true), "[v]")
+	graph += fmt.Sprintf(",settb=AVTB,setpts=PTS-STARTPTS,trim=end_frame=%d,setpts=PTS-STARTPTS,format=yuv420p[v]", frames)
+	if audio != "" {
+		args = r.inputArgs(args, audio)
+		graph += fmt.Sprintf(";[%d:a:0]%s,aresample=%d,aformat=sample_fmts=fltp:channel_layouts=stereo[a]", 1+len(window.Layers), loudnormFilter(measured), r.cfg.AudioRate)
+	}
+	return append(args, "-filter_complex", graph)
+}
+
+func (r *Rendering) overlayComposition(ctx context.Context, ws clip.MediaWorkspace, input string, windows []overlayWindow, visuals []declaredVisual, plates []string, cleanup *[]string) ([]string, []int, error) {
 	paths, frames := []string{}, []int{}
 	for i, window := range windows {
 		previous := input

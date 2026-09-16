@@ -169,21 +169,36 @@ func (r *Rendering) renderComposition(ctx context.Context, ws clip.MediaWorkspac
 		}
 	}
 	step("render_overlay")
-	pieces, pieceFrames, err := r.overlayComposition(ctx, ws, raw, layout.visuals, plates, totalFrames, &cleanup)
-	if err != nil {
-		return result, err
-	}
-	if err = removeIntermediate(raw); err != nil {
-		return result, err
-	}
-	args, err = r.compositionInputs(ctx, ws, pieces, pieceFrames, make([]int, len(pieces)), assembled, &measured, &cleanup)
-	if err != nil {
-		return result, err
-	}
-	step("render_encode")
-	args = append(args, r.encodeArgs(audio)...)
-	if err = r.runRender(ctx, ws, output, args); err != nil {
-		return result, err
+	windows := compositionWindows(layout.visuals, totalFrames, r.cfg.FPS, r.cfg.OverlayBatchSize)
+	// One window whose layers fit one batch needs no intermediate at all: the
+	// overlay graph runs straight into the delivery encode.
+	if len(windows) == 1 && len(windows[0].Layers) <= r.cfg.OverlayBatchSize {
+		step("render_encode")
+		args = r.deliveredOverlayArgs(raw, windows[0], layout.visuals, plates, assembled, &measured)
+		args = append(args, r.encodeArgs(audio)...)
+		if err = r.runRender(ctx, ws, output, args); err != nil {
+			return result, err
+		}
+		if err = removeIntermediate(raw); err != nil {
+			return result, err
+		}
+	} else {
+		pieces, pieceFrames, err := r.overlayComposition(ctx, ws, raw, windows, layout.visuals, plates, &cleanup)
+		if err != nil {
+			return result, err
+		}
+		if err = removeIntermediate(raw); err != nil {
+			return result, err
+		}
+		args, err = r.compositionInputs(ctx, ws, pieces, pieceFrames, make([]int, len(pieces)), assembled, &measured, &cleanup)
+		if err != nil {
+			return result, err
+		}
+		step("render_encode")
+		args = append(args, r.encodeArgs(audio)...)
+		if err = r.runRender(ctx, ws, output, args); err != nil {
+			return result, err
+		}
 	}
 	if audio {
 		if err = r.finishLoudness(ctx, ws, output, assembled, measured, totalFrames); err != nil {

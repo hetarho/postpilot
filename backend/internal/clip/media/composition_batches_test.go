@@ -1,6 +1,11 @@
 package media
 
 import (
+	"context"
+	"fmt"
+	"os"
+	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -86,5 +91,75 @@ func TestDeclaredAudioDucksOnlyTheAuthoredHookInterval(t *testing.T) {
 	audio := bareAudioGraph(cfg, cut, true, 450)
 	if !strings.Contains(audio, "first_pts=0") || !strings.Contains(audio, "atrim=end_sample=720000") || strings.Contains(audio, "loudnorm") {
 		t.Fatal("source audio clock or normalization moved")
+	}
+}
+
+// The two overlay paths, side by side and golden: a clip whose elements fit one
+// window is delivered straight out of the overlay graph, and one that needs
+// several keeps today's windowed pieces and its separate delivery pass.
+func TestOverlayDeliveryGraphGoldens(t *testing.T) {
+	const total = 450 // 15 s at 30 fps
+	one := []declaredVisual{
+		{text: clip.PortableText{Pace: "steady"}, manifest: clip.CompositionElement{Role: "badge", StartMS: 0, EndMS: 15000}},
+		{text: clip.PortableText{Pace: "steady"}, manifest: clip.CompositionElement{Role: "caption", StartMS: 1000, EndMS: 6000}},
+		{text: clip.PortableText{Pace: "steady"}, manifest: clip.CompositionElement{Role: "caption", StartMS: 6000, EndMS: 12000}},
+	}
+	many := make([]declaredVisual, 0, 20)
+	for i := range 20 {
+		many = append(many, declaredVisual{text: clip.PortableText{Pace: "steady"}, manifest: clip.CompositionElement{Role: "caption", StartMS: i * 700, EndMS: i*700 + 700}})
+	}
+	for _, tc := range []struct {
+		name    string
+		visuals []declaredVisual
+		audio   bool
+	}{{"fused", one, false}, {"fused-audio", one, true}, {"windowed", many, true}} {
+		t.Run(tc.name, func(t *testing.T) {
+			fake := &fakeRunner{run: func(_ context.Context, c Command) ([]byte, error) {
+				return nil, os.WriteFile(c.Args[len(c.Args)-1], []byte("piece"), 0600)
+			}}
+			a := newAdapter(t, fake)
+			r := testRenderer(t, a)
+			measured := loudness{I: -20, TP: -3, LRA: 7, Threshold: -30, Offset: 0.1}
+			if err := a.WithWorkspace(t.Context(), "overlay-plan", func(ws clip.MediaWorkspace) error {
+				raw := filepath.Join(ws.Path, "composition-footage.mp4")
+				plates := make([]string, len(tc.visuals))
+				for i := range plates {
+					plates[i] = filepath.Join(ws.Path, fmt.Sprintf("declared-%04d.png", i))
+				}
+				assembled := ""
+				if tc.audio {
+					assembled = filepath.Join(ws.Path, "composition-audio.wav")
+				}
+				windows := compositionWindows(tc.visuals, total, r.cfg.FPS, r.cfg.OverlayBatchSize)
+				var recorded strings.Builder
+				fused := len(windows) == 1 && len(windows[0].Layers) <= r.cfg.OverlayBatchSize
+				if fused != (tc.name != "windowed") {
+					t.Fatalf("%s took the wrong path: %d windows", tc.name, len(windows))
+				}
+				if fused {
+					args := r.deliveredOverlayArgs(raw, windows[0], tc.visuals, plates, assembled, &measured)
+					fmt.Fprintf(&recorded, "delivered inputs=%d\n%s\n", strings.Count(strings.Join(args, " "), " -i "), args[slices.Index(args, "-filter_complex")+1])
+					golden(t, "overlay-"+tc.name+".filter", recorded.String())
+					return nil
+				}
+				var cleanup []string
+				pieces, pieceFrames, err := r.overlayComposition(t.Context(), ws, raw, windows, tc.visuals, plates, &cleanup)
+				if err != nil {
+					return err
+				}
+				for _, pass := range fake.calls {
+					fmt.Fprintf(&recorded, "window inputs=%d\n%s\n", strings.Count(strings.Join(pass.Args, " "), " -i "), pass.Args[slices.Index(pass.Args, "-filter_complex")+1])
+				}
+				args, err := r.compositionInputs(t.Context(), ws, pieces, pieceFrames, make([]int, len(pieces)), assembled, &measured, &cleanup)
+				if err != nil {
+					return err
+				}
+				fmt.Fprintf(&recorded, "delivery inputs=%d\n%s\n", strings.Count(strings.Join(args, " "), " -i "), args[slices.Index(args, "-filter_complex")+1])
+				golden(t, "overlay-"+tc.name+".filter", recorded.String())
+				return nil
+			}); err != nil {
+				t.Fatal(err)
+			}
+		})
 	}
 }

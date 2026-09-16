@@ -47,7 +47,6 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
-| T194 | The overlay and the delivery encode become one | CLIP | T191 | todo |
 | T195 | A plate's sample frames come from one decode | CLIP | T191 | todo |
 | T196 | Preparation decodes each original once | CLIP | - | todo |
 | T197 | A cut's rate is read from its own observation | CLIP | T191 | todo |
@@ -55,9 +54,12 @@
 
 ## next
 - create-task CLIP — r30 moves every setting but title/template/ratio into ①, gives ② a written revision request that rewrites the current plan for one writing call, and keeps every instruction and request verbatim; CLIP-93's instruction clause is the one that fixes today's defect, where a changed instruction reuses the old plan because neither the plan-reuse nor the quote digest carries it.
-- implement-task T194, then T196, then T197 T198 — T194/T196 carry the rest of the 1225 s a prod generation took (T193 already collapsed the merge passes), measured by T190's per-operation durations against T191's identity baseline (docker --target identity-smoke) that none of them may move; T197/T198 are r29's rate work and move delivered frames on purpose.
+- implement-task T196, then T195, then T197 T198 — T196 is the last of r28's pass budget (T193 collapsed the merge, T194 fused the overlay into delivery), measured by T190's durations against T191's identity baseline (docker --target identity-smoke); T197/T198 are r29's rate work and move delivered frames on purpose.
 - T177 is blocked on the owner's viewing answers; T008 stays owner-dependent.
 ## log
+- 260916 T194 done; a single-window clip is overlaid and delivered in one encode with no lossless intermediate between them, the delivered clip still matching T191's baseline
+- 260916 create-task CLIP start
+- 260916 T194 claimed (perf)
 - 260916 T193 done; the cuts merge in rounds of six instead of a pairwise tree (100 cuts 98 passes→2, ordinary plans none at all) and the delivered clip still matches T191's baseline
 - 260916 update-ssot CLIP done; CLIP@30 — the creation screen keeps only title/template/ratio, ② gains a written revision request charged as one writing call and stopping at the plan, every instruction and request is kept verbatim, and an instruction change now invalidates the candidate plan
 - 260916 T193 claimed (perf)
@@ -75,6 +77,3 @@
 - 260916 T189 done; the owner binds a whole source to an item where sources are selected, every cut inherits it, and a binding with no matching observation is ignored rather than refused
 - 260916 update-ssot CLIP start
 - 260916 T189 claimed (grp)
-- 260916 T188 done; with an instruction present the experiential-marker check stands down on presence alone, every figure still needing a referenced fact
-- 260916 T188 claimed (grp)
-- 260916 T187 done; the writer reads project_instruction and the contract names it the content authority above authored guidance, structure still the template's; no instruction leaves the request byte-identical
