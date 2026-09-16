@@ -25,6 +25,7 @@ import {
 } from '@/features/generate-clip'
 import { StageModelSelect } from '@/features/select-model'
 import { ClipSourcePicker, useClipSourceUpload } from '@/features/upload-clip-sources'
+import { useClipSourceBinding } from '@/features/bind-clip-source-item'
 import { ClipObservationViewer, ClipAttemptInspection } from '@/features/inspect-clip-observations'
 import { appFailureFromConnect } from '@/shared/api'
 import {
@@ -148,6 +149,14 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
   const required =
     step === 'refine' && plan ? requiredClipSources(correction.draft, plan.sources) : undefined
   const upload = useClipSourceUpload(project.id, required, !project.finalized)
+  const binding = useClipSourceBinding(
+    ownerId,
+    project,
+    upload.entries.map((entry) => ({
+      fingerprint: entry.metadata.fingerprint,
+      sourceId: entry.sourceId,
+    })),
+  )
   const acceptSoundBatch = upload.acceptSoundBatch
   useEffect(() => {
     if (correction.soundBatch) acceptSoundBatch(correction.soundBatch)
@@ -275,9 +284,12 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
           {t('generation.reselection')}
         </Typography>
       )}
+      {/* Bind a whole source to an item before generating, where footage of one
+          cut of meat carries nothing that tells it from another (CLIP-123). */}
       <ClipSourcePicker
         upload={upload}
         sound={soundControl}
+        binding={binding.items.length ? binding : undefined}
         disabled={!uploadAllowed || generation.busy || finalization.busy}
         processing={generation.busy}
       />

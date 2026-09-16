@@ -198,3 +198,41 @@ func TestInstructionAdmitsExperienceButNeverAFigure(t *testing.T) {
 		t.Fatalf("an instruction admitted a context item claim: %s", reason)
 	}
 }
+
+// A whole-source binding made before generation reaches every cut taken from
+// that source, whether observation names no subject or several, while a source
+// the owner left unbound keeps today's automatic behaviour (CLIP-123, CLIP-62).
+func TestWholeSourceBindingReachesEveryCutAndLeavesOthersAutomatic(t *testing.T) {
+	inputs, analyses, cut := bindingFixture()
+	whole := clip.SourceAssociation{GroupID: "menu", ItemID: "cheese", SourceID: "source", Fingerprint: "fp", StartMS: 0, EndMS: 10000}
+
+	// Unbound, this footage names 해물라면, so the automatic rule settles on
+	// that item. The owner's binding is what has to outrank it.
+	if binding := clip.BindCutItem(inputs, evidenceFor(t, analyses, cut), cut, ""); binding.ItemID != "sea" || binding.Owner {
+		t.Fatalf("automatic association changed: %+v", binding)
+	}
+	bound := inputs
+	bound.Associations = []clip.SourceAssociation{whole}
+	for _, c := range []clip.Cut{
+		cut,
+		{ID: "early", SourceID: "source", Fingerprint: "fp", StartMS: 0, EndMS: 5000},
+		{ID: "late", SourceID: "source", Fingerprint: "fp", StartMS: 5000, EndMS: 10000},
+	} {
+		binding := clip.BindCutItem(bound, evidenceFor(t, analyses, c), c, "")
+		if binding.ItemID != "cheese" || binding.GroupID != "menu" || !binding.Owner {
+			t.Fatalf("cut %s did not inherit the bound item: %+v", c.ID, binding)
+		}
+	}
+	// Another source is untouched by the binding and stays automatic.
+	other := clip.Cut{ID: "other", SourceID: "second", Fingerprint: "fp2", StartMS: 0, EndMS: 5000}
+	second := []clip.SourceAnalysis{{Source: clip.AnalysisSource{RenderSource: clip.RenderSource{ID: "second", Fingerprint: "fp2"}}, Segments: []clip.Segment{{StartMS: 0, EndMS: 5000, Subjects: []string{"치즈라면"}, Certainty: clip.CertaintyCertain, Usability: clip.UsabilityUsable}}}}
+	if binding := clip.BindCutItem(bound, evidenceFor(t, second, other), other, ""); binding.ItemID != "cheese" || binding.Owner {
+		t.Fatalf("an unbound source lost its automatic association: %+v", binding)
+	}
+}
+
+func evidenceFor(t *testing.T, analyses []clip.SourceAnalysis, cut clip.Cut) []clip.ObservedEvidence {
+	t.Helper()
+	evidence, _ := clip.CutEvidence(analyses, cut)
+	return evidence
+}

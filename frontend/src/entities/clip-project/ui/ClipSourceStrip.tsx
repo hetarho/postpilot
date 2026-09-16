@@ -1,7 +1,7 @@
 import { Film } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { formatDuration } from '@/shared/lib/video'
-import { Button, Switch, Typography } from '@/shared/ui'
+import { Button, FieldLabel, Listbox, Switch, Typography } from '@/shared/ui'
 
 interface SourceTile {
   fingerprint: string
@@ -11,6 +11,9 @@ interface SourceTile {
   status?: string
   retainOriginalAudio?: boolean
   soundDisabled?: boolean
+  /** The item this whole source is bound to, empty when the owner left it for
+   *  automatic association (CLIP-123). */
+  boundItem?: string
 }
 
 /** The same source selector serves current uploads and retained observations.
@@ -21,12 +24,18 @@ export function ClipSourceStrip({
   onSelect,
   label,
   onSoundChange,
+  items,
+  onItemChange,
 }: {
   sources: readonly SourceTile[]
   selected: string
   onSelect: (fingerprint: string) => void
   label: string
   onSoundChange?: (fingerprint: string, enabled: boolean) => void
+  /** The items of the project's declared groups. A project that declares none
+   *  offers nothing, so the control is absent rather than empty (CLIP-123). */
+  items?: readonly { value: string; label: string }[]
+  onItemChange?: (fingerprint: string, item: string) => void
 }) {
   const { t } = useTranslation('clips')
   return (
@@ -74,6 +83,21 @@ export function ClipSourceStrip({
                 )}
               </span>
             </Button>
+            {onItemChange && !!items?.length && (
+              <div className="min-w-0 px-2 py-2">
+                <FieldLabel htmlFor={`clip-source-item-${source.fingerprint}`}>
+                  {t('source.boundItem')}
+                </FieldLabel>
+                <Listbox
+                  id={`clip-source-item-${source.fingerprint}`}
+                  className="mt-2"
+                  aria-label={t('source.boundItemName', { filename: source.filename })}
+                  value={source.boundItem ?? ''}
+                  onChange={(value) => onItemChange(source.fingerprint, value)}
+                  options={[{ value: '', label: t('source.boundItemNone') }, ...items]}
+                />
+              </div>
+            )}
             {onSoundChange && (
               <label className="flex min-h-11 cursor-pointer items-center gap-2 px-2 py-3">
                 <Switch

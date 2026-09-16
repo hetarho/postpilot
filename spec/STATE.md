@@ -47,7 +47,6 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
-| T189 | The owner binds a source to an item before generating | CLIP | - | todo |
 | T190 | Media-operation durations for successful work | CLIP | - | todo |
 | T191 | A delivered-clip identity baseline the speed work must hold | CLIP | - | todo |
 | T192 | Decoding uses the cores the encode cannot | CLIP | T191 | todo |
@@ -58,9 +57,12 @@
 
 ## next
 - implement-task T191, then T190 — T191 gates T192 T193 T194 T195 and T190 makes each one's effect measurable; T193 T194 T196 carry most of the 1225 s a prod generation took.
-- implement-task T189 — it removes the binding failure that emptied every meat caption; the instruction path is complete.
+- implement-task T191, then T190 — T191 gates T192 T193 T194 T195 and T190 makes each one measurable; the r26/r27 delta is fully implemented.
 - T177 is blocked on the owner's viewing answers; T008 stays owner-dependent.
 ## log
+- 260916 T189 done; the owner binds a whole source to an item where sources are selected, every cut inherits it, and a binding with no matching observation is ignored rather than refused
+- 260916 update-ssot CLIP start
+- 260916 T189 claimed (grp)
 - 260916 T188 done; with an instruction present the experiential-marker check stands down on presence alone, every figure still needing a referenced fact
 - 260916 T188 claimed (grp)
 - 260916 T187 done; the writer reads project_instruction and the contract names it the content authority above authored guidance, structure still the template's; no instruction leaves the request byte-identical
@@ -78,6 +80,3 @@
 - 260916 create-task CLIP start
 - 260916 update-ssot CLIP done; CLIP@28 — no repeated full-resolution pass, an identical clip from any speed change, and one read/decode per original
 - 260916 T177 (blocked) unaffected — CLIP-125 holds the delivered clip identical, so its rendered review clips stay valid
-- 260916 update-ssot CLIP start
-- 260916 T183 claimed (grp)
-- 260916 CLIP-64 defect fixed outside the task list; an unassigned cut now omits only text bound to its group's fields, so a caption citing no item fact survives (BE verify green)

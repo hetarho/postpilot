@@ -19,6 +19,7 @@ export function ClipSourcePicker({
   processing = false,
   correction = false,
   readOnly = false,
+  binding,
   sound,
 }: {
   upload: ReturnType<typeof useClipSourceUpload>
@@ -26,6 +27,16 @@ export function ClipSourcePicker({
   processing?: boolean
   correction?: boolean
   readOnly?: boolean
+  /** Binding one whole source to one item before generation (CLIP-123). Absent
+   *  where the project declares no group, or on a read-only surface. */
+  binding?: {
+    items: readonly { value: string; label: string }[]
+    value: (source: { sourceId: string; fingerprint: string }) => string
+    change: (
+      source: { sourceId: string; fingerprint: string; durationMs: number },
+      item: string,
+    ) => void
+  }
   sound?: {
     value: (source: {
       batchId: string
@@ -243,9 +254,33 @@ export function ClipSourcePicker({
                   }
                 : undefined
             }
+            items={binding?.items}
+            onItemChange={
+              binding && !readOnly
+                ? (fingerprint, item) => {
+                    const entry = upload.entries.find((e) => e.metadata.fingerprint === fingerprint)
+                    if (!entry?.sourceId || !entry.current) return
+                    binding.change(
+                      {
+                        sourceId: entry.sourceId,
+                        fingerprint,
+                        durationMs: entry.metadata.durationMs,
+                      },
+                      item,
+                    )
+                  }
+                : undefined
+            }
             sources={upload.entries.map((entry) => ({
               ...entry.metadata,
               previewURL: entry.previewURL,
+              boundItem:
+                binding && entry.sourceId
+                  ? binding.value({
+                      sourceId: entry.sourceId,
+                      fingerprint: entry.metadata.fingerprint,
+                    })
+                  : undefined,
               retainOriginalAudio:
                 entry.sourceId && entry.batchId && sound
                   ? sound.value({

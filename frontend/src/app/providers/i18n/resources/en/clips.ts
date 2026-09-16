@@ -837,6 +837,10 @@ export const clips = {
   source: {
     originalSound: 'Keep original sound',
     originalSoundName: 'Keep original sound for {{filename}}',
+    boundItem: 'Item in this video',
+    boundItemName: 'Item in {{filename}}',
+    boundItemNone: 'Match automatically',
+    boundItemNumber: 'Item {{n}}',
     soundFailed:
       'The sound setting could not be saved. The previous setting is shown; your edits and intended setting are kept for retry.',
     soundRetry: 'Retry sound setting',

@@ -1,6 +1,8 @@
 package store_test
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
 	"maps"
 	"strings"
@@ -142,5 +144,53 @@ func TestOptionalFieldGroupAdmitsNoItem(t *testing.T) {
 	}
 	if err = clip.RequiredAnswers(template, p, config.ClipCompositionLimits()); err != nil {
 		t.Fatal("empty optional group refused", err)
+	}
+}
+
+// A whole-source binding made before generation is saved with the project and
+// frozen into the attempt, so the writer receives it (CLIP-123, CLIP-69).
+func TestWholeSourceBindingSurvivesSaveAndGeneration(t *testing.T) {
+	h := generationSetup(t)
+	ctx := context.Background()
+	h.service = clip.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, compositionPlanner{h.planner}, compositionRenderer{h.renderer}, generationJobs{h.queue}, h.cfg).WithFinisher(generationFinisher{h.store}).WithCredits(&quotePricing{}, nil)
+	h.projects.SetGeneration(h.service)
+	body := "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><text id=\"intro\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"outro\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/>\n<group id=\"menu\" label=\"고기\"><field id=\"name\" label=\"부위\" required=\"true\"/></group><repeat for=\"menu\"><scene id=\"cut\" scope=\"item\"><text id=\"copy\" kind=\"ai\" role=\"caption\" basis=\"cut\">설명</text></scene></repeat></clip>"
+	template, err := h.projects.CreateTemplate(ctx, "alice", clip.Recipe{Name: "meat", CompositionBody: body})
+	if err != nil {
+		t.Fatal(err)
+	}
+	source := h.batch.Sources[0]
+	inputs := clip.CompositionInputs{
+		Items: map[string][]composition.Item{"menu": {{ID: "belly", Values: map[string]string{"name": "삼겹살"}}}},
+		Associations: []clip.SourceAssociation{{
+			GroupID: "menu", ItemID: "belly", SourceID: source.ID, Fingerprint: source.Fingerprint,
+			StartMS: 0, EndMS: source.DurationMS,
+		}},
+	}
+	// No observations exist yet, so this binding has nothing to be checked
+	// against and must be accepted rather than refused.
+	p, err := h.projects.UpdateProject(ctx, "alice", h.project.ID, clip.ProjectPatch{VideoTemplateID: &template.ID, CompositionInputs: &inputs})
+	if err != nil {
+		t.Fatal("a pre-generation binding was refused", err)
+	}
+	if got := p.Composition.Inputs.Associations; len(got) != 1 || got[0].ItemID != "belly" || got[0].StartMS != 0 || got[0].EndMS != source.DurationMS {
+		t.Fatalf("the binding was not saved whole: %+v", got)
+	}
+	h.project = p
+	jobID, err := accept(h, quote(t, h))
+	if err != nil {
+		t.Fatal(err)
+	}
+	j, err := h.jobs.GetByID(ctx, jobID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var snapshot struct{ Composition *clip.ProjectComposition }
+	if json.Unmarshal(j.Payload, &snapshot) != nil || snapshot.Composition == nil {
+		t.Fatal(string(j.Payload))
+	}
+	frozen := snapshot.Composition.Inputs.Associations
+	if len(frozen) != 1 || frozen[0].ItemID != "belly" || frozen[0].EndMS != source.DurationMS {
+		t.Fatalf("the binding was not frozen into the attempt: %+v", frozen)
 	}
 }

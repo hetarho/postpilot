@@ -261,7 +261,7 @@ func TestLegacyConversionKeepsProjectChoicesResultsAndFrozenRecipe(t *testing.T)
 	}
 }
 
-func TestCompositionAssociationRequiresRecordedSourceAndQuoteBindsIt(t *testing.T) {
+func TestCompositionAssociationHoldsToObservationsAndBindsTheQuote(t *testing.T) {
 	doc, err := composition.Parse(nativeBody, config.ClipCompositionLimits())
 	if err != nil {
 		t.Fatal(err)
@@ -281,9 +281,23 @@ func TestCompositionAssociationRequiresRecordedSourceAndQuoteBindsIt(t *testing.
 	if next := clip.QuoteInputDigest(p, clip.VideoTemplate{}, clip.SourceBatch{}, clip.GenerationPricing{}); next == base {
 		t.Fatal("association omitted from quote")
 	}
-	input.Associations[0].Fingerprint = "other"
+	// A range the observations contradict is still refused: this source was
+	// looked at, and 800 ms is past the 700 ms that was observed.
+	input.Associations[0].EndMS = 800
 	if err := clip.ValidateSourceAssociations(p, input.Associations); err == nil {
-		t.Fatal("stale fingerprint accepted")
+		t.Fatal("unobserved range accepted")
+	}
+	// A whole-source binding spans every segment by design (CLIP-123).
+	input.Associations[0].StartMS, input.Associations[0].EndMS = 0, 1000
+	if err := clip.ValidateSourceAssociations(p, input.Associations); err != nil {
+		t.Fatal("whole-source binding refused", err)
+	}
+	// A binding matching no retained observation is ignored rather than
+	// refused: before generation there are none, and a replaced source simply
+	// stops matching (CLIP-123).
+	input.Associations[0].Fingerprint = "other"
+	if err := clip.ValidateSourceAssociations(p, input.Associations); err != nil {
+		t.Fatal("a binding for an unobserved source was refused", err)
 	}
 	input.Values["menu.price"] = "smuggled"
 	if err := clip.ValidateCompositionInputs(doc, input, config.ClipCompositionLimits(), true); err == nil {

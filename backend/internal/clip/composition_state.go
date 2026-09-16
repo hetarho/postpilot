@@ -269,6 +269,12 @@ func ValidateCompositionInputs(d *composition.Document, in CompositionInputs, l 
 }
 
 // An association is owner input against recorded evidence, never a new observation.
+// ValidateSourceAssociations refuses a range the project's own observations
+// contradict. A binding that matches no retained observation is ignored rather
+// than refused (CLIP-123): before generation there are no observations at all,
+// and a source the owner replaced simply stops matching — nothing downstream
+// reads a binding whose source is gone, because every cut carries the source id
+// and fingerprint the binding must match.
 func ValidateSourceAssociations(p Project, associations []SourceAssociation) error {
 	if len(associations) == 0 {
 		return nil
@@ -278,19 +284,24 @@ func ValidateSourceAssociations(p Project, associations []SourceAssociation) err
 		return err
 	}
 	for _, a := range associations {
-		valid := false
 		for _, observed := range analyses {
-			if observed.Source.ID != a.SourceID || observed.Source.Fingerprint != a.Fingerprint || a.EndMS > observed.Source.Info.DurationMS {
+			if observed.Source.ID != a.SourceID || observed.Source.Fingerprint != a.Fingerprint {
 				continue
 			}
-			for _, segment := range observed.Segments {
-				if a.StartMS >= segment.StartMS && a.EndMS <= segment.EndMS {
-					valid = true
-				}
+			// The source was observed, so the range has to be footage that was
+			// actually looked at. A whole-source binding spans every segment by
+			// design and is checked against the source's own duration instead.
+			if a.StartMS == 0 && a.EndMS == observed.Source.Info.DurationMS {
+				break
 			}
-		}
-		if !valid {
-			return &composition.Problem{ElementID: a.ItemID, Line: 1, Reason: "source_association"}
+			inside := false
+			for _, segment := range observed.Segments {
+				inside = inside || a.StartMS >= segment.StartMS && a.EndMS <= segment.EndMS
+			}
+			if !inside || a.EndMS > observed.Source.Info.DurationMS {
+				return &composition.Problem{ElementID: a.ItemID, Line: 1, Reason: "source_association"}
+			}
+			break
 		}
 	}
 	return nil

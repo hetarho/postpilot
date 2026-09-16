@@ -800,6 +800,10 @@ export const clips = {
   source: {
     originalSound: '원본 소리 유지',
     originalSoundName: '{{filename}} 원본 소리 유지',
+    boundItem: '이 영상의 항목',
+    boundItemName: '{{filename}}의 항목',
+    boundItemNone: '자동으로 연결',
+    boundItemNumber: '항목 {{n}}',
     soundFailed:
       '소리 설정을 저장하지 못했어요. 이전 설정으로 돌아갔으며, 편집 내용과 변경할 설정은 다시 시도할 때까지 보관해요.',
     soundRetry: '소리 설정 다시 저장',
