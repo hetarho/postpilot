@@ -11,6 +11,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"unicode"
@@ -299,11 +300,28 @@ func fitCopy(canvas clip.Canvas, c clip.Copy, candidates [][]string, bounds map[
 	style := design.Caption()
 	role := style.Role()
 	left, right, vertical := copyInsets(style)
+	// The style's per-line character rule is part of the fit, not a verdict on
+	// it: a sentence that is one character over on one line has a two-line
+	// arrangement that obeys the rule, and preferring the single line that fits
+	// the canvas returned a layout the composition then refused (copy_limit).
+	// A rapid phrase is one line by construction and carries its own limit.
+	lineChars := style.Chars
+	if c.Pace == "rapid" {
+		lineChars = design.Rapid.MaxChars
+	}
+	// A two-line arrangement that breaks inside a word reads worse than a wider
+	// one that breaks where the writer put a space, so a clean break wins even
+	// when a mid-word candidate is narrower. Candidates are every grapheme split,
+	// so a clean one exists whenever the sentence has a space to break at.
+	cleanBreak := func(lines []string) bool {
+		return len(lines) < 2 || strings.HasSuffix(lines[0], " ") || strings.HasPrefix(lines[1], " ")
+	}
 	for size := role.Size; size >= role.Min; size-- {
 		best := copyLayout{}
 		bestWidth := math.Inf(1)
+		bestClean := false
 		for _, lines := range candidates {
-			if len(lines) > style.Lines {
+			if len(lines) > style.Lines || lineChars > 0 && slices.ContainsFunc(lines, func(line string) bool { return design.Chars(line) > lineChars }) {
 				continue
 			}
 			factor := size / 100
@@ -321,9 +339,10 @@ func fitCopy(canvas clip.Canvas, c clip.Copy, candidates [][]string, bounds map[
 			width += left + right
 			height += 2 * vertical
 			region, err := clip.PlaceCopy(canvas, c.Anchor, c.Align, math.Ceil(width), math.Ceil(height))
-			if err == nil && width < bestWidth {
+			clean := cleanBreak(lines)
+			if err == nil && (clean && !bestClean || clean == bestClean && width < bestWidth) {
 				best = copyLayout{style, role, lines, scaled, region, size, keywordOn(lines, c.Keyword, bounds, factor)}
-				bestWidth = width
+				bestWidth, bestClean = width, clean
 			}
 			// Prefer a single line whenever it fits at the current size.
 			if err == nil && len(lines) == 1 {

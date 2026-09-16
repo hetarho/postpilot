@@ -323,9 +323,6 @@ func (r *Rendering) layoutDeclaredElement(ctx context.Context, ws clip.MediaWork
 			fits := []declaredVisual{}
 			placements := []design.Candidate{}
 			for _, anchor := range anchors {
-				if !pinned && readable && anchor != "top" && anchor != "bottom" {
-					continue
-				}
 				copy := clip.Copy{Text: candidate.Text, Style: style, Anchor: anchor, Align: e.Align, Accent: text.Accent, Keyword: text.Keyword, Pace: text.Pace}
 				if !strings.Contains(copy.Text, copy.Keyword) {
 					copy.Keyword = ""
