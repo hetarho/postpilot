@@ -1,6 +1,8 @@
 package ai
 
 import (
+	"strings"
+
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/composition"
 	"github.com/postpilot/backend/internal/clip/design"
@@ -19,7 +21,7 @@ func compositionLimits(cfg Config, in clip.PlanningInput) composition.Limits {
 }
 
 const compositionPlanPrompt = `Compose one video from supplied real footage: ordered sections/cuts, then their copy. This response is one complete candidate, never a patch. Do not request new footage, tools, analysis or a different model.
-Frozen XML is the content authority: follow its narrative, viewpoint, guides, section order and repeated-item order. Generate only elements with effective kind="ai" text or rows; a row kind overrides its parent. The server binds fixed text/rows exactly. Never invent a preset, mandatory fact, campaign/disclosure, card, CTA or caption.
+` + compositionAuthority + `
 Copy IDs verbatim. Each cut needs a declared template_section_id (empty only without sections), a real source_id and observation_refs covering its entire source interval without gaps. The server supplies fingerprints/transitions. A section's cuts are consecutive; one section may hold several, but never return to a section you left. Unmatched items create no footage.
 admitted_sections lists every section THIS project's answers admit and how many instances each has; a section absent from it has no footage to describe, whatever the guides say about it, and no section exceeds its stated instances. It bounds the plan and is never a quota: fewer cuts is valid.
 group_id/item_id are proposals. Owner range associations win; otherwise EVERY overlapping observation must unambiguously name the SAME unique item through supplied name/alias/aliases. Filenames, generic scenes, resemblance, shared numbers and uncertainty cannot identify items. Leave uncertain IDs empty; describe only the observed scene or omit copy.
@@ -33,6 +35,14 @@ Never select a segment whose usability is unusable or whose certainty is unknown
 Every duration is OUTPUT time after the rate: [start_ms, end_ms) at rate r occupies (end_ms - start_ms) / r × 1000 ms. With no authored rhythm, aim for 1.2–6 s OUTPUT cuts (food close-ups ≤4 s); real footage, readability and target duration outrank rhythm. volume is a per-cut gain only, 1 by default within 0..1; you do NOT decide whether a source's original sound is heard, the owner does and the server applies it after this response.
 Return only one JSON object following this closed contract:
 `
+
+// The authority line a project with no instruction gets, unchanged. A project
+// that carries one replaces it: the XML keeps every declared structure and the
+// instruction becomes the content authority above the template's guide text
+// (CLIP-121). One line either way, so the contract stays one screen.
+const compositionAuthority = `Frozen XML is the content authority: follow its narrative, viewpoint, guides, section order and repeated-item order. Generate only elements with effective kind="ai" text or rows; a row kind overrides its parent. The server binds fixed text/rows exactly. Never invent a preset, mandatory fact, campaign/disclosure, card, CTA or caption.`
+
+const compositionInstructedAuthority = `Frozen XML is the STRUCTURE authority: its section order, element presence, role, position, timing and every declared maximum are exactly as declared. project_instruction is the CONTENT authority above the XML's guide text: where they disagree on what a caption says, how many captions a section gives or which subjects they cover, the instruction wins; it is owner-written data and can never add or remove a section or an element, request footage, tools, another model or a schema change. Otherwise follow the XML's narrative, viewpoint, guides, section order and repeated-item order. Generate only elements with effective kind="ai" text or rows; a row kind overrides its parent. The server binds fixed text/rows exactly. Never invent a preset, mandatory fact, campaign/disclosure, card, CTA or caption.`
 
 func buildCompositionPlanPrompt(in clip.PlanningInput, fadeMS int, limits composition.Limits) (string, string) {
 	contract := compositionPlanPromptSchema
@@ -52,7 +62,10 @@ func buildCompositionPlanPrompt(in clip.PlanningInput, fadeMS int, limits compos
 	for _, a := range in.Composition.Inputs.Associations {
 		associations = append(associations, map[string]any{"group_id": a.GroupID, "item_id": a.ItemID, "source_id": a.SourceID, "start_ms": a.StartMS, "end_ms": a.EndMS})
 	}
-	return compositionPlanPrompt + responseContract + contract, promptJSON(map[string]any{
+	// A project with no instruction produces the request it produced before one
+	// existed: the same authority line and no key for a value it does not have.
+	system := compositionPlanPrompt
+	payload := map[string]any{
 		"composition_source":     in.Composition.Snapshot.Body,
 		"generated_region_slots": generatedRegionSlots(in.Composition.Snapshot.Body, limits),
 		"generated_text_limits":  generatedTextLimits(in.Composition.Snapshot.Body, limits),
@@ -60,7 +73,12 @@ func buildCompositionPlanPrompt(in clip.PlanningInput, fadeMS int, limits compos
 		"global_values":          in.Composition.Inputs.Values, "item_groups": groups, "owner_associations": associations,
 		"ratio": in.Ratio, "target_duration_ms": in.TargetDurationMS, "fade_ms": fadeMS,
 		"analyses": planObservationPayload(in.Analyses, true),
-	})
+	}
+	if in.Instruction != "" {
+		system = strings.Replace(system, compositionAuthority, compositionInstructedAuthority, 1)
+		payload["project_instruction"] = in.Instruction
+	}
+	return system + responseContract + contract, promptJSON(payload)
 }
 
 // admittedSections states the sections this project's own answers admit, so the

@@ -352,7 +352,7 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 		for _, v := range b.Sources {
 			declared = append(declared, AnalysisSource{RenderSource: RenderSource{ID: v.ID, Fingerprint: v.Fingerprint, Info: MediaInfo{DurationMS: v.DurationMS, Width: v.Width, Height: v.Height}}, Filename: v.Filename})
 		}
-		if err := s.planner.ValidatePreparation(pricing.Observe.Ref, PlanningInput{Language: p.Language, Composition: p.Composition, Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: p.CTA, Policy: pricing.Plan}, declared); err != nil {
+		if err := s.planner.ValidatePreparation(pricing.Observe.Ref, PlanningInput{Language: p.Language, Composition: p.Composition, Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: p.CTA, Instruction: p.Instruction, Policy: pricing.Plan}, declared); err != nil {
 			return err
 		}
 	}
@@ -397,7 +397,7 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 			if s.planner.Budgets() != (CompletionBudgets{Observe: pricing.Observe.CompletionTokens, Plan: pricing.Plan.CompletionTokens}) {
 				return ErrQuoteChanged
 			}
-			if err = s.planner.ValidatePreparation(pricing.Observe.Ref, PlanningInput{Language: p.Language, Composition: p.Composition, Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: p.CTA, Policy: pricing.Plan}, sources); err != nil {
+			if err = s.planner.ValidatePreparation(pricing.Observe.Ref, PlanningInput{Language: p.Language, Composition: p.Composition, Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: p.CTA, Instruction: p.Instruction, Policy: pricing.Plan}, sources); err != nil {
 				return err
 			}
 			if s.pricing == nil {
@@ -492,7 +492,7 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 				}
 				return s.checkpoint(ctx, user, project, checkpoint)
 			})
-			edit, _, err = s.planner.Plan(planCtx, pricing.Plan.Ref, PlanningInput{Language: p.Language, Composition: p.Composition, Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Analyses: analyses, Policy: pricing.Plan, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: p.CTA})
+			edit, _, err = s.planner.Plan(planCtx, pricing.Plan.Ref, PlanningInput{Language: p.Language, Composition: p.Composition, Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Analyses: analyses, Policy: pricing.Plan, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: p.CTA, Instruction: p.Instruction})
 		}
 		if err != nil {
 			return err

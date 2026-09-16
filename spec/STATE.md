@@ -47,7 +47,6 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
-| T187 | The writer reads the instruction and lets it outrank guidance | CLIP | T186 | todo |
 | T188 | An instruction lets the writer speak from experience | CLIP | T186 | todo |
 | T189 | The owner binds a source to an item before generating | CLIP | - | todo |
 | T190 | Media-operation durations for successful work | CLIP | - | todo |
@@ -60,9 +59,11 @@
 
 ## next
 - implement-task T191, then T190 — T191 gates T192 T193 T194 T195 and T190 makes each one's effect measurable; T193 T194 T196 carry most of the 1225 s a prod generation took.
-- implement-task T187, then T188 — the writer now has an instruction to read; T189 removes the binding failure that emptied every meat caption.
+- implement-task T188, then T189 — an instruction still cannot admit experiential copy, and T189 removes the binding failure that emptied every meat caption.
 - T177 is blocked on the owner's viewing answers; T008 stays owner-dependent.
 ## log
+- 260916 T187 done; the writer reads project_instruction and the contract names it the content authority above authored guidance, structure still the template's; no instruction leaves the request byte-identical
+- 260916 T187 claimed (grp)
 - 260916 T186 done; a clip project stores one bounded instruction beside its answers and freezes it into every attempt (docker came back, so proto/sqlc were regenerated properly)
 - 260916 T186 claimed (grp)
 - 260916 T185 done; the writer is told which sections this project's answers admit and how many instances each has, the cut ceiling unchanged (owner's choice — update-ssot candidate on CLIP-103)
@@ -81,5 +82,3 @@
 - 260916 CLIP-64 defect fixed outside the task list; an unassigned cut now omits only text bound to its group's fields, so a caption citing no item fact survives (BE verify green)
 - 260916 create-task CLIP done; T183 T184 T185 carry the r26 delta, T186 T187 T188 the project instruction and T189 owner source binding
 - 260916 create-task CLIP start
-- 260916 update-ssot CLIP done; CLIP@27 — a project instruction outranks authored guidance on content and a source can be bound to an item before generation
-- 260916 T177 (blocked) unaffected — it reads CLIP-27 download shape, not the writer's inputs

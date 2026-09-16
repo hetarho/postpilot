@@ -102,6 +102,10 @@ type PlanningInput struct {
 	// place (CDS-29, CDS-31). The preset itself rides Template.
 	Disclosure, CTA string
 	HideDisclosure  bool
+	// The project's own instruction (CLIP-121), empty when none was written.
+	// On content it outranks the template's authored guidance; every declared
+	// structure stays the template's.
+	Instruction string
 }
 
 // CutScene is the scene of the segment a cut starts in, and ReadableText is

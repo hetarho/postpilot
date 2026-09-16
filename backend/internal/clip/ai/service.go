@@ -296,6 +296,19 @@ func executionPolicy(p llm.CallPolicy, ref llm.ModelRef, stage string, budget in
 	return &llm.ExecutionPolicy{Call: p, Delivery: delivery, NoFallback: true, RequireParameters: true}, nil
 }
 
+// PromptBytes is the encoded size validatePrompt measures, so a caller can
+// state an allowance in the same units the refusal reports.
+func PromptBytes(system, user string, schema json.RawMessage) int {
+	data, err := json.Marshal(struct {
+		System, User string
+		Schema       json.RawMessage
+	}{system, user, schema})
+	if err != nil {
+		return 0
+	}
+	return len(data)
+}
+
 func validatePrompt(system, user string, schema json.RawMessage, delivery llm.ExecutionDelivery, inputLimit int) error {
 	// The conservative encoded-byte bound is part of the approved input budget.
 	// Do not discard completed observations or authored content to make it fit.
