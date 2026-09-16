@@ -6,6 +6,17 @@ import (
 	"slices"
 )
 
+// The three reasons the SERVER has for not placing a narration caption it was
+// given: two captions claiming the same moment, an interval the output does not
+// hold, and a window too short to read (CLIP-66, CLIP-67, CDS-62). CLIP-138
+// admits nothing else here — a moment the writer left without a caption and a
+// fact the narration did not state are the writer's own choices, not events.
+const (
+	NoticeCaptionOverlap       = "caption_overlap"
+	NoticeCaptionOutsideOutput = "caption_outside_output"
+	NoticeCaptionFloor         = "caption_floor"
+)
+
 // PlanNotice extends the existing text fallback vocabulary to cut and plan
 // targets. Stored records are retained; owner edits only filter the projection.
 type PlanNotice struct {

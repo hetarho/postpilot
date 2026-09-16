@@ -79,6 +79,43 @@ type EditablePhrase struct {
 	StartMS, EndMS int
 }
 
+// NarrationScope marks a caption the narration call wrote (CLIP-134). Such a
+// caption belongs to no cut and to no template declaration: it owns an absolute
+// interval on the transformed output timeline, may lie inside one cut or cross
+// several, and never overlaps another narration caption (CLIP-66).
+const NarrationScope = "narration"
+
+// narrationInstanceID is the ONE shape a narration identity takes. The server
+// mints it, the way it mints an owner cut id: a client that sent one would be
+// creating an identity, and only the plan may hold identities (CLIP-97).
+var narrationInstanceID = regexp.MustCompile(`^narration-([1-9][0-9]*)$`)
+
+func NarrationID(n int) string { return "narration-" + strconv.Itoa(n) }
+
+// NextNarrationID is the next free narration identity, one past the highest
+// number the plan has ever used. `existing` is every identity the plan holds,
+// retired captions included, so a removed caption's id is never handed to a
+// different sentence — the rule cut ids already follow.
+func NextNarrationID(existing []string) string {
+	highest := 0
+	for _, id := range existing {
+		if m := narrationInstanceID.FindStringSubmatch(id); m != nil {
+			n, _ := strconv.Atoi(m[1])
+			highest = max(highest, n)
+		}
+	}
+	return NarrationID(highest + 1)
+}
+
+// NarrationCaption is the ONE shape a narration caption takes. Style, position
+// and alignment stay automatic because the renderer places a caption against
+// the frame beneath it, and the interval is absolute on the output timeline.
+func NarrationCaption(id, text string, startMS, endMS int) PortableText {
+	a, b := startMS, endMS
+	e := composition.Element{ID: id, Kind: "ai", Role: "caption", Style: "auto", Position: "auto", Align: "center", Basis: "output-start", StartMS: &a, EndMS: &b}
+	return PortableText{Scope: NarrationScope, Resolved: composition.ResolvedElement{InstanceID: id, Element: e, Text: text, StartMS: a, EndMS: b, AuthoredTiming: true}}
+}
+
 // Effective automatic choices are frozen with the rendered draft. The original
 // element still says whether a value was authored or automatically selected.
 type CompositionPlacement struct {

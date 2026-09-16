@@ -80,6 +80,14 @@ func ResolvePortableIntervals(plan EditPlan, limits composition.Limits) (EditPla
 	if duration <= 0 || len(v.Cuts) > limits.Cuts || len(plan.Portable.Elements) > limits.Cues {
 		return plan, ErrInvalid
 	}
+	// Narration is measured against the output this edit produces, before any
+	// interval is resolved: creating, splitting, trimming, reordering or
+	// re-rating footage moves the cuts under a caption and never the caption
+	// itself, so a caption the new output cannot hold is named here rather than
+	// silently retimed to fit it (CLIP-67).
+	if err := ValidateNarrationIntervals(plan.Portable.Elements, duration); err != nil {
+		return plan, err
+	}
 	for _, text := range plan.Portable.Elements {
 		r := &text.Resolved
 		if r.Element.Basis == "cut" && r.CutID != "" && !seen[r.CutID] {

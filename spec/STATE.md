@@ -52,7 +52,6 @@
 | T203 | ② asks for a revision in its own panel | CLIP | T202 | todo |
 | T204 | What the owner asked for is kept | CLIP | T202 | todo |
 | T209 | Caption pace and accent are project settings | CLIP CDS | - | todo |
-| T210 | The plan carries a narration | CLIP CDS | T207 | todo |
 | T211 | Writing call 1 writes the footage flow | CLIP CDS | T210 | todo |
 | T212 | Writing call 2 writes the narration | CLIP CDS | T211 | todo |
 | T213 | A generation runs the flow call and then the narration call | CLIP | T212 | todo |
@@ -61,9 +60,10 @@
 | T216 | ① arranges the sources and hints the writer | CLIP | - | todo |
 
 ## next
-- implement-task T210 next (dep T207 done), with T209 and T216 free to run beside it; then T211 → T212 → T213, T214 and T215 after T210, and the revision tasks T201 → T202 → T203/T204 after T212/T213 — every writing-contract change lives in T211/T212, so nothing else should touch ai/ prompts; T209 and T216 both change clip.proto, so run them one after another in one tree
+- implement-task T211 next (dep T210 done), with T214, T215, T209 and T216 free to run beside it; then T212 → T213, and the revision tasks T201 → T202 → T203/T204 after T212/T213 — every writing-contract change lives in T211/T212, so nothing else should touch ai/ prompts; T209, T214, T215 and T216 all change clip.proto, so run them one after another in one tree
 - T200 stands alone; ARCH's T205 T206 (deploy smoke gate) wait on T211, which absorbed T198; T177 is blocked on the owner's viewing answers; T008 stays owner-dependent
 ## log
+- 260916 T210 done; a plan carries narration captions with absolute, disjoint output intervals beside the template regions — the shape is validated at store time and again against the duration an edit produces, so footage edits never retime a caption and a caption the new output cannot hold is named for correction; ② may add, edit and remove one (server-minted `narration-N`, owner-written text skips grounding), `GroundNarration` drops the cross-item and context-item rules, and the three caption removal reasons exist (`caption_floor` has no producer until T212/T214)
 - 260916 T208 done; the template editor offers only fields, groups, guides and the badge, the accent and pace selects are gone, a converted legacy template says its scenes moved into the guide and saves that body, and the preview supplies one sample caption line; the converter now lifts an intro/outro authored inside a scene and keeps carrying prose when the body still has an authoring error
 - 260916 T200 done; a project is minted from title/template/ratio and everything else is written in ① beside the sources — migration 0056 relaxes the duration CHECK (goose NO TRANSACTION, foreign keys off), and the upload gate now asks for a savable project rather than a complete one
 - 260916 T208 claimed (tmpl)
@@ -83,4 +83,3 @@
 - 260916 T195 claimed (perf)
 - 260916 update-ssot CDS done; CDS@20 — rhythm and voice follow the instruction, captions hold disjoint absolute windows on the output timeline whatever cut lies beneath, the information pair is retired, numbers match any collected fact, and the accent is chosen in ①
 - 260916 T197 T198 (base CLIP@29) and T200-T204 (base CLIP@30) affected — r31 rebuilds the writing contract into two calls and targets the revision request; re-cut under create-task before implementing
-- 260916 update-ssot CLIP done; CLIP@31 — the template shrinks to what every clip must carry (design, slots, badge, fields, groups, optional guide), the instruction directs footage order and narration, two writing calls write the flow and then a narration of captions on the absolute output timeline, numbers ground on collected facts only, and an unwritten caption is no notice

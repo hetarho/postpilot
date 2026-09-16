@@ -1,6 +1,7 @@
 package clip
 
 import (
+	"maps"
 	"math"
 	"reflect"
 	"slices"
@@ -25,7 +26,20 @@ type CorrectionText struct {
 	Pace, Accent, Keyword                    string
 	ResolvedStartMS, ResolvedEndMS           int
 	GroupID, ItemID                          string
+	// Whether this caption is narration (CLIP-134). A read projection like the
+	// ids beside it: a draft carries it back unchanged, and only `Creation`
+	// makes a new one.
+	Narration bool
+	// Request-only provenance for a caption the plan does not yet contain. It
+	// is never stored and never projected back, so one caption is created
+	// exactly once — the rule a created cut follows.
+	Creation *TextCreation
 }
+
+// TextCreation authorizes one caption the plan does not hold. `add` is its only
+// kind and narration its only scope: every other caption on the timeline is a
+// template declaration, and a client cannot mint a declaration (CLIP-97).
+type TextCreation struct{ Kind string }
 
 func correctionText(t PortableText) CorrectionText {
 	r, e := t.Resolved, t.Resolved.Element
@@ -33,7 +47,8 @@ func correctionText(t PortableText) CorrectionText {
 		Text: r.Text, Rows: slices.Clone(r.Rows), Style: e.Style, Position: e.Position, Align: e.Align, Basis: e.Basis,
 		StartMS: e.StartMS, EndMS: e.EndMS, Pace: t.Pace, Accent: t.Accent, Keyword: t.Keyword,
 		ResolvedStartMS: r.StartMS, ResolvedEndMS: r.EndMS, GroupID: r.GroupID, ItemID: r.ItemID,
-		Phrases: slices.Clone(t.Phrases), StaleEvidence: t.StaleEvidence, Evidence: slices.Clone(t.Evidence), FallbackReason: t.FallbackReason}
+		Phrases: slices.Clone(t.Phrases), StaleEvidence: t.StaleEvidence, Evidence: slices.Clone(t.Evidence), FallbackReason: t.FallbackReason,
+		Narration: t.Scope == NarrationScope}
 	if t.Placement != nil {
 		a, b := t.Placement.StartMS, t.Placement.EndMS
 		result.EffectiveStartMS, result.EffectiveEndMS = &a, &b
@@ -153,9 +168,16 @@ func applyNativeCorrection(cfg RenderConfig, p Project, old EditPlan, sources []
 	trackNoticeCutEdits(old, &next)
 	seen := map[string]bool{}
 	for _, edit := range in.Elements {
+		if edit.Creation != nil {
+			caption, minted, e := mintNarrationCaption(edit, knownText)
+			if e != nil {
+				return EditPlan{}, e
+			}
+			knownText[minted.InstanceID], edit = caption, minted
+		}
 		t, ok := knownText[edit.InstanceID]
 		r := t.Resolved
-		if !ok || seen[edit.InstanceID] || edit.ElementID != r.Element.ID || edit.CutID != r.CutID || edit.Kind != r.Element.Kind || edit.Role != r.Element.Role || edit.GroupID != r.GroupID || edit.ItemID != r.ItemID {
+		if !ok || seen[edit.InstanceID] || edit.ElementID != r.Element.ID || edit.CutID != r.CutID || edit.Kind != r.Element.Kind || edit.Role != r.Element.Role || edit.GroupID != r.GroupID || edit.ItemID != r.ItemID || edit.Narration != (t.Scope == NarrationScope) {
 			return EditPlan{}, ErrInvalid
 		}
 		seen[edit.InstanceID] = true
@@ -224,4 +246,26 @@ func applyNativeCorrection(cfg RenderConfig, p Project, old EditPlan, sources []
 		return EditPlan{}, err
 	}
 	return resolved, nil
+}
+
+// mintNarrationCaption admits one caption the plan does not yet contain and
+// returns the edit the ordinary correction path then applies to it. Only the
+// sentence, its interval and its phrasing come from the owner: the identity,
+// the scope, the automatic placement and the absence of a cut are the server's,
+// exactly as they are for a caption the narration call wrote (CLIP-134).
+func mintNarrationCaption(edit CorrectionText, known map[string]PortableText) (PortableText, CorrectionText, error) {
+	// An id the plan already knows is corrected, never created, and a caption
+	// bound to a cut or to an item is a template declaration rather than
+	// narration — neither is something a client may mint (CLIP-97).
+	_, exists := known[edit.InstanceID]
+	if exists || edit.Creation.Kind != CutAdd || !edit.Narration || edit.CutID != "" || edit.GroupID != "" || edit.ItemID != "" || edit.StartMS == nil || edit.EndMS == nil {
+		return PortableText{}, CorrectionText{}, ErrInvalid
+	}
+	caption := NarrationCaption(NextNarrationID(slices.Collect(maps.Keys(known))), "", *edit.StartMS, *edit.EndMS)
+	// The owner wrote this sentence, so it is theirs before it is applied:
+	// nothing grounds an owner caption and no automatic repair rewrites it.
+	caption.OwnerEdited = true
+	out := correctionText(caption)
+	out.Text, out.Phrases, out.Pace, out.Accent, out.Keyword = edit.Text, slices.Clone(edit.Phrases), edit.Pace, edit.Accent, edit.Keyword
+	return caption, out, nil
 }

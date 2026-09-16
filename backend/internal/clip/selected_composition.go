@@ -15,6 +15,11 @@ import (
 // binding is already held to that: ScopedFact refuses it every item fact, and
 // GroundScopedText refuses any sentence naming an item. Literal authored text
 // and context survive; no dummy item or fabricated answer enters Resolve.
+//
+// A plan written today declares no section at all: its cuts carry no section,
+// group or item, the template holds only the fixed regions, and the narration
+// belongs to no cut (CLIP-134). Every branch below is then skipped and only the
+// fixed regions resolve — which is why such a plan records no item notice.
 func ResolveSelectedComposition(doc *composition.Document, inputs CompositionInputs, cuts []composition.Cut, limits composition.Limits, maxBytes int) (composition.Timeline, []CopyFallback, error) {
 	resolvedDoc := *doc
 	resolvedDoc.Sections = slices.Clone(doc.Sections)

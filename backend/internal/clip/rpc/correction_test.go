@@ -94,3 +94,37 @@ func TestCutRefusalKeepsIdentityAtTheRPCBoundary(t *testing.T) {
 		t.Fatal(got)
 	}
 }
+
+func TestNarrationCrossesTheWireAsAScopeAndACreation(t *testing.T) {
+	start, end := 2000, 5000
+	s := &clip.CorrectionState{Plan: clip.CorrectionPlan{DurationMS: 20000, Elements: []clip.CorrectionText{
+		{InstanceID: "narration-1", ElementID: "narration-1", Kind: "ai", Role: "caption", Text: "고기부터 올렸어요",
+			Style: "auto", Position: "auto", Align: "center", Basis: "output-start", StartMS: &start, EndMS: &end,
+			ResolvedStartMS: 2000, ResolvedEndMS: 5000, Narration: true,
+			Phrases: []clip.EditablePhrase{{Text: "고기부터", StartMS: 2000, EndMS: 2600}}},
+	}}}
+	wire := editingProto(s)
+	raw, err := protojson.Marshal(wire)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var decoded v1.ClipEditingState
+	if err := protojson.Unmarshal(raw, &decoded); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(correctionPlan(decoded.Plan), s.Plan) {
+		t.Fatal("the narration scope or its absolute times changed on the wire", decoded.Plan.String())
+	}
+	// Creation rides the request only, the way a cut's does.
+	if wire.Plan.Elements[0].Creation != nil {
+		t.Fatal("the projection returned creation provenance")
+	}
+	added := &v1.ClipEditPlan{Elements: []*v1.ClipEditableText{{Narration: true, Creation: &v1.ClipTextCreation{Kind: "add"}}}}
+	got := correctionPlan(added).Elements[0]
+	if got.Creation == nil || got.Creation.Kind != clip.CutAdd || !got.Narration {
+		t.Fatal("caption creation was lost on the way in", got)
+	}
+	if correctionPlan(&v1.ClipEditPlan{Elements: []*v1.ClipEditableText{{}}}).Elements[0].Creation != nil {
+		t.Fatal("an ordinary caption arrived with provenance")
+	}
+}

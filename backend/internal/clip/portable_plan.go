@@ -193,6 +193,12 @@ func validatePortablePlan(p EditPlan) error {
 		if r.Element.Kind != "fixed" && r.Element.Kind != "ai" {
 			return ErrInvalid
 		}
+		// A narration caption is admitted on its own shape alone: the snapshot
+		// declares the fixed regions and nothing else, so nothing here may ask
+		// the document whether this caption exists (CLIP-134).
+		if text.Scope == NarrationScope && (!ValidNarrationShape(text) || r.StartMS != *r.Element.StartMS || r.EndMS != *r.Element.EndMS) {
+			return ErrInvalid
+		}
 		ids[r.InstanceID] = true
 		for _, evidence := range text.Evidence {
 			valid := false
@@ -215,7 +221,56 @@ func validatePortablePlan(p EditPlan) error {
 			}
 		}
 	}
+	return ValidateNarrationIntervals(v.Elements, p.DurationMS)
+}
+
+// ValidNarrationShape reports whether a caption carries the one shape narration
+// takes: a server-minted identity, no cut, and an absolute output interval.
+func ValidNarrationShape(text PortableText) bool {
+	r := text.Resolved
+	e := r.Element
+	return text.Scope == NarrationScope && r.CutID == "" && r.GroupID == "" && r.ItemID == "" &&
+		r.InstanceID == e.ID && narrationInstanceID.MatchString(e.ID) &&
+		e.Kind == "ai" && e.Role == "caption" && e.Basis == "output-start" && e.StartMS != nil && e.EndMS != nil
+}
+
+// ValidateNarrationIntervals holds the narration to CLIP-66's two rules against
+// the output it will be rendered onto: every interval lies inside that output
+// and no two of them overlap. Both refusals name the caption's own instance,
+// because a caption the edited output no longer holds is corrected by the owner
+// rather than moved, retimed or dropped for them (CLIP-67).
+func ValidateNarrationIntervals(elements []PortableText, durationMS int) error {
+	type window struct {
+		id         string
+		start, end int
+	}
+	var windows []window
+	for _, text := range elements {
+		if text.Scope != NarrationScope {
+			continue
+		}
+		if !ValidNarrationShape(text) {
+			return ErrInvalid
+		}
+		// The DECLARED interval, not the resolved one: the declaration is what
+		// every later resolution reads, so it is what has to fit the output.
+		e := text.Resolved.Element
+		if *e.StartMS < 0 || *e.EndMS <= *e.StartMS || *e.EndMS > durationMS {
+			return narrationRefusal(e.ID, NoticeCaptionOutsideOutput)
+		}
+		windows = append(windows, window{e.ID, *e.StartMS, *e.EndMS})
+	}
+	slices.SortStableFunc(windows, func(a, b window) int { return a.start - b.start })
+	for i := 1; i < len(windows); i++ {
+		if windows[i].start < windows[i-1].end {
+			return narrationRefusal(windows[i].id, NoticeCaptionOverlap)
+		}
+	}
 	return nil
+}
+
+func narrationRefusal(id, reason string) error {
+	return &composition.Problem{ElementID: id, Line: 1, Reason: reason}
 }
 
 // LegacyPortablePlan is a read projection. No retained MP4, revision or stored

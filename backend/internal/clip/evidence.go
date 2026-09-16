@@ -163,6 +163,11 @@ func uncertainObservation(s Segment) bool {
 // BindCutItem ignores a writer's proposed identity. A complete owner range wins;
 // otherwise every overlapping observation must name the same unique supplied
 // item. Conflicts and partial owner ranges remain unassigned.
+//
+// Nothing a plan written today holds needs an item bound to a cut: narration
+// belongs to no cut and names any item it has a fact for (CLIP-134, CLIP-137).
+// This, ScopedFact and GroundScopedText survive for the frozen legacy plans
+// whose copy was scene-bound, and for nothing else.
 func BindCutItem(inputs CompositionInputs, evidence []ObservedEvidence, cut Cut, group string) ItemBinding {
 	owned := map[string]ItemBinding{}
 	partial := false
@@ -228,6 +233,8 @@ func BindCutItem(inputs CompositionInputs, evidence []ObservedEvidence, cut Cut,
 
 type FactReference struct{ FieldID, GroupID, ItemID string }
 
+// ScopedFact reaches an item's own answer only through a cut's binding, which
+// is why it is legacy: see BindCutItem.
 func ScopedFact(doc *composition.Document, inputs CompositionInputs, ref FactReference, scope string, binding ItemBinding) (composition.Fact, bool) {
 	var field *composition.Field
 	for i := range doc.Fields {
@@ -328,19 +335,26 @@ func bases(text string) []string {
 // lifts under CLIP-122 — the list itself never changes with one.
 var experientialMarkers = []string{"맛있", "맛없", "고소", "먹어", "먹었", "다녀왔", "써봤", "사용해보니", "느꼈", "만족", "효능", "효과", "치료", "i tried", "i loved", "i tasted", "i visited", "i ate", "i felt", "we tried", "we visited", "delicious", "tasty", "my experience", "cured", "effective"}
 
-// GroundScopedText deliberately checks each numeric token against one referenced
-// fact. It never concatenates digits, borrows another item's price, or treats a
-// missing currency/basis as measured evidence. Fixed authored text bypasses AI
-// grounding entirely.
+// GroundNarration is the WHOLE check a narration caption answers (CLIP-137):
+// every number, unit, currency and price basis it states matches some collected
+// fact exactly, and an experiential or contextual claim needs an instruction
+// that asked for it. `facts` is every fact the project collected, global and
+// item alike, because a caption belongs to no item and may name any of them —
+// there is no cross-item rule left to break and no cut it has to describe.
+//
+// It deliberately checks each numeric token against one fact. It never
+// concatenates digits, invents a price basis, or treats a missing
+// currency/basis as measured evidence. Owner-written and owner-edited text is
+// the owner's own claim and never reaches here.
 //
 // `instructed` is whether the project carries an owner instruction, and only
 // that: the instruction's own words are never read here. Where one is present
 // the experiential marker check stands down (CLIP-122) — the owner asked for
 // those sentences and reviews the clip before publishing — while every numeric
-// claim keeps needing a referenced fact, because a figure on screen is the one
+// claim keeps needing a collected fact, because a figure on screen is the one
 // claim a viewer acts on without checking it. A rule that scanned the text for
 // the owner's phrasing would refuse exactly the paraphrases they asked for.
-func GroundScopedText(text string, facts []composition.Fact, inputs CompositionInputs, binding ItemBinding, scope string, instructed bool) string {
+func GroundNarration(text string, facts []composition.Fact, instructed bool) string {
 	for _, claim := range measuredClaims(text) {
 		supported := false
 		for _, fact := range facts {
@@ -387,6 +401,19 @@ func GroundScopedText(text string, facts []composition.Fact, inputs CompositionI
 			return "unsupported_experience"
 		}
 	}
+	return ""
+}
+
+// GroundScopedText is GroundNarration plus the two rules a SCENE-BOUND caption
+// answers: it may not name another item, and a context caption may not point a
+// number at the dish on screen. Both rules exist because scene-bound copy
+// claimed to describe the footage under it. Only a frozen legacy plan still
+// carries such copy, and only that path may call this.
+func GroundScopedText(text string, facts []composition.Fact, inputs CompositionInputs, binding ItemBinding, scope string, instructed bool) string {
+	if reason := GroundNarration(text, facts, instructed); reason != "" {
+		return reason
+	}
+	lower := strings.ToLower(text)
 	for group, items := range inputs.Items {
 		for _, item := range items {
 			if scope != "context" && group == binding.GroupID && item.ID == binding.ItemID {

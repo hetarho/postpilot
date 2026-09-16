@@ -74,7 +74,10 @@ func correctionPlan(p *v1.ClipEditPlan) clip.CorrectionPlan {
 }
 func correctionText(t *v1.ClipEditableText) clip.CorrectionText {
 	out := clip.CorrectionText{InstanceID: t.InstanceId, ElementID: t.ElementId, CutID: t.CutId, Kind: t.Kind, Role: t.Role, Text: t.Text, Style: t.Style, Position: t.Position, Align: t.Align, Basis: t.Basis, Pace: t.Pace, Accent: t.Accent, Keyword: t.Keyword, ResolvedStartMS: int(t.ResolvedStartMs), ResolvedEndMS: int(t.ResolvedEndMs), GroupID: t.GroupId, ItemID: t.ItemId}
-	out.StaleEvidence, out.EvidenceReviewed, out.FallbackReason = t.StaleEvidence, t.EvidenceReviewed, t.FallbackReason
+	out.StaleEvidence, out.EvidenceReviewed, out.FallbackReason, out.Narration = t.StaleEvidence, t.EvidenceReviewed, t.FallbackReason, t.Narration
+	if t.GetCreation() != nil {
+		out.Creation = &clip.TextCreation{Kind: t.GetCreation().GetKind()}
+	}
 	for _, p := range t.Phrases {
 		out.Phrases = append(out.Phrases, clip.EditablePhrase{Text: p.Text, StartMS: int(p.StartMs), EndMS: int(p.EndMs)})
 	}
@@ -104,7 +107,9 @@ func correctionText(t *v1.ClipEditableText) clip.CorrectionText {
 }
 func correctionTextProto(t clip.CorrectionText) *v1.ClipEditableText {
 	out := &v1.ClipEditableText{InstanceId: t.InstanceID, ElementId: t.ElementID, CutId: t.CutID, Kind: t.Kind, Role: t.Role, Text: t.Text, Style: t.Style, Position: t.Position, Align: t.Align, Basis: t.Basis, Pace: t.Pace, Accent: t.Accent, Keyword: t.Keyword, ResolvedStartMs: int32(t.ResolvedStartMS), ResolvedEndMs: int32(t.ResolvedEndMS), GroupId: t.GroupID, ItemId: t.ItemID}
-	out.StaleEvidence, out.EvidenceReviewed, out.FallbackReason = t.StaleEvidence, t.EvidenceReviewed, t.FallbackReason
+	// Creation is request-only: the projection hands a caption back as an
+	// ordinary one, so a resave corrects it rather than creating it again.
+	out.StaleEvidence, out.EvidenceReviewed, out.FallbackReason, out.Narration = t.StaleEvidence, t.EvidenceReviewed, t.FallbackReason, t.Narration
 	for _, p := range t.Phrases {
 		out.Phrases = append(out.Phrases, &v1.ClipEditablePhrase{Text: p.Text, StartMs: int32(p.StartMS), EndMs: int32(p.EndMS)})
 	}

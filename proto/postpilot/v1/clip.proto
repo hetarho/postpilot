@@ -465,7 +465,8 @@ message ClipEditableText {
   int32 resolved_end_ms = 18;
   string group_id = 19;
   string item_id = 20;
-  // Phrase times are relative to the owned cut; empty requests automatic splitting.
+  // Phrase times are relative to the owned cut, and absolute on the output
+  // timeline for a caption that owns no cut — narration among them.
   repeated ClipEditablePhrase phrases = 21;
   bool stale_evidence = 22;
   // Explicit owner acknowledgement; never changes recorded observations.
@@ -475,7 +476,18 @@ message ClipEditableText {
   // Frozen automatic interval, relative to the owning cut when present.
   optional int32 effective_start_ms = 26;
   optional int32 effective_end_ms = 27;
+  // Whether this caption is narration: it belongs to no cut, is declared by no
+  // template, and its start/end are absolute times on the output timeline. A
+  // read projection, carried back unchanged; only `creation` makes a new one.
+  bool narration = 28;
+  // Request-only, one-time provenance for a caption the owner is adding. It is
+  // never stored and never returned, and the server mints the identity: a
+  // caption is created exactly once, and never by a client's own id.
+  ClipTextCreation creation = 29;
 }
+// `kind` is add and nothing else, and narration is the only caption an owner
+// may add — every other one is a template declaration.
+message ClipTextCreation { string kind = 1; }
 message ClipEditPlan {
   int32 duration_ms = 1;
   repeated ClipEditCut cuts = 2;
