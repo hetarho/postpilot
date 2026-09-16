@@ -67,6 +67,8 @@ type ClipProject struct {
 	FinalizedResultKey       sql.NullString
 	Language                 string
 	Instruction              string
+	CaptionPace              string
+	Accent                   string
 }
 
 type ClipSourceAttempt struct {

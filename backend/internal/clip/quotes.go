@@ -411,7 +411,7 @@ func (s *GenerationService) startApproved(ctx context.Context, user, id, batch, 
 		return "", err
 	}
 	recovery := s.selectRecovery(upgraded, b, modelRef(observe), p.Language)
-	payload, err := json.Marshal(generationPayload{Language: p.Language, Recovery: &recovery, Composition: c, Version: generationPayloadVersion, ProjectID: id, Ratio: p.Ratio, Observe: observe, Write: write, TargetDurationMS: p.TargetDurationMS, Template: t.Recipe, Answers: requiredQuoteAnswers(p, t), Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: design.DefaultCTA(t.Preset, p.CTA), Instruction: p.Instruction, Batch: b, Approval: &GenerationApproval{QuoteID: q.ID, MaxCredits: q.Pricing.MaxCredits, Pricing: q.Pricing}})
+	payload, err := json.Marshal(generationPayload{Language: p.Language, Recovery: &recovery, Composition: c, Version: generationPayloadVersion, ProjectID: id, Ratio: p.Ratio, Observe: observe, Write: write, TargetDurationMS: p.TargetDurationMS, Template: t.Recipe, Answers: requiredQuoteAnswers(p, t), Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: design.DefaultCTA(t.Preset, p.CTA), Instruction: p.Instruction, CaptionPace: p.CaptionPace, Accent: p.Accent, Batch: b, Approval: &GenerationApproval{QuoteID: q.ID, MaxCredits: q.Pricing.MaxCredits, Pricing: q.Pricing}})
 	if err != nil {
 		return "", err
 	}

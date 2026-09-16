@@ -51,13 +51,13 @@
 | T202 | A revision request runs as its own job and charges the writing calls its target needs | CLIP | T201 T213 | todo |
 | T203 | ② asks for a revision in its own panel | CLIP | T202 | todo |
 | T204 | What the owner asked for is kept | CLIP | T202 | todo |
-| T209 | Caption pace and accent are project settings | CLIP CDS | - | todo |
 | T216 | ① arranges the sources and hints the writer | CLIP | - | todo |
 
 ## next
-- implement-task T209 or T216 next (both free), then the revision tasks T201 → T202 → T203/T204 — T209, T214, T215 and T216 all change clip.proto, so run them one after another in one tree; then the revision tasks T201 → T202 → T203/T204 (deps T212/T213 done)
+- implement-task T216 next (free), then the revision tasks T201 → T202 → T203/T204 — T209, T214, T215 and T216 all change clip.proto, so run them one after another in one tree; then the revision tasks T201 → T202 → T203/T204 (deps T212/T213 done)
 - T200 and ARCH's T205 T206 are done; T177 is blocked on the owner's viewing answers; T008 stays owner-dependent
 ## log
+- 260916 T209 done; the caption pace and the accent are the project's (migration 0057, seeded from the template at creation, chosen in ① and gone from ②) — the render reads them through EditPlan.WithCaptions and applies them once at layout, a change bumps only the plan revision so the result goes stale without repaying a writing call, and the accent row draws its dots from the design system's own hex because CDS's palette has no FE theme tokens
 - 260916 T215 done; ② edits the narration on its own lane — one bar per caption whatever cut lies beneath, absolute start/end fields, add at the playhead into free room (≥900 ms), remove, undo/redo, an overlap or an out-of-output caption blocks 다시 렌더 without retiming anything, the three caption notices read in ko/en, and the item-binding controls left ② for ①
 - 260916 T214 done; the renderer schedules the narration on the output timeline (order by start, overlap omitted, CDS-41 floor through the shorter text then the free room, owner windows untouched), places a spanning caption against every cut it covers, and verifies V18 timeline-wide, V16 against the duration and V11 on every collected fact; the identity baseline was NOT re-pinned — measured, the delivered clip is identical at the commit that recorded it, at HEAD and here, so that constant belongs to another host
 - 260916 a caption over readable_text footage has no admissible anchor (readable allows top/bottom, the caption rule offers upper_mid/lower_mid) and is always dropped with copy_limit — pre-existing, found under T214, worth a review-code finding
@@ -77,4 +77,3 @@
 - 260916 T205 dep T211→- ; the original dep:T198 meant "after the pass-budget work that changes ffmpeg's filter set" (T193 T194), which is done, and r31's re-cut moved it onto a writing-call task T205 does not touch
 - 260916 T200 claimed (mint)
 - 260916 T205-T214 (CLIP, this session) renumbered to T207-T216 — create-task ARCH minted T205 T206 at the same moment; ARCH T205 dep T198→T211 since T198 was folded into T211
-- 260916 create-task CLIP done; T207-T216 carry r31 — the template grammar shrinks to fixed regions with legacy conversion, pace/accent move to the project, the plan gains a narration, two writing calls (flow, narration) replace the single writer, the renderer and ② schedule captions on the whole timeline, ① orders sources; T197 T198 folded into T211 (numbers retired), T201-T204 re-cut for the targeted revision, T200 rebased; CDS r20 is consumed by T207 T209 T210 T211 T212 T214 T215

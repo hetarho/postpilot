@@ -145,6 +145,10 @@ message ClipProject {
   // written. On content it outranks the template's authored guidance; the
   // declared structure stays the template's.
   string instruction = 30;
+  // The owner's caption pace and accent for THIS clip (CLIP-139). Empty is not
+  // chosen: the clip falls back to what its frozen template said.
+  string caption_pace = 31;
+  string accent = 32;
 }
 message ClipNotice {
   string code = 1;
@@ -248,6 +252,10 @@ message CreateClipProjectRequest {
   ContentLanguage language = 10;
   // Optional; empty is indistinguishable from never having written one.
   string instruction = 11;
+  // Absent seeds both from the selected template; an explicit empty string is
+  // the owner choosing the steady pace and no accent.
+  optional string caption_pace = 12;
+  optional string accent = 13;
 }
 message CreateClipProjectResponse { ClipProject project = 1; }
 message GetClipProjectRequest { string id = 1; }
@@ -265,6 +273,10 @@ message UpdateClipProjectRequest {
   ClipCompositionInputs composition_inputs = 9;
   // Supplied only when it changes; an empty string clears it.
   optional string instruction = 10;
+  // Supplied only when they change. Either one re-renders the same plan and
+  // costs no writing call (CLIP-139).
+  optional string caption_pace = 11;
+  optional string accent = 12;
 }
 message UpdateClipProjectResponse { ClipProject project = 1; }
 message DeleteClipProjectRequest { string id = 1; }

@@ -583,6 +583,8 @@ export const clips = {
   },
   ratio: { vertical: 'Vertical 9:16', horizontal: 'Horizontal 16:9', square: 'Square 1:1' },
   project: {
+    accent: 'Accent colour',
+    accentHelp: 'The colour one word of a caption takes. Chosen per clip.',
     search: 'Search clips',
     searchPlaceholder: 'Find by title',
     filterAll: 'All',

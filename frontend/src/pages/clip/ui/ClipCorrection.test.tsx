@@ -193,14 +193,28 @@ it('edits fixed global text without requiring legacy campaign facts', async () =
   })
 })
 
-it('splits and edits rapid phrase timing in exact milliseconds and merges back', async () => {
+it('edits rapid phrase timing in exact milliseconds on a rapid-paced clip', async () => {
+  // The PACE is the project's (CLIP-139): ② edits the phrases of a clip that is
+  // already rapid rather than switching one caption to it.
+  const p = fixture()
+  p.captionPace = 'rapid'
+  p.editing!.plan.elements![0] = {
+    ...p.editing!.plan.elements![0],
+    pace: 'rapid',
+    text: '오늘은 구로디지털단지에 와보았는데요',
+    phrases: [
+      { text: '오늘은', startMs: 120, endMs: 420 },
+      { text: '구로디지털단지에', startMs: 420, endMs: 1120 },
+      { text: '와보았는데요', startMs: 1120, endMs: 1820 },
+    ],
+  }
   const writes: NonNullable<FakeClipsOptions['planWrites']> = []
-  await mount({ planWrites: writes })
-  await selectText()
-  setField('자막 원문', '오늘은 구로디지털단지에 와보았는데요')
-  await userEvent.click(screen.getByRole('combobox', { name: /^자막 흐름/ }))
-  await userEvent.click(screen.getByRole('option', { name: '빠른 구절형' }))
+  await mount({ projects: [p], planWrites: writes })
+  await selectText('오늘은')
   expect(screen.getByLabelText('구절 1')).toHaveValue('오늘은')
+  // No per-caption pace or accent control survives in ②.
+  expect(screen.queryByRole('combobox', { name: /^자막 흐름/ })).not.toBeInTheDocument()
+  expect(screen.queryByLabelText('강조색')).not.toBeInTheDocument()
   const ends = screen.getAllByLabelText('컷 안에서 끝 (초)')
   fireEvent.change(ends[1], { target: { value: '0.919' } })
   await savePlan()
@@ -210,9 +224,6 @@ it('splits and edits rapid phrase timing in exact milliseconds and merges back',
     startMs: 420,
     endMs: 919,
   })
-  await userEvent.click(screen.getByRole('combobox', { name: /^자막 흐름/ }))
-  await userEvent.click(screen.getByRole('option', { name: '문장형' }))
-  expect(screen.getByLabelText('자막 원문')).toHaveValue('오늘은 구로디지털단지에 와보았는데요')
 })
 
 it('keeps the local draft on conflict and reloads only after an explicit discard', async () => {

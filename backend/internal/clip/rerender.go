@@ -41,6 +41,7 @@ func (s *GenerationService) SaveCorrection(ctx context.Context, user, id string,
 	if err != nil {
 		return Project{}, err
 	}
+	next = next.WithCaptions(p.CaptionPace, p.Accent)
 	if next.Portable != nil {
 		layout, ok := s.renderer.(CompositionLayouter)
 		if !ok {

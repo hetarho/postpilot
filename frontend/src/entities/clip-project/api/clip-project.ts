@@ -73,6 +73,9 @@ export function toClipProject(value: ProtoClipProject): ClipProject {
     hideDisclosure: value.hideDisclosure,
     cta: value.cta as ClipProject['cta'],
     instruction: value.instruction,
+    // Empty is "not chosen": the clip renders with what its template said.
+    captionPace: value.captionPace as ClipProject['captionPace'],
+    accent: value.accent as ClipProject['accent'],
     answers: value.answers.map((a) => ({ label: a.label, text: a.text })),
     createdAt: value.createdAt,
     updatedAt: value.updatedAt,

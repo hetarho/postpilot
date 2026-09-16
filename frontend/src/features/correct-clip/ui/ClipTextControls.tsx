@@ -227,7 +227,6 @@ export function ClipTextControls({
       )}
       {!narration && text.role === 'caption' && (
         <>
-          <Typography variant="meta">{t('editor.accentHelp')}</Typography>
           <div>
             <FieldLabel htmlFor="clip-text-keyword">{t('correction.keyword')}</FieldLabel>
             <TextField
@@ -240,29 +239,6 @@ export function ClipTextControls({
       )}
       {text.role === 'caption' && (
         <div className="space-y-3">
-          {!narration && (
-            <>
-              <FieldLabel id="clip-text-pace-label">{t('pace.label')}</FieldLabel>
-              <Listbox
-                aria-labelledby="clip-text-pace-label"
-                value={text.pace || 'steady'}
-                options={[
-                  { value: 'steady', label: t('pace.steady') },
-                  {
-                    value: 'rapid',
-                    label: t('pace.rapid'),
-                    disabled: !splitTextPhrases(plan, text),
-                  },
-                ]}
-                onChange={(pace) =>
-                  patch({
-                    pace,
-                    phrases: pace === 'rapid' ? (splitTextPhrases(plan, text) ?? []) : [],
-                  })
-                }
-              />
-            </>
-          )}
           {text.pace === 'rapid' &&
             phrases.map((phrase, index) => (
               <div key={index} className="space-y-2">

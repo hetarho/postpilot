@@ -570,6 +570,8 @@ export const clips = {
   },
   ratio: { vertical: '세로 9:16', horizontal: '가로 16:9', square: '정방형 1:1' },
   project: {
+    accent: '강조 색상',
+    accentHelp: '자막에서 한 낱말에만 쓰는 색이에요. 클립마다 다르게 고를 수 있어요.',
     search: '클립 검색',
     searchPlaceholder: '제목으로 찾기',
     filterAll: '전체',

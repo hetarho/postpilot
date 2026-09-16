@@ -946,7 +946,11 @@ type ClipProject struct {
 	// The owner's own free-text instruction for this project, empty when none was
 	// written. On content it outranks the template's authored guidance; the
 	// declared structure stays the template's.
-	Instruction   string `protobuf:"bytes,30,opt,name=instruction,proto3" json:"instruction,omitempty"`
+	Instruction string `protobuf:"bytes,30,opt,name=instruction,proto3" json:"instruction,omitempty"`
+	// The owner's caption pace and accent for THIS clip (CLIP-139). Empty is not
+	// chosen: the clip falls back to what its frozen template said.
+	CaptionPace   string `protobuf:"bytes,31,opt,name=caption_pace,json=captionPace,proto3" json:"caption_pace,omitempty"`
+	Accent        string `protobuf:"bytes,32,opt,name=accent,proto3" json:"accent,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1187,6 +1191,20 @@ func (x *ClipProject) GetNotices() []*ClipNotice {
 func (x *ClipProject) GetInstruction() string {
 	if x != nil {
 		return x.Instruction
+	}
+	return ""
+}
+
+func (x *ClipProject) GetCaptionPace() string {
+	if x != nil {
+		return x.CaptionPace
+	}
+	return ""
+}
+
+func (x *ClipProject) GetAccent() string {
+	if x != nil {
+		return x.Accent
 	}
 	return ""
 }
@@ -2271,7 +2289,11 @@ type CreateClipProjectRequest struct {
 	// Required concrete UI language; UNSPECIFIED is refused.
 	Language ContentLanguage `protobuf:"varint,10,opt,name=language,proto3,enum=postpilot.v1.ContentLanguage" json:"language,omitempty"`
 	// Optional; empty is indistinguishable from never having written one.
-	Instruction   string `protobuf:"bytes,11,opt,name=instruction,proto3" json:"instruction,omitempty"`
+	Instruction string `protobuf:"bytes,11,opt,name=instruction,proto3" json:"instruction,omitempty"`
+	// Absent seeds both from the selected template; an explicit empty string is
+	// the owner choosing the steady pace and no accent.
+	CaptionPace   *string `protobuf:"bytes,12,opt,name=caption_pace,json=captionPace,proto3,oneof" json:"caption_pace,omitempty"`
+	Accent        *string `protobuf:"bytes,13,opt,name=accent,proto3,oneof" json:"accent,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2379,6 +2401,20 @@ func (x *CreateClipProjectRequest) GetLanguage() ContentLanguage {
 func (x *CreateClipProjectRequest) GetInstruction() string {
 	if x != nil {
 		return x.Instruction
+	}
+	return ""
+}
+
+func (x *CreateClipProjectRequest) GetCaptionPace() string {
+	if x != nil && x.CaptionPace != nil {
+		return *x.CaptionPace
+	}
+	return ""
+}
+
+func (x *CreateClipProjectRequest) GetAccent() string {
+	if x != nil && x.Accent != nil {
+		return *x.Accent
 	}
 	return ""
 }
@@ -2528,7 +2564,11 @@ type UpdateClipProjectRequest struct {
 	HideDisclosure    *bool                  `protobuf:"varint,8,opt,name=hide_disclosure,json=hideDisclosure,proto3,oneof" json:"hide_disclosure,omitempty"`
 	CompositionInputs *ClipCompositionInputs `protobuf:"bytes,9,opt,name=composition_inputs,json=compositionInputs,proto3" json:"composition_inputs,omitempty"`
 	// Supplied only when it changes; an empty string clears it.
-	Instruction   *string `protobuf:"bytes,10,opt,name=instruction,proto3,oneof" json:"instruction,omitempty"`
+	Instruction *string `protobuf:"bytes,10,opt,name=instruction,proto3,oneof" json:"instruction,omitempty"`
+	// Supplied only when they change. Either one re-renders the same plan and
+	// costs no writing call (CLIP-139).
+	CaptionPace   *string `protobuf:"bytes,11,opt,name=caption_pace,json=captionPace,proto3,oneof" json:"caption_pace,omitempty"`
+	Accent        *string `protobuf:"bytes,12,opt,name=accent,proto3,oneof" json:"accent,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2629,6 +2669,20 @@ func (x *UpdateClipProjectRequest) GetCompositionInputs() *ClipCompositionInputs
 func (x *UpdateClipProjectRequest) GetInstruction() string {
 	if x != nil && x.Instruction != nil {
 		return *x.Instruction
+	}
+	return ""
+}
+
+func (x *UpdateClipProjectRequest) GetCaptionPace() string {
+	if x != nil && x.CaptionPace != nil {
+		return *x.CaptionPace
+	}
+	return ""
+}
+
+func (x *UpdateClipProjectRequest) GetAccent() string {
+	if x != nil && x.Accent != nil {
+		return *x.Accent
 	}
 	return ""
 }
@@ -6891,7 +6945,7 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x04 \x01(\tR\tcreatedAt\x12\x19\n" +
 	"\bview_url\x18\x05 \x01(\tR\aviewUrl\x12!\n" +
-	"\fdownload_url\x18\x06 \x01(\tR\vdownloadUrl\"\x91\v\n" +
+	"\fdownload_url\x18\x06 \x01(\tR\vdownloadUrl\"\xcc\v\n" +
 	"\vClipProject\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12*\n" +
@@ -6930,7 +6984,9 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\x12attempt_inspection\x18\x1b \x01(\v2#.postpilot.v1.ClipAttemptInspectionR\x11attemptInspection\x129\n" +
 	"\blanguage\x18\x1c \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\blanguage\x122\n" +
 	"\anotices\x18\x1d \x03(\v2\x18.postpilot.v1.ClipNoticeR\anotices\x12 \n" +
-	"\vinstruction\x18\x1e \x01(\tR\vinstructionB\v\n" +
+	"\vinstruction\x18\x1e \x01(\tR\vinstruction\x12!\n" +
+	"\fcaption_pace\x18\x1f \x01(\tR\vcaptionPace\x12\x16\n" +
+	"\x06accent\x18  \x01(\tR\x06accentB\v\n" +
 	"\t_can_editB\x0f\n" +
 	"\r_can_finalize\"n\n" +
 	"\n" +
@@ -7031,7 +7087,7 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\x11detached_projects\x18\x01 \x01(\x05R\x10detachedProjects\"\x19\n" +
 	"\x17ListClipProjectsRequest\"Q\n" +
 	"\x18ListClipProjectsResponse\x125\n" +
-	"\bprojects\x18\x01 \x03(\v2\x19.postpilot.v1.ClipProjectR\bprojects\"\xe0\x03\n" +
+	"\bprojects\x18\x01 \x03(\v2\x19.postpilot.v1.ClipProjectR\bprojects\"\xc1\x04\n" +
 	"\x18CreateClipProjectRequest\x12\x14\n" +
 	"\x05title\x18\x01 \x01(\tR\x05title\x12*\n" +
 	"\x11video_template_id\x18\x02 \x01(\tR\x0fvideoTemplateId\x12\x14\n" +
@@ -7046,13 +7102,17 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\x12composition_inputs\x18\t \x01(\v2#.postpilot.v1.ClipCompositionInputsR\x11compositionInputs\x129\n" +
 	"\blanguage\x18\n" +
 	" \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\blanguage\x12 \n" +
-	"\vinstruction\x18\v \x01(\tR\vinstruction\"P\n" +
+	"\vinstruction\x18\v \x01(\tR\vinstruction\x12&\n" +
+	"\fcaption_pace\x18\f \x01(\tH\x00R\vcaptionPace\x88\x01\x01\x12\x1b\n" +
+	"\x06accent\x18\r \x01(\tH\x01R\x06accent\x88\x01\x01B\x0f\n" +
+	"\r_caption_paceB\t\n" +
+	"\a_accent\"P\n" +
 	"\x19CreateClipProjectResponse\x123\n" +
 	"\aproject\x18\x01 \x01(\v2\x19.postpilot.v1.ClipProjectR\aproject\"'\n" +
 	"\x15GetClipProjectRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"M\n" +
 	"\x16GetClipProjectResponse\x123\n" +
-	"\aproject\x18\x01 \x01(\v2\x19.postpilot.v1.ClipProjectR\aproject\"\xb4\x04\n" +
+	"\aproject\x18\x01 \x01(\v2\x19.postpilot.v1.ClipProjectR\aproject\"\x95\x05\n" +
 	"\x18UpdateClipProjectRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\x05title\x18\x02 \x01(\tH\x00R\x05title\x88\x01\x01\x12/\n" +
@@ -7066,14 +7126,18 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\x0fhide_disclosure\x18\b \x01(\bH\x05R\x0ehideDisclosure\x88\x01\x01\x12R\n" +
 	"\x12composition_inputs\x18\t \x01(\v2#.postpilot.v1.ClipCompositionInputsR\x11compositionInputs\x12%\n" +
 	"\vinstruction\x18\n" +
-	" \x01(\tH\x06R\vinstruction\x88\x01\x01B\b\n" +
+	" \x01(\tH\x06R\vinstruction\x88\x01\x01\x12&\n" +
+	"\fcaption_pace\x18\v \x01(\tH\aR\vcaptionPace\x88\x01\x01\x12\x1b\n" +
+	"\x06accent\x18\f \x01(\tH\bR\x06accent\x88\x01\x01B\b\n" +
 	"\x06_titleB\x14\n" +
 	"\x12_video_template_idB\x15\n" +
 	"\x13_target_duration_msB\r\n" +
 	"\v_disclosureB\x06\n" +
 	"\x04_ctaB\x12\n" +
 	"\x10_hide_disclosureB\x0e\n" +
-	"\f_instruction\"P\n" +
+	"\f_instructionB\x0f\n" +
+	"\r_caption_paceB\t\n" +
+	"\a_accent\"P\n" +
 	"\x19UpdateClipProjectResponse\x123\n" +
 	"\aproject\x18\x01 \x01(\v2\x19.postpilot.v1.ClipProjectR\aproject\"*\n" +
 	"\x18DeleteClipProjectRequest\x12\x0e\n" +
@@ -7761,6 +7825,7 @@ func file_postpilot_v1_clip_proto_init() {
 	file_postpilot_v1_clip_proto_msgTypes[19].OneofWrappers = []any{}
 	file_postpilot_v1_clip_proto_msgTypes[22].OneofWrappers = []any{}
 	file_postpilot_v1_clip_proto_msgTypes[24].OneofWrappers = []any{}
+	file_postpilot_v1_clip_proto_msgTypes[30].OneofWrappers = []any{}
 	file_postpilot_v1_clip_proto_msgTypes[34].OneofWrappers = []any{}
 	file_postpilot_v1_clip_proto_msgTypes[52].OneofWrappers = []any{}
 	file_postpilot_v1_clip_proto_msgTypes[63].OneofWrappers = []any{}

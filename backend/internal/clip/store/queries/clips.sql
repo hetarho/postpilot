@@ -21,7 +21,7 @@ SELECT * FROM clip_projects WHERE user_id = ? ORDER BY updated_at DESC, id;
 -- name: GetClipProject :one
 SELECT * FROM clip_projects WHERE id = ? AND user_id = ?;
 -- name: InsertClipProject :exec
-INSERT INTO clip_projects(id, user_id, title, video_template_id, ratio, language, target_duration_ms, disclosure, cta, hide_disclosure, instruction, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+INSERT INTO clip_projects(id, user_id, title, video_template_id, ratio, language, target_duration_ms, disclosure, cta, hide_disclosure, instruction, caption_pace, accent, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 -- name: DeleteClipProject :execrows
 DELETE FROM clip_projects WHERE id = ? AND user_id = ?;
 -- name: ListClipAnswers :many
@@ -53,6 +53,17 @@ UPDATE clip_projects SET disclosure = ?, updated_at = ? WHERE id = ? AND user_id
 UPDATE clip_projects SET cta = ?, updated_at = ? WHERE id = ? AND user_id = ? AND finalized_at IS NULL;
 -- name: UpdateClipInstruction :execrows
 UPDATE clip_projects SET instruction = ?, updated_at = ? WHERE id = ? AND user_id = ? AND finalized_at IS NULL;
+-- Changing either re-renders the same plan: the phrases split differently and
+-- one word takes another colour, so the result goes stale while the plan, the
+-- observations and the writing calls stay exactly as they are (CLIP-139).
+-- name: UpdateClipCaptionPace :execrows
+UPDATE clip_projects SET caption_pace = sqlc.arg(caption_pace),
+    edit_plan_revision = edit_plan_revision + CASE WHEN edit_plan_json IS NOT NULL AND caption_pace != sqlc.arg(caption_pace) THEN 1 ELSE 0 END,
+    updated_at = sqlc.arg(updated_at) WHERE id = sqlc.arg(id) AND user_id = sqlc.arg(user_id) AND finalized_at IS NULL;
+-- name: UpdateClipAccent :execrows
+UPDATE clip_projects SET accent = sqlc.arg(accent),
+    edit_plan_revision = edit_plan_revision + CASE WHEN edit_plan_json IS NOT NULL AND accent != sqlc.arg(accent) THEN 1 ELSE 0 END,
+    updated_at = sqlc.arg(updated_at) WHERE id = sqlc.arg(id) AND user_id = sqlc.arg(user_id) AND finalized_at IS NULL;
 -- name: TouchClip :execrows
 UPDATE clip_projects SET updated_at = ? WHERE id = ? AND user_id = ? AND finalized_at IS NULL;
 

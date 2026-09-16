@@ -121,6 +121,19 @@ func (r *Rendering) layoutComposition(ctx context.Context, ws clip.MediaWorkspac
 	if err != nil {
 		return declaredLayout{}, err
 	}
+	// The pace and the accent are the PROJECT's (CLIP-139): they are applied
+	// here, once, so the scheduler, the layout and the verifier all read the
+	// same values. A project that chose neither leaves the frozen document's
+	// own values standing.
+	if plan.CaptionPace != "" || plan.Accent != "" {
+		elements := slices.Clone(plan.Portable.Elements)
+		for i := range elements {
+			elements[i].Pace, elements[i].Accent = plan.CaptionPaceOf(elements[i]), plan.AccentOf(elements[i])
+		}
+		portable := *plan.Portable
+		portable.Elements = elements
+		plan.Portable = &portable
+	}
 	result := declaredLayout{plan: plan}
 	portable := *plan.Portable
 	// Reading extension is a generation-time choice. Subsequent correction

@@ -81,7 +81,11 @@ type Project struct {
 	// The owner's own free-text instruction for this project (CLIP-121), empty
 	// when none was written. It belongs to the project, not to the answers the
 	// template declared.
-	Instruction                            string
+	Instruction string
+	// The owner's caption pace and accent for this clip (CLIP-139). Empty is
+	// "not chosen": the render falls back to what the frozen document said, so
+	// a project made before they moved renders exactly as it did.
+	CaptionPace, Accent                    string
 	TargetDurationMS                       int
 	Answers                                []Answer
 	Analysis, EditPlan                     string
@@ -96,8 +100,11 @@ type ProjectInput struct {
 	Title, VideoTemplateID, Ratio string
 	Disclosure, CTA               string
 	Instruction                   string
-	TargetDurationMS              int
-	Answers                       []Answer
+	// Absent seeds both from the selected template; an explicit empty string is
+	// the steady pace and no accent.
+	CaptionPace, Accent *string
+	TargetDurationMS    int
+	Answers             []Answer
 }
 
 // Ratio deliberately has no update representation.
@@ -109,6 +116,7 @@ type ProjectPatch struct {
 	HideDisclosure                          *bool
 	Title, VideoTemplateID, Disclosure, CTA *string
 	Instruction                             *string
+	CaptionPace, Accent                     *string
 	TargetDurationMS                        *int
 	Answers                                 []Answer
 }

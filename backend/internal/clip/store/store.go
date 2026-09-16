@@ -306,7 +306,7 @@ func projectRow(r sqlc.ClipProject) (clip.Project, error) {
 	if err != nil {
 		return clip.Project{}, err
 	}
-	p := clip.Project{ID: r.ID, UserID: r.UserID, Title: r.Title, VideoTemplateID: r.VideoTemplateID.String, Ratio: r.Ratio, Language: r.Language, Disclosure: r.Disclosure, HideDisclosure: r.HideDisclosure != 0, CTA: r.Cta, Instruction: r.Instruction, TargetDurationMS: int(r.TargetDurationMs), Analysis: r.AnalysisJson.String, EditPlan: r.EditPlanJson.String, EditPlanRevision: int(r.EditPlanRevision), RenderedPlanRevision: int(r.RenderedPlanRevision), CreatedAt: created, UpdatedAt: updated}
+	p := clip.Project{ID: r.ID, UserID: r.UserID, Title: r.Title, VideoTemplateID: r.VideoTemplateID.String, Ratio: r.Ratio, Language: r.Language, Disclosure: r.Disclosure, HideDisclosure: r.HideDisclosure != 0, CTA: r.Cta, Instruction: r.Instruction, CaptionPace: r.CaptionPace, Accent: r.Accent, TargetDurationMS: int(r.TargetDurationMs), Analysis: r.AnalysisJson.String, EditPlan: r.EditPlanJson.String, EditPlanRevision: int(r.EditPlanRevision), RenderedPlanRevision: int(r.RenderedPlanRevision), CreatedAt: created, UpdatedAt: updated}
 	if r.ResultKey.Valid {
 		at, err := time.Parse(time.RFC3339Nano, r.ResultCreatedAt.String)
 		if err != nil {
@@ -376,7 +376,7 @@ func saveAnswers(ctx context.Context, q *sqlc.Queries, user, id string, answers 
 }
 func (s *Store) InsertProject(ctx context.Context, p clip.Project) error {
 	_, err := transact(ctx, s, func(q *sqlc.Queries) (struct{}, error) {
-		err := q.InsertClipProject(ctx, sqlc.InsertClipProjectParams{ID: p.ID, UserID: p.UserID, Title: p.Title, VideoTemplateID: nullable(p.VideoTemplateID), Ratio: p.Ratio, Language: p.Language, TargetDurationMs: int64(p.TargetDurationMS), Disclosure: p.Disclosure, HideDisclosure: disclosureFlag(p.HideDisclosure), Cta: p.CTA, Instruction: p.Instruction, CreatedAt: stamp(p.CreatedAt), UpdatedAt: stamp(p.UpdatedAt)})
+		err := q.InsertClipProject(ctx, sqlc.InsertClipProjectParams{ID: p.ID, UserID: p.UserID, Title: p.Title, VideoTemplateID: nullable(p.VideoTemplateID), Ratio: p.Ratio, Language: p.Language, TargetDurationMs: int64(p.TargetDurationMS), Disclosure: p.Disclosure, HideDisclosure: disclosureFlag(p.HideDisclosure), Cta: p.CTA, Instruction: p.Instruction, CaptionPace: p.CaptionPace, Accent: p.Accent, CreatedAt: stamp(p.CreatedAt), UpdatedAt: stamp(p.UpdatedAt)})
 		if err == nil {
 			err = saveAnswers(ctx, q, p.UserID, p.ID, p.Answers, p.UpdatedAt)
 		}
@@ -440,6 +440,18 @@ func (s *Store) UpdateProject(ctx context.Context, user, id string, p clip.Proje
 		}
 		if p.Instruction != nil {
 			if err := affected(q.UpdateClipInstruction(ctx, sqlc.UpdateClipInstructionParams{Instruction: *p.Instruction, UpdatedAt: stamp(now), ID: id, UserID: user})); err != nil {
+				return clip.Project{}, err
+			}
+		}
+		// Both bump the plan revision where a plan exists, so the rendered
+		// result goes stale without the plan itself changing (CLIP-139).
+		if p.CaptionPace != nil {
+			if err := affected(q.UpdateClipCaptionPace(ctx, sqlc.UpdateClipCaptionPaceParams{CaptionPace: *p.CaptionPace, UpdatedAt: stamp(now), ID: id, UserID: user})); err != nil {
+				return clip.Project{}, err
+			}
+		}
+		if p.Accent != nil {
+			if err := affected(q.UpdateClipAccent(ctx, sqlc.UpdateClipAccentParams{Accent: *p.Accent, UpdatedAt: stamp(now), ID: id, UserID: user})); err != nil {
 				return clip.Project{}, err
 			}
 		}

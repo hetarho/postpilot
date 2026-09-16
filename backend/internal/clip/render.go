@@ -151,6 +151,9 @@ type EditPlan struct {
 	// The closing call to action, already resolved against the preset, and the
 	// project accent both cards paint with (CDS-29, CLIP-14).
 	CTA, Accent string
+	// The project's caption pace (CLIP-139), a render input like Accent beside
+	// it: empty is not chosen, and the frozen document's own value stands.
+	CaptionPace string
 	// What the model wrote per cut, parallel to Cuts, before the compiler placed
 	// it. It is the compiler's input and is never stored with the plan.
 	Written []Written
@@ -355,6 +358,33 @@ func (p EditPlan) Compiled() bool {
 // WithProject fills the render inputs the badge and the chips need. It is
 // called at render time rather than at approval time so a stored plan never
 // carries a stale disclosure.
+// WithCaptions is how the PROJECT's pace and accent reach a render (CLIP-139).
+// Either one empty leaves the frozen document's value standing, so a plan
+// written before they moved renders exactly as it did.
+func (p EditPlan) WithCaptions(pace, accent string) EditPlan {
+	p.CaptionPace = pace
+	if accent != "" {
+		p.Accent = accent
+	}
+	return p
+}
+
+// CaptionPaceOf and AccentOf answer what a caption actually renders with: the
+// project's choice where it made one, and what was frozen with the plan where
+// it did not.
+func (p EditPlan) CaptionPaceOf(text PortableText) string {
+	if p.CaptionPace != "" {
+		return p.CaptionPace
+	}
+	return text.Pace
+}
+func (p EditPlan) AccentOf(text PortableText) string {
+	if p.Accent != "" {
+		return p.Accent
+	}
+	return text.Accent
+}
+
 func (p EditPlan) WithFacts(disclosure string, facts []Answer, preset, cta, accent string, hideDisclosure ...bool) EditPlan {
 	p.HideDisclosure = len(hideDisclosure) > 0 && hideDisclosure[0]
 	p.Disclosure, p.Facts, p.Preset = disclosure, facts, preset

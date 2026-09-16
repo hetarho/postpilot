@@ -231,8 +231,21 @@ func (s *Service) CreateProject(ctx context.Context, user string, input ProjectI
 	if err != nil {
 		return Project{}, err
 	}
+	// The pace and the accent are the PROJECT's (CLIP-139). A request that says
+	// nothing about them takes the template's own values as the starting point,
+	// which is what a clip made from that template used to render with.
+	pace, accent := template.CaptionPace, template.Accent
+	if input.CaptionPace != nil {
+		pace = *input.CaptionPace
+	}
+	if input.Accent != nil {
+		accent = *input.Accent
+	}
+	if !ValidCaptionPace(pace) || !ValidAccent(accent) {
+		return Project{}, ErrInvalid
+	}
 	now := time.Now()
-	p := Project{ID: newID(), UserID: user, Title: title, VideoTemplateID: input.VideoTemplateID, Ratio: input.Ratio, Language: input.Language, Disclosure: input.Disclosure, HideDisclosure: input.HideDisclosure, CTA: input.CTA, Instruction: input.Instruction, TargetDurationMS: input.TargetDurationMS, Answers: answers, CreatedAt: now, UpdatedAt: now}
+	p := Project{ID: newID(), UserID: user, Title: title, VideoTemplateID: input.VideoTemplateID, Ratio: input.Ratio, Language: input.Language, Disclosure: input.Disclosure, HideDisclosure: input.HideDisclosure, CTA: input.CTA, Instruction: input.Instruction, CaptionPace: pace, Accent: accent, TargetDurationMS: input.TargetDurationMS, Answers: answers, CreatedAt: now, UpdatedAt: now}
 	p.Composition, err = s.projectComposition(template, input.CompositionInputs, p)
 	if err != nil {
 		return Project{}, err
@@ -286,6 +299,12 @@ func (s *Service) UpdateProject(ctx context.Context, user, id string, p ProjectP
 		return Project{}, ErrInvalid
 	}
 	if p.CTA != nil && !ValidCTA(*p.CTA) {
+		return Project{}, ErrInvalid
+	}
+	// Either one only changes how the SAME plan renders — how its phrases split
+	// and which colour one word takes — so both are clearable and neither
+	// invalidates an observation or a written plan (CLIP-139).
+	if p.CaptionPace != nil && !ValidCaptionPace(*p.CaptionPace) || p.Accent != nil && !ValidAccent(*p.Accent) {
 		return Project{}, ErrInvalid
 	}
 	if p.VideoTemplateID != nil {

@@ -6,6 +6,7 @@ import type { ClipEditingState } from './edit-plan'
 import type { ClipObservations } from './observations'
 import {
   compositionCharacters,
+  type ClipAccent,
   type ClipComposition,
 } from '@/entities/clip-template/@x/clip-project'
 import { emptyCompositionInputs, validCompositionInputs } from './composition-inputs'
@@ -41,6 +42,11 @@ export interface ClipProjectDraft {
   /** The owner's own instruction for this clip (CLIP-121). Optional, and an
    *  empty string is indistinguishable from never having written one. */
   instruction?: string
+  /** How the captions of THIS clip are paced and which colour one word takes
+   *  (CLIP-139). Empty is not chosen: the clip falls back to what its template
+   *  said. Changing either re-renders the same plan and costs no writing. */
+  captionPace?: '' | 'steady' | 'rapid'
+  accent?: ClipAccent
 }
 export interface ClipProject extends ClipProjectDraft {
   notices?: ClipNotice[]
@@ -152,6 +158,8 @@ export function emptyClipProject(): ClipProjectDraft {
     hideDisclosure: false,
     cta: '',
     instruction: '',
+    captionPace: '',
+    accent: '',
   }
 }
 export function projectDraft(value: ClipProjectDraft): ClipProjectDraft {
@@ -168,6 +176,8 @@ export function projectDraft(value: ClipProjectDraft): ClipProjectDraft {
     hideDisclosure: value.hideDisclosure ?? false,
     cta: value.cta,
     instruction: value.instruction ?? '',
+    captionPace: value.captionPace ?? '',
+    accent: value.accent ?? '',
   }
 }
 export function normalizeClipProject(value: ClipProjectDraft): ClipProjectDraft {

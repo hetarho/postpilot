@@ -379,6 +379,9 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       p.disclosure = req.disclosure as ClipProjectDraft['disclosure']
     if (req.cta !== undefined) p.cta = req.cta as ClipProjectDraft['cta']
     if (req.instruction !== undefined) p.instruction = req.instruction
+    if (req.captionPace !== undefined)
+      p.captionPace = req.captionPace as ClipProjectDraft['captionPace']
+    if (req.accent !== undefined) p.accent = req.accent as ClipProjectDraft['accent']
     for (const answer of req.answers)
       p.answers = [
         ...p.answers.filter((a) => a.label !== answer.label),

@@ -79,10 +79,16 @@ type generationPayload struct {
 	// The project's own instruction (CLIP-121), frozen with the answers and the
 	// composition so editing it mid-flight changes nothing in flight. A payload
 	// written before it existed decodes as none, which is today's behaviour.
-	Instruction    string
-	HideDisclosure bool
-	Batch          SourceBatch
-	Approval       *GenerationApproval
+	Instruction string
+	// The project's caption pace and accent (CLIP-139), frozen with the rest of
+	// the render inputs. They are deliberately absent from planRecoveryDigest
+	// and from the quote: changing either re-renders the same plan and costs no
+	// writing call. A payload written before they existed decodes as empty,
+	// which is the frozen document's own value — today's behaviour.
+	CaptionPace, Accent string
+	HideDisclosure      bool
+	Batch               SourceBatch
+	Approval            *GenerationApproval
 }
 
 func modelRef(s string) llm.ModelRef {
@@ -535,6 +541,9 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 		if edit.Portable == nil {
 			edit = edit.WithFacts(p.Disclosure, p.Answers, p.Template.Preset, p.CTA, p.Template.Accent, p.HideDisclosure)
 		}
+		// The project's caption pace and accent are render inputs too: a plan
+		// carries what was written, the project says how it is shown (CLIP-139).
+		edit = edit.WithCaptions(p.CaptionPace, p.Accent)
 		// The owner's source-sound choice is the SERVER's to state, and it is
 		// stated only here — after the model's own output has been validated, so
 		// no prompt, response or plan digest ever carried it, and a resumed plan
