@@ -595,7 +595,7 @@ export const clips = {
     ctaHelp: '클립 끝에 한 줄로 들어가요. 비워 두면 템플릿 프리셋의 기본값을 써요.',
     instruction: '클립에 담고 싶은 내용',
     instructionPrompt:
-      '이 클립에서 어떤 점을 강조하고 싶은지 자유롭게 적어 주세요. 여기에 적은 내용이 템플릿의 안내보다 우선합니다. 장면 구성과 문구 위치는 템플릿이 정한 대로 유지돼요.',
+      '이 클립에서 무엇을 어떤 순서로 보여줄지, 자막이 무엇을 말할지 자유롭게 적어 주세요. 여기에 적은 내용이 영상 순서와 리듬, 자막 내용에서 템플릿의 안내보다 우선합니다. 첫 화면과 마지막 화면의 구성은 템플릿이 정한 대로 유지돼요.',
     ratio: '화면 비율',
     duration: '목표 길이 (초)',
     durationHelp: '15초부터 90초까지 선택할 수 있어요.',
@@ -829,9 +829,17 @@ export const clips = {
     closePreview: '닫기',
   },
   source: {
+    moveEarlier: '앞으로',
+    moveEarlierName: '{{filename}}을 앞으로 옮기기',
+    moveLater: '뒤로',
+    moveLaterName: '{{filename}}을 뒤로 옮기기',
+    moved: '{{filename}} · {{position}} / {{total}} 번째로 옮겼어요',
+    orderHelp:
+      '위에서 아래로가 아니라, 왼쪽에서 오른쪽 순서로 영상이 이어져요. 지시문을 쓰면 지시문이 우선해요.',
     originalSound: '원본 소리 유지',
     originalSoundName: '{{filename}} 원본 소리 유지',
-    boundItem: '이 영상의 항목',
+    boundItem: '이 원본은 어느 메뉴인가요? (선택)',
+    boundItemHelp: '자막이 항목 이름을 말할 수 있게 도와주는 힌트예요. 비워 두어도 됩니다.',
     boundItemName: '{{filename}}의 항목',
     boundItemNone: '자동으로 연결',
     boundItemNumber: '항목 {{n}}',

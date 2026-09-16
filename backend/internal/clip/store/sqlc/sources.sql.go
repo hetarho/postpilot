@@ -227,7 +227,7 @@ func (q *Queries) ListSourceCleanup(ctx context.Context) ([]ClipSourceBatch, err
 }
 
 const listSourceLeases = `-- name: ListSourceLeases :many
-SELECT id, batch_id, user_id, object_key, filename, content_type, fingerprint, declared_bytes, actual_bytes, duration_ms, width, height, state, ordinal, canonical_id, retention_expires_at, cleanup_pending, retain_original_audio FROM clip_source_leases WHERE batch_id=? AND user_id=? ORDER BY ordinal
+SELECT id, batch_id, user_id, object_key, filename, content_type, fingerprint, declared_bytes, actual_bytes, duration_ms, width, height, state, ordinal, canonical_id, retention_expires_at, cleanup_pending, retain_original_audio, position FROM clip_source_leases WHERE batch_id=? AND user_id=? ORDER BY position, ordinal
 `
 
 type ListSourceLeasesParams struct {
@@ -235,6 +235,9 @@ type ListSourceLeasesParams struct {
 	UserID  string
 }
 
+// The owner's own arrangement first, then the order they were confirmed in: a
+// batch nobody arranged carries position 0 throughout and reads exactly as it
+// always did (CLIP-136).
 func (q *Queries) ListSourceLeases(ctx context.Context, arg ListSourceLeasesParams) ([]ClipSourceLease, error) {
 	rows, err := q.db.QueryContext(ctx, listSourceLeases, arg.BatchID, arg.UserID)
 	if err != nil {
@@ -263,6 +266,7 @@ func (q *Queries) ListSourceLeases(ctx context.Context, arg ListSourceLeasesPara
 			&i.RetentionExpiresAt,
 			&i.CleanupPending,
 			&i.RetainOriginalAudio,
+			&i.Position,
 		); err != nil {
 			return nil, err
 		}
@@ -320,7 +324,7 @@ func (q *Queries) MarkSourceCleanup(ctx context.Context, arg MarkSourceCleanupPa
 const projectSourceAudioChoices = `-- name: ProjectSourceAudioChoices :many
 SELECT l.canonical_id, l.fingerprint, l.retain_original_audio FROM clip_source_leases l
 JOIN clip_source_batches b ON b.id=l.batch_id AND b.user_id=l.user_id
-WHERE b.project_id=? AND b.user_id=? ORDER BY b.created_at, b.id, l.ordinal
+WHERE b.project_id=? AND b.user_id=? ORDER BY b.created_at, b.id, l.position, l.ordinal
 `
 
 type ProjectSourceAudioChoicesParams struct {
@@ -373,6 +377,31 @@ type RemoveSourceBatchParams struct {
 func (q *Queries) RemoveSourceBatch(ctx context.Context, arg RemoveSourceBatchParams) error {
 	_, err := q.db.ExecContext(ctx, removeSourceBatch, arg.ID, arg.UserID, arg.PutExpiresAt)
 	return err
+}
+
+const setSourceLeasePosition = `-- name: SetSourceLeasePosition :execrows
+UPDATE clip_source_leases SET position=?1
+WHERE canonical_id=?2 AND batch_id=?3 AND user_id=?4 AND cleanup_pending=0
+`
+
+type SetSourceLeasePositionParams struct {
+	Position    int64
+	CanonicalID string
+	BatchID     string
+	UserID      string
+}
+
+func (q *Queries) SetSourceLeasePosition(ctx context.Context, arg SetSourceLeasePositionParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, setSourceLeasePosition,
+		arg.Position,
+		arg.CanonicalID,
+		arg.BatchID,
+		arg.UserID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const setSourceLeaseReady = `-- name: SetSourceLeaseReady :execrows

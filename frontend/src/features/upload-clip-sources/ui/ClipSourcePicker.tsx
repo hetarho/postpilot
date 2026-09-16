@@ -21,6 +21,7 @@ export function ClipSourcePicker({
   readOnly = false,
   binding,
   sound,
+  order,
 }: {
   upload: ReturnType<typeof useClipSourceUpload>
   disabled?: boolean
@@ -37,6 +38,9 @@ export function ClipSourcePicker({
       item: string,
     ) => void
   }
+  /** Arranging the footage the clip follows when no instruction says otherwise
+   *  (CLIP-136). Absent on a read-only surface or while a generation runs. */
+  order?: { change: (sourceIds: string[]) => void; disabled?: boolean }
   sound?: {
     value: (source: {
       batchId: string
@@ -226,6 +230,18 @@ export function ClipSourcePicker({
             label={t('source.selected')}
             selected={selectedEntry.metadata.fingerprint}
             onSelect={setSelected}
+            onReorder={
+              !readOnly && order && !order.disabled && !busy && !upload.attempt
+                ? (fingerprints) => {
+                    const ids = fingerprints.map(
+                      (fingerprint) =>
+                        upload.entries.find((e) => e.metadata.fingerprint === fingerprint)
+                          ?.sourceId,
+                    )
+                    if (ids.every((id): id is string => !!id)) order.change(ids)
+                  }
+                : undefined
+            }
             onSoundChange={
               !readOnly && sound
                 ? (fingerprint, enabled) => {

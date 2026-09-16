@@ -9,6 +9,7 @@ function fixture(): ComponentProps<typeof ClipSourcePicker>['upload'] {
   return {
     phase: 'uploading',
     acceptSoundBatch: vi.fn(),
+    acceptSourceOrder: vi.fn(),
     ensurePlayback: vi.fn(async () => 'blob:test'),
     refreshRetained: vi.fn(async () => {}),
     entries: ['one.mp4', 'two.mp4', 'three.mp4'].map((filename, index) => ({

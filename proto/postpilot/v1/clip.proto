@@ -34,6 +34,9 @@ service ClipService {
   // Owner-only. Source audio is off by default and this is the ONLY way it
   // changes: no template, model, render or plan save may reach it.
   rpc SetClipSourceOriginalSound(SetClipSourceOriginalSoundRequest) returns (SetClipSourceOriginalSoundResponse) {}
+  // Owner-only. The order the footage plays in when no instruction says
+  // otherwise; the whole batch or nothing.
+  rpc ReorderClipSources(ReorderClipSourcesRequest) returns (ReorderClipSourcesResponse) {}
   // Read-only: every registered observe model with its current clip-analysis
   // eligibility (CLIP-30, CLIP-44). No model call, no write, no provider detail.
   rpc ListClipAnalysisEligibility(ListClipAnalysisEligibilityRequest) returns (ListClipAnalysisEligibilityResponse) {}
@@ -375,6 +378,15 @@ message ClipCancellationPolicy {
 // The expected revision is the plan revision the owner was looking at, or 0
 // before a plan exists. The fingerprint pins the exact file the choice was made
 // about, so a replaced source never inherits a decision made about another one.
+// The owner's arrangement of this batch's footage (CLIP-136). The list is the
+// WHOLE batch: one that misses a source, repeats one or names a foreign one is
+// refused rather than applied in part.
+message ReorderClipSourcesRequest {
+  string project_id = 1;
+  string batch_id = 2;
+  repeated string source_ids = 3;
+}
+message ReorderClipSourcesResponse { ClipSourceBatch batch = 1; }
 message SetClipSourceOriginalSoundRequest {
   string project_id = 1;
   string batch_id = 2;

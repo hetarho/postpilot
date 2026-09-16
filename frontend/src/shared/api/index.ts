@@ -44,6 +44,7 @@ export {
   ClipSourceBatchSchema,
   CreateClipSourceBatchResponseSchema,
   ConfirmClipSourceResponseSchema,
+  ReorderClipSourcesResponseSchema,
   DiscardClipSourceBatchResponseSchema,
   StartClipGenerationResponseSchema,
   QuoteClipGenerationResponseSchema,

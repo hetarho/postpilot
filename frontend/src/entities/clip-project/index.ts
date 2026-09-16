@@ -111,7 +111,12 @@ export {
   useClipCapabilities,
 } from './api/composition'
 
-export { getClipSources, getClipSourcePlayback, setClipSourceOriginalSound } from './api/sources'
+export {
+  getClipSources,
+  getClipSourcePlayback,
+  setClipSourceOriginalSound,
+  reorderClipSources,
+} from './api/sources'
 export type { ClipSourceAvailability } from './model/types'
 
 export { ClipDraftPreview } from './ui/ClipDraftPreview'
@@ -147,3 +152,4 @@ export type {
 export type { ClipNotice } from './model/notices'
 export { clipNoticeKey, clipNoticeKeys } from './model/notices'
 export { ClipNoticeList } from './ui/ClipNoticeList'
+export { reorderTargetIndex, moveInOrder } from './model/source-order'

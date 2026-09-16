@@ -57,6 +57,7 @@ export function useClipSourceUpload(
     ...state,
     ensurePlayback: session.ensurePlayback,
     acceptSoundBatch: session.acceptSoundBatch,
+    acceptSourceOrder: session.acceptSourceOrder,
     refreshRetained: session.refreshRetained,
     select: (files: File[]) =>
       session.select(

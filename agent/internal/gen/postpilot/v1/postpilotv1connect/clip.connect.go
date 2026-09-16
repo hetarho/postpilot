@@ -105,6 +105,9 @@ const (
 	// ClipServiceSetClipSourceOriginalSoundProcedure is the fully-qualified name of the ClipService's
 	// SetClipSourceOriginalSound RPC.
 	ClipServiceSetClipSourceOriginalSoundProcedure = "/postpilot.v1.ClipService/SetClipSourceOriginalSound"
+	// ClipServiceReorderClipSourcesProcedure is the fully-qualified name of the ClipService's
+	// ReorderClipSources RPC.
+	ClipServiceReorderClipSourcesProcedure = "/postpilot.v1.ClipService/ReorderClipSources"
 	// ClipServiceListClipAnalysisEligibilityProcedure is the fully-qualified name of the ClipService's
 	// ListClipAnalysisEligibility RPC.
 	ClipServiceListClipAnalysisEligibilityProcedure = "/postpilot.v1.ClipService/ListClipAnalysisEligibility"
@@ -138,6 +141,9 @@ type ClipServiceClient interface {
 	// Owner-only. Source audio is off by default and this is the ONLY way it
 	// changes: no template, model, render or plan save may reach it.
 	SetClipSourceOriginalSound(context.Context, *connect.Request[v1.SetClipSourceOriginalSoundRequest]) (*connect.Response[v1.SetClipSourceOriginalSoundResponse], error)
+	// Owner-only. The order the footage plays in when no instruction says
+	// otherwise; the whole batch or nothing.
+	ReorderClipSources(context.Context, *connect.Request[v1.ReorderClipSourcesRequest]) (*connect.Response[v1.ReorderClipSourcesResponse], error)
 	// Read-only: every registered observe model with its current clip-analysis
 	// eligibility (CLIP-30, CLIP-44). No model call, no write, no provider detail.
 	ListClipAnalysisEligibility(context.Context, *connect.Request[v1.ListClipAnalysisEligibilityRequest]) (*connect.Response[v1.ListClipAnalysisEligibilityResponse], error)
@@ -298,6 +304,12 @@ func NewClipServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(clipServiceMethods.ByName("SetClipSourceOriginalSound")),
 			connect.WithClientOptions(opts...),
 		),
+		reorderClipSources: connect.NewClient[v1.ReorderClipSourcesRequest, v1.ReorderClipSourcesResponse](
+			httpClient,
+			baseURL+ClipServiceReorderClipSourcesProcedure,
+			connect.WithSchema(clipServiceMethods.ByName("ReorderClipSources")),
+			connect.WithClientOptions(opts...),
+		),
 		listClipAnalysisEligibility: connect.NewClient[v1.ListClipAnalysisEligibilityRequest, v1.ListClipAnalysisEligibilityResponse](
 			httpClient,
 			baseURL+ClipServiceListClipAnalysisEligibilityProcedure,
@@ -333,6 +345,7 @@ type clipServiceClient struct {
 	getClipSources              *connect.Client[v1.GetClipSourcesRequest, v1.GetClipSourcesResponse]
 	getClipSourcePlayback       *connect.Client[v1.GetClipSourcePlaybackRequest, v1.GetClipSourcePlaybackResponse]
 	setClipSourceOriginalSound  *connect.Client[v1.SetClipSourceOriginalSoundRequest, v1.SetClipSourceOriginalSoundResponse]
+	reorderClipSources          *connect.Client[v1.ReorderClipSourcesRequest, v1.ReorderClipSourcesResponse]
 	listClipAnalysisEligibility *connect.Client[v1.ListClipAnalysisEligibilityRequest, v1.ListClipAnalysisEligibilityResponse]
 }
 
@@ -456,6 +469,11 @@ func (c *clipServiceClient) SetClipSourceOriginalSound(ctx context.Context, req 
 	return c.setClipSourceOriginalSound.CallUnary(ctx, req)
 }
 
+// ReorderClipSources calls postpilot.v1.ClipService.ReorderClipSources.
+func (c *clipServiceClient) ReorderClipSources(ctx context.Context, req *connect.Request[v1.ReorderClipSourcesRequest]) (*connect.Response[v1.ReorderClipSourcesResponse], error) {
+	return c.reorderClipSources.CallUnary(ctx, req)
+}
+
 // ListClipAnalysisEligibility calls postpilot.v1.ClipService.ListClipAnalysisEligibility.
 func (c *clipServiceClient) ListClipAnalysisEligibility(ctx context.Context, req *connect.Request[v1.ListClipAnalysisEligibilityRequest]) (*connect.Response[v1.ListClipAnalysisEligibilityResponse], error) {
 	return c.listClipAnalysisEligibility.CallUnary(ctx, req)
@@ -489,6 +507,9 @@ type ClipServiceHandler interface {
 	// Owner-only. Source audio is off by default and this is the ONLY way it
 	// changes: no template, model, render or plan save may reach it.
 	SetClipSourceOriginalSound(context.Context, *connect.Request[v1.SetClipSourceOriginalSoundRequest]) (*connect.Response[v1.SetClipSourceOriginalSoundResponse], error)
+	// Owner-only. The order the footage plays in when no instruction says
+	// otherwise; the whole batch or nothing.
+	ReorderClipSources(context.Context, *connect.Request[v1.ReorderClipSourcesRequest]) (*connect.Response[v1.ReorderClipSourcesResponse], error)
 	// Read-only: every registered observe model with its current clip-analysis
 	// eligibility (CLIP-30, CLIP-44). No model call, no write, no provider detail.
 	ListClipAnalysisEligibility(context.Context, *connect.Request[v1.ListClipAnalysisEligibilityRequest]) (*connect.Response[v1.ListClipAnalysisEligibilityResponse], error)
@@ -645,6 +666,12 @@ func NewClipServiceHandler(svc ClipServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(clipServiceMethods.ByName("SetClipSourceOriginalSound")),
 		connect.WithHandlerOptions(opts...),
 	)
+	clipServiceReorderClipSourcesHandler := connect.NewUnaryHandler(
+		ClipServiceReorderClipSourcesProcedure,
+		svc.ReorderClipSources,
+		connect.WithSchema(clipServiceMethods.ByName("ReorderClipSources")),
+		connect.WithHandlerOptions(opts...),
+	)
 	clipServiceListClipAnalysisEligibilityHandler := connect.NewUnaryHandler(
 		ClipServiceListClipAnalysisEligibilityProcedure,
 		svc.ListClipAnalysisEligibility,
@@ -701,6 +728,8 @@ func NewClipServiceHandler(svc ClipServiceHandler, opts ...connect.HandlerOption
 			clipServiceGetClipSourcePlaybackHandler.ServeHTTP(w, r)
 		case ClipServiceSetClipSourceOriginalSoundProcedure:
 			clipServiceSetClipSourceOriginalSoundHandler.ServeHTTP(w, r)
+		case ClipServiceReorderClipSourcesProcedure:
+			clipServiceReorderClipSourcesHandler.ServeHTTP(w, r)
 		case ClipServiceListClipAnalysisEligibilityProcedure:
 			clipServiceListClipAnalysisEligibilityHandler.ServeHTTP(w, r)
 		default:
@@ -806,6 +835,10 @@ func (UnimplementedClipServiceHandler) GetClipSourcePlayback(context.Context, *c
 
 func (UnimplementedClipServiceHandler) SetClipSourceOriginalSound(context.Context, *connect.Request[v1.SetClipSourceOriginalSoundRequest]) (*connect.Response[v1.SetClipSourceOriginalSoundResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipService.SetClipSourceOriginalSound is not implemented"))
+}
+
+func (UnimplementedClipServiceHandler) ReorderClipSources(context.Context, *connect.Request[v1.ReorderClipSourcesRequest]) (*connect.Response[v1.ReorderClipSourcesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipService.ReorderClipSources is not implemented"))
 }
 
 func (UnimplementedClipServiceHandler) ListClipAnalysisEligibility(context.Context, *connect.Request[v1.ListClipAnalysisEligibilityRequest]) (*connect.Response[v1.ListClipAnalysisEligibilityResponse], error) {

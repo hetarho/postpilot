@@ -21,6 +21,7 @@ import {
   DiscardClipSourceBatchResponseSchema,
   StartClipGenerationResponseSchema,
   QuoteClipGenerationResponseSchema,
+  ReorderClipSourcesResponseSchema,
   SaveClipEditPlanResponseSchema,
   StartClipRenderResponseSchema,
   ClipEditingStateSchema,
@@ -105,6 +106,7 @@ export interface FakeClipsOptions {
   generationReject?: AppFailureReason
   quoteRequests?: unknown[]
   quoteMaxCredits?: number
+  sourceOrders?: string[][]
   quotePricedCalls?: { label: string; stage: string; calls: number }[]
   quoteExpiresAt?: string
   quoteFails?: AppFailureReason
@@ -459,6 +461,22 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
         { label: 'narration', stage: 'write', calls: 1 },
       ],
     })
+  })
+  router.rpc(ClipService.method.reorderClipSources, (req) => {
+    options.calls?.push('ReorderClipSources')
+    options.sourceOrders?.push([...req.sourceIds])
+    const batch = batches.get(req.batchId)
+    if (!batch || batch.projectId !== req.projectId)
+      throw connectAppError('CLIP_SOURCE_UNAVAILABLE', Code.FailedPrecondition)
+    const held = batch.sources.map((s) => s.id)
+    if (
+      req.sourceIds.length !== held.length ||
+      new Set(req.sourceIds).size !== req.sourceIds.length ||
+      req.sourceIds.some((id) => !held.includes(id))
+    )
+      throw connectAppError('CLIP_INVALID_INPUT', Code.InvalidArgument)
+    batch.sources = req.sourceIds.map((id) => batch.sources.find((s) => s.id === id)!)
+    return create(ReorderClipSourcesResponseSchema, { batch })
   })
   router.rpc(ClipService.method.setClipSourceOriginalSound, (req) => {
     options.calls?.push('SetClipSourceOriginalSound')

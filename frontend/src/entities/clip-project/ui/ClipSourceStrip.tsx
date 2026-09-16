@@ -1,7 +1,9 @@
-import { Film } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { Film, GripVertical } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { formatDuration } from '@/shared/lib/video'
 import { Button, FieldLabel, Listbox, Switch, Typography } from '@/shared/ui'
+import { moveInOrder, reorderTargetIndex } from '../model/source-order'
 
 interface SourceTile {
   fingerprint: string
@@ -26,6 +28,7 @@ export function ClipSourceStrip({
   onSoundChange,
   items,
   onItemChange,
+  onReorder,
 }: {
   sources: readonly SourceTile[]
   selected: string
@@ -36,16 +39,53 @@ export function ClipSourceStrip({
    *  offers nothing, so the control is absent rather than empty (CLIP-123). */
   items?: readonly { value: string; label: string }[]
   onItemChange?: (fingerprint: string, item: string) => void
+  /** Moves one source to another place in the strip (CLIP-136). The whole new
+   *  order is handed over, because that is what the server stores. Absent where
+   *  the footage is only being looked at. */
+  onReorder?: (fingerprints: string[]) => void
 }) {
   const { t } = useTranslation('clips')
+  const strip = useRef<HTMLUListElement>(null)
+  const dragging = useRef<number | null>(null)
+  const [announced, setAnnounced] = useState('')
+  const order = sources.map((source) => source.fingerprint)
+  const move = (from: number, to: number) => {
+    if (!onReorder || to === from || to < 0 || to >= order.length) return
+    onReorder(moveInOrder(order, from, to))
+    setAnnounced(
+      t('source.moved', {
+        filename: sources[from].filename,
+        position: to + 1,
+        total: order.length,
+      }),
+    )
+  }
+  // The drag path and the two buttons mean the same thing, which is why they
+  // share `move`: a pointer drop names a target index, a button names the one
+  // beside it (CLIP-55).
+  const drop = (from: number, clientX: number) => {
+    const boxes = Array.from(strip.current?.children ?? []).map((tile) => {
+      const box = tile.getBoundingClientRect()
+      return { left: box.left, right: box.right }
+    })
+    move(from, reorderTargetIndex(boxes, clientX))
+  }
   return (
     <div className="min-w-0 space-y-2">
       <ul
+        ref={strip}
         aria-label={label}
         className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-2 overflow-x-auto overscroll-x-contain px-4 py-2 sm:mx-0 sm:scroll-px-2 sm:px-2"
       >
-        {sources.map((source) => (
-          <li key={source.fingerprint} className="w-40 shrink-0 snap-start">
+        {sources.map((source, index) => (
+          <li
+            key={source.fingerprint}
+            className="w-40 shrink-0 snap-start"
+            onPointerUp={(event) => {
+              if (dragging.current !== null) drop(dragging.current, event.clientX)
+              dragging.current = null
+            }}
+          >
             <Button
               variant={source.fingerprint === selected ? 'secondary' : 'ghost'}
               className="w-full"
@@ -83,11 +123,45 @@ export function ClipSourceStrip({
                 )}
               </span>
             </Button>
+            {onReorder && order.length > 1 && (
+              <div className="flex items-center gap-1 px-2">
+                {/* The handle starts a drag; the two buttons do the same move
+                    without one, for touch and for the keyboard (CLIP-55). */}
+                <span
+                  aria-hidden="true"
+                  className="cursor-grab touch-none px-1 py-2"
+                  onPointerDown={() => {
+                    dragging.current = index
+                  }}
+                >
+                  <GripVertical className="text-content-tertiary size-4" />
+                </span>
+                <Button
+                  variant="ghost"
+                  disabled={index === 0}
+                  aria-label={t('source.moveEarlierName', { filename: source.filename })}
+                  onClick={() => move(index, index - 1)}
+                >
+                  {t('source.moveEarlier')}
+                </Button>
+                <Button
+                  variant="ghost"
+                  disabled={index === order.length - 1}
+                  aria-label={t('source.moveLaterName', { filename: source.filename })}
+                  onClick={() => move(index, index + 1)}
+                >
+                  {t('source.moveLater')}
+                </Button>
+              </div>
+            )}
             {onItemChange && !!items?.length && (
               <div className="min-w-0 px-2 py-2">
                 <FieldLabel htmlFor={`clip-source-item-${source.fingerprint}`}>
                   {t('source.boundItem')}
                 </FieldLabel>
+                <Typography variant="meta" className="text-content-secondary mt-1 block">
+                  {t('source.boundItemHelp')}
+                </Typography>
                 <Listbox
                   id={`clip-source-item-${source.fingerprint}`}
                   className="mt-2"
@@ -115,6 +189,9 @@ export function ClipSourceStrip({
           </li>
         ))}
       </ul>
+      <Typography variant="meta" role="status" aria-live="polite" className="block">
+        {announced}
+      </Typography>
       <Typography variant="meta" className="text-content-secondary block">
         {t('source.position', {
           current: sources.findIndex((source) => source.fingerprint === selected) + 1,

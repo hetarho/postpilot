@@ -217,6 +217,28 @@ export class ClipSourceSession {
           : this.state.readyBatch,
     })
   }
+  /** The order the owner arranged the footage in, as the server now holds it
+   *  (CLIP-136). The entries are rebuilt in that order; a local file the batch
+   *  does not name keeps its place at the end. */
+  acceptSourceOrder = (batch: ClipSourceBatch) => {
+    if (!this.active || batch.projectId !== this.projectId) return
+    const ordered = new Map<string, LocalClipSource>()
+    for (const source of batch.sources) {
+      const entry = this.entries.get(source.metadata.fingerprint)
+      if (entry) ordered.set(source.metadata.fingerprint, entry)
+    }
+    for (const [fingerprint, entry] of this.entries)
+      if (!ordered.has(fingerprint)) ordered.set(fingerprint, entry)
+    this.entries = ordered
+    this.publish(this.state.phase, {
+      summaries: this.state.summaries,
+      error: this.state.error,
+      readyBatch:
+        this.state.readyBatch?.id === batch.id && batch.state === 'ready'
+          ? { ...batch, state: 'ready' }
+          : this.state.readyBatch,
+    })
+  }
   ensurePlayback = (fingerprint: string, refresh = false): Promise<string> => {
     const entry = this.entries.get(fingerprint)
     // A reopened editor may request pixels while its retained manifest is still

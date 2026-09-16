@@ -14,7 +14,7 @@ INSERT INTO clip_source_leases(id,canonical_id,batch_id,user_id,object_key,filen
 -- name: ProjectSourceAudioChoices :many
 SELECT l.canonical_id, l.fingerprint, l.retain_original_audio FROM clip_source_leases l
 JOIN clip_source_batches b ON b.id=l.batch_id AND b.user_id=l.user_id
-WHERE b.project_id=? AND b.user_id=? ORDER BY b.created_at, b.id, l.ordinal;
+WHERE b.project_id=? AND b.user_id=? ORDER BY b.created_at, b.id, l.position, l.ordinal;
 -- SetSourceOriginalAudio is owner-scoped and pins the exact file: a source whose
 -- fingerprint changed is a different file and keeps its own default.
 -- name: SetSourceOriginalAudio :execrows
@@ -23,8 +23,14 @@ WHERE canonical_id=sqlc.arg(canonical_id) AND fingerprint=sqlc.arg(fingerprint) 
   AND state='ready' AND cleanup_pending=0;
 -- name: GetSourceBatch :one
 SELECT * FROM clip_source_batches WHERE id=? AND user_id=?;
+-- The owner's own arrangement first, then the order they were confirmed in: a
+-- batch nobody arranged carries position 0 throughout and reads exactly as it
+-- always did (CLIP-136).
 -- name: ListSourceLeases :many
-SELECT * FROM clip_source_leases WHERE batch_id=? AND user_id=? ORDER BY ordinal;
+SELECT * FROM clip_source_leases WHERE batch_id=? AND user_id=? ORDER BY position, ordinal;
+-- name: SetSourceLeasePosition :execrows
+UPDATE clip_source_leases SET position=sqlc.arg(position)
+WHERE canonical_id=sqlc.arg(canonical_id) AND batch_id=sqlc.arg(batch_id) AND user_id=sqlc.arg(user_id) AND cleanup_pending=0;
 -- name: MarkSourceCleanup :execrows
 UPDATE clip_source_batches SET state='cleanup_pending' WHERE id=? AND user_id=?;
 -- name: SetSourceLeaseReady :execrows

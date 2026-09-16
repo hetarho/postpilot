@@ -111,6 +111,7 @@ type ClipSourceLease struct {
 	RetentionExpiresAt  sql.NullString
 	CleanupPending      int64
 	RetainOriginalAudio int64
+	Position            int64
 }
 
 type VideoTemplate struct {

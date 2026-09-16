@@ -5,6 +5,7 @@ import {
   ClipDraftPreview,
   useClipProject,
   requiredClipSources,
+  reorderClipSources,
   type ClipProject,
 } from '@/entities/clip-project'
 import { useClipCorrection, ClipCorrectionWorkspace } from '@/features/correct-clip'
@@ -27,6 +28,7 @@ import { StageModelSelect } from '@/features/select-model'
 import { ClipSourcePicker, useClipSourceUpload } from '@/features/upload-clip-sources'
 import { useClipSourceBinding } from '@/features/bind-clip-source-item'
 import { ClipObservationViewer, ClipAttemptInspection } from '@/features/inspect-clip-observations'
+import { useTransport } from '@connectrpc/connect-query'
 import { appFailureFromConnect } from '@/shared/api'
 import {
   ActionBar,
@@ -216,6 +218,24 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
       else void correction.save()
     },
   }
+  // The order the footage plays in when no instruction directs otherwise
+  // (CLIP-136). It is stored on the batch, so the refreshed batch is what the
+  // strip then shows.
+  const transport = useTransport()
+  const acceptSourceOrder = upload.acceptSourceOrder
+  const sourceOrder = {
+    // Arranging is refused while a generation runs or after finalization; an
+    // upload in flight is not a reason, since the strip itself hides the
+    // control until the footage is there.
+    disabled: generation.busy || finalization.busy || !!project.finalized,
+    change: (sourceIds: string[]) => {
+      const batchId = upload.readyBatch?.id
+      if (!batchId) return
+      void reorderClipSources(transport, { projectId: project.id, batchId, sourceIds }).then(
+        acceptSourceOrder,
+      )
+    },
+  }
   const correctionStatus: CorrectionStatus = correction.dirty
     ? 'dirty'
     : project.editPlanRevision > project.renderedPlanRevision
@@ -289,6 +309,7 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
       <ClipSourcePicker
         upload={upload}
         sound={soundControl}
+        order={sourceOrder}
         binding={binding.items.length ? binding : undefined}
         disabled={!uploadAllowed || generation.busy || finalization.busy}
         processing={generation.busy}

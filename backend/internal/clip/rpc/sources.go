@@ -110,6 +110,25 @@ func (h *Handler) DiscardClipSourceBatch(ctx context.Context, req *connect.Reque
 	return connect.NewResponse(&v1.DiscardClipSourceBatchResponse{}), nil
 }
 
+// ReorderClipSources records the order the owner arranged the footage in. The
+// actor comes from the session interceptor, never from the payload.
+func (h *Handler) ReorderClipSources(ctx context.Context, req *connect.Request[v1.ReorderClipSourcesRequest]) (*connect.Response[v1.ReorderClipSourcesResponse], error) {
+	user, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if h.sources == nil {
+		return nil, toConnectError(clip.ErrSourceState)
+	}
+	batch, err := h.sources.Reorder(ctx, user, req.Msg.GetProjectId(), req.Msg.GetBatchId(), req.Msg.GetSourceIds())
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+	response := connect.NewResponse(&v1.ReorderClipSourcesResponse{Batch: sourceBatchProto(batch)})
+	response.Header().Set("Cache-Control", "private, no-store")
+	return response, nil
+}
+
 // SetClipSourceOriginalSound is the ONE owner action that changes source audio.
 // The actor comes from the session interceptor, never from the payload.
 func (h *Handler) SetClipSourceOriginalSound(ctx context.Context, req *connect.Request[v1.SetClipSourceOriginalSoundRequest]) (*connect.Response[v1.SetClipSourceOriginalSoundResponse], error) {

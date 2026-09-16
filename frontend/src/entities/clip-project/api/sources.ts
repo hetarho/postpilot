@@ -37,6 +37,19 @@ export async function setClipSourceOriginalSound(
   return { batch: toClipSourceBatch(response.batch), project: toClipProject(response.project) }
 }
 
+/** The order the owner arranged this batch's footage in (CLIP-136). The whole
+ *  batch travels, because a partial order would leave the rest where nobody put
+ *  it, and the server refuses one anyway. */
+export async function reorderClipSources(
+  transport: Transport,
+  input: { projectId: string; batchId: string; sourceIds: string[] },
+  signal?: AbortSignal,
+) {
+  const response = await createClient(ClipService, transport).reorderClipSources(input, { signal })
+  if (!response.batch) throw new Error('Invalid source order response')
+  return toClipSourceBatch(response.batch)
+}
+
 export async function getClipSourcePlayback(
   transport: Transport,
   projectId: string,
