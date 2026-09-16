@@ -160,6 +160,14 @@ func (a *Adapter) Probe(ctx context.Context, ws clip.MediaWorkspace, path string
 	if info.VideoDurationMS > 0 && info.ContainerDurationMS >= info.VideoDurationMS && info.ContainerDurationMS >= info.AudioDurationMS && info.ContainerDurationMS <= a.cfg.Sources.MaxDurationMS && abs(info.ContainerDurationMS-info.DecodedDurationMS) <= 22 {
 		info.DurationMS = info.ContainerDurationMS
 	}
+	// A recording cut mid-frame leaves a trailing audio packet the video never
+	// reaches, so both the container and the decode clock outrun the last
+	// picture. Every later stage treats this length as footage that can be
+	// analysed and cut, and neither the analysis proxy nor a rendered cut pads
+	// video, so the usable length is never more than the video track itself.
+	if info.VideoDurationMS > 0 && info.VideoDurationMS < info.DurationMS {
+		info.DurationMS = info.VideoDurationMS
+	}
 	return info, nil
 }
 func durationMS(raw string) int {

@@ -78,6 +78,34 @@ func TestProbeUsesDecodedClockAndRotation(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// A recording cut mid-frame declares audio past its last picture, so the
+// container and the decode clock both reach 4309 ms while the video track stops
+// at 4155 ms. Only footage that exists can be analysed and cut.
+const trailingAudioJSON = `{"streams":[{"index":0,"codec_type":"video","codec_name":"hevc","width":1920,"height":1440,"avg_frame_rate":"30/1","duration":"4.155122","side_data_list":[{"rotation":-90}]},{"index":1,"codec_type":"audio","codec_name":"aac","channels":2,"sample_rate":"48000","duration":"4.309271"}],"format":{"format_name":"mov,mp4,m4a,3gp,3g2,mj2","duration":"4.309271"}}`
+
+func TestProbeHoldsDurationToTheVideoTrack(t *testing.T) {
+	r := &fakeRunner{run: func(_ context.Context, c Command) ([]byte, error) {
+		if strings.HasSuffix(c.Binary, "ffprobe") {
+			return []byte(trailingAudioJSON), nil
+		}
+		return []byte("frame=122\nout_time_us=4309000\nprogress=end\n"), nil
+	}}
+	a := newAdapter(t, r)
+	err := a.WithWorkspace(t.Context(), "job", func(ws clip.MediaWorkspace) error {
+		info, err := a.Probe(t.Context(), ws, sourceFile(t, ws))
+		if err != nil {
+			return err
+		}
+		if info.DurationMS != 4155 || info.VideoDurationMS != 4155 || info.ContainerDurationMS != 4309 || info.AudioDurationMS != 4309 {
+			t.Fatalf("probe=%+v", info)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
 func TestProbeRefusesInvalidInputs(t *testing.T) {
 	for name, doc := range map[string]string{"corrupt": "not json", "empty": "{}", "audio only": `{"streams":[{"codec_type":"audio"}],"format":{"format_name":"mov"}}`, "container": strings.Replace(probeJSON, "mov,mp4,m4a,3gp,3g2,mj2", "avi", 1), "dimensions": strings.Replace(probeJSON, `"width":1920`, `"width":0`, 1), "rotation": strings.Replace(probeJSON, `-90`, `45`, 1)} {
 		t.Run(name, func(t *testing.T) {
