@@ -230,7 +230,9 @@ func (s *GenerationService) StartRevision(ctx context.Context, user, id, request
 	if err != nil {
 		return "", err
 	}
-	return s.enqueue(ctx, GenerationStart{UserID: user, ProjectID: id, Observe: observe, Write: write, Payload: payload, Revise: true, Quote: &q}, b.ID, p.EditPlanRevision)
+	// The owner's words and the document they named, verbatim (CLIP-133).
+	asked := ProjectRequest{Kind: RevisionRequestKind(target), Body: request, CreatedAt: s.now()}
+	return s.enqueue(ctx, GenerationStart{UserID: user, ProjectID: id, Observe: observe, Write: write, Payload: payload, Revise: true, Quote: &q, Request: &asked}, b.ID, p.EditPlanRevision)
 }
 
 // RunRevision is the whole job: check that the plan is still the one that was

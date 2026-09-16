@@ -68,6 +68,8 @@ export interface FakeClipProject extends ClipProjectDraft {
   editing?: ClipProject['editing']
   observations?: ClipProject['observations']
   attemptInspection?: ClipProject['attemptInspection']
+  /** What the owner asked the AI for, newest first (CLIP-133). */
+  requests?: ClipProject['requests']
   editPlanRevision?: number
   renderedPlanRevision?: number
 }

@@ -17,4 +17,8 @@ type Store interface {
 	InsertProject(context.Context, Project) error
 	UpdateProject(context.Context, string, string, ProjectPatch, time.Time) (Project, error)
 	DeleteProject(context.Context, string, string) error
+	// What the owner asked the AI for, kept verbatim with the project
+	// (CLIP-133). Recorded by (id, user, project); read newest first.
+	RecordProjectRequest(context.Context, string, string, string, ProjectRequest) error
+	ListProjectRequests(context.Context, string, string) ([]ProjectRequest, error)
 }

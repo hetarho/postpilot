@@ -428,6 +428,14 @@ export const clips = {
       '요청의 접수 여부를 확인하는 중이에요. 생성 요청을 다시 보내지 않아요. 페이지를 나가도 이미 접수된 작업은 계속돼요.',
     checkAttempt: '접수된 작업 다시 확인',
   },
+  record: {
+    title: 'AI에 요청한 내용 {{count}}건',
+    kind: {
+      instruction: '생성 지시',
+      revision: '수정 요청 · {{target}}',
+    },
+    noInstruction: '지시 없이 생성했어요.',
+  },
   revision: {
     title: 'AI에 수정 요청',
     help: '고칠 점을 적으면 AI가 편집안을 다시 써요. 이미 만든 영상은 그대로 두고 편집안만 바뀌니, 새 영상은 다시 출력으로 만들어 주세요.',

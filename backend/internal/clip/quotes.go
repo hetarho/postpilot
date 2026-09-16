@@ -415,7 +415,11 @@ func (s *GenerationService) startApproved(ctx context.Context, user, id, batch, 
 	if err != nil {
 		return "", err
 	}
-	job, err := s.enqueue(ctx, GenerationStart{UserID: user, ProjectID: id, Observe: observe, Write: write, Payload: payload, Quote: &q}, batch, 0)
+	// The instruction this generation froze, kept verbatim beside the project.
+	// An empty one is recorded as the empty instruction it was: a clip written
+	// without direction is a thing the record has to be able to explain.
+	frozen := ProjectRequest{Kind: RequestInstruction, Body: p.Instruction, CreatedAt: s.now()}
+	job, err := s.enqueue(ctx, GenerationStart{UserID: user, ProjectID: id, Observe: observe, Write: write, Payload: payload, Quote: &q, Request: &frozen}, batch, 0)
 	if err != nil {
 		// A racing request may have won the unique active-project/source linkage.
 		if existing, lookup := s.acceptedJob(ctx, user, id, batch, observe, write, a); lookup == nil && existing != "" {

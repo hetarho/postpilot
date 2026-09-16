@@ -55,6 +55,9 @@ type GenerationStart struct {
 	// with no media in it.
 	Revise bool
 	Quote  *GenerationQuote
+	// What the owner asked the AI for, kept with the project once this start is
+	// accepted (CLIP-133). Absent for a re-render, which asks for nothing new.
+	Request *ProjectRequest
 }
 type ClipJob struct {
 	FinishedAt              *time.Time

@@ -156,6 +156,17 @@ message ClipProject {
   // chosen: the clip falls back to what its frozen template said.
   string caption_pace = 31;
   string accent = 32;
+  // What the owner asked the AI for, newest first (CLIP-133).
+  repeated ClipProjectRequest requests = 33;
+}
+// One accepted request, verbatim: the instruction a generation froze, or the
+// words of a revision. An empty body under kind `instruction` is the record of a
+// clip written without one. Never a diagnostic (CLIP-88), never deduplicated.
+message ClipProjectRequest {
+  // instruction | revision:flow | revision:narration | revision:both.
+  string kind = 1;
+  string body = 2;
+  string created_at = 3;
 }
 message ClipNotice {
   string code = 1;

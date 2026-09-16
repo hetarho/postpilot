@@ -437,6 +437,14 @@ export const clips = {
       'Checking whether your request was accepted without submitting it again. Leaving this page does not stop an accepted job.',
     checkAttempt: 'Check accepted work again',
   },
+  record: {
+    title: 'What you asked the AI for ({{count}})',
+    kind: {
+      instruction: 'Generation instruction',
+      revision: 'Revision · {{target}}',
+    },
+    noInstruction: 'Generated with no instruction.',
+  },
   revision: {
     title: 'Ask the AI to revise',
     help: 'Write what to change and the AI rewrites the edit plan. The clip you already made stays as it is, so make a new one with re-render.',

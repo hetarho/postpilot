@@ -256,6 +256,44 @@ func (q *Queries) ListClipAnswers(ctx context.Context, arg ListClipAnswersParams
 	return items, nil
 }
 
+const listClipProjectRequests = `-- name: ListClipProjectRequests :many
+SELECT kind, body, created_at FROM clip_project_requests WHERE project_id = ? AND user_id = ? ORDER BY created_at DESC, rowid DESC
+`
+
+type ListClipProjectRequestsParams struct {
+	ProjectID string
+	UserID    string
+}
+
+type ListClipProjectRequestsRow struct {
+	Kind      string
+	Body      string
+	CreatedAt string
+}
+
+func (q *Queries) ListClipProjectRequests(ctx context.Context, arg ListClipProjectRequestsParams) ([]ListClipProjectRequestsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listClipProjectRequests, arg.ProjectID, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListClipProjectRequestsRow
+	for rows.Next() {
+		var i ListClipProjectRequestsRow
+		if err := rows.Scan(&i.Kind, &i.Body, &i.CreatedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listClipProjects = `-- name: ListClipProjects :many
 SELECT id, user_id, title, video_template_id, ratio, target_duration_ms, analysis_json, edit_plan_json, result_key, result_content_type, result_bytes, result_duration_ms, result_created_at, edit_plan_revision, rendered_plan_revision, created_at, updated_at, deleting, disclosure, cta, hide_disclosure, composition_inputs_json, composition_snapshot_json, source_retention_expires_at, source_access_revoked_at, source_batch_id, result_id, finalized_at, finalized_plan_revision, finalized_result_key, language, instruction, caption_pace, accent FROM clip_projects WHERE user_id = ? ORDER BY updated_at DESC, id
 `
@@ -424,6 +462,34 @@ func (q *Queries) ProjectsForTemplate(ctx context.Context, arg ProjectsForTempla
 		return nil, err
 	}
 	return items, nil
+}
+
+const recordClipProjectRequest = `-- name: RecordClipProjectRequest :exec
+INSERT INTO clip_project_requests(id, project_id, user_id, kind, body, created_at) VALUES (?, ?, ?, ?, ?, ?)
+`
+
+type RecordClipProjectRequestParams struct {
+	ID        string
+	ProjectID string
+	UserID    string
+	Kind      string
+	Body      string
+	CreatedAt string
+}
+
+// What the owner asked the AI for, kept verbatim with the project (CLIP-133).
+// Ordered newest first, and by rowid within one instant so two requests made in
+// the same millisecond still read in the order they were accepted.
+func (q *Queries) RecordClipProjectRequest(ctx context.Context, arg RecordClipProjectRequestParams) error {
+	_, err := q.db.ExecContext(ctx, recordClipProjectRequest,
+		arg.ID,
+		arg.ProjectID,
+		arg.UserID,
+		arg.Kind,
+		arg.Body,
+		arg.CreatedAt,
+	)
+	return err
 }
 
 const saveProjectComposition = `-- name: SaveProjectComposition :execrows

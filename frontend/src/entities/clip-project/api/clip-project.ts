@@ -14,6 +14,7 @@ import { toClipEditingState } from './edit-plan'
 import { toClipAccounting } from './credits'
 import { toClipObservations } from './observations'
 import { toClipAttemptInspection } from './attempt-inspection'
+import { isClipRequestKind, type ClipProjectRequest } from '../model/revision'
 import { toProjectComposition, compositionInputsToProto } from './composition'
 import { POLL_INTERVAL_MS } from '@/shared/config'
 import {
@@ -77,6 +78,15 @@ export function toClipProject(value: ProtoClipProject): ClipProject {
     captionPace: value.captionPace as ClipProject['captionPace'],
     accent: value.accent as ClipProject['accent'],
     answers: value.answers.map((a) => ({ label: a.label, text: a.text })),
+    // Verbatim and in the order the server answered — newest first. A kind this
+    // build does not know is dropped rather than shown as an unlabelled entry.
+    requests: value.requests
+      .filter((r) => isClipRequestKind(r.kind) && Number.isFinite(Date.parse(r.createdAt)))
+      .map((r) => ({
+        kind: r.kind as ClipProjectRequest['kind'],
+        body: r.body,
+        createdAt: r.createdAt,
+      })),
     createdAt: value.createdAt,
     updatedAt: value.updatedAt,
     editPlanRevision: value.editPlanRevision,

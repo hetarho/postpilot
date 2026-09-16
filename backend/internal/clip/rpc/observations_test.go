@@ -26,6 +26,9 @@ func (s *observationStore) GetProject(_ context.Context, user, id string) (clip.
 	}
 	return s.project, nil
 }
+func (s *observationStore) ListProjectRequests(context.Context, string, string) ([]clip.ProjectRequest, error) {
+	return nil, nil
+}
 func (s *observationStore) ListProjects(_ context.Context, user string) ([]clip.Project, error) {
 	if user == s.project.UserID {
 		return []clip.Project{s.project}, nil

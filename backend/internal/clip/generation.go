@@ -131,6 +131,12 @@ func (s *GenerationService) enqueue(ctx context.Context, input GenerationStart, 
 	} else {
 		err = ErrQuoteRequired
 	}
+	// Between the link and the activation: the job row is still invisible to the
+	// dispatcher, so a record that cannot be written fails the start instead of
+	// letting a clip run with nothing saying what it was asked for (CLIP-133).
+	if err == nil && input.Request != nil {
+		err = s.projects.store.RecordProjectRequest(ctx, newID(), user, input.ProjectID, *input.Request)
+	}
 	if err == nil {
 		err = s.jobs.Activate(ctx, user, job)
 	}

@@ -91,8 +91,9 @@ export type {
   ClipSourceObservation,
   ClipObservations,
 } from './model/observations'
-export { CLIP_REVISION_TARGETS } from './model/revision'
-export type { ClipRevisionTarget } from './model/revision'
+export { CLIP_REVISION_TARGETS, isClipRequestKind } from './model/revision'
+export type { ClipRevisionTarget, ClipProjectRequest } from './model/revision'
+export { ClipRequestRecord } from './ui/ClipRequestRecord'
 export { ClipFailureNotice } from './ui/ClipFailureNotice'
 export { ClipQuoteApproval } from './ui/ClipQuoteApproval'
 export { ClipSourceStrip } from './ui/ClipSourceStrip'

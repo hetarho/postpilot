@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import {
   ClipDraftPreview,
   ClipFailureNotice,
+  ClipRequestRecord,
   useClipProject,
   requiredClipSources,
   reorderClipSources,
@@ -249,6 +250,10 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
 
   // Inside each step's content, above its dock, so inspecting a long observation
   // cannot scroll the step's committing action out of its sticky container.
+  // What the owner asked the AI for, beside the evidence it was answered from
+  // (CLIP-133). Read-only history in both ① and ②, never a control.
+  const requestRecord = <ClipRequestRecord requests={project.requests} />
+
   const observationPanel = (
     <ClipObservationViewer
       project={project}
@@ -320,6 +325,7 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
         processing={generation.busy}
       />
       {observationPanel}
+      {requestRecord}
       <section aria-labelledby="clip-models-heading" className="mt-10 mb-8 space-y-4">
         <Typography id="clip-models-heading" variant="title">
           {t('generation.models')}
@@ -434,6 +440,7 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
       sourcePicker={
         <>
           {observationPanel}
+          {requestRecord}
           <section aria-labelledby="clip-required-sources" className="mt-10 space-y-3">
             <Typography variant="title" id="clip-required-sources">
               {t('correction.requiredSources')}
@@ -481,6 +488,7 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
         </>
       )}
       {observationPanel}
+      {requestRecord}
     </>
   )
 

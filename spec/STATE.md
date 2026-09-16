@@ -47,12 +47,13 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
-| T204 | What the owner asked for is kept | CLIP | T202 | todo |
 
 ## next
-- implement-task T204 next (dep T202 done) — the last of the revision chain and the last free task
-- T177 is blocked on the owner's viewing answers; T008 stays owner-dependent
+- nothing is free: T177 is blocked on the owner's viewing answers and T008 stays owner-dependent. The r31 writing re-cut and the revision chain are complete (T200 T207–T216, T201–T204) — a `review-code` pass over clip/ is the next useful move, starting from the two findings in this log
 ## log
+- 260917 T204 done; what the owner asked the AI for is kept with the project (migration 0060 clip_project_requests, cascade to the project) — the instruction a generation froze and the words and target of each revision, verbatim with the time, written at the one seam where the job exists but cannot yet dispatch, so an accepted job always has its entry and a save never writes one; read back newest first in a disclosure beside the observations, and gone when the project is
+- 260917 useClipProject stops polling at a terminal revise_clip job, so a revision's settlement lands only on the next read — pre-existing from T202/T203, worth a review-code finding
+- 260917 T204 claimed (rui)
 - 260917 T203 done; ② asks the writer for a revision from its own panel — a bounded request with its count, a target defaulting to 자막, the ceiling and its priced writing calls re-quoted whenever either changes, and the run reported in place with 취소 while the timeline goes read-only and no focused job view opens; the approval surface came down to entities/clip-project so the revision reuses it instead of writing a second one, and a flush that moves the plan re-quotes rather than sending against a ceiling nobody approved
 - 260917 T203 claimed (rui)
 - 260917 T202 done; a revision is the third clip job kind — quoted for the writing calls its target needs and no observation, bound to the saved plan by its own digest, reserved at the start of its run, saved with SaveRevisedPlan so the plan revision advances while the rendered one stays behind; migration 0059 lets its job consume a quote, and every clip-kind check now asks job.ClipKind
@@ -70,6 +71,3 @@
 - 260916 T200 done; a project is minted from title/template/ratio and everything else is written in ① beside the sources — migration 0056 relaxes the duration CHECK (goose NO TRANSACTION, foreign keys off), and the upload gate now asks for a savable project rather than a complete one
 - 260916 T208 claimed (tmpl)
 - 260916 T207 done; a template body must satisfy ParseTemplate (no scene, repeat, caption/info text or cut basis), frozen snapshots still read through Parse/ReadStored, a legacy template reads back converted into one guide with composition_converted=true and its stored body untouched, the FE parser/guide/skeleton mirror it through the shared corpus; media (untracked tooling.go, T206) and pages/clip (T200's form rewrite) suites fail in the shared tree independently of this task
-- 260916 T206 done; the media package declares the filters, decoders, encoders and muxers it names, the image proves the bundled ffmpeg carries them in 0.01 s before the deploy pushes it, and the graph fixtures keep the list honest without Docker
-- 260916 T206 claimed (dply)
-- 260916 T205 done; the pushed image is the `runtime` target and the rollout no longer waits — the smokes run on the same commit in their own job and still fail the run, with a deploy check that catches the gate being removed rather than moved

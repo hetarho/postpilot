@@ -188,8 +188,17 @@ func (s *Service) ListProjects(ctx context.Context, user string) ([]Project, err
 }
 func (s *Service) GetProject(ctx context.Context, user, id string) (Project, error) {
 	p, err := s.store.GetProject(ctx, user, id)
-	if err != nil || p.Result == nil || s.generation == nil {
+	if err != nil {
 		return p, err
+	}
+	// What the owner asked the AI for, read where the OWNER reads the project
+	// (CLIP-133). The run paths take the project from the store directly, so no
+	// job pays for this read.
+	if p.Requests, err = s.store.ListProjectRequests(ctx, user, id); err != nil {
+		return Project{}, err
+	}
+	if p.Result == nil || s.generation == nil {
+		return p, nil
 	}
 	p.Result.ViewURL, err = s.generation.objects.PresignRead(ctx, p.Result.Key, "clip.mp4", false, s.generation.cfg.ReadTTL)
 	if err != nil {

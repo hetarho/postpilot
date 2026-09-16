@@ -3,8 +3,10 @@ package clip
 
 import (
 	"errors"
-	"github.com/postpilot/backend/internal/clip/composition"
+	"strings"
 	"time"
+
+	"github.com/postpilot/backend/internal/clip/composition"
 )
 
 var (
@@ -92,7 +94,34 @@ type Project struct {
 	Result                                 *Result
 	EditPlanRevision, RenderedPlanRevision int
 	CreatedAt, UpdatedAt                   time.Time
+	// What the owner asked the AI for, newest first (CLIP-133). Read only where
+	// the owner reads the project; the run paths take the project without it.
+	Requests []ProjectRequest
 }
+
+// ProjectRequest is one accepted request, kept verbatim: the instruction a
+// generation froze, or the words of a revision and the document it named
+// (CLIP-133). It is owner content — never a diagnostic, never deduplicated, and
+// never written by a save.
+type ProjectRequest struct {
+	Kind      string
+	Body      string
+	CreatedAt time.Time
+}
+
+// RequestInstruction is the kind of the instruction a generation froze; a
+// revision's kind names the target it was about. An empty body under
+// RequestInstruction is the record of a generation run WITHOUT an instruction.
+const RequestInstruction = "instruction"
+
+func RevisionRequestKind(target string) string { return "revision:" + target }
+
+// ValidRequestKind is the same set the table's CHECK holds.
+func ValidRequestKind(kind string) bool {
+	return kind == RequestInstruction ||
+		(strings.HasPrefix(kind, "revision:") && ValidRevisionTarget(strings.TrimPrefix(kind, "revision:")))
+}
+
 type ProjectInput struct {
 	Language                      string
 	CompositionInputs             *CompositionInputs

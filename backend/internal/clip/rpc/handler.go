@@ -230,6 +230,10 @@ func projectProto(p clip.Project) *v1.ClipProject {
 	for _, a := range p.Answers {
 		out.Answers = append(out.Answers, &v1.ClipAnswer{Label: a.Label, Text: a.Text})
 	}
+	// Verbatim, newest first, exactly as the store answered (CLIP-133).
+	for _, r := range p.Requests {
+		out.Requests = append(out.Requests, &v1.ClipProjectRequest{Kind: r.Kind, Body: r.Body, CreatedAt: r.CreatedAt.UTC().Format(time.RFC3339Nano)})
+	}
 	if r := p.Result; r != nil {
 		out.Result = &v1.ClipResult{Id: r.ID, ContentType: r.ContentType, Bytes: r.Bytes, DurationMs: int32(r.DurationMS), CreatedAt: r.CreatedAt.UTC().Format(time.RFC3339Nano), ViewUrl: r.ViewURL, DownloadUrl: r.DownloadURL}
 	}
