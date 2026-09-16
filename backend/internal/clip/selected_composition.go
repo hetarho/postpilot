@@ -8,8 +8,13 @@ import (
 )
 
 // ResolveSelectedComposition keeps real footage even when its item is unknown.
-// Only elements that need the missing association are omitted. Literal authored
-// text and context survive; no dummy item or fabricated answer enters Resolve.
+// Only elements that need the missing association are omitted: text bound to one
+// of the group's own fields. Generated copy stays, because the scene it describes
+// was filmed whether or not the item could be named — CLIP-64 asks such copy to
+// fall back to an observed description rather than disappear, and a cut with no
+// binding is already held to that: ScopedFact refuses it every item fact, and
+// GroundScopedText refuses any sentence naming an item. Literal authored text
+// and context survive; no dummy item or fabricated answer enters Resolve.
 func ResolveSelectedComposition(doc *composition.Document, inputs CompositionInputs, cuts []composition.Cut, limits composition.Limits, maxBytes int) (composition.Timeline, []CopyFallback, error) {
 	resolvedDoc := *doc
 	resolvedDoc.Sections = slices.Clone(doc.Sections)
@@ -30,7 +35,7 @@ func ResolveSelectedComposition(doc *composition.Document, inputs CompositionInp
 		filtered := section
 		filtered.ID, filtered.Repeat, filtered.Elements = id, "scenes", nil
 		for _, element := range section.Elements {
-			needsItem := element.Kind == "ai" && section.Scope == "item"
+			needsItem := false
 			parts := slices.Clone(element.Parts)
 			for _, row := range element.Rows {
 				parts = append(parts, row.Parts...)

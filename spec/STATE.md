@@ -30,7 +30,7 @@
 | THEME | 12 | 12 | - | 0 |
 | MKT | 4 | 4 | - | 0 |
 | VIDEO | 2 | 2 | - | 1 |
-| CLIP | 26 | 25 | CLIP-119+ CLIP-120+ CLIP-61✎ CLIP-102✎ CLIP-103✎ | 1 |
+| CLIP | 27 | 27 | - | 1 |
 | CDS | 19 | 19 | - | 1 |
 | BILL | 4 | 4 | - | 0 |
 
@@ -47,12 +47,25 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
+| T183 | A group holding a required field admits at least one item | CLIP | - | todo |
+| T184 | A plan under the length floor fails as insufficient footage | CLIP | - | todo |
+| T185 | The writer's cut budget follows the sections the answers admit | CLIP | T183 | todo |
+| T186 | A project carries its own instruction | CLIP | - | todo |
+| T187 | The writer reads the instruction and lets it outrank guidance | CLIP | T186 | todo |
+| T188 | An instruction lets the writer speak from experience | CLIP | T186 | todo |
+| T189 | The owner binds a source to an item before generating | CLIP | - | todo |
 
 ## next
-- create-task CLIP for the r26 delta (required-field group minimum, length-floor failure cause, writer cut budget).
+- implement-task T186, then T187 T188 — the instruction path the owner is waiting on; T189 removes the binding failure that emptied every meat caption.
 - T177 is blocked on the owner's viewing answers; the three review clips are rendered and the checklist is open. T008 stays owner-dependent.
 
 ## log
+- 260916 CLIP-64 defect fixed outside the task list; an unassigned cut now omits only text bound to its group's fields, so a caption citing no item fact survives (BE verify green)
+- 260916 create-task CLIP done; T183 T184 T185 carry the r26 delta, T186 T187 T188 the project instruction and T189 owner source binding
+- 260916 create-task CLIP start
+- 260916 update-ssot CLIP done; CLIP@27 — a project instruction outranks authored guidance on content and a source can be bound to an item before generation
+- 260916 T177 (blocked) unaffected — it reads CLIP-27 download shape, not the writer's inputs
+- 260916 update-ssot CLIP start
 - 260916 T182 done; the writer is told each declared maximum and an over-long answer takes the shorten-then-omit ladder
 - 260916 T182 claimed (max)
 - 260916 T181 done; answers bounded where they are typed, and a stored over-long one refused by field label with its counts

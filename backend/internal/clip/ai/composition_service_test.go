@@ -678,3 +678,53 @@ func TestNativeWriterAdmitsConsecutiveCutsInOneNonrepeatedSection(t *testing.T) 
 		})
 	}
 }
+
+// An item nobody could name costs the cut its item facts, never a caption that
+// cites none: the scene was filmed either way (CLIP-64). The authored prompt
+// decides which it is — one that substitutes an item value has nothing to say
+// without the item, while a purely literal one describes what is on screen.
+func TestUnassignedCutKeepsSceneCopyThatCitesNoItemFact(t *testing.T) {
+	sceneOnly := strings.Replace(nativeBody,
+		`<text id="copy" kind="ai" role="caption" basis="cut">관찰한 <value field="menu.name"/>을 설명한다.</text>`,
+		`<text id="copy" kind="ai" role="caption" basis="cut">이 컷에 보이는 것을 한마디로 쓴다.</text>`, 1)
+	for _, tc := range []struct {
+		name, body, text, kept, reason string
+	}{
+		{"scene_copy_survives", sceneOnly, "김이 올라오는 중", "김이 올라오는 중", ""},
+		{"named_item_still_refused", sceneOnly, "해물라면 나왔어요", "", "cross_item_identity"},
+		{"item_bound_prompt_still_omitted", nativeBody, "김이 올라오는 중", "", "item_unassigned"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			in, p := nativeInput(), nativePlan()
+			setNativeBody(&in, tc.body)
+			in.Analyses[0].Segments[0].Event = "음식을 담는다"
+			in.Analyses[0].Segments[0].Subjects = []string{"접시"}
+			g := nativeGenerated(p, 0)
+			g["text"], g["fact_refs"] = tc.text, []any{}
+			s, models, _ := newService(t, raw(p), true)
+			plan, _, err := s.Plan(t.Context(), testRef(), in)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(models.calls) != 1 {
+				t.Fatal("not one writer call")
+			}
+			text := findNativeCopy(t, plan, "cut-sea")
+			if tc.kept == "" {
+				if text != nil || !hasFallback(plan, "cut-sea", tc.reason) {
+					t.Fatalf("copy kept or reason missing: %+v %+v", text, plan.Portable.Fallbacks)
+				}
+			} else if text == nil || text.Resolved.Text != tc.kept {
+				t.Fatalf("scene copy lost with the item: %+v %+v", text, plan.Portable.Fallbacks)
+			}
+			// Whatever happens to the caption, the binding itself stays refused
+			// and the element that substitutes an item value stays omitted.
+			if plan.Portable.Cuts[0].ItemID != "" || !hasFallback(plan, "cut-sea", "item_unassigned") {
+				t.Fatalf("the item binding should still be refused: %+v", plan.Portable.Fallbacks)
+			}
+			if findNativeCopy(t, plan, "cut-cheese") == nil {
+				t.Fatal("the identified item lost its copy")
+			}
+		})
+	}
+}
