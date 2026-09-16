@@ -52,16 +52,16 @@
 | T203 | ② asks for a revision in its own panel | CLIP | T202 | todo |
 | T204 | What the owner asked for is kept | CLIP | T202 | todo |
 | T209 | Caption pace and accent are project settings | CLIP CDS | - | todo |
-| T212 | Writing call 2 writes the narration | CLIP CDS | T211 | todo |
 | T213 | A generation runs the flow call and then the narration call | CLIP | T212 | todo |
 | T214 | The renderer schedules captions across the whole timeline | CLIP CDS | T210 | todo |
 | T215 | ② edits captions on their own track | CLIP CDS | T210 | todo |
 | T216 | ① arranges the sources and hints the writer | CLIP | - | todo |
 
 ## next
-- implement-task T212 next (dep T211 done), then T213 — a native generation writes no caption until both land, so do not deploy from this window; T214, T215, T209 and T216 are free to run beside them, but T209, T214, T215 and T216 all change clip.proto, so run those one after another in one tree
-- T200 stands alone; ARCH's T205 T206 (deploy smoke gate) wait on T211, which absorbed T198; T177 is blocked on the owner's viewing answers; T008 stays owner-dependent
+- implement-task T213 next (dep T212 done) — a native generation writes no caption until both land, so do not deploy from this window; T214, T215, T209 and T216 are free to run beside them, but T209, T214, T215 and T216 all change clip.proto, so run those one after another in one tree
+- T200 and ARCH's T205 T206 are done; T177 is blocked on the owner's viewing answers; T008 stays owner-dependent
 ## log
+- 260916 T212 done; the narration call writes captions on absolute output intervals over the resolved flow plus the template's generated slot rows (schemas/narration.schema.json, narrationPrompt) — admitted in start order against the output, disjoint, within CDS-25, grounded by GroundNarration on every collected fact, CDS-41's reading time through the shorter sentence then the free room then caption_floor, with server-minted narration-N ids and no notice for anything the writer simply did not say
 - 260916 T211 done; the flow call writes the footage flow alone (schemas/flow.schema.json, flowPrompt) from the instruction, the template guide, the facts, the source order, the item hints and the observations, and the server resolves it into cuts plus the template's fixed regions; the rate contract now names the observed facts it is read from, states the 40% share and the speech rule as WRITING bounds the render never re-enforces, and Plan is refused a composition — 28 tests of the retired single-writer contract were removed (owner-approved) to return as narration tests in T212
 - 260916 T210 done; a plan carries narration captions with absolute, disjoint output intervals beside the template regions — the shape is validated at store time and again against the duration an edit produces, so footage edits never retime a caption and a caption the new output cannot hold is named for correction; ② may add, edit and remove one (server-minted `narration-N`, owner-written text skips grounding), `GroundNarration` drops the cross-item and context-item rules, and the three caption removal reasons exist (`caption_floor` has no producer until T212/T214)
 - 260916 T208 done; the template editor offers only fields, groups, guides and the badge, the accent and pace selects are gone, a converted legacy template says its scenes moved into the guide and saves that body, and the preview supplies one sample caption line; the converter now lifts an intro/outro authored inside a scene and keeps carrying prose when the body still has an authoring error
@@ -81,4 +81,3 @@
 - 260916 T195 done; every element's CDS-44 frames come from one read of the composed footage (output-side seeks select the same frames), the measurements and the delivered clip unchanged
 - 260916 T199 done; the owner instruction now rides both reuse digests, so a changed instruction re-plans on the stored observations instead of re-rendering the plan written without it
 - 260916 T195 claimed (perf)
-- 260916 update-ssot CDS done; CDS@20 — rhythm and voice follow the instruction, captions hold disjoint absolute windows on the output timeline whatever cut lies beneath, the information pair is retired, numbers match any collected fact, and the accent is chosen in ①

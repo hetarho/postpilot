@@ -113,6 +113,14 @@ type PlanningInput struct {
 	SourceAudio []SourceAudioSetting
 }
 
+// NarrationInput is the second writing call's input: the same planning input,
+// and the flow the server has already resolved into exact output intervals. The
+// narration is written over that flow and may not change it (CLIP-135).
+type NarrationInput struct {
+	PlanningInput
+	Flow EditPlan
+}
+
 // CutScene is the scene of the segment a cut starts in, and ReadableText is
 // true when ANY segment the cut spans carries legible footage text: the
 // restriction exists to keep typeset copy away from photographed text, so one

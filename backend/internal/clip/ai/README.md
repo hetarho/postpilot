@@ -27,6 +27,21 @@ once in `JSONSchema` and keeps every domain bound in the prompt. This preserves
 all observations at the 20-source/49-chunk ceiling without increasing the
 reserved input limit or paying for a summarization call.
 
+`Service.Narrate` is the second call. It receives the resolved flow — each cut's
+source range beside the exact window it occupies on the output timeline — and
+returns captions with absolute output intervals plus the template's generated
+slot rows, using `narration.schema.json`. It may not change the flow: a `cuts`
+key or an unknown element id in the response is ignored and recorded rather than
+applied. Each caption is admitted in start order against the output it plays on:
+inside the output, disjoint from the caption before it, within CDS-25's
+character bound, grounded by `GroundNarration` on the facts the project
+collected, not a sentence already said, and holding CDS-41's reading time —
+through the grounded shorter sentence, then the room the next caption leaves,
+then omission with its own reason. The server mints every caption identity
+(`narration-N`, in start order); the writer's own ids are recorded nowhere. A
+moment left without a caption, a fact the narration did not state and a source
+it did not use record nothing.
+
 `Service.Plan` and `composition-plan.schema.json` remain for payloads that carry
 no composition snapshot at all; a composition reaching that writer is refused.
 

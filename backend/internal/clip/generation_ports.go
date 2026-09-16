@@ -18,6 +18,7 @@ type Planner interface {
 	// The composition writer: the flow call, then the narration over it
 	// (CLIP-135). Plan is what a payload without a composition snapshot uses.
 	Flow(context.Context, llm.ModelRef, PlanningInput) (EditPlan, llm.Usage, error)
+	Narrate(context.Context, llm.ModelRef, NarrationInput) (EditPlan, llm.Usage, error)
 	Plan(context.Context, llm.ModelRef, PlanningInput) (EditPlan, llm.Usage, error)
 }
 type GenerationStore interface {

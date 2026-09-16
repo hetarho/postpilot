@@ -210,6 +210,11 @@ func (p *plannerFake) ObserveChunk(ctx context.Context, r llm.ModelRef, c clip.C
 func (p *plannerFake) Flow(ctx context.Context, r llm.ModelRef, in clip.PlanningInput) (clip.EditPlan, llm.Usage, error) {
 	return p.Plan(ctx, r, in)
 }
+
+// The narration writes over the flow; this fake has no text to add to it.
+func (p *plannerFake) Narrate(ctx context.Context, r llm.ModelRef, in clip.NarrationInput) (clip.EditPlan, llm.Usage, error) {
+	return in.Flow, llm.Usage{}, nil
+}
 func (p *plannerFake) Plan(ctx context.Context, r llm.ModelRef, in clip.PlanningInput) (clip.EditPlan, llm.Usage, error) {
 	frozen, err := job.ConsumeClipPolicy(ctx, "alice", p.id, r.String(), 32768, "write")
 	if err != nil {

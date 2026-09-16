@@ -190,6 +190,51 @@ func (s *Service) Flow(ctx context.Context, model llm.ModelRef, input clip.Plann
 	return result, usage, nil
 }
 
+// Narrate is the SECOND writing call of a generation (CLIP-135): it writes what
+// is said over the flow the server has already resolved — captions on absolute
+// output intervals, and the template's own generated slot rows. It may not
+// change a cut, and the flow it is given is the flow it writes over.
+func (s *Service) Narrate(ctx context.Context, model llm.ModelRef, input clip.NarrationInput) (clip.EditPlan, llm.Usage, error) {
+	if err := ctx.Err(); err != nil {
+		return clip.EditPlan{}, llm.Usage{}, err
+	}
+	if !nativeComposition(input.PlanningInput) || input.Flow.Portable == nil || len(input.Flow.Cuts) == 0 || input.Flow.DurationMS <= 0 {
+		return clip.EditPlan{}, llm.Usage{}, stageError("narrate", clip.ErrInvalid)
+	}
+	if err := validateInput(s.cfg, input.PlanningInput); err != nil {
+		return clip.EditPlan{}, llm.Usage{}, err
+	}
+	info, err := s.model(model, llm.StageNameWrite)
+	if err != nil {
+		return clip.EditPlan{}, llm.Usage{}, stageError("narrate", err)
+	}
+	execution, err := executionPolicy(input.Policy, model, llm.StageNameWrite, s.cfg.NarrationCompletionTokens, llm.ExecutionTextOnly)
+	if err != nil {
+		return clip.EditPlan{}, llm.Usage{}, err
+	}
+	system, user := buildNarrationPrompt(input, compositionLimits(s.cfg, input.PlanningInput))
+	request := llm.Request{System: system, Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(user)}}}, Stage: llm.StageNameWrite, Reasoning: input.Policy.Reasoning, DisableReasoning: input.Policy.DisableReasoning, MaxTokens: input.Policy.CompletionTokens, Execution: execution}
+	if execution.Call.StructuredOutput {
+		if !info.StructuredOutput {
+			return clip.EditPlan{}, llm.Usage{}, clip.ErrPricingUnavailable
+		}
+		request.JSONSchema = NarrationSchema()
+	}
+	if err := validatePrompt(system, user, request.JSONSchema, llm.ExecutionTextOnly, input.Policy.InputTokenLimit()); err != nil {
+		return clip.EditPlan{}, llm.Usage{}, err
+	}
+	result, usage, err := completeValidated(ctx, s, model, request, user, input.Policy, func(raw string) (clip.EditPlan, error) {
+		return parseNarration(s.cfg, input, raw)
+	})
+	if err != nil {
+		return clip.EditPlan{}, usage, stageError("narrate", err)
+	}
+	if err := validatePlan(s.cfg, input.PlanningInput, result); err != nil {
+		return clip.EditPlan{}, usage, stageError("narrate", planFailure(err, input.PlanningInput, result, "validation", 0))
+	}
+	return result, usage, nil
+}
+
 func (s *Service) Plan(ctx context.Context, model llm.ModelRef, input clip.PlanningInput) (clip.EditPlan, llm.Usage, error) {
 	if err := ctx.Err(); err != nil {
 		return clip.EditPlan{}, llm.Usage{}, err
