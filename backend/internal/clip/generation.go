@@ -189,6 +189,10 @@ func (e *StageFailure) Failure() llm.Failure {
 		f = llm.Failure{Reason: reasonFactsRequired, Params: map[string]string{"labels": strings.Join(facts.Labels, ", ")}}
 	case errors.Is(e.Cause, ErrCopyTooLong):
 		f = llm.Failure{Reason: "CLIP_COPY_TOO_LONG"}
+	// A plan that was read and validated but cannot fill the floor is the
+	// footage's shortfall, not the model's (CLIP-120).
+	case errors.Is(e.Cause, ErrInsufficientFootage):
+		f = llm.Failure{Reason: reasonInsufficientFootage}
 	// One reason per verifier check, so the correction step can point at what
 	// failed instead of saying the plan is invalid (CDS-52, LANG-21).
 	case errors.As(e.Cause, &layout) && layout.LayoutReason() != "":

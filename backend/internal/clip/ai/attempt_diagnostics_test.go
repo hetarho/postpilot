@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/postpilot/backend/internal/clip"
-	"github.com/postpilot/backend/internal/llm"
 )
 
 func TestNativeTimelineUsesObservedRoomBeforeSelectedStarts(t *testing.T) {
@@ -37,7 +36,7 @@ func TestNativeTimelineUsesObservedRoomBeforeSelectedStarts(t *testing.T) {
 			}
 			if duration == 6000 {
 				d, ok := clip.DiagnosticFromError(err)
-				if !errors.Is(err, llm.ErrBadOutput) || !ok || d.Phase != "timeline_grow" || d.Values["before_ms"] != 4000 || d.Values["after_ms"] != 12000 || d.Values["remaining_ms"] != 3000 || len(d.Ranges) != 2 || !d.Ranges[0].Valid {
+				if !errors.Is(err, clip.ErrInsufficientFootage) || !ok || d.Check != "plan_length_floor" || d.Phase != "timeline_grow" || d.Values["before_ms"] != 4000 || d.Values["after_ms"] != 12000 || d.Values["remaining_ms"] != 3000 || len(d.Ranges) != 2 || !d.Ranges[0].Valid {
 					t.Fatalf("lost failure measurements: %v %+v", err, d)
 				}
 				return
@@ -69,7 +68,7 @@ func TestNativeInvalidSelectionKeepsOnlySafeRangeDiagnostics(t *testing.T) {
 	s, models, _ := newService(t, raw(wire), true)
 	_, _, err := s.Plan(t.Context(), testRef(), in)
 	d, ok := clip.DiagnosticFromError(err)
-	if !ok || len(models.calls) != 1 || d.Check != "plan_timeline" || len(d.Ranges) != 1 || !d.Ranges[0].Valid || d.Values["after_ms"] != 7500 {
+	if !ok || len(models.calls) != 1 || d.Check != "plan_length_floor" || len(d.Ranges) != 1 || !d.Ranges[0].Valid || d.Values["after_ms"] != 7500 {
 		t.Fatalf("unsafe selection diagnostic: %v %+v", err, d)
 	}
 }

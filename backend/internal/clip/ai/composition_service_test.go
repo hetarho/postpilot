@@ -258,21 +258,25 @@ func TestNativeWriterRespectsItemOrderAndRejectsStructuralInventions(t *testing.
 		name   string
 		mutate func(*clip.PlanningInput, map[string]any)
 		valid  bool
+		// The cause an invalid case fails with: a removal that leaves too
+		// little footage is the footage's shortfall (CLIP-120), while an
+		// unreadable response is the model's.
+		cause error
 	}{
 		{"reordered_items_and_cuts", func(in *clip.PlanningInput, p map[string]any) {
 			slices.Reverse(in.Composition.Inputs.Items["menu"])
 			slices.Reverse(p["cuts"].([]any))
-		}, true},
-		{"reordered_cuts_only", func(_ *clip.PlanningInput, p map[string]any) { slices.Reverse(p["cuts"].([]any)) }, false},
-		{"invented_element", func(_ *clip.PlanningInput, p map[string]any) { nativeGenerated(p, 0)["element_id"] = "cta" }, true},
-		{"fixed_rewrite", func(_ *clip.PlanningInput, p map[string]any) { nativeGenerated(p, 0)["element_id"] = "sticker" }, true},
-		{"unknown_section", func(_ *clip.PlanningInput, p map[string]any) { firstCut(p)["template_section_id"] = "invention" }, false},
-		{"missing_cut_reference", func(_ *clip.PlanningInput, p map[string]any) { firstCut(p)["observation_refs"] = []string{} }, true},
+		}, true, nil},
+		{"reordered_cuts_only", func(_ *clip.PlanningInput, p map[string]any) { slices.Reverse(p["cuts"].([]any)) }, false, clip.ErrInsufficientFootage},
+		{"invented_element", func(_ *clip.PlanningInput, p map[string]any) { nativeGenerated(p, 0)["element_id"] = "cta" }, true, nil},
+		{"fixed_rewrite", func(_ *clip.PlanningInput, p map[string]any) { nativeGenerated(p, 0)["element_id"] = "sticker" }, true, nil},
+		{"unknown_section", func(_ *clip.PlanningInput, p map[string]any) { firstCut(p)["template_section_id"] = "invention" }, false, clip.ErrInsufficientFootage},
+		{"missing_cut_reference", func(_ *clip.PlanningInput, p map[string]any) { firstCut(p)["observation_refs"] = []string{} }, true, nil},
 		{"case_key", func(_ *clip.PlanningInput, p map[string]any) {
 			firstCut(p)["Source_ID"] = "source"
 			delete(firstCut(p), "source_id")
-		}, false},
-		{"null", func(_ *clip.PlanningInput, p map[string]any) { nativeGenerated(p, 0)["text"] = nil }, false},
+		}, false, llm.ErrBadOutput},
+		{"null", func(_ *clip.PlanningInput, p map[string]any) { nativeGenerated(p, 0)["text"] = nil }, false, llm.ErrBadOutput},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			in, p := nativeInput(), nativePlan()
@@ -285,7 +289,7 @@ func TestNativeWriterRespectsItemOrderAndRejectsStructuralInventions(t *testing.
 			if len(models.calls) != 1 {
 				t.Fatal("not one writer call")
 			}
-			if !tc.valid && !errors.Is(err, llm.ErrBadOutput) {
+			if !tc.valid && !errors.Is(err, tc.cause) {
 				t.Fatalf("wrong failure %v", err)
 			}
 		})
@@ -423,7 +427,7 @@ func TestUnusableAndUnknownFootageCannotBeSelectedAutomatically(t *testing.T) {
 		{"uncertain at 1x", "", clip.CertaintyUncertain, clip.UsabilityUsable, 1000},
 		{"uncertain sped up", "", clip.CertaintyUncertain, clip.UsabilityUsable, 2000},
 		{"certain sped up", "", clip.CertaintyCertain, clip.UsabilityUsable, 2000},
-		{"rate outside the source's own set", "plan_timeline", clip.CertaintyCertain, clip.UsabilityUsable, 500},
+		{"rate outside the source's own set", "plan_length_floor", clip.CertaintyCertain, clip.UsabilityUsable, 500},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			in, p := nativeInput(), nativePlan()
@@ -611,7 +615,7 @@ func TestReconciliationCannotReachAnotherItemsFootage(t *testing.T) {
 	s, models, _ := newService(t, raw(p), true)
 	_, _, err := s.Plan(t.Context(), testRef(), in)
 	d, ok := clip.DiagnosticFromError(err)
-	if err == nil || !ok || d.Check != "plan_timeline" || d.Phase != "timeline_grow" || len(models.calls) != 1 {
+	if err == nil || !ok || !errors.Is(err, clip.ErrInsufficientFootage) || d.Check != "plan_length_floor" || d.Phase != "timeline_grow" || len(models.calls) != 1 {
 		t.Fatalf("a cut reached past its own scene: %v %+v calls=%d", err, d, len(models.calls))
 	}
 	// The same cut IS grown, up to its own scene's end, before the shortfall is
@@ -659,7 +663,7 @@ func TestNativeWriterAdmitsConsecutiveCutsInOneNonrepeatedSection(t *testing.T) 
 			}
 			if !tc.valid {
 				d, ok := clip.DiagnosticFromError(err)
-				if !errors.Is(err, llm.ErrBadOutput) || !ok || d.Check != "plan_timeline" {
+				if !errors.Is(err, clip.ErrInsufficientFootage) || !ok || d.Check != "plan_length_floor" {
 					t.Fatalf("wanted a below-floor remainder, got %v (%+v)", err, d)
 				}
 				return

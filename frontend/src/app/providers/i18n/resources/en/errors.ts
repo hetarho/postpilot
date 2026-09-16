@@ -102,6 +102,8 @@ export const errors = {
     'The videos are processing or the upload has expired. Check progress, then select the source videos again.',
   CLIP_NOT_FOUND: 'Could not find the clip or video template.',
   CLIP_COPY_TOO_LONG: 'This caption does not fit in two lines. Shorten it and try again.',
+  CLIP_INSUFFICIENT_FOOTAGE:
+    'The selected videos are too short to reach the minimum length. Select more footage or lower the target length, then try again.',
   CLIP_LAYOUT_SAFE_AREA:
     'A caption fell outside the screen-safe area, so rendering stopped. Shorten it or move the caption.',
   CLIP_LAYOUT_SIZE:

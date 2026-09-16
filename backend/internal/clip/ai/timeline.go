@@ -148,7 +148,10 @@ func composeTimeline(cfg Config, in clip.PlanningInput, plan *clip.EditPlan) (er
 	}
 	if total > in.TargetDurationMS {
 		trimGeneratedOverrun(plan, in.TargetDurationMS)
-		if plan.DurationMS < cfg.Render.MinDurationMS || plan.DurationMS > cfg.Render.MaxDurationMS {
+		if plan.DurationMS < cfg.Render.MinDurationMS {
+			return footageError("plan_length_floor")
+		}
+		if plan.DurationMS > cfg.Render.MaxDurationMS {
 			return outputError("plan_timeline")
 		}
 		return nil
@@ -235,7 +238,10 @@ func composeTimeline(cfg Config, in clip.PlanningInput, plan *clip.EditPlan) (er
 	// seconds it cannot have.
 	achieved := in.TargetDurationMS - remaining
 	if achieved < cfg.Render.MinDurationMS {
-		return outputError("plan_timeline")
+		// The plan was read and validated and every cut already reaches the end
+		// of its observed footage: what is missing is footage, not a better
+		// response (CLIP-120).
+		return footageError("plan_length_floor")
 	}
 	plan.DurationMS = achieved
 	return nil

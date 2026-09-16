@@ -47,7 +47,6 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
-| T184 | A plan under the length floor fails as insufficient footage | CLIP | - | todo |
 | T185 | The writer's cut budget follows the sections the answers admit | CLIP | T183 | todo |
 | T186 | A project carries its own instruction | CLIP | - | todo |
 | T187 | The writer reads the instruction and lets it outrank guidance | CLIP | T186 | todo |
@@ -63,9 +62,12 @@
 
 ## next
 - implement-task T191, then T190 — T191 gates T192 T193 T194 T195 and T190 makes each one's effect measurable; T193 T194 T196 carry most of the 1225 s a prod generation took.
-- implement-task T184, then T185 — the r26 delta's remaining two; T186 T187 T188 carry the instruction path the owner is waiting on and T189 the binding failure that emptied every meat caption.
+- implement-task T185, then T186 T187 T188 — the writer's cut budget closes the r26 delta and the instruction path is what the owner is waiting on; T189 removes the binding failure that emptied every meat caption.
 - T177 is blocked on the owner's viewing answers; T008 stays owner-dependent.
 ## log
+- 260916 T184 done; a validated plan under the 15 s floor fails as CLIP_INSUFFICIENT_FOOTAGE with its own plan_length_floor check, never as an unreadable response
+- 260916 flake: internal/clip/store fails one differing test per full-suite run on clip source expiry (reproduced on unmodified HEAD) — review-code candidate
+- 260916 T184 claimed (grp)
 - 260916 T183 done; one effective minimum per group in both grammars, admission refusing an empty required group by name with its counts, and the owner's controls opened there
 - 260916 create-task CLIP done; T190 T191 instrument duration and delivered-clip identity, T192 T193 T194 T195 T196 carry r28's pass budget
 - 260916 prod measurement behind r28: generation 1225 s — prepare 285, analyze 69, plan 13, render 857 (encode 461, overlay 304); the box is one physical core
@@ -83,6 +85,3 @@
 - 260916 T182 done; the writer is told each declared maximum and an over-long answer takes the shorten-then-omit ladder
 - 260916 T182 claimed (max)
 - 260916 T181 done; answers bounded where they are typed, and a stored over-long one refused by field label with its counts
-- 260916 T181 claimed (max)
-- 260916 T180 done; a bounded 최대 글자 수 control on field, element and slot rows, the cap stated from the parser
-- 260916 T180 claimed (max)

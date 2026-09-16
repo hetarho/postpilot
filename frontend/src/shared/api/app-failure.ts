@@ -89,6 +89,7 @@ export const appFailureSpecs = {
   VOICE_INVALID_LIFECYCLE: {},
   CLIP_INVALID_INPUT: { optional: ['cut_id', 'check'] },
   CLIP_COPY_TOO_LONG: {},
+  CLIP_INSUFFICIENT_FOOTAGE: {},
   CLIP_LAYOUT_SAFE_AREA: {},
   CLIP_LAYOUT_SIZE: {},
   CLIP_LAYOUT_OVERLAP: {},

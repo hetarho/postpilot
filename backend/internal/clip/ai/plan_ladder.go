@@ -39,7 +39,7 @@ var planCheckTiers = map[string]planTier{
 	"plan_copy_format": removePlan, "plan_copy_keyword": removePlan, "plan_copy_lines": removePlan,
 	"plan_copy_second_cut": removePlan, "plan_copy_sequence": removePlan,
 	"plan_source_audio": repairPlan, "plan_duration_range": repairPlan, "plan_duration_limit": repairPlan,
-	"plan_timeline": failPlan, "caption_measurement": failPlan,
+	"plan_timeline": failPlan, "caption_measurement": failPlan, "plan_length_floor": failPlan,
 	"plan_required": failPlan, "plan_cut_fields": failPlan, "plan_caption_fields": failPlan,
 	"output_encoding_or_size": failPlan, "output_field_type": failPlan, "output_json": failPlan, "output_shape": failPlan,
 }

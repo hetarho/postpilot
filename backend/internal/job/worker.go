@@ -222,7 +222,7 @@ func logJobFailure(found Job, failure Failure, err error) {
 				"plan_style", "plan_accent", "caption_measurement", "plan_cut_count",
 				"plan_duration_range", "plan_source_metadata", "plan_cut_identity",
 				"plan_cut_range", "plan_cut_fade", "plan_cut_transition", "plan_focal", "plan_copy_format",
-				"plan_duration_limit", "plan_timeline", "plan_copy_lines",
+				"plan_duration_limit", "plan_timeline", "plan_length_floor", "plan_copy_lines",
 				"plan_copy_chars", "plan_copy_exposure", "plan_copy_keyword",
 				"plan_layout_safe_area", "plan_layout_size", "plan_layout_overlap",
 				"plan_layout_motion", "plan_layout_anchor_step", "plan_layout_frequency",

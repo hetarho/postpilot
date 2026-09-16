@@ -214,7 +214,7 @@ func TestComposeCannotFillTargetFromUnobservedOrReusedFootage(t *testing.T) {
 				return
 			}
 			var diagnostic interface{ OutputValidationCode() string }
-			if !errors.Is(err, llm.ErrBadOutput) || !errors.As(err, &diagnostic) || diagnostic.OutputValidationCode() != "plan_timeline" || len(models.calls) != 1 || measure.calls != 0 || usage != models.response.Usage {
+			if !errors.Is(err, clip.ErrInsufficientFootage) || !errors.As(err, &diagnostic) || diagnostic.OutputValidationCode() != "plan_length_floor" || len(models.calls) != 1 || measure.calls != 0 || usage != models.response.Usage {
 				t.Fatalf("unsafe timeline adjustment or paid retry: %v", err)
 			}
 			d, ok := clip.DiagnosticFromError(err)
@@ -530,5 +530,62 @@ func TestReconciliationConvertsOutputDeltaBackToSourceDelta(t *testing.T) {
 				t.Fatalf("rate %d: cut gave up %d source ms", rate, c.SourceSpanMS())
 			}
 		}
+	}
+}
+
+// A readable, schema-valid plan whose assembled output cannot reach the length
+// floor fails as insufficient selected footage (CLIP-120) rather than as an
+// unreadable response, and asks for no correction attempt: the response was
+// read and validated, so resending the prompt cannot lengthen the footage. The
+// same plan with one more second of observed footage ships.
+func TestPlanUnderTheLengthFloorFailsAsInsufficientFootage(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		observed int
+		ok       bool
+	}{
+		{"just under the floor", config.ClipMinDurationMS - 1000, false},
+		{"exactly at the floor", config.ClipMinDurationMS, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			in := planningInput()
+			in.Analyses[0].Source.Info.DurationMS = tc.observed
+			in.Analyses[0].Segments[0].EndMS = tc.observed
+			span := tc.observed / 3
+			cuts := []any{}
+			for i := range 3 {
+				end := (i + 1) * span
+				if i == 2 {
+					end = tc.observed
+				}
+				cuts = append(cuts, map[string]any{"id": fmt.Sprint("cut-", i), "source_id": "source",
+					"start_ms": i * span, "end_ms": end, "rate_permille": 1000,
+					"focal": map[string]any{"x": .5, "y": .5}, "chips": []string{},
+					"caption": map[string]any{"text": "여행", "start_ms": 0, "end_ms": 1000, "short_text": "여행", "keyword": ""}})
+			}
+			s, models, _ := newService(t, raw(map[string]any{"ratio": "vertical", "duration_ms": 15000, "cuts": cuts}), true)
+			plan, _, err := s.Plan(t.Context(), testRef(), in)
+			if len(models.calls) != 1 {
+				t.Fatalf("a validated plan was resent: %d calls", len(models.calls))
+			}
+			if tc.ok {
+				if err != nil || plan.DurationMS != tc.observed {
+					t.Fatalf("a plan at the floor was refused: %v %d", err, plan.DurationMS)
+				}
+				return
+			}
+			var code interface{ OutputValidationCode() string }
+			if !errors.Is(err, clip.ErrInsufficientFootage) || errors.Is(err, llm.ErrBadOutput) || !errors.As(err, &code) || code.OutputValidationCode() != "plan_length_floor" {
+				t.Fatalf("wrong cause below the floor: %v", err)
+			}
+			d, ok := clip.DiagnosticFromError(err)
+			if !ok || d.Check != "plan_length_floor" || d.Values["min_ms"] != config.ClipMinDurationMS || d.Values["after_ms"] != tc.observed {
+				t.Fatalf("lost the shortfall measurements: %+v", d)
+			}
+			// CLIP-85: the validated ranges stay inspectable after the refusal.
+			if len(d.Ranges) != 3 || !d.Ranges[0].Valid {
+				t.Fatalf("lost the validated ranges: %+v", d.Ranges)
+			}
+		})
 	}
 }

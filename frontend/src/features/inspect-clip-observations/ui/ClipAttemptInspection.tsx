@@ -111,6 +111,9 @@ const checkExplanations = {
   plan_source_metadata: 'inspection.planSourceMetadata',
   plan_target_duration: 'inspection.planTargetDuration',
   plan_timeline: 'inspection.lengthMismatch',
+  // The floor's own check always means the same thing, whatever phase reached
+  // it: the selected footage could not fill the minimum (CLIP-120).
+  plan_length_floor: 'inspection.tooShort',
   plan_volume: 'inspection.planVolume',
   plan_cut_rate: 'inspection.planCutRate',
   plan_cut_scene: 'inspection.planCutScene',

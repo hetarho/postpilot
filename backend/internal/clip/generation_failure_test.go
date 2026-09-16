@@ -74,3 +74,16 @@ func TestPreparationResourceFailuresStayTypedAndRedacted(t *testing.T) {
 		}
 	}
 }
+
+// The floor's shortfall reaches the owner as its own cause, distinct from the
+// unreadable-response cause a failed decode carries (CLIP-120).
+func TestInsufficientFootageFailsUnderItsOwnCause(t *testing.T) {
+	f := (&StageFailure{Stage: "plan", Cause: fmt.Errorf("clip output: %w", ErrInsufficientFootage)}).Failure()
+	if f.Reason != reasonInsufficientFootage || len(f.Params) != 0 || f.TechnicalDetail != "" {
+		t.Fatal("the footage shortfall lost its own cause", f)
+	}
+	unreadable := (&StageFailure{Stage: "plan", Cause: fmt.Errorf("clip output: %w", llm.ErrBadOutput)}).Failure()
+	if unreadable.Reason == f.Reason {
+		t.Fatal("a footage shortfall and an unreadable response share one cause", unreadable)
+	}
+}

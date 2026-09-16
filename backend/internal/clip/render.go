@@ -14,6 +14,12 @@ import (
 
 var ErrCopyTooLong = errors.New("CLIP_COPY_TOO_LONG")
 
+// ErrInsufficientFootage is a readable, validated plan whose assembled output
+// cannot reach the length floor (CLIP-120). It is deliberately NOT ErrInvalid
+// or ErrBadOutput: the response was read and validated, so the owner is pointed
+// at the footage rather than at the model, and no correction attempt is issued.
+var ErrInsufficientFootage = errors.New("CLIP_INSUFFICIENT_FOOTAGE")
+
 // All persisted time authority is integer milliseconds. Positions and volume are
 // normalized values, never arbitrary filter expressions or pixel coordinates.
 type Point struct{ X, Y float64 }
@@ -257,8 +263,9 @@ func (e planViolation) OutputValidationCode() string { return string(e) }
 // Each is its own named constant so the public-reason scan can read it
 // (internal/platform/rpcserver/failure_reasons_test.go).
 const (
-	reasonDisclosureRequired = "CLIP_DISCLOSURE_REQUIRED"
-	reasonFactsRequired      = "CLIP_FACTS_REQUIRED"
+	reasonDisclosureRequired  = "CLIP_DISCLOSURE_REQUIRED"
+	reasonFactsRequired       = "CLIP_FACTS_REQUIRED"
+	reasonInsufficientFootage = "CLIP_INSUFFICIENT_FOOTAGE"
 )
 
 const (
