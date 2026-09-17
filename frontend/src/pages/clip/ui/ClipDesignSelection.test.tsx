@@ -49,10 +49,10 @@ describe('① chooses the design, the caption styles and an optional template', 
     await user.click(screen.getByRole('button', { name: '클립 만들기' }))
     await waitFor(() => expect(writes).toHaveLength(1))
     expect(writes[0].videoTemplateId).toBe('')
-    // With no template the server seeds the shared defaults, which is what ①
-    // then offers as the project's own selection.
-    expect(writes[0].introPreset).toBe('b')
-    expect(writes[0].outroPreset).toBe('e')
+    // Nothing is selected, and nothing selected IS the shared default, which is
+    // what ① then offers (CLIP-139).
+    expect(writes[0].introPreset).toBeUndefined()
+    expect(writes[0].outroPreset).toBeUndefined()
   })
 
   it('offers each style with its own drawing, says which are drawn frame by frame, and saves the selection', async () => {

@@ -185,18 +185,12 @@ func legacyCompositionRoot(recipe Recipe) *composition.Node {
 }
 
 // EmptyCompositionBody is the document a project with NO template generates
-// from (CLIP-5): the two region elements the grammar requires, with no slot
-// text, no field, no group, no badge and no guide. Nothing of it renders — an
-// all-empty block draws nothing (CDS-73) — so the clip is its footage and its
-// narration alone. The grammar makes the root state a design selection, and this
-// one states the defaults: what a region actually renders in is the project's
-// and is read from there, never from here (CLIP-139).
+// from (CLIP-5): an outline with no entry at all — no slot text, no field, no
+// group, no badge and no guide — so the clip is its footage and its narration
+// alone. It names no design either: what a region renders in is the project's
+// and is read from there (CLIP-14, CLIP-139).
 func EmptyCompositionBody() string {
-	root := node("clip", map[string]string{"version": "1", "intro": "b", "caption": "bold", "outro": "e"})
-	root.Children = append(root.Children,
-		node("text", map[string]string{"id": "empty-hook", "kind": "fixed", "role": "hook", "basis": "output-start"}),
-		node("text", map[string]string{"id": "empty-ending", "kind": "fixed", "role": "ending", "basis": "output-end"}))
-	return composition.SerializeNode(root)
+	return composition.SerializeNode(node("clip", map[string]string{"version": "1"}))
 }
 
 // NoTemplate reports a frozen document no template stands behind: the empty one

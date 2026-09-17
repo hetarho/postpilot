@@ -138,27 +138,24 @@ describe('composition template authoring', () => {
       false,
     )
   })
-  it('creates a native template with one save and the caption treatment', async () => {
+  it('creates a template with one save and no design anywhere on the screen', async () => {
     const user = userEvent.setup(),
       writes: ClipRecipe[] = []
     const { router } = mount({ writes }, '/video-templates/new')
     await user.type(await screen.findByLabelText('템플릿 이름'), '새 구성')
     expect(screen.queryByLabelText(/스타일|style/i)).not.toBeInTheDocument()
-    expect(screen.queryByRole('tab', { name: '구성 편집' })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
-    await user.click(screen.getByRole('tab', { name: 'B 위아래 가로선' }))
-    await user.click(screen.getByRole('tab', { name: '크게 강조' }))
-    expect(screen.queryByRole('tab', { name: '원문' })).not.toBeInTheDocument()
-    await user.click(screen.getByRole('tab', { name: 'E 점수 강조' }))
+    // The design belongs to the clip, so the editor offers none of it (CLIP-42).
+    for (const name of ['B 위아래 가로선', '크게 강조', 'E 점수 강조'])
+      expect(screen.queryByRole('tab', { name })).not.toBeInTheDocument()
+    // 원문 and the builder are there from the first keystroke, over an empty body.
+    expect(screen.getByRole('tab', { name: '원문' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '인트로 문구 추가' }))
     expect(
-      parseClipComposition(((await source()) as HTMLTextAreaElement).value).elements.map((e) => [
+      parseClipTemplate(((await source()) as HTMLTextAreaElement).value).elements.map((e) => [
         e.role,
         e.rows.length,
       ]),
-    ).toEqual([
-      ['hook', 2],
-      ['ending', 3],
-    ])
+    ).toEqual([['hook', 1]])
     await user.dblClick(screen.getByRole('button', { name: '저장' }))
     await waitFor(() =>
       expect(router.state.location.pathname).toBe('/video-templates/video-template-1'),
@@ -187,18 +184,62 @@ describe('composition template authoring', () => {
     const user = userEvent.setup()
     mount()
     await screen.findByRole('button', { name: '장소' })
-    for (const name of ['정보 추가', '항목 묶음 추가', '구성 안내 추가', '화면 문구 추가'])
+    for (const name of [
+      '정보 추가',
+      '항목 묶음 추가',
+      '구성 안내 추가',
+      '구성 단계 추가',
+      '인트로 문구 추가',
+      '자막 추가',
+      '아웃트로 문구 추가',
+      '표시 문구 추가',
+    ])
       expect(screen.getByRole('button', { name })).toBeInTheDocument()
     for (const name of ['장면 추가', '반복 추가'])
       expect(screen.queryByRole('button', { name })).not.toBeInTheDocument()
     // Caption pace and the accent belong to the project now (CLIP-139).
     expect(screen.queryByRole('combobox', { name: /강조색/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('combobox', { name: /자막 속도/ })).not.toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: '화면 문구 추가' }))
+    // Each kind lands at the end of the outline, in the order it was added.
+    await user.click(screen.getByRole('button', { name: '자막 추가' }))
+    await user.click(screen.getByRole('button', { name: '표시 문구 추가' }))
     const added = parseClipTemplate(((await source()) as HTMLTextAreaElement).value)
-    expect(added.elements.map((e) => e.role)).toEqual(['badge', 'hook', 'ending', 'badge'])
+    expect(added.outline.map((entry) => added.elements[entry.index].role)).toEqual([
+      'badge',
+      'hook',
+      'ending',
+      'caption',
+      'badge',
+    ])
     expect(added.sections).toEqual([])
   })
+  it('reorders and deletes every kind of entry, regions included', async () => {
+    const user = userEvent.setup()
+    mount()
+    // The intro entry is an outline row like any other now (CLIP-112): it can be
+    // moved and removed, and the body's order is what the list shows.
+    const before = parseClipTemplate(((await source()) as HTMLTextAreaElement).value)
+    expect(before.outline.map((e) => before.elements[e.index].role)).toEqual([
+      'badge',
+      'hook',
+      'ending',
+    ])
+    await user.click(await screen.findByRole('tab', { name: '구성 편집' }))
+    const rows = screen.getAllByRole('button', { name: '위로 이동' })
+    await user.click(rows[rows.length - 1])
+    const moved = parseClipTemplate(((await source()) as HTMLTextAreaElement).value)
+    expect(moved.outline.map((e) => moved.elements[e.index].role)).toEqual([
+      'badge',
+      'ending',
+      'hook',
+    ])
+    await user.click(await screen.findByRole('tab', { name: '구성 편집' }))
+    await user.click(screen.getAllByRole('button', { name: '아웃트로' })[0])
+    await user.click(screen.getByRole('button', { name: '아웃트로 삭제' }))
+    const removed = parseClipTemplate(((await source()) as HTMLTextAreaElement).value)
+    expect(removed.outline.map((e) => removed.elements[e.index].role)).toEqual(['badge', 'hook'])
+  })
+
   it('a text carries no role of its own and no timing at all', async () => {
     const user = userEvent.setup()
     mount()

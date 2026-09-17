@@ -1,10 +1,11 @@
 import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
+  clipFieldMaximum,
   compositionCharacters,
   type ClipComposition,
 } from '@/entities/clip-template/@x/clip-project'
-import { CLIP_COMPOSITION_LIMITS } from '@/shared/config'
+import { CLIP_DEFAULT_REGION_PRESETS, type ClipRegionPresets } from '@/shared/config'
 import { Button, FieldCount, FieldLabel, FieldMessage, Textarea, Typography } from '@/shared/ui'
 import type { ClipCompositionInputs as Inputs } from '../model/composition'
 import { compositionInputsAtMinimum, removeCompositionItem } from '../model/composition-inputs'
@@ -12,10 +13,14 @@ import { boundedText } from '../lib/bounded-text'
 
 export function ClipCompositionInputFields({
   document,
+  presets = CLIP_DEFAULT_REGION_PRESETS,
   value: stored,
   onChange,
 }: {
   document: ClipComposition
+  /** The project's own presets, which decide how long an answer bound into an
+   *  intro or outro line may be (CLIP-117, CLIP-147). */
+  presets?: ClipRegionPresets
   value: Inputs
   onChange: (value: Inputs) => void
 }) {
@@ -34,12 +39,11 @@ export function ClipCompositionInputFields({
         const fieldId = `${id}-${key}-${f.id}`
         const text = values[f.id] ?? ''
         const missing = f.required && !text.trim()
-        // The maximum every position this answer reaches agrees on, computed by
-        // the parser (CLIP-117). A field that reaches no bounded position still
-        // has the grammar's own ceiling, so no field loses its counter.
-        const max =
-          document.maxima[f.group ? `${f.group}.${f.id}` : f.id] ??
-          CLIP_COMPOSITION_LIMITS.answerChars
+        // The maximum every position this answer reaches agrees on: the
+        // parser's, narrowed by the region slots the project's own presets put
+        // this answer in (CLIP-117). A field that reaches no bounded position
+        // still has the grammar's own ceiling, so no field loses its counter.
+        const max = clipFieldMaximum(document, presets, f.group ? `${f.group}.${f.id}` : f.id)
         const count = compositionCharacters(text)
         // Only an answer stored before its template tightened this number can be
         // over it: nothing typed here gets past the bound.

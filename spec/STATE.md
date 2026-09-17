@@ -48,13 +48,14 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
-| T229 | The template editor drops the design step and edits the outline | CLIP | T227 | todo |
 | T230 | 형식 안내 and 원문 teach the outline grammar | CLIP | T227 | todo |
 
 ## next
-- implement-task T229 then T230 — the two editor-surface tasks left (both touch resources/*/clips.ts)
+- implement-task T230 — the format guide is the last of CLIP r33
 - T177 stays blocked (its viewing checklist predates both the caption style set and the outline) and T008 is another session's
 ## log
+- 260918 T229 done; the editor is name, description and one outline the builder and 원문 share — no design step, every entry reorderable and deletable, region lines added one at a time — and ① narrows a bound answer with its own preset (the CLIP-117 gap T227 opened)
+- 260918 T229 claimed (otl)
 - 260918 T231 done; the pace and the accent stop being seeded too, the FE stops copying the five onto the draft, and an r23 design-first body is pinned through store → converted read → save → mint
 - 260918 T231 claimed (otl)
 - 260918 T233 done; the outline's caption entries reach the narration call in order and come back placed by the writer, with a fixed entry's own words kept and marked authored so V11 leaves them alone; an omitted entry notices once and the order is never checked
@@ -73,5 +74,3 @@
 - 260917 T226 done; both approval quotes carry what the frame-by-frame captions add — the plan's sequence captions, their frames and the seconds at a MEASURED per-frame cost (30 ms, resvg over real frames, 6–37 ms by crop on this Mac), or the selected sequence styles before a plan exists — shown on the one approval surface ① and ② share, refusing nothing (CLIP-145 stays open and needs prod numbers)
 - 260917 T226 claimed (stg)
 - 260917 T224 done; ① chooses the design — intro and outro presets beside pace and accent, the sixteen caption styles as a multi-select where each is drawn by the renderer itself and the frame-by-frame ones say so, an empty selection reading as the default style alone — the template is optional everywhere the FE still demanded one (없음 by default, minting without it), and choosing one fills all five while clearing it keeps them; the style samples needed a new GetClipCaptionStyleSamples (T222's preview needs a saved plan, so ① could not use it) — owner-approved mid-task
-- 260917 T224 claimed (stg)
-- 260917 T223 done; a template may carry named composition stages (`<stage name="…">한 줄 의도</stage>`, root only, at most 8, both halves required and bounded by the label and prompt counts), read by the Go and TypeScript parsers against the shared corpus and handed to the flow call in the template guide's position as a numbered order to follow where the footage allows — admitting and forbidding nothing, with no notice, count or refusal anywhere for a stage

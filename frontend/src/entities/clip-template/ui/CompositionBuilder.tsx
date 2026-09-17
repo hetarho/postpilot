@@ -11,11 +11,6 @@ import {
   newCompositionNode,
   patchCompositionSource,
 } from '../lib/composition-author'
-import {
-  compositionDesign,
-  isCompositionRegion,
-  rebuildCompositionSkeleton,
-} from '../lib/composition-skeleton'
 import { CompositionInput } from './CompositionFields'
 import { CompositionTextControls } from './CompositionTextControls'
 
@@ -42,7 +37,6 @@ export function CompositionBuilder({
   } catch {
     return <Typography variant="body">{t('composition.repairSource')}</Typography>
   }
-  const design = compositionDesign(source)
   const all = compositionOutline(root)
   const fields = all
     .filter((r) => r.node.name === 'field')
@@ -83,16 +77,6 @@ export function CompositionBuilder({
   )
   const renderEditor = (node: CompositionNode, label: string) => {
     const name = node.name
-    const region = isCompositionRegion(node)
-    // How many lines a region draws is the project's preset to decide, so a
-    // surplus row is no authoring error here (CLIP-147); an entry that declares
-    // a timing or a placement of its own still is (CLIP-66, CLIP-112).
-    const invalidRegion =
-      region &&
-      (['basis', 'start', 'end', 'position', 'align', 'style'].some((k) => k in node.attributes) ||
-        node.children.some((n) =>
-          n.name === 'row' ? 'role' in n.attributes : n.name !== '#text' || !!n.text.trim(),
-        ))
     const change = (next: CompositionNode) => patch(node, next)
     const attr = (field: string, value: string) =>
       change({ ...node, attributes: { ...node.attributes, [field]: value } })
@@ -179,52 +163,23 @@ export function CompositionBuilder({
           />
         )}
         {name === 'text' && (
-          <CompositionTextControls
-            node={node}
-            design={design}
-            bindings={bindings}
-            onChange={change}
-          />
+          <CompositionTextControls node={node} bindings={bindings} onChange={change} />
         )}
         {name === 'group' && addButtons(node, ['field'])}
-        {invalidRegion && (
-          <div>
-            <Typography variant="body" role="status">
-              {t('composition.invalid', { line: node.span.line, element: node.attributes.id })}{' '}
-              {t('composition.errors.invalid_skeleton')}
-            </Typography>
-            <Button
-              variant="secondary"
-              onClick={() =>
-                onChange(
-                  rebuildCompositionSkeleton(
-                    source,
-                    design,
-                    node.attributes.role as 'hook' | 'ending',
-                  ),
-                )
-              }
-            >
-              {t('composition.design.rebuild')}
-            </Button>
-          </div>
-        )}
-        {!region && (
-          <Button
-            variant="ghost"
-            onClick={() => {
-              patch(node, null)
-              setExpanded('')
-            }}
-          >
-            {t('composition.remove', { label })}
-          </Button>
-        )}
+        <Button
+          variant="ghost"
+          onClick={() => {
+            patch(node, null)
+            setExpanded('')
+          }}
+        >
+          {t('composition.remove', { label })}
+        </Button>
       </section>
     )
   }
   const list = (parent: CompositionNode, path: string) => {
-    const nodes = parent.children.filter((n) => n.name !== '#text' && !isCompositionRegion(n))
+    const nodes = parent.children.filter((n) => n.name !== '#text')
     return (
       <SortableList
         labels={{ drag: t('editor.drag'), up: t('editor.up'), down: t('editor.down') }}
@@ -275,22 +230,8 @@ export function CompositionBuilder({
     <div className="min-w-0 space-y-6">
       <Typography variant="meta">{t('composition.projectSettings')}</Typography>
       {activeEditor}
-      <div className="flex flex-wrap gap-2">
-        {all
-          .filter((row) => isCompositionRegion(row.node))
-          .map((row) => (
-            <Button
-              key={row.key}
-              variant="ghost"
-              aria-expanded={expanded === row.key}
-              onClick={() => setExpanded(expanded === row.key ? '' : row.key)}
-            >
-              {labelFor(row.node, 0)}
-            </Button>
-          ))}
-      </div>
       {outline}
-      {addButtons(root, ['field', 'group', 'stage', 'guide', 'text'])}
+      {addButtons(root, ['field', 'group', 'stage', 'guide', 'hook', 'caption', 'ending', 'badge'])}
     </div>
   )
 }

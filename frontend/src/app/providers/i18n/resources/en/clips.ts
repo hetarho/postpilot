@@ -225,14 +225,12 @@ export const clips = {
       caption_bold: 'Large emphasis',
       outro_b: 'B Divider line',
       outro_e: 'E Score emphasis',
-      rebuild: 'Rebuild with this preset',
       slotsHelp:
-        'Set each slot’s text or information binding. The selected design fixes the slot order and appearance.',
-      slot: 'Slot {{n}}',
-      slotKind: 'Slot {{n}} authorship',
-      excess:
-        'This design has no room for this row. Move its text to another slot or clear it, then rebuild the preset.',
-      metadata: 'Intro {{intro}} · Outro {{outro}}',
+        'Set each line’s text or information binding. How many of them are shown is the design the clip chooses.',
+      slot: 'Line {{n}}',
+      slotKind: 'Line {{n}} authorship',
+      addLine: 'Add a line',
+      removeLine: 'Remove line {{n}}',
     },
     sampleShortAI: 'Scene',
     templateChanged:
@@ -298,7 +296,7 @@ export const clips = {
     remove: 'Remove {{label}}',
     preview: 'Composition preview',
     previewHelp:
-      'Check visibility with illustrative answers and cuts. This is not footage or an AI result. The final layout can be checked after generation.',
+      'Check visibility with illustrative answers and cuts. The intro and outro are drawn in the default design; each clip is drawn in the design it chooses in ①. This is not footage or an AI result. The final layout can be checked after generation.',
     sampleDuration: 'Sample duration',
     sampleTime: 'Preview time',
     seconds: '{{value}} seconds',
@@ -377,6 +375,10 @@ export const clips = {
       scene: 'Add scene',
       repeat: 'Add repetition',
       text: 'Add on-screen copy',
+      hook: 'Add intro text',
+      caption: 'Add a caption',
+      ending: 'Add outro text',
+      badge: 'Add a disclosure',
     },
     errors: {
       items_required: 'Add the missing items in “{{element}}” before generating the clip.',

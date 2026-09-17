@@ -74,10 +74,10 @@ export function compositionOutline(root: CompositionNode): CompositionOutlineRow
   return rows
 }
 
-/** The nodes the palette can add. A template declares the information to
- *  collect, its named composition stages, one invisible guide and the disclosure
- *  badge — the only visible element outside the intro/outro skeleton (CLIP-4,
- *  CLIP-59, CLIP-141). */
+/** The entries the palette can add to the outline: the information to collect,
+ *  a named composition stage, one invisible guide, and the visible text — an
+ *  intro or outro line, a caption, the disclosure badge — each declaring its
+ *  words and nothing about where or when it is drawn (CLIP-59, CLIP-112). */
 export function newCompositionNode(name: string, label: string): CompositionNode {
   const id = `${name}_${crypto.randomUUID().replaceAll('-', '')}`
   switch (name) {
@@ -91,6 +91,15 @@ export function newCompositionNode(name: string, label: string): CompositionNode
       return compositionNode(name, {}, [compositionLiteral('')])
     case 'stage':
       return compositionNode(name, { name: label }, [compositionLiteral('')])
+    case 'hook':
+    case 'ending':
+      return compositionNode('text', { id, kind: 'fixed', role: name }, [
+        compositionNode('row', { kind: 'fixed' }),
+      ])
+    case 'caption':
+      return compositionNode('text', { id, kind: 'fixed', role: 'caption' }, [
+        compositionLiteral(''),
+      ])
     default:
       return compositionNode('text', { id, kind: 'fixed', role: 'badge' }, [compositionLiteral('')])
   }

@@ -3,11 +3,6 @@ import { Button, Typography } from '@/shared/ui'
 import type { CompositionNode } from '../model/composition'
 import { boundedChars, compositionLiteral, compositionNode } from '../lib/composition-author'
 import { compositionPositionChars } from '../lib/composition-parse'
-import {
-  compositionSlotCount,
-  regionRows,
-  type CompositionDesign,
-} from '../lib/composition-skeleton'
 import { CompositionInput, CompositionSelect } from './CompositionFields'
 
 export type CompositionBindingOption = { value: string; label: string }
@@ -98,12 +93,10 @@ function Parts({
 
 export function CompositionTextControls({
   node,
-  design,
   bindings,
   onChange,
 }: {
   node: CompositionNode
-  design: CompositionDesign
   bindings: CompositionBindingOption[]
   onChange: (node: CompositionNode) => void
 }) {
@@ -116,15 +109,18 @@ export function CompositionTextControls({
       value,
       label: t(`composition.${key}.${value}`, { defaultValue: t('composition.auto') }),
     }))
+  // An intro or outro entry is a list of LINES the author writes: how many of
+  // them are drawn is the preset the clip chooses in ① (CLIP-147), so nothing
+  // here pads them to a slot count or calls a surplus an error.
   if (a.role === 'hook' || a.role === 'ending') {
-    const count = compositionSlotCount(a.role, design)
-    const slots = regionRows([node], count)
+    const rows = node.children.filter((child) => child.name === 'row')
+    const replace = (next: CompositionNode[]) => onChange({ ...node, children: next })
     const patchRow = (i: number, row: CompositionNode) =>
-      onChange({ ...node, children: slots.map((r, j) => (i === j ? row : r)) })
+      replace(rows.map((r, j) => (i === j ? row : r)))
     return (
       <div className="space-y-4">
         <Typography variant="body">{t('composition.design.slotsHelp')}</Typography>
-        {slots.map((row, i) => (
+        {rows.map((row, i) => (
           <section
             key={i}
             className="space-y-3"
@@ -133,11 +129,6 @@ export function CompositionTextControls({
             <Typography variant="fieldTitle">
               {t('composition.design.slot', { n: i + 1 })}
             </Typography>
-            {i >= count && (
-              <Typography variant="body" role="status">
-                {t('composition.design.excess')}
-              </Typography>
-            )}
             <CompositionSelect
               label={t('composition.design.slotKind', { n: i + 1 })}
               value={row.attributes.kind}
@@ -154,8 +145,17 @@ export function CompositionTextControls({
               bindings={bindings}
               onChange={(children) => patchRow(i, { ...row, children })}
             />
+            <Button variant="ghost" onClick={() => replace(rows.filter((_, j) => j !== i))}>
+              {t('composition.design.removeLine', { n: i + 1 })}
+            </Button>
           </section>
         ))}
+        <Button
+          variant="ghost"
+          onClick={() => replace([...rows, compositionNode('row', { kind: 'fixed' })])}
+        >
+          {t('composition.design.addLine')}
+        </Button>
       </div>
     )
   }

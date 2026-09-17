@@ -32,7 +32,7 @@ import {
   type ProtoClipSourceBatch,
   type AppFailureReason,
 } from '@/shared/api'
-import { compositionDesign, compositionSkeleton, type ClipRecipe } from '@/entities/clip-template'
+import type { ClipRecipe } from '@/entities/clip-template'
 import { CLIP_CAPTION_STYLES, CLIP_DESIGN } from '@/shared/config'
 import {
   clipPlanToProto,
@@ -219,6 +219,9 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       .filter((r) => !r.ownerId || r.ownerId === options.ownerId)
       .map((r) => [r.id, { ...r }]),
   )
+  // What the server freezes for a project with no template: the grammar's own
+  // minimum document (CLIP-5).
+  const emptyCompositionBody = '<clip version="1"/>'
   const fixtureBody = (row: FakeClipTemplate) => {
     const escape = (v: string) =>
       v.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('"', '&quot;')
@@ -369,17 +372,6 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     const job = await options.cancel(req, p)
     return { job: toFakeProto(job), accepted: !!job.cancelRequestedAt }
   })
-  /** What the server starts a project's design selection at: the presets the chosen template's
-   *  own body declares and the caption style it names, or the shared defaults with no template. */
-  const seededDesign = (templateId: string): Partial<ClipProjectDraft> => {
-    const row = templateId ? rows.get(templateId) : undefined
-    const design = compositionDesign(row?.compositionBody ?? (row ? fixtureBody(row) : ''))
-    return {
-      introPreset: design.intro,
-      outroPreset: design.outro,
-      allowedCaptionStyles: [design.caption],
-    }
-  }
   /** Every approved style drawn once. The fake draws a box, not the style: what a test can check
    *  here is that ① offers each style, says which ones are drawn frame by frame, and saves what
    *  was ticked — the drawing itself is the renderer's, pinned by its own Go contract. */
@@ -415,9 +407,8 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       hideDisclosure: req.hideDisclosure,
       cta: req.cta as ClipProjectDraft['cta'],
       instruction: req.instruction,
-      // The server seeds the design selection from the template's own body, or
-      // from the shared defaults where there is no template (CLIP-139).
-      ...seededDesign(req.videoTemplateId),
+      // A template seeds none of the design: every project starts unset, which
+      // is the shared default (CLIP-14, CLIP-139).
       ...(req.introPreset !== undefined
         ? { introPreset: req.introPreset as ClipProjectDraft['introPreset'] }
         : {}),
@@ -483,7 +474,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       const snapshot = !template
         ? (p.composition?.snapshot ?? {
             version: 1,
-            body: compositionSkeleton('b', 'e'),
+            body: emptyCompositionBody,
             legacy: false,
           })
         : p.composition?.snapshot.templateId === p.videoTemplateId &&

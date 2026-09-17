@@ -219,13 +219,12 @@ export const clips = {
       caption_bold: '크게 강조',
       outro_b: 'B 가로선 구분',
       outro_e: 'E 점수 강조',
-      rebuild: '프리셋 형태로 다시 만들기',
-      slotsHelp: '슬롯마다 문구나 연결할 정보를 정하세요. 줄 순서와 모양은 선택한 디자인을 따라요.',
-      slot: '슬롯 {{n}}',
-      slotKind: '슬롯 {{n}} 문구 작성',
-      excess:
-        '이 디자인에 담을 수 없는 줄이에요. 내용을 다른 슬롯으로 옮기거나 직접 비운 뒤 프리셋 형태로 다시 만들어 주세요.',
-      metadata: '인트로 {{intro}} · 아웃트로 {{outro}}',
+      slotsHelp:
+        '줄마다 문구나 연결할 정보를 정하세요. 몇 줄까지 보이는지는 클립에서 고른 디자인이 정해요.',
+      slot: '{{n}}번째 줄',
+      slotKind: '{{n}}번째 줄 문구 작성',
+      addLine: '줄 추가',
+      removeLine: '{{n}}번째 줄 지우기',
     },
     sampleShortAI: '장면 문구',
     templateChanged:
@@ -289,7 +288,7 @@ export const clips = {
     remove: '{{label}} 삭제',
     preview: '구성 미리보기',
     previewHelp:
-      '예시 답변과 가상의 컷으로 표시 구간을 확인해요. 실제 영상이나 AI가 만든 결과가 아니며, 최종 배치는 영상 생성 후 확인할 수 있어요.',
+      '예시 답변과 가상의 컷으로 표시 구간을 확인해요. 인트로·아웃트로는 기본 디자인으로 그렸고, 실제 모양은 클립마다 ① 클립 생성에서 고른 디자인을 따라요. 실제 영상이나 AI가 만든 결과가 아니며, 최종 배치는 영상 생성 후 확인할 수 있어요.',
     sampleDuration: '예시 영상 길이',
     sampleTime: '확인할 시점',
     seconds: '{{value}}초',
@@ -368,6 +367,10 @@ export const clips = {
       scene: '장면 추가',
       repeat: '반복 추가',
       text: '화면 문구 추가',
+      hook: '인트로 문구 추가',
+      caption: '자막 추가',
+      ending: '아웃트로 문구 추가',
+      badge: '표시 문구 추가',
     },
     errors: {
       items_required: '“{{element}}”의 부족한 항목을 추가한 뒤 클립을 생성해 주세요.',

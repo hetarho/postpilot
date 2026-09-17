@@ -166,4 +166,34 @@ describe('answers bounded by their field maximum', () => {
     const input = screen.getByLabelText('상호')
     expect(input).toHaveAttribute('aria-invalid', 'true')
   })
+
+  // CLIP-117 against CLIP-147: the parser cannot know which slot a region line
+  // lands in, so ① — which knows the project's presets — narrows the bound.
+  it('narrows a bound answer to the slot the project preset puts it in', () => {
+    const body =
+      '<clip version="1"><field id="place" label="상호"/>' +
+      '<text id="intro" kind="fixed" role="hook"><row kind="fixed"><value field="place"/></row></text></clip>'
+    const Field = ({ intro }: { intro: 'a' | 'b' }) => {
+      const [value, setValue] = useState<ClipCompositionInputs>({
+        ...emptyCompositionInputs(),
+        values: { place: '' },
+      })
+      return (
+        <ClipCompositionInputFields
+          document={parseClipComposition(body)}
+          presets={{ intro, outro: 'e' }}
+          value={value}
+          onChange={setValue}
+        />
+      )
+    }
+    // Intro A's first slot is 8 characters, intro B's is 9 (CDS-20).
+    const a = render(<Field intro="a" />)
+    fireEvent.change(screen.getByLabelText('상호'), { target: { value: '아홉글자를넣어봅니다' } })
+    expect((screen.getByLabelText('상호') as HTMLTextAreaElement).value).toHaveLength(8)
+    a.unmount()
+    render(<Field intro="b" />)
+    fireEvent.change(screen.getByLabelText('상호'), { target: { value: '아홉글자를넣어봅니다' } })
+    expect((screen.getByLabelText('상호') as HTMLTextAreaElement).value).toHaveLength(9)
+  })
 })

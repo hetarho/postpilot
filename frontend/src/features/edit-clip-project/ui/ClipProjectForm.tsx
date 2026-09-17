@@ -20,7 +20,7 @@ import {
   type ClipProjectDraft,
 } from '@/entities/clip-project'
 import { CLIP_ACCENTS, compositionCharacters, useClipTemplates } from '@/entities/clip-template'
-import { CLIP_DESIGN } from '@/shared/config'
+import { CLIP_DEFAULT_REGION_PRESETS, CLIP_DESIGN } from '@/shared/config'
 import { appFailureFromConnect } from '@/shared/api'
 import { peekPendingClipDraft, queueClipDraft } from '../model/clip-draft-queue'
 import { ClipDesignSelection } from './ClipDesignSelection'
@@ -291,6 +291,10 @@ export function ClipProjectForm({
           {!creating && document && (
             <ClipCompositionInputFields
               document={document}
+              presets={{
+                intro: draft.introPreset || CLIP_DEFAULT_REGION_PRESETS.intro,
+                outro: draft.outroPreset || CLIP_DEFAULT_REGION_PRESETS.outro,
+              }}
               value={inputs}
               onChange={(inputs) => change('compositionInputs', inputs)}
             />

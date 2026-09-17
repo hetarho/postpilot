@@ -53,10 +53,4 @@ export type {
   CompositionLimits,
 } from './model/composition'
 
-export {
-  compositionSkeleton,
-  compositionDesign,
-  rebuildCompositionSkeleton,
-} from './lib/composition-skeleton'
-export type { CompositionDesign } from './lib/composition-skeleton'
-export { CompositionDesignStep, CompositionDesignThumbnail } from './ui/CompositionDesignStep'
+export { CompositionDesignThumbnail } from './ui/CompositionDesignThumbnail'
