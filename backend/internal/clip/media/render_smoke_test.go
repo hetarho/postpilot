@@ -33,6 +33,17 @@ func renderConfig(t *testing.T) clip.RenderConfig {
 		},
 	})
 }
+
+// renderFailure names WHAT the render refused. A rejected delivery and a failed
+// substage both arrive as the same sentence ("clip attempt validation failed"),
+// which on a CI runner is all the log holds — and the check, the phase and the
+// numbers it was measured against are the whole question (CLIP-88, CDS-52).
+func renderFailure(err error) error {
+	if d, ok := clip.DiagnosticFromError(err); ok {
+		return fmt.Errorf("%w: check=%s phase=%s element=%s values=%v", err, d.Check, d.Phase, d.ElementID, d.Values)
+	}
+	return err
+}
 func path(key, fallback string) string {
 	if value := os.Getenv(key); value != "" {
 		return value
@@ -281,7 +292,7 @@ func TestRenderSmoke(t *testing.T) {
 				plan.DurationMS = selected - plan.TransitionTotal()
 				result, err := r.Render(t.Context(), ws, plan, sources, load)
 				if err != nil {
-					return err
+					return renderFailure(err)
 				}
 				if math.Abs(float64(result.Info.DurationMS-plan.DurationMS)) > 1000.0/30 || result.Info.HasAudio != (variant != "silent-rounded") {
 					t.Fatalf("result=%+v", result)
