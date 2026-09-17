@@ -500,8 +500,16 @@ func fieldMaxima(d *Document, l Limits) map[string]int {
 			}
 		}
 	}
+	// Only a position the ANSWER reaches contributes (CLIP-117). In an `ai` position the
+	// answer is material the writer reads, not text that lands there: the position's own
+	// bound belongs to what the model writes and is stated to it under CLIP-118. Folding it
+	// into the field capped 기타 정보 at the 18 characters of the line the model writes FROM
+	// it, so an answer the control had accepted was refused at generation.
 	visit := func(t Element) {
 		if len(t.Rows) == 0 {
+			if t.Kind == "ai" {
+				return
+			}
 			limit := t.Chars
 			if limit == 0 {
 				limit = elementChars(t.Role)
@@ -510,6 +518,9 @@ func fieldMaxima(d *Document, l Limits) map[string]int {
 			return
 		}
 		for i, row := range t.Rows {
+			if RowKind(t, row) == "ai" {
+				continue
+			}
 			limit := row.Chars
 			if limit == 0 {
 				limit = regionSlotChars(d.Design, t.Role, i)

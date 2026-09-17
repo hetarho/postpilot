@@ -503,14 +503,22 @@ function fieldMaxima(d: ClipComposition, l: CompositionLimits) {
     for (const p of parts)
       if (p.field && p.field in out && limit < out[p.field]) out[p.field] = limit
   }
+  // Only a position the ANSWER reaches contributes (CLIP-117). In an `ai` position the answer
+  // is material the writer reads, not text that lands there, so that position's bound belongs
+  // to what the model writes (CLIP-118) — folding it in capped a field at the length of the
+  // line the model writes FROM it.
   const visit = (t: CompositionElement) => {
-    if (!t.rows.length) return fold(t.parts, t.chars || compositionPositionChars(d.design, t.role))
-    t.rows.forEach((row, index) =>
+    if (!t.rows.length) {
+      if (t.kind === 'ai') return
+      return fold(t.parts, t.chars || compositionPositionChars(d.design, t.role))
+    }
+    t.rows.forEach((row, index) => {
+      if ((row.kind || t.kind) === 'ai') return
       fold(
         row.parts,
         row.chars || compositionPositionChars(d.design, t.role, { role: row.role, index }),
-      ),
-    )
+      )
+    })
   }
   d.elements.forEach(visit)
   for (const section of d.sections) section.elements.forEach(visit)
