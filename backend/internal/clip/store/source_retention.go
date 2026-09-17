@@ -90,8 +90,16 @@ func (s *Store) ReleaseSourceAttempt(ctx context.Context, user, job string, term
 		if e != nil {
 			return struct{}{}, e
 		}
+		// A wall clock steps backwards — an NTP correction, a VM host resync — and neither of
+		// these times carries a monotonic reading: `bound` was read back from the database, so
+		// the comparison is wall-clock against wall-clock. Refusing the release over a step of a
+		// few hundred milliseconds would leave the batch in `consuming` with no second call
+		// coming, because the queue calls this exactly once per terminal outcome. So a terminal
+		// that precedes its own binding is CLAMPED to it: retention counts from the moment the
+		// job took the sources, which is never shorter than counting from the moment it let
+		// them go.
 		if terminal.Before(bound) {
-			return struct{}{}, clip.ErrSourceState
+			terminal = bound
 		}
 		if e = q.SetBoundSourceRetention(ctx, sqlc.SetBoundSourceRetentionParams{BatchID: a.BatchID, ExpiresAt: stamp(terminal.Add(config.ClipOriginalRetention))}); e != nil {
 			return struct{}{}, e

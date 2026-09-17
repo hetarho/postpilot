@@ -389,3 +389,48 @@ func TestOriginalPermanentFenceProtectsActivePixelsAndDefeatsReleaseRenewal(t *t
 		t.Fatal("reselection bypassed permanent fence", err)
 	}
 }
+
+// A wall clock steps backwards — an NTP correction, a virtualised host resyncing — and both times
+// here are wall clock: `bound` is read back from the database, so it carries no monotonic reading
+// to compare against. The queue calls the release exactly once per terminal outcome, so refusing
+// one that landed a few hundred milliseconds "before" its own binding would leave the batch in
+// `consuming` with nothing left to free it, and the owner could never start another clip from
+// those originals.
+func TestReleaseAdmitsATerminalTimeAClockStepPutBeforeItsBinding(t *testing.T) {
+	projects, store, _ := setup(t)
+	_, p := create(t, projects)
+	ctx := context.Background()
+	now := time.Now().UTC()
+	objects := fakeSources()
+	sources := clip.NewSourceService(store, objects, config.ClipSourceLimits(6*time.Hour, 10*time.Minute), func() time.Time { return now })
+	upload, err := sources.Create(ctx, "alice", p.ID, manifest(1))
+	if err != nil {
+		t.Fatal(err)
+	}
+	objects.upload(upload.Batch)
+	b, err := sources.Confirm(ctx, "alice", upload.Batch.ID, upload.Batch.Sources[0].ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bound := now.Add(time.Minute)
+	if err = store.LinkSourceJob(ctx, "alice", b.ID, "stepped", bound); err != nil {
+		t.Fatal(err)
+	}
+	// The job ran and finished, but the clock moved back half a second while it did.
+	if err = sources.ReleaseAttempt(ctx, "alice", "stepped", bound.Add(-500*time.Millisecond)); err != nil {
+		t.Fatal("a clock step refused the job's one release", err)
+	}
+	got, err := store.GetSourceBatch(ctx, "alice", b.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Released back to `ready`; the job id stays as the record of which attempt held it.
+	if got.State != "ready" {
+		t.Fatal("the batch stayed bound to a finished job", got.State)
+	}
+	// Retention counts from the binding, never from the earlier stamp: the originals keep their
+	// full window rather than losing the step.
+	if want := bound.Add(24 * time.Hour); !got.ExpiresAt.Equal(want) {
+		t.Fatal("retention was shortened by the step", got.ExpiresAt, want)
+	}
+}
