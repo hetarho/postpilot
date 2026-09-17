@@ -155,6 +155,17 @@ export interface FakeClipsOptions {
   deleteFails?: boolean
   detachedCount?: number
 }
+/** A directory row states when it was last touched as a RELATIVE time (CLIP-41), and
+ *  `formatRelativeTime` falls back to an absolute date once a week has passed. A literal date in a
+ *  fixture therefore passes for a week and fails ever after, on a day nobody changed anything — so
+ *  these stay a fixed distance from NOW instead of naming one.
+ *
+ *  Read ONCE per module load, never per response: a stamp that moved between two reads of the same
+ *  project would make every refetch look like a change, and the settings form compares what the
+ *  server last returned against its own baseline to decide whether it is in sync (CLIP-39). */
+const LOADED_AT = Date.now()
+const hoursAgo = (hours: number) => new Date(LOADED_AT - hours * 60 * 60 * 1000).toISOString()
+
 export function registerClipService(router: ConnectRouter, options: FakeClipsOptions = {}) {
   const projects = new Map<string, FakeClipProject>(
     (options.projects ?? [])
@@ -185,8 +196,8 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       result: p.result ? { ...p.result, bytes: BigInt(p.result.bytes) } : undefined,
       latestJob: p.latestJob ? toFakeProto(p.latestJob) : undefined,
       attemptInspection: p.attemptInspection,
-      createdAt: '2026-09-10T00:00:00Z',
-      updatedAt: '2026-09-10T00:00:00Z',
+      createdAt: hoursAgo(48),
+      updatedAt: hoursAgo(2),
     })
   const rows = new Map(
     (options.templates ?? [])
@@ -216,8 +227,8 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       compositionLegacy: row.compositionLegacy ?? !row.compositionBody,
       compositionConverted: row.compositionConverted ?? !row.compositionBody,
       projectCount: row.projectCount ?? 0,
-      createdAt: '2026-09-10T00:00:00Z',
-      updatedAt: '2026-09-10T00:00:00Z',
+      createdAt: hoursAgo(48),
+      updatedAt: hoursAgo(2),
     })
   router.rpc(ClipService.method.listVideoTemplates, () => {
     options.calls?.push('ListVideoTemplates')
