@@ -137,6 +137,9 @@ export interface FakeClipsOptions {
   soundFails?: boolean
   planSaveConflict?: boolean
   projectWrites?: ClipProjectDraft[]
+  /** Holds UpdateClipProject open until the test releases it, so an assertion can run WHILE the
+   *  settings autosave is in flight. */
+  projectSaveGate?: () => Promise<unknown>
   projectSaveFails?: boolean
   projectSaveError?: ConnectError
   projectListFails?: boolean
@@ -389,8 +392,9 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     options.projectWrites?.push(p)
     return create(CreateClipProjectResponseSchema, { project: projectProto(p) })
   })
-  router.rpc(ClipService.method.updateClipProject, (req) => {
+  router.rpc(ClipService.method.updateClipProject, async (req) => {
     options.calls?.push('UpdateClipProject')
+    if (options.projectSaveGate) await options.projectSaveGate()
     if (options.projectSaveError) throw options.projectSaveError
     if (options.projectSaveFails) throw connectAppError('CLIP_INVALID_INPUT', Code.InvalidArgument)
     const p = projects.get(req.id)

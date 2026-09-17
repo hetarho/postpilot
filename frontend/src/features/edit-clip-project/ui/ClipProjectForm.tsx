@@ -110,6 +110,13 @@ export function ClipProjectForm({
   const storedJSON = stored ? JSON.stringify(normalizeClipProject(stored)) : baseline
   const synced = storedJSON === baseline
   const pending = disabled || save.isPending
+  // The FIELDS stay open while an autosave is in flight. Disabling a `fieldset` disables every
+  // control inside it, and a browser blurs a control it disables — so locking the form on each
+  // save threw the owner out of the field they were typing in, a beat after every pause. Nothing
+  // is lost by leaving them open: the queue sends the LATEST draft, so a keystroke made during a
+  // flight goes out after it rather than racing it (CLIP-39). `/clips/new` still locks, because
+  // there `save.isPending` is the one committing action and it navigates away.
+  const locked = disabled || (save.isPending && !stored)
   if (!synced && !dirty && !save.isPending) {
     const refreshed = JSON.parse(storedJSON) as ClipProjectDraft
     setDraft(refreshed)
@@ -173,7 +180,7 @@ export function ClipProjectForm({
           void submit()
         }}
       >
-        <fieldset disabled={pending} className="min-w-0 space-y-6">
+        <fieldset disabled={locked} className="min-w-0 space-y-6">
           <div>
             <FieldLabel htmlFor="clip-title">{t('project.name')}</FieldLabel>
             <TextField

@@ -193,6 +193,31 @@ describe('clip directory and setup', () => {
     })
     expect(screen.getByLabelText('원본 영상 선택')).toBeEnabled()
   })
+  it('keeps the field usable and focused while its own autosave is in flight', async () => {
+    let release = () => {}
+    const held = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    mount('/clips/project', { projectSaveGate: () => held })
+    const user = userEvent.setup()
+    const title = await screen.findByLabelText('클립 제목')
+    await user.type(title, ' 기록')
+    // The save is on the wire. Disabling the form here would disable the field the owner is
+    // typing in, and a browser blurs a control it disables — so a beat after every pause the
+    // typing landed nowhere (CLIP-39).
+    expect(
+      await screen.findByText('저장하는 중…', undefined, { timeout: 4000 }),
+    ).toBeInTheDocument()
+    expect(title).toBeEnabled()
+    expect(title).toHaveFocus()
+    await user.type(title, '들')
+    release()
+    expect(await screen.findByText('저장됨', undefined, { timeout: 4000 })).toBeInTheDocument()
+    // The keystrokes made during the flight are kept and go out after it, not lost to a refresh
+    // from the answer that was already on its way.
+    expect(title).toHaveValue('제주 여행 기록들')
+    expect(title).toHaveFocus()
+  })
   it('lets the owner leave an autosaved project, and still guards an unminted one', async () => {
     const user = userEvent.setup()
     const { router, unmount } = mount('/clips/project')
