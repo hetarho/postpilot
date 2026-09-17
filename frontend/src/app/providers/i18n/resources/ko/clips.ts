@@ -407,6 +407,8 @@ export const clips = {
     title: '이번 작업의 크레딧',
     quoting: '최대 사용 크레딧을 확인하는 중이에요',
     maximumHelp: '예상 사용량이 아닌 청구 상한이에요. 실제 정산액은 더 적을 수 있어요.',
+    detailsShow: '요금 자세히',
+    detailsHide: '요금 접기',
     approve: '최대 {{amount, number}} 크레딧 · 승인하고 생성',
     expired: '승인 가능한 시간이 지났어요. 새 상한을 확인해 주세요.',
     refresh: '최대 크레딧 다시 확인',

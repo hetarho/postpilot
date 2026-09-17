@@ -150,7 +150,10 @@ it('approves once, retains local previews after terminal and refetches the resul
   const { user, revoke } = await selectSource()
   const generate = await screen.findByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' })
   await waitFor(() => expect(generate).toBeEnabled())
-  // The owner approves TWO writing calls: the footage flow, then the narration.
+  // The owner approves TWO writing calls: the footage flow, then the narration. The breakdown
+  // folds away by default so the docked panel does not cover the step behind it; the ceiling
+  // stays on the action and the cancellation rule beside it (CLIP-19, CLIP-81).
+  await user.click(screen.getByRole('button', { name: '요금 자세히' }))
   const writing = screen.getByRole('list', { name: '작성 호출' })
   expect(
     within(writing)
@@ -679,6 +682,8 @@ it.each([false, true])(
     const button = await screen.findByRole('button', { name: '최대 79 크레딧 · 승인하고 생성' })
     if (master) {
       expect(button).toBeEnabled()
+      // Folded away with the rest of the breakdown until the owner asks for it.
+      await userEvent.click(screen.getByRole('button', { name: '요금 자세히' }))
       expect(screen.getByText(/마스터는 크레딧을 차감하지/)).toBeVisible()
     } else {
       expect(button).toBeDisabled()

@@ -414,6 +414,8 @@ export const clips = {
     title: 'Credits for this attempt',
     quoting: 'Checking the maximum credit charge',
     maximumHelp: 'This is a charge ceiling, not a prediction. The final charge may be lower.',
+    detailsShow: 'Charge details',
+    detailsHide: 'Hide details',
     approve: 'Maximum {{amount, number}} credits · approve and generate',
     expired: 'This approval window expired. Check a new ceiling.',
     refresh: 'Refresh maximum credits',

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useId, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { AppFailure } from '@/shared/api'
 import { Button, Typography } from '@/shared/ui'
@@ -36,33 +36,60 @@ export function ClipQuoteApproval({
   children?: ReactNode
 }) {
   const { t } = useTranslation('clips')
+  const details = useId()
+  // The panel is docked, so on a phone its explanations covered the step behind it. What the
+  // approval must state stays out here — the ceiling is on the action itself, the cancellation
+  // rule sits beside it (CLIP-19, CLIP-81) and every refusal is in plain sight — while the
+  // breakdown that repeats what those already say folds away.
+  const [open, setOpen] = useState(false)
   const insufficient =
     !!quote && !!balance && !balance.unlimited && quote.maxCredits > balance.credits
   return (
     <div className="w-full min-w-0 space-y-2">
-      <Typography variant="meta" role="status">
-        {quoting ? t('credits.quoting') : expired ? t('credits.expired') : t('credits.maximumHelp')}
-      </Typography>
-      {quote && quote.calls.some((call) => call.label !== 'observe' && call.calls > 0) && (
-        <ul className="space-y-1" aria-label={t('credits.writingCalls')}>
-          {quote.calls
-            .filter((call) => call.label !== 'observe' && call.calls > 0)
-            .map((call) => (
-              <li key={call.label}>
-                <Typography variant="meta">
-                  {call.label === 'flow'
-                    ? t('credits.call.flow', { calls: call.calls })
-                    : t('credits.call.narration', { calls: call.calls })}
-                </Typography>
-              </li>
-            ))}
-        </ul>
-      )}
-      {children}
+      <div className="flex flex-wrap items-center justify-between gap-x-3">
+        {/* One live region whose TEXT changes: a region mounted only when it already holds its
+            message announces nothing. */}
+        <Typography variant="meta" role="status" className="min-w-0 flex-1">
+          {quoting
+            ? t('credits.quoting')
+            : expired
+              ? t('credits.expired')
+              : open
+                ? t('credits.maximumHelp')
+                : ''}
+        </Typography>
+        <Button
+          variant="ghost"
+          className="-mr-3 shrink-0"
+          aria-expanded={open}
+          aria-controls={details}
+          onClick={() => setOpen(!open)}
+        >
+          {t(open ? 'credits.detailsHide' : 'credits.detailsShow')}
+        </Button>
+      </div>
+      <div id={details} hidden={!open} className="space-y-2">
+        {quote && quote.calls.some((call) => call.label !== 'observe' && call.calls > 0) && (
+          <ul className="space-y-1" aria-label={t('credits.writingCalls')}>
+            {quote.calls
+              .filter((call) => call.label !== 'observe' && call.calls > 0)
+              .map((call) => (
+                <li key={call.label}>
+                  <Typography variant="meta">
+                    {call.label === 'flow'
+                      ? t('credits.call.flow', { calls: call.calls })
+                      : t('credits.call.narration', { calls: call.calls })}
+                  </Typography>
+                </li>
+              ))}
+          </ul>
+        )}
+        {children}
+        {balance?.unlimited && <Typography variant="body">{t('credits.exempt')}</Typography>}
+      </div>
       <Typography variant="body">
         {t(quote?.cancellationPolicy ? 'cancellation.rule' : 'cancellation.policyUnavailable')}
       </Typography>
-      {balance?.unlimited && <Typography variant="body">{t('credits.exempt')}</Typography>}
       {error && <ClipFailureNotice failure={error} />}
       {insufficient && balance && quote && (
         <ClipFailureNotice
