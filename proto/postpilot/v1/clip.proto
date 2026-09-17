@@ -579,6 +579,20 @@ message ClipEditableText {
   // never stored and never returned, and the server mints the identity: a
   // caption is created exactly once, and never by a client's own id.
   ClipTextCreation creation = 29;
+  // What the owner set for this caption in ②, each part absent on its own: the
+  // top-left of its measured bounds on the ratio's canvas, the font size of its
+  // role in px, and a style id from the project's allowed set. Absent means
+  // automatic placement, the style's own size and the project's default style.
+  ClipCaptionPlacement owner_position = 30;
+  int32 owner_size_px = 31;
+  string owner_style = 32;
+}
+// An absolute caption position in whole canvas pixels, never a fraction: the
+// layout resolves everything to canvas pixels and the preview places the served
+// fragment with the same numbers the render does.
+message ClipCaptionPlacement {
+  int32 x = 1;
+  int32 y = 2;
 }
 // `kind` is add and nothing else, and narration is the only caption an owner
 // may add — every other one is a template declaration.

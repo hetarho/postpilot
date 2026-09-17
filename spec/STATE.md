@@ -48,7 +48,6 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
-| T221 | The owner places, sizes and restyles a caption | CLIP CDS | T219 | doing@260917.plc |
 | T222 | The server hands the preview the caption SVG it will render | CDS CLIP | T219 T221 | todo |
 | T223 | A template carries named composition stages | CLIP | - | todo |
 | T224 | ① chooses the design, the caption styles and an optional template | CLIP | T217 T218 | todo |
@@ -56,8 +55,9 @@
 | T226 | The approval surface quotes sequence-rendered captions separately | CDS CLIP | T220 | todo |
 
 ## next
-- implement-task T221 → T222 → T225 (the caption placement deploy unit: store, serve, edit) — T223 T224 T226 stay free for another session
+- implement-task T222 → T225 (the rest of the caption placement deploy unit: serve the fragment, then edit over the cut frame) — T223 T224 T226 stay free for another session
 ## log
+- 260917 T221 done; a caption carries the owner's own position, size and style — clamped into the safe area by moving, never resizing, with the size floor and an unallowed style refused where they are written — and the manifest says who placed it so V1 still holds it inside the safe area, V3 demotes a shortfall under it to a notice, V13 leaves it out of the anchor walk and no repair or automatic placement runs over it again
 - 260917 T220 done; the thirteen sequence styles draw one frame at a time into a bounded PNG sequence under the attempt workspace, enter the overlay chain through image2 at the output frame rate with no loop and no fade, are counted by CLIP-33 and deleted the moment their overlay pass is encoded, while a static style's single rasterise is untouched
 - 260917 T219 done; internal/clip/design holds the sixteen approved caption styles with their faces, roles, colour treatments and motion, Jua and NanumMyeongjo ship pinned beside Pretendard and Paperlogy, resvg is handed every bundled face with system fonts off, and a caption whose face lacks a syllable falls back to the default style with a CLIP-108 notice naming it
 - 260917 CDS constraints still list face_family with two faces while CDS-17 names four — worth an update-ssot
@@ -77,10 +77,3 @@
 - 260917 useClipProject stops polling at a terminal revise_clip job, so a revision's settlement lands only on the next read — pre-existing from T202/T203, worth a review-code finding
 - 260917 T204 claimed (rui)
 - 260917 T203 done; ② asks the writer for a revision from its own panel — a bounded request with its count, a target defaulting to 자막, the ceiling and its priced writing calls re-quoted whenever either changes, and the run reported in place with 취소 while the timeline goes read-only and no focused job view opens; the approval surface came down to entities/clip-project so the revision reuses it instead of writing a second one, and a flush that moves the plan re-quotes rather than sending against a ceiling nobody approved
-- 260917 T203 claimed (rui)
-- 260917 T202 done; a revision is the third clip job kind — quoted for the writing calls its target needs and no observation, bound to the saved plan by its own digest, reserved at the start of its run, saved with SaveRevisedPlan so the plan revision advances while the rendered one stays behind; migration 0059 lets its job consume a quote, and every clip-kind check now asks job.ClipKind
-- 260917 T201 done; the two writing contracts gained a revision mode — the saved plan as the owner's edits left it plus their request, appended to the same prompts and answered on the same schemas; a flow target rewrites the footage then the narration, a narration target is told the flow is final, and the three writing calls now share one `write` helper
-- 260917 T216 done; the owner arranges the footage in ① (migration 0058 position, ReorderClipSources for the whole batch or nothing, ORDER BY position then ordinal) and the flow call reads that order; the strip moves a tile by grip-drag or by two buttons with a live announcement, the item control says it is an optional hint, and the instruction help says it directs order, rhythm and what the captions say
-- 260916 T209 done; the caption pace and the accent are the project's (migration 0057, seeded from the template at creation, chosen in ① and gone from ②) — the render reads them through EditPlan.WithCaptions and applies them once at layout, a change bumps only the plan revision so the result goes stale without repaying a writing call, and the accent row draws its dots from the design system's own hex because CDS's palette has no FE theme tokens
-- 260916 T215 done; ② edits the narration on its own lane — one bar per caption whatever cut lies beneath, absolute start/end fields, add at the playhead into free room (≥900 ms), remove, undo/redo, an overlap or an out-of-output caption blocks 다시 렌더 without retiming anything, the three caption notices read in ko/en, and the item-binding controls left ② for ①
-- 260916 T214 done; the renderer schedules the narration on the output timeline (order by start, overlap omitted, CDS-41 floor through the shorter text then the free room, owner windows untouched), places a spanning caption against every cut it covers, and verifies V18 timeline-wide, V16 against the duration and V11 on every collected fact; the identity baseline was NOT re-pinned — measured, the delivered clip is identical at the commit that recorded it, at HEAD and here, so that constant belongs to another host

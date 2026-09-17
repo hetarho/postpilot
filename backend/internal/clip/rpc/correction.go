@@ -78,6 +78,10 @@ func correctionText(t *v1.ClipEditableText) clip.CorrectionText {
 	if t.GetCreation() != nil {
 		out.Creation = &clip.TextCreation{Kind: t.GetCreation().GetKind()}
 	}
+	out.Owner = clip.OwnerCaption{Size: int(t.GetOwnerSizePx()), Style: t.GetOwnerStyle()}
+	if at := t.GetOwnerPosition(); at != nil {
+		out.Owner.Position = &clip.CaptionPlacement{X: int(at.GetX()), Y: int(at.GetY())}
+	}
 	for _, p := range t.Phrases {
 		out.Phrases = append(out.Phrases, clip.EditablePhrase{Text: p.Text, StartMS: int(p.StartMs), EndMS: int(p.EndMs)})
 	}
@@ -110,6 +114,10 @@ func correctionTextProto(t clip.CorrectionText) *v1.ClipEditableText {
 	// Creation is request-only: the projection hands a caption back as an
 	// ordinary one, so a resave corrects it rather than creating it again.
 	out.StaleEvidence, out.EvidenceReviewed, out.FallbackReason, out.Narration = t.StaleEvidence, t.EvidenceReviewed, t.FallbackReason, t.Narration
+	out.OwnerSizePx, out.OwnerStyle = int32(t.Owner.Size), t.Owner.Style
+	if at := t.Owner.Position; at != nil {
+		out.OwnerPosition = &v1.ClipCaptionPlacement{X: int32(at.X), Y: int32(at.Y)}
+	}
 	for _, p := range t.Phrases {
 		out.Phrases = append(out.Phrases, &v1.ClipEditablePhrase{Text: p.Text, StartMs: int32(p.StartMS), EndMs: int32(p.EndMS)})
 	}

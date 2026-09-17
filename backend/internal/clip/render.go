@@ -35,7 +35,18 @@ type Caption struct {
 	Keyword string
 	// Relative to the trimmed cut. Both zero takes the CDS-27 default window.
 	StartMS, EndMS int
+	// Where the owner put this caption and how big they made it (CDS-82). A nil
+	// Placement is automatic placement and a zero Size the style's own size;
+	// the two are independent, because ② resizes a caption where it stands.
+	Placement *CaptionPlacement
+	Size      int
 }
+
+// CaptionPlacement is an owner placement: the top-left of the caption's
+// measured bounds on the ratio's own canvas, in whole pixels. It is not a
+// fraction, because the layout resolves everything to canvas pixels and a
+// fraction would not survive the round trip identically (CDS-82).
+type CaptionPlacement struct{ X, Y int }
 type Copy = Caption
 type Cut struct {
 	ID, SourceID, Fingerprint string
@@ -629,6 +640,32 @@ func PlaceCopy(canvas Canvas, anchor, align string, width, height float64) (Regi
 		return Region{}, ErrInvalid
 	}
 	return Region{x, y, width, height}, nil
+}
+
+// PlaceOwnerCopy is CDS-82: the caption goes where the owner put it, moved —
+// never resized — until its measured bounds lie wholly inside the safe area.
+// Shrinking would silently change a size the owner set, so a box too large for
+// the safe area in either direction is refused rather than made to fit.
+func PlaceOwnerCopy(canvas Canvas, at CaptionPlacement, width, height float64) (Region, error) {
+	s := canvas.Safe
+	if math.IsNaN(width) || math.IsNaN(height) || width <= 0 || height <= 0 || width > s.Width || height > s.Height {
+		return Region{}, ErrInvalid
+	}
+	x := math.Min(math.Max(float64(at.X), s.X), s.X+s.Width-width)
+	y := math.Min(math.Max(float64(at.Y), s.Y), s.Y+s.Height-height)
+	return Region{x, y, width, height}, nil
+}
+
+// ClampCaptionPlacement is the same rule with nothing measured yet: the save
+// path holds a stored position inside the safe area without a text measurement,
+// which needs a font and a resvg run it has no workspace for. The measured
+// bounds are clamped again at layout, where they exist (CDS-82).
+func ClampCaptionPlacement(canvas Canvas, at CaptionPlacement) CaptionPlacement {
+	s := canvas.Safe
+	return CaptionPlacement{
+		X: int(math.Min(math.Max(float64(at.X), s.X), s.X+s.Width)),
+		Y: int(math.Min(math.Max(float64(at.Y), s.Y), s.Y+s.Height)),
+	}
 }
 
 // PickCopyAnchor maps a normalized output-space avoid region only to the four

@@ -371,7 +371,15 @@ func fitCopy(canvas clip.Canvas, c clip.Copy, candidates [][]string, bounds map[
 	cleanBreak := func(lines []string) bool {
 		return len(lines) < 2 || strings.HasSuffix(lines[0], " ") || strings.HasPrefix(lines[1], " ")
 	}
-	for size := role.Size; size >= role.Min; size-- {
+	// The owner's own size is the ONE size tried: the shrink-to-fit walk exists
+	// to find a size nobody chose, and running it over a number the owner set
+	// would quietly change it (CDS-82). The floor and the role's own size are
+	// checked where the size is written, not here.
+	largest, smallest := role.Size, role.Min
+	if c.Size > 0 {
+		largest, smallest = float64(c.Size), float64(c.Size)
+	}
+	for size := largest; size >= smallest; size-- {
 		best := copyLayout{}
 		bestWidth := math.Inf(1)
 		bestClean := false
@@ -394,6 +402,12 @@ func fitCopy(canvas clip.Canvas, c clip.Copy, candidates [][]string, bounds map[
 			width += left + right
 			height += 2 * vertical
 			region, err := clip.PlaceCopy(canvas, c.Anchor, c.Align, math.Ceil(width), math.Ceil(height))
+			if c.Placement != nil {
+				// An owner placement replaces the anchor's result entirely: the
+				// caption's measured bounds go where the owner put them, moved
+				// back inside the safe area but never resized (CDS-82).
+				region, err = clip.PlaceOwnerCopy(canvas, *c.Placement, math.Ceil(width), math.Ceil(height))
+			}
 			clean := cleanBreak(lines)
 			if err == nil && (clean && !bestClean || clean == bestClean && width < bestWidth) {
 				words := [][]wordSpan(nil)
@@ -434,7 +448,8 @@ func (l copyLayout) Elements(cut, copy int, c clip.Copy, startMS, endMS int) cli
 	add := func(kind string, region clip.Region, size float64, fill, background string) {
 		m = append(m, design.Element{Cut: cut, Copy: copy, Kind: kind, Style: c.Style, Anchor: c.Anchor, Pace: c.Pace, Region: design.Bounds(region),
 			StartMS: startMS, EndMS: endMS, FontSize: size, Fill: fill, Background: background,
-			InMS: motion.InMS, OutMS: motion.OutMS, DY: motion.InDY})
+			OwnerPlaced: c.Placement != nil,
+			InMS:        motion.InMS, OutMS: motion.OutMS, DY: motion.InDY})
 	}
 	p, s := l.Region, l.Style
 	if s.Plate != "" {

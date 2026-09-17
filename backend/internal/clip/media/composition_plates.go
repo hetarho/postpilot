@@ -265,6 +265,9 @@ func applyDeclaredGround(canvas clip.Canvas, visual *declaredVisual) {
 
 func (layout *declaredLayout) recordContrastNotices() {
 	for _, visual := range layout.visuals {
+		// A shortfall under an owner placement is named the same way and does
+		// not block the render: the owner chose the spot, so the clip is
+		// delivered with a notice about it rather than refused (CDS-52).
 		if visual.ground.Sampled() && !design.Legible(visual.manifest.Parts) {
 			clip.AddPlanNotice(&layout.plan, "composition_contrast", visual.manifest.CutID, visual.manifest.ElementID, "shortfall")
 		}

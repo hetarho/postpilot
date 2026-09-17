@@ -128,3 +128,16 @@ func TestNarrationCrossesTheWireAsAScopeAndACreation(t *testing.T) {
 		t.Fatal("an ordinary caption arrived with provenance")
 	}
 }
+
+// CDS-82 over the wire: the placement, the size and the style survive the trip
+// out and back, and a caption carrying none comes back carrying none.
+func TestOwnerPlacementSurvivesTheWire(t *testing.T) {
+	at := clip.CaptionPlacement{X: 210, Y: 940}
+	for _, owner := range []clip.OwnerCaption{{}, {Position: &at, Size: 64, Style: "film"}, {Size: 48}, {Style: "pop"}} {
+		in := clip.CorrectionText{InstanceID: "caption", ElementID: "caption", Kind: "ai", Role: "caption", Text: "현재 장면", Style: "auto", Position: "auto", Align: "center", Basis: "cut", Owner: owner}
+		out := correctionText(correctionTextProto(in))
+		if !reflect.DeepEqual(out.Owner, owner) {
+			t.Fatalf("the wire changed the placement: %+v want %+v", out.Owner, owner)
+		}
+	}
+}

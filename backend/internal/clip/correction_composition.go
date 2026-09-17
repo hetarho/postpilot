@@ -22,10 +22,14 @@ type CorrectionText struct {
 	Text                                     string
 	Rows                                     []composition.ResolvedRow
 	Style, Position, Align, Basis            string
-	StartMS, EndMS                           *int
-	Pace, Accent, Keyword                    string
-	ResolvedStartMS, ResolvedEndMS           int
-	GroupID, ItemID                          string
+	// The owner's own placement, size and style for this caption (CDS-82).
+	// Unlike the fields above it is not a projection of the frozen document:
+	// ② writes it, and an empty value is a caption placed automatically.
+	Owner                          OwnerCaption
+	StartMS, EndMS                 *int
+	Pace, Accent, Keyword          string
+	ResolvedStartMS, ResolvedEndMS int
+	GroupID, ItemID                string
 	// Whether this caption is narration (CLIP-134). A read projection like the
 	// ids beside it: a draft carries it back unchanged, and only `Creation`
 	// makes a new one.
@@ -48,7 +52,7 @@ func correctionText(t PortableText) CorrectionText {
 		StartMS: e.StartMS, EndMS: e.EndMS, Pace: t.Pace, Accent: t.Accent, Keyword: t.Keyword,
 		ResolvedStartMS: r.StartMS, ResolvedEndMS: r.EndMS, GroupID: r.GroupID, ItemID: r.ItemID,
 		Phrases: slices.Clone(t.Phrases), StaleEvidence: t.StaleEvidence, Evidence: slices.Clone(t.Evidence), FallbackReason: t.FallbackReason,
-		Narration: t.Scope == NarrationScope}
+		Owner: t.Owner, Narration: t.Scope == NarrationScope}
 	if t.Placement != nil {
 		a, b := t.Placement.StartMS, t.Placement.EndMS
 		result.EffectiveStartMS, result.EffectiveEndMS = &a, &b
@@ -195,6 +199,17 @@ func applyNativeCorrection(cfg RenderConfig, p Project, old EditPlan, sources []
 		if !ValidAccent(edit.Accent) || edit.Keyword != "" && !strings.Contains(edit.Text, edit.Keyword) {
 			return EditPlan{}, ErrInvalid
 		}
+		// The owner's own placement is admitted and clamped BEFORE the edit is
+		// compared with what the plan holds, so a drag that the safe area pulls
+		// back to where the caption already stood is not an edit at all.
+		// The allowed styles are the PROJECT's own selection (CLIP-142), not the
+		// plan's: a stored plan carries the design only as a render input, and
+		// a save must be judged against what the project allows today.
+		owner, err := ValidateOwnerCaption(edit.Owner, edit.Role, next.Ratio, p.DesignSelection().AllowedCaptionStyles())
+		if err != nil {
+			return EditPlan{}, err
+		}
+		edit.Owner = owner
 		before := correctionText(t)
 		// Provenance and warnings are server projections, never client authority.
 		edit.Evidence, edit.FallbackReason, edit.StaleEvidence = before.Evidence, before.FallbackReason, before.StaleEvidence
@@ -211,7 +226,7 @@ func applyNativeCorrection(cfg RenderConfig, p Project, old EditPlan, sources []
 		e := &t.Resolved.Element
 		e.Style, e.Position, e.Align, e.Basis, e.StartMS, e.EndMS = edit.Style, edit.Position, edit.Align, edit.Basis, edit.StartMS, edit.EndMS
 		t.Resolved.AuthoredTiming = edit.Basis != "cut" || edit.StartMS != nil || edit.EndMS != nil
-		t.Pace, t.Accent, t.Keyword = edit.Pace, edit.Accent, edit.Keyword
+		t.Pace, t.Accent, t.Keyword, t.Owner = edit.Pace, edit.Accent, edit.Keyword, edit.Owner
 		t.Phrases = slices.Clone(edit.Phrases)
 		contentChanged := before.Text != edit.Text || !reflect.DeepEqual(before.Rows, edit.Rows) || !slices.Equal(before.Phrases, edit.Phrases)
 		t.StaleEvidence = (t.StaleEvidence || associationAffectsText(t, changed)) && !reviewed && !contentChanged

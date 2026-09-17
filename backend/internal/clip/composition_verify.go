@@ -157,7 +157,7 @@ func VerifyCompositionManifest(plan EditPlan, elements []CompositionElement, lim
 					return fail("text_size")
 				}
 			}
-			if !part.ContrastNotice && !design.Legible(design.Manifest{part}) {
+			if !part.ContrastNotice && !part.OwnerPlaced && !design.Legible(design.Manifest{part}) {
 				return fail("contrast")
 			}
 		}

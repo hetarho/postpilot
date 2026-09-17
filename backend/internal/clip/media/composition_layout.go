@@ -254,7 +254,7 @@ func (r *Rendering) layoutComposition(ctx context.Context, ws clip.MediaWorkspac
 
 func declaredManifest(text clip.PortableText) clip.CompositionElement {
 	r, e := text.Resolved, text.Resolved.Element
-	result := clip.CompositionElement{InstanceID: r.InstanceID, ElementID: e.ID, CutID: r.CutID, Kind: e.Kind, Role: e.Role, Text: r.Text, Rows: slices.Clone(r.Rows), Facts: slices.Clone(r.Facts), Evidence: slices.Clone(text.Evidence), Style: e.Style, Position: e.Position, Align: e.Align, StartMS: r.StartMS, EndMS: r.EndMS, AuthoredStyle: e.Style != "auto", AuthoredPosition: e.Position != "auto", AuthoredTiming: r.AuthoredTiming, FallbackReason: text.FallbackReason, Layer: clip.CompositionLayer(e.Role)}
+	result := clip.CompositionElement{InstanceID: r.InstanceID, ElementID: e.ID, CutID: r.CutID, Kind: e.Kind, Role: e.Role, Text: r.Text, Rows: slices.Clone(r.Rows), Facts: slices.Clone(r.Facts), Evidence: slices.Clone(text.Evidence), Style: e.Style, Position: e.Position, Align: e.Align, StartMS: r.StartMS, EndMS: r.EndMS, AuthoredStyle: e.Style != "auto", AuthoredPosition: e.Position != "auto", AuthoredTiming: r.AuthoredTiming, OwnerPlaced: text.Owner.Placed(), FallbackReason: text.FallbackReason, Layer: clip.CompositionLayer(e.Role)}
 	motion := elementMotion(result, text.Pace)
 	result.InMS, result.OutMS, result.DY = motion.InMS, motion.OutMS, motion.DY
 	return result
@@ -303,6 +303,16 @@ func (r *Rendering) layoutDeclaredElement(ctx context.Context, ws clip.MediaWork
 			return visual, elementProblem(text, "invalid_design")
 		}
 	}
+	// The owner's own style narrows that set to one. A style the project does
+	// not allow is refused here too, not only where it was written: a selection
+	// narrowed after the caption was styled must not reach the renderer.
+	owner := text.Owner
+	if owner.Style != "" {
+		if !slices.Contains(candidates, owner.Style) {
+			return visual, elementProblem(text, "invalid_design")
+		}
+		candidates = []string{owner.Style}
+	}
 	texts := []clip.CopyAlternative{{Text: text.Resolved.Text, Rows: text.Resolved.Rows}}
 	if clip.AutomaticCompositionRepair(text) {
 		texts = append(texts, text.Alternatives...)
@@ -329,9 +339,14 @@ func (r *Rendering) layoutDeclaredElement(ctx context.Context, ws clip.MediaWork
 			style = caption.ID
 			rule := caption.Rule()
 			anchors := []string{e.Position}
-			pinned := e.Position != "auto" || text.Placement != nil
+			pinned := e.Position != "auto" || text.Placement != nil || owner.Placed()
 			if text.Placement != nil && e.Position == "auto" {
 				anchors = []string{text.Placement.Position}
+			}
+			// An owner placement decides the region outright, so no anchor is
+			// walked: the one named here is only what the manifest records.
+			if owner.Placed() && e.Position == "auto" && text.Placement == nil {
+				anchors = []string{caption.Rule().Anchor}
 			}
 			if !pinned {
 				anchors = []string{rule.Anchor}
@@ -342,7 +357,8 @@ func (r *Rendering) layoutDeclaredElement(ctx context.Context, ws clip.MediaWork
 			fits := []declaredVisual{}
 			placements := []design.Candidate{}
 			for _, anchor := range anchors {
-				copy := clip.Copy{Text: candidate.Text, Style: style, Anchor: anchor, Align: e.Align, Accent: text.Accent, Keyword: text.Keyword, Pace: text.Pace}
+				copy := clip.Copy{Text: candidate.Text, Style: style, Anchor: anchor, Align: e.Align, Accent: text.Accent, Keyword: text.Keyword, Pace: text.Pace,
+					Placement: owner.Position, Size: owner.Size}
 				if !strings.Contains(copy.Text, copy.Keyword) {
 					copy.Keyword = ""
 				}

@@ -19,10 +19,14 @@ type CompositionElement struct {
 	InMS, OutMS, Layer                              int
 	DY                                              float64
 	AuthoredStyle, AuthoredPosition, AuthoredTiming bool
-	FallbackReason                                  string
-	Advisories                                      []string
-	Parts                                           Manifest
-	Cues                                            []CompositionCue
+	// Whether the owner placed this caption themselves (CDS-82): V1 still holds
+	// it inside the safe area, V3 records a contrast shortfall under it as a
+	// notice and V13 does not measure its anchor step.
+	OwnerPlaced    bool
+	FallbackReason string
+	Advisories     []string
+	Parts          Manifest
+	Cues           []CompositionCue
 }
 
 func CompositionLayer(role string) int {
@@ -117,5 +121,8 @@ func ResolvePortableIntervals(plan EditPlan, limits composition.Limits) (EditPla
 
 func AutomaticCompositionRepair(text PortableText) bool {
 	e := text.Resolved.Element
-	return !text.OwnerEdited && text.Placement == nil && e.Kind == "ai" && e.Style == "auto" && e.Position == "auto" && e.Basis == "cut" && e.StartMS == nil && e.EndMS == nil
+	// An owner placement is the last word on where a caption sits (CDS-38), so
+	// the repair ladder — which moves a caption to make it fit — never reaches
+	// one, even before the owner has touched anything else about it.
+	return !text.OwnerEdited && text.Placement == nil && text.Owner == (OwnerCaption{}) && e.Kind == "ai" && e.Style == "auto" && e.Position == "auto" && e.Basis == "cut" && e.StartMS == nil && e.EndMS == nil
 }

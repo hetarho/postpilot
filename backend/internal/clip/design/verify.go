@@ -42,6 +42,11 @@ type Element struct {
 	Rule                             string
 	TypeRole                         string
 	ContrastNotice                   bool
+	// The owner put this caption here themselves (CDS-82). V1 still holds it
+	// inside the safe area, V3 records a shortfall under it as a notice rather
+	// than a failure, and V13 does not measure its anchor step: the owner chose
+	// the place, so the rules that move a caption for them no longer apply.
+	OwnerPlaced bool
 	// Which of the cut's copies this element belongs to (CDS-43): 0 for the one
 	// copy a cut usually carries, and for every piece of furniture.
 	Copy             int
@@ -134,11 +139,12 @@ func within(r, safe Bounds) bool {
 // Verify checks every design target for diagnostics, including overlap.
 // Delivery uses VerifyRenderable so overlap alone cannot block a video (CDS-56).
 //
-// V1 safe area · V2 size floors · V3 effective contrast (sampled shortfalls
-// carry a delivery notice and remain measurable through Legible) ·
+// V1 safe area, an owner placement counted like any other element · V2 size
+// floors · V3 effective contrast (sampled and owner-placed shortfalls carry a
+// delivery notice and remain measurable through Legible) ·
 // V5 lines and characters · V7 overlap between elements of different cuts whose
 // windows meet · V9 the two permitted motions · V13 one anchor step between
-// consecutive cuts · V19 named font family (checked at renderer construction) ·
+// consecutive automatically placed cuts · V19 named font family (checked at renderer construction) ·
 // V20 selected intro/outro preset geometry (VerifyRegion).
 // V4, V8, V11 and V12 belong to components this manifest does not carry yet.
 func Verify(m Manifest, ratio string, hideDisclosure ...bool) error {
@@ -177,7 +183,7 @@ func verify(m Manifest, ratio string, checkOverlap, hideDisclosure bool) error {
 		if e.Kind != "scrim" && e.Kind != "card" && !within(e.Region, elementSafe) {
 			return at(ViolationSafeArea, e)
 		}
-		if err := verifyContrast(e); err != nil && !e.ContrastNotice {
+		if err := verifyContrast(e); err != nil && !e.ContrastNotice && !e.OwnerPlaced {
 			return at(ViolationContrast, e)
 		}
 		if e.Kind == "badge" && e.FontSize != Type["badge"].Size {
@@ -396,7 +402,10 @@ func verifySequence(m Manifest) error {
 	cuts := []slot{}
 	anchor, style := map[slot]string{}, map[slot]string{}
 	for _, e := range m {
-		if !caption(e) {
+		// V13 is about what AUTOMATIC placement did between two consecutive
+		// cuts. An owner placement is not a step the eye has to be walked
+		// through — it is where the owner put the caption (CDS-38, CDS-82).
+		if !caption(e) || e.OwnerPlaced {
 			continue
 		}
 		at := slotOf(e)

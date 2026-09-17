@@ -61,10 +61,14 @@ type SourceEvidence struct {
 	StartMS, EndMS        int
 }
 type PortableText struct {
-	Phrases               []EditablePhrase
-	StaleEvidence         bool
-	OwnerEdited           bool
-	Placement             *CompositionPlacement
+	Phrases       []EditablePhrase
+	StaleEvidence bool
+	OwnerEdited   bool
+	Placement     *CompositionPlacement
+	// What the owner set for this caption in ② — its own position, size and
+	// style (CDS-82). The zero value is a caption nobody has placed, which is
+	// automatic placement and the project's default style, exactly as before.
+	Owner                 OwnerCaption
 	Accent, Keyword, Pace string
 	Resolved              composition.ResolvedElement
 	Scope                 string
