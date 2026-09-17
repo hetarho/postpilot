@@ -5,7 +5,7 @@ package composition
 import "strconv"
 
 type Limits struct {
-	SourceChars, Nodes, Fields, Items, Cuts, Cues               int
+	SourceChars, Nodes, Fields, Items, Cuts, Cues, Stages       int
 	LabelChars, PromptChars, AnswerChars, CopyChars, GuideChars int
 	MaxDurationMS, AutoInsetMS                                  int
 }
@@ -64,6 +64,14 @@ type Group struct {
 	Min, Max  int
 	Span      Span
 }
+
+// Stage is one named composition stage (CLIP-141): a short name and one line of
+// intent, kept in document order. It is guidance for the flow call only — it
+// admits no footage and forbids none.
+type Stage struct {
+	Name, Intent string
+	Span         Span
+}
 type Part struct{ Literal, Field string }
 type Row struct {
 	Role, Kind string
@@ -99,6 +107,7 @@ type Document struct {
 	Fields       []Field
 	Groups       []Group
 	Guidance     []string
+	Stages       []Stage
 	Sections     []Section
 	Elements     []Element
 	// Each field's effective maximum, keyed the way fieldKey keys a field

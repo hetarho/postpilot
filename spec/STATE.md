@@ -48,13 +48,13 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
-| T223 | A template carries named composition stages | CLIP | - | doing@260917.stg |
 | T224 | ① chooses the design, the caption styles and an optional template | CLIP | T217 T218 | todo |
 | T226 | The approval surface quotes sequence-rendered captions separately | CDS CLIP | T220 | todo |
 
 ## next
-- implement-task T224 (① chooses the design, the styles and the template — T222 now serves the previews its impl notes want) or T226 (the sequence quote); T223 is taken by another session
+- implement-task T224 (① chooses the design, the styles and the template) or T226 (the sequence quote) — T223 is done and the stage grammar is in
 ## log
+- 260917 T223 done; a template may carry named composition stages (`<stage name="…">한 줄 의도</stage>`, root only, at most 8, both halves required and bounded by the label and prompt counts), read by the Go and TypeScript parsers against the shared corpus and handed to the flow call in the template guide's position as a numbered order to follow where the footage allows — admitting and forbidding nothing, with no notice, count or refusal anywhere for a stage
 - 260917 T225 done; ② places each caption over a still frame of the cut it starts in — drag stopping at the safe area it draws while moving, arrow-key nudging in canvas pixels, the size refused outside CDS-3's floor and the role's own size at the control, the style taken from the project's allowed set, a contrast shortfall shown in place and blocking nothing, and a plain ground with the reason where the footage is not here — every change riding the existing draft queue and undo
 - 260917 T223 claimed (stg)
 - 260917 T225 claimed (plc)

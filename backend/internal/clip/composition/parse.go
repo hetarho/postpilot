@@ -105,7 +105,7 @@ func optional(n *Node, key, fallback string) string {
 	return v
 }
 func validLimits(l Limits) bool {
-	for _, v := range []int{l.SourceChars, l.Nodes, l.Fields, l.Items, l.Cuts, l.Cues, l.LabelChars, l.PromptChars, l.AnswerChars, l.CopyChars, l.GuideChars, l.MaxDurationMS} {
+	for _, v := range []int{l.SourceChars, l.Nodes, l.Fields, l.Items, l.Cuts, l.Cues, l.Stages, l.LabelChars, l.PromptChars, l.AnswerChars, l.CopyChars, l.GuideChars, l.MaxDurationMS} {
 		if v <= 0 {
 			return false
 		}
@@ -387,6 +387,10 @@ func parse(source string, limits Limits, stored, template bool) (*Document, *Pro
 				return nil, e
 			}
 			d.Guidance = append(d.Guidance, v)
+		case "stage":
+			if e = readStage(n, d, limits); e != nil {
+				return nil, e
+			}
 		case "text":
 			if e = claim(n, ""); e != nil {
 				return nil, e
@@ -452,6 +456,31 @@ func parse(source string, limits Limits, stored, template bool) (*Document, *Pro
 	d.Maxima = fieldMaxima(d, limits)
 	d.Minima = groupMinima(d)
 	return d, nil
+}
+
+// readStage reads one named composition stage (CLIP-141): a short name and one
+// line of intent, bounded by the counts a label and a prompt already have and
+// capped in number so a body cannot script the clip stage by stage. A stage is
+// a property of the whole clip, so it lives at the root only — inside a scene
+// or a repetition `stage` stays an unknown tag.
+func readStage(n *Node, d *Document, limits Limits) *Problem {
+	if e := attrs(n, "name"); e != nil {
+		return e
+	}
+	intent, e := content(n)
+	if e != nil {
+		return e
+	}
+	name := n.Attributes["name"]
+	if strings.TrimSpace(name) == "" || strings.TrimSpace(intent) == "" ||
+		scalar(name) > limits.LabelChars || scalar(intent) > limits.PromptChars {
+		return issue(n, "stage_limit")
+	}
+	d.Stages = append(d.Stages, Stage{Name: name, Intent: intent, Span: n.Span})
+	if len(d.Stages) > limits.Stages {
+		return issue(n, "stage_limit")
+	}
+	return nil
 }
 
 // groupMinima gives every repeated item group the number of items it actually

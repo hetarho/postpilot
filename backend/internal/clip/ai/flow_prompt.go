@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/postpilot/backend/internal/clip"
@@ -69,16 +70,42 @@ func BuildFlowPrompt(in clip.PlanningInput, fadeMS int, limits composition.Limit
 	return flowPrompt + responseContract + contract, promptJSON(payload)
 }
 
-// templateGuide is the template's own prose, which the instruction outranks on
-// content (CLIP-121). It is the root guide alone: a section guide cannot exist
-// in a body this writer plans for.
+// templateGuide is the template's own prose and its named stages, which the
+// instruction outranks on content (CLIP-121). It is the root guide alone: a
+// section guide cannot exist in a body this writer plans for.
 func templateGuide(in clip.PlanningInput, limits composition.Limits) string {
 	doc, problem := composition.ReadStored(in.Composition.Snapshot.Body, limits)
 	if problem != nil {
 		return ""
 	}
-	return strings.Join(doc.Guidance, "\n")
+	blocks := doc.Guidance
+	if stages := stageBlock(doc.Stages); stages != "" {
+		blocks = append(append([]string{}, blocks...), stages)
+	}
+	return strings.Join(blocks, "\n")
 }
+
+// stageBlock renders the template's named stages as the numbered order to
+// follow where the footage allows (CLIP-141). It says in the same breath that
+// the order admits and forbids nothing, because no code below refuses a cut for
+// matching no stage and nothing reports one as missing: footage the stages do
+// not name is placed where it belongs, and a stage nothing was filmed for is
+// simply not there (CLIP-136).
+func stageBlock(stages []composition.Stage) string {
+	if len(stages) == 0 {
+		return ""
+	}
+	var b strings.Builder
+	b.WriteString("Composition stages, in this order, to follow where the footage allows. They admit and forbid no footage: skip or merge a stage nothing was filmed for, and keep footage matching no stage where it belongs. Never repeat or stretch footage to fill a stage.")
+	for i, stage := range stages {
+		b.WriteString(fmt.Sprintf("\n%d. %s — %s", i+1, oneLine(stage.Name), oneLine(stage.Intent)))
+	}
+	return b.String()
+}
+
+// oneLine collapses an authored stage's wrapping so a stage stays one numbered
+// line in the prompt, whatever the body wrapped it as.
+func oneLine(s string) string { return strings.Join(strings.Fields(s), " ") }
 
 // flowObservationPayload is the planning payload plus the ONE owner setting a
 // rate turns on: whether this source's original sound is kept, which is what

@@ -331,6 +331,7 @@ function readClipComposition(
     fields: [],
     groups: [],
     guidance: [],
+    stages: [],
     sections: [],
     elements: [],
     maxima: {},
@@ -406,6 +407,25 @@ function readClipComposition(
     if (scalarLength(v) > limits.guideChars) problem(n, 'guide_limit')
     return v
   }
+  /** One named composition stage (CLIP-141): a short name and one line of intent,
+   * bounded by the counts a label and a prompt already have and capped in number
+   * so a body cannot script the clip stage by stage. A stage is a property of the
+   * whole clip, so it lives at the root only — inside a scene or a repetition
+   * `stage` stays an unknown tag. */
+  const stage = (n: CompositionNode) => {
+    attributes(n, 'name')
+    const name = n.attributes.name ?? '',
+      intent = content(n)
+    if (
+      !trimCompositionSpace(name) ||
+      !trimCompositionSpace(intent) ||
+      scalarLength(name) > limits.labelChars ||
+      scalarLength(intent) > limits.promptChars
+    )
+      problem(n, 'stage_limit')
+    d.stages.push({ name, intent, span: n.span })
+    if (d.stages.length > limits.stages) problem(n, 'stage_limit')
+  }
   const section = (n: CompositionNode, repeat = '') => {
     attributes(n, 'id', 'scope')
     claim(n)
@@ -439,6 +459,9 @@ function readClipComposition(
         break
       case 'guide':
         d.guidance.push(guide(n))
+        break
+      case 'stage':
+        stage(n)
         break
       case 'text':
         claim(n)

@@ -5,7 +5,8 @@ and selected footage cuts. Neither function chooses footage, calls AI or renders
 
 Three entries read the same grammar at different strictness. `ParseTemplate` is
 what a saved TEMPLATE body must satisfy (CLIP-4, CLIP-59): fields, groups,
-invisible guides, the intro/outro slots and the badge. It refuses `scene`,
+invisible guides, named composition stages, the intro/outro slots and the
+badge. It refuses `scene`,
 `repeat` (`unsupported_section`), a content text whose role is `caption` or
 `info` (`unsupported_role`) and `basis="cut"` (`unsupported_basis`). `Parse`
 still accepts every construct below so a project's frozen snapshot keeps
@@ -27,6 +28,8 @@ element's resolved text is the exact output after explicit value substitution.
     <field id="price" label="가격"/>
   </group>
   <guide>촬영한 순서와 실제 장면에 맞춰 구성하세요.</guide>
+  <stage name="식당 소개">간판과 외관을 먼저 보여준다</stage>
+  <stage name="음식">주문한 메뉴가 나오는 순간</stage>
   <text id="disclosure" kind="fixed" role="badge" position="header"
         basis="whole">협찬받아 촬영한 영상입니다.</text>
   <repeat for="menu">
@@ -47,11 +50,19 @@ element's resolved text is the exact output after explicit value substitution.
 </clip>
 ```
 
-- Root children: `field`, `group`, invisible `guide`, `scene`, `repeat`, `text`.
+- Root children: `field`, `group`, invisible `guide`, `stage`, `scene`,
+  `repeat`, `text`.
   A group contains fields. A scene contains guides/text and selects actual
   footage with `scope="scene|item|context"`. Repetition contains scenes and uses
   `for="scenes"` or a declared group. Nested repetition is refused; `scenes` is
   reserved as a group ID. Unfilmed items do not create synthetic footage.
+- `stage` is one named composition stage (CLIP-141): a `name` within the label
+  count and one line of intent within the prompt count, both required, at most
+  `Stages` of them and root children only — a stage is a property of the whole
+  clip, so inside a scene or a repetition `stage` stays an unknown tag. They are
+  ordered guidance handed to the flow call in the template guide's position and
+  nothing else reads them: no stage admits footage, refuses it or is reported
+  missing.
 - Template IDs use 1–64 ASCII letters, digits, underscores or hyphens, starting
   with a letter or digit. Fields inside groups have qualified identity, e.g.
   `menu.price`. Visible element and scene IDs are unique across the document.

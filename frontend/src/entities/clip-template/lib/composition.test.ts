@@ -76,6 +76,7 @@ const summary = (d: ClipComposition) => ({
   sections: d.sections.map(({ id, scope, repeat }) => ({ id, scope, repeat })),
   elements: d.elements.map((e) => e.id),
   guidance: d.guidance,
+  stages: d.stages.map(({ name, intent }) => ({ name, intent })),
 })
 const resolution = (t: CompositionTimeline) =>
   t.elements.map(({ instanceId, text, startMs, endMs, authoredTiming, facts, rows }) => ({

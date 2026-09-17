@@ -158,6 +158,22 @@ export function CompositionBuilder({
             />
           </>
         )}
+        {name === 'stage' && (
+          <>
+            <CompositionInput
+              label={t('composition.stageName')}
+              value={node.attributes.name ?? ''}
+              onChange={(v) => attr('name', v)}
+            />
+            <CompositionInput
+              label={t('composition.stageIntent')}
+              hint={t('composition.stageHint')}
+              value={node.children.map((n) => n.text).join('')}
+              multiline
+              onChange={(v) => change({ ...node, children: [compositionLiteral(v)] })}
+            />
+          </>
+        )}
         {name === 'guide' && (
           <CompositionInput
             label={t('composition.guidance')}
@@ -278,7 +294,7 @@ export function CompositionBuilder({
           ))}
       </div>
       {outline}
-      {addButtons(root, ['field', 'group', 'guide', 'text'])}
+      {addButtons(root, ['field', 'group', 'stage', 'guide', 'text'])}
     </div>
   )
 }

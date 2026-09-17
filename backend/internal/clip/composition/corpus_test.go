@@ -114,7 +114,11 @@ func summary(d *composition.Document) map[string]any {
 	for _, e := range d.Elements {
 		elements = append(elements, e.ID)
 	}
-	return map[string]any{"design": map[string]any{"intro": d.Design.Intro, "caption": d.Design.Caption, "outro": d.Design.Outro}, "accent": d.Accent, "pace": d.Pace, "fields": fields, "groups": groups, "sections": sections, "elements": elements, "guidance": append([]string{}, d.Guidance...)}
+	stages := []map[string]any{}
+	for _, s := range d.Stages {
+		stages = append(stages, map[string]any{"name": s.Name, "intent": s.Intent})
+	}
+	return map[string]any{"design": map[string]any{"intro": d.Design.Intro, "caption": d.Design.Caption, "outro": d.Design.Outro}, "accent": d.Accent, "pace": d.Pace, "fields": fields, "groups": groups, "sections": sections, "elements": elements, "guidance": append([]string{}, d.Guidance...), "stages": stages}
 }
 func resolution(t *testing.T, out composition.Timeline) []map[string]any {
 	t.Helper()

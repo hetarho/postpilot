@@ -51,7 +51,7 @@ func TestMigration0054PreservesAuthoredBytesAndFrozenContent(t *testing.T) {
 	if _, err = provider.UpTo(t.Context(), 54); err != nil {
 		t.Fatal(err)
 	}
-	limits := composition.Limits{SourceChars: 16000, Nodes: 1000, Fields: 10, Items: 20, Cuts: 100, Cues: 1000, LabelChars: 100, PromptChars: 4000, AnswerChars: 4000, CopyChars: 4000, GuideChars: 12000, MaxDurationMS: 90000}
+	limits := composition.Limits{SourceChars: 16000, Nodes: 1000, Fields: 10, Items: 20, Cuts: 100, Cues: 1000, Stages: 8, LabelChars: 100, PromptChars: 4000, AnswerChars: 4000, CopyChars: 4000, GuideChars: 12000, MaxDurationMS: 90000}
 	for id, body := range map[string]string{"restaurant": restaurant, "literal": original, "selected": selected} {
 		want := body
 		if id == "restaurant" {

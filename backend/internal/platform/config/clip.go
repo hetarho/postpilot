@@ -19,9 +19,13 @@ func ClipMedia(cfg *Config) clip.MediaConfig {
 }
 
 const (
-	ClipTemplateNameChars       = 40
-	ClipGuidanceChars           = 4000
-	ClipInformationFields       = 10
+	ClipTemplateNameChars = 40
+	ClipGuidanceChars     = 4000
+	ClipInformationFields = 10
+	// How many named composition stages one template may carry (CLIP-141). A
+	// stage is a movement of the whole clip, so a body listing more than this is
+	// scripting the footage rather than guiding the flow.
+	ClipCompositionStages       = 8
 	ClipLabelChars              = 40
 	ClipPromptChars             = 200
 	ClipTitleChars              = 100

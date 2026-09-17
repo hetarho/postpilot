@@ -5,6 +5,7 @@ export interface CompositionLimits {
   items: number
   cuts: number
   cues: number
+  stages: number
   labelChars: number
   promptChars: number
   answerChars: number
@@ -52,6 +53,7 @@ export type CompositionReason =
   | 'invalid_item_bounds'
   | 'items_required'
   | 'guide_limit'
+  | 'stage_limit'
   | 'unsupported_section'
   | 'unsupported_role'
   | 'unsupported_basis'
@@ -147,6 +149,14 @@ export interface CompositionElement {
   rows: CompositionRow[]
   span: CompositionSpan
 }
+/** One named composition stage (CLIP-141): a short name and one line of intent,
+ * kept in document order. Guidance for the flow call only — it admits no footage
+ * and forbids none. */
+export interface CompositionStage {
+  name: string
+  intent: string
+  span: CompositionSpan
+}
 export interface CompositionSection {
   id: string
   scope: string
@@ -164,6 +174,7 @@ export interface ClipComposition {
   fields: CompositionField[]
   groups: CompositionGroup[]
   guidance: string[]
+  stages: CompositionStage[]
   sections: CompositionSection[]
   elements: CompositionElement[]
   /** Each field's effective maximum, keyed as the qualified field reference
