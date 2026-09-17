@@ -66,3 +66,61 @@ describe('clip setup validation', () => {
     ).toMatchObject({ title: '경험', answers: [{ label: '장소', text: '  보존  ' }] })
   })
 })
+
+describe('normalizeClipProject against key order', () => {
+  const base = {
+    title: '클립',
+    videoTemplateId: 'template',
+    ratio: 'vertical' as const,
+    targetDurationMs: 30000,
+    disclosure: '' as const,
+    cta: '' as const,
+  }
+  // The server holds these as maps, so the same project can come back naming the same fields in a
+  // different order. The form compares serialized drafts to decide whether it is in sync
+  // (CLIP-39), so an order-sensitive comparison left an edit 'unsaved' for good.
+  it('serializes the same draft identically whatever order the server names its fields in', () => {
+    const one = normalizeClipProject({
+      ...base,
+      answers: [
+        { label: '나중', text: 'b' },
+        { label: '먼저', text: 'a' },
+      ],
+      compositionInputs: {
+        values: { region: '강릉', place: '가게' },
+        items: { menu: [{ id: 'first', values: { price: '9000', name: '갈비' } }] },
+        associations: [],
+      },
+    })
+    const other = normalizeClipProject({
+      ...base,
+      answers: [
+        { label: '먼저', text: 'a' },
+        { label: '나중', text: 'b' },
+      ],
+      compositionInputs: {
+        values: { place: '가게', region: '강릉' },
+        items: { menu: [{ id: 'first', values: { name: '갈비', price: '9000' } }] },
+        associations: [],
+      },
+    })
+    expect(JSON.stringify(one)).toBe(JSON.stringify(other))
+  })
+  it('keeps the order that is the owner’s own', () => {
+    const value = normalizeClipProject({
+      ...base,
+      answers: [],
+      compositionInputs: {
+        values: {},
+        items: {
+          menu: [
+            { id: 'second', values: {} },
+            { id: 'first', values: {} },
+          ],
+        },
+        associations: [],
+      },
+    })
+    expect(value.compositionInputs?.items.menu.map((v) => v.id)).toEqual(['second', 'first'])
+  })
+})

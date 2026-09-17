@@ -183,8 +183,41 @@ export function projectDraft(value: ClipProjectDraft): ClipProjectDraft {
     accent: value.accent ?? '',
   }
 }
+/** Key order is not part of what a draft SAYS, but it is part of what `JSON.stringify` writes.
+ *  The server holds these as maps, so two reads of the same project can name the same fields in
+ *  a different order, and the form compares serialized drafts to decide whether it is in sync
+ *  (CLIP-39). Without this an edit stayed 'unsaved' for good: the settings saved, the comparison
+ *  kept disagreeing, and ①'s approval panel never came back until the page was reloaded.
+ *
+ *  Only maps are ordered here. The item list and the associations keep the order they were given,
+ *  because there the order is the owner's. */
+const byKey = <T>(value: Record<string, T>): Record<string, T> =>
+  Object.fromEntries(Object.entries(value).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)))
+
 export function normalizeClipProject(value: ClipProjectDraft): ClipProjectDraft {
-  return { ...projectDraft(value), title: value.title.trim() }
+  const draft = projectDraft(value)
+  const inputs = draft.compositionInputs
+  return {
+    ...draft,
+    ...(inputs
+      ? {
+          compositionInputs: {
+            values: byKey(inputs.values),
+            items: Object.fromEntries(
+              Object.entries(byKey(inputs.items)).map(([group, list]) => [
+                group,
+                list.map((item) => ({ id: item.id, values: byKey(item.values) })),
+              ]),
+            ),
+            associations: inputs.associations,
+          },
+        }
+      : {}),
+    answers: [...draft.answers].sort((a, b) =>
+      a.label < b.label ? -1 : a.label > b.label ? 1 : 0,
+    ),
+    title: value.title.trim(),
+  }
 }
 /** `/clips/new` settles the ratio and nothing else (CLIP-130): the answers, the instruction and
  *  the length are written in ① beside the sources they describe, so minting asks only for what a
