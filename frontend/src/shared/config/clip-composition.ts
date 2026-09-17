@@ -7,6 +7,7 @@ export const CLIP_COMPOSITION_LIMITS = {
   items: 20,
   cuts: 100,
   cues: 2400,
+  stages: 8,
   labelChars: 40,
   promptChars: 200,
   answerChars: 500,
@@ -57,4 +58,12 @@ export const CLIP_TIMELINE = {
   minimumEditingRoomPx: 96,
   pixelsPerSecond: 80,
   minWidth: 320,
+} as const
+
+/** How ② places a caption (CDS-82, CLIP-143). The nudge is in CANVAS pixels, so
+ *  a keystroke moves the caption by the same amount at every ratio and at every
+ *  size the stage happens to be drawn at. */
+export const CLIP_CAPTION_PLACEMENT = {
+  nudgePx: 8,
+  coarseNudgePx: 40,
 } as const

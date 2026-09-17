@@ -394,6 +394,10 @@ export const GUIDELINE_TEXT_MAX_CHARS = positiveIntEnv(
 export {
   CLIP_DESIGN,
   CLIP_REGIONS,
+  CLIP_DEFAULT_CAPTION_STYLE,
+  CLIP_CAPTION_STYLES,
+  clipCaptionRule,
+  clipCaptionSizes,
   CLIP_RULES,
   clipRegion,
   clipCaption,
@@ -418,6 +422,7 @@ export type {
   ClipCaptionPace,
   ClipRatioId,
   ClipPresetId,
+  ClipCaptionStyleId,
   ClipDisclosureId,
   ClipCTAId,
 } from './clip-design'
@@ -427,4 +432,5 @@ export {
   CLIP_DRAFT_PREVIEW,
   CLIP_REVISION,
   CLIP_TIMELINE,
+  CLIP_CAPTION_PLACEMENT,
 } from './clip-composition'

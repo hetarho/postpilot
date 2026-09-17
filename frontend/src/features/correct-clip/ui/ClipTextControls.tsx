@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   ClipNoticeList,
@@ -10,7 +11,12 @@ import {
   type TimelineEdit,
 } from '@/entities/clip-project'
 import { CLIP_ACCENTS } from '@/entities/clip-template'
-import { CLIP_RAPID } from '@/shared/config'
+import {
+  CLIP_CAPTION_STYLES,
+  CLIP_DEFAULT_CAPTION_STYLE,
+  CLIP_RAPID,
+  clipCaptionSizes,
+} from '@/shared/config'
 import {
   Button,
   FieldLabel,
@@ -29,6 +35,7 @@ export function ClipTextControls({
   invalid,
   notices = [],
   language,
+  captionStyles = [],
 }: {
   notices?: readonly ClipNotice[]
   language?: 'ko' | 'en'
@@ -36,6 +43,9 @@ export function ClipTextControls({
   text: ClipEditableText
   change: (edit: TimelineEdit, group?: string) => void
   invalid: boolean
+  /** The styles THIS project allows a caption to take (CLIP-142). Empty is a
+   *  project that selected none, which is the default style alone. */
+  captionStyles?: readonly string[]
 }) {
   const { t } = useTranslation('clips')
   const textNotices = notices.filter(
@@ -58,6 +68,16 @@ export function ClipTextControls({
       { type: 'text', id: text.instanceId, patch: value },
       group ? `${text.instanceId}:${group}` : undefined,
     )
+  // The project's own selection, narrowed to styles this build actually knows:
+  // an id it does not carry is one the server would refuse anyway (CLIP-142).
+  const allowed = CLIP_CAPTION_STYLES.filter((id) =>
+    captionStyles.length ? captionStyles.includes(id) : id === CLIP_DEFAULT_CAPTION_STYLE,
+  )
+  const sizes = clipCaptionSizes(text.ownerStyle)
+  const [size, setSize] = useState(text.ownerSizePx ? String(text.ownerSizePx) : '')
+  const typed = Number(size)
+  const sizeRefused =
+    size.trim() !== '' && (!Number.isFinite(typed) || typed < sizes.min || typed > sizes.max)
   const phrases = text.phrases?.length
     ? text.phrases
     : text.pace === 'rapid'
@@ -236,6 +256,55 @@ export function ClipTextControls({
             />
           </div>
         </>
+      )}
+      {text.role === 'caption' && (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <FieldLabel id="clip-caption-style-label">{t('placement.style')}</FieldLabel>
+            <Listbox
+              aria-labelledby="clip-caption-style-label"
+              value={text.ownerStyle ?? ''}
+              options={[
+                { value: '', label: t('placement.styleDefault') },
+                ...allowed.map((value) => ({ value, label: t(`captionStyles.${value}`) })),
+              ]}
+              onChange={(ownerStyle) =>
+                patch({ ownerStyle: ownerStyle || undefined, ownerSizePx: undefined })
+              }
+            />
+          </div>
+          <div>
+            <FieldLabel htmlFor="clip-caption-size">{t('placement.size')}</FieldLabel>
+            <TextField
+              id="clip-caption-size"
+              inputMode="numeric"
+              value={size}
+              onChange={(e) => setSize(e.target.value)}
+              onBlur={() => {
+                const value = Number(size)
+                if (!size.trim()) return patch({ ownerSizePx: undefined })
+                // CDS-3's floor is refused AT THE CONTROL: the owner keeps what
+                // they typed and the caption keeps the size it had.
+                if (!Number.isFinite(value) || value < sizes.min || value > sizes.max) return
+                patch({ ownerSizePx: Math.round(value) })
+              }}
+            />
+            {sizeRefused ? (
+              <FieldMessage>
+                {t('placement.sizeRange', { min: sizes.min, max: sizes.max })}
+              </FieldMessage>
+            ) : (
+              <Typography variant="meta">
+                {t('placement.sizeRange', { min: sizes.min, max: sizes.max })}
+              </Typography>
+            )}
+          </div>
+          {text.ownerPosition && (
+            <Button variant="ghost" onClick={() => patch({ ownerPosition: undefined })}>
+              {t('placement.reset')}
+            </Button>
+          )}
+        </div>
       )}
       {text.role === 'caption' && (
         <div className="space-y-3">

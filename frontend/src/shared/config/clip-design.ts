@@ -19,8 +19,25 @@ export const CLIP_CTAS = Object.keys(design.cta) as ClipCTAId[]
 
 export const CLIP_REGIONS = design.regions
 export const CLIP_RULES = design.rule
+/** The default caption treatment's id (CDS-25). A project that selects no styles
+ *  may use this one alone, so it is also what an unset style means (CLIP-142). */
+export const CLIP_DEFAULT_CAPTION_STYLE = 'bold'
+/** Every approved caption style, in the order the design spec names them. The
+ *  set a project may actually assign from is its own selection (CLIP-142). */
+export type ClipCaptionStyleId = keyof typeof design.regions.caption
+export const CLIP_CAPTION_STYLES = Object.keys(design.regions.caption) as ClipCaptionStyleId[]
 export function clipCaption() {
   return design.regions.caption.bold
+}
+export function clipCaptionRule(id?: string) {
+  const rules: Record<string, typeof design.regions.caption.bold> = design.regions.caption
+  return rules[id || CLIP_DEFAULT_CAPTION_STYLE] ?? clipCaption()
+}
+/** The size range a caption in this style may be set at: CDS-3's floor for its
+ *  type role, and the size that role is set at, which V2 refuses to exceed. */
+export function clipCaptionSizes(id?: string) {
+  const role = design.type[clipCaptionRule(id).type as keyof typeof design.type]
+  return { min: role.min, max: role.size }
 }
 export function clipRegion(kind: 'intro' | 'outro', id: string) {
   return Object.entries(design.regions[kind]).find(([key]) => key === id)?.[1]

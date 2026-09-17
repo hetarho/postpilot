@@ -168,6 +168,13 @@ export interface ClipEditableText {
   resolvedEndMs: number
   groupId: string
   itemId: string
+  /** Where the owner put this caption, how big they made it and which approved
+   *  style they gave it (CDS-82). Each is absent on its own: no position is
+   *  automatic placement, no size the style's own and no style the project's
+   *  default, so resizing a caption nobody moved does not also pin it. */
+  ownerPosition?: { x: number; y: number }
+  ownerSizePx?: number
+  ownerStyle?: string
 }
 export interface ClipEditPlan {
   /** The server's complete per-source original-sound snapshot. Absent is a plan

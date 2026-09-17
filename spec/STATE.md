@@ -48,14 +48,16 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
-| T223 | A template carries named composition stages | CLIP | - | todo |
+| T223 | A template carries named composition stages | CLIP | - | doing@260917.stg |
 | T224 | ① chooses the design, the caption styles and an optional template | CLIP | T217 T218 | todo |
-| T225 | ② places captions over their own cut frame | CLIP CDS | T221 T222 | todo |
 | T226 | The approval surface quotes sequence-rendered captions separately | CDS CLIP | T220 | todo |
 
 ## next
-- implement-task T225 (the last of the caption placement deploy unit: ② edits over the cut frame) — T223 T224 T226 stay free for another session
+- implement-task T224 (① chooses the design, the styles and the template — T222 now serves the previews its impl notes want) or T226 (the sequence quote); T223 is taken by another session
 ## log
+- 260917 T225 done; ② places each caption over a still frame of the cut it starts in — drag stopping at the safe area it draws while moving, arrow-key nudging in canvas pixels, the size refused outside CDS-3's floor and the role's own size at the control, the style taken from the project's allowed set, a contrast shortfall shown in place and blocking nothing, and a plain ground with the reason where the footage is not here — every change riding the existing draft queue and undo
+- 260917 T223 claimed (stg)
+- 260917 T225 claimed (plc)
 - 260917 T222 done; GetClipCaptionPreview hands ② each caption as the renderer's own drawing with its root taken off — one `<g>` brought to the origin by a transform the reported box cancels exactly, ids prefixed per caption, a sequence style labelled as one representative frame — and a smoke contract rasterises the placed fragment and the renderer's caption to byte-identical PNGs; Jua and NanumMyeongjo now reach the browser too
 - 260917 T222 claimed (plc)
 - 260917 T221 done; a caption carries the owner's own position, size and style — clamped into the safe area by moving, never resizing, with the size floor and an unallowed style refused where they are written — and the manifest says who placed it so V1 still holds it inside the safe area, V3 demotes a shortfall under it to a notice, V13 leaves it out of the anchor walk and no repair or automatic placement runs over it again
@@ -73,6 +75,3 @@
 - 260917 create-task CLIP CDS start
 - 260917 update-ssot CLIP r32 CDS r21 done; the video template is a preset rather than a precondition (CLIP-5 at most one), the design selection and the allowed caption styles belong to ① (CLIP-139 CLIP-142), a template may carry named composition stages that guide the flow without admitting or forbidding footage (CLIP-141), and ② places each caption over its own cut frame for free movement inside the safe area with contrast demoted to a notice (CLIP-143 CDS-82 CDS-52); the caption style set, its static/sequence cost split and the preview-render agreement rule are new in CDS (CDS-80 CDS-81 CDS-83)
 - 260917 T177 (blocked, CDS CLIP) lies in the changed area: its release QA viewing checklist predates the caption style set
-- 260917 update-ssot CLIP CDS start (ideation clip-template-as-preset)
-- 260917 T204 done; what the owner asked the AI for is kept with the project (migration 0060 clip_project_requests, cascade to the project) — the instruction a generation froze and the words and target of each revision, verbatim with the time, written at the one seam where the job exists but cannot yet dispatch, so an accepted job always has its entry and a save never writes one; read back newest first in a disclosure beside the observations, and gone when the project is
-- 260917 useClipProject stops polling at a terminal revise_clip job, so a revision's settlement lands only on the next read — pre-existing from T202/T203, worth a review-code finding

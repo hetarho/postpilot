@@ -35,7 +35,7 @@ it('reuses one localized fallback line and removes it after the owner-edited res
   expect(screen.queryByText('같은 내용을 담은 더 짧은 문구를 사용했어요.')).not.toBeInTheDocument()
 })
 
-it('offers text, placement and timing edits without a style control', async () => {
+it('offers text, placement and timing edits, and the styles the project allows', async () => {
   const state = clipTimelineFixture(),
     change = vi.fn()
   render(
@@ -46,7 +46,9 @@ it('offers text, placement and timing edits without a style control', async () =
       invalid={false}
     />,
   )
-  expect(screen.queryByLabelText(/스타일|style/i)).not.toBeInTheDocument()
+  // A caption carries its own style now (CLIP-143), from the project's allowed
+  // set — which here is a project that selected none: the default alone.
+  expect(screen.getByLabelText('자막 스타일')).toBeInTheDocument()
   expect(screen.getByLabelText('자막 원문')).toBeEnabled()
   fireEvent.change(screen.getByLabelText('자막 원문'), { target: { value: '새 문구' } })
   expect(change).toHaveBeenLastCalledWith(

@@ -50,6 +50,10 @@ export interface ClipProjectDraft {
   accent?: ClipAccent
 }
 export interface ClipProject extends ClipProjectDraft {
+  /** The caption styles THIS clip may use (CLIP-142). A read projection: ① is
+   *  what chooses them, and ② only needs to know which ones a caption may be
+   *  given. Empty is a project that selected none — the default style alone. */
+  allowedCaptionStyles?: string[]
   notices?: ClipNotice[]
   /** What the owner asked the AI for, newest first (CLIP-133). */
   requests?: ClipProjectRequest[]

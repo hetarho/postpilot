@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
+import { clipTimelineFixture } from '@/test/clip-editing'
 import {
   applyTimelineEdit,
+  clipDraftKey,
   clipTimelineReducer,
   createClipTimeline,
   selectedTime,
@@ -365,4 +367,24 @@ it('copies a newly used source permission from its retained lease without changi
     expect(initial.sourceAudio).toHaveLength(2)
     expect(added.cuts[1].volumePermille).toBe(1000)
   }
+})
+
+it('carries an owner placement through the draft queue and undo', () => {
+  const fixture = clipTimelineFixture().plan
+  let state = createClipTimeline(fixture)
+  const id = fixture.elements![0].instanceId
+  const before = clipDraftKey(state.plan)
+  state = clipTimelineReducer(state, {
+    type: 'edit',
+    edit: { type: 'text', id, patch: { ownerPosition: { x: 200, y: 900 }, ownerStyle: 'film' } },
+    at: 0,
+  })
+  const placed = state.plan.elements!.find((text) => text.instanceId === id)!
+  expect(placed.ownerPosition).toEqual({ x: 200, y: 900 })
+  expect(placed.ownerStyle).toBe('film')
+  // A placement is a change the queue has to save, and one undo takes it back.
+  expect(clipDraftKey(state.plan)).not.toBe(before)
+  state = clipTimelineReducer(state, { type: 'undo' })
+  expect(state.plan.elements!.find((text) => text.instanceId === id)!.ownerPosition).toBeUndefined()
+  expect(clipDraftKey(state.plan)).toBe(before)
 })

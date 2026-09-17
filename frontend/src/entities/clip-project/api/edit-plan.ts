@@ -25,21 +25,32 @@ export function toClipEditingState(value: ProtoClipEditingState): ClipEditingSta
                 startMs: a.startMs,
                 endMs: a.endMs,
               })) ?? [],
-            elements: value.plan.elements.map(({ $typeName, rows, phrases, evidence, ...text }) => {
-              void $typeName
-              return {
-                ...text,
-                narration: text.narration,
-                phrases: phrases.map((p) => ({ text: p.text, startMs: p.startMs, endMs: p.endMs })),
-                evidence: evidence.map((e) => ({
-                  sourceId: e.sourceId,
-                  fingerprint: e.fingerprint,
-                  startMs: e.startMs,
-                  endMs: e.endMs,
-                })),
-                rows: rows.map((row) => ({ role: row.role, text: row.text })),
-              }
-            }),
+            elements: value.plan.elements.map(
+              ({ $typeName, rows, phrases, evidence, ownerPosition, ...text }) => {
+                void $typeName
+                return {
+                  ...text,
+                  // The wire message carries a type name the draft must not:
+                  // the draft is compared field by field to decide what changed.
+                  ownerPosition: ownerPosition
+                    ? { x: ownerPosition.x, y: ownerPosition.y }
+                    : undefined,
+                  narration: text.narration,
+                  phrases: phrases.map((p) => ({
+                    text: p.text,
+                    startMs: p.startMs,
+                    endMs: p.endMs,
+                  })),
+                  evidence: evidence.map((e) => ({
+                    sourceId: e.sourceId,
+                    fingerprint: e.fingerprint,
+                    startMs: e.startMs,
+                    endMs: e.endMs,
+                  })),
+                  rows: rows.map((row) => ({ role: row.role, text: row.text })),
+                }
+              },
+            ),
           }
         : {}),
       ...(value.plan.sourceAudio

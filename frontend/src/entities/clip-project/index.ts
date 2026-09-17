@@ -13,6 +13,12 @@ export {
 export { clipState, clipStateLabel } from './model/state'
 export { boundedText } from './lib/bounded-text'
 export { useClipLifecycleApi } from './api/lifecycle'
+export {
+  toClipCaptionPreview,
+  captionDrawingKey,
+  useClipCaptionPreview,
+} from './api/caption-preview'
+export type { ClipCanvasBox, ClipCaptionFragment, ClipCaptionPreview } from './api/caption-preview'
 export type { ClipState } from './model/state'
 export type {
   ClipRatio,

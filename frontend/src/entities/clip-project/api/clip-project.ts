@@ -77,6 +77,7 @@ export function toClipProject(value: ProtoClipProject): ClipProject {
     // Empty is "not chosen": the clip renders with what its template said.
     captionPace: value.captionPace as ClipProject['captionPace'],
     accent: value.accent as ClipProject['accent'],
+    allowedCaptionStyles: [...value.allowedCaptionStyles],
     answers: value.answers.map((a) => ({ label: a.label, text: a.text })),
     // Verbatim and in the order the server answered — newest first. A kind this
     // build does not know is dropped rather than shown as an unlabelled entry.

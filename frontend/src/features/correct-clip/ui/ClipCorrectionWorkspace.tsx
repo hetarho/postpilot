@@ -4,7 +4,9 @@ import { useTranslation } from 'react-i18next'
 import {
   clipSeconds,
   snapClipTime,
+  textInterval,
   timelineCuts,
+  useClipCaptionPreview,
   cutOutputMs,
   outputToSourceMs,
   sourceToOutputMs,
@@ -31,6 +33,7 @@ import type { useClipCorrection } from '../model/useClipCorrection'
 import { ClipTimeline } from './ClipTimeline'
 import { ClipTimeField } from './ClipTimeField'
 import { ClipTextControls } from './ClipTextControls'
+import { ClipCaptionStage } from './ClipCaptionStage'
 import { ClipCutAssemblyControls } from './ClipCutAssemblyControls'
 
 type Correction = ReturnType<typeof useClipCorrection>
@@ -43,6 +46,8 @@ export interface ClipEditorPreviewProps {
   stickyTop?: number
 }
 export function ClipCorrectionWorkspace({
+  projectId,
+  captionStyles,
   correction,
   state,
   disabled,
@@ -53,6 +58,7 @@ export function ClipCorrectionWorkspace({
   sourcePicker,
   preview,
   localSources,
+  resolvePlayback,
   comparison,
   revision,
   downloadAction,
@@ -60,6 +66,9 @@ export function ClipCorrectionWorkspace({
   notices = [],
   language,
 }: {
+  projectId: string
+  /** The caption styles this project allows (CLIP-142). */
+  captionStyles?: readonly string[]
   correction: Correction
   state: ClipEditingState
   disabled: boolean
@@ -77,6 +86,9 @@ export function ClipCorrectionWorkspace({
   downloadAction?: ReactNode
   finalizeAction?: ReactNode
   localSources: ReadonlyArray<{ fingerprint: string; url: string }>
+  /** Resolves an unexpired retained original for a source the session has no
+   *  local copy of, so ② can still show the frame a caption sits on. */
+  resolvePlayback?: (fingerprint: string, refresh?: boolean) => Promise<string>
   notices?: readonly ClipNotice[]
   language?: 'ko' | 'en'
 }) {
@@ -184,6 +196,24 @@ export function ClipCorrectionWorkspace({
     Math.abs(frame.outputMs - timeline.timeMs) <= CLIP_DRAFT_PREVIEW.frameToleranceMs
       ? outputToSourceMs(cutTime!, snapClipTime(frame.outputMs))
       : undefined
+  // ② draws each caption from the SERVER's own fragment (CDS-83). The query is
+  // keyed by what the captions draw, so selecting one or dragging it asks
+  // nothing: only their words, styles, sizes and pacing do.
+  const captionPreview = useClipCaptionPreview(
+    projectId,
+    correction.revision,
+    draft,
+    text?.role === 'caption',
+  )
+  const fragment = captionPreview.data?.captions.find((c) => c.instanceId === text?.instanceId)
+  // The cut the caption's interval STARTS in: a caption may cross several, and
+  // it is placed once, against the frame it opens over (CLIP-143).
+  const captionInterval = text ? textInterval(draft, text) : undefined
+  const captionCut = captionInterval
+    ? (timelineCuts(draft).find(
+        (c) => c.startMs <= captionInterval.startMs && captionInterval.startMs < c.endMs,
+      ) ?? timelineCuts(draft)[0])
+    : undefined
   const failure = correction.failure ?? renderFailure
   return (
     <section
@@ -554,10 +584,27 @@ export function ClipCorrectionWorkspace({
             language={language}
           />
         )}
+        {text?.role === 'caption' && captionPreview.data && (
+          <ClipCaptionStage
+            text={text}
+            fragment={fragment}
+            canvas={captionPreview.data.canvas}
+            safeArea={captionPreview.data.safeArea}
+            frameUrl={localSources.find((s) => s.fingerprint === captionCut?.cut.fingerprint)?.url}
+            frameFingerprint={captionCut?.cut.fingerprint}
+            frameStartMs={captionCut?.cut.startMs ?? 0}
+            resolvePlayback={resolvePlayback}
+            notices={notices}
+            language={language}
+            change={change}
+            disabled={disabled}
+          />
+        )}
         {text && (
           <ClipTextControls
             plan={draft}
             text={text}
+            captionStyles={captionStyles}
             notices={notices}
             language={language}
             change={change}

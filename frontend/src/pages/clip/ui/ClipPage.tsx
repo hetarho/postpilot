@@ -421,6 +421,8 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
       }
       notices={project.notices}
       language={project.language}
+      projectId={project.id}
+      captionStyles={project.allowedCaptionStyles}
       correction={correction}
       state={plan}
       disabled={pending}
@@ -437,6 +439,7 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
         fingerprint: entry.metadata.fingerprint,
         url: entry.previewURL,
       }))}
+      resolvePlayback={upload.ensurePlayback}
       sourcePicker={
         <>
           {observationPanel}

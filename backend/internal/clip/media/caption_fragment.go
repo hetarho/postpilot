@@ -2,7 +2,9 @@ package media
 
 import (
 	"context"
+	"encoding/xml"
 	"fmt"
+	"io"
 	"regexp"
 	"strconv"
 	"strings"
@@ -80,6 +82,12 @@ func (r *Rendering) captionFragment(canvas clip.Canvas, visual declaredVisual) (
 	// another, and the box it is given is the same rounded number the transform
 	// carries — so the two cancel exactly and the fragment rasterises to the
 	// render's own pixels rather than to something a rounding apart (CDS-83).
+	// This document reaches a BROWSER, which the render's own never does. The
+	// static path is validated as XML by the overlay catalog on its way out; the
+	// drawn one is not, so it is checked here — one place, both kinds.
+	if err := wellFormed(document); err != nil {
+		return clip.CaptionFragment{}, err
+	}
 	id := visual.manifest.InstanceID
 	box := clip.Region{X: rounded(l.Region.X), Y: rounded(l.Region.Y), Width: rounded(l.Region.Width), Height: rounded(l.Region.Height)}
 	return clip.CaptionFragment{
@@ -110,6 +118,20 @@ func (r *Rendering) captionDocument(canvas clip.Canvas, drawn declaredVisual) (s
 		out += "<defs>" + defs + "</defs>"
 	}
 	return out + body + "</svg>", nil
+}
+
+// wellFormed refuses a fragment no browser could parse rather than sending it.
+func wellFormed(document string) error {
+	d := xml.NewDecoder(strings.NewReader(document))
+	for {
+		_, err := d.Token()
+		if err == io.EOF {
+			return nil
+		}
+		if err != nil {
+			return clip.ErrInvalid
+		}
+	}
 }
 
 func coordinate(v float64) string { return strconv.FormatFloat(v, 'f', 3, 64) }

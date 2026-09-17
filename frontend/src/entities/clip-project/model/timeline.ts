@@ -41,6 +41,9 @@ export type TimelineEdit =
           | 'keyword'
           | 'phrases'
           | 'evidenceReviewed'
+          | 'ownerPosition'
+          | 'ownerSizePx'
+          | 'ownerStyle'
         >
       >
     }
