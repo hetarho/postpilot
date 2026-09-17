@@ -20,6 +20,48 @@ const template = {
 afterEach(() => discardClipDraftQueues())
 
 describe('template-defined project inputs', () => {
+  it('takes footage for a project whose template only came back converted', async () => {
+    // The server rewrites a template still written under the old grammar into the current one on
+    // the way out and flags it, while the STORED body waits for the owner's own save (CLIP-140).
+    // The project froze that stored body, so the two differ although nobody edited the template.
+    const stored =
+      '<clip version="1" intro="b" caption="bold" outro="e"><field id="place" label="상호명" required="true"/><text id="intro" kind="fixed" role="hook" basis="output-start"/><text id="outro" kind="fixed" role="ending" basis="output-end"/></clip>'
+    const converted = stored.replace('<field', '<guide>장면 설명</guide><field')
+    const composition = {
+      snapshot: { version: 1, body: stored, templateId: template.id, legacy: false },
+      inputs: { values: { place: '해미연풍우가' }, items: {}, associations: [] },
+    }
+    renderAppAt('/clips/owned', {
+      user: { id: 'alice' },
+      clips: {
+        templates: [
+          {
+            ...template,
+            compositionBody: converted,
+            compositionLegacy: false,
+            compositionConverted: true,
+          },
+        ],
+        projects: [
+          {
+            id: 'owned',
+            title: '해미연풍우가',
+            videoTemplateId: template.id,
+            ratio: 'vertical',
+            targetDurationMs: 30000,
+            answers: [],
+            disclosure: '',
+            cta: '',
+            composition,
+            compositionInputs: composition.inputs,
+          },
+        ],
+      },
+    })
+    // The conversion is not an edit to offer, and it must not hold the footage the clip needs.
+    await waitFor(() => expect(screen.getByLabelText('원본 영상 선택')).toBeEnabled())
+    expect(screen.queryByRole('button', { name: '최신 템플릿 적용' })).not.toBeInTheDocument()
+  })
   it('opens an older short group at its minimum and saves the stable items only after editing', async () => {
     const writes: ClipProjectDraft[] = []
     const body =

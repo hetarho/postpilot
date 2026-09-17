@@ -91,10 +91,16 @@ export function ClipProjectForm({
       : template?.compositionBody
   }
   const document = projectCompositionDocument(bodyFor(draft))
+  // A CONVERTED body is not an edit the owner made. A template still written under the old
+  // grammar comes back rewritten into the current one, flagged, while the STORED body waits for
+  // the owner's own save (CLIP-140) — and a project freezes that stored body. Comparing the two
+  // reports a change nobody made, and the offer could never clear it: applying it freezes the
+  // stored body again, so 최신 템플릿 적용 stayed on screen and ① kept refusing footage.
   const templateChanged =
     !!stored?.composition &&
     selected?.id === stored.videoTemplateId &&
     !selected.compositionLegacy &&
+    !selected.compositionConverted &&
     selected.compositionBody !== stored.composition.snapshot.body
   const inputs = document
     ? matchingCompositionInputs(document, draft.compositionInputs ?? emptyCompositionInputs())
