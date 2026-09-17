@@ -48,12 +48,17 @@ export interface ClipProjectDraft {
    *  said. Changing either re-renders the same plan and costs no writing. */
   captionPace?: '' | 'steady' | 'rapid'
   accent?: ClipAccent
+  /** The rest of the design selection this clip renders with (CLIP-111,
+   *  CLIP-139): the presets the intro and the outro are drawn in. Empty is a
+   *  project minted before the selection moved onto it, which reads as the
+   *  shared defaults. */
+  introPreset?: '' | 'a' | 'b'
+  outroPreset?: '' | 'b' | 'e'
+  /** The caption styles THIS clip may use (CLIP-142). An empty selection is not
+   *  "unset": it resolves to the default style alone, in ② and in the render. */
+  allowedCaptionStyles?: string[]
 }
 export interface ClipProject extends ClipProjectDraft {
-  /** The caption styles THIS clip may use (CLIP-142). A read projection: ① is
-   *  what chooses them, and ② only needs to know which ones a caption may be
-   *  given. Empty is a project that selected none — the default style alone. */
-  allowedCaptionStyles?: string[]
   notices?: ClipNotice[]
   /** What the owner asked the AI for, newest first (CLIP-133). */
   requests?: ClipProjectRequest[]
@@ -167,6 +172,9 @@ export function emptyClipProject(): ClipProjectDraft {
     instruction: '',
     captionPace: '',
     accent: '',
+    introPreset: '',
+    outroPreset: '',
+    allowedCaptionStyles: [],
   }
 }
 export function projectDraft(value: ClipProjectDraft): ClipProjectDraft {
@@ -185,6 +193,9 @@ export function projectDraft(value: ClipProjectDraft): ClipProjectDraft {
     instruction: value.instruction ?? '',
     captionPace: value.captionPace ?? '',
     accent: value.accent ?? '',
+    introPreset: value.introPreset ?? '',
+    outroPreset: value.outroPreset ?? '',
+    allowedCaptionStyles: [...(value.allowedCaptionStyles ?? [])],
   }
 }
 /** Key order is not part of what a draft SAYS, but it is part of what `JSON.stringify` writes.
@@ -223,7 +234,8 @@ export function normalizeClipProject(value: ClipProjectDraft): ClipProjectDraft 
     title: value.title.trim(),
   }
 }
-/** `/clips/new` settles the ratio and nothing else (CLIP-130): the answers, the instruction and
+/** `/clips/new` settles the ratio and nothing else (CLIP-130). The template is optional there and
+ *  everywhere else: a project with none is generated from its own settings (CLIP-5): the answers, the instruction and
  *  the length are written in ① beside the sources they describe, so minting asks only for what a
  *  project cannot exist without — and for the one value it can never change again (CLIP-9). */
 export function validNewClipProject(value: ClipProjectDraft): boolean {
@@ -231,7 +243,6 @@ export function validNewClipProject(value: ClipProjectDraft): boolean {
   return (
     !!title &&
     Array.from(title).length <= CLIP_PROJECT_LIMITS.title &&
-    !!value.videoTemplateId &&
     CLIP_RATIOS.includes(value.ratio)
   )
 }
@@ -245,7 +256,6 @@ export function savableClipProject(value: ClipProjectDraft): boolean {
   return (
     !!title &&
     length(title) <= CLIP_PROJECT_LIMITS.title &&
-    !!value.videoTemplateId &&
     CLIP_RATIOS.includes(value.ratio) &&
     (value.targetDurationMs === 0 ||
       (Number.isInteger(value.targetDurationMs) &&
@@ -265,7 +275,6 @@ export function validClipProject(
   return (
     !!value.title.trim() &&
     length(value.title.trim()) <= CLIP_PROJECT_LIMITS.title &&
-    !!value.videoTemplateId &&
     (!!composition || !!fields) &&
     // Campaign identity is required independently of badge visibility.
     (!!composition || CLIP_DISCLOSURES.includes(value.disclosure as ClipDisclosureId)) &&

@@ -14,6 +14,7 @@ import {
   ListClipProjectsResponseSchema,
   GetClipProjectResponseSchema,
   CreateClipProjectResponseSchema,
+  GetClipCaptionStyleSamplesResponseSchema,
   UpdateClipProjectResponseSchema,
   DeleteClipProjectResponseSchema,
   CreateClipSourceBatchResponseSchema,
@@ -31,8 +32,8 @@ import {
   type ProtoClipSourceBatch,
   type AppFailureReason,
 } from '@/shared/api'
-import type { ClipRecipe } from '@/entities/clip-template'
-import { CLIP_DESIGN } from '@/shared/config'
+import { compositionDesign, compositionSkeleton, type ClipRecipe } from '@/entities/clip-template'
+import { CLIP_CAPTION_STYLES, CLIP_DESIGN } from '@/shared/config'
 import {
   clipPlanToProto,
   withSourceSound,
@@ -137,6 +138,9 @@ export interface FakeClipsOptions {
   soundFails?: boolean
   planSaveConflict?: boolean
   projectWrites?: ClipProjectDraft[]
+  /** Which styles the samples call back as sequence-rendered, and whether it fails at all. */
+  sequenceStyles?: string[]
+  captionSamplesFail?: boolean
   /** Holds UpdateClipProject open until the test releases it, so an assertion can run WHILE the
    *  settings autosave is in flight. */
   projectSaveGate?: () => Promise<unknown>
@@ -357,6 +361,38 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     const job = await options.cancel(req, p)
     return { job: toFakeProto(job), accepted: !!job.cancelRequestedAt }
   })
+  /** What the server starts a project's design selection at: the presets the chosen template's
+   *  own body declares and the caption style it names, or the shared defaults with no template. */
+  const seededDesign = (templateId: string): Partial<ClipProjectDraft> => {
+    const row = templateId ? rows.get(templateId) : undefined
+    const design = compositionDesign(row?.compositionBody ?? (row ? fixtureBody(row) : ''))
+    return {
+      introPreset: design.intro,
+      outroPreset: design.outro,
+      allowedCaptionStyles: [design.caption],
+    }
+  }
+  /** Every approved style drawn once. The fake draws a box, not the style: what a test can check
+   *  here is that ① offers each style, says which ones are drawn frame by frame, and saves what
+   *  was ticked — the drawing itself is the renderer's, pinned by its own Go contract. */
+  router.rpc(ClipService.method.getClipCaptionStyleSamples, (req) => {
+    options.calls?.push('GetClipCaptionStyleSamples')
+    const p = projects.get(req.projectId)
+    if (!p) throw connectAppError('CLIP_NOT_FOUND', Code.NotFound)
+    if (options.captionSamplesFail) throw connectAppError('CLIP_BUSY', Code.FailedPrecondition)
+    return create(GetClipCaptionStyleSamplesResponseSchema, {
+      ratio: p.ratio,
+      canvas: { x: 0, y: 0, width: 1080, height: 1920 },
+      samples: CLIP_CAPTION_STYLES.map((style) => ({
+        instanceId: style,
+        style,
+        svg: `<g data-style="${style}"><text>오늘의 한 장면</text></g>`,
+        box: { x: 0, y: 0, width: 600, height: 120 },
+        fontSize: 72,
+        representativeFrame: (options.sequenceStyles ?? ['word-pop']).includes(style),
+      })),
+    })
+  })
   router.rpc(ClipService.method.createClipProject, (req) => {
     options.calls?.push('CreateClipProject')
     if (options.projectSaveFails) throw connectAppError('CLIP_INVALID_INPUT', Code.InvalidArgument)
@@ -371,6 +407,18 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       hideDisclosure: req.hideDisclosure,
       cta: req.cta as ClipProjectDraft['cta'],
       instruction: req.instruction,
+      // The server seeds the design selection from the template's own body, or
+      // from the shared defaults where there is no template (CLIP-139).
+      ...seededDesign(req.videoTemplateId),
+      ...(req.introPreset !== undefined
+        ? { introPreset: req.introPreset as ClipProjectDraft['introPreset'] }
+        : {}),
+      ...(req.outroPreset !== undefined
+        ? { outroPreset: req.outroPreset as ClipProjectDraft['outroPreset'] }
+        : {}),
+      ...(req.allowedCaptionStyles
+        ? { allowedCaptionStyles: [...req.allowedCaptionStyles.values] }
+        : {}),
     }
     if (req.compositionInputs) {
       const template = rows.get(p.videoTemplateId)!
@@ -410,16 +458,28 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     if (req.captionPace !== undefined)
       p.captionPace = req.captionPace as ClipProjectDraft['captionPace']
     if (req.accent !== undefined) p.accent = req.accent as ClipProjectDraft['accent']
+    if (req.introPreset !== undefined)
+      p.introPreset = req.introPreset as ClipProjectDraft['introPreset']
+    if (req.outroPreset !== undefined)
+      p.outroPreset = req.outroPreset as ClipProjectDraft['outroPreset']
+    if (req.allowedCaptionStyles) p.allowedCaptionStyles = [...req.allowedCaptionStyles.values]
     for (const answer of req.answers)
       p.answers = [
         ...p.answers.filter((a) => a.label !== answer.label),
         { label: answer.label, text: answer.text },
       ]
     if (req.compositionInputs) {
-      const template = rows.get(p.videoTemplateId)!
-      const snapshot =
-        p.composition?.snapshot.templateId === p.videoTemplateId &&
-        (!template.compositionBody || template.compositionLegacy)
+      // A project with no template freezes the grammar's minimum document, and
+      // there is no row to read a body from (CLIP-5, T218).
+      const template = p.videoTemplateId ? rows.get(p.videoTemplateId)! : undefined
+      const snapshot = !template
+        ? (p.composition?.snapshot ?? {
+            version: 1,
+            body: compositionSkeleton('b', 'e'),
+            legacy: false,
+          })
+        : p.composition?.snapshot.templateId === p.videoTemplateId &&
+            (!template.compositionBody || template.compositionLegacy)
           ? p.composition.snapshot
           : {
               version: 1,

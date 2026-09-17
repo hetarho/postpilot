@@ -59,4 +59,4 @@ export {
   rebuildCompositionSkeleton,
 } from './lib/composition-skeleton'
 export type { CompositionDesign } from './lib/composition-skeleton'
-export { CompositionDesignStep } from './ui/CompositionDesignStep'
+export { CompositionDesignStep, CompositionDesignThumbnail } from './ui/CompositionDesignStep'

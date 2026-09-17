@@ -113,3 +113,31 @@ func (h *Handler) GetClipCaptionPreview(ctx context.Context, req *connect.Reques
 func canvasBox(r clip.Region) *v1.ClipCanvasBox {
 	return &v1.ClipCanvasBox{X: r.X, Y: r.Y, Width: r.Width, Height: r.Height}
 }
+
+// GetClipCaptionStyleSamples hands ① every approved caption style drawn once by
+// the same registry the render draws with, so the offer shows each style's own
+// look (CDS-80, CDS-83). It carries nothing of this project but its ratio.
+func (h *Handler) GetClipCaptionStyleSamples(ctx context.Context, req *connect.Request[v1.GetClipCaptionStyleSamplesRequest]) (*connect.Response[v1.GetClipCaptionStyleSamplesResponse], error) {
+	user, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if h.generation == nil {
+		return nil, toConnectError(clip.ErrPreviewUnavailable)
+	}
+	result, err := h.generation.CaptionStyleSamples(ctx, user, req.Msg.ProjectId)
+	if err != nil {
+		return nil, previewConnectError(err)
+	}
+	out := &v1.GetClipCaptionStyleSamplesResponse{
+		Ratio:  result.Ratio,
+		Canvas: &v1.ClipCanvasBox{Width: float64(result.Canvas.Width), Height: float64(result.Canvas.Height)},
+	}
+	for _, f := range result.Fragments {
+		out.Samples = append(out.Samples, &v1.ClipCaptionFragment{InstanceId: f.Style, Svg: f.SVG,
+			Box: canvasBox(f.Box), FontSize: f.FontSize, Style: f.Style, RepresentativeFrame: f.Sequence})
+	}
+	response := connect.NewResponse(out)
+	response.Header().Set("Cache-Control", "private, no-store")
+	return response, nil
+}

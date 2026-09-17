@@ -6,7 +6,15 @@ import { parseClipComposition } from '../lib/composition-parse'
 import { sampleClipComposition } from '../lib/composition-sample'
 import { CompositionDesignFrame } from './CompositionDesignFrame'
 
-function Thumbnail({ kind, value }: { kind: keyof CompositionDesign; value: string }) {
+/** One preset drawn with the same frame the editor and the render draw with, so
+ *  every surface that offers a preset offers the same picture of it (CDS-83). */
+export function CompositionDesignThumbnail({
+  kind,
+  value,
+}: {
+  kind: keyof CompositionDesign
+  value: string
+}) {
   const { t } = useTranslation('clips')
   const source = compositionSkeleton(
     kind === 'intro' && value === 'a' ? 'a' : 'b',
@@ -73,7 +81,7 @@ export function CompositionDesignStep({
             options={options[kind].map((option) => ({
               value: option,
               label: t(`composition.design.${kind}_${option}`, { defaultValue: option }),
-              preview: <Thumbnail kind={kind} value={option} />,
+              preview: <CompositionDesignThumbnail kind={kind} value={option} />,
             }))}
             onChange={(option) => onChange({ ...value, [kind]: option })}
           />

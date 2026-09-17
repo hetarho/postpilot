@@ -634,7 +634,16 @@ export const clips = {
     new: 'New clip',
     name: 'Clip title',
     template: 'Video template',
-    chooseTemplate: 'Choose a video template',
+    templateOptional:
+      'A clip can be made without one. Choosing a template fills the design and voice settings with its values, and every one stays editable.',
+    chooseTemplate: 'None',
+    captionStyles: 'Caption styles',
+    captionStylesHelp:
+      'Each caption takes one of the selected styles, and ② can change any caption to another.',
+    captionStylesEmpty: 'With none selected, only {{style}} is used.',
+    captionStylesUnavailable:
+      'The style previews cannot be loaded right now. Choosing by name still applies.',
+    perFrameStyle: 'Drawn frame by frame · longer render',
     disclosure: 'Campaign type',
     disclosureHelp:
       'The campaign type determines the phrase. Choose separately whether to show it in the video.',
@@ -659,7 +668,7 @@ export const clips = {
     empty: 'No clips yet',
     loading: 'Loading',
     retry: 'Retry',
-    noTemplates: 'Create a video template first.',
+    noTemplates: 'No video templates yet. A clip can be made without one.',
     detachedTemplate: 'No linked video template. Choose another template.',
     templateLoading: 'Checking video template',
     templateUnavailable: 'Could not check the video template.',

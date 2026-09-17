@@ -23,7 +23,6 @@ describe('clip setup validation', () => {
   it.each([
     { title: '' },
     { title: '😀'.repeat(101) },
-    { videoTemplateId: '' },
     { targetDurationMs: 0 },
     { targetDurationMs: 14999 },
     { targetDurationMs: 90001 },
@@ -39,13 +38,16 @@ describe('clip setup validation', () => {
     expect(validClipProject({ ...draft(), ...patch }, fields)).toBe(false)
   })
   // Minting settles the ratio and nothing else (CLIP-130): a draft with no answers,
-  // no campaign type and no length is what `/clips/new` sends.
-  it('mints from the title, the template and the ratio alone', () => {
+  // no campaign type and no length is what `/clips/new` sends. The template is
+  // optional there and afterwards — a project with none is generated from its own
+  // settings (CLIP-5).
+  it('mints from the title and the ratio alone, with or without a template', () => {
     const minting = { ...emptyClipProject(), title: '새 경험', videoTemplateId: 'owned' }
     expect(validNewClipProject(minting)).toBe(true)
     expect(validClipProject(minting, fields)).toBe(false)
     expect(validNewClipProject({ ...minting, title: ' ' })).toBe(false)
-    expect(validNewClipProject({ ...minting, videoTemplateId: '' })).toBe(false)
+    expect(validNewClipProject({ ...minting, videoTemplateId: '' })).toBe(true)
+    expect(validClipProject({ ...draft(), videoTemplateId: '' }, fields)).toBe(true)
     expect(validNewClipProject({ ...minting, ratio: 'wide' as ClipProjectDraft['ratio'] })).toBe(
       false,
     )

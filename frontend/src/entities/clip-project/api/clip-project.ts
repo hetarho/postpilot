@@ -77,6 +77,8 @@ export function toClipProject(value: ProtoClipProject): ClipProject {
     // Empty is "not chosen": the clip renders with what its template said.
     captionPace: value.captionPace as ClipProject['captionPace'],
     accent: value.accent as ClipProject['accent'],
+    introPreset: value.introPreset as ClipProject['introPreset'],
+    outroPreset: value.outroPreset as ClipProject['outroPreset'],
     allowedCaptionStyles: [...value.allowedCaptionStyles],
     answers: value.answers.map((a) => ({ label: a.label, text: a.text })),
     // Verbatim and in the order the server answered — newest first. A kind this
@@ -215,10 +217,27 @@ export function useClipProjectMutations(ownerId: string) {
     ])
   const save = useMutation({
     mutationFn: async ({ id, draft }: { id?: string; draft: ClipProjectDraft }) => {
-      const { ratio, compositionInputs, ...fields } = normalizeClipProject(draft)
+      const {
+        ratio,
+        compositionInputs,
+        introPreset,
+        outroPreset,
+        allowedCaptionStyles,
+        ...fields
+      } = normalizeClipProject(draft)
       const inputs = compositionInputs ? compositionInputsToProto(compositionInputs) : undefined
+      // The design selection travels only where the owner has one: minting sends
+      // none of it so the server seeds all three from the chosen template, or
+      // from the shared defaults where there is no template (CLIP-139). An empty
+      // STYLE list is a selection of none and is sent as one, which is why the
+      // wrapper message exists (CLIP-142).
+      const design = {
+        ...(introPreset ? { introPreset } : {}),
+        ...(outroPreset ? { outroPreset } : {}),
+        ...(allowedCaptionStyles ? { allowedCaptionStyles: { values: allowedCaptionStyles } } : {}),
+      }
       const response = id
-        ? await client.updateClipProject({ id, ...fields, compositionInputs: inputs })
+        ? await client.updateClipProject({ id, ...fields, ...design, compositionInputs: inputs })
         : await client.createClipProject({
             ...fields,
             ratio,

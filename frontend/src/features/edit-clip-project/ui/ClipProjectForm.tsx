@@ -19,10 +19,16 @@ import {
   type ClipProject,
   type ClipProjectDraft,
 } from '@/entities/clip-project'
-import { CLIP_ACCENTS, compositionCharacters, useClipTemplates } from '@/entities/clip-template'
+import {
+  CLIP_ACCENTS,
+  compositionCharacters,
+  compositionDesign,
+  useClipTemplates,
+} from '@/entities/clip-template'
 import { CLIP_DESIGN } from '@/shared/config'
 import { appFailureFromConnect } from '@/shared/api'
 import { peekPendingClipDraft, queueClipDraft } from '../model/clip-draft-queue'
+import { ClipDesignSelection } from './ClipDesignSelection'
 import {
   ActionBar,
   AppFailureMessage,
@@ -148,16 +154,40 @@ export function ClipProjectForm({
     const value = await save.mutateAsync({ id: stored.id, draft: next })
     setBaseline(JSON.stringify(normalizeClipProject(value)))
   }
-  const change = <K extends keyof ClipProjectDraft>(key: K, value: ClipProjectDraft[K]) => {
-    const next =
-      key === 'videoTemplateId' && value !== draft.videoTemplateId
-        ? { ...draft, [key]: value, answers: [], compositionInputs: emptyCompositionInputs() }
-        : { ...draft, [key]: value }
+  /** The starting values the chosen template carries for the project's design selection
+   *  (CLIP-14): its accent and pace, and the two presets and the caption style its own body
+   *  declares. Every one stays editable afterwards, and CLEARING the template carries nothing —
+   *  the values the project already holds are the project's (CLIP-139, CLIP-5). */
+  const templateDesign = (id: string): Partial<ClipProjectDraft> => {
+    const template = templates.templates.find((v) => v.id === id)
+    if (!template) return {}
+    const design = compositionDesign(template.compositionBody ?? '')
+    return {
+      captionPace: template.captionPace ?? '',
+      accent: template.accent ?? '',
+      introPreset: design.intro,
+      outroPreset: design.outro,
+      allowedCaptionStyles: [design.caption],
+    }
+  }
+  const patch = (fields: Partial<ClipProjectDraft>) => {
+    const next = { ...draft, ...fields }
     setDraft(next)
     // An invalid draft is never sent: the server would refuse it, and the field says so itself.
     // It stays local until it is valid again, and then goes out with everything else.
     if (stored && savableClipProject(next)) queueClipDraft(stored.id, next, send)
   }
+  const change = <K extends keyof ClipProjectDraft>(key: K, value: ClipProjectDraft[K]) =>
+    patch(
+      key === 'videoTemplateId' && value !== draft.videoTemplateId
+        ? {
+            [key]: value,
+            answers: [],
+            compositionInputs: emptyCompositionInputs(),
+            ...templateDesign(String(value)),
+          }
+        : { [key]: value },
+    )
   const failure = save.error
   /** `/clips/new`'s one committing action. An existing project has no submit — the queue saves it
    *  a beat after each pause — and the ratio is why this one stayed explicit (CLIP-9). */
@@ -220,6 +250,9 @@ export function ClipProjectForm({
                 ...templates.templates.map((v) => ({ value: v.id, label: v.name })),
               ]}
             />
+            <Typography variant="body" className="text-content-secondary mt-2">
+              {t('project.templateOptional')}
+            </Typography>
             {templates.isPending && <Typography variant="body">{t('project.loading')}</Typography>}
             {templates.isError && (
               <div role="alert">
@@ -398,6 +431,7 @@ export function ClipProjectForm({
               <Typography variant="body" className="text-content-secondary">
                 {t('project.accentHelp')}
               </Typography>
+              <ClipDesignSelection projectId={stored.id} draft={draft} onChange={patch} />
             </div>
           )}
           <div>

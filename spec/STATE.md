@@ -48,12 +48,13 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
-| T224 | ① chooses the design, the caption styles and an optional template | CLIP | T217 T218 | todo |
 | T226 | The approval surface quotes sequence-rendered captions separately | CDS CLIP | T220 | todo |
 
 ## next
-- implement-task T224 (① chooses the design, the styles and the template) or T226 (the sequence quote) — T223 is done and the stage grammar is in
+- implement-task T226 (the sequence-rendered caption quote on the approval surface) — the only free task left; T177 stays blocked and T008 is another session's
 ## log
+- 260917 T224 done; ① chooses the design — intro and outro presets beside pace and accent, the sixteen caption styles as a multi-select where each is drawn by the renderer itself and the frame-by-frame ones say so, an empty selection reading as the default style alone — the template is optional everywhere the FE still demanded one (없음 by default, minting without it), and choosing one fills all five while clearing it keeps them; the style samples needed a new GetClipCaptionStyleSamples (T222's preview needs a saved plan, so ① could not use it) — owner-approved mid-task
+- 260917 T224 claimed (stg)
 - 260917 T223 done; a template may carry named composition stages (`<stage name="…">한 줄 의도</stage>`, root only, at most 8, both halves required and bounded by the label and prompt counts), read by the Go and TypeScript parsers against the shared corpus and handed to the flow call in the template guide's position as a numbered order to follow where the footage allows — admitting and forbidding nothing, with no notice, count or refusal anywhere for a stage
 - 260917 T225 done; ② places each caption over a still frame of the cut it starts in — drag stopping at the safe area it draws while moving, arrow-key nudging in canvas pixels, the size refused outside CDS-3's floor and the role's own size at the control, the style taken from the project's allowed set, a contrast shortfall shown in place and blocking nothing, and a plain ground with the reason where the footage is not here — every change riding the existing draft queue and undo
 - 260917 T223 claimed (stg)
@@ -72,6 +73,3 @@
 - 260917 the narration call still measures its generated region rows against the FROZEN document's preset (ai/composition_copy.go regionSelection), so a project that changes a preset can be handed slot limits the render will not use — nothing fails today, worth a review-code finding
 - 260917 T217 done; the design selection is the project's (migration 0062 intro_preset/outro_preset/allowed_caption_styles, backfilled from the document the render already reads so nothing re-renders differently), seeded from the template at creation, presence-aware on update and staling only the result; EditPlan.WithCaptions became WithDesign so the compiler names every seam it has to reach, and the layout, V20 and the admission read the presets and the allowed styles from there rather than from the frozen template composition
 - 260917 create-task CLIP CDS done; T217–T226 split r32/r21 into two roots — the project owning the design selection (T217) and the caption style registry with its faces and glyph fallback (T219) — then the template becoming optional (T218), sequence rendering through a temporary PNG sequence (T220), owner placement with the verifier changes (T221), the served preview fragment that keeps preview and render identical (T222), template stages (T223) and the two surfaces (T224 T225) with the sequence quote (T226); the CLIP-145 ceiling stays open and T226 only surfaces the numbers a ceiling would need
-- 260917 create-task CLIP CDS start
-- 260917 update-ssot CLIP r32 CDS r21 done; the video template is a preset rather than a precondition (CLIP-5 at most one), the design selection and the allowed caption styles belong to ① (CLIP-139 CLIP-142), a template may carry named composition stages that guide the flow without admitting or forbidding footage (CLIP-141), and ② places each caption over its own cut frame for free movement inside the safe area with contrast demoted to a notice (CLIP-143 CDS-82 CDS-52); the caption style set, its static/sequence cost split and the preview-render agreement rule are new in CDS (CDS-80 CDS-81 CDS-83)
-- 260917 T177 (blocked, CDS CLIP) lies in the changed area: its release QA viewing checklist predates the caption style set

@@ -42,6 +42,9 @@ const (
 	// ClipServiceGetClipCaptionPreviewProcedure is the fully-qualified name of the ClipService's
 	// GetClipCaptionPreview RPC.
 	ClipServiceGetClipCaptionPreviewProcedure = "/postpilot.v1.ClipService/GetClipCaptionPreview"
+	// ClipServiceGetClipCaptionStyleSamplesProcedure is the fully-qualified name of the ClipService's
+	// GetClipCaptionStyleSamples RPC.
+	ClipServiceGetClipCaptionStyleSamplesProcedure = "/postpilot.v1.ClipService/GetClipCaptionStyleSamples"
 	// ClipServiceSaveClipEditPlanProcedure is the fully-qualified name of the ClipService's
 	// SaveClipEditPlan RPC.
 	ClipServiceSaveClipEditPlanProcedure = "/postpilot.v1.ClipService/SaveClipEditPlan"
@@ -129,6 +132,9 @@ type ClipServiceClient interface {
 	// The caption SVG ② draws over the cut frame, built by the same style
 	// registry the renderer uses so the preview and the render cannot drift.
 	GetClipCaptionPreview(context.Context, *connect.Request[v1.GetClipCaptionPreviewRequest]) (*connect.Response[v1.GetClipCaptionPreviewResponse], error)
+	// Read-only: every approved caption style drawn once, so ① can offer the set
+	// by its own look. No plan, no selection and no footage of this project.
+	GetClipCaptionStyleSamples(context.Context, *connect.Request[v1.GetClipCaptionStyleSamplesRequest]) (*connect.Response[v1.GetClipCaptionStyleSamplesResponse], error)
 	SaveClipEditPlan(context.Context, *connect.Request[v1.SaveClipEditPlanRequest]) (*connect.Response[v1.SaveClipEditPlanResponse], error)
 	StartClipRender(context.Context, *connect.Request[v1.StartClipRenderRequest]) (*connect.Response[v1.StartClipRenderResponse], error)
 	StartClipGeneration(context.Context, *connect.Request[v1.StartClipGenerationRequest]) (*connect.Response[v1.StartClipGenerationResponse], error)
@@ -192,6 +198,12 @@ func NewClipServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			httpClient,
 			baseURL+ClipServiceGetClipCaptionPreviewProcedure,
 			connect.WithSchema(clipServiceMethods.ByName("GetClipCaptionPreview")),
+			connect.WithClientOptions(opts...),
+		),
+		getClipCaptionStyleSamples: connect.NewClient[v1.GetClipCaptionStyleSamplesRequest, v1.GetClipCaptionStyleSamplesResponse](
+			httpClient,
+			baseURL+ClipServiceGetClipCaptionStyleSamplesProcedure,
+			connect.WithSchema(clipServiceMethods.ByName("GetClipCaptionStyleSamples")),
 			connect.WithClientOptions(opts...),
 		),
 		saveClipEditPlan: connect.NewClient[v1.SaveClipEditPlanRequest, v1.SaveClipEditPlanResponse](
@@ -358,6 +370,7 @@ type clipServiceClient struct {
 	prepareClipPreview          *connect.Client[v1.PrepareClipPreviewRequest, v1.PrepareClipPreviewResponse]
 	getClipCapabilities         *connect.Client[v1.GetClipCapabilitiesRequest, v1.GetClipCapabilitiesResponse]
 	getClipCaptionPreview       *connect.Client[v1.GetClipCaptionPreviewRequest, v1.GetClipCaptionPreviewResponse]
+	getClipCaptionStyleSamples  *connect.Client[v1.GetClipCaptionStyleSamplesRequest, v1.GetClipCaptionStyleSamplesResponse]
 	saveClipEditPlan            *connect.Client[v1.SaveClipEditPlanRequest, v1.SaveClipEditPlanResponse]
 	startClipRender             *connect.Client[v1.StartClipRenderRequest, v1.StartClipRenderResponse]
 	startClipGeneration         *connect.Client[v1.StartClipGenerationRequest, v1.StartClipGenerationResponse]
@@ -399,6 +412,11 @@ func (c *clipServiceClient) GetClipCapabilities(ctx context.Context, req *connec
 // GetClipCaptionPreview calls postpilot.v1.ClipService.GetClipCaptionPreview.
 func (c *clipServiceClient) GetClipCaptionPreview(ctx context.Context, req *connect.Request[v1.GetClipCaptionPreviewRequest]) (*connect.Response[v1.GetClipCaptionPreviewResponse], error) {
 	return c.getClipCaptionPreview.CallUnary(ctx, req)
+}
+
+// GetClipCaptionStyleSamples calls postpilot.v1.ClipService.GetClipCaptionStyleSamples.
+func (c *clipServiceClient) GetClipCaptionStyleSamples(ctx context.Context, req *connect.Request[v1.GetClipCaptionStyleSamplesRequest]) (*connect.Response[v1.GetClipCaptionStyleSamplesResponse], error) {
+	return c.getClipCaptionStyleSamples.CallUnary(ctx, req)
 }
 
 // SaveClipEditPlan calls postpilot.v1.ClipService.SaveClipEditPlan.
@@ -538,6 +556,9 @@ type ClipServiceHandler interface {
 	// The caption SVG ② draws over the cut frame, built by the same style
 	// registry the renderer uses so the preview and the render cannot drift.
 	GetClipCaptionPreview(context.Context, *connect.Request[v1.GetClipCaptionPreviewRequest]) (*connect.Response[v1.GetClipCaptionPreviewResponse], error)
+	// Read-only: every approved caption style drawn once, so ① can offer the set
+	// by its own look. No plan, no selection and no footage of this project.
+	GetClipCaptionStyleSamples(context.Context, *connect.Request[v1.GetClipCaptionStyleSamplesRequest]) (*connect.Response[v1.GetClipCaptionStyleSamplesResponse], error)
 	SaveClipEditPlan(context.Context, *connect.Request[v1.SaveClipEditPlanRequest]) (*connect.Response[v1.SaveClipEditPlanResponse], error)
 	StartClipRender(context.Context, *connect.Request[v1.StartClipRenderRequest]) (*connect.Response[v1.StartClipRenderResponse], error)
 	StartClipGeneration(context.Context, *connect.Request[v1.StartClipGenerationRequest]) (*connect.Response[v1.StartClipGenerationResponse], error)
@@ -597,6 +618,12 @@ func NewClipServiceHandler(svc ClipServiceHandler, opts ...connect.HandlerOption
 		ClipServiceGetClipCaptionPreviewProcedure,
 		svc.GetClipCaptionPreview,
 		connect.WithSchema(clipServiceMethods.ByName("GetClipCaptionPreview")),
+		connect.WithHandlerOptions(opts...),
+	)
+	clipServiceGetClipCaptionStyleSamplesHandler := connect.NewUnaryHandler(
+		ClipServiceGetClipCaptionStyleSamplesProcedure,
+		svc.GetClipCaptionStyleSamples,
+		connect.WithSchema(clipServiceMethods.ByName("GetClipCaptionStyleSamples")),
 		connect.WithHandlerOptions(opts...),
 	)
 	clipServiceSaveClipEditPlanHandler := connect.NewUnaryHandler(
@@ -763,6 +790,8 @@ func NewClipServiceHandler(svc ClipServiceHandler, opts ...connect.HandlerOption
 			clipServiceGetClipCapabilitiesHandler.ServeHTTP(w, r)
 		case ClipServiceGetClipCaptionPreviewProcedure:
 			clipServiceGetClipCaptionPreviewHandler.ServeHTTP(w, r)
+		case ClipServiceGetClipCaptionStyleSamplesProcedure:
+			clipServiceGetClipCaptionStyleSamplesHandler.ServeHTTP(w, r)
 		case ClipServiceSaveClipEditPlanProcedure:
 			clipServiceSaveClipEditPlanHandler.ServeHTTP(w, r)
 		case ClipServiceStartClipRenderProcedure:
@@ -834,6 +863,10 @@ func (UnimplementedClipServiceHandler) GetClipCapabilities(context.Context, *con
 
 func (UnimplementedClipServiceHandler) GetClipCaptionPreview(context.Context, *connect.Request[v1.GetClipCaptionPreviewRequest]) (*connect.Response[v1.GetClipCaptionPreviewResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipService.GetClipCaptionPreview is not implemented"))
+}
+
+func (UnimplementedClipServiceHandler) GetClipCaptionStyleSamples(context.Context, *connect.Request[v1.GetClipCaptionStyleSamplesRequest]) (*connect.Response[v1.GetClipCaptionStyleSamplesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipService.GetClipCaptionStyleSamples is not implemented"))
 }
 
 func (UnimplementedClipServiceHandler) SaveClipEditPlan(context.Context, *connect.Request[v1.SaveClipEditPlanRequest]) (*connect.Response[v1.SaveClipEditPlanResponse], error) {

@@ -17,6 +17,7 @@ export {
   toClipCaptionPreview,
   captionDrawingKey,
   useClipCaptionPreview,
+  useClipCaptionStyleSamples,
 } from './api/caption-preview'
 export type { ClipCanvasBox, ClipCaptionFragment, ClipCaptionPreview } from './api/caption-preview'
 export type { ClipState } from './model/state'

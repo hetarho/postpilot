@@ -6,6 +6,7 @@ import {
   ClipEditPlanSchema,
   ClipService,
   GetClipCaptionPreviewRequestSchema,
+  GetClipCaptionStyleSamplesRequestSchema,
   type ProtoGetClipCaptionPreviewResponse,
 } from '@/shared/api'
 import type { ClipEditPlan } from '../model/edit-plan'
@@ -106,6 +107,39 @@ export function useClipCaptionPreview(
         { signal },
       )
       return toClipCaptionPreview(value)
+    },
+  })
+}
+
+/** Every approved caption style, drawn once by the renderer itself (CDS-83), so
+ *  ① offers the set by its own look rather than by a picture of it. It asks the
+ *  project for nothing but its ratio, so the answer is the same for every
+ *  project of that ratio and is cached for the session. */
+export function useClipCaptionStyleSamples(projectId: string | undefined, enabled: boolean) {
+  const transport = useTransport()
+  return useQuery<ClipCaptionPreview>({
+    queryKey: ['clip-caption-style-samples', transport, projectId],
+    enabled: enabled && !!projectId,
+    staleTime: Infinity,
+    retry: false,
+    queryFn: async ({ signal }) => {
+      const value = await createClient(ClipService, transport).getClipCaptionStyleSamples(
+        create(GetClipCaptionStyleSamplesRequestSchema, { projectId }),
+        { signal },
+      )
+      return {
+        ratio: value.ratio,
+        canvas: box(value.canvas),
+        safeArea: box(undefined),
+        captions: value.samples.map((c) => ({
+          instanceId: c.instanceId,
+          svg: c.svg,
+          box: box(c.box),
+          fontSize: c.fontSize,
+          style: c.style,
+          representativeFrame: c.representativeFrame,
+        })),
+      }
     },
   })
 }

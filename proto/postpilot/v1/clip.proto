@@ -13,6 +13,9 @@ service ClipService {
   // The caption SVG ② draws over the cut frame, built by the same style
   // registry the renderer uses so the preview and the render cannot drift.
   rpc GetClipCaptionPreview(GetClipCaptionPreviewRequest) returns (GetClipCaptionPreviewResponse) {}
+  // Read-only: every approved caption style drawn once, so ① can offer the set
+  // by its own look. No plan, no selection and no footage of this project.
+  rpc GetClipCaptionStyleSamples(GetClipCaptionStyleSamplesRequest) returns (GetClipCaptionStyleSamplesResponse) {}
   rpc SaveClipEditPlan(SaveClipEditPlanRequest) returns (SaveClipEditPlanResponse) {}
   rpc StartClipRender(StartClipRenderRequest) returns (StartClipRenderResponse) {}
   rpc StartClipGeneration(StartClipGenerationRequest) returns (StartClipGenerationResponse) {}
@@ -644,6 +647,19 @@ message GetClipCaptionPreviewRequest {
   // The plan being edited, so the fragment is of the caption on screen rather
   // than the one last saved.
   ClipEditPlan plan = 3;
+}
+// Every approved caption style drawn the way the render draws a caption, so the
+// set is offered by its own look rather than by a picture that goes stale the
+// moment a style changes (CDS-80, CDS-83). The project is asked only for its
+// ratio and its owner: nothing of its plan, selection or footage reaches these.
+message GetClipCaptionStyleSamplesRequest { string project_id = 1; }
+message GetClipCaptionStyleSamplesResponse {
+  string ratio = 1;
+  ClipCanvasBox canvas = 2;
+  // One fragment per style, in the order a surface offers them. `instance_id`
+  // and `style` are both that style's own id, and `representative_frame` says
+  // the style draws a frame at a time (CDS-81).
+  repeated ClipCaptionFragment samples = 3;
 }
 message GetClipCaptionPreviewResponse {
   string ratio = 1;
