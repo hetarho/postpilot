@@ -1,11 +1,13 @@
 package media
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/clip/design"
 )
 
 // Exercise a file-only preset with production resvg, fonts and measured layout.
@@ -17,7 +19,7 @@ func TestRenderSmokeFilePreset(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	files := map[string]string{
-		"bindings.json":         `{"version":1,"bindings":{"copy.clean":"proof","copy.memo":"proof","copy.bold":"proof","copy.mark":"proof","furniture":"furniture","region":"region","info":"info"}}`,
+		"bindings.json":         proofBindings(t),
 		"info/preset.json":      `{"id":"info","view":"info-v1","template":"overlay.svg"}`,
 		"info/overlay.svg":      `<svg xmlns="http://www.w3.org/2000/svg"/>`,
 		"proof/preset.json":     `{"id":"proof","view":"copy-v1","template":"overlay.svg"}`,
@@ -48,7 +50,7 @@ func TestRenderSmokeFilePreset(t *testing.T) {
 	}
 	if err := a.WithWorkspace(t.Context(), "file-preset", func(ws clip.MediaWorkspace) error {
 		canvas, _ := clip.ClipCanvas("vertical")
-		copy := clip.Copy{Text: "한글 & 여행", Style: "clean", Anchor: "bottom", Align: "center"}
+		copy := clip.Copy{Text: "한글 & 여행", Style: design.DefaultCaptionStyle, Anchor: "bottom", Align: "center"}
 		layout, err := r.layoutCopy(t.Context(), ws, canvas, copy)
 		if err != nil {
 			return err
@@ -74,4 +76,23 @@ func TestRenderSmokeFilePreset(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
+}
+
+// The renderer admits a catalog only when every approved style (CDS-80) has a
+// template bound to it, so the fixture binds the live set rather than a list
+// that goes stale the next time the set grows.
+func proofBindings(t *testing.T) string {
+	t.Helper()
+	bindings := map[string]string{"furniture": "furniture", "region": "region", "info": "info"}
+	for _, style := range design.CaptionStyles() {
+		bindings["copy."+style.ID] = "proof"
+	}
+	data, err := json.Marshal(struct {
+		Version  int               `json:"version"`
+		Bindings map[string]string `json:"bindings"`
+	}{1, bindings})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(data)
 }
