@@ -31,8 +31,8 @@
 | THEME | 12 | 12 | - | 0 |
 | MKT | 4 | 4 | - | 0 |
 | VIDEO | 2 | 2 | - | 1 |
-| CLIP | 32 | 32 | - | 3 |
-| CDS | 21 | 21 | - | 1 |
+| CLIP | 33 | 33 | - | 3 |
+| CDS | 22 | 22 | - | 1 |
 | BILL | 4 | 4 | - | 0 |
 
 ## review
@@ -48,10 +48,24 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
+| T227 | The template body becomes an ordered outline in both parsers | CLIP | - | todo |
+| T228 | The project's presets decide how many intro and outro lines are drawn | CLIP CDS | T227 | todo |
+| T229 | The template editor drops the design step and edits the outline | CLIP | T227 | todo |
+| T230 | 형식 안내 and 원문 teach the outline grammar | CLIP | T227 | todo |
+| T231 | A saved template reads as an outline and seeds no design | CLIP | T227 | todo |
+| T233 | The template's caption entries reach the narration in outline order | CLIP | T228 | todo |
 
 ## next
-- no CLIP task is free: T177 stays blocked (its viewing checklist predates the caption style set) and T008 is another session's — next planning move is update-ssot for CLIP-145 once prod render numbers exist
+- implement-task T227 — T228 T229 T230 T231 unlock behind it and T233 behind T228
+- T177 stays blocked (its viewing checklist predates both the caption style set and the outline) and T008 is another session's
 ## log
+- 260918 T232 done; 템플릿 없음 is plain metadata in the list and ① already distinguished the deleted-template case, now pinned by tests on both surfaces
+- 260918 T232 claimed (otl)
+- 260918 create-task CLIP done; T227 the outline grammar in both parsers, T228 the project's presets fill the region lines, T229 the editor, T230 the format guide, T231 the legacy read and the end of design seeding, T232 템플릿 없음, T233 the template's caption entries — CDS r22 is consumed by T228
+- 260918 create-task CLIP start (CDS r22 rides along)
+- 260918 update-ssot CLIP r33 + CDS r22 done; the template is an ordered outline whose entries declare only their order, the design selection is the project's alone (so the template screen offers no caption style at all), a paste is refused only for unreadable grammar, the project's preset decides how many intro/outro lines are drawn with the surplus noticed, and 템플릿 없음 stops reading as a missing template
+- 260918 T177 is in the changed area and stays blocked; no doing task touches the template surfaces
+- 260918 update-ssot CLIP start — the template as a post-template-style ordered outline round-tripped through 원문, and a template-less project shown as a normal state
 - 260917 T226 done; both approval quotes carry what the frame-by-frame captions add — the plan's sequence captions, their frames and the seconds at a MEASURED per-frame cost (30 ms, resvg over real frames, 6–37 ms by crop on this Mac), or the selected sequence styles before a plan exists — shown on the one approval surface ① and ② share, refusing nothing (CLIP-145 stays open and needs prod numbers)
 - 260917 T226 claimed (stg)
 - 260917 T224 done; ① chooses the design — intro and outro presets beside pace and accent, the sixteen caption styles as a multi-select where each is drawn by the renderer itself and the frame-by-frame ones say so, an empty selection reading as the default style alone — the template is optional everywhere the FE still demanded one (없음 by default, minting without it), and choosing one fills all five while clearing it keeps them; the style samples needed a new GetClipCaptionStyleSamples (T222's preview needs a saved plan, so ① could not use it) — owner-approved mid-task
@@ -65,10 +79,3 @@
 - 260917 T221 done; a caption carries the owner's own position, size and style — clamped into the safe area by moving, never resizing, with the size floor and an unallowed style refused where they are written — and the manifest says who placed it so V1 still holds it inside the safe area, V3 demotes a shortfall under it to a notice, V13 leaves it out of the anchor walk and no repair or automatic placement runs over it again
 - 260917 T220 done; the thirteen sequence styles draw one frame at a time into a bounded PNG sequence under the attempt workspace, enter the overlay chain through image2 at the output frame rate with no loop and no fade, are counted by CLIP-33 and deleted the moment their overlay pass is encoded, while a static style's single rasterise is untouched
 - 260917 T219 done; internal/clip/design holds the sixteen approved caption styles with their faces, roles, colour treatments and motion, Jua and NanumMyeongjo ship pinned beside Pretendard and Paperlogy, resvg is handed every bundled face with system fonts off, and a caption whose face lacks a syllable falls back to the default style with a CLIP-108 notice naming it
-- 260917 CDS constraints still list face_family with two faces while CDS-17 names four — worth an update-ssot
-- 260917 T221 claimed (plc)
-- 260917 T219 T220 adopted for closeout by plc — cap had committed both complete (7c33b5ca) with every acceptance verified, leaving only the st/archive/STATE closeout
-- 260917 T220 claimed (cap)
-- 260917 T219 claimed (cap)
-- 260917 T218 done; a clip generates with no template at all — minting, both quote gates, the writer's own input check and every prompt stop assuming one, a project with none freezes the grammar's minimum document (one empty hook, one empty ending, nothing else) so every downstream check still reads a real document, the guide section is omitted whole rather than sent empty with the two prefixes pinned by golden fixtures, and a revision runs on a project whose template was deleted from the composition it retained
-- 260917 the narration call still measures its generated region rows against the FROZEN document's preset (ai/composition_copy.go regionSelection), so a project that changes a preset can be handed slot limits the render will not use — nothing fails today, worth a review-code finding

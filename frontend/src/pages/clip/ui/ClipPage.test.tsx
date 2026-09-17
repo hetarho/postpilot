@@ -62,6 +62,19 @@ async function fillSetup() {
   return user
 }
 describe('clip directory and setup', () => {
+  it('asks for another template only when the one it names is gone', async () => {
+    // CLIP-146: 없음 is the normal selection, and the detached message belongs
+    // to a project whose named template was deleted.
+    const view = mount('/clips/project', {
+      projects: [{ ...project, videoTemplateId: '' }],
+    })
+    expect(await screen.findByRole('combobox', { name: /^영상 템플릿/ })).toHaveTextContent('없음')
+    expect(screen.queryByText(/연결된 영상 템플릿이 없어요/)).not.toBeInTheDocument()
+    view.unmount()
+    mount('/clips/project', { projects: [{ ...project, videoTemplateId: 'deleted' }] })
+    expect(await screen.findByText(/연결된 영상 템플릿이 없어요/)).toBeInTheDocument()
+  })
+
   it('autosaves disclosure visibility independently and restores it after reopening', async () => {
     const user = userEvent.setup()
     const updates: ClipProjectDraft[] = []

@@ -657,6 +657,7 @@ export const clips = {
     loading: '불러오는 중',
     retry: '다시 시도',
     noTemplates: '아직 영상 템플릿이 없어요. 없이도 만들 수 있어요.',
+    noTemplate: '템플릿 없음',
     detachedTemplate: '연결된 영상 템플릿이 없어요. 다시 선택해 주세요.',
     templateLoading: '영상 템플릿을 확인하는 중',
     templateUnavailable: '영상 템플릿을 확인할 수 없어요.',

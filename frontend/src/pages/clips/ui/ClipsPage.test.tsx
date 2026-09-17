@@ -127,6 +127,22 @@ describe('clip directory', () => {
     expect(within(link).getByText(/전|어제|방금/)).toBeInTheDocument()
   })
 
+  it('shows no template as a normal state and asks again only for a template that is gone', async () => {
+    mount('/clips', {
+      projects: [
+        { ...base, id: 'none', title: '템플릿 없는 클립', videoTemplateId: '' },
+        { ...base, id: 'gone', title: '지워진 템플릿 클립', videoTemplateId: 'deleted' },
+      ],
+    })
+    // CLIP-146: a project made without one is normal; only a named template
+    // that is gone asks the owner for another.
+    await waitFor(async () =>
+      expect(await row(/템플릿 없는 클립/)).toHaveTextContent('템플릿 없음'),
+    )
+    expect(await row(/템플릿 없는 클립/)).not.toHaveTextContent('다시 선택')
+    expect(await row(/지워진 템플릿 클립/)).toHaveTextContent('연결된 영상 템플릿이 없어요')
+  })
+
   it('narrows by title and by state, and carries both in the URL', async () => {
     const user = userEvent.setup()
     const { router } = mount()

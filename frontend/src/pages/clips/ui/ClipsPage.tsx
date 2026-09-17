@@ -190,11 +190,15 @@ export function ClipsPage() {
                   <span className={typographyStyles({ variant: 'meta', className: 'truncate' })}>
                     {template?.name ??
                       t(
-                        project.videoTemplateId && templates.isPending
-                          ? 'project.templateLoading'
-                          : project.videoTemplateId && templates.isError
-                            ? 'project.templateUnavailable'
-                            : 'project.detachedTemplate',
+                        // No template is a normal state and asks for nothing;
+                        // only a NAMED template that is gone does (CLIP-146).
+                        !project.videoTemplateId
+                          ? 'project.noTemplate'
+                          : templates.isPending
+                            ? 'project.templateLoading'
+                            : templates.isError
+                              ? 'project.templateUnavailable'
+                              : 'project.detachedTemplate',
                         { ns: 'clips' },
                       )}
                   </span>

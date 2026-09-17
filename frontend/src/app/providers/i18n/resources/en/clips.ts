@@ -674,6 +674,7 @@ export const clips = {
     loading: 'Loading',
     retry: 'Retry',
     noTemplates: 'No video templates yet. A clip can be made without one.',
+    noTemplate: 'No template',
     detachedTemplate: 'No linked video template. Choose another template.',
     templateLoading: 'Checking video template',
     templateUnavailable: 'Could not check the video template.',
