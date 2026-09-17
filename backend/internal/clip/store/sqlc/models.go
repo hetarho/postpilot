@@ -69,6 +69,9 @@ type ClipProject struct {
 	Instruction              string
 	CaptionPace              string
 	Accent                   string
+	IntroPreset              string
+	OutroPreset              string
+	AllowedCaptionStyles     string
 }
 
 type ClipSourceAttempt struct {

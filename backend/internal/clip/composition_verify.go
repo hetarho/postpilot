@@ -19,10 +19,13 @@ func VerifyCompositionManifest(plan EditPlan, elements []CompositionElement, lim
 	if plan.Portable.Snapshot.Legacy {
 		limits = LegacyCompositionLimits(limits)
 	}
-	doc, problem := composition.ReadStored(plan.Portable.Snapshot.Body, limits)
-	if problem != nil {
+	if _, problem := composition.ReadStored(plan.Portable.Snapshot.Body, limits); problem != nil {
 		return problem
 	}
+	// V20 is checked against the presets the PROJECT chose, which is what the
+	// layout was given: the frozen document declares the slot text, not which
+	// preset holds it (CLIP-139).
+	selection := plan.Design().RegionPresets()
 	canvas, err := ClipCanvas(plan.Ratio)
 	if err != nil {
 		return err
@@ -96,9 +99,9 @@ func VerifyCompositionManifest(plan EditPlan, elements []CompositionElement, lim
 		}
 		region := element.Role == "hook" || element.Role == "ending"
 		if region {
-			kind, preset := "intro", doc.Design.Intro
+			kind, preset := "intro", selection.Intro
 			if element.Role == "ending" {
-				kind, preset = "outro", doc.Design.Outro
+				kind, preset = "outro", selection.Outro
 			}
 			rows := []string{}
 			for _, row := range r.Rows {

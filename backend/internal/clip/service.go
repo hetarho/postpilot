@@ -217,9 +217,15 @@ func (s *Service) CreateProject(ctx context.Context, user string, input ProjectI
 	if !ValidLanguage(input.Language) {
 		return Project{}, ErrInvalid
 	}
-	template, err := s.store.GetTemplate(ctx, user, input.VideoTemplateID)
-	if err != nil {
-		return Project{}, err
+	// A template is a preset, not a precondition (CLIP-5): `/clips/new` may mint
+	// a project with none, and everything a template would have supplied starts
+	// at the shared defaults instead.
+	var template VideoTemplate
+	if input.VideoTemplateID != "" {
+		var err error
+		if template, err = s.store.GetTemplate(ctx, user, input.VideoTemplateID); err != nil {
+			return Project{}, err
+		}
 	}
 	title := strings.TrimSpace(input.Title)
 	// An unset duration is allowed at creation — the owner chooses it in ①
@@ -253,8 +259,26 @@ func (s *Service) CreateProject(ctx context.Context, user string, input ProjectI
 	if !ValidCaptionPace(pace) || !ValidAccent(accent) {
 		return Project{}, ErrInvalid
 	}
+	// The two presets and the allowed styles are seeded the same way, from the
+	// selection the template's own body declares (CLIP-14). A request that says
+	// nothing about them starts where that template starts, and a project made
+	// without one starts at the shared defaults.
+	seed := TemplateDesign(template, s.limits.Composition)
+	intro, outro, styles := seed.Intro, seed.Outro, []string{seed.Caption}
+	if input.IntroPreset != nil {
+		intro = *input.IntroPreset
+	}
+	if input.OutroPreset != nil {
+		outro = *input.OutroPreset
+	}
+	if input.CaptionStyles != nil {
+		styles = *input.CaptionStyles
+	}
+	if !ValidIntroPreset(intro) || !ValidOutroPreset(outro) || !ValidCaptionStyles(styles) {
+		return Project{}, ErrInvalid
+	}
 	now := time.Now()
-	p := Project{ID: newID(), UserID: user, Title: title, VideoTemplateID: input.VideoTemplateID, Ratio: input.Ratio, Language: input.Language, Disclosure: input.Disclosure, HideDisclosure: input.HideDisclosure, CTA: input.CTA, Instruction: input.Instruction, CaptionPace: pace, Accent: accent, TargetDurationMS: input.TargetDurationMS, Answers: answers, CreatedAt: now, UpdatedAt: now}
+	p := Project{ID: newID(), UserID: user, Title: title, VideoTemplateID: input.VideoTemplateID, Ratio: input.Ratio, Language: input.Language, Disclosure: input.Disclosure, HideDisclosure: input.HideDisclosure, CTA: input.CTA, Instruction: input.Instruction, CaptionPace: pace, Accent: accent, IntroPreset: intro, OutroPreset: outro, CaptionStyles: styles, TargetDurationMS: input.TargetDurationMS, Answers: answers, CreatedAt: now, UpdatedAt: now}
 	p.Composition, err = s.projectComposition(template, input.CompositionInputs, p)
 	if err != nil {
 		return Project{}, err
@@ -316,7 +340,18 @@ func (s *Service) UpdateProject(ctx context.Context, user, id string, p ProjectP
 	if p.CaptionPace != nil && !ValidCaptionPace(*p.CaptionPace) || p.Accent != nil && !ValidAccent(*p.Accent) {
 		return Project{}, ErrInvalid
 	}
-	if p.VideoTemplateID != nil {
+	// The presets and the allowed styles are the same kind of change: the plan,
+	// the observations and the writing calls all stand, and only the rendered
+	// result goes stale (CLIP-139, CLIP-142).
+	if p.IntroPreset != nil && !ValidIntroPreset(*p.IntroPreset) || p.OutroPreset != nil && !ValidOutroPreset(*p.OutroPreset) {
+		return Project{}, ErrInvalid
+	}
+	if p.CaptionStyles != nil && !ValidCaptionStyles(*p.CaptionStyles) {
+		return Project{}, ErrInvalid
+	}
+	// An empty id is the owner choosing 없음, which detaches the template and
+	// leaves every value it seeded exactly where it is (CLIP-5, CLIP-139).
+	if p.VideoTemplateID != nil && *p.VideoTemplateID != "" {
 		if _, err := s.store.GetTemplate(ctx, user, *p.VideoTemplateID); err != nil {
 			return Project{}, err
 		}
@@ -329,9 +364,12 @@ func (s *Service) UpdateProject(ctx context.Context, user, id string, p ProjectP
 	p.Composition = nil
 	p.ExpectedCompositionRevision = nil
 	if p.VideoTemplateID != nil && *p.VideoTemplateID != old.VideoTemplateID {
-		t, e := s.store.GetTemplate(ctx, user, *p.VideoTemplateID)
-		if e != nil {
-			return Project{}, e
+		var t VideoTemplate
+		if *p.VideoTemplateID != "" {
+			var e error
+			if t, e = s.store.GetTemplate(ctx, user, *p.VideoTemplateID); e != nil {
+				return Project{}, e
+			}
 		}
 		next := old
 		next.VideoTemplateID = t.ID

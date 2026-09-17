@@ -154,6 +154,12 @@ type EditPlan struct {
 	// The project's caption pace (CLIP-139), a render input like Accent beside
 	// it: empty is not chosen, and the frozen document's own value stands.
 	CaptionPace string
+	// The project's design selection (CLIP-139, CLIP-142), render inputs like
+	// the pace beside them: the presets the intro and outro render in and the
+	// styles a caption may take. Empty is a plan rendered before the selection
+	// moved onto the project, which reads as the shared defaults.
+	IntroPreset, OutroPreset string
+	CaptionStyles            []string
 	// What the model wrote per cut, parallel to Cuts, before the compiler placed
 	// it. It is the compiler's input and is never stored with the plan.
 	Written []Written
@@ -358,15 +364,22 @@ func (p EditPlan) Compiled() bool {
 // WithProject fills the render inputs the badge and the chips need. It is
 // called at render time rather than at approval time so a stored plan never
 // carries a stale disclosure.
-// WithCaptions is how the PROJECT's pace and accent reach a render (CLIP-139).
-// Either one empty leaves the frozen document's value standing, so a plan
-// written before they moved renders exactly as it did.
-func (p EditPlan) WithCaptions(pace, accent string) EditPlan {
-	p.CaptionPace = pace
-	if accent != "" {
-		p.Accent = accent
+// WithDesign is how the PROJECT's design selection reaches a render (CLIP-139):
+// the pace and the accent, the two region presets and the caption styles this
+// clip may use. An empty pace or accent leaves the frozen document's value
+// standing, so a plan written before they moved renders exactly as it did.
+func (p EditPlan) WithDesign(d ProjectDesign) EditPlan {
+	p.CaptionPace = d.CaptionPace
+	if d.Accent != "" {
+		p.Accent = d.Accent
 	}
+	p.IntroPreset, p.OutroPreset, p.CaptionStyles = d.IntroPreset, d.OutroPreset, d.CaptionStyles
 	return p
+}
+
+// Design is the selection this plan renders with, as the project left it.
+func (p EditPlan) Design() ProjectDesign {
+	return ProjectDesign{CaptionPace: p.CaptionPace, Accent: p.Accent, IntroPreset: p.IntroPreset, OutroPreset: p.OutroPreset, CaptionStyles: p.CaptionStyles}
 }
 
 // CaptionPaceOf and AccentOf answer what a caption actually renders with: the

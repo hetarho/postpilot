@@ -43,13 +43,16 @@ func BuildNarrationPrompt(in clip.NarrationInput, limits composition.Limits) (st
 	}
 	payload := map[string]any{
 		"project_instruction": in.Instruction,
-		"template_guide":      templateGuide(in.PlanningInput, limits),
 		"global_values":       in.Composition.Inputs.Values, "item_groups": groups, "item_hints": hints,
 		"cuts": resolvedFlowPayload(in), "output_duration_ms": in.Flow.DurationMS,
 		"ratio":                  in.Ratio,
 		"generated_region_slots": generatedRegionSlots(in.Composition.Snapshot.Body, limits),
 		"caption_max_chars":      design.Caption().Lines * design.Caption().Chars,
 		"analyses":               planObservationPayload(in.Analyses, true),
+	}
+	// Omitted whole rather than sent empty, exactly as the flow call omits it.
+	if guide := templateGuide(in.PlanningInput, limits); guide != "" {
+		payload["template_guide"] = guide
 	}
 	return narrationPrompt + responseContract + contract, promptJSON(payload)
 }

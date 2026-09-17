@@ -61,7 +61,7 @@ func (q *Queries) DeleteVideoTemplate(ctx context.Context, arg DeleteVideoTempla
 }
 
 const getClipProject = `-- name: GetClipProject :one
-SELECT id, user_id, title, video_template_id, ratio, target_duration_ms, analysis_json, edit_plan_json, result_key, result_content_type, result_bytes, result_duration_ms, result_created_at, edit_plan_revision, rendered_plan_revision, created_at, updated_at, deleting, disclosure, cta, hide_disclosure, composition_inputs_json, composition_snapshot_json, source_retention_expires_at, source_access_revoked_at, source_batch_id, result_id, finalized_at, finalized_plan_revision, finalized_result_key, language, instruction, caption_pace, accent FROM clip_projects WHERE id = ? AND user_id = ?
+SELECT id, user_id, title, video_template_id, ratio, target_duration_ms, analysis_json, edit_plan_json, result_key, result_content_type, result_bytes, result_duration_ms, result_created_at, edit_plan_revision, rendered_plan_revision, created_at, updated_at, deleting, disclosure, cta, hide_disclosure, composition_inputs_json, composition_snapshot_json, source_retention_expires_at, source_access_revoked_at, source_batch_id, result_id, finalized_at, finalized_plan_revision, finalized_result_key, language, instruction, caption_pace, accent, intro_preset, outro_preset, allowed_caption_styles FROM clip_projects WHERE id = ? AND user_id = ?
 `
 
 type GetClipProjectParams struct {
@@ -107,6 +107,9 @@ func (q *Queries) GetClipProject(ctx context.Context, arg GetClipProjectParams) 
 		&i.Instruction,
 		&i.CaptionPace,
 		&i.Accent,
+		&i.IntroPreset,
+		&i.OutroPreset,
+		&i.AllowedCaptionStyles,
 	)
 	return i, err
 }
@@ -142,25 +145,28 @@ func (q *Queries) GetVideoTemplate(ctx context.Context, arg GetVideoTemplatePara
 }
 
 const insertClipProject = `-- name: InsertClipProject :exec
-INSERT INTO clip_projects(id, user_id, title, video_template_id, ratio, language, target_duration_ms, disclosure, cta, hide_disclosure, instruction, caption_pace, accent, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO clip_projects(id, user_id, title, video_template_id, ratio, language, target_duration_ms, disclosure, cta, hide_disclosure, instruction, caption_pace, accent, intro_preset, outro_preset, allowed_caption_styles, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `
 
 type InsertClipProjectParams struct {
-	ID               string
-	UserID           string
-	Title            string
-	VideoTemplateID  sql.NullString
-	Ratio            string
-	Language         string
-	TargetDurationMs int64
-	Disclosure       string
-	Cta              string
-	HideDisclosure   int64
-	Instruction      string
-	CaptionPace      string
-	Accent           string
-	CreatedAt        string
-	UpdatedAt        string
+	ID                   string
+	UserID               string
+	Title                string
+	VideoTemplateID      sql.NullString
+	Ratio                string
+	Language             string
+	TargetDurationMs     int64
+	Disclosure           string
+	Cta                  string
+	HideDisclosure       int64
+	Instruction          string
+	CaptionPace          string
+	Accent               string
+	IntroPreset          string
+	OutroPreset          string
+	AllowedCaptionStyles string
+	CreatedAt            string
+	UpdatedAt            string
 }
 
 func (q *Queries) InsertClipProject(ctx context.Context, arg InsertClipProjectParams) error {
@@ -178,6 +184,9 @@ func (q *Queries) InsertClipProject(ctx context.Context, arg InsertClipProjectPa
 		arg.Instruction,
 		arg.CaptionPace,
 		arg.Accent,
+		arg.IntroPreset,
+		arg.OutroPreset,
+		arg.AllowedCaptionStyles,
 		arg.CreatedAt,
 		arg.UpdatedAt,
 	)
@@ -295,7 +304,7 @@ func (q *Queries) ListClipProjectRequests(ctx context.Context, arg ListClipProje
 }
 
 const listClipProjects = `-- name: ListClipProjects :many
-SELECT id, user_id, title, video_template_id, ratio, target_duration_ms, analysis_json, edit_plan_json, result_key, result_content_type, result_bytes, result_duration_ms, result_created_at, edit_plan_revision, rendered_plan_revision, created_at, updated_at, deleting, disclosure, cta, hide_disclosure, composition_inputs_json, composition_snapshot_json, source_retention_expires_at, source_access_revoked_at, source_batch_id, result_id, finalized_at, finalized_plan_revision, finalized_result_key, language, instruction, caption_pace, accent FROM clip_projects WHERE user_id = ? ORDER BY updated_at DESC, id
+SELECT id, user_id, title, video_template_id, ratio, target_duration_ms, analysis_json, edit_plan_json, result_key, result_content_type, result_bytes, result_duration_ms, result_created_at, edit_plan_revision, rendered_plan_revision, created_at, updated_at, deleting, disclosure, cta, hide_disclosure, composition_inputs_json, composition_snapshot_json, source_retention_expires_at, source_access_revoked_at, source_batch_id, result_id, finalized_at, finalized_plan_revision, finalized_result_key, language, instruction, caption_pace, accent, intro_preset, outro_preset, allowed_caption_styles FROM clip_projects WHERE user_id = ? ORDER BY updated_at DESC, id
 `
 
 func (q *Queries) ListClipProjects(ctx context.Context, userID string) ([]ClipProject, error) {
@@ -342,6 +351,9 @@ func (q *Queries) ListClipProjects(ctx context.Context, userID string) ([]ClipPr
 			&i.Instruction,
 			&i.CaptionPace,
 			&i.Accent,
+			&i.IntroPreset,
+			&i.OutroPreset,
+			&i.AllowedCaptionStyles,
 		); err != nil {
 			return nil, err
 		}
@@ -398,7 +410,7 @@ func (q *Queries) ListVideoTemplates(ctx context.Context, userID string) ([]Vide
 }
 
 const projectsForTemplate = `-- name: ProjectsForTemplate :many
-SELECT id, user_id, title, video_template_id, ratio, target_duration_ms, analysis_json, edit_plan_json, result_key, result_content_type, result_bytes, result_duration_ms, result_created_at, edit_plan_revision, rendered_plan_revision, created_at, updated_at, deleting, disclosure, cta, hide_disclosure, composition_inputs_json, composition_snapshot_json, source_retention_expires_at, source_access_revoked_at, source_batch_id, result_id, finalized_at, finalized_plan_revision, finalized_result_key, language, instruction, caption_pace, accent FROM clip_projects WHERE video_template_id = ? AND user_id = ? ORDER BY id
+SELECT id, user_id, title, video_template_id, ratio, target_duration_ms, analysis_json, edit_plan_json, result_key, result_content_type, result_bytes, result_duration_ms, result_created_at, edit_plan_revision, rendered_plan_revision, created_at, updated_at, deleting, disclosure, cta, hide_disclosure, composition_inputs_json, composition_snapshot_json, source_retention_expires_at, source_access_revoked_at, source_batch_id, result_id, finalized_at, finalized_plan_revision, finalized_result_key, language, instruction, caption_pace, accent, intro_preset, outro_preset, allowed_caption_styles FROM clip_projects WHERE video_template_id = ? AND user_id = ? ORDER BY id
 `
 
 type ProjectsForTemplateParams struct {
@@ -450,6 +462,9 @@ func (q *Queries) ProjectsForTemplate(ctx context.Context, arg ProjectsForTempla
 			&i.Instruction,
 			&i.CaptionPace,
 			&i.Accent,
+			&i.IntroPreset,
+			&i.OutroPreset,
+			&i.AllowedCaptionStyles,
 		); err != nil {
 			return nil, err
 		}
@@ -611,6 +626,32 @@ func (q *Queries) UpdateClipAccent(ctx context.Context, arg UpdateClipAccentPara
 	return result.RowsAffected()
 }
 
+const updateClipAllowedCaptionStyles = `-- name: UpdateClipAllowedCaptionStyles :execrows
+UPDATE clip_projects SET allowed_caption_styles = ?1,
+    edit_plan_revision = edit_plan_revision + CASE WHEN edit_plan_json IS NOT NULL AND allowed_caption_styles != ?1 THEN 1 ELSE 0 END,
+    updated_at = ?2 WHERE id = ?3 AND user_id = ?4 AND finalized_at IS NULL
+`
+
+type UpdateClipAllowedCaptionStylesParams struct {
+	AllowedCaptionStyles string
+	UpdatedAt            string
+	ID                   string
+	UserID               string
+}
+
+func (q *Queries) UpdateClipAllowedCaptionStyles(ctx context.Context, arg UpdateClipAllowedCaptionStylesParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateClipAllowedCaptionStyles,
+		arg.AllowedCaptionStyles,
+		arg.UpdatedAt,
+		arg.ID,
+		arg.UserID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const updateClipCTA = `-- name: UpdateClipCTA :execrows
 UPDATE clip_projects SET cta = ?, updated_at = ? WHERE id = ? AND user_id = ? AND finalized_at IS NULL
 `
@@ -728,6 +769,61 @@ type UpdateClipInstructionParams struct {
 func (q *Queries) UpdateClipInstruction(ctx context.Context, arg UpdateClipInstructionParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, updateClipInstruction,
 		arg.Instruction,
+		arg.UpdatedAt,
+		arg.ID,
+		arg.UserID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const updateClipIntroPreset = `-- name: UpdateClipIntroPreset :execrows
+UPDATE clip_projects SET intro_preset = ?1,
+    edit_plan_revision = edit_plan_revision + CASE WHEN edit_plan_json IS NOT NULL AND intro_preset != ?1 THEN 1 ELSE 0 END,
+    updated_at = ?2 WHERE id = ?3 AND user_id = ?4 AND finalized_at IS NULL
+`
+
+type UpdateClipIntroPresetParams struct {
+	IntroPreset string
+	UpdatedAt   string
+	ID          string
+	UserID      string
+}
+
+// The design selection is the same kind of change as the pace beside it: the
+// render reads a different preset or a different style set for the SAME plan,
+// so the result goes stale while the plan and its observations stand (CLIP-139).
+func (q *Queries) UpdateClipIntroPreset(ctx context.Context, arg UpdateClipIntroPresetParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateClipIntroPreset,
+		arg.IntroPreset,
+		arg.UpdatedAt,
+		arg.ID,
+		arg.UserID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const updateClipOutroPreset = `-- name: UpdateClipOutroPreset :execrows
+UPDATE clip_projects SET outro_preset = ?1,
+    edit_plan_revision = edit_plan_revision + CASE WHEN edit_plan_json IS NOT NULL AND outro_preset != ?1 THEN 1 ELSE 0 END,
+    updated_at = ?2 WHERE id = ?3 AND user_id = ?4 AND finalized_at IS NULL
+`
+
+type UpdateClipOutroPresetParams struct {
+	OutroPreset string
+	UpdatedAt   string
+	ID          string
+	UserID      string
+}
+
+func (q *Queries) UpdateClipOutroPreset(ctx context.Context, arg UpdateClipOutroPresetParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateClipOutroPreset,
+		arg.OutroPreset,
 		arg.UpdatedAt,
 		arg.ID,
 		arg.UserID,

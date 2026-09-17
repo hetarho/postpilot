@@ -11,6 +11,7 @@
 | id | st |
 |---|---|
 | clip-source-observation-visibility | converted@260912 |
+| clip-template-as-preset | converted@260917 |
 
 ## ssot
 | id | rev | tasked | pending | [?] |
@@ -30,8 +31,8 @@
 | THEME | 12 | 12 | - | 0 |
 | MKT | 4 | 4 | - | 0 |
 | VIDEO | 2 | 2 | - | 1 |
-| CLIP | 31 | 31 | - | 2 |
-| CDS | 20 | 20 | - | 1 |
+| CLIP | 32 | 32 | - | 3 |
+| CDS | 21 | 21 | - | 1 |
 | BILL | 4 | 4 | - | 0 |
 
 ## review
@@ -47,10 +48,27 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
+| T219 | The approved caption style set, its faces and its glyph fallback | CDS CLIP | - | doing@260917.cap |
+| T220 | Sequence-rendered caption styles | CDS | T219 | todo |
+| T221 | The owner places, sizes and restyles a caption | CLIP CDS | T219 | todo |
+| T222 | The server hands the preview the caption SVG it will render | CDS CLIP | T219 T221 | todo |
+| T223 | A template carries named composition stages | CLIP | - | todo |
+| T224 | ① chooses the design, the caption styles and an optional template | CLIP | T217 T218 | todo |
+| T225 | ② places captions over their own cut frame | CLIP CDS | T221 T222 | todo |
+| T226 | The approval surface quotes sequence-rendered captions separately | CDS CLIP | T220 | todo |
 
 ## next
-- nothing is free: T177 is blocked on the owner's viewing answers and T008 stays owner-dependent. The r31 writing re-cut and the revision chain are complete (T200 T207–T216, T201–T204) — a `review-code` pass over clip/ is the next useful move, starting from the two findings in this log
+- implement-task T223 (free, and the only CLIP root left untouched) — T219 is taken by another session, and T224 now has its deps but wants T222 for the previews its impl notes name
 ## log
+- 260917 T219 claimed (cap)
+- 260917 T218 done; a clip generates with no template at all — minting, both quote gates, the writer's own input check and every prompt stop assuming one, a project with none freezes the grammar's minimum document (one empty hook, one empty ending, nothing else) so every downstream check still reads a real document, the guide section is omitted whole rather than sent empty with the two prefixes pinned by golden fixtures, and a revision runs on a project whose template was deleted from the composition it retained
+- 260917 the narration call still measures its generated region rows against the FROZEN document's preset (ai/composition_copy.go regionSelection), so a project that changes a preset can be handed slot limits the render will not use — nothing fails today, worth a review-code finding
+- 260917 T217 done; the design selection is the project's (migration 0062 intro_preset/outro_preset/allowed_caption_styles, backfilled from the document the render already reads so nothing re-renders differently), seeded from the template at creation, presence-aware on update and staling only the result; EditPlan.WithCaptions became WithDesign so the compiler names every seam it has to reach, and the layout, V20 and the admission read the presets and the allowed styles from there rather than from the frozen template composition
+- 260917 create-task CLIP CDS done; T217–T226 split r32/r21 into two roots — the project owning the design selection (T217) and the caption style registry with its faces and glyph fallback (T219) — then the template becoming optional (T218), sequence rendering through a temporary PNG sequence (T220), owner placement with the verifier changes (T221), the served preview fragment that keeps preview and render identical (T222), template stages (T223) and the two surfaces (T224 T225) with the sequence quote (T226); the CLIP-145 ceiling stays open and T226 only surfaces the numbers a ceiling would need
+- 260917 create-task CLIP CDS start
+- 260917 update-ssot CLIP r32 CDS r21 done; the video template is a preset rather than a precondition (CLIP-5 at most one), the design selection and the allowed caption styles belong to ① (CLIP-139 CLIP-142), a template may carry named composition stages that guide the flow without admitting or forbidding footage (CLIP-141), and ② places each caption over its own cut frame for free movement inside the safe area with contrast demoted to a notice (CLIP-143 CDS-82 CDS-52); the caption style set, its static/sequence cost split and the preview-render agreement rule are new in CDS (CDS-80 CDS-81 CDS-83)
+- 260917 T177 (blocked, CDS CLIP) lies in the changed area: its release QA viewing checklist predates the caption style set
+- 260917 update-ssot CLIP CDS start (ideation clip-template-as-preset)
 - 260917 T204 done; what the owner asked the AI for is kept with the project (migration 0060 clip_project_requests, cascade to the project) — the instruction a generation froze and the words and target of each revision, verbatim with the time, written at the one seam where the job exists but cannot yet dispatch, so an accepted job always has its entry and a save never writes one; read back newest first in a disclosure beside the observations, and gone when the project is
 - 260917 useClipProject stops polling at a terminal revise_clip job, so a revision's settlement lands only on the next read — pre-existing from T202/T203, worth a review-code finding
 - 260917 T204 claimed (rui)
@@ -62,12 +80,3 @@
 - 260916 T209 done; the caption pace and the accent are the project's (migration 0057, seeded from the template at creation, chosen in ① and gone from ②) — the render reads them through EditPlan.WithCaptions and applies them once at layout, a change bumps only the plan revision so the result goes stale without repaying a writing call, and the accent row draws its dots from the design system's own hex because CDS's palette has no FE theme tokens
 - 260916 T215 done; ② edits the narration on its own lane — one bar per caption whatever cut lies beneath, absolute start/end fields, add at the playhead into free room (≥900 ms), remove, undo/redo, an overlap or an out-of-output caption blocks 다시 렌더 without retiming anything, the three caption notices read in ko/en, and the item-binding controls left ② for ①
 - 260916 T214 done; the renderer schedules the narration on the output timeline (order by start, overlap omitted, CDS-41 floor through the shorter text then the free room, owner windows untouched), places a spanning caption against every cut it covers, and verifies V18 timeline-wide, V16 against the duration and V11 on every collected fact; the identity baseline was NOT re-pinned — measured, the delivered clip is identical at the commit that recorded it, at HEAD and here, so that constant belongs to another host
-- 260916 a caption over readable_text footage has no admissible anchor (readable allows top/bottom, the caption rule offers upper_mid/lower_mid) and is always dropped with copy_limit — pre-existing, found under T214, worth a review-code finding
-- 260916 T213 done; a generation quotes, reserves, runs and resumes TWO writing calls — pricing v3 carries Narration beside Plan with SkipFlow/SkipNarration, the run stages are flow → narrate → layout → render, the written flow is kept with FlowReady so a narration failure resumes on it for one call, the quote lists both writing lines by label and ② shows them; the job reservation's writing line now admits two calls, and preparation measures the larger of the two requests
-- 260916 T212 done; the narration call writes captions on absolute output intervals over the resolved flow plus the template's generated slot rows (schemas/narration.schema.json, narrationPrompt) — admitted in start order against the output, disjoint, within CDS-25, grounded by GroundNarration on every collected fact, CDS-41's reading time through the shorter sentence then the free room then caption_floor, with server-minted narration-N ids and no notice for anything the writer simply did not say
-- 260916 T211 done; the flow call writes the footage flow alone (schemas/flow.schema.json, flowPrompt) from the instruction, the template guide, the facts, the source order, the item hints and the observations, and the server resolves it into cuts plus the template's fixed regions; the rate contract now names the observed facts it is read from, states the 40% share and the speech rule as WRITING bounds the render never re-enforces, and Plan is refused a composition — 28 tests of the retired single-writer contract were removed (owner-approved) to return as narration tests in T212
-- 260916 T210 done; a plan carries narration captions with absolute, disjoint output intervals beside the template regions — the shape is validated at store time and again against the duration an edit produces, so footage edits never retime a caption and a caption the new output cannot hold is named for correction; ② may add, edit and remove one (server-minted `narration-N`, owner-written text skips grounding), `GroundNarration` drops the cross-item and context-item rules, and the three caption removal reasons exist (`caption_floor` has no producer until T212/T214)
-- 260916 T208 done; the template editor offers only fields, groups, guides and the badge, the accent and pace selects are gone, a converted legacy template says its scenes moved into the guide and saves that body, and the preview supplies one sample caption line; the converter now lifts an intro/outro authored inside a scene and keeps carrying prose when the body still has an authoring error
-- 260916 T200 done; a project is minted from title/template/ratio and everything else is written in ① beside the sources — migration 0056 relaxes the duration CHECK (goose NO TRANSACTION, foreign keys off), and the upload gate now asks for a savable project rather than a complete one
-- 260916 T208 claimed (tmpl)
-- 260916 T207 done; a template body must satisfy ParseTemplate (no scene, repeat, caption/info text or cut basis), frozen snapshots still read through Parse/ReadStored, a legacy template reads back converted into one guide with composition_converted=true and its stored body untouched, the FE parser/guide/skeleton mirror it through the shared corpus; media (untracked tooling.go, T206) and pages/clip (T200's form rewrite) suites fail in the shared tree independently of this task

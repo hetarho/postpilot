@@ -55,11 +55,16 @@ func BuildFlowPrompt(in clip.PlanningInput, fadeMS int, limits composition.Limit
 	}
 	payload := map[string]any{
 		"project_instruction": in.Instruction,
-		"template_guide":      templateGuide(in, limits),
 		"global_values":       in.Composition.Inputs.Values, "item_groups": groups,
 		"source_order": order, "item_hints": hints,
 		"ratio": in.Ratio, "target_duration_ms": in.TargetDurationMS, "fade_ms": fadeMS,
 		"analyses": flowObservationPayload(in),
+	}
+	// No template, or one whose guide says nothing, adds no bytes at all: the
+	// section is omitted WHOLE rather than sent empty, so the request a
+	// revision appends to stays byte-identical (CLIP-5, TMPL-12).
+	if guide := templateGuide(in, limits); guide != "" {
+		payload["template_guide"] = guide
 	}
 	return flowPrompt + responseContract + contract, promptJSON(payload)
 }

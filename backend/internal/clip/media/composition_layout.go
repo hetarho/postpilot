@@ -263,14 +263,10 @@ func (r *Rendering) layoutDeclaredElement(ctx context.Context, ws clip.MediaWork
 		return r.layoutDeclaredRapid(ctx, ws, canvas, plan, text, placed, previous)
 	}
 	if e.Role != "caption" {
-		selection := composition.DefaultDesign()
-		if plan.Portable != nil {
-			doc, problem := composition.ReadStored(plan.Portable.Snapshot.Body, clip.LegacyCompositionLimits(r.cfg.Composition))
-			if problem != nil {
-				return visual, problem
-			}
-			selection = doc.Design
-		}
+		// The presets are the PROJECT's (CLIP-139): the frozen document keeps
+		// the slot text it declared, and which preset that text is laid into is
+		// read from the plan's own selection.
+		selection := plan.Design().RegionPresets()
 		result, err := r.layoutDeclaredRole(ctx, ws, canvas, plan.Ratio, visual, selection)
 		var problem *composition.Problem
 		if err == nil || !clip.AutomaticCompositionRepair(text) || !errors.As(err, &problem) {
@@ -293,7 +289,16 @@ func (r *Rendering) layoutDeclaredElement(ctx context.Context, ws clip.MediaWork
 		return visual, err
 	}
 	subject, readable, captionSafe := coveredFootage(canvas, plan, text)
-	candidates := []string{"bold"}
+	// The styles a caption may take are the project's own selection, the
+	// default style alone where it selected none (CLIP-142, CDS-25). A style id
+	// the approved set does not carry is an authoring error, refused here
+	// rather than quietly resolved to something else (CDS-66).
+	candidates := plan.Design().AllowedCaptionStyles()
+	for _, style := range candidates {
+		if _, ok := design.CaptionStyle(style); !ok {
+			return visual, elementProblem(text, "invalid_design")
+		}
+	}
 	texts := []clip.CopyAlternative{{Text: text.Resolved.Text, Rows: text.Resolved.Rows}}
 	if clip.AutomaticCompositionRepair(text) {
 		texts = append(texts, text.Alternatives...)

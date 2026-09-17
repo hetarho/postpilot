@@ -67,13 +67,13 @@ func (r *Rendering) ValidateAuthoredInput(ctx context.Context, in clip.PlanningI
 						}
 					}
 					if element.Element.Role != "caption" {
-						_, err := r.layoutDeclaredRole(ctx, ws, canvas, in.Ratio, declaredVisual{text: text, manifest: declaredManifest(text)}, doc.Design)
+						_, err := r.layoutDeclaredRole(ctx, ws, canvas, in.Ratio, declaredVisual{text: text, manifest: declaredManifest(text)}, in.Design.RegionPresets())
 						if err != nil {
 							return err
 						}
 						continue
 					}
-					c := clip.Copy{Text: element.Text, Style: "bold", Align: element.Element.Align, Anchor: element.Element.Position, Accent: doc.Accent}
+					c := clip.Copy{Text: element.Text, Style: in.Design.AllowedCaptionStyles()[0], Align: element.Element.Align, Anchor: element.Element.Position, Accent: doc.Accent}
 					layout, err := r.layoutCopy(ctx, ws, canvas, c)
 					if err != nil {
 						return elementProblem(text, "copy_limit")

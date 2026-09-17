@@ -30,23 +30,29 @@ type RevisionQuoteStore interface {
 }
 
 type revisionJobPayload struct {
-	Version             int
-	ProjectID, Write    string
-	Revision            int
-	Request, Target     string
-	PlanJSON            string
-	Language            string
-	Composition         *ProjectComposition
-	Template            Recipe
-	Answers             []Answer
-	Disclosure, CTA     string
-	Instruction         string
-	CaptionPace, Accent string
-	HideDisclosure      bool
-	TargetDurationMS    int
-	SourceAudio         []SourceAudioSetting
-	Approval            *GenerationApproval
-	Batch               SourceBatch
+	Version                  int
+	ProjectID, Write         string
+	Revision                 int
+	Request, Target          string
+	PlanJSON                 string
+	Language                 string
+	Composition              *ProjectComposition
+	Template                 Recipe
+	Answers                  []Answer
+	Disclosure, CTA          string
+	Instruction              string
+	CaptionPace, Accent      string
+	IntroPreset, OutroPreset string
+	CaptionStyles            []string
+	HideDisclosure           bool
+	TargetDurationMS         int
+	SourceAudio              []SourceAudioSetting
+	Approval                 *GenerationApproval
+	Batch                    SourceBatch
+}
+
+func (p revisionJobPayload) design() ProjectDesign {
+	return ProjectDesign{CaptionPace: p.CaptionPace, Accent: p.Accent, IntroPreset: p.IntroPreset, OutroPreset: p.OutroPreset, CaptionStyles: p.CaptionStyles}
 }
 
 // RevisionInputDigest binds a quote to the exact plan the owner was looking at
@@ -223,7 +229,7 @@ func (s *GenerationService) StartRevision(ctx context.Context, user, id, request
 		Request: request, Target: target, PlanJSON: p.EditPlan, Language: p.Language,
 		Composition: p.Composition, Template: recipe, Answers: p.Answers,
 		Disclosure: p.Disclosure, CTA: p.CTA, Instruction: p.Instruction,
-		CaptionPace: p.CaptionPace, Accent: p.Accent, HideDisclosure: p.HideDisclosure,
+		CaptionPace: p.CaptionPace, Accent: p.Accent, IntroPreset: p.IntroPreset, OutroPreset: p.OutroPreset, CaptionStyles: p.CaptionStyles, HideDisclosure: p.HideDisclosure,
 		TargetDurationMS: p.TargetDurationMS, SourceAudio: batchSourceAudio(b), Batch: b,
 		Approval: &GenerationApproval{QuoteID: q.ID, MaxCredits: q.Pricing.MaxCredits, Pricing: q.Pricing},
 	})
@@ -290,7 +296,7 @@ func (s *GenerationService) RunRevision(ctx context.Context, user, job, project 
 	in := PlanningInput{Language: frozen.Language, Composition: frozen.Composition, Template: frozen.Template,
 		Answers: frozen.Answers, Ratio: p.Ratio, TargetDurationMS: frozen.TargetDurationMS, Analyses: analyses,
 		Policy: pricing.Plan, Disclosure: frozen.Disclosure, HideDisclosure: frozen.HideDisclosure,
-		CTA: frozen.CTA, Instruction: frozen.Instruction, SourceAudio: frozen.SourceAudio}
+		CTA: frozen.CTA, Instruction: frozen.Instruction, Design: frozen.design(), SourceAudio: frozen.SourceAudio}
 	stage = "flow"
 	if frozen.Target == RevisionNarration {
 		stage = "narrate"
@@ -302,7 +308,7 @@ func (s *GenerationService) RunRevision(ctx context.Context, user, job, project 
 	if err != nil {
 		return err
 	}
-	next = next.WithCaptions(frozen.CaptionPace, frozen.Accent)
+	next = next.WithDesign(frozen.design())
 	next.SourceAudio = FreezeSourceAudio(frozen.Batch, next.Cuts)
 	if layout, ok := s.renderer.(CompositionLayouter); ok {
 		refs := make([]RenderSource, 0, len(analyses))

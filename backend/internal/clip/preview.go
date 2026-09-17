@@ -76,7 +76,7 @@ func (s *GenerationService) PreparePreview(ctx context.Context, user, id string,
 	}
 	// The pace and the accent are render inputs read from the PROJECT, the way
 	// the disclosure and the facts are (CLIP-139).
-	next = next.WithCaptions(p.CaptionPace, p.Accent)
+	next = next.WithDesign(p.DesignSelection())
 	if next.Portable == nil {
 		recipe := Recipe{}
 		if p.Composition != nil && p.Composition.Snapshot.LegacyRecipe != nil {

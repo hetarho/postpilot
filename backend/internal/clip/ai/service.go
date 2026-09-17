@@ -531,7 +531,17 @@ func validateSettings(cfg Config, in clip.PlanningInput) error {
 		return err
 	}
 	if nativeComposition(in) {
-		if in.TargetDurationMS < cfg.Render.MinDurationMS || in.TargetDurationMS > cfg.Render.MaxDurationMS || in.Composition.Snapshot.Version != clip.CompositionVersion || !within(in.Template.Name, 1, cfg.Template.NameChars) || !in.Composition.Snapshot.Legacy && in.Template.CompositionBody != in.Composition.Snapshot.Body {
+		if in.TargetDurationMS < cfg.Render.MinDurationMS || in.TargetDurationMS > cfg.Render.MaxDurationMS || in.Composition.Snapshot.Version != clip.CompositionVersion {
+			return clip.ErrInvalid
+		}
+		// With no template attached the recipe is absent and the document is
+		// the server's own empty one (CLIP-5); with one, it must still name the
+		// template and match the body that template froze.
+		if in.Composition.NoTemplate() {
+			if in.Template.Name != "" || in.Template.CompositionBody != "" || in.Composition.Snapshot.Body != clip.EmptyCompositionBody() {
+				return clip.ErrInvalid
+			}
+		} else if !within(in.Template.Name, 1, cfg.Template.NameChars) || !in.Composition.Snapshot.Legacy && in.Template.CompositionBody != in.Composition.Snapshot.Body {
 			return clip.ErrInvalid
 		}
 		doc, problem := composition.Parse(in.Composition.Snapshot.Body, compositionLimits(cfg, in))

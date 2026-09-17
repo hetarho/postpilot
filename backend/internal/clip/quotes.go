@@ -217,9 +217,13 @@ func (s *GenerationService) quoteInputs(ctx context.Context, user, id, batch, ob
 	if p.Finalized != nil {
 		return p, t, b, pricing, ErrFinalized
 	}
-	t, err = s.projects.store.GetTemplate(ctx, user, p.VideoTemplateID)
-	if err != nil {
-		return p, t, b, pricing, err
+	// A project generates with no template (CLIP-5) and with one it has since
+	// lost (CLIP-25): both leave the zero recipe standing and no declared
+	// structure to satisfy.
+	if p.VideoTemplateID != "" {
+		if t, err = s.projects.store.GetTemplate(ctx, user, p.VideoTemplateID); err != nil {
+			return p, t, b, pricing, err
+		}
 	}
 	if err = RequiredAnswers(t, p, s.projects.limits.Composition); err != nil {
 		return p, t, b, pricing, err
@@ -237,7 +241,7 @@ func (s *GenerationService) quoteInputs(ctx context.Context, user, id, batch, ob
 	if validator, ok := s.renderer.(interface {
 		ValidateAuthoredInput(context.Context, PlanningInput) error
 	}); ok {
-		if err := validator.ValidateAuthoredInput(ctx, PlanningInput{Composition: c, Template: t.Recipe, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS}); err != nil {
+		if err := validator.ValidateAuthoredInput(ctx, PlanningInput{Composition: c, Template: t.Recipe, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Design: p.DesignSelection()}); err != nil {
 			return p, t, b, pricing, err
 		}
 	}
@@ -411,7 +415,7 @@ func (s *GenerationService) startApproved(ctx context.Context, user, id, batch, 
 		return "", err
 	}
 	recovery := s.selectRecovery(upgraded, b, modelRef(observe), p.Language)
-	payload, err := json.Marshal(generationPayload{Language: p.Language, Recovery: &recovery, Composition: c, Version: generationPayloadVersion, ProjectID: id, Ratio: p.Ratio, Observe: observe, Write: write, TargetDurationMS: p.TargetDurationMS, Template: t.Recipe, Answers: requiredQuoteAnswers(p, t), Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: design.DefaultCTA(t.Preset, p.CTA), Instruction: p.Instruction, CaptionPace: p.CaptionPace, Accent: p.Accent, Batch: b, Approval: &GenerationApproval{QuoteID: q.ID, MaxCredits: q.Pricing.MaxCredits, Pricing: q.Pricing}})
+	payload, err := json.Marshal(generationPayload{Language: p.Language, Recovery: &recovery, Composition: c, Version: generationPayloadVersion, ProjectID: id, Ratio: p.Ratio, Observe: observe, Write: write, TargetDurationMS: p.TargetDurationMS, Template: t.Recipe, Answers: requiredQuoteAnswers(p, t), Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: design.DefaultCTA(t.Preset, p.CTA), Instruction: p.Instruction, CaptionPace: p.CaptionPace, Accent: p.Accent, IntroPreset: p.IntroPreset, OutroPreset: p.OutroPreset, CaptionStyles: p.CaptionStyles, Batch: b, Approval: &GenerationApproval{QuoteID: q.ID, MaxCredits: q.Pricing.MaxCredits, Pricing: q.Pricing}})
 	if err != nil {
 		return "", err
 	}

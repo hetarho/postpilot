@@ -197,6 +197,20 @@ func fields(values []*v1.ClipInformationField) []clip.InformationField {
 	}
 	return out
 }
+
+// captionStyles carries the wrapper's presence through: absent leaves the
+// selection as it is, and present-and-empty is a selection of none, which
+// resolves to the default style alone (CLIP-142).
+func captionStyles(m *v1.ClipCaptionStyles) *[]string {
+	if m == nil {
+		return nil
+	}
+	values := m.GetValues()
+	if values == nil {
+		values = []string{}
+	}
+	return &values
+}
 func answers(values []*v1.ClipAnswer) []clip.Answer {
 	out := make([]clip.Answer, 0, len(values))
 	for _, v := range values {
@@ -213,7 +227,7 @@ func templateProto(t clip.VideoTemplate) *v1.VideoTemplate {
 }
 func projectProto(p clip.Project) *v1.ClipProject {
 	canEdit, canFinalize := p.Finalized == nil, false
-	out := &v1.ClipProject{CanEdit: &canEdit, CanFinalize: &canFinalize, Composition: compositionProto(p.Composition), Id: p.ID, Title: p.Title, VideoTemplateId: p.VideoTemplateID, Ratio: p.Ratio, Language: languageToProto(p.Language), Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, Cta: p.CTA, Instruction: p.Instruction, CaptionPace: p.CaptionPace, Accent: p.Accent, TargetDurationMs: int32(p.TargetDurationMS), EditPlanRevision: int32(p.EditPlanRevision), RenderedPlanRevision: int32(p.RenderedPlanRevision), CreatedAt: p.CreatedAt.UTC().Format(time.RFC3339Nano), UpdatedAt: p.UpdatedAt.UTC().Format(time.RFC3339Nano)}
+	out := &v1.ClipProject{CanEdit: &canEdit, CanFinalize: &canFinalize, Composition: compositionProto(p.Composition), Id: p.ID, Title: p.Title, VideoTemplateId: p.VideoTemplateID, Ratio: p.Ratio, Language: languageToProto(p.Language), Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, Cta: p.CTA, Instruction: p.Instruction, CaptionPace: p.CaptionPace, Accent: p.Accent, IntroPreset: p.IntroPreset, OutroPreset: p.OutroPreset, AllowedCaptionStyles: p.CaptionStyles, TargetDurationMs: int32(p.TargetDurationMS), EditPlanRevision: int32(p.EditPlanRevision), RenderedPlanRevision: int32(p.RenderedPlanRevision), CreatedAt: p.CreatedAt.UTC().Format(time.RFC3339Nano), UpdatedAt: p.UpdatedAt.UTC().Format(time.RFC3339Nano)}
 	if p.EditPlan != "" {
 		if plan, err := clip.DecodeEditPlan(p.EditPlan); err == nil {
 			for _, n := range clip.ActivePlanNotices(plan) {
@@ -353,7 +367,7 @@ func (h *Handler) CreateClipProject(ctx context.Context, req *connect.Request[v1
 	if err != nil {
 		return nil, toConnectError(err)
 	}
-	value, err := h.service.CreateProject(ctx, user, clip.ProjectInput{Language: language, CompositionInputs: compositionInputs(m.CompositionInputs), Title: m.Title, VideoTemplateID: m.VideoTemplateId, Ratio: m.Ratio, TargetDurationMS: int(m.TargetDurationMs), Disclosure: m.Disclosure, HideDisclosure: m.HideDisclosure, CTA: m.Cta, Instruction: m.Instruction, CaptionPace: m.CaptionPace, Accent: m.Accent, Answers: answers(m.Answers)})
+	value, err := h.service.CreateProject(ctx, user, clip.ProjectInput{Language: language, CompositionInputs: compositionInputs(m.CompositionInputs), Title: m.Title, VideoTemplateID: m.VideoTemplateId, Ratio: m.Ratio, TargetDurationMS: int(m.TargetDurationMs), Disclosure: m.Disclosure, HideDisclosure: m.HideDisclosure, CTA: m.Cta, Instruction: m.Instruction, CaptionPace: m.CaptionPace, Accent: m.Accent, IntroPreset: m.IntroPreset, OutroPreset: m.OutroPreset, CaptionStyles: captionStyles(m.AllowedCaptionStyles), Answers: answers(m.Answers)})
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -429,7 +443,7 @@ func (h *Handler) UpdateClipProject(ctx context.Context, req *connect.Request[v1
 		return nil, err
 	}
 	m := req.Msg
-	p := clip.ProjectPatch{CompositionInputs: compositionInputs(m.CompositionInputs), Title: m.Title, VideoTemplateID: m.VideoTemplateId, Disclosure: m.Disclosure, HideDisclosure: m.HideDisclosure, CTA: m.Cta, Instruction: m.Instruction, CaptionPace: m.CaptionPace, Accent: m.Accent, Answers: answers(m.Answers)}
+	p := clip.ProjectPatch{CompositionInputs: compositionInputs(m.CompositionInputs), Title: m.Title, VideoTemplateID: m.VideoTemplateId, Disclosure: m.Disclosure, HideDisclosure: m.HideDisclosure, CTA: m.Cta, Instruction: m.Instruction, CaptionPace: m.CaptionPace, Accent: m.Accent, IntroPreset: m.IntroPreset, OutroPreset: m.OutroPreset, CaptionStyles: captionStyles(m.AllowedCaptionStyles), Answers: answers(m.Answers)}
 	if m.TargetDurationMs != nil {
 		v := int(*m.TargetDurationMs)
 		p.TargetDurationMS = &v

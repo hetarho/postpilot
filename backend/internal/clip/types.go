@@ -87,7 +87,13 @@ type Project struct {
 	// The owner's caption pace and accent for this clip (CLIP-139). Empty is
 	// "not chosen": the render falls back to what the frozen document said, so
 	// a project made before they moved renders exactly as it did.
-	CaptionPace, Accent                    string
+	CaptionPace, Accent string
+	// The owner's design selection for this clip (CLIP-139, CLIP-142): the two
+	// region presets and the caption styles the clip may use. Seeded from the
+	// template at creation and the project's to change afterwards; an empty
+	// style selection is the default style alone (CDS-25).
+	IntroPreset, OutroPreset               string
+	CaptionStyles                          []string
 	TargetDurationMS                       int
 	Answers                                []Answer
 	Analysis, EditPlan                     string
@@ -132,8 +138,12 @@ type ProjectInput struct {
 	// Absent seeds both from the selected template; an explicit empty string is
 	// the steady pace and no accent.
 	CaptionPace, Accent *string
-	TargetDurationMS    int
-	Answers             []Answer
+	// Absent seeds all three from the selected template, or from the shared
+	// defaults where no template is attached (CLIP-139).
+	IntroPreset, OutroPreset *string
+	CaptionStyles            *[]string
+	TargetDurationMS         int
+	Answers                  []Answer
 }
 
 // Ratio deliberately has no update representation.
@@ -146,6 +156,11 @@ type ProjectPatch struct {
 	Title, VideoTemplateID, Disclosure, CTA *string
 	Instruction                             *string
 	CaptionPace, Accent                     *string
-	TargetDurationMS                        *int
-	Answers                                 []Answer
+	// Presence-aware like the pace and the accent: changing any of the three
+	// marks the result stale and invalidates no observation and no plan
+	// (CLIP-139).
+	IntroPreset, OutroPreset *string
+	CaptionStyles            *[]string
+	TargetDurationMS         *int
+	Answers                  []Answer
 }

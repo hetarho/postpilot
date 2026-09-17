@@ -68,6 +68,9 @@ message ClipInformationFields { repeated ClipInformationField values = 1; }
 // bold (크게 강조) emotion and hook, mark (형광펜) one number or keyword. A
 // template's approved set always contains clean: every fallback lands on it.
 message ClipCopyStyles { repeated string values = 1; }
+// Presence-aware caption style selection: absent leaves it as it is, present
+// replaces it whole, and present-and-empty is a selection of none (CLIP-142).
+message ClipCaptionStyles { repeated string values = 1; }
 message VideoTemplate {
   string id = 1;
   string name = 2;
@@ -158,6 +161,13 @@ message ClipProject {
   string accent = 32;
   // What the owner asked the AI for, newest first (CLIP-133).
   repeated ClipProjectRequest requests = 33;
+  // The project's design selection (CLIP-139, CLIP-142): the presets the intro
+  // and the outro render in, and the caption styles this clip may use. Seeded
+  // from the template at creation and the project's to change afterwards; an
+  // empty style list is the default style alone.
+  string intro_preset = 34;
+  string outro_preset = 35;
+  repeated string allowed_caption_styles = 36;
 }
 // One accepted request, verbatim: the instruction a generation froze, or the
 // words of a revision. An empty body under kind `instruction` is the record of a
@@ -274,6 +284,11 @@ message CreateClipProjectRequest {
   // the owner choosing the steady pace and no accent.
   optional string caption_pace = 12;
   optional string accent = 13;
+  // Absent seeds all three from the selected template, or from the shared
+  // defaults where no template is attached (CLIP-139).
+  optional string intro_preset = 14;
+  optional string outro_preset = 15;
+  ClipCaptionStyles allowed_caption_styles = 16;
 }
 message CreateClipProjectResponse { ClipProject project = 1; }
 message GetClipProjectRequest { string id = 1; }
@@ -295,6 +310,11 @@ message UpdateClipProjectRequest {
   // costs no writing call (CLIP-139).
   optional string caption_pace = 11;
   optional string accent = 12;
+  // The rest of the design selection, supplied only when it changes. Each one
+  // re-renders the same plan and costs no writing call either (CLIP-139).
+  optional string intro_preset = 13;
+  optional string outro_preset = 14;
+  ClipCaptionStyles allowed_caption_styles = 15;
 }
 message UpdateClipProjectResponse { ClipProject project = 1; }
 message DeleteClipProjectRequest { string id = 1; }

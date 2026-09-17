@@ -86,9 +86,21 @@ type generationPayload struct {
 	// writing call. A payload written before they existed decodes as empty,
 	// which is the frozen document's own value — today's behaviour.
 	CaptionPace, Accent string
-	HideDisclosure      bool
-	Batch               SourceBatch
-	Approval            *GenerationApproval
+	// The rest of the project's design selection (CLIP-139, CLIP-142), frozen
+	// the same way and absent from the digest for the same reason. A payload
+	// written before it moved onto the project decodes as empty, which reads as
+	// the shared defaults -- today's behaviour.
+	IntroPreset, OutroPreset string
+	CaptionStyles            []string
+	HideDisclosure           bool
+	Batch                    SourceBatch
+	Approval                 *GenerationApproval
+}
+
+// design is the selection this frozen run renders with, in one value so a run
+// and a rerender cannot read it differently.
+func (p generationPayload) design() ProjectDesign {
+	return ProjectDesign{CaptionPace: p.CaptionPace, Accent: p.Accent, IntroPreset: p.IntroPreset, OutroPreset: p.OutroPreset, CaptionStyles: p.CaptionStyles}
 }
 
 func modelRef(s string) llm.ModelRef {
@@ -380,14 +392,14 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 		for _, v := range b.Sources {
 			declared = append(declared, AnalysisSource{RenderSource: RenderSource{ID: v.ID, Fingerprint: v.Fingerprint, Info: MediaInfo{DurationMS: v.DurationMS, Width: v.Width, Height: v.Height}}, Filename: v.Filename})
 		}
-		if err := s.planner.ValidatePreparation(pricing.Observe.Ref, PlanningInput{Language: p.Language, Composition: p.Composition, Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: p.CTA, Instruction: p.Instruction, Policy: pricing.Plan}, declared); err != nil {
+		if err := s.planner.ValidatePreparation(pricing.Observe.Ref, PlanningInput{Language: p.Language, Composition: p.Composition, Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: p.CTA, Instruction: p.Instruction, Design: p.design(), Policy: pricing.Plan}, declared); err != nil {
 			return err
 		}
 	}
 	if validator, ok := s.renderer.(interface {
 		ValidateAuthoredInput(context.Context, PlanningInput) error
 	}); ok {
-		if err := validator.ValidateAuthoredInput(ctx, PlanningInput{Language: p.Language, Composition: p.Composition, Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS}); err != nil {
+		if err := validator.ValidateAuthoredInput(ctx, PlanningInput{Language: p.Language, Composition: p.Composition, Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Design: p.design()}); err != nil {
 			return err
 		}
 	}
@@ -435,7 +447,7 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 			if s.planner.Budgets() != (CompletionBudgets{Observe: pricing.Observe.CompletionTokens, Flow: pricing.Plan.CompletionTokens, Narration: pricing.Narration.CompletionTokens}) {
 				return ErrQuoteChanged
 			}
-			if err = s.planner.ValidatePreparation(pricing.Observe.Ref, PlanningInput{Language: p.Language, Composition: p.Composition, Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: p.CTA, Instruction: p.Instruction, Policy: pricing.Plan}, sources); err != nil {
+			if err = s.planner.ValidatePreparation(pricing.Observe.Ref, PlanningInput{Language: p.Language, Composition: p.Composition, Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: p.CTA, Instruction: p.Instruction, Design: p.design(), Policy: pricing.Plan}, sources); err != nil {
 				return err
 			}
 			if s.pricing == nil {
@@ -535,7 +547,7 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 			recovery.FlowReady, recovery.PlanReady = flowReady, planReady
 			return s.saveRecovery(ctx, user, project, recovery)
 		}
-		in := PlanningInput{Language: p.Language, Composition: p.Composition, Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Analyses: analyses, Policy: pricing.Plan, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: p.CTA, Instruction: p.Instruction, SourceAudio: batchSourceAudio(b)}
+		in := PlanningInput{Language: p.Language, Composition: p.Composition, Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Analyses: analyses, Policy: pricing.Plan, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: p.CTA, Instruction: p.Instruction, Design: p.design(), SourceAudio: batchSourceAudio(b)}
 		set("flow", 0, 1)
 		if err := s.checkpoint(ctx, user, project, checkpoint); err != nil {
 			return err
@@ -559,7 +571,7 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 		}
 		// The project's caption pace and accent are render inputs too: a plan
 		// carries what was written, the project says how it is shown (CLIP-139).
-		edit = edit.WithCaptions(p.CaptionPace, p.Accent)
+		edit = edit.WithDesign(p.design())
 		// The owner's source-sound choice is the SERVER's to state, and it is
 		// stated only here — after the model's own output has been validated, so
 		// no prompt, response or plan digest ever carried it, and a resumed plan

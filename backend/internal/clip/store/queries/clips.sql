@@ -30,7 +30,7 @@ SELECT * FROM clip_projects WHERE user_id = ? ORDER BY updated_at DESC, id;
 -- name: GetClipProject :one
 SELECT * FROM clip_projects WHERE id = ? AND user_id = ?;
 -- name: InsertClipProject :exec
-INSERT INTO clip_projects(id, user_id, title, video_template_id, ratio, language, target_duration_ms, disclosure, cta, hide_disclosure, instruction, caption_pace, accent, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+INSERT INTO clip_projects(id, user_id, title, video_template_id, ratio, language, target_duration_ms, disclosure, cta, hide_disclosure, instruction, caption_pace, accent, intro_preset, outro_preset, allowed_caption_styles, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 -- name: DeleteClipProject :execrows
 DELETE FROM clip_projects WHERE id = ? AND user_id = ?;
 -- name: ListClipAnswers :many
@@ -72,6 +72,21 @@ UPDATE clip_projects SET caption_pace = sqlc.arg(caption_pace),
 -- name: UpdateClipAccent :execrows
 UPDATE clip_projects SET accent = sqlc.arg(accent),
     edit_plan_revision = edit_plan_revision + CASE WHEN edit_plan_json IS NOT NULL AND accent != sqlc.arg(accent) THEN 1 ELSE 0 END,
+    updated_at = sqlc.arg(updated_at) WHERE id = sqlc.arg(id) AND user_id = sqlc.arg(user_id) AND finalized_at IS NULL;
+-- The design selection is the same kind of change as the pace beside it: the
+-- render reads a different preset or a different style set for the SAME plan,
+-- so the result goes stale while the plan and its observations stand (CLIP-139).
+-- name: UpdateClipIntroPreset :execrows
+UPDATE clip_projects SET intro_preset = sqlc.arg(intro_preset),
+    edit_plan_revision = edit_plan_revision + CASE WHEN edit_plan_json IS NOT NULL AND intro_preset != sqlc.arg(intro_preset) THEN 1 ELSE 0 END,
+    updated_at = sqlc.arg(updated_at) WHERE id = sqlc.arg(id) AND user_id = sqlc.arg(user_id) AND finalized_at IS NULL;
+-- name: UpdateClipOutroPreset :execrows
+UPDATE clip_projects SET outro_preset = sqlc.arg(outro_preset),
+    edit_plan_revision = edit_plan_revision + CASE WHEN edit_plan_json IS NOT NULL AND outro_preset != sqlc.arg(outro_preset) THEN 1 ELSE 0 END,
+    updated_at = sqlc.arg(updated_at) WHERE id = sqlc.arg(id) AND user_id = sqlc.arg(user_id) AND finalized_at IS NULL;
+-- name: UpdateClipAllowedCaptionStyles :execrows
+UPDATE clip_projects SET allowed_caption_styles = sqlc.arg(allowed_caption_styles),
+    edit_plan_revision = edit_plan_revision + CASE WHEN edit_plan_json IS NOT NULL AND allowed_caption_styles != sqlc.arg(allowed_caption_styles) THEN 1 ELSE 0 END,
     updated_at = sqlc.arg(updated_at) WHERE id = sqlc.arg(id) AND user_id = sqlc.arg(user_id) AND finalized_at IS NULL;
 -- name: TouchClip :execrows
 UPDATE clip_projects SET updated_at = ? WHERE id = ? AND user_id = ? AND finalized_at IS NULL;

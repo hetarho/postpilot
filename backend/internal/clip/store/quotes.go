@@ -45,9 +45,13 @@ func validateQuoteInputs(ctx context.Context, q *sqlc.Queries, quote clip.Genera
 	if p.Finalized != nil {
 		return clip.ErrFinalized
 	}
-	t, err := getTemplate(ctx, q, quote.UserID, p.VideoTemplateID)
-	if err != nil {
-		return err
+	// A project may carry no template at all (CLIP-5), and the digest the
+	// service signed was computed over the same zero recipe.
+	var t clip.VideoTemplate
+	if p.VideoTemplateID != "" {
+		if t, err = getTemplate(ctx, q, quote.UserID, p.VideoTemplateID); err != nil {
+			return err
+		}
 	}
 	b, err := getSourceBatch(ctx, q, quote.UserID, quote.BatchID)
 	if err != nil {

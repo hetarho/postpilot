@@ -175,6 +175,38 @@ func legacyCompositionRoot(recipe Recipe) *composition.Node {
 	return root
 }
 
+// EmptyCompositionBody is the document a project with NO template generates
+// from (CLIP-5): the two region elements the grammar requires, with no slot
+// text, no field, no group, no badge and no guide. Nothing of it renders — an
+// all-empty block draws nothing (CDS-73) — so the clip is its footage and its
+// narration alone. The grammar makes the root state a design selection, and this
+// one states the defaults: what a region actually renders in is the project's
+// and is read from there, never from here (CLIP-139).
+func EmptyCompositionBody() string {
+	root := node("clip", map[string]string{"version": "1", "intro": "b", "caption": "bold", "outro": "e"})
+	root.Children = append(root.Children,
+		node("text", map[string]string{"id": "empty-hook", "kind": "fixed", "role": "hook", "basis": "output-start"}),
+		node("text", map[string]string{"id": "empty-ending", "kind": "fixed", "role": "ending", "basis": "output-end"}))
+	return composition.SerializeNode(root)
+}
+
+// NoTemplate reports a frozen document no template stands behind: the empty one
+// above, frozen by a project that never had a template or has lost the one it
+// had (CLIP-5, CLIP-25). A detached LEGACY project is not one of these — its
+// recipe is still frozen with it.
+func (c *ProjectComposition) NoTemplate() bool {
+	return c != nil && !c.Snapshot.Legacy && c.Snapshot.TemplateID == ""
+}
+
+// NoTemplateComposition is what a project with no template freezes: the empty
+// document above and no inputs, because nothing declared any.
+func NoTemplateComposition() ProjectComposition {
+	return ProjectComposition{
+		Snapshot: CompositionSnapshot{Version: CompositionVersion, Body: EmptyCompositionBody()},
+		Inputs:   CompositionInputs{Values: map[string]string{}, Items: map[string][]composition.Item{}},
+	}
+}
+
 func LegacyCompositionBody(recipe Recipe) string {
 	root := legacyCompositionRoot(recipe)
 	hook := node("text", map[string]string{"id": "legacy-template-hook", "kind": "ai", "role": "hook", "basis": "output-start"})
@@ -345,6 +377,14 @@ func ValidateSourceAssociations(p Project, associations []SourceAssociation) err
 }
 
 func GenerationComposition(t VideoTemplate, p Project, limits composition.Limits) (*ProjectComposition, error) {
+	// No template is attached — never selected, or deleted since. The clip is
+	// generated from the project's own settings and there is no declared
+	// structure to satisfy, so CLIP-102's check has nothing to check rather
+	// than something to refuse (CLIP-5, CLIP-25).
+	if t.ID == "" {
+		c := NoTemplateComposition()
+		return &c, nil
+	}
 	if t.CompositionBody == "" || t.CompositionLegacy {
 		p.EditPlan = ""
 		c := LegacyProjectComposition(p, t.Recipe)
@@ -434,6 +474,24 @@ func (s *Service) authoredRecipe(r Recipe) (Recipe, error) {
 }
 
 func (s *Service) projectComposition(t VideoTemplate, in *CompositionInputs, p Project) (*ProjectComposition, error) {
+	if t.ID == "" {
+		c := NoTemplateComposition()
+		if in != nil {
+			d, problem := composition.ReadStored(c.Snapshot.Body, s.limits.Composition)
+			if problem != nil {
+				return nil, problem
+			}
+			// Nothing is declared, so any value or item supplied here names a
+			// field that does not exist and is refused rather than stored.
+			if err := ValidateCompositionInputs(d, *in, s.limits.Composition, false); err != nil {
+				return nil, err
+			}
+			if err := ValidateSourceAssociations(p, in.Associations); err != nil {
+				return nil, err
+			}
+		}
+		return &c, nil
+	}
 	if t.CompositionBody == "" || t.CompositionLegacy {
 		c := LegacyProjectComposition(p, t.Recipe)
 		if in != nil {

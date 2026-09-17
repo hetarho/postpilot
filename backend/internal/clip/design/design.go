@@ -429,8 +429,19 @@ func Anchors(ratio string) (Anchor, bool) {
 	return l.Anchor, ok
 }
 
-// Caption is the one fixed caption treatment (CDS-25).
-func Caption() StyleRule { return loaded.Regions.Caption["bold"] }
+// DefaultCaptionStyle is the treatment an empty selection resolves to, and the
+// only one the approved set carries so far (CDS-25, CDS-80).
+const DefaultCaptionStyle = "bold"
+
+// Caption is the default caption treatment (CDS-25).
+func Caption() StyleRule { return loaded.Regions.Caption[DefaultCaptionStyle] }
+
+// CaptionStyle looks one approved caption style up by name; a name the set does
+// not carry is refused rather than resolved to the default (CDS-66, CDS-80).
+func CaptionStyle(id string) (StyleRule, bool) {
+	rule, ok := loaded.Regions.Caption[id]
+	return rule, ok
+}
 
 // Region returns a template-selected intro or outro preset.
 func Region(kind, id string) (RegionPreset, bool) {

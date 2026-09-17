@@ -106,6 +106,11 @@ type PlanningInput struct {
 	// On content it outranks the template's authored guidance; every declared
 	// structure stays the template's.
 	Instruction string
+	// The project's design selection (CLIP-139): the presets the intro and the
+	// outro will render in and the styles a caption may take. The admission
+	// layout checks the SAME presets the render will use, so a region that
+	// cannot be placed is refused before any paid work rather than at render.
+	Design ProjectDesign
 	// The owner's per-source original-sound choice, as a FACT the writer reads:
 	// a speech span of a source that keeps its sound cannot be transformed
 	// (CLIP-129). The setting itself stays the owner's and is applied by the
