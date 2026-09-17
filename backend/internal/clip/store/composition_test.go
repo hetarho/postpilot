@@ -488,3 +488,50 @@ func TestApplyingCurrentTemplateInputsPreservesPriorRenderedResult(t *testing.T)
 		t.Fatal("invalid edit replaced saved input", err)
 	}
 }
+
+// A project with no plan has nothing for changed inputs to stale, and CLIP-36 reads any revision
+// above zero as an editing state. Raising one here opened the owner at step 2, which offers no way
+// to upload the originals step 1 collects, so the clip could never be generated at all.
+func TestSavingInputsBeforeAnyGenerationLeavesTheProjectADraft(t *testing.T) {
+	s, raw, _ := setup(t)
+	ctx := t.Context()
+	template := legacyTemplate(t, raw, "alice", "editable", nativeBody)
+	p, err := s.CreateProject(ctx, "alice", clip.ProjectInput{Language: "ko", Title: "before", VideoTemplateID: template.ID, Ratio: "vertical", TargetDurationMS: 15000})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.EditPlanRevision != 0 {
+		t.Fatalf("a fresh project already carries revision %d", p.EditPlanRevision)
+	}
+	input := clip.CompositionInputs{Values: map[string]string{"b": "1인분 12000원"}, Items: map[string][]composition.Item{"menu": {{ID: "item", Values: map[string]string{"price": "9000원"}}}}}
+	saved, err := s.UpdateProject(ctx, "alice", p.ID, clip.ProjectPatch{CompositionInputs: &input})
+	if err != nil {
+		t.Fatal("inputs refused", err)
+	}
+	if !reflect.DeepEqual(saved.Composition.Inputs, input) {
+		t.Fatal("inputs were not saved")
+	}
+	if saved.EditPlanRevision != 0 || saved.RenderedPlanRevision != 0 {
+		t.Fatalf("saving inputs staled a plan that does not exist: %d/%d", saved.EditPlanRevision, saved.RenderedPlanRevision)
+	}
+	// A second edit is the one that used to pile up: every pause in the form raised it again.
+	input.Values["a"] = "another fact"
+	again, err := s.UpdateProject(ctx, "alice", p.ID, clip.ProjectPatch{CompositionInputs: &input})
+	if err != nil || again.EditPlanRevision != 0 {
+		t.Fatal("a further edit left the draft", err)
+	}
+	// Once a plan exists the same save must stale it, which is what CLIP-139 asks for.
+	result := clip.Result{Key: "result.mp4", ContentType: "video/mp4", Bytes: 123, DurationMS: 15000, CreatedAt: time.Now()}
+	if err = raw.SaveGeneration(ctx, "alice", p.ID, "[]", "plan", result); err != nil {
+		t.Fatal(err)
+	}
+	generated, err := s.GetProject(ctx, "alice", p.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	input.Values["a"] = "changed after the render"
+	staled, err := s.UpdateProject(ctx, "alice", p.ID, clip.ProjectPatch{CompositionInputs: &input})
+	if err != nil || staled.EditPlanRevision != generated.EditPlanRevision+1 {
+		t.Fatal("inputs changed after a render did not stale it", err)
+	}
+}

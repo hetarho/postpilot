@@ -12,8 +12,17 @@ SELECT * FROM clip_projects WHERE video_template_id = ? AND user_id = ? ORDER BY
 UPDATE video_templates SET composition_body=?,composition_legacy=? WHERE id=? AND user_id=?;
 -- name: SaveProjectComposition :execrows
 UPDATE clip_projects SET composition_snapshot_json=?,composition_inputs_json=? WHERE id=? AND user_id=? AND finalized_at IS NULL;
+-- Changed inputs stale the plan they were written into, exactly as the pace and
+-- the accent do, and like those ONLY WHERE A PLAN EXISTS. A project that has
+-- never been generated has nothing to stale, and a revision raised above zero on
+-- it reads as an editing state: the step bar sent the owner to step 2 before a
+-- single source had been uploaded (CLIP-36, CLIP-139).
+-- Keep this file ASCII: sqlc rewrites named parameters by byte offset, and a
+-- multi-byte comment anywhere in it corrupts every query below.
 -- name: TouchCompositionRevision :execrows
-UPDATE clip_projects SET edit_plan_revision=edit_plan_revision+1,updated_at=? WHERE id=? AND user_id=? AND deleting=0 AND finalized_at IS NULL;
+UPDATE clip_projects SET
+    edit_plan_revision = edit_plan_revision + CASE WHEN edit_plan_json IS NOT NULL THEN 1 ELSE 0 END,
+    updated_at = sqlc.arg(updated_at) WHERE id = sqlc.arg(id) AND user_id = sqlc.arg(user_id) AND deleting = 0 AND finalized_at IS NULL;
 -- name: DeleteVideoTemplate :execrows
 DELETE FROM video_templates WHERE id = ? AND user_id = ?;
 -- name: ListClipProjects :many

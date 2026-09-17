@@ -559,7 +559,9 @@ func (q *Queries) TouchClip(ctx context.Context, arg TouchClipParams) (int64, er
 }
 
 const touchCompositionRevision = `-- name: TouchCompositionRevision :execrows
-UPDATE clip_projects SET edit_plan_revision=edit_plan_revision+1,updated_at=? WHERE id=? AND user_id=? AND deleting=0 AND finalized_at IS NULL
+UPDATE clip_projects SET
+    edit_plan_revision = edit_plan_revision + CASE WHEN edit_plan_json IS NOT NULL THEN 1 ELSE 0 END,
+    updated_at = ?1 WHERE id = ?2 AND user_id = ?3 AND deleting = 0 AND finalized_at IS NULL
 `
 
 type TouchCompositionRevisionParams struct {
@@ -568,6 +570,13 @@ type TouchCompositionRevisionParams struct {
 	UserID    string
 }
 
+// Changed inputs stale the plan they were written into, exactly as the pace and
+// the accent do, and like those ONLY WHERE A PLAN EXISTS. A project that has
+// never been generated has nothing to stale, and a revision raised above zero on
+// it reads as an editing state: the step bar sent the owner to step 2 before a
+// single source had been uploaded (CLIP-36, CLIP-139).
+// Keep this file ASCII: sqlc rewrites named parameters by byte offset, and a
+// multi-byte comment anywhere in it corrupts every query below.
 func (q *Queries) TouchCompositionRevision(ctx context.Context, arg TouchCompositionRevisionParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, touchCompositionRevision, arg.UpdatedAt, arg.ID, arg.UserID)
 	if err != nil {
