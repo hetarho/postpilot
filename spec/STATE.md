@@ -48,9 +48,7 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
-| T219 | The approved caption style set, its faces and its glyph fallback | CDS CLIP | - | doing@260917.cap |
-| T220 | Sequence-rendered caption styles | CDS | T219 | doing@260917.cap |
-| T221 | The owner places, sizes and restyles a caption | CLIP CDS | T219 | todo |
+| T221 | The owner places, sizes and restyles a caption | CLIP CDS | T219 | doing@260917.plc |
 | T222 | The server hands the preview the caption SVG it will render | CDS CLIP | T219 T221 | todo |
 | T223 | A template carries named composition stages | CLIP | - | todo |
 | T224 | ① chooses the design, the caption styles and an optional template | CLIP | T217 T218 | todo |
@@ -58,8 +56,13 @@
 | T226 | The approval surface quotes sequence-rendered captions separately | CDS CLIP | T220 | todo |
 
 ## next
-- implement-task T223 (free, and the only CLIP root left untouched) — T219 is taken by another session, and T224 now has its deps but wants T222 for the previews its impl notes name
+- implement-task T221 → T222 → T225 (the caption placement deploy unit: store, serve, edit) — T223 T224 T226 stay free for another session
 ## log
+- 260917 T220 done; the thirteen sequence styles draw one frame at a time into a bounded PNG sequence under the attempt workspace, enter the overlay chain through image2 at the output frame rate with no loop and no fade, are counted by CLIP-33 and deleted the moment their overlay pass is encoded, while a static style's single rasterise is untouched
+- 260917 T219 done; internal/clip/design holds the sixteen approved caption styles with their faces, roles, colour treatments and motion, Jua and NanumMyeongjo ship pinned beside Pretendard and Paperlogy, resvg is handed every bundled face with system fonts off, and a caption whose face lacks a syllable falls back to the default style with a CLIP-108 notice naming it
+- 260917 CDS constraints still list face_family with two faces while CDS-17 names four — worth an update-ssot
+- 260917 T221 claimed (plc)
+- 260917 T219 T220 adopted for closeout by plc — cap had committed both complete (7c33b5ca) with every acceptance verified, leaving only the st/archive/STATE closeout
 - 260917 T220 claimed (cap)
 - 260917 T219 claimed (cap)
 - 260917 T218 done; a clip generates with no template at all — minting, both quote gates, the writer's own input check and every prompt stop assuming one, a project with none freezes the grammar's minimum document (one empty hook, one empty ending, nothing else) so every downstream check still reads a real document, the guide section is omitted whole rather than sent empty with the two prefixes pinned by golden fixtures, and a revision runs on a project whose template was deleted from the composition it retained
