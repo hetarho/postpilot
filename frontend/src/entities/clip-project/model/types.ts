@@ -123,6 +123,18 @@ export interface ClipQuote {
     responseRetries: number
   }
   cancellationPolicy?: { version: number; numerator: number; denominator: number; rounding: 'ceil' }
+  /** What the sequence-rendered captions add to the render this approval leads
+   *  to (CDS-81). Counted from the plan the project holds, or — before the first
+   *  generation — from the selection alone, where only the styles are known.
+   *  Nothing is refused for these numbers (CLIP-145) and rendering costs no
+   *  credits at all (CLIP-20): they are here to be read, not to gate. */
+  sequenceCaptions?: {
+    fromPlan: boolean
+    captions: number
+    frames: number
+    addedRenderMs: number
+    selectedStyles: number
+  }
   quoteId: string
   maxCredits: number
   expiresAt: string

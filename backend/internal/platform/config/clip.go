@@ -25,18 +25,27 @@ const (
 	// How many named composition stages one template may carry (CLIP-141). A
 	// stage is a movement of the whole clip, so a body listing more than this is
 	// scripting the footage rather than guiding the flow.
-	ClipCompositionStages       = 8
-	ClipLabelChars              = 40
-	ClipPromptChars             = 200
-	ClipTitleChars              = 100
-	ClipAnswerChars             = 500
-	ClipInstructionChars        = 1000
-	ClipMinDurationMS           = 15000
-	ClipMaxDurationMS           = 90000
-	ClipSourceCount             = 20
-	ClipSourceDurationMS        = 30 * 60 * 1000
-	ClipSourceFileBytes   int64 = 2 * 1024 * 1024 * 1024
-	ClipSourceBatchBytes  int64 = 8 * 1024 * 1024 * 1024
+	ClipCompositionStages = 8
+	// What one sequence-rendered caption frame costs to draw (CDS-81). It is the
+	// number the approval surface multiplies the frames by, so it is measured
+	// rather than assumed: 2026-09-17, the bundled resvg over the real frames
+	// five sequence styles produce, 6 ms (word-pop) to 37 ms (neon) per frame on
+	// a dev Mac, the spread coming from the painted crop rather than the style.
+	// This is the upper-mid of that range, and the render box is slower than the
+	// machine it was measured on — the number a CEILING would need is prod's,
+	// which is CLIP-145's own open question.
+	ClipSequenceFrameCostMS       = 30
+	ClipLabelChars                = 40
+	ClipPromptChars               = 200
+	ClipTitleChars                = 100
+	ClipAnswerChars               = 500
+	ClipInstructionChars          = 1000
+	ClipMinDurationMS             = 15000
+	ClipMaxDurationMS             = 90000
+	ClipSourceCount               = 20
+	ClipSourceDurationMS          = 30 * 60 * 1000
+	ClipSourceFileBytes     int64 = 2 * 1024 * 1024 * 1024
+	ClipSourceBatchBytes    int64 = 8 * 1024 * 1024 * 1024
 )
 
 func ClipSourceLimits(batchTTL, putTTL time.Duration) clip.SourceConfig {

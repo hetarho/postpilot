@@ -69,3 +69,56 @@ it('folds the breakdown while the approval keeps saying what it charges for', as
   await userEvent.click(screen.getByRole('button', { name: '요금 접기' }))
   expect(screen.queryByRole('list', { name: '작성 호출' })).not.toBeInTheDocument()
 })
+
+// CDS-81: a sequence-rendered caption costs one rasterisation per output frame,
+// so the approval says how many there are and what they add — and says it
+// plainly when a clip has none. It refuses nothing: the button is unchanged
+// (CLIP-145), and rendering costs no credits at all (CLIP-20).
+it('states what the frame-by-frame captions add to the render, without gating on it', () => {
+  approval({
+    quote: {
+      ...quote,
+      sequenceCaptions: {
+        fromPlan: true,
+        captions: 3,
+        frames: 180,
+        addedRenderMs: 5400,
+        selectedStyles: 2,
+      },
+    },
+  })
+  expect(screen.getByText('프레임마다 그리는 자막 3개 · 출력이 약 5초 길어져요')).toBeVisible()
+  expect(screen.getByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' })).toBeEnabled()
+})
+
+// Before the first generation there is no plan, so the styles are known and the
+// captions are not — the surface says exactly that rather than an estimate.
+it('counts the selected styles while no plan exists, and says none where every style is static', () => {
+  approval({
+    quote: {
+      ...quote,
+      sequenceCaptions: {
+        fromPlan: false,
+        captions: 0,
+        frames: 0,
+        addedRenderMs: 0,
+        selectedStyles: 2,
+      },
+    },
+  })
+  expect(screen.getByText(/프레임마다 그리는 스타일 2개/)).toBeVisible()
+  cleanup()
+  approval({
+    quote: {
+      ...quote,
+      sequenceCaptions: {
+        fromPlan: true,
+        captions: 0,
+        frames: 0,
+        addedRenderMs: 0,
+        selectedStyles: 0,
+      },
+    },
+  })
+  expect(screen.getByText('프레임마다 그리는 자막 없음 · 출력 시간이 늘지 않아요')).toBeVisible()
+})

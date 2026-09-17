@@ -399,6 +399,24 @@ message ClipPricedCall {
   // the label, not the stage, tells the owner which line is which.
   string label = 9;
 }
+// What the sequence-rendered captions of this clip add to a render (CDS-81): a
+// static style is rasterised once however long it is on screen, while a
+// sequence style draws one layer per output frame. Counted from the plan the
+// project holds, or — before the first generation — from the selection alone,
+// where only the styles are known. NOTHING is refused for these numbers: how
+// many such captions a project may hold is still open (CLIP-145), and rendering
+// costs no credits at all (CLIP-20).
+message ClipSequenceCaptionCost {
+  // Whether the captions were counted from a plan the project actually holds.
+  bool from_plan = 1;
+  // The plan's sequence-rendered captions, the output frames they cover and
+  // what those frames add to the render at the measured per-frame cost.
+  int32 captions = 2;
+  int32 frames = 3;
+  int32 added_render_ms = 4;
+  // Sequence-rendered styles in the project's own selection (CLIP-142).
+  int32 selected_styles = 5;
+}
 message QuoteClipGenerationResponse {
   string quote_id = 1;
   int32 max_credits = 2;
@@ -409,6 +427,7 @@ message QuoteClipGenerationResponse {
   int32 remaining_chunks = 7;
   bool render_only = 8;
   int32 response_retries = 9;
+  ClipSequenceCaptionCost sequence_captions = 10;
 }
 message ClipCancellationPolicy {
   int32 version = 1;
@@ -442,6 +461,7 @@ message QuoteClipRevisionResponse {
   int32 response_retries = 6;
   // The plan revision this quote was taken against.
   int32 plan_revision = 7;
+  ClipSequenceCaptionCost sequence_captions = 8;
 }
 message StartClipRevisionRequest {
   string project_id = 1;

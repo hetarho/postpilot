@@ -140,6 +140,14 @@ export interface FakeClipsOptions {
   projectWrites?: ClipProjectDraft[]
   /** Which styles the samples call back as sequence-rendered, and whether it fails at all. */
   sequenceStyles?: string[]
+  /** The whole sequence-caption line a quote answers with, for a test that needs plan numbers. */
+  sequenceCost?: {
+    fromPlan: boolean
+    captions: number
+    frames: number
+    addedRenderMs: number
+    selectedStyles: number
+  }
   captionSamplesFail?: boolean
   /** Holds UpdateClipProject open until the test releases it, so an assertion can run WHILE the
    *  settings autosave is in flight. */
@@ -525,6 +533,20 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       })),
     })
   })
+  /** What the server states about frame-by-frame captions on an approval surface
+   *  (CDS-81). The fake counts only the SELECTION, which is what a project with
+   *  no plan yet knows; a test that needs plan numbers supplies them itself. */
+  const sequenceCost = (p?: FakeClipProject) => ({
+    ...(options.sequenceCost ?? {
+      fromPlan: false,
+      captions: 0,
+      frames: 0,
+      addedRenderMs: 0,
+      selectedStyles: (p?.allowedCaptionStyles ?? []).filter((style) =>
+        (options.sequenceStyles ?? ['word-pop']).includes(style),
+      ).length,
+    }),
+  })
   router.rpc(ClipService.method.quoteClipGeneration, (req) => {
     options.calls?.push('QuoteClipGeneration')
     options.quoteRequests?.push(req)
@@ -550,6 +572,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
         { label: 'flow', stage: 'write', calls: 1 },
         { label: 'narration', stage: 'write', calls: 1 },
       ],
+      sequenceCaptions: sequenceCost(projects.get(req.projectId)),
     })
   })
   // A revision is quoted and started like a generation, but against the SAVED
@@ -592,6 +615,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
               { label: 'flow', stage: 'write', calls: 1 },
               { label: 'narration', stage: 'write', calls: 1 },
             ],
+      sequenceCaptions: sequenceCost(projects.get(req.projectId)),
     })
   })
   router.rpc(ClipService.method.startClipRevision, (req) => {

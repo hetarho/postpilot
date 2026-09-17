@@ -219,6 +219,10 @@ type RenderConfig struct {
 	// keeps the memory bounded without re-encoding the clip per tree level
 	// (CLIP-124).
 	MergeInputs int
+	// What ONE sequence-rendered caption frame costs to draw, in milliseconds
+	// (CDS-81). It is the number the approval surface multiplies the frames by,
+	// so it is measured rather than assumed — see ClipSequenceFrameCostMS.
+	SequenceFrameCostMS int
 }
 type Canvas struct {
 	Width, Height int

@@ -409,6 +409,11 @@ export const clips = {
   },
   credits: {
     writingCalls: 'Writing calls',
+    sequenceCaptions:
+      '{{captions}} captions drawn frame by frame · about {{seconds}}s longer to render',
+    sequenceStyles:
+      '{{styles}} styles drawn frame by frame are selected · the added time is known once the captions are',
+    sequenceNone: 'No caption is drawn frame by frame · nothing is added to the render',
     call: {
       flow: 'Footage flow ×{{calls}}',
       narration: 'Narration ×{{calls}}',

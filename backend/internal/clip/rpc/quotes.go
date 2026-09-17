@@ -30,7 +30,7 @@ func (h *Handler) QuoteClipGeneration(ctx context.Context, req *connect.Request[
 	if err != nil {
 		return nil, toConnectError(err)
 	}
-	return connect.NewResponse(&v1.QuoteClipGenerationResponse{ReusedChunks: int32(q.Pricing.ReusedChunks), RemainingChunks: int32(q.Pricing.ObservationCalls), RenderOnly: q.Pricing.RenderOnly(), ResponseRetries: int32(q.Pricing.Plan.ResponseRetries), CancellationPolicy: &v1.ClipCancellationPolicy{Version: int32(q.Pricing.CancellationPolicyVersion), UnusedReservationNumerator: 1, UnusedReservationDenominator: 2, Rounding: "ceil"}, QuoteId: q.ID, MaxCredits: int32(q.Pricing.MaxCredits), ExpiresAt: q.ExpiresAt.UTC().Format(time.RFC3339Nano), PricedCalls: []*v1.ClipPricedCall{pricedCallProto(q.Pricing.Observe, "observe", q.Pricing.ObserveCalls(q.Pricing.ObservationCalls)), pricedCallProto(q.Pricing.Plan, "flow", q.Pricing.FlowCalls()), pricedCallProto(q.Pricing.Narration, "narration", q.Pricing.NarrationCalls())}}), nil
+	return connect.NewResponse(&v1.QuoteClipGenerationResponse{SequenceCaptions: sequenceCostProto(ctx, h, user, req.Msg.ProjectId), ReusedChunks: int32(q.Pricing.ReusedChunks), RemainingChunks: int32(q.Pricing.ObservationCalls), RenderOnly: q.Pricing.RenderOnly(), ResponseRetries: int32(q.Pricing.Plan.ResponseRetries), CancellationPolicy: &v1.ClipCancellationPolicy{Version: int32(q.Pricing.CancellationPolicyVersion), UnusedReservationNumerator: 1, UnusedReservationDenominator: 2, Rounding: "ceil"}, QuoteId: q.ID, MaxCredits: int32(q.Pricing.MaxCredits), ExpiresAt: q.ExpiresAt.UTC().Format(time.RFC3339Nano), PricedCalls: []*v1.ClipPricedCall{pricedCallProto(q.Pricing.Observe, "observe", q.Pricing.ObserveCalls(q.Pricing.ObservationCalls)), pricedCallProto(q.Pricing.Plan, "flow", q.Pricing.FlowCalls()), pricedCallProto(q.Pricing.Narration, "narration", q.Pricing.NarrationCalls())}}), nil
 }
 
 // QuoteClipRevision prices ONE written revision of the plan the owner is
@@ -59,7 +59,21 @@ func (h *Handler) QuoteClipRevision(ctx context.Context, req *connect.Request[v1
 		ResponseRetries: int32(q.Pricing.Plan.ResponseRetries), PlanRevision: int32(project.EditPlanRevision),
 		CancellationPolicy: &v1.ClipCancellationPolicy{Version: int32(q.Pricing.CancellationPolicyVersion), UnusedReservationNumerator: 1, UnusedReservationDenominator: 2, Rounding: "ceil"},
 		PricedCalls:        []*v1.ClipPricedCall{pricedCallProto(q.Pricing.Plan, "flow", q.Pricing.FlowCalls()), pricedCallProto(q.Pricing.Narration, "narration", q.Pricing.NarrationCalls())},
+		SequenceCaptions:   sequenceCostProto(ctx, h, user, req.Msg.GetProjectId()),
 	}), nil
+}
+
+// sequenceCostProto states what the sequence-rendered captions add to the render
+// this approval leads to (CDS-81). It refuses nothing and gates nothing
+// (CLIP-145, CLIP-20), so a project whose numbers cannot be read is quoted
+// without them rather than refused its quote.
+func sequenceCostProto(ctx context.Context, h *Handler, user, project string) *v1.ClipSequenceCaptionCost {
+	cost, err := h.generation.SequenceCost(ctx, user, project)
+	if err != nil {
+		return nil
+	}
+	return &v1.ClipSequenceCaptionCost{FromPlan: cost.FromPlan, Captions: int32(cost.Captions),
+		Frames: int32(cost.Frames), AddedRenderMs: int32(cost.AddedRenderMS), SelectedStyles: int32(cost.SelectedStyles)}
 }
 
 // StartClipRevision accepts one approved revision. The actor comes from the

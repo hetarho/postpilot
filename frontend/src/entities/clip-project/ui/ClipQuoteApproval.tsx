@@ -44,6 +44,21 @@ export function ClipQuoteApproval({
   const [open, setOpen] = useState(false)
   const insufficient =
     !!quote && !!balance && !balance.unlimited && quote.maxCredits > balance.credits
+  /** One line, whatever the clip is: the captions and the seconds they add when
+   *  a plan says how many there are, the styles that would draw that way before
+   *  one exists, and plainly none where every style is static. */
+  const sequenceCaptionLine = (cost: NonNullable<ClipQuote['sequenceCaptions']>) => {
+    if (cost.fromPlan)
+      return cost.captions
+        ? t('credits.sequenceCaptions', {
+            captions: cost.captions,
+            seconds: Math.max(1, Math.round(cost.addedRenderMs / 1000)),
+          })
+        : t('credits.sequenceNone')
+    return cost.selectedStyles
+      ? t('credits.sequenceStyles', { styles: cost.selectedStyles })
+      : t('credits.sequenceNone')
+  }
   return (
     <div className="w-full min-w-0 space-y-2">
       <div className="flex flex-wrap items-center justify-between gap-x-3">
@@ -87,6 +102,15 @@ export function ClipQuoteApproval({
         {children}
         {balance?.unlimited && <Typography variant="body">{t('credits.exempt')}</Typography>}
       </div>
+      {/* What the sequence-rendered captions add to the render this approval
+          leads to (CDS-81). It states work, never a limit: nothing is refused
+          for the count (CLIP-145) and the render itself is credit-free
+          (CLIP-20). */}
+      {quote?.sequenceCaptions && (
+        <Typography variant="meta" className="text-content-secondary block">
+          {sequenceCaptionLine(quote.sequenceCaptions)}
+        </Typography>
+      )}
       <Typography variant="body">
         {t(quote?.cancellationPolicy ? 'cancellation.rule' : 'cancellation.policyUnavailable')}
       </Typography>

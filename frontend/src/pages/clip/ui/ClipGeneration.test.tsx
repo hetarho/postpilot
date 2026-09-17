@@ -121,6 +121,26 @@ async function selectSource() {
   await screen.findByText('업로드 확인 완료')
   return { user, revoke }
 }
+// CDS-81: the approval says what the frame-by-frame captions add to the render
+// before the owner approves the work that will draw them — and refuses nothing
+// for the count (CLIP-145).
+it('states the sequence-rendered captions on the approval surface', async () => {
+  mount({
+    sequenceCost: {
+      fromPlan: true,
+      captions: 2,
+      frames: 90,
+      addedRenderMs: 2700,
+      selectedStyles: 1,
+    },
+  })
+  await selectSource()
+  const approve = await screen.findByRole('button', {
+    name: '최대 20 크레딧 · 승인하고 생성',
+  })
+  expect(screen.getByText('프레임마다 그리는 자막 2개 · 출력이 약 3초 길어져요')).toBeVisible()
+  await waitFor(() => expect(approve).toBeEnabled())
+})
 it('approves once, retains local previews after terminal and refetches the result', async () => {
   const calls: string[] = []
   const starts: unknown[] = []

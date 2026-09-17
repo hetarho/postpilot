@@ -41,6 +41,28 @@ export function toClipAccounting(value: ProtoClipAccounting): ClipAccounting {
       refundCredits !== undefined,
   }
 }
+/** The sequence-rendered caption line both quotes carry (CDS-81). A server that
+ *  does not send it leaves it out rather than reporting zero work, which is a
+ *  different statement from "this clip has none". */
+function sequenceCaptions(value: ProtoClipQuote | ProtoClipRevisionQuote) {
+  const cost = value.sequenceCaptions
+  if (
+    !cost ||
+    ![cost.captions, cost.frames, cost.addedRenderMs, cost.selectedStyles].every(
+      (n) => Number.isInteger(n) && n >= 0,
+    )
+  )
+    return {}
+  return {
+    sequenceCaptions: {
+      fromPlan: cost.fromPlan,
+      captions: cost.captions,
+      frames: cost.frames,
+      addedRenderMs: cost.addedRenderMs,
+      selectedStyles: cost.selectedStyles,
+    },
+  }
+}
 export function toClipQuote(value: ProtoClipQuote, binding: string): ClipQuote {
   if (
     !value.quoteId ||
@@ -92,6 +114,7 @@ export function toClipQuote(value: ProtoClipQuote, binding: string): ClipQuote {
         ['observe', 'flow', 'narration'].includes(call.label),
       )
       .map((call) => ({ label: call.label, calls: call.calls })),
+    ...sequenceCaptions(value),
     quoteId: value.quoteId,
     maxCredits: value.maxCredits,
     expiresAt: value.expiresAt,
@@ -139,6 +162,7 @@ export function toClipRevisionQuote(value: ProtoClipRevisionQuote, binding: stri
         ['observe', 'flow', 'narration'].includes(call.label),
       )
       .map((call) => ({ label: call.label, calls: call.calls })),
+    ...sequenceCaptions(value),
     quoteId: value.quoteId,
     maxCredits: value.maxCredits,
     expiresAt: value.expiresAt,
