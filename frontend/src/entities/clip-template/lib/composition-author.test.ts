@@ -98,23 +98,24 @@ describe('composition authoring contract', () => {
         await i18next.changeLanguage(language)
         const guide = clipCompositionGuide()
         expect(guide).toContain(CLIP_COMPOSITION_EXAMPLE)
-        expect(guide).toContain('basis="whole|output-start|output-end"')
+        expect(guide).toContain('role="hook|caption|ending|badge"')
         expect(guide).toContain('unsupported_section, unsupported_role, unsupported_basis')
         expect(guide).toContain('chars is a positive integer')
-        expect(guide).toContain('outro E 22/6/18')
+        // The retired grammar is taught nowhere (CLIP-113).
+        for (const gone of ['outro E 22/6/18', 'basis="whole|output-start|output-end"', 'slot'])
+          expect(guide).not.toContain(gone)
         const doc = parseClipComposition(CLIP_COMPOSITION_EXAMPLE)
         expect(doc.sections).toEqual([])
         // Sample values must fit the example's own maxima (score is 6 characters).
         const preview = sampleClipComposition(doc, 30000, (_label, i) => `${i}`, '자막 예시')
         expect(preview.elements.map((e) => e.element.id)).toEqual(
-          expect.arrayContaining(['disclosure_badge', 'intro', 'closing', 'sample-narration']),
+          expect.arrayContaining(['disclosure_badge', 'intro', 'taste', 'closing']),
         )
-        // The template declares no caption, so the preview supplies one line to
-        // judge the caption treatment against the skeleton (CLIP-4).
-        const narration = preview.elements.find((e) => e.element.id === 'sample-narration')!
-        expect(narration.element.role).toBe('caption')
-        expect(narration.text).toBe('자막 예시')
-        expect(narration.endMs).toBeLessThanOrEqual(preview.durationMs)
+        // The example declares its own caption entry, so the preview draws that
+        // one rather than supplying a sample line (CLIP-112).
+        const caption = preview.elements.find((e) => e.element.role === 'caption')!
+        expect(caption.element.id).toBe('taste')
+        expect(caption.endMs).toBeLessThanOrEqual(preview.durationMs)
       } finally {
         await i18next.changeLanguage(previous)
       }

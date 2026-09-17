@@ -9,6 +9,9 @@ type Inspection = NonNullable<ClipProject['attemptInspection']>
 type Candidate = Inspection['ranges'][number]
 
 const checkExplanations = {
+  // The RENDER's own refusal: a preset or a caption style it could not draw.
+  // The template grammar has no such reason any more — a template names no
+  // design (CLIP-14).
   composition_invalid_design: 'composition.errors.invalid_design',
   composition_invalid_skeleton: 'composition.errors.invalid_skeleton',
   composition_unknown_attribute: 'composition.errors.unknown_attribute',

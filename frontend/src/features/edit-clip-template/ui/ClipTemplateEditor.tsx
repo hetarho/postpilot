@@ -82,11 +82,7 @@ export function ClipTemplateEditor({
   try {
     document = parseClipTemplate(body)
   } catch (error) {
-    if (error instanceof CompositionProblem)
-      problem =
-        stored?.compositionLegacy && error.reason === 'invalid_design'
-          ? new CompositionProblem(error.elementId, error.line, 'invalid_skeleton')
-          : error
+    if (error instanceof CompositionProblem) problem = error
     else throw error
   }
   const change = (patch: Partial<ClipRecipe>) => {

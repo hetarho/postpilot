@@ -134,6 +134,23 @@ describe('composition template authoring', () => {
       { id: 'menu', label: '메뉴', min: 1, max: CLIP_COMPOSITION_LIMITS.items },
     ])
     expect(guide).toContain('group(id, label?, min?, max?)')
+    // The outline grammar, and no construct it retired (CLIP-113).
+    expect(guide).toContain('role="hook|caption|ending|badge"')
+    expect(guide).toContain('A text declares NO timing')
+    for (const gone of ['basis="whole|output-start|output-end"', 'intro="a|b"', 'invalid_skeleton'])
+      expect(guide).not.toContain(gone)
+    // The example the guide hands out is a body the template grammar accepts,
+    // caption entry and stages included.
+    const example = parseClipTemplate(CLIP_COMPOSITION_EXAMPLE)
+    expect(example.outline.map((e) => e.kind)).toEqual([
+      'text',
+      'text',
+      'stage',
+      'stage',
+      'text',
+      'text',
+    ])
+    expect(example.elements.map((e) => e.role)).toEqual(['badge', 'hook', 'caption', 'ending'])
     expect(calls.some((c) => /Seed|Quote|Start|Generate|CreateVideo|UpdateVideo/.test(c))).toBe(
       false,
     )
@@ -274,6 +291,35 @@ describe('composition template authoring', () => {
       '가장 이른 클립으로 시작',
     ])
   })
+})
+
+it('refuses a paste only for what the grammar cannot read, naming its entry', async () => {
+  const writes: ClipRecipe[] = []
+  mount({ writes })
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  const input = await source()
+  // Readable and complete: a caption, three intro lines and a stage are all
+  // ordinary entries now, so nothing about the shape refuses them (CLIP-113).
+  const outline = body.replace(
+    '<text id="outro"',
+    '<stage name="가게 앞">외관을 먼저</stage><text id="line" kind="ai" role="caption">한 줄로 쓰세요</text><text id="outro"',
+  )
+  fireEvent.change(input, { target: { value: outline } })
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '저장' })).toBeEnabled()
+  // Unreadable: the entry and its 1-based line are named.
+  fireEvent.change(input, {
+    target: {
+      value: outline.replace(
+        '<text id="line" kind="ai" role="caption"',
+        '\n<text id="line" kind="ai" role="info"',
+      ),
+    },
+  })
+  const alert = screen.getByRole('alert')
+  expect(alert).toHaveTextContent('line')
+  expect(alert).toHaveTextContent('5')
+  expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
 })
 
 it('accepts an outro entry holding more lines than a preset draws', async () => {

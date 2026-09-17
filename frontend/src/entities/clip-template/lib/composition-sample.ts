@@ -62,7 +62,9 @@ export function sampleClipComposition(
       Math.floor((durationMs * i) / input.cuts.length)
   })
   const timeline = resolveClipComposition(doc, input, CLIP_COMPOSITION_PREVIEW.expandedBytes)
-  if (!narration) return timeline
+  // A template that declares its own caption entries is previewed with those
+  // (CLIP-112); the sample line is for one that declares none.
+  if (!narration || doc.elements.some((e) => e.role === 'caption')) return timeline
   const start = Math.round(timeline.durationMs / 3),
     end = Math.min(timeline.durationMs, start + CLIP_COMPOSITION_PREVIEW.narrationMs)
   return {

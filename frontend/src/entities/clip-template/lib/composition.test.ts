@@ -120,9 +120,12 @@ describe('shared portable composition contract', () => {
   it('the authoring example satisfies the template grammar', () => {
     const d = parseClipTemplate(CLIP_COMPOSITION_EXAMPLE)
     expect(d.sections).toEqual([])
-    expect(d.elements.map((e) => e.id)).toEqual(['disclosure_badge', 'intro', 'closing'])
+    expect(d.elements.map((e) => e.id)).toEqual(['disclosure_badge', 'intro', 'taste', 'closing'])
     expect(d.groups.map((g) => g.id)).toEqual(['menu'])
     expect(d.guidance).toHaveLength(1)
+    // The example shows the outline mixing its kinds in one order (CLIP-112).
+    expect(d.outline.map((e) => e.kind)).toEqual(['text', 'text', 'stage', 'stage', 'text', 'text'])
+    expect(d.stages.map((s) => s.name)).toEqual(['가게 앞', '음식'])
   })
   it('uses the same finite configuration as the backend corpus', () => {
     expect(CLIP_COMPOSITION_LIMITS).toEqual(corpus.limits)

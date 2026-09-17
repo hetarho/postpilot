@@ -39,7 +39,6 @@ export type CompositionReason =
   | 'unknown_tag'
   | 'unknown_attribute'
   | 'unknown_version'
-  | 'invalid_design'
   | 'invalid_skeleton'
   | 'invalid_accent'
   | 'invalid_pace'

@@ -123,6 +123,26 @@ it('moves an automatic caption to the alternative anchor around visible outro sl
   }
 })
 
+// CLIP-147: a line the chosen preset cannot draw is left out of the picture the
+// same way the render leaves it out, rather than breaking the preview.
+it('draws only the lines the chosen preset holds', () => {
+  const document = parseClipComposition(
+    '<clip version="1"><text id="opening" kind="fixed" role="hook"><row>첫 줄</row><row>둘째 줄</row><row>셋째 줄</row></text></clip>',
+  )
+  const timeline = sampleClipComposition(document, 15000, () => '예시')
+  const view = render(
+    <CompositionDesignFrame
+      document={document}
+      entries={timeline.elements}
+      ratio="vertical"
+      label="Preview"
+      sampleAI="문구"
+    />,
+  )
+  const group = view.container.querySelector('[data-region="intro"]')!
+  expect(group.querySelectorAll('text[data-slot]')).toHaveLength(2)
+})
+
 // CDS-79: the preview must land on the renderer's own baselines, not on its own
 // arithmetic. These are the y values the Go region goldens carry for the two
 // 1080-high canvases; 9:16 keeps the preset's authored values unchanged.

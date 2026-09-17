@@ -184,7 +184,11 @@ export function CompositionDesignFrame({
           slot: kind ? i : undefined,
         })
       })
-      .filter((line) => line.text.trim() !== '')
+      // A line past the last slot of the chosen preset is drawn by nobody, here
+      // as in the render (CLIP-147).
+      .filter(
+        (line) => line.text.trim() !== '' && (!kind || line.slot! < (preset?.slots.length ?? 0)),
+      )
     return { entry, lines, kind, slots: preset?.slots, rules: preset?.rules }
   })
   const lines = visuals.flatMap((v) => v.lines)
