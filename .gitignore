@@ -35,3 +35,6 @@ tmp/release-qa/clips/*.mp4
 
 # Python bytecode from the deploy tests (the tests themselves are tracked)
 __pycache__/
+tmp/caption-styles/*.mp4
+tmp/caption-styles/stills/*.png
+tmp/caption-styles/fonts/*.png
