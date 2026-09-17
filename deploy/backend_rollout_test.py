@@ -90,7 +90,13 @@ class RolloutTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         updates = [event for event in events if "up" in event[1]]
         self.assertEqual([event[2].split(":")[-1] for event in updates], [TARGET])
-        self.assertTrue(any("prune" in event[1] for event in events))
+        prunes = [event[1] for event in events if "prune" in event[1]]
+        # A bare prune reclaims dangling layers only. Every rollout pulls a new
+        # tag, so without -a the replaced images are never removed and the box
+        # runs out of room for a render workspace long before it runs out of db.
+        self.assertEqual(len(prunes), 1, prunes)
+        self.assertIn("-af", prunes[0])
+        self.assertIn("until=24h", prunes[0])
 
     def test_pull_failure_preserves_running_container(self):
         result, events = self.run_rollout("pull_failure")

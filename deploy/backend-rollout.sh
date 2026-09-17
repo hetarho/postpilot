@@ -106,4 +106,9 @@ if ! health_gate; then
   rollback "new image failed the health gate"
 fi
 
-docker image prune -f
+# 4) Reclaim the images this deploy replaced. Every rollout pulls a NEW TAG, so
+#    a bare prune removes only dangling layers and finds nothing: the tagged
+#    images accumulated until the box had no room left for a render workspace.
+#    -a takes the tagged ones too, and the window keeps the last day of images
+#    so a rollback still has a local one to start.
+docker image prune -af --filter "until=24h"
