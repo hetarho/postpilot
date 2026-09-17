@@ -246,10 +246,10 @@ func (s *Service) CreateProject(ctx context.Context, user string, input ProjectI
 	if err != nil {
 		return Project{}, err
 	}
-	// The pace and the accent are the PROJECT's (CLIP-139). A request that says
-	// nothing about them takes the template's own values as the starting point,
-	// which is what a clip made from that template used to render with.
-	pace, accent := template.CaptionPace, template.Accent
+	// The pace and the accent are the PROJECT's alone and start unset, which is
+	// the shared default: a template carries none of the five design values any
+	// more (CLIP-14, CLIP-139).
+	pace, accent := "", ""
 	if input.CaptionPace != nil {
 		pace = *input.CaptionPace
 	}

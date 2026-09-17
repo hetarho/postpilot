@@ -19,12 +19,7 @@ import {
   type ClipProject,
   type ClipProjectDraft,
 } from '@/entities/clip-project'
-import {
-  CLIP_ACCENTS,
-  compositionCharacters,
-  compositionDesign,
-  useClipTemplates,
-} from '@/entities/clip-template'
+import { CLIP_ACCENTS, compositionCharacters, useClipTemplates } from '@/entities/clip-template'
 import { CLIP_DESIGN } from '@/shared/config'
 import { appFailureFromConnect } from '@/shared/api'
 import { peekPendingClipDraft, queueClipDraft } from '../model/clip-draft-queue'
@@ -154,22 +149,6 @@ export function ClipProjectForm({
     const value = await save.mutateAsync({ id: stored.id, draft: next })
     setBaseline(JSON.stringify(normalizeClipProject(value)))
   }
-  /** The starting values the chosen template carries for the project's design selection
-   *  (CLIP-14): its accent and pace, and the two presets and the caption style its own body
-   *  declares. Every one stays editable afterwards, and CLEARING the template carries nothing —
-   *  the values the project already holds are the project's (CLIP-139, CLIP-5). */
-  const templateDesign = (id: string): Partial<ClipProjectDraft> => {
-    const template = templates.templates.find((v) => v.id === id)
-    if (!template) return {}
-    const design = compositionDesign(template.compositionBody ?? '')
-    return {
-      captionPace: template.captionPace ?? '',
-      accent: template.accent ?? '',
-      introPreset: design.intro,
-      outroPreset: design.outro,
-      allowedCaptionStyles: [design.caption],
-    }
-  }
   const patch = (fields: Partial<ClipProjectDraft>) => {
     const next = { ...draft, ...fields }
     setDraft(next)
@@ -179,13 +158,11 @@ export function ClipProjectForm({
   }
   const change = <K extends keyof ClipProjectDraft>(key: K, value: ClipProjectDraft[K]) =>
     patch(
+      // Choosing or clearing a template changes what this project collects and
+      // nothing about how it looks: the design selection is the project's own
+      // and a template carries none of it (CLIP-14, CLIP-139).
       key === 'videoTemplateId' && value !== draft.videoTemplateId
-        ? {
-            [key]: value,
-            answers: [],
-            compositionInputs: emptyCompositionInputs(),
-            ...templateDesign(String(value)),
-          }
+        ? { [key]: value, answers: [], compositionInputs: emptyCompositionInputs() }
         : { [key]: value },
     )
   const failure = save.error

@@ -6,17 +6,17 @@ import (
 	"github.com/postpilot/backend/internal/clip"
 )
 
-// The pace and the accent are the PROJECT's. A clip made from a template that
-// carried them starts with those values, and changing either re-renders the
-// same plan rather than rewriting it (CLIP-139).
-func TestCaptionPaceAndAccentAreSeededThenOwnedByTheProject(t *testing.T) {
+// The pace and the accent are the PROJECT's alone: every clip starts unset,
+// which is the shared default, and changing either re-renders the same plan
+// rather than rewriting it (CLIP-14, CLIP-139).
+func TestCaptionPaceAndAccentStartUnsetAndAreOwnedByTheProject(t *testing.T) {
 	h := generationSetup(t)
 	p, err := h.projects.GetProject(t.Context(), "alice", h.project.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if p.CaptionPace != h.template.CaptionPace || p.Accent != h.template.Accent {
-		t.Fatal("a new project did not start from its template's values", p.CaptionPace, p.Accent, h.template.CaptionPace, h.template.Accent)
+	if p.CaptionPace != "" || p.Accent != "" {
+		t.Fatal("a template seeded the project's pace or accent", p.CaptionPace, p.Accent, h.template.CaptionPace, h.template.Accent)
 	}
 	pace, accent := "rapid", "teal"
 	changed, err := h.projects.UpdateProject(t.Context(), "alice", p.ID, clip.ProjectPatch{CaptionPace: &pace, Accent: &accent})

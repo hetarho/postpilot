@@ -102,40 +102,41 @@ describe('① chooses the design, the caption styles and an optional template', 
     await waitFor(() => expect(writes.at(-1)?.outroPreset).toBe('b'), { timeout: 4000 })
   })
 
-  it('fills all five from a template and leaves every one editable, and clearing it keeps them', async () => {
+  it('takes no design from a template and keeps its own on either side of the choice', async () => {
     const user = userEvent.setup()
     const writes: ClipProjectDraft[] = []
     renderAppAt('/clips/project', {
       user: { id: 'alice' },
       clips: { templates: [template], projects: [project], projectWrites: writes },
     })
-    const picker = await screen.findByRole('combobox', { name: /^영상 템플릿/ })
+    // The project's own selection, made before any template is chosen.
+    const outro = await screen.findByRole('tablist', { name: '아웃트로 디자인' })
+    await user.click(within(outro).getAllByRole('tab')[1])
+    await waitFor(() => expect(writes.at(-1)?.outroPreset).toBe('e'), { timeout: 4000 })
+    // Choosing a template changes what the clip collects, not how it looks
+    // (CLIP-14, CLIP-139).
+    const picker = screen.getByRole('combobox', { name: /^영상 템플릿/ })
     await chooseOption(user, picker, '여행')
     await waitFor(
       () => {
         const last = writes.at(-1)
         expect(last?.videoTemplateId).toBe('template')
-        expect(last?.introPreset).toBe('a')
-        expect(last?.outroPreset).toBe('b')
-        expect(last?.allowedCaptionStyles).toEqual(['bold'])
-        expect(last?.captionPace).toBe('rapid')
-        expect(last?.accent).toBe('teal')
+        expect(last?.outroPreset).toBe('e')
+        // The project's own values, untouched by the template that names others.
+        expect(last?.introPreset).toBe('b')
+        expect(last?.allowedCaptionStyles).toEqual([])
+        expect(last?.captionPace).toBe('')
+        expect(last?.accent).toBe('')
       },
       { timeout: 4000 },
     )
-    // Seeded, not fixed: the presets stay the project's to change afterwards.
-    const outro = screen.getByRole('tablist', { name: '아웃트로 디자인' })
-    await user.click(within(outro).getAllByRole('tab')[1])
-    await waitFor(() => expect(writes.at(-1)?.outroPreset).toBe('e'), { timeout: 4000 })
-    // Clearing the template carries nothing away: the values are the project's.
+    // Clearing it carries nothing away either.
     await chooseOption(user, screen.getByRole('combobox', { name: /^영상 템플릿/ }), '없음')
     await waitFor(
       () => {
         const last = writes.at(-1)
         expect(last?.videoTemplateId).toBe('')
-        expect(last?.introPreset).toBe('a')
         expect(last?.outroPreset).toBe('e')
-        expect(last?.allowedCaptionStyles).toEqual(['bold'])
       },
       { timeout: 4000 },
     )

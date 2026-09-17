@@ -74,6 +74,67 @@ func TestTemplateSaveRefusesSectionsWhileStoredLegacyBodiesReadConverted(t *test
 	}
 }
 
+// A template saved under r23's design-first grammar opens as an outline: its
+// stored design attributes and authored intervals are ignored rather than
+// refused, the next save writes it without them, and the projects already
+// frozen from it are untouched (CLIP-114, CLIP-140, CLIP-144).
+func TestDesignFirstTemplateReadsAsAnOutlineAndSavesWithoutItsDesign(t *testing.T) {
+	s, st, _ := setup(t)
+	ctx := context.Background()
+	body := `<clip version="1" intro="a" caption="bold" outro="b" accent="teal" pace="rapid">` +
+		`<field id="place" label="상호" required="true">가게 이름</field>` +
+		`<text id="badge" kind="fixed" role="badge" position="header" basis="whole">직접 작성</text>` +
+		`<text id="intro" kind="fixed" role="hook" basis="output-start" start="0" end="2.5"><row><value field="place"/></row><row>다녀왔어요</row></text>` +
+		`<text id="outro" kind="fixed" role="ending" basis="output-end" start="-3" end="0"><row>또 갈래요</row></text></clip>`
+	legacy := legacyTemplate(t, st, "alice", "design first", body)
+	stored, err := st.GetTemplate(ctx, "alice", legacy.ID)
+	if err != nil || stored.CompositionBody != body {
+		t.Fatal("the stored body changed on read", err)
+	}
+	projection := s.TemplateProjection(stored)
+	if !projection.CompositionConverted {
+		t.Fatal("the design-first body was not carried onto the current grammar")
+	}
+	for _, gone := range []string{`intro="a"`, `caption="bold"`, `outro="b"`, `basis="`, `start="`, `end="`} {
+		if strings.Contains(projection.CompositionBody, gone) {
+			t.Fatalf("the projection kept %s:\n%s", gone, projection.CompositionBody)
+		}
+	}
+	doc, problem := composition.ParseTemplate(projection.CompositionBody, config.ClipCompositionLimits())
+	if problem != nil {
+		t.Fatalf("the projection is not savable: %+v", problem)
+	}
+	ids := []string{}
+	for _, entry := range doc.Outline {
+		ids = append(ids, doc.Elements[entry.Index].ID)
+	}
+	if strings.Join(ids, " ") != "badge intro outro" {
+		t.Fatal("the entries lost their declared order", ids)
+	}
+	if doc.Accent != "teal" || doc.Pace != "rapid" {
+		t.Fatal("the root lost what it still carries", doc.Accent, doc.Pace)
+	}
+	if rows := doc.Elements[1].Rows; len(rows) != 2 || rows[1].Parts[0].Literal != "다녀왔어요" {
+		t.Fatal("a region line was dropped by the read", rows)
+	}
+	// The owner's next save keeps it exactly as the projection wrote it.
+	saved, err := s.UpdateTemplate(ctx, "alice", legacy.ID, clip.TemplatePatch{CompositionBody: &projection.CompositionBody})
+	if err != nil || saved.CompositionBody != projection.CompositionBody {
+		t.Fatal("the converted body was refused on save", err)
+	}
+	// A project made from it takes none of the design the body used to name.
+	p, err := s.CreateProject(ctx, "alice", clip.ProjectInput{Language: "ko", Title: "frozen", VideoTemplateID: legacy.ID, Ratio: "vertical", TargetDurationMS: 15000})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.IntroPreset != "" || p.OutroPreset != "" || len(p.CaptionStyles) != 0 || p.CaptionPace != "" || p.Accent != "" {
+		t.Fatal("the template seeded the project's design", p.IntroPreset, p.OutroPreset, p.CaptionStyles, p.CaptionPace, p.Accent)
+	}
+	if p.Composition == nil || p.Composition.Snapshot.Body != saved.CompositionBody {
+		t.Fatal("the frozen snapshot is not the body the template now holds", p.Composition)
+	}
+}
+
 func asProblem(err error, target **composition.Problem) bool {
 	for e := err; e != nil; {
 		if p, ok := e.(*composition.Problem); ok {

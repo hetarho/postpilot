@@ -50,12 +50,13 @@
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
 | T229 | The template editor drops the design step and edits the outline | CLIP | T227 | todo |
 | T230 | 형식 안내 and 원문 teach the outline grammar | CLIP | T227 | todo |
-| T231 | A saved template reads as an outline and seeds no design | CLIP | T227 | todo |
 
 ## next
-- implement-task T229, T230, T231 — the three surface tasks left
+- implement-task T229 then T230 — the two editor-surface tasks left (both touch resources/*/clips.ts)
 - T177 stays blocked (its viewing checklist predates both the caption style set and the outline) and T008 is another session's
 ## log
+- 260918 T231 done; the pace and the accent stop being seeded too, the FE stops copying the five onto the draft, and an r23 design-first body is pinned through store → converted read → save → mint
+- 260918 T231 claimed (otl)
 - 260918 T233 done; the outline's caption entries reach the narration call in order and come back placed by the writer, with a fixed entry's own words kept and marked authored so V11 leaves them alone; an omitted entry notices once and the order is never checked
 - 260918 T233 claimed (otl)
 - 260918 T228 done; one placement rule gives every region entry its slot offset and its drawn line count, the layout and V20 read it together, and the surplus line is a derived notice that follows ①'s preset instead of a stored one; media-smoke stage green
@@ -74,5 +75,3 @@
 - 260917 T224 done; ① chooses the design — intro and outro presets beside pace and accent, the sixteen caption styles as a multi-select where each is drawn by the renderer itself and the frame-by-frame ones say so, an empty selection reading as the default style alone — the template is optional everywhere the FE still demanded one (없음 by default, minting without it), and choosing one fills all five while clearing it keeps them; the style samples needed a new GetClipCaptionStyleSamples (T222's preview needs a saved plan, so ① could not use it) — owner-approved mid-task
 - 260917 T224 claimed (stg)
 - 260917 T223 done; a template may carry named composition stages (`<stage name="…">한 줄 의도</stage>`, root only, at most 8, both halves required and bounded by the label and prompt counts), read by the Go and TypeScript parsers against the shared corpus and handed to the flow call in the template guide's position as a numbered order to follow where the footage allows — admitting and forbidding nothing, with no notice, count or refusal anywhere for a stage
-- 260917 T225 done; ② places each caption over a still frame of the cut it starts in — drag stopping at the safe area it draws while moving, arrow-key nudging in canvas pixels, the size refused outside CDS-3's floor and the role's own size at the control, the style taken from the project's allowed set, a contrast shortfall shown in place and blocking nothing, and a plain ground with the reason where the footage is not here — every change riding the existing draft queue and undo
-- 260917 T223 claimed (stg)
