@@ -58,6 +58,8 @@ export const clipNoticeKeys = {
   plan_duration_limit: 'durationTrimmed',
   // The narration's own removals: two captions claiming the same moment, an
   // interval the output does not hold, and a window too short to read.
+  // A region line the preset the project chose in ① cannot draw (CLIP-147).
+  region_line_surplus: 'regionLineSurplus',
   caption_overlap: 'captionOverlap',
   caption_outside_output: 'captionOutsideOutput',
   caption_floor: 'captionFloor',

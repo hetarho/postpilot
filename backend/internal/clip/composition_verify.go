@@ -26,6 +26,10 @@ func VerifyCompositionManifest(plan EditPlan, elements []CompositionElement, lim
 	// layout was given: the frozen document declares the slot text, not which
 	// preset holds it (CLIP-139).
 	selection := plan.Design().RegionPresets()
+	// Where each region entry's lines land in that preset: the lines the
+	// region's earlier entries took, and the ones this preset cannot draw at
+	// all (CLIP-147).
+	placements := RegionPlacements(ResolvedElements(plan.Portable.Elements), selection)
 	canvas, err := ClipCanvas(plan.Ratio)
 	if err != nil {
 		return err
@@ -99,9 +103,9 @@ func VerifyCompositionManifest(plan EditPlan, elements []CompositionElement, lim
 		}
 		region := element.Role == "hook" || element.Role == "ending"
 		if region {
-			kind, preset := "intro", selection.Intro
+			kind := "intro"
 			if element.Role == "ending" {
-				kind, preset = "outro", selection.Outro
+				kind = "outro"
 			}
 			rows := []string{}
 			for _, row := range r.Rows {
@@ -110,7 +114,9 @@ func VerifyCompositionManifest(plan EditPlan, elements []CompositionElement, lim
 			if len(rows) == 0 {
 				rows = []string{r.Text}
 			}
-			if err := design.VerifyRegion(kind, preset, plan.Ratio, rows, element.Parts); err != nil {
+			placement := placements[r.InstanceID]
+			rows = rows[:min(len(rows), max(0, placement.Drawn))]
+			if err := design.VerifyRegion(kind, RegionPresetID(selection, kind), plan.Ratio, placement.Offset, placement.Rules, rows, element.Parts); err != nil {
 				return fail("preset_mismatch")
 			}
 			if len(element.Parts) == 0 {

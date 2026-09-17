@@ -57,10 +57,13 @@ func RegionBaseline(preset RegionPreset, ratio string, y float64) float64 {
 // VerifyRegion is V20: omitted slots retain their indices and every painted
 // slot/rule must match the selected preset. Glyph offsets are recorded during
 // shaping so a moved text box cannot keep an unchanged declared baseline.
-func VerifyRegion(kind, id, ratio string, rows []string, parts Manifest) error {
+// `offset` is the slot this entry's first line lands in — the lines the region's
+// earlier entries took — and `rules` says whether this is the entry that paints
+// the preset's own rules (CLIP-147).
+func VerifyRegion(kind, id, ratio string, offset int, rules bool, rows []string, parts Manifest) error {
 	parts = slices.DeleteFunc(slices.Clone(parts), func(p Element) bool { return p.Kind == "scrim" })
 	preset, ok := Region(kind, id)
-	if !ok || len(rows) > len(preset.Slots) {
+	if !ok || offset < 0 || offset+len(rows) > len(preset.Slots) {
 		return ViolationRegion
 	}
 	layout, ok := Layout(ratio)
@@ -76,19 +79,25 @@ func VerifyRegion(kind, id, ratio string, rows []string, parts Manifest) error {
 		if next >= len(parts) {
 			return ViolationRegion
 		}
-		p, slot := parts[next], preset.Slots[i]
+		p, slot := parts[next], preset.Slots[offset+i]
 		role := RegionType(slot, ratio)
 		alpha := Color[slot.Fill].Alpha
 		if slot.Alpha != nil {
 			alpha *= *slot.Alpha
 		}
-		if p.Kind != "copy" || p.Slot != i+1 || p.Text != text || strings.ContainsAny(text, "\r\n") || Chars(text) > role.Chars || !close(p.FontSize, role.Size) || p.Fill != Color[slot.Fill].Hex || !close(p.Opacity, alpha) || !close(p.BaselineY, RegionBaseline(preset, ratio, slot.Y)) || !close(p.Region.Y, p.BaselineY+p.GlyphOffsetY) || !close(p.Region.X+p.Region.Width/2, layout.Anchor.Center) {
+		if p.Kind != "copy" || p.Slot != offset+i+1 || p.Text != text || strings.ContainsAny(text, "\r\n") || Chars(text) > role.Chars || !close(p.FontSize, role.Size) || p.Fill != Color[slot.Fill].Hex || !close(p.Opacity, alpha) || !close(p.BaselineY, RegionBaseline(preset, ratio, slot.Y)) || !close(p.Region.Y, p.BaselineY+p.GlyphOffsetY) || !close(p.Region.X+p.Region.Width/2, layout.Anchor.Center) {
 			return ViolationRegion
 		}
 		next++
 	}
 	if next == 0 {
 		if len(parts) != 0 {
+			return ViolationRegion
+		}
+		return nil
+	}
+	if !rules {
+		if next != len(parts) {
 			return ViolationRegion
 		}
 		return nil

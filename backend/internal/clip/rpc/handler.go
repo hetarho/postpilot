@@ -230,7 +230,7 @@ func projectProto(p clip.Project) *v1.ClipProject {
 	out := &v1.ClipProject{CanEdit: &canEdit, CanFinalize: &canFinalize, Composition: compositionProto(p.Composition), Id: p.ID, Title: p.Title, VideoTemplateId: p.VideoTemplateID, Ratio: p.Ratio, Language: languageToProto(p.Language), Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, Cta: p.CTA, Instruction: p.Instruction, CaptionPace: p.CaptionPace, Accent: p.Accent, IntroPreset: p.IntroPreset, OutroPreset: p.OutroPreset, AllowedCaptionStyles: p.CaptionStyles, TargetDurationMs: int32(p.TargetDurationMS), EditPlanRevision: int32(p.EditPlanRevision), RenderedPlanRevision: int32(p.RenderedPlanRevision), CreatedAt: p.CreatedAt.UTC().Format(time.RFC3339Nano), UpdatedAt: p.UpdatedAt.UTC().Format(time.RFC3339Nano)}
 	if p.EditPlan != "" {
 		if plan, err := clip.DecodeEditPlan(p.EditPlan); err == nil {
-			for _, n := range clip.ActivePlanNotices(plan) {
+			for _, n := range clip.ActivePlanNotices(plan, p.DesignSelection().RegionPresets()) {
 				out.Notices = append(out.Notices, &v1.ClipNotice{Code: n.Reason, CutId: n.CutID, ElementId: n.ElementID, Action: n.Action})
 			}
 		}

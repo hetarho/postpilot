@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/clip/composition"
 	"github.com/postpilot/backend/internal/platform/config"
 )
 
@@ -16,13 +17,13 @@ func TestNoticesRetainStorageAndClearOnlyEditedTargets(t *testing.T) {
 	clip.AddPlanNotice(&plan, "plan_focal", plan.Cuts[0].ID, "", "repair")
 	clip.AddPlanNotice(&plan, "composition_section_order", "removed-cut", "", "removal")
 	clip.RecomputePlanNotices(&plan, 45000, 0)
-	original := clip.ActivePlanNotices(plan)
+	original := clip.ActivePlanNotices(plan, composition.DefaultDesign())
 	if len(original) != 4 {
 		t.Fatal(original)
 	}
 	p.EditPlan, _ = clip.EncodeEditPlan(plan)
 	noOp, err := clip.ApplyCorrection(config.ClipRender(&config.Config{}), p, clip.CorrectionFromPlan(plan))
-	if err != nil || !reflect.DeepEqual(clip.ActivePlanNotices(noOp), original) {
+	if err != nil || !reflect.DeepEqual(clip.ActivePlanNotices(noOp, composition.DefaultDesign()), original) {
 		t.Fatal("no-op cleared a notice", err)
 	}
 	draft := clip.CorrectionFromPlan(plan)
@@ -32,19 +33,19 @@ func TestNoticesRetainStorageAndClearOnlyEditedTargets(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(clip.ActivePlanNotices(next)) != 2 || len(next.Notices) != len(plan.Notices) || len(next.Portable.Fallbacks) != 1 {
-		t.Fatal("edits did not filter targets without deleting records", clip.ActivePlanNotices(next))
+	if len(clip.ActivePlanNotices(next, composition.DefaultDesign())) != 2 || len(next.Notices) != len(plan.Notices) || len(next.Portable.Fallbacks) != 1 {
+		t.Fatal("edits did not filter targets without deleting records", clip.ActivePlanNotices(next, composition.DefaultDesign()))
 	}
 	encoded, err := clip.EncodeEditPlan(next)
 	if err != nil {
 		t.Fatal(err)
 	}
 	restored, err := clip.DecodeEditPlan(encoded)
-	if err != nil || !reflect.DeepEqual(clip.ActivePlanNotices(next), clip.ActivePlanNotices(restored)) {
+	if err != nil || !reflect.DeepEqual(clip.ActivePlanNotices(next, composition.DefaultDesign()), clip.ActivePlanNotices(restored, composition.DefaultDesign())) {
 		t.Fatal("owner edit filtering lost on reload", err)
 	}
 	clip.RecomputePlanNotices(&restored, restored.DurationMS, 0)
-	if len(clip.ActivePlanNotices(restored)) != 1 {
+	if len(clip.ActivePlanNotices(restored, composition.DefaultDesign())) != 1 {
 		t.Fatal("rerender kept resolved plan-level notice")
 	}
 }
@@ -62,12 +63,12 @@ func TestLegacyCorrectionKeepsNoticesUntilTheCutChanges(t *testing.T) {
 	}
 	draft := clip.CorrectionFromPlan(plan)
 	next, err := clip.ApplyCorrection(config.ClipRender(&config.Config{}), p, draft)
-	if err != nil || len(clip.ActivePlanNotices(next)) != 1 {
+	if err != nil || len(clip.ActivePlanNotices(next, composition.DefaultDesign())) != 1 {
 		t.Fatal("no-op lost history", err)
 	}
 	draft.Cuts[0].VolumePermille = 500
 	next, err = clip.ApplyCorrection(config.ClipRender(&config.Config{}), p, draft)
-	if err != nil || len(clip.ActivePlanNotices(next)) != 0 || len(next.Notices) != 1 {
+	if err != nil || len(clip.ActivePlanNotices(next, composition.DefaultDesign())) != 0 || len(next.Notices) != 1 {
 		t.Fatal("edit did not filter stored history", err)
 	}
 }

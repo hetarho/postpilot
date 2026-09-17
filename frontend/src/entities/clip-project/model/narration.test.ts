@@ -102,7 +102,13 @@ it('flags a caption past the end or over another one, and never retimes it', () 
 })
 
 it('reads the narration removal reasons and no longer knows the retired ones', () => {
-  for (const code of ['caption_overlap', 'caption_outside_output', 'caption_floor'])
+  // CLIP-147's own removal joins them: a region line the chosen preset cannot draw.
+  for (const code of [
+    'caption_overlap',
+    'caption_outside_output',
+    'caption_floor',
+    'region_line_surplus',
+  ])
     expect(
       clipNoticeKey({ code, cutId: '', elementId: 'narration-1', action: 'removal' }),
     ).not.toBe('inspection.detailUnknown')

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/clip/composition"
 )
 
 func TestStoredNoticesSurviveReloadAndRerenderRecomputesPlanScope(t *testing.T) {
@@ -25,7 +26,7 @@ func TestStoredNoticesSurviveReloadAndRerenderRecomputesPlanScope(t *testing.T) 
 		t.Fatal(err)
 	}
 	stored, err := clip.DecodeEditPlan(saved.EditPlan)
-	if err != nil || len(clip.ActivePlanNotices(stored)) != 2 {
+	if err != nil || len(clip.ActivePlanNotices(stored, composition.DefaultDesign())) != 2 {
 		t.Fatal("stored notices lost", err)
 	}
 	result := *p.Result
@@ -45,7 +46,7 @@ func TestStoredNoticesSurviveReloadAndRerenderRecomputesPlanScope(t *testing.T) 
 	if after.DurationMS < reloaded.TargetDurationMS {
 		want++
 	}
-	if len(clip.ActivePlanNotices(after)) != want || reloaded.EditPlanRevision != saved.EditPlanRevision || reloaded.RenderedPlanRevision != saved.EditPlanRevision {
-		t.Fatal("rerender changed owner revision or did not recompute notices", clip.ActivePlanNotices(after))
+	if len(clip.ActivePlanNotices(after, composition.DefaultDesign())) != want || reloaded.EditPlanRevision != saved.EditPlanRevision || reloaded.RenderedPlanRevision != saved.EditPlanRevision {
+		t.Fatal("rerender changed owner revision or did not recompute notices", clip.ActivePlanNotices(after, composition.DefaultDesign()))
 	}
 }

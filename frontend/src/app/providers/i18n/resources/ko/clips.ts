@@ -1,5 +1,7 @@
 export const clips = {
   notices: {
+    regionLineSurplus:
+      '선택한 인트로·아웃트로 디자인이 담을 수 있는 줄 수를 넘겨서 마지막 줄은 넣지 않았어요.',
     captionOverlap: '겹치는 자막을 하나 뺐어요',
     captionOutsideOutput: '영상 밖으로 나간 자막을 뺐어요',
     captionFloor: '읽을 시간이 모자란 자막을 뺐어요',

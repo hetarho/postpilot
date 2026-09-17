@@ -32,7 +32,7 @@ func regionBounds(visual declaredVisual) clip.Region {
 	return bounds
 }
 
-func (r *Rendering) layoutDeclaredRegion(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, ratio string, visual declaredVisual, kind, id string) (declaredVisual, error) {
+func (r *Rendering) layoutDeclaredRegion(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, ratio string, visual declaredVisual, kind, id string, placement clip.RegionPlacement) (declaredVisual, error) {
 	preset, ok := design.Region(kind, id)
 	if !ok {
 		return visual, elementProblem(visual.text, "invalid_design")
@@ -41,9 +41,9 @@ func (r *Rendering) layoutDeclaredRegion(ctx context.Context, ws clip.MediaWorks
 	if len(rows) == 0 {
 		rows = []composition.ResolvedRow{{Text: visual.text.Resolved.Text}}
 	}
-	if len(rows) > len(preset.Slots) {
-		return visual, elementProblem(visual.text, "copy_limit")
-	}
+	// The lines this entry's own slots can hold; the rest are drawn by nobody
+	// and noticed instead of refused (CLIP-147).
+	rows = rows[:min(len(rows), max(0, placement.Drawn))]
 	geometry, _ := design.Layout(ratio)
 	shadow := overlayShadow("text")
 	visual.region = overlay.RegionView{CopyView: overlay.CopyView{Canvas: overlay.Canvas{Width: canvas.Width, Height: canvas.Height}, Shadow: &shadow}}
@@ -56,7 +56,7 @@ func (r *Rendering) layoutDeclaredRegion(ctx context.Context, ws clip.MediaWorks
 		if strings.TrimSpace(row.Text) == "" {
 			continue
 		}
-		slot := preset.Slots[i]
+		slot := preset.Slots[placement.Offset+i]
 		role := design.RegionType(slot, ratio)
 		bounds, err := r.roleBounds(ctx, ws, row.Text, role)
 		if err != nil {
@@ -82,9 +82,11 @@ func (r *Rendering) layoutDeclaredRegion(ctx context.Context, ws clip.MediaWorks
 		}
 		line.Shadow = slot.Shadow != ""
 		visual.region.Lines = append(visual.region.Lines, line)
-		visual.manifest.Parts = append(visual.manifest.Parts, design.Element{Kind: "copy", Slot: i + 1, Text: row.Text, FontSize: role.Size, Fill: colour.Hex, Opacity: colour.Alpha, BaselineY: baseline, GlyphOffsetY: bounds.Y, Region: design.Bounds(box), StartMS: visual.manifest.StartMS, EndMS: visual.manifest.EndMS})
+		visual.manifest.Parts = append(visual.manifest.Parts, design.Element{Kind: "copy", Slot: placement.Offset + i + 1, Text: row.Text, FontSize: role.Size, Fill: colour.Hex, Opacity: colour.Alpha, BaselineY: baseline, GlyphOffsetY: bounds.Y, Region: design.Bounds(box), StartMS: visual.manifest.StartMS, EndMS: visual.manifest.EndMS})
 	}
-	if len(visual.region.Lines) > 0 {
+	// The preset's own rules are painted once for the region, by the first entry
+	// that has a line to paint (CDS-73, CLIP-147).
+	if placement.Rules && len(visual.region.Lines) > 0 {
 		for _, line := range preset.Rules {
 			rule := design.Rules[line.Kind]
 			box := clip.Region{X: geometry.Anchor.Center - rule.Width/2, Y: design.RegionBaseline(preset, ratio, line.Y), Width: rule.Width, Height: rule.Height}
@@ -96,7 +98,7 @@ func (r *Rendering) layoutDeclaredRegion(ctx context.Context, ws clip.MediaWorks
 	for _, part := range visual.manifest.Parts {
 		visual.manifest.Region = unionRegion(visual.manifest.Region, clip.Region(part.Region))
 	}
-	if err := design.VerifyRegion(kind, id, ratio, texts, visual.manifest.Parts); err != nil {
+	if err := design.VerifyRegion(kind, id, ratio, placement.Offset, placement.Rules, texts, visual.manifest.Parts); err != nil {
 		return visual, elementProblem(visual.text, "preset_mismatch")
 	}
 	return visual, nil

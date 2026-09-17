@@ -48,16 +48,17 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
-| T228 | The project's presets decide how many intro and outro lines are drawn | CLIP CDS | T227 | todo |
 | T229 | The template editor drops the design step and edits the outline | CLIP | T227 | todo |
 | T230 | 형식 안내 and 원문 teach the outline grammar | CLIP | T227 | todo |
 | T231 | A saved template reads as an outline and seeds no design | CLIP | T227 | todo |
 | T233 | The template's caption entries reach the narration in outline order | CLIP | T228 | todo |
 
 ## next
-- implement-task T228 (then T229 T230 T231 in any order, T233 behind T228)
+- implement-task T233, T229, T230, T231 — all four are now free
 - T177 stays blocked (its viewing checklist predates both the caption style set and the outline) and T008 is another session's
 ## log
+- 260918 T228 done; one placement rule gives every region entry its slot offset and its drawn line count, the layout and V20 read it together, and the surplus line is a derived notice that follows ①'s preset instead of a stored one; media-smoke stage green
+- 260918 T228 claimed (otl)
 - 260918 T227 done; the template body is an ordered outline in both parsers — no design attributes, no interval, no preset conformance, captions admitted — with the shared corpus migrated; T228's preset readers and T231's end of design seeding came with it because the compiler required them
 - 260918 T227 claimed (otl)
 - 260918 T232 done; 템플릿 없음 is plain metadata in the list and ① already distinguished the deleted-template case, now pinned by tests on both surfaces
@@ -76,5 +77,3 @@
 - 260917 T223 claimed (stg)
 - 260917 T225 claimed (plc)
 - 260917 T222 done; GetClipCaptionPreview hands ② each caption as the renderer's own drawing with its root taken off — one `<g>` brought to the origin by a transform the reported box cancels exactly, ids prefixed per caption, a sequence style labelled as one representative frame — and a smoke contract rasterises the placed fragment and the renderer's caption to byte-identical PNGs; Jua and NanumMyeongjo now reach the browser too
-- 260917 T222 claimed (plc)
-- 260917 T221 done; a caption carries the owner's own position, size and style — clamped into the safe area by moving, never resizing, with the size floor and an unallowed style refused where they are written — and the manifest says who placed it so V1 still holds it inside the safe area, V3 demotes a shortfall under it to a notice, V13 leaves it out of the anchor walk and no repair or automatic placement runs over it again

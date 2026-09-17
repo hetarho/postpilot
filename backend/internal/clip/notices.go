@@ -4,6 +4,8 @@ import (
 	"maps"
 	"reflect"
 	"slices"
+
+	"github.com/postpilot/backend/internal/clip/composition"
 )
 
 // The three reasons the SERVER has for not placing a narration caption it was
@@ -43,8 +45,12 @@ func RecomputePlanNotices(plan *EditPlan, target, tolerance int) {
 	}
 }
 
-func ActivePlanNotices(plan EditPlan) []PlanNotice {
+// presets is the project's own design selection: a region line the chosen
+// preset cannot draw is noticed here rather than stored, so changing the preset
+// in ① both raises and clears the notice (CLIP-139, CLIP-147).
+func ActivePlanNotices(plan EditPlan, presets composition.DesignSelection) []PlanNotice {
 	notices := slices.Clone(plan.Notices)
+	notices = append(notices, RegionSurplusNotices(plan, presets)...)
 	if plan.Portable != nil {
 		for _, f := range plan.Portable.Fallbacks {
 			n := PlanNotice{CopyFallback: f, Action: "removal"}

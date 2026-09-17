@@ -26,6 +26,18 @@ func regionVisual(kind string, rows ...string) declaredVisual {
 	return declaredVisual{text: text, manifest: declaredManifest(text)}
 }
 
+// regionPlacement is what the plan gives this one entry: the slot its first line
+// takes and how many of them the preset draws (CLIP-147).
+func regionPlacement(v declaredVisual, kind, id string) clip.RegionPlacement {
+	presets := composition.DesignSelection{Intro: "b", Outro: "e"}
+	if kind == "intro" {
+		presets.Intro = id
+	} else {
+		presets.Outro = id
+	}
+	return clip.RegionPlacements([]composition.ResolvedElement{v.text.Resolved}, presets)[v.text.Resolved.InstanceID]
+}
+
 func checkRegionPresets(t *testing.T, a *Adapter, r *Rendering, raster bool) {
 	t.Helper()
 	for _, ratio := range []string{"vertical", "horizontal", "square"} {
@@ -41,11 +53,12 @@ func checkRegionPresets(t *testing.T, a *Adapter, r *Rendering, raster bool) {
 			t.Run(ratio+"/"+choice.kind+choice.id, func(t *testing.T) {
 				canvas, _ := clip.ClipCanvas(ratio)
 				if err := a.WithWorkspace(t.Context(), "region", func(ws clip.MediaWorkspace) error {
-					v, err := r.layoutDeclaredRegion(t.Context(), ws, canvas, ratio, regionVisual(choice.kind, choice.rows...), choice.kind, choice.id)
+					visual := regionVisual(choice.kind, choice.rows...)
+					v, err := r.layoutDeclaredRegion(t.Context(), ws, canvas, ratio, visual, choice.kind, choice.id, regionPlacement(visual, choice.kind, choice.id))
 					if err != nil {
 						return err
 					}
-					if err := design.VerifyRegion(choice.kind, choice.id, ratio, choice.rows, v.manifest.Parts); err != nil {
+					if err := design.VerifyRegion(choice.kind, choice.id, ratio, 0, true, choice.rows, v.manifest.Parts); err != nil {
 						return err
 					}
 					preset, _ := design.Region(choice.kind, choice.id)
@@ -74,7 +87,7 @@ func checkRegionPresets(t *testing.T, a *Adapter, r *Rendering, raster bool) {
 					for _, mutate := range []func(*design.Element){func(p *design.Element) { p.BaselineY++ }, func(p *design.Element) { p.Region.Y++ }, func(p *design.Element) { p.Fill = "#FF6B57" }} {
 						parts := slices.Clone(v.manifest.Parts)
 						mutate(&parts[0])
-						if err := design.VerifyRegion(choice.kind, choice.id, ratio, choice.rows, parts); !errors.Is(err, design.ViolationRegion) {
+						if err := design.VerifyRegion(choice.kind, choice.id, ratio, 0, true, choice.rows, parts); !errors.Is(err, design.ViolationRegion) {
 							t.Fatal("V20 accepted a changed preset", err)
 						}
 					}
@@ -125,25 +138,73 @@ func TestRegionSlotsKeepTheirPositionsAndRefuseOverflow(t *testing.T) {
 	a, r := measured(t)
 	canvas, _ := clip.ClipCanvas("vertical")
 	if err := a.WithWorkspace(t.Context(), "slots", func(ws clip.MediaWorkspace) error {
-		v, err := r.layoutDeclaredRegion(t.Context(), ws, canvas, "vertical", regionVisual("outro", "점수", "", "오늘의 기록"), "outro", "e")
+		filled := regionVisual("outro", "점수", "", "오늘의 기록")
+		v, err := r.layoutDeclaredRegion(t.Context(), ws, canvas, "vertical", filled, "outro", "e", regionPlacement(filled, "outro", "e"))
 		if err != nil {
 			return err
 		}
 		if len(v.region.Lines) != 2 || v.region.Lines[0].Y != 836 || v.region.Lines[1].Y != 1110 || len(v.region.Rules) != 1 {
 			t.Fatal("empty slot reflowed", v.region)
 		}
-		v, err = r.layoutDeclaredRegion(t.Context(), ws, canvas, "vertical", regionVisual("outro", "", "", ""), "outro", "e")
+		empty := regionVisual("outro", "", "", "")
+		v, err = r.layoutDeclaredRegion(t.Context(), ws, canvas, "vertical", empty, "outro", "e", regionPlacement(empty, "outro", "e"))
 		if err != nil {
 			return err
 		}
 		if len(v.manifest.Parts) != 0 || len(v.region.Rules) != 0 || len(v.region.Lines) != 0 {
 			t.Fatal("empty region drew parts")
 		}
-		for _, rows := range [][]string{{"첫째", "둘째", "셋째"}, {"한 줄\n두 줄"}, {"하나둘셋넷다섯여섯일"}} {
-			_, err := r.layoutDeclaredRegion(t.Context(), ws, canvas, "vertical", regionVisual("intro", rows...), "intro", "b")
+		// A line past the preset's last slot is drawn by nobody and refuses
+		// nothing; the notice for it is the plan's (CLIP-147).
+		surplus := regionVisual("intro", "첫째", "둘째", "셋째")
+		drawn, err := r.layoutDeclaredRegion(t.Context(), ws, canvas, "vertical", surplus, "intro", "b", regionPlacement(surplus, "intro", "b"))
+		if err != nil {
+			return err
+		}
+		// Two drawn lines and preset B's own two rules; the third line is nowhere.
+		if len(drawn.region.Lines) != 2 || len(drawn.manifest.Parts) != 4 {
+			t.Fatal("the surplus line was drawn or the drawn ones were not", drawn.region.Lines, drawn.manifest.Parts)
+		}
+		for _, rows := range [][]string{{"한 줄\n두 줄"}, {"하나둘셋넷다섯여섯일"}} {
+			visual := regionVisual("intro", rows...)
+			_, err := r.layoutDeclaredRegion(t.Context(), ws, canvas, "vertical", visual, "intro", "b", regionPlacement(visual, "intro", "b"))
 			var problem *composition.Problem
 			if !errors.As(err, &problem) || problem.Reason != "copy_limit" || problem.ElementID != "owned-region" || problem.Line != 7 {
 				t.Fatalf("%v: %v", rows, err)
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// CLIP-147: two entries of one region fill its slots in order, so the second
+// entry's line is drawn on the second slot rather than over the first.
+func TestTwoRegionEntriesFillConsecutiveSlots(t *testing.T) {
+	a, r := measured(t)
+	canvas, _ := clip.ClipCanvas("vertical")
+	presets := composition.DesignSelection{Intro: "b", Outro: "e"}
+	first, second := regionVisual("intro", "성수 곱창"), regionVisual("intro", "성수동")
+	second.text.Resolved.InstanceID, second.text.Resolved.Element.ID = "second", "second"
+	placements := clip.RegionPlacements(clip.ResolvedElements([]clip.PortableText{first.text, second.text}), presets)
+	if err := a.WithWorkspace(t.Context(), "slots", func(ws clip.MediaWorkspace) error {
+		preset, _ := design.Region("intro", "b")
+		for i, entry := range []declaredVisual{first, second} {
+			v, err := r.layoutDeclaredRegion(t.Context(), ws, canvas, "vertical", entry, "intro", "b", placements[entry.text.Resolved.InstanceID])
+			if err != nil {
+				return err
+			}
+			if len(v.region.Lines) != 1 || v.region.Lines[0].Y != design.RegionBaseline(preset, "vertical", preset.Slots[i].Y) {
+				t.Fatal("the entry did not land on its own slot", i, v.region.Lines)
+			}
+			if v.manifest.Parts[0].Slot != i+1 {
+				t.Fatal("the manifest named another slot", v.manifest.Parts[0].Slot)
+			}
+			// Only the first entry paints the preset's rules, so nothing is
+			// drawn twice (CDS-73).
+			if rules := len(v.region.Rules); (i == 0) != (rules > 0) {
+				t.Fatal("the rules were painted by the wrong entry", i, rules)
 			}
 		}
 		return nil

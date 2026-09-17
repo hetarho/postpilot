@@ -11,7 +11,7 @@ import (
 	"github.com/postpilot/backend/internal/clip/overlay"
 )
 
-func (r *Rendering) layoutDeclaredRole(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, ratio string, visual declaredVisual, selection ...composition.DesignSelection) (declaredVisual, error) {
+func (r *Rendering) layoutDeclaredRole(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, ratio string, visual declaredVisual, selection composition.DesignSelection, placement clip.RegionPlacement) (declaredVisual, error) {
 	e := visual.text.Resolved.Element
 	switch e.Role {
 	case "badge":
@@ -19,15 +19,11 @@ func (r *Rendering) layoutDeclaredRole(ctx context.Context, ws clip.MediaWorkspa
 	case "info":
 		return r.layoutDeclaredInfo(ctx, ws, canvas, ratio, visual)
 	case "hook", "ending":
-		choice := composition.DefaultDesign()
-		if len(selection) > 0 {
-			choice = selection[0]
-		}
-		kind, id := "intro", choice.Intro
+		kind := "intro"
 		if e.Role == "ending" {
-			kind, id = "outro", choice.Outro
+			kind = "outro"
 		}
-		return r.layoutDeclaredRegion(ctx, ws, canvas, ratio, visual, kind, id)
+		return r.layoutDeclaredRegion(ctx, ws, canvas, ratio, visual, kind, clip.RegionPresetID(selection, kind), placement)
 	default:
 		return visual, elementProblem(visual.text, "invalid_role")
 	}

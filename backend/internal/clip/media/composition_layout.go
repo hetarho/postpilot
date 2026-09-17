@@ -271,7 +271,10 @@ func (r *Rendering) layoutDeclaredElement(ctx context.Context, ws clip.MediaWork
 		// the slot text it declared, and which preset that text is laid into is
 		// read from the plan's own selection.
 		selection := plan.Design().RegionPresets()
-		result, err := r.layoutDeclaredRole(ctx, ws, canvas, plan.Ratio, visual, selection)
+		// How many of this entry's lines that preset draws, and from which slot
+		// (CLIP-147).
+		placement := clip.RegionPlacements(clip.ResolvedElements(plan.Portable.Elements), selection)[text.Resolved.InstanceID]
+		result, err := r.layoutDeclaredRole(ctx, ws, canvas, plan.Ratio, visual, selection, placement)
 		var problem *composition.Problem
 		if err == nil || !clip.AutomaticCompositionRepair(text) || !errors.As(err, &problem) {
 			return result, err
@@ -280,7 +283,7 @@ func (r *Rendering) layoutDeclaredElement(ctx context.Context, ws clip.MediaWork
 			candidate := visual
 			candidate.text.Resolved.Text, candidate.text.Resolved.Rows = alternative.Text, slices.Clone(alternative.Rows)
 			candidate.manifest.Text, candidate.manifest.Rows = alternative.Text, slices.Clone(alternative.Rows)
-			result, alternativeError := r.layoutDeclaredRole(ctx, ws, canvas, plan.Ratio, candidate, selection)
+			result, alternativeError := r.layoutDeclaredRole(ctx, ws, canvas, plan.Ratio, candidate, selection, placement)
 			if alternativeError == nil {
 				result.text.FallbackReason = "shorter_copy"
 				result.manifest.FallbackReason = "shorter_copy"

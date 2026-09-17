@@ -1,5 +1,7 @@
 export const clips = {
   notices: {
+    regionLineSurplus:
+      'The chosen intro/outro design holds fewer lines than the template writes, so the last one is not shown.',
     captionOverlap: 'An overlapping caption was removed',
     captionOutsideOutput: 'A caption past the end of the clip was removed',
     captionFloor: 'A caption with too little time to read was removed',

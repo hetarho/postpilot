@@ -52,6 +52,10 @@ func (r *Rendering) ValidateAuthoredInput(ctx context.Context, in clip.PlanningI
 				if problem != nil {
 					return problem
 				}
+				// The lines each region entry draws under the project's own
+				// presets, so admission checks the layout the render will do
+				// (CLIP-147).
+				placements := clip.RegionPlacements(timeline.Elements, in.Design.RegionPresets())
 				for _, element := range timeline.Elements {
 					region := element.Element.Role == "hook" || element.Element.Role == "ending"
 					if !region && element.Element.Kind != "fixed" {
@@ -67,7 +71,7 @@ func (r *Rendering) ValidateAuthoredInput(ctx context.Context, in clip.PlanningI
 						}
 					}
 					if element.Element.Role != "caption" {
-						_, err := r.layoutDeclaredRole(ctx, ws, canvas, in.Ratio, declaredVisual{text: text, manifest: declaredManifest(text)}, in.Design.RegionPresets())
+						_, err := r.layoutDeclaredRole(ctx, ws, canvas, in.Ratio, declaredVisual{text: text, manifest: declaredManifest(text)}, in.Design.RegionPresets(), placements[element.InstanceID])
 						if err != nil {
 							return err
 						}

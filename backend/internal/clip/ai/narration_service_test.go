@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/clip/composition"
 	"github.com/postpilot/backend/internal/clip/design"
 )
 
@@ -266,7 +267,7 @@ func TestNarrationIgnoresCutsAndUnknownSlotIdentities(t *testing.T) {
 		t.Fatal("the response changed the flow", plan.Cuts)
 	}
 	if !hasNotice(plan, "composition_generated_identity") {
-		t.Fatal("the ignored identities were not recorded", clip.ActivePlanNotices(plan))
+		t.Fatal("the ignored identities were not recorded", clip.ActivePlanNotices(plan, composition.DefaultDesign()))
 	}
 	if len(narrationOf(plan)) != 1 {
 		t.Fatal("the captions beside them were lost", narrationOf(plan))

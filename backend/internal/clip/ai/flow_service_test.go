@@ -138,7 +138,7 @@ func TestFlowPlansAnOverShareAndASpeechRateAsWritten(t *testing.T) {
 	if len(plan.Cuts) != 2 || plan.Cuts[0].Rate() != 1250 || plan.Cuts[1].Rate() != 1250 {
 		t.Fatal("a transformed cut was returned to 1x, moving every millisecond after it", plan.Cuts)
 	}
-	for _, notice := range clip.ActivePlanNotices(plan) {
+	for _, notice := range clip.ActivePlanNotices(plan, composition.DefaultDesign()) {
 		if notice.Reason == "plan_cut_rate" || notice.Reason == "plan_cut_usability" {
 			t.Fatal("the writing bound was enforced at render", notice)
 		}
@@ -194,7 +194,7 @@ func TestFlowKeepsEverySelectionCheckTheWriterAnsweredBefore(t *testing.T) {
 			t.Fatal(name, err)
 		}
 		if len(plan.Cuts) != c.cuts || !hasNotice(plan, c.notice) {
-			t.Fatal(name+": the offending cut was kept or unexplained", plan.Cuts, clip.ActivePlanNotices(plan))
+			t.Fatal(name+": the offending cut was kept or unexplained", plan.Cuts, clip.ActivePlanNotices(plan, composition.DefaultDesign()))
 		}
 	}
 	// A cut that crosses an observed boundary is narrowed into ONE scene, the
@@ -208,7 +208,7 @@ func TestFlowKeepsEverySelectionCheckTheWriterAnsweredBefore(t *testing.T) {
 	unusable.Analyses[0].Segments[1].Usability = clip.UsabilityUnusable
 	refused, _, _ := flowRequest(t, unusable, defaultFlow())
 	if len(refused.Cuts) != 2 || !hasNotice(refused, "plan_cut_usability") {
-		t.Fatal("unusable footage was selected", refused.Cuts, clip.ActivePlanNotices(refused))
+		t.Fatal("unusable footage was selected", refused.Cuts, clip.ActivePlanNotices(refused, composition.DefaultDesign()))
 	}
 	for _, cut := range refused.Cuts {
 		if cut.StartMS >= 15000 {
