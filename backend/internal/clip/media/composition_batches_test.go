@@ -61,11 +61,11 @@ func TestWindowGraphUsesLocalTimeAndFiniteImageLoops(t *testing.T) {
 	cfg := config.ClipRender(&config.Config{})
 	visuals := []declaredVisual{{text: clip.PortableText{Pace: "steady"}, manifest: clip.CompositionElement{Role: "caption", StartMS: 0, EndMS: 15000}}}
 	window := overlayWindow{StartFrame: 307, EndFrame: 330, Layers: []int{0}}
-	graph := declaredOverlayGraph(cfg, window, visuals, true)
+	graph := declaredOverlayGraph(cfg, window, visuals, make([]captionLayer, len(visuals)), true)
 	if !strings.Contains(graph, "trim=start_frame=7:end_frame=30") || !strings.Contains(graph, "loop=loop=22:size=1:start=0") || strings.Contains(graph, "fade=t=in") || strings.Contains(graph, "pow(") || !strings.Contains(graph, "format=yuv444p[v]") {
 		t.Fatalf("restarted or unbounded overlay: %s", graph)
 	}
-	second := declaredOverlayGraph(cfg, window, visuals, false)
+	second := declaredOverlayGraph(cfg, window, visuals, make([]captionLayer, len(visuals)), false)
 	if !strings.Contains(second, "trim=start_frame=0:end_frame=23") {
 		t.Fatal("applied source offset to a local intermediate")
 	}
@@ -122,9 +122,9 @@ func TestOverlayDeliveryGraphGoldens(t *testing.T) {
 			measured := loudness{I: -20, TP: -3, LRA: 7, Threshold: -30, Offset: 0.1}
 			if err := a.WithWorkspace(t.Context(), "overlay-plan", func(ws clip.MediaWorkspace) error {
 				raw := filepath.Join(ws.Path, "composition-footage.mp4")
-				plates := make([]string, len(tc.visuals))
-				for i := range plates {
-					plates[i] = filepath.Join(ws.Path, fmt.Sprintf("declared-%04d.png", i))
+				layers := make([]captionLayer, len(tc.visuals))
+				for i := range layers {
+					layers[i] = captionLayer{Plate: filepath.Join(ws.Path, fmt.Sprintf("declared-%04d.png", i))}
 				}
 				assembled := ""
 				if tc.audio {
@@ -137,13 +137,13 @@ func TestOverlayDeliveryGraphGoldens(t *testing.T) {
 					t.Fatalf("%s took the wrong path: %d windows", tc.name, len(windows))
 				}
 				if fused {
-					args := r.deliveredOverlayArgs(raw, windows[0], tc.visuals, plates, assembled, &measured)
+					args := r.deliveredOverlayArgs(raw, windows[0], tc.visuals, layers, assembled, &measured)
 					fmt.Fprintf(&recorded, "delivered inputs=%d\n%s\n", strings.Count(strings.Join(args, " "), " -i "), args[slices.Index(args, "-filter_complex")+1])
 					golden(t, "overlay-"+tc.name+".filter", recorded.String())
 					return nil
 				}
 				var cleanup []string
-				pieces, pieceFrames, err := r.overlayComposition(t.Context(), ws, raw, windows, tc.visuals, plates, &cleanup)
+				pieces, pieceFrames, err := r.overlayComposition(t.Context(), ws, raw, windows, tc.visuals, layers, &cleanup)
 				if err != nil {
 					return err
 				}

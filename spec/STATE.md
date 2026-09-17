@@ -49,7 +49,7 @@
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
 | T219 | The approved caption style set, its faces and its glyph fallback | CDS CLIP | - | doing@260917.cap |
-| T220 | Sequence-rendered caption styles | CDS | T219 | todo |
+| T220 | Sequence-rendered caption styles | CDS | T219 | doing@260917.cap |
 | T221 | The owner places, sizes and restyles a caption | CLIP CDS | T219 | todo |
 | T222 | The server hands the preview the caption SVG it will render | CDS CLIP | T219 T221 | todo |
 | T223 | A template carries named composition stages | CLIP | - | todo |
@@ -60,6 +60,7 @@
 ## next
 - implement-task T223 (free, and the only CLIP root left untouched) — T219 is taken by another session, and T224 now has its deps but wants T222 for the previews its impl notes name
 ## log
+- 260917 T220 claimed (cap)
 - 260917 T219 claimed (cap)
 - 260917 T218 done; a clip generates with no template at all — minting, both quote gates, the writer's own input check and every prompt stop assuming one, a project with none freezes the grammar's minimum document (one empty hook, one empty ending, nothing else) so every downstream check still reads a real document, the guide section is omitted whole rather than sent empty with the two prefixes pinned by golden fixtures, and a revision runs on a project whose template was deleted from the composition it retained
 - 260917 the narration call still measures its generated region rows against the FROZEN document's preset (ai/composition_copy.go regionSelection), so a project that changes a preset can be handed slot limits the render will not use — nothing fails today, worth a review-code finding

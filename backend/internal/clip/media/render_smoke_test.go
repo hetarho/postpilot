@@ -19,12 +19,19 @@ import (
 
 func renderConfig(t *testing.T) clip.RenderConfig {
 	t.Helper()
-	// Both faces, from the same variables the image sets (CDS-17): the renderer
-	// refuses to start without the display face, so a config that names only
-	// Pretendard fails the constructor rather than any render.
-	font := path("CLIP_FONT_PATH", "/usr/share/postpilot-fonts/pretendard/PretendardVariable.ttf")
-	display := path("CLIP_FONT_PAPERLOGY_PATH", "/usr/share/postpilot-fonts/paperlogy/Paperlogy-8ExtraBold.ttf")
-	return config.ClipRender(&config.Config{ClipResvgPath: path("CLIP_RESVG_PATH", "/usr/local/bin/resvg"), ClipFontPath: font, ClipDisplayFontPath: display})
+	// Every face, from the same variables the image sets (CDS-17): the renderer
+	// refuses to start without all of them, so a config that names only some
+	// fails the constructor rather than any render.
+	return config.ClipRender(&config.Config{
+		ClipResvgPath: path("CLIP_RESVG_PATH", "/usr/local/bin/resvg"),
+		ClipFontPaths: map[string]string{
+			"pretendard":        path("CLIP_FONT_PATH", "/usr/share/postpilot-fonts/pretendard/PretendardVariable.ttf"),
+			"paperlogy":         path("CLIP_FONT_PAPERLOGY_PATH", "/usr/share/postpilot-fonts/paperlogy/Paperlogy-8ExtraBold.ttf"),
+			"jua":               path("CLIP_FONT_JUA_PATH", "/usr/share/postpilot-fonts/jua/Jua-Regular.ttf"),
+			"nanummyeongjo":     path("CLIP_FONT_NANUM_MYEONGJO_PATH", "/usr/share/postpilot-fonts/nanummyeongjo/NanumMyeongjo-Regular.ttf"),
+			"nanummyeongjo-800": path("CLIP_FONT_NANUM_MYEONGJO_BOLD_PATH", "/usr/share/postpilot-fonts/nanummyeongjo/NanumMyeongjo-ExtraBold.ttf"),
+		},
+	})
 }
 func path(key, fallback string) string {
 	if value := os.Getenv(key); value != "" {

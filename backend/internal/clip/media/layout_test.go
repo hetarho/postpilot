@@ -19,6 +19,17 @@ import (
 func measured(t *testing.T) (*Adapter, *Rendering) {
 	t.Helper()
 	a := newAdapter(t, &fakeRunner{run: func(_ context.Context, c Command) ([]byte, error) {
+		// A rasterisation, rather than a measurement: stand in for resvg by
+		// writing the SVG it was given to the PNG it was asked for, so the
+		// frames a sequence style produces exist and differ exactly where its
+		// drawing does.
+		if !slices.Contains(c.Args, "--query-all") {
+			svg, err := os.ReadFile(c.Args[len(c.Args)-2])
+			if err != nil {
+				return nil, err
+			}
+			return nil, os.WriteFile(c.Args[len(c.Args)-1], svg, 0600)
+		}
 		data, err := os.ReadFile(c.Args[len(c.Args)-1])
 		if err != nil {
 			return nil, err

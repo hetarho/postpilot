@@ -300,10 +300,11 @@ type Config struct {
 	ClipQuoteTTL                                  time.Duration
 	ClipSourceSweepInterval                       time.Duration
 	ClipWorkRoot, ClipFFmpegPath, ClipFFprobePath string
-	ClipResvgPath, ClipFontPath                   string
-	ClipDisplayFontPath                           string
-	ClipOverlayDir                                string
-	ClipWorkStaleAge, ClipMediaTimeout            time.Duration
+	ClipResvgPath                                 string
+	// Every bundled font file CDS-17 names, keyed as RenderConfig.FontPaths is.
+	ClipFontPaths                      map[string]string
+	ClipOverlayDir                     string
+	ClipWorkStaleAge, ClipMediaTimeout time.Duration
 
 	// OrphanSweepInterval is how often unconfirmed uploads and stray objects are cleaned
 	// up. The PRD leaves the cadence undecided (§9.5); daily is the provisional default.

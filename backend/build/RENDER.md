@@ -16,46 +16,95 @@ notices, source archive and exact dependency sources/notices ship in the image.
 Readelf rejects a dynamically linked executable. Both development and production
 copy the same build output; production remains distroless nonroot.
 
-Two faces ship, and the renderer passes both as separate `--use-font-file`
-arguments with system fonts off. Pretendard Variable sets every role but two;
-Paperlogy 8 ExtraBold sets `t.hook` and `t.title`, which is 크게 강조's face
-(CDS-17, CDS-25). Each is pinned by exact size and SHA-256 at construction, so a
-swapped file fails the renderer's constructor rather than a render, and the
-glyph-coverage check runs against the face the text will actually be set in —
-`checkCopy` reads the role's own face, and a Korean glyph Paperlogy lacks is
-`CLIP_INVALID_INPUT`, never a silent substitution. CDS-17's Noto Sans KR fallback
-never fires here: resvg runs with system fonts disabled and coverage is refused
-before rasterisation, so that fallback is a frontend preview concern only.
-Paperlogy comes from the designer's own distribution page
+Four faces ship in five files, and the renderer passes every one of them as its
+own `--use-font-file` argument with system fonts off (CDS-17). Pretendard
+Variable sets every role but two; Paperlogy 8 ExtraBold sets `t.hook` and
+`t.title`, which is 크게 강조's face (CDS-25); Jua and NanumMyeongjo, at 400 and
+800, are the remaining caption faces a style may name. Each file is pinned by
+exact size and SHA-256 at construction, so a swapped one fails the renderer's
+constructor rather than a render, and the glyph-coverage check runs against the
+face the text will actually be set in — a caption reads its STYLE's face
+(CDS-18), not its role's. CDS-17's Noto Sans KR fallback never fires here: resvg
+runs with system fonts disabled, so that fallback is a frontend preview concern
+only.
+
+The two Google Fonts faces come from the `ofl/` trees of google/fonts; Paperlogy
+comes from the designer's own distribution page
 ([freesentation.blog/paperlogyfont](https://freesentation.blog/paperlogyfont)) and
-the release archive it links; the archive and file checksums, the OFL notice and
-the family name inside the file are recorded in
-`backend/assets/fonts/paperlogy/README.md`. Only 8 ExtraBold is bundled, because
-CDS uses no other Paperlogy weight.
+the release archive it links. Each face's `README.md` under `backend/assets/fonts`
+records its checksums, its OFL notice and the family name inside the file. Only
+the weights CDS names are bundled: one Paperlogy, one Jua, two NanumMyeongjo.
+NanumMyeongjo is the one face whose two weights are two files, and they answer to
+one family name — ExtraBold declares `NanumMyeongjo` as its TYPOGRAPHIC family,
+its legacy name being the unparsable `NanumMyeongjoExtraBold`.
+
+Coverage is read from each file once at construction, over the ranges Korean
+captions are written in, so the per-caption check is a set lookup. Jua carries
+2,367 of the 11,172 Hangul syllables; a caption whose style names it and whose
+text it cannot set is drawn in the default style instead, with a CLIP-108 notice
+naming that caption (CDS-84). The swap is one caption's, never the project's, and
+no glyph is ever taken from another family. A glyph even the default face lacks
+is `CLIP_INVALID_INPUT`, as before.
 
 The renderer supplies `--skip-system-fonts --use-font-file` explicitly. It queries
 shaped glyph bounds with `--query-all` once per caption, selecting only grapheme
 breaks and at most two lines. The final SVG uses the same font weight and measured
 bounds. The minimum-size failure is `CLIP_COPY_TOO_LONG`; unsupported glyphs and
 control characters are invalid input, never substituted images or fonts.
-Pretendard is pinned with its OFL notice in `backend/assets/fonts/pretendard`.
-The four style ids are clean, memo, bold and mark; every approved set keeps clean,
-because every design-system fallback lands on it. Each is drawn only from design
-tokens, never a literal:
 
-- `clean` — an `ink.900` plate at `radius.box`, an 8 px accent bar clipped to the
-  plate's own rounded rect at its left inner edge, 22/32 padding with the bar
-  inside a 40 px left inset, `t.body` 56/700 white, at most two lines.
-- `memo` — a `paper.50` plate, one 14 px accent dot at the top left, 18/28 padding
-  with 54 px on the left, `t.caption` 44/600 `text.ink`, exactly one line.
-- `bold` — no plate: white `t.title` 72/800 over a 6 px round-joined `stroke.dark`
-  painted under the fill, plus the `shadow.text` drop shadow. One word may take
-  the accent, as a `tspan` inside the line so the run stays shaped as one, and
-  that word turns white on a bright ground (see the sampler below). Set in
-  Paperlogy 8 ExtraBold.
-- `mark` — no plate: white `t.mark` 60/800 with a 4 px stroke and the same shadow,
-  and the keyword's `underline.mark` highlight (accent α0.9, 0.42em tall, raised
-  0.28em above the baseline, 6 px past each side) drawn behind the text.
+## The approved caption style set
+
+The set lives in `internal/clip/design/caption_style.go` rather than in
+`design.json`, because a style carries a filter graph and generated geometry a
+constants file cannot express; the numbers the renderer and the preview must
+agree on to the pixel stay in `regions.caption`, which both sides read (CDS-80,
+CDS-83). Each style fixes its face, its type role, its colour treatment and its
+motion, and says whether one rasterisation covers its whole interval (static) or
+it draws a layer per output frame (sequence). `크게 강조` is the default, and an
+empty selection resolves to it alone (CDS-25).
+
+Two rules hold across every style. Contrast is measured against `stroke.dark`
+only where a style actually strokes in it (CDS-44): a coloured outline is
+decoration, not a backing the text can be read off, so such a style is measured
+against its own sampled ground. And every filter a style emits declares
+`color-interpolation-filters="sRGB"`, because resvg computes filters in
+linearRGB by default and the colour then differs from what a browser draws —
+which CDS-83 forbids. `feDisplacementMap` is admitted to no style: resvg 0.48.1
+places its result at the wrong offset.
+
+The retired style ids `clean`, `memo`, `mark` and `simple` are still read off
+stored plans and render in the default treatment they already rendered in;
+nothing writes one.
+
+### Static and sequence rendering
+
+A static style rasterises once and the overlay chain loops that one plate for
+the caption's whole interval, fading it in and out and settling it upward with
+`fade` and an `overlay` y expression. That path is unchanged.
+
+A sequence style draws one PNG per OUTPUT frame of its own interval into a
+directory of the attempt's workspace, and the chain reads them back with
+`image2` at the output frame rate, shifted to the caption's start with `setpts`
+and overlaid at the crop origin the frames were drawn in. A window that opens
+mid-caption resumes the sequence at the frame it reaches, through
+`-start_number`, rather than replaying an entrance the owner already saw. It
+carries no `loop`
+and no `fade`: its motion is already in every frame, which is the whole reason
+the extra rasterisations are paid for. Frames enter through `image2` rather than
+`image2pipe` because the chain already takes several inputs — feeding pipes
+concurrently makes scheduling and partial-failure retry much harder, while files
+let one failed caption re-render alone — and decoder threads stay limited on the
+sequence input exactly as they are on a single-frame one, because an unbounded
+image demuxer can leave the scheduler waiting after an overlay stops consuming.
+
+Each frame is cropped to the caption's own box grown by the style's declared
+bleed, never to the whole canvas: a full-canvas layer would reserve about ten
+megabytes of workspace budget for every frame of every caption. The frames count
+against CLIP-33's temporary-disk accounting like every other intermediate — the
+workspace total descends into the one directory it holds — and they are deleted
+as soon as the overlay pass that read them is encoded, so a long sequence never
+sits beside the output it helped make. Every frame is a pure function of the
+plan and the frame index, so one plan delivers one clip byte for byte.
 
 ## Cards, scrims and brightness
 
@@ -342,6 +391,7 @@ Official references checked on 2026-09-10:
 - [Uniseg](https://pkg.go.dev/github.com/rivo/uniseg): Unicode grapheme boundaries; latest resolver pinned v0.4.7 in go.mod/go.sum.
 - [SFNT](https://pkg.go.dev/golang.org/x/image/font/sfnt): fixed-font glyph coverage; latest resolver pinned x/image v0.46.0.
 - [Paperlogy](https://freesentation.blog/paperlogyfont): the designer's own release page and archive, read on 2026-09-11; checksums in `backend/assets/fonts/paperlogy/README.md`.
+- [Jua](https://github.com/google/fonts/tree/main/ofl/jua) and [NanumMyeongjo](https://github.com/google/fonts/tree/main/ofl/nanummyeongjo): the Google Fonts `ofl/` trees, read on 2026-09-17; checksums in each face's own `README.md` under `backend/assets/fonts`.
 - [WCAG 2.1 contrast minimum](https://www.w3.org/TR/WCAG21/#contrast-minimum): the relative-luminance and contrast-ratio definitions V3 computes.
 - [image/png](https://pkg.go.dev/image/png): the standard-library decoder the brightness sampler reads its frames with.
 

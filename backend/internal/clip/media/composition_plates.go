@@ -59,12 +59,58 @@ func (r *Rendering) sampleDeclaredGrounds(ctx context.Context, ws clip.MediaWork
 	return nil
 }
 
-func (r *Rendering) declaredPlate(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, visual *declaredVisual, source clip.MediaSource, index int) (string, error) {
+// One overlay input: a static caption's single plate, which the chain loops for
+// the caption's whole interval, or a sequence style's own PNG per output frame
+// (CDS-80, CDS-81).
+type captionLayer struct {
+	Plate    string
+	Sequence *captionSequence
+}
+
+// paths are what the pass that reads this layer has to delete once it is done.
+func (l captionLayer) paths() []string {
+	if l.Sequence != nil {
+		return []string{l.Sequence.Dir}
+	}
+	return []string{l.Plate}
+}
+
+func (r *Rendering) declaredLayer(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, visual *declaredVisual, source clip.MediaSource, index int) (captionLayer, error) {
+	// A rapid phrase replaces its neighbour with no fade and no movement
+	// whatever style it carries (CDS-4), so it has nothing to animate and takes
+	// the one rasterisation its style would otherwise spend per frame.
+	if visual.manifest.Role == "caption" && !visual.caption.Caption.Static() && visual.copy.Pace != "rapid" {
+		sequence, err := r.captionSequence(ctx, ws, canvas, visual.copy, visual.caption, visual.manifest.StartMS, visual.manifest.EndMS, index)
+		if err != nil {
+			return captionLayer{}, err
+		}
+		return captionLayer{Sequence: &sequence}, nil
+	}
 	body, err := r.declaredSVG(canvas, *visual)
 	if err != nil {
-		return "", err
+		return captionLayer{}, err
 	}
-	return r.rasterize(ctx, ws, canvas, body, fmt.Sprintf("declared-%04d", index))
+	plate, err := r.rasterize(ctx, ws, canvas, body, fmt.Sprintf("declared-%04d", index))
+	return captionLayer{Plate: plate}, err
+}
+
+// layerInput is what ffmpeg is told to read this layer back with. A sequence
+// enters through `image2` at the output frame rate rather than through
+// `image2pipe`: the chain already takes several inputs, feeding pipes
+// concurrently makes scheduling and partial-failure retry much harder, and
+// files let one failed caption re-render alone. Decoder threads stay limited on
+// it exactly as they are on a single-frame input, because an unbounded image
+// demuxer can leave the scheduler waiting once an overlay stops consuming.
+func (r *Rendering) layerInput(args []string, layer captionLayer, window overlayWindow) []string {
+	args = append(args, "-threads", strconv.Itoa(r.media.cfg.DecodeThreads), "-framerate", strconv.Itoa(r.cfg.FPS))
+	if layer.Sequence != nil {
+		// A caption that began before this window RESUMES at the frame the
+		// window opens on rather than starting over: the sequence is the
+		// caption's own motion through its interval, not a loop.
+		first := 1 + max(0, min(window.StartFrame-layer.Sequence.StartFrame, layer.Sequence.Frames-1))
+		return append(args, "-f", "image2", "-start_number", strconv.Itoa(first), "-i", layer.Sequence.Pattern)
+	}
+	return append(args, "-i", layer.Plate)
 }
 
 // Both export and preview shape exactly the same escaped, bundled templates.
@@ -96,16 +142,16 @@ func declaredSampleWindow(start, end, duration, fps int) [2]int {
 
 // Only this window's small layer batch is opened. Subsequent batches read the
 // preceding lossless window, not the original full-length composition.
-func (r *Rendering) renderOverlayWindow(ctx context.Context, ws clip.MediaWorkspace, input string, window overlayWindow, visuals []declaredVisual, plates []string, firstPass bool, output string) error {
+func (r *Rendering) renderOverlayWindow(ctx context.Context, ws clip.MediaWorkspace, input string, window overlayWindow, visuals []declaredVisual, layers []captionLayer, firstPass bool, output string) error {
 	args := r.baseArgs()
 	if firstPass {
 		args = append(args, "-ss", strconv.Itoa(window.StartFrame/r.cfg.FPS))
 	}
 	args = r.inputArgs(args, input)
 	for _, index := range window.Layers {
-		args = append(args, "-threads", strconv.Itoa(r.media.cfg.DecodeThreads), "-framerate", strconv.Itoa(r.cfg.FPS), "-i", plates[index])
+		args = r.layerInput(args, layers[index], window)
 	}
-	args = append(args, "-filter_complex", declaredOverlayGraph(r.cfg, window, visuals, firstPass))
+	args = append(args, "-filter_complex", declaredOverlayGraph(r.cfg, window, visuals, layers, firstPass))
 	args = append(args, r.encodeProfile(false, 0, "yuv444p")...)
 	args = append(args, "-t", frameSeconds(window.EndFrame-window.StartFrame, r.cfg.FPS))
 	return r.runRender(ctx, ws, output, args)
@@ -119,15 +165,15 @@ func (r *Rendering) renderOverlayWindow(ctx context.Context, ws clip.MediaWorksp
 // The tail repeats what the windowed path's delivery pass does to its piece —
 // the timebase reset, the trim and the conversion, in that order — so only the
 // lossless round trip is removed and no delivered pixel moves (CLIP-125).
-func (r *Rendering) deliveredOverlayArgs(input string, window overlayWindow, visuals []declaredVisual, plates []string, audio string, measured *loudness) []string {
+func (r *Rendering) deliveredOverlayArgs(input string, window overlayWindow, visuals []declaredVisual, layers []captionLayer, audio string, measured *loudness) []string {
 	args := r.baseArgs()
 	args = append(args, "-ss", strconv.Itoa(window.StartFrame/r.cfg.FPS))
 	args = r.inputArgs(args, input)
 	for _, index := range window.Layers {
-		args = append(args, "-threads", strconv.Itoa(r.media.cfg.DecodeThreads), "-framerate", strconv.Itoa(r.cfg.FPS), "-i", plates[index])
+		args = r.layerInput(args, layers[index], window)
 	}
 	frames := window.EndFrame - window.StartFrame
-	graph := strings.TrimSuffix(declaredOverlayGraph(r.cfg, window, visuals, true), "[v]")
+	graph := strings.TrimSuffix(declaredOverlayGraph(r.cfg, window, visuals, layers, true), "[v]")
 	graph += fmt.Sprintf(",settb=AVTB,setpts=PTS-STARTPTS,trim=end_frame=%d,setpts=PTS-STARTPTS,format=yuv420p[v]", frames)
 	if audio != "" {
 		args = r.inputArgs(args, audio)
@@ -136,7 +182,7 @@ func (r *Rendering) deliveredOverlayArgs(input string, window overlayWindow, vis
 	return append(args, "-filter_complex", graph)
 }
 
-func (r *Rendering) overlayComposition(ctx context.Context, ws clip.MediaWorkspace, input string, windows []overlayWindow, visuals []declaredVisual, plates []string, cleanup *[]string) ([]string, []int, error) {
+func (r *Rendering) overlayComposition(ctx context.Context, ws clip.MediaWorkspace, input string, windows []overlayWindow, visuals []declaredVisual, layers []captionLayer, cleanup *[]string) ([]string, []int, error) {
 	paths, frames := []string{}, []int{}
 	for i, window := range windows {
 		previous := input
@@ -145,7 +191,7 @@ func (r *Rendering) overlayComposition(ctx context.Context, ws clip.MediaWorkspa
 			batch.Layers = window.Layers[offset:min(len(window.Layers), offset+r.cfg.OverlayBatchSize)]
 			path := filepath.Join(ws.Path, fmt.Sprintf("overlay-%04d-%04d.mp4", i, offset/r.cfg.OverlayBatchSize))
 			*cleanup = append(*cleanup, path)
-			if err := r.renderOverlayWindow(ctx, ws, previous, batch, visuals, plates, offset == 0, path); err != nil {
+			if err := r.renderOverlayWindow(ctx, ws, previous, batch, visuals, layers, offset == 0, path); err != nil {
 				return nil, nil, err
 			}
 			if previous != input {
@@ -201,7 +247,10 @@ func applyDeclaredGround(canvas clip.Canvas, visual *declaredVisual) {
 		if p.Kind != "copy" {
 			continue
 		}
-		stroke := design.Caption().Stroke
+		stroke := ""
+		if visual.caption.Caption.DarkStroke() {
+			stroke = visual.caption.Style.Stroke
+		}
 		if view != nil {
 			stroke = ""
 			if line < len(view.Lines) && view.Lines[line].StrokeWidth > 0 {
@@ -218,6 +267,11 @@ func (layout *declaredLayout) recordContrastNotices() {
 	for _, visual := range layout.visuals {
 		if visual.ground.Sampled() && !design.Legible(visual.manifest.Parts) {
 			clip.AddPlanNotice(&layout.plan, "composition_contrast", visual.manifest.CutID, visual.manifest.ElementID, "shortfall")
+		}
+		// A caption drawn in the default style because its own face could not
+		// set one of its syllables says so by name (CDS-84, CLIP-108).
+		if visual.glyphFallback {
+			clip.AddPlanNotice(&layout.plan, "composition_caption_glyph", visual.manifest.CutID, visual.manifest.ElementID, "style_fallback")
 		}
 	}
 }

@@ -328,7 +328,13 @@ func newReleaseHarness(t *testing.T, mode string, stress bool, clocks ...func() 
 	if _, err = d.Writer.Exec("INSERT INTO credit_lots(id,user_id,kind,granted,remaining,created_at) VALUES ('release-extra','release-user','purchased',5000,5000,?)", time.Now().UTC().Format(time.RFC3339Nano)); err != nil {
 		t.Fatal(err)
 	}
-	cfg := &config.Config{ClipWorkRoot: filepath.Join(root, "work"), ClipFFmpegPath: "/usr/local/bin/ffmpeg", ClipFFprobePath: "/usr/local/bin/ffprobe", ClipResvgPath: "/usr/local/bin/resvg", ClipFontPath: "/usr/share/postpilot-fonts/pretendard/PretendardVariable.ttf", ClipDisplayFontPath: "/usr/share/postpilot-fonts/paperlogy/Paperlogy-8ExtraBold.ttf", ClipWorkStaleAge: time.Hour, ClipMediaTimeout: 15 * time.Minute, ClipSourceBatchTTL: 6 * time.Hour, PresignPutTTL: 10 * time.Minute, PresignGetTTL: time.Minute, ClipQuoteTTL: 5 * time.Minute, OrphanMinAge: time.Hour}
+	cfg := &config.Config{ClipWorkRoot: filepath.Join(root, "work"), ClipFFmpegPath: "/usr/local/bin/ffmpeg", ClipFFprobePath: "/usr/local/bin/ffprobe", ClipResvgPath: "/usr/local/bin/resvg", ClipFontPaths: map[string]string{
+		"pretendard":        "/usr/share/postpilot-fonts/pretendard/PretendardVariable.ttf",
+		"paperlogy":         "/usr/share/postpilot-fonts/paperlogy/Paperlogy-8ExtraBold.ttf",
+		"jua":               "/usr/share/postpilot-fonts/jua/Jua-Regular.ttf",
+		"nanummyeongjo":     "/usr/share/postpilot-fonts/nanummyeongjo/NanumMyeongjo-Regular.ttf",
+		"nanummyeongjo-800": "/usr/share/postpilot-fonts/nanummyeongjo/NanumMyeongjo-ExtraBold.ttf",
+	}, ClipWorkStaleAge: time.Hour, ClipMediaTimeout: 15 * time.Minute, ClipSourceBatchTTL: 6 * time.Hour, PresignPutTTL: 10 * time.Minute, PresignGetTTL: time.Minute, ClipQuoteTTL: 5 * time.Minute, OrphanMinAge: time.Hour}
 	mcfg := config.ClipMedia(cfg)
 	runner := releaseRunner{ExecRunner: clipmedia.ExecRunner{StdoutLimit: mcfg.StdoutLimit, StderrLimit: mcfg.StderrLimit, WaitDelay: mcfg.WaitDelay}, metrics: metrics, root: cfg.ClipWorkRoot}
 	adapter, err := clipmedia.New(mcfg, runner)

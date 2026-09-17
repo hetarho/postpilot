@@ -92,7 +92,7 @@ func VerifyCompositionManifest(plan EditPlan, elements []CompositionElement, lim
 				}
 				captionWindows[element.CutID] = append(captionWindows[element.CutID], element)
 			}
-			motion := design.CaptionMotion(text.Pace)
+			motion := design.CaptionMotion(element.Style, text.Pace)
 			if element.InMS != motion.InMS || element.OutMS != motion.OutMS || element.DY != motion.InDY {
 				return fail("motion")
 			}

@@ -23,22 +23,39 @@ import (
 	"golang.org/x/image/font/sfnt"
 )
 
-// The two bundled faces (CDS-17, CLIP-13), each pinned by size and checksum:
-// the renderer never discovers a font and never substitutes one.
-const pretendardSHA256 = "3090ccde0442bb347aa7685d9ba8b17436a60682df6e8f92a9a670de14056e22"
-const paperlogySHA256 = "fb0324f8ac057e50f4f4632331617e347bfe5a04184f7b0db514be682fb6b25c"
-const pretendardBytes, paperlogyBytes = 6739336, 1304560
+// Every bundled font file (CDS-17, CLIP-13), each pinned by size and checksum:
+// the renderer never discovers a font and never substitutes one. `Key` is what
+// RenderConfig.FontPaths carries the file under; a face shipping one weight for
+// every role keeps its bare face name.
+type bundledFont struct {
+	Key, Face string
+	// 0 where the face ships one file for every weight.
+	Weight int
+	Bytes  int64
+	SHA256 string
+}
+
+var bundledFonts = []bundledFont{
+	{Key: "pretendard", Face: "pretendard", Bytes: 6739336, SHA256: "3090ccde0442bb347aa7685d9ba8b17436a60682df6e8f92a9a670de14056e22"},
+	{Key: "paperlogy", Face: "paperlogy", Bytes: 1304560, SHA256: "fb0324f8ac057e50f4f4632331617e347bfe5a04184f7b0db514be682fb6b25c"},
+	{Key: "jua", Face: "jua", Bytes: 2119352, SHA256: "769677aef240bfc3b9965f2b50748075bff885e6c6992fc591a3fb268279f898"},
+	{Key: "nanummyeongjo", Face: "nanummyeongjo", Weight: 400, Bytes: 3058408, SHA256: "7ed9e8653a8ed04285d51dc343ffea6eb3d9c73afc27383ea8929ee4ffd03205"},
+	{Key: "nanummyeongjo-800", Face: "nanummyeongjo", Weight: 800, Bytes: 3180888, SHA256: "60c0077fce069ba90ae97c0a3679f6eb3712e0ca637bdd0c15b72d335ec46db7"},
+}
+
+// The family resvg falls back to for text that names none, which no element in
+// this package emits: every text carries its own font-family.
 const fontFamily = "Pretendard Variable"
 
 type Rendering struct {
 	media *Adapter
 	cfg   clip.RenderConfig
-	font  *sfnt.Font
-	// The secondary face, by the family name the file itself declares. Nil only
-	// when it is not configured, which the constructor refuses.
-	display       *sfnt.Font
-	displayFamily string
-	overlays      *overlay.Catalog
+	// Every bundled file by its RenderConfig key, and the paths in the order
+	// they are handed to resvg, so a render is byte-identical across processes.
+	fonts    map[string]*sfnt.Font
+	fontArgs []string
+	coverage map[string]map[rune]bool
+	overlays *overlay.Catalog
 }
 
 var _ clip.Renderer = (*Rendering)(nil)
@@ -50,28 +67,30 @@ func NewRenderer(media *Adapter, cfg clip.RenderConfig) (*Rendering, error) {
 	if cfg.OverlayBatchSize <= 0 || cfg.OverlayBatchSize > 16 || cfg.Composition.Cues <= 0 || cfg.MergeInputs < 2 || cfg.MergeInputs > 8 || cfg.SampleBatch < 3 || cfg.SampleBatch > 48 {
 		return nil, errors.New("invalid clip composition renderer configuration")
 	}
-	if media == nil || cfg.FadeMS != design.Transition.FadeMS || cfg.FPS != 30 || cfg.MaxCuts <= 0 || cfg.MaxCopyRunes <= 0 || cfg.MinDurationMS != 15000 || cfg.MaxDurationMS != 90000 || !filepath.IsAbs(cfg.ResvgPath) || !filepath.IsAbs(cfg.FontPath) {
+	if media == nil || cfg.FadeMS != design.Transition.FadeMS || cfg.FPS != 30 || cfg.MaxCuts <= 0 || cfg.MaxCopyRunes <= 0 || cfg.MinDurationMS != 15000 || cfg.MaxDurationMS != 90000 || !filepath.IsAbs(cfg.ResvgPath) {
 		return nil, errors.New("invalid clip renderer configuration")
 	}
-	font, err := bundledFace(cfg.FontPath, pretendardBytes, pretendardSHA256)
-	if err != nil {
-		return nil, err
+	fonts := map[string]*sfnt.Font{}
+	args := []string{}
+	for _, f := range bundledFonts {
+		path := cfg.FontPaths[f.Key]
+		if !filepath.IsAbs(path) {
+			return nil, errors.New("invalid clip renderer configuration")
+		}
+		font, err := bundledFace(path, f.Bytes, f.SHA256)
+		if err != nil {
+			return nil, err
+		}
+		fonts[f.Key], args = font, append(args, "--use-font-file", path)
 	}
-	if !filepath.IsAbs(cfg.DisplayFontPath) {
-		return nil, errors.New("invalid clip renderer configuration")
-	}
-	display, err := bundledFace(cfg.DisplayFontPath, paperlogyBytes, paperlogySHA256)
-	if err != nil {
-		return nil, err
-	}
-	if err := validateFontFamilies(map[string]*sfnt.Font{"pretendard": font, "paperlogy": display}); err != nil {
+	if err := validateFontFamilies(fonts); err != nil {
 		return nil, err
 	}
 	catalog, err := loadOverlays(cfg.OverlayDir)
 	if err != nil {
 		return nil, err
 	}
-	return &Rendering{media: media, cfg: cfg, font: font, display: display, displayFamily: design.FontFamily("paperlogy"), overlays: catalog}, nil
+	return &Rendering{media: media, cfg: cfg, fonts: fonts, fontArgs: args, coverage: faceCoverage(fonts), overlays: catalog}, nil
 }
 
 // bundledFace loads one pinned face: the size and the checksum both have to
@@ -93,18 +112,34 @@ func bundledFace(path string, size int64, sum string) (*sfnt.Font, error) {
 	return sfnt.Parse(data)
 }
 
-// family and face answer which of the two bundled faces a type role is set in.
+// family and face answer which bundled file a type role — or a caption style
+// wearing one (CDS-18) — is set in. A role naming no bundled face is a
+// configuration mistake the constructor already refused, so the lookup falls
+// back to the default family rather than to a discovered one.
 func (r *Rendering) family(role design.TypeRole) string {
-	if role.Face == "paperlogy" {
-		return r.displayFamily
+	if family := design.FontFamily(role.Face); family != "" {
+		return family
 	}
 	return fontFamily
 }
 func (r *Rendering) face(role design.TypeRole) *sfnt.Font {
-	if role.Face == "paperlogy" {
-		return r.display
+	return r.fonts[fontFileKey(role.Face, role.Weight)]
+}
+
+// fontFileKey picks the file a face sets a given weight in. Only a face that
+// ships more than one weight distinguishes them.
+func fontFileKey(face string, weight int) string {
+	for _, f := range bundledFonts {
+		if f.Face == face && f.Weight == weight {
+			return f.Key
+		}
 	}
-	return r.font
+	for _, f := range bundledFonts {
+		if f.Face == face && f.Weight == 0 {
+			return f.Key
+		}
+	}
+	return "pretendard"
 }
 
 func escaped(value string) string {
@@ -113,22 +148,19 @@ func escaped(value string) string {
 	return b.String()
 }
 func (r *Rendering) checkCopy(text string, role design.TypeRole) error {
-	font := r.face(role)
-	var buf sfnt.Buffer
 	for _, c := range text {
-		if c == '\n' {
+		if c == '\n' || c == '\u200d' || c == '\ufe0e' || c == '\ufe0f' {
 			continue
 		}
 		if unicode.IsControl(c) || c == '\ufffe' || c == '\uffff' {
 			return clip.ErrInvalid
 		}
-		if c == '\u200d' || c == '\ufe0e' || c == '\ufe0f' {
-			continue
-		}
-		id, err := font.GlyphIndex(&buf, c)
-		if err != nil || id == 0 {
-			return clip.ErrInvalid
-		}
+	}
+	// A face that cannot set a syllable is a style problem the caller resolves
+	// by falling back to the default style (CDS-84); reaching the rasteriser
+	// with one left is invalid input, because nothing may substitute a glyph.
+	if r.MissingGlyph(text, role) != 0 {
+		return clip.ErrInvalid
 	}
 	return nil
 }
@@ -188,15 +220,12 @@ func measureSVG(values []string, weight int, tracking float64, family string) st
 	return b.String()
 }
 
-// Both faces are handed to resvg explicitly, and system discovery stays off:
-// the SVG asks for one of the two family names by hand (CLIP-13).
+// Every bundled face is handed to resvg explicitly, and system discovery stays
+// off: each text asks for one of their family names by hand (CLIP-13, CDS-84).
 func (r *Rendering) resvg(ctx context.Context, ws clip.MediaWorkspace, args ...string) ([]byte, error) {
-	return r.media.run(ctx, ws, r.cfg.ResvgPath, append([]string{
-		"--skip-system-fonts",
-		"--use-font-file", r.cfg.FontPath,
-		"--use-font-file", r.cfg.DisplayFontPath,
-		"--font-family", fontFamily,
-	}, args...)...)
+	head := append([]string{"--skip-system-fonts"}, r.fontArgs...)
+	head = append(head, "--font-family", fontFamily)
+	return r.media.run(ctx, ws, r.cfg.ResvgPath, append(head, args...)...)
 }
 func (r *Rendering) measure(ctx context.Context, ws clip.MediaWorkspace, values []string, weight int, tracking float64, family string) (map[string]clip.Region, error) {
 	path := filepath.Join(ws.Path, "copy-measure.svg")
@@ -244,6 +273,10 @@ func (r *Rendering) measure(ctx context.Context, ws clip.MediaWorkspace, values 
 // whole element occupies (plate for a plated style, stroke-inflated text block
 // for an unplated one) and where its keyword sits on its own line.
 type copyLayout struct {
+	// The approved style this caption was laid out in: the face it is set in,
+	// the colour it is painted and the motion it declares all come from here
+	// (CDS-80), and Style is the same style's layout contract.
+	Caption  design.CaptionStyle
 	Style    design.StyleRule
 	Role     design.TypeRole
 	Lines    []string
@@ -251,6 +284,15 @@ type copyLayout struct {
 	Region   clip.Region
 	FontSize float64
 	Keyword  keywordSpan
+	// Per line, the words a per-word style needs; empty for every other style.
+	Words [][]wordSpan
+}
+
+// One measured word on its line, for the styles that light words one at a time.
+type wordSpan struct {
+	Text   string
+	Offset float64 // advance of the line up to this word's left edge
+	Width  float64
 }
 type keywordSpan struct {
 	Line    int
@@ -294,11 +336,24 @@ func keywordOn(lines []string, keyword string, bounds map[string]clip.Region, fa
 	return keywordSpan{}
 }
 
+// captionStyle resolves the style a copy names. A style id outside the approved
+// set never reaches a rasterisation from a new composition — the layout refuses
+// it as an authoring error first (CDS-66). What does reach here is a retired
+// name on a stored plan, which renders in the default treatment it already
+// rendered in when the set carried one style.
+func captionStyle(id string) design.CaptionStyle {
+	if style, ok := design.LookupCaptionStyle(id); ok {
+		return style
+	}
+	return design.DefaultCaption()
+}
+
 // The fit loop searches only between the role's nominal size and its minimum
 // (CDS-19); below the minimum the copy does not fit and is refused, never shrunk.
 func fitCopy(canvas clip.Canvas, c clip.Copy, candidates [][]string, bounds map[string]clip.Region) (copyLayout, error) {
-	style := design.Caption()
-	role := style.Role()
+	caption := captionStyle(c.Style)
+	style := caption.Rule()
+	role := caption.Role()
 	left, right, vertical := copyInsets(style)
 	// The style's per-line character rule is part of the fit, not a verdict on
 	// it: a sentence that is one character over on one line has a two-line
@@ -341,7 +396,13 @@ func fitCopy(canvas clip.Canvas, c clip.Copy, candidates [][]string, bounds map[
 			region, err := clip.PlaceCopy(canvas, c.Anchor, c.Align, math.Ceil(width), math.Ceil(height))
 			clean := cleanBreak(lines)
 			if err == nil && (clean && !bestClean || clean == bestClean && width < bestWidth) {
-				best = copyLayout{style, role, lines, scaled, region, size, keywordOn(lines, c.Keyword, bounds, factor)}
+				words := [][]wordSpan(nil)
+				if caption.PerWord() {
+					for _, line := range lines {
+						words = append(words, wordsOn(line, bounds, factor))
+					}
+				}
+				best = copyLayout{caption, style, role, lines, scaled, region, size, keywordOn(lines, c.Keyword, bounds, factor), words}
 				bestWidth, bestClean = width, clean
 			}
 			// Prefer a single line whenever it fits at the current size.
@@ -365,10 +426,15 @@ func paint(token string) (string, string) {
 // The window is already on the output timeline.
 func (l copyLayout) Elements(cut, copy int, c clip.Copy, startMS, endMS int) clip.Manifest {
 	m := clip.Manifest{}
+	// The style the manifest names is the one the copy carries, not the one the
+	// layout resolved it to: a stored plan's retired style name is its own
+	// history, and a composition that fell back under CDS-84 already carries
+	// the style it fell back to.
+	motion := design.CaptionMotion(c.Style, c.Pace)
 	add := func(kind string, region clip.Region, size float64, fill, background string) {
 		m = append(m, design.Element{Cut: cut, Copy: copy, Kind: kind, Style: c.Style, Anchor: c.Anchor, Pace: c.Pace, Region: design.Bounds(region),
 			StartMS: startMS, EndMS: endMS, FontSize: size, Fill: fill, Background: background,
-			InMS: design.CaptionMotion(c.Pace).InMS, OutMS: design.CaptionMotion(c.Pace).OutMS, DY: design.CaptionMotion(c.Pace).InDY})
+			InMS: motion.InMS, OutMS: motion.OutMS, DY: motion.InDY})
 	}
 	p, s := l.Region, l.Style
 	if s.Plate != "" {
@@ -385,10 +451,7 @@ func (l copyLayout) Elements(cut, copy int, c clip.Copy, startMS, endMS int) cli
 	left, right, vertical := copyInsets(s)
 	inner := p.Width - left - right
 	top := p.Y + vertical
-	fill := design.Color["text_white"].Hex
-	if s.Plate == "paper_50" {
-		fill = design.Color["badge_ad"].Hex
-	}
+	fill := l.Caption.Paint.Fill
 	for i, line := range l.Lines {
 		bounds := l.Bounds[i]
 		x := p.X + left + (inner-bounds.Width)/2
@@ -397,7 +460,7 @@ func (l copyLayout) Elements(cut, copy int, c clip.Copy, startMS, endMS int) cli
 			add("highlight", clip.Region{X: x + l.Keyword.Offset - u.Extend, Y: top + (1-u.RaiseEM-u.HeightEM)*l.FontSize, Width: l.Keyword.Width + 2*u.Extend, Height: u.HeightEM * l.FontSize}, 0, accent, "")
 		}
 		background := design.Color[s.Plate].Hex
-		if s.Stroke != "" {
+		if s.Stroke != "" && l.Caption.DarkStroke() {
 			stroke := design.Color["stroke_dark"]
 			background, _ = design.Over(stroke.Hex, stroke.Alpha, "#FFFFFF")
 		}
@@ -412,30 +475,77 @@ func (l copyLayout) Elements(cut, copy int, c clip.Copy, startMS, endMS int) cli
 // keyword, the prefix that precedes it on each line that holds it: its advance
 // is where the highlight starts (CDS-26), never an estimated width.
 func (r *Rendering) layoutCopy(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, c clip.Copy) (copyLayout, error) {
-	style := design.Caption()
-	if err := r.checkCopy(c.Text, style.Role()); err != nil {
+	caption := captionStyle(c.Style)
+	style := caption.Rule()
+	if err := r.checkCopy(c.Text, caption.Role()); err != nil {
 		return copyLayout{}, err
 	}
 	candidates, values, err := copyCandidates(c.Text, style.Lines)
 	if err != nil {
 		return copyLayout{}, err
 	}
+	extras := []string(nil)
 	if c.Keyword != "" {
+		extras = append(extras, keywordValues(candidates, c.Keyword)...)
+	}
+	if caption.PerWord() {
+		extras = append(extras, wordValues(candidates)...)
+	}
+	if len(extras) > 0 {
 		seen := map[string]bool{}
 		for _, v := range values {
 			seen[v] = true
 		}
-		for _, extra := range keywordValues(candidates, c.Keyword) {
-			if !seen[extra] {
+		for _, extra := range extras {
+			if extra != "" && !seen[extra] {
 				values, seen[extra] = append(values, extra), true
 			}
 		}
 	}
-	bounds, err := r.measure(ctx, ws, values, style.Role().Weight, style.Role().Tracking, r.family(style.Role()))
+	role := caption.Role()
+	bounds, err := r.measure(ctx, ws, values, role.Weight, role.Tracking, r.family(role))
 	if err != nil {
 		return copyLayout{}, err
 	}
 	return fitCopy(canvas, c, candidates, bounds)
+}
+
+// wordsOn measures each word of a line the way keywordOn measures the keyword:
+// from the line UP TO AND INCLUDING that word, never from the prefix alone,
+// because a prefix can end in a space, which has an advance but no ink box.
+func wordsOn(line string, bounds map[string]clip.Region, factor float64) []wordSpan {
+	whole := bounds[line]
+	out := []wordSpan{}
+	at := 0
+	for _, word := range strings.Split(line, " ") {
+		if word == "" {
+			at++
+			continue
+		}
+		through, box := bounds[line[:at+len(word)]], bounds[word]
+		out = append(out, wordSpan{Text: word, Width: box.Width * factor,
+			Offset: (through.X + through.Width - box.Width - whole.X) * factor})
+		at += len(word) + 1
+	}
+	return out
+}
+
+// Every word of every candidate line, and that line up to and including each of
+// them, so one measurement pass covers a per-word style's whole layout.
+func wordValues(candidates [][]string) []string {
+	out := []string{}
+	for _, lines := range candidates {
+		for _, line := range lines {
+			at := 0
+			for _, word := range strings.Split(line, " ") {
+				if word != "" {
+					out = append(out, word, line[:at+len(word)])
+				}
+				at += len(word) + 1
+			}
+		}
+	}
+	return out
 }
 
 // The keyword itself plus, per candidate line that holds it, that line up to and
@@ -632,25 +742,33 @@ func (r *Rendering) furniturePlate(ctx context.Context, ws clip.MediaWorkspace, 
 }
 
 func (r *Rendering) rasterize(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, body, name string) (string, error) {
-	svg := filepath.Join(ws.Path, name+".svg")
 	png := filepath.Join(ws.Path, name+".png")
-	data := []byte(body)
-	// A full RGBA canvas plus PNG/metadata headroom is small and known before
-	// rasterization. Reserve it before the subprocess, not after its write.
-	if err := r.media.capacity(ws, int64(len(data))+int64(canvas.Width)*int64(canvas.Height)*5); err != nil {
-		return "", err
-	}
-	if err := os.WriteFile(svg, data, 0600); err != nil {
-		return "", err
-	}
-	defer os.Remove(svg)
-	if _, err := r.resvg(ctx, ws, svg, png); err != nil {
-		return "", err
-	}
-	if err := r.media.sourcePath(ws, png); err != nil {
+	box := clip.Region{Width: float64(canvas.Width), Height: float64(canvas.Height)}
+	if err := r.rasterizeTo(ctx, ws, box, body, png); err != nil {
 		return "", err
 	}
 	return png, nil
+}
+
+// rasterizeTo draws one SVG into one named PNG. The box is the pixels it covers,
+// which for a sequence layer is its own crop rather than the whole canvas: the
+// reservation CLIP-33 accounts for is the layer's, not the frame's.
+func (r *Rendering) rasterizeTo(ctx context.Context, ws clip.MediaWorkspace, box clip.Region, body, png string) error {
+	svg := strings.TrimSuffix(png, filepath.Ext(png)) + ".svg"
+	data := []byte(body)
+	// An RGBA layer plus PNG/metadata headroom is small and known before
+	// rasterization. Reserve it before the subprocess, not after its write.
+	if err := r.media.capacity(ws, int64(len(data))+int64(box.Width)*int64(box.Height)*5); err != nil {
+		return err
+	}
+	if err := os.WriteFile(svg, data, 0600); err != nil {
+		return err
+	}
+	defer os.Remove(svg)
+	if _, err := r.resvg(ctx, ws, svg, png); err != nil {
+		return err
+	}
+	return r.media.workspaceFile(ws, png)
 }
 
 // FixedElements places the disclosure badge and a cut's chips and returns them
@@ -694,7 +812,7 @@ func (r *Rendering) CaptionSize(ctx context.Context, ratio string, c clip.Captio
 	if strings.TrimSpace(c.Text) == "" {
 		return 0, 0, nil
 	}
-	if err := r.checkCopy(c.Text, design.Caption().Role()); err != nil {
+	if err := r.checkCopy(c.Text, captionStyle(c.Style).Role()); err != nil {
 		return 0, 0, err
 	}
 	err = r.media.WithWorkspace(ctx, "clip-caption-size", func(ws clip.MediaWorkspace) error {

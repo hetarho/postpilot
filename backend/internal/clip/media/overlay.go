@@ -16,8 +16,8 @@ import (
 func overlayBox(p clip.Region, radius float64, fill, opacity string) overlay.Box {
 	return overlay.Box{X: p.X, Y: p.Y, Width: p.Width, Height: p.Height, Radius: radius, Fill: fill, Opacity: opacity}
 }
-func overlayShadow(name string) overlay.Shadow {
-	s := design.Shadow[name]
+func overlayShadow(name string) overlay.Shadow { return shadowPaint(design.Shadow[name]) }
+func shadowPaint(s design.ShadowPaint) overlay.Shadow {
 	return overlay.Shadow{DX: s.DX, DY: s.DY, Deviation: s.Blur / 2, Fill: s.Hex, Opacity: trimmed(s.Alpha)}
 }
 func overlayText(role design.TypeRole, value string, x, y float64, fill, opacity string) overlay.Text {
@@ -27,7 +27,10 @@ func overlayText(role design.TypeRole, value string, x, y float64, fill, opacity
 func copyView(canvas clip.Canvas, c clip.Copy, l copyLayout, ground Luminance) overlay.CopyView {
 	v := overlay.CopyView{Canvas: overlay.Canvas{Width: canvas.Width, Height: canvas.Height}}
 	p, s, accent := l.Region, l.Style, design.Accent[c.Accent]
-	if s.Plate == "" && ground.Scrim() {
+	if !l.Caption.Paint.Accent {
+		accent = ""
+	}
+	if s.Plate == "" && l.Caption.Paint.Scrim && ground.Scrim() {
 		if scrim, ok := scrimFor(canvas, c.Anchor); ok {
 			paint := design.Scrim[scrim.Edge]
 			v.Scrim = &overlay.Scrim{Box: overlayBox(scrim.Region, 0, paint.Hex, ""), From: trimmed(paint.From), To: trimmed(paint.To)}
@@ -38,7 +41,7 @@ func copyView(canvas clip.Canvas, c clip.Copy, l copyLayout, ground Luminance) o
 		word = design.Color["text_white"].Hex
 	}
 	if s.Shadow != "" {
-		shadow := overlayShadow(s.Shadow)
+		shadow := shadowPaint(l.Caption.Paint.Shadow)
 		v.Shadow = &shadow
 	}
 	if s.Plate != "" {
@@ -58,15 +61,11 @@ func copyView(canvas clip.Canvas, c clip.Copy, l copyLayout, ground Luminance) o
 	for i, line := range l.Lines {
 		bounds := l.Bounds[i]
 		x, y := p.X+left+(inner-bounds.Width)/2-bounds.X, top-bounds.Y
-		fill, _ := paint("text_white")
-		if s.Plate == "paper_50" {
-			fill, _ = paint("text_white")
-		}
-		t := overlayText(l.Role, line, x, y, fill, "")
+		t := overlayText(l.Role, line, x, y, l.Caption.Paint.Fill, "")
 		t.Size, t.Tracking = l.FontSize, l.Role.Tracking*l.FontSize
 		t.Stroke, t.StrokeOpacity = "none", "1"
-		if s.Stroke != "" {
-			t.Stroke, t.StrokeOpacity = paint("stroke_dark")
+		if s.Stroke != "" && l.Caption.Paint.Stroke != "" {
+			t.Stroke, t.StrokeOpacity = l.Caption.Paint.Stroke, trimmed(design.Color["stroke_dark"].Alpha)
 		}
 		t.StrokeWidth, t.Shadow = s.StrokeWidth(), s.Shadow != ""
 		if accent != "" && s.Highlight && l.Keyword.Present && l.Keyword.Line == i {
@@ -132,8 +131,10 @@ func loadOverlays(directory string) (*overlay.Catalog, error) {
 			return nil, err
 		}
 	}
-	for _, style := range []string{"bold"} {
-		if _, err := catalog.Render("copy."+style, overlayProbe("copy-v1")); err != nil {
+	// Every approved style (CDS-80) has to have a template bound to it: an
+	// unbound id would fail at the rasterisation, long after a layout took it.
+	for _, style := range design.CaptionStyles() {
+		if _, err := catalog.Render("copy."+style.ID, overlayProbe("copy-v1")); err != nil {
 			return nil, err
 		}
 	}
@@ -170,7 +171,7 @@ func copyCrop(canvas clip.Canvas, c clip.Copy, l copyLayout, ground Luminance) c
 	if c.Pace != "rapid" || ground.Scrim() {
 		return clip.Region{Width: float64(canvas.Width), Height: float64(canvas.Height)}
 	}
-	s := design.Shadow[l.Style.Shadow]
+	s := l.Caption.Paint.Shadow
 	pad := math.Ceil(2*s.Blur + math.Max(math.Abs(s.DX), math.Abs(s.DY)) + l.Style.StrokeWidth() + 2)
 	p := l.Region
 	x, y := math.Max(0, math.Floor(p.X-pad)), math.Max(0, math.Floor(p.Y-pad))

@@ -57,6 +57,18 @@ func (a *Adapter) capacity(ws clip.MediaWorkspace, additional int64) error {
 		if os.IsNotExist(err) { // a successfully consumed proxy may just be released
 			continue
 		}
+		// A caption's frame sequence is the one directory this workspace holds,
+		// and its frames count against the same budget every other intermediate
+		// does: a long sequence has to be refused before it fills the disk
+		// rather than after (CLIP-33, CDS-81).
+		if err == nil && info.IsDir() {
+			size, err := directoryBytes(filepath.Join(ws.Path, entry.Name()), a.cfg.WorkspaceMaxBytes-total)
+			if err != nil {
+				return limited("budget", total, additional, -1)
+			}
+			total += size
+			continue
+		}
 		if err != nil || !info.Mode().IsRegular() || info.Size() < 0 || info.Size() > a.cfg.WorkspaceMaxBytes-total {
 			return limited("budget", total, additional, -1)
 		}
@@ -72,6 +84,28 @@ func (a *Adapter) capacity(ws clip.MediaWorkspace, additional int64) error {
 		return limited("budget", total, additional, -1)
 	}
 	return workspaceTotal(a.diskCheck(ws.Path, additional+diskHeadroom), total, additional)
+}
+
+// directoryBytes is one frame sequence's own total. It refuses as soon as the
+// running sum passes what is left, so a directory that filled while it was being
+// read cannot be counted as something smaller than it is.
+func directoryBytes(path string, remaining int64) (int64, error) {
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		return 0, err
+	}
+	var total int64
+	for _, entry := range entries {
+		info, err := entry.Info()
+		if os.IsNotExist(err) {
+			continue
+		}
+		if err != nil || !info.Mode().IsRegular() || info.Size() < 0 || info.Size() > remaining-total {
+			return 0, errors.New("clip workspace sequence exceeds its budget")
+		}
+		total += info.Size()
+	}
+	return total, nil
 }
 
 // The disk check knows what the filesystem has left and nothing about the

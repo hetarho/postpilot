@@ -11,12 +11,23 @@ import (
 func TestBundledFontFamilyNames(t *testing.T) {
 	r := testRenderer(t, newAdapter(t, &fakeRunner{}))
 	for _, family := range []string{"Paperlogy 8 ExtraBold", "8Paperlogy", "Paperlogy -8", "Pretendard Variable", "", "Paperlogy, serif"} {
-		if resolvesFontFamily(r.display, family) {
+		if resolvesFontFamily(r.fonts["paperlogy"], family) {
 			t.Fatalf("Paperlogy file accepted %q", family)
 		}
 	}
-	if !resolvesFontFamily(r.display, "Paperlogy") || !resolvesFontFamily(r.font, "Pretendard Variable") {
-		t.Fatal("bundled typographic families did not resolve")
+	// NanumMyeongjo ExtraBold declares the unparsable NanumMyeongjoExtraBold as
+	// its legacy family and NanumMyeongjo as its typographic one, which is the
+	// name both weights answer to.
+	if resolvesFontFamily(r.fonts["nanummyeongjo-800"], "NanumMyeongjoExtraBold") {
+		t.Fatal("a family name SVG cannot parse was accepted")
+	}
+	for key, family := range map[string]string{
+		"pretendard": "Pretendard Variable", "paperlogy": "Paperlogy", "jua": "Jua",
+		"nanummyeongjo": "NanumMyeongjo", "nanummyeongjo-800": "NanumMyeongjo",
+	} {
+		if !resolvesFontFamily(r.fonts[key], family) {
+			t.Fatalf("%s did not resolve %q", key, family)
+		}
 	}
 }
 

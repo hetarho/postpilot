@@ -125,8 +125,12 @@ func TestTypeScaleAndCharacterCountsMatchCDS19And20(t *testing.T) {
 	if !reflect.DeepEqual(design.Type, want) {
 		t.Fatalf("type scale\n got %+v\nwant %+v", design.Type, want)
 	}
-	// Exactly two faces, each named as the bundled file itself declares it.
-	if !reflect.DeepEqual(design.Faces, map[string]string{"pretendard": "Pretendard Variable", "paperlogy": "Paperlogy"}) {
+	// Exactly the four faces CDS-17 names, each as the bundled file itself
+	// declares it: a name SVG cannot parse as a CSS family silently falls back.
+	if !reflect.DeepEqual(design.Faces, map[string]string{
+		"pretendard": "Pretendard Variable", "paperlogy": "Paperlogy",
+		"jua": "Jua", "nanummyeongjo": "NanumMyeongjo",
+	}) {
 		t.Fatalf("faces %+v", design.Faces)
 	}
 	for role, entry := range design.Type {

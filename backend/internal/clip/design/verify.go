@@ -206,7 +206,10 @@ func verify(m Manifest, ratio string, checkOverlap, hideDisclosure bool) error {
 			continue
 		}
 		style := Caption()
-		motion := CaptionMotion(e.Pace)
+		if rule, ok := CaptionRule(e.Style); ok {
+			style = rule
+		}
+		motion := CaptionMotion(e.Style, e.Pace)
 		if !ValidPace(e.Pace) || e.InMS != motion.InMS || e.OutMS != motion.OutMS || e.DY != motion.InDY {
 			return at(ViolationMotion, e)
 		}

@@ -153,6 +153,27 @@ func (a *Adapter) sourcePath(ws clip.MediaWorkspace, path string) error {
 	}
 	return nil
 }
+
+// workspaceFile is sourcePath for a file a caption's frame sequence nests one
+// directory deeper. A sequence directory is the only thing this workspace holds
+// that is not flat, so nothing else widens by admitting it.
+func (a *Adapter) workspaceFile(ws clip.MediaWorkspace, path string) error {
+	if filepath.Dir(path) == ws.Path {
+		return a.sourcePath(ws, path)
+	}
+	if err := a.validWorkspace(ws, true); err != nil {
+		return err
+	}
+	if filepath.Dir(filepath.Dir(path)) != ws.Path || filepath.Clean(path) != path {
+		return clip.ErrInvalidMedia
+	}
+	info, err := os.Lstat(path)
+	if err != nil || !info.Mode().IsRegular() || info.Size() <= 0 || info.Size() > a.cfg.Sources.MaxFileBytes {
+		return clip.ErrInvalidMedia
+	}
+	return nil
+}
+
 func (a *Adapter) WithWorkspace(ctx context.Context, jobID string, fn func(clip.MediaWorkspace) error) (err error) {
 	if err := ctx.Err(); err != nil {
 		return err

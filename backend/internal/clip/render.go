@@ -186,13 +186,15 @@ type Renderer interface {
 	Render(context.Context, MediaWorkspace, EditPlan, []RenderSource, RenderSourceLoader) (RenderedVideo, error)
 }
 type RenderConfig struct {
-	OverlayBatchSize    int
-	Composition         composition.Limits
-	ResvgPath, FontPath string
+	OverlayBatchSize int
+	Composition      composition.Limits
+	ResvgPath        string
 	// Empty uses the embedded preset catalog; a directory is snapshotted at boot.
 	OverlayDir string
-	// The secondary face (CDS-17): the hook title and 크게 강조 are set in it.
-	DisplayFontPath                                                  string
+	// Every bundled font file CDS-17 names, keyed by the face it sets and, for a
+	// face shipping more than one weight, that weight. The renderer hands all of
+	// them to resvg and discovers none (CLIP-13).
+	FontPaths                                                        map[string]string
 	MaxCuts, MaxCopyRunes, FadeMS, FPS, CRF, AudioRate, AudioBitrate int
 	MinDurationMS, MaxDurationMS                                     int
 	// How many sampled frames one read of the footage may produce at once.
@@ -256,6 +258,11 @@ func normalized(v float64) bool { return !math.IsNaN(v) && !math.IsInf(v, 0) && 
 // Normalized reports whether a value is a usable 0..1 fraction — a focal
 // coordinate or an original-audio gain.
 func Normalized(v float64) bool { return normalized(v) }
+
+// RetiredCopyStyles are the style names CDS-23, CDS-24, CDS-26 and CDS-58
+// retired. Nothing writes one; a stored plan that carries one is read.
+var RetiredCopyStyles = []string{"clean", "memo", "mark", "simple"}
+
 func ValidCopy(c Copy, maxRunes int) bool {
 	if !utf8.ValidString(c.Text) || utf8.RuneCountInString(c.Text) > maxRunes || !ValidAccent(c.Accent) || !ValidCaptionPace(c.Pace) {
 		return false
@@ -266,7 +273,11 @@ func ValidCopy(c Copy, maxRunes int) bool {
 	if strings.TrimSpace(c.Text) == "" && c.Anchor == "" && c.Align == "" && c.Style == "" {
 		return c.Keyword == ""
 	}
-	known := slices.Contains([]string{"clean", "memo", "bold", "mark", "simple"}, c.Style)
+	// The approved set (CDS-80), plus the names CDS retired with the plated
+	// styles: a plan written before the set still renders, in the default
+	// treatment it already rendered in when the set carried one style.
+	_, approved := design.LookupCaptionStyle(c.Style)
+	known := approved || slices.Contains(RetiredCopyStyles, c.Style)
 	return slices.Contains(CopyAnchors, c.Anchor) && slices.Contains(CopyAligns, c.Align) && known
 }
 

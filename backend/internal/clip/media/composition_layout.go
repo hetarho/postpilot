@@ -22,6 +22,10 @@ type declaredVisual struct {
 	info      overlay.CopyView
 	ground    Luminance
 	cues      []declaredVisual
+	// The caption's own style could not set one of its syllables, so it was
+	// drawn in the default style instead (CDS-84). Recorded as a notice once
+	// the whole layout is settled.
+	glyphFallback bool
 }
 type declaredLayout struct {
 	plan    clip.EditPlan
@@ -295,7 +299,7 @@ func (r *Rendering) layoutDeclaredElement(ctx context.Context, ws clip.MediaWork
 	// rather than quietly resolved to something else (CDS-66).
 	candidates := plan.Design().AllowedCaptionStyles()
 	for _, style := range candidates {
-		if _, ok := design.CaptionStyle(style); !ok {
+		if _, ok := design.CaptionRule(style); !ok {
 			return visual, elementProblem(text, "invalid_design")
 		}
 	}
@@ -313,7 +317,17 @@ func (r *Rendering) layoutDeclaredElement(ctx context.Context, ws clip.MediaWork
 			continue
 		}
 		for _, style := range candidates {
-			rule := design.Caption()
+			// CDS-84: a style whose face has no glyph for one of this caption's
+			// syllables draws this caption in the default style instead. The
+			// swap is per caption, never per project, and no glyph is ever
+			// taken from another family.
+			caption, _ := design.LookupCaptionStyle(style)
+			glyphFallback := false
+			if r.MissingGlyph(candidate.Text, caption.Role()) != 0 {
+				caption, glyphFallback = design.DefaultCaption(), true
+			}
+			style = caption.ID
+			rule := caption.Rule()
 			anchors := []string{e.Position}
 			pinned := e.Position != "auto" || text.Placement != nil
 			if text.Placement != nil && e.Position == "auto" {
@@ -348,9 +362,14 @@ func (r *Rendering) layoutDeclaredElement(ctx context.Context, ws clip.MediaWork
 					last = "copy_limit"
 					continue
 				}
-				visual.copy, visual.caption = copy, layout
+				visual.copy, visual.caption, visual.glyphFallback = copy, layout, glyphFallback
 				visual.text.Resolved.Text = candidate.Text
 				visual.manifest.Text, visual.manifest.Style, visual.manifest.Position, visual.manifest.Region = candidate.Text, style, anchor, layout.Region
+				// The motion is the chosen style's, not the authored element's:
+				// declaredManifest computed it before a style was picked, and a
+				// style declares its own (CDS-4, CDS-80).
+				motion := elementMotion(visual.manifest, text.Pace)
+				visual.manifest.InMS, visual.manifest.OutMS, visual.manifest.DY = motion.InMS, motion.OutMS, motion.DY
 				visual.manifest.Parts = layout.Elements(0, 0, copy, text.Resolved.StartMS, text.Resolved.EndMS)
 				if index > 0 {
 					visual.text.FallbackReason = "shorter_copy"

@@ -16,6 +16,27 @@ func removeIntermediate(path string) error {
 	if os.IsNotExist(err) {
 		return nil
 	}
+	// A caption's frame sequence is a directory; every other intermediate is a
+	// file, so the fallback cannot swallow a path it was not given.
+	if err != nil {
+		if info, statErr := os.Lstat(path); statErr == nil && info.IsDir() {
+			return os.RemoveAll(path)
+		}
+	}
+	return err
+}
+
+// releaseLayers deletes what the overlay pass has finished reading. A caption's
+// frames are dead the moment the pass that consumed them is encoded, so a long
+// sequence never sits in the workspace beside the output it helped make
+// (CLIP-33).
+func releaseLayers(layers []captionLayer) error {
+	var err error
+	for _, layer := range layers {
+		for _, path := range layer.paths() {
+			err = errors.Join(err, removeIntermediate(path))
+		}
+	}
 	return err
 }
 
@@ -171,13 +192,13 @@ func (r *Rendering) renderComposition(ctx context.Context, ws clip.MediaWorkspac
 	if err = r.sampleDeclaredGrounds(ctx, ws, canvas, composedSource, layout.visuals); err != nil {
 		return result, err
 	}
-	plates := make([]string, len(layout.visuals))
+	layers := make([]captionLayer, len(layout.visuals))
 	for i := range layout.visuals {
-		plates[i], err = r.declaredPlate(ctx, ws, canvas, &layout.visuals[i], composedSource, i)
+		layers[i], err = r.declaredLayer(ctx, ws, canvas, &layout.visuals[i], composedSource, i)
 		if err != nil {
 			return result, err
 		}
-		cleanup = append(cleanup, plates[i])
+		cleanup = append(cleanup, layers[i].paths()...)
 	}
 	layout.recordContrastNotices()
 	plan = layout.plan
@@ -209,20 +230,20 @@ func (r *Rendering) renderComposition(ctx context.Context, ws clip.MediaWorkspac
 	// overlay graph runs straight into the delivery encode.
 	if len(windows) == 1 && len(windows[0].Layers) <= r.cfg.OverlayBatchSize {
 		step("render_encode")
-		args = r.deliveredOverlayArgs(raw, windows[0], layout.visuals, plates, assembled, &measured)
+		args = r.deliveredOverlayArgs(raw, windows[0], layout.visuals, layers, assembled, &measured)
 		args = append(args, r.encodeArgs(audio)...)
 		if err = r.runRender(ctx, ws, output, args); err != nil {
 			return result, err
 		}
-		if err = removeIntermediate(raw); err != nil {
+		if err = errors.Join(removeIntermediate(raw), releaseLayers(layers)); err != nil {
 			return result, err
 		}
 	} else {
-		pieces, pieceFrames, err := r.overlayComposition(ctx, ws, raw, windows, layout.visuals, plates, &cleanup)
+		pieces, pieceFrames, err := r.overlayComposition(ctx, ws, raw, windows, layout.visuals, layers, &cleanup)
 		if err != nil {
 			return result, err
 		}
-		if err = removeIntermediate(raw); err != nil {
+		if err = errors.Join(removeIntermediate(raw), releaseLayers(layers)); err != nil {
 			return result, err
 		}
 		args, err = r.compositionInputs(ctx, ws, pieces, pieceFrames, make([]int, len(pieces)), assembled, &measured, &cleanup)

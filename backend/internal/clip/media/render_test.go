@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -16,18 +17,31 @@ import (
 	"github.com/postpilot/backend/internal/clip/design"
 )
 
+// bundledFontPaths is the repository's own copy of every face the image ships.
+func bundledFontPaths(t *testing.T) map[string]string {
+	t.Helper()
+	files := map[string]string{
+		"pretendard":        "pretendard/PretendardVariable.ttf",
+		"paperlogy":         "paperlogy/Paperlogy-8ExtraBold.ttf",
+		"jua":               "jua/Jua-Regular.ttf",
+		"nanummyeongjo":     "nanummyeongjo/NanumMyeongjo-Regular.ttf",
+		"nanummyeongjo-800": "nanummyeongjo/NanumMyeongjo-ExtraBold.ttf",
+	}
+	out := map[string]string{}
+	for key, name := range files {
+		path, err := filepath.Abs("../../../assets/fonts/" + name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		out[key] = path
+	}
+	return out
+}
+
 func testRenderer(t *testing.T, a *Adapter) *Rendering {
 	t.Helper()
 	cfg := renderConfig(t)
-	var err error
-	cfg.FontPath, err = filepath.Abs("../../../assets/fonts/pretendard/PretendardVariable.ttf")
-	if err != nil {
-		t.Fatal(err)
-	}
-	cfg.DisplayFontPath, err = filepath.Abs("../../../assets/fonts/paperlogy/Paperlogy-8ExtraBold.ttf")
-	if err != nil {
-		t.Fatal(err)
-	}
+	cfg.FontPaths = bundledFontPaths(t)
 	r, err := NewRenderer(a, cfg)
 	if err != nil {
 		t.Fatal(err)
@@ -72,29 +86,37 @@ func TestBundledFontAndGraphemeBoundaries(t *testing.T) {
 	if got, _, err := copyCandidates("한글 여행", 1); err != nil || len(got) != 1 || len(got[0]) != 1 {
 		t.Fatalf("one-line style offered a wrap: %v %v", got, err)
 	}
-	// Both faces are pinned by size and checksum (CDS-17, CLIP-13): a swapped
-	// file fails the constructor, not the render.
-	for _, swap := range []func(*clip.RenderConfig, string){
-		func(c *clip.RenderConfig, path string) { c.FontPath = path },
-		func(c *clip.RenderConfig, path string) { c.DisplayFontPath = path },
-	} {
+	// Every bundled file is pinned by size and checksum (CDS-17, CLIP-13): a
+	// swapped one fails the constructor, not the render.
+	for key := range bundledFontPaths(t) {
 		cfg := r.cfg
+		cfg.FontPaths = maps.Clone(cfg.FontPaths)
 		path := filepath.Join(t.TempDir(), "font.ttf")
 		_ = os.WriteFile(path, []byte("fake"), 0600)
-		swap(&cfg, path)
+		cfg.FontPaths[key] = path
 		if _, err := NewRenderer(r.media, cfg); err == nil {
-			t.Fatal("wrong font accepted")
+			t.Fatalf("a wrong %s file was accepted", key)
 		}
 	}
-	// The hook and 크게 강조 are set in the secondary face, everything else in
-	// the primary one.
-	if r.family(design.Type["hook"]) != design.FontFamily("paperlogy") || r.family(design.Type["body"]) != fontFamily {
-		t.Fatal("a role was set in the wrong face")
+	// Every face CDS-17 names is bundled, and a role — or a caption style
+	// wearing one — is set in the file its own face and weight name.
+	for _, face := range []string{"pretendard", "paperlogy", "jua", "nanummyeongjo"} {
+		if r.face(design.TypeRole{Face: face}) == nil || r.family(design.TypeRole{Face: face}) != design.FontFamily(face) {
+			t.Fatalf("face %q did not resolve", face)
+		}
 	}
-	if r.face(design.Type["title"]) != r.display || r.face(design.Type["caption"]) != r.font {
+	if r.face(design.Type["hook"]) != r.fonts["paperlogy"] || r.face(design.Type["body"]) != r.fonts["pretendard"] {
 		t.Fatal("the coverage check reads the wrong face")
 	}
-	// And it reads it per text, so a character only ONE face carries is refused
+	// NanumMyeongjo is the one face bundled at two weights, and each weight is
+	// its own file under one family (CDS-17).
+	serif := design.TypeRole{Face: "nanummyeongjo"}
+	light, heavy := serif, serif
+	light.Weight, heavy.Weight = 400, 800
+	if r.face(light) != r.fonts["nanummyeongjo"] || r.face(heavy) != r.fonts["nanummyeongjo-800"] || r.face(light) == r.face(heavy) {
+		t.Fatal("the two NanumMyeongjo weights did not resolve to their own files")
+	}
+	// And it reads it per text, so a character only SOME faces carry is refused
 	// exactly where it cannot be drawn (CLIP-13): Paperlogy has no ♥ or 〃.
 	for _, text := range []string{"♥", "〃"} {
 		if err := r.checkCopy(text, design.Type["body"]); err != nil {
@@ -104,17 +126,44 @@ func TestBundledFontAndGraphemeBoundaries(t *testing.T) {
 			t.Fatalf("Paperlogy does not carry %q, so it may not be substituted: %v", text, err)
 		}
 	}
+	// Jua carries 2,367 of the 11,172 Hangul syllables, so an ordinary sentence
+	// sets and an uncommon syllable does not (CDS-84). 쎯 is one it lacks.
+	jua := design.CaptionStyle{Face: "jua", Weight: 400}.Role()
+	if got := r.MissingGlyph("여기 진짜 좋아요", jua); got != 0 {
+		t.Fatalf("Jua could not set an ordinary sentence: %q", got)
+	}
+	if got := r.MissingGlyph("쎯은 없다", jua); got != '쎯' {
+		t.Fatalf("Jua reported %q rather than the syllable it lacks", got)
+	}
+	if got := r.MissingGlyph("쎯은 없다", design.DefaultCaption().Role()); got != 0 {
+		t.Fatalf("the default style's face lacks %q, so nothing could fall back to it", got)
+	}
 }
 
 // The four styles on the three ratios, each drawn only from CDS tokens. The
 // goldens are what catches a token silently changing shape; the assertions after
 // them are the properties CDS states outright.
+//
+// staticCaptionStyles are the approved styles one rasterisation covers: the
+// sequence-rendered ones draw a layer per output frame and are pinned by their
+// own goldens.
+func staticCaptionStyles() []design.CaptionStyle {
+	out := []design.CaptionStyle{}
+	for _, style := range design.CaptionStyles() {
+		if style.Static() {
+			out = append(out, style)
+		}
+	}
+	return out
+}
+
 func TestCopyLayoutAndSVGGolden(t *testing.T) {
 	text := `한글 & <여행>`
 	bounds := map[string]clip.Region{text: {X: 1, Y: -80, Width: 500, Height: 100}}
 	for _, ratio := range []string{"vertical", "horizontal", "square"} {
 		canvas, _ := clip.ClipCanvas(ratio)
-		for style, rule := range map[string]design.StyleRule{"bold": design.Caption()} {
+		for _, caption := range staticCaptionStyles() {
+			style, rule := caption.ID, caption.Rule()
 			c := clip.Copy{Text: text, Anchor: rule.Anchor, Align: rule.Align, Style: style, Accent: "coral"}
 			l, err := fitCopy(canvas, c, [][]string{{text}}, bounds)
 			if err != nil {
@@ -130,8 +179,13 @@ func TestCopyLayoutAndSVGGolden(t *testing.T) {
 			if l.Region.X < canvas.Safe.X || l.Region.X+l.Region.Width > canvas.Safe.X+canvas.Safe.Width {
 				t.Fatalf("%s/%s left the safe area: %+v", ratio, style, l.Region)
 			}
-			if l.FontSize < rule.Role().Min || l.FontSize > rule.Role().Size {
-				t.Fatalf("%s/%s size %v outside [%v,%v]", ratio, style, l.FontSize, rule.Role().Min, rule.Role().Size)
+			if l.FontSize < caption.Role().Min || l.FontSize > caption.Role().Size {
+				t.Fatalf("%s/%s size %v outside [%v,%v]", ratio, style, l.FontSize, caption.Role().Min, caption.Role().Size)
+			}
+			// Each style is set in the face it names, at its own weight, and in
+			// nothing else (CDS-18, CDS-80).
+			if want := fmt.Sprintf(`font-family="%s" font-size="%.0f" font-weight="%d"`, design.FontFamily(caption.Face), l.FontSize, caption.Weight); !strings.Contains(svg, want) {
+				t.Fatalf("%s/%s is not set in its own face: want %s", ratio, style, want)
 			}
 			// A plated style paints its plate and no stroke; an unplated one the
 			// reverse, with the drop shadow (CDS-23..26).
@@ -149,7 +203,8 @@ func TestCopyLayoutAndSVGGolden(t *testing.T) {
 	}
 	canvas, _ := clip.ClipCanvas("vertical")
 	// Neutral: no accent means no bar, no dot and no highlight anywhere.
-	for style := range map[string]design.StyleRule{"bold": design.Caption()} {
+	for _, caption := range staticCaptionStyles() {
+		style := caption.ID
 		c := clip.Copy{Text: text, Anchor: "bottom", Align: "center", Style: style}
 		l, err := fitCopy(canvas, c, [][]string{{text}}, bounds)
 		if err != nil {
@@ -398,7 +453,7 @@ func TestCopyMeasurementAndExplicitFontArguments(t *testing.T) {
 			t.Fatal(bounds)
 		}
 		args := fake.calls[0].Args
-		if !slices.Contains(args, "--skip-system-fonts") || !slices.Contains(args, r.cfg.FontPath) || !slices.Contains(args, "--query-all") {
+		if !slices.Contains(args, "--skip-system-fonts") || !slices.Contains(args, "--query-all") || slices.ContainsFunc(slices.Collect(maps.Values(r.cfg.FontPaths)), func(p string) bool { return !slices.Contains(args, p) }) {
 			t.Fatal(args)
 		}
 		return nil

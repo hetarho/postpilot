@@ -2,6 +2,7 @@ package media
 
 import (
 	"fmt"
+	"math"
 	"slices"
 	"strconv"
 	"strings"
@@ -22,7 +23,7 @@ type declaredMotion struct {
 func elementMotion(element clip.CompositionElement, pace string) declaredMotion {
 	switch element.Role {
 	case "caption":
-		m := design.CaptionMotion(pace)
+		m := design.CaptionMotion(element.Style, pace)
 		return declaredMotion{m.InMS, m.OutMS, m.InDY}
 	case "hook":
 		if element.EndMS-element.StartMS >= design.Transition.FadeMS {
@@ -91,7 +92,7 @@ func compositionWindows(visuals []declaredVisual, totalFrames, fps, batchSize in
 
 // Only integer bounds and code-owned motion enter this graph. PNGs are decoded
 // once and repeated for this finite window, with at most OverlayBatchSize inputs.
-func declaredOverlayGraph(cfg clip.RenderConfig, window overlayWindow, visuals []declaredVisual, firstPass bool) string {
+func declaredOverlayGraph(cfg clip.RenderConfig, window overlayWindow, visuals []declaredVisual, layers []captionLayer, firstPass bool) string {
 	var graph strings.Builder
 	frames := window.EndFrame - window.StartFrame
 	startFrame := 0
@@ -109,6 +110,17 @@ func declaredOverlayGraph(cfg clip.RenderConfig, window overlayWindow, visuals [
 		e := v.manifest
 		m := elementMotion(e, v.text.Pace)
 		start, end := float64(e.StartMS)/1000-offset, float64(e.EndMS)/1000-offset
+		// A sequence style already drew its own fade and its own settle into
+		// every frame, so the chain neither loops it nor fades it: it only
+		// shifts the sequence to the caption's start and puts it at the crop
+		// origin the frames were drawn in (CDS-80).
+		if sequence := layers[index].Sequence; sequence != nil {
+			fmt.Fprintf(&graph, "[%d:v:0]format=rgba,setpts=PTS+%s/TB[layer%d];", i+1, secondsFloat(math.Max(0, start)), i)
+			fmt.Fprintf(&graph, "[%s][layer%d]overlay=x=%.0f:y=%.0f:format=auto:shortest=0:eof_action=pass:enable='gte(t,%s)*lt(t,%s)'[overlay%d];",
+				last, i, sequence.Origin.X, sequence.Origin.Y, secondsFloat(start), secondsFloat(end), i)
+			last = fmt.Sprintf("overlay%d", i)
+			continue
+		}
 		fmt.Fprintf(&graph, "[%d:v:0]format=rgba,loop=loop=%d:size=1:start=0", i+1, frames-1)
 		if m.InMS > 0 && start >= 0 {
 			fmt.Fprintf(&graph, ",fade=t=in:st=%s:d=%s:alpha=1", secondsFloat(start), seconds(m.InMS))

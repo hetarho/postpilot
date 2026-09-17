@@ -55,7 +55,7 @@ func ValidOutroPreset(id string) bool {
 // style alone (CLIP-142) — and refuses an unapproved or repeated id.
 func ValidCaptionStyles(styles []string) bool {
 	for i, id := range styles {
-		if _, ok := design.CaptionStyle(id); !ok || slices.Index(styles, id) != i {
+		if _, ok := design.CaptionRule(id); !ok || slices.Index(styles, id) != i {
 			return false
 		}
 	}

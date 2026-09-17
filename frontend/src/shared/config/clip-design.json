@@ -376,7 +376,9 @@
   },
   "faces": {
     "pretendard": "Pretendard Variable",
-    "paperlogy": "Paperlogy"
+    "paperlogy": "Paperlogy",
+    "jua": "Jua",
+    "nanummyeongjo": "NanumMyeongjo"
   },
   "voice": {
     "banned": ["ㅋㅋ", "ㄹㅇ", "최고", "역대급"]
@@ -584,6 +586,291 @@
         "bar": false,
         "dot": false,
         "stroke": "text",
+        "shadow": "text",
+        "highlight": false
+      },
+      "keynote": {
+        "type": "hook",
+        "plate": "",
+        "lines": 2,
+        "chars": 9,
+        "anchor": "upper_mid",
+        "anchor_alt": "lower_mid",
+        "align": "center",
+        "padding": {
+          "v": 0,
+          "h": 0
+        },
+        "pad_left": 0,
+        "bar": false,
+        "dot": false,
+        "stroke": "",
+        "shadow": "text",
+        "highlight": false
+      },
+      "film": {
+        "type": "title",
+        "plate": "",
+        "lines": 2,
+        "chars": 11,
+        "anchor": "upper_mid",
+        "anchor_alt": "lower_mid",
+        "align": "center",
+        "padding": {
+          "v": 0,
+          "h": 0
+        },
+        "pad_left": 0,
+        "bar": false,
+        "dot": false,
+        "stroke": "",
+        "shadow": "text",
+        "highlight": false
+      },
+      "word-pop": {
+        "type": "title",
+        "plate": "",
+        "lines": 2,
+        "chars": 11,
+        "anchor": "upper_mid",
+        "anchor_alt": "lower_mid",
+        "align": "center",
+        "padding": {
+          "v": 0,
+          "h": 0
+        },
+        "pad_left": 0,
+        "bar": false,
+        "dot": false,
+        "stroke": "text",
+        "shadow": "",
+        "highlight": false
+      },
+      "blur-in": {
+        "type": "hook",
+        "plate": "",
+        "lines": 2,
+        "chars": 9,
+        "anchor": "upper_mid",
+        "anchor_alt": "lower_mid",
+        "align": "center",
+        "padding": {
+          "v": 0,
+          "h": 0
+        },
+        "pad_left": 0,
+        "bar": false,
+        "dot": false,
+        "stroke": "",
+        "shadow": "text",
+        "highlight": false
+      },
+      "ambient": {
+        "type": "title",
+        "plate": "",
+        "lines": 2,
+        "chars": 11,
+        "anchor": "upper_mid",
+        "anchor_alt": "lower_mid",
+        "align": "center",
+        "padding": {
+          "v": 0,
+          "h": 0
+        },
+        "pad_left": 0,
+        "bar": false,
+        "dot": false,
+        "stroke": "",
+        "shadow": "text",
+        "highlight": false
+      },
+      "neon": {
+        "type": "hook",
+        "plate": "",
+        "lines": 2,
+        "chars": 9,
+        "anchor": "upper_mid",
+        "anchor_alt": "lower_mid",
+        "align": "center",
+        "padding": {
+          "v": 0,
+          "h": 0
+        },
+        "pad_left": 0,
+        "bar": false,
+        "dot": false,
+        "stroke": "",
+        "shadow": "",
+        "highlight": false
+      },
+      "iridescent": {
+        "type": "hook",
+        "plate": "",
+        "lines": 2,
+        "chars": 9,
+        "anchor": "upper_mid",
+        "anchor_alt": "lower_mid",
+        "align": "center",
+        "padding": {
+          "v": 0,
+          "h": 0
+        },
+        "pad_left": 0,
+        "bar": false,
+        "dot": false,
+        "stroke": "small",
+        "shadow": "",
+        "highlight": false
+      },
+      "glitch": {
+        "type": "hook",
+        "plate": "",
+        "lines": 2,
+        "chars": 9,
+        "anchor": "upper_mid",
+        "anchor_alt": "lower_mid",
+        "align": "center",
+        "padding": {
+          "v": 0,
+          "h": 0
+        },
+        "pad_left": 0,
+        "bar": false,
+        "dot": false,
+        "stroke": "",
+        "shadow": "",
+        "highlight": false
+      },
+      "ember": {
+        "type": "hook",
+        "plate": "",
+        "lines": 2,
+        "chars": 9,
+        "anchor": "upper_mid",
+        "anchor_alt": "lower_mid",
+        "align": "center",
+        "padding": {
+          "v": 0,
+          "h": 0
+        },
+        "pad_left": 0,
+        "bar": false,
+        "dot": false,
+        "stroke": "text",
+        "shadow": "",
+        "highlight": false
+      },
+      "stack": {
+        "type": "title",
+        "plate": "",
+        "lines": 2,
+        "chars": 11,
+        "anchor": "upper_mid",
+        "anchor_alt": "lower_mid",
+        "align": "center",
+        "padding": {
+          "v": 0,
+          "h": 0
+        },
+        "pad_left": 0,
+        "bar": false,
+        "dot": false,
+        "stroke": "",
+        "shadow": "",
+        "highlight": false
+      },
+      "outline": {
+        "type": "hook",
+        "plate": "",
+        "lines": 2,
+        "chars": 9,
+        "anchor": "upper_mid",
+        "anchor_alt": "lower_mid",
+        "align": "center",
+        "padding": {
+          "v": 0,
+          "h": 0
+        },
+        "pad_left": 0,
+        "bar": false,
+        "dot": false,
+        "stroke": "small",
+        "shadow": "",
+        "highlight": false
+      },
+      "pop": {
+        "type": "hook",
+        "plate": "",
+        "lines": 2,
+        "chars": 9,
+        "anchor": "upper_mid",
+        "anchor_alt": "lower_mid",
+        "align": "center",
+        "padding": {
+          "v": 0,
+          "h": 0
+        },
+        "pad_left": 0,
+        "bar": false,
+        "dot": false,
+        "stroke": "text",
+        "shadow": "",
+        "highlight": false
+      },
+      "sticker": {
+        "type": "title",
+        "plate": "",
+        "lines": 2,
+        "chars": 11,
+        "anchor": "upper_mid",
+        "anchor_alt": "lower_mid",
+        "align": "center",
+        "padding": {
+          "v": 0,
+          "h": 0
+        },
+        "pad_left": 0,
+        "bar": false,
+        "dot": false,
+        "stroke": "",
+        "shadow": "",
+        "highlight": false
+      },
+      "bubble": {
+        "type": "title",
+        "plate": "",
+        "lines": 2,
+        "chars": 11,
+        "anchor": "upper_mid",
+        "anchor_alt": "lower_mid",
+        "align": "center",
+        "padding": {
+          "v": 0,
+          "h": 0
+        },
+        "pad_left": 0,
+        "bar": false,
+        "dot": false,
+        "stroke": "",
+        "shadow": "",
+        "highlight": false
+      },
+      "serif": {
+        "type": "hook",
+        "plate": "",
+        "lines": 2,
+        "chars": 9,
+        "anchor": "upper_mid",
+        "anchor_alt": "lower_mid",
+        "align": "center",
+        "padding": {
+          "v": 0,
+          "h": 0
+        },
+        "pad_left": 0,
+        "bar": false,
+        "dot": false,
+        "stroke": "",
         "shadow": "text",
         "highlight": false
       }

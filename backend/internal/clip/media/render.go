@@ -93,11 +93,11 @@ func cutGraph(cfg clip.RenderConfig, canvas clip.Canvas, c clip.EditCut, source 
 		// expressions on the one looped plate image — never a second raster per
 		// frame, and never anything else.
 		start, end := c.CaptionWindow(j)
-		pace := ""
+		pace, style := "", ""
 		if j < len(c.Copies) {
-			pace = c.Copies[j].Pace
+			pace, style = c.Copies[j].Pace, c.Copies[j].Style
 		}
-		m := design.CaptionMotion(pace)
+		m := design.CaptionMotion(style, pace)
 		origin := clip.Region{}
 		if j < len(l.CopyRegions) {
 			origin = l.CopyRegions[j]
@@ -625,7 +625,7 @@ func (c *composed) resolve(canvas clip.Canvas) {
 				Cut: i, Copy: j, Kind: "scrim", Style: copy.Style, Anchor: copy.Anchor, Pace: copy.Pace,
 				Region: design.Bounds(s.Region), StartMS: offsets[i] + start, EndMS: offsets[i] + end,
 				Background: design.Scrim[s.Edge].Hex,
-				InMS:       design.CaptionMotion(copy.Pace).InMS, OutMS: design.CaptionMotion(copy.Pace).OutMS, DY: design.CaptionMotion(copy.Pace).InDY,
+				InMS:       design.CaptionMotion(copy.Style, copy.Pace).InMS, OutMS: design.CaptionMotion(copy.Style, copy.Pace).OutMS, DY: design.CaptionMotion(copy.Style, copy.Pace).InDY,
 			})
 		}
 	}
