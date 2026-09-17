@@ -92,8 +92,11 @@ func TestRegionPresetsOnEveryRatio(t *testing.T) {
 	checkRegionPresets(t, a, r, false)
 }
 
-func TestDeclaredRegionsUseDocumentSelection(t *testing.T) {
+// The presets are the project's since CLIP-139, so the plan carries them and the
+// frozen document's own attributes no longer choose anything.
+func TestDeclaredRegionsUseTheProjectSelection(t *testing.T) {
 	plan := declaredPlan(t, `<clip version="1" intro="a" caption="bold" outro="b"><text id="intro" kind="fixed" role="hook" basis="output-start" start="0" end="2.5"><row>오늘의 장면</row><row>남긴 기록</row></text><text id="outro" kind="fixed" role="ending" basis="output-end" start="-3" end="0"><row>다시 만나자</row><row>오늘을 남겨요</row></text></clip>`, "vertical")
+	plan.IntroPreset, plan.OutroPreset = "a", "b"
 	layout := measuredDeclared(t, plan)
 	if len(layout.visuals) != 2 || layout.visuals[0].region.Lines[0].Y != 940 || layout.visuals[1].region.Lines[0].Y != 900 {
 		t.Fatal("document design selection was ignored", layout.elements())
@@ -104,7 +107,7 @@ func TestAuthoredAdmissionUsesSelectedRegionLimits(t *testing.T) {
 	_, r := measured(t)
 	for _, intro := range []string{"a", "b"} {
 		body := `<clip version="1" intro="` + intro + `" caption="bold" outro="e"><text id="intro" kind="fixed" role="hook" basis="output-start" start="0" end="2.5"><row>하나둘셋넷다섯여섯</row></text><text id="outro" kind="fixed" role="ending" basis="output-end"/></clip>`
-		err := r.ValidateAuthoredInput(t.Context(), clip.PlanningInput{Ratio: "vertical", TargetDurationMS: 15000, Composition: &clip.ProjectComposition{Snapshot: clip.CompositionSnapshot{Body: body}}})
+		err := r.ValidateAuthoredInput(t.Context(), clip.PlanningInput{Ratio: "vertical", TargetDurationMS: 15000, Design: clip.ProjectDesign{IntroPreset: intro, OutroPreset: "e"}, Composition: &clip.ProjectComposition{Snapshot: clip.CompositionSnapshot{Body: body}}})
 		if intro == "b" {
 			if err != nil {
 				t.Fatal(err)
