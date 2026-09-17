@@ -197,6 +197,25 @@ func logJobFailure(found Job, failure Failure, err error) {
 				attrs = append(attrs, "media_elapsed_ms", ms)
 			}
 		}
+		// Three separate ceilings raise one workspace failure. Which one, and
+		// the sizes that decided it, is the whole diagnosis: without them a
+		// full disk and a job that outgrew its own budget read identically.
+		var limit interface {
+			MediaLimitCheck() string
+			MediaWorkspaceBytes() int64
+			MediaRequestedBytes() int64
+			MediaFreeBytes() int64
+		}
+		if errors.As(err, &limit) {
+			switch check := limit.MediaLimitCheck(); check {
+			case "request", "listing", "budget", "prepared", "disk", "output":
+				attrs = append(attrs, "media_limit_check", check)
+			}
+			attrs = append(attrs, "media_workspace_bytes", limit.MediaWorkspaceBytes(), "media_requested_bytes", limit.MediaRequestedBytes())
+			if free := limit.MediaFreeBytes(); free >= 0 {
+				attrs = append(attrs, "media_free_bytes", free)
+			}
+		}
 		var staged interface{ FailureStage() string }
 		if errors.As(err, &staged) {
 			switch stage := staged.FailureStage(); stage {

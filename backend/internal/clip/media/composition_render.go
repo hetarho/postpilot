@@ -19,6 +19,30 @@ func removeIntermediate(path string) error {
 	return err
 }
 
+// removeConsumed deletes every candidate the merge tree did not carry into the
+// arguments it returned. A merge cannot do this itself: the cuts it reads are
+// the CALLER's, and on the per-cut path they still hold the audio that has to
+// outlive the picture. Here the footage is bare and its sound is already a
+// separate track, so what the tree stopped reading is dead the moment it
+// returns rather than when the whole render ends.
+func removeConsumed(candidates, args []string) error {
+	alive := map[string]bool{}
+	for i, arg := range args {
+		if arg == "-i" && i+1 < len(args) {
+			alive[args[i+1]] = true
+		}
+	}
+	for _, path := range candidates {
+		if alive[path] {
+			continue
+		}
+		if err := removeIntermediate(path); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (r *Rendering) renderComposition(ctx context.Context, ws clip.MediaWorkspace, plan clip.EditPlan, sources []clip.RenderSource, load clip.RenderSourceLoader) (result clip.RenderedVideo, err error) {
 	substage, started := "render_layout", time.Now()
 	step := func(next string) {
@@ -123,11 +147,19 @@ func (r *Rendering) renderComposition(ctx context.Context, ws clip.MediaWorkspac
 	if err != nil {
 		return result, err
 	}
+	// Free what the tree stopped reading BEFORE the root encode, not after it.
+	// Waiting until the end kept the leaves, the merges and the growing root
+	// alive together: three lossless copies of one clip in a workspace bounded
+	// for about two, which is where a long plan ran out of room.
+	consumed := append(append([]string{}, cuts...), cleanup[mergeStart:]...)
+	if err = removeConsumed(consumed, args); err != nil {
+		return result, err
+	}
 	args = append(args, r.encodeProfile(false, 0, "yuv444p")...)
 	if err = r.runRender(ctx, ws, raw, args); err != nil {
 		return result, err
 	}
-	for _, path := range append(cuts, cleanup[mergeStart:]...) {
+	for _, path := range consumed {
 		if err = removeIntermediate(path); err != nil {
 			return result, err
 		}

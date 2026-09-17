@@ -3,6 +3,7 @@ package media
 import (
 	"context"
 	"errors"
+	"math"
 	"os"
 	"path/filepath"
 	"slices"
@@ -81,6 +82,48 @@ func TestWorkspaceCapacityCountsPreparedAndOriginalFiles(t *testing.T) {
 		}
 		if err := ws.CheckCapacity(0); !errors.Is(err, clip.ErrWorkspaceLimit) {
 			t.Fatal("prepared cap ignored", err)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// Three ceilings raise one error. A refusal that does not say which of them
+// stopped the job leaves a full disk and a job that outgrew its own budget
+// looking identical in the log, which is exactly what they are not.
+func TestWorkspaceRefusalNamesTheCeilingThatStoppedIt(t *testing.T) {
+	a := newAdapter(t, &fakeRunner{})
+	a.cfg.WorkspaceMaxBytes, a.cfg.PreparedMaxBytes = 128, 64
+	if err := a.WithWorkspace(t.Context(), "named limits", func(ws clip.MediaWorkspace) error {
+		refusal := func(err error) (string, int64) {
+			t.Helper()
+			var limit *workspaceLimit
+			if !errors.Is(err, clip.ErrWorkspaceLimit) || !errors.As(err, &limit) {
+				t.Fatalf("a refusal lost its diagnosis: %v", err)
+			}
+			return limit.MediaLimitCheck(), limit.MediaWorkspaceBytes()
+		}
+		if check, _ := refusal(ws.CheckCapacity(129)); check != "request" {
+			t.Fatal(check)
+		}
+		if err := os.WriteFile(filepath.Join(ws.Path, "source.mp4"), []byte(strings.Repeat("x", 60)), 0600); err != nil {
+			return err
+		}
+		if check, total := refusal(ws.CheckCapacity(69)); check != "budget" || total != 60 {
+			t.Fatal(check, total)
+		}
+		if err := os.WriteFile(filepath.Join(ws.Path, "proxy-one.mp4"), []byte(strings.Repeat("p", 65)), 0600); err != nil {
+			return err
+		}
+		if check, _ := refusal(ws.CheckCapacity(0)); check != "prepared" {
+			t.Fatal(check)
+		}
+		// The disk is the one ceiling that can also say how much was left.
+		var limit *workspaceLimit
+		err := availableDisk(ws.Path, math.MaxInt64)
+		if !errors.As(err, &limit) || limit.MediaLimitCheck() != "disk" || limit.MediaFreeBytes() < 0 {
+			t.Fatalf("the disk refusal carried no free space: %v", err)
 		}
 		return nil
 	}); err != nil {

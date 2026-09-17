@@ -76,8 +76,15 @@ func commandOperation(c Command) string {
 			switch {
 			case output == "clip-result.mp4":
 				return "encode_final"
-			case output == "compose-audio.wav":
+			case output == "compose-audio.wav", output == "composition-audio.wav":
 				return "compose_audio"
+			// The composition tree's root merge and its leaves. Both used to
+			// fall through to "decode", which named the two passes that dominate
+			// a render after the pass that does the least.
+			case output == "composition-footage.mp4":
+				return "compose_video"
+			case strings.HasPrefix(output, "bare-"):
+				return "render_cut"
 			case strings.HasPrefix(output, "audio-correction-"):
 				return "correct_audio"
 			case strings.HasPrefix(output, "render-cut-"):

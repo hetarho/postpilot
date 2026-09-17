@@ -3,6 +3,7 @@ package media
 import (
 	"context"
 	"errors"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -16,16 +17,39 @@ import (
 // precede writes and continue while a child is running, not just after encoding.
 const diskHeadroom int64 = 8 << 20
 
+// A refusal names WHICH ceiling stopped the job and the numbers that decided
+// it. Three different limits raise the one error, and without these a failed
+// render says only that something was full. Sizes are code-owned integers, so
+// they cross the worker's logging boundary where a name or a path may not.
+type workspaceLimit struct {
+	error
+	check                   string
+	total, additional, free int64
+}
+
+func (e *workspaceLimit) Unwrap() error              { return e.error }
+func (e *workspaceLimit) MediaLimitCheck() string    { return e.check }
+func (e *workspaceLimit) MediaWorkspaceBytes() int64 { return e.total }
+func (e *workspaceLimit) MediaRequestedBytes() int64 { return e.additional }
+
+// MediaFreeBytes is negative when the filesystem was never reached, which is
+// itself the diagnosis: the refusal came from the budget, not from the disk.
+func (e *workspaceLimit) MediaFreeBytes() int64 { return e.free }
+
+func limited(check string, total, additional, free int64) error {
+	return &workspaceLimit{error: clip.ErrWorkspaceLimit, check: check, total: total, additional: additional, free: free}
+}
+
 func (a *Adapter) capacity(ws clip.MediaWorkspace, additional int64) error {
 	if err := a.validWorkspace(ws, true); err != nil {
 		return err
 	}
 	if additional < 0 || additional > a.cfg.WorkspaceMaxBytes {
-		return clip.ErrWorkspaceLimit
+		return limited("request", 0, additional, -1)
 	}
 	entries, err := os.ReadDir(ws.Path)
 	if err != nil {
-		return clip.ErrWorkspaceLimit
+		return limited("listing", 0, additional, -1)
 	}
 	var total, prepared int64
 	for _, entry := range entries {
@@ -34,34 +58,61 @@ func (a *Adapter) capacity(ws clip.MediaWorkspace, additional int64) error {
 			continue
 		}
 		if err != nil || !info.Mode().IsRegular() || info.Size() < 0 || info.Size() > a.cfg.WorkspaceMaxBytes-total {
-			return clip.ErrWorkspaceLimit
+			return limited("budget", total, additional, -1)
 		}
 		total += info.Size()
 		if strings.HasPrefix(entry.Name(), "proxy-") {
 			if info.Size() > a.cfg.PreparedMaxBytes-prepared {
-				return clip.ErrWorkspaceLimit
+				return limited("prepared", prepared, additional, -1)
 			}
 			prepared += info.Size()
 		}
 	}
 	if additional > a.cfg.WorkspaceMaxBytes-total {
-		return clip.ErrWorkspaceLimit
+		return limited("budget", total, additional, -1)
 	}
-	return a.diskCheck(ws.Path, additional+diskHeadroom)
+	return workspaceTotal(a.diskCheck(ws.Path, additional+diskHeadroom), total, additional)
+}
+
+// The disk check knows what the filesystem has left and nothing about the
+// directory; the caller knows the opposite. Both numbers belong on the one
+// error that leaves the check, so they are joined here.
+func workspaceTotal(err error, total, additional int64) error {
+	if err == nil {
+		return nil
+	}
+	var limit *workspaceLimit
+	if errors.As(err, &limit) {
+		return &workspaceLimit{error: err, check: limit.check, total: total, additional: additional, free: limit.free}
+	}
+	if errors.Is(err, clip.ErrWorkspaceLimit) {
+		return &workspaceLimit{error: err, check: "disk", total: total, additional: additional, free: -1}
+	}
+	return err
 }
 
 func availableDisk(path string, required int64) error {
 	var stat unix.Statfs_t
 	if required < 0 || unix.Statfs(path, &stat) != nil || stat.Bsize <= 0 {
-		return clip.ErrWorkspaceLimit
+		return limited("disk", 0, required, -1)
 	}
 	// Divide rather than multiply the filesystem's unsigned block count.
 	needed := uint64(required)
 	block := uint64(stat.Bsize)
 	if uint64(stat.Bavail) < (needed+block-1)/block {
-		return clip.ErrWorkspaceLimit
+		return limited("disk", 0, required, reportedFree(uint64(stat.Bavail), block))
 	}
 	return nil
+}
+
+// Report what is free WITHOUT the multiplication the check above avoids: a
+// filesystem large enough to overflow the product reports the largest size the
+// log can carry, which is true enough for a number that only says "not this".
+func reportedFree(blocks, block uint64) int64 {
+	if blocks > uint64(math.MaxInt64)/block {
+		return math.MaxInt64
+	}
+	return int64(blocks * block)
 }
 
 func (a *Adapter) run(ctx context.Context, ws clip.MediaWorkspace, binary string, args ...string) ([]byte, error) {
@@ -108,11 +159,11 @@ func (a *Adapter) runCommand(ctx context.Context, ws clip.MediaWorkspace, comman
 		}
 		if output != "" {
 			if filepath.Dir(output) != ws.Path || limit <= 0 || limitError == nil {
-				return clip.ErrWorkspaceLimit
+				return limited("output", 0, limit, -1)
 			}
 			info, err := os.Lstat(output)
 			if err != nil && !os.IsNotExist(err) {
-				return clip.ErrWorkspaceLimit
+				return limited("output", 0, limit, -1)
 			}
 			if err == nil && (!info.Mode().IsRegular() || info.Size() > limit) {
 				return limitError

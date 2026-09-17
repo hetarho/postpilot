@@ -49,6 +49,52 @@ func TestClipFailureLogsSafeMediaCause(t *testing.T) {
 	}
 }
 
+type testWorkspaceLimit struct {
+	error
+	check                  string
+	total, requested, free int64
+}
+
+func (e testWorkspaceLimit) Unwrap() error              { return e.error }
+func (e testWorkspaceLimit) MediaLimitCheck() string    { return e.check }
+func (e testWorkspaceLimit) MediaWorkspaceBytes() int64 { return e.total }
+func (e testWorkspaceLimit) MediaRequestedBytes() int64 { return e.requested }
+func (e testWorkspaceLimit) MediaFreeBytes() int64      { return e.free }
+
+// A workspace failure that does not name the ceiling it hit cannot be acted on:
+// a full host and a job that outgrew its own budget need opposite repairs and
+// read identically without this. The sizes are code-owned, the label is not.
+func TestClipWorkspaceFailureLogsWhichCeilingAndItsSizes(t *testing.T) {
+	var logs bytes.Buffer
+	previous := slog.Default()
+	slog.SetDefault(slog.New(slog.NewJSONHandler(&logs, nil)))
+	t.Cleanup(func() { slog.SetDefault(previous) })
+	for _, tc := range []struct {
+		name, check string
+		free        int64
+	}{{"budget", "budget", -1}, {"disk", "disk", 8 << 20}, {"private", "private-canary", -1}} {
+		t.Run(tc.name, func(t *testing.T) {
+			logs.Reset()
+			cause := testWorkspaceLimit{error: errors.New("private-canary /video.mp4"), check: tc.check, total: 8 << 30, requested: 2 << 30, free: tc.free}
+			err := diagnosticStageError{error: cause, stage: "render"}
+			logJobFailure(Job{ID: "owned-job", Kind: KindGenerateClip}, failureFromError(err), err)
+			var got map[string]any
+			if json.Unmarshal(logs.Bytes(), &got) != nil || strings.Contains(logs.String(), "private-canary") || strings.Contains(logs.String(), "video.mp4") {
+				t.Fatal("private diagnostic escaped", logs.String())
+			}
+			if want := map[bool]any{true: nil, false: any(tc.check)}[tc.check == "private-canary"]; got["media_limit_check"] != want {
+				t.Fatal(got)
+			}
+			if got["media_workspace_bytes"] != float64(8<<30) || got["media_requested_bytes"] != float64(2<<30) {
+				t.Fatal(got)
+			}
+			if free, reported := got["media_free_bytes"]; reported != (tc.free >= 0) || reported && free != float64(tc.free) {
+				t.Fatal(got)
+			}
+		})
+	}
+}
+
 type progressLogStore struct{ terminalStore }
 
 func (*progressLogStore) UpdateProgress(context.Context, string, string, int, int, time.Time) error {

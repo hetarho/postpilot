@@ -114,3 +114,22 @@ func TestOperationRecordsCarryCodeOwnedLabelsOnly(t *testing.T) {
 		t.Fatalf("private label reached the sink: %+v", records)
 	}
 }
+
+// An operation label is how a failed render is read months later. The two
+// passes that dominate a composition both fell through to "decode", the name
+// reserved for a command that does the least of all.
+func TestCompositionPassesAreNamedByTheirOwnOutput(t *testing.T) {
+	for output, want := range map[string]string{
+		"bare-0003.mp4":           "render_cut",
+		"compose-01-0000.mp4":     "compose_video",
+		"composition-footage.mp4": "compose_video",
+		"composition-audio.wav":   "compose_audio",
+		"compose-audio.wav":       "compose_audio",
+		"clip-result.mp4":         "encode_final",
+	} {
+		c := Command{Binary: "/usr/local/bin/ffmpeg", Args: []string{"-i", "/private/in.mp4", filepath.Join("/private", output)}}
+		if got := commandOperation(c); got != want {
+			t.Fatalf("%s reported itself as %s, not %s", output, got, want)
+		}
+	}
+}

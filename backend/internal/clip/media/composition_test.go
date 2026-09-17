@@ -149,3 +149,57 @@ func TestFootageMergePlanGoldens(t *testing.T) {
 		})
 	}
 }
+
+// The merge tree is where a bounded workspace is won or lost. A leaf the tree
+// has already read is dead, but the render used to hold every one of them until
+// after the root encode: leaves, merges and the growing root were three lossless
+// copies of one clip in a directory sized for about two.
+func TestConsumedFootageIsFreedBeforeTheRootEncode(t *testing.T) {
+	fake := &fakeRunner{run: func(_ context.Context, c Command) ([]byte, error) {
+		return nil, os.WriteFile(c.Args[len(c.Args)-1], []byte("video"), 0600)
+	}}
+	a := newAdapter(t, fake)
+	r := testRenderer(t, a)
+	if err := a.WithWorkspace(t.Context(), "consumed", func(ws clip.MediaWorkspace) error {
+		// Forty leaves take two rounds above the bound of six, so this covers a
+		// merge reading leaves and a merge reading other merges.
+		leaves, frames, transitions := make([]string, 40), make([]int, 40), make([]int, 40)
+		for i := range leaves {
+			leaves[i] = filepath.Join(ws.Path, fmt.Sprintf("bare-%04d.mp4", i))
+			frames[i] = 21
+			if err := os.WriteFile(leaves[i], []byte("leaf"), 0600); err != nil {
+				return err
+			}
+		}
+		var cleanup []string
+		args, err := r.compositionInputsFormat(t.Context(), ws, leaves, frames, transitions, "", nil, &cleanup, "yuv444p")
+		if err != nil {
+			return err
+		}
+		if err := removeConsumed(append(append([]string{}, leaves...), cleanup...), args); err != nil {
+			return err
+		}
+		alive := map[string]bool{}
+		for i, arg := range args {
+			if arg == "-i" {
+				alive[filepath.Base(args[i+1])] = true
+			}
+		}
+		if len(alive) == 0 || len(alive) > r.cfg.MergeInputs {
+			return fmt.Errorf("wrong merge shape: %d branches", len(alive))
+		}
+		entries, err := os.ReadDir(ws.Path)
+		if err != nil {
+			return err
+		}
+		// Only what the root encode still has to read may exist by now.
+		for _, entry := range entries {
+			if !alive[entry.Name()] {
+				return fmt.Errorf("a consumed input outlived its merge: %s", entry.Name())
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
