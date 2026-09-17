@@ -52,7 +52,7 @@ func TestOldStyleAttributesOnlyOpenForReading(t *testing.T) {
 			t.Fatal(p)
 		}
 		d, p := composition.ReadStored(body, config.ClipCompositionLimits())
-		if p != nil || d.Design != composition.DefaultDesign() || d.Elements[0].Style != "auto" || d.Elements[0].Parts[0].Literal != "원문" {
+		if p != nil || d.Elements[0].Style != "auto" || d.Elements[0].Parts[0].Literal != "원문" {
 			t.Fatal(d, p)
 		}
 	}
@@ -118,7 +118,16 @@ func summary(d *composition.Document) map[string]any {
 	for _, s := range d.Stages {
 		stages = append(stages, map[string]any{"name": s.Name, "intent": s.Intent})
 	}
-	return map[string]any{"design": map[string]any{"intro": d.Design.Intro, "caption": d.Design.Caption, "outro": d.Design.Outro}, "accent": d.Accent, "pace": d.Pace, "fields": fields, "groups": groups, "sections": sections, "elements": elements, "guidance": append([]string{}, d.Guidance...), "stages": stages}
+	// The outline is the body's own order across its kinds (CLIP-112).
+	outline := []string{}
+	for _, entry := range d.Outline {
+		if entry.Kind == "stage" {
+			outline = append(outline, "stage:"+d.Stages[entry.Index].Name)
+			continue
+		}
+		outline = append(outline, "text:"+d.Elements[entry.Index].ID)
+	}
+	return map[string]any{"outline": outline, "accent": d.Accent, "pace": d.Pace, "fields": fields, "groups": groups, "sections": sections, "elements": elements, "guidance": append([]string{}, d.Guidance...), "stages": stages}
 }
 func resolution(t *testing.T, out composition.Timeline) []map[string]any {
 	t.Helper()

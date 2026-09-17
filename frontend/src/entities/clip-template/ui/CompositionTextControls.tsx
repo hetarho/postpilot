@@ -1,4 +1,3 @@
-import { CLIP_TIMING } from '@/shared/config'
 import { useTranslation } from 'react-i18next'
 import { Button, Typography } from '@/shared/ui'
 import type { CompositionNode } from '../model/composition'
@@ -117,26 +116,7 @@ export function CompositionTextControls({
       value,
       label: t(`composition.${key}.${value}`, { defaultValue: t('composition.auto') }),
     }))
-  const timing = a.basis === 'output-start' || a.basis === 'output-end'
-  const setBasis = (basis: string) => {
-    const next: Record<string, string> = { ...a, basis }
-    delete next.start
-    delete next.end
-    if (basis === 'output-start') {
-      next.start = '0'
-      next.end = '3'
-    }
-    if (basis === 'output-end') {
-      next.start = '-3'
-      next.end = '0'
-    }
-    onChange({ ...node, attributes: next })
-  }
   if (a.role === 'hook' || a.role === 'ending') {
-    const start = a.start ?? (a.role === 'hook' ? '0' : String(-CLIP_TIMING.outro_default_s))
-    const end = a.end ?? (a.role === 'hook' ? String(CLIP_TIMING.intro_default_s) : '0')
-    const interval = (key: string, value: string) =>
-      onChange({ ...node, attributes: { ...a, start, end, [key]: value } })
     const count = compositionSlotCount(a.role, design)
     const slots = regionRows([node], count)
     const patchRow = (i: number, row: CompositionNode) =>
@@ -144,20 +124,6 @@ export function CompositionTextControls({
     return (
       <div className="space-y-4">
         <Typography variant="body">{t('composition.design.slotsHelp')}</Typography>
-        <div className="grid min-w-0 gap-3 sm:grid-cols-2">
-          <CompositionInput
-            label={t('composition.start')}
-            value={start}
-            numeric
-            onChange={(v) => interval('start', v)}
-          />
-          <CompositionInput
-            label={t('composition.end')}
-            value={end}
-            numeric
-            onChange={(v) => interval('end', v)}
-          />
-        </div>
         {slots.map((row, i) => (
           <section
             key={i}
@@ -179,7 +145,7 @@ export function CompositionTextControls({
               onChange={(kind) => patchRow(i, { ...row, attributes: { ...row.attributes, kind } })}
             />
             <CharsInput
-              max={compositionPositionChars(design, a.role, { index: i })}
+              max={compositionPositionChars(a.role, { index: i })}
               value={row.attributes.chars ?? ''}
               onChange={(chars) => patchRow(i, { ...row, attributes: patchChars(row, chars) })}
             />
@@ -217,35 +183,10 @@ export function CompositionTextControls({
         onChange={(v) => attr('align', v)}
       />
       <CharsInput
-        max={compositionPositionChars(design, a.role)}
+        max={compositionPositionChars(a.role)}
         value={a.chars ?? ''}
         onChange={(chars) => onChange({ ...node, attributes: patchChars(node, chars) })}
       />
-      <CompositionSelect
-        label={t('composition.timingLabel')}
-        value={a.basis}
-        options={options('basis', ['whole', 'output-start', 'output-end'])}
-        onChange={setBasis}
-      />
-      {timing && (
-        <div className="grid min-w-0 gap-3 sm:grid-cols-2">
-          <CompositionInput
-            label={t('composition.start')}
-            value={a.start ?? ''}
-            numeric
-            onChange={(v) => attr('start', v)}
-          />
-          <CompositionInput
-            label={t('composition.end')}
-            value={a.end ?? ''}
-            numeric
-            onChange={(v) => attr('end', v)}
-          />
-        </div>
-      )}
-      {a.basis === 'output-end' && (
-        <Typography variant="body">{t('composition.endHelp')}</Typography>
-      )}
       <Parts
         nodes={node.children}
         bindings={bindings}

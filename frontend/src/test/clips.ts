@@ -223,7 +223,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     const escape = (v: string) =>
       v.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('"', '&quot;')
     return (
-      `<clip version="1" intro="b" caption="bold" outro="e" pace="${row.captionPace ?? 'steady'}">` +
+      `<clip version="1" pace="${row.captionPace ?? 'steady'}">` +
       row.informationFields
         .map(
           (f, i) =>
@@ -232,7 +232,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
         .join('') +
       // The server reads a legacy body back converted (CLIP-140): its scene and
       // scene-bound caption are carried into the guide, never handed back as markup.
-      `<guide>${escape(row.cutGuidance)}${escape(row.cutGuidance ? '\n\n' : '')}legacy-caption [ai]: Describe the selected scene.</guide><text id="intro" kind="fixed" role="hook" basis="output-start"/><text id="outro" kind="fixed" role="ending" basis="output-end"/></clip>`
+      `<guide>${escape(row.cutGuidance)}${escape(row.cutGuidance ? '\n\n' : '')}legacy-caption [ai]: Describe the selected scene.</guide><text id="intro" kind="fixed" role="hook"/><text id="outro" kind="fixed" role="ending"/></clip>`
     )
   }
   const toProto = (row: FakeClipTemplate) =>

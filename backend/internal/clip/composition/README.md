@@ -4,11 +4,15 @@
 and selected footage cuts. Neither function chooses footage, calls AI or renders.
 
 Three entries read the same grammar at different strictness. `ParseTemplate` is
-what a saved TEMPLATE body must satisfy (CLIP-4, CLIP-59): fields, groups,
-invisible guides, named composition stages, the intro/outro slots and the
-badge. It refuses `scene`,
-`repeat` (`unsupported_section`), a content text whose role is `caption` or
-`info` (`unsupported_role`) and `basis="cut"` (`unsupported_basis`). `Parse`
+what a saved TEMPLATE body must satisfy (CLIP-4, CLIP-59, CLIP-112): an ordered
+outline of named composition stages and visible text entries — intro, caption
+and outro — beside the badge, the fields, the groups and the invisible guides.
+Where an entry stands in that outline is the only position it declares, so it
+refuses `scene`, `repeat` (`unsupported_section`), a text whose role is `info`
+(`unsupported_role`) and any `basis`, `start` or `end` (`unsupported_basis`).
+The root still accepts `intro`, `caption` and `outro` and reads nothing from
+them: the presets a clip renders in are the project's (CLIP-14, CLIP-139), and a
+surplus region line is a render notice rather than a refusal (CLIP-147). `Parse`
 still accepts every construct below so a project's frozen snapshot keeps
 resolving and rendering exactly as it was frozen (CLIP-140), and `ReadStored`
 additionally tolerates retired attributes. `ConvertLegacyTemplate` carries a
@@ -51,7 +55,9 @@ element's resolved text is the exact output after explicit value substitution.
 ```
 
 - Root children: `field`, `group`, invisible `guide`, `stage`, `scene`,
-  `repeat`, `text`.
+  `repeat`, `text`. `Document.Outline` carries the root's stages and texts in
+  document order — the outline CLIP-112 makes the entry's only position — while
+  the per-kind slices stay beside it for readers that need one kind.
   A group contains fields. A scene contains guides/text and selects actual
   footage with `scope="scene|item|context"`. Repetition contains scenes and uses
   `for="scenes"` or a declared group. Nested repetition is refused; `scenes` is
@@ -66,8 +72,11 @@ element's resolved text is the exact output after explicit value substitution.
 - Template IDs use 1–64 ASCII letters, digits, underscores or hyphens, starting
   with a letter or digit. Fields inside groups have qualified identity, e.g.
   `menu.price`. Visible element and scene IDs are unique across the document.
-- A text declares `kind="fixed|ai"`, `role="caption|info|badge|hook|ending"` and
-  `basis="whole|output-start|output-end|cut"`. Style defaults to `auto`, position
+- A text declares `kind="fixed|ai"`, `role="caption|info|badge|hook|ending"` and,
+  in a snapshot only, `basis="whole|output-start|output-end|cut"`. An entry that
+  declares no basis takes the span its role is drawn at: the output's opening for
+  `hook`, its end for `ending`, the whole output for a `badge` or a `caption` the
+  narration has yet to time. Style defaults to `auto`, position
   to `auto`, alignment to `center`; named styles apply only to caption roles and must belong to the root's
   approved set. Badge, info, hook and ending require `auto` (or omit style). Header placement is only for info/badge. Card rows (hook,
   ending, info) use `hook|title|mark|body|caption|label|badge` typography roles.

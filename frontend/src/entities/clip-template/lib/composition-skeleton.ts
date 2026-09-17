@@ -1,4 +1,4 @@
-import { CLIP_REGIONS, CLIP_TIMING } from '@/shared/config'
+import { CLIP_REGIONS } from '@/shared/config'
 import type { CompositionNode } from '../model/composition'
 import {
   compositionDraftTree,
@@ -52,35 +52,19 @@ export function regionRows(nodes: CompositionNode[], count: number) {
   while (rows.length < count) rows.push(emptyRow())
   return rows
 }
+/** A region entry declares its role and its lines and nothing else: where it
+ *  stands in the outline is its only position, and the span it is drawn at
+ *  belongs to the renderer (CLIP-66, CLIP-112). */
 function region(
   role: 'hook' | 'ending',
   design: CompositionDesign,
   id: string,
   originals: CompositionNode[] = [],
 ) {
-  const first = originals[0],
-    basis = role === 'hook' ? 'output-start' : 'output-end'
-  const sameBasis = first?.attributes.basis === basis
+  const first = originals[0]
   return compositionNode(
     'text',
-    {
-      id: first?.attributes.id || id,
-      role,
-      kind: 'fixed',
-      basis,
-      start:
-        sameBasis && first.attributes.start !== undefined
-          ? first.attributes.start
-          : role === 'hook'
-            ? '0'
-            : String(-CLIP_TIMING.outro_default_s),
-      end:
-        sameBasis && first.attributes.end !== undefined
-          ? first.attributes.end
-          : role === 'hook'
-            ? String(CLIP_TIMING.intro_default_s)
-            : '0',
-    },
+    { id: first?.attributes.id || id, role, kind: 'fixed' },
     regionRows(originals, compositionSlotCount(role, design)),
   )
 }
@@ -91,7 +75,7 @@ export function compositionSkeleton(
 ) {
   const design: CompositionDesign = { intro, caption: 'bold', outro }
   return serializeCompositionNode(
-    compositionNode('clip', { version: '1', ...design }, [
+    compositionNode('clip', { version: '1' }, [
       region('hook', design, 'intro'),
       region('ending', design, 'outro'),
     ]),
@@ -164,8 +148,10 @@ export function rebuildCompositionSkeleton(
       break
     }
   }
-  const attributes: Record<string, string> = { ...current.attributes, ...design }
-  delete attributes.styles
+  const attributes: Record<string, string> = { ...current.attributes }
+  // The design attributes go with the design: the presets are the project's and
+  // a template names none of them (CLIP-14, CLIP-144).
+  for (const key of ['styles', 'intro', 'caption', 'outro']) delete attributes[key]
   const opening = serializeCompositionNode(compositionNode('clip', attributes)).replace(/\/>$/, '>')
   return chars.slice(0, current.span.start).join('') + opening + chars.slice(end).join('')
 }

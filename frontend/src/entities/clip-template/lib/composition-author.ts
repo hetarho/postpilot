@@ -92,9 +92,7 @@ export function newCompositionNode(name: string, label: string): CompositionNode
     case 'stage':
       return compositionNode(name, { name: label }, [compositionLiteral('')])
     default:
-      return compositionNode('text', { id, kind: 'fixed', role: 'badge', basis: 'whole' }, [
-        compositionLiteral(''),
-      ])
+      return compositionNode('text', { id, kind: 'fixed', role: 'badge' }, [compositionLiteral('')])
   }
 }
 

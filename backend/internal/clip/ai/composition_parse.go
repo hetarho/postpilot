@@ -235,7 +235,7 @@ func parseCompositionPlan(cfg Config, input clip.PlanningInput, raw string) (out
 			f.Reason = reason
 		}
 	}
-	if err := attachCompositionCopy(cfg, doc, wire.Generated, timeline, portable, bindings, evidence, &plan, input.Instruction != ""); err != nil {
+	if err := attachCompositionCopy(cfg, input.Design.RegionPresets(), doc, wire.Generated, timeline, portable, bindings, evidence, &plan, input.Instruction != ""); err != nil {
 		return clip.EditPlan{}, err
 	}
 	plan.Portable = portable

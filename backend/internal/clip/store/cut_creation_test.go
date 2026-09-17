@@ -113,7 +113,7 @@ func TestAssemblyRejectionsPreserveDraftAndPreviousResult(t *testing.T) {
 			h := generationSetup(t)
 			h.service = clip.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, ownedPlanWriter{h.planner}, ownedPlanRenderer{h.renderer}, generationJobs{h.queue}, h.cfg).WithFinisher(generationFinisher{h.store}).WithCredits(&quotePricing{}, nil)
 			h.projects.SetGeneration(h.service)
-			template, err := legacyTemplate(t, h.store, "alice", "assembly-rejections", `<clip version="1" intro="b" caption="bold" outro="e"><repeat for="scenes"><scene id="shot"><text id="copy" kind="ai" role="caption" basis="cut">Describe the scene.</text></scene></repeat><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`), error(nil)
+			template, err := legacyTemplate(t, h.store, "alice", "assembly-rejections", `<clip version="1"><repeat for="scenes"><scene id="shot"><text id="copy" kind="ai" role="caption" basis="cut">Describe the scene.</text></scene></repeat><text id="empty-hook" kind="fixed" role="hook"/><text id="empty-ending" kind="fixed" role="ending"/></clip>`), error(nil)
 			if err != nil {
 				t.Fatal(err)
 			}

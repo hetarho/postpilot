@@ -42,11 +42,19 @@ func (d ProjectDesign) RegionPresets() composition.DesignSelection {
 // selection, or the default style alone where it selected none (CLIP-142).
 func (d ProjectDesign) AllowedCaptionStyles() []string { return ResolvedCaptionStyles(d.CaptionStyles) }
 
+// An empty preset id is the shared default, which is where every project starts
+// and what an owner who has chosen nothing carries (CLIP-139).
 func ValidIntroPreset(id string) bool {
+	if id == "" {
+		return true
+	}
 	_, ok := design.Region("intro", id)
 	return ok
 }
 func ValidOutroPreset(id string) bool {
+	if id == "" {
+		return true
+	}
 	_, ok := design.Region("outro", id)
 	return ok
 }
@@ -69,19 +77,4 @@ func ResolvedCaptionStyles(styles []string) []string {
 		return []string{design.DefaultCaptionStyle}
 	}
 	return slices.Clone(styles)
-}
-
-// TemplateDesign is the starting values a template carries for the project's
-// selection (CLIP-14): the root attributes its own body declares, and the
-// shared defaults where it declares none — a project made without a template
-// included, whose body is no body at all.
-func TemplateDesign(t VideoTemplate, limits composition.Limits) composition.DesignSelection {
-	if t.CompositionLegacy {
-		limits = LegacyCompositionLimits(limits)
-	}
-	doc, problem := composition.ReadStored(t.CompositionBody, limits)
-	if problem != nil {
-		return composition.DefaultDesign()
-	}
-	return doc.Design
 }

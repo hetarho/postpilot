@@ -1,7 +1,7 @@
 import i18next from 'i18next'
 import { CLIP_COMPOSITION_LIMITS } from '@/shared/config'
 
-export const CLIP_COMPOSITION_EXAMPLE = `<clip version="1" intro="b" caption="bold" outro="e">
+export const CLIP_COMPOSITION_EXAMPLE = `<clip version="1">
   <field id="place" label="상호명" required="true">간판에 적힌 이름을 공백 빼고 9자 이내로 적어주세요. 예: 성수 곱창</field>
   <field id="region" label="지역" required="true">동네나 지역을 짧게 적어주세요. 예: 성수동</field>
   <field id="verdict" label="한줄평" required="true">이번 식사를 한 문장으로 적어주세요. 공백 빼고 18자까지 들어갑니다.</field>
@@ -12,9 +12,9 @@ export const CLIP_COMPOSITION_EXAMPLE = `<clip version="1" intro="b" caption="bo
     <field id="price" label="가격" required="false">단위까지 적어주세요. 예: 1인분 18,000원</field>
   </group>
   <guide>친구에게 카톡으로 말하듯 자연스러운 존댓말로 쓰세요. 감탄사와 최상급, 광고성 수식어를 남발하지 마세요. 메뉴 이름과 가격은 입력된 그대로 말하고, 화면으로 알 수 없는 맛과 향은 지침에 적힌 만큼만 말하세요.</guide>
-  <text id="disclosure_badge" kind="fixed" role="badge" position="top" align="left" basis="whole"><value field="disclosure"/></text>
-  <text id="intro" kind="fixed" role="hook" basis="output-start"><row kind="fixed"><value field="place"/></row><row kind="fixed"><value field="region"/></row></text>
-  <text id="closing" kind="fixed" role="ending" basis="output-end"><row kind="fixed"><value field="place"/></row><row kind="fixed"><value field="score"/></row><row kind="fixed"><value field="verdict"/></row></text>
+  <text id="disclosure_badge" kind="fixed" role="badge" position="top" align="left"><value field="disclosure"/></text>
+  <text id="intro" kind="fixed" role="hook"><row kind="fixed"><value field="place"/></row><row kind="fixed"><value field="region"/></row></text>
+  <text id="closing" kind="fixed" role="ending"><row kind="fixed"><value field="place"/></row><row kind="fixed"><value field="score"/></row><row kind="fixed"><value field="verdict"/></row></text>
 </clip>`
 
 /** Closed grammar shared by both localized guides; examples are parsed in tests. */

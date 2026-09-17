@@ -22,6 +22,7 @@ it.each(['vertical', 'horizontal', 'square'] as const)(
             ratio={ratio}
             label="Preview"
             sampleAI="문구"
+            presets={{ intro, outro }}
           />,
         )
         const shape = CLIP_DESIGN.ratios[ratio],

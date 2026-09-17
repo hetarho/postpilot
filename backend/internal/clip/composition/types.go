@@ -95,12 +95,24 @@ type Section struct {
 	Elements          []Element
 	Span              Span
 }
+
+// DesignSelection is the pair of region presets a clip RENDERS in. It is the
+// project's (CLIP-139) and reaches this package as an argument, never as a
+// property of a document: a template declares no design at all (CLIP-14), and a
+// frozen snapshot's leftover attributes are ignored (CLIP-144).
 type DesignSelection struct{ Intro, Caption, Outro string }
 
 func DefaultDesign() DesignSelection { return DesignSelection{Intro: "b", Caption: "bold", Outro: "e"} }
 
+// Entry is one position in the body's ordered outline (CLIP-112): the order an
+// entry stands in is the only position it declares. Kind is "stage" or "text"
+// and Index points into the document's own Stages or Elements.
+type Entry struct {
+	Kind  string
+	Index int
+}
+
 type Document struct {
-	Design       DesignSelection
 	Source       string
 	Root         *Node
 	Accent, Pace string
@@ -110,6 +122,10 @@ type Document struct {
 	Stages       []Stage
 	Sections     []Section
 	Elements     []Element
+	// The root's stages and visible entries in document order (CLIP-112). The
+	// per-kind slices above stay beside it so a reader that needs only one kind
+	// does not walk the outline it has no use for.
+	Outline []Entry
 	// Each field's effective maximum, keyed the way fieldKey keys a field
 	// (CLIP-117): the smallest of its authored maximum, the cap of every
 	// position its value reaches, and the grammar's AnswerChars. Computed once

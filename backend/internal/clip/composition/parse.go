@@ -32,21 +32,6 @@ func declaredChars(n, blame *Node, limit int) (int, *Problem) {
 	return value, nil
 }
 
-// regionSlotChars is the CDS-20 count of the preset slot a region row lands in.
-// A ratio changes the hook's size but not its characters (CDS-46), so the
-// selection alone answers it.
-func regionSlotChars(selection DesignSelection, role string, index int) int {
-	kind, id := "intro", selection.Intro
-	if role == "ending" {
-		kind, id = "outro", selection.Outro
-	}
-	preset, ok := design.Region(kind, id)
-	if !ok || index < 0 || index >= len(preset.Slots) {
-		return 0
-	}
-	return design.Type[preset.Slots[index].Type].Chars
-}
-
 // elementChars is the count an element's own text position imposes when it
 // carries no rows: an information value reads as a caption, while a badge and a
 // caption impose none of their own — their line and wrap rules are CDS-25's and
@@ -198,18 +183,10 @@ func parse(source string, limits Limits, stored, template bool) (*Document, *Pro
 	if root.Attributes["version"] != "1" {
 		return nil, issue(root, "unknown_version")
 	}
+	// `intro`, `caption` and `outro` are still accepted on the root so every
+	// body saved before CLIP r33 opens, and they decide nothing: the presets a
+	// clip renders in are the project's (CLIP-14, CLIP-139, CLIP-144).
 	d := &Document{Source: source, Root: root, Accent: optional(root, "accent", ""), Pace: optional(root, "pace", "steady")}
-	d.Design = DesignSelection{Intro: optional(root, "intro", "b"), Caption: optional(root, "caption", "bold"), Outro: optional(root, "outro", "e")}
-	if !slices.Contains([]string{"a", "b"}, d.Design.Intro) || d.Design.Caption != "bold" || !slices.Contains([]string{"b", "e"}, d.Design.Outro) {
-		return nil, issue(root, "invalid_design")
-	}
-	if !stored {
-		for _, attr := range []string{"intro", "caption", "outro"} {
-			if _, present := root.Attributes[attr]; !present {
-				return nil, issue(root, "invalid_design")
-			}
-		}
-	}
 	if !slices.Contains([]string{"", "coral", "amber", "lime", "teal", "blue", "violet", "pink"}, d.Accent) {
 		return nil, issue(root, "invalid_accent")
 	}
@@ -391,6 +368,7 @@ func parse(source string, limits Limits, stored, template bool) (*Document, *Pro
 			if e = readStage(n, d, limits); e != nil {
 				return nil, e
 			}
+			d.Outline = append(d.Outline, Entry{Kind: "stage", Index: len(d.Stages) - 1})
 		case "text":
 			if e = claim(n, ""); e != nil {
 				return nil, e
@@ -400,6 +378,7 @@ func parse(source string, limits Limits, stored, template bool) (*Document, *Pro
 				return nil, e
 			}
 			d.Elements = append(d.Elements, v)
+			d.Outline = append(d.Outline, Entry{Kind: "text", Index: len(d.Elements) - 1})
 		case "scene":
 			if template {
 				return nil, issue(n, "unsupported_section")
@@ -435,22 +414,6 @@ func parse(source string, limits Limits, stored, template bool) (*Document, *Pro
 			}
 		default:
 			return nil, issue(n, "unknown_tag")
-		}
-	}
-	if !stored {
-		for _, role := range []string{"hook", "ending"} {
-			count := 0
-			for _, element := range d.Elements {
-				if element.Role == role {
-					count++
-				}
-				if element.Role == role && count > 1 {
-					return nil, &Problem{ElementID: element.ID, Line: element.Span.Line, Reason: "invalid_skeleton"}
-				}
-			}
-			if count != 1 {
-				return nil, issue(root, "invalid_skeleton")
-			}
 		}
 	}
 	d.Maxima = fieldMaxima(d, limits)
@@ -546,17 +509,18 @@ func fieldMaxima(d *Document, l Limits) map[string]int {
 			fold(t.Parts, limit)
 			return
 		}
-		for i, row := range t.Rows {
+		for _, row := range t.Rows {
 			if RowKind(t, row) == "ai" {
 				continue
 			}
 			limit := row.Chars
-			if limit == 0 {
-				limit = regionSlotChars(d.Design, t.Role, i)
-				if t.Role == "info" {
-					limit = design.Type[row.Role].Chars
-				}
+			if limit == 0 && t.Role == "info" {
+				limit = design.Type[row.Role].Chars
 			}
+			// A region slot's own count belongs to the preset the PROJECT
+			// chose (CLIP-147), so an undeclared region row contributes none
+			// here; the drawn position still holds the text to its count when
+			// it renders (CLIP-116, CDS-77).
 			fold(row.Parts, limit)
 		}
 	}
@@ -587,17 +551,36 @@ func readElement(n *Node, d *Document, scope, repeat string, inScene bool, l Lim
 	if !slices.Contains([]string{"caption", "info", "badge", "hook", "ending"}, t.Role) {
 		return t, issue(n, "invalid_role")
 	}
-	// A template carries no caption or information element of its own any
-	// more: captions are the narration's and cut-bound information went with
-	// the sections (CLIP-4, CLIP-65). The role is named before the basis so a
-	// legacy caption is refused for what it is, not for when it showed.
-	if template && (t.Role == "caption" || t.Role == "info") {
+	// Cut-bound information went with the sections, so `info` stays the one
+	// role a template may not take (CLIP-4, CLIP-59). A caption is an outline
+	// entry again (CLIP-112) and the narration places it.
+	if template && t.Role == "info" {
 		return t, issue(n, "unsupported_role")
 	}
-	if template && t.Basis == "cut" {
-		return t, issue(n, "unsupported_basis")
+	// A template entry declares no interval at all — the order it stands in is
+	// the only position it has (CLIP-66, CLIP-112). A frozen snapshot keeps
+	// every interval it was frozen with (CLIP-140).
+	if template {
+		for _, attr := range []string{"basis", "start", "end"} {
+			if _, present := n.Attributes[attr]; present {
+				return t, issue(n, "unsupported_basis")
+			}
+		}
 	}
 	region := t.Role == "hook" || t.Role == "ending"
+	// An entry that declares no basis takes the one its role is drawn at: the
+	// output's opening for an intro entry, its end for an outro entry, the
+	// whole output for a badge or a caption the narration has yet to time.
+	if t.Basis == "" {
+		switch t.Role {
+		case "hook":
+			t.Basis = "output-start"
+		case "ending":
+			t.Basis = "output-end"
+		default:
+			t.Basis = "whole"
+		}
+	}
 	if region && !stored {
 		_, hasPosition := n.Attributes["position"]
 		_, hasAlign := n.Attributes["align"]
@@ -730,9 +713,11 @@ func readElement(n *Node, d *Document, scope, repeat string, inScene bool, l Lim
 			if e != nil {
 				return t, e
 			}
-			// A row's position is its preset slot when the element is a region
-			// block, and its own row role inside an information pair.
-			slot := regionSlotChars(d.Design, t.Role, len(t.Rows))
+			// A region row's own count is the preset slot it lands in, which is
+			// the project's and unknowable here (CLIP-147); the grammar's copy
+			// ceiling is all this row can be held to. An information pair still
+			// takes its row role's count.
+			slot := 0
 			if !region {
 				slot = design.Type[role].Chars
 			}
@@ -752,15 +737,10 @@ func readElement(n *Node, d *Document, scope, repeat string, inScene bool, l Lim
 		}
 		t.Parts = p
 	}
+	// How many of a region's lines are drawn is the project's preset to decide,
+	// and a surplus line is a notice rather than a refusal (CLIP-147). What
+	// stays refused is a region element whose text sits outside a row.
 	if region && !stored {
-		kind, id := "intro", d.Design.Intro
-		if t.Role == "ending" {
-			kind, id = "outro", d.Design.Outro
-		}
-		preset, _ := design.Region(kind, id)
-		if len(t.Rows) > len(preset.Slots) {
-			return t, issue(n, "invalid_skeleton")
-		}
 		for _, p := range t.Parts {
 			if p.Field != "" || strings.TrimSpace(p.Literal) != "" {
 				return t, issue(n, "invalid_skeleton")

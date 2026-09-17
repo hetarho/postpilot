@@ -20,7 +20,7 @@ type ownedPlanWriter struct{ *plannerFake }
 
 func TestOldRoleStyleDraftCanBeReadAndExplicitlyCorrected(t *testing.T) {
 	s, raw, d := setup(t)
-	valid := `<clip version="1" intro="b" caption="bold" outro="e"><text id="badge" kind="fixed" role="badge" basis="whole">기록</text><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`
+	valid := `<clip version="1"><text id="badge" kind="fixed" role="badge">기록</text><text id="empty-hook" kind="fixed" role="hook"/><text id="empty-ending" kind="fixed" role="ending"/></clip>`
 	invalid := strings.Replace(valid, `role="badge"`, `role="badge" style="simple"`, 1)
 	template, err := s.CreateTemplate(t.Context(), "alice", clip.Recipe{Name: "historical style", CompositionBody: valid})
 	if err != nil {
@@ -100,7 +100,7 @@ func TestGenerationPersistsTheRenderedOwnedPlanAndItsStyles(t *testing.T) {
 	h := generationSetup(t)
 	h.service = clip.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, ownedPlanWriter{h.planner}, ownedPlanRenderer{h.renderer}, generationJobs{h.queue}, h.cfg).WithFinisher(generationFinisher{h.store}).WithCredits(&quotePricing{}, nil)
 	h.projects.SetGeneration(h.service)
-	body := `<clip version="1" intro="b" caption="bold" outro="e"><repeat for="scenes"><scene id="shot"><text id="copy" kind="ai" role="caption" basis="cut">Describe the scene.</text></scene></repeat><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`
+	body := `<clip version="1"><repeat for="scenes"><scene id="shot"><text id="copy" kind="ai" role="caption" basis="cut">Describe the scene.</text></scene></repeat><text id="empty-hook" kind="fixed" role="hook"/><text id="empty-ending" kind="fixed" role="ending"/></clip>`
 	template, err := legacyTemplate(t, h.store, "alice", "owned-render", body), error(nil)
 	if err != nil {
 		t.Fatal(err)
@@ -127,7 +127,7 @@ func TestGenerationPersistsTheRenderedOwnedPlanAndItsStyles(t *testing.T) {
 	}
 }
 
-const nativeBody = `<clip version="1" intro="b" caption="bold" outro="e"><field id="a" label="가격"/><field id="b" label="가격" required="true"/><group id="menu"><field id="price" label="가격"/></group><repeat for="scenes"><scene id="shot" scope="scene"><text id="copy" kind="ai" role="caption" basis="cut">장면만 설명</text></scene></repeat><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`
+const nativeBody = `<clip version="1"><field id="a" label="가격"/><field id="b" label="가격" required="true"/><group id="menu"><field id="price" label="가격"/></group><repeat for="scenes"><scene id="shot" scope="scene"><text id="copy" kind="ai" role="caption" basis="cut">장면만 설명</text></scene></repeat><text id="empty-hook" kind="fixed" role="hook"/><text id="empty-ending" kind="fixed" role="ending"/></clip>`
 
 func TestNativeCompositionOwnedRoundTripAndRequiredIDs(t *testing.T) {
 	s, st, d := setup(t)
@@ -308,7 +308,7 @@ func TestCompositionAssociationHoldsToObservationsAndBindsTheQuote(t *testing.T)
 func TestUnsupportedCompositionRefusesQuoteBeforeMediaOrCreditWork(t *testing.T) {
 	h := generationSetup(t)
 	ctx := context.Background()
-	body := `<clip version="1" intro="b" caption="bold" outro="e"><repeat for="scenes"><scene id="shot" scope="scene"/></repeat><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`
+	body := `<clip version="1"><repeat for="scenes"><scene id="shot" scope="scene"/></repeat><text id="empty-hook" kind="fixed" role="hook"/><text id="empty-ending" kind="fixed" role="ending"/></clip>`
 	if _, err := h.store.UpdateTemplate(ctx, "alice", h.template.ID, clip.TemplatePatch{CompositionBody: &body}, time.Now()); err != nil {
 		t.Fatal(err)
 	}

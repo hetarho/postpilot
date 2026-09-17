@@ -46,24 +46,15 @@ const typeChars = (type: string) =>
  * that imposes none of its own — a badge or a caption, whose line and wrap rules
  * are CDS-25's and the repair ladder's rather than a character ceiling.
  *
- * A region row takes its preset slot's type (a ratio changes the hook's size but
- * not its characters, CDS-46), an information row its row role, and an element
- * without rows reads as a caption when it carries information. One derivation,
- * exported so the editor bounds its control by the number the parser enforces
- * rather than one of its own (CLIP-116). */
-export function compositionPositionChars(
-  design: ClipComposition['design'],
-  role: string,
-  row?: { role?: string; index: number },
-) {
+ * A region row imposes none here either: how many lines its region draws and at
+ * what size is the preset the PROJECT chose (CLIP-147), so the drawn position
+ * holds the text to its count when it renders (CDS-77). An information row takes
+ * its row role, and an element without rows reads as a caption when it carries
+ * information. One derivation, exported so the editor bounds its control by the
+ * number the parser enforces rather than one of its own (CLIP-116). */
+export function compositionPositionChars(role: string, row?: { role?: string; index: number }) {
   if (!row) return role === 'info' ? typeChars('caption') : 0
-  if (role === 'info') return typeChars(row.role ?? '')
-  const preset =
-    role === 'ending'
-      ? CLIP_DESIGN.regions.outro[design.outro]
-      : CLIP_DESIGN.regions.intro[design.intro]
-  const slot = preset?.slots[row.index]
-  return slot ? typeChars(slot.type) : 0
+  return role === 'info' ? typeChars(row.role ?? '') : 0
 }
 export function validCompositionLimits(l: CompositionLimits) {
   return (Object.keys(CLIP_COMPOSITION_LIMITS) as (keyof CompositionLimits)[]).every((key) => {
@@ -118,7 +109,11 @@ function readElement(
   const a = n.attributes,
     kind = a.kind,
     role = a.role,
-    basis = a.basis
+    // An entry that declares no basis takes the one its role is drawn at: the
+    // output's opening for an intro entry, its end for an outro entry, the whole
+    // output for a badge or a caption the narration has yet to time.
+    basis =
+      a.basis ?? (role === 'hook' ? 'output-start' : role === 'ending' ? 'output-end' : 'whole')
   if (kind !== 'fixed' && kind !== 'ai') problem(n, 'invalid_kind')
   if (
     role !== 'caption' &&
@@ -128,12 +123,15 @@ function readElement(
     role !== 'ending'
   )
     problem(n, 'invalid_role')
-  // A template carries no caption or information element of its own any more:
-  // captions are the narration's and cut-bound information went with the
-  // sections (CLIP-4, CLIP-65). The role is named before the basis so a legacy
-  // caption is refused for what it is, not for when it showed.
-  if (template && (role === 'caption' || role === 'info')) problem(n, 'unsupported_role')
-  if (template && basis === 'cut') problem(n, 'unsupported_basis')
+  // Cut-bound information went with the sections, so `info` stays the one role
+  // a template may not take (CLIP-4, CLIP-59). A caption is an outline entry
+  // again (CLIP-112) and the narration places it.
+  if (template && role === 'info') problem(n, 'unsupported_role')
+  // A template entry declares no interval at all — the order it stands in is the
+  // only position it has (CLIP-66, CLIP-112). A frozen snapshot keeps every
+  // interval it was frozen with (CLIP-140).
+  if (template && ['basis', 'start', 'end'].some((key) => Object.hasOwn(a, key)))
+    problem(n, 'unsupported_basis')
   const region = role === 'hook' || role === 'ending'
   if (
     region &&
@@ -156,7 +154,7 @@ function readElement(
   if (basis !== 'whole' && basis !== 'output-start' && basis !== 'output-end' && basis !== 'cut')
     problem(n, 'invalid_basis')
   if (basis === 'cut' && !inScene) problem(n, 'invalid_basis')
-  const ownLimit = compositionPositionChars(d.design, role) || l.copyChars
+  const ownLimit = compositionPositionChars(role) || l.copyChars
   const chars = declaredChars(n, n, ownLimit)
   const hasStart = Object.hasOwn(a, 'start'),
     hasEnd = Object.hasOwn(a, 'end')
@@ -237,20 +235,19 @@ function readElement(
       if (!region && !rowRoles.includes(rowRole)) problem(n, 'invalid_row_role')
       const rowKind = c.attributes.kind ?? kind
       if (rowKind !== 'fixed' && rowKind !== 'ai') problem(n, 'invalid_kind')
-      // A row's position is its preset slot in a region block, and its own row
-      // role inside an information pair.
-      const slot = compositionPositionChars(d.design, role, { role: rowRole, index }) || l.copyChars
+      // A region row's own count is the preset slot it lands in, which is the
+      // project's and unknowable here (CLIP-147); the grammar's copy ceiling is
+      // all this row can be held to. An information pair still takes its row
+      // role's count.
+      const slot = compositionPositionChars(role, { role: rowRole, index }) || l.copyChars
       return { role: rowRole, kind: rowKind, chars: declaredChars(c, n, slot), parts: parts(c) }
     })
   } else t.parts = parts(n)
-  if (region && !stored) {
-    const count =
-      role === 'hook'
-        ? CLIP_DESIGN.regions.intro[d.design.intro].slots.length
-        : CLIP_DESIGN.regions.outro[d.design.outro].slots.length
-    if (t.rows.length > count || t.parts.some((p) => p.field || trimCompositionSpace(p.literal)))
-      problem(n, 'invalid_skeleton')
-  }
+  // How many of a region's lines are drawn is the project's preset to decide,
+  // and a surplus line is a notice rather than a refusal (CLIP-147). What stays
+  // refused is a region element whose text sits outside a row.
+  if (region && !stored && t.parts.some((p) => p.field || trimCompositionSpace(p.literal)))
+    problem(n, 'invalid_skeleton')
   for (const row of [{ kind, parts: t.parts }, ...t.rows]) {
     const max = row.kind === 'ai' ? l.guideChars : l.copyChars
     if (row.parts.reduce((n, p) => n + scalarLength(p.literal), 0) > max) problem(n, 'copy_limit')
@@ -315,17 +312,12 @@ function readClipComposition(
     ...(stored ? ['styles'] : []),
   )
   if (root.attributes.version !== '1') problem(root, 'unknown_version')
-  const intro = root.attributes.intro ?? 'b',
-    caption = root.attributes.caption ?? 'bold',
-    outro = root.attributes.outro ?? 'e'
-  if ((intro !== 'a' && intro !== 'b') || caption !== 'bold' || (outro !== 'b' && outro !== 'e'))
-    problem(root, 'invalid_design')
-  if (!stored && ['intro', 'caption', 'outro'].some((key) => !Object.hasOwn(root.attributes, key)))
-    problem(root, 'invalid_design')
+  // `intro`, `caption` and `outro` are still accepted on the root so every body
+  // saved before CLIP r33 opens, and they decide nothing: the presets a clip
+  // renders in are the project's (CLIP-14, CLIP-139, CLIP-144).
   const d: ClipComposition = {
     source,
     root,
-    design: { intro, caption, outro },
     accent: root.attributes.accent ?? '',
     pace: root.attributes.pace ?? 'steady',
     fields: [],
@@ -334,6 +326,7 @@ function readClipComposition(
     stages: [],
     sections: [],
     elements: [],
+    outline: [],
     maxima: {},
     minima: {},
   }
@@ -462,10 +455,12 @@ function readClipComposition(
         break
       case 'stage':
         stage(n)
+        d.outline.push({ kind: 'stage', index: d.stages.length - 1 })
         break
       case 'text':
         claim(n)
         d.elements.push(readElement(n, d, 'context', '', false, limits, stored, template))
+        d.outline.push({ kind: 'text', index: d.elements.length - 1 })
         break
       case 'scene':
         if (template) problem(n, 'unsupported_section')
@@ -488,13 +483,6 @@ function readClipComposition(
         problem(n, 'unknown_tag')
     }
   }
-  if (!stored)
-    for (const role of ['hook', 'ending']) {
-      const elements = d.elements.filter((e) => e.role === role)
-      if (elements.length > 1)
-        throw new CompositionProblem(elements[1].id, elements[1].span.line, 'invalid_skeleton')
-      if (elements.length !== 1) problem(root, 'invalid_skeleton')
-    }
   d.maxima = fieldMaxima(d, limits)
   d.minima = groupMinima(d)
   return d
@@ -533,14 +521,14 @@ function fieldMaxima(d: ClipComposition, l: CompositionLimits) {
   const visit = (t: CompositionElement) => {
     if (!t.rows.length) {
       if (t.kind === 'ai') return
-      return fold(t.parts, t.chars || compositionPositionChars(d.design, t.role))
+      return fold(t.parts, t.chars || compositionPositionChars(t.role))
     }
+    // A region slot's own count belongs to the preset the PROJECT chose
+    // (CLIP-147), so an undeclared region row contributes none here; the drawn
+    // position still holds the text to its count when it renders (CDS-77).
     t.rows.forEach((row, index) => {
       if ((row.kind || t.kind) === 'ai') return
-      fold(
-        row.parts,
-        row.chars || compositionPositionChars(d.design, t.role, { role: row.role, index }),
-      )
+      fold(row.parts, row.chars || compositionPositionChars(t.role, { role: row.role, index }))
     })
   }
   d.elements.forEach(visit)

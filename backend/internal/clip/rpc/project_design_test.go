@@ -70,7 +70,11 @@ func TestCreatingAClipWithNoTemplateCrossesTheWireAsNone(t *testing.T) {
 	if s.created.VideoTemplateID != "" || s.created.Composition == nil || s.created.Composition.Snapshot.TemplateID != "" {
 		t.Fatal("the boundary invented a template", s.created.VideoTemplateID, s.created.Composition)
 	}
-	if s.created.IntroPreset != "b" || s.created.OutroPreset != "e" {
-		t.Fatal("a project with no template did not start at the defaults", s.created.IntroPreset, s.created.OutroPreset)
+	// An unset selection is what the shared default looks like on the wire.
+	if s.created.IntroPreset != "" || s.created.OutroPreset != "" {
+		t.Fatal("the boundary invented a selection", s.created.IntroPreset, s.created.OutroPreset)
+	}
+	if presets := s.created.DesignSelection().RegionPresets(); presets.Intro != "b" || presets.Outro != "e" {
+		t.Fatal("the unset selection did not resolve to the defaults", presets)
 	}
 }

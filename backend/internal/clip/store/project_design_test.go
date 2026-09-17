@@ -4,18 +4,18 @@ import (
 	"testing"
 
 	"github.com/postpilot/backend/internal/clip"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 func designedBody(intro, outro string) string {
 	return `<clip version="1" intro="` + intro + `" caption="bold" outro="` + outro + `">` +
-		`<text id="intro" kind="fixed" role="hook" basis="output-start"/>` +
-		`<text id="outro" kind="fixed" role="ending" basis="output-end"/></clip>`
+		`<text id="intro" kind="fixed" role="hook"/>` +
+		`<text id="outro" kind="fixed" role="ending"/></clip>`
 }
 
-// The design selection is the PROJECT's (CLIP-139, CLIP-142): a clip made from a
-// template starts at that template's values and may change every one of them.
-func TestDesignSelectionIsSeededFromTheTemplateThenOwnedByTheProject(t *testing.T) {
+// The design selection is the PROJECT's alone (CLIP-14, CLIP-139, CLIP-142):
+// every project starts at the shared defaults, template or no template, and may
+// change every one of them.
+func TestDesignSelectionStartsAtTheDefaultsAndIsOwnedByTheProject(t *testing.T) {
 	service, _, _ := setup(t)
 	template, err := service.CreateTemplate(t.Context(), "alice", clip.Recipe{Name: "디자인", Preset: "stay", Accent: "teal", CompositionBody: designedBody("a", "b")})
 	if err != nil {
@@ -25,13 +25,16 @@ func TestDesignSelectionIsSeededFromTheTemplateThenOwnedByTheProject(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	if p.IntroPreset != "a" || p.OutroPreset != "b" || len(p.CaptionStyles) != 1 || p.CaptionStyles[0] != "bold" {
-		t.Fatal("a new project did not start from its template's selection", p.IntroPreset, p.OutroPreset, p.CaptionStyles)
+	// The template's body still names presets and the project takes none of
+	// them: an empty selection IS the shared default (CLIP-14).
+	if p.IntroPreset != "" || p.OutroPreset != "" || len(p.CaptionStyles) != 0 {
+		t.Fatal("a template seeded the project's design", p.IntroPreset, p.OutroPreset, p.CaptionStyles)
 	}
-	// A template that declares none, and no template at all, both start at the
-	// shared defaults rather than at an invented value.
-	if seed := clip.TemplateDesign(clip.VideoTemplate{}, config.ClipCompositionLimits()); seed.Intro != "b" || seed.Outro != "e" || seed.Caption != "bold" {
-		t.Fatal("a project made without a template did not start at the defaults", seed)
+	if presets := p.DesignSelection().RegionPresets(); presets.Intro != "b" || presets.Outro != "e" {
+		t.Fatal("the unset selection did not resolve to the shared defaults", presets)
+	}
+	if resolved := clip.ResolvedCaptionStyles(p.CaptionStyles); len(resolved) != 1 || resolved[0] != "bold" {
+		t.Fatal("the unset styles did not resolve to the default style", resolved)
 	}
 	intro, outro, styles := "b", "e", []string{}
 	changed, err := service.UpdateProject(t.Context(), "alice", p.ID, clip.ProjectPatch{IntroPreset: &intro, OutroPreset: &outro, CaptionStyles: &styles})
@@ -86,10 +89,10 @@ func TestChangingTheDesignSelectionStalesTheResultWithoutRewritingThePlan(t *tes
 	if err != nil || same.EditPlanRevision != after.EditPlanRevision {
 		t.Fatal("an unchanged value still staled the result", same.EditPlanRevision, err)
 	}
-	// The styles are the same kind of choice: the project seeded ["bold"] from
-	// its template, and selecting none is a change the render has to be redone
-	// for, even where the default it resolves to draws the same caption.
-	styles := []string{}
+	// The styles are the same kind of choice: selecting one is a change the
+	// render has to be redone for, even where the default it replaces draws the
+	// same caption.
+	styles := []string{"keynote"}
 	restyled, err := h.projects.UpdateProject(t.Context(), "alice", h.project.ID, clip.ProjectPatch{CaptionStyles: &styles})
 	if err != nil || restyled.EditPlanRevision != after.EditPlanRevision+1 {
 		t.Fatal("changing the allowed styles did not stale the result", restyled.EditPlanRevision, err)

@@ -46,7 +46,7 @@ func BuildNarrationPrompt(in clip.NarrationInput, limits composition.Limits) (st
 		"global_values":       in.Composition.Inputs.Values, "item_groups": groups, "item_hints": hints,
 		"cuts": resolvedFlowPayload(in), "output_duration_ms": in.Flow.DurationMS,
 		"ratio":                  in.Ratio,
-		"generated_region_slots": generatedRegionSlots(in.Composition.Snapshot.Body, limits),
+		"generated_region_slots": generatedRegionSlots(in.Design.RegionPresets(), in.Composition.Snapshot.Body, limits),
 		"caption_max_chars":      design.Caption().Lines * design.Caption().Chars,
 		"analyses":               planObservationPayload(in.Analyses, true),
 	}

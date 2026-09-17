@@ -20,7 +20,8 @@ describe('design-first composition skeleton', () => {
     ['b', 'e'],
   ] as const)('creates %s/%s with fixed ordered slots and default intervals', (intro, ending) => {
     const doc = parseClipComposition(compositionSkeleton(intro, ending))
-    expect(doc.design).toEqual({ intro, caption: 'bold', outro: ending })
+    // A skeleton names no design: the presets are the project's (CLIP-14).
+    expect(Object.keys(doc.root.attributes)).toEqual(['version'])
     expect(doc.elements.map((e) => [e.role, e.rows.length, e.startMs, e.endMs])).toEqual([
       ['hook', 2, 0, 2500],
       ['ending', ending === 'b' ? 2 : 3, -3000, 0],
@@ -58,7 +59,12 @@ describe('design-first composition skeleton', () => {
       'ending',
     )
     expect(full).toContain('Keep third')
-    expect(() => parseClipComposition(full)).toThrow('invalid_skeleton')
+    // A third line is no longer an authoring error: how many of them the outro
+    // draws is the preset the PROJECT chose, and the surplus is a notice at
+    // render rather than a refusal here (CLIP-147).
+    expect(parseClipComposition(full).elements.find((e) => e.role === 'ending')!.rows).toHaveLength(
+      3,
+    )
   })
   it('moves the real restaurant legacy ending to the root and preserves its entire prompt', () => {
     // 0054 removes retired style attributes but intentionally does not restructure this ending.
@@ -117,6 +123,6 @@ describe('design-first composition skeleton', () => {
         (c: { name: string }) => c.name === 'restaurant v2 design-first pasteable example',
       ).body,
     ).toBe(document)
-    expect(parseClipComposition(document).design.outro).toBe('e')
+    expect(parseClipComposition(document).root.attributes.outro).toBe('e')
   })
 })

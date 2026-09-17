@@ -25,24 +25,23 @@ describe('composition authoring contract', () => {
   })
 
   it('holds an authored maximum inside what its position allows', () => {
-    // Outro E's middle slot is the 6-character display (CDS-20), so the control
-    // cannot author the invalid_max the parser would refuse.
-    const display = compositionPositionChars(
-      { intro: 'a', caption: 'bold', outro: 'e' },
-      'ending',
-      {
-        index: 1,
-      },
-    )
-    expect(display).toBe(6)
-    expect(boundedChars('20', display)).toBe('6')
-    expect(boundedChars('4', display)).toBe('4')
-    expect(boundedChars('0', display)).toBe('')
-    expect(boundedChars('여섯', display)).toBe('')
+    // An information row is the one position that still imposes its own count
+    // here: a region line's is the preset the PROJECT chose (CLIP-147), and a
+    // caption's line and wrap rules are CDS-25's rather than a ceiling.
+    const label = compositionPositionChars('info', { role: 'label', index: 0 })
+    expect(label).toBe(22)
+    expect(boundedChars('40', label)).toBe('22')
+    expect(boundedChars('4', label)).toBe('4')
+    expect(boundedChars('0', label)).toBe('')
+    expect(boundedChars('여섯', label)).toBe('')
     // 자동 is the attribute's absence, so an emptied control stays empty.
-    expect(boundedChars('', display)).toBe('')
-    // A position with no count of its own keeps the number as typed.
-    expect(compositionPositionChars({ intro: 'a', caption: 'bold', outro: 'e' }, 'caption')).toBe(0)
+    expect(boundedChars('', label)).toBe('')
+    for (const open of [
+      compositionPositionChars('caption'),
+      compositionPositionChars('ending', { index: 1 }),
+      compositionPositionChars('hook', { index: 0 }),
+    ])
+      expect(open).toBe(0)
     expect(boundedChars('40', 0)).toBe('40')
   })
 
@@ -68,15 +67,16 @@ describe('composition authoring contract', () => {
     const body = [
       '<clip version="1" intro="a" caption="bold" outro="e">',
       '  <text id="opening" kind="fixed" role="hook" basis="output-start">',
-      '    <row chars="9">여는 문구</row><row>작은 문구</row>',
+      '    <row chars="501">여는 문구</row><row>작은 문구</row>',
       '  </text>',
       '  <text id="closing" kind="fixed" role="ending" basis="output-end">',
       '    <row>라벨</row><row>큰 글씨</row><row>닫는 문구</row>',
       '  </text>',
       '</clip>',
     ].join('\n')
-    // Intro A's first slot is the 8-character headline, so 9 is refused there
-    // and the failure names the text that carries the row, on the text's line.
+    // A region row is held to the grammar's copy ceiling alone — its slot's own
+    // count is the preset the PROJECT chose (CLIP-147) — and the failure names
+    // the text that carries the row, on the text's line.
     expect(() => parseClipComposition(body)).toThrow('invalid_max')
     try {
       parseClipComposition(body)

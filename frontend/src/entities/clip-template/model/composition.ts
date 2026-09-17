@@ -165,10 +165,15 @@ export interface CompositionSection {
   elements: CompositionElement[]
   span: CompositionSpan
 }
+/** One position in the body's ordered outline (CLIP-112): the order an entry
+ * stands in is the only position it declares. */
+export interface CompositionEntry {
+  kind: 'stage' | 'text'
+  index: number
+}
 export interface ClipComposition {
   source: string
   root: CompositionNode
-  design: { intro: 'a' | 'b'; caption: 'bold'; outro: 'b' | 'e' }
   accent: string
   pace: string
   fields: CompositionField[]
@@ -177,6 +182,9 @@ export interface ClipComposition {
   stages: CompositionStage[]
   sections: CompositionSection[]
   elements: CompositionElement[]
+  /** The root's stages and visible entries in document order (CLIP-112); the
+   * per-kind lists above stay beside it. */
+  outline: CompositionEntry[]
   /** Each field's effective maximum, keyed as the qualified field reference
    * (CLIP-117): the smallest of its authored maximum, the cap of every position
    * its value reaches, and the grammar's answerChars. */

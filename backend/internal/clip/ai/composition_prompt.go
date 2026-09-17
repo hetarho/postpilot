@@ -67,7 +67,7 @@ func buildCompositionPlanPrompt(in clip.PlanningInput, fadeMS int, limits compos
 	system := compositionPlanPrompt
 	payload := map[string]any{
 		"composition_source":     in.Composition.Snapshot.Body,
-		"generated_region_slots": generatedRegionSlots(in.Composition.Snapshot.Body, limits),
+		"generated_region_slots": generatedRegionSlots(in.Design.RegionPresets(), in.Composition.Snapshot.Body, limits),
 		"generated_text_limits":  generatedTextLimits(in.Composition.Snapshot.Body, limits),
 		"admitted_sections":      admittedSections(in, limits),
 		"global_values":          in.Composition.Inputs.Values, "item_groups": groups, "owner_associations": associations,
@@ -98,14 +98,14 @@ func admittedSections(in clip.PlanningInput, limits composition.Limits) []map[st
 }
 
 // The parser resolves row authorship; the design tokens own every slot limit.
-func generatedRegionSlots(body string, limits composition.Limits) []map[string]any {
+func generatedRegionSlots(presets composition.DesignSelection, body string, limits composition.Limits) []map[string]any {
 	out := []map[string]any{}
 	doc, problem := composition.ReadStored(body, limits)
 	if problem != nil {
 		return out
 	}
 	for _, e := range doc.Elements {
-		region, id := regionSelection(doc, e)
+		region, id := regionSelection(presets, e)
 		preset, ok := design.Region(region, id)
 		if !ok {
 			continue
@@ -144,7 +144,9 @@ func generatedTextLimits(body string, limits composition.Limits) []map[string]an
 		out = append(out, entry)
 	}
 	visit := func(e composition.Element) {
-		if region, _ := regionSelection(doc, e); region != "" {
+		// A region row's own limit rides generated_region_slots, which knows the
+		// project's preset; this list carries the other generated positions.
+		if e.Role == "hook" || e.Role == "ending" {
 			return
 		}
 		if len(e.Rows) == 0 {

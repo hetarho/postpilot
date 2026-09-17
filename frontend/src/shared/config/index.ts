@@ -395,6 +395,7 @@ export {
   CLIP_DESIGN,
   CLIP_REGIONS,
   CLIP_DEFAULT_CAPTION_STYLE,
+  CLIP_DEFAULT_REGION_PRESETS,
   CLIP_CAPTION_STYLES,
   clipCaptionRule,
   clipCaptionSizes,
@@ -420,6 +421,7 @@ export {
 } from './clip-design'
 export type {
   ClipCaptionPace,
+  ClipRegionPresets,
   ClipRatioId,
   ClipPresetId,
   ClipCaptionStyleId,

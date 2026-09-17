@@ -146,8 +146,15 @@ func TestReleaseDetailedBodyUsesCurrentGrammar(t *testing.T) {
 	if problem != nil {
 		t.Fatal(problem)
 	}
-	if doc.Design.Intro != "b" || doc.Design.Caption != "bold" || doc.Design.Outro != "e" {
-		t.Fatalf("unexpected release design: %+v", doc.Design)
+	// The body names no design and no timing: both are the project's and the
+	// renderer's now (CLIP-14, CLIP-66).
+	if len(doc.Root.Attributes) != 1 || doc.Root.Attributes["version"] != "1" {
+		t.Fatalf("unexpected release root: %+v", doc.Root.Attributes)
+	}
+	for _, e := range doc.Elements {
+		if e.StartMS != nil && e.Role != "hook" && e.Role != "ending" {
+			t.Fatalf("%s declares an interval: %+v", e.ID, e)
+		}
 	}
 }
 

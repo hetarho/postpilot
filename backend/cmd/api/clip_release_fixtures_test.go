@@ -733,5 +733,5 @@ func releaseCorrelation(a, b []byte) float64 {
 const releaseCaption = "천천히 흐르는 장면"
 
 func releaseDetailedBody() string {
-	return `<clip version="1" intro="b" caption="bold" outro="e"><guide>` + strings.Repeat("관찰한 장면을 차분히 설명한다. ", 130) + `</guide><guide>` + strings.Repeat("관찰한 사실과 입력한 내용만 사용한다. ", 110) + `</guide><text id="label" kind="fixed" role="badge" position="header" basis="whole">검증용 영상</text><text id="opening" kind="fixed" role="hook" basis="output-start" start="0" end="3"><row>오늘의 기록</row><row>직접 남긴 장면</row></text><text id="closing" kind="fixed" role="ending" basis="output-end" start="-4" end="0"><row>다음에 또 만나요</row><row>또 오고 싶은 곳</row></text></clip>`
+	return `<clip version="1"><guide>` + strings.Repeat("관찰한 장면을 차분히 설명한다. ", 130) + `</guide><guide>` + strings.Repeat("관찰한 사실과 입력한 내용만 사용한다. ", 110) + `</guide><text id="label" kind="fixed" role="badge" position="header">검증용 영상</text><text id="opening" kind="fixed" role="hook"><row>오늘의 기록</row><row>직접 남긴 장면</row></text><text id="closing" kind="fixed" role="ending"><row>다음에 또 만나요</row><row>또 오고 싶은 곳</row></text></clip>`
 }

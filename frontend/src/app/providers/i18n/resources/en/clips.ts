@@ -392,9 +392,9 @@ export const clips = {
       unsupported_section:
         'Scenes (scene, repeat) are no longer part of a template. Put footage order and scene guidance in the clip instruction.',
       unsupported_role:
-        'Caption and info texts are no longer part of a template. Captions come from the clip instruction and the footage at generation.',
+        'Info texts are no longer part of a template. Write what should stay on screen as a caption.',
       unsupported_basis:
-        'Cut-relative timing (basis="cut") is no longer supported. Use whole or an output-start/output-end interval.',
+        'A template declares no timing. Entries appear in the order you place them, and ② is where their times change.',
       guide_limit: 'The guide is too long. Shorten it to the guide limit.',
       stage_limit:
         'A composition stage needs both a name and one line of intent, within the length and count limits.',

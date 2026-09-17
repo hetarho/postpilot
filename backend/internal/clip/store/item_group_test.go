@@ -15,7 +15,7 @@ import (
 
 func TestItemGroupBoundsRefusedAtTemplateSave(t *testing.T) {
 	s, raw, _ := setup(t)
-	body := `<clip version="1" intro="b" caption="bold" outro="e"><group id="menu" min="1" max="2"><field id="name" label="Name"/></group><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`
+	body := `<clip version="1"><group id="menu" min="1" max="2"><field id="name" label="Name"/></group><text id="empty-hook" kind="fixed" role="hook"/><text id="empty-ending" kind="fixed" role="ending"/></clip>`
 	template, err := s.CreateTemplate(t.Context(), "alice", clip.Recipe{Name: "menu", CompositionBody: body})
 	if err != nil {
 		t.Fatal(err)
@@ -44,7 +44,7 @@ func TestItemGroupMinimumRefusesQuoteBeforeWorkButAllowsDrafts(t *testing.T) {
 	for name, label := range map[string]string{"named": "메뉴", "undeclared_name": ""} {
 		t.Run(name, func(t *testing.T) {
 			h := generationSetup(t)
-			body := "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><text id=\"intro\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"outro\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/>\n<group id=\"menu\" label=\"" + label + "\" min=\"2\" max=\"2\"><field id=\"name\" label=\"Name\" required=\"true\"/></group></clip>"
+			body := "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><text id=\"intro\" kind=\"fixed\" role=\"hook\"/><text id=\"outro\" kind=\"fixed\" role=\"ending\"/>\n<group id=\"menu\" label=\"" + label + "\" min=\"2\" max=\"2\"><field id=\"name\" label=\"Name\" required=\"true\"/></group></clip>"
 			template, err := h.projects.CreateTemplate(t.Context(), "alice", clip.Recipe{Name: "menu", CompositionBody: body})
 			if err != nil {
 				t.Fatal(err)
@@ -101,7 +101,7 @@ func TestItemGroupMinimumRefusesQuoteBeforeWorkButAllowsDrafts(t *testing.T) {
 // given.
 func TestRequiredFieldGroupAdmitsOneItemAtQuoteNotAtTemplateLoad(t *testing.T) {
 	h := generationSetup(t)
-	body := "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><text id=\"intro\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"outro\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/>\n<group id=\"menu\" label=\"메뉴\"><field id=\"name\" label=\"Name\" required=\"true\"/></group></clip>"
+	body := "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><text id=\"intro\" kind=\"fixed\" role=\"hook\"/><text id=\"outro\" kind=\"fixed\" role=\"ending\"/>\n<group id=\"menu\" label=\"메뉴\"><field id=\"name\" label=\"Name\" required=\"true\"/></group></clip>"
 	template, err := h.projects.CreateTemplate(t.Context(), "alice", clip.Recipe{Name: "menu", CompositionBody: body})
 	if err != nil {
 		t.Fatal("legacy template refused at load", err)
@@ -133,7 +133,7 @@ func TestRequiredFieldGroupAdmitsOneItemAtQuoteNotAtTemplateLoad(t *testing.T) {
 // the empty set included (CLIP-61).
 func TestOptionalFieldGroupAdmitsNoItem(t *testing.T) {
 	h := generationSetup(t)
-	body := `<clip version="1" intro="b" caption="bold" outro="e"><text id="intro" kind="fixed" role="hook" basis="output-start"/><text id="outro" kind="fixed" role="ending" basis="output-end"/><group id="menu" label="메뉴"><field id="name" label="Name"/></group></clip>`
+	body := `<clip version="1"><text id="intro" kind="fixed" role="hook"/><text id="outro" kind="fixed" role="ending"/><group id="menu" label="메뉴"><field id="name" label="Name"/></group></clip>`
 	template, err := h.projects.CreateTemplate(t.Context(), "alice", clip.Recipe{Name: "menu", CompositionBody: body})
 	if err != nil {
 		t.Fatal(err)
@@ -154,7 +154,7 @@ func TestWholeSourceBindingSurvivesSaveAndGeneration(t *testing.T) {
 	ctx := context.Background()
 	h.service = clip.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, compositionPlanner{h.planner}, compositionRenderer{h.renderer}, generationJobs{h.queue}, h.cfg).WithFinisher(generationFinisher{h.store}).WithCredits(&quotePricing{}, nil)
 	h.projects.SetGeneration(h.service)
-	body := "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><text id=\"intro\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"outro\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/>\n<group id=\"menu\" label=\"고기\"><field id=\"name\" label=\"부위\" required=\"true\"/></group><repeat for=\"menu\"><scene id=\"cut\" scope=\"item\"><text id=\"copy\" kind=\"ai\" role=\"caption\" basis=\"cut\">설명</text></scene></repeat></clip>"
+	body := "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><text id=\"intro\" kind=\"fixed\" role=\"hook\"/><text id=\"outro\" kind=\"fixed\" role=\"ending\"/>\n<group id=\"menu\" label=\"고기\"><field id=\"name\" label=\"부위\" required=\"true\"/></group><repeat for=\"menu\"><scene id=\"cut\" scope=\"item\"><text id=\"copy\" kind=\"ai\" role=\"caption\" basis=\"cut\">설명</text></scene></repeat></clip>"
 	template, err := legacyTemplate(t, h.store, "alice", "meat", body), error(nil)
 	if err != nil {
 		t.Fatal(err)

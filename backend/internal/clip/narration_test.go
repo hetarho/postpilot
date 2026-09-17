@@ -336,11 +336,11 @@ func TestGroundNarrationChecksFactsWithoutAnItemRule(t *testing.T) {
 
 func TestAPlanWithoutSectionsResolvesOnlyItsFixedRegions(t *testing.T) {
 	limits := config.ClipCompositionLimits()
-	body := `<clip version="1" intro="b" caption="bold" outro="e">` +
+	body := `<clip version="1">` +
 		`<field id="place" label="상호" required="true">가게 이름</field>` +
 		`<group id="menu" label="메뉴" min="1"><field id="name" label="이름" required="true">메뉴 이름</field></group>` +
-		`<text id="hook" kind="fixed" role="hook" basis="output-start" start="0" end="2"><row><value field="place"/></row></text>` +
-		`<text id="ending" kind="fixed" role="ending" basis="output-end" start="-2" end="0"><row>또 갈래요</row></text></clip>`
+		`<text id="hook" kind="fixed" role="hook"><row><value field="place"/></row></text>` +
+		`<text id="ending" kind="fixed" role="ending"><row>또 갈래요</row></text></clip>`
 	doc, problem := composition.ParseTemplate(body, limits)
 	if problem != nil {
 		t.Fatal(problem)

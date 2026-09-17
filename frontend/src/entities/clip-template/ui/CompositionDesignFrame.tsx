@@ -1,5 +1,12 @@
 import { useId, useLayoutEffect, useRef, useState } from 'react'
-import { CLIP_DESIGN, CLIP_REGIONS, CLIP_RULES, type ClipRatioId } from '@/shared/config'
+import {
+  CLIP_DEFAULT_REGION_PRESETS,
+  CLIP_DESIGN,
+  CLIP_REGIONS,
+  CLIP_RULES,
+  type ClipRatioId,
+  type ClipRegionPresets,
+} from '@/shared/config'
 import type { ClipComposition, ResolvedCompositionElement } from '../model/composition'
 
 type TypeName = keyof typeof CLIP_DESIGN.type
@@ -104,12 +111,17 @@ export function CompositionDesignFrame({
   ratio,
   label,
   sampleAI,
+  presets = CLIP_DEFAULT_REGION_PRESETS,
 }: {
   document: ClipComposition
   entries: ResolvedCompositionElement[]
   ratio: ClipRatioId
   label: string
   sampleAI: string
+  /** The presets the intro and the outro are drawn in. A template declares
+   *  none, so a surface with no project selection draws the shared defaults
+   *  (CLIP-14, CLIP-147). */
+  presets?: ClipRegionPresets
 }) {
   const shape = CLIP_DESIGN.ratios[ratio]
   const scale = shape.canvas.height / CLIP_DESIGN.ratios.vertical.canvas.height
@@ -129,9 +141,9 @@ export function CompositionDesignFrame({
     const kind = e.role === 'hook' ? 'intro' : e.role === 'ending' ? 'outro' : undefined
     const preset =
       kind === 'intro'
-        ? CLIP_REGIONS.intro[document.design.intro]
+        ? CLIP_REGIONS.intro[presets.intro]
         : kind === 'outro'
-          ? CLIP_REGIONS.outro[document.design.outro]
+          ? CLIP_REGIONS.outro[presets.outro]
           : undefined
     const rows = entry.rows.length
       ? entry.rows
@@ -350,7 +362,7 @@ export function CompositionDesignFrame({
               key={v.entry.instanceId}
               data-element={e.id}
               data-region={v.kind}
-              data-preset={document.design[v.kind]}
+              data-preset={presets[v.kind]}
             >
               {v.lines.map((line) =>
                 paintedText(line, shape.anchor.center, v.slots![line.slot!].y + regionOffset(v)),

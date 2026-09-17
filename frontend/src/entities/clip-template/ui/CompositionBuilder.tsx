@@ -13,7 +13,6 @@ import {
 } from '../lib/composition-author'
 import {
   compositionDesign,
-  compositionSlotCount,
   isCompositionRegion,
   rebuildCompositionSkeleton,
 } from '../lib/composition-skeleton'
@@ -85,18 +84,15 @@ export function CompositionBuilder({
   const renderEditor = (node: CompositionNode, label: string) => {
     const name = node.name
     const region = isCompositionRegion(node)
+    // How many lines a region draws is the project's preset to decide, so a
+    // surplus row is no authoring error here (CLIP-147); an entry that declares
+    // a timing or a placement of its own still is (CLIP-66, CLIP-112).
     const invalidRegion =
       region &&
-      (node.attributes.basis !==
-        (node.attributes.role === 'hook' ? 'output-start' : 'output-end') ||
-        'position' in node.attributes ||
-        'align' in node.attributes ||
-        'style' in node.attributes ||
+      (['basis', 'start', 'end', 'position', 'align', 'style'].some((k) => k in node.attributes) ||
         node.children.some((n) =>
           n.name === 'row' ? 'role' in n.attributes : n.name !== '#text' || !!n.text.trim(),
-        ) ||
-        node.children.filter((n) => n.name === 'row').length >
-          compositionSlotCount(node.attributes.role, design))
+        ))
     const change = (next: CompositionNode) => patch(node, next)
     const attr = (field: string, value: string) =>
       change({ ...node, attributes: { ...node.attributes, [field]: value } })

@@ -23,8 +23,11 @@ func ConvertLegacyTemplate(body string, l Limits) (string, bool, *Problem) {
 		return body, false, problem
 	}
 	root := &Node{Name: "clip", Attributes: map[string]string{}}
+	// The root's design attributes go with the retired constructs: the presets
+	// a clip renders in are the project's, so a body that still names them is
+	// carrying a value nothing reads (CLIP-14, CLIP-144).
 	for k, v := range d.Root.Attributes {
-		if k != "styles" {
+		if !slices.Contains([]string{"styles", "intro", "caption", "outro"}, k) {
 			root.Attributes[k] = v
 		}
 	}
@@ -51,7 +54,7 @@ func ConvertLegacyTemplate(body string, l Limits) (string, bool, *Problem) {
 				}
 				continue
 			}
-			root.Children = append(root.Children, withoutStyle(n))
+			root.Children = append(root.Children, withoutTiming(withoutStyle(n)))
 		default:
 			root.Children = append(root.Children, n)
 		}
@@ -110,25 +113,29 @@ func sectionContents(n *Node) (prose []string, regions []*Node) {
 	return prose, regions
 }
 
-// liftedRegion gives a region element the basis its role requires and drops the
-// cut-local interval it carried inside a scene, so CLIP-112's default interval
-// applies. Everything else the skeleton fixes — position, alignment, row count —
-// is left exactly as authored, so the departure stays visible as CLIP-114's
-// authoring error for the owner to rebuild rather than being silently corrected.
-func liftedRegion(n *Node) *Node {
-	out := withoutStyle(n)
-	if out == n {
-		copy := *n
-		copy.Attributes = maps.Clone(n.Attributes)
-		out = &copy
+// liftedRegion carries a region element a template authored inside a scene up
+// to the root, where an outline entry belongs. Position and alignment are left
+// exactly as authored, so a departure stays visible as CLIP-114's authoring
+// error rather than being silently corrected.
+func liftedRegion(n *Node) *Node { return withoutTiming(withoutStyle(n)) }
+
+// withoutTiming drops the interval an entry used to declare: where an entry
+// stands in the outline is the only position it has now, and the intro, the
+// outro and the badge take the spans the renderer gives them (CLIP-66,
+// CLIP-112).
+func withoutTiming(n *Node) *Node {
+	if !slices.ContainsFunc([]string{"basis", "start", "end"}, func(k string) bool {
+		_, present := n.Attributes[k]
+		return present
+	}) {
+		return n
 	}
-	out.Attributes["basis"] = "output-start"
-	if n.Attributes["role"] == "ending" {
-		out.Attributes["basis"] = "output-end"
+	out := *n
+	out.Attributes = maps.Clone(n.Attributes)
+	for _, k := range []string{"basis", "start", "end"} {
+		delete(out.Attributes, k)
 	}
-	delete(out.Attributes, "start")
-	delete(out.Attributes, "end")
-	return out
+	return &out
 }
 
 // textProse states one element the way a reader would: its id, whether the

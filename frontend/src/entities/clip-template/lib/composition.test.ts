@@ -54,7 +54,11 @@ const corpus = JSON.parse(
   }[]
 }
 const summary = (d: ClipComposition) => ({
-  design: d.design,
+  outline: d.outline.map((entry) =>
+    entry.kind === 'stage'
+      ? `stage:${d.stages[entry.index].name}`
+      : `text:${d.elements[entry.index].id}`,
+  ),
   accent: d.accent,
   pace: d.pace,
   fields: d.fields.map(({ id, group, label, prompt, required, chars }) => ({

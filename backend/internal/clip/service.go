@@ -259,12 +259,10 @@ func (s *Service) CreateProject(ctx context.Context, user string, input ProjectI
 	if !ValidCaptionPace(pace) || !ValidAccent(accent) {
 		return Project{}, ErrInvalid
 	}
-	// The two presets and the allowed styles are seeded the same way, from the
-	// selection the template's own body declares (CLIP-14). A request that says
-	// nothing about them starts where that template starts, and a project made
-	// without one starts at the shared defaults.
-	seed := TemplateDesign(template, s.limits.Composition)
-	intro, outro, styles := seed.Intro, seed.Outro, []string{seed.Caption}
+	// The two presets and the allowed styles are the project's alone and start
+	// at the shared defaults whether or not a template was chosen: a template
+	// carries no design at all (CLIP-14, CLIP-139).
+	intro, outro, styles := "", "", []string(nil)
 	if input.IntroPreset != nil {
 		intro = *input.IntroPreset
 	}

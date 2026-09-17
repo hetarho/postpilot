@@ -14,7 +14,7 @@ func copyKey(element, cut string) string { return element + "/" + cut }
 
 // instructed is whether the project carries an owner instruction, and travels
 // unread to the one check it changes (CLIP-122).
-func attachCompositionCopy(cfg Config, doc *composition.Document, generated []generatedJSON, timeline composition.Timeline, plan *clip.PortablePlan, bindings map[string]clip.ItemBinding, evidence map[string][]clip.ObservedEvidence, owner *clip.EditPlan, instructed bool) error {
+func attachCompositionCopy(cfg Config, presets composition.DesignSelection, doc *composition.Document, generated []generatedJSON, timeline composition.Timeline, plan *clip.PortablePlan, bindings map[string]clip.ItemBinding, evidence map[string][]clip.ObservedEvidence, owner *clip.EditPlan, instructed bool) error {
 	declared, scopes := map[string]composition.Element{}, map[string]string{}
 	for _, element := range doc.Elements {
 		key := copyKey(element.ID, "")
@@ -76,9 +76,9 @@ func attachCompositionCopy(cfg Config, doc *composition.Document, generated []ge
 		for _, observed := range evidence[resolved.CutID] {
 			text.Evidence = append(text.Evidence, observed.Source)
 		}
-		if region, _ := regionSelection(doc, resolved.Element); region != "" && len(resolved.Element.Rows) > 0 {
+		if region, _ := regionSelection(presets, resolved.Element); region != "" && len(resolved.Element.Rows) > 0 {
 			entry, exists := entries[key]
-			attachRegionRows(doc, plan.Inputs, entry, exists && removed[key] == "", bindings[resolved.CutID], evidence[resolved.CutID], &text, owner, instructed)
+			attachRegionRows(presets, doc, plan.Inputs, entry, exists && removed[key] == "", bindings[resolved.CutID], evidence[resolved.CutID], &text, owner, instructed)
 			if slices.ContainsFunc(text.Resolved.Rows, func(row composition.ResolvedRow) bool { return strings.TrimSpace(row.Text) != "" }) {
 				plan.Elements = append(plan.Elements, text)
 			}
@@ -244,21 +244,23 @@ func generatesText(e composition.Element) bool {
 	return slices.ContainsFunc(e.Rows, func(row composition.Row) bool { return composition.RowKind(e, row) == "ai" })
 }
 
-func regionSelection(doc *composition.Document, e composition.Element) (string, string) {
+// regionSelection is the preset a region entry is drawn in: the PROJECT's,
+// never the body's, because a template declares no design (CLIP-14, CLIP-139).
+func regionSelection(presets composition.DesignSelection, e composition.Element) (string, string) {
 	switch e.Role {
 	case "hook":
-		return "intro", doc.Design.Intro
+		return "intro", presets.Intro
 	case "ending":
-		return "outro", doc.Design.Outro
+		return "outro", presets.Outro
 	}
 	return "", ""
 }
 
 // Ground and repair AI rows individually. A missing or malformed response can
 // empty generated slots, but can never replace their fixed neighbours.
-func attachRegionRows(doc *composition.Document, inputs clip.CompositionInputs, entry generatedJSON, exists bool, binding clip.ItemBinding, observed []clip.ObservedEvidence, out *clip.PortableText, owner *clip.EditPlan, instructed bool) {
+func attachRegionRows(presets composition.DesignSelection, doc *composition.Document, inputs clip.CompositionInputs, entry generatedJSON, exists bool, binding clip.ItemBinding, observed []clip.ObservedEvidence, out *clip.PortableText, owner *clip.EditPlan, instructed bool) {
 	e := out.Resolved.Element
-	region, id := regionSelection(doc, e)
+	region, id := regionSelection(presets, e)
 	preset, _ := design.Region(region, id)
 	out.Resolved.Rows = slices.Clone(out.Resolved.Rows)
 	if generatesText(e) {

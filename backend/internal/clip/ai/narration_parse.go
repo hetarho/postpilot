@@ -143,7 +143,7 @@ func parseNarration(cfg Config, input clip.NarrationInput, raw string) (out clip
 		// grounded shorter row, then an empty row with its own notice.
 		slot, exists := slots[resolved.Element.ID]
 		entry := generatedJSON{ElementID: slot.ElementID, Rows: slot.Rows, ShortRows: slot.ShortRows, Observations: slot.Observations, Facts: slot.Facts}
-		attachRegionRows(doc, portable.Inputs, entry, exists, clip.ItemBinding{}, evidence, &text, &plan, instructed)
+		attachRegionRows(input.Design.RegionPresets(), doc, portable.Inputs, entry, exists, clip.ItemBinding{}, evidence, &text, &plan, instructed)
 		if slices.ContainsFunc(text.Resolved.Rows, func(row composition.ResolvedRow) bool { return strings.TrimSpace(row.Text) != "" }) {
 			portable.Elements = append(portable.Elements, text)
 		}
