@@ -12,6 +12,11 @@ import (
 )
 
 type narrationCaptionJSON struct {
+	// declaredID is the outline entry this caption is, empty for one the writer
+	// chose to add; authored says its text is the template's own and is neither
+	// rewritten nor ground checked (CLIP-65). Neither crosses the wire.
+	declaredID   string
+	authored     bool
 	ID           string     `json:"id"`
 	Text         string     `json:"text"`
 	ShortText    string     `json:"short_text"`
@@ -28,9 +33,23 @@ type narrationSlotJSON struct {
 	Observations []string   `json:"observation_refs"`
 	Facts        []factJSON `json:"fact_refs"`
 }
+
+// narrationDeclaredJSON places one caption the template's outline already
+// carries: where it plays, and — for an `ai` entry alone — what it says.
+type narrationDeclaredJSON struct {
+	ElementID    string     `json:"element_id"`
+	Text         string     `json:"text"`
+	ShortText    string     `json:"short_text"`
+	Keyword      string     `json:"keyword"`
+	StartMS      int        `json:"start_ms"`
+	EndMS        int        `json:"end_ms"`
+	Observations []string   `json:"observation_refs"`
+	Facts        []factJSON `json:"fact_refs"`
+}
 type narrationJSON struct {
-	Captions []narrationCaptionJSON `json:"captions"`
-	Slots    []narrationSlotJSON    `json:"slots"`
+	Captions []narrationCaptionJSON  `json:"captions"`
+	Declared []narrationDeclaredJSON `json:"declared_captions"`
+	Slots    []narrationSlotJSON     `json:"slots"`
 	// The flow is final. A response that echoes it is admitted and ignored
 	// rather than refused, so one stray key cannot cost a whole writing call.
 	Cuts []json.RawMessage `json:"cuts"`
@@ -132,8 +151,17 @@ func parseNarration(cfg Config, input clip.NarrationInput, raw string) (out clip
 		slots[slot.ElementID] = slot
 	}
 	declared := map[string]bool{}
+	// The outline's caption entries are placed by this call, not resolved into
+	// the plan with an interval of their own (CLIP-112).
+	captionEntries := map[string]composition.ResolvedElement{}
+	for _, entry := range clip.DeclaredCaptions(timeline) {
+		captionEntries[entry.Element.ID] = entry
+	}
 	for _, resolved := range timeline.Elements {
 		declared[resolved.Element.ID] = true
+		if _, isCaption := captionEntries[resolved.Element.ID]; isCaption {
+			continue
+		}
 		text := clip.PortableText{Resolved: resolved, Scope: "context", Accent: doc.Accent, Pace: doc.Pace}
 		if !generatesText(resolved.Element) {
 			portable.Elements = append(portable.Elements, text)
@@ -154,12 +182,47 @@ func parseNarration(cfg Config, input clip.NarrationInput, raw string) (out clip
 		}
 	}
 
-	admitNarration(cfg, input, &plan, &portable, wire.Captions, evidence, collected, doc.Pace, instructed)
+	admitNarration(cfg, input, &plan, &portable, narrationCaptions(&plan, wire, timeline), evidence, collected, doc.Pace, instructed)
 	clip.RecomputePlanNotices(&plan, input.TargetDurationMS, cfg.TargetToleranceMS)
 	if _, err := clip.EncodeEditPlan(plan); err != nil {
 		return clip.EditPlan{}, err
 	}
 	return plan, nil
+}
+
+// narrationCaptions is every caption this response places: the ones the writer
+// wrote, and the outline's own entries carrying the text the template already
+// fixed (CLIP-112). A declared entry the response left out is shown nowhere and
+// says so once (CLIP-108).
+func narrationCaptions(plan *clip.EditPlan, wire narrationJSON, timeline composition.Timeline) []narrationCaptionJSON {
+	placed := map[string]narrationDeclaredJSON{}
+	for _, entry := range wire.Declared {
+		if _, seen := placed[entry.ElementID]; seen {
+			recordGeneratedNotice(plan, "composition_generated_identity", "", entry.ElementID, "removal")
+			continue
+		}
+		placed[entry.ElementID] = entry
+	}
+	out := slices.Clone(wire.Captions)
+	for _, declared := range clip.DeclaredCaptions(timeline) {
+		answer, exists := placed[declared.Element.ID]
+		if !exists {
+			recordGeneratedNotice(plan, "copy_omitted", "", declared.Element.ID, "removal")
+			continue
+		}
+		caption := narrationCaptionJSON{declaredID: declared.Element.ID, ID: declared.Element.ID,
+			Text: answer.Text, ShortText: answer.ShortText, Keyword: answer.Keyword,
+			StartMS: answer.StartMS, EndMS: answer.EndMS, Observations: answer.Observations, Facts: answer.Facts}
+		// A fixed entry says what the template wrote, whatever the response
+		// returned in its place (CLIP-65).
+		if declared.Element.Kind != "ai" {
+			caption.authored = true
+			caption.Text, caption.ShortText, caption.Keyword = declared.Text, "", ""
+			caption.Observations, caption.Facts = nil, nil
+		}
+		out = append(out, caption)
+	}
+	return out
 }
 
 // admitNarration walks the captions in start order and admits each one against
@@ -173,9 +236,13 @@ func admitNarration(cfg Config, input clip.NarrationInput, plan *clip.EditPlan, 
 	admitted := []clip.PortableText{}
 	maxChars := design.Caption().Lines * design.Caption().Chars
 	for index, caption := range ordered {
+		id := clip.NarrationID(index + 1)
+		if caption.declaredID != "" {
+			id = caption.declaredID
+		}
 		drop := func(reason string) {
 			plan.Portable = portable
-			portable.Fallbacks = append(portable.Fallbacks, clip.CopyFallback{ElementID: clip.NarrationID(index + 1), Reason: reason})
+			portable.Fallbacks = append(portable.Fallbacks, clip.CopyFallback{ElementID: id, Reason: reason})
 		}
 		if len(admitted) >= min(cfg.Render.MaxCuts, compositionLimits(cfg, input.PlanningInput).Cuts) {
 			drop("composition_generated_bounds")
@@ -204,6 +271,11 @@ func admitNarration(cfg Config, input clip.NarrationInput, plan *clip.EditPlan, 
 			}
 			if design.Chars(value) > maxChars {
 				return "composition_generated_bounds"
+			}
+			// The template's own words are the owner's claim, not the writer's,
+			// and saying them once more is what the template asked for.
+			if caption.authored {
+				return ""
 			}
 			if reason := clip.GroundNarration(value, collected, instructed); reason != "" {
 				return reason
@@ -241,7 +313,12 @@ func admitNarration(cfg Config, input clip.NarrationInput, plan *clip.EditPlan, 
 			continue
 		}
 		used[sentenceKey(chosen)] = true
+		// Every caption on the timeline carries a minted narration identity,
+		// declared or written: the owner edits, retimes and restyles them all
+		// the same way in ② (CLIP-17). Only a refusal names the outline entry
+		// it came from, because that is what the owner has to fix.
 		text := clip.NarrationCaption(clip.NarrationID(len(admitted)+1), chosen, start, end)
+		text.Authored = caption.authored
 		text.Resolved.Facts, text.Evidence, text.Pace, text.FallbackReason = cited, observed, pace, fallback
 		if caption.Keyword != "" && strings.Contains(chosen, caption.Keyword) {
 			text.Keyword = caption.Keyword

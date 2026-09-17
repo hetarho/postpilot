@@ -67,6 +67,11 @@ func TestNoTemplateAddsNoBytesToTheNarrationCall(t *testing.T) {
 	if _, present := payload["template_guide"]; present {
 		t.Fatal("an empty template guide was sent as a key of its own", payload["template_guide"])
 	}
+	// A template that declares no caption entry — a project with no template
+	// included — adds no key either (CLIP-5, CLIP-112).
+	if _, present := payload["declared_captions"]; present {
+		t.Fatal("an empty declared-caption list was sent as a key of its own", payload["declared_captions"])
+	}
 	golden(t, "testdata/narration-prompt-prefix.txt", system)
 }
 

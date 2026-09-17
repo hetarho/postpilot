@@ -68,7 +68,12 @@ type PortableText struct {
 	// What the owner set for this caption in ② — its own position, size and
 	// style (CDS-82). The zero value is a caption nobody has placed, which is
 	// automatic placement and the project's default style, exactly as before.
-	Owner                 OwnerCaption
+	Owner OwnerCaption
+	// The template's own words rather than the writer's: a caption entry of the
+	// outline whose text is fixed (CLIP-65). It is placed by the narration call
+	// like any other caption, and the grounding a WRITTEN claim answers to does
+	// not apply to it (CLIP-122, CDS-42).
+	Authored              bool
 	Accent, Keyword, Pace string
 	Resolved              composition.ResolvedElement
 	Scope                 string

@@ -124,3 +124,18 @@ func RegionSurplusNotices(plan EditPlan, presets composition.DesignSelection) []
 	}
 	return out
 }
+
+// DeclaredCaptions is the outline's own caption entries, in the order the body
+// carries them (CLIP-112). Where each one plays is the narration's to decide
+// over the resolved flow, so none of them reaches a plan from the flow call.
+// A caption bound to a cut belongs to a frozen legacy snapshot and is not one
+// of these (CLIP-140).
+func DeclaredCaptions(timeline composition.Timeline) []composition.ResolvedElement {
+	var out []composition.ResolvedElement
+	for _, e := range timeline.Elements {
+		if e.Element.Role == "caption" && e.CutID == "" {
+			out = append(out, e)
+		}
+	}
+	return out
+}

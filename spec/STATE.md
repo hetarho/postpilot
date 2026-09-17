@@ -51,12 +51,13 @@
 | T229 | The template editor drops the design step and edits the outline | CLIP | T227 | todo |
 | T230 | 형식 안내 and 원문 teach the outline grammar | CLIP | T227 | todo |
 | T231 | A saved template reads as an outline and seeds no design | CLIP | T227 | todo |
-| T233 | The template's caption entries reach the narration in outline order | CLIP | T228 | todo |
 
 ## next
-- implement-task T233, T229, T230, T231 — all four are now free
+- implement-task T229, T230, T231 — the three surface tasks left
 - T177 stays blocked (its viewing checklist predates both the caption style set and the outline) and T008 is another session's
 ## log
+- 260918 T233 done; the outline's caption entries reach the narration call in order and come back placed by the writer, with a fixed entry's own words kept and marked authored so V11 leaves them alone; an omitted entry notices once and the order is never checked
+- 260918 T233 claimed (otl)
 - 260918 T228 done; one placement rule gives every region entry its slot offset and its drawn line count, the layout and V20 read it together, and the surplus line is a derived notice that follows ①'s preset instead of a stored one; media-smoke stage green
 - 260918 T228 claimed (otl)
 - 260918 T227 done; the template body is an ordered outline in both parsers — no design attributes, no interval, no preset conformance, captions admitted — with the shared corpus migrated; T228's preset readers and T231's end of design seeding came with it because the compiler required them
@@ -75,5 +76,3 @@
 - 260917 T223 done; a template may carry named composition stages (`<stage name="…">한 줄 의도</stage>`, root only, at most 8, both halves required and bounded by the label and prompt counts), read by the Go and TypeScript parsers against the shared corpus and handed to the flow call in the template guide's position as a numbered order to follow where the footage allows — admitting and forbidding nothing, with no notice, count or refusal anywhere for a stage
 - 260917 T225 done; ② places each caption over a still frame of the cut it starts in — drag stopping at the safe area it draws while moving, arrow-key nudging in canvas pixels, the size refused outside CDS-3's floor and the role's own size at the control, the style taken from the project's allowed set, a contrast shortfall shown in place and blocking nothing, and a plain ground with the reason where the footage is not here — every change riding the existing draft queue and undo
 - 260917 T223 claimed (stg)
-- 260917 T225 claimed (plc)
-- 260917 T222 done; GetClipCaptionPreview hands ② each caption as the renderer's own drawing with its root taken off — one `<g>` brought to the origin by a transform the reported box cancels exactly, ids prefixed per caption, a sequence style labelled as one representative frame — and a smoke contract rasterises the placed fragment and the renderer's caption to byte-identical PNGs; Jua and NanumMyeongjo now reach the browser too

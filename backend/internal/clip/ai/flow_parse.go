@@ -127,7 +127,9 @@ func parseFlowPlan(cfg Config, input clip.PlanningInput, raw string) (out clip.E
 	// for written text belongs to the narration call and is no notice until it
 	// answers (CLIP-138).
 	for _, resolved := range timeline.Elements {
-		if generatesText(resolved.Element) {
+		// A caption entry of the outline is placed by the narration call, whatever
+		// its text already says, so the flow leaves it alone (CLIP-112).
+		if generatesText(resolved.Element) || resolved.Element.Role == "caption" && resolved.CutID == "" {
 			continue
 		}
 		portable.Elements = append(portable.Elements, clip.PortableText{Resolved: resolved, Scope: "context", Accent: doc.Accent, Pace: doc.Pace})

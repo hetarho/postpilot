@@ -20,6 +20,7 @@ A caption needs its own time to be read: at least 900 + 90 × characters ms. Giv
 Every number, unit, currency and price basis you state must appear in global_values or item_groups exactly, and the caption states the fact_refs it took it from. Every descriptive claim cites the observation_refs it describes. A taste, texture, satisfaction or visit claim may be written only when project_instruction asks for it; with no instruction, never infer one from appearance. Omit what you cannot support: an unwritten caption is not a defect.
 item_hints say which item a span of footage shows. A caption may name any item it has a fact for, whatever is on screen at that moment.
 slots are the template's own generated rows, one entry per element_id in generated_region_slots, with rows in the declared order and each row within its stated character limit. Supply a grounded shorter row in short_rows, or an empty row where nothing supports one.
+declared_captions are captions the template's outline already carries, in the order it carries them. Answer one declared_captions entry per element_id with the start_ms and end_ms it plays at, following that order where the footage allows and holding the same non-overlapping windows your own captions hold. A "fixed" entry's text is already written: place it and leave its text empty in your answer, and do not write the same sentence again in captions. An "ai" entry is an instruction to you: write its text under every rule above. An entry you leave out is not shown at all.
 Do not choose a style, a position, an accent or a transition: the server places every caption. Write the words and their times only.
 Return only one JSON object following this closed contract:
 `
@@ -54,7 +55,43 @@ func BuildNarrationPrompt(in clip.NarrationInput, limits composition.Limits) (st
 	if guide := templateGuide(in.PlanningInput, limits); guide != "" {
 		payload["template_guide"] = guide
 	}
+	// A template that declares no caption entry adds no bytes at all, so its
+	// request stays byte-identical to the one it produced before they existed.
+	if declared := declaredCaptionPayload(in, limits); len(declared) > 0 {
+		payload["declared_captions"] = declared
+	}
 	return narrationPrompt + responseContract + contract, promptJSON(payload)
+}
+
+// declaredCaptionPayload is the outline's own caption entries in the order they
+// stand in (CLIP-112): what a fixed one says, or what an ai one asks the writer
+// for. Where each plays is the writer's to decide over the resolved flow.
+func declaredCaptionPayload(in clip.NarrationInput, limits composition.Limits) []map[string]any {
+	if in.Composition == nil || in.Flow.Portable == nil {
+		return nil
+	}
+	doc, problem := composition.Parse(in.Composition.Snapshot.Body, limits)
+	if problem != nil {
+		return nil
+	}
+	timeline, _, err := clip.ResolveSelectedComposition(doc, in.Composition.Inputs, in.Flow.Portable.Cuts, limits, clip.AttemptCheckpointMaxBytes)
+	if err != nil {
+		return nil
+	}
+	out := []map[string]any{}
+	for _, element := range clip.DeclaredCaptions(timeline) {
+		entry := map[string]any{"element_id": element.Element.ID, "order": len(out) + 1, "kind": element.Element.Kind}
+		if element.Element.Kind == "ai" {
+			entry["instruction"] = element.Text
+		} else {
+			entry["text"] = element.Text
+		}
+		if element.Element.Chars > 0 {
+			entry["chars"] = element.Element.Chars
+		}
+		out = append(out, entry)
+	}
+	return out
 }
 
 // resolvedFlowPayload is the finished flow as the narration reads it: each cut's

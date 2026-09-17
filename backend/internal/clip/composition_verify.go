@@ -201,7 +201,7 @@ func VerifyCompositionManifest(plan EditPlan, elements []CompositionElement, lim
 		// V11: a collected fact behind every number the narration states, from
 		// any item — a caption belongs to none (CLIP-137). Owner-written text is
 		// the owner's own claim and is not ground checked (CLIP-122).
-		if text.Scope == NarrationScope && !text.OwnerEdited {
+		if text.Scope == NarrationScope && !text.OwnerEdited && !text.Authored {
 			// `instructed` is true here: whether an experiential sentence was
 			// asked for was settled when it was written, and the instruction
 			// itself is not part of a rendered plan.
