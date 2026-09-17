@@ -17,6 +17,35 @@
 }
 
 /*
+ * The two caption faces CDS-17 added. A served caption fragment names its own
+ * family and the browser must shape it with the very file resvg does, or the
+ * preview would show a placement the render will not produce (CDS-83, CDS-18).
+ */
+@font-face {
+  font-family: 'Jua';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/clip/Jua-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'NanumMyeongjo';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/clip/NanumMyeongjo-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'NanumMyeongjo';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url('/fonts/clip/NanumMyeongjo-ExtraBold.ttf') format('truetype');
+}
+
+/*
  * The colour system has THREE LAYERS. The rules this file carries are written up in
  * spec/legacy/tech/design-language.md; this header only says how the layers fit together.
  *

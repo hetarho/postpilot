@@ -10,6 +10,9 @@ import "postpilot/v1/language.proto";
 service ClipService {
   rpc PrepareClipPreview(PrepareClipPreviewRequest) returns (PrepareClipPreviewResponse) {}
   rpc GetClipCapabilities(GetClipCapabilitiesRequest) returns (GetClipCapabilitiesResponse) {}
+  // The caption SVG ② draws over the cut frame, built by the same style
+  // registry the renderer uses so the preview and the render cannot drift.
+  rpc GetClipCaptionPreview(GetClipCaptionPreviewRequest) returns (GetClipCaptionPreviewResponse) {}
   rpc SaveClipEditPlan(SaveClipEditPlanRequest) returns (SaveClipEditPlanResponse) {}
   rpc StartClipRender(StartClipRenderRequest) returns (StartClipRenderResponse) {}
   rpc StartClipGeneration(StartClipGenerationRequest) returns (StartClipGenerationResponse) {}
@@ -610,6 +613,46 @@ message ClipEditPlan {
   ClipSourceAudioSettings source_audio = 7;
 }
 message ClipSourceAssociations { repeated ClipSourceAssociation values = 1; }
+
+// A box in canvas pixels, carried as doubles because a measured caption box is
+// not integral: the preview places the fragment at exactly the numbers the
+// render uses, and rounding here would show the owner a different placement.
+message ClipCanvasBox {
+  double x = 1;
+  double y = 2;
+  double width = 3;
+  double height = 4;
+}
+message ClipCaptionFragment {
+  string instance_id = 1;
+  // A `<g>` holding the caption drawn at the ORIGIN, with the `<defs>` its
+  // filters need and every id prefixed with this caption's own instance. The
+  // caller places it with one transform, so moving a caption needs no round
+  // trip; two captions on screen cannot collide on a filter id.
+  string svg = 2;
+  // Where the caption's measured bounds sit on the canvas today.
+  ClipCanvasBox box = 3;
+  double font_size = 4;
+  string style = 5;
+  // A sequence-rendered style draws one layer per output frame; this fragment
+  // is ONE representative frame of that motion, not the motion itself.
+  bool representative_frame = 6;
+}
+message GetClipCaptionPreviewRequest {
+  string project_id = 1;
+  int32 expected_revision = 2;
+  // The plan being edited, so the fragment is of the caption on screen rather
+  // than the one last saved.
+  ClipEditPlan plan = 3;
+}
+message GetClipCaptionPreviewResponse {
+  string ratio = 1;
+  ClipCanvasBox canvas = 2;
+  // The design safe area every caption is clamped inside, sent so the editor
+  // mirrors no CDS geometry of its own.
+  ClipCanvasBox safe_area = 3;
+  repeated ClipCaptionFragment captions = 4;
+}
 
 message PrepareClipPreviewRequest {
   string project_id = 1;

@@ -78,3 +78,38 @@ func previewResponseFits(out *v1.PrepareClipPreviewResponse, limit int) bool {
 	encoded, err := (protojson.MarshalOptions{EmitUnpopulated: true}).Marshal(out)
 	return err == nil && len(encoded) <= limit
 }
+
+// GetClipCaptionPreview hands ② each caption's SVG fragment, its box and the
+// safe area, built by the one style registry the renderer uses (CDS-83).
+func (h *Handler) GetClipCaptionPreview(ctx context.Context, req *connect.Request[v1.GetClipCaptionPreviewRequest]) (*connect.Response[v1.GetClipCaptionPreviewResponse], error) {
+	user, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if h.generation == nil {
+		return nil, toConnectError(clip.ErrPreviewUnavailable)
+	}
+	if req.Msg.Plan == nil {
+		return nil, toConnectError(clip.ErrInvalid)
+	}
+	result, err := h.generation.CaptionPreviewOf(ctx, user, req.Msg.ProjectId, int(req.Msg.ExpectedRevision), correctionPlan(req.Msg.Plan))
+	if err != nil {
+		return nil, previewConnectError(err)
+	}
+	out := &v1.GetClipCaptionPreviewResponse{
+		Ratio:    result.Ratio,
+		Canvas:   &v1.ClipCanvasBox{Width: float64(result.Canvas.Width), Height: float64(result.Canvas.Height)},
+		SafeArea: canvasBox(result.Canvas.Safe),
+	}
+	for _, f := range result.Fragments {
+		out.Captions = append(out.Captions, &v1.ClipCaptionFragment{InstanceId: f.InstanceID, Svg: f.SVG,
+			Box: canvasBox(f.Box), FontSize: f.FontSize, Style: f.Style, RepresentativeFrame: f.Sequence})
+	}
+	response := connect.NewResponse(out)
+	response.Header().Set("Cache-Control", "private, no-store")
+	return response, nil
+}
+
+func canvasBox(r clip.Region) *v1.ClipCanvasBox {
+	return &v1.ClipCanvasBox{X: r.X, Y: r.Y, Width: r.Width, Height: r.Height}
+}

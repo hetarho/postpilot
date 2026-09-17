@@ -48,15 +48,16 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
-| T222 | The server hands the preview the caption SVG it will render | CDS CLIP | T219 T221 | todo |
 | T223 | A template carries named composition stages | CLIP | - | todo |
 | T224 | ① chooses the design, the caption styles and an optional template | CLIP | T217 T218 | todo |
 | T225 | ② places captions over their own cut frame | CLIP CDS | T221 T222 | todo |
 | T226 | The approval surface quotes sequence-rendered captions separately | CDS CLIP | T220 | todo |
 
 ## next
-- implement-task T222 → T225 (the rest of the caption placement deploy unit: serve the fragment, then edit over the cut frame) — T223 T224 T226 stay free for another session
+- implement-task T225 (the last of the caption placement deploy unit: ② edits over the cut frame) — T223 T224 T226 stay free for another session
 ## log
+- 260917 T222 done; GetClipCaptionPreview hands ② each caption as the renderer's own drawing with its root taken off — one `<g>` brought to the origin by a transform the reported box cancels exactly, ids prefixed per caption, a sequence style labelled as one representative frame — and a smoke contract rasterises the placed fragment and the renderer's caption to byte-identical PNGs; Jua and NanumMyeongjo now reach the browser too
+- 260917 T222 claimed (plc)
 - 260917 T221 done; a caption carries the owner's own position, size and style — clamped into the safe area by moving, never resizing, with the size floor and an unallowed style refused where they are written — and the manifest says who placed it so V1 still holds it inside the safe area, V3 demotes a shortfall under it to a notice, V13 leaves it out of the anchor walk and no repair or automatic placement runs over it again
 - 260917 T220 done; the thirteen sequence styles draw one frame at a time into a bounded PNG sequence under the attempt workspace, enter the overlay chain through image2 at the output frame rate with no loop and no fade, are counted by CLIP-33 and deleted the moment their overlay pass is encoded, while a static style's single rasterise is untouched
 - 260917 T219 done; internal/clip/design holds the sixteen approved caption styles with their faces, roles, colour treatments and motion, Jua and NanumMyeongjo ship pinned beside Pretendard and Paperlogy, resvg is handed every bundled face with system fonts off, and a caption whose face lacks a syllable falls back to the default style with a CLIP-108 notice naming it
@@ -75,5 +76,3 @@
 - 260917 update-ssot CLIP CDS start (ideation clip-template-as-preset)
 - 260917 T204 done; what the owner asked the AI for is kept with the project (migration 0060 clip_project_requests, cascade to the project) — the instruction a generation froze and the words and target of each revision, verbatim with the time, written at the one seam where the job exists but cannot yet dispatch, so an accepted job always has its entry and a save never writes one; read back newest first in a disclosure beside the observations, and gone when the project is
 - 260917 useClipProject stops polling at a terminal revise_clip job, so a revision's settlement lands only on the next read — pre-existing from T202/T203, worth a review-code finding
-- 260917 T204 claimed (rui)
-- 260917 T203 done; ② asks the writer for a revision from its own panel — a bounded request with its count, a target defaulting to 자막, the ceiling and its priced writing calls re-quoted whenever either changes, and the run reported in place with 취소 while the timeline goes read-only and no focused job view opens; the approval surface came down to entities/clip-project so the revision reuses it instead of writing a second one, and a flush that moves the plan re-quotes rather than sending against a ceiling nobody approved
