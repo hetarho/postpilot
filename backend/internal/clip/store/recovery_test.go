@@ -46,10 +46,13 @@ func TestLegacyAttemptEvidenceIsNeverReusedForNewGeneration(t *testing.T) {
 
 func TestRecoveryRenderRestartSkipsCompletedWork(t *testing.T) {
 	h := generationSetup(t)
-	h.renderer.fail = clip.ErrInvalidMedia
+	// The attempt fails after its plan is validated and durable: the render is
+	// its own job now, so this is the interruption a continuation resumes from
+	// (CLIP-151, CLIP-93).
+	h.media.cleanupErr = errors.New("workspace cleanup failed")
 	first := h.start(t)
 	if err := h.run(t); err == nil {
-		t.Fatal("expected injected rendering failure")
+		t.Fatal("expected the injected attempt failure")
 	}
 	state, err := h.store.GetRecovery(t.Context(), "alice", h.project.ID)
 	if err != nil || state == nil || state.JobID != first || len(state.Chunks) != 3 || state.Plan == "" {
@@ -58,7 +61,7 @@ func TestRecoveryRenderRestartSkipsCompletedWork(t *testing.T) {
 	if foreign, err := h.store.GetRecovery(t.Context(), "bob", h.project.ID); err != nil || foreign != nil {
 		t.Fatal("foreign recovery exposed")
 	}
-	h.renderer.fail = nil
+	h.media.cleanupErr = nil
 	h.planner.gate = llm.ErrModelUnavailable
 	// Recreate the service to prove that continuation does not depend on memory.
 	h.service = clip.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, h.planner, h.renderer, generationJobs{h.queue}, h.cfg).WithFinisher(generationFinisher{h.store}).WithCredits(&quotePricing{}, nil)
@@ -73,7 +76,9 @@ func TestRecoveryRenderRestartSkipsCompletedWork(t *testing.T) {
 	if err := h.run(t); err != nil {
 		t.Fatal("continuation failed", err)
 	}
-	if h.planner.observe != 3 || h.planner.plans != 1 || h.media.probes != 3 || len(h.media.prepared) != 3 || h.renderer.calls != 2 || len(h.admitter.calls) != 1 {
+	// The third probe was the render's own read of the original; the render is
+	// its own job now, so the continuation probes nothing again (CLIP-151).
+	if h.planner.observe != 3 || h.planner.plans != 1 || h.media.probes != 2 || len(h.media.prepared) != 3 || h.renderer.calls != 0 || len(h.admitter.calls) != 1 {
 		t.Fatalf("successful work repeated: observe=%d plan=%d probe=%d render=%d holds=%d", h.planner.observe, h.planner.plans, h.media.probes, h.renderer.calls, len(h.admitter.calls))
 	}
 	h.assertClean(t)
@@ -83,11 +88,12 @@ func TestRecoveryChangedInputsKeepAnalysisAndInvalidatePlan(t *testing.T) {
 	for _, change := range []string{"facts", "target", "template", "instruction"} {
 		t.Run(change, func(t *testing.T) {
 			h := generationSetup(t)
-			h.renderer.fail = clip.ErrInvalidMedia
+			h.media.cleanupErr = errors.New("workspace cleanup failed")
 			h.start(t)
 			if err := h.run(t); err == nil {
 				t.Fatal("missing failure")
 			}
+			h.media.cleanupErr = nil
 			patch := clip.ProjectPatch{}
 			switch change {
 			case "facts":
@@ -124,8 +130,10 @@ func TestRecoveryChangedInputsKeepAnalysisAndInvalidatePlan(t *testing.T) {
 			if err := h.run(t); err != nil {
 				t.Fatal(err)
 			}
-			if h.planner.observe != 3 || h.planner.plans != 2 || h.media.probes != 3 {
-				t.Fatal("changed template/facts repeated analysis")
+			// Two probes, not three: the third was the render reading its
+			// original back, and the render is its own job now (CLIP-151).
+			if h.planner.observe != 3 || h.planner.plans != 2 || h.media.probes != 2 {
+				t.Fatalf("changed template/facts repeated analysis observe=%d plans=%d probes=%d", h.planner.observe, h.planner.plans, h.media.probes)
 			}
 		})
 	}
@@ -169,11 +177,14 @@ func TestRecoveryDoesNotResumeACandidateThatNeverPassedLayout(t *testing.T) {
 // reusable and unpaid (CLIP-93).
 func TestAnIncompatibleCandidatePlanIsRewrittenWithoutRepeatingAnalysis(t *testing.T) {
 	h := generationSetup(t)
-	h.renderer.fail = clip.ErrInvalidMedia
+	// Interrupted after the plan is durable, which is where a continuation
+	// picks a candidate up now that the render is its own job (CLIP-151).
+	h.media.cleanupErr = errors.New("workspace cleanup failed")
 	h.start(t)
 	if err := h.run(t); err == nil {
-		t.Fatal("expected the injected rendering failure")
+		t.Fatal("expected the injected attempt failure")
 	}
+	h.media.cleanupErr = nil
 	if _, err := h.db.Writer.Exec("UPDATE clip_recovery_states SET state_json=json_set(state_json,'$.PlanDigest','written-under-another-contract') WHERE project_id=?", h.project.ID); err != nil {
 		t.Fatal(err)
 	}

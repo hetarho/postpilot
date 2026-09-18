@@ -570,7 +570,7 @@ export const clips = {
       analyze: 'Analyze footage',
       plan: 'Compose cuts and captions',
       render: 'Render video',
-      save: 'Save result',
+      save: 'Saving',
       cleanup: 'Clean up sources',
     },
     failedAt: 'Failed during: {{stage}}',

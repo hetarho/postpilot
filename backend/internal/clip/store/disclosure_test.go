@@ -91,8 +91,25 @@ func TestDisclosureChoiceReachesApprovedGeneration(t *testing.T) {
 	if err := h.run(t); err != nil {
 		t.Fatal(err)
 	}
-	if !h.planner.input.HideDisclosure || !h.renderer.plan.HideDisclosure {
-		t.Fatal("generation lost visibility")
+	if !h.planner.input.HideDisclosure {
+		t.Fatal("the writer was not told the badge is hidden")
+	}
+	// The choice is frozen INTO the document the generation saves, and that
+	// document is what the render executes: the generation renders nothing
+	// itself, so the flag no longer travels as a field on a rendered plan
+	// (CLIP-151).
+	h.render(t)
+	if h.renderer.plan.Portable == nil {
+		t.Fatal("the render did not execute the frozen composition")
+	}
+	for _, e := range h.renderer.plan.Portable.Elements {
+		if e.Resolved.Element.Role == "badge" {
+			t.Fatal("the hidden badge was frozen into the executed document", e.Resolved.Text)
+		}
+	}
+	stored, err := h.projects.GetProject(t.Context(), "alice", h.project.ID)
+	if err != nil || !stored.HideDisclosure {
+		t.Fatal("the project lost the owner's visibility choice", err)
 	}
 	h.assertClean(t)
 }

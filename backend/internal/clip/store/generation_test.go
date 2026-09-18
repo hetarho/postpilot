@@ -538,6 +538,29 @@ func (h *generationHarness) run(t *testing.T) error {
 	}
 	return err
 }
+
+// A generation stops at the plan (CLIP-151), so a test that needs a STORED
+// result renders the saved plan the way the owner does in ②.
+func (h *generationHarness) startRender(t *testing.T) string {
+	t.Helper()
+	ctx := context.Background()
+	p, err := h.projects.GetProject(ctx, "alice", h.project.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	id, err := h.service.StartRender(ctx, "alice", h.project.ID, h.batch.ID, p.EditPlanRevision)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
+func (h *generationHarness) render(t *testing.T) {
+	t.Helper()
+	h.startRender(t)
+	if err := h.run(t); err != nil {
+		t.Fatal(err)
+	}
+}
 func (h *generationHarness) assertClean(t *testing.T) {
 	t.Helper()
 	if _, err := h.store.GetSourceBatch(context.Background(), "alice", h.batch.ID); err != nil {
@@ -593,18 +616,72 @@ func TestApprovedGenerationPreparesAllThenUsesFrozenInputs(t *testing.T) {
 		t.Fatal(err)
 	}
 	h.assertClean(t)
-	if len(h.admitter.calls) != 1 || h.media.probes != 2 || h.planner.observe != 3 || h.planner.plans != 1 || h.renderer.calls != 1 || h.media.maxSources != 1 {
+	// The attempt renders nothing (CLIP-151): it prepares, observes, writes and
+	// stops at the validated plan.
+	if len(h.admitter.calls) != 1 || h.media.probes != 2 || h.planner.observe != 3 || h.planner.plans != 1 || h.renderer.calls != 0 || h.media.maxSources != 1 {
 		t.Fatal("incorrect prepare/admit/analyze/render counts")
 	}
 	if h.planner.input.Template.CutGuidance == guidance || h.planner.input.Policy != snapshot.Approval.Pricing.Plan {
 		t.Fatal("used changed inputs")
 	}
-	if h.objects.downloads[h.batch.Sources[0].Key] != 2 || h.objects.downloads[h.batch.Sources[1].Key] != 1 {
+	// One download per source: preparation reads each original once and the
+	// attempt renders nothing, so nothing reads one a second time (CLIP-151).
+	if h.objects.downloads[h.batch.Sources[0].Key] != 1 || h.objects.downloads[h.batch.Sources[1].Key] != 1 {
 		t.Fatal("preparation redownloaded a source", h.objects.downloads)
 	}
 }
+
+// CLIP-151: the attempt succeeds with a plan and NO result file. The previous
+// result is still there and still the one the project stores, behind the new
+// plan revision, which is what makes it read as the stale render it is
+// (CLIP-26, CLIP-152).
+func TestGenerationSucceedsWithAPlanAndNoResult(t *testing.T) {
+	h := generationSetup(t)
+	ctx := context.Background()
+	old := clip.Result{Key: clip.ResultPrefix + "alice/old/old.mp4", ContentType: "video/mp4", Bytes: 5, DurationMS: 30000, CreatedAt: time.Now()}
+	if err := h.store.SaveGeneration(ctx, "alice", h.project.ID, "old analysis", "old plan", old); err != nil {
+		t.Fatal(err)
+	}
+	before, err := h.projects.GetProject(ctx, "alice", h.project.ID)
+	if err != nil || before.Result == nil || before.EditPlanRevision != before.RenderedPlanRevision {
+		t.Fatal("the prior render was not stored", err)
+	}
+	id := h.start(t)
+	if err = h.run(t); err != nil {
+		t.Fatal(err)
+	}
+	j, err := h.jobs.GetByID(ctx, id)
+	if err != nil || j.Status != job.StatusDone {
+		t.Fatal("the plan-only attempt did not settle as a success", j.Status, err)
+	}
+	p, err := h.projects.GetProject(ctx, "alice", h.project.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.EditPlan == "" || p.EditPlan == before.EditPlan || p.Analysis == before.Analysis {
+		t.Fatal("the validated plan was not saved")
+	}
+	if p.EditPlanRevision != before.EditPlanRevision+1 {
+		t.Fatal("the plan revision did not advance", p.EditPlanRevision)
+	}
+	if p.Result == nil || p.Result.Key != old.Key || p.RenderedPlanRevision != before.RenderedPlanRevision {
+		t.Fatal("the previous result did not survive as the stale one", p.Result, p.RenderedPlanRevision)
+	}
+	if h.renderer.calls != 0 || len(h.objects.results) != 0 {
+		t.Fatal("the generation executed media work", h.renderer.calls, h.objects.results)
+	}
+	state, err := h.service.EditingState(p)
+	if err != nil || state == nil || len(state.Plan.Cuts) == 0 {
+		t.Fatal("the saved plan does not open as a draft to review", err)
+	}
+	h.assertClean(t)
+}
 func TestGenerationFailurePreservesOldResultAndCleansInputs(t *testing.T) {
-	for _, mode := range []string{"hold", "probe", "download", "observe", "plan", "input limit", "render", "authored-element", "save", "partial-upload", "workspace-cleanup"} {
+	// "render", "authored-element", "save" and "partial-upload" left with the
+	// render: a generation executes no media and writes no file, so the stages
+	// that could fail that way are the render job's (CLIP-151). Its own failures
+	// are the preparation, the observation, the writing and the cleanup.
+	for _, mode := range []string{"hold", "probe", "download", "observe", "plan", "input limit", "workspace-cleanup"} {
 		t.Run(mode, func(t *testing.T) {
 			h := generationSetup(t)
 			old := clip.Result{Key: clip.ResultPrefix + "alice/old/old.mp4", ContentType: "video/mp4", Bytes: 5, DurationMS: 30000, CreatedAt: time.Now()}

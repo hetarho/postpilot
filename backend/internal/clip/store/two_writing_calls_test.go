@@ -2,6 +2,7 @@ package store_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/postpilot/backend/internal/clip"
@@ -117,10 +118,12 @@ func TestANarrationFailureResumesOnTheFlowItAlreadyPaidFor(t *testing.T) {
 // and no FlowReady at all. It still resumes at rendering.
 func TestAPlanWrittenBeforeTheCallsSplitStillResumesAtRender(t *testing.T) {
 	h := generationSetup(t)
-	h.renderer.fail = clip.ErrInvalidMedia
+	// The attempt fails after its plan is durable: the render it used to fail in
+	// is its own job now (CLIP-151).
+	h.media.cleanupErr = errors.New("workspace cleanup failed")
 	h.start(t)
 	if err := h.run(t); err == nil {
-		t.Fatal("expected the injected rendering failure")
+		t.Fatal("expected the injected attempt failure")
 	}
 	if _, err := h.db.Writer.Exec("UPDATE clip_recovery_states SET state_json=json_set(state_json,'$.FlowReady',json('false')) WHERE project_id=?", h.project.ID); err != nil {
 		t.Fatal(err)
@@ -129,7 +132,7 @@ func TestAPlanWrittenBeforeTheCallsSplitStillResumesAtRender(t *testing.T) {
 	if err != nil || !q.Pricing.RenderOnly() || q.Pricing.PlanCalls() != 0 || q.Pricing.MaxCredits != 0 {
 		t.Fatalf("an older complete plan was rewritten: %+v %v", q.Pricing, err)
 	}
-	h.renderer.fail = nil
+	h.media.cleanupErr = nil
 	flows := h.planner.flows
 	h.start(t)
 	if err := h.run(t); err != nil {

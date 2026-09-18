@@ -82,19 +82,24 @@ func (p ownedPlanWriter) Flow(ctx context.Context, model llm.ModelRef, in clip.P
 type ownedPlanRenderer struct{ *rendererFake }
 
 func (ownedPlanRenderer) CompositionPlanVersion() int { return clip.CompositionPlanVersion }
-func (r ownedPlanRenderer) Render(ctx context.Context, ws clip.MediaWorkspace, p clip.EditPlan, sources []clip.RenderSource, load clip.RenderSourceLoader) (clip.RenderedVideo, error) {
+
+// The layout is where the executor decides what the plan finally says: it runs
+// before any render, which is the only place a generation reaches now that it
+// stops at the plan (CLIP-151), and it is what the draft preview then draws.
+func (ownedPlanRenderer) LayoutComposition(_ context.Context, p clip.EditPlan, _ []clip.RenderSource) (clip.EditPlan, []clip.CompositionElement, error) {
 	if p.Portable == nil || p.Disclosure != "" || p.Hook != "" || len(p.Facts) != 0 {
-		return clip.RenderedVideo{}, errors.New("injected legacy content into native render")
-	}
-	video, err := r.rendererFake.Render(ctx, ws, p, sources, load)
-	if err != nil {
-		return video, err
+		return p, nil, errors.New("injected legacy content into native layout")
 	}
 	p.Portable.Elements[0].Resolved.Text = "짧은 문장"
 	p.Portable.Elements[0].FallbackReason = "shorter_copy"
 	p.Portable.Elements[0].Placement = &clip.CompositionPlacement{Style: "memo", Position: "top", StartMS: 120, EndMS: 14880}
-	video.Plan = &p
-	return video, nil
+	return p, nil, nil
+}
+func (r ownedPlanRenderer) Render(ctx context.Context, ws clip.MediaWorkspace, p clip.EditPlan, sources []clip.RenderSource, load clip.RenderSourceLoader) (clip.RenderedVideo, error) {
+	if p.Portable == nil || p.Disclosure != "" || p.Hook != "" || len(p.Facts) != 0 {
+		return clip.RenderedVideo{}, errors.New("injected legacy content into native render")
+	}
+	return r.rendererFake.Render(ctx, ws, p, sources, load)
 }
 func TestGenerationPersistsTheRenderedOwnedPlanAndItsStyles(t *testing.T) {
 	h := generationSetup(t)

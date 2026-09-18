@@ -66,6 +66,9 @@ func TestChangingTheDesignSelectionStalesTheResultWithoutRewritingThePlan(t *tes
 	if err := h.run(t); err != nil {
 		t.Fatal(err)
 	}
+	// The generation stops at the plan (CLIP-151); the render the selection
+	// stales is the one the owner starts.
+	h.render(t)
 	before, err := h.projects.GetProject(t.Context(), "alice", h.project.ID)
 	if err != nil || before.Result == nil || before.EditPlanRevision != before.RenderedPlanRevision {
 		t.Fatal("the fixture has no rendered result to stale", err)

@@ -31,7 +31,7 @@
 | THEME | 12 | 12 | - | 0 |
 | MKT | 4 | 4 | - | 0 |
 | VIDEO | 2 | 2 | - | 1 |
-| CLIP | 36 | 36 | - | 4 |
+| CLIP | 37 | 36 | CLIP-159+ CLIP-157✎ CLIP-155✎ CLIP-153✎ CLIP-126✎ | 2 |
 | CDS | 22 | 22 | - | 1 |
 | BILL | 4 | 4 | - | 0 |
 
@@ -48,10 +48,9 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
-| T241 | a generation stops at the validated plan and renders nothing | CLIP | - | todo |
 | T242 | a render is started per kind and records the kind with its result | CLIP | T241 | todo |
 | T243 | every plan check runs on the server before a render of either kind | CLIP | T242 | todo |
-| T244 | ②'s timeline reads at any cut length | CLIP | - | todo |
+| T244 | ②'s timeline reads at any cut length | CLIP | - | doing@260918.ctr |
 | T245 | a selected cut or caption opens its own sheet | CLIP | T244 | todo |
 | T246 | the preview carries its scrubber, its info control and its download | CLIP | T245 | todo |
 | T247 | ②'s dock is the revision composer over 렌더하기 and 확정하기 | CLIP | T246 T242 | todo |
@@ -64,10 +63,17 @@
 | T254 | ② runs the browser render with its own progress and cancellation | CLIP | T253 T247 | todo |
 
 ## next
-- implement-task T241, then T242→T243 (the contract), T244→T249 (②'s surfaces) and T250→T254 (the browser render, behind T242 T243 T247)
-- implement-task T241, then T242→T243 (the contract) and T244→T249 (②'s surfaces); the two chains are independent until T247, which needs T242's render kind
+- create-task CLIP (r37) before any of T250→T254 is claimed — r37 cuts T250's refusals from three to two and hands T251 the per-style motion it never carried, so the browser cluster is re-cut rather than edited
+- create-task CLIP (r37) also re-cuts T242, whose CLIP-153 changed: the kind offered first is the project's last one, which T242 never carried; T243 waits behind it
 - T177 stays blocked (its viewing checklist predates the caption style set, the outline and now ②'s shape) and T008 is another session's
 ## log
+- 260918 T241 done; the generation ends on the validated plan, `SaveGeneratedPlan` advances the analysis and the plan while `result_*`/`rendered_plan_revision` stand, and a file-less completion skips the staging row and applies its plan in the job's own terminal transaction
+- 260918 out of scope: `renderLoader`'s `verifyRetained` probe lost its only caller with the generation's render stage; the render job does the same identity check itself (review-code candidate)
+- 260918 update-ssot CLIP r37 done; the browser render draws every style including the sequence ones — it sets no type and applies only the motion, so the two kinds owe the same clip and not the same file and a caption that moves differently between them is not a defect; the originals a page lacks are fetched rather than refusing the kind, leaving the encoders and the memory as the two refusals; the kind offered first is the project's last one and the browser kind where it has none; CLIP-126 closes with no wall-clock committed
+- 260918 r37 rewrites T250's three refusals to two and gives T251 the per-style motion it never carried; T241 and T244 (both doing) are outside it
+- 260918 T244 claimed (ctr)
+- 260918 update-ssot CLIP start — the browser kind draws only static captions, fetches the originals it lacks, and the kinds owe the same clip rather than the same file
+- 260918 T241 claimed (ctr)
 - 260918 create-task CLIP done; the browser render becomes T250 the capability refusal, T251 the video track, T252 the audio track, T253 the mux/measure/store, T254 ②'s own progress and cancellation — the server already typesets every caption PNG the draft preview draws, so the browser composites them and never sets type itself
 - 260918 create-task CLIP start (the browser render cluster)
 - 260918 update-ssot CLIP r36 done; a browser render stores its file before the owner sees it and is unsuccessful until it does, so ② always plays what it will hand over and CLIP-76's preserved result holds for both kinds — the server records the browser's own verdict instead of decoding the stored file again
@@ -81,10 +87,3 @@
 - 260918 update-ssot CLIP start — the render moves behind the owner's approval, ② reviews the plan and then the rendered result, and rendering splits into a browser and a server kind
 - 260918 T234 claimed (rfn)
 - 260918 create-task CLIP done; r34 becomes T234 the autosaved draft, T235 the readable timeline, T236 the item sheets, T237 the preview's own controls, T238 the finalization dialog, T239 the docked revision composer, T240 the reference sheet — one linear chain because every one of them edits ②'s workspace
-- 260918 create-task CLIP start (r34)
-- 260918 bugfix: production's first revision request died in prepare with an unnamed reason — the reservation guard, the metered boundary, the ledger's hold/settle/record, the clip accounting read, its SQL and the table's two cancellation CHECKs all named generate_clip alone; they now ask ChargedClipKind, migration 0063 widens the CHECKs (NO TRANSACTION, 0027's pragma, because two tables cascade from generation_jobs), and the reserve/meter/settle, the cancel and the rebuild are pinned by tests
-- 260918 update-ssot CLIP r34 done; ② stops being one page holding everything — the editing surface is the preview, its scrubber and the timeline, a selected cut or caption opens a sheet carrying its own frame, the draft autosaves so 저장 is gone, the dock becomes the revision composer with 다시 렌더 and 확정하기 above it, the download moves under the video as an icon, and the parity copy, the project-wide notices and the confirmation copy move into an info control and a finalization dialog
-- 260918 no doing task touches ②'s surfaces; T177's viewing checklist is again in the changed area and stays blocked
-- 260918 update-ssot CLIP start — ②'s mobile shape: the correction surfaces, the download, the revision request and the dock
-- 260918 T230 done; the copied guide teaches the outline and nothing it retired, the example carries stages and a caption, and a paste refuses only unreadable grammar — found and fixed an editor crash on a body with more region lines than the preset holds
-- 260918 T230 claimed (otl)

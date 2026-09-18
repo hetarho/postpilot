@@ -251,6 +251,35 @@ func (q *Queries) SaveCorrection(ctx context.Context, arg SaveCorrectionParams) 
 	return result.RowsAffected()
 }
 
+const saveGeneratedPlan = `-- name: SaveGeneratedPlan :execrows
+UPDATE clip_projects SET analysis_json=?,edit_plan_json=?,updated_at=?,edit_plan_revision=edit_plan_revision+1 WHERE user_id=? AND id=? AND deleting=0 AND finalized_at IS NULL
+`
+
+type SaveGeneratedPlanParams struct {
+	AnalysisJson sql.NullString
+	EditPlanJson sql.NullString
+	UpdatedAt    string
+	UserID       string
+	ID           string
+}
+
+// A generation that stops at the plan (CLIP-151). The analysis and the plan
+// advance; result_key, result_id and rendered_plan_revision are untouched, so
+// the previous result survives and reads as the stale one it is (CLIP-152).
+func (q *Queries) SaveGeneratedPlan(ctx context.Context, arg SaveGeneratedPlanParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, saveGeneratedPlan,
+		arg.AnalysisJson,
+		arg.EditPlanJson,
+		arg.UpdatedAt,
+		arg.UserID,
+		arg.ID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const saveGeneration = `-- name: SaveGeneration :execrows
 UPDATE clip_projects SET result_id=lower(hex(randomblob(16))),analysis_json=?,edit_plan_json=?,result_key=?,result_content_type=?,result_bytes=?,result_duration_ms=?,result_created_at=?,updated_at=?,edit_plan_revision=edit_plan_revision+1,rendered_plan_revision=edit_plan_revision+1 WHERE user_id=? AND id=? AND deleting=0 AND finalized_at IS NULL
 `

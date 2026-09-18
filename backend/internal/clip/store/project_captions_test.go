@@ -44,6 +44,9 @@ func TestChangingThePaceStalesTheResultWithoutRewritingThePlan(t *testing.T) {
 	if err := h.run(t); err != nil {
 		t.Fatal(err)
 	}
+	// The generation stops at the plan (CLIP-151), so the render this staling
+	// is about is the one the owner starts next.
+	h.render(t)
 	before, err := h.projects.GetProject(t.Context(), "alice", h.project.ID)
 	if err != nil || before.Result == nil || before.EditPlanRevision != before.RenderedPlanRevision {
 		t.Fatal("the fixture has no rendered result to stale", err)

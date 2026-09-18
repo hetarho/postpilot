@@ -132,6 +132,32 @@ func (s *Store) SaveGeneration(ctx context.Context, user, id, analysis, plan str
 	})
 	return err
 }
+
+// SaveGeneratedPlan is what a generation now finishes with: the analysis and the
+// plan it validated, and no result. The stored result and the revision it was
+// rendered from stay exactly as they are, so a regenerated project keeps the
+// clip it already has while the new plan waits for the render the owner asks
+// for (CLIP-151, CLIP-152, CLIP-26).
+func (s *Store) SaveGeneratedPlan(ctx context.Context, user, id, analysis, plan string, now time.Time) error {
+	_, err := transact(ctx, s, func(q *sqlc.Queries) (struct{}, error) {
+		old, err := getProject(ctx, q, user, id)
+		if err != nil {
+			return struct{}{}, err
+		}
+		n, err := q.SaveGeneratedPlan(ctx, sqlc.SaveGeneratedPlanParams{AnalysisJson: nullable(analysis), EditPlanJson: nullable(plan), UpdatedAt: stamp(now), UserID: user, ID: id})
+		if e := affected(n, err); e != nil {
+			return struct{}{}, e
+		}
+		if decoded, e := clip.DecodeEditPlan(plan); e == nil && decoded.Portable != nil {
+			old.Composition = &clip.ProjectComposition{Snapshot: decoded.Portable.Snapshot, Inputs: decoded.Portable.Inputs}
+			if e = saveComposition(ctx, q, old); e != nil {
+				return struct{}{}, e
+			}
+		}
+		return struct{}{}, nil
+	})
+	return err
+}
 func (s *Store) DeletionKeys(ctx context.Context) ([]string, error) { return s.read.DeletionKeys(ctx) }
 func (s *Store) RemoveDeletion(ctx context.Context, key string) error {
 	return s.write.RemoveDeletion(ctx, key)

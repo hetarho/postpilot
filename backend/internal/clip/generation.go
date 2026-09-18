@@ -11,7 +11,6 @@ import (
 	"github.com/postpilot/backend/internal/plan"
 	"io"
 	"log/slog"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -405,7 +404,6 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 	}
 	var analysisJSON []byte
 	var planJSON string
-	var result Result
 	// Every media command is timed, the successful ones included, and each
 	// record is attributed to the stage running when it started, so a stage
 	// total is explained by the operations inside it (CLIP-88).
@@ -626,39 +624,17 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 				}
 			}
 		}
-		set("render", 0, 1)
-		logAttemptDiagnostic(job, "render", checkpoint.Diagnostic)
-		// The retained composition owns every visible element. Only old queued
-		// payloads without that contract enter the compatibility compositor.
-		load, releaseSource := s.renderLoader(ws, func(id string) (SourceLease, MediaInfo, bool) {
-			for i, v := range b.Sources {
-				if v.ID == id {
-					return v, sources[i].Info, true
-				}
-			}
-			return SourceLease{}, MediaInfo{}, false
-		}, pricing.ReusedChunks > 0)
-		if edit.Portable == nil {
-			edit = edit.WithFacts(p.Disclosure, p.Answers, p.Template.Preset, p.CTA, p.Template.Accent, p.HideDisclosure)
-		}
-		video, err := s.renderer.Render(ctx, ws, edit, renderSources, load)
-		if err = errors.Join(err, releaseSource()); err != nil {
-			return err
-		}
+		// The attempt ends HERE, on the validated plan. No media execution runs
+		// and no result file is produced: the owner reads this plan in ②'s draft
+		// preview and starts the render they want themselves (CLIP-151).
+		set("save", 0, 1)
+		logAttemptDiagnostic(job, "save", checkpoint.Diagnostic)
 		recovery.PlanReady = true
-		if video.Plan != nil {
-			edit = *video.Plan
-		}
 		recovery.Plan, err = EncodeEditPlan(edit)
 		if err != nil {
 			return err
 		}
 		if err := s.saveRecovery(ctx, user, project, recovery); err != nil {
-			return err
-		}
-		set("save", 0, 1)
-		key := ResultPrefix + url.PathEscape(user) + "/" + url.PathEscape(project) + "/" + newID() + ".mp4"
-		if err = s.uploadPath(ctx, key, video.Path, video.Bytes); err != nil {
 			return err
 		}
 		analysisJSON, err = json.Marshal(analyses)
@@ -677,18 +653,16 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 		// made about it and a new one stays silent (CLIP-18, CLIP-100).
 		edit.SourceAudio = FreezeSourceAudio(b, edit.Cuts)
 		planJSON, err = EncodeEditPlan(edit)
-		if err != nil {
-			return err
-		}
-		result = Result{Key: key, ContentType: "video/mp4", Bytes: video.Bytes, DurationMS: video.Info.DurationMS, CreatedAt: s.now()}
-		return nil
+		return err
 	})
 	if err != nil {
 		return err
 	}
-	// A failed attempt never replaces the prior result, including a local cleanup
-	// failure. Uploaded but unpublished output remains recoverable by the sweep.
-	if err = s.finisher.Complete(ctx, AttemptResult{JobID: job, UserID: user, ProjectID: project, ExpectedRevision: currentProject.EditPlanRevision, Analysis: string(analysisJSON), EditPlan: planJSON, Result: result}); err != nil {
+	// A failed attempt never replaces the prior plan, and a successful one never
+	// replaces the previous result either: it advances the plan the render is
+	// asked for, which is what leaves that result standing as a stale one
+	// (CLIP-26, CLIP-152).
+	if err = s.finisher.Complete(ctx, AttemptResult{JobID: job, UserID: user, ProjectID: project, ExpectedRevision: currentProject.EditPlanRevision, Analysis: string(analysisJSON), EditPlan: planJSON}); err != nil {
 		return err
 	}
 	set("cleanup", 0, 1)

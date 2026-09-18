@@ -10,6 +10,11 @@ INSERT INTO clip_proxy_leases(object_key,batch_id) VALUES (?,?);
 DELETE FROM clip_proxy_leases WHERE object_key=?;
 -- name: SaveGeneration :execrows
 UPDATE clip_projects SET result_id=lower(hex(randomblob(16))),analysis_json=?,edit_plan_json=?,result_key=?,result_content_type=?,result_bytes=?,result_duration_ms=?,result_created_at=?,updated_at=?,edit_plan_revision=edit_plan_revision+1,rendered_plan_revision=edit_plan_revision+1 WHERE user_id=? AND id=? AND deleting=0 AND finalized_at IS NULL;
+-- A generation that stops at the plan (CLIP-151). The analysis and the plan
+-- advance; result_key, result_id and rendered_plan_revision are untouched, so
+-- the previous result survives and reads as the stale one it is (CLIP-152).
+-- name: SaveGeneratedPlan :execrows
+UPDATE clip_projects SET analysis_json=?,edit_plan_json=?,updated_at=?,edit_plan_revision=edit_plan_revision+1 WHERE user_id=? AND id=? AND deleting=0 AND finalized_at IS NULL;
 -- name: EnqueueObjectDeletion :exec
 INSERT INTO clip_object_deletions(object_key,created_at) VALUES (?,?) ON CONFLICT(object_key) DO NOTHING;
 -- name: DeletionKeys :many

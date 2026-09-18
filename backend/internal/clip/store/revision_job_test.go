@@ -7,8 +7,10 @@ import (
 	"github.com/postpilot/backend/internal/clip"
 )
 
-// revisionReady runs one generation so the project holds a plan, a result and
-// the observations a revision is bound to.
+// revisionReady runs one generation so the project holds a plan and the
+// observations a revision is bound to, then renders it, since a generation
+// stops at the plan and a revision is about leaving a RENDERED result stale
+// (CLIP-151, CLIP-132).
 func revisionReady(t *testing.T) *generationHarness {
 	t.Helper()
 	h := generationSetup(t)
@@ -17,6 +19,7 @@ func revisionReady(t *testing.T) *generationHarness {
 	if err := h.run(t); err != nil {
 		t.Fatal(err)
 	}
+	h.render(t)
 	return h
 }
 

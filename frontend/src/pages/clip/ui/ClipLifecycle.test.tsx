@@ -249,3 +249,19 @@ it.each([false, true])(
     else expect(screen.getByText('8 크레딧')).toBeVisible()
   },
 )
+
+it('opens a plan with no render as a plan to review, not as a missing result', async () => {
+  // A generation now stops at the validated plan (CLIP-151), so this is ②'s
+  // normal FIRST state: the draft preview, the render action, and nothing
+  // anywhere saying the attempt failed or that a result went missing.
+  mount({ projects: [{ ...project(), renderedPlanRevision: 0, result: undefined }] })
+  expect(await screen.findByRole('tab', { name: '클립 다듬기' })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  )
+  expect(screen.getByRole('region', { name: '편집 중인 영상' })).toBeVisible()
+  expect(screen.getByText('수정됨 · 다시 출력 필요')).toBeVisible()
+  expect(screen.queryByRole('link', { name: /다운로드/ })).not.toBeInTheDocument()
+  expect(screen.queryByText(/실패/)).not.toBeInTheDocument()
+  expect(screen.queryByText(/아직 다듬을 편집안이 없어요/)).not.toBeInTheDocument()
+})

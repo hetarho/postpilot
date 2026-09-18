@@ -559,7 +559,7 @@ export const clips = {
       analyze: '영상 분석',
       plan: '컷·자막 구성',
       render: '영상 렌더링',
-      save: '결과 저장',
+      save: '저장 중',
       cleanup: '원본 정리',
     },
     failedAt: '{{stage}} 단계에서 실패했어요',

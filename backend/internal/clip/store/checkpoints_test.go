@@ -81,15 +81,24 @@ func TestInterruptionPreservesCompletedChunksAndFencesCancellation(t *testing.T)
 	}
 }
 
+// The render is its own job now (CLIP-151), so the checkpoint a render failure
+// leaves is that job's — and it still carries the ranges of the plan it was
+// given, which is what tells a lost render from a bad plan.
 func TestRenderFailureRetainsSelectedOriginalRanges(t *testing.T) {
 	h := generationSetup(t)
-	id := h.start(t)
+	h.start(t)
+	if err := h.run(t); err != nil {
+		t.Fatal(err)
+	}
 	h.renderer.fail = clip.ErrInvalidMedia
+	id := h.startRender(t)
 	if h.run(t) == nil {
 		t.Fatal("expected render failure")
 	}
 	c, err := h.store.GetAttemptCheckpoint(t.Context(), "alice", h.project.ID, id)
-	if err != nil || c == nil || c.Stage != "render" || len(c.Diagnostic.Ranges) != 1 || !c.Diagnostic.Ranges[0].Valid || c.CompletedSources != 2 {
+	// The render's batch is narrowed to the sources its plan actually uses, so
+	// the count that proves nothing was lost is the retained observations'.
+	if err != nil || c == nil || c.Stage != "render" || len(c.Diagnostic.Ranges) != 1 || !c.Diagnostic.Ranges[0].Valid || len(c.Observations) != 2 {
 		t.Fatalf("render failure lost successful plan ranges: %+v %v", c, err)
 	}
 }

@@ -104,6 +104,12 @@ func TestPreparationReleasesEachProxyAndNeverUploadsOrSignsIt(t *testing.T) {
 	if err := h.run(t); err != nil {
 		t.Fatal(err)
 	}
+	// The one object a clip stores is its render's, and the render is its own
+	// job (CLIP-151); the proxies are the generation's and are gone either way.
+	if len(h.objects.results) != 0 {
+		t.Fatal("the generation stored a file", h.objects.results)
+	}
+	h.render(t)
 	for _, c := range h.media.prepared {
 		if _, err := os.Stat(c.Path); !os.IsNotExist(err) {
 			t.Fatal("proxy remains")

@@ -49,11 +49,15 @@ func TestGenerationStatesTheOwnerSnapshotAndTheSettingDoesNotInvalidateThePlan(t
 func TestTheSoundSettingDoesNotInvalidateAnInterruptedCandidate(t *testing.T) {
 	h := generationSetup(t)
 	ctx := context.Background()
-	h.renderer.fail = clip.ErrInvalidMedia
+	// The attempt fails after its plan is validated and durable, which is the
+	// interruption a continuation resumes from now that the render is its own
+	// job (CLIP-151, CLIP-93).
+	h.media.cleanupErr = errors.New("workspace cleanup failed")
 	h.start(t)
 	if err := h.run(t); err == nil {
-		t.Fatal("expected the injected rendering failure")
+		t.Fatal("expected the injected attempt failure")
 	}
+	h.media.cleanupErr = nil
 	before, err := h.service.Quote(ctx, "alice", h.project.ID, h.batch.ID, "p/o", "p/w")
 	if err != nil || !before.Pricing.RenderOnly() || before.Pricing.ReusedChunks != 3 {
 		t.Fatalf("the fixture has no reusable candidate: %+v %v", before.Pricing, err)
@@ -76,24 +80,25 @@ func TestTheSoundSettingDoesNotInvalidateAnInterruptedCandidate(t *testing.T) {
 	if h.planner.observe != observed || h.planner.plans != planned {
 		t.Fatal("the sound change consulted a model")
 	}
-	h.renderer.fail = nil
 	h.start(t)
 	if err := h.run(t); err != nil {
 		t.Fatal("render-only continuation failed", err)
 	}
-	if h.planner.observe != observed || h.planner.plans != planned || h.renderer.calls != 2 {
+	if h.planner.observe != observed || h.planner.plans != planned || h.renderer.calls != 0 {
 		t.Fatal("continuation repeated completed AI work")
 	}
-	if !h.renderer.plan.RetainsOriginalAudio(h.renderer.plan.Cuts[0]) {
-		t.Fatal("continuation rendered the old source-sound snapshot")
-	}
 	completed, err := h.projects.GetProject(ctx, "alice", h.project.ID)
-	if err != nil || completed.Result == nil {
-		t.Fatal("continuation did not persist a result", err)
+	if err != nil || completed.EditPlan == "" {
+		t.Fatal("continuation did not persist its plan", err)
 	}
 	plan, err := clip.DecodeEditPlan(completed.EditPlan)
 	if err != nil || !plan.RetainsOriginalAudio(plan.Cuts[0]) {
 		t.Fatal("saved assembly lost the latest owner sound setting", err)
+	}
+	// And the render the continuation exists for carries that snapshot.
+	h.render(t)
+	if !h.renderer.plan.RetainsOriginalAudio(h.renderer.plan.Cuts[0]) {
+		t.Fatal("the render used the old source-sound snapshot")
 	}
 	h.assertClean(t)
 }

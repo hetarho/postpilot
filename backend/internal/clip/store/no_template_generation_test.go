@@ -64,12 +64,12 @@ func TestAClipIsMintedGeneratedAndRerenderedWithNoTemplate(t *testing.T) {
 	if err := h.run(t); err != nil {
 		t.Fatal("a generation with no template failed", err)
 	}
-	rendered, err := h.projects.GetProject(t.Context(), "alice", p.ID)
-	if err != nil || rendered.Result == nil {
-		t.Fatal("no clip was produced", err)
+	planned, err := h.projects.GetProject(t.Context(), "alice", p.ID)
+	if err != nil || planned.EditPlan == "" || planned.Result != nil {
+		t.Fatal("the generation did not stop at a plan of its own", err)
 	}
-	if rendered.VideoTemplateID != "" {
-		t.Fatal("the generation attached a template", rendered.VideoTemplateID)
+	if planned.VideoTemplateID != "" {
+		t.Fatal("the generation attached a template", planned.VideoTemplateID)
 	}
 	// And the same project rerenders, still with none.
 	batch := rerenderBatch(t, h, true)
@@ -84,7 +84,7 @@ func TestAClipIsMintedGeneratedAndRerenderedWithNoTemplate(t *testing.T) {
 		t.Fatal(err)
 	}
 	latest, err := h.projects.GetProject(t.Context(), "alice", p.ID)
-	if err != nil || latest.EditPlanRevision != latest.RenderedPlanRevision || latest.VideoTemplateID != "" {
+	if err != nil || latest.Result == nil || latest.EditPlanRevision != latest.RenderedPlanRevision || latest.VideoTemplateID != "" {
 		t.Fatal("the rerender did not settle on a project with no template", latest.EditPlanRevision, latest.RenderedPlanRevision, err)
 	}
 }

@@ -6,6 +6,7 @@ import (
 	"github.com/postpilot/backend/internal/clip/store"
 	"github.com/postpilot/backend/internal/job"
 	jobstore "github.com/postpilot/backend/internal/job/store"
+	"time"
 )
 
 // Component fixtures isolate the clip store; composition-level transaction and
@@ -14,6 +15,11 @@ type generationFinisher struct{ store *store.Store }
 
 func (f generationFinisher) Complete(ctx context.Context, c clip.AttemptResult) error {
 	if c.EditPlan != "" {
+		// A generation stops at the plan and carries no result of its own
+		// (CLIP-151); only a legacy staged completion still brings one.
+		if c.Result.Key == "" {
+			return f.store.SaveGeneratedPlan(ctx, c.UserID, c.ProjectID, c.Analysis, c.EditPlan, time.Now())
+		}
 		return f.store.SaveGeneration(ctx, c.UserID, c.ProjectID, c.Analysis, c.EditPlan, c.Result)
 	}
 	return f.store.SaveRender(ctx, c.UserID, c.ProjectID, c.ExpectedRevision, c.Result)
