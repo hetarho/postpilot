@@ -1,5 +1,13 @@
 export const clips = {
   notices: {
+    renderCanvas: '영상 해상도가 선택한 화면비의 출력 규격과 달라요.',
+    renderFrameRate: '영상 프레임 속도가 출력 규격과 달라요.',
+    renderCodec: '영상 또는 오디오 형식이 출력 규격과 달라요.',
+    renderAudio: '영상의 소리 유무가 선택한 원본 소리 설정과 달라요.',
+    renderAudioRate: '영상의 오디오 샘플 속도가 출력 규격과 달라요.',
+    renderLoudness: '영상의 소리 크기가 목표 범위를 벗어났어요.',
+    renderDuration: '영상 길이가 편집한 타임라인과 달라요.',
+    renderVerdict: '브라우저가 영상 출력 검사에서 문제를 보고했어요. 재생하며 확인해 주세요.',
     regionLineSurplus:
       '선택한 인트로·아웃트로 디자인이 담을 수 있는 줄 수를 넘겨서 마지막 줄은 넣지 않았어요.',
     captionOverlap: '겹치는 자막을 하나 뺐어요',

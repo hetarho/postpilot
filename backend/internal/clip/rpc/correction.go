@@ -227,5 +227,31 @@ func (h *Handler) StartClipRender(ctx context.Context, req *connect.Request[v1.S
 	if err != nil {
 		return nil, toConnectError(err)
 	}
+	if kind == clip.RenderBrowser {
+		return connect.NewResponse(&v1.StartClipRenderResponse{RenderId: id}), nil
+	}
 	return connect.NewResponse(&v1.StartClipRenderResponse{JobId: id}), nil
+}
+
+func (h *Handler) ReportClipRenderVerdict(ctx context.Context, req *connect.Request[v1.ReportClipRenderVerdictRequest]) (*connect.Response[v1.ReportClipRenderVerdictResponse], error) {
+	user, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if req.Msg.Measurements == nil {
+		return nil, toConnectError(clip.ErrInvalid)
+	}
+	if h.generation == nil {
+		return nil, toConnectError(clip.ErrRenderUnavailable)
+	}
+	m := req.Msg.Measurements
+	v, err := h.generation.ReportRenderVerdict(ctx, user, req.Msg.RenderId, clip.RenderMeasurements{Width: int(m.Width), Height: int(m.Height), FrameRateNumerator: int(m.FrameRateNumerator), FrameRateDenominator: int(m.FrameRateDenominator), VideoFrames: int(m.VideoFrames), VideoCodec: m.VideoCodec, VideoProfile: m.VideoProfile, HasAudio: m.HasAudio, AudioCodec: m.AudioCodec, AudioRate: int(m.AudioRate), LoudnessLUFS: m.LoudnessLufs, Silent: m.Silent}, req.Msg.Passed)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+	out := &v1.ReportClipRenderVerdictResponse{Passed: v.Passed}
+	for _, n := range v.Notices {
+		out.Notices = append(out.Notices, &v1.ClipNotice{Code: n.Reason, Action: n.Action})
+	}
+	return connect.NewResponse(out), nil
 }

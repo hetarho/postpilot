@@ -302,6 +302,10 @@ func (r *rendererFake) CaptionSize(context.Context, string, clip.Caption) (float
 	return 10, 10, r.captionErr
 }
 
+func (r *rendererFake) Layout(_ context.Context, p clip.EditPlan, _ []clip.RenderSource) (clip.EditPlan, clip.Manifest, error) {
+	return p, nil, r.captionErr
+}
+
 func (r *rendererFake) Render(ctx context.Context, ws clip.MediaWorkspace, p clip.EditPlan, _ []clip.RenderSource, loader clip.RenderSourceLoader) (clip.RenderedVideo, error) {
 	r.calls++
 	r.plan = p

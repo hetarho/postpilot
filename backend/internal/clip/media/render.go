@@ -241,23 +241,35 @@ func (r *Rendering) renderCut(ctx context.Context, ws clip.MediaWorkspace, canva
 	}
 	return r.media.sourcePath(ws, path)
 }
-func (r *Rendering) Render(ctx context.Context, ws clip.MediaWorkspace, plan clip.EditPlan, sources []clip.RenderSource, load clip.RenderSourceLoader) (result clip.RenderedVideo, err error) {
+
+// preparePlan is shared by admission/layout and execution so legacy conversion
+// and rate refusals cannot first appear after a render has started.
+func (r *Rendering) preparePlan(plan clip.EditPlan, sources []clip.RenderSource) (clip.EditPlan, error) {
+	var err error
 	// Every rate is rechecked against the ORIGINAL's own verified cadence before
 	// a single FFmpeg process starts. An unsuitable one is IDENTIFIED, never
 	// simulated and never quietly replaced by 1x (CLIP-99, CDS-68).
 	if err = clip.RefuseUnrenderableRates(plan, sources); err != nil {
-		return result, err
+		return plan, err
 	}
 	if plan.Portable == nil && (plan.Hook != "" || len(plan.Facts) > 0 || slices.ContainsFunc(plan.Cuts, func(c clip.Cut) bool { return len(c.Chips) > 0 })) {
 		if strings.ContainsAny(plan.Hook, "\r\n") || design.Chars(plan.Hook) > design.Type["hook"].Chars {
-			return result, &composition.Problem{ElementID: "legacy-hook", Line: 1, Reason: "copy_limit"}
+			return plan, &composition.Problem{ElementID: "legacy-hook", Line: 1, Reason: "copy_limit"}
 		}
 		p := clip.Project{Answers: plan.Facts, Disclosure: plan.Disclosure, HideDisclosure: plan.HideDisclosure, CTA: plan.CTA}
 		recipe := clip.Recipe{Preset: plan.Preset, Accent: plan.Accent}
 		plan.Portable, err = clip.FreezeLegacyPlan(p, plan, recipe, r.cfg.Composition)
 		if err != nil {
-			return result, err
+			return plan, err
 		}
+	}
+	return plan, nil
+}
+
+func (r *Rendering) Render(ctx context.Context, ws clip.MediaWorkspace, plan clip.EditPlan, sources []clip.RenderSource, load clip.RenderSourceLoader) (result clip.RenderedVideo, err error) {
+	plan, err = r.preparePlan(plan, sources)
+	if err != nil {
+		return result, err
 	}
 	if plan.Portable != nil {
 		return r.renderComposition(ctx, ws, plan, sources, load)
@@ -797,6 +809,18 @@ func (r *Rendering) Layout(ctx context.Context, plan clip.EditPlan, sources []cl
 		return err
 	})
 	return repaired, manifest, err
+}
+
+// ValidateRenderPlan includes the legacy conversion execution will perform.
+// Layout itself stays a read of the supplied representation, used by previews
+// and diagnostics that must preserve their input's words and structure.
+func (r *Rendering) ValidateRenderPlan(ctx context.Context, plan clip.EditPlan, sources []clip.RenderSource) (clip.EditPlan, error) {
+	plan, err := r.preparePlan(plan, sources)
+	if err != nil {
+		return plan, err
+	}
+	plan, _, err = r.Layout(ctx, plan, sources)
+	return plan, err
 }
 
 func (r *Rendering) runRender(ctx context.Context, ws clip.MediaWorkspace, output string, args []string) error {

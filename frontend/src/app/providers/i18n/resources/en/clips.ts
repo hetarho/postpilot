@@ -1,5 +1,13 @@
 export const clips = {
   notices: {
+    renderCanvas: 'The video resolution differs from the selected output format.',
+    renderFrameRate: 'The video frame rate differs from the output format.',
+    renderCodec: 'The video or audio codec differs from the output format.',
+    renderAudio: 'The audio track differs from the selected source sound settings.',
+    renderAudioRate: 'The audio sample rate differs from the output format.',
+    renderLoudness: 'The video loudness is outside the target range.',
+    renderDuration: 'The video duration differs from the edited timeline.',
+    renderVerdict: 'The browser reported an output check issue. Review the video before sharing.',
     regionLineSurplus:
       'The chosen intro/outro design holds fewer lines than the template writes, so the last one is not shown.',
     captionOverlap: 'An overlapping caption was removed',

@@ -7,6 +7,14 @@ export interface ClipNotice {
 
 // Messages describe delivered content, independent of the failed-attempt vocabulary.
 export const clipNoticeKeys = {
+  render_output_canvas: 'renderCanvas',
+  render_output_frame_rate: 'renderFrameRate',
+  render_output_codec: 'renderCodec',
+  render_output_audio: 'renderAudio',
+  render_output_audio_rate: 'renderAudioRate',
+  render_output_loudness: 'renderLoudness',
+  render_output_duration: 'renderDuration',
+  render_output_verdict: 'renderVerdict',
   intro_slot_shortened: 'introSlotShortened',
   outro_slot_shortened: 'outroSlotShortened',
   intro_slot_omitted: 'introSlotOmitted',

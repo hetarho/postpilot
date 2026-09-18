@@ -18,7 +18,6 @@ func TestRenderKindRefusedBeforeWork(t *testing.T) {
 	}{
 		{v1.ClipRenderKind_CLIP_RENDER_KIND_UNSPECIFIED, connect.CodeInvalidArgument},
 		{v1.ClipRenderKind(99), connect.CodeInvalidArgument},
-		{v1.ClipRenderKind_CLIP_RENDER_KIND_BROWSER, connect.CodeUnimplemented},
 	} {
 		_, err := h.StartClipRender(auth.WithUser(t.Context(), "alice"), connect.NewRequest(&v1.StartClipRenderRequest{RenderKind: tc.kind}))
 		if connect.CodeOf(err) != tc.code {

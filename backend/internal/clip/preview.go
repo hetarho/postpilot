@@ -43,6 +43,14 @@ type CompositionLayouter interface {
 	LayoutComposition(context.Context, EditPlan, []RenderSource) (EditPlan, []CompositionElement, error)
 }
 
+type PlanLayouter interface {
+	Layout(context.Context, EditPlan, []RenderSource) (EditPlan, Manifest, error)
+}
+
+type RenderPlanValidator interface {
+	ValidateRenderPlan(context.Context, EditPlan, []RenderSource) (EditPlan, error)
+}
+
 func (s *GenerationService) PreparePreview(ctx context.Context, user, id string, revision int, hash string, draft CorrectionPlan, ids []string, offset int) (PreparedPreview, error) {
 	p, err := s.projects.store.GetProject(ctx, user, id)
 	if err != nil {

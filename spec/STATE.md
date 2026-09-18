@@ -49,7 +49,6 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
-| T243 | every plan check runs on the server before a render of either kind | CLIP | T242 | todo |
 | T247 | ②'s dock is the revision composer over 렌더하기 and 확정하기 | CLIP | T246 T242 | todo |
 | T248 | 확정하기 opens the finalization dialog | CLIP | T247 | todo |
 | T249 | ②'s reference opens on demand | CLIP | T248 | todo |
@@ -62,10 +61,12 @@
 | T257 | the approval surface quotes the longest render its styles can produce | CLIP CDS | - | todo |
 
 ## next
-- implement-task T243 — the next dependency-ready todo in table order; T247 and T250 are also unblocked by T242.
+- implement-task T247 — the next dependency-ready todo in table order; T250 is also ready.
 - T256 and T257 remain independent of the browser cluster.
 - T177 stays blocked; T008 belongs to another session; post-quality-and-related-links awaits conversion.
 ## log
+- 260918 T243 done; both kinds run server plan admission first, browser verdicts are owner/revision-bound records with notices, and file promotion remains T253.
+- 260918 T243 claimed (rnd)
 - 260918 T242 done; render kind survives the result and completion staging, old results read as server, and project reads expose the last successful kind.
 - 260918 out of scope: frontend/src/pages/editor/ui/DraftEditor.tsx:140 has an existing storedAnswers useMemo dependency warning; lint passes with no errors.
 - 260918 T242 claimed (rnd)
@@ -84,5 +85,3 @@
 - 260918 create-task CLIP start (r37 delta onto T242 T250 T251, plus the failing release smoke as its own task)
 - 260918 implement-task stopped before claiming anything: every todo task is base:CLIP@36 against rev 37, and T242 — the only one whose dep is met — sits inside r37's delta, so create-task CLIP (r37) comes first
 - 260918 out of scope, CONFIRMED by local `pnpm smoke:input`: the release smokes still require a generation to leave a result file — `clip_release_test.go:214` (and :802) fail on `Result == nil` with the job done and no failure, which is exactly CLIP-151 as T241 implemented it (ARCH-38 keeps the rollout, which is green); both smokes have to start a render after the plan, so the repair belongs with T242 and needs a task
-- 260918 T246 done; the scrubber, one info control and the icon download are the preview's own row, and `Slider` gained a labelless one-row shape for it — the parity copy left `ClipDraftPreview` with the `precise` state its block was the only reader of, and `FinalizeClipNotices` lost its notice list but keeps the refusal and the uncertain retry until T248's dialog takes them
-- 260918 T246 claimed (sht)

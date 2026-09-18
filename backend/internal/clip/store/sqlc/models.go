@@ -23,6 +23,19 @@ type ClipAttemptResult struct {
 	RenderKind        string
 }
 
+type ClipBrowserRender struct {
+	ID           string
+	UserID       string
+	ProjectID    string
+	PlanRevision int64
+	Ratio        string
+	DurationMs   int64
+	HasAudio     int64
+	CreatedAt    string
+	VerdictJson  sql.NullString
+	ReportedAt   sql.NullString
+}
+
 type ClipGenerationQuote struct {
 	ID            string
 	UserID        string

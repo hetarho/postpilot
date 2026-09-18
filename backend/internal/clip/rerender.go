@@ -105,9 +105,7 @@ type renderPayload struct {
 
 func (s *GenerationService) StartRender(ctx context.Context, user, id, batch string, revision int, kind RenderKind) (string, error) {
 	switch kind {
-	case RenderServer:
-	case RenderBrowser:
-		return "", ErrRenderUnavailable
+	case RenderServer, RenderBrowser:
 	default:
 		return "", ErrInvalid
 	}
@@ -164,6 +162,49 @@ func (s *GenerationService) StartRender(ctx context.Context, user, id, batch str
 	}
 	if err = MatchRenderBatch(plan, b); err != nil {
 		return "", err
+	}
+	// Resolve the same bundled-font layout and checks before either executor
+	// starts. Pixel-dependent contrast and output checks stay with the producer.
+	if plan.Portable == nil {
+		t := VideoTemplate{}
+		if p.Composition != nil && p.Composition.Snapshot.LegacyRecipe != nil {
+			t.Recipe = *p.Composition.Snapshot.LegacyRecipe
+		} else if p.VideoTemplateID != "" {
+			t, err = s.projects.store.GetTemplate(ctx, user, p.VideoTemplateID)
+			if err != nil && !errors.Is(err, ErrNotFound) {
+				return "", err
+			}
+		}
+		plan = plan.WithFacts(p.Disclosure, p.Answers, t.Preset, p.CTA, t.Accent, p.HideDisclosure)
+	}
+	plan = plan.WithDesign(p.DesignSelection())
+	refs := make([]RenderSource, 0, len(sources))
+	for _, source := range sources {
+		refs = append(refs, source.RenderSource)
+	}
+	if err := RefuseUnrenderableRates(plan, refs); err != nil {
+		return "", err
+	}
+	if validator, ok := s.renderer.(RenderPlanValidator); ok {
+		plan, err = validator.ValidateRenderPlan(ctx, plan, refs)
+	} else if plan.Portable != nil {
+		layout, ok := s.renderer.(CompositionLayouter)
+		if !ok {
+			return "", ErrCompositionUnavailable
+		}
+		plan, _, err = layout.LayoutComposition(ctx, plan, refs)
+	} else {
+		layout, ok := s.renderer.(PlanLayouter)
+		if !ok {
+			return "", ErrCompositionUnavailable
+		}
+		plan, _, err = layout.Layout(ctx, plan, refs)
+	}
+	if err != nil {
+		return "", err
+	}
+	if kind == RenderBrowser {
+		return s.beginBrowserRender(ctx, p, plan, refs)
 	}
 	raw, err := json.Marshal(renderPayload{HideDisclosure: p.HideDisclosure, Version: 1, ProjectID: id, Revision: revision, PlanJSON: p.EditPlan, Sources: sources, Batch: b})
 	if err != nil {
@@ -224,6 +265,7 @@ func (s *GenerationService) RunRender(ctx context.Context, user, job, project st
 	if err != nil {
 		return err
 	}
+	plan = plan.WithDesign(p.DesignSelection())
 	if err := s.checkComposition(p.Composition); err != nil {
 		return err
 	}

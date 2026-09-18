@@ -18,6 +18,7 @@ service ClipService {
   rpc GetClipCaptionStyleSamples(GetClipCaptionStyleSamplesRequest) returns (GetClipCaptionStyleSamplesResponse) {}
   rpc SaveClipEditPlan(SaveClipEditPlanRequest) returns (SaveClipEditPlanResponse) {}
   rpc StartClipRender(StartClipRenderRequest) returns (StartClipRenderResponse) {}
+  rpc ReportClipRenderVerdict(ReportClipRenderVerdictRequest) returns (ReportClipRenderVerdictResponse) {}
   rpc StartClipGeneration(StartClipGenerationRequest) returns (StartClipGenerationResponse) {}
   rpc QuoteClipGeneration(QuoteClipGenerationRequest) returns (QuoteClipGenerationResponse) {}
   rpc FinalizeClipProject(FinalizeClipProjectRequest) returns (FinalizeClipProjectResponse) {}
@@ -764,7 +765,31 @@ message ClipEditingState {
 message SaveClipEditPlanRequest { string project_id = 1; int32 expected_revision = 2; ClipEditPlan plan = 3; }
 message SaveClipEditPlanResponse { ClipProject project = 1; }
 message StartClipRenderRequest { string project_id = 1; int32 expected_revision = 2; string batch_id = 3; ClipRenderKind render_kind = 4; }
-message StartClipRenderResponse { string job_id = 1; }
+message StartClipRenderResponse { string job_id = 1; string render_id = 2; }
+message ClipRenderMeasurements {
+  int32 width = 1;
+  int32 height = 2;
+  int32 frame_rate_numerator = 3;
+  int32 frame_rate_denominator = 4;
+  int32 video_frames = 5;
+  string video_codec = 6;
+  string video_profile = 7;
+  bool has_audio = 8;
+  string audio_codec = 9;
+  int32 audio_rate = 10;
+  optional double loudness_lufs = 11;
+  bool silent = 12;
+}
+message ReportClipRenderVerdictRequest {
+  string render_id = 1;
+  ClipRenderMeasurements measurements = 2;
+  bool passed = 3;
+}
+// The verdict is recorded; it never makes an unstored local file a result.
+message ReportClipRenderVerdictResponse {
+  bool passed = 1;
+  repeated ClipNotice notices = 2;
+}
 
 // Version 0 means unavailable; storage support never implies execution support.
 message GetClipCapabilitiesRequest {}

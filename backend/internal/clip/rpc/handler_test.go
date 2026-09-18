@@ -101,6 +101,7 @@ func TestEveryProcedureRequiresActor(t *testing.T) {
 	calls := []func() error{
 		func() error { _, e := h.SaveClipEditPlan(ctx, nil); return e },
 		func() error { _, e := h.StartClipRender(ctx, nil); return e },
+		func() error { _, e := h.ReportClipRenderVerdict(ctx, nil); return e },
 		func() error { _, e := h.StartClipGeneration(ctx, nil); return e },
 		func() error { _, e := h.QuoteClipGeneration(ctx, nil); return e },
 		func() error { _, e := h.CreateClipSourceBatch(ctx, nil); return e }, func() error { _, e := h.ConfirmClipSource(ctx, nil); return e }, func() error { _, e := h.DiscardClipSourceBatch(ctx, nil); return e },
