@@ -1,2 +1,2 @@
 export { useFinalizeClip } from './model/useFinalizeClip'
-export { FinalizeClipAction } from './ui/FinalizeClipAction'
+export { FinalizeClipAction, FinalizeClipNotices } from './ui/FinalizeClipAction'

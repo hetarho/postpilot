@@ -52,6 +52,7 @@ export const clips = {
 
   finalization: {
     confirm: '확정하기',
+    summaryLabel: '확정 전 확인할 내용',
     notice:
       '확정하면 원본을 삭제하고 수정이 끝나요. 확정된 영상은 계속 재생하고 다운로드할 수 있어요.',
     waiting: '수정 단계에서 확정하기를 누르면 완성돼요. 다운로드만으로는 확정되지 않아요.',

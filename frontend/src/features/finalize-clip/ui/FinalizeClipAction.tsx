@@ -3,17 +3,25 @@ import { ClipNoticeList, type ClipProject } from '@/entities/clip-project'
 import { AppFailureMessage, Button, Typography } from '@/shared/ui'
 import type { useFinalizeClip } from '../model/useFinalizeClip'
 
-export function FinalizeClipAction({
+/** Why ② would refuse the confirmation, or nothing when it would take it. */
+function refusalOf(project: ClipProject) {
+  return project.finalizationRefusal ?? (!project.canFinalize ? 'unavailable' : undefined)
+}
+
+/** Everything the confirmation has to SAY: what confirming does, what the clip
+ *  delivered and why it is refused. It lives in ②'s PANEL, directly above the
+ *  dock, because a dock holds the committing control and its refusals and
+ *  nothing that is merely true (THEME-39, THEME-34) — stacked inside the dock,
+ *  this block grew tall enough to cover the editor it sits over. */
+export function FinalizeClipNotices({
   action,
   project,
-  disabled,
 }: {
   action: ReturnType<typeof useFinalizeClip>
   project: ClipProject
-  disabled: boolean
 }) {
   const { t } = useTranslation('clips')
-  const refusal = project.finalizationRefusal ?? (!project.canFinalize ? 'unavailable' : undefined)
+  const refusal = refusalOf(project)
   return (
     <div className="w-full min-w-0 space-y-2">
       <Typography variant="meta">{t('finalization.notice')}</Typography>
@@ -41,15 +49,33 @@ export function FinalizeClipAction({
           </Button>
         </>
       )}
-      <Button
-        variant="cta"
-        className="w-full sm:w-auto"
-        pending={action.pending}
-        disabled={disabled || !!refusal || action.uncertain}
-        onClick={() => void action.confirm()}
-      >
-        {t('finalization.confirm')}
-      </Button>
     </div>
+  )
+}
+
+/** ②'s primary committing control (CLIP-40). The button alone: its reasons are
+ *  in `FinalizeClipNotices`, so the dock stays the one row it shares with 다시
+ *  렌더 and 저장. */
+export function FinalizeClipAction({
+  action,
+  project,
+  disabled,
+}: {
+  action: ReturnType<typeof useFinalizeClip>
+  project: ClipProject
+  disabled: boolean
+}) {
+  const { t } = useTranslation('clips')
+  const refusal = refusalOf(project)
+  return (
+    <Button
+      variant="cta"
+      className="w-full sm:w-auto"
+      pending={action.pending}
+      disabled={disabled || !!refusal || action.uncertain}
+      onClick={() => void action.confirm()}
+    >
+      {t('finalization.confirm')}
+    </Button>
   )
 }

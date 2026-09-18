@@ -54,6 +54,7 @@ export const clips = {
 
   finalization: {
     confirm: 'Confirm clip',
+    summaryLabel: 'Before you confirm',
     notice:
       'Confirmation deletes the originals and ends editing. You can still play and download the confirmed video.',
     waiting:

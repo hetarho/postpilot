@@ -63,6 +63,7 @@ export function ClipCorrectionWorkspace({
   revision,
   downloadAction,
   finalizeAction,
+  finalizeNotices,
   notices = [],
   language,
 }: {
@@ -83,8 +84,15 @@ export function ClipCorrectionWorkspace({
    *  the PANEL: ②'s dock is full, and a charged action would not belong beside
    *  three credit-free ones in any case (CLIP-40). */
   revision?: ReactNode
+  /** Downloading the identified latest successful render. In the PANEL beside
+   *  the confirmation's own copy: the dock is one row of committing controls and
+   *  a download commits nothing (CLIP-40, THEME-39). */
   downloadAction?: ReactNode
+  /** ②'s primary committing control, the one thing of the confirmation the dock
+   *  carries. */
   finalizeAction?: ReactNode
+  /** What confirming does, what the clip delivered and why it is refused. */
+  finalizeNotices?: ReactNode
   localSources: ReadonlyArray<{ fingerprint: string; url: string }>
   /** Resolves an unexpired retained original for a source the session has no
    *  local copy of, so ② can still show the frame a caption sits on. */
@@ -621,6 +629,12 @@ export function ClipCorrectionWorkspace({
       {revision}
       {comparison}
       {sourcePicker}
+      {(finalizeNotices || downloadAction) && (
+        <section className="mt-10 space-y-3" aria-label={t('finalization.summaryLabel')}>
+          {finalizeNotices}
+          {downloadAction}
+        </section>
+      )}
       <div ref={actions} className="contents">
         <ActionBar ariaLabel={t('correction.actions')}>
           {failure && (
@@ -646,7 +660,10 @@ export function ClipCorrectionWorkspace({
               )}
             </div>
           )}
-          <div className="flex flex-wrap justify-end gap-2">
+          {/* ONE row: 다시 렌더 and 확정하기 stand side by side, with 저장 joining
+              them while the draft is dirty. Everything the confirmation says sits
+              in the panel above, so the dock cannot grow over the editor. */}
+          <div className="flex flex-wrap items-center justify-end gap-2">
             {correction.dirty && (
               <Button
                 variant="secondary"
@@ -657,7 +674,6 @@ export function ClipCorrectionWorkspace({
                 {t('timeline.save')}
               </Button>
             )}
-            {downloadAction}
             <Button
               variant="secondary"
               pending={renderPending}
@@ -672,8 +688,8 @@ export function ClipCorrectionWorkspace({
             >
               {t('timeline.render')}
             </Button>
+            {finalizeAction}
           </div>
-          {finalizeAction}
         </ActionBar>
       </div>
       <Dialog

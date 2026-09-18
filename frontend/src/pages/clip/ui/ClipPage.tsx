@@ -13,7 +13,7 @@ import {
 import { useClipCorrection, ClipCorrectionWorkspace } from '@/features/correct-clip'
 import { useSession } from '@/entities/session'
 import { isTerminal, progressLabel, progressRatio } from '@/entities/generation-job'
-import { useFinalizeClip, FinalizeClipAction } from '@/features/finalize-clip'
+import { useFinalizeClip, FinalizeClipAction, FinalizeClipNotices } from '@/features/finalize-clip'
 import { useCancelClip, CancelClipAction } from '@/features/cancel-clip'
 import { ClipProjectForm, useClipDraftSave } from '@/features/edit-clip-project'
 import { DeleteClipProjectButton } from '@/features/delete-clip-project'
@@ -419,6 +419,7 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
           disabled={uploading || generation.busy || !correction.validation?.saveable}
         />
       }
+      finalizeNotices={<FinalizeClipNotices action={finalization} project={project} />}
       notices={project.notices}
       language={project.language}
       projectId={project.id}
@@ -484,9 +485,14 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
             {t('preview.renderedRevision', { revision: project.renderedPlanRevision })}
           </Typography>
           <ClipResult ownerId={ownerId} project={project} />
-          <ActionBar ariaLabel={t('correction.actions')}>
+          <section className="space-y-3" aria-label={t('finalization.summaryLabel')}>
+            <FinalizeClipNotices action={finalization} project={project} />
             <ClipDownloadAction project={project} />
-            <FinalizeClipAction action={finalization} project={project} disabled />
+          </section>
+          <ActionBar ariaLabel={t('correction.actions')}>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <FinalizeClipAction action={finalization} project={project} disabled />
+            </div>
           </ActionBar>
         </>
       )}

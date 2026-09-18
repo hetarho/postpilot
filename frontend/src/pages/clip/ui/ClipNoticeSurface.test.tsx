@@ -6,7 +6,7 @@ import { ClipProjectSchema, contentLanguageToProto } from '@/shared/api'
 import { toClipProject } from '@/entities/clip-project'
 import { createTestQueryClient, withProviders } from '@/test/session'
 import { ClipResult, ClipDownloadAction } from '@/features/generate-clip'
-import { FinalizeClipAction } from '@/features/finalize-clip'
+import { FinalizeClipAction, FinalizeClipNotices } from '@/features/finalize-clip'
 
 afterEach(cleanup)
 it.each(['ko', 'en'] as const)(
@@ -44,6 +44,7 @@ it.each(['ko', 'en'] as const)(
         <ClipResult project={project} ownerId="owner" />
         <ClipDownloadAction project={project} />
         <div data-testid="confirmation">
+          <FinalizeClipNotices action={action} project={project} />
           <FinalizeClipAction action={action} project={project} disabled={false} />
         </div>
       </>,
