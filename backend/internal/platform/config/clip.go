@@ -9,13 +9,23 @@ func ClipMedia(cfg *Config) clip.MediaConfig {
 	return clip.MediaConfig{
 		WorkRoot: cfg.ClipWorkRoot, FFmpegPath: cfg.ClipFFmpegPath, FFprobePath: cfg.ClipFFprobePath,
 		StaleAge: cfg.ClipWorkStaleAge, OperationTimeout: cfg.ClipMediaTimeout, WaitDelay: 2 * time.Second,
-		ChunkDurationMS: 60000, LongEdge: 720, FPS: 15, DecodeThreads: 2, EncodeThreads: 1, CRF: 28, AudioRate: 48000, AudioBitrate: 64000,
+		ChunkDurationMS: 60000, LongEdge: 720, FPS: 15, DecodeThreads: clipThreads(cfg.ClipDecodeThreads, 2), EncodeThreads: clipThreads(cfg.ClipEncodeThreads, 1), CRF: 28, AudioRate: 48000, AudioBitrate: 64000,
 		StdoutLimit: 64 * 1024, StderrLimit: 16 * 1024, MaxStreams: 64, MaxDimension: 16384, DurationToleranceMS: 1000,
 		AnalysisMaxBytes: 8 << 20, PreparedMaxBytes: 512 << 20, WorkspaceMaxBytes: 8 << 30,
 		VideoMaxRate: 900000, VideoBufferSize: 1800000, RetryMaxRate: 650000, RetryBufferSize: 1300000,
 		DiskCheckInterval: 100 * time.Millisecond,
 		Sources:           ClipSourceLimits(cfg.ClipSourceBatchTTL, cfg.PresignPutTTL),
 	}
+}
+
+// clipThreads keeps a Config built by hand — tests and tools that never go
+// through Load — on the production pinning. Load refuses a non-positive value,
+// so a zero here can only mean nobody set one.
+func clipThreads(value, fallback int) int {
+	if value <= 0 {
+		return fallback
+	}
+	return value
 }
 
 const (

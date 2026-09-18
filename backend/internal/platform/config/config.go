@@ -305,6 +305,12 @@ type Config struct {
 	ClipFontPaths                      map[string]string
 	ClipOverlayDir                     string
 	ClipWorkStaleAge, ClipMediaTimeout time.Duration
+	// How many threads one ffmpeg may take. libx264 above one thread is not
+	// bit-exact, so raising the encoder moves delivered bytes (CLIP-124,
+	// CLIP-125) — production leaves these at 1 and 2. They are settings because a
+	// dev box has cores the production box does not and no byte to reproduce;
+	// docker-compose.yml raises them there.
+	ClipEncodeThreads, ClipDecodeThreads int
 
 	// OrphanSweepInterval is how often unconfirmed uploads and stray objects are cleaned
 	// up. The PRD leaves the cadence undecided (§9.5); daily is the provisional default.

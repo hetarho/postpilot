@@ -40,5 +40,13 @@ func loadClipMedia(cfg *Config) error {
 		return err
 	}
 	cfg.ClipMediaTimeout, err = positiveDuration("CLIP_MEDIA_TIMEOUT", "15m")
+	if err != nil {
+		return err
+	}
+	cfg.ClipEncodeThreads, err = positiveInt("CLIP_ENCODE_THREADS", "1")
+	if err != nil {
+		return err
+	}
+	cfg.ClipDecodeThreads, err = positiveInt("CLIP_DECODE_THREADS", "2")
 	return err
 }
