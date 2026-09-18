@@ -13,7 +13,7 @@ import {
   type ClipDisplayedFrame,
   type ClipEditingState,
 } from '@/entities/clip-project'
-import { X } from 'lucide-react'
+import { Info, X } from 'lucide-react'
 import type { AppFailure } from '@/shared/api'
 import { CLIP_DRAFT_PREVIEW, CLIP_TIMELINE } from '@/shared/config'
 import {
@@ -24,6 +24,7 @@ import {
   FieldLabel,
   FieldMessage,
   Listbox,
+  Popover,
   RangeSlider,
   Sheet,
   Slider,
@@ -87,9 +88,10 @@ export function ClipCorrectionWorkspace({
    *  the PANEL: ②'s dock is full, and a charged action would not belong beside
    *  three credit-free ones in any case (CLIP-40). */
   revision?: ReactNode
-  /** Downloading the identified latest successful render. In the PANEL beside
-   *  the confirmation's own copy: the dock is one row of committing controls and
-   *  a download commits nothing (CLIP-40, THEME-39). */
+  /** Downloading the identified latest successful render, as an icon directly
+   *  under the video it downloads (CLIP-149): the dock is one row of committing
+   *  controls and a download commits nothing (CLIP-40, THEME-39). Absent while
+   *  the plan has no render, and its absence is silence. */
   downloadAction?: ReactNode
   /** ②'s primary committing control, the one thing of the confirmation the dock
    *  carries. */
@@ -264,10 +266,44 @@ export function ClipCorrectionWorkspace({
           stickyTop: pinPreview ? viewport.offsetTop : undefined,
         })}
       </div>
-      <ClipNoticeList
-        notices={notices.filter((n) => !n.cutId && !n.elementId)}
-        language={language}
-      />
+      {/* Directly under the preview, and nothing else about the clip stands in the
+          flow ② edits in (CLIP-148): the download of the render this plan already
+          has (CLIP-149), and one info control holding what the draft preview
+          cannot promise about the delivered file plus every notice that names no
+          cut and no caption. With a plan and no render there is simply no
+          download — a plan awaiting one is ②'s FIRST state (CLIP-56), not a
+          missing result. */}
+      <div className="flex flex-wrap items-center gap-2">
+        {downloadAction}
+        <Popover
+          label={t('preview.aboutLabel')}
+          triggerSize="icon"
+          triggerVariant="secondary"
+          triggerLabel={<Info aria-hidden="true" className="size-5" />}
+          placement="below"
+          align="start"
+          phone="sheet"
+        >
+          {() => (
+            <div className="space-y-2">
+              <Typography variant="body" className="text-content-secondary">
+                {t('preview.parity')}
+              </Typography>
+              {/* The preview reports the precision of the frame it is showing, so
+                  this says the position is approximate only while it is. */}
+              {frame && !frame.precise && (
+                <Typography variant="body" className="text-content-secondary">
+                  {t('preview.frameApproximate')}
+                </Typography>
+              )}
+              <ClipNoticeList
+                notices={notices.filter((n) => !n.cutId && !n.elementId)}
+                language={language}
+              />
+            </div>
+          )}
+        </Popover>
+      </div>
       {/* The save state is NOT reported here: CLIP-38 gives it to the page's one
           status region, and a second copy beside the timeline said it twice with
           two different delays. Undo/redo moved to the timeline's own head. */}
@@ -304,7 +340,7 @@ export function ClipCorrectionWorkspace({
         withTargets
       />
       <Slider
-        label={t('preview.outputTime')}
+        ariaLabel={t('preview.outputTime')}
         min={0}
         max={Math.max(1, Number.isFinite(draft.durationMs) ? draft.durationMs : 1)}
         step={CLIP_DRAFT_PREVIEW.frameToleranceMs}
@@ -344,10 +380,12 @@ export function ClipCorrectionWorkspace({
       {revision}
       {comparison}
       {sourcePicker}
-      {(finalizeNotices || downloadAction) && (
+      {/* The download moved under the video it downloads (CLIP-149), so what is
+          left here is the confirmation's own copy — which T248 takes into the
+          finalization dialog. */}
+      {finalizeNotices && (
         <section className="mt-10 space-y-3" aria-label={t('finalization.summaryLabel')}>
           {finalizeNotices}
-          {downloadAction}
         </section>
       )}
       <div ref={actions} className="contents">

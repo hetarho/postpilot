@@ -56,8 +56,14 @@ it.each(['ko', 'en'] as const)(
       },
     )
     const confirmation = within(screen.getByTestId('confirmation'))
-    expect(confirmation.getAllByRole('listitem')).toHaveLength(3)
-    expect(screen.getAllByRole('listitem')).toHaveLength(6)
+    // The confirmation SAYS what confirming does and why it is refused, and lists
+    // no notices: one naming a cut or a caption rides in that item's sheet, one
+    // naming neither in the info control beside the preview (CLIP-109). T248
+    // lists the unresolved ones in the dialog this copy moves into.
+    expect(confirmation.queryByRole('listitem')).not.toBeInTheDocument()
+    expect(confirmation.getByText(/확정하면|Confirming/)).toBeInTheDocument()
+    // The delivered result keeps its own list, which is ③'s and not ②'s.
+    expect(screen.getAllByRole('listitem')).toHaveLength(3)
     expect(screen.getByRole('link')).toHaveAttribute('href', project.result!.downloadUrl)
     const button = confirmation.getByRole('button')
     expect(button).toBeEnabled()

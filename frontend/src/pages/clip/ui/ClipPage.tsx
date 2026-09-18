@@ -409,9 +409,7 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
           }
         />
       }
-      downloadAction={
-        project.result?.downloadUrl && <ClipDownloadAction compact project={project} />
-      }
+      downloadAction={project.result?.downloadUrl && <ClipDownloadAction icon project={project} />}
       finalizeAction={
         <FinalizeClipAction
           action={finalization}

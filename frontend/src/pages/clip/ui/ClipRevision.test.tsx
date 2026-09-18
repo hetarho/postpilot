@@ -88,11 +88,12 @@ it('asks for a revision from ②s panel, leaves the dock alone and sends nothing
   await mount({ revisionStarts: starts })
   const dock = within(screen.getByLabelText('클립 수정 작업'))
   expect(dock.getAllByRole('button').map((b) => b.textContent)).toEqual(['다시 렌더', '확정하기'])
-  // The dock is that one row and nothing else: the download and everything the
-  // confirmation SAYS sit in the panel above it (THEME-39).
+  // The dock is that one row and nothing else: the confirmation's own copy sits
+  // in the panel above it and the download under the video it downloads
+  // (CLIP-149, THEME-39).
   expect(dock.queryByRole('link', { name: '렌더 1 다운로드' })).not.toBeInTheDocument()
-  const summary = within(screen.getByLabelText('확정 전 확인할 내용'))
-  expect(summary.getByRole('link', { name: '렌더 1 다운로드' })).toBeInTheDocument()
+  expect(screen.getByLabelText('확정 전 확인할 내용')).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: '렌더 1 다운로드' })).toBeInTheDocument()
   await write('자막을 더 짧게')
   // Counted CDS-20's way, like every other bounded clip field.
   expect(panel().getByText('6 / 1000자')).toBeInTheDocument()

@@ -50,7 +50,6 @@
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
 | T242 | a render is started per kind and records the kind with its result | CLIP | T241 | todo |
 | T243 | every plan check runs on the server before a render of either kind | CLIP | T242 | todo |
-| T246 | the preview carries its scrubber, its info control and its download | CLIP | T245 | todo |
 | T247 | ②'s dock is the revision composer over 렌더하기 and 확정하기 | CLIP | T246 T242 | todo |
 | T248 | 확정하기 opens the finalization dialog | CLIP | T247 | todo |
 | T249 | ②'s reference opens on demand | CLIP | T248 | todo |
@@ -62,9 +61,11 @@
 
 ## next
 - create-task CLIP (r37) before T242 or any of T250→T254 is claimed — CLIP-153 now offers the project's last kind first, which T242 never carried, and r37 cuts T250's refusals from three to two while handing T251 the per-style motion; T243 waits behind T242
-- implement-task T246 next (②'s preview controls, T245 done); T247→T249 follow it in order, T247 behind T242
+- T247 is next in ②'s order but waits on T242 (its 렌더하기 names the kind T242 records), so create-task CLIP (r37) comes first; T248 and T249 follow T247
 - T177 stays blocked (its viewing checklist predates the caption style set, the outline and now ②'s shape) and T008 is another session's
 ## log
+- 260918 T246 done; the scrubber, one info control and the icon download are the preview's own row, and `Slider` gained a labelless one-row shape for it — the parity copy left `ClipDraftPreview` with the `precise` state its block was the only reader of, and `FinalizeClipNotices` lost its notice list but keeps the refusal and the uncertain retry until T248's dialog takes them
+- 260918 T246 claimed (sht)
 - 260918 T245 done; one Sheet holds whichever item the timeline selected, its `open` derived from the selection alone so closing it clears the selection — and ② now arrives with NOTHING selected, since the first cut being selected would have landed the step with a sheet over the preview it exists to review; `survivingSelection` had to keep an absent selection absent, or every acknowledged autosave reopened the sheet
 - 260918 T245 claimed (sht)
 - 260918 T244 done; every cut draws its thumbnail at once, each ruler tick and label is bounded by its own cut and dropped below CLIP_TIMELINE.minLabelPx, undo/redo head the timeline as icon controls, and the save state is the page's status region alone — hiding a label also hid the control's name, so each bar now carries its own aria-label
@@ -83,7 +84,3 @@
 - 260918 browser render decided as WebCodecs + an mp4 muxer rather than ffmpeg.wasm (owner, 260918): hardware-accelerated and tens of KB against ffmpeg.wasm's tens of MB and its COOP/COEP requirement, at the cost of a different pipeline from the server's, which pushes CLIP-157 toward output-contract parity rather than pixel parity
 - 260918 create-task CLIP start (r35, re-planning T237 T238 T239 with it)
 - 260918 T234 done; ②'s draft already autosaved, so 저장 just went and 다시 렌더 flushes the queue itself — which exposed `useGenerateClip.render` refusing the very revision the flush had just won, since the project prop lags the cache write by one render
-- 260918 update-ssot CLIP r35 done; a generation now stops at the plan and renders nothing, ② reviews the plan and then the render it asked for, and a render is a browser or a server one chosen per render — both under the same output contract and both able to finalize, the server checking everything the plan can tell before either starts and the producing side measuring its own file, a browser that cannot render refusing rather than changing kind, and the kind recorded on every render while both stay credit-free
-- 260918 r35 lands on ②'s dock and its render action, which T237 T238 T239 already rewrite; T234 (doing) touches CLIP-39, whose only change is the action's name
-- 260918 update-ssot CLIP start — the render moves behind the owner's approval, ② reviews the plan and then the rendered result, and rendering splits into a browser and a server kind
-- 260918 T234 claimed (rfn)

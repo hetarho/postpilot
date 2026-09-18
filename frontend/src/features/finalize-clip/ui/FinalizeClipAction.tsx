@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { ClipNoticeList, type ClipProject } from '@/entities/clip-project'
+import type { ClipProject } from '@/entities/clip-project'
 import { AppFailureMessage, Button, Typography } from '@/shared/ui'
 import type { useFinalizeClip } from '../model/useFinalizeClip'
 
@@ -25,12 +25,11 @@ export function FinalizeClipNotices({
   return (
     <div className="w-full min-w-0 space-y-2">
       <Typography variant="meta">{t('finalization.notice')}</Typography>
-      <ClipNoticeList
-        notices={project.notices}
-        language={project.language}
-        cuts={project.editing?.plan.cuts}
-        withTargets
-      />
+      {/* No notice list: a notice naming a cut or a caption rides in that item's
+          sheet and one naming neither in the info control beside the preview, so
+          a third copy of the whole set standing in ②'s page is exactly what
+          CLIP-109 took away. T248 lists the unresolved ones in the finalization
+          dialog this copy moves into. */}
       {refusal && <Typography variant="body">{t(`finalization.refusal.${refusal}`)}</Typography>}
       {action.failure && (
         <div role="alert">

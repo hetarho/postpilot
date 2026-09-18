@@ -188,7 +188,7 @@ export const clips = {
     noRanges: 'This source has no observed ranges to link.',
   },
   preview: {
-    parityLabel: 'Preview and rendered video differences',
+    aboutLabel: 'About this preview',
     invalidTimeline: 'Enter valid cut ranges to preview footage. Text and timing remain editable.',
     title: 'Current draft preview',
     play: 'Play',

@@ -43,7 +43,6 @@ function PreviewVideo({
   master,
   canvas,
   onFrame,
-  onPrecision,
   onDisplayedFrame,
 }: {
   item: PreviewCut
@@ -57,7 +56,6 @@ function PreviewVideo({
   master: boolean
   canvas: { width: number; height: number }
   onFrame: (ms: number) => void
-  onPrecision: (precise: boolean) => void
   onDisplayedFrame?: (frame: ClipDisplayedFrame) => void
 }) {
   const { t } = useTranslation('clips')
@@ -154,11 +152,6 @@ function PreviewVideo({
           outputMs: sourceToOutputMs(item, mediaMs),
           precise,
         })
-      onPrecision(
-        precise &&
-          Math.abs(mediaMs - (playing ? el.currentTime * 1000 : sourceMs)) / rate <=
-            CLIP_DRAFT_PREVIEW.frameToleranceMs,
-      )
       if (playing && !el.seeking) onFrame(Math.max(item.startMs, sourceToOutputMs(item, mediaMs)))
     }
     const tick = () => {
@@ -185,7 +178,7 @@ function PreviewVideo({
       else cancelAnimationFrame(handle)
       el.removeEventListener('seeked', seeked)
     }
-  }, [url, master, playing, sourceMs, item, rate, onFrame, onPrecision, onDisplayedFrame])
+  }, [url, master, playing, sourceMs, item, rate, onFrame, onDisplayedFrame])
 
   const failed = async () => {
     const epoch = playbackEpoch.current
@@ -295,7 +288,6 @@ export function ClipDraftPreview({
     setPlaying(false)
   }
   const [muted, setMuted] = useState(true)
-  const [precise, setPrecise] = useState(false)
   const [retry, setRetry] = useState(0)
   const [preparation] = useState(
     () =>
@@ -405,7 +397,6 @@ export function ClipDraftPreview({
               master={slot.master}
               canvas={canvas}
               onFrame={changeTime}
-              onPrecision={setPrecise}
               onDisplayedFrame={onDisplayedFrame}
             />
           ))}
@@ -453,7 +444,7 @@ export function ClipDraftPreview({
       </div>
       {!compact && (
         <Slider
-          label={t('preview.outputTime')}
+          ariaLabel={t('preview.outputTime')}
           min={0}
           max={Math.max(1, duration)}
           step={CLIP_DRAFT_PREVIEW.seekStepMs}
@@ -489,21 +480,11 @@ export function ClipDraftPreview({
           {t('preview.retry')}
         </Button>
       )}
-      <details className={compact ? 'my-3' : undefined}>
-        <summary className="text-content-secondary cursor-pointer">
-          <Typography as="span" variant="meta">
-            {t('preview.parityLabel')}
-          </Typography>
-        </summary>
-        <Typography variant="body" className="text-content-secondary">
-          {t('preview.parity')}
-        </Typography>
-        {!precise && (
-          <Typography variant="body" className="text-content-secondary">
-            {t('preview.frameApproximate')}
-          </Typography>
-        )}
-      </details>
+      {/* No parity block here: what the draft preview cannot promise about the
+          delivered render is reached from the ONE info control beside the
+          preview, and stands as permanent text nowhere (CLIP-148). The frame's
+          own precision travels with each displayed frame, so the control that
+          says it does not need this component's state. */}
     </section>
   )
 }

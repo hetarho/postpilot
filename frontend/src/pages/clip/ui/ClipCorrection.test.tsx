@@ -160,12 +160,13 @@ it('opens the selected cut or caption in its own sheet, with its notice, and clo
   expect(screen.queryByLabelText('자막 원문')).not.toBeInTheDocument()
   expect(screen.queryByText(cutNotice)).not.toBeInTheDocument()
   expect(screen.queryByText(captionNotice)).not.toBeInTheDocument()
-  // The one naming neither stands in the page.
-  // T246 moves it into the preview's info control; today it also stands in the
-  // section above the dock, which is why this counts rather than asserting one.
-  expect(
-    page().getAllByText('사용할 수 있는 장면만 담아 선택한 길이보다 짧게 완성됐어요.').length,
-  ).toBeGreaterThan(0)
+  // The one naming neither is reached from the info control and stands nowhere in
+  // the flow (CLIP-148). The previous render's own comparison keeps a copy behind
+  // its closed details (CLIP-152), so what is asserted is that none of it SHOWS.
+  for (const node of screen.queryAllByText(
+    '사용할 수 있는 장면만 담아 선택한 길이보다 짧게 완성됐어요.',
+  ))
+    expect(node).not.toBeVisible()
 
   await selectCut()
   const cutSheet = screen.getByRole('dialog', { name: /컷 1/ })
@@ -202,6 +203,52 @@ it('opens the selected cut or caption in its own sheet, with its notice, and clo
     'aria-pressed',
     'false',
   )
+})
+
+// CLIP-53, CLIP-148, CLIP-149: the preview's own row. One scrubber stating its
+// second, one info control holding everything ② has to say about the whole clip,
+// and the download of the render this plan already has.
+it('carries its scrubber, its info control and its download on the preview itself', async () => {
+  const p = fixture()
+  p.notices = [{ code: 'plan_target_duration', cutId: '', elementId: '', action: 'shortfall' }]
+  const untargeted = '사용할 수 있는 장면만 담아 선택한 길이보다 짧게 완성됐어요.'
+  const parity = /브라우저 재생 시간에는 오차가 있을 수 있어요/
+  await mount({ projects: [p] })
+
+  // One row: the control carries its own name and its seconds are its value, so
+  // no label line is drawn for it.
+  const scrubber = screen.getByRole('slider', { name: '완성 영상 기준 시간' })
+  expect(scrubber).toHaveAttribute('aria-valuetext', '0 / 19.8 s')
+  expect(document.querySelector(`label[for="${scrubber.id}"]`)).toBeNull()
+
+  // None of what the info control holds stands as permanent text in the flow. The
+  // copy inside the previous render's closed comparison is not text ② states.
+  expect(screen.queryByText(parity)).not.toBeInTheDocument()
+  for (const node of screen.queryAllByText(untargeted)) expect(node).not.toBeVisible()
+
+  await userEvent.click(screen.getByRole('button', { name: '이 미리보기에 대해' }))
+  const about = within(screen.getByRole('dialog', { name: '이 미리보기에 대해' }))
+  expect(about.getByText(parity)).toBeInTheDocument()
+  expect(about.getByText(untargeted)).toBeInTheDocument()
+
+  expect(screen.getByRole('link', { name: '렌더 1 다운로드' })).toHaveAttribute(
+    'href',
+    'https://private.test/download',
+  )
+})
+
+// A plan awaiting its first render is ②'s NORMAL first state (CLIP-56): the
+// download is simply absent, and nothing reads as missing or refused.
+it('offers no download while the plan has no render, and says nothing is wrong', async () => {
+  const p = fixture()
+  p.result = undefined
+  p.renderedPlanRevision = 0
+  await mount({ projects: [p] })
+  expect(screen.getByRole('tab', { name: '클립 다듬기' })).toHaveAttribute('aria-selected', 'true')
+  expect(screen.queryByRole('link', { name: /다운로드/ })).not.toBeInTheDocument()
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '이 미리보기에 대해' })).toBeInTheDocument()
+  expect(screen.getByRole('slider', { name: '완성 영상 기준 시간' })).toBeInTheDocument()
 })
 
 it('keeps a selected text field mounted while its cut is reordered', async () => {

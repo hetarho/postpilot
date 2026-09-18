@@ -182,7 +182,7 @@ export const clips = {
     noRanges: '이 원본에는 연결할 관찰 구간이 없어요.',
   },
   preview: {
-    parityLabel: '미리보기와 결과 영상의 차이',
+    aboutLabel: '이 미리보기에 대해',
     invalidTimeline: '재생 가능한 컷 구간을 입력해 주세요. 글과 시간은 계속 수정할 수 있어요.',
     title: '편집 중인 영상',
     play: '재생',

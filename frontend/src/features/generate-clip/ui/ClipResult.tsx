@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { Download } from 'lucide-react'
 import { useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -74,32 +75,42 @@ export function ClipResult({ project, ownerId }: { project: ClipProject; ownerId
   )
 }
 
-/** Download the identified successful result from the current step's action bar. */
+/** Download the identified successful result. Three shapes for the three places
+ *  it is offered: ③'s docked `cta`, a `compact` button in flow, and the `icon`
+ *  that sits directly under ②'s preview, where the video it downloads already
+ *  says what it is and the revision rides in the control's name (CLIP-149). */
 export function ClipDownloadAction({
   project,
   compact = false,
+  icon = false,
 }: {
   project: ClipProject
   compact?: boolean
+  icon?: boolean
 }) {
   const { t } = useTranslation('clips')
   if (!project.result?.downloadUrl) return null
+  const revision = t('finalization.downloadRevision', { revision: project.renderedPlanRevision })
+  if (icon)
+    return (
+      <a
+        href={project.result.downloadUrl}
+        aria-label={revision}
+        className={buttonStyles({ variant: 'ghost', size: 'icon' })}
+      >
+        <Download aria-hidden="true" className="size-5" />
+      </a>
+    )
   return (
     <a
       href={project.result.downloadUrl}
-      aria-label={
-        project.finalized
-          ? undefined
-          : t('finalization.downloadRevision', { revision: project.renderedPlanRevision })
-      }
+      aria-label={project.finalized ? undefined : revision}
       className={buttonStyles({
         variant: compact ? 'secondary' : 'cta',
         className: compact ? undefined : 'w-full sm:w-auto',
       })}
     >
-      {project.finalized
-        ? t(compact ? 'timeline.download' : 'generation.download')
-        : t('finalization.downloadRevision', { revision: project.renderedPlanRevision })}
+      {project.finalized ? t(compact ? 'timeline.download' : 'generation.download') : revision}
     </a>
   )
 }
