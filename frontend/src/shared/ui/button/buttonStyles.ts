@@ -1,7 +1,7 @@
 import { clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 
-export type ButtonVariant = 'cta' | 'secondary' | 'ghost' | 'danger'
+export type ButtonVariant = 'cta' | 'secondary' | 'ghost' | 'danger' | 'scrim'
 export type ButtonSize = 'default' | 'compact' | 'icon'
 
 // Every variant carries an `active:` treatment. Tailwind compiles `hover:` to
@@ -17,6 +17,11 @@ const VARIANT_STYLES: Record<ButtonVariant, string> = {
     'bg-button-ghost-bg text-button-ghost-fg hover:bg-button-ghost-bg-hover active:bg-button-ghost-bg-active',
   danger:
     'bg-button-ghost-bg text-button-danger-quiet-fg pointer-coarse:bg-button-danger-quiet-bg-hover hover:bg-button-danger-quiet-bg-hover active:bg-button-danger-quiet-bg-hover',
+  // A control standing ON footage — the preview's sound, refresh and info controls. It takes the
+  // media scrim's plane at rest rather than the ghost's transparent one, because a glyph alone is
+  // invisible over a bright frame and unreadable over a dark one (THEME-25).
+  scrim:
+    'bg-media-scrim-bg/60 text-media-scrim-fg hover:bg-media-scrim-bg/80 active:bg-media-scrim-bg/90',
 }
 
 /** The control's height follows the POINTER, not the device (THEME-23). Under a coarse pointer —

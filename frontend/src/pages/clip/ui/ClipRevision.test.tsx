@@ -72,7 +72,7 @@ async function mount(clips: FakeClipsOptions = {}, jobs: FakeJobsOptions = {}) {
       ...clips,
     },
   })
-  await screen.findByRole('heading', { name: '컷·자막 수정' })
+  await screen.findByRole('region', { name: '컷·자막 수정' })
   return view
 }
 const panel = () => within(screen.getByLabelText('클립 수정 작업'))
@@ -80,30 +80,41 @@ async function write(text: string) {
   await userEvent.type(screen.getByLabelText('요청 내용'), text)
 }
 
-it('keeps two dock rows and opens approval from send without starting a revision', async () => {
+// The post editor's dock (CLIP-40, owner decision 2026-09-19): the field's heading row carries
+// the step's actions at its right, the field and its send control sit under it, and the target
+// is chosen where the request is approved rather than standing in the row the owner types in.
+it('keeps one composer in the dock and opens the target and the approval from send', async () => {
   const starts: unknown[] = []
   await mount({ revisionStarts: starts })
   const dockElement = screen.getByLabelText('클립 수정 작업')
   const dock = within(dockElement)
-  expect(dockElement.children).toHaveLength(2)
+  expect(dockElement.children).toHaveLength(1)
+  const composer = dockElement.children[0] as HTMLElement
+  const heading = composer.children[0] as HTMLElement
+  expect(heading).toHaveTextContent('요청 내용')
   expect(
-    within(dockElement.children[0] as HTMLElement)
+    within(heading)
       .getAllByRole('button')
       .map((b) => b.textContent),
-  ).toEqual(['다시 렌더 · 서버', '확정하기'])
-  expect(dockElement.children[1]).toContainElement(dock.getByLabelText('요청 내용'))
-  expect(screen.queryByRole('region', { name: 'AI에 수정 요청' })).not.toBeInTheDocument()
-  expect(dock.queryByRole('button', { name: /브라우저/ })).not.toBeInTheDocument()
+  ).toEqual(['다시 렌더', '확정하기'])
+  expect(composer.children[1]).toContainElement(dock.getByLabelText('요청 내용'))
+  expect(dock.queryByRole('tablist', { name: '고칠 대상' })).not.toBeInTheDocument()
+  expect(dock.queryByRole('button', { name: /브라우저|서버/ })).not.toBeInTheDocument()
   // Approval and download never increase the dock height.
   expect(dock.queryByRole('link', { name: '렌더 1 다운로드' })).not.toBeInTheDocument()
   expect(screen.queryByText(/확정하면 원본을 삭제/)).not.toBeInTheDocument()
   expect(screen.getByRole('link', { name: '렌더 1 다운로드' })).toBeInTheDocument()
+  // The counter appears with the first character, not before.
+  expect(dock.queryByText(/1000자/)).not.toBeInTheDocument()
   await write('자막을 더 짧게')
   // Counted CDS-20's way, like every other bounded clip field.
   expect(panel().getByText('6 / 1000자')).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /승인하고 수정 요청/ })).not.toBeInTheDocument()
+  await userEvent.click(panel().getByRole('button', { name: 'AI에 수정 요청' }))
+  const sheet = within(await screen.findByRole('dialog', { name: 'AI에 수정 요청' }))
   // 자막 by default: the narration is what an owner asks about most, and it is
   // the one target that leaves the footage exactly where they put it.
-  const targets = within(panel().getByRole('tablist', { name: '고칠 대상' }))
+  const targets = within(sheet.getByRole('tablist', { name: '고칠 대상' }))
   expect(targets.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
     '영상 흐름',
     '자막',
@@ -111,15 +122,13 @@ it('keeps two dock rows and opens approval from send without starting a revision
   ])
   expect(targets.getByRole('tab', { name: '자막' })).toHaveAttribute('aria-selected', 'true')
   // The ceiling and the writing calls it pays for, with the cancellation rule.
-  expect(screen.queryByRole('button', { name: /승인하고 수정 요청/ })).not.toBeInTheDocument()
-  await userEvent.click(panel().getByRole('button', { name: 'AI에 수정 요청' }))
-  const approve = await screen.findByRole(
+  const approve = await sheet.findByRole(
     'button',
     { name: '최대 8 크레딧 · 승인하고 수정 요청' },
     { timeout: 3000 },
   )
-  expect(screen.getByText('자막 작성 1회')).toBeInTheDocument()
-  expect(screen.getByText(/사용하지 않은 예약액|취소하면/, { exact: false })).toBeInTheDocument()
+  expect(sheet.getByText('자막 작성 1회')).toBeInTheDocument()
+  expect(sheet.getByText(/사용하지 않은 예약액|취소하면/, { exact: false })).toBeInTheDocument()
   expect(starts).toHaveLength(0)
   await userEvent.click(approve)
   await waitFor(() => expect(starts).toHaveLength(1))
@@ -133,21 +142,20 @@ it('re-quotes when the target changes', async () => {
   await mount({ revisionQuotes: quotes })
   await write('고기를 먼저 보여줘')
   await userEvent.click(panel().getByRole('button', { name: 'AI에 수정 요청' }))
-  await screen.findByRole(
+  const sheet = within(await screen.findByRole('dialog', { name: 'AI에 수정 요청' }))
+  await sheet.findByRole(
     'button',
     { name: '최대 8 크레딧 · 승인하고 수정 요청' },
     { timeout: 3000 },
   )
-  await userEvent.keyboard('{Escape}')
-  await userEvent.click(panel().getByRole('tab', { name: '영상 흐름' }))
-  await userEvent.click(panel().getByRole('button', { name: 'AI에 수정 요청' }))
-  await screen.findByRole(
+  await userEvent.click(sheet.getByRole('tab', { name: '영상 흐름' }))
+  await sheet.findByRole(
     'button',
     { name: '최대 16 크레딧 · 승인하고 수정 요청' },
     { timeout: 3000 },
   )
-  expect(screen.getByText('컷 구성 1회')).toBeInTheDocument()
-  expect(screen.getByText('자막 작성 1회')).toBeInTheDocument()
+  expect(sheet.getByText('컷 구성 1회')).toBeInTheDocument()
+  expect(sheet.getByText('자막 작성 1회')).toBeInTheDocument()
   expect(quotes).toHaveLength(2)
   expect(quotes[1]).toMatchObject({ target: 'flow' })
 })

@@ -3,6 +3,13 @@ import type { ClipAccounting } from '@/entities/clip-project'
 import { isTerminal, type GenerationJob } from '@/entities/generation-job'
 import { Typography } from '@/shared/ui'
 
+/** What this generation cost, as ONE figure (CLIP-81, owner decision 2026-09-19): the credits it
+ *  used once settled, and a pending word until then. The ceiling, the reservation, the refund and
+ *  the cancellation split are the server's bookkeeping and stay out of the workspace.
+ *
+ *  An exempt (master) account is never debited; the server records what the run WOULD have cost
+ *  as a reference amount, and that is the figure shown for it, marked as not debited — the one
+ *  thing the old breakdown said that the owner could not read from it. */
 export function ClipCreditSettlement({
   job,
   accounting,
@@ -14,74 +21,31 @@ export function ClipCreditSettlement({
   if (!job || job.kind !== 'generate_clip') return null
   const a = accounting?.jobId === job.id ? accounting : undefined
   const settled = !!a?.settled
-  const fields = [
-    ['approved', a?.approvedMaxCredits],
-    ['reserved', a?.reservedCredits],
-    ['charged', settled ? a?.finalChargeCredits : undefined],
-    ['refunded', settled ? a?.refundCredits : undefined],
-  ] as const
-  const breakdown = settled
-    ? ([
-        ['confirmed', a?.confirmedChargeCredits],
-        ['cancellationFee', a?.cancellationFeeCredits],
-        ...(a?.status === 'exempt'
-          ? ([
-              ['shadowConfirmed', a.shadowConfirmedChargeCredits],
-              ['shadowCancellationFee', a.shadowCancellationFeeCredits],
-              ['shadowTotal', a.shadowChargeCredits],
-            ] as const)
-          : []),
-      ] as const)
-    : []
+  const exempt = a?.status === 'exempt'
+  const reference =
+    a?.shadowChargeCredits ??
+    (a?.shadowConfirmedChargeCredits ?? 0) + (a?.shadowCancellationFeeCredits ?? 0)
+  const value =
+    !a || a.status === 'unavailable'
+      ? t('credits.pendingAmount')
+      : settled
+        ? exempt
+          ? t('credits.usedExempt', { amount: reference })
+          : t('credits.used', { amount: a.finalChargeCredits ?? 0 })
+        : isTerminal(job)
+          ? t('credits.settling')
+          : t('credits.pendingAmount')
   return (
-    <section aria-label={t('credits.title')} className="mt-6 space-y-3">
-      <Typography variant="title">{t('credits.title')}</Typography>
-      <Typography variant="body" role="status">
-        {t(
-          !a || a.status === 'unavailable'
-            ? 'credits.unavailable'
-            : !settled && isTerminal(job)
-              ? 'credits.settling'
-              : a.status === 'exempt'
-                ? 'credits.exempt'
-                : settled
-                  ? 'credits.settled'
-                  : a.status === 'reserved'
-                    ? 'credits.held'
-                    : 'credits.preparing',
-        )}
+    <section
+      aria-label={t('credits.title')}
+      className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1"
+    >
+      <Typography variant="meta" as="h2">
+        {t('credits.title')}
       </Typography>
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-2">
-        {[...fields, ...breakdown.filter(([, amount]) => amount !== undefined)].map(
-          ([label, amount]) => (
-            <div key={label} className="min-w-0 space-y-1">
-              <dt>
-                <Typography variant="meta">
-                  {t(
-                    label === 'confirmed' ||
-                      label === 'cancellationFee' ||
-                      label === 'shadowConfirmed' ||
-                      label === 'shadowCancellationFee' ||
-                      label === 'shadowTotal'
-                      ? `cancellation.${label}`
-                      : `credits.${label}`,
-                  )}
-                </Typography>
-              </dt>
-              <dd>
-                <Typography variant="body">
-                  {amount === undefined
-                    ? t('credits.pendingAmount')
-                    : t('credits.amount', { amount })}
-                </Typography>
-              </dd>
-            </div>
-          ),
-        )}
-      </dl>
-      {settled && job.status === 'failed' && a?.finalChargeCredits === 0 && (
-        <Typography variant="body">{t('credits.noCharge')}</Typography>
-      )}
+      <Typography variant="body" role="status">
+        {value}
+      </Typography>
     </section>
   )
 }

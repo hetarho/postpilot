@@ -68,13 +68,15 @@ async function mount(clips: FakeClipsOptions = {}, jobs: FakeJobsOptions = {}) {
       ...clips,
     },
   })
-  await screen.findByRole('heading', { name: '컷·자막 수정' })
+  await screen.findByRole('region', { name: '컷·자막 수정' })
   return view
 }
 async function goToStep(name: '클립 생성' | '클립 다듬기' | '클립 완성') {
   await userEvent.click(await screen.findByRole('tab', { name }))
 }
 const timeline = () => within(screen.getByLabelText('편집 타임라인'))
+// ②'s one render trigger: 렌더하기, or 다시 렌더 once a render of the current plan exists (CLIP-40).
+const RENDER = /^(렌더하기|다시 렌더)$/
 // A selection is what OPENS an item's sheet (CLIP-53), and ② arrives with none:
 // every cut or caption control below is reached by selecting its bar first.
 const selectCut = async (name = '컷 1') => userEvent.click(timeline().getByRole('button', { name }))
@@ -101,7 +103,7 @@ async function select(ids = ['a', 'b']) {
   vi.mocked(putBlobWithProgress).mockResolvedValue()
   vi.spyOn(URL, 'createObjectURL').mockImplementation((blob) => `blob:${(blob as File).name}`)
   const revoke = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
-  await userEvent.click(screen.getByRole('button', { name: '참고 자료' }))
+  await userEvent.click(screen.getByRole('button', { name: '원본 소스' }))
   await userEvent.click(screen.getByRole('tab', { name: '원본 영상' }))
   const input = screen.getByLabelText('원본 영상 선택')
   await waitFor(() => expect(input).toBeEnabled())
@@ -117,13 +119,13 @@ it('opens a matching result in refine with one action bar and an available downl
     'href',
     'https://private.test/download',
   )
-  expect(screen.getByRole('button', { name: /렌더.*서버/ })).toBeDisabled()
+  expect(screen.getByRole('button', { name: RENDER })).toBeDisabled()
   // Nothing is selected, so no cut or caption control stands in the page.
   expect(screen.queryByLabelText('원본 시작 (초)')).not.toBeInTheDocument()
   await selectCut()
   expect(screen.getAllByLabelText('원본 시작 (초)')).toHaveLength(1)
   await goToStep('클립 생성')
-  expect(screen.queryByRole('button', { name: /렌더.*서버/ })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: RENDER })).not.toBeInTheDocument()
 })
 
 it('saves exact milliseconds and selected text with a new optimistic revision', async () => {
@@ -229,10 +231,22 @@ it('carries its scrubber, its info control and its download on the preview itsel
   expect(screen.queryByText(parity)).not.toBeInTheDocument()
   for (const node of screen.queryAllByText(untargeted)) expect(node).not.toBeVisible()
 
-  await userEvent.click(screen.getByRole('button', { name: '이 미리보기에 대해' }))
-  const about = within(screen.getByRole('dialog', { name: '이 미리보기에 대해' }))
-  expect(about.getByText(parity)).toBeInTheDocument()
-  expect(about.getByText(untargeted)).toBeInTheDocument()
+  // The info control stands ON the frame, at its top-right, beside the player's own controls
+  // (owner decision 2026-09-19).
+  const about = screen.getByRole('button', { name: '이 미리보기에 대해' })
+  const canvas = document.querySelector('[data-clip-preview-canvas]')!
+  expect(canvas.parentElement).toContainElement(about)
+  expect(canvas).not.toContainElement(about)
+  const corner = within(canvas.parentElement!.lastElementChild as HTMLElement)
+  expect(corner.getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual([
+    '미리보기 소리 듣기',
+    '미리보기 새로고침',
+    '이 미리보기에 대해',
+  ])
+  await userEvent.click(about)
+  const panel = within(screen.getByRole('dialog', { name: '이 미리보기에 대해' }))
+  expect(panel.getByText(parity)).toBeInTheDocument()
+  expect(panel.getByText(untargeted)).toBeInTheDocument()
 
   expect(screen.getByRole('link', { name: '렌더 1 다운로드' })).toHaveAttribute(
     'href',
@@ -274,7 +288,7 @@ it('preserves invalid authored intervals and disables rerender until repaired', 
   setField('표시 끝 (초)', '12')
   expect(screen.getByLabelText('표시 끝 (초)')).toHaveValue(12)
   expect(screen.queryByRole('button', { name: '저장' })).not.toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /렌더.*서버/ })).toBeDisabled()
+  expect(screen.getByRole('button', { name: RENDER })).toBeDisabled()
   expect(screen.getByText(/이 문구의 내용·위치·시간/)).toBeInTheDocument()
   // The autosave does not take an invalid draft either, so nothing reaches the server.
   await new Promise((resolve) => setTimeout(resolve, 900))
@@ -362,9 +376,9 @@ it('requires matching sources for rerender while text edits and previous video r
   await selectText()
   setField('자막 원문', '원본 없이 수정')
   await waitFor(() => expect(calls).toContain('SaveClipEditPlan'), AUTOSAVE)
-  expect(screen.getByRole('button', { name: /렌더.*서버/ })).toBeDisabled()
+  expect(screen.getByRole('button', { name: RENDER })).toBeDisabled()
   await select()
-  await waitFor(() => expect(screen.getByRole('button', { name: /렌더.*서버/ })).toBeEnabled())
+  await waitFor(() => expect(screen.getByRole('button', { name: RENDER })).toBeEnabled())
   expect(calls).not.toContain('StartClipGeneration')
 })
 
@@ -372,7 +386,7 @@ it('uses localized selected-cut controls and shows a single audio control', asyn
   await mount()
   await selectCut()
   await act(async () => initializeI18n('en'))
-  expect(screen.getByRole('heading', { name: 'Edit cuts and captions' })).toBeInTheDocument()
+  expect(screen.getByRole('region', { name: 'Edit cuts and captions' })).toBeInTheDocument()
   expect(screen.getByLabelText('Source start (seconds)')).toHaveValue(0)
   expect(screen.getAllByLabelText('Original audio (%)')).toHaveLength(1)
 })
@@ -417,7 +431,7 @@ it('adds observed footage through the page, then saves split/rate operations and
   }
   const planWrites: NonNullable<FakeClipsOptions['planWrites']> = []
   await mount({ projects: [project], planWrites })
-  await userEvent.click(screen.getByRole('button', { name: '참고 자료' }))
+  await userEvent.click(screen.getByRole('button', { name: '원본 소스' }))
   await userEvent.click(screen.getByRole('button', { name: /관찰 구간 1개 자세히 보기/ }))
   await userEvent.click(screen.getByRole('button', { name: '이 구간을 컷으로 추가' }))
   await waitFor(() => expect(planWrites).toHaveLength(1))
@@ -433,7 +447,7 @@ it('adds observed footage through the page, then saves split/rate operations and
     chips: [],
     focal: { x: 0.3, y: 0.6 },
   })
-  expect(screen.queryByRole('dialog', { name: '참고 자료' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('dialog', { name: '원본 소스' })).not.toBeInTheDocument()
   expect(screen.getByRole('dialog', { name: /컷 2/ })).toBeVisible()
   await userEvent.click(screen.getByRole('combobox', { name: /재생 속도/ }))
   await userEvent.click(screen.getByRole('option', { name: '2×' }))
@@ -481,14 +495,14 @@ it('shares retained sound across both steps, stales the old render and offers cr
   const soundWrites: NonNullable<FakeClipsOptions['soundWrites']> = [],
     calls: string[] = []
   await mount({ projects: [project], retainedBatches: [batch], soundWrites, calls })
-  await userEvent.click(screen.getByRole('button', { name: '참고 자료' }))
+  await userEvent.click(screen.getByRole('button', { name: '원본 소스' }))
   await userEvent.click(screen.getByRole('tab', { name: '원본 영상' }))
   const toggle = await screen.findByRole('switch', { name: /source-a.mp4 원본 소리 유지/ })
   await waitFor(() => expect(toggle).toBeEnabled())
   expect(toggle).not.toBeChecked()
   await userEvent.click(toggle)
   await waitFor(() => expect(soundWrites).toHaveLength(1))
-  await waitFor(() => expect(screen.getByRole('button', { name: /렌더.*서버/ })).toBeEnabled())
+  await waitFor(() => expect(screen.getByRole('button', { name: RENDER })).toBeEnabled())
   expect(screen.getByRole('link', { name: '렌더 1 다운로드' })).toBeVisible()
   expect(calls).not.toContain('SaveClipEditPlan')
   await goToStep('클립 생성')
@@ -512,13 +526,15 @@ it('renders a dirty draft by flushing it first, and offers no 저장 anywhere', 
   const calls: string[] = []
   await mount({ planWrites: writes, calls })
   await select()
-  await waitFor(() => expect(screen.getByRole('button', { name: /렌더.*서버/ })).toBeEnabled())
+  await waitFor(() => expect(screen.getByRole('button', { name: RENDER })).toBeEnabled())
   await selectText()
   setField('자막 원문', '렌더 직전 수정')
   // Dirty, and no way to save it by hand.
   expect(screen.queryByRole('button', { name: '저장' })).not.toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /렌더.*서버/ })).toBeEnabled()
-  await userEvent.click(screen.getByRole('button', { name: /렌더.*서버/ }))
+  expect(screen.getByRole('button', { name: RENDER })).toBeEnabled()
+  await userEvent.click(screen.getByRole('button', { name: RENDER }))
+  // 렌더하기 asks where: the kind is chosen per render (CLIP-153).
+  await userEvent.click(await screen.findByRole('button', { name: '서버에서 렌더' }))
   await waitFor(() => expect(calls).toContain('StartClipRender'), AUTOSAVE)
   // The edit reached the server BEFORE the render started.
   expect(writes.at(-1)?.plan.elements?.[0].text).toBe('렌더 직전 수정')

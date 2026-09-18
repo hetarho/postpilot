@@ -225,47 +225,52 @@ it('keeps cancellation unavailable for a legacy attempt', async () => {
   expect(screen.getByText(/이 작업은 취소 기능을 지원하지/)).toBeVisible()
 })
 
-it.each([false, true])(
-  'separates confirmed AI use, cancellation addition, debit and refund (exempt=%s)',
-  async (exempt) => {
-    const job = { id: 'cancelled', kind: 'generate_clip', status: 'cancelled', stage: 'render' }
-    mount(
-      {
-        projects: [
-          {
-            ...project(),
-            latestJob: job,
-            accounting: {
-              jobId: job.id,
-              status: exempt ? 'exempt' : 'settled',
-              settled: true,
-              approvedMaxCredits: 21,
-              reservedCredits: exempt ? 0 : 21,
-              confirmedChargeCredits: exempt ? 0 : 4,
-              cancellationFeeCredits: exempt ? 0 : 9,
-              finalChargeCredits: exempt ? 0 : 13,
-              refundCredits: exempt ? 0 : 8,
-              ...(exempt
-                ? {
-                    shadowConfirmedChargeCredits: 4,
-                    shadowCancellationFeeCredits: 9,
-                    shadowChargeCredits: 13,
-                  }
-                : {}),
-            },
+// The workspace states ONE figure for the job — the credits it used — and for an exempt
+// account the reference amount the server recorded, marked as not debited (CLIP-81, owner
+// decision 2026-09-19). The ceiling, the reservation, the refund and the cancellation split stay
+// the server's bookkeeping.
+it.each([false, true])('states only the credits the job used (exempt=%s)', async (exempt) => {
+  const job = { id: 'cancelled', kind: 'generate_clip', status: 'cancelled', stage: 'render' }
+  mount(
+    {
+      projects: [
+        {
+          ...project(),
+          latestJob: job,
+          accounting: {
+            jobId: job.id,
+            status: exempt ? 'exempt' : 'settled',
+            settled: true,
+            approvedMaxCredits: 21,
+            reservedCredits: exempt ? 0 : 21,
+            confirmedChargeCredits: exempt ? 0 : 4,
+            cancellationFeeCredits: exempt ? 0 : 9,
+            finalChargeCredits: exempt ? 0 : 13,
+            refundCredits: exempt ? 0 : 8,
+            ...(exempt
+              ? {
+                  shadowConfirmedChargeCredits: 4,
+                  shadowCancellationFeeCredits: 9,
+                  shadowChargeCredits: 13,
+                }
+              : {}),
           },
-        ],
-      },
-      [job],
-    )
-    await confirm()
-    expect(screen.getByText('확인된 AI 사용분')).toBeVisible()
-    expect(screen.getByText('취소 추가분')).toBeVisible()
-    expect(screen.getByText('13 크레딧')).toBeVisible()
-    if (exempt) expect(screen.getByText('참고 총액 (차감 없음)')).toBeVisible()
-    else expect(screen.getByText('8 크레딧')).toBeVisible()
-  },
-)
+        },
+      ],
+    },
+    [job],
+  )
+  await confirm()
+  const credit = within(screen.getByRole('region', { name: '이번 작업의 크레딧' }))
+  expect(credit.getByRole('status')).toHaveTextContent(
+    exempt ? '13 크레딧 사용 · 마스터 계정은 차감하지 않아요' : '13 크레딧 사용',
+  )
+  if (!exempt) expect(credit.getByRole('status')).not.toHaveTextContent('마스터')
+  expect(screen.queryByText('확인된 AI 사용분')).not.toBeInTheDocument()
+  expect(screen.queryByText('취소 추가분')).not.toBeInTheDocument()
+  expect(screen.queryByText('8 크레딧')).not.toBeInTheDocument()
+  expect(screen.queryByText('21 크레딧')).not.toBeInTheDocument()
+})
 
 it('opens a plan with no render as a plan to review, not as a missing result', async () => {
   // A generation now stops at the validated plan (CLIP-151), so this is ②'s
@@ -281,11 +286,18 @@ it('opens a plan with no render as a plan to review, not as a missing result', a
   expect(screen.queryByRole('link', { name: /다운로드/ })).not.toBeInTheDocument()
   expect(screen.queryByText(/실패/)).not.toBeInTheDocument()
   expect(screen.queryByText(/아직 다듬을 편집안이 없어요/)).not.toBeInTheDocument()
+  // 확정하기 waits for a render to confirm (CLIP-40, CLIP-152): until then the dock's one action
+  // is the render, and it carries the step's own emphasis.
+  expect(screen.queryByRole('button', { name: '확정하기' })).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '렌더하기' })).toHaveClass('bg-button-cta-bg')
+  expect(screen.queryByText('렌더하기로 영상을 만든 뒤 확정해 주세요.')).not.toBeInTheDocument()
+})
+
+it('demotes 렌더하기 beside 확정하기 once the project has a render', async () => {
+  mount()
   const finalize = await confirm()
-  expect(finalize).toBeDisabled()
-  expect(finalize).toHaveAccessibleDescription('렌더하기로 영상을 만든 뒤 확정해 주세요.')
-  await userEvent.click(finalize)
-  expect(screen.queryByRole('dialog', { name: '클립을 확정할까요?' })).not.toBeInTheDocument()
+  expect(finalize).toHaveClass('bg-button-cta-bg')
+  expect(screen.getByRole('button', { name: '다시 렌더' })).toHaveClass('bg-button-secondary-bg')
 })
 
 it.each(['server', 'browser'] as const)(

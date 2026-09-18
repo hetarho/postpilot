@@ -751,12 +751,13 @@ it.each([0, 7])(
       },
       { jobs: [job] },
     )
-    await screen.findByText('영상 처리는 끝났고 크레딧을 정산하는 중이에요.')
-    const credit = within(screen.getByRole('region', { name: '이번 작업의 크레딧' }))
-    expect(credit.getByText('79 크레딧')).toBeVisible()
-    expect(credit.getByText('40 크레딧')).toBeVisible()
-    expect(credit.getAllByText('확인 중')).toHaveLength(2)
-    expect(credit.queryByText('0 크레딧')).not.toBeInTheDocument()
+    const credit = within(await screen.findByRole('region', { name: '이번 작업의 크레딧' }))
+    // One figure, and not yet: neither the ceiling nor the reservation stands in for it, and a
+    // pending settlement is never shown as zero.
+    await waitFor(() => expect(credit.getByRole('status')).toHaveTextContent('정산 중'))
+    expect(credit.queryByText(/79/)).not.toBeInTheDocument()
+    expect(credit.queryByText(/40/)).not.toBeInTheDocument()
+    expect(credit.queryByText(/0 크레딧/)).not.toBeInTheDocument()
     accounting = {
       ...accounting,
       status: 'settled',
@@ -767,9 +768,10 @@ it.each([0, 7])(
     await act(() =>
       view.queryClient.invalidateQueries({ queryKey: clipProjectsKey(view.transport, 'alice') }),
     )
-    await screen.findByText('크레딧 정산이 완료됐어요.')
-    expect(credit.getByText(charge + ' 크레딧')).toBeVisible()
-    expect(credit.getAllByText(40 - charge + ' 크레딧').length).toBeGreaterThan(0)
+    await waitFor(() =>
+      expect(credit.getByRole('status')).toHaveTextContent(`${charge} 크레딧 사용`),
+    )
+    expect(credit.queryByText(new RegExp(`${40 - charge} 크레딧`))).not.toBeInTheDocument()
     // The settlement and the preserved result remain in correction.
     await goToStep('클립 다듬기')
     expect(await screen.findByLabelText('클립 미리보기')).toHaveAttribute('src', result.viewUrl)

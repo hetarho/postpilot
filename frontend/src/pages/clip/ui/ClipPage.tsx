@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useBlocker, useParams } from '@tanstack/react-router'
+import { ArrowLeft } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import {
   ClipDraftPreview,
@@ -52,31 +53,46 @@ import { ClipProgressBar, ClipStatusLine, type CorrectionStatus } from './ClipSt
 
 const STEP_PANEL_ID = 'clip-step-panel'
 
-/** The workspace's top row (CLIP-37): the way out, the page's ONE status line, and the delete.
- *  `flex-wrap` so a delete refusal, which asks for the full width, drops to its own line rather
- *  than crushing the way out beside it — the Korean refusal copy is longer than a 360px row can
- *  hold beside anything. */
-function ClipTopRow({ status, actions }: { status: ReactNode; actions?: ReactNode }) {
+/** The workspace's top row (CLIP-37): ONE line holding the way out, the step bar and the delete,
+ *  in that order — the group's own 클립 · 영상 템플릿 row is not drawn on this page, so this is
+ *  the page's only chrome and the 목록 link is its way back (owner decision 2026-09-19). The page's
+ *  ONE status line rides the row too, but drops to a second line only while it has something to
+ *  say; at rest it is out of the flow.
+ *
+ *  On a phone the step bar takes a line of its own under the two controls: three Korean step
+ *  names and two 44px targets do not share 328px, and a bar scrolling its third step out of view
+ *  reads as two steps. From `sm:` the three share one line, as asked. `flex-wrap` also lets a
+ *  delete refusal, which asks for the full width, drop to its own line. */
+function ClipTopRow({
+  status,
+  steps,
+  actions,
+}: {
+  status: ReactNode
+  steps?: ReactNode
+  actions?: ReactNode
+}) {
   const { t } = useTranslation('clips')
   return (
-    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-      {/* Underlined: `link-fg` resolves to `content-secondary`, so at rest an un-underlined way
-          out is pixel-identical to ordinary copy and only a `hover:` colour no touchscreen ever
-          matches would mark it. */}
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+      {/* The word is underlined: `link-fg` resolves to `content-secondary`, so at rest an
+          un-underlined way out is pixel-identical to ordinary copy. On a phone the glyph stands
+          for it and the name stays the word. */}
       <Link
         to="/clips"
+        aria-label={t('project.back')}
         className={typographyStyles({
           variant: 'label',
           className:
-            'text-link-fg hover:text-link-fg-hover inline-flex min-h-11 min-w-0 items-center underline',
+            'text-link-fg hover:text-link-fg-hover inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-1 sm:justify-start',
         })}
       >
-        {t('project.back')}
+        <ArrowLeft aria-hidden="true" className="size-5" />
+        <span className="hidden underline sm:inline">{t('project.back')}</span>
       </Link>
-      <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
-        {status}
-        {actions}
-      </div>
+      {steps}
+      {actions && <div className="ml-auto flex shrink-0 items-center gap-2">{actions}</div>}
+      {status}
     </div>
   )
 }
@@ -122,6 +138,7 @@ function NewClip({ ownerId }: { ownerId: string }) {
             upload={{ phase: 'idle' }}
             correction="clean"
             save={{ failing: false, label: '' }}
+            className="order-last w-full"
           />
         }
       />
@@ -478,7 +495,7 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
           </details>
         )
       }
-      revision={
+      revision={(actions) => (
         <ClipRevisionRequest
           ownerId={ownerId}
           project={project}
@@ -501,24 +518,29 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
           cancelAction={
             <CancelClipAction action={cancellation} job={job} accounting={generation.accounting} />
           }
+          action={actions}
         />
-      }
+      )}
       downloadAction={project.result?.downloadUrl && <ClipDownloadAction icon project={project} />}
+      // 확정하기 stands only once the project has a render to confirm (CLIP-40, CLIP-152): before
+      // that the dock's one action is the render, and a disabled 확정하기 beside it only said so.
       finalizeAction={
-        <FinalizeClipAction
-          action={finalization}
-          project={project}
-          disabled={
-            uploading || generation.busy || browser.busy || !correction.validation?.saveable
-          }
-          localRefusal={
-            uploading || generation.busy || browser.busy
-              ? 'busy'
-              : !correction.validation?.saveable
-                ? 'invalid_plan'
-                : undefined
-          }
-        />
+        project.result ? (
+          <FinalizeClipAction
+            action={finalization}
+            project={project}
+            disabled={
+              uploading || generation.busy || browser.busy || !correction.validation?.saveable
+            }
+            localRefusal={
+              uploading || generation.busy || browser.busy
+                ? 'busy'
+                : !correction.validation?.saveable
+                  ? 'invalid_plan'
+                  : undefined
+            }
+          />
+        ) : undefined
       }
       notices={project.notices}
       language={project.language}
@@ -529,7 +551,9 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
       disabled={pending}
       renderReady={!!upload.readyBatch && correction.revision === project.editPlanRevision}
       renderPending={generation.starting || browser.busy}
-      renderProgress={browserStatus}
+      // Handed over only while there is a browser render to report on, so the dock carries no
+      // row for it the rest of the time.
+      renderProgress={browser.state.phase !== 'idle' ? browserStatus : undefined}
       browserCapability={browserCapability.data}
       lastRenderKind={project.lastRenderKind}
       currentRender={
@@ -629,6 +653,22 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
               upload={upload}
               correction={correctionStatus}
               save={save}
+              className="order-last w-full"
+            />
+          )
+        }
+        steps={
+          !focused &&
+          !project.finalized && (
+            <SegmentedControl
+              value={step}
+              options={clipSteps()}
+              onChange={(next) => {
+                if (!finalization.busy) setStep(next)
+              }}
+              ariaLabel={t('steps.aria')}
+              controls={STEP_PANEL_ID}
+              className="order-last w-full sm:order-none sm:w-auto sm:min-w-0 sm:flex-1"
             />
           )
         }
@@ -645,18 +685,6 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
           )
         }
       />
-      {!focused && !project.finalized && (
-        <SegmentedControl
-          value={step}
-          options={clipSteps()}
-          onChange={(next) => {
-            if (!finalization.busy) setStep(next)
-          }}
-          ariaLabel={t('steps.aria')}
-          controls={STEP_PANEL_ID}
-          className="mt-4"
-        />
-      )}
       <section
         ref={focusRoot}
         hidden={!focused}

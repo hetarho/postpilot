@@ -30,8 +30,6 @@ const writing = [
 ] as const
 const video = [
   ['/clips', '/clips'],
-  ['/clips/new', '/clips'],
-  ['/clips/one', '/clips'],
   ['/video-templates', '/video-templates'],
   ['/video-templates/new', '/video-templates'],
   ['/video-templates/one', '/video-templates'],
@@ -92,6 +90,22 @@ it.each(cases)(
     // Everything under the group clears the taller chrome; the page stays the one scroller.
     expect(band!.closest('.chrome-subnav')).not.toBeNull()
     expect(band!.closest('.pb-nav')?.querySelectorAll('[class~="overflow-y-auto"]')).toHaveLength(0)
+  },
+)
+
+// The clip workspace is a page inside the group that asks for the group level to be absent
+// (CLIP-37): the primary level still marks 영상, but no group row or rail is drawn and nothing
+// under it clears a group row that is not there.
+it.each(['/clips/new', '/clips/one'])(
+  'draws no group level on the clip workspace at %s',
+  async (path) => {
+    const { router } = renderAppAt(path, { user: { id: 'alice', plan: ProtoPlan.FREE } })
+    await screen.findAllByRole('navigation', { name: '주요' })
+    await waitFor(() => expect(router.state.status).toBe('idle'))
+    expect(router.state.location.pathname).toBe(path)
+    assertPrimary('/clips')
+    expect(screen.queryAllByRole('navigation', { name: '영상 메뉴' })).toHaveLength(0)
+    expect(document.querySelector('.chrome-subnav')).toBeNull()
   },
 )
 

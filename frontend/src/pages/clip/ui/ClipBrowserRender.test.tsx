@@ -1,5 +1,5 @@
 import { create } from '@bufbuild/protobuf'
-import { act, screen, waitFor } from '@testing-library/react'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { ClipSourceBatchSchema } from '@/shared/api'
@@ -142,9 +142,16 @@ async function mount() {
     user: { id: 'alice' },
     clips: { projects: [project], retainedBatches: [batch], calls },
   })
-  const button = await screen.findByRole('button', { name: '다시 렌더 · 브라우저' })
+  const button = await screen.findByRole('button', { name: '다시 렌더' })
   await waitFor(() => expect(button).toBeEnabled())
   await userEvent.click(button)
+  // The last successful kind leads the choice (CLIP-153): this project's was a browser render.
+  const choice = within(await screen.findByRole('dialog', { name: '다시 렌더' }))
+  expect(choice.getAllByRole('button', { name: /에서 렌더$/ }).map((b) => b.textContent)).toEqual([
+    '브라우저에서 렌더',
+    '서버에서 렌더',
+  ])
+  await userEvent.click(choice.getByRole('button', { name: '브라우저에서 렌더' }))
   await screen.findByText('브라우저에서 영상 만드는 중')
   await waitFor(() => expect(workerSignal).toBeDefined())
   return { ...view, calls }
@@ -158,8 +165,8 @@ it('keeps ② interactive and reports one monotonic scale from encoding through 
   expect(screen.queryByRole('region', { name: '클립 작업 진행' })).not.toBeInTheDocument()
   expect(screen.getByRole('tab', { name: '클립 다듬기' })).toHaveAttribute('aria-selected', 'true')
   expect(screen.getByLabelText('요청 내용')).toBeInTheDocument()
-  await userEvent.click(screen.getByRole('button', { name: '참고 자료' }))
-  expect(await screen.findByRole('dialog', { name: '참고 자료' })).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: '원본 소스' }))
+  expect(await screen.findByRole('dialog', { name: '원본 소스' })).toBeInTheDocument()
   await userEvent.keyboard('{Escape}')
   await userEvent.click(screen.getByRole('tab', { name: '클립 생성' }))
   expect(screen.getByLabelText('클립 제목')).toBeInTheDocument()
@@ -207,7 +214,7 @@ it.each(['encoding', 'storing'])(
     if (stage === 'storing') expect(uploadSignal?.aborted).toBe(true)
     expect(calls).toContain('CancelClipBrowserRender')
     expect(calls).not.toContain('CompleteClipRenderUpload')
-    expect(screen.getByRole('heading', { name: '컷·자막 수정' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: '컷·자막 수정' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '렌더 1 다운로드' })).toHaveAttribute(
       'href',
       'https://example.test/download.mp4',

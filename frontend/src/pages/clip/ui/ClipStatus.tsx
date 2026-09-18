@@ -6,7 +6,7 @@ import {
   progressRatio,
   type GenerationJob,
 } from '@/entities/generation-job'
-import { clipState, clipStateLabel, type ClipProject } from '@/entities/clip-project'
+import type { ClipProject } from '@/entities/clip-project'
 import type { ClipUploadState } from '@/features/upload-clip-sources'
 import { AppFailureMessage, ProgressBar, Typography } from '@/shared/ui'
 import type { AppFailure } from '@/shared/api'
@@ -33,11 +33,12 @@ export interface SaveStatus {
   failure?: AppFailure
 }
 
-/** `idle` is the only phase the line stays quiet for: nothing has been picked, so what the screen
- *  has to say is the project's own state and the picker's own button is the instruction. Every
- *  other phase — including `owned` and `finished`, which report that the local originals were
- *  released — is a statement about this attempt. */
-const SILENT_PHASES: ReadonlySet<ClipUploadState['phase']> = new Set(['idle'])
+/** The phases the line stays quiet for: the ones where nothing is HAPPENING. `idle` has nothing
+ *  picked, `ready` has the originals uploaded and waiting on 생성, and `finished` has a job behind
+ *  it and the retained manifest refreshing on a timer. A line that read 업로드 준비 완료 for as long
+ *  as the owner sat on ① was a standing state wearing an event's presentation (THEME-24; owner
+ *  decision 2026-09-19). Every other phase is an attempt in flight or a refusal to act on. */
+const SILENT_PHASES: ReadonlySet<ClipUploadState['phase']> = new Set(['idle', 'ready', 'finished'])
 
 /** The 2px track pinned along the page's top edge while a job runs or sources upload.
  *
@@ -77,7 +78,9 @@ export function ClipProgressBar({
 
 /** One `meta` status surface carrying AT MOST ONE state, in CLIP-38's precedence: a failing save,
  *  the running job's stage, the source upload's phase, a correction that is unsaved or
- *  unrendered, the save state, then the project's own state.
+ *  unrendered, the save state, then a stopped attempt. At rest it says NOTHING and takes no
+ *  room: the project's own state (초안 · 다듬는 중 · 완성) is what the step bar beside it already
+ *  shows, so it is not said twice (owner decision 2026-09-19).
  *
  *  A failing save leads because this screen has no save button once the settings autosave (T098)
  *  and a clip generation runs for minutes — the precedence that put the stage first would hide a
@@ -91,17 +94,20 @@ export function ClipStatusLine({
   upload,
   correction,
   save,
+  className,
 }: {
   project: ClipProject | undefined
   job: GenerationJob | undefined
   upload: Pick<ClipUploadState, 'phase'>
   correction: CorrectionStatus
   save: SaveStatus
+  /** Where the line sits when it has something to say; while it is empty it is out of the flow. */
+  className?: string
 }) {
   const { t } = useTranslation('clips')
   const running = job && !isTerminal(job)
   const message = project?.finalized
-    ? clipStateLabel('finished')
+    ? ''
     : save.failing
       ? save.label
       : running
@@ -117,18 +123,23 @@ export function ClipStatusLine({
                   ? t('cancellation.cancelled')
                   : job?.status === 'failed'
                     ? t('generation.failedAt', { stage: progressLabel(job) })
-                    : project
-                      ? clipStateLabel(clipState(project))
-                      : '')
+                    : '')
   const failure = !project?.finalized && save.failing ? save.failure : undefined
   return (
+    // Mounted at all times; `sr-only` rather than unmounted while empty, so the live region is
+    // there before its text arrives and takes no row from the page while it has none.
     <Typography
       variant="meta"
       as="div"
       role="status"
       aria-live="polite"
       aria-label={t('project.statusAria')}
-      className={clsx('min-w-0', !failure && 'truncate', save.failing && 'text-notice-danger-fg')}
+      className={clsx(
+        'min-w-0',
+        message || failure ? className : 'sr-only',
+        !failure && 'truncate',
+        save.failing && 'text-notice-danger-fg',
+      )}
     >
       {message}
       {failure && <AppFailureMessage failure={failure} />}

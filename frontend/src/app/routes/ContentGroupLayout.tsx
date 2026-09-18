@@ -1,4 +1,4 @@
-import { Outlet } from '@tanstack/react-router'
+import { Outlet, useMatches } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { NavLinks } from './NavLinks'
 import { CONTENT_GROUPS } from './navigation'
@@ -14,7 +14,18 @@ import { CONTENT_GROUPS } from './navigation'
  *  `chrome-subnav` is what tells everything inside the group that the sticky chrome got taller. */
 export function ContentGroupLayout({ group }: { group: keyof typeof CONTENT_GROUPS }) {
   const { t } = useTranslation('nav')
+  // A workspace inside the group asks for the level to be ABSENT (CLIP-37): no row, no rail, and
+  // no `chrome-subnav`, so a sticky element on that page clears only what is actually stuck.
+  const hidden = useMatches({
+    select: (matches) => matches.some((match) => match.staticData.groupNav === 'hidden'),
+  })
   const label = t(group === 'writing' ? 'writingGroup' : 'videoGroup')
+  if (hidden)
+    return (
+      <div className="flex min-w-0 flex-1 flex-col">
+        <Outlet />
+      </div>
+    )
   const destinations = CONTENT_GROUPS[group].map(({ labelKey, to, icon }) => ({
     to,
     label: t(labelKey),

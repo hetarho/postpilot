@@ -172,7 +172,11 @@ it.each([500, 750, 1000, 1250, 1500, 2000])(
     expect((off as HTMLVideoElement & { webkitPreservesPitch: boolean }).webkitPreservesPitch).toBe(
       true,
     )
-    fireEvent.click(screen.getByRole('checkbox', { name: '미리보기 소리 듣기' }))
+    // The sound control stands on the frame, as a player's does, and says which way it is set.
+    const sound = screen.getByRole('button', { name: '미리보기 소리 듣기' })
+    expect(sound).toHaveAttribute('aria-pressed', 'false')
+    fireEvent.click(sound)
+    expect(sound).toHaveAttribute('aria-pressed', 'true')
     expect(off.muted).toBe(true)
     expect(on.muted).toBe(false)
     expect(off.volume).toBe(1)
@@ -277,4 +281,108 @@ it('refreshes a failed signed URL once and keeps codec failure explicit', async 
       '이 브라우저에서는 원본 형식을 재생할 수 없어요. 글과 시간은 계속 수정할 수 있어요.',
     ),
   ).toBeVisible()
+})
+
+/** Frame callbacks the test fires by hand, and a pitch flag the sync effect flips so a test can
+ *  wait for the effect to have run against each player. */
+function installFrameCallbacks() {
+  const frames = new Map<HTMLVideoElement, VideoFrameRequestCallback>()
+  Object.defineProperty(HTMLVideoElement.prototype, 'requestVideoFrameCallback', {
+    configurable: true,
+    value: function (this: HTMLVideoElement, callback: VideoFrameRequestCallback) {
+      frames.set(this, callback)
+      return 1
+    },
+  })
+  Object.defineProperty(HTMLVideoElement.prototype, 'cancelVideoFrameCallback', {
+    configurable: true,
+    value: () => {},
+  })
+  Object.defineProperty(HTMLMediaElement.prototype, 'preservesPitch', {
+    configurable: true,
+    writable: true,
+    value: false,
+  })
+  return frames
+}
+const synced = (player: HTMLVideoElement) => expect(player.preservesPitch).toBe(true)
+function loaded(...players: HTMLVideoElement[]) {
+  for (const player of players) {
+    Object.defineProperty(player, 'readyState', { value: 4 })
+    fireEvent.loadedMetadata(player)
+  }
+}
+const scrubber = () => screen.getByRole('slider', { name: '완성 영상 기준 시간' })
+
+// A cut that runs to the end of its source never presents a frame at or past the cut's end: the
+// element stops at EOF with the clock a frame short, and the next cut was never handed the
+// playhead — the preview played cut 1 and stopped there.
+it("hands playback to the next cut when the current cut's footage ends", async () => {
+  installFrameCallbacks()
+  const play = vi.mocked(HTMLMediaElement.prototype.play)
+  const view = mount()
+  const [a, b] = await syncedPlayers(view.container, 2, synced)
+  loaded(a!, b!)
+  expect(a!.currentTime).toBe(2)
+  expect(b!.currentTime).toBe(3)
+  fireEvent.click(screen.getByRole('button', { name: '재생' }))
+  await waitFor(() => expect(play.mock.contexts).toContain(a))
+  expect(play.mock.contexts).not.toContain(b)
+  fireEvent(a!, new Event('ended'))
+  expect(scrubber()).toHaveAttribute('aria-valuetext', '10.000 / 19.800 s')
+  await waitFor(() => expect(play.mock.contexts).toContain(b))
+  expect(screen.getByRole('button', { name: '일시 정지' })).toBeInTheDocument()
+})
+
+// The playing master is the clock: seeking it back to the time it reported a render ago made the
+// picture hop backwards every few frames after a scrub. Paused, the requested position is the
+// truth again.
+it('never seeks the playing master back to the time it last reported', async () => {
+  const frames = installFrameCallbacks()
+  const view = mount()
+  const [a] = await syncedPlayers(view.container, 2, synced)
+  loaded(a!)
+  expect(a!.currentTime).toBe(2)
+  fireEvent.click(screen.getByRole('button', { name: '재생' }))
+  act(() => frames.get(a!)!(0, { mediaTime: 2.5 } as VideoFrameCallbackMetadata))
+  expect(scrubber()).toHaveAttribute('aria-valuetext', '0.500 / 19.800 s')
+  expect(a!.currentTime).toBe(2)
+  fireEvent.click(screen.getByRole('button', { name: '일시 정지' }))
+  expect(a!.currentTime).toBe(2.5)
+})
+
+it('keeps the footage when play() is interrupted, and pauses when the browser refuses it', async () => {
+  const play = vi
+    .spyOn(HTMLMediaElement.prototype, 'play')
+    .mockRejectedValue(new DOMException('interrupted', 'AbortError'))
+  const view = mount()
+  await syncedPlayers(view.container, 2, (player) => expect(player).toHaveAttribute('src'))
+  fireEvent.click(screen.getByRole('button', { name: '재생' }))
+  await waitFor(() => expect(play).toHaveBeenCalled())
+  await act(async () => {})
+  expect(screen.queryByText(/원본을 재생하지 못했어요/)).not.toBeInTheDocument()
+  expect(view.container.querySelectorAll('video')).toHaveLength(2)
+  expect(screen.getByRole('button', { name: '일시 정지' })).toBeInTheDocument()
+  play.mockRejectedValue(new DOMException('needs a gesture', 'NotAllowedError'))
+  fireEvent.click(screen.getByRole('button', { name: '일시 정지' }))
+  fireEvent.click(screen.getByRole('button', { name: '재생' }))
+  expect(screen.getByRole('button', { name: '일시 정지' })).toBeInTheDocument()
+  await screen.findByRole('button', { name: '재생' })
+  expect(screen.queryByText(/원본을 재생하지 못했어요/)).not.toBeInTheDocument()
+  expect(view.container.querySelectorAll('video')).toHaveLength(2)
+})
+
+it('plays from a press on the frame, and refreshes footage and captions on demand', async () => {
+  const view = mount()
+  await syncedPlayers(view.container, 2, (player) => expect(player).toHaveAttribute('src'))
+  await screen.findByText('현재 편집 내용의 미리보기예요.')
+  expect(view.prepare).toHaveBeenCalledTimes(1)
+  const frame = screen.getByRole('button', { name: '재생' })
+  fireEvent.click(frame)
+  expect(frame).toHaveAccessibleName('일시 정지')
+  fireEvent.click(screen.getByRole('button', { name: '미리보기 새로고침' }))
+  expect(frame).toHaveAccessibleName('재생')
+  await waitFor(() => expect(view.access).toHaveBeenCalledWith('a', true))
+  expect(view.access).toHaveBeenCalledWith('b', true)
+  await waitFor(() => expect(view.prepare).toHaveBeenCalledTimes(2))
 })

@@ -66,6 +66,7 @@ function line(
       upload={{ phase: over.phase ?? 'idle' }}
       correction={over.correction ?? 'clean'}
       save={over.save ?? QUIET}
+      className="order-last w-full"
     />,
   )
   return screen.getByRole('status', { name: '클립 상태' })
@@ -96,10 +97,25 @@ it('says the upload phase before an unsaved correction', () => {
   )
 })
 
-it('stays quiet about an idle picker and reports the project instead', () => {
-  expect(
-    line({ project: project({ editPlanRevision: 2, renderedPlanRevision: 2, result }) }),
-  ).toHaveTextContent('다듬는 중')
+// At rest the line says nothing and takes no row (owner decision 2026-09-19): the project's own
+// state is the step bar's to show, and a finished upload is not an event.
+it('stays quiet about an idle picker and a project at rest, out of the flow', () => {
+  const status = line({
+    project: project({ editPlanRevision: 2, renderedPlanRevision: 2, result }),
+  })
+  expect(status).toHaveTextContent('')
+  expect(status).toHaveClass('sr-only')
+  expect(status).not.toHaveClass('w-full')
+})
+
+it('stays quiet about an upload that is ready and waiting', () => {
+  expect(line({ phase: 'ready' })).toHaveTextContent('')
+})
+
+it('takes the row only while it has something to say', () => {
+  const status = line({ correction: 'unrendered' })
+  expect(status).toHaveClass('w-full', 'order-last')
+  expect(status).not.toHaveClass('sr-only')
 })
 
 it('says an unsaved correction before the save state', () => {
@@ -116,14 +132,14 @@ it('says the save state before the project state', () => {
   expect(line({ save: { failing: false, label: '저장했어요' } })).toHaveTextContent('저장했어요')
 })
 
-it("falls back to the project's own state", () => {
-  expect(line()).toHaveTextContent('초안')
+it('says nothing for a fresh draft', () => {
+  expect(line()).toHaveTextContent('')
 })
 
-it('calls a project whose plan is newer than its render 다듬는 중', () => {
+it('says nothing for a project whose plan is newer than its render, beyond the correction state', () => {
   expect(
     line({ project: project({ editPlanRevision: 3, renderedPlanRevision: 2, result }) }),
-  ).toHaveTextContent('다듬는 중')
+  ).toHaveTextContent('')
 })
 
 it('names the stage a failed attempt stopped at', () => {

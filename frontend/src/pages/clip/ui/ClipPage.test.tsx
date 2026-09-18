@@ -156,9 +156,28 @@ describe('clip directory and setup', () => {
     expect(await screen.findByLabelText('목표 길이 (초)')).toHaveValue(null)
     expect(await screen.findByLabelText('장소')).toBeInTheDocument()
     expect(await screen.findByLabelText('원본 영상 선택')).toBeEnabled()
-    // The status line reports the project's own state now; the picker's own button is what says
-    // to select sources (CLIP-38).
-    expect(await screen.findByRole('status', { name: '클립 상태' })).toHaveTextContent('초안')
+    // The status line has nothing to say about a project at rest (CLIP-38); the picker's own
+    // button is what says to select sources.
+    expect(await screen.findByRole('status', { name: '클립 상태' })).toHaveTextContent('')
+  })
+  it('draws the group row on the directory but not on the workspace, whose 목록 link is the way back', async () => {
+    const directory = mount('/clips')
+    await screen.findByRole('list', { name: '저장된 클립' })
+    expect(screen.getAllByRole('navigation', { name: '영상 메뉴' })).toHaveLength(2)
+    directory.unmount()
+    mount('/clips/project')
+    await screen.findByLabelText('클립 제목')
+    expect(screen.queryByRole('navigation', { name: '영상 메뉴' })).not.toBeInTheDocument()
+    expect(document.querySelector('.chrome-subnav')).toBeNull()
+    // One row (CLIP-37): the way back, the step bar and 삭제, in that order.
+    const back = screen.getByRole('link', { name: '클립 목록' })
+    expect(back).toHaveAttribute('href', '/clips')
+    const steps = screen.getByRole('tablist', { name: '클립 단계' })
+    const remove = screen.getByRole('button', { name: '삭제' })
+    expect(back.parentElement).toBe(steps.parentElement)
+    expect(back.parentElement).toBe(remove.parentElement!.parentElement)
+    expect(back.compareDocumentPosition(steps) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(steps.compareDocumentPosition(remove) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
   it('gives /clips/new the workspace top row and no lifecycle', async () => {
     mount('/clips/new')
@@ -288,7 +307,10 @@ describe('clip page local upload lifecycle', () => {
     const calls: string[] = []
     const sourceRequests: unknown[] = []
     const { queryClient, user, revoke, file } = await uploadFixture({ calls, sourceRequests })
-    await screen.findByText('업로드 준비 완료')
+    await waitFor(() => expect(calls).toContain('ConfirmClipSource'))
+    // A finished upload is a state, not an event: the status line says nothing about it.
+    expect(screen.queryByText('업로드 준비 완료')).not.toBeInTheDocument()
+    await waitFor(() => expect(screen.getByRole('button', { name: '선택 취소' })).toBeEnabled())
     expect(putBlobWithProgress).toHaveBeenCalledWith(
       expect.stringContaining('https://storage.test/'),
       { 'Content-Type': 'video/mp4', 'If-None-Match': '*' },
@@ -307,9 +329,11 @@ describe('clip page local upload lifecycle', () => {
     expect(calls.filter((c) => c === 'ConfirmClipSource')).toHaveLength(1)
     expect(screen.getByRole('button', { name: '생성' })).toBeDisabled()
     await user.click(screen.getByRole('button', { name: '선택 취소' }))
-    // Back to idle: the status line drops to the project's own state and the picker asks for a
-    // fresh selection rather than a replacement.
-    expect(await screen.findByRole('status', { name: '클립 상태' })).toHaveTextContent('초안')
+    // Back to idle: the status line falls silent and the picker asks for a fresh selection
+    // rather than a replacement.
+    await waitFor(() =>
+      expect(screen.getByRole('status', { name: '클립 상태' })).toHaveTextContent(''),
+    )
     expect(screen.getByLabelText('원본 영상 선택')).toBeInTheDocument()
     expect(calls).toContain('DiscardClipSourceBatch')
     expect(revoke).toHaveBeenCalledWith('blob:local-clip')
@@ -326,12 +350,12 @@ describe('clip page local upload lifecycle', () => {
   it('shows reselection after remount and never deletes asynchronously on unload', async () => {
     const calls: string[] = []
     const { unmount, revoke } = await uploadFixture({ calls })
-    await screen.findByText('업로드 준비 완료')
+    await waitFor(() => expect(calls).toContain('ConfirmClipSource'))
     unmount()
     expect(revoke).toHaveBeenCalledWith('blob:local-clip')
     expect(calls).not.toContain('DiscardClipSourceBatch')
     mount('/clips/project')
-    expect(await screen.findByRole('status', { name: '클립 상태' })).toHaveTextContent('초안')
+    expect(await screen.findByRole('status', { name: '클립 상태' })).toHaveTextContent('')
     expect(screen.queryByText('clip.mp4')).not.toBeInTheDocument()
   })
 })

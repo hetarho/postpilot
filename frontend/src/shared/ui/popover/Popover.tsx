@@ -42,6 +42,9 @@ export const Popover = forwardRef<
     /** The trigger's emphasis. `secondary` unless the surface it opens IS the step's committing
      *  choice — 확정하기 opens the pair that ends 글 다듬기, so it carries the CTA fill. */
     triggerVariant?: ButtonVariant
+    /** The trigger's pending state, for a surface whose choice starts work the trigger then
+     *  waits on — 렌더하기 while the render it chose is running. */
+    triggerPending?: boolean
     triggerClassName?: string
     children: (close: () => void) => ReactNode
     disabled?: boolean
@@ -63,6 +66,7 @@ export const Popover = forwardRef<
     triggerLabel,
     triggerSize,
     triggerVariant = 'secondary',
+    triggerPending = false,
     triggerClassName,
     children,
     disabled = false,
@@ -194,6 +198,7 @@ export const Popover = forwardRef<
       // there would be a dangling reference.
       aria-controls={open && !asSheet ? id : undefined}
       disabled={disabled}
+      pending={triggerPending}
       className={triggerClassName}
       onClick={() => setOpen((value) => !value)}
     >

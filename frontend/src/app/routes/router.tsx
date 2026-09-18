@@ -327,14 +327,19 @@ const clipsRoute = createRoute({
   }),
   component: lazyRouteComponent(() => import('@/pages/clips'), 'ClipsPage'),
 })
+// The clip workspace draws no group row or rail (CLIP-37): the owner arrived from 클립, the
+// workspace's own top row carries the way back, and the row it would take is the row the step bar
+// and the preview need.
 const newClipRoute = createRoute({
   getParentRoute: () => videoGroupRoute,
   path: '/clips/new',
+  staticData: { groupNav: 'hidden' },
   component: lazyRouteComponent(() => import('@/pages/clip'), 'ClipPage'),
 })
 const clipRoute = createRoute({
   getParentRoute: () => videoGroupRoute,
   path: '/clips/$clipId',
+  staticData: { groupNav: 'hidden' },
   component: lazyRouteComponent(() => import('@/pages/clip'), 'ClipPage'),
 })
 const newVideoTemplateRoute = createRoute({
@@ -602,6 +607,11 @@ export const router = createRouter({
 declare module '@tanstack/react-router' {
   interface Register {
     router: typeof router
+  }
+  /** What a route tells the chrome around it. `groupNav: 'hidden'` takes the group's second level
+   *  off a page that is a workspace rather than a destination (→CLIP-37). */
+  interface StaticDataRouteOption {
+    groupNav?: 'hidden'
   }
   interface HistoryState {
     notice?: 'password-changed'

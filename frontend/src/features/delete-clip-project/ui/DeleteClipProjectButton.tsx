@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from '@tanstack/react-router'
+import { Trash2 } from 'lucide-react'
 import { useClipProjectMutations, type ClipProject } from '@/entities/clip-project'
 import { appFailureFromConnect } from '@/shared/api'
 import { AppFailureMessage, Button, Dialog } from '@/shared/ui'
@@ -48,12 +49,16 @@ export function DeleteClipProjectButton({
 
   return (
     <>
+      {/* The glyph carries it on a phone, where the row also holds the step bar (CLIP-37); the
+          word comes back from `sm:`. The name is the word at every width. */}
       <Button
         variant="danger"
+        aria-label={t('project.delete')}
         disabled={disabled || remove.isPending}
         onClick={() => setConfirming(true)}
       >
-        {t('project.delete')}
+        <Trash2 aria-hidden="true" className="size-5" />
+        <span className="hidden sm:inline">{t('project.delete')}</span>
       </Button>
       {/* `w-full` inside the wrapping top row, so a refusal takes its own line under the trigger
           instead of squeezing the row it was pressed from (§4.3). */}

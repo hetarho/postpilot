@@ -104,11 +104,6 @@ export const clips = {
     uncertain: 'The cancellation outcome is unknown. Check the server state before retrying.',
     stopped:
       'The job was cancelled. Your previous video is preserved; you can start a retry yourself.',
-    confirmed: 'Confirmed AI use',
-    cancellationFee: 'Cancellation addition',
-    shadowConfirmed: 'Reference AI use (no debit)',
-    shadowCancellationFee: 'Reference cancellation addition (no debit)',
-    shadowTotal: 'Reference total (no debit)',
   },
   assembly: {
     addTitle: 'Add a cut from this observed scene',
@@ -135,10 +130,8 @@ export const clips = {
     captionOverlap: 'This caption overlaps another. Move one of them.',
     narrationStart: 'Caption start (whole clip)',
     narrationEnd: 'Caption end (whole clip)',
-    render: 'Render · {{kind}}',
-    rerender: 'Render again · {{kind}}',
-    renderKinds: { browser: 'Browser', server: 'Server' },
-    switchRenderKind: 'Use {{kind}}',
+    render: 'Render',
+    rerender: 'Render again',
     download: 'Download',
     label: 'Editing timeline',
     cuts: 'Video cuts',
@@ -205,6 +198,8 @@ export const clips = {
     title: 'Current draft preview',
     play: 'Play',
     pause: 'Pause',
+    replay: 'Play from the start',
+    refresh: 'Refresh preview',
     originalAudio: 'Enable preview audio',
     outputTime: 'Output timeline',
     loadingMedia: 'Loading the original video.',
@@ -451,20 +446,10 @@ export const clips = {
     refresh: 'Refresh maximum credits',
     exempt:
       'Master accounts are not debited. Model compatibility and execution limits still apply.',
-    approved: 'Approved maximum',
-    reserved: 'Actual reservation',
-    charged: 'Final charge',
-    refunded: 'Returned credits',
-    amount: '{{amount, number}} credits',
+    used: '{{amount, number}} credits used',
+    usedExempt: '{{amount, number}} credits used · master accounts are not debited',
     pendingAmount: 'Pending',
-    preparing:
-      'All originals and analysis copies are prepared and verified before credits are reserved.',
-    held: 'Credits are reserved for AI work. The final charge is not yet known.',
-    settling: 'Video processing finished. Credit settlement is still pending.',
-    settled: 'Credit settlement is complete.',
-    unavailable: 'Checking authoritative accounting. Missing amounts are not shown as zero.',
-    noCharge:
-      'This failed attempt costs you zero credits. This does not claim that the external provider billed zero.',
+    settling: 'Settling',
     uncertain:
       'Checking whether your request was accepted without submitting it again. Leaving this page does not stop an accepted job.',
     checkAttempt: 'Check accepted work again',
@@ -494,9 +479,15 @@ export const clips = {
       memory:
         'This device reports too little memory for browser rendering. Choose server rendering.',
     },
+    choose: 'Where should this render run?',
+    kind: { browser: 'Render in this browser', server: 'Render on the server' },
+    kindHelp: {
+      browser: 'Made right here on this device. Leaving this screen stops it.',
+      server: 'Made on the server. It keeps going after you leave this screen.',
+    },
   },
   reference: {
-    label: 'Reference',
+    label: 'Source material',
     tabs: { observations: 'Observations', sources: 'Sources', requests: 'Requests' },
   },
   revision: {

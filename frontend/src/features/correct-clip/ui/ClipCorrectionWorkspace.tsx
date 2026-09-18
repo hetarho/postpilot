@@ -54,6 +54,8 @@ export interface ClipEditorPreviewProps {
   maxHeight: number
   compact: boolean
   stickyTop?: number
+  /** ②'s info control, overlaid at the frame's top-right beside the player's own (CLIP-148). */
+  corner?: ReactNode
 }
 export function ClipCorrectionWorkspace({
   projectId,
@@ -97,15 +99,19 @@ export function ClipCorrectionWorkspace({
   referenceAction?: ReactNode
   preview: (props: ClipEditorPreviewProps) => ReactNode
   comparison?: ReactNode
-  /** The dock's bottom row: revision composer or its active run. */
-  revision?: ReactNode
+  /** The dock's composer — the revision request, or its active run — handed the step's actions
+   *  (렌더하기 and, once a render exists, 확정하기) to carry at the right of its heading (CLIP-40).
+   *  A render-prop rather than a node, because the page owns the composer and this workspace owns
+   *  the render control, and neither feature may import the other (ARCH-13). */
+  revision?: (actions: ReactNode) => ReactNode
   /** Downloading the identified latest successful render, as an icon directly
    *  under the video it downloads (CLIP-149): the dock holds committing
    *  controls and a download commits nothing (CLIP-40, THEME-39). Absent while
    *  the plan has no render, and its absence is silence. */
   downloadAction?: ReactNode
   /** ②'s primary committing control, the one thing of the confirmation the dock
-   *  carries. */
+   *  carries. Absent until the project has a render: until then the render IS the step's
+   *  next action, and a disabled 확정하기 only said so in smaller type (CLIP-40). */
   finalizeAction?: ReactNode
   localSources: ReadonlyArray<{ fingerprint: string; url: string }>
   /** Resolves an unexpired retained original for a source the session has no
@@ -270,7 +276,8 @@ export function ClipCorrectionWorkspace({
         }
       }}
     >
-      <Typography variant="title">{t('correction.title')}</Typography>
+      {/* No heading of its own: the step bar above already names this step, and the preview is
+          what the screen is for (owner decision 2026-09-19). The section keeps the name. */}
       <div ref={previewRoot} className="contents">
         {preview({
           timeMs: timeline.timeMs,
@@ -285,46 +292,49 @@ export function ClipCorrectionWorkspace({
           ),
           compact: true,
           stickyTop: pinPreview ? viewport.offsetTop : undefined,
+          // ONE info control holding what the draft preview cannot promise about the delivered
+          // file plus every notice that names no cut and no caption (CLIP-148), on the frame it
+          // is about — a video player's corner, not a row of the page.
+          corner: (
+            <Popover
+              label={t('preview.aboutLabel')}
+              triggerSize="icon"
+              triggerVariant="scrim"
+              triggerLabel={<Info aria-hidden="true" className="size-5" />}
+              placement="below"
+              align="end"
+              phone="sheet"
+            >
+              {() => (
+                <div className="space-y-2">
+                  <Typography variant="body" className="text-content-secondary">
+                    {t('preview.parity')}
+                  </Typography>
+                  {/* The preview reports the precision of the frame it is showing, so
+                      this says the position is approximate only while it is. */}
+                  {frame && !frame.precise && (
+                    <Typography variant="body" className="text-content-secondary">
+                      {t('preview.frameApproximate')}
+                    </Typography>
+                  )}
+                  <ClipNoticeList
+                    notices={notices.filter((n) => !n.cutId && !n.elementId)}
+                    language={language}
+                  />
+                </div>
+              )}
+            </Popover>
+          ),
         })}
       </div>
       {/* Directly under the preview, and nothing else about the clip stands in the
           flow ② edits in (CLIP-148): the download of the render this plan already
-          has (CLIP-149), the reference sheet, and one info control holding what the draft preview
-          cannot promise about the delivered file plus every notice that names no
-          cut and no caption. With a plan and no render there is simply no
+          has (CLIP-149) and the source sheet. With a plan and no render there is simply no
           download — a plan awaiting one is ②'s FIRST state (CLIP-56), not a
           missing result. */}
       <div className="flex flex-wrap items-center gap-2">
         {downloadAction}
         {referenceAction}
-        <Popover
-          label={t('preview.aboutLabel')}
-          triggerSize="icon"
-          triggerVariant="secondary"
-          triggerLabel={<Info aria-hidden="true" className="size-5" />}
-          placement="below"
-          align="start"
-          phone="sheet"
-        >
-          {() => (
-            <div className="space-y-2">
-              <Typography variant="body" className="text-content-secondary">
-                {t('preview.parity')}
-              </Typography>
-              {/* The preview reports the precision of the frame it is showing, so
-                  this says the position is approximate only while it is. */}
-              {frame && !frame.precise && (
-                <Typography variant="body" className="text-content-secondary">
-                  {t('preview.frameApproximate')}
-                </Typography>
-              )}
-              <ClipNoticeList
-                notices={notices.filter((n) => !n.cutId && !n.elementId)}
-                language={language}
-              />
-            </div>
-          )}
-        </Popover>
       </div>
       {/* The save state is NOT reported here: CLIP-38 gives it to the page's one
           status region, and a second copy beside the timeline said it twice with
@@ -402,52 +412,68 @@ export function ClipCorrectionWorkspace({
       {comparison}
       <div ref={actions} className="contents">
         <ActionBar ariaLabel={t('correction.actions')} className="space-y-3">
-          <div className="space-y-2">
-            {renderProgress}
-            {failure && (
-              <div role="alert" className="mb-3 space-y-2">
-                <AppFailureMessage failure={failure} />
-                {failure.reason === 'CLIP_PLAN_CONFLICT' && (
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      variant="ghost"
-                      disabled={correction.pending}
-                      onClick={() => setConfirm(true)}
-                    >
-                      {t('correction.reload')}
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      disabled={correction.pending}
-                      onClick={correction.reapply}
-                    >
-                      {t('timeline.reapply')}
-                    </Button>
-                  </div>
-                )}
-              </div>
-            )}
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              <ClipRenderAction
-                key={projectId}
-                lastKind={lastRenderKind}
-                currentRender={currentRender}
-                browserAvailable={browserCapability?.available ?? false}
-                browserRefusal={
-                  browserCapability && !browserCapability.available
-                    ? browserCapability.reason
-                    : undefined
-                }
-                pending={renderPending}
-                disabled={
-                  disabled || correction.pending || !renderReady || !correction.validation?.valid
-                }
-                onRender={onRender}
-              />
-              {finalizeAction}
+          {/* Only while there is something to report: an empty first row would still push the
+              composer down by the bar's own row gap. */}
+          {(renderProgress || failure) && (
+            <div className="space-y-2">
+              {renderProgress}
+              {failure && (
+                <div role="alert" className="mb-3 space-y-2">
+                  <AppFailureMessage failure={failure} />
+                  {failure.reason === 'CLIP_PLAN_CONFLICT' && (
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="ghost"
+                        disabled={correction.pending}
+                        onClick={() => setConfirm(true)}
+                      >
+                        {t('correction.reload')}
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        disabled={correction.pending}
+                        onClick={correction.reapply}
+                      >
+                        {t('timeline.reapply')}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-          </div>
-          {revision}
+          )}
+          {/* The post editor's dock (CLIP-40 →POST-45): the composer's heading row carries the
+              step's actions at its right — 렌더하기, the step's own action until the project has
+              a render, then secondary beside the primary 확정하기 — and its field and send
+              control sit under them. Nothing else is a row of this bar. */}
+          {(() => {
+            const actions = (
+              <>
+                <ClipRenderAction
+                  lastKind={lastRenderKind}
+                  currentRender={currentRender}
+                  browserAvailable={browserCapability?.available ?? false}
+                  browserRefusal={
+                    browserCapability && !browserCapability.available
+                      ? browserCapability.reason
+                      : undefined
+                  }
+                  pending={renderPending}
+                  disabled={
+                    disabled || correction.pending || !renderReady || !correction.validation?.valid
+                  }
+                  variant={finalizeAction ? 'secondary' : 'cta'}
+                  onRender={onRender}
+                />
+                {finalizeAction}
+              </>
+            )
+            return revision ? (
+              revision(actions)
+            ) : (
+              <div className="flex flex-wrap items-center justify-end gap-2">{actions}</div>
+            )
+          })()}
         </ActionBar>
       </div>
       {/* ONE selection is ONE sheet (CLIP-53): the selected item's own controls
