@@ -64,6 +64,7 @@
 - T247 is next in ②'s order but waits on T242 (its 렌더하기 names the kind T242 records), so create-task CLIP (r37) comes first; T248 and T249 follow T247
 - T177 stays blocked (its viewing checklist predates the caption style set, the outline and now ②'s shape) and T008 is another session's
 ## log
+- 260918 out of scope: the deploy's release smoke fails on main at 191e2f9d — `TestClipWriterInputRelease` exits 1 inside the image (ARCH-38 keeps the rollout, which went green); the commits between it and the last green deploy are the backend T241 ones, not the frontend of T245/T246
 - 260918 T246 done; the scrubber, one info control and the icon download are the preview's own row, and `Slider` gained a labelless one-row shape for it — the parity copy left `ClipDraftPreview` with the `precise` state its block was the only reader of, and `FinalizeClipNotices` lost its notice list but keeps the refusal and the uncertain retry until T248's dialog takes them
 - 260918 T246 claimed (sht)
 - 260918 T245 done; one Sheet holds whichever item the timeline selected, its `open` derived from the selection alone so closing it clears the selection — and ② now arrives with NOTHING selected, since the first cut being selected would have landed the step with a sheet over the preview it exists to review; `survivingSelection` had to keep an absent selection absent, or every acknowledged autosave reopened the sheet
@@ -83,4 +84,3 @@
 - 260918 create-task CLIP done; T235–T240 discarded and r34+r35 re-cut as T241 the plan-only generation, T242 the recorded render kind, T243 the pre-render checks, T244 the timeline, T245 the item sheets, T246 the preview's own controls, T247 the docked composer with 렌더하기, T248 the finalization dialog, T249 the reference sheet — the browser render (CLIP-153 CLIP-154 CLIP-155 CLIP-156) is NOT tasked, see next
 - 260918 browser render decided as WebCodecs + an mp4 muxer rather than ffmpeg.wasm (owner, 260918): hardware-accelerated and tens of KB against ffmpeg.wasm's tens of MB and its COOP/COEP requirement, at the cost of a different pipeline from the server's, which pushes CLIP-157 toward output-contract parity rather than pixel parity
 - 260918 create-task CLIP start (r35, re-planning T237 T238 T239 with it)
-- 260918 T234 done; ②'s draft already autosaved, so 저장 just went and 다시 렌더 flushes the queue itself — which exposed `useGenerateClip.render` refusing the very revision the flush had just won, since the project prop lags the cache write by one render
