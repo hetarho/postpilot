@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/clip/design"
 )
 
 func previewMeasured(t *testing.T, ratio string) (*Adapter, *Rendering, *fakeRunner) {
@@ -47,6 +48,33 @@ func previewMeasured(t *testing.T, ratio string) (*Adapter, *Rendering, *fakeRun
 	}}
 	a.runner = runner
 	return a, r, runner
+}
+
+func TestPreviewUsesCaptionRepresentativeRasterAndDeclaresItsMotionKind(t *testing.T) {
+	for _, style := range []string{"bold", "neon"} {
+		t.Run(style, func(t *testing.T) {
+			_, r, _ := previewMeasured(t, "vertical")
+			plan := ownerPlacedPlan(t, "vertical", clip.OwnerCaption{Style: style})
+			plan.CaptionStyles = []string{design.DefaultCaptionStyle, "neon"}
+			sources := []clip.RenderSource{{ID: "source", Fingerprint: "fp", Info: clip.MediaInfo{DurationMS: 60000, Width: 1920, Height: 1080}}}
+			out, err := r.PreparePreview(t.Context(), plan, sources, nil, 0, clip.PreviewConfig{MaxAssets: 8, MaxAssetBytes: 512 << 10, MaxResponseBytes: 4 << 20})
+			if err != nil || len(out.Assets) == 0 {
+				t.Fatalf("preview: %+v %v", out, err)
+			}
+			found := false
+			for _, asset := range out.Assets {
+				if asset.InstanceID == plan.Portable.Elements[0].Resolved.InstanceID {
+					found = true
+					if asset.RepresentativeFrame != (style == "neon") {
+						t.Fatalf("%s representative=%v", style, asset.RepresentativeFrame)
+					}
+				}
+			}
+			if !found {
+				t.Fatal("caption absent")
+			}
+		})
+	}
 }
 func TestPreviewCropsTransparentAssetsWithExportIntervalsOnAllRatios(t *testing.T) {
 	cfg := clip.PreviewConfig{MaxAssets: 8, MaxAssetBytes: 512 << 10, MaxResponseBytes: 4 << 20, Timeout: 5 * time.Second}

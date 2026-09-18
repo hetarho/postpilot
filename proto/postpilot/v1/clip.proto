@@ -728,6 +728,8 @@ message ClipPreviewAsset {
   int32 out_ms = 11;
   double dy = 12;
   int32 layer = 13;
+  // One representative raster of a sequence style; its motion is applied per frame.
+  bool representative_frame = 14;
 }
 message PrepareClipPreviewResponse {
   string draft_hash = 1;

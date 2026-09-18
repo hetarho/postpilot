@@ -6867,22 +6867,24 @@ func (x *PrepareClipPreviewRequest) GetAssetOffset() int32 {
 }
 
 type ClipPreviewAsset struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Key           string                 `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
-	InstanceId    string                 `protobuf:"bytes,2,opt,name=instance_id,json=instanceId,proto3" json:"instance_id,omitempty"`
-	Png           []byte                 `protobuf:"bytes,3,opt,name=png,proto3" json:"png,omitempty"`
-	X             int32                  `protobuf:"varint,4,opt,name=x,proto3" json:"x,omitempty"`
-	Y             int32                  `protobuf:"varint,5,opt,name=y,proto3" json:"y,omitempty"`
-	Width         int32                  `protobuf:"varint,6,opt,name=width,proto3" json:"width,omitempty"`
-	Height        int32                  `protobuf:"varint,7,opt,name=height,proto3" json:"height,omitempty"`
-	StartMs       int32                  `protobuf:"varint,8,opt,name=start_ms,json=startMs,proto3" json:"start_ms,omitempty"`
-	EndMs         int32                  `protobuf:"varint,9,opt,name=end_ms,json=endMs,proto3" json:"end_ms,omitempty"`
-	InMs          int32                  `protobuf:"varint,10,opt,name=in_ms,json=inMs,proto3" json:"in_ms,omitempty"`
-	OutMs         int32                  `protobuf:"varint,11,opt,name=out_ms,json=outMs,proto3" json:"out_ms,omitempty"`
-	Dy            float64                `protobuf:"fixed64,12,opt,name=dy,proto3" json:"dy,omitempty"`
-	Layer         int32                  `protobuf:"varint,13,opt,name=layer,proto3" json:"layer,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	Key        string                 `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+	InstanceId string                 `protobuf:"bytes,2,opt,name=instance_id,json=instanceId,proto3" json:"instance_id,omitempty"`
+	Png        []byte                 `protobuf:"bytes,3,opt,name=png,proto3" json:"png,omitempty"`
+	X          int32                  `protobuf:"varint,4,opt,name=x,proto3" json:"x,omitempty"`
+	Y          int32                  `protobuf:"varint,5,opt,name=y,proto3" json:"y,omitempty"`
+	Width      int32                  `protobuf:"varint,6,opt,name=width,proto3" json:"width,omitempty"`
+	Height     int32                  `protobuf:"varint,7,opt,name=height,proto3" json:"height,omitempty"`
+	StartMs    int32                  `protobuf:"varint,8,opt,name=start_ms,json=startMs,proto3" json:"start_ms,omitempty"`
+	EndMs      int32                  `protobuf:"varint,9,opt,name=end_ms,json=endMs,proto3" json:"end_ms,omitempty"`
+	InMs       int32                  `protobuf:"varint,10,opt,name=in_ms,json=inMs,proto3" json:"in_ms,omitempty"`
+	OutMs      int32                  `protobuf:"varint,11,opt,name=out_ms,json=outMs,proto3" json:"out_ms,omitempty"`
+	Dy         float64                `protobuf:"fixed64,12,opt,name=dy,proto3" json:"dy,omitempty"`
+	Layer      int32                  `protobuf:"varint,13,opt,name=layer,proto3" json:"layer,omitempty"`
+	// One representative raster of a sequence style; its motion is applied per frame.
+	RepresentativeFrame bool `protobuf:"varint,14,opt,name=representative_frame,json=representativeFrame,proto3" json:"representative_frame,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *ClipPreviewAsset) Reset() {
@@ -7004,6 +7006,13 @@ func (x *ClipPreviewAsset) GetLayer() int32 {
 		return x.Layer
 	}
 	return 0
+}
+
+func (x *ClipPreviewAsset) GetRepresentativeFrame() bool {
+	if x != nil {
+		return x.RepresentativeFrame
+	}
+	return false
 }
 
 type PrepareClipPreviewResponse struct {
@@ -9039,7 +9048,7 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\x04plan\x18\x04 \x01(\v2\x1a.postpilot.v1.ClipEditPlanR\x04plan\x12\x1f\n" +
 	"\velement_ids\x18\x05 \x03(\tR\n" +
 	"elementIds\x12!\n" +
-	"\fasset_offset\x18\x06 \x01(\x05R\vassetOffset\"\xa5\x02\n" +
+	"\fasset_offset\x18\x06 \x01(\x05R\vassetOffset\"\xd8\x02\n" +
 	"\x10ClipPreviewAsset\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x1f\n" +
 	"\vinstance_id\x18\x02 \x01(\tR\n" +
@@ -9055,7 +9064,8 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	" \x01(\x05R\x04inMs\x12\x15\n" +
 	"\x06out_ms\x18\v \x01(\x05R\x05outMs\x12\x0e\n" +
 	"\x02dy\x18\f \x01(\x01R\x02dy\x12\x14\n" +
-	"\x05layer\x18\r \x01(\x05R\x05layer\"\x95\x02\n" +
+	"\x05layer\x18\r \x01(\x05R\x05layer\x121\n" +
+	"\x14representative_frame\x18\x0e \x01(\bR\x13representativeFrame\"\x95\x02\n" +
 	"\x1aPrepareClipPreviewResponse\x12\x1d\n" +
 	"\n" +
 	"draft_hash\x18\x01 \x01(\tR\tdraftHash\x12!\n" +

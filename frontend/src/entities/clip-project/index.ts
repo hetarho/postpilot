@@ -144,6 +144,9 @@ export { ClipDraftPreview } from './ui/ClipDraftPreview'
 export type { ClipDisplayedFrame } from './ui/ClipDraftPreview'
 export type { ClipEditableText } from './model/edit-plan'
 export { previewTimeline, previewFrame, previewElementIDs } from './model/draft-preview'
+export { PreviewAssetCache, PreviewPreparation } from './model/preview-assets'
+export type { PreparedAsset } from './model/preview-assets'
+export { clipPreviewRequest } from './api/preview'
 export {
   timelineCuts,
   timelineBarPx,
@@ -176,3 +179,13 @@ export type { ClipNotice } from './model/notices'
 export { clipNoticeKey, clipNoticeKeys } from './model/notices'
 export { ClipNoticeList } from './ui/ClipNoticeList'
 export { reorderTargetIndex, moveInOrder } from './model/source-order'
+
+export { createClipVideoWorker } from './lib/create-video-worker'
+export type {
+  BrowserVideoInput,
+  BrowserVideoProgress,
+  BrowserVideoTrack,
+  BrowserVideoRender,
+  EncodedClipChunk,
+} from './model/browser-video'
+export type { VideoWorkerInput, VideoWorkerOutput } from './model/video-worker-protocol'

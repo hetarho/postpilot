@@ -67,3 +67,52 @@ func TestRenderSmokePreview(t *testing.T) {
 		})
 	}
 }
+
+func TestRenderSmokePreviewSequenceRepresentative(t *testing.T) {
+	if os.Getenv("CLIP_MEDIA_SMOKE") != "1" {
+		t.Skip("real preview gate runs inside Docker")
+	}
+	t.Parallel()
+	a, err := New(mediaConfig(t), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r, err := NewRenderer(a, renderConfig(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	plan := ownerPlacedPlan(t, "vertical", clip.OwnerCaption{Style: "neon"})
+	plan.CaptionStyles = []string{"bold", "neon"}
+	sources := []clip.RenderSource{{ID: "source", Fingerprint: "fp", Info: clip.MediaInfo{DurationMS: 60000, Width: 1920, Height: 1080}}}
+	out, err := r.PreparePreview(t.Context(), plan, sources, nil, 0, clip.PreviewConfig{MaxAssets: 8, MaxAssetBytes: 512 << 10, MaxResponseBytes: 4 << 20})
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, asset := range out.Assets {
+		if !asset.RepresentativeFrame {
+			continue
+		}
+		found = true
+		img, err := png.Decode(bytes.NewReader(asset.PNG))
+		if err != nil || img.Bounds().Dx() != asset.Width || img.Bounds().Dy() != asset.Height {
+			t.Fatal("invalid representative raster", err)
+		}
+		visible := false
+		for y := 0; y < asset.Height && !visible; y++ {
+			for x := 0; x < asset.Width; x++ {
+				_, _, _, alpha := img.At(x, y).RGBA()
+				if alpha > 0 {
+					visible = true
+					break
+				}
+			}
+		}
+		if !visible {
+			t.Fatal("empty representative caption")
+		}
+	}
+	if !found {
+		t.Fatal("sequence caption missing")
+	}
+}

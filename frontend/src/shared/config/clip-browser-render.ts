@@ -1,5 +1,6 @@
 /** CDS-52 V12. Probe and encode must use the same configurations. */
 export const CLIP_BROWSER_RENDER = {
+  matte: '#000000', // style-escape: encoded video matte and fade-through-black are independent of the UI theme.
   // Only a reported value below this floor refuses; an unreported value is unknown.
   memoryFloorGB: 2,
   frameRate: 30,
@@ -9,4 +10,7 @@ export const CLIP_BROWSER_RENDER = {
   audioSampleRate: 48_000,
   audioChannels: 2,
   audioBitrate: 192_000,
+  encodeQueueFrames: 4,
+  keyFrameIntervalFrames: 60,
+  sourceTimeoutMs: 30_000,
 } as const

@@ -20,6 +20,7 @@ type PreviewAsset struct {
 	X, Y, Width, Height                int
 	StartMS, EndMS, InMS, OutMS, Layer int
 	DY                                 float64
+	RepresentativeFrame                bool
 }
 type PreviewParity string
 

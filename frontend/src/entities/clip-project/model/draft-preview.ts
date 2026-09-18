@@ -106,6 +106,7 @@ export interface PreviewAsset {
   outMs: number
   dy: number
   layer: number
+  representativeFrame?: boolean
 }
 export interface PreviewPage {
   draftHash: string

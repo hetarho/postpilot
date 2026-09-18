@@ -39,7 +39,7 @@ func (h *Handler) PrepareClipPreview(ctx context.Context, req *connect.Request[v
 	}
 	out := &v1.PrepareClipPreviewResponse{DraftHash: result.DraftHash, CanvasWidth: int32(result.Canvas.Width), CanvasHeight: int32(result.Canvas.Height), NextOffset: int32(result.NextOffset)}
 	for _, a := range result.Assets {
-		out.Assets = append(out.Assets, &v1.ClipPreviewAsset{Key: a.Key, InstanceId: a.InstanceID, Png: a.PNG, X: int32(a.X), Y: int32(a.Y), Width: int32(a.Width), Height: int32(a.Height), StartMs: int32(a.StartMS), EndMs: int32(a.EndMS), InMs: int32(a.InMS), OutMs: int32(a.OutMS), Dy: a.DY, Layer: int32(a.Layer)})
+		out.Assets = append(out.Assets, &v1.ClipPreviewAsset{Key: a.Key, InstanceId: a.InstanceID, Png: a.PNG, X: int32(a.X), Y: int32(a.Y), Width: int32(a.Width), Height: int32(a.Height), StartMs: int32(a.StartMS), EndMs: int32(a.EndMS), InMs: int32(a.InMS), OutMs: int32(a.OutMS), Dy: a.DY, Layer: int32(a.Layer), RepresentativeFrame: a.RepresentativeFrame})
 	}
 	for _, p := range result.Parity {
 		switch p {
