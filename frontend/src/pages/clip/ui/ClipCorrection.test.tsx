@@ -75,6 +75,9 @@ async function goToStep(name: '클립 생성' | '클립 다듬기' | '클립 완
   await userEvent.click(await screen.findByRole('tab', { name }))
 }
 const timeline = () => within(screen.getByLabelText('편집 타임라인'))
+// A selection is what OPENS an item's sheet (CLIP-53), and ② arrives with none:
+// every cut or caption control below is reached by selecting its bar first.
+const selectCut = async (name = '컷 1') => userEvent.click(timeline().getByRole('button', { name }))
 const selectText = async (name = 'caption a') =>
   userEvent.click(timeline().getByRole('button', { name }))
 const setField = (label: string, value: string) =>
@@ -112,6 +115,9 @@ it('opens a matching result in refine with one action bar and an available downl
     'https://private.test/download',
   )
   expect(screen.getByRole('button', { name: '다시 렌더' })).toBeDisabled()
+  // Nothing is selected, so no cut or caption control stands in the page.
+  expect(screen.queryByLabelText('원본 시작 (초)')).not.toBeInTheDocument()
+  await selectCut()
   expect(screen.getAllByLabelText('원본 시작 (초)')).toHaveLength(1)
   await goToStep('클립 생성')
   expect(screen.queryByRole('button', { name: '다시 렌더' })).not.toBeInTheDocument()
@@ -120,6 +126,7 @@ it('opens a matching result in refine with one action bar and an available downl
 it('saves exact milliseconds and selected text with a new optimistic revision', async () => {
   const writes: NonNullable<FakeClipsOptions['planWrites']> = []
   await mount({ planWrites: writes })
+  await selectCut()
   setField('원본 시작 (초)', '0.123')
   setField('원본 끝 (초)', '12.345')
   await selectText()
@@ -130,6 +137,71 @@ it('saves exact milliseconds and selected text with a new optimistic revision', 
   expect(writes.at(-1)!.plan.cuts[0]).toMatchObject({ startMs: 123, endMs: 12345 })
   expect(writes.map((write) => write.revision)).toEqual(writes.map((_, index) => index + 1))
   expect(screen.getByRole('link', { name: '렌더 1 다운로드' })).toBeInTheDocument()
+})
+
+// CLIP-53: one selection is ONE sheet. The page behind keeps the preview and the
+// timeline, the item's own controls open over them, and the notice naming that
+// item rides inside its sheet rather than anywhere in ②'s flow.
+it('opens the selected cut or caption in its own sheet, with its notice, and closes to no selection', async () => {
+  const p = fixture()
+  p.notices = [
+    { code: 'plan_cut_rate', cutId: 'cut-a', elementId: '', action: 'repair' },
+    { code: 'plan_style', cutId: 'cut-a', elementId: 'caption', action: 'repair' },
+    { code: 'plan_target_duration', cutId: '', elementId: '', action: 'shortfall' },
+  ]
+  const cutNotice = '이 장면은 원래 속도인 1배속으로 담았어요.'
+  const captionNotice = '이 문구는 템플릿에서 정한 디자인으로 담았어요.'
+  await mount({ projects: [p] })
+  const page = () => within(screen.getByRole('region', { name: '컷·자막 수정' }))
+
+  // Nothing is selected: no sheet, no item control and no targeted notice.
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  expect(screen.queryByLabelText('원본 시작 (초)')).not.toBeInTheDocument()
+  expect(screen.queryByLabelText('자막 원문')).not.toBeInTheDocument()
+  expect(screen.queryByText(cutNotice)).not.toBeInTheDocument()
+  expect(screen.queryByText(captionNotice)).not.toBeInTheDocument()
+  // The one naming neither stands in the page.
+  // T246 moves it into the preview's info control; today it also stands in the
+  // section above the dock, which is why this counts rather than asserting one.
+  expect(
+    page().getAllByText('사용할 수 있는 장면만 담아 선택한 길이보다 짧게 완성됐어요.').length,
+  ).toBeGreaterThan(0)
+
+  await selectCut()
+  const cutSheet = screen.getByRole('dialog', { name: /컷 1/ })
+  expect(within(cutSheet).getByLabelText('원본 시작 (초)')).toBeInTheDocument()
+  expect(within(cutSheet).getByRole('slider', { name: '원본 소리 (%)' })).toBeInTheDocument()
+  expect(within(cutSheet).getByRole('button', { name: '아래로 이동' })).toBeInTheDocument()
+  expect(within(cutSheet).getByRole('button', { name: '컷 삭제' })).toBeInTheDocument()
+  expect(within(cutSheet).getByText(cutNotice)).toBeInTheDocument()
+  expect(page().queryByText(cutNotice)).not.toBeInTheDocument()
+  // The page behind kept both.
+  expect(page().getByRole('region', { name: '편집 중인 영상' })).toBeInTheDocument()
+  expect(page().getByLabelText('편집 타임라인')).toBeInTheDocument()
+  expect(timeline().getByRole('button', { name: '컷 1' })).toHaveAttribute('aria-pressed', 'true')
+
+  await userEvent.click(within(cutSheet).getByRole('button', { name: '닫기' }))
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  expect(timeline().getByRole('button', { name: '컷 1' })).toHaveAttribute('aria-pressed', 'false')
+
+  await selectText()
+  const textSheet = screen.getByRole('dialog', { name: '선택한 문구' })
+  expect(within(textSheet).getByLabelText('자막 원문')).toBeInTheDocument()
+  // The placement stage, over the output frame of the cut its interval starts in.
+  expect(await within(textSheet).findByText('자막 배치')).toBeInTheDocument()
+  expect(
+    within(textSheet).getByRole('button', { name: /자막을 끌어서 옮기기/ }),
+  ).toBeInTheDocument()
+  expect(within(textSheet).getByText(captionNotice)).toBeInTheDocument()
+  expect(page().queryByText(captionNotice)).not.toBeInTheDocument()
+  expect(within(textSheet).getByRole('button', { name: '문구 삭제' })).toBeInTheDocument()
+
+  await userEvent.keyboard('{Escape}')
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  expect(timeline().getByRole('button', { name: 'caption a' })).toHaveAttribute(
+    'aria-pressed',
+    'false',
+  )
 })
 
 it('keeps a selected text field mounted while its cut is reordered', async () => {
@@ -169,6 +241,7 @@ it('undoes a saved deletion, preserving output-relative fixed text', async () =>
   p.editing!.plan.durationMs = 39800
   const writes: NonNullable<FakeClipsOptions['planWrites']> = []
   await mount({ projects: [p], planWrites: writes })
+  await selectCut()
   await userEvent.click(screen.getByRole('button', { name: '컷 삭제' }))
   expect(timeline().queryByRole('button', { name: 'caption a' })).not.toBeInTheDocument()
   expect(timeline().getByRole('button', { name: '정확한 고정 문구' })).toBeInTheDocument()
@@ -247,6 +320,7 @@ it('requires matching sources for rerender while text edits and previous video r
 
 it('uses localized selected-cut controls and shows a single audio control', async () => {
   await mount()
+  await selectCut()
   await act(async () => initializeI18n('en'))
   expect(screen.getByRole('heading', { name: 'Edit cuts and captions' })).toBeInTheDocument()
   expect(screen.getByLabelText('Source start (seconds)')).toHaveValue(0)
@@ -255,6 +329,7 @@ it('uses localized selected-cut controls and shows a single audio control', asyn
 
 it('snaps range gestures to the output frame grid while precise typing retains milliseconds', async () => {
   await mount()
+  await selectCut()
   fireEvent.change(screen.getByRole('slider', { name: '시작 손잡이 · 원본' }), {
     target: { value: '124' },
   })

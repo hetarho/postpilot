@@ -40,6 +40,11 @@ const mount = (options: FakeClipsOptions = {}, jobs: FakeGenerationJobRow[] = []
     jobs: { jobs },
   })
 const confirm = () => screen.findByRole('button', { name: '확정하기' })
+// The cut's own controls live in its sheet, which a selection opens (CLIP-53).
+const selectCut = async () =>
+  userEvent.click(
+    within(screen.getByLabelText('편집 타임라인')).getByRole('button', { name: '컷 1' }),
+  )
 
 it('downloads without confirming, guards the result tab and confirms only once on double click', async () => {
   const calls: string[] = []
@@ -69,6 +74,7 @@ it('flushes the current plan before confirming and refuses the now-stale render'
     writes: NonNullable<FakeClipsOptions['planWrites']> = []
   mount({ calls, planWrites: writes })
   await confirm()
+  await selectCut()
   fireEvent.change(screen.getByLabelText('원본 시작 (초)'), { target: { value: '0.5' } })
   await userEvent.click(await confirm())
   await waitFor(() => expect(writes).toHaveLength(1))
@@ -82,6 +88,7 @@ it('keeps the draft when its save conflicts and never sends confirmation', async
   const calls: string[] = []
   mount({ calls, planSaveConflict: true })
   await confirm()
+  await selectCut()
   fireEvent.change(screen.getByLabelText('원본 시작 (초)'), { target: { value: '0.5' } })
   await userEvent.click(await confirm())
   await screen.findByRole('button', { name: '내 편집을 최신 버전에 적용' })

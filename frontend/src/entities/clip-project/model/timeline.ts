@@ -535,7 +535,10 @@ export interface ClipTimelineState extends TimelineSnapshot {
 export function createClipTimeline(plan: ClipEditPlan): ClipTimelineState {
   return {
     plan: copyClipPlan(plan),
-    selection: plan.cuts[0] ? { kind: 'cut', id: plan.cuts[0].id } : undefined,
+    // NOTHING is selected on arrival. A selection is what opens an item's sheet
+    // (CLIP-53), so selecting the first cut here would land ② with a sheet over
+    // the very preview and timeline the step exists to review (CLIP-56).
+    selection: undefined,
     past: [],
     future: [],
     timeMs: 0,
@@ -543,7 +546,7 @@ export function createClipTimeline(plan: ClipEditPlan): ClipTimelineState {
 }
 export type ClipTimelineAction =
   | { type: 'edit'; edit: TimelineEdit; at: number; group?: string }
-  | { type: 'select'; selection: ClipSelection }
+  | { type: 'select'; selection?: ClipSelection }
   | { type: 'seek'; timeMs: number }
   | { type: 'undo' }
   | { type: 'redo' }
@@ -586,6 +589,10 @@ function survivingSelection(
   next: ClipEditPlan,
   selection?: ClipSelection,
 ): ClipSelection | undefined {
+  // An adopted plan must not open a sheet the owner never asked for: with
+  // nothing selected, the fallback below would have selected a cut on every
+  // autosave the server acknowledged.
+  if (!selection) return undefined
   if (selection?.kind === 'text' && next.elements?.some((t) => t.instanceId === selection.id))
     return selection
   if (selection?.kind === 'cut' && next.cuts.some((c) => c.id === selection.id)) return selection
@@ -605,7 +612,9 @@ export function clipTimelineReducer(
 ): ClipTimelineState {
   if (action.type === 'seek') return { ...state, timeMs: action.timeMs }
   if (action.type === 'select') {
-    const time = selectedTime(state.plan, action.selection)
+    // Clearing it is closing the sheet: the playhead stays where the owner left
+    // it, since nothing was selected to seek to.
+    const time = action.selection ? selectedTime(state.plan, action.selection) : NaN
     return {
       ...state,
       selection: action.selection,

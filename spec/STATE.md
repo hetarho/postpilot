@@ -50,7 +50,6 @@
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
 | T242 | a render is started per kind and records the kind with its result | CLIP | T241 | todo |
 | T243 | every plan check runs on the server before a render of either kind | CLIP | T242 | todo |
-| T245 | a selected cut or caption opens its own sheet | CLIP | T244 | todo |
 | T246 | the preview carries its scrubber, its info control and its download | CLIP | T245 | todo |
 | T247 | ②'s dock is the revision composer over 렌더하기 and 확정하기 | CLIP | T246 T242 | todo |
 | T248 | 확정하기 opens the finalization dialog | CLIP | T247 | todo |
@@ -63,9 +62,11 @@
 
 ## next
 - create-task CLIP (r37) before T242 or any of T250→T254 is claimed — CLIP-153 now offers the project's last kind first, which T242 never carried, and r37 cuts T250's refusals from three to two while handing T251 the per-style motion; T243 waits behind T242
-- implement-task T245 next (②'s surfaces, T244 done); T246→T249 follow it in order
+- implement-task T246 next (②'s preview controls, T245 done); T247→T249 follow it in order, T247 behind T242
 - T177 stays blocked (its viewing checklist predates the caption style set, the outline and now ②'s shape) and T008 is another session's
 ## log
+- 260918 T245 done; one Sheet holds whichever item the timeline selected, its `open` derived from the selection alone so closing it clears the selection — and ② now arrives with NOTHING selected, since the first cut being selected would have landed the step with a sheet over the preview it exists to review; `survivingSelection` had to keep an absent selection absent, or every acknowledged autosave reopened the sheet
+- 260918 T245 claimed (sht)
 - 260918 T244 done; every cut draws its thumbnail at once, each ruler tick and label is bounded by its own cut and dropped below CLIP_TIMELINE.minLabelPx, undo/redo head the timeline as icon controls, and the save state is the page's status region alone — hiding a label also hid the control's name, so each bar now carries its own aria-label
 - 260918 T241 done; the generation ends on the validated plan, `SaveGeneratedPlan` advances the analysis and the plan while `result_*`/`rendered_plan_revision` stand, and a file-less completion skips the staging row and applies its plan in the job's own terminal transaction
 - 260918 out of scope: `renderLoader`'s `verifyRetained` probe lost its only caller with the generation's render stage; the render job does the same identity check itself (review-code candidate)

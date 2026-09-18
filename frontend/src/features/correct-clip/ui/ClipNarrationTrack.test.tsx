@@ -28,7 +28,7 @@ it('shows the narration in its own lane and adds a caption at the playhead', asy
   expect(onAddCaption).toHaveBeenCalledWith({ startMs: 6000, endMs: 8000 })
 })
 
-it('offers a narration caption its own text, absolute times and removal, and no placement', async () => {
+it('offers a narration caption its own text and absolute times, and no placement', async () => {
   const plan = clipNarrationFixture().plan
   const change = vi.fn()
   render(
@@ -48,7 +48,8 @@ it('offers a narration caption its own text, absolute times and removal, and no 
     'narration-2:start',
   )
   expect(screen.getByLabelText('자막 원문')).toHaveValue('컷을 건너가는 자막')
-  expect(screen.getByRole('button', { name: '문구 삭제' })).toBeInTheDocument()
+  // Removal is the item sheet's pinned footer, not this block's last control (CLIP-53).
+  expect(screen.queryByRole('button', { name: '문구 삭제' })).not.toBeInTheDocument()
   // The server places a caption and the project sets its pace and accent.
   for (const label of ['위치', '정렬', '강조색', '자막 속도', '기준']) {
     expect(screen.queryByLabelText(label)).not.toBeInTheDocument()

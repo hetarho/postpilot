@@ -371,9 +371,9 @@ export function ClipTextControls({
           })}
         </Typography>
       ))}
-      <Button variant="danger" onClick={() => change({ type: 'removeText', id: text.instanceId })}>
-        {t('timeline.deleteText')}
-      </Button>
+      {/* No delete here: it is the item sheet's pinned footer that carries it,
+          beside the cut's own, so a destructive control is never at the bottom
+          of a scroller (CLIP-53). */}
     </div>
   )
 }

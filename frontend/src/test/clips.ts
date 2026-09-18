@@ -14,6 +14,7 @@ import {
   ListClipProjectsResponseSchema,
   GetClipProjectResponseSchema,
   CreateClipProjectResponseSchema,
+  GetClipCaptionPreviewResponseSchema,
   GetClipCaptionStyleSamplesResponseSchema,
   UpdateClipProjectResponseSchema,
   DeleteClipProjectResponseSchema,
@@ -71,6 +72,8 @@ export interface FakeClipProject extends ClipProjectDraft {
   attemptInspection?: ClipProject['attemptInspection']
   /** What the owner asked the AI for, newest first (CLIP-133). */
   requests?: ClipProject['requests']
+  /** What the server states about the delivered plan (CLIP-109). */
+  notices?: ClipProject['notices']
   editPlanRevision?: number
   renderedPlanRevision?: number
 }
@@ -371,6 +374,31 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     if (!options.cancel) throw connectAppError('CLIP_BUSY', Code.FailedPrecondition)
     const job = await options.cancel(req, p)
     return { job: toFakeProto(job), accepted: !!job.cancelRequestedAt }
+  })
+  /** The captions of the plan being edited, drawn as the renderer draws them (CDS-83). The fake
+   *  draws a box per caption at a fixed spot: what a test can check here is that ② places the
+   *  fragment it was given and asks for it once, not how the glyphs look. */
+  router.rpc(ClipService.method.getClipCaptionPreview, (req) => {
+    options.calls?.push('GetClipCaptionPreview')
+    const p = projects.get(req.projectId)
+    if (!p) throw connectAppError('CLIP_NOT_FOUND', Code.NotFound)
+    return create(GetClipCaptionPreviewResponseSchema, {
+      ratio: p.ratio,
+      canvas: { x: 0, y: 0, width: 1080, height: 1920 },
+      safeArea: { x: 60, y: 120, width: 960, height: 1680 },
+      captions: (req.plan?.elements ?? [])
+        .filter((text) => text.role === 'caption')
+        .map((text) => ({
+          instanceId: text.instanceId,
+          style: text.ownerStyle || text.style,
+          svg: `<g data-caption="${text.instanceId}"><text>${text.text}</text></g>`,
+          box: { x: 240, y: 1500, width: 600, height: 120 },
+          fontSize: 72,
+          representativeFrame: (options.sequenceStyles ?? ['word-pop']).includes(
+            text.ownerStyle || text.style,
+          ),
+        })),
+    })
   })
   /** Every approved style drawn once. The fake draws a box, not the style: what a test can check
    *  here is that ① offers each style, says which ones are drawn frame by frame, and saves what
