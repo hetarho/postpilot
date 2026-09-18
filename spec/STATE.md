@@ -31,7 +31,7 @@
 | THEME | 12 | 12 | - | 0 |
 | MKT | 4 | 4 | - | 0 |
 | VIDEO | 2 | 2 | - | 1 |
-| CLIP | 35 | 34 | CLIP-153✎ CLIP-154✎ CLIP-155+ CLIP-156+ — the browser render only, held on the CLIP-76 gap | 4 |
+| CLIP | 36 | 36 | - | 4 |
 | CDS | 22 | 22 | - | 1 |
 | BILL | 4 | 4 | - | 0 |
 
@@ -57,12 +57,21 @@
 | T247 | ②'s dock is the revision composer over 렌더하기 and 확정하기 | CLIP | T246 T242 | todo |
 | T248 | 확정하기 opens the finalization dialog | CLIP | T247 | todo |
 | T249 | ②'s reference opens on demand | CLIP | T248 | todo |
+| T250 | the browser states whether it can render, and refuses with one reason | CLIP | T242 | todo |
+| T251 | the browser composites and encodes the video track | CLIP | T250 | todo |
+| T252 | the browser builds and encodes the audio track | CLIP | T251 | todo |
+| T253 | the browser muxes its output, measures it and stores it before it is shown | CLIP | T252 T243 | todo |
+| T254 | ② runs the browser render with its own progress and cancellation | CLIP | T253 T247 | todo |
 
 ## next
-- update-ssot CLIP: CLIP-154 says a browser render's file is never uploaded while CLIP-76 preserves the confirmed result for preview/download and CLIP-21 keeps it until deletion — a browser-rendered clip has no file for the server to keep, and the browser cluster cannot be planned until that is settled
+- implement-task T241, then T242→T243 (the contract), T244→T249 (②'s surfaces) and T250→T254 (the browser render, behind T242 T243 T247)
 - implement-task T241, then T242→T243 (the contract) and T244→T249 (②'s surfaces); the two chains are independent until T247, which needs T242's render kind
 - T177 stays blocked (its viewing checklist predates the caption style set, the outline and now ②'s shape) and T008 is another session's
 ## log
+- 260918 create-task CLIP done; the browser render becomes T250 the capability refusal, T251 the video track, T252 the audio track, T253 the mux/measure/store, T254 ②'s own progress and cancellation — the server already typesets every caption PNG the draft preview draws, so the browser composites them and never sets type itself
+- 260918 create-task CLIP start (the browser render cluster)
+- 260918 update-ssot CLIP r36 done; a browser render stores its file before the owner sees it and is unsuccessful until it does, so ② always plays what it will hand over and CLIP-76's preserved result holds for both kinds — the server records the browser's own verdict instead of decoding the stored file again
+- 260918 update-ssot CLIP start — a browser render's file reaches the server before the owner sees it
 - 260918 create-task CLIP done; T235–T240 discarded and r34+r35 re-cut as T241 the plan-only generation, T242 the recorded render kind, T243 the pre-render checks, T244 the timeline, T245 the item sheets, T246 the preview's own controls, T247 the docked composer with 렌더하기, T248 the finalization dialog, T249 the reference sheet — the browser render (CLIP-153 CLIP-154 CLIP-155 CLIP-156) is NOT tasked, see next
 - 260918 browser render decided as WebCodecs + an mp4 muxer rather than ffmpeg.wasm (owner, 260918): hardware-accelerated and tens of KB against ffmpeg.wasm's tens of MB and its COOP/COEP requirement, at the cost of a different pipeline from the server's, which pushes CLIP-157 toward output-contract parity rather than pixel parity
 - 260918 create-task CLIP start (r35, re-planning T237 T238 T239 with it)
@@ -79,7 +88,3 @@
 - 260918 update-ssot CLIP start — ②'s mobile shape: the correction surfaces, the download, the revision request and the dock
 - 260918 T230 done; the copied guide teaches the outline and nothing it retired, the example carries stages and a caption, and a paste refuses only unreadable grammar — found and fixed an editor crash on a body with more region lines than the preset holds
 - 260918 T230 claimed (otl)
-- 260918 T229 done; the editor is name, description and one outline the builder and 원문 share — no design step, every entry reorderable and deletable, region lines added one at a time — and ① narrows a bound answer with its own preset (the CLIP-117 gap T227 opened)
-- 260918 T229 claimed (otl)
-- 260918 T231 done; the pace and the accent stop being seeded too, the FE stops copying the five onto the draft, and an r23 design-first body is pinned through store → converted read → save → mint
-- 260918 T231 claimed (otl)
