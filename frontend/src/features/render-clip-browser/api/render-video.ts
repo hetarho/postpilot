@@ -1,4 +1,5 @@
 import { createBrowserSourceFrames } from '../lib/source-frames'
+import type { BrowserOriginals } from '../lib/originals'
 import {
   createClipVideoWorker,
   type BrowserVideoInput,
@@ -15,9 +16,15 @@ export function renderBrowserVideo(
   localSources: readonly { fingerprint: string; url: string }[],
   resolvePlayback: (fingerprint: string) => Promise<string>,
   signal?: AbortSignal,
+  originals?: BrowserOriginals,
 ): BrowserVideoRender {
   const controller = new AbortController()
-  const sources = createBrowserSourceFrames(localSources, resolvePlayback, controller.signal)
+  const sources = createBrowserSourceFrames(
+    localSources,
+    resolvePlayback,
+    controller.signal,
+    originals,
+  )
   const worker = createClipVideoWorker()
   const send = (message: VideoWorkerInput, transfer: Transferable[] = []) =>
     worker.postMessage(message, transfer)

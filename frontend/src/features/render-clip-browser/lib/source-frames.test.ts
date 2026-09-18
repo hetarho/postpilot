@@ -11,11 +11,7 @@ it('fetches an unheld original once before its first frame, and reuses it across
     close: vi.fn(),
   }
   const ports = {
-    resolve: vi.fn(async () => {
-      events.push('access')
-      return 'authorized-playback'
-    }),
-    load: vi.fn(async () => {
+    read: vi.fn(async () => {
       events.push('fetch')
       return new Blob()
     }),
@@ -27,26 +23,25 @@ it('fetches an unheld original once before its first frame, and reuses it across
   const frames = new BrowserSourceFrames(ports, new AbortController().signal)
   await frames.frame('fingerprint', 1000)
   await frames.frame('fingerprint', 5000)
-  expect(events).toEqual(['access', 'fetch', 'open', 'frame:1000', 'frame:5000'])
-  expect(ports.load).toHaveBeenCalledOnce()
+  expect(events).toEqual(['fetch', 'open', 'frame:1000', 'frame:5000'])
+  expect(ports.read).toHaveBeenCalledOnce()
   frames.dispose()
   await Promise.resolve()
   expect(source.close).toHaveBeenCalledOnce()
 })
 
-it('cancellation after access never fetches or decodes the original', async () => {
+it('cancellation after a source read never opens its decoder', async () => {
   const controller = new AbortController()
   const ports = {
-    resolve: vi.fn(async () => {
+    read: vi.fn(async () => {
       controller.abort()
-      return 'url'
+      return new Blob()
     }),
-    load: vi.fn(),
     open: vi.fn(),
   }
   const frames = new BrowserSourceFrames(ports, controller.signal)
   await expect(frames.frame('fp', 0)).rejects.toMatchObject({ name: 'AbortError' })
-  expect(ports.load).not.toHaveBeenCalled()
+  expect(ports.read).toHaveBeenCalledOnce()
   expect(ports.open).not.toHaveBeenCalled()
   frames.dispose()
 })

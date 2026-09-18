@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { Film, GripVertical } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { formatDuration } from '@/shared/lib/video'
+import { formatDuration } from '@/shared/lib/media'
 import { Button, FieldLabel, Listbox, Switch, Typography } from '@/shared/ui'
 import { moveInOrder, reorderTargetIndex } from '../model/source-order'
 

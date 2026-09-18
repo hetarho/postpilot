@@ -1,8 +1,9 @@
 import { CLIP_BROWSER_RENDER } from '@/shared/config'
+import { BrowserOriginals } from './originals'
 
 interface SourceFramePorts {
-  resolve: (fingerprint: string) => Promise<string>
-  load: (url: string, signal: AbortSignal) => Promise<Blob>
+  read: (fingerprint: string) => Promise<Blob>
+  dispose?: () => void
   open: (
     blob: Blob,
     signal: AbortSignal,
@@ -23,9 +24,7 @@ export class BrowserSourceFrames {
     this.signal.throwIfAborted()
     let source = this.sources.get(fingerprint)
     if (!source) {
-      source = this.ports.resolve(fingerprint).then(async (url) => {
-        this.signal.throwIfAborted()
-        const blob = await this.ports.load(url, this.signal)
+      source = this.ports.read(fingerprint).then(async (blob) => {
         this.signal.throwIfAborted()
         return this.ports.open(blob, this.signal)
       })
@@ -42,6 +41,7 @@ export class BrowserSourceFrames {
         () => {},
       )
     this.sources.clear()
+    this.ports.dispose?.()
   }
 }
 
@@ -108,17 +108,13 @@ export function createBrowserSourceFrames(
   localSources: readonly { fingerprint: string; url: string }[],
   resolvePlayback: (fingerprint: string) => Promise<string>,
   signal: AbortSignal,
+  originals?: BrowserOriginals,
 ) {
+  const reader = originals ?? new BrowserOriginals(localSources, resolvePlayback, signal)
   return new BrowserSourceFrames(
     {
-      resolve: async (fingerprint) =>
-        localSources.find((s) => s.fingerprint === fingerprint)?.url ??
-        resolvePlayback(fingerprint),
-      load: async (url, signal) => {
-        const response = await fetch(url, { signal })
-        if (!response.ok) throw new Error('CLIP_SOURCE_UNAVAILABLE')
-        return response.blob()
-      },
+      read: reader.get,
+      dispose: originals ? undefined : () => reader.dispose(),
       open: openBrowserSourceVideo,
     },
     signal,

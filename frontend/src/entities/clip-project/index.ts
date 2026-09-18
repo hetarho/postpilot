@@ -181,6 +181,7 @@ export { ClipNoticeList } from './ui/ClipNoticeList'
 export { reorderTargetIndex, moveInOrder } from './model/source-order'
 
 export { createClipVideoWorker } from './lib/create-video-worker'
+export { browserAudioPlan } from './model/browser-audio-plan'
 export type {
   BrowserVideoInput,
   BrowserVideoProgress,

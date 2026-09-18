@@ -11,7 +11,7 @@ import {
   type ClipSourceObservation,
   type ClipAddCutSelection,
 } from '@/entities/clip-project'
-import { formatDuration } from '@/shared/lib/video'
+import { formatDuration } from '@/shared/lib/media'
 import { Button, Sheet, Typography } from '@/shared/ui'
 import { AddObservedCut } from './AddObservedCut'
 

@@ -10,6 +10,7 @@ export const CLIP_BROWSER_RENDER = {
   audioSampleRate: 48_000,
   audioChannels: 2,
   audioBitrate: 192_000,
+  audioBatchFrames: 2048,
   encodeQueueFrames: 4,
   keyFrameIntervalFrames: 60,
   sourceTimeoutMs: 30_000,

@@ -1,7 +1,7 @@
 import { File as NodeFile } from 'node:buffer'
 import { webcrypto, createHash } from 'node:crypto'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { readVideoMetadata } from '@/shared/lib/video'
+import { readVideoMetadata } from '@/shared/lib/media'
 import { CLIP_SOURCE_MAX_FILE_BYTES, CLIP_SOURCE_FINGERPRINT_CHUNK_BYTES } from '@/shared/config'
 import {
   checkSourceFiles,
@@ -10,7 +10,10 @@ import {
   sourceFingerprint,
 } from './manifest'
 
-vi.mock('@/shared/lib/video', () => ({ readVideoMetadata: vi.fn() }))
+vi.mock('@/shared/lib/media', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/shared/lib/media')>()),
+  readVideoMetadata: vi.fn(),
+}))
 const metadata = { durationMs: 1234, width: 1920, height: 1080 }
 const file = (name = 'a.mp4', type = 'video/mp4', content = 'clip') =>
   new NodeFile([content], name, { type }) as unknown as File

@@ -8,7 +8,7 @@ import {
   CLIP_SOURCE_MAX_FILE_BYTES,
   CLIP_SOURCE_MAX_FILENAME_CHARS,
 } from '@/shared/config'
-import { readVideoMetadata, type VideoMetadata } from '@/shared/lib/video'
+import { readVideoMetadata, type VideoMetadata } from '@/shared/lib/media'
 
 export type ClipSelectionReason =
   | 'count'
