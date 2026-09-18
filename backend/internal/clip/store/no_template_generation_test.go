@@ -77,7 +77,7 @@ func TestAClipIsMintedGeneratedAndRerenderedWithNoTemplate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := h.service.StartRender(t.Context(), "alice", p.ID, batch.ID, changed.EditPlanRevision); err != nil {
+	if _, err := h.service.StartRender(t.Context(), "alice", p.ID, batch.ID, changed.EditPlanRevision, clip.RenderServer); err != nil {
 		t.Fatal("a rerender refused a project with no template", err)
 	}
 	if err := runRender(t, h); err != nil {

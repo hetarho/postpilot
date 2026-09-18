@@ -318,7 +318,7 @@ func TestOriginalRerenderReusesFullManifestWithoutUnusedMissingPixels(t *testing
 	ctx := context.Background()
 	unused := h.batch.Sources[1].Key
 	delete(h.objects.info, unused)
-	if _, err := h.service.StartRender(ctx, "alice", p.ID, h.batch.ID, p.EditPlanRevision); err != nil {
+	if _, err := h.service.StartRender(ctx, "alice", p.ID, h.batch.ID, p.EditPlanRevision, clip.RenderServer); err != nil {
 		t.Fatal(err)
 	}
 	if err := runRender(t, h); err != nil {

@@ -103,7 +103,14 @@ type renderPayload struct {
 	Batch          SourceBatch
 }
 
-func (s *GenerationService) StartRender(ctx context.Context, user, id, batch string, revision int) (string, error) {
+func (s *GenerationService) StartRender(ctx context.Context, user, id, batch string, revision int, kind RenderKind) (string, error) {
+	switch kind {
+	case RenderServer:
+	case RenderBrowser:
+		return "", ErrRenderUnavailable
+	default:
+		return "", ErrInvalid
+	}
 	p, err := s.projects.store.GetProject(ctx, user, id)
 	if err != nil {
 		return "", err
@@ -309,7 +316,7 @@ func (s *GenerationService) RunRender(ctx context.Context, user, job, project st
 		if err = s.uploadPath(ctx, key, video.Path, video.Bytes); err != nil {
 			return err
 		}
-		result = Result{Key: key, ContentType: "video/mp4", Bytes: video.Bytes, DurationMS: video.Info.DurationMS, CreatedAt: time.Now()}
+		result = Result{Kind: RenderServer, Key: key, ContentType: "video/mp4", Bytes: video.Bytes, DurationMS: video.Info.DurationMS, CreatedAt: time.Now()}
 		return nil
 	})
 	if err != nil {

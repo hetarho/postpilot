@@ -20,6 +20,7 @@ type ClipAttemptResult struct {
 	ResultBytes       int64
 	ResultDurationMs  int64
 	ResultCreatedAt   string
+	RenderKind        string
 }
 
 type ClipGenerationQuote struct {
@@ -72,6 +73,7 @@ type ClipProject struct {
 	IntroPreset              string
 	OutroPreset              string
 	AllowedCaptionStyles     string
+	RenderKind               string
 }
 
 type ClipSourceAttempt struct {

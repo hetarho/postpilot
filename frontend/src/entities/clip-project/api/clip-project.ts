@@ -3,6 +3,7 @@ import { useTransport } from '@connectrpc/connect-query'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ClipService,
+  ClipRenderKind,
   contentLanguageToProto,
   contentLanguageFromProto,
   type ProtoClipProject,
@@ -94,6 +95,12 @@ export function toClipProject(value: ProtoClipProject): ClipProject {
     updatedAt: value.updatedAt,
     editPlanRevision: value.editPlanRevision,
     renderedPlanRevision: value.renderedPlanRevision,
+    lastRenderKind: value.result
+      ? value.lastRenderKind === ClipRenderKind.BROWSER ||
+        value.result.renderKind === ClipRenderKind.BROWSER
+        ? 'browser'
+        : 'server'
+      : undefined,
     latestJob: value.latestJob ? toGenerationJob(value.latestJob) : undefined,
     latestAttempt:
       value.latestAttempt?.jobId && value.latestAttempt.batchId
@@ -112,6 +119,7 @@ export function toClipProject(value: ProtoClipProject): ClipProject {
     result: value.result
       ? {
           ...(value.result.id ? { id: value.result.id } : {}),
+          renderKind: value.result.renderKind === ClipRenderKind.BROWSER ? 'browser' : 'server',
           contentType: value.result.contentType,
           bytes: Number(value.result.bytes),
           durationMs: value.result.durationMs,

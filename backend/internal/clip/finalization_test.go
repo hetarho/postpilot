@@ -13,8 +13,11 @@ func TestNativeFinalizationUsesSavedEvidenceWithoutPixelsOrLayout(t *testing.T) 
 	p.UserID, p.ID, p.EditPlanRevision, p.RenderedPlanRevision = "owner", "project", 2, 2
 	p.Result = &clip.Result{ID: "result", Key: "clip-results/result.mp4", ContentType: "video/mp4", Bytes: 100, DurationMS: plan.DurationMS, CreatedAt: time.Now()}
 	req := clip.FinalizationRequest{UserID: p.UserID, ProjectID: p.ID, ExpectedRevision: 2, ExpectedResultID: "result"}
-	if err := clip.ValidateFinalization(p, req, config.ClipRender(&config.Config{})); err != nil {
-		t.Fatal(err)
+	for _, kind := range []clip.RenderKind{"", clip.RenderServer, clip.RenderBrowser} {
+		p.Result.Kind = kind
+		if err := clip.ValidateFinalization(p, req, config.ClipRender(&config.Config{})); err != nil {
+			t.Fatal(kind, err)
+		}
 	}
 	plan.Portable.Elements[0].StaleEvidence = true
 	var err error

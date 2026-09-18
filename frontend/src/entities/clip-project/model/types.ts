@@ -19,6 +19,7 @@ export { CLIP_DISCLOSURES, CLIP_CTAS } from '@/shared/config'
 import { CLIP_CTAS, CLIP_DISCLOSURES } from '@/shared/config'
 export type { ClipDisclosureId, ClipCTAId } from '@/shared/config'
 export type ClipRatio = (typeof CLIP_RATIOS)[number]
+export type ClipRenderKind = 'server' | 'browser'
 export const CLIP_PROJECT_LIMITS = {
   title: 100,
   answer: 500,
@@ -75,6 +76,7 @@ export interface ClipProject extends ClipProjectDraft {
   updatedAt: string
   editPlanRevision: number
   renderedPlanRevision: number
+  lastRenderKind?: ClipRenderKind
   latestJob?: GenerationJob
   latestAttempt?: { jobId: string; batchId: string; quoteId: string }
   accounting?: ClipAccounting
@@ -82,6 +84,7 @@ export interface ClipProject extends ClipProjectDraft {
   attemptInspection?: ClipAttemptInspection
   observations?: ClipObservations
   result?: {
+    renderKind?: ClipRenderKind
     id?: string
     contentType: string
     bytes: number

@@ -5,7 +5,7 @@ package clip
 func SameAttemptResult(a, b AttemptResult) bool {
 	return a.JobID == b.JobID && a.UserID == b.UserID && a.ProjectID == b.ProjectID &&
 		a.ExpectedRevision == b.ExpectedRevision && a.Analysis == b.Analysis && a.EditPlan == b.EditPlan &&
-		a.Result.Key == b.Result.Key && a.Result.ContentType == b.Result.ContentType &&
+		a.Result.RenderKind() == b.Result.RenderKind() && a.Result.Key == b.Result.Key && a.Result.ContentType == b.Result.ContentType &&
 		a.Result.Bytes == b.Result.Bytes && a.Result.DurationMS == b.Result.DurationMS &&
 		a.Result.CreatedAt.Equal(b.Result.CreatedAt)
 }

@@ -183,6 +183,8 @@ func toConnectError(err error) error {
 		return rpcserver.NewAppError(connect.CodeNotFound, "clip or video template not found", "CLIP_NOT_FOUND", nil)
 	case errors.Is(err, clip.ErrDuplicateName):
 		return rpcserver.NewAppError(connect.CodeAlreadyExists, "video template name already exists", "CLIP_TEMPLATE_NAME_TAKEN", nil)
+	case errors.Is(err, clip.ErrRenderUnavailable):
+		return connect.NewError(connect.CodeUnimplemented, err)
 	case errors.Is(err, clip.ErrInvalid):
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid clip input", "CLIP_INVALID_INPUT", nil)
 	default:
@@ -250,6 +252,11 @@ func projectProto(p clip.Project) *v1.ClipProject {
 	}
 	if r := p.Result; r != nil {
 		out.Result = &v1.ClipResult{Id: r.ID, ContentType: r.ContentType, Bytes: r.Bytes, DurationMs: int32(r.DurationMS), CreatedAt: r.CreatedAt.UTC().Format(time.RFC3339Nano), ViewUrl: r.ViewURL, DownloadUrl: r.DownloadURL}
+		kind := v1.ClipRenderKind_CLIP_RENDER_KIND_SERVER
+		if r.RenderKind() == clip.RenderBrowser {
+			kind = v1.ClipRenderKind_CLIP_RENDER_KIND_BROWSER
+		}
+		out.Result.RenderKind, out.LastRenderKind = kind, &kind
 	}
 	return out
 }

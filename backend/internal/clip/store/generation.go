@@ -118,7 +118,7 @@ func (s *Store) SaveGeneration(ctx context.Context, user, id, analysis, plan str
 				return struct{}{}, err
 			}
 		}
-		n, err := q.SaveGeneration(ctx, sqlc.SaveGenerationParams{AnalysisJson: nullable(analysis), EditPlanJson: nullable(plan), ResultKey: nullable(r.Key), ResultContentType: nullable(r.ContentType), ResultBytes: sql.NullInt64{Int64: r.Bytes, Valid: true}, ResultDurationMs: sql.NullInt64{Int64: int64(r.DurationMS), Valid: true}, ResultCreatedAt: nullable(stamp(r.CreatedAt)), UpdatedAt: stamp(r.CreatedAt), UserID: user, ID: id})
+		n, err := q.SaveGeneration(ctx, sqlc.SaveGenerationParams{RenderKind: string(r.RenderKind()), AnalysisJson: nullable(analysis), EditPlanJson: nullable(plan), ResultKey: nullable(r.Key), ResultContentType: nullable(r.ContentType), ResultBytes: sql.NullInt64{Int64: r.Bytes, Valid: true}, ResultDurationMs: sql.NullInt64{Int64: int64(r.DurationMS), Valid: true}, ResultCreatedAt: nullable(stamp(r.CreatedAt)), UpdatedAt: stamp(r.CreatedAt), UserID: user, ID: id})
 		if e := affected(n, err); e != nil {
 			return struct{}{}, e
 		}

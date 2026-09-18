@@ -160,7 +160,7 @@ func TestARevisionIsOneJobAtATimeLikeEveryOtherClipJob(t *testing.T) {
 	if _, err := h.service.QuoteRevision(t.Context(), "alice", h.project.ID, "또", clip.RevisionFlow, "p/o", "p/w"); !errors.Is(err, clip.ErrBusy) {
 		t.Fatal("a second revision was quoted while one was running", err)
 	}
-	if _, err := h.service.StartRender(t.Context(), "alice", h.project.ID, h.batch.ID, 1); err == nil {
+	if _, err := h.service.StartRender(t.Context(), "alice", h.project.ID, h.batch.ID, 1, clip.RenderServer); err == nil {
 		t.Fatal("a render started beside a running revision")
 	}
 }

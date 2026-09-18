@@ -49,7 +49,6 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
-| T242 | a render is started per kind and records the kind with its result | CLIP | T241 | todo |
 | T243 | every plan check runs on the server before a render of either kind | CLIP | T242 | todo |
 | T247 | ②'s dock is the revision composer over 렌더하기 and 확정하기 | CLIP | T246 T242 | todo |
 | T248 | 확정하기 opens the finalization dialog | CLIP | T247 | todo |
@@ -63,12 +62,13 @@
 | T257 | the approval surface quotes the longest render its styles can produce | CLIP CDS | - | todo |
 
 ## next
-- implement-task T256 — the mix the owner already selected still renders as one style; no dep
-- T257 is independent of it and of the browser cluster
-- implement-task T242 — claimable and unstarted: r37 is in it, its dep T241 is done and no code was written for it
-- after T242: T247 is ②'s next step and T243 T250 open the browser cluster
-- T177 stays blocked (its viewing checklist predates the caption style set, the outline and now ②'s shape) and T008 is another session's; ideation post-quality-and-related-links is complete enough to convert (first domain candidate: a new QUAL) and waits on the owner's word
+- implement-task T243 — the next dependency-ready todo in table order; T247 and T250 are also unblocked by T242.
+- T256 and T257 remain independent of the browser cluster.
+- T177 stays blocked; T008 belongs to another session; post-quality-and-related-links awaits conversion.
 ## log
+- 260918 T242 done; render kind survives the result and completion staging, old results read as server, and project reads expose the last successful kind.
+- 260918 out of scope: frontend/src/pages/editor/ui/DraftEditor.tsx:140 has an existing storedAnswers useMemo dependency warning; lint passes with no errors.
+- 260918 T242 claimed (rnd)
 - 260918 create-task CLIP CDS done; T256 reverses the narration contract so a caption carries its own style (owner > narration > default, out-of-set falls back with one notice and spends no correction), T257 turns the pre-generation quote from a style count into the longest render the selection admits — neither depends on the other and both are independent of the browser cluster
 - 260918 create-task CLIP CDS start (r38/r23: a style per caption, the sequence quote)
 - 260918 ideation post-quality-and-related-links: 추천글 is a template position carrying its own count, tag-matched, excluding links used in the last N posts, rendered as title plus URL and filled by code after validation from the verified Naver URLs PUB-15 already keeps, the model never seeing one; quality is measure-then-offer over the account's recent published posts with four metrics as pass/warn badges and no composite score; research corrected two premises — 도배율 is 블라이's label rather than Naver's, and Naver's own spam page names template-driven bulk publishing and repeated identical links, which reversed the free-repeat and bare-URL decisions
@@ -86,11 +86,3 @@
 - 260918 out of scope, CONFIRMED by local `pnpm smoke:input`: the release smokes still require a generation to leave a result file — `clip_release_test.go:214` (and :802) fail on `Result == nil` with the job done and no failure, which is exactly CLIP-151 as T241 implemented it (ARCH-38 keeps the rollout, which is green); both smokes have to start a render after the plan, so the repair belongs with T242 and needs a task
 - 260918 T246 done; the scrubber, one info control and the icon download are the preview's own row, and `Slider` gained a labelless one-row shape for it — the parity copy left `ClipDraftPreview` with the `precise` state its block was the only reader of, and `FinalizeClipNotices` lost its notice list but keeps the refusal and the uncertain retry until T248's dialog takes them
 - 260918 T246 claimed (sht)
-- 260918 T245 done; one Sheet holds whichever item the timeline selected, its `open` derived from the selection alone so closing it clears the selection — and ② now arrives with NOTHING selected, since the first cut being selected would have landed the step with a sheet over the preview it exists to review; `survivingSelection` had to keep an absent selection absent, or every acknowledged autosave reopened the sheet
-- 260918 T245 claimed (sht)
-- 260918 T244 done; every cut draws its thumbnail at once, each ruler tick and label is bounded by its own cut and dropped below CLIP_TIMELINE.minLabelPx, undo/redo head the timeline as icon controls, and the save state is the page's status region alone — hiding a label also hid the control's name, so each bar now carries its own aria-label
-- 260918 T241 done; the generation ends on the validated plan, `SaveGeneratedPlan` advances the analysis and the plan while `result_*`/`rendered_plan_revision` stand, and a file-less completion skips the staging row and applies its plan in the job's own terminal transaction
-- 260918 out of scope: `renderLoader`'s `verifyRetained` probe lost its only caller with the generation's render stage; the render job does the same identity check itself (review-code candidate)
-- 260918 update-ssot CLIP r37 done; the browser render draws every style including the sequence ones — it sets no type and applies only the motion, so the two kinds owe the same clip and not the same file and a caption that moves differently between them is not a defect; the originals a page lacks are fetched rather than refusing the kind, leaving the encoders and the memory as the two refusals; the kind offered first is the project's last one and the browser kind where it has none; CLIP-126 closes with no wall-clock committed
-- 260918 r37 rewrites T250's three refusals to two and gives T251 the per-style motion it never carried; T241 and T244 (both doing) are outside it
-- 260918 T244 claimed (ctr)

@@ -95,18 +95,18 @@ func TestCorrectionSaveConflictSubsetRenderAndZeroUsage(t *testing.T) {
 	if _, err = h.service.SaveCorrection(ctx, "alice", old.ID, 1, draft); !errors.Is(err, clip.ErrPlanConflict) {
 		t.Fatal(err)
 	}
-	if _, err = h.service.StartRender(ctx, "alice", old.ID, "missing", 1); !errors.Is(err, clip.ErrPlanConflict) {
+	if _, err = h.service.StartRender(ctx, "alice", old.ID, "missing", 1, clip.RenderServer); !errors.Is(err, clip.ErrPlanConflict) {
 		t.Fatal(err)
 	}
 	b := rerenderBatch(t, h, true)
-	if _, err = h.service.StartRender(ctx, "bob", old.ID, b.ID, 2); !errors.Is(err, clip.ErrNotFound) {
+	if _, err = h.service.StartRender(ctx, "bob", old.ID, b.ID, 2, clip.RenderServer); !errors.Is(err, clip.ErrNotFound) {
 		t.Fatal(err)
 	}
-	id, err := h.service.StartRender(ctx, "alice", old.ID, b.ID, 2)
+	id, err := h.service.StartRender(ctx, "alice", old.ID, b.ID, 2, clip.RenderServer)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err = h.service.StartRender(ctx, "alice", old.ID, b.ID, 2); !errors.Is(err, clip.ErrBusy) {
+	if _, err = h.service.StartRender(ctx, "alice", old.ID, b.ID, 2, clip.RenderServer); !errors.Is(err, clip.ErrBusy) {
 		t.Fatal(err)
 	}
 	if _, err = h.service.SaveCorrection(ctx, "alice", old.ID, 2, draft); !errors.Is(err, clip.ErrBusy) {
@@ -124,6 +124,9 @@ func TestCorrectionSaveConflictSubsetRenderAndZeroUsage(t *testing.T) {
 	}
 	if got.EditPlan != saved.EditPlan || got.Analysis != old.Analysis || got.EditPlanRevision != 2 || got.RenderedPlanRevision != 2 || got.Result.Key == old.Result.Key {
 		t.Fatal(got)
+	}
+	if got.Result.Kind != clip.RenderServer {
+		t.Fatal("server render kind lost", got.Result)
 	}
 	if len(h.admitter.calls) != 0 || h.planner.observe != 0 || h.planner.plans != 0 {
 		t.Fatal("render used AI or credits")
@@ -159,7 +162,7 @@ func TestCorrectionFailuresPreserveSavedPlanAndOldVideo(t *testing.T) {
 				t.Fatal(err)
 			}
 			b := rerenderBatch(t, h, true)
-			if _, err = h.service.StartRender(ctx, "alice", old.ID, b.ID, 2); err != nil {
+			if _, err = h.service.StartRender(ctx, "alice", old.ID, b.ID, 2, clip.RenderServer); err != nil {
 				t.Fatal(err)
 			}
 			switch stage {

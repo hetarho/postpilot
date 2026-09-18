@@ -23,6 +23,7 @@ export type { ClipCanvasBox, ClipCaptionFragment, ClipCaptionPreview } from './a
 export type { ClipState } from './model/state'
 export type {
   ClipRatio,
+  ClipRenderKind,
   ClipDisclosureId,
   ClipCTAId,
   ClipProjectDraft,

@@ -19,7 +19,7 @@ func (q *Queries) DeleteAttemptResult(ctx context.Context, jobID string) error {
 }
 
 const getAttemptResult = `-- name: GetAttemptResult :one
-SELECT job_id, user_id, project_id, expected_revision, analysis_json, edit_plan_json, result_key, result_content_type, result_bytes, result_duration_ms, result_created_at FROM clip_attempt_results WHERE job_id=?
+SELECT job_id, user_id, project_id, expected_revision, analysis_json, edit_plan_json, result_key, result_content_type, result_bytes, result_duration_ms, result_created_at, render_kind FROM clip_attempt_results WHERE job_id=?
 `
 
 func (q *Queries) GetAttemptResult(ctx context.Context, jobID string) (ClipAttemptResult, error) {
@@ -37,12 +37,13 @@ func (q *Queries) GetAttemptResult(ctx context.Context, jobID string) (ClipAttem
 		&i.ResultBytes,
 		&i.ResultDurationMs,
 		&i.ResultCreatedAt,
+		&i.RenderKind,
 	)
 	return i, err
 }
 
 const pendingAttemptResults = `-- name: PendingAttemptResults :many
-SELECT job_id, user_id, project_id, expected_revision, analysis_json, edit_plan_json, result_key, result_content_type, result_bytes, result_duration_ms, result_created_at FROM clip_attempt_results ORDER BY result_created_at,job_id
+SELECT job_id, user_id, project_id, expected_revision, analysis_json, edit_plan_json, result_key, result_content_type, result_bytes, result_duration_ms, result_created_at, render_kind FROM clip_attempt_results ORDER BY result_created_at,job_id
 `
 
 func (q *Queries) PendingAttemptResults(ctx context.Context) ([]ClipAttemptResult, error) {
@@ -66,6 +67,7 @@ func (q *Queries) PendingAttemptResults(ctx context.Context) ([]ClipAttemptResul
 			&i.ResultBytes,
 			&i.ResultDurationMs,
 			&i.ResultCreatedAt,
+			&i.RenderKind,
 		); err != nil {
 			return nil, err
 		}
@@ -81,8 +83,8 @@ func (q *Queries) PendingAttemptResults(ctx context.Context) ([]ClipAttemptResul
 }
 
 const stageAttemptResult = `-- name: StageAttemptResult :exec
-INSERT INTO clip_attempt_results(job_id,user_id,project_id,expected_revision,analysis_json,edit_plan_json,result_key,result_content_type,result_bytes,result_duration_ms,result_created_at)
-VALUES(?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(job_id) DO NOTHING
+INSERT INTO clip_attempt_results(job_id,user_id,project_id,expected_revision,analysis_json,edit_plan_json,result_key,result_content_type,result_bytes,result_duration_ms,result_created_at,render_kind)
+VALUES(?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(job_id) DO NOTHING
 `
 
 type StageAttemptResultParams struct {
@@ -97,6 +99,7 @@ type StageAttemptResultParams struct {
 	ResultBytes       int64
 	ResultDurationMs  int64
 	ResultCreatedAt   string
+	RenderKind        string
 }
 
 func (q *Queries) StageAttemptResult(ctx context.Context, arg StageAttemptResultParams) error {
@@ -112,6 +115,7 @@ func (q *Queries) StageAttemptResult(ctx context.Context, arg StageAttemptResult
 		arg.ResultBytes,
 		arg.ResultDurationMs,
 		arg.ResultCreatedAt,
+		arg.RenderKind,
 	)
 	return err
 }

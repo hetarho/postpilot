@@ -19,7 +19,7 @@ import {
   type ModelAvailability,
   type ModelRef,
 } from '@/entities/model-catalog'
-import { ClipService, appFailureFromConnect, type AppFailure } from '@/shared/api'
+import { ClipService, ClipRenderKind, appFailureFromConnect, type AppFailure } from '@/shared/api'
 import { POLL_INTERVAL_MS } from '@/shared/config'
 import {
   clipModelsReady,
@@ -121,6 +121,7 @@ export function useGenerateClip(ownerId: string, project: ClipProject, ownedJobI
       const response =
         input.kind === 'render'
           ? await client.startClipRender({
+              renderKind: ClipRenderKind.SERVER,
               projectId: project.id,
               batchId: input.batchId,
               expectedRevision: input.revision,

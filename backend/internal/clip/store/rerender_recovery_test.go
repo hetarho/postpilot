@@ -28,7 +28,7 @@ func TestRenderRejectsRevisionRaceBeforeLinkWithoutConsumingSources(t *testing.T
 		}
 	}}
 	s := clip.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, h.planner, h.renderer, jobs, h.cfg).WithFinisher(generationFinisher{h.store})
-	if _, err := s.StartRender(ctx, "alice", p.ID, b.ID, 1); !errors.Is(err, clip.ErrPlanConflict) {
+	if _, err := s.StartRender(ctx, "alice", p.ID, b.ID, 1, clip.RenderServer); !errors.Is(err, clip.ErrPlanConflict) {
 		t.Fatal(err)
 	}
 	b, err := h.store.GetSourceBatch(ctx, "alice", b.ID)
@@ -49,7 +49,7 @@ func TestRenderCancellationMalformedPanicAndBootAlwaysClean(t *testing.T) {
 			h, p, _ := completedClip(t)
 			ctx := context.Background()
 			b := rerenderBatch(t, h, true)
-			if _, err := h.service.StartRender(ctx, "alice", p.ID, b.ID, 1); err != nil {
+			if _, err := h.service.StartRender(ctx, "alice", p.ID, b.ID, 1, clip.RenderServer); err != nil {
 				t.Fatal(err)
 			}
 			j, err := h.jobs.PickNextQueued(ctx, time.Now())
@@ -112,12 +112,12 @@ func TestRenderExpiryCleanupRetryAndAtomicRevisionSwap(t *testing.T) {
 	if _, err := h.db.Writer.Exec("UPDATE clip_source_leases SET retention_expires_at=? WHERE batch_id=?", time.Now().Add(-time.Hour).Format(time.RFC3339Nano), b.ID); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := h.service.StartRender(ctx, "alice", p.ID, b.ID, 1); !errors.Is(err, clip.ErrSourceState) {
+	if _, err := h.service.StartRender(ctx, "alice", p.ID, b.ID, 1, clip.RenderServer); !errors.Is(err, clip.ErrSourceState) {
 		t.Fatal(err)
 	}
 	b = rerenderBatch(t, h, true)
 	h.objects.failDelete[b.Sources[0].Key] = true
-	if _, err := h.service.StartRender(ctx, "alice", p.ID, b.ID, 1); err != nil {
+	if _, err := h.service.StartRender(ctx, "alice", p.ID, b.ID, 1, clip.RenderServer); err != nil {
 		t.Fatal(err)
 	}
 	if err := runRender(t, h); err != nil {

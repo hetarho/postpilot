@@ -211,10 +211,19 @@ func (h *Handler) StartClipRender(ctx context.Context, req *connect.Request[v1.S
 	if err != nil {
 		return nil, err
 	}
+	var kind clip.RenderKind
+	switch req.Msg.RenderKind {
+	case v1.ClipRenderKind_CLIP_RENDER_KIND_SERVER:
+		kind = clip.RenderServer
+	case v1.ClipRenderKind_CLIP_RENDER_KIND_BROWSER:
+		kind = clip.RenderBrowser
+	default:
+		return nil, toConnectError(clip.ErrInvalid)
+	}
 	if h.generation == nil {
 		return nil, toConnectError(errors.New("clip rendering unavailable"))
 	}
-	id, err := h.generation.StartRender(ctx, user, req.Msg.ProjectId, req.Msg.BatchId, int(req.Msg.ExpectedRevision))
+	id, err := h.generation.StartRender(ctx, user, req.Msg.ProjectId, req.Msg.BatchId, int(req.Msg.ExpectedRevision), kind)
 	if err != nil {
 		return nil, toConnectError(err)
 	}

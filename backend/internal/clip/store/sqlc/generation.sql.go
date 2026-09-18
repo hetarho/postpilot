@@ -281,10 +281,11 @@ func (q *Queries) SaveGeneratedPlan(ctx context.Context, arg SaveGeneratedPlanPa
 }
 
 const saveGeneration = `-- name: SaveGeneration :execrows
-UPDATE clip_projects SET result_id=lower(hex(randomblob(16))),analysis_json=?,edit_plan_json=?,result_key=?,result_content_type=?,result_bytes=?,result_duration_ms=?,result_created_at=?,updated_at=?,edit_plan_revision=edit_plan_revision+1,rendered_plan_revision=edit_plan_revision+1 WHERE user_id=? AND id=? AND deleting=0 AND finalized_at IS NULL
+UPDATE clip_projects SET render_kind=?,result_id=lower(hex(randomblob(16))),analysis_json=?,edit_plan_json=?,result_key=?,result_content_type=?,result_bytes=?,result_duration_ms=?,result_created_at=?,updated_at=?,edit_plan_revision=edit_plan_revision+1,rendered_plan_revision=edit_plan_revision+1 WHERE user_id=? AND id=? AND deleting=0 AND finalized_at IS NULL
 `
 
 type SaveGenerationParams struct {
+	RenderKind        string
 	AnalysisJson      sql.NullString
 	EditPlanJson      sql.NullString
 	ResultKey         sql.NullString
@@ -299,6 +300,7 @@ type SaveGenerationParams struct {
 
 func (q *Queries) SaveGeneration(ctx context.Context, arg SaveGenerationParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, saveGeneration,
+		arg.RenderKind,
 		arg.AnalysisJson,
 		arg.EditPlanJson,
 		arg.ResultKey,
@@ -317,10 +319,11 @@ func (q *Queries) SaveGeneration(ctx context.Context, arg SaveGenerationParams) 
 }
 
 const saveRender = `-- name: SaveRender :execrows
-UPDATE clip_projects SET result_id=lower(hex(randomblob(16))),result_key=?,result_content_type=?,result_bytes=?,result_duration_ms=?,result_created_at=?,updated_at=?,edit_plan_json=?,rendered_plan_revision=edit_plan_revision WHERE id=? AND user_id=? AND deleting=0 AND finalized_at IS NULL AND edit_plan_revision=?
+UPDATE clip_projects SET render_kind=?,result_id=lower(hex(randomblob(16))),result_key=?,result_content_type=?,result_bytes=?,result_duration_ms=?,result_created_at=?,updated_at=?,edit_plan_json=?,rendered_plan_revision=edit_plan_revision WHERE id=? AND user_id=? AND deleting=0 AND finalized_at IS NULL AND edit_plan_revision=?
 `
 
 type SaveRenderParams struct {
+	RenderKind        string
 	ResultKey         sql.NullString
 	ResultContentType sql.NullString
 	ResultBytes       sql.NullInt64
@@ -335,6 +338,7 @@ type SaveRenderParams struct {
 
 func (q *Queries) SaveRender(ctx context.Context, arg SaveRenderParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, saveRender,
+		arg.RenderKind,
 		arg.ResultKey,
 		arg.ResultContentType,
 		arg.ResultBytes,

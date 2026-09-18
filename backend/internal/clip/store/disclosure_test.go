@@ -62,7 +62,7 @@ func TestDisclosureChoiceReachesRerenderAndCannotChangeWhileRunning(t *testing.T
 		t.Fatal("previous result lost")
 	}
 	batch := rerenderBatch(t, h, true)
-	if _, err = h.service.StartRender(t.Context(), "alice", old.ID, batch.ID, changed.EditPlanRevision); err != nil {
+	if _, err = h.service.StartRender(t.Context(), "alice", old.ID, batch.ID, changed.EditPlanRevision, clip.RenderServer); err != nil {
 		t.Fatal(err)
 	}
 	hidden = false

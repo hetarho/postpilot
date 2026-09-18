@@ -107,7 +107,13 @@ message SeedPresetFieldsRequest { string preset = 1; }
 message SeedPresetFieldsResponse { repeated ClipInformationField fields = 1; }
 message FinalizeClipProjectRequest { string project_id = 1; int32 expected_revision = 2; string expected_result_id = 3; }
 message FinalizeClipProjectResponse { ClipProject project = 1; }
+enum ClipRenderKind {
+  CLIP_RENDER_KIND_UNSPECIFIED = 0;
+  CLIP_RENDER_KIND_SERVER = 1;
+  CLIP_RENDER_KIND_BROWSER = 2;
+}
 message ClipResult {
+  ClipRenderKind render_kind = 8;
   string id = 7;
   string content_type = 1;
   int64 bytes = 2;
@@ -174,6 +180,8 @@ message ClipProject {
   string intro_preset = 34;
   string outro_preset = 35;
   repeated string allowed_caption_styles = 36;
+  // Absent until the project has a successful result; derived from that result.
+  optional ClipRenderKind last_render_kind = 37;
 }
 // One accepted request, verbatim: the instruction a generation froze, or the
 // words of a revision. An empty body under kind `instruction` is the record of a
@@ -755,7 +763,7 @@ message ClipEditingState {
 }
 message SaveClipEditPlanRequest { string project_id = 1; int32 expected_revision = 2; ClipEditPlan plan = 3; }
 message SaveClipEditPlanResponse { ClipProject project = 1; }
-message StartClipRenderRequest { string project_id = 1; int32 expected_revision = 2; string batch_id = 3; }
+message StartClipRenderRequest { string project_id = 1; int32 expected_revision = 2; string batch_id = 3; ClipRenderKind render_kind = 4; }
 message StartClipRenderResponse { string job_id = 1; }
 
 // Version 0 means unavailable; storage support never implies execution support.

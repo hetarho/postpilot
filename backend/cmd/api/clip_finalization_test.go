@@ -165,7 +165,7 @@ func TestClipFinalizationPreservesMatchingResultAndFencesEveryMutation(t *testin
 	if _, err := h.clips.SaveCorrection(t.Context(), "alice", "clip", h.project.EditPlanRevision, h.project.EditPlan); !errors.Is(err, clip.ErrFinalized) {
 		t.Fatal("no-op edit bypassed finalization", err)
 	}
-	if _, err := h.generation.StartRender(t.Context(), "alice", "clip", h.batch.ID, h.project.EditPlanRevision); !errors.Is(err, clip.ErrFinalized) {
+	if _, err := h.generation.StartRender(t.Context(), "alice", "clip", h.batch.ID, h.project.EditPlanRevision, clip.RenderServer); !errors.Is(err, clip.ErrFinalized) {
 		t.Fatal(err)
 	}
 	if _, err := h.generation.Quote(t.Context(), "alice", "clip", h.batch.ID, "p/o", "p/w"); !errors.Is(err, clip.ErrFinalized) {

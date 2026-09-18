@@ -61,7 +61,17 @@ type TemplatePatch struct {
 	InformationFields                              *[]InformationField
 }
 type Answer struct{ Label, Text string }
+type RenderKind string
+
+const (
+	RenderServer  RenderKind = "server"
+	RenderBrowser RenderKind = "browser"
+)
+
+var ErrRenderUnavailable = errors.New("browser rendering is not implemented")
+
 type Result struct {
+	Kind                 RenderKind
 	ID                   string
 	Key, ContentType     string
 	ViewURL, DownloadURL string
@@ -69,6 +79,15 @@ type Result struct {
 	DurationMS           int
 	CreatedAt            time.Time
 }
+
+// RenderKind reads results written before the kind was recorded as server work.
+func (r Result) RenderKind() RenderKind {
+	if r.Kind == "" {
+		return RenderServer
+	}
+	return r.Kind
+}
+
 type Project struct {
 	Language                                  string
 	Finalized                                 *Finalization

@@ -548,7 +548,7 @@ func (h *generationHarness) startRender(t *testing.T) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	id, err := h.service.StartRender(ctx, "alice", h.project.ID, h.batch.ID, p.EditPlanRevision)
+	id, err := h.service.StartRender(ctx, "alice", h.project.ID, h.batch.ID, p.EditPlanRevision, clip.RenderServer)
 	if err != nil {
 		t.Fatal(err)
 	}

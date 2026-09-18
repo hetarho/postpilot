@@ -20,6 +20,7 @@ export {
 export { onUnauthenticated, emitUnauthenticated } from './auth-events'
 export {
   ClipService,
+  ClipRenderKind,
   PrepareClipPreviewRequestSchema,
   PrepareClipPreviewResponseSchema,
   GetClipCaptionPreviewRequestSchema,

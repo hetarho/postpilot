@@ -92,7 +92,7 @@ func (s *Store) SaveRender(ctx context.Context, user, id string, revision int, r
 				return struct{}{}, err
 			}
 		}
-		n, err := q.SaveRender(ctx, sqlc.SaveRenderParams{EditPlanJson: nullable(raw), ResultKey: nullable(r.Key), ResultContentType: nullable(r.ContentType), ResultBytes: sql.NullInt64{Int64: r.Bytes, Valid: true}, ResultDurationMs: sql.NullInt64{Int64: int64(r.DurationMS), Valid: true}, ResultCreatedAt: nullable(stamp(r.CreatedAt)), UpdatedAt: stamp(r.CreatedAt), ID: id, UserID: user, EditPlanRevision: int64(revision)})
+		n, err := q.SaveRender(ctx, sqlc.SaveRenderParams{RenderKind: string(r.RenderKind()), EditPlanJson: nullable(raw), ResultKey: nullable(r.Key), ResultContentType: nullable(r.ContentType), ResultBytes: sql.NullInt64{Int64: r.Bytes, Valid: true}, ResultDurationMs: sql.NullInt64{Int64: int64(r.DurationMS), Valid: true}, ResultCreatedAt: nullable(stamp(r.CreatedAt)), UpdatedAt: stamp(r.CreatedAt), ID: id, UserID: user, EditPlanRevision: int64(revision)})
 		if err != nil {
 			return struct{}{}, err
 		}

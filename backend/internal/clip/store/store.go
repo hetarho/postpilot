@@ -342,7 +342,7 @@ func projectRow(r sqlc.ClipProject) (clip.Project, error) {
 		if err != nil {
 			return clip.Project{}, err
 		}
-		p.Result = &clip.Result{ID: r.ResultID.String, Key: r.ResultKey.String, ContentType: r.ResultContentType.String, Bytes: r.ResultBytes.Int64, DurationMS: int(r.ResultDurationMs.Int64), CreatedAt: at}
+		p.Result = &clip.Result{Kind: clip.RenderKind(r.RenderKind), ID: r.ResultID.String, Key: r.ResultKey.String, ContentType: r.ResultContentType.String, Bytes: r.ResultBytes.Int64, DurationMS: int(r.ResultDurationMs.Int64), CreatedAt: at}
 	}
 	if r.FinalizedAt.Valid {
 		at, err := time.Parse(time.RFC3339Nano, r.FinalizedAt.String)

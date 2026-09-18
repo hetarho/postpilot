@@ -2,6 +2,7 @@ import { create } from '@bufbuild/protobuf'
 import { Code, type ConnectError, type createRouterTransport } from '@connectrpc/connect'
 import {
   ClipService,
+  ClipRenderKind,
   ClipAnalysisEligibility,
   ListClipAnalysisEligibilityResponseSchema,
   VideoTemplateSchema,
@@ -195,6 +196,11 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
   const projectProto = (p: FakeClipProject) =>
     create(ClipProjectSchema, {
       ...p,
+      lastRenderKind: p.result
+        ? p.result.renderKind === 'browser'
+          ? ClipRenderKind.BROWSER
+          : ClipRenderKind.SERVER
+        : undefined,
       finalizedAt: p.finalized?.at,
       finalizedPlanRevision: p.finalized?.planRevision,
       finalizedResultId: p.finalized?.resultId,
@@ -211,7 +217,14 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       editing: p.editing
         ? create(ClipEditingStateSchema, { ...p.editing, plan: clipPlanToProto(p.editing.plan) })
         : undefined,
-      result: p.result ? { ...p.result, bytes: BigInt(p.result.bytes) } : undefined,
+      result: p.result
+        ? {
+            ...p.result,
+            renderKind:
+              p.result.renderKind === 'browser' ? ClipRenderKind.BROWSER : ClipRenderKind.SERVER,
+            bytes: BigInt(p.result.bytes),
+          }
+        : undefined,
       latestJob: p.latestJob ? toFakeProto(p.latestJob) : undefined,
       attemptInspection: p.attemptInspection,
       createdAt: hoursAgo(48),

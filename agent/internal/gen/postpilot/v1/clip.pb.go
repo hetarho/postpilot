@@ -80,6 +80,55 @@ func (ClipAnalysisEligibility) EnumDescriptor() ([]byte, []int) {
 	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{0}
 }
 
+type ClipRenderKind int32
+
+const (
+	ClipRenderKind_CLIP_RENDER_KIND_UNSPECIFIED ClipRenderKind = 0
+	ClipRenderKind_CLIP_RENDER_KIND_SERVER      ClipRenderKind = 1
+	ClipRenderKind_CLIP_RENDER_KIND_BROWSER     ClipRenderKind = 2
+)
+
+// Enum value maps for ClipRenderKind.
+var (
+	ClipRenderKind_name = map[int32]string{
+		0: "CLIP_RENDER_KIND_UNSPECIFIED",
+		1: "CLIP_RENDER_KIND_SERVER",
+		2: "CLIP_RENDER_KIND_BROWSER",
+	}
+	ClipRenderKind_value = map[string]int32{
+		"CLIP_RENDER_KIND_UNSPECIFIED": 0,
+		"CLIP_RENDER_KIND_SERVER":      1,
+		"CLIP_RENDER_KIND_BROWSER":     2,
+	}
+)
+
+func (x ClipRenderKind) Enum() *ClipRenderKind {
+	p := new(ClipRenderKind)
+	*p = x
+	return p
+}
+
+func (x ClipRenderKind) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ClipRenderKind) Descriptor() protoreflect.EnumDescriptor {
+	return file_postpilot_v1_clip_proto_enumTypes[1].Descriptor()
+}
+
+func (ClipRenderKind) Type() protoreflect.EnumType {
+	return &file_postpilot_v1_clip_proto_enumTypes[1]
+}
+
+func (x ClipRenderKind) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ClipRenderKind.Descriptor instead.
+func (ClipRenderKind) EnumDescriptor() ([]byte, []int) {
+	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{1}
+}
+
 type ClipPreviewParity int32
 
 const (
@@ -116,11 +165,11 @@ func (x ClipPreviewParity) String() string {
 }
 
 func (ClipPreviewParity) Descriptor() protoreflect.EnumDescriptor {
-	return file_postpilot_v1_clip_proto_enumTypes[1].Descriptor()
+	return file_postpilot_v1_clip_proto_enumTypes[2].Descriptor()
 }
 
 func (ClipPreviewParity) Type() protoreflect.EnumType {
-	return &file_postpilot_v1_clip_proto_enumTypes[1]
+	return &file_postpilot_v1_clip_proto_enumTypes[2]
 }
 
 func (x ClipPreviewParity) Number() protoreflect.EnumNumber {
@@ -129,7 +178,7 @@ func (x ClipPreviewParity) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ClipPreviewParity.Descriptor instead.
 func (ClipPreviewParity) EnumDescriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{1}
+	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{2}
 }
 
 type ClipAnalysisModelEligibility struct {
@@ -857,6 +906,7 @@ func (x *FinalizeClipProjectResponse) GetProject() *ClipProject {
 
 type ClipResult struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
+	RenderKind    ClipRenderKind         `protobuf:"varint,8,opt,name=render_kind,json=renderKind,proto3,enum=postpilot.v1.ClipRenderKind" json:"render_kind,omitempty"`
 	Id            string                 `protobuf:"bytes,7,opt,name=id,proto3" json:"id,omitempty"`
 	ContentType   string                 `protobuf:"bytes,1,opt,name=content_type,json=contentType,proto3" json:"content_type,omitempty"`
 	Bytes         int64                  `protobuf:"varint,2,opt,name=bytes,proto3" json:"bytes,omitempty"`
@@ -896,6 +946,13 @@ func (x *ClipResult) ProtoReflect() protoreflect.Message {
 // Deprecated: Use ClipResult.ProtoReflect.Descriptor instead.
 func (*ClipResult) Descriptor() ([]byte, []int) {
 	return file_postpilot_v1_clip_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *ClipResult) GetRenderKind() ClipRenderKind {
+	if x != nil {
+		return x.RenderKind
+	}
+	return ClipRenderKind_CLIP_RENDER_KIND_UNSPECIFIED
 }
 
 func (x *ClipResult) GetId() string {
@@ -1006,8 +1063,10 @@ type ClipProject struct {
 	IntroPreset          string   `protobuf:"bytes,34,opt,name=intro_preset,json=introPreset,proto3" json:"intro_preset,omitempty"`
 	OutroPreset          string   `protobuf:"bytes,35,opt,name=outro_preset,json=outroPreset,proto3" json:"outro_preset,omitempty"`
 	AllowedCaptionStyles []string `protobuf:"bytes,36,rep,name=allowed_caption_styles,json=allowedCaptionStyles,proto3" json:"allowed_caption_styles,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	// Absent until the project has a successful result; derived from that result.
+	LastRenderKind *ClipRenderKind `protobuf:"varint,37,opt,name=last_render_kind,json=lastRenderKind,proto3,enum=postpilot.v1.ClipRenderKind,oneof" json:"last_render_kind,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *ClipProject) Reset() {
@@ -1290,6 +1349,13 @@ func (x *ClipProject) GetAllowedCaptionStyles() []string {
 		return x.AllowedCaptionStyles
 	}
 	return nil
+}
+
+func (x *ClipProject) GetLastRenderKind() ClipRenderKind {
+	if x != nil && x.LastRenderKind != nil {
+		return *x.LastRenderKind
+	}
+	return ClipRenderKind_CLIP_RENDER_KIND_UNSPECIFIED
 }
 
 // One accepted request, verbatim: the instruction a generation froze, or the
@@ -7331,6 +7397,7 @@ type StartClipRenderRequest struct {
 	ProjectId        string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	ExpectedRevision int32                  `protobuf:"varint,2,opt,name=expected_revision,json=expectedRevision,proto3" json:"expected_revision,omitempty"`
 	BatchId          string                 `protobuf:"bytes,3,opt,name=batch_id,json=batchId,proto3" json:"batch_id,omitempty"`
+	RenderKind       ClipRenderKind         `protobuf:"varint,4,opt,name=render_kind,json=renderKind,proto3,enum=postpilot.v1.ClipRenderKind" json:"render_kind,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -7384,6 +7451,13 @@ func (x *StartClipRenderRequest) GetBatchId() string {
 		return x.BatchId
 	}
 	return ""
+}
+
+func (x *StartClipRenderRequest) GetRenderKind() ClipRenderKind {
+	if x != nil {
+		return x.RenderKind
+	}
+	return ClipRenderKind_CLIP_RENDER_KIND_UNSPECIFIED
 }
 
 type StartClipRenderResponse struct {
@@ -8150,9 +8224,11 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\x11expected_revision\x18\x02 \x01(\x05R\x10expectedRevision\x12,\n" +
 	"\x12expected_result_id\x18\x03 \x01(\tR\x10expectedResultId\"R\n" +
 	"\x1bFinalizeClipProjectResponse\x123\n" +
-	"\aproject\x18\x01 \x01(\v2\x19.postpilot.v1.ClipProjectR\aproject\"\xd3\x01\n" +
+	"\aproject\x18\x01 \x01(\v2\x19.postpilot.v1.ClipProjectR\aproject\"\x92\x02\n" +
 	"\n" +
-	"ClipResult\x12\x0e\n" +
+	"ClipResult\x12=\n" +
+	"\vrender_kind\x18\b \x01(\x0e2\x1c.postpilot.v1.ClipRenderKindR\n" +
+	"renderKind\x12\x0e\n" +
 	"\x02id\x18\a \x01(\tR\x02id\x12!\n" +
 	"\fcontent_type\x18\x01 \x01(\tR\vcontentType\x12\x14\n" +
 	"\x05bytes\x18\x02 \x01(\x03R\x05bytes\x12\x1f\n" +
@@ -8161,7 +8237,7 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x04 \x01(\tR\tcreatedAt\x12\x19\n" +
 	"\bview_url\x18\x05 \x01(\tR\aviewUrl\x12!\n" +
-	"\fdownload_url\x18\x06 \x01(\tR\vdownloadUrl\"\x86\r\n" +
+	"\fdownload_url\x18\x06 \x01(\tR\vdownloadUrl\"\xe8\r\n" +
 	"\vClipProject\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12*\n" +
@@ -8206,9 +8282,11 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\brequests\x18! \x03(\v2 .postpilot.v1.ClipProjectRequestR\brequests\x12!\n" +
 	"\fintro_preset\x18\" \x01(\tR\vintroPreset\x12!\n" +
 	"\foutro_preset\x18# \x01(\tR\voutroPreset\x124\n" +
-	"\x16allowed_caption_styles\x18$ \x03(\tR\x14allowedCaptionStylesB\v\n" +
+	"\x16allowed_caption_styles\x18$ \x03(\tR\x14allowedCaptionStyles\x12K\n" +
+	"\x10last_render_kind\x18% \x01(\x0e2\x1c.postpilot.v1.ClipRenderKindH\x02R\x0elastRenderKind\x88\x01\x01B\v\n" +
 	"\t_can_editB\x0f\n" +
-	"\r_can_finalize\"[\n" +
+	"\r_can_finalizeB\x13\n" +
+	"\x11_last_render_kind\"[\n" +
 	"\x12ClipProjectRequest\x12\x12\n" +
 	"\x04kind\x18\x01 \x01(\tR\x04kind\x12\x12\n" +
 	"\x04body\x18\x02 \x01(\tR\x04body\x12\x1d\n" +
@@ -8759,12 +8837,14 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\x11expected_revision\x18\x02 \x01(\x05R\x10expectedRevision\x12.\n" +
 	"\x04plan\x18\x03 \x01(\v2\x1a.postpilot.v1.ClipEditPlanR\x04plan\"O\n" +
 	"\x18SaveClipEditPlanResponse\x123\n" +
-	"\aproject\x18\x01 \x01(\v2\x19.postpilot.v1.ClipProjectR\aproject\"\x7f\n" +
+	"\aproject\x18\x01 \x01(\v2\x19.postpilot.v1.ClipProjectR\aproject\"\xbe\x01\n" +
 	"\x16StartClipRenderRequest\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\x01 \x01(\tR\tprojectId\x12+\n" +
 	"\x11expected_revision\x18\x02 \x01(\x05R\x10expectedRevision\x12\x19\n" +
-	"\bbatch_id\x18\x03 \x01(\tR\abatchId\"0\n" +
+	"\bbatch_id\x18\x03 \x01(\tR\abatchId\x12=\n" +
+	"\vrender_kind\x18\x04 \x01(\x0e2\x1c.postpilot.v1.ClipRenderKindR\n" +
+	"renderKind\"0\n" +
 	"\x17StartClipRenderResponse\x12\x15\n" +
 	"\x06job_id\x18\x01 \x01(\tR\x05jobId\"\x1c\n" +
 	"\x1aGetClipCapabilitiesRequest\"\x88\x01\n" +
@@ -8836,7 +8916,11 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	",CLIP_ANALYSIS_ELIGIBILITY_VIDEO_INPUT_ABSENT\x10\x02\x129\n" +
 	"5CLIP_ANALYSIS_ELIGIBILITY_INLINE_ENDPOINT_UNAVAILABLE\x10\x03\x12=\n" +
 	"9CLIP_ANALYSIS_ELIGIBILITY_REQUIRED_PARAMETERS_UNSUPPORTED\x10\x04\x127\n" +
-	"3CLIP_ANALYSIS_ELIGIBILITY_PRICE_CEILING_UNAVAILABLE\x10\x05*\xd2\x01\n" +
+	"3CLIP_ANALYSIS_ELIGIBILITY_PRICE_CEILING_UNAVAILABLE\x10\x05*m\n" +
+	"\x0eClipRenderKind\x12 \n" +
+	"\x1cCLIP_RENDER_KIND_UNSPECIFIED\x10\x00\x12\x1b\n" +
+	"\x17CLIP_RENDER_KIND_SERVER\x10\x01\x12\x1c\n" +
+	"\x18CLIP_RENDER_KIND_BROWSER\x10\x02*\xd2\x01\n" +
 	"\x11ClipPreviewParity\x12#\n" +
 	"\x1fCLIP_PREVIEW_PARITY_UNSPECIFIED\x10\x00\x122\n" +
 	".CLIP_PREVIEW_PARITY_SOURCE_CONTRAST_FINAL_ONLY\x10\x01\x126\n" +
@@ -8886,304 +8970,308 @@ func file_postpilot_v1_clip_proto_rawDescGZIP() []byte {
 	return file_postpilot_v1_clip_proto_rawDescData
 }
 
-var file_postpilot_v1_clip_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_postpilot_v1_clip_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
 var file_postpilot_v1_clip_proto_msgTypes = make([]protoimpl.MessageInfo, 115)
 var file_postpilot_v1_clip_proto_goTypes = []any{
 	(ClipAnalysisEligibility)(0),                // 0: postpilot.v1.ClipAnalysisEligibility
-	(ClipPreviewParity)(0),                      // 1: postpilot.v1.ClipPreviewParity
-	(*ClipAnalysisModelEligibility)(nil),        // 2: postpilot.v1.ClipAnalysisModelEligibility
-	(*ListClipAnalysisEligibilityRequest)(nil),  // 3: postpilot.v1.ListClipAnalysisEligibilityRequest
-	(*ListClipAnalysisEligibilityResponse)(nil), // 4: postpilot.v1.ListClipAnalysisEligibilityResponse
-	(*ClipInformationField)(nil),                // 5: postpilot.v1.ClipInformationField
-	(*ClipInformationFields)(nil),               // 6: postpilot.v1.ClipInformationFields
-	(*ClipCopyStyles)(nil),                      // 7: postpilot.v1.ClipCopyStyles
-	(*ClipCaptionStyles)(nil),                   // 8: postpilot.v1.ClipCaptionStyles
-	(*VideoTemplate)(nil),                       // 9: postpilot.v1.VideoTemplate
-	(*ClipAnswer)(nil),                          // 10: postpilot.v1.ClipAnswer
-	(*SeedPresetFieldsRequest)(nil),             // 11: postpilot.v1.SeedPresetFieldsRequest
-	(*SeedPresetFieldsResponse)(nil),            // 12: postpilot.v1.SeedPresetFieldsResponse
-	(*FinalizeClipProjectRequest)(nil),          // 13: postpilot.v1.FinalizeClipProjectRequest
-	(*FinalizeClipProjectResponse)(nil),         // 14: postpilot.v1.FinalizeClipProjectResponse
-	(*ClipResult)(nil),                          // 15: postpilot.v1.ClipResult
-	(*ClipProject)(nil),                         // 16: postpilot.v1.ClipProject
-	(*ClipProjectRequest)(nil),                  // 17: postpilot.v1.ClipProjectRequest
-	(*ClipNotice)(nil),                          // 18: postpilot.v1.ClipNotice
-	(*ClipObservations)(nil),                    // 19: postpilot.v1.ClipObservations
-	(*ClipSourceObservation)(nil),               // 20: postpilot.v1.ClipSourceObservation
-	(*ClipObservedSegment)(nil),                 // 21: postpilot.v1.ClipObservedSegment
-	(*ClipAttempt)(nil),                         // 22: postpilot.v1.ClipAttempt
-	(*ClipAccounting)(nil),                      // 23: postpilot.v1.ClipAccounting
-	(*ListVideoTemplatesRequest)(nil),           // 24: postpilot.v1.ListVideoTemplatesRequest
-	(*ListVideoTemplatesResponse)(nil),          // 25: postpilot.v1.ListVideoTemplatesResponse
-	(*CreateVideoTemplateRequest)(nil),          // 26: postpilot.v1.CreateVideoTemplateRequest
-	(*CreateVideoTemplateResponse)(nil),         // 27: postpilot.v1.CreateVideoTemplateResponse
-	(*UpdateVideoTemplateRequest)(nil),          // 28: postpilot.v1.UpdateVideoTemplateRequest
-	(*UpdateVideoTemplateResponse)(nil),         // 29: postpilot.v1.UpdateVideoTemplateResponse
-	(*DeleteVideoTemplateRequest)(nil),          // 30: postpilot.v1.DeleteVideoTemplateRequest
-	(*DeleteVideoTemplateResponse)(nil),         // 31: postpilot.v1.DeleteVideoTemplateResponse
-	(*ListClipProjectsRequest)(nil),             // 32: postpilot.v1.ListClipProjectsRequest
-	(*ListClipProjectsResponse)(nil),            // 33: postpilot.v1.ListClipProjectsResponse
-	(*CreateClipProjectRequest)(nil),            // 34: postpilot.v1.CreateClipProjectRequest
-	(*CreateClipProjectResponse)(nil),           // 35: postpilot.v1.CreateClipProjectResponse
-	(*GetClipProjectRequest)(nil),               // 36: postpilot.v1.GetClipProjectRequest
-	(*GetClipProjectResponse)(nil),              // 37: postpilot.v1.GetClipProjectResponse
-	(*UpdateClipProjectRequest)(nil),            // 38: postpilot.v1.UpdateClipProjectRequest
-	(*UpdateClipProjectResponse)(nil),           // 39: postpilot.v1.UpdateClipProjectResponse
-	(*DeleteClipProjectRequest)(nil),            // 40: postpilot.v1.DeleteClipProjectRequest
-	(*DeleteClipProjectResponse)(nil),           // 41: postpilot.v1.DeleteClipProjectResponse
-	(*ClipSourceMetadata)(nil),                  // 42: postpilot.v1.ClipSourceMetadata
-	(*ClipSource)(nil),                          // 43: postpilot.v1.ClipSource
-	(*ClipSourceBatch)(nil),                     // 44: postpilot.v1.ClipSourceBatch
-	(*ClipSourceUpload)(nil),                    // 45: postpilot.v1.ClipSourceUpload
-	(*CreateClipSourceBatchRequest)(nil),        // 46: postpilot.v1.CreateClipSourceBatchRequest
-	(*CreateClipSourceBatchResponse)(nil),       // 47: postpilot.v1.CreateClipSourceBatchResponse
-	(*ConfirmClipSourceRequest)(nil),            // 48: postpilot.v1.ConfirmClipSourceRequest
-	(*ConfirmClipSourceResponse)(nil),           // 49: postpilot.v1.ConfirmClipSourceResponse
-	(*DiscardClipSourceBatchRequest)(nil),       // 50: postpilot.v1.DiscardClipSourceBatchRequest
-	(*DiscardClipSourceBatchResponse)(nil),      // 51: postpilot.v1.DiscardClipSourceBatchResponse
-	(*GetClipSourcesRequest)(nil),               // 52: postpilot.v1.GetClipSourcesRequest
-	(*GetClipSourcesResponse)(nil),              // 53: postpilot.v1.GetClipSourcesResponse
-	(*GetClipSourcePlaybackRequest)(nil),        // 54: postpilot.v1.GetClipSourcePlaybackRequest
-	(*GetClipSourcePlaybackResponse)(nil),       // 55: postpilot.v1.GetClipSourcePlaybackResponse
-	(*StartClipGenerationRequest)(nil),          // 56: postpilot.v1.StartClipGenerationRequest
-	(*StartClipGenerationResponse)(nil),         // 57: postpilot.v1.StartClipGenerationResponse
-	(*QuoteClipGenerationRequest)(nil),          // 58: postpilot.v1.QuoteClipGenerationRequest
-	(*ClipPricedCall)(nil),                      // 59: postpilot.v1.ClipPricedCall
-	(*ClipSequenceCaptionCost)(nil),             // 60: postpilot.v1.ClipSequenceCaptionCost
-	(*QuoteClipGenerationResponse)(nil),         // 61: postpilot.v1.QuoteClipGenerationResponse
-	(*ClipCancellationPolicy)(nil),              // 62: postpilot.v1.ClipCancellationPolicy
-	(*QuoteClipRevisionRequest)(nil),            // 63: postpilot.v1.QuoteClipRevisionRequest
-	(*QuoteClipRevisionResponse)(nil),           // 64: postpilot.v1.QuoteClipRevisionResponse
-	(*StartClipRevisionRequest)(nil),            // 65: postpilot.v1.StartClipRevisionRequest
-	(*StartClipRevisionResponse)(nil),           // 66: postpilot.v1.StartClipRevisionResponse
-	(*ReorderClipSourcesRequest)(nil),           // 67: postpilot.v1.ReorderClipSourcesRequest
-	(*ReorderClipSourcesResponse)(nil),          // 68: postpilot.v1.ReorderClipSourcesResponse
-	(*SetClipSourceOriginalSoundRequest)(nil),   // 69: postpilot.v1.SetClipSourceOriginalSoundRequest
-	(*SetClipSourceOriginalSoundResponse)(nil),  // 70: postpilot.v1.SetClipSourceOriginalSoundResponse
-	(*CancelClipJobRequest)(nil),                // 71: postpilot.v1.CancelClipJobRequest
-	(*CancelClipJobResponse)(nil),               // 72: postpilot.v1.CancelClipJobResponse
-	(*ClipCaption)(nil),                         // 73: postpilot.v1.ClipCaption
-	(*ClipEditCut)(nil),                         // 74: postpilot.v1.ClipEditCut
-	(*ClipCutCreation)(nil),                     // 75: postpilot.v1.ClipCutCreation
-	(*ClipSourceAudioSetting)(nil),              // 76: postpilot.v1.ClipSourceAudioSetting
-	(*ClipSourceAudioSettings)(nil),             // 77: postpilot.v1.ClipSourceAudioSettings
-	(*ClipFocal)(nil),                           // 78: postpilot.v1.ClipFocal
-	(*ClipTextRow)(nil),                         // 79: postpilot.v1.ClipTextRow
-	(*ClipEditablePhrase)(nil),                  // 80: postpilot.v1.ClipEditablePhrase
-	(*ClipTextEvidence)(nil),                    // 81: postpilot.v1.ClipTextEvidence
-	(*ClipEditableText)(nil),                    // 82: postpilot.v1.ClipEditableText
-	(*ClipCaptionPlacement)(nil),                // 83: postpilot.v1.ClipCaptionPlacement
-	(*ClipTextCreation)(nil),                    // 84: postpilot.v1.ClipTextCreation
-	(*ClipEditPlan)(nil),                        // 85: postpilot.v1.ClipEditPlan
-	(*ClipSourceAssociations)(nil),              // 86: postpilot.v1.ClipSourceAssociations
-	(*ClipCanvasBox)(nil),                       // 87: postpilot.v1.ClipCanvasBox
-	(*ClipCaptionFragment)(nil),                 // 88: postpilot.v1.ClipCaptionFragment
-	(*GetClipCaptionPreviewRequest)(nil),        // 89: postpilot.v1.GetClipCaptionPreviewRequest
-	(*GetClipCaptionStyleSamplesRequest)(nil),   // 90: postpilot.v1.GetClipCaptionStyleSamplesRequest
-	(*GetClipCaptionStyleSamplesResponse)(nil),  // 91: postpilot.v1.GetClipCaptionStyleSamplesResponse
-	(*GetClipCaptionPreviewResponse)(nil),       // 92: postpilot.v1.GetClipCaptionPreviewResponse
-	(*PrepareClipPreviewRequest)(nil),           // 93: postpilot.v1.PrepareClipPreviewRequest
-	(*ClipPreviewAsset)(nil),                    // 94: postpilot.v1.ClipPreviewAsset
-	(*PrepareClipPreviewResponse)(nil),          // 95: postpilot.v1.PrepareClipPreviewResponse
-	(*ClipRetainedSource)(nil),                  // 96: postpilot.v1.ClipRetainedSource
-	(*ClipEditingState)(nil),                    // 97: postpilot.v1.ClipEditingState
-	(*SaveClipEditPlanRequest)(nil),             // 98: postpilot.v1.SaveClipEditPlanRequest
-	(*SaveClipEditPlanResponse)(nil),            // 99: postpilot.v1.SaveClipEditPlanResponse
-	(*StartClipRenderRequest)(nil),              // 100: postpilot.v1.StartClipRenderRequest
-	(*StartClipRenderResponse)(nil),             // 101: postpilot.v1.StartClipRenderResponse
-	(*GetClipCapabilitiesRequest)(nil),          // 102: postpilot.v1.GetClipCapabilitiesRequest
-	(*GetClipCapabilitiesResponse)(nil),         // 103: postpilot.v1.GetClipCapabilitiesResponse
-	(*ClipCompositionItem)(nil),                 // 104: postpilot.v1.ClipCompositionItem
-	(*ClipCompositionItems)(nil),                // 105: postpilot.v1.ClipCompositionItems
-	(*ClipSourceAssociation)(nil),               // 106: postpilot.v1.ClipSourceAssociation
-	(*ClipCompositionInputs)(nil),               // 107: postpilot.v1.ClipCompositionInputs
-	(*ClipCompositionSnapshot)(nil),             // 108: postpilot.v1.ClipCompositionSnapshot
-	(*ClipProjectComposition)(nil),              // 109: postpilot.v1.ClipProjectComposition
-	(*ClipAttemptInspection)(nil),               // 110: postpilot.v1.ClipAttemptInspection
-	(*ClipAttemptRange)(nil),                    // 111: postpilot.v1.ClipAttemptRange
-	nil,                                         // 112: postpilot.v1.ClipSourceUpload.HeadersEntry
-	nil,                                         // 113: postpilot.v1.ClipCompositionItem.ValuesEntry
-	nil,                                         // 114: postpilot.v1.ClipCompositionInputs.ValuesEntry
-	nil,                                         // 115: postpilot.v1.ClipCompositionInputs.ItemsEntry
-	nil,                                         // 116: postpilot.v1.ClipAttemptInspection.MeasurementsEntry
-	(*ModelRef)(nil),                            // 117: postpilot.v1.ModelRef
-	(*GenerationJob)(nil),                       // 118: postpilot.v1.GenerationJob
-	(ContentLanguage)(0),                        // 119: postpilot.v1.ContentLanguage
+	(ClipRenderKind)(0),                         // 1: postpilot.v1.ClipRenderKind
+	(ClipPreviewParity)(0),                      // 2: postpilot.v1.ClipPreviewParity
+	(*ClipAnalysisModelEligibility)(nil),        // 3: postpilot.v1.ClipAnalysisModelEligibility
+	(*ListClipAnalysisEligibilityRequest)(nil),  // 4: postpilot.v1.ListClipAnalysisEligibilityRequest
+	(*ListClipAnalysisEligibilityResponse)(nil), // 5: postpilot.v1.ListClipAnalysisEligibilityResponse
+	(*ClipInformationField)(nil),                // 6: postpilot.v1.ClipInformationField
+	(*ClipInformationFields)(nil),               // 7: postpilot.v1.ClipInformationFields
+	(*ClipCopyStyles)(nil),                      // 8: postpilot.v1.ClipCopyStyles
+	(*ClipCaptionStyles)(nil),                   // 9: postpilot.v1.ClipCaptionStyles
+	(*VideoTemplate)(nil),                       // 10: postpilot.v1.VideoTemplate
+	(*ClipAnswer)(nil),                          // 11: postpilot.v1.ClipAnswer
+	(*SeedPresetFieldsRequest)(nil),             // 12: postpilot.v1.SeedPresetFieldsRequest
+	(*SeedPresetFieldsResponse)(nil),            // 13: postpilot.v1.SeedPresetFieldsResponse
+	(*FinalizeClipProjectRequest)(nil),          // 14: postpilot.v1.FinalizeClipProjectRequest
+	(*FinalizeClipProjectResponse)(nil),         // 15: postpilot.v1.FinalizeClipProjectResponse
+	(*ClipResult)(nil),                          // 16: postpilot.v1.ClipResult
+	(*ClipProject)(nil),                         // 17: postpilot.v1.ClipProject
+	(*ClipProjectRequest)(nil),                  // 18: postpilot.v1.ClipProjectRequest
+	(*ClipNotice)(nil),                          // 19: postpilot.v1.ClipNotice
+	(*ClipObservations)(nil),                    // 20: postpilot.v1.ClipObservations
+	(*ClipSourceObservation)(nil),               // 21: postpilot.v1.ClipSourceObservation
+	(*ClipObservedSegment)(nil),                 // 22: postpilot.v1.ClipObservedSegment
+	(*ClipAttempt)(nil),                         // 23: postpilot.v1.ClipAttempt
+	(*ClipAccounting)(nil),                      // 24: postpilot.v1.ClipAccounting
+	(*ListVideoTemplatesRequest)(nil),           // 25: postpilot.v1.ListVideoTemplatesRequest
+	(*ListVideoTemplatesResponse)(nil),          // 26: postpilot.v1.ListVideoTemplatesResponse
+	(*CreateVideoTemplateRequest)(nil),          // 27: postpilot.v1.CreateVideoTemplateRequest
+	(*CreateVideoTemplateResponse)(nil),         // 28: postpilot.v1.CreateVideoTemplateResponse
+	(*UpdateVideoTemplateRequest)(nil),          // 29: postpilot.v1.UpdateVideoTemplateRequest
+	(*UpdateVideoTemplateResponse)(nil),         // 30: postpilot.v1.UpdateVideoTemplateResponse
+	(*DeleteVideoTemplateRequest)(nil),          // 31: postpilot.v1.DeleteVideoTemplateRequest
+	(*DeleteVideoTemplateResponse)(nil),         // 32: postpilot.v1.DeleteVideoTemplateResponse
+	(*ListClipProjectsRequest)(nil),             // 33: postpilot.v1.ListClipProjectsRequest
+	(*ListClipProjectsResponse)(nil),            // 34: postpilot.v1.ListClipProjectsResponse
+	(*CreateClipProjectRequest)(nil),            // 35: postpilot.v1.CreateClipProjectRequest
+	(*CreateClipProjectResponse)(nil),           // 36: postpilot.v1.CreateClipProjectResponse
+	(*GetClipProjectRequest)(nil),               // 37: postpilot.v1.GetClipProjectRequest
+	(*GetClipProjectResponse)(nil),              // 38: postpilot.v1.GetClipProjectResponse
+	(*UpdateClipProjectRequest)(nil),            // 39: postpilot.v1.UpdateClipProjectRequest
+	(*UpdateClipProjectResponse)(nil),           // 40: postpilot.v1.UpdateClipProjectResponse
+	(*DeleteClipProjectRequest)(nil),            // 41: postpilot.v1.DeleteClipProjectRequest
+	(*DeleteClipProjectResponse)(nil),           // 42: postpilot.v1.DeleteClipProjectResponse
+	(*ClipSourceMetadata)(nil),                  // 43: postpilot.v1.ClipSourceMetadata
+	(*ClipSource)(nil),                          // 44: postpilot.v1.ClipSource
+	(*ClipSourceBatch)(nil),                     // 45: postpilot.v1.ClipSourceBatch
+	(*ClipSourceUpload)(nil),                    // 46: postpilot.v1.ClipSourceUpload
+	(*CreateClipSourceBatchRequest)(nil),        // 47: postpilot.v1.CreateClipSourceBatchRequest
+	(*CreateClipSourceBatchResponse)(nil),       // 48: postpilot.v1.CreateClipSourceBatchResponse
+	(*ConfirmClipSourceRequest)(nil),            // 49: postpilot.v1.ConfirmClipSourceRequest
+	(*ConfirmClipSourceResponse)(nil),           // 50: postpilot.v1.ConfirmClipSourceResponse
+	(*DiscardClipSourceBatchRequest)(nil),       // 51: postpilot.v1.DiscardClipSourceBatchRequest
+	(*DiscardClipSourceBatchResponse)(nil),      // 52: postpilot.v1.DiscardClipSourceBatchResponse
+	(*GetClipSourcesRequest)(nil),               // 53: postpilot.v1.GetClipSourcesRequest
+	(*GetClipSourcesResponse)(nil),              // 54: postpilot.v1.GetClipSourcesResponse
+	(*GetClipSourcePlaybackRequest)(nil),        // 55: postpilot.v1.GetClipSourcePlaybackRequest
+	(*GetClipSourcePlaybackResponse)(nil),       // 56: postpilot.v1.GetClipSourcePlaybackResponse
+	(*StartClipGenerationRequest)(nil),          // 57: postpilot.v1.StartClipGenerationRequest
+	(*StartClipGenerationResponse)(nil),         // 58: postpilot.v1.StartClipGenerationResponse
+	(*QuoteClipGenerationRequest)(nil),          // 59: postpilot.v1.QuoteClipGenerationRequest
+	(*ClipPricedCall)(nil),                      // 60: postpilot.v1.ClipPricedCall
+	(*ClipSequenceCaptionCost)(nil),             // 61: postpilot.v1.ClipSequenceCaptionCost
+	(*QuoteClipGenerationResponse)(nil),         // 62: postpilot.v1.QuoteClipGenerationResponse
+	(*ClipCancellationPolicy)(nil),              // 63: postpilot.v1.ClipCancellationPolicy
+	(*QuoteClipRevisionRequest)(nil),            // 64: postpilot.v1.QuoteClipRevisionRequest
+	(*QuoteClipRevisionResponse)(nil),           // 65: postpilot.v1.QuoteClipRevisionResponse
+	(*StartClipRevisionRequest)(nil),            // 66: postpilot.v1.StartClipRevisionRequest
+	(*StartClipRevisionResponse)(nil),           // 67: postpilot.v1.StartClipRevisionResponse
+	(*ReorderClipSourcesRequest)(nil),           // 68: postpilot.v1.ReorderClipSourcesRequest
+	(*ReorderClipSourcesResponse)(nil),          // 69: postpilot.v1.ReorderClipSourcesResponse
+	(*SetClipSourceOriginalSoundRequest)(nil),   // 70: postpilot.v1.SetClipSourceOriginalSoundRequest
+	(*SetClipSourceOriginalSoundResponse)(nil),  // 71: postpilot.v1.SetClipSourceOriginalSoundResponse
+	(*CancelClipJobRequest)(nil),                // 72: postpilot.v1.CancelClipJobRequest
+	(*CancelClipJobResponse)(nil),               // 73: postpilot.v1.CancelClipJobResponse
+	(*ClipCaption)(nil),                         // 74: postpilot.v1.ClipCaption
+	(*ClipEditCut)(nil),                         // 75: postpilot.v1.ClipEditCut
+	(*ClipCutCreation)(nil),                     // 76: postpilot.v1.ClipCutCreation
+	(*ClipSourceAudioSetting)(nil),              // 77: postpilot.v1.ClipSourceAudioSetting
+	(*ClipSourceAudioSettings)(nil),             // 78: postpilot.v1.ClipSourceAudioSettings
+	(*ClipFocal)(nil),                           // 79: postpilot.v1.ClipFocal
+	(*ClipTextRow)(nil),                         // 80: postpilot.v1.ClipTextRow
+	(*ClipEditablePhrase)(nil),                  // 81: postpilot.v1.ClipEditablePhrase
+	(*ClipTextEvidence)(nil),                    // 82: postpilot.v1.ClipTextEvidence
+	(*ClipEditableText)(nil),                    // 83: postpilot.v1.ClipEditableText
+	(*ClipCaptionPlacement)(nil),                // 84: postpilot.v1.ClipCaptionPlacement
+	(*ClipTextCreation)(nil),                    // 85: postpilot.v1.ClipTextCreation
+	(*ClipEditPlan)(nil),                        // 86: postpilot.v1.ClipEditPlan
+	(*ClipSourceAssociations)(nil),              // 87: postpilot.v1.ClipSourceAssociations
+	(*ClipCanvasBox)(nil),                       // 88: postpilot.v1.ClipCanvasBox
+	(*ClipCaptionFragment)(nil),                 // 89: postpilot.v1.ClipCaptionFragment
+	(*GetClipCaptionPreviewRequest)(nil),        // 90: postpilot.v1.GetClipCaptionPreviewRequest
+	(*GetClipCaptionStyleSamplesRequest)(nil),   // 91: postpilot.v1.GetClipCaptionStyleSamplesRequest
+	(*GetClipCaptionStyleSamplesResponse)(nil),  // 92: postpilot.v1.GetClipCaptionStyleSamplesResponse
+	(*GetClipCaptionPreviewResponse)(nil),       // 93: postpilot.v1.GetClipCaptionPreviewResponse
+	(*PrepareClipPreviewRequest)(nil),           // 94: postpilot.v1.PrepareClipPreviewRequest
+	(*ClipPreviewAsset)(nil),                    // 95: postpilot.v1.ClipPreviewAsset
+	(*PrepareClipPreviewResponse)(nil),          // 96: postpilot.v1.PrepareClipPreviewResponse
+	(*ClipRetainedSource)(nil),                  // 97: postpilot.v1.ClipRetainedSource
+	(*ClipEditingState)(nil),                    // 98: postpilot.v1.ClipEditingState
+	(*SaveClipEditPlanRequest)(nil),             // 99: postpilot.v1.SaveClipEditPlanRequest
+	(*SaveClipEditPlanResponse)(nil),            // 100: postpilot.v1.SaveClipEditPlanResponse
+	(*StartClipRenderRequest)(nil),              // 101: postpilot.v1.StartClipRenderRequest
+	(*StartClipRenderResponse)(nil),             // 102: postpilot.v1.StartClipRenderResponse
+	(*GetClipCapabilitiesRequest)(nil),          // 103: postpilot.v1.GetClipCapabilitiesRequest
+	(*GetClipCapabilitiesResponse)(nil),         // 104: postpilot.v1.GetClipCapabilitiesResponse
+	(*ClipCompositionItem)(nil),                 // 105: postpilot.v1.ClipCompositionItem
+	(*ClipCompositionItems)(nil),                // 106: postpilot.v1.ClipCompositionItems
+	(*ClipSourceAssociation)(nil),               // 107: postpilot.v1.ClipSourceAssociation
+	(*ClipCompositionInputs)(nil),               // 108: postpilot.v1.ClipCompositionInputs
+	(*ClipCompositionSnapshot)(nil),             // 109: postpilot.v1.ClipCompositionSnapshot
+	(*ClipProjectComposition)(nil),              // 110: postpilot.v1.ClipProjectComposition
+	(*ClipAttemptInspection)(nil),               // 111: postpilot.v1.ClipAttemptInspection
+	(*ClipAttemptRange)(nil),                    // 112: postpilot.v1.ClipAttemptRange
+	nil,                                         // 113: postpilot.v1.ClipSourceUpload.HeadersEntry
+	nil,                                         // 114: postpilot.v1.ClipCompositionItem.ValuesEntry
+	nil,                                         // 115: postpilot.v1.ClipCompositionInputs.ValuesEntry
+	nil,                                         // 116: postpilot.v1.ClipCompositionInputs.ItemsEntry
+	nil,                                         // 117: postpilot.v1.ClipAttemptInspection.MeasurementsEntry
+	(*ModelRef)(nil),                            // 118: postpilot.v1.ModelRef
+	(*GenerationJob)(nil),                       // 119: postpilot.v1.GenerationJob
+	(ContentLanguage)(0),                        // 120: postpilot.v1.ContentLanguage
 }
 var file_postpilot_v1_clip_proto_depIdxs = []int32{
-	117, // 0: postpilot.v1.ClipAnalysisModelEligibility.model:type_name -> postpilot.v1.ModelRef
+	118, // 0: postpilot.v1.ClipAnalysisModelEligibility.model:type_name -> postpilot.v1.ModelRef
 	0,   // 1: postpilot.v1.ClipAnalysisModelEligibility.status:type_name -> postpilot.v1.ClipAnalysisEligibility
-	2,   // 2: postpilot.v1.ListClipAnalysisEligibilityResponse.models:type_name -> postpilot.v1.ClipAnalysisModelEligibility
-	5,   // 3: postpilot.v1.ClipInformationFields.values:type_name -> postpilot.v1.ClipInformationField
-	5,   // 4: postpilot.v1.VideoTemplate.information_fields:type_name -> postpilot.v1.ClipInformationField
-	5,   // 5: postpilot.v1.SeedPresetFieldsResponse.fields:type_name -> postpilot.v1.ClipInformationField
-	16,  // 6: postpilot.v1.FinalizeClipProjectResponse.project:type_name -> postpilot.v1.ClipProject
-	10,  // 7: postpilot.v1.ClipProject.answers:type_name -> postpilot.v1.ClipAnswer
-	15,  // 8: postpilot.v1.ClipProject.result:type_name -> postpilot.v1.ClipResult
-	118, // 9: postpilot.v1.ClipProject.latest_job:type_name -> postpilot.v1.GenerationJob
-	97,  // 10: postpilot.v1.ClipProject.editing:type_name -> postpilot.v1.ClipEditingState
-	23,  // 11: postpilot.v1.ClipProject.accounting:type_name -> postpilot.v1.ClipAccounting
-	22,  // 12: postpilot.v1.ClipProject.latest_attempt:type_name -> postpilot.v1.ClipAttempt
-	19,  // 13: postpilot.v1.ClipProject.observations:type_name -> postpilot.v1.ClipObservations
-	109, // 14: postpilot.v1.ClipProject.composition:type_name -> postpilot.v1.ClipProjectComposition
-	110, // 15: postpilot.v1.ClipProject.attempt_inspection:type_name -> postpilot.v1.ClipAttemptInspection
-	119, // 16: postpilot.v1.ClipProject.language:type_name -> postpilot.v1.ContentLanguage
-	18,  // 17: postpilot.v1.ClipProject.notices:type_name -> postpilot.v1.ClipNotice
-	17,  // 18: postpilot.v1.ClipProject.requests:type_name -> postpilot.v1.ClipProjectRequest
-	20,  // 19: postpilot.v1.ClipObservations.sources:type_name -> postpilot.v1.ClipSourceObservation
-	96,  // 20: postpilot.v1.ClipSourceObservation.source:type_name -> postpilot.v1.ClipRetainedSource
-	21,  // 21: postpilot.v1.ClipSourceObservation.segments:type_name -> postpilot.v1.ClipObservedSegment
-	78,  // 22: postpilot.v1.ClipObservedSegment.focal:type_name -> postpilot.v1.ClipFocal
-	9,   // 23: postpilot.v1.ListVideoTemplatesResponse.templates:type_name -> postpilot.v1.VideoTemplate
-	5,   // 24: postpilot.v1.CreateVideoTemplateRequest.information_fields:type_name -> postpilot.v1.ClipInformationField
-	9,   // 25: postpilot.v1.CreateVideoTemplateResponse.template:type_name -> postpilot.v1.VideoTemplate
-	6,   // 26: postpilot.v1.UpdateVideoTemplateRequest.information_fields:type_name -> postpilot.v1.ClipInformationFields
-	7,   // 27: postpilot.v1.UpdateVideoTemplateRequest.copy_styles:type_name -> postpilot.v1.ClipCopyStyles
-	9,   // 28: postpilot.v1.UpdateVideoTemplateResponse.template:type_name -> postpilot.v1.VideoTemplate
-	16,  // 29: postpilot.v1.ListClipProjectsResponse.projects:type_name -> postpilot.v1.ClipProject
-	10,  // 30: postpilot.v1.CreateClipProjectRequest.answers:type_name -> postpilot.v1.ClipAnswer
-	107, // 31: postpilot.v1.CreateClipProjectRequest.composition_inputs:type_name -> postpilot.v1.ClipCompositionInputs
-	119, // 32: postpilot.v1.CreateClipProjectRequest.language:type_name -> postpilot.v1.ContentLanguage
-	8,   // 33: postpilot.v1.CreateClipProjectRequest.allowed_caption_styles:type_name -> postpilot.v1.ClipCaptionStyles
-	16,  // 34: postpilot.v1.CreateClipProjectResponse.project:type_name -> postpilot.v1.ClipProject
-	16,  // 35: postpilot.v1.GetClipProjectResponse.project:type_name -> postpilot.v1.ClipProject
-	10,  // 36: postpilot.v1.UpdateClipProjectRequest.answers:type_name -> postpilot.v1.ClipAnswer
-	107, // 37: postpilot.v1.UpdateClipProjectRequest.composition_inputs:type_name -> postpilot.v1.ClipCompositionInputs
-	8,   // 38: postpilot.v1.UpdateClipProjectRequest.allowed_caption_styles:type_name -> postpilot.v1.ClipCaptionStyles
-	16,  // 39: postpilot.v1.UpdateClipProjectResponse.project:type_name -> postpilot.v1.ClipProject
-	42,  // 40: postpilot.v1.ClipSource.metadata:type_name -> postpilot.v1.ClipSourceMetadata
-	43,  // 41: postpilot.v1.ClipSourceBatch.sources:type_name -> postpilot.v1.ClipSource
-	112, // 42: postpilot.v1.ClipSourceUpload.headers:type_name -> postpilot.v1.ClipSourceUpload.HeadersEntry
-	42,  // 43: postpilot.v1.CreateClipSourceBatchRequest.sources:type_name -> postpilot.v1.ClipSourceMetadata
-	44,  // 44: postpilot.v1.CreateClipSourceBatchResponse.batch:type_name -> postpilot.v1.ClipSourceBatch
-	45,  // 45: postpilot.v1.CreateClipSourceBatchResponse.uploads:type_name -> postpilot.v1.ClipSourceUpload
-	44,  // 46: postpilot.v1.ConfirmClipSourceResponse.batch:type_name -> postpilot.v1.ClipSourceBatch
-	44,  // 47: postpilot.v1.GetClipSourcesResponse.batches:type_name -> postpilot.v1.ClipSourceBatch
-	117, // 48: postpilot.v1.StartClipGenerationRequest.observe_model:type_name -> postpilot.v1.ModelRef
-	117, // 49: postpilot.v1.StartClipGenerationRequest.write_model:type_name -> postpilot.v1.ModelRef
-	117, // 50: postpilot.v1.QuoteClipGenerationRequest.observe_model:type_name -> postpilot.v1.ModelRef
-	117, // 51: postpilot.v1.QuoteClipGenerationRequest.write_model:type_name -> postpilot.v1.ModelRef
-	117, // 52: postpilot.v1.ClipPricedCall.model:type_name -> postpilot.v1.ModelRef
-	59,  // 53: postpilot.v1.QuoteClipGenerationResponse.priced_calls:type_name -> postpilot.v1.ClipPricedCall
-	62,  // 54: postpilot.v1.QuoteClipGenerationResponse.cancellation_policy:type_name -> postpilot.v1.ClipCancellationPolicy
-	60,  // 55: postpilot.v1.QuoteClipGenerationResponse.sequence_captions:type_name -> postpilot.v1.ClipSequenceCaptionCost
-	117, // 56: postpilot.v1.QuoteClipRevisionRequest.observe_model:type_name -> postpilot.v1.ModelRef
-	117, // 57: postpilot.v1.QuoteClipRevisionRequest.write_model:type_name -> postpilot.v1.ModelRef
-	59,  // 58: postpilot.v1.QuoteClipRevisionResponse.priced_calls:type_name -> postpilot.v1.ClipPricedCall
-	62,  // 59: postpilot.v1.QuoteClipRevisionResponse.cancellation_policy:type_name -> postpilot.v1.ClipCancellationPolicy
-	60,  // 60: postpilot.v1.QuoteClipRevisionResponse.sequence_captions:type_name -> postpilot.v1.ClipSequenceCaptionCost
-	117, // 61: postpilot.v1.StartClipRevisionRequest.observe_model:type_name -> postpilot.v1.ModelRef
-	117, // 62: postpilot.v1.StartClipRevisionRequest.write_model:type_name -> postpilot.v1.ModelRef
-	44,  // 63: postpilot.v1.ReorderClipSourcesResponse.batch:type_name -> postpilot.v1.ClipSourceBatch
-	44,  // 64: postpilot.v1.SetClipSourceOriginalSoundResponse.batch:type_name -> postpilot.v1.ClipSourceBatch
-	16,  // 65: postpilot.v1.SetClipSourceOriginalSoundResponse.project:type_name -> postpilot.v1.ClipProject
-	118, // 66: postpilot.v1.CancelClipJobResponse.job:type_name -> postpilot.v1.GenerationJob
-	23,  // 67: postpilot.v1.CancelClipJobResponse.accounting:type_name -> postpilot.v1.ClipAccounting
-	73,  // 68: postpilot.v1.ClipEditCut.copy:type_name -> postpilot.v1.ClipCaption
-	73,  // 69: postpilot.v1.ClipEditCut.copies:type_name -> postpilot.v1.ClipCaption
-	78,  // 70: postpilot.v1.ClipEditCut.focal:type_name -> postpilot.v1.ClipFocal
-	75,  // 71: postpilot.v1.ClipEditCut.creation:type_name -> postpilot.v1.ClipCutCreation
-	76,  // 72: postpilot.v1.ClipSourceAudioSettings.values:type_name -> postpilot.v1.ClipSourceAudioSetting
-	79,  // 73: postpilot.v1.ClipEditableText.rows:type_name -> postpilot.v1.ClipTextRow
-	80,  // 74: postpilot.v1.ClipEditableText.phrases:type_name -> postpilot.v1.ClipEditablePhrase
-	81,  // 75: postpilot.v1.ClipEditableText.evidence:type_name -> postpilot.v1.ClipTextEvidence
-	84,  // 76: postpilot.v1.ClipEditableText.creation:type_name -> postpilot.v1.ClipTextCreation
-	83,  // 77: postpilot.v1.ClipEditableText.owner_position:type_name -> postpilot.v1.ClipCaptionPlacement
-	74,  // 78: postpilot.v1.ClipEditPlan.cuts:type_name -> postpilot.v1.ClipEditCut
-	82,  // 79: postpilot.v1.ClipEditPlan.elements:type_name -> postpilot.v1.ClipEditableText
-	86,  // 80: postpilot.v1.ClipEditPlan.associations:type_name -> postpilot.v1.ClipSourceAssociations
-	77,  // 81: postpilot.v1.ClipEditPlan.source_audio:type_name -> postpilot.v1.ClipSourceAudioSettings
-	106, // 82: postpilot.v1.ClipSourceAssociations.values:type_name -> postpilot.v1.ClipSourceAssociation
-	87,  // 83: postpilot.v1.ClipCaptionFragment.box:type_name -> postpilot.v1.ClipCanvasBox
-	85,  // 84: postpilot.v1.GetClipCaptionPreviewRequest.plan:type_name -> postpilot.v1.ClipEditPlan
-	87,  // 85: postpilot.v1.GetClipCaptionStyleSamplesResponse.canvas:type_name -> postpilot.v1.ClipCanvasBox
-	88,  // 86: postpilot.v1.GetClipCaptionStyleSamplesResponse.samples:type_name -> postpilot.v1.ClipCaptionFragment
-	87,  // 87: postpilot.v1.GetClipCaptionPreviewResponse.canvas:type_name -> postpilot.v1.ClipCanvasBox
-	87,  // 88: postpilot.v1.GetClipCaptionPreviewResponse.safe_area:type_name -> postpilot.v1.ClipCanvasBox
-	88,  // 89: postpilot.v1.GetClipCaptionPreviewResponse.captions:type_name -> postpilot.v1.ClipCaptionFragment
-	85,  // 90: postpilot.v1.PrepareClipPreviewRequest.plan:type_name -> postpilot.v1.ClipEditPlan
-	94,  // 91: postpilot.v1.PrepareClipPreviewResponse.assets:type_name -> postpilot.v1.ClipPreviewAsset
-	1,   // 92: postpilot.v1.PrepareClipPreviewResponse.parity:type_name -> postpilot.v1.ClipPreviewParity
-	85,  // 93: postpilot.v1.ClipEditingState.plan:type_name -> postpilot.v1.ClipEditPlan
-	96,  // 94: postpilot.v1.ClipEditingState.sources:type_name -> postpilot.v1.ClipRetainedSource
-	85,  // 95: postpilot.v1.SaveClipEditPlanRequest.plan:type_name -> postpilot.v1.ClipEditPlan
-	16,  // 96: postpilot.v1.SaveClipEditPlanResponse.project:type_name -> postpilot.v1.ClipProject
-	113, // 97: postpilot.v1.ClipCompositionItem.values:type_name -> postpilot.v1.ClipCompositionItem.ValuesEntry
-	104, // 98: postpilot.v1.ClipCompositionItems.items:type_name -> postpilot.v1.ClipCompositionItem
-	114, // 99: postpilot.v1.ClipCompositionInputs.values:type_name -> postpilot.v1.ClipCompositionInputs.ValuesEntry
-	115, // 100: postpilot.v1.ClipCompositionInputs.items:type_name -> postpilot.v1.ClipCompositionInputs.ItemsEntry
-	106, // 101: postpilot.v1.ClipCompositionInputs.associations:type_name -> postpilot.v1.ClipSourceAssociation
-	108, // 102: postpilot.v1.ClipProjectComposition.snapshot:type_name -> postpilot.v1.ClipCompositionSnapshot
-	107, // 103: postpilot.v1.ClipProjectComposition.inputs:type_name -> postpilot.v1.ClipCompositionInputs
-	19,  // 104: postpilot.v1.ClipAttemptInspection.observations:type_name -> postpilot.v1.ClipObservations
-	111, // 105: postpilot.v1.ClipAttemptInspection.ranges:type_name -> postpilot.v1.ClipAttemptRange
-	116, // 106: postpilot.v1.ClipAttemptInspection.measurements:type_name -> postpilot.v1.ClipAttemptInspection.MeasurementsEntry
-	105, // 107: postpilot.v1.ClipCompositionInputs.ItemsEntry.value:type_name -> postpilot.v1.ClipCompositionItems
-	93,  // 108: postpilot.v1.ClipService.PrepareClipPreview:input_type -> postpilot.v1.PrepareClipPreviewRequest
-	102, // 109: postpilot.v1.ClipService.GetClipCapabilities:input_type -> postpilot.v1.GetClipCapabilitiesRequest
-	89,  // 110: postpilot.v1.ClipService.GetClipCaptionPreview:input_type -> postpilot.v1.GetClipCaptionPreviewRequest
-	90,  // 111: postpilot.v1.ClipService.GetClipCaptionStyleSamples:input_type -> postpilot.v1.GetClipCaptionStyleSamplesRequest
-	98,  // 112: postpilot.v1.ClipService.SaveClipEditPlan:input_type -> postpilot.v1.SaveClipEditPlanRequest
-	100, // 113: postpilot.v1.ClipService.StartClipRender:input_type -> postpilot.v1.StartClipRenderRequest
-	56,  // 114: postpilot.v1.ClipService.StartClipGeneration:input_type -> postpilot.v1.StartClipGenerationRequest
-	58,  // 115: postpilot.v1.ClipService.QuoteClipGeneration:input_type -> postpilot.v1.QuoteClipGenerationRequest
-	13,  // 116: postpilot.v1.ClipService.FinalizeClipProject:input_type -> postpilot.v1.FinalizeClipProjectRequest
-	71,  // 117: postpilot.v1.ClipService.CancelClipJob:input_type -> postpilot.v1.CancelClipJobRequest
-	24,  // 118: postpilot.v1.ClipService.ListVideoTemplates:input_type -> postpilot.v1.ListVideoTemplatesRequest
-	26,  // 119: postpilot.v1.ClipService.CreateVideoTemplate:input_type -> postpilot.v1.CreateVideoTemplateRequest
-	28,  // 120: postpilot.v1.ClipService.UpdateVideoTemplate:input_type -> postpilot.v1.UpdateVideoTemplateRequest
-	30,  // 121: postpilot.v1.ClipService.DeleteVideoTemplate:input_type -> postpilot.v1.DeleteVideoTemplateRequest
-	11,  // 122: postpilot.v1.ClipService.SeedPresetFields:input_type -> postpilot.v1.SeedPresetFieldsRequest
-	32,  // 123: postpilot.v1.ClipService.ListClipProjects:input_type -> postpilot.v1.ListClipProjectsRequest
-	34,  // 124: postpilot.v1.ClipService.CreateClipProject:input_type -> postpilot.v1.CreateClipProjectRequest
-	36,  // 125: postpilot.v1.ClipService.GetClipProject:input_type -> postpilot.v1.GetClipProjectRequest
-	38,  // 126: postpilot.v1.ClipService.UpdateClipProject:input_type -> postpilot.v1.UpdateClipProjectRequest
-	40,  // 127: postpilot.v1.ClipService.DeleteClipProject:input_type -> postpilot.v1.DeleteClipProjectRequest
-	46,  // 128: postpilot.v1.ClipService.CreateClipSourceBatch:input_type -> postpilot.v1.CreateClipSourceBatchRequest
-	48,  // 129: postpilot.v1.ClipService.ConfirmClipSource:input_type -> postpilot.v1.ConfirmClipSourceRequest
-	50,  // 130: postpilot.v1.ClipService.DiscardClipSourceBatch:input_type -> postpilot.v1.DiscardClipSourceBatchRequest
-	52,  // 131: postpilot.v1.ClipService.GetClipSources:input_type -> postpilot.v1.GetClipSourcesRequest
-	54,  // 132: postpilot.v1.ClipService.GetClipSourcePlayback:input_type -> postpilot.v1.GetClipSourcePlaybackRequest
-	69,  // 133: postpilot.v1.ClipService.SetClipSourceOriginalSound:input_type -> postpilot.v1.SetClipSourceOriginalSoundRequest
-	67,  // 134: postpilot.v1.ClipService.ReorderClipSources:input_type -> postpilot.v1.ReorderClipSourcesRequest
-	63,  // 135: postpilot.v1.ClipService.QuoteClipRevision:input_type -> postpilot.v1.QuoteClipRevisionRequest
-	65,  // 136: postpilot.v1.ClipService.StartClipRevision:input_type -> postpilot.v1.StartClipRevisionRequest
-	3,   // 137: postpilot.v1.ClipService.ListClipAnalysisEligibility:input_type -> postpilot.v1.ListClipAnalysisEligibilityRequest
-	95,  // 138: postpilot.v1.ClipService.PrepareClipPreview:output_type -> postpilot.v1.PrepareClipPreviewResponse
-	103, // 139: postpilot.v1.ClipService.GetClipCapabilities:output_type -> postpilot.v1.GetClipCapabilitiesResponse
-	92,  // 140: postpilot.v1.ClipService.GetClipCaptionPreview:output_type -> postpilot.v1.GetClipCaptionPreviewResponse
-	91,  // 141: postpilot.v1.ClipService.GetClipCaptionStyleSamples:output_type -> postpilot.v1.GetClipCaptionStyleSamplesResponse
-	99,  // 142: postpilot.v1.ClipService.SaveClipEditPlan:output_type -> postpilot.v1.SaveClipEditPlanResponse
-	101, // 143: postpilot.v1.ClipService.StartClipRender:output_type -> postpilot.v1.StartClipRenderResponse
-	57,  // 144: postpilot.v1.ClipService.StartClipGeneration:output_type -> postpilot.v1.StartClipGenerationResponse
-	61,  // 145: postpilot.v1.ClipService.QuoteClipGeneration:output_type -> postpilot.v1.QuoteClipGenerationResponse
-	14,  // 146: postpilot.v1.ClipService.FinalizeClipProject:output_type -> postpilot.v1.FinalizeClipProjectResponse
-	72,  // 147: postpilot.v1.ClipService.CancelClipJob:output_type -> postpilot.v1.CancelClipJobResponse
-	25,  // 148: postpilot.v1.ClipService.ListVideoTemplates:output_type -> postpilot.v1.ListVideoTemplatesResponse
-	27,  // 149: postpilot.v1.ClipService.CreateVideoTemplate:output_type -> postpilot.v1.CreateVideoTemplateResponse
-	29,  // 150: postpilot.v1.ClipService.UpdateVideoTemplate:output_type -> postpilot.v1.UpdateVideoTemplateResponse
-	31,  // 151: postpilot.v1.ClipService.DeleteVideoTemplate:output_type -> postpilot.v1.DeleteVideoTemplateResponse
-	12,  // 152: postpilot.v1.ClipService.SeedPresetFields:output_type -> postpilot.v1.SeedPresetFieldsResponse
-	33,  // 153: postpilot.v1.ClipService.ListClipProjects:output_type -> postpilot.v1.ListClipProjectsResponse
-	35,  // 154: postpilot.v1.ClipService.CreateClipProject:output_type -> postpilot.v1.CreateClipProjectResponse
-	37,  // 155: postpilot.v1.ClipService.GetClipProject:output_type -> postpilot.v1.GetClipProjectResponse
-	39,  // 156: postpilot.v1.ClipService.UpdateClipProject:output_type -> postpilot.v1.UpdateClipProjectResponse
-	41,  // 157: postpilot.v1.ClipService.DeleteClipProject:output_type -> postpilot.v1.DeleteClipProjectResponse
-	47,  // 158: postpilot.v1.ClipService.CreateClipSourceBatch:output_type -> postpilot.v1.CreateClipSourceBatchResponse
-	49,  // 159: postpilot.v1.ClipService.ConfirmClipSource:output_type -> postpilot.v1.ConfirmClipSourceResponse
-	51,  // 160: postpilot.v1.ClipService.DiscardClipSourceBatch:output_type -> postpilot.v1.DiscardClipSourceBatchResponse
-	53,  // 161: postpilot.v1.ClipService.GetClipSources:output_type -> postpilot.v1.GetClipSourcesResponse
-	55,  // 162: postpilot.v1.ClipService.GetClipSourcePlayback:output_type -> postpilot.v1.GetClipSourcePlaybackResponse
-	70,  // 163: postpilot.v1.ClipService.SetClipSourceOriginalSound:output_type -> postpilot.v1.SetClipSourceOriginalSoundResponse
-	68,  // 164: postpilot.v1.ClipService.ReorderClipSources:output_type -> postpilot.v1.ReorderClipSourcesResponse
-	64,  // 165: postpilot.v1.ClipService.QuoteClipRevision:output_type -> postpilot.v1.QuoteClipRevisionResponse
-	66,  // 166: postpilot.v1.ClipService.StartClipRevision:output_type -> postpilot.v1.StartClipRevisionResponse
-	4,   // 167: postpilot.v1.ClipService.ListClipAnalysisEligibility:output_type -> postpilot.v1.ListClipAnalysisEligibilityResponse
-	138, // [138:168] is the sub-list for method output_type
-	108, // [108:138] is the sub-list for method input_type
-	108, // [108:108] is the sub-list for extension type_name
-	108, // [108:108] is the sub-list for extension extendee
-	0,   // [0:108] is the sub-list for field type_name
+	3,   // 2: postpilot.v1.ListClipAnalysisEligibilityResponse.models:type_name -> postpilot.v1.ClipAnalysisModelEligibility
+	6,   // 3: postpilot.v1.ClipInformationFields.values:type_name -> postpilot.v1.ClipInformationField
+	6,   // 4: postpilot.v1.VideoTemplate.information_fields:type_name -> postpilot.v1.ClipInformationField
+	6,   // 5: postpilot.v1.SeedPresetFieldsResponse.fields:type_name -> postpilot.v1.ClipInformationField
+	17,  // 6: postpilot.v1.FinalizeClipProjectResponse.project:type_name -> postpilot.v1.ClipProject
+	1,   // 7: postpilot.v1.ClipResult.render_kind:type_name -> postpilot.v1.ClipRenderKind
+	11,  // 8: postpilot.v1.ClipProject.answers:type_name -> postpilot.v1.ClipAnswer
+	16,  // 9: postpilot.v1.ClipProject.result:type_name -> postpilot.v1.ClipResult
+	119, // 10: postpilot.v1.ClipProject.latest_job:type_name -> postpilot.v1.GenerationJob
+	98,  // 11: postpilot.v1.ClipProject.editing:type_name -> postpilot.v1.ClipEditingState
+	24,  // 12: postpilot.v1.ClipProject.accounting:type_name -> postpilot.v1.ClipAccounting
+	23,  // 13: postpilot.v1.ClipProject.latest_attempt:type_name -> postpilot.v1.ClipAttempt
+	20,  // 14: postpilot.v1.ClipProject.observations:type_name -> postpilot.v1.ClipObservations
+	110, // 15: postpilot.v1.ClipProject.composition:type_name -> postpilot.v1.ClipProjectComposition
+	111, // 16: postpilot.v1.ClipProject.attempt_inspection:type_name -> postpilot.v1.ClipAttemptInspection
+	120, // 17: postpilot.v1.ClipProject.language:type_name -> postpilot.v1.ContentLanguage
+	19,  // 18: postpilot.v1.ClipProject.notices:type_name -> postpilot.v1.ClipNotice
+	18,  // 19: postpilot.v1.ClipProject.requests:type_name -> postpilot.v1.ClipProjectRequest
+	1,   // 20: postpilot.v1.ClipProject.last_render_kind:type_name -> postpilot.v1.ClipRenderKind
+	21,  // 21: postpilot.v1.ClipObservations.sources:type_name -> postpilot.v1.ClipSourceObservation
+	97,  // 22: postpilot.v1.ClipSourceObservation.source:type_name -> postpilot.v1.ClipRetainedSource
+	22,  // 23: postpilot.v1.ClipSourceObservation.segments:type_name -> postpilot.v1.ClipObservedSegment
+	79,  // 24: postpilot.v1.ClipObservedSegment.focal:type_name -> postpilot.v1.ClipFocal
+	10,  // 25: postpilot.v1.ListVideoTemplatesResponse.templates:type_name -> postpilot.v1.VideoTemplate
+	6,   // 26: postpilot.v1.CreateVideoTemplateRequest.information_fields:type_name -> postpilot.v1.ClipInformationField
+	10,  // 27: postpilot.v1.CreateVideoTemplateResponse.template:type_name -> postpilot.v1.VideoTemplate
+	7,   // 28: postpilot.v1.UpdateVideoTemplateRequest.information_fields:type_name -> postpilot.v1.ClipInformationFields
+	8,   // 29: postpilot.v1.UpdateVideoTemplateRequest.copy_styles:type_name -> postpilot.v1.ClipCopyStyles
+	10,  // 30: postpilot.v1.UpdateVideoTemplateResponse.template:type_name -> postpilot.v1.VideoTemplate
+	17,  // 31: postpilot.v1.ListClipProjectsResponse.projects:type_name -> postpilot.v1.ClipProject
+	11,  // 32: postpilot.v1.CreateClipProjectRequest.answers:type_name -> postpilot.v1.ClipAnswer
+	108, // 33: postpilot.v1.CreateClipProjectRequest.composition_inputs:type_name -> postpilot.v1.ClipCompositionInputs
+	120, // 34: postpilot.v1.CreateClipProjectRequest.language:type_name -> postpilot.v1.ContentLanguage
+	9,   // 35: postpilot.v1.CreateClipProjectRequest.allowed_caption_styles:type_name -> postpilot.v1.ClipCaptionStyles
+	17,  // 36: postpilot.v1.CreateClipProjectResponse.project:type_name -> postpilot.v1.ClipProject
+	17,  // 37: postpilot.v1.GetClipProjectResponse.project:type_name -> postpilot.v1.ClipProject
+	11,  // 38: postpilot.v1.UpdateClipProjectRequest.answers:type_name -> postpilot.v1.ClipAnswer
+	108, // 39: postpilot.v1.UpdateClipProjectRequest.composition_inputs:type_name -> postpilot.v1.ClipCompositionInputs
+	9,   // 40: postpilot.v1.UpdateClipProjectRequest.allowed_caption_styles:type_name -> postpilot.v1.ClipCaptionStyles
+	17,  // 41: postpilot.v1.UpdateClipProjectResponse.project:type_name -> postpilot.v1.ClipProject
+	43,  // 42: postpilot.v1.ClipSource.metadata:type_name -> postpilot.v1.ClipSourceMetadata
+	44,  // 43: postpilot.v1.ClipSourceBatch.sources:type_name -> postpilot.v1.ClipSource
+	113, // 44: postpilot.v1.ClipSourceUpload.headers:type_name -> postpilot.v1.ClipSourceUpload.HeadersEntry
+	43,  // 45: postpilot.v1.CreateClipSourceBatchRequest.sources:type_name -> postpilot.v1.ClipSourceMetadata
+	45,  // 46: postpilot.v1.CreateClipSourceBatchResponse.batch:type_name -> postpilot.v1.ClipSourceBatch
+	46,  // 47: postpilot.v1.CreateClipSourceBatchResponse.uploads:type_name -> postpilot.v1.ClipSourceUpload
+	45,  // 48: postpilot.v1.ConfirmClipSourceResponse.batch:type_name -> postpilot.v1.ClipSourceBatch
+	45,  // 49: postpilot.v1.GetClipSourcesResponse.batches:type_name -> postpilot.v1.ClipSourceBatch
+	118, // 50: postpilot.v1.StartClipGenerationRequest.observe_model:type_name -> postpilot.v1.ModelRef
+	118, // 51: postpilot.v1.StartClipGenerationRequest.write_model:type_name -> postpilot.v1.ModelRef
+	118, // 52: postpilot.v1.QuoteClipGenerationRequest.observe_model:type_name -> postpilot.v1.ModelRef
+	118, // 53: postpilot.v1.QuoteClipGenerationRequest.write_model:type_name -> postpilot.v1.ModelRef
+	118, // 54: postpilot.v1.ClipPricedCall.model:type_name -> postpilot.v1.ModelRef
+	60,  // 55: postpilot.v1.QuoteClipGenerationResponse.priced_calls:type_name -> postpilot.v1.ClipPricedCall
+	63,  // 56: postpilot.v1.QuoteClipGenerationResponse.cancellation_policy:type_name -> postpilot.v1.ClipCancellationPolicy
+	61,  // 57: postpilot.v1.QuoteClipGenerationResponse.sequence_captions:type_name -> postpilot.v1.ClipSequenceCaptionCost
+	118, // 58: postpilot.v1.QuoteClipRevisionRequest.observe_model:type_name -> postpilot.v1.ModelRef
+	118, // 59: postpilot.v1.QuoteClipRevisionRequest.write_model:type_name -> postpilot.v1.ModelRef
+	60,  // 60: postpilot.v1.QuoteClipRevisionResponse.priced_calls:type_name -> postpilot.v1.ClipPricedCall
+	63,  // 61: postpilot.v1.QuoteClipRevisionResponse.cancellation_policy:type_name -> postpilot.v1.ClipCancellationPolicy
+	61,  // 62: postpilot.v1.QuoteClipRevisionResponse.sequence_captions:type_name -> postpilot.v1.ClipSequenceCaptionCost
+	118, // 63: postpilot.v1.StartClipRevisionRequest.observe_model:type_name -> postpilot.v1.ModelRef
+	118, // 64: postpilot.v1.StartClipRevisionRequest.write_model:type_name -> postpilot.v1.ModelRef
+	45,  // 65: postpilot.v1.ReorderClipSourcesResponse.batch:type_name -> postpilot.v1.ClipSourceBatch
+	45,  // 66: postpilot.v1.SetClipSourceOriginalSoundResponse.batch:type_name -> postpilot.v1.ClipSourceBatch
+	17,  // 67: postpilot.v1.SetClipSourceOriginalSoundResponse.project:type_name -> postpilot.v1.ClipProject
+	119, // 68: postpilot.v1.CancelClipJobResponse.job:type_name -> postpilot.v1.GenerationJob
+	24,  // 69: postpilot.v1.CancelClipJobResponse.accounting:type_name -> postpilot.v1.ClipAccounting
+	74,  // 70: postpilot.v1.ClipEditCut.copy:type_name -> postpilot.v1.ClipCaption
+	74,  // 71: postpilot.v1.ClipEditCut.copies:type_name -> postpilot.v1.ClipCaption
+	79,  // 72: postpilot.v1.ClipEditCut.focal:type_name -> postpilot.v1.ClipFocal
+	76,  // 73: postpilot.v1.ClipEditCut.creation:type_name -> postpilot.v1.ClipCutCreation
+	77,  // 74: postpilot.v1.ClipSourceAudioSettings.values:type_name -> postpilot.v1.ClipSourceAudioSetting
+	80,  // 75: postpilot.v1.ClipEditableText.rows:type_name -> postpilot.v1.ClipTextRow
+	81,  // 76: postpilot.v1.ClipEditableText.phrases:type_name -> postpilot.v1.ClipEditablePhrase
+	82,  // 77: postpilot.v1.ClipEditableText.evidence:type_name -> postpilot.v1.ClipTextEvidence
+	85,  // 78: postpilot.v1.ClipEditableText.creation:type_name -> postpilot.v1.ClipTextCreation
+	84,  // 79: postpilot.v1.ClipEditableText.owner_position:type_name -> postpilot.v1.ClipCaptionPlacement
+	75,  // 80: postpilot.v1.ClipEditPlan.cuts:type_name -> postpilot.v1.ClipEditCut
+	83,  // 81: postpilot.v1.ClipEditPlan.elements:type_name -> postpilot.v1.ClipEditableText
+	87,  // 82: postpilot.v1.ClipEditPlan.associations:type_name -> postpilot.v1.ClipSourceAssociations
+	78,  // 83: postpilot.v1.ClipEditPlan.source_audio:type_name -> postpilot.v1.ClipSourceAudioSettings
+	107, // 84: postpilot.v1.ClipSourceAssociations.values:type_name -> postpilot.v1.ClipSourceAssociation
+	88,  // 85: postpilot.v1.ClipCaptionFragment.box:type_name -> postpilot.v1.ClipCanvasBox
+	86,  // 86: postpilot.v1.GetClipCaptionPreviewRequest.plan:type_name -> postpilot.v1.ClipEditPlan
+	88,  // 87: postpilot.v1.GetClipCaptionStyleSamplesResponse.canvas:type_name -> postpilot.v1.ClipCanvasBox
+	89,  // 88: postpilot.v1.GetClipCaptionStyleSamplesResponse.samples:type_name -> postpilot.v1.ClipCaptionFragment
+	88,  // 89: postpilot.v1.GetClipCaptionPreviewResponse.canvas:type_name -> postpilot.v1.ClipCanvasBox
+	88,  // 90: postpilot.v1.GetClipCaptionPreviewResponse.safe_area:type_name -> postpilot.v1.ClipCanvasBox
+	89,  // 91: postpilot.v1.GetClipCaptionPreviewResponse.captions:type_name -> postpilot.v1.ClipCaptionFragment
+	86,  // 92: postpilot.v1.PrepareClipPreviewRequest.plan:type_name -> postpilot.v1.ClipEditPlan
+	95,  // 93: postpilot.v1.PrepareClipPreviewResponse.assets:type_name -> postpilot.v1.ClipPreviewAsset
+	2,   // 94: postpilot.v1.PrepareClipPreviewResponse.parity:type_name -> postpilot.v1.ClipPreviewParity
+	86,  // 95: postpilot.v1.ClipEditingState.plan:type_name -> postpilot.v1.ClipEditPlan
+	97,  // 96: postpilot.v1.ClipEditingState.sources:type_name -> postpilot.v1.ClipRetainedSource
+	86,  // 97: postpilot.v1.SaveClipEditPlanRequest.plan:type_name -> postpilot.v1.ClipEditPlan
+	17,  // 98: postpilot.v1.SaveClipEditPlanResponse.project:type_name -> postpilot.v1.ClipProject
+	1,   // 99: postpilot.v1.StartClipRenderRequest.render_kind:type_name -> postpilot.v1.ClipRenderKind
+	114, // 100: postpilot.v1.ClipCompositionItem.values:type_name -> postpilot.v1.ClipCompositionItem.ValuesEntry
+	105, // 101: postpilot.v1.ClipCompositionItems.items:type_name -> postpilot.v1.ClipCompositionItem
+	115, // 102: postpilot.v1.ClipCompositionInputs.values:type_name -> postpilot.v1.ClipCompositionInputs.ValuesEntry
+	116, // 103: postpilot.v1.ClipCompositionInputs.items:type_name -> postpilot.v1.ClipCompositionInputs.ItemsEntry
+	107, // 104: postpilot.v1.ClipCompositionInputs.associations:type_name -> postpilot.v1.ClipSourceAssociation
+	109, // 105: postpilot.v1.ClipProjectComposition.snapshot:type_name -> postpilot.v1.ClipCompositionSnapshot
+	108, // 106: postpilot.v1.ClipProjectComposition.inputs:type_name -> postpilot.v1.ClipCompositionInputs
+	20,  // 107: postpilot.v1.ClipAttemptInspection.observations:type_name -> postpilot.v1.ClipObservations
+	112, // 108: postpilot.v1.ClipAttemptInspection.ranges:type_name -> postpilot.v1.ClipAttemptRange
+	117, // 109: postpilot.v1.ClipAttemptInspection.measurements:type_name -> postpilot.v1.ClipAttemptInspection.MeasurementsEntry
+	106, // 110: postpilot.v1.ClipCompositionInputs.ItemsEntry.value:type_name -> postpilot.v1.ClipCompositionItems
+	94,  // 111: postpilot.v1.ClipService.PrepareClipPreview:input_type -> postpilot.v1.PrepareClipPreviewRequest
+	103, // 112: postpilot.v1.ClipService.GetClipCapabilities:input_type -> postpilot.v1.GetClipCapabilitiesRequest
+	90,  // 113: postpilot.v1.ClipService.GetClipCaptionPreview:input_type -> postpilot.v1.GetClipCaptionPreviewRequest
+	91,  // 114: postpilot.v1.ClipService.GetClipCaptionStyleSamples:input_type -> postpilot.v1.GetClipCaptionStyleSamplesRequest
+	99,  // 115: postpilot.v1.ClipService.SaveClipEditPlan:input_type -> postpilot.v1.SaveClipEditPlanRequest
+	101, // 116: postpilot.v1.ClipService.StartClipRender:input_type -> postpilot.v1.StartClipRenderRequest
+	57,  // 117: postpilot.v1.ClipService.StartClipGeneration:input_type -> postpilot.v1.StartClipGenerationRequest
+	59,  // 118: postpilot.v1.ClipService.QuoteClipGeneration:input_type -> postpilot.v1.QuoteClipGenerationRequest
+	14,  // 119: postpilot.v1.ClipService.FinalizeClipProject:input_type -> postpilot.v1.FinalizeClipProjectRequest
+	72,  // 120: postpilot.v1.ClipService.CancelClipJob:input_type -> postpilot.v1.CancelClipJobRequest
+	25,  // 121: postpilot.v1.ClipService.ListVideoTemplates:input_type -> postpilot.v1.ListVideoTemplatesRequest
+	27,  // 122: postpilot.v1.ClipService.CreateVideoTemplate:input_type -> postpilot.v1.CreateVideoTemplateRequest
+	29,  // 123: postpilot.v1.ClipService.UpdateVideoTemplate:input_type -> postpilot.v1.UpdateVideoTemplateRequest
+	31,  // 124: postpilot.v1.ClipService.DeleteVideoTemplate:input_type -> postpilot.v1.DeleteVideoTemplateRequest
+	12,  // 125: postpilot.v1.ClipService.SeedPresetFields:input_type -> postpilot.v1.SeedPresetFieldsRequest
+	33,  // 126: postpilot.v1.ClipService.ListClipProjects:input_type -> postpilot.v1.ListClipProjectsRequest
+	35,  // 127: postpilot.v1.ClipService.CreateClipProject:input_type -> postpilot.v1.CreateClipProjectRequest
+	37,  // 128: postpilot.v1.ClipService.GetClipProject:input_type -> postpilot.v1.GetClipProjectRequest
+	39,  // 129: postpilot.v1.ClipService.UpdateClipProject:input_type -> postpilot.v1.UpdateClipProjectRequest
+	41,  // 130: postpilot.v1.ClipService.DeleteClipProject:input_type -> postpilot.v1.DeleteClipProjectRequest
+	47,  // 131: postpilot.v1.ClipService.CreateClipSourceBatch:input_type -> postpilot.v1.CreateClipSourceBatchRequest
+	49,  // 132: postpilot.v1.ClipService.ConfirmClipSource:input_type -> postpilot.v1.ConfirmClipSourceRequest
+	51,  // 133: postpilot.v1.ClipService.DiscardClipSourceBatch:input_type -> postpilot.v1.DiscardClipSourceBatchRequest
+	53,  // 134: postpilot.v1.ClipService.GetClipSources:input_type -> postpilot.v1.GetClipSourcesRequest
+	55,  // 135: postpilot.v1.ClipService.GetClipSourcePlayback:input_type -> postpilot.v1.GetClipSourcePlaybackRequest
+	70,  // 136: postpilot.v1.ClipService.SetClipSourceOriginalSound:input_type -> postpilot.v1.SetClipSourceOriginalSoundRequest
+	68,  // 137: postpilot.v1.ClipService.ReorderClipSources:input_type -> postpilot.v1.ReorderClipSourcesRequest
+	64,  // 138: postpilot.v1.ClipService.QuoteClipRevision:input_type -> postpilot.v1.QuoteClipRevisionRequest
+	66,  // 139: postpilot.v1.ClipService.StartClipRevision:input_type -> postpilot.v1.StartClipRevisionRequest
+	4,   // 140: postpilot.v1.ClipService.ListClipAnalysisEligibility:input_type -> postpilot.v1.ListClipAnalysisEligibilityRequest
+	96,  // 141: postpilot.v1.ClipService.PrepareClipPreview:output_type -> postpilot.v1.PrepareClipPreviewResponse
+	104, // 142: postpilot.v1.ClipService.GetClipCapabilities:output_type -> postpilot.v1.GetClipCapabilitiesResponse
+	93,  // 143: postpilot.v1.ClipService.GetClipCaptionPreview:output_type -> postpilot.v1.GetClipCaptionPreviewResponse
+	92,  // 144: postpilot.v1.ClipService.GetClipCaptionStyleSamples:output_type -> postpilot.v1.GetClipCaptionStyleSamplesResponse
+	100, // 145: postpilot.v1.ClipService.SaveClipEditPlan:output_type -> postpilot.v1.SaveClipEditPlanResponse
+	102, // 146: postpilot.v1.ClipService.StartClipRender:output_type -> postpilot.v1.StartClipRenderResponse
+	58,  // 147: postpilot.v1.ClipService.StartClipGeneration:output_type -> postpilot.v1.StartClipGenerationResponse
+	62,  // 148: postpilot.v1.ClipService.QuoteClipGeneration:output_type -> postpilot.v1.QuoteClipGenerationResponse
+	15,  // 149: postpilot.v1.ClipService.FinalizeClipProject:output_type -> postpilot.v1.FinalizeClipProjectResponse
+	73,  // 150: postpilot.v1.ClipService.CancelClipJob:output_type -> postpilot.v1.CancelClipJobResponse
+	26,  // 151: postpilot.v1.ClipService.ListVideoTemplates:output_type -> postpilot.v1.ListVideoTemplatesResponse
+	28,  // 152: postpilot.v1.ClipService.CreateVideoTemplate:output_type -> postpilot.v1.CreateVideoTemplateResponse
+	30,  // 153: postpilot.v1.ClipService.UpdateVideoTemplate:output_type -> postpilot.v1.UpdateVideoTemplateResponse
+	32,  // 154: postpilot.v1.ClipService.DeleteVideoTemplate:output_type -> postpilot.v1.DeleteVideoTemplateResponse
+	13,  // 155: postpilot.v1.ClipService.SeedPresetFields:output_type -> postpilot.v1.SeedPresetFieldsResponse
+	34,  // 156: postpilot.v1.ClipService.ListClipProjects:output_type -> postpilot.v1.ListClipProjectsResponse
+	36,  // 157: postpilot.v1.ClipService.CreateClipProject:output_type -> postpilot.v1.CreateClipProjectResponse
+	38,  // 158: postpilot.v1.ClipService.GetClipProject:output_type -> postpilot.v1.GetClipProjectResponse
+	40,  // 159: postpilot.v1.ClipService.UpdateClipProject:output_type -> postpilot.v1.UpdateClipProjectResponse
+	42,  // 160: postpilot.v1.ClipService.DeleteClipProject:output_type -> postpilot.v1.DeleteClipProjectResponse
+	48,  // 161: postpilot.v1.ClipService.CreateClipSourceBatch:output_type -> postpilot.v1.CreateClipSourceBatchResponse
+	50,  // 162: postpilot.v1.ClipService.ConfirmClipSource:output_type -> postpilot.v1.ConfirmClipSourceResponse
+	52,  // 163: postpilot.v1.ClipService.DiscardClipSourceBatch:output_type -> postpilot.v1.DiscardClipSourceBatchResponse
+	54,  // 164: postpilot.v1.ClipService.GetClipSources:output_type -> postpilot.v1.GetClipSourcesResponse
+	56,  // 165: postpilot.v1.ClipService.GetClipSourcePlayback:output_type -> postpilot.v1.GetClipSourcePlaybackResponse
+	71,  // 166: postpilot.v1.ClipService.SetClipSourceOriginalSound:output_type -> postpilot.v1.SetClipSourceOriginalSoundResponse
+	69,  // 167: postpilot.v1.ClipService.ReorderClipSources:output_type -> postpilot.v1.ReorderClipSourcesResponse
+	65,  // 168: postpilot.v1.ClipService.QuoteClipRevision:output_type -> postpilot.v1.QuoteClipRevisionResponse
+	67,  // 169: postpilot.v1.ClipService.StartClipRevision:output_type -> postpilot.v1.StartClipRevisionResponse
+	5,   // 170: postpilot.v1.ClipService.ListClipAnalysisEligibility:output_type -> postpilot.v1.ListClipAnalysisEligibilityResponse
+	141, // [141:171] is the sub-list for method output_type
+	111, // [111:141] is the sub-list for method input_type
+	111, // [111:111] is the sub-list for extension type_name
+	111, // [111:111] is the sub-list for extension extendee
+	0,   // [0:111] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_clip_proto_init() }
@@ -9209,7 +9297,7 @@ func file_postpilot_v1_clip_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_postpilot_v1_clip_proto_rawDesc), len(file_postpilot_v1_clip_proto_rawDesc)),
-			NumEnums:      2,
+			NumEnums:      3,
 			NumMessages:   115,
 			NumExtensions: 0,
 			NumServices:   1,

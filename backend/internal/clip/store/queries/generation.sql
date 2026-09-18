@@ -9,7 +9,7 @@ INSERT INTO clip_proxy_leases(object_key,batch_id) VALUES (?,?);
 -- name: RemoveProxy :exec
 DELETE FROM clip_proxy_leases WHERE object_key=?;
 -- name: SaveGeneration :execrows
-UPDATE clip_projects SET result_id=lower(hex(randomblob(16))),analysis_json=?,edit_plan_json=?,result_key=?,result_content_type=?,result_bytes=?,result_duration_ms=?,result_created_at=?,updated_at=?,edit_plan_revision=edit_plan_revision+1,rendered_plan_revision=edit_plan_revision+1 WHERE user_id=? AND id=? AND deleting=0 AND finalized_at IS NULL;
+UPDATE clip_projects SET render_kind=?,result_id=lower(hex(randomblob(16))),analysis_json=?,edit_plan_json=?,result_key=?,result_content_type=?,result_bytes=?,result_duration_ms=?,result_created_at=?,updated_at=?,edit_plan_revision=edit_plan_revision+1,rendered_plan_revision=edit_plan_revision+1 WHERE user_id=? AND id=? AND deleting=0 AND finalized_at IS NULL;
 -- A generation that stops at the plan (CLIP-151). The analysis and the plan
 -- advance; result_key, result_id and rendered_plan_revision are untouched, so
 -- the previous result survives and reads as the stale one it is (CLIP-152).
@@ -26,7 +26,7 @@ SELECT result_key FROM clip_projects WHERE result_key IS NOT NULL UNION SELECT r
 -- name: SaveCorrection :execrows
 UPDATE clip_projects SET edit_plan_json=?,edit_plan_revision=edit_plan_revision+1,updated_at=? WHERE id=? AND user_id=? AND deleting=0 AND finalized_at IS NULL AND edit_plan_revision=?;
 -- name: SaveRender :execrows
-UPDATE clip_projects SET result_id=lower(hex(randomblob(16))),result_key=?,result_content_type=?,result_bytes=?,result_duration_ms=?,result_created_at=?,updated_at=?,edit_plan_json=?,rendered_plan_revision=edit_plan_revision WHERE id=? AND user_id=? AND deleting=0 AND finalized_at IS NULL AND edit_plan_revision=?;
+UPDATE clip_projects SET render_kind=?,result_id=lower(hex(randomblob(16))),result_key=?,result_content_type=?,result_bytes=?,result_duration_ms=?,result_created_at=?,updated_at=?,edit_plan_json=?,rendered_plan_revision=edit_plan_revision WHERE id=? AND user_id=? AND deleting=0 AND finalized_at IS NULL AND edit_plan_revision=?;
 -- name: HasActiveClipJob :one
 SELECT COUNT(*) FROM generation_jobs WHERE clip_project_id=? AND status IN ('queued','running');
 -- Every active clip job EXCEPT the one asking. A revision saves the plan it
