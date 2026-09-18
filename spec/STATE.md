@@ -49,7 +49,7 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
-| T242 | a render is started per kind and records the kind with its result | CLIP | T241 | doing@260918.knd |
+| T242 | a render is started per kind and records the kind with its result | CLIP | T241 | todo |
 | T243 | every plan check runs on the server before a render of either kind | CLIP | T242 | todo |
 | T247 | ②'s dock is the revision composer over 렌더하기 and 확정하기 | CLIP | T246 T242 | todo |
 | T248 | 확정하기 opens the finalization dialog | CLIP | T247 | todo |
@@ -61,10 +61,11 @@
 | T254 | ② runs the browser render with its own progress and cancellation | CLIP | T253 T247 | todo |
 
 ## next
-- implement-task T242 (doing, knd) — the render kind and the project's last-rendered kind; T243 T247 T250 follow it
+- implement-task T242 — claimable and unstarted: r37 is in it, its dep T241 is done and no code was written for it
 - after T242: T247 is ②'s next step and T243 T250 open the browser cluster
 - T177 stays blocked (its viewing checklist predates the caption style set, the outline and now ②'s shape) and T008 is another session's
 ## log
+- 260918 T242 released back to todo before any code was written (knd stopped at the owner's word); nothing of it is in the tree
 - 260918 T255 done; the smoke's continuation now succeeds on the saved plan with the result untouched, stated by one `continuationVerdict` a host test pins so the next drift breaks ARCH-26 instead of the deploy — clip-input-smoke is green again (PASS in 70 s)
 - 260918 ideation post-quality-and-related-links start
 - 260918 T255 claimed (knd)
@@ -84,4 +85,3 @@
 - 260918 update-ssot CLIP r37 done; the browser render draws every style including the sequence ones — it sets no type and applies only the motion, so the two kinds owe the same clip and not the same file and a caption that moves differently between them is not a defect; the originals a page lacks are fetched rather than refusing the kind, leaving the encoders and the memory as the two refusals; the kind offered first is the project's last one and the browser kind where it has none; CLIP-126 closes with no wall-clock committed
 - 260918 r37 rewrites T250's three refusals to two and gives T251 the per-style motion it never carried; T241 and T244 (both doing) are outside it
 - 260918 T244 claimed (ctr)
-- 260918 update-ssot CLIP start — the browser kind draws only static captions, fetches the originals it lacks, and the kinds owe the same clip rather than the same file
