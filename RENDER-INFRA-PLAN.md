@@ -4,6 +4,11 @@
 것이 드러나 계획 문서로 범위를 넓혔다. 무엇이 실측이고 무엇이 추정인지, 무엇을 고쳤고 무엇이
 남았는지를 구분해 적었다. 앞선 기록(`CLIP-WORKSPACE-FINDINGS.md`)을 흡수했다.
 
+> **2026-09-18 갱신** — 테일넷을 실제로 구축하고 큐 경로를 뚫었다. 바뀐 곳은 넷이다.
+> 8절에 실제 노드 구성과 `tailscale serve` 결정·검증이 들어갔고, 7-1과 5-1에서 **Vultr 이전이
+> 보류**로 바뀌었으며, 10절에 "Micro로 충분한가"가 미확인 항목으로 추가되었고, 12절에 tailnet
+> 확인 명령이 붙었다. **큐 API 자체는 여전히 미구현이고 경로만 열려 있다.**
+
 **목표는 셋이고 우선순위가 아니라 전부 중요하다: 속도, 경제성, 안정성.**
 그중 속도가 제품의 생사를 가른다. 영상 하나에 20~30분이면 아무도 쓰지 않는다.
 
@@ -189,19 +194,25 @@ GPU에 유지하지 못하면 프레임이 GPU↔시스템 메모리를 왕복�
 
 | # | 할 일 | 소요 | 비용 | 결과 |
 |---|---|---|---|---|
-| **1** | 웹+DB를 **Vultr CPU Optimized 2 vCPU 서울**로 | 반나절 | $20/월 | 스로틀 실패 제거. 안정성 확보 |
+| **1** | ~~웹+DB를 **Vultr CPU Optimized 2 vCPU 서울**로~~ **보류 (2026-09-18)** | 반나절 | $20/월 | 3번이 스로틀의 원인을 제거하므로 근거가 겹친다 — 7-1 |
 | **2** | 새 단계별 실측 **(1과 병행)** | 반나절 | — | 3절의 추정을 숫자로 |
-| **3** | **미디어 실행기**(prepare+render) 분리 → 친구분 서버 | 2~3주 | $0 | 계약 완성. API 박스 CPU 해방 |
+| **3** | **미디어 실행기**(prepare+render) 분리 → `blah-02` | 2~3주 | $0 | 계약 완성. API 박스 CPU 해방 |
 | **4** | 렌더 병렬화 + LLM 관측 병렬화 | 1~2주 | — | **7.5분** |
 | **5** | 진행률 + 저해상도 프리뷰 | 며칠 | — | 체감 **1.5분** |
-| **6** | GPU 전환 및 검증 (친구분 서버) | 1~2주 | $0 | **가부 결정** |
+| **6** | GPU 전환 및 검증 (`blah-02`) | 1~2주 | $0 | **가부 결정** |
 | **7** | 플랫폼 결정 → **미디어 실행기만** 클라우드로 | 1~2주 | 결과에 따라 | 동시성 제한 해제 |
 
-**핵심은 7번에서 옮기는 것이 미디어 실행기 하나뿐이라는 점이다.** 웹과 DB는 1번 이후로 다시
-움직이지 않는다. DB 이사는 가장 위험한 종류의 이사이므로 한 번만 한다.
+**핵심은 7번에서 옮기는 것이 미디어 실행기 하나뿐이라는 점이다.** 웹과 DB는 움직이지 않는다
+(1번이 보류되었으므로 지금은 blah-03에 머무른다). DB 이사는 가장 위험한 종류의 이사이므로
+하더라도 한 번만 한다.
 
-**1번을 3번 뒤로 미루지 않는다.** 안정성은 지금 깨져 있고, 분리 작업은 몇 주가 걸린다. 반나절에
-월 $20이고 분리 작업과 충돌하지 않는다.
+~~**1번을 3번 뒤로 미루지 않는다.**~~ **2026-09-18에 뒤집혔다.** 원래 논지는 "안정성이 지금
+깨져 있으므로 분리를 기다리지 말라"였는데, 깨뜨린 주체가 렌더의 버스트 크레딧 소모다. 3번이
+렌더를 blah-02로 보내면 그 소모가 사라지므로 이사 자체가 필요 없어질 수 있다. **따라서 1번은
+3번 뒤로 미루고, 렌더 재개 후의 메모리·swap 관측으로 판단한다.**
+
+다만 **백업(Litestream → R2)은 1번에 묶어 두지 않는다.** 그것은 박스 교체와 독립이고 지금이
+가장 위험한 항목이므로, 이사 보류와 무관하게 진행한다.
 
 **페이즈 경계를 렌더가 아니라 "미디어 전체"로 긋는다.** 렌더만 떼면 API 박스에 prepare의
 285초가 남는다. prepare까지 함께 떼면 API 박스는 LLM 조율과 DB만 남아 CPU가 거의 필요
@@ -294,8 +305,9 @@ nvidia-smi --query-gpu=name,driver_version --format=csv
 
 | 조각 | 선택 | 이유 |
 |---|---|---|
-| 웹 + DB | **Vultr CPU Optimized 2 vCPU/4GB 서울, $20** | 전용 EPYC 코어라 스로틀 없음. 서울 리전. x86이라 이미지 그대로. ssh+compose 구조 동일 |
-| 미디어 실행기 (당분간) | **친구분 물리 서버, Tailscale** | 공짜. GPU 실험실. 분리 계약을 안전하게 완성 |
+| 웹 + DB | ~~Vultr CPU Optimized 2 vCPU/4GB 서울, $20~~ → **보류 (2026-09-18)** | 이전의 근거는 5-1의 "스로틀 실패 제거"였는데, 스로틀의 원인이 렌더의 버스트 크레딧 소모이므로 렌더가 blah-02로 빠지면 근거가 함께 사라진다. 월 $7과 $20~40의 차이이기도 하다. 다만 **"Micro로 충분"은 아직 확정하지 않는다** — 10절 |
+| 미디어 실행기 (당분간) | **`blah-02`, Tailscale** | 공짜. GPU 실험실. 분리 계약을 안전하게 완성. 구성은 8절 |
+| 큐의 tailnet 노출 | **`tailscale serve`** (2026-09-18 확정) | IP 바인딩은 tailscaled 장애 시 공인 IP로 열리는 fail-open이다. serve는 fail-closed다 — 8절 |
 | 내구성 | **Litestream → R2** (클로즈 베타부터) | 비용 0, 코드 변경 0. R2를 이미 쓴다 |
 | 엣지 | Caddy 현상 유지 | 병목이 아님 |
 
@@ -342,7 +354,7 @@ nvidia-smi --query-gpu=name,driver_version --format=csv
 ### 전달 방식은 풀(pull)
 
 ```
-[API 박스 · Vultr]                   [미디어 실행기 · 친구분 서버]
+[API 박스 · blah-03]                 [미디어 실행기 · blah-02]
   잡 큐 + SQLite                        무상태 컨테이너
      │                                        │
      │◀── GET  /internal/media/next ──────────┤
@@ -356,21 +368,80 @@ nvidia-smi --query-gpu=name,driver_version --format=csv
 **API가 실행기에 도달할 필요가 없다**는 것이 핵심이다. 집 인터넷이 끊기거나 재부팅되어도 잡이
 큐에 남아 있다가 실행기가 돌아오면 이어진다. 푸시였다면 API가 타임아웃을 처리해야 한다.
 
-### Tailscale 구성
+### Tailscale 구성 — 2026-09-18 구축 완료
+
+계획 단계의 예시(`--hostname=media-01`, `tag:media`)가 아니라 **실제로 구축된 형태**를 적는다.
+아래 표와 검증 결과는 모두 그날 실측한 것이다.
+
+테일넷은 `blah.official0417@gmail.com` 소유이고 MagicDNS 접미사는 `tail46233e.ts.net`이다.
+**ACL은 전체 허용**이라 새 노드는 붙는 즉시 모든 노드에 닿는다. SSH 정책도 모든 노드·모든
+계정에 `accept`이고 재인증을 요구하는 `check`가 아니다(`tailscale debug netmap`의 `SSHPolicy`로
+확인). 계획이 권고했던 `tag:media`는 **쓰이지 않았고** 모든 노드가 그 계정에 매여 있다.
+
+| 노드 | 정체 | tailnet IP | 접속 | 역할 |
+|---|---|---|---|---|
+| `blah-01` | 구 teumsae | 100.84.218.63 | `ssh blah@blah-01` | design-system-platform, Ollama |
+| `blah-02` | 집 서버 (Ryzen 5 5600 / 39GB / **RTX 3080 Ti**) | 100.82.44.42 | **SSH 미개방** | 렌더 워커 예정. 별도 에이전트가 담당한다 |
+| `blah-03` | 이 VPS (Lightsail, 43.203.82.239) | 100.101.93.38 | `ssh ubuntu@blah-03` | postpilot API + 큐 + SQLite, cosimosi, edge-caddy |
+
+접속에서 걸리기 쉬운 곳이 셋 있다.
+
+- **`blah-01`에 `ubuntu` 계정은 없다.** `blah`로 붙는다. `ubuntu`로 시도하면
+  `tailnet policy does not permit you to SSH as user "ubuntu"`가 돌아오는데, ACL 결함이 아니라
+  계정 부재다.
+- **자기 자신에게는 Tailscale SSH가 통하지 않는다.** blah-03에서 `ssh ubuntu@blah-03`을 하면
+  tailnet을 타지 않고 로컬 sshd로 직행하므로 pem 키를 요구한다. 접속 검증은 **반드시 다른
+  노드에서** 한다.
+- **WSL2는 윈도우 호스트의 Tailscale을 타고 닿지 않는다.** NAT 구간이 tailnet으로 이어지지
+  않아 100.x로 가는 TCP가 타임아웃된다. 로컬에서 직접 붙으려면 WSL 안에 tailscale을 설치해야
+  하고, `systemd=true`가 이미 켜져 있어 조건은 갖췄다(2026-09-18 기준 미설치).
+
+노드를 새로 붙일 때는 auth key를 쓰면 브라우저 로그인이 필요 없다. 관리 콘솔의
+Settings → Keys → Generate auth key에서 Reusable과 Ephemeral을 모두 끈 키를 발급해
+`sudo tailscale up --authkey=tskey-auth-... --hostname=<이름> --ssh`로 붙인다.
+`--ssh`는 관리 경로이지 운영 경로가 아니다. 잡 전달은 위의 HTTP 계약으로 한다.
+
+### 큐를 tailnet에만 노출하는 방법 — `tailscale serve`로 확정
+
+blah-02의 워커가 blah-03의 큐를 폴링하려면 큐가 tailnet에서만 보여야 한다. 후보가 둘이었고
+**`serve`로 확정했다.** 컨테이너는 `127.0.0.1:9000`에만 바인딩하고 tailnet 노출은 tailscaled가
+맡는다.
 
 ```sh
-# 사용자 테일넷에서 미리 발급한 auth key로 붙인다 — 브라우저 로그인 없음
-sudo tailscale up \
-  --authkey=tskey-auth-xxxxx \
-  --advertise-tags=tag:media \
-  --hostname=media-01 \
-  --ssh
+# blah-03에서 한 번만 실행한다. 재부팅과 재배포를 넘어 유지된다
+sudo tailscale serve --bg --http=9000 127.0.0.1:9000
 ```
 
-- **테일넷 소유권을 친구분 계정에 두지 않는다.** auth key를 쓰면 친구분은 명령 한 줄만
-  붙여넣고 계정이 관여하지 않는다.
-- **태그를 붙인다.** 사용자 계정에 매이지 않아 키 만료로 끊기지 않고, ACL을 태그 기준으로 쓴다.
-- **`--ssh`는 관리 경로이지 운영 경로가 아니다.** 잡 전달은 위의 HTTP 계약으로 한다.
+| | docker가 tailnet IP에 직접 바인딩 | **`tailscale serve`** |
+|---|---|---|
+| compose | `"${TS_IP}:9000:9000"` | `"127.0.0.1:9000:9000"` |
+| IP 관리 | 배포 스크립트가 `tailscale ip -4`를 `.env`에 주입 | **불필요** |
+| tailscaled 장애 시 | `TS_IP`가 비면 `":9000:9000"` = **0.0.0.0 전체 노출 (fail-open)** | 그냥 닿지 않는다 **(fail-closed)** |
+| 기동 경합 | docker가 tailscaled보다 먼저 뜨면 바인드 실패 | 없다 |
+
+**fail-open이 기각 사유다.** `${TS_IP}`가 빈 문자열이면 compose는 오류를 내지 않고 모든
+인터페이스에 바인딩한다. edge-caddy가 이미 `0.0.0.0:80/443`을 잡고 있는 박스여서 그 사고는
+곧바로 공인 IP 노출이 된다. 기동 순서 문제도 같이 사라지므로 `docker.service`에
+`After=tailscaled.service` drop-in을 넣거나 `ip_nonlocal_bind=1`을 켤 필요가 없다
+(후자는 오타 난 IP에도 조용히 성공하는 나쁜 실패 양식이라 애초에 기각했다).
+
+**검증 (2026-09-18, 더미 업스트림으로)**
+
+| 경로 | 결과 |
+|---|---|
+| blah-01 → `http://blah-03:9000`, 업스트림 없음 | 502 — 경로는 살아 있고 업스트림만 비었다 |
+| blah-01 → `http://blah-03:9000`, 업스트림 있음 | **200** |
+| `http://43.203.82.239:9000` (공인 IP) | **거부** |
+| 배포로 api 컨테이너가 교체된 직후 | serve 설정 **유지됨** |
+
+마지막 행이 이 선택의 값어치를 보여 준다. tailscaled가 리스너를 소유하므로 컨테이너 교체나
+재배포와 무관하게 살아남는다. 상태는 `tailscale serve status`로 보고, 되돌릴 때는
+`sudo tailscale serve --http=9000 off`다.
+
+**아직 없는 것**: 큐 API(`/internal/media/next`, `/internal/media/result`) 자체는 **미구현**이다.
+`backend/`와 `proto/` 어디에도 없고 spec에도 태스크가 없다. 지금 9000을 듣는 것은 tailscaled
+뿐이고 업스트림은 비어 있다. 즉 **경로만 먼저 뚫어 둔 상태**이며, 컨테이너가 `127.0.0.1:9000`에
+붙는 순간 별도 조치 없이 동작한다.
 
 ### 멈출 지점
 
@@ -443,7 +514,8 @@ base는 "storage, database, worker"를 덮는다.
 | 항목 | 어떻게 확정하나 |
 |---|---|
 | 버스트 크레딧 고갈이 실제로 일어났는가 | Lightsail 콘솔의 `BurstCapacityPercentage` 그래프 최근 2주 |
-| 과거 잡의 단계별 소요 시간 분산 | 운영 DB 조회가 권한 정책(Production Reads)에 막혀 있음. 컨테이너 로그는 재생성으로 소실 |
+| 과거 잡의 단계별 소요 시간 분산 | 운영 DB 조회가 권한 정책(Production Reads)에 막혀 있음. 컨테이너 로그는 재생성으로 소실 — **2026-09-18에 실증됨**: `deploy-backend`가 돌 때마다 컨테이너가 교체되어 그 이전 로그가 통째로 사라진다. 그날 02:26과 07:52 두 번의 배포로 로그가 두 번 비었고, `docker logs --since 168h`를 줘도 남는 것은 마지막 배포 이후분뿐이다 |
+| **blah-03이 렌더 없이 Lightsail Micro로 충분한가** | 렌더 재개 후 메모리·swap을 관측해 판단한다. 2026-09-18 관측값은 컨테이너 4개 합계 99.8 MiB, available 469 MB이지만 **렌더가 한 건도 없던 기간의 값이라 API 부하 데이터가 아니다.** `uptime`의 load average는 직전 1·5·15분 평균일 뿐이므로 "장기간 0.00"의 근거로 쓸 수 없다 |
 | T190~T196 이후의 진짜 단계별 시간 | **5-1의 2번.** 모든 추정의 선행 조건 |
 | 후보 박스의 실제 코어 성능 | 벤치마크 스크립트를 후보에서 한 시간씩 실행. **$0.2 미만** |
 | `xfade`를 GPU에 유지할 수 있는가 | 친구분 서버, 5-2의 2번 |
@@ -468,8 +540,20 @@ base는 "storage, database, worker"를 덮는다.
 ## 12. 다시 확인하는 방법
 
 ```sh
-# 운영 접속
+# 운영 접속 — pem 경로 (tailnet 밖에서)
 ssh -i ~/.ssh/lightsail-cosimosi.pem ubuntu@43.203.82.239
+
+# tailnet 안이라면 (8절)
+ssh ubuntu@blah-03      # blah-01에서는 ssh blah@blah-01
+
+# tailnet 상태와 큐 노출
+tailscale status                 # 노드 목록과 온라인 여부
+tailscale serve status           # 9000 프록시 설정
+sudo tailscale debug netmap | python3 -c 'import json,sys; print(json.dumps(json.load(sys.stdin)["SSHPolicy"], indent=1))'
+
+# 큐 경로가 tailnet에서만 열려 있는지 — 반드시 다른 노드에서 (자기 자신은 tailnet을 안 탄다)
+ssh blah@blah-01 'curl -s -o /dev/null -w "%{http_code}\n" http://blah-03:9000/'   # 업스트림 없으면 502
+curl -s -o /dev/null -w "%{http_code}\n" http://43.203.82.239:9000/                 # 반드시 거부
 
 # 디스크와 이미지
 df -h / ; docker system df
