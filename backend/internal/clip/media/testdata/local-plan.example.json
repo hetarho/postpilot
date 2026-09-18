@@ -1,0 +1,71 @@
+{
+  "ratio": "vertical",
+  "durationMS": 12800,
+  "disclosure": "self",
+  "hideDisclosure": true,
+  "preset": "restaurant",
+  "accent": "coral",
+  "intro": "b",
+  "outro": "b",
+  "hook": "퇴근길에 여기",
+  "cta": "place",
+  "captionStyles": ["bold", "film", "ember"],
+  "facts": [
+    { "label": "상호", "text": "가게 이름" },
+    { "label": "메뉴", "text": "대표 메뉴" }
+  ],
+  "cuts": [
+    {
+      "file": "first.mp4",
+      "startMS": 200,
+      "endMS": 3200,
+      "transitionMS": 0,
+      "focalX": 0.5,
+      "focalY": 0.5,
+      "copies": []
+    },
+    {
+      "file": "second.mp4",
+      "startMS": 800,
+      "endMS": 3800,
+      "transitionMS": 0,
+      "focalX": 0.5,
+      "focalY": 0.5,
+      "copies": [
+        {
+          "text": "먹음직스러운 살코기",
+          "style": "ember",
+          "anchor": "bottom",
+          "align": "center",
+          "keyword": ""
+        }
+      ]
+    },
+    {
+      "file": "third.mp4",
+      "startMS": 1200,
+      "endMS": 4200,
+      "transitionMS": 200,
+      "focalX": 0.5,
+      "focalY": 0.5,
+      "copies": [
+        {
+          "text": "퇴근하고 한 잔",
+          "style": "bold",
+          "anchor": "bottom",
+          "align": "center",
+          "keyword": "한 잔"
+        }
+      ]
+    },
+    {
+      "file": "fourth.mp4",
+      "startMS": 400,
+      "endMS": 3400,
+      "transitionMS": 0,
+      "focalX": 0.45,
+      "focalY": 0.5,
+      "copies": []
+    }
+  ]
+}
