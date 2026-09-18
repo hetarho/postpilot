@@ -4,6 +4,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/postpilot/backend/internal/clip"
 )
@@ -27,6 +28,33 @@ func browserUpload(t *testing.T, h *generationHarness, p clip.Project) (string, 
 
 func browserMeasurements() clip.RenderMeasurements {
 	return clip.RenderMeasurements{Width: 1080, Height: 1920, FrameRateNumerator: 30, FrameRateDenominator: 1, VideoFrames: 900, VideoCodec: "h264", VideoProfile: "High"}
+}
+
+func TestSlowBrowserEncodeCanUploadAndCompleteWithAFreshStoredFile(t *testing.T) {
+	h, p, _ := completedClip(t)
+	id, err := h.service.StartRender(t.Context(), "alice", p.ID, h.batch.ID, p.EditPlanRevision, clip.RenderBrowser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// It took two hours to encode. No object existed during that time.
+	if _, err := h.db.Writer.Exec("UPDATE clip_browser_renders SET created_at=? WHERE id=?", time.Now().Add(-2*time.Hour).UTC().Format(time.RFC3339Nano), id); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.service.PrepareBrowserUpload(t.Context(), "alice", id, 1234); err != nil {
+		t.Fatal(err)
+	}
+	r, err := h.store.GetBrowserRender(t.Context(), "alice", id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.objects.info[r.ResultKey()] = clip.SourceObjectInfo{Bytes: 1234, ContentType: "video/mp4"}
+	if _, err := h.service.ReportRenderVerdict(t.Context(), "alice", id, browserMeasurements(), true); err != nil {
+		t.Fatal(err)
+	}
+	stored, err := h.service.CompleteBrowserUpload(t.Context(), "alice", id)
+	if err != nil || stored.Result.Key != r.ResultKey() {
+		t.Fatal(stored, err)
+	}
 }
 
 func TestBrowserUploadPromotesOnlyStoredPassingFileAndRetryDoesNotDeleteIt(t *testing.T) {
@@ -120,7 +148,8 @@ func TestBrowserUploadFailureVerdictStalenessAndAtomicPromotion(t *testing.T) {
 				}
 			}
 			if failure == "expired" {
-				if _, err := h.db.Writer.Exec("UPDATE clip_browser_renders SET created_at='2000-01-01T00:00:00Z' WHERE id=?", id); err != nil {
+				h.objects.results = append(h.objects.results, clip.StoredObject{Key: r.ResultKey(), Modified: time.Now().Add(-2 * time.Hour)})
+				if err := h.service.Sweep(t.Context()); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -134,6 +163,16 @@ func TestBrowserUploadFailureVerdictStalenessAndAtomicPromotion(t *testing.T) {
 			r, _ = h.store.GetBrowserRender(t.Context(), "alice", id)
 			if r.StoredAt != nil {
 				t.Fatal("failed attempt marked stored")
+			}
+			if failure == "expired" {
+				if r.CancelledAt == nil {
+					t.Fatal("orphan deletion did not fence completion")
+				}
+				// A delayed PUT cannot revive an attempt the sweeper claimed.
+				h.objects.info[r.ResultKey()] = clip.SourceObjectInfo{Bytes: 1234, ContentType: "video/mp4"}
+				if _, err := h.service.CompleteBrowserUpload(t.Context(), "alice", id); !errors.Is(err, clip.ErrSourceState) {
+					t.Fatal(err)
+				}
 			}
 		})
 	}

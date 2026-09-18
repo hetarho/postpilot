@@ -468,6 +468,16 @@ export const clips = {
     noInstruction: '지시 없이 생성했어요.',
   },
   render: {
+    progress: {
+      label: '브라우저 렌더 진행',
+      encoding: '브라우저에서 영상 만드는 중',
+      storing: '완성된 영상 저장 중',
+      cancelling: '브라우저 렌더 취소 중',
+      cancelled: '브라우저 렌더를 취소했어요.',
+      done: '브라우저 렌더를 저장했어요.',
+      failed: '브라우저 렌더를 완료하지 못했어요.',
+      cancel: '브라우저 렌더 취소',
+    },
     refusal: {
       capability:
         '이 브라우저는 필요한 영상·음성 인코딩을 지원하지 않아요. 서버 렌더를 선택해 주세요.',

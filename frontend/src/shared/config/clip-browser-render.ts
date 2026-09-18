@@ -14,4 +14,7 @@ export const CLIP_BROWSER_RENDER = {
   encodeQueueFrames: 4,
   keyFrameIntervalFrames: 60,
   sourceTimeoutMs: 30_000,
+  // One determinate scale; these are phase weights, never a time estimate.
+  encodeProgressPercent: 80,
+  storedProgressPercent: 99,
 } as const

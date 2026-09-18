@@ -302,6 +302,44 @@ func (s *GenerationService) Sweep(ctx context.Context) error {
 		if keep[object.Key] {
 			continue
 		}
+		if id, browser := strings.CutPrefix(parts[2], "browser-"); browser && strings.HasSuffix(id, ".mp4") {
+			renders, ok := s.store.(BrowserUploadStore)
+			if !ok {
+				return ErrRenderUnavailable
+			}
+			id = strings.TrimSuffix(id, ".mp4")
+			r, err := renders.GetBrowserRender(ctx, user, id)
+			if err != nil && !errors.Is(err, ErrNotFound) {
+				return err
+			}
+			if err == nil {
+				if r.ResultKey() != object.Key {
+					continue
+				}
+				// Claim deletion using the same writer as completion. Whichever
+				// wins fences the other, even after the reference snapshot above.
+				cancelled, err := renders.CancelBrowserRender(ctx, user, id, time.Now())
+				if err != nil && !errors.Is(err, ErrNotFound) {
+					return err
+				}
+				if err == nil && !cancelled {
+					// Completion won. It can never promote this identity again,
+					// so a fresh reference protects its current file without
+					// retaining a superseded file recreated by a delayed PUT.
+					refs, err := s.store.ResultKeys(ctx)
+					if err != nil {
+						return err
+					}
+					live := false
+					for _, key := range refs {
+						live = live || key == object.Key
+					}
+					if live {
+						continue
+					}
+				}
+			}
+		}
 		if err = s.objects.Delete(ctx, object.Key); err != nil {
 			return errors.New("orphan clip result deletion failed")
 		}

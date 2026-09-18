@@ -735,6 +735,61 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     p.editPlanRevision = (p.editPlanRevision ?? 0) + 1
     return create(SaveClipEditPlanResponseSchema, { project: projectProto(p) })
   })
+  const browserRenders = new Map<
+    string,
+    { projectId: string; revision: number; cancelled: boolean; stored: boolean; passed: boolean }
+  >()
+  router.rpc(ClipService.method.cancelClipBrowserRender, (req) => {
+    options.calls?.push('CancelClipBrowserRender')
+    const render = browserRenders.get(req.renderId)
+    if (!render) throw connectAppError('CLIP_NOT_FOUND', Code.NotFound)
+    if (render.stored) return { cancelled: false }
+    render.cancelled = true
+    return { cancelled: true }
+  })
+  router.rpc(ClipService.method.prepareClipRenderUpload, (req) => {
+    options.calls?.push('PrepareClipRenderUpload')
+    const render = browserRenders.get(req.renderId)
+    if (!render || render.cancelled)
+      throw connectAppError('CLIP_SOURCE_UNAVAILABLE', Code.FailedPrecondition)
+    return {
+      putUrl: 'https://private.test/browser-put',
+      headers: { 'Content-Type': 'video/mp4', 'If-None-Match': '*' },
+    }
+  })
+  router.rpc(ClipService.method.reportClipRenderVerdict, (req) => {
+    options.calls?.push('ReportClipRenderVerdict')
+    const render = browserRenders.get(req.renderId)
+    if (!render || render.cancelled)
+      throw connectAppError('CLIP_SOURCE_UNAVAILABLE', Code.FailedPrecondition)
+    render.passed = req.passed
+    return {
+      passed: req.passed,
+      notices: req.passed ? [] : [{ code: 'render_output_verdict', action: 'shortfall' }],
+    }
+  })
+  router.rpc(ClipService.method.completeClipRenderUpload, (req) => {
+    options.calls?.push('CompleteClipRenderUpload')
+    const render = browserRenders.get(req.renderId)
+    if (!render || render.cancelled || !render.passed)
+      throw connectAppError('CLIP_SOURCE_UNAVAILABLE', Code.FailedPrecondition)
+    const p = projects.get(render.projectId)!
+    if (p.editPlanRevision !== render.revision)
+      throw connectAppError('CLIP_PLAN_CONFLICT', Code.Aborted)
+    render.stored = true
+    p.renderedPlanRevision = render.revision
+    p.result = {
+      id: req.renderId,
+      renderKind: 'browser',
+      contentType: 'video/mp4',
+      bytes: 1234,
+      durationMs: p.editing!.plan.durationMs,
+      createdAt: new Date().toISOString(),
+      viewUrl: 'https://private.test/browser-result.mp4',
+      downloadUrl: 'https://private.test/browser-download.mp4',
+    }
+    return { project: projectProto(p) }
+  })
   router.rpc(ClipService.method.startClipRender, (req) => {
     options.calls?.push('StartClipRender')
     options.renderStarts?.push(req)
@@ -746,6 +801,17 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       throw connectAppError('CLIP_SOURCE_UNAVAILABLE', Code.FailedPrecondition)
     if (p.editPlanRevision !== req.expectedRevision)
       throw connectAppError('CLIP_PLAN_CONFLICT', Code.Aborted)
+    if (req.renderKind === ClipRenderKind.BROWSER) {
+      const renderId = `browser-render-${browserRenders.size + 1}`
+      browserRenders.set(renderId, {
+        projectId: p.id,
+        revision: req.expectedRevision,
+        cancelled: false,
+        stored: false,
+        passed: false,
+      })
+      return create(StartClipRenderResponseSchema, { renderId })
+    }
     b.state = 'consuming'
     const jobId = options.renderJobId ?? 'clip-render-job'
     p.latestJob = {

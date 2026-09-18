@@ -49,15 +49,16 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
-| T254 | ② runs the browser render with its own progress and cancellation | CLIP | T253 T247 | todo |
 | T256 | the narration names one caption style per caption | CLIP CDS | - | todo |
 | T257 | the approval surface quotes the longest render its styles can produce | CLIP CDS | - | todo |
 
 ## next
-- implement-task T254 — connect browser rendering to the correction dock, progress and cancellation.
-- T256 and T257 remain independent of the browser cluster.
+- implement-task T256 — let narration name an allowed style on each caption.
+- T257 quotes the longest render the selected caption styles admit.
 - T177 stays blocked; T008 belongs to another session; post-quality-and-related-links awaits conversion.
 ## log
+- 260918 T254 done; browser rendering stays in ② with encode/store progress, cancellation and navigation cleanup; promotion and orphan cleanup serialize without an encoding time limit, and real Chromium plus local/image gates pass.
+- 260918 T254 claimed (rnd)
 - 260918 T253 done; MP4 timing excludes measured AAC priming, direct immutable uploads promote atomically after stored-file/verdict checks, and failed attempts preserve the prior result; all local and image gates pass.
 - 260918 T253 claimed (rnd)
 - 260918 T252 done; retained-source audio uses pitch-preserving rates, exact cut timing, BS.1770 normalization and measured AAC priming; Chromium audio and video checks pass.
@@ -76,5 +77,3 @@
 - 260918 T243 claimed (rnd)
 - 260918 T242 done; render kind survives the result and completion staging, old results read as server, and project reads expose the last successful kind.
 - 260918 out of scope: frontend/src/pages/editor/ui/DraftEditor.tsx:140 has an existing storedAnswers useMemo dependency warning; lint passes with no errors.
-- 260918 T242 claimed (rnd)
-- 260918 create-task CLIP CDS done; T256 reverses the narration contract so a caption carries its own style (owner > narration > default, out-of-set falls back with one notice and spends no correction), T257 turns the pre-generation quote from a style count into the longest render the selection admits — neither depends on the other and both are independent of the browser cluster

@@ -36,6 +36,7 @@ type ClipBrowserRender struct {
 	ReportedAt   sql.NullString
 	UploadBytes  int64
 	StoredAt     sql.NullString
+	CancelledAt  sql.NullString
 }
 
 type ClipGenerationQuote struct {

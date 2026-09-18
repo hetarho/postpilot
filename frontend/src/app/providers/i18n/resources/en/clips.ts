@@ -477,6 +477,16 @@ export const clips = {
     noInstruction: 'Generated with no instruction.',
   },
   render: {
+    progress: {
+      label: 'Browser render progress',
+      encoding: 'Rendering in your browser',
+      storing: 'Storing the finished video',
+      cancelling: 'Cancelling browser render',
+      cancelled: 'Browser render cancelled.',
+      done: 'Browser render stored.',
+      failed: 'Browser render could not finish.',
+      cancel: 'Cancel browser render',
+    },
     refusal: {
       capability:
         'This browser does not support the required video or audio encoding. Choose server rendering.',

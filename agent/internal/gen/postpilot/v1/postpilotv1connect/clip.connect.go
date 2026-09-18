@@ -60,6 +60,9 @@ const (
 	// ClipServiceCompleteClipRenderUploadProcedure is the fully-qualified name of the ClipService's
 	// CompleteClipRenderUpload RPC.
 	ClipServiceCompleteClipRenderUploadProcedure = "/postpilot.v1.ClipService/CompleteClipRenderUpload"
+	// ClipServiceCancelClipBrowserRenderProcedure is the fully-qualified name of the ClipService's
+	// CancelClipBrowserRender RPC.
+	ClipServiceCancelClipBrowserRenderProcedure = "/postpilot.v1.ClipService/CancelClipBrowserRender"
 	// ClipServiceStartClipGenerationProcedure is the fully-qualified name of the ClipService's
 	// StartClipGeneration RPC.
 	ClipServiceStartClipGenerationProcedure = "/postpilot.v1.ClipService/StartClipGeneration"
@@ -149,6 +152,7 @@ type ClipServiceClient interface {
 	ReportClipRenderVerdict(context.Context, *connect.Request[v1.ReportClipRenderVerdictRequest]) (*connect.Response[v1.ReportClipRenderVerdictResponse], error)
 	PrepareClipRenderUpload(context.Context, *connect.Request[v1.PrepareClipRenderUploadRequest]) (*connect.Response[v1.PrepareClipRenderUploadResponse], error)
 	CompleteClipRenderUpload(context.Context, *connect.Request[v1.CompleteClipRenderUploadRequest]) (*connect.Response[v1.CompleteClipRenderUploadResponse], error)
+	CancelClipBrowserRender(context.Context, *connect.Request[v1.CancelClipBrowserRenderRequest]) (*connect.Response[v1.CancelClipBrowserRenderResponse], error)
 	StartClipGeneration(context.Context, *connect.Request[v1.StartClipGenerationRequest]) (*connect.Response[v1.StartClipGenerationResponse], error)
 	QuoteClipGeneration(context.Context, *connect.Request[v1.QuoteClipGenerationRequest]) (*connect.Response[v1.QuoteClipGenerationResponse], error)
 	FinalizeClipProject(context.Context, *connect.Request[v1.FinalizeClipProjectRequest]) (*connect.Response[v1.FinalizeClipProjectResponse], error)
@@ -246,6 +250,12 @@ func NewClipServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			httpClient,
 			baseURL+ClipServiceCompleteClipRenderUploadProcedure,
 			connect.WithSchema(clipServiceMethods.ByName("CompleteClipRenderUpload")),
+			connect.WithClientOptions(opts...),
+		),
+		cancelClipBrowserRender: connect.NewClient[v1.CancelClipBrowserRenderRequest, v1.CancelClipBrowserRenderResponse](
+			httpClient,
+			baseURL+ClipServiceCancelClipBrowserRenderProcedure,
+			connect.WithSchema(clipServiceMethods.ByName("CancelClipBrowserRender")),
 			connect.WithClientOptions(opts...),
 		),
 		startClipGeneration: connect.NewClient[v1.StartClipGenerationRequest, v1.StartClipGenerationResponse](
@@ -406,6 +416,7 @@ type clipServiceClient struct {
 	reportClipRenderVerdict     *connect.Client[v1.ReportClipRenderVerdictRequest, v1.ReportClipRenderVerdictResponse]
 	prepareClipRenderUpload     *connect.Client[v1.PrepareClipRenderUploadRequest, v1.PrepareClipRenderUploadResponse]
 	completeClipRenderUpload    *connect.Client[v1.CompleteClipRenderUploadRequest, v1.CompleteClipRenderUploadResponse]
+	cancelClipBrowserRender     *connect.Client[v1.CancelClipBrowserRenderRequest, v1.CancelClipBrowserRenderResponse]
 	startClipGeneration         *connect.Client[v1.StartClipGenerationRequest, v1.StartClipGenerationResponse]
 	quoteClipGeneration         *connect.Client[v1.QuoteClipGenerationRequest, v1.QuoteClipGenerationResponse]
 	finalizeClipProject         *connect.Client[v1.FinalizeClipProjectRequest, v1.FinalizeClipProjectResponse]
@@ -475,6 +486,11 @@ func (c *clipServiceClient) PrepareClipRenderUpload(ctx context.Context, req *co
 // CompleteClipRenderUpload calls postpilot.v1.ClipService.CompleteClipRenderUpload.
 func (c *clipServiceClient) CompleteClipRenderUpload(ctx context.Context, req *connect.Request[v1.CompleteClipRenderUploadRequest]) (*connect.Response[v1.CompleteClipRenderUploadResponse], error) {
 	return c.completeClipRenderUpload.CallUnary(ctx, req)
+}
+
+// CancelClipBrowserRender calls postpilot.v1.ClipService.CancelClipBrowserRender.
+func (c *clipServiceClient) CancelClipBrowserRender(ctx context.Context, req *connect.Request[v1.CancelClipBrowserRenderRequest]) (*connect.Response[v1.CancelClipBrowserRenderResponse], error) {
+	return c.cancelClipBrowserRender.CallUnary(ctx, req)
 }
 
 // StartClipGeneration calls postpilot.v1.ClipService.StartClipGeneration.
@@ -612,6 +628,7 @@ type ClipServiceHandler interface {
 	ReportClipRenderVerdict(context.Context, *connect.Request[v1.ReportClipRenderVerdictRequest]) (*connect.Response[v1.ReportClipRenderVerdictResponse], error)
 	PrepareClipRenderUpload(context.Context, *connect.Request[v1.PrepareClipRenderUploadRequest]) (*connect.Response[v1.PrepareClipRenderUploadResponse], error)
 	CompleteClipRenderUpload(context.Context, *connect.Request[v1.CompleteClipRenderUploadRequest]) (*connect.Response[v1.CompleteClipRenderUploadResponse], error)
+	CancelClipBrowserRender(context.Context, *connect.Request[v1.CancelClipBrowserRenderRequest]) (*connect.Response[v1.CancelClipBrowserRenderResponse], error)
 	StartClipGeneration(context.Context, *connect.Request[v1.StartClipGenerationRequest]) (*connect.Response[v1.StartClipGenerationResponse], error)
 	QuoteClipGeneration(context.Context, *connect.Request[v1.QuoteClipGenerationRequest]) (*connect.Response[v1.QuoteClipGenerationResponse], error)
 	FinalizeClipProject(context.Context, *connect.Request[v1.FinalizeClipProjectRequest]) (*connect.Response[v1.FinalizeClipProjectResponse], error)
@@ -705,6 +722,12 @@ func NewClipServiceHandler(svc ClipServiceHandler, opts ...connect.HandlerOption
 		ClipServiceCompleteClipRenderUploadProcedure,
 		svc.CompleteClipRenderUpload,
 		connect.WithSchema(clipServiceMethods.ByName("CompleteClipRenderUpload")),
+		connect.WithHandlerOptions(opts...),
+	)
+	clipServiceCancelClipBrowserRenderHandler := connect.NewUnaryHandler(
+		ClipServiceCancelClipBrowserRenderProcedure,
+		svc.CancelClipBrowserRender,
+		connect.WithSchema(clipServiceMethods.ByName("CancelClipBrowserRender")),
 		connect.WithHandlerOptions(opts...),
 	)
 	clipServiceStartClipGenerationHandler := connect.NewUnaryHandler(
@@ -871,6 +894,8 @@ func NewClipServiceHandler(svc ClipServiceHandler, opts ...connect.HandlerOption
 			clipServicePrepareClipRenderUploadHandler.ServeHTTP(w, r)
 		case ClipServiceCompleteClipRenderUploadProcedure:
 			clipServiceCompleteClipRenderUploadHandler.ServeHTTP(w, r)
+		case ClipServiceCancelClipBrowserRenderProcedure:
+			clipServiceCancelClipBrowserRenderHandler.ServeHTTP(w, r)
 		case ClipServiceStartClipGenerationProcedure:
 			clipServiceStartClipGenerationHandler.ServeHTTP(w, r)
 		case ClipServiceQuoteClipGenerationProcedure:
@@ -962,6 +987,10 @@ func (UnimplementedClipServiceHandler) PrepareClipRenderUpload(context.Context, 
 
 func (UnimplementedClipServiceHandler) CompleteClipRenderUpload(context.Context, *connect.Request[v1.CompleteClipRenderUploadRequest]) (*connect.Response[v1.CompleteClipRenderUploadResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipService.CompleteClipRenderUpload is not implemented"))
+}
+
+func (UnimplementedClipServiceHandler) CancelClipBrowserRender(context.Context, *connect.Request[v1.CancelClipBrowserRenderRequest]) (*connect.Response[v1.CancelClipBrowserRenderResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipService.CancelClipBrowserRender is not implemented"))
 }
 
 func (UnimplementedClipServiceHandler) StartClipGeneration(context.Context, *connect.Request[v1.StartClipGenerationRequest]) (*connect.Response[v1.StartClipGenerationResponse], error) {

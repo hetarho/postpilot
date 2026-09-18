@@ -19,6 +19,11 @@ func browserRender(row sqlc.ClipBrowserRender) (clip.BrowserRender, error) {
 		at, err = time.Parse(time.RFC3339Nano, row.StoredAt.String)
 		r.StoredAt = &at
 	}
+	if err == nil && row.CancelledAt.Valid {
+		var at time.Time
+		at, err = time.Parse(time.RFC3339Nano, row.CancelledAt.String)
+		r.CancelledAt = &at
+	}
 	if err == nil && row.VerdictJson.Valid {
 		err = json.Unmarshal([]byte(row.VerdictJson.String), &r.Verdict)
 	}
@@ -28,6 +33,9 @@ func browserRender(row sqlc.ClipBrowserRender) (clip.BrowserRender, error) {
 // Recheck ownership, revision and activity in the same transaction as the
 // record. Layout has no write lock, so a save may win while it is being checked.
 func checkBrowserProject(ctx context.Context, q *sqlc.Queries, r clip.BrowserRender) error {
+	if r.CancelledAt != nil {
+		return clip.ErrSourceState
+	}
 	p, err := getProject(ctx, q, r.UserID, r.ProjectID)
 	if err != nil {
 		return err

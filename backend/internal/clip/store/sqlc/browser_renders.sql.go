@@ -39,6 +39,24 @@ func (q *Queries) BeginBrowserRender(ctx context.Context, arg BeginBrowserRender
 	return err
 }
 
+const cancelBrowserRender = `-- name: CancelBrowserRender :execrows
+UPDATE clip_browser_renders SET cancelled_at=? WHERE id=? AND user_id=? AND cancelled_at IS NULL AND stored_at IS NULL
+`
+
+type CancelBrowserRenderParams struct {
+	CancelledAt sql.NullString
+	ID          string
+	UserID      string
+}
+
+func (q *Queries) CancelBrowserRender(ctx context.Context, arg CancelBrowserRenderParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, cancelBrowserRender, arg.CancelledAt, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const completeBrowserRender = `-- name: CompleteBrowserRender :execrows
 UPDATE clip_browser_renders SET stored_at=? WHERE id=? AND user_id=? AND stored_at IS NULL
 `
@@ -58,7 +76,7 @@ func (q *Queries) CompleteBrowserRender(ctx context.Context, arg CompleteBrowser
 }
 
 const getBrowserRender = `-- name: GetBrowserRender :one
-SELECT id, user_id, project_id, plan_revision, ratio, duration_ms, has_audio, created_at, verdict_json, reported_at, upload_bytes, stored_at FROM clip_browser_renders WHERE id=? AND user_id=?
+SELECT id, user_id, project_id, plan_revision, ratio, duration_ms, has_audio, created_at, verdict_json, reported_at, upload_bytes, stored_at, cancelled_at FROM clip_browser_renders WHERE id=? AND user_id=?
 `
 
 type GetBrowserRenderParams struct {
@@ -82,6 +100,7 @@ func (q *Queries) GetBrowserRender(ctx context.Context, arg GetBrowserRenderPara
 		&i.ReportedAt,
 		&i.UploadBytes,
 		&i.StoredAt,
+		&i.CancelledAt,
 	)
 	return i, err
 }

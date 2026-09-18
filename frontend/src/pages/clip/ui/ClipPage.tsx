@@ -27,6 +27,7 @@ import {
   ClipResult,
   useGenerateClip,
 } from '@/features/generate-clip'
+import { useBrowserRender, ClipBrowserRenderStatus } from '@/features/render-clip-browser'
 import { ClipRevisionRequest } from '@/features/revise-clip'
 import { StageModelSelect } from '@/features/select-model'
 import { ClipSourcePicker, useClipSourceUpload } from '@/features/upload-clip-sources'
@@ -174,6 +175,8 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
     owned: upload.markOwned,
     rejected: upload.rejectAttempt,
   }
+  const browser = useBrowserRender(ownerId, project.id)
+  const browserStatus = <ClipBrowserRenderStatus state={browser.state} cancel={browser.cancel} />
   const job = generation.job
   const browserCapability = useClipBrowserRenderCapability(
     project.ratio,
@@ -206,7 +209,7 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
   // clip job still takes the whole screen (CLIP-78).
   const revising = job?.kind === 'revise_clip' && !isTerminal(job)
   const focused = !project.finalized && generation.busy && !revising
-  const pending = generation.busy || uploading || finalization.busy
+  const pending = generation.busy || uploading || finalization.busy || browser.busy
   const progress = job ? progressRatio(job) : undefined
   const progressTitle = cancellation.cancelling
     ? t('cancellation.cancelling')
@@ -240,7 +243,7 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
     // Arranging is refused while a generation runs or after finalization; an
     // upload in flight is not a reason, since the strip itself hides the
     // control until the footage is there.
-    disabled: generation.busy || finalization.busy || !!project.finalized,
+    disabled: generation.busy || browser.busy || finalization.busy || !!project.finalized,
     change: (sourceIds: string[]) => {
       const batchId = upload.readyBatch?.id
       if (!batchId) return
@@ -304,7 +307,7 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
           observe={generation.observeRef}
           write={generation.writeRef}
           observeStatus={generation.observeStatus}
-          ready={ready && generation.canQuote && !generation.busy}
+          ready={ready && generation.canQuote && !generation.busy && !browser.busy}
           pending={generation.starting}
           // The queue is flushed BEFORE the run starts, so an approval can never be committed
           // against settings the server has not taken (CLIP-39). A refusal stops the start; the
@@ -331,7 +334,7 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
         sound={soundControl}
         order={sourceOrder}
         binding={binding.items.length ? binding : undefined}
-        disabled={!uploadAllowed || generation.busy || finalization.busy}
+        disabled={!uploadAllowed || generation.busy || browser.busy || finalization.busy}
         processing={generation.busy}
       />
       {observationPanel}
@@ -349,10 +352,10 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
             still serve photo-only posts. */}
         <StageModelSelect
           stage="observe"
-          disabled={generation.busy}
+          disabled={generation.busy || browser.busy}
           availability={generation.availability}
         />
-        <StageModelSelect stage="write" disabled={generation.busy} />
+        <StageModelSelect stage="write" disabled={generation.busy || browser.busy} />
         {!generation.modelsReady && (
           <Typography variant="body" role="status" className="text-content-secondary break-words">
             {generation.eligibility.kind === 'loading'
@@ -438,6 +441,7 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
                     correction.dirty ||
                     correction.pending ||
                     generation.busy ||
+                    browser.busy ||
                     finalization.busy ||
                     !correction.validation?.valid
                   }
@@ -484,7 +488,9 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
           // A revision is refused while any other clip job holds the project, and
           // after finalization; its own run is not a reason, since the composer then
           // shows that run instead of the field.
-          disabled={uploading || finalization.busy || (generation.busy && !revising)}
+          disabled={
+            uploading || finalization.busy || browser.busy || (generation.busy && !revising)
+          }
           // The same chain a generation runs before it starts (CLIP-39): the
           // writer answers from the SAVED plan, so an unflushed edit would be
           // silently dropped from what it rewrites.
@@ -502,9 +508,11 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
         <FinalizeClipAction
           action={finalization}
           project={project}
-          disabled={uploading || generation.busy || !correction.validation?.saveable}
+          disabled={
+            uploading || generation.busy || browser.busy || !correction.validation?.saveable
+          }
           localRefusal={
-            uploading || generation.busy
+            uploading || generation.busy || browser.busy
               ? 'busy'
               : !correction.validation?.saveable
                 ? 'invalid_plan'
@@ -520,7 +528,8 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
       state={plan}
       disabled={pending}
       renderReady={!!upload.readyBatch && correction.revision === project.editPlanRevision}
-      renderPending={generation.starting}
+      renderPending={generation.starting || browser.busy}
+      renderProgress={browserStatus}
       browserCapability={browserCapability.data}
       lastRenderKind={project.lastRenderKind}
       currentRender={
@@ -535,10 +544,23 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
       // against the revision the server took rather than against one the owner has since
       // typed past (CLIP-39). A failed save stops the start; the status line already says so.
       onRender={(kind) => {
-        // T254 connects the local worker here. A browser choice must never
-        // accidentally enter the existing durable server-job path.
-        if (kind !== 'server') return
-        if (correction.pending) return
+        if (correction.pending || browser.busy) return
+        if (kind === 'browser') {
+          if (!browserCapability.data?.available || !upload.readyBatch) return
+          void browser.start({
+            batchId: upload.readyBatch.id,
+            localSources: upload.entries.map((entry) => ({
+              fingerprint: entry.metadata.fingerprint,
+              url: entry.previewURL,
+            })),
+            resolvePlayback: upload.ensurePlayback,
+            flush: async () => {
+              await save.flush(true)
+              return correction.flush()
+            },
+          })
+          return
+        }
         void correction
           .flush()
           .then((revision) => generation.render(upload.readyBatch, revision, ownership))
@@ -704,6 +726,7 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
           }))}
         />
       )}
+      {!focused && step !== 'refine' && browserStatus}
       {!focused && (
         <div
           id={STEP_PANEL_ID}

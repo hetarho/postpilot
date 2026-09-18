@@ -21,6 +21,7 @@ type BrowserRender struct {
 	CreatedAt             time.Time
 	UploadBytes           int64
 	StoredAt              *time.Time
+	CancelledAt           *time.Time
 	Verdict               *RenderVerdict
 }
 

@@ -7,8 +7,17 @@ import (
 
 type BrowserUploadStore interface {
 	BrowserRenderStore
-	ReserveBrowserRenderUpload(context.Context, string, string, int64, time.Time, time.Time) error
-	CompleteBrowserRender(context.Context, string, string, time.Time, time.Time) (string, error)
+	ReserveBrowserRenderUpload(context.Context, string, string, int64, time.Time) error
+	CompleteBrowserRender(context.Context, string, string, time.Time) (string, error)
+	CancelBrowserRender(context.Context, string, string, time.Time) (bool, error)
+}
+
+func (s *GenerationService) CancelBrowserRender(ctx context.Context, user, id string) (bool, error) {
+	store, ok := s.store.(BrowserUploadStore)
+	if !ok {
+		return false, ErrRenderUnavailable
+	}
+	return store.CancelBrowserRender(ctx, user, id, s.now())
 }
 
 func (s *GenerationService) PrepareBrowserUpload(ctx context.Context, user, id string, bytes int64) (SignedSourcePut, error) {
@@ -23,13 +32,9 @@ func (s *GenerationService) PrepareBrowserUpload(ctx context.Context, user, id s
 	if err != nil {
 		return SignedSourcePut{}, err
 	}
-	// An orphan cannot be promoted after the sweeper is allowed to remove it.
-	deadline := r.CreatedAt.Add(s.cfg.OrphanMinAge)
-	now := s.now()
-	if !now.Add(s.sources.config.PutTTL).Before(deadline) {
-		return SignedSourcePut{}, ErrSourceState
-	}
-	if err := store.ReserveBrowserRenderUpload(ctx, user, id, bytes, now, deadline); err != nil {
+	// Encoding has no time ceiling. The orphan grace period belongs to the
+	// stored object's modification time, not the admitted render's start.
+	if err := store.ReserveBrowserRenderUpload(ctx, user, id, bytes, s.now()); err != nil {
 		return SignedSourcePut{}, err
 	}
 	return s.sources.objects.PresignSource(ctx, r.ResultKey(), "video/mp4", s.sources.config.PutTTL)
@@ -44,6 +49,9 @@ func (s *GenerationService) CompleteBrowserUpload(ctx context.Context, user, id 
 	if err != nil {
 		return Project{}, err
 	}
+	if r.CancelledAt != nil {
+		return Project{}, ErrSourceState
+	}
 	if r.StoredAt == nil {
 		if r.UploadBytes <= 0 || r.Verdict == nil || !r.Verdict.Passed {
 			return Project{}, ErrSourceState
@@ -56,7 +64,7 @@ func (s *GenerationService) CompleteBrowserUpload(ctx context.Context, user, id 
 			return Project{}, ErrInvalid
 		}
 	}
-	project, err := store.CompleteBrowserRender(ctx, user, id, s.now(), r.CreatedAt.Add(s.cfg.OrphanMinAge))
+	project, err := store.CompleteBrowserRender(ctx, user, id, s.now())
 	if err != nil {
 		return Project{}, err
 	}

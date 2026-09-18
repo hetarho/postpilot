@@ -64,6 +64,7 @@ export function ClipCorrectionWorkspace({
   renderReady,
   renderPending,
   renderFailure,
+  renderProgress,
   lastRenderKind,
   currentRender,
   browserCapability,
@@ -88,6 +89,7 @@ export function ClipCorrectionWorkspace({
   renderReady: boolean
   renderPending: boolean
   renderFailure?: AppFailure
+  renderProgress?: ReactNode
   lastRenderKind?: ClipRenderKind
   currentRender?: boolean
   browserCapability?: ClipBrowserRenderCapability
@@ -401,6 +403,7 @@ export function ClipCorrectionWorkspace({
       <div ref={actions} className="contents">
         <ActionBar ariaLabel={t('correction.actions')} className="space-y-3">
           <div className="space-y-2">
+            {renderProgress}
             {failure && (
               <div role="alert" className="mb-3 space-y-2">
                 <AppFailureMessage failure={failure} />
