@@ -12,27 +12,25 @@ import (
 // screen, while a sequence style draws one layer per output frame, so the two
 // are quoted separately rather than as one caption count.
 //
-// Nothing here refuses anything. How many such captions a project may hold, and
-// where that would be checked, is CLIP-145 and still open — this is the surface
-// the numbers such a ceiling needs accumulate on (CLIP-19, CLIP-20: rendering
-// itself costs no credits).
+// CLIP-145 sets no caption ceiling: this informs approval and refuses nothing.
+// Before narration exists, quote the whole target as sequence-rendered whenever
+// the selection permits it. Rendering itself costs no credits (CLIP-20).
 type SequenceCaptionCost struct {
 	// Whether the captions were counted from a plan the project actually holds.
-	// Before the first generation there is none, and only the selection is
-	// known: how many of the styles the clip may use draw a frame at a time.
+	// Before the first generation, frames and time describe the longest case
+	// the selection admits; the eventual caption count remains unknown.
 	FromPlan bool
-	// The plan's captions whose style is sequence-rendered, the output frames
-	// they cover, and what those frames add to the render at the measured
-	// per-frame cost.
+	// The plan's sequence captions (zero before narration), their frames or
+	// the whole target's frames, and the measured added render time.
 	Captions, Frames, AddedRenderMS int
 	// Sequence-rendered styles in the project's own selection (CLIP-142).
 	SelectedStyles int
 }
 
 // SequenceCostOf counts what a project's CURRENT plan and selection imply. The
-// style a caption is drawn in is the owner's where they chose one and the
-// project's first allowed style otherwise — the same resolution the layout
-// makes, so the number the owner is shown is the number the render produces.
+// style is the owner's choice, then the narration's, then the selection's
+// first entry, as in layout. With no plan, non-overlapping captions can cover
+// at most the whole target timeline, regardless of how many styles are selected.
 func SequenceCostOf(p Project, plan EditPlan, hasPlan bool, cfg RenderConfig) SequenceCaptionCost {
 	allowed := p.DesignSelection().AllowedCaptionStyles()
 	out := SequenceCaptionCost{}
@@ -42,6 +40,10 @@ func SequenceCostOf(p Project, plan EditPlan, hasPlan bool, cfg RenderConfig) Se
 		}
 	}
 	if !hasPlan || plan.Portable == nil {
+		if out.SelectedStyles > 0 {
+			out.Frames = (p.TargetDurationMS*cfg.FPS + 999) / 1000
+			out.AddedRenderMS = out.Frames * cfg.SequenceFrameCostMS
+		}
 		return out
 	}
 	out.FromPlan = true
@@ -49,8 +51,14 @@ func SequenceCostOf(p Project, plan EditPlan, hasPlan bool, cfg RenderConfig) Se
 		if text.Resolved.Element.Role != "caption" {
 			continue
 		}
-		id := text.Owner.Style
-		if id == "" || !slices.Contains(allowed, id) {
+		id := allowed[0]
+		if !plan.Portable.Snapshot.Legacy && text.Resolved.Element.Style != "" && text.Resolved.Element.Style != "auto" {
+			id = text.Resolved.Element.Style
+		}
+		if text.Owner.Style != "" {
+			id = text.Owner.Style
+		}
+		if !slices.Contains(allowed, id) {
 			id = allowed[0]
 		}
 		style, ok := design.LookupCaptionStyle(id)

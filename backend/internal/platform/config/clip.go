@@ -31,9 +31,9 @@ const (
 	// rather than assumed: 2026-09-17, the bundled resvg over the real frames
 	// five sequence styles produce, 6 ms (word-pop) to 37 ms (neon) per frame on
 	// a dev Mac, the spread coming from the painted crop rather than the style.
-	// This is the upper-mid of that range, and the render box is slower than the
-	// machine it was measured on — the number a CEILING would need is prod's,
-	// which is CLIP-145's own open question.
+	// This is the upper-mid of that measured range, an estimate rather than a
+	// wall-clock guarantee. CLIP-145 quotes the longest permitted frame count
+	// with it and imposes no ceiling on sequence captions.
 	ClipSequenceFrameCostMS       = 30
 	ClipLabelChars                = 40
 	ClipPromptChars               = 200

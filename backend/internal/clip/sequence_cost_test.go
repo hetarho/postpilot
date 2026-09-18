@@ -53,7 +53,7 @@ func TestTheQuoteCountsSequenceCaptionsAndWhatTheirFramesAdd(t *testing.T) {
 // and after: zero captions and no added time, never an estimate of one.
 func TestOnlyStaticStylesCostNothingExtra(t *testing.T) {
 	cfg := config.ClipRender(&config.Config{})
-	project := clip.Project{CaptionStyles: []string{design.DefaultCaptionStyle}}
+	project := clip.Project{TargetDurationMS: 60000, CaptionStyles: []string{design.DefaultCaptionStyle, "keynote", "film"}}
 	plan := clip.EditPlan{Portable: &clip.PortablePlan{Elements: []clip.PortableText{
 		captionElement("a", design.DefaultCaptionStyle, 0, 3000)}}}
 	for _, cost := range []clip.SequenceCaptionCost{
@@ -64,15 +64,47 @@ func TestOnlyStaticStylesCostNothingExtra(t *testing.T) {
 			t.Fatalf("a static-only clip was quoted sequence work: %+v", cost)
 		}
 	}
-	// A clip that has not been generated yet is counted from the selection
-	// alone: the styles are known, the captions are not.
-	pending := clip.Project{CaptionStyles: []string{"neon", "serif"}}
-	cost := clip.SequenceCostOf(pending, clip.EditPlan{}, false, cfg)
-	if cost.FromPlan || cost.SelectedStyles != 2 || cost.Captions != 0 || cost.AddedRenderMS != 0 {
-		t.Fatalf("a project with no plan was quoted as if it had one: %+v", cost)
-	}
 	// An empty selection is the default style alone (CLIP-142), which is static.
 	if clip.SequenceCostOf(clip.Project{}, clip.EditPlan{}, false, cfg).SelectedStyles != 0 {
 		t.Fatal("the default style was counted as sequence-rendered")
+	}
+}
+
+func TestNoPlanQuotesTheWholeTargetWhenAnyStyleUsesSequences(t *testing.T) {
+	cfg := config.ClipRender(&config.Config{})
+	for _, styles := range [][]string{{"neon"}, {"bold", "neon"}, {"neon", "serif"}} {
+		project := clip.Project{TargetDurationMS: 15000, CaptionStyles: styles}
+		cost := clip.SequenceCostOf(project, clip.EditPlan{}, false, cfg)
+		if cost.FromPlan || cost.Captions != 0 || cost.Frames != 450 || cost.AddedRenderMS != 450*cfg.SequenceFrameCostMS {
+			t.Fatalf("no-plan quote must cover the whole target once: %+v", cost)
+		}
+		if cost.SelectedStyles == 0 {
+			t.Fatal("selection metadata was lost", cost)
+		}
+	}
+	// A partial last frame must never understate the longest case.
+	cost := clip.SequenceCostOf(clip.Project{TargetDurationMS: 15001, CaptionStyles: []string{"neon"}}, clip.EditPlan{}, false, cfg)
+	if cost.Frames != 451 {
+		t.Fatal("the final frame was not quoted", cost)
+	}
+}
+
+func TestPlanQuoteFollowsNarratedStylesAndOwnerOverrides(t *testing.T) {
+	cfg := config.ClipRender(&config.Config{})
+	project := clip.Project{TargetDurationMS: 60000, CaptionStyles: []string{"bold", "neon", "word-pop"}}
+	first := captionElement("first", "", 0, 2000)
+	first.Resolved.Element.Style = "neon"
+	second := captionElement("second", "bold", 2000, 5000)
+	second.Resolved.Element.Style = "word-pop"
+	plan := clip.EditPlan{Portable: &clip.PortablePlan{Elements: []clip.PortableText{first, second}}}
+	cost := clip.SequenceCostOf(project, plan, true, cfg)
+	if !cost.FromPlan || cost.Captions != 1 || cost.Frames != 60 || cost.AddedRenderMS != 60*cfg.SequenceFrameCostMS {
+		t.Fatal("the quote ignored narration or the owner's override", cost)
+	}
+	// Legacy freezes carried an old style, but still render in the first
+	// selected treatment. A quote must not resurrect that historical choice.
+	plan.Portable.Snapshot.Legacy = true
+	if cost := clip.SequenceCostOf(project, plan, true, cfg); cost.Captions != 0 || cost.AddedRenderMS != 0 {
+		t.Fatal("a legacy plan was charged sequence work it will not render", cost)
 	}
 }

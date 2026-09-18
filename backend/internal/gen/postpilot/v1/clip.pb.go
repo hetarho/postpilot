@@ -4213,15 +4213,15 @@ func (x *ClipPricedCall) GetLabel() string {
 // static style is rasterised once however long it is on screen, while a
 // sequence style draws one layer per output frame. Counted from the plan the
 // project holds, or — before the first generation — from the selection alone,
-// where only the styles are known. NOTHING is refused for these numbers: how
-// many such captions a project may hold is still open (CLIP-145), and rendering
-// costs no credits at all (CLIP-20).
+// assuming the whole target is sequence-rendered if any selected style permits
+// it. No caption ceiling applies (CLIP-145), and rendering costs no credits
+// at all (CLIP-20).
 type ClipSequenceCaptionCost struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Whether the captions were counted from a plan the project actually holds.
 	FromPlan bool `protobuf:"varint,1,opt,name=from_plan,json=fromPlan,proto3" json:"from_plan,omitempty"`
-	// The plan's sequence-rendered captions, the output frames they cover and
-	// what those frames add to the render at the measured per-frame cost.
+	// The plan's sequence captions (zero before narration), their frames or
+	// the whole target's frames, and the measured added render time.
 	Captions      int32 `protobuf:"varint,2,opt,name=captions,proto3" json:"captions,omitempty"`
 	Frames        int32 `protobuf:"varint,3,opt,name=frames,proto3" json:"frames,omitempty"`
 	AddedRenderMs int32 `protobuf:"varint,4,opt,name=added_render_ms,json=addedRenderMs,proto3" json:"added_render_ms,omitempty"`

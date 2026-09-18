@@ -49,12 +49,13 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
-| T257 | the approval surface quotes the longest render its styles can produce | CLIP CDS | - | todo |
 
 ## next
-- implement-task T257 — quote the longest render the selected caption styles admit.
-- T177 stays blocked; T008 belongs to another session; post-quality-and-related-links awaits conversion.
+- No claimable todo tasks remain; T008 belongs to another session and T177 remains blocked.
+- post-quality-and-related-links remains open ideation, awaiting conversion when ready.
 ## log
+- 260918 T257 done; approval quotes the whole target before narration and actual styled captions afterward, in ko/en seconds with no sequence ceiling; all local gates pass.
+- 260918 T257 claimed (rnd)
 - 260918 T256 done; narration names each caption style, defaults without extra calls, preserves owner/legacy choices and reports out-of-set fallbacks; all local and image gates pass.
 - 260918 T256 claimed (rnd)
 - 260918 T254 done; browser rendering stays in ② with encode/store progress, cancellation and navigation cleanup; promotion and orphan cleanup serialize without an encoding time limit, and real Chromium plus local/image gates pass.
@@ -73,5 +74,3 @@
 - 260918 T248 claimed (rnd)
 - 260918 T247 done; the two-row dock keeps the revision composer reachable, send opens credit approval, and render labels derive the kind and current-plan match.
 - 260918 T247 claimed (rnd)
-- 260918 T243 done; both kinds run server plan admission first, browser verdicts are owner/revision-bound records with notices, and file promotion remains T253.
-- 260918 T243 claimed (rnd)

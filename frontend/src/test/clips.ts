@@ -565,20 +565,22 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       })),
     })
   })
-  /** What the server states about frame-by-frame captions on an approval surface
-   *  (CDS-81). The fake counts only the SELECTION, which is what a project with
-   *  no plan yet knows; a test that needs plan numbers supplies them itself. */
-  const sequenceCost = (p?: FakeClipProject) => ({
-    ...(options.sequenceCost ?? {
+  /** Before narration, quote the whole target whenever the selection admits
+   *  frame-by-frame captions. Plan-specific tests supply their exact counts. */
+  const sequenceCost = (p?: FakeClipProject) => {
+    if (options.sequenceCost) return options.sequenceCost
+    const selectedStyles = (p?.allowedCaptionStyles ?? []).filter((style) =>
+      (options.sequenceStyles ?? ['word-pop']).includes(style),
+    ).length
+    const frames = selectedStyles ? Math.ceil(((p?.targetDurationMs ?? 15000) * 30) / 1000) : 0
+    return {
       fromPlan: false,
       captions: 0,
-      frames: 0,
-      addedRenderMs: 0,
-      selectedStyles: (p?.allowedCaptionStyles ?? []).filter((style) =>
-        (options.sequenceStyles ?? ['word-pop']).includes(style),
-      ).length,
-    }),
-  })
+      frames,
+      addedRenderMs: frames * 30,
+      selectedStyles,
+    }
+  }
   router.rpc(ClipService.method.quoteClipGeneration, (req) => {
     options.calls?.push('QuoteClipGeneration')
     options.quoteRequests?.push(req)

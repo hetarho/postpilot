@@ -420,10 +420,9 @@ export const clips = {
   },
   credits: {
     writingCalls: '작성 호출',
-    sequenceCaptions: '프레임마다 그리는 자막 {{captions}}개 · 출력이 약 {{seconds}}초 길어져요',
-    sequenceStyles:
-      '프레임마다 그리는 스타일 {{styles}}개를 골랐어요 · 자막이 정해지면 길어지는 시간이 나와요',
-    sequenceNone: '프레임마다 그리는 자막 없음 · 출력 시간이 늘지 않아요',
+    sequenceCaptions: '프레임마다 그리는 자막 {{captions}}개 · 렌더링에 약 {{seconds}}초 더 걸려요',
+    sequenceWorstCase: '모든 자막을 프레임마다 그리면 렌더링에 최대 약 {{seconds}}초 더 걸려요',
+    sequenceNone: '프레임마다 그리는 자막 없음 · 추가 렌더링 시간 0초',
     call: {
       flow: '컷 구성 {{calls}}회',
       narration: '자막 작성 {{calls}}회',

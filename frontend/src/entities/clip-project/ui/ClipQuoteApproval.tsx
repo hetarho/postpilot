@@ -44,9 +44,8 @@ export function ClipQuoteApproval({
   const [open, setOpen] = useState(false)
   const insufficient =
     !!quote && !!balance && !balance.unlimited && quote.maxCredits > balance.credits
-  /** One line, whatever the clip is: the captions and the seconds they add when
-   *  a plan says how many there are, the styles that would draw that way before
-   *  one exists, and plainly none where every style is static. */
+  /** A plan quotes its own captions; before narration, the whole target is
+   *  the longest case allowed by the selection. Both are stated in seconds. */
   const sequenceCaptionLine = (cost: NonNullable<ClipQuote['sequenceCaptions']>) => {
     if (cost.fromPlan)
       return cost.captions
@@ -56,7 +55,9 @@ export function ClipQuoteApproval({
           })
         : t('credits.sequenceNone')
     return cost.selectedStyles
-      ? t('credits.sequenceStyles', { styles: cost.selectedStyles })
+      ? t('credits.sequenceWorstCase', {
+          seconds: Math.ceil(cost.addedRenderMs / 1000),
+        })
       : t('credits.sequenceNone')
   }
   return (

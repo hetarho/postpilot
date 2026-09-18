@@ -2005,9 +2005,9 @@ export const ClipPricedCallSchema: GenMessage<ClipPricedCall> = /*@__PURE__*/
  * static style is rasterised once however long it is on screen, while a
  * sequence style draws one layer per output frame. Counted from the plan the
  * project holds, or — before the first generation — from the selection alone,
- * where only the styles are known. NOTHING is refused for these numbers: how
- * many such captions a project may hold is still open (CLIP-145), and rendering
- * costs no credits at all (CLIP-20).
+ * assuming the whole target is sequence-rendered if any selected style permits
+ * it. No caption ceiling applies (CLIP-145), and rendering costs no credits
+ * at all (CLIP-20).
  *
  * @generated from message postpilot.v1.ClipSequenceCaptionCost
  */
@@ -2020,8 +2020,8 @@ export type ClipSequenceCaptionCost = Message<"postpilot.v1.ClipSequenceCaptionC
   fromPlan: boolean;
 
   /**
-   * The plan's sequence-rendered captions, the output frames they cover and
-   * what those frames add to the render at the measured per-frame cost.
+   * The plan's sequence captions (zero before narration), their frames or
+   * the whole target's frames, and the measured added render time.
    *
    * @generated from field: int32 captions = 2;
    */

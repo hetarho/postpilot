@@ -138,7 +138,7 @@ it('states the sequence-rendered captions on the approval surface', async () => 
   const approve = await screen.findByRole('button', {
     name: '최대 20 크레딧 · 승인하고 생성',
   })
-  expect(screen.getByText('프레임마다 그리는 자막 2개 · 출력이 약 3초 길어져요')).toBeVisible()
+  expect(screen.getByText('프레임마다 그리는 자막 2개 · 렌더링에 약 3초 더 걸려요')).toBeVisible()
   await waitFor(() => expect(approve).toBeEnabled())
 })
 it('approves once, retains local previews after terminal and refetches the result', async () => {
