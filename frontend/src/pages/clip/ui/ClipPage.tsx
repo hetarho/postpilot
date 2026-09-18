@@ -394,7 +394,7 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
           write={generation.writeRef}
           job={job}
           // A revision is refused while any other clip job holds the project, and
-          // after finalization; its own run is not a reason, since the panel then
+          // after finalization; its own run is not a reason, since the composer then
           // shows that run instead of the field.
           disabled={uploading || finalization.busy || (generation.busy && !revising)}
           // The same chain a generation runs before it starts (CLIP-39): the
@@ -427,7 +427,13 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
       disabled={pending}
       renderReady={!!upload.readyBatch && correction.revision === project.editPlanRevision}
       renderPending={generation.starting}
-      // A revision states its own refusal in its own panel, in one voice: the
+      lastRenderKind={project.lastRenderKind}
+      currentRender={
+        !!project.result &&
+        !correction.dirty &&
+        project.renderedPlanRevision === correction.revision
+      }
+      // A revision states its own refusal beside its composer: the
       // dock's alert is about the render it commits.
       renderFailure={job?.kind === 'revise_clip' ? undefined : generation.failure}
       // The draft's queue is flushed BEFORE the render starts, so the render always runs

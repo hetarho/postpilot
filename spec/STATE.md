@@ -49,7 +49,6 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
-| T247 | ②'s dock is the revision composer over 렌더하기 and 확정하기 | CLIP | T246 T242 | todo |
 | T248 | 확정하기 opens the finalization dialog | CLIP | T247 | todo |
 | T249 | ②'s reference opens on demand | CLIP | T248 | todo |
 | T250 | the browser states whether it can render, and refuses with one reason | CLIP | T242 | todo |
@@ -61,10 +60,12 @@
 | T257 | the approval surface quotes the longest render its styles can produce | CLIP CDS | - | todo |
 
 ## next
-- implement-task T247 — the next dependency-ready todo in table order; T250 is also ready.
+- implement-task T248 — finalization opens one confirmation dialog; T250 is also ready.
 - T256 and T257 remain independent of the browser cluster.
 - T177 stays blocked; T008 belongs to another session; post-quality-and-related-links awaits conversion.
 ## log
+- 260918 T247 done; the two-row dock keeps the revision composer reachable, send opens credit approval, and render labels derive the kind and current-plan match.
+- 260918 T247 claimed (rnd)
 - 260918 T243 done; both kinds run server plan admission first, browser verdicts are owner/revision-bound records with notices, and file promotion remains T253.
 - 260918 T243 claimed (rnd)
 - 260918 T242 done; render kind survives the result and completion staging, old results read as server, and project reads expose the last successful kind.
@@ -83,5 +84,3 @@
 - 260918 create-task CLIP done; r37 lands on the todo tasks rather than as new ones — T242 gains the project's last-rendered kind (read off the latest result, no new column), T247 derives the first-offered kind from it with server as the fallback, T250 drops to two refusals and T251 takes the fetch of an unheld original plus CLIP-159's motion over the server's representative raster; T243 T248 T249 T252 T253 T254 are base bumps, T253 and T254 each gaining one note from CLIP-157 and CLIP-126
 - 260918 T255+ the release smoke's continuation still expects a generation to produce a result; reproduced at 191e2f9d as `retained candidate failed <nil>` (cmd/api/clip_release_test.go:214, ~64 s inside --target clip-input-smoke), so CLIP-151 is the truth and the smoke is stale
 - 260918 create-task CLIP start (r37 delta onto T242 T250 T251, plus the failing release smoke as its own task)
-- 260918 implement-task stopped before claiming anything: every todo task is base:CLIP@36 against rev 37, and T242 — the only one whose dep is met — sits inside r37's delta, so create-task CLIP (r37) comes first
-- 260918 out of scope, CONFIRMED by local `pnpm smoke:input`: the release smokes still require a generation to leave a result file — `clip_release_test.go:214` (and :802) fail on `Result == nil` with the job done and no failure, which is exactly CLIP-151 as T241 implemented it (ARCH-38 keeps the rollout, which is green); both smokes have to start a render after the plan, so the repair belongs with T242 and needs a task

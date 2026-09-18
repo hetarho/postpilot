@@ -75,22 +75,26 @@ async function mount(clips: FakeClipsOptions = {}, jobs: FakeJobsOptions = {}) {
   await screen.findByRole('heading', { name: '컷·자막 수정' })
   return view
 }
-const panel = () => within(screen.getByRole('region', { name: 'AI에 수정 요청' }))
+const panel = () => within(screen.getByLabelText('클립 수정 작업'))
 async function write(text: string) {
   await userEvent.type(screen.getByLabelText('요청 내용'), text)
 }
 
-// The request is a PANEL control with its own approval, because ②'s one ActionBar
-// is already full and a charged action does not belong beside three credit-free
-// ones (CLIP-40, THEME-39). Nothing is sent until the ceiling is approved.
-it('asks for a revision from ②s panel, leaves the dock alone and sends nothing before approval', async () => {
+it('keeps two dock rows and opens approval from send without starting a revision', async () => {
   const starts: unknown[] = []
   await mount({ revisionStarts: starts })
-  const dock = within(screen.getByLabelText('클립 수정 작업'))
-  expect(dock.getAllByRole('button').map((b) => b.textContent)).toEqual(['다시 렌더', '확정하기'])
-  // The dock is that one row and nothing else: the confirmation's own copy sits
-  // in the panel above it and the download under the video it downloads
-  // (CLIP-149, THEME-39).
+  const dockElement = screen.getByLabelText('클립 수정 작업')
+  const dock = within(dockElement)
+  expect(dockElement.children).toHaveLength(2)
+  expect(
+    within(dockElement.children[0] as HTMLElement)
+      .getAllByRole('button')
+      .map((b) => b.textContent),
+  ).toEqual(['다시 렌더 · 서버', '확정하기'])
+  expect(dockElement.children[1]).toContainElement(dock.getByLabelText('요청 내용'))
+  expect(screen.queryByRole('region', { name: 'AI에 수정 요청' })).not.toBeInTheDocument()
+  expect(dock.queryByRole('button', { name: /브라우저/ })).not.toBeInTheDocument()
+  // Approval and download never increase the dock height.
   expect(dock.queryByRole('link', { name: '렌더 1 다운로드' })).not.toBeInTheDocument()
   expect(screen.getByLabelText('확정 전 확인할 내용')).toBeInTheDocument()
   expect(screen.getByRole('link', { name: '렌더 1 다운로드' })).toBeInTheDocument()
@@ -107,13 +111,15 @@ it('asks for a revision from ②s panel, leaves the dock alone and sends nothing
   ])
   expect(targets.getByRole('tab', { name: '자막' })).toHaveAttribute('aria-selected', 'true')
   // The ceiling and the writing calls it pays for, with the cancellation rule.
-  const approve = await panel().findByRole(
+  expect(screen.queryByRole('button', { name: /승인하고 수정 요청/ })).not.toBeInTheDocument()
+  await userEvent.click(panel().getByRole('button', { name: 'AI에 수정 요청' }))
+  const approve = await screen.findByRole(
     'button',
     { name: '최대 8 크레딧 · 승인하고 수정 요청' },
     { timeout: 3000 },
   )
-  expect(panel().getByText('자막 작성 1회')).toBeInTheDocument()
-  expect(panel().getByText(/사용하지 않은 예약액|취소하면/, { exact: false })).toBeInTheDocument()
+  expect(screen.getByText('자막 작성 1회')).toBeInTheDocument()
+  expect(screen.getByText(/사용하지 않은 예약액|취소하면/, { exact: false })).toBeInTheDocument()
   expect(starts).toHaveLength(0)
   await userEvent.click(approve)
   await waitFor(() => expect(starts).toHaveLength(1))
@@ -126,19 +132,22 @@ it('re-quotes when the target changes', async () => {
   const quotes: unknown[] = []
   await mount({ revisionQuotes: quotes })
   await write('고기를 먼저 보여줘')
-  await panel().findByRole(
+  await userEvent.click(panel().getByRole('button', { name: 'AI에 수정 요청' }))
+  await screen.findByRole(
     'button',
     { name: '최대 8 크레딧 · 승인하고 수정 요청' },
     { timeout: 3000 },
   )
+  await userEvent.keyboard('{Escape}')
   await userEvent.click(panel().getByRole('tab', { name: '영상 흐름' }))
-  await panel().findByRole(
+  await userEvent.click(panel().getByRole('button', { name: 'AI에 수정 요청' }))
+  await screen.findByRole(
     'button',
     { name: '최대 16 크레딧 · 승인하고 수정 요청' },
     { timeout: 3000 },
   )
-  expect(panel().getByText('컷 구성 1회')).toBeInTheDocument()
-  expect(panel().getByText('자막 작성 1회')).toBeInTheDocument()
+  expect(screen.getByText('컷 구성 1회')).toBeInTheDocument()
+  expect(screen.getByText('자막 작성 1회')).toBeInTheDocument()
   expect(quotes).toHaveLength(2)
   expect(quotes[1]).toMatchObject({ target: 'flow' })
 })
@@ -146,7 +155,7 @@ it('re-quotes when the target changes', async () => {
 // The owner stays in ② while it runs (CLIP-131): the plan being rewritten is the
 // one on this screen. The timeline goes read-only because an edit made against a
 // plan that is being replaced has nowhere to land.
-it('keeps ② mounted and read-only while the request runs, with progress and 취소 in the panel', async () => {
+it('keeps ② mounted and read-only while the request runs, with progress and 취소 replacing the composer', async () => {
   await mount(
     { revisionJobId: 'revision-job' },
     {
@@ -170,8 +179,9 @@ it('keeps ② mounted and read-only while the request runs, with progress and �
   )
   expect(screen.getByRole('button', { name: '컷 삭제' })).toBeEnabled()
   await write('자막을 더 짧게')
+  await userEvent.click(panel().getByRole('button', { name: 'AI에 수정 요청' }))
   await userEvent.click(
-    await panel().findByRole(
+    await screen.findByRole(
       'button',
       { name: '최대 8 크레딧 · 승인하고 수정 요청' },
       { timeout: 3000 },

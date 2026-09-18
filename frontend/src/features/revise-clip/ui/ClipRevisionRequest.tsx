@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import { Send } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import {
   boundedText,
@@ -13,16 +14,17 @@ import { compositionCharacters } from '@/entities/clip-template'
 import { progressLabel, progressRatio, type GenerationJob } from '@/entities/generation-job'
 import type { ModelRef } from '@/entities/model-catalog'
 import { useMyPlan } from '@/entities/plan'
-import { FieldLabel, ProgressBar, SegmentedControl, Textarea, Typography } from '@/shared/ui'
+import {
+  FieldLabel,
+  Popover,
+  ProgressBar,
+  SegmentedControl,
+  Textarea,
+  Typography,
+} from '@/shared/ui'
 import { useClipRevision } from '../api/useClipRevision'
 
-/** ②'s own panel asks the writer for a revision (CLIP-131, CLIP-40).
- *
- *  It is a panel control with its own approval rather than a dock action: THEME-39
- *  allows one ActionBar per step and ②'s is already full with 확정하기, 다시 렌더
- *  and the download. The owner stays here while it runs — the preview and the
- *  timeline are the thing being revised, and watching them is the point — so this
- *  path deliberately does not open CLIP-78's focused job view. */
+/** The dock's composer keeps the plan visible during both approval and revision. */
 export function ClipRevisionRequest({
   ownerId,
   project,
@@ -55,13 +57,7 @@ export function ClipRevisionRequest({
   const progress = revision.job ? progressRatio(revision.job) : undefined
   const title = revision.job ? progressLabel(revision.job) : t('revision.running')
   return (
-    <section aria-labelledby="clip-revision-heading" className="mt-10 space-y-3">
-      <Typography variant="title" id="clip-revision-heading">
-        {t('revision.title')}
-      </Typography>
-      <Typography variant="body" className="text-content-secondary break-words">
-        {t('revision.help')}
-      </Typography>
+    <div className="min-w-0">
       {running ? (
         <div className="space-y-3">
           <Typography variant="body" role="status" aria-live="polite">
@@ -74,26 +70,29 @@ export function ClipRevisionRequest({
           {cancelAction}
         </div>
       ) : (
-        <fieldset disabled={disabled} className="min-w-0 space-y-3">
-          <div>
+        <fieldset
+          disabled={disabled}
+          className="flex min-w-0 flex-wrap items-end gap-2 sm:flex-nowrap"
+        >
+          <div className="w-full min-w-0 sm:order-2 sm:flex-1">
             <FieldLabel htmlFor="clip-revision-request">{t('revision.request')}</FieldLabel>
             <Textarea
               id="clip-revision-request"
               inputMode="text"
+              aria-describedby="clip-revision-count"
+              rows={1}
+              className="max-h-24"
               autoGrow
               value={request}
               onChange={(event) =>
                 setRequest(boundedText(event.target.value, CLIP_PROJECT_LIMITS.instruction))
               }
             />
-            <Typography variant="meta" as="p" className="mt-2">
+            <Typography variant="meta" as="p" id="clip-revision-count" className="mt-1">
               {t('revision.count', { used, max: CLIP_PROJECT_LIMITS.instruction })}
             </Typography>
           </div>
-          <div className="space-y-2">
-            <Typography variant="fieldTitle" as="p">
-              {t('revision.target')}
-            </Typography>
+          <div className="min-w-0 flex-1 sm:order-1 sm:flex-none">
             <SegmentedControl
               ariaLabel={t('revision.target')}
               value={target}
@@ -104,29 +103,46 @@ export function ClipRevisionRequest({
               onChange={setTarget}
             />
           </div>
-          {revision.cancelled && (
-            <Typography variant="body" role="status">
-              {t('revision.cancelled')}
-            </Typography>
-          )}
-          <ClipFailureNotice failure={revision.failure} />
-          <ClipQuoteApproval
-            quote={revision.quote}
-            quoting={revision.quoting}
-            expired={revision.expired}
-            balance={myPlan?.balance}
-            error={revision.error}
-            approveDisabled={disabled || !myPlan || !request.trim()}
-            approveLabel={
-              revision.quote
-                ? t('revision.approve', { amount: revision.quote.maxCredits })
-                : t('revision.send')
-            }
-            onRefresh={revision.refresh}
-            onApprove={(quote) => void revision.start(quote, flush)}
-          />
+          <Popover
+            label={t('revision.send')}
+            triggerLabel={<Send aria-hidden="true" className="size-5" />}
+            triggerSize="icon"
+            triggerVariant="cta"
+            className="shrink-0 sm:order-3"
+            placement="above"
+            align="end"
+            phone="sheet"
+            disabled={disabled || !request.trim()}
+          >
+            {(close) => (
+              <ClipQuoteApproval
+                quote={revision.quote}
+                quoting={revision.quoting}
+                expired={revision.expired}
+                balance={myPlan?.balance}
+                error={revision.error}
+                approveDisabled={disabled || !myPlan || !request.trim()}
+                approveLabel={
+                  revision.quote
+                    ? t('revision.approve', { amount: revision.quote.maxCredits })
+                    : t('revision.send')
+                }
+                onRefresh={revision.refresh}
+                onApprove={(quote) => {
+                  void revision.start(quote, flush)
+                  close()
+                }}
+              />
+            )}
+          </Popover>
         </fieldset>
       )}
-    </section>
+      {revision.cancelled && (
+        <Typography variant="body" role="status">
+          {t('revision.cancelled')}
+        </Typography>
+      )}
+      <ClipFailureNotice failure={revision.failure} />
+    </div>
   )
 }

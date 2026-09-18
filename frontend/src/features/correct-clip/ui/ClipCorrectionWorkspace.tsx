@@ -1,4 +1,4 @@
-import { ClipNoticeList, type ClipNotice } from '@/entities/clip-project'
+import { ClipNoticeList, type ClipNotice, type ClipRenderKind } from '@/entities/clip-project'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
@@ -33,6 +33,7 @@ import {
   useVisualViewport,
 } from '@/shared/ui'
 import type { useClipCorrection } from '../model/useClipCorrection'
+import { ClipRenderAction } from './ClipRenderAction'
 import { ClipTimeline } from './ClipTimeline'
 import { ClipTimeField } from './ClipTimeField'
 import { ClipTextControls } from './ClipTextControls'
@@ -58,6 +59,8 @@ export function ClipCorrectionWorkspace({
   renderReady,
   renderPending,
   renderFailure,
+  lastRenderKind,
+  currentRender,
   onRender,
   sourcePicker,
   preview,
@@ -80,16 +83,16 @@ export function ClipCorrectionWorkspace({
   renderReady: boolean
   renderPending: boolean
   renderFailure?: AppFailure
-  onRender: () => void
+  lastRenderKind?: ClipRenderKind
+  currentRender?: boolean
+  onRender: (kind: ClipRenderKind) => void
   sourcePicker: ReactNode
   preview: (props: ClipEditorPreviewProps) => ReactNode
   comparison?: ReactNode
-  /** The owner's written revision request and its approval (CLIP-131). It sits in
-   *  the PANEL: ②'s dock is full, and a charged action would not belong beside
-   *  three credit-free ones in any case (CLIP-40). */
+  /** The dock's bottom row: revision composer or its active run. */
   revision?: ReactNode
   /** Downloading the identified latest successful render, as an icon directly
-   *  under the video it downloads (CLIP-149): the dock is one row of committing
+   *  under the video it downloads (CLIP-149): the dock holds committing
    *  controls and a download commits nothing (CLIP-40, THEME-39). Absent while
    *  the plan has no render, and its absence is silence. */
   downloadAction?: ReactNode
@@ -136,6 +139,18 @@ export function ClipCorrectionWorkspace({
     )
       return
     const gap = CLIP_TIMELINE.fieldGapPx
+    const dock = actions.current?.firstElementChild
+    // The composer is already inside the dock. The item's fields belong above
+    // it, but scrolling this field there would chase the sticky bar forever.
+    // On keyboard resize, clear the containing section's top by just enough to
+    // bring the entire dock back into the visible viewport.
+    if (dock?.contains(field)) {
+      const bottom =
+        (window.visualViewport?.offsetTop ?? 0) + (window.visualViewport?.height ?? innerHeight)
+      const overflow = dock.getBoundingClientRect().bottom - bottom
+      if (overflow > 0) window.scrollBy({ top: overflow + gap, behavior: 'instant' })
+      return
+    }
     const top =
       Math.max(
         window.visualViewport?.offsetTop ?? 0,
@@ -377,7 +392,6 @@ export function ClipCorrectionWorkspace({
           {t('correction.timelineError', { min: state.minDurationMs, max: state.maxDurationMs })}
         </FieldMessage>
       )}
-      {revision}
       {comparison}
       {sourcePicker}
       {/* The download moved under the video it downloads (CLIP-149), so what is
@@ -389,49 +403,46 @@ export function ClipCorrectionWorkspace({
         </section>
       )}
       <div ref={actions} className="contents">
-        <ActionBar ariaLabel={t('correction.actions')}>
-          {failure && (
-            <div role="alert" className="mb-3 space-y-2">
-              <AppFailureMessage failure={failure} />
-              {failure.reason === 'CLIP_PLAN_CONFLICT' && (
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="ghost"
-                    disabled={correction.pending}
-                    onClick={() => setConfirm(true)}
-                  >
-                    {t('correction.reload')}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    disabled={correction.pending}
-                    onClick={correction.reapply}
-                  >
-                    {t('timeline.reapply')}
-                  </Button>
-                </div>
-              )}
+        <ActionBar ariaLabel={t('correction.actions')} className="space-y-3">
+          <div className="space-y-2">
+            {failure && (
+              <div role="alert" className="mb-3 space-y-2">
+                <AppFailureMessage failure={failure} />
+                {failure.reason === 'CLIP_PLAN_CONFLICT' && (
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="ghost"
+                      disabled={correction.pending}
+                      onClick={() => setConfirm(true)}
+                    >
+                      {t('correction.reload')}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      disabled={correction.pending}
+                      onClick={correction.reapply}
+                    >
+                      {t('timeline.reapply')}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <ClipRenderAction
+                key={projectId}
+                lastKind={lastRenderKind}
+                currentRender={currentRender}
+                pending={renderPending}
+                disabled={
+                  disabled || correction.pending || !renderReady || !correction.validation?.valid
+                }
+                onRender={onRender}
+              />
+              {finalizeAction}
             </div>
-          )}
-          {/* ONE row: 다시 렌더 and 확정하기 stand side by side, with 저장 joining
-              them while the draft is dirty. Everything the confirmation says sits
-              in the panel above, so the dock cannot grow over the editor. */}
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            {/* No 저장: the draft autosaves as ①'s settings do, and 다시 렌더 flushes the
-                queue itself, so a dirty draft is not a reason to refuse it (CLIP-39). An
-                INVALID draft still is — it is the one thing autosave cannot take. */}
-            <Button
-              variant="secondary"
-              pending={renderPending}
-              disabled={
-                disabled || correction.pending || !renderReady || !correction.validation?.valid
-              }
-              onClick={onRender}
-            >
-              {t('timeline.render')}
-            </Button>
-            {finalizeAction}
           </div>
+          {revision}
         </ActionBar>
       </div>
       {/* ONE selection is ONE sheet (CLIP-53): the selected item's own controls

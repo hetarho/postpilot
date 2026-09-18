@@ -114,13 +114,13 @@ it('opens a matching result in refine with one action bar and an available downl
     'href',
     'https://private.test/download',
   )
-  expect(screen.getByRole('button', { name: '다시 렌더' })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /렌더.*서버/ })).toBeDisabled()
   // Nothing is selected, so no cut or caption control stands in the page.
   expect(screen.queryByLabelText('원본 시작 (초)')).not.toBeInTheDocument()
   await selectCut()
   expect(screen.getAllByLabelText('원본 시작 (초)')).toHaveLength(1)
   await goToStep('클립 생성')
-  expect(screen.queryByRole('button', { name: '다시 렌더' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /렌더.*서버/ })).not.toBeInTheDocument()
 })
 
 it('saves exact milliseconds and selected text with a new optimistic revision', async () => {
@@ -271,7 +271,7 @@ it('preserves invalid authored intervals and disables rerender until repaired', 
   setField('표시 끝 (초)', '12')
   expect(screen.getByLabelText('표시 끝 (초)')).toHaveValue(12)
   expect(screen.queryByRole('button', { name: '저장' })).not.toBeInTheDocument()
-  expect(screen.getByRole('button', { name: '다시 렌더' })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /렌더.*서버/ })).toBeDisabled()
   expect(screen.getByText(/이 문구의 내용·위치·시간/)).toBeInTheDocument()
   // The autosave does not take an invalid draft either, so nothing reaches the server.
   await new Promise((resolve) => setTimeout(resolve, 900))
@@ -359,9 +359,9 @@ it('requires matching sources for rerender while text edits and previous video r
   await selectText()
   setField('자막 원문', '원본 없이 수정')
   await waitFor(() => expect(calls).toContain('SaveClipEditPlan'), AUTOSAVE)
-  expect(screen.getByRole('button', { name: '다시 렌더' })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /렌더.*서버/ })).toBeDisabled()
   await select()
-  await waitFor(() => expect(screen.getByRole('button', { name: '다시 렌더' })).toBeEnabled())
+  await waitFor(() => expect(screen.getByRole('button', { name: /렌더.*서버/ })).toBeEnabled())
   expect(calls).not.toContain('StartClipGeneration')
 })
 
@@ -481,7 +481,7 @@ it('shares retained sound across both steps, stales the old render and offers cr
   expect(toggle).not.toBeChecked()
   await userEvent.click(toggle)
   await waitFor(() => expect(soundWrites).toHaveLength(1))
-  await waitFor(() => expect(screen.getByRole('button', { name: '다시 렌더' })).toBeEnabled())
+  await waitFor(() => expect(screen.getByRole('button', { name: /렌더.*서버/ })).toBeEnabled())
   expect(screen.getByRole('link', { name: '렌더 1 다운로드' })).toBeVisible()
   expect(calls).not.toContain('SaveClipEditPlan')
   await goToStep('클립 생성')
@@ -505,13 +505,13 @@ it('renders a dirty draft by flushing it first, and offers no 저장 anywhere', 
   const calls: string[] = []
   await mount({ planWrites: writes, calls })
   await select()
-  await waitFor(() => expect(screen.getByRole('button', { name: '다시 렌더' })).toBeEnabled())
+  await waitFor(() => expect(screen.getByRole('button', { name: /렌더.*서버/ })).toBeEnabled())
   await selectText()
   setField('자막 원문', '렌더 직전 수정')
   // Dirty, and no way to save it by hand.
   expect(screen.queryByRole('button', { name: '저장' })).not.toBeInTheDocument()
-  expect(screen.getByRole('button', { name: '다시 렌더' })).toBeEnabled()
-  await userEvent.click(screen.getByRole('button', { name: '다시 렌더' }))
+  expect(screen.getByRole('button', { name: /렌더.*서버/ })).toBeEnabled()
+  await userEvent.click(screen.getByRole('button', { name: /렌더.*서버/ }))
   await waitFor(() => expect(calls).toContain('StartClipRender'), AUTOSAVE)
   // The edit reached the server BEFORE the render started.
   expect(writes.at(-1)?.plan.elements?.[0].text).toBe('렌더 직전 수정')

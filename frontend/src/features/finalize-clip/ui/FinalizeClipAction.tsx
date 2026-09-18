@@ -52,9 +52,7 @@ export function FinalizeClipNotices({
   )
 }
 
-/** ②'s primary committing control (CLIP-40). The button alone: its reasons are
- *  in `FinalizeClipNotices`, so the dock stays the one row it shares with 다시
- *  렌더 and 저장. */
+/** ②'s primary control shares the dock's upper row with rendering (CLIP-40). */
 export function FinalizeClipAction({
   action,
   project,
@@ -69,7 +67,6 @@ export function FinalizeClipAction({
   return (
     <Button
       variant="cta"
-      className="w-full sm:w-auto"
       pending={action.pending}
       disabled={disabled || !!refusal || action.uncertain}
       onClick={() => void action.confirm()}
