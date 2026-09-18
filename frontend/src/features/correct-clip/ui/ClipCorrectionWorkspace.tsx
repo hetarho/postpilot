@@ -264,63 +264,48 @@ export function ClipCorrectionWorkspace({
         notices={notices.filter((n) => !n.cutId && !n.elementId)}
         language={language}
       />
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          variant="secondary"
-          disabled={disabled || !timeline.past.length}
-          onClick={() => dispatch({ type: 'undo' })}
-        >
-          {t('timeline.undo')}
-        </Button>
-        <Button
-          variant="secondary"
-          disabled={disabled || !timeline.future.length}
-          onClick={() => dispatch({ type: 'redo' })}
-        >
-          {t('timeline.redo')}
-        </Button>
-        <Typography variant="meta" role="status">
-          {t(
-            correction.saving
-              ? 'timeline.saving'
-              : correction.dirty
-                ? 'timeline.unsaved'
-                : 'timeline.saved',
-          )}
-        </Typography>
-        {text?.cutId && (
-          <>
-            <Button
-              variant="secondary"
-              disabled={disabled || draft.cuts.findIndex((c) => c.id === text.cutId) <= 0}
-              onClick={() => {
-                const from = draft.cuts.findIndex((c) => c.id === text.cutId)
-                change({ type: 'move', from, to: from - 1 })
-              }}
-            >
-              {t('editor.up')}
-            </Button>
-            <Button
-              variant="secondary"
-              disabled={
-                disabled ||
-                draft.cuts.findIndex((c) => c.id === text.cutId) < 0 ||
-                draft.cuts.findIndex((c) => c.id === text.cutId) === draft.cuts.length - 1
-              }
-              onClick={() => {
-                const from = draft.cuts.findIndex((c) => c.id === text.cutId)
-                change({ type: 'move', from, to: from + 1 })
-              }}
-            >
-              {t('editor.down')}
-            </Button>
-          </>
-        )}
-      </div>
+      {/* The save state is NOT reported here: CLIP-38 gives it to the page's one
+          status region, and a second copy beside the timeline said it twice with
+          two different delays. Undo/redo moved to the timeline's own head. */}
+      {text?.cutId && (
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="secondary"
+            disabled={disabled || draft.cuts.findIndex((c) => c.id === text.cutId) <= 0}
+            onClick={() => {
+              const from = draft.cuts.findIndex((c) => c.id === text.cutId)
+              change({ type: 'move', from, to: from - 1 })
+            }}
+          >
+            {t('editor.up')}
+          </Button>
+          <Button
+            variant="secondary"
+            disabled={
+              disabled ||
+              draft.cuts.findIndex((c) => c.id === text.cutId) < 0 ||
+              draft.cuts.findIndex((c) => c.id === text.cutId) === draft.cuts.length - 1
+            }
+            onClick={() => {
+              const from = draft.cuts.findIndex((c) => c.id === text.cutId)
+              change({ type: 'move', from, to: from + 1 })
+            }}
+          >
+            {t('editor.down')}
+          </Button>
+        </div>
+      )}
       <ClipTimeline
         plan={draft}
         selection={timeline.selection}
         timeMs={timeline.timeMs}
+        history={{
+          undo: () => dispatch({ type: 'undo' }),
+          redo: () => dispatch({ type: 'redo' }),
+          canUndo: !!timeline.past.length,
+          canRedo: !!timeline.future.length,
+          disabled,
+        }}
         onSelect={(selection) => dispatch({ type: 'select', selection })}
         onAddCaption={(slot) => {
           // A local identity until the save returns the server-minted one.

@@ -137,6 +137,8 @@ export type { ClipEditableText } from './model/edit-plan'
 export { previewTimeline, previewFrame, previewElementIDs } from './model/draft-preview'
 export {
   timelineCuts,
+  timelineBarPx,
+  timelineLabelFits,
   textInterval,
   nativeTextErrors,
   validateTimelinePlan,

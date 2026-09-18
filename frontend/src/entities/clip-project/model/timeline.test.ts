@@ -7,6 +7,8 @@ import {
   createClipTimeline,
   selectedTime,
   textInterval,
+  timelineBarPx,
+  timelineLabelFits,
   validateTimelinePlan,
 } from './timeline'
 import type { ClipEditPlan, ClipEditableText, ClipEditingState } from './edit-plan'
@@ -387,4 +389,35 @@ it('carries an owner placement through the draft queue and undo', () => {
   state = clipTimelineReducer(state, { type: 'undo' })
   expect(state.plan.elements!.find((text) => text.instanceId === id)!.ownerPosition).toBeUndefined()
   expect(clipDraftKey(state.plan)).toBe(before)
+})
+
+describe('timeline label geometry', () => {
+  // The strip the component draws for a 10 s plan at 80 px/s.
+  const strip = 800
+  it('measures a bar as its share of the strip', () => {
+    expect(timelineBarPx(1000, 10000, strip)).toBe(80)
+    expect(timelineBarPx(10000, 10000, strip)).toBe(strip)
+    // A cut longer than the plan it sits in cannot draw past the strip.
+    expect(timelineBarPx(20000, 10000, strip)).toBe(strip)
+  })
+  it('measures nothing from a length, a duration or a strip it cannot use', () => {
+    const cases: Array<[number, number, number]> = [
+      [0, 10000, strip],
+      [-1, 10000, strip],
+      [1000, 0, strip],
+      [1000, Number.NaN, strip],
+      [1000, 10000, 0],
+    ]
+    for (const [span, duration, px] of cases) {
+      expect(timelineBarPx(span, duration, px)).toBe(0)
+      expect(timelineLabelFits(span, duration, px)).toBe(false)
+    }
+  })
+  it('admits a label only once the bar can hold one', () => {
+    // 44 px is the floor: 550 ms of a 10 s plan is exactly 44 px.
+    expect(timelineLabelFits(550, 10000, strip)).toBe(true)
+    expect(timelineLabelFits(549, 10000, strip)).toBe(false)
+    // Twenty cuts over 5 s: 20 px each, so none of them carries a label.
+    expect(timelineLabelFits(250, 5000, 400)).toBe(false)
+  })
 })

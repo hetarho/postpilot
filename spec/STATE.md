@@ -50,7 +50,6 @@
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
 | T242 | a render is started per kind and records the kind with its result | CLIP | T241 | todo |
 | T243 | every plan check runs on the server before a render of either kind | CLIP | T242 | todo |
-| T244 | ②'s timeline reads at any cut length | CLIP | - | doing@260918.ctr |
 | T245 | a selected cut or caption opens its own sheet | CLIP | T244 | todo |
 | T246 | the preview carries its scrubber, its info control and its download | CLIP | T245 | todo |
 | T247 | ②'s dock is the revision composer over 렌더하기 and 확정하기 | CLIP | T246 T242 | todo |
@@ -63,10 +62,11 @@
 | T254 | ② runs the browser render with its own progress and cancellation | CLIP | T253 T247 | todo |
 
 ## next
-- create-task CLIP (r37) before any of T250→T254 is claimed — r37 cuts T250's refusals from three to two and hands T251 the per-style motion it never carried, so the browser cluster is re-cut rather than edited
-- create-task CLIP (r37) also re-cuts T242, whose CLIP-153 changed: the kind offered first is the project's last one, which T242 never carried; T243 waits behind it
+- create-task CLIP (r37) before T242 or any of T250→T254 is claimed — CLIP-153 now offers the project's last kind first, which T242 never carried, and r37 cuts T250's refusals from three to two while handing T251 the per-style motion; T243 waits behind T242
+- implement-task T245 next (②'s surfaces, T244 done); T246→T249 follow it in order
 - T177 stays blocked (its viewing checklist predates the caption style set, the outline and now ②'s shape) and T008 is another session's
 ## log
+- 260918 T244 done; every cut draws its thumbnail at once, each ruler tick and label is bounded by its own cut and dropped below CLIP_TIMELINE.minLabelPx, undo/redo head the timeline as icon controls, and the save state is the page's status region alone — hiding a label also hid the control's name, so each bar now carries its own aria-label
 - 260918 T241 done; the generation ends on the validated plan, `SaveGeneratedPlan` advances the analysis and the plan while `result_*`/`rendered_plan_revision` stand, and a file-less completion skips the staging row and applies its plan in the job's own terminal transaction
 - 260918 out of scope: `renderLoader`'s `verifyRetained` probe lost its only caller with the generation's render stage; the render job does the same identity check itself (review-code candidate)
 - 260918 update-ssot CLIP r37 done; the browser render draws every style including the sequence ones — it sets no type and applies only the motion, so the two kinds owe the same clip and not the same file and a caption that moves differently between them is not a defect; the originals a page lacks are fetched rather than refusing the kind, leaving the encoders and the memory as the two refusals; the kind offered first is the project's last one and the browser kind where it has none; CLIP-126 closes with no wall-clock committed
@@ -86,4 +86,3 @@
 - 260918 r35 lands on ②'s dock and its render action, which T237 T238 T239 already rewrite; T234 (doing) touches CLIP-39, whose only change is the action's name
 - 260918 update-ssot CLIP start — the render moves behind the owner's approval, ② reviews the plan and then the rendered result, and rendering splits into a browser and a server kind
 - 260918 T234 claimed (rfn)
-- 260918 create-task CLIP done; r34 becomes T234 the autosaved draft, T235 the readable timeline, T236 the item sheets, T237 the preview's own controls, T238 the finalization dialog, T239 the docked revision composer, T240 the reference sheet — one linear chain because every one of them edits ②'s workspace

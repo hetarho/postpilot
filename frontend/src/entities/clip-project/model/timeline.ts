@@ -53,6 +53,22 @@ export type TimelineEdit =
 
 export { timelineCuts } from './edit-plan'
 
+/** The drawn width of one timeline bar, in CSS px. Every bar is laid out as a
+ *  percentage of the plan's duration over one strip whose width the timeline
+ *  computes itself, so the geometry is decided from those three numbers alone
+ *  and never read back out of the DOM. */
+export function timelineBarPx(spanMs: number, durationMs: number, stripPx: number): number {
+  if (!(spanMs > 0) || !(durationMs > 0) || !(stripPx > 0)) return 0
+  return (Math.min(spanMs, durationMs) / durationMs) * stripPx
+}
+
+/** Whether that bar is wide enough to carry its own label (CLIP-54). A bar
+ *  narrower than this carries none, so no label can reach past the bar it
+ *  belongs to and over its neighbour. */
+export function timelineLabelFits(spanMs: number, durationMs: number, stripPx: number): boolean {
+  return timelineBarPx(spanMs, durationMs, stripPx) >= CLIP_TIMELINE.minLabelPx
+}
+
 export function textInterval(plan: ClipEditPlan, text: ClipEditableText) {
   const cut = timelineCuts(plan).find((c) => c.cut.id === text.cutId)
   const length = cut ? cut.endMs - cut.startMs : 0

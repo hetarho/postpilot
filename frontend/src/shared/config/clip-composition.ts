@@ -58,6 +58,10 @@ export const CLIP_TIMELINE = {
   minimumEditingRoomPx: 96,
   pixelsPerSecond: 80,
   minWidth: 320,
+  /** The narrowest a timeline bar may be and still carry its own label. Below
+   *  it the label is dropped rather than truncated to nothing, because two
+   *  adjacent ellipses read as one smear rather than as two cuts (CLIP-54). */
+  minLabelPx: 44,
 } as const
 
 /** How ② places a caption (CDS-82, CLIP-143). The nudge is in CANVAS pixels, so
