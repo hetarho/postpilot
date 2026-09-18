@@ -664,25 +664,14 @@ export function ClipCorrectionWorkspace({
               them while the draft is dirty. Everything the confirmation says sits
               in the panel above, so the dock cannot grow over the editor. */}
           <div className="flex flex-wrap items-center justify-end gap-2">
-            {correction.dirty && (
-              <Button
-                variant="secondary"
-                pending={correction.pending}
-                disabled={disabled || !correction.validation?.saveable}
-                onClick={() => void correction.save()}
-              >
-                {t('timeline.save')}
-              </Button>
-            )}
+            {/* No 저장: the draft autosaves as ①'s settings do, and 다시 렌더 flushes the
+                queue itself, so a dirty draft is not a reason to refuse it (CLIP-39). An
+                INVALID draft still is — it is the one thing autosave cannot take. */}
             <Button
               variant="secondary"
               pending={renderPending}
               disabled={
-                disabled ||
-                correction.pending ||
-                correction.dirty ||
-                !renderReady ||
-                !correction.validation?.valid
+                disabled || correction.pending || !renderReady || !correction.validation?.valid
               }
               onClick={onRender}
             >

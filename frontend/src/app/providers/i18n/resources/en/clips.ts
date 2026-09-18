@@ -127,7 +127,6 @@ export const clips = {
     narrationStart: 'Caption start (whole clip)',
     narrationEnd: 'Caption end (whole clip)',
     render: 'Rerender',
-    save: 'Save',
     download: 'Download',
     label: 'Editing timeline',
     cuts: 'Video cuts',
@@ -543,7 +542,8 @@ export const clips = {
     requiredSources: 'Originals needed for rerender',
     missingSources: 'Still needed: {{names}}',
     unexpectedSources: 'Mismatched or unnecessary files: {{names}}',
-    saveFirst: 'Save your edits before selecting the required originals.',
+    saveFirst:
+      'Originals can be selected once the edit is saved. Fix any edit that needs attention first.',
     inspect: 'Inspect this source range',
     sourcePreview: 'Selected cut source preview',
     save: 'Save edits',

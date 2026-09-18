@@ -79,7 +79,9 @@ const selectText = async (name = 'caption a') =>
   userEvent.click(timeline().getByRole('button', { name }))
 const setField = (label: string, value: string) =>
   fireEvent.change(screen.getByLabelText(label), { target: { value } })
-const savePlan = async () => userEvent.click(screen.getByRole('button', { name: '저장' }))
+// No 저장 button: the draft autosaves on a pause as ①'s settings do (CLIP-39), so a
+// test waits for the write that pause produces instead of pressing anything.
+const AUTOSAVE = { timeout: 3000 }
 async function select(ids = ['a', 'b']) {
   const files = ids.map((id) => new File(['clip'], `source-${id}.mp4`, { type: 'video/mp4' }))
   vi.mocked(readSourceManifest).mockResolvedValue(
@@ -122,10 +124,9 @@ it('saves exact milliseconds and selected text with a new optimistic revision', 
   setField('원본 끝 (초)', '12.345')
   await selectText()
   setField('자막 원문', '오늘 장면')
-  await savePlan()
   // An autosave may finish while the owner switches from the cut to its text.
   // Every accepted write advances the optimistic revision; the last holds both edits.
-  await waitFor(() => expect(writes.at(-1)?.plan.elements?.[0].text).toBe('오늘 장면'))
+  await waitFor(() => expect(writes.at(-1)?.plan.elements?.[0].text).toBe('오늘 장면'), AUTOSAVE)
   expect(writes.at(-1)!.plan.cuts[0]).toMatchObject({ startMs: 123, endMs: 12345 })
   expect(writes.map((write) => write.revision)).toEqual(writes.map((_, index) => index + 1))
   expect(screen.getByRole('link', { name: '렌더 1 다운로드' })).toBeInTheDocument()
@@ -140,8 +141,7 @@ it('keeps a selected text field mounted while its cut is reordered', async () =>
   await userEvent.click(screen.getByRole('button', { name: '아래로 이동' }))
   expect(screen.getByLabelText('자막 원문')).toBe(field)
   expect(field).toHaveValue('선택한 문구')
-  await savePlan()
-  await waitFor(() => expect(writes).toHaveLength(1))
+  await waitFor(() => expect(writes).toHaveLength(1), AUTOSAVE)
   expect(writes[0].plan.cuts.map((c) => c.id)).toEqual(['cut-b', 'cut-a'])
 })
 
@@ -151,9 +151,11 @@ it('preserves invalid authored intervals and disables rerender until repaired', 
   await selectText()
   setField('표시 끝 (초)', '12')
   expect(screen.getByLabelText('표시 끝 (초)')).toHaveValue(12)
-  expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
+  expect(screen.queryByRole('button', { name: '저장' })).not.toBeInTheDocument()
   expect(screen.getByRole('button', { name: '다시 렌더' })).toBeDisabled()
   expect(screen.getByText(/이 문구의 내용·위치·시간/)).toBeInTheDocument()
+  // The autosave does not take an invalid draft either, so nothing reaches the server.
+  await new Promise((resolve) => setTimeout(resolve, 900))
   expect(calls).not.toContain('SaveClipEditPlan')
   await userEvent.click(screen.getByRole('button', { name: '실행 취소' }))
   expect(screen.getByLabelText('표시 끝 (초)')).toHaveValue(3.88)
@@ -170,12 +172,10 @@ it('undoes a saved deletion, preserving output-relative fixed text', async () =>
   await userEvent.click(screen.getByRole('button', { name: '컷 삭제' }))
   expect(timeline().queryByRole('button', { name: 'caption a' })).not.toBeInTheDocument()
   expect(timeline().getByRole('button', { name: '정확한 고정 문구' })).toBeInTheDocument()
-  await savePlan()
-  await waitFor(() => expect(writes).toHaveLength(1))
+  await waitFor(() => expect(writes).toHaveLength(1), AUTOSAVE)
   await userEvent.click(screen.getByRole('button', { name: '실행 취소' }))
   expect(timeline().getByRole('button', { name: 'caption a' })).toBeInTheDocument()
-  await savePlan()
-  await waitFor(() => expect(writes).toHaveLength(2))
+  await waitFor(() => expect(writes).toHaveLength(2), AUTOSAVE)
   expect(writes.map((w) => w.revision)).toEqual([1, 2])
 })
 
@@ -184,8 +184,7 @@ it('edits fixed global text without requiring legacy campaign facts', async () =
   await mount({ planWrites: writes })
   await selectText('정확한 고정 문구')
   setField('자막 원문', '직접 쓴 문구 <그대로>')
-  await savePlan()
-  await waitFor(() => expect(writes).toHaveLength(1))
+  await waitFor(() => expect(writes).toHaveLength(1), AUTOSAVE)
   expect(writes[0].plan.elements!.find((t) => t.instanceId === 'global')).toMatchObject({
     text: '직접 쓴 문구 <그대로>',
     basis: 'whole',
@@ -217,8 +216,7 @@ it('edits rapid phrase timing in exact milliseconds on a rapid-paced clip', asyn
   expect(screen.queryByLabelText('강조색')).not.toBeInTheDocument()
   const ends = screen.getAllByLabelText('컷 안에서 끝 (초)')
   fireEvent.change(ends[1], { target: { value: '0.919' } })
-  await savePlan()
-  await waitFor(() => expect(writes).toHaveLength(1))
+  await waitFor(() => expect(writes).toHaveLength(1), AUTOSAVE)
   expect(writes[0].plan.elements![0].phrases![1]).toMatchObject({
     text: '구로디지털단지에',
     startMs: 420,
@@ -230,8 +228,7 @@ it('keeps the local draft on conflict and reloads only after an explicit discard
   await mount({ planSaveConflict: true })
   await selectText()
   setField('자막 원문', '내 수정')
-  await savePlan()
-  await screen.findByRole('button', { name: '내 편집을 최신 버전에 적용' })
+  await screen.findByRole('button', { name: '내 편집을 최신 버전에 적용' }, AUTOSAVE)
   expect(screen.getByLabelText('자막 원문')).toHaveValue('내 수정')
   expect(screen.getByRole('link', { name: '렌더 1 다운로드' })).toBeInTheDocument()
 })
@@ -241,8 +238,7 @@ it('requires matching sources for rerender while text edits and previous video r
   await mount({ calls })
   await selectText()
   setField('자막 원문', '원본 없이 수정')
-  await savePlan()
-  await waitFor(() => expect(calls).toContain('SaveClipEditPlan'))
+  await waitFor(() => expect(calls).toContain('SaveClipEditPlan'), AUTOSAVE)
   expect(screen.getByRole('button', { name: '다시 렌더' })).toBeDisabled()
   await select()
   await waitFor(() => expect(screen.getByRole('button', { name: '다시 렌더' })).toBeEnabled())
@@ -377,4 +373,25 @@ it('shares retained sound across both steps, stales the old render and offers cr
   await userEvent.click(screen.getByRole('button', { name: '실행 취소' }))
   await waitFor(() => expect(soundWrites).toHaveLength(3))
   expect(soundWrites[2]).toMatchObject({ expectedRevision: 3, retainOriginalAudio: true })
+})
+
+// CLIP-39: ② autosaves as ① does, so 저장 is gone and a dirty draft is not a reason to
+// refuse 다시 렌더 — the render flushes the queue itself and runs against what the server
+// took, never against a revision the owner has since typed past.
+it('renders a dirty draft by flushing it first, and offers no 저장 anywhere', async () => {
+  const writes: NonNullable<FakeClipsOptions['planWrites']> = []
+  const calls: string[] = []
+  await mount({ planWrites: writes, calls })
+  await select()
+  await waitFor(() => expect(screen.getByRole('button', { name: '다시 렌더' })).toBeEnabled())
+  await selectText()
+  setField('자막 원문', '렌더 직전 수정')
+  // Dirty, and no way to save it by hand.
+  expect(screen.queryByRole('button', { name: '저장' })).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '다시 렌더' })).toBeEnabled()
+  await userEvent.click(screen.getByRole('button', { name: '다시 렌더' }))
+  await waitFor(() => expect(calls).toContain('StartClipRender'), AUTOSAVE)
+  // The edit reached the server BEFORE the render started.
+  expect(writes.at(-1)?.plan.elements?.[0].text).toBe('렌더 직전 수정')
+  expect(calls.indexOf('SaveClipEditPlan')).toBeLessThan(calls.indexOf('StartClipRender'))
 })

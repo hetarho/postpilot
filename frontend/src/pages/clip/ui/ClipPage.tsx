@@ -432,9 +432,15 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
       // A revision states its own refusal in its own panel, in one voice: the
       // dock's alert is about the render it commits.
       renderFailure={job?.kind === 'revise_clip' ? undefined : generation.failure}
+      // The draft's queue is flushed BEFORE the render starts, so the render always runs
+      // against the revision the server took rather than against one the owner has since
+      // typed past (CLIP-39). A failed save stops the start; the status line already says so.
       onRender={() => {
-        if (!correction.dirty && !correction.pending)
-          void generation.render(upload.readyBatch, correction.revision, ownership)
+        if (correction.pending) return
+        void correction
+          .flush()
+          .then((revision) => generation.render(upload.readyBatch, revision, ownership))
+          .catch(() => undefined)
       }}
       localSources={upload.entries.map((entry) => ({
         fingerprint: entry.metadata.fingerprint,

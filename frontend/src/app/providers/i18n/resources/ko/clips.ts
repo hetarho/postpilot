@@ -123,7 +123,6 @@ export const clips = {
     narrationStart: '자막 시작 (전체 기준)',
     narrationEnd: '자막 끝 (전체 기준)',
     render: '다시 렌더',
-    save: '저장',
     download: '다운로드',
     label: '편집 타임라인',
     cuts: '영상 컷',
@@ -532,7 +531,8 @@ export const clips = {
     requiredSources: '다시 출력에 필요한 원본',
     missingSources: '아직 필요한 원본: {{names}}',
     unexpectedSources: '일치하지 않거나 필요하지 않은 파일: {{names}}',
-    saveFirst: '수정사항을 먼저 저장한 뒤 필요한 원본을 선택해 주세요.',
+    saveFirst:
+      '편집 내용이 저장된 뒤에 원본을 선택할 수 있어요. 확인이 필요한 편집이 있으면 먼저 고쳐 주세요.',
     inspect: '이 구간 원본 확인',
     sourcePreview: '선택한 컷의 원본 미리보기',
     save: '수정 저장',

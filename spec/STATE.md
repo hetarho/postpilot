@@ -31,7 +31,7 @@
 | THEME | 12 | 12 | - | 0 |
 | MKT | 4 | 4 | - | 0 |
 | VIDEO | 2 | 2 | - | 1 |
-| CLIP | 34 | 34 | - | 3 |
+| CLIP | 35 | 34 | CLIP-151+ CLIP-152+ CLIP-153+ CLIP-154+ CLIP-155+ CLIP-156+ CLIP-20✎ CLIP-27✎ CLIP-36✎ CLIP-39✎ CLIP-40✎ CLIP-56✎ CLIP-73✎ CLIP-75✎ CLIP-76✎ CLIP-78✎ CLIP-79✎ CLIP-109✎ CLIP-132✎ | 4 |
 | CDS | 22 | 22 | - | 1 |
 | BILL | 4 | 4 | - | 0 |
 
@@ -48,7 +48,6 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
-| T234 | ②'s edit draft autosaves and 저장 leaves the dock | CLIP | - | todo |
 | T235 | ②'s timeline reads at any cut length | CLIP | T234 | todo |
 | T236 | a selected cut or caption opens its own sheet | CLIP | T235 | todo |
 | T237 | the preview carries its scrubber, its info control and its download | CLIP | T236 | todo |
@@ -57,9 +56,15 @@
 | T240 | ②'s reference opens on demand | CLIP | T239 | todo |
 
 ## next
-- implement-task T234, then T235→T240 in that order — they are one linear chain through ②'s surfaces, so a later one rebases on the earlier one's shape
+- create-task CLIP (r35) — sequence it behind T234→T240, which already rewrite the surfaces r35 changes again
+- implement-task T235, then T236→T240 in that order — they are one linear chain through ②'s surfaces, so a later one rebases on the earlier one's shape
 - T177 stays blocked (its viewing checklist predates the caption style set, the outline and now ②'s shape) and T008 is another session's
 ## log
+- 260918 T234 done; ②'s draft already autosaved, so 저장 just went and 다시 렌더 flushes the queue itself — which exposed `useGenerateClip.render` refusing the very revision the flush had just won, since the project prop lags the cache write by one render
+- 260918 update-ssot CLIP r35 done; a generation now stops at the plan and renders nothing, ② reviews the plan and then the render it asked for, and a render is a browser or a server one chosen per render — both under the same output contract and both able to finalize, the server checking everything the plan can tell before either starts and the producing side measuring its own file, a browser that cannot render refusing rather than changing kind, and the kind recorded on every render while both stay credit-free
+- 260918 r35 lands on ②'s dock and its render action, which T237 T238 T239 already rewrite; T234 (doing) touches CLIP-39, whose only change is the action's name
+- 260918 update-ssot CLIP start — the render moves behind the owner's approval, ② reviews the plan and then the rendered result, and rendering splits into a browser and a server kind
+- 260918 T234 claimed (rfn)
 - 260918 create-task CLIP done; r34 becomes T234 the autosaved draft, T235 the readable timeline, T236 the item sheets, T237 the preview's own controls, T238 the finalization dialog, T239 the docked revision composer, T240 the reference sheet — one linear chain because every one of them edits ②'s workspace
 - 260918 create-task CLIP start (r34)
 - 260918 bugfix: production's first revision request died in prepare with an unnamed reason — the reservation guard, the metered boundary, the ledger's hold/settle/record, the clip accounting read, its SQL and the table's two cancellation CHECKs all named generate_clip alone; they now ask ChargedClipKind, migration 0063 widens the CHECKs (NO TRANSACTION, 0027's pragma, because two tables cascade from generation_jobs), and the reserve/meter/settle, the cancel and the rebuild are pinned by tests

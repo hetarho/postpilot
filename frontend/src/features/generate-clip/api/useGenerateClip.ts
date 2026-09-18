@@ -292,7 +292,11 @@ export function useGenerateClip(ownerId: string, project: ClipProject, ownedJobI
       busy ||
       !batch ||
       !!project.finalized ||
-      revision !== project.editPlanRevision ||
+      // The caller flushes its draft and hands us the revision the server TOOK, which can be
+      // ahead of the project this render pass closed over — the cache write has not reached it
+      // yet (CLIP-39). Only an older revision is a real refusal, and the RPC's own
+      // `expectedRevision` still settles any race against another session.
+      revision < project.editPlanRevision ||
       !project.editing ||
       consumed.current.has(batch.id)
     )
