@@ -3,6 +3,7 @@ package media
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/clip/composition"
 	"github.com/postpilot/backend/internal/clip/design"
 	"github.com/postpilot/backend/internal/platform/config"
 )
@@ -92,6 +94,26 @@ type localCopy struct {
 	EndMS   int    `json:"endMS"`
 }
 
+// localFailure names what refused the plan. renderFailure alone reports the
+// substage, which for a layout refusal is always "render_layout" and says
+// nothing about WHICH element the grammar or the geometry rejected; a Problem
+// carries that, so it is unwrapped here.
+func localFailure(err error) error {
+	var p *composition.Problem
+	if errors.As(err, &p) {
+		return fmt.Errorf("%w (element=%q line=%d reason=%s)", renderFailure(err), p.ElementID, p.Line, p.Reason)
+	}
+	var l *clip.LayoutError
+	if errors.As(err, &l) {
+		return fmt.Errorf("%w (cut=%d copy=%d)", renderFailure(err), l.Cut, l.Copy)
+	}
+	chain := ""
+	for e := err; e != nil; e = errors.Unwrap(e) {
+		chain += fmt.Sprintf(" <- %T(%v)", e, e)
+	}
+	return fmt.Errorf("%w [chain%s]", renderFailure(err), chain)
+}
+
 func localMediaConfig(t *testing.T) clip.MediaConfig {
 	t.Helper()
 	return config.ClipMedia(&config.Config{
@@ -158,6 +180,18 @@ func TestLocalAuthoredClip(t *testing.T) {
 			paths[id] = local
 			seen[c.File] = id
 		}
+		// A cut reaching past its source is refused as plan_cut_range, but only
+		// after every original has been copied and probed. Saying so here turns
+		// a two-minute round trip into an immediate answer.
+		byID := map[string]clip.RenderSource{}
+		for _, source := range sources {
+			byID[source.ID] = source
+		}
+		for i, c := range lp.Cuts {
+			if source := byID[seen[c.File]]; c.EndMS > source.Info.DurationMS || c.StartMS >= c.EndMS {
+				return fmt.Errorf("cut %d (%s) asks for %d-%d ms of a %d ms source", i, c.File, c.StartMS, c.EndMS, source.Info.DurationMS)
+			}
+		}
 		for i, c := range lp.Cuts {
 			id := seen[c.File]
 			cut := clip.EditCut{
@@ -209,7 +243,7 @@ func TestLocalAuthoredClip(t *testing.T) {
 			return clip.ErrNotFound
 		})
 		if err != nil {
-			return renderFailure(err)
+			return localFailure(err)
 		}
 		if err := os.MkdirAll(output, 0700); err != nil {
 			return err
