@@ -476,6 +476,10 @@ export const clips = {
     },
     noInstruction: 'Generated with no instruction.',
   },
+  reference: {
+    label: 'Reference',
+    tabs: { observations: 'Observations', sources: 'Sources', requests: 'Requests' },
+  },
   revision: {
     request: 'What to change',
     count: '{{used}} / {{max}} characters',

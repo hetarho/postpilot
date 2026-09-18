@@ -62,7 +62,7 @@ export function ClipCorrectionWorkspace({
   lastRenderKind,
   currentRender,
   onRender,
-  sourcePicker,
+  referenceAction,
   preview,
   localSources,
   resolvePlayback,
@@ -85,7 +85,7 @@ export function ClipCorrectionWorkspace({
   lastRenderKind?: ClipRenderKind
   currentRender?: boolean
   onRender: (kind: ClipRenderKind) => void
-  sourcePicker: ReactNode
+  referenceAction?: ReactNode
   preview: (props: ClipEditorPreviewProps) => ReactNode
   comparison?: ReactNode
   /** The dock's bottom row: revision composer or its active run. */
@@ -280,13 +280,14 @@ export function ClipCorrectionWorkspace({
       </div>
       {/* Directly under the preview, and nothing else about the clip stands in the
           flow ② edits in (CLIP-148): the download of the render this plan already
-          has (CLIP-149), and one info control holding what the draft preview
+          has (CLIP-149), the reference sheet, and one info control holding what the draft preview
           cannot promise about the delivered file plus every notice that names no
           cut and no caption. With a plan and no render there is simply no
           download — a plan awaiting one is ②'s FIRST state (CLIP-56), not a
           missing result. */}
       <div className="flex flex-wrap items-center gap-2">
         {downloadAction}
+        {referenceAction}
         <Popover
           label={t('preview.aboutLabel')}
           triggerSize="icon"
@@ -390,7 +391,6 @@ export function ClipCorrectionWorkspace({
         </FieldMessage>
       )}
       {comparison}
-      {sourcePicker}
       <div ref={actions} className="contents">
         <ActionBar ariaLabel={t('correction.actions')} className="space-y-3">
           <div className="space-y-2">

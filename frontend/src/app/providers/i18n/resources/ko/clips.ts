@@ -467,6 +467,10 @@ export const clips = {
     },
     noInstruction: '지시 없이 생성했어요.',
   },
+  reference: {
+    label: '참고 자료',
+    tabs: { observations: '관찰 기록', sources: '원본 영상', requests: '요청 기록' },
+  },
   revision: {
     request: '요청 내용',
     count: '{{used}} / {{max}}자',

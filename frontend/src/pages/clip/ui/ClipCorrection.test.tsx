@@ -101,9 +101,12 @@ async function select(ids = ['a', 'b']) {
   vi.mocked(putBlobWithProgress).mockResolvedValue()
   vi.spyOn(URL, 'createObjectURL').mockImplementation((blob) => `blob:${(blob as File).name}`)
   const revoke = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
+  await userEvent.click(screen.getByRole('button', { name: '참고 자료' }))
+  await userEvent.click(screen.getByRole('tab', { name: '원본 영상' }))
   const input = screen.getByLabelText('원본 영상 선택')
   await waitFor(() => expect(input).toBeEnabled())
   await userEvent.upload(input, files)
+  await userEvent.keyboard('{Escape}')
   return revoke
 }
 
@@ -414,6 +417,7 @@ it('adds observed footage through the page, then saves split/rate operations and
   }
   const planWrites: NonNullable<FakeClipsOptions['planWrites']> = []
   await mount({ projects: [project], planWrites })
+  await userEvent.click(screen.getByRole('button', { name: '참고 자료' }))
   await userEvent.click(screen.getByRole('button', { name: /관찰 구간 1개 자세히 보기/ }))
   await userEvent.click(screen.getByRole('button', { name: '이 구간을 컷으로 추가' }))
   await waitFor(() => expect(planWrites).toHaveLength(1))
@@ -429,7 +433,8 @@ it('adds observed footage through the page, then saves split/rate operations and
     chips: [],
     focal: { x: 0.3, y: 0.6 },
   })
-  expect(screen.getByText(/2번 컷에 사용 · 1× · 원본 0:12–0:15/)).toBeVisible()
+  expect(screen.queryByRole('dialog', { name: '참고 자료' })).not.toBeInTheDocument()
+  expect(screen.getByRole('dialog', { name: /컷 2/ })).toBeVisible()
   await userEvent.click(screen.getByRole('combobox', { name: /재생 속도/ }))
   await userEvent.click(screen.getByRole('option', { name: '2×' }))
   await waitFor(() => expect(planWrites).toHaveLength(2))
@@ -476,6 +481,8 @@ it('shares retained sound across both steps, stales the old render and offers cr
   const soundWrites: NonNullable<FakeClipsOptions['soundWrites']> = [],
     calls: string[] = []
   await mount({ projects: [project], retainedBatches: [batch], soundWrites, calls })
+  await userEvent.click(screen.getByRole('button', { name: '참고 자료' }))
+  await userEvent.click(screen.getByRole('tab', { name: '원본 영상' }))
   const toggle = await screen.findByRole('switch', { name: /source-a.mp4 원본 소리 유지/ })
   await waitFor(() => expect(toggle).toBeEnabled())
   expect(toggle).not.toBeChecked()

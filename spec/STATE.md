@@ -49,7 +49,6 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
-| T249 | ②'s reference opens on demand | CLIP | T248 | todo |
 | T250 | the browser states whether it can render, and refuses with one reason | CLIP | T242 | todo |
 | T251 | the browser composites and encodes the video track | CLIP | T250 | todo |
 | T252 | the browser builds and encodes the audio track | CLIP | T251 | todo |
@@ -59,10 +58,12 @@
 | T257 | the approval surface quotes the longest render its styles can produce | CLIP CDS | - | todo |
 
 ## next
-- implement-task T249 — open the editing reference on demand; T250 is also ready.
+- implement-task T250 — probe browser render capability with an explicit refusal.
 - T256 and T257 remain independent of the browser cluster.
 - T177 stays blocked; T008 belongs to another session; post-quality-and-related-links awaits conversion.
 ## log
+- 260918 T249 done; one reference sheet lazily mounts observations, sources or requests, and observed cut additions land in the new cut’s editor.
+- 260918 T249 claimed (rnd)
 - 260918 T248 done; finalization flushes before a targeted-notice confirmation dialog, with render-first and other refusals beside the dock button.
 - 260918 T248 claimed (rnd)
 - 260918 T247 done; the two-row dock keeps the revision composer reachable, send opens credit approval, and render labels derive the kind and current-plan match.
@@ -81,5 +82,3 @@
 - 260918 T255 done; the smoke's continuation now succeeds on the saved plan with the result untouched, stated by one `continuationVerdict` a host test pins so the next drift breaks ARCH-26 instead of the deploy — clip-input-smoke is green again (PASS in 70 s)
 - 260918 ideation post-quality-and-related-links start
 - 260918 T255 claimed (knd)
-- 260918 T242 claimed (knd)
-- 260918 create-task CLIP done; r37 lands on the todo tasks rather than as new ones — T242 gains the project's last-rendered kind (read off the latest result, no new column), T247 derives the first-offered kind from it with server as the fallback, T250 drops to two refusals and T251 takes the fetch of an unheld original plus CLIP-159's motion over the server's representative raster; T243 T248 T249 T252 T253 T254 are base bumps, T253 and T254 each gaining one note from CLIP-157 and CLIP-126

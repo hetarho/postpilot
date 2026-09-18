@@ -37,6 +37,7 @@ import {
   AppFailureMessage,
   Button,
   Dialog,
+  Sheet,
   SegmentedControl,
   ProgressBar,
   Typography,
@@ -248,10 +249,11 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
       ? 'unrendered'
       : 'clean'
 
-  // Inside each step's content, above its dock, so inspecting a long observation
-  // cannot scroll the step's committing action out of its sticky container.
-  // What the owner asked the AI for, beside the evidence it was answered from
-  // (CLIP-133). Read-only history in both ① and ②, never a control.
+  // Shared reference content: ① keeps it in flow; ② mounts only the chosen tab.
+  const [referenceOpen, setReferenceOpen] = useState(false)
+  const [referenceTab, setReferenceTab] = useState<'observations' | 'sources' | 'requests'>(
+    'observations',
+  )
   const requestRecord = <ClipRequestRecord requests={project.requests} />
 
   const observationPanel = (
@@ -259,8 +261,8 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
       project={project}
       onAddCut={
         step === 'refine' && !pending && plan?.plan.nativeComposition
-          ? (selection) =>
-              correction.addCut(
+          ? async (selection) => {
+              await correction.addCut(
                 selection,
                 upload.readyBatch?.sources.find(
                   (source) =>
@@ -268,6 +270,8 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
                     source.metadata.fingerprint === selection.source.fingerprint,
                 )?.retainOriginalAudio,
               )
+              setReferenceOpen(false)
+            }
           : undefined
       }
       draftPlan={step === 'refine' ? correction.draft : undefined}
@@ -361,6 +365,84 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
         </Typography>
       </section>
     </ClipProjectForm>
+  )
+
+  const referenceAction = (
+    <>
+      <Button
+        variant="secondary"
+        onClick={() => {
+          setReferenceTab('observations')
+          setReferenceOpen(true)
+        }}
+      >
+        {t('reference.label')}
+      </Button>
+      <Sheet
+        open={referenceOpen}
+        labelledBy="clip-reference-title"
+        onClose={() => setReferenceOpen(false)}
+        header={
+          <div className="space-y-3">
+            <Typography variant="title" as="h2" id="clip-reference-title">
+              {t('reference.label')}
+            </Typography>
+            <SegmentedControl
+              ariaLabel={t('reference.label')}
+              value={referenceTab}
+              onChange={setReferenceTab}
+              controls="clip-reference-panel"
+              options={(['observations', 'sources', 'requests'] as const).map((value) => ({
+                value,
+                label: t(`reference.tabs.${value}`),
+              }))}
+            />
+          </div>
+        }
+      >
+        {referenceOpen && (
+          <div
+            role="tabpanel"
+            id="clip-reference-panel"
+            aria-label={t(`reference.tabs.${referenceTab}`)}
+          >
+            {referenceTab === 'observations' && observationPanel}
+            {referenceTab === 'requests' && requestRecord}
+            {referenceTab === 'sources' && (
+              <>
+                <section aria-labelledby="clip-required-sources" className="mt-10 space-y-3">
+                  <Typography variant="title" id="clip-required-sources">
+                    {t('correction.requiredSources')}
+                  </Typography>
+                  <ul className="space-y-2">
+                    {required?.map((source) => (
+                      <li key={source.fingerprint}>
+                        <Typography variant="body" className="break-words">
+                          {source.filename}
+                        </Typography>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+                <ClipSourcePicker
+                  upload={upload}
+                  sound={soundControl}
+                  correction
+                  disabled={
+                    correction.dirty ||
+                    correction.pending ||
+                    generation.busy ||
+                    finalization.busy ||
+                    !correction.validation?.valid
+                  }
+                  processing={generation.busy}
+                />
+              </>
+            )}
+          </div>
+        )}
+      </Sheet>
+    </>
   )
 
   const refinePanel = plan ? (
@@ -457,39 +539,7 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
         url: entry.previewURL,
       }))}
       resolvePlayback={upload.ensurePlayback}
-      sourcePicker={
-        <>
-          {observationPanel}
-          {requestRecord}
-          <section aria-labelledby="clip-required-sources" className="mt-10 space-y-3">
-            <Typography variant="title" id="clip-required-sources">
-              {t('correction.requiredSources')}
-            </Typography>
-            <ul className="space-y-2">
-              {required?.map((source) => (
-                <li key={source.fingerprint}>
-                  <Typography variant="body" className="break-words">
-                    {source.filename}
-                  </Typography>
-                </li>
-              ))}
-            </ul>
-          </section>
-          <ClipSourcePicker
-            upload={upload}
-            sound={soundControl}
-            correction
-            disabled={
-              correction.dirty ||
-              correction.pending ||
-              generation.busy ||
-              finalization.busy ||
-              !correction.validation?.valid
-            }
-            processing={generation.busy}
-          />
-        </>
-      }
+      referenceAction={referenceAction}
     />
   ) : (
     <>
@@ -514,8 +564,7 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
           </ActionBar>
         </>
       )}
-      {observationPanel}
-      {requestRecord}
+      {referenceAction}
     </>
   )
 
