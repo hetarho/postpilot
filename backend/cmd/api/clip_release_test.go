@@ -158,6 +158,40 @@ func TestReleaseDetailedBodyUsesCurrentGrammar(t *testing.T) {
 	}
 }
 
+// Runs on the host, unlike the smoke it guards: the continuation's expectation
+// is the thing that went stale, so it is pinned where ARCH-26 reads it.
+func TestContinuationVerdictExpectsAPlanAndNoNewResult(t *testing.T) {
+	plan := &v1.ClipEditingState{Plan: &v1.ClipEditPlan{Cuts: []*v1.ClipEditCut{{}}}}
+	before := &v1.ClipProject{EditPlanRevision: 3, RenderedPlanRevision: 2, Result: &v1.ClipResult{Id: "kept"}}
+	done := &v1.GenerationJob{Status: "done"}
+	for _, c := range []struct {
+		name  string
+		after *v1.ClipProject
+		job   *v1.GenerationJob
+		want  string
+	}{
+		{"plan only", &v1.ClipProject{EditPlanRevision: 4, RenderedPlanRevision: 2, Result: before.Result, Editing: plan}, done, ""},
+		{"failed job", &v1.ClipProject{EditPlanRevision: 4, RenderedPlanRevision: 2, Result: before.Result, Editing: plan}, &v1.GenerationJob{Status: "failed"}, "ended failed"},
+		{"no plan", &v1.ClipProject{EditPlanRevision: 4, RenderedPlanRevision: 2, Result: before.Result}, done, "without a saved plan"},
+		{"revision stood still", &v1.ClipProject{EditPlanRevision: 3, RenderedPlanRevision: 2, Result: before.Result, Editing: plan}, done, "did not advance"},
+		{"rendered revision moved", &v1.ClipProject{EditPlanRevision: 4, RenderedPlanRevision: 4, Result: before.Result, Editing: plan}, done, "moved the rendered revision"},
+		{"result replaced", &v1.ClipProject{EditPlanRevision: 4, RenderedPlanRevision: 2, Result: &v1.ClipResult{Id: "fresh"}, Editing: plan}, done, "touched the result"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			err := continuationVerdict(before, c.after, c.job)
+			if c.want == "" {
+				if err != nil {
+					t.Fatalf("a plan-only continuation was refused: %v", err)
+				}
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), c.want) {
+				t.Fatalf("wanted %q, got %v", c.want, err)
+			}
+		})
+	}
+}
+
 // The environment opt-in deliberately isolates real binaries and databases from
 // ordinary unit runs. Docker's release-smoke target has the production runtime,
 // zero credentials and no external network, but loopback HTTP remains available.
@@ -179,10 +213,41 @@ func TestClipWriterInputRelease(t *testing.T) {
 	h.verifyCandidateContinuation()
 }
 
+// A generation ends on the validated plan and renders nothing (CLIP-151), so a
+// continuation succeeded when the plan it saved is durable and the project's
+// previous result is exactly where it was: a plan standing ahead of its render
+// is ②'s normal state, not an unfinished job (CLIP-152). This is a function
+// rather than assertions inlined in the smoke so `go test ./...` pins it too —
+// the smoke around it executes only inside the image, which is how this
+// expectation went on requiring a result for a release after T241 removed one.
+func continuationVerdict(before, after *v1.ClipProject, job *v1.GenerationJob) error {
+	if job.GetStatus() != "done" {
+		return fmt.Errorf("continuation ended %s: %v", job.GetStatus(), job.GetFailure())
+	}
+	if len(after.GetEditing().GetPlan().GetCuts()) == 0 {
+		return errors.New("continuation finished without a saved plan")
+	}
+	if after.GetEditPlanRevision() <= before.GetEditPlanRevision() {
+		return fmt.Errorf("saved plan did not advance the revision: %d -> %d", before.GetEditPlanRevision(), after.GetEditPlanRevision())
+	}
+	if after.GetRenderedPlanRevision() != before.GetRenderedPlanRevision() {
+		return fmt.Errorf("a generation moved the rendered revision: %d -> %d", before.GetRenderedPlanRevision(), after.GetRenderedPlanRevision())
+	}
+	if after.GetResult().GetId() != before.GetResult().GetId() {
+		return fmt.Errorf("a generation touched the result: %q -> %q", before.GetResult().GetId(), after.GetResult().GetId())
+	}
+	return nil
+}
+
 func (h *releaseHarness) verifyCandidateContinuation() {
 	t, ctx := h.t, h.t.Context()
 	model := &v1.ModelRef{ProviderId: "fixture", ModelId: releaseModel}
 	calls, balance, prepared := h.provider.posts.Load(), h.balance(), len(h.metrics.prepared)
+	read, err := h.client.GetClipProject(ctx, releaseRequest(h, &v1.GetClipProjectRequest{Id: h.project}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	before := read.Msg.Project
 	quote, err := h.client.QuoteClipGeneration(ctx, releaseRequest(h, &v1.QuoteClipGenerationRequest{ProjectId: h.project, BatchId: h.batch, ObserveModel: model, WriteModel: model}))
 	if err != nil {
 		t.Fatal(err)
@@ -210,8 +275,8 @@ func (h *releaseHarness) verifyCandidateContinuation() {
 		}
 		j := p.Msg.Project.LatestJob
 		if j != nil && j.Id == started.Msg.JobId && (j.Status == "done" || j.Status == "failed") {
-			if j.Status != "done" || p.Msg.Project.Result == nil {
-				t.Fatal("retained candidate failed", j.Failure)
+			if err := continuationVerdict(before, p.Msg.Project, j); err != nil {
+				t.Fatal("retained candidate failed:", err)
 			}
 			break
 		}
@@ -238,7 +303,7 @@ func (h *releaseHarness) verifyCandidateContinuation() {
 	if changed.Msg.RenderOnly || changed.Msg.RemainingChunks != 0 || int(changed.Msg.ReusedChunks) != h.expected || h.provider.posts.Load() != calls {
 		t.Fatal("changed template discarded reusable observations")
 	}
-	t.Logf("candidate continuation: reused_chunks=%d additional_AI_calls=0 additional_proxies=0; changed template retains observations", h.expected)
+	t.Logf("candidate continuation: reused_chunks=%d additional_AI_calls=0 additional_proxies=0; plan-only completion, result untouched; changed template retains observations", h.expected)
 }
 
 func TestClipRelease(t *testing.T) {
