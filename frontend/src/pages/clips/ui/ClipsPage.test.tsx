@@ -151,7 +151,9 @@ describe('clip directory', () => {
     expect(screen.queryByRole('link', { name: /제주 여행/ })).not.toBeInTheDocument()
     expect(await row(/부산 바다/)).toBeInTheDocument()
 
-    await user.click(screen.getByRole('tab', { name: '다듬는 중' }))
+    // The filter is a labelled dropdown beside the search, named by its label and its value.
+    await user.click(screen.getByRole('combobox', { name: /^상태/ }))
+    await user.click(await screen.findByRole('option', { name: '다듬는 중' }))
     await waitFor(() => expect(router.state.location.search).toMatchObject({ status: 'refining' }))
     // 강릉 바다 is refining AND failed: the filter reads the project's own state, not the badge.
     expect(await row(/강릉 바다/)).toBeInTheDocument()

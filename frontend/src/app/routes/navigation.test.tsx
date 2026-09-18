@@ -57,20 +57,33 @@ function assertPrimary(current: string | undefined, master = false, label = '주
     ).toEqual(current ? [current] : [])
   }
 }
-/** The group level is drawn twice — the band that stands in for the rail below the desk, and the
- *  rail itself — because the two sit in different places in the document (THEME-38). */
+/** The group level is drawn twice — the band below the desk, which names the current destination
+ *  and holds the rest behind one menu control, and the rail on the desk, which lists every
+ *  destination as a link — because the two sit in different places in the document (THEME-38). */
 function assertGroup(label: string, tab: string) {
   const shapes = screen.getAllByRole('navigation', { name: label })
   expect(shapes).toHaveLength(2)
-  for (const shape of shapes) {
-    const links = within(shape).getAllByRole('link')
-    expect(
-      links
-        .filter((l) => l.getAttribute('aria-current') === 'page')
-        .map((l) => l.getAttribute('href')),
-    ).toEqual([tab])
-  }
+  const [band, rail] = shapes
+  const links = within(rail!).getAllByRole('link')
+  expect(
+    links
+      .filter((l) => l.getAttribute('aria-current') === 'page')
+      .map((l) => l.getAttribute('href')),
+  ).toEqual([tab])
+  const current = links.find((l) => l.getAttribute('href') === tab)!
+  expect(within(band!).queryAllByRole('link')).toHaveLength(0)
+  expect(band).toHaveTextContent(current.textContent!)
+  expect(within(band!).getByRole('button', { name: label })).toHaveAttribute(
+    'aria-haspopup',
+    'menu',
+  )
   return shapes
+}
+/** Opens the band's menu and answers with the open menu, scoped. */
+async function openGroupMenu(label: string) {
+  const [band] = screen.getAllByRole('navigation', { name: label })
+  await userEvent.click(within(band!).getByRole('button', { name: label }))
+  return within(await screen.findByRole('menu', { name: label }))
 }
 it.each(cases)(
   'preserves the direct $path address and both matched navigation levels',
@@ -84,8 +97,7 @@ it.each(cases)(
     // The band is chrome that stays put while the page scrolls: `top-0` while the header still
     // scrolls away, under the header once that is sticky, and never its own vertical scroller.
     expect(band).toHaveClass('sticky', 'top-0', 'sm:top-header', 'h-subnav')
-    expect(band).toHaveClass('overflow-x-auto', 'overscroll-x-contain')
-    expect(band!.className).not.toMatch(/(?:fixed|overflow-y-auto)/)
+    expect(band!.className).not.toMatch(/(?:fixed|overflow-y-auto|overflow-x-auto)/)
     expect(rail!.closest('aside')).toHaveClass('lg:sticky', 'lg:top-header', 'lg:h-sidebar')
     // Everything under the group clears the taller chrome; the page stays the one scroller.
     expect(band!.closest('.chrome-subnav')).not.toBeNull()
@@ -145,9 +157,7 @@ it('restores both active levels through browser history and keeps ko/en parity',
   const { router } = renderAppAt('/posts', { user: { id: 'root', plan: ProtoPlan.MASTER } })
   await screen.findAllByRole('navigation', { name: '글 메뉴' })
   await userEvent.click(
-    within(screen.getAllByRole('navigation', { name: '글 메뉴' })[0]!).getByRole('link', {
-      name: '말투',
-    }),
+    (await openGroupMenu('글 메뉴')).getByRole('menuitemradio', { name: '말투' }),
   )
   await waitFor(() => expect(router.state.location.pathname).toBe('/voices'))
   await userEvent.click(
@@ -157,9 +167,7 @@ it('restores both active levels through browser history and keeps ko/en parity',
   )
   await screen.findAllByRole('navigation', { name: '영상 메뉴' })
   await userEvent.click(
-    within(screen.getAllByRole('navigation', { name: '영상 메뉴' })[0]!).getByRole('link', {
-      name: '영상 템플릿',
-    }),
+    (await openGroupMenu('영상 메뉴')).getByRole('menuitemradio', { name: '영상 템플릿' }),
   )
   await waitFor(() => expect(router.state.location.pathname).toBe('/video-templates'))
   assertPrimary('/clips', true)
@@ -199,8 +207,39 @@ it('restores both active levels through browser history and keeps ko/en parity',
       .map((l) => l.textContent),
   ).toEqual(['Posts', 'Videos', 'AI models', 'Publishing tools'])
   const [band] = assertGroup('Video navigation', '/clips')
-  expect(within(band!).getByRole('link', { name: 'Video templates' })).toHaveAttribute(
-    'href',
-    '/video-templates',
+  expect(band).toHaveTextContent('My videos')
+  const menu = await openGroupMenu('Video navigation')
+  expect(menu.getAllByRole('menuitemradio').map((item) => item.textContent)).toEqual([
+    'My videos',
+    'Video templates',
+  ])
+  expect(menu.getByRole('menuitemradio', { name: 'My videos' })).toHaveAttribute(
+    'aria-checked',
+    'true',
   )
 })
+
+// THEME-38 (owner decision 2026-09-19): below the desk the group level is the current
+// destination's name — the group's home by default — with one menu control holding the group, in
+// place of a row of pill links that read as buttons rather than as a menu.
+it.each([
+  ['/posts', '글 메뉴', ['내 글', '말투', '글 템플릿', '지침'], '/voices'],
+  ['/clips', '영상 메뉴', ['내 영상', '영상 템플릿'], '/video-templates'],
+] as const)(
+  'names the group home at %s and keeps the rest of the group behind one menu',
+  async (path, label, all, second) => {
+    const { router } = renderAppAt(path, { user: { id: 'alice', plan: ProtoPlan.FREE } })
+    const [band] = await screen.findAllByRole('navigation', { name: label })
+    await waitFor(() => expect(router.state.status).toBe('idle'))
+    expect(band).toHaveTextContent(all[0])
+    expect(within(band!).queryAllByRole('link')).toHaveLength(0)
+    const menu = await openGroupMenu(label)
+    const items = menu.getAllByRole('menuitemradio')
+    expect(items.map((item) => item.textContent)).toEqual([...all])
+    expect(items[0]).toHaveAttribute('aria-checked', 'true')
+    await userEvent.click(items[1]!)
+    await waitFor(() => expect(router.state.location.pathname).toBe(second))
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+    expect(screen.getAllByRole('navigation', { name: label })[0]).toHaveTextContent(all[1])
+  },
+)

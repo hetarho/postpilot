@@ -95,7 +95,7 @@ function mount(
 }
 /** The workspace is three panels behind one tab row now (CLIP-36), so a test that asserts across
  *  steps has to say which one it is looking at. */
-async function goToStep(name: '클립 생성' | '클립 다듬기' | '클립 완성') {
+async function goToStep(name: '생성' | '수정' | '완성') {
   await userEvent.setup().click(await screen.findByRole('tab', { name }))
 }
 async function selectSource() {
@@ -228,7 +228,7 @@ it('approves once, retains local previews after terminal and refetches the resul
   expect(calls.filter((c) => c === 'GetClipProject').length).toBeGreaterThan(1)
   expect(calls).not.toContain('DiscardClipSourceBatch')
   // The consumed selection's summary stays with the picker that made it, on ①.
-  await goToStep('클립 생성')
+  await goToStep('생성')
   expect(screen.getByText('clip.mp4 · 처리 완료')).toBeInTheDocument()
   // A new selection after completion must not be mistaken for the consumed batch.
   await selectSource()
@@ -299,16 +299,16 @@ it('keeps an older result visible on a durable credit refusal and requires a new
     failureParams: { required: '79', balance: '12', renews_at: '2026-09-30T15:00:00Z' },
   }
   mount({ projects: [{ ...project, result, latestJob: job }] }, { jobs: [job] })
-  await goToStep('클립 생성')
+  await goToStep('생성')
   // Explicit AI retry is on the generation step; the previous render stays in correction.
   expect(await screen.findByText(/크레딧이 79 필요한데 12만 남았어요/)).toBeInTheDocument()
   expect(screen.getByText('원본 준비 중 단계에서 실패했어요')).toBeInTheDocument()
   expect(screen.getByRole('link', { name: '크레딧·요금제 확인' })).toHaveAttribute('href', '/plans')
   expect(screen.getByRole('button', { name: '다시 생성' })).toBeDisabled()
   // The previous successful result is untouched, one tab away (CLIP-26).
-  await goToStep('클립 다듬기')
+  await goToStep('수정')
   expect(await screen.findByLabelText('클립 미리보기')).toHaveAttribute('src', result.viewUrl)
-  await goToStep('클립 생성')
+  await goToStep('생성')
   await selectSource()
   expect(
     await screen.findByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' }),
@@ -720,7 +720,7 @@ it('displays a pricing refusal beside generation while leaving the previous resu
   // generation that earned it, on ①.
   expect(await screen.findByLabelText('클립 미리보기')).toHaveAttribute('src', result.viewUrl)
   expect(screen.getByRole('link', { name: /렌더 \d+ 다운로드/ })).toBeEnabled()
-  await goToStep('클립 생성')
+  await goToStep('생성')
   await selectSource()
   await screen.findByRole('alert')
   expect(screen.getByRole('button', { name: '생성' })).toBeDisabled()
@@ -773,7 +773,7 @@ it.each([0, 7])(
     )
     expect(credit.queryByText(new RegExp(`${40 - charge} 크레딧`))).not.toBeInTheDocument()
     // The settlement and the preserved result remain in correction.
-    await goToStep('클립 다듬기')
+    await goToStep('수정')
     expect(await screen.findByLabelText('클립 미리보기')).toHaveAttribute('src', result.viewUrl)
   },
 )

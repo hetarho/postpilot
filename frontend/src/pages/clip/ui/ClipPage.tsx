@@ -59,10 +59,10 @@ const STEP_PANEL_ID = 'clip-step-panel'
  *  ONE status line rides the row too, but drops to a second line only while it has something to
  *  say; at rest it is out of the flow.
  *
- *  On a phone the step bar takes a line of its own under the two controls: three Korean step
- *  names and two 44px targets do not share 328px, and a bar scrolling its third step out of view
- *  reads as two steps. From `sm:` the three share one line, as asked. `flex-wrap` also lets a
- *  delete refusal, which asks for the full width, drop to its own line. */
+ *  The steps are drawn as text — 생성 › 수정 › 완성, the current one told by colour — between the two
+ *  controls at every width: three pills in the row read as three more buttons, and the short
+ *  names share 328px with the two 44px targets. `flex-wrap` lets a delete refusal, which asks for
+ *  the full width, drop to its own line. */
 function ClipTopRow({
   status,
   steps,
@@ -668,7 +668,8 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
               }}
               ariaLabel={t('steps.aria')}
               controls={STEP_PANEL_ID}
-              className="order-last w-full sm:order-none sm:w-auto sm:min-w-0 sm:flex-1"
+              variant="steps"
+              className="min-w-0 flex-1"
             />
           )
         }

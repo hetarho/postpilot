@@ -93,13 +93,17 @@ export function ClipsPage() {
     <main
       className={pageStyles({ width: 'wide', gutters: false, className: 'flex flex-1 flex-col' })}
     >
+      {/* Below the desk the group band above already names this place (내 영상), so the heading
+          stays for the document outline and the desk alone (THEME-38, owner decision 2026-09-19). */}
       <div className="px-4 sm:px-6 lg:px-8">
-        <Typography variant="display">{t('title', { ns: 'clips' })}</Typography>
+        <Typography variant="display" className="sr-only lg:not-sr-only">
+          {t('title', { ns: 'clips' })}
+        </Typography>
       </div>
 
       {/* On the screen at every project count: a search that appears at some number of projects
           is a second layout for the same page. */}
-      <div className="mt-6 px-4 sm:px-6 lg:px-8">
+      <div className="mt-4 px-4 sm:px-6 lg:mt-6 lg:px-8">
         <ClipListControls narrowing={narrowing} onChange={narrow} />
       </div>
 

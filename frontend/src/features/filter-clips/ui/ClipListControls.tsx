@@ -30,7 +30,7 @@ export function ClipListControls({
         })),
         onChange: (value) =>
           onChange({ ...narrowing, status: value === 'all' ? undefined : value }),
-        ariaLabel: t('project.filterAria'),
+        label: t('project.filterLabel'),
       }}
     />
   )

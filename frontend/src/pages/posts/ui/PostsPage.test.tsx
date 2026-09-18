@@ -176,13 +176,15 @@ describe('PostsPage', () => {
     const { router } = renderList(NARROWABLE)
     await screen.findByRole('link', { name: /제주 3일/ })
 
-    await user.click(screen.getByRole('tab', { name: '확정' }))
+    await user.click(screen.getByRole('combobox', { name: /^상태/ }))
+    await user.click(await screen.findByRole('option', { name: '확정' }))
 
     await waitFor(() => expect(router.state.location.search).toEqual({ status: 'finalized' }))
     expect(screen.getByRole('link', { name: /서울 산책/ })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /제주 3일/ })).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('tab', { name: '전체' }))
+    await user.click(screen.getByRole('combobox', { name: /^상태/ }))
+    await user.click(await screen.findByRole('option', { name: '전체' }))
     await waitFor(() => expect(router.state.location.search).toEqual({}))
   })
 
@@ -238,7 +240,7 @@ describe('PostsPage', () => {
     expect(await screen.findByRole('link', { name: /제주 3일/ })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /부산 밥상/ })).toBeNull()
     expect(screen.getByLabelText('검색')).toHaveValue('제주')
-    expect(screen.getByRole('tab', { name: '검토', selected: true })).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: /^상태/ })).toHaveTextContent('검토')
   })
 
   // POST-67: typing replaces the entry it is on. Otherwise 뒤로 walks back one character at a
@@ -261,6 +263,6 @@ describe('PostsPage', () => {
 
     expect(await screen.findByText(/아직 글이 없어요/)).toBeInTheDocument()
     expect(screen.getByLabelText('검색')).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: '전체' })).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: /^상태/ })).toHaveTextContent('전체')
   })
 })

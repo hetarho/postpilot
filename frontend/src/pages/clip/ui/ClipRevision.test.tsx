@@ -201,7 +201,7 @@ it('keeps ② mounted and read-only while the request runs, with progress and �
   expect(screen.queryByLabelText('요청 내용')).not.toBeInTheDocument()
   // ② is still the screen: its step bar, its timeline and its preview stay, and
   // no focused job view took over.
-  expect(screen.getByRole('tab', { name: '클립 다듬기' })).toBeInTheDocument()
+  expect(screen.getByRole('tab', { name: '수정' })).toBeInTheDocument()
   expect(screen.getByLabelText('편집 타임라인')).toBeInTheDocument()
   await waitFor(() => expect(screen.getByRole('button', { name: '컷 삭제' })).toBeDisabled())
 })

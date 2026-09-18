@@ -55,10 +55,10 @@ it('downloads without confirming, guards the result tab and confirms only once o
     project().result!.downloadUrl,
   )
   expect(calls).not.toContain('FinalizeClipProject')
-  await userEvent.click(screen.getByRole('tab', { name: '클립 완성' }))
+  await userEvent.click(screen.getByRole('tab', { name: '완성' }))
   expect(screen.getByText(/수정 단계에서 확정하기를/)).toBeVisible()
   expect(screen.queryByLabelText('클립 미리보기')).not.toBeInTheDocument()
-  await userEvent.click(screen.getByRole('button', { name: '클립 다듬기로 이동' }))
+  await userEvent.click(screen.getByRole('button', { name: '수정으로 이동' }))
   await userEvent.dblClick(await confirm())
   const dialog = within(await screen.findByRole('dialog', { name: '클립을 확정할까요?' }))
   expect(calls).not.toContain('FinalizeClipProject')
@@ -86,7 +86,7 @@ it('flushes the current plan before confirming and refuses the now-stale render'
   expect(screen.queryByRole('dialog', { name: '클립을 확정할까요?' })).not.toBeInTheDocument()
   expect(screen.getByText('렌더하기로 현재 편집안을 출력한 뒤 확정해 주세요.')).toBeInTheDocument()
   expect(screen.getByRole('link', { name: '렌더 1 다운로드' })).toBeInTheDocument()
-  expect(screen.getByRole('tab', { name: '클립 다듬기' })).toHaveAttribute('aria-selected', 'true')
+  expect(screen.getByRole('tab', { name: '수정' })).toHaveAttribute('aria-selected', 'true')
 })
 
 it('keeps the draft when its save conflicts and never sends confirmation', async () => {
@@ -277,10 +277,7 @@ it('opens a plan with no render as a plan to review, not as a missing result', a
   // normal FIRST state: the draft preview, the render action, and nothing
   // anywhere saying the attempt failed or that a result went missing.
   mount({ projects: [{ ...project(), renderedPlanRevision: 0, result: undefined }] })
-  expect(await screen.findByRole('tab', { name: '클립 다듬기' })).toHaveAttribute(
-    'aria-selected',
-    'true',
-  )
+  expect(await screen.findByRole('tab', { name: '수정' })).toHaveAttribute('aria-selected', 'true')
   expect(screen.getByRole('region', { name: '편집 중인 영상' })).toBeVisible()
   expect(screen.getByText('수정됨 · 다시 출력 필요')).toBeVisible()
   expect(screen.queryByRole('link', { name: /다운로드/ })).not.toBeInTheDocument()

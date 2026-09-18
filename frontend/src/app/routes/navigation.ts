@@ -45,17 +45,19 @@ export const DESTINATIONS = [
 ] as const
 
 /** The second level is drawn with the first level's row shape (THEME-38), so a group destination
- *  carries an icon exactly like a primary one. `글` repeats the primary icon deliberately: it is
- *  the same destination seen one level down, not a different place. */
+ *  carries an icon exactly like a primary one. The group's HOME repeats the primary icon
+ *  deliberately — it is the same destination seen one level down, not a different place — and is
+ *  named for what it lists (내 글 · 내 영상), which is also the name the phone's group row shows by
+ *  default (owner decision 2026-09-19). */
 export const CONTENT_GROUPS = {
   writing: [
-    { to: '/posts', labelKey: 'posts', icon: FileText },
+    { to: '/posts', labelKey: 'myPosts', icon: FileText },
     { to: '/voices', labelKey: 'voices', icon: Speech },
     { to: '/templates', labelKey: 'templates', icon: LayoutTemplate },
     { to: '/guidelines', labelKey: 'guidelines', icon: ListChecks },
   ],
   video: [
-    { to: '/clips', labelKey: 'clips', icon: Scissors },
+    { to: '/clips', labelKey: 'myVideos', icon: Scissors },
     { to: '/video-templates', labelKey: 'videoTemplates', icon: Clapperboard },
   ],
 } as const

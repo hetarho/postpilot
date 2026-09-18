@@ -374,9 +374,7 @@ it.each(['ko', 'en'] as const)(
     })
     const titleLabel = language === 'ko' ? '클립 제목' : 'Clip title'
     await user.type(await screen.findByLabelText(titleLabel), ' changed')
-    await user.click(
-      screen.getByRole('tab', { name: language === 'ko' ? '클립 다듬기' : 'Refine clip' }),
-    )
+    await user.click(screen.getByRole('tab', { name: language === 'ko' ? '수정' : 'Refine' }))
     expect(screen.queryByLabelText(titleLabel)).not.toBeInTheDocument()
     const status = screen.getByRole('status', {
       name: language === 'ko' ? '클립 상태' : 'Clip status',
@@ -390,13 +388,9 @@ it.each(['ko', 'en'] as const)(
     expect(status).not.toHaveClass('truncate')
     expect(status).toHaveClass('text-notice-danger-fg')
     expect(status).not.toHaveTextContent('private backend prose')
-    await user.click(
-      screen.getByRole('tab', { name: language === 'ko' ? '클립 완성' : 'Finish clip' }),
-    )
+    await user.click(screen.getByRole('tab', { name: language === 'ko' ? '완성' : 'Finish' }))
     expect(status).toHaveTextContent('menu')
-    await user.click(
-      screen.getByRole('tab', { name: language === 'ko' ? '클립 생성' : 'Create clip' }),
-    )
+    await user.click(screen.getByRole('tab', { name: language === 'ko' ? '생성' : 'Create' }))
     expect(await screen.findByLabelText(titleLabel)).toHaveValue('제주 여행 changed')
   },
 )

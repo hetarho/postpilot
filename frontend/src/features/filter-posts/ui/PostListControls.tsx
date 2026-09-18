@@ -30,7 +30,7 @@ export function PostListControls({
         options: STATUSES.map((value) => ({ value, label: t(`list.filter.${value}`) })),
         onChange: (value) =>
           onChange({ ...narrowing, status: value === 'all' ? undefined : value }),
-        ariaLabel: t('list.filter.aria'),
+        label: t('list.filter.label'),
       }}
     />
   )

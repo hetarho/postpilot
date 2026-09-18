@@ -10,7 +10,7 @@ export const posts = {
     search: '검색',
     searchPlaceholder: '제목 또는 태그',
     filter: {
-      aria: '상태로 좁히기',
+      label: '상태',
       all: '전체',
       draft: '초안',
       review: '검토',

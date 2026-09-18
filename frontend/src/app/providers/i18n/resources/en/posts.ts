@@ -10,7 +10,7 @@ export const posts = {
     search: 'Search',
     searchPlaceholder: 'Title or tag',
     filter: {
-      aria: 'Narrow by status',
+      label: 'Status',
       all: 'All',
       draft: 'Draft',
       review: 'Review',

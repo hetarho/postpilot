@@ -78,14 +78,18 @@ export function PostsPage() {
     <main
       className={pageStyles({ width: 'wide', gutters: false, className: 'flex flex-1 flex-col' })}
     >
+      {/* Below the desk the group band above already names this place (내 글), so the heading
+          stays for the document outline and the desk alone (THEME-38, owner decision 2026-09-19). */}
       <div className="px-4 sm:px-6 lg:px-8">
-        <Typography variant="display">{t('list.mine', { ns: 'posts' })}</Typography>
+        <Typography variant="display" className="sr-only lg:not-sr-only">
+          {t('list.mine', { ns: 'posts' })}
+        </Typography>
       </div>
 
       {/* On the screen at every post count (POST-68): a search that appears at some number of
           posts is a second layout for the same page, and the count it would appear at is exactly
           where someone starts needing it. */}
-      <div className="mt-6 px-4 sm:px-6 lg:px-8">
+      <div className="mt-4 px-4 sm:px-6 lg:mt-6 lg:px-8">
         <PostListControls narrowing={narrowing} onChange={narrow} />
       </div>
 

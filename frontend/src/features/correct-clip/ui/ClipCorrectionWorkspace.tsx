@@ -332,7 +332,9 @@ export function ClipCorrectionWorkspace({
           has (CLIP-149) and the source sheet. With a plan and no render there is simply no
           download — a plan awaiting one is ②'s FIRST state (CLIP-56), not a
           missing result. */}
-      <div className="flex flex-wrap items-center gap-2">
+      {/* `mt-4` by hand: the preview above renders through `display: contents` wrappers so its
+          frame can be pinned, and a box-less child takes no share of the section's `space-y`. */}
+      <div className="mt-4 flex flex-wrap items-center gap-2">
         {downloadAction}
         {referenceAction}
       </div>

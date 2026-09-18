@@ -20,7 +20,7 @@
 | ARCH | 3 | 3 | - | 0 |
 | AUTH | 5 | 5 | - | 0 |
 | QUOTA | 12 | 12 | - | 0 |
-| POST | 6 | 6 | - | 0 |
+| POST | 7 | 7 | - | 0 |
 | VOICE | 3 | 3 | - | 1 |
 | GEN | 6 | 6 | - | 0 |
 | MODEL | 10 | 10 | - | 0 |
@@ -29,10 +29,10 @@
 | EXPORT | 2 | 2 | - | 0 |
 | PUB | 5 | 5 | - | 0 |
 | LANG | 3 | 3 | - | 0 |
-| THEME | 12 | 12 | - | 0 |
+| THEME | 13 | 13 | - | 0 |
 | MKT | 4 | 4 | - | 0 |
 | VIDEO | 2 | 2 | - | 1 |
-| CLIP | 39 | 39 | - | 1 |
+| CLIP | 40 | 40 | - | 1 |
 | CDS | 23 | 23 | - | 1 |
 | BILL | 4 | 4 | - | 0 |
 
@@ -43,6 +43,7 @@
 | clip-project-update-260914 | converted@260914 |
 | clip-failure-visibility-260914 | converted@260914 |
 | clip-release-smoke-260914 | converted@260916 |
+| arch-260919 | open@260919 |
 
 ## tasks
 | id | title | ssot | dep | st |
@@ -54,6 +55,7 @@
 - No claimable todo tasks remain; T008 belongs to another session and T177 remains blocked.
 - post-quality-and-related-links remains open ideation, awaiting conversion when ready.
 ## log
+- 260919 review-code arch-260919 start
 - 260918 T257 done; approval quotes the whole target before narration and actual styled captions afterward, in ko/en seconds with no sequence ceiling; all local gates pass.
 - 260918 T257 claimed (rnd)
 - 260918 T256 done; narration names each caption style, defaults without extra calls, preserves owner/legacy choices and reports out-of-set fallbacks; all local and image gates pass.
