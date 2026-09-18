@@ -122,7 +122,7 @@ func TestEightShortSourcesComposeWithExactTransitionTimeline(t *testing.T) {
 			t.Fatal("invalid timeline or non-text planning")
 		}
 		if len(styles) != 1 || styles["bold"] == 0 {
-			t.Fatalf("captions did not use the fixed treatment: %v", styles)
+			t.Fatalf("legacy captions did not retain their default treatment: %v", styles)
 		}
 		// Exactly the 1200 ms cut is too short to earn its copy's exposure.
 		if dropped != 1 {
@@ -141,8 +141,8 @@ func TestMultiSourceOutputDiagnosticsPreserveFailureAndUsage(t *testing.T) {
 		{"source identity", "plan_source", func(v map[string]any) { firstCut(v)["source_id"] = "private-canary" }},
 		{"duplicate cut", "plan_cut_identity", func(v map[string]any) { v["cuts"].([]any)[1].(map[string]any)["id"] = firstCut(v)["id"] }},
 		{"ratio", "plan_ratio", func(v map[string]any) { v["ratio"] = "horizontal" }},
-		// A style or an accent is no longer part of the contract, so naming one
-		// is an unknown property, not a disallowed value.
+		// Styles are named by Narrate, not this legacy one-call contract.
+		// Here a style or accent remains an unknown property.
 		{"style", "output_shape", func(v map[string]any) { firstCut(v)["caption"].(map[string]any)["style"] = "bold" }},
 		{"accent", "output_shape", func(v map[string]any) { firstCut(v)["caption"].(map[string]any)["accent"] = "coral" }},
 		{"shape", "output_shape", func(v map[string]any) { v["private-canary"] = "private-canary" }},
@@ -196,4 +196,29 @@ func abs(n int) int {
 		return -n
 	}
 	return n
+}
+
+func TestNarrationKeepsTheMixedStylesItNames(t *testing.T) {
+	in := narrationInput(t)
+	in.Design.CaptionStyles = []string{"keynote", "word-pop", "film"}
+	first := narrationCaption("첫 장면입니다", 1000, 5000)
+	second := narrationCaption("다음 장면입니다", 6000, 10000)
+	first["style"], second["style"] = "film", "word-pop"
+	plan, payload, system := narrate(t, in, narrationResponse(first, second))
+	captions := narrationOf(plan)
+	if len(captions) != 2 || captions[0].Resolved.Element.Style != "film" || captions[1].Resolved.Element.Style != "word-pop" {
+		t.Fatalf("the narration lost its mixed treatments: %+v", captions)
+	}
+	styles := payload["allowed_caption_styles"].([]any)
+	if len(styles) != 3 || styles[0].(map[string]any)["id"] != "keynote" {
+		t.Fatal("the prompt did not carry this project's selection", styles)
+	}
+	for _, style := range styles {
+		if style.(map[string]any)["reads_as"] == "" {
+			t.Fatal("the writer was given a style id without its meaning", style)
+		}
+	}
+	if strings.Contains(system, "Do not choose a style") || !strings.Contains(system, "vary it across the clip") {
+		t.Fatal("the prompt still forbids mixed caption styles")
+	}
 }

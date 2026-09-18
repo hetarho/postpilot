@@ -21,6 +21,7 @@ type narrationCaptionJSON struct {
 	Text         string     `json:"text"`
 	ShortText    string     `json:"short_text"`
 	Keyword      string     `json:"keyword"`
+	Style        string     `json:"style"`
 	StartMS      int        `json:"start_ms"`
 	EndMS        int        `json:"end_ms"`
 	Observations []string   `json:"observation_refs"`
@@ -41,6 +42,7 @@ type narrationDeclaredJSON struct {
 	Text         string     `json:"text"`
 	ShortText    string     `json:"short_text"`
 	Keyword      string     `json:"keyword"`
+	Style        string     `json:"style"`
 	StartMS      int        `json:"start_ms"`
 	EndMS        int        `json:"end_ms"`
 	Observations []string   `json:"observation_refs"`
@@ -211,7 +213,7 @@ func narrationCaptions(plan *clip.EditPlan, wire narrationJSON, timeline composi
 			continue
 		}
 		caption := narrationCaptionJSON{declaredID: declared.Element.ID, ID: declared.Element.ID,
-			Text: answer.Text, ShortText: answer.ShortText, Keyword: answer.Keyword,
+			Text: answer.Text, ShortText: answer.ShortText, Keyword: answer.Keyword, Style: answer.Style,
 			StartMS: answer.StartMS, EndMS: answer.EndMS, Observations: answer.Observations, Facts: answer.Facts}
 		// A fixed entry says what the template wrote, whatever the response
 		// returned in its place (CLIP-65).
@@ -319,6 +321,17 @@ func admitNarration(cfg Config, input clip.NarrationInput, plan *clip.EditPlan, 
 		// it came from, because that is what the owner has to fix.
 		text := clip.NarrationCaption(clip.NarrationID(len(admitted)+1), chosen, start, end)
 		text.Authored = caption.authored
+		// An absent choice is not a repair. Freeze the selection's default so
+		// a later render does not choose a different treatment for this caption.
+		styles := input.Design.AllowedCaptionStyles()
+		style := caption.Style
+		if style == "" {
+			style = styles[0]
+		} else if !slices.Contains(styles, style) {
+			style = styles[0]
+			clip.AddPlanNotice(plan, "composition_caption_style", "", text.Resolved.Element.ID, "style_fallback")
+		}
+		text.Resolved.Element.Style = style
 		text.Resolved.Facts, text.Evidence, text.Pace, text.FallbackReason = cited, observed, pace, fallback
 		if caption.Keyword != "" && strings.Contains(chosen, caption.Keyword) {
 			text.Keyword = caption.Keyword

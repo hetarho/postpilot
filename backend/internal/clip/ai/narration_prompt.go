@@ -21,7 +21,7 @@ Every number, unit, currency and price basis you state must appear in global_val
 item_hints say which item a span of footage shows. A caption may name any item it has a fact for, whatever is on screen at that moment.
 slots are the template's own generated rows, one entry per element_id in generated_region_slots, with rows in the declared order and each row within its stated character limit. Supply a grounded shorter row in short_rows, or an empty row where nothing supports one.
 declared_captions are captions the template's outline already carries, in the order it carries them. Answer one declared_captions entry per element_id with the start_ms and end_ms it plays at, following that order where the footage allows and holding the same non-overlapping windows your own captions hold. A "fixed" entry's text is already written: place it and leave its text empty in your answer, and do not write the same sentence again in captions. An "ai" entry is an instruction to you: write its text under every rule above. An entry you leave out is not shown at all.
-Do not choose a style, a position, an accent or a transition: the server places every caption. Write the words and their times only.
+For every caption, including declared_captions, name one style id from allowed_caption_styles. Choose the treatment that suits what that caption says and vary it across the clip when the selection offers a mix. Never name a style outside that selection. Do not choose a position, an accent or a transition: the server places every caption.
 Return only one JSON object following this closed contract:
 `
 
@@ -48,6 +48,7 @@ func BuildNarrationPrompt(in clip.NarrationInput, limits composition.Limits) (st
 		"cuts": resolvedFlowPayload(in), "output_duration_ms": in.Flow.DurationMS,
 		"ratio":                  in.Ratio,
 		"generated_region_slots": generatedRegionSlots(in.Design.RegionPresets(), in.Composition.Snapshot.Body, limits),
+		"allowed_caption_styles": narrationStyles(in.Design),
 		"caption_max_chars":      design.Caption().Lines * design.Caption().Chars,
 		"analyses":               planObservationPayload(in.Analyses, true),
 	}
@@ -112,6 +113,18 @@ func resolvedFlowPayload(in clip.NarrationInput) []map[string]any {
 			"rate_permille": cut.Rate(), "output_start_ms": offset, "output_end_ms": offset + cut.OutputDurationMS(),
 			"observation_ids": observations})
 		offset += cut.OutputDurationMS()
+	}
+	return out
+}
+
+// The selection is request data, keeping the schema and cached prefix stable.
+func narrationStyles(selection clip.ProjectDesign) []map[string]string {
+	out := []map[string]string{}
+	for _, id := range selection.AllowedCaptionStyles() {
+		style, ok := design.LookupCaptionStyle(id)
+		if ok {
+			out = append(out, map[string]string{"id": id, "name": style.Name, "reads_as": style.Description})
+		}
 	}
 	return out
 }

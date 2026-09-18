@@ -273,6 +273,9 @@ func (layout *declaredLayout) recordContrastNotices() {
 		}
 		// A caption drawn in the default style because its own face could not
 		// set one of its syllables says so by name (CDS-84, CLIP-108).
+		if visual.styleFallback {
+			clip.AddPlanNotice(&layout.plan, "composition_caption_style", visual.manifest.CutID, visual.manifest.ElementID, "style_fallback")
+		}
 		if visual.glyphFallback {
 			clip.AddPlanNotice(&layout.plan, "composition_caption_glyph", visual.manifest.CutID, visual.manifest.ElementID, "style_fallback")
 		}

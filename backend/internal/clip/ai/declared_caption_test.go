@@ -168,3 +168,16 @@ func TestTheOutlineOrderOfDeclaredCaptionsIsNotChecked(t *testing.T) {
 		t.Fatal("the reversed order was recorded as a removal", plan.Portable.Fallbacks)
 	}
 }
+
+func TestDeclaredCaptionsCarryTheirNarratedStyles(t *testing.T) {
+	in := declaredNarrationInput(t)
+	in.Design.CaptionStyles = []string{"keynote", "film"}
+	fixed := declaredCaption("opening_line", "", 0, 3000)
+	written := declaredCaption("dish_line", "면을 그릇에 담고 있어요", 4000, 8000)
+	fixed["style"], written["style"] = "film", "keynote"
+	plan, _, _ := narrate(t, in, declaredResponse([]map[string]any{fixed, written}))
+	captions := narrationOf(plan)
+	if len(captions) != 2 || captions[0].Resolved.Element.Style != "film" || captions[1].Resolved.Element.Style != "keynote" {
+		t.Fatal("declared captions lost their individual styles", captions)
+	}
+}

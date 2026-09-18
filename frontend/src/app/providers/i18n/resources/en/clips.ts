@@ -25,6 +25,7 @@ export const clips = {
     omittedCut: 'Omitted cut',
     sceneTrimmed: 'This cut was shortened to one observed scene.',
     normalSpeed: 'This cut uses its original 1× speed.',
+    captionStyleFallback: 'This caption uses the project’s default caption style.',
     approvedStyle: 'This text follows the template’s selected design.',
     approvedAccent: 'This text uses the template’s accent colour.',
     cropAdjusted: 'The crop centre was moved inside this frame.',

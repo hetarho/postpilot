@@ -49,14 +49,14 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
-| T256 | the narration names one caption style per caption | CLIP CDS | - | todo |
 | T257 | the approval surface quotes the longest render its styles can produce | CLIP CDS | - | todo |
 
 ## next
-- implement-task T256 — let narration name an allowed style on each caption.
-- T257 quotes the longest render the selected caption styles admit.
+- implement-task T257 — quote the longest render the selected caption styles admit.
 - T177 stays blocked; T008 belongs to another session; post-quality-and-related-links awaits conversion.
 ## log
+- 260918 T256 done; narration names each caption style, defaults without extra calls, preserves owner/legacy choices and reports out-of-set fallbacks; all local and image gates pass.
+- 260918 T256 claimed (rnd)
 - 260918 T254 done; browser rendering stays in ② with encode/store progress, cancellation and navigation cleanup; promotion and orphan cleanup serialize without an encoding time limit, and real Chromium plus local/image gates pass.
 - 260918 T254 claimed (rnd)
 - 260918 T253 done; MP4 timing excludes measured AAC priming, direct immutable uploads promote atomically after stored-file/verdict checks, and failed attempts preserve the prior result; all local and image gates pass.
@@ -75,5 +75,3 @@
 - 260918 T247 claimed (rnd)
 - 260918 T243 done; both kinds run server plan admission first, browser verdicts are owner/revision-bound records with notices, and file promotion remains T253.
 - 260918 T243 claimed (rnd)
-- 260918 T242 done; render kind survives the result and completion staging, old results read as server, and project reads expose the last successful kind.
-- 260918 out of scope: frontend/src/pages/editor/ui/DraftEditor.tsx:140 has an existing storedAnswers useMemo dependency warning; lint passes with no errors.

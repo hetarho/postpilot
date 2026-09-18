@@ -116,9 +116,9 @@ func NextNarrationID(existing []string) string {
 	return NarrationID(highest + 1)
 }
 
-// NarrationCaption is the ONE shape a narration caption takes. Style, position
-// and alignment stay automatic because the renderer places a caption against
-// the frame beneath it, and the interval is absolute on the output timeline.
+// NarrationCaption starts with automatic placement and the default treatment.
+// The narration can name a style on Element; the owner can override it in ②.
+// Its interval is absolute on the output timeline.
 func NarrationCaption(id, text string, startMS, endMS int) PortableText {
 	a, b := startMS, endMS
 	e := composition.Element{ID: id, Kind: "ai", Role: "caption", Style: "auto", Position: "auto", Align: "center", Basis: "output-start", StartMS: &a, EndMS: &b}

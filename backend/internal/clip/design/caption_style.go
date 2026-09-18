@@ -44,6 +44,8 @@ type CaptionStyle struct {
 	ID string
 	// The Korean name CDS and the owner's own surface call it by.
 	Name string
+	// What this treatment reads as, supplied with the allowed narration styles.
+	Description string
 	// A key in Faces, which resolves to the CSS family the bundled file
 	// declares. The style's face outranks the type role's (CDS-18).
 	Face   string
@@ -99,66 +101,66 @@ var captionStyles = buildCaptionStyles()
 func buildCaptionStyles() []CaptionStyle {
 	white := Color["text_white"].Hex
 	set := []CaptionStyle{{
-		ID: DefaultCaptionStyle, Name: "크게 강조", Face: "paperlogy", Weight: 800, Rendering: StaticCaption, Motion: Motion,
+		ID: DefaultCaptionStyle, Description: "Large, bold emphasis with a dark outline.", Name: "크게 강조", Face: "paperlogy", Weight: 800, Rendering: StaticCaption, Motion: Motion,
 		Paint: CaptionPaint{Fill: white, Stroke: Color["stroke_dark"].Hex, Shadow: Shadow["text"], Accent: true, Scrim: true},
 	}, {
-		ID: "keynote", Name: "키노트", Face: "pretendard", Weight: 250, Tracking: -0.026, Rendering: StaticCaption,
+		ID: "keynote", Description: "Quiet, light sans-serif presentation.", Name: "키노트", Face: "pretendard", Weight: 250, Tracking: -0.026, Rendering: StaticCaption,
 		Motion: MotionTokens{InMS: 320, InDY: 10, OutMS: 200, Ease: Motion.Ease},
 		Paint:  CaptionPaint{Fill: white, Shadow: ShadowPaint{Hex: "#000000", Alpha: 0.5, Blur: 28, DY: 2}, Scrim: true},
 	}, {
-		ID: "film", Name: "필름 자막", Face: "nanummyeongjo", Weight: 800, Tracking: 0.007, Rendering: StaticCaption,
+		ID: "film", Description: "Cinematic serif subtitles.", Name: "필름 자막", Face: "nanummyeongjo", Weight: 800, Tracking: 0.007, Rendering: StaticCaption,
 		Motion: MotionTokens{InMS: 200, InDY: 0, OutMS: 280, Ease: Motion.Ease},
 		Paint:  CaptionPaint{Fill: "#F2F2EE", Shadow: ShadowPaint{Hex: "#000000", Alpha: 0.92, Blur: 10, DY: 2}},
 	}, {
-		ID: "word-pop", Name: "워드 팝", Face: "pretendard", Weight: 800, Rendering: SequenceCaption,
+		ID: "word-pop", Description: "Words highlighted one at a time for rhythmic emphasis.", Name: "워드 팝", Face: "pretendard", Weight: 800, Rendering: SequenceCaption,
 		Motion: MotionTokens{InMS: 80, InDY: 0, OutMS: 120, Ease: Motion.Ease},
 		Paint:  CaptionPaint{Fill: white, Stroke: "#0A0C10", Accent: true},
 	}, {
-		ID: "blur-in", Name: "블러 인", Face: "pretendard", Weight: 700, Tracking: -0.016, Rendering: SequenceCaption,
+		ID: "blur-in", Description: "Text comes into focus from a soft blur.", Name: "블러 인", Face: "pretendard", Weight: 700, Tracking: -0.016, Rendering: SequenceCaption,
 		Motion: MotionTokens{InMS: 360, InDY: 0, OutMS: 200, Ease: Motion.Ease},
 		Paint:  CaptionPaint{Fill: white, Shadow: Shadow["text"], Scrim: true},
 	}, {
-		ID: "ambient", Name: "소프트 앰비언트", Face: "pretendard", Weight: 700, Tracking: -0.011, Rendering: SequenceCaption,
+		ID: "ambient", Description: "Soft light drifting around the text.", Name: "소프트 앰비언트", Face: "pretendard", Weight: 700, Tracking: -0.011, Rendering: SequenceCaption,
 		Motion: Motion,
 		Paint:  CaptionPaint{Fill: white, Shadow: ShadowPaint{Hex: "#0A0C10", Alpha: 0.55, Blur: 14, DY: 0}},
 	}, {
-		ID: "neon", Name: "네온 사인", Face: "pretendard", Weight: 800, Tracking: -0.01, Rendering: SequenceCaption,
+		ID: "neon", Description: "A bright cyan neon glow.", Name: "네온 사인", Face: "pretendard", Weight: 800, Tracking: -0.01, Rendering: SequenceCaption,
 		Motion: Motion,
 		Paint:  CaptionPaint{Fill: "#EAFEFF"},
 	}, {
-		ID: "iridescent", Name: "이리데센트", Face: "paperlogy", Weight: 800, Rendering: SequenceCaption,
+		ID: "iridescent", Description: "Shifting rainbow light over bold text.", Name: "이리데센트", Face: "paperlogy", Weight: 800, Rendering: SequenceCaption,
 		Motion: Motion,
 		Paint:  CaptionPaint{Fill: white, Stroke: white},
 	}, {
-		ID: "glitch", Name: "글리치", Face: "paperlogy", Weight: 800, Rendering: SequenceCaption,
+		ID: "glitch", Description: "Brief digital distortion for sharp emphasis.", Name: "글리치", Face: "paperlogy", Weight: 800, Rendering: SequenceCaption,
 		Motion: MotionTokens{InMS: 80, InDY: 0, OutMS: 120, Ease: Motion.Ease},
 		Paint:  CaptionPaint{Fill: white},
 	}, {
-		ID: "ember", Name: "엠버 글로우", Face: "paperlogy", Weight: 800, Rendering: SequenceCaption,
+		ID: "ember", Description: "A warm ember glow around the letters.", Name: "엠버 글로우", Face: "paperlogy", Weight: 800, Rendering: SequenceCaption,
 		Motion: Motion,
 		Paint:  CaptionPaint{Fill: "#FFF8EC", Stroke: "#7A2400"},
 	}, {
-		ID: "stack", Name: "스택 블록", Face: "paperlogy", Weight: 800, Rendering: SequenceCaption,
+		ID: "stack", Description: "Text stacked on dark blocks.", Name: "스택 블록", Face: "paperlogy", Weight: 800, Rendering: SequenceCaption,
 		Motion: MotionTokens{InMS: 340, InDY: 0, OutMS: 120, Ease: Motion.Ease},
 		Paint:  CaptionPaint{Fill: white, Plate: "#0A0C10", Accent: true},
 	}, {
-		ID: "outline", Name: "아웃라인", Face: "paperlogy", Weight: 800, Rendering: SequenceCaption,
+		ID: "outline", Description: "Hollow outlined letters with animated emphasis.", Name: "아웃라인", Face: "paperlogy", Weight: 800, Rendering: SequenceCaption,
 		Motion: MotionTokens{InMS: 180, InDY: 8, OutMS: 120, Ease: Motion.Ease},
 		Paint:  CaptionPaint{Stroke: white, Accent: true},
 	}, {
-		ID: "pop", Name: "팝 바운스", Face: "jua", Weight: 400, Rendering: SequenceCaption,
+		ID: "pop", Description: "Rounded playful letters that bounce.", Name: "팝 바운스", Face: "jua", Weight: 400, Rendering: SequenceCaption,
 		Motion: MotionTokens{InMS: 300, InDY: 0, OutMS: 120, Ease: Motion.Ease},
 		Paint:  CaptionPaint{Fill: white, Stroke: "#FF3B6B"},
 	}, {
-		ID: "sticker", Name: "스티커", Face: "jua", Weight: 400, Rendering: SequenceCaption,
+		ID: "sticker", Description: "Rounded text on a white sticker.", Name: "스티커", Face: "jua", Weight: 400, Rendering: SequenceCaption,
 		Motion: MotionTokens{InMS: 260, InDY: 0, OutMS: 120, Ease: Motion.Ease},
 		Paint:  CaptionPaint{Fill: "#1A1C22", Plate: "#FFFFFF"},
 	}, {
-		ID: "bubble", Name: "버블 챗", Face: "jua", Weight: 400, Rendering: SequenceCaption,
+		ID: "bubble", Description: "Conversational text in a speech bubble.", Name: "버블 챗", Face: "jua", Weight: 400, Rendering: SequenceCaption,
 		Motion: MotionTokens{InMS: 280, InDY: 34, OutMS: 120, Ease: Motion.Ease},
 		Paint:  CaptionPaint{Fill: "#10130A", Plate: "#FFFFFF"},
 	}, {
-		ID: "serif", Name: "세리프 미니멀", Face: "nanummyeongjo", Weight: 400, Tracking: 0.06, Rendering: SequenceCaption,
+		ID: "serif", Description: "Spaced, restrained serif lettering with a gentle entrance.", Name: "세리프 미니멀", Face: "nanummyeongjo", Weight: 400, Tracking: 0.06, Rendering: SequenceCaption,
 		Motion: MotionTokens{InMS: 300, InDY: 16, OutMS: 200, Ease: Motion.Ease},
 		Paint:  CaptionPaint{Fill: "#F7F3EA", Shadow: ShadowPaint{Hex: "#000000", Alpha: 0.72, Blur: 18, DY: 2}},
 	}}

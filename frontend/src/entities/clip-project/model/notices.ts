@@ -20,6 +20,7 @@ export const clipNoticeKeys = {
   intro_slot_omitted: 'introSlotOmitted',
   outro_slot_omitted: 'outroSlotOmitted',
   composition_contrast: 'contrastReview',
+  composition_caption_style: 'captionStyleFallback',
   plan_cut_scene: 'sceneTrimmed',
   plan_cut_rate: 'normalSpeed',
   plan_cut_usability: 'normalSpeed',

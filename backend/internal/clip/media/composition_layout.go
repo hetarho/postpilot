@@ -26,6 +26,7 @@ type declaredVisual struct {
 	// drawn in the default style instead (CDS-84). Recorded as a notice once
 	// the whole layout is settled.
 	glyphFallback bool
+	styleFallback bool
 }
 type declaredLayout struct {
 	plan    clip.EditPlan
@@ -306,16 +307,24 @@ func (r *Rendering) layoutDeclaredElement(ctx context.Context, ws clip.MediaWork
 			return visual, elementProblem(text, "invalid_design")
 		}
 	}
-	// The owner's own style narrows that set to one. A style the project does
-	// not allow is refused here too, not only where it was written: a selection
-	// narrowed after the caption was styled must not reach the renderer.
+	// Only an explicit choice outranks the selection's first entry. Old plans
+	// carrying "auto" keep that entry, and the owner's choice always wins.
 	owner := text.Owner
+	style := candidates[0]
+	if !plan.Portable.Snapshot.Legacy && e.Style != "" && e.Style != "auto" {
+		style = e.Style
+	}
 	if owner.Style != "" {
 		if !slices.Contains(candidates, owner.Style) {
 			return visual, elementProblem(text, "invalid_design")
 		}
-		candidates = []string{owner.Style}
+		style = owner.Style
 	}
+	styleFallback := !slices.Contains(candidates, style)
+	if styleFallback {
+		style = candidates[0]
+	}
+	candidates = []string{style}
 	texts := []clip.CopyAlternative{{Text: text.Resolved.Text, Rows: text.Resolved.Rows}}
 	if clip.AutomaticCompositionRepair(text) {
 		texts = append(texts, text.Alternatives...)
@@ -381,7 +390,7 @@ func (r *Rendering) layoutDeclaredElement(ctx context.Context, ws clip.MediaWork
 					last = "copy_limit"
 					continue
 				}
-				visual.copy, visual.caption, visual.glyphFallback = copy, layout, glyphFallback
+				visual.copy, visual.caption, visual.glyphFallback, visual.styleFallback = copy, layout, glyphFallback, styleFallback
 				visual.text.Resolved.Text = candidate.Text
 				visual.manifest.Text, visual.manifest.Style, visual.manifest.Position, visual.manifest.Region = candidate.Text, style, anchor, layout.Region
 				// The motion is the chosen style's, not the authored element's:

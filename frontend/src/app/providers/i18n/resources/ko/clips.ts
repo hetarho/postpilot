@@ -24,6 +24,7 @@ export const clips = {
     omittedCut: '제외된 장면',
     sceneTrimmed: '관찰된 한 장면 안으로 이 컷을 줄였어요.',
     normalSpeed: '이 장면은 원래 속도인 1배속으로 담았어요.',
+    captionStyleFallback: '이 자막은 프로젝트의 기본 자막 스타일로 담았어요.',
     approvedStyle: '이 문구는 템플릿에서 정한 디자인으로 담았어요.',
     approvedAccent: '이 문구는 템플릿에서 정한 강조색으로 담았어요.',
     cropAdjusted: '이 장면의 화면 중심을 영상 안으로 맞췄어요.',

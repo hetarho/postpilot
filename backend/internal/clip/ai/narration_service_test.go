@@ -321,3 +321,40 @@ func TestNarrationRefusesAFlowItCannotWriteOver(t *testing.T) {
 		t.Fatal("the narration ran without a composition", err)
 	}
 }
+
+func TestNarrationStyleFallbackNeedsNoCorrectionCall(t *testing.T) {
+	for _, choice := range []string{"outside-set", "bold", ""} {
+		t.Run(choice, func(t *testing.T) {
+			in := narrationInput(t)
+			in.Design.CaptionStyles = []string{"keynote", "film"}
+			caption := narrationCaption("첫 장면입니다", 1000, 5000)
+			if choice != "" {
+				caption["style"] = choice
+			}
+			// narrate asserts exactly one provider call, including for an
+			// unknown name and a registered style outside this selection.
+			plan, _, _ := narrate(t, in, narrationResponse(caption))
+			captions := narrationOf(plan)
+			if len(captions) != 1 || captions[0].Resolved.Element.Style != "keynote" {
+				t.Fatal("a missing or out-of-set style did not use the default", captions)
+			}
+			count := 0
+			for _, n := range clip.ActivePlanNotices(plan, in.Design.RegionPresets()) {
+				if n.Reason != "composition_caption_style" {
+					continue
+				}
+				count++
+				if n.ElementID != "narration-1" || n.Action != "style_fallback" {
+					t.Fatal("the style swap did not name the admitted caption", n)
+				}
+			}
+			want := 1
+			if choice == "" {
+				want = 0
+			}
+			if count != want {
+				t.Fatalf("style notices = %d, want %d", count, want)
+			}
+		})
+	}
+}

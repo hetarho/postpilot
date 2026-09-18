@@ -103,3 +103,66 @@ func TestACaptionFallsBackWhenItsFaceLacksASyllable(t *testing.T) {
 		}
 	}
 }
+
+func TestCaptionStyleResolutionKeepsOwnerNarrationAndLegacyDefaults(t *testing.T) {
+	for _, tc := range []struct {
+		name, narration, owner, want string
+		styles                       []string
+		notice                       bool
+	}{
+		{"narration", "film", "", "film", []string{"keynote", "film", "pop"}, false},
+		{"owner wins", "film", "pop", "pop", []string{"keynote", "film", "pop"}, false},
+		{"legacy automatic", "auto", "", "keynote", []string{"keynote", "film"}, false},
+		{"legacy absent", "", "", "keynote", []string{"keynote", "film"}, false},
+		{"single style", "auto", "", "film", []string{"film"}, false},
+		{"empty selection", "auto", "", "bold", nil, false},
+		{"narrowed selection", "film", "", "keynote", []string{"keynote"}, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			caption := narrationText("narration-1", "여기 좋아요", 1000, 5000)
+			caption.Resolved.Element.Style, caption.Owner.Style = tc.narration, tc.owner
+			plan := narrationPlan(t, caption)
+			plan.CaptionStyles = tc.styles
+			layout := measuredDeclared(t, plan)
+			visual := captionVisual(t, layout)
+			if visual.copy.Style != tc.want {
+				t.Fatalf("style = %q, want %q", visual.copy.Style, tc.want)
+			}
+			layout.recordContrastNotices()
+			layout.recordContrastNotices() // A repeated layout must not duplicate the notice.
+			count := 0
+			for _, n := range layout.plan.Notices {
+				if n.Reason == "composition_caption_style" {
+					count++
+					if n.ElementID != "narration-1" || n.Action != "style_fallback" {
+						t.Fatal(n)
+					}
+				}
+			}
+			want := 0
+			if tc.notice {
+				want = 1
+			}
+			if count != want {
+				t.Fatalf("notices = %d, want %d", count, want)
+			}
+		})
+	}
+}
+
+func TestFrozenLegacyCaptionKeepsTheSelectionsFirstStyle(t *testing.T) {
+	// A legacy freeze carries its old copy style in Element.Style. Prior
+	// renders ignored it, so teaching narration to use that field must not
+	// restyle an existing frozen legacy plan.
+	plan := declaredPlan(t, captionBody("여기 좋아요"), "vertical")
+	plan.Portable.Snapshot.Legacy = true
+	plan.CaptionStyles = []string{"keynote", "film"}
+	for i := range plan.Portable.Elements {
+		if plan.Portable.Elements[i].Resolved.Element.Role == "caption" {
+			plan.Portable.Elements[i].Resolved.Element.Style = "film"
+		}
+	}
+	if visual := captionVisual(t, measuredDeclared(t, plan)); visual.copy.Style != "keynote" {
+		t.Fatal("a frozen legacy caption changed style", visual.copy.Style)
+	}
+}

@@ -125,7 +125,8 @@ func planningInput() clip.PlanningInput {
 	return clip.PlanningInput{Policy: testPolicy("write"), Template: clip.Recipe{Name: "제주 & Seoul", InformationFields: []clip.InformationField{{Label: "장소 / Place", Prompt: "어디인가요?"}}, CutGuidance: "현장 소리를 남겨줘. Keep the original sound.", Accent: "coral"}, Answers: []clip.Answer{{Label: "장소 / Place", Text: "한글 <그대로> & O'Brien\nKeep 10:30 unchanged."}}, Ratio: "vertical", TargetDurationMS: 15000, Analyses: []clip.SourceAnalysis{{Source: source(), Segments: []clip.Segment{{StartMS: 0, EndMS: 65000, Event: "음식을 담는다", Subjects: []string{"접시"}, Speech: "", Quality: "steady", Focal: clip.Point{X: .5, Y: .5}, Subject: clip.Region{X: .2, Y: .6, Width: .6, Height: .3}, Certainty: clip.CertaintyCertain, Usability: clip.UsabilityUsable}}}}}
 }
 func plan() map[string]any {
-	// Words only: the model no longer names a position, a style or an accent.
+	// Legacy one-call fixture: caption styling now belongs to Narrate, while
+	// this retired response still contains only words and times.
 	// Three cuts, because CDS-37 holds every cut to 6.0 s while a clip is at
 	// least 15 s (CLIP-19): one long take is not a clip any more.
 	cut := func(id string, start, end int, text string) map[string]any {
@@ -311,7 +312,7 @@ func TestRecordedLiveClipResponses(t *testing.T) {
 	if result.TransitionTotal() != 0 {
 		t.Fatalf("invented a transition inside one scene: %+v", result.Cuts)
 	}
-	// The recorded response named no style or position; the design system chose
+	// The legacy recorded response named no style or position; its default chose
 	// both from the scene and the sentence (CDS-39, CDS-40).
 	if cut.FirstCopy().Style != "bold" || cut.FirstCopy().Anchor != "upper_mid" || cut.FirstCopy().Align != "center" {
 		t.Fatalf("placement was not the design system's: %+v %+v", cut.FirstCopy(), result.Decisions)
