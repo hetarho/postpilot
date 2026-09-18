@@ -49,16 +49,17 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
-| T253 | the browser muxes its output, measures it and stores it before it is shown | CLIP | T252 T243 | todo |
 | T254 | ② runs the browser render with its own progress and cancellation | CLIP | T253 T247 | todo |
 | T256 | the narration names one caption style per caption | CLIP CDS | - | todo |
 | T257 | the approval surface quotes the longest render its styles can produce | CLIP CDS | - | todo |
 
 ## next
-- implement-task T253 — mux, verify and durably store the browser result.
+- implement-task T254 — connect browser rendering to the correction dock, progress and cancellation.
 - T256 and T257 remain independent of the browser cluster.
 - T177 stays blocked; T008 belongs to another session; post-quality-and-related-links awaits conversion.
 ## log
+- 260918 T253 done; MP4 timing excludes measured AAC priming, direct immutable uploads promote atomically after stored-file/verdict checks, and failed attempts preserve the prior result; all local and image gates pass.
+- 260918 T253 claimed (rnd)
 - 260918 T252 done; retained-source audio uses pitch-preserving rates, exact cut timing, BS.1770 normalization and measured AAC priming; Chromium audio and video checks pass.
 - 260918 T252 claimed (rnd)
 - 260918 T251 done; worker composition encodes exact plan frames with server PNGs, one source read, bounded queues and cancellation cleanup; all three canvases and real-font media smokes pass.
@@ -77,5 +78,3 @@
 - 260918 out of scope: frontend/src/pages/editor/ui/DraftEditor.tsx:140 has an existing storedAnswers useMemo dependency warning; lint passes with no errors.
 - 260918 T242 claimed (rnd)
 - 260918 create-task CLIP CDS done; T256 reverses the narration contract so a caption carries its own style (owner > narration > default, out-of-set falls back with one notice and spends no correction), T257 turns the pre-generation quote from a style count into the longest render the selection admits — neither depends on the other and both are independent of the browser cluster
-- 260918 create-task CLIP CDS start (r38/r23: a style per caption, the sequence quote)
-- 260918 ideation post-quality-and-related-links: 추천글 is a template position carrying its own count, tag-matched, excluding links used in the last N posts, rendered as title plus URL and filled by code after validation from the verified Naver URLs PUB-15 already keeps, the model never seeing one; quality is measure-then-offer over the account's recent published posts with four metrics as pass/warn badges and no composite score; research corrected two premises — 도배율 is 블라이's label rather than Naver's, and Naver's own spam page names template-driven bulk publishing and repeated identical links, which reversed the free-repeat and bare-URL decisions

@@ -54,6 +54,12 @@ const (
 	// ClipServiceReportClipRenderVerdictProcedure is the fully-qualified name of the ClipService's
 	// ReportClipRenderVerdict RPC.
 	ClipServiceReportClipRenderVerdictProcedure = "/postpilot.v1.ClipService/ReportClipRenderVerdict"
+	// ClipServicePrepareClipRenderUploadProcedure is the fully-qualified name of the ClipService's
+	// PrepareClipRenderUpload RPC.
+	ClipServicePrepareClipRenderUploadProcedure = "/postpilot.v1.ClipService/PrepareClipRenderUpload"
+	// ClipServiceCompleteClipRenderUploadProcedure is the fully-qualified name of the ClipService's
+	// CompleteClipRenderUpload RPC.
+	ClipServiceCompleteClipRenderUploadProcedure = "/postpilot.v1.ClipService/CompleteClipRenderUpload"
 	// ClipServiceStartClipGenerationProcedure is the fully-qualified name of the ClipService's
 	// StartClipGeneration RPC.
 	ClipServiceStartClipGenerationProcedure = "/postpilot.v1.ClipService/StartClipGeneration"
@@ -141,6 +147,8 @@ type ClipServiceClient interface {
 	SaveClipEditPlan(context.Context, *connect.Request[v1.SaveClipEditPlanRequest]) (*connect.Response[v1.SaveClipEditPlanResponse], error)
 	StartClipRender(context.Context, *connect.Request[v1.StartClipRenderRequest]) (*connect.Response[v1.StartClipRenderResponse], error)
 	ReportClipRenderVerdict(context.Context, *connect.Request[v1.ReportClipRenderVerdictRequest]) (*connect.Response[v1.ReportClipRenderVerdictResponse], error)
+	PrepareClipRenderUpload(context.Context, *connect.Request[v1.PrepareClipRenderUploadRequest]) (*connect.Response[v1.PrepareClipRenderUploadResponse], error)
+	CompleteClipRenderUpload(context.Context, *connect.Request[v1.CompleteClipRenderUploadRequest]) (*connect.Response[v1.CompleteClipRenderUploadResponse], error)
 	StartClipGeneration(context.Context, *connect.Request[v1.StartClipGenerationRequest]) (*connect.Response[v1.StartClipGenerationResponse], error)
 	QuoteClipGeneration(context.Context, *connect.Request[v1.QuoteClipGenerationRequest]) (*connect.Response[v1.QuoteClipGenerationResponse], error)
 	FinalizeClipProject(context.Context, *connect.Request[v1.FinalizeClipProjectRequest]) (*connect.Response[v1.FinalizeClipProjectResponse], error)
@@ -226,6 +234,18 @@ func NewClipServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			httpClient,
 			baseURL+ClipServiceReportClipRenderVerdictProcedure,
 			connect.WithSchema(clipServiceMethods.ByName("ReportClipRenderVerdict")),
+			connect.WithClientOptions(opts...),
+		),
+		prepareClipRenderUpload: connect.NewClient[v1.PrepareClipRenderUploadRequest, v1.PrepareClipRenderUploadResponse](
+			httpClient,
+			baseURL+ClipServicePrepareClipRenderUploadProcedure,
+			connect.WithSchema(clipServiceMethods.ByName("PrepareClipRenderUpload")),
+			connect.WithClientOptions(opts...),
+		),
+		completeClipRenderUpload: connect.NewClient[v1.CompleteClipRenderUploadRequest, v1.CompleteClipRenderUploadResponse](
+			httpClient,
+			baseURL+ClipServiceCompleteClipRenderUploadProcedure,
+			connect.WithSchema(clipServiceMethods.ByName("CompleteClipRenderUpload")),
 			connect.WithClientOptions(opts...),
 		),
 		startClipGeneration: connect.NewClient[v1.StartClipGenerationRequest, v1.StartClipGenerationResponse](
@@ -384,6 +404,8 @@ type clipServiceClient struct {
 	saveClipEditPlan            *connect.Client[v1.SaveClipEditPlanRequest, v1.SaveClipEditPlanResponse]
 	startClipRender             *connect.Client[v1.StartClipRenderRequest, v1.StartClipRenderResponse]
 	reportClipRenderVerdict     *connect.Client[v1.ReportClipRenderVerdictRequest, v1.ReportClipRenderVerdictResponse]
+	prepareClipRenderUpload     *connect.Client[v1.PrepareClipRenderUploadRequest, v1.PrepareClipRenderUploadResponse]
+	completeClipRenderUpload    *connect.Client[v1.CompleteClipRenderUploadRequest, v1.CompleteClipRenderUploadResponse]
 	startClipGeneration         *connect.Client[v1.StartClipGenerationRequest, v1.StartClipGenerationResponse]
 	quoteClipGeneration         *connect.Client[v1.QuoteClipGenerationRequest, v1.QuoteClipGenerationResponse]
 	finalizeClipProject         *connect.Client[v1.FinalizeClipProjectRequest, v1.FinalizeClipProjectResponse]
@@ -443,6 +465,16 @@ func (c *clipServiceClient) StartClipRender(ctx context.Context, req *connect.Re
 // ReportClipRenderVerdict calls postpilot.v1.ClipService.ReportClipRenderVerdict.
 func (c *clipServiceClient) ReportClipRenderVerdict(ctx context.Context, req *connect.Request[v1.ReportClipRenderVerdictRequest]) (*connect.Response[v1.ReportClipRenderVerdictResponse], error) {
 	return c.reportClipRenderVerdict.CallUnary(ctx, req)
+}
+
+// PrepareClipRenderUpload calls postpilot.v1.ClipService.PrepareClipRenderUpload.
+func (c *clipServiceClient) PrepareClipRenderUpload(ctx context.Context, req *connect.Request[v1.PrepareClipRenderUploadRequest]) (*connect.Response[v1.PrepareClipRenderUploadResponse], error) {
+	return c.prepareClipRenderUpload.CallUnary(ctx, req)
+}
+
+// CompleteClipRenderUpload calls postpilot.v1.ClipService.CompleteClipRenderUpload.
+func (c *clipServiceClient) CompleteClipRenderUpload(ctx context.Context, req *connect.Request[v1.CompleteClipRenderUploadRequest]) (*connect.Response[v1.CompleteClipRenderUploadResponse], error) {
+	return c.completeClipRenderUpload.CallUnary(ctx, req)
 }
 
 // StartClipGeneration calls postpilot.v1.ClipService.StartClipGeneration.
@@ -578,6 +610,8 @@ type ClipServiceHandler interface {
 	SaveClipEditPlan(context.Context, *connect.Request[v1.SaveClipEditPlanRequest]) (*connect.Response[v1.SaveClipEditPlanResponse], error)
 	StartClipRender(context.Context, *connect.Request[v1.StartClipRenderRequest]) (*connect.Response[v1.StartClipRenderResponse], error)
 	ReportClipRenderVerdict(context.Context, *connect.Request[v1.ReportClipRenderVerdictRequest]) (*connect.Response[v1.ReportClipRenderVerdictResponse], error)
+	PrepareClipRenderUpload(context.Context, *connect.Request[v1.PrepareClipRenderUploadRequest]) (*connect.Response[v1.PrepareClipRenderUploadResponse], error)
+	CompleteClipRenderUpload(context.Context, *connect.Request[v1.CompleteClipRenderUploadRequest]) (*connect.Response[v1.CompleteClipRenderUploadResponse], error)
 	StartClipGeneration(context.Context, *connect.Request[v1.StartClipGenerationRequest]) (*connect.Response[v1.StartClipGenerationResponse], error)
 	QuoteClipGeneration(context.Context, *connect.Request[v1.QuoteClipGenerationRequest]) (*connect.Response[v1.QuoteClipGenerationResponse], error)
 	FinalizeClipProject(context.Context, *connect.Request[v1.FinalizeClipProjectRequest]) (*connect.Response[v1.FinalizeClipProjectResponse], error)
@@ -659,6 +693,18 @@ func NewClipServiceHandler(svc ClipServiceHandler, opts ...connect.HandlerOption
 		ClipServiceReportClipRenderVerdictProcedure,
 		svc.ReportClipRenderVerdict,
 		connect.WithSchema(clipServiceMethods.ByName("ReportClipRenderVerdict")),
+		connect.WithHandlerOptions(opts...),
+	)
+	clipServicePrepareClipRenderUploadHandler := connect.NewUnaryHandler(
+		ClipServicePrepareClipRenderUploadProcedure,
+		svc.PrepareClipRenderUpload,
+		connect.WithSchema(clipServiceMethods.ByName("PrepareClipRenderUpload")),
+		connect.WithHandlerOptions(opts...),
+	)
+	clipServiceCompleteClipRenderUploadHandler := connect.NewUnaryHandler(
+		ClipServiceCompleteClipRenderUploadProcedure,
+		svc.CompleteClipRenderUpload,
+		connect.WithSchema(clipServiceMethods.ByName("CompleteClipRenderUpload")),
 		connect.WithHandlerOptions(opts...),
 	)
 	clipServiceStartClipGenerationHandler := connect.NewUnaryHandler(
@@ -821,6 +867,10 @@ func NewClipServiceHandler(svc ClipServiceHandler, opts ...connect.HandlerOption
 			clipServiceStartClipRenderHandler.ServeHTTP(w, r)
 		case ClipServiceReportClipRenderVerdictProcedure:
 			clipServiceReportClipRenderVerdictHandler.ServeHTTP(w, r)
+		case ClipServicePrepareClipRenderUploadProcedure:
+			clipServicePrepareClipRenderUploadHandler.ServeHTTP(w, r)
+		case ClipServiceCompleteClipRenderUploadProcedure:
+			clipServiceCompleteClipRenderUploadHandler.ServeHTTP(w, r)
 		case ClipServiceStartClipGenerationProcedure:
 			clipServiceStartClipGenerationHandler.ServeHTTP(w, r)
 		case ClipServiceQuoteClipGenerationProcedure:
@@ -904,6 +954,14 @@ func (UnimplementedClipServiceHandler) StartClipRender(context.Context, *connect
 
 func (UnimplementedClipServiceHandler) ReportClipRenderVerdict(context.Context, *connect.Request[v1.ReportClipRenderVerdictRequest]) (*connect.Response[v1.ReportClipRenderVerdictResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipService.ReportClipRenderVerdict is not implemented"))
+}
+
+func (UnimplementedClipServiceHandler) PrepareClipRenderUpload(context.Context, *connect.Request[v1.PrepareClipRenderUploadRequest]) (*connect.Response[v1.PrepareClipRenderUploadResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipService.PrepareClipRenderUpload is not implemented"))
+}
+
+func (UnimplementedClipServiceHandler) CompleteClipRenderUpload(context.Context, *connect.Request[v1.CompleteClipRenderUploadRequest]) (*connect.Response[v1.CompleteClipRenderUploadResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipService.CompleteClipRenderUpload is not implemented"))
 }
 
 func (UnimplementedClipServiceHandler) StartClipGeneration(context.Context, *connect.Request[v1.StartClipGenerationRequest]) (*connect.Response[v1.StartClipGenerationResponse], error) {

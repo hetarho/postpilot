@@ -19,6 +19,8 @@ service ClipService {
   rpc SaveClipEditPlan(SaveClipEditPlanRequest) returns (SaveClipEditPlanResponse) {}
   rpc StartClipRender(StartClipRenderRequest) returns (StartClipRenderResponse) {}
   rpc ReportClipRenderVerdict(ReportClipRenderVerdictRequest) returns (ReportClipRenderVerdictResponse) {}
+  rpc PrepareClipRenderUpload(PrepareClipRenderUploadRequest) returns (PrepareClipRenderUploadResponse) {}
+  rpc CompleteClipRenderUpload(CompleteClipRenderUploadRequest) returns (CompleteClipRenderUploadResponse) {}
   rpc StartClipGeneration(StartClipGenerationRequest) returns (StartClipGenerationResponse) {}
   rpc QuoteClipGeneration(QuoteClipGenerationRequest) returns (QuoteClipGenerationResponse) {}
   rpc FinalizeClipProject(FinalizeClipProjectRequest) returns (FinalizeClipProjectResponse) {}
@@ -792,6 +794,11 @@ message ReportClipRenderVerdictResponse {
   bool passed = 1;
   repeated ClipNotice notices = 2;
 }
+// The admitted render determines the immutable object key; no media enters RPC.
+message PrepareClipRenderUploadRequest { string render_id = 1; int64 bytes = 2; }
+message PrepareClipRenderUploadResponse { string put_url = 1; map<string, string> headers = 2; }
+message CompleteClipRenderUploadRequest { string render_id = 1; }
+message CompleteClipRenderUploadResponse { ClipProject project = 1; }
 
 // Version 0 means unavailable; storage support never implies execution support.
 message GetClipCapabilitiesRequest {}

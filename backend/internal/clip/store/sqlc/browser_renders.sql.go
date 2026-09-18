@@ -39,8 +39,26 @@ func (q *Queries) BeginBrowserRender(ctx context.Context, arg BeginBrowserRender
 	return err
 }
 
+const completeBrowserRender = `-- name: CompleteBrowserRender :execrows
+UPDATE clip_browser_renders SET stored_at=? WHERE id=? AND user_id=? AND stored_at IS NULL
+`
+
+type CompleteBrowserRenderParams struct {
+	StoredAt sql.NullString
+	ID       string
+	UserID   string
+}
+
+func (q *Queries) CompleteBrowserRender(ctx context.Context, arg CompleteBrowserRenderParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, completeBrowserRender, arg.StoredAt, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const getBrowserRender = `-- name: GetBrowserRender :one
-SELECT id, user_id, project_id, plan_revision, ratio, duration_ms, has_audio, created_at, verdict_json, reported_at FROM clip_browser_renders WHERE id=? AND user_id=?
+SELECT id, user_id, project_id, plan_revision, ratio, duration_ms, has_audio, created_at, verdict_json, reported_at, upload_bytes, stored_at FROM clip_browser_renders WHERE id=? AND user_id=?
 `
 
 type GetBrowserRenderParams struct {
@@ -62,8 +80,28 @@ func (q *Queries) GetBrowserRender(ctx context.Context, arg GetBrowserRenderPara
 		&i.CreatedAt,
 		&i.VerdictJson,
 		&i.ReportedAt,
+		&i.UploadBytes,
+		&i.StoredAt,
 	)
 	return i, err
+}
+
+const reserveBrowserRenderUpload = `-- name: ReserveBrowserRenderUpload :execrows
+UPDATE clip_browser_renders SET upload_bytes=? WHERE id=? AND user_id=? AND upload_bytes=0 AND stored_at IS NULL
+`
+
+type ReserveBrowserRenderUploadParams struct {
+	UploadBytes int64
+	ID          string
+	UserID      string
+}
+
+func (q *Queries) ReserveBrowserRenderUpload(ctx context.Context, arg ReserveBrowserRenderUploadParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, reserveBrowserRenderUpload, arg.UploadBytes, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const saveBrowserRenderVerdict = `-- name: SaveBrowserRenderVerdict :execrows

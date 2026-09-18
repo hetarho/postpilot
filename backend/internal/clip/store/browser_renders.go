@@ -11,9 +11,14 @@ import (
 )
 
 func browserRender(row sqlc.ClipBrowserRender) (clip.BrowserRender, error) {
-	r := clip.BrowserRender{ID: row.ID, UserID: row.UserID, ProjectID: row.ProjectID, Revision: int(row.PlanRevision), Ratio: row.Ratio, DurationMS: int(row.DurationMs), Audio: row.HasAudio != 0}
+	r := clip.BrowserRender{ID: row.ID, UserID: row.UserID, ProjectID: row.ProjectID, Revision: int(row.PlanRevision), Ratio: row.Ratio, DurationMS: int(row.DurationMs), Audio: row.HasAudio != 0, UploadBytes: row.UploadBytes}
 	var err error
 	r.CreatedAt, err = time.Parse(time.RFC3339Nano, row.CreatedAt)
+	if err == nil && row.StoredAt.Valid {
+		var at time.Time
+		at, err = time.Parse(time.RFC3339Nano, row.StoredAt.String)
+		r.StoredAt = &at
+	}
 	if err == nil && row.VerdictJson.Valid {
 		err = json.Unmarshal([]byte(row.VerdictJson.String), &r.Verdict)
 	}

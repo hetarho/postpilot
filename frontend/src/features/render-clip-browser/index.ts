@@ -10,3 +10,8 @@ export type {
   BrowserVideoRender,
   EncodedClipChunk,
 } from '@/entities/clip-project'
+export {
+  createBrowserResultStore,
+  storeBrowserResult,
+  BrowserRenderVerdictError,
+} from './api/store-result'

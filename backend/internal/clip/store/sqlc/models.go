@@ -34,6 +34,8 @@ type ClipBrowserRender struct {
 	CreatedAt    string
 	VerdictJson  sql.NullString
 	ReportedAt   sql.NullString
+	UploadBytes  int64
+	StoredAt     sql.NullString
 }
 
 type ClipGenerationQuote struct {

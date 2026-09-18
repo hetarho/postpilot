@@ -3,6 +3,7 @@ package clip
 import (
 	"context"
 	"math"
+	"net/url"
 	"time"
 
 	"github.com/postpilot/backend/internal/clip/design"
@@ -18,7 +19,14 @@ type BrowserRender struct {
 	DurationMS            int
 	Audio                 bool
 	CreatedAt             time.Time
+	UploadBytes           int64
+	StoredAt              *time.Time
 	Verdict               *RenderVerdict
+}
+
+// Object identity is derived from the admitted render, never supplied by a client.
+func (r BrowserRender) ResultKey() string {
+	return ResultPrefix + url.PathEscape(r.UserID) + "/" + url.PathEscape(r.ProjectID) + "/browser-" + r.ID + ".mp4"
 }
 
 type RenderMeasurements struct {
