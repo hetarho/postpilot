@@ -62,7 +62,7 @@ export const clips = {
 
   finalization: {
     confirm: 'Confirm clip',
-    summaryLabel: 'Before you confirm',
+    dialogTitle: 'Confirm this clip?',
     notice:
       'Confirmation deletes the originals and ends editing. You can still play and download the confirmed video.',
     waiting:
@@ -74,8 +74,8 @@ export const clips = {
     refusal: {
       finalized: 'This clip is already confirmed.',
       busy: 'Wait for the current job before confirming.',
-      missing_render: 'Render a video before confirming.',
-      stale_render: 'Render the saved edits again before confirming.',
+      missing_render: 'Use Render to make a video before confirming.',
+      stale_render: 'Use Render to output the current edits before confirming.',
       invalid_plan: 'Fix the editing errors and render again.',
       unavailable: 'Confirmation availability is unknown. Refresh this page.',
     },

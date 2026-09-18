@@ -23,6 +23,27 @@ export function useFinalizeClip(
     if (found.finalized) setFailure(undefined)
     return found
   }
+  /** Flush and read before showing the destructive confirmation's saved plan. */
+  async function prepare() {
+    if (locked.current || uncertain || project.finalized) return
+    locked.current = true
+    setPending(true)
+    setFailure(undefined)
+    try {
+      const revision = await flush()
+      const saved = await api.refresh()
+      if (saved.editPlanRevision !== revision) {
+        setFailure({ reason: 'CLIP_FINALIZATION_CONFLICT', params: {} })
+        return
+      }
+      return saved
+    } catch (error) {
+      setFailure(appFailureFromConnect(error))
+    } finally {
+      locked.current = false
+      setPending(false)
+    }
+  }
   async function confirm() {
     if (locked.current || uncertain || project.finalized) return
     locked.current = true
@@ -76,5 +97,5 @@ export function useFinalizeClip(
       setPending(false)
     }
   }
-  return { confirm, checkAgain, pending, uncertain, failure, busy: pending || uncertain }
+  return { prepare, confirm, checkAgain, pending, uncertain, failure, busy: pending || uncertain }
 }

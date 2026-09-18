@@ -60,7 +60,7 @@ export const clips = {
 
   finalization: {
     confirm: '확정하기',
-    summaryLabel: '확정 전 확인할 내용',
+    dialogTitle: '클립을 확정할까요?',
     notice:
       '확정하면 원본을 삭제하고 수정이 끝나요. 확정된 영상은 계속 재생하고 다운로드할 수 있어요.',
     waiting: '수정 단계에서 확정하기를 누르면 완성돼요. 다운로드만으로는 확정되지 않아요.',
@@ -71,8 +71,8 @@ export const clips = {
     refusal: {
       finalized: '이미 확정된 클립이에요.',
       busy: '작업이 끝난 뒤 확정할 수 있어요.',
-      missing_render: '먼저 영상을 렌더해 주세요.',
-      stale_render: '저장된 수정본을 다시 렌더한 뒤 확정해 주세요.',
+      missing_render: '렌더하기로 영상을 만든 뒤 확정해 주세요.',
+      stale_render: '렌더하기로 현재 편집안을 출력한 뒤 확정해 주세요.',
       invalid_plan: '편집 내용의 오류를 수정하고 다시 렌더해 주세요.',
       unavailable: '확정 가능 여부를 확인하지 못했어요. 화면을 새로고침해 주세요.',
     },

@@ -96,7 +96,7 @@ it('keeps two dock rows and opens approval from send without starting a revision
   expect(dock.queryByRole('button', { name: /브라우저/ })).not.toBeInTheDocument()
   // Approval and download never increase the dock height.
   expect(dock.queryByRole('link', { name: '렌더 1 다운로드' })).not.toBeInTheDocument()
-  expect(screen.getByLabelText('확정 전 확인할 내용')).toBeInTheDocument()
+  expect(screen.queryByText(/확정하면 원본을 삭제/)).not.toBeInTheDocument()
   expect(screen.getByRole('link', { name: '렌더 1 다운로드' })).toBeInTheDocument()
   await write('자막을 더 짧게')
   // Counted CDS-20's way, like every other bounded clip field.

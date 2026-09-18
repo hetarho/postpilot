@@ -70,7 +70,6 @@ export function ClipCorrectionWorkspace({
   revision,
   downloadAction,
   finalizeAction,
-  finalizeNotices,
   notices = [],
   language,
 }: {
@@ -99,8 +98,6 @@ export function ClipCorrectionWorkspace({
   /** ②'s primary committing control, the one thing of the confirmation the dock
    *  carries. */
   finalizeAction?: ReactNode
-  /** What confirming does, what the clip delivered and why it is refused. */
-  finalizeNotices?: ReactNode
   localSources: ReadonlyArray<{ fingerprint: string; url: string }>
   /** Resolves an unexpired retained original for a source the session has no
    *  local copy of, so ② can still show the frame a caption sits on. */
@@ -394,14 +391,6 @@ export function ClipCorrectionWorkspace({
       )}
       {comparison}
       {sourcePicker}
-      {/* The download moved under the video it downloads (CLIP-149), so what is
-          left here is the confirmation's own copy — which T248 takes into the
-          finalization dialog. */}
-      {finalizeNotices && (
-        <section className="mt-10 space-y-3" aria-label={t('finalization.summaryLabel')}>
-          {finalizeNotices}
-        </section>
-      )}
       <div ref={actions} className="contents">
         <ActionBar ariaLabel={t('correction.actions')} className="space-y-3">
           <div className="space-y-2">

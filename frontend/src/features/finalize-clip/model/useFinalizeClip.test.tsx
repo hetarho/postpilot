@@ -114,3 +114,25 @@ it('refuses a new plan revision read after flushing instead of confirming anothe
   expect(view.events).toEqual(['flush', 'read'])
   expect(view.result.current.failure?.reason).toBe('CLIP_FINALIZATION_CONFLICT')
 })
+
+it('prepares from the saved read only after flush and never finalizes while opening', async () => {
+  let resolve!: (revision: number) => void
+  const view = setup(
+    () =>
+      new Promise<number>((done) => {
+        resolve = done
+      }),
+  )
+  let prepared!: ReturnType<typeof view.result.current.prepare>
+  act(() => {
+    prepared = view.result.current.prepare()
+    void view.result.current.prepare()
+  })
+  expect(view.events).toEqual(['flush'])
+  await act(async () => {
+    resolve(1)
+    expect((await prepared)?.result?.id).toBe('result')
+  })
+  expect(view.events).toEqual(['flush', 'read'])
+  expect(view.result.current.busy).toBe(false)
+})
