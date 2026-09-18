@@ -9,6 +9,8 @@ import {
   requiredClipSources,
   reorderClipSources,
   type ClipProject,
+  clipRenderNeedsAudio,
+  useClipBrowserRenderCapability,
 } from '@/entities/clip-project'
 import { useClipCorrection, ClipCorrectionWorkspace } from '@/features/correct-clip'
 import { useSession } from '@/entities/session'
@@ -173,6 +175,10 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
     rejected: upload.rejectAttempt,
   }
   const job = generation.job
+  const browserCapability = useClipBrowserRenderCapability(
+    project.ratio,
+    clipRenderNeedsAudio(correction.draft),
+  )
   useEffect(() => {
     if (job && (job.status === 'done' || job.status === 'failed' || job.status === 'cancelled'))
       upload.finishAttempt(job.id, job.status)
@@ -515,6 +521,7 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
       disabled={pending}
       renderReady={!!upload.readyBatch && correction.revision === project.editPlanRevision}
       renderPending={generation.starting}
+      browserCapability={browserCapability.data}
       lastRenderKind={project.lastRenderKind}
       currentRender={
         !!project.result &&
@@ -527,7 +534,10 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
       // The draft's queue is flushed BEFORE the render starts, so the render always runs
       // against the revision the server took rather than against one the owner has since
       // typed past (CLIP-39). A failed save stops the start; the status line already says so.
-      onRender={() => {
+      onRender={(kind) => {
+        // T254 connects the local worker here. A browser choice must never
+        // accidentally enter the existing durable server-job path.
+        if (kind !== 'server') return
         if (correction.pending) return
         void correction
           .flush()

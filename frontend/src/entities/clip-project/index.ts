@@ -12,6 +12,13 @@ export {
 } from './model/types'
 export { clipState, clipStateLabel } from './model/state'
 export { preferredClipRenderKind } from './model/render-kind'
+export {
+  clipBrowserEncoderConfig,
+  clipBrowserRenderCapability,
+  clipRenderNeedsAudio,
+} from './model/browser-render-capability'
+export type { ClipBrowserRenderCapability } from './model/browser-render-capability'
+export { useClipBrowserRenderCapability } from './api/useClipBrowserRenderCapability'
 export { boundedText } from './lib/bounded-text'
 export { useClipLifecycleApi } from './api/lifecycle'
 export {

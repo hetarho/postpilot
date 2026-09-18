@@ -476,6 +476,14 @@ export const clips = {
     },
     noInstruction: 'Generated with no instruction.',
   },
+  render: {
+    refusal: {
+      capability:
+        'This browser does not support the required video or audio encoding. Choose server rendering.',
+      memory:
+        'This device reports too little memory for browser rendering. Choose server rendering.',
+    },
+  },
   reference: {
     label: 'Reference',
     tabs: { observations: 'Observations', sources: 'Sources', requests: 'Requests' },

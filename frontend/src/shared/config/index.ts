@@ -436,3 +436,4 @@ export {
   CLIP_TIMELINE,
   CLIP_CAPTION_PLACEMENT,
 } from './clip-composition'
+export { CLIP_BROWSER_RENDER } from './clip-browser-render'

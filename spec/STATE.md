@@ -49,7 +49,6 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
-| T250 | the browser states whether it can render, and refuses with one reason | CLIP | T242 | todo |
 | T251 | the browser composites and encodes the video track | CLIP | T250 | todo |
 | T252 | the browser builds and encodes the audio track | CLIP | T251 | todo |
 | T253 | the browser muxes its output, measures it and stores it before it is shown | CLIP | T252 T243 | todo |
@@ -58,10 +57,12 @@
 | T257 | the approval surface quotes the longest render its styles can produce | CLIP CDS | - | todo |
 
 ## next
-- implement-task T250 — probe browser render capability with an explicit refusal.
+- implement-task T251 — composite and encode the browser video track.
 - T256 and T257 remain independent of the browser cluster.
 - T177 stays blocked; T008 belongs to another session; post-quality-and-related-links awaits conversion.
 ## log
+- 260918 T250 done; static H.264/AAC probes and reported memory yield one browser refusal, with no original-file check, encoding, network call or implicit kind switch.
+- 260918 T250 claimed (rnd)
 - 260918 T249 done; one reference sheet lazily mounts observations, sources or requests, and observed cut additions land in the new cut’s editor.
 - 260918 T249 claimed (rnd)
 - 260918 T248 done; finalization flushes before a targeted-notice confirmation dialog, with render-first and other refusals beside the dock button.
@@ -80,5 +81,3 @@
 - 260918 update-ssot CDS CLIP start (caption style assignment: an allowed set wider than one still renders as one)
 - 260918 T242 released back to todo before any code was written (knd stopped at the owner's word); nothing of it is in the tree
 - 260918 T255 done; the smoke's continuation now succeeds on the saved plan with the result untouched, stated by one `continuationVerdict` a host test pins so the next drift breaks ARCH-26 instead of the deploy — clip-input-smoke is green again (PASS in 70 s)
-- 260918 ideation post-quality-and-related-links start
-- 260918 T255 claimed (knd)

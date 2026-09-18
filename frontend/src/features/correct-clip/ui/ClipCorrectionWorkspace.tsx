@@ -1,4 +1,9 @@
-import { ClipNoticeList, type ClipNotice, type ClipRenderKind } from '@/entities/clip-project'
+import {
+  ClipNoticeList,
+  type ClipNotice,
+  type ClipRenderKind,
+  type ClipBrowserRenderCapability,
+} from '@/entities/clip-project'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
@@ -61,6 +66,7 @@ export function ClipCorrectionWorkspace({
   renderFailure,
   lastRenderKind,
   currentRender,
+  browserCapability,
   onRender,
   referenceAction,
   preview,
@@ -84,6 +90,7 @@ export function ClipCorrectionWorkspace({
   renderFailure?: AppFailure
   lastRenderKind?: ClipRenderKind
   currentRender?: boolean
+  browserCapability?: ClipBrowserRenderCapability
   onRender: (kind: ClipRenderKind) => void
   referenceAction?: ReactNode
   preview: (props: ClipEditorPreviewProps) => ReactNode
@@ -422,6 +429,12 @@ export function ClipCorrectionWorkspace({
                 key={projectId}
                 lastKind={lastRenderKind}
                 currentRender={currentRender}
+                browserAvailable={browserCapability?.available ?? false}
+                browserRefusal={
+                  browserCapability && !browserCapability.available
+                    ? browserCapability.reason
+                    : undefined
+                }
                 pending={renderPending}
                 disabled={
                   disabled || correction.pending || !renderReady || !correction.validation?.valid

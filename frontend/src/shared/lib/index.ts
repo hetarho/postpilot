@@ -63,9 +63,11 @@ export type {
 export type { DecodeFailure, ResizedJpeg } from './image'
 export {
   formatDuration,
+  probeEncoderSupport,
   readVideoMetadata,
   VideoUnreadableError,
   type VideoMetadata,
+  type EncoderSupport,
 } from './video'
 export {
   DecodeError,

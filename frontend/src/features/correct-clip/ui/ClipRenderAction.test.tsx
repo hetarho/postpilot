@@ -39,3 +39,19 @@ it('falls back to server with no browser offer while browser rendering is unavai
   await userEvent.click(screen.getByRole('button', { name: '렌더하기 · 서버' }))
   expect(onRender).toHaveBeenCalledExactlyOnceWith('server')
 })
+
+it('never switches an explicitly chosen browser render to server when capability disappears', async () => {
+  const onRender = vi.fn()
+  const props = { lastKind: 'server' as const, pending: false, disabled: false, onRender }
+  const view = render(<ClipRenderAction {...props} browserAvailable />)
+  await userEvent.click(screen.getByRole('button', { name: '브라우저로 변경' }))
+  view.rerender(<ClipRenderAction {...props} browserRefusal="capability" />)
+  const refused = screen.getByRole('button', { name: '렌더하기 · 브라우저' })
+  expect(refused).toBeDisabled()
+  expect(screen.getAllByRole('status')).toHaveLength(1)
+  await userEvent.click(refused)
+  expect(onRender).not.toHaveBeenCalled()
+  await userEvent.click(screen.getByRole('button', { name: '서버로 변경' }))
+  await userEvent.click(screen.getByRole('button', { name: '렌더하기 · 서버' }))
+  expect(onRender).toHaveBeenCalledExactlyOnceWith('server')
+})

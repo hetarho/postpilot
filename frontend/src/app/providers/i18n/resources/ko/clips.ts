@@ -467,6 +467,13 @@ export const clips = {
     },
     noInstruction: '지시 없이 생성했어요.',
   },
+  render: {
+    refusal: {
+      capability:
+        '이 브라우저는 필요한 영상·음성 인코딩을 지원하지 않아요. 서버 렌더를 선택해 주세요.',
+      memory: '이 기기의 메모리가 브라우저 렌더에 부족해요. 서버 렌더를 선택해 주세요.',
+    },
+  },
   reference: {
     label: '참고 자료',
     tabs: { observations: '관찰 기록', sources: '원본 영상', requests: '요청 기록' },
