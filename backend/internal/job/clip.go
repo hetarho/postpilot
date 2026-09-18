@@ -16,6 +16,15 @@ func ClipKind(kind string) bool {
 	return kind == KindGenerateClip || kind == KindRenderClip || kind == KindReviseClip
 }
 
+// ChargedClipKind reports whether a clip job reserves an approved credit ceiling
+// before its first model call. A generation and a revision request both do; a
+// render writes nothing and spends nothing (CLIP-19, CLIP-20, CLIP-132). Every
+// admission, metering and settlement gate asks this instead of naming the
+// generation alone — naming it is what left the revision unable to reserve.
+func ChargedClipKind(kind string) bool {
+	return kind == KindGenerateClip || kind == KindReviseClip
+}
+
 // One owner-written revision of a saved plan (CLIP-131). It is charged work
 // like a generation — it calls the writing model — and does no media work at
 // all, which is why it is its own kind rather than a generation with a flag.

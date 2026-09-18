@@ -53,6 +53,8 @@
 - CLIP r33 and CDS r22 are fully implemented (T227–T233); T177's viewing checklist is the next thing to re-plan, and T008 is another session's
 - T177 stays blocked (its viewing checklist predates both the caption style set and the outline) and T008 is another session's
 ## log
+- 260918 bugfix: production's first revision request died in prepare with an unnamed reason — the reservation guard, the metered boundary, the ledger's hold/settle/record, the clip accounting read, its SQL and the table's two cancellation CHECKs all named generate_clip alone; they now ask ChargedClipKind, migration 0063 widens the CHECKs (NO TRANSACTION, 0027's pragma, because two tables cascade from generation_jobs), and the reserve/meter/settle, the cancel and the rebuild are pinned by tests
+- 260918 update-ssot CLIP start — ②'s mobile shape: the correction surfaces, the download, the revision request and the dock
 - 260918 T230 done; the copied guide teaches the outline and nothing it retired, the example carries stages and a caption, and a paste refuses only unreadable grammar — found and fixed an editor crash on a body with more region lines than the preset holds
 - 260918 T230 claimed (otl)
 - 260918 T229 done; the editor is name, description and one outline the builder and 원문 share — no design step, every entry reorderable and deletable, region lines added one at a time — and ① narrows a bound answer with its own preset (the CLIP-117 gap T227 opened)

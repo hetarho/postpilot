@@ -207,6 +207,14 @@ func (s *Service) GrantBonusOnce(ctx context.Context, id, userID string, credits
 	return s.store.InsertLotIfAbsent(ctx, Lot{ID: id, UserID: userID, Kind: LotBonus, Granted: credits, Remaining: credits, CreatedAt: s.now()})
 }
 
+// chargedClipKind names the clip work that reserves an approved credit ceiling
+// and settles against it: the generation and the owner's revision request
+// (CLIP-19, CLIP-132). A render is credit-free and never takes this path. The
+// kinds are strings here because this context owns no job vocabulary.
+func chargedClipKind(kind string) bool {
+	return kind == "generate_clip" || kind == "revise_clip"
+}
+
 // Hold reserves the credits one piece of LLM work could cost, and records the start.
 //
 // Reserving up front rather than charging afterwards is what bounds the account: cost is
@@ -229,7 +237,7 @@ func (s *Service) Hold(ctx context.Context, start Start) error {
 	required := plan.Charge(s.worstCaseMicrousd(start.Calls))
 	var approved *int
 	policyVersion := 0
-	if start.Kind == "generate_clip" {
+	if chargedClipKind(start.Kind) {
 		if start.Clip == nil {
 			return ErrClipApproval
 		}
@@ -419,7 +427,7 @@ func (s *Service) Settle(ctx context.Context, jobID string, outcome TerminalOutc
 		if !found {
 			return nil
 		}
-		if outcome == OutcomeCancelled && (admission.Kind != "generate_clip" || admission.CancellationPolicyVersion != 1) {
+		if outcome == OutcomeCancelled && (!chargedClipKind(admission.Kind) || admission.CancellationPolicyVersion != 1) {
 			return ErrSettlementOutcome
 		}
 
@@ -431,7 +439,7 @@ func (s *Service) Settle(ctx context.Context, jobID string, outcome TerminalOutc
 		settlement := Settlement{}
 		// A clip reserves its complete run after probing. Never debit another lot for
 		// provider overage: raw cost remains in the ledger, user credit is capped.
-		if admission.Kind == "generate_clip" {
+		if chargedClipKind(admission.Kind) {
 			ceiling := admission.HoldCredits
 			if admission.ApprovedMaxCredits != nil {
 				ceiling = min(ceiling, *admission.ApprovedMaxCredits)
@@ -553,7 +561,7 @@ func (s *Service) OpenHolds(ctx context.Context) ([]string, error) {
 // records its tokens; only its estimate is lost.
 func (s *Service) Record(ctx context.Context, call Call) error {
 	info, _ := s.models.Lookup(call.Model)
-	if call.Kind == "generate_clip" {
+	if chargedClipKind(call.Kind) {
 		if policy, ok := frozenCallPrice(ctx, call); ok {
 			info.InputUSDPerMillion, info.OutputUSDPerMillion = policy.InputUSDPerMillion, policy.OutputUSDPerMillion
 			if policy.Pricing.Version != 0 && !policy.Pricing.AggregateUsageSufficient {
@@ -607,7 +615,7 @@ func (s *Service) RecordCall(ctx context.Context, ref llm.ModelRef, stage string
 	if callErr != nil && u.PromptTokens == 0 && u.CompletionTokens == 0 && !u.CostReported {
 		return nil
 	}
-	if work.Kind == "generate_clip" {
+	if chargedClipKind(work.Kind) {
 		// A provider can report paid usage while worker shutdown cancels its call.
 		// Preserve that evidence for boot settlement without permitting another call.
 		recordCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)

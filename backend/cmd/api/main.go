@@ -1838,13 +1838,13 @@ type meteredRegistry struct {
 
 func (m meteredRegistry) Complete(ctx context.Context, ref llm.ModelRef, req llm.Request) (llm.Response, error) {
 	work, hasWork := usage.WorkFromContext(ctx)
-	if req.Execution != nil && (!hasWork || work.Kind != job.KindGenerateClip) {
+	if req.Execution != nil && (!hasWork || !job.ChargedClipKind(work.Kind)) {
 		return llm.Response{}, job.ErrCreditAllowance
 	}
 	if work, ok := usage.WorkFromContext(ctx); ok && work.Kind == job.KindRenderClip {
 		return llm.Response{}, job.ErrCreditAllowance
 	}
-	if work, ok := usage.WorkFromContext(ctx); ok && work.Kind == job.KindGenerateClip {
+	if work, ok := usage.WorkFromContext(ctx); ok && job.ChargedClipKind(work.Kind) {
 		policy, err := job.ConsumeClipPolicy(ctx, work.UserID, work.JobID, ref.String(), req.MaxTokens, req.Stage)
 		if err != nil {
 			return llm.Response{}, err

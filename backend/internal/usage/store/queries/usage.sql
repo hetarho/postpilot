@@ -128,11 +128,13 @@ SELECT user_id, kind, job_id, hold_credits, created_at, approved_max_credits, ca
 FROM usage_admissions
 WHERE job_id = ? AND settled_at IS NULL;
 
+-- Both charged clip kinds are read here: a generation and an owner's revision
+-- request each reserve against an approved ceiling and settle against it.
 -- name: ClipAccountingForJob :one
 SELECT a.approved_max_credits, a.hold_credits, a.settled_credits, a.settled_at, a.cancellation_policy_version, a.settlement_reason, a.confirmed_charge_credits, a.cancellation_fee_credits,
        CAST(COALESCE((SELECT SUM(h.credits) FROM credit_hold_lots h WHERE h.job_id = a.job_id), 0) AS INTEGER) AS debited_credits
 FROM usage_admissions a
-WHERE a.user_id = ? AND a.job_id = ? AND a.kind = 'generate_clip';
+WHERE a.user_id = ? AND a.job_id = ? AND a.kind IN ('generate_clip','revise_clip');
 
 -- name: MarkAdmissionSettled :exec
 UPDATE usage_admissions SET settled_credits = ?, settled_at = ?, settlement_reason = ?, confirmed_charge_credits = ?, cancellation_fee_credits = ?

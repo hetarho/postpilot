@@ -38,7 +38,7 @@ func (a clipGuard) Reserve(ctx context.Context, start job.Start) error {
 		if err != nil {
 			return err
 		}
-		if start.Clip == nil || j.UserID != start.UserID || j.Kind != job.KindGenerateClip || j.Status != job.StatusRunning || j.Stage != "prepare" || j.CancelRequestedAt != nil || j.CancellationPolicyVersion != start.Clip.CancellationPolicyVersion {
+		if start.Clip == nil || j.UserID != start.UserID || !job.ChargedClipKind(j.Kind) || j.Status != job.StatusRunning || j.Stage != "prepare" || j.CancelRequestedAt != nil || j.CancellationPolicyVersion != start.Clip.CancellationPolicyVersion {
 			return job.ErrCreditAllowance
 		}
 		admission := a.admission

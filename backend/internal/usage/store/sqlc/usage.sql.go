@@ -43,7 +43,7 @@ const clipAccountingForJob = `-- name: ClipAccountingForJob :one
 SELECT a.approved_max_credits, a.hold_credits, a.settled_credits, a.settled_at, a.cancellation_policy_version, a.settlement_reason, a.confirmed_charge_credits, a.cancellation_fee_credits,
        CAST(COALESCE((SELECT SUM(h.credits) FROM credit_hold_lots h WHERE h.job_id = a.job_id), 0) AS INTEGER) AS debited_credits
 FROM usage_admissions a
-WHERE a.user_id = ? AND a.job_id = ? AND a.kind = 'generate_clip'
+WHERE a.user_id = ? AND a.job_id = ? AND a.kind IN ('generate_clip','revise_clip')
 `
 
 type ClipAccountingForJobParams struct {
@@ -63,6 +63,8 @@ type ClipAccountingForJobRow struct {
 	DebitedCredits            int64
 }
 
+// Both charged clip kinds are read here: a generation and an owner's revision
+// request each reserve against an approved ceiling and settle against it.
 func (q *Queries) ClipAccountingForJob(ctx context.Context, arg ClipAccountingForJobParams) (ClipAccountingForJobRow, error) {
 	row := q.db.QueryRowContext(ctx, clipAccountingForJob, arg.UserID, arg.JobID)
 	var i ClipAccountingForJobRow
