@@ -55,7 +55,9 @@ var ErrRecipientRejected = errors.New("mail recipient rejected")
 //
 // Implementations must translate "not found" into ErrUserNotFound / ErrNoSession —
 // the service branches on those, never on a driver error.
-type Store interface {
+// AccountStore is the account itself: minting one, finding it by any of the three identities
+// it can be reached by, and the writes that change what it is.
+type AccountStore interface {
 	CreateUser(ctx context.Context, u User) error
 	GetUser(ctx context.Context, id string) (User, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
@@ -65,8 +67,16 @@ type Store interface {
 	MarkEmailVerified(ctx context.Context, id string, at time.Time) error
 	MarkEmailUnreachable(ctx context.Context, id string, at time.Time) error
 	UpdatePasswordHash(ctx context.Context, id, passwordHash string) error
+}
+
+// LoginAttemptStore is the throttle a failed sign-in feeds.
+type LoginAttemptStore interface {
 	RecordLoginFailure(ctx context.Context, id string, now time.Time) (int, error)
 	ClearLoginFailures(ctx context.Context, id string) error
+}
+
+// AccountPlanStore is the authority an account acts with, and the operator's view of it.
+type AccountPlanStore interface {
 	// GetUserPlan is deliberately narrower than GetUser: the interceptor resolves the
 	// acting plan on every authenticated request, and loading a password hash that often
 	// widens the blast radius of any log or dump for a value nothing on that path reads.
@@ -75,14 +85,30 @@ type Store interface {
 	GetUserCreatedAt(ctx context.Context, id string) (time.Time, error)
 	SetUserPlan(ctx context.Context, id string, p plan.Plan) error
 	ListUsers(ctx context.Context) ([]User, error)
+}
 
+// SessionStore is a signed-in session and every way one ends.
+type SessionStore interface {
 	CreateSession(ctx context.Context, s Session) error
 	GetSession(ctx context.Context, hashedToken string) (Session, error)
 	DeleteSession(ctx context.Context, hashedToken string) error
 	DeleteExpiredSessions(ctx context.Context, before time.Time) (int64, error)
 	DeleteSessionsForUser(ctx context.Context, userID string) error
+}
 
+// LinkStore is a single-use link — verification, password reset — and its one consumption.
+type LinkStore interface {
 	CreateLink(ctx context.Context, link Link) error
 	ConsumeLink(ctx context.Context, tokenHash string, purpose LinkPurpose, now time.Time) (Link, error)
 	InvalidateLinks(ctx context.Context, userID string, purpose LinkPurpose, now time.Time) error
+}
+
+// Storage is every behaviour the auth context's SQL store happens to implement: the
+// composition root's handle, not a port (ARCH-6).
+type Storage interface {
+	AccountStore
+	LoginAttemptStore
+	AccountPlanStore
+	SessionStore
+	LinkStore
 }

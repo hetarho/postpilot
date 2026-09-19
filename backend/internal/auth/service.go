@@ -28,7 +28,11 @@ const (
 // Service is the auth context's behavior. It owns every rule about how a login
 // succeeds, how long a session lives, and what a failure is allowed to reveal.
 type Service struct {
-	store      Store
+	accounts   AccountStore
+	attempts   LoginAttemptStore
+	plans      AccountPlanStore
+	sessions   SessionStore
+	links      LinkStore
 	ttl        time.Duration
 	mailer     Mailer
 	google     GoogleIdentity
@@ -68,7 +72,7 @@ type Deps struct {
 
 // NewService wires the context with its store, the session lifetime from config and its
 // collaborators.
-func NewService(store Store, ttl time.Duration, deps Deps) *Service {
+func NewService(store Storage, ttl time.Duration, deps Deps) *Service {
 	if deps.Mailer == nil {
 		panic("auth: a mailer is required")
 	}
@@ -80,7 +84,8 @@ func NewService(store Store, ttl time.Duration, deps Deps) *Service {
 	dummyHash()
 
 	return &Service{
-		store: store, ttl: ttl, now: time.Now, verify: VerifyPassword,
+		accounts: store, attempts: store, plans: store, sessions: store, links: store,
+		ttl: ttl, now: time.Now, verify: VerifyPassword,
 		lastResend: make(map[resendKey]time.Time),
 		mailer:     deps.Mailer, google: deps.Google, topUp: deps.TopUp,
 		webOrigin:  normalizeWebOrigin(deps.WebOrigin),
@@ -106,7 +111,7 @@ func (s *Service) send(ctx context.Context, user User, mail Mail) error {
 		if !errors.Is(err, ErrRecipientRejected) {
 			return fmt.Errorf("send transactional mail: %w", err)
 		}
-		if err := s.store.MarkEmailUnreachable(ctx, user.ID, s.now()); err != nil {
+		if err := s.accounts.MarkEmailUnreachable(ctx, user.ID, s.now()); err != nil {
 			return fmt.Errorf("mark rejected email unreachable: %w", err)
 		}
 		return nil
@@ -141,7 +146,7 @@ func (s *Service) Signup(ctx context.Context, rawEmail, password string) error {
 	user := User{
 		ID: email, PasswordHash: hash, Email: email, Plan: plan.Free, CreatedAt: s.now(),
 	}
-	if err := s.store.CreateUser(ctx, user); err != nil {
+	if err := s.accounts.CreateUser(ctx, user); err != nil {
 		if !errors.Is(err, ErrDuplicateUser) {
 			return fmt.Errorf("create signup account: %w", err)
 		}
@@ -209,11 +214,11 @@ func (s *Service) RequestPasswordReset(ctx context.Context, rawEmail string) err
 	if !s.reserveResend(LinkPurposeResetPassword, email, now) {
 		return nil
 	}
-	if err := s.store.InvalidateLinks(ctx, user.ID, LinkPurposeResetPassword, now); err != nil {
+	if err := s.links.InvalidateLinks(ctx, user.ID, LinkPurposeResetPassword, now); err != nil {
 		s.releaseResend(LinkPurposeResetPassword, email, now)
 		return fmt.Errorf("invalidate password reset links: %w", err)
 	}
-	if err := s.store.CreateLink(ctx, Link{
+	if err := s.links.CreateLink(ctx, Link{
 		TokenHash: tokenHash, UserID: user.ID, Purpose: LinkPurposeResetPassword,
 		Email: email, ExpiresAt: now.Add(ResetLinkTTL), CreatedAt: now,
 	}); err != nil {
@@ -233,14 +238,14 @@ func (s *Service) VerifyEmail(ctx context.Context, rawToken string) error {
 	if rawToken == "" {
 		return ErrLinkInvalid
 	}
-	link, err := s.store.ConsumeLink(ctx, hashToken(rawToken), LinkPurposeVerifyEmail, s.now())
+	link, err := s.links.ConsumeLink(ctx, hashToken(rawToken), LinkPurposeVerifyEmail, s.now())
 	if err != nil {
 		if errors.Is(err, ErrLinkInvalid) {
 			return ErrLinkInvalid
 		}
 		return fmt.Errorf("consume verification link: %w", err)
 	}
-	if err := s.store.MarkEmailVerified(ctx, link.UserID, s.now()); err != nil {
+	if err := s.accounts.MarkEmailVerified(ctx, link.UserID, s.now()); err != nil {
 		return fmt.Errorf("mark email verified: %w", err)
 	}
 	if err := s.runBootstraps(ctx, link.UserID); err != nil {
@@ -263,7 +268,7 @@ func (s *Service) ResetPassword(ctx context.Context, rawToken, newPassword strin
 	if rawToken == "" {
 		return ErrLinkInvalid
 	}
-	link, err := s.store.ConsumeLink(ctx, hashToken(rawToken), LinkPurposeResetPassword, s.now())
+	link, err := s.links.ConsumeLink(ctx, hashToken(rawToken), LinkPurposeResetPassword, s.now())
 	if err != nil {
 		if errors.Is(err, ErrLinkInvalid) {
 			return ErrLinkInvalid
@@ -276,7 +281,7 @@ func (s *Service) ResetPassword(ctx context.Context, rawToken, newPassword strin
 // RegisterEmail gives an authenticated emailless account its first address. A taken
 // address produces the same success response and moves the information into mail.
 func (s *Service) RegisterEmail(ctx context.Context, userID, rawEmail string) error {
-	user, err := s.store.GetUser(ctx, userID)
+	user, err := s.accounts.GetUser(ctx, userID)
 	if err != nil {
 		return err
 	}
@@ -294,7 +299,7 @@ func (s *Service) RegisterEmail(ctx context.Context, userID, rawEmail string) er
 	if found && existing.ID != user.ID {
 		return s.send(ctx, existing, existingAccountMail(email))
 	}
-	if err := s.store.SetEmail(ctx, user.ID, email, nil); err != nil {
+	if err := s.accounts.SetEmail(ctx, user.ID, email, nil); err != nil {
 		if !errors.Is(err, ErrDuplicateUser) {
 			return err
 		}
@@ -315,7 +320,7 @@ func (s *Service) RegisterEmail(ctx context.Context, userID, rawEmail string) er
 // ChangePassword proves the current password without reclassifying a bad proof as a lost
 // session. A Google-only account has no current password and must use the mailed reset path.
 func (s *Service) ChangePassword(ctx context.Context, userID, currentPassword, newPassword string) error {
-	user, err := s.store.GetUser(ctx, userID)
+	user, err := s.accounts.GetUser(ctx, userID)
 	if err != nil {
 		return err
 	}
@@ -360,14 +365,14 @@ func validatePasswordLength(password string) error {
 }
 
 func (s *Service) accountForEmail(ctx context.Context, email string) (User, bool, error) {
-	user, err := s.store.GetUser(ctx, email)
+	user, err := s.accounts.GetUser(ctx, email)
 	if err == nil {
 		return user, true, nil
 	}
 	if !errors.Is(err, ErrUserNotFound) {
 		return User{}, false, fmt.Errorf("look up account id: %w", err)
 	}
-	user, err = s.store.GetUserByEmail(ctx, email)
+	user, err = s.accounts.GetUserByEmail(ctx, email)
 	if err == nil {
 		return user, true, nil
 	}
@@ -392,11 +397,11 @@ func (s *Service) sendVerification(ctx context.Context, user User) error {
 		s.releaseResend(LinkPurposeVerifyEmail, user.Email, now)
 		return err
 	}
-	if err := s.store.InvalidateLinks(ctx, user.ID, LinkPurposeVerifyEmail, now); err != nil {
+	if err := s.links.InvalidateLinks(ctx, user.ID, LinkPurposeVerifyEmail, now); err != nil {
 		s.releaseResend(LinkPurposeVerifyEmail, user.Email, now)
 		return fmt.Errorf("invalidate verification links: %w", err)
 	}
-	if err := s.store.CreateLink(ctx, Link{
+	if err := s.links.CreateLink(ctx, Link{
 		TokenHash: tokenHash, UserID: user.ID, Purpose: LinkPurposeVerifyEmail,
 		Email: user.Email, ExpiresAt: now.Add(VerifyLinkTTL), CreatedAt: now,
 	}); err != nil {
@@ -456,10 +461,10 @@ func (s *Service) runBootstraps(ctx context.Context, userID string) error {
 // is durable before sessions are revoked, so no session is ended unless the replacement
 // credential can already authenticate the owner.
 func (s *Service) setPassword(ctx context.Context, userID, newHash string) error {
-	if err := s.store.UpdatePasswordHash(ctx, userID, newHash); err != nil {
+	if err := s.accounts.UpdatePasswordHash(ctx, userID, newHash); err != nil {
 		return fmt.Errorf("set password: %w", err)
 	}
-	if err := s.store.DeleteSessionsForUser(ctx, userID); err != nil {
+	if err := s.sessions.DeleteSessionsForUser(ctx, userID); err != nil {
 		return fmt.Errorf("password changed but session revocation failed: %w", err)
 	}
 	return nil
@@ -473,10 +478,10 @@ func (s *Service) setPassword(ctx context.Context, userID, newHash string) error
 // same ErrInvalidCredentials after the same amount of argon2id work, so neither the
 // message nor the timing tells a caller whether an id exists.
 func (s *Service) Login(ctx context.Context, loginID, password string) (User, string, error) {
-	user, err := s.store.GetUser(ctx, loginID)
+	user, err := s.accounts.GetUser(ctx, loginID)
 	if errors.Is(err, ErrUserNotFound) {
 		if email, normalizeErr := NormalizeEmail(loginID); normalizeErr == nil {
-			user, err = s.store.GetUserByEmail(ctx, email)
+			user, err = s.accounts.GetUserByEmail(ctx, email)
 		}
 	}
 	switch {
@@ -508,7 +513,7 @@ func (s *Service) Login(ctx context.Context, loginID, password string) (User, st
 		s.recordLoginFailure(ctx, user, now)
 		return User{}, "", ErrInvalidCredentials
 	}
-	if err := s.store.ClearLoginFailures(ctx, user.ID); err != nil {
+	if err := s.attempts.ClearLoginFailures(ctx, user.ID); err != nil {
 		return User{}, "", fmt.Errorf("clear login failures: %w", err)
 	}
 	if user.Email != "" && user.EmailVerifiedAt == nil {
@@ -548,7 +553,7 @@ func (s *Service) SignInWithGoogle(ctx context.Context, claims GoogleClaims) (Us
 	}
 	claims.Subject = strings.TrimSpace(claims.Subject)
 
-	user, err := s.store.GetUserByGoogleSubject(ctx, claims.Subject)
+	user, err := s.accounts.GetUserByGoogleSubject(ctx, claims.Subject)
 	if err == nil {
 		return s.issueSession(ctx, user, s.now())
 	}
@@ -556,7 +561,7 @@ func (s *Service) SignInWithGoogle(ctx context.Context, claims GoogleClaims) (Us
 		return User{}, "", fmt.Errorf("look up google subject: %w", err)
 	}
 
-	user, err = s.store.GetUserByEmail(ctx, email)
+	user, err = s.accounts.GetUserByEmail(ctx, email)
 	found := err == nil
 	if err != nil && !errors.Is(err, ErrUserNotFound) {
 		return User{}, "", fmt.Errorf("look up google email: %w", err)
@@ -566,7 +571,7 @@ func (s *Service) SignInWithGoogle(ctx context.Context, claims GoogleClaims) (Us
 		if user.GoogleSubject != "" && user.GoogleSubject != claims.Subject {
 			return User{}, "", ErrGoogleAccountMismatch
 		}
-		if err := s.store.BindGoogleIdentity(ctx, user.ID, claims.Subject, now); err != nil {
+		if err := s.accounts.BindGoogleIdentity(ctx, user.ID, claims.Subject, now); err != nil {
 			if errors.Is(err, ErrGoogleAccountMismatch) {
 				return User{}, "", ErrGoogleAccountMismatch
 			}
@@ -583,7 +588,7 @@ func (s *Service) SignInWithGoogle(ctx context.Context, claims GoogleClaims) (Us
 		ID: email, Email: email, PasswordHash: "", EmailVerifiedAt: &now,
 		GoogleSubject: claims.Subject, Plan: plan.Free, CreatedAt: now,
 	}
-	if err := s.store.CreateUser(ctx, user); err != nil {
+	if err := s.accounts.CreateUser(ctx, user); err != nil {
 		if errors.Is(err, ErrDuplicateUser) {
 			return User{}, "", ErrGoogleAccountMismatch
 		}
@@ -607,7 +612,7 @@ func (s *Service) issueSession(ctx context.Context, user User, now time.Time) (U
 		ExpiresAt: now.Add(s.ttl),
 		CreatedAt: now,
 	}
-	if err := s.store.CreateSession(ctx, session); err != nil {
+	if err := s.sessions.CreateSession(ctx, session); err != nil {
 		return User{}, "", fmt.Errorf("create session: %w", err)
 	}
 
@@ -618,7 +623,7 @@ func (s *Service) issueSession(ctx context.Context, user User, now time.Time) (U
 // notification fails. Returning a different wire error here would reveal that the id
 // reached an existing account, undoing the dummy-hash path's enumeration protection.
 func (s *Service) recordLoginFailure(ctx context.Context, user User, now time.Time) {
-	count, err := s.store.RecordLoginFailure(ctx, user.ID, now)
+	count, err := s.attempts.RecordLoginFailure(ctx, user.ID, now)
 	if err != nil {
 		slog.ErrorContext(ctx, "could not record login failure", "user_id", user.ID, "err", err)
 		return
@@ -645,7 +650,7 @@ func (s *Service) Authenticate(ctx context.Context, rawToken string) (Actor, err
 		return Actor{}, ErrNoSession
 	}
 
-	session, err := s.store.GetSession(ctx, hashToken(rawToken))
+	session, err := s.sessions.GetSession(ctx, hashToken(rawToken))
 	if err != nil {
 		if errors.Is(err, ErrNoSession) {
 			return Actor{}, ErrNoSession
@@ -657,13 +662,13 @@ func (s *Service) Authenticate(ctx context.Context, rawToken string) (Actor, err
 		// The row just proved itself dead, so drop it here rather than waiting for the
 		// next boot sweep. A failure to delete is not the caller's problem — the
 		// expiry check above already denied them.
-		if err := s.store.DeleteSession(ctx, session.Token); err != nil {
+		if err := s.sessions.DeleteSession(ctx, session.Token); err != nil {
 			slog.Warn("could not delete expired session", "err", err)
 		}
 		return Actor{}, ErrNoSession
 	}
 
-	acting, err := s.store.GetUserPlan(ctx, session.UserID)
+	acting, err := s.plans.GetUserPlan(ctx, session.UserID)
 	if err != nil {
 		// A live session whose account is gone is a deleted user, not an outage: the
 		// cascade removed the row and this token is meaningless.
@@ -682,23 +687,23 @@ func (s *Service) Authenticate(ctx context.Context, rawToken string) (Actor, err
 // running a queued job carries the process context, not the request's — where the row is
 // the only authority available.
 func (s *Service) PlanOf(ctx context.Context, userID string) (plan.Plan, error) {
-	return s.store.GetUserPlan(ctx, userID)
+	return s.plans.GetUserPlan(ctx, userID)
 }
 
 // CreatedAt returns the account creation instant used as its monthly-credit anchor while
 // it has no subscription. The store query behind it deliberately loads no credential data.
 func (s *Service) CreatedAt(ctx context.Context, userID string) (time.Time, error) {
-	return s.store.GetUserCreatedAt(ctx, userID)
+	return s.plans.GetUserCreatedAt(ctx, userID)
 }
 
 // Account returns the client-visible identity fields for an authenticated account.
 func (s *Service) Account(ctx context.Context, userID string) (User, error) {
-	return s.store.GetUser(ctx, userID)
+	return s.accounts.GetUser(ctx, userID)
 }
 
 // ListUsers returns every account for the operator screen, without password hashes.
 func (s *Service) ListUsers(ctx context.Context) ([]User, error) {
-	users, err := s.store.ListUsers(ctx)
+	users, err := s.plans.ListUsers(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list users: %w", err)
 	}
@@ -718,7 +723,7 @@ func (s *Service) SetUserPlan(ctx context.Context, userID string, target plan.Pl
 	}
 	// A no-op set is not a demotion, and the guarded statement cannot tell the two apart:
 	// setting the last master back to master would match zero rows and read as a refusal.
-	current, err := s.store.GetUserPlan(ctx, userID)
+	current, err := s.plans.GetUserPlan(ctx, userID)
 	if err != nil {
 		return err
 	}
@@ -735,7 +740,7 @@ func (s *Service) SetUserPlan(ctx context.Context, userID string, target plan.Pl
 	if tops && s.topUp == nil {
 		return fmt.Errorf("set plan %s: no monthly top-up is wired", target)
 	}
-	if err := s.store.SetUserPlan(ctx, userID, target); err != nil {
+	if err := s.plans.SetUserPlan(ctx, userID, target); err != nil {
 		return err
 	}
 	if !tops {
@@ -754,24 +759,24 @@ func (s *Service) AssignTier(ctx context.Context, userID string, target plan.Pla
 	if !target.Valid() {
 		return fmt.Errorf("unknown plan %q", target)
 	}
-	current, err := s.store.GetUserPlan(ctx, userID)
+	current, err := s.plans.GetUserPlan(ctx, userID)
 	if err != nil {
 		return err
 	}
 	if current == target {
 		return nil
 	}
-	return s.store.SetUserPlan(ctx, userID, target)
+	return s.plans.SetUserPlan(ctx, userID, target)
 }
 
 func (s *Service) TierOf(ctx context.Context, userID string) (plan.Plan, error) {
-	return s.store.GetUserPlan(ctx, userID)
+	return s.plans.GetUserPlan(ctx, userID)
 }
 
 // VerifiedEmail returns only an address that can receive billing notices. Operator-created
 // legacy accounts remain valid but answer ok=false until they register and verify one.
 func (s *Service) VerifiedEmail(ctx context.Context, userID string) (string, bool, error) {
-	user, err := s.store.GetUser(ctx, userID)
+	user, err := s.accounts.GetUser(ctx, userID)
 	if err != nil {
 		return "", false, err
 	}
@@ -788,7 +793,7 @@ func (s *Service) Logout(ctx context.Context, rawToken string) error {
 	if rawToken == "" {
 		return nil
 	}
-	if err := s.store.DeleteSession(ctx, hashToken(rawToken)); err != nil {
+	if err := s.sessions.DeleteSession(ctx, hashToken(rawToken)); err != nil {
 		return fmt.Errorf("delete session: %w", err)
 	}
 	return nil
@@ -798,7 +803,7 @@ func (s *Service) Logout(ctx context.Context, rawToken string) error {
 // boot; the per-request path also drops expired rows as it finds them, so this only
 // collects sessions nobody ever came back for.
 func (s *Service) SweepExpired(ctx context.Context) (int64, error) {
-	n, err := s.store.DeleteExpiredSessions(ctx, s.now())
+	n, err := s.sessions.DeleteExpiredSessions(ctx, s.now())
 	if err != nil {
 		return 0, fmt.Errorf("sweep expired sessions: %w", err)
 	}
@@ -824,7 +829,7 @@ func (s *Service) CreateUser(ctx context.Context, loginID, password string, tier
 		return err
 	}
 
-	return s.store.CreateUser(ctx, User{
+	return s.accounts.CreateUser(ctx, User{
 		ID:           loginID,
 		PasswordHash: hash,
 		Plan:         tier,

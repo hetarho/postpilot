@@ -589,4 +589,4 @@ func parseOptional(value sql.NullString) *time.Time {
 	return &parsed
 }
 
-var _ experiment.Store = (*Store)(nil)
+var _ experiment.Storage = (*Store)(nil)

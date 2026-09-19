@@ -896,4 +896,4 @@ func TestApplyFailureStoresOnlyStableReason(t *testing.T) {
 	}
 }
 
-var _ Store = (*memoryStore)(nil)
+var _ Storage = (*memoryStore)(nil)

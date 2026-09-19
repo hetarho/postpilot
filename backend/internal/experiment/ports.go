@@ -10,7 +10,9 @@ import (
 // the schema surfaces as a generated column for this lookup.
 const JobSubject = "model_experiment"
 
-type Store interface {
+// RunLedger is one experiment as a whole: minting it, finding it again, and what the queue
+// and the post screen ask about it.
+type RunLedger interface {
 	Create(ctx context.Context, found Experiment) error
 	Delete(ctx context.Context, id string) error
 	Get(ctx context.Context, id string) (Experiment, error)
@@ -19,22 +21,45 @@ type Store interface {
 	SetJob(ctx context.Context, id, userID, jobID string) error
 	SetSnapshot(ctx context.Context, id string, snapshot Snapshot, hash string) error
 	SetStatus(ctx context.Context, id string, status Status, finishedAt *time.Time) error
+	ListQueued(ctx context.Context) ([]string, error)
+	CountPublishableForVoice(ctx context.Context, userID, voiceID string) (int, error)
+}
+
+// CandidateLedger is the two sides of a run while they are being produced, including what a
+// restart has to make good.
+type CandidateLedger interface {
 	StartCandidate(ctx context.Context, experimentID, candidateID string, now time.Time) error
 	CompleteCandidate(ctx context.Context, candidate Candidate) error
 	FailUnfinished(ctx context.Context, experimentID string, failure Failure, now time.Time) error
 	RecoverInterrupted(ctx context.Context, failure Failure, now time.Time) (int64, error)
-	ListQueued(ctx context.Context) ([]string, error)
 	ResetFailedCandidates(ctx context.Context, experimentID string) (int64, error)
 	RestoreFailedCandidates(ctx context.Context, experimentID string, candidates []Candidate) error
+}
+
+// OutcomeLedger is what the owner decided and what happened when it was applied.
+type OutcomeLedger interface {
 	Decide(ctx context.Context, id, userID, candidateID string, status Status, outcome Outcome, adoptionRequested bool, decidedAt, expiresAt time.Time) (bool, error)
 	SetApplyFailure(ctx context.Context, id, userID string, failure Failure) error
 	SetApplied(ctx context.Context, id, userID string, now time.Time) error
 	SetAdoptionFailure(ctx context.Context, id, userID string, failure Failure) error
 	SetAdopted(ctx context.Context, id, userID string, now time.Time) error
 	LeaderboardData(ctx context.Context, userID string, stage Stage) ([]Experiment, []Candidate, error)
+}
+
+// RunRetention is the cleanup: a run that has outlived its window, and one whose post is
+// gone.
+type RunRetention interface {
 	PurgeExpired(ctx context.Context, before time.Time) (int64, error)
 	PurgePost(ctx context.Context, userID, postSlug string) error
-	CountPublishableForVoice(ctx context.Context, userID, voiceID string) (int, error)
+}
+
+// Storage is every behaviour the experiment context's SQL store happens to implement: the
+// composition root's handle, not a port (ARCH-6).
+type Storage interface {
+	RunLedger
+	CandidateLedger
+	OutcomeLedger
+	RunRetention
 }
 
 // VoiceDirectory is the voice context's published check that a voice is owned and alive,

@@ -7,14 +7,16 @@ import (
 )
 
 type Sweeper struct {
-	store Store
-	now   func() time.Time
+	retention RunRetention
+	now       func() time.Time
 }
 
-func NewSweeper(store Store) *Sweeper { return &Sweeper{store: store, now: time.Now} }
+func NewSweeper(retention RunRetention) *Sweeper {
+	return &Sweeper{retention: retention, now: time.Now}
+}
 
 func (s *Sweeper) Sweep(ctx context.Context) (int64, error) {
-	return s.store.PurgeExpired(ctx, s.now())
+	return s.retention.PurgeExpired(ctx, s.now())
 }
 
 func (s *Sweeper) Run(ctx context.Context, interval time.Duration) {

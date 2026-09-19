@@ -28,9 +28,15 @@ var ErrSettlementOutcome = errors.New("settlement requires a persisted terminal 
 
 // Service is the credit gate and the ledger writer.
 type Service struct {
-	store   Store
-	models  Models
-	anchors Anchors
+	// tx is also the handle every narrow port below is served from: the ledger has one
+	// store, and a use-case names the behaviour it uses (ARCH-6).
+	tx        WriteScope
+	lots      LotLedger
+	purchases PurchasedLotLedger
+	charges   SpendLedger
+	holds     HoldLedger
+	models    Models
+	anchors   Anchors
 
 	// approvedKinds is the work that may not start without an approved credit ceiling.
 	// The composition root names it: the ledger enforces the rule and never learns which
@@ -52,7 +58,7 @@ type Service struct {
 // would silently revert to a calendar month (ARCH-40). approvedKinds is the work that
 // must carry an approved ceiling; an empty list is a ledger where every start is priced
 // from its planned calls alone, which is a real mode and must be stated.
-func NewService(store Store, models Models, maxCompletionTokens int64, anchors Anchors, approvedKinds ...string) *Service {
+func NewService(store Storage, models Models, maxCompletionTokens int64, anchors Anchors, approvedKinds ...string) *Service {
 	if anchors == nil {
 		panic("usage: monthly anchors are required")
 	}
@@ -61,7 +67,8 @@ func NewService(store Store, models Models, maxCompletionTokens int64, anchors A
 		approved[kind] = true
 	}
 	return &Service{
-		store: store, models: models, anchors: anchors, approvedKinds: approved,
+		tx: store, lots: store, purchases: store, charges: store, holds: store,
+		models: models, anchors: anchors, approvedKinds: approved,
 		maxCompletionTokens: maxCompletionTokens,
 		now:                 time.Now, newID: newID,
 	}
@@ -83,9 +90,9 @@ func (s *Service) approvedKindList() []string {
 	return kinds
 }
 
-func (s *Service) WithStore(store Store) *Service {
+func (s *Service) WithStore(store Storage) *Service {
 	clone := *s
-	clone.store = store
+	clone.tx, clone.lots, clone.purchases, clone.charges, clone.holds = store, store, store, store, store
 	return &clone
 }
 
@@ -104,7 +111,7 @@ func (s *Service) OpenMonthlyLot(ctx context.Context, userID string, tier plan.P
 		return errors.New("open monthly lot: invalid user, tier, or window")
 	}
 	credits := plan.MonthlyCredits(tier)
-	_, err := s.store.InsertLotIfAbsent(ctx, Lot{
+	_, err := s.lots.InsertLotIfAbsent(ctx, Lot{
 		ID: monthlyLotID(userID, start), UserID: userID, Kind: LotMonthly,
 		Granted: credits, Remaining: credits, ExpiresAt: &end, CreatedAt: s.now(),
 	})
@@ -130,7 +137,7 @@ func (s *Service) StartMonthlyWindow(ctx context.Context, userID string, tier pl
 	credits := plan.MonthlyCredits(tier)
 	id := monthlyLotID(userID, start)
 	now := s.now()
-	return s.store.InWriteTx(ctx, func(tx Store) error {
+	return s.tx.InWriteTx(ctx, func(tx Storage) error {
 		if err := tx.ExpireMonthlyLotsExcept(ctx, userID, id, start); err != nil {
 			return err
 		}
@@ -152,14 +159,14 @@ func (s *Service) RaiseMonthlyLot(ctx context.Context, userID string, credits in
 	if credits <= 0 {
 		return errors.New("raise monthly lot: credits must be positive")
 	}
-	lot, found, err := s.store.ActiveMonthlyLot(ctx, userID, s.now())
+	lot, found, err := s.lots.ActiveMonthlyLot(ctx, userID, s.now())
 	if err != nil {
 		return err
 	}
 	if !found {
 		return nil
 	}
-	return s.store.RaiseLot(ctx, lot.ID, credits)
+	return s.lots.RaiseLot(ctx, lot.ID, credits)
 }
 
 func (s *Service) OpenPurchasedLot(ctx context.Context, userID string, credits int) (string, error) {
@@ -167,7 +174,7 @@ func (s *Service) OpenPurchasedLot(ctx context.Context, userID string, credits i
 		return "", errors.New("open purchased lot: user and positive credits are required")
 	}
 	id := "purchased:" + s.newID()
-	err := s.store.InsertLot(ctx, Lot{ID: id, UserID: userID, Kind: LotPurchased, Granted: credits, Remaining: credits, CreatedAt: s.now()})
+	err := s.lots.InsertLot(ctx, Lot{ID: id, UserID: userID, Kind: LotPurchased, Granted: credits, Remaining: credits, CreatedAt: s.now()})
 	if err != nil {
 		return "", err
 	}
@@ -175,7 +182,7 @@ func (s *Service) OpenPurchasedLot(ctx context.Context, userID string, credits i
 }
 
 func (s *Service) VoidUntouchedLot(ctx context.Context, lotID string) error {
-	ok, err := s.store.VoidUntouchedLot(ctx, lotID)
+	ok, err := s.purchases.VoidUntouchedLot(ctx, lotID)
 	if err != nil {
 		return err
 	}
@@ -189,7 +196,7 @@ func (s *Service) LotUntouched(ctx context.Context, lotID string) (bool, error) 
 	if lotID == "" {
 		return false, nil
 	}
-	return s.store.LotUntouched(ctx, lotID)
+	return s.purchases.LotUntouched(ctx, lotID)
 }
 
 // UntouchedLots answers, for each of the given purchased lots, whether it is still whole.
@@ -202,7 +209,7 @@ func (s *Service) UntouchedLots(ctx context.Context, lotIDs []string) (map[strin
 	if len(lotIDs) == 0 {
 		return nil, nil
 	}
-	ids, err := s.store.UntouchedPurchasedLots(ctx, lotIDs)
+	ids, err := s.purchases.UntouchedPurchasedLots(ctx, lotIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -217,7 +224,7 @@ func (s *Service) RestoreLot(ctx context.Context, lotID string, credits int) err
 	if credits <= 0 {
 		return errors.New("restore lot: credits must be positive")
 	}
-	ok, err := s.store.RestoreLot(ctx, lotID, credits)
+	ok, err := s.purchases.RestoreLot(ctx, lotID, credits)
 	if err != nil {
 		return err
 	}
@@ -231,7 +238,7 @@ func (s *Service) GrantBonusOnce(ctx context.Context, id, userID string, credits
 	if id == "" || userID == "" || credits <= 0 {
 		return false, errors.New("grant bonus: id, user, and positive credits are required")
 	}
-	return s.store.InsertLotIfAbsent(ctx, Lot{ID: id, UserID: userID, Kind: LotBonus, Granted: credits, Remaining: credits, CreatedAt: s.now()})
+	return s.lots.InsertLotIfAbsent(ctx, Lot{ID: id, UserID: userID, Kind: LotBonus, Granted: credits, Remaining: credits, CreatedAt: s.now()})
 }
 
 // Hold reserves the credits one piece of LLM work could cost, and records the start.
@@ -279,7 +286,7 @@ func (s *Service) Hold(ctx context.Context, start Start) error {
 		}
 	}
 
-	return s.store.InWriteTx(ctx, func(tx Store) error {
+	return s.tx.InWriteTx(ctx, func(tx Storage) error {
 		if approved != nil && required > *approved {
 			return &CreditCeilingError{Required: required, Approved: *approved}
 		}
@@ -312,7 +319,7 @@ func (s *Service) Hold(ctx context.Context, start Start) error {
 // spend takes credits out of the account's lots in consumption order, refusing before it
 // writes anything if they do not cover the amount.
 func (s *Service) spend(
-	ctx context.Context, tx Store, userID string, required int, now, renewsAt time.Time,
+	ctx context.Context, tx Storage, userID string, required int, now, renewsAt time.Time,
 ) ([]LotDebit, error) {
 	lots, err := tx.LotsInConsumptionOrder(ctx, userID, now)
 	if err != nil {
@@ -354,7 +361,7 @@ func (s *Service) spend(
 // It runs on access rather than on a timer so a balance is correct on the first request
 // after a boundary, whether or not anything was running when the boundary passed.
 func (s *Service) renew(
-	ctx context.Context, tx Store, userID string, acting plan.Plan, now time.Time,
+	ctx context.Context, tx Storage, userID string, acting plan.Plan, now time.Time,
 ) (time.Time, error) {
 	if s.anchors == nil {
 		return time.Time{}, errors.New("usage: monthly anchors are not wired")
@@ -441,7 +448,7 @@ func (s *Service) Settle(ctx context.Context, jobID string, outcome TerminalOutc
 	}
 	now := s.now()
 
-	return s.store.InWriteTx(ctx, func(tx Store) error {
+	return s.tx.InWriteTx(ctx, func(tx Storage) error {
 		admission, debits, found, err := tx.HoldForJob(ctx, jobID)
 		if err != nil {
 			return err
@@ -504,7 +511,7 @@ func (s *Service) Settle(ctx context.Context, jobID string, outcome TerminalOutc
 
 // refund returns credits to the lots they were taken from, newest debit last, so a lot
 // can never be credited past what it granted.
-func refund(ctx context.Context, tx Store, debits []LotDebit, amount int) error {
+func refund(ctx context.Context, tx Storage, debits []LotDebit, amount int) error {
 	left := amount
 	for _, debit := range debits {
 		if left == 0 {
@@ -523,7 +530,7 @@ func refund(ctx context.Context, tx Store, debits []LotDebit, amount int) error 
 // spend it never refuses: settlement is charging for work already done, and the only
 // question left is how much of it the balance can absorb.
 func (s *Service) spendUpTo(
-	ctx context.Context, tx Store, userID string, amount int, now time.Time,
+	ctx context.Context, tx Storage, userID string, amount int, now time.Time,
 ) (int, error) {
 	lots, err := tx.LotsInConsumptionOrder(ctx, userID, now)
 	if err != nil {
@@ -553,7 +560,7 @@ func (s *Service) Release(ctx context.Context, jobID string) error {
 	if jobID == "" {
 		return nil
 	}
-	return s.store.InWriteTx(ctx, func(tx Store) error {
+	return s.tx.InWriteTx(ctx, func(tx Storage) error {
 		admission, debits, found, err := tx.HoldForJob(ctx, jobID)
 		if err != nil {
 			return err
@@ -572,7 +579,7 @@ func (s *Service) Release(ctx context.Context, jobID string) error {
 // at boot — asks the job context which of them are terminal and settles those; this
 // context never reads another context's tables.
 func (s *Service) OpenHolds(ctx context.Context) ([]string, error) {
-	return s.store.UnsettledHoldJobs(ctx)
+	return s.holds.UnsettledHoldJobs(ctx)
 }
 
 // Record persists one completed provider call, pricing it by the shared reported →
@@ -601,7 +608,7 @@ func (s *Service) Record(ctx context.Context, call Call) error {
 		OutputUSDPerMillion: info.OutputUSDPerMillion,
 	})
 
-	return s.store.InsertEvent(ctx, Event{
+	return s.charges.InsertEvent(ctx, Event{
 		UserID:             call.UserID,
 		Kind:               call.Kind,
 		JobID:              call.JobID,
@@ -657,7 +664,7 @@ func (s *Service) RecordCall(ctx context.Context, ref llm.ModelRef, stage string
 // stage. It is the ledger's published answer to "is this model honoring its effort", read
 // by the curation surface through its own port — the catalog never touches usage_events.
 func (s *Service) ReasoningSpendByModel(ctx context.Context, stage string) ([]ReasoningSpend, error) {
-	return s.store.ReasoningSpend(ctx, stage, s.now().Add(-ReasoningSpendWindow))
+	return s.charges.ReasoningSpend(ctx, stage, s.now().Add(-ReasoningSpendWindow))
 }
 
 // BalanceFor reports what the account may spend, renewing the monthly grant first so a
@@ -666,7 +673,7 @@ func (s *Service) BalanceFor(ctx context.Context, userID string, acting plan.Pla
 	now := s.now()
 
 	var balance Balance
-	err := s.store.InWriteTx(ctx, func(tx Store) error {
+	err := s.tx.InWriteTx(ctx, func(tx Storage) error {
 		renewsAt, err := s.renew(ctx, tx, userID, acting, now)
 		if err != nil {
 			return err
@@ -704,7 +711,7 @@ func (s *Service) SpendableCredits(ctx context.Context, userID string, acting pl
 	if plan.Unlimited(acting) {
 		return 0, true, nil
 	}
-	lots, err := s.store.LotsInConsumptionOrder(ctx, userID, s.now())
+	lots, err := s.lots.LotsInConsumptionOrder(ctx, userID, s.now())
 	if err != nil {
 		return 0, false, err
 	}
@@ -726,7 +733,7 @@ func (s *Service) CreditsFor(calls []PlannedCall) int {
 // whatever request happens to renew it first.
 func (s *Service) EnsureMonthlyLot(ctx context.Context, userID string, acting plan.Plan) error {
 	now := s.now()
-	return s.store.InWriteTx(ctx, func(tx Store) error {
+	return s.tx.InWriteTx(ctx, func(tx Storage) error {
 		_, err := s.renew(ctx, tx, userID, acting, now)
 		return err
 	})
@@ -744,7 +751,7 @@ func (s *Service) TopUpMonthlyLot(ctx context.Context, userID string, credits in
 	if credits <= 0 {
 		return fmt.Errorf("top up: credits must be positive")
 	}
-	return s.store.InWriteTx(ctx, func(tx Store) error {
+	return s.tx.InWriteTx(ctx, func(tx Storage) error {
 		lot, found, err := tx.ActiveMonthlyLot(ctx, userID, s.now())
 		if err != nil {
 			return err
@@ -761,7 +768,7 @@ func (s *Service) Grant(ctx context.Context, userID string, credits int, expires
 	if credits <= 0 {
 		return fmt.Errorf("grant: credits must be positive")
 	}
-	return s.store.InsertLot(ctx, Lot{
+	return s.lots.InsertLot(ctx, Lot{
 		ID: s.newID(), UserID: userID, Kind: LotBonus,
 		Granted: credits, Remaining: credits,
 		ExpiresAt: expiresAt, CreatedAt: s.now(),

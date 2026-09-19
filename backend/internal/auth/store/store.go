@@ -25,7 +25,7 @@ import (
 // than "…08.513110616Z" byte-for-byte, so a sweep would judge the wrong row expired.
 const writeLayout = "2006-01-02T15:04:05.000000000Z07:00"
 
-// Store implements auth.Store over SQLite.
+// Store implements auth.Storage over SQLite.
 //
 // It holds both handles because the split is not an implementation detail it can hide:
 // writes must serialize through the single writer connection, reads should not

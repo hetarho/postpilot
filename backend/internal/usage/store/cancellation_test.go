@@ -35,7 +35,7 @@ func TestSQLiteCancellationSettlementIsOnceBoundedAndSeparateFromUsage(t *testin
 			ctx := context.Background()
 			st := usagestore.New(handle.Writer, handle.Reader)
 			insertLot(t, handle, "original", "alice", "purchased", 200, nil, time.Now())
-			err := st.InWriteTx(ctx, func(tx usage.Store) error {
+			err := st.InWriteTx(ctx, func(tx usage.Storage) error {
 				if err := tx.InsertAdmission(ctx, usage.Admission{UserID: "alice", Kind: "generate_clip", JobID: "clip", HoldCredits: tc.reservation, ApprovedMaxCredits: &tc.reservation, CancellationPolicyVersion: 1, CreatedAt: time.Now()}); err != nil {
 					return err
 				}

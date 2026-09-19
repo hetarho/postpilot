@@ -12,7 +12,7 @@ import (
 	"github.com/postpilot/backend/internal/plan"
 )
 
-// fakeStore is an in-memory auth.Store. It exists because these tests are about the
+// fakeStore is an in-memory auth.Storage. It exists because these tests are about the
 // service's rules (what a failure reveals, when a session dies), not about SQL.
 type fakeStore struct {
 	users    map[string]User

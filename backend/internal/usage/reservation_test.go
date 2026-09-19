@@ -35,7 +35,7 @@ func TestClipSettlementNeverDebitsAboveReservation(t *testing.T) {
 }
 
 type clipRecordStore struct {
-	Store
+	Storage
 	event Event
 }
 
@@ -52,9 +52,9 @@ func (s *clipRecordStore) InsertEvent(ctx context.Context, e Event) error {
 }
 
 func TestClipCanceledCallStillRecordsReportedUsage(t *testing.T) {
-	svc, _ := newTestService(t, seoulNoon)
-	store := &clipRecordStore{Store: svc.store}
-	svc.store = store
+	svc, backing := newTestService(t, seoulNoon)
+	store := &clipRecordStore{Storage: backing}
+	svc.tx, svc.lots, svc.purchases, svc.charges, svc.holds = store, store, store, store, store
 	ctx, cancel := context.WithCancel(WithWork(context.Background(), Work{UserID: "alice", Kind: "generate_clip", JobID: "clip"}))
 	cancel()
 	if err := svc.RecordCall(ctx, cheapRef, "observe", llm.Usage{PromptTokens: 10, CostMicrousd: 100, CostReported: true}, ctx.Err()); err != nil {

@@ -12,7 +12,7 @@ import (
 	"github.com/postpilot/backend/internal/plan"
 )
 
-// fakeStore is an in-memory usage.Store. These tests are about the hold rules, the
+// fakeStore is an in-memory usage.Storage. These tests are about the hold rules, the
 // consumption order and the settlement arithmetic, not about SQL — but the two guards the
 // real statements carry (a lot never drops below zero, never rises above its grant) are
 // reproduced here, because those are the invariant rather than an implementation detail.
@@ -35,7 +35,7 @@ func newFakeStore() *fakeStore {
 
 // InWriteTx is a pass-through here: these tests assert the rules, and the real store's
 // BEGIN IMMEDIATE is what makes them hold under concurrency.
-func (f *fakeStore) InWriteTx(_ context.Context, fn func(Store) error) error { return fn(f) }
+func (f *fakeStore) InWriteTx(_ context.Context, fn func(Storage) error) error { return fn(f) }
 
 func (f *fakeStore) LotsInConsumptionOrder(_ context.Context, userID string, now time.Time) ([]Lot, error) {
 	var out []Lot

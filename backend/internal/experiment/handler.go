@@ -11,34 +11,34 @@ import (
 // Handle runs one durable experiment job. The queue owns durability; this method owns
 // stage orchestration and persists each candidate independently as it finishes.
 func (s *Service) Handle(ctx context.Context, experimentID string, progress Progress) error {
-	found, err := s.store.Get(ctx, experimentID)
+	found, err := s.runs.Get(ctx, experimentID)
 	if err != nil {
 		return err
 	}
 	if len(found.InputSnapshot) == 0 {
-		_ = s.store.FailUnfinished(ctx, found.ID, normalizeFailure(ErrSnapshotUnavailable), s.now())
+		_ = s.candidates.FailUnfinished(ctx, found.ID, normalizeFailure(ErrSnapshotUnavailable), s.now())
 		return ErrSnapshotUnavailable
 	}
-	if err := s.store.SetStatus(ctx, found.ID, StatusRunning, nil); err != nil {
+	if err := s.runs.SetStatus(ctx, found.ID, StatusRunning, nil); err != nil {
 		return err
 	}
 	if found.Stage == StageWrite {
 		prepared, err := s.runner.PrepareWrite(ctx, found, progress)
 		if err != nil {
-			_ = s.store.FailUnfinished(ctx, found.ID, normalizeFailure(err), s.now())
+			_ = s.candidates.FailUnfinished(ctx, found.ID, normalizeFailure(err), s.now())
 			return err
 		}
 		if prepared.TargetLanguage == nil || found.TargetLanguage == nil || *prepared.TargetLanguage != *found.TargetLanguage {
-			_ = s.store.FailUnfinished(ctx, found.ID, normalizeFailure(ErrLanguageRequired), s.now())
+			_ = s.candidates.FailUnfinished(ctx, found.ID, normalizeFailure(ErrLanguageRequired), s.now())
 			return ErrLanguageRequired
 		}
 		frozen, hash, err := FreezeSnapshot(prepared)
 		if err != nil {
-			_ = s.store.FailUnfinished(ctx, found.ID, normalizeFailure(err), s.now())
+			_ = s.candidates.FailUnfinished(ctx, found.ID, normalizeFailure(err), s.now())
 			return err
 		}
-		if err := s.store.SetSnapshot(ctx, found.ID, frozen, hash); err != nil {
-			_ = s.store.FailUnfinished(ctx, found.ID, normalizeFailure(err), s.now())
+		if err := s.runs.SetSnapshot(ctx, found.ID, frozen, hash); err != nil {
+			_ = s.candidates.FailUnfinished(ctx, found.ID, normalizeFailure(err), s.now())
 			return err
 		}
 		found.InputSnapshot = frozen.Content
@@ -46,10 +46,10 @@ func (s *Service) Handle(ctx context.Context, experimentID string, progress Prog
 		found.PromptVersion = frozen.PromptVersion
 	}
 	if err := s.runCandidates(ctx, found, progress); err != nil {
-		_ = s.store.FailUnfinished(ctx, found.ID, normalizeFailure(err), s.now())
+		_ = s.candidates.FailUnfinished(ctx, found.ID, normalizeFailure(err), s.now())
 		return err
 	}
-	updated, err := s.store.Get(ctx, found.ID)
+	updated, err := s.runs.Get(ctx, found.ID)
 	if err != nil {
 		return err
 	}
@@ -58,7 +58,7 @@ func (s *Service) Handle(ctx context.Context, experimentID string, progress Prog
 		return err
 	}
 	finished := s.now()
-	if err := s.store.SetStatus(ctx, found.ID, status, &finished); err != nil {
+	if err := s.runs.SetStatus(ctx, found.ID, status, &finished); err != nil {
 		return err
 	}
 	if status == StatusFailed {
@@ -69,7 +69,7 @@ func (s *Service) Handle(ctx context.Context, experimentID string, progress Prog
 
 func (s *Service) runCandidate(ctx context.Context, found Experiment, candidate Candidate, progress Progress) error {
 	started := s.now()
-	if err := s.store.StartCandidate(ctx, found.ID, candidate.ID, started); err != nil {
+	if err := s.candidates.StartCandidate(ctx, found.ID, candidate.ID, started); err != nil {
 		return err
 	}
 	candidate.Status = CandidateRunning
@@ -96,7 +96,7 @@ func (s *Service) runCandidate(ctx context.Context, found Experiment, candidate 
 		candidate.Status = CandidateSucceeded
 		candidate.Failure = nil
 	}
-	return s.store.CompleteCandidate(ctx, candidate)
+	return s.candidates.CompleteCandidate(ctx, candidate)
 }
 
 func diagnosticError(err error) error {

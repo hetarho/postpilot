@@ -7,15 +7,19 @@ import (
 	"github.com/postpilot/backend/internal/llm"
 )
 
-// Store is the persistence this context needs, declared here by its consumer
+// Storage is the persistence this context needs, declared here by its consumer
 // (ARCHITECTURE §2.2).
-type Store interface {
+// WriteScope runs one ledger write as a transaction the caller may join (ARCH-6).
+type WriteScope interface {
 	// InWriteTx runs fn inside ONE write transaction, handing it a store scoped to that
 	// transaction. The hold needs it: reading a balance and spending it are one decision,
 	// and two concurrent starts that each read the same balance would otherwise both be
 	// admitted past it.
-	InWriteTx(ctx context.Context, fn func(Store) error) error
+	InWriteTx(ctx context.Context, fn func(Storage) error) error
+}
 
+// LotLedger is the grants an account holds and the order they are spent in.
+type LotLedger interface {
 	// LotsInConsumptionOrder returns the account's unexpired lots, ordered by expiry
 	// ascending with the non-expiring ones last. That single ordering is what makes the
 	// monthly grant spend before a bonus without a second rule.
@@ -40,6 +44,10 @@ type Store interface {
 	// is the upgrade top-up (QUOTA-35) and the only write that edits a grant already
 	// given; a renewal opens a new lot instead.
 	RaiseLot(ctx context.Context, lotID string, credits int) error
+}
+
+// PurchasedLotLedger is what a refund needs to know and do about a bought grant.
+type PurchasedLotLedger interface {
 	VoidUntouchedLot(ctx context.Context, lotID string) (bool, error)
 	LotUntouched(ctx context.Context, lotID string) (bool, error)
 	// UntouchedPurchasedLots answers the same question for many lots at once, on the read
@@ -47,12 +55,25 @@ type Store interface {
 	// a write — that is what LotUntouched's writer read is for.
 	UntouchedPurchasedLots(ctx context.Context, lotIDs []string) ([]string, error)
 	RestoreLot(ctx context.Context, lotID string, credits int) (bool, error)
+}
+
+// SpendLedger is a call charged to an account and the evidence kept of it.
+type SpendLedger interface {
 	// SpendFromLot and RefundToLot move credits within one lot. Both are guarded in SQL by
 	// the amount available, so a concurrent write cannot drive a lot past its own bounds
 	// even if a caller's arithmetic is stale.
 	SpendFromLot(ctx context.Context, lotID string, credits int) error
 	RefundToLot(ctx context.Context, lotID string, credits int) error
+	InsertEvent(ctx context.Context, event Event) error
+	// ReasoningSpend aggregates recorded calls at one stage since `since`, per model.
+	ReasoningSpend(ctx context.Context, stage string, since time.Time) ([]ReasoningSpend, error)
+	// CostForJob preserves the distinction between priced evidence and unavailable cost.
+	CostForJob(ctx context.Context, jobID string) (JobCost, error)
+}
 
+// HoldLedger is the ceiling a job was admitted under, the credits held against it, and the
+// settlement that closes it.
+type HoldLedger interface {
 	InsertAdmission(ctx context.Context, admission Admission) error
 	InsertHoldDebits(ctx context.Context, jobID string, debits []LotDebit) error
 	// HoldForJob returns the admission and the lots its hold came from. Missing means the
@@ -66,12 +87,16 @@ type Store interface {
 	// one deletion this context performs: the ledger proper is append-only, but a start
 	// that never happened must not stay charged.
 	DeleteAdmissionForJob(ctx context.Context, jobID string) error
+}
 
-	InsertEvent(ctx context.Context, event Event) error
-	// ReasoningSpend aggregates recorded calls at one stage since `since`, per model.
-	ReasoningSpend(ctx context.Context, stage string, since time.Time) ([]ReasoningSpend, error)
-	// CostForJob preserves the distinction between priced evidence and unavailable cost.
-	CostForJob(ctx context.Context, jobID string) (JobCost, error)
+// Storage is every behaviour the ledger's SQL store happens to implement: the composition
+// root's handle, not a port (ARCH-6).
+type Storage interface {
+	WriteScope
+	LotLedger
+	PurchasedLotLedger
+	SpendLedger
+	HoldLedger
 }
 
 // Models resolves a ref's registry metadata. The hold needs its prices to estimate a

@@ -18,7 +18,7 @@ func TestInWriteTxSurvivesACancelledCaller(t *testing.T) {
 	store := usagestore.New(handle.Writer, handle.Reader)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	err := store.InWriteTx(ctx, func(usage.Store) error {
+	err := store.InWriteTx(ctx, func(usage.Storage) error {
 		// What a disconnecting browser does: the request context dies mid-transaction, so
 		// the rollback cannot be issued on it either.
 		cancel()
@@ -28,7 +28,7 @@ func TestInWriteTxSurvivesACancelledCaller(t *testing.T) {
 		t.Fatalf("InWriteTx err = %v, want context.Canceled", err)
 	}
 
-	if err := store.InWriteTx(context.Background(), func(usage.Store) error { return nil }); err != nil {
+	if err := store.InWriteTx(context.Background(), func(usage.Storage) error { return nil }); err != nil {
 		t.Fatalf("the next write transaction inherited the abandoned one: %v", err)
 	}
 }
@@ -39,14 +39,14 @@ func TestInWriteTxSurvivesACancelledCommit(t *testing.T) {
 	store := usagestore.New(handle.Writer, handle.Reader)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	if err := store.InWriteTx(ctx, func(usage.Store) error {
+	if err := store.InWriteTx(ctx, func(usage.Storage) error {
 		cancel()
 		return nil
 	}); err == nil {
 		t.Fatal("a commit on a cancelled context reported success")
 	}
 
-	if err := store.InWriteTx(context.Background(), func(usage.Store) error { return nil }); err != nil {
+	if err := store.InWriteTx(context.Background(), func(usage.Storage) error { return nil }); err != nil {
 		t.Fatalf("the next write transaction inherited the abandoned one: %v", err)
 	}
 }

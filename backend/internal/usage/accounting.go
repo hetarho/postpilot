@@ -22,7 +22,7 @@ type accountingReader interface {
 // spent and returned. The kinds it covers are the ones the root marked as needing an
 // approval; the ledger passes them down rather than naming a product in SQL.
 func (s *Service) ReservationAccounting(ctx context.Context, user, job string) (*ReservationAccounting, error) {
-	r, ok := s.store.(accountingReader)
+	r, ok := s.holds.(accountingReader)
 	if !ok {
 		return nil, ErrApprovalRequired
 	}

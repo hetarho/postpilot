@@ -19,7 +19,7 @@ import (
 // order — or hide one that has not actually lapsed.
 const writeLayout = "2006-01-02T15:04:05.000000000Z07:00"
 
-// Store implements usage.Store over SQLite.
+// Store implements usage.Storage over SQLite.
 //
 // writer is kept alongside the query set because a transaction must be opened on the same
 // handle the queries run against — and that handle is capped at one connection, so a
@@ -46,7 +46,7 @@ func NewTx(tx *sql.Tx) *Store {
 // The writer pool opens immediate transactions (platform/db), so the write lock is held
 // from BEGIN — SQLite's deferred default would take it only at the first write, which is
 // exactly the window in which two admissions could both read the same count and both pass.
-func (s *Store) InWriteTx(ctx context.Context, fn func(usage.Store) error) error {
+func (s *Store) InWriteTx(ctx context.Context, fn func(usage.Storage) error) error {
 	if s.writer == nil {
 		// Already inside a transaction — nesting would deadlock on the single writer.
 		return fn(s)

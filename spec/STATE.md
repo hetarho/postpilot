@@ -50,7 +50,6 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
-| T277 | experiment, usage and auth ports are per use-case | ARCH | T286 | todo |
 | T278 | a failure reason is a proto enum both sides compile against | ARCH | - | todo |
 | T279 | every hand-kept enum mirror is pinned to the generated enum | ARCH | T008 | todo |
 | T281 | clip.proto becomes one file and service per rpc family | ARCH | T262 | todo |
@@ -64,6 +63,8 @@
 - agent tasks T279 T282 T283 T284 wait for T008; T008 belongs to another session and T177 remains blocked
 - post-quality-and-related-links remains open ideation, awaiting conversion when ready
 ## log
+- 260920 T277 done; experiment/usage/auth traded three 23-24 method Stores for 14 behaviour ports, none over 10, with the usage tx port kept as WriteScope; ARCH-26 green
+- 260920 T277 claimed (clp)
 - 260920 T276 done; post/voice/publishing traded four table-shaped Stores (31+22+37+29) for 22 behaviour ports, none over 10 methods, with the composites left only as the composition root handle; ARCH-26 green
 - 260920 T276 claimed (clp)
 - 260920 T280 done; billing/plan/publishing boundaries translate at the adapter, provision takes Settings, health moved under platform, and the generate payload is pinned by a golden test. The json-tag item is a mapper-in-the-same-package fact, not a leak — see the task result
@@ -82,5 +83,3 @@
 - 260920 T263 claimed (clp)
 - 260920 T262 done; the clip ESLint/vitest allowlist is deleted, 12 clip slices trade transports for entity call hooks (project/source/plan/render families) and ClipRenderKind stops at clip-preview; ARCH-25 green
 - 260920 T262 claimed (clp)
-- 260920 T261 done; ClipPage is 98 lines over widgets/clip-workspace, useClipWorkspace returns 11 handles, ClipCorrectionWorkspace takes 6 props (was 22) and the four page-held rules are named model functions with 27 DOM-free assertions; ARCH-25 green
-- 260920 T261 claimed (clp)
