@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"context"
@@ -7,18 +7,31 @@ import (
 	"time"
 
 	"github.com/postpilot/backend/internal/clip"
-	clipstore "github.com/postpilot/backend/internal/clip/store"
 	"github.com/postpilot/backend/internal/job"
-	jobstore "github.com/postpilot/backend/internal/job/store"
 )
 
-type clipFinisher struct {
+// Finisher is the terminal-commit saga: a finished attempt's job row and its
+// clip result land in one writer transaction, or neither does. A candidate
+// stays staged until then so a crash between upload and commit loses nothing.
+type Finisher struct {
 	writer *sql.DB
-	clips  *clipstore.Store
-	jobs   *jobstore.Store
+	bind   Binder
+	jobs   JobReader
+	clips  ClipStore
+	now    func() time.Time
 }
 
-func (f clipFinisher) resultCommitted(ctx context.Context, c clip.AttemptResult) bool {
+func NewFinisher(writer *sql.DB, bind Binder, jobs JobReader, clips ClipStore, now func() time.Time) Finisher {
+	if writer == nil || bind == nil || jobs == nil || clips == nil {
+		panic("clip app: finisher needs writer, binder, jobs and clips")
+	}
+	if now == nil {
+		now = time.Now
+	}
+	return Finisher{writer: writer, bind: bind, jobs: jobs, clips: clips, now: now}
+}
+
+func (f Finisher) resultCommitted(ctx context.Context, c clip.AttemptResult) bool {
 	j, err := f.jobs.GetByID(ctx, c.JobID)
 	if err != nil || j.Status != job.StatusDone || j.UserID != c.UserID || j.ClipProjectID != c.ProjectID {
 		return false
@@ -35,7 +48,7 @@ func (f clipFinisher) resultCommitted(ctx context.Context, c clip.AttemptResult)
 	return p.Result != nil && p.Result.Key == c.Result.Key
 }
 
-func (f clipFinisher) Complete(ctx context.Context, c clip.AttemptResult) error {
+func (f Finisher) Complete(ctx context.Context, c clip.AttemptResult) error {
 	cleanup, stop := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 	defer stop()
 	j, err := f.jobs.GetByID(cleanup, c.JobID)
@@ -62,9 +75,8 @@ func (f clipFinisher) Complete(ctx context.Context, c clip.AttemptResult) error 
 			}
 		}
 	}
-	err = clipWriteTx(ctx, f.writer, func(tx *sql.Tx) error {
-		jobs, clips := jobstore.NewTx(tx), clipstore.NewTx(tx)
-		j, err := jobs.GetByID(ctx, c.JobID)
+	err = WriteTx(ctx, f.writer, f.bind, func(p Ports) error {
+		j, err := p.Jobs.GetByID(ctx, c.JobID)
 		if err != nil {
 			return err
 		}
@@ -76,7 +88,7 @@ func (f clipFinisher) Complete(ctx context.Context, c clip.AttemptResult) error 
 		}
 		candidate := c
 		if !plan {
-			candidate, err = clips.GetAttemptResult(ctx, c.JobID)
+			candidate, err = p.Clips.GetAttemptResult(ctx, c.JobID)
 			if err != nil {
 				return err
 			}
@@ -84,16 +96,16 @@ func (f clipFinisher) Complete(ctx context.Context, c clip.AttemptResult) error 
 		if candidate.UserID != j.UserID || candidate.ProjectID != j.ClipProjectID || candidate.Result.Key != c.Result.Key || (j.Kind == job.KindGenerateClip) != (candidate.EditPlan != "") {
 			return clip.ErrInvalid
 		}
-		if err := clips.ApplyAttemptResult(ctx, candidate); err != nil {
+		if err := p.Clips.ApplyAttemptResult(ctx, candidate); err != nil {
 			return err
 		}
-		if err := jobs.Finish(ctx, j.ID, job.StatusDone, nil, time.Now()); err != nil {
+		if err := p.Jobs.Finish(ctx, j.ID, job.StatusDone, nil, f.now()); err != nil {
 			return err
 		}
 		if plan {
 			return nil
 		}
-		return clips.DeleteAttemptResult(ctx, c.JobID)
+		return p.Clips.DeleteAttemptResult(ctx, c.JobID)
 	})
 	if err == nil || f.resultCommitted(cleanup, c) {
 		return nil
@@ -110,7 +122,9 @@ func (f clipFinisher) Complete(ctx context.Context, c clip.AttemptResult) error 
 	return err
 }
 
-func (f clipFinisher) Recover(ctx context.Context) error {
+// Recover sweeps staged candidates whose job has already ended: a crash after
+// the stage but before the commit leaves a row nobody will commit.
+func (f Finisher) Recover(ctx context.Context) error {
 	rows, err := f.clips.PendingAttemptResults(ctx)
 	if err != nil {
 		return err

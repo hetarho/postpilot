@@ -62,7 +62,6 @@
 | T267 | pages consume hooks; verbs have one home; post owns its cache dependencies | ARCH | T259 | todo |
 | T268 | the route tree is assembled from route groups | ARCH | - | todo |
 | T269 | platform/config holds env only; limits live in their context | ARCH | - | todo |
-| T270 | clip pricing, approval and terminal commits leave cmd/api | ARCH | - | todo |
 | T271 | required collaborators enter through constructors; main is four steps | ARCH | T270 | todo |
 | T272 | job and usage expose primitives; clip composes them | ARCH | T270 | todo |
 | T273 | the clip root is the domain; use-cases live in clip/app | ARCH | T270 | todo |
@@ -79,10 +78,13 @@
 | T284 | the agent generates only the protos it uses and drops the survey harness | ARCH | T008 T281 | todo |
 
 ## next
-- implement-task T270 (P1: clip sagas out of cmd/api); FE roots with no dep: T258 T259 T260 T263 T264 T266 T268; BE roots: T269 T276 T278 T280
+- implement-task T271 (constructor injection + main shape, dep T270 done); then T272 T273; FE roots with no dep: T258 T259 T260 T263 T264 T266 T268; BE roots: T269 T276 T278 T280
+- the clip `release-smoke` stage is red at HEAD on this host: 9 of 28 modes end in `no result` (generation ends on a plan since T255, harness still expects a Result) — needs a fix task (review-code clip-release-smoke or update the harness)
 - agent tasks T279 T282 T283 T284 wait for T008; T008 belongs to another session and T177 remains blocked
 - post-quality-and-related-links remains open ideation, awaiting conversion when ready
 ## log
+- 260919 T270 done; clip sagas live in internal/clip/app over tx-scoped ports, cmd/api keeps wiring; ARCH-26 green; release-smoke 19/28 with the same 9 `no result` failures on an untouched HEAD build (pre-existing, out of scope)
+- 260919 T270 claimed (arc)
 - 260919 create-task review/arch-260919 + ARCH r5 done: 27 tasks T258-T284 (FE 11 · BE 12 · agent 3 · cross 1), review converted, ARCH tasked=5
 - 260919 create-task review/arch-260919 + ARCH r4 start
 - 260919 create-architecture ARCH r4 done (ARCH-3/6/14/16/17/21✎, ARCH-40/41+); warning: ARCH-3✎ touches agent enum mirrors that T008 (doing) exercises live — F24-F30 tasks must depend on T008
@@ -101,5 +103,3 @@
 - 260918 T253 claimed (rnd)
 - 260918 T252 done; retained-source audio uses pitch-preserving rates, exact cut timing, BS.1770 normalization and measured AAC priming; Chromium audio and video checks pass.
 - 260918 T252 claimed (rnd)
-- 260918 T251 done; worker composition encodes exact plan frames with server PNGs, one source read, bounded queues and cancellation cleanup; all three canvases and real-font media smokes pass.
-- 260918 T251 claimed (rnd)

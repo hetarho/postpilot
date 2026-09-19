@@ -3,9 +3,12 @@ package main
 import (
 	"context"
 	"database/sql"
-	"errors"
+	"time"
+
+	"github.com/postpilot/backend/internal/auth"
 	"github.com/postpilot/backend/internal/clip"
 	clipai "github.com/postpilot/backend/internal/clip/ai"
+	clipapp "github.com/postpilot/backend/internal/clip/app"
 	clipmedia "github.com/postpilot/backend/internal/clip/media"
 	clipstore "github.com/postpilot/backend/internal/clip/store"
 	"github.com/postpilot/backend/internal/job"
@@ -13,25 +16,45 @@ import (
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/platform/config"
 	"github.com/postpilot/backend/internal/storage"
-	"time"
+	"github.com/postpilot/backend/internal/usage"
+	usagestore "github.com/postpilot/backend/internal/usage/store"
 )
 
-func newClipGeneration(ctx context.Context, cfg *config.Config, store *clipstore.Store, projects *clip.Service, sources *clip.SourceService, bucket *storage.Bucket, media *clipmedia.Adapter, models meteredRegistry, queue *job.Queue, writer *sql.DB) (*clip.GenerationService, error) {
+// clipTxPorts is the one place that knows which store constructors wrap the
+// writer transaction the clip sagas commit in (ARCH-6): the job and clip stores
+// on the same *sql.Tx, and the credit admission over the ledger's tx-scoped
+// store so a hold lands with the job row it guards.
+func clipTxPorts(ledger *usage.Service, registry *llm.Registry, plans *auth.Service) clipapp.Binder {
+	return func(tx *sql.Tx) clipapp.Ports {
+		ports := clipapp.Ports{Jobs: jobstore.NewTx(tx), Clips: clipstore.NewTx(tx)}
+		if ledger != nil {
+			ports.Admission = jobAdmission{ledger: ledger.WithStore(usagestore.NewTx(tx)), registry: registry, plans: plans}
+		}
+		return ports
+	}
+}
+
+func clipBudgets(cfg clipai.Config) clipapp.Budgets {
+	return clipapp.Budgets{ObserveCompletionTokens: cfg.ObserveCompletionTokens, FlowCompletionTokens: cfg.FlowCompletionTokens, NarrationCompletionTokens: cfg.NarrationCompletionTokens, ObserveReasoning: cfg.ObserveReasoning, PlanReasoning: cfg.PlanReasoning}
+}
+
+func newClipGeneration(ctx context.Context, cfg *config.Config, store *clipstore.Store, projects *clip.Service, sources *clip.SourceService, bucket *storage.Bucket, media *clipmedia.Adapter, models meteredRegistry, queue *job.Queue, writer *sql.DB, bind clipapp.Binder) (*clip.GenerationService, error) {
 	renderer, err := clipmedia.NewRenderer(media, config.ClipRender(cfg))
 	if err != nil {
 		return nil, err
 	}
-	planner, err := clipai.New(clipModels{models}, renderer, config.ClipAI(cfg))
+	aiConfig := config.ClipAI(cfg)
+	planner, err := clipai.New(clipModels{models}, renderer, aiConfig)
 	if err != nil {
 		return nil, err
 	}
-	service := clip.NewGenerationService(store, projects, sources, bucket, media, planner, renderer, clipJobs{queue}, config.ClipGeneration(cfg))
-	finisher := clipFinisher{writer: writer, clips: store, jobs: jobstore.New(writer, writer)}
+	service := clip.NewGenerationService(store, projects, sources, bucket, media, planner, renderer, clipapp.NewJobs(queue), config.ClipGeneration(cfg))
+	finisher := clipapp.NewFinisher(writer, bind, jobstore.New(writer, writer), store, nil)
 	service.WithFinisher(finisher)
-	service.WithCredits(clipQuotePricing{registry: models.Registry, cfg: config.ClipAI(cfg)}, clipAccounting{ledger: models.ledger})
-	service.WithAdmission(clipAdmission{registry: models.Registry, cfg: config.ClipAI(cfg)})
+	service.WithCredits(clipapp.NewPricing(models.Registry, clipBudgets(aiConfig)), clipapp.NewAccounting(models.ledger))
+	service.WithAdmission(clipapp.NewModelAdmission(models.Registry, clipBudgets(aiConfig)))
 	projects.SetGeneration(service)
-	projects.SetFinalizer(clipFinalizer{writer: writer, clips: store, cfg: config.ClipRender(cfg)})
+	projects.SetFinalizer(clipapp.NewFinalizer(writer, bind, store, config.ClipRender(cfg), nil))
 	if _, err = queue.SweepUnactivatedClips(ctx); err != nil {
 		return nil, err
 	}
@@ -55,52 +78,6 @@ func newClipGeneration(ctx context.Context, cfg *config.Config, store *clipstore
 	return service, nil
 }
 
-type clipJobs struct{ queue *job.Queue }
 type clipModels struct{ meteredRegistry }
 
 func (m clipModels) Resolve(ref llm.ModelRef) (llm.ModelInfo, bool) { return m.Lookup(ref) }
-
-func (a clipJobs) Enqueue(ctx context.Context, s clip.GenerationStart) (string, error) {
-	kind := job.KindGenerateClip
-	if s.RenderOnly {
-		kind = job.KindRenderClip
-	}
-	if s.Revise {
-		kind = job.KindReviseClip
-	}
-	policy := 0
-	if s.Quote != nil {
-		policy = s.Quote.Pricing.CancellationPolicyVersion
-	}
-	id, err := a.queue.Enqueue(ctx, job.NewJob{CancellationPolicyVersion: policy, Kind: kind, NonMetered: s.RenderOnly, UserID: s.UserID, ClipProjectID: s.ProjectID, ObserveModel: s.Observe, WriteModel: s.Write, Payload: s.Payload})
-	if errors.Is(err, job.ErrActiveConflict) {
-		return "", clip.ErrBusy
-	}
-	if errors.Is(err, job.ErrInvalidTarget) {
-		return "", clip.ErrNotFound
-	}
-	return id, err
-}
-func (a clipJobs) Activate(ctx context.Context, user, id string) error {
-	return a.queue.ActivateClip(ctx, user, id)
-}
-func (a clipJobs) FailQueued(ctx context.Context, user, id string) (bool, error) {
-	return a.queue.FailQueued(ctx, id, user, job.Failure{Reason: "CLIP_PROCESSING_FAILED"})
-}
-func (a clipJobs) Active(ctx context.Context, user, id string) (*clip.ClipJob, error) {
-	j, err := a.queue.ActiveForClip(ctx, user, id)
-	return clipJob(j), err
-}
-func (a clipJobs) Get(ctx context.Context, user, id string) (*clip.ClipJob, error) {
-	j, err := a.queue.Get(ctx, id, user)
-	if errors.Is(err, job.ErrNotFound) {
-		return nil, nil
-	}
-	return clipJob(j), err
-}
-func clipJob(j *job.JobSummary) *clip.ClipJob {
-	if j == nil {
-		return nil
-	}
-	return &clip.ClipJob{ID: j.ID, Status: j.Status, Stage: j.Stage, FinishedAt: j.FinishedAt}
-}

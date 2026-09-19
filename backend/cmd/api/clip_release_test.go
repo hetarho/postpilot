@@ -22,6 +22,7 @@ import (
 	authstore "github.com/postpilot/backend/internal/auth/store"
 	"github.com/postpilot/backend/internal/clip"
 	clipai "github.com/postpilot/backend/internal/clip/ai"
+	clipapp "github.com/postpilot/backend/internal/clip/app"
 	"github.com/postpilot/backend/internal/clip/composition"
 	clipmedia "github.com/postpilot/backend/internal/clip/media"
 	cliprpc "github.com/postpilot/backend/internal/clip/rpc"
@@ -81,7 +82,7 @@ func (a *releaseAdmission) Hold(ctx context.Context, s job.Start) error {
 }
 
 type releaseFinisher struct {
-	clipFinisher
+	clipapp.Finisher
 	mode string
 }
 
@@ -89,11 +90,11 @@ func (s releaseFinisher) Complete(ctx context.Context, c clip.AttemptResult) err
 	if s.mode == "save failure" {
 		return errors.New("private-media-canary result save failed")
 	}
-	return s.clipFinisher.Complete(ctx, c)
+	return s.Finisher.Complete(ctx, c)
 }
 
 type releaseClipGuard struct {
-	clipGuard
+	clipapp.Guard
 	admission *releaseAdmission
 }
 
@@ -206,8 +207,8 @@ func TestClipWriterInputRelease(t *testing.T) {
 	}
 	h := newReleaseHarness(t, "detailed-input", false)
 	st := clipstore.New(h.d.Writer, h.d.Reader)
-	finisher := clipFinisher{writer: h.d.Writer, clips: st, jobs: h.jobs}
-	h.service.WithFinisher(releaseFinisher{clipFinisher: finisher, mode: "save failure"})
+	finisher := clipapp.NewFinisher(h.d.Writer, clipTxPorts(nil, nil, nil), h.jobs, st, nil)
+	h.service.WithFinisher(releaseFinisher{Finisher: finisher, mode: "save failure"})
 	h.exercise("save failure")
 	h.service.WithFinisher(finisher)
 	h.verifyCandidateContinuation()
@@ -448,12 +449,13 @@ func newReleaseHarness(t *testing.T, mode string, stress bool, clocks ...func() 
 	q := job.New(js, 10*time.Millisecond)
 	admission := &releaseAdmission{jobAdmission: jobAdmission{ledger: ledger, registry: registry, plans: authSvc}, metrics: metrics}
 	q.Admit(admission)
-	guard := clipGuard{writer: d.Writer, admission: admission.jobAdmission}
+	bind := clipTxPorts(ledger, registry, authSvc)
+	guard := clipapp.NewGuard(d.Writer, bind, js)
 	admission.hold = guard.Reserve
 	q.GuardClips(releaseClipGuard{guard, admission})
-	g := clip.NewGenerationService(st, projects, sources, objects, media, planner, renderer, clipJobs{q}, config.ClipGeneration(cfg)).WithFinisher(releaseFinisher{clipFinisher{writer: d.Writer, clips: st, jobs: js}, mode}).WithCredits(clipQuotePricing{registry: registry, cfg: config.ClipAI(cfg)}, clipAccounting{ledger: ledger})
+	g := clip.NewGenerationService(st, projects, sources, objects, media, planner, renderer, clipapp.NewJobs(q), config.ClipGeneration(cfg)).WithFinisher(releaseFinisher{clipapp.NewFinisher(d.Writer, bind, js, st, nil), mode}).WithCredits(clipapp.NewPricing(registry, clipBudgets(config.ClipAI(cfg))), clipapp.NewAccounting(ledger))
 	projects.SetGeneration(g)
-	projects.SetFinalizer(clipFinalizer{writer: d.Writer, clips: st, cfg: config.ClipRender(cfg)})
+	projects.SetFinalizer(clipapp.NewFinalizer(d.Writer, bind, st, config.ClipRender(cfg), nil))
 	var h *releaseHarness
 	if !strings.HasPrefix(mode, "restart ") {
 		q.Register(job.KindGenerateClip, metered(func(ctx context.Context, j job.Job, p job.Progress) error {

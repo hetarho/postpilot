@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/postpilot/backend/internal/clip"
+	clipapp "github.com/postpilot/backend/internal/clip/app"
 	"github.com/postpilot/backend/internal/job"
 	jobstore "github.com/postpilot/backend/internal/job/store"
 	"github.com/postpilot/backend/internal/llm"
@@ -72,7 +73,7 @@ func TestClipMeteringRequiresTheCompleteAdmittedExecutionPolicy(t *testing.T) {
 			w.Stage = "write"
 			w.CompletionTokens = 32768
 			w.Pricing.Delivery = llm.ExecutionTextOnly
-			ctx, err = (clipJobs{queue: q}).ReserveApproved(ctx, "alice", id, clip.GenerationApproval{QuoteID: "quote", MaxCredits: 100, Pricing: clip.GenerationPricing{Version: clip.PricingPolicyVersion, Observe: p, Plan: w, Narration: w, ObservationCalls: 1, MaxCredits: 100}}, 1)
+			ctx, err = clipapp.NewJobs(q).ReserveApproved(ctx, "alice", id, clip.GenerationApproval{QuoteID: "quote", MaxCredits: 100, Pricing: clip.GenerationPricing{Version: clip.PricingPolicyVersion, Observe: p, Plan: w, Narration: w, ObservationCalls: 1, MaxCredits: 100}}, 1)
 			if err != nil {
 				t.Fatal(err)
 			}

@@ -8,6 +8,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/postpilot/backend/internal/auth"
 	"github.com/postpilot/backend/internal/clip"
+	clipapp "github.com/postpilot/backend/internal/clip/app"
 	cliprpc "github.com/postpilot/backend/internal/clip/rpc"
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/job"
@@ -32,7 +33,7 @@ func TestCancelClipRPCDistinguishesAcceptedRequestFromTerminalCancellation(t *te
 				}
 			}
 			projects := clip.NewService(h.clips, config.ClipLimits())
-			generation := clip.NewGenerationService(h.clips, projects, nil, nil, nil, nil, nil, clipJobs{h.queue}, clip.GenerationConfig{ReadTTL: time.Minute, CleanupTimeout: time.Second, OrphanMinAge: time.Hour}).WithCredits(nil, clipAccounting{ledger: h.ledger})
+			generation := clip.NewGenerationService(h.clips, projects, nil, nil, nil, nil, nil, clipapp.NewJobs(h.queue), clip.GenerationConfig{ReadTTL: time.Minute, CleanupTimeout: time.Second, OrphanMinAge: time.Hour}).WithCredits(nil, clipapp.NewAccounting(h.ledger))
 			handler := cliprpc.NewHandler(projects).WithGeneration(generation, h.queue)
 			req := connect.NewRequest(&v1.CancelClipJobRequest{ProjectId: "clip", JobId: id})
 			if _, err := handler.CancelClipJob(context.Background(), req); connect.CodeOf(err) != connect.CodeUnauthenticated {

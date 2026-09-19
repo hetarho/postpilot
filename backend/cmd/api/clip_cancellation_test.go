@@ -12,6 +12,7 @@ import (
 	"github.com/postpilot/backend/internal/auth"
 	authstore "github.com/postpilot/backend/internal/auth/store"
 	"github.com/postpilot/backend/internal/clip"
+	clipapp "github.com/postpilot/backend/internal/clip/app"
 	clipstore "github.com/postpilot/backend/internal/clip/store"
 	"github.com/postpilot/backend/internal/job"
 	jobstore "github.com/postpilot/backend/internal/job/store"
@@ -27,8 +28,9 @@ type cancellationHarness struct {
 	clips     *clipstore.Store
 	queue     *job.Queue
 	ledger    *usage.Service
-	finisher  clipFinisher
+	finisher  clipapp.Finisher
 	admission jobAdmission
+	bind      clipapp.Binder
 }
 
 func newCancellationHarness(t *testing.T, wrap func(*jobstore.Store) job.Store) *cancellationHarness {
@@ -61,8 +63,9 @@ func newCancellationHarness(t *testing.T, wrap func(*jobstore.Store) job.Store) 
 	q := job.New(queueStore, time.Millisecond)
 	admission := jobAdmission{ledger: ledger, plans: authSvc}
 	q.Admit(admission)
-	q.GuardClips(clipGuard{writer: d.Writer, admission: admission})
-	return &cancellationHarness{d, js, cs, q, ledger, clipFinisher{writer: d.Writer, clips: cs, jobs: js}, admission}
+	bind := clipTxPorts(ledger, nil, authSvc)
+	q.GuardClips(clipapp.NewGuard(d.Writer, bind, js))
+	return &cancellationHarness{d, js, cs, q, ledger, clipapp.NewFinisher(d.Writer, bind, js, cs, nil), admission, bind}
 }
 
 func (h *cancellationHarness) enqueue(t *testing.T, kind string) string {
@@ -407,7 +410,7 @@ func TestClipPendingCancellationRecoversBeforeFailureAndSettlesOnce(t *testing.T
 	h.db, h.jobs, h.clips = reopened, jobstore.New(reopened.Writer, reopened.Reader), clipstore.New(reopened.Writer, reopened.Reader)
 	h.ledger = h.ledger.WithStore(usagestore.New(reopened.Writer, reopened.Reader))
 	h.admission.ledger = h.ledger
-	h.finisher = clipFinisher{writer: reopened.Writer, clips: h.clips, jobs: h.jobs}
+	h.finisher = clipapp.NewFinisher(reopened.Writer, h.bind, h.jobs, h.clips, nil)
 	recovered := job.New(h.jobs, time.Millisecond)
 	recovered.Admit(h.admission)
 	for range 2 {

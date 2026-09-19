@@ -32,6 +32,7 @@ import (
 	billingrpc "github.com/postpilot/backend/internal/billing/rpc"
 	billingstore "github.com/postpilot/backend/internal/billing/store"
 	"github.com/postpilot/backend/internal/clip"
+	clipapp "github.com/postpilot/backend/internal/clip/app"
 	clipmedia "github.com/postpilot/backend/internal/clip/media"
 	cliprpc "github.com/postpilot/backend/internal/clip/rpc"
 	clipstore "github.com/postpilot/backend/internal/clip/store"
@@ -259,7 +260,8 @@ func main() {
 	// rule ARCHITECTURE §2.2 exists to hold.
 	catalogSvc.SetReasoningSpend(catalogReasoningSpend{ledger: ledger, providerID: registry.ProviderID()})
 	jobQueue.Admit(jobAdmission{ledger: ledger, registry: registry, plans: authSvc})
-	jobQueue.GuardClips(clipGuard{writer: handle.Writer, admission: jobAdmission{ledger: ledger, registry: registry, plans: authSvc}})
+	clipPorts := clipTxPorts(ledger, registry, authSvc)
+	jobQueue.GuardClips(clipapp.NewGuard(handle.Writer, clipPorts, jobstore.New(handle.Writer, handle.Writer)))
 
 	// After the admitter is attached, not with the other boot sweeps: an open hold can only
 	// be settled through it, and a sweep that ran first would silently find nothing.
@@ -335,7 +337,7 @@ func main() {
 		slog.Error("clip workspace cleanup failed", "err", err)
 		os.Exit(1)
 	}
-	clipGeneration, err := newClipGeneration(ctx, cfg, clipStore, clipSvc, clipSources, bucket, clipMedia, meteredModels, jobQueue, handle.Writer)
+	clipGeneration, err := newClipGeneration(ctx, cfg, clipStore, clipSvc, clipSources, bucket, clipMedia, meteredModels, jobQueue, handle.Writer, clipPorts)
 	if err != nil {
 		slog.Error("clip generation initialization failed", "err", err)
 		os.Exit(1)
@@ -1837,22 +1839,11 @@ type meteredRegistry struct {
 }
 
 func (m meteredRegistry) Complete(ctx context.Context, ref llm.ModelRef, req llm.Request) (llm.Response, error) {
-	work, hasWork := usage.WorkFromContext(ctx)
-	if req.Execution != nil && (!hasWork || !job.ChargedClipKind(work.Kind)) {
-		return llm.Response{}, job.ErrCreditAllowance
-	}
-	if work, ok := usage.WorkFromContext(ctx); ok && work.Kind == job.KindRenderClip {
-		return llm.Response{}, job.ErrCreditAllowance
-	}
-	if work, ok := usage.WorkFromContext(ctx); ok && job.ChargedClipKind(work.Kind) {
-		policy, err := job.ConsumeClipPolicy(ctx, work.UserID, work.JobID, ref.String(), req.MaxTokens, req.Stage)
-		if err != nil {
-			return llm.Response{}, err
-		}
-		if req.Execution == nil || req.Execution.Call != policy || !req.Execution.Matches(ref, req) {
-			return llm.Response{}, job.ErrCreditAllowance
-		}
-		ctx = usage.WithCallPrice(ctx, work.UserID, work.JobID, policy)
+	// The clip context owns the execution-policy rule; the registry is not touched
+	// until the call is admitted, so a refusal costs no provider call.
+	ctx, err := clipapp.AdmitExecution(ctx, ref, req)
+	if err != nil {
+		return llm.Response{}, err
 	}
 	response, err := m.Registry.Complete(ctx, ref, req)
 	// A ledger failure never fails the user's work: the tokens are already spent, and the
