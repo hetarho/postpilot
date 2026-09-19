@@ -83,7 +83,7 @@ func (s *GenerationService) enqueue(ctx context.Context, input clip.GenerationSt
 	}
 	// A queued row is invisible to the dispatcher until its source lease is linked.
 	if input.RenderOnly {
-		err = s.store.LinkRenderSourceJob(ctx, user, batch, job, revision, time.Now())
+		err = s.store.LinkRenderSourceJob(ctx, user, batch, job, revision, s.now())
 	} else if input.Revise && input.Quote != nil {
 		// A revision's quote binds the saved plan and the owner's words, which
 		// StartRevision has just checked; the link consumes it and renews the
@@ -136,6 +136,32 @@ func (s *GenerationService) enqueue(ctx context.Context, input clip.GenerationSt
 	return job, nil
 }
 
+// generationRun is one attempt of the generation job: the accepted payload and batch,
+// the quote it runs under, the recovery it resumes from, and the checkpoint the owner
+// reads while it works. The stages run in order and each leaves its result on the run.
+type generationRun struct {
+	s                  *GenerationService
+	ctx                context.Context
+	user, job, project string
+	progress           func(string, int, int)
+	stage              string
+	checkpoint         clip.AttemptCheckpoint
+	p                  clip.GenerationPayload
+	b                  clip.SourceBatch
+	pricing            clip.GenerationPricing
+	recovery           clip.RecoveryState
+	sources            []clip.AnalysisSource
+	prepared           []preparedChunk
+	analyses           []clip.SourceAnalysis
+	edit               clip.EditPlan
+	analysisJSON       []byte
+	planJSON           string
+}
+
+// Run is the generation job: accept the approved payload, prepare the sources, observe
+// every chunk, write the flow and the narration over it, save the plan, and commit it
+// with the job. The attempt ends on the validated plan — no media is rendered and no
+// result file is produced; the owner starts the render they want (CLIP-151).
 func (s *GenerationService) Run(ctx context.Context, user, job, project string, payload []byte, progress func(string, int, int)) (err error) {
 	if s.finisher == nil {
 		return clip.ErrCompositionUnavailable
@@ -144,53 +170,120 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 	if err != nil {
 		return err
 	}
-	stage := "prepare"
-	checkpoint := clip.AttemptCheckpoint{Version: 1, JobID: job, Stage: stage}
+	r := &generationRun{s: s, ctx: ctx, user: user, job: job, project: project, progress: progress, stage: "prepare", checkpoint: clip.AttemptCheckpoint{Version: 1, JobID: job, Stage: "prepare"}}
+	// The failure is recorded after it has been wrapped with its stage (defers run last
+	// registered first), so the checkpoint names the stage the diagnostic belongs to.
 	defer func() {
-		if err == nil {
-			return
-		}
-		checkpoint.Stage = stage
-		if d, ok := clip.DiagnosticFromError(err); ok {
-			d.Values = clip.SafeAttemptValues(d.Values)
-			if len(d.Ranges) == 0 {
-				d.Ranges = checkpoint.Diagnostic.Ranges
-			}
-			for _, key := range []string{"target_ms", "after_ms", "cut_count", "transition_ms", "reused_chunks", "remaining_chunks", "reused_plan"} {
-				if n, ok := checkpoint.Diagnostic.Values[key]; ok {
-					d.Values[key] = n
-				}
-			}
-			if stage == "analyze" {
-				// The worker owns the global source/chunk position; parser indexes
-				// describe a segment inside that chunk and cannot replace it.
-				for _, key := range []string{"source", "chunk"} {
-					if value, exists := checkpoint.Diagnostic.Values[key]; exists {
-						d.Values[key] = value
-					}
-				}
-			}
-			checkpoint.Diagnostic = d
-		} else if err != nil {
-			var output interface{ OutputValidationCode() string }
-			if errors.As(err, &output) {
-				checkpoint.Diagnostic.Check = output.OutputValidationCode()
-			}
-		}
 		if err != nil {
-			logAttemptDiagnostic(job, stage, checkpoint.Diagnostic)
+			r.recordFailure(ctx, err)
 		}
-		recordCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), s.cfg.CleanupTimeout)
-		defer cancel()
-		s.checkpoint(recordCtx, user, project, checkpoint)
 	}()
+	defer func() {
+		if err != nil {
+			err = &clip.StageFailure{Stage: r.stage, Cause: err}
+		}
+	}()
+	if err := r.accept(payload); err != nil {
+		return err
+	}
+	r.checkpoint.TotalSources = len(r.b.Sources)
+	s.checkpoint(ctx, user, project, r.checkpoint)
+	r.ctx = r.observeMedia(ctx)
+	err = s.media.WithWorkspace(r.ctx, job, func(ws clip.MediaWorkspace) error {
+		if err := r.prepare(ws); err != nil {
+			return err
+		}
+		if err := r.analyze(); err != nil {
+			return err
+		}
+		if err := r.write(); err != nil {
+			return err
+		}
+		return r.save()
+	})
+	if err != nil {
+		return err
+	}
+	return r.finish(currentProject)
+}
+
+// recordFailure folds the failing stage and its diagnostic into the durable checkpoint.
+func (r *generationRun) recordFailure(ctx context.Context, err error) {
+	r.checkpoint.Stage = r.stage
+	if d, ok := clip.DiagnosticFromError(err); ok {
+		d.Values = clip.SafeAttemptValues(d.Values)
+		if len(d.Ranges) == 0 {
+			d.Ranges = r.checkpoint.Diagnostic.Ranges
+		}
+		for _, key := range []string{"target_ms", "after_ms", "cut_count", "transition_ms", "reused_chunks", "remaining_chunks", "reused_plan"} {
+			if n, ok := r.checkpoint.Diagnostic.Values[key]; ok {
+				d.Values[key] = n
+			}
+		}
+		if r.stage == "analyze" {
+			// The worker owns the global source/chunk position; parser indexes
+			// describe a segment inside that chunk and cannot replace it.
+			for _, key := range []string{"source", "chunk"} {
+				if value, exists := r.checkpoint.Diagnostic.Values[key]; exists {
+					d.Values[key] = value
+				}
+			}
+		}
+		r.checkpoint.Diagnostic = d
+	} else {
+		var output interface{ OutputValidationCode() string }
+		if errors.As(err, &output) {
+			r.checkpoint.Diagnostic.Check = output.OutputValidationCode()
+		}
+	}
+	logAttemptDiagnostic(r.job, r.stage, r.checkpoint.Diagnostic)
+	recordCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), r.s.cfg.CleanupTimeout)
+	defer cancel()
+	r.s.checkpoint(recordCtx, r.user, r.project, r.checkpoint)
+}
+
+// set advances the stage the owner sees and the worker's progress.
+func (r *generationRun) set(name string, done, total int) {
+	r.stage = name
+	r.checkpoint.Stage = name
+	slog.Info("clip work progress", "job", r.job, "stage", name, "completed", done, "total", total)
+	if name == "prepare" {
+		r.checkpoint.Diagnostic.Values = map[string]int{"source": min(done+1, total)}
+	}
+	if name != "cleanup" {
+		r.s.checkpoint(r.ctx, r.user, r.project, r.checkpoint)
+	}
+	if r.progress != nil {
+		r.progress(name, done, total)
+	}
+}
+
+// planningInput is the frozen brief every planner call reads.
+func (r *generationRun) planningInput() clip.PlanningInput {
+	p := r.p
+	return clip.PlanningInput{Language: p.Language, Composition: p.Composition, Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: p.CTA, Instruction: p.Instruction, Design: p.Design(), Policy: r.pricing.Plan}
+}
+
+// validatePreparation is the planner's own check of the models, the budgets and the
+// brief, run before the workspace opens and again over the prepared sources.
+func (r *generationRun) validatePreparation(declared []clip.AnalysisSource) error {
+	s, pricing := r.s, r.pricing
+	if err := s.planner.ValidateModels(pricing.Observe.Ref, pricing.Plan.Ref); err != nil {
+		return admissionRefusal(pricing.Observe.Ref, err)
+	}
+	if s.planner.Budgets() != (clip.CompletionBudgets{Observe: pricing.Observe.CompletionTokens, Flow: pricing.Plan.CompletionTokens, Narration: pricing.Narration.CompletionTokens}) {
+		return clip.ErrQuoteChanged
+	}
+	return s.planner.ValidatePreparation(pricing.Observe.Ref, r.planningInput(), declared)
+}
+
+// accept decodes the durable payload and proves it is the approved work: the batch
+// it names, the quote it consumed, the recovery it may resume, and a brief the planner
+// and the renderer accept. Nothing here opens a workspace or calls a model.
+func (r *generationRun) accept(payload []byte) error {
+	s, ctx := r.s, r.ctx
 	// Resolve cleanup from the durable linkage, even if payload decoding fails.
-	defer func() {
-		if err != nil {
-			err = &clip.StageFailure{Stage: stage, Cause: err}
-		}
-	}()
-	b, err := s.store.BatchForJob(ctx, user, job)
+	b, err := s.store.BatchForJob(ctx, r.user, r.job)
 	if err != nil {
 		return err
 	}
@@ -209,10 +302,10 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 	if !clip.SupportedGenerationPayload(p.Version) || (p.Version >= 4 && p.Composition == nil) || p.Approval == nil {
 		return clip.ErrQuoteRequired
 	}
-	if p.ProjectID != project || p.Batch.ProjectID != project || p.Batch.ID != b.ID || p.Batch.UserID != user || !clip.SameSourceManifest(p.Batch.Sources, b.Sources) {
+	if p.ProjectID != r.project || p.Batch.ProjectID != r.project || p.Batch.ID != b.ID || p.Batch.UserID != r.user || !clip.SameSourceManifest(p.Batch.Sources, b.Sources) {
 		return clip.ErrInvalid
 	}
-	if b.State != "consuming" || b.ProjectID != project {
+	if b.State != "consuming" || b.ProjectID != r.project {
 		return clip.ErrSourceState
 	}
 	pricing := p.Approval.Pricing
@@ -223,17 +316,17 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 	if !ok {
 		return clip.ErrQuoteRequired
 	}
-	q, err := quoteStore.GetQuote(ctx, user, p.Approval.QuoteID)
+	q, err := quoteStore.GetQuote(ctx, r.user, p.Approval.QuoteID)
 	if err != nil {
 		return err
 	}
 	// Expiry is enforced when the quote is consumed, not after a long, already
 	// accepted preparation. Reconfirm the durable ownership and exact approval.
-	if q.ConsumedJobID != job || q.ProjectID != project || q.BatchID != b.ID || q.Pricing != pricing {
+	if q.ConsumedJobID != r.job || q.ProjectID != r.project || q.BatchID != b.ID || q.Pricing != pricing {
 		return clip.ErrQuoteChanged
 	}
 	recovery := s.selectRecovery(p.Recovery, b, pricing.Observe.Ref, p.Language)
-	recovery.JobID = job
+	recovery.JobID = r.job
 	if p.Recovery != nil && len(recovery.Chunks) != pricing.ReusedChunks {
 		return clip.ErrQuoteChanged
 	}
@@ -247,34 +340,13 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 	if !pricing.SkipFlow {
 		recovery.Plan, recovery.PlanDigest, recovery.PlanReady, recovery.FlowReady = "", "", false, false
 	}
-	checkpoint.TotalSources = len(b.Sources)
-	s.checkpoint(ctx, user, project, checkpoint)
-	set := func(name string, done, total int) {
-		stage = name
-		checkpoint.Stage = name
-		slog.Info("clip work progress", "job", job, "stage", name, "completed", done, "total", total)
-		if name == "prepare" {
-			checkpoint.Diagnostic.Values = map[string]int{"source": min(done+1, total)}
-		}
-		if name != "cleanup" {
-			s.checkpoint(ctx, user, project, checkpoint)
-		}
-		if progress != nil {
-			progress(name, done, total)
-		}
-	}
+	r.p, r.b, r.pricing, r.recovery = p, b, pricing, recovery
 	if !pricing.RenderOnly() {
-		if err := s.planner.ValidateModels(pricing.Observe.Ref, pricing.Plan.Ref); err != nil {
-			return admissionRefusal(pricing.Observe.Ref, err)
-		}
-		if s.planner.Budgets() != (clip.CompletionBudgets{Observe: pricing.Observe.CompletionTokens, Flow: pricing.Plan.CompletionTokens, Narration: pricing.Narration.CompletionTokens}) {
-			return clip.ErrQuoteChanged
-		}
 		declared := make([]clip.AnalysisSource, 0, len(b.Sources))
 		for _, v := range b.Sources {
 			declared = append(declared, clip.AnalysisSource{RenderSource: clip.RenderSource{ID: v.ID, Fingerprint: v.Fingerprint, Info: clip.MediaInfo{DurationMS: v.DurationMS, Width: v.Width, Height: v.Height}}, Filename: v.Filename})
 		}
-		if err := s.planner.ValidatePreparation(pricing.Observe.Ref, clip.PlanningInput{Language: p.Language, Composition: p.Composition, Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: p.CTA, Instruction: p.Instruction, Design: p.Design(), Policy: pricing.Plan}, declared); err != nil {
+		if err := r.validatePreparation(declared); err != nil {
 			return err
 		}
 	}
@@ -285,270 +357,287 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 			return err
 		}
 	}
-	var analysisJSON []byte
-	var planJSON string
-	// Every media command is timed, the successful ones included, and each
-	// record is attributed to the stage running when it started, so a stage
-	// total is explained by the operations inside it (CLIP-88).
-	ctx = clip.WithMediaStageObserver(ctx, func(r clip.MediaRecord) {
-		if r.Operation != "" {
-			slog.Info("clip media operation", "job", job, "stage", stage, "operation", r.Operation, "outcome", r.Outcome, "elapsed_ms", r.Elapsed.Milliseconds())
+	return nil
+}
+
+// observeMedia times every media command and attributes it to the stage running when
+// it started, so a stage total is explained by the operations inside it (CLIP-88).
+func (r *generationRun) observeMedia(ctx context.Context) context.Context {
+	return clip.WithMediaStageObserver(ctx, func(rec clip.MediaRecord) {
+		if rec.Operation != "" {
+			slog.Info("clip media operation", "job", r.job, "stage", r.stage, "operation", rec.Operation, "outcome", rec.Outcome, "elapsed_ms", rec.Elapsed.Milliseconds())
 			return
 		}
-		slog.Info("clip render substage", "job", job, "stage", stage, "substage", r.Substage, "elapsed_ms", r.Elapsed.Milliseconds())
+		slog.Info("clip render substage", "job", r.job, "stage", r.stage, "substage", rec.Substage, "elapsed_ms", rec.Elapsed.Milliseconds())
 	})
-	err = s.media.WithWorkspace(ctx, job, func(ws clip.MediaWorkspace) error {
-		set("prepare", 0, len(b.Sources))
-		sources, prepared, err := s.prepareRecoveredBatch(ctx, ws, b, recovery, func(n int) { set("prepare", n, len(b.Sources)) })
-		if err != nil {
-			return err
-		}
-		count := 0
-		for _, v := range prepared {
-			if v.reused == nil {
-				count++
-			}
-		}
-		checkpoint.TotalChunks = len(prepared)
-		recovery.Sources, recovery.Pricing = sources, pricing
-		if err := s.saveRecovery(ctx, user, project, recovery); err != nil {
-			return err
-		}
-		checkpoint.Observations = make([]clip.SourceAnalysis, len(sources))
-		for i, source := range sources {
-			checkpoint.Observations[i].Source = source
-		}
-		if count > pricing.ObservationCalls {
-			return clip.ErrQuoteChanged
-		}
-		if !pricing.RenderOnly() {
-			if err = s.planner.ValidateModels(pricing.Observe.Ref, pricing.Plan.Ref); err != nil {
-				return admissionRefusal(pricing.Observe.Ref, err)
-			}
-			if s.planner.Budgets() != (clip.CompletionBudgets{Observe: pricing.Observe.CompletionTokens, Flow: pricing.Plan.CompletionTokens, Narration: pricing.Narration.CompletionTokens}) {
-				return clip.ErrQuoteChanged
-			}
-			if err = s.planner.ValidatePreparation(pricing.Observe.Ref, clip.PlanningInput{Language: p.Language, Composition: p.Composition, Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: p.CTA, Instruction: p.Instruction, Design: p.Design(), Policy: pricing.Plan}, sources); err != nil {
-				return err
-			}
-			if s.pricing == nil {
-				return clip.ErrPricingUnavailable
-			}
-			// The same qualification the quote ran, on the current document: a leaf
-			// that drifted refuses here, before the reservation and any model call.
-			current, err := s.freezeWork(ctx, pricing.Observe.Ref, pricing.Plan.Ref, count, pricing.SkipFlow, pricing.SkipNarration, pricing.Plan.ResponseRetries)
-			if err != nil {
-				return admissionRefusal(pricing.Observe.Ref, err)
-			}
-			if !current.Valid() || current.ObservationCalls != count || current.Observe != pricing.Observe || current.Plan != pricing.Plan || current.Narration != pricing.Narration || current.MaxCredits > p.Approval.MaxCredits {
-				return clip.ErrQuoteChanged
-			}
-		}
-		// All source/proxy validation and price/profile checks precede the only
-		// reservation. Subsequent calls can consume only this exact allowance.
-		admitted, err := s.jobs.ReserveApproved(ctx, user, job, *p.Approval, count)
-		if err != nil {
-			return err
-		}
-		ctx = admitted
-		set("analyze", 0, len(prepared))
-		chunks := make([]clip.ChunkAnalysis, 0, len(prepared))
-		for index, v := range prepared {
-			checkpoint.Diagnostic.Values = map[string]int{"source": v.source + 1, "chunk": index + 1}
-			if err := s.checkpoint(ctx, user, project, checkpoint); err != nil {
-				return err
-			}
-			slog.Info("clip analysis started", "job", job, "source", v.source+1, "chunk", index+1, "total", len(prepared), "reused", v.reused != nil)
-			var observation clip.ChunkAnalysis
-			var err error
-			if v.reused != nil {
-				observation = *v.reused
-			} else {
-				observeCtx := clip.WithResponseCorrectionObserver(ctx, func(retry, limit int, d clip.AttemptDiagnostic) error {
-					checkpoint.Diagnostic = d
-					checkpoint.Diagnostic.Values["retry"] = retry
-					logAttemptDiagnostic(job, "analyze", d)
-					if progress != nil {
-						progress("analyze_retry", retry, limit)
-					}
-					return s.checkpoint(ctx, user, project, checkpoint)
-				})
-				observation, err = s.observe(observeCtx, v.chunk, sources[v.source], pricing.Observe, p.Language)
-			}
-			if err != nil {
-				return admissionRefusal(pricing.Observe.Ref, err)
-			}
-			// The observer validates its chunk; check the identity and range again
-			// before making it durable or allowing the next paid call.
-			source := sources[v.source]
-			if observation.SourceID != source.ID || observation.Fingerprint != source.Fingerprint || observation.Index != v.chunk.Index || observation.OffsetMS != v.chunk.OffsetMS || observation.DurationMS != v.chunk.DurationMS {
-				return clip.ErrInvalid
-			}
-			if err := clip.ValidateSegments(s.cfg.Analysis, observation.Segments, observation.OffsetMS, observation.OffsetMS+observation.DurationMS); err != nil {
-				return err
-			}
-			if v.reused == nil {
-				recovery.Chunks = append(recovery.Chunks, observation)
-				if err := s.saveRecovery(ctx, user, project, recovery); err != nil {
-					return err
-				}
-			}
-			chunks = append(chunks, observation)
-			checkpoint.Observations[v.source].Segments = append(checkpoint.Observations[v.source].Segments, observation.Segments...)
-			checkpoint.CompletedChunks = len(chunks)
-			if index+1 == len(prepared) || prepared[index+1].source != v.source {
-				checkpoint.CompletedSources++
-			}
-			set("analyze", len(chunks), len(prepared))
-		}
-		analyses, err := clip.MergeAnalyses(s.cfg.Analysis, sources, chunks)
-		if err != nil {
-			return err
-		}
-		checkpoint.Diagnostic = clip.AttemptDiagnostic{}
-		// The writer's own context: one retry observer per stage, so a
-		// correction says which of the two calls is being corrected.
-		writing := func(stage string) context.Context {
-			return clip.WithResponseCorrectionObserver(ctx, func(retry, limit int, d clip.AttemptDiagnostic) error {
-				checkpoint.Diagnostic = d
-				checkpoint.Diagnostic.Values["retry"] = retry
-				logAttemptDiagnostic(job, stage, d)
-				if progress != nil {
-					progress(stage+"_retry", retry, limit)
-				}
-				return s.checkpoint(ctx, user, project, checkpoint)
-			})
-		}
-		keep := func(edit *clip.EditPlan, flowReady, planReady bool) error {
-			raw, err := clip.EncodeEditPlan(*edit)
-			if err != nil {
-				return err
-			}
-			recovery.Plan, recovery.PlanDigest = raw, planRecoveryDigest(p)
-			recovery.FlowReady, recovery.PlanReady = flowReady, planReady
-			return s.saveRecovery(ctx, user, project, recovery)
-		}
-		in := clip.PlanningInput{Language: p.Language, Composition: p.Composition, Template: p.Template, Answers: p.Answers, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Analyses: analyses, Policy: pricing.Plan, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: p.CTA, Instruction: p.Instruction, Design: p.Design(), SourceAudio: batchSourceAudio(b)}
-		set("flow", 0, 1)
-		if err := s.checkpoint(ctx, user, project, checkpoint); err != nil {
-			return err
-		}
-		var edit clip.EditPlan
-		if pricing.SkipFlow {
-			edit, err = clip.DecodeEditPlan(recovery.Plan)
-		} else if p.Composition != nil {
-			// A composition is written by the flow call and then the narration
-			// over it (CLIP-135); the single writer is what a payload with no
-			// composition snapshot still uses.
-			edit, _, err = s.planner.Flow(writing("flow"), pricing.Plan.Ref, in)
-		} else {
-			edit, _, err = s.planner.Plan(writing("flow"), pricing.Plan.Ref, in)
-		}
-		if err != nil {
-			return err
-		}
-		if edit.Portable == nil {
-			edit = edit.WithFacts(p.Disclosure, p.Answers, p.Template.Preset, p.CTA, p.Template.Accent, p.HideDisclosure)
-		}
-		// The project's caption pace and accent are render inputs too: a plan
-		// carries what was written, the project says how it is shown (CLIP-139).
-		edit = edit.WithDesign(p.Design())
-		// The owner's source-sound choice is the SERVER's to state, and it is
-		// stated only here — after the model's own output has been validated, so
-		// no prompt, response or plan digest ever carried it, and a resumed plan
-		// takes the setting as it stands now (CLIP-100, CDS-6).
-		edit.SourceAudio = clip.FreezeSourceAudio(b, edit.Cuts)
-		// The written flow is kept before the narration is asked for, so a
-		// failure or a cancellation in the narration resumes on it and pays for
-		// one writing call rather than two (CLIP-87, CLIP-93).
-		if !pricing.SkipFlow {
-			// The flow is written either way: a payload with no composition gets
-			// its whole plan from the one writer, and is ready to render at once.
-			if err := keep(&edit, true, edit.Portable == nil); err != nil {
-				return err
-			}
-		}
-		if !pricing.SkipNarration && edit.Portable != nil {
-			set("narrate", 0, 1)
-			if err := s.checkpoint(ctx, user, project, checkpoint); err != nil {
-				return err
-			}
-			edit, _, err = s.planner.Narrate(writing("narrate"), pricing.Narration.Ref, clip.NarrationInput{PlanningInput: in, Flow: edit})
-			if err != nil {
-				return err
-			}
-			edit.SourceAudio = clip.FreezeSourceAudio(b, edit.Cuts)
-			if err := keep(&edit, true, false); err != nil {
-				return err
-			}
-		}
-		checkpoint.Diagnostic = clip.AttemptDiagnostic{Ranges: clip.AttemptRangeDiagnostics(edit, analyses), Values: map[string]int{"cut_count": len(edit.Cuts), "target_ms": p.TargetDurationMS, "after_ms": edit.DurationMS, "transition_ms": edit.TransitionTotal()}}
-		renderSources := make([]clip.RenderSource, len(sources))
-		for i, v := range sources {
-			renderSources[i] = v.RenderSource
-		}
-		if edit.Portable != nil {
-			if layout, ok := s.renderer.(interface {
-				LayoutComposition(context.Context, clip.EditPlan, []clip.RenderSource) (clip.EditPlan, []clip.CompositionElement, error)
-			}); ok {
-				set("narrate", 0, 1)
-				edit, _, err = layout.LayoutComposition(ctx, edit, renderSources)
-				if err != nil {
-					return err
-				}
-				edit.SourceAudio = clip.FreezeSourceAudio(b, edit.Cuts)
-				recovery.Plan, err = clip.EncodeEditPlan(edit)
-				if err != nil {
-					return err
-				}
-				recovery.PlanReady = true
-				if err := s.saveRecovery(ctx, user, project, recovery); err != nil {
-					return err
-				}
-			}
-		}
-		// The attempt ends HERE, on the validated plan. No media execution runs
-		// and no result file is produced: the owner reads this plan in ②'s draft
-		// preview and starts the render they want themselves (CLIP-151).
-		set("save", 0, 1)
-		logAttemptDiagnostic(job, "save", checkpoint.Diagnostic)
-		recovery.PlanReady = true
-		recovery.Plan, err = clip.EncodeEditPlan(edit)
-		if err != nil {
-			return err
-		}
-		if err := s.saveRecovery(ctx, user, project, recovery); err != nil {
-			return err
-		}
-		analysisJSON, err = json.Marshal(analyses)
-		if err != nil {
-			return err
-		}
-		if edit.Portable == nil && p.Composition != nil && p.Composition.Snapshot.Legacy {
-			projectSnapshot := clip.Project{VideoTemplateID: p.Composition.Snapshot.TemplateID, Answers: p.Answers, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: p.CTA}
-			edit.Portable, err = clip.FreezeLegacyPlan(projectSnapshot, edit, p.Template, s.projects.limits.Composition)
-			if err != nil {
-				return err
-			}
-		}
-		// The owner owns source sound, not the writer: the snapshot is taken
-		// from the live leases, so a reselected source keeps the choice already
-		// made about it and a new one stays silent (CLIP-18, CLIP-100).
-		edit.SourceAudio = clip.FreezeSourceAudio(b, edit.Cuts)
-		planJSON, err = clip.EncodeEditPlan(edit)
-		return err
-	})
+}
+
+// prepare proxies every source (reusing what the recovery holds), re-qualifies the
+// models on the current documents and takes the one credit reservation. Every source,
+// proxy, price and profile check precedes that reservation; later calls can consume
+// only this exact allowance.
+func (r *generationRun) prepare(ws clip.MediaWorkspace) error {
+	s, ctx, pricing := r.s, r.ctx, r.pricing
+	r.set("prepare", 0, len(r.b.Sources))
+	sources, prepared, err := s.prepareRecoveredBatch(ctx, ws, r.b, r.recovery, func(n int) { r.set("prepare", n, len(r.b.Sources)) })
 	if err != nil {
 		return err
 	}
-	// A failed attempt never replaces the prior plan, and a successful one never
-	// replaces the previous result either: it advances the plan the render is
-	// asked for, which is what leaves that result standing as a stale one
-	// (CLIP-26, CLIP-152).
-	if err = s.finisher.Complete(ctx, clip.AttemptResult{JobID: job, UserID: user, ProjectID: project, ExpectedRevision: currentProject.EditPlanRevision, Analysis: string(analysisJSON), EditPlan: planJSON}); err != nil {
+	r.sources, r.prepared = sources, prepared
+	count := 0
+	for _, v := range prepared {
+		if v.reused == nil {
+			count++
+		}
+	}
+	r.checkpoint.TotalChunks = len(prepared)
+	r.recovery.Sources, r.recovery.Pricing = sources, pricing
+	if err := s.saveRecovery(ctx, r.user, r.project, r.recovery); err != nil {
 		return err
 	}
-	set("cleanup", 0, 1)
+	r.checkpoint.Observations = make([]clip.SourceAnalysis, len(sources))
+	for i, source := range sources {
+		r.checkpoint.Observations[i].Source = source
+	}
+	if count > pricing.ObservationCalls {
+		return clip.ErrQuoteChanged
+	}
+	if !pricing.RenderOnly() {
+		if err := r.validatePreparation(sources); err != nil {
+			return err
+		}
+		if s.pricing == nil {
+			return clip.ErrPricingUnavailable
+		}
+		// The same qualification the quote ran, on the current document: a leaf
+		// that drifted refuses here, before the reservation and any model call.
+		current, err := s.freezeWork(ctx, pricing.Observe.Ref, pricing.Plan.Ref, count, pricing.SkipFlow, pricing.SkipNarration, pricing.Plan.ResponseRetries)
+		if err != nil {
+			return admissionRefusal(pricing.Observe.Ref, err)
+		}
+		if !current.Valid() || current.ObservationCalls != count || current.Observe != pricing.Observe || current.Plan != pricing.Plan || current.Narration != pricing.Narration || current.MaxCredits > r.p.Approval.MaxCredits {
+			return clip.ErrQuoteChanged
+		}
+	}
+	admitted, err := s.jobs.ReserveApproved(ctx, r.user, r.job, *r.p.Approval, count)
+	if err != nil {
+		return err
+	}
+	r.ctx = admitted
+	return nil
+}
+
+// analyze observes every prepared chunk that the recovery did not already hold, checks
+// each observation against the chunk it was asked about, and merges them per source.
+func (r *generationRun) analyze() error {
+	s, ctx := r.s, r.ctx
+	r.set("analyze", 0, len(r.prepared))
+	chunks := make([]clip.ChunkAnalysis, 0, len(r.prepared))
+	for index, v := range r.prepared {
+		r.checkpoint.Diagnostic.Values = map[string]int{"source": v.source + 1, "chunk": index + 1}
+		if err := s.checkpoint(ctx, r.user, r.project, r.checkpoint); err != nil {
+			return err
+		}
+		slog.Info("clip analysis started", "job", r.job, "source", v.source+1, "chunk", index+1, "total", len(r.prepared), "reused", v.reused != nil)
+		var observation clip.ChunkAnalysis
+		var err error
+		if v.reused != nil {
+			observation = *v.reused
+		} else {
+			observation, err = s.observe(r.correcting("analyze"), v.chunk, r.sources[v.source], r.pricing.Observe, r.p.Language)
+		}
+		if err != nil {
+			return admissionRefusal(r.pricing.Observe.Ref, err)
+		}
+		// The observer validates its chunk; check the identity and range again
+		// before making it durable or allowing the next paid call.
+		source := r.sources[v.source]
+		if observation.SourceID != source.ID || observation.Fingerprint != source.Fingerprint || observation.Index != v.chunk.Index || observation.OffsetMS != v.chunk.OffsetMS || observation.DurationMS != v.chunk.DurationMS {
+			return clip.ErrInvalid
+		}
+		if err := clip.ValidateSegments(s.cfg.Analysis, observation.Segments, observation.OffsetMS, observation.OffsetMS+observation.DurationMS); err != nil {
+			return err
+		}
+		if v.reused == nil {
+			r.recovery.Chunks = append(r.recovery.Chunks, observation)
+			if err := s.saveRecovery(ctx, r.user, r.project, r.recovery); err != nil {
+				return err
+			}
+		}
+		chunks = append(chunks, observation)
+		r.checkpoint.Observations[v.source].Segments = append(r.checkpoint.Observations[v.source].Segments, observation.Segments...)
+		r.checkpoint.CompletedChunks = len(chunks)
+		if index+1 == len(r.prepared) || r.prepared[index+1].source != v.source {
+			r.checkpoint.CompletedSources++
+		}
+		r.set("analyze", len(chunks), len(r.prepared))
+	}
+	analyses, err := clip.MergeAnalyses(s.cfg.Analysis, r.sources, chunks)
+	if err != nil {
+		return err
+	}
+	r.analyses = analyses
+	r.checkpoint.Diagnostic = clip.AttemptDiagnostic{}
+	return nil
+}
+
+// correcting is a model call's own context: one retry observer per stage, so a
+// correction says which call is being corrected.
+func (r *generationRun) correcting(stage string) context.Context {
+	return clip.WithResponseCorrectionObserver(r.ctx, func(retry, limit int, d clip.AttemptDiagnostic) error {
+		r.checkpoint.Diagnostic = d
+		r.checkpoint.Diagnostic.Values["retry"] = retry
+		logAttemptDiagnostic(r.job, stage, d)
+		if r.progress != nil {
+			r.progress(stage+"_retry", retry, limit)
+		}
+		return r.s.checkpoint(r.ctx, r.user, r.project, r.checkpoint)
+	})
+}
+
+// keep saves the plan as written so far, so a failure or a cancellation resumes on it
+// and pays for one writing call rather than two (CLIP-87, CLIP-93).
+func (r *generationRun) keep(flowReady, planReady bool) error {
+	raw, err := clip.EncodeEditPlan(r.edit)
+	if err != nil {
+		return err
+	}
+	r.recovery.Plan, r.recovery.PlanDigest = raw, planRecoveryDigest(r.p)
+	r.recovery.FlowReady, r.recovery.PlanReady = flowReady, planReady
+	return r.s.saveRecovery(r.ctx, r.user, r.project, r.recovery)
+}
+
+// write asks the writer for the flow (or resumes the kept one), then the narration over
+// it (CLIP-135), and lays the composition out; the plan is kept after every call.
+func (r *generationRun) write() error {
+	s, ctx, p, pricing := r.s, r.ctx, r.p, r.pricing
+	in := r.planningInput()
+	in.Analyses, in.SourceAudio = r.analyses, batchSourceAudio(r.b)
+	r.set("flow", 0, 1)
+	if err := s.checkpoint(ctx, r.user, r.project, r.checkpoint); err != nil {
+		return err
+	}
+	var err error
+	if pricing.SkipFlow {
+		r.edit, err = clip.DecodeEditPlan(r.recovery.Plan)
+	} else if p.Composition != nil {
+		// A composition is written by the flow call and then the narration
+		// over it (CLIP-135); the single writer is what a payload with no
+		// composition snapshot still uses.
+		r.edit, _, err = s.planner.Flow(r.correcting("flow"), pricing.Plan.Ref, in)
+	} else {
+		r.edit, _, err = s.planner.Plan(r.correcting("flow"), pricing.Plan.Ref, in)
+	}
+	if err != nil {
+		return err
+	}
+	if r.edit.Portable == nil {
+		r.edit = r.edit.WithFacts(p.Disclosure, p.Answers, p.Template.Preset, p.CTA, p.Template.Accent, p.HideDisclosure)
+	}
+	// The project's caption pace and accent are render inputs too: a plan
+	// carries what was written, the project says how it is shown (CLIP-139).
+	r.edit = r.edit.WithDesign(p.Design())
+	// The owner's source-sound choice is the SERVER's to state, and it is
+	// stated only here — after the model's own output has been validated, so
+	// no prompt, response or plan digest ever carried it, and a resumed plan
+	// takes the setting as it stands now (CLIP-100, CDS-6).
+	r.edit.SourceAudio = clip.FreezeSourceAudio(r.b, r.edit.Cuts)
+	if !pricing.SkipFlow {
+		// The flow is written either way: a payload with no composition gets
+		// its whole plan from the one writer, and is ready to render at once.
+		if err := r.keep(true, r.edit.Portable == nil); err != nil {
+			return err
+		}
+	}
+	if !pricing.SkipNarration && r.edit.Portable != nil {
+		r.set("narrate", 0, 1)
+		if err := s.checkpoint(ctx, r.user, r.project, r.checkpoint); err != nil {
+			return err
+		}
+		r.edit, _, err = s.planner.Narrate(r.correcting("narrate"), pricing.Narration.Ref, clip.NarrationInput{PlanningInput: in, Flow: r.edit})
+		if err != nil {
+			return err
+		}
+		r.edit.SourceAudio = clip.FreezeSourceAudio(r.b, r.edit.Cuts)
+		if err := r.keep(true, false); err != nil {
+			return err
+		}
+	}
+	r.checkpoint.Diagnostic = clip.AttemptDiagnostic{Ranges: clip.AttemptRangeDiagnostics(r.edit, r.analyses), Values: map[string]int{"cut_count": len(r.edit.Cuts), "target_ms": p.TargetDurationMS, "after_ms": r.edit.DurationMS, "transition_ms": r.edit.TransitionTotal()}}
+	return r.layout()
+}
+
+// layout lets the renderer place the composition's elements when it can, and keeps
+// the laid-out plan as the one ready to render.
+func (r *generationRun) layout() error {
+	if r.edit.Portable == nil {
+		return nil
+	}
+	layout, ok := r.s.renderer.(interface {
+		LayoutComposition(context.Context, clip.EditPlan, []clip.RenderSource) (clip.EditPlan, []clip.CompositionElement, error)
+	})
+	if !ok {
+		return nil
+	}
+	renderSources := make([]clip.RenderSource, len(r.sources))
+	for i, v := range r.sources {
+		renderSources[i] = v.RenderSource
+	}
+	r.set("narrate", 0, 1)
+	var err error
+	r.edit, _, err = layout.LayoutComposition(r.ctx, r.edit, renderSources)
+	if err != nil {
+		return err
+	}
+	r.edit.SourceAudio = clip.FreezeSourceAudio(r.b, r.edit.Cuts)
+	if r.recovery.Plan, err = clip.EncodeEditPlan(r.edit); err != nil {
+		return err
+	}
+	r.recovery.PlanReady = true
+	return r.s.saveRecovery(r.ctx, r.user, r.project, r.recovery)
+}
+
+// save encodes the validated plan and the merged analysis for the commit. The attempt
+// ends HERE, on the plan: no media execution runs and no result file is produced; the
+// owner reads this plan in ②'s draft preview and starts the render they want (CLIP-151).
+func (r *generationRun) save() error {
+	s, ctx, p := r.s, r.ctx, r.p
+	r.set("save", 0, 1)
+	logAttemptDiagnostic(r.job, "save", r.checkpoint.Diagnostic)
+	r.recovery.PlanReady = true
+	var err error
+	if r.recovery.Plan, err = clip.EncodeEditPlan(r.edit); err != nil {
+		return err
+	}
+	if err := s.saveRecovery(ctx, r.user, r.project, r.recovery); err != nil {
+		return err
+	}
+	if r.analysisJSON, err = json.Marshal(r.analyses); err != nil {
+		return err
+	}
+	if r.edit.Portable == nil && p.Composition != nil && p.Composition.Snapshot.Legacy {
+		projectSnapshot := clip.Project{VideoTemplateID: p.Composition.Snapshot.TemplateID, Answers: p.Answers, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, CTA: p.CTA}
+		if r.edit.Portable, err = clip.FreezeLegacyPlan(projectSnapshot, r.edit, p.Template, s.projects.limits.Composition); err != nil {
+			return err
+		}
+	}
+	// The owner owns source sound, not the writer: the snapshot is taken
+	// from the live leases, so a reselected source keeps the choice already
+	// made about it and a new one stays silent (CLIP-18, CLIP-100).
+	r.edit.SourceAudio = clip.FreezeSourceAudio(r.b, r.edit.Cuts)
+	r.planJSON, err = clip.EncodeEditPlan(r.edit)
+	return err
+}
+
+// finish commits the plan with the job. A failed attempt never replaces the prior plan,
+// and a successful one never replaces the previous result either: it advances the plan
+// the render is asked for, which is what leaves that result standing as a stale one
+// (CLIP-26, CLIP-152).
+func (r *generationRun) finish(currentProject clip.Project) error {
+	if err := r.s.finisher.Complete(r.ctx, clip.AttemptResult{JobID: r.job, UserID: r.user, ProjectID: r.project, ExpectedRevision: currentProject.EditPlanRevision, Analysis: string(r.analysisJSON), EditPlan: r.planJSON}); err != nil {
+		return err
+	}
+	r.set("cleanup", 0, 1)
 	return nil
 }
 

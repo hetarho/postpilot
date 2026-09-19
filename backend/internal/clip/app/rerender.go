@@ -6,7 +6,6 @@ import (
 	"errors"
 	"net/url"
 	"reflect"
-	"time"
 
 	"github.com/postpilot/backend/internal/clip"
 )
@@ -147,7 +146,7 @@ func (s *GenerationService) StartRender(ctx context.Context, user, id, batch str
 	if err != nil {
 		return "", err
 	}
-	if b.ProjectID != id || b.State != "ready" || !time.Now().Before(b.ExpiresAt) {
+	if b.ProjectID != id || b.State != "ready" || !s.now().Before(b.ExpiresAt) {
 		return "", clip.ErrSourceState
 	}
 	// The owner's per-source sound choice is frozen HERE, from the leases that
@@ -357,7 +356,7 @@ func (s *GenerationService) RunRender(ctx context.Context, user, job, project st
 		if err = s.uploadPath(ctx, key, video.Path, video.Bytes); err != nil {
 			return err
 		}
-		result = clip.Result{Kind: clip.RenderServer, Key: key, ContentType: "video/mp4", Bytes: video.Bytes, DurationMS: video.Info.DurationMS, CreatedAt: time.Now()}
+		result = clip.Result{Kind: clip.RenderServer, Key: key, ContentType: "video/mp4", Bytes: video.Bytes, DurationMS: video.Info.DurationMS, CreatedAt: s.now()}
 		return nil
 	})
 	if err != nil {

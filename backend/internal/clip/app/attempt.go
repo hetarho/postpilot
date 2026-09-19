@@ -241,7 +241,7 @@ func (s *GenerationService) Sweep(ctx context.Context) error {
 	if err = s.sources.Sweep(ctx); err != nil {
 		return err
 	}
-	if err = s.media.CleanupStale(ctx, time.Now()); err != nil {
+	if err = s.media.CleanupStale(ctx, s.now()); err != nil {
 		return err
 	}
 	keys, err := s.store.DeletionKeys(ctx)
@@ -271,7 +271,7 @@ func (s *GenerationService) Sweep(ctx context.Context) error {
 	for _, key := range refs {
 		keep[key] = true
 	}
-	cutoff := time.Now().Add(-s.cfg.OrphanMinAge)
+	cutoff := s.now().Add(-s.cfg.OrphanMinAge)
 	for _, object := range objects {
 		if !strings.HasPrefix(object.Key, clip.ResultPrefix) || object.Modified.IsZero() || !object.Modified.Before(cutoff) || keep[object.Key] {
 			continue
@@ -323,7 +323,7 @@ func (s *GenerationService) Sweep(ctx context.Context) error {
 				}
 				// Claim deletion using the same writer as completion. Whichever
 				// wins fences the other, even after the reference snapshot above.
-				cancelled, err := renders.CancelBrowserRender(ctx, user, id, time.Now())
+				cancelled, err := renders.CancelBrowserRender(ctx, user, id, s.now())
 				if err != nil && !errors.Is(err, clip.ErrNotFound) {
 					return err
 				}
