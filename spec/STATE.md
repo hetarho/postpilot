@@ -50,7 +50,6 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
-| T264 | i18n namespaces assembled from slice-owned fragments | ARCH | - | todo |
 | T265 | the clips namespace lives in the clip slices | ARCH | T261 T264 | todo |
 | T266 | one autosave queue behind three save features | ARCH | - | todo |
 | T268 | the route tree is assembled from route groups | ARCH | - | todo |
@@ -66,11 +65,13 @@
 | T284 | the agent generates only the protos it uses and drops the survey harness | ARCH | T008 T281 | todo |
 
 ## next
-- implement-task: T264 (i18n per slice, then T265) T266 (autosave queue) T268 (route groups) T263 T264 T266 T268; BE roots T276 (voice/post/publishing ports), T277 (experiment/usage/auth ports), T278 (typed failure reasons), T280 (boundary leaks), T275 (missing test packages)
+- implement-task: T265 (clips namespace into the clip slices) T266 (i18n per slice, then T265) T266 (autosave queue) T268 (route groups) T263 T264 T266 T268; BE roots T276 (voice/post/publishing ports), T277 (experiment/usage/auth ports), T278 (typed failure reasons), T280 (boundary leaks), T275 (missing test packages)
 - the clip `release-smoke` stage is red at HEAD on this host: 9 of 28 modes end in `no result` (generation ends on a plan since T255, harness still expects a Result) — needs a fix task (review-code clip-release-smoke or update the harness)
 - agent tasks T279 T282 T283 T284 wait for T008; T008 belongs to another session and T177 remains blocked
 - post-quality-and-related-links remains open ideation, awaiting conversion when ready
 ## log
+- 260920 T264 done; 8 domain namespaces became 63 slice fragments assembled by app/providers/i18n (leaf-module imports, one steiger exception) and resources.test gained a no-duplicate-claim check; ARCH-25 green
+- 260920 T264 claimed (clp)
 - 260920 T263 done; DraftEditor is 253 lines / 3 useState over useDraftSteps + useBriefMirror + useCaretHandoff + useDraftAssignments, five inline components became eleven files and the last ESLint warning is gone (lint now 0 problems); ARCH-25 green
 - 260920 T263 claimed (clp)
 - 260920 T262 done; the clip ESLint/vitest allowlist is deleted, 12 clip slices trade transports for entity call hooks (project/source/plan/render families) and ClipRenderKind stops at clip-preview; ARCH-25 green
@@ -89,5 +90,3 @@
 - 260920 T269 done; platform/config imports nothing under internal/ (guard test), clip/post/voice/generation own their limits and cmd/api merges env via clipEnvironment; ARCH-26 green and the release smoke is the pre-existing 19/28
 - 260920 T258 T269 claimed (cfg)
 - 260920 T286 done; usage names no product (approved-kinds list from the root, ceiling read off the admission), charge math frozen and pinned by a new parity table; ARCH-26/28 green
-- 260919 T286 claimed (sub)
-- 260919 T272 done; the allowance, reservation policy and cancellation rule live in clip/app, job keeps generic ports (Reporting, Cancellation, CancellationStore) and imports no llm; ARCH-26/28 green and the release smoke fails only the pre-existing 9 `no result`

@@ -1,7 +1,7 @@
 import i18next from 'i18next'
 import { describe, expect, it } from 'vitest'
 import { appFailureSpecs } from '@/shared/api'
-import { RESOURCE_NAMESPACES, resources } from '.'
+import { FRAGMENTS, RESOURCE_NAMESPACES, resources } from '.'
 
 interface Leaf {
   key: string
@@ -24,6 +24,25 @@ describe('bundled locale resources', () => {
   it('registers exactly the product namespaces', () => {
     expect(Object.keys(resources.ko)).toEqual(RESOURCE_NAMESPACES)
     expect(Object.keys(resources.en)).toEqual(RESOURCE_NAMESPACES)
+  })
+
+  it('assembles the namespaces from slice fragments with no key claimed twice', () => {
+    // A namespace is built by spreading its fragments, so two fragments claiming the same key
+    // would silently take turns depending on import order. Every key belongs to ONE slice.
+    const claims = new Map<string, string>()
+    for (const fragment of FRAGMENTS) {
+      expect(RESOURCE_NAMESPACES).toContain(fragment.namespace)
+      expect(Object.keys(fragment.ko)).toEqual(Object.keys(fragment.en))
+      for (const key of Object.keys(fragment.ko)) {
+        const at = `${fragment.namespace}.${key}`
+        expect(claims.has(at), `${at} is claimed twice`).toBe(false)
+        claims.set(at, fragment.namespace)
+      }
+    }
+    // Nothing is lost in the assembly: every fragment key reaches the namespace it names.
+    for (const fragment of FRAGMENTS)
+      for (const key of Object.keys(fragment.ko))
+        expect(resources.ko[fragment.namespace as keyof typeof resources.ko]).toHaveProperty(key)
   })
 
   it('keeps recursive keys and interpolation placeholders identical', () => {

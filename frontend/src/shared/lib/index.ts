@@ -81,3 +81,4 @@ export {
   jpegFilename,
   resizeToJpeg,
 } from './image'
+export type { I18nFragment } from './localization'

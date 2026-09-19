@@ -20,3 +20,4 @@ export {
   formatRelativeTime,
 } from './format'
 export { formatAppFailure } from './failure'
+export type { I18nFragment } from './fragment'
