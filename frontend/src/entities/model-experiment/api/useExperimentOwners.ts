@@ -2,7 +2,7 @@ import { useCallback } from 'react'
 import { useTransport } from '@connectrpc/connect-query'
 import { useQueryClient, type QueryKey } from '@tanstack/react-query'
 import { getSelectionsQueryKey } from '@/entities/model-catalog/@x/model-experiment'
-import { getPostQueryKey, listPostsQueryKey } from '@/entities/post/@x/model-experiment'
+import { invalidateWrittenPost } from '@/entities/post/@x/model-experiment'
 import { voiceProfileQueryKey, voiceVersionsQueryKey } from '@/entities/voice/@x/model-experiment'
 
 /** What a decided experiment makes stale outside itself. An experiment's outcome is written into
@@ -17,14 +17,16 @@ export function useExperimentOwnerRefresh(
   const queryClient = useQueryClient()
   const { postSlug, voiceId } = experiment
   return useCallback(async () => {
-    const keys: QueryKey[] = [listPostsQueryKey(transport), getSelectionsQueryKey(transport)]
-    if (postSlug) keys.push(getPostQueryKey(transport, postSlug))
+    const keys: QueryKey[] = [getSelectionsQueryKey(transport)]
     if (voiceId) {
       keys.push(
         voiceProfileQueryKey(transport, ownerId, voiceId),
         voiceVersionsQueryKey(transport, ownerId, voiceId),
       )
     }
-    await Promise.all(keys.map((queryKey) => queryClient.invalidateQueries({ queryKey })))
+    await Promise.all([
+      invalidateWrittenPost(queryClient, transport, postSlug),
+      ...keys.map((queryKey) => queryClient.invalidateQueries({ queryKey })),
+    ])
   }, [ownerId, postSlug, queryClient, transport, voiceId])
 }

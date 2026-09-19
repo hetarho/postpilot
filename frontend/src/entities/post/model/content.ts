@@ -5,6 +5,7 @@ import {
   PostContentSchema,
   type Block,
   type BlockType,
+  type Observation,
   type PostContent,
 } from '@/shared/api'
 import type { PostDraft } from './types'
@@ -26,6 +27,15 @@ export function blockWith(block: Block, patch: BlockPatch): Block {
 }
 export function newBlock(init: BlockPatch & { type: BlockType }): Block {
   return create(BlockSchema, init)
+}
+
+/** What the observe stage saw in each attached photo. A post carries its observations
+ *  (`PostDraft.observations`), so the lookup lives with the post rather than in a slice of its
+ *  own — the picker and the contact sheet are both reading one post's own rows. */
+export function observationByFile(
+  observations: readonly Observation[],
+): ReadonlyMap<string, Observation> {
+  return new Map(observations.map((observation) => [observation.file, observation]))
 }
 
 /** Exact filename lookup shared by block rendering and exporters. */

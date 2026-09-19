@@ -1,7 +1,7 @@
 import { create } from '@bufbuild/protobuf'
 import { useMutation, useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
-import { listPostsQueryKey, postDetailQueriesKey } from '@/entities/post/@x/voice'
+import { invalidatePostsDependingOn } from '@/entities/post/@x/voice'
 import {
   appFailureFromConnect,
   contentLanguageToProto,
@@ -71,7 +71,7 @@ export function useDeleteVoice(ownerId: string) {
       // history are intact and only display differently.
       if (data.voice) upsertCachedVoice(queryClient, transport, ownerId, data.voice)
       if (data.voice) invalidateVoiceScope(queryClient, transport, ownerId, data.voice.id)
-      invalidateDependentPosts(queryClient, transport)
+      invalidatePostsDependingOn(queryClient, transport, { voiceId: data.voice?.id })
     },
   })
   const failure = mutation.error ? appFailureFromConnect(mutation.error) : undefined
@@ -92,7 +92,7 @@ export function useRenameVoice(ownerId: string) {
       // The name is projected onto every post written in the voice and onto its own profile
       // response; none of those rows changed, only what they display.
       if (data.voice) invalidateVoiceScope(queryClient, transport, ownerId, data.voice.id)
-      invalidateDependentPosts(queryClient, transport)
+      invalidatePostsDependingOn(queryClient, transport, { voiceId: data.voice?.id })
     },
   })
   return {
@@ -110,7 +110,7 @@ export function useRestoreVoice(ownerId: string) {
       if (data.voice) upsertCachedVoice(queryClient, transport, ownerId, data.voice)
       // Every post written in the voice loses its tombstone, and its AI controls come back.
       if (data.voice) invalidateVoiceScope(queryClient, transport, ownerId, data.voice.id)
-      invalidateDependentPosts(queryClient, transport)
+      invalidatePostsDependingOn(queryClient, transport, { voiceId: data.voice?.id })
     },
   })
   const failure = mutation.error ? appFailureFromConnect(mutation.error) : undefined
@@ -180,12 +180,4 @@ export function useRestoreVoiceProfile(ownerId: string, voiceId: string) {
     failure: mutation.error ? appFailureFromConnect(mutation.error) : undefined,
     adopt: (version: bigint) => mutation.mutateAsync({ voiceId, version }),
   }
-}
-
-function invalidateDependentPosts(
-  queryClient: ReturnType<typeof useQueryClient>,
-  transport: ReturnType<typeof useTransport>,
-): void {
-  void queryClient.invalidateQueries({ queryKey: listPostsQueryKey(transport) })
-  void queryClient.invalidateQueries({ queryKey: postDetailQueriesKey(transport) })
 }

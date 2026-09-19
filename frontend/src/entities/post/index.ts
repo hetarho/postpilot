@@ -8,6 +8,7 @@ export {
   hasContent,
   imageByFile,
   newBlock,
+  observationByFile,
   postContentWith,
 } from './model/content'
 export { BlockList } from './ui/BlockList'
@@ -22,6 +23,12 @@ export type { GenerationOptionValues } from './api/useGenerationOptions'
 export { useGenerationOptions } from './api/useGenerationOptions'
 export { usePostImagesCache } from './api/usePostImagesCache'
 export { useRefreshPostImages } from './api/useRefreshPostImages'
+export type { PostDependency } from './api/post-dependencies'
+export {
+  invalidatePostsDependingOn,
+  invalidateWrittenPost,
+  useInvalidatePostsDependingOn,
+} from './api/post-dependencies'
 export {
   getPostQueryKey,
   listPostsQueryKey,

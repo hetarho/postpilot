@@ -8,7 +8,7 @@ import {
   ClipRequestRecord,
   useClipProject,
   requiredClipSources,
-  reorderClipSources,
+  useReorderClipSources,
   type ClipProject,
   clipRenderNeedsAudio,
   useClipBrowserRenderCapability,
@@ -34,7 +34,6 @@ import { StageModelSelect } from '@/features/select-model'
 import { ClipSourcePicker, useClipSourceUpload } from '@/features/upload-clip-sources'
 import { useClipSourceBinding } from '@/features/bind-clip-source-item'
 import { ClipObservationViewer, ClipAttemptInspection } from '@/features/inspect-clip-observations'
-import { useTransport } from '@connectrpc/connect-query'
 import { appFailureFromConnect } from '@/shared/api'
 import {
   ActionBar,
@@ -254,7 +253,7 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
   // The order the footage plays in when no instruction directs otherwise
   // (CLIP-136). It is stored on the batch, so the refreshed batch is what the
   // strip then shows.
-  const transport = useTransport()
+  const reorderSources = useReorderClipSources()
   const acceptSourceOrder = upload.acceptSourceOrder
   const sourceOrder = {
     // Arranging is refused while a generation runs or after finalization; an
@@ -264,9 +263,7 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
     change: (sourceIds: string[]) => {
       const batchId = upload.readyBatch?.id
       if (!batchId) return
-      void reorderClipSources(transport, { projectId: project.id, batchId, sourceIds }).then(
-        acceptSourceOrder,
-      )
+      void reorderSources({ projectId: project.id, batchId, sourceIds }).then(acceptSourceOrder)
     },
   }
   const correctionStatus: CorrectionStatus = correction.dirty

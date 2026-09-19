@@ -1,7 +1,7 @@
 import { useMutation, useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
 import { invalidateGuidelines } from '@/entities/guideline/@x/template'
-import { listPostsQueryKey, postDetailQueriesKey } from '@/entities/post/@x/template'
+import { invalidatePostsDependingOn } from '@/entities/post/@x/template'
 import { TemplateService } from '@/shared/api'
 import { invalidateTemplates } from './template-cache'
 import { templateErrorMessage } from './template-errors'
@@ -21,8 +21,7 @@ export function useUpdateTemplate(ownerId: string, templateId: string) {
       // the badges keep the old name until something else happens to refetch them — the
       // same reason `useRenameVoice` invalidates these two keys for the identical projection.
       if (saved.name !== undefined) {
-        void queryClient.invalidateQueries({ queryKey: listPostsQueryKey(transport) })
-        void queryClient.invalidateQueries({ queryKey: postDetailQueriesKey(transport) })
+        invalidatePostsDependingOn(queryClient, transport, { templateId })
         // The guideline list projects the same name onto every scope chip, for the same reason.
         invalidateGuidelines(queryClient, transport, ownerId)
       }

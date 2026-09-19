@@ -1,4 +1,6 @@
+import { useCallback } from 'react'
 import { createClient, type Transport } from '@connectrpc/connect'
+import { useTransport } from '@connectrpc/connect-query'
 import { ClipService } from '@/shared/api'
 import { toClipProject, toClipSourceBatch } from './clip-project'
 
@@ -48,6 +50,17 @@ export async function reorderClipSources(
   const response = await createClient(ClipService, transport).reorderClipSources(input, { signal })
   if (!response.batch) throw new Error('Invalid source order response')
   return toClipSourceBatch(response.batch)
+}
+
+/** The same call for a screen that holds no transport of its own (ARCH-17): arranging footage is
+ *  one click on the strip, with no cache of its own to keep — the refreshed batch IS the answer. */
+export function useReorderClipSources() {
+  const transport = useTransport()
+  return useCallback(
+    (input: { projectId: string; batchId: string; sourceIds: string[] }) =>
+      reorderClipSources(transport, input),
+    [transport],
+  )
 }
 
 export async function getClipSourcePlayback(

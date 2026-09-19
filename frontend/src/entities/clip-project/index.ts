@@ -134,6 +134,7 @@ export {
   getClipSourcePlayback,
   setClipSourceOriginalSound,
   reorderClipSources,
+  useReorderClipSources,
 } from './api/sources'
 export type { ClipSourceAvailability } from './model/types'
 

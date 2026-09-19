@@ -1,7 +1,7 @@
 import { useMutation, useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
 import { invalidateGuidelines } from '@/entities/guideline/@x/template'
-import { listPostsQueryKey, postDetailQueriesKey } from '@/entities/post/@x/template'
+import { invalidatePostsDependingOn } from '@/entities/post/@x/template'
 import { TemplateService } from '@/shared/api'
 import { invalidateTemplates } from './template-cache'
 import { templateErrorMessage } from './template-errors'
@@ -14,7 +14,7 @@ export function useDeleteTemplate(ownerId: string) {
   const transport = useTransport()
   const queryClient = useQueryClient()
   const mutation = useMutation(TemplateService.method.deleteTemplate, {
-    onSuccess: (data) => {
+    onSuccess: (data, deleted) => {
       invalidateTemplates(queryClient, transport, ownerId)
       // The delete cascaded this template's guideline scope links, so a guideline scoped to it now
       // shows different chips — or 적용 대상 없음, if it named no other template. Always, not only
@@ -23,8 +23,7 @@ export function useDeleteTemplate(ownerId: string) {
       // Only when the delete actually detached something: an unreferenced template leaves
       // every post's cached badge correct, and refetching them all would be pure noise.
       if (data.detachedPosts > 0) {
-        void queryClient.invalidateQueries({ queryKey: postDetailQueriesKey(transport) })
-        void queryClient.invalidateQueries({ queryKey: listPostsQueryKey(transport) })
+        invalidatePostsDependingOn(queryClient, transport, { templateId: deleted.id })
       }
     },
   })

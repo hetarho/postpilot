@@ -1,6 +1,6 @@
 import type { PostImage } from '@/entities/image'
 import type { PostVideo } from '@/entities/video'
-import { observationByFile } from '@/entities/observation'
+import { observationByFile } from '@/entities/post'
 import type { Observation } from '@/shared/api'
 
 /** Which kind a row is, carrying the attachment itself so the picker renders it without

@@ -57,7 +57,6 @@
 | T264 | i18n namespaces assembled from slice-owned fragments | ARCH | - | todo |
 | T265 | the clips namespace lives in the clip slices | ARCH | T261 T264 | todo |
 | T266 | one autosave queue behind three save features | ARCH | - | todo |
-| T267 | pages consume hooks; verbs have one home; post owns its cache dependencies | ARCH | T259 | todo |
 | T268 | the route tree is assembled from route groups | ARCH | - | todo |
 | T275 | job/store, template/rpc and modelcatalog/rpc have tests | ARCH | T285 | todo |
 | T276 | voice, post and publishing ports are per use-case | ARCH | - | todo |
@@ -71,11 +70,13 @@
 | T284 | the agent generates only the protos it uses and drops the survey harness | ARCH | T008 T281 | todo |
 
 ## next
-- implement-task: T267 is next for FE (its dep T259 is done); other FE roots T260 T263 T264 T266 T268; BE roots T276 (voice/post/publishing ports), T277 (experiment/usage/auth ports), T278 (typed failure reasons), T280 (boundary leaks), T275 (missing test packages)
+- implement-task: FE roots T260 (clip entity split, unblocks T261→T262) T263 T264 T266 T268; BE roots T276 (voice/post/publishing ports), T277 (experiment/usage/auth ports), T278 (typed failure reasons), T280 (boundary leaks), T275 (missing test packages)
 - the clip `release-smoke` stage is red at HEAD on this host: 9 of 28 modes end in `no result` (generation ends on a plan since T255, harness still expects a Result) — needs a fix task (review-code clip-release-smoke or update the harness)
 - agent tasks T279 T282 T283 T284 wait for T008; T008 belongs to another session and T177 remains blocked
 - post-quality-and-related-links remains open ideation, awaiting conversion when ready
 ## log
+- 260920 T267 done; one `invalidatePostsDependingOn` entry in entities/post replaces the post keys 8 verbs restated, entities/observation folded into post, and pages/clip gave up the last page-held transport; ARCH-25 green
+- 260920 T267 claimed (ent)
 - 260920 T259 done; an ESLint block + a source-tree vitest hold ARCH-17 over pages/widgets/features (clip allowlisted for T262), 45 slice files traded descriptors for entity hooks, and 7 slices whose only hook moved were deleted; ARCH-25 green
 - 260920 T259 claimed (ent)
 - 260920 T258 done; shared/config is 80 lines of env + cross-slice values, product limits and slice tuning live in 24 new `config` segments, clip-design.json moved into entities/clip-project and reaches clip-template through a new @x; ARCH-25 green
