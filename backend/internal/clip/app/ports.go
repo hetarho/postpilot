@@ -51,7 +51,7 @@ type ClipTx interface {
 // Admission is the credit hold, already bound to the transaction it must
 // commit with. The composition root builds it from the ledger's tx-scoped store.
 type Admission interface {
-	Hold(context.Context, job.Start) error
+	Hold(context.Context, Hold) error
 }
 
 // Ports is what one writer transaction exposes to a saga.
@@ -69,7 +69,7 @@ type Binder func(*sql.Tx) Ports
 // Authorizer serializes dispatch authorization with cancellation through the
 // job store's conditional writer statement.
 type Authorizer interface {
-	AuthorizeClipDispatch(ctx context.Context, user, id string) error
+	AuthorizeDispatch(ctx context.Context, user, id string) error
 }
 
 // Queue is the job queue surface the clip jobs adapter drives.
@@ -81,7 +81,6 @@ type Queue interface {
 	Get(ctx context.Context, id, user string) (*job.JobSummary, error)
 	Snapshot(ctx context.Context, user string, subject job.Subject, id string) (*job.Job, error)
 	LatestSnapshot(ctx context.Context, user string, subject job.Subject) (*job.Job, error)
-	ReserveClip(ctx context.Context, user, id string, calls []job.PlannedCall, approval ...job.ClipReservation) (context.Context, error)
 }
 
 // Freezer is the model registry as the quote and the admission see it: frozen

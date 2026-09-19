@@ -34,7 +34,7 @@ func TestOwnerCutCreationRidesTheExistingOptimisticSave(t *testing.T) {
 	ctx := context.Background()
 	// The editor only exists where planning and rendering both understand the
 	// current plan, so the fixture's executors advertise that capability.
-	h.service = clipapp.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, compositionPlanner{h.planner}, layoutRenderer{h.renderer}, generationJobs{h.queue}, h.cfg, generationDeps(generationFinisher{h.store}, &quotePricing{}, nil))
+	h.service = clipapp.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, compositionPlanner{h.planner}, layoutRenderer{h.renderer}, h.clipJobs(), h.cfg, generationDeps(generationFinisher{h.store}, &quotePricing{}, nil))
 	p, err := h.projects.GetProject(ctx, "alice", h.project.ID)
 	if err != nil {
 		t.Fatal(err)
@@ -112,7 +112,7 @@ func TestAssemblyRejectionsPreserveDraftAndPreviousResult(t *testing.T) {
 	for _, kind := range []string{"unsupported-rate", "insufficient-cadence", "overlap", "authored-interval"} {
 		t.Run(kind, func(t *testing.T) {
 			h := generationSetup(t)
-			h.service = clipapp.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, ownedPlanWriter{h.planner}, ownedPlanRenderer{h.renderer}, generationJobs{h.queue}, h.cfg, generationDeps(generationFinisher{h.store}, &quotePricing{}, nil))
+			h.service = clipapp.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, ownedPlanWriter{h.planner}, ownedPlanRenderer{h.renderer}, h.clipJobs(), h.cfg, generationDeps(generationFinisher{h.store}, &quotePricing{}, nil))
 			template, err := legacyTemplate(t, h.store, "alice", "assembly-rejections", `<clip version="1"><repeat for="scenes"><scene id="shot"><text id="copy" kind="ai" role="caption" basis="cut">Describe the scene.</text></scene></repeat><text id="empty-hook" kind="fixed" role="hook"/><text id="empty-ending" kind="fixed" role="ending"/></clip>`), error(nil)
 			if err != nil {
 				t.Fatal(err)
@@ -125,7 +125,7 @@ func TestAssemblyRejectionsPreserveDraftAndPreviousResult(t *testing.T) {
 			if err := h.run(t); err != nil {
 				t.Fatal(err)
 			}
-			h.service = clipapp.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, compositionPlanner{h.planner}, layoutRenderer{h.renderer}, generationJobs{h.queue}, h.cfg, generationDeps(generationFinisher{h.store}, &quotePricing{}, nil))
+			h.service = clipapp.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, compositionPlanner{h.planner}, layoutRenderer{h.renderer}, h.clipJobs(), h.cfg, generationDeps(generationFinisher{h.store}, &quotePricing{}, nil))
 			p, err := h.projects.GetProject(t.Context(), "alice", h.project.ID)
 			if err != nil {
 				t.Fatal(err)

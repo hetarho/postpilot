@@ -19,7 +19,7 @@ func TestCancelClipRPCDistinguishesAcceptedRequestFromTerminalCancellation(t *te
 	for _, running := range []bool{false, true} {
 		t.Run(map[bool]string{false: "queued", true: "running"}[running], func(t *testing.T) {
 			h := newCancellationHarness(t, nil)
-			id := h.enqueue(t, job.KindGenerateClip)
+			id := h.enqueue(t, clip.JobKindGenerate)
 			payload := `{"Version":4,"ProjectID":"clip","Batch":{"UserID":"alice"},"Approval":{"MaxCredits":5,"Pricing":{"CancellationPolicyVersion":1}}}`
 			if _, err := h.db.Writer.Exec("UPDATE generation_jobs SET payload=? WHERE id=?", payload, id); err != nil {
 				t.Fatal(err)
@@ -33,7 +33,7 @@ func TestCancelClipRPCDistinguishesAcceptedRequestFromTerminalCancellation(t *te
 				}
 			}
 			projects := clipapp.NewService(h.clips, config.ClipLimits(), clipapp.NewSourceService(h.clips, &finalizationObjects{objects: map[string]clip.SourceObjectInfo{}}, config.ClipSourceLimits(6*time.Hour, 10*time.Minute)), clipapp.NewFinalizer(h.db.Writer, h.bind, h.clips, config.ClipRender(&config.Config{}), nil))
-			generation := clipapp.NewGenerationService(h.clips, projects, nil, nil, nil, nil, nil, clipapp.NewJobs(h.queue), clip.GenerationConfig{ReadTTL: time.Minute, CleanupTimeout: time.Second, OrphanMinAge: time.Hour}, generationDeps(nil, nil, clipapp.NewAccounting(h.ledger)))
+			generation := clipapp.NewGenerationService(h.clips, projects, nil, nil, nil, nil, nil, clipapp.NewJobs(h.queue, h.guard), clip.GenerationConfig{ReadTTL: time.Minute, CleanupTimeout: time.Second, OrphanMinAge: time.Hour}, generationDeps(nil, nil, clipapp.NewAccounting(h.ledger)))
 			handler := cliprpc.NewHandler(projects).WithGeneration(generation, h.queue)
 			req := connect.NewRequest(&v1.CancelClipJobRequest{ProjectId: "clip", JobId: id})
 			if _, err := handler.CancelClipJob(context.Background(), req); connect.CodeOf(err) != connect.CodeUnauthenticated {

@@ -11,9 +11,9 @@ import (
 func TestClipResultCommitRacingCancellationKeepsOneOutcome(t *testing.T) {
 	for range 8 {
 		h := newCancellationHarness(t, nil)
-		id := h.enqueue(t, job.KindGenerateClip)
+		id := h.enqueue(t, clip.JobKindGenerate)
 		ready, compete := make(chan struct{}), make(chan struct{})
-		terminal := h.run(t, job.KindGenerateClip, func(ctx context.Context, j job.Job, _ job.Progress) error {
+		terminal := h.run(t, clip.JobKindGenerate, func(ctx context.Context, j job.Job, _ job.Progress) error {
 			if _, err := h.reserve(ctx, j.ID); err != nil {
 				return err
 			}
@@ -29,7 +29,7 @@ func TestClipResultCommitRacingCancellationKeepsOneOutcome(t *testing.T) {
 		cancelled := make(chan error, 1)
 		go func() {
 			<-compete
-			_, err := h.queue.CancelClipJob(t.Context(), "alice", job.Subject{Dimension: clip.JobSubject, ID: "clip"}, id)
+			_, err := h.queue.Cancel(t.Context(), "alice", job.Subject{Dimension: clip.JobSubject, ID: "clip"}, id)
 			cancelled <- err
 		}()
 		close(compete)

@@ -14,29 +14,21 @@ const releaseTimeout = 5 * time.Second
 // Enqueue persists queued work and only then wakes the worker. It never runs the
 // handler in the caller's request.
 func (q *Queue) Enqueue(ctx context.Context, input NewJob) (string, error) {
-	// A cancellation policy belongs to the charged clip work: a generation and a
-	// revision both reserve credits and both can be cancelled mid-flight.
-	if input.CancellationPolicyVersion < 0 || input.CancellationPolicyVersion > 1 || (input.CancellationPolicyVersion != 0 && input.Kind != KindGenerateClip && input.Kind != KindReviseClip) {
+	// The queue honours one cancellation policy version besides "none"; which kinds may
+	// carry it is the enqueueing context's rule, checked before it gets here.
+	if input.CancellationPolicyVersion < 0 || input.CancellationPolicyVersion > 1 {
 		return "", ErrInvalidTarget
 	}
 	if input.Kind == "" || input.UserID == "" {
 		return "", fmt.Errorf("enqueue job: kind and user are required")
-	}
-	if input.Subject(subjectClipProject) != "" && !ClipKind(input.Kind) {
-		return "", ErrInvalidTarget
 	}
 	for _, s := range input.Subjects {
 		if !s.valid() {
 			return "", ErrInvalidTarget
 		}
 	}
-	if input.NonMetered != (input.Kind == KindRenderClip) {
-		return "", ErrInvalidTarget
-	}
-	if input.Kind == KindRenderClip && (input.Subject(subjectClipProject) == "" || len(input.Subjects) != 1 || input.TargetLanguage != "" || input.ObserveModel != "" || input.WriteModel != "" || len(input.ExtraModels) > 0 || len(input.CallCounts) > 0 || len(input.PricingCalls) > 0) {
-		return "", ErrInvalidTarget
-	}
-	if input.Kind == KindGenerateClip && (input.Subject(subjectClipProject) == "" || len(input.Subjects) != 1 || input.ObserveModel == "" || input.WriteModel == "") {
+	// Work that spends nothing may not also defer a hold it will never take.
+	if input.NonMetered && input.DeferHold {
 		return "", ErrInvalidTarget
 	}
 	if (input.Kind == KindGenerate || input.Kind == KindRevise) && input.TargetLanguage == "" {
@@ -66,10 +58,9 @@ func (q *Queue) Enqueue(ctx context.Context, input NewJob) (string, error) {
 	// The hold precedes the insert so a refused start leaves no job row at all. The error
 	// is returned unwrapped: the credit refusal it carries is matched by type at every rpc
 	// edge above, and wrapping it here would say nothing a caller needs.
-	// A clip job reserves its credits when it knows what it will spend them on —
-	// after preparation for a generation, before the first writing call for a
-	// revision — so nothing is held for a job that refuses at admission.
-	if q.admitter != nil && !ClipKind(input.Kind) && !input.NonMetered {
+	// Work that defers its hold reserves its credits when it knows what it will spend
+	// them on — after its owner approves — so nothing is held for it here.
+	if q.admitter != nil && !input.DeferHold && !input.NonMetered {
 		if err := q.admitter.Hold(ctx, Start{
 			UserID: input.UserID, Kind: input.Kind, JobID: found.ID, Calls: input.plannedCalls(),
 		}); err != nil {

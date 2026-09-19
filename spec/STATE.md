@@ -62,7 +62,6 @@
 | T267 | pages consume hooks; verbs have one home; post owns its cache dependencies | ARCH | T259 | todo |
 | T268 | the route tree is assembled from route groups | ARCH | - | todo |
 | T269 | platform/config holds env only; limits live in their context | ARCH | - | todo |
-| T272 | the clip credit allowance and cancellation policy leave the queue | ARCH | T285 | todo |
 | T275 | job/store, template/rpc and modelcatalog/rpc have tests | ARCH | T285 | todo |
 | T276 | voice, post and publishing ports are per use-case | ARCH | - | todo |
 | T277 | experiment, usage and auth ports are per use-case | ARCH | T286 | todo |
@@ -76,11 +75,13 @@
 | T286 | the ledger settles by approved ceiling, not by product kind | ARCH | T272 | todo |
 
 ## next
-- implement-task T272 (clip allowance into clip/app; dep T285 done) then T286 (ledger de-named); other roots meanwhile: BE T269 T276 T278 T280, FE T258 T259 T260 T263 T264 T266 T268; follow-up to log as a task: constructor treatment for voice/experiment/guideline/modelcatalog/billingstore setters and moving jobAdmission/meteredRegistry out of package main
+- implement-task T286 (ledger de-named by approved ceiling; dep T272 done); other roots meanwhile: BE T269 T276 T278 T280, FE T258 T259 T260 T263 T264 T266 T268; follow-up to log as a task: constructor treatment for voice/experiment/guideline/modelcatalog/billingstore setters
 - the clip `release-smoke` stage is red at HEAD on this host: 9 of 28 modes end in `no result` (generation ends on a plan since T255, harness still expects a Result) — needs a fix task (review-code clip-release-smoke or update the harness)
 - agent tasks T279 T282 T283 T284 wait for T008; T008 belongs to another session and T177 remains blocked
 - post-quality-and-related-links remains open ideation, awaiting conversion when ready
 ## log
+- 260919 T272 done; the allowance, reservation policy and cancellation rule live in clip/app, job keeps generic ports (Reporting, Cancellation, CancellationStore) and imports no llm; ARCH-26/28 green and the release smoke fails only the pre-existing 9 `no result`
+- 260919 T272 claimed (sub)
 - 260919 T285 done; job addresses work by Subject{Dimension,ID} (Guards stated by the caller, 7 store lookups collapsed, experiment id derived+indexed); ARCH-26 and ARCH-28 green. Deviation: the subject_kind/subject_id pair was dropped as unreadable without behaviour change — see the task result
 - 260919 T285 claimed (sub)
 - 260919 create-task T272 re-split done: T285 (subject addressing, VIRTUAL generated columns) + T272 (allowance into clip/app) + T286 (ledger de-named, charge math frozen); T275 dep→T285, T277 dep→T286
@@ -99,5 +100,3 @@
 - 260919 review-code arch-260919 ready; owner adopted all 31 (rule: clear anything that accrues per change now); next create-task review/arch-260919
 - 260919 review-code arch-260919 FE re-verified at 19c19cc2; F9 widened (6 pages own RPC), F31 added (cross-domain cache keys in 8 features); 31 [?] awaiting triage
 - 260919 review-code arch-260919 findings written (30, 1×P1 F13 cmd/api sagas; FE 12 · BE 10 · agent/proto 8); awaiting triage
-- 260919 review-code arch-260919 start
-- 260918 T257 done; approval quotes the whole target before narration and actual styled captions afterward, in ko/en seconds with no sequence ceiling; all local gates pass.

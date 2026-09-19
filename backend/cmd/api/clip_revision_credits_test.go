@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/postpilot/backend/internal/clip"
+	clipapp "github.com/postpilot/backend/internal/clip/app"
 	"github.com/postpilot/backend/internal/job"
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/usage"
@@ -17,7 +18,7 @@ import (
 // ceiling. Every one of those three gates named `generate_clip` alone, so the
 // very first revision died in prepare with no reserved allowance and a failure
 // reason that could name neither the check nor the cause.
-func revisionReservation() job.ClipReservation {
+func revisionReservation() clipapp.Reservation {
 	r := cancellationReservation()
 	// No observation call is repaid: the recorded observations are the evidence
 	// the rewrite is bound to. Two writing calls is a flow-and-narration target.
@@ -27,7 +28,7 @@ func revisionReservation() job.ClipReservation {
 }
 
 func reserveRevision(h *cancellationHarness, ctx context.Context, id string) (context.Context, error) {
-	return h.queue.ReserveClip(ctx, "alice", id, []job.PlannedCall{{Ref: "p/w", Count: 2, CompletionTokens: 32768}}, revisionReservation())
+	return clipapp.NewJobs(h.queue, h.guard).Reserve(ctx, "alice", id, []job.PlannedCall{{Ref: "p/w", Count: 2, CompletionTokens: 32768}}, revisionReservation())
 }
 
 // writeCall is a reserved writing call as the planner sends it: the frozen
@@ -42,19 +43,19 @@ func writeCall() (llm.ModelRef, llm.Request) {
 
 func TestClipRevisionReservesMetersAndSettlesLikeAGeneration(t *testing.T) {
 	h := newCancellationHarness(t, nil)
-	id := h.enqueue(t, job.KindReviseClip)
+	id := h.enqueue(t, clip.JobKindRevise)
 	metered := make(chan struct{})
-	terminal := h.run(t, job.KindReviseClip, func(ctx context.Context, j job.Job, _ job.Progress) error {
+	terminal := h.run(t, clip.JobKindRevise, func(ctx context.Context, j job.Job, _ job.Progress) error {
 		admitted, err := reserveRevision(h, ctx, j.ID)
 		if err != nil {
 			return err
 		}
 		ref, r := writeCall()
-		work := usage.WithWork(admitted, usage.Work{UserID: "alice", Kind: job.KindReviseClip, JobID: j.ID})
+		work := usage.WithWork(admitted, usage.Work{UserID: "alice", Kind: clip.JobKindRevise, JobID: j.ID})
 		// The empty registry cannot resolve the model, so the call stops there.
 		// What matters is that it got that far: a refusal of the reserved call as
 		// unmetered work is the boundary rejecting the revision for its kind.
-		if _, err := (meteredRegistry{Registry: &llm.Registry{}, ledger: h.ledger}).Complete(work, ref, r); errors.Is(err, job.ErrCreditAllowance) {
+		if _, err := (meteredRegistry{Registry: &llm.Registry{}, ledger: h.ledger}).Complete(work, ref, r); errors.Is(err, clip.ErrCreditAllowance) {
 			return errors.New("the metered boundary refused a reserved revision call")
 		}
 		close(metered)
@@ -84,9 +85,9 @@ func TestClipRevisionReservesMetersAndSettlesLikeAGeneration(t *testing.T) {
 
 func TestClipRevisionCancellationSettlesUnderItsPolicy(t *testing.T) {
 	h := newCancellationHarness(t, nil)
-	id := h.enqueue(t, job.KindReviseClip)
+	id := h.enqueue(t, clip.JobKindRevise)
 	reserved := make(chan struct{})
-	terminal := h.run(t, job.KindReviseClip, func(ctx context.Context, j job.Job, _ job.Progress) error {
+	terminal := h.run(t, clip.JobKindRevise, func(ctx context.Context, j job.Job, _ job.Progress) error {
 		if _, err := reserveRevision(h, ctx, j.ID); err != nil {
 			return err
 		}
@@ -98,7 +99,7 @@ func TestClipRevisionCancellationSettlesUnderItsPolicy(t *testing.T) {
 		t.Fatal(err)
 	}
 	awaitCancellationSignal(t, reserved)
-	if _, err := h.queue.CancelClipJob(t.Context(), "alice", job.Subject{Dimension: clip.JobSubject, ID: "clip"}, id); err != nil {
+	if _, err := h.queue.Cancel(t.Context(), "alice", job.Subject{Dimension: clip.JobSubject, ID: "clip"}, id); err != nil {
 		t.Fatal(err)
 	}
 	awaitCancellationSignal(t, terminal)

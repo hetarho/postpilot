@@ -18,11 +18,11 @@ func (h *Handler) CancelClipJob(ctx context.Context, req *connect.Request[v1.Can
 	if h.jobs == nil || h.generation == nil {
 		return nil, toConnectError(clip.ErrCancellationPolicy)
 	}
-	j, err := h.jobs.CancelClipJob(ctx, user, job.Subject{Dimension: clip.JobSubject, ID: req.Msg.ProjectId}, req.Msg.JobId)
+	j, err := h.jobs.Cancel(ctx, user, job.Subject{Dimension: clip.JobSubject, ID: req.Msg.ProjectId}, req.Msg.JobId)
 	if errors.Is(err, job.ErrNotFound) {
 		err = clip.ErrNotFound
 	}
-	if errors.Is(err, job.ErrCancellationUnavailable) {
+	if errors.Is(err, job.ErrCancellationUnavailable) || errors.Is(err, clip.ErrCancellationUnavailable) {
 		err = clip.ErrCancellationPolicy
 	}
 	if err != nil {

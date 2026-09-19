@@ -31,6 +31,7 @@ type cancellationHarness struct {
 	ledger    *usage.Service
 	finisher  clipapp.Finisher
 	admission jobAdmission
+	guard     clipapp.Guard
 	bind      clipapp.Binder
 }
 
@@ -55,23 +56,25 @@ func newCancellationHarness(t *testing.T, wrap func(*jobstore.Store) job.Store) 
 	}
 	authSvc := auth.NewService(authstore.New(d.Writer, d.Reader), time.Hour, auth.Deps{Mailer: mail.NewLog()})
 	ledger := usage.NewService(usagestore.New(d.Writer, d.Reader), emptyModels{}, 32768, usageAnchors{auth: authSvc})
-	js, cs := jobstore.New(d.Writer, d.Reader, deferredKindsForTest()), clipstore.New(d.Writer, d.Reader)
+	js, cs := jobstore.New(d.Writer, d.Reader, jobKindsForTest()), clipstore.New(d.Writer, d.Reader)
 	var queueStore job.Store = js
 	if wrap != nil {
 		queueStore = wrap(js)
 	}
-	q := job.New(queueStore, time.Millisecond)
+	q := job.New(queueStore, time.Millisecond, jobReportingForTest())
+	q.AllowCancellation(clipCancellation{})
 	admission := jobAdmission{ledger: ledger, plans: authSvc}
 	q.Admit(admission)
 	bind := clipTxPorts(ledger, nil, authSvc)
-	q.GuardClips(clipapp.NewGuard(d.Writer, bind, js))
-	return &cancellationHarness{d, js, cs, q, ledger, clipapp.NewFinisher(d.Writer, bind, js, cs, nil), admission, bind}
+	q.AllowCancellation(clipCancellation{})
+	guard := clipapp.NewGuard(d.Writer, bind, js)
+	return &cancellationHarness{d, js, cs, q, ledger, clipapp.NewFinisher(d.Writer, bind, js, cs, nil), admission, guard, bind}
 }
 
 func (h *cancellationHarness) enqueue(t *testing.T, kind string) string {
 	t.Helper()
 	n := clipJob(job.NewJob{UserID: "alice", Kind: kind}, "clip")
-	if kind == job.KindRenderClip {
+	if kind == clip.JobKindRender {
 		n.NonMetered = true
 	} else {
 		n.CancellationPolicyVersion = 1
@@ -84,17 +87,17 @@ func (h *cancellationHarness) enqueue(t *testing.T, kind string) string {
 	}
 	return id
 }
-func cancellationReservation() job.ClipReservation {
+func cancellationReservation() clipapp.Reservation {
 	p := llm.CallPolicy{Ref: llm.ModelRef{ProviderID: "p", ModelID: "o"}, Stage: "observe", CompletionTokens: 8192, InputUSDPerMillion: "0.15", OutputUSDPerMillion: "0", Pricing: llm.CallPricing{Version: llm.CallPricingVersion, Fingerprint: strings.Repeat("a", 64), Delivery: llm.ExecutionInlineStatic, Endpoint: "leaf", RequiredParameters: "max_tokens", PromptUSDPerMillion: "0.15", CompletionUSDPerMillion: "0", RequestUSD: "0", ImageUSD: "0", AudioUSDPerToken: "0"}}
 	w := p
 	w.Ref.ModelID = "w"
 	w.Stage = "write"
 	w.CompletionTokens = 32768
 	w.Pricing.Delivery = llm.ExecutionTextOnly
-	return job.ClipReservation{CancellationPolicyVersion: 1, ApprovedMaxCredits: 5, Calls: []job.ClipCall{{Policy: p, Count: 1}, {Policy: w, Count: 1}}}
+	return clipapp.Reservation{CancellationPolicyVersion: 1, ApprovedMaxCredits: 5, Calls: []clipapp.Call{{Policy: p, Count: 1}, {Policy: w, Count: 1}}}
 }
 func (h *cancellationHarness) reserve(ctx context.Context, id string) (context.Context, error) {
-	return h.queue.ReserveClip(ctx, "alice", id, []job.PlannedCall{{Ref: "p/o", Count: 1, CompletionTokens: 8192}, {Ref: "p/w", Count: 1, CompletionTokens: 32768}}, cancellationReservation())
+	return clipapp.NewJobs(h.queue, h.guard).Reserve(ctx, "alice", id, []job.PlannedCall{{Ref: "p/o", Count: 1, CompletionTokens: 8192}, {Ref: "p/w", Count: 1, CompletionTokens: 32768}}, cancellationReservation())
 }
 func (h *cancellationHarness) candidate(id string, render bool) clip.AttemptResult {
 	c := clip.AttemptResult{JobID: id, UserID: "alice", ProjectID: "clip", ExpectedRevision: 1, Analysis: "[]", EditPlan: "new-plan", Result: clip.Result{Key: "clip-results/alice/clip/new.mp4", ContentType: "video/mp4", Bytes: 20, DurationMS: 15000, CreatedAt: time.Now()}}
@@ -143,7 +146,7 @@ func (h *cancellationHarness) assertPreviousResult(t *testing.T) {
 }
 
 func TestClipCancellationBeforeReservationAndManualRenderAreFree(t *testing.T) {
-	for _, kind := range []string{job.KindGenerateClip, job.KindRenderClip} {
+	for _, kind := range []string{clip.JobKindGenerate, clip.JobKindRender} {
 		t.Run(kind, func(t *testing.T) {
 			h := newCancellationHarness(t, nil)
 			id := h.enqueue(t, kind)
@@ -151,7 +154,7 @@ func TestClipCancellationBeforeReservationAndManualRenderAreFree(t *testing.T) {
 			terminal := h.run(t, kind, func(ctx context.Context, j job.Job, _ job.Progress) error {
 				close(entered)
 				<-release
-				if kind == job.KindGenerateClip {
+				if kind == clip.JobKindGenerate {
 					_, err := h.reserve(ctx, j.ID)
 					if err == nil {
 						return errors.New("reservation succeeded after cancellation")
@@ -164,7 +167,7 @@ func TestClipCancellationBeforeReservationAndManualRenderAreFree(t *testing.T) {
 				t.Fatal(err)
 			}
 			awaitCancellationSignal(t, entered)
-			cancelled, err := h.queue.CancelClipJob(t.Context(), "alice", job.Subject{Dimension: clip.JobSubject, ID: "clip"}, id)
+			cancelled, err := h.queue.Cancel(t.Context(), "alice", job.Subject{Dimension: clip.JobSubject, ID: "clip"}, id)
 			if err != nil || cancelled.CancelRequestedAt == nil || cancelled.Status != job.StatusRunning {
 				t.Fatal(cancelled, err)
 			}
@@ -187,20 +190,20 @@ func TestClipCancellationWhileProviderExitsWaitsForConfirmedUsage(t *testing.T) 
 	for _, known := range []bool{false, true} {
 		t.Run(map[bool]string{false: "unknown", true: "confirmed"}[known], func(t *testing.T) {
 			h := newCancellationHarness(t, nil)
-			id := h.enqueue(t, job.KindGenerateClip)
+			id := h.enqueue(t, clip.JobKindGenerate)
 			inFlight, recorded, release := make(chan struct{}), make(chan struct{}), make(chan struct{})
-			terminal := h.run(t, job.KindGenerateClip, func(ctx context.Context, j job.Job, _ job.Progress) error {
+			terminal := h.run(t, clip.JobKindGenerate, func(ctx context.Context, j job.Job, _ job.Progress) error {
 				admitted, err := h.reserve(ctx, j.ID)
 				if err != nil {
 					return err
 				}
-				if _, err := job.ConsumeClipPolicy(admitted, "alice", j.ID, "p/o", 8192, "observe"); err != nil {
+				if _, err := clipapp.ConsumePolicy(admitted, "alice", j.ID, "p/o", 8192, "observe"); err != nil {
 					return err
 				}
 				close(inFlight)
 				<-ctx.Done()
 				// Even a detached continuation cannot authorize the remaining writer call.
-				if _, err := job.ConsumeClipPolicy(context.WithoutCancel(admitted), "alice", j.ID, "p/w", 32768, "write"); err == nil {
+				if _, err := clipapp.ConsumePolicy(context.WithoutCancel(admitted), "alice", j.ID, "p/w", 32768, "write"); err == nil {
 					return errors.New("writer authorized after durable cancellation")
 				}
 				u := llm.Usage{}
@@ -208,7 +211,7 @@ func TestClipCancellationWhileProviderExitsWaitsForConfirmedUsage(t *testing.T) 
 					u.CostReported = true
 					u.CostMicrousd = 100
 				}
-				work := usage.WithWork(ctx, usage.Work{UserID: "alice", Kind: job.KindGenerateClip, JobID: j.ID})
+				work := usage.WithWork(ctx, usage.Work{UserID: "alice", Kind: clip.JobKindGenerate, JobID: j.ID})
 				if err := h.ledger.RecordCall(work, llm.ModelRef{ProviderID: "p", ModelID: "o"}, "observe", u, ctx.Err()); err != nil {
 					return err
 				}
@@ -220,7 +223,7 @@ func TestClipCancellationWhileProviderExitsWaitsForConfirmedUsage(t *testing.T) 
 				t.Fatal(err)
 			}
 			awaitCancellationSignal(t, inFlight)
-			if _, err := h.queue.CancelClipJob(t.Context(), "alice", job.Subject{Dimension: clip.JobSubject, ID: "clip"}, id); err != nil {
+			if _, err := h.queue.Cancel(t.Context(), "alice", job.Subject{Dimension: clip.JobSubject, ID: "clip"}, id); err != nil {
 				t.Fatal(err)
 			}
 			awaitCancellationSignal(t, recorded)
@@ -250,14 +253,14 @@ func TestClipCancellationAndResultCommitHaveOneWinner(t *testing.T) {
 	for _, mode := range []string{"cancel after upload", "completion wins", "save fails", "completion response lost"} {
 		t.Run(mode, func(t *testing.T) {
 			h := newCancellationHarness(t, nil)
-			id := h.enqueue(t, job.KindGenerateClip)
+			id := h.enqueue(t, clip.JobKindGenerate)
 			boundary, release := make(chan struct{}), make(chan struct{})
 			if mode == "save fails" {
 				if _, err := h.db.Writer.Exec(`CREATE TRIGGER reject_clip_done BEFORE UPDATE OF status ON generation_jobs WHEN NEW.status='done' BEGIN SELECT RAISE(ABORT,'test commit failure'); END`); err != nil {
 					t.Fatal(err)
 				}
 			}
-			terminal := h.run(t, job.KindGenerateClip, func(ctx context.Context, j job.Job, _ job.Progress) error {
+			terminal := h.run(t, clip.JobKindGenerate, func(ctx context.Context, j job.Job, _ job.Progress) error {
 				if _, err := h.reserve(ctx, j.ID); err != nil {
 					return err
 				}
@@ -284,7 +287,7 @@ func TestClipCancellationAndResultCommitHaveOneWinner(t *testing.T) {
 			}
 			awaitCancellationSignal(t, boundary)
 			if mode == "cancel after upload" || mode == "completion wins" {
-				j, err := h.queue.CancelClipJob(t.Context(), "alice", job.Subject{Dimension: clip.JobSubject, ID: "clip"}, id)
+				j, err := h.queue.Cancel(t.Context(), "alice", job.Subject{Dimension: clip.JobSubject, ID: "clip"}, id)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -336,18 +339,18 @@ func TestClipCancellationAndResultCommitHaveOneWinner(t *testing.T) {
 
 func TestClipQueuedCancellationIsOwnedIdempotentAndSurvivesRestart(t *testing.T) {
 	h := newCancellationHarness(t, nil)
-	id := h.enqueue(t, job.KindGenerateClip)
-	if _, err := h.queue.CancelClipJob(t.Context(), "bob", job.Subject{Dimension: clip.JobSubject, ID: "clip"}, id); !errors.Is(err, job.ErrNotFound) {
+	id := h.enqueue(t, clip.JobKindGenerate)
+	if _, err := h.queue.Cancel(t.Context(), "bob", job.Subject{Dimension: clip.JobSubject, ID: "clip"}, id); !errors.Is(err, job.ErrNotFound) {
 		t.Fatal("foreign cancellation", err)
 	}
-	if _, err := h.queue.CancelClipJob(t.Context(), "alice", job.Subject{Dimension: clip.JobSubject, ID: "other"}, id); !errors.Is(err, job.ErrNotFound) {
+	if _, err := h.queue.Cancel(t.Context(), "alice", job.Subject{Dimension: clip.JobSubject, ID: "other"}, id); !errors.Is(err, job.ErrNotFound) {
 		t.Fatal("mismatched project", err)
 	}
 	var wg sync.WaitGroup
 	errs := make(chan error, 8)
 	for range 8 {
 		wg.Go(func() {
-			_, err := h.queue.CancelClipJob(t.Context(), "alice", job.Subject{Dimension: clip.JobSubject, ID: "clip"}, id)
+			_, err := h.queue.Cancel(t.Context(), "alice", job.Subject{Dimension: clip.JobSubject, ID: "clip"}, id)
 			errs <- err
 		})
 	}
@@ -366,12 +369,13 @@ func TestClipQueuedCancellationIsOwnedIdempotentAndSurvivesRestart(t *testing.T)
 		t.Fatal("dispatched cancelled queue", err)
 	}
 	// A new queue represents process restart; a terminal request remains unchanged.
-	recovered := job.New(h.jobs, time.Millisecond)
+	recovered := job.New(h.jobs, time.Millisecond, jobReportingForTest())
+	recovered.AllowCancellation(clipCancellation{})
 	recovered.Admit(h.admission)
 	if _, err := recovered.SweepRunning(t.Context()); err != nil {
 		t.Fatal(err)
 	}
-	again, err := recovered.CancelClipJob(t.Context(), "alice", job.Subject{Dimension: clip.JobSubject, ID: "clip"}, id)
+	again, err := recovered.Cancel(t.Context(), "alice", job.Subject{Dimension: clip.JobSubject, ID: "clip"}, id)
 	if err != nil || again.Status != job.StatusCancelled || !again.FinishedAt.Equal(*j.FinishedAt) {
 		t.Fatal(again, err)
 	}
@@ -379,7 +383,7 @@ func TestClipQueuedCancellationIsOwnedIdempotentAndSurvivesRestart(t *testing.T)
 
 func TestClipPendingCancellationRecoversBeforeFailureAndSettlesOnce(t *testing.T) {
 	h := newCancellationHarness(t, nil)
-	id := h.enqueue(t, job.KindGenerateClip)
+	id := h.enqueue(t, clip.JobKindGenerate)
 	if err := h.queue.Activate(t.Context(), "alice", id); err != nil {
 		t.Fatal(err)
 	}
@@ -392,7 +396,7 @@ func TestClipPendingCancellationRecoversBeforeFailureAndSettlesOnce(t *testing.T
 	if err := h.clips.StageAttemptResult(t.Context(), h.candidate(id, false)); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := h.queue.CancelClipJob(t.Context(), "alice", job.Subject{Dimension: clip.JobSubject, ID: "clip"}, id); err != nil {
+	if _, err := h.queue.Cancel(t.Context(), "alice", job.Subject{Dimension: clip.JobSubject, ID: "clip"}, id); err != nil {
 		t.Fatal(err)
 	}
 	var path string
@@ -410,11 +414,12 @@ func TestClipPendingCancellationRecoversBeforeFailureAndSettlesOnce(t *testing.T
 	if err := db.Migrate(t.Context(), reopened.Writer); err != nil {
 		t.Fatal(err)
 	}
-	h.db, h.jobs, h.clips = reopened, jobstore.New(reopened.Writer, reopened.Reader, deferredKindsForTest()), clipstore.New(reopened.Writer, reopened.Reader)
+	h.db, h.jobs, h.clips = reopened, jobstore.New(reopened.Writer, reopened.Reader, jobKindsForTest()), clipstore.New(reopened.Writer, reopened.Reader)
 	h.ledger = h.ledger.WithStore(usagestore.New(reopened.Writer, reopened.Reader))
 	h.admission.ledger = h.ledger
 	h.finisher = clipapp.NewFinisher(reopened.Writer, h.bind, h.jobs, h.clips, nil)
-	recovered := job.New(h.jobs, time.Millisecond)
+	recovered := job.New(h.jobs, time.Millisecond, jobReportingForTest())
+	recovered.AllowCancellation(clipCancellation{})
 	recovered.Admit(h.admission)
 	for range 2 {
 		if _, err := recovered.SweepRunning(t.Context()); err != nil {
@@ -464,14 +469,14 @@ func TestClipCancellationBeforeHandlerRegistrationSkipsTheHandler(t *testing.T) 
 		paused = &pausedClipPick{Store: s, picked: make(chan struct{}), release: make(chan struct{})}
 		return paused
 	})
-	id := h.enqueue(t, job.KindGenerateClip)
+	id := h.enqueue(t, clip.JobKindGenerate)
 	called := make(chan struct{}, 1)
-	terminal := h.run(t, job.KindGenerateClip, func(context.Context, job.Job, job.Progress) error { called <- struct{}{}; return nil })
+	terminal := h.run(t, clip.JobKindGenerate, func(context.Context, job.Job, job.Progress) error { called <- struct{}{}; return nil })
 	if err := h.queue.Activate(t.Context(), "alice", id); err != nil {
 		t.Fatal(err)
 	}
 	awaitCancellationSignal(t, paused.picked)
-	if _, err := h.queue.CancelClipJob(t.Context(), "alice", job.Subject{Dimension: clip.JobSubject, ID: "clip"}, id); err != nil {
+	if _, err := h.queue.Cancel(t.Context(), "alice", job.Subject{Dimension: clip.JobSubject, ID: "clip"}, id); err != nil {
 		t.Fatal(err)
 	}
 	close(paused.release)
@@ -491,15 +496,15 @@ func TestClipReservationRacingCancellationCannotAcquireALaterHold(t *testing.T) 
 	for i := range 8 {
 		t.Run(string(rune('a'+i)), func(t *testing.T) {
 			h := newCancellationHarness(t, nil)
-			id := h.enqueue(t, job.KindGenerateClip)
+			id := h.enqueue(t, clip.JobKindGenerate)
 			entered, start, cancelled := make(chan struct{}), make(chan struct{}), make(chan struct{})
-			terminal := h.run(t, job.KindGenerateClip, func(ctx context.Context, j job.Job, _ job.Progress) error {
+			terminal := h.run(t, clip.JobKindGenerate, func(ctx context.Context, j job.Job, _ job.Progress) error {
 				close(entered)
 				<-start
 				admitted, err := h.reserve(ctx, j.ID)
 				<-cancelled
 				if err == nil {
-					if _, err := job.ConsumeClipPolicy(context.WithoutCancel(admitted), "alice", j.ID, "p/o", 8192, "observe"); err == nil {
+					if _, err := clipapp.ConsumePolicy(context.WithoutCancel(admitted), "alice", j.ID, "p/o", 8192, "observe"); err == nil {
 						return errors.New("dispatch escaped cancellation")
 					}
 				}
@@ -512,7 +517,7 @@ func TestClipReservationRacingCancellationCannotAcquireALaterHold(t *testing.T) 
 			cancelErr := make(chan error, 1)
 			go func() {
 				<-start
-				_, err := h.queue.CancelClipJob(t.Context(), "alice", job.Subject{Dimension: clip.JobSubject, ID: "clip"}, id)
+				_, err := h.queue.Cancel(t.Context(), "alice", job.Subject{Dimension: clip.JobSubject, ID: "clip"}, id)
 				cancelErr <- err
 				close(cancelled)
 			}()
@@ -541,9 +546,9 @@ func TestClipNormalFailureRacingCancellationUsesTheDurableOutcome(t *testing.T) 
 	for i := range 8 {
 		t.Run(string(rune('a'+i)), func(t *testing.T) {
 			h := newCancellationHarness(t, nil)
-			id := h.enqueue(t, job.KindGenerateClip)
+			id := h.enqueue(t, clip.JobKindGenerate)
 			entered, start := make(chan struct{}), make(chan struct{})
-			terminal := h.run(t, job.KindGenerateClip, func(ctx context.Context, j job.Job, _ job.Progress) error {
+			terminal := h.run(t, clip.JobKindGenerate, func(ctx context.Context, j job.Job, _ job.Progress) error {
 				if _, err := h.reserve(ctx, j.ID); err != nil {
 					return err
 				}
@@ -558,7 +563,7 @@ func TestClipNormalFailureRacingCancellationUsesTheDurableOutcome(t *testing.T) 
 			cancelErr := make(chan error, 1)
 			go func() {
 				<-start
-				_, err := h.queue.CancelClipJob(t.Context(), "alice", job.Subject{Dimension: clip.JobSubject, ID: "clip"}, id)
+				_, err := h.queue.Cancel(t.Context(), "alice", job.Subject{Dimension: clip.JobSubject, ID: "clip"}, id)
 				cancelErr <- err
 			}()
 			close(start)
@@ -592,11 +597,11 @@ func TestClipNormalFailureRacingCancellationUsesTheDurableOutcome(t *testing.T) 
 
 func TestClipCancellationPolicyRejectsLegacyAndOtherJobKinds(t *testing.T) {
 	h := newCancellationHarness(t, nil)
-	id, err := h.queue.Enqueue(t.Context(), clipJob(job.NewJob{UserID: "alice", Kind: job.KindGenerateClip, ObserveModel: "p/o", WriteModel: "p/w"}, "clip"))
+	id, err := h.queue.Enqueue(t.Context(), clipJob(job.NewJob{UserID: "alice", Kind: clip.JobKindGenerate, ObserveModel: "p/o", WriteModel: "p/w"}, "clip"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := h.queue.CancelClipJob(t.Context(), "alice", job.Subject{Dimension: clip.JobSubject, ID: "clip"}, id); !errors.Is(err, job.ErrCancellationUnavailable) {
+	if _, err := h.queue.Cancel(t.Context(), "alice", job.Subject{Dimension: clip.JobSubject, ID: "clip"}, id); !errors.Is(err, job.ErrCancellationUnavailable) {
 		t.Fatal("legacy charged cancellation offered", err)
 	}
 	if err := h.queue.Activate(t.Context(), "alice", id); err != nil {
@@ -612,14 +617,14 @@ func TestClipCancellationPolicyRejectsLegacyAndOtherJobKinds(t *testing.T) {
 	if _, err := h.db.Writer.Exec(`INSERT INTO generation_jobs(id,user_id,kind,status,created_at,updated_at) VALUES('voice','alice','analyze_voice','queued',?,?)`, now, now); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := h.queue.CancelClipJob(t.Context(), "alice", job.Subject{Dimension: clip.JobSubject, ID: "clip"}, "voice"); !errors.Is(err, job.ErrNotFound) {
+	if _, err := h.queue.Cancel(t.Context(), "alice", job.Subject{Dimension: clip.JobSubject, ID: "clip"}, "voice"); !errors.Is(err, job.ErrNotFound) {
 		t.Fatal("non-clip cancellation exposed", err)
 	}
 }
 
 func TestClipCompletionRejectsConflictingStagedCandidate(t *testing.T) {
 	h := newCancellationHarness(t, nil)
-	id := h.enqueue(t, job.KindGenerateClip)
+	id := h.enqueue(t, clip.JobKindGenerate)
 	if err := h.queue.Activate(t.Context(), "alice", id); err != nil {
 		t.Fatal(err)
 	}
@@ -649,7 +654,7 @@ func TestClipManualRenderCompletionChecksSavedRevision(t *testing.T) {
 	for _, stale := range []bool{false, true} {
 		t.Run(map[bool]string{false: "matching", true: "stale"}[stale], func(t *testing.T) {
 			h := newCancellationHarness(t, nil)
-			id := h.enqueue(t, job.KindRenderClip)
+			id := h.enqueue(t, clip.JobKindRender)
 			if err := h.queue.Activate(t.Context(), "alice", id); err != nil {
 				t.Fatal(err)
 			}

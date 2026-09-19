@@ -35,6 +35,9 @@ var (
 	ErrForbidden      = errors.New("job belongs to another user")
 	ErrActiveConflict = errors.New("an active job already exists")
 	ErrInvalidTarget  = errors.New("job target does not belong to user")
+	// ErrDispatchRefused is a call that lost the race with the owner's cancellation: the
+	// conditional authorization wrote no row, so no provider call may follow it.
+	ErrDispatchRefused = errors.New("job dispatch was refused")
 	// ErrVoiceUnavailable closes the lifecycle race between a service's active-voice
 	// precheck and the durable insert. The database is the final arbiter.
 	ErrVoiceUnavailable = errors.New("job voice is deleted or unknown")
@@ -57,10 +60,14 @@ func (e *ErrAlreadyInProgress) Unwrap() error { return ErrActiveConflict }
 // only carries the id; it never reads voice tables.
 type NewJob struct {
 	CancellationPolicyVersion int
-	// Only render_clip can opt out, and it must declare no possible model call.
+	// NonMetered work declares it will make no model call at all; only a kind whose owner
+	// guarantees that may set it.
 	NonMetered bool
-	Kind       string
-	UserID     string
+	// DeferHold states that this kind reserves its credits later — once its owner has
+	// approved what the work will cost — rather than at enqueue.
+	DeferHold bool
+	Kind      string
+	UserID    string
 	// Subjects are the things this job belongs to, in the owning context's own words.
 	// Voice-owned work may carry two: the voice it writes into and the post that caused it.
 	Subjects       []Subject
@@ -182,6 +189,9 @@ type Job struct {
 
 // JobSummary is the public view returned to other contexts and the RPC edge.
 type JobSummary struct {
+	// CanCancel is the queue's own answer, not the client's to infer: the cancellation
+	// rule lives at the composition root and the summary is where it becomes visible.
+	CanCancel                 bool
 	CancelRequestedAt         *time.Time
 	CancellationPolicyVersion int
 	FinishedAt                *time.Time
@@ -201,8 +211,9 @@ type JobSummary struct {
 	UpdatedAt                 time.Time
 }
 
-func summarize(found Job) *JobSummary {
+func (q *Queue) summarize(found Job) *JobSummary {
 	return &JobSummary{
+		CanCancel:         q.canCancel(found),
 		CancelRequestedAt: found.CancelRequestedAt, CancellationPolicyVersion: found.CancellationPolicyVersion,
 		ID: found.ID, Kind: found.Kind, UserID: found.UserID, Subjects: cloneSubjects(found.Subjects),
 		Status: found.Status, Stage: found.Stage, ProgressDone: found.ProgressDone,
@@ -210,6 +221,14 @@ func summarize(found Job) *JobSummary {
 		ObserveModel: found.ObserveModel, WriteModel: found.WriteModel, TargetLanguage: found.TargetLanguage,
 		CreatedAt: found.CreatedAt, UpdatedAt: found.UpdatedAt, FinishedAt: found.FinishedAt,
 	}
+}
+
+// canCancel reports whether the owner may still stop this job right now.
+func (q *Queue) canCancel(found Job) bool {
+	if q == nil || q.cancellation == nil || Terminal(found.Status) || found.CancelRequestedAt != nil {
+		return false
+	}
+	return q.cancellation.Kind(found.Kind) && q.cancellation.Allowed(found.Kind, found.CancellationPolicyVersion)
 }
 
 func newID() string {

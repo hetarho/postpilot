@@ -1,17 +1,38 @@
 package main
 
 import (
+	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/job"
+	jobstore "github.com/postpilot/backend/internal/job/store"
 	"github.com/postpilot/backend/internal/post"
 	"github.com/postpilot/backend/internal/voice"
 )
 
-// deferredDispatchKinds are the kinds whose dispatch waits for an explicit activation:
-// clip work exists as a row while its owner is still deciding whether to pay for it, and
-// nothing may pick it up until they approve. The queue is told the list; it does not know
-// why these kinds wait.
-func deferredDispatchKinds() []string {
-	return []string{job.KindGenerateClip, job.KindRenderClip, job.KindReviseClip}
+// jobKinds is what the queue's store is told about the work it holds. Clip work exists as
+// a row while its owner is still deciding whether to pay for it, so nothing may pick it
+// up until they approve (Deferred); an owner may stop any of it (Cancellable); and the
+// two charged kinds authorize every model call against that stop (Authorized). The store
+// is given the lists, so its SQL names no product.
+func jobKinds() jobstore.Kinds {
+	return jobstore.Kinds{
+		Deferred:    []string{clip.JobKindGenerate, clip.JobKindRender, clip.JobKindRevise},
+		Cancellable: []string{clip.JobKindGenerate, clip.JobKindRender, clip.JobKindRevise},
+		Authorized:  []string{clip.JobKindGenerate, clip.JobKindRevise},
+	}
+}
+
+// clipCancellation is the rule the queue asks before it accepts a stop: a render may
+// always be stopped because it spends nothing, and charged clip work only under the
+// cancellation policy this build honours and the owner approved.
+type clipCancellation struct{}
+
+func (clipCancellation) Kind(kind string) bool { return clip.IsJobKind(kind) }
+
+func (clipCancellation) Allowed(kind string, cancellationPolicyVersion int) bool {
+	if kind == clip.JobKindRender {
+		return true
+	}
+	return clip.ChargedJobKind(kind) && cancellationPolicyVersion == clip.CancellationPolicyVersion
 }
 
 // voiceOwnedKind identifies personalization work whose writes are serialized per voice,

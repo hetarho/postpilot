@@ -45,8 +45,8 @@ func (h *Handler) GetGeneration(ctx context.Context, req *connect.Request[postpi
 // The proto still carries one field per subject, so this adapter — and only this
 // adapter — names the two dimensions those fields stand for. T281 reshapes the message.
 const (
-	subjectPost        = "post"
-	subjectClipProject = "clip_project"
+	subjectPost    = "post"
+	subjectProject = "clip_project"
 )
 
 // ToProto is shared with the post RPC adapter, which embeds an active job snapshot.
@@ -60,10 +60,10 @@ func ToProto(found *job.JobSummary) *postpilotv1.GenerationJob {
 		requested = found.CancelRequestedAt.UTC().Format(time.RFC3339Nano)
 	}
 	return &postpilotv1.GenerationJob{
-		CancelRequestedAt: requested, CancellationPolicyVersion: int32(found.CancellationPolicyVersion), CanCancel: !job.Terminal(found.Status) && found.CancelRequestedAt == nil && (found.Kind == job.KindRenderClip || job.ClipKind(found.Kind) && found.CancellationPolicyVersion == 1),
+		CancelRequestedAt: requested, CancellationPolicyVersion: int32(found.CancellationPolicyVersion), CanCancel: found.CanCancel,
 		Id: found.ID, Kind: found.Kind, Status: found.Status, Stage: found.Stage,
 		ProgressDone: int32(found.ProgressDone), ProgressTotal: int32(found.ProgressTotal),
-		PostSlug: postSlug, ClipProjectId: found.Subject(subjectClipProject), ObserveModel: modelRef(found.ObserveModel),
+		PostSlug: postSlug, ClipProjectId: found.Subject(subjectProject), ObserveModel: modelRef(found.ObserveModel),
 		WriteModel: modelRef(found.WriteModel), TargetLanguage: languageToProto(found.TargetLanguage), CreatedAt: found.CreatedAt.UTC().Format(time.RFC3339),
 		UpdatedAt: found.UpdatedAt.UTC().Format(time.RFC3339), Failure: failureToProto(found.Failure),
 	}

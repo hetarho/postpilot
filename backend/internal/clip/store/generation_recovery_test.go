@@ -31,7 +31,7 @@ func TestGenerationActivationCompensationNeverDeletesRunningInputs(t *testing.T)
 	for _, running := range []bool{false, true} {
 		t.Run(map[bool]string{false: "queued", true: "running"}[running], func(t *testing.T) {
 			h := generationSetup(t)
-			jobs := interruptedActivation{generationJobs: generationJobs{h.queue}}
+			jobs := interruptedActivation{generationJobs: h.clipJobs()}
 			if running {
 				jobs.after = func() {
 					if _, err := h.jobs.PickNextQueued(context.Background(), time.Now()); err != nil {

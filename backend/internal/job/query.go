@@ -18,7 +18,7 @@ func (q *Queue) Get(ctx context.Context, id, userID string) (*JobSummary, error)
 	if found.UserID != userID {
 		return nil, ErrForbidden
 	}
-	return summarize(found), nil
+	return q.summarize(found), nil
 }
 
 // ActiveFor is the queued/running job a subject currently has, if any. The caller names
@@ -28,7 +28,7 @@ func (q *Queue) ActiveFor(ctx context.Context, subject Subject, filter Filter) (
 	if err != nil || found == nil {
 		return nil, err
 	}
-	return summarize(*found), nil
+	return q.summarize(*found), nil
 }
 
 // HasActiveFor answers the "is this busy" question a context asks before it deletes or
@@ -44,7 +44,7 @@ func (q *Queue) ActiveUnattached(ctx context.Context, userID, kind string) (*Job
 	if err != nil || found == nil {
 		return nil, err
 	}
-	return summarize(*found), nil
+	return q.summarize(*found), nil
 }
 
 // LatestFor is the most recent job of a subject, terminal or not.
@@ -53,7 +53,7 @@ func (q *Queue) LatestFor(ctx context.Context, subject Subject, filter Filter) (
 	if err != nil || found == nil {
 		return nil, err
 	}
-	return summarize(*found), nil
+	return q.summarize(*found), nil
 }
 
 // Snapshot is an owner-scoped read of one job including its durable payload, checked

@@ -13,6 +13,40 @@ import (
 // a project is.
 const JobSubject = "clip_project"
 
+// The three kinds of clip work. They are the clip context's words, handed to the queue as
+// opaque strings: a generation, an owner's revision of a saved plan (CLIP-131), and a
+// render that writes nothing and spends nothing (CLIP-19, CLIP-20, CLIP-132).
+const (
+	JobKindGenerate = "generate_clip"
+	JobKindRender   = "render_clip"
+	JobKindRevise   = "revise_clip"
+)
+
+// SafeJobStage is the stage vocabulary a clip job may have its progress logged under.
+// Anything else is an unexpected handler's string and is logged as "unknown".
+func SafeJobStage(stage string) string {
+	switch stage {
+	// `plan` and `plan_retry` are the single writing call this build no longer makes; a
+	// job queued before it split keeps a readable stage.
+	case "queued", "prepare", "analyze", "analyze_retry", "flow", "flow_retry", "narrate", "narrate_retry", "plan", "plan_retry", "render", "save", "cleanup":
+		return stage
+	}
+	return "unknown"
+}
+
+// IsJobKind reports whether a job belongs to the clip surface at all.
+func IsJobKind(kind string) bool {
+	return kind == JobKindGenerate || kind == JobKindRender || kind == JobKindRevise
+}
+
+// ChargedJobKind reports whether a clip job reserves an approved credit ceiling before
+// its first model call. A generation and a revision request both do; a render does not.
+// Every admission, metering and settlement gate asks this instead of naming the
+// generation alone — naming it is what left the revision unable to reserve.
+func ChargedJobKind(kind string) bool {
+	return kind == JobKindGenerate || kind == JobKindRevise
+}
+
 // One budget per call the generation makes: the observation, then the two
 // writing calls the assembly contract names (CLIP-135).
 type CompletionBudgets struct{ Observe, Flow, Narration int }

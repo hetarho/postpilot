@@ -116,7 +116,8 @@ func TestClipQualityLifecycle(t *testing.T) {
 			}
 			calls, balance := h.provider.posts.Load(), h.balance()
 			// A fresh queue reads only durable state and never replays paid work.
-			recovery := job.New(jobstore.New(h.d.Writer, h.d.Reader, deferredKindsForTest()), time.Millisecond)
+			recovery := job.New(jobstore.New(h.d.Writer, h.d.Reader, jobKindsForTest()), time.Millisecond, jobReportingForTest())
+			recovery.AllowCancellation(clipCancellation{})
 			recovery.Admit(h.admission)
 			for range 2 {
 				if _, err := recovery.SweepRunning(t.Context()); err != nil {

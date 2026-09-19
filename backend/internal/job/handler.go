@@ -18,7 +18,8 @@ type Handler func(ctx context.Context, found Job, progress Progress) error
 type Queue struct {
 	store        Store
 	admitter     Admitter
-	clipGuard    ClipGuard
+	reporting    Reporting
+	cancellation Cancellation
 	pollInterval time.Duration
 	wake         chan struct{}
 
@@ -30,12 +31,15 @@ type Queue struct {
 	newID    func() string
 }
 
-func New(store Store, pollInterval time.Duration) *Queue {
+// New takes the reporting collaborator explicitly. A nil one is the queue's own bare
+// mode: no stage lines, no provider detail, and every handler error reported as
+// UNKNOWN_FAILURE — which is what the queue's own tests run with.
+func New(store Store, pollInterval time.Duration, reporting Reporting) *Queue {
 	if pollInterval <= 0 {
 		panic("job: poll interval must be positive")
 	}
 	return &Queue{
-		store: store, pollInterval: pollInterval, wake: make(chan struct{}, 1),
+		store: store, pollInterval: pollInterval, reporting: reporting, wake: make(chan struct{}, 1),
 		handlers: make(map[string]Handler), terminal: make(map[string]func(context.Context, Job, time.Time) error), running: make(map[string]context.CancelFunc), now: time.Now, newID: newID,
 	}
 }
@@ -66,7 +70,20 @@ func (q *Queue) notifyTerminal(ctx context.Context, j Job, at time.Time) error {
 // enqueues freely — which is what the queue's own tests want.
 func (q *Queue) Admit(admitter Admitter) { q.admitter = admitter }
 
-func (q *Queue) GuardClips(guard ClipGuard) { q.clipGuard = guard }
+// AllowCancellation installs the rule that decides which work an owner may stop. Without
+// it nothing is cancellable, which is the queue's default and a legal mode.
+func (q *Queue) AllowCancellation(rule Cancellation) { q.cancellation = rule }
+
+func (q *Queue) stageLogged(kind, stage string) (string, bool) {
+	if q.reporting == nil {
+		return "", false
+	}
+	return q.reporting.SafeStage(kind, stage)
+}
+
+func (q *Queue) redacted(kind string) bool {
+	return q.reporting != nil && q.reporting.Redacted(kind)
+}
 
 // Register binds a kind to its owning context at the composition root.
 func (q *Queue) Register(kind string, handler Handler) {

@@ -85,7 +85,26 @@ type jobAdmission struct {
 	plans    *auth.Service
 }
 
+// clipAdmission is the charged clip path's hold: the clip context states its approved
+// ceiling and priced lines in its own words, and this is where they become the ledger's.
+type clipAdmission struct{ jobAdmission }
+
+func (a clipAdmission) Hold(ctx context.Context, hold clipapp.Hold) error {
+	reservation := &usage.ClipReservation{
+		ApprovedMaxCredits:        hold.Reservation.ApprovedMaxCredits,
+		CancellationPolicyVersion: hold.Reservation.CancellationPolicyVersion,
+	}
+	for _, c := range hold.Reservation.Calls {
+		reservation.Calls = append(reservation.Calls, usage.PricedCall{Policy: c.Policy, Count: c.Count})
+	}
+	return a.hold(ctx, job.Start{UserID: hold.UserID, Kind: hold.Kind, JobID: hold.JobID, Calls: hold.Calls}, reservation)
+}
+
 func (a jobAdmission) Hold(ctx context.Context, start job.Start) error {
+	return a.hold(ctx, start, nil)
+}
+
+func (a jobAdmission) hold(ctx context.Context, start job.Start, clipReservation *usage.ClipReservation) error {
 	// The request's own tier is preferred so one request is judged against one tier
 	// throughout; a start made from a worker context has no session to read, and falls back
 	// to the stored row, which is the same authority the interceptor resolved from.
@@ -102,13 +121,6 @@ func (a jobAdmission) Hold(ctx context.Context, start job.Start) error {
 		calls = append(calls, usage.PlannedCall{
 			Ref: parseRegistryRef(call.Ref), Count: call.Count, CompletionTokens: int64(call.CompletionTokens),
 		})
-	}
-	var clipReservation *usage.ClipReservation
-	if start.Clip != nil {
-		clipReservation = &usage.ClipReservation{ApprovedMaxCredits: start.Clip.ApprovedMaxCredits, CancellationPolicyVersion: start.Clip.CancellationPolicyVersion}
-		for _, c := range start.Clip.Calls {
-			clipReservation.Calls = append(clipReservation.Calls, usage.PricedCall{Policy: c.Policy, Count: c.Count})
-		}
 	}
 	return a.ledger.Hold(ctx, usage.Start{
 		UserID: start.UserID, Plan: acting, Kind: start.Kind, JobID: start.JobID, Calls: calls,

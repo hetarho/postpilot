@@ -43,7 +43,7 @@ func newHandler(t *testing.T) (*jobrpc.Handler, *job.Queue) {
 		"INSERT INTO posts (slug, user_id, voice_id, created_at, updated_at) VALUES ('post-a', 'alice', 'voice-alice', ?, ?)", now, now); err != nil {
 		t.Fatal(err)
 	}
-	queue := job.New(jobstore.New(handle.Writer, handle.Reader, deferredKindsForTest()), time.Second)
+	queue := job.New(jobstore.New(handle.Writer, handle.Reader, jobKindsForTest()), time.Second, jobReportingForTest())
 	return jobrpc.NewHandler(queue), queue
 }
 

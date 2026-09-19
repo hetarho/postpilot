@@ -30,49 +30,6 @@ func (q *Queries) Activate(ctx context.Context, arg ActivateParams) (int64, erro
 	return result.RowsAffected()
 }
 
-const activeForClip = `-- name: ActiveForClip :one
-SELECT id, post_slug, user_id, voice_id, kind, status, stage, progress_done, progress_total, error, observe_model, write_model, payload, created_at, updated_at, started_at, finished_at, target_language, error_reason, error_params, technical_detail, clip_project_id, dispatch_ready, cancel_requested_at, cancellation_policy_version, experiment_id FROM generation_jobs WHERE user_id=? AND clip_project_id=? AND status IN ('queued','running') LIMIT 1
-`
-
-type ActiveForClipParams struct {
-	UserID        string
-	ClipProjectID sql.NullString
-}
-
-func (q *Queries) ActiveForClip(ctx context.Context, arg ActiveForClipParams) (GenerationJob, error) {
-	row := q.db.QueryRowContext(ctx, activeForClip, arg.UserID, arg.ClipProjectID)
-	var i GenerationJob
-	err := row.Scan(
-		&i.ID,
-		&i.PostSlug,
-		&i.UserID,
-		&i.VoiceID,
-		&i.Kind,
-		&i.Status,
-		&i.Stage,
-		&i.ProgressDone,
-		&i.ProgressTotal,
-		&i.Error,
-		&i.ObserveModel,
-		&i.WriteModel,
-		&i.Payload,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.StartedAt,
-		&i.FinishedAt,
-		&i.TargetLanguage,
-		&i.ErrorReason,
-		&i.ErrorParams,
-		&i.TechnicalDetail,
-		&i.ClipProjectID,
-		&i.DispatchReady,
-		&i.CancelRequestedAt,
-		&i.CancellationPolicyVersion,
-		&i.ExperimentID,
-	)
-	return i, err
-}
-
 const activeForExperiment = `-- name: ActiveForExperiment :one
 SELECT id, post_slug, user_id, voice_id, kind, status, stage, progress_done, progress_total, error, observe_model, write_model, payload, created_at, updated_at, started_at, finished_at, target_language, error_reason, error_params, technical_detail, clip_project_id, dispatch_ready, cancel_requested_at, cancellation_policy_version, experiment_id FROM generation_jobs
 WHERE experiment_id = ? AND status IN ('queued', 'running')
@@ -171,6 +128,49 @@ type ActiveForPostUserParams struct {
 
 func (q *Queries) ActiveForPostUser(ctx context.Context, arg ActiveForPostUserParams) (GenerationJob, error) {
 	row := q.db.QueryRowContext(ctx, activeForPostUser, arg.PostSlug, arg.UserID)
+	var i GenerationJob
+	err := row.Scan(
+		&i.ID,
+		&i.PostSlug,
+		&i.UserID,
+		&i.VoiceID,
+		&i.Kind,
+		&i.Status,
+		&i.Stage,
+		&i.ProgressDone,
+		&i.ProgressTotal,
+		&i.Error,
+		&i.ObserveModel,
+		&i.WriteModel,
+		&i.Payload,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.StartedAt,
+		&i.FinishedAt,
+		&i.TargetLanguage,
+		&i.ErrorReason,
+		&i.ErrorParams,
+		&i.TechnicalDetail,
+		&i.ClipProjectID,
+		&i.DispatchReady,
+		&i.CancelRequestedAt,
+		&i.CancellationPolicyVersion,
+		&i.ExperimentID,
+	)
+	return i, err
+}
+
+const activeForProject = `-- name: ActiveForProject :one
+SELECT id, post_slug, user_id, voice_id, kind, status, stage, progress_done, progress_total, error, observe_model, write_model, payload, created_at, updated_at, started_at, finished_at, target_language, error_reason, error_params, technical_detail, clip_project_id, dispatch_ready, cancel_requested_at, cancellation_policy_version, experiment_id FROM generation_jobs WHERE user_id=? AND clip_project_id=? AND status IN ('queued','running') LIMIT 1
+`
+
+type ActiveForProjectParams struct {
+	UserID        string
+	ClipProjectID sql.NullString
+}
+
+func (q *Queries) ActiveForProject(ctx context.Context, arg ActiveForProjectParams) (GenerationJob, error) {
+	row := q.db.QueryRowContext(ctx, activeForProject, arg.UserID, arg.ClipProjectID)
 	var i GenerationJob
 	err := row.Scan(
 		&i.ID,
@@ -342,18 +342,20 @@ func (q *Queries) ActiveForVoiceKind(ctx context.Context, arg ActiveForVoiceKind
 	return i, err
 }
 
-const authorizeClipDispatch = `-- name: AuthorizeClipDispatch :execrows
+const authorizeDispatch = `-- name: AuthorizeDispatch :execrows
 UPDATE generation_jobs SET updated_at=updated_at
-WHERE id=? AND user_id=? AND kind IN ('generate_clip','revise_clip') AND status='running' AND cancel_requested_at IS NULL
+WHERE id=?1 AND user_id=?2 AND kind IN (SELECT value FROM json_each(?3))
+ AND status='running' AND cancel_requested_at IS NULL
 `
 
-type AuthorizeClipDispatchParams struct {
+type AuthorizeDispatchParams struct {
 	ID     string
 	UserID string
+	Kinds  interface{}
 }
 
-func (q *Queries) AuthorizeClipDispatch(ctx context.Context, arg AuthorizeClipDispatchParams) (int64, error) {
-	result, err := q.db.ExecContext(ctx, authorizeClipDispatch, arg.ID, arg.UserID)
+func (q *Queries) AuthorizeDispatch(ctx context.Context, arg AuthorizeDispatchParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, authorizeDispatch, arg.ID, arg.UserID, arg.Kinds)
 	if err != nil {
 		return 0, err
 	}
@@ -513,17 +515,17 @@ func (q *Queries) InsertJob(ctx context.Context, arg InsertJobParams) error {
 	return err
 }
 
-const latestForClip = `-- name: LatestForClip :one
+const latestForProject = `-- name: LatestForProject :one
 SELECT id, post_slug, user_id, voice_id, kind, status, stage, progress_done, progress_total, error, observe_model, write_model, payload, created_at, updated_at, started_at, finished_at, target_language, error_reason, error_params, technical_detail, clip_project_id, dispatch_ready, cancel_requested_at, cancellation_policy_version, experiment_id FROM generation_jobs WHERE user_id=? AND clip_project_id=? ORDER BY created_at DESC,id DESC LIMIT 1
 `
 
-type LatestForClipParams struct {
+type LatestForProjectParams struct {
 	UserID        string
 	ClipProjectID sql.NullString
 }
 
-func (q *Queries) LatestForClip(ctx context.Context, arg LatestForClipParams) (GenerationJob, error) {
-	row := q.db.QueryRowContext(ctx, latestForClip, arg.UserID, arg.ClipProjectID)
+func (q *Queries) LatestForProject(ctx context.Context, arg LatestForProjectParams) (GenerationJob, error) {
+	row := q.db.QueryRowContext(ctx, latestForProject, arg.UserID, arg.ClipProjectID)
 	var i GenerationJob
 	err := row.Scan(
 		&i.ID,
@@ -623,43 +625,53 @@ func (q *Queries) PickNextQueued(ctx context.Context, arg PickNextQueuedParams) 
 	return i, err
 }
 
-const recoverClipCancellations = `-- name: RecoverClipCancellations :execrows
+const recoverCancellations = `-- name: RecoverCancellations :execrows
 UPDATE generation_jobs SET status='cancelled',finished_at=?1,updated_at=?1,
  error=NULL,error_reason=NULL,error_params=NULL,technical_detail=NULL
 WHERE status IN ('queued','running') AND cancel_requested_at IS NOT NULL
- AND kind IN ('generate_clip','render_clip','revise_clip')
+ AND kind IN (SELECT value FROM json_each(?2))
 `
 
-func (q *Queries) RecoverClipCancellations(ctx context.Context, now sql.NullString) (int64, error) {
-	result, err := q.db.ExecContext(ctx, recoverClipCancellations, now)
+type RecoverCancellationsParams struct {
+	Now   sql.NullString
+	Kinds interface{}
+}
+
+func (q *Queries) RecoverCancellations(ctx context.Context, arg RecoverCancellationsParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, recoverCancellations, arg.Now, arg.Kinds)
 	if err != nil {
 		return 0, err
 	}
 	return result.RowsAffected()
 }
 
-const requestClipCancellation = `-- name: RequestClipCancellation :execrows
+const requestCancellation = `-- name: RequestCancellation :execrows
 UPDATE generation_jobs SET cancel_requested_at=?1, updated_at=?1,
  status=CASE WHEN status='queued' THEN 'cancelled' ELSE status END,
  finished_at=CASE WHEN status='queued' THEN ?1 ELSE finished_at END
 WHERE id=?2 AND user_id=?3 AND clip_project_id=?4
  AND status IN ('queued','running') AND cancel_requested_at IS NULL
- AND (kind='render_clip' OR (kind IN ('generate_clip','revise_clip') AND cancellation_policy_version=1))
+ AND kind IN (SELECT value FROM json_each(?5))
 `
 
-type RequestClipCancellationParams struct {
+type RequestCancellationParams struct {
 	Now       sql.NullString
 	ID        string
 	UserID    string
 	ProjectID sql.NullString
+	Kinds     interface{}
 }
 
-func (q *Queries) RequestClipCancellation(ctx context.Context, arg RequestClipCancellationParams) (int64, error) {
-	result, err := q.db.ExecContext(ctx, requestClipCancellation,
+// The kind's own eligibility is decided before this runs, against the same immutable
+// columns (kind and cancellation policy version never change after insert); what this
+// statement adds is the race: one request, on work that has not already finished.
+func (q *Queries) RequestCancellation(ctx context.Context, arg RequestCancellationParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, requestCancellation,
 		arg.Now,
 		arg.ID,
 		arg.UserID,
 		arg.ProjectID,
+		arg.Kinds,
 	)
 	if err != nil {
 		return 0, err

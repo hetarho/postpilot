@@ -25,7 +25,7 @@ func newFinisherUnderTest(t *testing.T, jobs *fakeJobs, clips *fakeClips) Finish
 }
 
 func TestFinisherCommitsAStagedFileWithTheJobAndClearsTheStage(t *testing.T) {
-	jobs := &fakeJobs{jobs: map[string]job.Job{"job": runningJob(job.KindGenerateClip)}}
+	jobs := &fakeJobs{jobs: map[string]job.Job{"job": runningJob(clip.JobKindGenerate)}}
 	clips := newFakeClips(oldProject())
 	f := newFinisherUnderTest(t, jobs, clips)
 	if err := f.Complete(context.Background(), fileCandidate()); err != nil {
@@ -41,7 +41,7 @@ func TestFinisherCommitsAStagedFileWithTheJobAndClearsTheStage(t *testing.T) {
 }
 
 func TestFinisherAppliesAPlanOnlyCompletionWithoutAStagingRow(t *testing.T) {
-	jobs := &fakeJobs{jobs: map[string]job.Job{"job": runningJob(job.KindGenerateClip)}}
+	jobs := &fakeJobs{jobs: map[string]job.Job{"job": runningJob(clip.JobKindGenerate)}}
 	clips := newFakeClips(oldProject())
 	c := fileCandidate()
 	c.Result = clip.Result{}
@@ -55,7 +55,7 @@ func TestFinisherAppliesAPlanOnlyCompletionWithoutAStagingRow(t *testing.T) {
 
 func TestFinisherRefusesForeignConflictingAndCancelledJobs(t *testing.T) {
 	t.Run("foreign job", func(t *testing.T) {
-		j := runningJob(job.KindGenerateClip)
+		j := runningJob(clip.JobKindGenerate)
 		j.UserID = "bob"
 		jobs := &fakeJobs{jobs: map[string]job.Job{"job": j}}
 		clips := newFakeClips(oldProject())
@@ -64,7 +64,7 @@ func TestFinisherRefusesForeignConflictingAndCancelledJobs(t *testing.T) {
 		}
 	})
 	t.Run("cancellation requested inside the transaction", func(t *testing.T) {
-		j := runningJob(job.KindGenerateClip)
+		j := runningJob(clip.JobKindGenerate)
 		at := time.Now()
 		j.CancelRequestedAt = &at
 		jobs := &fakeJobs{jobs: map[string]job.Job{"job": j}}
@@ -75,7 +75,7 @@ func TestFinisherRefusesForeignConflictingAndCancelledJobs(t *testing.T) {
 		}
 	})
 	t.Run("job no longer running", func(t *testing.T) {
-		j := runningJob(job.KindGenerateClip)
+		j := runningJob(clip.JobKindGenerate)
 		j.Status = job.StatusFailed
 		jobs := &fakeJobs{jobs: map[string]job.Job{"job": j}}
 		clips := newFakeClips(oldProject())
@@ -85,7 +85,7 @@ func TestFinisherRefusesForeignConflictingAndCancelledJobs(t *testing.T) {
 		}
 	})
 	t.Run("staged candidate disagrees with the completion", func(t *testing.T) {
-		jobs := &fakeJobs{jobs: map[string]job.Job{"job": runningJob(job.KindGenerateClip)}}
+		jobs := &fakeJobs{jobs: map[string]job.Job{"job": runningJob(clip.JobKindGenerate)}}
 		clips := newFakeClips(oldProject())
 		other := fileCandidate()
 		other.Result.Key = "clip-results/alice/clip/other.mp4"
@@ -97,7 +97,7 @@ func TestFinisherRefusesForeignConflictingAndCancelledJobs(t *testing.T) {
 		}
 	})
 	t.Run("render job carrying a plan", func(t *testing.T) {
-		jobs := &fakeJobs{jobs: map[string]job.Job{"job": runningJob(job.KindRenderClip)}}
+		jobs := &fakeJobs{jobs: map[string]job.Job{"job": runningJob(clip.JobKindRender)}}
 		clips := newFakeClips(oldProject())
 		err := newFinisherUnderTest(t, jobs, clips).Complete(context.Background(), fileCandidate())
 		if !errors.Is(err, clip.ErrInvalid) || len(clips.applied) != 0 {
@@ -107,8 +107,8 @@ func TestFinisherRefusesForeignConflictingAndCancelledJobs(t *testing.T) {
 }
 
 func TestFinisherRecoverDiscardsOnlyOrphanedStages(t *testing.T) {
-	running := runningJob(job.KindGenerateClip)
-	done := runningJob(job.KindGenerateClip)
+	running := runningJob(clip.JobKindGenerate)
+	done := runningJob(clip.JobKindGenerate)
 	done.ID, done.Status = "done", job.StatusDone
 	jobs := &fakeJobs{jobs: map[string]job.Job{"job": running, "done": done}}
 	clips := newFakeClips(oldProject())

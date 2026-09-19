@@ -18,6 +18,12 @@ var (
 	ErrQuoteChanged       = errors.New("clip credit quote inputs changed")
 	ErrPricingUnavailable = errors.New("clip model pricing unavailable")
 	ErrCancellationPolicy = errors.New("clip cancellation policy requires a supported client approval")
+	// ErrCreditAllowance is refused work: a model call with no reserved allowance behind
+	// it, or a reservation that does not match the job it claims to pay for.
+	ErrCreditAllowance = errors.New("clip call has no reserved credit allowance")
+	// ErrCancellationUnavailable is a job the owner may not cancel: its approval named no
+	// cancellation policy, or the policy it named is not one this build honours.
+	ErrCancellationUnavailable = errors.New("clip cancellation policy was not approved")
 )
 
 const PricingPolicyVersion = 3

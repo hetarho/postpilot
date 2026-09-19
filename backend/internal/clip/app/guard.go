@@ -5,12 +5,12 @@ import (
 	"database/sql"
 	"errors"
 
+	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/job"
 )
 
-// Guard is the job.ClipGuard port: the credit hold for a charged clip job is
-// taken in the same transaction that proves the job is still the running,
-// unreserved `prepare`-stage job the approval described.
+// Guard takes the credit hold for a charged clip job in the same transaction that proves
+// the job is still the running, unreserved `prepare`-stage job the approval described.
 type Guard struct {
 	writer     *sql.DB
 	bind       Binder
@@ -27,28 +27,28 @@ func NewGuard(writer *sql.DB, bind Binder, authorizer Authorizer) Guard {
 // Reservable is the state guard: only a running charged clip job in its
 // prepare stage, not yet asked to cancel, under the policy the start names,
 // may take a hold.
-func Reservable(j job.Job, start job.Start) bool {
-	return start.Clip != nil && j.UserID == start.UserID && job.ChargedClipKind(j.Kind) && j.Status == job.StatusRunning && j.Stage == "prepare" && j.CancelRequestedAt == nil && j.CancellationPolicyVersion == start.Clip.CancellationPolicyVersion
+func Reservable(j job.Job, hold Hold) bool {
+	return j.UserID == hold.UserID && clip.ChargedJobKind(j.Kind) && j.Status == job.StatusRunning && j.Stage == "prepare" && j.CancelRequestedAt == nil && j.CancellationPolicyVersion == hold.Reservation.CancellationPolicyVersion
 }
 
-func (g Guard) Reserve(ctx context.Context, start job.Start) error {
+func (g Guard) Reserve(ctx context.Context, hold Hold) error {
 	return WriteTx(ctx, g.writer, g.bind, func(p Ports) error {
-		j, err := p.Jobs.GetByID(ctx, start.JobID)
+		j, err := p.Jobs.GetByID(ctx, hold.JobID)
 		if err != nil {
 			return err
 		}
-		if !Reservable(j, start) {
-			return job.ErrCreditAllowance
+		if !Reservable(j, hold) {
+			return clip.ErrCreditAllowance
 		}
 		if p.Admission == nil {
 			return errors.New("clip ledger unavailable")
 		}
-		return p.Admission.Hold(ctx, start)
+		return p.Admission.Hold(ctx, hold)
 	})
 }
 
 // Authorize serializes dispatch authorization with cancellation through the
 // job store's conditional writer statement.
 func (g Guard) Authorize(ctx context.Context, user, id string) error {
-	return g.authorizer.AuthorizeClipDispatch(ctx, user, id)
+	return g.authorizer.AuthorizeDispatch(ctx, user, id)
 }

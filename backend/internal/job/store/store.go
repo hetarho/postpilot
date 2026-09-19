@@ -20,43 +20,50 @@ const writeLayout = "2006-01-02T15:04:05.000000000Z07:00"
 // names are the owning contexts' words for their own subjects; this table is the only
 // place they meet a column, and an unknown dimension is refused rather than ignored.
 const (
-	dimensionPost        = "post"
-	dimensionVoice       = "voice"
-	dimensionClipProject = "clip_project"
-	dimensionExperiment  = "model_experiment"
+	dimensionPost       = "post"
+	dimensionVoice      = "voice"
+	dimensionProject    = "clip_project"
+	dimensionExperiment = "model_experiment"
 )
 
 // attachable dimensions are the ones a job is inserted with. The experiment dimension is
 // read-only: an experiment's id is its payload, surfaced by a generated column.
 func attachableDimension(dimension string) bool {
 	switch dimension {
-	case dimensionPost, dimensionVoice, dimensionClipProject:
+	case dimensionPost, dimensionVoice, dimensionProject:
 		return true
 	default:
 		return false
 	}
 }
 
+// Kinds is what the composition root tells the store about the work it will hold, so no
+// statement here names a product: which kinds wait for an activation before they may be
+// dispatched, which an owner may cancel, and which must authorize every model call
+// against that cancellation. Empty lists are a real mode — a queue where nothing waits,
+// nothing is cancelled and nothing is authorized — and must be stated, not defaulted into.
+type Kinds struct {
+	Deferred    []string
+	Cancellable []string
+	Authorized  []string
+}
+
 type Store struct {
 	write *sqlc.Queries
 	read  *sqlc.Queries
-	// deferredKinds are the kinds whose dispatch waits for an explicit activation. The
-	// composition root names them, so the queue's SQL never does.
-	deferredKinds []string
+	kinds Kinds
 }
 
-// New takes the deferred kinds explicitly — a nil list is a queue where every job
-// dispatches at once, which is a real mode and must be stated rather than defaulted into.
-func New(writer, reader *sql.DB, deferredKinds []string) *Store {
-	return &Store{write: sqlc.New(writer), read: sqlc.New(reader), deferredKinds: deferredKinds}
+func New(writer, reader *sql.DB, kinds Kinds) *Store {
+	return &Store{write: sqlc.New(writer), read: sqlc.New(reader), kinds: kinds}
 }
 
-func NewTx(tx *sql.Tx, deferredKinds []string) *Store {
-	return &Store{write: sqlc.New(tx), read: sqlc.New(tx), deferredKinds: deferredKinds}
+func NewTx(tx *sql.Tx, kinds Kinds) *Store {
+	return &Store{write: sqlc.New(tx), read: sqlc.New(tx), kinds: kinds}
 }
 
 func (s *Store) deferred(kind string) bool {
-	for _, deferredKind := range s.deferredKinds {
+	for _, deferredKind := range s.kinds.Deferred {
 		if deferredKind == kind {
 			return true
 		}
@@ -64,14 +71,13 @@ func (s *Store) deferred(kind string) bool {
 	return false
 }
 
-func (s *Store) deferredKindsJSON() (string, error) {
-	kinds := s.deferredKinds
+func kindsJSON(kinds []string) (string, error) {
 	if kinds == nil {
 		kinds = []string{}
 	}
 	raw, err := json.Marshal(kinds)
 	if err != nil {
-		return "", fmt.Errorf("encode deferred kinds: %w", err)
+		return "", fmt.Errorf("encode job kinds: %w", err)
 	}
 	return string(raw), nil
 }
@@ -85,7 +91,7 @@ func (s *Store) Insert(ctx context.Context, found job.Job) error {
 	err := s.write.InsertJob(ctx, sqlc.InsertJobParams{
 		CancellationPolicyVersion: int64(found.CancellationPolicyVersion),
 		ID:                        found.ID, PostSlug: nullString(found.Subject(dimensionPost)), UserID: found.UserID, VoiceID: nullString(found.Subject(dimensionVoice)),
-		ClipProjectID: nullString(found.Subject(dimensionClipProject)), DispatchReady: s.dispatchReady(found.Kind), Kind: found.Kind, ObserveModel: nullString(found.ObserveModel),
+		ClipProjectID: nullString(found.Subject(dimensionProject)), DispatchReady: s.dispatchReady(found.Kind), Kind: found.Kind, ObserveModel: nullString(found.ObserveModel),
 		WriteModel: nullString(found.WriteModel), Payload: string(found.Payload),
 		TargetLanguage: nullString(found.TargetLanguage),
 		CreatedAt:      formatTime(found.CreatedAt), UpdatedAt: formatTime(found.UpdatedAt),
@@ -231,11 +237,11 @@ func (s *Store) ActiveFor(ctx context.Context, subject job.Subject, filter job.F
 		default:
 			row, err = s.read.ActiveForVoice(ctx, nullString(subject.ID))
 		}
-	case dimensionClipProject:
+	case dimensionProject:
 		if filter.Kind != "" {
 			return nil, fmt.Errorf("active for clip project: kind filter unsupported")
 		}
-		row, err = s.read.ActiveForClip(ctx, sqlc.ActiveForClipParams{UserID: filter.UserID, ClipProjectID: nullString(subject.ID)})
+		row, err = s.read.ActiveForProject(ctx, sqlc.ActiveForProjectParams{UserID: filter.UserID, ClipProjectID: nullString(subject.ID)})
 	case dimensionExperiment:
 		if filter.UserID != "" || filter.Kind != "" {
 			return nil, fmt.Errorf("active for experiment: filters unsupported")
@@ -256,13 +262,13 @@ func (s *Store) ActiveFor(ctx context.Context, subject job.Subject, filter job.F
 
 // LatestFor is the most recent job of a subject, terminal or not.
 func (s *Store) LatestFor(ctx context.Context, subject job.Subject, filter job.Filter) (*job.Job, error) {
-	if subject.Dimension != dimensionClipProject {
+	if subject.Dimension != dimensionProject {
 		return nil, fmt.Errorf("latest job lookup: unsupported subject dimension %q", subject.Dimension)
 	}
 	if filter.Kind != "" {
 		return nil, fmt.Errorf("latest for clip project: kind filter unsupported")
 	}
-	row, err := s.read.LatestForClip(ctx, sqlc.LatestForClipParams{UserID: filter.UserID, ClipProjectID: nullString(subject.ID)})
+	row, err := s.read.LatestForProject(ctx, sqlc.LatestForProjectParams{UserID: filter.UserID, ClipProjectID: nullString(subject.ID)})
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
@@ -449,7 +455,7 @@ func rowSubjects(row sqlc.GenerationJob) []job.Subject {
 	for _, candidate := range []job.Subject{
 		{Dimension: dimensionPost, ID: row.PostSlug.String},
 		{Dimension: dimensionVoice, ID: row.VoiceID.String},
-		{Dimension: dimensionClipProject, ID: row.ClipProjectID.String},
+		{Dimension: dimensionProject, ID: row.ClipProjectID.String},
 	} {
 		if candidate.ID != "" {
 			subjects = append(subjects, candidate)
@@ -470,7 +476,7 @@ func (s *Store) dispatchReady(kind string) int64 {
 
 // Activate releases one deferred job for dispatch.
 func (s *Store) Activate(ctx context.Context, user, id string) (bool, error) {
-	kinds, err := s.deferredKindsJSON()
+	kinds, err := kindsJSON(s.kinds.Deferred)
 	if err != nil {
 		return false, err
 	}
@@ -484,7 +490,7 @@ func (s *Store) SweepUnactivated(ctx context.Context, f job.Failure) (int64, err
 	if err != nil {
 		return 0, err
 	}
-	kinds, err := s.deferredKindsJSON()
+	kinds, err := kindsJSON(s.kinds.Deferred)
 	if err != nil {
 		return 0, err
 	}

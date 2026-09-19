@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/postpilot/backend/internal/clip"
+	clipapp "github.com/postpilot/backend/internal/clip/app"
 	"github.com/postpilot/backend/internal/clip/store"
-	"github.com/postpilot/backend/internal/job"
 	jobstore "github.com/postpilot/backend/internal/job/store"
 )
 
@@ -32,9 +32,9 @@ type generationGuard struct {
 	jobs      *jobstore.Store
 }
 
-func (g generationGuard) Reserve(ctx context.Context, start job.Start) error {
-	return g.admission.Hold(ctx, start)
+func (g generationGuard) Reserve(ctx context.Context, hold clipapp.Hold) error {
+	return g.admission.Hold(ctx, hold)
 }
 func (g generationGuard) Authorize(ctx context.Context, user, id string) error {
-	return g.jobs.AuthorizeClipDispatch(ctx, user, id)
+	return g.jobs.AuthorizeDispatch(ctx, user, id)
 }

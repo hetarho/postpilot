@@ -25,7 +25,7 @@ func TestRenderRejectsRevisionRaceBeforeLinkWithoutConsumingSources(t *testing.T
 	h, p, draft := completedClip(t)
 	ctx := context.Background()
 	b := rerenderBatch(t, h, true)
-	jobs := beforeRenderEnqueue{generationJobs: generationJobs{h.queue}, before: func() {
+	jobs := beforeRenderEnqueue{generationJobs: h.clipJobs(), before: func() {
 		if _, err := h.service.SaveCorrection(ctx, "alice", p.ID, 1, draft); err != nil {
 			t.Fatal(err)
 		}

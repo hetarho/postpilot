@@ -46,10 +46,11 @@ type releaseAdmission struct {
 	metrics  *releaseMetrics
 	expected int
 	holds    int
-	hold     func(context.Context, job.Start) error
+	hold     func(context.Context, clipapp.Hold) error
 }
 
-func (a *releaseAdmission) Hold(ctx context.Context, s job.Start) error {
+// reserve is the clip hold this harness checks before it reaches the ledger.
+func (a *releaseAdmission) reserve(ctx context.Context, s clipapp.Hold) error {
 	a.metrics.mu.Lock()
 	defer a.metrics.mu.Unlock()
 	if len(a.metrics.prepared) != a.expected {
@@ -71,11 +72,7 @@ func (a *releaseAdmission) Hold(ctx context.Context, s job.Start) error {
 	if len(s.Calls) != 2 || s.Calls[0].Count != a.expected*4 || s.Calls[1].Count != 8 {
 		return errors.New("inexact reserved call count")
 	}
-	hold := a.hold
-	if hold == nil {
-		hold = a.jobAdmission.Hold
-	}
-	err := hold(ctx, s)
+	err := a.hold(ctx, s)
 	if err == nil {
 		a.holds++
 	}
@@ -99,8 +96,8 @@ type releaseClipGuard struct {
 	admission *releaseAdmission
 }
 
-func (g releaseClipGuard) Reserve(ctx context.Context, start job.Start) error {
-	return g.admission.Hold(ctx, start)
+func (g releaseClipGuard) Reserve(ctx context.Context, hold clipapp.Hold) error {
+	return g.admission.reserve(ctx, hold)
 }
 
 type releaseHarness struct {
@@ -446,31 +443,33 @@ func newReleaseHarness(t *testing.T, mode string, stress bool, clocks ...func() 
 	sources := clipapp.NewSourceService(st, objects, config.ClipSourceLimits(6*time.Hour, 10*time.Minute), clocks...)
 	bind := clipTxPorts(ledger, registry, authSvc)
 	projects := clipapp.NewService(st, config.ClipLimits(), sources, clipapp.NewFinalizer(d.Writer, bind, st, config.ClipRender(cfg), nil))
-	js := jobstore.New(d.Writer, d.Reader, deferredKindsForTest())
-	q := job.New(js, 10*time.Millisecond)
+	js := jobstore.New(d.Writer, d.Reader, jobKindsForTest())
+	q := job.New(js, 10*time.Millisecond, jobReportingForTest())
+	q.AllowCancellation(clipCancellation{})
 	admission := &releaseAdmission{jobAdmission: jobAdmission{ledger: ledger, registry: registry, plans: authSvc}, metrics: metrics}
 	q.Admit(admission)
 	guard := clipapp.NewGuard(d.Writer, bind, js)
 	admission.hold = guard.Reserve
-	q.GuardClips(releaseClipGuard{guard, admission})
+	q.AllowCancellation(clipCancellation{})
+	clipGuard := releaseClipGuard{guard, admission}
 	finisher := &releaseFinisher{Finisher: clipapp.NewFinisher(d.Writer, bind, js, st, nil), mode: mode}
-	g := clipapp.NewGenerationService(st, projects, sources, objects, media, planner, renderer, clipapp.NewJobs(q), config.ClipGeneration(cfg), generationDeps(finisher, clipapp.NewPricing(registry, clipBudgets(config.ClipAI(cfg))), clipapp.NewAccounting(ledger)))
+	g := clipapp.NewGenerationService(st, projects, sources, objects, media, planner, renderer, clipapp.NewJobs(q, clipGuard), config.ClipGeneration(cfg), generationDeps(finisher, clipapp.NewPricing(registry, clipBudgets(config.ClipAI(cfg))), clipapp.NewAccounting(ledger)))
 	var h *releaseHarness
 	if !strings.HasPrefix(mode, "restart ") {
-		q.Register(job.KindGenerateClip, metered(func(ctx context.Context, j job.Job, p job.Progress) error {
+		q.Register(clip.JobKindGenerate, metered(func(ctx context.Context, j job.Job, p job.Progress) error {
 			if h.generationHandler != nil {
 				return h.generationHandler(ctx, j, p)
 			}
 			return g.Run(ctx, j.UserID, j.ID, j.Subject(clip.JobSubject), j.Payload, p)
 		}))
 	}
-	q.Register(job.KindRenderClip, metered(func(ctx context.Context, j job.Job, p job.Progress) error {
+	q.Register(clip.JobKindRender, metered(func(ctx context.Context, j job.Job, p job.Progress) error {
 		if h.renderHandler != nil {
 			return h.renderHandler(ctx, j, p)
 		}
 		return g.RunRender(ctx, j.UserID, j.ID, j.Subject(clip.JobSubject), j.Payload, p)
 	}))
-	for _, kind := range []string{job.KindGenerateClip, job.KindRenderClip} {
+	for _, kind := range []string{clip.JobKindGenerate, clip.JobKindRender} {
 		q.OnTerminal(kind, func(ctx context.Context, j job.Job, at time.Time) error {
 			return sources.ReleaseAttempt(ctx, j.UserID, j.ID, at)
 		})
@@ -751,7 +750,7 @@ func (h *releaseHarness) exercise(mode string) {
 	workerCtx, cancel := context.WithCancel(ctx)
 	workerDone := make(chan struct{})
 	if strings.HasPrefix(mode, "restart ") {
-		h.queue.Register(job.KindGenerateClip, metered(func(ctx context.Context, j job.Job, p job.Progress) error {
+		h.queue.Register(clip.JobKindGenerate, metered(func(ctx context.Context, j job.Job, p job.Progress) error {
 			return h.service.Run(ctx, j.UserID, j.ID, j.Subject(clip.JobSubject), j.Payload, func(stage string, done, total int) {
 				p(stage, done, total)
 				if mode == "restart prepare" && stage == "prepare" && done == 1 || mode == "restart hold" && stage == "analyze" && done == 0 || mode == "restart partial" && stage == "analyze" && done == 1 || mode == "restart save" && stage == "save" {
@@ -793,7 +792,8 @@ func (h *releaseHarness) exercise(mode string) {
 			}
 			// New worker instance reads only durable state, has no old allowance or
 			// media references and never installs a handler capable of AI replay.
-			recovery := job.New(jobstore.New(h.d.Writer, h.d.Reader, deferredKindsForTest()), time.Millisecond)
+			recovery := job.New(jobstore.New(h.d.Writer, h.d.Reader, jobKindsForTest()), time.Millisecond, jobReportingForTest())
+			recovery.AllowCancellation(clipCancellation{})
 			recovery.Admit(h.admission)
 			if _, e = recovery.SweepRunning(ctx); e != nil {
 				t.Fatal(e)

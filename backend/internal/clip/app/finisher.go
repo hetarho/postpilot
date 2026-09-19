@@ -55,7 +55,7 @@ func (f Finisher) Complete(ctx context.Context, c clip.AttemptResult) error {
 	if err != nil {
 		return err
 	}
-	if j.UserID != c.UserID || j.Subject(clip.JobSubject) != c.ProjectID || !job.ClipKind(j.Kind) {
+	if j.UserID != c.UserID || j.Subject(clip.JobSubject) != c.ProjectID || !clip.IsJobKind(j.Kind) {
 		return clip.ErrNotFound
 	}
 	if f.resultCommitted(cleanup, c) {
@@ -93,7 +93,7 @@ func (f Finisher) Complete(ctx context.Context, c clip.AttemptResult) error {
 				return err
 			}
 		}
-		if candidate.UserID != j.UserID || candidate.ProjectID != j.Subject(clip.JobSubject) || candidate.Result.Key != c.Result.Key || (j.Kind == job.KindGenerateClip) != (candidate.EditPlan != "") {
+		if candidate.UserID != j.UserID || candidate.ProjectID != j.Subject(clip.JobSubject) || candidate.Result.Key != c.Result.Key || (j.Kind == clip.JobKindGenerate) != (candidate.EditPlan != "") {
 			return clip.ErrInvalid
 		}
 		if err := p.Clips.ApplyAttemptResult(ctx, candidate); err != nil {

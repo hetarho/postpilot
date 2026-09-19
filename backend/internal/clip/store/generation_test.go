@@ -189,7 +189,7 @@ func (p *plannerFake) ValidatePreparation(llm.ModelRef, clip.PlanningInput, []cl
 	return p.preparationErr
 }
 func (p *plannerFake) ObserveChunk(ctx context.Context, r llm.ModelRef, c clip.ChunkInput) (clip.ChunkAnalysis, llm.Usage, error) {
-	frozen, err := job.ConsumeClipPolicy(ctx, "alice", p.id, r.String(), 8192, "observe")
+	frozen, err := clipapp.ConsumePolicy(ctx, "alice", p.id, r.String(), 8192, "observe")
 	if err != nil {
 		return clip.ChunkAnalysis{}, llm.Usage{}, err
 	}
@@ -277,7 +277,7 @@ func (p *plannerFake) Narrate(ctx context.Context, r llm.ModelRef, in clip.Narra
 	return plan, llm.Usage{}, nil
 }
 func (p *plannerFake) Plan(ctx context.Context, r llm.ModelRef, in clip.PlanningInput) (clip.EditPlan, llm.Usage, error) {
-	frozen, err := job.ConsumeClipPolicy(ctx, "alice", p.id, r.String(), 32768, "write")
+	frozen, err := clipapp.ConsumePolicy(ctx, "alice", p.id, r.String(), 32768, "write")
 	if err != nil {
 		return clip.EditPlan{}, llm.Usage{}, err
 	}
@@ -340,18 +340,16 @@ func (r *rendererFake) Render(ctx context.Context, ws clip.MediaWorkspace, p cli
 }
 
 type clipAdmitter struct {
-	calls  []job.Start
+	calls  []clipapp.Hold
 	refuse error
 	media  *mediaFake
 }
 
-func (a *clipAdmitter) Hold(_ context.Context, s job.Start) error {
+func (a *clipAdmitter) Hold(_ context.Context, s clipapp.Hold) error {
 	remainingObserve := 0
-	if s.Clip != nil {
-		for _, c := range s.Clip.Calls {
-			if c.Policy.Stage == "observe" {
-				remainingObserve += c.Count
-			}
+	for _, c := range s.Reservation.Calls {
+		if c.Policy.Stage == "observe" {
+			remainingObserve += c.Count
 		}
 	}
 	if remainingObserve > 0 {
@@ -382,19 +380,29 @@ func (a *clipAdmitter) Hold(_ context.Context, s job.Start) error {
 	a.calls = append(a.calls, s)
 	return nil
 }
+
+// queueAdmitter is the ledger as the QUEUE sees it: charged clip work defers its hold to
+// the guard above, so nothing is ever held through this path.
+type queueAdmitter struct{ *clipAdmitter }
+
+func (queueAdmitter) Hold(context.Context, job.Start) error { return nil }
+
 func (*clipAdmitter) Release(context.Context, string)             {}
 func (*clipAdmitter) Settle(context.Context, string, string)      {}
 func (*clipAdmitter) OpenHolds(context.Context) ([]string, error) { return nil, nil }
 
-type generationJobs struct{ q *job.Queue }
+type generationJobs struct {
+	q    *job.Queue
+	jobs clipapp.Jobs
+}
 
 func (j generationJobs) Enqueue(ctx context.Context, s clip.GenerationStart) (string, error) {
-	kind := job.KindGenerateClip
+	kind := clip.JobKindGenerate
 	if s.RenderOnly {
-		kind = job.KindRenderClip
+		kind = clip.JobKindRender
 	}
 	if s.Revise {
-		kind = job.KindReviseClip
+		kind = clip.JobKindRevise
 	}
 	policy := 0
 	if s.Quote != nil {
@@ -409,18 +417,7 @@ func (j generationJobs) FailQueued(ctx context.Context, user, id string) (bool, 
 	return j.q.FailQueued(ctx, id, user, job.Failure{Reason: "CLIP_PROCESSING_FAILED"})
 }
 func (j generationJobs) ReserveApproved(ctx context.Context, user, id string, approval clip.GenerationApproval, n int) (context.Context, error) {
-	p := approval.Pricing
-	calls := []job.PlannedCall{}
-	if n > 0 {
-		calls = append(calls, job.PlannedCall{Ref: p.Observe.Ref.String(), Count: p.ObserveCalls(n), CompletionTokens: p.Observe.CompletionTokens})
-	}
-	if p.PlanCalls() > 0 {
-		calls = append(calls, job.PlannedCall{Ref: p.Plan.Ref.String(), Count: p.PlanCalls(), CompletionTokens: p.Plan.CompletionTokens})
-	}
-	if len(calls) == 0 {
-		return ctx, nil
-	}
-	return j.q.ReserveClip(ctx, user, id, calls, job.ClipReservation{CancellationPolicyVersion: p.CancellationPolicyVersion, ApprovedMaxCredits: approval.MaxCredits, Calls: []job.ClipCall{{Policy: p.Observe, Count: p.ObserveCalls(n)}, {Policy: p.Plan, Count: p.PlanCalls()}}})
+	return j.jobs.ReserveApproved(ctx, user, id, approval, n)
 }
 func (j generationJobs) Active(ctx context.Context, user, id string) (*clip.ClipJob, error) {
 	found, err := j.q.ActiveFor(ctx, job.Subject{Dimension: clip.JobSubject, ID: id}, job.Filter{UserID: user})
@@ -451,6 +448,7 @@ type generationHarness struct {
 	planner  *plannerFake
 	renderer *rendererFake
 	admitter *clipAdmitter
+	guard    generationGuard
 	queue    *job.Queue
 	jobs     *jobstore.Store
 	template clip.VideoTemplate
@@ -482,22 +480,28 @@ func generationSetup(t *testing.T) *generationHarness {
 	media := &mediaFake{root: t.TempDir(), durations: []int{60001, 15000}}
 	planner := &plannerFake{}
 	renderer := &rendererFake{}
-	jobs := jobstore.New(d.Writer, d.Reader, deferredKindsForTest())
-	queue := job.New(jobs, time.Millisecond)
+	jobs := jobstore.New(d.Writer, d.Reader, jobKindsForTest())
+	queue := job.New(jobs, time.Millisecond, jobReportingForTest())
 	admitter := &clipAdmitter{media: media}
-	queue.Admit(admitter)
-	queue.GuardClips(generationGuard{admitter, jobs})
+	queue.Admit(queueAdmitter{admitter})
+	queue.AllowCancellation(clipCancellationForTest{})
+	guard := generationGuard{admitter, jobs}
 	cfg := clip.GenerationConfig{Media: clip.MediaConfig{Sources: config.ClipSourceLimits(6*time.Hour, 10*time.Minute), ChunkDurationMS: 60000, DurationToleranceMS: 1000}, Analysis: clip.AnalysisLimits{ChunkMS: 60000, MaxSources: 20, MaxSourceDurationMS: 1800000, MaxSegments: 60, MaxTextRunes: 2000, MaxSubjects: 20}, QuoteTTL: 5 * time.Minute, ReadTTL: time.Minute, CleanupTimeout: time.Second, OrphanMinAge: time.Hour}
 	cfg.Render = config.ClipRender(&config.Config{})
 	cfg.Media.AnalysisMaxBytes, cfg.Media.PreparedMaxBytes, cfg.Media.WorkspaceMaxBytes = 8<<20, 512<<20, 8<<30
-	service := clipapp.NewGenerationService(st, projects, sources, objects, media, planner, renderer, generationJobs{queue}, cfg, generationDeps(generationFinisher{st}, &quotePricing{}, nil))
-	return &generationHarness{service, projects, st, d, sources, objects, media, planner, renderer, admitter, queue, jobs, template, project, batch, cfg}
+	service := clipapp.NewGenerationService(st, projects, sources, objects, media, planner, renderer, generationJobs{queue, clipapp.NewJobs(queue, guard)}, cfg, generationDeps(generationFinisher{st}, &quotePricing{}, nil))
+	return &generationHarness{service, projects, st, d, sources, objects, media, planner, renderer, admitter, guard, queue, jobs, template, project, batch, cfg}
+}
+
+// clipJobs is the clip context's job adapter over this harness's queue and guard.
+func (h *generationHarness) clipJobs() generationJobs {
+	return generationJobs{h.queue, clipapp.NewJobs(h.queue, h.guard)}
 }
 
 // withCredits rebuilds the generation side over new pricing and accounting; the
 // constructor re-binds the project service to the rebuilt service.
 func (h *generationHarness) withCredits(pricing clip.QuotePricing, accounting clip.AccountingReader) {
-	h.service = clipapp.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, h.planner, h.renderer, generationJobs{h.queue}, h.cfg, generationDeps(generationFinisher{h.store}, pricing, accounting))
+	h.service = clipapp.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, h.planner, h.renderer, h.clipJobs(), h.cfg, generationDeps(generationFinisher{h.store}, pricing, accounting))
 }
 func (h *generationHarness) start(t *testing.T) string {
 	t.Helper()
@@ -518,9 +522,9 @@ func (h *generationHarness) run(t *testing.T) error {
 	// The dispatcher picks the runner by kind, exactly as cmd/api registers it.
 	run := h.service.Run
 	switch j.Kind {
-	case job.KindRenderClip:
+	case clip.JobKindRender:
 		run = h.service.RunRender
-	case job.KindReviseClip:
+	case clip.JobKindRevise:
 		run = h.service.RunRevision
 	}
 	err = run(ctx, j.UserID, j.ID, j.Subject(clip.JobSubject), j.Payload, func(stage string, done, total int) {

@@ -82,16 +82,16 @@ func registerJobs(c *contexts) {
 // registerClipJobs binds the three clip kinds and releases each attempt's held sources
 // when its job ends, whatever the outcome.
 func registerClipJobs(q *job.Queue, service *clipapp.GenerationService, sources *clipapp.SourceService) {
-	q.Register(job.KindGenerateClip, metered(func(ctx context.Context, j job.Job, progress job.Progress) error {
+	q.Register(clip.JobKindGenerate, metered(func(ctx context.Context, j job.Job, progress job.Progress) error {
 		return service.Run(ctx, j.UserID, j.ID, j.Subject(clip.JobSubject), j.Payload, progress)
 	}))
-	q.Register(job.KindRenderClip, metered(func(ctx context.Context, j job.Job, progress job.Progress) error {
+	q.Register(clip.JobKindRender, metered(func(ctx context.Context, j job.Job, progress job.Progress) error {
 		return service.RunRender(ctx, j.UserID, j.ID, j.Subject(clip.JobSubject), j.Payload, progress)
 	}))
-	q.Register(job.KindReviseClip, metered(func(ctx context.Context, j job.Job, progress job.Progress) error {
+	q.Register(clip.JobKindRevise, metered(func(ctx context.Context, j job.Job, progress job.Progress) error {
 		return service.RunRevision(ctx, j.UserID, j.ID, j.Subject(clip.JobSubject), j.Payload, progress)
 	}))
-	for _, kind := range []string{job.KindGenerateClip, job.KindRenderClip, job.KindReviseClip} {
+	for _, kind := range []string{clip.JobKindGenerate, clip.JobKindRender, clip.JobKindRevise} {
 		q.OnTerminal(kind, func(ctx context.Context, j job.Job, at time.Time) error {
 			return sources.ReleaseAttempt(ctx, j.UserID, j.ID, at)
 		})

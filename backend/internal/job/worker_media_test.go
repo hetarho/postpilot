@@ -34,7 +34,7 @@ func TestClipFailureLogsSafeMediaCause(t *testing.T) {
 			cause.operation, cause.class, cause.ms = "private-canary", "private-canary", -1
 		}
 		err := diagnosticStageError{error: cause, stage: "render"}
-		logJobFailure(Job{ID: "owned-job", Kind: KindGenerateClip}, failureFromError(err), err)
+		reportingQueue().logJobFailure(Job{ID: "owned-job", Kind: "generate_clip"}, reportingQueue().failureFromError(err), err)
 		var got map[string]any
 		if json.Unmarshal(logs.Bytes(), &got) != nil || strings.Contains(logs.String(), "private-canary") || strings.Contains(logs.String(), "video.mp4") {
 			t.Fatal("private diagnostic escaped", logs.String())
@@ -77,7 +77,7 @@ func TestClipWorkspaceFailureLogsWhichCeilingAndItsSizes(t *testing.T) {
 			logs.Reset()
 			cause := testWorkspaceLimit{error: errors.New("private-canary /video.mp4"), check: tc.check, total: 8 << 30, requested: 2 << 30, free: tc.free}
 			err := diagnosticStageError{error: cause, stage: "render"}
-			logJobFailure(Job{ID: "owned-job", Kind: KindGenerateClip}, failureFromError(err), err)
+			reportingQueue().logJobFailure(Job{ID: "owned-job", Kind: "generate_clip"}, reportingQueue().failureFromError(err), err)
 			var got map[string]any
 			if json.Unmarshal(logs.Bytes(), &got) != nil || strings.Contains(logs.String(), "private-canary") || strings.Contains(logs.String(), "video.mp4") {
 				t.Fatal("private diagnostic escaped", logs.String())
@@ -107,16 +107,17 @@ func TestClipWorkerLogsStageChangesAndTotalDuration(t *testing.T) {
 	slog.SetDefault(slog.New(slog.NewJSONHandler(&logs, nil)))
 	t.Cleanup(func() { slog.SetDefault(previous) })
 	store := &progressLogStore{terminalStore: terminalStore{commit: true}}
-	queue := New(store, time.Second)
-	queue.Register(KindGenerateClip, func(_ context.Context, _ Job, progress Progress) error {
+	queue := New(store, time.Second, testReporting{})
+	queue.AllowCancellation(testCancellation{})
+	queue.Register("generate_clip", func(_ context.Context, _ Job, progress Progress) error {
 		progress("prepare", 0, 2)
 		progress("prepare", 1, 2)
 		progress("render", 0, 1)
 		progress("private-canary", 0, 1)
 		return context.DeadlineExceeded
 	})
-	queue.run(t.Context(), Job{ID: "owned-job", Kind: KindGenerateClip})
-	if strings.Contains(logs.String(), "private-canary") || strings.Count(logs.String(), "clip stage changed") != 3 || strings.Count(logs.String(), "clip job stopped") != 1 {
+	queue.run(t.Context(), Job{ID: "owned-job", Kind: "generate_clip"})
+	if strings.Contains(logs.String(), "private-canary") || strings.Count(logs.String(), "job stage changed") != 3 || strings.Count(logs.String(), "job stopped") != 1 {
 		t.Fatal(logs.String())
 	}
 	for _, line := range strings.Split(strings.TrimSpace(logs.String()), "\n") {

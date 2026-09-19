@@ -105,7 +105,7 @@ func (r ownedPlanRenderer) Render(ctx context.Context, ws clip.MediaWorkspace, p
 }
 func TestGenerationPersistsTheRenderedOwnedPlanAndItsStyles(t *testing.T) {
 	h := generationSetup(t)
-	h.service = clipapp.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, ownedPlanWriter{h.planner}, ownedPlanRenderer{h.renderer}, generationJobs{h.queue}, h.cfg, generationDeps(generationFinisher{h.store}, &quotePricing{}, nil))
+	h.service = clipapp.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, ownedPlanWriter{h.planner}, ownedPlanRenderer{h.renderer}, h.clipJobs(), h.cfg, generationDeps(generationFinisher{h.store}, &quotePricing{}, nil))
 	body := `<clip version="1"><repeat for="scenes"><scene id="shot"><text id="copy" kind="ai" role="caption" basis="cut">Describe the scene.</text></scene></repeat><text id="empty-hook" kind="fixed" role="hook"/><text id="empty-ending" kind="fixed" role="ending"/></clip>`
 	template, err := legacyTemplate(t, h.store, "alice", "owned-render", body), error(nil)
 	if err != nil {
@@ -399,7 +399,7 @@ func (compositionRenderer) CompositionPlanVersion() int { return clip.Compositio
 func TestNativeQuoteInvalidatesGroupedValuesAndFreezesAcceptedComposition(t *testing.T) {
 	h := generationSetup(t)
 	ctx := context.Background()
-	h.service = clipapp.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, compositionPlanner{h.planner}, compositionRenderer{h.renderer}, generationJobs{h.queue}, h.cfg, generationDeps(generationFinisher{h.store}, &quotePricing{}, nil))
+	h.service = clipapp.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, compositionPlanner{h.planner}, compositionRenderer{h.renderer}, h.clipJobs(), h.cfg, generationDeps(generationFinisher{h.store}, &quotePricing{}, nil))
 	template, err := legacyTemplate(t, h.store, "alice", "native-quote", nativeBody), error(nil)
 	if err != nil {
 		t.Fatal(err)

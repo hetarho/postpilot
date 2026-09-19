@@ -11,30 +11,44 @@ import (
 // Jobs is the clip.GenerationJobs port over the job queue. It translates the
 // queue's vocabulary into the clip context's and owns the approval rule a
 // reservation must satisfy.
-type Jobs struct{ queue Queue }
+type Jobs struct {
+	queue Queue
+	guard Reserver
+}
 
-func NewJobs(queue Queue) Jobs {
+// Reserver is the credit hold and the per-call dispatch authorization, both of which
+// commit against the job row in one short transaction. Without one no charged clip work
+// can reserve, which is the mode the queue's own tests run in.
+type Reserver interface {
+	Reserve(ctx context.Context, hold Hold) error
+	Authorize(ctx context.Context, user, id string) error
+}
+
+func NewJobs(queue Queue, guard Reserver) Jobs {
 	if queue == nil {
 		panic("clip app: jobs need a queue")
 	}
-	return Jobs{queue: queue}
+	return Jobs{queue: queue, guard: guard}
 }
 
 func (a Jobs) Enqueue(ctx context.Context, s clip.GenerationStart) (string, error) {
-	kind := job.KindGenerateClip
+	kind := clip.JobKindGenerate
 	if s.RenderOnly {
-		kind = job.KindRenderClip
+		kind = clip.JobKindRender
 	}
 	if s.Revise {
-		kind = job.KindReviseClip
+		kind = clip.JobKindRevise
 	}
 	policy := 0
 	if s.Quote != nil {
 		policy = s.Quote.Pricing.CancellationPolicyVersion
 	}
+	if err := validClipStart(kind, s, policy); err != nil {
+		return "", err
+	}
 	subject := job.Subject{Dimension: clip.JobSubject, ID: s.ProjectID}
 	id, err := a.queue.Enqueue(ctx, job.NewJob{
-		CancellationPolicyVersion: policy, Kind: kind, NonMetered: s.RenderOnly, UserID: s.UserID,
+		CancellationPolicyVersion: policy, Kind: kind, NonMetered: s.RenderOnly, DeferHold: clip.ChargedJobKind(kind), UserID: s.UserID,
 		Subjects: []job.Subject{subject},
 		// One project runs one job at a time, whoever asked: the project is the lock.
 		Guards:       []job.Guard{{Subject: subject, Filter: job.Filter{UserID: s.UserID}}},
@@ -95,16 +109,16 @@ func (a Jobs) ReserveApproved(ctx context.Context, user, id string, approval cli
 	if len(calls) == 0 {
 		return ctx, nil
 	}
-	return a.queue.ReserveClip(ctx, user, id, calls, reservation)
+	return a.Reserve(ctx, user, id, calls, reservation)
 }
 
 // PlanReservation is the approval rule: the approval must carry a valid quote
 // whose credit ceiling it repeats, and the chunk count must fit the quote. It
 // returns the planned calls and the reservation the ledger prices them under.
-func PlanReservation(approval clip.GenerationApproval, chunks int) ([]job.PlannedCall, job.ClipReservation, error) {
+func PlanReservation(approval clip.GenerationApproval, chunks int) ([]job.PlannedCall, Reservation, error) {
 	p := approval.Pricing
 	if chunks < 0 || chunks > p.ObservationCalls || !p.Valid() || approval.MaxCredits != p.MaxCredits || approval.QuoteID == "" {
-		return nil, job.ClipReservation{}, job.ErrCreditAllowance
+		return nil, Reservation{}, clip.ErrCreditAllowance
 	}
 	calls := []job.PlannedCall{}
 	if chunks > 0 {
@@ -113,8 +127,25 @@ func PlanReservation(approval clip.GenerationApproval, chunks int) ([]job.Planne
 	if p.PlanCalls() > 0 {
 		calls = append(calls, job.PlannedCall{Ref: p.Plan.Ref.String(), Count: p.PlanCalls(), CompletionTokens: p.Plan.CompletionTokens})
 	}
-	reservation := job.ClipReservation{CancellationPolicyVersion: p.CancellationPolicyVersion, ApprovedMaxCredits: approval.MaxCredits, Calls: []job.ClipCall{{Policy: p.Observe, Count: p.ObserveCalls(chunks)}, {Policy: p.Plan, Count: p.PlanCalls()}}}
+	reservation := Reservation{CancellationPolicyVersion: p.CancellationPolicyVersion, ApprovedMaxCredits: approval.MaxCredits, Calls: []Call{{Policy: p.Observe, Count: p.ObserveCalls(chunks)}, {Policy: p.Plan, Count: p.PlanCalls()}}}
 	return calls, reservation, nil
+}
+
+// validClipStart is the shape rule the queue used to hold: only charged clip work may
+// carry a cancellation policy, a render spends nothing and names no model, and a
+// generation must name both of its models.
+func validClipStart(kind string, s clip.GenerationStart, policy int) error {
+	switch {
+	case s.ProjectID == "" || s.UserID == "":
+		return clip.ErrNotFound
+	case policy != 0 && !clip.ChargedJobKind(kind):
+		return clip.ErrNotFound
+	case kind == clip.JobKindRender && (s.Observe != "" || s.Write != ""):
+		return clip.ErrNotFound
+	case kind == clip.JobKindGenerate && (s.Observe == "" || s.Write == ""):
+		return clip.ErrNotFound
+	}
+	return nil
 }
 
 func summary(j *job.JobSummary) *clip.ClipJob {

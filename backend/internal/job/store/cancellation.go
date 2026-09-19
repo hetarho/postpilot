@@ -7,20 +7,36 @@ import (
 	"time"
 )
 
-func (s *Store) RequestClipCancellation(ctx context.Context, user, project, id string, at time.Time) error {
-	_, err := s.write.RequestClipCancellation(ctx, sqlc.RequestClipCancellationParams{ID: id, UserID: user, ProjectID: nullString(project), Now: nullString(formatTime(at))})
+func (s *Store) RequestCancellation(ctx context.Context, user, subject, id string, at time.Time) error {
+	kinds, err := kindsJSON(s.kinds.Cancellable)
+	if err != nil {
+		return err
+	}
+	_, err = s.write.RequestCancellation(ctx, sqlc.RequestCancellationParams{ID: id, UserID: user, ProjectID: nullString(subject), Now: nullString(formatTime(at)), Kinds: kinds})
 	return err
 }
-func (s *Store) RecoverClipCancellations(ctx context.Context, at time.Time) (int64, error) {
-	return s.write.RecoverClipCancellations(ctx, nullString(formatTime(at)))
+
+func (s *Store) RecoverCancellations(ctx context.Context, at time.Time) (int64, error) {
+	kinds, err := kindsJSON(s.kinds.Cancellable)
+	if err != nil {
+		return 0, err
+	}
+	return s.write.RecoverCancellations(ctx, sqlc.RecoverCancellationsParams{Now: nullString(formatTime(at)), Kinds: kinds})
 }
-func (s *Store) AuthorizeClipDispatch(ctx context.Context, user, id string) error {
-	n, err := s.write.AuthorizeClipDispatch(ctx, sqlc.AuthorizeClipDispatchParams{ID: id, UserID: user})
+
+// AuthorizeDispatch is the conditional writer statement that serializes one model
+// call against a cancellation request: a refused row means the owner got there first.
+func (s *Store) AuthorizeDispatch(ctx context.Context, user, id string) error {
+	kinds, err := kindsJSON(s.kinds.Authorized)
+	if err != nil {
+		return err
+	}
+	n, err := s.write.AuthorizeDispatch(ctx, sqlc.AuthorizeDispatchParams{ID: id, UserID: user, Kinds: kinds})
 	if err != nil {
 		return err
 	}
 	if n != 1 {
-		return job.ErrCreditAllowance
+		return job.ErrDispatchRefused
 	}
 	return nil
 }

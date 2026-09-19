@@ -54,7 +54,7 @@ func TestPlanReservationEnforcesTheApprovalRule(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			calls, reservation, err := PlanReservation(c.approval, c.chunks)
 			if c.wantErr {
-				if !errors.Is(err, job.ErrCreditAllowance) {
+				if !errors.Is(err, clip.ErrCreditAllowance) {
 					t.Fatal(err)
 				}
 				return
@@ -74,18 +74,43 @@ func TestPlanReservationEnforcesTheApprovalRule(t *testing.T) {
 
 type fakeQueue struct {
 	Queue
-	reserved []job.PlannedCall
-	approval []job.ClipReservation
+	summary *job.JobSummary
 }
 
-func (q *fakeQueue) ReserveClip(ctx context.Context, _, _ string, calls []job.PlannedCall, approval ...job.ClipReservation) (context.Context, error) {
-	q.reserved, q.approval = calls, approval
-	return ctx, nil
+func (q *fakeQueue) Get(context.Context, string, string) (*job.JobSummary, error) {
+	return q.summary, nil
 }
+
+// reservableJob is the job an approved reservation may be taken against: running, in its
+// prepare stage, on the models the approval prices.
+func reservableJob() *job.JobSummary {
+	return &job.JobSummary{
+		ID: "job", Kind: clip.JobKindGenerate, UserID: "alice", Status: job.StatusRunning, Stage: "prepare",
+		ObserveModel: observePolicy().Ref.String(), WriteModel: writePolicy().Ref.String(),
+	}
+}
+
+// fakeReserver records the hold the allowance would take and admits it.
+type fakeReserver struct {
+	held    []Hold
+	refuse  error
+	refused error
+}
+
+func (r *fakeReserver) Reserve(_ context.Context, hold Hold) error {
+	if r.refuse != nil {
+		return r.refuse
+	}
+	r.held = append(r.held, hold)
+	return nil
+}
+
+func (r *fakeReserver) Authorize(context.Context, string, string) error { return r.refused }
 
 func TestReserveApprovedSkipsTheQueueWhenNothingIsLeftToCall(t *testing.T) {
-	q := &fakeQueue{}
-	jobs := NewJobs(q)
+	q := &fakeQueue{summary: reservableJob()}
+	reserver := &fakeReserver{}
+	jobs := NewJobs(q, reserver)
 	// A resumed generation that already holds every observation and both
 	// writing results has nothing left to price.
 	resumed := approvedPricing(0)
@@ -95,13 +120,13 @@ func TestReserveApprovedSkipsTheQueueWhenNothingIsLeftToCall(t *testing.T) {
 		t.Fatal("the resumed quote must be a valid render-only pricing")
 	}
 	approval := clip.GenerationApproval{QuoteID: "quote", MaxCredits: resumed.MaxCredits, Pricing: resumed}
-	if _, err := jobs.ReserveApproved(context.Background(), "alice", "job", approval, 0); err != nil || q.reserved != nil {
-		t.Fatal("a continuation with nothing left to call must not reserve", q.reserved, err)
+	if _, err := jobs.ReserveApproved(context.Background(), "alice", "job", approval, 0); err != nil || len(reserver.held) != 0 {
+		t.Fatal("a continuation with nothing left to call must not reserve", reserver.held, err)
 	}
 	fresh := approvedPricing(1)
 	approval = clip.GenerationApproval{QuoteID: "quote", MaxCredits: fresh.MaxCredits, Pricing: fresh}
-	if _, err := jobs.ReserveApproved(context.Background(), "alice", "job", approval, 1); err != nil || len(q.reserved) != 2 || len(q.approval) != 1 {
-		t.Fatal(q.reserved, q.approval, err)
+	if _, err := jobs.ReserveApproved(context.Background(), "alice", "job", approval, 1); err != nil || len(reserver.held) != 1 || len(reserver.held[0].Calls) != 2 {
+		t.Fatal(reserver.held, err)
 	}
 }
 

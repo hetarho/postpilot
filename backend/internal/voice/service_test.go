@@ -868,7 +868,7 @@ func TestAnalyzeHandlerFailureBecomesFailedJob(t *testing.T) {
 	alice := h.voice("alice")
 	models := h.models
 	models.response = "## 문장 길이\n짧음"
-	queue := job.New(jobstore.New(h.db.Writer, h.db.Reader, deferredKindsForTest()), 5*time.Millisecond)
+	queue := job.New(jobstore.New(h.db.Writer, h.db.Reader, jobKindsForTest()), 5*time.Millisecond, jobReportingForTest())
 	svc := voice.NewService(h.store, models, queueJobs{queue: queue})
 	queue.Register(job.KindAnalyzeVoice, func(ctx context.Context, found job.Job, progress job.Progress) error {
 		return svc.Analyze(ctx, voice.AnalysisJob{UserID: found.UserID, VoiceID: found.Subject(voice.JobSubject), WriteModel: found.WriteModel}, voice.Progress(progress))
@@ -902,7 +902,7 @@ func TestAnalysesAreGuardedPerVoiceThroughTheQueue(t *testing.T) {
 	h := newVoiceHarness(t)
 	casual := h.voice("alice")
 	formal, _, _ := h.svc.CreateVoice(context.Background(), "alice", "격식", voice.LanguageKorean, nil)
-	queue := job.New(jobstore.New(h.db.Writer, h.db.Reader, deferredKindsForTest()), time.Second)
+	queue := job.New(jobstore.New(h.db.Writer, h.db.Reader, jobKindsForTest()), time.Second, jobReportingForTest())
 	svc := voice.NewService(h.store, h.models, queueJobs{queue: queue})
 	h.addSample(t, "alice", casual, "c", "casual", longSample("해"), time.Now())
 	h.addSample(t, "alice", formal.ID, "f", "formal", longSample("습"), time.Now())

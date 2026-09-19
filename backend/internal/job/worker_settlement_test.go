@@ -32,18 +32,18 @@ func TestWorkerResourceReleaseUsesOnlyDurableTerminalTime(t *testing.T) {
 	for _, committed := range []bool{false, true} {
 		t.Run(map[bool]string{false: "uncommitted", true: "committed"}[committed], func(t *testing.T) {
 			store := &terminalStore{persisted: Job{Status: StatusRunning}, commit: committed, finishErr: errors.New("ambiguous terminal write")}
-			q := New(store, time.Second)
+			q := New(store, time.Second, testReporting{})
 			q.now = func() time.Time { return at }
 			released := 0
-			q.Register(KindRenderClip, func(context.Context, Job, Progress) error { return nil })
-			q.OnTerminal(KindRenderClip, func(ctx context.Context, j Job, terminal time.Time) error {
+			q.Register("render_clip", func(context.Context, Job, Progress) error { return nil })
+			q.OnTerminal("render_clip", func(ctx context.Context, j Job, terminal time.Time) error {
 				if ctx.Err() != nil || store.persisted.Status != StatusDone || store.persisted.FinishedAt == nil || !terminal.Equal(*store.persisted.FinishedAt) {
 					t.Fatal("release preceded durable terminal outcome")
 				}
 				released++
 				return errors.New("cleanup unavailable")
 			})
-			q.run(context.Background(), Job{ID: "render", Kind: KindRenderClip})
+			q.run(context.Background(), Job{ID: "render", Kind: "render_clip"})
 			if committed && (released != 1 || store.persisted.Status != StatusDone) || !committed && released != 0 {
 				t.Fatal("incorrect terminal resource release", released)
 			}
@@ -98,19 +98,20 @@ func TestWorkerSettlesOnlyPersistedTerminalOutcome(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			store := &terminalStore{persisted: Job{Status: tc.persisted}, commit: tc.commit, finishErr: tc.finishErr, readErr: tc.readErr, runningReads: 2}
 			admitter := &terminalAdmitter{}
-			queue := New(store, time.Second)
+			queue := New(store, time.Second, testReporting{})
+			queue.AllowCancellation(testCancellation{})
 			queue.Admit(admitter)
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 			calls := 0
-			queue.Register(KindGenerateClip, func(context.Context, Job, Progress) error {
+			queue.Register("generate_clip", func(context.Context, Job, Progress) error {
 				calls++
 				if tc.cancelWorker {
 					cancel()
 				}
 				return tc.runErr
 			})
-			queue.run(ctx, Job{ID: "clip", Kind: KindGenerateClip})
+			queue.run(ctx, Job{ID: "clip", Kind: "generate_clip"})
 			if calls != 1 {
 				t.Fatalf("handler called %d times", calls)
 			}
@@ -128,11 +129,12 @@ func TestWorkerSettlesOnlyPersistedTerminalOutcome(t *testing.T) {
 func TestRecoveryUsesSamePersistedOutcomeWithoutHandlerReplay(t *testing.T) {
 	for _, status := range []string{StatusQueued, StatusRunning, StatusDone, StatusFailed, StatusCancelled} {
 		t.Run(status, func(t *testing.T) {
-			store := &terminalStore{persisted: Job{ID: "clip", Kind: KindGenerateClip, Status: status}}
+			store := &terminalStore{persisted: Job{ID: "clip", Kind: "generate_clip", Status: status}}
 			admitter := &terminalAdmitter{open: []string{"clip"}}
-			queue := New(store, time.Second)
+			queue := New(store, time.Second, testReporting{})
+			queue.AllowCancellation(testCancellation{})
 			queue.Admit(admitter)
-			queue.Register(KindGenerateClip, func(context.Context, Job, Progress) error { t.Fatal("recovery replayed provider work"); return nil })
+			queue.Register("generate_clip", func(context.Context, Job, Progress) error { t.Fatal("recovery replayed provider work"); return nil })
 			for range 2 {
 				n, err := queue.SweepOpenHolds(context.Background())
 				if err != nil {
@@ -150,7 +152,7 @@ func TestRecoveryUsesSamePersistedOutcomeWithoutHandlerReplay(t *testing.T) {
 	}
 	store := &terminalStore{readErr: ErrNotFound}
 	admitter := &terminalAdmitter{open: []string{"missing"}}
-	queue := New(store, time.Second)
+	queue := New(store, time.Second, testReporting{})
 	queue.Admit(admitter)
 	if n, err := queue.SweepOpenHolds(context.Background()); err != nil || n != 1 || admitter.releases != 1 || len(admitter.statuses) != 0 {
 		t.Fatal(n, err, admitter)

@@ -55,7 +55,7 @@ func runRender(t *testing.T, h *generationHarness) error {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if j.Kind != job.KindRenderClip {
+	if j.Kind != clip.JobKindRender {
 		t.Fatal(j.Kind)
 	}
 	err = h.service.RunRender(ctx, j.UserID, j.ID, j.Subject(clip.JobSubject), j.Payload, func(stage string, n, total int) {

@@ -154,7 +154,7 @@ func TestOptionalFieldGroupAdmitsNoItem(t *testing.T) {
 func TestWholeSourceBindingSurvivesSaveAndGeneration(t *testing.T) {
 	h := generationSetup(t)
 	ctx := context.Background()
-	h.service = clipapp.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, compositionPlanner{h.planner}, compositionRenderer{h.renderer}, generationJobs{h.queue}, h.cfg, generationDeps(generationFinisher{h.store}, &quotePricing{}, nil))
+	h.service = clipapp.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, compositionPlanner{h.planner}, compositionRenderer{h.renderer}, h.clipJobs(), h.cfg, generationDeps(generationFinisher{h.store}, &quotePricing{}, nil))
 	body := "<clip version=\"1\" intro=\"b\" caption=\"bold\" outro=\"e\"><text id=\"intro\" kind=\"fixed\" role=\"hook\"/><text id=\"outro\" kind=\"fixed\" role=\"ending\"/>\n<group id=\"menu\" label=\"고기\"><field id=\"name\" label=\"부위\" required=\"true\"/></group><repeat for=\"menu\"><scene id=\"cut\" scope=\"item\"><text id=\"copy\" kind=\"ai\" role=\"caption\" basis=\"cut\">설명</text></scene></repeat></clip>"
 	template, err := legacyTemplate(t, h.store, "alice", "meat", body), error(nil)
 	if err != nil {

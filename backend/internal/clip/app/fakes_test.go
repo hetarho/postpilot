@@ -134,12 +134,12 @@ func (f *fakeClips) RecordFinalization(_ context.Context, req clip.FinalizationR
 }
 
 type fakeAdmission struct {
-	held []job.Start
+	held []Hold
 	err  error
 }
 
-func (a *fakeAdmission) Hold(_ context.Context, s job.Start) error {
-	a.held = append(a.held, s)
+func (a *fakeAdmission) Hold(_ context.Context, h Hold) error {
+	a.held = append(a.held, h)
 	return a.err
 }
 

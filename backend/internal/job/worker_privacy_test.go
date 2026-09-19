@@ -19,11 +19,11 @@ func TestClipWorkerLogsExcludeRawFailuresAndPanics(t *testing.T) {
 	slog.SetDefault(slog.New(slog.NewJSONHandler(&logs, nil)))
 	t.Cleanup(func() { slog.SetDefault(previous) })
 	const secret = "/private/source-secret.mp4: private provider body"
-	for _, kind := range []string{KindGenerateClip, KindRenderClip} {
+	for _, kind := range []string{"generate_clip", "render_clip"} {
 		logs.Reset()
 		found := Job{ID: "owned-job", Kind: kind}
-		logJobFailure(found, failureFromError(errors.New(secret)), errors.New(secret))
-		err := callHandler(context.Background(), func(context.Context, Job, Progress) error {
+		reportingQueue().logJobFailure(found, reportingQueue().failureFromError(errors.New(secret)), errors.New(secret))
+		err := reportingQueue().callHandler(context.Background(), func(context.Context, Job, Progress) error {
 			panic(secret)
 		}, found, nil)
 		if !errors.Is(err, errHandlerPanicked) || strings.Contains(logs.String(), secret) || strings.Contains(logs.String(), "source-secret") {
@@ -58,7 +58,7 @@ func TestClipWorkerLogsOnlyAllowlistedDiagnostics(t *testing.T) {
 		}
 		cause := llm.WithCallDiagnostic(errors.New("private-canary /source.mp4 data:video/mp4;base64,private"), info)
 		err := diagnosticStageError{error: fmt.Errorf("private-canary: %w", cause), stage: stage}
-		logJobFailure(Job{ID: "owned-job", Kind: KindGenerateClip}, Failure{Reason: "CLIP_PROCESSING_FAILED", TechnicalDetail: "private-canary"}, err)
+		reportingQueue().logJobFailure(Job{ID: "owned-job", Kind: "generate_clip"}, Failure{Reason: "CLIP_PROCESSING_FAILED", TechnicalDetail: "private-canary"}, err)
 		if strings.Contains(logs.String(), "private-canary") || strings.Contains(logs.String(), "data:video") || strings.Contains(logs.String(), "source.mp4") {
 			t.Fatal("private metadata escaped", logs.String())
 		}
@@ -92,7 +92,7 @@ func TestClipWorkerLogsOnlyCodeOwnedOutputViolations(t *testing.T) {
 	for _, code := range []string{"plan_timeline", "plan_cut_range", "plan_caption_time", "output_shape", "observe_subject_bounds", "observe_segment_overlap", "observe_source_identity", "private-canary"} {
 		logs.Reset()
 		err := diagnosticStageError{stage: "plan", error: fmt.Errorf("private-canary: %w", outputDiagnosticError{error: llm.ErrBadOutput, code: code})}
-		logJobFailure(Job{ID: "owned-job", Kind: KindGenerateClip}, failureFromError(err), err)
+		reportingQueue().logJobFailure(Job{ID: "owned-job", Kind: "generate_clip"}, reportingQueue().failureFromError(err), err)
 		var got map[string]any
 		if json.Unmarshal(logs.Bytes(), &got) != nil || strings.Contains(logs.String(), "private-canary") {
 			t.Fatal("private output diagnostic escaped")

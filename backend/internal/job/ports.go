@@ -2,7 +2,6 @@ package job
 
 import (
 	"context"
-	"github.com/postpilot/backend/internal/llm"
 	"time"
 )
 
@@ -33,24 +32,6 @@ type Start struct {
 	Kind   string
 	JobID  string
 	Calls  []PlannedCall
-	Clip   *ClipReservation
-}
-
-type ClipCall struct {
-	Policy llm.CallPolicy
-	Count  int
-}
-type ClipReservation struct {
-	CancellationPolicyVersion int
-	ApprovedMaxCredits        int
-	Calls                     []ClipCall
-}
-
-// ClipGuard serializes admission and dispatch with durable cancellation. The
-// composition root binds job and ledger stores to the same short transaction.
-type ClipGuard interface {
-	Reserve(context.Context, Start) error
-	Authorize(context.Context, string, string) error
 }
 
 // PlannedCall is one model the job will run, how many times, and the completion budget each

@@ -18,8 +18,12 @@ const (
 	experimentSubject  = "model_experiment"
 )
 
-func deferredKinds() []string {
-	return []string{job.KindGenerateClip, job.KindRenderClip, job.KindReviseClip}
+func testKinds() jobstore.Kinds {
+	return jobstore.Kinds{
+		Deferred:    []string{"generate_clip", "render_clip", "revise_clip"},
+		Cancellable: []string{"generate_clip", "render_clip", "revise_clip"},
+		Authorized:  []string{"generate_clip", "revise_clip"},
+	}
 }
 
 // subjectHarness is a migrated temp database with the rows every subject dimension needs.
@@ -65,7 +69,7 @@ func subjectHarness(t *testing.T) (*jobstore.Store, *db.DB) {
 			t.Fatalf("insert clip project %s: %v", user, err)
 		}
 	}
-	return jobstore.New(handle.Writer, handle.Reader, deferredKinds()), handle
+	return jobstore.New(handle.Writer, handle.Reader, testKinds()), handle
 }
 
 func insert(t *testing.T, store *jobstore.Store, found job.Job) job.Job {
@@ -103,7 +107,7 @@ func TestActiveForFindsBothAttachmentsOfOneJob(t *testing.T) {
 func TestActiveForClipProjectIsOwnerScoped(t *testing.T) {
 	store, _ := subjectHarness(t)
 	ctx := context.Background()
-	insert(t, store, job.Job{ID: "clip-job", Kind: job.KindGenerateClip, UserID: "alice",
+	insert(t, store, job.Job{ID: "clip-job", Kind: "generate_clip", UserID: "alice",
 		ObserveModel: "p/o", WriteModel: "p/w",
 		Subjects: []job.Subject{{Dimension: clipProjectSubject, ID: "clip-alice"}}})
 
@@ -174,7 +178,7 @@ func TestActiveUnattachedIgnoresPostAndProjectWork(t *testing.T) {
 func TestActivateAndSweepOnlyTouchDeferredKinds(t *testing.T) {
 	store, _ := subjectHarness(t)
 	ctx := context.Background()
-	insert(t, store, job.Job{ID: "clip-job", Kind: job.KindGenerateClip, UserID: "alice",
+	insert(t, store, job.Job{ID: "clip-job", Kind: "generate_clip", UserID: "alice",
 		ObserveModel: "p/o", WriteModel: "p/w",
 		Subjects: []job.Subject{{Dimension: clipProjectSubject, ID: "clip-alice"}}})
 	insert(t, store, job.Job{ID: "plain", Kind: job.KindGenerate, UserID: "alice", TargetLanguage: "ko",
@@ -190,7 +194,7 @@ func TestActivateAndSweepOnlyTouchDeferredKinds(t *testing.T) {
 	if err != nil || !released {
 		t.Fatalf("activation = %v, %v", released, err)
 	}
-	insert(t, store, job.Job{ID: "clip-waiting", Kind: job.KindRenderClip, UserID: "bob",
+	insert(t, store, job.Job{ID: "clip-waiting", Kind: "render_clip", UserID: "bob",
 		Subjects: []job.Subject{{Dimension: clipProjectSubject, ID: "clip-bob"}}})
 	swept, err := store.SweepUnactivated(ctx, job.Failure{Reason: "CLIP_PROCESSING_FAILED"})
 	if err != nil || swept != 1 {

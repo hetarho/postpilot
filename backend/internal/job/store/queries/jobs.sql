@@ -113,9 +113,9 @@ LIMIT 1;
 -- name: GetJobByID :one
 SELECT * FROM generation_jobs WHERE id = ?;
 
--- name: ActiveForClip :one
+-- name: ActiveForProject :one
 SELECT * FROM generation_jobs WHERE user_id=? AND clip_project_id=? AND status IN ('queued','running') LIMIT 1;
--- name: LatestForClip :one
+-- name: LatestForProject :one
 SELECT * FROM generation_jobs WHERE user_id=? AND clip_project_id=? ORDER BY created_at DESC,id DESC LIMIT 1;
 -- name: Activate :execrows
 -- Which kinds defer their dispatch is the composition root's answer, passed in as a JSON
@@ -124,18 +124,22 @@ UPDATE generation_jobs SET dispatch_ready=1 WHERE user_id=? AND id=? AND kind IN
 -- name: SweepUnactivated :execrows
 UPDATE generation_jobs SET status='failed', error_reason=?, error_params=?, technical_detail=?, finished_at=?, updated_at=? WHERE kind IN (SELECT value FROM json_each(sqlc.arg(kinds))) AND status='queued' AND dispatch_ready=0 AND cancel_requested_at IS NULL;
 
--- name: RequestClipCancellation :execrows
+-- name: RequestCancellation :execrows
+-- The kind's own eligibility is decided before this runs, against the same immutable
+-- columns (kind and cancellation policy version never change after insert); what this
+-- statement adds is the race: one request, on work that has not already finished.
 UPDATE generation_jobs SET cancel_requested_at=sqlc.arg(now), updated_at=sqlc.arg(now),
  status=CASE WHEN status='queued' THEN 'cancelled' ELSE status END,
  finished_at=CASE WHEN status='queued' THEN sqlc.arg(now) ELSE finished_at END
 WHERE id=sqlc.arg(id) AND user_id=sqlc.arg(user_id) AND clip_project_id=sqlc.arg(project_id)
  AND status IN ('queued','running') AND cancel_requested_at IS NULL
- AND (kind='render_clip' OR (kind IN ('generate_clip','revise_clip') AND cancellation_policy_version=1));
--- name: RecoverClipCancellations :execrows
+ AND kind IN (SELECT value FROM json_each(sqlc.arg(kinds)));
+-- name: RecoverCancellations :execrows
 UPDATE generation_jobs SET status='cancelled',finished_at=sqlc.arg(now),updated_at=sqlc.arg(now),
  error=NULL,error_reason=NULL,error_params=NULL,technical_detail=NULL
 WHERE status IN ('queued','running') AND cancel_requested_at IS NOT NULL
- AND kind IN ('generate_clip','render_clip','revise_clip');
--- name: AuthorizeClipDispatch :execrows
+ AND kind IN (SELECT value FROM json_each(sqlc.arg(kinds)));
+-- name: AuthorizeDispatch :execrows
 UPDATE generation_jobs SET updated_at=updated_at
-WHERE id=? AND user_id=? AND kind IN ('generate_clip','revise_clip') AND status='running' AND cancel_requested_at IS NULL;
+WHERE id=sqlc.arg(id) AND user_id=sqlc.arg(user_id) AND kind IN (SELECT value FROM json_each(sqlc.arg(kinds)))
+ AND status='running' AND cancel_requested_at IS NULL;

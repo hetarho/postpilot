@@ -9,8 +9,6 @@ import (
 	"strings"
 	"syscall"
 	"time"
-
-	"github.com/postpilot/backend/internal/llm"
 )
 
 // A terminal write is one SQLite update. It gets a fresh, bounded context so a
@@ -54,27 +52,32 @@ func (q *Queue) run(ctx context.Context, found Job) {
 	workerCtx := ctx
 	started := time.Now()
 	stage, stageStarted := "queued", started
-	clipJob := ClipKind(found.Kind)
-	if clipJob {
-		slog.Info("clip job started", "job", found.ID, "kind", found.Kind)
+	_, watched := q.stageLogged(found.Kind, stage)
+	if watched {
+		slog.Info("job started", "job", found.ID, "kind", found.Kind)
 		defer func() {
-			slog.Info("clip job stopped", "job", found.ID, "kind", found.Kind, "stage", safeClipStage(stage), "stage_elapsed_ms", time.Since(stageStarted).Milliseconds(), "elapsed_ms", time.Since(started).Milliseconds())
+			logged, _ := q.stageLogged(found.Kind, stage)
+			slog.Info("job stopped", "job", found.ID, "kind", found.Kind, "stage", logged, "stage_elapsed_ms", time.Since(stageStarted).Milliseconds(), "elapsed_ms", time.Since(started).Milliseconds())
 		}()
 	}
 	handler := q.handler(found.Kind)
 	var runErr error
-	if clipJob {
+	// Cancellable work is registered so the owner's request can reach the running call.
+	cancellable := q.cancellable(found)
+	if cancellable {
 		var cleanup func()
-		ctx, cleanup, runErr = q.registerClipExecution(ctx, found)
+		ctx, cleanup, runErr = q.registerCancellableExecution(ctx, found)
 		defer cleanup()
 	}
 	if runErr == nil && handler == nil {
 		runErr = errHandlerMissing
 	}
 	if runErr == nil {
-		runErr = callHandler(ctx, handler, found, func(next string, done, total int) {
-			if clipJob && next != stage {
-				slog.Info("clip stage changed", "job", found.ID, "stage", safeClipStage(next), "previous_stage", safeClipStage(stage), "previous_elapsed_ms", time.Since(stageStarted).Milliseconds(), "elapsed_ms", time.Since(started).Milliseconds())
+		runErr = q.callHandler(ctx, handler, found, func(next string, done, total int) {
+			if watched && next != stage {
+				nextStage, _ := q.stageLogged(found.Kind, next)
+				previousStage, _ := q.stageLogged(found.Kind, stage)
+				slog.Info("job stage changed", "job", found.ID, "stage", nextStage, "previous_stage", previousStage, "previous_elapsed_ms", time.Since(stageStarted).Milliseconds(), "elapsed_ms", time.Since(started).Milliseconds())
 				stage, stageStarted = next, time.Now()
 			}
 			if err := q.store.UpdateProgress(ctx, found.ID, next, done, total, q.now()); err != nil && ctx.Err() == nil {
@@ -90,7 +93,7 @@ func (q *Queue) run(ctx context.Context, found Job) {
 	finishCtx, cancel := context.WithTimeout(context.WithoutCancel(workerCtx), finishTimeout)
 	defer cancel()
 	var persisted Job
-	if clipJob {
+	if cancellable {
 		var err error
 		persisted, err = q.store.GetByID(finishCtx, found.ID)
 		if err != nil {
@@ -108,16 +111,16 @@ func (q *Queue) run(ctx context.Context, found Job) {
 		status = StatusCancelled
 	} else if runErr != nil {
 		status = StatusFailed
-		normalized := failureFromError(runErr)
+		normalized := q.failureFromError(runErr)
 		failure = &normalized
-		logJobFailure(found, normalized, runErr)
+		q.logJobFailure(found, normalized, runErr)
 	}
 	terminalAt := q.now()
 	var finishErr error
 	if !Terminal(persisted.Status) {
 		finishErr = q.store.Finish(finishCtx, found.ID, status, failure, terminalAt)
 	}
-	if finishErr != nil || clipJob {
+	if finishErr != nil || cancellable {
 		if finishErr != nil {
 			slog.Error("finish job failed", "job", found.ID, "status", status, "err", finishErr)
 		}
@@ -138,7 +141,9 @@ func (q *Queue) run(ctx context.Context, found Job) {
 	// rows are all written by now, so this is the first moment the hold can be reconciled
 	// against what the work actually cost. A failure here strands credits until the boot
 	// sweep, which is why it must not also fail the job.
-	if q.admitter != nil && found.Kind != KindRenderClip {
+	// Work that took no hold settles to nothing: the ledger returns without a write when
+	// it finds no open admission, so the queue does not need to know which kinds spend.
+	if q.admitter != nil {
 		q.admitter.Settle(finishCtx, found.ID, status)
 	}
 	if !terminalAt.IsZero() {
@@ -148,21 +153,11 @@ func (q *Queue) run(ctx context.Context, found Job) {
 	}
 }
 
-func safeClipStage(stage string) string {
-	switch stage {
-	// `plan` and `plan_retry` are the single writing call this build no longer
-	// makes; a job queued before it split keeps a readable stage.
-	case "queued", "prepare", "analyze", "analyze_retry", "flow", "flow_retry", "narrate", "narrate_retry", "plan", "plan_retry", "render", "save", "cleanup":
-		return stage
-	}
-	return "unknown"
-}
-
-func callHandler(ctx context.Context, handler Handler, found Job, progress Progress) (err error) {
+func (q *Queue) callHandler(ctx context.Context, handler Handler, found Job, progress Progress) (err error) {
 	defer func() {
 		if recovered := recover(); recovered != nil {
 			attrs := []any{"job", found.ID, "kind", found.Kind}
-			if !ClipKind(found.Kind) {
+			if !q.redacted(found.Kind) {
 				attrs = append(attrs, "panic", recovered)
 			}
 			slog.Error("job handler panicked", attrs...)
@@ -172,11 +167,12 @@ func callHandler(ctx context.Context, handler Handler, found Job, progress Progr
 	return handler(ctx, found, progress)
 }
 
-// Clip failures may wrap subprocess stderr, media paths or provider bodies. Log
-// only normalized metadata even if an unexpected handler bypasses StageFailure.
-func logJobFailure(found Job, failure Failure, err error) {
+// A redacted kind's failures may wrap subprocess stderr, media paths or provider bodies.
+// Log only normalized metadata for those, even if an unexpected handler bypasses
+// StageFailure.
+func (q *Queue) logJobFailure(found Job, failure Failure, err error) {
 	attrs := []any{"job", found.ID, "kind", found.Kind, "reason", failure.Reason}
-	if !ClipKind(found.Kind) {
+	if !q.redacted(found.Kind) {
 		attrs = append(attrs, "err", err)
 	} else {
 		var media interface {
@@ -223,17 +219,8 @@ func logJobFailure(found Job, failure Failure, err error) {
 				attrs = append(attrs, "stage", stage)
 			}
 		}
-		if diagnostic, ok := llm.DiagnosticOf(err); ok {
-			attrs = append(attrs, "operation", diagnostic.Operation, "error_class", diagnostic.Class)
-			if diagnostic.HTTPStatus != 0 {
-				attrs = append(attrs, "http_status", diagnostic.HTTPStatus)
-			}
-			if diagnostic.UpstreamCode != 0 {
-				attrs = append(attrs, "upstream_code", diagnostic.UpstreamCode)
-			}
-			if diagnostic.RequestID != "" {
-				attrs = append(attrs, "request_id", diagnostic.RequestID)
-			}
+		if q != nil && q.reporting != nil {
+			attrs = append(attrs, q.reporting.LogAttrs(err)...)
 		}
 		var output interface{ OutputValidationCode() string }
 		if errors.As(err, &output) {

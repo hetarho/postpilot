@@ -60,6 +60,7 @@ type contexts struct {
 
 	clipStore      *clipstore.Store
 	clipPorts      clipapp.Binder
+	clipGuard      clipapp.Guard
 	clip           *clipapp.Service
 	clipSources    *clipapp.SourceService
 	clipGeneration *clipapp.GenerationService
@@ -78,7 +79,8 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 	cfg, handle, registry := p.cfg, p.db, p.registry
 	c := &contexts{platform: p}
 
-	c.jobs = job.New(jobstore.New(handle.Writer, handle.Reader, deferredDispatchKinds()), config.WorkerPollInterval)
+	c.jobs = job.New(jobstore.New(handle.Writer, handle.Reader, jobKinds()), config.WorkerPollInterval, jobReporting{})
+	c.jobs.AllowCancellation(clipCancellation{})
 	if n, err := c.jobs.SweepRunning(ctx); err != nil {
 		return nil, fmt.Errorf("running job sweep: %w", err)
 	} else if n > 0 {
@@ -159,7 +161,7 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 	p.catalog.SetReasoningSpend(catalogReasoningSpend{ledger: c.ledger, providerID: registry.ProviderID()})
 	c.jobs.Admit(jobAdmission{ledger: c.ledger, registry: registry, plans: c.auth})
 	c.clipPorts = clipTxPorts(c.ledger, registry, c.auth)
-	c.jobs.GuardClips(clipapp.NewGuard(handle.Writer, c.clipPorts, jobstore.New(handle.Writer, handle.Writer, deferredDispatchKinds())))
+	c.clipGuard = clipapp.NewGuard(handle.Writer, c.clipPorts, jobstore.New(handle.Writer, handle.Writer, jobKinds()))
 
 	// After the admitter is attached, not with the other boot sweeps: an open hold can only
 	// be settled through it, and a sweep that ran first would silently find nothing.
@@ -220,7 +222,7 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 	if err := clipMedia.CleanupStale(ctx, time.Now()); err != nil {
 		return nil, fmt.Errorf("clip workspace cleanup: %w", err)
 	}
-	c.clipGeneration, err = newClipGeneration(ctx, cfg, c.clipStore, c.clip, c.clipSources, p.bucket, clipMedia, c.metered, c.jobs, handle.Writer, c.clipPorts)
+	c.clipGeneration, err = newClipGeneration(ctx, cfg, c.clipStore, c.clip, c.clipSources, p.bucket, clipMedia, c.metered, c.jobs, c.clipGuard, handle.Writer, c.clipPorts)
 	if err != nil {
 		return nil, fmt.Errorf("clip generation initialization: %w", err)
 	}

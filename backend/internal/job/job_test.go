@@ -77,8 +77,8 @@ func newHarness(t *testing.T) *harness {
 			t.Fatalf("insert post %s: %v", row.slug, err)
 		}
 	}
-	store := jobstore.New(handle.Writer, handle.Reader, deferredKindsForTest())
-	return &harness{queue: job.New(store, 10*time.Millisecond), store: store, handle: handle}
+	store := jobstore.New(handle.Writer, handle.Reader, jobKindsForTest())
+	return &harness{queue: job.New(store, 10*time.Millisecond, reportingForTest{}), store: store, handle: handle}
 }
 
 func waitFor(t *testing.T, queue *job.Queue, id, userID string, match func(*job.JobSummary) bool) *job.JobSummary {

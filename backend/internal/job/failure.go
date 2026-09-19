@@ -1,10 +1,6 @@
 package job
 
-import (
-	"errors"
-
-	"github.com/postpilot/backend/internal/llm"
-)
+import "errors"
 
 const (
 	FailureReasonInterrupted    = "JOB_INTERRUPTED"
@@ -42,21 +38,39 @@ func cloneParams(values map[string]string) map[string]string {
 	return copy
 }
 
-func failureFromError(err error) Failure {
+// Reporting is how the contexts whose work the queue runs describe that work: the
+// durable failure an error becomes, the provider detail that may be logged beside it, and
+// which stage names are safe to log for a kind. The queue owns three reasons of its own
+// (interrupted, panicked, handler missing) and no vocabulary beyond them — a provider's
+// error classes and a product's stage names are not the queue's to know.
+//
+// A queue built without one is a legal, tested mode: every other failure reports
+// UNKNOWN_FAILURE and no stage line is written.
+type Reporting interface {
+	Failure(err error) Failure
+	LogAttrs(err error) []any
+	// SafeStage returns the stage name that may be logged for this kind, and false when
+	// this kind is not stage-logged at all.
+	SafeStage(kind, stage string) (string, bool)
+	// Redacted marks a kind whose errors and panics may wrap user content, provider
+	// bodies or file paths: the queue then logs only normalized metadata about them.
+	Redacted(kind string) bool
+}
+
+func (q *Queue) failureFromError(err error) Failure {
 	switch {
 	case errors.Is(err, errHandlerPanicked):
 		return Failure{Reason: FailureReasonPanicked}
 	case errors.Is(err, errHandlerMissing):
 		return Failure{Reason: FailureReasonHandlerMissing}
 	}
-	normalized := llm.NormalizeFailure(err)
-	var detailed interface{ Failure() llm.Failure }
-	if errors.As(err, &detailed) {
-		normalized = detailed.Failure()
+	if q == nil || q.reporting == nil {
+		return Failure{Reason: FailureReasonUnknown}
 	}
-	return Failure{
-		Reason:          normalized.Reason,
-		Params:          cloneParams(normalized.Params),
-		TechnicalDetail: normalized.TechnicalDetail,
+	failure := q.reporting.Failure(err)
+	if failure.Reason == "" {
+		failure.Reason = FailureReasonUnknown
 	}
+	failure.Params = cloneParams(failure.Params)
+	return failure
 }

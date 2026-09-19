@@ -87,7 +87,7 @@ func newFinalizationHarness(t *testing.T) *finalizationHarness {
 	h.objects = &finalizationObjects{objects: map[string]clip.SourceObjectInfo{}}
 	h.sources = clipapp.NewSourceService(h.clips, h.objects, config.ClipSourceLimits(6*time.Hour, 10*time.Minute), func() time.Time { return h.now })
 	h.service = clipapp.NewService(h.clips, config.ClipLimits(), h.sources, clipapp.NewFinalizer(h.db.Writer, h.bind, h.clips, config.ClipRender(cfg), nil))
-	h.generation = clipapp.NewGenerationService(h.clips, h.service, h.sources, h.objects, nil, nil, nil, clipapp.NewJobs(h.queue), config.ClipGeneration(cfg), neutralGenerationDeps())
+	h.generation = clipapp.NewGenerationService(h.clips, h.service, h.sources, h.objects, nil, nil, nil, clipapp.NewJobs(h.queue, h.guard), config.ClipGeneration(cfg), neutralGenerationDeps())
 	upload, err := h.sources.Create(t.Context(), "alice", "clip", []clip.SourceMetadata{{Filename: "source.mp4", ContentType: "video/mp4", Bytes: 100, DurationMS: 16000, Width: 640, Height: 640, Fingerprint: strings.Repeat("a", 64)}})
 	if err != nil {
 		t.Fatal(err)
@@ -169,7 +169,7 @@ func TestClipFinalizationPreservesMatchingResultAndFencesEveryMutation(t *testin
 	if _, err := h.generation.Quote(t.Context(), "alice", "clip", h.batch.ID, "p/o", "p/w"); !errors.Is(err, clip.ErrFinalized) {
 		t.Fatal(err)
 	}
-	if _, err := h.queue.Enqueue(t.Context(), clipJob(job.NewJob{UserID: "alice", Kind: job.KindRenderClip, NonMetered: true}, "clip")); !errors.Is(err, job.ErrInvalidTarget) {
+	if _, err := h.queue.Enqueue(t.Context(), clipJob(job.NewJob{UserID: "alice", Kind: clip.JobKindRender, NonMetered: true}, "clip")); !errors.Is(err, job.ErrInvalidTarget) {
 		t.Fatal("enqueue bypassed finalization", err)
 	}
 	again, err := h.service.FinalizeProject(t.Context(), h.request())
@@ -258,7 +258,7 @@ func TestClipFinalizationRejectsForeignStaleInvalidAndActiveRequests(t *testing.
 					t.Fatal(err)
 				}
 			default:
-				id := h.enqueue(t, job.KindRenderClip)
+				id := h.enqueue(t, clip.JobKindRender)
 				if mode != "queued" {
 					if err := h.queue.Activate(t.Context(), "alice", id); err != nil {
 						t.Fatal(err)
@@ -268,7 +268,7 @@ func TestClipFinalizationRejectsForeignStaleInvalidAndActiveRequests(t *testing.
 					}
 				}
 				if mode == "cancelling" {
-					if _, err := h.queue.CancelClipJob(t.Context(), "alice", job.Subject{Dimension: clip.JobSubject, ID: "clip"}, id); err != nil {
+					if _, err := h.queue.Cancel(t.Context(), "alice", job.Subject{Dimension: clip.JobSubject, ID: "clip"}, id); err != nil {
 						t.Fatal(err)
 					}
 				}
@@ -361,7 +361,7 @@ func TestClipFinalizationCompetesWithEditStartAndDelete(t *testing.T) {
 						}
 						_, err = h.clips.SaveCorrection(t.Context(), "alice", "clip", h.project.EditPlanRevision, raw)
 					case "start":
-						_, err = h.queue.Enqueue(t.Context(), clipJob(job.NewJob{UserID: "alice", Kind: job.KindRenderClip, NonMetered: true}, "clip"))
+						_, err = h.queue.Enqueue(t.Context(), clipJob(job.NewJob{UserID: "alice", Kind: clip.JobKindRender, NonMetered: true}, "clip"))
 					case "delete":
 						err = h.service.DeleteProject(t.Context(), "alice", "clip")
 					}
