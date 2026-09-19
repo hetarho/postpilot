@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { createClient, type Transport } from '@connectrpc/connect'
 import { useTransport } from '@connectrpc/connect-query'
-import { ClipRenderKind, ClipService } from '@/shared/api'
+import { ClipRenderKind, ClipRenderService } from '@/shared/api'
 import { toClipProject, type ClipProject } from '@/entities/clip-project/@x/clip-preview'
 
 /** Which machine makes the file. The kind is a domain word here; the proto enum stays inside
@@ -51,7 +51,7 @@ export interface ClipRenderCalls {
 }
 
 export function clipRenderCalls(transport: Transport): ClipRenderCalls {
-  const client = createClient(ClipService, transport)
+  const client = createClient(ClipRenderService, transport)
   return {
     async admit({ machine, ...input }) {
       // Settle admission even if the page leaves, so a late identity can be cancelled.

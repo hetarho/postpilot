@@ -1,0 +1,135 @@
+syntax = "proto3";
+package postpilot.v1;
+option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
+
+import "postpilot/v1/clip.proto";
+import "postpilot/v1/post.proto";
+import "postpilot/v1/provider.proto";
+import "postpilot/v1/language.proto";
+
+// The clip project itself and the paid run that fills it.
+service ClipGenerationService {
+  rpc ListClipProjects(ListClipProjectsRequest) returns (ListClipProjectsResponse) {}
+  rpc CreateClipProject(CreateClipProjectRequest) returns (CreateClipProjectResponse) {}
+  rpc GetClipProject(GetClipProjectRequest) returns (GetClipProjectResponse) {}
+  rpc UpdateClipProject(UpdateClipProjectRequest) returns (UpdateClipProjectResponse) {}
+  rpc DeleteClipProject(DeleteClipProjectRequest) returns (DeleteClipProjectResponse) {}
+  rpc QuoteClipGeneration(QuoteClipGenerationRequest) returns (QuoteClipGenerationResponse) {}
+  rpc StartClipGeneration(StartClipGenerationRequest) returns (StartClipGenerationResponse) {}
+  rpc FinalizeClipProject(FinalizeClipProjectRequest) returns (FinalizeClipProjectResponse) {}
+  rpc CancelClipJob(CancelClipJobRequest) returns (CancelClipJobResponse) {}
+  // Read-only: every registered observe model with its current clip-analysis
+  // eligibility (CLIP-30, CLIP-44). No model call, no write, no provider detail.
+  rpc ListClipAnalysisEligibility(ListClipAnalysisEligibilityRequest) returns (ListClipAnalysisEligibilityResponse) {}
+}
+
+message ListClipProjectsRequest {}
+
+message ListClipProjectsResponse { repeated ClipProject projects = 1; }
+
+message CreateClipProjectRequest {
+  string title = 1;
+  string video_template_id = 2;
+  string ratio = 3;
+  int32 target_duration_ms = 4;
+  repeated ClipAnswer answers = 5;
+  // Both may be empty at creation; generation refuses an empty disclosure.
+  string disclosure = 6;
+  string cta = 7;
+  bool hide_disclosure = 8;
+  ClipCompositionInputs composition_inputs = 9;
+  // Required concrete UI language; UNSPECIFIED is refused.
+  ContentLanguage language = 10;
+  // Optional; empty is indistinguishable from never having written one.
+  string instruction = 11;
+  // Absent seeds both from the selected template; an explicit empty string is
+  // the owner choosing the steady pace and no accent.
+  optional string caption_pace = 12;
+  optional string accent = 13;
+  // Absent seeds all three from the selected template, or from the shared
+  // defaults where no template is attached (CLIP-139).
+  optional string intro_preset = 14;
+  optional string outro_preset = 15;
+  ClipCaptionStyles allowed_caption_styles = 16;
+}
+
+message CreateClipProjectResponse { ClipProject project = 1; }
+
+message GetClipProjectRequest { string id = 1; }
+
+message GetClipProjectResponse { ClipProject project = 1; }
+
+message UpdateClipProjectRequest {
+  string id = 1;
+  optional string title = 2;
+  optional string video_template_id = 3;
+  optional int32 target_duration_ms = 4;
+  // Only supplied labels change; an empty text explicitly clears that answer.
+  repeated ClipAnswer answers = 5;
+  optional string disclosure = 6;
+  optional string cta = 7;
+  optional bool hide_disclosure = 8;
+  ClipCompositionInputs composition_inputs = 9;
+  // Supplied only when it changes; an empty string clears it.
+  optional string instruction = 10;
+  // Supplied only when they change. Either one re-renders the same plan and
+  // costs no writing call (CLIP-139).
+  optional string caption_pace = 11;
+  optional string accent = 12;
+  // The rest of the design selection, supplied only when it changes. Each one
+  // re-renders the same plan and costs no writing call either (CLIP-139).
+  optional string intro_preset = 13;
+  optional string outro_preset = 14;
+  ClipCaptionStyles allowed_caption_styles = 15;
+}
+
+message UpdateClipProjectResponse { ClipProject project = 1; }
+
+message DeleteClipProjectRequest { string id = 1; }
+
+message DeleteClipProjectResponse {}
+
+message QuoteClipGenerationRequest {
+  string project_id = 1;
+  string batch_id = 2;
+  ModelRef observe_model = 3;
+  ModelRef write_model = 4;
+}
+
+message QuoteClipGenerationResponse {
+  string quote_id = 1;
+  int32 max_credits = 2;
+  string expires_at = 3;
+  repeated ClipPricedCall priced_calls = 4;
+  ClipCancellationPolicy cancellation_policy = 5;
+  int32 reused_chunks = 6;
+  int32 remaining_chunks = 7;
+  bool render_only = 8;
+  int32 response_retries = 9;
+  ClipSequenceCaptionCost sequence_captions = 10;
+}
+
+message StartClipGenerationRequest {
+  string project_id = 1;
+  string batch_id = 2;
+  ModelRef observe_model = 3;
+  ModelRef write_model = 4;
+  string quote_id = 5;
+  optional int32 approved_max_credits = 6;
+  int32 cancellation_policy_version = 7;
+}
+
+message StartClipGenerationResponse { string job_id = 1; }
+
+message FinalizeClipProjectRequest { string project_id = 1; int32 expected_revision = 2; string expected_result_id = 3; }
+
+message FinalizeClipProjectResponse { ClipProject project = 1; }
+
+message CancelClipJobRequest { string project_id = 1; string job_id = 2; }
+
+message CancelClipJobResponse { GenerationJob job = 1; ClipAccounting accounting = 2; bool accepted = 3; }
+
+message ListClipAnalysisEligibilityRequest {}
+
+// Registry order; display metadata is the observe model list's (ProviderService).
+message ListClipAnalysisEligibilityResponse { repeated ClipAnalysisModelEligibility models = 1; }

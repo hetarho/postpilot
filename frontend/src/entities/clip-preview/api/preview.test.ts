@@ -1,7 +1,7 @@
 import { webcrypto } from 'node:crypto'
 import { createRouterTransport } from '@connectrpc/connect'
 import { afterEach, expect, it, vi } from 'vitest'
-import { ClipService } from '@/shared/api'
+import { ClipRenderService } from '@/shared/api'
 import type { ClipEditPlan } from '@/entities/clip-plan'
 import { clipPreviewRequest } from './preview'
 
@@ -13,7 +13,7 @@ it('refuses an oversized Connect JSON body before sending or truncating the curr
     throw new Error('oversized request reached transport')
   })
   const transport = createRouterTransport((router) =>
-    router.service(ClipService, { prepareClipPreview: send }),
+    router.service(ClipRenderService, { prepareClipPreview: send }),
   )
   const plan: ClipEditPlan = {
     nativeComposition: true,

@@ -4,7 +4,7 @@ import { useTransport } from '@connectrpc/connect-query'
 import { useQuery } from '@tanstack/react-query'
 import {
   ClipEditPlanSchema,
-  ClipService,
+  ClipPlanService,
   GetClipCaptionPreviewRequestSchema,
   GetClipCaptionStyleSamplesRequestSchema,
   type ProtoGetClipCaptionPreviewResponse,
@@ -98,7 +98,7 @@ export function useClipCaptionPreview(
     staleTime: Infinity,
     retry: false,
     queryFn: async ({ signal }) => {
-      const value = await createClient(ClipService, transport).getClipCaptionPreview(
+      const value = await createClient(ClipPlanService, transport).getClipCaptionPreview(
         create(GetClipCaptionPreviewRequestSchema, {
           projectId,
           expectedRevision: revision,
@@ -123,7 +123,7 @@ export function useClipCaptionStyleSamples(projectId: string | undefined, enable
     staleTime: Infinity,
     retry: false,
     queryFn: async ({ signal }) => {
-      const value = await createClient(ClipService, transport).getClipCaptionStyleSamples(
+      const value = await createClient(ClipPlanService, transport).getClipCaptionStyleSamples(
         create(GetClipCaptionStyleSamplesRequestSchema, { projectId }),
         { signal },
       )

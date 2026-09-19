@@ -1,0 +1,67 @@
+syntax = "proto3";
+package postpilot.v1;
+option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
+
+import "postpilot/v1/clip.proto";
+
+// The video templates an account writes clips from, and what the design system allows.
+// Its own service because the template builder is a screen of its own (ARCH-41).
+service ClipTemplateService {
+  rpc ListVideoTemplates(ListVideoTemplatesRequest) returns (ListVideoTemplatesResponse) {}
+  rpc CreateVideoTemplate(CreateVideoTemplateRequest) returns (CreateVideoTemplateResponse) {}
+  rpc UpdateVideoTemplate(UpdateVideoTemplateRequest) returns (UpdateVideoTemplateResponse) {}
+  rpc DeleteVideoTemplate(DeleteVideoTemplateRequest) returns (DeleteVideoTemplateResponse) {}
+  rpc SeedPresetFields(SeedPresetFieldsRequest) returns (SeedPresetFieldsResponse) {}
+  rpc GetClipCapabilities(GetClipCapabilitiesRequest) returns (GetClipCapabilitiesResponse) {}
+}
+
+message ListVideoTemplatesRequest {}
+
+message ListVideoTemplatesResponse { repeated VideoTemplate templates = 1; }
+
+message CreateVideoTemplateRequest {
+  string name = 1;
+  repeated ClipInformationField information_fields = 2;
+  string cut_guidance = 3;
+  repeated string copy_styles = 4;
+  string accent = 5;
+  // Required on create: one of the five presets.
+  string preset = 6;
+  string caption_pace = 7;
+  optional string composition_body = 8;
+}
+
+message CreateVideoTemplateResponse { VideoTemplate template = 1; }
+
+message UpdateVideoTemplateRequest {
+  string id = 1;
+  optional string name = 2;
+  ClipInformationFields information_fields = 3;
+  optional string cut_guidance = 4;
+  ClipCopyStyles copy_styles = 5;
+  optional string accent = 6;
+  // Present means change it, and only one of the five is accepted.
+  optional string preset = 7;
+  optional string caption_pace = 8;
+  optional string composition_body = 9;
+}
+
+message UpdateVideoTemplateResponse { VideoTemplate template = 1; }
+
+message DeleteVideoTemplateRequest { string id = 1; }
+
+message DeleteVideoTemplateResponse { int32 detached_projects = 1; }
+
+// The reserved information fields a preset needs, in the order a form shows
+// them. Labels are exact Korean and the prompts are code-owned.
+message SeedPresetFieldsRequest { string preset = 1; }
+
+message SeedPresetFieldsResponse { repeated ClipInformationField fields = 1; }
+
+// Version 0 means unavailable; storage support never implies execution support.
+message GetClipCapabilitiesRequest {}
+
+message GetClipCapabilitiesResponse {
+  int32 composition_version = 1;
+  int32 composition_plan_version = 2;
+}

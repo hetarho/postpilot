@@ -104,10 +104,12 @@ type releaseHarness struct {
 	// The plan the job persisted, so the speech probes below read the OUTPUT
 	// timeline the way the renderer laid it out rather than a mapping tuned to
 	// one compiler version.
-	plan              *v1.ClipEditPlan
-	t                 *testing.T
-	d                 *db.DB
-	client            postpilotv1connect.ClipServiceClient
+	plan *v1.ClipEditPlan
+	t    *testing.T
+	d    *db.DB
+	// One client per clip service since the split (T281): the harness drives the same
+	// context through the five families' paths.
+	client            releaseClipClient
 	cookie            string
 	project, batch    string
 	service           *clipapp.GenerationService
@@ -476,17 +478,37 @@ func newReleaseHarness(t *testing.T, mode string, stress bool, clocks ...func() 
 	}
 
 	mux := http.NewServeMux()
-	path, handler := postpilotv1connect.NewClipServiceHandler(cliprpc.NewHandler(projects).WithSources(sources).WithGeneration(g, q), connect.WithInterceptors(authrpc.NewInterceptor(authSvc, nil, "")))
-	mux.Handle(path, handler)
+	clipEdge := cliprpc.NewHandler(projects).WithSources(sources).WithGeneration(g, q)
+	interceptors := connect.WithInterceptors(authrpc.NewInterceptor(authSvc, nil, ""))
+	for _, register := range []func() (string, http.Handler){
+		func() (string, http.Handler) {
+			return postpilotv1connect.NewClipSourceServiceHandler(clipEdge, interceptors)
+		},
+		func() (string, http.Handler) {
+			return postpilotv1connect.NewClipGenerationServiceHandler(clipEdge, interceptors)
+		},
+		func() (string, http.Handler) {
+			return postpilotv1connect.NewClipPlanServiceHandler(clipEdge, interceptors)
+		},
+		func() (string, http.Handler) {
+			return postpilotv1connect.NewClipRenderServiceHandler(clipEdge, interceptors)
+		},
+		func() (string, http.Handler) {
+			return postpilotv1connect.NewClipTemplateServiceHandler(clipEdge, interceptors)
+		},
+	} {
+		path, handler := register()
+		mux.Handle(path, handler)
+	}
 	rpcServer := httptest.NewServer(mux)
 	t.Cleanup(rpcServer.Close)
-	h = &releaseHarness{t: t, d: d, client: postpilotv1connect.NewClipServiceClient(rpcServer.Client(), rpcServer.URL), cookie: cookie, service: g, finisher: finisher, queue: q, jobs: js, ledger: ledger, objects: objects, media: media, metrics: metrics, provider: provider, admission: admission, master: mode == "master"}
+	h = &releaseHarness{t: t, d: d, client: newReleaseClipClient(rpcServer.Client(), rpcServer.URL), cookie: cookie, service: g, finisher: finisher, queue: q, jobs: js, ledger: ledger, objects: objects, media: media, metrics: metrics, provider: provider, admission: admission, master: mode == "master"}
 	h.sources, h.projects = sources, projects
 	if mode == "aborted client" {
 		h.aborted = &releaseAbortTransport{RoundTripper: rpcServer.Client().Transport}
 		client := *rpcServer.Client()
 		client.Transport = h.aborted
-		h.client = postpilotv1connect.NewClipServiceClient(&client, rpcServer.URL)
+		h.client = newReleaseClipClient(&client, rpcServer.URL)
 	}
 	// The reserved labels a clip's own chips and cards read (CDS-30, CDS-28).
 	// Two of them plus a campaign type are what the approval gate requires
@@ -1128,5 +1150,25 @@ func (h *releaseHarness) verifyFinalization() {
 	bytes, err := io.Copy(io.Discard, io.LimitReader(result.Body, finalized.Result.Bytes+1))
 	if err != nil || result.StatusCode != http.StatusOK || bytes != finalized.Result.Bytes {
 		t.Fatal("confirmed result download failed", err)
+	}
+}
+
+// releaseClipClient is the five clip services behind one value, so the harness reads as one
+// client the way it did before the families were split into their own services (ARCH-41).
+type releaseClipClient struct {
+	postpilotv1connect.ClipSourceServiceClient
+	postpilotv1connect.ClipGenerationServiceClient
+	postpilotv1connect.ClipPlanServiceClient
+	postpilotv1connect.ClipRenderServiceClient
+	postpilotv1connect.ClipTemplateServiceClient
+}
+
+func newReleaseClipClient(httpClient connect.HTTPClient, url string) releaseClipClient {
+	return releaseClipClient{
+		ClipSourceServiceClient:     postpilotv1connect.NewClipSourceServiceClient(httpClient, url),
+		ClipGenerationServiceClient: postpilotv1connect.NewClipGenerationServiceClient(httpClient, url),
+		ClipPlanServiceClient:       postpilotv1connect.NewClipPlanServiceClient(httpClient, url),
+		ClipRenderServiceClient:     postpilotv1connect.NewClipRenderServiceClient(httpClient, url),
+		ClipTemplateServiceClient:   postpilotv1connect.NewClipTemplateServiceClient(httpClient, url),
 	}
 }

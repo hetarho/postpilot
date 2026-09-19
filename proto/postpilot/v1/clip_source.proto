@@ -1,0 +1,63 @@
+syntax = "proto3";
+package postpilot.v1;
+option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
+
+import "postpilot/v1/clip.proto";
+
+// The footage a clip is cut from: reserving an upload, confirming it, and what a session
+// needs to play back an original it did not upload itself.
+service ClipSourceService {
+  rpc CreateClipSourceBatch(CreateClipSourceBatchRequest) returns (CreateClipSourceBatchResponse) {}
+  rpc ConfirmClipSource(ConfirmClipSourceRequest) returns (ConfirmClipSourceResponse) {}
+  rpc DiscardClipSourceBatch(DiscardClipSourceBatchRequest) returns (DiscardClipSourceBatchResponse) {}
+  rpc GetClipSources(GetClipSourcesRequest) returns (GetClipSourcesResponse) {}
+  rpc GetClipSourcePlayback(GetClipSourcePlaybackRequest) returns (GetClipSourcePlaybackResponse) {}
+  // Owner-only. Source audio is off by default and this is the ONLY way it
+  // changes: no template, model, render or plan save may reach it.
+  rpc SetClipSourceOriginalSound(SetClipSourceOriginalSoundRequest) returns (SetClipSourceOriginalSoundResponse) {}
+  // Owner-only. The order the footage plays in when no instruction says
+  // otherwise; the whole batch or nothing.
+  rpc ReorderClipSources(ReorderClipSourcesRequest) returns (ReorderClipSourcesResponse) {}
+}
+
+message CreateClipSourceBatchRequest { string project_id = 1; repeated ClipSourceMetadata sources = 2; }
+
+message CreateClipSourceBatchResponse { ClipSourceBatch batch = 1; repeated ClipSourceUpload uploads = 2; }
+
+message ConfirmClipSourceRequest { string batch_id = 1; string source_id = 2; }
+
+message ConfirmClipSourceResponse { ClipSourceBatch batch = 1; }
+
+message DiscardClipSourceBatchRequest { string batch_id = 1; }
+
+message DiscardClipSourceBatchResponse {}
+
+message GetClipSourcesRequest { string project_id = 1; }
+
+message GetClipSourcesResponse { repeated ClipSourceBatch batches = 1; }
+
+message GetClipSourcePlaybackRequest { string project_id = 1; string source_id = 2; string expected_fingerprint = 3; }
+
+message GetClipSourcePlaybackResponse { string url = 1; string expires_at = 2; }
+
+message SetClipSourceOriginalSoundRequest {
+  string project_id = 1;
+  string batch_id = 2;
+  string source_id = 3;
+  string expected_fingerprint = 4;
+  bool retain_original_audio = 5;
+  int32 expected_revision = 6;
+}
+
+message SetClipSourceOriginalSoundResponse {
+  ClipSourceBatch batch = 1;
+  ClipProject project = 2;
+}
+
+message ReorderClipSourcesRequest {
+  string project_id = 1;
+  string batch_id = 2;
+  repeated string source_ids = 3;
+}
+
+message ReorderClipSourcesResponse { ClipSourceBatch batch = 1; }

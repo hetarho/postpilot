@@ -51,7 +51,6 @@
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
 | T279 | every hand-kept enum mirror is pinned to the generated enum | ARCH | T008 | todo |
-| T281 | clip.proto becomes one file and service per rpc family | ARCH | T262 | todo |
 | T282 | the agent maps proto at one adapter and keeps preflight out of main | ARCH | T008 | todo |
 | T283 | SmartEditor scripts are files with a DOM test; naver is plan vs driver | ARCH | T282 | todo |
 | T284 | the agent generates only the protos it uses and drops the survey harness | ARCH | T008 T281 | todo |
@@ -62,6 +61,8 @@
 - agent tasks T279 T282 T283 T284 wait for T008; T008 belongs to another session and T177 remains blocked
 - post-quality-and-related-links remains open ideation, awaiting conversion when ready
 ## log
+- 260920 T281 done; clip.proto is five files/services (template·source·generation·plan·render), buf breaks on PACKAGE, one BE handler serves all five and each FE entity names its family. BE+FE deploy together: the rpc paths changed
+- 260920 T281 claimed (clp)
 - 260920 T278 done; FailureReason is a 222-value proto enum both sides compile against, the 212-line allowlist is gone and two tests hold the contract at both ends; the wire is unchanged
 - 260920 T278 claimed (clp)
 - 260920 T277 done; experiment/usage/auth traded three 23-24 method Stores for 14 behaviour ports, none over 10, with the usage tx port kept as WriteScope; ARCH-26 green
@@ -80,5 +81,3 @@
 - 260920 T265 claimed (clp)
 - 260920 T264 done; 8 domain namespaces became 63 slice fragments assembled by app/providers/i18n (leaf-module imports, one steiger exception) and resources.test gained a no-duplicate-claim check; ARCH-25 green
 - 260920 T264 claimed (clp)
-- 260920 T263 done; DraftEditor is 253 lines / 3 useState over useDraftSteps + useBriefMirror + useCaretHandoff + useDraftAssignments, five inline components became eleven files and the last ESLint warning is gone (lint now 0 problems); ARCH-25 green
-- 260920 T263 claimed (clp)

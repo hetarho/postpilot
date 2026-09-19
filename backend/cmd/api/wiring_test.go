@@ -73,7 +73,7 @@ func TestBuildContextsWiresEveryRequiredCollaborator(t *testing.T) {
 		}
 	}
 	registerJobs(app)
-	if got := handlers(app); len(got) != 18 {
+	if got := handlers(app); len(got) != 22 {
 		t.Fatalf("handlers = %d, want every Connect service", len(got))
 	}
 }

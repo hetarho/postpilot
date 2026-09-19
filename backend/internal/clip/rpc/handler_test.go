@@ -135,10 +135,22 @@ func TestStableFailureDetails(t *testing.T) {
 	}
 }
 func TestWireHasNoOwnerClaimOrRatioUpdate(t *testing.T) {
-	methods := v1.File_postpilot_v1_clip_proto.Services().ByName("ClipService").Methods()
-	for i := 0; i < methods.Len(); i++ {
-		if methods.Get(i).Input().Fields().ByName("user_id") != nil {
-			t.Fatal("request claims an owner")
+	// Every clip service, since the split (T281): a request may never claim its own owner.
+	for _, file := range []protoreflect.FileDescriptor{
+		v1.File_postpilot_v1_clip_template_proto,
+		v1.File_postpilot_v1_clip_source_proto,
+		v1.File_postpilot_v1_clip_generation_proto,
+		v1.File_postpilot_v1_clip_plan_proto,
+		v1.File_postpilot_v1_clip_render_proto,
+	} {
+		services := file.Services()
+		for s := 0; s < services.Len(); s++ {
+			methods := services.Get(s).Methods()
+			for i := 0; i < methods.Len(); i++ {
+				if methods.Get(i).Input().Fields().ByName("user_id") != nil {
+					t.Fatalf("%s claims an owner", methods.Get(i).FullName())
+				}
+			}
 		}
 	}
 	fields := (&v1.UpdateClipProjectRequest{}).ProtoReflect().Descriptor().Fields()

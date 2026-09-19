@@ -16,6 +16,11 @@ plugins:
     opt:
       - paths=source_relative
       - Mpostpilot/v1/clip.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
+      - Mpostpilot/v1/clip_render.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
+      - Mpostpilot/v1/clip_plan.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
+      - Mpostpilot/v1/clip_generation.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
+      - Mpostpilot/v1/clip_source.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
+      - Mpostpilot/v1/clip_template.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
       - Mpostpilot/v1/auth.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
       - Mpostpilot/v1/billing.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
       - Mpostpilot/v1/error.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
@@ -37,6 +42,11 @@ plugins:
     opt:
       - paths=source_relative
       - Mpostpilot/v1/clip.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
+      - Mpostpilot/v1/clip_render.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
+      - Mpostpilot/v1/clip_plan.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
+      - Mpostpilot/v1/clip_generation.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
+      - Mpostpilot/v1/clip_source.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
+      - Mpostpilot/v1/clip_template.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
       - Mpostpilot/v1/auth.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
       - Mpostpilot/v1/billing.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
       - Mpostpilot/v1/error.proto=github.com/postpilot/agent/internal/gen/postpilot/v1

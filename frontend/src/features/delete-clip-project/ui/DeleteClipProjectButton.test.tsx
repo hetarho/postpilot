@@ -3,7 +3,11 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Code, createRouterTransport } from '@connectrpc/connect'
 import { create } from '@bufbuild/protobuf'
-import { ClipService, DeleteClipProjectResponseSchema, type AppFailureReason } from '@/shared/api'
+import {
+  ClipGenerationService,
+  DeleteClipProjectResponseSchema,
+  type AppFailureReason,
+} from '@/shared/api'
 import { connectAppError } from '@/test/app-error'
 import { createTestQueryClient, withProviders } from '@/test/session'
 import { DeleteClipProjectButton } from './DeleteClipProjectButton'
@@ -14,7 +18,7 @@ vi.mock('@tanstack/react-router', () => ({ useNavigate: () => navigate }))
 function renderButton(options: { refusal?: AppFailureReason; disabled?: boolean } = {}) {
   const calls: string[] = []
   const transport = createRouterTransport(({ rpc }) => {
-    rpc(ClipService.method.deleteClipProject, (req) => {
+    rpc(ClipGenerationService.method.deleteClipProject, (req) => {
       calls.push(req.id)
       if (options.refusal) throw connectAppError(options.refusal, Code.FailedPrecondition)
       return create(DeleteClipProjectResponseSchema, {})

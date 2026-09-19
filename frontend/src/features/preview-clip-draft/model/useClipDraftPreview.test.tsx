@@ -5,7 +5,7 @@ import { Code, createRouterTransport } from '@connectrpc/connect'
 import { TransportProvider } from '@connectrpc/connect-query'
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import { ClipService, PrepareClipPreviewResponseSchema } from '@/shared/api'
+import { ClipRenderService, PrepareClipPreviewResponseSchema } from '@/shared/api'
 import { connectAppError } from '@/test/app-error'
 import type { ClipEditPlan } from '@/entities/clip-plan'
 import { useClipDraftPreview } from './useClipDraftPreview'
@@ -52,7 +52,7 @@ function harness(
   ),
 ) {
   const transport = createRouterTransport((router) =>
-    router.service(ClipService, { prepareClipPreview: (req) => prepare(req.draftHash) }),
+    router.service(ClipRenderService, { prepareClipPreview: (req) => prepare(req.draftHash) }),
   )
   const wrapper = ({ children }: { children: ReactNode }) => (
     <TransportProvider transport={transport}>{children}</TransportProvider>

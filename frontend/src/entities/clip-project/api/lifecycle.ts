@@ -1,7 +1,7 @@
 import { createClient } from '@connectrpc/connect'
 import { useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
-import { ClipService } from '@/shared/api'
+import { ClipGenerationService } from '@/shared/api'
 import { toGenerationJob } from '@/entities/generation-job/@x/clip-project'
 import { clipProjectsKey, toClipProject } from './clip-project'
 
@@ -9,7 +9,7 @@ import { clipProjectsKey, toClipProject } from './clip-project'
 export function useClipLifecycleApi(ownerId: string, projectId: string) {
   const transport = useTransport()
   const cache = useQueryClient()
-  const client = createClient(ClipService, transport)
+  const client = createClient(ClipGenerationService, transport)
   const key = [...clipProjectsKey(transport, ownerId), 'detail', projectId]
   async function refresh() {
     await cache.cancelQueries({ queryKey: key })

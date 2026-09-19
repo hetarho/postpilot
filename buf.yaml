@@ -14,6 +14,13 @@ lint:
     # Keep their source-compatible names instead of renaming public messages only for lint shape.
     - RPC_REQUEST_RESPONSE_UNIQUE
     - RPC_RESPONSE_STANDARD_NAME
+    # FailureReason's names ARE the wire values — the detail carries the name as a string
+    # (T278) — so its zero value is UNKNOWN_FAILURE and cannot take an _UNSPECIFIED suffix
+    # without changing what every older client reads.
+    - ENUM_ZERO_VALUE_SUFFIX
 breaking:
   use:
-    - FILE
+    # PACKAGE, not FILE: an rpc family may move to a file of its own, and a message may move
+    # between those files, without either counting as a breaking change (ARCH-41). Only the
+    # wire — a renamed field, a changed number, a moved rpc PATH — breaks.
+    - PACKAGE

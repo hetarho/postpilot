@@ -2,7 +2,7 @@ import { createClient, type Transport } from '@connectrpc/connect'
 import { useTransport } from '@connectrpc/connect-query'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  ClipService,
+  ClipGenerationService,
   ClipRenderKind,
   contentLanguageToProto,
   contentLanguageFromProto,
@@ -185,9 +185,9 @@ export function useClipProjects(ownerId: string) {
         ? POLL_INTERVAL_MS
         : false,
     queryFn: async ({ signal }) =>
-      (await createClient(ClipService, transport).listClipProjects({}, { signal })).projects.map(
-        toClipProject,
-      ),
+      (
+        await createClient(ClipGenerationService, transport).listClipProjects({}, { signal })
+      ).projects.map(toClipProject),
   })
 }
 export function useClipProject(ownerId: string, id: string | undefined) {
@@ -208,7 +208,10 @@ export function useClipProject(ownerId: string, id: string | undefined) {
         : false
     },
     queryFn: async ({ signal }) => {
-      const response = await createClient(ClipService, transport).getClipProject({ id }, { signal })
+      const response = await createClient(ClipGenerationService, transport).getClipProject(
+        { id },
+        { signal },
+      )
       if (!response.project) throw new Error('Missing clip')
       return toClipProject(response.project)
     },
@@ -216,7 +219,7 @@ export function useClipProject(ownerId: string, id: string | undefined) {
 }
 export function useClipProjectMutations(ownerId: string) {
   const transport = useTransport()
-  const client = createClient(ClipService, transport)
+  const client = createClient(ClipGenerationService, transport)
   const cache = useQueryClient()
   const invalidate = () =>
     Promise.all([

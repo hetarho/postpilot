@@ -2,7 +2,12 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { act, renderHook } from '@testing-library/react'
 import { create } from '@bufbuild/protobuf'
 import { Code, createRouterTransport } from '@connectrpc/connect'
-import { ClipService, ClipProjectSchema, ClipEditingStateSchema } from '@/shared/api'
+import {
+  ClipGenerationService,
+  ClipPlanService,
+  ClipProjectSchema,
+  ClipEditingStateSchema,
+} from '@/shared/api'
 import { clipPlanToProto, toClipEditingState } from '@/entities/clip-plan'
 import { toClipProject, type ClipProject } from '@/entities/clip-project'
 import { clipEditingFixture, clipTimelineFixture } from '@/test/clip-editing'
@@ -29,8 +34,8 @@ function setup(editing = clipEditingFixture()) {
   let release: (() => void) | undefined
   const writes: number[] = []
   const transport = createRouterTransport((router) => {
-    router.rpc(ClipService.method.getClipProject, () => ({ project: wire() }))
-    router.rpc(ClipService.method.saveClipEditPlan, async (req) => {
+    router.rpc(ClipGenerationService.method.getClipProject, () => ({ project: wire() }))
+    router.rpc(ClipPlanService.method.saveClipEditPlan, async (req) => {
       writes.push(req.expectedRevision)
       creationRequests.push(req.plan?.cuts.filter((c) => c.creation).map((c) => c.id) ?? [])
       if (hold)

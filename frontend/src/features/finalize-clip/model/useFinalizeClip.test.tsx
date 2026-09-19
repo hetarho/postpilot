@@ -2,7 +2,7 @@ import { act, renderHook } from '@testing-library/react'
 import { createRouterTransport, Code, ConnectError } from '@connectrpc/connect'
 import { create } from '@bufbuild/protobuf'
 import { expect, it } from 'vitest'
-import { ClipService, ClipProjectSchema } from '@/shared/api'
+import { ClipGenerationService, ClipProjectSchema } from '@/shared/api'
 import { toClipProject } from '@/entities/clip-project'
 import { createTestQueryClient, withProviders } from '@/test/session'
 import { useFinalizeClip } from './useFinalizeClip'
@@ -21,12 +21,12 @@ function setup(flush: () => Promise<number> = async () => 1) {
     committed = false
   const events: string[] = []
   const transport = createRouterTransport((router) => {
-    router.rpc(ClipService.method.getClipProject, () => {
+    router.rpc(ClipGenerationService.method.getClipProject, () => {
       events.push('read')
       if (readsFail) throw new ConnectError('offline', Code.Unavailable)
       return { project: wire }
     })
-    router.rpc(ClipService.method.finalizeClipProject, (input) => {
+    router.rpc(ClipGenerationService.method.finalizeClipProject, (input) => {
       events.push('confirm')
       expect(input.expectedRevision).toBe(1)
       expect(input.expectedResultId).toBe('result')

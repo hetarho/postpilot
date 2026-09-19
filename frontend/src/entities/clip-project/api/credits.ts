@@ -1,7 +1,7 @@
 import { createClient } from '@connectrpc/connect'
 import { useTransport } from '@connectrpc/connect-query'
 import { useQuery } from '@tanstack/react-query'
-import { ClipService } from '@/shared/api'
+import { ClipGenerationService } from '@/shared/api'
 import type { ProtoClipAccounting, ProtoClipQuote, ProtoClipRevisionQuote } from '@/shared/api'
 import type { ClipAccounting, ClipPricedCall, ClipQuote } from '../model/types'
 
@@ -197,7 +197,7 @@ export function useClipGenerationQuote(
     refetchOnReconnect: false,
     queryFn: async ({ signal }) =>
       toClipQuote(
-        await createClient(ClipService, transport).quoteClipGeneration(input, { signal }),
+        await createClient(ClipGenerationService, transport).quoteClipGeneration(input, { signal }),
         binding,
       ),
   })

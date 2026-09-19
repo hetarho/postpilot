@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { createClient, type Transport } from '@connectrpc/connect'
 import { useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
-import { ClipService } from '@/shared/api'
+import { ClipGenerationService, ClipSourceService } from '@/shared/api'
 import { clipProjectsKey, toClipProject } from './clip-project'
 import type { ClipProject } from '../model/types'
 import {
@@ -31,7 +31,7 @@ export interface ClipProjectCalls {
 }
 
 export function clipProjectCalls(transport: Transport): ClipProjectCalls {
-  const client = createClient(ClipService, transport)
+  const client = createClient(ClipGenerationService, transport)
   return {
     async fetch(projectId, signal) {
       const response = await client.getClipProject({ id: projectId }, { signal })
@@ -118,7 +118,7 @@ export interface ClipSourceCalls {
 }
 
 export function clipSourceCalls(transport: Transport): ClipSourceCalls {
-  const client = createClient(ClipService, transport)
+  const client = createClient(ClipSourceService, transport)
   return {
     retained: (projectId, signal) => getClipSources(transport, projectId, signal),
     playback: (projectId, sourceId, fingerprint, signal) =>

@@ -6,56 +6,10 @@ import "postpilot/v1/post.proto";
 import "postpilot/v1/provider.proto";
 import "postpilot/v1/language.proto";
 
-// All procedures derive the owner from the authenticated session.
-service ClipService {
-  rpc PrepareClipPreview(PrepareClipPreviewRequest) returns (PrepareClipPreviewResponse) {}
-  rpc GetClipCapabilities(GetClipCapabilitiesRequest) returns (GetClipCapabilitiesResponse) {}
-  // The caption SVG ② draws over the cut frame, built by the same style
-  // registry the renderer uses so the preview and the render cannot drift.
-  rpc GetClipCaptionPreview(GetClipCaptionPreviewRequest) returns (GetClipCaptionPreviewResponse) {}
-  // Read-only: every approved caption style drawn once, so ① can offer the set
-  // by its own look. No plan, no selection and no footage of this project.
-  rpc GetClipCaptionStyleSamples(GetClipCaptionStyleSamplesRequest) returns (GetClipCaptionStyleSamplesResponse) {}
-  rpc SaveClipEditPlan(SaveClipEditPlanRequest) returns (SaveClipEditPlanResponse) {}
-  rpc StartClipRender(StartClipRenderRequest) returns (StartClipRenderResponse) {}
-  rpc ReportClipRenderVerdict(ReportClipRenderVerdictRequest) returns (ReportClipRenderVerdictResponse) {}
-  rpc PrepareClipRenderUpload(PrepareClipRenderUploadRequest) returns (PrepareClipRenderUploadResponse) {}
-  rpc CompleteClipRenderUpload(CompleteClipRenderUploadRequest) returns (CompleteClipRenderUploadResponse) {}
-  rpc CancelClipBrowserRender(CancelClipBrowserRenderRequest) returns (CancelClipBrowserRenderResponse) {}
-  rpc StartClipGeneration(StartClipGenerationRequest) returns (StartClipGenerationResponse) {}
-  rpc QuoteClipGeneration(QuoteClipGenerationRequest) returns (QuoteClipGenerationResponse) {}
-  rpc FinalizeClipProject(FinalizeClipProjectRequest) returns (FinalizeClipProjectResponse) {}
-  rpc CancelClipJob(CancelClipJobRequest) returns (CancelClipJobResponse) {}
-  rpc ListVideoTemplates(ListVideoTemplatesRequest) returns (ListVideoTemplatesResponse) {}
-  rpc CreateVideoTemplate(CreateVideoTemplateRequest) returns (CreateVideoTemplateResponse) {}
-  rpc UpdateVideoTemplate(UpdateVideoTemplateRequest) returns (UpdateVideoTemplateResponse) {}
-  rpc DeleteVideoTemplate(DeleteVideoTemplateRequest) returns (DeleteVideoTemplateResponse) {}
-  rpc SeedPresetFields(SeedPresetFieldsRequest) returns (SeedPresetFieldsResponse) {}
-  rpc ListClipProjects(ListClipProjectsRequest) returns (ListClipProjectsResponse) {}
-  rpc CreateClipProject(CreateClipProjectRequest) returns (CreateClipProjectResponse) {}
-  rpc GetClipProject(GetClipProjectRequest) returns (GetClipProjectResponse) {}
-  rpc UpdateClipProject(UpdateClipProjectRequest) returns (UpdateClipProjectResponse) {}
-  rpc DeleteClipProject(DeleteClipProjectRequest) returns (DeleteClipProjectResponse) {}
-  rpc CreateClipSourceBatch(CreateClipSourceBatchRequest) returns (CreateClipSourceBatchResponse) {}
-  rpc ConfirmClipSource(ConfirmClipSourceRequest) returns (ConfirmClipSourceResponse) {}
-  rpc DiscardClipSourceBatch(DiscardClipSourceBatchRequest) returns (DiscardClipSourceBatchResponse) {}
-  rpc GetClipSources(GetClipSourcesRequest) returns (GetClipSourcesResponse) {}
-  rpc GetClipSourcePlayback(GetClipSourcePlaybackRequest) returns (GetClipSourcePlaybackResponse) {}
-  // Owner-only. Source audio is off by default and this is the ONLY way it
-  // changes: no template, model, render or plan save may reach it.
-  rpc SetClipSourceOriginalSound(SetClipSourceOriginalSoundRequest) returns (SetClipSourceOriginalSoundResponse) {}
-  // Owner-only. The order the footage plays in when no instruction says
-  // otherwise; the whole batch or nothing.
-  rpc ReorderClipSources(ReorderClipSourcesRequest) returns (ReorderClipSourcesResponse) {}
-  // The single charged action of step ②: one written revision of the saved
-  // plan, priced for the writing calls its target needs.
-  rpc QuoteClipRevision(QuoteClipRevisionRequest) returns (QuoteClipRevisionResponse) {}
-  rpc StartClipRevision(StartClipRevisionRequest) returns (StartClipRevisionResponse) {}
-  // Read-only: every registered observe model with its current clip-analysis
-  // eligibility (CLIP-30, CLIP-44). No model call, no write, no provider detail.
-  rpc ListClipAnalysisEligibility(ListClipAnalysisEligibilityRequest) returns (ListClipAnalysisEligibilityResponse) {}
-}
-
+// clip.proto holds the clip domain's SHARED messages. Its rpcs live in one file and service
+// per family — clip_template, clip_source, clip_generation, clip_plan, clip_render (ARCH-41) —
+// and a message may move between those files freely: `buf.yaml` breaks on PACKAGE, so only a
+// wire change is a breaking change.
 // Exactly one answer per model. UNSPECIFIED is a missing value, never eligible.
 enum ClipAnalysisEligibility {
   CLIP_ANALYSIS_ELIGIBILITY_UNSPECIFIED = 0;
@@ -69,9 +23,6 @@ message ClipAnalysisModelEligibility {
   ModelRef model = 1;
   ClipAnalysisEligibility status = 2;
 }
-message ListClipAnalysisEligibilityRequest {}
-// Registry order; display metadata is the observe model list's (ProviderService).
-message ListClipAnalysisEligibilityResponse { repeated ClipAnalysisModelEligibility models = 1; }
 message ClipInformationField { string label = 1; string prompt = 2; }
 message ClipInformationFields { repeated ClipInformationField values = 1; }
 // Stable style ids, one per role: clean (깔끔하게) narrative, memo (메모) fact,
@@ -105,12 +56,6 @@ message VideoTemplate {
   bool composition_converted = 14;
 }
 message ClipAnswer { string label = 1; string text = 2; }
-// The reserved information fields a preset needs, in the order a form shows
-// them. Labels are exact Korean and the prompts are code-owned.
-message SeedPresetFieldsRequest { string preset = 1; }
-message SeedPresetFieldsResponse { repeated ClipInformationField fields = 1; }
-message FinalizeClipProjectRequest { string project_id = 1; int32 expected_revision = 2; string expected_result_id = 3; }
-message FinalizeClipProjectResponse { ClipProject project = 1; }
 enum ClipRenderKind {
   CLIP_RENDER_KIND_UNSPECIFIED = 0;
   CLIP_RENDER_KIND_SERVER = 1;
@@ -252,91 +197,6 @@ message ClipAccounting {
   optional int32 shadow_confirmed_charge_credits = 14;
   optional int32 shadow_cancellation_fee_credits = 15;
 }
-message ListVideoTemplatesRequest {}
-message ListVideoTemplatesResponse { repeated VideoTemplate templates = 1; }
-message CreateVideoTemplateRequest {
-  string name = 1;
-  repeated ClipInformationField information_fields = 2;
-  string cut_guidance = 3;
-  repeated string copy_styles = 4;
-  string accent = 5;
-  // Required on create: one of the five presets.
-  string preset = 6;
-  string caption_pace = 7;
-  optional string composition_body = 8;
-}
-message CreateVideoTemplateResponse { VideoTemplate template = 1; }
-message UpdateVideoTemplateRequest {
-  string id = 1;
-  optional string name = 2;
-  ClipInformationFields information_fields = 3;
-  optional string cut_guidance = 4;
-  ClipCopyStyles copy_styles = 5;
-  optional string accent = 6;
-  // Present means change it, and only one of the five is accepted.
-  optional string preset = 7;
-  optional string caption_pace = 8;
-  optional string composition_body = 9;
-}
-message UpdateVideoTemplateResponse { VideoTemplate template = 1; }
-message DeleteVideoTemplateRequest { string id = 1; }
-message DeleteVideoTemplateResponse { int32 detached_projects = 1; }
-message ListClipProjectsRequest {}
-message ListClipProjectsResponse { repeated ClipProject projects = 1; }
-message CreateClipProjectRequest {
-  string title = 1;
-  string video_template_id = 2;
-  string ratio = 3;
-  int32 target_duration_ms = 4;
-  repeated ClipAnswer answers = 5;
-  // Both may be empty at creation; generation refuses an empty disclosure.
-  string disclosure = 6;
-  string cta = 7;
-  bool hide_disclosure = 8;
-  ClipCompositionInputs composition_inputs = 9;
-  // Required concrete UI language; UNSPECIFIED is refused.
-  ContentLanguage language = 10;
-  // Optional; empty is indistinguishable from never having written one.
-  string instruction = 11;
-  // Absent seeds both from the selected template; an explicit empty string is
-  // the owner choosing the steady pace and no accent.
-  optional string caption_pace = 12;
-  optional string accent = 13;
-  // Absent seeds all three from the selected template, or from the shared
-  // defaults where no template is attached (CLIP-139).
-  optional string intro_preset = 14;
-  optional string outro_preset = 15;
-  ClipCaptionStyles allowed_caption_styles = 16;
-}
-message CreateClipProjectResponse { ClipProject project = 1; }
-message GetClipProjectRequest { string id = 1; }
-message GetClipProjectResponse { ClipProject project = 1; }
-message UpdateClipProjectRequest {
-  string id = 1;
-  optional string title = 2;
-  optional string video_template_id = 3;
-  optional int32 target_duration_ms = 4;
-  // Only supplied labels change; an empty text explicitly clears that answer.
-  repeated ClipAnswer answers = 5;
-  optional string disclosure = 6;
-  optional string cta = 7;
-  optional bool hide_disclosure = 8;
-  ClipCompositionInputs composition_inputs = 9;
-  // Supplied only when it changes; an empty string clears it.
-  optional string instruction = 10;
-  // Supplied only when they change. Either one re-renders the same plan and
-  // costs no writing call (CLIP-139).
-  optional string caption_pace = 11;
-  optional string accent = 12;
-  // The rest of the design selection, supplied only when it changes. Each one
-  // re-renders the same plan and costs no writing call either (CLIP-139).
-  optional string intro_preset = 13;
-  optional string outro_preset = 14;
-  ClipCaptionStyles allowed_caption_styles = 15;
-}
-message UpdateClipProjectResponse { ClipProject project = 1; }
-message DeleteClipProjectRequest { string id = 1; }
-message DeleteClipProjectResponse {}
 // Source bytes travel directly to object storage, never in an RPC body.
 message ClipSourceMetadata {
   string filename = 1;
@@ -371,32 +231,6 @@ message ClipSourceUpload {
   map<string,string> headers = 3;
   string expires_at = 4;
 }
-message CreateClipSourceBatchRequest { string project_id = 1; repeated ClipSourceMetadata sources = 2; }
-message CreateClipSourceBatchResponse { ClipSourceBatch batch = 1; repeated ClipSourceUpload uploads = 2; }
-message ConfirmClipSourceRequest { string batch_id = 1; string source_id = 2; }
-message ConfirmClipSourceResponse { ClipSourceBatch batch = 1; }
-message DiscardClipSourceBatchRequest { string batch_id = 1; }
-message DiscardClipSourceBatchResponse {}
-message GetClipSourcesRequest { string project_id = 1; }
-message GetClipSourcesResponse { repeated ClipSourceBatch batches = 1; }
-message GetClipSourcePlaybackRequest { string project_id = 1; string source_id = 2; string expected_fingerprint = 3; }
-message GetClipSourcePlaybackResponse { string url = 1; string expires_at = 2; }
-message StartClipGenerationRequest {
-  string project_id = 1;
-  string batch_id = 2;
-  ModelRef observe_model = 3;
-  ModelRef write_model = 4;
-  string quote_id = 5;
-  optional int32 approved_max_credits = 6;
-  int32 cancellation_policy_version = 7;
-}
-message StartClipGenerationResponse { string job_id = 1; }
-message QuoteClipGenerationRequest {
-  string project_id = 1;
-  string batch_id = 2;
-  ModelRef observe_model = 3;
-  ModelRef write_model = 4;
-}
 message ClipPricedCall {
   ModelRef model = 1;
   string stage = 2;
@@ -429,83 +263,12 @@ message ClipSequenceCaptionCost {
   // Sequence-rendered styles in the project's own selection (CLIP-142).
   int32 selected_styles = 5;
 }
-message QuoteClipGenerationResponse {
-  string quote_id = 1;
-  int32 max_credits = 2;
-  string expires_at = 3;
-  repeated ClipPricedCall priced_calls = 4;
-  ClipCancellationPolicy cancellation_policy = 5;
-  int32 reused_chunks = 6;
-  int32 remaining_chunks = 7;
-  bool render_only = 8;
-  int32 response_retries = 9;
-  ClipSequenceCaptionCost sequence_captions = 10;
-}
 message ClipCancellationPolicy {
   int32 version = 1;
   int32 unused_reservation_numerator = 2;
   int32 unused_reservation_denominator = 3;
   string rounding = 4;
 }
-// The expected revision is the plan revision the owner was looking at, or 0
-// before a plan exists. The fingerprint pins the exact file the choice was made
-// about, so a replaced source never inherits a decision made about another one.
-// The owner's arrangement of this batch's footage (CLIP-136). The list is the
-// WHOLE batch: one that misses a source, repeats one or names a foreign one is
-// refused rather than applied in part.
-// One owner-written revision of the saved plan (CLIP-131). The target names
-// which document it is about; the quote binds the plan revision it was taken
-// against, so a plan saved after it is refused rather than rewritten.
-message QuoteClipRevisionRequest {
-  string project_id = 1;
-  string request = 2;
-  // flow | narration | both.
-  string target = 3;
-  ModelRef observe_model = 4;
-  ModelRef write_model = 5;
-}
-message QuoteClipRevisionResponse {
-  string quote_id = 1;
-  int32 max_credits = 2;
-  string expires_at = 3;
-  repeated ClipPricedCall priced_calls = 4;
-  ClipCancellationPolicy cancellation_policy = 5;
-  int32 response_retries = 6;
-  // The plan revision this quote was taken against.
-  int32 plan_revision = 7;
-  ClipSequenceCaptionCost sequence_captions = 8;
-}
-message StartClipRevisionRequest {
-  string project_id = 1;
-  string request = 2;
-  string target = 3;
-  ModelRef observe_model = 4;
-  ModelRef write_model = 5;
-  string quote_id = 6;
-  optional int32 approved_max_credits = 7;
-  int32 cancellation_policy_version = 8;
-}
-message StartClipRevisionResponse { string job_id = 1; }
-message ReorderClipSourcesRequest {
-  string project_id = 1;
-  string batch_id = 2;
-  repeated string source_ids = 3;
-}
-message ReorderClipSourcesResponse { ClipSourceBatch batch = 1; }
-message SetClipSourceOriginalSoundRequest {
-  string project_id = 1;
-  string batch_id = 2;
-  string source_id = 3;
-  string expected_fingerprint = 4;
-  bool retain_original_audio = 5;
-  int32 expected_revision = 6;
-}
-message SetClipSourceOriginalSoundResponse {
-  ClipSourceBatch batch = 1;
-  ClipProject project = 2;
-}
-message CancelClipJobRequest { string project_id = 1; string job_id = 2; }
-message CancelClipJobResponse { GenerationJob job = 1; ClipAccounting accounting = 2; bool accepted = 3; }
 message ClipCaption {
   string text = 1;
   // The caption's VERTICAL anchor: top, upper_mid, lower_mid or bottom. The
@@ -673,44 +436,7 @@ message ClipCaptionFragment {
   // is ONE representative frame of that motion, not the motion itself.
   bool representative_frame = 6;
 }
-message GetClipCaptionPreviewRequest {
-  string project_id = 1;
-  int32 expected_revision = 2;
-  // The plan being edited, so the fragment is of the caption on screen rather
-  // than the one last saved.
-  ClipEditPlan plan = 3;
-}
-// Every approved caption style drawn the way the render draws a caption, so the
-// set is offered by its own look rather than by a picture that goes stale the
-// moment a style changes (CDS-80, CDS-83). The project is asked only for its
-// ratio and its owner: nothing of its plan, selection or footage reaches these.
-message GetClipCaptionStyleSamplesRequest { string project_id = 1; }
-message GetClipCaptionStyleSamplesResponse {
-  string ratio = 1;
-  ClipCanvasBox canvas = 2;
-  // One fragment per style, in the order a surface offers them. `instance_id`
-  // and `style` are both that style's own id, and `representative_frame` says
-  // the style draws a frame at a time (CDS-81).
-  repeated ClipCaptionFragment samples = 3;
-}
-message GetClipCaptionPreviewResponse {
-  string ratio = 1;
-  ClipCanvasBox canvas = 2;
-  // The design safe area every caption is clamped inside, sent so the editor
-  // mirrors no CDS geometry of its own.
-  ClipCanvasBox safe_area = 3;
-  repeated ClipCaptionFragment captions = 4;
-}
 
-message PrepareClipPreviewRequest {
-  string project_id = 1;
-  int32 expected_revision = 2;
-  // SHA-256 of the deterministic protobuf encoding of plan.
-  string draft_hash = 3;
-  ClipEditPlan plan = 4;
-  repeated string element_ids = 5;
-  int32 asset_offset = 6;
-}
 enum ClipPreviewParity {
   CLIP_PREVIEW_PARITY_UNSPECIFIED = 0;
   CLIP_PREVIEW_PARITY_SOURCE_CONTRAST_FINAL_ONLY = 1;
@@ -733,15 +459,6 @@ message ClipPreviewAsset {
   int32 layer = 13;
   // One representative raster of a sequence style; its motion is applied per frame.
   bool representative_frame = 14;
-}
-message PrepareClipPreviewResponse {
-  string draft_hash = 1;
-  int32 canvas_width = 2;
-  int32 canvas_height = 3;
-  repeated ClipPreviewAsset assets = 4;
-  // -1 means this requested element page is complete.
-  int32 next_offset = 5;
-  repeated ClipPreviewParity parity = 6;
 }
 message ClipRetainedSource {
   string id = 1;
@@ -767,10 +484,6 @@ message ClipEditingState {
   int32 min_duration_ms = 7;
   int32 max_duration_ms = 8;
 }
-message SaveClipEditPlanRequest { string project_id = 1; int32 expected_revision = 2; ClipEditPlan plan = 3; }
-message SaveClipEditPlanResponse { ClipProject project = 1; }
-message StartClipRenderRequest { string project_id = 1; int32 expected_revision = 2; string batch_id = 3; ClipRenderKind render_kind = 4; }
-message StartClipRenderResponse { string job_id = 1; string render_id = 2; }
 message ClipRenderMeasurements {
   int32 width = 1;
   int32 height = 2;
@@ -785,31 +498,7 @@ message ClipRenderMeasurements {
   optional double loudness_lufs = 11;
   bool silent = 12;
 }
-message ReportClipRenderVerdictRequest {
-  string render_id = 1;
-  ClipRenderMeasurements measurements = 2;
-  bool passed = 3;
-}
-// The verdict is recorded; it never makes an unstored local file a result.
-message ReportClipRenderVerdictResponse {
-  bool passed = 1;
-  repeated ClipNotice notices = 2;
-}
-// The admitted render determines the immutable object key; no media enters RPC.
-message PrepareClipRenderUploadRequest { string render_id = 1; int64 bytes = 2; }
-message PrepareClipRenderUploadResponse { string put_url = 1; map<string, string> headers = 2; }
-message CompleteClipRenderUploadRequest { string render_id = 1; }
-message CompleteClipRenderUploadResponse { ClipProject project = 1; }
-message CancelClipBrowserRenderRequest { string render_id = 1; }
-// False means completion already won; a stored result is never undone.
-message CancelClipBrowserRenderResponse { bool cancelled = 1; }
 
-// Version 0 means unavailable; storage support never implies execution support.
-message GetClipCapabilitiesRequest {}
-message GetClipCapabilitiesResponse {
-  int32 composition_version = 1;
-  int32 composition_plan_version = 2;
-}
 message ClipCompositionItem {
   string id = 1;
   map<string, string> values = 2;

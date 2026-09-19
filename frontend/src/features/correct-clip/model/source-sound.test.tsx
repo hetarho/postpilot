@@ -3,7 +3,9 @@ import { act, renderHook } from '@testing-library/react'
 import { create } from '@bufbuild/protobuf'
 import { Code, createRouterTransport } from '@connectrpc/connect'
 import {
-  ClipService,
+  ClipGenerationService,
+  ClipPlanService,
+  ClipSourceService,
   ClipProjectSchema,
   ClipEditingStateSchema,
   ClipSourceBatchSchema,
@@ -66,9 +68,9 @@ function setup(preplan = false) {
     if (fail) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
   }
   const transport = createRouterTransport((router) => {
-    router.rpc(ClipService.method.getClipProject, () => ({ project: wire() }))
-    router.rpc(ClipService.method.getClipSources, () => ({ batches: [batch()] }))
-    router.rpc(ClipService.method.setClipSourceOriginalSound, async (req) => {
+    router.rpc(ClipGenerationService.method.getClipProject, () => ({ project: wire() }))
+    router.rpc(ClipSourceService.method.getClipSources, () => ({ batches: [batch()] }))
+    router.rpc(ClipSourceService.method.setClipSourceOriginalSound, async (req) => {
       writes.push({
         kind: 'sound',
         revision: req.expectedRevision,
@@ -95,7 +97,7 @@ function setup(preplan = false) {
       }
       return { project: wire(), batch: batch() }
     })
-    router.rpc(ClipService.method.saveClipEditPlan, async (req) => {
+    router.rpc(ClipPlanService.method.saveClipEditPlan, async (req) => {
       writes.push({ kind: 'plan', revision: req.expectedRevision })
       await wait('plan')
       if (req.expectedRevision !== revision)

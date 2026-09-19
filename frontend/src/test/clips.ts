@@ -1,7 +1,11 @@
 import { create } from '@bufbuild/protobuf'
 import { Code, type ConnectError, type createRouterTransport } from '@connectrpc/connect'
 import {
-  ClipService,
+  ClipGenerationService,
+  ClipPlanService,
+  ClipRenderService,
+  ClipSourceService,
+  ClipTemplateService,
   ClipRenderKind,
   ClipAnalysisEligibility,
   ListClipAnalysisEligibilityResponseSchema,
@@ -266,12 +270,12 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       createdAt: hoursAgo(48),
       updatedAt: hoursAgo(2),
     })
-  router.rpc(ClipService.method.listVideoTemplates, () => {
+  router.rpc(ClipTemplateService.method.listVideoTemplates, () => {
     options.calls?.push('ListVideoTemplates')
     if (options.listFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
     return create(ListVideoTemplatesResponseSchema, { templates: [...rows.values()].map(toProto) })
   })
-  router.rpc(ClipService.method.getClipCapabilities, () => {
+  router.rpc(ClipTemplateService.method.getClipCapabilities, () => {
     options.calls?.push('GetClipCapabilities')
     return {
       compositionVersion: options.compositionVersion ?? 1,
@@ -279,7 +283,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     }
   })
   let next = 0
-  router.rpc(ClipService.method.createVideoTemplate, (req) => {
+  router.rpc(ClipTemplateService.method.createVideoTemplate, (req) => {
     options.calls?.push('CreateVideoTemplate')
     if (options.saveFails) throw connectAppError('CLIP_TEMPLATE_NAME_TAKEN', Code.AlreadyExists)
     const row: FakeClipTemplate = {
@@ -298,7 +302,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     rows.set(row.id, row)
     return create(CreateVideoTemplateResponseSchema, { template: toProto(row) })
   })
-  router.rpc(ClipService.method.updateVideoTemplate, (req) => {
+  router.rpc(ClipTemplateService.method.updateVideoTemplate, (req) => {
     options.calls?.push('UpdateVideoTemplate')
     if (options.saveFails) throw connectAppError('CLIP_TEMPLATE_NAME_TAKEN', Code.AlreadyExists)
     const row = rows.get(req.id)
@@ -322,7 +326,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     options.writes?.push({ ...row })
     return create(UpdateVideoTemplateResponseSchema, { template: toProto(row) })
   })
-  router.rpc(ClipService.method.seedPresetFields, (req) => {
+  router.rpc(ClipTemplateService.method.seedPresetFields, (req) => {
     options.calls?.push('SeedPresetFields')
     const preset = CLIP_DESIGN.presets[req.preset as keyof typeof CLIP_DESIGN.presets]
     if (!preset) throw connectAppError('CLIP_INVALID_INPUT', Code.InvalidArgument)
@@ -334,7 +338,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       })),
     })
   })
-  router.rpc(ClipService.method.deleteVideoTemplate, (req) => {
+  router.rpc(ClipTemplateService.method.deleteVideoTemplate, (req) => {
     options.calls?.push('DeleteVideoTemplate')
     if (options.deleteFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
     const row = rows.get(req.id)
@@ -345,14 +349,14 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       detachedProjects: options.detachedCount ?? row.projectCount ?? 0,
     })
   })
-  router.rpc(ClipService.method.listClipProjects, () => {
+  router.rpc(ClipGenerationService.method.listClipProjects, () => {
     options.calls?.push('ListClipProjects')
     if (options.projectListFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
     return create(ListClipProjectsResponseSchema, {
       projects: [...projects.values()].map((p) => projectProto(options.readProject?.(p) ?? p)),
     })
   })
-  router.rpc(ClipService.method.getClipProject, (req) => {
+  router.rpc(ClipGenerationService.method.getClipProject, (req) => {
     options.calls?.push('GetClipProject')
     const p = projects.get(req.id)
     if (!p) throw connectAppError('CLIP_NOT_FOUND', Code.NotFound)
@@ -360,7 +364,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       project: projectProto(options.readProject?.(p) ?? p),
     })
   })
-  router.rpc(ClipService.method.finalizeClipProject, async (req) => {
+  router.rpc(ClipGenerationService.method.finalizeClipProject, async (req) => {
     options.calls?.push('FinalizeClipProject')
     const p = projects.get(req.projectId)
     if (!p) throw connectAppError('CLIP_NOT_FOUND', Code.NotFound)
@@ -382,7 +386,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     }
     return { project: projectProto(p) }
   })
-  router.rpc(ClipService.method.cancelClipJob, async (req) => {
+  router.rpc(ClipGenerationService.method.cancelClipJob, async (req) => {
     options.calls?.push('CancelClipJob')
     const p = projects.get(req.projectId)
     if (!p) throw connectAppError('CLIP_NOT_FOUND', Code.NotFound)
@@ -393,7 +397,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
   /** The captions of the plan being edited, drawn as the renderer draws them (CDS-83). The fake
    *  draws a box per caption at a fixed spot: what a test can check here is that ② places the
    *  fragment it was given and asks for it once, not how the glyphs look. */
-  router.rpc(ClipService.method.getClipCaptionPreview, (req) => {
+  router.rpc(ClipPlanService.method.getClipCaptionPreview, (req) => {
     options.calls?.push('GetClipCaptionPreview')
     const p = projects.get(req.projectId)
     if (!p) throw connectAppError('CLIP_NOT_FOUND', Code.NotFound)
@@ -418,7 +422,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
   /** Every approved style drawn once. The fake draws a box, not the style: what a test can check
    *  here is that ① offers each style, says which ones are drawn frame by frame, and saves what
    *  was ticked — the drawing itself is the renderer's, pinned by its own Go contract. */
-  router.rpc(ClipService.method.getClipCaptionStyleSamples, (req) => {
+  router.rpc(ClipPlanService.method.getClipCaptionStyleSamples, (req) => {
     options.calls?.push('GetClipCaptionStyleSamples')
     const p = projects.get(req.projectId)
     if (!p) throw connectAppError('CLIP_NOT_FOUND', Code.NotFound)
@@ -436,7 +440,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       })),
     })
   })
-  router.rpc(ClipService.method.createClipProject, (req) => {
+  router.rpc(ClipGenerationService.method.createClipProject, (req) => {
     options.calls?.push('CreateClipProject')
     if (options.projectSaveFails) throw connectAppError('CLIP_INVALID_INPUT', Code.InvalidArgument)
     const p: FakeClipProject = {
@@ -482,7 +486,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     options.projectWrites?.push(p)
     return create(CreateClipProjectResponseSchema, { project: projectProto(p) })
   })
-  router.rpc(ClipService.method.updateClipProject, async (req) => {
+  router.rpc(ClipGenerationService.method.updateClipProject, async (req) => {
     options.calls?.push('UpdateClipProject')
     if (options.projectSaveGate) await options.projectSaveGate()
     if (options.projectSaveError) throw options.projectSaveError
@@ -538,7 +542,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     options.projectWrites?.push({ ...p })
     return create(UpdateClipProjectResponseSchema, { project: projectProto(p) })
   })
-  router.rpc(ClipService.method.deleteClipProject, (req) => {
+  router.rpc(ClipGenerationService.method.deleteClipProject, (req) => {
     options.calls?.push('DeleteClipProject')
     if (options.deleteFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
     if (!projects.delete(req.id)) throw connectAppError('CLIP_NOT_FOUND', Code.NotFound)
@@ -553,7 +557,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     { id: string; max: number; request: string; target: string; revision: number }
   >()
   let quoteNumber = 0
-  router.rpc(ClipService.method.listClipAnalysisEligibility, () => {
+  router.rpc(ClipGenerationService.method.listClipAnalysisEligibility, () => {
     options.calls?.push('ListClipAnalysisEligibility')
     const fails =
       typeof options.eligibilityFails === 'function'
@@ -583,7 +587,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       selectedStyles,
     }
   }
-  router.rpc(ClipService.method.quoteClipGeneration, (req) => {
+  router.rpc(ClipGenerationService.method.quoteClipGeneration, (req) => {
     options.calls?.push('QuoteClipGeneration')
     options.quoteRequests?.push(req)
     if (options.quoteFails) throw connectAppError(options.quoteFails, Code.FailedPrecondition)
@@ -614,7 +618,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
   // A revision is quoted and started like a generation, but against the SAVED
   // PLAN rather than a batch: the quote binds the plan revision it was taken
   // against, and the narration target pays for one writing call instead of two.
-  router.rpc(ClipService.method.quoteClipRevision, (req) => {
+  router.rpc(ClipPlanService.method.quoteClipRevision, (req) => {
     options.calls?.push('QuoteClipRevision')
     options.revisionQuotes?.push(req)
     if (options.revisionQuoteFails)
@@ -654,7 +658,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       sequenceCaptions: sequenceCost(projects.get(req.projectId)),
     })
   })
-  router.rpc(ClipService.method.startClipRevision, (req) => {
+  router.rpc(ClipPlanService.method.startClipRevision, (req) => {
     options.calls?.push('StartClipRevision')
     options.revisionStarts?.push(req)
     if (options.revisionReject)
@@ -686,7 +690,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     }
     return create(StartClipRevisionResponseSchema, { jobId })
   })
-  router.rpc(ClipService.method.reorderClipSources, (req) => {
+  router.rpc(ClipSourceService.method.reorderClipSources, (req) => {
     options.calls?.push('ReorderClipSources')
     options.sourceOrders?.push([...req.sourceIds])
     const batch = batches.get(req.batchId)
@@ -702,7 +706,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     batch.sources = req.sourceIds.map((id) => batch.sources.find((s) => s.id === id)!)
     return create(ReorderClipSourcesResponseSchema, { batch })
   })
-  router.rpc(ClipService.method.setClipSourceOriginalSound, (req) => {
+  router.rpc(ClipSourceService.method.setClipSourceOriginalSound, (req) => {
     options.calls?.push('SetClipSourceOriginalSound')
     options.soundWrites?.push(req)
     const p = projects.get(req.projectId),
@@ -728,7 +732,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     }
     return { project: projectProto(p), batch: b }
   })
-  router.rpc(ClipService.method.saveClipEditPlan, (req) => {
+  router.rpc(ClipPlanService.method.saveClipEditPlan, (req) => {
     options.calls?.push('SaveClipEditPlan')
     const p = projects.get(req.projectId)
     if (!p?.editing) throw connectAppError('CLIP_NOT_FOUND', Code.NotFound)
@@ -743,7 +747,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     string,
     { projectId: string; revision: number; cancelled: boolean; stored: boolean; passed: boolean }
   >()
-  router.rpc(ClipService.method.cancelClipBrowserRender, (req) => {
+  router.rpc(ClipRenderService.method.cancelClipBrowserRender, (req) => {
     options.calls?.push('CancelClipBrowserRender')
     const render = browserRenders.get(req.renderId)
     if (!render) throw connectAppError('CLIP_NOT_FOUND', Code.NotFound)
@@ -751,7 +755,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     render.cancelled = true
     return { cancelled: true }
   })
-  router.rpc(ClipService.method.prepareClipRenderUpload, (req) => {
+  router.rpc(ClipRenderService.method.prepareClipRenderUpload, (req) => {
     options.calls?.push('PrepareClipRenderUpload')
     const render = browserRenders.get(req.renderId)
     if (!render || render.cancelled)
@@ -761,7 +765,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       headers: { 'Content-Type': 'video/mp4', 'If-None-Match': '*' },
     }
   })
-  router.rpc(ClipService.method.reportClipRenderVerdict, (req) => {
+  router.rpc(ClipRenderService.method.reportClipRenderVerdict, (req) => {
     options.calls?.push('ReportClipRenderVerdict')
     const render = browserRenders.get(req.renderId)
     if (!render || render.cancelled)
@@ -772,7 +776,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       notices: req.passed ? [] : [{ code: 'render_output_verdict', action: 'shortfall' }],
     }
   })
-  router.rpc(ClipService.method.completeClipRenderUpload, (req) => {
+  router.rpc(ClipRenderService.method.completeClipRenderUpload, (req) => {
     options.calls?.push('CompleteClipRenderUpload')
     const render = browserRenders.get(req.renderId)
     if (!render || render.cancelled || !render.passed)
@@ -794,7 +798,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     }
     return { project: projectProto(p) }
   })
-  router.rpc(ClipService.method.startClipRender, (req) => {
+  router.rpc(ClipRenderService.method.startClipRender, (req) => {
     options.calls?.push('StartClipRender')
     options.renderStarts?.push(req)
     if (options.renderFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
@@ -828,7 +832,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     p.latestAttempt = { jobId, batchId: b.id, quoteId: '' }
     return create(StartClipRenderResponseSchema, { jobId })
   })
-  router.rpc(ClipService.method.startClipGeneration, (req) => {
+  router.rpc(ClipGenerationService.method.startClipGeneration, (req) => {
     options.calls?.push('StartClipGeneration')
     options.generationStarts?.push(req)
     if (options.generationFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
@@ -861,7 +865,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     if (options.generationAmbiguous) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
     return create(StartClipGenerationResponseSchema, { jobId })
   })
-  router.rpc(ClipService.method.getClipSources, (req) => {
+  router.rpc(ClipSourceService.method.getClipSources, (req) => {
     options.calls?.push('GetClipSources')
     if (!projects.has(req.projectId)) throw connectAppError('CLIP_NOT_FOUND', Code.NotFound)
     const p = projects.get(req.projectId)!
@@ -877,7 +881,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
         b.state = 'ready'
     return { batches: [...batches.values()].filter((b) => b.projectId === req.projectId) }
   })
-  router.rpc(ClipService.method.getClipSourcePlayback, (req) => {
+  router.rpc(ClipSourceService.method.getClipSourcePlayback, (req) => {
     const b = [...batches.values()].find((b) => b.current && b.projectId === req.projectId)
     const source = b?.sources.find(
       (s) => s.id === req.sourceId && s.metadata?.fingerprint === req.expectedFingerprint,
@@ -888,7 +892,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       expiresAt: new Date(Date.now() + 300000).toISOString(),
     }
   })
-  router.rpc(ClipService.method.createClipSourceBatch, (req) => {
+  router.rpc(ClipSourceService.method.createClipSourceBatch, (req) => {
     options.calls?.push('CreateClipSourceBatch')
     options.sourceRequests?.push(req)
     if (options.reserveFails)
@@ -915,7 +919,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       })),
     })
   })
-  router.rpc(ClipService.method.confirmClipSource, (req) => {
+  router.rpc(ClipSourceService.method.confirmClipSource, (req) => {
     options.calls?.push('ConfirmClipSource')
     options.sourceRequests?.push(req)
     if (options.confirmFails)
@@ -930,7 +934,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     if (b.sources.every((s) => s.state === 'ready')) b.state = 'ready'
     return create(ConfirmClipSourceResponseSchema, { batch: b })
   })
-  router.rpc(ClipService.method.discardClipSourceBatch, (req) => {
+  router.rpc(ClipSourceService.method.discardClipSourceBatch, (req) => {
     options.calls?.push('DiscardClipSourceBatch')
     options.sourceRequests?.push(req)
     if (options.discardFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)

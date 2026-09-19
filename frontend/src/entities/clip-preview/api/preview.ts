@@ -5,7 +5,7 @@ import { useTransport } from '@connectrpc/connect-query'
 import {
   ClipEditPlanSchema,
   ClipPreviewParity,
-  ClipService,
+  ClipRenderService,
   PrepareClipPreviewRequestSchema,
 } from '@/shared/api'
 import { CLIP_DRAFT_PREVIEW } from '@/entities/clip-design/@x/clip-preview'
@@ -45,7 +45,7 @@ export async function clipPreviewRequest(
           .byteLength > CLIP_DRAFT_PREVIEW.maxRequestBytes
       )
         throw new Error('CLIP_PREVIEW_TOO_LARGE')
-      const value = await createClient(ClipService, transport).prepareClipPreview(request, {
+      const value = await createClient(ClipRenderService, transport).prepareClipPreview(request, {
         signal,
       })
       return {

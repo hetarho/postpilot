@@ -3,14 +3,14 @@ import { QueryClient } from '@tanstack/react-query'
 import { renderHook, act } from '@testing-library/react'
 import { expect, it } from 'vitest'
 import i18next from 'i18next'
-import { ClipService, contentLanguageToProto } from '@/shared/api'
+import { ClipGenerationService, contentLanguageToProto } from '@/shared/api'
 import { withProviders } from '@/test/session'
 import { useClipProjectMutations } from './clip-project'
 
 it('sends the resolved UI language explicitly when creating a project', async () => {
   const seen: number[] = []
   const transport = createRouterTransport(({ rpc }) => {
-    rpc(ClipService.method.createClipProject, (request) => {
+    rpc(ClipGenerationService.method.createClipProject, (request) => {
       seen.push(request.language)
       return {
         project: {

@@ -147,8 +147,23 @@ func handlers(c *contexts) []rpcserver.Registrar {
 		func(opts ...connect.HandlerOption) (string, http.Handler) {
 			return postpilotv1connect.NewTemplateServiceHandler(templaterpc.NewHandler(c.template), opts...)
 		},
+		// One clip handler, five services (ARCH-41): the rpcs are grouped by family so a task
+		// stream editing one family edits one proto file, while the context behind them is
+		// still one — splitting the handler would only split the services it holds.
 		func(opts ...connect.HandlerOption) (string, http.Handler) {
-			return postpilotv1connect.NewClipServiceHandler(cliprpc.NewHandler(c.clip).WithSources(c.clipSources).WithGeneration(c.clipGeneration, c.jobs), opts...)
+			return postpilotv1connect.NewClipTemplateServiceHandler(clipHandler(c), opts...)
+		},
+		func(opts ...connect.HandlerOption) (string, http.Handler) {
+			return postpilotv1connect.NewClipSourceServiceHandler(clipHandler(c), opts...)
+		},
+		func(opts ...connect.HandlerOption) (string, http.Handler) {
+			return postpilotv1connect.NewClipGenerationServiceHandler(clipHandler(c), opts...)
+		},
+		func(opts ...connect.HandlerOption) (string, http.Handler) {
+			return postpilotv1connect.NewClipPlanServiceHandler(clipHandler(c), opts...)
+		},
+		func(opts ...connect.HandlerOption) (string, http.Handler) {
+			return postpilotv1connect.NewClipRenderServiceHandler(clipHandler(c), opts...)
 		},
 		func(opts ...connect.HandlerOption) (string, http.Handler) {
 			return postpilotv1connect.NewGuidelineServiceHandler(guidelinerpc.NewHandler(c.guideline), opts...)
@@ -222,3 +237,8 @@ func runBillingPasses(ctx context.Context, interval time.Duration, pass func(tim
 
 // estimatorCombos hands the plan edge the priced combos the catalog owns, mapping the
 // catalog's shape onto the edge's own so neither imports the other (ARCHITECTURE §2.2).
+
+// clipHandler builds the clip context's Connect edge. It answers for all five clip services.
+func clipHandler(c *contexts) *cliprpc.Handler {
+	return cliprpc.NewHandler(c.clip).WithSources(c.clipSources).WithGeneration(c.clipGeneration, c.jobs)
+}

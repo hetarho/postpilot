@@ -1,7 +1,7 @@
 import { createClient, type Transport } from '@connectrpc/connect'
 import { useTransport } from '@connectrpc/connect-query'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ClipService, type ProtoVideoTemplate } from '@/shared/api'
+import { ClipTemplateService, type ProtoVideoTemplate } from '@/shared/api'
 import {
   CLIP_ACCENTS,
   normalizeRecipe,
@@ -48,7 +48,7 @@ export function useClipTemplates(ownerId: string) {
   const query = useQuery({
     queryKey: clipTemplatesKey(transport, ownerId),
     queryFn: async () =>
-      (await createClient(ClipService, transport).listVideoTemplates({})).templates.map(
+      (await createClient(ClipTemplateService, transport).listVideoTemplates({})).templates.map(
         toClipTemplate,
       ),
     enabled: !!ownerId,
@@ -59,7 +59,7 @@ export function useClipTemplates(ownerId: string) {
 }
 export function useClipTemplateMutations(ownerId: string) {
   const transport = useTransport()
-  const client = createClient(ClipService, transport)
+  const client = createClient(ClipTemplateService, transport)
   const cache = useQueryClient()
   const invalidate = async () => {
     await Promise.all([

@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react'
 import { createRouterTransport, Code, ConnectError } from '@connectrpc/connect'
 import { expect, it } from 'vitest'
-import { ClipService } from '@/shared/api'
+import { ClipGenerationService } from '@/shared/api'
 import { type GenerationJob } from '@/entities/generation-job'
 import { createTestQueryClient, withProviders } from '@/test/session'
 import { useCancelClip } from './useCancelClip'
@@ -29,11 +29,11 @@ it.each(['running', 'done', 'cancelled'])(
       cancellationPolicyVersion: 1,
     }
     const transport = createRouterTransport((router) => {
-      router.rpc(ClipService.method.cancelClipJob, () => {
+      router.rpc(ClipGenerationService.method.cancelClipJob, () => {
         requests++
         throw new ConnectError('lost', Code.Unavailable)
       })
-      router.rpc(ClipService.method.getClipProject, () => {
+      router.rpc(ClipGenerationService.method.getClipProject, () => {
         if (offline) throw new ConnectError('offline', Code.Unavailable)
         return {
           project: {

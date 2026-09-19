@@ -1,7 +1,7 @@
 import { createClient } from '@connectrpc/connect'
 import { useTransport } from '@connectrpc/connect-query'
 import { useQuery } from '@tanstack/react-query'
-import { ClipService, type ProtoClipProjectComposition } from '@/shared/api'
+import { ClipTemplateService, type ProtoClipProjectComposition } from '@/shared/api'
 import type { ClipCompositionInputs, ClipProjectComposition } from '../model/composition'
 
 export function toProjectComposition(
@@ -59,7 +59,10 @@ export function useClipCapabilities(ownerId: string) {
     enabled: !!ownerId,
     staleTime: 0,
     queryFn: async ({ signal }) => {
-      const value = await createClient(ClipService, transport).getClipCapabilities({}, { signal })
+      const value = await createClient(ClipTemplateService, transport).getClipCapabilities(
+        {},
+        { signal },
+      )
       return {
         compositionVersion: value.compositionVersion,
         compositionPlanVersion: value.compositionPlanVersion,

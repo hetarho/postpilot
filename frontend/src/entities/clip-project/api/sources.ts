@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 import { createClient, type Transport } from '@connectrpc/connect'
 import { useTransport } from '@connectrpc/connect-query'
-import { ClipService } from '@/shared/api'
+import { ClipSourceService } from '@/shared/api'
 import { toClipProject, toClipSourceBatch } from './clip-project'
 
 /** Metadata may outlive a page; playback capabilities stay with its runtime session. */
@@ -10,7 +10,7 @@ export async function getClipSources(
   projectId: string,
   signal?: AbortSignal,
 ) {
-  const response = await createClient(ClipService, transport).getClipSources(
+  const response = await createClient(ClipSourceService, transport).getClipSources(
     { projectId },
     { signal },
   )
@@ -32,9 +32,12 @@ export async function setClipSourceOriginalSound(
   },
   signal?: AbortSignal,
 ) {
-  const response = await createClient(ClipService, transport).setClipSourceOriginalSound(input, {
-    signal,
-  })
+  const response = await createClient(ClipSourceService, transport).setClipSourceOriginalSound(
+    input,
+    {
+      signal,
+    },
+  )
   if (!response.batch || !response.project) throw new Error('Invalid source sound response')
   return { batch: toClipSourceBatch(response.batch), project: toClipProject(response.project) }
 }
@@ -47,7 +50,9 @@ export async function reorderClipSources(
   input: { projectId: string; batchId: string; sourceIds: string[] },
   signal?: AbortSignal,
 ) {
-  const response = await createClient(ClipService, transport).reorderClipSources(input, { signal })
+  const response = await createClient(ClipSourceService, transport).reorderClipSources(input, {
+    signal,
+  })
   if (!response.batch) throw new Error('Invalid source order response')
   return toClipSourceBatch(response.batch)
 }
@@ -70,7 +75,7 @@ export async function getClipSourcePlayback(
   expectedFingerprint: string,
   signal?: AbortSignal,
 ) {
-  const response = await createClient(ClipService, transport).getClipSourcePlayback(
+  const response = await createClient(ClipSourceService, transport).getClipSourcePlayback(
     { projectId, sourceId, expectedFingerprint },
     { signal },
   )

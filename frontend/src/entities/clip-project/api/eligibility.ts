@@ -3,7 +3,7 @@ import { useTransport } from '@connectrpc/connect-query'
 import { useQuery } from '@tanstack/react-query'
 import {
   ClipAnalysisEligibility,
-  ClipService,
+  ClipGenerationService,
   type ProtoClipAnalysisEligibilityList,
 } from '@/shared/api'
 import { type ClipEligibilityStatus, type ClipModelEligibility } from '../model/eligibility'
@@ -43,7 +43,10 @@ export function useClipAnalysisEligibility(ownerId: string) {
     queryKey: clipEligibilityKey(transport, ownerId),
     queryFn: async ({ signal }) =>
       toClipEligibility(
-        await createClient(ClipService, transport).listClipAnalysisEligibility({}, { signal }),
+        await createClient(ClipGenerationService, transport).listClipAnalysisEligibility(
+          {},
+          { signal },
+        ),
       ),
     staleTime: 60_000,
     refetchOnWindowFocus: false,

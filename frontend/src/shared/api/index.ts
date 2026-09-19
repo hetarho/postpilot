@@ -9,7 +9,6 @@ export {
   publishingClient,
   publishingClientFor,
   templateClient,
-  clipClient,
   voiceClient,
   voiceLearningClient,
   voiceValidationClient,
@@ -18,50 +17,67 @@ export {
   unauthenticatedInterceptor,
 } from './transport'
 export { onUnauthenticated, emitUnauthenticated } from './auth-events'
+export { ClipTemplateService } from './gen/postpilot/v1/clip_template_pb'
+export { ClipSourceService } from './gen/postpilot/v1/clip_source_pb'
+export { ClipGenerationService } from './gen/postpilot/v1/clip_generation_pb'
+export { ClipPlanService } from './gen/postpilot/v1/clip_plan_pb'
+export { ClipRenderService } from './gen/postpilot/v1/clip_render_pb'
 export {
-  ClipService,
   ClipRenderKind,
-  PrepareClipPreviewRequestSchema,
-  PrepareClipPreviewResponseSchema,
-  GetClipCaptionPreviewRequestSchema,
-  GetClipCaptionPreviewResponseSchema,
-  GetClipCaptionStyleSamplesRequestSchema,
-  GetClipCaptionStyleSamplesResponseSchema,
   ClipPreviewParity,
   VideoTemplateSchema,
   ClipProjectSchema,
   ClipObservationsSchema,
   ClipEditPlanSchema,
   ClipEditingStateSchema,
-  SaveClipEditPlanResponseSchema,
-  StartClipRenderResponseSchema,
-  ListVideoTemplatesResponseSchema,
-  SeedPresetFieldsResponseSchema,
-  CreateVideoTemplateResponseSchema,
-  UpdateVideoTemplateResponseSchema,
-  DeleteVideoTemplateResponseSchema,
-  ListClipProjectsResponseSchema,
-  CreateClipProjectResponseSchema,
-  GetClipProjectResponseSchema,
-  UpdateClipProjectResponseSchema,
-  DeleteClipProjectResponseSchema,
   ClipSourceMetadataSchema,
   ClipSourceBatchSchema,
-  CreateClipSourceBatchResponseSchema,
-  ConfirmClipSourceResponseSchema,
-  ReorderClipSourcesResponseSchema,
-  DiscardClipSourceBatchResponseSchema,
-  StartClipGenerationResponseSchema,
-  QuoteClipGenerationResponseSchema,
-  QuoteClipRevisionResponseSchema,
-  StartClipRevisionResponseSchema,
   ClipAccountingSchema,
   ClipAttemptSchema,
   ClipAnalysisEligibility,
-  ListClipAnalysisEligibilityResponseSchema,
 } from './gen/postpilot/v1/clip_pb'
+export {
+  CreateClipProjectResponseSchema,
+  DeleteClipProjectResponseSchema,
+  GetClipProjectResponseSchema,
+  ListClipAnalysisEligibilityResponseSchema,
+  ListClipProjectsResponseSchema,
+  QuoteClipGenerationResponseSchema,
+  StartClipGenerationResponseSchema,
+  UpdateClipProjectResponseSchema,
+} from './gen/postpilot/v1/clip_generation_pb'
+export {
+  GetClipCaptionPreviewRequestSchema,
+  GetClipCaptionPreviewResponseSchema,
+  GetClipCaptionStyleSamplesRequestSchema,
+  GetClipCaptionStyleSamplesResponseSchema,
+  QuoteClipRevisionResponseSchema,
+  SaveClipEditPlanResponseSchema,
+  StartClipRevisionResponseSchema,
+} from './gen/postpilot/v1/clip_plan_pb'
+export {
+  PrepareClipPreviewRequestSchema,
+  PrepareClipPreviewResponseSchema,
+  StartClipRenderResponseSchema,
+} from './gen/postpilot/v1/clip_render_pb'
+export {
+  ConfirmClipSourceResponseSchema,
+  CreateClipSourceBatchResponseSchema,
+  DiscardClipSourceBatchResponseSchema,
+  ReorderClipSourcesResponseSchema,
+} from './gen/postpilot/v1/clip_source_pb'
+export {
+  CreateVideoTemplateResponseSchema,
+  DeleteVideoTemplateResponseSchema,
+  ListVideoTemplatesResponseSchema,
+  SeedPresetFieldsResponseSchema,
+  UpdateVideoTemplateResponseSchema,
+} from './gen/postpilot/v1/clip_template_pb'
 export type {
   ListClipAnalysisEligibilityResponse as ProtoClipAnalysisEligibilityList,
+  QuoteClipGenerationResponse as ProtoClipQuote,
+} from './gen/postpilot/v1/clip_generation_pb'
+export type {
   VideoTemplate as ProtoVideoTemplate,
   ClipProject as ProtoClipProject,
   ClipProjectComposition as ProtoClipProjectComposition,
@@ -70,8 +86,6 @@ export type {
   ClipAttemptInspection as ProtoClipAttemptInspection,
   ClipEditPlan as ProtoClipEditPlan,
   ClipEditingState as ProtoClipEditingState,
-  GetClipCaptionPreviewResponse as ProtoGetClipCaptionPreviewResponse,
-  GetClipCaptionStyleSamplesResponse as ProtoGetClipCaptionStyleSamplesResponse,
   ClipInformationField as ProtoClipInformationField,
   ClipAnswer as ProtoClipAnswer,
   ClipSourceMetadata as ProtoClipSourceMetadata,
@@ -79,9 +93,12 @@ export type {
   ClipSource as ProtoClipSource,
   ClipSourceUpload as ProtoClipSourceUpload,
   ClipAccounting as ProtoClipAccounting,
-  QuoteClipGenerationResponse as ProtoClipQuote,
-  QuoteClipRevisionResponse as ProtoClipRevisionQuote,
 } from './gen/postpilot/v1/clip_pb'
+export type {
+  GetClipCaptionPreviewResponse as ProtoGetClipCaptionPreviewResponse,
+  GetClipCaptionStyleSamplesResponse as ProtoGetClipCaptionStyleSamplesResponse,
+  QuoteClipRevisionResponse as ProtoClipRevisionQuote,
+} from './gen/postpilot/v1/clip_plan_pb'
 export {
   contentLanguages,
   contentLanguageFromProto,

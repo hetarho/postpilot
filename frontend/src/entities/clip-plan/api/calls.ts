@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { createClient, type Transport } from '@connectrpc/connect'
 import { useTransport } from '@connectrpc/connect-query'
 import { useQuery } from '@tanstack/react-query'
-import { ClipService } from '@/shared/api'
+import { ClipPlanService } from '@/shared/api'
 import {
   toClipProject,
   toClipRevisionQuote,
@@ -34,7 +34,7 @@ export interface ClipPlanCalls {
 }
 
 export function clipPlanCalls(transport: Transport): ClipPlanCalls {
-  const client = createClient(ClipService, transport)
+  const client = createClient(ClipPlanService, transport)
   return {
     async save({ projectId, expectedRevision, plan }) {
       const result = await client.saveClipEditPlan({
@@ -89,7 +89,7 @@ export function useClipRevisionQuote(
     refetchOnReconnect: false,
     queryFn: async ({ signal }) =>
       toClipRevisionQuote(
-        await createClient(ClipService, transport).quoteClipRevision(
+        await createClient(ClipPlanService, transport).quoteClipRevision(
           {
             projectId: input.projectId,
             request: input.request,

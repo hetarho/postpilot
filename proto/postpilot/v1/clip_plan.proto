@@ -1,0 +1,101 @@
+syntax = "proto3";
+package postpilot.v1;
+option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
+
+import "postpilot/v1/clip.proto";
+import "postpilot/v1/provider.proto";
+
+// The edit plan ② works on: saving a correction, drawing its captions, and asking for the
+// plan to be rewritten.
+service ClipPlanService {
+  rpc SaveClipEditPlan(SaveClipEditPlanRequest) returns (SaveClipEditPlanResponse) {}
+  // The caption SVG ② draws over the cut frame, built by the same style
+  // registry the renderer uses so the preview and the render cannot drift.
+  rpc GetClipCaptionPreview(GetClipCaptionPreviewRequest) returns (GetClipCaptionPreviewResponse) {}
+  // Read-only: every approved caption style drawn once, so ① can offer the set
+  // by its own look. No plan, no selection and no footage of this project.
+  rpc GetClipCaptionStyleSamples(GetClipCaptionStyleSamplesRequest) returns (GetClipCaptionStyleSamplesResponse) {}
+  // The single charged action of step ②: one written revision of the saved
+  // plan, priced for the writing calls its target needs.
+  rpc QuoteClipRevision(QuoteClipRevisionRequest) returns (QuoteClipRevisionResponse) {}
+  rpc StartClipRevision(StartClipRevisionRequest) returns (StartClipRevisionResponse) {}
+}
+
+message SaveClipEditPlanRequest { string project_id = 1; int32 expected_revision = 2; ClipEditPlan plan = 3; }
+
+message SaveClipEditPlanResponse { ClipProject project = 1; }
+
+message GetClipCaptionPreviewRequest {
+  string project_id = 1;
+  int32 expected_revision = 2;
+  // The plan being edited, so the fragment is of the caption on screen rather
+  // than the one last saved.
+  ClipEditPlan plan = 3;
+}
+
+message GetClipCaptionPreviewResponse {
+  string ratio = 1;
+  ClipCanvasBox canvas = 2;
+  // The design safe area every caption is clamped inside, sent so the editor
+  // mirrors no CDS geometry of its own.
+  ClipCanvasBox safe_area = 3;
+  repeated ClipCaptionFragment captions = 4;
+}
+
+// Every approved caption style drawn the way the render draws a caption, so the
+// set is offered by its own look rather than by a picture that goes stale the
+// moment a style changes (CDS-80, CDS-83). The project is asked only for its
+// ratio and its owner: nothing of its plan, selection or footage reaches these.
+message GetClipCaptionStyleSamplesRequest { string project_id = 1; }
+
+message GetClipCaptionStyleSamplesResponse {
+  string ratio = 1;
+  ClipCanvasBox canvas = 2;
+  // One fragment per style, in the order a surface offers them. `instance_id`
+  // and `style` are both that style's own id, and `representative_frame` says
+  // the style draws a frame at a time (CDS-81).
+  repeated ClipCaptionFragment samples = 3;
+}
+
+// The expected revision is the plan revision the owner was looking at, or 0
+// before a plan exists. The fingerprint pins the exact file the choice was made
+// about, so a replaced source never inherits a decision made about another one.
+// The owner's arrangement of this batch's footage (CLIP-136). The list is the
+// WHOLE batch: one that misses a source, repeats one or names a foreign one is
+// refused rather than applied in part.
+// One owner-written revision of the saved plan (CLIP-131). The target names
+// which document it is about; the quote binds the plan revision it was taken
+// against, so a plan saved after it is refused rather than rewritten.
+message QuoteClipRevisionRequest {
+  string project_id = 1;
+  string request = 2;
+  // flow | narration | both.
+  string target = 3;
+  ModelRef observe_model = 4;
+  ModelRef write_model = 5;
+}
+
+message QuoteClipRevisionResponse {
+  string quote_id = 1;
+  int32 max_credits = 2;
+  string expires_at = 3;
+  repeated ClipPricedCall priced_calls = 4;
+  ClipCancellationPolicy cancellation_policy = 5;
+  int32 response_retries = 6;
+  // The plan revision this quote was taken against.
+  int32 plan_revision = 7;
+  ClipSequenceCaptionCost sequence_captions = 8;
+}
+
+message StartClipRevisionRequest {
+  string project_id = 1;
+  string request = 2;
+  string target = 3;
+  ModelRef observe_model = 4;
+  ModelRef write_model = 5;
+  string quote_id = 6;
+  optional int32 approved_max_credits = 7;
+  int32 cancellation_policy_version = 8;
+}
+
+message StartClipRevisionResponse { string job_id = 1; }

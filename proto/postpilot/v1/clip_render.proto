@@ -1,0 +1,66 @@
+syntax = "proto3";
+package postpilot.v1;
+option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
+
+import "postpilot/v1/clip.proto";
+
+// Everything that turns a plan into a file: the draft preview's assets, the server render,
+// and the three steps a browser render's bytes are stored through.
+service ClipRenderService {
+  rpc PrepareClipPreview(PrepareClipPreviewRequest) returns (PrepareClipPreviewResponse) {}
+  rpc StartClipRender(StartClipRenderRequest) returns (StartClipRenderResponse) {}
+  rpc ReportClipRenderVerdict(ReportClipRenderVerdictRequest) returns (ReportClipRenderVerdictResponse) {}
+  rpc PrepareClipRenderUpload(PrepareClipRenderUploadRequest) returns (PrepareClipRenderUploadResponse) {}
+  rpc CompleteClipRenderUpload(CompleteClipRenderUploadRequest) returns (CompleteClipRenderUploadResponse) {}
+  rpc CancelClipBrowserRender(CancelClipBrowserRenderRequest) returns (CancelClipBrowserRenderResponse) {}
+}
+
+message PrepareClipPreviewRequest {
+  string project_id = 1;
+  int32 expected_revision = 2;
+  // SHA-256 of the deterministic protobuf encoding of plan.
+  string draft_hash = 3;
+  ClipEditPlan plan = 4;
+  repeated string element_ids = 5;
+  int32 asset_offset = 6;
+}
+
+message PrepareClipPreviewResponse {
+  string draft_hash = 1;
+  int32 canvas_width = 2;
+  int32 canvas_height = 3;
+  repeated ClipPreviewAsset assets = 4;
+  // -1 means this requested element page is complete.
+  int32 next_offset = 5;
+  repeated ClipPreviewParity parity = 6;
+}
+
+message StartClipRenderRequest { string project_id = 1; int32 expected_revision = 2; string batch_id = 3; ClipRenderKind render_kind = 4; }
+
+message StartClipRenderResponse { string job_id = 1; string render_id = 2; }
+
+message ReportClipRenderVerdictRequest {
+  string render_id = 1;
+  ClipRenderMeasurements measurements = 2;
+  bool passed = 3;
+}
+
+// The verdict is recorded; it never makes an unstored local file a result.
+message ReportClipRenderVerdictResponse {
+  bool passed = 1;
+  repeated ClipNotice notices = 2;
+}
+
+// The admitted render determines the immutable object key; no media enters RPC.
+message PrepareClipRenderUploadRequest { string render_id = 1; int64 bytes = 2; }
+
+message PrepareClipRenderUploadResponse { string put_url = 1; map<string, string> headers = 2; }
+
+message CompleteClipRenderUploadRequest { string render_id = 1; }
+
+message CompleteClipRenderUploadResponse { ClipProject project = 1; }
+
+message CancelClipBrowserRenderRequest { string render_id = 1; }
+
+// False means completion already won; a stored result is never undone.
+message CancelClipBrowserRenderResponse { bool cancelled = 1; }
