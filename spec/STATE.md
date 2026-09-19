@@ -50,7 +50,6 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
-| T266 | one autosave queue behind three save features | ARCH | - | todo |
 | T268 | the route tree is assembled from route groups | ARCH | - | todo |
 | T275 | job/store, template/rpc and modelcatalog/rpc have tests | ARCH | T285 | todo |
 | T276 | voice, post and publishing ports are per use-case | ARCH | - | todo |
@@ -64,11 +63,13 @@
 | T284 | the agent generates only the protos it uses and drops the survey harness | ARCH | T008 T281 | todo |
 
 ## next
-- implement-task: T266 (i18n per slice, then T265) T266 (autosave queue) T268 (route groups) T263 T264 T266 T268; BE roots T276 (voice/post/publishing ports), T277 (experiment/usage/auth ports), T278 (typed failure reasons), T280 (boundary leaks), T275 (missing test packages)
+- implement-task: T268 (i18n per slice, then T265) T266 (autosave queue) T268 (route groups) T263 T264 T266 T268; BE roots T276 (voice/post/publishing ports), T277 (experiment/usage/auth ports), T278 (typed failure reasons), T280 (boundary leaks), T275 (missing test packages)
 - the clip `release-smoke` stage is red at HEAD on this host: 9 of 28 modes end in `no result` (generation ends on a plan since T255, harness still expects a Result) — needs a fix task (review-code clip-release-smoke or update the harness)
 - agent tasks T279 T282 T283 T284 wait for T008; T008 belongs to another session and T177 remains blocked
 - post-quality-and-related-links remains open ideation, awaiting conversion when ready
 ## log
+- 260920 T266 done; shared/lib/autosave carries the clip-settings and block-editor queues (223→82, 236→155) with 10 unit tests; save-draft stays bespoke (assignments + mid-flight rekey) and says why; ARCH-25 green
+- 260920 T266 claimed (clp)
 - 260920 T265 done; the 1.1k-line clips namespace is 17 slice fragments (largest 209 lines/language) and app/providers/i18n keeps only the five cross-cutting namespaces; ARCH-25 green
 - 260920 T265 claimed (clp)
 - 260920 T264 done; 8 domain namespaces became 63 slice fragments assembled by app/providers/i18n (leaf-module imports, one steiger exception) and resources.test gained a no-duplicate-claim check; ARCH-25 green
@@ -87,5 +88,3 @@
 - 260920 T267 claimed (ent)
 - 260920 T259 done; an ESLint block + a source-tree vitest hold ARCH-17 over pages/widgets/features (clip allowlisted for T262), 45 slice files traded descriptors for entity hooks, and 7 slices whose only hook moved were deleted; ARCH-25 green
 - 260920 T259 claimed (ent)
-- 260920 T258 done; shared/config is 80 lines of env + cross-slice values, product limits and slice tuning live in 24 new `config` segments, clip-design.json moved into entities/clip-project and reaches clip-template through a new @x; ARCH-25 green
-- 260920 T269 done; platform/config imports nothing under internal/ (guard test), clip/post/voice/generation own their limits and cmd/api merges env via clipEnvironment; ARCH-26 green and the release smoke is the pre-existing 19/28

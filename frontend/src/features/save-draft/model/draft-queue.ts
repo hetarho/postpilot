@@ -1,5 +1,13 @@
 // The draft save pipeline, per post, outside React.
 //
+// This one is NOT `shared/lib/autosave` (T266), and deliberately: the clip settings' queue and
+// the block editor's are a debounce around one payload, while this queue is a serial channel for
+// four things at once — the text, and the voice, 템플릿 and target-language ASSIGNMENTS, each with
+// its own waiters, its own "what the server holds" baseline and its own taken-back-on-refusal
+// rule — and it re-keys itself mid-flight when the first save mints the slug. Folding that into
+// the shared machine would move post rules into `shared/lib` rather than share a machine.
+// What it does share: `SaveState`, the `AUTOSAVE_*` timing and the state vocabulary.
+//
 // It lives here rather than inside the hook because the text belongs to the user, not to
 // the component that happens to be mounted: leaving the editor with a save still failing
 // must not end the retries, and the editor the mint navigation mounts must not start a
