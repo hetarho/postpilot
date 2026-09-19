@@ -4,10 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/composition"
 	"github.com/postpilot/backend/internal/clip/store/sqlc"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 type legacyRecipeJSON struct {
@@ -102,7 +102,7 @@ func decodeComposition(snapshot, inputs string) (*clip.ProjectComposition, error
 	for _, a := range in.Associations {
 		c.Inputs.Associations = append(c.Inputs.Associations, clip.SourceAssociation{GroupID: a.GroupID, ItemID: a.ItemID, SourceID: a.SourceID, Fingerprint: a.Fingerprint, StartMS: a.StartMS, EndMS: a.EndMS})
 	}
-	limits := config.ClipCompositionLimits()
+	limits := clip.DefaultCompositionLimits()
 	if s.Legacy {
 		limits = clip.LegacyCompositionLimits(limits)
 	}
@@ -110,7 +110,7 @@ func decodeComposition(snapshot, inputs string) (*clip.ProjectComposition, error
 	if e != nil {
 		return nil, e
 	}
-	if e := clip.ValidateCompositionInputs(d, c.Inputs, config.ClipCompositionLimits(), false); e != nil {
+	if e := clip.ValidateCompositionInputs(d, c.Inputs, clip.DefaultCompositionLimits(), false); e != nil {
 		return nil, e
 	}
 	return c, nil

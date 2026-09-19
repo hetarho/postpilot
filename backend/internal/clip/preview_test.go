@@ -12,7 +12,6 @@ import (
 	clipapp "github.com/postpilot/backend/internal/clip/app"
 
 	"github.com/postpilot/backend/internal/clip"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 type previewProjectStore struct {
@@ -64,7 +63,7 @@ func previewSetup(t *testing.T) (*clipapp.GenerationService, *previewProjectStor
 	p.ID, p.UserID = "owned", "alice"
 	store := &previewProjectStore{project: p}
 	render := &previewRenderer{}
-	cfg := config.ClipGeneration(&config.Config{PresignGetTTL: time.Minute, OrphanMinAge: time.Hour})
+	cfg := clip.DefaultGenerationConfig(clip.Environment{GetTTL: time.Minute, OrphanMinAge: time.Hour})
 	service := clipapp.NewGenerationService(nil, testProjects(store), nil, neutralProcessing{}, nil, nil, render, neutralJobs{}, cfg, neutralGenerationDeps())
 	return service, store, render, draft
 }
@@ -125,7 +124,7 @@ func TestNativeCorrectionKeepsContentAndRejectsForgedIdentities(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	original.Portable, err = clip.FreezeLegacyPlan(p, original, clip.Recipe{}, config.ClipCompositionLimits())
+	original.Portable, err = clip.FreezeLegacyPlan(p, original, clip.Recipe{}, clip.DefaultCompositionLimits())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -137,7 +136,7 @@ func TestNativeCorrectionKeepsContentAndRejectsForgedIdentities(t *testing.T) {
 	draft := clip.CorrectionFromPlan(original)
 	draft.Elements[0].Text = "수정한 문구"
 	draft.Cuts[0].Focal = &clip.Point{X: .1, Y: .8}
-	next, err := clip.ApplyCorrection(config.ClipRender(&config.Config{}), p, draft)
+	next, err := clip.ApplyCorrection(clip.DefaultRenderConfig(clip.Environment{}), p, draft)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -154,7 +153,7 @@ func TestNativeCorrectionKeepsContentAndRejectsForgedIdentities(t *testing.T) {
 	}
 	draft.Cuts[0].StartMS = 100
 	draft.DurationMS -= 100
-	trimmed, err := clip.ApplyCorrection(config.ClipRender(&config.Config{}), p, draft)
+	trimmed, err := clip.ApplyCorrection(clip.DefaultRenderConfig(clip.Environment{}), p, draft)
 	if err != nil {
 		t.Fatal("trim", err)
 	}
@@ -162,7 +161,7 @@ func TestNativeCorrectionKeepsContentAndRejectsForgedIdentities(t *testing.T) {
 		t.Fatal("trim lost frozen evidence", err)
 	}
 	draft.Elements[0].InstanceID = "forged"
-	if _, err := clip.ApplyCorrection(config.ClipRender(&config.Config{}), p, draft); err == nil {
+	if _, err := clip.ApplyCorrection(clip.DefaultRenderConfig(clip.Environment{}), p, draft); err == nil {
 		t.Fatal("accepted foreign element")
 	}
 }

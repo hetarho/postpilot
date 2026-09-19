@@ -7,7 +7,6 @@ import (
 
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/composition"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 // narrationFixture is the creation fixture with one narration caption saved on
@@ -112,7 +111,7 @@ func TestNarrationValidationRefusals(t *testing.T) {
 }
 
 func TestNarrationKeepsItsOutputIntervalThroughEveryFootageEdit(t *testing.T) {
-	cfg := config.ClipRender(&config.Config{})
+	cfg := clip.DefaultRenderConfig(clip.Environment{})
 	for name, edit := range map[string]func(*clip.CorrectionPlan){
 		"reorder": func(d *clip.CorrectionPlan) {
 			d.Cuts[0], d.Cuts[1] = d.Cuts[1], d.Cuts[0]
@@ -170,7 +169,7 @@ func ownerCaption(text string, start, end int) clip.CorrectionText {
 }
 
 func TestOwnerAddsEditsAndRemovesANarrationCaption(t *testing.T) {
-	cfg := config.ClipRender(&config.Config{})
+	cfg := clip.DefaultRenderConfig(clip.Environment{})
 	p, plan := narrationFixture(t)
 	draft := creationDraft(plan)
 	draft.Elements = append(draft.Elements, ownerCaption("직접 쓴 자막", 8000, 11000))
@@ -258,7 +257,7 @@ func TestOwnerAddsEditsAndRemovesANarrationCaption(t *testing.T) {
 }
 
 func TestNarrationCreationRefusals(t *testing.T) {
-	cfg := config.ClipRender(&config.Config{})
+	cfg := clip.DefaultRenderConfig(clip.Environment{})
 	for name, broken := range map[string]func(clip.CorrectionText) clip.CorrectionText{
 		"an unknown creation kind": func(e clip.CorrectionText) clip.CorrectionText {
 			e.Creation = &clip.TextCreation{Kind: "invent"}
@@ -335,7 +334,7 @@ func TestGroundNarrationChecksFactsWithoutAnItemRule(t *testing.T) {
 }
 
 func TestAPlanWithoutSectionsResolvesOnlyItsFixedRegions(t *testing.T) {
-	limits := config.ClipCompositionLimits()
+	limits := clip.DefaultCompositionLimits()
 	body := `<clip version="1">` +
 		`<field id="place" label="상호" required="true">가게 이름</field>` +
 		`<group id="menu" label="메뉴" min="1"><field id="name" label="이름" required="true">메뉴 이름</field></group>` +

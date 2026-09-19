@@ -10,7 +10,6 @@ import (
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/composition"
 	"github.com/postpilot/backend/internal/clip/store"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 // legacyTemplate stores a body under the section grammar the template editor no
@@ -59,7 +58,7 @@ func TestTemplateSaveRefusesSectionsWhileStoredLegacyBodiesReadConverted(t *test
 	if !projection.CompositionConverted || strings.Contains(projection.CompositionBody, "<scene") || !strings.Contains(projection.CompositionBody, "가장 이른 클립으로 시작") || !strings.Contains(projection.CompositionBody, "c [ai]: 보이는 것 하나") {
 		t.Fatalf("projection not converted: %+v", projection)
 	}
-	if _, problem := composition.ParseTemplate(projection.CompositionBody, config.ClipCompositionLimits()); problem != nil {
+	if _, problem := composition.ParseTemplate(projection.CompositionBody, clip.DefaultCompositionLimits()); problem != nil {
 		t.Fatalf("converted projection refused: %+v", problem)
 	}
 	// A project frozen from the legacy template carries the stored sections, not
@@ -100,7 +99,7 @@ func TestDesignFirstTemplateReadsAsAnOutlineAndSavesWithoutItsDesign(t *testing.
 			t.Fatalf("the projection kept %s:\n%s", gone, projection.CompositionBody)
 		}
 	}
-	doc, problem := composition.ParseTemplate(projection.CompositionBody, config.ClipCompositionLimits())
+	doc, problem := composition.ParseTemplate(projection.CompositionBody, clip.DefaultCompositionLimits())
 	if problem != nil {
 		t.Fatalf("the projection is not savable: %+v", problem)
 	}

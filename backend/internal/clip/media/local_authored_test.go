@@ -13,7 +13,6 @@ import (
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/composition"
 	"github.com/postpilot/backend/internal/clip/design"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 // An opt-in harness that renders ONE hand-written plan through the product's own
@@ -116,14 +115,14 @@ func localFailure(err error) error {
 
 func localMediaConfig(t *testing.T) clip.MediaConfig {
 	t.Helper()
-	return config.ClipMedia(&config.Config{
-		ClipWorkRoot:       filepath.Join(t.TempDir(), "work"),
-		ClipFFmpegPath:     path("CLIP_FFMPEG_PATH", "/usr/local/bin/ffmpeg"),
-		ClipFFprobePath:    path("CLIP_FFPROBE_PATH", "/usr/local/bin/ffprobe"),
-		ClipWorkStaleAge:   time.Hour,
-		ClipMediaTimeout:   20 * time.Minute,
-		ClipSourceBatchTTL: 6 * time.Hour,
-		PresignPutTTL:      10 * time.Minute,
+	return clip.DefaultMediaConfig(clip.Environment{
+		WorkRoot:       filepath.Join(t.TempDir(), "work"),
+		FFmpegPath:     path("CLIP_FFMPEG_PATH", "/usr/local/bin/ffmpeg"),
+		FFprobePath:    path("CLIP_FFPROBE_PATH", "/usr/local/bin/ffprobe"),
+		WorkStaleAge:   time.Hour,
+		MediaTimeout:   20 * time.Minute,
+		SourceBatchTTL: 6 * time.Hour,
+		PutTTL:         10 * time.Minute,
 	})
 }
 

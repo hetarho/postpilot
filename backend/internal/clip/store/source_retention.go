@@ -9,11 +9,10 @@ import (
 
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/store/sqlc"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 func renewProjectSources(ctx context.Context, q *sqlc.Queries, user, project string, now time.Time) error {
-	if err := q.SetSourceRetention(ctx, sqlc.SetSourceRetentionParams{UserID: user, ProjectID: project, Now: nullable(stamp(now)), ExpiresAt: nullable(stamp(now.Add(config.ClipOriginalRetention)))}); err != nil {
+	if err := q.SetSourceRetention(ctx, sqlc.SetSourceRetentionParams{UserID: user, ProjectID: project, Now: nullable(stamp(now)), ExpiresAt: nullable(stamp(now.Add(clip.OriginalRetention)))}); err != nil {
 		return err
 	}
 	return q.RefreshProjectRetention(ctx, sqlc.RefreshProjectRetentionParams{ID: project, UserID: user})
@@ -65,7 +64,7 @@ func bindSourceAttempt(ctx context.Context, q *sqlc.Queries, user, batch, job st
 	if err = q.InsertSourceAttempt(ctx, sqlc.InsertSourceAttemptParams{JobID: job, UserID: user, ProjectID: b.ProjectID, BatchID: batch, ManifestJson: string(raw), BoundAt: stamp(now)}); err != nil {
 		return err
 	}
-	if err = q.SetBoundSourceRetention(ctx, sqlc.SetBoundSourceRetentionParams{BatchID: batch, ExpiresAt: stamp(now.Add(config.ClipOriginalRetention))}); err != nil {
+	if err = q.SetBoundSourceRetention(ctx, sqlc.SetBoundSourceRetentionParams{BatchID: batch, ExpiresAt: stamp(now.Add(clip.OriginalRetention))}); err != nil {
 		return err
 	}
 	return q.RefreshProjectRetention(ctx, sqlc.RefreshProjectRetentionParams{ID: b.ProjectID, UserID: user})
@@ -101,7 +100,7 @@ func (s *Store) ReleaseSourceAttempt(ctx context.Context, user, job string, term
 		if terminal.Before(bound) {
 			terminal = bound
 		}
-		if e = q.SetBoundSourceRetention(ctx, sqlc.SetBoundSourceRetentionParams{BatchID: a.BatchID, ExpiresAt: stamp(terminal.Add(config.ClipOriginalRetention))}); e != nil {
+		if e = q.SetBoundSourceRetention(ctx, sqlc.SetBoundSourceRetentionParams{BatchID: a.BatchID, ExpiresAt: stamp(terminal.Add(clip.OriginalRetention))}); e != nil {
 			return struct{}{}, e
 		}
 		if e = affected(q.ReleaseSourceAttempt(ctx, sqlc.ReleaseSourceAttemptParams{UserID: user, JobID: job, ReleasedAt: nullable(stamp(terminal))})); e != nil {

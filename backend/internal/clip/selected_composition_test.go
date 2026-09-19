@@ -6,7 +6,6 @@ import (
 
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/composition"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 const unassignedDoc = `<clip version="1" intro="b" caption="bold" outro="e"><group id="menu"><field id="name" label="이름" required="true"/></group><repeat for="menu"><scene id="dish" scope="item"><text id="literal" kind="fixed" role="caption" basis="cut">  그대로  </text><text id="bound" kind="fixed" role="info" basis="cut"><value field="menu.name"/></text><text id="copy" kind="ai" role="caption" basis="cut">메뉴 설명</text></scene></repeat><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`
@@ -22,7 +21,7 @@ func resolvedIDs(t *composition.Timeline) []string {
 // An item nobody could name costs the cut its item facts, never the scene
 // sentence: the footage was filmed either way (CLIP-64).
 func TestUnassignedSelectedFootageKeepsSceneCopyAndDropsItemBindings(t *testing.T) {
-	limits := config.ClipCompositionLimits()
+	limits := clip.DefaultCompositionLimits()
 	doc, problem := composition.Parse(unassignedDoc, limits)
 	if problem != nil {
 		t.Fatal(problem)
@@ -51,7 +50,7 @@ func TestUnassignedSelectedFootageKeepsSceneCopyAndDropsItemBindings(t *testing.
 
 // A cut whose item is known takes the whole section, this path untouched.
 func TestAssignedSelectedFootageKeepsEveryElement(t *testing.T) {
-	limits := config.ClipCompositionLimits()
+	limits := clip.DefaultCompositionLimits()
 	doc, problem := composition.Parse(unassignedDoc, limits)
 	if problem != nil {
 		t.Fatal(problem)

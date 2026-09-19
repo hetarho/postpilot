@@ -17,7 +17,6 @@ import (
 	"github.com/postpilot/backend/internal/clip/ai"
 	"github.com/postpilot/backend/internal/clip/design"
 	"github.com/postpilot/backend/internal/llm"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 type fakeModels struct {
@@ -92,7 +91,7 @@ func newService(t *testing.T, raw string, structured bool) (*ai.Service, *fakeMo
 	t.Cleanup(func() { structuredFixture = true })
 	f := &fakeModels{info: llm.ModelInfo{Vision: true, VideoInput: true, VideoDelivery: llm.VideoDelivery{InlineStaticVideo: true}, StructuredOutput: structured, Stages: []string{llm.StageNameObserve, llm.StageNameWrite}}, response: llm.Response{Text: raw, Usage: llm.Usage{CompletionTokens: 100, PromptTokens: 200, CostReported: true, CostMicrousd: 10}}}
 	c := &fakeSizer{}
-	cfg := config.ClipAI(&config.Config{LLMReasoning: config.LLMReasoningPolicy{Observe: llm.ReasoningLow, Write: llm.ReasoningLow}})
+	cfg := ai.DefaultConfig(clip.Environment{})
 	s, err := ai.New(f, c, cfg)
 	if err != nil {
 		t.Fatal(err)
@@ -274,7 +273,7 @@ func TestRecordedLiveClipResponses(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	limits := config.ClipAI(&config.Config{}).Analysis
+	limits := ai.DefaultConfig(clip.Environment{}).Analysis
 	analyses, err := clip.MergeAnalyses(limits, []clip.AnalysisSource{in.Source}, []clip.ChunkAnalysis{observed})
 	if err != nil {
 		t.Fatal(err)
@@ -384,7 +383,7 @@ func TestPlanIsGroundedMeasuredAndPreservesExactAnswers(t *testing.T) {
 			t.Fatalf("caption window %d..%d", start, end)
 		}
 		request := f.calls[0]
-		if len(f.calls) != 1 || request.HasVideos() || request.HasImages() || request.MaxTokens != config.ClipAI(&config.Config{}).PlanCompletionTokens || request.Stage != llm.StageNameWrite || (request.JSONSchema != nil) != structured || !strings.Contains(request.System, `"maxLength": 500`) {
+		if len(f.calls) != 1 || request.HasVideos() || request.HasImages() || request.MaxTokens != ai.DefaultConfig(clip.Environment{}).PlanCompletionTokens || request.Stage != llm.StageNameWrite || (request.JSONSchema != nil) != structured || !strings.Contains(request.System, `"maxLength": 500`) {
 			t.Fatal(request)
 		}
 		var data struct {

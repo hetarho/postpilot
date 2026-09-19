@@ -9,7 +9,6 @@ import (
 
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/design"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 // captionLayout lays one caption out the way the composition does, so a
@@ -121,7 +120,7 @@ func TestASequenceDrawsTheSameFramesTwice(t *testing.T) {
 // loop and no fade: its motion is already drawn into every frame. A static one
 // keeps the looped single plate, unchanged (CDS-81).
 func TestTheOverlayGraphReadsASequenceWithImage2AndLoopsAStaticPlate(t *testing.T) {
-	cfg := config.ClipRender(&config.Config{})
+	cfg := clip.DefaultRenderConfig(clip.Environment{})
 	_, r := measured(t)
 	visuals := []declaredVisual{
 		{text: clip.PortableText{Pace: "steady"}, manifest: clip.CompositionElement{Role: "caption", Style: "blur-in", StartMS: 1000, EndMS: 4000}},

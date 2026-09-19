@@ -5,6 +5,7 @@ import (
 	"database/sql"
 
 	"github.com/postpilot/backend/internal/auth"
+	"github.com/postpilot/backend/internal/clip"
 	clipai "github.com/postpilot/backend/internal/clip/ai"
 	clipapp "github.com/postpilot/backend/internal/clip/app"
 	clipmedia "github.com/postpilot/backend/internal/clip/media"
@@ -32,22 +33,36 @@ func clipTxPorts(ledger *usage.Service, registry *llm.Registry, plans *auth.Serv
 	}
 }
 
+// clipEnvironment is where the parsed env meets the clip context's own limits
+// (ARCH-21): platform/config owns the values a deployment may move, the clip
+// package owns the product rules, and this is the one merge point.
+func clipEnvironment(cfg *config.Config) clip.Environment {
+	return clip.Environment{
+		WorkRoot: cfg.ClipWorkRoot, FFmpegPath: cfg.ClipFFmpegPath, FFprobePath: cfg.ClipFFprobePath,
+		ResvgPath: cfg.ClipResvgPath, OverlayDir: cfg.ClipOverlayDir, FontPaths: cfg.ClipFontPaths,
+		WorkStaleAge: cfg.ClipWorkStaleAge, MediaTimeout: cfg.ClipMediaTimeout,
+		EncodeThreads: cfg.ClipEncodeThreads, DecodeThreads: cfg.ClipDecodeThreads,
+		SourceBatchTTL: cfg.ClipSourceBatchTTL, PutTTL: cfg.PresignPutTTL, GetTTL: cfg.PresignGetTTL,
+		OrphanMinAge: cfg.OrphanMinAge, QuoteTTL: cfg.ClipQuoteTTL,
+	}
+}
+
 func clipBudgets(cfg clipai.Config) clipapp.Budgets {
 	return clipapp.Budgets{ObserveCompletionTokens: cfg.ObserveCompletionTokens, FlowCompletionTokens: cfg.FlowCompletionTokens, NarrationCompletionTokens: cfg.NarrationCompletionTokens, ObserveReasoning: cfg.ObserveReasoning, PlanReasoning: cfg.PlanReasoning}
 }
 
 func newClipGeneration(ctx context.Context, cfg *config.Config, store *clipstore.Store, projects *clipapp.Service, sources *clipapp.SourceService, bucket *storage.Bucket, media *clipmedia.Adapter, models meteredRegistry, queue *job.Queue, guard clipapp.Reserver, writer *sql.DB, bind clipapp.Binder) (*clipapp.GenerationService, error) {
-	renderer, err := clipmedia.NewRenderer(media, config.ClipRender(cfg))
+	renderer, err := clipmedia.NewRenderer(media, clip.DefaultRenderConfig(clipEnvironment(cfg)))
 	if err != nil {
 		return nil, err
 	}
-	aiConfig := config.ClipAI(cfg)
+	aiConfig := clipai.DefaultConfig(clipEnvironment(cfg))
 	planner, err := clipai.New(clipModels{models}, renderer, aiConfig)
 	if err != nil {
 		return nil, err
 	}
 	finisher := clipapp.NewFinisher(writer, bind, jobstore.New(writer, writer, jobKinds()), store, nil)
-	service := clipapp.NewGenerationService(store, projects, sources, bucket, media, planner, renderer, clipapp.NewJobs(queue, guard), config.ClipGeneration(cfg), clipapp.GenerationDeps{
+	service := clipapp.NewGenerationService(store, projects, sources, bucket, media, planner, renderer, clipapp.NewJobs(queue, guard), clip.DefaultGenerationConfig(clipEnvironment(cfg)), clipapp.GenerationDeps{
 		Finisher:   finisher,
 		Pricing:    clipapp.NewPricing(models.Registry, clipBudgets(aiConfig)),
 		Accounting: clipapp.NewAccounting(models.ledger),

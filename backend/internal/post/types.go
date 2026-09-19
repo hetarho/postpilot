@@ -242,7 +242,7 @@ type Post struct {
 	MachineBaselineVoiceID string
 	TargetLength           *int
 	// TagCount is how many tags a run asks for (POST-63). Always concrete: the store reads a
-	// row never saved with one as config.PostTagCountDefault, so no caller sees "unset". The
+	// row never saved with one as TagCountRange.Default, so no caller sees "unset". The
 	// one exception is a Post being CREATED, where 0 means "nobody named one" and the column
 	// stays NULL - a create seeds it only when the template it names has an opinion.
 	TagCount          int

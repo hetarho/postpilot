@@ -6,7 +6,6 @@ import (
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/composition"
 	"github.com/postpilot/backend/internal/clip/design"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 func captionElement(instance, style string, startMS, endMS int) clip.PortableText {
@@ -19,7 +18,7 @@ func captionElement(instance, style string, startMS, endMS int) clip.PortableTex
 // only the sequence-rendered captions are counted, and what they add is their
 // own frames times the measured per-frame cost — not a guess from the count.
 func TestTheQuoteCountsSequenceCaptionsAndWhatTheirFramesAdd(t *testing.T) {
-	cfg := config.ClipRender(&config.Config{})
+	cfg := clip.DefaultRenderConfig(clip.Environment{})
 	project := clip.Project{CaptionStyles: []string{design.DefaultCaptionStyle, "neon", "word-pop"}}
 	plan := clip.EditPlan{Portable: &clip.PortablePlan{Elements: []clip.PortableText{
 		captionElement("static", design.DefaultCaptionStyle, 0, 3000),
@@ -52,7 +51,7 @@ func TestTheQuoteCountsSequenceCaptionsAndWhatTheirFramesAdd(t *testing.T) {
 // A project using only static styles has nothing to state, before a plan exists
 // and after: zero captions and no added time, never an estimate of one.
 func TestOnlyStaticStylesCostNothingExtra(t *testing.T) {
-	cfg := config.ClipRender(&config.Config{})
+	cfg := clip.DefaultRenderConfig(clip.Environment{})
 	project := clip.Project{TargetDurationMS: 60000, CaptionStyles: []string{design.DefaultCaptionStyle, "keynote", "film"}}
 	plan := clip.EditPlan{Portable: &clip.PortablePlan{Elements: []clip.PortableText{
 		captionElement("a", design.DefaultCaptionStyle, 0, 3000)}}}
@@ -71,7 +70,7 @@ func TestOnlyStaticStylesCostNothingExtra(t *testing.T) {
 }
 
 func TestNoPlanQuotesTheWholeTargetWhenAnyStyleUsesSequences(t *testing.T) {
-	cfg := config.ClipRender(&config.Config{})
+	cfg := clip.DefaultRenderConfig(clip.Environment{})
 	for _, styles := range [][]string{{"neon"}, {"bold", "neon"}, {"neon", "serif"}} {
 		project := clip.Project{TargetDurationMS: 15000, CaptionStyles: styles}
 		cost := clip.SequenceCostOf(project, clip.EditPlan{}, false, cfg)
@@ -90,7 +89,7 @@ func TestNoPlanQuotesTheWholeTargetWhenAnyStyleUsesSequences(t *testing.T) {
 }
 
 func TestPlanQuoteFollowsNarratedStylesAndOwnerOverrides(t *testing.T) {
-	cfg := config.ClipRender(&config.Config{})
+	cfg := clip.DefaultRenderConfig(clip.Environment{})
 	project := clip.Project{TargetDurationMS: 60000, CaptionStyles: []string{"bold", "neon", "word-pop"}}
 	first := captionElement("first", "", 0, 2000)
 	first.Resolved.Element.Style = "neon"

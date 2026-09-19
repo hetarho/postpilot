@@ -11,7 +11,6 @@ import (
 	"github.com/postpilot/backend/internal/auth"
 	"github.com/postpilot/backend/internal/clip"
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 type verdictStore struct {
@@ -33,7 +32,7 @@ func (s *verdictStore) SaveBrowserRenderVerdict(_ context.Context, user, id stri
 func TestReportedVerdictUsesActorAndReturnsDeliveryNotices(t *testing.T) {
 	store := &verdictStore{}
 	h := NewHandler(nil)
-	h.generation = clipapp.NewGenerationService(store, nil, nil, nil, nil, nil, nil, nil, clip.GenerationConfig{Render: config.ClipRender(&config.Config{}), ReadTTL: time.Minute, CleanupTimeout: time.Second, OrphanMinAge: time.Hour}, neutralGenerationDeps())
+	h.generation = clipapp.NewGenerationService(store, nil, nil, nil, nil, nil, nil, nil, clip.GenerationConfig{Render: clip.DefaultRenderConfig(clip.Environment{}), ReadTTL: time.Minute, CleanupTimeout: time.Second, OrphanMinAge: time.Hour}, neutralGenerationDeps())
 	ctx := auth.WithUser(t.Context(), "owner")
 	m := &v1.ClipRenderMeasurements{Width: 1080, Height: 1080, FrameRateNumerator: 30, FrameRateDenominator: 1, VideoFrames: 450, VideoCodec: "h264", VideoProfile: "High"}
 	response, err := h.ReportClipRenderVerdict(ctx, connect.NewRequest(&v1.ReportClipRenderVerdictRequest{RenderId: "render", Measurements: m, Passed: true}))

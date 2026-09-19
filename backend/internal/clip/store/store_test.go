@@ -17,7 +17,6 @@ import (
 	"github.com/postpilot/backend/internal/clip/design"
 	"github.com/postpilot/backend/internal/clip/store"
 	"github.com/postpilot/backend/internal/plan"
-	"github.com/postpilot/backend/internal/platform/config"
 	"github.com/postpilot/backend/internal/platform/db"
 )
 
@@ -46,8 +45,8 @@ func setupWith(t *testing.T, objects clip.ObjectStore) (*clipapp.Service, *store
 		}
 	}
 	s := store.New(d.Writer, d.Reader)
-	sources := clipapp.NewSourceService(s, objects, config.ClipSourceLimits(6*time.Hour, 10*time.Minute))
-	return clipapp.NewService(s, config.ClipLimits(), sources, nullFinalizer{}), s, d, sources
+	sources := clipapp.NewSourceService(s, objects, clip.DefaultSourceLimits(clip.Environment{SourceBatchTTL: 6 * time.Hour, PutTTL: 10 * time.Minute}))
+	return clipapp.NewService(s, clip.DefaultLimits(), sources, nullFinalizer{}), s, d, sources
 }
 func recipe() clip.Recipe {
 	return clip.Recipe{Name: " 여행 ", Preset: "stay", InformationFields: []clip.InformationField{{Label: " 장소 ", Prompt: " 어디였나요? "}}, Accent: "teal"}

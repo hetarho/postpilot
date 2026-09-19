@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/postpilot/backend/internal/platform/config"
 	"os"
 	"strings"
 	"testing"
@@ -185,7 +184,7 @@ func TestUnknownChipLabelsAreDroppedNotRefused(t *testing.T) {
 	if got := plan.Cuts[0].Chips; len(got) != 2 || got[0] != "위치" || got[1] != "가격" {
 		t.Fatalf("chips = %v, want the two reserved labels in order", got)
 	}
-	system, _ := ai.BuildPlanPrompt(in, 200, config.ClipCompositionLimits())
+	system, _ := ai.BuildPlanPrompt(in, 200, clip.DefaultCompositionLimits())
 	if !strings.Contains(system, strings.Join(design.Fact.Chips, " · ")) || strings.Contains(system, "상호 · 위치") {
 		t.Fatal("the prompt's chip vocabulary is not the design table's")
 	}

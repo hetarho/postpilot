@@ -3,11 +3,11 @@ package ai_test
 import (
 	"context"
 	"errors"
+	"testing"
+
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/ai"
 	"github.com/postpilot/backend/internal/llm"
-	"github.com/postpilot/backend/internal/platform/config"
-	"testing"
 )
 
 type correctionModels struct {
@@ -47,7 +47,7 @@ func TestIncompleteCoverageUsesTheReservedCorrectionAllowance(t *testing.T) {
 			}
 			_, base, sizer := newService(t, raw(observation()), true)
 			models := &correctionModels{fakeModels: base, validAfter: 3, invalid: raw(bad)}
-			service, err := ai.New(models, sizer, config.ClipAI(&config.Config{LLMReasoning: config.LLMReasoningPolicy{Observe: llm.ReasoningLow, Write: llm.ReasoningLow}}))
+			service, err := ai.New(models, sizer, ai.DefaultConfig(clip.Environment{}))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -110,7 +110,7 @@ func TestReadableRuleBreaksNeverSpendCorrectionCalls(t *testing.T) {
 			// The corrected attempt answers with the valid plan, so a working
 			// correction shows up as exactly two calls.
 			models := &correctionModels{fakeModels: base, validAfter: 2, invalid: raw(bad)}
-			service, err := ai.New(models, sizer, config.ClipAI(&config.Config{LLMReasoning: config.LLMReasoningPolicy{Observe: llm.ReasoningLow, Write: llm.ReasoningLow}}))
+			service, err := ai.New(models, sizer, ai.DefaultConfig(clip.Environment{}))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -151,7 +151,7 @@ func TestResponseCorrectionStopsOnCancellationProviderAndLegacyLimits(t *testing
 			if kind == "length" {
 				models.finish = "length"
 			}
-			service, _ := ai.New(models, sizer, config.ClipAI(&config.Config{LLMReasoning: config.LLMReasoningPolicy{Observe: llm.ReasoningLow, Write: llm.ReasoningLow}}))
+			service, _ := ai.New(models, sizer, ai.DefaultConfig(clip.Environment{}))
 			ctx := t.Context()
 			if kind == "cancel" {
 				ctx = clip.WithResponseCorrectionObserver(ctx, func(int, int, clip.AttemptDiagnostic) error { return context.Canceled })

@@ -12,7 +12,6 @@ import (
 
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/composition"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 func TestItemGroupBoundsRefusedAtTemplateSave(t *testing.T) {
@@ -77,7 +76,7 @@ func TestItemGroupMinimumRefusesQuoteBeforeWorkButAllowsDrafts(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if err = clip.RequiredAnswers(template, p, config.ClipCompositionLimits()); err != nil {
+			if err = clip.RequiredAnswers(template, p, clip.DefaultCompositionLimits()); err != nil {
 				t.Fatal("complete group refused", err)
 			}
 			inputs.Items["menu"][1].Values["name"] = ""
@@ -86,7 +85,7 @@ func TestItemGroupMinimumRefusesQuoteBeforeWorkButAllowsDrafts(t *testing.T) {
 				t.Fatal("blank item draft refused", err)
 			}
 			var problem *composition.Problem
-			if err = clip.RequiredAnswers(template, p, config.ClipCompositionLimits()); !errors.As(err, &problem) || problem.Reason != "required_binding" {
+			if err = clip.RequiredAnswers(template, p, clip.DefaultCompositionLimits()); !errors.As(err, &problem) || problem.Reason != "required_binding" {
 				t.Fatal("item field requirement lost", err)
 			}
 			inputs.Items["menu"] = append(inputs.Items["menu"], composition.Item{ID: "third"})
@@ -126,7 +125,7 @@ func TestRequiredFieldGroupAdmitsOneItemAtQuoteNotAtTemplateLoad(t *testing.T) {
 	if p, err = h.projects.UpdateProject(t.Context(), "alice", p.ID, clip.ProjectPatch{CompositionInputs: &inputs}); err != nil {
 		t.Fatal(err)
 	}
-	if err = clip.RequiredAnswers(template, p, config.ClipCompositionLimits()); err != nil {
+	if err = clip.RequiredAnswers(template, p, clip.DefaultCompositionLimits()); err != nil {
 		t.Fatal("one item refused", err)
 	}
 }
@@ -144,7 +143,7 @@ func TestOptionalFieldGroupAdmitsNoItem(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = clip.RequiredAnswers(template, p, config.ClipCompositionLimits()); err != nil {
+	if err = clip.RequiredAnswers(template, p, clip.DefaultCompositionLimits()); err != nil {
 		t.Fatal("empty optional group refused", err)
 	}
 }

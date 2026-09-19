@@ -1,0 +1,882 @@
+{
+  "ratios": {
+    "vertical": {
+      "canvas": {
+        "width": 1080,
+        "height": 1920
+      },
+      "safe": {
+        "x": 64,
+        "y": 40,
+        "width": 952,
+        "height": 1380
+      },
+      "anchor": {
+        "top": 80,
+        "upper_mid": 700,
+        "lower_mid": 1100,
+        "bottom": 1380,
+        "left": 96,
+        "center": 540,
+        "right": 984
+      },
+      "copy_max_width": 856,
+      "hook_size": 84,
+      "badge": {
+        "right": 984,
+        "top": 80
+      },
+      "scrim_top": {
+        "x": 0,
+        "y": 40,
+        "width": 1080,
+        "height": 310
+      },
+      "scrim_bottom": {
+        "x": 0,
+        "y": 1040,
+        "width": 1080,
+        "height": 380
+      }
+    },
+    "horizontal": {
+      "canvas": {
+        "width": 1920,
+        "height": 1080
+      },
+      "safe": {
+        "x": 96,
+        "y": 72,
+        "width": 1728,
+        "height": 936
+      },
+      "anchor": {
+        "top": 112,
+        "upper_mid": 420,
+        "lower_mid": 660,
+        "bottom": 968,
+        "left": 96,
+        "center": 960,
+        "right": 1824
+      },
+      "copy_max_width": 960,
+      "hook_size": 72,
+      "badge": {
+        "right": 1824,
+        "top": 112
+      },
+      "scrim_top": {
+        "x": 0,
+        "y": 72,
+        "width": 1920,
+        "height": 200
+      },
+      "scrim_bottom": {
+        "x": 0,
+        "y": 748,
+        "width": 1920,
+        "height": 260
+      }
+    },
+    "square": {
+      "canvas": {
+        "width": 1080,
+        "height": 1080
+      },
+      "safe": {
+        "x": 64,
+        "y": 72,
+        "width": 952,
+        "height": 936
+      },
+      "anchor": {
+        "top": 112,
+        "upper_mid": 420,
+        "lower_mid": 660,
+        "bottom": 968,
+        "left": 64,
+        "center": 540,
+        "right": 1016
+      },
+      "copy_max_width": 952,
+      "hook_size": 76,
+      "badge": {
+        "right": 1016,
+        "top": 112
+      },
+      "scrim_top": {
+        "x": 0,
+        "y": 72,
+        "width": 1080,
+        "height": 200
+      },
+      "scrim_bottom": {
+        "x": 0,
+        "y": 748,
+        "width": 1080,
+        "height": 260
+      }
+    }
+  },
+  "type": {
+    "display": {
+      "size": 132,
+      "min": 132,
+      "face": "paperlogy",
+      "weight": 800,
+      "tracking": 0.04,
+      "line_height": 1,
+      "chars": 6
+    },
+    "headline": {
+      "size": 96,
+      "min": 96,
+      "face": "paperlogy",
+      "weight": 800,
+      "tracking": -0.02,
+      "line_height": 1.1,
+      "chars": 8
+    },
+    "hook": {
+      "size": 84,
+      "min": 72,
+      "face": "paperlogy",
+      "weight": 800,
+      "tracking": -0.02,
+      "line_height": 1.15,
+      "chars": 9
+    },
+    "title": {
+      "size": 72,
+      "min": 64,
+      "face": "paperlogy",
+      "weight": 800,
+      "tracking": -0.02,
+      "line_height": 1.2,
+      "chars": 11
+    },
+    "body": {
+      "size": 56,
+      "min": 48,
+      "face": "pretendard",
+      "weight": 700,
+      "tracking": -0.01,
+      "line_height": 1.3,
+      "chars": 14
+    },
+    "caption": {
+      "size": 44,
+      "min": 40,
+      "face": "pretendard",
+      "weight": 600,
+      "tracking": 0,
+      "line_height": 1.3,
+      "chars": 18
+    },
+    "label": {
+      "size": 36,
+      "min": 34,
+      "face": "pretendard",
+      "weight": 600,
+      "tracking": 0.02,
+      "line_height": 1.2,
+      "chars": 22
+    },
+    "badge": {
+      "size": 36,
+      "min": 36,
+      "face": "pretendard",
+      "weight": 800,
+      "tracking": 0.02,
+      "line_height": 1,
+      "chars": 0
+    }
+  },
+  "color": {
+    "text_white": {
+      "hex": "#FFFFFF",
+      "alpha": 1
+    },
+    "text_muted": {
+      "hex": "#FFFFFF",
+      "alpha": 0.72
+    },
+    "stroke_dark": {
+      "hex": "#0B0B0B",
+      "alpha": 0.85
+    },
+    "badge_ad": {
+      "hex": "#111111",
+      "alpha": 0.8
+    }
+  },
+  "shadow": {
+    "text": {
+      "hex": "#000000",
+      "alpha": 0.55,
+      "blur": 12,
+      "dx": 0,
+      "dy": 4
+    }
+  },
+  "scrim": {
+    "top": {
+      "hex": "#000000",
+      "from": 0.45,
+      "to": 0
+    },
+    "bottom": {
+      "hex": "#000000",
+      "from": 0,
+      "to": 0.55
+    }
+  },
+  "accent": {
+    "coral": "#FF6B57",
+    "amber": "#FFB020",
+    "lime": "#9BD53A",
+    "teal": "#2BB8A6",
+    "blue": "#3D7BFF",
+    "violet": "#8A63FF",
+    "pink": "#FF6FB5"
+  },
+  "spacing": {
+    "pad_chip": {
+      "v": 16,
+      "h": 28
+    },
+    "gap_stack": 16,
+    "radius_chip": 12,
+    "stroke_text": 6,
+    "stroke_small": 4
+  },
+  "presets": {
+    "restaurant": {
+      "label": "음식점",
+      "hook": "fact",
+      "chips": ["위치", "가격", "메뉴"],
+      "cta": "place",
+      "accent": "coral",
+      "styles": {
+        "clean": 50,
+        "mark": 25,
+        "memo": 20,
+        "bold": 5
+      },
+      "cut_min_s": 2.5,
+      "cut_max_s": 4,
+      "rhythm": "cut",
+      "price_note": "",
+      "refuse": ""
+    },
+    "cafe": {
+      "label": "카페",
+      "hook": "space",
+      "chips": ["위치", "메뉴", "영업"],
+      "cta": "save",
+      "accent": "teal",
+      "styles": {
+        "clean": 45,
+        "memo": 30,
+        "bold": 15,
+        "mark": 10
+      },
+      "cut_min_s": 4,
+      "cut_max_s": 6,
+      "rhythm": "fade",
+      "price_note": "",
+      "refuse": ""
+    },
+    "stay": {
+      "label": "숙소·여행",
+      "hook": "location",
+      "chips": ["위치", "가격", "영업"],
+      "cta": "blog",
+      "accent": "blue",
+      "styles": {
+        "clean": 50,
+        "memo": 35,
+        "bold": 10,
+        "mark": 5
+      },
+      "cut_min_s": 4,
+      "cut_max_s": 6,
+      "rhythm": "fade",
+      "price_note": "1박 기준",
+      "refuse": ""
+    },
+    "beauty": {
+      "label": "뷰티",
+      "hook": "usage",
+      "chips": ["가격", "메뉴", "평점"],
+      "cta": "blog",
+      "accent": "pink",
+      "styles": {
+        "clean": 40,
+        "mark": 30,
+        "memo": 20,
+        "bold": 10
+      },
+      "cut_min_s": 2,
+      "cut_max_s": 3,
+      "rhythm": "cut",
+      "price_note": "",
+      "refuse": "efficacy"
+    },
+    "home": {
+      "label": "생활용품·가전",
+      "hook": "problem",
+      "chips": ["가격", "메뉴", "평점"],
+      "cta": "blog",
+      "accent": "amber",
+      "styles": {
+        "clean": 40,
+        "mark": 35,
+        "memo": 20,
+        "bold": 5
+      },
+      "cut_min_s": 3,
+      "cut_max_s": 4,
+      "rhythm": "cut",
+      "price_note": "",
+      "refuse": "specs"
+    }
+  },
+  "disclosure": {
+    "ad": "광고",
+    "sponsored": "협찬",
+    "provided": "제품 제공",
+    "paid": "소정의 원고료 지급",
+    "self": "내돈내산"
+  },
+  "cta": {
+    "blog": "자세한 후기는 블로그에",
+    "place": "위치는 프로필 정보 태그에서",
+    "save": "저장해두고 방문해보세요"
+  },
+  "facts": {
+    "labels": ["상호", "위치", "가격", "메뉴", "영업", "평점"],
+    "chips": ["위치", "가격", "메뉴", "영업", "평점"],
+    "minimum": {
+      "labels": ["상호", "위치", "가격", "메뉴"],
+      "count": 2
+    },
+    "prompts": {
+      "상호": "가게나 제품의 이름을 정확히 적어 주세요.",
+      "위치": "화면에 보여줄 위치를 적어 주세요. (예: 서울 연남동)",
+      "가격": "가격을 적어 주세요. (예: 9,900원)",
+      "메뉴": "대표 메뉴나 제품 이름을 적어 주세요.",
+      "영업": "영업시간이나 휴무를 적어 주세요.",
+      "평점": "직접 남긴 평점이 있으면 적어 주세요."
+    },
+    "defaults": {
+      "chips": ["위치", "가격", "메뉴"],
+      "cta": "blog"
+    }
+  },
+  "faces": {
+    "pretendard": "Pretendard Variable",
+    "paperlogy": "Paperlogy",
+    "jua": "Jua",
+    "nanummyeongjo": "NanumMyeongjo"
+  },
+  "voice": {
+    "banned": ["ㅋㅋ", "ㄹㅇ", "최고", "역대급"]
+  },
+  "motion": {
+    "in_ms": 180,
+    "in_dy": 12,
+    "out_ms": 120,
+    "ease": [0.22, 1, 0.36, 1]
+  },
+  "timing": {
+    "sub_min_base_ms": 900,
+    "sub_min_per_char_ms": 90,
+    "cut_min_s": 1.2,
+    "cut_max_s": 6,
+    "cut_max_food_s": 4,
+    "badge_min_head_s": 3,
+    "badge_min_tail_s": 3,
+    "chip_min_s": 2,
+    "copy_lead_ms": 120,
+    "sub_extend_ms": 240,
+    "sub_occupancy_min": 0.6,
+    "intro_default_s": 2.5,
+    "outro_default_s": 3
+  },
+  "transition": {
+    "default": "cut",
+    "fade_ms": 200,
+    "black_ms": 300,
+    "fade_ratio_max": 0.4
+  },
+  "playback": {
+    "rates_permille": [500, 750, 1000, 1250, 1500, 2000],
+    "unit_permille": 1000,
+    "output_fps": 30
+  },
+  "copy": {
+    "max_per_cut": 2,
+    "second_min_cut_s": 4,
+    "second_max_chars": 16
+  },
+  "audio": {
+    "loudnorm": {
+      "i": -16,
+      "tp": -1.5,
+      "lra": 11
+    },
+    "crossfade_ms": 60,
+    "hook_dip_db": -6
+  },
+  "luma": {
+    "scrim_threshold": 0.6,
+    "sigma_threshold": 0.25,
+    "contrast_min": 4.5
+  },
+  "rapid": {
+    "min_ms": 300,
+    "max_ms": 1000,
+    "short_ms": 300,
+    "medium_ms": 500,
+    "long_ms": 800,
+    "short_chars": 3,
+    "target_chars": 9,
+    "max_chars": 14,
+    "max_per_cut": 24
+  },
+  "rule": {
+    "hair": {
+      "w": 520,
+      "h": 2,
+      "alpha": 0.55
+    },
+    "bar": {
+      "w": 160,
+      "h": 6,
+      "alpha": 1
+    }
+  },
+  "regions": {
+    "intro": {
+      "a": {
+        "slots": [
+          {
+            "type": "headline",
+            "y": 940,
+            "fill": "text_white",
+            "stroke": "text",
+            "shadow": "text"
+          },
+          {
+            "type": "label",
+            "y": 1020,
+            "fill": "text_muted",
+            "stroke": "small",
+            "shadow": "text",
+            "tracking": 0.02
+          }
+        ],
+        "rules": []
+      },
+      "b": {
+        "slots": [
+          {
+            "type": "hook",
+            "y": 960,
+            "fill": "text_white",
+            "stroke": "none",
+            "shadow": "text"
+          },
+          {
+            "type": "label",
+            "y": 1090,
+            "fill": "text_muted",
+            "stroke": "none",
+            "shadow": "text",
+            "tracking": 0.02
+          }
+        ],
+        "rules": [
+          {
+            "kind": "hair",
+            "y": 846
+          },
+          {
+            "kind": "hair",
+            "y": 1010
+          }
+        ]
+      }
+    },
+    "outro": {
+      "b": {
+        "slots": [
+          {
+            "type": "hook",
+            "y": 900,
+            "fill": "text_white",
+            "stroke": "none",
+            "shadow": "text"
+          },
+          {
+            "type": "body",
+            "y": 1040,
+            "fill": "text_white",
+            "stroke": "small",
+            "shadow": "text"
+          }
+        ],
+        "rules": [
+          {
+            "kind": "hair",
+            "y": 950
+          }
+        ]
+      },
+      "e": {
+        "slots": [
+          {
+            "type": "label",
+            "y": 836,
+            "fill": "text_muted",
+            "stroke": "small",
+            "shadow": "text",
+            "tracking": 0.08
+          },
+          {
+            "type": "display",
+            "y": 980,
+            "fill": "text_white",
+            "stroke": "text",
+            "shadow": "text",
+            "tracking": 0.04
+          },
+          {
+            "type": "caption",
+            "y": 1110,
+            "fill": "text_white",
+            "stroke": "small",
+            "shadow": "text",
+            "alpha": 0.8
+          }
+        ],
+        "rules": [
+          {
+            "kind": "bar",
+            "y": 1030
+          }
+        ]
+      }
+    },
+    "caption": {
+      "bold": {
+        "type": "title",
+        "plate": "",
+        "lines": 2,
+        "chars": 11,
+        "anchor": "upper_mid",
+        "anchor_alt": "lower_mid",
+        "align": "center",
+        "padding": {
+          "v": 0,
+          "h": 0
+        },
+        "pad_left": 0,
+        "bar": false,
+        "dot": false,
+        "stroke": "text",
+        "shadow": "text",
+        "highlight": false
+      },
+      "keynote": {
+        "type": "hook",
+        "plate": "",
+        "lines": 2,
+        "chars": 9,
+        "anchor": "upper_mid",
+        "anchor_alt": "lower_mid",
+        "align": "center",
+        "padding": {
+          "v": 0,
+          "h": 0
+        },
+        "pad_left": 0,
+        "bar": false,
+        "dot": false,
+        "stroke": "",
+        "shadow": "text",
+        "highlight": false
+      },
+      "film": {
+        "type": "title",
+        "plate": "",
+        "lines": 2,
+        "chars": 11,
+        "anchor": "upper_mid",
+        "anchor_alt": "lower_mid",
+        "align": "center",
+        "padding": {
+          "v": 0,
+          "h": 0
+        },
+        "pad_left": 0,
+        "bar": false,
+        "dot": false,
+        "stroke": "",
+        "shadow": "text",
+        "highlight": false
+      },
+      "word-pop": {
+        "type": "title",
+        "plate": "",
+        "lines": 2,
+        "chars": 11,
+        "anchor": "upper_mid",
+        "anchor_alt": "lower_mid",
+        "align": "center",
+        "padding": {
+          "v": 0,
+          "h": 0
+        },
+        "pad_left": 0,
+        "bar": false,
+        "dot": false,
+        "stroke": "text",
+        "shadow": "",
+        "highlight": false
+      },
+      "blur-in": {
+        "type": "hook",
+        "plate": "",
+        "lines": 2,
+        "chars": 9,
+        "anchor": "upper_mid",
+        "anchor_alt": "lower_mid",
+        "align": "center",
+        "padding": {
+          "v": 0,
+          "h": 0
+        },
+        "pad_left": 0,
+        "bar": false,
+        "dot": false,
+        "stroke": "",
+        "shadow": "text",
+        "highlight": false
+      },
+      "ambient": {
+        "type": "title",
+        "plate": "",
+        "lines": 2,
+        "chars": 11,
+        "anchor": "upper_mid",
+        "anchor_alt": "lower_mid",
+        "align": "center",
+        "padding": {
+          "v": 0,
+          "h": 0
+        },
+        "pad_left": 0,
+        "bar": false,
+        "dot": false,
+        "stroke": "",
+        "shadow": "text",
+        "highlight": false
+      },
+      "neon": {
+        "type": "hook",
+        "plate": "",
+        "lines": 2,
+        "chars": 9,
+        "anchor": "upper_mid",
+        "anchor_alt": "lower_mid",
+        "align": "center",
+        "padding": {
+          "v": 0,
+          "h": 0
+        },
+        "pad_left": 0,
+        "bar": false,
+        "dot": false,
+        "stroke": "",
+        "shadow": "",
+        "highlight": false
+      },
+      "iridescent": {
+        "type": "hook",
+        "plate": "",
+        "lines": 2,
+        "chars": 9,
+        "anchor": "upper_mid",
+        "anchor_alt": "lower_mid",
+        "align": "center",
+        "padding": {
+          "v": 0,
+          "h": 0
+        },
+        "pad_left": 0,
+        "bar": false,
+        "dot": false,
+        "stroke": "small",
+        "shadow": "",
+        "highlight": false
+      },
+      "glitch": {
+        "type": "hook",
+        "plate": "",
+        "lines": 2,
+        "chars": 9,
+        "anchor": "upper_mid",
+        "anchor_alt": "lower_mid",
+        "align": "center",
+        "padding": {
+          "v": 0,
+          "h": 0
+        },
+        "pad_left": 0,
+        "bar": false,
+        "dot": false,
+        "stroke": "",
+        "shadow": "",
+        "highlight": false
+      },
+      "ember": {
+        "type": "hook",
+        "plate": "",
+        "lines": 2,
+        "chars": 9,
+        "anchor": "upper_mid",
+        "anchor_alt": "lower_mid",
+        "align": "center",
+        "padding": {
+          "v": 0,
+          "h": 0
+        },
+        "pad_left": 0,
+        "bar": false,
+        "dot": false,
+        "stroke": "text",
+        "shadow": "",
+        "highlight": false
+      },
+      "stack": {
+        "type": "title",
+        "plate": "",
+        "lines": 2,
+        "chars": 11,
+        "anchor": "upper_mid",
+        "anchor_alt": "lower_mid",
+        "align": "center",
+        "padding": {
+          "v": 0,
+          "h": 0
+        },
+        "pad_left": 0,
+        "bar": false,
+        "dot": false,
+        "stroke": "",
+        "shadow": "",
+        "highlight": false
+      },
+      "outline": {
+        "type": "hook",
+        "plate": "",
+        "lines": 2,
+        "chars": 9,
+        "anchor": "upper_mid",
+        "anchor_alt": "lower_mid",
+        "align": "center",
+        "padding": {
+          "v": 0,
+          "h": 0
+        },
+        "pad_left": 0,
+        "bar": false,
+        "dot": false,
+        "stroke": "small",
+        "shadow": "",
+        "highlight": false
+      },
+      "pop": {
+        "type": "hook",
+        "plate": "",
+        "lines": 2,
+        "chars": 9,
+        "anchor": "upper_mid",
+        "anchor_alt": "lower_mid",
+        "align": "center",
+        "padding": {
+          "v": 0,
+          "h": 0
+        },
+        "pad_left": 0,
+        "bar": false,
+        "dot": false,
+        "stroke": "text",
+        "shadow": "",
+        "highlight": false
+      },
+      "sticker": {
+        "type": "title",
+        "plate": "",
+        "lines": 2,
+        "chars": 11,
+        "anchor": "upper_mid",
+        "anchor_alt": "lower_mid",
+        "align": "center",
+        "padding": {
+          "v": 0,
+          "h": 0
+        },
+        "pad_left": 0,
+        "bar": false,
+        "dot": false,
+        "stroke": "",
+        "shadow": "",
+        "highlight": false
+      },
+      "bubble": {
+        "type": "title",
+        "plate": "",
+        "lines": 2,
+        "chars": 11,
+        "anchor": "upper_mid",
+        "anchor_alt": "lower_mid",
+        "align": "center",
+        "padding": {
+          "v": 0,
+          "h": 0
+        },
+        "pad_left": 0,
+        "bar": false,
+        "dot": false,
+        "stroke": "",
+        "shadow": "",
+        "highlight": false
+      },
+      "serif": {
+        "type": "hook",
+        "plate": "",
+        "lines": 2,
+        "chars": 9,
+        "anchor": "upper_mid",
+        "anchor_alt": "lower_mid",
+        "align": "center",
+        "padding": {
+          "v": 0,
+          "h": 0
+        },
+        "pad_left": 0,
+        "bar": false,
+        "dot": false,
+        "stroke": "",
+        "shadow": "text",
+        "highlight": false
+      }
+    }
+  },
+  "information": {
+    "label_tracking": 0.08
+  }
+}

@@ -7,7 +7,6 @@ import (
 
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/composition"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 func TestLegacyPortablePlanPreservesTextAndCardAbsence(t *testing.T) {
@@ -18,7 +17,7 @@ func TestLegacyPortablePlanPreservesTextAndCardAbsence(t *testing.T) {
 	}
 	plan.Cuts[0].Copies[0].Text = "정확한 <한글> & 🥣"
 	r := clip.Recipe{Accent: "teal"}
-	portable, err := clip.FreezeLegacyPlan(p, plan, r, config.ClipCompositionLimits())
+	portable, err := clip.FreezeLegacyPlan(p, plan, r, clip.DefaultCompositionLimits())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,10 +70,10 @@ func TestLegacyCardsBecomeExplicitWithoutSharedDisclosure(t *testing.T) {
 	if strings.Contains(body, "협찬") || strings.Contains(body, "legacy-disclosure") {
 		t.Fatal("shared template copied campaign", body)
 	}
-	if _, e := composition.Parse(body, config.ClipCompositionLimits()); e != nil {
+	if _, e := composition.Parse(body, clip.DefaultCompositionLimits()); e != nil {
 		t.Fatal("invalid legacy template source", e, body)
 	}
-	portable, err := clip.FreezeLegacyPlan(p, plan, r, config.ClipCompositionLimits())
+	portable, err := clip.FreezeLegacyPlan(p, plan, r, clip.DefaultCompositionLimits())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,7 +85,7 @@ func TestLegacyCardsBecomeExplicitWithoutSharedDisclosure(t *testing.T) {
 		t.Fatal(roles, portable)
 	}
 	p.HideDisclosure = true
-	hidden, err := clip.FreezeLegacyPlan(p, plan, r, config.ClipCompositionLimits())
+	hidden, err := clip.FreezeLegacyPlan(p, plan, r, clip.DefaultCompositionLimits())
 	if err != nil {
 		t.Fatal(err)
 	}

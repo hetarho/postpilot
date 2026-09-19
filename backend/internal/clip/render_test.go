@@ -8,7 +8,6 @@ import (
 
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/design"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 func validPlan() (clip.EditPlan, []clip.RenderSource) {
@@ -22,7 +21,7 @@ func validPlan() (clip.EditPlan, []clip.RenderSource) {
 	return clip.EditPlan{Ratio: "vertical", DurationMS: 15000, Cuts: []clip.EditCut{c, d}}, []clip.RenderSource{s}
 }
 func TestValidateEditPlan(t *testing.T) {
-	cfg := config.ClipRender(&config.Config{})
+	cfg := clip.DefaultRenderConfig(clip.Environment{})
 	p, s := validPlan()
 	if err := clip.ValidateEditPlan(cfg, p, s); err != nil {
 		t.Fatal(err)
@@ -53,7 +52,7 @@ func TestValidateEditPlan(t *testing.T) {
 // CDS-20 and CDS-23..26 bound the lines and characters per style, and CDS-41 the
 // exposure a copy of that length earns. Each case names the code it must return.
 func TestCopyLimitsAndExposurePerStyle(t *testing.T) {
-	cfg := config.ClipRender(&config.Config{})
+	cfg := clip.DefaultRenderConfig(clip.Environment{})
 	for name, tc := range map[string]struct {
 		style, text string
 		start, end  int
@@ -172,7 +171,7 @@ func TestOriginalVolumeDefaultsAndExplicitMute(t *testing.T) {
 // The plan's duration is the footage it selected less what its transitions
 // overlap — per cut, not one fade times the boundaries (CDS-36).
 func TestDurationArithmeticWithMixedTransitions(t *testing.T) {
-	cfg := config.ClipRender(&config.Config{})
+	cfg := clip.DefaultRenderConfig(clip.Environment{})
 	for name, transitions := range map[string][]int{
 		"every boundary hard":  {0, 0, 0},
 		"every boundary fades": {0, 200, 200},
@@ -211,7 +210,7 @@ func TestDurationArithmeticWithMixedTransitions(t *testing.T) {
 // CDS-43: a cut of 4 s or more may carry a description and then the number it
 // leads to, 120 ms apart and never together.
 func TestSecondCopyRules(t *testing.T) {
-	cfg := config.ClipRender(&config.Config{})
+	cfg := clip.DefaultRenderConfig(clip.Environment{})
 	// 7.6 s a cut, so both copies fit with room to spare.
 	twoCopies := func() (clip.EditPlan, []clip.RenderSource) {
 		p, s := validPlan()

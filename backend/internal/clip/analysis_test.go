@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/postpilot/backend/internal/clip"
-	"github.com/postpilot/backend/internal/platform/config"
+	"github.com/postpilot/backend/internal/clip/ai"
 )
 
 func analysisSource(id string, duration int) clip.AnalysisSource {
@@ -15,7 +15,7 @@ func analysisSegment(start, end int) clip.Segment {
 	return clip.Segment{StartMS: start, EndMS: end, Event: "음식을 접시에 담는다", Action: "젓가락으로 집는다", Motion: "static", Quality: "stable, in focus", Focal: clip.Point{X: .5, Y: .5}, Subject: clip.Region{X: .2, Y: .6, Width: .6, Height: .3}, Certainty: clip.CertaintyCertain, Usability: clip.UsabilityUsable}
 }
 func TestMergeAnalysesPinsCompleteManifestAndAbsoluteTime(t *testing.T) {
-	l := config.ClipAI(&config.Config{}).Analysis
+	l := ai.DefaultConfig(clip.Environment{}).Analysis
 	sources := []clip.AnalysisSource{analysisSource("one", 65000), analysisSource("two", 1000)}
 	chunks := []clip.ChunkAnalysis{
 		{SourceID: "one", Fingerprint: "fingerprint-one", Index: 0, DurationMS: 60000, Segments: []clip.Segment{analysisSegment(0, 60000)}},
@@ -83,7 +83,7 @@ func TestMergeAnalysesPinsCompleteManifestAndAbsoluteTime(t *testing.T) {
 // Black, obscured and unknowable footage is RECORDED with its exact span; only
 // its quality reason carries meaning, and a v2 chunk still has to be complete.
 func TestUnknowableSpansAreRecordedWithoutInventedDescription(t *testing.T) {
-	l := config.ClipAI(&config.Config{}).Analysis
+	l := ai.DefaultConfig(clip.Environment{}).Analysis
 	unknown := analysisSegment(0, 5000)
 	unknown.Event, unknown.Action, unknown.Motion, unknown.Subjects = "", "", "", nil
 	unknown.Certainty, unknown.Usability = clip.CertaintyUnknown, clip.UsabilityUnusable

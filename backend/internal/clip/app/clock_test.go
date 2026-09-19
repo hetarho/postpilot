@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/postpilot/backend/internal/clip"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 // clockStore records the template the service inserts; nothing else is read.
@@ -28,7 +27,7 @@ type clockFinalizer struct{ clip.ProjectFinalizer }
 // project service stores comes from `now`, so a test can hold time still.
 func TestServiceStampsTemplatesFromItsClock(t *testing.T) {
 	store := &clockStore{}
-	s := NewService(store, config.ClipLimits(), NewSourceService(store, clockObjects{}, config.ClipSourceLimits(6*time.Hour, 10*time.Minute)), clockFinalizer{})
+	s := NewService(store, clip.DefaultLimits(), NewSourceService(store, clockObjects{}, clip.DefaultSourceLimits(clip.Environment{SourceBatchTTL: 6 * time.Hour, PutTTL: 10 * time.Minute})), clockFinalizer{})
 	frozen := time.Date(2026, 9, 19, 12, 0, 0, 0, time.UTC)
 	s.now = func() time.Time { return frozen }
 	created, err := s.CreateTemplate(context.Background(), "alice", clip.Recipe{Name: "여행", Preset: "stay"})

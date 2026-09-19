@@ -5,14 +5,14 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/ai"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 func TestWriterIsToldEachDeclaredTextMaximum(t *testing.T) {
 	in := nativeInput()
 	setNativeBody(&in, `<clip version="1" intro="a" caption="bold" outro="e"><text id="line" kind="ai" role="caption" basis="whole" chars="7">관찰</text><text id="pair" kind="ai" role="info" position="bottom" basis="whole"><row role="label">위치</row><row role="caption" chars="5">관찰</row></text><text id="free" kind="ai" role="caption" basis="whole">관찰</text><text id="opening" kind="fixed" role="hook" basis="output-start"><row>주제</row><row>부제</row></text><text id="closing" kind="fixed" role="ending" basis="output-end"><row>라벨</row><row>점수</row><row>마무리</row></text></clip>`)
-	_, user := ai.BuildPlanPrompt(in, 200, config.ClipCompositionLimits())
+	_, user := ai.BuildPlanPrompt(in, 200, clip.DefaultCompositionLimits())
 	var payload struct {
 		Limits []struct {
 			Element string `json:"element_id"`

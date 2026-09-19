@@ -12,7 +12,6 @@ import (
 	clipapp "github.com/postpilot/backend/internal/clip/app"
 
 	"github.com/postpilot/backend/internal/clip"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 type sourceObjects struct {
@@ -81,20 +80,20 @@ func manifest(count int) []clip.SourceMetadata {
 func TestSourceManifestLimits(t *testing.T) {
 	s, store, _ := setup(t)
 	_, p := create(t, s)
-	src := clipapp.NewSourceService(store, fakeSources(), config.ClipSourceLimits(6*time.Hour, 10*time.Minute))
+	src := clipapp.NewSourceService(store, fakeSources(), clip.DefaultSourceLimits(clip.Environment{SourceBatchTTL: 6 * time.Hour, PutTTL: 10 * time.Minute}))
 	tests := map[string]func() []clip.SourceMetadata{
 		"none":      func() []clip.SourceMetadata { return nil },
 		"count":     func() []clip.SourceMetadata { return manifest(21) },
 		"duplicate": func() []clip.SourceMetadata { v := manifest(2); v[1].Fingerprint = v[0].Fingerprint; return v },
 		"aggregate duration": func() []clip.SourceMetadata {
 			v := manifest(2)
-			v[0].DurationMS = config.ClipSourceDurationMS
+			v[0].DurationMS = clip.SourceDurationMS
 			return v
 		},
 		"aggregate bytes": func() []clip.SourceMetadata {
 			v := manifest(5)
 			for i := range v {
-				v[i].Bytes = config.ClipSourceFileBytes
+				v[i].Bytes = clip.SourceFileBytes
 			}
 			return v
 		},
@@ -103,9 +102,9 @@ func TestSourceManifestLimits(t *testing.T) {
 		"fingerprint":           func(v *clip.SourceMetadata) { v.Fingerprint = "" },
 		"malformed fingerprint": func(v *clip.SourceMetadata) { v.Fingerprint = strings.Repeat("z", 64) },
 		"zero bytes":            func(v *clip.SourceMetadata) { v.Bytes = 0 },
-		"file bytes":            func(v *clip.SourceMetadata) { v.Bytes = config.ClipSourceFileBytes + 1 },
+		"file bytes":            func(v *clip.SourceMetadata) { v.Bytes = clip.SourceFileBytes + 1 },
 		"zero duration":         func(v *clip.SourceMetadata) { v.DurationMS = 0 },
-		"duration":              func(v *clip.SourceMetadata) { v.DurationMS = config.ClipSourceDurationMS + 1 },
+		"duration":              func(v *clip.SourceMetadata) { v.DurationMS = clip.SourceDurationMS + 1 },
 		"width":                 func(v *clip.SourceMetadata) { v.Width = 0 },
 		"height":                func(v *clip.SourceMetadata) { v.Height = -1 },
 		"extension":             func(v *clip.SourceMetadata) { v.Filename = "video.avi" },
@@ -126,13 +125,13 @@ func TestSourceManifestLimits(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	for ext, types := range config.ClipSourceLimits(6*time.Hour, 10*time.Minute).Containers {
+	for ext, types := range clip.DefaultSourceLimits(clip.Environment{SourceBatchTTL: 6 * time.Hour, PutTTL: 10 * time.Minute}).Containers {
 		for _, mime := range types {
 			v := manifest(1)
 			v[0].Filename = "VIDEO." + strings.ToUpper(ext)
 			v[0].ContentType = mime
-			v[0].Bytes = config.ClipSourceFileBytes
-			v[0].DurationMS = config.ClipSourceDurationMS
+			v[0].Bytes = clip.SourceFileBytes
+			v[0].DurationMS = clip.SourceDurationMS
 			if _, err := src.Create(context.Background(), "alice", p.ID, v); err != nil {
 				t.Fatal(ext, mime, err)
 			}
@@ -140,8 +139,8 @@ func TestSourceManifestLimits(t *testing.T) {
 	}
 	v := manifest(4)
 	for i := range v {
-		v[i].Bytes = config.ClipSourceFileBytes
-		v[i].DurationMS = config.ClipSourceDurationMS / 4
+		v[i].Bytes = clip.SourceFileBytes
+		v[i].DurationMS = clip.SourceDurationMS / 4
 	}
 	if _, err := src.Create(context.Background(), "alice", p.ID, v); err != nil {
 		t.Fatal(err)
@@ -151,7 +150,7 @@ func TestSourceOwnedCreateConfirmReplaceAndDiscard(t *testing.T) {
 	s, store, _ := setup(t)
 	_, p := create(t, s)
 	objects := fakeSources()
-	src := clipapp.NewSourceService(store, objects, config.ClipSourceLimits(6*time.Hour, 10*time.Minute))
+	src := clipapp.NewSourceService(store, objects, clip.DefaultSourceLimits(clip.Environment{SourceBatchTTL: 6 * time.Hour, PutTTL: 10 * time.Minute}))
 	ctx := context.Background()
 	for _, project := range []string{p.ID, "unknown"} {
 		if _, err := src.Create(ctx, "bob", project, manifest(1)); !errors.Is(err, clip.ErrNotFound) {
@@ -214,7 +213,7 @@ func TestSourceMismatchAndPartialCleanupRemainRetryable(t *testing.T) {
 			s, store, _ := setup(t)
 			_, p := create(t, s)
 			objects := fakeSources()
-			src := clipapp.NewSourceService(store, objects, config.ClipSourceLimits(6*time.Hour, 10*time.Minute))
+			src := clipapp.NewSourceService(store, objects, clip.DefaultSourceLimits(clip.Environment{SourceBatchTTL: 6 * time.Hour, PutTTL: 10 * time.Minute}))
 			ctx := context.Background()
 			u, err := src.Create(ctx, "alice", p.ID, manifest(2))
 			if err != nil {
@@ -351,7 +350,7 @@ func TestSourceBootSweepAndSigningFailure(t *testing.T) {
 	s, store, d := setup(t)
 	_, p := create(t, s)
 	objects := fakeSources()
-	src := clipapp.NewSourceService(store, objects, config.ClipSourceLimits(6*time.Hour, 10*time.Minute))
+	src := clipapp.NewSourceService(store, objects, clip.DefaultSourceLimits(clip.Environment{SourceBatchTTL: 6 * time.Hour, PutTTL: 10 * time.Minute}))
 	ctx := context.Background()
 	objects.signFails = true
 	if _, err := src.Create(ctx, "alice", p.ID, manifest(1)); err == nil {
@@ -390,7 +389,7 @@ func TestSourceBootSweepAndSigningFailure(t *testing.T) {
 func TestSourceSchemaStoresMetadataOnlyAndNoSignedURLs(t *testing.T) {
 	s, store, d := setup(t)
 	_, p := create(t, s)
-	src := clipapp.NewSourceService(store, fakeSources(), config.ClipSourceLimits(6*time.Hour, 10*time.Minute))
+	src := clipapp.NewSourceService(store, fakeSources(), clip.DefaultSourceLimits(clip.Environment{SourceBatchTTL: 6 * time.Hour, PutTTL: 10 * time.Minute}))
 	if _, err := src.Create(context.Background(), "alice", p.ID, manifest(1)); err != nil {
 		t.Fatal(err)
 	}

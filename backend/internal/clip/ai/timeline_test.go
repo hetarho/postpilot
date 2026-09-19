@@ -10,7 +10,6 @@ import (
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/design"
 	"github.com/postpilot/backend/internal/llm"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 // Reproduce the timing shape of the failed owner-authorized live composition.
@@ -87,7 +86,7 @@ func assertExecutableTimeline(t *testing.T, in clip.PlanningInput, got clip.Edit
 		sources = append(sources, a.Source.RenderSource)
 	}
 	// The production renderer's unmodified strict validator remains authority.
-	if err := clip.ValidateEditPlan(config.ClipRender(&config.Config{}), got, sources); err != nil {
+	if err := clip.ValidateEditPlan(clip.DefaultRenderConfig(clip.Environment{}), got, sources); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -544,8 +543,8 @@ func TestPlanUnderTheLengthFloorFailsAsInsufficientFootage(t *testing.T) {
 		observed int
 		ok       bool
 	}{
-		{"just under the floor", config.ClipMinDurationMS - 1000, false},
-		{"exactly at the floor", config.ClipMinDurationMS, true},
+		{"just under the floor", clip.MinDurationMS - 1000, false},
+		{"exactly at the floor", clip.MinDurationMS, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			in := planningInput()
@@ -579,7 +578,7 @@ func TestPlanUnderTheLengthFloorFailsAsInsufficientFootage(t *testing.T) {
 				t.Fatalf("wrong cause below the floor: %v", err)
 			}
 			d, ok := clip.DiagnosticFromError(err)
-			if !ok || d.Check != "plan_length_floor" || d.Values["min_ms"] != config.ClipMinDurationMS || d.Values["after_ms"] != tc.observed {
+			if !ok || d.Check != "plan_length_floor" || d.Values["min_ms"] != clip.MinDurationMS || d.Values["after_ms"] != tc.observed {
 				t.Fatalf("lost the shortfall measurements: %+v", d)
 			}
 			// CLIP-85: the validated ranges stay inspectable after the refusal.

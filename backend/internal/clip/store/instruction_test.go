@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/postpilot/backend/internal/clip"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 // The instruction belongs to the project (CLIP-1, CLIP-121): it round-trips
@@ -16,7 +15,7 @@ import (
 func TestProjectInstructionRoundTripsAndIsBounded(t *testing.T) {
 	service, _, _ := setup(t)
 	template, _ := create(t, service)
-	limit := config.ClipInstructionChars
+	limit := clip.InstructionChars
 	p, err := service.CreateProject(t.Context(), "alice", clip.ProjectInput{Title: "instruction", Language: "ko", VideoTemplateID: template.ID, Ratio: "vertical", TargetDurationMS: 15000})
 	if err != nil {
 		t.Fatal(err)

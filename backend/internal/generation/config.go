@@ -1,6 +1,6 @@
 package generation
 
-import "github.com/postpilot/backend/internal/platform/config"
+import "github.com/postpilot/backend/internal/post"
 
 const (
 	BadOutputErrorHeadChars     = 200
@@ -13,7 +13,7 @@ const (
 // never saved with one reads as. Three decode sites, one rule.
 func resolveTagCount(n int) int {
 	if n <= 0 {
-		return config.PostTagCountDefault
+		return post.TagCountRange.Default
 	}
 	return n
 }

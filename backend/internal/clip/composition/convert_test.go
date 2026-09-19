@@ -5,12 +5,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/composition"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 func TestLegacyRestaurantTemplateConvertsIntoFixedRegionsAndOneGuide(t *testing.T) {
-	l := config.ClipCompositionLimits()
+	l := clip.DefaultCompositionLimits()
 	body, err := os.ReadFile("testdata/legacy-restaurant.xml")
 	if err != nil {
 		t.Fatal(err)
@@ -64,7 +64,7 @@ func TestLegacyRestaurantTemplateConvertsIntoFixedRegionsAndOneGuide(t *testing.
 }
 
 func TestConversionRefusesOverlongCarriedGuideInsteadOfTruncating(t *testing.T) {
-	l := config.ClipCompositionLimits()
+	l := clip.DefaultCompositionLimits()
 	body := `<clip version="1" intro="b" caption="bold" outro="e"><scene id="s" scope="scene"><guide>` + strings.Repeat("가", l.GuideChars) + `</guide><text id="c" kind="ai" role="caption" basis="cut">설명</text></scene><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`
 	out, changed, problem := composition.ConvertLegacyTemplate(body, l)
 	if problem == nil || problem.Reason != "guide_limit" || problem.ElementID != "clip" || problem.Line != 1 || changed || out != body {
@@ -73,7 +73,7 @@ func TestConversionRefusesOverlongCarriedGuideInsteadOfTruncating(t *testing.T) 
 }
 
 func TestTemplateGrammarNamesTheRefusedConstruct(t *testing.T) {
-	l := config.ClipCompositionLimits()
+	l := clip.DefaultCompositionLimits()
 	skeleton := `<text id="empty-hook" kind="fixed" role="hook"/><text id="empty-ending" kind="fixed" role="ending"/>`
 	for _, c := range []struct{ body, reason, id string }{
 		{`<clip version="1" intro="b" caption="bold" outro="e"><scene id="footage" scope="scene"/>` + skeleton + `</clip>`, "unsupported_section", "footage"},

@@ -7,7 +7,6 @@ import (
 
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/composition"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 // narrationPlan is a two-cut flow of 7.5 s each with the narration written over
@@ -161,7 +160,7 @@ func TestVerifierHoldsTheNarrationToTheTimelineAndItsFacts(t *testing.T) {
 	)
 	layout := measuredDeclared(t, plan)
 	elements := layout.elements()
-	if err := clip.VerifyCompositionManifest(layout.plan, elements, config.ClipCompositionLimits()); err != nil {
+	if err := clip.VerifyCompositionManifest(layout.plan, elements, clip.DefaultCompositionLimits()); err != nil {
 		t.Fatal("a valid narration was refused", err)
 	}
 	problem := &composition.Problem{}
@@ -169,7 +168,7 @@ func TestVerifierHoldsTheNarrationToTheTimelineAndItsFacts(t *testing.T) {
 	overlapping := elements
 	overlapping[1].StartMS = overlapping[0].StartMS
 	layout.plan.Portable.Elements[1].Resolved.StartMS = overlapping[0].StartMS
-	err := clip.VerifyCompositionManifest(layout.plan, overlapping, config.ClipCompositionLimits())
+	err := clip.VerifyCompositionManifest(layout.plan, overlapping, clip.DefaultCompositionLimits())
 	if !errors.As(err, &problem) || problem.Reason != clip.NoticeCaptionOverlap {
 		t.Fatal("overlapping narration was rendered", err)
 	}
@@ -178,7 +177,7 @@ func TestVerifierHoldsTheNarrationToTheTimelineAndItsFacts(t *testing.T) {
 	outside := beyond.elements()
 	outside[0].EndMS = beyond.plan.DurationMS + 1
 	beyond.plan.Portable.Elements[0].Resolved.EndMS = outside[0].EndMS
-	err = clip.VerifyCompositionManifest(beyond.plan, outside, config.ClipCompositionLimits())
+	err = clip.VerifyCompositionManifest(beyond.plan, outside, clip.DefaultCompositionLimits())
 	if !errors.As(err, &problem) || problem.Reason != "interval_outside" {
 		t.Fatal("a caption past the end was rendered", err)
 	}

@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/composition"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 type corpusCase struct {
@@ -47,11 +47,11 @@ func corpus(t *testing.T) (composition.Limits, []corpusCase) {
 
 func TestOldStyleAttributesOnlyOpenForReading(t *testing.T) {
 	for _, body := range []string{`<clip version="1" styles="simple"><text id="text" kind="fixed" role="caption" basis="whole">원문</text></clip>`, `<clip version="1" intro="b" caption="bold" outro="e"><text id="text" kind="fixed" role="caption" style="simple" basis="whole">원문</text></clip>`} {
-		_, p := composition.Parse(body, config.ClipCompositionLimits())
+		_, p := composition.Parse(body, clip.DefaultCompositionLimits())
 		if p == nil || p.Reason != "unknown_attribute" {
 			t.Fatal(p)
 		}
-		d, p := composition.ReadStored(body, config.ClipCompositionLimits())
+		d, p := composition.ReadStored(body, clip.DefaultCompositionLimits())
 		if p != nil || d.Elements[0].Style != "auto" || d.Elements[0].Parts[0].Literal != "원문" {
 			t.Fatal(d, p)
 		}
@@ -139,8 +139,8 @@ func resolution(t *testing.T, out composition.Timeline) []map[string]any {
 }
 func TestSharedCorpus(t *testing.T) {
 	l, cases := corpus(t)
-	if l != config.ClipCompositionLimits() {
-		t.Fatalf("configuration differs from shared contract: %+v", config.ClipCompositionLimits())
+	if l != clip.DefaultCompositionLimits() {
+		t.Fatalf("configuration differs from shared contract: %+v", clip.DefaultCompositionLimits())
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -221,7 +221,7 @@ func TestSharedCorpus(t *testing.T) {
 	}
 }
 func TestSubtreeEditPreservesUntouchedSource(t *testing.T) {
-	l := config.ClipCompositionLimits()
+	l := clip.DefaultCompositionLimits()
 	source := " \n<clip version='1' intro=\"b\" caption=\"bold\" outro=\"e\">\n <guide>🧑‍🍳 keep &amp; spacing</guide>\n <text id='copy' kind='fixed' role='caption' basis='whole'>old</text>\n<text id=\"empty-hook\" kind=\"fixed\" role=\"hook\" basis=\"output-start\"/><text id=\"empty-ending\" kind=\"fixed\" role=\"ending\" basis=\"output-end\"/></clip>\n"
 	d, e := composition.Parse(source, l)
 	if e != nil {
@@ -257,7 +257,7 @@ func TestExactSecondsAndAutomaticShortCutRefusal(t *testing.T) {
 			t.Fatalf("%s = %d %v", c.s, v, ok)
 		}
 	}
-	l := config.ClipCompositionLimits()
+	l := clip.DefaultCompositionLimits()
 	d, e := composition.Parse(`<clip version="1" intro="b" caption="bold" outro="e"><scene id="s"><text id="c" kind="fixed" role="caption" basis="cut">x</text></scene><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`, l)
 	if e != nil {
 		t.Fatal(e)
@@ -272,7 +272,7 @@ func FuzzCompositionParser(f *testing.F) {
 	f.Add(`<clip version="1" intro="b" caption="bold" outro="e"><text id="x" kind="fixed" role="caption" basis="whole">한 &amp; 😀</text><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`)
 	f.Add(`<!DOCTYPE clip [<!ENTITY a SYSTEM "file:///secret">]>`)
 	f.Fuzz(func(t *testing.T, s string) {
-		d, e := composition.Parse(s, config.ClipCompositionLimits())
+		d, e := composition.Parse(s, clip.DefaultCompositionLimits())
 		if e != nil {
 			return
 		}
@@ -280,7 +280,7 @@ func FuzzCompositionParser(f *testing.F) {
 			t.Fatal("source changed")
 		}
 		serialized := composition.SerializeNode(d.Root)
-		again, e := composition.Parse(serialized, config.ClipCompositionLimits())
+		again, e := composition.Parse(serialized, clip.DefaultCompositionLimits())
 		if e == nil && composition.SerializeNode(again.Root) != serialized {
 			t.Fatal("unstable serializer")
 		}
@@ -288,7 +288,7 @@ func FuzzCompositionParser(f *testing.F) {
 }
 
 func TestQualifiedFieldEditAndUnlabelledGuide(t *testing.T) {
-	l := config.ClipCompositionLimits()
+	l := clip.DefaultCompositionLimits()
 	source := `<clip version="1" intro="b" caption="bold" outro="e"><guide>keep</guide><group id="a"><field id="price" label="A"/></group><group id="b"><field id="price" label="B"/></group><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`
 	d, e := composition.Parse(source, l)
 	if e != nil {
@@ -314,7 +314,7 @@ func TestQualifiedFieldEditAndUnlabelledGuide(t *testing.T) {
 // gives none however much prose describes it, a section bound to no group gives
 // one, and `scenes` repetition is bound to no item at all.
 func TestAdmittedSectionsCountTheAnswersNotTheProse(t *testing.T) {
-	l := config.ClipCompositionLimits()
+	l := clip.DefaultCompositionLimits()
 	body := `<clip version="1" intro="b" caption="bold" outro="e"><group id="menu"><field id="name" label="메뉴" required="true"/></group><group id="extra"><field id="note" label="메모"/></group><guide>두 묶음을 모두 길게 설명한다.</guide><scene id="opening" scope="scene"/><repeat for="menu"><scene id="dish" scope="item"/></repeat><repeat for="extra"><scene id="note" scope="item"/></repeat><repeat for="scenes"><scene id="loose" scope="scene"/></repeat><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`
 	d, p := composition.Parse(body, l)
 	if p != nil {

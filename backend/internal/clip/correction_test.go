@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/postpilot/backend/internal/clip"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 func correctionFixture(t *testing.T) (clip.Project, clip.CorrectionPlan) {
@@ -60,7 +59,7 @@ func legacyStoredPlan(p clip.EditPlan, styles []string) string {
 
 func TestCorrectionMutationsAndIntegerPersistence(t *testing.T) {
 	p, draft := correctionFixture(t)
-	cfg := config.ClipRender(&config.Config{})
+	cfg := clip.DefaultRenderConfig(clip.Environment{})
 	draft.Cuts[0], draft.Cuts[1] = draft.Cuts[1], draft.Cuts[0]
 	draft.Cuts[0].StartMS = 1000
 	draft.Cuts[0].EndMS = 20000
@@ -108,7 +107,7 @@ func TestCorrectionRejectsEveryInvalidMutationWithoutChangingInput(t *testing.T)
 			p, input := correctionFixture(t)
 			raw := p.EditPlan
 			mutate(&input)
-			_, err := clip.ApplyCorrection(config.ClipRender(&config.Config{}), p, input)
+			_, err := clip.ApplyCorrection(clip.DefaultRenderConfig(clip.Environment{}), p, input)
 			if !errors.Is(err, clip.ErrInvalid) && !errors.Is(err, clip.ErrCopyTooLong) {
 				t.Fatal(err)
 			}

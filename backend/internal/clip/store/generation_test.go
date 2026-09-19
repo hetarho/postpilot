@@ -23,7 +23,6 @@ import (
 	jobstore "github.com/postpilot/backend/internal/job/store"
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/plan"
-	"github.com/postpilot/backend/internal/platform/config"
 	"github.com/postpilot/backend/internal/platform/db"
 )
 
@@ -486,8 +485,8 @@ func generationSetup(t *testing.T) *generationHarness {
 	queue.Admit(queueAdmitter{admitter})
 	queue.AllowCancellation(clipCancellationForTest{})
 	guard := generationGuard{admitter, jobs}
-	cfg := clip.GenerationConfig{Media: clip.MediaConfig{Sources: config.ClipSourceLimits(6*time.Hour, 10*time.Minute), ChunkDurationMS: 60000, DurationToleranceMS: 1000}, Analysis: clip.AnalysisLimits{ChunkMS: 60000, MaxSources: 20, MaxSourceDurationMS: 1800000, MaxSegments: 60, MaxTextRunes: 2000, MaxSubjects: 20}, QuoteTTL: 5 * time.Minute, ReadTTL: time.Minute, CleanupTimeout: time.Second, OrphanMinAge: time.Hour}
-	cfg.Render = config.ClipRender(&config.Config{})
+	cfg := clip.GenerationConfig{Media: clip.MediaConfig{Sources: clip.DefaultSourceLimits(clip.Environment{SourceBatchTTL: 6 * time.Hour, PutTTL: 10 * time.Minute}), ChunkDurationMS: 60000, DurationToleranceMS: 1000}, Analysis: clip.AnalysisLimits{ChunkMS: 60000, MaxSources: 20, MaxSourceDurationMS: 1800000, MaxSegments: 60, MaxTextRunes: 2000, MaxSubjects: 20}, QuoteTTL: 5 * time.Minute, ReadTTL: time.Minute, CleanupTimeout: time.Second, OrphanMinAge: time.Hour}
+	cfg.Render = clip.DefaultRenderConfig(clip.Environment{})
 	cfg.Media.AnalysisMaxBytes, cfg.Media.PreparedMaxBytes, cfg.Media.WorkspaceMaxBytes = 8<<20, 512<<20, 8<<30
 	service := clipapp.NewGenerationService(st, projects, sources, objects, media, planner, renderer, generationJobs{queue, clipapp.NewJobs(queue, guard)}, cfg, generationDeps(generationFinisher{st}, &quotePricing{}, nil))
 	return &generationHarness{service, projects, st, d, sources, objects, media, planner, renderer, admitter, guard, queue, jobs, template, project, batch, cfg}

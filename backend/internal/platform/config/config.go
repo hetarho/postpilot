@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
-	"github.com/postpilot/backend/internal/llm"
 )
 
 // sessionTTL is how long a session stays valid after login. Fixed at 30 days by the
@@ -53,17 +52,6 @@ const maxVideoBytes int64 = 200 << 20 // 200 MiB
 // before it starts — grows with the photo count. Without a ceiling the worst case a hold
 // has to price is unbounded.
 const maxPhotosPerPost = 30
-
-// The per-post tag count (POST-63): what a post never saved with one reads as, and the
-// range SavePostGenerationOptions accepts. Exported and shared here rather than declared in
-// `internal/post` because `internal/generation` needs the default too — for a queued payload
-// or a write-experiment snapshot frozen before the member existed — and may not import post.
-// The frontend mirrors the three as POST_TAG_COUNT_DEFAULT / _MIN / _MAX.
-const (
-	PostTagCountDefault = 4
-	PostTagCountMin     = 1
-	PostTagCountMax     = 10
-)
 
 // llmStageTimeout bounds one provider call. Generation takes 30 s – 2 min and a long
 // draft can take longer on a slow model (PRD §6.6); the API is a long-lived container,
@@ -122,43 +110,6 @@ const WorkerConcurrency = 1
 // ExperimentCandidateConcurrency is the fixed pair width: one comparison has exactly
 // two candidates and both may call providers concurrently.
 const ExperimentCandidateConcurrency = 2
-
-// VoicePersonalizationConfig contains product thresholds for progressive learning.
-// They are deliberately code-owned: changing one changes product semantics, while no
-// interval exists because personalization never runs on a clock.
-type VoicePersonalizationConfig struct {
-	FewShotTargetCount        int
-	FewShotMax                int
-	FewShotExcerptTargetChars int
-	FewShotExcerptMaxChars    int
-	EmbeddingSwitchPosts      int
-	DiffMaxRules              int
-	DiffMinPatternEdits       int
-	RuleActivationEvidence    int
-	RuleRetireAfter           time.Duration
-	ValidationPostCount       int
-	EndingMaxConsecutive      int
-}
-
-// LLMReasoningPolicy is code-owned because changing a stage's reasoning strength
-// changes generation behavior rather than deployment topology. A model-level registry
-// override still wins.
-//
-// Analyze has no field on purpose: policy/providers.md requires it to send no effort, and
-// a request that carries no stage value already sends none (registry.go forwards only a
-// resolved effort). Adding the field back would be a second place for one rule to live,
-// which is how it previously came to be set, asserted, and forwarded nowhere.
-type LLMReasoningPolicy struct {
-	Observe llm.ReasoningEffort
-	Write   llm.ReasoningEffort
-}
-
-func defaultLLMReasoningPolicy() LLMReasoningPolicy {
-	return LLMReasoningPolicy{
-		Observe: llm.ReasoningLow,
-		Write:   llm.ReasoningLow,
-	}
-}
 
 // LLMCompletionBudget is what each stage asks the provider for, so the stages stop sharing
 // one constant. It is code-owned for the same reason the reasoning policy is: a stage's
@@ -225,16 +176,6 @@ func defaultLLMCompletionBudget(fallback, observeBatchSize int) LLMCompletionBud
 		WriteFloor:   fallback,
 		WritePerChar: writeBudgetPerChar,
 		Ceiling:      fallback * writeBudgetCeilingFactor,
-	}
-}
-
-func defaultVoicePersonalizationConfig() VoicePersonalizationConfig {
-	return VoicePersonalizationConfig{
-		FewShotTargetCount: 2, FewShotMax: 3,
-		FewShotExcerptTargetChars: 500, FewShotExcerptMaxChars: 800,
-		EmbeddingSwitchPosts: 50, DiffMaxRules: 3, DiffMinPatternEdits: 2,
-		RuleActivationEvidence: 3, RuleRetireAfter: 180 * 24 * time.Hour,
-		ValidationPostCount: 3, EndingMaxConsecutive: 2,
 	}
 }
 
@@ -347,8 +288,6 @@ type Config struct {
 	// LLMMaxTokensDefault is the completion cap when a caller sets none, and the ceiling
 	// every derived per-stage budget is bounded by.
 	LLMMaxTokensDefault int
-	// LLMReasoning supplies stage defaults; a per-(model, purpose) override takes precedence.
-	LLMReasoning LLMReasoningPolicy
 	// LLMCompletionBudget is the per-stage budget policy the generation context asks for.
 	LLMCompletionBudget LLMCompletionBudget
 	// ObserveBatchSize is the number of photos sent to one observation call.
@@ -358,10 +297,6 @@ type Config struct {
 	ExperimentContentRetention time.Duration
 	// ExperimentSweepInterval is how often terminal experiment content is purged.
 	ExperimentSweepInterval time.Duration
-	// VoicePersonalization is injected into the voice and generation contexts. It has
-	// no scheduler or sweep interval: all evaluation is request-time and user-initiated.
-	VoicePersonalization VoicePersonalizationConfig
-
 	// Publishing owns a separate durable queue because a browser-side external commit
 	// has lease and ambiguity semantics that generation jobs do not have (plan 12).
 	PublishPairingTTL          time.Duration
@@ -459,12 +394,10 @@ func Load() (*Config, error) {
 		// Relative to the working directory, like DB_PATH: `backend/config/providers.yaml`
 		// for a host run and `/app/config/providers.yaml` in the dev container. The
 		// production image sets an absolute path (Dockerfile).
-		ProvidersConfig:      getenv("PROVIDERS_CONFIG", "config/providers.yaml"),
-		CatalogTTL:           catalogTTL,
-		CatalogFetchTimeout:  catalogFetchTimeout,
-		LLMStageTimeout:      llmStageTimeout,
-		LLMReasoning:         defaultLLMReasoningPolicy(),
-		VoicePersonalization: defaultVoicePersonalizationConfig(),
+		ProvidersConfig:     getenv("PROVIDERS_CONFIG", "config/providers.yaml"),
+		CatalogTTL:          catalogTTL,
+		CatalogFetchTimeout: catalogFetchTimeout,
+		LLMStageTimeout:     llmStageTimeout,
 	}
 	cfg.R2PublicEndpoint = getenv("R2_PUBLIC_ENDPOINT", cfg.R2Endpoint)
 

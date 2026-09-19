@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/postpilot/backend/internal/platform/config"
+	"github.com/postpilot/backend/internal/post"
 )
 
 const ObservePrompt = `사진마다 파일명을 정확히 대응해 관찰 사실만 반환하세요. 추측하거나 이야기를 만들지 마세요.
@@ -193,7 +193,7 @@ func writeGuidelinesSection(out *strings.Builder, guidelines []string) {
 // consumers that explicitly request the established Korean contract. Runtime work uses
 // BuildWritePromptForLanguage with its frozen language.
 func BuildWritePrompt(profile Profile, observations []Observation, memo, title string, filenames []string, targetLength *int, template *TemplateBrief, guidelines []string) (string, string) {
-	return BuildWritePromptForLanguage(LanguageKorean, profile, observations, memo, title, filenames, nil, targetLength, config.PostTagCountDefault, template, guidelines)
+	return BuildWritePromptForLanguage(LanguageKorean, profile, observations, memo, title, filenames, nil, targetLength, post.TagCountRange.Default, template, guidelines)
 }
 
 // tagCount is the frozen per-post count (GEN-46); the sentence stays in the stable part

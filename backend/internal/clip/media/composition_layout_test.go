@@ -9,7 +9,6 @@ import (
 
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/composition"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 func measuredDeclared(t *testing.T, plan clip.EditPlan) declaredLayout {
@@ -176,7 +175,7 @@ func TestCentredPartsSitOnTheCanvasCentre(t *testing.T) {
 
 func declaredPlan(t *testing.T, body, ratio string) clip.EditPlan {
 	t.Helper()
-	limits := config.ClipCompositionLimits()
+	limits := clip.DefaultCompositionLimits()
 	// Frozen layout fixtures also cover compositions saved before design selection.
 	doc, problem := composition.ReadStored(body, limits)
 	if problem != nil {

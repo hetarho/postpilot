@@ -142,7 +142,7 @@ func releaseRequest[T any](h *releaseHarness, msg *T) *connect.Request[T] {
 // template grammar, not only the wider snapshot one. Checking it here keeps the
 // break inside `go test ./...` instead of the Docker gate beside the deploy.
 func TestReleaseDetailedBodyUsesCurrentGrammar(t *testing.T) {
-	doc, problem := composition.ParseTemplate(releaseDetailedBody(), config.ClipCompositionLimits())
+	doc, problem := composition.ParseTemplate(releaseDetailedBody(), clip.DefaultCompositionLimits())
 	if problem != nil {
 		t.Fatal(problem)
 	}
@@ -406,19 +406,19 @@ func newReleaseHarness(t *testing.T, mode string, stress bool, clocks ...func() 
 		"nanummyeongjo":     "/usr/share/postpilot-fonts/nanummyeongjo/NanumMyeongjo-Regular.ttf",
 		"nanummyeongjo-800": "/usr/share/postpilot-fonts/nanummyeongjo/NanumMyeongjo-ExtraBold.ttf",
 	}, ClipWorkStaleAge: time.Hour, ClipMediaTimeout: 15 * time.Minute, ClipSourceBatchTTL: 6 * time.Hour, PresignPutTTL: 10 * time.Minute, PresignGetTTL: time.Minute, ClipQuoteTTL: 5 * time.Minute, OrphanMinAge: time.Hour}
-	mcfg := config.ClipMedia(cfg)
+	mcfg := clip.DefaultMediaConfig(clipEnvironment(cfg))
 	runner := releaseRunner{ExecRunner: clipmedia.ExecRunner{StdoutLimit: mcfg.StdoutLimit, StderrLimit: mcfg.StderrLimit, WaitDelay: mcfg.WaitDelay}, metrics: metrics, root: cfg.ClipWorkRoot}
 	adapter, err := clipmedia.New(mcfg, runner)
 	if err != nil {
 		t.Fatal(err)
 	}
 	media := &releaseMedia{Adapter: adapter, metrics: metrics, root: cfg.ClipWorkRoot}
-	render, err := clipmedia.NewRenderer(adapter, config.ClipRender(cfg))
+	render, err := clipmedia.NewRenderer(adapter, clip.DefaultRenderConfig(clipEnvironment(cfg)))
 	if err != nil {
 		t.Fatal(err)
 	}
 	renderer := releaseRenderer{Rendering: render, metrics: metrics}
-	planner, err := clipai.New(clipModels{meteredRegistry{Registry: registry, ledger: ledger}}, renderer, config.ClipAI(cfg))
+	planner, err := clipai.New(clipModels{meteredRegistry{Registry: registry, ledger: ledger}}, renderer, clipai.DefaultConfig(clipEnvironment(cfg)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -440,9 +440,9 @@ func newReleaseHarness(t *testing.T, mode string, stress bool, clocks ...func() 
 		t.Cleanup(blob.Close)
 		objects.readBase = blob.URL
 	}
-	sources := clipapp.NewSourceService(st, objects, config.ClipSourceLimits(6*time.Hour, 10*time.Minute), clocks...)
+	sources := clipapp.NewSourceService(st, objects, clip.DefaultSourceLimits(clip.Environment{SourceBatchTTL: 6 * time.Hour, PutTTL: 10 * time.Minute}), clocks...)
 	bind := clipTxPorts(ledger, registry, authSvc)
-	projects := clipapp.NewService(st, config.ClipLimits(), sources, clipapp.NewFinalizer(d.Writer, bind, st, config.ClipRender(cfg), nil))
+	projects := clipapp.NewService(st, clip.DefaultLimits(), sources, clipapp.NewFinalizer(d.Writer, bind, st, clip.DefaultRenderConfig(clipEnvironment(cfg)), nil))
 	js := jobstore.New(d.Writer, d.Reader, jobKindsForTest())
 	q := job.New(js, 10*time.Millisecond, jobReportingForTest())
 	q.AllowCancellation(clipCancellation{})
@@ -453,7 +453,7 @@ func newReleaseHarness(t *testing.T, mode string, stress bool, clocks ...func() 
 	q.AllowCancellation(clipCancellation{})
 	clipGuard := releaseClipGuard{guard, admission}
 	finisher := &releaseFinisher{Finisher: clipapp.NewFinisher(d.Writer, bind, js, st, nil), mode: mode}
-	g := clipapp.NewGenerationService(st, projects, sources, objects, media, planner, renderer, clipapp.NewJobs(q, clipGuard), config.ClipGeneration(cfg), generationDeps(finisher, clipapp.NewPricing(registry, clipBudgets(config.ClipAI(cfg))), clipapp.NewAccounting(ledger)))
+	g := clipapp.NewGenerationService(st, projects, sources, objects, media, planner, renderer, clipapp.NewJobs(q, clipGuard), clip.DefaultGenerationConfig(clipEnvironment(cfg)), generationDeps(finisher, clipapp.NewPricing(registry, clipBudgets(clipai.DefaultConfig(clipEnvironment(cfg)))), clipapp.NewAccounting(ledger)))
 	var h *releaseHarness
 	if !strings.HasPrefix(mode, "restart ") {
 		q.Register(clip.JobKindGenerate, metered(func(ctx context.Context, j job.Job, p job.Progress) error {

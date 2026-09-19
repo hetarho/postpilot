@@ -9,7 +9,6 @@ import (
 	"github.com/postpilot/backend/internal/clip/ai"
 	"github.com/postpilot/backend/internal/clip/design"
 	"github.com/postpilot/backend/internal/llm"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 // The completion budgets are frozen into the credit hold before any provider
@@ -18,7 +17,7 @@ import (
 // segment and short_text, keyword, chips and hook to the plan: this measures the
 // worst case those bounds allow against the budgets they have to fit.
 func TestSchemaWorstCaseFitsTheCompletionBudgets(t *testing.T) {
-	cfg := config.ClipAI(&config.Config{})
+	cfg := ai.DefaultConfig(clip.Environment{})
 	long := strings.Repeat("한", 2000)
 	subjects := make([]string, cfg.Analysis.MaxSubjects)
 	for i := range subjects {

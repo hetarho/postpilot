@@ -14,7 +14,6 @@ import (
 
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/design"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 func renderConfig(t *testing.T) clip.RenderConfig {
@@ -22,9 +21,9 @@ func renderConfig(t *testing.T) clip.RenderConfig {
 	// Every face, from the same variables the image sets (CDS-17): the renderer
 	// refuses to start without all of them, so a config that names only some
 	// fails the constructor rather than any render.
-	return config.ClipRender(&config.Config{
-		ClipResvgPath: path("CLIP_RESVG_PATH", "/usr/local/bin/resvg"),
-		ClipFontPaths: map[string]string{
+	return clip.DefaultRenderConfig(clip.Environment{
+		ResvgPath: path("CLIP_RESVG_PATH", "/usr/local/bin/resvg"),
+		FontPaths: map[string]string{
 			"pretendard":        path("CLIP_FONT_PATH", "/usr/share/postpilot-fonts/pretendard/PretendardVariable.ttf"),
 			"paperlogy":         path("CLIP_FONT_PAPERLOGY_PATH", "/usr/share/postpilot-fonts/paperlogy/Paperlogy-8ExtraBold.ttf"),
 			"jua":               path("CLIP_FONT_JUA_PATH", "/usr/share/postpilot-fonts/jua/Jua-Regular.ttf"),

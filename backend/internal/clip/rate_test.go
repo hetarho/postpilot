@@ -8,7 +8,6 @@ import (
 
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/composition"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 // cadence30 is footage whose decoded frames agree with its declared 30 fps, so
@@ -88,7 +87,7 @@ func TestTransformedDurationIsExactAndSeparateFromSourceTime(t *testing.T) {
 }
 
 func TestFasterCutValidatesOnTheTransformedTimeline(t *testing.T) {
-	cfg := config.ClipRender(&config.Config{})
+	cfg := clip.DefaultRenderConfig(clip.Environment{})
 	_, plan := ratePlan(t, 2000)
 	refs := []clip.RenderSource{{ID: "a", Fingerprint: "fa", Info: cadence30(60000)}}
 	if plan.DurationMS != 10000 {
@@ -137,7 +136,7 @@ func TestSlowRateNeedsVerifiedOriginalCadence(t *testing.T) {
 		}
 	}
 	// The plan refuses the rate outright; it is never substituted by 1x.
-	cfg := config.ClipRender(&config.Config{})
+	cfg := clip.DefaultRenderConfig(clip.Environment{})
 	_, plan := ratePlan(t, 750)
 	err := clip.ValidateEditPlan(cfg, plan, []clip.RenderSource{{ID: "a", Fingerprint: "fa", Info: cadence30(60000)}})
 	if err == nil || plan.Cuts[0].Rate() != 750 {
@@ -255,7 +254,7 @@ func TestLegacyPlansReadAtOneTimesWithTheirOriginalAudioMeaning(t *testing.T) {
 }
 
 func TestLegacyOverlapSurvivesButCannotGrow(t *testing.T) {
-	cfg := config.ClipRender(&config.Config{})
+	cfg := clip.DefaultRenderConfig(clip.Environment{})
 	sources := []clip.SourceAnalysis{{Source: clip.AnalysisSource{RenderSource: clip.RenderSource{ID: "a", Fingerprint: "fa", Info: cadence30(60000)}, Filename: "a.mp4"}}}
 	analysis, _ := json.Marshal(sources)
 	copies := []clip.Caption{{Text: "조용한 골목", Anchor: "bottom", Align: "center", Style: "clean"}}
@@ -308,7 +307,7 @@ func TestLegacyOverlapSurvivesButCannotGrow(t *testing.T) {
 }
 
 func TestOwnerAudioSnapshotSurvivesCorrectionAndRefusesContradiction(t *testing.T) {
-	cfg := config.ClipRender(&config.Config{})
+	cfg := clip.DefaultRenderConfig(clip.Environment{})
 	p, draft := correctionFixture(t)
 	saved, err := clip.DecodeEditPlan(p.EditPlan)
 	if err != nil {

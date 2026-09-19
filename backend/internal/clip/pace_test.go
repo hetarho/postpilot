@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/postpilot/backend/internal/clip"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 func TestRapidPhraseTimingAndLosslessFallback(t *testing.T) {
@@ -63,7 +62,7 @@ func TestRapidCorrectionRoundtripAndBoundaries(t *testing.T) {
 	p, draft := correctionFixture(t)
 	copies, _ := clip.SplitRapid(clip.Caption{Text: "오늘은 구로디지털단지에 와보았는데요", Style: "clean", Anchor: "bottom", Align: "center"}, 120, 1420)
 	draft.Cuts[0].Copies = copies
-	cfg := config.ClipRender(&config.Config{})
+	cfg := clip.DefaultRenderConfig(clip.Environment{})
 	next, err := clip.ApplyCorrection(cfg, p, draft)
 	if err != nil {
 		t.Fatal(err)

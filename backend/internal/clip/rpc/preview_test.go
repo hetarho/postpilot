@@ -16,7 +16,6 @@ import (
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/composition"
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
-	"github.com/postpilot/backend/internal/platform/config"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -47,7 +46,7 @@ func TestPreviewRPCAuthenticatesHashOwnerAndReadOnlyResponse(t *testing.T) {
 	analysis, _ := json.Marshal([]clip.SourceAnalysis{{Source: clip.AnalysisSource{RenderSource: clip.RenderSource{ID: "source", Fingerprint: "fp", Info: clip.MediaInfo{DurationMS: 15000, Width: 1920, Height: 1080}}}}})
 	store := previewRPCStore{project: clip.Project{ID: "owned", UserID: "alice", Ratio: "vertical", EditPlan: raw, EditPlanRevision: 1, Analysis: string(analysis)}}
 	projects := testProjects(store)
-	cfg := config.ClipGeneration(&config.Config{PresignGetTTL: time.Minute, OrphanMinAge: time.Hour})
+	cfg := clip.DefaultGenerationConfig(clip.Environment{GetTTL: time.Minute, OrphanMinAge: time.Hour})
 	generation := clipapp.NewGenerationService(nil, projects, nil, neutralProcessing{}, nil, nil, previewRPCRenderer{}, neutralJobs{}, cfg, neutralGenerationDeps())
 	h := NewHandler(projects).WithGeneration(generation, nil)
 	wire := editingProto(&clip.CorrectionState{Plan: clip.CorrectionFromPlan(plan)}).Plan

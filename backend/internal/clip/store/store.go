@@ -7,14 +7,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/postpilot/backend/internal/clip"
-	"github.com/postpilot/backend/internal/clip/composition"
-	"github.com/postpilot/backend/internal/clip/store/sqlc"
-	"github.com/postpilot/backend/internal/platform/config"
 	"io"
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/clip/composition"
+	"github.com/postpilot/backend/internal/clip/store/sqlc"
 )
 
 const timeLayout = "2006-01-02T15:04:05.000000000Z07:00"
@@ -154,7 +154,7 @@ func templateRow(r sqlc.VideoTemplate) (clip.VideoTemplate, error) {
 	if !r.CompositionBody.Valid {
 		t.CompositionBody = clip.LegacyCompositionBody(t.Recipe)
 	}
-	limits := config.ClipCompositionLimits()
+	limits := clip.DefaultCompositionLimits()
 	if t.CompositionLegacy {
 		limits = clip.LegacyCompositionLimits(limits)
 	}

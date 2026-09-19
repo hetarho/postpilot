@@ -12,7 +12,6 @@ import (
 	cliprpc "github.com/postpilot/backend/internal/clip/rpc"
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/job"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 func TestCancelClipRPCDistinguishesAcceptedRequestFromTerminalCancellation(t *testing.T) {
@@ -32,7 +31,7 @@ func TestCancelClipRPCDistinguishesAcceptedRequestFromTerminalCancellation(t *te
 					t.Fatal(err)
 				}
 			}
-			projects := clipapp.NewService(h.clips, config.ClipLimits(), clipapp.NewSourceService(h.clips, &finalizationObjects{objects: map[string]clip.SourceObjectInfo{}}, config.ClipSourceLimits(6*time.Hour, 10*time.Minute)), clipapp.NewFinalizer(h.db.Writer, h.bind, h.clips, config.ClipRender(&config.Config{}), nil))
+			projects := clipapp.NewService(h.clips, clip.DefaultLimits(), clipapp.NewSourceService(h.clips, &finalizationObjects{objects: map[string]clip.SourceObjectInfo{}}, clip.DefaultSourceLimits(clip.Environment{SourceBatchTTL: 6 * time.Hour, PutTTL: 10 * time.Minute})), clipapp.NewFinalizer(h.db.Writer, h.bind, h.clips, clip.DefaultRenderConfig(clip.Environment{}), nil))
 			generation := clipapp.NewGenerationService(h.clips, projects, nil, nil, nil, nil, nil, clipapp.NewJobs(h.queue, h.guard), clip.GenerationConfig{ReadTTL: time.Minute, CleanupTimeout: time.Second, OrphanMinAge: time.Hour}, generationDeps(nil, nil, clipapp.NewAccounting(h.ledger)))
 			handler := cliprpc.NewHandler(projects).WithGeneration(generation, h.queue)
 			req := connect.NewRequest(&v1.CancelClipJobRequest{ProjectId: "clip", JobId: id})

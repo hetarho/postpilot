@@ -3,8 +3,8 @@ package composition_test
 import (
 	"testing"
 
+	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/composition"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 // A field's effective maximum folds in the positions its ANSWER reaches (CLIP-117). An `ai`
@@ -21,11 +21,11 @@ func TestAnAIPositionDoesNotCapTheFieldItReads(t *testing.T) {
 		`</scene></repeat>` +
 		`<text id="intro" kind="fixed" role="hook" basis="output-start" chars="9"><value field="name"/></text>` +
 		`<text id="outro" kind="fixed" role="ending" basis="output-end"/></clip>`
-	d, problem := composition.ReadStored(body, config.ClipCompositionLimits())
+	d, problem := composition.ReadStored(body, clip.DefaultCompositionLimits())
 	if problem != nil {
 		t.Fatal(problem)
 	}
-	if got := d.Maxima["note"]; got != config.ClipCompositionLimits().AnswerChars {
+	if got := d.Maxima["note"]; got != clip.DefaultCompositionLimits().AnswerChars {
 		t.Fatalf("an ai position capped the field it only reads: note = %d", got)
 	}
 	// A fixed position still caps the field it prints: that text lands on screen as typed.

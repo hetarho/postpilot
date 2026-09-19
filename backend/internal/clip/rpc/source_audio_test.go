@@ -12,7 +12,6 @@ import (
 	"github.com/postpilot/backend/internal/auth"
 	"github.com/postpilot/backend/internal/clip"
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 // audioStore records what actually reached the domain, so the test can assert
@@ -42,7 +41,7 @@ func TestSourceSoundRPCIsOwnerScopedAndReturnsBothProjections(t *testing.T) {
 	source := clip.SourceLease{ID: "source", Key: "clip-inputs/alice/private-original", State: "ready", ExpiresAt: expires, ActualBytes: 123,
 		SourceMetadata: clip.SourceMetadata{Filename: "source.mp4", ContentType: "video/mp4", Bytes: 123, Fingerprint: fingerprint}}
 	store := &audioStore{batch: clip.SourceBatch{ID: "batch", UserID: "alice", ProjectID: "owned", State: "ready", Current: true, ExpiresAt: expires, Sources: []clip.SourceLease{source}}}
-	h := NewHandler(nil).WithSources(clipapp.NewSourceService(store, rpcSourceObjects{}, config.ClipSourceLimits(6*time.Hour, 10*time.Minute)))
+	h := NewHandler(nil).WithSources(clipapp.NewSourceService(store, rpcSourceObjects{}, clip.DefaultSourceLimits(clip.Environment{SourceBatchTTL: 6 * time.Hour, PutTTL: 10 * time.Minute})))
 	ctx := auth.WithUser(context.Background(), "alice")
 	request := &v1.SetClipSourceOriginalSoundRequest{ProjectId: "owned", BatchId: "batch", SourceId: "source", ExpectedFingerprint: fingerprint, RetainOriginalAudio: true, ExpectedRevision: 3}
 	out, err := h.SetClipSourceOriginalSound(ctx, connect.NewRequest(request))

@@ -12,6 +12,7 @@ import (
 	authstore "github.com/postpilot/backend/internal/auth/store"
 	"github.com/postpilot/backend/internal/billing"
 	billingstore "github.com/postpilot/backend/internal/billing/store"
+	"github.com/postpilot/backend/internal/clip"
 	clipapp "github.com/postpilot/backend/internal/clip/app"
 	clipmedia "github.com/postpilot/backend/internal/clip/media"
 	clipstore "github.com/postpilot/backend/internal/clip/store"
@@ -213,9 +214,9 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 	}
 
 	c.clipStore = clipstore.New(handle.Writer, handle.Reader)
-	c.clipSources = clipapp.NewSourceService(c.clipStore, p.bucket, config.ClipSourceLimits(cfg.ClipSourceBatchTTL, cfg.PresignPutTTL))
-	c.clip = clipapp.NewService(c.clipStore, config.ClipLimits(), c.clipSources, clipapp.NewFinalizer(handle.Writer, c.clipPorts, c.clipStore, config.ClipRender(cfg), nil))
-	clipMedia, err := clipmedia.New(config.ClipMedia(cfg), nil)
+	c.clipSources = clipapp.NewSourceService(c.clipStore, p.bucket, clip.DefaultSourceLimits(clipEnvironment(cfg)))
+	c.clip = clipapp.NewService(c.clipStore, clip.DefaultLimits(), c.clipSources, clipapp.NewFinalizer(handle.Writer, c.clipPorts, c.clipStore, clip.DefaultRenderConfig(clipEnvironment(cfg)), nil))
+	clipMedia, err := clipmedia.New(clip.DefaultMediaConfig(clipEnvironment(cfg)), nil)
 	if err != nil {
 		return nil, fmt.Errorf("clip media initialization: %w", err)
 	}
@@ -240,8 +241,8 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 			// template limit of their own (TEMPLATE-6): a template must not be able to store a
 			// number the post would refuse.
 			TargetLengthMin: 1,
-			TagCountMin:     config.PostTagCountMin,
-			TagCountMax:     config.PostTagCountMax,
+			TagCountMin:     post.TagCountRange.Min,
+			TagCountMax:     post.TagCountRange.Max,
 		},
 	)
 	c.post.SetTemplateDirectory(postTemplates{service: c.template})
@@ -264,14 +265,7 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 		voiceModels{selections: c.provider, registry: c.metered, plans: c.auth},
 		voiceJobs{queue: c.jobs},
 	)
-	c.voice.ConfigurePersonalization(voicePosts{service: c.post}, voice.PersonalizationConfig{
-		FewShotTargetCount: cfg.VoicePersonalization.FewShotTargetCount, FewShotMax: cfg.VoicePersonalization.FewShotMax,
-		FewShotExcerptTargetChars: cfg.VoicePersonalization.FewShotExcerptTargetChars, FewShotExcerptMaxChars: cfg.VoicePersonalization.FewShotExcerptMaxChars,
-		EmbeddingSwitchPosts: cfg.VoicePersonalization.EmbeddingSwitchPosts, DiffMaxRules: cfg.VoicePersonalization.DiffMaxRules,
-		DiffMinPatternEdits: cfg.VoicePersonalization.DiffMinPatternEdits, RuleActivationEvidence: cfg.VoicePersonalization.RuleActivationEvidence,
-		RuleRetireAfter: cfg.VoicePersonalization.RuleRetireAfter, ValidationPostCount: cfg.VoicePersonalization.ValidationPostCount,
-		EndingMaxConsecutive: cfg.VoicePersonalization.EndingMaxConsecutive,
-	})
+	c.voice.ConfigurePersonalization(voicePosts{service: c.post}, voice.PersonalizationThresholds())
 
 	c.generation = generation.NewService(
 		generationPosts{service: c.post},
@@ -281,7 +275,7 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 		generationImages{bucket: p.bucket},
 		generationJobs{queue: c.jobs, budget: cfg.LLMCompletionBudget},
 		cfg.ObserveBatchSize,
-		generation.ReasoningPolicy{Observe: cfg.LLMReasoning.Observe, Write: cfg.LLMReasoning.Write},
+		generation.DefaultReasoningPolicy(),
 		// The budget policy is passed whole rather than as numbers: the stages ask their
 		// owner what their work needs, and this context holds no cap of its own.
 		cfg.LLMCompletionBudget,

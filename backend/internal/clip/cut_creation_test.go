@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/postpilot/backend/internal/clip"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 const ownerCut = "owner-3f2504e0-4f89-41d3-9a0c-0305e82c3301"
@@ -31,7 +30,7 @@ func creationFixture(t *testing.T) (clip.Project, clip.EditPlan) {
 		{ID: "second", SourceID: "a", Fingerprint: "fa", StartMS: 10000, EndMS: 20000, TransitionMS: 0, Focal: clip.Point{X: .5, Y: .5}, Copies: copies},
 	}}
 	p := clip.Project{Ratio: "vertical", Analysis: string(analysis), EditPlanRevision: 1}
-	portable, err := clip.FreezeLegacyPlan(p, plan, clip.Recipe{Accent: "teal"}, config.ClipCompositionLimits())
+	portable, err := clip.FreezeLegacyPlan(p, plan, clip.Recipe{Accent: "teal"}, clip.DefaultCompositionLimits())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,7 +61,7 @@ func addedCut(id, origin string, start, end int) clip.CorrectionCut {
 }
 
 func TestOwnerAddCreatesFootageWithServerOwnedDefaults(t *testing.T) {
-	cfg := config.ClipRender(&config.Config{})
+	cfg := clip.DefaultRenderConfig(clip.Environment{})
 	p, plan := creationFixture(t)
 	draft := creationDraft(plan)
 	// A second look at the same observed scene the first cut came from.
@@ -114,7 +113,7 @@ func TestOwnerAddCreatesFootageWithServerOwnedDefaults(t *testing.T) {
 }
 
 func TestOwnerSplitDividesFootageAndLeavesTextOnTheLeft(t *testing.T) {
-	cfg := config.ClipRender(&config.Config{})
+	cfg := clip.DefaultRenderConfig(clip.Environment{})
 	p, plan := creationFixture(t)
 	draft := creationDraft(plan)
 	// The parent keeps its id and its content; the right side is new footage.
@@ -153,7 +152,7 @@ func TestOwnerSplitDividesFootageAndLeavesTextOnTheLeft(t *testing.T) {
 }
 
 func TestOwnerCutCreationRefusesForgedIdentityAndUnevidencedFootage(t *testing.T) {
-	cfg := config.ClipRender(&config.Config{})
+	cfg := clip.DefaultRenderConfig(clip.Environment{})
 	p, plan := creationFixture(t)
 	// The reason each refusal must give, so a case cannot pass because some
 	// unrelated check happened to fail first.
@@ -262,7 +261,7 @@ func TestOwnerCutCreationRefusesForgedIdentityAndUnevidencedFootage(t *testing.T
 }
 
 func TestCreatedCutJoinsIdentityHistoryAndSurvivesUndo(t *testing.T) {
-	cfg := config.ClipRender(&config.Config{})
+	cfg := clip.DefaultRenderConfig(clip.Environment{})
 	p, plan := creationFixture(t)
 	draft := creationDraft(plan)
 	draft.Cuts = append(draft.Cuts, addedCut(ownerCut, "first", 20000, 30000))
@@ -317,7 +316,7 @@ func TestCreatedCutJoinsIdentityHistoryAndSurvivesUndo(t *testing.T) {
 // A split leaves an authored window that no longer fits in the owner's draft
 // rather than moving, shortening or dropping it (CLIP-67, CDS-64).
 func TestSplitRefusesRatherThanRetimingAuthoredText(t *testing.T) {
-	cfg := config.ClipRender(&config.Config{})
+	cfg := clip.DefaultRenderConfig(clip.Environment{})
 	p, plan := creationFixture(t)
 	draft := creationDraft(plan)
 	authored := 0

@@ -7,13 +7,12 @@ import (
 
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/ai"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 // The instruction is the ONE thing it changes in a writing request, and a
 // project that carries none leaves no residue of one.
 func TestAnInstructionChangesOnlyItsOwnValue(t *testing.T) {
-	l, fade := config.ClipCompositionLimits(), 200
+	l, fade := clip.DefaultCompositionLimits(), 200
 	base := flowInput()
 	systemBefore, userBefore := ai.BuildFlowPrompt(base, fade, l)
 
@@ -41,15 +40,15 @@ func TestAnInstructionChangesOnlyItsOwnValue(t *testing.T) {
 // instruction overflows it is refused before any paid work, with its measured
 // size (CLIP-90).
 func TestOverlongInstructionIsRefusedBeforePaidWork(t *testing.T) {
-	l := config.ClipCompositionLimits()
+	l := clip.DefaultCompositionLimits()
 	base := flowInput()
 	base.Analyses = nil
 	withInstruction := base
-	withInstruction.Instruction = strings.Repeat("가", config.ClipInstructionChars)
+	withInstruction.Instruction = strings.Repeat("가", clip.InstructionChars)
 	// An allowance that exactly admits the LARGER of the two writing requests
 	// without the instruction: the instruction is then the only thing that can
 	// overflow it (CLIP-90).
-	cfg := config.ClipAI(&config.Config{})
+	cfg := ai.DefaultConfig(clip.Environment{})
 	system, user := ai.BuildNarrationPrompt(clip.NarrationInput{PlanningInput: base, Flow: ai.WidestFlow(cfg, base)}, l)
 	allowance := ai.PromptBytes(system, user, ai.NarrationSchema()) + 2048
 

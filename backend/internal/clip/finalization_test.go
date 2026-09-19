@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/postpilot/backend/internal/clip"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 func TestNativeFinalizationUsesSavedEvidenceWithoutPixelsOrLayout(t *testing.T) {
@@ -16,7 +15,7 @@ func TestNativeFinalizationUsesSavedEvidenceWithoutPixelsOrLayout(t *testing.T) 
 	req := clip.FinalizationRequest{UserID: p.UserID, ProjectID: p.ID, ExpectedRevision: 2, ExpectedResultID: "result"}
 	for _, kind := range []clip.RenderKind{"", clip.RenderServer, clip.RenderBrowser} {
 		p.Result.Kind = kind
-		if err := clip.ValidateFinalization(p, req, config.ClipRender(&config.Config{})); err != nil {
+		if err := clip.ValidateFinalization(p, req, clip.DefaultRenderConfig(clip.Environment{})); err != nil {
 			t.Fatal(kind, err)
 		}
 	}
@@ -26,7 +25,7 @@ func TestNativeFinalizationUsesSavedEvidenceWithoutPixelsOrLayout(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := clip.ValidateFinalization(p, req, config.ClipRender(&config.Config{})); !errors.Is(err, clip.ErrFinalizationInvalid) {
+	if err := clip.ValidateFinalization(p, req, clip.DefaultRenderConfig(clip.Environment{})); !errors.Is(err, clip.ErrFinalizationInvalid) {
 		t.Fatal("stale evidence finalized", err)
 	}
 }

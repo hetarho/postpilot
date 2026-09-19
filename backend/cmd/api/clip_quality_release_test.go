@@ -20,7 +20,6 @@ import (
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/job"
 	jobstore "github.com/postpilot/backend/internal/job/store"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 // This extends the production-binary release harness; localhost serves recorded
@@ -291,7 +290,7 @@ func TestClipQualityLifecycle(t *testing.T) {
 		h.objects.mu.Lock()
 		h.objects.failDelete = false
 		h.objects.mu.Unlock()
-		restarted := clipapp.NewSourceService(clipstore.New(h.d.Writer, h.d.Reader), h.objects, config.ClipSourceLimits(6*time.Hour, 10*time.Minute), now)
+		restarted := clipapp.NewSourceService(clipstore.New(h.d.Writer, h.d.Reader), h.objects, clip.DefaultSourceLimits(clip.Environment{SourceBatchTTL: 6 * time.Hour, PutTTL: 10 * time.Minute}), now)
 		if err = restarted.Sweep(t.Context()); err != nil {
 			t.Fatal(err)
 		}

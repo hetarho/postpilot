@@ -9,7 +9,6 @@ import (
 
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/composition"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 // The CDS-53 owner review needs whole clips, not fixtures: three of them, one per
@@ -151,7 +150,7 @@ func qaBody(c qaClip) string {
 // so the caption windows above cross a transformed boundary.
 func qaPlan(c qaClip, sources []clip.RenderSource) (clip.EditPlan, error) {
 	body := qaBody(c)
-	limits := config.ClipCompositionLimits()
+	limits := clip.DefaultCompositionLimits()
 	doc, problem := composition.Parse(body, limits)
 	if problem != nil {
 		return clip.EditPlan{}, problem

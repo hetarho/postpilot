@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/postpilot/backend/internal/clip"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 type fakeRunner struct {
@@ -28,7 +27,7 @@ func (r *fakeRunner) Run(ctx context.Context, c Command) ([]byte, error) {
 }
 func mediaConfig(t *testing.T) clip.MediaConfig {
 	t.Helper()
-	return config.ClipMedia(&config.Config{ClipWorkRoot: filepath.Join(t.TempDir(), "work"), ClipFFmpegPath: "/usr/local/bin/ffmpeg", ClipFFprobePath: "/usr/local/bin/ffprobe", ClipWorkStaleAge: time.Hour, ClipMediaTimeout: time.Minute, ClipSourceBatchTTL: 6 * time.Hour, PresignPutTTL: 10 * time.Minute})
+	return clip.DefaultMediaConfig(clip.Environment{WorkRoot: filepath.Join(t.TempDir(), "work"), FFmpegPath: "/usr/local/bin/ffmpeg", FFprobePath: "/usr/local/bin/ffprobe", WorkStaleAge: time.Hour, MediaTimeout: time.Minute, SourceBatchTTL: 6 * time.Hour, PutTTL: 10 * time.Minute})
 }
 func newAdapter(t *testing.T, r Runner) *Adapter {
 	t.Helper()

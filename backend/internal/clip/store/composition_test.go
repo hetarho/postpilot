@@ -15,7 +15,6 @@ import (
 	"github.com/postpilot/backend/internal/clip/composition"
 	"github.com/postpilot/backend/internal/clip/store"
 	"github.com/postpilot/backend/internal/llm"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 type ownedPlanWriter struct{ *plannerFake }
@@ -64,13 +63,13 @@ func (p ownedPlanWriter) Flow(ctx context.Context, model llm.ModelRef, in clip.P
 		return plan, usage, err
 	}
 	plan.Cuts[0].Copies = nil
-	doc, problem := composition.Parse(in.Composition.Snapshot.Body, config.ClipCompositionLimits())
+	doc, problem := composition.Parse(in.Composition.Snapshot.Body, clip.DefaultCompositionLimits())
 	if problem != nil {
 		return plan, usage, problem
 	}
 	cut := plan.Cuts[0]
 	plan.Portable = &clip.PortablePlan{Snapshot: in.Composition.Snapshot, Inputs: in.Composition.Inputs, Cuts: []composition.Cut{{ID: cut.ID, SectionID: "shot", SourceID: cut.SourceID, StartMS: cut.StartMS, EndMS: cut.EndMS}}}
-	resolved, problem := composition.Resolve(doc, composition.Inputs{Cuts: plan.Portable.Cuts}, config.ClipCompositionLimits(), 30000)
+	resolved, problem := composition.Resolve(doc, composition.Inputs{Cuts: plan.Portable.Cuts}, clip.DefaultCompositionLimits(), 30000)
 	if problem != nil {
 		return plan, usage, problem
 	}
@@ -148,7 +147,7 @@ func TestNativeCompositionOwnedRoundTripAndRequiredIDs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := clip.RequiredAnswers(template, p, config.ClipCompositionLimits()); err == nil {
+	if err := clip.RequiredAnswers(template, p, clip.DefaultCompositionLimits()); err == nil {
 		t.Fatal("blank required ID passed")
 	}
 	inputs.Values["b"] = "18,000원"
@@ -156,11 +155,11 @@ func TestNativeCompositionOwnedRoundTripAndRequiredIDs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := clip.RequiredAnswers(template, p, config.ClipCompositionLimits()); err != nil {
+	if err := clip.RequiredAnswers(template, p, clip.DefaultCompositionLimits()); err != nil {
 		t.Fatal("legacy category/disclosure gate survived", err)
 	}
 	restartedStore := store.New(d.Writer, d.Reader)
-	restarted := clipapp.NewService(restartedStore, config.ClipLimits(), clipapp.NewSourceService(restartedStore, fakeSources(), config.ClipSourceLimits(6*time.Hour, 10*time.Minute)), nullFinalizer{})
+	restarted := clipapp.NewService(restartedStore, clip.DefaultLimits(), clipapp.NewSourceService(restartedStore, fakeSources(), clip.DefaultSourceLimits(clip.Environment{SourceBatchTTL: 6 * time.Hour, PutTTL: 10 * time.Minute})), nullFinalizer{})
 	got, err := restarted.GetProject(ctx, "alice", p.ID)
 	if err != nil || !reflect.DeepEqual(got.Composition, p.Composition) || got.Composition.Snapshot.Body != body {
 		t.Fatal(got.Composition, err)
@@ -269,12 +268,12 @@ func TestLegacyConversionKeepsProjectChoicesResultsAndFrozenRecipe(t *testing.T)
 }
 
 func TestCompositionAssociationHoldsToObservationsAndBindsTheQuote(t *testing.T) {
-	doc, err := composition.Parse(nativeBody, config.ClipCompositionLimits())
+	doc, err := composition.Parse(nativeBody, clip.DefaultCompositionLimits())
 	if err != nil {
 		t.Fatal(err)
 	}
 	input := clip.CompositionInputs{Values: map[string]string{"b": "3"}, Items: map[string][]composition.Item{"menu": {{ID: "dish", Values: map[string]string{"price": "9000"}}}}, Associations: []clip.SourceAssociation{{GroupID: "menu", ItemID: "dish", SourceID: "source", Fingerprint: "sha", StartMS: 100, EndMS: 500}}}
-	if err := clip.ValidateCompositionInputs(doc, input, config.ClipCompositionLimits(), true); err != nil {
+	if err := clip.ValidateCompositionInputs(doc, input, clip.DefaultCompositionLimits(), true); err != nil {
 		t.Fatal(err)
 	}
 	a := []clip.SourceAnalysis{{Source: clip.AnalysisSource{RenderSource: clip.RenderSource{ID: "source", Fingerprint: "sha", Info: clip.MediaInfo{DurationMS: 1000}}}, Segments: []clip.Segment{{StartMS: 0, EndMS: 700}}}}
@@ -307,7 +306,7 @@ func TestCompositionAssociationHoldsToObservationsAndBindsTheQuote(t *testing.T)
 		t.Fatal("a binding for an unobserved source was refused", err)
 	}
 	input.Values["menu.price"] = "smuggled"
-	if err := clip.ValidateCompositionInputs(doc, input, config.ClipCompositionLimits(), true); err == nil {
+	if err := clip.ValidateCompositionInputs(doc, input, clip.DefaultCompositionLimits(), true); err == nil {
 		t.Fatal("group field escaped scope")
 	}
 }
@@ -344,7 +343,7 @@ func TestLegacyEscapingKeepsMaximumValidGuidanceReadable(t *testing.T) {
 	s, _, _ := setup(t)
 	ctx := context.Background()
 	r := recipe()
-	r.CutGuidance = strings.Repeat("&", config.ClipLimits().GuidanceChars)
+	r.CutGuidance = strings.Repeat("&", clip.DefaultLimits().GuidanceChars)
 	template, err := s.CreateTemplate(ctx, "alice", r)
 	if err != nil {
 		t.Fatal(err)

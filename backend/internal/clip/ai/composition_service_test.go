@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/postpilot/backend/internal/platform/config"
 	"slices"
 	"strings"
 	"testing"
@@ -105,7 +104,7 @@ func TestWriterInputCarriesAllowedRatesAndNoAudioAuthority(t *testing.T) {
 	in.Analyses[0].Source.Info.FrameRateNumerator, in.Analyses[0].Source.Info.FrameRateDenominator = 60, 1
 	in.Analyses[0].Source.Info.DecodedFrames, in.Analyses[0].Source.Info.DecodedDurationMS = 900, 15000
 	in.Analyses[0].Source.Info.CadenceVerified = true
-	system, user := ai.BuildPlanPrompt(in, 200, config.ClipCompositionLimits())
+	system, user := ai.BuildPlanPrompt(in, 200, clip.DefaultCompositionLimits())
 	var payload map[string]any
 	if err := json.Unmarshal([]byte(user), &payload); err != nil {
 		t.Fatal(err)

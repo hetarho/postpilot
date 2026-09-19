@@ -2,10 +2,10 @@ package store
 
 import (
 	"context"
+	"time"
+
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/store/sqlc"
-	"github.com/postpilot/backend/internal/platform/config"
-	"time"
 )
 
 var _ clip.SourceStore = (*Store)(nil)
@@ -188,7 +188,7 @@ func (s *Store) ConfirmSourceLease(ctx context.Context, user, batch, id string, 
 		if !found {
 			return clip.SourceBatch{}, clip.ErrNotFound
 		}
-		if err := affected(q.SetSourceLeaseReady(ctx, sqlc.SetSourceLeaseReadyParams{ActualBytes: actual, RetentionExpiresAt: nullable(stamp(now.Add(config.ClipOriginalRetention))), CanonicalID: id, BatchID: batch, UserID: user})); err != nil {
+		if err := affected(q.SetSourceLeaseReady(ctx, sqlc.SetSourceLeaseReadyParams{ActualBytes: actual, RetentionExpiresAt: nullable(stamp(now.Add(clip.OriginalRetention))), CanonicalID: id, BatchID: batch, UserID: user})); err != nil {
 			return clip.SourceBatch{}, err
 		}
 		if err := q.MarkSourceBatchReady(ctx, sqlc.MarkSourceBatchReadyParams{ID: batch, UserID: user}); err != nil {

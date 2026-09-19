@@ -8,8 +8,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 // fakeStore is an in-memory post.Store. These tests are about the context's rules —
@@ -47,7 +45,7 @@ func (f *fakeStore) CreatePost(_ context.Context, p Post) error {
 	// The real store reads a NULL tag_count as the default (POST-63); the fake mirrors that
 	// at insert so a freshly created post reads the same way through both.
 	if p.TagCount == 0 {
-		p.TagCount = config.PostTagCountDefault
+		p.TagCount = TagCountRange.Default
 	}
 	f.posts[p.Slug] = p
 	return nil

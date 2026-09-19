@@ -35,8 +35,21 @@ type ReasoningPolicy struct {
 	Write   llm.ReasoningEffort
 }
 
+// DefaultReasoningPolicy is code-owned because changing a stage's reasoning
+// strength changes generation behaviour rather than deployment topology
+// (ARCH-21). A model-level registry override still wins.
+//
+// Analyze has no field on purpose: policy/providers.md requires it to send no
+// effort, and a request that carries no stage value already sends none
+// (registry.go forwards only a resolved effort). Adding the field back would be
+// a second place for one rule to live, which is how it previously came to be
+// set, asserted, and forwarded nowhere.
+func DefaultReasoningPolicy() ReasoningPolicy {
+	return ReasoningPolicy{Observe: llm.ReasoningLow, Write: llm.ReasoningLow}
+}
+
 // CompletionBudget is the per-stage completion cap policy, received from its owner
-// (internal/platform/config) rather than computed here: this context asks for the budget its
+// (cmd/api, from the platform completion budget) rather than computed here: this context asks for the budget its
 // work needs and holds no number of its own.
 type CompletionBudget interface {
 	// Write is the writing stage's cap for a post's requested target length.

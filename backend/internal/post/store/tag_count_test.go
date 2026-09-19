@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/postpilot/backend/internal/platform/config"
+	"github.com/postpilot/backend/internal/post"
 )
 
 // POST-63: a row never saved with a tag count reads as the default, with no backfill; the
@@ -19,11 +19,11 @@ func TestTagCountDefaultsAndRoundTrips(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.TagCount != config.PostTagCountDefault {
-		t.Fatalf("NULL tag_count read as %d, want the default %d", got.TagCount, config.PostTagCountDefault)
+	if got.TagCount != post.TagCountRange.Default {
+		t.Fatalf("NULL tag_count read as %d, want the default %d", got.TagCount, post.TagCountRange.Default)
 	}
-	if config.PostTagCountDefault != 4 {
-		t.Fatalf("the default is %d; POST-63 says 4", config.PostTagCountDefault)
+	if post.TagCountRange.Default != 4 {
+		t.Fatalf("the default is %d; POST-63 says 4", post.TagCountRange.Default)
 	}
 
 	length := 1200

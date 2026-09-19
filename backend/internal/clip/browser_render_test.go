@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/postpilot/backend/internal/clip"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 func TestReportedOutputContract(t *testing.T) {
@@ -31,7 +30,7 @@ func TestReportedOutputContract(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			m := good
 			tc.change(&m)
-			v, err := clip.CheckRenderMeasurements(config.ClipRender(&config.Config{}), r, m)
+			v, err := clip.CheckRenderMeasurements(clip.DefaultRenderConfig(clip.Environment{}), r, m)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -49,7 +48,7 @@ func TestReportedOutputContract(t *testing.T) {
 	for _, bad := range []float64{math.NaN(), math.Inf(1), math.Inf(-1)} {
 		m := good
 		m.LoudnessLUFS = &bad
-		if _, err := clip.CheckRenderMeasurements(config.ClipRender(&config.Config{}), r, m); err == nil {
+		if _, err := clip.CheckRenderMeasurements(clip.DefaultRenderConfig(clip.Environment{}), r, m); err == nil {
 			t.Fatal("nonfinite measurement accepted")
 		}
 	}

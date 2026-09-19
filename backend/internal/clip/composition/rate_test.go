@@ -3,14 +3,14 @@ package composition_test
 import (
 	"testing"
 
+	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/composition"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 // A caption bound to a cut resolves on the cut's TRANSFORMED output length, while
 // the cut keeps stating the original source range it was taken from (CDS-62).
 func TestCutIntervalsResolveOnTheTransformedOutputTimeline(t *testing.T) {
-	l := config.ClipCompositionLimits()
+	l := clip.DefaultCompositionLimits()
 	d, problem := composition.Parse(`<clip version="1" intro="b" caption="bold" outro="e"><scene id="s"><text id="c" kind="fixed" role="caption" basis="cut">x</text></scene><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`, l)
 	if problem != nil {
 		t.Fatal(problem)
@@ -40,7 +40,7 @@ func TestCutIntervalsResolveOnTheTransformedOutputTimeline(t *testing.T) {
 // A cut whose transformed length is too short for its own transition is refused
 // on the transformed value, not on the source span it came from.
 func TestTransitionIsMeasuredAgainstTheTransformedLength(t *testing.T) {
-	l := config.ClipCompositionLimits()
+	l := clip.DefaultCompositionLimits()
 	d, problem := composition.Parse(`<clip version="1" intro="b" caption="bold" outro="e"><scene id="s"><text id="c" kind="fixed" role="caption" basis="cut">x</text></scene><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`, l)
 	if problem != nil {
 		t.Fatal(problem)

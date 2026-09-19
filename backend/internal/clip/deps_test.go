@@ -9,7 +9,6 @@ import (
 
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/llm"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 // Neutral collaborators for the clip constructors (ARCH-40): each answers the way the
@@ -86,7 +85,7 @@ type projectStore interface {
 // testProjects is a project service over a store, with the collaborators no test in this
 // package exercises answering neutrally.
 func testProjects(store projectStore) *clipapp.Service {
-	return clipapp.NewService(store, config.ClipLimits(), clipapp.NewSourceService(store, nullObjects{}, config.ClipSourceLimits(6*time.Hour, 10*time.Minute)), nullFinalizer{})
+	return clipapp.NewService(store, clip.DefaultLimits(), clipapp.NewSourceService(store, nullObjects{}, clip.DefaultSourceLimits(clip.Environment{SourceBatchTTL: 6 * time.Hour, PutTTL: 10 * time.Minute})), nullFinalizer{})
 }
 
 // neutralJobs is a generation-side job port with no queue behind it: nothing is active,

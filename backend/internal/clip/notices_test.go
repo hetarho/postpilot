@@ -6,7 +6,6 @@ import (
 
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/composition"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 func TestNoticesRetainStorageAndClearOnlyEditedTargets(t *testing.T) {
@@ -22,14 +21,14 @@ func TestNoticesRetainStorageAndClearOnlyEditedTargets(t *testing.T) {
 		t.Fatal(original)
 	}
 	p.EditPlan, _ = clip.EncodeEditPlan(plan)
-	noOp, err := clip.ApplyCorrection(config.ClipRender(&config.Config{}), p, clip.CorrectionFromPlan(plan))
+	noOp, err := clip.ApplyCorrection(clip.DefaultRenderConfig(clip.Environment{}), p, clip.CorrectionFromPlan(plan))
 	if err != nil || !reflect.DeepEqual(clip.ActivePlanNotices(noOp, composition.DefaultDesign()), original) {
 		t.Fatal("no-op cleared a notice", err)
 	}
 	draft := clip.CorrectionFromPlan(plan)
 	draft.Cuts[0].Focal = &clip.Point{X: .1, Y: .2}
 	draft.Elements[0].Text = "직접 쓴 문구"
-	next, err := clip.ApplyCorrection(config.ClipRender(&config.Config{}), p, draft)
+	next, err := clip.ApplyCorrection(clip.DefaultRenderConfig(clip.Environment{}), p, draft)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,12 +61,12 @@ func TestLegacyCorrectionKeepsNoticesUntilTheCutChanges(t *testing.T) {
 		t.Fatal(err)
 	}
 	draft := clip.CorrectionFromPlan(plan)
-	next, err := clip.ApplyCorrection(config.ClipRender(&config.Config{}), p, draft)
+	next, err := clip.ApplyCorrection(clip.DefaultRenderConfig(clip.Environment{}), p, draft)
 	if err != nil || len(clip.ActivePlanNotices(next, composition.DefaultDesign())) != 1 {
 		t.Fatal("no-op lost history", err)
 	}
 	draft.Cuts[0].VolumePermille = 500
-	next, err = clip.ApplyCorrection(config.ClipRender(&config.Config{}), p, draft)
+	next, err = clip.ApplyCorrection(clip.DefaultRenderConfig(clip.Environment{}), p, draft)
 	if err != nil || len(clip.ActivePlanNotices(next, composition.DefaultDesign())) != 0 || len(next.Notices) != 1 {
 		t.Fatal("edit did not filter stored history", err)
 	}

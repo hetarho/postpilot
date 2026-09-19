@@ -5,11 +5,10 @@ import (
 	"time"
 
 	"github.com/postpilot/backend/internal/clip"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 func TestValidateProbedSources(t *testing.T) {
-	cfg := config.ClipMedia(&config.Config{ClipSourceBatchTTL: 6 * time.Hour, PresignPutTTL: 10 * time.Minute})
+	cfg := clip.DefaultMediaConfig(clip.Environment{SourceBatchTTL: 6 * time.Hour, PutTTL: 10 * time.Minute})
 	source := clip.ProbedSource{Metadata: clip.SourceMetadata{Filename: "source.MOV", ContentType: "video/quicktime", Fingerprint: "one", Bytes: 1024, DurationMS: 61000, Width: 1080, Height: 1920}, Info: clip.MediaInfo{DurationMS: 61000, Width: 1080, Height: 1920}}
 	if n, err := clip.ValidateProbedSources(cfg, []clip.ProbedSource{source}); err != nil || n != 2 {
 		t.Fatalf("%d %v", n, err)

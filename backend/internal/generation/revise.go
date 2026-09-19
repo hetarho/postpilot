@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/postpilot/backend/internal/platform/config"
+	"github.com/postpilot/backend/internal/post"
 )
 
 const RevisePrompt = `현재 블로그 글에 사용자의 수정 요청만 최소한으로 반영하세요.
@@ -40,7 +40,7 @@ type revisionPayloadJSON struct {
 }
 
 func encodeRevisionPayload(instruction string, saveAsRule bool, template *TemplateBrief, guidelines []string) ([]byte, error) {
-	return encodeRevisionPayloadForLanguage(instruction, saveAsRule, LanguageKorean, template, guidelines, config.PostTagCountDefault, false)
+	return encodeRevisionPayloadForLanguage(instruction, saveAsRule, LanguageKorean, template, guidelines, post.TagCountRange.Default, false)
 }
 
 func encodeRevisionPayloadForLanguage(instruction string, saveAsRule bool, language Language, template *TemplateBrief, guidelines []string, tagCount int, nativeEffort bool) ([]byte, error) {
@@ -75,7 +75,7 @@ func parseRevisionPayload(payload []byte) (revisionPayloadJSON, error) {
 }
 
 func BuildRevisePrompt(profile Profile, content PostContent, filenames []string, instruction string, targetLength *int, template *TemplateBrief, guidelines []string) (string, string) {
-	return BuildRevisePromptForLanguage(LanguageKorean, profile, content, filenames, instruction, targetLength, config.PostTagCountDefault, template, guidelines)
+	return BuildRevisePromptForLanguage(LanguageKorean, profile, content, filenames, instruction, targetLength, post.TagCountRange.Default, template, guidelines)
 }
 
 func BuildRevisePromptForLanguage(language Language, profile Profile, content PostContent, filenames []string, instruction string, targetLength *int, tagCount int, template *TemplateBrief, guidelines []string) (string, string) {

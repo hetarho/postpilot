@@ -8,7 +8,6 @@ import (
 
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/composition"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 func TestReadingExtensionStaysWithinObservedSceneTargetAndOwnerBinding(t *testing.T) {
@@ -39,7 +38,7 @@ func TestReadingExtensionStaysWithinObservedSceneTargetAndOwnerBinding(t *testin
 		t.Run(tc.name, func(t *testing.T) {
 			p := fixture()
 			tc.change(&p)
-			got, err := clip.ExtendCompositionReadingWindows(p, config.ClipCompositionLimits())
+			got, err := clip.ExtendCompositionReadingWindows(p, clip.DefaultCompositionLimits())
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -83,7 +82,7 @@ func TestPortableIntervalsFollowCutsAndKeepOutputScope(t *testing.T) {
 			p := portableTimingFixture()
 			tc.edit(&p)
 			before := *p.Portable
-			got, err := clip.ResolvePortableIntervals(p, config.ClipCompositionLimits())
+			got, err := clip.ResolvePortableIntervals(p, clip.DefaultCompositionLimits())
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -110,7 +109,7 @@ func TestPortableIntervalsFollowCutsAndKeepOutputScope(t *testing.T) {
 func TestPortableInvalidAuthoredIntervalPreservesLiteralDraft(t *testing.T) {
 	p := portableTimingFixture()
 	p.Cuts[0].EndMS = 1500
-	got, err := clip.ResolvePortableIntervals(p, config.ClipCompositionLimits())
+	got, err := clip.ResolvePortableIntervals(p, clip.DefaultCompositionLimits())
 	var problem *composition.Problem
 	if !errors.As(err, &problem) || problem.ElementID != "cut" || problem.Line != 23 || problem.Reason != "interval_outside" {
 		t.Fatalf("%+v %v", problem, err)

@@ -6,7 +6,6 @@ import (
 
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/design"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 // placedDraft is the creation fixture's first caption with the owner's own
@@ -36,7 +35,7 @@ func firstCaption(t *testing.T, plan clip.EditPlan) clip.PortableText {
 // CDS-82: a save accepts a caption's own position, size and style and hands all
 // three back unchanged, so ② reopens on what the owner left.
 func TestSaveRoundTripsTheOwnersPlacement(t *testing.T) {
-	cfg := config.ClipRender(&config.Config{})
+	cfg := clip.DefaultRenderConfig(clip.Environment{})
 	p, plan := creationFixture(t)
 	p.CaptionStyles = []string{design.DefaultCaptionStyle, "film"}
 	at := clip.CaptionPlacement{X: 200, Y: 900}
@@ -94,7 +93,7 @@ func TestAPlanWrittenBeforePlacementDecodesWithNone(t *testing.T) {
 // CDS-3's floor is refused where the size is written, and so is a style the
 // project does not allow (CLIP-142). The POSITION is clamped instead (CDS-82).
 func TestSaveRefusesASizeBelowTheFloorAndAnUnallowedStyle(t *testing.T) {
-	cfg := config.ClipRender(&config.Config{})
+	cfg := clip.DefaultRenderConfig(clip.Environment{})
 	p, plan := creationFixture(t)
 	floor := int(design.Caption().Role().Min)
 	for _, owner := range []clip.OwnerCaption{
@@ -113,7 +112,7 @@ func TestSaveRefusesASizeBelowTheFloorAndAnUnallowedStyle(t *testing.T) {
 }
 
 func TestSaveClampsAPlacementIntoTheSafeArea(t *testing.T) {
-	cfg := config.ClipRender(&config.Config{})
+	cfg := clip.DefaultRenderConfig(clip.Environment{})
 	p, plan := creationFixture(t)
 	safe, _ := design.Safe("vertical")
 	at := clip.CaptionPlacement{X: -500, Y: 99999}

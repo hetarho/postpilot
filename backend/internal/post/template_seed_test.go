@@ -3,8 +3,6 @@ package post
 import (
 	"context"
 	"testing"
-
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 func number(value int) *int { return &value }
@@ -132,7 +130,7 @@ func TestARefusedAssignmentSeedsNothing(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if after.TargetLength != nil || after.TagCount != config.PostTagCountDefault {
+	if after.TargetLength != nil || after.TagCount != TagCountRange.Default {
 		t.Fatalf("a refused assignment seeded: length=%v tags=%d", after.TargetLength, after.TagCount)
 	}
 }
@@ -160,7 +158,7 @@ func TestCreatingAPostWithATemplateSeedsIt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if plain.TargetLength != nil || plain.TagCount != config.PostTagCountDefault {
+	if plain.TargetLength != nil || plain.TagCount != TagCountRange.Default {
 		t.Fatalf("a create invented a number: length=%v tags=%d", plain.TargetLength, plain.TagCount)
 	}
 }

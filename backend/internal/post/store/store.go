@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/postpilot/backend/internal/platform/config"
 	"github.com/postpilot/backend/internal/post"
 	"github.com/postpilot/backend/internal/post/store/sqlc"
 )
@@ -839,7 +838,7 @@ func optionalInt(value sql.NullInt64) *int {
 // column existed, and rows never saved through the options call, read as 4 with no backfill.
 func tagCountOrDefault(value sql.NullInt64) int {
 	if !value.Valid {
-		return config.PostTagCountDefault
+		return post.TagCountRange.Default
 	}
 	return int(value.Int64)
 }

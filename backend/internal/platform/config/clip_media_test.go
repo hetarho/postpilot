@@ -2,24 +2,17 @@ package config
 
 import (
 	"testing"
-	"time"
 )
 
-func TestClipMediaConfiguration(t *testing.T) {
+// The product shape these paths feed is pinned in internal/clip (limits_test.go).
+// What belongs here is only that the environment is parsed and validated.
+func TestClipMediaEnvironmentIsValidated(t *testing.T) {
 	cfg, err := Load()
 	if err != nil {
 		t.Fatal(err)
 	}
-	m := ClipMedia(cfg)
-	r := ClipRender(cfg)
-	if r.FadeMS != 200 || r.FPS != 30 || r.MinDurationMS != 15000 || r.MaxDurationMS != 90000 || r.ResvgPath != "/usr/local/bin/resvg" || len(r.FontPaths) != 5 || r.FontPaths["pretendard"] != "/usr/share/postpilot-fonts/pretendard/PretendardVariable.ttf" || r.FontPaths["nanummyeongjo-800"] != "/usr/share/postpilot-fonts/nanummyeongjo/NanumMyeongjo-ExtraBold.ttf" {
-		t.Fatalf("%+v", r)
-	}
-	if m.ChunkDurationMS != 60000 || m.LongEdge != 720 || m.FPS != 15 || m.DecodeThreads != 2 || m.EncodeThreads != 1 || m.AudioBitrate != 64000 || m.DurationToleranceMS != 1000 || m.Sources.MaxCount != 20 || m.Sources.MaxDurationMS != 1800000 || m.OperationTimeout != 15*time.Minute {
-		t.Fatalf("%+v", m)
-	}
-	if WorkerConcurrency != 1 || m.AnalysisMaxBytes != 8<<20 || m.PreparedMaxBytes != 512<<20 || m.WorkspaceMaxBytes != 8<<30 || m.VideoMaxRate != 900000 || m.VideoBufferSize != 1800000 || m.RetryMaxRate != 650000 || m.RetryBufferSize != 1300000 || m.DiskCheckInterval != 100*time.Millisecond {
-		t.Fatalf("unbounded shared media configuration: %+v", m)
+	if cfg.ClipResvgPath != "/usr/local/bin/resvg" || len(cfg.ClipFontPaths) != 5 || cfg.ClipFontPaths["pretendard"] != "/usr/share/postpilot-fonts/pretendard/PretendardVariable.ttf" || cfg.ClipFontPaths["nanummyeongjo-800"] != "/usr/share/postpilot-fonts/nanummyeongjo/NanumMyeongjo-ExtraBold.ttf" {
+		t.Fatalf("%+v", cfg.ClipFontPaths)
 	}
 	for key, value := range map[string]string{"CLIP_WORK_ROOT": "/", "CLIP_FFMPEG_PATH": "ffmpeg", "CLIP_FFPROBE_PATH": "$BIN/ffprobe", "CLIP_RESVG_PATH": "resvg", "CLIP_FONT_PATH": "$FONT/file.ttf", "CLIP_FONT_JUA_PATH": "jua.ttf", "CLIP_WORK_STALE_AGE": "0s", "CLIP_MEDIA_TIMEOUT": "-1m"} {
 		t.Run(key, func(t *testing.T) {
@@ -35,7 +28,7 @@ func TestClipOverlayDirectoryConfiguration(t *testing.T) {
 	for _, value := range []string{"", t.TempDir()} {
 		t.Setenv("CLIP_OVERLAY_DIR", value)
 		cfg, err := Load()
-		if err != nil || ClipRender(cfg).OverlayDir != value {
+		if err != nil || cfg.ClipOverlayDir != value {
 			t.Fatalf("overlay directory not propagated: %v", err)
 		}
 	}

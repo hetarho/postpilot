@@ -11,8 +11,6 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
-
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 // Service is the drafting context's behavior. Every method takes the acting user id
@@ -779,7 +777,7 @@ func (s *Service) SaveGenerationOptions(ctx context.Context, userID, slug string
 	if targetLength != nil && *targetLength <= 0 {
 		return Post{}, &InvalidContentError{Reason: "target length must be positive"}
 	}
-	if tagCount != nil && (*tagCount < config.PostTagCountMin || *tagCount > config.PostTagCountMax) {
+	if tagCount != nil && !TagCountRange.Allows(*tagCount) {
 		return Post{}, ErrInvalidTagCount
 	}
 	found, err := s.ownedPost(ctx, userID, slug)

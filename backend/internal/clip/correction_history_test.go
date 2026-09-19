@@ -8,7 +8,6 @@ import (
 
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/composition"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 func nativeHistoryFixture(t *testing.T) (clip.Project, clip.EditPlan) {
@@ -19,7 +18,7 @@ func nativeHistoryFixture(t *testing.T) (clip.Project, clip.EditPlan) {
 		t.Fatal(err)
 	}
 	plan.Cuts[0].EndMS, plan.Cuts[1].EndMS, plan.DurationMS = 20000, 20000, 39800
-	plan.Portable, err = clip.FreezeLegacyPlan(p, plan, clip.Recipe{}, config.ClipCompositionLimits())
+	plan.Portable, err = clip.FreezeLegacyPlan(p, plan, clip.Recipe{}, clip.DefaultCompositionLimits())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -50,7 +49,7 @@ func TestNativeUndoRestoresSavedDeletedIdentityAndKeepsOutputRelativeText(t *tes
 			removed.Elements = append(removed.Elements, e)
 		}
 	}
-	next, err := clip.ApplyCorrection(config.ClipRender(&config.Config{}), p, removed)
+	next, err := clip.ApplyCorrection(clip.DefaultRenderConfig(clip.Environment{}), p, removed)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,7 +60,7 @@ func TestNativeUndoRestoresSavedDeletedIdentityAndKeepsOutputRelativeText(t *tes
 	if err != nil {
 		t.Fatal("deleted plan", err)
 	}
-	restored, err := clip.ApplyCorrection(config.ClipRender(&config.Config{}), p, original)
+	restored, err := clip.ApplyCorrection(clip.DefaultRenderConfig(clip.Environment{}), p, original)
 	if err != nil {
 		t.Fatal("undo after save", err)
 	}
@@ -69,7 +68,7 @@ func TestNativeUndoRestoresSavedDeletedIdentityAndKeepsOutputRelativeText(t *tes
 		t.Fatal("undo lost content")
 	}
 	original.Cuts[0].ID = "forged"
-	if _, err := clip.ApplyCorrection(config.ClipRender(&config.Config{}), p, original); err == nil {
+	if _, err := clip.ApplyCorrection(clip.DefaultRenderConfig(clip.Environment{}), p, original); err == nil {
 		t.Fatal("accepted forged history identity")
 	}
 }
@@ -95,7 +94,7 @@ func TestAssociationCorrectionPreservesObservationsAndFactsUntilOwnerReviews(t *
 	draft := clip.CorrectionFromPlan(plan)
 	associations := []clip.SourceAssociation{{GroupID: "menu", ItemID: "soup", SourceID: "a", Fingerprint: "fa", StartMS: 0, EndMS: 20000}}
 	draft.Associations = &associations
-	changed, err := clip.ApplyCorrection(config.ClipRender(&config.Config{}), p, draft)
+	changed, err := clip.ApplyCorrection(clip.DefaultRenderConfig(clip.Environment{}), p, draft)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -111,7 +110,7 @@ func TestAssociationCorrectionPreservesObservationsAndFactsUntilOwnerReviews(t *
 	}
 	review := clip.CorrectionFromPlan(changed)
 	review.Elements[0].EvidenceReviewed = true
-	corrected, err := clip.ApplyCorrection(config.ClipRender(&config.Config{}), p, review)
+	corrected, err := clip.ApplyCorrection(clip.DefaultRenderConfig(clip.Environment{}), p, review)
 	if err != nil || clip.ValidateCompositionEvidence(corrected) != nil {
 		t.Fatal("explicit review", err)
 	}
@@ -125,7 +124,7 @@ func TestNativeCorrectionDoesNotEnableTheLegacyEditingMarker(t *testing.T) {
 	plan.Portable.Snapshot.Legacy, plan.Portable.NativeEditing = false, false
 	p.EditPlan, _ = clip.EncodeEditPlan(plan)
 	draft := clip.CorrectionFromPlan(plan)
-	next, err := clip.ApplyCorrection(config.ClipRender(&config.Config{}), p, draft)
+	next, err := clip.ApplyCorrection(clip.DefaultRenderConfig(clip.Environment{}), p, draft)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -133,7 +132,7 @@ func TestNativeCorrectionDoesNotEnableTheLegacyEditingMarker(t *testing.T) {
 		t.Fatal("native correction acquired an unnecessary legacy marker")
 	}
 	p.EditPlan, _ = clip.EncodeEditPlan(next)
-	again, err := clip.ApplyCorrection(config.ClipRender(&config.Config{}), p, clip.CorrectionFromPlan(next))
+	again, err := clip.ApplyCorrection(clip.DefaultRenderConfig(clip.Environment{}), p, clip.CorrectionFromPlan(next))
 	if err != nil || !reflect.DeepEqual(next, again) {
 		t.Fatal("unchanged correction is not idempotent", err)
 	}

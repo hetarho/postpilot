@@ -7,7 +7,6 @@ import (
 
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/composition"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 func captionPair(t *testing.T, pace string, duration int) clip.EditPlan {
@@ -18,7 +17,7 @@ func captionPair(t *testing.T, pace string, duration int) clip.EditPlan {
 	plan.Portable.Elements[1].Resolved.Text = "국물이 정말 진해요"
 	plan.Portable.Elements[2].Resolved.Text = "따뜻하게 먹어요"
 	var err error
-	plan, err = clip.ResolvePortableIntervals(plan, config.ClipCompositionLimits())
+	plan, err = clip.ResolvePortableIntervals(plan, clip.DefaultCompositionLimits())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,7 +76,7 @@ func TestV18RefusesOverlappingCutCaptionsAtEveryPace(t *testing.T) {
 		// only the new cross-caption check can detect this forged manifest.
 		layout.plan.Portable.Elements[1].Resolved.StartMS = elements[0].StartMS
 		elements[1].StartMS = elements[0].StartMS
-		err := clip.VerifyCompositionManifest(layout.plan, elements, config.ClipCompositionLimits())
+		err := clip.VerifyCompositionManifest(layout.plan, elements, clip.DefaultCompositionLimits())
 		var problem *composition.Problem
 		if !errors.As(err, &problem) || problem.Reason != "caption_overlap" || problem.ElementID != "dish_review" {
 			t.Fatalf("%s: %v", pace, err)

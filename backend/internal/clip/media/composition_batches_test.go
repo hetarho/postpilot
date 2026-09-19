@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/postpilot/backend/internal/clip"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 func TestOutputCaptionSamplingIncludesTheLastExistingFrame(t *testing.T) {
@@ -58,7 +57,7 @@ func TestCompositionWindowsCoverRapidCuesWithoutRestartingPersistentFades(t *tes
 }
 
 func TestWindowGraphUsesLocalTimeAndFiniteImageLoops(t *testing.T) {
-	cfg := config.ClipRender(&config.Config{})
+	cfg := clip.DefaultRenderConfig(clip.Environment{})
 	visuals := []declaredVisual{{text: clip.PortableText{Pace: "steady"}, manifest: clip.CompositionElement{Role: "caption", StartMS: 0, EndMS: 15000}}}
 	window := overlayWindow{StartFrame: 307, EndFrame: 330, Layers: []int{0}}
 	graph := declaredOverlayGraph(cfg, window, visuals, make([]captionLayer, len(visuals)), true)
@@ -72,7 +71,7 @@ func TestWindowGraphUsesLocalTimeAndFiniteImageLoops(t *testing.T) {
 }
 
 func TestDeclaredAudioDucksOnlyTheAuthoredHookInterval(t *testing.T) {
-	cfg := config.ClipRender(&config.Config{})
+	cfg := clip.DefaultRenderConfig(clip.Environment{})
 	plain := declaredAudioGraph(cfg, []int{450}, []int{0}, nil)
 	if strings.Contains(plain, "-6") || strings.Contains(plain, "volume=") {
 		t.Fatal("implicit hook dip")
