@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"database/sql"
-	"time"
 
 	"github.com/postpilot/backend/internal/auth"
 	"github.com/postpilot/backend/internal/clip"
@@ -48,32 +47,18 @@ func newClipGeneration(ctx context.Context, cfg *config.Config, store *clipstore
 	if err != nil {
 		return nil, err
 	}
-	service := clip.NewGenerationService(store, projects, sources, bucket, media, planner, renderer, clipapp.NewJobs(queue), config.ClipGeneration(cfg))
 	finisher := clipapp.NewFinisher(writer, bind, jobstore.New(writer, writer), store, nil)
-	service.WithFinisher(finisher)
-	service.WithCredits(clipapp.NewPricing(models.Registry, clipBudgets(aiConfig)), clipapp.NewAccounting(models.ledger))
-	service.WithAdmission(clipapp.NewModelAdmission(models.Registry, clipBudgets(aiConfig)))
-	projects.SetGeneration(service)
-	projects.SetFinalizer(clipapp.NewFinalizer(writer, bind, store, config.ClipRender(cfg), nil))
+	service := clip.NewGenerationService(store, projects, sources, bucket, media, planner, renderer, clipapp.NewJobs(queue), config.ClipGeneration(cfg), clip.GenerationDeps{
+		Finisher:   finisher,
+		Pricing:    clipapp.NewPricing(models.Registry, clipBudgets(aiConfig)),
+		Accounting: clipapp.NewAccounting(models.ledger),
+		Admission:  clipapp.NewModelAdmission(models.Registry, clipBudgets(aiConfig)),
+	})
 	if _, err = queue.SweepUnactivatedClips(ctx); err != nil {
 		return nil, err
 	}
 	if err := finisher.Recover(ctx); err != nil {
 		return nil, err
-	}
-	queue.Register(job.KindGenerateClip, metered(func(ctx context.Context, j job.Job, progress job.Progress) error {
-		return service.Run(ctx, j.UserID, j.ID, j.ClipProjectID, j.Payload, progress)
-	}))
-	queue.Register(job.KindRenderClip, metered(func(ctx context.Context, j job.Job, progress job.Progress) error {
-		return service.RunRender(ctx, j.UserID, j.ID, j.ClipProjectID, j.Payload, progress)
-	}))
-	queue.Register(job.KindReviseClip, metered(func(ctx context.Context, j job.Job, progress job.Progress) error {
-		return service.RunRevision(ctx, j.UserID, j.ID, j.ClipProjectID, j.Payload, progress)
-	}))
-	for _, kind := range []string{job.KindGenerateClip, job.KindRenderClip, job.KindReviseClip} {
-		queue.OnTerminal(kind, func(ctx context.Context, j job.Job, at time.Time) error {
-			return sources.ReleaseAttempt(ctx, j.UserID, j.ID, at)
-		})
 	}
 	return service, nil
 }

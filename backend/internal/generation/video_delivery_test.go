@@ -17,8 +17,8 @@ func TestSignedVideoGateRefusesInlineOnlyModelEvenWhenAllObservationsAreReused(t
 		posts := &fakePosts{input: PostInput{Slug: "p", UserID: "alice", Voice: VoiceRef{ID: "voice"}, TargetLanguage: LanguageKorean, Images: []Image{clip("a.mp4")}, Observations: []Observation{{File: "a.mp4", Speech: "known"}}}}
 		jobs := &fakeJobs{id: "job"}
 		linker := &fakeLinker{}
-		svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget)
-		svc.SetVideoLinker(linker, 1)
+		svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, testDeps())
+		svc.videos, svc.videoURLTTL = linker, 1
 		var selected *[]string
 		if reuse {
 			none := []string{}

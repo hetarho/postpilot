@@ -2,11 +2,12 @@ package store_test
 
 import (
 	"context"
+	"time"
+
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/store"
 	"github.com/postpilot/backend/internal/job"
 	jobstore "github.com/postpilot/backend/internal/job/store"
-	"time"
 )
 
 // Component fixtures isolate the clip store; composition-level transaction and

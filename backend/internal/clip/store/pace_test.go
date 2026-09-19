@@ -2,8 +2,9 @@ package store_test
 
 import (
 	"errors"
-	"github.com/postpilot/backend/internal/clip"
 	"testing"
+
+	"github.com/postpilot/backend/internal/clip"
 )
 
 func TestTemplatePacePersistsAndPatchPresence(t *testing.T) {

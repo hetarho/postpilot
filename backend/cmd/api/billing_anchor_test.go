@@ -12,6 +12,7 @@ import (
 	"github.com/postpilot/backend/internal/billing"
 	billingstore "github.com/postpilot/backend/internal/billing/store"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
+	"github.com/postpilot/backend/internal/mail"
 	"github.com/postpilot/backend/internal/plan"
 	planrpc "github.com/postpilot/backend/internal/plan/rpc"
 	"github.com/postpilot/backend/internal/platform/db"
@@ -41,11 +42,10 @@ func TestUsageAnchorPrefersAnActiveSubscriptionAndFallsBackAfterLapse(t *testing
 	if err := billingStore.UpsertSubscription(ctx, active); err != nil {
 		t.Fatal(err)
 	}
-	authService := auth.NewService(authstore.New(handle.Writer, handle.Reader), time.Hour)
+	authService := auth.NewService(authstore.New(handle.Writer, handle.Reader), time.Hour, auth.Deps{Mailer: mail.NewLog()})
 	billingService := billing.NewService(billingStore, nil, nil, nil, nil, nil, nil)
 	anchors := usageAnchors{auth: authService, billing: billingService}
-	ledger := usage.NewService(usagestore.New(handle.Writer, handle.Reader), emptyModels{}, 0)
-	ledger.SetAnchors(anchors)
+	ledger := usage.NewService(usagestore.New(handle.Writer, handle.Reader), emptyModels{}, 0, anchors)
 
 	response, err := planrpc.NewHandler(ledger, emptyBillingEstimator{}).GetMyPlan(
 		auth.WithActor(ctx, auth.Actor{UserID: "alice", Plan: plan.Pro}),

@@ -62,7 +62,6 @@
 | T267 | pages consume hooks; verbs have one home; post owns its cache dependencies | ARCH | T259 | todo |
 | T268 | the route tree is assembled from route groups | ARCH | - | todo |
 | T269 | platform/config holds env only; limits live in their context | ARCH | - | todo |
-| T271 | required collaborators enter through constructors; main is four steps | ARCH | T270 | todo |
 | T272 | job and usage expose primitives; clip composes them | ARCH | T270 | todo |
 | T273 | the clip root is the domain; use-cases live in clip/app | ARCH | T270 | todo |
 | T274 | clip generation orchestration is a sequence of testable stages | ARCH | T273 | todo |
@@ -78,11 +77,13 @@
 | T284 | the agent generates only the protos it uses and drops the survey harness | ARCH | T008 T281 | todo |
 
 ## next
-- implement-task T271 (constructor injection + main shape, dep T270 done); then T272 T273; FE roots with no dep: T258 T259 T260 T263 T264 T266 T268; BE roots: T269 T276 T278 T280
+- implement-task T272 (job/usage product-agnostic, dep T270 done) then T273; follow-up to log as a task: the same constructor treatment for voice/experiment/guideline/modelcatalog/billingstore setters and moving jobAdmission/meteredRegistry out of package main; FE roots with no dep: T258 T259 T260 T263 T264 T266 T268; BE roots: T269 T276 T278 T280
 - the clip `release-smoke` stage is red at HEAD on this host: 9 of 28 modes end in `no result` (generation ends on a plan since T255, harness still expects a Result) — needs a fix task (review-code clip-release-smoke or update the harness)
 - agent tasks T279 T282 T283 T284 wait for T008; T008 belongs to another session and T177 remains blocked
 - post-quality-and-related-links remains open ideation, awaiting conversion when ready
 ## log
+- 260919 T271 done; main is loadPlatform→buildContexts→registerJobs→serve (23 lines), post/generation/auth/clip/usage take collaborators in constructors and a cmd/api wiring test builds the whole graph; ARCH-26 green. Out of scope: 7 setters on voice/experiment/guideline/modelcatalog/billingstore, and jobAdmission/meteredRegistry rule bodies still in main (T272's seam)
+- 260919 T271 claimed (arc)
 - 260919 T270 done; clip sagas live in internal/clip/app over tx-scoped ports, cmd/api keeps wiring; ARCH-26 green; release-smoke 19/28 with the same 9 `no result` failures on an untouched HEAD build (pre-existing, out of scope)
 - 260919 T270 claimed (arc)
 - 260919 create-task review/arch-260919 + ARCH r5 done: 27 tasks T258-T284 (FE 11 · BE 12 · agent 3 · cross 1), review converted, ARCH tasked=5
@@ -101,5 +102,3 @@
 - 260918 T254 claimed (rnd)
 - 260918 T253 done; MP4 timing excludes measured AAC priming, direct immutable uploads promote atomically after stored-file/verdict checks, and failed attempts preserve the prior result; all local and image gates pass.
 - 260918 T253 claimed (rnd)
-- 260918 T252 done; retained-source audio uses pitch-preserving rates, exact cut timing, BS.1770 normalization and measured AAC priming; Chromium audio and video checks pass.
-- 260918 T252 claimed (rnd)

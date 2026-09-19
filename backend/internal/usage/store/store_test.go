@@ -66,8 +66,7 @@ func newServiceWithDB(t *testing.T) (*usage.Service, *db.DB) {
 			t.Fatalf("seed user %s: %v", id, err)
 		}
 	}
-	svc := usage.NewService(usagestore.New(handle.Writer, handle.Reader), pricedModels{}, maxCompletion)
-	svc.SetAnchors(fixedAnchors{anchor: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)})
+	svc := usage.NewService(usagestore.New(handle.Writer, handle.Reader), pricedModels{}, maxCompletion, fixedAnchors{anchor: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)})
 	return svc, handle
 }
 
@@ -417,7 +416,7 @@ func TestUntouchedLotsAnswersManyLotsOffTheReadPool(t *testing.T) {
 
 	// A store with NO writer proves which pool the query used: reaching for the writer here
 	// would panic on the nil pool rather than answer.
-	readOnly := usage.NewService(usagestore.New(nil, handle.Reader), pricedModels{}, maxCompletion)
+	readOnly := usage.NewService(usagestore.New(nil, handle.Reader), pricedModels{}, maxCompletion, fixedAnchors{anchor: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)})
 	answer, err := readOnly.UntouchedLots(ctx, []string{"purchased:whole", "purchased:spent"})
 	if err != nil || !answer["purchased:whole"] || answer["purchased:spent"] {
 		t.Fatalf("read-pool answer = %+v, %v", answer, err)

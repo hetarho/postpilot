@@ -164,7 +164,7 @@ func TestObserveBatchesIncrementallyAndMatchesFilenames(t *testing.T) {
 		items = append(items, `{"file":"NOT_ATTACHED.jpg","scene":"extra","mood":"","visible_text":"","objects":[],"people_present":false}`)
 		return llm.Response{Text: `{"observations":[` + strings.Join(items, ",") + `]}`}, nil
 	}
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget)
+	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
 	var progress []string
 	got, err := svc.observe(context.Background(), post, post.Images, nil, observeRef, func(stage string, done, total int) {
 		progress = append(progress, fmt.Sprintf("%s:%d/%d", stage, done, total))
@@ -202,7 +202,7 @@ func TestReasoningPolicyAndFailedUsageReachExperimentCandidates(t *testing.T) {
 		}
 		return llm.Response{Usage: llm.Usage{PromptTokens: 13, CompletionTokens: 3, CostMicrousd: 2, CostReported: true}}, errors.New("observe failed after billing")
 	}
-	svc := NewService(&fakePosts{}, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget)
+	svc := NewService(&fakePosts{}, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
 	_, writeUsage, writeErr := svc.writeCandidate(context.Background(), PostInput{}, Profile{}, nil, writeRef)
 	observePost := PostInput{Images: []Image{{Filename: "IMG.jpg", Key: "key"}}}
 	_, observeUsage, observeErr := svc.observeCandidate(context.Background(), observePost, observePost.Images, nil, observeRef, func(string, int, int) {}, false)
@@ -248,7 +248,7 @@ func TestLengthLimitedPartialJSONIsOutputTruncated(t *testing.T) {
 					Usage:        llm.Usage{PromptTokens: 11, CompletionTokens: 8192},
 				}, nil
 			}
-			svc := NewService(&fakePosts{}, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget)
+			svc := NewService(&fakePosts{}, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
 			err := test.run(svc)
 			if !errors.Is(err, llm.ErrOutputTruncated) || errors.Is(err, llm.ErrBadOutput) {
 				t.Fatalf("err = %v, want only ErrOutputTruncated", err)
@@ -272,7 +272,7 @@ func TestGenerateWithNoPhotosSkipsObserveAndPersistsReviewInput(t *testing.T) {
 		}
 		return llm.Response{Text: `{"title":"완성","summary":"요약","tags":["a","b","c"],"blocks":[{"type":"TEXT","content":"본문"}]}`}, nil
 	}
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget)
+	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
 	var progress []string
 	err := svc.Generate(context.Background(), GenerateJob{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()}, func(stage string, done, total int) {
 		progress = append(progress, fmt.Sprintf("%s:%d/%d", stage, done, total))
@@ -306,7 +306,7 @@ func TestGenerateUsesFrozenTargetInsteadOfLaterPostOption(t *testing.T) {
 		}
 		return llm.Response{Text: `{"title":"t","summary":"s","tags":["a","b","c"],"blocks":[{"type":"TEXT","content":"ok"}]}`}, nil
 	}
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget)
+	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
 	if err := svc.Generate(context.Background(), GenerateJob{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(), TargetLength: &frozen, TagCount: 9}, func(string, int, int) {}); err != nil {
 		t.Fatal(err)
 	}
@@ -329,7 +329,7 @@ func TestWriteStructuredAndPlainFallback(t *testing.T) {
 				}
 				return llm.Response{Text: raw}, nil
 			}
-			svc := NewService(&fakePosts{}, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget)
+			svc := NewService(&fakePosts{}, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
 			content, err := svc.write(context.Background(), PostInput{UserID: "alice", Voice: liveVoice, TargetLanguage: LanguageKorean}, nil, writeRef)
 			if err != nil || len(content.Blocks) != 1 {
 				t.Fatalf("content=%+v err=%v", content, err)
@@ -350,7 +350,7 @@ func TestQueuedZeroPhotoGenerationIgnoresPhotosAttachedAfterStart(t *testing.T) 
 		}
 		return llm.Response{Text: `{"title":"t","summary":"s","tags":["a","b","c"],"blocks":[{"type":"TEXT","content":"ok"}]}`}, nil
 	}
-	err := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget).Generate(
+	err := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps()).Generate(
 		context.Background(), GenerateJob{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()},
 		func(string, int, int) {},
 	)
@@ -368,7 +368,7 @@ func TestProviderTimeoutHasClearStageReason(t *testing.T) {
 		return llm.Response{}, context.DeadlineExceeded
 	}
 	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice}}
-	err := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget).Generate(
+	err := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps()).Generate(
 		context.Background(), GenerateJob{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()},
 		func(string, int, int) {},
 	)
@@ -404,7 +404,7 @@ func TestStartGenerationPreconditionsAndEnqueueOnly(t *testing.T) {
 			jobs := &fakeJobs{id: "job-1"}
 			request := StartRequest{UserID: "alice", PostSlug: "post", ObserveModel: observeRef.String(), WriteModel: writeRef.String()}
 			tc.mutate(&request, posts, models)
-			svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget)
+			svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, testDeps())
 			id, err := svc.Start(context.Background(), request)
 			if !errors.Is(err, tc.wantErr) {
 				t.Fatalf("id=%q err=%v, want %v", id, err, tc.wantErr)
@@ -424,7 +424,7 @@ func TestStartGenerationPreconditionsAndEnqueueOnly(t *testing.T) {
 
 	posts, models := &fakePosts{input: basePost}, newFakeModels()
 	jobs := &fakeJobs{err: &JobAlreadyInProgressError{ActiveID: "active"}}
-	_, err := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget).Start(context.Background(), StartRequest{
+	_, err := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, testDeps()).Start(context.Background(), StartRequest{
 		UserID: "alice", PostSlug: "post", ObserveModel: observeRef.String(), WriteModel: writeRef.String(),
 	})
 	var active *JobAlreadyInProgressError
@@ -443,7 +443,7 @@ func TestWriteExperimentUsesOnePreparedSnapshotAndDoesNotApplyBeforeChoice(t *te
 			Usage: llm.Usage{PromptTokens: 10, CompletionTokens: 2, CostMicrousd: 3, CostReported: true},
 		}, nil
 	}
-	svc := NewService(posts, fakeProfiles{profile: Profile{Styleguide: "말투"}}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget)
+	svc := NewService(posts, fakeProfiles{profile: Profile{Styleguide: "말투"}}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
 	raw, err := svc.SnapshotWriteInput(context.Background(), "alice", "post", llm.ModelRef{}, nil, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -486,8 +486,8 @@ func TestOrdinaryGenerationAndRevisionRefuseAnUnresolvedWriteExperiment(t *testi
 	}}
 	jobs := &fakeJobs{id: "should-not-enqueue"}
 	rules := &fakeRules{}
-	svc := NewService(posts, fakeProfiles{}, rules, newFakeModels(), fakeImages{}, jobs, 4, testReasoningPolicy, testBudget)
-	svc.SetPendingExperimentFinder(fakePendingExperiments{id: "experiment-pending"})
+	svc := NewService(posts, fakeProfiles{}, rules, newFakeModels(), fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, testDeps())
+	svc.experiments = fakePendingExperiments{id: "experiment-pending"}
 
 	_, err := svc.Start(context.Background(), StartRequest{
 		UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(),
@@ -518,7 +518,7 @@ func TestWriteExperimentObservesPhotosExactlyOnceBeforeTwoWriters(t *testing.T) 
 		}
 		return llm.Response{Text: `{"title":"글","summary":"요약","tags":["a","b","c"],"blocks":[{"type":"TEXT","content":"본문"}]}`}, nil
 	}
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget)
+	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
 	raw, err := svc.SnapshotWriteInput(context.Background(), "alice", "post", observeRef, nil, nil)
 	if err != nil {
 		t.Fatal(err)

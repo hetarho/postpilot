@@ -3,7 +3,6 @@ package clip
 import (
 	"context"
 	"errors"
-	"github.com/postpilot/backend/internal/llm"
 	"io"
 	"log/slog"
 	"net/url"
@@ -11,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/postpilot/backend/internal/llm"
 )
 
 func (s *GenerationService) withSource(ctx context.Context, ws MediaWorkspace, v SourceLease, info MediaInfo, fn func(MediaSource) error) error {

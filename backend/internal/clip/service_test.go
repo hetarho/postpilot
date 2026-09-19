@@ -4,14 +4,15 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
-	"github.com/postpilot/backend/internal/clip"
-	"github.com/postpilot/backend/internal/platform/config"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/postpilot/backend/internal/clip"
 )
 
 type memoryStore struct {
+	clip.SourceStore
 	clip.Store
 	last  clip.VideoTemplate
 	patch clip.TemplatePatch
@@ -34,7 +35,7 @@ func (s *memoryStore) UpdateTemplate(_ context.Context, _, _ string, p clip.Temp
 func TestTemplateValidationUsesScalarsAndPreservesExactGuidance(t *testing.T) {
 	ctx := context.Background()
 	store := &memoryStore{}
-	s := clip.NewService(store, config.ClipLimits())
+	s := testProjects(store)
 	value, err := s.CreateTemplate(ctx, "owner", clip.Recipe{Name: strings.Repeat("한", 40), Preset: "cafe", CutGuidance: "  Preserve exact\n안내  "})
 	if err != nil {
 		t.Fatal(err)

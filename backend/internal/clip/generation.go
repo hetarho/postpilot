@@ -6,9 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/postpilot/backend/internal/clip/composition"
-	"github.com/postpilot/backend/internal/llm"
-	"github.com/postpilot/backend/internal/plan"
 	"io"
 	"log/slog"
 	"os"
@@ -16,6 +13,10 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/postpilot/backend/internal/clip/composition"
+	"github.com/postpilot/backend/internal/llm"
+	"github.com/postpilot/backend/internal/plan"
 )
 
 var ErrBusy = errors.New("clip busy")
@@ -38,16 +39,32 @@ type GenerationService struct {
 	now           func() time.Time
 }
 
-func (s *GenerationService) WithFinisher(finisher ClipFinisher) *GenerationService {
-	s.finisher = finisher
-	return s
+// GenerationDeps are the collaborators the generation side reaches other contexts
+// through (ARCH-40). All four are required: the finisher commits a result with its job,
+// the pricing and accounting sit on the credit path, and the admission answers
+// eligibility — a service missing any of them refuses or misreports rather than runs.
+type GenerationDeps struct {
+	Finisher   ClipFinisher
+	Pricing    QuotePricing
+	Accounting AccountingReader
+	Admission  AnalysisAdmission
 }
 
-func NewGenerationService(store GenerationStore, projects *Service, sources *SourceService, objects ProcessingObjects, media Media, planner Planner, renderer Renderer, jobs GenerationJobs, cfg GenerationConfig) *GenerationService {
+func NewGenerationService(store GenerationStore, projects *Service, sources *SourceService, objects ProcessingObjects, media Media, planner Planner, renderer Renderer, jobs GenerationJobs, cfg GenerationConfig, deps GenerationDeps) *GenerationService {
 	if cfg.ReadTTL <= 0 || cfg.CleanupTimeout <= 0 || cfg.OrphanMinAge <= 0 {
 		panic("invalid clip generation configuration")
 	}
-	return &GenerationService{store: store, projects: projects, sources: sources, objects: objects, media: media, planner: planner, renderer: renderer, jobs: jobs, cfg: cfg, now: time.Now}
+	if deps.Finisher == nil || deps.Pricing == nil || deps.Accounting == nil || deps.Admission == nil {
+		panic("clip: finisher, pricing, accounting and admission are required")
+	}
+	s := &GenerationService{store: store, projects: projects, sources: sources, objects: objects, media: media, planner: planner, renderer: renderer, jobs: jobs, cfg: cfg, now: time.Now,
+		finisher: deps.Finisher, pricing: deps.Pricing, accounting: deps.Accounting, admission: deps.Admission}
+	// The project service and its generation side need each other; the pair is closed
+	// here, where both exist, instead of through a setter the composition root could forget.
+	if projects != nil {
+		projects.generation = s
+	}
+	return s
 }
 
 // This is the durable application snapshot, not the public project projection. No URL

@@ -1,8 +1,9 @@
 package clip
 
 import (
-	"github.com/postpilot/backend/internal/llm"
 	"testing"
+
+	"github.com/postpilot/backend/internal/llm"
 )
 
 func TestRecoverySelectionBindsEveryAnalysisIdentity(t *testing.T) {

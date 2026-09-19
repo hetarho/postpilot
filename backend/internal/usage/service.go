@@ -41,9 +41,15 @@ type Service struct {
 	newID func() string
 }
 
-func NewService(store Store, models Models, maxCompletionTokens int64) *Service {
+// NewService wires the ledger. anchors is the account-specific monthly-window resolver
+// and is required: every path that renews a balance reads it, and a ledger without one
+// would silently revert to a calendar month (ARCH-40).
+func NewService(store Store, models Models, maxCompletionTokens int64, anchors Anchors) *Service {
+	if anchors == nil {
+		panic("usage: monthly anchors are required")
+	}
 	return &Service{
-		store: store, models: models,
+		store: store, models: models, anchors: anchors,
 		maxCompletionTokens: maxCompletionTokens,
 		now:                 time.Now, newID: newID,
 	}
@@ -56,11 +62,6 @@ func (s *Service) WithStore(store Store) *Service {
 	clone.store = store
 	return &clone
 }
-
-// SetAnchors attaches the account-specific monthly-window resolver. It is required for
-// every path that renews a balance; an unwired ledger fails instead of silently reverting
-// to a calendar month.
-func (s *Service) SetAnchors(anchors Anchors) { s.anchors = anchors }
 
 func newID() string {
 	buf := make([]byte, 16)

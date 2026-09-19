@@ -21,6 +21,15 @@ import (
 
 func setup(t *testing.T) (*clip.Service, *store.Store, *db.DB) {
 	t.Helper()
+	projects, st, d, _ := setupWith(t, fakeSources())
+	return projects, st, d
+}
+
+// setupWith builds the project service over a migrated database with the source side
+// reading objects: the constructor needs both (ARCH-40), so the objects a test wants to
+// observe are chosen before the service exists.
+func setupWith(t *testing.T, objects clip.ObjectStore) (*clip.Service, *store.Store, *db.DB, *clip.SourceService) {
+	t.Helper()
 	d, err := db.Open(filepath.Join(t.TempDir(), "clip.db"))
 	if err != nil {
 		t.Fatal(err)
@@ -35,7 +44,8 @@ func setup(t *testing.T) (*clip.Service, *store.Store, *db.DB) {
 		}
 	}
 	s := store.New(d.Writer, d.Reader)
-	return clip.NewService(s, config.ClipLimits()), s, d
+	sources := clip.NewSourceService(s, objects, config.ClipSourceLimits(6*time.Hour, 10*time.Minute))
+	return clip.NewService(s, config.ClipLimits(), sources, nullFinalizer{}), s, d, sources
 }
 func recipe() clip.Recipe {
 	return clip.Recipe{Name: " 여행 ", Preset: "stay", InformationFields: []clip.InformationField{{Label: " 장소 ", Prompt: " 어디였나요? "}}, Accent: "teal"}

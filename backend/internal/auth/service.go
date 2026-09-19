@@ -53,8 +53,25 @@ type Service struct {
 	topUp MonthlyTopUp
 }
 
-// NewService wires the context with its store and the session lifetime from config.
-func NewService(store Store, ttl time.Duration) *Service {
+// Deps are the collaborators the auth context is composed with (ARCH-40). Mailer is
+// required: transactional mail is never dropped, so a service that can reach send must
+// have a delivery edge. The rest name legal absent modes: no Google means sign-in is
+// disabled, no TopUp means an upgrade that owes credits is refused loudly, no Bootstraps
+// means a new account gets no defaults, an empty WebOrigin means no link can be built.
+type Deps struct {
+	Mailer     Mailer
+	WebOrigin  string
+	Google     GoogleIdentity
+	TopUp      MonthlyTopUp
+	Bootstraps []AccountBootstrap
+}
+
+// NewService wires the context with its store, the session lifetime from config and its
+// collaborators.
+func NewService(store Store, ttl time.Duration, deps Deps) *Service {
+	if deps.Mailer == nil {
+		panic("auth: a mailer is required")
+	}
 	// Derive the dummy hash now, at boot, rather than on the first unknown-id login.
 	// Deferred, that login would pay two argon2id derivations (build the dummy, then
 	// verify against it) where a wrong password pays one — a timing difference on the
@@ -65,31 +82,15 @@ func NewService(store Store, ttl time.Duration) *Service {
 	return &Service{
 		store: store, ttl: ttl, now: time.Now, verify: VerifyPassword,
 		lastResend: make(map[resendKey]time.Time),
+		mailer:     deps.Mailer, google: deps.Google, topUp: deps.TopUp,
+		webOrigin:  normalizeWebOrigin(deps.WebOrigin),
+		bootstraps: append([]AccountBootstrap(nil), deps.Bootstraps...),
 	}
 }
 
-// SetMonthlyTopUp gives the service the credit side of a tier upgrade. Without it an
-// upgrade that owes credits fails loudly rather than moving the tier and dropping the
-// grant on the floor.
-func (s *Service) SetMonthlyTopUp(topUp MonthlyTopUp) { s.topUp = topUp }
-
-// SetBootstraps replaces the idempotent account defaults. Replacement lets a repaired
-// dependency heal an account when its verification link is consumed later.
-func (s *Service) SetBootstraps(bootstraps ...AccountBootstrap) {
-	s.bootstraps = append([]AccountBootstrap(nil), bootstraps...)
-}
-
-// SetMailer attaches the delivery edge after the auth service is constructed. A caller that
-// reaches send without this wiring receives an error; transactional mail is never dropped.
-func (s *Service) SetMailer(mailer Mailer) { s.mailer = mailer }
-
-// SetGoogle attaches the optional Google authorization-code exchange edge. Leaving it
-// nil is the supported disabled configuration rather than an incomplete service.
-func (s *Service) SetGoogle(identity GoogleIdentity) { s.google = identity }
-
-// SetWebOrigin supplies the browser origin used to build verification and reset URLs.
-func (s *Service) SetWebOrigin(origin string) {
-	s.webOrigin = strings.TrimRight(strings.TrimSpace(origin), "/")
+// normalizeWebOrigin is the browser origin used to build verification and reset URLs.
+func normalizeWebOrigin(origin string) string {
+	return strings.TrimRight(strings.TrimSpace(origin), "/")
 }
 
 // send applies the permanent-recipient policy before and after the delivery adapter.

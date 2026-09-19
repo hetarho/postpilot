@@ -1,8 +1,9 @@
 package rpc
 
 import (
-	"github.com/postpilot/backend/internal/clip"
 	"testing"
+
+	"github.com/postpilot/backend/internal/clip"
 )
 
 func TestProjectNoticeProjectionFiltersEditedCutAndKeepsStableCode(t *testing.T) {

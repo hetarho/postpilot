@@ -42,7 +42,7 @@ func TestListAnalysisEligibilityAnswersEveryObserveModelInOrder(t *testing.T) {
 			"down":   errors.New("provider disabled"),
 		},
 	}
-	s := (&GenerationService{}).WithAdmission(admission)
+	s := &GenerationService{admission: admission}
 	got, err := s.ListAnalysisEligibility(context.Background())
 	if err != nil {
 		t.Fatal(err)

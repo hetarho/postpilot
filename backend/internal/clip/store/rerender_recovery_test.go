@@ -3,10 +3,11 @@ package store_test
 import (
 	"context"
 	"errors"
-	"github.com/postpilot/backend/internal/clip"
-	"github.com/postpilot/backend/internal/job"
 	"testing"
 	"time"
+
+	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/job"
 )
 
 type beforeRenderEnqueue struct {
@@ -27,7 +28,7 @@ func TestRenderRejectsRevisionRaceBeforeLinkWithoutConsumingSources(t *testing.T
 			t.Fatal(err)
 		}
 	}}
-	s := clip.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, h.planner, h.renderer, jobs, h.cfg).WithFinisher(generationFinisher{h.store})
+	s := clip.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, h.planner, h.renderer, jobs, h.cfg, generationDeps(generationFinisher{h.store}, nil, nil))
 	if _, err := s.StartRender(ctx, "alice", p.ID, b.ID, 1, clip.RenderServer); !errors.Is(err, clip.ErrPlanConflict) {
 		t.Fatal(err)
 	}

@@ -1,9 +1,10 @@
 package main
 
 import (
+	"testing"
+
 	"github.com/postpilot/backend/internal/clip/ai"
 	"github.com/postpilot/backend/internal/platform/config"
-	"testing"
 )
 
 func TestClipPricingCallsUseExactStageCompletionCaps(t *testing.T) {

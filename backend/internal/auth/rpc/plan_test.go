@@ -22,11 +22,10 @@ import (
 func newPlanServer(t *testing.T) (postpilotv1connect.AuthServiceClient, postpilotv1connect.AdminServiceClient, postpilotv1connect.PublishingServiceClient, postpilotv1connect.ModelCatalogServiceClient) {
 	t.Helper()
 
-	svc := auth.NewService(newStore(t), sessionTTL)
 	// Production wires the ledger's top-up here (QUOTA-35). These cases are about the
 	// master-only gate, so the credit side is a no-op; that it actually RUNS on this path is
 	// pinned by TestSetUserPlanRunsTheUpgradeTopUp below.
-	svc.SetMonthlyTopUp(func(context.Context, string, int) error { return nil })
+	svc := auth.NewService(newStore(t), sessionTTL, auth.Deps{Mailer: discardMailer{}, TopUp: func(context.Context, string, int) error { return nil }})
 	for id, tier := range map[string]plan.Plan{"alice": plan.Free, "root": plan.Master} {
 		if err := svc.CreateUser(context.Background(), id, "s3cret", tier); err != nil {
 			t.Fatalf("seed %s: %v", id, err)
@@ -219,7 +218,7 @@ func TestTheLastMasterCannotBeDemoted(t *testing.T) {
 
 // The same guard has to hold on the CLI path, which does not go through the interceptor.
 func TestServiceRefusesTheLastMasterDemotion(t *testing.T) {
-	svc := auth.NewService(newStore(t), sessionTTL)
+	svc := auth.NewService(newStore(t), sessionTTL, auth.Deps{Mailer: discardMailer{}})
 	ctx := context.Background()
 	if err := svc.CreateUser(ctx, "root", "s3cret", plan.Master); err != nil {
 		t.Fatal(err)
@@ -244,16 +243,15 @@ func TestServiceRefusesTheLastMasterDemotion(t *testing.T) {
 // difference between the two grants, and the handler must run that credit side rather than
 // leaving it to whoever remembers.
 func TestSetUserPlanRunsTheUpgradeTopUp(t *testing.T) {
-	svc := auth.NewService(newStore(t), sessionTTL)
 	type topUpCall struct {
 		userID  string
 		credits int
 	}
 	var topUps []topUpCall
-	svc.SetMonthlyTopUp(func(_ context.Context, userID string, credits int) error {
+	svc := auth.NewService(newStore(t), sessionTTL, auth.Deps{Mailer: discardMailer{}, TopUp: func(_ context.Context, userID string, credits int) error {
 		topUps = append(topUps, topUpCall{userID, credits})
 		return nil
-	})
+	}})
 	if err := svc.CreateUser(context.Background(), "alice", "s3cret", plan.Free); err != nil {
 		t.Fatalf("seed alice: %v", err)
 	}
@@ -306,8 +304,7 @@ func TestSetEstimatorComboIsMasterOnlyAndMapsItsRefusals(t *testing.T) {
 		t.Fatalf("as free = %v, want permission_denied", err)
 	}
 
-	svc := auth.NewService(newStore(t), sessionTTL)
-	svc.SetMonthlyTopUp(func(context.Context, string, int) error { return nil })
+	svc := auth.NewService(newStore(t), sessionTTL, auth.Deps{Mailer: discardMailer{}, TopUp: func(context.Context, string, int) error { return nil }})
 	assigner := &fakeComboAssigner{}
 	handler := authrpc.NewAdminHandler(svc, assigner)
 	ctx := auth.WithActor(context.Background(), auth.Actor{UserID: "root", Plan: plan.Master})

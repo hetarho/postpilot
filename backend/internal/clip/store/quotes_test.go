@@ -65,7 +65,7 @@ func TestChangedQuoteInputsAndPricesRequireNewApproval(t *testing.T) {
 		t.Run(change, func(t *testing.T) {
 			h := generationSetup(t)
 			pricing := &quotePricing{}
-			h.service.WithCredits(pricing, nil)
+			h.withCredits(pricing, nil)
 			q := quote(t, h)
 			ctx := context.Background()
 			var err error

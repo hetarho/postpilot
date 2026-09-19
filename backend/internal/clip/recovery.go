@@ -6,8 +6,9 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"github.com/postpilot/backend/internal/llm"
 	"slices"
+
+	"github.com/postpilot/backend/internal/llm"
 )
 
 const AnalysisContractVersion = "clip-observation-v2"

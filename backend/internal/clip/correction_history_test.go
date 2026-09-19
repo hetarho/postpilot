@@ -2,12 +2,13 @@ package clip_test
 
 import (
 	"encoding/json"
-	"github.com/postpilot/backend/internal/clip"
-	"github.com/postpilot/backend/internal/clip/composition"
-	"github.com/postpilot/backend/internal/platform/config"
 	"reflect"
 	"slices"
 	"testing"
+
+	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/clip/composition"
+	"github.com/postpilot/backend/internal/platform/config"
 )
 
 func nativeHistoryFixture(t *testing.T) (clip.Project, clip.EditPlan) {

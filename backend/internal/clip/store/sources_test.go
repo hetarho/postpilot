@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/postpilot/backend/internal/clip"
-	"github.com/postpilot/backend/internal/platform/config"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/platform/config"
 )
 
 type sourceObjects struct {
@@ -261,11 +262,9 @@ func TestSourceMismatchAndPartialCleanupRemainRetryable(t *testing.T) {
 	}
 }
 func TestSourceExpiryConsumptionAndProjectDeletionFence(t *testing.T) {
-	s, store, d := setup(t)
-	_, p := create(t, s)
 	objects := fakeSources()
-	src := clip.NewSourceService(store, objects, config.ClipSourceLimits(6*time.Hour, 10*time.Minute))
-	s.SetSources(src)
+	s, store, d, src := setupWith(t, objects)
+	_, p := create(t, s)
 	ctx := context.Background()
 	u, err := src.Create(ctx, "alice", p.ID, manifest(1))
 	if err != nil {
@@ -324,11 +323,9 @@ func TestSourceExpiryConsumptionAndProjectDeletionFence(t *testing.T) {
 	}
 }
 func TestSourceDeleteFailsClosedWhenCleanupIntentCannotBeSaved(t *testing.T) {
-	s, store, d := setup(t)
-	_, p := create(t, s)
 	objects := fakeSources()
-	src := clip.NewSourceService(store, objects, config.ClipSourceLimits(6*time.Hour, 10*time.Minute))
-	s.SetSources(src)
+	s, _, d, src := setupWith(t, objects)
+	_, p := create(t, s)
 	ctx := context.Background()
 	u, err := src.Create(ctx, "alice", p.ID, manifest(1))
 	if err != nil {

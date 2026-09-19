@@ -17,7 +17,7 @@ func ptrOf[T any](value T) *T { return &value }
 func newAnswerService(t *testing.T) (*Service, *fakeStore) {
 	t.Helper()
 	svc, store := newTemplateAwareService(t)
-	svc.SetTemplateAnswerLimits(40, 500)
+	svc.answerLabelMax, svc.answerValueMax = 40, 500
 	return svc, store
 }
 

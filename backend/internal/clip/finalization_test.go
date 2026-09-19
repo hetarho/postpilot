@@ -2,10 +2,11 @@ package clip_test
 
 import (
 	"errors"
-	"github.com/postpilot/backend/internal/clip"
-	"github.com/postpilot/backend/internal/platform/config"
 	"testing"
 	"time"
+
+	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/platform/config"
 )
 
 func TestNativeFinalizationUsesSavedEvidenceWithoutPixelsOrLayout(t *testing.T) {

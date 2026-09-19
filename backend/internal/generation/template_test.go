@@ -240,8 +240,8 @@ func (f *fakeTemplateBriefs) RenderedFor(_ context.Context, _, templateID string
 
 func templateAwareService(t *testing.T, briefs *fakeTemplateBriefs, posts *fakePosts, jobs *fakeJobs, models *fakeModels) *Service {
 	t.Helper()
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget)
-	svc.SetTemplateBriefs(briefs)
+	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, testDeps())
+	svc.templates = briefs
 	return svc
 }
 

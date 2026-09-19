@@ -6,6 +6,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"log/slog"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/composition"
 	"github.com/postpilot/backend/internal/clip/store"
@@ -15,13 +23,6 @@ import (
 	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/platform/config"
 	"github.com/postpilot/backend/internal/platform/db"
-	"io"
-	"log/slog"
-	"os"
-	"path/filepath"
-	"strings"
-	"testing"
-	"time"
 )
 
 type processingObjects struct {
@@ -458,11 +459,9 @@ type generationHarness struct {
 
 func generationSetup(t *testing.T) *generationHarness {
 	t.Helper()
-	projects, st, d := setup(t)
-	template, project := create(t, projects)
 	objects := &processingObjects{sourceObjects: fakeSources(), downloads: map[string]int{}}
-	sources := clip.NewSourceService(st, objects, config.ClipSourceLimits(6*time.Hour, 10*time.Minute))
-	projects.SetSources(sources)
+	projects, st, d, sources := setupWith(t, objects)
+	template, project := create(t, projects)
 	manifest := manifest(2)
 	manifest[0].DurationMS = 60000
 	manifest[1].DurationMS = 15000
@@ -489,9 +488,14 @@ func generationSetup(t *testing.T) *generationHarness {
 	cfg := clip.GenerationConfig{Media: clip.MediaConfig{Sources: config.ClipSourceLimits(6*time.Hour, 10*time.Minute), ChunkDurationMS: 60000, DurationToleranceMS: 1000}, Analysis: clip.AnalysisLimits{ChunkMS: 60000, MaxSources: 20, MaxSourceDurationMS: 1800000, MaxSegments: 60, MaxTextRunes: 2000, MaxSubjects: 20}, QuoteTTL: 5 * time.Minute, ReadTTL: time.Minute, CleanupTimeout: time.Second, OrphanMinAge: time.Hour}
 	cfg.Render = config.ClipRender(&config.Config{})
 	cfg.Media.AnalysisMaxBytes, cfg.Media.PreparedMaxBytes, cfg.Media.WorkspaceMaxBytes = 8<<20, 512<<20, 8<<30
-	service := clip.NewGenerationService(st, projects, sources, objects, media, planner, renderer, generationJobs{queue}, cfg).WithFinisher(generationFinisher{st}).WithCredits(&quotePricing{}, nil)
-	projects.SetGeneration(service)
+	service := clip.NewGenerationService(st, projects, sources, objects, media, planner, renderer, generationJobs{queue}, cfg, generationDeps(generationFinisher{st}, &quotePricing{}, nil))
 	return &generationHarness{service, projects, st, d, sources, objects, media, planner, renderer, admitter, queue, jobs, template, project, batch, cfg}
+}
+
+// withCredits rebuilds the generation side over new pricing and accounting; the
+// constructor re-binds the project service to the rebuilt service.
+func (h *generationHarness) withCredits(pricing clip.QuotePricing, accounting clip.AccountingReader) {
+	h.service = clip.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, h.planner, h.renderer, generationJobs{h.queue}, h.cfg, generationDeps(generationFinisher{h.store}, pricing, accounting))
 }
 func (h *generationHarness) start(t *testing.T) string {
 	t.Helper()

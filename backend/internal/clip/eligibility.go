@@ -129,12 +129,6 @@ func admissionRefusal(model llm.ModelRef, err error) error {
 	return &ModelAdmissionError{Model: model, Err: err}
 }
 
-// WithAdmission attaches the qualifier the eligibility list reads.
-func (s *GenerationService) WithAdmission(admission AnalysisAdmission) *GenerationService {
-	s.admission = admission
-	return s
-}
-
 // eligibilityConcurrency bounds how many models are qualified at once; the
 // adapter bounds its own document reads underneath.
 const eligibilityConcurrency = 4

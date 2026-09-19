@@ -64,7 +64,7 @@ func TestRecoveryRenderRestartSkipsCompletedWork(t *testing.T) {
 	h.media.cleanupErr = nil
 	h.planner.gate = llm.ErrModelUnavailable
 	// Recreate the service to prove that continuation does not depend on memory.
-	h.service = clip.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, h.planner, h.renderer, generationJobs{h.queue}, h.cfg).WithFinisher(generationFinisher{h.store}).WithCredits(&quotePricing{}, nil)
+	h.service = clip.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, h.planner, h.renderer, generationJobs{h.queue}, h.cfg, generationDeps(generationFinisher{h.store}, &quotePricing{}, nil))
 	q, err := h.service.Quote(t.Context(), "alice", h.project.ID, h.batch.ID, "p/o", "p/w")
 	if err != nil {
 		t.Fatal("AI-free continuation consulted unavailable models", err)

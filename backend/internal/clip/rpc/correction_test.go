@@ -1,12 +1,13 @@
 package rpc
 
 import (
+	"reflect"
+	"testing"
+
 	"connectrpc.com/connect"
 	"github.com/postpilot/backend/internal/clip"
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"google.golang.org/protobuf/encoding/protojson"
-	"reflect"
-	"testing"
 )
 
 func TestCorrectionWireRoundtripAndConflict(t *testing.T) {

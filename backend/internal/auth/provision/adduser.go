@@ -66,8 +66,7 @@ func Run(ctx context.Context, args []string, bootstraps ...Bootstrap) error {
 		return err
 	}
 
-	svc := auth.NewService(store.New(handle.Writer, handle.Reader), cfg.SessionTTL)
-	svc.SetMailer(mail.NewLog())
+	svc := auth.NewService(store.New(handle.Writer, handle.Reader), cfg.SessionTTL, auth.Deps{Mailer: mail.NewLog()})
 	if err := svc.CreateUser(ctx, loginID, password, tier); err != nil {
 		if errors.Is(err, auth.ErrDuplicateUser) {
 			if bootErr := runBootstraps(ctx, handle, loginID, bootstraps); bootErr != nil {
@@ -143,13 +142,13 @@ func SetPlan(ctx context.Context, args []string, topUp CreditTopUp) error {
 		return err
 	}
 
-	svc := auth.NewService(store.New(handle.Writer, handle.Reader), cfg.SessionTTL)
-	svc.SetMailer(mail.NewLog())
+	deps := auth.Deps{Mailer: mail.NewLog()}
 	if topUp != nil {
-		svc.SetMonthlyTopUp(func(ctx context.Context, userID string, credits int) error {
+		deps.TopUp = func(ctx context.Context, userID string, credits int) error {
 			return topUp(ctx, handle, userID, credits)
-		})
+		}
 	}
+	svc := auth.NewService(store.New(handle.Writer, handle.Reader), cfg.SessionTTL, deps)
 	if err := svc.SetUserPlan(ctx, loginID, target); err != nil {
 		if errors.Is(err, auth.ErrUserNotFound) {
 			return fmt.Errorf("account %q does not exist", loginID)
@@ -194,8 +193,7 @@ func GrantCredits(ctx context.Context, args []string, grant CreditGrant) error {
 		return err
 	}
 
-	svc := auth.NewService(store.New(handle.Writer, handle.Reader), cfg.SessionTTL)
-	svc.SetMailer(mail.NewLog())
+	svc := auth.NewService(store.New(handle.Writer, handle.Reader), cfg.SessionTTL, auth.Deps{Mailer: mail.NewLog()})
 	if _, err := svc.PlanOf(ctx, loginID); err != nil {
 		if errors.Is(err, auth.ErrUserNotFound) {
 			return fmt.Errorf("account %q does not exist", loginID)

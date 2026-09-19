@@ -10,12 +10,12 @@ import (
 	"github.com/postpilot/backend/internal/auth"
 	"github.com/postpilot/backend/internal/clip"
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
-	"github.com/postpilot/backend/internal/platform/config"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type rpcStore struct {
 	clip.Store
+	clip.SourceStore
 	user          string
 	patch         clip.ProjectPatch
 	templatePatch clip.TemplatePatch
@@ -47,7 +47,7 @@ func (s *rpcStore) UpdateTemplate(_ context.Context, user, id string, p clip.Tem
 }
 func TestPresenceActorAndNotFound(t *testing.T) {
 	s := &rpcStore{}
-	h := NewHandler(clip.NewService(s, config.ClipLimits()))
+	h := NewHandler(testProjects(s))
 	ctx := auth.WithUser(context.Background(), "alice")
 	title := "new title"
 	response, err := h.UpdateClipProject(ctx, connect.NewRequest(&v1.UpdateClipProjectRequest{Id: "owned", Title: &title, Answers: []*v1.ClipAnswer{{Label: "場所", Text: ""}}}))
@@ -166,7 +166,7 @@ func TestResultWireExposesURLsButNoPrivateObjectKey(t *testing.T) {
 }
 
 func TestCreateProjectRefusesAbsentAndUnknownWireLanguages(t *testing.T) {
-	h := NewHandler(clip.NewService(&rpcStore{}, config.ClipLimits()))
+	h := NewHandler(testProjects(&rpcStore{}))
 	ctx := auth.WithUser(t.Context(), "alice")
 	for _, language := range []v1.ContentLanguage{v1.ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED, v1.ContentLanguage(99)} {
 		_, err := h.CreateClipProject(ctx, connect.NewRequest(&v1.CreateClipProjectRequest{Language: language}))

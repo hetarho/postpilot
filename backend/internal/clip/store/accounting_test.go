@@ -25,7 +25,7 @@ func (r *accountingReader) ForJob(_ context.Context, user, job string) (*clip.Ac
 func TestProjectAccountingDistinguishesEverySettlementPhase(t *testing.T) {
 	h := generationSetup(t)
 	reader := &accountingReader{}
-	h.service.WithCredits(&quotePricing{}, reader)
+	h.withCredits(&quotePricing{}, reader)
 	q := quote(t, h)
 	id, err := accept(h, q)
 	if err != nil {

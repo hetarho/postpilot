@@ -332,7 +332,7 @@ func TestDeletePostRemovesVideoObjects(t *testing.T) {
 	svc, store, blobs := newTestService(t)
 	ctx := context.Background()
 	p := mustCreatePost(t, svc, alice, "Jeju")
-	svc.SetExperimentContentPurger(&recordingContentPurger{})
+	svc.contentPurger = &recordingContentPurger{}
 
 	video := mustAttachVideo(t, svc, blobs, alice, p.Slug, "clip.mp4", 5_000)
 	if err := svc.DeletePost(ctx, alice, p.Slug); err != nil {

@@ -103,8 +103,7 @@ func (r ownedPlanRenderer) Render(ctx context.Context, ws clip.MediaWorkspace, p
 }
 func TestGenerationPersistsTheRenderedOwnedPlanAndItsStyles(t *testing.T) {
 	h := generationSetup(t)
-	h.service = clip.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, ownedPlanWriter{h.planner}, ownedPlanRenderer{h.renderer}, generationJobs{h.queue}, h.cfg).WithFinisher(generationFinisher{h.store}).WithCredits(&quotePricing{}, nil)
-	h.projects.SetGeneration(h.service)
+	h.service = clip.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, ownedPlanWriter{h.planner}, ownedPlanRenderer{h.renderer}, generationJobs{h.queue}, h.cfg, generationDeps(generationFinisher{h.store}, &quotePricing{}, nil))
 	body := `<clip version="1"><repeat for="scenes"><scene id="shot"><text id="copy" kind="ai" role="caption" basis="cut">Describe the scene.</text></scene></repeat><text id="empty-hook" kind="fixed" role="hook"/><text id="empty-ending" kind="fixed" role="ending"/></clip>`
 	template, err := legacyTemplate(t, h.store, "alice", "owned-render", body), error(nil)
 	if err != nil {
@@ -158,7 +157,8 @@ func TestNativeCompositionOwnedRoundTripAndRequiredIDs(t *testing.T) {
 	if err := clip.RequiredAnswers(template, p, config.ClipCompositionLimits()); err != nil {
 		t.Fatal("legacy category/disclosure gate survived", err)
 	}
-	restarted := clip.NewService(store.New(d.Writer, d.Reader), config.ClipLimits())
+	restartedStore := store.New(d.Writer, d.Reader)
+	restarted := clip.NewService(restartedStore, config.ClipLimits(), clip.NewSourceService(restartedStore, fakeSources(), config.ClipSourceLimits(6*time.Hour, 10*time.Minute)), nullFinalizer{})
 	got, err := restarted.GetProject(ctx, "alice", p.ID)
 	if err != nil || !reflect.DeepEqual(got.Composition, p.Composition) || got.Composition.Snapshot.Body != body {
 		t.Fatal(got.Composition, err)
@@ -397,8 +397,7 @@ func (compositionRenderer) CompositionPlanVersion() int { return clip.Compositio
 func TestNativeQuoteInvalidatesGroupedValuesAndFreezesAcceptedComposition(t *testing.T) {
 	h := generationSetup(t)
 	ctx := context.Background()
-	h.service = clip.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, compositionPlanner{h.planner}, compositionRenderer{h.renderer}, generationJobs{h.queue}, h.cfg).WithFinisher(generationFinisher{h.store}).WithCredits(&quotePricing{}, nil)
-	h.projects.SetGeneration(h.service)
+	h.service = clip.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, compositionPlanner{h.planner}, compositionRenderer{h.renderer}, generationJobs{h.queue}, h.cfg, generationDeps(generationFinisher{h.store}, &quotePricing{}, nil))
 	template, err := legacyTemplate(t, h.store, "alice", "native-quote", nativeBody), error(nil)
 	if err != nil {
 		t.Fatal(err)

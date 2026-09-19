@@ -11,7 +11,7 @@ func TestAuthLinkURLsUseTheConfiguredWebOrigin(t *testing.T) {
 	if _, err := svc.verificationLink("raw"); err == nil {
 		t.Fatal("verification link accepted an empty web origin")
 	}
-	svc.SetWebOrigin("https://postpilot.example.com/")
+	svc.webOrigin = normalizeWebOrigin("https://postpilot.example.com/")
 	verification, err := svc.verificationLink("raw+/=")
 	if err != nil || verification != "https://postpilot.example.com/verify-email?token=raw%2B%2F%3D" {
 		t.Fatalf("verification link = %q, %v", verification, err)
@@ -28,7 +28,7 @@ func TestTransactionalMailBuildersAreBilingualPlainText(t *testing.T) {
 		t.Fatal(err)
 	}
 	svc := &Service{}
-	svc.SetWebOrigin("https://postpilot.example.com")
+	svc.webOrigin = normalizeWebOrigin("https://postpilot.example.com")
 	verifyLink, err := svc.verificationLink(raw)
 	if err != nil {
 		t.Fatal(err)

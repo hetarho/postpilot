@@ -84,13 +84,10 @@ func newFinalizationHarness(t *testing.T) *finalizationHarness {
 	t.Helper()
 	h := &finalizationHarness{cancellationHarness: newCancellationHarness(t, nil), now: time.Now()}
 	cfg := &config.Config{PresignGetTTL: 5 * time.Minute, OrphanMinAge: time.Hour, ClipSourceBatchTTL: 6 * time.Hour, PresignPutTTL: 10 * time.Minute}
-	h.service = clip.NewService(h.clips, config.ClipLimits())
 	h.objects = &finalizationObjects{objects: map[string]clip.SourceObjectInfo{}}
 	h.sources = clip.NewSourceService(h.clips, h.objects, config.ClipSourceLimits(6*time.Hour, 10*time.Minute), func() time.Time { return h.now })
-	h.service.SetSources(h.sources)
-	h.generation = clip.NewGenerationService(h.clips, h.service, h.sources, h.objects, nil, nil, nil, clipapp.NewJobs(h.queue), config.ClipGeneration(cfg))
-	h.service.SetGeneration(h.generation)
-	h.service.SetFinalizer(clipapp.NewFinalizer(h.db.Writer, h.bind, h.clips, config.ClipRender(cfg), nil))
+	h.service = clip.NewService(h.clips, config.ClipLimits(), h.sources, clipapp.NewFinalizer(h.db.Writer, h.bind, h.clips, config.ClipRender(cfg), nil))
+	h.generation = clip.NewGenerationService(h.clips, h.service, h.sources, h.objects, nil, nil, nil, clipapp.NewJobs(h.queue), config.ClipGeneration(cfg), neutralGenerationDeps())
 	upload, err := h.sources.Create(t.Context(), "alice", "clip", []clip.SourceMetadata{{Filename: "source.mp4", ContentType: "video/mp4", Bytes: 100, DurationMS: 16000, Width: 640, Height: 640, Fingerprint: strings.Repeat("a", 64)}})
 	if err != nil {
 		t.Fatal(err)
@@ -229,8 +226,7 @@ func TestClipFinalizationCleanupFailureAndLateUploadNeverReopenEditing(t *testin
 	}
 	h.assertFinalized(t)
 	// A new service only reads durable state; a retry cannot reset the timestamp.
-	restarted := clip.NewService(h.clips, config.ClipLimits())
-	restarted.SetFinalizer(clipapp.NewFinalizer(h.db.Writer, h.bind, h.clips, config.ClipRender(&config.Config{}), nil))
+	restarted := clip.NewService(h.clips, config.ClipLimits(), h.sources, clipapp.NewFinalizer(h.db.Writer, h.bind, h.clips, config.ClipRender(&config.Config{}), nil))
 	if _, err := restarted.FinalizeProject(t.Context(), h.request()); err != nil {
 		t.Fatal(err)
 	}
@@ -472,7 +468,7 @@ func (f *lostFinalizationReply) Finalize(ctx context.Context, req clip.Finalizat
 }
 func TestClipFinalizationAmbiguousResponseResolvesFromDurableIdentity(t *testing.T) {
 	h := newFinalizationHarness(t)
-	h.service.SetFinalizer(&lostFinalizationReply{ProjectFinalizer: clipapp.NewFinalizer(h.db.Writer, h.bind, h.clips, config.ClipRender(&config.Config{}), nil)})
+	h.service = clip.NewService(h.clips, config.ClipLimits(), h.sources, &lostFinalizationReply{ProjectFinalizer: clipapp.NewFinalizer(h.db.Writer, h.bind, h.clips, config.ClipRender(&config.Config{}), nil)})
 	if _, err := h.service.FinalizeProject(t.Context(), h.request()); err == nil {
 		t.Fatal("fixture did not lose response")
 	}

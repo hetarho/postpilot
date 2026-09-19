@@ -11,6 +11,7 @@ import (
 	authstore "github.com/postpilot/backend/internal/auth/store"
 	"github.com/postpilot/backend/internal/billing"
 	billingstore "github.com/postpilot/backend/internal/billing/store"
+	"github.com/postpilot/backend/internal/mail"
 	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/platform/db"
 	"github.com/postpilot/backend/internal/usage"
@@ -46,15 +47,14 @@ func newLedgerHarness(t *testing.T, name string, createdAt time.Time, anchor tim
 		t.Fatal(err)
 	}
 
-	ledger := usage.NewService(usagestore.New(handle.Writer, handle.Reader), nil, 0)
-	ledger.SetAnchors(fixedAnchor{at: anchor})
+	ledger := usage.NewService(usagestore.New(handle.Writer, handle.Reader), nil, 0, fixedAnchor{at: anchor})
 
 	store := billingstore.New(handle.Writer, handle.Reader)
 	store.SetCreditsForTx(func(tx *sql.Tx) billing.Credits {
-		return usage.NewService(usagestore.NewTx(tx), nil, 0)
+		return usage.NewService(usagestore.NewTx(tx), nil, 0, fixedAnchor{at: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)})
 	})
 	store.SetPlansForTx(func(tx *sql.Tx) billing.Plans {
-		return auth.NewService(authstore.NewTx(tx), time.Hour)
+		return auth.NewService(authstore.NewTx(tx), time.Hour, auth.Deps{Mailer: mail.NewLog()})
 	})
 	if err := store.UpsertPaymentMethod(ctx, billing.PaymentMethod{
 		UserID: "alice", Provider: "toss", BillingKey: "billing-key",

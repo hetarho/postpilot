@@ -48,7 +48,29 @@ type CompletionBudget interface {
 	Observation() int
 }
 
-func NewService(posts Posts, profiles Profiles, rules RuleWriter, models LLM, images ImageReader, jobs Jobs, batchSize int, reasoning ReasoningPolicy, budget CompletionBudget) *Service {
+// Deps are the collaborators from other contexts a generation run reads or writes
+// through (ARCH-40). Every one is required: a missing template brief, 지침, candidate
+// recorder, version-sample writer or experiment finder would not fail a run, it would
+// silently produce a poorer or unrecorded post — exactly the wire nobody notices.
+type Deps struct {
+	// Experiments answers whether a post has a pending A/B run (generation must not
+	// overwrite what an experiment is about to judge).
+	Experiments PendingExperiments
+	// Templates is the template context's published brief lookup, read once at enqueue.
+	Templates TemplateBriefs
+	// Guidelines is the guideline context's published resolution, read once at enqueue.
+	Guidelines GuidelinesForPrompt
+	// Candidates records what a completed revision asked for.
+	Candidates GuidelineCandidates
+	// Samples is the voice context's per-version snapshot recorder.
+	Samples VersionSampleWriter
+	// Videos mints the signed link a video reaches a model through (VIDEO-10); the
+	// bytes never enter this process. VideoURLTTL is that link's lifetime.
+	Videos      VideoLinker
+	VideoURLTTL time.Duration
+}
+
+func NewService(posts Posts, profiles Profiles, rules RuleWriter, models LLM, images ImageReader, jobs Jobs, batchSize int, reasoning ReasoningPolicy, budget CompletionBudget, deps Deps) *Service {
 	if batchSize <= 0 {
 		panic("generation: batch size must be positive")
 	}
@@ -58,30 +80,17 @@ func NewService(posts Posts, profiles Profiles, rules RuleWriter, models LLM, im
 	if budget == nil {
 		panic("generation: a completion budget policy is required")
 	}
-	return &Service{posts: posts, profiles: profiles, rules: rules, models: models, images: images, jobs: jobs, batchSize: batchSize, reasoning: reasoning, budget: budget}
+	for name, dep := range map[string]any{"experiments": deps.Experiments, "template briefs": deps.Templates, "guidelines": deps.Guidelines, "guideline candidates": deps.Candidates, "version samples": deps.Samples, "video linker": deps.Videos} {
+		if dep == nil {
+			panic("generation: " + name + " collaborator is required")
+		}
+	}
+	if deps.VideoURLTTL <= 0 {
+		panic("generation: video link TTL must be positive")
+	}
+	return &Service{posts: posts, profiles: profiles, rules: rules, models: models, images: images, jobs: jobs, batchSize: batchSize, reasoning: reasoning, budget: budget,
+		experiments: deps.Experiments, templates: deps.Templates, guidelines: deps.Guidelines, candidates: deps.Candidates, samples: deps.Samples, videos: deps.Videos, videoURLTTL: deps.VideoURLTTL}
 }
-
-func (s *Service) SetPendingExperimentFinder(finder PendingExperiments) {
-	s.experiments = finder
-}
-
-// SetTemplateBriefs wires the template context's published brief lookup. Without it the
-// prompt simply carries no brief, so a partially wired process keeps the no-template
-// behavior rather than failing.
-func (s *Service) SetTemplateBriefs(briefs TemplateBriefs) { s.templates = briefs }
-
-// SetVideoLinker wires how a video reaches a model: a signed URL, minted per call, living
-// exactly as long as a view URL does. Without it a run with a video fails its observe call
-// rather than falling back to something — there is no other way to deliver a clip.
-func (s *Service) SetVideoLinker(linker VideoLinker, ttl time.Duration) {
-	s.videos = linker
-	s.videoURLTTL = ttl
-}
-
-// SetVersionSamples wires the voice context's per-version snapshot recorder. Without it a
-// generation simply records nothing, which is the same outcome a failed recording has: the
-// post is the product and the snapshot is a record of it.
-func (s *Service) SetVersionSamples(writer VersionSampleWriter) { s.samples = writer }
 
 // recordVersionSample copies what a run produced into the voice's current head version. It is
 // called AFTER the machine baseline is written, and its failure is swallowed on template: a
@@ -96,16 +105,6 @@ func (s *Service) recordVersionSample(ctx context.Context, userID, voiceID strin
 		slog.WarnContext(ctx, "record voice version sample failed", "error", err, "voice_id", voiceID)
 	}
 }
-
-// SetGuidelines wires the guideline context's published resolution. Without it the prompt
-// simply carries no 지침, so a partially wired process keeps the no-guideline behavior
-// rather than failing.
-func (s *Service) SetGuidelines(resolver GuidelinesForPrompt) { s.guidelines = resolver }
-
-// SetGuidelineCandidates wires the guideline context's candidate recorder. Without it a
-// completed revision simply records nothing, which is the same outcome a failed recording
-// has — the revision is the product and the candidate is a receipt for it.
-func (s *Service) SetGuidelineCandidates(recorder GuidelineCandidates) { s.candidates = recorder }
 
 // recordGuidelineCandidate records what the user ASKED FOR, after the revised content is
 // already persisted. Its failure is swallowed for the same reason recordVersionSample's is:

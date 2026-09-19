@@ -71,8 +71,8 @@ func observationAnswer(request llm.Request) llm.Response {
 
 func videoService(t *testing.T, posts *fakePosts, models *fakeModels, linker *fakeLinker) *Service {
 	t.Helper()
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget)
-	svc.SetVideoLinker(linker, 10*time.Minute)
+	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
+	svc.videos, svc.videoURLTTL = linker, 10*time.Minute
 	return svc
 }
 
@@ -187,7 +187,7 @@ func TestStartRefusesAVideoBlindObserveModel(t *testing.T) {
 	posts := &fakePosts{}
 	models := videoModels()
 	jobs := &fakeJobs{id: "job"}
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget)
+	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, testDeps())
 	posts.input = PostInput{
 		Slug: "p", UserID: "alice", Voice: VoiceRef{ID: "voice"},
 		Images: []Image{photo("IMG_1.jpg"), clip("a.mp4")},
@@ -240,7 +240,7 @@ func TestStartPlansOneObserveCallPerFrozenVideo(t *testing.T) {
 	posts := &fakePosts{}
 	models := videoModels()
 	jobs := &fakeJobs{id: "job"}
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget)
+	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, testDeps())
 	images := []Image{
 		photo("IMG_1.jpg"), photo("IMG_2.jpg"), photo("IMG_3.jpg"), photo("IMG_4.jpg"), photo("IMG_5.jpg"),
 		clip("a.mp4"), clip("b.mp4"),
@@ -404,7 +404,7 @@ func TestObserveVideoWithoutALinkerFails(t *testing.T) {
 	models.complete = func(_ llm.ModelRef, request llm.Request) (llm.Response, error) {
 		return observationAnswer(request), nil
 	}
-	svc := NewService(&fakePosts{}, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget)
+	svc := NewService(&fakePosts{}, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
 	post := PostInput{Slug: "p", UserID: "alice", Images: []Image{clip("a.mp4")}}
 	if _, err := svc.observe(context.Background(), post, post.Images, nil, videoObserveRef, func(string, int, int) {}); err == nil {
 		t.Fatal("a video observation ran with no linker configured")

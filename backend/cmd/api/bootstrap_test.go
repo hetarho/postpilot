@@ -149,23 +149,28 @@ func TestVerificationRepairsFailedSignupBootstrapsExactlyOnce(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	authSvc := auth.NewService(authstore.New(handle.Writer, handle.Reader), time.Hour)
 	mailer := &captureMailer{}
-	authSvc.SetMailer(mailer)
-	authSvc.SetWebOrigin("https://postpilot.example.com")
-	authSvc.SetBootstraps(func(context.Context, string) error { return errors.New("voice unavailable") })
+	authStore := authstore.New(handle.Writer, handle.Reader)
+	authSvc := auth.NewService(authStore, time.Hour, auth.Deps{
+		Mailer: mailer, WebOrigin: "https://postpilot.example.com",
+		Bootstraps: []auth.AccountBootstrap{func(context.Context, string) error { return errors.New("voice unavailable") }},
+	})
 	if err := authSvc.Signup(ctx, "alice@example.com", "password1"); err == nil {
 		t.Fatal("signup with a failed bootstrap returned nil")
 	}
 
-	ledger := usage.NewService(usagestore.New(handle.Writer, handle.Reader), emptyModels{}, 0)
-	ledger.SetAnchors(usageAnchors{auth: authSvc})
-	authSvc.SetBootstraps(
-		func(ctx context.Context, userID string) error { return defaultVoiceBootstrap(ctx, handle, userID) },
-		func(ctx context.Context, userID string) error {
-			return ledger.EnsureMonthlyLot(ctx, userID, plan.Free)
+	// The repaired process is a new service over the same rows: bootstraps are
+	// constructor state, so healing means constructing again, not mutating.
+	ledger := usage.NewService(usagestore.New(handle.Writer, handle.Reader), emptyModels{}, 0, usageAnchors{auth: authSvc})
+	authSvc = auth.NewService(authStore, time.Hour, auth.Deps{
+		Mailer: mailer, WebOrigin: "https://postpilot.example.com",
+		Bootstraps: []auth.AccountBootstrap{
+			func(ctx context.Context, userID string) error { return defaultVoiceBootstrap(ctx, handle, userID) },
+			func(ctx context.Context, userID string) error {
+				return ledger.EnsureMonthlyLot(ctx, userID, plan.Free)
+			},
 		},
-	)
+	})
 	if err := authSvc.ResendVerification(ctx, "alice@example.com"); err != nil {
 		t.Fatal(err)
 	}
@@ -209,8 +214,7 @@ func TestAccountBootstrapPrecedesPostCreation(t *testing.T) {
 		t.Fatal(err)
 	}
 	voiceSvc := voice.NewService(voicestore.New(handle.Writer, handle.Reader), nil, nil)
-	postSvc := post.NewService(poststore.New(handle.Writer, handle.Reader), noBlobs{}, time.Minute, time.Minute, 1<<20, 30)
-	postSvc.SetVoiceDirectory(postVoices{service: voiceSvc})
+	postSvc := post.NewService(poststore.New(handle.Writer, handle.Reader), noBlobs{}, testPostLimits(), testPostDeps(voiceSvc))
 
 	if _, err := voiceSvc.DefaultVoice(ctx, "alice"); !errors.Is(err, voice.ErrVoiceNotFound) {
 		t.Fatalf("default before bootstrap = %v", err)
@@ -258,8 +262,7 @@ func TestARunFreezesThePostsNumbersNotTheTemplates(t *testing.T) {
 	}
 
 	voiceSvc := voice.NewService(voicestore.New(handle.Writer, handle.Reader), nil, nil)
-	postSvc := post.NewService(poststore.New(handle.Writer, handle.Reader), noBlobs{}, time.Minute, time.Minute, 1<<20, 30)
-	postSvc.SetVoiceDirectory(postVoices{service: voiceSvc})
+	postSvc := post.NewService(poststore.New(handle.Writer, handle.Reader), noBlobs{}, testPostLimits(), testPostDeps(voiceSvc))
 	templateSvc := template.NewService(
 		templatestore.New(handle.Writer, handle.Reader),
 		template.Limits{
@@ -334,8 +337,7 @@ func TestGenerationAdapterCarriesThePostTemplateThroughToTheFrozenBrief(t *testi
 	}
 
 	voiceSvc := voice.NewService(voicestore.New(handle.Writer, handle.Reader), nil, nil)
-	postSvc := post.NewService(poststore.New(handle.Writer, handle.Reader), noBlobs{}, time.Minute, time.Minute, 1<<20, 30)
-	postSvc.SetVoiceDirectory(postVoices{service: voiceSvc})
+	postSvc := post.NewService(poststore.New(handle.Writer, handle.Reader), noBlobs{}, testPostLimits(), testPostDeps(voiceSvc))
 	templateSvc := template.NewService(
 		templatestore.New(handle.Writer, handle.Reader),
 		template.Limits{
@@ -357,7 +359,6 @@ func TestGenerationAdapterCarriesThePostTemplateThroughToTheFrozenBrief(t *testi
 		t.Fatal(err)
 	}
 	language := post.LanguageKorean
-	postSvc.SetTemplateAnswerLimits(40, 500)
 	saved, err := postSvc.SaveDraft(ctx, "alice", "", "제주", "", &defaultVoice.ID, &created.ID, &language,
 		[]post.TemplateAnswer{
 			{Label: "총평 별점", Text: "4.5점", Enabled: true},
@@ -474,8 +475,7 @@ func TestVoiceLearningAdapterCarriesBothLanguagesBeforeTheEqualityGate(t *testin
 	models := &trackingVoiceModels{}
 	jobs := &trackingVoiceJobs{}
 	voiceSvc := voice.NewService(voicestore.New(handle.Writer, handle.Reader), models, jobs)
-	postSvc := post.NewService(poststore.New(handle.Writer, handle.Reader), noBlobs{}, time.Minute, time.Minute, 1<<20, 30)
-	postSvc.SetVoiceDirectory(postVoices{service: voiceSvc})
+	postSvc := post.NewService(poststore.New(handle.Writer, handle.Reader), noBlobs{}, testPostLimits(), testPostDeps(voiceSvc))
 
 	defaultVoice, err := voiceSvc.DefaultVoice(ctx, "alice")
 	if err != nil {
@@ -554,8 +554,7 @@ func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.
 	}
 
 	voiceSvc := voice.NewService(voicestore.New(handle.Writer, handle.Reader), nil, nil)
-	postSvc := post.NewService(poststore.New(handle.Writer, handle.Reader), noBlobs{}, time.Minute, time.Minute, 1<<20, 30)
-	postSvc.SetVoiceDirectory(postVoices{service: voiceSvc})
+	postSvc := post.NewService(poststore.New(handle.Writer, handle.Reader), noBlobs{}, testPostLimits(), testPostDeps(voiceSvc))
 	templateSvc := template.NewService(
 		templatestore.New(handle.Writer, handle.Reader),
 		template.Limits{
@@ -667,8 +666,10 @@ func TestGuidelineCandidateAdaptersRecordReviewAndApproveAcrossTheSeam(t *testin
 	}
 
 	voiceSvc := voice.NewService(voicestore.New(handle.Writer, handle.Reader), nil, nil)
-	postSvc := post.NewService(poststore.New(handle.Writer, handle.Reader), noBlobs{}, time.Minute, time.Minute, 1<<20, 30)
-	postSvc.SetVoiceDirectory(postVoices{service: voiceSvc})
+	// The guideline context is built after the post context that detaches through it, so
+	// the link resolves at call time — the same shape the composition root uses.
+	var guidelineSvc *guideline.Service
+	postSvc := post.NewService(poststore.New(handle.Writer, handle.Reader), noBlobs{}, testPostLimits(), testPostDepsWithLinks(voiceSvc, lateLinks{&guidelineSvc}))
 	templateSvc := template.NewService(
 		templatestore.New(handle.Writer, handle.Reader),
 		template.Limits{
@@ -680,16 +681,12 @@ func TestGuidelineCandidateAdaptersRecordReviewAndApproveAcrossTheSeam(t *testin
 	)
 	postSvc.SetTemplateDirectory(postTemplates{service: templateSvc})
 	// Two pending candidates allowed, so the bound is reachable in a test without 50 rows.
-	guidelineSvc := guideline.NewService(
+	guidelineSvc = guideline.NewService(
 		guidelinestore.New(handle.Writer, handle.Reader),
 		guideline.Limits{TextMaxChars: 300, MaxPerAccount: 100},
 		2,
 	)
 	guidelineSvc.SetTemplateDirectory(guidelineTemplates{service: templateSvc})
-	// The delete path's two required hooks, stubbed: this test is about the candidate link.
-	postSvc.SetExperimentContentPurger(noPurge{})
-	postSvc.SetLivePublishFinder(noLivePublish{})
-	postSvc.SetGuidelineCandidateDetacher(postCandidateLinks{service: guidelineSvc})
 
 	defaultVoice, err := voiceSvc.DefaultVoice(ctx, "alice")
 	if err != nil {

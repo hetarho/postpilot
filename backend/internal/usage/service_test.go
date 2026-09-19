@@ -339,8 +339,7 @@ const maxCompletion = 10_000
 func newTestService(t *testing.T, now time.Time) (*Service, *fakeStore) {
 	t.Helper()
 	store := newFakeStore()
-	svc := NewService(store, pricedModels, maxCompletion)
-	svc.SetAnchors(fakeAnchors{anchor: testAnchor})
+	svc := NewService(store, pricedModels, maxCompletion, fakeAnchors{anchor: testAnchor})
 	svc.now = func() time.Time { return now }
 	seq := 0
 	svc.newID = func() string { seq++; return fmt.Sprintf("lot-new-%d", seq) }
@@ -596,8 +595,7 @@ func TestRenewalUsesOneDeterministicLotPerAnchorWindow(t *testing.T) {
 	anchor := time.Date(2025, 1, 20, 11, 0, 0, 0, seoul)
 	now := time.Date(2026, 9, 15, 12, 0, 0, 0, seoul)
 	store := newFakeStore()
-	svc := NewService(store, pricedModels, maxCompletion)
-	svc.SetAnchors(fakeAnchors{anchor: anchor})
+	svc := NewService(store, pricedModels, maxCompletion, fakeAnchors{anchor: anchor})
 	svc.now = func() time.Time { return now }
 
 	first, err := svc.BalanceFor(context.Background(), "alice", plan.Basic)
@@ -642,8 +640,7 @@ func TestLegacyCalendarLotTransitionsThroughOneShortAnchorCycle(t *testing.T) {
 		ID: "legacy-calendar", UserID: "alice", Kind: LotMonthly,
 		Granted: 50, Remaining: 50, ExpiresAt: &calendarExpiry,
 	}}
-	svc := NewService(store, pricedModels, maxCompletion)
-	svc.SetAnchors(fakeAnchors{anchor: anchor})
+	svc := NewService(store, pricedModels, maxCompletion, fakeAnchors{anchor: anchor})
 	svc.now = func() time.Time { return now }
 
 	legacy, err := svc.BalanceFor(context.Background(), "alice", plan.Free)
@@ -857,25 +854,15 @@ func TestReleaseReturnsTheWholeHold(t *testing.T) {
 	}
 }
 
-func TestRenewingOperationsFailWhenAnchorsAreNotWired(t *testing.T) {
-	store := newFakeStore()
-	svc := NewService(store, pricedModels, maxCompletion)
-	ctx := context.Background()
-
-	checks := map[string]func() error{
-		"balance": func() error { _, err := svc.BalanceFor(ctx, "alice", plan.Free); return err },
-		"ensure":  func() error { return svc.EnsureMonthlyLot(ctx, "alice", plan.Free) },
-		"hold": func() error {
-			return svc.Hold(ctx, holdStart("alice", plan.Free, "job", PlannedCall{Ref: cheapRef, Count: 1}))
-		},
-	}
-	for name, check := range checks {
-		t.Run(name, func(t *testing.T) {
-			if err := check(); err == nil || !strings.Contains(err.Error(), "anchors") {
-				t.Fatalf("error = %v, want a loud anchor-wiring failure", err)
-			}
-		})
-	}
+func TestConstructionRefusesALedgerWithoutAnchors(t *testing.T) {
+	// The monthly-window resolver is a constructor argument (ARCH-40): a ledger that could
+	// be built without one would silently anchor on a calendar month.
+	defer func() {
+		if r := recover(); r == nil || !strings.Contains(fmt.Sprint(r), "anchors") {
+			t.Fatalf("panic = %v, want a loud anchor-wiring refusal", r)
+		}
+	}()
+	NewService(newFakeStore(), pricedModels, maxCompletion, nil)
 }
 
 func TestRecordCallPricesAndAttributesFromContext(t *testing.T) {
@@ -883,7 +870,7 @@ func TestRecordCallPricesAndAttributesFromContext(t *testing.T) {
 	store := newFakeStore()
 	svc := NewService(store, fakeModels{ref: {
 		Ref: ref, InputUSDPerMillion: "0.075", OutputUSDPerMillion: "0.25",
-	}}, maxCompletion)
+	}}, maxCompletion, fakeAnchors{anchor: testAnchor})
 	svc.now = func() time.Time { return seoulNoon }
 	ctx := WithWork(context.Background(), Work{
 		UserID: "alice", Kind: "generate", JobID: "job", ObserveModel: "openrouter/observer",

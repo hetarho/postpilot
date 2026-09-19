@@ -51,9 +51,7 @@ func newServer(t *testing.T) (postpilotv1connect.AuthServiceClient, *httptest.Se
 	t.Helper()
 
 	store := newStore(t)
-	svc := auth.NewService(store, sessionTTL)
-	svc.SetMailer(discardMailer{})
-	svc.SetWebOrigin("https://postpilot.example.com")
+	svc := auth.NewService(store, sessionTTL, auth.Deps{Mailer: discardMailer{}, WebOrigin: "https://postpilot.example.com"})
 	if err := svc.CreateUser(context.Background(), "alice", "s3cret", plan.Free); err != nil {
 		t.Fatalf("seed user: %v", err)
 	}
@@ -117,10 +115,9 @@ func TestLoginSetCookieAttributes(t *testing.T) {
 
 func TestGoogleSignInIsPublicAndSetsTheLoginCookie(t *testing.T) {
 	store := newStore(t)
-	svc := auth.NewService(store, sessionTTL)
-	svc.SetGoogle(googleIdentity{claims: auth.GoogleClaims{
+	svc := auth.NewService(store, sessionTTL, auth.Deps{Mailer: discardMailer{}, Google: googleIdentity{claims: auth.GoogleClaims{
 		Subject: "google-1", Email: "person@example.com", EmailVerified: true,
-	}})
+	}}})
 	mux := http.NewServeMux()
 	mux.Handle(postpilotv1connect.NewAuthServiceHandler(
 		authrpc.NewHandler(svc, sessionTTL),
@@ -187,8 +184,7 @@ func TestLoginFailureIsGenericAndSetsNoCookie(t *testing.T) {
 
 func TestLoginThrottleIsPerIPAndRunsBeforeAccountAccounting(t *testing.T) {
 	store := newStore(t)
-	svc := auth.NewService(store, sessionTTL)
-	svc.SetMailer(discardMailer{})
+	svc := auth.NewService(store, sessionTTL, auth.Deps{Mailer: discardMailer{}})
 	if err := svc.CreateUser(context.Background(), "alice", "s3cret", plan.Free); err != nil {
 		t.Fatal(err)
 	}
@@ -330,10 +326,8 @@ func TestInterceptorPublicSignupAndVerificationSetButProtectsRegisterEmail(t *te
 
 func TestResetPasswordRevokesThePreResetCookie(t *testing.T) {
 	store := newStore(t)
-	svc := auth.NewService(store, sessionTTL)
 	mailer := &recordingMailer{}
-	svc.SetMailer(mailer)
-	svc.SetWebOrigin("https://postpilot.example.com")
+	svc := auth.NewService(store, sessionTTL, auth.Deps{Mailer: mailer, WebOrigin: "https://postpilot.example.com"})
 	if err := svc.CreateUser(context.Background(), "alice", "s3cret", plan.Free); err != nil {
 		t.Fatal(err)
 	}
@@ -401,7 +395,7 @@ func TestChangePasswordFailureReasonsStayInsideTheLiveSession(t *testing.T) {
 
 	t.Run("password not set", func(t *testing.T) {
 		store := newStore(t)
-		svc := auth.NewService(store, sessionTTL)
+		svc := auth.NewService(store, sessionTTL, auth.Deps{Mailer: discardMailer{}})
 		if err := svc.CreateUser(context.Background(), "alice", "s3cret", plan.Free); err != nil {
 			t.Fatal(err)
 		}
@@ -442,9 +436,7 @@ func TestUnverifiedCorrectPasswordIsWireIdenticalToWrongPassword(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	svc := auth.NewService(store, sessionTTL)
-	svc.SetMailer(discardMailer{})
-	svc.SetWebOrigin("https://postpilot.example.com")
+	svc := auth.NewService(store, sessionTTL, auth.Deps{Mailer: discardMailer{}, WebOrigin: "https://postpilot.example.com"})
 	mux := http.NewServeMux()
 	mux.Handle(postpilotv1connect.NewAuthServiceHandler(
 		authrpc.NewHandler(svc, sessionTTL),
@@ -477,7 +469,7 @@ func TestInterceptorRejectsTamperedCookie(t *testing.T) {
 // leaves: its WrapStreamingHandler is a pass-through, so a streaming procedure added
 // later (the generation job queue, plan 05) would ship with no session check at all.
 func TestInterceptorCoversStreamingHandlers(t *testing.T) {
-	svc := auth.NewService(newStore(t), sessionTTL)
+	svc := auth.NewService(newStore(t), sessionTTL, auth.Deps{Mailer: discardMailer{}})
 	interceptor := authrpc.NewInterceptor(svc, auth.NewThrottle(), "")
 
 	reached := false
@@ -498,7 +490,7 @@ func TestInterceptorCoversStreamingHandlers(t *testing.T) {
 }
 
 func TestInterceptorThrottlesStreamingHandlersWithTheSamePeerKey(t *testing.T) {
-	svc := auth.NewService(newStore(t), sessionTTL)
+	svc := auth.NewService(newStore(t), sessionTTL, auth.Deps{Mailer: discardMailer{}})
 	interceptor := authrpc.NewInterceptor(svc, auth.NewThrottle(), "")
 	reached := 0
 	wrapped := interceptor.WrapStreamingHandler(func(context.Context, connect.StreamingHandlerConn) error {

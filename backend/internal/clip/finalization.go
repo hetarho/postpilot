@@ -26,8 +26,6 @@ type ProjectFinalizer interface {
 	Finalize(context.Context, FinalizationRequest) (Project, error)
 }
 
-func (s *Service) SetFinalizer(f ProjectFinalizer) { s.finalizer = f }
-
 // ValidateFinalization uses retained metadata only. Confirmation cannot require
 // source pixels or re-render an already successful, matching export.
 func ValidateFinalization(p Project, req FinalizationRequest, cfg RenderConfig) error {

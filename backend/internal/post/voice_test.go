@@ -3,6 +3,8 @@ package post
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 	"testing"
 	"time"
 )
@@ -41,12 +43,18 @@ func TestCreateRequiresAnOwnedActiveVoice(t *testing.T) {
 	if len(store.posts) != 0 {
 		t.Fatalf("a rejected create minted a post: %+v", store.posts)
 	}
-	// Without a wired directory the create fails closed rather than trusting the id.
-	bare := NewService(newFakeStore(), newFakeBlobs(), time.Minute, time.Minute, testMaxBytes, 30)
-	voiceID := aliceVoice
-	if _, err := bare.SaveDraft(ctx, alice, "", "Jeju", "", &voiceID, nil, &language, nil); err == nil {
-		t.Fatal("create succeeded without a voice directory")
-	}
+	// A directory is constructor state (ARCH-40): a service that could be built without
+	// one would fail every create closed at runtime instead of at boot.
+	func() {
+		defer func() {
+			if r := recover(); r == nil || !strings.Contains(fmt.Sprint(r), "voices") {
+				t.Fatalf("panic = %v, want a loud voice-directory refusal", r)
+			}
+		}()
+		deps := testDeps()
+		deps.Voices = nil
+		NewService(newFakeStore(), newFakeBlobs(), Limits{PutTTL: time.Minute, GetTTL: time.Minute, MaxImageBytes: testMaxBytes, MaxPhotos: 30}, deps)
+	}()
 }
 
 // Plan 10 A5/A7: read models carry the voice's name and tombstone state, so a post whose
@@ -179,14 +187,14 @@ func TestReassignmentTargetsAndBusyPostsAreRefused(t *testing.T) {
 		t.Fatalf("reassign during a job = %v", err)
 	}
 	svc.jobs = fakeActiveJobs{}
-	svc.SetPendingExperimentFinder(fakePendingExperiments{created.Slug: "experiment-1"})
+	svc.experiments = fakePendingExperiments{created.Slug: "experiment-1"}
 	if _, err := svc.SaveDraft(ctx, alice, created.Slug, "Jeju", "", &review, nil, nil, nil); !errors.Is(err, ErrPostBusy) {
 		t.Fatalf("reassign during an undecided experiment = %v", err)
 	}
 	if store.posts[created.Slug].VoiceID != aliceVoice {
 		t.Fatal("a refused reassignment moved the post")
 	}
-	svc.SetPendingExperimentFinder(fakePendingExperiments{})
+	svc.experiments = fakePendingExperiments{}
 	if moved, err := svc.SaveDraft(ctx, alice, created.Slug, "Jeju", "", &review, nil, nil, nil); err != nil || moved.VoiceID != aliceReview {
 		t.Fatalf("idle reassign = %+v err=%v", moved, err)
 	}

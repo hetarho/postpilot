@@ -22,10 +22,14 @@ type Service struct {
 	generation *GenerationService
 }
 
-func (s *Service) SetGeneration(g *GenerationService) { s.generation = g }
-func (s *Service) SetSources(sources *SourceService)  { s.sources = sources }
-
-func NewService(store Store, limits Limits) *Service {
+// NewService wires the project context. sources and finalizer are required (ARCH-40):
+// deleting a project fences its sources and confirming a result is a saga over two
+// contexts' tables, and a service built without either would skip both silently. The
+// generation side is bound by NewGenerationService, which needs this service first.
+func NewService(store Store, limits Limits, sources *SourceService, finalizer ProjectFinalizer) *Service {
+	if sources == nil || finalizer == nil {
+		panic("clip: sources and finalizer are required")
+	}
 	for _, n := range []int{limits.NameChars, limits.GuidanceChars, limits.FieldCount, limits.LabelChars, limits.PromptChars, limits.TitleChars, limits.AnswerChars, limits.InstructionChars, limits.MinDurationMS, limits.MaxDurationMS} {
 		if n <= 0 {
 			panic("clip: limits must be positive")
@@ -34,7 +38,7 @@ func NewService(store Store, limits Limits) *Service {
 	if limits.MinDurationMS > limits.MaxDurationMS {
 		panic("clip: inverted duration limits")
 	}
-	return &Service{store: store, limits: limits}
+	return &Service{store: store, limits: limits, sources: sources, finalizer: finalizer}
 }
 func newID() string {
 	var b [16]byte

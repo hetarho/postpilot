@@ -3,12 +3,13 @@ package clip_test
 import (
 	"encoding/json"
 	"errors"
-	"github.com/postpilot/backend/internal/clip"
-	"github.com/postpilot/backend/internal/platform/config"
 	"math"
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/platform/config"
 )
 
 func correctionFixture(t *testing.T) (clip.Project, clip.CorrectionPlan) {

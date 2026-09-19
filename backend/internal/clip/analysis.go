@@ -1,10 +1,11 @@
 package clip
 
 import (
-	"github.com/postpilot/backend/internal/clip/design"
-	"github.com/postpilot/backend/internal/llm"
 	"math"
 	"strings"
+
+	"github.com/postpilot/backend/internal/clip/design"
+	"github.com/postpilot/backend/internal/llm"
 )
 
 // These records contain facts in original, display-oriented source coordinates.

@@ -3,13 +3,14 @@ package store_test
 import (
 	"context"
 	"errors"
-	"github.com/postpilot/backend/internal/clip"
-	"github.com/postpilot/backend/internal/job"
 	"reflect"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/job"
 )
 
 func completedClip(t *testing.T) (*generationHarness, clip.Project, clip.CorrectionPlan) {

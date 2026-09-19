@@ -12,6 +12,7 @@ import (
 	authstore "github.com/postpilot/backend/internal/auth/store"
 	"github.com/postpilot/backend/internal/billing"
 	billingstore "github.com/postpilot/backend/internal/billing/store"
+	"github.com/postpilot/backend/internal/mail"
 	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/platform/db"
 	"github.com/postpilot/backend/internal/usage"
@@ -36,7 +37,7 @@ func TestRegistrationReplacesTheCardAndPersistsOneNonExpiringBonus(t *testing.T)
 
 	store := billingstore.New(handle.Writer, handle.Reader)
 	store.SetCreditsForTx(func(tx *sql.Tx) billing.Credits {
-		return usage.NewService(usagestore.NewTx(tx), nil, 0)
+		return usage.NewService(usagestore.NewTx(tx), nil, 0, fixedAnchor{at: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)})
 	})
 	store.SetPlansForTx(func(*sql.Tx) billing.Plans { return registrationPlans{} })
 	provider := &registrationProvider{label: "11 1234"}
@@ -100,10 +101,10 @@ func TestSubscribePersistsSubscriptionTierEventsAndMonthlyLotTogether(t *testing
 
 	store := billingstore.New(handle.Writer, handle.Reader)
 	store.SetCreditsForTx(func(tx *sql.Tx) billing.Credits {
-		return usage.NewService(usagestore.NewTx(tx), nil, 0)
+		return usage.NewService(usagestore.NewTx(tx), nil, 0, fixedAnchor{at: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)})
 	})
 	store.SetPlansForTx(func(tx *sql.Tx) billing.Plans {
-		return auth.NewService(authstore.NewTx(tx), time.Hour)
+		return auth.NewService(authstore.NewTx(tx), time.Hour, auth.Deps{Mailer: mail.NewLog()})
 	})
 	if err := store.UpsertPaymentMethod(ctx, billing.PaymentMethod{
 		UserID: "alice", Provider: "toss", BillingKey: "billing-key",
@@ -154,10 +155,10 @@ func TestPurchaseAndRefundPersistOneMoneyLedgerAndOneCreditLot(t *testing.T) {
 	}
 
 	usageStore := usagestore.New(handle.Writer, handle.Reader)
-	ledger := usage.NewService(usageStore, nil, 0)
+	ledger := usage.NewService(usageStore, nil, 0, fixedAnchor{at: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)})
 	store := billingstore.New(handle.Writer, handle.Reader)
 	store.SetCreditsForTx(func(tx *sql.Tx) billing.Credits {
-		return usage.NewService(usagestore.NewTx(tx), nil, 0)
+		return usage.NewService(usagestore.NewTx(tx), nil, 0, fixedAnchor{at: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)})
 	})
 	store.SetPlansForTx(func(*sql.Tx) billing.Plans { return registrationPlans{} })
 	if err := store.UpsertPaymentMethod(ctx, billing.PaymentMethod{

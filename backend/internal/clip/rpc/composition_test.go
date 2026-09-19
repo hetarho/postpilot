@@ -11,7 +11,6 @@ import (
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/composition"
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 type nativeRPCStore struct{ rpcStore }
@@ -25,7 +24,7 @@ func (s *nativeRPCStore) GetProject(_ context.Context, user, id string) (clip.Pr
 
 func TestCompositionRPCPresenceAndCapabilities(t *testing.T) {
 	s := &nativeRPCStore{}
-	h := NewHandler(clip.NewService(s, config.ClipLimits()))
+	h := NewHandler(testProjects(s))
 	ctx := auth.WithUser(context.Background(), "alice")
 	if _, err := h.GetClipCapabilities(context.Background(), connect.NewRequest(&v1.GetClipCapabilitiesRequest{})); connect.CodeOf(err) != connect.CodeUnauthenticated {
 		t.Fatal(err)

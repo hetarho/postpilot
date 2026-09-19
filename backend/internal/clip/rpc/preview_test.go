@@ -20,6 +20,7 @@ import (
 
 type previewRPCStore struct {
 	clip.Store
+	clip.SourceStore
 	project clip.Project
 }
 
@@ -43,9 +44,9 @@ func TestPreviewRPCAuthenticatesHashOwnerAndReadOnlyResponse(t *testing.T) {
 	}
 	analysis, _ := json.Marshal([]clip.SourceAnalysis{{Source: clip.AnalysisSource{RenderSource: clip.RenderSource{ID: "source", Fingerprint: "fp", Info: clip.MediaInfo{DurationMS: 15000, Width: 1920, Height: 1080}}}}})
 	store := previewRPCStore{project: clip.Project{ID: "owned", UserID: "alice", Ratio: "vertical", EditPlan: raw, EditPlanRevision: 1, Analysis: string(analysis)}}
-	projects := clip.NewService(store, config.ClipLimits())
+	projects := testProjects(store)
 	cfg := config.ClipGeneration(&config.Config{PresignGetTTL: time.Minute, OrphanMinAge: time.Hour})
-	generation := clip.NewGenerationService(nil, projects, nil, nil, nil, nil, previewRPCRenderer{}, nil, cfg)
+	generation := clip.NewGenerationService(nil, projects, nil, neutralProcessing{}, nil, nil, previewRPCRenderer{}, neutralJobs{}, cfg, neutralGenerationDeps())
 	h := NewHandler(projects).WithGeneration(generation, nil)
 	wire := editingProto(&clip.CorrectionState{Plan: clip.CorrectionFromPlan(plan)}).Plan
 	encoded, _ := (proto.MarshalOptions{Deterministic: true}).Marshal(wire)

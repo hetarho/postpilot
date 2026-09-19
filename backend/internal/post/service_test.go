@@ -56,11 +56,8 @@ func newTestService(t *testing.T) (*Service, *fakeStore, *fakeBlobs) {
 
 	store := newFakeStore()
 	blobs := newFakeBlobs()
-	svc := NewService(store, blobs, 10*time.Minute, 5*time.Minute, testMaxBytes, 30)
-	svc.SetVideoLimits(testMaxVideos, testMaxVideoBytes, testMaxVideoSeconds)
+	svc := NewService(store, blobs, Limits{PutTTL: 10 * time.Minute, GetTTL: 5 * time.Minute, MaxImageBytes: testMaxBytes, MaxPhotos: 30, MaxVideos: testMaxVideos, MaxVideoBytes: testMaxVideoBytes, MaxVideoSeconds: testMaxVideoSeconds}, testDeps())
 	svc.now = func() time.Time { return testNow }
-	svc.SetVoiceDirectory(testVoices())
-	svc.SetLivePublishFinder(&fakeLivePublish{})
 
 	n := 0
 	svc.newID = func() string {
@@ -580,9 +577,9 @@ func TestDeletePostDetachesGuidelineCandidateLinks(t *testing.T) {
 	svc, _, _ := newTestService(t)
 	ctx := context.Background()
 	found := mustCreatePost(t, svc, alice, "Jeju")
-	svc.SetExperimentContentPurger(&recordingContentPurger{})
+	svc.contentPurger = &recordingContentPurger{}
 	detacher := &recordingCandidateDetacher{}
-	svc.SetGuidelineCandidateDetacher(detacher)
+	svc.candidateLinks = detacher
 
 	if err := svc.DeletePost(ctx, alice, found.Slug); err != nil {
 		t.Fatal(err)
@@ -597,8 +594,8 @@ func TestDeletePostDetachesGuidelineCandidateLinks(t *testing.T) {
 func TestDeletePostSucceedsWhenTheDetachFails(t *testing.T) {
 	svc, store, _ := newTestService(t)
 	found := mustCreatePost(t, svc, alice, "Jeju")
-	svc.SetExperimentContentPurger(&recordingContentPurger{})
-	svc.SetGuidelineCandidateDetacher(&recordingCandidateDetacher{err: errors.New("database unavailable")})
+	svc.contentPurger = &recordingContentPurger{}
+	svc.candidateLinks = &recordingCandidateDetacher{err: errors.New("database unavailable")}
 
 	if err := svc.DeletePost(context.Background(), alice, found.Slug); err != nil {
 		t.Fatalf("a detach failure failed the delete: %v", err)
@@ -611,10 +608,10 @@ func TestDeletePostSucceedsWhenTheDetachFails(t *testing.T) {
 func TestDeletePostDoesNotDetachWhenItIsRefused(t *testing.T) {
 	svc, _, _ := newTestService(t)
 	found := mustCreatePost(t, svc, alice, "Jeju")
-	svc.SetExperimentContentPurger(&recordingContentPurger{})
+	svc.contentPurger = &recordingContentPurger{}
 	detacher := &recordingCandidateDetacher{}
-	svc.SetGuidelineCandidateDetacher(detacher)
-	svc.SetLivePublishFinder(&fakeLivePublish{live: true})
+	svc.candidateLinks = detacher
+	svc.livePublish = &fakeLivePublish{live: true}
 
 	if err := svc.DeletePost(context.Background(), alice, found.Slug); !errors.Is(err, ErrPostPublishing) {
 		t.Fatalf("DeletePost = %v, want ErrPostPublishing", err)
@@ -634,7 +631,7 @@ func TestDeletePostPurgesExperimentContentBeforeRemovingSource(t *testing.T) {
 		t.Fatal(err)
 	}
 	purger := &recordingContentPurger{}
-	svc.SetExperimentContentPurger(purger)
+	svc.contentPurger = purger
 
 	if err := svc.DeletePost(ctx, alice, found.Slug); err != nil {
 		t.Fatal(err)
@@ -653,7 +650,7 @@ func TestDeletePostPurgesExperimentContentBeforeRemovingSource(t *testing.T) {
 func TestDeletePostStopsBeforeDeleteWhenExperimentPurgeFails(t *testing.T) {
 	svc, store, _ := newTestService(t)
 	found := mustCreatePost(t, svc, alice, "Jeju")
-	svc.SetExperimentContentPurger(&recordingContentPurger{err: errors.New("database unavailable")})
+	svc.contentPurger = &recordingContentPurger{err: errors.New("database unavailable")}
 
 	if err := svc.DeletePost(context.Background(), alice, found.Slug); err == nil {
 		t.Fatal("delete succeeded without purging experiment content")
@@ -675,9 +672,9 @@ func TestDeletePostRefusesWhileAPublicationIsLive(t *testing.T) {
 		t.Fatal(err)
 	}
 	purger := &recordingContentPurger{}
-	svc.SetExperimentContentPurger(purger)
+	svc.contentPurger = purger
 	live := &fakeLivePublish{live: true}
-	svc.SetLivePublishFinder(live)
+	svc.livePublish = live
 
 	if err := svc.DeletePost(ctx, alice, found.Slug); !errors.Is(err, ErrPostPublishing) {
 		t.Fatalf("DeletePost = %v, want ErrPostPublishing", err)
@@ -708,8 +705,8 @@ func TestDeletePostProceedsWithTerminalPublishHistory(t *testing.T) {
 	svc, store, _ := newTestService(t)
 	ctx := context.Background()
 	found := mustCreatePost(t, svc, alice, "Jeju")
-	svc.SetExperimentContentPurger(&recordingContentPurger{})
-	svc.SetLivePublishFinder(&fakeLivePublish{live: false})
+	svc.contentPurger = &recordingContentPurger{}
+	svc.livePublish = &fakeLivePublish{live: false}
 
 	if err := svc.DeletePost(ctx, alice, found.Slug); err != nil {
 		t.Fatal(err)
@@ -726,8 +723,8 @@ func TestDeletePostRefusesWithoutALivePublishFinder(t *testing.T) {
 	ctx := context.Background()
 	found := mustCreatePost(t, svc, alice, "Jeju")
 	purger := &recordingContentPurger{}
-	svc.SetExperimentContentPurger(purger)
-	svc.SetLivePublishFinder(nil)
+	svc.contentPurger = purger
+	svc.livePublish = nil
 
 	if err := svc.DeletePost(ctx, alice, found.Slug); err == nil {
 		t.Fatal("delete succeeded with no live publish finder wired")

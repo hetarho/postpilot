@@ -16,7 +16,7 @@ func TestEveryStageNamesItselfOnItsRequest(t *testing.T) {
 	images, _ := storedSnapshot(2, "")
 	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, Images: images}}
 	models := observingModels(t)
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget)
+	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
 
 	if err := svc.Generate(context.Background(), GenerateJob{
 		UserID: "alice", PostSlug: "post", ObserveModel: observeRef.String(), WriteModel: writeRef.String(),
@@ -42,7 +42,7 @@ func TestEachStageSendsItsOwnCompletionBudget(t *testing.T) {
 		Slug: "post", UserID: "alice", Voice: liveVoice, Images: images, TargetLength: &target,
 	}}
 	models := observingModels(t)
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget)
+	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
 
 	if err := svc.Generate(context.Background(), GenerateJob{
 		UserID: "alice", PostSlug: "post", ObserveModel: observeRef.String(), WriteModel: writeRef.String(),
@@ -78,7 +78,7 @@ func TestNativeEffortWritingGetsFrozenHeadroom(t *testing.T) {
 	info.ReasoningNativeEffort = true
 	models.infos[writeRef] = info
 	jobs := &fakeJobs{id: "job"}
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget)
+	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, testDeps())
 
 	if _, err := svc.Start(context.Background(), StartRequest{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()}); err != nil {
 		t.Fatal(err)
@@ -130,7 +130,7 @@ func TestTruncationNamesTheReasoningSplitWhenReported(t *testing.T) {
 				models.complete = func(llm.ModelRef, llm.Request) (llm.Response, error) {
 					return llm.Response{Text: `{"partial":`, FinishReason: "length", Usage: test.usage}, nil
 				}
-				svc := NewService(&fakePosts{}, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget)
+				svc := NewService(&fakePosts{}, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
 				err := path.run(svc)
 				// A14: the sentinel and the reason are unchanged whichever half is at fault.
 				if !errors.Is(err, llm.ErrOutputTruncated) || errors.Is(err, llm.ErrBadOutput) {

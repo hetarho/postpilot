@@ -1,10 +1,11 @@
 package clip_test
 
 import (
-	"github.com/postpilot/backend/internal/clip"
-	"github.com/postpilot/backend/internal/platform/config"
 	"testing"
 	"time"
+
+	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/platform/config"
 )
 
 func TestValidateProbedSources(t *testing.T) {

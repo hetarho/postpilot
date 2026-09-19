@@ -14,6 +14,7 @@ import (
 )
 
 type previewProjectStore struct {
+	clip.SourceStore
 	clip.Store
 	mu      sync.Mutex
 	project clip.Project
@@ -62,7 +63,7 @@ func previewSetup(t *testing.T) (*clip.GenerationService, *previewProjectStore, 
 	store := &previewProjectStore{project: p}
 	render := &previewRenderer{}
 	cfg := config.ClipGeneration(&config.Config{PresignGetTTL: time.Minute, OrphanMinAge: time.Hour})
-	service := clip.NewGenerationService(nil, clip.NewService(store, config.ClipLimits()), nil, nil, nil, nil, render, nil, cfg)
+	service := clip.NewGenerationService(nil, testProjects(store), nil, neutralProcessing{}, nil, nil, render, neutralJobs{}, cfg, neutralGenerationDeps())
 	return service, store, render, draft
 }
 func TestPreviewIsOwnedReadOnlyAndRevisionScoped(t *testing.T) {

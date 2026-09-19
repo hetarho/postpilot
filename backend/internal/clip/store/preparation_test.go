@@ -43,7 +43,7 @@ func TestPreparationFaultsNeverReserveOrCallAI(t *testing.T) {
 			case "disk":
 				h.media.capacityErr = clip.ErrWorkspaceLimit
 			case "price drift":
-				h.service.WithCredits(&quotePricing{inputRate: "20"}, nil)
+				h.withCredits(&quotePricing{inputRate: "20"}, nil)
 			case "delivery drift":
 				h.planner.gate = clip.ErrModelInputUnsupported
 			case "legacy pricing", "old payload", "ceiling":

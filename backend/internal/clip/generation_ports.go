@@ -2,9 +2,10 @@ package clip
 
 import (
 	"context"
-	"github.com/postpilot/backend/internal/llm"
 	"io"
 	"time"
+
+	"github.com/postpilot/backend/internal/llm"
 )
 
 // One budget per call the generation makes: the observation, then the two

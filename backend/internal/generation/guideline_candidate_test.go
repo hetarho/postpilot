@@ -23,8 +23,8 @@ func (f *fakeCandidates) Record(_ context.Context, userID, postSlug, instruction
 
 func candidateAwareService(t *testing.T, posts *fakePosts, models *fakeModels, candidates *fakeCandidates) *Service {
 	t.Helper()
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget)
-	svc.SetGuidelineCandidates(candidates)
+	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
+	svc.candidates = candidates
 	return svc
 }
 
@@ -108,7 +108,7 @@ func TestRecordingFailureLeavesTheRevisionSuccessful(t *testing.T) {
 // An unwired recorder is the same outcome as a failed recording: the revision is the product.
 func TestRevisionWithoutACandidateRecorderStillCompletes(t *testing.T) {
 	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, Content: revisionContent("before")}}
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, revisingModels(), fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget)
+	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, revisingModels(), fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
 	if err := svc.Revise(context.Background(), RevisionJob{
 		UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(),
 		Payload: mustRevisionPayload(t, "광고 같아", false),
@@ -125,8 +125,8 @@ func TestRecordingAddsNoProviderCallAndNoEnqueue(t *testing.T) {
 	models := revisingModels()
 	jobs := &fakeJobs{}
 	candidates := &fakeCandidates{}
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget)
-	svc.SetGuidelineCandidates(candidates)
+	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, testDeps())
+	svc.candidates = candidates
 
 	if err := svc.Revise(context.Background(), RevisionJob{
 		UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(),
@@ -155,9 +155,9 @@ func TestRecordingChangesNoPromptByte(t *testing.T) {
 		t.Helper()
 		posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, Content: revisionContent("before")}}
 		models := revisingModels()
-		svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget)
+		svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
 		if recorder != nil {
-			svc.SetGuidelineCandidates(recorder)
+			svc.candidates = recorder
 		}
 		if err := svc.Revise(context.Background(), RevisionJob{
 			UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(),

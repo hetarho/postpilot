@@ -17,6 +17,7 @@ import (
 	"github.com/postpilot/backend/internal/job"
 	jobstore "github.com/postpilot/backend/internal/job/store"
 	"github.com/postpilot/backend/internal/llm"
+	"github.com/postpilot/backend/internal/mail"
 	"github.com/postpilot/backend/internal/platform/db"
 	"github.com/postpilot/backend/internal/usage"
 	usagestore "github.com/postpilot/backend/internal/usage/store"
@@ -52,9 +53,8 @@ func newCancellationHarness(t *testing.T, wrap func(*jobstore.Store) job.Store) 
 	if _, err := d.Writer.Exec(`INSERT INTO clip_projects(id,user_id,title,ratio,target_duration_ms,analysis_json,edit_plan_json,edit_plan_revision,rendered_plan_revision,result_key,result_content_type,result_bytes,result_duration_ms,result_created_at,created_at,updated_at) VALUES ('clip','alice','clip','square',15000,'[]','old-plan',1,1,'clip-results/alice/clip/old.mp4','video/mp4',10,15000,?,?,?)`, now, now, now); err != nil {
 		t.Fatal(err)
 	}
-	authSvc := auth.NewService(authstore.New(d.Writer, d.Reader), time.Hour)
-	ledger := usage.NewService(usagestore.New(d.Writer, d.Reader), emptyModels{}, 32768)
-	ledger.SetAnchors(usageAnchors{auth: authSvc})
+	authSvc := auth.NewService(authstore.New(d.Writer, d.Reader), time.Hour, auth.Deps{Mailer: mail.NewLog()})
+	ledger := usage.NewService(usagestore.New(d.Writer, d.Reader), emptyModels{}, 32768, usageAnchors{auth: authSvc})
 	js, cs := jobstore.New(d.Writer, d.Reader), clipstore.New(d.Writer, d.Reader)
 	var queueStore job.Store = js
 	if wrap != nil {

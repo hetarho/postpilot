@@ -1,9 +1,10 @@
 package clip
 
 import (
+	"slices"
+
 	"github.com/postpilot/backend/internal/clip/composition"
 	"github.com/postpilot/backend/internal/clip/design"
-	"slices"
 )
 
 // The archive contains only identities produced by this generation. Deleted

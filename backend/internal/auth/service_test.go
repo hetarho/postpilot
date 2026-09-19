@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/url"
 	"strings"
 	"testing"
@@ -318,7 +319,7 @@ func newTestService(t *testing.T, now time.Time) (*Service, *fakeStore) {
 	t.Helper()
 
 	store := newFakeStore()
-	svc := NewService(store, 720*time.Hour)
+	svc := NewService(store, 720*time.Hour, Deps{Mailer: &fakeMailer{}})
 	svc.now = func() time.Time { return now }
 
 	if err := svc.CreateUser(context.Background(), "alice", "s3cret", plan.Free); err != nil {
@@ -400,7 +401,7 @@ func TestGoogleSignInJoinsBySubjectEvenWhenPasswordLocked(t *testing.T) {
 		ID: "alice", Email: "old@example.com", EmailVerifiedAt: &verifiedAt,
 		GoogleSubject: "google-1", LockedUntil: &lockedUntil, Plan: plan.Pro, CreatedAt: now.Add(-time.Hour),
 	}
-	svc := NewService(store, time.Hour)
+	svc := NewService(store, time.Hour, Deps{Mailer: &fakeMailer{}})
 	svc.now = func() time.Time { return now }
 
 	user, raw, err := svc.SignInWithGoogle(context.Background(), GoogleClaims{
@@ -418,7 +419,7 @@ func TestGoogleSignInJoinsByEmailAndVerifies(t *testing.T) {
 	now := time.Date(2026, 9, 8, 8, 0, 0, 0, time.UTC)
 	store := newFakeStore()
 	store.users["legacy"] = User{ID: "legacy", Email: "person@example.com", Plan: plan.Free, CreatedAt: now.Add(-time.Hour)}
-	svc := NewService(store, time.Hour)
+	svc := NewService(store, time.Hour, Deps{Mailer: &fakeMailer{}})
 	svc.now = func() time.Time { return now }
 
 	user, _, err := svc.SignInWithGoogle(context.Background(), GoogleClaims{
@@ -436,7 +437,7 @@ func TestGoogleSignInJoinsByEmailAndVerifies(t *testing.T) {
 func TestGoogleSignInRefusesMismatchedSubject(t *testing.T) {
 	store := newFakeStore()
 	store.users["alice"] = User{ID: "alice", Email: "alice@example.com", GoogleSubject: "google-a", Plan: plan.Free}
-	svc := NewService(store, time.Hour)
+	svc := NewService(store, time.Hour, Deps{Mailer: &fakeMailer{}})
 
 	_, _, err := svc.SignInWithGoogle(context.Background(), GoogleClaims{
 		Subject: "google-b", Email: "alice@example.com", EmailVerified: true,
@@ -449,10 +450,10 @@ func TestGoogleSignInRefusesMismatchedSubject(t *testing.T) {
 func TestGoogleSignInCreatesVerifiedPasswordlessAccountAndBootstraps(t *testing.T) {
 	now := time.Date(2026, 9, 8, 8, 0, 0, 0, time.UTC)
 	store := newFakeStore()
-	svc := NewService(store, time.Hour)
+	svc := NewService(store, time.Hour, Deps{Mailer: &fakeMailer{}})
 	svc.now = func() time.Time { return now }
 	var bootstrapped []string
-	svc.SetBootstraps(func(_ context.Context, id string) error {
+	svc.bootstraps = bootstrapsOf(func(_ context.Context, id string) error {
 		bootstrapped = append(bootstrapped, id)
 		return nil
 	})
@@ -475,7 +476,7 @@ func TestGoogleSignInCreatesVerifiedPasswordlessAccountAndBootstraps(t *testing.
 }
 
 func TestGoogleSignInRefusesAbsentOrUnverifiedEmail(t *testing.T) {
-	svc := NewService(newFakeStore(), time.Hour)
+	svc := NewService(newFakeStore(), time.Hour, Deps{Mailer: &fakeMailer{}})
 	for name, claims := range map[string]GoogleClaims{
 		"absent":     {Subject: "google", EmailVerified: true},
 		"unverified": {Subject: "google", Email: "person@example.com"},
@@ -567,7 +568,7 @@ func TestLoginFailuresLockNotifyOnceAndReleaseAtTheBoundary(t *testing.T) {
 	user.EmailVerifiedAt = &verifiedAt
 	store.users[user.ID] = user
 	mailer := &fakeMailer{}
-	svc.SetMailer(mailer)
+	svc.mailer = mailer
 
 	for attempt := 1; attempt <= LockThreshold; attempt++ {
 		if _, _, err := svc.Login(context.Background(), "alice", "wrong"); !errors.Is(err, ErrInvalidCredentials) {
@@ -665,7 +666,7 @@ func TestSendSkipsAndRecordsUnreachableAddresses(t *testing.T) {
 	now := time.Date(2026, 9, 8, 12, 0, 0, 0, time.UTC)
 	svc, store := newTestService(t, now)
 	mailer := &fakeMailer{}
-	svc.SetMailer(mailer)
+	svc.mailer = mailer
 	user := store.users["alice"]
 	user.Email = "alice@example.com"
 	store.users[user.ID] = user
@@ -691,25 +692,27 @@ func TestSendSkipsAndRecordsUnreachableAddresses(t *testing.T) {
 	}
 }
 
-func TestSendFailsWhenNoMailerIsWired(t *testing.T) {
-	svc, store := newTestService(t, time.Now())
-	user := store.users["alice"]
-	user.Email = "alice@example.com"
-	if err := svc.send(context.Background(), user, existingAccountMail(user.Email)); err == nil {
-		t.Fatal("send silently dropped mail with no adapter")
-	}
+func TestConstructionRefusesAServiceWithoutAMailer(t *testing.T) {
+	// Transactional mail is never dropped, so the delivery edge is a constructor argument
+	// (ARCH-40): a service that could reach send without one cannot be built.
+	defer func() {
+		if r := recover(); r == nil || !strings.Contains(fmt.Sprint(r), "mailer") {
+			t.Fatalf("panic = %v, want a loud mailer-wiring refusal", r)
+		}
+	}()
+	NewService(newFakeStore(), time.Hour, Deps{})
 }
 
 func TestSignupCreatesUnverifiedFreeAccountAndTakenAddressLooksSuccessful(t *testing.T) {
 	now := time.Date(2026, 9, 8, 12, 0, 0, 0, time.UTC)
 	store := newFakeStore()
-	svc := NewService(store, time.Hour)
+	svc := NewService(store, time.Hour, Deps{Mailer: &fakeMailer{}})
 	svc.now = func() time.Time { return now }
-	svc.SetWebOrigin("https://postpilot.example.com")
+	svc.webOrigin = normalizeWebOrigin("https://postpilot.example.com")
 	mailer := &fakeMailer{}
-	svc.SetMailer(mailer)
+	svc.mailer = mailer
 	bootstraps := 0
-	svc.SetBootstraps(func(_ context.Context, userID string) error {
+	svc.bootstraps = bootstrapsOf(func(_ context.Context, userID string) error {
 		if userID != "alice@example.com" {
 			t.Fatalf("bootstrap user = %q", userID)
 		}
@@ -741,7 +744,7 @@ func TestSignupCreatesUnverifiedFreeAccountAndTakenAddressLooksSuccessful(t *tes
 }
 
 func TestSignupValidatesPasswordLength(t *testing.T) {
-	svc := NewService(newFakeStore(), time.Hour)
+	svc := NewService(newFakeStore(), time.Hour, Deps{Mailer: &fakeMailer{}})
 	for _, tc := range []struct {
 		password string
 		want     error
@@ -758,13 +761,13 @@ func TestSignupValidatesPasswordLength(t *testing.T) {
 func TestVerifyEmailIsSingleUseExpiresAndRunsBootstrapsWithoutASession(t *testing.T) {
 	now := time.Date(2026, 9, 8, 12, 0, 0, 0, time.UTC)
 	store := newFakeStore()
-	svc := NewService(store, time.Hour)
+	svc := NewService(store, time.Hour, Deps{Mailer: &fakeMailer{}})
 	svc.now = func() time.Time { return now }
-	svc.SetWebOrigin("https://postpilot.example.com")
+	svc.webOrigin = normalizeWebOrigin("https://postpilot.example.com")
 	mailer := &fakeMailer{}
-	svc.SetMailer(mailer)
+	svc.mailer = mailer
 	bootstraps := 0
-	svc.SetBootstraps(func(context.Context, string) error { bootstraps++; return nil })
+	svc.bootstraps = bootstrapsOf(func(context.Context, string) error { bootstraps++; return nil })
 	if err := svc.Signup(context.Background(), "alice@example.com", "password1"); err != nil {
 		t.Fatal(err)
 	}
@@ -796,11 +799,11 @@ func TestVerifyEmailIsSingleUseExpiresAndRunsBootstrapsWithoutASession(t *testin
 func TestResendVerificationHidesAccountStateAndFloorsBursts(t *testing.T) {
 	now := time.Date(2026, 9, 8, 12, 0, 0, 0, time.UTC)
 	store := newFakeStore()
-	svc := NewService(store, time.Hour)
+	svc := NewService(store, time.Hour, Deps{Mailer: &fakeMailer{}})
 	svc.now = func() time.Time { return now }
-	svc.SetWebOrigin("https://postpilot.example.com")
+	svc.webOrigin = normalizeWebOrigin("https://postpilot.example.com")
 	mailer := &fakeMailer{}
-	svc.SetMailer(mailer)
+	svc.mailer = mailer
 
 	if err := svc.ResendVerification(context.Background(), "unknown@example.com"); err != nil {
 		t.Fatalf("unknown = %v", err)
@@ -842,11 +845,11 @@ func TestAVerificationDoesNotSuppressAResetForTheSameAddress(t *testing.T) {
 	const email = "alice@example.com"
 	now := time.Date(2026, 9, 8, 12, 0, 0, 0, time.UTC)
 	store := newFakeStore()
-	svc := NewService(store, time.Hour)
+	svc := NewService(store, time.Hour, Deps{Mailer: &fakeMailer{}})
 	svc.now = func() time.Time { return now }
-	svc.SetWebOrigin("https://postpilot.example.com")
+	svc.webOrigin = normalizeWebOrigin("https://postpilot.example.com")
 	mailer := &fakeMailer{}
-	svc.SetMailer(mailer)
+	svc.mailer = mailer
 	store.users[email] = User{ID: email, Email: email}
 
 	if err := svc.ResendVerification(ctx, email); err != nil {
@@ -901,7 +904,7 @@ func TestResendReservationsAreIndependentPerPurpose(t *testing.T) {
 		{name: "reset first", first: LinkPurposeResetPassword, other: LinkPurposeVerifyEmail},
 	} {
 		t.Run(order.name, func(t *testing.T) {
-			svc := NewService(newFakeStore(), time.Hour)
+			svc := NewService(newFakeStore(), time.Hour, Deps{Mailer: &fakeMailer{}})
 			if !svc.reserveResend(order.first, email, now) {
 				t.Fatal("first reservation refused")
 			}
@@ -939,9 +942,9 @@ func TestResendReservationsAreIndependentPerPurpose(t *testing.T) {
 func TestLoginByEmailAndUnverifiedOrGoogleOnlyCredentialsStayGeneric(t *testing.T) {
 	now := time.Date(2026, 9, 8, 12, 0, 0, 0, time.UTC)
 	svc, store := newTestService(t, now)
-	svc.SetWebOrigin("https://postpilot.example.com")
+	svc.webOrigin = normalizeWebOrigin("https://postpilot.example.com")
 	mailer := &fakeMailer{}
-	svc.SetMailer(mailer)
+	svc.mailer = mailer
 
 	verifiedAt := now
 	legacy := store.users["alice"]
@@ -979,9 +982,9 @@ func TestLoginByEmailAndUnverifiedOrGoogleOnlyCredentialsStayGeneric(t *testing.
 func TestRegisterEmailHidesTakenAddressThenVerifiesTheHappyPath(t *testing.T) {
 	now := time.Date(2026, 9, 8, 12, 0, 0, 0, time.UTC)
 	svc, store := newTestService(t, now)
-	svc.SetWebOrigin("https://postpilot.example.com")
+	svc.webOrigin = normalizeWebOrigin("https://postpilot.example.com")
 	mailer := &fakeMailer{}
-	svc.SetMailer(mailer)
+	svc.mailer = mailer
 	store.users["bob"] = User{ID: "bob", Email: "taken@example.com", Plan: plan.Free}
 
 	if err := svc.RegisterEmail(context.Background(), "alice", "taken@example.com"); err != nil {
@@ -1010,9 +1013,9 @@ func TestRequestPasswordResetHidesAccountStateInvalidatesOlderLinksAndFloorsBurs
 	now := time.Date(2026, 9, 8, 12, 0, 0, 0, time.UTC)
 	svc, store := newTestService(t, now)
 	svc.now = func() time.Time { return now }
-	svc.SetWebOrigin("https://postpilot.example.com")
+	svc.webOrigin = normalizeWebOrigin("https://postpilot.example.com")
 	mailer := &fakeMailer{}
-	svc.SetMailer(mailer)
+	svc.mailer = mailer
 
 	verifiedAt := now.Add(-time.Hour)
 	verified := store.users["alice"]
@@ -1060,9 +1063,9 @@ func TestRequestPasswordResetHidesAccountStateInvalidatesOlderLinksAndFloorsBurs
 func TestResetPasswordIsSingleUseExpiresRevokesSessionsAndPreservesLock(t *testing.T) {
 	now := time.Date(2026, 9, 8, 12, 0, 0, 0, time.UTC)
 	svc, store := newTestService(t, now)
-	svc.SetWebOrigin("https://postpilot.example.com")
+	svc.webOrigin = normalizeWebOrigin("https://postpilot.example.com")
 	mailer := &fakeMailer{}
-	svc.SetMailer(mailer)
+	svc.mailer = mailer
 	verifiedAt := now.Add(-time.Hour)
 	lockedUntil := now.Add(15 * time.Minute)
 	if _, _, err := svc.Login(context.Background(), "alice", "s3cret"); err != nil {
@@ -1317,3 +1320,6 @@ func flipFirstChar(s string) string {
 	}
 	return string(replacement) + s[1:]
 }
+
+// bootstrapsOf is the test-side spelling of Deps.Bootstraps for a service already built.
+func bootstrapsOf(fns ...AccountBootstrap) []AccountBootstrap { return fns }

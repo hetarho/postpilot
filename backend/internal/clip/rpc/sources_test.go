@@ -1,17 +1,18 @@
 package rpc
 
 import (
-	"connectrpc.com/connect"
 	"context"
+	"strings"
+	"testing"
+	"time"
+
+	"connectrpc.com/connect"
 	"github.com/postpilot/backend/internal/auth"
 	"github.com/postpilot/backend/internal/clip"
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/platform/config"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/reflect/protoreflect"
-	"strings"
-	"testing"
-	"time"
 )
 
 type rpcSourceStore struct {

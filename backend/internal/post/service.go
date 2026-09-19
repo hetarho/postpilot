@@ -46,77 +46,70 @@ type Service struct {
 	newID func() string
 }
 
-// SetPendingExperimentFinder wires the experiment projection after both contexts have
-// been constructed in the composition root.
-func (s *Service) SetPendingExperimentFinder(finder PendingExperimentFinder) {
-	s.experiments = finder
+// Limits are the sizes and lifetimes the drafting context enforces. Zero for a video or
+// answer ceiling refuses every video upload or non-empty answer, which is the safe direction
+// for a server whose config did not supply them.
+type Limits struct {
+	PutTTL, GetTTL  time.Duration
+	MaxImageBytes   int64
+	MaxPhotos       int
+	MaxVideos       int
+	MaxVideoBytes   int64
+	MaxVideoSeconds int
+	// AnswerLabelMax and AnswerValueMax bound one data-field answer (TEMPLATE-43).
+	AnswerLabelMax, AnswerValueMax int
 }
 
-func (s *Service) SetExperimentContentPurger(purger ExperimentContentPurger) {
-	s.contentPurger = purger
+// Deps are the collaborators from other contexts a post reads or fences through
+// (ARCH-40). Every one is required: without the voice directory no post can be created,
+// and without the others a delete, a finalization or an experiment purge would silently
+// skip the check that makes it safe. The template directory is the one optional
+// collaborator (SetTemplateDirectory): a post needs no template.
+type Deps struct {
+	Jobs           ActiveJobFinder
+	Voices         VoiceDirectory
+	Experiments    PendingExperimentFinder
+	ContentPurger  ExperimentContentPurger
+	CandidateLinks GuidelineCandidateDetacher
+	LivePublish    LivePublishFinder
 }
 
-// SetGuidelineCandidateDetacher wires the guideline context's post-link drop, which only
-// exists once both services have been constructed.
-func (s *Service) SetGuidelineCandidateDetacher(detacher GuidelineCandidateDetacher) {
-	s.candidateLinks = detacher
+// NewService wires the context with its store, its object storage, its limits and its
+// collaborators.
+func NewService(store Store, blobs ObjectStore, limits Limits, deps Deps) *Service {
+	for name, dep := range map[string]any{"jobs": deps.Jobs, "voices": deps.Voices, "experiments": deps.Experiments, "content purger": deps.ContentPurger, "candidate links": deps.CandidateLinks, "live publish": deps.LivePublish} {
+		if dep == nil {
+			panic("post: " + name + " collaborator is required")
+		}
+	}
+	return &Service{
+		store:          store,
+		blobs:          blobs,
+		putTTL:         limits.PutTTL,
+		getTTL:         limits.GetTTL,
+		maxBytes:       limits.MaxImageBytes,
+		maxPhotos:      limits.MaxPhotos,
+		maxVideos:      limits.MaxVideos,
+		maxVideoBytes:  limits.MaxVideoBytes,
+		maxVideoMillis: int64(limits.MaxVideoSeconds) * 1000,
+		answerLabelMax: limits.AnswerLabelMax,
+		answerValueMax: limits.AnswerValueMax,
+		jobs:           deps.Jobs,
+		voices:         deps.Voices,
+		experiments:    deps.Experiments,
+		contentPurger:  deps.ContentPurger,
+		candidateLinks: deps.CandidateLinks,
+		livePublish:    deps.LivePublish,
+		now:            time.Now,
+		newID:          newObjectID,
+	}
 }
 
-// SetLivePublishFinder wires the publishing context's in-flight query, which only exists
-// once both services have been constructed.
-func (s *Service) SetLivePublishFinder(finder LivePublishFinder) {
-	s.livePublish = finder
-}
-
-// SetVoiceDirectory wires the voice context's published directory. Without it no post can
-// be created — failing closed is the point, since a post must name an owned active voice.
-func (s *Service) SetVoiceDirectory(directory VoiceDirectory) {
-	s.voices = directory
-}
-
-// SetTemplateDirectory wires the template context's published directory. Unlike the voice
-// directory its absence is survivable: a post needs no template, so without it assignment is
-// simply refused and read models project the stored id with no name.
+// SetTemplateDirectory wires the template context's published directory. Its absence is
+// survivable: a post needs no template, so without it assignment is simply refused and read
+// models project the stored id with no name (tested in TestWithoutATemplateDirectory...).
 func (s *Service) SetTemplateDirectory(directory TemplateDirectory) {
 	s.templates = directory
-}
-
-// SetVideoLimits wires the video ceilings (VIDEO-3). They are a separate setter rather
-// than four more positional arguments on NewService: every existing caller means photos,
-// and a constructor nobody can read is how a limit ends up in the wrong slot.
-//
-// Zero for either ceiling refuses every video upload, which is the safe direction for a
-// server whose config did not supply them.
-func (s *Service) SetVideoLimits(maxVideos int, maxVideoBytes int64, maxSeconds int) {
-	s.maxVideos = maxVideos
-	s.maxVideoBytes = maxVideoBytes
-	s.maxVideoMillis = int64(maxSeconds) * 1000
-}
-
-// SetTemplateAnswerLimits wires the data-field answer ceilings (TEMPLATE-43), for the same
-// reason SetVideoLimits is a setter: every existing caller of NewService means photos.
-func (s *Service) SetTemplateAnswerLimits(labelMax, valueMax int) {
-	s.answerLabelMax = labelMax
-	s.answerValueMax = valueMax
-}
-
-// NewService wires the context with its store, its object storage, the presigned URL
-// lifetimes, and the largest object it will accept as a photo.
-func NewService(store Store, blobs ObjectStore, putTTL, getTTL time.Duration, maxBytes int64, maxPhotos int, jobs ...ActiveJobFinder) *Service {
-	svc := &Service{
-		store:     store,
-		blobs:     blobs,
-		putTTL:    putTTL,
-		getTTL:    getTTL,
-		maxBytes:  maxBytes,
-		maxPhotos: maxPhotos,
-		now:       time.Now,
-		newID:     newObjectID,
-	}
-	if len(jobs) > 0 {
-		svc.jobs = jobs[0]
-	}
-	return svc
 }
 
 // SaveDraft creates the post when slug is empty, otherwise updates the caller's own.

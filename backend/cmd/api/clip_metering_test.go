@@ -3,6 +3,12 @@ package main
 import (
 	"context"
 	"errors"
+	"io"
+	"path/filepath"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/postpilot/backend/internal/clip"
 	clipapp "github.com/postpilot/backend/internal/clip/app"
 	"github.com/postpilot/backend/internal/job"
@@ -10,11 +16,6 @@ import (
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/platform/db"
 	"github.com/postpilot/backend/internal/usage"
-	"io"
-	"path/filepath"
-	"strings"
-	"testing"
-	"time"
 )
 
 func TestClipMeteringFailsClosedBeforeProviderOrLedger(t *testing.T) {

@@ -4,13 +4,14 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
-	"github.com/postpilot/backend/internal/clip/composition"
-	"github.com/postpilot/backend/internal/clip/design"
 	"maps"
 	"regexp"
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/postpilot/backend/internal/clip/composition"
+	"github.com/postpilot/backend/internal/clip/design"
 )
 
 const CompositionVersion = 1

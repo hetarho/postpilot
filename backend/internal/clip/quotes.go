@@ -107,11 +107,6 @@ type QuoteStore interface {
 	LinkApprovedSourceJob(context.Context, GenerationQuote, string, time.Time) error
 }
 
-func (s *GenerationService) WithCredits(pricing QuotePricing, accounting AccountingReader) *GenerationService {
-	s.pricing, s.accounting = pricing, accounting
-	return s
-}
-
 type remainingQuotePricing interface {
 	FreezeWork(context.Context, llm.ModelRef, llm.ModelRef, int, bool, bool, int) (GenerationPricing, error)
 }

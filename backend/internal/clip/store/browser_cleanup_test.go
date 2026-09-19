@@ -1,9 +1,10 @@
 package store_test
 
 import (
-	"github.com/postpilot/backend/internal/clip"
 	"testing"
 	"time"
+
+	"github.com/postpilot/backend/internal/clip"
 )
 
 func TestBrowserOrphanSweepKeepsCurrentFileAndReapsRecreatedSupersededFile(t *testing.T) {

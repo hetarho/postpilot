@@ -11,12 +11,12 @@ import (
 	"github.com/postpilot/backend/internal/auth"
 	"github.com/postpilot/backend/internal/clip"
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
-	"github.com/postpilot/backend/internal/platform/config"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
 type observationStore struct {
 	clip.Store
+	clip.SourceStore
 	project clip.Project
 }
 
@@ -57,7 +57,7 @@ func TestRetainedObservationDetailIsOwnerScopedAndStructured(t *testing.T) {
 	}
 	s := &observationStore{project: clip.Project{ID: "owned", UserID: "alice", Analysis: string(raw),
 		Ratio: "vertical", Result: &clip.Result{Key: "private-result-key", DownloadURL: "https://download.test/result"}}}
-	h := NewHandler(clip.NewService(s, config.ClipLimits()))
+	h := NewHandler(testProjects(s))
 	ctx := auth.WithUser(context.Background(), "alice")
 	r, err := h.GetClipProject(ctx, connect.NewRequest(&v1.GetClipProjectRequest{Id: "owned"}))
 	if err != nil {
@@ -108,10 +108,10 @@ func TestAbsentOrUnreadableObservationsPreserveTheResult(t *testing.T) {
 	} {
 		t.Run(tc.raw, func(t *testing.T) {
 			s := &observationStore{project: clip.Project{ID: "owned", UserID: "alice", Ratio: "vertical", Analysis: tc.raw,
-				Result: &clip.Result{DownloadURL: "https://download.test/result"}}}
-			service := clip.NewService(s, config.ClipLimits())
-			generation := clip.NewGenerationService(nil, service, nil, nil, nil, nil, nil, nil,
-				clip.GenerationConfig{ReadTTL: time.Minute, CleanupTimeout: time.Minute, OrphanMinAge: time.Minute})
+				Result: &clip.Result{Key: "result"}}}
+			service := testProjects(s)
+			generation := clip.NewGenerationService(nil, service, nil, neutralProcessing{}, nil, nil, nil, neutralJobs{}, clip.GenerationConfig{ReadTTL: time.Minute, CleanupTimeout: time.Minute, OrphanMinAge: time.Minute}, neutralGenerationDeps())
+
 			h := NewHandler(service).WithGeneration(generation, nil)
 			if tc.status == "unavailable" {
 				// Without the unavailable guard this attempts to decode the correction
@@ -119,7 +119,7 @@ func TestAbsentOrUnreadableObservationsPreserveTheResult(t *testing.T) {
 				s.project.EditPlan = "not a usable correction"
 			}
 			r, err := h.GetClipProject(auth.WithUser(context.Background(), "alice"), connect.NewRequest(&v1.GetClipProjectRequest{Id: "owned"}))
-			if err != nil || r.Msg.Project.GetObservations().GetStatus() != tc.status || r.Msg.Project.GetResult().GetDownloadUrl() != "https://download.test/result" {
+			if err != nil || r.Msg.Project.GetObservations().GetStatus() != tc.status || r.Msg.Project.GetResult().GetDownloadUrl() != "https://objects.test/result?download" {
 				t.Fatalf("lost readable result: %v %v", r, err)
 			}
 		})

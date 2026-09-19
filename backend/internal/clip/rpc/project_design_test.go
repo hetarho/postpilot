@@ -8,7 +8,6 @@ import (
 	"github.com/postpilot/backend/internal/auth"
 	"github.com/postpilot/backend/internal/clip"
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
-	"github.com/postpilot/backend/internal/platform/config"
 )
 
 // The design selection crosses the wire the way the pace and the accent do:
@@ -16,7 +15,7 @@ import (
 // list is a selection of none (CLIP-139, CLIP-142).
 func TestDesignSelectionKeepsItsPresenceAcrossTheWire(t *testing.T) {
 	s := &rpcStore{}
-	h := NewHandler(clip.NewService(s, config.ClipLimits()))
+	h := NewHandler(testProjects(s))
 	ctx := auth.WithUser(context.Background(), "alice")
 	if _, err := h.UpdateClipProject(ctx, connect.NewRequest(&v1.UpdateClipProjectRequest{Id: "owned"})); err != nil {
 		t.Fatal(err)
@@ -49,6 +48,7 @@ func TestDesignSelectionKeepsItsPresenceAcrossTheWire(t *testing.T) {
 // template to read, so only the insert is recorded.
 type createStore struct {
 	clip.Store
+	clip.SourceStore
 	created clip.Project
 }
 
@@ -60,7 +60,7 @@ func (s *createStore) InsertProject(_ context.Context, p clip.Project) error {
 // A project minted with no template reaches the service as one (CLIP-5).
 func TestCreatingAClipWithNoTemplateCrossesTheWireAsNone(t *testing.T) {
 	s := &createStore{}
-	h := NewHandler(clip.NewService(s, config.ClipLimits()))
+	h := NewHandler(testProjects(s))
 	ctx := auth.WithUser(context.Background(), "alice")
 	_, err := h.CreateClipProject(ctx, connect.NewRequest(&v1.CreateClipProjectRequest{
 		Title: "템플릿 없이", Ratio: "vertical", Language: v1.ContentLanguage_CONTENT_LANGUAGE_KOREAN}))

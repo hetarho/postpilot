@@ -33,6 +33,7 @@ import (
 	jobstore "github.com/postpilot/backend/internal/job/store"
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/llm/openaicompat"
+	"github.com/postpilot/backend/internal/mail"
 	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/platform/config"
 	"github.com/postpilot/backend/internal/platform/db"
@@ -117,6 +118,7 @@ type releaseHarness struct {
 	projects          *clip.Service
 	generationHandler job.Handler
 	renderHandler     job.Handler
+	finisher          *releaseFinisher
 	queue             *job.Queue
 	jobs              *jobstore.Store
 	ledger            *usage.Service
@@ -206,11 +208,11 @@ func TestClipWriterInputRelease(t *testing.T) {
 		t.Fatal("release regression must run nonroot")
 	}
 	h := newReleaseHarness(t, "detailed-input", false)
-	st := clipstore.New(h.d.Writer, h.d.Reader)
-	finisher := clipapp.NewFinisher(h.d.Writer, clipTxPorts(nil, nil, nil), h.jobs, st, nil)
-	h.service.WithFinisher(releaseFinisher{Finisher: finisher, mode: "save failure"})
+	// The finisher is constructor state; the harness keeps the one it built so a test can
+	// flip its failure mode instead of re-wiring the service.
+	h.finisher.mode = "save failure"
 	h.exercise("save failure")
-	h.service.WithFinisher(finisher)
+	h.finisher.mode = ""
 	h.verifyCandidateContinuation()
 }
 
@@ -382,7 +384,7 @@ func newReleaseHarness(t *testing.T, mode string, stress bool, clocks ...func() 
 	if err = as.CreateSession(ctx, auth.Session{Token: hash, UserID: "release-user", CreatedAt: time.Now(), ExpiresAt: time.Now().Add(time.Hour)}); err != nil {
 		t.Fatal(err)
 	}
-	authSvc := auth.NewService(as, time.Hour)
+	authSvc := auth.NewService(as, time.Hour, auth.Deps{Mailer: mail.NewLog()})
 	metrics := &releaseMetrics{hashes: map[string]bool{}, mode: mode}
 	provider := &releaseProvider{mode: mode, metrics: metrics}
 	server := httptest.NewServer(provider)
@@ -391,8 +393,7 @@ func newReleaseHarness(t *testing.T, mode string, stress bool, clocks ...func() 
 	if err != nil {
 		t.Fatal(err)
 	}
-	ledger := usage.NewService(usagestore.New(d.Writer, d.Reader), registry, 8192)
-	ledger.SetAnchors(usageAnchors{auth: authSvc})
+	ledger := usage.NewService(usagestore.New(d.Writer, d.Reader), registry, 8192, usageAnchors{auth: authSvc})
 	if err = ledger.EnsureMonthlyLot(ctx, "release-user", tier); err != nil {
 		t.Fatal(err)
 	}
@@ -425,7 +426,6 @@ func newReleaseHarness(t *testing.T, mode string, stress bool, clocks ...func() 
 		t.Fatal(err)
 	}
 	st := clipstore.New(d.Writer, d.Reader)
-	projects := clip.NewService(st, config.ClipLimits())
 	objects := &releaseObjects{root: root, paths: map[string]string{}, downloads: map[string]int{}}
 	if strings.HasPrefix(mode, "multi-source") || mode == "success" {
 		blob := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -444,18 +444,17 @@ func newReleaseHarness(t *testing.T, mode string, stress bool, clocks ...func() 
 		objects.readBase = blob.URL
 	}
 	sources := clip.NewSourceService(st, objects, config.ClipSourceLimits(6*time.Hour, 10*time.Minute), clocks...)
-	projects.SetSources(sources)
+	bind := clipTxPorts(ledger, registry, authSvc)
+	projects := clip.NewService(st, config.ClipLimits(), sources, clipapp.NewFinalizer(d.Writer, bind, st, config.ClipRender(cfg), nil))
 	js := jobstore.New(d.Writer, d.Reader)
 	q := job.New(js, 10*time.Millisecond)
 	admission := &releaseAdmission{jobAdmission: jobAdmission{ledger: ledger, registry: registry, plans: authSvc}, metrics: metrics}
 	q.Admit(admission)
-	bind := clipTxPorts(ledger, registry, authSvc)
 	guard := clipapp.NewGuard(d.Writer, bind, js)
 	admission.hold = guard.Reserve
 	q.GuardClips(releaseClipGuard{guard, admission})
-	g := clip.NewGenerationService(st, projects, sources, objects, media, planner, renderer, clipapp.NewJobs(q), config.ClipGeneration(cfg)).WithFinisher(releaseFinisher{clipapp.NewFinisher(d.Writer, bind, js, st, nil), mode}).WithCredits(clipapp.NewPricing(registry, clipBudgets(config.ClipAI(cfg))), clipapp.NewAccounting(ledger))
-	projects.SetGeneration(g)
-	projects.SetFinalizer(clipapp.NewFinalizer(d.Writer, bind, st, config.ClipRender(cfg), nil))
+	finisher := &releaseFinisher{Finisher: clipapp.NewFinisher(d.Writer, bind, js, st, nil), mode: mode}
+	g := clip.NewGenerationService(st, projects, sources, objects, media, planner, renderer, clipapp.NewJobs(q), config.ClipGeneration(cfg), generationDeps(finisher, clipapp.NewPricing(registry, clipBudgets(config.ClipAI(cfg))), clipapp.NewAccounting(ledger)))
 	var h *releaseHarness
 	if !strings.HasPrefix(mode, "restart ") {
 		q.Register(job.KindGenerateClip, metered(func(ctx context.Context, j job.Job, p job.Progress) error {
@@ -482,7 +481,7 @@ func newReleaseHarness(t *testing.T, mode string, stress bool, clocks ...func() 
 	mux.Handle(path, handler)
 	rpcServer := httptest.NewServer(mux)
 	t.Cleanup(rpcServer.Close)
-	h = &releaseHarness{t: t, d: d, client: postpilotv1connect.NewClipServiceClient(rpcServer.Client(), rpcServer.URL), cookie: cookie, service: g, queue: q, jobs: js, ledger: ledger, objects: objects, media: media, metrics: metrics, provider: provider, admission: admission, master: mode == "master"}
+	h = &releaseHarness{t: t, d: d, client: postpilotv1connect.NewClipServiceClient(rpcServer.Client(), rpcServer.URL), cookie: cookie, service: g, finisher: finisher, queue: q, jobs: js, ledger: ledger, objects: objects, media: media, metrics: metrics, provider: provider, admission: admission, master: mode == "master"}
 	h.sources, h.projects = sources, projects
 	if mode == "aborted client" {
 		h.aborted = &releaseAbortTransport{RoundTripper: rpcServer.Client().Transport}

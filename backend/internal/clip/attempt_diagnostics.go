@@ -3,9 +3,10 @@ package clip
 import (
 	"context"
 	"errors"
-	"github.com/postpilot/backend/internal/clip/composition"
 	"log/slog"
 	"regexp"
+
+	"github.com/postpilot/backend/internal/clip/composition"
 )
 
 // Checkpoints contain validated domain evidence, never a raw provider response.
