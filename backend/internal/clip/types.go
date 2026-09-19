@@ -27,7 +27,7 @@ type Limits struct {
 	NameChars, GuidanceChars, FieldCount, LabelChars, PromptChars int
 	TitleChars, AnswerChars, MinDurationMS, MaxDurationMS         int
 	// The project instruction's own maximum (CLIP-121), counted CDS-20's way
-	// like every other bounded text.
+	// like every other BoundedText text.
 	InstructionChars int
 }
 

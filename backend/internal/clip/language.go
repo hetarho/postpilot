@@ -8,12 +8,12 @@ import (
 
 func ValidLanguage(language string) bool { return language == "ko" || language == "en" }
 
-func supportedGenerationPayload(version int) bool {
-	return version >= 3 && version <= generationPayloadVersion
+func SupportedGenerationPayload(version int) bool {
+	return version >= 3 && version <= GenerationPayloadVersion
 }
 
-func (p *generationPayload) UnmarshalJSON(raw []byte) error {
-	type wire generationPayload
+func (p *GenerationPayload) UnmarshalJSON(raw []byte) error {
+	type wire GenerationPayload
 	var value wire
 	decoder := json.NewDecoder(bytes.NewReader(raw))
 	decoder.DisallowUnknownFields()
@@ -29,6 +29,6 @@ func (p *generationPayload) UnmarshalJSON(raw []byte) error {
 	if !ValidLanguage(value.Language) {
 		return ErrInvalid
 	}
-	*p = generationPayload(value)
+	*p = GenerationPayload(value)
 	return nil
 }

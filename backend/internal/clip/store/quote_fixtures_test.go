@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	clipapp "github.com/postpilot/backend/internal/clip/app"
+
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/usage"
@@ -33,7 +35,7 @@ func (p *quotePricing) Freeze(_ context.Context, o, w llm.ModelRef, count int) (
 	credits, err := usage.ClipCredits([]usage.PricedCall{{Policy: a, Count: count}, {Policy: b, Count: 2}})
 	return clip.GenerationPricing{Version: clip.PricingPolicyVersion, Observe: a, Plan: b, Narration: b, ObservationCalls: count, MaxCredits: credits}, err
 }
-func startApproved(ctx context.Context, s *clip.GenerationService, user, id, batch, o, w string) (string, error) {
+func startApproved(ctx context.Context, s *clipapp.GenerationService, user, id, batch, o, w string) (string, error) {
 	q, err := s.Quote(ctx, user, id, batch, o, w)
 	if err != nil {
 		return "", err

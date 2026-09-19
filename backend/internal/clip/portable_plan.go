@@ -91,7 +91,7 @@ func decodeAssemblyPlan(raw string) (EditPlan, error) {
 	}
 	raw = string(clean)
 	var s storedAssemblyPlan
-	if strictJSON(raw, &s) != nil || s.Version != CompositionPlanVersion {
+	if StrictJSON(raw, &s) != nil || s.Version != CompositionPlanVersion {
 		return EditPlan{}, ErrInvalid
 	}
 	p, err := portableFromStored(storedPortablePlan{s.Version, s.Ratio, s.Plan, s.Focals, nil, PortablePlan{}})
@@ -128,7 +128,7 @@ func decodeAssemblyPlan(raw string) (EditPlan, error) {
 
 func decodePortablePlan(raw string) (EditPlan, error) {
 	var s storedPortablePlan
-	if strictJSON(raw, &s) != nil || s.Version != portablePlanVersion {
+	if StrictJSON(raw, &s) != nil || s.Version != portablePlanVersion {
 		return EditPlan{}, ErrInvalid
 	}
 	p, err := portableFromStored(s)

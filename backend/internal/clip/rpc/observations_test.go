@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	clipapp "github.com/postpilot/backend/internal/clip/app"
+
 	"connectrpc.com/connect"
 	"github.com/postpilot/backend/internal/auth"
 	"github.com/postpilot/backend/internal/clip"
@@ -110,7 +112,7 @@ func TestAbsentOrUnreadableObservationsPreserveTheResult(t *testing.T) {
 			s := &observationStore{project: clip.Project{ID: "owned", UserID: "alice", Ratio: "vertical", Analysis: tc.raw,
 				Result: &clip.Result{Key: "result"}}}
 			service := testProjects(s)
-			generation := clip.NewGenerationService(nil, service, nil, neutralProcessing{}, nil, nil, nil, neutralJobs{}, clip.GenerationConfig{ReadTTL: time.Minute, CleanupTimeout: time.Minute, OrphanMinAge: time.Minute}, neutralGenerationDeps())
+			generation := clipapp.NewGenerationService(nil, service, nil, neutralProcessing{}, nil, nil, nil, neutralJobs{}, clip.GenerationConfig{ReadTTL: time.Minute, CleanupTimeout: time.Minute, OrphanMinAge: time.Minute}, neutralGenerationDeps())
 
 			h := NewHandler(service).WithGeneration(generation, nil)
 			if tc.status == "unavailable" {

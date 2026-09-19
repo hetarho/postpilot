@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	clipapp "github.com/postpilot/backend/internal/clip/app"
+
 	"github.com/postpilot/backend/internal/auth"
 	authstore "github.com/postpilot/backend/internal/auth/store"
 	"github.com/postpilot/backend/internal/clip"
@@ -19,7 +21,7 @@ import (
 	"github.com/postpilot/backend/internal/platform/db"
 )
 
-func setup(t *testing.T) (*clip.Service, *store.Store, *db.DB) {
+func setup(t *testing.T) (*clipapp.Service, *store.Store, *db.DB) {
 	t.Helper()
 	projects, st, d, _ := setupWith(t, fakeSources())
 	return projects, st, d
@@ -28,7 +30,7 @@ func setup(t *testing.T) (*clip.Service, *store.Store, *db.DB) {
 // setupWith builds the project service over a migrated database with the source side
 // reading objects: the constructor needs both (ARCH-40), so the objects a test wants to
 // observe are chosen before the service exists.
-func setupWith(t *testing.T, objects clip.ObjectStore) (*clip.Service, *store.Store, *db.DB, *clip.SourceService) {
+func setupWith(t *testing.T, objects clip.ObjectStore) (*clipapp.Service, *store.Store, *db.DB, *clipapp.SourceService) {
 	t.Helper()
 	d, err := db.Open(filepath.Join(t.TempDir(), "clip.db"))
 	if err != nil {
@@ -44,13 +46,13 @@ func setupWith(t *testing.T, objects clip.ObjectStore) (*clip.Service, *store.St
 		}
 	}
 	s := store.New(d.Writer, d.Reader)
-	sources := clip.NewSourceService(s, objects, config.ClipSourceLimits(6*time.Hour, 10*time.Minute))
-	return clip.NewService(s, config.ClipLimits(), sources, nullFinalizer{}), s, d, sources
+	sources := clipapp.NewSourceService(s, objects, config.ClipSourceLimits(6*time.Hour, 10*time.Minute))
+	return clipapp.NewService(s, config.ClipLimits(), sources, nullFinalizer{}), s, d, sources
 }
 func recipe() clip.Recipe {
 	return clip.Recipe{Name: " 여행 ", Preset: "stay", InformationFields: []clip.InformationField{{Label: " 장소 ", Prompt: " 어디였나요? "}}, Accent: "teal"}
 }
-func create(t *testing.T, s *clip.Service) (clip.VideoTemplate, clip.Project) {
+func create(t *testing.T, s *clipapp.Service) (clip.VideoTemplate, clip.Project) {
 	t.Helper()
 	ctx := context.Background()
 	v, err := s.CreateTemplate(ctx, "alice", recipe())

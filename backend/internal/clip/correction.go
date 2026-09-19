@@ -192,7 +192,7 @@ func CorrectionFromPlan(p EditPlan) CorrectionPlan {
 func EncodeEditPlan(p EditPlan) (string, error) {
 	return encodeAssemblyPlan(p)
 }
-func strictJSON(raw string, out any) error {
+func StrictJSON(raw string, out any) error {
 	d := json.NewDecoder(strings.NewReader(raw))
 	d.DisallowUnknownFields()
 	if err := d.Decode(out); err != nil {
@@ -255,7 +255,7 @@ func DecodeEditPlan(raw string) (EditPlan, error) {
 		// T076's original representation. Do not invent template permissions lost in
 		// that format: only styles already present in the retained plan are approved.
 		var legacy legacyEditPlan
-		if err := strictJSON(raw, &legacy); err != nil {
+		if err := StrictJSON(raw, &legacy); err != nil {
 			return EditPlan{}, err
 		}
 		p := legacy.upgrade()
@@ -286,11 +286,11 @@ func DecodeEditPlan(raw string) (EditPlan, error) {
 	var s storedEditPlan
 	if marker.Version < 3 {
 		var legacy legacyStoredEditPlan
-		if err := strictJSON(raw, &legacy); err != nil {
+		if err := StrictJSON(raw, &legacy); err != nil {
 			return EditPlan{}, ErrInvalid
 		}
 		s = storedEditPlan{legacy.Version, legacy.Ratio, storedCorrection(legacy.Plan.upgrade()), legacy.Focals, legacy.CopyStyles}
-	} else if err := strictJSON(raw, &s); err != nil {
+	} else if err := StrictJSON(raw, &s); err != nil {
 		return EditPlan{}, ErrInvalid
 	}
 	if s.Version < 1 || s.Version > storedPlanVersion {
@@ -329,7 +329,7 @@ func RetainedObservations(p Project) ([]SourceAnalysis, error) {
 		return nil, nil
 	}
 	var analyses []SourceAnalysis
-	if err := strictJSON(p.Analysis, &analyses); err != nil {
+	if err := StrictJSON(p.Analysis, &analyses); err != nil {
 		return nil, err
 	}
 	return analyses, nil
@@ -346,9 +346,9 @@ func RetainedSources(p Project) ([]AnalysisSource, error) {
 	return sources, nil
 }
 func EditingState(p Project, cfg RenderConfig) (*CorrectionState, error) {
-	return editingState(p, cfg, false)
+	return EditingStateOf(p, cfg, false)
 }
-func editingState(p Project, cfg RenderConfig, exposeNative bool) (*CorrectionState, error) {
+func EditingStateOf(p Project, cfg RenderConfig, exposeNative bool) (*CorrectionState, error) {
 	if p.EditPlan == "" {
 		return nil, nil
 	}
@@ -501,18 +501,4 @@ func MatchRenderBatch(plan EditPlan, batch SourceBatch) error {
 		return ErrSourceState
 	}
 	return nil
-}
-func renderBatchSources(plan EditPlan, batch SourceBatch) SourceBatch {
-	needed := map[string]bool{}
-	for _, c := range plan.Cuts {
-		needed[c.Fingerprint] = true
-	}
-	out := batch
-	out.Sources = nil
-	for _, v := range batch.Sources {
-		if needed[v.Fingerprint] {
-			out.Sources = append(out.Sources, v)
-		}
-	}
-	return out
 }

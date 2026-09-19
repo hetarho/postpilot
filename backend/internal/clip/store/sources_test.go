@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	clipapp "github.com/postpilot/backend/internal/clip/app"
+
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/platform/config"
 )
@@ -79,7 +81,7 @@ func manifest(count int) []clip.SourceMetadata {
 func TestSourceManifestLimits(t *testing.T) {
 	s, store, _ := setup(t)
 	_, p := create(t, s)
-	src := clip.NewSourceService(store, fakeSources(), config.ClipSourceLimits(6*time.Hour, 10*time.Minute))
+	src := clipapp.NewSourceService(store, fakeSources(), config.ClipSourceLimits(6*time.Hour, 10*time.Minute))
 	tests := map[string]func() []clip.SourceMetadata{
 		"none":      func() []clip.SourceMetadata { return nil },
 		"count":     func() []clip.SourceMetadata { return manifest(21) },
@@ -149,7 +151,7 @@ func TestSourceOwnedCreateConfirmReplaceAndDiscard(t *testing.T) {
 	s, store, _ := setup(t)
 	_, p := create(t, s)
 	objects := fakeSources()
-	src := clip.NewSourceService(store, objects, config.ClipSourceLimits(6*time.Hour, 10*time.Minute))
+	src := clipapp.NewSourceService(store, objects, config.ClipSourceLimits(6*time.Hour, 10*time.Minute))
 	ctx := context.Background()
 	for _, project := range []string{p.ID, "unknown"} {
 		if _, err := src.Create(ctx, "bob", project, manifest(1)); !errors.Is(err, clip.ErrNotFound) {
@@ -212,7 +214,7 @@ func TestSourceMismatchAndPartialCleanupRemainRetryable(t *testing.T) {
 			s, store, _ := setup(t)
 			_, p := create(t, s)
 			objects := fakeSources()
-			src := clip.NewSourceService(store, objects, config.ClipSourceLimits(6*time.Hour, 10*time.Minute))
+			src := clipapp.NewSourceService(store, objects, config.ClipSourceLimits(6*time.Hour, 10*time.Minute))
 			ctx := context.Background()
 			u, err := src.Create(ctx, "alice", p.ID, manifest(2))
 			if err != nil {
@@ -349,7 +351,7 @@ func TestSourceBootSweepAndSigningFailure(t *testing.T) {
 	s, store, d := setup(t)
 	_, p := create(t, s)
 	objects := fakeSources()
-	src := clip.NewSourceService(store, objects, config.ClipSourceLimits(6*time.Hour, 10*time.Minute))
+	src := clipapp.NewSourceService(store, objects, config.ClipSourceLimits(6*time.Hour, 10*time.Minute))
 	ctx := context.Background()
 	objects.signFails = true
 	if _, err := src.Create(ctx, "alice", p.ID, manifest(1)); err == nil {
@@ -388,7 +390,7 @@ func TestSourceBootSweepAndSigningFailure(t *testing.T) {
 func TestSourceSchemaStoresMetadataOnlyAndNoSignedURLs(t *testing.T) {
 	s, store, d := setup(t)
 	_, p := create(t, s)
-	src := clip.NewSourceService(store, fakeSources(), config.ClipSourceLimits(6*time.Hour, 10*time.Minute))
+	src := clipapp.NewSourceService(store, fakeSources(), config.ClipSourceLimits(6*time.Hour, 10*time.Minute))
 	if _, err := src.Create(context.Background(), "alice", p.ID, manifest(1)); err != nil {
 		t.Fatal(err)
 	}

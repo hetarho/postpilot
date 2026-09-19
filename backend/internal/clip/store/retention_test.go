@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	clipapp "github.com/postpilot/backend/internal/clip/app"
+
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/platform/config"
 )
@@ -39,8 +41,8 @@ func TestOriginalCapabilitiesRejectChangesDuringSigning(t *testing.T) {
 				objects := fakeSources()
 				signer := &racingSourceSigner{ObjectStore: objects}
 				cfg := config.ClipSourceLimits(6*time.Hour, 10*time.Minute)
-				sources := clip.NewSourceService(store, signer, cfg)
-				other := clip.NewSourceService(store, objects, cfg)
+				sources := clipapp.NewSourceService(store, signer, cfg)
+				other := clipapp.NewSourceService(store, objects, cfg)
 				mutate := func() {
 					var err error
 					if change == "revoke" {
@@ -85,7 +87,7 @@ func TestOriginalRetentionMutationsAndAttemptReleaseAreNotReadLeases(t *testing.
 	ctx := context.Background()
 	now := time.Now().UTC()
 	objects := fakeSources()
-	sources := clip.NewSourceService(store, objects, config.ClipSourceLimits(6*time.Hour, 10*time.Minute), func() time.Time { return now })
+	sources := clipapp.NewSourceService(store, objects, config.ClipSourceLimits(6*time.Hour, 10*time.Minute), func() time.Time { return now })
 	upload, err := sources.Create(ctx, "alice", p.ID, manifest(1))
 	if err != nil {
 		t.Fatal(err)
@@ -168,7 +170,7 @@ func TestPartialUploadExpiryDoesNotShortenConfirmedOriginals(t *testing.T) {
 	ctx := context.Background()
 	now := time.Now().UTC()
 	objects := fakeSources()
-	sources := clip.NewSourceService(store, objects, config.ClipSourceLimits(6*time.Hour, 10*time.Minute), func() time.Time { return now })
+	sources := clipapp.NewSourceService(store, objects, config.ClipSourceLimits(6*time.Hour, 10*time.Minute), func() time.Time { return now })
 	u, err := sources.Create(ctx, "alice", p.ID, manifest(2))
 	if err != nil {
 		t.Fatal(err)
@@ -219,7 +221,7 @@ func TestOriginalTombstoneOutlivesAnIssuedPutAndPermanentDeletion(t *testing.T) 
 	ctx := context.Background()
 	now := time.Now().UTC()
 	objects := fakeSources()
-	sources := clip.NewSourceService(store, objects, config.ClipSourceLimits(6*time.Hour, 10*time.Minute), func() time.Time { return now })
+	sources := clipapp.NewSourceService(store, objects, config.ClipSourceLimits(6*time.Hour, 10*time.Minute), func() time.Time { return now })
 	u, err := sources.Create(ctx, "alice", p.ID, manifest(1))
 	if err != nil {
 		t.Fatal(err)
@@ -268,7 +270,7 @@ func TestOriginalPlaybackOwnershipExpiryMissingAndStaleSelection(t *testing.T) {
 	ctx := context.Background()
 	now := time.Now().UTC()
 	objects := fakeSources()
-	sources := clip.NewSourceService(store, objects, config.ClipSourceLimits(6*time.Hour, 10*time.Minute), func() time.Time { return now })
+	sources := clipapp.NewSourceService(store, objects, config.ClipSourceLimits(6*time.Hour, 10*time.Minute), func() time.Time { return now })
 	u, err := sources.Create(ctx, "alice", p.ID, manifest(1))
 	if err != nil {
 		t.Fatal(err)
@@ -339,7 +341,7 @@ func TestOriginalPermanentFenceProtectsActivePixelsAndDefeatsReleaseRenewal(t *t
 	ctx := context.Background()
 	now := time.Now().UTC()
 	objects := fakeSources()
-	sources := clip.NewSourceService(store, objects, config.ClipSourceLimits(6*time.Hour, 10*time.Minute), func() time.Time { return now })
+	sources := clipapp.NewSourceService(store, objects, config.ClipSourceLimits(6*time.Hour, 10*time.Minute), func() time.Time { return now })
 	u, err := sources.Create(ctx, "alice", p.ID, manifest(1))
 	if err != nil {
 		t.Fatal(err)
@@ -377,7 +379,7 @@ func TestOriginalPermanentFenceProtectsActivePixelsAndDefeatsReleaseRenewal(t *t
 		t.Fatal("terminal release revived fenced originals", got, err)
 	}
 	// Restart creates a fresh service; durable cleanup and access denial remain.
-	sources = clip.NewSourceService(store, objects, config.ClipSourceLimits(6*time.Hour, 10*time.Minute), func() time.Time { return now })
+	sources = clipapp.NewSourceService(store, objects, config.ClipSourceLimits(6*time.Hour, 10*time.Minute), func() time.Time { return now })
 	objects.failDelete[b.Sources[0].Key] = false
 	if err = sources.Sweep(ctx); err != nil {
 		t.Fatal(err)
@@ -402,7 +404,7 @@ func TestReleaseAdmitsATerminalTimeAClockStepPutBeforeItsBinding(t *testing.T) {
 	ctx := context.Background()
 	now := time.Now().UTC()
 	objects := fakeSources()
-	sources := clip.NewSourceService(store, objects, config.ClipSourceLimits(6*time.Hour, 10*time.Minute), func() time.Time { return now })
+	sources := clipapp.NewSourceService(store, objects, config.ClipSourceLimits(6*time.Hour, 10*time.Minute), func() time.Time { return now })
 	upload, err := sources.Create(ctx, "alice", p.ID, manifest(1))
 	if err != nil {
 		t.Fatal(err)

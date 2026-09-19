@@ -3,6 +3,8 @@ package rpc
 import (
 	"testing"
 
+	clipapp "github.com/postpilot/backend/internal/clip/app"
+
 	"connectrpc.com/connect"
 	"github.com/postpilot/backend/internal/auth"
 	"github.com/postpilot/backend/internal/clip"
@@ -11,7 +13,7 @@ import (
 
 func TestRenderKindRefusedBeforeWork(t *testing.T) {
 	h := NewHandler(nil)
-	h.generation = &clip.GenerationService{}
+	h.generation = &clipapp.GenerationService{}
 	for _, tc := range []struct {
 		kind v1.ClipRenderKind
 		code connect.Code

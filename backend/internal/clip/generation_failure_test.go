@@ -20,14 +20,14 @@ func TestDurableCompositionFailureKeepsElementIdentityWithoutDraftText(t *testin
 	}
 }
 
-// A bounded answer is the one composition refusal an owner can hit without ever
+// A BoundedText answer is the one composition refusal an owner can hit without ever
 // seeing the template body, so it names the field instead of a line (CLIP-102).
 func TestBoundedAnswerFailureNamesTheFieldAndItsCounts(t *testing.T) {
 	problem := &composition.Problem{ElementID: "place", Line: 3, Reason: "answer_limit", Label: "상호", Max: 6, Actual: 9}
 	failure := (&StageFailure{Stage: "prepare", Cause: fmt.Errorf("private draft: %w", problem)}).Failure()
 	want := map[string]string{"element_id": "place", "line": "3", "reason": "answer_limit", "label": "상호", "max": "6", "actual": "9"}
 	if failure.Reason != "CLIP_COMPOSITION_INVALID" || !reflect.DeepEqual(failure.Params, want) {
-		t.Fatal("bounded answer lost its label or counts", failure)
+		t.Fatal("BoundedText answer lost its label or counts", failure)
 	}
 	// Every other reason keeps the three parameters it always had.
 	plain := (&StageFailure{Stage: "render", Cause: &composition.Problem{ElementID: "price", Line: 7, Reason: "copy_limit"}}).Failure()
@@ -48,7 +48,7 @@ func TestClipFailureUsesOnlyReasonSpecificParams(t *testing.T) {
 }
 
 func TestClipDiagnosticMetadataDoesNotChangePublicFailure(t *testing.T) {
-	cause := errors.New("bounded provider request failed")
+	cause := errors.New("BoundedText provider request failed")
 	want := (&StageFailure{Stage: "analyze", Cause: cause}).Failure()
 	err := &StageFailure{Stage: "analyze", Cause: llm.WithCallDiagnostic(cause, llm.CallDiagnostic{Operation: "response", Class: "http_error", HTTPStatus: 403, RequestID: "req-0123456789abcdef"})}
 	if !reflect.DeepEqual(err.Failure(), want) || err.FailureStage() != "analyze" || !errors.Is(err, cause) {

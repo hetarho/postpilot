@@ -12,7 +12,6 @@ import (
 	authstore "github.com/postpilot/backend/internal/auth/store"
 	"github.com/postpilot/backend/internal/billing"
 	billingstore "github.com/postpilot/backend/internal/billing/store"
-	"github.com/postpilot/backend/internal/clip"
 	clipapp "github.com/postpilot/backend/internal/clip/app"
 	clipmedia "github.com/postpilot/backend/internal/clip/media"
 	clipstore "github.com/postpilot/backend/internal/clip/store"
@@ -61,9 +60,9 @@ type contexts struct {
 
 	clipStore      *clipstore.Store
 	clipPorts      clipapp.Binder
-	clip           *clip.Service
-	clipSources    *clip.SourceService
-	clipGeneration *clip.GenerationService
+	clip           *clipapp.Service
+	clipSources    *clipapp.SourceService
+	clipGeneration *clipapp.GenerationService
 
 	template   *template.Service
 	guideline  *guideline.Service
@@ -212,8 +211,8 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 	}
 
 	c.clipStore = clipstore.New(handle.Writer, handle.Reader)
-	c.clipSources = clip.NewSourceService(c.clipStore, p.bucket, config.ClipSourceLimits(cfg.ClipSourceBatchTTL, cfg.PresignPutTTL))
-	c.clip = clip.NewService(c.clipStore, config.ClipLimits(), c.clipSources, clipapp.NewFinalizer(handle.Writer, c.clipPorts, c.clipStore, config.ClipRender(cfg), nil))
+	c.clipSources = clipapp.NewSourceService(c.clipStore, p.bucket, config.ClipSourceLimits(cfg.ClipSourceBatchTTL, cfg.PresignPutTTL))
+	c.clip = clipapp.NewService(c.clipStore, config.ClipLimits(), c.clipSources, clipapp.NewFinalizer(handle.Writer, c.clipPorts, c.clipStore, config.ClipRender(cfg), nil))
 	clipMedia, err := clipmedia.New(config.ClipMedia(cfg), nil)
 	if err != nil {
 		return nil, fmt.Errorf("clip media initialization: %w", err)

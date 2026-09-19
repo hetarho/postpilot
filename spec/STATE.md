@@ -63,7 +63,6 @@
 | T268 | the route tree is assembled from route groups | ARCH | - | todo |
 | T269 | platform/config holds env only; limits live in their context | ARCH | - | todo |
 | T272 | job and usage expose primitives; clip composes them | ARCH | T270 | blocked@260919 |
-| T273 | the clip root is the domain; use-cases live in clip/app | ARCH | T270 | todo |
 | T274 | clip generation orchestration is a sequence of testable stages | ARCH | T273 | todo |
 | T275 | job/store, template/rpc and modelcatalog/rpc have tests | ARCH | T272 | todo |
 | T276 | voice, post and publishing ports are per use-case | ARCH | - | todo |
@@ -77,11 +76,12 @@
 | T284 | the agent generates only the protos it uses and drops the survey harness | ARCH | T008 T281 | todo |
 
 ## next
-- create-task review/arch-260919 T272 (blocked: three money-path decisions listed in its result → split into T272a/b/c); implement-task T273 (dep T270 done) or an FE root (T258 T259 T260 T263 T264 T266 T268) meanwhile; follow-up to log as a task: the same constructor treatment for voice/experiment/guideline/modelcatalog/billingstore setters and moving jobAdmission/meteredRegistry out of package main; FE roots with no dep: T258 T259 T260 T263 T264 T266 T268; BE roots: T269 T276 T278 T280
+- create-task review/arch-260919 T272 (blocked: three money-path decisions listed in its result → split into T272a/b/c); implement-task T274 (its move half landed with T273; only Run decomposition + remaining clocks remain) or an FE root (T258 T259 T260 T263 T264 T266 T268) meanwhile; follow-up to log as a task: the same constructor treatment for voice/experiment/guideline/modelcatalog/billingstore setters and moving jobAdmission/meteredRegistry out of package main; FE roots with no dep: T258 T259 T260 T263 T264 T266 T268; BE roots: T269 T276 T278 T280
 - the clip `release-smoke` stage is red at HEAD on this host: 9 of 28 modes end in `no result` (generation ends on a plan since T255, harness still expects a Result) — needs a fix task (review-code clip-release-smoke or update the harness)
 - agent tasks T279 T282 T283 T284 wait for T008; T008 belongs to another session and T177 remains blocked
 - post-quality-and-related-links remains open ideation, awaiting conversion when ready
 ## log
+- 260919 T273 done; the clip root is the pure domain (deps: design, composition, llm, plan) and clip/app holds the three services, their methods and the worker orchestration (4.6k lines) — T274 keeps only the Run decomposition; ARCH-26 green, release smoke unchanged (pre-existing 9 `no result`)
 - 260919 T272 blocked; job/usage clip knowledge reaches the schema (clip_project_id) and the settlement rules — three decisions owed (columns, allowance port, SettlementPolicy) before an implementer can proceed; T277 (dep T272) and T275 (dep T272) wait
 - 260919 T271 done; main is loadPlatform→buildContexts→registerJobs→serve (23 lines), post/generation/auth/clip/usage take collaborators in constructors and a cmd/api wiring test builds the whole graph; ARCH-26 green. Out of scope: 7 setters on voice/experiment/guideline/modelcatalog/billingstore, and jobAdmission/meteredRegistry rule bodies still in main (T272's seam)
 - 260919 T271 claimed (arc)
@@ -101,4 +101,3 @@
 - 260918 T256 claimed (rnd)
 - 260918 T254 done; browser rendering stays in ② with encode/store progress, cancellation and navigation cleanup; promotion and orphan cleanup serialize without an encoding time limit, and real Chromium plus local/image gates pass.
 - 260918 T254 claimed (rnd)
-- 260918 T253 done; MP4 timing excludes measured AAC priming, direct immutable uploads promote atomically after stored-file/verdict checks, and failed attempts preserve the prior result; all local and image gates pass.

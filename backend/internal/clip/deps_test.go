@@ -5,6 +5,8 @@ import (
 	"io"
 	"time"
 
+	clipapp "github.com/postpilot/backend/internal/clip/app"
+
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/platform/config"
@@ -59,10 +61,10 @@ func (nullObjects) HeadSource(context.Context, string) (clip.SourceObjectInfo, e
 func (nullObjects) Delete(context.Context, string) error             { return nil }
 func (nullObjects) ListSourceKeys(context.Context) ([]string, error) { return nil, nil }
 
-func neutralGenerationDeps() clip.GenerationDeps { return generationDeps(nil, nil, nil) }
+func neutralGenerationDeps() clipapp.GenerationDeps { return generationDeps(nil, nil, nil) }
 
 // generationDeps fills the collaborators a test leaves nil with the neutral ones.
-func generationDeps(f clip.ClipFinisher, p clip.QuotePricing, a clip.AccountingReader) clip.GenerationDeps {
+func generationDeps(f clip.ClipFinisher, p clip.QuotePricing, a clip.AccountingReader) clipapp.GenerationDeps {
 	if f == nil {
 		f = neutralFinisher{}
 	}
@@ -72,7 +74,7 @@ func generationDeps(f clip.ClipFinisher, p clip.QuotePricing, a clip.AccountingR
 	if a == nil {
 		a = neutralAccounting{}
 	}
-	return clip.GenerationDeps{Finisher: f, Pricing: p, Accounting: a, Admission: neutralAdmission{}}
+	return clipapp.GenerationDeps{Finisher: f, Pricing: p, Accounting: a, Admission: neutralAdmission{}}
 }
 
 // projectStore is what a project service and its source side both read.
@@ -83,8 +85,8 @@ type projectStore interface {
 
 // testProjects is a project service over a store, with the collaborators no test in this
 // package exercises answering neutrally.
-func testProjects(store projectStore) *clip.Service {
-	return clip.NewService(store, config.ClipLimits(), clip.NewSourceService(store, nullObjects{}, config.ClipSourceLimits(6*time.Hour, 10*time.Minute)), nullFinalizer{})
+func testProjects(store projectStore) *clipapp.Service {
+	return clipapp.NewService(store, config.ClipLimits(), clipapp.NewSourceService(store, nullObjects{}, config.ClipSourceLimits(6*time.Hour, 10*time.Minute)), nullFinalizer{})
 }
 
 // neutralJobs is a generation-side job port with no queue behind it: nothing is active,

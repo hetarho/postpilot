@@ -52,51 +52,6 @@ type BrowserRenderStore interface {
 	SaveBrowserRenderVerdict(context.Context, string, string, RenderVerdict, time.Time) error
 }
 
-func (s *GenerationService) beginBrowserRender(ctx context.Context, p Project, plan EditPlan, sources []RenderSource) (string, error) {
-	store, ok := s.store.(BrowserRenderStore)
-	if !ok {
-		return "", ErrRenderUnavailable
-	}
-	r := BrowserRender{ID: newID(), UserID: p.UserID, ProjectID: p.ID, Revision: p.EditPlanRevision, Ratio: plan.Ratio, DurationMS: plan.DurationMS, CreatedAt: s.now()}
-	for _, cut := range plan.Cuts {
-		for _, source := range sources {
-			if source.ID == cut.SourceID && source.Info.HasAudio && plan.RetainsOriginalAudio(cut) {
-				r.Audio = true
-			}
-		}
-	}
-	if err := store.BeginBrowserRender(ctx, r); err != nil {
-		return "", err
-	}
-	return r.ID, nil
-}
-
-// ReportRenderVerdict consumes bounded measurements, never an object key or
-// media bytes. The upload/promotion path consumes this retained verdict later.
-func (s *GenerationService) ReportRenderVerdict(ctx context.Context, user, id string, measurements RenderMeasurements, passed bool) (RenderVerdict, error) {
-	store, ok := s.store.(BrowserRenderStore)
-	if !ok {
-		return RenderVerdict{}, ErrRenderUnavailable
-	}
-	r, err := store.GetBrowserRender(ctx, user, id)
-	if err != nil {
-		return RenderVerdict{}, err
-	}
-	v, err := CheckRenderMeasurements(s.cfg.Render, r, measurements)
-	if err != nil {
-		return RenderVerdict{}, err
-	}
-	v.ReportedPassed = passed
-	if !passed && v.Passed {
-		v.Passed = false
-		v.Notices = []PlanNotice{{CopyFallback: CopyFallback{Reason: "render_output_verdict"}, Action: "shortfall"}}
-	}
-	if err := store.SaveBrowserRenderVerdict(ctx, user, id, v, s.now()); err != nil {
-		return RenderVerdict{}, err
-	}
-	return v, nil
-}
-
 func CheckRenderMeasurements(cfg RenderConfig, r BrowserRender, m RenderMeasurements) (RenderVerdict, error) {
 	if m.Width <= 0 || m.Height <= 0 || m.FrameRateNumerator <= 0 || m.FrameRateDenominator <= 0 || m.VideoFrames <= 0 ||
 		m.Width > 16384 || m.Height > 16384 || m.FrameRateNumerator > 1000000 || m.FrameRateDenominator > 1000000 || m.VideoFrames > 1000000 ||

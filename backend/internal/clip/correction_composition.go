@@ -60,6 +60,23 @@ func correctionText(t PortableText) CorrectionText {
 	return result
 }
 
+// nativeCorrection carries one correction through its steps: the portable plan
+// being rewritten, the cuts the owner submitted, and what the archive already
+// knew about the plan's text.
+type nativeCorrection struct {
+	cfg      RenderConfig
+	p        Project
+	old      EditPlan
+	in       CorrectionPlan
+	next     EditPlan
+	portable PortablePlan
+	// changed is the set of source associations this correction moved; a text
+	// grounded on one of them is marked stale unless the owner reviewed it.
+	changed   []SourceAssociation
+	created   []string
+	knownText map[string]PortableText
+}
+
 func applyNativeCorrection(cfg RenderConfig, p Project, old EditPlan, sources []AnalysisSource, in CorrectionPlan) (EditPlan, error) {
 	// An older client must never silently replace the portable plan with its
 	// legacy caption projection. Reload with the native editing contract.
@@ -69,135 +86,148 @@ func applyNativeCorrection(cfg RenderConfig, p Project, old EditPlan, sources []
 	if err := matchOwnerAudio(old, in); err != nil {
 		return EditPlan{}, err
 	}
-	next := old
+	c := &nativeCorrection{cfg: cfg, p: p, old: old, in: in, next: old}
+	if err := c.rewritePortableInputs(); err != nil {
+		return EditPlan{}, err
+	}
+	if err := c.applyCuts(); err != nil {
+		return EditPlan{}, err
+	}
+	if err := c.applyElements(); err != nil {
+		return EditPlan{}, err
+	}
+	return c.validate(sources)
+}
 
-	portable := *old.Portable
-	portable.NativeEditing = portable.NativeEditing || portable.Snapshot.Legacy
-
-	changed := []SourceAssociation{}
+// rewritePortableInputs copies the portable plan, applies the owner's source
+// associations and retains the observations a geometry change needs.
+func (c *nativeCorrection) rewritePortableInputs() error {
+	old, in := c.old, c.in
+	c.portable = *old.Portable
+	c.portable.NativeEditing = c.portable.NativeEditing || c.portable.Snapshot.Legacy
+	c.changed = []SourceAssociation{}
 	if in.Associations != nil {
-		portable.Inputs.Associations = slices.Clone(*in.Associations)
-		limits := cfg.Composition
-		if portable.Snapshot.Legacy {
+		c.portable.Inputs.Associations = slices.Clone(*in.Associations)
+		limits := c.cfg.Composition
+		if c.portable.Snapshot.Legacy {
 			limits = LegacyCompositionLimits(limits)
 		}
-		doc, problem := composition.ReadStored(portable.Snapshot.Body, limits)
+		doc, problem := composition.ReadStored(c.portable.Snapshot.Body, limits)
 		if problem != nil {
-			return EditPlan{}, problem
+			return problem
 		}
-		if err := ValidateCompositionInputs(doc, portable.Inputs, limits, false); err != nil {
-			return EditPlan{}, err
+		if err := ValidateCompositionInputs(doc, c.portable.Inputs, limits, false); err != nil {
+			return err
 		}
-		if err := ValidateSourceAssociations(p, portable.Inputs.Associations); err != nil {
-			return EditPlan{}, err
+		if err := ValidateSourceAssociations(c.p, c.portable.Inputs.Associations); err != nil {
+			return err
 		}
-		changed = changedAssociations(old.Portable.Inputs.Associations, portable.Inputs.Associations)
+		c.changed = changedAssociations(old.Portable.Inputs.Associations, c.portable.Inputs.Associations)
 	}
-	portable.Elements = nil
-	portable.TargetDurationMS = 0
+	c.portable.Elements = nil
+	c.portable.TargetDurationMS = 0
 	geometryChanged := len(old.Cuts) != len(in.Cuts)
 	if !geometryChanged {
-		for i, c := range in.Cuts {
+		for i, cut := range in.Cuts {
 			prior := old.Cuts[i]
-			if c.ID != prior.ID || c.StartMS != prior.StartMS || c.EndMS != prior.EndMS {
+			if cut.ID != prior.ID || cut.StartMS != prior.StartMS || cut.EndMS != prior.EndMS {
 				geometryChanged = true
 				break
 			}
 		}
 	}
-	if len(portable.Observations) == 0 && geometryChanged {
+	if len(c.portable.Observations) == 0 && geometryChanged {
 		var err error
-		portable.Observations, err = RetainedObservations(p)
-		if err != nil {
-			return EditPlan{}, err
+		if c.portable.Observations, err = RetainedObservations(c.p); err != nil {
+			return err
 		}
 	}
-	next.Portable, next.Cuts, next.DurationMS = &portable, nil, in.DurationMS
-	known, knownText := correctionArchive(old, in, &portable)
+	c.next.Portable, c.next.Cuts, c.next.DurationMS = &c.portable, nil, in.DurationMS
+	return nil
+}
+
+// applyCuts admits every created cut and corrects every known one; a cut the
+// plan already approved is corrected, never created (CLIP-97).
+func (c *nativeCorrection) applyCuts() error {
+	old, in := c.old, c.in
+	var known map[string]Cut
+	known, c.knownText = correctionArchive(old, in, &c.portable)
 	bindings := map[string]composition.Cut{}
-	for _, c := range append(slices.Clone(old.Portable.RetiredBindings), old.Portable.Cuts...) {
-		bindings[c.ID] = c
+	for _, cut := range append(slices.Clone(old.Portable.RetiredBindings), old.Portable.Cuts...) {
+		bindings[cut.ID] = cut
 	}
-	created := []string{}
-	for _, c := range in.Cuts {
-		prior, ok := known[c.ID]
-		// An id the server already approved is corrected, never created: only a
-		// cut the plan does not contain may carry creation provenance, and only
-		// with it (CLIP-97).
-		if ok == (c.Creation != nil) {
-			return EditPlan{}, cutRefusal(c.ID, "cut_identity")
+	c.created = []string{}
+	for _, cut := range in.Cuts {
+		prior, ok := known[cut.ID]
+		if ok == (cut.Creation != nil) {
+			return cutRefusal(cut.ID, "cut_identity")
 		}
 		if !ok {
-			origin, exists := known[c.Creation.OriginID]
+			origin, exists := known[cut.Creation.OriginID]
 			if !exists {
-				return EditPlan{}, cutRefusal(c.ID, "cut_origin")
+				return cutRefusal(cut.ID, "cut_origin")
 			}
-			admitted, binding, err := admitOwnerCut(c, origin, bindings[c.Creation.OriginID], &portable, in.Cuts)
+			admitted, binding, err := admitOwnerCut(cut, origin, bindings[cut.Creation.OriginID], &c.portable, in.Cuts)
 			if err != nil {
-				return EditPlan{}, err
+				return err
 			}
-			created = append(created, c.ID)
-			portable.Cuts = append(portable.Cuts, binding)
-			next.Cuts = append(next.Cuts, admitted)
+			c.created = append(c.created, cut.ID)
+			c.portable.Cuts = append(c.portable.Cuts, binding)
+			c.next.Cuts = append(c.next.Cuts, admitted)
 			continue
 		}
-		if c.SourceID != prior.SourceID || c.Fingerprint != prior.Fingerprint || c.VolumePermille < 0 || c.VolumePermille > 1000 {
-			return EditPlan{}, ErrInvalid
+		if cut.SourceID != prior.SourceID || cut.Fingerprint != prior.Fingerprint || cut.VolumePermille < 0 || cut.VolumePermille > 1000 {
+			return ErrInvalid
 		}
-		if c.Focal != nil {
-			f := *c.Focal
+		if cut.Focal != nil {
+			f := *cut.Focal
 			if math.IsNaN(f.X) || math.IsNaN(f.Y) || math.IsInf(f.X, 0) || math.IsInf(f.Y, 0) || f.X < 0 || f.X > 1 || f.Y < 0 || f.Y > 1 {
-				return EditPlan{}, ErrInvalid
+				return ErrInvalid
 			}
 			prior.Focal = f
 		}
-		volume := float64(c.VolumePermille) / 1000
-		prior.StartMS, prior.EndMS, prior.TransitionMS, prior.Volume = c.StartMS, c.EndMS, c.TransitionMS, &volume
+		volume := float64(cut.VolumePermille) / 1000
+		prior.StartMS, prior.EndMS, prior.TransitionMS, prior.Volume = cut.StartMS, cut.EndMS, cut.TransitionMS, &volume
 		// One fixed rate per cut; the plan validator below decides whether this
 		// source's verified cadence actually admits it (CDS-68).
-		prior.PlaybackRatePermille = c.Rate()
+		prior.PlaybackRatePermille = cut.Rate()
 		// The portable declarations are the only visible content authority.
 		prior.Copies, prior.Chips = nil, nil
-		next.Cuts = append(next.Cuts, prior)
+		c.next.Cuts = append(c.next.Cuts, prior)
 	}
 	// A created cut carries no text of its own: a split leaves the parent's
 	// cut-bound content on the left, where the owner authored it (CDS-64).
-	if err := ValidateOwnerCutContent(created, in.Elements); err != nil {
-		return EditPlan{}, err
+	if err := ValidateOwnerCutContent(c.created, in.Elements); err != nil {
+		return err
 	}
-	if len(next.Cuts) > 0 {
-		next.Cuts[0].TransitionMS = 0
+	if len(c.next.Cuts) > 0 {
+		c.next.Cuts[0].TransitionMS = 0
 	}
-	next.SourceAudio = ReconcileSourceAudio(old.SourceAudio, next.Cuts)
-	trackNoticeCutEdits(old, &next)
+	c.next.SourceAudio = ReconcileSourceAudio(old.SourceAudio, c.next.Cuts)
+	trackNoticeCutEdits(old, &c.next)
+	return nil
+}
+
+// applyElements applies every text edit onto the archived element it names,
+// minting the narration captions the owner created (CLIP-134).
+func (c *nativeCorrection) applyElements() error {
 	seen := map[string]bool{}
-	for _, edit := range in.Elements {
+	for _, edit := range c.in.Elements {
 		if edit.Creation != nil {
-			caption, minted, e := mintNarrationCaption(edit, knownText)
+			caption, minted, e := mintNarrationCaption(edit, c.knownText)
 			if e != nil {
-				return EditPlan{}, e
+				return e
 			}
-			knownText[minted.InstanceID], edit = caption, minted
+			c.knownText[minted.InstanceID], edit = caption, minted
 		}
-		t, ok := knownText[edit.InstanceID]
+		t, ok := c.knownText[edit.InstanceID]
 		r := t.Resolved
 		if !ok || seen[edit.InstanceID] || edit.ElementID != r.Element.ID || edit.CutID != r.CutID || edit.Kind != r.Element.Kind || edit.Role != r.Element.Role || edit.GroupID != r.GroupID || edit.ItemID != r.ItemID || edit.Narration != (t.Scope == NarrationScope) {
-			return EditPlan{}, ErrInvalid
+			return ErrInvalid
 		}
 		seen[edit.InstanceID] = true
-		if len([]rune(edit.Text)) > cfg.Composition.CopyChars || len(edit.Rows) > cfg.Composition.Nodes {
-			return EditPlan{}, ErrInvalid
-		}
-		for _, row := range edit.Rows {
-			if len([]rune(row.Text)) > cfg.Composition.CopyChars || !slices.Contains([]string{"", "label", "hook", "body", "caption"}, row.Role) {
-				return EditPlan{}, ErrInvalid
-			}
-		}
-		if !slices.Contains([]string{"auto", "header", "top", "upper_mid", "lower_mid", "bottom", "center"}, edit.Position) || !slices.Contains([]string{"left", "center", "right"}, edit.Align) || !slices.Contains([]string{"steady", "rapid", ""}, edit.Pace) {
-			return EditPlan{}, ErrInvalid
-		}
-		if !ValidAccent(edit.Accent) || edit.Keyword != "" && !strings.Contains(edit.Text, edit.Keyword) {
-			return EditPlan{}, ErrInvalid
+		if err := c.validateElementEdit(edit); err != nil {
+			return err
 		}
 		// The owner's own placement is admitted and clamped BEFORE the edit is
 		// compared with what the plan holds, so a drag that the safe area pulls
@@ -205,41 +235,73 @@ func applyNativeCorrection(cfg RenderConfig, p Project, old EditPlan, sources []
 		// The allowed styles are the PROJECT's own selection (CLIP-142), not the
 		// plan's: a stored plan carries the design only as a render input, and
 		// a save must be judged against what the project allows today.
-		owner, err := ValidateOwnerCaption(edit.Owner, edit.Role, next.Ratio, p.DesignSelection().AllowedCaptionStyles())
+		owner, err := ValidateOwnerCaption(edit.Owner, edit.Role, c.next.Ratio, c.p.DesignSelection().AllowedCaptionStyles())
 		if err != nil {
-			return EditPlan{}, err
+			return err
 		}
 		edit.Owner = owner
-		before := correctionText(t)
-		// Provenance and warnings are server projections, never client authority.
-		edit.Evidence, edit.FallbackReason, edit.StaleEvidence = before.Evidence, before.FallbackReason, before.StaleEvidence
-		edit.EffectiveStartMS, edit.EffectiveEndMS = before.EffectiveStartMS, before.EffectiveEndMS
-		reviewed := edit.EvidenceReviewed
-		edit.EvidenceReviewed = false
-		// Derived intervals are output only and never make a content edit.
-		before.ResolvedStartMS, before.ResolvedEndMS = edit.ResolvedStartMS, edit.ResolvedEndMS
-		if !reflect.DeepEqual(before, edit) {
-			t.Placement, t.Alternatives = nil, nil
-			t.FallbackReason = ""
-		}
-		t.Resolved.Text, t.Resolved.Rows = edit.Text, slices.Clone(edit.Rows)
-		e := &t.Resolved.Element
-		e.Style, e.Position, e.Align, e.Basis, e.StartMS, e.EndMS = edit.Style, edit.Position, edit.Align, edit.Basis, edit.StartMS, edit.EndMS
-		t.Resolved.AuthoredTiming = edit.Basis != "cut" || edit.StartMS != nil || edit.EndMS != nil
-		t.Pace, t.Accent, t.Keyword, t.Owner = edit.Pace, edit.Accent, edit.Keyword, edit.Owner
-		t.Phrases = slices.Clone(edit.Phrases)
-		contentChanged := before.Text != edit.Text || !reflect.DeepEqual(before.Rows, edit.Rows) || !slices.Equal(before.Phrases, edit.Phrases)
-		t.StaleEvidence = (t.StaleEvidence || associationAffectsText(t, changed)) && !reviewed && !contentChanged
-		if !reflect.DeepEqual(before, edit) {
-			t.OwnerEdited = true
-		}
-		portable.Elements = append(portable.Elements, t)
+		c.portable.Elements = append(c.portable.Elements, applyTextEdit(t, edit, c.changed))
 	}
-	resolved, err := ResolvePortableIntervals(next, cfg.Composition)
+	return nil
+}
+
+// validateElementEdit is the shape check on one submitted text edit: bounded
+// text and rows, known roles, positions, alignments, paces and accents.
+func (c *nativeCorrection) validateElementEdit(edit CorrectionText) error {
+	if len([]rune(edit.Text)) > c.cfg.Composition.CopyChars || len(edit.Rows) > c.cfg.Composition.Nodes {
+		return ErrInvalid
+	}
+	for _, row := range edit.Rows {
+		if len([]rune(row.Text)) > c.cfg.Composition.CopyChars || !slices.Contains([]string{"", "label", "hook", "body", "caption"}, row.Role) {
+			return ErrInvalid
+		}
+	}
+	if !slices.Contains([]string{"auto", "header", "top", "upper_mid", "lower_mid", "bottom", "center"}, edit.Position) || !slices.Contains([]string{"left", "center", "right"}, edit.Align) || !slices.Contains([]string{"steady", "rapid", ""}, edit.Pace) {
+		return ErrInvalid
+	}
+	if !ValidAccent(edit.Accent) || edit.Keyword != "" && !strings.Contains(edit.Text, edit.Keyword) {
+		return ErrInvalid
+	}
+	return nil
+}
+
+// applyTextEdit writes one admitted edit onto its archived text. Provenance and
+// warnings stay server projections, and an edit that changes nothing leaves the
+// placement and the stale-evidence mark untouched.
+func applyTextEdit(t PortableText, edit CorrectionText, changed []SourceAssociation) PortableText {
+	before := correctionText(t)
+	edit.Evidence, edit.FallbackReason, edit.StaleEvidence = before.Evidence, before.FallbackReason, before.StaleEvidence
+	edit.EffectiveStartMS, edit.EffectiveEndMS = before.EffectiveStartMS, before.EffectiveEndMS
+	reviewed := edit.EvidenceReviewed
+	edit.EvidenceReviewed = false
+	// Derived intervals are output only and never make a content edit.
+	before.ResolvedStartMS, before.ResolvedEndMS = edit.ResolvedStartMS, edit.ResolvedEndMS
+	if !reflect.DeepEqual(before, edit) {
+		t.Placement, t.Alternatives = nil, nil
+		t.FallbackReason = ""
+	}
+	t.Resolved.Text, t.Resolved.Rows = edit.Text, slices.Clone(edit.Rows)
+	e := &t.Resolved.Element
+	e.Style, e.Position, e.Align, e.Basis, e.StartMS, e.EndMS = edit.Style, edit.Position, edit.Align, edit.Basis, edit.StartMS, edit.EndMS
+	t.Resolved.AuthoredTiming = edit.Basis != "cut" || edit.StartMS != nil || edit.EndMS != nil
+	t.Pace, t.Accent, t.Keyword, t.Owner = edit.Pace, edit.Accent, edit.Keyword, edit.Owner
+	t.Phrases = slices.Clone(edit.Phrases)
+	contentChanged := before.Text != edit.Text || !reflect.DeepEqual(before.Rows, edit.Rows) || !slices.Equal(before.Phrases, edit.Phrases)
+	t.StaleEvidence = (t.StaleEvidence || associationAffectsText(t, changed)) && !reviewed && !contentChanged
+	if !reflect.DeepEqual(before, edit) {
+		t.OwnerEdited = true
+	}
+	return t
+}
+
+// validate resolves the corrected plan's intervals and runs the plan
+// validators over it; the result is the plan the store saves.
+func (c *nativeCorrection) validate(sources []AnalysisSource) (EditPlan, error) {
+	resolved, err := ResolvePortableIntervals(c.next, c.cfg.Composition)
 	if err != nil {
 		return EditPlan{}, err
 	}
-	if resolved.DurationMS != in.DurationMS {
+	if resolved.DurationMS != c.in.DurationMS {
 		return EditPlan{}, ErrInvalid
 	}
 	if err := ValidateEditablePhrases(resolved); err != nil {
@@ -252,12 +314,12 @@ func applyNativeCorrection(cfg RenderConfig, p Project, old EditPlan, sources []
 	for _, s := range sources {
 		refs = append(refs, s.RenderSource)
 	}
-	if err := ValidateEditPlan(cfg, geometry, refs); err != nil {
+	if err := ValidateEditPlan(c.cfg, geometry, refs); err != nil {
 		return EditPlan{}, err
 	}
 	// A legacy plan's existing overlap stays exactly as saved; a correction may
 	// neither create a new one nor enlarge it (CLIP-98).
-	if err := ValidateSourceRanges(resolved, SourceOverlaps(old.Cuts)); err != nil {
+	if err := ValidateSourceRanges(resolved, SourceOverlaps(c.old.Cuts)); err != nil {
 		return EditPlan{}, err
 	}
 	return resolved, nil

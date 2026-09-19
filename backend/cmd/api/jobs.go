@@ -6,7 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/postpilot/backend/internal/clip"
+	clipapp "github.com/postpilot/backend/internal/clip/app"
+
 	"github.com/postpilot/backend/internal/experiment"
 	"github.com/postpilot/backend/internal/generation"
 	"github.com/postpilot/backend/internal/job"
@@ -76,7 +77,7 @@ func registerJobs(c *contexts) {
 
 // registerClipJobs binds the three clip kinds and releases each attempt's held sources
 // when its job ends, whatever the outcome.
-func registerClipJobs(q *job.Queue, service *clip.GenerationService, sources *clip.SourceService) {
+func registerClipJobs(q *job.Queue, service *clipapp.GenerationService, sources *clipapp.SourceService) {
 	q.Register(job.KindGenerateClip, metered(func(ctx context.Context, j job.Job, progress job.Progress) error {
 		return service.Run(ctx, j.UserID, j.ID, j.ClipProjectID, j.Payload, progress)
 	}))

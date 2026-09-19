@@ -256,7 +256,7 @@ func validateSegments(l AnalysisLimits, segments []Segment, start, end int, comp
 				return observationViolation("observe_subject_bounds", i+1, observationGeometry(s.Focal, box))
 			}
 		}
-		if !bounded(s.Event, 0, l.MaxTextRunes) || !bounded(s.Speech, 0, l.MaxTextRunes) || !bounded(s.Quality, 1, l.MaxTextRunes) || !bounded(s.Action, 0, l.MaxTextRunes) || !bounded(s.Motion, 0, l.MaxTextRunes) {
+		if !BoundedText(s.Event, 0, l.MaxTextRunes) || !BoundedText(s.Speech, 0, l.MaxTextRunes) || !BoundedText(s.Quality, 1, l.MaxTextRunes) || !BoundedText(s.Action, 0, l.MaxTextRunes) || !BoundedText(s.Motion, 0, l.MaxTextRunes) {
 			return observationViolation("observe_text_length", i+1, map[string]int{"event_runes": len([]rune(s.Event)), "speech_runes": len([]rune(s.Speech)), "quality_runes": len([]rune(s.Quality)), "action_runes": len([]rune(s.Action)), "motion_runes": len([]rune(s.Motion))})
 		}
 		if strings.TrimSpace(s.Quality) == "" {
@@ -267,13 +267,13 @@ func validateSegments(l AnalysisLimits, segments []Segment, start, end int, comp
 		}
 		description := strings.TrimSpace(s.Event) != "" || strings.TrimSpace(s.Speech) != "" || strings.TrimSpace(s.Action) != "" || strings.TrimSpace(s.Motion) != ""
 		for _, subject := range s.Subjects {
-			if !bounded(subject, 1, l.MaxTextRunes) || strings.TrimSpace(subject) == "" {
+			if !BoundedText(subject, 1, l.MaxTextRunes) || strings.TrimSpace(subject) == "" {
 				return observationViolation("observe_subject_text", i+1, map[string]int{"subject_runes": len([]rune(subject))})
 			}
 			description = true
 		}
 		// Black, obscured or unreadable footage has nothing truthful to
-		// describe, so its bounded quality reason IS the record. Everything
+		// describe, so its BoundedText quality reason IS the record. Everything
 		// else still owes a fact.
 		if !description && !s.Unknowable() {
 			return observationViolation("observe_description", i+1, nil)

@@ -113,9 +113,9 @@ type releaseHarness struct {
 	client            postpilotv1connect.ClipServiceClient
 	cookie            string
 	project, batch    string
-	service           *clip.GenerationService
-	sources           *clip.SourceService
-	projects          *clip.Service
+	service           *clipapp.GenerationService
+	sources           *clipapp.SourceService
+	projects          *clipapp.Service
 	generationHandler job.Handler
 	renderHandler     job.Handler
 	finisher          *releaseFinisher
@@ -443,9 +443,9 @@ func newReleaseHarness(t *testing.T, mode string, stress bool, clocks ...func() 
 		t.Cleanup(blob.Close)
 		objects.readBase = blob.URL
 	}
-	sources := clip.NewSourceService(st, objects, config.ClipSourceLimits(6*time.Hour, 10*time.Minute), clocks...)
+	sources := clipapp.NewSourceService(st, objects, config.ClipSourceLimits(6*time.Hour, 10*time.Minute), clocks...)
 	bind := clipTxPorts(ledger, registry, authSvc)
-	projects := clip.NewService(st, config.ClipLimits(), sources, clipapp.NewFinalizer(d.Writer, bind, st, config.ClipRender(cfg), nil))
+	projects := clipapp.NewService(st, config.ClipLimits(), sources, clipapp.NewFinalizer(d.Writer, bind, st, config.ClipRender(cfg), nil))
 	js := jobstore.New(d.Writer, d.Reader)
 	q := job.New(js, 10*time.Millisecond)
 	admission := &releaseAdmission{jobAdmission: jobAdmission{ledger: ledger, registry: registry, plans: authSvc}, metrics: metrics}
@@ -454,7 +454,7 @@ func newReleaseHarness(t *testing.T, mode string, stress bool, clocks ...func() 
 	admission.hold = guard.Reserve
 	q.GuardClips(releaseClipGuard{guard, admission})
 	finisher := &releaseFinisher{Finisher: clipapp.NewFinisher(d.Writer, bind, js, st, nil), mode: mode}
-	g := clip.NewGenerationService(st, projects, sources, objects, media, planner, renderer, clipapp.NewJobs(q), config.ClipGeneration(cfg), generationDeps(finisher, clipapp.NewPricing(registry, clipBudgets(config.ClipAI(cfg))), clipapp.NewAccounting(ledger)))
+	g := clipapp.NewGenerationService(st, projects, sources, objects, media, planner, renderer, clipapp.NewJobs(q), config.ClipGeneration(cfg), generationDeps(finisher, clipapp.NewPricing(registry, clipBudgets(config.ClipAI(cfg))), clipapp.NewAccounting(ledger)))
 	var h *releaseHarness
 	if !strings.HasPrefix(mode, "restart ") {
 		q.Register(job.KindGenerateClip, metered(func(ctx context.Context, j job.Job, p job.Progress) error {

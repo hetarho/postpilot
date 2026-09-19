@@ -216,7 +216,7 @@ type RenderConfig struct {
 	// How many full-resolution video inputs one merge may open at once. A
 	// linear graph over every cut opens every decoder for the whole clip, which
 	// the shared service cannot hold; merging in rounds of this many is what
-	// keeps the memory bounded without re-encoding the clip per tree level
+	// keeps the memory BoundedText without re-encoding the clip per tree level
 	// (CLIP-124).
 	MergeInputs int
 	// What ONE sequence-rendered caption frame costs to draw, in milliseconds

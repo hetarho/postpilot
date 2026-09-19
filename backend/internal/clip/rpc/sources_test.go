@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	clipapp "github.com/postpilot/backend/internal/clip/app"
+
 	"connectrpc.com/connect"
 	"github.com/postpilot/backend/internal/auth"
 	"github.com/postpilot/backend/internal/clip"
@@ -74,7 +76,7 @@ func (s *rpcSourceStore) ProjectSourceBatches(_ context.Context, user, project s
 }
 func TestSourceRPCUsesActorAndNeverSerializesObjectIdentity(t *testing.T) {
 	store := &rpcSourceStore{}
-	h := NewHandler(nil).WithSources(clip.NewSourceService(store, rpcSourceObjects{}, config.ClipSourceLimits(6*time.Hour, 10*time.Minute)))
+	h := NewHandler(nil).WithSources(clipapp.NewSourceService(store, rpcSourceObjects{}, config.ClipSourceLimits(6*time.Hour, 10*time.Minute)))
 	ctx := auth.WithUser(context.Background(), "alice")
 	request := &v1.CreateClipSourceBatchRequest{ProjectId: "owned", Sources: []*v1.ClipSourceMetadata{{Filename: "original.mp4", ContentType: "video/mp4", Bytes: 123, DurationMs: 1000, Width: 1920, Height: 1080, Fingerprint: strings.Repeat("a", 64)}}}
 	out, err := h.CreateClipSourceBatch(ctx, connect.NewRequest(request))
@@ -119,7 +121,7 @@ func TestRetainedSourcesRPCSeparatesMetadataFromOwnedPlaybackCapabilities(t *tes
 	expires := time.Now().Add(time.Hour)
 	source := clip.SourceLease{ID: "source", Key: "clip-inputs/alice/private-original", State: "ready", ExpiresAt: expires, ActualBytes: 123, SourceMetadata: clip.SourceMetadata{Filename: "source.mp4", ContentType: "video/mp4", Bytes: 123, Fingerprint: strings.Repeat("a", 64)}}
 	store := &rpcSourceStore{batch: clip.SourceBatch{ID: "batch", UserID: "alice", ProjectID: "owned", State: "ready", Current: true, ExpiresAt: expires, Sources: []clip.SourceLease{source}}}
-	h := NewHandler(nil).WithSources(clip.NewSourceService(store, rpcSourceObjects{}, config.ClipSourceLimits(6*time.Hour, 10*time.Minute)))
+	h := NewHandler(nil).WithSources(clipapp.NewSourceService(store, rpcSourceObjects{}, config.ClipSourceLimits(6*time.Hour, 10*time.Minute)))
 	ctx := auth.WithUser(context.Background(), "alice")
 	response, err := h.GetClipSources(ctx, connect.NewRequest(&v1.GetClipSourcesRequest{ProjectId: "owned"}))
 	if err != nil {

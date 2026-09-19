@@ -32,8 +32,8 @@ func TestCancelClipRPCDistinguishesAcceptedRequestFromTerminalCancellation(t *te
 					t.Fatal(err)
 				}
 			}
-			projects := clip.NewService(h.clips, config.ClipLimits(), clip.NewSourceService(h.clips, &finalizationObjects{objects: map[string]clip.SourceObjectInfo{}}, config.ClipSourceLimits(6*time.Hour, 10*time.Minute)), clipapp.NewFinalizer(h.db.Writer, h.bind, h.clips, config.ClipRender(&config.Config{}), nil))
-			generation := clip.NewGenerationService(h.clips, projects, nil, nil, nil, nil, nil, clipapp.NewJobs(h.queue), clip.GenerationConfig{ReadTTL: time.Minute, CleanupTimeout: time.Second, OrphanMinAge: time.Hour}, generationDeps(nil, nil, clipapp.NewAccounting(h.ledger)))
+			projects := clipapp.NewService(h.clips, config.ClipLimits(), clipapp.NewSourceService(h.clips, &finalizationObjects{objects: map[string]clip.SourceObjectInfo{}}, config.ClipSourceLimits(6*time.Hour, 10*time.Minute)), clipapp.NewFinalizer(h.db.Writer, h.bind, h.clips, config.ClipRender(&config.Config{}), nil))
+			generation := clipapp.NewGenerationService(h.clips, projects, nil, nil, nil, nil, nil, clipapp.NewJobs(h.queue), clip.GenerationConfig{ReadTTL: time.Minute, CleanupTimeout: time.Second, OrphanMinAge: time.Hour}, generationDeps(nil, nil, clipapp.NewAccounting(h.ledger)))
 			handler := cliprpc.NewHandler(projects).WithGeneration(generation, h.queue)
 			req := connect.NewRequest(&v1.CancelClipJobRequest{ProjectId: "clip", JobId: id})
 			if _, err := handler.CancelClipJob(context.Background(), req); connect.CodeOf(err) != connect.CodeUnauthenticated {

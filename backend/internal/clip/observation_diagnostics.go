@@ -2,7 +2,7 @@ package clip
 
 import "math"
 
-// Geometry is recorded as bounded millionths, never provider text.
+// Geometry is recorded as BoundedText millionths, never provider text.
 func observationGeometry(focal Point, subject Region) map[string]int {
 	values := map[string]int{}
 	for key, value := range map[string]float64{"focal_x_ppm": focal.X, "focal_y_ppm": focal.Y, "subject_x_ppm": subject.X, "subject_y_ppm": subject.Y, "subject_width_ppm": subject.Width, "subject_height_ppm": subject.Height} {

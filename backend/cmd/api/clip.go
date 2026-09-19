@@ -5,7 +5,6 @@ import (
 	"database/sql"
 
 	"github.com/postpilot/backend/internal/auth"
-	"github.com/postpilot/backend/internal/clip"
 	clipai "github.com/postpilot/backend/internal/clip/ai"
 	clipapp "github.com/postpilot/backend/internal/clip/app"
 	clipmedia "github.com/postpilot/backend/internal/clip/media"
@@ -37,7 +36,7 @@ func clipBudgets(cfg clipai.Config) clipapp.Budgets {
 	return clipapp.Budgets{ObserveCompletionTokens: cfg.ObserveCompletionTokens, FlowCompletionTokens: cfg.FlowCompletionTokens, NarrationCompletionTokens: cfg.NarrationCompletionTokens, ObserveReasoning: cfg.ObserveReasoning, PlanReasoning: cfg.PlanReasoning}
 }
 
-func newClipGeneration(ctx context.Context, cfg *config.Config, store *clipstore.Store, projects *clip.Service, sources *clip.SourceService, bucket *storage.Bucket, media *clipmedia.Adapter, models meteredRegistry, queue *job.Queue, writer *sql.DB, bind clipapp.Binder) (*clip.GenerationService, error) {
+func newClipGeneration(ctx context.Context, cfg *config.Config, store *clipstore.Store, projects *clipapp.Service, sources *clipapp.SourceService, bucket *storage.Bucket, media *clipmedia.Adapter, models meteredRegistry, queue *job.Queue, writer *sql.DB, bind clipapp.Binder) (*clipapp.GenerationService, error) {
 	renderer, err := clipmedia.NewRenderer(media, config.ClipRender(cfg))
 	if err != nil {
 		return nil, err
@@ -48,7 +47,7 @@ func newClipGeneration(ctx context.Context, cfg *config.Config, store *clipstore
 		return nil, err
 	}
 	finisher := clipapp.NewFinisher(writer, bind, jobstore.New(writer, writer), store, nil)
-	service := clip.NewGenerationService(store, projects, sources, bucket, media, planner, renderer, clipapp.NewJobs(queue), config.ClipGeneration(cfg), clip.GenerationDeps{
+	service := clipapp.NewGenerationService(store, projects, sources, bucket, media, planner, renderer, clipapp.NewJobs(queue), config.ClipGeneration(cfg), clipapp.GenerationDeps{
 		Finisher:   finisher,
 		Pricing:    clipapp.NewPricing(models.Registry, clipBudgets(aiConfig)),
 		Accounting: clipapp.NewAccounting(models.ledger),

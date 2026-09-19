@@ -2,11 +2,16 @@
 package rpc
 
 import (
-	"connectrpc.com/connect"
 	"context"
 	"errors"
+	"log/slog"
+	"strings"
+	"time"
+
+	"connectrpc.com/connect"
 	"github.com/postpilot/backend/internal/auth"
 	"github.com/postpilot/backend/internal/clip"
+	clipapp "github.com/postpilot/backend/internal/clip/app"
 	"github.com/postpilot/backend/internal/clip/composition"
 	"github.com/postpilot/backend/internal/clip/design"
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
@@ -14,19 +19,16 @@ import (
 	jobrpc "github.com/postpilot/backend/internal/job/rpc"
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/platform/rpcserver"
-	"log/slog"
-	"strings"
-	"time"
 )
 
 type Handler struct {
-	service    *clip.Service
-	sources    *clip.SourceService
-	generation *clip.GenerationService
+	service    *clipapp.Service
+	sources    *clipapp.SourceService
+	generation *clipapp.GenerationService
 	jobs       *job.Queue
 }
 
-func (h *Handler) WithGeneration(g *clip.GenerationService, j *job.Queue) *Handler {
+func (h *Handler) WithGeneration(g *clipapp.GenerationService, j *job.Queue) *Handler {
 	h.generation = g
 	h.jobs = j
 	return h
@@ -96,8 +98,8 @@ func eligibilityProto(s clip.EligibilityStatus) v1.ClipAnalysisEligibility {
 	return v1.ClipAnalysisEligibility_CLIP_ANALYSIS_ELIGIBILITY_UNSPECIFIED
 }
 
-func NewHandler(service *clip.Service) *Handler                     { return &Handler{service: service} }
-func (h *Handler) WithSources(sources *clip.SourceService) *Handler { h.sources = sources; return h }
+func NewHandler(service *clipapp.Service) *Handler                     { return &Handler{service: service} }
+func (h *Handler) WithSources(sources *clipapp.SourceService) *Handler { h.sources = sources; return h }
 func actingUser(ctx context.Context) (string, error) {
 	user, ok := auth.UserFromContext(ctx)
 	if !ok {

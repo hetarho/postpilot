@@ -1,7 +1,6 @@
 package clip
 
 import (
-	"context"
 	"slices"
 
 	"github.com/postpilot/backend/internal/clip/design"
@@ -90,20 +89,4 @@ func sequenceFrames(text PortableText, fps int) int {
 		return total
 	}
 	return frames(text.Resolved.StartMS, text.Resolved.EndMS)
-}
-
-// SequenceCost answers what one project's approval surfaces show. A project
-// whose stored plan cannot be read is quoted from its selection alone rather
-// than refused: nothing here gates an action.
-func (s *GenerationService) SequenceCost(ctx context.Context, user, id string) (SequenceCaptionCost, error) {
-	p, err := s.projects.store.GetProject(ctx, user, id)
-	if err != nil {
-		return SequenceCaptionCost{}, err
-	}
-	return s.sequenceCostOf(p), nil
-}
-
-func (s *GenerationService) sequenceCostOf(p Project) SequenceCaptionCost {
-	plan, err := DecodeEditPlan(p.EditPlan)
-	return SequenceCostOf(p, plan, err == nil && p.EditPlan != "", s.cfg.Render)
 }

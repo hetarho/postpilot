@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	clipapp "github.com/postpilot/backend/internal/clip/app"
+
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/llm"
 )
@@ -57,10 +59,10 @@ func (nullObjects) HeadSource(context.Context, string) (clip.SourceObjectInfo, e
 func (nullObjects) Delete(context.Context, string) error             { return nil }
 func (nullObjects) ListSourceKeys(context.Context) ([]string, error) { return nil, nil }
 
-func neutralGenerationDeps() clip.GenerationDeps { return generationDeps(nil, nil, nil) }
+func neutralGenerationDeps() clipapp.GenerationDeps { return generationDeps(nil, nil, nil) }
 
 // generationDeps fills the collaborators a test leaves nil with the neutral ones.
-func generationDeps(f clip.ClipFinisher, p clip.QuotePricing, a clip.AccountingReader) clip.GenerationDeps {
+func generationDeps(f clip.ClipFinisher, p clip.QuotePricing, a clip.AccountingReader) clipapp.GenerationDeps {
 	if f == nil {
 		f = neutralFinisher{}
 	}
@@ -70,5 +72,5 @@ func generationDeps(f clip.ClipFinisher, p clip.QuotePricing, a clip.AccountingR
 	if a == nil {
 		a = neutralAccounting{}
 	}
-	return clip.GenerationDeps{Finisher: f, Pricing: p, Accounting: a, Admission: neutralAdmission{}}
+	return clipapp.GenerationDeps{Finisher: f, Pricing: p, Accounting: a, Admission: neutralAdmission{}}
 }

@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	clipapp "github.com/postpilot/backend/internal/clip/app"
+
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/platform/config"
 )
@@ -57,13 +59,13 @@ func (r *previewRenderer) PreparePreview(ctx context.Context, p clip.EditPlan, s
 	}
 	return clip.PreparedPreview{NextOffset: -1}, nil
 }
-func previewSetup(t *testing.T) (*clip.GenerationService, *previewProjectStore, *previewRenderer, clip.CorrectionPlan) {
+func previewSetup(t *testing.T) (*clipapp.GenerationService, *previewProjectStore, *previewRenderer, clip.CorrectionPlan) {
 	p, draft := correctionFixture(t)
 	p.ID, p.UserID = "owned", "alice"
 	store := &previewProjectStore{project: p}
 	render := &previewRenderer{}
 	cfg := config.ClipGeneration(&config.Config{PresignGetTTL: time.Minute, OrphanMinAge: time.Hour})
-	service := clip.NewGenerationService(nil, testProjects(store), nil, neutralProcessing{}, nil, nil, render, neutralJobs{}, cfg, neutralGenerationDeps())
+	service := clipapp.NewGenerationService(nil, testProjects(store), nil, neutralProcessing{}, nil, nil, render, neutralJobs{}, cfg, neutralGenerationDeps())
 	return service, store, render, draft
 }
 func TestPreviewIsOwnedReadOnlyAndRevisionScoped(t *testing.T) {

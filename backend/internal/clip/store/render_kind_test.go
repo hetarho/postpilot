@@ -5,11 +5,13 @@ import (
 	"testing"
 	"time"
 
+	clipapp "github.com/postpilot/backend/internal/clip/app"
+
 	"github.com/postpilot/backend/internal/clip"
 )
 
 func TestRenderKindRejectsBeforeAccessingDependencies(t *testing.T) {
-	s := &clip.GenerationService{}
+	s := &clipapp.GenerationService{}
 	for _, kind := range []clip.RenderKind{"", "unknown"} {
 		if _, err := s.StartRender(t.Context(), "alice", "project", "batch", 1, kind); !errors.Is(err, clip.ErrInvalid) {
 			t.Fatal(kind, err)

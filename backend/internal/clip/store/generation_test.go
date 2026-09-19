@@ -14,6 +14,8 @@ import (
 	"testing"
 	"time"
 
+	clipapp "github.com/postpilot/backend/internal/clip/app"
+
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/composition"
 	"github.com/postpilot/backend/internal/clip/store"
@@ -439,11 +441,11 @@ func (j generationJobs) Get(ctx context.Context, user, id string) (*clip.ClipJob
 }
 
 type generationHarness struct {
-	service  *clip.GenerationService
-	projects *clip.Service
+	service  *clipapp.GenerationService
+	projects *clipapp.Service
 	store    *store.Store
 	db       *db.DB
-	sources  *clip.SourceService
+	sources  *clipapp.SourceService
 	objects  *processingObjects
 	media    *mediaFake
 	planner  *plannerFake
@@ -488,14 +490,14 @@ func generationSetup(t *testing.T) *generationHarness {
 	cfg := clip.GenerationConfig{Media: clip.MediaConfig{Sources: config.ClipSourceLimits(6*time.Hour, 10*time.Minute), ChunkDurationMS: 60000, DurationToleranceMS: 1000}, Analysis: clip.AnalysisLimits{ChunkMS: 60000, MaxSources: 20, MaxSourceDurationMS: 1800000, MaxSegments: 60, MaxTextRunes: 2000, MaxSubjects: 20}, QuoteTTL: 5 * time.Minute, ReadTTL: time.Minute, CleanupTimeout: time.Second, OrphanMinAge: time.Hour}
 	cfg.Render = config.ClipRender(&config.Config{})
 	cfg.Media.AnalysisMaxBytes, cfg.Media.PreparedMaxBytes, cfg.Media.WorkspaceMaxBytes = 8<<20, 512<<20, 8<<30
-	service := clip.NewGenerationService(st, projects, sources, objects, media, planner, renderer, generationJobs{queue}, cfg, generationDeps(generationFinisher{st}, &quotePricing{}, nil))
+	service := clipapp.NewGenerationService(st, projects, sources, objects, media, planner, renderer, generationJobs{queue}, cfg, generationDeps(generationFinisher{st}, &quotePricing{}, nil))
 	return &generationHarness{service, projects, st, d, sources, objects, media, planner, renderer, admitter, queue, jobs, template, project, batch, cfg}
 }
 
 // withCredits rebuilds the generation side over new pricing and accounting; the
 // constructor re-binds the project service to the rebuilt service.
 func (h *generationHarness) withCredits(pricing clip.QuotePricing, accounting clip.AccountingReader) {
-	h.service = clip.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, h.planner, h.renderer, generationJobs{h.queue}, h.cfg, generationDeps(generationFinisher{h.store}, pricing, accounting))
+	h.service = clipapp.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, h.planner, h.renderer, generationJobs{h.queue}, h.cfg, generationDeps(generationFinisher{h.store}, pricing, accounting))
 }
 func (h *generationHarness) start(t *testing.T) string {
 	t.Helper()

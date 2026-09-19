@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	clipapp "github.com/postpilot/backend/internal/clip/app"
+
 	"connectrpc.com/connect"
 	"github.com/postpilot/backend/internal/clip"
 	clipstore "github.com/postpilot/backend/internal/clip/store"
@@ -288,7 +290,7 @@ func TestClipQualityLifecycle(t *testing.T) {
 		h.objects.mu.Lock()
 		h.objects.failDelete = false
 		h.objects.mu.Unlock()
-		restarted := clip.NewSourceService(clipstore.New(h.d.Writer, h.d.Reader), h.objects, config.ClipSourceLimits(6*time.Hour, 10*time.Minute), now)
+		restarted := clipapp.NewSourceService(clipstore.New(h.d.Writer, h.d.Reader), h.objects, config.ClipSourceLimits(6*time.Hour, 10*time.Minute), now)
 		if err = restarted.Sweep(t.Context()); err != nil {
 			t.Fatal(err)
 		}

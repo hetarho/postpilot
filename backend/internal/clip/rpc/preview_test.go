@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	clipapp "github.com/postpilot/backend/internal/clip/app"
+
 	"connectrpc.com/connect"
 	"github.com/postpilot/backend/internal/auth"
 	"github.com/postpilot/backend/internal/clip"
@@ -46,7 +48,7 @@ func TestPreviewRPCAuthenticatesHashOwnerAndReadOnlyResponse(t *testing.T) {
 	store := previewRPCStore{project: clip.Project{ID: "owned", UserID: "alice", Ratio: "vertical", EditPlan: raw, EditPlanRevision: 1, Analysis: string(analysis)}}
 	projects := testProjects(store)
 	cfg := config.ClipGeneration(&config.Config{PresignGetTTL: time.Minute, OrphanMinAge: time.Hour})
-	generation := clip.NewGenerationService(nil, projects, nil, neutralProcessing{}, nil, nil, previewRPCRenderer{}, neutralJobs{}, cfg, neutralGenerationDeps())
+	generation := clipapp.NewGenerationService(nil, projects, nil, neutralProcessing{}, nil, nil, previewRPCRenderer{}, neutralJobs{}, cfg, neutralGenerationDeps())
 	h := NewHandler(projects).WithGeneration(generation, nil)
 	wire := editingProto(&clip.CorrectionState{Plan: clip.CorrectionFromPlan(plan)}).Plan
 	encoded, _ := (proto.MarshalOptions{Deterministic: true}).Marshal(wire)

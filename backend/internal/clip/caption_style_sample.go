@@ -1,7 +1,6 @@
 package clip
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -80,48 +79,4 @@ func CaptionStyleSamplePlan(ratio string, styles []string) (EditPlan, []RenderSo
 	// faces and reads no footage, so nothing here opens a file.
 	source := RenderSource{ID: "sample", Fingerprint: "sample", Info: MediaInfo{DurationMS: duration, Width: 1920, Height: 1080}}
 	return plan, []RenderSource{source}, nil
-}
-
-// CaptionStyleSamples draws every approved caption style the way the render
-// draws a caption, so ① offers the set by its own look rather than by a picture
-// of it that could go stale the moment a style changes (CDS-80, CDS-83). It
-// asks the project only for its ratio and its owner: the samples are the same
-// for every project of that ratio, and nothing about this project's own plan,
-// selection or footage reaches them.
-//
-// It shares the preview's owner lock and timeout for the same reason ②'s
-// fragments do: this measures with resvg, and one owner measures once at a time.
-func (s *GenerationService) CaptionStyleSamples(ctx context.Context, user, id string) (CaptionPreview, error) {
-	p, err := s.projects.store.GetProject(ctx, user, id)
-	if err != nil {
-		return CaptionPreview{}, err
-	}
-	cfg := s.cfg.Preview
-	fragmenter, ok := s.renderer.(CaptionFragmenter)
-	if !ok || cfg.Timeout <= 0 {
-		return CaptionPreview{}, ErrPreviewUnavailable
-	}
-	styles := make([]string, 0, len(design.CaptionStyles()))
-	for _, style := range design.CaptionStyles() {
-		styles = append(styles, style.ID)
-	}
-	plan, sources, err := CaptionStyleSamplePlan(p.Ratio, styles)
-	if err != nil {
-		return CaptionPreview{}, err
-	}
-	canvas, err := ClipCanvas(plan.Ratio)
-	if err != nil {
-		return CaptionPreview{}, err
-	}
-	if _, loaded := s.previewOwners.LoadOrStore(user, struct{}{}); loaded {
-		return CaptionPreview{}, ErrPreviewBusy
-	}
-	defer s.previewOwners.Delete(user)
-	ctx, cancel := context.WithTimeout(ctx, cfg.Timeout)
-	defer cancel()
-	fragments, err := fragmenter.CaptionFragments(ctx, plan, sources)
-	if err != nil {
-		return CaptionPreview{}, err
-	}
-	return CaptionPreview{Ratio: plan.Ratio, Canvas: canvas, Fragments: fragments}, nil
 }

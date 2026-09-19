@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	clipapp "github.com/postpilot/backend/internal/clip/app"
+
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/job"
 )
@@ -37,7 +39,7 @@ func TestGenerationActivationCompensationNeverDeletesRunningInputs(t *testing.T)
 					}
 				}
 			}
-			s := clip.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, h.planner, h.renderer, jobs, h.cfg, generationDeps(generationFinisher{h.store}, &quotePricing{}, nil))
+			s := clipapp.NewGenerationService(h.store, h.projects, h.sources, h.objects, h.media, h.planner, h.renderer, jobs, h.cfg, generationDeps(generationFinisher{h.store}, &quotePricing{}, nil))
 			id, err := startApproved(context.Background(), s, "alice", h.project.ID, h.batch.ID, "p/o", "p/w")
 			if running {
 				if err != nil || id == "" {

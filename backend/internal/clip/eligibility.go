@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync"
 
 	"github.com/postpilot/backend/internal/llm"
 )
@@ -94,7 +93,7 @@ type AnalysisCandidate struct {
 
 // AnalysisAdmission is the consumer-owned port behind CLIP-30. ObserveModels
 // lists every registered observe model in registry order; QualifyObserve
-// freezes the exact bounded analysis request for one of them without a model
+// freezes the exact BoundedText analysis request for one of them without a model
 // call or a write, returning nil or one of the llm admission failures.
 type AnalysisAdmission interface {
 	ObserveModels() []AnalysisCandidate
@@ -114,69 +113,4 @@ func (e *ModelAdmissionError) Unwrap() error { return e.Err }
 func (e *ModelAdmissionError) Failure() llm.Failure {
 	status, _ := EligibilityOf(e.Err)
 	return llm.Failure{Reason: status.FailureReason(), Params: map[string]string{"model": e.Model.String()}}
-}
-
-// admissionRefusal names the model on an admission failure and leaves every
-// other error alone.
-func admissionRefusal(model llm.ModelRef, err error) error {
-	if _, ok := EligibilityOf(err); !ok {
-		return err
-	}
-	var named *ModelAdmissionError
-	if errors.As(err, &named) {
-		return err
-	}
-	return &ModelAdmissionError{Model: model, Err: err}
-}
-
-// eligibilityConcurrency bounds how many models are qualified at once; the
-// adapter bounds its own document reads underneath.
-const eligibilityConcurrency = 4
-
-// ListAnalysisEligibility answers CLIP-44 for every registered observe model,
-// in registry order, without a model call or a write. A model without video
-// input is answered from the catalog alone; every other model is qualified
-// against its current endpoint document. A qualification that fails for a
-// reason other than admission (a disabled provider, a read that could not
-// complete) has no current proof and reports the endpoint as unavailable; only
-// the caller's own cancellation propagates.
-func (s *GenerationService) ListAnalysisEligibility(ctx context.Context) ([]ModelEligibility, error) {
-	if s.admission == nil {
-		return nil, ErrPricingUnavailable
-	}
-	candidates := s.admission.ObserveModels()
-	out := make([]ModelEligibility, len(candidates))
-	var wg sync.WaitGroup
-	sem := make(chan struct{}, eligibilityConcurrency)
-	for i, c := range candidates {
-		out[i] = ModelEligibility{Model: c.Ref, Status: EligibilityVideoInputAbsent}
-		if !c.VideoInput {
-			continue
-		}
-		wg.Add(1)
-		go func(i int, ref llm.ModelRef) {
-			defer wg.Done()
-			select {
-			case sem <- struct{}{}:
-				defer func() { <-sem }()
-			case <-ctx.Done():
-				out[i].Status = EligibilityInlineEndpointUnavailable
-				return
-			}
-			err := s.admission.QualifyObserve(ctx, ref)
-			switch status, ok := EligibilityOf(err); {
-			case err == nil:
-				out[i].Status = EligibilityEligible
-			case ok:
-				out[i].Status = status
-			default:
-				out[i].Status = EligibilityInlineEndpointUnavailable
-			}
-		}(i, c.Ref)
-	}
-	wg.Wait()
-	if err := ctx.Err(); err != nil {
-		return nil, err
-	}
-	return out, nil
 }
