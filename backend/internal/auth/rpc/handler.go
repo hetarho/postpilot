@@ -67,7 +67,7 @@ func (h *Handler) RequestPasswordReset(ctx context.Context, req *connect.Request
 func (h *Handler) ResetPassword(ctx context.Context, req *connect.Request[postpilotv1.ResetPasswordRequest]) (*connect.Response[postpilotv1.ResetPasswordResponse], error) {
 	if err := h.svc.ResetPassword(ctx, req.Msg.GetToken(), req.Msg.GetNewPassword()); err != nil {
 		if errors.Is(err, auth.ErrLinkInvalid) {
-			return nil, rpcserver.NewAppError(connect.CodeFailedPrecondition, "password reset link invalid", "RESET_LINK_INVALID", nil)
+			return nil, rpcserver.NewAppError(connect.CodeFailedPrecondition, "password reset link invalid", postpilotv1.FailureReason_RESET_LINK_INVALID, nil)
 		}
 		return nil, authMutationError("reset password", err)
 	}
@@ -79,12 +79,12 @@ func (h *Handler) Login(ctx context.Context, req *connect.Request[postpilotv1.Lo
 	user, rawToken, err := h.svc.Login(ctx, req.Msg.GetLoginId(), req.Msg.GetPassword())
 	if err != nil {
 		if errors.Is(err, auth.ErrInvalidCredentials) {
-			return nil, rpcserver.NewAppError(connect.CodeUnauthenticated, invalidCredentialsMessage, "INVALID_CREDENTIALS", nil)
+			return nil, rpcserver.NewAppError(connect.CodeUnauthenticated, invalidCredentialsMessage, postpilotv1.FailureReason_INVALID_CREDENTIALS, nil)
 		}
 		// An infrastructure failure must not become "invalid credentials" — that would
 		// hide an outage behind a login form. The detail stays in the log.
 		slog.Error("login failed", "err", err)
-		return nil, rpcserver.NewAppError(connect.CodeInternal, "login failed", "UNKNOWN_FAILURE", nil)
+		return nil, rpcserver.NewAppError(connect.CodeInternal, "login failed", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
 	}
 
 	res := connect.NewResponse(&postpilotv1.LoginResponse{
@@ -119,7 +119,7 @@ func (h *Handler) SignInWithGoogle(ctx context.Context, req *connect.Request[pos
 func (h *Handler) Logout(ctx context.Context, req *connect.Request[postpilotv1.LogoutRequest]) (*connect.Response[postpilotv1.LogoutResponse], error) {
 	if err := h.svc.Logout(ctx, cookieValue(req.Header())); err != nil {
 		slog.Error("logout failed", "err", err)
-		return nil, rpcserver.NewAppError(connect.CodeInternal, "logout failed", "UNKNOWN_FAILURE", nil)
+		return nil, rpcserver.NewAppError(connect.CodeInternal, "logout failed", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
 	}
 
 	res := connect.NewResponse(&postpilotv1.LogoutResponse{})
@@ -138,13 +138,13 @@ func (h *Handler) Logout(ctx context.Context, req *connect.Request[postpilotv1.L
 func (h *Handler) GetMe(ctx context.Context, _ *connect.Request[postpilotv1.GetMeRequest]) (*connect.Response[postpilotv1.GetMeResponse], error) {
 	userID, ok := auth.UserFromContext(ctx)
 	if !ok {
-		return nil, rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", "AUTH_REQUIRED", nil)
+		return nil, rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", postpilotv1.FailureReason_AUTH_REQUIRED, nil)
 	}
 	acting, _ := auth.PlanFromContext(ctx)
 	user, err := h.svc.Account(ctx, userID)
 	if err != nil {
 		slog.Error("get account failed", "err", err)
-		return nil, rpcserver.NewAppError(connect.CodeInternal, "get account failed", "UNKNOWN_FAILURE", nil)
+		return nil, rpcserver.NewAppError(connect.CodeInternal, "get account failed", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
 	}
 	return connect.NewResponse(&postpilotv1.GetMeResponse{
 		User: userToProto(user),
@@ -155,7 +155,7 @@ func (h *Handler) GetMe(ctx context.Context, _ *connect.Request[postpilotv1.GetM
 func (h *Handler) RegisterEmail(ctx context.Context, req *connect.Request[postpilotv1.RegisterEmailRequest]) (*connect.Response[postpilotv1.RegisterEmailResponse], error) {
 	userID, ok := auth.UserFromContext(ctx)
 	if !ok {
-		return nil, rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", "AUTH_REQUIRED", nil)
+		return nil, rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", postpilotv1.FailureReason_AUTH_REQUIRED, nil)
 	}
 	if err := h.svc.RegisterEmail(ctx, userID, req.Msg.GetEmail()); err != nil {
 		return nil, authMutationError("register email", err)
@@ -166,7 +166,7 @@ func (h *Handler) RegisterEmail(ctx context.Context, req *connect.Request[postpi
 func (h *Handler) ChangePassword(ctx context.Context, req *connect.Request[postpilotv1.ChangePasswordRequest]) (*connect.Response[postpilotv1.ChangePasswordResponse], error) {
 	userID, ok := auth.UserFromContext(ctx)
 	if !ok {
-		return nil, rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", "AUTH_REQUIRED", nil)
+		return nil, rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", postpilotv1.FailureReason_AUTH_REQUIRED, nil)
 	}
 	if err := h.svc.ChangePassword(ctx, userID, req.Msg.GetCurrentPassword(), req.Msg.GetNewPassword()); err != nil {
 		return nil, authMutationError("change password", err)
@@ -184,39 +184,39 @@ func userToProto(user auth.User) *postpilotv1.User {
 func authMutationError(operation string, err error) error {
 	switch {
 	case errors.Is(err, auth.ErrInvalidEmail):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid email", "INVALID_EMAIL", nil)
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid email", postpilotv1.FailureReason_INVALID_EMAIL, nil)
 	case errors.Is(err, auth.ErrPasswordTooShort):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "password too short", "PASSWORD_TOO_SHORT", map[string]string{"min": "8"})
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "password too short", postpilotv1.FailureReason_PASSWORD_TOO_SHORT, map[string]string{"min": "8"})
 	case errors.Is(err, auth.ErrPasswordTooLong):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "password too long", "PASSWORD_TOO_LONG", map[string]string{"max": "128"})
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "password too long", postpilotv1.FailureReason_PASSWORD_TOO_LONG, map[string]string{"max": "128"})
 	case errors.Is(err, auth.ErrLinkInvalid):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "verification link invalid", "VERIFICATION_LINK_INVALID", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "verification link invalid", postpilotv1.FailureReason_VERIFICATION_LINK_INVALID, nil)
 	case errors.Is(err, auth.ErrEmailAlreadyVerified):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "email already verified", "EMAIL_ALREADY_VERIFIED", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "email already verified", postpilotv1.FailureReason_EMAIL_ALREADY_VERIFIED, nil)
 	case errors.Is(err, auth.ErrPasswordNotSet):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "password not set", "PASSWORD_NOT_SET", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "password not set", postpilotv1.FailureReason_PASSWORD_NOT_SET, nil)
 	case errors.Is(err, auth.ErrCurrentPasswordWrong):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "current password wrong", "CURRENT_PASSWORD_WRONG", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "current password wrong", postpilotv1.FailureReason_CURRENT_PASSWORD_WRONG, nil)
 	default:
 		slog.Error(operation+" failed", "err", err)
-		return rpcserver.NewAppError(connect.CodeInternal, operation+" failed", "UNKNOWN_FAILURE", nil)
+		return rpcserver.NewAppError(connect.CodeInternal, operation+" failed", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
 	}
 }
 
 func googleSignInError(err error) error {
 	switch {
 	case errors.Is(err, auth.ErrGoogleSignInDisabled):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "google sign-in disabled", "GOOGLE_SIGNIN_DISABLED", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "google sign-in disabled", postpilotv1.FailureReason_GOOGLE_SIGNIN_DISABLED, nil)
 	case errors.Is(err, auth.ErrGoogleEmailUnverified):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "google email unverified", "GOOGLE_EMAIL_UNVERIFIED", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "google email unverified", postpilotv1.FailureReason_GOOGLE_EMAIL_UNVERIFIED, nil)
 	case errors.Is(err, auth.ErrGoogleAccountMismatch):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "google account mismatch", "GOOGLE_ACCOUNT_MISMATCH", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "google account mismatch", postpilotv1.FailureReason_GOOGLE_ACCOUNT_MISMATCH, nil)
 	case errors.Is(err, auth.ErrGoogleSignInFailed):
 		slog.Info("google sign-in refused", "err", err)
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "google sign-in failed", "GOOGLE_SIGNIN_FAILED", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "google sign-in failed", postpilotv1.FailureReason_GOOGLE_SIGNIN_FAILED, nil)
 	default:
 		slog.Error("google sign-in failed", "err", err)
-		return rpcserver.NewAppError(connect.CodeInternal, "google sign-in failed", "UNKNOWN_FAILURE", nil)
+		return rpcserver.NewAppError(connect.CodeInternal, "google sign-in failed", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
 	}
 }
 

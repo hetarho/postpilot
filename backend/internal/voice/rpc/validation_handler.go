@@ -156,22 +156,22 @@ func toProtoValidation(v voice.ProfileValidation) *postpilotv1.VoiceProfileValid
 func validationError(op string, err error) error {
 	switch {
 	case errors.Is(err, voice.ErrComparisonNotFound):
-		return rpcserver.NewAppError(connect.CodeNotFound, "voice rule comparison not found", "VOICE_COMPARISON_NOT_FOUND", nil)
+		return rpcserver.NewAppError(connect.CodeNotFound, "voice rule comparison not found", postpilotv1.FailureReason_VOICE_COMPARISON_NOT_FOUND, nil)
 	case errors.Is(err, voice.ErrValidationNotFound):
-		return rpcserver.NewAppError(connect.CodeNotFound, "voice profile validation not found", "VOICE_VALIDATION_NOT_FOUND", nil)
+		return rpcserver.NewAppError(connect.CodeNotFound, "voice profile validation not found", postpilotv1.FailureReason_VOICE_VALIDATION_NOT_FOUND, nil)
 	case errors.Is(err, voice.ErrRuleNotFound):
-		return rpcserver.NewAppError(connect.CodeNotFound, "voice rule not found", "VOICE_RULE_NOT_FOUND", nil)
+		return rpcserver.NewAppError(connect.CodeNotFound, "voice rule not found", postpilotv1.FailureReason_VOICE_RULE_NOT_FOUND, nil)
 	case errors.Is(err, voice.ErrInsufficientSources):
 		minimum := voice.DefaultValidationPostCount
 		var insufficient *voice.InsufficientSourcesError
 		if errors.As(err, &insufficient) && insufficient.Minimum > 0 {
 			minimum = insufficient.Minimum
 		}
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "not enough authored sources", "VOICE_INSUFFICIENT_SOURCES", map[string]string{"min": fmt.Sprint(minimum)})
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "not enough authored sources", postpilotv1.FailureReason_VOICE_INSUFFICIENT_SOURCES, map[string]string{"min": fmt.Sprint(minimum)})
 	case errors.Is(err, voice.ErrInvalidLifecycle):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "voice validation state does not allow this operation", "VOICE_INVALID_LIFECYCLE", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "voice validation state does not allow this operation", postpilotv1.FailureReason_VOICE_INVALID_LIFECYCLE, nil)
 	case errors.Is(err, voice.ErrAnalyzeModelRequired):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "enabled analyze and write models are required", "VOICE_ANALYZE_MODEL_REQUIRED", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "enabled analyze and write models are required", postpilotv1.FailureReason_VOICE_ANALYZE_MODEL_REQUIRED, nil)
 	default:
 		return toConnectError(op, err)
 	}

@@ -10,6 +10,7 @@ import (
 	"connectrpc.com/connect"
 
 	"github.com/postpilot/backend/internal/auth"
+	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
 	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/platform/rpcserver"
@@ -161,7 +162,7 @@ func (i *Interceptor) authorize(ctx context.Context, procedure string, header ht
 	if class, throttled := throttledProcedures[procedure]; throttled {
 		retryAt, allowed := i.throttle.Allow(class, auth.ClientIP(header, peerAddr, i.clientIPHeader), time.Now())
 		if !allowed {
-			return nil, rpcserver.NewAppError(connect.CodeResourceExhausted, "too many attempts", "TOO_MANY_ATTEMPTS", map[string]string{
+			return nil, rpcserver.NewAppError(connect.CodeResourceExhausted, "too many attempts", postpilotv1.FailureReason_TOO_MANY_ATTEMPTS, map[string]string{
 				"retry_at": retryAt.UTC().Format(time.RFC3339),
 			})
 		}
@@ -178,11 +179,11 @@ func (i *Interceptor) authorize(ctx context.Context, procedure string, header ht
 			// response.
 			slog.Error("session lookup failed", "procedure", procedure, "err", err)
 		}
-		return nil, rpcserver.NewAppError(connect.CodeUnauthenticated, unauthenticatedMessage, "AUTH_REQUIRED", nil)
+		return nil, rpcserver.NewAppError(connect.CodeUnauthenticated, unauthenticatedMessage, postpilotv1.FailureReason_AUTH_REQUIRED, nil)
 	}
 
 	if masterProcedures[procedure] && actor.Plan != plan.Master {
-		return nil, rpcserver.NewAppError(connect.CodePermissionDenied, masterOnlyMessage, plan.ReasonMasterOnly, nil)
+		return nil, rpcserver.NewAppError(connect.CodePermissionDenied, masterOnlyMessage, rpcserver.ReasonOf(plan.ReasonMasterOnly), nil)
 	}
 
 	return auth.WithActor(ctx, actor), nil

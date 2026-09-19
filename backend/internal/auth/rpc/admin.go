@@ -51,7 +51,7 @@ func (h *AdminHandler) ListUsers(ctx context.Context, _ *connect.Request[postpil
 	users, err := h.svc.ListUsers(ctx)
 	if err != nil {
 		slog.Error("list users failed", "err", err)
-		return nil, rpcserver.NewAppError(connect.CodeInternal, "could not list accounts", "UNKNOWN_FAILURE", nil)
+		return nil, rpcserver.NewAppError(connect.CodeInternal, "could not list accounts", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
 	}
 
 	out := make([]*postpilotv1.PlanUser, 0, len(users))
@@ -64,22 +64,22 @@ func (h *AdminHandler) ListUsers(ctx context.Context, _ *connect.Request[postpil
 func (h *AdminHandler) SetUserPlan(ctx context.Context, req *connect.Request[postpilotv1.SetUserPlanRequest]) (*connect.Response[postpilotv1.SetUserPlanResponse], error) {
 	target, ok := planrpc.FromProto(req.Msg.GetPlan())
 	if !ok {
-		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "a plan is required", "PLAN_REQUIRED", nil)
+		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "a plan is required", postpilotv1.FailureReason_PLAN_REQUIRED, nil)
 	}
 	userID := req.Msg.GetUserId()
 	if userID == "" {
-		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "a user id is required", "USER_ID_REQUIRED", nil)
+		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "a user id is required", postpilotv1.FailureReason_USER_ID_REQUIRED, nil)
 	}
 
 	switch err := h.svc.SetUserPlan(ctx, userID, target); {
 	case errors.Is(err, auth.ErrUserNotFound):
-		return nil, rpcserver.NewAppError(connect.CodeNotFound, "account not found", "USER_NOT_FOUND", nil)
+		return nil, rpcserver.NewAppError(connect.CodeNotFound, "account not found", postpilotv1.FailureReason_USER_NOT_FOUND, nil)
 	case errors.Is(err, auth.ErrLastMaster):
 		return nil, rpcserver.NewAppError(connect.CodeFailedPrecondition,
-			"the last master account cannot be demoted", "LAST_MASTER", nil)
+			"the last master account cannot be demoted", postpilotv1.FailureReason_LAST_MASTER, nil)
 	case err != nil:
 		slog.Error("set user plan failed", "user_id", userID, "err", err)
-		return nil, rpcserver.NewAppError(connect.CodeInternal, "could not change the plan", "UNKNOWN_FAILURE", nil)
+		return nil, rpcserver.NewAppError(connect.CodeInternal, "could not change the plan", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
 	}
 
 	// The echo carries the id and the new tier only: created_at did not change, and the
@@ -110,20 +110,20 @@ func (h *AdminHandler) SetEstimatorCombo(ctx context.Context, req *connect.Reque
 	write := req.Msg.GetWriteModelId()
 	if combo == "" || observe == "" || write == "" {
 		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument,
-			"a combo and both models are required", "COMBO_INCOMPLETE", nil)
+			"a combo and both models are required", postpilotv1.FailureReason_COMBO_INCOMPLETE, nil)
 	}
 
 	switch err := h.combos.AssignCombo(ctx, combo, observe, write); {
 	case errors.Is(err, ErrComboUnknown):
 		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument,
-			"unknown estimator combo", "COMBO_UNKNOWN", nil)
+			"unknown estimator combo", postpilotv1.FailureReason_COMBO_UNKNOWN, nil)
 	case errors.Is(err, ErrComboModelUnusable):
 		return nil, rpcserver.NewAppError(connect.CodeFailedPrecondition,
-			"the model is not registered for that stage", "MODEL_NOT_REGISTERED", nil)
+			"the model is not registered for that stage", postpilotv1.FailureReason_MODEL_NOT_REGISTERED, nil)
 	case err != nil:
 		slog.Error("set estimator combo failed", "combo", combo, "err", err)
 		return nil, rpcserver.NewAppError(connect.CodeInternal,
-			"could not assign the combo", "UNKNOWN_FAILURE", nil)
+			"could not assign the combo", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
 	}
 	return connect.NewResponse(&postpilotv1.SetEstimatorComboResponse{}), nil
 }

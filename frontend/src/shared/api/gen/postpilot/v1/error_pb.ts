@@ -2,15 +2,15 @@
 // @generated from file postpilot/v1/error.proto (package postpilot.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GenEnum, GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file postpilot/v1/error.proto.
  */
 export const file_postpilot_v1_error: GenFile = /*@__PURE__*/
-  fileDesc("Chhwb3N0cGlsb3QvdjEvZXJyb3IucHJvdG8SDHBvc3RwaWxvdC52MSKJAQoOQXBwRXJyb3JEZXRhaWwSDgoGcmVhc29uGAEgASgJEjgKBnBhcmFtcxgCIAMoCzIoLnBvc3RwaWxvdC52MS5BcHBFcnJvckRldGFpbC5QYXJhbXNFbnRyeRotCgtQYXJhbXNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIpUBCgdGYWlsdXJlEg4KBnJlYXNvbhgBIAEoCRIxCgZwYXJhbXMYAiADKAsyIS5wb3N0cGlsb3QudjEuRmFpbHVyZS5QYXJhbXNFbnRyeRIYChB0ZWNobmljYWxfZGV0YWlsGAMgASgJGi0KC1BhcmFtc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAFCRFpCZ2l0aHViLmNvbS9wb3N0cGlsb3QvYmFja2VuZC9pbnRlcm5hbC9nZW4vcG9zdHBpbG90L3YxO3Bvc3RwaWxvdHYxYgZwcm90bzM");
+  fileDesc("Chhwb3N0cGlsb3QvdjEvZXJyb3IucHJvdG8SDHBvc3RwaWxvdC52MSKJAQoOQXBwRXJyb3JEZXRhaWwSDgoGcmVhc29uGAEgASgJEjgKBnBhcmFtcxgCIAMoCzIoLnBvc3RwaWxvdC52MS5BcHBFcnJvckRldGFpbC5QYXJhbXNFbnRyeRotCgtQYXJhbXNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIpUBCgdGYWlsdXJlEg4KBnJlYXNvbhgBIAEoCRIxCgZwYXJhbXMYAiADKAsyIS5wb3N0cGlsb3QudjEuRmFpbHVyZS5QYXJhbXNFbnRyeRIYChB0ZWNobmljYWxfZGV0YWlsGAMgASgJGi0KC1BhcmFtc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEq4DAKDUZhaWx1cmVSZWFzb24SEwoPVU5LTk9XTl9GQUlMVVJFEAASEQoNQVVUSF9SRVFVSVJFRBABEh0KGUJJTExJTkdfU0VMRUNUSU9OX0lOVkFMSUQQAhIXChNCSUxMSU5HX1VOQVZBSUxBQkxFEAMSFgoSQ0hBTkdFX1VOU1VQUE9SVEVEEAQSEQoNQ0hBUkdFX0ZBSUxFRBAFEhsKF0NMSVBfQU5BTFlTSVNfVE9PX0xBUkdFEAYSDQoJQ0xJUF9CVVNZEAcSJQohQ0xJUF9DQU5DRUxMQVRJT05fUE9MSUNZX1JFUVVJUkVEEAgSHAoYQ0xJUF9DT01QT1NJVElPTl9JTlZBTElEEAkSIAocQ0xJUF9DT01QT1NJVElPTl9VTkFWQUlMQUJMRRAKEhYKEkNMSVBfQ09QWV9UT09fTE9ORxALEiAKHENMSVBfQ1JFRElUX0NFSUxJTkdfRVhDRUVERUQQDBIcChhDTElQX0RJU0NMT1NVUkVfUkVRVUlSRUQQDRIXChNDTElQX0ZBQ1RTX1JFUVVJUkVEEA4SHgoaQ0xJUF9GSU5BTElaQVRJT05fQ09ORkxJQ1QQDxIdChlDTElQX0ZJTkFMSVpBVElPTl9JTlZBTElEEBASEgoOQ0xJUF9GSU5BTElaRUQQERIYChRDTElQX0lOUFVUX1RPT19MQVJHRRASEh0KGUNMSVBfSU5TVUZGSUNJRU5UX0ZPT1RBR0UQExIWChJDTElQX0lOVkFMSURfSU5QVVQQFBIWChJDTElQX0lOVkFMSURfTUVESUEQFRIbChdDTElQX0xBWU9VVF9BTkNIT1JfU1RFUBAWEhgKFENMSVBfTEFZT1VUX0NPTlRSQVNUEBcSGgoWQ0xJUF9MQVlPVVRfRElTQ0xPU1VSRRAYEhQKEENMSVBfTEFZT1VUX0tJTkQQGRIWChJDTElQX0xBWU9VVF9NT1RJT04QGhIXChNDTElQX0xBWU9VVF9PVkVSTEFQEBsSGQoVQ0xJUF9MQVlPVVRfU0FGRV9BUkVBEBwSFAoQQ0xJUF9MQVlPVVRfU0laRRAdEioKJkNMSVBfTU9ERUxfSU5MSU5FX0VORFBPSU5UX1VOQVZBSUxBQkxFEB4SIAocQ0xJUF9NT0RFTF9JTlBVVF9VTlNVUFBPUlRFRBAfEigKJENMSVBfTU9ERUxfUFJJQ0VfQ0VJTElOR19VTkFWQUlMQUJMRRAgEiIKHkNMSVBfTU9ERUxfUFJJQ0lOR19VTkFWQUlMQUJMRRAhEi4KKkNMSVBfTU9ERUxfUkVRVUlSRURfUEFSQU1FVEVSU19VTlNVUFBPUlRFRBAiEiEKHUNMSVBfTU9ERUxfVklERU9fSU5QVVRfQUJTRU5UECMSEgoOQ0xJUF9OT1RfRk9VTkQQJBIWChJDTElQX1BMQU5fQ09ORkxJQ1QQJRIVChFDTElQX1BSRVZJRVdfQlVTWRAmEhgKFENMSVBfUFJFVklFV19USU1FT1VUECcSGgoWQ0xJUF9QUkVWSUVXX1RPT19MQVJHRRAoEhwKGENMSVBfUFJFVklFV19VTkFWQUlMQUJMRRApEhYKEkNMSVBfUVVPVEVfQ0hBTkdFRBAqEhYKEkNMSVBfUVVPVEVfRVhQSVJFRBArEhcKE0NMSVBfUVVPVEVfUkVRVUlSRUQQLBIXChNDTElQX1NPVVJDRV9FWFBJUkVEEC0SFwoTQ0xJUF9TT1VSQ0VfTUlTU0lORxAuEhsKF0NMSVBfU09VUkNFX1VOQVZBSUxBQkxFEC8SIQodQ0xJUF9UQVJHRVRfRFVSQVRJT05fUkVRVUlSRUQQMBIcChhDTElQX1RFTVBMQVRFX05BTUVfVEFLRU4QMRIYChRDTElQX1dPUktTUEFDRV9MSU1JVBAyEhQKEENPTUJPX0lOQ09NUExFVEUQMxIRCg1DT01CT19VTktOT1dOEDQSHQoZQ09OVEVOVF9MQU5HVUFHRV9SRVFVSVJFRBA1EhoKFkNVUlJFTlRfUEFTU1dPUkRfV1JPTkcQNhIZChVDVVNUT01FUl9LRVlfTUlTTUFUQ0gQNxIaChZFTUFJTF9BTFJFQURZX1ZFUklGSUVEEDgSHwobRU1BSUxfVkVSSUZJQ0FUSU9OX1JFUVVJUkVEEDkSHgoaRVhQRVJJTUVOVF9BTFJFQURZX1JVTk5JTkcQOhIjCh9FWFBFUklNRU5UX0NBTkRJREFURVNfRFVQTElDQVRFEDsSIgoeRVhQRVJJTUVOVF9DQU5ESURBVEVfTk9UX0ZPVU5EEDwSJAogRVhQRVJJTUVOVF9DT05GSVJNQVRJT05fUkVRVUlSRUQQPRIYChRFWFBFUklNRU5UX0ZPUkJJRERFThA+Eh4KGkVYUEVSSU1FTlRfTU9ERUxTX1JFUVVJUkVEED8SGAoURVhQRVJJTUVOVF9OT1RfRk9VTkQQQBImCiJFWFBFUklNRU5UX1JFVFJZX01PREVMX1VOQVZBSUxBQkxFEEESIwofRVhQRVJJTUVOVF9TTkFQU0hPVF9VTkFWQUlMQUJMRRBCEhwKGEVYUEVSSU1FTlRfU1RBR0VfSU5WQUxJRBBDEhwKGEVYUEVSSU1FTlRfU1RBVEVfSU5WQUxJRBBEEiQKIEVYUEVSSU1FTlRfVEFSR0VUX0xFTkdUSF9JTlZBTElEEEUSHQoZRVhQRVJJTUVOVF9WT0lDRV9SRVFVSVJFRBBGEiAKHEVYUEVSSU1FTlRfVk9JQ0VfVU5BVkFJTEFCTEUQRxIeChpHRU5FUkFUSU9OX0FMUkVBRFlfUlVOTklORxBIEiUKIUdFTkVSQVRJT05fT0JTRVJWRV9NT0RFTF9SRVFVSVJFRBBJEiQKIEdFTkVSQVRJT05fVEFSR0VUX0xFTkdUSF9JTlZBTElEEEoSHQoZR0VORVJBVElPTl9WT0lDRV9NSVNNQVRDSBBLEiMKH0dFTkVSQVRJT05fV1JJVEVfTU9ERUxfUkVRVUlSRUQQTBIbChdHT09HTEVfQUNDT1VOVF9NSVNNQVRDSBBNEhsKF0dPT0dMRV9FTUFJTF9VTlZFUklGSUVEEE4SGgoWR09PR0xFX1NJR05JTl9ESVNBQkxFRBBPEhgKFEdPT0dMRV9TSUdOSU5fRkFJTEVEEFASIQodR1VJREVMSU5FX0NBTkRJREFURV9OT1RfRk9VTkQQURIbChdHVUlERUxJTkVfTElNSVRfUkVBQ0hFRBBSEhcKE0dVSURFTElORV9OT1RfRk9VTkQQUxIbChdHVUlERUxJTkVfU0NPUEVfSU5WQUxJRBBUEiAKHEdVSURFTElORV9URU1QTEFURV9OT1RfRk9VTkQQVRIbChdHVUlERUxJTkVfVEVYVF9SRVFVSVJFRBBWEhgKFEdVSURFTElORV9URVhUX1RBS0VOEFcSGwoXR1VJREVMSU5FX1RFWFRfVE9PX0xPTkcQWBIYChRJTlNVRkZJQ0lFTlRfQ1JFRElUUxBZEhcKE0lOVkFMSURfQ1JFREVOVElBTFMQWhIRCg1JTlZBTElEX0VNQUlMEFsSEQoNSk9CX0ZPUkJJRERFThBcEhcKE0pPQl9IQU5ETEVSX01JU1NJTkcQXRITCg9KT0JfSU5URVJSVVBURUQQXhIRCg1KT0JfTk9UX0ZPVU5EEF8SEAoMSk9CX1BBTklDS0VEEGASDwoLTEFTVF9NQVNURVIQYRIPCgtNQVNURVJfT05MWRBiEh4KGk1PREVMX0NBTkRJREFURVNfRFVQTElDQVRFEGMSEgoOTU9ERUxfRElTQUJMRUQQZBIVChFNT0RFTF9JRF9SRVFVSVJFRBBlEhMKD01PREVMX05PVF9GT1VORBBmEhgKFE1PREVMX05PVF9SRUdJU1RFUkVEEGcSGAoUTU9ERUxfT1VUUFVUX0lOVkFMSUQQaBIaChZNT0RFTF9PVVRQVVRfVFJVTkNBVEVEEGkSHAoYTU9ERUxfUFVSUE9TRV9JTkVMSUdJQkxFEGoSGQoVTU9ERUxfUFVSUE9TRV9JTlZBTElEEGsSIAocTU9ERUxfUFVSUE9TRV9OT1RfUkVHSVNURVJFRBBsEhYKEk1PREVMX1JBVEVfTElNSVRFRBBtEhsKF01PREVMX1JFQVNPTklOR19JTlZBTElEEG4SIgoeTU9ERUxfUkVDT01NRU5EQVRJT05fTk9UX0ZPVU5EEG8SGQoVTU9ERUxfU0VUX1VOQVZBSUxBQkxFEHASFwoTTU9ERUxfU1RBR0VfSU5WQUxJRBBxEhgKFE1PREVMX1NUQUdFX1JFUVVJUkVEEHISFQoRTU9ERUxfVU5BVkFJTEFCTEUQcxIUChBNT0RFTF9VTlNVSVRBQkxFEHQSFQoRTU9ERUxfVU5TVVBQT1JURUQQdRIbChdNT0RFTF9WSURFT19VTlNVUFBPUlRFRBB2Eg0KCU5PX0NIQU5HRRB3EhcKE05PX1NDSEVEVUxFRF9DSEFOR0UQeBIUChBQQVNTV09SRF9OT1RfU0VUEHkSFQoRUEFTU1dPUkRfVE9PX0xPTkcQehIWChJQQVNTV09SRF9UT09fU0hPUlQQexIbChdQQVlNRU5UX01FVEhPRF9SRVFVSVJFRBB8EhEKDVBMQU5fUkVRVUlSRUQQfRINCglQT1NUX0JVU1kQfhIYChRQT1NUX0NPTlRFTlRfSU5WQUxJRBB/EhcKElBPU1RfQ09OVEVOVF9TVEFMRRCAARIYChNQT1NUX0ZJTEVOQU1FX1RBS0VOEIEBEhMKDlBPU1RfRk9SQklEREVOEIIBEiMKHlBPU1RfTUFDSElORV9CQVNFTElORV9SRVFVSVJFRBCDARIXChJQT1NUX05PVF9GSU5BTElaRUQQhAESEwoOUE9TVF9OT1RfRk9VTkQQhQESFQoQUE9TVF9QSE9UT19MSU1JVBCGARIUCg9QT1NUX1BVQkxJU0hJTkcQhwESGwoWUE9TVF9UQUdfQ09VTlRfSU5WQUxJRBCIARIiCh1QT1NUX1RBUkdFVF9MQU5HVUFHRV9SRVFVSVJFRBCJARIlCiBQT1NUX1RBUkdFVF9MQU5HVUFHRV9VTlNVUFBPUlRFRBCKARIhChxQT1NUX1RFTVBMQVRFX0FOU1dFUl9JTlZBTElEEIsBEiIKHVBPU1RfVEVNUExBVEVfQU5TV0VSX1RPT19MT05HEIwBEhUKEFBPU1RfVklERU9fTElNSVQQjQESFgoRUFJPVklERVJfRElTQUJMRUQQjgESHAoXUFVCTElTSF9BR0VOVF9OT1RfUkVBRFkQjwESGgoVUFVCTElTSF9BR0VOVF9SRVZPS0VEEJABEh4KGVBVQkxJU0hfQUdFTlRfVU5BVkFJTEFCTEUQkQESGwoWUFVCTElTSF9BTFJFQURZX0VYSVNUUxCSARIfChpQVUJMSVNIX0NBVEVHT1JZX05PVF9GT1VORBCTARIZChRQVUJMSVNIX0NPTU1JVF9GRU5DRRCUARIWChFQVUJMSVNIX0ZPUkJJRERFThCVARIaChVQVUJMSVNIX0xFQVNFX0lOVkFMSUQQlgESHAoXUFVCTElTSF9ORUVEU19BVFRFTlRJT04QlwESFgoRUFVCTElTSF9OT1RfRk9VTkQQmAESHAoXUFVCTElTSF9PVVRDT01FX1VOS05PV04QmQESHAoXUFVCTElTSF9QQUlSSU5HX0lOVkFMSUQQmgESGgoVUFVCTElTSF9QQUlSSU5HX0xJTUlUEJsBEh8KGlBVQkxJU0hfUE9TVF9OT1RfRklOQUxJWkVEEJwBEhwKF1BVQkxJU0hfUkVRVUVTVF9JTlZBTElEEJ0BEhsKFlBVQkxJU0hfU1RBTEVfUkVWSVNJT04QngESHwoaUFVCTElTSF9UUkFOU0lUSU9OX0lOVkFMSUQQnwESGAoTUFVCTElTSF9VUkxfSU5WQUxJRBCgARIXChJQVVJDSEFTRV9OT1RfRk9VTkQQoQESEwoOUFVSQ0hBU0VfU1BFTlQQogESFwoSUFVSQ0hBU0VfVE9PX1NNQUxMEKMBEhYKEVBVUlBPU0VfTk9UX0ZPVU5EEKQBEhIKDVJFRlVORF9GQUlMRUQQpQESGQoUUkVGVU5EX1dJTkRPV19DTE9TRUQQpgESFwoSUkVTRVRfTElOS19JTlZBTElEEKcBEh4KGVJFVklTSU9OX0NPTlRFTlRfUkVRVUlSRUQQqAESIgodUkVWSVNJT05fSU5TVFJVQ1RJT05fUkVRVUlSRUQQqQESIgodUkVWSVNJT05fSU5TVFJVQ1RJT05fVE9PX0xPTkcQqgESGAoTU1VCU0NSSVBUSU9OX0VYSVNUUxCrARIeChlTVUJTQ1JJUFRJT05fTkVFRFNfTUVUSE9EEKwBEhoKFVNVQlNDUklQVElPTl9SRVFVSVJFRBCtARIbChZURU1QTEFURV9CT0RZX1JFUVVJUkVEEK4BEhwKF1RFTVBMQVRFX0ZJRUxEX1RPT19MT05HEK8BEhsKFlRFTVBMQVRFX0xJTUlUX1JFQUNIRUQQsAESGwoWVEVNUExBVEVfTkFNRV9SRVFVSVJFRBCxARIYChNURU1QTEFURV9OQU1FX1RBS0VOELIBEhcKElRFTVBMQVRFX05PVF9GT1VORBCzARIhChxURU1QTEFURV9OVU1CRVJfT1VUX09GX1JBTkdFELQBEhoKFVRFTVBMQVRFX1BBUlNFX0ZBSUxFRBC1ARIaChVUSUVSX05PVF9TVUJTQ1JJQkFCTEUQtgESFgoRVE9PX01BTllfQVRURU1QVFMQtwESEwoOVVBMT0FEX0lOVkFMSUQQuAESFQoQVVBMT0FEX05PVF9GT1VORBC5ARIaChVVUExPQURfT0JKRUNUX01JU1NJTkcQugESGQoUVVBMT0FEX1ZJREVPX0lOVkFMSUQQuwESHQoYVVBMT0FEX1ZJREVPX1VOU1VQUE9SVEVEELwBEhUKEFVTRVJfSURfUkVRVUlSRUQQvQESEwoOVVNFUl9OT1RfRk9VTkQQvgESHgoZVkVSSUZJQ0FUSU9OX0xJTktfSU5WQUxJRBC/ARIaChVWSURFT19OT1RfUFVCTElTSEFCTEUQwAESIQocVk9JQ0VfQU5BTFlaRV9NT0RFTF9SRVFVSVJFRBDBARIcChdWT0lDRV9CQVNFTElORV9NSVNNQVRDSBDCARIPCgpWT0lDRV9CVVNZEMMBEh8KGlZPSUNFX0NPTVBBUklTT05fTk9UX0ZPVU5EEMQBEiEKHFZPSUNFX0NPTkZJUk1BVElPTl9OT1RfRk9VTkQQxQESJAofVk9JQ0VfQ09OVEVOVF9MQU5HVUFHRV9NSVNNQVRDSBDGARIjCh5WT0lDRV9ERUZBVUxUX0RFTEVURV9GT1JCSURERU4QxwESEgoNVk9JQ0VfREVMRVRFRBDIARIfChpWT0lDRV9ERVNDUklQVElPTl9UT09fTE9ORxDJARIbChZWT0lDRV9GRUVEQkFDS19JTlZBTElEEMoBEh8KGlZPSUNFX0lOU1VGRklDSUVOVF9TT1VSQ0VTEMsBEhwKF1ZPSUNFX0lOVkFMSURfTElGRUNZQ0xFEMwBEh0KGFZPSUNFX0xFQVJOSU5HX05PVF9GT1VORBDNARIYChNWT0lDRV9OQU1FX1JFUVVJUkVEEM4BEhUKEFZPSUNFX05BTUVfVEFLRU4QzwESGAoTVk9JQ0VfTkFNRV9UT09fTE9ORxDQARIUCg9WT0lDRV9OT1RfRk9VTkQQ0QESEwoOVk9JQ0VfUkVRVUlSRUQQ0gESGQoUVk9JQ0VfUlVMRV9OT1RfRk9VTkQQ0wESIQocVk9JQ0VfU0FNUExFX01VVEFUSU9OX0ZBSUxFRBDUARIbChZWT0lDRV9TQU1QTEVfTk9UX0ZPVU5EENUBEhsKFlZPSUNFX1NBTVBMRV9UT09fU0hPUlQQ1gESIwoeVk9JQ0VfU09VUkNFX0xBTkdVQUdFX1JFUVVJUkVEENcBEiYKIVZPSUNFX1NPVVJDRV9MQU5HVUFHRV9VTlNVUFBPUlRFRBDYARIfChpWT0lDRV9WQUxJREFUSU9OX05PVF9GT1VORBDZARIbChZDTElQX1BST0NFU1NJTkdfRkFJTEVEENoBEhoKFUNMSVBfTEFZT1VUX0ZSRVFVRU5DWRDcARIhChxWT0lDRV9QUk9GSUxFX0ZJRUxEX1JFUVVJUkVEEN0BEhgKE05FVFdPUktfVU5BVkFJTEFCTEUQ3gFCRFpCZ2l0aHViLmNvbS9wb3N0cGlsb3QvYmFja2VuZC9pbnRlcm5hbC9nZW4vcG9zdHBpbG90L3YxO3Bvc3RwaWxvdHYxYgZwcm90bzM");
 
 /**
  * AppErrorDetail accompanies a synchronous Connect status. reason is a stable product
@@ -25,6 +25,8 @@ export const file_postpilot_v1_error: GenFile = /*@__PURE__*/
  */
 export type AppErrorDetail = Message<"postpilot.v1.AppErrorDetail"> & {
   /**
+   * The FailureReason's name. A string on the wire on purpose: see the enum's comment.
+   *
    * @generated from field: string reason = 1;
    */
   reason: string;
@@ -72,3 +74,1146 @@ export type Failure = Message<"postpilot.v1.Failure"> & {
  */
 export const FailureSchema: GenMessage<Failure> = /*@__PURE__*/
   messageDesc(file_postpilot_v1_error, 1);
+
+/**
+ * FailureReason is every refusal this API can name, as a value both sides compile against.
+ *
+ * It IS the cross-language contract: the backend passes one of these to `NewAppError`, and
+ * the browser's `appFailureSpecs` and its two error catalogues are typed by the generated
+ * names, so a reason nobody translated is a compile error rather than the generic unknown
+ * copy reaching a user (ARCH-3).
+ *
+ * The WIRE stays a string — `AppErrorDetail.reason` carries `FailureReason.String()` — so an
+ * older client and the Mac agent need nothing. A value is never renumbered or reused; a
+ * retired reason keeps its number and is deleted from the emitting adapter only.
+ *
+ * @generated from enum postpilot.v1.FailureReason
+ */
+export enum FailureReason {
+  /**
+   * @generated from enum value: UNKNOWN_FAILURE = 0;
+   */
+  UNKNOWN_FAILURE = 0,
+
+  /**
+   * @generated from enum value: AUTH_REQUIRED = 1;
+   */
+  AUTH_REQUIRED = 1,
+
+  /**
+   * @generated from enum value: BILLING_SELECTION_INVALID = 2;
+   */
+  BILLING_SELECTION_INVALID = 2,
+
+  /**
+   * @generated from enum value: BILLING_UNAVAILABLE = 3;
+   */
+  BILLING_UNAVAILABLE = 3,
+
+  /**
+   * @generated from enum value: CHANGE_UNSUPPORTED = 4;
+   */
+  CHANGE_UNSUPPORTED = 4,
+
+  /**
+   * @generated from enum value: CHARGE_FAILED = 5;
+   */
+  CHARGE_FAILED = 5,
+
+  /**
+   * @generated from enum value: CLIP_ANALYSIS_TOO_LARGE = 6;
+   */
+  CLIP_ANALYSIS_TOO_LARGE = 6,
+
+  /**
+   * @generated from enum value: CLIP_BUSY = 7;
+   */
+  CLIP_BUSY = 7,
+
+  /**
+   * @generated from enum value: CLIP_CANCELLATION_POLICY_REQUIRED = 8;
+   */
+  CLIP_CANCELLATION_POLICY_REQUIRED = 8,
+
+  /**
+   * @generated from enum value: CLIP_COMPOSITION_INVALID = 9;
+   */
+  CLIP_COMPOSITION_INVALID = 9,
+
+  /**
+   * @generated from enum value: CLIP_COMPOSITION_UNAVAILABLE = 10;
+   */
+  CLIP_COMPOSITION_UNAVAILABLE = 10,
+
+  /**
+   * @generated from enum value: CLIP_COPY_TOO_LONG = 11;
+   */
+  CLIP_COPY_TOO_LONG = 11,
+
+  /**
+   * @generated from enum value: CLIP_CREDIT_CEILING_EXCEEDED = 12;
+   */
+  CLIP_CREDIT_CEILING_EXCEEDED = 12,
+
+  /**
+   * @generated from enum value: CLIP_DISCLOSURE_REQUIRED = 13;
+   */
+  CLIP_DISCLOSURE_REQUIRED = 13,
+
+  /**
+   * @generated from enum value: CLIP_FACTS_REQUIRED = 14;
+   */
+  CLIP_FACTS_REQUIRED = 14,
+
+  /**
+   * @generated from enum value: CLIP_FINALIZATION_CONFLICT = 15;
+   */
+  CLIP_FINALIZATION_CONFLICT = 15,
+
+  /**
+   * @generated from enum value: CLIP_FINALIZATION_INVALID = 16;
+   */
+  CLIP_FINALIZATION_INVALID = 16,
+
+  /**
+   * @generated from enum value: CLIP_FINALIZED = 17;
+   */
+  CLIP_FINALIZED = 17,
+
+  /**
+   * @generated from enum value: CLIP_INPUT_TOO_LARGE = 18;
+   */
+  CLIP_INPUT_TOO_LARGE = 18,
+
+  /**
+   * @generated from enum value: CLIP_INSUFFICIENT_FOOTAGE = 19;
+   */
+  CLIP_INSUFFICIENT_FOOTAGE = 19,
+
+  /**
+   * @generated from enum value: CLIP_INVALID_INPUT = 20;
+   */
+  CLIP_INVALID_INPUT = 20,
+
+  /**
+   * @generated from enum value: CLIP_INVALID_MEDIA = 21;
+   */
+  CLIP_INVALID_MEDIA = 21,
+
+  /**
+   * @generated from enum value: CLIP_LAYOUT_ANCHOR_STEP = 22;
+   */
+  CLIP_LAYOUT_ANCHOR_STEP = 22,
+
+  /**
+   * @generated from enum value: CLIP_LAYOUT_CONTRAST = 23;
+   */
+  CLIP_LAYOUT_CONTRAST = 23,
+
+  /**
+   * @generated from enum value: CLIP_LAYOUT_DISCLOSURE = 24;
+   */
+  CLIP_LAYOUT_DISCLOSURE = 24,
+
+  /**
+   * @generated from enum value: CLIP_LAYOUT_KIND = 25;
+   */
+  CLIP_LAYOUT_KIND = 25,
+
+  /**
+   * @generated from enum value: CLIP_LAYOUT_MOTION = 26;
+   */
+  CLIP_LAYOUT_MOTION = 26,
+
+  /**
+   * @generated from enum value: CLIP_LAYOUT_OVERLAP = 27;
+   */
+  CLIP_LAYOUT_OVERLAP = 27,
+
+  /**
+   * @generated from enum value: CLIP_LAYOUT_SAFE_AREA = 28;
+   */
+  CLIP_LAYOUT_SAFE_AREA = 28,
+
+  /**
+   * @generated from enum value: CLIP_LAYOUT_SIZE = 29;
+   */
+  CLIP_LAYOUT_SIZE = 29,
+
+  /**
+   * @generated from enum value: CLIP_MODEL_INLINE_ENDPOINT_UNAVAILABLE = 30;
+   */
+  CLIP_MODEL_INLINE_ENDPOINT_UNAVAILABLE = 30,
+
+  /**
+   * @generated from enum value: CLIP_MODEL_INPUT_UNSUPPORTED = 31;
+   */
+  CLIP_MODEL_INPUT_UNSUPPORTED = 31,
+
+  /**
+   * @generated from enum value: CLIP_MODEL_PRICE_CEILING_UNAVAILABLE = 32;
+   */
+  CLIP_MODEL_PRICE_CEILING_UNAVAILABLE = 32,
+
+  /**
+   * @generated from enum value: CLIP_MODEL_PRICING_UNAVAILABLE = 33;
+   */
+  CLIP_MODEL_PRICING_UNAVAILABLE = 33,
+
+  /**
+   * @generated from enum value: CLIP_MODEL_REQUIRED_PARAMETERS_UNSUPPORTED = 34;
+   */
+  CLIP_MODEL_REQUIRED_PARAMETERS_UNSUPPORTED = 34,
+
+  /**
+   * @generated from enum value: CLIP_MODEL_VIDEO_INPUT_ABSENT = 35;
+   */
+  CLIP_MODEL_VIDEO_INPUT_ABSENT = 35,
+
+  /**
+   * @generated from enum value: CLIP_NOT_FOUND = 36;
+   */
+  CLIP_NOT_FOUND = 36,
+
+  /**
+   * @generated from enum value: CLIP_PLAN_CONFLICT = 37;
+   */
+  CLIP_PLAN_CONFLICT = 37,
+
+  /**
+   * @generated from enum value: CLIP_PREVIEW_BUSY = 38;
+   */
+  CLIP_PREVIEW_BUSY = 38,
+
+  /**
+   * @generated from enum value: CLIP_PREVIEW_TIMEOUT = 39;
+   */
+  CLIP_PREVIEW_TIMEOUT = 39,
+
+  /**
+   * @generated from enum value: CLIP_PREVIEW_TOO_LARGE = 40;
+   */
+  CLIP_PREVIEW_TOO_LARGE = 40,
+
+  /**
+   * @generated from enum value: CLIP_PREVIEW_UNAVAILABLE = 41;
+   */
+  CLIP_PREVIEW_UNAVAILABLE = 41,
+
+  /**
+   * @generated from enum value: CLIP_QUOTE_CHANGED = 42;
+   */
+  CLIP_QUOTE_CHANGED = 42,
+
+  /**
+   * @generated from enum value: CLIP_QUOTE_EXPIRED = 43;
+   */
+  CLIP_QUOTE_EXPIRED = 43,
+
+  /**
+   * @generated from enum value: CLIP_QUOTE_REQUIRED = 44;
+   */
+  CLIP_QUOTE_REQUIRED = 44,
+
+  /**
+   * @generated from enum value: CLIP_SOURCE_EXPIRED = 45;
+   */
+  CLIP_SOURCE_EXPIRED = 45,
+
+  /**
+   * @generated from enum value: CLIP_SOURCE_MISSING = 46;
+   */
+  CLIP_SOURCE_MISSING = 46,
+
+  /**
+   * @generated from enum value: CLIP_SOURCE_UNAVAILABLE = 47;
+   */
+  CLIP_SOURCE_UNAVAILABLE = 47,
+
+  /**
+   * @generated from enum value: CLIP_TARGET_DURATION_REQUIRED = 48;
+   */
+  CLIP_TARGET_DURATION_REQUIRED = 48,
+
+  /**
+   * @generated from enum value: CLIP_TEMPLATE_NAME_TAKEN = 49;
+   */
+  CLIP_TEMPLATE_NAME_TAKEN = 49,
+
+  /**
+   * @generated from enum value: CLIP_WORKSPACE_LIMIT = 50;
+   */
+  CLIP_WORKSPACE_LIMIT = 50,
+
+  /**
+   * @generated from enum value: COMBO_INCOMPLETE = 51;
+   */
+  COMBO_INCOMPLETE = 51,
+
+  /**
+   * @generated from enum value: COMBO_UNKNOWN = 52;
+   */
+  COMBO_UNKNOWN = 52,
+
+  /**
+   * @generated from enum value: CONTENT_LANGUAGE_REQUIRED = 53;
+   */
+  CONTENT_LANGUAGE_REQUIRED = 53,
+
+  /**
+   * @generated from enum value: CURRENT_PASSWORD_WRONG = 54;
+   */
+  CURRENT_PASSWORD_WRONG = 54,
+
+  /**
+   * @generated from enum value: CUSTOMER_KEY_MISMATCH = 55;
+   */
+  CUSTOMER_KEY_MISMATCH = 55,
+
+  /**
+   * @generated from enum value: EMAIL_ALREADY_VERIFIED = 56;
+   */
+  EMAIL_ALREADY_VERIFIED = 56,
+
+  /**
+   * @generated from enum value: EMAIL_VERIFICATION_REQUIRED = 57;
+   */
+  EMAIL_VERIFICATION_REQUIRED = 57,
+
+  /**
+   * @generated from enum value: EXPERIMENT_ALREADY_RUNNING = 58;
+   */
+  EXPERIMENT_ALREADY_RUNNING = 58,
+
+  /**
+   * @generated from enum value: EXPERIMENT_CANDIDATES_DUPLICATE = 59;
+   */
+  EXPERIMENT_CANDIDATES_DUPLICATE = 59,
+
+  /**
+   * @generated from enum value: EXPERIMENT_CANDIDATE_NOT_FOUND = 60;
+   */
+  EXPERIMENT_CANDIDATE_NOT_FOUND = 60,
+
+  /**
+   * @generated from enum value: EXPERIMENT_CONFIRMATION_REQUIRED = 61;
+   */
+  EXPERIMENT_CONFIRMATION_REQUIRED = 61,
+
+  /**
+   * @generated from enum value: EXPERIMENT_FORBIDDEN = 62;
+   */
+  EXPERIMENT_FORBIDDEN = 62,
+
+  /**
+   * @generated from enum value: EXPERIMENT_MODELS_REQUIRED = 63;
+   */
+  EXPERIMENT_MODELS_REQUIRED = 63,
+
+  /**
+   * @generated from enum value: EXPERIMENT_NOT_FOUND = 64;
+   */
+  EXPERIMENT_NOT_FOUND = 64,
+
+  /**
+   * @generated from enum value: EXPERIMENT_RETRY_MODEL_UNAVAILABLE = 65;
+   */
+  EXPERIMENT_RETRY_MODEL_UNAVAILABLE = 65,
+
+  /**
+   * @generated from enum value: EXPERIMENT_SNAPSHOT_UNAVAILABLE = 66;
+   */
+  EXPERIMENT_SNAPSHOT_UNAVAILABLE = 66,
+
+  /**
+   * @generated from enum value: EXPERIMENT_STAGE_INVALID = 67;
+   */
+  EXPERIMENT_STAGE_INVALID = 67,
+
+  /**
+   * @generated from enum value: EXPERIMENT_STATE_INVALID = 68;
+   */
+  EXPERIMENT_STATE_INVALID = 68,
+
+  /**
+   * @generated from enum value: EXPERIMENT_TARGET_LENGTH_INVALID = 69;
+   */
+  EXPERIMENT_TARGET_LENGTH_INVALID = 69,
+
+  /**
+   * @generated from enum value: EXPERIMENT_VOICE_REQUIRED = 70;
+   */
+  EXPERIMENT_VOICE_REQUIRED = 70,
+
+  /**
+   * @generated from enum value: EXPERIMENT_VOICE_UNAVAILABLE = 71;
+   */
+  EXPERIMENT_VOICE_UNAVAILABLE = 71,
+
+  /**
+   * @generated from enum value: GENERATION_ALREADY_RUNNING = 72;
+   */
+  GENERATION_ALREADY_RUNNING = 72,
+
+  /**
+   * @generated from enum value: GENERATION_OBSERVE_MODEL_REQUIRED = 73;
+   */
+  GENERATION_OBSERVE_MODEL_REQUIRED = 73,
+
+  /**
+   * @generated from enum value: GENERATION_TARGET_LENGTH_INVALID = 74;
+   */
+  GENERATION_TARGET_LENGTH_INVALID = 74,
+
+  /**
+   * @generated from enum value: GENERATION_VOICE_MISMATCH = 75;
+   */
+  GENERATION_VOICE_MISMATCH = 75,
+
+  /**
+   * @generated from enum value: GENERATION_WRITE_MODEL_REQUIRED = 76;
+   */
+  GENERATION_WRITE_MODEL_REQUIRED = 76,
+
+  /**
+   * @generated from enum value: GOOGLE_ACCOUNT_MISMATCH = 77;
+   */
+  GOOGLE_ACCOUNT_MISMATCH = 77,
+
+  /**
+   * @generated from enum value: GOOGLE_EMAIL_UNVERIFIED = 78;
+   */
+  GOOGLE_EMAIL_UNVERIFIED = 78,
+
+  /**
+   * @generated from enum value: GOOGLE_SIGNIN_DISABLED = 79;
+   */
+  GOOGLE_SIGNIN_DISABLED = 79,
+
+  /**
+   * @generated from enum value: GOOGLE_SIGNIN_FAILED = 80;
+   */
+  GOOGLE_SIGNIN_FAILED = 80,
+
+  /**
+   * @generated from enum value: GUIDELINE_CANDIDATE_NOT_FOUND = 81;
+   */
+  GUIDELINE_CANDIDATE_NOT_FOUND = 81,
+
+  /**
+   * @generated from enum value: GUIDELINE_LIMIT_REACHED = 82;
+   */
+  GUIDELINE_LIMIT_REACHED = 82,
+
+  /**
+   * @generated from enum value: GUIDELINE_NOT_FOUND = 83;
+   */
+  GUIDELINE_NOT_FOUND = 83,
+
+  /**
+   * @generated from enum value: GUIDELINE_SCOPE_INVALID = 84;
+   */
+  GUIDELINE_SCOPE_INVALID = 84,
+
+  /**
+   * @generated from enum value: GUIDELINE_TEMPLATE_NOT_FOUND = 85;
+   */
+  GUIDELINE_TEMPLATE_NOT_FOUND = 85,
+
+  /**
+   * @generated from enum value: GUIDELINE_TEXT_REQUIRED = 86;
+   */
+  GUIDELINE_TEXT_REQUIRED = 86,
+
+  /**
+   * @generated from enum value: GUIDELINE_TEXT_TAKEN = 87;
+   */
+  GUIDELINE_TEXT_TAKEN = 87,
+
+  /**
+   * @generated from enum value: GUIDELINE_TEXT_TOO_LONG = 88;
+   */
+  GUIDELINE_TEXT_TOO_LONG = 88,
+
+  /**
+   * @generated from enum value: INSUFFICIENT_CREDITS = 89;
+   */
+  INSUFFICIENT_CREDITS = 89,
+
+  /**
+   * @generated from enum value: INVALID_CREDENTIALS = 90;
+   */
+  INVALID_CREDENTIALS = 90,
+
+  /**
+   * @generated from enum value: INVALID_EMAIL = 91;
+   */
+  INVALID_EMAIL = 91,
+
+  /**
+   * @generated from enum value: JOB_FORBIDDEN = 92;
+   */
+  JOB_FORBIDDEN = 92,
+
+  /**
+   * @generated from enum value: JOB_HANDLER_MISSING = 93;
+   */
+  JOB_HANDLER_MISSING = 93,
+
+  /**
+   * @generated from enum value: JOB_INTERRUPTED = 94;
+   */
+  JOB_INTERRUPTED = 94,
+
+  /**
+   * @generated from enum value: JOB_NOT_FOUND = 95;
+   */
+  JOB_NOT_FOUND = 95,
+
+  /**
+   * @generated from enum value: JOB_PANICKED = 96;
+   */
+  JOB_PANICKED = 96,
+
+  /**
+   * @generated from enum value: LAST_MASTER = 97;
+   */
+  LAST_MASTER = 97,
+
+  /**
+   * @generated from enum value: MASTER_ONLY = 98;
+   */
+  MASTER_ONLY = 98,
+
+  /**
+   * @generated from enum value: MODEL_CANDIDATES_DUPLICATE = 99;
+   */
+  MODEL_CANDIDATES_DUPLICATE = 99,
+
+  /**
+   * @generated from enum value: MODEL_DISABLED = 100;
+   */
+  MODEL_DISABLED = 100,
+
+  /**
+   * @generated from enum value: MODEL_ID_REQUIRED = 101;
+   */
+  MODEL_ID_REQUIRED = 101,
+
+  /**
+   * @generated from enum value: MODEL_NOT_FOUND = 102;
+   */
+  MODEL_NOT_FOUND = 102,
+
+  /**
+   * @generated from enum value: MODEL_NOT_REGISTERED = 103;
+   */
+  MODEL_NOT_REGISTERED = 103,
+
+  /**
+   * @generated from enum value: MODEL_OUTPUT_INVALID = 104;
+   */
+  MODEL_OUTPUT_INVALID = 104,
+
+  /**
+   * @generated from enum value: MODEL_OUTPUT_TRUNCATED = 105;
+   */
+  MODEL_OUTPUT_TRUNCATED = 105,
+
+  /**
+   * @generated from enum value: MODEL_PURPOSE_INELIGIBLE = 106;
+   */
+  MODEL_PURPOSE_INELIGIBLE = 106,
+
+  /**
+   * @generated from enum value: MODEL_PURPOSE_INVALID = 107;
+   */
+  MODEL_PURPOSE_INVALID = 107,
+
+  /**
+   * @generated from enum value: MODEL_PURPOSE_NOT_REGISTERED = 108;
+   */
+  MODEL_PURPOSE_NOT_REGISTERED = 108,
+
+  /**
+   * @generated from enum value: MODEL_RATE_LIMITED = 109;
+   */
+  MODEL_RATE_LIMITED = 109,
+
+  /**
+   * @generated from enum value: MODEL_REASONING_INVALID = 110;
+   */
+  MODEL_REASONING_INVALID = 110,
+
+  /**
+   * @generated from enum value: MODEL_RECOMMENDATION_NOT_FOUND = 111;
+   */
+  MODEL_RECOMMENDATION_NOT_FOUND = 111,
+
+  /**
+   * @generated from enum value: MODEL_SET_UNAVAILABLE = 112;
+   */
+  MODEL_SET_UNAVAILABLE = 112,
+
+  /**
+   * @generated from enum value: MODEL_STAGE_INVALID = 113;
+   */
+  MODEL_STAGE_INVALID = 113,
+
+  /**
+   * @generated from enum value: MODEL_STAGE_REQUIRED = 114;
+   */
+  MODEL_STAGE_REQUIRED = 114,
+
+  /**
+   * @generated from enum value: MODEL_UNAVAILABLE = 115;
+   */
+  MODEL_UNAVAILABLE = 115,
+
+  /**
+   * @generated from enum value: MODEL_UNSUITABLE = 116;
+   */
+  MODEL_UNSUITABLE = 116,
+
+  /**
+   * @generated from enum value: MODEL_UNSUPPORTED = 117;
+   */
+  MODEL_UNSUPPORTED = 117,
+
+  /**
+   * @generated from enum value: MODEL_VIDEO_UNSUPPORTED = 118;
+   */
+  MODEL_VIDEO_UNSUPPORTED = 118,
+
+  /**
+   * @generated from enum value: NO_CHANGE = 119;
+   */
+  NO_CHANGE = 119,
+
+  /**
+   * @generated from enum value: NO_SCHEDULED_CHANGE = 120;
+   */
+  NO_SCHEDULED_CHANGE = 120,
+
+  /**
+   * @generated from enum value: PASSWORD_NOT_SET = 121;
+   */
+  PASSWORD_NOT_SET = 121,
+
+  /**
+   * @generated from enum value: PASSWORD_TOO_LONG = 122;
+   */
+  PASSWORD_TOO_LONG = 122,
+
+  /**
+   * @generated from enum value: PASSWORD_TOO_SHORT = 123;
+   */
+  PASSWORD_TOO_SHORT = 123,
+
+  /**
+   * @generated from enum value: PAYMENT_METHOD_REQUIRED = 124;
+   */
+  PAYMENT_METHOD_REQUIRED = 124,
+
+  /**
+   * @generated from enum value: PLAN_REQUIRED = 125;
+   */
+  PLAN_REQUIRED = 125,
+
+  /**
+   * @generated from enum value: POST_BUSY = 126;
+   */
+  POST_BUSY = 126,
+
+  /**
+   * @generated from enum value: POST_CONTENT_INVALID = 127;
+   */
+  POST_CONTENT_INVALID = 127,
+
+  /**
+   * @generated from enum value: POST_CONTENT_STALE = 128;
+   */
+  POST_CONTENT_STALE = 128,
+
+  /**
+   * @generated from enum value: POST_FILENAME_TAKEN = 129;
+   */
+  POST_FILENAME_TAKEN = 129,
+
+  /**
+   * @generated from enum value: POST_FORBIDDEN = 130;
+   */
+  POST_FORBIDDEN = 130,
+
+  /**
+   * @generated from enum value: POST_MACHINE_BASELINE_REQUIRED = 131;
+   */
+  POST_MACHINE_BASELINE_REQUIRED = 131,
+
+  /**
+   * @generated from enum value: POST_NOT_FINALIZED = 132;
+   */
+  POST_NOT_FINALIZED = 132,
+
+  /**
+   * @generated from enum value: POST_NOT_FOUND = 133;
+   */
+  POST_NOT_FOUND = 133,
+
+  /**
+   * @generated from enum value: POST_PHOTO_LIMIT = 134;
+   */
+  POST_PHOTO_LIMIT = 134,
+
+  /**
+   * @generated from enum value: POST_PUBLISHING = 135;
+   */
+  POST_PUBLISHING = 135,
+
+  /**
+   * @generated from enum value: POST_TAG_COUNT_INVALID = 136;
+   */
+  POST_TAG_COUNT_INVALID = 136,
+
+  /**
+   * @generated from enum value: POST_TARGET_LANGUAGE_REQUIRED = 137;
+   */
+  POST_TARGET_LANGUAGE_REQUIRED = 137,
+
+  /**
+   * @generated from enum value: POST_TARGET_LANGUAGE_UNSUPPORTED = 138;
+   */
+  POST_TARGET_LANGUAGE_UNSUPPORTED = 138,
+
+  /**
+   * @generated from enum value: POST_TEMPLATE_ANSWER_INVALID = 139;
+   */
+  POST_TEMPLATE_ANSWER_INVALID = 139,
+
+  /**
+   * @generated from enum value: POST_TEMPLATE_ANSWER_TOO_LONG = 140;
+   */
+  POST_TEMPLATE_ANSWER_TOO_LONG = 140,
+
+  /**
+   * @generated from enum value: POST_VIDEO_LIMIT = 141;
+   */
+  POST_VIDEO_LIMIT = 141,
+
+  /**
+   * @generated from enum value: PROVIDER_DISABLED = 142;
+   */
+  PROVIDER_DISABLED = 142,
+
+  /**
+   * @generated from enum value: PUBLISH_AGENT_NOT_READY = 143;
+   */
+  PUBLISH_AGENT_NOT_READY = 143,
+
+  /**
+   * @generated from enum value: PUBLISH_AGENT_REVOKED = 144;
+   */
+  PUBLISH_AGENT_REVOKED = 144,
+
+  /**
+   * @generated from enum value: PUBLISH_AGENT_UNAVAILABLE = 145;
+   */
+  PUBLISH_AGENT_UNAVAILABLE = 145,
+
+  /**
+   * @generated from enum value: PUBLISH_ALREADY_EXISTS = 146;
+   */
+  PUBLISH_ALREADY_EXISTS = 146,
+
+  /**
+   * @generated from enum value: PUBLISH_CATEGORY_NOT_FOUND = 147;
+   */
+  PUBLISH_CATEGORY_NOT_FOUND = 147,
+
+  /**
+   * @generated from enum value: PUBLISH_COMMIT_FENCE = 148;
+   */
+  PUBLISH_COMMIT_FENCE = 148,
+
+  /**
+   * @generated from enum value: PUBLISH_FORBIDDEN = 149;
+   */
+  PUBLISH_FORBIDDEN = 149,
+
+  /**
+   * @generated from enum value: PUBLISH_LEASE_INVALID = 150;
+   */
+  PUBLISH_LEASE_INVALID = 150,
+
+  /**
+   * @generated from enum value: PUBLISH_NEEDS_ATTENTION = 151;
+   */
+  PUBLISH_NEEDS_ATTENTION = 151,
+
+  /**
+   * @generated from enum value: PUBLISH_NOT_FOUND = 152;
+   */
+  PUBLISH_NOT_FOUND = 152,
+
+  /**
+   * @generated from enum value: PUBLISH_OUTCOME_UNKNOWN = 153;
+   */
+  PUBLISH_OUTCOME_UNKNOWN = 153,
+
+  /**
+   * @generated from enum value: PUBLISH_PAIRING_INVALID = 154;
+   */
+  PUBLISH_PAIRING_INVALID = 154,
+
+  /**
+   * @generated from enum value: PUBLISH_PAIRING_LIMIT = 155;
+   */
+  PUBLISH_PAIRING_LIMIT = 155,
+
+  /**
+   * @generated from enum value: PUBLISH_POST_NOT_FINALIZED = 156;
+   */
+  PUBLISH_POST_NOT_FINALIZED = 156,
+
+  /**
+   * @generated from enum value: PUBLISH_REQUEST_INVALID = 157;
+   */
+  PUBLISH_REQUEST_INVALID = 157,
+
+  /**
+   * @generated from enum value: PUBLISH_STALE_REVISION = 158;
+   */
+  PUBLISH_STALE_REVISION = 158,
+
+  /**
+   * @generated from enum value: PUBLISH_TRANSITION_INVALID = 159;
+   */
+  PUBLISH_TRANSITION_INVALID = 159,
+
+  /**
+   * @generated from enum value: PUBLISH_URL_INVALID = 160;
+   */
+  PUBLISH_URL_INVALID = 160,
+
+  /**
+   * @generated from enum value: PURCHASE_NOT_FOUND = 161;
+   */
+  PURCHASE_NOT_FOUND = 161,
+
+  /**
+   * @generated from enum value: PURCHASE_SPENT = 162;
+   */
+  PURCHASE_SPENT = 162,
+
+  /**
+   * @generated from enum value: PURCHASE_TOO_SMALL = 163;
+   */
+  PURCHASE_TOO_SMALL = 163,
+
+  /**
+   * @generated from enum value: PURPOSE_NOT_FOUND = 164;
+   */
+  PURPOSE_NOT_FOUND = 164,
+
+  /**
+   * @generated from enum value: REFUND_FAILED = 165;
+   */
+  REFUND_FAILED = 165,
+
+  /**
+   * @generated from enum value: REFUND_WINDOW_CLOSED = 166;
+   */
+  REFUND_WINDOW_CLOSED = 166,
+
+  /**
+   * @generated from enum value: RESET_LINK_INVALID = 167;
+   */
+  RESET_LINK_INVALID = 167,
+
+  /**
+   * @generated from enum value: REVISION_CONTENT_REQUIRED = 168;
+   */
+  REVISION_CONTENT_REQUIRED = 168,
+
+  /**
+   * @generated from enum value: REVISION_INSTRUCTION_REQUIRED = 169;
+   */
+  REVISION_INSTRUCTION_REQUIRED = 169,
+
+  /**
+   * @generated from enum value: REVISION_INSTRUCTION_TOO_LONG = 170;
+   */
+  REVISION_INSTRUCTION_TOO_LONG = 170,
+
+  /**
+   * @generated from enum value: SUBSCRIPTION_EXISTS = 171;
+   */
+  SUBSCRIPTION_EXISTS = 171,
+
+  /**
+   * @generated from enum value: SUBSCRIPTION_NEEDS_METHOD = 172;
+   */
+  SUBSCRIPTION_NEEDS_METHOD = 172,
+
+  /**
+   * @generated from enum value: SUBSCRIPTION_REQUIRED = 173;
+   */
+  SUBSCRIPTION_REQUIRED = 173,
+
+  /**
+   * @generated from enum value: TEMPLATE_BODY_REQUIRED = 174;
+   */
+  TEMPLATE_BODY_REQUIRED = 174,
+
+  /**
+   * @generated from enum value: TEMPLATE_FIELD_TOO_LONG = 175;
+   */
+  TEMPLATE_FIELD_TOO_LONG = 175,
+
+  /**
+   * @generated from enum value: TEMPLATE_LIMIT_REACHED = 176;
+   */
+  TEMPLATE_LIMIT_REACHED = 176,
+
+  /**
+   * @generated from enum value: TEMPLATE_NAME_REQUIRED = 177;
+   */
+  TEMPLATE_NAME_REQUIRED = 177,
+
+  /**
+   * @generated from enum value: TEMPLATE_NAME_TAKEN = 178;
+   */
+  TEMPLATE_NAME_TAKEN = 178,
+
+  /**
+   * @generated from enum value: TEMPLATE_NOT_FOUND = 179;
+   */
+  TEMPLATE_NOT_FOUND = 179,
+
+  /**
+   * @generated from enum value: TEMPLATE_NUMBER_OUT_OF_RANGE = 180;
+   */
+  TEMPLATE_NUMBER_OUT_OF_RANGE = 180,
+
+  /**
+   * @generated from enum value: TEMPLATE_PARSE_FAILED = 181;
+   */
+  TEMPLATE_PARSE_FAILED = 181,
+
+  /**
+   * @generated from enum value: TIER_NOT_SUBSCRIBABLE = 182;
+   */
+  TIER_NOT_SUBSCRIBABLE = 182,
+
+  /**
+   * @generated from enum value: TOO_MANY_ATTEMPTS = 183;
+   */
+  TOO_MANY_ATTEMPTS = 183,
+
+  /**
+   * @generated from enum value: UPLOAD_INVALID = 184;
+   */
+  UPLOAD_INVALID = 184,
+
+  /**
+   * @generated from enum value: UPLOAD_NOT_FOUND = 185;
+   */
+  UPLOAD_NOT_FOUND = 185,
+
+  /**
+   * @generated from enum value: UPLOAD_OBJECT_MISSING = 186;
+   */
+  UPLOAD_OBJECT_MISSING = 186,
+
+  /**
+   * @generated from enum value: UPLOAD_VIDEO_INVALID = 187;
+   */
+  UPLOAD_VIDEO_INVALID = 187,
+
+  /**
+   * @generated from enum value: UPLOAD_VIDEO_UNSUPPORTED = 188;
+   */
+  UPLOAD_VIDEO_UNSUPPORTED = 188,
+
+  /**
+   * @generated from enum value: USER_ID_REQUIRED = 189;
+   */
+  USER_ID_REQUIRED = 189,
+
+  /**
+   * @generated from enum value: USER_NOT_FOUND = 190;
+   */
+  USER_NOT_FOUND = 190,
+
+  /**
+   * @generated from enum value: VERIFICATION_LINK_INVALID = 191;
+   */
+  VERIFICATION_LINK_INVALID = 191,
+
+  /**
+   * @generated from enum value: VIDEO_NOT_PUBLISHABLE = 192;
+   */
+  VIDEO_NOT_PUBLISHABLE = 192,
+
+  /**
+   * @generated from enum value: VOICE_ANALYZE_MODEL_REQUIRED = 193;
+   */
+  VOICE_ANALYZE_MODEL_REQUIRED = 193,
+
+  /**
+   * @generated from enum value: VOICE_BASELINE_MISMATCH = 194;
+   */
+  VOICE_BASELINE_MISMATCH = 194,
+
+  /**
+   * @generated from enum value: VOICE_BUSY = 195;
+   */
+  VOICE_BUSY = 195,
+
+  /**
+   * @generated from enum value: VOICE_COMPARISON_NOT_FOUND = 196;
+   */
+  VOICE_COMPARISON_NOT_FOUND = 196,
+
+  /**
+   * @generated from enum value: VOICE_CONFIRMATION_NOT_FOUND = 197;
+   */
+  VOICE_CONFIRMATION_NOT_FOUND = 197,
+
+  /**
+   * @generated from enum value: VOICE_CONTENT_LANGUAGE_MISMATCH = 198;
+   */
+  VOICE_CONTENT_LANGUAGE_MISMATCH = 198,
+
+  /**
+   * @generated from enum value: VOICE_DEFAULT_DELETE_FORBIDDEN = 199;
+   */
+  VOICE_DEFAULT_DELETE_FORBIDDEN = 199,
+
+  /**
+   * @generated from enum value: VOICE_DELETED = 200;
+   */
+  VOICE_DELETED = 200,
+
+  /**
+   * @generated from enum value: VOICE_DESCRIPTION_TOO_LONG = 201;
+   */
+  VOICE_DESCRIPTION_TOO_LONG = 201,
+
+  /**
+   * @generated from enum value: VOICE_FEEDBACK_INVALID = 202;
+   */
+  VOICE_FEEDBACK_INVALID = 202,
+
+  /**
+   * @generated from enum value: VOICE_INSUFFICIENT_SOURCES = 203;
+   */
+  VOICE_INSUFFICIENT_SOURCES = 203,
+
+  /**
+   * @generated from enum value: VOICE_INVALID_LIFECYCLE = 204;
+   */
+  VOICE_INVALID_LIFECYCLE = 204,
+
+  /**
+   * @generated from enum value: VOICE_LEARNING_NOT_FOUND = 205;
+   */
+  VOICE_LEARNING_NOT_FOUND = 205,
+
+  /**
+   * @generated from enum value: VOICE_NAME_REQUIRED = 206;
+   */
+  VOICE_NAME_REQUIRED = 206,
+
+  /**
+   * @generated from enum value: VOICE_NAME_TAKEN = 207;
+   */
+  VOICE_NAME_TAKEN = 207,
+
+  /**
+   * @generated from enum value: VOICE_NAME_TOO_LONG = 208;
+   */
+  VOICE_NAME_TOO_LONG = 208,
+
+  /**
+   * @generated from enum value: VOICE_NOT_FOUND = 209;
+   */
+  VOICE_NOT_FOUND = 209,
+
+  /**
+   * @generated from enum value: VOICE_REQUIRED = 210;
+   */
+  VOICE_REQUIRED = 210,
+
+  /**
+   * @generated from enum value: VOICE_RULE_NOT_FOUND = 211;
+   */
+  VOICE_RULE_NOT_FOUND = 211,
+
+  /**
+   * @generated from enum value: VOICE_SAMPLE_MUTATION_FAILED = 212;
+   */
+  VOICE_SAMPLE_MUTATION_FAILED = 212,
+
+  /**
+   * @generated from enum value: VOICE_SAMPLE_NOT_FOUND = 213;
+   */
+  VOICE_SAMPLE_NOT_FOUND = 213,
+
+  /**
+   * @generated from enum value: VOICE_SAMPLE_TOO_SHORT = 214;
+   */
+  VOICE_SAMPLE_TOO_SHORT = 214,
+
+  /**
+   * @generated from enum value: VOICE_SOURCE_LANGUAGE_REQUIRED = 215;
+   */
+  VOICE_SOURCE_LANGUAGE_REQUIRED = 215,
+
+  /**
+   * @generated from enum value: VOICE_SOURCE_LANGUAGE_UNSUPPORTED = 216;
+   */
+  VOICE_SOURCE_LANGUAGE_UNSUPPORTED = 216,
+
+  /**
+   * @generated from enum value: VOICE_VALIDATION_NOT_FOUND = 217;
+   */
+  VOICE_VALIDATION_NOT_FOUND = 217,
+
+  /**
+   * Reasons no Connect status carries: a durable job failure the browser renders from the
+   * job record, and one the browser raises itself. They are values of the same enum because
+   * the browser renders them from the same catalogue.
+   * a clip run that failed inside the pipeline: durable, so it reaches the browser through the job rather than through a status
+   *
+   * @generated from enum value: CLIP_PROCESSING_FAILED = 218;
+   */
+  CLIP_PROCESSING_FAILED = 218,
+
+  /**
+   * a layout refusal recorded on the plan
+   *
+   * @generated from enum value: CLIP_LAYOUT_FREQUENCY = 220;
+   */
+  CLIP_LAYOUT_FREQUENCY = 220,
+
+  /**
+   * a profile field the owner left empty, reported with the run
+   *
+   * @generated from enum value: VOICE_PROFILE_FIELD_REQUIRED = 221;
+   */
+  VOICE_PROFILE_FIELD_REQUIRED = 221,
+
+  /**
+   * the browser's own: no status ever carries it, and it is named here so the catalogue it is rendered from stays one list
+   *
+   * @generated from enum value: NETWORK_UNAVAILABLE = 222;
+   */
+  NETWORK_UNAVAILABLE = 222,
+}
+
+/**
+ * Describes the enum postpilot.v1.FailureReason.
+ */
+export const FailureReasonSchema: GenEnum<FailureReason> = /*@__PURE__*/
+  enumDesc(file_postpilot_v1_error, 0);

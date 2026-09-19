@@ -30,13 +30,27 @@ type AppFailure interface {
 // the code — the same failure is `resource_exhausted` when it refuses new work and
 // `permission_denied` when it refuses authority.
 func AppErrorFrom(code connect.Code, failure AppFailure) *connect.Error {
-	return NewAppError(code, failure.Error(), failure.Reason(), failure.Params())
+	return NewAppError(code, failure.Error(), ReasonOf(failure.Reason()), failure.Params())
 }
 
-func NewAppError(code connect.Code, message, reason string, params map[string]string) *connect.Error {
+// ReasonOf names a domain failure's reason as the wire enum. The domain keeps strings — it
+// may not import proto (ARCH-7) — so this is the one translation, and it is pinned: a reason
+// no enum value covers would come out as UNKNOWN_FAILURE, which `failure_reasons_test.go`
+// refuses by walking every reason the tree emits (ARCH-3).
+func ReasonOf(reason string) postpilotv1.FailureReason {
+	if value, ok := postpilotv1.FailureReason_value[reason]; ok {
+		return postpilotv1.FailureReason(value)
+	}
+	return postpilotv1.FailureReason_UNKNOWN_FAILURE
+}
+
+// NewAppError builds the Connect status one refusal travels as. The reason is the generated
+// enum, so a new one is a proto edit the compiler carries to every adapter; the WIRE stays
+// the reason's name, which is what keeps an older client and the agent unchanged.
+func NewAppError(code connect.Code, message string, reason postpilotv1.FailureReason, params map[string]string) *connect.Error {
 	connectErr := connect.NewError(code, errors.New(message))
 	detail, err := connect.NewErrorDetail(&postpilotv1.AppErrorDetail{
-		Reason: reason,
+		Reason: reason.String(),
 		Params: maps.Clone(params),
 	})
 	if err == nil {

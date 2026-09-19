@@ -105,7 +105,7 @@ func (h *AgentHandler) FailPublish(ctx context.Context, req *connect.Request[pos
 func actingAgent(ctx context.Context) (publishing.Agent, error) {
 	agent, ok := agentFromContext(ctx)
 	if !ok {
-		return publishing.Agent{}, rpcserver.NewAppError(connect.CodeUnauthenticated, "publishing agent authentication required", "AUTH_REQUIRED", nil)
+		return publishing.Agent{}, rpcserver.NewAppError(connect.CodeUnauthenticated, "publishing agent authentication required", postpilotv1.FailureReason_AUTH_REQUIRED, nil)
 	}
 	return agent, nil
 }

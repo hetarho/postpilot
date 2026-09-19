@@ -93,7 +93,7 @@ func (h *Handler) GetGeneration(ctx context.Context, req *connect.Request[postpi
 func actingUser(ctx context.Context) (string, error) {
 	userID, ok := auth.UserFromContext(ctx)
 	if !ok {
-		return "", rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", "AUTH_REQUIRED", nil)
+		return "", rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", postpilotv1.FailureReason_AUTH_REQUIRED, nil)
 	}
 	return userID, nil
 }
@@ -110,18 +110,18 @@ func toConnectError(op string, err error) error {
 	switch {
 	case errors.Is(err, generation.ErrNotFound):
 		if op == "get generation" {
-			return rpcserver.NewAppError(connect.CodeNotFound, "generation job not found", "JOB_NOT_FOUND", nil)
+			return rpcserver.NewAppError(connect.CodeNotFound, "generation job not found", postpilotv1.FailureReason_JOB_NOT_FOUND, nil)
 		}
-		return rpcserver.NewAppError(connect.CodeNotFound, "post not found", "POST_NOT_FOUND", nil)
+		return rpcserver.NewAppError(connect.CodeNotFound, "post not found", postpilotv1.FailureReason_POST_NOT_FOUND, nil)
 	case errors.Is(err, generation.ErrForbidden):
 		if op == "get generation" {
-			return rpcserver.NewAppError(connect.CodePermissionDenied, "generation job belongs to another user", "JOB_FORBIDDEN", nil)
+			return rpcserver.NewAppError(connect.CodePermissionDenied, "generation job belongs to another user", postpilotv1.FailureReason_JOB_FORBIDDEN, nil)
 		}
-		return rpcserver.NewAppError(connect.CodePermissionDenied, "post belongs to another user", "POST_FORBIDDEN", nil)
+		return rpcserver.NewAppError(connect.CodePermissionDenied, "post belongs to another user", postpilotv1.FailureReason_POST_FORBIDDEN, nil)
 	case errors.Is(err, generation.ErrWriteModelRequired):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "an enabled write model is required", "GENERATION_WRITE_MODEL_REQUIRED", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "an enabled write model is required", postpilotv1.FailureReason_GENERATION_WRITE_MODEL_REQUIRED, nil)
 	case errors.Is(err, generation.ErrObserveModelRequired):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "an enabled photo observation model is required", "GENERATION_OBSERVE_MODEL_REQUIRED", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "an enabled photo observation model is required", postpilotv1.FailureReason_GENERATION_OBSERVE_MODEL_REQUIRED, nil)
 	case errors.Is(err, generation.ErrVideoUnsupported):
 		// The model is NAMED, because the fix is to pick another one and the user is looking
 		// at the picker (VIDEO-11).
@@ -131,34 +131,34 @@ func toConnectError(op string, err error) error {
 			params["model"] = unsupported.Model
 		}
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition,
-			"the selected observe model cannot watch video", "MODEL_VIDEO_UNSUPPORTED", params)
+			"the selected observe model cannot watch video", postpilotv1.FailureReason_MODEL_VIDEO_UNSUPPORTED, params)
 	case errors.Is(err, generation.ErrLanguageRequired):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post target language is required", "POST_TARGET_LANGUAGE_REQUIRED", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post target language is required", postpilotv1.FailureReason_POST_TARGET_LANGUAGE_REQUIRED, nil)
 	case errors.Is(err, generation.ErrContentLanguageRequired):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "content language is required for revision", "CONTENT_LANGUAGE_REQUIRED", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "content language is required for revision", postpilotv1.FailureReason_CONTENT_LANGUAGE_REQUIRED, nil)
 	case errors.Is(err, generation.ErrRevisionContentRequired):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post content is required for revision", "REVISION_CONTENT_REQUIRED", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post content is required for revision", postpilotv1.FailureReason_REVISION_CONTENT_REQUIRED, nil)
 	case errors.Is(err, generation.ErrVoiceDeleted):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post voice is deleted", "VOICE_DELETED", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post voice is deleted", postpilotv1.FailureReason_VOICE_DELETED, nil)
 	case errors.Is(err, generation.ErrVoiceMismatch):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post voice changed after enqueue", "GENERATION_VOICE_MISMATCH", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post voice changed after enqueue", postpilotv1.FailureReason_GENERATION_VOICE_MISMATCH, nil)
 	case errors.Is(err, generation.ErrVoiceContentLanguageMismatch):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post content language does not match the voice source language", "VOICE_CONTENT_LANGUAGE_MISMATCH", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post content language does not match the voice source language", postpilotv1.FailureReason_VOICE_CONTENT_LANGUAGE_MISMATCH, nil)
 	case errors.Is(err, generation.ErrVoiceRequired):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post voice is required", "VOICE_REQUIRED", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post voice is required", postpilotv1.FailureReason_VOICE_REQUIRED, nil)
 	case errors.Is(err, generation.ErrRevisionInstructionRequired):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "revision instruction is required", "REVISION_INSTRUCTION_REQUIRED", nil)
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "revision instruction is required", postpilotv1.FailureReason_REVISION_INSTRUCTION_REQUIRED, nil)
 	case errors.Is(err, generation.ErrRevisionInstructionTooLong):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "revision instruction is too long", "REVISION_INSTRUCTION_TOO_LONG", map[string]string{
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "revision instruction is too long", postpilotv1.FailureReason_REVISION_INSTRUCTION_TOO_LONG, map[string]string{
 			"max": strconv.Itoa(generation.RevisionInstructionMaxChars),
 		})
 	case errors.Is(err, generation.ErrInvalidTargetLength):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "target length must be positive", "GENERATION_TARGET_LENGTH_INVALID", nil)
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "target length must be positive", postpilotv1.FailureReason_GENERATION_TARGET_LENGTH_INVALID, nil)
 	case errors.As(err, &active):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "generation is already in progress", "GENERATION_ALREADY_RUNNING", activeJobParams(active.ActiveID))
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "generation is already in progress", postpilotv1.FailureReason_GENERATION_ALREADY_RUNNING, activeJobParams(active.ActiveID))
 	default:
 		slog.Error(op+" failed", "err", err)
-		return rpcserver.NewAppError(connect.CodeInternal, "generation request failed", "UNKNOWN_FAILURE", nil)
+		return rpcserver.NewAppError(connect.CodeInternal, "generation request failed", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
 	}
 }
 

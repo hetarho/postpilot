@@ -89,7 +89,7 @@ func (h *Handler) DeleteTemplate(ctx context.Context, req *connect.Request[postp
 func actingUser(ctx context.Context) (string, error) {
 	userID, ok := auth.UserFromContext(ctx)
 	if !ok {
-		return "", rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", "AUTH_REQUIRED", nil)
+		return "", rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", postpilotv1.FailureReason_AUTH_REQUIRED, nil)
 	}
 	return userID, nil
 }
@@ -114,28 +114,28 @@ func toConnectError(op string, err error) error {
 		if outOfRange.Max > 0 {
 			params["max"] = strconv.Itoa(outOfRange.Max)
 		}
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "template number is out of range", "TEMPLATE_NUMBER_OUT_OF_RANGE", params)
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "template number is out of range", postpilotv1.FailureReason_TEMPLATE_NUMBER_OUT_OF_RANGE, params)
 	case errors.As(err, &tooLong):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "template field is too long", "TEMPLATE_FIELD_TOO_LONG", map[string]string{
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "template field is too long", postpilotv1.FailureReason_TEMPLATE_FIELD_TOO_LONG, map[string]string{
 			"field": tooLong.Field, "max": strconv.Itoa(tooLong.Max), "actual": strconv.Itoa(tooLong.Chars),
 		})
 	case errors.As(err, &parseErr):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "template body does not parse", "TEMPLATE_PARSE_FAILED", map[string]string{
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "template body does not parse", postpilotv1.FailureReason_TEMPLATE_PARSE_FAILED, map[string]string{
 			"line": strconv.Itoa(parseErr.Line), "reason": parseErr.Reason,
 		})
 	case errors.Is(err, template.ErrNameRequired):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "template name is required", "TEMPLATE_NAME_REQUIRED", nil)
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "template name is required", postpilotv1.FailureReason_TEMPLATE_NAME_REQUIRED, nil)
 	case errors.Is(err, template.ErrBodyRequired):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "template body is required", "TEMPLATE_BODY_REQUIRED", nil)
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "template body is required", postpilotv1.FailureReason_TEMPLATE_BODY_REQUIRED, nil)
 	case errors.Is(err, template.ErrDuplicateName):
-		return rpcserver.NewAppError(connect.CodeAlreadyExists, "template name already exists", "TEMPLATE_NAME_TAKEN", nil)
+		return rpcserver.NewAppError(connect.CodeAlreadyExists, "template name already exists", postpilotv1.FailureReason_TEMPLATE_NAME_TAKEN, nil)
 	case errors.Is(err, template.ErrTooMany):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "template limit reached", "TEMPLATE_LIMIT_REACHED", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "template limit reached", postpilotv1.FailureReason_TEMPLATE_LIMIT_REACHED, nil)
 	case errors.Is(err, template.ErrNotFound):
-		return rpcserver.NewAppError(connect.CodeNotFound, "template not found", "TEMPLATE_NOT_FOUND", nil)
+		return rpcserver.NewAppError(connect.CodeNotFound, "template not found", postpilotv1.FailureReason_TEMPLATE_NOT_FOUND, nil)
 	default:
 		slog.Error(op+" failed", "err", err)
-		return rpcserver.NewAppError(connect.CodeInternal, op+" failed", "UNKNOWN_FAILURE", nil)
+		return rpcserver.NewAppError(connect.CodeInternal, op+" failed", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
 	}
 }
 

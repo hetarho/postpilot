@@ -11,7 +11,7 @@ import (
 
 func TestNewAppErrorAttachesOneTypedDetail(t *testing.T) {
 	params := map[string]string{"max": "100", "actual": "101"}
-	err := rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid field", "PURPOSE_FIELD_TOO_LONG", params)
+	err := rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid field", postpilotv1.FailureReason_TEMPLATE_FIELD_TOO_LONG, params)
 	params["max"] = "changed after construction"
 
 	if got, want := err.Code(), connect.CodeInvalidArgument; got != want {
@@ -32,7 +32,7 @@ func TestNewAppErrorAttachesOneTypedDetail(t *testing.T) {
 	if !ok {
 		t.Fatalf("detail type = %T, want *postpilotv1.AppErrorDetail", value)
 	}
-	if got, want := detail.GetReason(), "PURPOSE_FIELD_TOO_LONG"; got != want {
+	if got, want := detail.GetReason(), "TEMPLATE_FIELD_TOO_LONG"; got != want {
 		t.Errorf("reason = %q, want %q", got, want)
 	}
 	if got, want := detail.GetParams()["max"], "100"; got != want {
@@ -44,7 +44,7 @@ func TestNewAppErrorAttachesOneTypedDetail(t *testing.T) {
 }
 
 func TestNewAppErrorAcceptsNoParams(t *testing.T) {
-	err := rpcserver.NewAppError(connect.CodeNotFound, "not found", "POST_NOT_FOUND", nil)
+	err := rpcserver.NewAppError(connect.CodeNotFound, "not found", postpilotv1.FailureReason_POST_NOT_FOUND, nil)
 	value, valueErr := err.Details()[0].Value()
 	if valueErr != nil {
 		t.Fatalf("decode detail: %v", valueErr)

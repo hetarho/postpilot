@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/platform/rpcserver"
 
 	"connectrpc.com/connect"
@@ -61,7 +62,7 @@ func (h *Handler) PrepareClipPreview(ctx context.Context, req *connect.Request[v
 
 func previewConnectError(err error) error {
 	if errors.Is(err, context.DeadlineExceeded) {
-		return rpcserver.NewAppError(connect.CodeDeadlineExceeded, "clip preview preparation timed out", "CLIP_PREVIEW_TIMEOUT", nil)
+		return rpcserver.NewAppError(connect.CodeDeadlineExceeded, "clip preview preparation timed out", postpilotv1.FailureReason_CLIP_PREVIEW_TIMEOUT, nil)
 	}
 	if errors.Is(err, context.Canceled) {
 		return connect.NewError(connect.CodeCanceled, context.Canceled)

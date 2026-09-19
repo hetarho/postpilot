@@ -45,7 +45,7 @@ func (h *Handler) SavePostDraft(ctx context.Context, req *connect.Request[postpi
 		if req.Msg.TargetLanguage != nil && *req.Msg.TargetLanguage == postpilotv1.ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED {
 			reason = "POST_TARGET_LANGUAGE_REQUIRED"
 		}
-		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid post target language", reason, nil)
+		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid post target language", rpcserver.ReasonOf(reason), nil)
 	}
 	saved, err := h.svc.SaveDraft(ctx, userID, req.Msg.GetSlug(), req.Msg.GetTitle(), req.Msg.GetMemo(),
 		req.Msg.VoiceId, req.Msg.TemplateId, targetLanguage, fromProtoTemplateAnswers(req.Msg.GetTemplateAnswers()))
@@ -62,7 +62,7 @@ func (h *Handler) SavePostContent(ctx context.Context, req *connect.Request[post
 	}
 	content, err := fromProtoContent(req.Msg.GetContent())
 	if err != nil {
-		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid post content", "POST_CONTENT_INVALID", nil)
+		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid post content", postpilotv1.FailureReason_POST_CONTENT_INVALID, nil)
 	}
 	saved, err := h.svc.SaveContent(ctx, userID, req.Msg.GetSlug(), content, req.Msg.GetExpectedRevision())
 	if err != nil {
@@ -237,7 +237,7 @@ func (h *Handler) DeleteVideo(ctx context.Context, req *connect.Request[postpilo
 func actingUser(ctx context.Context) (string, error) {
 	userID, ok := auth.UserFromContext(ctx)
 	if !ok {
-		return "", rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", "AUTH_REQUIRED", nil)
+		return "", rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", postpilotv1.FailureReason_AUTH_REQUIRED, nil)
 	}
 	return userID, nil
 }
@@ -250,68 +250,67 @@ func toConnectError(op string, err error) error {
 	// sentinel switch — the same shape the template context's field-too-long refusal uses.
 	var answerTooLong *post.TemplateAnswerTooLongError
 	if errors.As(err, &answerTooLong) {
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "template answer is too long",
-			"POST_TEMPLATE_ANSWER_TOO_LONG", map[string]string{
-				"field":  answerTooLong.Field,
-				"max":    strconv.Itoa(answerTooLong.Max),
-				"actual": strconv.Itoa(answerTooLong.Chars),
-			})
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "template answer is too long", postpilotv1.FailureReason_POST_TEMPLATE_ANSWER_TOO_LONG, map[string]string{
+			"field":  answerTooLong.Field,
+			"max":    strconv.Itoa(answerTooLong.Max),
+			"actual": strconv.Itoa(answerTooLong.Chars),
+		})
 	}
 	switch {
 	case errors.Is(err, post.ErrNotFound):
 		if op == "confirm upload" {
-			return rpcserver.NewAppError(connect.CodeNotFound, "upload not found", "UPLOAD_NOT_FOUND", nil)
+			return rpcserver.NewAppError(connect.CodeNotFound, "upload not found", postpilotv1.FailureReason_UPLOAD_NOT_FOUND, nil)
 		}
-		return rpcserver.NewAppError(connect.CodeNotFound, "post resource not found", "POST_NOT_FOUND", nil)
+		return rpcserver.NewAppError(connect.CodeNotFound, "post resource not found", postpilotv1.FailureReason_POST_NOT_FOUND, nil)
 	case errors.Is(err, post.ErrForbidden):
-		return rpcserver.NewAppError(connect.CodePermissionDenied, "post belongs to another user", "POST_FORBIDDEN", nil)
+		return rpcserver.NewAppError(connect.CodePermissionDenied, "post belongs to another user", postpilotv1.FailureReason_POST_FORBIDDEN, nil)
 	case errors.Is(err, post.ErrTemplateAnswerInvalid):
 		return rpcserver.NewAppError(connect.CodeInvalidArgument,
-			"a template answer needs a label, and one label at most once", "POST_TEMPLATE_ANSWER_INVALID", nil)
+			"a template answer needs a label, and one label at most once", postpilotv1.FailureReason_POST_TEMPLATE_ANSWER_INVALID, nil)
 	case errors.Is(err, post.ErrDuplicateFilename):
 		// One namespace across photos and videos, so the message names neither kind.
-		return rpcserver.NewAppError(connect.CodeAlreadyExists, "filename already exists in this post", "POST_FILENAME_TAKEN", nil)
+		return rpcserver.NewAppError(connect.CodeAlreadyExists, "filename already exists in this post", postpilotv1.FailureReason_POST_FILENAME_TAKEN, nil)
 	case errors.Is(err, post.ErrTooManyPhotos):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post already holds the maximum number of photos", "POST_PHOTO_LIMIT", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post already holds the maximum number of photos", postpilotv1.FailureReason_POST_PHOTO_LIMIT, nil)
 	case errors.Is(err, post.ErrTooManyVideos):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post already holds the maximum number of videos", "POST_VIDEO_LIMIT", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post already holds the maximum number of videos", postpilotv1.FailureReason_POST_VIDEO_LIMIT, nil)
 	case errors.Is(err, post.ErrUnsupportedVideo):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "unsupported video container", "UPLOAD_VIDEO_UNSUPPORTED", nil)
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "unsupported video container", postpilotv1.FailureReason_UPLOAD_VIDEO_UNSUPPORTED, nil)
 	case errors.Is(err, post.ErrInvalidImage):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid uploaded image", "UPLOAD_INVALID", nil)
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid uploaded image", postpilotv1.FailureReason_UPLOAD_INVALID, nil)
 	case errors.Is(err, post.ErrInvalidVideo):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid uploaded video", "UPLOAD_VIDEO_INVALID", nil)
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid uploaded video", postpilotv1.FailureReason_UPLOAD_VIDEO_INVALID, nil)
 	case errors.Is(err, post.ErrObjectMissing):
 		// FailedPrecondition, not NotFound: the upload record is fine, the object just
 		// is not there yet — the client should retry the PUT, not give up.
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "uploaded object is missing", "UPLOAD_OBJECT_MISSING", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "uploaded object is missing", postpilotv1.FailureReason_UPLOAD_OBJECT_MISSING, nil)
 	case errors.Is(err, post.ErrPostBusy):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post has an active job", "POST_BUSY", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post has an active job", postpilotv1.FailureReason_POST_BUSY, nil)
 	case errors.Is(err, post.ErrPostPublishing):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post has a live publish job", "POST_PUBLISHING", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post has a live publish job", postpilotv1.FailureReason_POST_PUBLISHING, nil)
 	case errors.Is(err, post.ErrStaleContentRevision):
-		return rpcserver.NewAppError(connect.CodeAborted, "post content revision is stale", "POST_CONTENT_STALE", nil)
+		return rpcserver.NewAppError(connect.CodeAborted, "post content revision is stale", postpilotv1.FailureReason_POST_CONTENT_STALE, nil)
 	case errors.Is(err, post.ErrNoMachineBaseline):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post has no machine baseline", "POST_MACHINE_BASELINE_REQUIRED", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post has no machine baseline", postpilotv1.FailureReason_POST_MACHINE_BASELINE_REQUIRED, nil)
 	case errors.Is(err, post.ErrPostNotFinalized):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post is not finalized", "POST_NOT_FINALIZED", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post is not finalized", postpilotv1.FailureReason_POST_NOT_FINALIZED, nil)
 	case errors.Is(err, post.ErrInvalidTagCount):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "tag count out of range", "POST_TAG_COUNT_INVALID", nil)
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "tag count out of range", postpilotv1.FailureReason_POST_TAG_COUNT_INVALID, nil)
 	case errors.Is(err, post.ErrInvalidContent):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid post content", "POST_CONTENT_INVALID", nil)
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid post content", postpilotv1.FailureReason_POST_CONTENT_INVALID, nil)
 	case errors.Is(err, post.ErrVoiceRequired):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "post voice is required", "VOICE_REQUIRED", nil)
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "post voice is required", postpilotv1.FailureReason_VOICE_REQUIRED, nil)
 	case errors.Is(err, post.ErrLanguageRequired):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "post target language is required", "POST_TARGET_LANGUAGE_REQUIRED", nil)
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "post target language is required", postpilotv1.FailureReason_POST_TARGET_LANGUAGE_REQUIRED, nil)
 	case errors.Is(err, post.ErrVoiceNotFound):
-		return rpcserver.NewAppError(connect.CodeNotFound, "voice not found", "VOICE_NOT_FOUND", nil)
+		return rpcserver.NewAppError(connect.CodeNotFound, "voice not found", postpilotv1.FailureReason_VOICE_NOT_FOUND, nil)
 	case errors.Is(err, post.ErrTemplateNotFound):
-		return rpcserver.NewAppError(connect.CodeNotFound, "template not found", "PURPOSE_NOT_FOUND", nil)
+		return rpcserver.NewAppError(connect.CodeNotFound, "template not found", postpilotv1.FailureReason_PURPOSE_NOT_FOUND, nil)
 	case errors.Is(err, post.ErrVoiceDeleted):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "voice is deleted", "VOICE_DELETED", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "voice is deleted", postpilotv1.FailureReason_VOICE_DELETED, nil)
 	default:
 		slog.Error(op+" failed", "err", err)
-		return rpcserver.NewAppError(connect.CodeInternal, op+" failed", "UNKNOWN_FAILURE", nil)
+		return rpcserver.NewAppError(connect.CodeInternal, op+" failed", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
 	}
 }
 

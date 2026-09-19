@@ -135,7 +135,7 @@ func (h *UserHandler) CancelPublish(ctx context.Context, req *connect.Request[po
 func actingUser(ctx context.Context) (string, error) {
 	userID, ok := auth.UserFromContext(ctx)
 	if !ok {
-		return "", rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", "AUTH_REQUIRED", nil)
+		return "", rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", postpilotv1.FailureReason_AUTH_REQUIRED, nil)
 	}
 	return userID, nil
 }

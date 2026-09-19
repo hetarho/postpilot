@@ -122,7 +122,7 @@ func (h *Handler) DismissGuidelineCandidate(ctx context.Context, req *connect.Re
 func actingUser(ctx context.Context) (string, error) {
 	userID, ok := auth.UserFromContext(ctx)
 	if !ok {
-		return "", rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", "AUTH_REQUIRED", nil)
+		return "", rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", postpilotv1.FailureReason_AUTH_REQUIRED, nil)
 	}
 	return userID, nil
 }
@@ -147,28 +147,28 @@ func toConnectError(op string, err error) error {
 	var atCap *guideline.AccountCapError
 	switch {
 	case errors.As(err, &tooLong):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "guideline text is too long", "GUIDELINE_TEXT_TOO_LONG", map[string]string{
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "guideline text is too long", postpilotv1.FailureReason_GUIDELINE_TEXT_TOO_LONG, map[string]string{
 			"max": strconv.Itoa(tooLong.Max), "actual": strconv.Itoa(tooLong.Chars),
 		})
 	case errors.As(err, &atCap):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "guideline limit reached", "GUIDELINE_LIMIT_REACHED", map[string]string{
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "guideline limit reached", postpilotv1.FailureReason_GUIDELINE_LIMIT_REACHED, map[string]string{
 			"max": strconv.Itoa(atCap.Max),
 		})
 	case errors.Is(err, guideline.ErrInvalidText):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "guideline text is required", "GUIDELINE_TEXT_REQUIRED", nil)
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "guideline text is required", postpilotv1.FailureReason_GUIDELINE_TEXT_REQUIRED, nil)
 	case errors.Is(err, guideline.ErrScopeShape):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "guideline scope is invalid", "GUIDELINE_SCOPE_INVALID", nil)
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "guideline scope is invalid", postpilotv1.FailureReason_GUIDELINE_SCOPE_INVALID, nil)
 	case errors.Is(err, guideline.ErrDuplicateText):
-		return rpcserver.NewAppError(connect.CodeAlreadyExists, "guideline text already exists", "GUIDELINE_TEXT_TAKEN", nil)
+		return rpcserver.NewAppError(connect.CodeAlreadyExists, "guideline text already exists", postpilotv1.FailureReason_GUIDELINE_TEXT_TAKEN, nil)
 	case errors.Is(err, guideline.ErrTemplateNotFound):
-		return rpcserver.NewAppError(connect.CodeNotFound, "scoped template not found", "GUIDELINE_TEMPLATE_NOT_FOUND", nil)
+		return rpcserver.NewAppError(connect.CodeNotFound, "scoped template not found", postpilotv1.FailureReason_GUIDELINE_TEMPLATE_NOT_FOUND, nil)
 	case errors.Is(err, guideline.ErrNotFound):
-		return rpcserver.NewAppError(connect.CodeNotFound, "guideline not found", "GUIDELINE_NOT_FOUND", nil)
+		return rpcserver.NewAppError(connect.CodeNotFound, "guideline not found", postpilotv1.FailureReason_GUIDELINE_NOT_FOUND, nil)
 	case errors.Is(err, guideline.ErrCandidateNotFound):
-		return rpcserver.NewAppError(connect.CodeNotFound, "guideline candidate not found", "GUIDELINE_CANDIDATE_NOT_FOUND", nil)
+		return rpcserver.NewAppError(connect.CodeNotFound, "guideline candidate not found", postpilotv1.FailureReason_GUIDELINE_CANDIDATE_NOT_FOUND, nil)
 	default:
 		slog.Error(op+" failed", "err", err)
-		return rpcserver.NewAppError(connect.CodeInternal, op+" failed", "UNKNOWN_FAILURE", nil)
+		return rpcserver.NewAppError(connect.CodeInternal, op+" failed", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
 	}
 }
 

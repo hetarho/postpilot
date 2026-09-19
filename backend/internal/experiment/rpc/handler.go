@@ -219,7 +219,7 @@ func (h *Handler) GetLeaderboard(ctx context.Context, req *connect.Request[postp
 func actingUser(ctx context.Context) (string, error) {
 	userID, ok := auth.UserFromContext(ctx)
 	if !ok {
-		return "", rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", "AUTH_REQUIRED", nil)
+		return "", rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", postpilotv1.FailureReason_AUTH_REQUIRED, nil)
 	}
 	return userID, nil
 }
@@ -235,45 +235,45 @@ func toConnectError(op string, err error) error {
 	var active *experiment.JobAlreadyInProgressError
 	switch {
 	case errors.Is(err, experiment.ErrNotFound):
-		return rpcserver.NewAppError(connect.CodeNotFound, "experiment not found", "EXPERIMENT_NOT_FOUND", nil)
+		return rpcserver.NewAppError(connect.CodeNotFound, "experiment not found", postpilotv1.FailureReason_EXPERIMENT_NOT_FOUND, nil)
 	case errors.Is(err, experiment.ErrCandidateNotFound):
-		return rpcserver.NewAppError(connect.CodeNotFound, "experiment candidate not found", "EXPERIMENT_CANDIDATE_NOT_FOUND", nil)
+		return rpcserver.NewAppError(connect.CodeNotFound, "experiment candidate not found", postpilotv1.FailureReason_EXPERIMENT_CANDIDATE_NOT_FOUND, nil)
 	case errors.Is(err, experiment.ErrForbidden):
-		return rpcserver.NewAppError(connect.CodePermissionDenied, "experiment belongs to another user", "EXPERIMENT_FORBIDDEN", nil)
+		return rpcserver.NewAppError(connect.CodePermissionDenied, "experiment belongs to another user", postpilotv1.FailureReason_EXPERIMENT_FORBIDDEN, nil)
 	case errors.Is(err, experiment.ErrInvalidStage):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid experiment stage", "EXPERIMENT_STAGE_INVALID", nil)
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid experiment stage", postpilotv1.FailureReason_EXPERIMENT_STAGE_INVALID, nil)
 	case errors.Is(err, experiment.ErrDuplicateCandidates):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "experiment candidates must differ", "EXPERIMENT_CANDIDATES_DUPLICATE", nil)
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "experiment candidates must differ", postpilotv1.FailureReason_EXPERIMENT_CANDIDATES_DUPLICATE, nil)
 	case errors.Is(err, experiment.ErrInvalidTargetLength):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "experiment target length must be positive", "EXPERIMENT_TARGET_LENGTH_INVALID", nil)
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "experiment target length must be positive", postpilotv1.FailureReason_EXPERIMENT_TARGET_LENGTH_INVALID, nil)
 	case errors.Is(err, experiment.ErrVoiceRequired):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "an active voice is required", "EXPERIMENT_VOICE_REQUIRED", nil)
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "an active voice is required", postpilotv1.FailureReason_EXPERIMENT_VOICE_REQUIRED, nil)
 	case errors.Is(err, experiment.ErrModelRequired):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "two enabled suitable models are required", "EXPERIMENT_MODELS_REQUIRED", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "two enabled suitable models are required", postpilotv1.FailureReason_EXPERIMENT_MODELS_REQUIRED, nil)
 	case errors.Is(err, experiment.ErrVideoUnsupported):
 		params := map[string]string{}
 		var unsupported *experiment.VideoUnsupportedError
 		if errors.As(err, &unsupported) {
 			params["model"] = unsupported.Model
 		}
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "the observe model cannot read signed post video URLs", "MODEL_VIDEO_UNSUPPORTED", params)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "the observe model cannot read signed post video URLs", postpilotv1.FailureReason_MODEL_VIDEO_UNSUPPORTED, params)
 	case errors.Is(err, experiment.ErrLanguageRequired):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post target language is required", "POST_TARGET_LANGUAGE_REQUIRED", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post target language is required", postpilotv1.FailureReason_POST_TARGET_LANGUAGE_REQUIRED, nil)
 	case errors.Is(err, experiment.ErrInvalidState):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "experiment state does not allow this operation", "EXPERIMENT_STATE_INVALID", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "experiment state does not allow this operation", postpilotv1.FailureReason_EXPERIMENT_STATE_INVALID, nil)
 	case errors.Is(err, experiment.ErrConfirmationRequired):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "experiment confirmation is required", "EXPERIMENT_CONFIRMATION_REQUIRED", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "experiment confirmation is required", postpilotv1.FailureReason_EXPERIMENT_CONFIRMATION_REQUIRED, nil)
 	case errors.Is(err, experiment.ErrSnapshotUnavailable):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "experiment snapshot is unavailable", "EXPERIMENT_SNAPSHOT_UNAVAILABLE", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "experiment snapshot is unavailable", postpilotv1.FailureReason_EXPERIMENT_SNAPSHOT_UNAVAILABLE, nil)
 	case errors.Is(err, experiment.ErrRetryModelUnavailable):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "experiment retry model is unavailable", "EXPERIMENT_RETRY_MODEL_UNAVAILABLE", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "experiment retry model is unavailable", postpilotv1.FailureReason_EXPERIMENT_RETRY_MODEL_UNAVAILABLE, nil)
 	case errors.Is(err, experiment.ErrVoiceUnavailable):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "experiment voice is unavailable", "EXPERIMENT_VOICE_UNAVAILABLE", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "experiment voice is unavailable", postpilotv1.FailureReason_EXPERIMENT_VOICE_UNAVAILABLE, nil)
 	case errors.As(err, &active):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "experiment is already in progress", "EXPERIMENT_ALREADY_RUNNING", activeJobParams(active.ActiveID))
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "experiment is already in progress", postpilotv1.FailureReason_EXPERIMENT_ALREADY_RUNNING, activeJobParams(active.ActiveID))
 	default:
 		slog.Error(op+" failed", "err", err)
-		return rpcserver.NewAppError(connect.CodeInternal, "experiment request failed", "UNKNOWN_FAILURE", nil)
+		return rpcserver.NewAppError(connect.CodeInternal, "experiment request failed", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
 	}
 }
 

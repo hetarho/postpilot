@@ -14,6 +14,7 @@ import (
 	clipapp "github.com/postpilot/backend/internal/clip/app"
 	"github.com/postpilot/backend/internal/clip/composition"
 	"github.com/postpilot/backend/internal/clip/design"
+	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/job"
 	jobrpc "github.com/postpilot/backend/internal/job/rpc"
@@ -53,7 +54,7 @@ func (h *Handler) StartClipGeneration(ctx context.Context, req *connect.Request[
 	if err != nil {
 		var admission *clip.ModelAdmissionError
 		if errors.Is(err, llm.ErrUnsupported) && !errors.As(err, &admission) {
-			return nil, rpcserver.NewAppError(connect.CodeFailedPrecondition, "video input is required", "MODEL_VIDEO_UNSUPPORTED", map[string]string{"model": observe.String()})
+			return nil, rpcserver.NewAppError(connect.CodeFailedPrecondition, "video input is required", postpilotv1.FailureReason_MODEL_VIDEO_UNSUPPORTED, map[string]string{"model": observe.String()})
 		}
 		return nil, toConnectError(err)
 	}
@@ -103,7 +104,7 @@ func (h *Handler) WithSources(sources *clipapp.SourceService) *Handler { h.sourc
 func actingUser(ctx context.Context) (string, error) {
 	user, ok := auth.UserFromContext(ctx)
 	if !ok {
-		return "", rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", "AUTH_REQUIRED", nil)
+		return "", rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", postpilotv1.FailureReason_AUTH_REQUIRED, nil)
 	}
 	return user, nil
 }
@@ -114,84 +115,84 @@ func toConnectError(err error) error {
 	var cut *clip.CutError
 	switch {
 	case errors.As(err, &cut):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid clip cut", "CLIP_INVALID_INPUT", map[string]string{"cut_id": cut.CutID, "check": cut.OutputValidationCode()})
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid clip cut", postpilotv1.FailureReason_CLIP_INVALID_INPUT, map[string]string{"cut_id": cut.CutID, "check": cut.OutputValidationCode()})
 	case errors.Is(err, clip.ErrFinalized):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip is finalized", "CLIP_FINALIZED", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip is finalized", postpilotv1.FailureReason_CLIP_FINALIZED, nil)
 	case errors.Is(err, clip.ErrFinalizationConflict):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip result changed", "CLIP_FINALIZATION_CONFLICT", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip result changed", postpilotv1.FailureReason_CLIP_FINALIZATION_CONFLICT, nil)
 	case errors.Is(err, clip.ErrFinalizationInvalid):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip cannot be finalized", "CLIP_FINALIZATION_INVALID", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip cannot be finalized", postpilotv1.FailureReason_CLIP_FINALIZATION_INVALID, nil)
 	case errors.Is(err, clip.ErrPreviewBusy):
-		return rpcserver.NewAppError(connect.CodeResourceExhausted, "clip preview is busy", "CLIP_PREVIEW_BUSY", nil)
+		return rpcserver.NewAppError(connect.CodeResourceExhausted, "clip preview is busy", postpilotv1.FailureReason_CLIP_PREVIEW_BUSY, nil)
 	case errors.Is(err, clip.ErrPreviewTooLarge):
-		return rpcserver.NewAppError(connect.CodeResourceExhausted, "clip preview is too large", "CLIP_PREVIEW_TOO_LARGE", nil)
+		return rpcserver.NewAppError(connect.CodeResourceExhausted, "clip preview is too large", postpilotv1.FailureReason_CLIP_PREVIEW_TOO_LARGE, nil)
 	case errors.Is(err, clip.ErrPreviewUnavailable):
-		return rpcserver.NewAppError(connect.CodeUnavailable, "clip preview unavailable", "CLIP_PREVIEW_UNAVAILABLE", nil)
+		return rpcserver.NewAppError(connect.CodeUnavailable, "clip preview unavailable", postpilotv1.FailureReason_CLIP_PREVIEW_UNAVAILABLE, nil)
 	case errors.As(err, &problem):
 		// A bounded answer names what the owner typed and by how much it is over,
 		// because a line number in a template body means nothing in the answer
 		// form (CLIP-102).
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid clip composition", "CLIP_COMPOSITION_INVALID", problem.FailureParams())
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid clip composition", postpilotv1.FailureReason_CLIP_COMPOSITION_INVALID, problem.FailureParams())
 	case errors.Is(err, clip.ErrCompositionUnavailable):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip composition execution unavailable", "CLIP_COMPOSITION_UNAVAILABLE", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip composition execution unavailable", postpilotv1.FailureReason_CLIP_COMPOSITION_UNAVAILABLE, nil)
 	// The model's admission answer first: it unwraps to the generic unsupported
 	// error and must keep its own reason and the model it names (CLIP-44, LANG-21).
 	case errors.As(err, &admission):
 		f := admission.Failure()
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip analysis model not eligible", f.Reason, f.Params)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip analysis model not eligible", rpcserver.ReasonOf(f.Reason), f.Params)
 	case errors.Is(err, clip.ErrQuoteRequired):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip credit approval required", "CLIP_QUOTE_REQUIRED", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip credit approval required", postpilotv1.FailureReason_CLIP_QUOTE_REQUIRED, nil)
 	case errors.Is(err, clip.ErrCancellationPolicy):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip cancellation approval required", "CLIP_CANCELLATION_POLICY_REQUIRED", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip cancellation approval required", postpilotv1.FailureReason_CLIP_CANCELLATION_POLICY_REQUIRED, nil)
 	case errors.Is(err, clip.ErrQuoteExpired):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip credit quote expired", "CLIP_QUOTE_EXPIRED", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip credit quote expired", postpilotv1.FailureReason_CLIP_QUOTE_EXPIRED, nil)
 	case errors.Is(err, clip.ErrQuoteChanged):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip credit quote changed", "CLIP_QUOTE_CHANGED", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip credit quote changed", postpilotv1.FailureReason_CLIP_QUOTE_CHANGED, nil)
 	case errors.Is(err, clip.ErrPricingUnavailable):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip model pricing unavailable", "CLIP_MODEL_PRICING_UNAVAILABLE", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip model pricing unavailable", postpilotv1.FailureReason_CLIP_MODEL_PRICING_UNAVAILABLE, nil)
 	case errors.Is(err, clip.ErrModelInputUnsupported):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip model input unsupported", "CLIP_MODEL_INPUT_UNSUPPORTED", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip model input unsupported", postpilotv1.FailureReason_CLIP_MODEL_INPUT_UNSUPPORTED, nil)
 	case errors.Is(err, clip.ErrWorkspaceLimit):
-		return rpcserver.NewAppError(connect.CodeResourceExhausted, "clip workspace limit", "CLIP_WORKSPACE_LIMIT", nil)
+		return rpcserver.NewAppError(connect.CodeResourceExhausted, "clip workspace limit", postpilotv1.FailureReason_CLIP_WORKSPACE_LIMIT, nil)
 	case errors.Is(err, clip.ErrInputTooLarge):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "clip input limit", "CLIP_INPUT_TOO_LARGE", nil)
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "clip input limit", postpilotv1.FailureReason_CLIP_INPUT_TOO_LARGE, nil)
 	case errors.Is(err, clip.ErrAnalysisTooLarge):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "clip analysis copy limit", "CLIP_ANALYSIS_TOO_LARGE", nil)
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "clip analysis copy limit", postpilotv1.FailureReason_CLIP_ANALYSIS_TOO_LARGE, nil)
 	case errors.Is(err, clip.ErrPlanConflict):
-		return rpcserver.NewAppError(connect.CodeAborted, "clip edit plan changed", "CLIP_PLAN_CONFLICT", nil)
+		return rpcserver.NewAppError(connect.CodeAborted, "clip edit plan changed", postpilotv1.FailureReason_CLIP_PLAN_CONFLICT, nil)
 	case errors.Is(err, clip.ErrDisclosureRequired):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip disclosure is required", "CLIP_DISCLOSURE_REQUIRED", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip disclosure is required", postpilotv1.FailureReason_CLIP_DISCLOSURE_REQUIRED, nil)
 	case errors.Is(err, clip.ErrTargetDurationRequired):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip target duration is required", "CLIP_TARGET_DURATION_REQUIRED", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip target duration is required", postpilotv1.FailureReason_CLIP_TARGET_DURATION_REQUIRED, nil)
 	case errors.As(err, &facts):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip needs more on-screen facts", "CLIP_FACTS_REQUIRED", map[string]string{"labels": strings.Join(facts.Labels, ", ")})
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip needs more on-screen facts", postpilotv1.FailureReason_CLIP_FACTS_REQUIRED, map[string]string{"labels": strings.Join(facts.Labels, ", ")})
 	case errors.Is(err, clip.ErrBusy):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip is busy", "CLIP_BUSY", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip is busy", postpilotv1.FailureReason_CLIP_BUSY, nil)
 	case errors.Is(err, llm.ErrModelUnavailable):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "model is unavailable", "MODEL_UNAVAILABLE", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "model is unavailable", postpilotv1.FailureReason_MODEL_UNAVAILABLE, nil)
 	case errors.Is(err, llm.ErrProviderDisabled):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "model provider is disabled", "PROVIDER_DISABLED", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "model provider is disabled", postpilotv1.FailureReason_PROVIDER_DISABLED, nil)
 	case errors.Is(err, clip.ErrInvalidMedia):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "clip media is invalid", "CLIP_INVALID_MEDIA", nil)
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "clip media is invalid", postpilotv1.FailureReason_CLIP_INVALID_MEDIA, nil)
 	case errors.Is(err, clip.ErrCopyTooLong):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "clip copy does not fit", "CLIP_COPY_TOO_LONG", nil)
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "clip copy does not fit", postpilotv1.FailureReason_CLIP_COPY_TOO_LONG, nil)
 	case errors.Is(err, clip.ErrSourceExpired):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip originals expired", "CLIP_SOURCE_EXPIRED", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip originals expired", postpilotv1.FailureReason_CLIP_SOURCE_EXPIRED, nil)
 	case errors.Is(err, clip.ErrSourceMissing):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip originals missing", "CLIP_SOURCE_MISSING", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip originals missing", postpilotv1.FailureReason_CLIP_SOURCE_MISSING, nil)
 	case errors.Is(err, clip.ErrSourceState):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip source batch is not available", "CLIP_SOURCE_UNAVAILABLE", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip source batch is not available", postpilotv1.FailureReason_CLIP_SOURCE_UNAVAILABLE, nil)
 	case errors.Is(err, clip.ErrNotFound):
-		return rpcserver.NewAppError(connect.CodeNotFound, "clip or video template not found", "CLIP_NOT_FOUND", nil)
+		return rpcserver.NewAppError(connect.CodeNotFound, "clip or video template not found", postpilotv1.FailureReason_CLIP_NOT_FOUND, nil)
 	case errors.Is(err, clip.ErrDuplicateName):
-		return rpcserver.NewAppError(connect.CodeAlreadyExists, "video template name already exists", "CLIP_TEMPLATE_NAME_TAKEN", nil)
+		return rpcserver.NewAppError(connect.CodeAlreadyExists, "video template name already exists", postpilotv1.FailureReason_CLIP_TEMPLATE_NAME_TAKEN, nil)
 	case errors.Is(err, clip.ErrRenderUnavailable):
 		return connect.NewError(connect.CodeUnimplemented, err)
 	case errors.Is(err, clip.ErrInvalid):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid clip input", "CLIP_INVALID_INPUT", nil)
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid clip input", postpilotv1.FailureReason_CLIP_INVALID_INPUT, nil)
 	default:
 		slog.Error("clip operation failed", "err", err)
-		return rpcserver.NewAppError(connect.CodeInternal, "clip operation failed", "UNKNOWN_FAILURE", nil)
+		return rpcserver.NewAppError(connect.CodeInternal, "clip operation failed", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
 	}
 }
 func fields(values []*v1.ClipInformationField) []clip.InformationField {

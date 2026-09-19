@@ -124,17 +124,17 @@ func NewHandler(ledger Ledger, estimator Estimator) *Handler {
 func (h *Handler) GetMyPlan(ctx context.Context, _ *connect.Request[postpilotv1.GetMyPlanRequest]) (*connect.Response[postpilotv1.GetMyPlanResponse], error) {
 	userID, ok := auth.UserFromContext(ctx)
 	if !ok {
-		return nil, rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", "AUTH_REQUIRED", nil)
+		return nil, rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", postpilotv1.FailureReason_AUTH_REQUIRED, nil)
 	}
 	acting, ok := auth.PlanFromContext(ctx)
 	if !ok {
-		return nil, rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", "AUTH_REQUIRED", nil)
+		return nil, rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", postpilotv1.FailureReason_AUTH_REQUIRED, nil)
 	}
 
 	balance, err := h.ledger.BalanceFor(ctx, userID, acting)
 	if err != nil {
 		slog.Error("plan balance read failed", "user_id", userID, "err", err)
-		return nil, rpcserver.NewAppError(connect.CodeInternal, "could not read plan balance", "UNKNOWN_FAILURE", nil)
+		return nil, rpcserver.NewAppError(connect.CodeInternal, "could not read plan balance", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
 	}
 
 	lots := make([]*postpilotv1.CreditLot, 0, len(balance.Lots))

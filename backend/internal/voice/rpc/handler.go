@@ -244,7 +244,7 @@ func (h *Handler) RestoreVoiceProfile(ctx context.Context, req *connect.Request[
 func actingUser(ctx context.Context) (string, error) {
 	userID, ok := auth.UserFromContext(ctx)
 	if !ok {
-		return "", rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", "AUTH_REQUIRED", nil)
+		return "", rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", postpilotv1.FailureReason_AUTH_REQUIRED, nil)
 	}
 	return userID, nil
 }
@@ -266,45 +266,45 @@ func toConnectError(op string, err error) error {
 	var mismatch *voice.ContentLanguageMismatchError
 	switch {
 	case errors.As(err, &tooShort):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "voice sample is too short", "VOICE_SAMPLE_TOO_SHORT", map[string]string{"actual": fmt.Sprint(tooShort.Chars), "min": fmt.Sprint(voice.SampleMinChars)})
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "voice sample is too short", postpilotv1.FailureReason_VOICE_SAMPLE_TOO_SHORT, map[string]string{"actual": fmt.Sprint(tooShort.Chars), "min": fmt.Sprint(voice.SampleMinChars)})
 	case errors.As(err, &badName):
 		if badName.Chars == 0 {
-			return rpcserver.NewAppError(connect.CodeInvalidArgument, "voice name is required", "VOICE_NAME_REQUIRED", nil)
+			return rpcserver.NewAppError(connect.CodeInvalidArgument, "voice name is required", postpilotv1.FailureReason_VOICE_NAME_REQUIRED, nil)
 		}
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "voice name is too long", "VOICE_NAME_TOO_LONG", map[string]string{"actual": fmt.Sprint(badName.Chars), "max": fmt.Sprint(voice.VoiceNameMaxChars)})
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "voice name is too long", postpilotv1.FailureReason_VOICE_NAME_TOO_LONG, map[string]string{"actual": fmt.Sprint(badName.Chars), "max": fmt.Sprint(voice.VoiceNameMaxChars)})
 	case errors.As(err, &longDescription):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "voice description is too long", "VOICE_DESCRIPTION_TOO_LONG", map[string]string{"actual": fmt.Sprint(longDescription.Chars), "max": fmt.Sprint(voice.VoiceDescriptionMaxChars)})
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "voice description is too long", postpilotv1.FailureReason_VOICE_DESCRIPTION_TOO_LONG, map[string]string{"actual": fmt.Sprint(longDescription.Chars), "max": fmt.Sprint(voice.VoiceDescriptionMaxChars)})
 	case errors.Is(err, voice.ErrVoiceRequired):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "voice is required", "VOICE_REQUIRED", nil)
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "voice is required", postpilotv1.FailureReason_VOICE_REQUIRED, nil)
 	case errors.Is(err, voice.ErrLanguageRequired):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "voice source language is required", "VOICE_SOURCE_LANGUAGE_REQUIRED", nil)
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "voice source language is required", postpilotv1.FailureReason_VOICE_SOURCE_LANGUAGE_REQUIRED, nil)
 	case errors.Is(err, voice.ErrLanguageUnsupported):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "voice source language is unsupported", "VOICE_SOURCE_LANGUAGE_UNSUPPORTED", nil)
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "voice source language is unsupported", postpilotv1.FailureReason_VOICE_SOURCE_LANGUAGE_UNSUPPORTED, nil)
 	case errors.Is(err, voice.ErrVoiceNotFound):
-		return rpcserver.NewAppError(connect.CodeNotFound, "voice not found", "VOICE_NOT_FOUND", nil)
+		return rpcserver.NewAppError(connect.CodeNotFound, "voice not found", postpilotv1.FailureReason_VOICE_NOT_FOUND, nil)
 	case errors.Is(err, voice.ErrSampleNotFound):
-		return rpcserver.NewAppError(connect.CodeNotFound, "voice sample not found", "VOICE_SAMPLE_NOT_FOUND", nil)
+		return rpcserver.NewAppError(connect.CodeNotFound, "voice sample not found", postpilotv1.FailureReason_VOICE_SAMPLE_NOT_FOUND, nil)
 	case errors.Is(err, voice.ErrSampleMutation):
-		return rpcserver.NewAppError(connect.CodeInternal, "voice sample could not be updated", "VOICE_SAMPLE_MUTATION_FAILED", nil)
+		return rpcserver.NewAppError(connect.CodeInternal, "voice sample could not be updated", postpilotv1.FailureReason_VOICE_SAMPLE_MUTATION_FAILED, nil)
 	case errors.Is(err, voice.ErrVoiceNameTaken):
-		return rpcserver.NewAppError(connect.CodeAlreadyExists, "voice name already exists", "VOICE_NAME_TAKEN", nil)
+		return rpcserver.NewAppError(connect.CodeAlreadyExists, "voice name already exists", postpilotv1.FailureReason_VOICE_NAME_TAKEN, nil)
 	case errors.Is(err, voice.ErrVoiceDeleted):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "voice is deleted", "VOICE_DELETED", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "voice is deleted", postpilotv1.FailureReason_VOICE_DELETED, nil)
 	case errors.Is(err, voice.ErrVoiceIsDefault):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "default voice cannot be deleted", "VOICE_DEFAULT_DELETE_FORBIDDEN", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "default voice cannot be deleted", postpilotv1.FailureReason_VOICE_DEFAULT_DELETE_FORBIDDEN, nil)
 	case errors.Is(err, voice.ErrVoiceBusy):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "voice has unfinished work", "VOICE_BUSY", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "voice has unfinished work", postpilotv1.FailureReason_VOICE_BUSY, nil)
 	case errors.Is(err, voice.ErrBaselineVoiceMismatch):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post baseline voice does not match current voice", "VOICE_BASELINE_MISMATCH", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post baseline voice does not match current voice", postpilotv1.FailureReason_VOICE_BASELINE_MISMATCH, nil)
 	case errors.As(err, &mismatch):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post content language does not match voice source language", "VOICE_CONTENT_LANGUAGE_MISMATCH", languageMismatchParams(mismatch))
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post content language does not match voice source language", postpilotv1.FailureReason_VOICE_CONTENT_LANGUAGE_MISMATCH, languageMismatchParams(mismatch))
 	case errors.Is(err, voice.ErrAnalyzeModelRequired):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "an enabled analyze model is required", "VOICE_ANALYZE_MODEL_REQUIRED", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "an enabled analyze model is required", postpilotv1.FailureReason_VOICE_ANALYZE_MODEL_REQUIRED, nil)
 	case errors.Is(err, voice.ErrInvalidLifecycle):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "voice state does not allow this operation", "VOICE_INVALID_LIFECYCLE", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "voice state does not allow this operation", postpilotv1.FailureReason_VOICE_INVALID_LIFECYCLE, nil)
 	default:
 		slog.Error(op+" failed", "err", err)
-		return rpcserver.NewAppError(connect.CodeInternal, op+" failed", "UNKNOWN_FAILURE", nil)
+		return rpcserver.NewAppError(connect.CodeInternal, op+" failed", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
 	}
 }
 

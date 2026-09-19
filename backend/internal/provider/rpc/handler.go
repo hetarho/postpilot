@@ -82,10 +82,10 @@ func (h *Handler) SaveSelection(ctx context.Context, req *connect.Request[postpi
 	stage, ok := fromProtoStage(req.Msg.GetStage())
 	if !ok {
 		if req.Msg.GetStage() == postpilotv1.Stage_STAGE_UNSPECIFIED {
-			return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "stage is required", "MODEL_STAGE_REQUIRED", nil)
+			return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "stage is required", postpilotv1.FailureReason_MODEL_STAGE_REQUIRED, nil)
 		}
 		// A newer client than this server: say so rather than "required".
-		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, fmt.Sprintf("unknown stage: %s", req.Msg.GetStage()), "MODEL_STAGE_INVALID", nil)
+		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, fmt.Sprintf("unknown stage: %s", req.Msg.GetStage()), postpilotv1.FailureReason_MODEL_STAGE_INVALID, nil)
 	}
 	ref := llm.ModelRef{ProviderID: req.Msg.GetRef().GetProviderId(), ModelID: req.Msg.GetRef().GetModelId()}
 	saved, err := h.svc.SaveSelection(ctx, userID, stage, ref)
@@ -124,7 +124,7 @@ func (h *Handler) SaveComparisonPair(ctx context.Context, req *connect.Request[p
 			reason = "MODEL_STAGE_REQUIRED"
 			message = "stage is required"
 		}
-		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, message, reason, nil)
+		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, message, rpcserver.ReasonOf(reason), nil)
 	}
 	pair, err := h.svc.SaveComparisonPair(ctx, userID, stage, fromProtoRef(req.Msg.GetCandidateA()), fromProtoRef(req.Msg.GetCandidateB()))
 	if err != nil {
@@ -173,7 +173,7 @@ func (h *Handler) ApplyRecommendationSet(ctx context.Context, req *connect.Reque
 func actingUser(ctx context.Context) (string, error) {
 	userID, ok := auth.UserFromContext(ctx)
 	if !ok {
-		return "", rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", "AUTH_REQUIRED", nil)
+		return "", rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", postpilotv1.FailureReason_AUTH_REQUIRED, nil)
 	}
 	return userID, nil
 }
@@ -191,20 +191,20 @@ func toConnectError(op string, err error) error {
 	}
 	switch {
 	case errors.Is(err, provider.ErrUnknownStage):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "unknown stage", "MODEL_STAGE_INVALID", nil)
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "unknown stage", postpilotv1.FailureReason_MODEL_STAGE_INVALID, nil)
 	case errors.Is(err, provider.ErrModelNotRegistered):
-		return rpcserver.NewAppError(connect.CodeNotFound, "model not registered", "MODEL_NOT_REGISTERED", nil)
+		return rpcserver.NewAppError(connect.CodeNotFound, "model not registered", postpilotv1.FailureReason_MODEL_NOT_REGISTERED, nil)
 	case errors.Is(err, provider.ErrRecommendationNotFound):
-		return rpcserver.NewAppError(connect.CodeNotFound, "recommendation not found", "MODEL_RECOMMENDATION_NOT_FOUND", nil)
+		return rpcserver.NewAppError(connect.CodeNotFound, "recommendation not found", postpilotv1.FailureReason_MODEL_RECOMMENDATION_NOT_FOUND, nil)
 	case errors.Is(err, provider.ErrModelDisabled):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "model disabled", "MODEL_DISABLED", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "model disabled", postpilotv1.FailureReason_MODEL_DISABLED, nil)
 	case errors.Is(err, provider.ErrModelUnsuitable):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "model unsuitable", "MODEL_UNSUITABLE", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "model unsuitable", postpilotv1.FailureReason_MODEL_UNSUITABLE, nil)
 	case errors.Is(err, provider.ErrDuplicateCandidates):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "duplicate candidates", "MODEL_CANDIDATES_DUPLICATE", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "duplicate candidates", postpilotv1.FailureReason_MODEL_CANDIDATES_DUPLICATE, nil)
 	default:
 		slog.Error(op+" failed", "err", err)
-		return rpcserver.NewAppError(connect.CodeInternal, op+" failed", "UNKNOWN_FAILURE", nil)
+		return rpcserver.NewAppError(connect.CodeInternal, op+" failed", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
 	}
 }
 

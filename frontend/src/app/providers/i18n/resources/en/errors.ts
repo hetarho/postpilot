@@ -1,3 +1,5 @@
+import type { AppFailureReason } from '@/shared/api'
+
 export const errors = {
   UNKNOWN_FAILURE: 'Could not complete the request. Please try again.',
   AUTH_REQUIRED: 'Log in to continue.',
@@ -267,4 +269,4 @@ export const errors = {
   USER_ID_REQUIRED: 'Choose an account.',
   MASTER_ONLY: 'This is available to operator accounts only.',
   NETWORK_UNAVAILABLE: 'Could not connect to the network.',
-} as const
+} as const satisfies Record<AppFailureReason, string>

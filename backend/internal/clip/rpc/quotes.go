@@ -7,6 +7,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/postpilot/backend/internal/clip"
+	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/platform/rpcserver"
@@ -25,7 +26,7 @@ func (h *Handler) QuoteClipGeneration(ctx context.Context, req *connect.Request[
 	q, err := h.generation.Quote(ctx, user, req.Msg.ProjectId, req.Msg.BatchId, observe.String(), write.String())
 	var admission *clip.ModelAdmissionError
 	if errors.Is(err, llm.ErrUnsupported) && !errors.As(err, &admission) {
-		return nil, rpcserver.NewAppError(connect.CodeFailedPrecondition, "video input is required", "MODEL_VIDEO_UNSUPPORTED", map[string]string{"model": observe.String()})
+		return nil, rpcserver.NewAppError(connect.CodeFailedPrecondition, "video input is required", postpilotv1.FailureReason_MODEL_VIDEO_UNSUPPORTED, map[string]string{"model": observe.String()})
 	}
 	if err != nil {
 		return nil, toConnectError(err)

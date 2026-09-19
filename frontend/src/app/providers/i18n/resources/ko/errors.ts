@@ -1,3 +1,5 @@
+import type { AppFailureReason } from '@/shared/api'
+
 export const errors = {
   UNKNOWN_FAILURE: '요청을 마치지 못했어요. 다시 시도해 주세요.',
   AUTH_REQUIRED: '로그인이 필요해요.',
@@ -260,4 +262,4 @@ export const errors = {
   USER_ID_REQUIRED: '계정을 선택해 주세요.',
   MASTER_ONLY: '운영자 계정만 쓸 수 있는 기능이에요.',
   NETWORK_UNAVAILABLE: '네트워크에 연결할 수 없어요.',
-} as const
+} as const satisfies Record<AppFailureReason, string>

@@ -76,7 +76,7 @@ func (h *Handler) ListCatalog(ctx context.Context, req *connect.Request[postpilo
 func (h *Handler) SetModelPurpose(ctx context.Context, req *connect.Request[postpilotv1.SetModelPurposeRequest]) (*connect.Response[postpilotv1.SetModelPurposeResponse], error) {
 	modelID := req.Msg.GetModelId()
 	if modelID == "" {
-		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "a model id is required", "MODEL_ID_REQUIRED", nil)
+		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "a model id is required", postpilotv1.FailureReason_MODEL_ID_REQUIRED, nil)
 	}
 	purpose := modelcatalog.Purpose(req.Msg.GetPurpose())
 	model, err := h.svc.SetPurpose(ctx, modelID, purpose, req.Msg.GetRegistered())
@@ -91,7 +91,7 @@ func (h *Handler) SetModelPurpose(ctx context.Context, req *connect.Request[post
 func (h *Handler) UpdateModel(ctx context.Context, req *connect.Request[postpilotv1.UpdateModelRequest]) (*connect.Response[postpilotv1.UpdateModelResponse], error) {
 	modelID := req.Msg.GetModelId()
 	if modelID == "" {
-		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "a model id is required", "MODEL_ID_REQUIRED", nil)
+		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "a model id is required", postpilotv1.FailureReason_MODEL_ID_REQUIRED, nil)
 	}
 	patch := modelcatalog.Patch{Purpose: modelcatalog.Purpose(req.Msg.GetPurpose())}
 	if req.Msg.ReasoningEffort != nil {
@@ -225,18 +225,18 @@ func toProtoReasoningSpend(spend *modelcatalog.ReasoningSpend) *postpilotv1.Reas
 func toConnectError(op string, err error) error {
 	switch {
 	case errors.Is(err, modelcatalog.ErrNotFound):
-		return rpcserver.NewAppError(connect.CodeNotFound, "model not found", "MODEL_NOT_FOUND", nil)
+		return rpcserver.NewAppError(connect.CodeNotFound, "model not found", postpilotv1.FailureReason_MODEL_NOT_FOUND, nil)
 	case errors.Is(err, modelcatalog.ErrInvalidReasoning):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "unknown reasoning effort", "MODEL_REASONING_INVALID", nil)
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "unknown reasoning effort", postpilotv1.FailureReason_MODEL_REASONING_INVALID, nil)
 	case errors.Is(err, modelcatalog.ErrUnknownPurpose):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "unknown purpose", "MODEL_PURPOSE_INVALID", nil)
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "unknown purpose", postpilotv1.FailureReason_MODEL_PURPOSE_INVALID, nil)
 	case errors.Is(err, modelcatalog.ErrPurposeIneligible):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "model not capable of this purpose", "MODEL_PURPOSE_INELIGIBLE", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "model not capable of this purpose", postpilotv1.FailureReason_MODEL_PURPOSE_INELIGIBLE, nil)
 	case errors.Is(err, modelcatalog.ErrPurposeNotRegistered):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "model is not registered to this purpose", "MODEL_PURPOSE_NOT_REGISTERED", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "model is not registered to this purpose", postpilotv1.FailureReason_MODEL_PURPOSE_NOT_REGISTERED, nil)
 	default:
 		slog.Error(op+" failed", "err", err)
-		return rpcserver.NewAppError(connect.CodeInternal, op+" failed", "UNKNOWN_FAILURE", nil)
+		return rpcserver.NewAppError(connect.CodeInternal, op+" failed", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
 	}
 }
 

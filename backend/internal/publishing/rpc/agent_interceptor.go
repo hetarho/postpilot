@@ -8,6 +8,7 @@ import (
 
 	"connectrpc.com/connect"
 
+	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
 	"github.com/postpilot/backend/internal/platform/rpcserver"
 	"github.com/postpilot/backend/internal/publishing"
@@ -53,18 +54,18 @@ func (i *AgentInterceptor) authorize(ctx context.Context, procedure string, head
 	}
 	scheme, token, ok := strings.Cut(strings.TrimSpace(header.Get("Authorization")), " ")
 	if !ok || !strings.EqualFold(scheme, "Bearer") || strings.TrimSpace(token) == "" {
-		return nil, rpcserver.NewAppError(connect.CodeUnauthenticated, "publishing agent authentication required", "AUTH_REQUIRED", nil)
+		return nil, rpcserver.NewAppError(connect.CodeUnauthenticated, "publishing agent authentication required", postpilotv1.FailureReason_AUTH_REQUIRED, nil)
 	}
 	agent, err := i.auth.AuthenticateAgent(ctx, token)
 	if err != nil {
 		if errors.Is(err, publishing.ErrAgentRevoked) {
-			return nil, rpcserver.NewAppError(connect.CodeUnauthenticated, "publishing agent authentication failed", "PUBLISH_AGENT_REVOKED", nil)
+			return nil, rpcserver.NewAppError(connect.CodeUnauthenticated, "publishing agent authentication failed", postpilotv1.FailureReason_PUBLISH_AGENT_REVOKED, nil)
 		}
 		// A token lookup failure is operational, not credential revocation. Returning
 		// Unauthenticated would make the Mac supervisor stop permanently instead of
 		// applying its transient-error backoff. The last_seen_at refresh cannot arrive
 		// here: the service keeps it non-fatal so a failed write costs only freshness.
-		return nil, rpcserver.NewAppError(connect.CodeUnavailable, "publishing agent authentication is temporarily unavailable", "PUBLISH_AGENT_UNAVAILABLE", nil)
+		return nil, rpcserver.NewAppError(connect.CodeUnavailable, "publishing agent authentication is temporarily unavailable", postpilotv1.FailureReason_PUBLISH_AGENT_UNAVAILABLE, nil)
 	}
 	return withAgent(ctx, agent), nil
 }

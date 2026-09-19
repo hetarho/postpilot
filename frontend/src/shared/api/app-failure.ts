@@ -1,15 +1,22 @@
 import { Code, ConnectError } from '@connectrpc/connect'
 
 import type { AppErrorDetail, Failure as ProtoFailure } from './gen/postpilot/v1/error_pb'
-import { AppErrorDetailSchema } from './gen/postpilot/v1/error_pb'
+import { AppErrorDetailSchema, FailureReason } from './gen/postpilot/v1/error_pb'
 
 type FailureParamSpec = Readonly<{
   required?: readonly string[]
   optional?: readonly string[]
 }>
 
-// This is the browser's allowlist for the public failure contract. A backend reason is
-// intentionally not displayable until it is registered here and in both locale catalogs.
+/** Every refusal the API can name, from the proto enum both sides compile against (T278).
+ *
+ *  The enum is the contract; this file and the two locale catalogues are typed by it, so a
+ *  reason nobody gave params or copy to is a `tsc` error rather than the generic unknown
+ *  message reaching a user (ARCH-3). */
+export type AppFailureReason = keyof typeof FailureReason
+
+// What params each reason is allowed to carry. Keyed by the enum, so adding a reason to the
+// proto makes this object incomplete until it is given a spec.
 export const appFailureSpecs = {
   UNKNOWN_FAILURE: {},
   AUTH_REQUIRED: {},
@@ -255,9 +262,7 @@ export const appFailureSpecs = {
   LAST_MASTER: {},
   USER_NOT_FOUND: {},
   USER_ID_REQUIRED: {},
-} as const satisfies Readonly<Record<string, FailureParamSpec>>
-
-export type AppFailureReason = keyof typeof appFailureSpecs
+} as const satisfies Readonly<Record<AppFailureReason, FailureParamSpec>>
 
 export interface AppFailure {
   readonly reason: AppFailureReason

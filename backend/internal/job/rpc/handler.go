@@ -25,18 +25,18 @@ func NewHandler(queue *job.Queue) *Handler { return &Handler{queue: queue} }
 func (h *Handler) GetGeneration(ctx context.Context, req *connect.Request[postpilotv1.GetGenerationRequest]) (*connect.Response[postpilotv1.GetGenerationResponse], error) {
 	userID, ok := auth.UserFromContext(ctx)
 	if !ok {
-		return nil, rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", "AUTH_REQUIRED", nil)
+		return nil, rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", postpilotv1.FailureReason_AUTH_REQUIRED, nil)
 	}
 	found, err := h.queue.Get(ctx, req.Msg.GetId(), userID)
 	if err != nil {
 		switch {
 		case errors.Is(err, job.ErrNotFound):
-			return nil, rpcserver.NewAppError(connect.CodeNotFound, "job not found", "JOB_NOT_FOUND", nil)
+			return nil, rpcserver.NewAppError(connect.CodeNotFound, "job not found", postpilotv1.FailureReason_JOB_NOT_FOUND, nil)
 		case errors.Is(err, job.ErrForbidden):
-			return nil, rpcserver.NewAppError(connect.CodePermissionDenied, "job belongs to another user", "JOB_FORBIDDEN", nil)
+			return nil, rpcserver.NewAppError(connect.CodePermissionDenied, "job belongs to another user", postpilotv1.FailureReason_JOB_FORBIDDEN, nil)
 		default:
 			slog.Error("get generation failed", "err", err)
-			return nil, rpcserver.NewAppError(connect.CodeInternal, "get generation failed", "UNKNOWN_FAILURE", nil)
+			return nil, rpcserver.NewAppError(connect.CodeInternal, "get generation failed", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
 		}
 	}
 	return connect.NewResponse(&postpilotv1.GetGenerationResponse{Job: ToProto(found)}), nil

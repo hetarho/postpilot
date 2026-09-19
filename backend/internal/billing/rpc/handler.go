@@ -27,7 +27,7 @@ func (h *Handler) GetMyBilling(ctx context.Context, _ *connect.Request[postpilot
 	view, err := h.service.GetMyBilling(ctx, userID)
 	if err != nil {
 		slog.Error("billing read failed", "user_id", userID, "err", err)
-		return nil, rpcserver.NewAppError(connect.CodeInternal, "could not read billing", "UNKNOWN_FAILURE", nil)
+		return nil, rpcserver.NewAppError(connect.CodeInternal, "could not read billing", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
 	}
 	response := &postpilotv1.GetMyBillingResponse{CustomerKey: view.CustomerKey}
 	if view.Subscription != nil {
@@ -82,7 +82,7 @@ func (h *Handler) Subscribe(ctx context.Context, req *connect.Request[postpilotv
 	tier, tierOK := planrpc.FromProto(req.Msg.GetPlan())
 	term, termOK := termFromProto(req.Msg.GetTerm())
 	if !tierOK || !termOK {
-		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid subscription selection", "TIER_NOT_SUBSCRIBABLE", nil)
+		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid subscription selection", postpilotv1.FailureReason_TIER_NOT_SUBSCRIBABLE, nil)
 	}
 	subscription, err := h.service.Subscribe(ctx, userID, tier, term)
 	if err != nil {
@@ -99,7 +99,7 @@ func (h *Handler) ChangeSubscription(ctx context.Context, req *connect.Request[p
 	tier, tierOK := planrpc.FromProto(req.Msg.GetPlan())
 	term, termOK := termFromProto(req.Msg.GetTerm())
 	if !tierOK || !termOK {
-		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid subscription selection", "TIER_NOT_SUBSCRIBABLE", nil)
+		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid subscription selection", postpilotv1.FailureReason_TIER_NOT_SUBSCRIBABLE, nil)
 	}
 	subscription, appliedNow, err := h.service.ChangeSubscription(ctx, userID, tier, term)
 	if err != nil {
@@ -151,15 +151,15 @@ func (h *Handler) QuotePrice(ctx context.Context, req *connect.Request[postpilot
 	tier, ok := planrpc.FromProto(req.Msg.GetPlan())
 	term, termOK := termFromProto(req.Msg.GetTerm())
 	if !ok || !termOK || (tier != plan.Basic && tier != plan.Pro && tier != plan.Max) {
-		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid billing selection", "BILLING_SELECTION_INVALID", nil)
+		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid billing selection", postpilotv1.FailureReason_BILLING_SELECTION_INVALID, nil)
 	}
 	quote, err := h.service.QuotePrice(ctx, tier, term)
 	if errors.Is(err, billing.ErrUnavailable) {
-		return nil, rpcserver.NewAppError(connect.CodeFailedPrecondition, "billing unavailable", "BILLING_UNAVAILABLE", nil)
+		return nil, rpcserver.NewAppError(connect.CodeFailedPrecondition, "billing unavailable", postpilotv1.FailureReason_BILLING_UNAVAILABLE, nil)
 	}
 	if err != nil {
 		slog.Error("billing quote failed", "user_id", func() string { id, _ := auth.UserFromContext(ctx); return id }(), "err", err)
-		return nil, rpcserver.NewAppError(connect.CodeInternal, "could not quote price", "UNKNOWN_FAILURE", nil)
+		return nil, rpcserver.NewAppError(connect.CodeInternal, "could not quote price", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
 	}
 	return connect.NewResponse(&postpilotv1.QuotePriceResponse{UsdCents: int32(quote.USDCents), Krw: int64(quote.KRW), KrwPerUsdE4: quote.RatePerUSDE4, RateDate: quote.RateDate}), nil
 }
@@ -172,7 +172,7 @@ func (h *Handler) QuoteChange(ctx context.Context, req *connect.Request[postpilo
 	tier, tierOK := planrpc.FromProto(req.Msg.GetPlan())
 	term, termOK := termFromProto(req.Msg.GetTerm())
 	if !tierOK || !termOK {
-		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid subscription selection", "TIER_NOT_SUBSCRIBABLE", nil)
+		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid subscription selection", postpilotv1.FailureReason_TIER_NOT_SUBSCRIBABLE, nil)
 	}
 	quote, err := h.service.QuoteChange(ctx, userID, tier, term)
 	if err != nil {
@@ -284,24 +284,24 @@ func toProtoPurchase(value billing.Purchase) *postpilotv1.BillingPurchase {
 func purchaseError(userID string, err error) error {
 	switch {
 	case errors.Is(err, billing.ErrUnavailable):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "billing unavailable", "BILLING_UNAVAILABLE", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "billing unavailable", postpilotv1.FailureReason_BILLING_UNAVAILABLE, nil)
 	case errors.Is(err, billing.ErrPurchaseTooSmall):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "purchase must be at least one dollar", "PURCHASE_TOO_SMALL", nil)
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "purchase must be at least one dollar", postpilotv1.FailureReason_PURCHASE_TOO_SMALL, nil)
 	case errors.Is(err, billing.ErrPaymentMethodRequired):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "payment method required", "PAYMENT_METHOD_REQUIRED", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "payment method required", postpilotv1.FailureReason_PAYMENT_METHOD_REQUIRED, nil)
 	case errors.Is(err, billing.ErrPurchaseNotFound):
-		return rpcserver.NewAppError(connect.CodeNotFound, "purchase not found", "PURCHASE_NOT_FOUND", nil)
+		return rpcserver.NewAppError(connect.CodeNotFound, "purchase not found", postpilotv1.FailureReason_PURCHASE_NOT_FOUND, nil)
 	case errors.Is(err, billing.ErrRefundWindowClosed):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "refund window closed", "REFUND_WINDOW_CLOSED", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "refund window closed", postpilotv1.FailureReason_REFUND_WINDOW_CLOSED, nil)
 	case errors.Is(err, billing.ErrPurchaseSpent):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "purchased credits were spent", "PURCHASE_SPENT", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "purchased credits were spent", postpilotv1.FailureReason_PURCHASE_SPENT, nil)
 	case errors.Is(err, billing.ErrRefundFailed):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "refund failed", "REFUND_FAILED", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "refund failed", postpilotv1.FailureReason_REFUND_FAILED, nil)
 	case errors.Is(err, billing.ErrChargeFailed):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "charge failed", "CHARGE_FAILED", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "charge failed", postpilotv1.FailureReason_CHARGE_FAILED, nil)
 	default:
 		slog.Error("credit purchase operation failed", "user_id", userID, "err", err)
-		return rpcserver.NewAppError(connect.CodeInternal, "could not complete credit purchase operation", "UNKNOWN_FAILURE", nil)
+		return rpcserver.NewAppError(connect.CodeInternal, "could not complete credit purchase operation", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
 	}
 }
 
@@ -329,71 +329,71 @@ func instant(value time.Time) string { return value.UTC().Format(time.RFC3339) }
 func registrationError(userID string, err error) error {
 	switch {
 	case errors.Is(err, billing.ErrUnavailable):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "billing unavailable", "BILLING_UNAVAILABLE", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "billing unavailable", postpilotv1.FailureReason_BILLING_UNAVAILABLE, nil)
 	case errors.Is(err, billing.ErrEmailVerificationRequired):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "verified email required", "EMAIL_VERIFICATION_REQUIRED", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "verified email required", postpilotv1.FailureReason_EMAIL_VERIFICATION_REQUIRED, nil)
 	case errors.Is(err, billing.ErrCustomerKeyMismatch):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "customer key does not match account", "CUSTOMER_KEY_MISMATCH", nil)
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "customer key does not match account", postpilotv1.FailureReason_CUSTOMER_KEY_MISMATCH, nil)
 	default:
 		slog.Error("payment method registration failed", "user_id", userID, "err", err)
-		return rpcserver.NewAppError(connect.CodeInternal, "could not register payment method", "UNKNOWN_FAILURE", nil)
+		return rpcserver.NewAppError(connect.CodeInternal, "could not register payment method", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
 	}
 }
 
 func removalError(userID string, err error) error {
 	switch {
 	case errors.Is(err, billing.ErrUnavailable):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "billing unavailable", "BILLING_UNAVAILABLE", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "billing unavailable", postpilotv1.FailureReason_BILLING_UNAVAILABLE, nil)
 	case errors.Is(err, billing.ErrSubscriptionNeedsMethod):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "subscription needs a payment method", "SUBSCRIPTION_NEEDS_METHOD", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "subscription needs a payment method", postpilotv1.FailureReason_SUBSCRIPTION_NEEDS_METHOD, nil)
 	default:
 		slog.Error("payment method removal failed", "user_id", userID, "err", err)
-		return rpcserver.NewAppError(connect.CodeInternal, "could not remove payment method", "UNKNOWN_FAILURE", nil)
+		return rpcserver.NewAppError(connect.CodeInternal, "could not remove payment method", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
 	}
 }
 
 func subscriptionError(userID string, err error) error {
 	switch {
 	case errors.Is(err, billing.ErrUnavailable):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "billing unavailable", "BILLING_UNAVAILABLE", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "billing unavailable", postpilotv1.FailureReason_BILLING_UNAVAILABLE, nil)
 	case errors.Is(err, billing.ErrTierNotSubscribable):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "tier is not subscribable", "TIER_NOT_SUBSCRIBABLE", nil)
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "tier is not subscribable", postpilotv1.FailureReason_TIER_NOT_SUBSCRIBABLE, nil)
 	case errors.Is(err, billing.ErrSubscriptionExists):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "subscription already exists", "SUBSCRIPTION_EXISTS", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "subscription already exists", postpilotv1.FailureReason_SUBSCRIPTION_EXISTS, nil)
 	case errors.Is(err, billing.ErrPaymentMethodRequired):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "payment method required", "PAYMENT_METHOD_REQUIRED", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "payment method required", postpilotv1.FailureReason_PAYMENT_METHOD_REQUIRED, nil)
 	case errors.Is(err, billing.ErrChargeFailed):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "charge failed", "CHARGE_FAILED", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "charge failed", postpilotv1.FailureReason_CHARGE_FAILED, nil)
 	default:
 		slog.Error("subscription start failed", "user_id", userID, "err", err)
-		return rpcserver.NewAppError(connect.CodeInternal, "could not start subscription", "UNKNOWN_FAILURE", nil)
+		return rpcserver.NewAppError(connect.CodeInternal, "could not start subscription", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
 	}
 }
 
 func changeError(userID string, err error) error {
 	switch {
 	case errors.Is(err, billing.ErrUnavailable):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "billing unavailable", "BILLING_UNAVAILABLE", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "billing unavailable", postpilotv1.FailureReason_BILLING_UNAVAILABLE, nil)
 	case errors.Is(err, billing.ErrTierNotSubscribable):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "tier is not subscribable", "TIER_NOT_SUBSCRIBABLE", nil)
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "tier is not subscribable", postpilotv1.FailureReason_TIER_NOT_SUBSCRIBABLE, nil)
 	case errors.Is(err, billing.ErrSubscriptionRequired):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "active subscription required", "SUBSCRIPTION_REQUIRED", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "active subscription required", postpilotv1.FailureReason_SUBSCRIPTION_REQUIRED, nil)
 	case errors.Is(err, billing.ErrNoChange):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "subscription already has this selection", "NO_CHANGE", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "subscription already has this selection", postpilotv1.FailureReason_NO_CHANGE, nil)
 	case errors.Is(err, billing.ErrNoScheduledChange):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "no scheduled subscription change", "NO_SCHEDULED_CHANGE", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "no scheduled subscription change", postpilotv1.FailureReason_NO_SCHEDULED_CHANGE, nil)
 	case errors.Is(err, billing.ErrChangeUnsupported):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "change tier and term separately", "CHANGE_UNSUPPORTED", nil)
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "change tier and term separately", postpilotv1.FailureReason_CHANGE_UNSUPPORTED, nil)
 	case errors.Is(err, billing.ErrPaymentMethodRequired):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "payment method required", "PAYMENT_METHOD_REQUIRED", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "payment method required", postpilotv1.FailureReason_PAYMENT_METHOD_REQUIRED, nil)
 	case errors.Is(err, billing.ErrChargeFailed):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "charge failed", "CHARGE_FAILED", nil)
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "charge failed", postpilotv1.FailureReason_CHARGE_FAILED, nil)
 	default:
 		slog.Error("subscription change failed", "user_id", userID, "err", err)
-		return rpcserver.NewAppError(connect.CodeInternal, "could not change subscription", "UNKNOWN_FAILURE", nil)
+		return rpcserver.NewAppError(connect.CodeInternal, "could not change subscription", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
 	}
 }
 
 func authRequired() error {
-	return rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", "AUTH_REQUIRED", nil)
+	return rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", postpilotv1.FailureReason_AUTH_REQUIRED, nil)
 }
