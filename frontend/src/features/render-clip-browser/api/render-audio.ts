@@ -1,10 +1,7 @@
-import {
-  browserAudioPlan,
-  clipBrowserEncoderConfig,
-  type ClipEditPlan,
-  type ClipRatio,
-} from '@/entities/clip-project'
-import { CLIP_BROWSER_RENDER, CLIP_DESIGN } from '@/entities/clip-project'
+import { type ClipEditPlan } from '@/entities/clip-plan'
+import { browserAudioPlan, clipBrowserEncoderConfig } from '@/entities/clip-preview'
+import { type ClipRatio } from '@/entities/clip-project'
+import { CLIP_BROWSER_RENDER, CLIP_DESIGN } from '@/entities/clip-design'
 import {
   createAudioProcessor,
   mp4HasAudio,

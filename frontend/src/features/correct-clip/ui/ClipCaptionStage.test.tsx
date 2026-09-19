@@ -1,7 +1,7 @@
 import userEvent from '@testing-library/user-event'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
-import type { ClipCanvasBox, ClipCaptionFragment, ClipEditableText } from '@/entities/clip-project'
+import type { ClipCanvasBox, ClipCaptionFragment, ClipEditableText } from '@/entities/clip-plan'
 import { clipTimelineFixture } from '@/test/clip-editing'
 import { ClipCaptionStage } from './ClipCaptionStage'
 import { ClipTextControls } from './ClipTextControls'

@@ -1,14 +1,9 @@
 import { createClient, type Transport } from '@connectrpc/connect'
-import {
-  clipRenderNeedsAudio,
-  toClipProject,
-  type ClipProject,
-  type ClipEditPlan,
-  type ClipRatio,
-  type BrowserVideoTrack,
-} from '@/entities/clip-project'
+import { type ClipEditPlan } from '@/entities/clip-plan'
+import { clipRenderNeedsAudio, type BrowserVideoTrack } from '@/entities/clip-preview'
+import { toClipProject, type ClipProject, type ClipRatio } from '@/entities/clip-project'
 import { ClipService, ClipRenderKind } from '@/shared/api'
-import { CLIP_BROWSER_RENDER } from '@/entities/clip-project'
+import { CLIP_BROWSER_RENDER } from '@/entities/clip-design'
 import { BrowserOriginals } from '../lib/originals'
 import { prepareBrowserRenderAssets } from './prepare-assets'
 import { renderBrowserVideo } from './render-video'

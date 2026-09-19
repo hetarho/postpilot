@@ -3,28 +3,30 @@ import { createClient } from '@connectrpc/connect'
 import { useTransport } from '@connectrpc/connect-query'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
+  acknowledgeClipCuts,
+  clipDraftKey,
   clipPlanToProto,
   clipSourceSound,
-  withSourceSound,
-  setClipSourceOriginalSound,
-  getClipSources,
-  clipProjectsKey,
-  clipDraftKey,
+  clipTimelineReducer,
   copyClipPlan,
   createClipTimeline,
-  clipTimelineReducer,
-  acknowledgeClipCuts,
   ownerCutId,
-  toClipProject,
-  validateTimelinePlan,
-  type ClipProject,
-  type ClipSourceBatch,
   type ClipEditPlan,
   type TimelineEdit,
-  type ClipAddCutSelection,
+  validateTimelinePlan,
+  withSourceSound,
+} from '@/entities/clip-plan'
+import { type ClipAddCutSelection } from '@/entities/clip-observation'
+import {
+  clipProjectsKey,
+  getClipSources,
+  setClipSourceOriginalSound,
+  toClipProject,
+  type ClipProject,
+  type ClipSourceBatch,
 } from '@/entities/clip-project'
 import { ClipService, appFailureFromConnect } from '@/shared/api'
-import { CLIP_TIMELINE } from '@/entities/clip-project'
+import { CLIP_TIMELINE } from '@/entities/clip-design'
 export interface ClipSoundSource {
   sourceId: string
   fingerprint: string

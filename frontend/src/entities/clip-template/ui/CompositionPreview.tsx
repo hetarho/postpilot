@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next'
 import {
   CLIP_COMPOSITION_LIMITS,
   CLIP_COMPOSITION_PREVIEW,
-} from '@/entities/clip-project/@x/clip-template'
-import { type ClipRatioId } from '@/entities/clip-project/@x/clip-template'
+} from '@/entities/clip-design/@x/clip-template'
+import { type ClipRatioId } from '@/entities/clip-design/@x/clip-template'
 import { Slider, Typography } from '@/shared/ui'
 import {
   CompositionProblem,

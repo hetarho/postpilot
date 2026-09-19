@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { ClipProject, BrowserVideoTrack } from '@/entities/clip-project'
+import type { BrowserVideoTrack } from '@/entities/clip-preview'
+import type { ClipProject } from '@/entities/clip-project'
 import { clipTimelineFixture } from '@/test/clip-editing'
 import {
   runBrowserRender,

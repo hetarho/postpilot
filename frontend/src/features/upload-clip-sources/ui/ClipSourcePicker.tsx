@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { appFailureFromConnect } from '@/shared/api'
-import { CLIP_SOURCE_CONTAINERS } from '@/entities/clip-project'
+import { CLIP_SOURCE_CONTAINERS } from '@/entities/clip-design'
 import { DirectUploadError } from '@/shared/lib/upload'
 import { ClipSourceStrip } from '@/entities/clip-project'
 import { AppFailureMessage, Button, ProgressBar, Typography, buttonStyles } from '@/shared/ui'

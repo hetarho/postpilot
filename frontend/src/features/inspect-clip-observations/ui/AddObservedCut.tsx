@@ -1,13 +1,12 @@
 import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { CLIP_TRANSITION } from '@/entities/clip-project'
+import { CLIP_TRANSITION } from '@/entities/clip-design'
+import { clipSeconds, type ClipEditPlan } from '@/entities/clip-plan'
 import {
-  clipSeconds,
   type ClipAddCutSelection,
-  type ClipEditPlan,
-  type ClipSourceObservation,
   type ClipObservedSegment,
-} from '@/entities/clip-project'
+  type ClipSourceObservation,
+} from '@/entities/clip-observation'
 import { Button, FieldLabel, FieldMessage, RangeSlider, TextField, Typography } from '@/shared/ui'
 
 export function AddObservedCut({

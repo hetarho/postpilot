@@ -3,7 +3,7 @@ import { Download } from 'lucide-react'
 import { useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { clipProjectsKey, ClipNoticeList, type ClipProject } from '@/entities/clip-project'
+import { ClipNoticeList, clipProjectsKey, type ClipProject } from '@/entities/clip-project'
 import { Button, Typography, buttonStyles } from '@/shared/ui'
 
 // Key this component by result.createdAt: a new output gets its own single

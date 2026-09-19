@@ -1,11 +1,11 @@
 import type { Transport } from '@connectrpc/connect'
+import { type ClipEditPlan } from '@/entities/clip-plan'
 import {
-  clipPreviewRequest,
   PreviewAssetCache,
   PreviewPreparation,
-  type ClipEditPlan,
+  clipPreviewRequest,
   type PreparedAsset,
-} from '@/entities/clip-project'
+} from '@/entities/clip-preview'
 
 /** The same server PNGs, manifest checks and runtime-only cache the preview uses. */
 export async function prepareBrowserRenderAssets(

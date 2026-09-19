@@ -2,18 +2,18 @@ import { useEffect, useRef } from 'react'
 import { Film, Redo2, Undo2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import {
-  type ClipNotice,
   clipSeconds,
+  clipTextTracks,
+  cutRate,
+  narrationSlot,
   timelineCuts,
   timelineLabelFits,
-  clipTextTracks,
-  narrationSlot,
-  cutRate,
   type ClipEditPlan,
   type ClipSelection,
-} from '@/entities/clip-project'
+} from '@/entities/clip-plan'
+import { type ClipNotice } from '@/entities/clip-project'
 import { Button, Typography } from '@/shared/ui'
-import { CLIP_TIMELINE } from '@/entities/clip-project'
+import { CLIP_TIMELINE } from '@/entities/clip-design'
 export function ClipTimeline({
   plan,
   selection,

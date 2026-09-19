@@ -2,8 +2,8 @@ import {
   CLIP_COMPOSITION_LIMITS,
   CLIP_DESIGN,
   CLIP_REGIONS,
-} from '@/entities/clip-project/@x/clip-template'
-import { type ClipRegionPresets } from '@/entities/clip-project/@x/clip-template'
+} from '@/entities/clip-design/@x/clip-template'
+import { type ClipRegionPresets } from '@/entities/clip-design/@x/clip-template'
 import type { ClipComposition } from '../model/composition'
 
 const slots = (kind: 'intro' | 'outro', preset: string) =>

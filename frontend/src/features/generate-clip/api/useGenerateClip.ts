@@ -6,10 +6,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   clipProjectsKey,
   toClipProject,
-  useClipAnalysisEligibility,
   type ClipProject,
   type ClipQuote,
   type ReadyClipBatch,
+  useClipAnalysisEligibility,
 } from '@/entities/clip-project'
 import { isTerminal, useJob } from '@/entities/generation-job'
 import { myPlanQueryKey } from '@/entities/plan'

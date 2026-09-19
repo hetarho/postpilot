@@ -1,10 +1,13 @@
 import type { ClipNotice } from './notices'
-import type { ClipProjectRequest } from './revision'
+import type { ClipProjectRequest } from '@/entities/clip-plan/@x/clip-project'
 import type { GenerationJob } from '@/entities/generation-job/@x/clip-project'
-import type { ClipCTAId, ClipDisclosureId } from '../config'
+import type { ClipCTAId, ClipDisclosureId } from '@/entities/clip-design/@x/clip-project'
 import type { ClipProjectComposition, ClipCompositionInputs } from './composition'
-import type { ClipEditingState } from './edit-plan'
-import type { ClipObservations } from './observations'
+import type { ClipEditingState } from '@/entities/clip-plan/@x/clip-project'
+import type {
+  ClipAttemptInspection,
+  ClipObservations,
+} from '@/entities/clip-observation/@x/clip-project'
 import {
   compositionCharacters,
   type ClipAccent,
@@ -15,7 +18,7 @@ import { emptyCompositionInputs, validCompositionInputs } from './composition-in
 export const CLIP_RATIOS = ['vertical', 'horizontal', 'square'] as const
 /** The five campaign types and three CTAs, read from the design system: the
  *  phrases are code-owned and only these ids ever travel (CDS-29, CDS-31). */
-import { CLIP_CTAS, CLIP_DISCLOSURES } from '../config'
+import { CLIP_CTAS, CLIP_DISCLOSURES } from '@/entities/clip-design/@x/clip-project'
 export type ClipRatio = (typeof CLIP_RATIOS)[number]
 export type ClipRenderKind = 'server' | 'browser'
 export const CLIP_PROJECT_LIMITS = {
@@ -304,20 +307,4 @@ export function validClipProject(
           value.answers.some((a) => a.label === field.label && !!a.text.trim()),
         ))
   )
-}
-
-export interface ClipAttemptInspection {
-  evidenceLimited?: boolean
-  jobId: string
-  status: 'available' | 'missing' | 'unavailable'
-  stage: string
-  completedChunks: number
-  totalChunks: number
-  completedSources: number
-  totalSources: number
-  observations: ClipObservations
-  ranges: Array<{ cut: number; source: number; startMs: number; endMs: number; valid: boolean }>
-  validationCheck: string
-  validationPhase: string
-  measurements: Record<string, number>
 }

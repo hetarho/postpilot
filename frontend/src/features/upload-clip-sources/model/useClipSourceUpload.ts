@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useSyncExternalStore } from 'react
 import { useTransport } from '@connectrpc/connect-query'
 import { createClipSourcePipeline } from '../api/pipeline'
 import { ClipSourceSession } from './session'
-import type { RetainedClipSource } from '@/entities/clip-project'
+import type { RetainedClipSource } from '@/entities/clip-plan'
 import { POLL_INTERVAL_MS } from '@/shared/config'
 import { matchClipSources } from './reselection'
 

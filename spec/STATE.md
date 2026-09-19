@@ -50,7 +50,6 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
-| T260 | split entities/clip-project into four nouns | ARCH | - | todo |
 | T261 | the clip page composes a widget instead of wiring eleven hooks | ARCH | T260 | todo |
 | T262 | clip pages and features consume entity hooks, allowlist removed | ARCH | T259 T261 | todo |
 | T263 | the draft editor page composes hooks it does not own | ARCH | - | todo |
@@ -70,11 +69,15 @@
 | T284 | the agent generates only the protos it uses and drops the survey harness | ARCH | T008 T281 | todo |
 
 ## next
-- implement-task: FE roots T260 (clip entity split, unblocks T261→T262) T263 T264 T266 T268; BE roots T276 (voice/post/publishing ports), T277 (experiment/usage/auth ports), T278 (typed failure reasons), T280 (boundary leaks), T275 (missing test packages)
+- implement-task: T261 (clip workspace widget, then T262) T263 T264 T266 T268; BE roots T276 (voice/post/publishing ports), T277 (experiment/usage/auth ports), T278 (typed failure reasons), T280 (boundary leaks), T275 (missing test packages)
 - the clip `release-smoke` stage is red at HEAD on this host: 9 of 28 modes end in `no result` (generation ends on a plan since T255, harness still expects a Result) — needs a fix task (review-code clip-release-smoke or update the harness)
 - agent tasks T279 T282 T283 T284 wait for T008; T008 belongs to another session and T177 remains blocked
 - post-quality-and-related-links remains open ideation, awaiting conversion when ready
 ## log
+- 260920 T260 done; five slices (clip-design is the config leaf the owner approved), the clip @x graph is acyclic and clip-project's barrel is 55 symbols (was 116); preview fetching moved to features/preview-clip-draft and the entity player renders from props; ARCH-25 green
+- 260920 out of scope (T260): entities/@x holds a pre-existing cycle generation-job → voice → post → generation-job
+- 260920 T260 owner decision: config becomes a fifth leaf slice `entities/clip-design` — the four-noun @x graph cannot be acyclic while the aggregate embeds plan/observation types and both read the design config
+- 260920 T260 claimed (clp)
 - 260920 T267 done; one `invalidatePostsDependingOn` entry in entities/post replaces the post keys 8 verbs restated, entities/observation folded into post, and pages/clip gave up the last page-held transport; ARCH-25 green
 - 260920 T267 claimed (ent)
 - 260920 T259 done; an ESLint block + a source-tree vitest hold ARCH-17 over pages/widgets/features (clip allowlisted for T262), 45 slice files traded descriptors for entity hooks, and 7 slices whose only hook moved were deleted; ARCH-25 green
@@ -91,7 +94,3 @@
 - 260919 create-task T272 re-split done: T285 (subject addressing, VIRTUAL generated columns) + T272 (allowance into clip/app) + T286 (ledger de-named, charge math frozen); T275 dep→T285, T277 dep→T286
 - 260919 create-task T272 re-split start (owner decided: generated-column bridge, allowance into clip/app, usage de-named with frozen charge math)
 - 260919 T274 done; Run is a 44-line sequence over generationRun stages (accept/prepare/analyze/write/layout/save/finish) with stage unit tests, no bare clock left in clip/app; ARCH-26 green, release smoke unchanged (pre-existing 9 `no result`)
-- 260919 T273 done; the clip root is the pure domain (deps: design, composition, llm, plan) and clip/app holds the three services, their methods and the worker orchestration (4.6k lines) — T274 keeps only the Run decomposition; ARCH-26 green, release smoke unchanged (pre-existing 9 `no result`)
-- 260919 T272 blocked; job/usage clip knowledge reaches the schema (clip_project_id) and the settlement rules — three decisions owed (columns, allowance port, SettlementPolicy) before an implementer can proceed; T277 (dep T272) and T275 (dep T272) wait
-- 260919 T271 done; main is loadPlatform→buildContexts→registerJobs→serve (23 lines), post/generation/auth/clip/usage take collaborators in constructors and a cmd/api wiring test builds the whole graph; ARCH-26 green. Out of scope: 7 setters on voice/experiment/guideline/modelcatalog/billingstore, and jobAdmission/meteredRegistry rule bodies still in main (T272's seam)
-- 260919 T271 claimed (arc)

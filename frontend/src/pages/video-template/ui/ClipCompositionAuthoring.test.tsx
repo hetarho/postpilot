@@ -8,7 +8,7 @@ import {
   parseClipTemplate,
   type ClipRecipe,
 } from '@/entities/clip-template'
-import { CLIP_COMPOSITION_LIMITS } from '@/entities/clip-project'
+import { CLIP_COMPOSITION_LIMITS } from '@/entities/clip-design'
 import type { FakeClipsOptions } from '@/test/clips'
 
 const body =

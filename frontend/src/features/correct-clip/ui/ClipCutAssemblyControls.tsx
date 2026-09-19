@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { CLIP_TRANSITION } from '@/entities/clip-project'
+import { CLIP_TRANSITION } from '@/entities/clip-design'
 import {
   CLIP_PLAYBACK_RATES,
-  cutRate,
   cutOutputMs,
+  cutRate,
   type ClipEditCut,
   type TimelineEdit,
-} from '@/entities/clip-project'
+} from '@/entities/clip-plan'
 import { Button, FieldLabel, FieldMessage, Listbox, Typography } from '@/shared/ui'
 import { ClipTimeField } from './ClipTimeField'
 

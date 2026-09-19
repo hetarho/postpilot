@@ -8,7 +8,7 @@ import {
   type BrowserVideoTrack,
   type VideoWorkerInput,
   type VideoWorkerOutput,
-} from '@/entities/clip-project'
+} from '@/entities/clip-preview'
 
 /** Heavy composition/encoding lives in the worker; DOM video supplies transferable snapshots. */
 export function renderBrowserVideo(

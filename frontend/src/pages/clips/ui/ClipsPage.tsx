@@ -4,8 +4,8 @@ import { useTranslation } from 'react-i18next'
 import {
   clipState,
   clipStateLabel,
-  useClipProjects,
   type ClipProject,
+  useClipProjects,
 } from '@/entities/clip-project'
 import { useClipTemplates } from '@/entities/clip-template'
 import { isTerminal } from '@/entities/generation-job'

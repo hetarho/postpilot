@@ -1,14 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
-  ClipNoticeList,
-  type ClipNotice,
   type ClipCanvasBox,
   type ClipCaptionFragment,
   type ClipEditableText,
   type TimelineEdit,
-} from '@/entities/clip-project'
-import { CLIP_CAPTION_PLACEMENT } from '@/entities/clip-project'
+} from '@/entities/clip-plan'
+import { ClipNoticeList, type ClipNotice } from '@/entities/clip-project'
+import { CLIP_CAPTION_PLACEMENT } from '@/entities/clip-design'
 import { Typography } from '@/shared/ui'
 
 /** Where the caption may sit: its measured bounds, moved — never resized — until

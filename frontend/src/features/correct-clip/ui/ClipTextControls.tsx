@@ -1,22 +1,21 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
-  ClipNoticeList,
-  type ClipNotice,
   clipSeconds,
-  textInterval,
   splitTextPhrases,
+  textInterval,
   type ClipEditPlan,
   type ClipEditableText,
   type TimelineEdit,
-} from '@/entities/clip-project'
+} from '@/entities/clip-plan'
+import { ClipNoticeList, type ClipNotice } from '@/entities/clip-project'
 import { CLIP_ACCENTS } from '@/entities/clip-template'
 import {
   CLIP_CAPTION_STYLES,
   CLIP_DEFAULT_CAPTION_STYLE,
   CLIP_RAPID,
   clipCaptionSizes,
-} from '@/entities/clip-project'
+} from '@/entities/clip-design'
 import {
   Button,
   FieldLabel,

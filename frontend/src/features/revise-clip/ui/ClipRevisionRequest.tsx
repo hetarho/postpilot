@@ -1,14 +1,13 @@
 import { useState, type ReactNode } from 'react'
 import { Send } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { CLIP_REVISION_TARGETS, type ClipRevisionTarget } from '@/entities/clip-plan'
 import {
-  boundedText,
+  CLIP_PROJECT_LIMITS,
   ClipFailureNotice,
   ClipQuoteApproval,
-  CLIP_PROJECT_LIMITS,
-  CLIP_REVISION_TARGETS,
+  boundedText,
   type ClipProject,
-  type ClipRevisionTarget,
 } from '@/entities/clip-project'
 import { compositionCharacters } from '@/entities/clip-template'
 import { progressLabel, progressRatio, type GenerationJob } from '@/entities/generation-job'

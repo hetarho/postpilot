@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from '@tanstack/react-router'
 import { Trash2 } from 'lucide-react'
-import { useClipProjectMutations, type ClipProject } from '@/entities/clip-project'
+import { type ClipProject, useClipProjectMutations } from '@/entities/clip-project'
 import { appFailureFromConnect } from '@/shared/api'
 import { AppFailureMessage, Button, Dialog } from '@/shared/ui'
 

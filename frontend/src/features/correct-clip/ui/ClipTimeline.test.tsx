@@ -2,7 +2,7 @@ import userEvent from '@testing-library/user-event'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import { clipTimelineFixture } from '@/test/clip-editing'
-import { type ClipEditPlan } from '@/entities/clip-project'
+import { type ClipEditPlan } from '@/entities/clip-plan'
 import { ClipTimeline } from './ClipTimeline'
 
 afterEach(cleanup)

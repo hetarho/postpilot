@@ -5,9 +5,9 @@ import {
   CLIP_SOURCE_MAX_BATCH_BYTES,
   CLIP_SOURCE_MAX_COUNT,
   CLIP_SOURCE_MAX_DURATION_MS,
-  CLIP_SOURCE_MAX_FILE_BYTES,
   CLIP_SOURCE_MAX_FILENAME_CHARS,
-} from '@/entities/clip-project'
+  CLIP_SOURCE_MAX_FILE_BYTES,
+} from '@/entities/clip-design'
 import { readVideoMetadata, type VideoMetadata } from '@/shared/lib/media'
 
 export type ClipSelectionReason =

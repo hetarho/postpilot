@@ -1,6 +1,6 @@
 import { cleanup, render } from '@testing-library/react'
 import { afterEach, expect, it } from 'vitest'
-import { CLIP_DESIGN, CLIP_REGIONS, CLIP_RULES } from '@/entities/clip-project/@x/clip-template'
+import { CLIP_DESIGN, CLIP_REGIONS, CLIP_RULES } from '@/entities/clip-design/@x/clip-template'
 import { parseClipComposition } from '../lib/composition-parse'
 import { sampleClipComposition } from '../lib/composition-sample'
 import { CompositionDesignFrame } from './CompositionDesignFrame'

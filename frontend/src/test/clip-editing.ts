@@ -1,4 +1,4 @@
-import type { ClipEditingState } from '@/entities/clip-project'
+import type { ClipEditingState } from '@/entities/clip-plan'
 
 export function clipTimelineFixture(): ClipEditingState {
   const state = clipEditingFixture()

@@ -3,9 +3,9 @@ import {
   emptyCompositionInputs,
   projectCompositionDocument,
   projectDraft,
-  useClipProjectMutations,
   type ClipProject,
   type ClipSourceAssociation,
+  useClipProjectMutations,
 } from '@/entities/clip-project'
 
 interface BoundSource {

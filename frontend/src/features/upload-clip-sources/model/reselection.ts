@@ -1,4 +1,5 @@
-import type { ClipSourceMetadata, RetainedClipSource } from '@/entities/clip-project'
+import type { RetainedClipSource } from '@/entities/clip-plan'
+import type { ClipSourceMetadata } from '@/entities/clip-project'
 
 export class ClipSourceMismatchError extends Error {
   constructor(

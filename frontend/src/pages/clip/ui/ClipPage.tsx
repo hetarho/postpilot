@@ -2,18 +2,17 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useBlocker, useParams } from '@tanstack/react-router'
 import { ArrowLeft } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { requiredClipSources } from '@/entities/clip-plan'
+import { clipRenderNeedsAudio, useClipBrowserRenderCapability } from '@/entities/clip-preview'
 import {
-  ClipDraftPreview,
   ClipFailureNotice,
   ClipRequestRecord,
-  useClipProject,
-  requiredClipSources,
-  useReorderClipSources,
   type ClipProject,
-  clipRenderNeedsAudio,
-  useClipBrowserRenderCapability,
+  useClipProject,
+  useReorderClipSources,
 } from '@/entities/clip-project'
 import { useClipCorrection, ClipCorrectionWorkspace } from '@/features/correct-clip'
+import { ClipDraftPreviewPanel } from '@/features/preview-clip-draft'
 import { useSession } from '@/entities/session'
 import { isTerminal, progressLabel, progressRatio } from '@/entities/generation-job'
 import { useFinalizeClip, FinalizeClipAction } from '@/features/finalize-clip'
@@ -472,7 +471,7 @@ function ExistingClip({ ownerId, project }: { ownerId: string; project: ClipProj
   const refinePanel = plan ? (
     <ClipCorrectionWorkspace
       preview={(controls) => (
-        <ClipDraftPreview
+        <ClipDraftPreviewPanel
           {...controls}
           projectId={project.id}
           revision={correction.revision}

@@ -1,4 +1,4 @@
-import { CLIP_COMPOSITION_PREVIEW } from '@/entities/clip-project/@x/clip-template'
+import { CLIP_COMPOSITION_PREVIEW } from '@/entities/clip-design/@x/clip-template'
 import type { ClipComposition, CompositionInputs } from '../model/composition'
 import { resolveClipComposition } from './composition-resolve'
 

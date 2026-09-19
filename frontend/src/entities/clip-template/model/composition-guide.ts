@@ -1,5 +1,5 @@
 import i18next from 'i18next'
-import { CLIP_COMPOSITION_LIMITS } from '@/entities/clip-project/@x/clip-template'
+import { CLIP_COMPOSITION_LIMITS } from '@/entities/clip-design/@x/clip-template'
 export const CLIP_COMPOSITION_EXAMPLE = `<clip version="1">
   <field id="place" label="상호명" required="true">간판에 적힌 이름을 공백 빼고 9자 이내로 적어주세요. 예: 성수 곱창</field>
   <field id="region" label="지역" required="true">동네나 지역을 짧게 적어주세요. 예: 성수동</field>

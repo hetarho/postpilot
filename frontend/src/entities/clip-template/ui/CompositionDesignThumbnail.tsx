@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
-import { CLIP_COMPOSITION_PREVIEW, CLIP_REGIONS } from '@/entities/clip-project/@x/clip-template'
-import { type ClipRegionPresets } from '@/entities/clip-project/@x/clip-template'
+import { CLIP_COMPOSITION_PREVIEW, CLIP_REGIONS } from '@/entities/clip-design/@x/clip-template'
+import { type ClipRegionPresets } from '@/entities/clip-design/@x/clip-template'
 import { parseClipComposition } from '../lib/composition-parse'
 import { sampleClipComposition } from '../lib/composition-sample'
 import { CompositionDesignFrame } from './CompositionDesignFrame'

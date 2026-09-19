@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { ClipEditCut } from '@/entities/clip-project'
+import type { ClipEditCut } from '@/entities/clip-plan'
 
 /** The frame a cut's own controls are edited against, inside its sheet
  *  (CLIP-53). It is the SOURCE, played locally and seeked to the cut's start,

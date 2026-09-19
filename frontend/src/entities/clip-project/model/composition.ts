@@ -1,11 +1,7 @@
-export interface ClipSourceAssociation {
-  groupId: string
-  itemId: string
-  sourceId: string
-  fingerprint: string
-  startMs: number
-  endMs: number
-}
+import type { ClipSourceAssociation } from '@/entities/clip-design/@x/clip-project'
+
+export type { ClipSourceAssociation }
+
 export interface ClipCompositionInputs {
   values: Record<string, string>
   items: Record<string, Array<{ id: string; values: Record<string, string> }>>

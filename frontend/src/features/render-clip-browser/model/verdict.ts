@@ -1,9 +1,6 @@
-import {
-  clipBrowserEncoderConfig,
-  type BrowserVideoTrack,
-  type ClipRatio,
-} from '@/entities/clip-project'
-import { CLIP_BROWSER_RENDER, CLIP_DESIGN } from '@/entities/clip-project'
+import { clipBrowserEncoderConfig, type BrowserVideoTrack } from '@/entities/clip-preview'
+import { type ClipRatio } from '@/entities/clip-project'
+import { CLIP_BROWSER_RENDER, CLIP_DESIGN } from '@/entities/clip-design'
 import type { EncodedAudioTrack } from '@/shared/lib/media'
 
 export function browserRenderVerdict(

@@ -2,25 +2,25 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useBlocker, useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import {
-  boundedText,
   CLIP_PROJECT_LIMITS,
+  CLIP_RATIOS,
   ClipCompositionInputFields,
+  boundedText,
+  emptyClipProject,
   emptyCompositionInputs,
   matchingCompositionInputs,
-  projectCompositionDocument,
-  CLIP_RATIOS,
-  emptyClipProject,
   normalizeClipProject,
+  projectCompositionDocument,
   projectDraft,
-  useClipProjectMutations,
   savableClipProject,
-  validClipProject,
-  validNewClipProject,
   type ClipProject,
   type ClipProjectDraft,
+  useClipProjectMutations,
+  validClipProject,
+  validNewClipProject,
 } from '@/entities/clip-project'
 import { CLIP_ACCENTS, compositionCharacters, useClipTemplates } from '@/entities/clip-template'
-import { CLIP_DEFAULT_REGION_PRESETS, CLIP_DESIGN } from '@/entities/clip-project'
+import { CLIP_DEFAULT_REGION_PRESETS, CLIP_DESIGN } from '@/entities/clip-design'
 import { appFailureFromConnect } from '@/shared/api'
 import { peekPendingClipDraft, queueClipDraft } from '../model/clip-draft-queue'
 import { ClipDesignSelection } from './ClipDesignSelection'

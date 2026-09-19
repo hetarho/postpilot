@@ -5,8 +5,8 @@ import {
   compositionCharacters,
   type ClipComposition,
 } from '@/entities/clip-template/@x/clip-project'
-import { CLIP_DEFAULT_REGION_PRESETS } from '../config'
-import { type ClipRegionPresets } from '../config'
+import { CLIP_DEFAULT_REGION_PRESETS } from '@/entities/clip-design/@x/clip-project'
+import { type ClipRegionPresets } from '@/entities/clip-design/@x/clip-project'
 import { Button, FieldCount, FieldLabel, FieldMessage, Textarea, Typography } from '@/shared/ui'
 import type { ClipCompositionInputs as Inputs } from '../model/composition'
 import { compositionInputsAtMinimum, removeCompositionItem } from '../model/composition-inputs'

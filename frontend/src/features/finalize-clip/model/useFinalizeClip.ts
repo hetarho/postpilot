@@ -1,8 +1,8 @@
 import { useRef, useState } from 'react'
 import {
+  type ClipProject,
   useClipLifecycleApi,
   useClipProjectMutations,
-  type ClipProject,
 } from '@/entities/clip-project'
 import { appFailureFromConnect, type AppFailure } from '@/shared/api'
 

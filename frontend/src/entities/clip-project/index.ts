@@ -1,190 +1,65 @@
-export * from './config'
-export {
-  CLIP_RATIOS,
-  CLIP_PROJECT_LIMITS,
-  emptyClipProject,
-  projectDraft,
-  normalizeClipProject,
-  savableClipProject,
-  validClipProject,
-  validNewClipProject,
-} from './model/types'
-export { clipState, clipStateLabel } from './model/state'
-export { preferredClipRenderKind } from './model/render-kind'
-export {
-  clipBrowserEncoderConfig,
-  clipBrowserRenderCapability,
-  clipRenderNeedsAudio,
-} from './model/browser-render-capability'
-export type { ClipBrowserRenderCapability } from './model/browser-render-capability'
-export { useClipBrowserRenderCapability } from './api/useClipBrowserRenderCapability'
-export { boundedText } from './lib/bounded-text'
-export { useClipLifecycleApi } from './api/lifecycle'
-export {
-  toClipCaptionPreview,
-  captionDrawingKey,
-  useClipCaptionPreview,
-  useClipCaptionStyleSamples,
-} from './api/caption-preview'
-export type { ClipCanvasBox, ClipCaptionFragment, ClipCaptionPreview } from './api/caption-preview'
-export type { ClipState } from './model/state'
-export type {
-  ClipRatio,
-  ClipRenderKind,
-  ClipProjectDraft,
-  ClipProject,
-  ClipSourceMetadata,
-  ClipSourceBatch,
-  ReadyClipBatch,
-  ClipAccounting,
-  ClipQuote,
-} from './model/types'
+/** The clip project itself: its lifecycle, its sources, its price and the state it is in. */
 export {
   clipProjectsKey,
   toClipProject,
   toClipSourceBatch,
-  useClipProjects,
   useClipProject,
   useClipProjectMutations,
+  useClipProjects,
 } from './api/clip-project'
 export {
-  allowsSecondCopy,
-  firstCopy,
-  CLIP_TRANSITIONS,
-  CLIP_TRANSITION_CHOICES,
-  COPY_ANCHORS,
-  COPY_ALIGNS,
-  clipPlanDuration,
-  cutOutputMs,
-  cutRate,
-  ownerCutId,
-  CLIP_PLAYBACK_RATES,
-  outputToSourceMs,
-  sourceToOutputMs,
-  copyClipPlan,
-  editClipPlan,
-  groundedInAnswers,
-  requiredClipSources,
-  validateClipPlan,
-  withinHookLimits,
-} from './model/edit-plan'
-export type {
-  ClipCaption,
-  ClipEditCut,
-  ClipEditPlan,
-  ClipEditingState,
-  RetainedClipSource,
-  ClipEdit,
-} from './model/edit-plan'
-export { toClipEditingState, clipPlanToProto } from './api/edit-plan'
-export { toClipQuote, toClipRevisionQuote, toClipAccounting } from './api/credits'
+  compositionInputsToProto,
+  toProjectComposition,
+  useClipCapabilities,
+} from './api/composition'
+export { toClipQuote, toClipRevisionQuote } from './api/credits'
+export { useClipAnalysisEligibility } from './api/eligibility'
+export { useClipLifecycleApi } from './api/lifecycle'
 export {
-  CLIP_ELIGIBILITY_STATUSES,
-  clipEligibilityOf,
-  isClipEligibilityStatus,
-} from './model/eligibility'
-export type {
-  ClipEligibilityStatus,
-  ClipIneligibility,
-  ClipModelEligibility,
-} from './model/eligibility'
-export {
-  clipEligibilityKey,
-  toClipEligibility,
-  useClipAnalysisEligibility,
-} from './api/eligibility'
-
-export { isRapidCut, canSplitRapid, canAddRapid } from './model/caption-pace'
-export { observationCutUsage, observationSummary } from './model/observations'
-export type {
-  ClipObservedSegment,
-  ClipAddCutSelection,
-  ClipObservationCertainty,
-  ClipObservationUsability,
-  ClipSourceObservation,
-  ClipObservations,
-} from './model/observations'
-export { CLIP_REVISION_TARGETS, isClipRequestKind } from './model/revision'
-export type { ClipRevisionTarget, ClipProjectRequest } from './model/revision'
-export { ClipRequestRecord } from './ui/ClipRequestRecord'
-export { ClipFailureNotice } from './ui/ClipFailureNotice'
-export { ClipQuoteApproval } from './ui/ClipQuoteApproval'
-export { ClipSourceStrip } from './ui/ClipSourceStrip'
-export { ClipCompositionInputFields } from './ui/ClipCompositionInputs'
+  getClipSourcePlayback,
+  getClipSources,
+  setClipSourceOriginalSound,
+  useReorderClipSources,
+} from './api/sources'
+export { boundedText } from './lib/bounded-text'
+export type { ClipSourceAssociation } from './model/composition'
 export {
   emptyCompositionInputs,
   matchingCompositionInputs,
   projectCompositionDocument,
-  validCompositionInputs,
 } from './model/composition-inputs'
-
-export type {
-  ClipCompositionInputs,
-  ClipProjectComposition,
-  ClipSourceAssociation,
-} from './model/composition'
-export {
-  toProjectComposition,
-  compositionInputsToProto,
-  useClipCapabilities,
-} from './api/composition'
-
-export {
-  getClipSources,
-  getClipSourcePlayback,
-  setClipSourceOriginalSound,
-  reorderClipSources,
-  useReorderClipSources,
-} from './api/sources'
-export type { ClipSourceAvailability } from './model/types'
-
-export { ClipDraftPreview } from './ui/ClipDraftPreview'
-export type { ClipDisplayedFrame } from './ui/ClipDraftPreview'
-export type { ClipEditableText } from './model/edit-plan'
-export { previewTimeline, previewFrame, previewElementIDs } from './model/draft-preview'
-export { PreviewAssetCache, PreviewPreparation } from './model/preview-assets'
-export type { PreparedAsset } from './model/preview-assets'
-export { clipPreviewRequest } from './api/preview'
-export {
-  timelineCuts,
-  timelineBarPx,
-  timelineLabelFits,
-  textInterval,
-  nativeTextErrors,
-  validateTimelinePlan,
-  applyTimelineEdit,
-  acknowledgeClipCuts,
-  clipDraftKey,
-  clipSourceSound,
-  withSourceSound,
-  selectedTime,
-  snapClipTime,
-  clipSeconds,
-  createClipTimeline,
-  clipTimelineReducer,
-  splitTextPhrases,
-  clipTextTracks,
-  narrationSlot,
-} from './model/timeline'
-export type {
-  ClipSelection,
-  TimelineEdit,
-  ClipTimelineState,
-  ClipTimelineAction,
-} from './model/timeline'
-
+export { clipEligibilityOf } from './model/eligibility'
+export type { ClipEligibilityStatus, ClipModelEligibility } from './model/eligibility'
+export { clipNoticeKey } from './model/notices'
 export type { ClipNotice } from './model/notices'
-export { clipNoticeKey, clipNoticeKeys } from './model/notices'
-export { ClipNoticeList } from './ui/ClipNoticeList'
-export { reorderTargetIndex, moveInOrder } from './model/source-order'
-
-export { createClipVideoWorker } from './lib/create-video-worker'
-export { browserAudioPlan } from './model/browser-audio-plan'
+export { preferredClipRenderKind } from './model/render-kind'
+export { clipState, clipStateLabel } from './model/state'
+export type { ClipState } from './model/state'
+export {
+  CLIP_PROJECT_LIMITS,
+  CLIP_RATIOS,
+  emptyClipProject,
+  normalizeClipProject,
+  projectDraft,
+  savableClipProject,
+  validClipProject,
+  validNewClipProject,
+} from './model/types'
 export type {
-  BrowserVideoInput,
-  BrowserVideoProgress,
-  BrowserVideoTrack,
-  BrowserVideoRender,
-  EncodedClipChunk,
-} from './model/browser-video'
-export type { VideoWorkerInput, VideoWorkerOutput } from './model/video-worker-protocol'
+  ClipAccounting,
+  ClipProject,
+  ClipProjectDraft,
+  ClipQuote,
+  ClipRatio,
+  ClipRenderKind,
+  ClipSourceAvailability,
+  ClipSourceBatch,
+  ClipSourceMetadata,
+  ReadyClipBatch,
+} from './model/types'
+export { ClipCompositionInputFields } from './ui/ClipCompositionInputs'
+export { ClipFailureNotice } from './ui/ClipFailureNotice'
+export { ClipNoticeList } from './ui/ClipNoticeList'
+export { ClipQuoteApproval } from './ui/ClipQuoteApproval'
+export { ClipRequestRecord } from './ui/ClipRequestRecord'
+export { ClipSourceStrip } from './ui/ClipSourceStrip'

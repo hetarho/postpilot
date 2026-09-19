@@ -1,11 +1,8 @@
 import { useTranslation } from 'react-i18next'
 import { CompositionDesignThumbnail } from '@/entities/clip-template'
-import {
-  useClipCaptionStyleSamples,
-  type ClipCaptionFragment,
-  type ClipProjectDraft,
-} from '@/entities/clip-project'
-import { CLIP_CAPTION_STYLES, CLIP_DEFAULT_CAPTION_STYLE } from '@/entities/clip-project'
+import { type ClipCaptionFragment, useClipCaptionStyleSamples } from '@/entities/clip-plan'
+import { type ClipProjectDraft } from '@/entities/clip-project'
+import { CLIP_CAPTION_STYLES, CLIP_DEFAULT_CAPTION_STYLE } from '@/entities/clip-design'
 import { Checkbox, SegmentedControl, Typography } from '@/shared/ui'
 
 /** One style as the RENDERER draws it, scaled into the row (CDS-83). The

@@ -1,5 +1,5 @@
 import { createClient, type Transport } from '@connectrpc/connect'
-import { toClipSourceBatch, getClipSources, getClipSourcePlayback } from '@/entities/clip-project'
+import { getClipSourcePlayback, getClipSources, toClipSourceBatch } from '@/entities/clip-project'
 import { ClipService } from '@/shared/api'
 import { putBlobWithProgress } from '@/shared/lib/upload'
 import { readSourceManifest } from '../model/manifest'

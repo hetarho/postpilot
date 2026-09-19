@@ -35,16 +35,18 @@ import {
   type AppFailureReason,
 } from '@/shared/api'
 import type { ClipRecipe } from '@/entities/clip-template'
-import { CLIP_CAPTION_STYLES, CLIP_DESIGN } from '@/entities/clip-project'
+import { CLIP_CAPTION_STYLES, CLIP_DESIGN } from '@/entities/clip-design'
 import {
   clipPlanToProto,
+  toClipEditingState,
+  type ClipEditPlan,
   withSourceSound,
+} from '@/entities/clip-plan'
+import {
   compositionInputsToProto,
   toProjectComposition,
-  toClipEditingState,
   type ClipProject,
   type ClipProjectDraft,
-  type ClipEditPlan,
 } from '@/entities/clip-project'
 import { toFakeProto, type FakeGenerationJobRow } from './jobs'
 import { connectAppError } from './app-error'

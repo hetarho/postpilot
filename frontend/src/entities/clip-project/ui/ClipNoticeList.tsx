@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { Typography } from '@/shared/ui'
 import { clipNoticeKey, type ClipNotice } from '../model/notices'
-import type { ClipEditCut } from '../model/edit-plan'
+import type { ClipEditCut } from '@/entities/clip-plan/@x/clip-project'
 
 export function ClipNoticeList({
   notices = [],

@@ -1,4 +1,5 @@
-import type { ClipObservations, ClipProject } from '@/entities/clip-project'
+import type { ClipObservations } from '@/entities/clip-observation'
+import type { ClipProject } from '@/entities/clip-project'
 import { emptyClipProject } from '@/entities/clip-project'
 import { clipEditingFixture } from './clip-editing'
 

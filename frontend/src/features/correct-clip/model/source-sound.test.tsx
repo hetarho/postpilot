@@ -8,16 +8,12 @@ import {
   ClipEditingStateSchema,
   ClipSourceBatchSchema,
 } from '@/shared/api'
-import {
-  clipPlanToProto,
-  toClipEditingState,
-  toClipProject,
-  withSourceSound,
-} from '@/entities/clip-project'
+import { clipPlanToProto, toClipEditingState, withSourceSound } from '@/entities/clip-plan'
+import { toClipProject } from '@/entities/clip-project'
 import { clipTimelineFixture } from '@/test/clip-editing'
 import { connectAppError } from '@/test/app-error'
 import { createTestQueryClient, withProviders } from '@/test/session'
-import { CLIP_TIMELINE } from '@/entities/clip-project'
+import { CLIP_TIMELINE } from '@/entities/clip-design'
 import { useClipCorrection } from './useClipCorrection'
 
 function setup(preplan = false) {

@@ -1,9 +1,9 @@
 import { appFailureFromConnect } from '@/shared/api'
 import type {
+  ClipSourceAvailability,
   ClipSourceBatch,
   ClipSourceMetadata,
   ReadyClipBatch,
-  ClipSourceAvailability,
 } from '@/entities/clip-project'
 
 export interface SourcePipeline {

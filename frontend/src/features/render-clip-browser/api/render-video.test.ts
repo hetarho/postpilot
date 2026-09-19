@@ -12,7 +12,7 @@ const { worker, sources } = vi.hoisted(() => ({
   },
   sources: { frame: vi.fn(), dispose: vi.fn() },
 }))
-vi.mock('@/entities/clip-project', () => ({ createClipVideoWorker: () => worker }))
+vi.mock('@/entities/clip-preview', () => ({ createClipVideoWorker: () => worker }))
 vi.mock('../lib/source-frames', () => ({ createBrowserSourceFrames: () => sources }))
 beforeEach(() => vi.clearAllMocks())
 const input = () => ({ plan: clipTimelineFixture().plan, ratio: 'vertical' as const, assets: [] })

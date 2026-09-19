@@ -6,10 +6,10 @@ export { BrowserOriginals } from './lib/originals'
 export type {
   BrowserVideoInput,
   BrowserVideoProgress,
-  BrowserVideoTrack,
   BrowserVideoRender,
+  BrowserVideoTrack,
   EncodedClipChunk,
-} from '@/entities/clip-project'
+} from '@/entities/clip-preview'
 export {
   createBrowserResultStore,
   storeBrowserResult,

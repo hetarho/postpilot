@@ -2,18 +2,18 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@connectrpc/connect'
 import { useTransport } from '@connectrpc/connect-query'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { type ClipRevisionTarget } from '@/entities/clip-plan'
 import {
   clipProjectsKey,
   projectDraft,
   toClipRevisionQuote,
   type ClipProject,
   type ClipQuote,
-  type ClipRevisionTarget,
 } from '@/entities/clip-project'
 import { isTerminal, type GenerationJob } from '@/entities/generation-job'
 import type { ModelRef } from '@/entities/model-catalog'
 import { ClipService, appFailureFromConnect, type AppFailure } from '@/shared/api'
-import { CLIP_REVISION } from '@/entities/clip-project'
+import { CLIP_REVISION } from '@/entities/clip-design'
 import { POLL_INTERVAL_MS } from '@/shared/config'
 /** What a revision quote is bound to: the plan the owner is looking at, the
  *  settings the writer reads beside it, and the exact words they wrote. The

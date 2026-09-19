@@ -1,10 +1,6 @@
 import { createClient, type Transport } from '@connectrpc/connect'
-import {
-  toClipProject,
-  type ClipProject,
-  type BrowserVideoTrack,
-  type ClipRatio,
-} from '@/entities/clip-project'
+import { type BrowserVideoTrack } from '@/entities/clip-preview'
+import { toClipProject, type ClipProject, type ClipRatio } from '@/entities/clip-project'
 import { ClipService } from '@/shared/api'
 import { muxMp4, type EncodedAudioTrack } from '@/shared/lib/media'
 import { putBlobWithProgress } from '@/shared/lib/upload'

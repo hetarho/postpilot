@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { formatDateTime } from '@/shared/lib'
 import { Typography } from '@/shared/ui'
-import type { ClipProjectRequest } from '../model/revision'
+import type { ClipProjectRequest } from '@/entities/clip-plan/@x/clip-project'
 
 /** What the owner asked the AI for, kept with the project (CLIP-133).
  *

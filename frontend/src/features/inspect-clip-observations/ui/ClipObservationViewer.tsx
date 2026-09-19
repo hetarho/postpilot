@@ -1,16 +1,15 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { type ClipEditPlan } from '@/entities/clip-plan'
 import {
-  ClipSourceStrip,
   observationCutUsage,
   observationSummary,
-  type ClipEditPlan,
+  type ClipAddCutSelection,
   type ClipObservations,
   type ClipObservedSegment,
-  type ClipProject,
   type ClipSourceObservation,
-  type ClipAddCutSelection,
-} from '@/entities/clip-project'
+} from '@/entities/clip-observation'
+import { ClipSourceStrip, type ClipProject } from '@/entities/clip-project'
 import { formatDuration } from '@/shared/lib/media'
 import { Button, Sheet, Typography } from '@/shared/ui'
 import { AddObservedCut } from './AddObservedCut'

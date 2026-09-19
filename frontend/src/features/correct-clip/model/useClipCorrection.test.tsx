@@ -3,16 +3,12 @@ import { act, renderHook } from '@testing-library/react'
 import { create } from '@bufbuild/protobuf'
 import { Code, createRouterTransport } from '@connectrpc/connect'
 import { ClipService, ClipProjectSchema, ClipEditingStateSchema } from '@/shared/api'
-import {
-  clipPlanToProto,
-  toClipEditingState,
-  toClipProject,
-  type ClipProject,
-} from '@/entities/clip-project'
+import { clipPlanToProto, toClipEditingState } from '@/entities/clip-plan'
+import { toClipProject, type ClipProject } from '@/entities/clip-project'
 import { clipEditingFixture, clipTimelineFixture } from '@/test/clip-editing'
 import { connectAppError } from '@/test/app-error'
 import { createTestQueryClient, withProviders } from '@/test/session'
-import { CLIP_TIMELINE } from '@/entities/clip-project'
+import { CLIP_TIMELINE } from '@/entities/clip-design'
 import { useClipCorrection } from './useClipCorrection'
 
 function setup(editing = clipEditingFixture()) {

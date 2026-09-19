@@ -1,26 +1,22 @@
-import {
-  ClipNoticeList,
-  type ClipNotice,
-  type ClipRenderKind,
-  type ClipBrowserRenderCapability,
-} from '@/entities/clip-project'
+import { type ClipBrowserRenderCapability } from '@/entities/clip-preview'
+import { ClipNoticeList, type ClipNotice, type ClipRenderKind } from '@/entities/clip-project'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   clipSeconds,
-  snapClipTime,
-  textInterval,
-  timelineCuts,
-  useClipCaptionPreview,
   cutOutputMs,
   outputToSourceMs,
+  snapClipTime,
   sourceToOutputMs,
-  type ClipDisplayedFrame,
+  textInterval,
+  timelineCuts,
   type ClipEditingState,
-} from '@/entities/clip-project'
+  useClipCaptionPreview,
+} from '@/entities/clip-plan'
+import { type ClipDisplayedFrame } from '@/entities/clip-preview'
 import { Info, X } from 'lucide-react'
 import type { AppFailure } from '@/shared/api'
-import { CLIP_DRAFT_PREVIEW, CLIP_TIMELINE } from '@/entities/clip-project'
+import { CLIP_DRAFT_PREVIEW, CLIP_TIMELINE } from '@/entities/clip-design'
 import {
   ActionBar,
   AppFailureMessage,
