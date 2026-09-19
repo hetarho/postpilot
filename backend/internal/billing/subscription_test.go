@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
 	"sort"
 	"strings"
 	"testing"
@@ -354,7 +353,7 @@ func (c *subscriptionCredits) OpenPurchasedLot(_ context.Context, _ string, cred
 func (c *subscriptionCredits) VoidUntouchedLot(_ context.Context, lotID string) error {
 	lot, found := c.lots[lotID]
 	if !found || lot.remaining != lot.granted {
-		return usage.ErrLotTouched
+		return ErrLotTouched
 	}
 	lot.remaining = 0
 	return nil
@@ -438,7 +437,7 @@ func (p *subscriptionProvider) Refund(_ context.Context, paymentKey, reason stri
 	}
 	return nil
 }
-func (*subscriptionProvider) ParseNotification(*http.Request) (Notification, error) {
+func (*subscriptionProvider) ParseNotification([]byte) (Notification, error) {
 	return Notification{}, nil
 }
 

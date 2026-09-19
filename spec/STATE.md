@@ -54,7 +54,6 @@
 | T277 | experiment, usage and auth ports are per use-case | ARCH | T286 | todo |
 | T278 | a failure reason is a proto enum both sides compile against | ARCH | - | todo |
 | T279 | every hand-kept enum mirror is pinned to the generated enum | ARCH | T008 | todo |
-| T280 | six boundary leaks translated at the adapter | ARCH | - | todo |
 | T281 | clip.proto becomes one file and service per rpc family | ARCH | T262 | todo |
 | T282 | the agent maps proto at one adapter and keeps preflight out of main | ARCH | T008 | todo |
 | T283 | SmartEditor scripts are files with a DOM test; naver is plan vs driver | ARCH | T282 | todo |
@@ -66,6 +65,8 @@
 - agent tasks T279 T282 T283 T284 wait for T008; T008 belongs to another session and T177 remains blocked
 - post-quality-and-related-links remains open ideation, awaiting conversion when ready
 ## log
+- 260920 T280 done; billing/plan/publishing boundaries translate at the adapter, provision takes Settings, health moved under platform, and the generate payload is pinned by a golden test. The json-tag item is a mapper-in-the-same-package fact, not a leak — see the task result
+- 260920 T280 claimed (clp)
 - 260920 T275 done; job/store has 7 lifecycle+authorization tests (dispatch vs cancellation serialization included) and template/rpc + modelcatalog/rpc have handler tests for every mapping and refusal; ARCH-26 green
 - 260920 T275 claimed (clp)
 - 260920 T268 done; router.tsx is 70 lines over app/routes/tree.ts + 11 group files, 12 search schemas moved to their pages, and tree.test pins all 45 addresses; ARCH-25 green
@@ -84,5 +85,3 @@
 - 260920 T261 claimed (clp)
 - 260920 T260 done; five slices (clip-design is the config leaf the owner approved), the clip @x graph is acyclic and clip-project's barrel is 55 symbols (was 116); preview fetching moved to features/preview-clip-draft and the entity player renders from props; ARCH-25 green
 - 260920 out of scope (T260): entities/@x holds a pre-existing cycle generation-job → voice → post → generation-job
-- 260920 T260 owner decision: config becomes a fifth leaf slice `entities/clip-design` — the four-noun @x graph cannot be acyclic while the aggregate embeds plan/observation types and both read the design config
-- 260920 T260 claimed (clp)

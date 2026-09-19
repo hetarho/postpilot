@@ -9,6 +9,7 @@ import (
 	authrpc "github.com/postpilot/backend/internal/auth/rpc"
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/modelcatalog"
+	"github.com/postpilot/backend/internal/plan"
 	planrpc "github.com/postpilot/backend/internal/plan/rpc"
 	"github.com/postpilot/backend/internal/usage"
 )
@@ -98,3 +99,24 @@ func (emptyModels) Lookup(llm.ModelRef) (llm.ModelInfo, bool) { return llm.Model
 // defaultVoiceBootstrap gives a freshly provisioned account its `기본 말투` before it can
 // create a post. It is idempotent, so `adduser` may be rerun to repair an account that was
 // left without a voice; a failure exits non-zero because the invariant is not established.
+
+// planBalance is the ledger as the plan edge asks for it: the translation ARCH-7 wants at the
+// boundary, so `plan/rpc` publishes its own shape and the ledger's lot row stops here.
+type planBalance struct{ ledger *usage.Service }
+
+func (b planBalance) BalanceFor(ctx context.Context, userID string, acting plan.Plan) (planrpc.Balance, error) {
+	found, err := b.ledger.BalanceFor(ctx, userID, acting)
+	if err != nil {
+		return planrpc.Balance{}, err
+	}
+	lots := make([]planrpc.Lot, 0, len(found.Lots))
+	for _, lot := range found.Lots {
+		lots = append(lots, planrpc.Lot{
+			Kind: string(lot.Kind), Granted: lot.Granted, Remaining: lot.Remaining,
+			ExpiresAt: lot.ExpiresAt,
+		})
+	}
+	return planrpc.Balance{
+		Credits: found.Credits, Unlimited: found.Unlimited, Lots: lots, RenewsAt: found.RenewsAt,
+	}, nil
+}

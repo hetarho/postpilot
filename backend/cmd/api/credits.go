@@ -2,12 +2,14 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
 	"time"
 
 	"github.com/postpilot/backend/internal/auth"
+	"github.com/postpilot/backend/internal/billing"
 	clipapp "github.com/postpilot/backend/internal/clip/app"
 	"github.com/postpilot/backend/internal/job"
 	"github.com/postpilot/backend/internal/llm"
@@ -202,4 +204,18 @@ func parseRegistryRef(ref string) llm.ModelRef {
 		return llm.ModelRef{}
 	}
 	return llm.ModelRef{ProviderID: providerID, ModelID: modelID}
+}
+
+// billingCredits is the ledger as the billing context asks for it. The only thing it adds is
+// the translation ARCH-7 wants at the boundary: the ledger's sentinel for "this lot is no
+// longer whole" becomes billing's own, so the refund path matches an error it owns and the
+// billing package imports no ledger at all.
+type billingCredits struct{ billing.Credits }
+
+func (c billingCredits) VoidUntouchedLot(ctx context.Context, lotID string) error {
+	err := c.Credits.VoidUntouchedLot(ctx, lotID)
+	if errors.Is(err, usage.ErrLotTouched) {
+		return billing.ErrLotTouched
+	}
+	return err
 }

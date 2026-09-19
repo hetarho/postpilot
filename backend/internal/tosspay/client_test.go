@@ -80,8 +80,8 @@ func TestTossProviderEndpointsBodiesAndErrorMapping(t *testing.T) {
 
 func TestParseNotificationSupportsCurrentDataEnvelope(t *testing.T) {
 	client := New("test", nil)
-	req := httptest.NewRequest(http.MethodPost, "/webhooks/toss", strings.NewReader(`{"eventType":"PAYMENT_STATUS_CHANGED","data":{"paymentKey":"pay-1","orderId":"order-1","status":"DONE"}}`))
-	n, err := client.ParseNotification(req)
+	body := []byte(`{"eventType":"PAYMENT_STATUS_CHANGED","data":{"paymentKey":"pay-1","orderId":"order-1","status":"DONE"}}`)
+	n, err := client.ParseNotification(body)
 	if err != nil || n.EventType != "PAYMENT_STATUS_CHANGED" || n.PaymentKey != "pay-1" || n.OrderID != "order-1" || n.Status != "DONE" || len(n.Raw) == 0 {
 		t.Fatalf("notification=%+v err=%v", n, err)
 	}

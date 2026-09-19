@@ -3,7 +3,6 @@ package store_test
 import (
 	"context"
 	"database/sql"
-	"net/http"
 	"path/filepath"
 	"testing"
 	"time"
@@ -221,6 +220,6 @@ func (*registrationProvider) PaymentByOrder(context.Context, string) (billing.Pa
 	return billing.Payment{}, false, nil
 }
 func (*registrationProvider) Refund(context.Context, string, string) error { return nil }
-func (*registrationProvider) ParseNotification(*http.Request) (billing.Notification, error) {
+func (*registrationProvider) ParseNotification([]byte) (billing.Notification, error) {
 	return billing.Notification{}, nil
 }

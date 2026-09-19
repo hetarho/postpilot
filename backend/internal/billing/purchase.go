@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/postpilot/backend/internal/plan"
-	"github.com/postpilot/backend/internal/usage"
 )
 
 const refundWindow = 7 * 24 * time.Hour
@@ -111,7 +110,7 @@ func (s *Service) RefundPurchase(ctx context.Context, userID, purchaseID string)
 		return Purchase{}, ErrRefundWindowClosed
 	}
 	if err := s.credits.VoidUntouchedLot(ctx, purchase.LotID); err != nil {
-		if !errors.Is(err, usage.ErrLotTouched) {
+		if !errors.Is(err, ErrLotTouched) {
 			return Purchase{}, err
 		}
 		// The lot is no longer untouched, which reads two ways: the credits were spent, or an

@@ -82,11 +82,7 @@ func (c *Client) Refund(ctx context.Context, paymentKey, reason string) error {
 	return c.do(ctx, http.MethodPost, "/v1/payments/"+url.PathEscape(paymentKey)+"/cancel", map[string]string{"cancelReason": reason}, nil)
 }
 
-func (c *Client) ParseNotification(r *http.Request) (billing.Notification, error) {
-	raw, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
-	if err != nil {
-		return billing.Notification{}, fmt.Errorf("read Toss notification: %w", err)
-	}
+func (c *Client) ParseNotification(raw []byte) (billing.Notification, error) {
 	var envelope struct {
 		EventType  string `json:"eventType"`
 		PaymentKey string `json:"paymentKey"`

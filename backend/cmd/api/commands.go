@@ -10,6 +10,7 @@ import (
 	authstore "github.com/postpilot/backend/internal/auth/store"
 	"github.com/postpilot/backend/internal/experiment"
 	"github.com/postpilot/backend/internal/mail"
+	"github.com/postpilot/backend/internal/platform/config"
 	"github.com/postpilot/backend/internal/platform/db"
 	"github.com/postpilot/backend/internal/usage"
 	usagestore "github.com/postpilot/backend/internal/usage/store"
@@ -70,17 +71,24 @@ func runCommand(args []string) bool {
 		return false
 	}
 	ctx := context.Background()
+	// The environment is read HERE, in the composition root, and handed to the command
+	// (ARCH-6): nothing under `internal/` learns where the database is by itself.
+	cfg, err := config.Load()
+	if err != nil {
+		fatal(args[0], err)
+	}
+	settings := provision.Settings{DBPath: cfg.DBPath, SessionTTL: cfg.SessionTTL}
 	switch args[0] {
 	case "adduser":
-		if err := provision.Run(ctx, args[1:], defaultVoiceBootstrap, creditBootstrap); err != nil {
+		if err := provision.Run(ctx, settings, args[1:], defaultVoiceBootstrap, creditBootstrap); err != nil {
 			fatal("adduser", err)
 		}
 	case "grantcredits":
-		if err := provision.GrantCredits(ctx, args[1:], grantCreditsTo); err != nil {
+		if err := provision.GrantCredits(ctx, settings, args[1:], grantCreditsTo); err != nil {
 			fatal("grantcredits", err)
 		}
 	case "setplan":
-		if err := provision.SetPlan(ctx, args[1:], topUpMonthlyLot); err != nil {
+		if err := provision.SetPlan(ctx, settings, args[1:], topUpMonthlyLot); err != nil {
 			fatal("setplan", err)
 		}
 	default:

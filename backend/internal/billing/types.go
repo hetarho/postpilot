@@ -29,6 +29,11 @@ var (
 	ErrRefundWindowClosed        = errors.New("refund window closed")
 	ErrPurchaseSpent             = errors.New("purchased credits were spent")
 	ErrRefundFailed              = errors.New("refund failed")
+	// ErrLotTouched is what the credits port reports when a purchased lot is no longer
+	// whole. It is billing's own sentinel, translated from whatever the ledger says by the
+	// adapter that wires the two (ARCH-7): billing knows a lot can be spent, not how the
+	// ledger names that.
+	ErrLotTouched = errors.New("purchased credit lot has already been touched")
 )
 
 type Term string

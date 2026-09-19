@@ -184,6 +184,10 @@ type PostInput struct {
 	// and frozen like TargetLength; a write-experiment snapshot carries it inside this struct,
 	// so a different count is a different input hash. 0 is only ever a legacy decode and
 	// resolves to the default.
+	// The one struct tag in this file, and a load-bearing one: an experiment snapshot
+	// marshals PostInput directly, so this key IS the frozen input's wire shape and the hash
+	// taken over it (`experimentSnapshot`). Changing it would re-key every stored snapshot,
+	// which is why the snapshot's own wire struct — the honest fix — is its own change.
 	TagCount int `json:"tag_count,omitempty"`
 	// WriteNativeEffort is frozen from the selected catalog model at enqueue, so the hold
 	// and a delayed execution use the same completion budget even if curation changes.

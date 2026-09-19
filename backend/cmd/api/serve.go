@@ -20,10 +20,10 @@ import (
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
 	generationrpc "github.com/postpilot/backend/internal/generation/rpc"
 	guidelinerpc "github.com/postpilot/backend/internal/guideline/rpc"
-	"github.com/postpilot/backend/internal/health"
 	modelcatalogrpc "github.com/postpilot/backend/internal/modelcatalog/rpc"
 	planrpc "github.com/postpilot/backend/internal/plan/rpc"
 	"github.com/postpilot/backend/internal/platform/config"
+	"github.com/postpilot/backend/internal/platform/health"
 	"github.com/postpilot/backend/internal/platform/rpcserver"
 	"github.com/postpilot/backend/internal/post"
 	postrpc "github.com/postpilot/backend/internal/post/rpc"
@@ -127,7 +127,7 @@ func handlers(c *contexts) []rpcserver.Registrar {
 			return postpilotv1connect.NewAuthServiceHandler(authrpc.NewHandler(c.auth, cfg.SessionTTL), opts...)
 		},
 		func(opts ...connect.HandlerOption) (string, http.Handler) {
-			return postpilotv1connect.NewPlanServiceHandler(planrpc.NewHandler(c.ledger, estimatorCombos{catalog: catalog}), opts...)
+			return postpilotv1connect.NewPlanServiceHandler(planrpc.NewHandler(planBalance{ledger: c.ledger}, estimatorCombos{catalog: catalog}), opts...)
 		},
 		func(opts ...connect.HandlerOption) (string, http.Handler) {
 			return postpilotv1connect.NewBillingServiceHandler(billingrpc.NewHandler(c.billing), opts...)

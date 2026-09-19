@@ -11,15 +11,14 @@ import (
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/plan"
 	planrpc "github.com/postpilot/backend/internal/plan/rpc"
-	"github.com/postpilot/backend/internal/usage"
 )
 
 // stubLedger answers with a fixed balance: this file is about what the handler PUBLISHES
 // from the ladder, not about how a balance is computed.
 type stubLedger struct{}
 
-func (stubLedger) BalanceFor(context.Context, string, plan.Plan) (usage.Balance, error) {
-	return usage.Balance{Credits: 220}, nil
+func (stubLedger) BalanceFor(context.Context, string, plan.Plan) (planrpc.Balance, error) {
+	return planrpc.Balance{Credits: 220}, nil
 }
 
 // stubEstimator publishes one priced combo, the way an operator who has assigned `quality`

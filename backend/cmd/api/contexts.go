@@ -141,7 +141,7 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 	)
 	c.billingStore = billingstore.New(handle.Writer, handle.Reader)
 	c.billingStore.SetCreditsForTx(func(tx *sql.Tx) billing.Credits {
-		return usage.NewService(usagestore.NewTx(tx), nil, 0, anchors, approvedCeilingKinds()...)
+		return billingCredits{usage.NewService(usagestore.NewTx(tx), nil, 0, anchors, approvedCeilingKinds()...)}
 	})
 	c.billingStore.SetPlansForTx(func(tx *sql.Tx) billing.Plans {
 		return auth.NewService(authstore.NewTx(tx), cfg.SessionTTL, auth.Deps{Mailer: p.mailer})
@@ -152,7 +152,7 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 		exchangeRates = fxrate.NewEximbank(cfg.EximAPIKey, http.DefaultClient)
 	}
 	c.billing = billing.NewService(
-		c.billingStore, c.payments, exchangeRates, c.ledger, c.auth, c.auth,
+		c.billingStore, c.payments, exchangeRates, billingCredits{c.ledger}, c.auth, c.auth,
 		billingMailer{mailer: p.mailer},
 	)
 	c.metered = meteredRegistry{Registry: registry, ledger: c.ledger}

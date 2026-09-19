@@ -3,7 +3,6 @@ package rpc
 import (
 	"context"
 	"errors"
-	"net/http"
 	"testing"
 	"time"
 
@@ -226,7 +225,7 @@ func (handlerProvider) PaymentByOrder(context.Context, string) (billing.Payment,
 	return billing.Payment{}, false, nil
 }
 func (handlerProvider) Refund(context.Context, string, string) error { return nil }
-func (handlerProvider) ParseNotification(*http.Request) (billing.Notification, error) {
+func (handlerProvider) ParseNotification([]byte) (billing.Notification, error) {
 	return billing.Notification{}, nil
 }
 

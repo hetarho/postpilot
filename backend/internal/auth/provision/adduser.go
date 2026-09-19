@@ -20,7 +20,6 @@ import (
 	"github.com/postpilot/backend/internal/auth/store"
 	"github.com/postpilot/backend/internal/mail"
 	"github.com/postpilot/backend/internal/plan"
-	"github.com/postpilot/backend/internal/platform/config"
 	"github.com/postpilot/backend/internal/platform/db"
 )
 
@@ -40,13 +39,16 @@ type Bootstrap func(ctx context.Context, handle *db.DB, userID string) error
 // The bootstraps also run when the id already exists, so a rerun repairs an account whose
 // bootstrap failed the first time — without touching the password — and still exits
 // non-zero with the duplicate message.
-func Run(ctx context.Context, args []string, bootstraps ...Bootstrap) error {
-	loginID, tier, err := parseAddUserArgs(args)
-	if err != nil {
-		return err
-	}
+// Settings is what an operator command needs of the environment. The composition root reads
+// it (ARCH-6): a package under `internal/` that calls `config.Load()` is a second, invisible
+// place the process learns where its database is.
+type Settings struct {
+	DBPath     string
+	SessionTTL time.Duration
+}
 
-	cfg, err := config.Load()
+func Run(ctx context.Context, cfg Settings, args []string, bootstraps ...Bootstrap) error {
+	loginID, tier, err := parseAddUserArgs(args)
 	if err != nil {
 		return err
 	}
@@ -119,7 +121,7 @@ func parseAddUserArgs(args []string) (string, plan.Plan, error) {
 // change the master-only RPC makes, for a deployment whose last master needs promoting
 // from a shell — and it enforces the same last-master guard, so neither path can lock
 // administration out.
-func SetPlan(ctx context.Context, args []string, topUp CreditTopUp) error {
+func SetPlan(ctx context.Context, cfg Settings, args []string, topUp CreditTopUp) error {
 	if len(args) != 2 || strings.TrimSpace(args[0]) == "" {
 		return errors.New("usage: setplan <login_id> <free|basic|pro|max|master>")
 	}
@@ -129,10 +131,6 @@ func SetPlan(ctx context.Context, args []string, topUp CreditTopUp) error {
 		return err
 	}
 
-	cfg, err := config.Load()
-	if err != nil {
-		return err
-	}
 	handle, err := db.Open(cfg.DBPath)
 	if err != nil {
 		return err
@@ -174,16 +172,12 @@ type CreditGrant func(ctx context.Context, handle *db.DB, userID string, credits
 //
 // It exists because there is no signup and no checkout: every credit an account holds
 // beyond its monthly grant is put there by the operator, from a shell on the box.
-func GrantCredits(ctx context.Context, args []string, grant CreditGrant) error {
+func GrantCredits(ctx context.Context, cfg Settings, args []string, grant CreditGrant) error {
 	loginID, credits, expiresAt, err := parseGrantArgs(args)
 	if err != nil {
 		return err
 	}
 
-	cfg, err := config.Load()
-	if err != nil {
-		return err
-	}
 	handle, err := db.Open(cfg.DBPath)
 	if err != nil {
 		return err

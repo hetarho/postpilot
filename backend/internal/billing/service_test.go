@@ -3,7 +3,6 @@ package billing
 import (
 	"context"
 	"errors"
-	"net/http"
 	"testing"
 	"time"
 
@@ -314,6 +313,6 @@ func (stubProvider) PaymentByOrder(context.Context, string) (Payment, bool, erro
 	return Payment{}, false, nil
 }
 func (stubProvider) Refund(context.Context, string, string) error { return nil }
-func (stubProvider) ParseNotification(*http.Request) (Notification, error) {
+func (stubProvider) ParseNotification([]byte) (Notification, error) {
 	return Notification{}, nil
 }

@@ -47,7 +47,7 @@ func TestUsageAnchorPrefersAnActiveSubscriptionAndFallsBackAfterLapse(t *testing
 	anchors := usageAnchors{auth: authService, billing: billingService}
 	ledger := usage.NewService(usagestore.New(handle.Writer, handle.Reader), emptyModels{}, 0, anchors, approvedCeilingKinds()...)
 
-	response, err := planrpc.NewHandler(ledger, emptyBillingEstimator{}).GetMyPlan(
+	response, err := planrpc.NewHandler(planBalance{ledger: ledger}, emptyBillingEstimator{}).GetMyPlan(
 		auth.WithActor(ctx, auth.Actor{UserID: "alice", Plan: plan.Pro}),
 		connect.NewRequest(&postpilotv1.GetMyPlanRequest{}),
 	)

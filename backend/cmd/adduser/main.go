@@ -11,6 +11,7 @@ import (
 	"os"
 
 	"github.com/postpilot/backend/internal/auth/provision"
+	"github.com/postpilot/backend/internal/platform/config"
 	"github.com/postpilot/backend/internal/platform/db"
 	"github.com/postpilot/backend/internal/voice"
 	voicestore "github.com/postpilot/backend/internal/voice/store"
@@ -19,7 +20,14 @@ import (
 func main() {
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})))
 
-	if err := provision.Run(context.Background(), os.Args[1:], defaultVoiceBootstrap); err != nil {
+	// The environment is read here rather than inside the command (ARCH-6).
+	cfg, err := config.Load()
+	if err != nil {
+		slog.Error("adduser failed", "err", err)
+		os.Exit(1)
+	}
+	settings := provision.Settings{DBPath: cfg.DBPath, SessionTTL: cfg.SessionTTL}
+	if err := provision.Run(context.Background(), settings, os.Args[1:], defaultVoiceBootstrap); err != nil {
 		slog.Error("adduser failed", "err", err)
 		os.Exit(1)
 	}

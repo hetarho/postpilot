@@ -1,11 +1,16 @@
 package rpc
 
 import (
+	"io"
 	"net/http"
 	"time"
 
 	"github.com/postpilot/backend/internal/billing"
 )
+
+// The most of a notification body this edge will read. Toss's envelopes are a few hundred
+// bytes; the cap is what keeps a public POST from being a memory bill.
+const maxNotificationBytes = 1 << 20
 
 type WebhookHandler struct {
 	provider billing.Provider
@@ -26,7 +31,15 @@ func (h *WebhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "billing unavailable", http.StatusServiceUnavailable)
 		return
 	}
-	notification, err := h.provider.ParseNotification(r)
+	// The transport stops here: the provider port is handed the body it has to read, never
+	// the request it arrived in (ARCH-7). The cap is the adapter's too — a domain port
+	// cannot decide how much of a socket to trust.
+	body, err := io.ReadAll(io.LimitReader(r.Body, maxNotificationBytes))
+	if err != nil {
+		http.Error(w, "invalid notification", http.StatusBadRequest)
+		return
+	}
+	notification, err := h.provider.ParseNotification(body)
 	if err != nil {
 		http.Error(w, "invalid notification", http.StatusBadRequest)
 		return

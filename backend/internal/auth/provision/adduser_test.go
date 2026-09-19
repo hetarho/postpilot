@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/postpilot/backend/internal/auth"
 	"github.com/postpilot/backend/internal/plan"
@@ -50,12 +51,16 @@ func runWithStdin(t *testing.T, dbPath, stdin string, first string, rest ...any)
 		r.Close()
 	}()
 
-	return Run(context.Background(), args, bootstraps...)
+	return Run(context.Background(), settings(dbPath), args, bootstraps...)
 }
 
 // TestRunCreatesAccountOnAFreshVolume is job 01 A10's precondition: adduser must work
 // against a database that does not exist yet, because provisioning the first account
 // is the first thing an operator does after a deploy.
+// settings is what the composition root hands these commands in production; the tests hand
+// them the same thing rather than an environment variable.
+func settings(dbPath string) Settings { return Settings{DBPath: dbPath, SessionTTL: time.Hour} }
+
 func TestRunCreatesAccountOnAFreshVolume(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "fresh", "postpilot.db")
 
@@ -258,24 +263,24 @@ func TestSetPlanChangesAnAccountAndKeepsTheLastMaster(t *testing.T) {
 		return nil
 	}
 
-	if err := SetPlan(ctx, []string{"root", "basic"}, recordTopUp); !errors.Is(err, auth.ErrLastMaster) {
+	if err := SetPlan(ctx, settings(dbPath), []string{"root", "basic"}, recordTopUp); !errors.Is(err, auth.ErrLastMaster) {
 		t.Fatalf("demoting the last master = %v, want ErrLastMaster", err)
 	}
 	if got := storedPlan(t, dbPath, "root"); got != "master" {
 		t.Fatalf("plan = %q, want the refused demotion to have changed nothing", got)
 	}
 
-	if err := SetPlan(ctx, []string{"ghost", "free"}, recordTopUp); err == nil || !strings.Contains(err.Error(), "does not exist") {
+	if err := SetPlan(ctx, settings(dbPath), []string{"ghost", "free"}, recordTopUp); err == nil || !strings.Contains(err.Error(), "does not exist") {
 		t.Errorf("unknown account = %v, want a clear message", err)
 	}
-	if err := SetPlan(ctx, []string{"root", "pro"}, recordTopUp); err == nil {
+	if err := SetPlan(ctx, settings(dbPath), []string{"root", "pro"}, recordTopUp); err == nil {
 		t.Error("an unknown tier was accepted")
 	}
 
 	if err := runWithStdin(t, dbPath, "hunter2\nhunter2\n", "alice"); err != nil {
 		t.Fatalf("seed alice: %v", err)
 	}
-	if err := SetPlan(ctx, []string{"alice", "max"}, recordTopUp); err != nil {
+	if err := SetPlan(ctx, settings(dbPath), []string{"alice", "max"}, recordTopUp); err != nil {
 		t.Fatalf("SetPlan: %v", err)
 	}
 	if got := storedPlan(t, dbPath, "alice"); got != "max" {
@@ -303,7 +308,7 @@ func TestSetPlanRefusesAnUpgradeWithNoTopUpWired(t *testing.T) {
 	}
 	t.Setenv("DB_PATH", dbPath)
 
-	err := SetPlan(context.Background(), []string{"bob", "pro"}, nil)
+	err := SetPlan(context.Background(), settings(dbPath), []string{"bob", "pro"}, nil)
 	if err == nil || !strings.Contains(err.Error(), "top-up") {
 		t.Fatalf("SetPlan with no top-up = %v, want a refusal naming it", err)
 	}

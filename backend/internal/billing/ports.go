@@ -2,7 +2,6 @@ package billing
 
 import (
 	"context"
-	"net/http"
 	"time"
 
 	"github.com/postpilot/backend/internal/plan"
@@ -30,7 +29,10 @@ type Provider interface {
 	Charge(ctx context.Context, request ChargeRequest) (Payment, error)
 	PaymentByOrder(ctx context.Context, orderID string) (Payment, bool, error)
 	Refund(ctx context.Context, paymentKey, reason string) error
-	ParseNotification(r *http.Request) (Notification, error)
+	// ParseNotification reads one provider notification out of the POSTed body. The
+	// transport is unwrapped by the http adapter (ARCH-7): a domain port takes bytes, not a
+	// `*http.Request`.
+	ParseNotification(body []byte) (Notification, error)
 }
 
 type Rates interface {
@@ -46,6 +48,7 @@ type Credits interface {
 	OpenMonthlyLot(ctx context.Context, userID string, tier plan.Plan, start, end time.Time) error
 	RaiseMonthlyLot(ctx context.Context, userID string, credits int) error
 	OpenPurchasedLot(ctx context.Context, userID string, credits int) (lotID string, err error)
+	// VoidUntouchedLot reports ErrLotTouched when the lot is no longer whole.
 	VoidUntouchedLot(ctx context.Context, lotID string) error
 	// UntouchedLots answers "is this purchase still whole" for a screenful of purchases in
 	// one read-pool query. Billing consumes only the plural read — the single writer-bound

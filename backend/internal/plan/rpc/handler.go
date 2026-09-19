@@ -15,7 +15,6 @@ import (
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
 	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/platform/rpcserver"
-	"github.com/postpilot/backend/internal/usage"
 )
 
 // ToProto maps a domain plan onto the wire enum. An unknown plan becomes UNSPECIFIED
@@ -56,10 +55,33 @@ func FromProto(p postpilotv1.Plan) (plan.Plan, bool) {
 	}
 }
 
+// Balance is what this edge publishes about an account's credits, declared by the consumer:
+// the ledger's own shape stops at the adapter that wires the two (ARCH-7), so a lot column
+// the ledger adds does not reach the wire by accident.
+type Balance struct {
+	// Credits is the sum of what the unexpired lots still hold. Zero for an unlimited
+	// account, which reads Unlimited instead.
+	Credits   int
+	Unlimited bool
+	Lots      []Lot
+	// RenewsAt is when the next monthly grant opens: every refusal names it, so a user is
+	// never told "later" without being told when.
+	RenewsAt time.Time
+}
+
+// Lot is one grant as the plan screen shows it.
+type Lot struct {
+	Kind      string
+	Granted   int
+	Remaining int
+	// ExpiresAt is nil for a grant that does not expire.
+	ExpiresAt *time.Time
+}
+
 // Ledger is the balance this handler reports. Declared here by its consumer; the usage
-// context implements it.
+// context implements it through an adapter in the composition root.
 type Ledger interface {
-	BalanceFor(ctx context.Context, userID string, acting plan.Plan) (usage.Balance, error)
+	BalanceFor(ctx context.Context, userID string, acting plan.Plan) (Balance, error)
 }
 
 // EstimatorCombo is one priced combo as this edge publishes it. It is declared here so the
@@ -122,7 +144,7 @@ func (h *Handler) GetMyPlan(ctx context.Context, _ *connect.Request[postpilotv1.
 			expires = lot.ExpiresAt.UTC().Format(time.RFC3339)
 		}
 		lots = append(lots, &postpilotv1.CreditLot{
-			Kind:      string(lot.Kind),
+			Kind:      lot.Kind,
 			Granted:   int32(lot.Granted),
 			Remaining: int32(lot.Remaining),
 			ExpiresAt: expires,
