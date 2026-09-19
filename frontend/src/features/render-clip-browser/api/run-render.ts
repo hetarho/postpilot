@@ -1,11 +1,13 @@
-import { createClient, type Transport } from '@connectrpc/connect'
 import { type ClipEditPlan } from '@/entities/clip-plan'
-import { clipRenderNeedsAudio, type BrowserVideoTrack } from '@/entities/clip-preview'
-import { toClipProject, type ClipProject, type ClipRatio } from '@/entities/clip-project'
-import { ClipService, ClipRenderKind } from '@/shared/api'
+import {
+  clipRenderNeedsAudio,
+  type BrowserVideoTrack,
+  type ClipRenderCalls,
+} from '@/entities/clip-preview'
+import { type ClipProject, type ClipRatio } from '@/entities/clip-project'
 import { CLIP_BROWSER_RENDER } from '@/entities/clip-design'
 import { BrowserOriginals } from '../lib/originals'
-import { prepareBrowserRenderAssets } from './prepare-assets'
+import { prepareBrowserRenderAssets, type PreviewRequestCall } from './prepare-assets'
 import { renderBrowserVideo } from './render-video'
 import { renderBrowserAudio, type BrowserAudioTrack } from './render-audio'
 import { createBrowserResultStore, storeBrowserResult } from './store-result'
@@ -42,28 +44,35 @@ export interface BrowserRenderOperations {
     progress: (percent: number) => void,
   ) => Promise<ClipProject>
 }
-export function browserRenderOperations(transport: Transport): BrowserRenderOperations {
-  const client = createClient(ClipService, transport)
+/** The run's collaborators, built from the entity call surfaces the feature was handed: the
+ *  descriptors and the proto mapping stay in `entities/clip-*` (ARCH-17), and this feature owns
+ *  what only a browser can do — encode, mux and put the bytes. */
+export function browserRenderOperations(calls: {
+  render: ClipRenderCalls
+  fetchProject: (projectId: string) => Promise<ClipProject>
+  requestPreview: PreviewRequestCall
+}): BrowserRenderOperations {
   return {
     async admit(input) {
-      // Settle admission even if the page leaves, so a late identity can be cancelled.
-      const response = await client.startClipRender({
+      const { renderId } = await calls.render.admit({
         projectId: input.projectId,
         expectedRevision: input.revision,
         batchId: input.batchId,
-        renderKind: ClipRenderKind.BROWSER,
+        machine: 'browser',
       })
-      if (!response.renderId) throw new Error('Missing browser render identity')
-      return response.renderId
+      if (!renderId) throw new Error('Missing browser render identity')
+      return renderId
     },
-    cancel: async (renderId) => (await client.cancelClipBrowserRender({ renderId })).cancelled,
-    async refresh(id) {
-      const response = await client.getClipProject({ id })
-      if (!response.project) throw new Error('Missing clip project')
-      return toClipProject(response.project)
-    },
+    cancel: (renderId) => calls.render.cancelBrowserRender(renderId),
+    refresh: (id) => calls.fetchProject(id),
     prepare: (input, signal) =>
-      prepareBrowserRenderAssets(transport, input.projectId, input.revision, input.plan, signal),
+      prepareBrowserRenderAssets(
+        calls.requestPreview,
+        input.projectId,
+        input.revision,
+        input.plan,
+        signal,
+      ),
     video: renderBrowserVideo,
     audio: renderBrowserAudio,
     store: (id, video, audio, input, signal, progress) =>
@@ -73,7 +82,7 @@ export function browserRenderOperations(transport: Transport): BrowserRenderOper
         audio,
         input.ratio,
         input.plan.durationMs,
-        createBrowserResultStore(transport),
+        createBrowserResultStore(calls.render),
         signal,
         progress,
       ),

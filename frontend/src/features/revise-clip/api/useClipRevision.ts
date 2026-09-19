@@ -1,18 +1,19 @@
 import { useEffect, useState } from 'react'
-import { createClient } from '@connectrpc/connect'
-import { useTransport } from '@connectrpc/connect-query'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { type ClipRevisionTarget } from '@/entities/clip-plan'
+import { useMutation } from '@tanstack/react-query'
 import {
-  clipProjectsKey,
+  useClipPlanCalls,
+  useClipRevisionQuote,
+  type ClipRevisionTarget,
+} from '@/entities/clip-plan'
+import {
   projectDraft,
-  toClipRevisionQuote,
+  useRefreshClipProjects,
   type ClipProject,
   type ClipQuote,
 } from '@/entities/clip-project'
 import { isTerminal, type GenerationJob } from '@/entities/generation-job'
 import type { ModelRef } from '@/entities/model-catalog'
-import { ClipService, appFailureFromConnect, type AppFailure } from '@/shared/api'
+import { appFailureFromConnect, type AppFailure } from '@/shared/api'
 import { CLIP_REVISION } from '@/entities/clip-design'
 import { POLL_INTERVAL_MS } from '@/shared/config'
 /** What a revision quote is bound to: the plan the owner is looking at, the
@@ -60,8 +61,8 @@ export function useClipRevision({
   write: ModelRef | null
   job?: GenerationJob
 }) {
-  const transport = useTransport()
-  const cache = useQueryClient()
+  const calls = useClipPlanCalls()
+  const refresh = useRefreshClipProjects(ownerId)
   // A quote binds the words it was taken against, so the text is part of its
   // key; the settle is what keeps that from being one request per character.
   const [settled, setSettled] = useState(request)
@@ -76,18 +77,14 @@ export function useClipRevision({
   const binding = revisionBinding(project, text, target, observe, write)
   const mutation = useMutation({
     mutationFn: async (quote: ClipQuote) => {
-      const response = await createClient(ClipService, transport).startClipRevision({
+      return calls.revise({
         projectId: project.id,
         request: text,
         target,
         observeModel: observe!,
         writeModel: write!,
-        quoteId: quote.quoteId,
-        approvedMaxCredits: quote.maxCredits,
-        cancellationPolicyVersion: quote.cancellationPolicy?.version,
+        quote,
       })
-      if (!response.jobId) throw new Error('Missing durable clip job')
-      return response
     },
     // Never replay a paid request, and never pause one offline to resume later.
     retry: false,
@@ -99,36 +96,17 @@ export function useClipRevision({
   // minted: the panel must not offer the field again in it.
   const running =
     mutation.isPending || !!(mine && !isTerminal(mine)) || (mutation.isSuccess && !job)
-  const query = useQuery({
-    queryKey: ['clip-revision-quote', transport, ownerId, binding],
-    enabled:
-      !!text &&
+  const query = useClipRevisionQuote(
+    ownerId,
+    { projectId: project.id, request: text, target, observeModel: observe, writeModel: write },
+    binding,
+    !!text &&
       !!observe &&
       !!write &&
       !project.finalized &&
       project.editPlanRevision > 0 &&
       !running,
-    gcTime: 0,
-    staleTime: 0,
-    retry: false,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-    queryFn: async ({ signal }) =>
-      toClipRevisionQuote(
-        await createClient(ClipService, transport).quoteClipRevision(
-          {
-            projectId: project.id,
-            request: text,
-            target,
-            observeModel: observe!,
-            writeModel: write!,
-          },
-          { signal },
-        ),
-        binding,
-      ),
-  })
+  )
   const [now, setNow] = useState(Date.now)
   const expires = Date.parse(query.data?.expiresAt ?? '')
   useEffect(() => {
@@ -180,7 +158,7 @@ export function useClipRevision({
       // against. Re-quote rather than rewrite a plan nobody approved.
       if (revision !== project.editPlanRevision) {
         setFailure({ reason: 'CLIP_QUOTE_CHANGED', params: {} })
-        void cache.invalidateQueries({ queryKey: clipProjectsKey(transport, ownerId) })
+        void refresh.all()
         return
       }
       try {
@@ -188,7 +166,7 @@ export function useClipRevision({
       } catch (error) {
         setFailure(appFailureFromConnect(error))
       }
-      void cache.invalidateQueries({ queryKey: clipProjectsKey(transport, ownerId) })
+      void refresh.all()
     },
   }
 }

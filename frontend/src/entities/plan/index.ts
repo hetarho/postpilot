@@ -20,5 +20,5 @@ export {
   postsPerGrant,
 } from './model/types'
 export { planFromProto, planToProto, toPlanAccount } from './api/plan-mappers'
-export { myPlanQueryKey, useMyPlan } from './api/useMyPlan'
+export { myPlanQueryKey, useMyPlanQueryKey, useMyPlan } from './api/useMyPlan'
 export { useAccounts, useSetUserPlan } from './api/useAccounts'

@@ -1,4 +1,4 @@
-import { ConnectError } from '@connectrpc/connect'
+import { Code, ConnectError } from '@connectrpc/connect'
 
 import type { AppErrorDetail, Failure as ProtoFailure } from './gen/postpilot/v1/error_pb'
 import { AppErrorDetailSchema } from './gen/postpilot/v1/error_pb'
@@ -325,4 +325,19 @@ export function appFailureFromProto(failure?: ProtoFailure): AppFailure {
     params: failure.params,
     technicalDetail: failure.technicalDetail || undefined,
   })
+}
+
+/** Whether the same request is worth sending again. A refusal the server will repeat for the
+ *  same body (invalid, conflict, not found, refused) is not; a connection or capacity failure
+ *  is. Callers with a queue ask this rather than reading Connect codes themselves (ARCH-17). */
+export function retriableTransportFailure(error: unknown): boolean {
+  const code = ConnectError.from(error).code
+  return (
+    code === Code.Unavailable ||
+    code === Code.DeadlineExceeded ||
+    code === Code.Unknown ||
+    code === Code.Internal ||
+    code === Code.ResourceExhausted ||
+    code === Code.Aborted
+  )
 }

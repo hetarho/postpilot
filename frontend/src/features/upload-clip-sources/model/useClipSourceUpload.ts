@@ -1,8 +1,8 @@
 import { useEffect, useLayoutEffect, useMemo, useSyncExternalStore } from 'react'
-import { useTransport } from '@connectrpc/connect-query'
 import { createClipSourcePipeline } from '../api/pipeline'
 import { ClipSourceSession } from './session'
 import type { RetainedClipSource } from '@/entities/clip-plan'
+import { useClipSourceCalls } from '@/entities/clip-project'
 import { POLL_INTERVAL_MS } from '@/shared/config'
 import { matchClipSources } from './reselection'
 
@@ -11,11 +11,11 @@ export function useClipSourceUpload(
   required?: readonly RetainedClipSource[],
   enabled = true,
 ) {
-  const transport = useTransport()
+  const calls = useClipSourceCalls()
   // A result/plan refetch must not replace the runtime owner of an accepted attempt.
   const session = useMemo(
-    () => new ClipSourceSession(projectId, createClipSourcePipeline(transport)),
-    [projectId, transport],
+    () => new ClipSourceSession(projectId, createClipSourcePipeline(calls)),
+    [projectId, calls],
   )
   const state = useSyncExternalStore(session.subscribe, session.getSnapshot)
   // Own the runtime before child preview effects request retained playback.

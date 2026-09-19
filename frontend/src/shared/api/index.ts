@@ -94,6 +94,7 @@ export {
   appFailureFromProto,
   appFailureSpecs,
   normalizeAppFailure,
+  retriableTransportFailure,
 } from './app-failure'
 export type { AppFailure, AppFailureReason } from './app-failure'
 export { AppErrorDetailSchema, FailureSchema } from './gen/postpilot/v1/error_pb'

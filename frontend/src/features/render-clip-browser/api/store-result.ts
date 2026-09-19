@@ -1,7 +1,5 @@
-import { createClient, type Transport } from '@connectrpc/connect'
-import { type BrowserVideoTrack } from '@/entities/clip-preview'
-import { toClipProject, type ClipProject, type ClipRatio } from '@/entities/clip-project'
-import { ClipService } from '@/shared/api'
+import { type BrowserVideoTrack, type ClipRenderCalls } from '@/entities/clip-preview'
+import { type ClipProject, type ClipRatio } from '@/entities/clip-project'
 import { muxMp4, type EncodedAudioTrack } from '@/shared/lib/media'
 import { putBlobWithProgress } from '@/shared/lib/upload'
 import { browserRenderVerdict, type BrowserRenderVerdict } from '../model/verdict'
@@ -26,19 +24,12 @@ export interface BrowserResultStore {
   ): Promise<{ passed: boolean; notices: { code: string; action: string }[] }>
   complete(renderId: string, signal: AbortSignal): Promise<ClipProject>
 }
-export function createBrowserResultStore(transport: Transport): BrowserResultStore {
-  const client = createClient(ClipService, transport)
+export function createBrowserResultStore(calls: ClipRenderCalls): BrowserResultStore {
   return {
-    prepare: (renderId, bytes, signal) =>
-      client.prepareClipRenderUpload({ renderId, bytes: BigInt(bytes) }, { signal }),
+    prepare: (renderId, bytes, signal) => calls.prepareUpload(renderId, bytes, signal),
     put: putBlobWithProgress,
-    report: (renderId, verdict, signal) =>
-      client.reportClipRenderVerdict({ renderId, ...verdict }, { signal }),
-    async complete(renderId, signal) {
-      const response = await client.completeClipRenderUpload({ renderId }, { signal })
-      if (!response.project) throw new Error('Missing stored render')
-      return toClipProject(response.project)
-    },
+    report: (renderId, verdict, signal) => calls.reportVerdict(renderId, verdict, signal),
+    complete: (renderId, signal) => calls.completeUpload(renderId, signal),
   }
 }
 

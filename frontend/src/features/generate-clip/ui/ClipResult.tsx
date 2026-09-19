@@ -1,17 +1,14 @@
 import { useRef, useState } from 'react'
 import { Download } from 'lucide-react'
-import { useTransport } from '@connectrpc/connect-query'
-import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { ClipNoticeList, clipProjectsKey, type ClipProject } from '@/entities/clip-project'
+import { ClipNoticeList, useRefreshClipProjects, type ClipProject } from '@/entities/clip-project'
 import { Button, Typography, buttonStyles } from '@/shared/ui'
 
 // Key this component by result.createdAt: a new output gets its own single
 // automatic URL refresh. No Blob, source file or persistent browser storage.
 export function ClipResult({ project, ownerId }: { project: ClipProject; ownerId: string }) {
   const { t } = useTranslation('clips')
-  const transport = useTransport()
-  const cache = useQueryClient()
+  const projects = useRefreshClipProjects(ownerId)
   const [attempt, setAttempt] = useState<'fresh' | 'refreshing' | 'retried' | 'failed'>('fresh')
   const refreshed = useRef(false)
   const refreshing = useRef(false)
@@ -22,10 +19,7 @@ export function ClipResult({ project, ownerId }: { project: ClipProject; ownerId
     refreshed.current = true
     setAttempt('refreshing')
     try {
-      await cache.invalidateQueries(
-        { queryKey: [...clipProjectsKey(transport, ownerId), 'detail', project.id] },
-        { throwOnError: true },
-      )
+      await projects.detail(project.id)
       setAttempt('retried')
     } catch {
       setAttempt('failed')

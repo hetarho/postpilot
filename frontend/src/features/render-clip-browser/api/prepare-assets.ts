@@ -1,22 +1,28 @@
-import type { Transport } from '@connectrpc/connect'
 import { type ClipEditPlan } from '@/entities/clip-plan'
 import {
   PreviewAssetCache,
   PreviewPreparation,
-  clipPreviewRequest,
+  type ClipPreviewRequest,
   type PreparedAsset,
 } from '@/entities/clip-preview'
 
+/** How the caller asks for one preview request; the entity owns the transport behind it. */
+export type PreviewRequestCall = (
+  projectId: string,
+  revision: number,
+  plan: ClipEditPlan,
+) => Promise<ClipPreviewRequest>
+
 /** The same server PNGs, manifest checks and runtime-only cache the preview uses. */
 export async function prepareBrowserRenderAssets(
-  transport: Transport,
+  requestPreview: PreviewRequestCall,
   projectId: string,
   revision: number,
   plan: ClipEditPlan,
   signal: AbortSignal,
 ): Promise<{ assets: PreparedAsset[]; width: number; height: number; dispose: () => void }> {
   signal.throwIfAborted()
-  const request = await clipPreviewRequest(transport, projectId, revision, plan)
+  const request = await requestPreview(projectId, revision, plan)
   signal.throwIfAborted()
   const preparation = new PreviewPreparation(
     new PreviewAssetCache({

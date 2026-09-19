@@ -17,9 +17,9 @@ vi.mock('@/features/render-clip-browser/api/run-render', async (original) => {
     await import('@/features/render-clip-browser/api/store-result')
   return {
     ...actual,
-    browserRenderOperations: (transport: Parameters<typeof actual.browserRenderOperations>[0]) =>
+    browserRenderOperations: (calls: Parameters<typeof actual.browserRenderOperations>[0]) =>
       ({
-        ...actual.browserRenderOperations(transport),
+        ...actual.browserRenderOperations(calls),
         prepare: async () => ({ assets: [], width: 1080, height: 1920, dispose: media.dispose }),
         video: media.video,
         audio: async () => undefined,
@@ -30,7 +30,7 @@ vi.mock('@/features/render-clip-browser/api/run-render', async (original) => {
             audio,
             input.ratio,
             input.plan.durationMs,
-            createBrowserResultStore(transport),
+            createBrowserResultStore(calls.render),
             signal,
             progress,
             async () => new Blob(['encoded-mp4'], { type: 'video/mp4' }),

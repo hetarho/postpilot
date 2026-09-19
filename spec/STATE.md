@@ -50,7 +50,6 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
-| T262 | clip pages and features consume entity hooks, allowlist removed | ARCH | T259 T261 | todo |
 | T263 | the draft editor page composes hooks it does not own | ARCH | - | todo |
 | T264 | i18n namespaces assembled from slice-owned fragments | ARCH | - | todo |
 | T265 | the clips namespace lives in the clip slices | ARCH | T261 T264 | todo |
@@ -68,11 +67,13 @@
 | T284 | the agent generates only the protos it uses and drops the survey harness | ARCH | T008 T281 | todo |
 
 ## next
-- implement-task: T262 (clip proto symbols into the four entities, allowlist removed) T263 T264 T266 T268; BE roots T276 (voice/post/publishing ports), T277 (experiment/usage/auth ports), T278 (typed failure reasons), T280 (boundary leaks), T275 (missing test packages)
+- implement-task: T263 (draft editor page) T264 (i18n per slice, then T265) T266 (autosave queue) T268 (route groups) T263 T264 T266 T268; BE roots T276 (voice/post/publishing ports), T277 (experiment/usage/auth ports), T278 (typed failure reasons), T280 (boundary leaks), T275 (missing test packages)
 - the clip `release-smoke` stage is red at HEAD on this host: 9 of 28 modes end in `no result` (generation ends on a plan since T255, harness still expects a Result) — needs a fix task (review-code clip-release-smoke or update the harness)
 - agent tasks T279 T282 T283 T284 wait for T008; T008 belongs to another session and T177 remains blocked
 - post-quality-and-related-links remains open ideation, awaiting conversion when ready
 ## log
+- 260920 T262 done; the clip ESLint/vitest allowlist is deleted, 12 clip slices trade transports for entity call hooks (project/source/plan/render families) and ClipRenderKind stops at clip-preview; ARCH-25 green
+- 260920 T262 claimed (clp)
 - 260920 T261 done; ClipPage is 98 lines over widgets/clip-workspace, useClipWorkspace returns 11 handles, ClipCorrectionWorkspace takes 6 props (was 22) and the four page-held rules are named model functions with 27 DOM-free assertions; ARCH-25 green
 - 260920 T261 claimed (clp)
 - 260920 T260 done; five slices (clip-design is the config leaf the owner approved), the clip @x graph is acyclic and clip-project's barrel is 55 symbols (was 116); preview fetching moved to features/preview-clip-draft and the entity player renders from props; ARCH-25 green
@@ -91,5 +92,3 @@
 - 260919 T272 done; the allowance, reservation policy and cancellation rule live in clip/app, job keeps generic ports (Reporting, Cancellation, CancellationStore) and imports no llm; ARCH-26/28 green and the release smoke fails only the pre-existing 9 `no result`
 - 260919 T272 claimed (sub)
 - 260919 T285 done; job addresses work by Subject{Dimension,ID} (Guards stated by the caller, 7 store lookups collapsed, experiment id derived+indexed); ARCH-26 and ARCH-28 green. Deviation: the subject_kind/subject_id pair was dropped as unreadable without behaviour change — see the task result
-- 260919 T285 claimed (sub)
-- 260919 create-task T272 re-split done: T285 (subject addressing, VIRTUAL generated columns) + T272 (allowance into clip/app) + T286 (ledger de-named, charge math frozen); T275 dep→T285, T277 dep→T286

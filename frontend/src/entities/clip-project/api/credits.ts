@@ -1,3 +1,7 @@
+import { createClient } from '@connectrpc/connect'
+import { useTransport } from '@connectrpc/connect-query'
+import { useQuery } from '@tanstack/react-query'
+import { ClipService } from '@/shared/api'
 import type { ProtoClipAccounting, ProtoClipQuote, ProtoClipRevisionQuote } from '@/shared/api'
 import type { ClipAccounting, ClipPricedCall, ClipQuote } from '../model/types'
 
@@ -168,4 +172,33 @@ export function toClipRevisionQuote(value: ProtoClipRevisionQuote, binding: stri
     expiresAt: value.expiresAt,
     binding,
   }
+}
+
+/** The price a generation is approved against. A quote binds the exact settings it was taken
+ *  for (CLIP-131), so it is read fresh for every binding and never served from a cache — the
+ *  binding string the caller computes IS the identity of the request. */
+export function useClipGenerationQuote(
+  ownerId: string,
+  input: {
+    projectId: string
+    batchId: string
+    observeModel: { providerId: string; modelId: string }
+    writeModel: { providerId: string; modelId: string }
+  },
+  binding: string,
+) {
+  const transport = useTransport()
+  return useQuery({
+    queryKey: ['clip-quote', transport, ownerId, binding],
+    gcTime: 0,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    queryFn: async ({ signal }) =>
+      toClipQuote(
+        await createClient(ClipService, transport).quoteClipGeneration(input, { signal }),
+        binding,
+      ),
+  })
 }

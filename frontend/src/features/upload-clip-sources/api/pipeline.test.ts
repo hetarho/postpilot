@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createFakeAuthBackend } from '@/test/session'
+import { clipSourceCalls } from '@/entities/clip-project'
 import { createClipSourcePipeline } from './pipeline'
 
 describe('clip source Connect boundary', () => {
@@ -23,7 +24,7 @@ describe('clip source Connect boundary', () => {
         ],
       },
     })
-    const pipeline = createClipSourcePipeline(transport)
+    const pipeline = createClipSourcePipeline(clipSourceCalls(transport))
     const manifest = [
       {
         filename: 'clip.mp4',

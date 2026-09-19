@@ -1,11 +1,8 @@
 import { useEffect, useLayoutEffect, useReducer, useRef, useState } from 'react'
-import { createClient } from '@connectrpc/connect'
-import { useTransport } from '@connectrpc/connect-query'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   acknowledgeClipCuts,
   clipDraftKey,
-  clipPlanToProto,
   clipSourceSound,
   clipTimelineReducer,
   copyClipPlan,
@@ -18,14 +15,14 @@ import {
 } from '@/entities/clip-plan'
 import { type ClipAddCutSelection } from '@/entities/clip-observation'
 import {
-  clipProjectsKey,
-  getClipSources,
-  setClipSourceOriginalSound,
-  toClipProject,
+  useClipProjectCalls,
+  useClipProjectsKey,
+  useClipSourceCalls,
   type ClipProject,
   type ClipSourceBatch,
 } from '@/entities/clip-project'
-import { ClipService, appFailureFromConnect } from '@/shared/api'
+import { useClipPlanCalls } from '@/entities/clip-plan'
+import { appFailureFromConnect } from '@/shared/api'
 import { CLIP_TIMELINE } from '@/entities/clip-design'
 export interface ClipSoundSource {
   sourceId: string
@@ -35,7 +32,10 @@ export interface ClipSoundSource {
 }
 
 export function useClipCorrection(ownerId: string, project: ClipProject, createCutId = ownerCutId) {
-  const transport = useTransport()
+  const calls = useClipPlanCalls()
+  const projects = useClipProjectCalls()
+  const projectsKey = useClipProjectsKey(ownerId)
+  const sources = useClipSourceCalls()
   const cache = useQueryClient()
   const initial = project.editing?.plan ?? { durationMs: 0, cuts: [], hook: '' }
   const [timeline, dispatch] = useReducer(clipTimelineReducer, initial, createClipTimeline)
@@ -86,7 +86,7 @@ export function useClipCorrection(ownerId: string, project: ClipProject, createC
       sound?: ClipSoundSource
     }) => {
       if (sound) {
-        const { project: next, batch } = await setClipSourceOriginalSound(transport, {
+        const { project: next, batch } = await sources.sound({
           projectId: project.id,
           batchId: sound.batchId,
           sourceId: sound.sourceId,
@@ -97,26 +97,24 @@ export function useClipCorrection(ownerId: string, project: ClipProject, createC
         if (mounted.current) setSoundBatch(batch)
         return next
       }
-      const result = await createClient(ClipService, transport).saveClipEditPlan({
+      return calls.save({
         projectId: project.id,
         expectedRevision,
-        plan: clipPlanToProto({
+        plan: {
           ...plan,
           sourceAudio: plan.sourceAudio?.filter((setting) =>
             plan.cuts.some(
               (cut) => cut.sourceId === setting.sourceId && cut.fingerprint === setting.fingerprint,
             ),
           ),
-        }),
+        },
       })
-      if (!result.project?.editing) throw new Error('Missing saved correction')
-      return toClipProject(result.project)
     },
     retry: false,
   })
   function publish(next: ClipProject) {
-    cache.setQueryData([...clipProjectsKey(transport, ownerId), 'detail', project.id], next)
-    void cache.invalidateQueries({ queryKey: clipProjectsKey(transport, ownerId) })
+    cache.setQueryData([...projectsKey, 'detail', project.id], next)
+    void cache.invalidateQueries({ queryKey: projectsKey })
   }
   function adopt(next: ClipProject, clearHistory = false) {
     if (!next.editing) return
@@ -267,10 +265,8 @@ export function useClipCorrection(ownerId: string, project: ClipProject, createC
   ])
   const reload = useMutation({
     mutationFn: async (keepDraft: boolean) => {
-      const result = await createClient(ClipService, transport).getClipProject({ id: project.id })
-      if (!result.project) throw new Error('Missing current correction')
-      const batches = soundSources.current.size ? await getClipSources(transport, project.id) : []
-      const next = toClipProject(result.project)
+      const next = await projects.fetch(project.id)
+      const batches = soundSources.current.size ? await sources.retained(project.id) : []
       let accepted = next.editing?.plan ?? { durationMs: 0, cuts: [], hook: '' }
       for (const batch of batches.filter((b) => b.current))
         for (const source of batch.sources)

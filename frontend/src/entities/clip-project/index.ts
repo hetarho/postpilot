@@ -63,3 +63,12 @@ export { ClipNoticeList } from './ui/ClipNoticeList'
 export { ClipQuoteApproval } from './ui/ClipQuoteApproval'
 export { ClipRequestRecord } from './ui/ClipRequestRecord'
 export { ClipSourceStrip } from './ui/ClipSourceStrip'
+export {
+  clipSourceCalls,
+  useClipProjectCalls,
+  useClipProjectsKey,
+  useClipSourceCalls,
+  useRefreshClipProjects,
+} from './api/calls'
+export type { ClipProjectCalls, ClipSourceCalls } from './api/calls'
+export { useClipGenerationQuote } from './api/credits'

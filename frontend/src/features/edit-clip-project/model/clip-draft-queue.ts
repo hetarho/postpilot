@@ -1,5 +1,4 @@
-import { Code, ConnectError } from '@connectrpc/connect'
-import { appFailureFromConnect, type AppFailure } from '@/shared/api'
+import { appFailureFromConnect, retriableTransportFailure, type AppFailure } from '@/shared/api'
 import {
   AUTOSAVE_DEBOUNCE_MS,
   AUTOSAVE_RETRY_BASE_MS,
@@ -86,15 +85,7 @@ function publish(queue: Queue) {
 /** A refusal the server will give again for the same draft. Retrying it spends requests to be
  *  told the same thing, so the queue stops and waits for the owner's next edit. */
 function terminal(error: unknown): boolean {
-  const code = ConnectError.from(error).code
-  return (
-    code !== Code.Unavailable &&
-    code !== Code.DeadlineExceeded &&
-    code !== Code.Unknown &&
-    code !== Code.Internal &&
-    code !== Code.ResourceExhausted &&
-    code !== Code.Aborted
-  )
+  return !retriableTransportFailure(error)
 }
 
 async function run(projectId: string, queue: Queue) {

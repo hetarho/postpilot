@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { createClient } from '@connectrpc/connect'
-import { useTransport } from '@connectrpc/connect-query'
-import { useQueryClient } from '@tanstack/react-query'
-import { clipProjectsKey, toClipProject, type ClipNotice } from '@/entities/clip-project'
-import { ClipService, appFailureFromConnect, type AppFailure } from '@/shared/api'
+import {
+  useClipProjectCalls,
+  useRefreshClipProjects,
+  type ClipNotice,
+} from '@/entities/clip-project'
+import { useClipPreviewRequest, useClipRenderCalls } from '@/entities/clip-preview'
+import { appFailureFromConnect, type AppFailure } from '@/shared/api'
 import {
   browserRenderOperations,
   runBrowserRender,
@@ -23,8 +25,10 @@ type StartInput = Pick<BrowserRenderInput, 'batchId' | 'localSources' | 'resolve
 }
 
 export function useBrowserRender(ownerId: string, projectId: string) {
-  const transport = useTransport(),
-    cache = useQueryClient()
+  const calls = useClipProjectCalls()
+  const renders = useClipRenderCalls()
+  const requestPreview = useClipPreviewRequest()
+  const refresh = useRefreshClipProjects(ownerId)
   const current = useRef<AbortController | undefined>(undefined)
   const mounted = useRef(true)
   const [state, setState] = useState<BrowserRenderState>({
@@ -54,19 +58,14 @@ export function useBrowserRender(ownerId: string, projectId: string) {
     try {
       const revision = await input.flush()
       controller.signal.throwIfAborted()
-      const response = await createClient(ClipService, transport).getClipProject(
-        { id: projectId },
-        { signal: controller.signal },
-      )
-      if (!response.project) throw new Error('Missing saved clip')
-      const project = toClipProject(response.project)
+      const project = await calls.fetch(projectId, controller.signal)
       if (project.editPlanRevision !== revision || !project.editing) {
         update({ phase: 'failed', failure: { reason: 'CLIP_PLAN_CONFLICT', params: {} } })
         return
       }
       await runBrowserRender(
         { ...input, projectId, revision, plan: project.editing.plan, ratio: project.ratio },
-        browserRenderOperations(transport),
+        browserRenderOperations({ render: renders, fetchProject: calls.fetch, requestPreview }),
         controller.signal,
         (progress) => update({ progress }),
       )
@@ -92,7 +91,7 @@ export function useBrowserRender(ownerId: string, projectId: string) {
       // Fetch the full server projection, including editing and finalization,
       // rather than replacing the cache with the completion's partial project.
       if (current.current === controller) current.current = undefined
-      await cache.invalidateQueries({ queryKey: clipProjectsKey(transport, ownerId) })
+      await refresh.all()
     }
   }
   return {

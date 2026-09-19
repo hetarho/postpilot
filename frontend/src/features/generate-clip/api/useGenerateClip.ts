@@ -1,25 +1,24 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { createClient } from '@connectrpc/connect'
-import { useTransport } from '@connectrpc/connect-query'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  clipProjectsKey,
-  toClipProject,
+  useClipAnalysisEligibility,
+  useClipProjectCalls,
+  useClipProjectsKey,
   type ClipProject,
   type ClipQuote,
   type ReadyClipBatch,
-  useClipAnalysisEligibility,
 } from '@/entities/clip-project'
+import { useClipRenderCalls } from '@/entities/clip-preview'
 import { isTerminal, useJob } from '@/entities/generation-job'
-import { myPlanQueryKey } from '@/entities/plan'
+import { useMyPlanQueryKey } from '@/entities/plan'
 import {
   useSelectionSavePending,
   useStageSelection,
   type ModelAvailability,
   type ModelRef,
 } from '@/entities/model-catalog'
-import { ClipService, ClipRenderKind, appFailureFromConnect, type AppFailure } from '@/shared/api'
+import { appFailureFromConnect, type AppFailure } from '@/shared/api'
 import { POLL_INTERVAL_MS } from '@/shared/config'
 import {
   clipModelsReady,
@@ -62,7 +61,10 @@ const DEFINITE_REFUSALS = new Set([
 ])
 
 export function useGenerateClip(ownerId: string, project: ClipProject, ownedJobId?: string) {
-  const transport = useTransport()
+  const planKey = useMyPlanQueryKey()
+  const calls = useClipProjectCalls()
+  const renders = useClipRenderCalls()
+  const projectsKey = useClipProjectsKey(ownerId)
   const cache = useQueryClient()
   const observe = useStageSelection('observe')
   const write = useStageSelection('write')
@@ -117,16 +119,15 @@ export function useGenerateClip(ownerId: string, project: ClipProject, ownedJobI
   }, [])
   const mutation = useMutation({
     mutationFn: async (input: StartInput) => {
-      const client = createClient(ClipService, transport)
       const response =
         input.kind === 'render'
-          ? await client.startClipRender({
-              renderKind: ClipRenderKind.SERVER,
+          ? await renders.admit({
+              machine: 'server',
               projectId: project.id,
               batchId: input.batchId,
               expectedRevision: input.revision,
             })
-          : await client.startClipGeneration({
+          : await calls.startGeneration({
               projectId: project.id,
               batchId: input.batchId,
               observeModel: input.observe,
@@ -150,7 +151,7 @@ export function useGenerateClip(ownerId: string, project: ClipProject, ownedJobI
   // Finish this page's accepted media owner even if another tab has already
   // started a newer job by the time the project projection arrives.
   const id = ownedJobId ?? latestId
-  const poll = useJob(id, [clipProjectsKey(transport, ownerId), myPlanQueryKey(transport)])
+  const poll = useJob(id, [projectsKey, planKey])
   const job =
     poll.job?.id === id ? poll.job : project.latestJob?.id === id ? project.latestJob : undefined
   useEffect(() => {
@@ -164,18 +165,13 @@ export function useGenerateClip(ownerId: string, project: ClipProject, ownedJobI
     (!!project.latestJob && project.latestJob.id !== id && !isTerminal(project.latestJob))
   const modelsReady = !selectionPending && clipModelsReady(observe, write, eligibility)
   const resolution = useQuery({
-    queryKey: ['clip-start-resolution', transport, ownerId, project.id, uncertain?.batchId],
+    queryKey: [...projectsKey, 'start-resolution', project.id, uncertain?.batchId],
     enabled: !!uncertain,
     gcTime: 0,
     staleTime: 0,
     refetchInterval: uncertain ? POLL_INTERVAL_MS : false,
     queryFn: async ({ signal }) => {
-      const response = await createClient(ClipService, transport).getClipProject(
-        { id: project.id },
-        { signal },
-      )
-      if (!response.project) throw new Error('Missing owned clip')
-      const found = toClipProject(response.project)
+      const found = await calls.fetch(project.id, signal)
       const attempt = found.latestAttempt
       if (
         active.current &&
@@ -191,7 +187,7 @@ export function useGenerateClip(ownerId: string, project: ClipProject, ownedJobI
         setStarted({ id: attempt.jobId, previous: project.latestJob?.id, batchId: attempt.batchId })
         setUncertain(undefined)
         setLocalFailure(undefined)
-        void cache.invalidateQueries({ queryKey: clipProjectsKey(transport, ownerId) })
+        void cache.invalidateQueries({ queryKey: projectsKey })
       }
       return found
     },
@@ -209,8 +205,8 @@ export function useGenerateClip(ownerId: string, project: ClipProject, ownedJobI
       ])
     : ''
   useEffect(() => {
-    if (balanceTransition) void cache.invalidateQueries({ queryKey: myPlanQueryKey(transport) })
-  }, [balanceTransition, cache, transport])
+    if (balanceTransition) void cache.invalidateQueries({ queryKey: planKey })
+  }, [balanceTransition, cache, planKey])
 
   async function submit(input: StartInput, ownership: Ownership) {
     if (!ownership.begin(input.batchId)) return
@@ -222,7 +218,7 @@ export function useGenerateClip(ownerId: string, project: ClipProject, ownedJobI
       if (!active.current) return
       ownership.owned(input.batchId, response.jobId)
       setStarted({ id: response.jobId, previous: project.latestJob?.id, batchId: input.batchId })
-      void cache.invalidateQueries({ queryKey: clipProjectsKey(transport, ownerId) })
+      void cache.invalidateQueries({ queryKey: projectsKey })
     } catch (error) {
       if (!active.current) return
       const failure = appFailureFromConnect(error)
@@ -239,7 +235,7 @@ export function useGenerateClip(ownerId: string, project: ClipProject, ownedJobI
         unresolved.current = pending
         setUncertain(pending)
       }
-      void cache.invalidateQueries({ queryKey: clipProjectsKey(transport, ownerId) })
+      void cache.invalidateQueries({ queryKey: projectsKey })
     } finally {
       starting.current = false
     }
@@ -335,7 +331,7 @@ export function useGenerateClip(ownerId: string, project: ClipProject, ownedJobI
     checkAgain: () => {
       poll.refetch()
       if (uncertain) void resolution.refetch()
-      void cache.invalidateQueries({ queryKey: clipProjectsKey(transport, ownerId) })
+      void cache.invalidateQueries({ queryKey: projectsKey })
     },
     start,
     render,

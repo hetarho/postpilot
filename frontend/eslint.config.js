@@ -74,18 +74,11 @@ export default defineConfig([
   // message rename at one entity.
   {
     files: ['src/pages/**/*.{ts,tsx}', 'src/widgets/**/*.{ts,tsx}', 'src/features/**/*.{ts,tsx}'],
-    // Temporary allowlist: the clip slices still hold their own descriptors. T262 migrates them
-    // into the four clip entities and deletes these three lines.
     // Tests are out of scope here for the same reason steiger skips them: a fake backend is
     // built from `createRouterTransport` and the service descriptor, and `src/test` owns those
     // harnesses. The source-tree pin in `src/test/arch-proto-symbols.test.ts` states the rule
     // for slice source.
-    ignores: [
-      'src/**/*.test.{ts,tsx}',
-      'src/pages/clip{,s}/**',
-      'src/features/*clip*/**',
-      'src/widgets/clip-*/**',
-    ],
+    ignores: ['src/**/*.test.{ts,tsx}'],
     rules: {
       'no-restricted-imports': [
         'error',
