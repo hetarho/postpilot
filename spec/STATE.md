@@ -17,7 +17,7 @@
 ## ssot
 | id | rev | tasked | pending | [?] |
 |---|---|---|---|---|
-| ARCH | 4 | 3 | ARCH-3✎ ARCH-6✎ ARCH-14✎ ARCH-16✎ ARCH-17✎ ARCH-21✎ ARCH-40+ ARCH-41+ | 0 |
+| ARCH | 5 | 5 | - | 0 |
 | AUTH | 5 | 5 | - | 0 |
 | QUOTA | 12 | 12 | - | 0 |
 | POST | 7 | 7 | - | 0 |
@@ -43,19 +43,48 @@
 | clip-project-update-260914 | converted@260914 |
 | clip-failure-visibility-260914 | converted@260914 |
 | clip-release-smoke-260914 | converted@260916 |
-| arch-260919 | ready@260919 |
+| arch-260919 | converted@260919 |
 
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
+| T258 | shared/config keeps env and cross-slice constants only | ARCH | - | todo |
+| T259 | proto symbols and connect-query reach no further than entity api | ARCH | - | todo |
+| T260 | split entities/clip-project into four nouns | ARCH | - | todo |
+| T261 | the clip page composes a widget instead of wiring eleven hooks | ARCH | T260 | todo |
+| T262 | clip pages and features consume entity hooks, allowlist removed | ARCH | T259 T261 | todo |
+| T263 | the draft editor page composes hooks it does not own | ARCH | - | todo |
+| T264 | i18n namespaces assembled from slice-owned fragments | ARCH | - | todo |
+| T265 | the clips namespace lives in the clip slices | ARCH | T261 T264 | todo |
+| T266 | one autosave queue behind three save features | ARCH | - | todo |
+| T267 | pages consume hooks; verbs have one home; post owns its cache dependencies | ARCH | T259 | todo |
+| T268 | the route tree is assembled from route groups | ARCH | - | todo |
+| T269 | platform/config holds env only; limits live in their context | ARCH | - | todo |
+| T270 | clip pricing, approval and terminal commits leave cmd/api | ARCH | - | todo |
+| T271 | required collaborators enter through constructors; main is four steps | ARCH | T270 | todo |
+| T272 | job and usage expose primitives; clip composes them | ARCH | T270 | todo |
+| T273 | the clip root is the domain; use-cases live in clip/app | ARCH | T270 | todo |
+| T274 | clip generation orchestration is a sequence of testable stages | ARCH | T273 | todo |
+| T275 | job/store, template/rpc and modelcatalog/rpc have tests | ARCH | T272 | todo |
+| T276 | voice, post and publishing ports are per use-case | ARCH | - | todo |
+| T277 | experiment, usage and auth ports are per use-case | ARCH | T272 | todo |
+| T278 | a failure reason is a proto enum both sides compile against | ARCH | - | todo |
+| T279 | every hand-kept enum mirror is pinned to the generated enum | ARCH | T008 | todo |
+| T280 | six boundary leaks translated at the adapter | ARCH | - | todo |
+| T281 | clip.proto becomes one file and service per rpc family | ARCH | T262 | todo |
+| T282 | the agent maps proto at one adapter and keeps preflight out of main | ARCH | T008 | todo |
+| T283 | SmartEditor scripts are files with a DOM test; naver is plan vs driver | ARCH | T282 | todo |
+| T284 | the agent generates only the protos it uses and drops the survey harness | ARCH | T008 T281 | todo |
 
 ## next
-- create-task ARCH (r4 delta) together with create-task review/arch-260919 (31 [o]) — the ARCH rules are enforced by the review tasks, so one decomposition covers both; agent findings F24-F30 wait for T008.
-- No claimable todo tasks remain; T008 belongs to another session and T177 remains blocked.
-- post-quality-and-related-links remains open ideation, awaiting conversion when ready.
+- implement-task T270 (P1: clip sagas out of cmd/api); FE roots with no dep: T258 T259 T260 T263 T264 T266 T268; BE roots: T269 T276 T278 T280
+- agent tasks T279 T282 T283 T284 wait for T008; T008 belongs to another session and T177 remains blocked
+- post-quality-and-related-links remains open ideation, awaiting conversion when ready
 ## log
+- 260919 create-task review/arch-260919 + ARCH r5 done: 27 tasks T258-T284 (FE 11 · BE 12 · agent 3 · cross 1), review converted, ARCH tasked=5
+- 260919 create-task review/arch-260919 + ARCH r4 start
 - 260919 create-architecture ARCH r4 done (ARCH-3/6/14/16/17/21✎, ARCH-40/41+); warning: ARCH-3✎ touches agent enum mirrors that T008 (doing) exercises live — F24-F30 tasks must depend on T008
 - 260919 create-architecture ARCH r4 start (review/arch-260919 gaps: ARCH-6 saga home, ARCH-14 verb rule, ARCH-21 config wording, buf breaking rule)
 - 260919 review-code arch-260919 ready; owner adopted all 31 (rule: clear anything that accrues per change now); next create-task review/arch-260919
@@ -74,11 +103,3 @@
 - 260918 T252 claimed (rnd)
 - 260918 T251 done; worker composition encodes exact plan frames with server PNGs, one source read, bounded queues and cancellation cleanup; all three canvases and real-font media smokes pass.
 - 260918 T251 claimed (rnd)
-- 260918 T250 done; static H.264/AAC probes and reported memory yield one browser refusal, with no original-file check, encoding, network call or implicit kind switch.
-- 260918 T250 claimed (rnd)
-- 260918 T249 done; one reference sheet lazily mounts observations, sources or requests, and observed cut additions land in the new cut’s editor.
-- 260918 T249 claimed (rnd)
-- 260918 T248 done; finalization flushes before a targeted-notice confirmation dialog, with render-first and other refusals beside the dock button.
-- 260918 T248 claimed (rnd)
-- 260918 T247 done; the two-row dock keeps the revision composer reachable, send opens credit approval, and render labels derive the kind and current-plan match.
-- 260918 T247 claimed (rnd)
