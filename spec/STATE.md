@@ -17,7 +17,7 @@
 ## ssot
 | id | rev | tasked | pending | [?] |
 |---|---|---|---|---|
-| ARCH | 3 | 3 | - | 0 |
+| ARCH | 4 | 3 | ARCH-3✎ ARCH-6✎ ARCH-14✎ ARCH-16✎ ARCH-17✎ ARCH-21✎ ARCH-40+ ARCH-41+ | 0 |
 | AUTH | 5 | 5 | - | 0 |
 | QUOTA | 12 | 12 | - | 0 |
 | POST | 7 | 7 | - | 0 |
@@ -52,10 +52,12 @@
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
 
 ## next
-- create-task review/arch-260919 (31 [o]; ARCH amendments for the four noted gaps come first, agent findings F24-F30 wait for T008).
+- create-task ARCH (r4 delta) together with create-task review/arch-260919 (31 [o]) — the ARCH rules are enforced by the review tasks, so one decomposition covers both; agent findings F24-F30 wait for T008.
 - No claimable todo tasks remain; T008 belongs to another session and T177 remains blocked.
 - post-quality-and-related-links remains open ideation, awaiting conversion when ready.
 ## log
+- 260919 create-architecture ARCH r4 done (ARCH-3/6/14/16/17/21✎, ARCH-40/41+); warning: ARCH-3✎ touches agent enum mirrors that T008 (doing) exercises live — F24-F30 tasks must depend on T008
+- 260919 create-architecture ARCH r4 start (review/arch-260919 gaps: ARCH-6 saga home, ARCH-14 verb rule, ARCH-21 config wording, buf breaking rule)
 - 260919 review-code arch-260919 ready; owner adopted all 31 (rule: clear anything that accrues per change now); next create-task review/arch-260919
 - 260919 review-code arch-260919 FE re-verified at 19c19cc2; F9 widened (6 pages own RPC), F31 added (cross-domain cache keys in 8 features); 31 [?] awaiting triage
 - 260919 review-code arch-260919 findings written (30, 1×P1 F13 cmd/api sagas; FE 12 · BE 10 · agent/proto 8); awaiting triage
