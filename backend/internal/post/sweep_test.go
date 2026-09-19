@@ -8,7 +8,7 @@ import (
 
 const testMinAge = time.Hour
 
-func newTestSweeper(store Store, blobs ObjectStore) *Sweeper {
+func newTestSweeper(store SweepLedger, blobs ObjectStore) *Sweeper {
 	s := NewSweeper(store, blobs, testMinAge)
 	s.now = func() time.Time { return testNow }
 	return s

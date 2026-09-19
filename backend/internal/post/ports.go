@@ -102,12 +102,21 @@ type GuidelineCandidateDetacher interface {
 //
 // Ownership is a property of the query, not of a check the caller must remember: the
 // post-scoped lookups take the post, and the service resolves the post's owner first.
-type Store interface {
+// PostCatalog is the post itself: minting one, reading it, listing an account's and
+// destroying one.
+type PostCatalog interface {
 	CreatePost(ctx context.Context, p Post) error
+	GetPost(ctx context.Context, slug string) (Post, error)
+	SlugExists(ctx context.Context, slug string) (bool, error)
+	ListPosts(ctx context.Context, userID string) ([]Summary, error)
+	DeletePost(ctx context.Context, slug, userID string) (bool, error)
+}
+
+// DraftWriter is every guarded write the drafting screen makes to a post that exists.
+type DraftWriter interface {
 	UpdateDraft(ctx context.Context, slug, userID, title, memo string, targetLanguage *Language, updatedAt time.Time) (bool, error)
 	UpdateObservations(ctx context.Context, slug, userID string, observations []Observation, updatedAt time.Time) (bool, error)
 	UpdateGeneratedContent(ctx context.Context, slug, userID string, content PostContent, language Language, updatedAt time.Time) (bool, error)
-	GetPost(ctx context.Context, slug string) (Post, error)
 	// ReassignVoice moves the post to another voice in one statement that also drops the
 	// machine baseline's voice association — the part of the post that belonged to the old
 	// voice. Content, revisions, photos and finalization state are untouched. It reports
@@ -122,6 +131,10 @@ type Store interface {
 	// (TEMPLATE-48), in the same statement: a nil member of seed is a number that template has
 	// no opinion about and leaves the post's own value alone.
 	AssignTemplate(ctx context.Context, slug, userID string, templateID *string, seed TemplateNumbers, updatedAt time.Time) (bool, error)
+}
+
+// TemplateAnswers is the post's answers to its template's data fields (TEMPLATE-43).
+type TemplateAnswers interface {
 	// UpsertTemplateAnswers writes one row per answer in ONE transaction, keyed by label.
 	// It never deletes: clearing an answer is an empty Text, which the enqueue reads the way
 	// it reads a switched-off field, and a label the current template no longer declares is
@@ -129,10 +142,10 @@ type Store interface {
 	UpsertTemplateAnswers(ctx context.Context, slug string, answers []TemplateAnswer, updatedAt time.Time) error
 	// ListTemplateAnswers returns the post's answers ordered by label.
 	ListTemplateAnswers(ctx context.Context, slug string) ([]TemplateAnswer, error)
-	SlugExists(ctx context.Context, slug string) (bool, error)
-	ListPosts(ctx context.Context, userID string) ([]Summary, error)
-	DeletePost(ctx context.Context, slug, userID string) (bool, error)
+}
 
+// ImageCatalog is the post's confirmed photos.
+type ImageCatalog interface {
 	ListImages(ctx context.Context, postSlug string) ([]Image, error)
 	GetImage(ctx context.Context, id string) (Image, error)
 	DeleteImage(ctx context.Context, id string) error
@@ -142,7 +155,11 @@ type Store interface {
 	// ImageKeyInUse reports whether a photo row points at this object key. The sweep
 	// asks before deleting anything an uploads row named.
 	ImageKeyInUse(ctx context.Context, key string) (bool, error)
+}
 
+// VideoCatalog is the post's confirmed clips, which share the post's ONE filename
+// namespace with its photos.
+type VideoCatalog interface {
 	ListVideos(ctx context.Context, postSlug string) ([]Video, error)
 	GetVideo(ctx context.Context, id string) (Video, error)
 	DeleteVideo(ctx context.Context, id string) error
@@ -154,17 +171,16 @@ type Store interface {
 	CountVideos(ctx context.Context, postSlug string) (int, error)
 	// VideoKeyInUse is ImageKeyInUse for the other table, asked for the same reason.
 	VideoKeyInUse(ctx context.Context, key string) (bool, error)
+}
 
+// UploadLedger is an upload in flight and what the sweep needs to decide whether an object
+// still has an owner.
+type UploadLedger interface {
 	CreateUpload(ctx context.Context, u Upload) error
 	GetUpload(ctx context.Context, id string) (Upload, error)
 	GetUploadByFilename(ctx context.Context, postSlug, filename string) (Upload, error)
 	DeleteUpload(ctx context.Context, id string) error
 	ListUploadsExpiredBefore(ctx context.Context, t time.Time) ([]Upload, error)
-
-	// ConfirmVideoUpload records the video and drops the upload row ATOMICALLY, for the
-	// same reason ConfirmUpload does — see the note below.
-	ConfirmVideoUpload(ctx context.Context, video Video, uploadID string) error
-
 	// ConfirmUpload records the photo and drops the upload row ATOMICALLY.
 	//
 	// The two must not be separate statements. If the image landed and the upload row
@@ -172,11 +188,35 @@ type Store interface {
 	// seeing it expired, would delete the bytes out from under a photo that looks fine
 	// in the database.
 	ConfirmUpload(ctx context.Context, img Image, uploadID string) error
-
+	// ConfirmVideoUpload records the video and drops the upload row ATOMICALLY, for the
+	// same reason ConfirmUpload does — see the note below.
+	ConfirmVideoUpload(ctx context.Context, video Video, uploadID string) error
 	// AllReferencedKeys is every object key the database still points at — images, videos
 	// and in-flight uploads together, read as one consistent snapshot. The sweep deletes
 	// what is missing from this set, so a key lost to a race here is a deleted photo.
 	AllReferencedKeys(ctx context.Context) (map[string]struct{}, error)
+}
+
+// SweepLedger is what the object sweep needs and nothing else: the expired uploads, the two
+// "does a row still point at this key" questions, and the whole referenced set.
+type SweepLedger interface {
+	ListUploadsExpiredBefore(ctx context.Context, t time.Time) ([]Upload, error)
+	DeleteUpload(ctx context.Context, id string) error
+	ImageKeyInUse(ctx context.Context, key string) (bool, error)
+	VideoKeyInUse(ctx context.Context, key string) (bool, error)
+	AllReferencedKeys(ctx context.Context) (map[string]struct{}, error)
+}
+
+// Storage is every behaviour the post context's SQL store happens to implement. It is the
+// composition root's handle, NOT a port: no use-case takes it, and each one below holds only
+// the narrow interfaces it calls (ARCH-6).
+type Storage interface {
+	PostCatalog
+	DraftWriter
+	TemplateAnswers
+	ImageCatalog
+	VideoCatalog
+	UploadLedger
 }
 
 // ContentStore is the progressive editor capability. It is separated from the base

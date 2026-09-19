@@ -17,7 +17,7 @@ const objectPrefix = "posts/"
 //   - An object with no row at all — a PUT that landed while the confirm was lost, or a
 //     row deleted while the object delete failed. Only a listing finds these.
 type Sweeper struct {
-	store  Store
+	rows   SweepLedger
 	blobs  ObjectStore
 	minAge time.Duration
 
@@ -26,8 +26,8 @@ type Sweeper struct {
 
 // NewSweeper builds the sweeper. minAge is the grace period an object gets before it
 // counts as stray.
-func NewSweeper(store Store, blobs ObjectStore, minAge time.Duration) *Sweeper {
-	return &Sweeper{store: store, blobs: blobs, minAge: minAge, now: time.Now}
+func NewSweeper(rows SweepLedger, blobs ObjectStore, minAge time.Duration) *Sweeper {
+	return &Sweeper{rows: rows, blobs: blobs, minAge: minAge, now: time.Now}
 }
 
 // Run sweeps every interval until the context is cancelled. It does NOT sweep on start:
@@ -62,7 +62,7 @@ func (s *Sweeper) sweepExpiredUploads(ctx context.Context) int {
 	// still be sending its confirm.
 	cutoff := s.now().Add(-s.minAge)
 
-	uploads, err := s.store.ListUploadsExpiredBefore(ctx, cutoff)
+	uploads, err := s.rows.ListUploadsExpiredBefore(ctx, cutoff)
 	if err != nil {
 		slog.Error("orphan sweep: list expired uploads failed", "err", err)
 		return 0
@@ -77,13 +77,13 @@ func (s *Sweeper) sweepExpiredUploads(ctx context.Context) int {
 		//
 		// Both tables are asked regardless of the row's own kind: what matters is whether
 		// ANY attachment owns the key now, not what the upload said it would become.
-		inUse, err := s.store.ImageKeyInUse(ctx, upload.Key)
+		inUse, err := s.rows.ImageKeyInUse(ctx, upload.Key)
 		if err != nil {
 			slog.Error("orphan sweep: check image key failed", "key", upload.Key, "err", err)
 			continue
 		}
 		if !inUse {
-			inUse, err = s.store.VideoKeyInUse(ctx, upload.Key)
+			inUse, err = s.rows.VideoKeyInUse(ctx, upload.Key)
 			if err != nil {
 				slog.Error("orphan sweep: check video key failed", "key", upload.Key, "err", err)
 				continue
@@ -91,7 +91,7 @@ func (s *Sweeper) sweepExpiredUploads(ctx context.Context) int {
 		}
 		if inUse {
 			// Drop the stale row only; the object belongs to the attachment now.
-			if err := s.store.DeleteUpload(ctx, upload.ID); err != nil {
+			if err := s.rows.DeleteUpload(ctx, upload.ID); err != nil {
 				slog.Error("orphan sweep: delete stale upload row failed", "upload_id", upload.ID, "err", err)
 			}
 			continue
@@ -103,7 +103,7 @@ func (s *Sweeper) sweepExpiredUploads(ctx context.Context) int {
 			slog.Error("orphan sweep: delete object failed", "key", upload.Key, "err", err)
 			continue
 		}
-		if err := s.store.DeleteUpload(ctx, upload.ID); err != nil {
+		if err := s.rows.DeleteUpload(ctx, upload.ID); err != nil {
 			slog.Error("orphan sweep: delete upload row failed", "upload_id", upload.ID, "err", err)
 			continue
 		}
@@ -119,7 +119,7 @@ func (s *Sweeper) sweepStrayObjects(ctx context.Context) int {
 	// the other order a row could be deleted after being seen, and its object would
 	// survive as a leak. Both are safe, but only this order is safe without the age
 	// check doing the work.
-	referenced, err := s.store.AllReferencedKeys(ctx)
+	referenced, err := s.rows.AllReferencedKeys(ctx)
 	if err != nil {
 		slog.Error("orphan sweep: read referenced keys failed", "err", err)
 		return 0

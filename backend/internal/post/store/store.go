@@ -20,7 +20,7 @@ import (
 // time.RFC3339Nano trims trailing zeros and would sort "…08.5Z" after "…08.51Z".
 const writeLayout = "2006-01-02T15:04:05.000000000Z07:00"
 
-// Store implements post.Store over SQLite. Writes go through the single serialized
+// Store implements post.Storage over SQLite. Writes go through the single serialized
 // writer connection, reads through the pool (ARCHITECTURE §2.4).
 type Store struct {
 	writer *sql.DB

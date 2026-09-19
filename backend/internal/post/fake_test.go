@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-// fakeStore is an in-memory post.Store. These tests are about the context's rules —
+// fakeStore is an in-memory post.Storage. These tests are about the context’s rules —
 // ownership, the upload handshake, what the sweep may delete — not about SQL.
 type fakeStore struct {
 	mu      sync.Mutex

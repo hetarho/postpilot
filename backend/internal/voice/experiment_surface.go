@@ -30,13 +30,13 @@ func (s *Service) SnapshotAnalysisInput(ctx context.Context, userID, voiceID str
 	if err != nil {
 		return nil, err
 	}
-	samples, _, err := s.store.CorpusSnapshot(ctx, userID, voiceID)
+	samples, _, err := s.samples.CorpusSnapshot(ctx, userID, voiceID)
 	if err != nil {
 		return nil, fmt.Errorf("문체 샘플을 불러오지 못했어요: %w", err)
 	}
 	var sources []AuthoredSource
 	if s.personalization != nil {
-		if sources, err = s.personalization.ListAuthoredSources(ctx, userID, voiceID); err != nil {
+		if sources, err = s.learning.ListAuthoredSources(ctx, userID, voiceID); err != nil {
 			return nil, fmt.Errorf("완성 글을 불러오지 못했어요: %w", err)
 		}
 		sources = authoredSourcesForLanguage(sources, active.SourceLanguage)
@@ -99,7 +99,7 @@ func (s *Service) ApplyStyleguideWinner(ctx context.Context, userID, voiceID, st
 	if s.personalization == nil {
 		return nil
 	}
-	head, err := s.store.GetProfile(ctx, userID, voiceID)
+	head, err := s.profiles.GetProfile(ctx, userID, voiceID)
 	if err != nil {
 		return err
 	}
@@ -107,12 +107,12 @@ func (s *Service) ApplyStyleguideWinner(ctx context.Context, userID, voiceID, st
 	if err != nil {
 		return err
 	}
-	samples, _, err := s.store.CorpusSnapshot(ctx, userID, voiceID)
+	samples, _, err := s.samples.CorpusSnapshot(ctx, userID, voiceID)
 	if err != nil {
 		return fmt.Errorf("corpus for analyze winner: %w", err)
 	}
 	var sources []AuthoredSource
-	if sources, err = s.personalization.ListAuthoredSources(ctx, userID, voiceID); err != nil {
+	if sources, err = s.learning.ListAuthoredSources(ctx, userID, voiceID); err != nil {
 		return fmt.Errorf("authored sources for analyze winner: %w", err)
 	}
 	// The measured half is MEASURED, not inherited: cloning the current head would carry its
@@ -125,7 +125,7 @@ func (s *Service) ApplyStyleguideWinner(ctx context.Context, userID, voiceID, st
 	profile.SourceCount = len(samples) + len(sources)
 	profile.Sources = sources
 	profile.Empty = false
-	overrides, err := s.personalization.ListManualOverrides(ctx, userID, voiceID)
+	overrides, err := s.overrides.ListManualOverrides(ctx, userID, voiceID)
 	if err != nil {
 		return fmt.Errorf("manual voice overrides: %w", err)
 	}
@@ -134,13 +134,13 @@ func (s *Service) ApplyStyleguideWinner(ctx context.Context, userID, voiceID, st
 			return err
 		}
 	}
-	if profile.Rules, err = s.personalization.ListRules(ctx, userID, voiceID); err != nil {
+	if profile.Rules, err = s.rules.ListRules(ctx, userID, voiceID); err != nil {
 		return fmt.Errorf("voice rules: %w", err)
 	}
 	// origin "analysis": an analyze-stage winner IS an analysis result, and the version
 	// history's origin vocabulary already names that. A separate origin would need a
 	// migration to widen the CHECK for a distinction the history does not make.
-	_, ok, err := s.personalization.PublishProfileVersionIfHead(ctx, userID, voiceID, profile, "analysis", head.Structured.Version, s.now())
+	_, ok, err := s.versions.PublishProfileVersionIfHead(ctx, userID, voiceID, profile, "analysis", head.Structured.Version, s.now())
 	if err != nil {
 		return fmt.Errorf("publish analyze winner profile: %w", err)
 	}

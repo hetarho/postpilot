@@ -22,17 +22,17 @@ func (s *Service) Analyze(ctx context.Context, found AnalysisJob, progress Progr
 	}
 	attempted := false
 	for {
-		head, err := s.store.GetProfile(ctx, found.UserID, found.VoiceID)
+		head, err := s.profiles.GetProfile(ctx, found.UserID, found.VoiceID)
 		if err != nil {
 			return fmt.Errorf("현재 문체 프로필을 불러오지 못했어요: %w", err)
 		}
-		samples, corpusVersion, err := s.store.CorpusSnapshot(ctx, found.UserID, found.VoiceID)
+		samples, corpusVersion, err := s.samples.CorpusSnapshot(ctx, found.UserID, found.VoiceID)
 		if err != nil {
 			return fmt.Errorf("문체 샘플을 불러오지 못했어요: %w", err)
 		}
 		var sources []AuthoredSource
 		if s.personalization != nil {
-			sources, err = s.personalization.ListAuthoredSources(ctx, found.UserID, found.VoiceID)
+			sources, err = s.learning.ListAuthoredSources(ctx, found.UserID, found.VoiceID)
 			if err != nil {
 				return fmt.Errorf("완성 글을 불러오지 못했어요: %w", err)
 			}
@@ -66,7 +66,7 @@ func (s *Service) Analyze(ctx context.Context, found AnalysisJob, progress Progr
 		// The guard, and only the guard: it used to be a write of `styleguide` that happened
 		// to be conditional. False means a sample changed while the provider was working, so
 		// this analysis describes a corpus the voice has already moved past (change 16).
-		stored, err := s.store.ClaimCorpusVersion(ctx, found.UserID, found.VoiceID, corpusVersion, s.now())
+		stored, err := s.profiles.ClaimCorpusVersion(ctx, found.UserID, found.VoiceID, corpusVersion, s.now())
 		if err != nil {
 			return fmt.Errorf("문체 분석 결과를 저장하지 못했어요: %w", err)
 		}
@@ -80,7 +80,7 @@ func (s *Service) Analyze(ctx context.Context, found AnalysisJob, progress Progr
 				progress("analyze", 1, 1)
 				return nil
 			}
-			overrides, overrideErr := s.personalization.ListManualOverrides(ctx, found.UserID, found.VoiceID)
+			overrides, overrideErr := s.overrides.ListManualOverrides(ctx, found.UserID, found.VoiceID)
 			if overrideErr != nil {
 				return fmt.Errorf("manual voice overrides: %w", overrideErr)
 			}
@@ -89,11 +89,11 @@ func (s *Service) Analyze(ctx context.Context, found AnalysisJob, progress Progr
 					return overrideErr
 				}
 			}
-			measured.Rules, overrideErr = s.personalization.ListRules(ctx, found.UserID, found.VoiceID)
+			measured.Rules, overrideErr = s.rules.ListRules(ctx, found.UserID, found.VoiceID)
 			if overrideErr != nil {
 				return fmt.Errorf("voice rules: %w", overrideErr)
 			}
-			if _, published, versionErr := s.personalization.PublishProfileVersionIfHead(ctx, found.UserID, found.VoiceID, measured, "analysis", head.Structured.Version, s.now()); versionErr != nil {
+			if _, published, versionErr := s.versions.PublishProfileVersionIfHead(ctx, found.UserID, found.VoiceID, measured, "analysis", head.Structured.Version, s.now()); versionErr != nil {
 				return fmt.Errorf("publish typed voice profile: %w", versionErr)
 			} else if !published {
 				if err := ctx.Err(); err != nil {

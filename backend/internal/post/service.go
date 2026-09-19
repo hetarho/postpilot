@@ -16,7 +16,15 @@ import (
 // Service is the drafting context's behavior. Every method takes the acting user id
 // from the caller (the interceptor put it in the context) and never from a payload.
 type Service struct {
-	store          Store
+	posts   PostCatalog
+	drafts  DraftWriter
+	answers TemplateAnswers
+	images  ImageCatalog
+	videos  VideoCatalog
+	uploads UploadLedger
+	// content is the progressive editor's capability: present only when the store wired in
+	// implements it, which is what the editor's use-cases check before writing.
+	content        ContentStore
 	blobs          ObjectStore
 	putTTL         time.Duration
 	getTTL         time.Duration
@@ -74,14 +82,20 @@ type Deps struct {
 
 // NewService wires the context with its store, its object storage, its limits and its
 // collaborators.
-func NewService(store Store, blobs ObjectStore, limits Limits, deps Deps) *Service {
+func NewService(store Storage, blobs ObjectStore, limits Limits, deps Deps) *Service {
 	for name, dep := range map[string]any{"jobs": deps.Jobs, "voices": deps.Voices, "experiments": deps.Experiments, "content purger": deps.ContentPurger, "candidate links": deps.CandidateLinks, "live publish": deps.LivePublish} {
 		if dep == nil {
 			panic("post: " + name + " collaborator is required")
 		}
 	}
 	return &Service{
-		store:          store,
+		posts:          store,
+		drafts:         store,
+		answers:        store,
+		images:         store,
+		videos:         store,
+		uploads:        store,
+		content:        contentStoreOf(store),
 		blobs:          blobs,
 		putTTL:         limits.PutTTL,
 		getTTL:         limits.GetTTL,
@@ -155,7 +169,7 @@ func (s *Service) SaveDraft(ctx context.Context, userID, slug, title, memo strin
 			return Post{}, err
 		}
 		// After the insert, because the answers reference the slug it just minted.
-		if err := s.store.UpsertTemplateAnswers(ctx, created.Slug, answers, s.now()); err != nil {
+		if err := s.answers.UpsertTemplateAnswers(ctx, created.Slug, answers, s.now()); err != nil {
 			return Post{}, fmt.Errorf("save template answers: %w", err)
 		}
 		return s.Get(ctx, userID, created.Slug)
@@ -174,7 +188,7 @@ func (s *Service) SaveDraft(ctx context.Context, userID, slug, title, memo strin
 		// The seeds ride on the assignment's own statement (TEMPLATE-48): a template with an
 		// opinion overwrites that option, one without leaves the post's value alone, and
 		// clearing to 없음 seeds nothing at all.
-		if _, err := s.store.AssignTemplate(ctx, slug, userID, &targetTemplate.ID, targetTemplate.Seeds(), s.now()); err != nil {
+		if _, err := s.drafts.AssignTemplate(ctx, slug, userID, &targetTemplate.ID, targetTemplate.Seeds(), s.now()); err != nil {
 			return Post{}, fmt.Errorf("assign template: %w", err)
 		}
 	}
@@ -182,10 +196,10 @@ func (s *Service) SaveDraft(ctx context.Context, userID, slug, title, memo strin
 	now := s.now()
 	// Written after ownedPost, which is what scopes the answer rows to this account: the
 	// table is keyed by slug alone, like the post's images and videos.
-	if err := s.store.UpsertTemplateAnswers(ctx, slug, answers, now); err != nil {
+	if err := s.answers.UpsertTemplateAnswers(ctx, slug, answers, now); err != nil {
 		return Post{}, fmt.Errorf("save template answers: %w", err)
 	}
-	updated, err := s.store.UpdateDraft(ctx, slug, userID, title, memo, targetLanguage, now)
+	updated, err := s.drafts.UpdateDraft(ctx, slug, userID, title, memo, targetLanguage, now)
 	if err != nil {
 		return Post{}, fmt.Errorf("update draft: %w", err)
 	}
@@ -255,7 +269,7 @@ func (s *Service) reassignVoice(ctx context.Context, found Post, voiceID string)
 			return ErrPostBusy
 		}
 	}
-	changed, err := s.store.ReassignVoice(ctx, found.Slug, found.UserID, target.ID, s.now())
+	changed, err := s.drafts.ReassignVoice(ctx, found.Slug, found.UserID, target.ID, s.now())
 	if err != nil {
 		return fmt.Errorf("reassign voice: %w", err)
 	}
@@ -396,7 +410,7 @@ func (s *Service) createPost(ctx context.Context, userID, title, memo, voiceID s
 			if lookupErr != nil {
 				return false
 			}
-			taken, err := s.store.SlugExists(ctx, candidate)
+			taken, err := s.posts.SlugExists(ctx, candidate)
 			if err != nil {
 				lookupErr = err
 			}
@@ -423,7 +437,7 @@ func (s *Service) createPost(ctx context.Context, userID, title, memo, voiceID s
 			CreatedAt:      now,
 			UpdatedAt:      now,
 		}
-		err := s.store.CreatePost(ctx, created)
+		err := s.posts.CreatePost(ctx, created)
 		if err == nil {
 			return s.Get(ctx, userID, slug)
 		}
@@ -456,7 +470,7 @@ func (s *Service) Get(ctx context.Context, userID, slug string) (Post, error) {
 		return Post{}, err
 	}
 
-	images, err := s.store.ListImages(ctx, slug)
+	images, err := s.images.ListImages(ctx, slug)
 	if err != nil {
 		return Post{}, fmt.Errorf("list images: %w", err)
 	}
@@ -468,7 +482,7 @@ func (s *Service) Get(ctx context.Context, userID, slug string) (Post, error) {
 		images[i].ViewURL = url
 	}
 
-	videos, err := s.store.ListVideos(ctx, slug)
+	videos, err := s.videos.ListVideos(ctx, slug)
 	if err != nil {
 		return Post{}, fmt.Errorf("list videos: %w", err)
 	}
@@ -480,7 +494,7 @@ func (s *Service) Get(ctx context.Context, userID, slug string) (Post, error) {
 		videos[i].ViewURL = url
 	}
 
-	answers, err := s.store.ListTemplateAnswers(ctx, slug)
+	answers, err := s.answers.ListTemplateAnswers(ctx, slug)
 	if err != nil {
 		return Post{}, fmt.Errorf("list template answers: %w", err)
 	}
@@ -515,7 +529,7 @@ func (s *Service) Get(ctx context.Context, userID, slug string) (Post, error) {
 
 // List returns the caller's posts, newest first.
 func (s *Service) List(ctx context.Context, userID string) ([]Summary, error) {
-	summaries, err := s.store.ListPosts(ctx, userID)
+	summaries, err := s.posts.ListPosts(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("list posts: %w", err)
 	}
@@ -557,11 +571,11 @@ func (s *Service) DeletePost(ctx context.Context, userID, slug string) error {
 	if err != nil {
 		return err
 	}
-	images, err := s.store.ListImages(ctx, found.Slug)
+	images, err := s.images.ListImages(ctx, found.Slug)
 	if err != nil {
 		return fmt.Errorf("list images for post delete: %w", err)
 	}
-	videos, err := s.store.ListVideos(ctx, found.Slug)
+	videos, err := s.videos.ListVideos(ctx, found.Slug)
 	if err != nil {
 		return fmt.Errorf("list videos for post delete: %w", err)
 	}
@@ -613,7 +627,7 @@ func (s *Service) DeletePost(ctx context.Context, userID, slug string) error {
 			return fmt.Errorf("delete post video %s: %w", video.ID, err)
 		}
 	}
-	deleted, err := s.store.DeletePost(ctx, slug, userID)
+	deleted, err := s.posts.DeletePost(ctx, slug, userID)
 	if err != nil {
 		return fmt.Errorf("delete post: %w", err)
 	}
@@ -646,18 +660,18 @@ func (s *Service) AttachedImages(ctx context.Context, userID, slug string) (Post
 	if err != nil {
 		return Post{}, err
 	}
-	found.Images, err = s.store.ListImages(ctx, slug)
+	found.Images, err = s.images.ListImages(ctx, slug)
 	if err != nil {
 		return Post{}, fmt.Errorf("list attached images: %w", err)
 	}
-	found.Videos, err = s.store.ListVideos(ctx, slug)
+	found.Videos, err = s.videos.ListVideos(ctx, slug)
 	if err != nil {
 		return Post{}, fmt.Errorf("list attached videos: %w", err)
 	}
 	// The enqueue reads this projection, and the answers are part of what it has to freeze
 	// (POST-62): without them here the template's data fields would resolve as if the post
 	// had answered nothing.
-	found.TemplateAnswers, err = s.store.ListTemplateAnswers(ctx, slug)
+	found.TemplateAnswers, err = s.answers.ListTemplateAnswers(ctx, slug)
 	if err != nil {
 		return Post{}, fmt.Errorf("list attached template answers: %w", err)
 	}
@@ -678,7 +692,7 @@ func (s *Service) SetObservations(ctx context.Context, userID, slug string, obse
 	if reflect.DeepEqual(found.Observations, observations) {
 		return nil
 	}
-	updated, err := s.store.UpdateObservations(ctx, slug, userID, observations, s.now())
+	updated, err := s.drafts.UpdateObservations(ctx, slug, userID, observations, s.now())
 	if err != nil {
 		return err
 	}
@@ -700,18 +714,18 @@ func (s *Service) SetGeneratedContent(ctx context.Context, userID, slug string, 
 	if found.Status == StatusReview && found.MachineBaselineRevision == found.ContentRevision && found.Content != nil && found.ContentLanguage != nil && *found.ContentLanguage == language && reflect.DeepEqual(*found.Content, content) {
 		return nil
 	}
-	images, err := s.store.ListImages(ctx, slug)
+	images, err := s.images.ListImages(ctx, slug)
 	if err != nil {
 		return fmt.Errorf("list images for generated content: %w", err)
 	}
-	videos, err := s.store.ListVideos(ctx, slug)
+	videos, err := s.videos.ListVideos(ctx, slug)
 	if err != nil {
 		return fmt.Errorf("list videos for generated content: %w", err)
 	}
 	if err := ValidateContent(content, images, videos); err != nil {
 		return err
 	}
-	updated, err := s.store.UpdateGeneratedContent(ctx, slug, userID, content, language, s.now())
+	updated, err := s.drafts.UpdateGeneratedContent(ctx, slug, userID, content, language, s.now())
 	if err != nil {
 		return err
 	}
@@ -744,19 +758,19 @@ func (s *Service) SaveContent(ctx context.Context, userID, slug string, content 
 	if found.Content != nil && reflect.DeepEqual(*found.Content, content) {
 		return s.Get(ctx, userID, slug)
 	}
-	images, err := s.store.ListImages(ctx, slug)
+	images, err := s.images.ListImages(ctx, slug)
 	if err != nil {
 		return Post{}, fmt.Errorf("list images for content save: %w", err)
 	}
-	videos, err := s.store.ListVideos(ctx, slug)
+	videos, err := s.videos.ListVideos(ctx, slug)
 	if err != nil {
 		return Post{}, fmt.Errorf("list videos for content save: %w", err)
 	}
 	if err := ValidateContent(content, images, videos); err != nil {
 		return Post{}, err
 	}
-	contentStore, ok := s.store.(ContentStore)
-	if !ok {
+	contentStore := s.content
+	if contentStore == nil {
 		return Post{}, errors.New("post content store is not configured")
 	}
 	updated, err := contentStore.SaveContent(ctx, slug, userID, content, expectedRevision, s.now())
@@ -791,8 +805,8 @@ func (s *Service) SaveGenerationOptions(ctx context.Context, userID, slug string
 	if equalOptionalInt(found.TargetLength, targetLength) && nextTagCount == found.TagCount {
 		return s.Get(ctx, userID, slug)
 	}
-	contentStore, ok := s.store.(ContentStore)
-	if !ok {
+	contentStore := s.content
+	if contentStore == nil {
 		return Post{}, errors.New("post content store is not configured")
 	}
 	updated, err := contentStore.SaveGenerationOptions(ctx, slug, userID, targetLength, nextTagCount, s.now())
@@ -819,8 +833,8 @@ func (s *Service) Finalize(ctx context.Context, userID, slug string, expectedRev
 	if found.Status == StatusFinalized && found.FinalizedRevision == expectedRevision {
 		return s.Get(ctx, userID, slug)
 	}
-	contentStore, ok := s.store.(ContentStore)
-	if !ok {
+	contentStore := s.content
+	if contentStore == nil {
 		return Post{}, errors.New("post content store is not configured")
 	}
 	// The confirmed AI title becomes the post's title (spec/legacy/policy/posts.md). An untitled
@@ -848,8 +862,8 @@ func (s *Service) LearningSnapshot(ctx context.Context, userID, slug string) (Le
 	if found.Status != StatusFinalized || found.FinalizedRevision != found.ContentRevision {
 		return LearningSnapshot{}, ErrPostNotFinalized
 	}
-	contentStore, ok := s.store.(ContentStore)
-	if !ok {
+	contentStore := s.content
+	if contentStore == nil {
 		return LearningSnapshot{}, errors.New("post content store is not configured")
 	}
 	snapshot, err := contentStore.LearningSnapshot(ctx, slug, userID)
@@ -881,14 +895,14 @@ func (s *Service) PublishingSnapshot(ctx context.Context, userID, slug string) (
 		found.FinalizedRevision != found.ContentRevision || found.FinalizedAt == nil {
 		return PublishingSnapshot{}, ErrPostNotFinalized
 	}
-	images, err := s.store.ListImages(ctx, found.Slug)
+	images, err := s.images.ListImages(ctx, found.Slug)
 	if err != nil {
 		return PublishingSnapshot{}, fmt.Errorf("list publishing images: %w", err)
 	}
 	// Read for the revalidation below and deliberately NOT carried into the snapshot:
 	// publishing does not stage videos, and a validator that could not see them would
 	// reject a legitimately attached clip as an unknown file.
-	videos, err := s.store.ListVideos(ctx, found.Slug)
+	videos, err := s.videos.ListVideos(ctx, found.Slug)
 	if err != nil {
 		return PublishingSnapshot{}, fmt.Errorf("list publishing videos: %w", err)
 	}
@@ -974,12 +988,12 @@ func (s *Service) CreateUpload(ctx context.Context, userID, postSlug, filename s
 	// A CONFIRMED attachment of EITHER kind with this name is a real conflict — the
 	// filename is how the model and the exporters address one, so a post has a single
 	// namespace and two attachments cannot share a name.
-	taken, err := s.store.ImageFilenameTaken(ctx, postSlug, filename)
+	taken, err := s.images.ImageFilenameTaken(ctx, postSlug, filename)
 	if err != nil {
 		return Upload{}, "", "", fmt.Errorf("check filename: %w", err)
 	}
 	if !taken {
-		taken, err = s.store.VideoFilenameTaken(ctx, postSlug, filename)
+		taken, err = s.videos.VideoFilenameTaken(ctx, postSlug, filename)
 		if err != nil {
 			return Upload{}, "", "", fmt.Errorf("check video filename: %w", err)
 		}
@@ -1014,7 +1028,7 @@ func (s *Service) CreateUpload(ctx context.Context, userID, postSlug, filename s
 	}
 	// The row is written after the presign succeeds: a row with no usable URL would be
 	// swept later as an orphan for no reason.
-	if err := s.store.CreateUpload(ctx, upload); err != nil {
+	if err := s.uploads.CreateUpload(ctx, upload); err != nil {
 		// The UNIQUE(post_slug, filename) constraint fired, which means another request
 		// claimed the name between the checks above and this insert.
 		if errors.Is(err, ErrDuplicateFilename) {
@@ -1039,7 +1053,7 @@ func (s *Service) reserve(ctx context.Context, postSlug, filename, uploadID stri
 		if !ok {
 			return "", "", fmt.Errorf("%w: %s", ErrUnsupportedVideo, filename)
 		}
-		count, err := s.store.CountVideos(ctx, postSlug)
+		count, err := s.videos.CountVideos(ctx, postSlug)
 		if err != nil {
 			return "", "", fmt.Errorf("count videos: %w", err)
 		}
@@ -1050,7 +1064,7 @@ func (s *Service) reserve(ctx context.Context, postSlug, filename, uploadID stri
 	}
 
 	if s.maxPhotos > 0 {
-		existing, err := s.store.ListImages(ctx, postSlug)
+		existing, err := s.images.ListImages(ctx, postSlug)
 		if err != nil {
 			return "", "", fmt.Errorf("count photos: %w", err)
 		}
@@ -1064,7 +1078,7 @@ func (s *Service) reserve(ctx context.Context, postSlug, filename, uploadID stri
 // replacePendingUpload clears an unconfirmed upload holding this filename so a retry
 // can take it. Its object goes too — nothing will ever reference that key again.
 func (s *Service) replacePendingUpload(ctx context.Context, postSlug, filename string) error {
-	pending, err := s.store.GetUploadByFilename(ctx, postSlug, filename)
+	pending, err := s.uploads.GetUploadByFilename(ctx, postSlug, filename)
 	if errors.Is(err, ErrNotFound) {
 		return nil
 	}
@@ -1074,7 +1088,7 @@ func (s *Service) replacePendingUpload(ctx context.Context, postSlug, filename s
 
 	// Row first, then object. The reverse order could delete the bytes and then fail,
 	// leaving a row that promises an object which is not there.
-	if err := s.store.DeleteUpload(ctx, pending.ID); err != nil {
+	if err := s.uploads.DeleteUpload(ctx, pending.ID); err != nil {
 		return fmt.Errorf("clear pending upload: %w", err)
 	}
 	if err := s.blobs.Delete(ctx, pending.Key); err != nil {
@@ -1099,7 +1113,7 @@ func (s *Service) ConfirmUpload(ctx context.Context, userID, uploadID string, wi
 		return Attachment{}, fmt.Errorf("%w: dimensions %dx%d", ErrInvalidImage, width, height)
 	}
 
-	upload, err := s.store.GetUpload(ctx, uploadID)
+	upload, err := s.uploads.GetUpload(ctx, uploadID)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
 			// No upload row: either this id never existed, or it was already confirmed
@@ -1148,7 +1162,7 @@ func (s *Service) ConfirmUpload(ctx context.Context, userID, uploadID string, wi
 	}
 	// One transaction: see the note on Store.ConfirmUpload for why the two writes must
 	// not be separable.
-	if err := s.store.ConfirmUpload(ctx, image, upload.ID); err != nil {
+	if err := s.uploads.ConfirmUpload(ctx, image, upload.ID); err != nil {
 		if errors.Is(err, ErrDuplicateFilename) {
 			return Attachment{}, ErrDuplicateFilename
 		}
@@ -1194,7 +1208,7 @@ func (s *Service) confirmVideo(ctx context.Context, upload Upload, width, height
 		Height:      height,
 		CreatedAt:   s.now(),
 	}
-	if err := s.store.ConfirmVideoUpload(ctx, video, upload.ID); err != nil {
+	if err := s.uploads.ConfirmVideoUpload(ctx, video, upload.ID); err != nil {
 		if errors.Is(err, ErrDuplicateFilename) {
 			return Attachment{}, ErrDuplicateFilename
 		}
@@ -1210,7 +1224,7 @@ func (s *Service) dropRejectedUpload(ctx context.Context, upload Upload) {
 	if err := s.blobs.Delete(ctx, upload.Key); err != nil {
 		slog.Warn("could not delete a rejected upload's object", "key", upload.Key, "err", err)
 	}
-	if err := s.store.DeleteUpload(ctx, upload.ID); err != nil {
+	if err := s.uploads.DeleteUpload(ctx, upload.ID); err != nil {
 		slog.Warn("could not delete a rejected upload row", "upload_id", upload.ID, "err", err)
 	}
 }
@@ -1221,7 +1235,7 @@ func (s *Service) dropRejectedUpload(ctx context.Context, upload Upload) {
 // Both tables are asked because the id alone no longer says which kind it became — the
 // row that knew is exactly the one the first attempt deleted.
 func (s *Service) alreadyConfirmed(ctx context.Context, userID, uploadID string) (Attachment, error) {
-	image, err := s.store.GetImage(ctx, uploadID)
+	image, err := s.images.GetImage(ctx, uploadID)
 	if err == nil {
 		if _, err := s.ownedPost(ctx, userID, image.PostSlug); err != nil {
 			return Attachment{}, err
@@ -1232,7 +1246,7 @@ func (s *Service) alreadyConfirmed(ctx context.Context, userID, uploadID string)
 		return Attachment{}, fmt.Errorf("load image: %w", err)
 	}
 
-	video, err := s.store.GetVideo(ctx, uploadID)
+	video, err := s.videos.GetVideo(ctx, uploadID)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
 			return Attachment{}, ErrNotFound
@@ -1251,7 +1265,7 @@ func (s *Service) alreadyConfirmed(ctx context.Context, userID, uploadID string)
 // object if the delete failed, leaving bytes nobody can name. This way a failure leaves
 // a row whose object is gone, which the user can retry.
 func (s *Service) DeleteImage(ctx context.Context, userID, imageID string) error {
-	image, err := s.store.GetImage(ctx, imageID)
+	image, err := s.images.GetImage(ctx, imageID)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
 			return ErrNotFound
@@ -1266,7 +1280,7 @@ func (s *Service) DeleteImage(ctx context.Context, userID, imageID string) error
 	if err := s.blobs.Delete(ctx, image.Key); err != nil {
 		return fmt.Errorf("delete object: %w", err)
 	}
-	if err := s.store.DeleteImage(ctx, imageID); err != nil {
+	if err := s.images.DeleteImage(ctx, imageID); err != nil {
 		return fmt.Errorf("delete image row: %w", err)
 	}
 	// The observation goes with the photo. Observations are paired to photos by FILENAME
@@ -1282,7 +1296,7 @@ func (s *Service) DeleteImage(ctx context.Context, userID, imageID string) error
 // DeleteVideo removes the video and its object, in the same order and for the same reason
 // DeleteImage does, and drops the observation entry the filename owned (VIDEO-12).
 func (s *Service) DeleteVideo(ctx context.Context, userID, videoID string) error {
-	video, err := s.store.GetVideo(ctx, videoID)
+	video, err := s.videos.GetVideo(ctx, videoID)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
 			return ErrNotFound
@@ -1297,7 +1311,7 @@ func (s *Service) DeleteVideo(ctx context.Context, userID, videoID string) error
 	if err := s.blobs.Delete(ctx, video.Key); err != nil {
 		return fmt.Errorf("delete object: %w", err)
 	}
-	if err := s.store.DeleteVideo(ctx, videoID); err != nil {
+	if err := s.videos.DeleteVideo(ctx, videoID); err != nil {
 		return fmt.Errorf("delete video row: %w", err)
 	}
 	if err := s.dropObservation(ctx, found, video.Filename); err != nil {
@@ -1318,7 +1332,7 @@ func (s *Service) dropObservation(ctx context.Context, found Post, filename stri
 	if len(kept) == len(found.Observations) {
 		return nil
 	}
-	if _, err := s.store.UpdateObservations(ctx, found.Slug, found.UserID, kept, s.now()); err != nil {
+	if _, err := s.drafts.UpdateObservations(ctx, found.Slug, found.UserID, kept, s.now()); err != nil {
 		return fmt.Errorf("drop observation for deleted photo: %w", err)
 	}
 	return nil
@@ -1329,7 +1343,7 @@ func (s *Service) dropObservation(ctx context.Context, found Post, filename stri
 // Unknown and foreign are distinguished on template (PRD §7 specifies 403 for a foreign
 // slug). At two users there is nothing to enumerate.
 func (s *Service) ownedPost(ctx context.Context, userID, slug string) (Post, error) {
-	found, err := s.store.GetPost(ctx, slug)
+	found, err := s.posts.GetPost(ctx, slug)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
 			return Post{}, ErrNotFound
@@ -1351,4 +1365,13 @@ func newObjectID() string {
 		panic("post: cannot read random bytes for an object id: " + err.Error())
 	}
 	return hex.EncodeToString(buf)
+}
+
+// contentStoreOf reports the progressive editor capability of the store that was wired in.
+// A store without it leaves the editor's use-cases refusing rather than panicking.
+func contentStoreOf(store Storage) ContentStore {
+	if content, ok := store.(ContentStore); ok {
+		return content
+	}
+	return nil
 }

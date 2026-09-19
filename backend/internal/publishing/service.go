@@ -25,7 +25,10 @@ type Config struct {
 }
 
 type Service struct {
-	store   Store
+	agents  AgentRegistry
+	jobs    JobLedger
+	lease   JobLease
+	assets  AssetStaging
 	posts   PostSnapshots
 	staging ObjectStaging
 	clock   Clock
@@ -41,8 +44,8 @@ type Service struct {
 	lastTouch map[string]time.Time
 }
 
-func NewService(store Store, posts PostSnapshots, staging ObjectStaging, cfg Config) *Service {
-	return &Service{store: store, posts: posts, staging: staging, clock: realClock{}, tokens: cryptoTokens{}, config: cfg, lastTouch: map[string]time.Time{}}
+func NewService(store Storage, posts PostSnapshots, staging ObjectStaging, cfg Config) *Service {
+	return &Service{agents: store, jobs: store, lease: store, assets: store, posts: posts, staging: staging, clock: realClock{}, tokens: cryptoTokens{}, config: cfg, lastTouch: map[string]time.Time{}}
 }
 
 func (s *Service) CreatePairing(ctx context.Context, userID, label string) (Pairing, error) {
@@ -62,7 +65,7 @@ func (s *Service) CreatePairing(ctx context.Context, userID, label string) (Pair
 	compactCode := strings.ToUpper(hex.EncodeToString(digest[:])[:12])
 	code := compactCode[:4] + "-" + compactCode[4:8] + "-" + compactCode[8:]
 	expires := now.Add(s.config.PairingTTL)
-	if err := s.store.CreatePairing(ctx, hashCode(code), userID, label, expires, now, s.config.MaxPendingPairings); err != nil {
+	if err := s.agents.CreatePairing(ctx, hashCode(code), userID, label, expires, now, s.config.MaxPendingPairings); err != nil {
 		if errors.Is(err, ErrPairingLimit) {
 			return Pairing{}, err
 		}
@@ -85,7 +88,7 @@ func (s *Service) Enroll(ctx context.Context, deviceCode, browserLabel string) (
 	if err != nil {
 		return Enrollment{}, fmt.Errorf("generate agent id: %w", err)
 	}
-	_, err = s.store.Enroll(ctx, hashCode(deviceCode), hashToken(token), agentID, browserLabel, s.clock.Now())
+	_, err = s.agents.Enroll(ctx, hashCode(deviceCode), hashToken(token), agentID, browserLabel, s.clock.Now())
 	if err != nil {
 		if errors.Is(err, ErrPairingInvalid) {
 			return Enrollment{}, err
@@ -100,7 +103,7 @@ func (s *Service) AuthenticateAgent(ctx context.Context, rawToken string) (Agent
 	if rawToken == "" {
 		return Agent{}, ErrAgentRevoked
 	}
-	agent, err := s.store.AgentByTokenHash(ctx, hashToken(rawToken))
+	agent, err := s.agents.AgentByTokenHash(ctx, hashToken(rawToken))
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
 			return Agent{}, ErrAgentRevoked
@@ -140,7 +143,7 @@ func (s *Service) touchAgent(ctx context.Context, agent Agent, now time.Time) er
 	s.lastTouch[agent.ID] = now
 	s.touchMu.Unlock()
 
-	err := s.store.TouchAgent(ctx, agent.UserID, agent.ID, now)
+	err := s.agents.TouchAgent(ctx, agent.UserID, agent.ID, now)
 	if err == nil {
 		return nil
 	}
@@ -164,7 +167,7 @@ func (s *Service) touchAgent(ctx context.Context, agent Agent, now time.Time) er
 }
 
 func (s *Service) ListAgents(ctx context.Context, userID string) ([]Agent, error) {
-	agents, err := s.store.ListAgents(ctx, userID)
+	agents, err := s.agents.ListAgents(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -183,7 +186,7 @@ func (s *Service) UpdateAgent(ctx context.Context, userID, agentID, label, categ
 	if strings.TrimSpace(label) == "" || !validVisibility(visibility) {
 		return Agent{}, ErrInvalid
 	}
-	agent, err := s.store.OwnedAgent(ctx, userID, agentID)
+	agent, err := s.agents.OwnedAgent(ctx, userID, agentID)
 	if err != nil {
 		return Agent{}, err
 	}
@@ -193,7 +196,7 @@ func (s *Service) UpdateAgent(ctx context.Context, userID, agentID, label, categ
 	if !agent.HasCategory(categoryID) {
 		return Agent{}, ErrCategoryNotFound
 	}
-	return s.store.UpdateAgent(ctx, userID, agentID, strings.TrimSpace(label), categoryID, visibility, s.clock.Now())
+	return s.agents.UpdateAgent(ctx, userID, agentID, strings.TrimSpace(label), categoryID, visibility, s.clock.Now())
 }
 
 func (s *Service) SyncAgent(ctx context.Context, agent Agent, update ProfileUpdate) (Agent, error) {
@@ -206,11 +209,11 @@ func (s *Service) SyncAgent(ctx context.Context, agent Agent, update ProfileUpda
 	if !update.CompatibilityReady {
 		update.ExecutorVersion = ""
 	}
-	return s.store.SyncAgent(ctx, agent.UserID, agent.ID, update, s.clock.Now())
+	return s.agents.SyncAgent(ctx, agent.UserID, agent.ID, update, s.clock.Now())
 }
 
 func (s *Service) RevokeAgent(ctx context.Context, userID, agentID string) error {
-	if err := s.store.RevokeAgent(ctx, userID, agentID, s.clock.Now()); err != nil {
+	if err := s.agents.RevokeAgent(ctx, userID, agentID, s.clock.Now()); err != nil {
 		return err
 	}
 	// Drops the suppression entry so the map stays bounded by the agents currently
@@ -225,7 +228,7 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (Job, error) 
 	if !validVisibility(request.Visibility) || request.ExpectedContentRevision <= 0 {
 		return Job{}, ErrInvalid
 	}
-	agent, err := s.store.OwnedAgent(ctx, request.UserID, request.AgentID)
+	agent, err := s.agents.OwnedAgent(ctx, request.UserID, request.AgentID)
 	if err != nil {
 		return Job{}, err
 	}
@@ -242,7 +245,7 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (Job, error) 
 	postCreatedAt, err := s.posts.PostIdentity(ctx, request.UserID, request.PostSlug)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
-			previous, latestErr := s.store.LatestJobForDeletedPost(ctx, request.UserID, request.PostSlug)
+			previous, latestErr := s.jobs.LatestJobForDeletedPost(ctx, request.UserID, request.PostSlug)
 			if latestErr == nil && previous.Status == StatusNeedsAttention {
 				return s.retryAttention(ctx, request, previous)
 			}
@@ -252,7 +255,7 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (Job, error) 
 		}
 		return Job{}, err
 	}
-	if previous, latestErr := s.store.LatestJobForPost(ctx, request.UserID, request.PostSlug, postCreatedAt); latestErr == nil {
+	if previous, latestErr := s.jobs.LatestJobForPost(ctx, request.UserID, request.PostSlug, postCreatedAt); latestErr == nil {
 		switch previous.Status {
 		case StatusNeedsAttention:
 			return s.retryAttention(ctx, request, previous)
@@ -287,7 +290,7 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (Job, error) 
 	if err != nil {
 		return Job{}, fmt.Errorf("generate publish job id: %w", err)
 	}
-	if err := s.store.ReserveJobID(ctx, request.UserID, jobID, now); err != nil {
+	if err := s.jobs.ReserveJobID(ctx, request.UserID, jobID, now); err != nil {
 		return Job{}, fmt.Errorf("reserve publish job id: %w", err)
 	}
 	assets := make([]Asset, 0, len(ordered))
@@ -303,7 +306,7 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (Job, error) 
 				clean = s.staging.Delete(ctx, staged.StagedKey) == nil && clean
 			}
 			if clean {
-				_ = s.store.ReleaseJobID(ctx, request.UserID, jobID)
+				_ = s.jobs.ReleaseJobID(ctx, request.UserID, jobID)
 			}
 			if copyErr != nil {
 				return Job{}, fmt.Errorf("stage %s: %w", image.Filename, copyErr)
@@ -326,7 +329,7 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (Job, error) 
 	// writes and agent changes cannot pass that writer reservation until insertion
 	// commits, so the accepted request has one atomic current-state boundary.
 	guard := func(guardCtx context.Context) error {
-		currentAgent, guardErr := s.store.OwnedAgent(guardCtx, request.UserID, request.AgentID)
+		currentAgent, guardErr := s.agents.OwnedAgent(guardCtx, request.UserID, request.AgentID)
 		if guardErr != nil {
 			return guardErr
 		}
@@ -351,13 +354,13 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (Job, error) 
 		}
 		return nil
 	}
-	if err := s.store.CreateJob(ctx, job, assets, guard); err != nil {
+	if err := s.jobs.CreateJob(ctx, job, assets, guard); err != nil {
 		clean := true
 		for _, staged := range assets {
 			clean = s.staging.Delete(ctx, staged.StagedKey) == nil && clean
 		}
 		if clean {
-			_ = s.store.ReleaseJobID(ctx, request.UserID, jobID)
+			_ = s.jobs.ReleaseJobID(ctx, request.UserID, jobID)
 		}
 		if errors.Is(err, ErrAlreadyPublishing) {
 			return Job{}, err
@@ -375,7 +378,7 @@ func (s *Service) retryAttention(ctx context.Context, request StartRequest, prev
 		previous.CategoryID != request.CategoryID || previous.Visibility != request.Visibility || previous.Manifest == nil {
 		return Job{}, ErrAlreadyPublishing
 	}
-	return s.store.RetryAttentionJob(ctx, request.UserID, previous.ID, s.clock.Now())
+	return s.jobs.RetryAttentionJob(ctx, request.UserID, previous.ID, s.clock.Now())
 }
 
 func cloneContent(content Content) Content {
@@ -391,13 +394,13 @@ func cloneContent(content Content) Content {
 
 func (s *Service) GetJob(ctx context.Context, userID, postSlug, jobID string) (Job, error) {
 	if jobID != "" {
-		return s.store.OwnedJob(ctx, userID, jobID)
+		return s.jobs.OwnedJob(ctx, userID, jobID)
 	}
 	postCreatedAt, err := s.posts.PostIdentity(ctx, userID, postSlug)
 	if err != nil {
 		return Job{}, err
 	}
-	return s.store.LatestJobForPost(ctx, userID, postSlug, postCreatedAt)
+	return s.jobs.LatestJobForPost(ctx, userID, postSlug, postCreatedAt)
 }
 
 // HasLiveJobForPost reports whether this post incarnation still has a publication in
@@ -406,27 +409,27 @@ func (s *Service) GetJob(ctx context.Context, userID, postSlug, jobID string) (J
 // paired agent can never be left driving a browser for a post that no longer exists.
 // It is a query: it takes no lease and mutates nothing.
 func (s *Service) HasLiveJobForPost(ctx context.Context, userID, postSlug string, postCreatedAt time.Time) (bool, error) {
-	return s.store.HasLivePublishJobForPost(ctx, userID, postSlug, postCreatedAt)
+	return s.jobs.HasLivePublishJobForPost(ctx, userID, postSlug, postCreatedAt)
 }
 
 func (s *Service) ListRetryable(ctx context.Context, userID string) ([]Job, error) {
 	if strings.TrimSpace(userID) == "" {
 		return nil, ErrForbidden
 	}
-	return s.store.ListRetryableJobs(ctx, userID)
+	return s.jobs.ListRetryableJobs(ctx, userID)
 }
 
 // Retry resumes the same immutable pre-commit manifest by account-scoped job
 // identity. It intentionally does not require the source post to still exist.
 func (s *Service) Retry(ctx context.Context, userID, jobID string) (Job, error) {
-	job, err := s.store.OwnedJob(ctx, userID, strings.TrimSpace(jobID))
+	job, err := s.jobs.OwnedJob(ctx, userID, strings.TrimSpace(jobID))
 	if err != nil {
 		return Job{}, err
 	}
 	if job.Status != StatusNeedsAttention || job.CommittedAt != nil || job.Manifest == nil {
 		return Job{}, ErrTransition
 	}
-	agent, err := s.store.OwnedAgent(ctx, userID, job.AgentID)
+	agent, err := s.agents.OwnedAgent(ctx, userID, job.AgentID)
 	if err != nil {
 		return Job{}, err
 	}
@@ -440,18 +443,18 @@ func (s *Service) Retry(ctx context.Context, userID, jobID string) (Job, error) 
 	if !categoryFound || categoryName != job.Manifest.CategoryName {
 		return Job{}, ErrCategoryNotFound
 	}
-	return s.store.RetryAttentionJob(ctx, userID, job.ID, s.clock.Now())
+	return s.jobs.RetryAttentionJob(ctx, userID, job.ID, s.clock.Now())
 }
 
 func (s *Service) Cancel(ctx context.Context, userID, jobID string) (Job, error) {
-	current, err := s.store.OwnedJob(ctx, userID, jobID)
+	current, err := s.jobs.OwnedJob(ctx, userID, jobID)
 	if err != nil {
 		return Job{}, err
 	}
 	if !CanCancel(current) {
 		return Job{}, ErrCommitFence
 	}
-	job, err := s.store.Cancel(ctx, userID, jobID, s.clock.Now())
+	job, err := s.jobs.Cancel(ctx, userID, jobID, s.clock.Now())
 	if err != nil {
 		return Job{}, err
 	}
@@ -472,7 +475,7 @@ func (s *Service) Claim(ctx context.Context, agent Agent) (Claim, error) {
 	}
 	now := s.clock.Now()
 	expires := now.Add(s.config.LeaseTTL)
-	job, err := s.store.ClaimJob(ctx, agent, hashToken(raw), expires, now)
+	job, err := s.lease.ClaimJob(ctx, agent, hashToken(raw), expires, now)
 	if err != nil {
 		return Claim{}, err
 	}
@@ -496,7 +499,7 @@ func (s *Service) Renew(ctx context.Context, agent Agent, jobID, leaseToken stri
 	}
 	now := s.clock.Now()
 	expires := now.Add(s.config.LeaseTTL)
-	if err := s.store.RenewLease(ctx, agent, jobID, hashToken(leaseToken), expires, now); err != nil {
+	if err := s.lease.RenewLease(ctx, agent, jobID, hashToken(leaseToken), expires, now); err != nil {
 		return time.Time{}, err
 	}
 	return expires, nil
@@ -506,7 +509,7 @@ func (s *Service) Progress(ctx context.Context, agent Agent, jobID, leaseToken s
 	if !agent.Ready() {
 		return Job{}, ErrAgentNotReady
 	}
-	current, err := s.store.OwnedJob(ctx, agent.UserID, jobID)
+	current, err := s.jobs.OwnedJob(ctx, agent.UserID, jobID)
 	if err != nil {
 		return Job{}, err
 	}
@@ -516,14 +519,14 @@ func (s *Service) Progress(ctx context.Context, agent Agent, jobID, leaseToken s
 	if err := ValidateProgress(current.Stage, stage, current.ProgressSeq, seq); err != nil {
 		return Job{}, err
 	}
-	return s.store.UpdateProgress(ctx, agent, jobID, hashToken(leaseToken), current.Stage, current.ProgressSeq, stage, seq, s.clock.Now())
+	return s.lease.UpdateProgress(ctx, agent, jobID, hashToken(leaseToken), current.Stage, current.ProgressSeq, stage, seq, s.clock.Now())
 }
 
 func (s *Service) Complete(ctx context.Context, agent Agent, jobID, leaseToken string, seq int64, publishedURL string) (Job, error) {
 	if !agent.Ready() {
 		return Job{}, ErrAgentNotReady
 	}
-	current, err := s.store.OwnedJob(ctx, agent.UserID, jobID)
+	current, err := s.jobs.OwnedJob(ctx, agent.UserID, jobID)
 	if err != nil {
 		return Job{}, err
 	}
@@ -536,7 +539,7 @@ func (s *Service) Complete(ctx context.Context, agent Agent, jobID, leaseToken s
 	if !validNaverURL(publishedURL, current.Manifest.ExpectedPlatformAccountID) {
 		return Job{}, ErrPublishedURLInvalid
 	}
-	job, err := s.store.Complete(ctx, agent, jobID, hashToken(leaseToken), seq, publishedURL, s.clock.Now())
+	job, err := s.lease.Complete(ctx, agent, jobID, hashToken(leaseToken), seq, publishedURL, s.clock.Now())
 	if err != nil {
 		return Job{}, err
 	}
@@ -550,7 +553,7 @@ func (s *Service) Fail(ctx context.Context, agent Agent, jobID, leaseToken strin
 	if !agent.Ready() {
 		return Job{}, ErrAgentNotReady
 	}
-	current, err := s.store.OwnedJob(ctx, agent.UserID, jobID)
+	current, err := s.jobs.OwnedJob(ctx, agent.UserID, jobID)
 	if err != nil {
 		return Job{}, err
 	}
@@ -560,7 +563,7 @@ func (s *Service) Fail(ctx context.Context, agent Agent, jobID, leaseToken strin
 	status := FailureStatus(current.Stage, kind)
 	precommitFailure := failureForAgentReport(status, kind, detail)
 	commitFailure := Failure{Reason: "PUBLISH_OUTCOME_UNKNOWN", TechnicalDetail: precommitFailure.TechnicalDetail}
-	job, err := s.store.Fail(ctx, agent, jobID, hashToken(leaseToken), seq, status, precommitFailure, commitFailure, s.clock.Now())
+	job, err := s.lease.Fail(ctx, agent, jobID, hashToken(leaseToken), seq, status, precommitFailure, commitFailure, s.clock.Now())
 	if err != nil {
 		return Job{}, err
 	}
@@ -586,11 +589,11 @@ func failureForAgentReport(status Status, kind FailureKind, detail string) Failu
 }
 
 func (s *Service) RecoverExpired(ctx context.Context) (int64, int64, error) {
-	return s.store.RequeueExpired(ctx, s.clock.Now())
+	return s.lease.RequeueExpired(ctx, s.clock.Now())
 }
 
 func (s *Service) CleanupTerminals(ctx context.Context) error {
-	jobs, err := s.store.TerminalJobsWithAssets(ctx)
+	jobs, err := s.assets.TerminalJobsWithAssets(ctx)
 	if err != nil {
 		return err
 	}
@@ -604,7 +607,7 @@ func (s *Service) CleanupTerminals(ctx context.Context) error {
 }
 
 func (s *Service) SweepOrphans(ctx context.Context, minAge time.Duration) (int, error) {
-	live, err := s.store.LiveStagedKeys(ctx)
+	live, err := s.assets.LiveStagedKeys(ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -627,7 +630,7 @@ func (s *Service) SweepOrphans(ctx context.Context, minAge time.Duration) (int, 
 }
 
 func (s *Service) cleanupAssets(ctx context.Context, jobID string) error {
-	assets, err := s.store.Assets(ctx, jobID)
+	assets, err := s.assets.Assets(ctx, jobID)
 	if err != nil {
 		return err
 	}
@@ -640,7 +643,7 @@ func (s *Service) cleanupAssets(ctx context.Context, jobID string) error {
 	if cleanupErr != nil {
 		return cleanupErr
 	}
-	return s.store.DeleteAssets(ctx, jobID)
+	return s.assets.DeleteAssets(ctx, jobID)
 }
 
 func orderedImages(content Content, images []SnapshotImage) ([]SnapshotImage, error) {

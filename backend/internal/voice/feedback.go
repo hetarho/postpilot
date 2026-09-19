@@ -33,7 +33,7 @@ func (s *Service) GiveFeedback(ctx context.Context, userID, postSlug, sentenceRe
 		return "", err
 	}
 	voiceID := active.ID
-	event, err := s.personalization.FindLearningEvent(ctx, userID, voiceID, postSlug, snapshot.BaselineRevision, learningInputHash(snapshot))
+	event, err := s.learning.FindLearningEvent(ctx, userID, voiceID, postSlug, snapshot.BaselineRevision, learningInputHash(snapshot))
 	if err != nil {
 		return "", err
 	}
@@ -72,7 +72,7 @@ func (s *Service) GiveFeedback(ctx context.Context, userID, postSlug, sentenceRe
 	} else if existing != nil {
 		return existing.ID, nil
 	}
-	if err = s.personalization.InsertFeedback(ctx, feedback); err == nil {
+	if err = s.feedback.InsertFeedback(ctx, feedback); err == nil {
 		return feedback.ID, nil
 	}
 	// The unique constraint arbitrates simultaneous retries from multiple tabs.
@@ -83,7 +83,7 @@ func (s *Service) GiveFeedback(ctx context.Context, userID, postSlug, sentenceRe
 }
 
 func (s *Service) findFeedback(ctx context.Context, want Feedback) (*Feedback, error) {
-	items, err := s.personalization.ListFeedback(ctx, want.UserID, want.VoiceID)
+	items, err := s.feedback.ListFeedback(ctx, want.UserID, want.VoiceID)
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +102,7 @@ func (s *Service) ChangeRuleStatus(ctx context.Context, userID, ruleID string, s
 	if status != RuleCandidate && status != RuleActive && status != RuleRetired && status != RuleRejected {
 		return Profile{}, ErrInvalidLifecycle
 	}
-	rule, err := s.personalization.GetRule(ctx, userID, ruleID)
+	rule, err := s.rules.GetRule(ctx, userID, ruleID)
 	if err != nil {
 		return Profile{}, err
 	}
@@ -123,7 +123,7 @@ func (s *Service) ChangeRuleStatus(ctx context.Context, userID, ruleID string, s
 			profile.Structured.Rules[i].LastEvidenceAt = now
 		}
 	}
-	if err = s.personalization.ApplyRuleStatusAndPublish(ctx, userID, rule.VoiceID, ruleID, status, profile.Structured, now); err != nil {
+	if err = s.rules.ApplyRuleStatusAndPublish(ctx, userID, rule.VoiceID, ruleID, status, profile.Structured, now); err != nil {
 		return Profile{}, err
 	}
 	return s.Get(ctx, userID, rule.VoiceID)
@@ -132,10 +132,10 @@ func (s *Service) Confirmations(ctx context.Context, userID, voiceID string) ([]
 	if _, err := s.ownedVoice(ctx, userID, voiceID); err != nil {
 		return nil, err
 	}
-	return s.personalization.ListConfirmations(ctx, userID, voiceID)
+	return s.feedback.ListConfirmations(ctx, userID, voiceID)
 }
 func (s *Service) ResolveConfirmation(ctx context.Context, userID, confirmationID string, replace bool) (Profile, error) {
-	confirmation, err := s.personalization.GetConfirmation(ctx, userID, confirmationID)
+	confirmation, err := s.feedback.GetConfirmation(ctx, userID, confirmationID)
 	if err != nil {
 		return Profile{}, err
 	}
@@ -145,7 +145,7 @@ func (s *Service) ResolveConfirmation(ctx context.Context, userID, confirmationI
 	if err := s.retireStaleRules(ctx, userID, confirmation.VoiceID); err != nil {
 		return Profile{}, err
 	}
-	if err := s.personalization.ResolveConfirmationAndPublish(ctx, userID, confirmationID, replace, s.now()); err != nil {
+	if err := s.feedback.ResolveConfirmationAndPublish(ctx, userID, confirmationID, replace, s.now()); err != nil {
 		return Profile{}, err
 	}
 	return s.Get(ctx, userID, confirmation.VoiceID)

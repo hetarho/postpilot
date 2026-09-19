@@ -31,7 +31,9 @@ type StagedObject struct {
 	LastModified time.Time
 }
 
-type Store interface {
+// AgentRegistry is the Mac companions an account has paired: enrolling one, reading it,
+// keeping its profile current and revoking it.
+type AgentRegistry interface {
 	CreatePairing(ctx context.Context, codeHash, userID, label string, expiresAt, createdAt time.Time, maxPending int) error
 	Enroll(ctx context.Context, codeHash, tokenHash, agentID, browserLabel string, now time.Time) (Agent, error)
 	AgentByTokenHash(ctx context.Context, tokenHash string) (Agent, error)
@@ -41,9 +43,13 @@ type Store interface {
 	UpdateAgent(ctx context.Context, userID, agentID, label, categoryID string, visibility Visibility, now time.Time) (Agent, error)
 	SyncAgent(ctx context.Context, userID, agentID string, update ProfileUpdate, now time.Time) (Agent, error)
 	RevokeAgent(ctx context.Context, userID, agentID string, now time.Time) error
+}
+
+// JobLedger is a publish job as its OWNER sees it: reserving its id, starting it, finding
+// it again and stopping it.
+type JobLedger interface {
 	ReserveJobID(ctx context.Context, userID, jobID string, now time.Time) error
 	ReleaseJobID(ctx context.Context, userID, jobID string) error
-
 	// CreateJob runs guard after reserving the serialized writer and revalidating the
 	// selected agent, then inserts the job and assets in that same transaction. This
 	// gives Start one linearization point without letting this context read post tables.
@@ -56,15 +62,34 @@ type Store interface {
 	// HasLivePublishJobForPost reports a non-terminal job for exactly this post incarnation.
 	// The post context consults it before a destructive operation.
 	HasLivePublishJobForPost(ctx context.Context, userID, postSlug string, postCreatedAt time.Time) (bool, error)
+	Cancel(ctx context.Context, userID, jobID string, now time.Time) (Job, error)
+}
+
+// JobLease is the same job as the leased EXECUTOR sees it: claiming one, holding the lease
+// while it works, and the sweep that takes an expired lease back (PUB).
+type JobLease interface {
 	ClaimJob(ctx context.Context, agent Agent, leaseHash string, expiresAt, now time.Time) (Job, error)
 	RenewLease(ctx context.Context, agent Agent, jobID, leaseHash string, expiresAt, now time.Time) error
 	UpdateProgress(ctx context.Context, agent Agent, jobID, leaseHash string, currentStage Stage, currentSeq int64, nextStage Stage, nextSeq int64, now time.Time) (Job, error)
 	Complete(ctx context.Context, agent Agent, jobID, leaseHash string, seq int64, url string, now time.Time) (Job, error)
 	Fail(ctx context.Context, agent Agent, jobID, leaseHash string, seq int64, status Status, precommitFailure, commitFailure Failure, now time.Time) (Job, error)
-	Cancel(ctx context.Context, userID, jobID string, now time.Time) (Job, error)
 	RequeueExpired(ctx context.Context, now time.Time) (requeued, unknown int64, err error)
+}
+
+// AssetStaging is the staged bytes a job publishes and what the cleanup needs to find
+// the ones nothing owns any more.
+type AssetStaging interface {
 	Assets(ctx context.Context, jobID string) ([]Asset, error)
 	DeleteAssets(ctx context.Context, jobID string) error
 	LiveStagedKeys(ctx context.Context) (map[string]struct{}, error)
 	TerminalJobsWithAssets(ctx context.Context) ([]string, error)
+}
+
+// Storage is every behaviour the publishing context's SQL store happens to implement: the
+// composition root's handle, not a port (ARCH-6).
+type Storage interface {
+	AgentRegistry
+	JobLedger
+	JobLease
+	AssetStaging
 }

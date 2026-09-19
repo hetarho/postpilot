@@ -11,7 +11,7 @@ func (s *Service) ListVersions(ctx context.Context, userID, voiceID string) ([]P
 	if _, err := s.ownedVoice(ctx, userID, voiceID); err != nil {
 		return nil, err
 	}
-	return s.personalization.ListProfileVersions(ctx, userID, voiceID)
+	return s.versions.ListProfileVersions(ctx, userID, voiceID)
 }
 
 func (s *Service) UpdateOverride(ctx context.Context, userID, voiceID string, layer RuleLayer, field string, value *string) (Profile, error) {
@@ -28,7 +28,7 @@ func (s *Service) UpdateOverride(ctx context.Context, userID, voiceID string, la
 	storedValue := value
 	if value == nil {
 		// Clearing reverts to the last measured/analyzed snapshot by replaying remaining overrides.
-		versions, loadErr := s.personalization.ListProfileVersions(ctx, userID, voiceID)
+		versions, loadErr := s.versions.ListProfileVersions(ctx, userID, voiceID)
 		if loadErr != nil {
 			return Profile{}, loadErr
 		}
@@ -48,7 +48,7 @@ func (s *Service) UpdateOverride(ctx context.Context, userID, voiceID string, la
 		}
 		storedValue = &trimmed
 	}
-	overrides, err := s.personalization.ListManualOverrides(ctx, userID, voiceID)
+	overrides, err := s.overrides.ListManualOverrides(ctx, userID, voiceID)
 	if err != nil {
 		return Profile{}, err
 	}
@@ -61,7 +61,7 @@ func (s *Service) UpdateOverride(ctx context.Context, userID, voiceID string, la
 		}
 	}
 	now := s.now()
-	if err = s.personalization.ApplyOverrideAndPublish(ctx, ManualOverride{UserID: userID, VoiceID: voiceID, Layer: layer, Field: field, UpdatedAt: now}, storedValue, profile.Structured, now); err != nil {
+	if err = s.overrides.ApplyOverrideAndPublish(ctx, ManualOverride{UserID: userID, VoiceID: voiceID, Layer: layer, Field: field, UpdatedAt: now}, storedValue, profile.Structured, now); err != nil {
 		return Profile{}, err
 	}
 	return s.Get(ctx, userID, voiceID)
@@ -71,11 +71,11 @@ func (s *Service) RestoreVersion(ctx context.Context, userID, voiceID string, ve
 	if _, err := s.activeVoice(ctx, userID, voiceID); err != nil {
 		return Profile{}, err
 	}
-	found, err := s.personalization.GetProfileVersion(ctx, userID, voiceID, version)
+	found, err := s.versions.GetProfileVersion(ctx, userID, voiceID, version)
 	if err != nil {
 		return Profile{}, err
 	}
-	if _, err = s.personalization.PublishProfileVersion(ctx, userID, voiceID, found.Profile, "restore", version, s.now()); err != nil {
+	if _, err = s.versions.PublishProfileVersion(ctx, userID, voiceID, found.Profile, "restore", version, s.now()); err != nil {
 		return Profile{}, err
 	}
 	return s.Get(ctx, userID, voiceID)

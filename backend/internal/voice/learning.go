@@ -167,7 +167,7 @@ func (s *Service) LearnFromFinalizedPost(ctx context.Context, userID, postSlug s
 		return LearningEvent{}, "", false, err
 	}
 	hash := learningInputHash(snapshot)
-	existing, err := s.personalization.FindLearningEvent(ctx, userID, voiceID, postSlug, snapshot.BaselineRevision, hash)
+	existing, err := s.learning.FindLearningEvent(ctx, userID, voiceID, postSlug, snapshot.BaselineRevision, hash)
 	if err != nil {
 		return LearningEvent{}, "", false, err
 	}
@@ -176,10 +176,10 @@ func (s *Service) LearnFromFinalizedPost(ctx context.Context, userID, postSlug s
 		return *existing, jobID, true, resumeErr
 	}
 	event := LearningEvent{ID: s.newID(), UserID: userID, VoiceID: voiceID, PostSlug: postSlug, BaselineRevision: snapshot.BaselineRevision, InputHash: hash, BaselineJSON: snapshot.BaselineJSON, FinalJSON: snapshot.FinalJSON, ModelRef: model.String(), Status: "queued", CreatedAt: s.now(), ContentLanguage: snapshot.ContentLanguage, SourceLanguage: active.SourceLanguage}
-	if err = s.personalization.InsertLearningEvent(ctx, event); err != nil {
+	if err = s.learning.InsertLearningEvent(ctx, event); err != nil {
 		// The database uniqueness constraint is the final arbiter when two tabs
 		// finalize the same immutable input concurrently.
-		if raced, findErr := s.personalization.FindLearningEvent(ctx, userID, voiceID, postSlug, snapshot.BaselineRevision, hash); findErr == nil && raced != nil {
+		if raced, findErr := s.learning.FindLearningEvent(ctx, userID, voiceID, postSlug, snapshot.BaselineRevision, hash); findErr == nil && raced != nil {
 			jobID, resumeErr := s.resumeLearningEvent(ctx, raced, model)
 			return *raced, jobID, true, resumeErr
 		}
@@ -246,7 +246,7 @@ func (s *Service) enqueueLearningEvent(ctx context.Context, event *LearningEvent
 	jobID, err := s.personalizationJobs.EnqueuePersonalization(ctx, PersonalizationJobRequest{Kind: LearnJobKind, UserID: event.UserID, VoiceID: event.VoiceID, PostSlug: event.PostSlug, Model: model.String(), Payload: event.ID})
 	if err != nil {
 		failure := normalizeFailure(err)
-		_ = s.personalization.SetLearningEventStatus(ctx, event.UserID, event.ID, "retryable", &failure, nil)
+		_ = s.learning.SetLearningEventStatus(ctx, event.UserID, event.ID, "retryable", &failure, nil)
 		event.Status = "retryable"
 		event.Error = ""
 		event.Failure = &failure
@@ -257,14 +257,14 @@ func (s *Service) enqueueLearningEvent(ctx context.Context, event *LearningEvent
 	event.Status = "queued"
 	event.Error = ""
 	event.Failure = nil
-	if err = s.personalization.SetLearningEventJob(ctx, event.UserID, event.ID, jobID); err != nil {
+	if err = s.learning.SetLearningEventJob(ctx, event.UserID, event.ID, jobID); err != nil {
 		return jobID, err
 	}
 	return jobID, nil
 }
 
 func (s *Service) RetryLearning(ctx context.Context, userID, eventID string, requested llm.ModelRef) (LearningEvent, string, error) {
-	event, err := s.personalization.GetLearningEvent(ctx, userID, eventID)
+	event, err := s.learning.GetLearningEvent(ctx, userID, eventID)
 	if err != nil {
 		return LearningEvent{}, "", err
 	}
@@ -286,7 +286,7 @@ func (s *Service) RetryLearning(ctx context.Context, userID, eventID string, req
 }
 
 func (s *Service) GetLearningEvent(ctx context.Context, userID, eventID string) (LearningEvent, error) {
-	found, err := s.personalization.GetLearningEvent(ctx, userID, eventID)
+	found, err := s.learning.GetLearningEvent(ctx, userID, eventID)
 	if err != nil {
 		return LearningEvent{}, err
 	}
@@ -294,7 +294,7 @@ func (s *Service) GetLearningEvent(ctx context.Context, userID, eventID string) 
 }
 
 func (s *Service) Learn(ctx context.Context, job LearningJob, progress Progress) error {
-	event, err := s.personalization.GetLearningEvent(ctx, job.UserID, job.EventID)
+	event, err := s.learning.GetLearningEvent(ctx, job.UserID, job.EventID)
 	if err != nil {
 		return err
 	}
@@ -308,7 +308,7 @@ func (s *Service) Learn(ctx context.Context, job LearningJob, progress Progress)
 		}
 		return s.failLearning(ctx, *event, voiceUnavailableError(err))
 	}
-	_ = s.personalization.SetLearningEventStatus(ctx, job.UserID, event.ID, "running", nil, nil)
+	_ = s.learning.SetLearningEventStatus(ctx, job.UserID, event.ID, "running", nil, nil)
 	final, body, err := parseAuthoredContent(event.FinalJSON)
 	if err != nil {
 		return s.failLearning(ctx, *event, err)
@@ -317,7 +317,7 @@ func (s *Service) Learn(ctx context.Context, job LearningJob, progress Progress)
 	if err != nil {
 		return s.failLearning(ctx, *event, err)
 	}
-	sources, err := s.personalization.ListAuthoredSources(ctx, job.UserID, event.VoiceID)
+	sources, err := s.learning.ListAuthoredSources(ctx, job.UserID, event.VoiceID)
 	if err != nil {
 		return s.failLearning(ctx, *event, err)
 	}
@@ -356,7 +356,7 @@ func (s *Service) Learn(ctx context.Context, job LearningJob, progress Progress)
 	if err = validateAxes(profile.Axes); err != nil {
 		return s.failLearning(ctx, *event, err)
 	}
-	overrides, err := s.personalization.ListManualOverrides(ctx, job.UserID, event.VoiceID)
+	overrides, err := s.overrides.ListManualOverrides(ctx, job.UserID, event.VoiceID)
 	if err != nil {
 		return s.failLearning(ctx, *event, err)
 	}
@@ -367,7 +367,7 @@ func (s *Service) Learn(ctx context.Context, job LearningJob, progress Progress)
 	}
 	excerpt := excerptAroundTarget(body, s.config.FewShotExcerptTargetChars, s.config.FewShotExcerptMaxChars)
 	source := AuthoredSource{ID: s.newID(), UserID: job.UserID, VoiceID: event.VoiceID, PostSlug: event.PostSlug, LearningEventID: event.ID, Title: final.Title, Tags: final.Tags, Body: body, Excerpt: excerpt, CreatedAt: s.now(), SourceLanguage: event.SourceLanguage}
-	profile.Rules, err = s.personalization.ListRules(ctx, job.UserID, event.VoiceID)
+	profile.Rules, err = s.rules.ListRules(ctx, job.UserID, event.VoiceID)
 	if err != nil {
 		return s.failLearning(ctx, *event, err)
 	}
@@ -381,7 +381,7 @@ func (s *Service) Learn(ctx context.Context, job LearningJob, progress Progress)
 	}
 	profile.SourceCount = len(sources) + 1
 	profile.Sources = append([]AuthoredSource{source}, sources...)
-	if err = s.personalization.ApplyLearningResult(ctx, *event, LearningResult{Source: source, Profile: profile, Rules: rules}, s.config, s.now()); err != nil {
+	if err = s.learning.ApplyLearningResult(ctx, *event, LearningResult{Source: source, Profile: profile, Rules: rules}, s.config, s.now()); err != nil {
 		return s.failLearning(ctx, *event, err)
 	}
 	progress("learn", 1, 1)
@@ -398,6 +398,6 @@ func validateAxes(a AxesProfile) error {
 }
 func (s *Service) failLearning(ctx context.Context, event LearningEvent, cause error) error {
 	failure := normalizeFailure(cause)
-	_ = s.personalization.SetLearningEventStatus(ctx, event.UserID, event.ID, "retryable", &failure, nil)
+	_ = s.learning.SetLearningEventStatus(ctx, event.UserID, event.ID, "retryable", &failure, nil)
 	return cause
 }

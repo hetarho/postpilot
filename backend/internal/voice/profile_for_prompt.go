@@ -73,7 +73,7 @@ func (s *Service) promptProfileForTopic(ctx context.Context, userID, voiceID str
 	if err := s.retireStaleRules(ctx, userID, voiceID); err != nil {
 		return PromptProfile{}, err
 	}
-	profile, err := s.store.GetProfile(ctx, userID, voiceID)
+	profile, err := s.profiles.GetProfile(ctx, userID, voiceID)
 	if err != nil {
 		return PromptProfile{}, fmt.Errorf("get profile for prompt: %w", err)
 	}
@@ -84,13 +84,13 @@ func (s *Service) promptProfileForTopic(ctx context.Context, userID, voiceID str
 			TargetLanguage: target, Portable: true,
 		}, nil
 	}
-	samples, err := s.store.ListSampleBodies(ctx, userID, voiceID)
+	samples, err := s.samples.ListSampleBodies(ctx, userID, voiceID)
 	if err != nil {
 		return PromptProfile{}, fmt.Errorf("list excerpts: %w", err)
 	}
 	var sources []AuthoredSource
 	if s.personalization != nil {
-		sources, err = s.personalization.ListAuthoredSources(ctx, userID, voiceID)
+		sources, err = s.learning.ListAuthoredSources(ctx, userID, voiceID)
 	}
 	if err != nil {
 		return PromptProfile{}, fmt.Errorf("list authored excerpts: %w", err)
@@ -115,7 +115,7 @@ func (s *Service) promptProfileForTopic(ctx context.Context, userID, voiceID str
 	}
 	var rules []ContrastRule
 	if s.personalization != nil {
-		rules, err = s.personalization.ListRules(ctx, userID, voiceID)
+		rules, err = s.rules.ListRules(ctx, userID, voiceID)
 	}
 	if err != nil {
 		return PromptProfile{}, fmt.Errorf("list active rules: %w", err)
@@ -141,7 +141,7 @@ func (s *Service) retireStaleRules(ctx context.Context, userID, voiceID string) 
 		return nil
 	}
 	now := s.now()
-	if _, err := s.personalization.RetireStaleRulesAndPublish(ctx, userID, voiceID, now.Add(-s.config.RuleRetireAfter), now); err != nil {
+	if _, err := s.rules.RetireStaleRulesAndPublish(ctx, userID, voiceID, now.Add(-s.config.RuleRetireAfter), now); err != nil {
 		return fmt.Errorf("retire stale voice rules: %w", err)
 	}
 	return nil

@@ -15,28 +15,42 @@ import (
 )
 
 type Service struct {
-	store                 Store
-	models                Models
-	jobs                  Jobs
-	experiments           Experiments
-	now                   func() time.Time
-	newID                 func() string
-	profileMu             sync.Mutex
-	sampleMu              sync.Mutex
-	directoryMu           sync.Mutex
-	posts                 Posts
-	config                PersonalizationConfig
-	personalization       PersonalizationStore
+	directory      VoiceDirectoryStore
+	profiles       ProfileStore
+	samples        SampleStore
+	versionSamples VersionSampleStore
+	models         Models
+	jobs           Jobs
+	experiments    Experiments
+	now            func() time.Time
+	newID          func() string
+	profileMu      sync.Mutex
+	sampleMu       sync.Mutex
+	directoryMu    sync.Mutex
+	posts          Posts
+	config         PersonalizationConfig
+	// personalization is the learning store as one handle, held only to answer "is learning
+	// wired at all" — every call goes through one of the narrow ports below it.
+	personalization       PersonalizationStorage
+	versions              ProfileVersionStore
+	overrides             ManualOverrideStore
+	learning              LearningRunStore
+	rules                 ContrastRuleStore
+	feedback              FeedbackStore
+	comparisons           RuleComparisonStore
+	validations           ProfileValidationStore
 	personalizationJobs   PersonalizationJobs
 	personalizationModels PersonalizationModels
 	personalizationReady  bool
 }
 
-func NewService(store Store, models Models, jobs Jobs) *Service {
-	svc := &Service{store: store, models: models, jobs: jobs, now: time.Now, newID: newID,
+func NewService(store Storage, models Models, jobs Jobs) *Service {
+	svc := &Service{directory: store, profiles: store, samples: store, versionSamples: store, models: models, jobs: jobs, now: time.Now, newID: newID,
 		config: PersonalizationConfig{FewShotTargetCount: 2, FewShotMax: 3, FewShotExcerptTargetChars: 500, FewShotExcerptMaxChars: 800, EmbeddingSwitchPosts: 50, DiffMaxRules: 3, DiffMinPatternEdits: 2, RuleActivationEvidence: 3, RuleRetireAfter: 180 * 24 * time.Hour, ValidationPostCount: DefaultValidationPostCount, EndingMaxConsecutive: 2}}
-	if p, ok := store.(PersonalizationStore); ok {
+	if p, ok := store.(PersonalizationStorage); ok {
 		svc.personalization = p
+		svc.versions, svc.overrides, svc.learning = p, p, p
+		svc.rules, svc.feedback, svc.comparisons, svc.validations = p, p, p, p
 	}
 	return svc
 }
@@ -74,7 +88,7 @@ func (s *Service) EndingMaxConsecutive() int {
 // --- directory ---
 
 func (s *Service) ListVoices(ctx context.Context, userID string) ([]Voice, error) {
-	voices, err := s.store.ListVoices(ctx, userID)
+	voices, err := s.directory.ListVoices(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("list voices: %w", err)
 	}
@@ -88,7 +102,7 @@ func (s *Service) GetVoice(ctx context.Context, userID, voiceID string) (Voice, 
 // DefaultVoice is the account's one active default. Reads never create it: an account
 // without one is a bootstrap failure, surfaced rather than papered over.
 func (s *Service) DefaultVoice(ctx context.Context, userID string) (Voice, error) {
-	found, ok, err := s.store.DefaultVoice(ctx, userID)
+	found, ok, err := s.directory.DefaultVoice(ctx, userID)
 	if err != nil {
 		return Voice{}, fmt.Errorf("default voice: %w", err)
 	}
@@ -108,12 +122,12 @@ func (s *Service) EnsureDefaultVoice(ctx context.Context, userID string, sourceL
 	}
 	s.directoryMu.Lock()
 	defer s.directoryMu.Unlock()
-	if found, ok, err := s.store.DefaultVoice(ctx, userID); err != nil {
+	if found, ok, err := s.directory.DefaultVoice(ctx, userID); err != nil {
 		return Voice{}, false, fmt.Errorf("default voice: %w", err)
 	} else if ok {
 		return found, false, nil
 	}
-	voices, err := s.store.ListVoices(ctx, userID)
+	voices, err := s.directory.ListVoices(ctx, userID)
 	if err != nil {
 		return Voice{}, false, fmt.Errorf("list voices: %w", err)
 	}
@@ -127,7 +141,7 @@ func (s *Service) EnsureDefaultVoice(ctx context.Context, userID string, sourceL
 		}
 	}
 	if oldest != nil {
-		if err := s.store.SetDefaultVoice(ctx, userID, oldest.ID, s.now()); err != nil {
+		if err := s.directory.SetDefaultVoice(ctx, userID, oldest.ID, s.now()); err != nil {
 			return Voice{}, false, fmt.Errorf("promote default voice: %w", err)
 		}
 		promoted, err := s.ownedVoice(ctx, userID, oldest.ID)
@@ -135,7 +149,7 @@ func (s *Service) EnsureDefaultVoice(ctx context.Context, userID string, sourceL
 	}
 	now := s.now()
 	created := Voice{ID: s.newID(), UserID: userID, Name: DefaultVoiceName, IsDefault: true, CreatedAt: now, UpdatedAt: now, SourceLanguage: sourceLanguage}
-	if err := s.store.InsertVoice(ctx, created); err != nil {
+	if err := s.directory.InsertVoice(ctx, created); err != nil {
 		return Voice{}, false, fmt.Errorf("create default voice: %w", err)
 	}
 	return created, true, nil
@@ -177,7 +191,7 @@ func (s *Service) CreateVoice(ctx context.Context, userID, name string, sourceLa
 	defer s.directoryMu.Unlock()
 	now := s.now()
 	created := Voice{ID: s.newID(), UserID: userID, Name: name, SourceLanguage: sourceLanguage, CreatedAt: now, UpdatedAt: now}
-	if err := s.store.InsertVoice(ctx, created); err != nil {
+	if err := s.directory.InsertVoice(ctx, created); err != nil {
 		if errors.Is(err, ErrVoiceNameTaken) {
 			return Voice{}, "", err
 		}
@@ -209,7 +223,7 @@ func (s *Service) RenameVoice(ctx context.Context, userID, voiceID, name string)
 	if found.Name == name {
 		return found, nil
 	}
-	if err := s.store.RenameVoice(ctx, userID, voiceID, name, s.now()); err != nil {
+	if err := s.directory.RenameVoice(ctx, userID, voiceID, name, s.now()); err != nil {
 		if errors.Is(err, ErrVoiceNameTaken) || errors.Is(err, ErrVoiceNotFound) {
 			return Voice{}, err
 		}
@@ -228,7 +242,7 @@ func (s *Service) SetDefaultVoice(ctx context.Context, userID, voiceID string) (
 		return nil, err
 	}
 	if !found.IsDefault {
-		if err := s.store.SetDefaultVoice(ctx, userID, voiceID, s.now()); err != nil {
+		if err := s.directory.SetDefaultVoice(ctx, userID, voiceID, s.now()); err != nil {
 			if errors.Is(err, ErrVoiceNotFound) {
 				return nil, err
 			}
@@ -255,7 +269,7 @@ func (s *Service) DeleteVoice(ctx context.Context, userID, voiceID string) (Voic
 	if found.IsDefault {
 		return Voice{}, ErrVoiceIsDefault
 	}
-	active, err := s.store.CountActiveVoices(ctx, userID)
+	active, err := s.directory.CountActiveVoices(ctx, userID)
 	if err != nil {
 		return Voice{}, fmt.Errorf("count active voices: %w", err)
 	}
@@ -267,7 +281,7 @@ func (s *Service) DeleteVoice(ctx context.Context, userID, voiceID string) (Voic
 	} else if busy {
 		return Voice{}, ErrVoiceBusy
 	}
-	if n, err := s.store.CountUndecidedVoiceWork(ctx, voiceID); err != nil {
+	if n, err := s.directory.CountUndecidedVoiceWork(ctx, voiceID); err != nil {
 		return Voice{}, fmt.Errorf("check undecided voice work: %w", err)
 	} else if n > 0 {
 		return Voice{}, ErrVoiceBusy
@@ -279,7 +293,7 @@ func (s *Service) DeleteVoice(ctx context.Context, userID, voiceID string) (Voic
 			return Voice{}, ErrVoiceBusy
 		}
 	}
-	deleted, err := s.store.SoftDeleteVoice(ctx, userID, voiceID, s.now())
+	deleted, err := s.directory.SoftDeleteVoice(ctx, userID, voiceID, s.now())
 	if err != nil {
 		return Voice{}, fmt.Errorf("delete voice: %w", err)
 	}
@@ -305,7 +319,7 @@ func (s *Service) RestoreVoice(ctx context.Context, userID, voiceID string) (Voi
 	if !found.Deleted() {
 		return found, nil
 	}
-	if _, err := s.store.RestoreVoice(ctx, userID, voiceID, s.now()); err != nil {
+	if _, err := s.directory.RestoreVoice(ctx, userID, voiceID, s.now()); err != nil {
 		if errors.Is(err, ErrVoiceNameTaken) {
 			return Voice{}, err
 		}
@@ -339,7 +353,7 @@ func (s *Service) ownedVoice(ctx context.Context, userID, voiceID string) (Voice
 	if strings.TrimSpace(voiceID) == "" {
 		return Voice{}, ErrVoiceRequired
 	}
-	found, err := s.store.GetVoice(ctx, userID, voiceID)
+	found, err := s.directory.GetVoice(ctx, userID, voiceID)
 	if err != nil {
 		if errors.Is(err, ErrVoiceNotFound) {
 			return Voice{}, err
@@ -369,11 +383,11 @@ func (s *Service) Get(ctx context.Context, userID, voiceID string) (Profile, err
 	if err != nil {
 		return Profile{}, err
 	}
-	profile, err := s.store.GetProfile(ctx, userID, voiceID)
+	profile, err := s.profiles.GetProfile(ctx, userID, voiceID)
 	if err != nil {
 		return Profile{}, fmt.Errorf("get profile: %w", err)
 	}
-	samples, err := s.store.ListSamples(ctx, userID, voiceID)
+	samples, err := s.samples.ListSamples(ctx, userID, voiceID)
 	if err != nil {
 		return Profile{}, fmt.Errorf("list samples: %w", err)
 	}
@@ -393,7 +407,7 @@ func (s *Service) Get(ctx context.Context, userID, voiceID string) (Profile, err
 	profile.Samples = samples
 	if s.personalization != nil {
 		profile.SourceCount, err = func() (int, error) {
-			sources, e := s.personalization.ListAuthoredSources(ctx, userID, voiceID)
+			sources, e := s.learning.ListAuthoredSources(ctx, userID, voiceID)
 			if e == nil {
 				sources = authoredSourcesForLanguage(sources, found.SourceLanguage)
 				profile.Structured.Sources = sources
@@ -405,11 +419,11 @@ func (s *Service) Get(ctx context.Context, userID, voiceID string) (Profile, err
 		}
 		profile.CanValidate = profile.SourceCount >= s.config.ValidationPostCount
 		profile.Structured.SourceCount = profile.SourceCount
-		profile.Structured.Rules, err = s.personalization.ListRules(ctx, userID, voiceID)
+		profile.Structured.Rules, err = s.rules.ListRules(ctx, userID, voiceID)
 		if err != nil {
 			return Profile{}, fmt.Errorf("list voice rules: %w", err)
 		}
-		profile.Structured.Feedback, err = s.personalization.ListFeedback(ctx, userID, voiceID)
+		profile.Structured.Feedback, err = s.feedback.ListFeedback(ctx, userID, voiceID)
 		if err != nil {
 			return Profile{}, fmt.Errorf("list voice feedback: %w", err)
 		}
@@ -444,7 +458,7 @@ func (s *Service) RecordVersionSample(ctx context.Context, userID, voiceID, cont
 	if _, err := s.activeVoice(ctx, userID, voiceID); err != nil {
 		return err
 	}
-	profile, err := s.store.GetProfile(ctx, userID, voiceID)
+	profile, err := s.profiles.GetProfile(ctx, userID, voiceID)
 	if err != nil {
 		return fmt.Errorf("get profile for version sample: %w", err)
 	}
@@ -452,7 +466,7 @@ func (s *Service) RecordVersionSample(ctx context.Context, userID, voiceID, cont
 	if head <= 0 {
 		return nil
 	}
-	if err := s.store.UpsertVersionSample(ctx, VersionSample{
+	if err := s.versionSamples.UpsertVersionSample(ctx, VersionSample{
 		UserID: userID, VoiceID: voiceID, Version: head, Content: content, CreatedAt: s.now(),
 	}); err != nil {
 		return fmt.Errorf("record version sample: %w", err)
@@ -465,10 +479,10 @@ func (s *Service) RecordVersionSample(ctx context.Context, userID, voiceID, cont
 // post is ErrVersionSampleNotFound, which callers present as "no preview" rather than as a
 // failure. A deleted voice's samples stay READABLE, like the rest of its profile.
 func (s *Service) VersionSample(ctx context.Context, userID, voiceID string, version int64) (VersionSample, error) {
-	if _, err := s.store.GetVoice(ctx, userID, voiceID); err != nil {
+	if _, err := s.directory.GetVoice(ctx, userID, voiceID); err != nil {
 		return VersionSample{}, err
 	}
-	return s.store.GetVersionSample(ctx, userID, voiceID, version)
+	return s.versionSamples.GetVersionSample(ctx, userID, voiceID, version)
 }
 
 func (s *Service) AddSample(ctx context.Context, userID, voiceID, label, body string, requested llm.ModelRef) (Sample, string, error) {
@@ -493,12 +507,12 @@ func (s *Service) AddSample(ctx context.Context, userID, voiceID, label, body st
 	sample := Sample{
 		ID: s.newID(), UserID: userID, VoiceID: voiceID, Label: label, Body: body, Chars: chars, CreatedAt: s.now(),
 	}
-	if err := s.store.InsertSample(ctx, sample); err != nil {
+	if err := s.samples.InsertSample(ctx, sample); err != nil {
 		return Sample{}, "", fmt.Errorf("insert sample: %w", err)
 	}
 	jobID, err := s.enqueueAnalysis(ctx, userID, voiceID, model)
 	if err != nil {
-		_, cleanupErr := s.store.DeleteSample(ctx, userID, voiceID, sample.ID, s.now())
+		_, cleanupErr := s.samples.DeleteSample(ctx, userID, voiceID, sample.ID, s.now())
 		return Sample{}, "", errors.Join(ErrSampleMutation, err, cleanupErr)
 	}
 	return sample, jobID, nil
@@ -510,20 +524,20 @@ func (s *Service) DeleteSample(ctx context.Context, userID, voiceID, sampleID st
 	}
 	s.sampleMu.Lock()
 	defer s.sampleMu.Unlock()
-	sample, err := s.store.GetSampleBody(ctx, userID, voiceID, sampleID)
+	sample, err := s.samples.GetSampleBody(ctx, userID, voiceID, sampleID)
 	if err != nil {
 		return "", fmt.Errorf("get sample before delete: %w", err)
 	}
 	if sample == nil {
 		return "", ErrSampleNotFound
 	}
-	before, err := s.store.CountSamples(ctx, userID, voiceID)
+	before, err := s.samples.CountSamples(ctx, userID, voiceID)
 	if err != nil {
 		return "", fmt.Errorf("count samples before delete: %w", err)
 	}
 	var authoredSources []AuthoredSource
 	if s.personalization != nil {
-		authoredSources, err = s.personalization.ListAuthoredSources(ctx, userID, voiceID)
+		authoredSources, err = s.learning.ListAuthoredSources(ctx, userID, voiceID)
 		if err != nil {
 			return "", fmt.Errorf("list finalized sources before delete: %w", err)
 		}
@@ -539,14 +553,14 @@ func (s *Service) DeleteSample(ctx context.Context, userID, voiceID, sampleID st
 			return "", ErrAnalyzeModelRequired
 		}
 	}
-	deleted, err := s.store.DeleteSample(ctx, userID, voiceID, sampleID, s.now())
+	deleted, err := s.samples.DeleteSample(ctx, userID, voiceID, sampleID, s.now())
 	if err != nil {
 		return "", fmt.Errorf("delete sample: %w", err)
 	}
 	if !deleted {
 		return "", ErrSampleNotFound
 	}
-	count, err := s.store.CountSamples(ctx, userID, voiceID)
+	count, err := s.samples.CountSamples(ctx, userID, voiceID)
 	if err != nil {
 		return "", fmt.Errorf("count samples: %w", err)
 	}
@@ -557,13 +571,13 @@ func (s *Service) DeleteSample(ctx context.Context, userID, voiceID, sampleID st
 		var ok bool
 		model, ok, err = s.models.AnalyzeModel(ctx, userID)
 		if err != nil {
-			if restoreErr := s.store.InsertSample(ctx, *sample); restoreErr != nil {
+			if restoreErr := s.samples.InsertSample(ctx, *sample); restoreErr != nil {
 				return "", errors.Join(ErrSampleMutation, err, restoreErr)
 			}
 			return "", fmt.Errorf("resolve analyze model: %w", err)
 		}
 		if !ok {
-			if restoreErr := s.store.InsertSample(ctx, *sample); restoreErr != nil {
+			if restoreErr := s.samples.InsertSample(ctx, *sample); restoreErr != nil {
 				return "", errors.Join(ErrSampleMutation, ErrAnalyzeModelRequired, restoreErr)
 			}
 			return "", ErrAnalyzeModelRequired
@@ -573,7 +587,7 @@ func (s *Service) DeleteSample(ctx context.Context, userID, voiceID, sampleID st
 	if err == nil {
 		return jobID, nil
 	}
-	if restoreErr := s.store.InsertSample(ctx, *sample); restoreErr != nil {
+	if restoreErr := s.samples.InsertSample(ctx, *sample); restoreErr != nil {
 		return "", errors.Join(ErrSampleMutation, err, restoreErr)
 	}
 	return "", errors.Join(ErrSampleMutation, err)

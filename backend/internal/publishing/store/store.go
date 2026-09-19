@@ -726,4 +726,4 @@ func isUnique(err error) bool {
 	return strings.Contains(strings.ToLower(err.Error()), "unique constraint failed")
 }
 
-var _ publishing.Store = (*Store)(nil)
+var _ publishing.Storage = (*Store)(nil)

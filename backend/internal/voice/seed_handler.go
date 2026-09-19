@@ -39,7 +39,7 @@ func (s *Service) Seed(ctx context.Context, found SeedJob, progress Progress) er
 	if err != nil {
 		return voiceUnavailableError(err)
 	}
-	head, err := s.store.GetProfile(ctx, found.UserID, found.VoiceID)
+	head, err := s.profiles.GetProfile(ctx, found.UserID, found.VoiceID)
 	if err != nil {
 		return fmt.Errorf("현재 문체 프로필을 불러오지 못했어요: %w", err)
 	}
@@ -50,7 +50,7 @@ func (s *Service) Seed(ctx context.Context, found SeedJob, progress Progress) er
 		progress("seed", 1, 1)
 		return nil
 	}
-	_, corpusVersion, err := s.store.CorpusSnapshot(ctx, found.UserID, found.VoiceID)
+	_, corpusVersion, err := s.samples.CorpusSnapshot(ctx, found.UserID, found.VoiceID)
 	if err != nil {
 		return fmt.Errorf("문체 샘플을 불러오지 못했어요: %w", err)
 	}
@@ -69,7 +69,7 @@ func (s *Service) Seed(ctx context.Context, found SeedJob, progress Progress) er
 	}
 	// The same optimistic guard the analysis uses: a sample added while the provider ran bumps
 	// the corpus version, and its own analysis is the authority from then on.
-	stored, err := s.store.ClaimCorpusVersion(ctx, found.UserID, found.VoiceID, corpusVersion, s.now())
+	stored, err := s.profiles.ClaimCorpusVersion(ctx, found.UserID, found.VoiceID, corpusVersion, s.now())
 	if err != nil {
 		return fmt.Errorf("문체 분석 결과를 저장하지 못했어요: %w", err)
 	}
@@ -88,7 +88,7 @@ func (s *Service) Seed(ctx context.Context, found SeedJob, progress Progress) er
 		Empty:   false,
 		Lexical: LexicalProfile{Description: VoiceValue{Value: styleguide, Source: SourceAnalyzed}},
 	}
-	if _, published, err := s.personalization.PublishProfileVersionIfHead(ctx, found.UserID, found.VoiceID, seeded, "seed", 0, s.now()); err != nil {
+	if _, published, err := s.versions.PublishProfileVersionIfHead(ctx, found.UserID, found.VoiceID, seeded, "seed", 0, s.now()); err != nil {
 		return fmt.Errorf("publish seeded voice profile: %w", err)
 	} else if !published {
 		// Real evidence won the race between the corpus claim and this publish. Unlike
