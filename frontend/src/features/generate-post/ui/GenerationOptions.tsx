@@ -2,11 +2,13 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { appFailureFromConnect } from '@/shared/api'
 import {
+  type GenerationOptionValues,
   POST_TAG_COUNT_MAX,
   POST_TAG_COUNT_MIN,
   POST_TARGET_LENGTH_DEFAULT,
   POST_TARGET_LENGTH_MAX,
   POST_TARGET_LENGTH_MIN,
+  useGenerationOptions,
 } from '@/entities/post'
 import {
   AppFailureMessage,
@@ -19,7 +21,6 @@ import {
   typographyStyles,
 } from '@/shared/ui'
 import { formatNumber } from '@/shared/lib'
-import { useGenerationOptions, type GenerationOptionValues } from '../api/useGenerationOptions'
 
 /** 목표 분량 and 태그 개수 — the parts of the writing brief that are validated numbers rather than
  *  choices, so they keep one explicit save while their neighbours in the brief apply on selection.

@@ -15,6 +15,8 @@ import {
   type ExperimentStatusName,
   useExperiments,
   useLeaderboard,
+  useStartModelExperiment,
+  useStartWriteExperiment,
 } from '@/entities/model-experiment'
 import { displayTitle, usePost, usePosts } from '@/entities/post'
 import { useSession } from '@/entities/session'
@@ -26,10 +28,8 @@ import {
   needsPicker,
   ReobservePicker,
   type GenerationModelSelection,
-  useStartWriteExperiment,
 } from '@/features/generate-post'
 import { PostCreditEstimate } from '@/features/select-model'
-import { useStartModelExperiment } from '@/features/start-model-experiment'
 import {
   Badge,
   type BadgeTone,

@@ -1,10 +1,10 @@
 import { create } from '@bufbuild/protobuf'
 import { useMutation, useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
-import type { ModelRef } from '@/entities/model-catalog'
-import { voiceProfileQueryKey } from '@/entities/voice'
+import { voiceProfileQueryKey } from '@/entities/voice/@x/generation-job'
 import { appFailureFromConnect, GenerationService, ModelRefSchema } from '@/shared/api'
 import { formatAppFailure } from '@/shared/lib'
+import type { ModelRef } from '../model/types'
 
 export function useStartRevision(ownerId: string, voiceId: string) {
   const transport = useTransport()

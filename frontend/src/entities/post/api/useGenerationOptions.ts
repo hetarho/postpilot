@@ -1,7 +1,7 @@
 import { useMutation, useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
-import { getPostQueryKey, listPostsQueryKey } from '@/entities/post'
 import { PostService } from '@/shared/api'
+import { getPostQueryKey, listPostsQueryKey } from './post-queries'
 
 /** The two per-post run options that are validated numbers rather than choices (POST-20, POST-63).
  *  `targetLength` undefined means natural length; `tagCount` is always a number. */

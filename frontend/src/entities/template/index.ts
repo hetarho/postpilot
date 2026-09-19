@@ -14,6 +14,9 @@ export {
 export { templateDirectoryQuery, useTemplates } from './api/useTemplates'
 export { templatesQueryKey, toTemplate, toTemplateRef } from './api/template-queries'
 export { invalidateTemplates } from './api/template-cache'
+export { useCreateTemplate } from './api/useCreateTemplate'
+export { useDeleteTemplate } from './api/useDeleteTemplate'
+export { useUpdateTemplate } from './api/useUpdateTemplate'
 export { templateErrorMessage } from './api/template-errors'
 export { TemplateRefLabel } from './ui/TemplateRefLabel'
 export {

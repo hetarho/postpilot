@@ -1,11 +1,9 @@
-import { create } from '@bufbuild/protobuf'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from '@tanstack/react-router'
-import { useMutation } from '@connectrpc/connect-query'
 import { useStageSelection } from '@/entities/model-catalog'
 import type { VoiceProfile } from '@/entities/voice'
-import { appFailureFromConnect, ModelRefSchema, VoiceValidationService } from '@/shared/api'
+import { useStartVoiceProfileValidation } from '@/entities/voice'
 import { VOICE_VALIDATION_POST_COUNT } from '../config'
 import {
   AppFailureMessage,
@@ -31,17 +29,17 @@ export function ValidateVoiceProfile({
   const { t } = useTranslation('voices')
   const analyze = useStageSelection('analyze')
   const write = useStageSelection('write')
-  const mutation = useMutation(VoiceValidationService.method.startVoiceProfileValidation)
+  const mutation = useStartVoiceProfileValidation()
   const navigate = useNavigate()
   const [judge, setJudge] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const missing = Math.max(0, VOICE_VALIDATION_POST_COUNT - profile.finalizedSourceCount)
   const start = async () => {
     if (blocked || !analyze.selected || !write.selected) return
-    const response = await mutation.mutateAsync({
+    const response = await mutation.start({
       voiceId,
-      analyzeModel: create(ModelRefSchema, analyze.selected),
-      writeModel: create(ModelRefSchema, write.selected),
+      analyzeModel: analyze.selected,
+      writeModel: write.selected,
       judgeEnabled: judge,
     })
     setConfirming(false)
@@ -85,9 +83,9 @@ export function ValidateVoiceProfile({
           {blocked}
         </Notice>
       )}
-      {mutation.error && (
+      {mutation.failure && (
         <Notice tone="danger" role="alert" className="mt-3">
-          <AppFailureMessage failure={appFailureFromConnect(mutation.error)} />
+          <AppFailureMessage failure={mutation.failure} />
         </Notice>
       )}
       <Dialog

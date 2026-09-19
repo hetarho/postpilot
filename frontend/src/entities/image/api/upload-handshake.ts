@@ -1,4 +1,6 @@
+import { useMemo } from 'react'
 import { type Transport, createClient } from '@connectrpc/connect'
+import { useTransport } from '@connectrpc/connect-query'
 import { AttachmentKind, appFailureFromConnect, PostService } from '@/shared/api'
 import { type PostVideo, toPostVideo } from '@/entities/video/@x/image'
 import {
@@ -101,4 +103,12 @@ function classify(error: unknown): unknown {
     default:
       return new UploadRpcFailure(failure)
   }
+}
+
+/** The handshake bound to the transport the app is mounted on. The uploading feature owns the
+ *  browser half (decode, resize, the PUT) and takes the two RPCs from here, so no slice above
+ *  entities holds a transport of its own (ARCH-17). */
+export function useUploadHandshake(): ReturnType<typeof createUploadHandshake> {
+  const transport = useTransport()
+  return useMemo(() => createUploadHandshake(transport), [transport])
 }

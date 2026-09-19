@@ -1,14 +1,10 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { createClient } from '@connectrpc/connect'
-import { useMutation, useTransport } from '@connectrpc/connect-query'
-import { useQuery } from '@tanstack/react-query'
 import { Link, useParams } from '@tanstack/react-router'
 import { useJob } from '@/entities/generation-job'
 import { useSession } from '@/entities/session'
-import { voiceValidationQueryKey, voiceValidationState } from '@/entities/voice'
-import { appFailureFromConnect, appFailureFromProto, VoiceValidationService } from '@/shared/api'
-import { POLL_INTERVAL_MS } from '@/shared/config'
+import { useVoiceProfileValidation, voiceValidationState } from '@/entities/voice'
+import { appFailureFromProto } from '@/shared/api'
 import { formatNumber, formatPercent } from '@/shared/lib'
 import {
   AppFailureMessage,
@@ -24,29 +20,16 @@ export function VoiceValidationPage() {
   const { t } = useTranslation(['voices', 'common'])
   const { voiceId = '', id = '' } = useParams({ strict: false })
   const { user } = useSession()
-  const transport = useTransport()
-  const key = voiceValidationQueryKey(transport, user?.id ?? '', voiceId, id)
-  const query = useQuery({
-    queryKey: key,
-    queryFn: () =>
-      createClient(VoiceValidationService, transport).getVoiceProfileValidation({
-        validationId: id,
-      }),
-    refetchInterval: (state) =>
-      ['queued', 'running'].includes(state.state.data?.validation?.status ?? '')
-        ? POLL_INTERVAL_MS
-        : false,
-  })
-  const jobState = useJob(query.data?.validation?.jobId ?? '', [key])
-  const retry = useMutation(VoiceValidationService.method.retryVoiceProfileValidation)
-  const retryFailure = retry.error ? appFailureFromConnect(retry.error) : undefined
-  if (query.isPending) return <Placeholder>{t('validation.loading', { ns: 'voices' })}</Placeholder>
-  const validation = query.data?.validation
-  if (!validation || query.isError)
+  const run = useVoiceProfileValidation(user?.id ?? '', voiceId, id)
+  const jobState = useJob(run.validation?.jobId ?? '', [run.queryKey])
+  const retryFailure = run.retryFailure
+  if (run.isPending) return <Placeholder>{t('validation.loading', { ns: 'voices' })}</Placeholder>
+  const validation = run.validation
+  if (!validation || run.isError)
     return (
       <Placeholder>
         {t('validation.loadFailed', { ns: 'voices' })}{' '}
-        <Button variant="ghost" onClick={() => void query.refetch()}>
+        <Button variant="ghost" onClick={() => void run.refetch()}>
           {t('action.retry', { ns: 'common' })}
         </Button>
       </Placeholder>
@@ -65,8 +48,7 @@ export function VoiceValidationPage() {
   const status = voiceValidationState(validation.status)
   const retryValidation = async () => {
     try {
-      await retry.mutateAsync({ validationId: id })
-      await query.refetch()
+      await run.retry()
     } catch {
       // The structured mutation failure is rendered beside the retry action.
     }
@@ -95,7 +77,7 @@ export function VoiceValidationPage() {
         <Button
           variant="secondary"
           className="mt-4"
-          pending={retry.isPending}
+          pending={run.retryPending}
           onClick={() => void retryValidation()}
         >
           {t('validation.retry', { ns: 'voices' })}

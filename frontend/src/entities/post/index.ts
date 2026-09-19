@@ -1,7 +1,15 @@
 export * from './config'
 export type { PostDraft, PostListItem, PostStatus, PostTemplateAnswer } from './model/types'
 export { untitledTitle, displayTitle, postStatusLabel } from './model/types'
-export { blockKey, hasContent, imageByFile } from './model/content'
+export {
+  blockKey,
+  blockWith,
+  copyPostContent,
+  hasContent,
+  imageByFile,
+  newBlock,
+  postContentWith,
+} from './model/content'
 export { BlockList } from './ui/BlockList'
 export type { PostLoadFailure } from './api/usePost'
 export { usePost } from './api/usePost'
@@ -9,6 +17,15 @@ export { usePosts } from './api/usePosts'
 export { useDeletePost } from './api/useDeletePost'
 export { useSavePostDraft } from './api/useSavePostDraft'
 export { ContentRevisionConflictError, useSavePostContent } from './api/useSavePostContent'
+export { useFinalizePost } from './api/useFinalizePost'
+export type { GenerationOptionValues } from './api/useGenerationOptions'
+export { useGenerationOptions } from './api/useGenerationOptions'
 export { usePostImagesCache } from './api/usePostImagesCache'
 export { useRefreshPostImages } from './api/useRefreshPostImages'
-export { getPostQueryKey, listPostsQueryKey, postDetailQueriesKey } from './api/post-queries'
+export {
+  getPostQueryKey,
+  listPostsQueryKey,
+  postDetailQueriesKey,
+  useListPostsQueryKey,
+  usePostQueryKey,
+} from './api/post-queries'

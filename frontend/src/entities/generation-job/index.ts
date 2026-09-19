@@ -1,5 +1,7 @@
 export type { GenerationJob, ModelRef } from './model/types'
 export { CLIP_STAGES, isTerminal, progressLabel, progressRatio } from './model/types'
 export { useJob } from './api/useJob'
+export { useStartGeneration } from './api/useStartGeneration'
+export { useStartRevision } from './api/useStartRevision'
 export { FailureNotice } from './ui/FailureNotice'
 export { ProgressLine } from './ui/ProgressLine'

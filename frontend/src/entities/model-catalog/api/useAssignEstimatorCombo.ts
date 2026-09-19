@@ -1,7 +1,7 @@
-import { useMutation, useTransport } from '@connectrpc/connect-query'
-import { createConnectQueryKey } from '@connectrpc/connect-query'
+import { createConnectQueryKey, useMutation, useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
-import { AdminService, ModelCatalogService, PlanService, appFailureFromConnect } from '@/shared/api'
+import { myPlanQueryKey } from '@/entities/plan/@x/model-catalog'
+import { AdminService, ModelCatalogService, appFailureFromConnect } from '@/shared/api'
 
 /** Points one estimator combo at the two models that price it.
  *
@@ -23,14 +23,7 @@ export function useAssignEstimatorCombo() {
           cardinality: 'finite',
         }),
       })
-      void queryClient.invalidateQueries({
-        queryKey: createConnectQueryKey({
-          schema: PlanService.method.getMyPlan,
-          input: {},
-          transport,
-          cardinality: 'finite',
-        }),
-      })
+      void queryClient.invalidateQueries({ queryKey: myPlanQueryKey(transport) })
     },
   })
   return {

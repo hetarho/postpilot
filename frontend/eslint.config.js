@@ -68,6 +68,53 @@ export default defineConfig([
       ],
     },
   },
+  // ARCH-17: proto service descriptors, message schemas and `@connectrpc/connect-query` are
+  // named only in `shared/api` and `entities/*/api`. Pages, widgets and features consume the
+  // hooks and domain types an entity exports, so a proto rename stops at one directory and a
+  // message rename at one entity.
+  {
+    files: ['src/pages/**/*.{ts,tsx}', 'src/widgets/**/*.{ts,tsx}', 'src/features/**/*.{ts,tsx}'],
+    // Temporary allowlist: the clip slices still hold their own descriptors. T262 migrates them
+    // into the four clip entities and deletes these three lines.
+    // Tests are out of scope here for the same reason steiger skips them: a fake backend is
+    // built from `createRouterTransport` and the service descriptor, and `src/test` owns those
+    // harnesses. The source-tree pin in `src/test/arch-proto-symbols.test.ts` states the rule
+    // for slice source.
+    ignores: [
+      'src/**/*.test.{ts,tsx}',
+      'src/pages/clip{,s}/**',
+      'src/features/*clip*/**',
+      'src/widgets/clip-*/**',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@connectrpc/connect-query',
+              message:
+                'connect-query는 shared/api와 entities/*/api에서만 써요. 페이지·위젯·피처는 엔티티가 내보낸 훅을 쓰세요 (ARCH-17).',
+            },
+            {
+              name: '@connectrpc/connect',
+              message:
+                'Connect 클라이언트는 entities/*/api가 만들어요. 페이지·위젯·피처는 엔티티 훅을 쓰세요 (ARCH-17).',
+            },
+          ],
+        },
+      ],
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            "ImportDeclaration[source.value='@/shared/api'] > ImportSpecifier[imported.name=/(Service|Schema)$|^Proto[A-Z]/]",
+          message:
+            'proto 서비스·메시지 스키마 이름은 shared/api와 entities/*/api에만 있어야 해요. 엔티티가 도메인 타입으로 바꿔서 내보내세요 (ARCH-17).',
+        },
+      ],
+    },
+  },
   // Formatting is delegated to Prettier (must stay last) — disables conflicting rules.
   eslintConfigPrettier,
 ])

@@ -20,14 +20,16 @@ vi.mock('@tanstack/react-router', () => ({
   ),
 }))
 
-vi.mock('@connectrpc/connect-query', () => ({
-  useTransport: () => ({}),
-  useMutation: () => ({ mutateAsync: mocks.retry, isPending: false, error: mocks.retryError }),
-}))
-
-vi.mock('@tanstack/react-query', () => ({
-  useQuery: () => ({
-    data: {
+vi.mock('@/entities/generation-job', () => ({ useJob: () => ({}) }))
+vi.mock('@/entities/session', () => ({ useSession: () => ({ user: { id: 'alice' } }) }))
+// The transport, the polling query and the retry mutation are the voice entity's (ARCH-17), so
+// the screen is exercised against the one hook it consumes.
+vi.mock('@/entities/voice', async () => {
+  const { appFailureFromConnect } = await import('@/shared/api')
+  return {
+    voiceValidationState: (value: string) => value,
+    useVoiceProfileValidation: () => ({
+      queryKey: ['validation'],
       validation: {
         id: 'validation-1',
         voiceId: 'voice-default',
@@ -39,19 +41,15 @@ vi.mock('@tanstack/react-query', () => ({
         yCount: 0,
         items: [],
       },
-    },
-    isPending: false,
-    isError: false,
-    refetch: mocks.refetch,
-  }),
-}))
-
-vi.mock('@/entities/generation-job', () => ({ useJob: () => ({}) }))
-vi.mock('@/entities/session', () => ({ useSession: () => ({ user: { id: 'alice' } }) }))
-vi.mock('@/entities/voice', () => ({
-  voiceValidationQueryKey: () => ['validation'],
-  voiceValidationState: (value: string) => value,
-}))
+      isPending: false,
+      isError: false,
+      refetch: mocks.refetch,
+      retryPending: false,
+      retryFailure: mocks.retryError ? appFailureFromConnect(mocks.retryError as Error) : undefined,
+      retry: mocks.retry,
+    }),
+  }
+})
 
 beforeEach(() => {
   mocks.retry.mockReset()

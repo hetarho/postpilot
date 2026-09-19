@@ -6,7 +6,6 @@ import { VoiceRuleComparisonPage } from './VoiceRuleComparisonPage'
 
 const mocks = vi.hoisted(() => ({
   decide: vi.fn(),
-  invalidate: vi.fn(),
   routeVoiceId: 'voice-default',
   comparisonVoiceId: 'voice-default',
 }))
@@ -18,44 +17,36 @@ vi.mock('@tanstack/react-router', () => ({
   ),
 }))
 
-vi.mock('@connectrpc/connect-query', () => ({
-  useTransport: () => ({}),
-  useMutation: () => ({ mutateAsync: mocks.decide, isPending: false }),
-}))
-
-vi.mock('@tanstack/react-query', () => ({
-  useQuery: () => ({
-    data: {
-      comparison: {
-        id: 'comparison-1',
-        voiceId: mocks.comparisonVoiceId,
-        status: 'review',
-        jobId: 'job-1',
-        chosenSide: '',
-        candidates: [
-          { id: 'candidate-a', side: 'A', output: 'A 결과', status: 'succeeded', error: '' },
-          { id: 'candidate-b', side: 'B', output: 'B 결과', status: 'succeeded', error: '' },
-        ],
-      },
+vi.mock('@/entities/generation-job', () => ({ useJob: () => ({}) }))
+vi.mock('@/entities/session', () => ({ useSession: () => ({ user: { id: 'alice' } }) }))
+// The comparison query, the decide/retry calls and the invalidation they own belong to the voice
+// entity (ARCH-17); the screen is exercised against that one hook.
+vi.mock('@/entities/voice', () => ({
+  useVoiceRuleComparison: () => ({
+    queryKey: ['comparison'],
+    comparison: {
+      id: 'comparison-1',
+      voiceId: mocks.comparisonVoiceId,
+      status: 'review',
+      jobId: 'job-1',
+      chosenSide: '',
+      candidates: [
+        { id: 'candidate-a', side: 'A', output: 'A 결과', status: 'succeeded', error: '' },
+        { id: 'candidate-b', side: 'B', output: 'B 결과', status: 'succeeded', error: '' },
+      ],
     },
     isPending: false,
     isError: false,
     refetch: vi.fn(),
+    decidePending: false,
+    decide: mocks.decide,
+    retryPending: false,
+    retry: vi.fn(),
   }),
-  useQueryClient: () => ({ invalidateQueries: mocks.invalidate }),
-}))
-
-vi.mock('@/entities/generation-job', () => ({ useJob: () => ({}) }))
-vi.mock('@/entities/session', () => ({ useSession: () => ({ user: { id: 'alice' } }) }))
-vi.mock('@/entities/voice', () => ({
-  voiceComparisonQueryKey: () => ['comparison'],
-  voiceProfileQueryKey: () => ['profile'],
-  voiceVersionsQueryKey: () => ['versions'],
 }))
 
 beforeEach(() => {
   mocks.decide.mockReset().mockResolvedValue({})
-  mocks.invalidate.mockReset().mockResolvedValue(undefined)
   mocks.routeVoiceId = 'voice-default'
   mocks.comparisonVoiceId = 'voice-default'
 })
@@ -69,7 +60,7 @@ it('keeps the desktop selector visible and submits candidate B', async () => {
   await user.click(screen.getByRole('tab', { name: 'B' }))
   await user.click(screen.getByRole('button', { name: '이 글이 더 나아요' }))
 
-  expect(mocks.decide).toHaveBeenCalledWith({ comparisonId: 'comparison-1', chosenSide: 'B' })
+  expect(mocks.decide).toHaveBeenCalledWith('B')
 })
 
 it('refuses a comparison that belongs to a different voice than the route', () => {

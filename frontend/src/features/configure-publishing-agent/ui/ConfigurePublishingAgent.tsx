@@ -1,9 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useTransport } from '@connectrpc/connect-query'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { publishingAgentsQueryKey, type PublishingAgent } from '@/entities/publishing-agent'
-import { appFailureFromConnect, publishingClientFor, PublishVisibility } from '@/shared/api'
+import { useConfigurePublishingAgent, type PublishingAgent } from '@/entities/publishing-agent'
+import { PublishVisibility } from '@/shared/api'
 import { AppFailureMessage, Button, FieldLabel, Listbox, Notice, TextField } from '@/shared/ui'
 
 export function ConfigurePublishingAgent({
@@ -17,20 +15,8 @@ export function ConfigurePublishingAgent({
   const [label, setLabel] = useState(agent.label)
   const [categoryId, setCategoryId] = useState(agent.defaultCategoryId)
   const [visibility, setVisibility] = useState(agent.defaultVisibility)
-  const transport = useTransport()
-  const client = useMemo(() => publishingClientFor(transport), [transport])
-  const queryClient = useQueryClient()
-  const update = useMutation({
-    mutationFn: () =>
-      client.updatePublishingAgent({
-        agentId: agent.id,
-        label: label.trim(),
-        defaultCategoryId: categoryId,
-        defaultVisibility: visibility,
-      }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: publishingAgentsQueryKey(ownerId) }),
-  })
-  const failure = update.error ? appFailureFromConnect(update.error) : undefined
+  const update = useConfigurePublishingAgent(ownerId, agent.id)
+  const failure = update.failure
   if (!agent.ready) return null
   return (
     <div className="mt-4 grid gap-4">
@@ -88,7 +74,9 @@ export function ConfigurePublishingAgent({
       </div>
       <Button
         variant="secondary"
-        onClick={() => update.mutate()}
+        onClick={() =>
+          update.mutate({ label, defaultCategoryId: categoryId, defaultVisibility: visibility })
+        }
         pending={update.isPending}
         disabled={!label.trim() || !categoryId}
       >

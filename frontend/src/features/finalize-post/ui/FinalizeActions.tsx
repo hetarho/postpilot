@@ -1,9 +1,8 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ContentRevisionConflictError, type PostDraft } from '@/entities/post'
+import { type PostDraft, ContentRevisionConflictError, useFinalizePost } from '@/entities/post'
 import { appFailureFromConnect, type AppFailure } from '@/shared/api'
 import { AppFailureMessage, Button, Notice, Popover, Typography } from '@/shared/ui'
-import { useFinalizePost } from '../api/useFinalizePost'
 import type { VoiceLearning } from '../model/useVoiceLearning'
 
 type FinalizeMode = 'finalize' | 'learn'

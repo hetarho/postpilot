@@ -1,19 +1,10 @@
 import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { createClient } from '@connectrpc/connect'
-import { useTransport } from '@connectrpc/connect-query'
-import { useMutation } from '@connectrpc/connect-query'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from '@tanstack/react-router'
 import { useJob } from '@/entities/generation-job'
 import { useSession } from '@/entities/session'
-import {
-  voiceComparisonQueryKey,
-  voiceProfileQueryKey,
-  voiceVersionsQueryKey,
-} from '@/entities/voice'
-import { appFailureFromConnect, appFailureFromProto, VoiceValidationService } from '@/shared/api'
-import { POLL_INTERVAL_MS } from '@/shared/config'
+import { useVoiceRuleComparison } from '@/entities/voice'
+import { appFailureFromProto } from '@/shared/api'
 import {
   ActionBar,
   AppFailureMessage,
@@ -31,31 +22,18 @@ export function VoiceRuleComparisonPage() {
   const { voiceId = '', id = '' } = useParams({ strict: false })
   const { user } = useSession()
   const ownerId = user?.id ?? ''
-  const transport = useTransport()
-  const queryClient = useQueryClient()
-  const key = voiceComparisonQueryKey(transport, ownerId, voiceId, id)
-  const query = useQuery({
-    queryKey: key,
-    queryFn: () =>
-      createClient(VoiceValidationService, transport).getVoiceRuleComparison({ comparisonId: id }),
-    refetchInterval: (state) =>
-      ['queued', 'running'].includes(state.state.data?.comparison?.status ?? '')
-        ? POLL_INTERVAL_MS
-        : false,
-  })
-  const jobState = useJob(query.data?.comparison?.jobId ?? '', [key])
-  const decide = useMutation(VoiceValidationService.method.decideVoiceRuleComparison)
-  const retry = useMutation(VoiceValidationService.method.retryVoiceRuleComparison)
-  const decideFailure = decide.error ? appFailureFromConnect(decide.error) : undefined
-  const retryFailure = retry.error ? appFailureFromConnect(retry.error) : undefined
+  const run = useVoiceRuleComparison(ownerId, voiceId, id)
+  const jobState = useJob(run.comparison?.jobId ?? '', [run.queryKey])
+  const decideFailure = run.decideFailure
+  const retryFailure = run.retryFailure
   const [active, setActive] = useState('')
-  if (query.isPending) return <Placeholder>{t('comparison.loading', { ns: 'voices' })}</Placeholder>
-  const comparison = query.data?.comparison
-  if (!comparison || query.isError) {
+  if (run.isPending) return <Placeholder>{t('comparison.loading', { ns: 'voices' })}</Placeholder>
+  const comparison = run.comparison
+  if (!comparison || run.isError) {
     return (
       <Placeholder>
         {t('comparison.loadFailed', { ns: 'voices' })}{' '}
-        <Button variant="ghost" onClick={() => void query.refetch()}>
+        <Button variant="ghost" onClick={() => void run.refetch()}>
           {t('action.retry', { ns: 'common' })}
         </Button>
       </Placeholder>
@@ -91,20 +69,10 @@ export function VoiceRuleComparisonPage() {
     const side = comparison.candidates.find((candidate) => candidate.id === candidateId)?.side
     if (!side) return
     try {
-      await decide.mutateAsync({ comparisonId: id, chosenSide: side })
+      await run.decide(side)
     } catch {
       // The structured mutation failure is rendered in the action bar.
-      return
     }
-    // The decision publishes to the comparison's own voice, so only that voice's profile and
-    // version list are stale.
-    await queryClient.invalidateQueries({ queryKey: key })
-    await queryClient.invalidateQueries({
-      queryKey: voiceProfileQueryKey(transport, ownerId, voiceId),
-    })
-    await queryClient.invalidateQueries({
-      queryKey: voiceVersionsQueryKey(transport, ownerId, voiceId),
-    })
   }
   const canRetry =
     comparison.status === 'partial' ||
@@ -112,8 +80,7 @@ export function VoiceRuleComparisonPage() {
     jobState.job?.status === 'failed'
   const retryComparison = async () => {
     try {
-      await retry.mutateAsync({ comparisonId: id })
-      await query.refetch()
+      await run.retry()
     } catch {
       // The structured mutation failure is rendered beside the retry action.
     }
@@ -140,7 +107,7 @@ export function VoiceRuleComparisonPage() {
         <Button
           variant="secondary"
           className="mt-4"
-          pending={retry.isPending}
+          pending={run.retryPending}
           onClick={() => void retryComparison()}
         >
           {t('comparison.retry', { ns: 'voices' })}
@@ -172,7 +139,7 @@ export function VoiceRuleComparisonPage() {
               <Button
                 variant="cta"
                 disabled={!ready}
-                pending={decide.isPending}
+                pending={run.decidePending}
                 onClick={() => void choose(activeId)}
               >
                 {t('comparison.prefer', { ns: 'voices' })}

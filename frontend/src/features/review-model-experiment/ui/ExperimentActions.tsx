@@ -1,13 +1,13 @@
-import { useCallback, useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useTransport } from '@connectrpc/connect-query'
-import { type QueryKey, useQueryClient } from '@tanstack/react-query'
 import type { ModelExperiment } from '@/entities/model-experiment'
-import { needsExperimentReview, useExperimentActions } from '@/entities/model-experiment'
-import { getPostQueryKey, listPostsQueryKey } from '@/entities/post'
-import { getSelectionsQueryKey } from '@/entities/model-catalog'
+import {
+  needsExperimentReview,
+  useExperimentActions,
+  useExperimentOwnerRefresh,
+} from '@/entities/model-experiment'
 import { useSession } from '@/entities/session'
-import { useVoices, voiceProfileQueryKey, voiceVersionsQueryKey } from '@/entities/voice'
+import { useVoices } from '@/entities/voice'
 import { AppFailureMessage, Button, Dialog, Notice } from '@/shared/ui'
 import { hasExperimentActions } from '../model/experiment-actions'
 
@@ -19,8 +19,6 @@ export function ExperimentActions({
   activeCandidateId: string
 }) {
   const { t } = useTranslation('models')
-  const transport = useTransport()
-  const queryClient = useQueryClient()
   const { user } = useSession()
   const ownerId = user?.id ?? ''
   const { voices, isPending: voicesPending } = useVoices(ownerId)
@@ -33,18 +31,7 @@ export function ExperimentActions({
   const voiceWorkBlocked = Boolean(
     experiment.voiceId && (voicesPending || !frozenVoice || frozenVoice.deleted),
   )
-  const refreshOwner = useCallback(async () => {
-    const keys: QueryKey[] = [listPostsQueryKey(transport), getSelectionsQueryKey(transport)]
-    if (experiment.postSlug) keys.push(getPostQueryKey(transport, experiment.postSlug))
-    // An applied analyze winner publishes a new head for the experiment's frozen voice only.
-    if (experiment.voiceId) {
-      keys.push(
-        voiceProfileQueryKey(transport, ownerId, experiment.voiceId),
-        voiceVersionsQueryKey(transport, ownerId, experiment.voiceId),
-      )
-    }
-    await Promise.all(keys.map((queryKey) => queryClient.invalidateQueries({ queryKey })))
-  }, [experiment.postSlug, experiment.voiceId, ownerId, queryClient, transport])
+  const refreshOwner = useExperimentOwnerRefresh(ownerId, experiment)
   const actions = useExperimentActions(experiment.id, refreshOwner)
   const [confirmStyle, setConfirmStyle] = useState(false)
   // `useExperimentActions` reports one `isPending` for all six mutations, so the button the thumb

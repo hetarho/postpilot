@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Voice } from '@/entities/voice'
 import { Button, Dialog, FieldMessage } from '@/shared/ui'
-import { useDeleteVoice } from '../api/useDeleteVoice'
+import { useDeleteVoice } from '@/entities/voice'
 
 /** Soft-deletes a voice after the sheet explains what stays. Never offered for the default: the
  *  server refuses it, and a button that always fails is not a control. */

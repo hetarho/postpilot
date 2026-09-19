@@ -1,6 +1,7 @@
 // Query keys and the proto→domain mappers for the post entity.
+import { useMemo } from 'react'
 import type { Transport } from '@connectrpc/connect'
-import { createConnectQueryKey } from '@connectrpc/connect-query'
+import { createConnectQueryKey, useTransport } from '@connectrpc/connect-query'
 import { toPostImage } from '@/entities/image/@x/post'
 import { toPostVideo } from '@/entities/video/@x/post'
 import { toGenerationJob } from '@/entities/generation-job/@x/post'
@@ -102,4 +103,15 @@ export function listPostsQueryKey(transport: Transport) {
     transport,
     cardinality: 'finite',
   })
+}
+
+/** The post's own cache entries as targets, for a caller that must mark them stale without
+ *  holding a transport of its own (ARCH-17). */
+export function usePostQueryKey(slug: string) {
+  const transport = useTransport()
+  return useMemo(() => getPostQueryKey(transport, slug), [slug, transport])
+}
+export function useListPostsQueryKey() {
+  const transport = useTransport()
+  return useMemo(() => listPostsQueryKey(transport), [transport])
 }

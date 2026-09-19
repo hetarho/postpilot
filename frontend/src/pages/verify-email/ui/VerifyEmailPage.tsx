@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { useResendVerification, useVerifyEmail } from '@/features/verify-email'
+import { useResendVerification, useVerifyEmail } from '@/entities/session'
 import {
   AppFailureMessage,
   Button,

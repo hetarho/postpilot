@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AppFailureMessage, Button, FieldLabel, Notice, TextField } from '@/shared/ui'
-import { useChangePassword } from '../api/useChangePassword'
+import { useChangePassword } from '@/entities/session'
 
 export function ChangePasswordForm({ onChanged }: { onChanged: () => void }) {
   const { t } = useTranslation('auth')

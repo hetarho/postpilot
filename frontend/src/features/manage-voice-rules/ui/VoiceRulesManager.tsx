@@ -1,23 +1,10 @@
-import { create } from '@bufbuild/protobuf'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from '@tanstack/react-router'
-import { useMutation, useTransport } from '@connectrpc/connect-query'
-import { useQueryClient } from '@tanstack/react-query'
 import { useStageSelection } from '@/entities/model-catalog'
 import type { VoiceProfile } from '@/entities/voice'
-import {
-  voiceConfirmationsQueryKey,
-  voiceProfileQueryKey,
-  voiceVersionsQueryKey,
-} from '@/entities/voice'
-import {
-  appFailureFromConnect,
-  ModelRefSchema,
-  VoiceLearningService,
-  VoiceRuleStatus,
-  VoiceValidationService,
-} from '@/shared/api'
+import { useStartVoiceRuleComparison, useVoiceRuleActions } from '@/entities/voice'
+import { appFailureFromConnect, VoiceRuleStatus } from '@/shared/api'
 import { AppFailureMessage, Badge, Button, Dialog, Notice, Typography } from '@/shared/ui'
 
 interface RuleConfirmation {
@@ -45,38 +32,23 @@ export function VoiceRulesManager({
   blocked?: string
 }) {
   const { t } = useTranslation('voices')
-  const transport = useTransport()
-  const queryClient = useQueryClient()
   const navigate = useNavigate()
   const write = useStageSelection('write')
-  const statusMutation = useMutation(VoiceLearningService.method.setVoiceRuleStatus)
-  const resolveMutation = useMutation(VoiceLearningService.method.resolveRuleConfirmation)
-  const compareMutation = useMutation(VoiceValidationService.method.startVoiceRuleComparison)
+  const rules = useVoiceRuleActions(ownerId, voiceId)
+  const comparison = useStartVoiceRuleComparison()
   const [compareRule, setCompareRule] = useState<string>()
-  const refresh = () => {
-    for (const queryKey of [
-      voiceProfileQueryKey(transport, ownerId, voiceId),
-      voiceVersionsQueryKey(transport, ownerId, voiceId),
-      voiceConfirmationsQueryKey(transport, ownerId, voiceId),
-    ]) {
-      void queryClient.invalidateQueries({ queryKey })
-    }
-  }
   const changeStatus = (ruleId: string, status: VoiceRuleStatus) => {
     if (blocked) return
-    void statusMutation
-      .mutateAsync({ ruleId, status })
-      .then(refresh)
-      .catch(() => undefined)
+    void rules.setStatus(ruleId, status).catch(() => undefined)
   }
   const startComparison = async () => {
     if (blocked) return
     const source = profile.structured.sources[0]
     if (!compareRule || !source || !write.selected) return
-    const response = await compareMutation.mutateAsync({
+    const response = await comparison.start({
       ruleId: compareRule,
       sourceId: source.id,
-      writeModel: create(ModelRefSchema, write.selected),
+      writeModel: write.selected,
     })
     setCompareRule(undefined)
     if (response.comparisonId) {
@@ -87,7 +59,7 @@ export function VoiceRulesManager({
     }
   }
   const pending = confirmations.filter((item) => item.status === 'pending')
-  const actionError = statusMutation.error ?? resolveMutation.error ?? compareMutation.error
+  const actionError = rules.error ?? comparison.error
   return (
     <section aria-label={t('rules.title')}>
       {blocked && (
@@ -176,24 +148,14 @@ export function VoiceRulesManager({
                 <Button
                   variant="secondary"
                   disabled={Boolean(blocked)}
-                  onClick={() =>
-                    void resolveMutation
-                      .mutateAsync({ confirmationId: item.id, replace: false })
-                      .then(refresh)
-                      .catch(() => undefined)
-                  }
+                  onClick={() => void rules.resolve(item.id, false).catch(() => undefined)}
                 >
                   {t('rules.keep')}
                 </Button>
                 <Button
                   variant="cta"
                   disabled={Boolean(blocked)}
-                  onClick={() =>
-                    void resolveMutation
-                      .mutateAsync({ confirmationId: item.id, replace: true })
-                      .then(refresh)
-                      .catch(() => undefined)
-                  }
+                  onClick={() => void rules.resolve(item.id, true).catch(() => undefined)}
                 >
                   {t('rules.replace')}
                 </Button>
@@ -206,7 +168,7 @@ export function VoiceRulesManager({
         open={compareRule !== undefined}
         title={t('rules.compareTitle')}
         confirmLabel={t('rules.compareConfirm')}
-        pending={compareMutation.isPending}
+        pending={comparison.isPending}
         onClose={() => setCompareRule(undefined)}
         onConfirm={() => void startComparison().catch(() => undefined)}
       >

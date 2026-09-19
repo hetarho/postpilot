@@ -1,12 +1,10 @@
-import { clone } from '@bufbuild/protobuf'
 import type { PostContent } from '@/shared/api'
-import { PostContentSchema } from '@/shared/api'
 import {
   AUTOSAVE_DEBOUNCE_MS,
   AUTOSAVE_RETRY_BASE_MS,
   AUTOSAVE_RETRY_MAX_MS,
 } from '@/shared/config'
-import { ContentRevisionConflictError } from '@/entities/post'
+import { ContentRevisionConflictError, copyPostContent } from '@/entities/post'
 
 export type ContentSaveState = 'idle' | 'dirty' | 'saving' | 'saved' | 'error' | 'conflict'
 export interface ContentSnapshot {
@@ -48,7 +46,7 @@ export interface ContentQueueHandle {
 const queues = new Map<string, Queue>()
 
 function copy(snapshot: ContentSnapshot): ContentSnapshot {
-  return { content: clone(PostContentSchema, snapshot.content) }
+  return { content: copyPostContent(snapshot.content) }
 }
 function same(a: ContentSnapshot, b: ContentSnapshot): boolean {
   return JSON.stringify(a.content) === JSON.stringify(b.content)

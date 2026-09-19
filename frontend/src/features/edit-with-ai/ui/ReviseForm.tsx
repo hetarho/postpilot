@@ -1,7 +1,7 @@
 import { forwardRef, useCallback, useImperativeHandle, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { SendHorizontal } from 'lucide-react'
-import { isTerminal, type GenerationJob } from '@/entities/generation-job'
+import { isTerminal, useStartRevision, type GenerationJob } from '@/entities/generation-job'
 import { useSelectionSavePending, useStageSelection } from '@/entities/model-catalog'
 import { ContentRevisionConflictError } from '@/entities/post'
 import { deletedVoiceAIReason, type VoiceRef } from '@/entities/voice'
@@ -17,7 +17,7 @@ import {
   Typography,
   typographyStyles,
 } from '@/shared/ui'
-import { useStartRevision } from '../api/useStartRevision'
+
 import { SaveAsGuidelineButton } from './SaveAsGuidelineButton'
 
 interface ReviseFormProps {

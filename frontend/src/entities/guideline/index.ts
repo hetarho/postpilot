@@ -23,7 +23,11 @@ export {
   toGuidelineCandidate,
   toScopePatch,
 } from './api/guideline-queries'
-export { invalidateGuidelineCandidates, invalidateGuidelines } from './api/guideline-cache'
+export {
+  invalidateGuidelineCandidates,
+  invalidateGuidelines,
+  useInvalidateGuidelineCandidates,
+} from './api/guideline-cache'
 export type { BulkReviewOutcome } from './api/guideline-mutations'
 export {
   useBulkReviewGuidelineCandidates,

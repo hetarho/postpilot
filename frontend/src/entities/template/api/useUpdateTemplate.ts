@@ -1,9 +1,10 @@
 import { useMutation, useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
-import { invalidateGuidelines } from '@/entities/guideline'
-import { listPostsQueryKey, postDetailQueriesKey } from '@/entities/post'
-import { invalidateTemplates, templateErrorMessage } from '@/entities/template'
+import { invalidateGuidelines } from '@/entities/guideline/@x/template'
+import { listPostsQueryKey, postDetailQueriesKey } from '@/entities/post/@x/template'
 import { TemplateService } from '@/shared/api'
+import { invalidateTemplates } from './template-cache'
+import { templateErrorMessage } from './template-errors'
 
 /** Presence is the edit unit. `saveAll` sends the three fields the template screen edits as one
  *  draft, which is one transaction on the server rather than a read-modify-write: the screen is

@@ -1,13 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useMutation } from '@connectrpc/connect-query'
 import { ContentRevisionConflictError } from '@/entities/post'
-import {
-  appFailureFromConnect,
-  type AppFailure,
-  VoiceFeedbackReason,
-  VoiceLearningService,
-} from '@/shared/api'
+import { useSentenceFeedback } from '@/entities/voice'
+import { appFailureFromConnect, type AppFailure, VoiceFeedbackReason } from '@/shared/api'
 import { LONG_PRESS_MS } from '../config'
 import { clsx } from 'clsx'
 import {
@@ -51,7 +46,7 @@ export function SentenceFeedback({
   const [reason, setReason] = useState(VoiceFeedbackReason.VOCABULARY)
   const [prepareFailure, setPrepareFailure] = useState<AppFailure | 'content-conflict'>()
   const timer = useRef<number | undefined>(undefined)
-  const mutation = useMutation(VoiceLearningService.method.giveSentenceFeedback)
+  const mutation = useSentenceFeedback()
   // A component unmounted mid-press keeps the long-press timeout scheduled. React ignores
   // the resulting setOpen without complaining, which is why it would never be found later.
   useEffect(() => () => window.clearTimeout(timer.current), [])
@@ -69,12 +64,7 @@ export function SentenceFeedback({
       return
     }
     try {
-      await mutation.mutateAsync({
-        postSlug,
-        sentenceRef: selected,
-        authoredText: selected,
-        reason,
-      })
+      await mutation.give(postSlug, selected, reason)
       setOpen(false)
     } catch {
       // The stable application failure remains in the dialog next to the action.

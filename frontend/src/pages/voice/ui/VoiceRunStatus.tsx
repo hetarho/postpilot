@@ -1,8 +1,7 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useTransport } from '@connectrpc/connect-query'
 import { FailureNotice, ProgressLine, isTerminal, useJob } from '@/entities/generation-job'
-import { voiceProfileQueryKey } from '@/entities/voice'
+import { useVoiceProfileQueryKey } from '@/entities/voice'
 
 /** The one durable run that can be writing THIS voice's profile: an analysis, or the seeding job
  *  a described creation started. Both are reported the same way because they end the same way —
@@ -19,11 +18,8 @@ export function VoiceRunStatus({
   jobId: string
 }) {
   const { t } = useTranslation('voices')
-  const transport = useTransport()
-  const invalidateOnDone = useMemo(
-    () => [voiceProfileQueryKey(transport, ownerId, voiceId)],
-    [ownerId, transport, voiceId],
-  )
+  const profileKey = useVoiceProfileQueryKey(ownerId, voiceId)
+  const invalidateOnDone = useMemo(() => [profileKey], [profileKey])
   const jobState = useJob(jobId, invalidateOnDone)
   if (!jobId) return null
   return (

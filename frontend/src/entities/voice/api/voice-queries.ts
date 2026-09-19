@@ -1,4 +1,6 @@
+import { useMemo } from 'react'
 import type { Transport } from '@connectrpc/connect'
+import { useTransport } from '@connectrpc/connect-query'
 import {
   requireContentLanguage,
   VoiceLayer,
@@ -237,4 +239,14 @@ export function voiceValidationQueryKey(
   id: string,
 ) {
   return ['voice-validation', transport, ownerId, voiceId, id] as const
+}
+
+/** The profile entry as a cache target, for a caller that has to say "this job's completion makes
+ *  that profile stale" without holding a transport of its own (ARCH-17). */
+export function useVoiceProfileQueryKey(ownerId: string, voiceId: string) {
+  const transport = useTransport()
+  return useMemo(
+    () => voiceProfileQueryKey(transport, ownerId, voiceId),
+    [ownerId, transport, voiceId],
+  )
 }

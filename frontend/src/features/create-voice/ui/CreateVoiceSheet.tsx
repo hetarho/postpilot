@@ -3,7 +3,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useStageSelection } from '@/entities/model-catalog'
 import type { ContentLanguage } from '@/shared/api'
-import { VOICE_DESCRIPTION_MAX_CHARS, VOICE_NAME_MAX_CHARS } from '@/entities/voice'
+import { VOICE_DESCRIPTION_MAX_CHARS, VOICE_NAME_MAX_CHARS, useCreateVoice } from '@/entities/voice'
 import { activeLocale } from '@/shared/lib'
 import {
   Button,
@@ -15,7 +15,6 @@ import {
   TextField,
   Typography,
 } from '@/shared/ui'
-import { useCreateVoice } from '../api/useCreateVoice'
 
 /** The directory's one committing action and the overlay it opens. The trigger is rendered here
  *  rather than by the page so the open state stays with the form it opens, the way `Popover`

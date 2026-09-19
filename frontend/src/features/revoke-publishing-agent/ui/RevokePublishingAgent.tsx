@@ -1,9 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useTransport } from '@connectrpc/connect-query'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { publishingAgentsQueryKey } from '@/entities/publishing-agent'
-import { appFailureFromConnect, publishingClientFor } from '@/shared/api'
+import { useRevokePublishingAgent } from '@/entities/publishing-agent'
 import { AppFailureMessage, Button, Dialog, Notice } from '@/shared/ui'
 
 export function RevokePublishingAgent({
@@ -17,19 +14,8 @@ export function RevokePublishingAgent({
 }) {
   const { t } = useTranslation('publishing')
   const [confirming, setConfirming] = useState(false)
-  const transport = useTransport()
-  const client = useMemo(() => publishingClientFor(transport), [transport])
-  const queryClient = useQueryClient()
-  const revoke = useMutation({
-    mutationFn: () => client.revokePublishingAgent({ agentId }),
-    onSuccess: async () => {
-      setConfirming(false)
-      await queryClient.invalidateQueries({
-        queryKey: publishingAgentsQueryKey(ownerId),
-      })
-    },
-  })
-  const failure = revoke.error ? appFailureFromConnect(revoke.error) : undefined
+  const revoke = useRevokePublishingAgent(ownerId, agentId)
+  const failure = revoke.failure
   return (
     <>
       <Button variant="danger" onClick={() => setConfirming(true)}>
@@ -40,7 +26,7 @@ export function RevokePublishingAgent({
         title={t('revoke.title')}
         confirmLabel={t('revoke.action')}
         onClose={() => setConfirming(false)}
-        onConfirm={() => revoke.mutate()}
+        onConfirm={() => revoke.mutate(undefined, { onSuccess: () => setConfirming(false) })}
         pending={revoke.isPending}
       >
         <div className="space-y-3">

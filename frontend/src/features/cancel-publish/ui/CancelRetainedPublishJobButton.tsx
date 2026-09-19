@@ -1,9 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useTransport } from '@connectrpc/connect-query'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { retryablePublishJobsQueryKey } from '@/entities/publish-job'
-import { appFailureFromConnect, publishingClientFor } from '@/shared/api'
+import { useCancelRetainedPublishJob } from '@/entities/publish-job'
 import { AppFailureMessage, Button, Dialog, Notice } from '@/shared/ui'
 
 interface CancelRetainedPublishJobButtonProps {
@@ -19,19 +16,8 @@ export function CancelRetainedPublishJobButton({
 }: CancelRetainedPublishJobButtonProps) {
   const { t } = useTranslation('publishing')
   const [confirming, setConfirming] = useState(false)
-  const transport = useTransport()
-  const client = useMemo(() => publishingClientFor(transport), [transport])
-  const queryClient = useQueryClient()
-  const cancel = useMutation({
-    mutationFn: () => client.cancelPublish({ jobId }),
-    onSuccess: async () => {
-      setConfirming(false)
-      await queryClient.invalidateQueries({
-        queryKey: retryablePublishJobsQueryKey(ownerId),
-      })
-    },
-  })
-  const failure = cancel.error ? appFailureFromConnect(cancel.error) : undefined
+  const cancel = useCancelRetainedPublishJob(ownerId, jobId)
+  const failure = cancel.failure
 
   return (
     <>
@@ -43,7 +29,7 @@ export function CancelRetainedPublishJobButton({
         title={t('cancelRetained.title')}
         confirmLabel={t('cancelRetained.confirm')}
         onClose={() => setConfirming(false)}
-        onConfirm={() => cancel.mutate()}
+        onConfirm={() => cancel.mutate(undefined, { onSuccess: () => setConfirming(false) })}
         pending={cancel.isPending}
       >
         <div className="space-y-3">

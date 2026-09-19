@@ -6,6 +6,6 @@ export type {
   PresignedUpload,
   UploadKind,
 } from './api/upload-handshake'
-export { createUploadHandshake } from './api/upload-handshake'
+export { createUploadHandshake, useUploadHandshake } from './api/upload-handshake'
 export { useDeleteImage } from './api/useDeleteImage'
 export { Thumbnail } from './ui/Thumbnail'

@@ -1,9 +1,5 @@
-import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useTransport } from '@connectrpc/connect-query'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { retryablePublishJobsQueryKey } from '@/entities/publish-job'
-import { appFailureFromConnect, publishingClientFor } from '@/shared/api'
+import { useRetryPublishJob } from '@/entities/publish-job'
 import { AppFailureMessage, Button, Notice } from '@/shared/ui'
 
 interface RetryPublishJobButtonProps {
@@ -13,17 +9,8 @@ interface RetryPublishJobButtonProps {
 
 export function RetryPublishJobButton({ ownerId, jobId }: RetryPublishJobButtonProps) {
   const { t } = useTranslation('publishing')
-  const transport = useTransport()
-  const client = useMemo(() => publishingClientFor(transport), [transport])
-  const queryClient = useQueryClient()
-  const retry = useMutation({
-    mutationFn: async () => client.retryPublish({ jobId }),
-    onSuccess: () =>
-      queryClient.invalidateQueries({
-        queryKey: retryablePublishJobsQueryKey(ownerId),
-      }),
-  })
-  const failure = retry.error ? appFailureFromConnect(retry.error) : undefined
+  const retry = useRetryPublishJob(ownerId, jobId)
+  const failure = retry.failure
 
   return (
     <div>

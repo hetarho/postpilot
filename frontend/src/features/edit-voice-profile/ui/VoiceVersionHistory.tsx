@@ -1,19 +1,12 @@
 import i18next from 'i18next'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useMutation, useTransport } from '@connectrpc/connect-query'
-import { useQueryClient } from '@tanstack/react-query'
 import { ChevronDown } from 'lucide-react'
 import { clsx } from 'clsx'
 import type { PostContent } from '@/shared/api'
 import { formatDate } from '@/shared/lib'
 import type { VoiceProfile, VoiceVersion } from '@/entities/voice'
-import {
-  useVoiceVersionSample,
-  voiceProfileQueryKey,
-  voiceVersionsQueryKey,
-} from '@/entities/voice'
-import { appFailureFromConnect, VoiceService } from '@/shared/api'
+import { useRestoreVoiceProfile, useVoiceVersionSample } from '@/entities/voice'
 import { VOICE_VERSION_PREVIEW_CHARS } from '../config'
 import { AppFailureMessage, Button, Notice, Spinner, Typography } from '@/shared/ui'
 
@@ -40,18 +33,8 @@ export function VoiceVersionHistory({
   readOnly?: boolean
 }) {
   const { t } = useTranslation(['voices', 'common'])
-  const transport = useTransport()
-  const queryClient = useQueryClient()
-  const restore = useMutation(VoiceService.method.restoreVoiceProfile)
+  const restore = useRestoreVoiceProfile(ownerId, voiceId)
   const [openVersion, setOpenVersion] = useState<bigint>()
-  const refresh = () => {
-    void queryClient.invalidateQueries({
-      queryKey: voiceProfileQueryKey(transport, ownerId, voiceId),
-    })
-    void queryClient.invalidateQueries({
-      queryKey: voiceVersionsQueryKey(transport, ownerId, voiceId),
-    })
-  }
   return (
     <section aria-label={t('versions.title', { ns: 'voices' })}>
       {versions.length === 0 ? (
@@ -104,11 +87,8 @@ export function VoiceVersionHistory({
                     adopting={restore.isPending}
                     onAdopt={() =>
                       void restore
-                        .mutateAsync({ voiceId, version: version.version })
-                        .then(() => {
-                          setOpenVersion(undefined)
-                          refresh()
-                        })
+                        .adopt(version.version)
+                        .then(() => setOpenVersion(undefined))
                         .catch(() => undefined)
                     }
                   />
@@ -118,9 +98,9 @@ export function VoiceVersionHistory({
           })}
         </ul>
       )}
-      {restore.error && (
+      {restore.failure && (
         <Notice tone="danger" role="alert" className="mt-3">
-          <AppFailureMessage failure={appFailureFromConnect(restore.error)} />
+          <AppFailureMessage failure={restore.failure} />
         </Notice>
       )}
     </section>

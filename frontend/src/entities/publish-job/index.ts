@@ -11,3 +11,9 @@ export {
   retryablePublishJobsQueryKey,
   useRetryablePublishJobs,
 } from './api/useRetryablePublishJobs'
+export {
+  PublishStartError,
+  useCancelRetainedPublishJob,
+  usePublishPost,
+  useRetryPublishJob,
+} from './api/publish-job-mutations'

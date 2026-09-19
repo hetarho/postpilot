@@ -10,11 +10,11 @@ import {
   canSaveTemplate,
   parse,
   remainingChars,
+  useCreateTemplate,
   useTemplates,
+  useUpdateTemplate,
   type Template,
 } from '@/entities/template'
-import { useCreateTemplate } from '@/features/create-template'
-import { useUpdateTemplate } from '@/features/edit-template'
 import {
   POST_TAG_COUNT_DEFAULT,
   POST_TAG_COUNT_MAX,

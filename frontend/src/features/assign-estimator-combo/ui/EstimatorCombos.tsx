@@ -1,6 +1,10 @@
 import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useAdminCatalog, type AdminCatalogEntry } from '@/entities/model-catalog'
+import {
+  useAdminCatalog,
+  useAssignEstimatorCombo,
+  type AdminCatalogEntry,
+} from '@/entities/model-catalog'
 import {
   AppFailureMessage,
   FieldLabel,
@@ -9,7 +13,6 @@ import {
   Typography,
   type ListboxOption,
 } from '@/shared/ui'
-import { useAssignEstimatorCombo } from '../api/useAssignEstimatorCombo'
 
 /** The four estimator combos, richest first. The names are the product's (QUOTA-39) — the
  *  operator names the models behind each tier, not the tier itself. */

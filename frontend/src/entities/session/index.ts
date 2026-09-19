@@ -5,3 +5,13 @@ export { loadSession, getMeQueryKey, seedSessionCache } from './api/session-quer
 export { useSession } from './api/useSession'
 export { useLogin } from './api/useLogin'
 export { useLogout } from './api/useLogout'
+export { useSignInWithGoogle } from './api/useSignInWithGoogle'
+export {
+  useChangePassword,
+  useRegisterEmail,
+  useRequestPasswordReset,
+  useResendVerification,
+  useResetPassword,
+  useSignUp,
+  useVerifyEmail,
+} from './api/session-mutations'

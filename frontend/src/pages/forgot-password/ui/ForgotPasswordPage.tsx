@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { useRequestPasswordReset } from '@/features/request-password-reset'
+import { useRequestPasswordReset } from '@/entities/session'
 import {
   AppFailureMessage,
   Button,

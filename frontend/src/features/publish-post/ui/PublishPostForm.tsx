@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { PublishingAgent } from '@/entities/publishing-agent'
-import { isBeforeCommitFence, type PublishJob } from '@/entities/publish-job'
+import { isBeforeCommitFence, usePublishPost, type PublishJob } from '@/entities/publish-job'
 import {
   appFailureFromConnect,
   type AppFailure,
@@ -10,7 +10,6 @@ import {
 } from '@/shared/api'
 import { PUBLISH_AGENT_STALE_MS } from '@/entities/publishing-agent'
 import { AppFailureMessage, Button, Dialog, FieldLabel, Listbox, Notice } from '@/shared/ui'
-import { usePublishPost } from '../model/usePublishPost'
 
 export function PublishPostForm({
   ownerId,

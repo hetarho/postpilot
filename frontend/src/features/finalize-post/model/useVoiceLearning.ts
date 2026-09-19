@@ -1,16 +1,15 @@
 import i18next from 'i18next'
 import { useMemo, useState } from 'react'
-import { useTransport } from '@connectrpc/connect-query'
 import { isTerminal, useJob, type GenerationJob } from '@/entities/generation-job'
 import { useStageSelection } from '@/entities/model-catalog'
-import { getPostQueryKey, type PostDraft } from '@/entities/post'
+import { usePostQueryKey, type PostDraft } from '@/entities/post'
 import {
   deletedVoiceAIReason,
+  useVoiceLearningActions,
+  useVoiceProfileQueryKey,
   voiceContentLanguageMismatch,
   voiceContentLanguageMismatchReason,
-  voiceProfileQueryKey,
 } from '@/entities/voice'
-import { useVoiceLearningActions } from '../api/useVoiceLearningActions'
 import {
   isLearningHandoffForRevision,
   readLearningHandoff,
@@ -59,7 +58,6 @@ export interface VoiceLearning {
  *  mid-flight by the very action that starts the run. Held above both panels, the started job,
  *  its handoff and its error all survive the switch. */
 export function useVoiceLearning(ownerId: string, post: PostDraft): VoiceLearning {
-  const transport = useTransport()
   const analyze = useStageSelection('analyze')
   const actions = useVoiceLearningActions()
   const [handoff, setHandoff] = useState(() => readLearningHandoff(ownerId, post.slug))
@@ -69,13 +67,9 @@ export function useVoiceLearning(ownerId: string, post: PostDraft): VoiceLearnin
   const current = isLearningHandoffForRevision(handoff, post.contentRevision)
   // The learning event publishes to the post's voice and no other, so that is the one profile
   // the completed job makes stale.
-  const invalidate = useMemo(
-    () => [
-      getPostQueryKey(transport, post.slug),
-      voiceProfileQueryKey(transport, ownerId, post.voice.id),
-    ],
-    [ownerId, post.slug, post.voice.id, transport],
-  )
+  const postKey = usePostQueryKey(post.slug)
+  const voiceProfileKey = useVoiceProfileQueryKey(ownerId, post.voice.id)
+  const invalidate = useMemo(() => [postKey, voiceProfileKey], [postKey, voiceProfileKey])
   const jobState = useJob(current ? (handoff?.jobId ?? '') : '', invalidate)
   const job = jobState.job
   const active = Boolean(job && !isTerminal(job))

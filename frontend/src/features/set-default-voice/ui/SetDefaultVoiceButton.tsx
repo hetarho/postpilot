@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { Button, FieldMessage } from '@/shared/ui'
-import { useSetDefaultVoice } from '../api/useSetDefaultVoice'
+import { useSetDefaultVoice } from '@/entities/voice'
 
 /** Makes this voice the one a new post starts in. Nothing else changes: no profile work, and the
  *  previous default keeps everything it learned. */

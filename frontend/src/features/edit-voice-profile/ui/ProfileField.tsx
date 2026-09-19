@@ -1,12 +1,9 @@
 import i18next from 'i18next'
 import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useMutation, useTransport } from '@connectrpc/connect-query'
-import { useQueryClient } from '@tanstack/react-query'
 import type { VoiceValue } from '@/entities/voice'
-import { voiceProfileQueryKey, voiceVersionsQueryKey } from '@/entities/voice'
-import { appFailureFromConnect, VoiceLayer, VoiceService } from '@/shared/api'
-import { formatAppFailure } from '@/shared/lib'
+import { useUpdateVoiceOverride } from '@/entities/voice'
+import { VoiceLayer } from '@/shared/api'
 import {
   Badge,
   Button,
@@ -40,22 +37,10 @@ export function ProfileField({
   readOnly?: boolean
 }) {
   const { t } = useTranslation(['voices', 'common'])
-  const transport = useTransport()
-  const queryClient = useQueryClient()
-  const override = useMutation(VoiceService.method.updateVoiceOverride)
-  // An override publishes a new whole-profile version, so the version list is stale too.
-  const refresh = async () => {
-    await queryClient.invalidateQueries({
-      queryKey: voiceProfileQueryKey(transport, ownerId, voiceId),
-    })
-    await queryClient.invalidateQueries({
-      queryKey: voiceVersionsQueryKey(transport, ownerId, voiceId),
-    })
-  }
+  const override = useUpdateVoiceOverride(ownerId, voiceId)
   const commit = async (exit: () => void, next?: string) => {
     try {
-      await override.mutateAsync({ voiceId, layer, field, value: next })
-      await refresh()
+      await override.override(layer, field, next)
       // Only a successful save leaves edit mode. A rejected one keeps the draft on screen, because
       // discarding the owner's text is a worse outcome than showing the server's message twice.
       exit()
@@ -72,9 +57,7 @@ export function ProfileField({
           label={label}
           value={value}
           pending={override.isPending}
-          errorMessage={
-            override.error ? formatAppFailure(appFailureFromConnect(override.error)) : undefined
-          }
+          errorMessage={override.errorMessage || undefined}
           showClear={value.source === 'manual'}
           onSave={(next) => commit(exit, next)}
           onClear={() => commit(exit)}

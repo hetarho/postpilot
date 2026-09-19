@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { detachWarning, type Template } from '@/entities/template'
+import { detachWarning, useDeleteTemplate, type Template } from '@/entities/template'
 import { Button, Dialog, FieldMessage } from '@/shared/ui'
-import { useDeleteTemplate } from '../api/useDeleteTemplate'
 
 /** Deletes a template after the sheet says exactly how many posts lose their assignment. The
  *  count comes from the server's projection, so the sentence and the write agree. */

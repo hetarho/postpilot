@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { Button, FieldMessage } from '@/shared/ui'
-import { useRestoreVoice } from '../api/useRestoreVoice'
+import { useRestoreVoice } from '@/entities/voice'
 
 /** Brings a deleted voice back exactly as it was — no job, no profile change, not made default. */
 export function RestoreVoiceButton({

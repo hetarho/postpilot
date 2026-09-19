@@ -1,7 +1,8 @@
 import { forwardRef, useCallback, useImperativeHandle, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { clsx } from 'clsx'
-import type { GenerationJob } from '@/entities/generation-job'
+import { useStartGeneration, type GenerationJob } from '@/entities/generation-job'
+import { useStartWriteExperiment } from '@/entities/model-experiment'
 import type { PostDraft } from '@/entities/post'
 import {
   sameRef,
@@ -18,8 +19,6 @@ import {
   Typography,
   buttonStyles,
 } from '@/shared/ui'
-import { useStartGeneration } from '../api/useStartGeneration'
-import { useStartWriteExperiment } from '../api/useStartWriteExperiment'
 import { needsPicker } from '../model/reobserve'
 import {
   comparisonGenerationPreconditions,

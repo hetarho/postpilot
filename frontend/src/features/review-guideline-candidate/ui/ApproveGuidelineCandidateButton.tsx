@@ -1,15 +1,13 @@
 import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useTransport } from '@connectrpc/connect-query'
-import { useQueryClient } from '@tanstack/react-query'
 import {
   GuidelineScopeField,
   canSaveGuideline,
   globalScope,
-  invalidateGuidelineCandidates,
   isDuplicateGuideline,
   remainingGuidelineChars,
   useCreateGuidelineCall,
+  useInvalidateGuidelineCandidates,
   type GuidelineCandidate,
   type GuidelineScope,
 } from '@/entities/guideline'
@@ -48,8 +46,7 @@ export function ApproveGuidelineCandidateButton({
   const [scope, setScope] = useState<GuidelineScope>(globalScope)
   const [duplicate, setDuplicate] = useState(false)
   const create = useCreateGuidelineCall(ownerId)
-  const queryClient = useQueryClient()
-  const transport = useTransport()
+  const invalidateCandidates = useInvalidateGuidelineCandidates(ownerId)
 
   // Seeded on OPEN, not from an effect on the candidate: a refetch that bumps this candidate's
   // occurrence count must not overwrite what someone is editing, and reopening starts from the
@@ -83,7 +80,7 @@ export function ApproveGuidelineCandidateButton({
       // gone. If it is still here, the message says why, and 무시 is the way out.
       if (isDuplicateGuideline(cause)) {
         setDuplicate(true)
-        invalidateGuidelineCandidates(queryClient, transport, ownerId)
+        invalidateCandidates()
         return
       }
       // Any other refusal — over the text bound, past the account cap — keeps the dialog open

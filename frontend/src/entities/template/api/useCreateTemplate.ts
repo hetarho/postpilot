@@ -1,7 +1,8 @@
 import { useMutation, useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
-import { invalidateTemplates, templateErrorMessage } from '@/entities/template'
 import { TemplateService } from '@/shared/api'
+import { invalidateTemplates } from './template-cache'
+import { templateErrorMessage } from './template-errors'
 
 export function useCreateTemplate(ownerId: string) {
   const transport = useTransport()

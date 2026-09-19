@@ -50,7 +50,6 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
-| T259 | proto symbols and connect-query reach no further than entity api | ARCH | - | todo |
 | T260 | split entities/clip-project into four nouns | ARCH | - | todo |
 | T261 | the clip page composes a widget instead of wiring eleven hooks | ARCH | T260 | todo |
 | T262 | clip pages and features consume entity hooks, allowlist removed | ARCH | T259 T261 | todo |
@@ -72,11 +71,13 @@
 | T284 | the agent generates only the protos it uses and drops the survey harness | ARCH | T008 T281 | todo |
 
 ## next
-- implement-task: BE roots T276 (voice/post/publishing ports), T277 (experiment/usage/auth ports), T278 (typed failure reasons), T280 (boundary leaks), T275 (missing test packages); FE roots T259 T260 T263 T264 T266 T268
+- implement-task: T267 is next for FE (its dep T259 is done); other FE roots T260 T263 T264 T266 T268; BE roots T276 (voice/post/publishing ports), T277 (experiment/usage/auth ports), T278 (typed failure reasons), T280 (boundary leaks), T275 (missing test packages)
 - the clip `release-smoke` stage is red at HEAD on this host: 9 of 28 modes end in `no result` (generation ends on a plan since T255, harness still expects a Result) — needs a fix task (review-code clip-release-smoke or update the harness)
 - agent tasks T279 T282 T283 T284 wait for T008; T008 belongs to another session and T177 remains blocked
 - post-quality-and-related-links remains open ideation, awaiting conversion when ready
 ## log
+- 260920 T259 done; an ESLint block + a source-tree vitest hold ARCH-17 over pages/widgets/features (clip allowlisted for T262), 45 slice files traded descriptors for entity hooks, and 7 slices whose only hook moved were deleted; ARCH-25 green
+- 260920 T259 claimed (ent)
 - 260920 T258 done; shared/config is 80 lines of env + cross-slice values, product limits and slice tuning live in 24 new `config` segments, clip-design.json moved into entities/clip-project and reaches clip-template through a new @x; ARCH-25 green
 - 260920 T269 done; platform/config imports nothing under internal/ (guard test), clip/post/voice/generation own their limits and cmd/api merges env via clipEnvironment; ARCH-26 green and the release smoke is the pre-existing 19/28
 - 260920 T258 T269 claimed (cfg)

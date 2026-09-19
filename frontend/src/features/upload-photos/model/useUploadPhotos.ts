@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState, useSyncExternalStore } from 'react'
-import { useTransport } from '@connectrpc/connect-query'
+import { useUploadHandshake } from '@/entities/image'
 import { usePostImagesCache } from '@/entities/post'
 import { appFailureFromConnect, type AppFailure } from '@/shared/api'
 import { createUploadPipeline } from '../api/upload-pipeline'
@@ -42,15 +42,15 @@ export function useUploadPhotos({
   /** Structured reason why the post could not be created; selected files were dropped. */
   createFailure: AppFailure | undefined
 } {
-  const transport = useTransport()
+  const handshake = useUploadHandshake()
   const cache = usePostImagesCache()
   const deps = useMemo(
     () => ({
-      pipeline: createUploadPipeline(transport),
+      pipeline: createUploadPipeline(handshake),
       onConfirmed: cache.append,
       onVideoConfirmed: cache.appendVideo,
     }),
-    [transport, cache.append, cache.appendVideo],
+    [handshake, cache.append, cache.appendVideo],
   )
   const [creatingPost, setCreatingPost] = useState(false)
   const [createFailure, setCreateFailure] = useState<AppFailure>()

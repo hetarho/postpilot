@@ -11,7 +11,6 @@ const mocks = vi.hoisted(() => ({
   decide: vi.fn(),
   retry: vi.fn(),
   refetch: vi.fn(),
-  invalidate: vi.fn(),
   decideError: undefined as unknown,
   retryError: undefined as unknown,
   status: 'review',
@@ -24,19 +23,15 @@ vi.mock('@tanstack/react-router', () => ({
   ),
 }))
 
-vi.mock('@connectrpc/connect-query', () => ({
-  useTransport: () => ({}),
-  useMutation: (method: { name?: string; input?: { typeName?: string } }) => {
-    const name = `${method.name ?? ''}:${method.input?.typeName ?? ''}`
-    return name.includes('DecideVoiceRuleComparison')
-      ? { mutateAsync: mocks.decide, isPending: false, error: mocks.decideError }
-      : { mutateAsync: mocks.retry, isPending: false, error: mocks.retryError }
-  },
-}))
-
-vi.mock('@tanstack/react-query', () => ({
-  useQuery: () => ({
-    data: {
+vi.mock('@/entities/generation-job', () => ({ useJob: () => ({}) }))
+vi.mock('@/entities/session', () => ({ useSession: () => ({ user: { id: 'alice' } }) }))
+// The decide and retry calls, their failures and the caches they invalidate are the voice
+// entity's (ARCH-17); what this screen owes the user is the localized refusal.
+vi.mock('@/entities/voice', async () => {
+  const { appFailureFromConnect } = await import('@/shared/api')
+  return {
+    useVoiceRuleComparison: () => ({
+      queryKey: ['comparison'],
       comparison: {
         id: 'comparison-1',
         voiceId: 'voice-default',
@@ -48,27 +43,25 @@ vi.mock('@tanstack/react-query', () => ({
           { id: 'candidate-b', side: 'B', output: 'B result', status: 'succeeded' },
         ],
       },
-    },
-    isPending: false,
-    isError: false,
-    refetch: mocks.refetch,
-  }),
-  useQueryClient: () => ({ invalidateQueries: mocks.invalidate }),
-}))
-
-vi.mock('@/entities/generation-job', () => ({ useJob: () => ({}) }))
-vi.mock('@/entities/session', () => ({ useSession: () => ({ user: { id: 'alice' } }) }))
-vi.mock('@/entities/voice', () => ({
-  voiceComparisonQueryKey: () => ['comparison'],
-  voiceProfileQueryKey: () => ['profile'],
-  voiceVersionsQueryKey: () => ['versions'],
-}))
+      isPending: false,
+      isError: false,
+      refetch: mocks.refetch,
+      decidePending: false,
+      decideFailure: mocks.decideError
+        ? appFailureFromConnect(mocks.decideError as Error)
+        : undefined,
+      decide: mocks.decide,
+      retryPending: false,
+      retryFailure: mocks.retryError ? appFailureFromConnect(mocks.retryError as Error) : undefined,
+      retry: mocks.retry,
+    }),
+  }
+})
 
 beforeEach(() => {
   mocks.decide.mockReset()
   mocks.retry.mockReset()
   mocks.refetch.mockReset().mockResolvedValue(undefined)
-  mocks.invalidate.mockReset().mockResolvedValue(undefined)
   mocks.decideError = undefined
   mocks.retryError = undefined
   mocks.status = 'review'
@@ -104,7 +97,6 @@ describe('VoiceRuleComparisonPage mutation failures', () => {
       await user.click(screen.getByRole('button', { name: action }))
 
       expect(await screen.findByRole('alert')).toHaveTextContent(message)
-      expect(mocks.invalidate).not.toHaveBeenCalled()
       expect(document.body).not.toHaveTextContent('private backend prose')
       expect(document.body).not.toHaveTextContent('[failed_precondition]')
     },

@@ -1,4 +1,5 @@
 export * from './config'
+export { useAssignEstimatorCombo } from './api/useAssignEstimatorCombo'
 export type {
   AdminCatalogEntry,
   CatalogBrowse,

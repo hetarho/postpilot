@@ -1,23 +1,14 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useTransport } from '@connectrpc/connect-query'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { publishingAgentsQueryKey } from '@/entities/publishing-agent'
-import { appFailureFromConnect, publishingClientFor } from '@/shared/api'
+import { usePairPublishingAgent } from '@/entities/publishing-agent'
 import { formatDateTime } from '@/shared/lib'
 import { AppFailureMessage, Button, FieldLabel, Notice, TextField, Typography } from '@/shared/ui'
 
 export function PairPublishingAgent({ ownerId }: { ownerId: string }) {
   const { t } = useTranslation('publishing')
   const [label, setLabel] = useState<string>(() => t('pair.defaultLabel'))
-  const transport = useTransport()
-  const client = useMemo(() => publishingClientFor(transport), [transport])
-  const queryClient = useQueryClient()
-  const pairing = useMutation({
-    mutationFn: () => client.createAgentPairing({ label: label.trim() }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: publishingAgentsQueryKey(ownerId) }),
-  })
-  const failure = pairing.error ? appFailureFromConnect(pairing.error) : undefined
+  const pairing = usePairPublishingAgent(ownerId)
+  const failure = pairing.failure
 
   return (
     <section aria-labelledby="pair-agent-heading">
@@ -44,7 +35,7 @@ export function PairPublishingAgent({ ownerId }: { ownerId: string }) {
       <Button
         variant="cta"
         className="mt-4 w-full sm:w-auto"
-        onClick={() => pairing.mutate()}
+        onClick={() => pairing.mutate(label)}
         pending={pairing.isPending}
         disabled={!label.trim()}
       >

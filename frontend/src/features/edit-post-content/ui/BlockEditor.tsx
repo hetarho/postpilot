@@ -1,4 +1,3 @@
-import { clone, create } from '@bufbuild/protobuf'
 import i18next from 'i18next'
 import {
   forwardRef,
@@ -11,14 +10,15 @@ import {
 } from 'react'
 import { useTranslation } from 'react-i18next'
 import { unfilledSlotCount } from '@/shared/lib'
-import { BlockList, type PostDraft } from '@/entities/post'
 import {
-  BlockSchema,
-  BlockType,
-  PostContentSchema,
-  type Block,
-  type PostContent,
-} from '@/shared/api'
+  BlockList,
+  blockWith,
+  copyPostContent,
+  newBlock,
+  postContentWith,
+  type PostDraft,
+} from '@/entities/post'
+import { BlockType, type Block, type PostContent } from '@/shared/api'
 import {
   Button,
   Editable,
@@ -53,7 +53,7 @@ export const BlockEditor = forwardRef<
 >(function BlockEditor({ post, onContentChange }, ref) {
   const { t } = useTranslation('posts')
   const { t: tTemplates } = useTranslation('templates')
-  const [content, setContent] = useState(() => clone(PostContentSchema, post.content!))
+  const [content, setContent] = useState(() => copyPostContent(post.content!))
   const unfilled = unfilledSlotCount(content)
   const valid = useMemo(
     () =>
@@ -77,20 +77,20 @@ export const BlockEditor = forwardRef<
   ])
 
   const updateBlock = (index: number, value: Block) => {
-    const next = clone(PostContentSchema, content)
+    const next = copyPostContent(content)
     next.blocks[index] = value
     setContent(next)
   }
   const removeBlock = (index: number) => {
     if (content.blocks.length === 1) return
-    const next = clone(PostContentSchema, content)
+    const next = copyPostContent(content)
     next.blocks.splice(index, 1)
     setContent(next)
   }
   const moveBlock = (index: number, direction: -1 | 1) => {
     const destination = index + direction
     if (destination < 0 || destination >= content.blocks.length) return
-    const next = clone(PostContentSchema, content)
+    const next = copyPostContent(content)
     ;[next.blocks[index], next.blocks[destination]] = [next.blocks[destination], next.blocks[index]]
     setContent(next)
   }
@@ -149,7 +149,7 @@ export const BlockEditor = forwardRef<
         variant="secondary"
         className="mt-4 w-full sm:w-auto"
         onClick={() => {
-          const next = clone(PostContentSchema, content)
+          const next = copyPostContent(content)
           next.blocks.push(freshBlock(BlockType.TEXT))
           setContent(next)
         }}
@@ -358,9 +358,7 @@ function HeaderFields({
         <TextField
           id="generated-title"
           value={content.title}
-          onChange={(event) =>
-            onChange(create(PostContentSchema, { ...content, title: event.target.value }))
-          }
+          onChange={(event) => onChange(postContentWith(content, { title: event.target.value }))}
           className="mt-1"
         />
       </div>
@@ -371,9 +369,7 @@ function HeaderFields({
           rows={3}
           autoGrow
           value={content.summary}
-          onChange={(event) =>
-            onChange(create(PostContentSchema, { ...content, summary: event.target.value }))
-          }
+          onChange={(event) => onChange(postContentWith(content, { summary: event.target.value }))}
           className="max-h-field mt-1"
         />
       </div>
@@ -384,8 +380,7 @@ function HeaderFields({
           value={content.tags.join(', ')}
           onChange={(event) =>
             onChange(
-              create(PostContentSchema, {
-                ...content,
+              postContentWith(content, {
                 tags: event.target.value
                   .split(',')
                   .map((tag) => tag.trim())
@@ -404,7 +399,7 @@ function HeaderFields({
         <Button
           variant="ghost"
           onClick={() => {
-            onChange(create(PostContentSchema, { ...content, ...opened.current }))
+            onChange(postContentWith(content, { ...opened.current }))
             onDone()
           }}
         >
@@ -444,20 +439,18 @@ function BlockFields({
           aria-labelledby={`block-image-label-${index}`}
           value={block.file}
           options={names.map((filename) => ({ value: filename, label: filename }))}
-          onChange={(file) => onChange(create(BlockSchema, { ...block, file }))}
+          onChange={(file) => onChange(blockWith(block, { file }))}
         />
         <TextField
           aria-label={t('edit.altText')}
           value={block.alt}
-          onChange={(event) => onChange(create(BlockSchema, { ...block, alt: event.target.value }))}
+          onChange={(event) => onChange(blockWith(block, { alt: event.target.value }))}
           placeholder={t('edit.photoDescription')}
         />
         <TextField
           aria-label={t('edit.caption')}
           value={block.caption}
-          onChange={(event) =>
-            onChange(create(BlockSchema, { ...block, caption: event.target.value }))
-          }
+          onChange={(event) => onChange(blockWith(block, { caption: event.target.value }))}
           placeholder={t('edit.captionPlaceholder')}
         />
       </div>
@@ -470,9 +463,7 @@ function BlockFields({
         rows={3}
         autoGrow
         value={block.items.join('\n')}
-        onChange={(event) =>
-          onChange(create(BlockSchema, { ...block, items: event.target.value.split('\n') }))
-        }
+        onChange={(event) => onChange(blockWith(block, { items: event.target.value.split('\n') }))}
         className="mt-3"
       />
     )
@@ -487,7 +478,7 @@ function BlockFields({
             value: level,
             label: t('edit.headingOption', { level }),
           }))}
-          onChange={(level) => onChange(create(BlockSchema, { ...block, level }))}
+          onChange={(level) => onChange(blockWith(block, { level }))}
         />
       )}
       <Textarea
@@ -495,9 +486,7 @@ function BlockFields({
         rows={block.type === BlockType.HEADING ? 1 : 3}
         autoGrow
         value={block.content}
-        onChange={(event) =>
-          onChange(create(BlockSchema, { ...block, content: event.target.value }))
-        }
+        onChange={(event) => onChange(blockWith(block, { content: event.target.value }))}
       />
     </div>
   )
@@ -506,27 +495,27 @@ function BlockFields({
 function freshBlock(type: BlockType, firstImage?: string, firstVideo?: string): Block {
   switch (type) {
     case BlockType.HEADING:
-      return create(BlockSchema, {
+      return newBlock({
         type,
         level: 2,
         content: i18next.t('edit.newBlock.heading', { ns: 'posts' }),
       })
     case BlockType.QUOTE:
-      return create(BlockSchema, {
+      return newBlock({
         type,
         content: i18next.t('edit.newBlock.quote', { ns: 'posts' }),
       })
     case BlockType.LIST:
-      return create(BlockSchema, {
+      return newBlock({
         type,
         items: [i18next.t('edit.newBlock.list', { ns: 'posts' })],
       })
     case BlockType.IMAGE:
-      return create(BlockSchema, { type, file: firstImage ?? '' })
+      return newBlock({ type, file: firstImage ?? '' })
     case BlockType.VIDEO:
-      return create(BlockSchema, { type, file: firstVideo ?? '' })
+      return newBlock({ type, file: firstVideo ?? '' })
     default:
-      return create(BlockSchema, {
+      return newBlock({
         type: BlockType.TEXT,
         content: i18next.t('edit.newBlock.text', { ns: 'posts' }),
       })

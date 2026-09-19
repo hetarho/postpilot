@@ -1,4 +1,3 @@
-import type { Transport } from '@connectrpc/connect'
 import { createUploadHandshake } from '@/entities/image'
 import { IMAGE_JPEG_QUALITY, IMAGE_MAX_LONG_EDGE_PX } from '../config'
 import { decodeImage, resizeToJpeg } from '@/shared/lib'
@@ -7,9 +6,9 @@ import type { UploadPipeline } from '../model/upload-batch'
 
 /** The real pipeline: browser decode + resize, then the handshake around a direct PUT to
  *  object storage. The API is never in the path of the bytes ([I6]). */
-export function createUploadPipeline(transport: Transport): UploadPipeline {
-  const handshake = createUploadHandshake(transport)
-
+export function createUploadPipeline(
+  handshake: ReturnType<typeof createUploadHandshake>,
+): UploadPipeline {
   return {
     async convert(file) {
       const bitmap = await decodeImage(file)

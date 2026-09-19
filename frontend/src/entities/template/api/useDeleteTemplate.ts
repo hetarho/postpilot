@@ -1,9 +1,10 @@
 import { useMutation, useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
-import { invalidateGuidelines } from '@/entities/guideline'
-import { postDetailQueriesKey, listPostsQueryKey } from '@/entities/post'
-import { invalidateTemplates, templateErrorMessage } from '@/entities/template'
+import { invalidateGuidelines } from '@/entities/guideline/@x/template'
+import { listPostsQueryKey, postDetailQueriesKey } from '@/entities/post/@x/template'
 import { TemplateService } from '@/shared/api'
+import { invalidateTemplates } from './template-cache'
+import { templateErrorMessage } from './template-errors'
 
 /** Deleting a template detaches it from every post that named it and cascades its guideline scope
  *  links, in the same transaction (spec/legacy/policy/templates.md). Those posts are now cached with an

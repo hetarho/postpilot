@@ -1,6 +1,6 @@
 import { create } from '@bufbuild/protobuf'
 import { useMutation } from '@connectrpc/connect-query'
-import type { ModelRef } from '@/entities/model-catalog'
+import type { ModelRef } from '@/entities/model-catalog/@x/model-experiment'
 import {
   appFailureFromConnect,
   ModelExperimentService,
