@@ -22,7 +22,7 @@ import {
 import type { FakeWriteExperimentStart } from '@/test/experiments'
 import type { FakeGenerationStart } from '@/test/jobs'
 import { FAKE_STORAGE_ORIGIN, type FakeDraftSave } from '@/test/posts'
-import { clearCaret } from '../model/editor-handoff'
+import { clearCaret } from '@/features/edit-post-content/model/caret-handoff'
 
 const USER = { id: 'alice' }
 

@@ -5,3 +5,4 @@ export {
   flushContentQueue,
   type ContentSaveState,
 } from './model/content-queue'
+export { useCaretHandoff } from './model/caret-handoff'

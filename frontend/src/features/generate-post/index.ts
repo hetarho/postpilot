@@ -8,3 +8,4 @@ export {
   comparisonGenerationPreconditions,
 } from './model/preconditions'
 export type { GenerationModelSelection, GenerationPreconditions } from './model/preconditions'
+export { useBriefMirror } from './model/useBriefMirror'
