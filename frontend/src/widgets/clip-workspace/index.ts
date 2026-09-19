@@ -1,0 +1,5 @@
+export { ClipWorkspace } from './ui/ClipWorkspace'
+export { ClipTopRow } from './ui/ClipTopRow'
+export { ClipStatusLine } from './ui/ClipStatus'
+export { useClipWorkspace } from './model/useClipWorkspace'
+export type { ClipWorkspace as ClipWorkspaceHandles } from './model/useClipWorkspace'

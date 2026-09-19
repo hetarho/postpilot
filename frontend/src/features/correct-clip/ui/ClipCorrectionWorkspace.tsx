@@ -53,69 +53,81 @@ export interface ClipEditorPreviewProps {
   /** ②'s info control, overlaid at the frame's top-right beside the player's own (CLIP-148). */
   corner?: ReactNode
 }
+/** ②'s screen. It takes six handles rather than the twenty-two scalars the page used to spread
+ *  here (ARCH-14): one for the saved project, one for the draft being corrected, one for the
+ *  render it commits, one for the footage it draws, one for the slots its owner fills, and the
+ *  one flag that disables the lot. */
 export function ClipCorrectionWorkspace({
-  projectId,
-  captionStyles,
+  project,
   correction,
-  state,
+  render,
+  footage,
+  slots,
   disabled,
-  renderReady,
-  renderPending,
-  renderFailure,
-  renderProgress,
-  lastRenderKind,
-  currentRender,
-  browserCapability,
-  onRender,
-  referenceAction,
-  preview,
-  localSources,
-  resolvePlayback,
-  comparison,
-  revision,
-  downloadAction,
-  finalizeAction,
-  notices = [],
-  language,
 }: {
-  projectId: string
-  /** The caption styles this project allows (CLIP-142). */
-  captionStyles?: readonly string[]
+  /** The SAVED side: what the server holds for this project, including the plan ② edits from. */
+  project: {
+    id: string
+    state: ClipEditingState
+    /** The caption styles this project allows (CLIP-142). */
+    captionStyles?: readonly string[]
+    notices?: readonly ClipNotice[]
+    language?: 'ko' | 'en'
+  }
+  /** The DRAFT side: the correction in progress, its validation and its save state. */
   correction: Correction
-  state: ClipEditingState
+  /** The render this step commits, and what the controls may say about it. */
+  render: {
+    ready: boolean
+    pending: boolean
+    failure?: AppFailure
+    /** Handed over only while there is a browser render to report on. */
+    progress?: ReactNode
+    lastKind?: ClipRenderKind
+    current?: boolean
+    capability?: ClipBrowserRenderCapability
+    start: (kind: ClipRenderKind) => void
+  }
+  /** The originals ② draws frames from: the local copies, and the way to reach an unexpired
+   *  retained one the session has no local copy of. */
+  footage: {
+    localSources: ReadonlyArray<{ fingerprint: string; url: string }>
+    resolvePlayback?: (fingerprint: string, refresh?: boolean) => Promise<string>
+  }
+  /** What the owner of this workspace fills in: the page owns the composer and this workspace
+   *  owns the render control, and neither feature may import the other (ARCH-13). */
+  slots: {
+    preview: (props: ClipEditorPreviewProps) => ReactNode
+    comparison?: ReactNode
+    /** The dock's composer — the revision request, or its active run — handed the step's actions
+     *  (렌더하기 and, once a render exists, 확정하기) to carry at the right of its heading (CLIP-40). */
+    revision?: (actions: ReactNode) => ReactNode
+    /** Downloading the identified latest successful render, as an icon directly under the video
+     *  it downloads (CLIP-149): the dock holds committing controls and a download commits
+     *  nothing (CLIP-40, THEME-39). Absent while the plan has no render, and its absence is
+     *  silence. */
+    downloadAction?: ReactNode
+    /** ②'s primary committing control, the one thing of the confirmation the dock carries.
+     *  Absent until the project has a render: until then the render IS the step's next action,
+     *  and a disabled 확정하기 beside it only said so in smaller type (CLIP-40). */
+    finalizeAction?: ReactNode
+    referenceAction?: ReactNode
+  }
   disabled: boolean
-  renderReady: boolean
-  renderPending: boolean
-  renderFailure?: AppFailure
-  renderProgress?: ReactNode
-  lastRenderKind?: ClipRenderKind
-  currentRender?: boolean
-  browserCapability?: ClipBrowserRenderCapability
-  onRender: (kind: ClipRenderKind) => void
-  referenceAction?: ReactNode
-  preview: (props: ClipEditorPreviewProps) => ReactNode
-  comparison?: ReactNode
-  /** The dock's composer — the revision request, or its active run — handed the step's actions
-   *  (렌더하기 and, once a render exists, 확정하기) to carry at the right of its heading (CLIP-40).
-   *  A render-prop rather than a node, because the page owns the composer and this workspace owns
-   *  the render control, and neither feature may import the other (ARCH-13). */
-  revision?: (actions: ReactNode) => ReactNode
-  /** Downloading the identified latest successful render, as an icon directly
-   *  under the video it downloads (CLIP-149): the dock holds committing
-   *  controls and a download commits nothing (CLIP-40, THEME-39). Absent while
-   *  the plan has no render, and its absence is silence. */
-  downloadAction?: ReactNode
-  /** ②'s primary committing control, the one thing of the confirmation the dock
-   *  carries. Absent until the project has a render: until then the render IS the step's
-   *  next action, and a disabled 확정하기 only said so in smaller type (CLIP-40). */
-  finalizeAction?: ReactNode
-  localSources: ReadonlyArray<{ fingerprint: string; url: string }>
-  /** Resolves an unexpired retained original for a source the session has no
-   *  local copy of, so ② can still show the frame a caption sits on. */
-  resolvePlayback?: (fingerprint: string, refresh?: boolean) => Promise<string>
-  notices?: readonly ClipNotice[]
-  language?: 'ko' | 'en'
 }) {
+  const { id: projectId, state, captionStyles, notices = [], language } = project
+  const { localSources, resolvePlayback } = footage
+  const { preview, comparison, revision, downloadAction, finalizeAction, referenceAction } = slots
+  const {
+    ready: renderReady,
+    pending: renderPending,
+    failure: renderFailure,
+    progress: renderProgress,
+    lastKind: lastRenderKind,
+    current: currentRender,
+    capability: browserCapability,
+    start: onRender,
+  } = render
   const { t } = useTranslation('clips')
   const { t: tCommon } = useTranslation('common')
   const viewport = useVisualViewport()
