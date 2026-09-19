@@ -95,7 +95,3 @@
 - 260919 T272 blocked; job/usage clip knowledge reaches the schema (clip_project_id) and the settlement rules — three decisions owed (columns, allowance port, SettlementPolicy) before an implementer can proceed; T277 (dep T272) and T275 (dep T272) wait
 - 260919 T271 done; main is loadPlatform→buildContexts→registerJobs→serve (23 lines), post/generation/auth/clip/usage take collaborators in constructors and a cmd/api wiring test builds the whole graph; ARCH-26 green. Out of scope: 7 setters on voice/experiment/guideline/modelcatalog/billingstore, and jobAdmission/meteredRegistry rule bodies still in main (T272's seam)
 - 260919 T271 claimed (arc)
-- 260919 T270 done; clip sagas live in internal/clip/app over tx-scoped ports, cmd/api keeps wiring; ARCH-26 green; release-smoke 19/28 with the same 9 `no result` failures on an untouched HEAD build (pre-existing, out of scope)
-- 260919 T270 claimed (arc)
-- 260919 create-task review/arch-260919 + ARCH r5 done: 27 tasks T258-T284 (FE 11 · BE 12 · agent 3 · cross 1), review converted, ARCH tasked=5
-- 260919 create-task review/arch-260919 + ARCH r4 start
