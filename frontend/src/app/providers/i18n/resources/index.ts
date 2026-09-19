@@ -4,13 +4,28 @@ import { auth as enAuth } from './en/auth'
 import { nav as enNav } from './en/nav'
 import { errors as enErrors } from './en/errors'
 import { marketing as enMarketing } from './en/marketing'
-import { clips as enClips } from './en/clips'
 import { common as koCommon } from './ko/common'
 import { auth as koAuth } from './ko/auth'
 import { nav as koNav } from './ko/nav'
 import { errors as koErrors } from './ko/errors'
 import { marketing as koMarketing } from './ko/marketing'
-import { clips as koClips } from './ko/clips'
+import { i18n as cancelClipClipsI18n } from '@/features/cancel-clip/config/i18n'
+import { i18n as clipDesignClipsI18n } from '@/entities/clip-design/config/i18n'
+import { i18n as clipPreviewClipsI18n } from '@/entities/clip-preview/config/i18n'
+import { i18n as clipProjectClipsI18n } from '@/entities/clip-project/config/i18n'
+import { i18n as clipTemplateClipsI18n } from '@/entities/clip-template/config/i18n'
+import { i18n as clipWorkspaceClipsI18n } from '@/widgets/clip-workspace/config/i18n'
+import { i18n as correctClipClipsI18n } from '@/features/correct-clip/config/i18n'
+import { i18n as deleteClipTemplateClipsI18n } from '@/features/delete-clip-template/config/i18n'
+import { i18n as editClipProjectClipsI18n } from '@/features/edit-clip-project/config/i18n'
+import { i18n as editClipTemplateClipsI18n } from '@/features/edit-clip-template/config/i18n'
+import { i18n as finalizeClipClipsI18n } from '@/features/finalize-clip/config/i18n'
+import { i18n as generateClipClipsI18n } from '@/features/generate-clip/config/i18n'
+import { i18n as inspectClipObservationsClipsI18n } from '@/features/inspect-clip-observations/config/i18n'
+import { i18n as renderClipBrowserClipsI18n } from '@/features/render-clip-browser/config/i18n'
+import { i18n as reviseClipClipsI18n } from '@/features/revise-clip/config/i18n'
+import { i18n as uploadClipSourcesClipsI18n } from '@/features/upload-clip-sources/config/i18n'
+import { i18n as videoTemplatesClipsI18n } from '@/pages/video-templates/config/i18n'
 // The fragments are imported as MODULES rather than through their slices' public APIs, and
 // `steiger.config.ts` allows it for this file alone: a fragment is a leaf (its only import is
 // the type above), while a slice barrel drags that slice's whole module graph in. Pulling 60
@@ -107,6 +122,23 @@ export const RESOURCE_NAMESPACES = [
  *  This list is the one file a new slice with its own strings touches — a one-line import
  *  instead of an edit inside a 1,100-line namespace file (ARCH-16). */
 export const FRAGMENTS: readonly I18nFragment[] = [
+  cancelClipClipsI18n,
+  clipDesignClipsI18n,
+  clipPreviewClipsI18n,
+  clipProjectClipsI18n,
+  clipTemplateClipsI18n,
+  clipWorkspaceClipsI18n,
+  correctClipClipsI18n,
+  deleteClipTemplateClipsI18n,
+  editClipProjectClipsI18n,
+  editClipTemplateClipsI18n,
+  finalizeClipClipsI18n,
+  generateClipClipsI18n,
+  inspectClipObservationsClipsI18n,
+  renderClipBrowserClipsI18n,
+  reviseClipClipsI18n,
+  uploadClipSourcesClipsI18n,
+  videoTemplatesClipsI18n,
   accountMenuI18n,
   billingCheckoutI18n,
   billingI18n,
@@ -258,7 +290,25 @@ export const resources = {
       ...purchaseCreditsI18n.ko,
       ...subscriptionI18n.ko,
     },
-    clips: koClips,
+    clips: {
+      ...cancelClipClipsI18n.ko,
+      ...clipDesignClipsI18n.ko,
+      ...clipPreviewClipsI18n.ko,
+      ...clipProjectClipsI18n.ko,
+      ...clipTemplateClipsI18n.ko,
+      ...clipWorkspaceClipsI18n.ko,
+      ...correctClipClipsI18n.ko,
+      ...deleteClipTemplateClipsI18n.ko,
+      ...editClipProjectClipsI18n.ko,
+      ...editClipTemplateClipsI18n.ko,
+      ...finalizeClipClipsI18n.ko,
+      ...generateClipClipsI18n.ko,
+      ...inspectClipObservationsClipsI18n.ko,
+      ...renderClipBrowserClipsI18n.ko,
+      ...reviseClipClipsI18n.ko,
+      ...uploadClipSourcesClipsI18n.ko,
+      ...videoTemplatesClipsI18n.ko,
+    },
   },
   en: {
     common: enCommon,
@@ -345,6 +395,24 @@ export const resources = {
       ...purchaseCreditsI18n.en,
       ...subscriptionI18n.en,
     },
-    clips: enClips,
+    clips: {
+      ...cancelClipClipsI18n.en,
+      ...clipDesignClipsI18n.en,
+      ...clipPreviewClipsI18n.en,
+      ...clipProjectClipsI18n.en,
+      ...clipTemplateClipsI18n.en,
+      ...clipWorkspaceClipsI18n.en,
+      ...correctClipClipsI18n.en,
+      ...deleteClipTemplateClipsI18n.en,
+      ...editClipProjectClipsI18n.en,
+      ...editClipTemplateClipsI18n.en,
+      ...finalizeClipClipsI18n.en,
+      ...generateClipClipsI18n.en,
+      ...inspectClipObservationsClipsI18n.en,
+      ...renderClipBrowserClipsI18n.en,
+      ...reviseClipClipsI18n.en,
+      ...uploadClipSourcesClipsI18n.en,
+      ...videoTemplatesClipsI18n.en,
+    },
   },
 } as const
