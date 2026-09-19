@@ -35,7 +35,7 @@ import {
   type AppFailureReason,
 } from '@/shared/api'
 import type { ClipRecipe } from '@/entities/clip-template'
-import { CLIP_CAPTION_STYLES, CLIP_DESIGN } from '@/shared/config'
+import { CLIP_CAPTION_STYLES, CLIP_DESIGN } from '@/entities/clip-project'
 import {
   clipPlanToProto,
   withSourceSound,

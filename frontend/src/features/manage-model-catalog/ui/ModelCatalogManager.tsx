@@ -1,7 +1,8 @@
 import { useId, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAdminCatalog, useRefreshCatalog } from '@/entities/model-catalog'
-import { MODEL_PURPOSES, type ModelPurpose } from '@/shared/config'
+import { MODEL_PURPOSES } from '@/entities/model-catalog'
+import { type ModelPurpose } from '@/entities/model-catalog'
 import {
   Button,
   Checkbox,

@@ -6,7 +6,7 @@ import { useSelectionSavePending, useStageSelection } from '@/entities/model-cat
 import { ContentRevisionConflictError } from '@/entities/post'
 import { deletedVoiceAIReason, type VoiceRef } from '@/entities/voice'
 import { appFailureFromConnect, type AppFailure } from '@/shared/api'
-import { REVISION_INSTRUCTION_MAX_CHARS } from '@/shared/config'
+import { REVISION_INSTRUCTION_MAX_CHARS } from '../config'
 import {
   AppFailureMessage,
   Button,

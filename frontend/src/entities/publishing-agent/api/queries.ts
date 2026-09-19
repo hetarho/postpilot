@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTransport } from '@connectrpc/connect-query'
 import { publishingClientFor, type ProtoPublishingAgent } from '@/shared/api'
-import { PUBLISH_AGENT_STALE_MS } from '@/shared/config'
+import { PUBLISH_AGENT_STALE_MS } from '../config'
 import type { PublishingAgent } from '../model/types'
 
 export const publishingAgentsQueryKey = (ownerId: string) => ['publishing-agents', ownerId] as const

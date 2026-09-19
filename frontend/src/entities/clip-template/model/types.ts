@@ -1,6 +1,6 @@
 import { parseClipTemplate } from '../lib/composition-parse'
-import { CLIP_PRESETS, type ClipPresetId, type ClipCaptionPace } from '@/shared/config'
-
+import { CLIP_PRESETS } from '@/entities/clip-project/@x/clip-template'
+import { type ClipPresetId, type ClipCaptionPace } from '@/entities/clip-project/@x/clip-template'
 export const CLIP_TEMPLATE_LIMITS = {
   name: 40,
   guidance: 4000,

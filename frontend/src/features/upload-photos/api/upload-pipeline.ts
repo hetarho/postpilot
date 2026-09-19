@@ -1,6 +1,6 @@
 import type { Transport } from '@connectrpc/connect'
 import { createUploadHandshake } from '@/entities/image'
-import { IMAGE_JPEG_QUALITY, IMAGE_MAX_LONG_EDGE_PX } from '@/shared/config'
+import { IMAGE_JPEG_QUALITY, IMAGE_MAX_LONG_EDGE_PX } from '../config'
 import { decodeImage, resizeToJpeg } from '@/shared/lib'
 import { putBlobWithProgress } from '@/shared/lib/upload'
 import type { UploadPipeline } from '../model/upload-batch'

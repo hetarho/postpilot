@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CLIP_COMPOSITION_LIMITS } from '@/shared/config'
+import { CLIP_COMPOSITION_LIMITS } from '@/entities/clip-project/@x/clip-template'
 import { useTranslation } from 'react-i18next'
 import { Button, Checkbox, SortableList, Typography } from '@/shared/ui'
 import type { CompositionNode } from '../model/composition'

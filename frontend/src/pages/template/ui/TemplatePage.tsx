@@ -22,7 +22,7 @@ import {
   POST_TARGET_LENGTH_DEFAULT,
   POST_TARGET_LENGTH_MAX,
   POST_TARGET_LENGTH_MIN,
-} from '@/shared/config'
+} from '@/entities/post'
 import {
   ActionBar,
   Button,

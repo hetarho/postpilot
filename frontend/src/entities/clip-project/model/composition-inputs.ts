@@ -2,7 +2,7 @@ import {
   parseClipComposition,
   type ClipComposition,
 } from '@/entities/clip-template/@x/clip-project'
-import { CLIP_COMPOSITION_LIMITS } from '@/shared/config'
+import { CLIP_COMPOSITION_LIMITS } from '../config'
 import type { ClipCompositionInputs } from './composition'
 
 export const emptyCompositionInputs = (): ClipCompositionInputs => ({

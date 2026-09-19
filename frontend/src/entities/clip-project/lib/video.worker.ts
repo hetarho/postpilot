@@ -1,5 +1,5 @@
 import { clipBrowserEncoderConfig } from '../model/browser-render-capability'
-import { CLIP_BROWSER_RENDER } from '@/shared/config'
+import { CLIP_BROWSER_RENDER } from '../config'
 import type { BrowserVideoInput, EncodedClipChunk } from '../model/browser-video'
 import type { VideoWorkerInput, VideoWorkerOutput } from '../model/video-worker-protocol'
 import { compositeBrowserVideo } from '../model/composite-video'

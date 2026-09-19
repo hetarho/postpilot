@@ -1,4 +1,4 @@
-import { PROMO_AURORA_MIN_FRAME_MS, PROMO_AURORA_RESOLUTION_SCALE } from '@/shared/config'
+import { PROMO_AURORA_MIN_FRAME_MS, PROMO_AURORA_RESOLUTION_SCALE } from './config'
 import { prefersReducedMotion } from '@/shared/lib'
 
 /** The aurora behind a promotional stage, drawn by a fragment shader (THEME-37).

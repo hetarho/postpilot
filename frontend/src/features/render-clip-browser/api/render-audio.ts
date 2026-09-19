@@ -4,7 +4,7 @@ import {
   type ClipEditPlan,
   type ClipRatio,
 } from '@/entities/clip-project'
-import { CLIP_BROWSER_RENDER, CLIP_DESIGN } from '@/shared/config'
+import { CLIP_BROWSER_RENDER, CLIP_DESIGN } from '@/entities/clip-project'
 import {
   createAudioProcessor,
   mp4HasAudio,

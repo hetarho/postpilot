@@ -1,5 +1,4 @@
 import { DEFAULT_THEME_PREFERENCE } from '@/shared/config'
-
 export const THEME_PREFERENCES = ['system', 'light', 'dark'] as const
 export const EFFECTIVE_THEMES = ['day', 'night'] as const
 

@@ -20,7 +20,7 @@ import {
   type ClipProjectDraft,
 } from '@/entities/clip-project'
 import { CLIP_ACCENTS, compositionCharacters, useClipTemplates } from '@/entities/clip-template'
-import { CLIP_DEFAULT_REGION_PRESETS, CLIP_DESIGN } from '@/shared/config'
+import { CLIP_DEFAULT_REGION_PRESETS, CLIP_DESIGN } from '@/entities/clip-project'
 import { appFailureFromConnect } from '@/shared/api'
 import { peekPendingClipDraft, queueClipDraft } from '../model/clip-draft-queue'
 import { ClipDesignSelection } from './ClipDesignSelection'

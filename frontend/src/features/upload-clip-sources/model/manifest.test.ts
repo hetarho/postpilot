@@ -2,7 +2,10 @@ import { File as NodeFile } from 'node:buffer'
 import { webcrypto, createHash } from 'node:crypto'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { readVideoMetadata } from '@/shared/lib/media'
-import { CLIP_SOURCE_MAX_FILE_BYTES, CLIP_SOURCE_FINGERPRINT_CHUNK_BYTES } from '@/shared/config'
+import {
+  CLIP_SOURCE_MAX_FILE_BYTES,
+  CLIP_SOURCE_FINGERPRINT_CHUNK_BYTES,
+} from '@/entities/clip-project'
 import {
   checkSourceFiles,
   ClipSelectionError,

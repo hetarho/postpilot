@@ -24,8 +24,7 @@ import {
   type ClipAddCutSelection,
 } from '@/entities/clip-project'
 import { ClipService, appFailureFromConnect } from '@/shared/api'
-import { CLIP_TIMELINE } from '@/shared/config'
-
+import { CLIP_TIMELINE } from '@/entities/clip-project'
 export interface ClipSoundSource {
   sourceId: string
   fingerprint: string

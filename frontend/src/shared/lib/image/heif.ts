@@ -2,7 +2,7 @@
 //
 // Imported dynamically by `decode.ts` — this module and the worker chunk it references
 // must stay out of the main bundle, since most sessions never select a HEIC.
-import { HEIF_DECODER_IDLE_MS } from '@/shared/config'
+import { HEIF_DECODER_IDLE_MS } from './config'
 import { DecodeError } from './decode-error'
 import type { HeifDecodeRequest, HeifDecodeResponse } from './heif-worker'
 

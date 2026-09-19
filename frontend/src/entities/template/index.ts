@@ -1,3 +1,4 @@
+export * from './config'
 export type { Template, TemplateRef } from './model/types'
 export {
   noTemplateLabel,

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { CLIP_TRANSITION } from '@/shared/config'
+import { CLIP_TRANSITION } from '@/entities/clip-project'
 import {
   CLIP_PLAYBACK_RATES,
   cutRate,

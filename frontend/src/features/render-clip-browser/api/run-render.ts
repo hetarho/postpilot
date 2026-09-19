@@ -8,7 +8,7 @@ import {
   type BrowserVideoTrack,
 } from '@/entities/clip-project'
 import { ClipService, ClipRenderKind } from '@/shared/api'
-import { CLIP_BROWSER_RENDER } from '@/shared/config'
+import { CLIP_BROWSER_RENDER } from '@/entities/clip-project'
 import { BrowserOriginals } from '../lib/originals'
 import { prepareBrowserRenderAssets } from './prepare-assets'
 import { renderBrowserVideo } from './render-video'

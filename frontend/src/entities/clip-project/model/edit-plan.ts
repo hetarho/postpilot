@@ -1,7 +1,6 @@
 import {
   CLIP_COPY,
   CLIP_RAPID,
-  type ClipCaptionPace,
   CLIP_FACTS,
   CLIP_TIMING,
   CLIP_TRANSITION,
@@ -10,7 +9,8 @@ import {
   CLIP_TYPE,
   CLIP_VOICE,
   clipCaption,
-} from '@/shared/config'
+} from '../config'
+import { type ClipCaptionPace } from '../config'
 import { CLIP_ACCENTS, type ClipAccent } from '@/entities/clip-template/@x/clip-project'
 
 import { copyChars, splitRapid, isRapidCut, canAddRapid } from './caption-pace'

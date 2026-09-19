@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { useTransport } from '@connectrpc/connect-query'
 import { useQuery } from '@tanstack/react-query'
 import { appFailureFromConnect, publishingClientFor } from '@/shared/api'
-import { PUBLISH_JOB_POLL_MS } from '@/shared/config'
+import { PUBLISH_JOB_POLL_MS } from '../config'
 import { TERMINAL_PUBLISH_STATUSES, toPublishJob } from '../model/types'
 
 export const publishJobQueryKey = (ownerId: string, postSlug: string) =>

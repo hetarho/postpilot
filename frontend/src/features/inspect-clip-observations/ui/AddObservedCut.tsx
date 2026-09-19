@@ -1,6 +1,6 @@
 import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { CLIP_TRANSITION } from '@/shared/config'
+import { CLIP_TRANSITION } from '@/entities/clip-project'
 import {
   clipSeconds,
   type ClipAddCutSelection,

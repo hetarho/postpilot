@@ -5,7 +5,6 @@ import { renderAppAt } from '@/test/app'
 import type { FakeClipProject, FakeClipsOptions, FakeClipTemplate } from '@/test/clips'
 import type { FakeGenerationJobRow } from '@/test/jobs'
 import { POLL_INTERVAL_MS } from '@/shared/config'
-
 const template: FakeClipTemplate = {
   id: 'template',
   name: '여행',

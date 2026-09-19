@@ -12,7 +12,7 @@ import {
   ProtoGuidelineScope,
   UpdateGuidelineResponseSchema,
 } from '@/shared/api'
-import { GUIDELINE_TEXT_MAX_CHARS } from '@/shared/config'
+import { GUIDELINE_TEXT_MAX_CHARS } from '@/entities/guideline'
 import { connectAppError } from './app-error'
 
 type ConnectRouter = Parameters<Parameters<typeof createRouterTransport>[0]>[0]

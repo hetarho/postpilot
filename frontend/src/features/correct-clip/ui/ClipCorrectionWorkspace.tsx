@@ -20,7 +20,7 @@ import {
 } from '@/entities/clip-project'
 import { Info, X } from 'lucide-react'
 import type { AppFailure } from '@/shared/api'
-import { CLIP_DRAFT_PREVIEW, CLIP_TIMELINE } from '@/shared/config'
+import { CLIP_DRAFT_PREVIEW, CLIP_TIMELINE } from '@/entities/clip-project'
 import {
   ActionBar,
   AppFailureMessage,

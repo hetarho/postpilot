@@ -1,3 +1,4 @@
+export * from './config'
 export type {
   CreditBalance,
   CreditLot,

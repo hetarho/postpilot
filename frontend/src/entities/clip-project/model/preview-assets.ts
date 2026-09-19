@@ -1,4 +1,4 @@
-import { CLIP_DRAFT_PREVIEW, CLIP_COMPOSITION_LIMITS } from '@/shared/config'
+import { CLIP_DRAFT_PREVIEW, CLIP_COMPOSITION_LIMITS } from '../config'
 import type { PreviewAsset, PreviewPage } from './draft-preview'
 
 export type PreparedAsset = Omit<PreviewAsset, 'png'> & { url: string }

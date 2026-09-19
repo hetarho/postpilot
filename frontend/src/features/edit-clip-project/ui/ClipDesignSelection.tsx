@@ -5,7 +5,7 @@ import {
   type ClipCaptionFragment,
   type ClipProjectDraft,
 } from '@/entities/clip-project'
-import { CLIP_CAPTION_STYLES, CLIP_DEFAULT_CAPTION_STYLE } from '@/shared/config'
+import { CLIP_CAPTION_STYLES, CLIP_DEFAULT_CAPTION_STYLE } from '@/entities/clip-project'
 import { Checkbox, SegmentedControl, Typography } from '@/shared/ui'
 
 /** One style as the RENDERER draws it, scaled into the row (CDS-83). The

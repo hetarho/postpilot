@@ -6,7 +6,7 @@ import { toPostVideo } from '@/entities/video/@x/post'
 import { toGenerationJob } from '@/entities/generation-job/@x/post'
 import { toTemplateRef } from '@/entities/template/@x/post'
 import { toVoiceRef } from '@/entities/voice/@x/post'
-import { POST_TAG_COUNT_DEFAULT } from '@/shared/config'
+import { POST_TAG_COUNT_DEFAULT } from '../config'
 import {
   contentLanguageFromProto,
   PostService,

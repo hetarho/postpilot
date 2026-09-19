@@ -6,7 +6,7 @@ import { useMutation } from '@connectrpc/connect-query'
 import { useStageSelection } from '@/entities/model-catalog'
 import type { VoiceProfile } from '@/entities/voice'
 import { appFailureFromConnect, ModelRefSchema, VoiceValidationService } from '@/shared/api'
-import { VOICE_VALIDATION_POST_COUNT } from '@/shared/config'
+import { VOICE_VALIDATION_POST_COUNT } from '../config'
 import {
   AppFailureMessage,
   Button,

@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import type { EstimatorCombo, EstimatorComboName } from '@/entities/plan'
-import { PLAN_ESTIMATE_BOUNDS } from '@/shared/config'
+import { PLAN_ESTIMATE_BOUNDS } from '../config'
 import { PromoFrame, SegmentedControl, Slider, Typography } from '@/shared/ui'
 import type { EstimateInput } from '../model/estimate-input'
 

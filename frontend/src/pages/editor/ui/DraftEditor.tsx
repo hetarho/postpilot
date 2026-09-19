@@ -8,7 +8,7 @@ import {
   type RefObject,
 } from 'react'
 import { useTranslation } from 'react-i18next'
-import { POST_TAG_COUNT_DEFAULT } from '@/shared/config'
+import { POST_TAG_COUNT_DEFAULT } from '@/entities/post'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { FailureNotice, isTerminal } from '@/entities/generation-job'
 import {

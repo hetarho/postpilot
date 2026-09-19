@@ -2,7 +2,7 @@ import { useId, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useStageSelection } from '@/entities/model-catalog'
 import { type VoiceProfile, useAddVoiceSample } from '@/entities/voice'
-import { VOICE_SAMPLE_MIN_CHARS } from '@/shared/config'
+import { VOICE_SAMPLE_MIN_CHARS } from '../config'
 import {
   Button,
   Dialog,

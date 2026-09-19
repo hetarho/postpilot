@@ -1,5 +1,4 @@
 import { GOOGLE_CLIENT_ID } from '@/shared/config'
-
 export const GOOGLE_SIGN_IN_STORAGE_KEY = 'postpilot.google-signin'
 
 export interface GoogleSignInAttempt {

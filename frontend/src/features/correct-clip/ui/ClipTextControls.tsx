@@ -16,7 +16,7 @@ import {
   CLIP_DEFAULT_CAPTION_STYLE,
   CLIP_RAPID,
   clipCaptionSizes,
-} from '@/shared/config'
+} from '@/entities/clip-project'
 import {
   Button,
   FieldLabel,

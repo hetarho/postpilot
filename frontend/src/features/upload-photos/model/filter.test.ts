@@ -6,7 +6,7 @@ import {
   UPLOAD_MAX_VIDEOS_PER_POST,
   UPLOAD_VIDEO_EXTENSIONS,
   VIDEO_MAX_SECONDS,
-} from '@/shared/config'
+} from '../config'
 import { filterFile, skipReasonLabel } from './filter'
 
 const MB = 1024 * 1024

@@ -6,7 +6,7 @@ import {
   UPLOAD_MAX_VIDEOS_PER_POST,
   UPLOAD_VIDEO_EXTENSIONS,
   VIDEO_MAX_SECONDS,
-} from '@/shared/config'
+} from '../config'
 import { type DecodeFailure, fileExtension } from '@/shared/lib'
 
 /** Why a selected file was never uploaded (PRD F-2: listed under "건너뜀" with a reason).

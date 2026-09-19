@@ -1,3 +1,4 @@
+export * from './config'
 export type { UploadItem, UploadBatchState } from './model/upload-batch'
 export { discardUploadBatches } from './model/upload-batch'
 export { useUploadPhotos } from './model/useUploadPhotos'

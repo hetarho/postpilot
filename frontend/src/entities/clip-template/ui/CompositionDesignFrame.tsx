@@ -4,9 +4,8 @@ import {
   CLIP_DESIGN,
   CLIP_REGIONS,
   CLIP_RULES,
-  type ClipRatioId,
-  type ClipRegionPresets,
-} from '@/shared/config'
+} from '@/entities/clip-project/@x/clip-template'
+import { type ClipRatioId, type ClipRegionPresets } from '@/entities/clip-project/@x/clip-template'
 import type { ClipComposition, ResolvedCompositionElement } from '../model/composition'
 
 type TypeName = keyof typeof CLIP_DESIGN.type

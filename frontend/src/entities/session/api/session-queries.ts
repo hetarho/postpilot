@@ -9,7 +9,7 @@ import { createConnectQueryKey, createQueryOptions } from '@connectrpc/connect-q
 import type { QueryClient } from '@tanstack/react-query'
 import { planFromProto } from '@/entities/plan/@x/session'
 import { AuthService, GetMeResponseSchema, type GetMeResponse } from '@/shared/api'
-import { SESSION_STALE_MS } from '@/shared/config'
+import { SESSION_STALE_MS } from '../config'
 import type { SessionUser } from '../model/types'
 
 /** What the server says about the caller right now.

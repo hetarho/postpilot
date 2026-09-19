@@ -1,4 +1,5 @@
-import { MODEL_PURPOSES, type ModelPurpose } from '@/shared/config'
+import { MODEL_PURPOSES } from '@/entities/model-catalog'
+import { type ModelPurpose } from '@/entities/model-catalog'
 import type { CatalogDocumentPlan, CatalogDocumentPurposePlan } from '@/entities/model-catalog'
 
 /** The causes the server reports. Anything outside this list is rendered through the fallback

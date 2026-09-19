@@ -1,7 +1,7 @@
 import type { Transport } from '@connectrpc/connect'
 import { createConnectQueryKey, useQuery } from '@connectrpc/connect-query'
 import { PlanService } from '@/shared/api'
-import { PLAN_BALANCE_STALE_MS } from '@/shared/config'
+import { PLAN_BALANCE_STALE_MS } from '../config'
 import type { MyPlan } from '../model/types'
 import { toMyPlan } from './plan-mappers'
 

@@ -8,7 +8,7 @@ import {
   VoiceFeedbackReason,
   VoiceLearningService,
 } from '@/shared/api'
-import { LONG_PRESS_MS } from '@/shared/config'
+import { LONG_PRESS_MS } from '../config'
 import { clsx } from 'clsx'
 import {
   AppFailureMessage,

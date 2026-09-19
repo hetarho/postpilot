@@ -25,7 +25,7 @@ import {
   type Position,
 } from '../model/blocks'
 import { remainingChars, TEMPLATE_LIMITS, TEMPLATE_PARSE_OPTIONS } from '../model/types'
-import { TEMPLATE_PHOTO_ROW_MAX } from '@/shared/config'
+import { TEMPLATE_PHOTO_ROW_MAX } from '../config'
 import {
   Badge,
   Button,

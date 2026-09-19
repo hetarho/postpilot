@@ -8,8 +8,7 @@ import {
   LISTBOX_MIN_PANEL_PX,
   LISTBOX_TRIGGER_GAP_PX,
   LISTBOX_VIEWPORT_GUTTER_PX,
-} from '@/shared/config'
-
+} from './config'
 export interface ListboxOption<T> {
   value: T
   label: string

@@ -7,7 +7,7 @@ import {
   TEMPLATE_BODY_MAX_CHARS,
   TEMPLATE_NAME_MAX_CHARS,
   TEMPLATE_PHOTO_ROW_MAX,
-} from '@/shared/config'
+} from '../config'
 import type { ParseOptions } from '../lib/grammar'
 
 /** A reusable 템플릿 brief (spec/legacy/policy/templates.md): what a kind of post is for and how that

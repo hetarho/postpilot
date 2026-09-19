@@ -3,7 +3,7 @@ import { clsx } from 'clsx'
 import { Crown, Leaf, Rocket, Sparkles, Zap } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { planLabel, type PlanName, type PlanOffer } from '@/entities/plan'
-import { PROMO_COUNT_UP_MS, PROMO_RISE_STAGGER_MS } from '@/shared/config'
+import { PROMO_COUNT_UP_MS, PROMO_RISE_STAGGER_MS } from '../config'
 import { Badge, PromoFrame, PromoText, Typography } from '@/shared/ui'
 import { useCountUp } from '../model/useCountUp'
 

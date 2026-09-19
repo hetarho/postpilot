@@ -1,3 +1,4 @@
+export * from './config'
 export type {
   AdminCatalogEntry,
   CatalogBrowse,

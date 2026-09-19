@@ -13,8 +13,7 @@ import {
   type ClipSelection,
 } from '@/entities/clip-project'
 import { Button, Typography } from '@/shared/ui'
-import { CLIP_TIMELINE } from '@/shared/config'
-
+import { CLIP_TIMELINE } from '@/entities/clip-project'
 export function ClipTimeline({
   plan,
   selection,

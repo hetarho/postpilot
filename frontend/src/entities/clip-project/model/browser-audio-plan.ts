@@ -1,4 +1,4 @@
-import { CLIP_BROWSER_RENDER, CLIP_DESIGN } from '@/shared/config'
+import { CLIP_BROWSER_RENDER, CLIP_DESIGN } from '../config'
 import { cutRate, timelineCuts, type ClipEditPlan } from './edit-plan'
 import { clipSourceSound, textInterval } from './timeline'
 

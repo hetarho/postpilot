@@ -14,7 +14,7 @@ import {
   voiceVersionsQueryKey,
 } from '@/entities/voice'
 import { appFailureFromConnect, VoiceService } from '@/shared/api'
-import { VOICE_VERSION_PREVIEW_CHARS } from '@/shared/config'
+import { VOICE_VERSION_PREVIEW_CHARS } from '../config'
 import { AppFailureMessage, Button, Notice, Spinner, Typography } from '@/shared/ui'
 
 /** The version list, as a list of OPENABLE rows.

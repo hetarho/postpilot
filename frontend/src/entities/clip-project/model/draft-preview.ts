@@ -1,4 +1,4 @@
-import { CLIP_DRAFT_PREVIEW, CLIP_TRANSITION } from '@/shared/config'
+import { CLIP_DRAFT_PREVIEW, CLIP_TRANSITION } from '../config'
 import {
   cutOutputMs,
   outputToSourceMs,

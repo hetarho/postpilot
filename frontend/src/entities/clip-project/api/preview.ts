@@ -6,7 +6,7 @@ import {
   ClipService,
   PrepareClipPreviewRequestSchema,
 } from '@/shared/api'
-import { CLIP_DRAFT_PREVIEW } from '@/shared/config'
+import { CLIP_DRAFT_PREVIEW } from '../config'
 import type { ClipEditPlan } from '../model/edit-plan'
 import type { PreviewPage } from '../model/draft-preview'
 import { clipPlanToProto } from './edit-plan'

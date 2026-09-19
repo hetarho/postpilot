@@ -1,6 +1,6 @@
 import { useQuery } from '@connectrpc/connect-query'
 import { AuthService } from '@/shared/api'
-import { SESSION_STALE_MS } from '@/shared/config'
+import { SESSION_STALE_MS } from '../config'
 import type { SessionUser } from '../model/types'
 import { toSessionUser } from './session-queries'
 

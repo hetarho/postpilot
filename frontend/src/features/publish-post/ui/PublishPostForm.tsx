@@ -8,7 +8,7 @@ import {
   PublishStatus,
   PublishVisibility,
 } from '@/shared/api'
-import { PUBLISH_AGENT_STALE_MS } from '@/shared/config'
+import { PUBLISH_AGENT_STALE_MS } from '@/entities/publishing-agent'
 import { AppFailureMessage, Button, Dialog, FieldLabel, Listbox, Notice } from '@/shared/ui'
 import { usePublishPost } from '../model/usePublishPost'
 

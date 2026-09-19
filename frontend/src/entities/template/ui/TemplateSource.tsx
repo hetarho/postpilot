@@ -1,10 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
-  COPY_FEEDBACK_MS,
-  TEMPLATE_ASK_MAX_PER_BODY,
-  TEMPLATE_PHOTO_ROW_MAX,
-} from '@/shared/config'
+import { COPY_FEEDBACK_MS } from '@/shared/config'
+import { TEMPLATE_ASK_MAX_PER_BODY, TEMPLATE_PHOTO_ROW_MAX } from '../config'
 import { copyText } from '@/shared/lib'
 import {
   Button,

@@ -1,3 +1,4 @@
+export * from './config'
 export { ModelCatalogManager } from './ui/ModelCatalogManager'
 export type { CatalogFilters, CatalogSort } from './model/catalog-view'
 export {

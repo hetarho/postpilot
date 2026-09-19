@@ -13,8 +13,8 @@ import {
 import { isTerminal, type GenerationJob } from '@/entities/generation-job'
 import type { ModelRef } from '@/entities/model-catalog'
 import { ClipService, appFailureFromConnect, type AppFailure } from '@/shared/api'
-import { CLIP_REVISION, POLL_INTERVAL_MS } from '@/shared/config'
-
+import { CLIP_REVISION } from '@/entities/clip-project'
+import { POLL_INTERVAL_MS } from '@/shared/config'
 /** What a revision quote is bound to: the plan the owner is looking at, the
  *  settings the writer reads beside it, and the exact words they wrote. The
  *  server digests the same set (CLIP-131), so anything that moves here has to

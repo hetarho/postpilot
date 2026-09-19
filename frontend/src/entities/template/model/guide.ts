@@ -3,8 +3,7 @@ import {
   TEMPLATE_ASK_MAX_PER_BODY,
   TEMPLATE_BODY_MAX_CHARS,
   TEMPLATE_PHOTO_ROW_MAX,
-} from '@/shared/config'
-
+} from '../config'
 /** The worked example the guide carries, and the one place it is written down.
  *
  *  It is a BODY, not prose: `guide.test.ts` parses it with the real parser, so an example that

@@ -1,7 +1,7 @@
 import { orderModelsForStage, type LevelName } from './level'
 import i18next from 'i18next'
-import { MODEL_PURPOSES, type ModelPurpose } from '@/shared/config'
-
+import { MODEL_PURPOSES } from '../config'
+import { type ModelPurpose } from '../config'
 /** The three places a model is chosen ([I3]); the app never fills one in. */
 export type StageName = 'observe' | 'write' | 'analyze'
 

@@ -1,3 +1,4 @@
+export * from './config'
 export type { PublishJob } from './model/types'
 export {
   isBeforeCommitFence,

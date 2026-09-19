@@ -4,7 +4,7 @@ import {
   TEMPLATE_ASK_MAX_PER_BODY,
   TEMPLATE_BODY_MAX_CHARS,
   TEMPLATE_PHOTO_ROW_MAX,
-} from '@/shared/config'
+} from '../config'
 import { PARSE_REASONS, parse } from '../lib/grammar'
 import { TEMPLATE_PARSE_OPTIONS } from './types'
 import { GUIDE_EXAMPLE_BODY, formatGuide } from './guide'

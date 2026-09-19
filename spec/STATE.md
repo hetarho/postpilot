@@ -50,7 +50,6 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
-| T258 | shared/config keeps env and cross-slice constants only | ARCH | - | todo |
 | T259 | proto symbols and connect-query reach no further than entity api | ARCH | - | todo |
 | T260 | split entities/clip-project into four nouns | ARCH | - | todo |
 | T261 | the clip page composes a widget instead of wiring eleven hooks | ARCH | T260 | todo |
@@ -61,7 +60,6 @@
 | T266 | one autosave queue behind three save features | ARCH | - | todo |
 | T267 | pages consume hooks; verbs have one home; post owns its cache dependencies | ARCH | T259 | todo |
 | T268 | the route tree is assembled from route groups | ARCH | - | todo |
-| T269 | platform/config holds env only; limits live in their context | ARCH | - | todo |
 | T275 | job/store, template/rpc and modelcatalog/rpc have tests | ARCH | T285 | todo |
 | T276 | voice, post and publishing ports are per use-case | ARCH | - | todo |
 | T277 | experiment, usage and auth ports are per use-case | ARCH | T286 | todo |
@@ -74,11 +72,14 @@
 | T284 | the agent generates only the protos it uses and drops the survey harness | ARCH | T008 T281 | todo |
 
 ## next
-- implement-task: BE roots T269 (config into contexts), T276 (voice/post/publishing ports), T277 (experiment/usage/auth ports, dep T286 done), T278 (typed failure reasons), T280 (boundary leaks), T275 (missing test packages, dep T285 done); FE roots T258 T259 T260 T263 T264 T266 T268
+- implement-task: BE roots T276 (voice/post/publishing ports), T277 (experiment/usage/auth ports), T278 (typed failure reasons), T280 (boundary leaks), T275 (missing test packages); FE roots T259 T260 T263 T264 T266 T268
 - the clip `release-smoke` stage is red at HEAD on this host: 9 of 28 modes end in `no result` (generation ends on a plan since T255, harness still expects a Result) — needs a fix task (review-code clip-release-smoke or update the harness)
 - agent tasks T279 T282 T283 T284 wait for T008; T008 belongs to another session and T177 remains blocked
 - post-quality-and-related-links remains open ideation, awaiting conversion when ready
 ## log
+- 260920 T258 done; shared/config is 80 lines of env + cross-slice values, product limits and slice tuning live in 24 new `config` segments, clip-design.json moved into entities/clip-project and reaches clip-template through a new @x; ARCH-25 green
+- 260920 T269 done; platform/config imports nothing under internal/ (guard test), clip/post/voice/generation own their limits and cmd/api merges env via clipEnvironment; ARCH-26 green and the release smoke is the pre-existing 19/28
+- 260920 T258 T269 claimed (cfg)
 - 260920 T286 done; usage names no product (approved-kinds list from the root, ceiling read off the admission), charge math frozen and pinned by a new parity table; ARCH-26/28 green
 - 260919 T286 claimed (sub)
 - 260919 T272 done; the allowance, reservation policy and cancellation rule live in clip/app, job keeps generic ports (Reporting, Cancellation, CancellationStore) and imports no llm; ARCH-26/28 green and the release smoke fails only the pre-existing 9 `no result`
@@ -96,6 +97,3 @@
 - 260919 T270 claimed (arc)
 - 260919 create-task review/arch-260919 + ARCH r5 done: 27 tasks T258-T284 (FE 11 · BE 12 · agent 3 · cross 1), review converted, ARCH tasked=5
 - 260919 create-task review/arch-260919 + ARCH r4 start
-- 260919 create-architecture ARCH r4 done (ARCH-3/6/14/16/17/21✎, ARCH-40/41+); warning: ARCH-3✎ touches agent enum mirrors that T008 (doing) exercises live — F24-F30 tasks must depend on T008
-- 260919 create-architecture ARCH r4 start (review/arch-260919 gaps: ARCH-6 saga home, ARCH-14 verb rule, ARCH-21 config wording, buf breaking rule)
-- 260919 review-code arch-260919 ready; owner adopted all 31 (rule: clear anything that accrues per change now); next create-task review/arch-260919

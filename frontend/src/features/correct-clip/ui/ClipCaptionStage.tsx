@@ -8,7 +8,7 @@ import {
   type ClipEditableText,
   type TimelineEdit,
 } from '@/entities/clip-project'
-import { CLIP_CAPTION_PLACEMENT } from '@/shared/config'
+import { CLIP_CAPTION_PLACEMENT } from '@/entities/clip-project'
 import { Typography } from '@/shared/ui'
 
 /** Where the caption may sit: its measured bounds, moved — never resized — until

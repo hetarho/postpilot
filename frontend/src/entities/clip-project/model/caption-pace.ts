@@ -1,4 +1,4 @@
-import { CLIP_RAPID, CLIP_TIMING } from '@/shared/config'
+import { CLIP_RAPID, CLIP_TIMING } from '../config'
 import type { ClipCaption, ClipEditCut } from './edit-plan'
 
 export function copyChars(text: string): number {

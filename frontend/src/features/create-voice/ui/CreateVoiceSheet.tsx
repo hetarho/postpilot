@@ -3,7 +3,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useStageSelection } from '@/entities/model-catalog'
 import type { ContentLanguage } from '@/shared/api'
-import { VOICE_DESCRIPTION_MAX_CHARS, VOICE_NAME_MAX_CHARS } from '@/shared/config'
+import { VOICE_DESCRIPTION_MAX_CHARS, VOICE_NAME_MAX_CHARS } from '@/entities/voice'
 import { activeLocale } from '@/shared/lib'
 import {
   Button,

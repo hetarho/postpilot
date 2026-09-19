@@ -12,7 +12,7 @@ import {
 import { clipEditingFixture, clipTimelineFixture } from '@/test/clip-editing'
 import { connectAppError } from '@/test/app-error'
 import { createTestQueryClient, withProviders } from '@/test/session'
-import { CLIP_TIMELINE } from '@/shared/config'
+import { CLIP_TIMELINE } from '@/entities/clip-project'
 import { useClipCorrection } from './useClipCorrection'
 
 function setup(editing = clipEditingFixture()) {

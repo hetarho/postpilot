@@ -11,11 +11,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
 import { twMerge } from 'tailwind-merge'
-import {
-  POPOVER_VIEWPORT_GUTTER_PX,
-  POPOVER_MIN_PANEL_PX,
-  POPOVER_TRIGGER_GAP_PX,
-} from '@/shared/config'
+import { POPOVER_VIEWPORT_GUTTER_PX, POPOVER_MIN_PANEL_PX, POPOVER_TRIGGER_GAP_PX } from './config'
 import { Button } from '../button/Button'
 import type { ButtonSize, ButtonVariant } from '../button/buttonStyles'
 import { Sheet } from '../sheet/Sheet'

@@ -1,3 +1,4 @@
+export * from './config'
 export type { SessionUser } from './model/types'
 export type { SessionState } from './api/session-queries'
 export { loadSession, getMeQueryKey, seedSessionCache } from './api/session-queries'

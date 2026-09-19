@@ -1,4 +1,4 @@
-import { CLIP_BROWSER_RENDER, CLIP_DESIGN } from '@/shared/config'
+import { CLIP_BROWSER_RENDER, CLIP_DESIGN } from '../config'
 import type { EncoderSupport } from '@/shared/lib'
 import type { ClipRatio } from './types'
 import type { ClipEditPlan } from './edit-plan'

@@ -9,7 +9,7 @@ import type { ConfirmedAttachment, PostImage, UploadKind } from '@/entities/imag
 import { UploadObjectMissing, UploadRejected, UploadRpcFailure } from '@/entities/image'
 import type { PostVideo } from '@/entities/video'
 import type { AppFailure } from '@/shared/api'
-import { UPLOAD_CONVERT_CONCURRENCY, VIDEO_MAX_SECONDS } from '@/shared/config'
+import { UPLOAD_CONVERT_CONCURRENCY, VIDEO_MAX_SECONDS } from '../config'
 import {
   DecodeError,
   dedupeFilename,

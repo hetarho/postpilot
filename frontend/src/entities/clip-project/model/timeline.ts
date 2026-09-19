@@ -1,4 +1,4 @@
-import { CLIP_COMPOSITION_LIMITS, CLIP_RAPID, CLIP_TIMELINE, CLIP_TIMING } from '@/shared/config'
+import { CLIP_COMPOSITION_LIMITS, CLIP_RAPID, CLIP_TIMELINE, CLIP_TIMING } from '../config'
 import { CLIP_ACCENTS } from '@/entities/clip-template/@x/clip-project'
 import {
   copyClipPlan,

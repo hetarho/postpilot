@@ -1,4 +1,4 @@
-import { CLIP_BROWSER_RENDER } from '@/shared/config'
+import { CLIP_BROWSER_RENDER } from '@/entities/clip-project'
 import { BrowserOriginals } from './originals'
 
 interface SourceFramePorts {

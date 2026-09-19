@@ -3,7 +3,7 @@ import {
   type BrowserVideoTrack,
   type ClipRatio,
 } from '@/entities/clip-project'
-import { CLIP_BROWSER_RENDER, CLIP_DESIGN } from '@/shared/config'
+import { CLIP_BROWSER_RENDER, CLIP_DESIGN } from '@/entities/clip-project'
 import type { EncodedAudioTrack } from '@/shared/lib/media'
 
 export function browserRenderVerdict(

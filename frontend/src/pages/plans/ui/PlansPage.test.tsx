@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ProtoPlan, ProtoTerm } from '@/shared/api'
-import { PLAN_ESTIMATE_STORAGE_KEY } from '@/shared/config'
+import { PLAN_ESTIMATE_STORAGE_KEY } from '../config'
 import { renderAppAt } from '@/test/app'
 
 const USER = { id: 'alice' }

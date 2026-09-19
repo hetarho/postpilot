@@ -1,7 +1,7 @@
 import type { ClipNotice } from './notices'
 import type { ClipProjectRequest } from './revision'
 import type { GenerationJob } from '@/entities/generation-job/@x/clip-project'
-import type { ClipCTAId, ClipDisclosureId } from '@/shared/config'
+import type { ClipCTAId, ClipDisclosureId } from '../config'
 import type { ClipProjectComposition, ClipCompositionInputs } from './composition'
 import type { ClipEditingState } from './edit-plan'
 import type { ClipObservations } from './observations'
@@ -15,9 +15,7 @@ import { emptyCompositionInputs, validCompositionInputs } from './composition-in
 export const CLIP_RATIOS = ['vertical', 'horizontal', 'square'] as const
 /** The five campaign types and three CTAs, read from the design system: the
  *  phrases are code-owned and only these ids ever travel (CDS-29, CDS-31). */
-export { CLIP_DISCLOSURES, CLIP_CTAS } from '@/shared/config'
-import { CLIP_CTAS, CLIP_DISCLOSURES } from '@/shared/config'
-export type { ClipDisclosureId, ClipCTAId } from '@/shared/config'
+import { CLIP_CTAS, CLIP_DISCLOSURES } from '../config'
 export type ClipRatio = (typeof CLIP_RATIOS)[number]
 export type ClipRenderKind = 'server' | 'browser'
 export const CLIP_PROJECT_LIMITS = {

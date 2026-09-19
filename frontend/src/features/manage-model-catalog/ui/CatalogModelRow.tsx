@@ -11,7 +11,7 @@ import {
   type ReasoningEffortName,
   type ReasoningSpend,
 } from '@/entities/model-catalog'
-import type { ModelPurpose } from '@/shared/config'
+import type { ModelPurpose } from '@/entities/model-catalog'
 import { AppFailureMessage, Badge, Checkbox, FieldLabel, Listbox, Typography } from '@/shared/ui'
 import { offersReasoningControl, reasoningOptionsFor } from '../model/catalog-view'
 

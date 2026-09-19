@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useQuery } from '@connectrpc/connect-query'
 import { ProviderService } from '@/shared/api'
-import { MODEL_CATALOG_STALE_MS } from '@/shared/config'
+import { MODEL_CATALOG_STALE_MS } from '../config'
 import type { CatalogModel } from '../model/types'
 import { toCatalogModel } from './catalog-mappers'
 

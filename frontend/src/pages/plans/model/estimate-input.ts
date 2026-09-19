@@ -1,11 +1,6 @@
 import { useEffect, useState } from 'react'
 import { ESTIMATOR_COMBOS, type EstimatorCombo, type EstimatorComboName } from '@/entities/plan'
-import {
-  PLAN_ESTIMATE_BOUNDS,
-  PLAN_ESTIMATE_DEFAULTS,
-  PLAN_ESTIMATE_STORAGE_KEY,
-} from '@/shared/config'
-
+import { PLAN_ESTIMATE_BOUNDS, PLAN_ESTIMATE_DEFAULTS, PLAN_ESTIMATE_STORAGE_KEY } from '../config'
 /** What the reader says they will do. It is the whole input to the estimate (QUOTA-41). */
 export interface EstimateInput {
   chars: number

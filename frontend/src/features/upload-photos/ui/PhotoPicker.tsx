@@ -1,6 +1,6 @@
 import { useId, type ChangeEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { UPLOAD_ALLOWED_EXTENSIONS, UPLOAD_VIDEO_EXTENSIONS } from '@/shared/config'
+import { UPLOAD_ALLOWED_EXTENSIONS, UPLOAD_VIDEO_EXTENSIONS } from '../config'
 import { buttonStyles } from '@/shared/ui'
 
 // One picker takes both kinds (VIDEO-7); the extension gate sorts them afterwards

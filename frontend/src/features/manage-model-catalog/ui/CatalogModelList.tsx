@@ -1,7 +1,8 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import { useWindowVirtualizer } from '@tanstack/react-virtual'
 import type { AdminCatalogEntry } from '@/entities/model-catalog'
-import { CATALOG_ROW_ESTIMATE_PX, CATALOG_ROW_OVERSCAN, type ModelPurpose } from '@/shared/config'
+import { CATALOG_ROW_ESTIMATE_PX, CATALOG_ROW_OVERSCAN } from '../config'
+import { type ModelPurpose } from '@/entities/model-catalog'
 import { CatalogModelRow } from './CatalogModelRow'
 
 /** The catalog list, virtualized.

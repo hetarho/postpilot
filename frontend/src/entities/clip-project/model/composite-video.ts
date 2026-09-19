@@ -2,7 +2,7 @@ import { clipBrowserEncoderConfig } from './browser-render-capability'
 import { previewCrop, previewFrame, previewMotion } from './draft-preview'
 import { timelineCuts } from './edit-plan'
 import type { PreparedAsset } from './preview-assets'
-import { CLIP_BROWSER_RENDER } from '@/shared/config'
+import { CLIP_BROWSER_RENDER } from '../config'
 import type { BrowserVideoInput, BrowserVideoProgress } from './browser-video'
 
 interface CompositePorts {

@@ -4,8 +4,8 @@ import {
   type AdminCatalogEntry,
   type ReasoningEffortName,
 } from '@/entities/model-catalog'
-import { FEATURED_MODEL_PROVIDERS, type ModelPurpose } from '@/shared/config'
-
+import { FEATURED_MODEL_PROVIDERS } from '../config'
+import { type ModelPurpose } from '@/entities/model-catalog'
 /** What the operator has narrowed the catalog to. Every field is a widening default, so the
  *  initial state shows everything the active tab may show. */
 export interface CatalogFilters {

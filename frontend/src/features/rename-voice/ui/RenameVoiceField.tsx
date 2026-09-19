@@ -1,7 +1,7 @@
 import { useId, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Voice } from '@/entities/voice'
-import { VOICE_NAME_MAX_CHARS } from '@/shared/config'
+import { VOICE_NAME_MAX_CHARS } from '@/entities/voice'
 import { Button, Editable, FieldLabel, FieldMessage, TextField, Typography } from '@/shared/ui'
 import { useRenameVoice } from '../api/useRenameVoice'
 

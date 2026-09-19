@@ -1,4 +1,4 @@
-import { CLIP_PLAYBACK, CLIP_RATES } from '@/shared/config'
+import { CLIP_PLAYBACK, CLIP_RATES } from '../config'
 import type { ProtoClipObservations } from '@/shared/api'
 import type {
   ClipObservationCertainty,

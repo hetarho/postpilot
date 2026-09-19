@@ -1,4 +1,4 @@
-import { CLIP_COMPOSITION_LIMITS } from '@/shared/config'
+import { CLIP_COMPOSITION_LIMITS } from '@/entities/clip-project/@x/clip-template'
 import {
   CompositionProblem,
   type ClipComposition,

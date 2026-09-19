@@ -1,5 +1,5 @@
 import { CLIP_ACCENTS, type ClipAccent } from '@/entities/clip-template/@x/clip-project'
-import { CLIP_PLAYBACK, CLIP_RATES } from '@/shared/config'
+import { CLIP_PLAYBACK, CLIP_RATES } from '../config'
 import type { ProtoClipEditingState } from '@/shared/api'
 import {
   COPY_ALIGNS,
