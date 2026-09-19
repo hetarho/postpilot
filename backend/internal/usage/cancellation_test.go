@@ -15,7 +15,7 @@ func TestCancelledClipChargeUsesTheUnusedReservationAndCannotOverflow(t *testing
 		{0, 100, 0, 0}, {5, math.MaxInt64, 5, 0},
 		{math.MaxInt, 0, 0, math.MaxInt/2 + 1},
 	} {
-		confirmed, fee := cancelledClipCharge(tc.cost, tc.reservation)
+		confirmed, fee := cancelledCharge(tc.cost, tc.reservation)
 		if confirmed != tc.confirmed || fee != tc.fee || confirmed+fee > tc.reservation {
 			t.Fatalf("reservation %d cost %d: confirmed=%d fee=%d", tc.reservation, tc.cost, confirmed, fee)
 		}

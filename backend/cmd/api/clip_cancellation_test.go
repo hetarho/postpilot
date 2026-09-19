@@ -55,7 +55,7 @@ func newCancellationHarness(t *testing.T, wrap func(*jobstore.Store) job.Store) 
 		t.Fatal(err)
 	}
 	authSvc := auth.NewService(authstore.New(d.Writer, d.Reader), time.Hour, auth.Deps{Mailer: mail.NewLog()})
-	ledger := usage.NewService(usagestore.New(d.Writer, d.Reader), emptyModels{}, 32768, usageAnchors{auth: authSvc})
+	ledger := usage.NewService(usagestore.New(d.Writer, d.Reader), emptyModels{}, 32768, usageAnchors{auth: authSvc}, approvedCeilingKinds()...)
 	js, cs := jobstore.New(d.Writer, d.Reader, jobKindsForTest()), clipstore.New(d.Writer, d.Reader)
 	var queueStore job.Store = js
 	if wrap != nil {
@@ -227,13 +227,13 @@ func TestClipCancellationWhileProviderExitsWaitsForConfirmedUsage(t *testing.T) 
 				t.Fatal(err)
 			}
 			awaitCancellationSignal(t, recorded)
-			a, err := h.ledger.ClipAccounting(t.Context(), "alice", id)
+			a, err := h.ledger.ReservationAccounting(t.Context(), "alice", id)
 			if err != nil || a == nil || a.Settled {
 				t.Fatal("settled while handler still owns work", a, err)
 			}
 			close(release)
 			awaitCancellationSignal(t, terminal)
-			a, err = h.ledger.ClipAccounting(t.Context(), "alice", id)
+			a, err = h.ledger.ReservationAccounting(t.Context(), "alice", id)
 			if err != nil || !a.Settled {
 				t.Fatal(a, err)
 			}
@@ -320,7 +320,7 @@ func TestClipCancellationAndResultCommitHaveOneWinner(t *testing.T) {
 			if err := h.db.Reader.QueryRow("SELECT COUNT(*) FROM clip_object_deletions WHERE object_key='clip-results/alice/clip/new.mp4'").Scan(&deleted); err != nil || deleted != map[bool]int{true: 0, false: 1}[success] {
 				t.Fatal("candidate cleanup", deleted, err)
 			}
-			a, err := h.ledger.ClipAccounting(t.Context(), "alice", id)
+			a, err := h.ledger.ReservationAccounting(t.Context(), "alice", id)
 			if err != nil || a == nil || !a.Settled {
 				t.Fatal(a, err)
 			}
@@ -436,7 +436,7 @@ func TestClipPendingCancellationRecoversBeforeFailureAndSettlesOnce(t *testing.T
 	if err != nil || j.Status != job.StatusCancelled {
 		t.Fatal(j, err)
 	}
-	a, err := h.ledger.ClipAccounting(t.Context(), "alice", id)
+	a, err := h.ledger.ReservationAccounting(t.Context(), "alice", id)
 	if err != nil || !a.Settled || a.SettlementReason != "cancelled" || *a.FinalCharge != 3 || *a.Refund != 2 {
 		t.Fatal(a, err)
 	}
@@ -526,7 +526,7 @@ func TestClipReservationRacingCancellationCannotAcquireALaterHold(t *testing.T) 
 				t.Fatal(err)
 			}
 			awaitCancellationSignal(t, terminal)
-			a, err := h.ledger.ClipAccounting(t.Context(), "alice", id)
+			a, err := h.ledger.ReservationAccounting(t.Context(), "alice", id)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -575,7 +575,7 @@ func TestClipNormalFailureRacingCancellationUsesTheDurableOutcome(t *testing.T) 
 			if err != nil {
 				t.Fatal(err)
 			}
-			a, err := h.ledger.ClipAccounting(t.Context(), "alice", id)
+			a, err := h.ledger.ReservationAccounting(t.Context(), "alice", id)
 			if err != nil || a == nil || !a.Settled {
 				t.Fatal(a, err)
 			}

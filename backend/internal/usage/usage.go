@@ -36,7 +36,9 @@ type Start struct {
 	Kind   string
 	JobID  string
 	Calls  []PlannedCall
-	Clip   *ClipReservation
+	// Approval is the ceiling and priced lines this work was approved for. Work of a kind
+	// the root marked as needing one may not start without it.
+	Approval *Reservation
 }
 
 // Admission is the durable record of an admitted start and the credits held for it.
@@ -51,7 +53,7 @@ type Admission struct {
 }
 
 // TerminalOutcome is supplied by the job owner after its terminal state is durable.
-// The zero value cannot authorize settlement, particularly a clip failure waiver.
+// The zero value cannot authorize settlement, particularly a failure waiver.
 type TerminalOutcome string
 
 const (
@@ -61,7 +63,7 @@ const (
 )
 
 // Settlement records product charges separately from provider usage. A nil
-// breakdown belongs to a historical or non-clip admission, never measured zero.
+// breakdown belongs to a historical or unpriced admission, never measured zero.
 type Settlement struct {
 	Credits                          int
 	Reason                           TerminalOutcome

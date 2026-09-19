@@ -21,9 +21,9 @@ const DefaultQuoteRetries = 3
 
 // QuoteCredits is the quote formula: the observation call priced for every
 // retry it may need, and both writing calls priced as one line on the same
-// model at the same budget (usage.ClipCredits takes at most two).
+// model at the same budget (usage.ReservationCredits takes at most two).
 func QuoteCredits(pricing clip.GenerationPricing, count, retries int) (int, error) {
-	return usage.ClipCredits([]usage.PricedCall{{Policy: pricing.Observe, Count: count * (1 + retries)}, {Policy: pricing.Plan, Count: pricing.PlanCalls()}})
+	return usage.ReservationCredits([]usage.PricedCall{{Policy: pricing.Observe, Count: count * (1 + retries)}, {Policy: pricing.Plan, Count: pricing.PlanCalls()}})
 }
 
 // Pricing is the clip.QuotePricing port over the registry.
@@ -87,7 +87,7 @@ func NewAccounting(ledger AccountingLedger) Accounting {
 }
 
 func (a Accounting) ForJob(ctx context.Context, user, id string) (*clip.Accounting, error) {
-	r, err := a.ledger.ClipAccounting(ctx, user, id)
+	r, err := a.ledger.ReservationAccounting(ctx, user, id)
 	if err != nil || r == nil {
 		return nil, err
 	}

@@ -21,6 +21,13 @@ func jobKinds() jobstore.Kinds {
 	}
 }
 
+// approvedCeilingKinds is the work the ledger may not start without an approved credit
+// ceiling: a clip generation and an owner's revision each quote their whole run before
+// the first model call (CLIP-19, CLIP-132). A render spends nothing and never reserves.
+func approvedCeilingKinds() []string {
+	return []string{clip.JobKindGenerate, clip.JobKindRevise}
+}
+
 // clipCancellation is the rule the queue asks before it accepts a stop: a render may
 // always be stopped because it spends nothing, and charged clip work only under the
 // cancellation policy this build honours and the owner approved.

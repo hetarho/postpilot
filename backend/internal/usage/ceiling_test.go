@@ -11,8 +11,8 @@ import (
 	"github.com/postpilot/backend/internal/plan"
 )
 
-func approvedTestClip() *ClipReservation {
-	return &ClipReservation{ApprovedMaxCredits: 100, Calls: []PricedCall{
+func approvedTestClip() *Reservation {
+	return &Reservation{ApprovedMaxCredits: 100, Calls: []PricedCall{
 		{Policy: llm.CallPolicy{Ref: cheapRef, Stage: "observe", CompletionTokens: 8192, InputUSDPerMillion: "0.1", OutputUSDPerMillion: "0.7"}, Count: 3},
 		{Policy: llm.CallPolicy{Ref: cheapRef, Stage: "write", CompletionTokens: 32768, InputUSDPerMillion: "0.1", OutputUSDPerMillion: "0.7"}, Count: 1},
 	}}
@@ -59,16 +59,16 @@ func TestMultimodalAdmissionEnvelopeIsNeverMeasuredUsage(t *testing.T) {
 	}
 }
 func TestClipPricingRequiresKnownExactDecimalAndChecksOverflow(t *testing.T) {
-	if got := boundedClipCharge(math.MaxInt64, 18); got != 18 {
+	if got := boundedCharge(math.MaxInt64, 18); got != 18 {
 		t.Fatal("overflowed settlement", got)
 	}
-	if got := boundedClipCharge(1, 2); got != 2 {
+	if got := boundedCharge(1, 2); got != 2 {
 		t.Fatal("small ceiling", got)
 	}
 	for _, rate := range []string{"", "-1", "NaN", "Inf", "1/3", "1e999", "9999999999999999999999999999999"} {
 		c := approvedTestClip().Calls
 		c[0].Policy.InputUSDPerMillion = rate
-		if _, err := ClipCredits(c); !errors.Is(err, ErrClipPricing) {
+		if _, err := ReservationCredits(c); !errors.Is(err, ErrPricingUnavailable) {
 			t.Fatal(rate, err)
 		}
 	}
@@ -78,17 +78,17 @@ func TestClipPricingRequiresKnownExactDecimalAndChecksOverflow(t *testing.T) {
 			c[i].Policy.InputUSDPerMillion = rate
 			c[i].Policy.OutputUSDPerMillion = rate
 		}
-		if credits, err := ClipCredits(c); err != nil || credits != 2 {
+		if credits, err := ReservationCredits(c); err != nil || credits != 2 {
 			t.Fatal(rate, credits, err)
 		}
 	}
 	c := approvedTestClip().Calls
-	credits, err := ClipCredits(c)
+	credits, err := ReservationCredits(c)
 	if err != nil || credits != 18 {
 		t.Fatal(credits, err)
 	}
 	c[0].Count = math.MaxInt
-	if _, err = ClipCredits(c); !errors.Is(err, ErrClipPricing) {
+	if _, err = ReservationCredits(c); !errors.Is(err, ErrPricingUnavailable) {
 		t.Fatal(err)
 	}
 }
@@ -99,11 +99,11 @@ func TestClipAdmissionRequiresCeilingAndNeverMutatesOnRefusal(t *testing.T) {
 		st.lots = []Lot{openMonthly("alice", 100)}
 		start := holdStart("alice", tier, "clip")
 		start.Kind = "generate_clip"
-		if err := svc.Hold(context.Background(), start); !errors.Is(err, ErrClipApproval) {
+		if err := svc.Hold(context.Background(), start); !errors.Is(err, ErrApprovalRequired) {
 			t.Fatal(err)
 		}
-		start.Clip = approvedTestClip()
-		start.Clip.ApprovedMaxCredits = 0
+		start.Approval = approvedTestClip()
+		start.Approval.ApprovedMaxCredits = 0
 		var exceeded *CreditCeilingError
 		if err := svc.Hold(context.Background(), start); !errors.As(err, &exceeded) || exceeded.Approved != 0 || exceeded.Required != 18 {
 			t.Fatal(err)
@@ -111,7 +111,7 @@ func TestClipAdmissionRequiresCeilingAndNeverMutatesOnRefusal(t *testing.T) {
 		if st.balance("alice", seoulNoon) != 100 || len(st.admissions) != 0 {
 			t.Fatal(st.lots, st.admissions)
 		}
-		start.Clip.ApprovedMaxCredits = 18
+		start.Approval.ApprovedMaxCredits = 18
 		if err := svc.Hold(context.Background(), start); err != nil {
 			t.Fatal(err)
 		}
@@ -169,18 +169,18 @@ func TestMultimodalQuoteAndActualCountHoldUseIdenticalPrices(t *testing.T) {
 		p.Pricing = llm.CallPricing{Version: llm.CallPricingVersion, Fingerprint: strings.Repeat("a", 64), Delivery: llm.ExecutionTextOnly, Endpoint: "leaf", RequiredParameters: "max_tokens", PromptUSDPerMillion: "0.3", CompletionUSDPerMillion: "2.5", RequestUSD: "0.01", ImageUSD: "0.0000003", AudioUSDPerToken: "0.000001"}
 	}
 	reservation.Calls[0].Policy.Pricing.Delivery = llm.ExecutionInlineStatic
-	quoted, err := ClipCredits(reservation.Calls)
+	quoted, err := ReservationCredits(reservation.Calls)
 	if err != nil {
 		t.Fatal(err)
 	}
 	reservation.ApprovedMaxCredits = quoted
 	reservation.Calls[0].Count--
-	actual, err := ClipCredits(reservation.Calls)
+	actual, err := ReservationCredits(reservation.Calls)
 	if err != nil || actual >= quoted {
 		t.Fatal(actual, quoted, err)
 	}
 	start := holdStart("alice", plan.Free, "multimodal")
-	start.Kind, start.Clip = "generate_clip", reservation
+	start.Kind, start.Approval = "generate_clip", reservation
 	if err = svc.Hold(context.Background(), start); err != nil {
 		t.Fatal(err)
 	}

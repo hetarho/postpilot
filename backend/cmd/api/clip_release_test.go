@@ -390,7 +390,7 @@ func newReleaseHarness(t *testing.T, mode string, stress bool, clocks ...func() 
 	if err != nil {
 		t.Fatal(err)
 	}
-	ledger := usage.NewService(usagestore.New(d.Writer, d.Reader), registry, 8192, usageAnchors{auth: authSvc})
+	ledger := usage.NewService(usagestore.New(d.Writer, d.Reader), registry, 8192, usageAnchors{auth: authSvc}, approvedCeilingKinds()...)
 	if err = ledger.EnsureMonthlyLot(ctx, "release-user", tier); err != nil {
 		t.Fatal(err)
 	}

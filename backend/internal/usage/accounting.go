@@ -2,9 +2,9 @@ package usage
 
 import "context"
 
-// ClipAccounting is the ledger's owner-scoped projection, not a client estimate.
+// ReservationAccounting is the ledger's owner-scoped projection, not a client estimate.
 // Nil amounts are unknown/pending, never a settled zero. Shadow is master-only.
-type ClipAccounting struct {
+type ReservationAccounting struct {
 	CancellationPolicyVersion                             int
 	SettlementReason                                      string
 	NominalReservation, ConfirmedCharge, CancellationFee  *int
@@ -14,14 +14,17 @@ type ClipAccounting struct {
 	Settled                                               bool
 }
 
-type clipAccountingReader interface {
-	ClipAccountingForJob(context.Context, string, string) (*ClipAccounting, error)
+type accountingReader interface {
+	AccountingForJob(ctx context.Context, user, job string, kinds []string) (*ReservationAccounting, error)
 }
 
-func (s *Service) ClipAccounting(ctx context.Context, user, job string) (*ClipAccounting, error) {
-	r, ok := s.store.(clipAccountingReader)
+// ReservationAccounting is the owner's view of what one piece of approved work reserved,
+// spent and returned. The kinds it covers are the ones the root marked as needing an
+// approval; the ledger passes them down rather than naming a product in SQL.
+func (s *Service) ReservationAccounting(ctx context.Context, user, job string) (*ReservationAccounting, error) {
+	r, ok := s.store.(accountingReader)
 	if !ok {
-		return nil, ErrClipApproval
+		return nil, ErrApprovalRequired
 	}
-	return r.ClipAccountingForJob(ctx, user, job)
+	return r.AccountingForJob(ctx, user, job, s.approvedKindList())
 }

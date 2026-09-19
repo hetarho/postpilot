@@ -90,7 +90,8 @@ type Freezer interface {
 	Models() []llm.ModelInfo
 }
 
-// AccountingLedger is the ledger's per-job clip settlement view.
+// AccountingLedger is the ledger's per-job view of work that settles against an
+// approved ceiling.
 type AccountingLedger interface {
-	ClipAccounting(ctx context.Context, user, job string) (*usage.ClipAccounting, error)
+	ReservationAccounting(ctx context.Context, user, job string) (*usage.ReservationAccounting, error)
 }

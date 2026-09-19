@@ -33,7 +33,7 @@ func (p *quotePricing) Freeze(_ context.Context, o, w llm.ModelRef, count int) (
 	b.Pricing = a.Pricing
 	b.Pricing.Delivery = llm.ExecutionTextOnly
 	// Both writing calls are the same model at the same budget (CLIP-135).
-	credits, err := usage.ClipCredits([]usage.PricedCall{{Policy: a, Count: count}, {Policy: b, Count: 2}})
+	credits, err := usage.ReservationCredits([]usage.PricedCall{{Policy: a, Count: count}, {Policy: b, Count: 2}})
 	return clip.GenerationPricing{Version: clip.PricingPolicyVersion, Observe: a, Plan: b, Narration: b, ObservationCalls: count, MaxCredits: credits}, err
 }
 func startApproved(ctx context.Context, s *clipapp.GenerationService, user, id, batch, o, w string) (string, error) {
@@ -84,7 +84,7 @@ func (p *quotePricing) FreezeWork(ctx context.Context, o, w llm.ModelRef, count 
 	}
 	// Existing fixture policies stay legacy unless a test explicitly sets retries.
 	pricing.SkipFlow, pricing.SkipNarration = skipFlow, skipNarration
-	pricing.MaxCredits, err = usage.ClipCredits([]usage.PricedCall{{Policy: pricing.Observe, Count: count}, {Policy: pricing.Plan, Count: pricing.PlanCalls()}})
+	pricing.MaxCredits, err = usage.ReservationCredits([]usage.PricedCall{{Policy: pricing.Observe, Count: count}, {Policy: pricing.Plan, Count: pricing.PlanCalls()}})
 	return pricing, err
 }
 func (j generationJobs) Snapshot(ctx context.Context, user, project, id string) (*clip.ClipJob, error) {

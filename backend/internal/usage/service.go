@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/postpilot/backend/internal/llm"
@@ -31,6 +32,11 @@ type Service struct {
 	models  Models
 	anchors Anchors
 
+	// approvedKinds is the work that may not start without an approved credit ceiling.
+	// The composition root names it: the ledger enforces the rule and never learns which
+	// product asked for it.
+	approvedKinds map[string]bool
+
 	// maxCompletionTokens is the same cap the registry sends on a call that sets none. It is
 	// only a fallback for a planned call whose caller did not declare a stage budget.
 	maxCompletionTokens int64
@@ -43,13 +49,19 @@ type Service struct {
 
 // NewService wires the ledger. anchors is the account-specific monthly-window resolver
 // and is required: every path that renews a balance reads it, and a ledger without one
-// would silently revert to a calendar month (ARCH-40).
-func NewService(store Store, models Models, maxCompletionTokens int64, anchors Anchors) *Service {
+// would silently revert to a calendar month (ARCH-40). approvedKinds is the work that
+// must carry an approved ceiling; an empty list is a ledger where every start is priced
+// from its planned calls alone, which is a real mode and must be stated.
+func NewService(store Store, models Models, maxCompletionTokens int64, anchors Anchors, approvedKinds ...string) *Service {
 	if anchors == nil {
 		panic("usage: monthly anchors are required")
 	}
+	approved := make(map[string]bool, len(approvedKinds))
+	for _, kind := range approvedKinds {
+		approved[kind] = true
+	}
 	return &Service{
-		store: store, models: models, anchors: anchors,
+		store: store, models: models, anchors: anchors, approvedKinds: approved,
 		maxCompletionTokens: maxCompletionTokens,
 		now:                 time.Now, newID: newID,
 	}
@@ -57,6 +69,20 @@ func NewService(store Store, models Models, maxCompletionTokens int64, anchors A
 
 // WithStore preserves pricing, anchors and clocks inside a composition-owned
 // transaction. The caller owns committing or rolling back that scoped store.
+// requiresApproval reports whether this work must reserve an approved ceiling before it
+// may start.
+func (s *Service) requiresApproval(kind string) bool { return s.approvedKinds[kind] }
+
+// approvedKindList is the same set in a stable order, for the statements that filter on it.
+func (s *Service) approvedKindList() []string {
+	kinds := make([]string, 0, len(s.approvedKinds))
+	for kind := range s.approvedKinds {
+		kinds = append(kinds, kind)
+	}
+	sort.Strings(kinds)
+	return kinds
+}
+
 func (s *Service) WithStore(store Store) *Service {
 	clone := *s
 	clone.store = store
@@ -208,14 +234,6 @@ func (s *Service) GrantBonusOnce(ctx context.Context, id, userID string, credits
 	return s.store.InsertLotIfAbsent(ctx, Lot{ID: id, UserID: userID, Kind: LotBonus, Granted: credits, Remaining: credits, CreatedAt: s.now()})
 }
 
-// chargedClipKind names the clip work that reserves an approved credit ceiling
-// and settles against it: the generation and the owner's revision request
-// (CLIP-19, CLIP-132). A render is credit-free and never takes this path. The
-// kinds are strings here because this context owns no job vocabulary.
-func chargedClipKind(kind string) bool {
-	return kind == "generate_clip" || kind == "revise_clip"
-}
-
 // Hold reserves the credits one piece of LLM work could cost, and records the start.
 //
 // Reserving up front rather than charging afterwards is what bounds the account: cost is
@@ -238,23 +256,26 @@ func (s *Service) Hold(ctx context.Context, start Start) error {
 	required := plan.Charge(s.worstCaseMicrousd(start.Calls))
 	var approved *int
 	policyVersion := 0
-	if chargedClipKind(start.Kind) {
-		if start.Clip == nil {
-			return ErrClipApproval
+	// Work the root marked as needing an approval may not start without one, and the
+	// admission row it writes carries that ceiling — which is what every later gate reads
+	// instead of asking which product this is.
+	if s.requiresApproval(start.Kind) {
+		if start.Approval == nil {
+			return ErrApprovalRequired
 		}
 		var err error
-		required, err = ClipCredits(start.Clip.Calls)
+		required, err = ReservationCredits(start.Approval.Calls)
 		if err != nil {
 			return err
 		}
-		cap := start.Clip.ApprovedMaxCredits
+		cap := start.Approval.ApprovedMaxCredits
 		if cap < 0 {
-			return ErrClipApproval
+			return ErrApprovalRequired
 		}
 		approved = &cap
-		policyVersion = start.Clip.CancellationPolicyVersion
+		policyVersion = start.Approval.CancellationPolicyVersion
 		if policyVersion < 0 || policyVersion > 1 {
-			return ErrClipApproval
+			return ErrApprovalRequired
 		}
 	}
 
@@ -428,7 +449,7 @@ func (s *Service) Settle(ctx context.Context, jobID string, outcome TerminalOutc
 		if !found {
 			return nil
 		}
-		if outcome == OutcomeCancelled && (!chargedClipKind(admission.Kind) || admission.CancellationPolicyVersion != 1) {
+		if outcome == OutcomeCancelled && (admission.ApprovedMaxCredits == nil || admission.CancellationPolicyVersion != 1) {
 			return ErrSettlementOutcome
 		}
 
@@ -438,20 +459,17 @@ func (s *Service) Settle(ctx context.Context, jobID string, outcome TerminalOutc
 		}
 		actual := plan.Charge(cost.TotalMicrousd)
 		settlement := Settlement{}
-		// A clip reserves its complete run after probing. Never debit another lot for
+		// Approved work reserved its complete run up front. Never debit another lot for
 		// provider overage: raw cost remains in the ledger, user credit is capped.
-		if chargedClipKind(admission.Kind) {
-			ceiling := admission.HoldCredits
-			if admission.ApprovedMaxCredits != nil {
-				ceiling = min(ceiling, *admission.ApprovedMaxCredits)
-			}
-			actual = boundedClipCharge(cost.ConfirmedMicrousd, ceiling)
+		if admission.ApprovedMaxCredits != nil {
+			ceiling := min(admission.HoldCredits, *admission.ApprovedMaxCredits)
+			actual = boundedCharge(cost.ConfirmedMicrousd, ceiling)
 			if outcome == OutcomeFailed && cost.ConfirmedMicrousd == 0 {
 				// No confirmed billable work: waive even the infrastructure base. Missing
 				// usage stays unknown in the ledger; it is not a reported zero supplier bill.
 				actual = 0
 			}
-			confirmed, fee := cancelledClipCharge(cost.ConfirmedMicrousd, ceiling)
+			confirmed, fee := cancelledCharge(cost.ConfirmedMicrousd, ceiling)
 			if outcome == OutcomeCancelled {
 				actual = confirmed + fee
 			} else {
@@ -562,7 +580,9 @@ func (s *Service) OpenHolds(ctx context.Context) ([]string, error) {
 // records its tokens; only its estimate is lost.
 func (s *Service) Record(ctx context.Context, call Call) error {
 	info, _ := s.models.Lookup(call.Model)
-	if chargedClipKind(call.Kind) {
+	// A call made under a reservation is priced at the frozen policy the reservation
+	// admitted, so a catalog change between approval and call cannot move the bill.
+	{
 		if policy, ok := frozenCallPrice(ctx, call); ok {
 			info.InputUSDPerMillion, info.OutputUSDPerMillion = policy.InputUSDPerMillion, policy.OutputUSDPerMillion
 			if policy.Pricing.Version != 0 && !policy.Pricing.AggregateUsageSufficient {
@@ -616,7 +636,7 @@ func (s *Service) RecordCall(ctx context.Context, ref llm.ModelRef, stage string
 	if callErr != nil && u.PromptTokens == 0 && u.CompletionTokens == 0 && !u.CostReported {
 		return nil
 	}
-	if chargedClipKind(work.Kind) {
+	if s.requiresApproval(work.Kind) {
 		// A provider can report paid usage while worker shutdown cancels its call.
 		// Preserve that evidence for boot settlement without permitting another call.
 		recordCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)

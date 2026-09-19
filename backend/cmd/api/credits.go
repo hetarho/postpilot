@@ -90,7 +90,7 @@ type jobAdmission struct {
 type clipAdmission struct{ jobAdmission }
 
 func (a clipAdmission) Hold(ctx context.Context, hold clipapp.Hold) error {
-	reservation := &usage.ClipReservation{
+	reservation := &usage.Reservation{
 		ApprovedMaxCredits:        hold.Reservation.ApprovedMaxCredits,
 		CancellationPolicyVersion: hold.Reservation.CancellationPolicyVersion,
 	}
@@ -104,7 +104,7 @@ func (a jobAdmission) Hold(ctx context.Context, start job.Start) error {
 	return a.hold(ctx, start, nil)
 }
 
-func (a jobAdmission) hold(ctx context.Context, start job.Start, clipReservation *usage.ClipReservation) error {
+func (a jobAdmission) hold(ctx context.Context, start job.Start, clipReservation *usage.Reservation) error {
 	// The request's own tier is preferred so one request is judged against one tier
 	// throughout; a start made from a worker context has no session to read, and falls back
 	// to the stored row, which is the same authority the interceptor resolved from.
@@ -124,7 +124,7 @@ func (a jobAdmission) hold(ctx context.Context, start job.Start, clipReservation
 	}
 	return a.ledger.Hold(ctx, usage.Start{
 		UserID: start.UserID, Plan: acting, Kind: start.Kind, JobID: start.JobID, Calls: calls,
-		Clip: clipReservation,
+		Approval: clipReservation,
 	})
 }
 

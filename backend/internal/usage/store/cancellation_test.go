@@ -73,7 +73,7 @@ func TestSQLiteCancellationSettlementIsOnceBoundedAndSeparateFromUsage(t *testin
 					t.Fatal(err)
 				}
 			}
-			a, err := svc.ClipAccounting(ctx, "alice", "clip")
+			a, err := svc.ReservationAccounting(ctx, "alice", "clip")
 			if err != nil || a == nil {
 				t.Fatal(a, err)
 			}
@@ -97,7 +97,7 @@ func TestSQLiteCancellationSettlementIsOnceBoundedAndSeparateFromUsage(t *testin
 			if err := handle.Reader.QueryRow("SELECT COUNT(*) FROM usage_events WHERE job_id='clip'").Scan(&events); err != nil || events != calls {
 				t.Fatal("fee became provider usage", events, err)
 			}
-			if other, err := svc.ClipAccounting(ctx, "bob", "clip"); err != nil || other != nil {
+			if other, err := svc.ReservationAccounting(ctx, "bob", "clip"); err != nil || other != nil {
 				t.Fatal("foreign accounting", other, err)
 			}
 			if err := svc.Settle(ctx, "clip", usage.OutcomeFailed); err != nil {
@@ -115,7 +115,7 @@ func TestSQLiteCancellationPreservesOldPoliciesAndMissingReservations(t *testing
 	svc, handle := newServiceWithDB(t)
 	ctx := context.Background()
 	request := holdFor("legacy")
-	request.Kind, request.Clip = "generate_clip", approvedStoreClip()
+	request.Kind, request.Approval = "generate_clip", approvedStoreClip()
 	if err := svc.Hold(ctx, request); err != nil {
 		t.Fatal(err)
 	}
@@ -147,8 +147,8 @@ func TestSQLiteCancellationRefundRollbackKeepsOriginalExpiredLots(t *testing.T) 
 	insertLot(t, handle, "purchased", "alice", "purchased", 20, nil, time.Now())
 	request := holdFor("cancelled")
 	request.Kind = "generate_clip"
-	request.Clip = approvedStoreClip()
-	request.Clip.CancellationPolicyVersion = 1
+	request.Approval = approvedStoreClip()
+	request.Approval.CancellationPolicyVersion = 1
 	if err := svc.Hold(ctx, request); err != nil {
 		t.Fatal(err)
 	}
@@ -183,7 +183,7 @@ func TestSQLiteCancellationRefundRollbackKeepsOriginalExpiredLots(t *testing.T) 
 	if purchased != 18 {
 		t.Fatal("refund moved into purchased credits", purchased)
 	}
-	a, err := svc.ClipAccounting(ctx, "alice", "cancelled")
+	a, err := svc.ReservationAccounting(ctx, "alice", "cancelled")
 	if err != nil || *a.Refund != 2 || *a.FinalCharge != 3 {
 		t.Fatal(a, err)
 	}

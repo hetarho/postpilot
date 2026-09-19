@@ -136,11 +136,11 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 	anchors := usageAnchors{auth: c.auth, late: c}
 	c.ledger = usage.NewService(
 		usagestore.New(handle.Writer, handle.Reader), registry,
-		int64(cfg.LLMMaxTokensDefault), anchors,
+		int64(cfg.LLMMaxTokensDefault), anchors, approvedCeilingKinds()...,
 	)
 	c.billingStore = billingstore.New(handle.Writer, handle.Reader)
 	c.billingStore.SetCreditsForTx(func(tx *sql.Tx) billing.Credits {
-		return usage.NewService(usagestore.NewTx(tx), nil, 0, anchors)
+		return usage.NewService(usagestore.NewTx(tx), nil, 0, anchors, approvedCeilingKinds()...)
 	})
 	c.billingStore.SetPlansForTx(func(tx *sql.Tx) billing.Plans {
 		return auth.NewService(authstore.NewTx(tx), cfg.SessionTTL, auth.Deps{Mailer: p.mailer})

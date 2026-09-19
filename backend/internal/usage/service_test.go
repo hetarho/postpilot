@@ -21,6 +21,7 @@ type fakeStore struct {
 	admissions  []Admission
 	holdDebits  map[string][]LotDebit
 	settled     map[string]int
+	settlements map[string]Settlement
 	events      []Event
 	lotSeq      int
 	spendCalls  int
@@ -29,7 +30,7 @@ type fakeStore struct {
 }
 
 func newFakeStore() *fakeStore {
-	return &fakeStore{holdDebits: map[string][]LotDebit{}, settled: map[string]int{}}
+	return &fakeStore{holdDebits: map[string][]LotDebit{}, settled: map[string]int{}, settlements: map[string]Settlement{}}
 }
 
 // InWriteTx is a pass-through here: these tests assert the rules, and the real store's
@@ -227,6 +228,7 @@ func (f *fakeStore) HoldForJob(_ context.Context, jobID string) (Admission, []Lo
 
 func (f *fakeStore) MarkSettled(_ context.Context, jobID string, settlement Settlement, _ time.Time) error {
 	f.settled[jobID] = settlement.Credits
+	f.settlements[jobID] = settlement
 	return nil
 }
 
@@ -339,7 +341,9 @@ const maxCompletion = 10_000
 func newTestService(t *testing.T, now time.Time) (*Service, *fakeStore) {
 	t.Helper()
 	store := newFakeStore()
-	svc := NewService(store, pricedModels, maxCompletion, fakeAnchors{anchor: testAnchor})
+	// The two kinds the product marks as needing an approved ceiling; the ledger only
+	// knows them because the root says so.
+	svc := NewService(store, pricedModels, maxCompletion, fakeAnchors{anchor: testAnchor}, "generate_clip", "revise_clip")
 	svc.now = func() time.Time { return now }
 	seq := 0
 	svc.newID = func() string { seq++; return fmt.Sprintf("lot-new-%d", seq) }

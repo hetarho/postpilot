@@ -3,7 +3,9 @@ package store
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/postpilot/backend/internal/usage"
 	"github.com/postpilot/backend/internal/usage/store/sqlc"
@@ -23,8 +25,15 @@ func optionalCredits(n sql.NullInt64) *int {
 	return &v
 }
 
-func (s *Store) ClipAccountingForJob(ctx context.Context, user, job string) (*usage.ClipAccounting, error) {
-	r, err := s.read.ClipAccountingForJob(ctx, sqlc.ClipAccountingForJobParams{UserID: user, JobID: job})
+func (s *Store) AccountingForJob(ctx context.Context, user, job string, kinds []string) (*usage.ReservationAccounting, error) {
+	if kinds == nil {
+		kinds = []string{}
+	}
+	encoded, err := json.Marshal(kinds)
+	if err != nil {
+		return nil, fmt.Errorf("encode approved kinds: %w", err)
+	}
+	r, err := s.read.AccountingForJob(ctx, sqlc.AccountingForJobParams{UserID: user, JobID: job, Kinds: string(encoded)})
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
@@ -32,7 +41,7 @@ func (s *Store) ClipAccountingForJob(ctx context.Context, user, job string) (*us
 		return nil, err
 	}
 	reserved := int(r.DebitedCredits)
-	out := &usage.ClipAccounting{Approved: optionalCredits(r.ApprovedMaxCredits), Reserved: &reserved, Settled: r.SettledAt.Valid, Exempt: r.HoldCredits > 0 && reserved == 0}
+	out := &usage.ReservationAccounting{Approved: optionalCredits(r.ApprovedMaxCredits), Reserved: &reserved, Settled: r.SettledAt.Valid, Exempt: r.HoldCredits > 0 && reserved == 0}
 	nominal := int(r.HoldCredits)
 	out.NominalReservation, out.CancellationPolicyVersion = &nominal, int(r.CancellationPolicyVersion)
 	out.SettlementReason = r.SettlementReason.String
@@ -41,7 +50,7 @@ func (s *Store) ClipAccountingForJob(ctx context.Context, user, job string) (*us
 		return out, nil
 	}
 	if !r.SettledCredits.Valid {
-		return nil, errors.New("settled clip has no final charge")
+		return nil, errors.New("settled admission has no final charge")
 	}
 	charge := int(r.SettledCredits.Int64)
 	if out.Exempt {
@@ -58,7 +67,7 @@ func (s *Store) ClipAccountingForJob(ctx context.Context, user, job string) (*us
 	} else {
 		refund := reserved - charge
 		if refund < 0 {
-			return nil, errors.New("clip charge exceeds reservation")
+			return nil, errors.New("charge exceeds reservation")
 		}
 		out.FinalCharge, out.Refund = &charge, &refund
 	}

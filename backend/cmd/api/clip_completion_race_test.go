@@ -60,7 +60,7 @@ func TestClipResultCommitRacingCancellationKeepsOneOutcome(t *testing.T) {
 		if err := h.finisher.Recover(t.Context()); err != nil {
 			t.Fatal(err)
 		}
-		a, err := h.ledger.ClipAccounting(t.Context(), "alice", id)
+		a, err := h.ledger.ReservationAccounting(t.Context(), "alice", id)
 		if err != nil || a == nil || !a.Settled || a.FinalCharge == nil || *a.FinalCharge != wantCharge || a.CancellationFee == nil || *a.CancellationFee != wantFee || *a.Refund != 5-wantCharge {
 			t.Fatal("settlement disagrees with durable result", a, err)
 		}

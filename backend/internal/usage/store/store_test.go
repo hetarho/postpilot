@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/platform/db"
@@ -66,7 +67,7 @@ func newServiceWithDB(t *testing.T) (*usage.Service, *db.DB) {
 			t.Fatalf("seed user %s: %v", id, err)
 		}
 	}
-	svc := usage.NewService(usagestore.New(handle.Writer, handle.Reader), pricedModels{}, maxCompletion, fixedAnchors{anchor: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)})
+	svc := usage.NewService(usagestore.New(handle.Writer, handle.Reader), pricedModels{}, maxCompletion, fixedAnchors{anchor: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)}, clip.JobKindGenerate, clip.JobKindRevise)
 	return svc, handle
 }
 
@@ -136,7 +137,7 @@ func concurrentHolds(t *testing.T, kind string) {
 			request := holdFor(string(rune('a' + i)))
 			request.Kind = kind
 			if kind == "generate_clip" {
-				request.Clip = approvedStoreClip()
+				request.Approval = approvedStoreClip()
 			}
 			results[i] = svc.Hold(context.Background(), request)
 		}()
@@ -416,7 +417,7 @@ func TestUntouchedLotsAnswersManyLotsOffTheReadPool(t *testing.T) {
 
 	// A store with NO writer proves which pool the query used: reaching for the writer here
 	// would panic on the nil pool rather than answer.
-	readOnly := usage.NewService(usagestore.New(nil, handle.Reader), pricedModels{}, maxCompletion, fixedAnchors{anchor: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)})
+	readOnly := usage.NewService(usagestore.New(nil, handle.Reader), pricedModels{}, maxCompletion, fixedAnchors{anchor: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)}, clip.JobKindGenerate, clip.JobKindRevise)
 	answer, err := readOnly.UntouchedLots(ctx, []string{"purchased:whole", "purchased:spent"})
 	if err != nil || !answer["purchased:whole"] || answer["purchased:spent"] {
 		t.Fatalf("read-pool answer = %+v, %v", answer, err)

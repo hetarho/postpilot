@@ -36,7 +36,7 @@ func TestSQLiteClipFailureSettlementEvidenceAndConcurrency(t *testing.T) {
 			}
 			request := holdFor("clip")
 			request.Kind = "generate_clip"
-			request.Clip = approvedStoreClip()
+			request.Approval = approvedStoreClip()
 			if err := svc.Hold(ctx, request); err != nil {
 				t.Fatal(err)
 			}
@@ -110,7 +110,7 @@ func TestSQLiteClipRefundRollbackRestoresOriginalLotsAndExpiry(t *testing.T) {
 	insertLot(t, handle, "purchased", "alice", "purchased", 20, nil, time.Now())
 	request := holdFor("clip")
 	request.Kind = "generate_clip"
-	request.Clip = approvedStoreClip()
+	request.Approval = approvedStoreClip()
 	if err := svc.Hold(ctx, request); err != nil {
 		t.Fatal(err)
 	}
@@ -167,7 +167,7 @@ func TestSQLiteSettledClipIsNotRetroactivelyWaived(t *testing.T) {
 	ctx := context.Background()
 	request := holdFor("legacy-clip")
 	request.Kind = "generate_clip"
-	request.Clip = approvedStoreClip()
+	request.Approval = approvedStoreClip()
 	if err := svc.Hold(ctx, request); err != nil {
 		t.Fatal(err)
 	}
@@ -198,7 +198,7 @@ func TestSQLiteMasterClipRecordsCostWithoutDebitingLots(t *testing.T) {
 	insertLot(t, handle, "master-purchased", "alice", "purchased", 100, nil, time.Now())
 	request := holdFor("master-clip")
 	request.Kind, request.Plan = "generate_clip", plan.Master
-	request.Clip = approvedStoreClip()
+	request.Approval = approvedStoreClip()
 	if err := svc.Hold(ctx, request); err != nil {
 		t.Fatal(err)
 	}
@@ -226,8 +226,8 @@ func TestSQLiteMasterClipRecordsCostWithoutDebitingLots(t *testing.T) {
 
 // Two bounded calls at known frozen rates cost 5 credits, preserving the lot
 // split used by the existing failure-settlement regression fixtures.
-func approvedStoreClip() *usage.ClipReservation {
-	return &usage.ClipReservation{ApprovedMaxCredits: 5, Calls: []usage.PricedCall{
+func approvedStoreClip() *usage.Reservation {
+	return &usage.Reservation{ApprovedMaxCredits: 5, Calls: []usage.PricedCall{
 		{Policy: llm.CallPolicy{Ref: pricedRef, Stage: "observe", CompletionTokens: 8192, InputUSDPerMillion: "0.15", OutputUSDPerMillion: "0"}, Count: 1},
 		{Policy: llm.CallPolicy{Ref: pricedRef, Stage: "write", CompletionTokens: 32768, InputUSDPerMillion: "0.15", OutputUSDPerMillion: "0"}, Count: 1},
 	}}

@@ -45,7 +45,7 @@ func TestUsageAnchorPrefersAnActiveSubscriptionAndFallsBackAfterLapse(t *testing
 	authService := auth.NewService(authstore.New(handle.Writer, handle.Reader), time.Hour, auth.Deps{Mailer: mail.NewLog()})
 	billingService := billing.NewService(billingStore, nil, nil, nil, nil, nil, nil)
 	anchors := usageAnchors{auth: authService, billing: billingService}
-	ledger := usage.NewService(usagestore.New(handle.Writer, handle.Reader), emptyModels{}, 0, anchors)
+	ledger := usage.NewService(usagestore.New(handle.Writer, handle.Reader), emptyModels{}, 0, anchors, approvedCeilingKinds()...)
 
 	response, err := planrpc.NewHandler(ledger, emptyBillingEstimator{}).GetMyPlan(
 		auth.WithActor(ctx, auth.Actor{UserID: "alice", Plan: plan.Pro}),

@@ -72,14 +72,15 @@
 | T282 | the agent maps proto at one adapter and keeps preflight out of main | ARCH | T008 | todo |
 | T283 | SmartEditor scripts are files with a DOM test; naver is plan vs driver | ARCH | T282 | todo |
 | T284 | the agent generates only the protos it uses and drops the survey harness | ARCH | T008 T281 | todo |
-| T286 | the ledger settles by approved ceiling, not by product kind | ARCH | T272 | todo |
 
 ## next
-- implement-task T286 (ledger de-named by approved ceiling; dep T272 done); other roots meanwhile: BE T269 T276 T278 T280, FE T258 T259 T260 T263 T264 T266 T268; follow-up to log as a task: constructor treatment for voice/experiment/guideline/modelcatalog/billingstore setters
+- implement-task: BE roots T269 (config into contexts), T276 (voice/post/publishing ports), T277 (experiment/usage/auth ports, dep T286 done), T278 (typed failure reasons), T280 (boundary leaks), T275 (missing test packages, dep T285 done); FE roots T258 T259 T260 T263 T264 T266 T268
 - the clip `release-smoke` stage is red at HEAD on this host: 9 of 28 modes end in `no result` (generation ends on a plan since T255, harness still expects a Result) — needs a fix task (review-code clip-release-smoke or update the harness)
 - agent tasks T279 T282 T283 T284 wait for T008; T008 belongs to another session and T177 remains blocked
 - post-quality-and-related-links remains open ideation, awaiting conversion when ready
 ## log
+- 260920 T286 done; usage names no product (approved-kinds list from the root, ceiling read off the admission), charge math frozen and pinned by a new parity table; ARCH-26/28 green
+- 260919 T286 claimed (sub)
 - 260919 T272 done; the allowance, reservation policy and cancellation rule live in clip/app, job keeps generic ports (Reporting, Cancellation, CancellationStore) and imports no llm; ARCH-26/28 green and the release smoke fails only the pre-existing 9 `no result`
 - 260919 T272 claimed (sub)
 - 260919 T285 done; job addresses work by Subject{Dimension,ID} (Guards stated by the caller, 7 store lookups collapsed, experiment id derived+indexed); ARCH-26 and ARCH-28 green. Deviation: the subject_kind/subject_id pair was dropped as unreadable without behaviour change — see the task result
@@ -98,5 +99,3 @@
 - 260919 create-architecture ARCH r4 done (ARCH-3/6/14/16/17/21✎, ARCH-40/41+); warning: ARCH-3✎ touches agent enum mirrors that T008 (doing) exercises live — F24-F30 tasks must depend on T008
 - 260919 create-architecture ARCH r4 start (review/arch-260919 gaps: ARCH-6 saga home, ARCH-14 verb rule, ARCH-21 config wording, buf breaking rule)
 - 260919 review-code arch-260919 ready; owner adopted all 31 (rule: clear anything that accrues per change now); next create-task review/arch-260919
-- 260919 review-code arch-260919 FE re-verified at 19c19cc2; F9 widened (6 pages own RPC), F31 added (cross-domain cache keys in 8 features); 31 [?] awaiting triage
-- 260919 review-code arch-260919 findings written (30, 1×P1 F13 cmd/api sagas; FE 12 · BE 10 · agent/proto 8); awaiting triage

@@ -11,6 +11,52 @@ import (
 	"strings"
 )
 
+const accountingForJob = `-- name: AccountingForJob :one
+SELECT a.approved_max_credits, a.hold_credits, a.settled_credits, a.settled_at, a.cancellation_policy_version, a.settlement_reason, a.confirmed_charge_credits, a.cancellation_fee_credits,
+       CAST(COALESCE((SELECT SUM(h.credits) FROM credit_hold_lots h WHERE h.job_id = a.job_id), 0) AS INTEGER) AS debited_credits
+FROM usage_admissions a
+WHERE a.user_id = ?1 AND a.job_id = ?2
+  AND a.kind IN (SELECT value FROM json_each(?3))
+`
+
+type AccountingForJobParams struct {
+	UserID string
+	JobID  string
+	Kinds  interface{}
+}
+
+type AccountingForJobRow struct {
+	ApprovedMaxCredits        sql.NullInt64
+	HoldCredits               int64
+	SettledCredits            sql.NullInt64
+	SettledAt                 sql.NullString
+	CancellationPolicyVersion int64
+	SettlementReason          sql.NullString
+	ConfirmedChargeCredits    sql.NullInt64
+	CancellationFeeCredits    sql.NullInt64
+	DebitedCredits            int64
+}
+
+// The kinds that settle against an approved ceiling are passed in, not named here. The
+// filter stays on the kind rather than on `approved_max_credits IS NOT NULL` so that
+// admissions written before the ceiling column existed are still projected.
+func (q *Queries) AccountingForJob(ctx context.Context, arg AccountingForJobParams) (AccountingForJobRow, error) {
+	row := q.db.QueryRowContext(ctx, accountingForJob, arg.UserID, arg.JobID, arg.Kinds)
+	var i AccountingForJobRow
+	err := row.Scan(
+		&i.ApprovedMaxCredits,
+		&i.HoldCredits,
+		&i.SettledCredits,
+		&i.SettledAt,
+		&i.CancellationPolicyVersion,
+		&i.SettlementReason,
+		&i.ConfirmedChargeCredits,
+		&i.CancellationFeeCredits,
+		&i.DebitedCredits,
+	)
+	return i, err
+}
+
 const activeMonthlyLot = `-- name: ActiveMonthlyLot :one
 SELECT id, user_id, kind, granted, remaining, expires_at, created_at
 FROM credit_lots
@@ -35,49 +81,6 @@ func (q *Queries) ActiveMonthlyLot(ctx context.Context, arg ActiveMonthlyLotPara
 		&i.Remaining,
 		&i.ExpiresAt,
 		&i.CreatedAt,
-	)
-	return i, err
-}
-
-const clipAccountingForJob = `-- name: ClipAccountingForJob :one
-SELECT a.approved_max_credits, a.hold_credits, a.settled_credits, a.settled_at, a.cancellation_policy_version, a.settlement_reason, a.confirmed_charge_credits, a.cancellation_fee_credits,
-       CAST(COALESCE((SELECT SUM(h.credits) FROM credit_hold_lots h WHERE h.job_id = a.job_id), 0) AS INTEGER) AS debited_credits
-FROM usage_admissions a
-WHERE a.user_id = ? AND a.job_id = ? AND a.kind IN ('generate_clip','revise_clip')
-`
-
-type ClipAccountingForJobParams struct {
-	UserID string
-	JobID  string
-}
-
-type ClipAccountingForJobRow struct {
-	ApprovedMaxCredits        sql.NullInt64
-	HoldCredits               int64
-	SettledCredits            sql.NullInt64
-	SettledAt                 sql.NullString
-	CancellationPolicyVersion int64
-	SettlementReason          sql.NullString
-	ConfirmedChargeCredits    sql.NullInt64
-	CancellationFeeCredits    sql.NullInt64
-	DebitedCredits            int64
-}
-
-// Both charged clip kinds are read here: a generation and an owner's revision
-// request each reserve against an approved ceiling and settle against it.
-func (q *Queries) ClipAccountingForJob(ctx context.Context, arg ClipAccountingForJobParams) (ClipAccountingForJobRow, error) {
-	row := q.db.QueryRowContext(ctx, clipAccountingForJob, arg.UserID, arg.JobID)
-	var i ClipAccountingForJobRow
-	err := row.Scan(
-		&i.ApprovedMaxCredits,
-		&i.HoldCredits,
-		&i.SettledCredits,
-		&i.SettledAt,
-		&i.CancellationPolicyVersion,
-		&i.SettlementReason,
-		&i.ConfirmedChargeCredits,
-		&i.CancellationFeeCredits,
-		&i.DebitedCredits,
 	)
 	return i, err
 }

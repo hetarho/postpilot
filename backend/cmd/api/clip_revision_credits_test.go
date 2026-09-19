@@ -70,7 +70,7 @@ func TestClipRevisionReservesMetersAndSettlesLikeAGeneration(t *testing.T) {
 	if err != nil || j.Status != job.StatusDone {
 		t.Fatal(j, err)
 	}
-	a, err := h.ledger.ClipAccounting(t.Context(), "alice", id)
+	a, err := h.ledger.ReservationAccounting(t.Context(), "alice", id)
 	if err != nil || a == nil || !a.Settled {
 		t.Fatal("a charged revision left no settled hold", a, err)
 	}
@@ -109,7 +109,7 @@ func TestClipRevisionCancellationSettlesUnderItsPolicy(t *testing.T) {
 	}
 	// A cancelled revision settles exactly as a cancelled generation does; a
 	// settlement that refuses the outcome would leave the hold open forever.
-	a, err := h.ledger.ClipAccounting(t.Context(), "alice", id)
+	a, err := h.ledger.ReservationAccounting(t.Context(), "alice", id)
 	if err != nil || a == nil || !a.Settled {
 		t.Fatal("a cancelled revision left its hold unsettled", a, err)
 	}
