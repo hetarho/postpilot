@@ -55,14 +55,14 @@ func TestClipMeteringRequiresTheCompleteAdmittedExecutionPolicy(t *testing.T) {
 			if _, err = d.Writer.Exec("INSERT INTO clip_projects(id,user_id,title,ratio,target_duration_ms,created_at,updated_at) VALUES ('clip','alice','test','square',15000,?,?)", now, now); err != nil {
 				t.Fatal(err)
 			}
-			st := jobstore.New(d.Writer, d.Reader)
+			st := jobstore.New(d.Writer, d.Reader, deferredKindsForTest())
 			q := job.New(st, time.Millisecond)
 			q.Admit(clipMeterAdmission{})
-			id, err := q.Enqueue(ctx, job.NewJob{UserID: "alice", ClipProjectID: "clip", Kind: job.KindGenerateClip, ObserveModel: "p/o", WriteModel: "p/w"})
+			id, err := q.Enqueue(ctx, clipJob(job.NewJob{UserID: "alice", Kind: job.KindGenerateClip, ObserveModel: "p/o", WriteModel: "p/w"}, "clip"))
 			if err != nil {
 				t.Fatal(err)
 			}
-			if err = q.ActivateClip(ctx, "alice", id); err != nil {
+			if err = q.Activate(ctx, "alice", id); err != nil {
 				t.Fatal(err)
 			}
 			if _, err = st.PickNextQueued(ctx, time.Now()); err != nil {

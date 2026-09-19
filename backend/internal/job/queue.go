@@ -22,16 +22,21 @@ func (q *Queue) Enqueue(ctx context.Context, input NewJob) (string, error) {
 	if input.Kind == "" || input.UserID == "" {
 		return "", fmt.Errorf("enqueue job: kind and user are required")
 	}
-	if input.ClipProjectID != "" && !ClipKind(input.Kind) {
+	if input.Subject(subjectClipProject) != "" && !ClipKind(input.Kind) {
 		return "", ErrInvalidTarget
+	}
+	for _, s := range input.Subjects {
+		if !s.valid() {
+			return "", ErrInvalidTarget
+		}
 	}
 	if input.NonMetered != (input.Kind == KindRenderClip) {
 		return "", ErrInvalidTarget
 	}
-	if input.Kind == KindRenderClip && (input.ClipProjectID == "" || input.PostSlug != nil || input.VoiceID != "" || input.TargetLanguage != "" || input.ObserveModel != "" || input.WriteModel != "" || len(input.ExtraModels) > 0 || len(input.CallCounts) > 0 || len(input.PricingCalls) > 0) {
+	if input.Kind == KindRenderClip && (input.Subject(subjectClipProject) == "" || len(input.Subjects) != 1 || input.TargetLanguage != "" || input.ObserveModel != "" || input.WriteModel != "" || len(input.ExtraModels) > 0 || len(input.CallCounts) > 0 || len(input.PricingCalls) > 0) {
 		return "", ErrInvalidTarget
 	}
-	if input.Kind == KindGenerateClip && (input.ClipProjectID == "" || input.PostSlug != nil || input.VoiceID != "" || input.ObserveModel == "" || input.WriteModel == "") {
+	if input.Kind == KindGenerateClip && (input.Subject(subjectClipProject) == "" || len(input.Subjects) != 1 || input.ObserveModel == "" || input.WriteModel == "") {
 		return "", ErrInvalidTarget
 	}
 	if (input.Kind == KindGenerate || input.Kind == KindRevise) && input.TargetLanguage == "" {
@@ -52,7 +57,7 @@ func (q *Queue) Enqueue(ctx context.Context, input NewJob) (string, error) {
 	now := q.now()
 	found := Job{
 		CancellationPolicyVersion: input.CancellationPolicyVersion,
-		ID:                        q.newID(), Kind: input.Kind, UserID: input.UserID, PostSlug: input.PostSlug, VoiceID: input.VoiceID, ClipProjectID: input.ClipProjectID,
+		ID:                        q.newID(), Kind: input.Kind, UserID: input.UserID, Subjects: cloneSubjects(input.Subjects),
 		Status: StatusQueued, ObserveModel: input.ObserveModel, WriteModel: input.WriteModel,
 		TargetLanguage: input.TargetLanguage,
 		Payload:        append([]byte(nil), input.Payload...), CreatedAt: now, UpdatedAt: now,
@@ -106,27 +111,22 @@ func (q *Queue) releaseAdmission(ctx context.Context, jobID string) {
 	q.admitter.Release(releaseCtx, jobID)
 }
 
-// activeForInput checks every guard the row will be inserted under. Voice-owned work may
-// also point at a post, so it must satisfy both the post guard and the (voice, kind) guard.
+// activeForInput runs the guards the caller stated, in order, and stops at the first one
+// that finds active work. Which subject serializes which kind is the enqueueing context's
+// rule — voice-owned work states both its post guard and its (voice, kind) guard — so the
+// queue only walks the list. No guard at all means the unattached default.
 func (q *Queue) activeForInput(ctx context.Context, input NewJob) (*Job, error) {
-	if input.ClipProjectID != "" {
-		s, ok := q.store.(ClipStore)
-		if !ok {
+	if len(input.Guards) == 0 {
+		return q.store.ActiveUnattached(ctx, input.UserID, input.Kind)
+	}
+	for _, guard := range input.Guards {
+		if !guard.Subject.valid() {
 			return nil, ErrInvalidTarget
 		}
-		return s.ActiveForClip(ctx, input.UserID, input.ClipProjectID)
-	}
-	if input.PostSlug != nil {
-		active, err := q.store.ActiveForPostUser(ctx, *input.PostSlug, input.UserID)
+		active, err := q.store.ActiveFor(ctx, guard.Subject, guard.Filter)
 		if err != nil || active != nil {
 			return active, err
 		}
 	}
-	if input.VoiceID != "" && (input.PostSlug == nil || voiceOwnedKind(input.Kind)) {
-		return q.store.ActiveForVoiceKind(ctx, input.VoiceID, input.Kind)
-	}
-	if input.PostSlug != nil {
-		return nil, nil
-	}
-	return q.store.ActiveForUserKind(ctx, input.UserID, input.Kind)
+	return nil, nil
 }

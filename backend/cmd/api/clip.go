@@ -24,7 +24,7 @@ import (
 // store so a hold lands with the job row it guards.
 func clipTxPorts(ledger *usage.Service, registry *llm.Registry, plans *auth.Service) clipapp.Binder {
 	return func(tx *sql.Tx) clipapp.Ports {
-		ports := clipapp.Ports{Jobs: jobstore.NewTx(tx), Clips: clipstore.NewTx(tx)}
+		ports := clipapp.Ports{Jobs: jobstore.NewTx(tx, deferredDispatchKinds()), Clips: clipstore.NewTx(tx)}
 		if ledger != nil {
 			ports.Admission = jobAdmission{ledger: ledger.WithStore(usagestore.NewTx(tx)), registry: registry, plans: plans}
 		}
@@ -46,14 +46,14 @@ func newClipGeneration(ctx context.Context, cfg *config.Config, store *clipstore
 	if err != nil {
 		return nil, err
 	}
-	finisher := clipapp.NewFinisher(writer, bind, jobstore.New(writer, writer), store, nil)
+	finisher := clipapp.NewFinisher(writer, bind, jobstore.New(writer, writer, deferredDispatchKinds()), store, nil)
 	service := clipapp.NewGenerationService(store, projects, sources, bucket, media, planner, renderer, clipapp.NewJobs(queue), config.ClipGeneration(cfg), clipapp.GenerationDeps{
 		Finisher:   finisher,
 		Pricing:    clipapp.NewPricing(models.Registry, clipBudgets(aiConfig)),
 		Accounting: clipapp.NewAccounting(models.ledger),
 		Admission:  clipapp.NewModelAdmission(models.Registry, clipBudgets(aiConfig)),
 	})
-	if _, err = queue.SweepUnactivatedClips(ctx); err != nil {
+	if _, err = queue.SweepUnactivated(ctx); err != nil {
 		return nil, err
 	}
 	if err := finisher.Recover(ctx); err != nil {

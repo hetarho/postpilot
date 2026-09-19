@@ -10,6 +10,7 @@ import (
 	clipapp "github.com/postpilot/backend/internal/clip/app"
 
 	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/job"
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/usage"
 )
@@ -43,7 +44,7 @@ func startApproved(ctx context.Context, s *clipapp.GenerationService, user, id, 
 	return s.Start(ctx, user, id, batch, o, w, clip.QuoteApproval{CancellationPolicyVersion: clip.CancellationPolicyVersion, QuoteID: q.ID, MaxCredits: &q.Pricing.MaxCredits})
 }
 func (j generationJobs) Latest(ctx context.Context, user, id string) (*clip.ClipJob, error) {
-	r, err := j.q.LatestClipSnapshot(ctx, user, id)
+	r, err := j.q.LatestSnapshot(ctx, user, job.Subject{Dimension: clip.JobSubject, ID: id})
 	if err != nil || r == nil {
 		return nil, err
 	}
@@ -87,7 +88,7 @@ func (p *quotePricing) FreezeWork(ctx context.Context, o, w llm.ModelRef, count 
 	return pricing, err
 }
 func (j generationJobs) Snapshot(ctx context.Context, user, project, id string) (*clip.ClipJob, error) {
-	row, err := j.q.ClipJobSnapshot(ctx, user, project, id)
+	row, err := j.q.Snapshot(ctx, user, job.Subject{Dimension: clip.JobSubject, ID: project}, id)
 	if err != nil || row == nil {
 		return nil, err
 	}

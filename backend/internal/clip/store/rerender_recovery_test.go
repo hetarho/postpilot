@@ -38,7 +38,7 @@ func TestRenderRejectsRevisionRaceBeforeLinkWithoutConsumingSources(t *testing.T
 	if err != nil || b.State != "ready" || b.JobID != "" {
 		t.Fatal(b, err)
 	}
-	j, err := h.queue.LatestForClip(ctx, "alice", p.ID)
+	j, err := h.queue.LatestFor(ctx, job.Subject{Dimension: clip.JobSubject, ID: p.ID}, job.Filter{UserID: "alice"})
 	if err != nil || j.Status != job.StatusFailed {
 		t.Fatal(j, err)
 	}

@@ -73,15 +73,16 @@
 | T282 | the agent maps proto at one adapter and keeps preflight out of main | ARCH | T008 | todo |
 | T283 | SmartEditor scripts are files with a DOM test; naver is plan vs driver | ARCH | T282 | todo |
 | T284 | the agent generates only the protos it uses and drops the survey harness | ARCH | T008 T281 | todo |
-| T285 | job addresses a subject instead of naming each product | ARCH | T270 | todo |
 | T286 | the ledger settles by approved ceiling, not by product kind | ARCH | T272 | todo |
 
 ## next
-- implement-task T285 (job subject addressing) opens the money-path chain T285 → T272 (clip allowance into clip/app) → T286 (ledger de-named); other roots meanwhile: BE T269 T276 T278 T280, FE T258 T259 T260 T263 T264 T266 T268; follow-up to log as a task: constructor treatment for voice/experiment/guideline/modelcatalog/billingstore setters and moving jobAdmission/meteredRegistry out of package main
+- implement-task T272 (clip allowance into clip/app; dep T285 done) then T286 (ledger de-named); other roots meanwhile: BE T269 T276 T278 T280, FE T258 T259 T260 T263 T264 T266 T268; follow-up to log as a task: constructor treatment for voice/experiment/guideline/modelcatalog/billingstore setters and moving jobAdmission/meteredRegistry out of package main
 - the clip `release-smoke` stage is red at HEAD on this host: 9 of 28 modes end in `no result` (generation ends on a plan since T255, harness still expects a Result) — needs a fix task (review-code clip-release-smoke or update the harness)
 - agent tasks T279 T282 T283 T284 wait for T008; T008 belongs to another session and T177 remains blocked
 - post-quality-and-related-links remains open ideation, awaiting conversion when ready
 ## log
+- 260919 T285 done; job addresses work by Subject{Dimension,ID} (Guards stated by the caller, 7 store lookups collapsed, experiment id derived+indexed); ARCH-26 and ARCH-28 green. Deviation: the subject_kind/subject_id pair was dropped as unreadable without behaviour change — see the task result
+- 260919 T285 claimed (sub)
 - 260919 create-task T272 re-split done: T285 (subject addressing, VIRTUAL generated columns) + T272 (allowance into clip/app) + T286 (ledger de-named, charge math frozen); T275 dep→T285, T277 dep→T286
 - 260919 create-task T272 re-split start (owner decided: generated-column bridge, allowance into clip/app, usage de-named with frozen charge math)
 - 260919 T274 done; Run is a 44-line sequence over generationRun stages (accept/prepare/analyze/write/layout/save/finish) with stage unit tests, no bare clock left in clip/app; ARCH-26 green, release smoke unchanged (pre-existing 9 `no result`)
@@ -100,5 +101,3 @@
 - 260919 review-code arch-260919 findings written (30, 1×P1 F13 cmd/api sagas; FE 12 · BE 10 · agent/proto 8); awaiting triage
 - 260919 review-code arch-260919 start
 - 260918 T257 done; approval quotes the whole target before narration and actual styled captions afterward, in ko/en seconds with no sequence ceiling; all local gates pass.
-- 260918 T257 claimed (rnd)
-- 260918 T256 done; narration names each caption style, defaults without extra calls, preserves owner/legacy choices and reports out-of-set fallbacks; all local and image gates pass.

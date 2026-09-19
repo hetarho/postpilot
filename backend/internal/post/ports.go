@@ -6,6 +6,9 @@ import (
 	"time"
 )
 
+// JobSubject is what the post context calls itself when it addresses the job queue.
+const JobSubject = "post"
+
 // ErrObjectNotFound is what an ObjectStore reports for a key that is not there. It is
 // the store's job to translate whatever its SDK raises into this.
 var ErrObjectNotFound = errors.New("object not found")

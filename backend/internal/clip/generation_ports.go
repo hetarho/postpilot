@@ -8,6 +8,11 @@ import (
 	"github.com/postpilot/backend/internal/llm"
 )
 
+// JobSubject is what the clip context calls itself when it addresses the job queue: a
+// clip job belongs to a project, and the queue matches on the pair without knowing what
+// a project is.
+const JobSubject = "clip_project"
+
 // One budget per call the generation makes: the observation, then the two
 // writing calls the assembly contract names (CLIP-135).
 type CompletionBudgets struct{ Observe, Flow, Narration int }

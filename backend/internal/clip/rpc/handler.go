@@ -355,7 +355,7 @@ func (h *Handler) ListClipProjects(ctx context.Context, req *connect.Request[v1.
 		// post list does for its own active job; `editing`, `accounting` and `latest_attempt`
 		// stay detail-only.
 		if h.jobs != nil {
-			j, err := h.jobs.LatestForClip(ctx, user, v.ID)
+			j, err := h.jobs.LatestFor(ctx, job.Subject{Dimension: clip.JobSubject, ID: v.ID}, job.Filter{UserID: user})
 			if err != nil {
 				return nil, toConnectError(err)
 			}
@@ -395,7 +395,7 @@ func (h *Handler) GetClipProject(ctx context.Context, req *connect.Request[v1.Ge
 	// poller then shows a finished clip with nothing to play.
 	var latest *job.JobSummary
 	if h.jobs != nil {
-		latest, err = h.jobs.LatestForClip(ctx, user, req.Msg.Id)
+		latest, err = h.jobs.LatestFor(ctx, job.Subject{Dimension: clip.JobSubject, ID: req.Msg.Id}, job.Filter{UserID: user})
 		if err != nil {
 			return nil, toConnectError(err)
 		}
@@ -432,7 +432,7 @@ func (h *Handler) GetClipProject(ctx context.Context, req *connect.Request[v1.Ge
 			out.AttemptInspection = attemptInspectionProto(j.ID, j.Stage, c, readErr)
 		}
 		if j != nil {
-			snapshot, err := h.jobs.LatestClipSnapshot(ctx, user, value.ID)
+			snapshot, err := h.jobs.LatestSnapshot(ctx, user, job.Subject{Dimension: clip.JobSubject, ID: value.ID})
 			if err != nil {
 				return nil, toConnectError(err)
 			}

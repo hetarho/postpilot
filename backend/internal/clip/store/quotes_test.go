@@ -209,7 +209,7 @@ func TestClipQuoteRequiresPolicyEchoWithoutChangingLegacyFrozenJobs(t *testing.T
 		}
 	}
 	assertNoQuoteWork(t, h)
-	if j, err := h.queue.LatestForClip(t.Context(), "alice", h.project.ID); err != nil || j != nil {
+	if j, err := h.queue.LatestFor(t.Context(), job.Subject{Dimension: clip.JobSubject, ID: h.project.ID}, job.Filter{UserID: "alice"}); err != nil || j != nil {
 		t.Fatal("unsupported client created a job", j, err)
 	}
 	legacy := q.Pricing

@@ -34,17 +34,13 @@ func (a experimentVoices) ActiveVoice(ctx context.Context, userID, voiceID strin
 type experimentJobs struct{ queue *job.Queue }
 
 func (a experimentJobs) EnqueueExperiment(ctx context.Context, request experiment.JobRequest) (string, error) {
-	var postSlug *string
-	if request.PostSlug != "" {
-		value := request.PostSlug
-		postSlug = &value
-	}
 	targetLanguage := ""
 	if request.TargetLanguage != nil {
 		targetLanguage = request.TargetLanguage.String()
 	}
+	subjects, guards := postVoiceWork(job.KindModelExperiment, request.UserID, request.PostSlug, request.VoiceID)
 	id, err := a.queue.Enqueue(ctx, job.NewJob{
-		Kind: job.KindModelExperiment, UserID: request.UserID, PostSlug: postSlug, VoiceID: request.VoiceID,
+		Kind: job.KindModelExperiment, UserID: request.UserID, Subjects: subjects, Guards: guards,
 		TargetLanguage: targetLanguage, Payload: []byte(request.ExperimentID), ExtraModels: request.Models,
 	})
 	var active *job.ErrAlreadyInProgress
@@ -58,7 +54,7 @@ func (a experimentJobs) EnqueueExperiment(ctx context.Context, request experimen
 }
 
 func (a experimentJobs) HasRunnableExperiment(ctx context.Context, experimentID string) (bool, error) {
-	return a.queue.HasRunnableExperiment(ctx, experimentID)
+	return a.queue.HasActiveFor(ctx, job.Subject{Dimension: experiment.JobSubject, ID: experimentID}, job.Filter{})
 }
 
 // postExperiments reaches the experiment context from post and generation, both of which

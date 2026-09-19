@@ -34,4 +34,5 @@ type GenerationJob struct {
 	DispatchReady             int64
 	CancelRequestedAt         sql.NullString
 	CancellationPolicyVersion int64
+	ExperimentID              sql.NullString
 }

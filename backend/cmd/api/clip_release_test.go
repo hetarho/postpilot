@@ -446,7 +446,7 @@ func newReleaseHarness(t *testing.T, mode string, stress bool, clocks ...func() 
 	sources := clipapp.NewSourceService(st, objects, config.ClipSourceLimits(6*time.Hour, 10*time.Minute), clocks...)
 	bind := clipTxPorts(ledger, registry, authSvc)
 	projects := clipapp.NewService(st, config.ClipLimits(), sources, clipapp.NewFinalizer(d.Writer, bind, st, config.ClipRender(cfg), nil))
-	js := jobstore.New(d.Writer, d.Reader)
+	js := jobstore.New(d.Writer, d.Reader, deferredKindsForTest())
 	q := job.New(js, 10*time.Millisecond)
 	admission := &releaseAdmission{jobAdmission: jobAdmission{ledger: ledger, registry: registry, plans: authSvc}, metrics: metrics}
 	q.Admit(admission)
@@ -461,14 +461,14 @@ func newReleaseHarness(t *testing.T, mode string, stress bool, clocks ...func() 
 			if h.generationHandler != nil {
 				return h.generationHandler(ctx, j, p)
 			}
-			return g.Run(ctx, j.UserID, j.ID, j.ClipProjectID, j.Payload, p)
+			return g.Run(ctx, j.UserID, j.ID, j.Subject(clip.JobSubject), j.Payload, p)
 		}))
 	}
 	q.Register(job.KindRenderClip, metered(func(ctx context.Context, j job.Job, p job.Progress) error {
 		if h.renderHandler != nil {
 			return h.renderHandler(ctx, j, p)
 		}
-		return g.RunRender(ctx, j.UserID, j.ID, j.ClipProjectID, j.Payload, p)
+		return g.RunRender(ctx, j.UserID, j.ID, j.Subject(clip.JobSubject), j.Payload, p)
 	}))
 	for _, kind := range []string{job.KindGenerateClip, job.KindRenderClip} {
 		q.OnTerminal(kind, func(ctx context.Context, j job.Job, at time.Time) error {
@@ -752,7 +752,7 @@ func (h *releaseHarness) exercise(mode string) {
 	workerDone := make(chan struct{})
 	if strings.HasPrefix(mode, "restart ") {
 		h.queue.Register(job.KindGenerateClip, metered(func(ctx context.Context, j job.Job, p job.Progress) error {
-			return h.service.Run(ctx, j.UserID, j.ID, j.ClipProjectID, j.Payload, func(stage string, done, total int) {
+			return h.service.Run(ctx, j.UserID, j.ID, j.Subject(clip.JobSubject), j.Payload, func(stage string, done, total int) {
 				p(stage, done, total)
 				if mode == "restart prepare" && stage == "prepare" && done == 1 || mode == "restart hold" && stage == "analyze" && done == 0 || mode == "restart partial" && stage == "analyze" && done == 1 || mode == "restart save" && stage == "save" {
 					cancel()
@@ -793,7 +793,7 @@ func (h *releaseHarness) exercise(mode string) {
 			}
 			// New worker instance reads only durable state, has no old allowance or
 			// media references and never installs a handler capable of AI replay.
-			recovery := job.New(jobstore.New(h.d.Writer, h.d.Reader), time.Millisecond)
+			recovery := job.New(jobstore.New(h.d.Writer, h.d.Reader, deferredKindsForTest()), time.Millisecond)
 			recovery.Admit(h.admission)
 			if _, e = recovery.SweepRunning(ctx); e != nil {
 				t.Fatal(e)

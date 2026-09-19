@@ -7,6 +7,9 @@ import (
 	"github.com/postpilot/backend/internal/llm"
 )
 
+// JobSubject is what the voice context calls itself when it addresses the job queue.
+const JobSubject = "voice"
+
 // Store is persistence behavior owned by the voice context. SQL rows stop in store/. Every
 // profile query names the voice AND the account: the voice partitions the aggregate, the
 // account keeps a crafted same-shape id from another user out.

@@ -78,7 +78,7 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 	cfg, handle, registry := p.cfg, p.db, p.registry
 	c := &contexts{platform: p}
 
-	c.jobs = job.New(jobstore.New(handle.Writer, handle.Reader), config.WorkerPollInterval)
+	c.jobs = job.New(jobstore.New(handle.Writer, handle.Reader, deferredDispatchKinds()), config.WorkerPollInterval)
 	if n, err := c.jobs.SweepRunning(ctx); err != nil {
 		return nil, fmt.Errorf("running job sweep: %w", err)
 	} else if n > 0 {
@@ -159,7 +159,7 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 	p.catalog.SetReasoningSpend(catalogReasoningSpend{ledger: c.ledger, providerID: registry.ProviderID()})
 	c.jobs.Admit(jobAdmission{ledger: c.ledger, registry: registry, plans: c.auth})
 	c.clipPorts = clipTxPorts(c.ledger, registry, c.auth)
-	c.jobs.GuardClips(clipapp.NewGuard(handle.Writer, c.clipPorts, jobstore.New(handle.Writer, handle.Writer)))
+	c.jobs.GuardClips(clipapp.NewGuard(handle.Writer, c.clipPorts, jobstore.New(handle.Writer, handle.Writer, deferredDispatchKinds())))
 
 	// After the admitter is attached, not with the other boot sweeps: an open hold can only
 	// be settled through it, and a sweep that ran first would silently find nothing.

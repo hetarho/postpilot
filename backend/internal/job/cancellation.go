@@ -16,7 +16,7 @@ type ClipCancellationStore interface {
 
 // CancelClipJob first commits the request, then signals its local handler. Queued
 // work has no handler, so its conditional request write is also the terminal write.
-func (q *Queue) CancelClipJob(ctx context.Context, user, project, id string) (*JobSummary, error) {
+func (q *Queue) CancelClipJob(ctx context.Context, user string, subject Subject, id string) (*JobSummary, error) {
 	s, ok := q.store.(ClipCancellationStore)
 	if !ok {
 		return nil, ErrCancellationUnavailable
@@ -25,7 +25,7 @@ func (q *Queue) CancelClipJob(ctx context.Context, user, project, id string) (*J
 	if err != nil {
 		return nil, err
 	}
-	if j.UserID != user || j.ClipProjectID != project || project == "" || !ClipKind(j.Kind) {
+	if j.UserID != user || !subject.valid() || j.Subject(subject.Dimension) != subject.ID || !ClipKind(j.Kind) {
 		return nil, ErrNotFound
 	}
 	if Terminal(j.Status) {
@@ -34,7 +34,7 @@ func (q *Queue) CancelClipJob(ctx context.Context, user, project, id string) (*J
 	if j.Kind != KindRenderClip && (j.CancellationPolicyVersion != 1 || q.clipGuard == nil) {
 		return nil, ErrCancellationUnavailable
 	}
-	requestErr := s.RequestClipCancellation(ctx, user, project, id, q.now())
+	requestErr := s.RequestClipCancellation(ctx, user, subject.ID, id, q.now())
 	// A lost response is not proof of rollback. Resolve the durable request before
 	// signalling or reporting an accepted request to the caller.
 	readCtx, stop := context.WithTimeout(context.WithoutCancel(ctx), finishTimeout)

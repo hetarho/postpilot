@@ -51,7 +51,7 @@ func (f *fakeJobs) Finish(_ context.Context, id, status string, _ *job.Failure, 
 	f.finished = append(f.finished, id)
 	return nil
 }
-func (f *fakeJobs) ActiveForClip(context.Context, string, string) (*job.Job, error) {
+func (f *fakeJobs) ActiveFor(context.Context, job.Subject, job.Filter) (*job.Job, error) {
 	return f.active, nil
 }
 

@@ -77,7 +77,7 @@ func newHarness(t *testing.T) *harness {
 			t.Fatalf("insert post %s: %v", row.slug, err)
 		}
 	}
-	store := jobstore.New(handle.Writer, handle.Reader)
+	store := jobstore.New(handle.Writer, handle.Reader, deferredKindsForTest())
 	return &harness{queue: job.New(store, 10*time.Millisecond), store: store, handle: handle}
 }
 
@@ -101,9 +101,8 @@ func postSlug(value string) *string { return &value }
 func TestEnqueuePersistsFrozenTargetLanguageAndRejectsUnknownTag(t *testing.T) {
 	h := newHarness(t)
 	ctx := context.Background()
-	id, err := h.queue.Enqueue(ctx, job.NewJob{
-		Kind: job.KindGenerate, UserID: "alice", PostSlug: postSlug("post-a"), TargetLanguage: "en",
-	})
+	id, err := h.queue.Enqueue(ctx, attach(job.NewJob{
+		Kind: job.KindGenerate, UserID: "alice", TargetLanguage: "en"}, "post-a", ""))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,14 +113,12 @@ func TestEnqueuePersistsFrozenTargetLanguageAndRejectsUnknownTag(t *testing.T) {
 	if found.TargetLanguage != "en" {
 		t.Fatalf("target language = %q, want en", found.TargetLanguage)
 	}
-	if _, err := h.queue.Enqueue(ctx, job.NewJob{
-		Kind: job.KindGenerate, UserID: "alice", PostSlug: postSlug("post-b"), TargetLanguage: "fr",
-	}); err == nil {
+	if _, err := h.queue.Enqueue(ctx, attach(job.NewJob{
+		Kind: job.KindGenerate, UserID: "alice", TargetLanguage: "fr"}, "post-b", "")); err == nil {
 		t.Fatal("unknown target language was accepted")
 	}
-	if _, err := h.queue.Enqueue(ctx, job.NewJob{
-		Kind: job.KindRevise, UserID: "alice", PostSlug: postSlug("post-b"),
-	}); err == nil {
+	if _, err := h.queue.Enqueue(ctx, attach(job.NewJob{
+		Kind: job.KindRevise, UserID: "alice"}, "post-b", "")); err == nil {
 		t.Fatal("missing revision content language was accepted")
 	}
 }
@@ -147,9 +144,8 @@ func TestEnqueueReturnsBeforeHandlerAndWorkerPublishesProgress(t *testing.T) {
 	}
 	enqueued := make(chan result, 1)
 	go func() {
-		id, err := h.queue.Enqueue(context.Background(), job.NewJob{
-			Kind: "fake", UserID: "alice", PostSlug: postSlug("post-a"),
-		})
+		id, err := h.queue.Enqueue(context.Background(), attach(job.NewJob{
+			Kind: "fake", UserID: "alice"}, "post-a", ""))
 		enqueued <- result{id: id, err: err}
 	}()
 
@@ -195,11 +191,11 @@ func TestEnqueueReturnsBeforeHandlerAndWorkerPublishesProgress(t *testing.T) {
 func TestEnqueueGuardsPostAndUserKind(t *testing.T) {
 	h := newHarness(t)
 	ctx := context.Background()
-	first, err := h.queue.Enqueue(ctx, job.NewJob{Kind: job.KindGenerate, UserID: "alice", PostSlug: postSlug("post-a"), TargetLanguage: "ko"})
+	first, err := h.queue.Enqueue(ctx, attach(job.NewJob{Kind: job.KindGenerate, UserID: "alice", TargetLanguage: "ko"}, "post-a", ""))
 	if err != nil {
 		t.Fatalf("first post job: %v", err)
 	}
-	_, err = h.queue.Enqueue(ctx, job.NewJob{Kind: job.KindRevise, UserID: "alice", PostSlug: postSlug("post-a"), TargetLanguage: "ko"})
+	_, err = h.queue.Enqueue(ctx, attach(job.NewJob{Kind: job.KindRevise, UserID: "alice", TargetLanguage: "ko"}, "post-a", ""))
 	var active *job.ErrAlreadyInProgress
 	if !errors.As(err, &active) || active.ActiveID != first {
 		t.Fatalf("second post job = %v, want active %s", err, first)
@@ -221,38 +217,38 @@ func TestEnqueueGuardsPostAndUserKind(t *testing.T) {
 func TestVoiceOwnedJobsAreGuardedPerVoice(t *testing.T) {
 	h := newHarness(t)
 	ctx := context.Background()
-	first, err := h.queue.Enqueue(ctx, job.NewJob{Kind: job.KindAnalyzeVoice, UserID: "alice", VoiceID: "voice-alice"})
+	first, err := h.queue.Enqueue(ctx, attach(job.NewJob{Kind: job.KindAnalyzeVoice, UserID: "alice"}, "", "voice-alice"))
 	if err != nil {
 		t.Fatalf("first voice analysis: %v", err)
 	}
-	second, err := h.queue.Enqueue(ctx, job.NewJob{Kind: job.KindAnalyzeVoice, UserID: "alice", VoiceID: "voice-alice-2"})
+	second, err := h.queue.Enqueue(ctx, attach(job.NewJob{Kind: job.KindAnalyzeVoice, UserID: "alice"}, "", "voice-alice-2"))
 	if err != nil {
 		t.Fatalf("second voice analysis: %v", err)
 	}
 	var active *job.ErrAlreadyInProgress
-	if _, err := h.queue.Enqueue(ctx, job.NewJob{Kind: job.KindAnalyzeVoice, UserID: "alice", VoiceID: "voice-alice"}); !errors.As(err, &active) || active.ActiveID != first {
+	if _, err := h.queue.Enqueue(ctx, attach(job.NewJob{Kind: job.KindAnalyzeVoice, UserID: "alice"}, "", "voice-alice")); !errors.As(err, &active) || active.ActiveID != first {
 		t.Fatalf("same voice analysis = %v, want active %s", err, first)
 	}
-	if _, err := h.queue.Enqueue(ctx, job.NewJob{Kind: job.KindLearnVoice, UserID: "alice", VoiceID: "voice-alice"}); err != nil {
+	if _, err := h.queue.Enqueue(ctx, attach(job.NewJob{Kind: job.KindLearnVoice, UserID: "alice"}, "", "voice-alice")); err != nil {
 		t.Fatalf("another kind for the same voice: %v", err)
 	}
 	found, err := h.queue.Get(ctx, second, "alice")
-	if err != nil || found.VoiceID != "voice-alice-2" {
+	if err != nil || found.Subject(voiceSubject) != "voice-alice-2" {
 		t.Fatalf("job projection = %+v err=%v", found, err)
 	}
-	if summary, err := h.queue.ActiveForVoiceKind(ctx, "voice-alice-2", job.KindAnalyzeVoice); err != nil || summary == nil || summary.ID != second {
+	if summary, err := h.queue.ActiveFor(ctx, job.Subject{Dimension: voiceSubject, ID: "voice-alice-2"}, job.Filter{Kind: job.KindAnalyzeVoice}); err != nil || summary == nil || summary.ID != second {
 		t.Fatalf("active for voice = %+v err=%v", summary, err)
 	}
 	for voiceID, want := range map[string]bool{"voice-alice": true, "voice-alice-2": true, "voice-bob": false} {
-		if busy, err := h.queue.HasActiveForVoice(ctx, voiceID); err != nil || busy != want {
+		if busy, err := h.queue.HasActiveFor(ctx, job.Subject{Dimension: voiceSubject, ID: voiceID}, job.Filter{}); err != nil || busy != want {
 			t.Fatalf("HasActiveForVoice(%s) = %v err=%v, want %v", voiceID, busy, err, want)
 		}
 	}
 	// A post-backed job frozen to a voice also holds that voice.
-	if _, err := h.queue.Enqueue(ctx, job.NewJob{Kind: job.KindGenerate, UserID: "bob", PostSlug: postSlug("post-bob"), VoiceID: "voice-bob", TargetLanguage: "ko"}); err != nil {
+	if _, err := h.queue.Enqueue(ctx, attach(job.NewJob{Kind: job.KindGenerate, UserID: "bob", TargetLanguage: "ko"}, "post-bob", "voice-bob")); err != nil {
 		t.Fatal(err)
 	}
-	if busy, _ := h.queue.HasActiveForVoice(ctx, "voice-bob"); !busy {
+	if busy, _ := h.queue.HasActiveFor(ctx, job.Subject{Dimension: voiceSubject, ID: "voice-bob"}, job.Filter{}); !busy {
 		t.Fatal("post-backed job did not hold its voice")
 	}
 	// The (voice, kind) index closes the race the precheck cannot: a direct insert races.
@@ -271,21 +267,18 @@ func TestPostBackedVoiceOwnedJobsAreAlsoGuardedPerVoice(t *testing.T) {
 		"2026-08-30T00:00:00Z", "2026-08-30T00:00:00Z"); err != nil {
 		t.Fatalf("insert second-voice post: %v", err)
 	}
-	first, err := h.queue.Enqueue(ctx, job.NewJob{
-		Kind: job.KindLearnVoice, UserID: "alice", VoiceID: "voice-alice", PostSlug: postSlug("post-a"),
-	})
+	first, err := h.queue.Enqueue(ctx, attach(job.NewJob{
+		Kind: job.KindLearnVoice, UserID: "alice"}, "post-a", "voice-alice"))
 	if err != nil {
 		t.Fatalf("first learning job: %v", err)
 	}
 	var active *job.ErrAlreadyInProgress
-	if _, err := h.queue.Enqueue(ctx, job.NewJob{
-		Kind: job.KindLearnVoice, UserID: "alice", VoiceID: "voice-alice", PostSlug: postSlug("post-b"),
-	}); !errors.As(err, &active) || active.ActiveID != first {
+	if _, err := h.queue.Enqueue(ctx, attach(job.NewJob{
+		Kind: job.KindLearnVoice, UserID: "alice"}, "post-b", "voice-alice")); !errors.As(err, &active) || active.ActiveID != first {
 		t.Fatalf("same voice learning on another post = %v, want active %s", err, first)
 	}
-	if _, err := h.queue.Enqueue(ctx, job.NewJob{
-		Kind: job.KindLearnVoice, UserID: "alice", VoiceID: "voice-alice-2", PostSlug: postSlug("post-c"),
-	}); err != nil {
+	if _, err := h.queue.Enqueue(ctx, attach(job.NewJob{
+		Kind: job.KindLearnVoice, UserID: "alice"}, "post-c", "voice-alice-2")); err != nil {
 		t.Fatalf("another voice learning on another post: %v", err)
 	}
 	if _, err := h.handle.Writer.ExecContext(ctx,
@@ -294,8 +287,9 @@ func TestPostBackedVoiceOwnedJobsAreAlsoGuardedPerVoice(t *testing.T) {
 		t.Fatal("the database accepted a second post-backed learning job for one voice")
 	}
 	if err := h.store.Insert(ctx, job.Job{
-		ID: "store-dup", Kind: job.KindLearnVoice, UserID: "alice", VoiceID: "voice-alice",
-		PostSlug: postSlug("post-b"), CreatedAt: time.Now(), UpdatedAt: time.Now(),
+		ID: "store-dup", Kind: job.KindLearnVoice, UserID: "alice",
+		Subjects:  []job.Subject{{Dimension: postSubject, ID: "post-b"}, {Dimension: voiceSubject, ID: "voice-alice"}},
+		CreatedAt: time.Now(), UpdatedAt: time.Now(),
 	}); !errors.Is(err, job.ErrActiveConflict) {
 		t.Fatalf("store duplicate error = %v, want ErrActiveConflict", err)
 	}
@@ -303,9 +297,8 @@ func TestPostBackedVoiceOwnedJobsAreAlsoGuardedPerVoice(t *testing.T) {
 
 func TestEnqueueRejectsPostOwnedByAnotherUser(t *testing.T) {
 	h := newHarness(t)
-	_, err := h.queue.Enqueue(context.Background(), job.NewJob{
-		Kind: job.KindGenerate, UserID: "alice", PostSlug: postSlug("post-bob"), TargetLanguage: "ko",
-	})
+	_, err := h.queue.Enqueue(context.Background(), attach(job.NewJob{
+		Kind: job.KindGenerate, UserID: "alice", TargetLanguage: "ko"}, "post-bob", ""))
 	if !errors.Is(err, job.ErrInvalidTarget) {
 		t.Fatalf("foreign post enqueue = %v, want ErrInvalidTarget", err)
 	}
@@ -329,7 +322,8 @@ func TestStoreMapsInactiveVoiceTrigger(t *testing.T) {
 		t.Fatal(err)
 	}
 	err := h.store.Insert(ctx, job.Job{
-		ID: "deleted-voice-job", Kind: job.KindAnalyzeVoice, UserID: "alice", VoiceID: "voice-alice-2",
+		ID: "deleted-voice-job", Kind: job.KindAnalyzeVoice, UserID: "alice",
+		Subjects:  []job.Subject{{Dimension: voiceSubject, ID: "voice-alice-2"}},
 		CreatedAt: time.Now(), UpdatedAt: time.Now(),
 	})
 	if !errors.Is(err, job.ErrVoiceUnavailable) {
@@ -345,15 +339,13 @@ func TestPanicFailsOneJobAndWorkerContinues(t *testing.T) {
 		}
 		return nil
 	})
-	first, err := h.queue.Enqueue(context.Background(), job.NewJob{
-		Kind: "sometimes-panic", UserID: "alice", PostSlug: postSlug("post-a"), Payload: []byte("panic"),
-	})
+	first, err := h.queue.Enqueue(context.Background(), attach(job.NewJob{
+		Kind: "sometimes-panic", UserID: "alice", Payload: []byte("panic")}, "post-a", ""))
 	if err != nil {
 		t.Fatal(err)
 	}
-	second, err := h.queue.Enqueue(context.Background(), job.NewJob{
-		Kind: "sometimes-panic", UserID: "alice", PostSlug: postSlug("post-b"),
-	})
+	second, err := h.queue.Enqueue(context.Background(), attach(job.NewJob{
+		Kind: "sometimes-panic", UserID: "alice"}, "post-b", ""))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -377,9 +369,8 @@ func TestProviderMessageIsTechnicalDetailOnly(t *testing.T) {
 	h.queue.Register("quota", func(context.Context, job.Job, job.Progress) error {
 		return &llm.ProviderError{Provider: "stub", Status: 429, Message: "daily free quota exhausted", Kind: llm.ErrRateLimited}
 	})
-	id, err := h.queue.Enqueue(context.Background(), job.NewJob{
-		Kind: "quota", UserID: "alice", PostSlug: postSlug("post-a"),
-	})
+	id, err := h.queue.Enqueue(context.Background(), attach(job.NewJob{
+		Kind: "quota", UserID: "alice"}, "post-a", ""))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -404,9 +395,8 @@ func TestOutputTruncationGetsStableReason(t *testing.T) {
 	h.queue.Register("truncated", func(context.Context, job.Job, job.Progress) error {
 		return fmt.Errorf("write: %w", llm.ErrOutputTruncated)
 	})
-	id, err := h.queue.Enqueue(context.Background(), job.NewJob{
-		Kind: "truncated", UserID: "alice", PostSlug: postSlug("post-a"),
-	})
+	id, err := h.queue.Enqueue(context.Background(), attach(job.NewJob{
+		Kind: "truncated", UserID: "alice"}, "post-a", ""))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -423,9 +413,8 @@ func TestOutputTruncationGetsStableReason(t *testing.T) {
 
 func TestSweepAndOwnership(t *testing.T) {
 	h := newHarness(t)
-	id, err := h.queue.Enqueue(context.Background(), job.NewJob{
-		Kind: "fake", UserID: "alice", PostSlug: postSlug("post-a"),
-	})
+	id, err := h.queue.Enqueue(context.Background(), attach(job.NewJob{
+		Kind: "fake", UserID: "alice"}, "post-a", ""))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -461,7 +450,7 @@ func TestBootSweepHoldsQueuedPersonalizationOnly(t *testing.T) {
 		}
 		ids = append(ids, id)
 	}
-	ordinary, err := h.queue.Enqueue(ctx, job.NewJob{Kind: "ordinary", UserID: "alice", PostSlug: postSlug("post-a")})
+	ordinary, err := h.queue.Enqueue(ctx, attach(job.NewJob{Kind: "ordinary", UserID: "alice"}, "post-a", ""))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -517,9 +506,8 @@ func TestShutdownLeavesRunningForNextSweep(t *testing.T) {
 		<-ctx.Done()
 		return ctx.Err()
 	})
-	id, err := h.queue.Enqueue(context.Background(), job.NewJob{
-		Kind: "shutdown", UserID: "alice", PostSlug: postSlug("post-a"),
-	})
+	id, err := h.queue.Enqueue(context.Background(), attach(job.NewJob{
+		Kind: "shutdown", UserID: "alice"}, "post-a", ""))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -551,9 +539,8 @@ func TestShutdownAfterSuccessfulHandlerPersistsDone(t *testing.T) {
 		<-ctx.Done()
 		return nil
 	})
-	id, err := h.queue.Enqueue(context.Background(), job.NewJob{
-		Kind: "shutdown-after-success", UserID: "alice", PostSlug: postSlug("post-a"),
-	})
+	id, err := h.queue.Enqueue(context.Background(), attach(job.NewJob{
+		Kind: "shutdown-after-success", UserID: "alice"}, "post-a", ""))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -576,9 +563,8 @@ func TestOrdinaryHandlerErrorIsNonEmpty(t *testing.T) {
 	h.queue.Register("error", func(context.Context, job.Job, job.Progress) error {
 		return fmt.Errorf("사진을 읽지 못했어요")
 	})
-	id, _ := h.queue.Enqueue(context.Background(), job.NewJob{
-		Kind: "error", UserID: "alice", PostSlug: postSlug("post-a"),
-	})
+	id, _ := h.queue.Enqueue(context.Background(), attach(job.NewJob{
+		Kind: "error", UserID: "alice"}, "post-a", ""))
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go h.queue.Run(ctx)
@@ -592,9 +578,8 @@ func TestOrdinaryHandlerErrorIsNonEmpty(t *testing.T) {
 
 func TestMissingHandlerGetsOwnedReason(t *testing.T) {
 	h := newHarness(t)
-	id, err := h.queue.Enqueue(context.Background(), job.NewJob{
-		Kind: "not-registered", UserID: "alice", PostSlug: postSlug("post-a"),
-	})
+	id, err := h.queue.Enqueue(context.Background(), attach(job.NewJob{
+		Kind: "not-registered", UserID: "alice"}, "post-a", ""))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -610,9 +595,8 @@ func TestMissingHandlerGetsOwnedReason(t *testing.T) {
 func TestStoreMapsLegacyFailureAndRejectsMalformedParams(t *testing.T) {
 	t.Run("legacy raw error", func(t *testing.T) {
 		h := newHarness(t)
-		id, err := h.queue.Enqueue(context.Background(), job.NewJob{
-			Kind: "legacy", UserID: "alice", PostSlug: postSlug("post-a"),
-		})
+		id, err := h.queue.Enqueue(context.Background(), attach(job.NewJob{
+			Kind: "legacy", UserID: "alice"}, "post-a", ""))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -631,9 +615,8 @@ func TestStoreMapsLegacyFailureAndRejectsMalformedParams(t *testing.T) {
 
 	t.Run("non-object params", func(t *testing.T) {
 		h := newHarness(t)
-		id, err := h.queue.Enqueue(context.Background(), job.NewJob{
-			Kind: "malformed", UserID: "alice", PostSlug: postSlug("post-a"),
-		})
+		id, err := h.queue.Enqueue(context.Background(), attach(job.NewJob{
+			Kind: "malformed", UserID: "alice"}, "post-a", ""))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -694,9 +677,8 @@ func TestStoreMapsLegacyFailureAndRejectsMalformedParams(t *testing.T) {
 	for name, test := range malformed {
 		t.Run(name, func(t *testing.T) {
 			h := newHarness(t)
-			id, err := h.queue.Enqueue(context.Background(), job.NewJob{
-				Kind: "malformed", UserID: "alice", PostSlug: postSlug("post-a"),
-			})
+			id, err := h.queue.Enqueue(context.Background(), attach(job.NewJob{
+				Kind: "malformed", UserID: "alice"}, "post-a", ""))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -714,9 +696,8 @@ func TestStoreMapsLegacyFailureAndRejectsMalformedParams(t *testing.T) {
 
 	t.Run("invalid reason rejected before write", func(t *testing.T) {
 		h := newHarness(t)
-		id, err := h.queue.Enqueue(context.Background(), job.NewJob{
-			Kind: "invalid-write", UserID: "alice", PostSlug: postSlug("post-a"),
-		})
+		id, err := h.queue.Enqueue(context.Background(), attach(job.NewJob{
+			Kind: "invalid-write", UserID: "alice"}, "post-a", ""))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -732,9 +713,8 @@ func TestStoreMapsLegacyFailureAndRejectsMalformedParams(t *testing.T) {
 
 func TestSuccessfulFinishClearsAllFailureColumnsAtomically(t *testing.T) {
 	h := newHarness(t)
-	id, err := h.queue.Enqueue(context.Background(), job.NewJob{
-		Kind: "clear", UserID: "alice", PostSlug: postSlug("post-a"),
-	})
+	id, err := h.queue.Enqueue(context.Background(), attach(job.NewJob{
+		Kind: "clear", UserID: "alice"}, "post-a", ""))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -766,9 +746,8 @@ func TestSuccessfulFinishClearsAllFailureColumnsAtomically(t *testing.T) {
 
 func TestStoreRejectsFailureThatDoesNotMatchTerminalStatus(t *testing.T) {
 	h := newHarness(t)
-	id, err := h.queue.Enqueue(context.Background(), job.NewJob{
-		Kind: "terminal-invariant", UserID: "alice", PostSlug: postSlug("post-a"),
-	})
+	id, err := h.queue.Enqueue(context.Background(), attach(job.NewJob{
+		Kind: "terminal-invariant", UserID: "alice"}, "post-a", ""))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -791,7 +770,7 @@ func TestStoreRejectsFailureThatDoesNotMatchTerminalStatus(t *testing.T) {
 func TestFinishCannotClaimSuccessAfterAnotherTerminalWrite(t *testing.T) {
 	h := newHarness(t)
 	ctx := context.Background()
-	id, err := h.queue.Enqueue(ctx, job.NewJob{Kind: "terminal-race", UserID: "alice", PostSlug: postSlug("post-a")})
+	id, err := h.queue.Enqueue(ctx, attach(job.NewJob{Kind: "terminal-race", UserID: "alice"}, "post-a", ""))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -866,16 +845,15 @@ func TestExplicitPricingCallsCollapseOnlyWhenRefAndBudgetAgree(t *testing.T) {
 	admitter := &recordingAdmitter{}
 	h.queue.Admit(admitter)
 
-	if _, err := h.queue.Enqueue(context.Background(), job.NewJob{
-		Kind: job.KindGenerate, UserID: "alice", PostSlug: postSlug("post-a"), VoiceID: "voice-alice",
+	if _, err := h.queue.Enqueue(context.Background(), attach(job.NewJob{
+		Kind: job.KindGenerate, UserID: "alice",
 		TargetLanguage: "ko",
 		PricingCalls: []job.PlannedCall{
 			{Ref: "openrouter/one", Count: 2, CompletionTokens: 1024},
 			{Ref: "openrouter/one", Count: 1, CompletionTokens: 8192},
 			{Ref: "openrouter/one", Count: 1, CompletionTokens: 1024},
 			{Ref: "openrouter/unused", Count: 0, CompletionTokens: 1024},
-		},
-	}); err != nil {
+		}}, "post-a", "voice-alice")); err != nil {
 		t.Fatalf("enqueue: %v", err)
 	}
 	if got, want := callBudgetSummary(admitter.starts[0].Calls), "openrouter/one x3 @1024,openrouter/one x1 @8192"; got != want {
@@ -891,10 +869,9 @@ func TestOneRefAcrossTwoStagesIsPricedOnce(t *testing.T) {
 	admitter := &recordingAdmitter{}
 	h.queue.Admit(admitter)
 
-	if _, err := h.queue.Enqueue(context.Background(), job.NewJob{
-		Kind: job.KindGenerate, UserID: "alice", PostSlug: postSlug("post-a"), VoiceID: "voice-alice",
-		ObserveModel: "openrouter/one", WriteModel: "openrouter/one", TargetLanguage: "ko",
-	}); err != nil {
+	if _, err := h.queue.Enqueue(context.Background(), attach(job.NewJob{
+		Kind: job.KindGenerate, UserID: "alice",
+		ObserveModel: "openrouter/one", WriteModel: "openrouter/one", TargetLanguage: "ko"}, "post-a", "voice-alice")); err != nil {
 		t.Fatalf("enqueue: %v", err)
 	}
 	if got, want := callSummary(admitter.starts[0].Calls), "openrouter/one x2"; got != want {
@@ -909,11 +886,10 @@ func TestAStatedCountIsNotMultipliedPerSlot(t *testing.T) {
 	admitter := &recordingAdmitter{}
 	h.queue.Admit(admitter)
 
-	if _, err := h.queue.Enqueue(context.Background(), job.NewJob{
-		Kind: job.KindGenerate, UserID: "alice", PostSlug: postSlug("post-a"), VoiceID: "voice-alice",
+	if _, err := h.queue.Enqueue(context.Background(), attach(job.NewJob{
+		Kind: job.KindGenerate, UserID: "alice",
 		ObserveModel: "openrouter/one", WriteModel: "openrouter/one", TargetLanguage: "ko",
-		CallCounts: map[string]int{"openrouter/one": 6},
-	}); err != nil {
+		CallCounts: map[string]int{"openrouter/one": 6}}, "post-a", "voice-alice")); err != nil {
 		t.Fatalf("enqueue: %v", err)
 	}
 	if got, want := callSummary(admitter.starts[0].Calls), "openrouter/one x6"; got != want {
@@ -928,11 +904,10 @@ func TestStatedCallCountsReachTheGate(t *testing.T) {
 	admitter := &recordingAdmitter{}
 	h.queue.Admit(admitter)
 
-	if _, err := h.queue.Enqueue(context.Background(), job.NewJob{
-		Kind: job.KindGenerate, UserID: "alice", PostSlug: postSlug("post-a"), VoiceID: "voice-alice",
+	if _, err := h.queue.Enqueue(context.Background(), attach(job.NewJob{
+		Kind: job.KindGenerate, UserID: "alice",
 		ObserveModel: "openrouter/vision", WriteModel: "openrouter/writer", TargetLanguage: "ko",
-		CallCounts: map[string]int{"openrouter/vision": 8},
-	}); err != nil {
+		CallCounts: map[string]int{"openrouter/vision": 8}}, "post-a", "voice-alice")); err != nil {
 		t.Fatalf("enqueue: %v", err)
 	}
 	if got, want := callSummary(admitter.starts[0].Calls), "openrouter/vision x8,openrouter/writer x1"; got != want {
@@ -948,11 +923,10 @@ func TestAZeroStatedCountHoldsNoCallForThatModel(t *testing.T) {
 	admitter := &recordingAdmitter{}
 	h.queue.Admit(admitter)
 
-	if _, err := h.queue.Enqueue(context.Background(), job.NewJob{
-		Kind: job.KindGenerate, UserID: "alice", PostSlug: postSlug("post-a"), VoiceID: "voice-alice",
+	if _, err := h.queue.Enqueue(context.Background(), attach(job.NewJob{
+		Kind: job.KindGenerate, UserID: "alice",
 		ObserveModel: "openrouter/vision", WriteModel: "openrouter/writer", TargetLanguage: "ko",
-		CallCounts: map[string]int{"openrouter/vision": 0},
-	}); err != nil {
+		CallCounts: map[string]int{"openrouter/vision": 0}}, "post-a", "voice-alice")); err != nil {
 		t.Fatalf("enqueue: %v", err)
 	}
 	if got, want := callSummary(admitter.starts[0].Calls), "openrouter/writer x1"; got != want {
@@ -967,11 +941,10 @@ func TestAZeroObserveCountKeepsTheWriteCallOfASharedModel(t *testing.T) {
 	admitter := &recordingAdmitter{}
 	h.queue.Admit(admitter)
 
-	if _, err := h.queue.Enqueue(context.Background(), job.NewJob{
-		Kind: job.KindGenerate, UserID: "alice", PostSlug: postSlug("post-a"), VoiceID: "voice-alice",
+	if _, err := h.queue.Enqueue(context.Background(), attach(job.NewJob{
+		Kind: job.KindGenerate, UserID: "alice",
 		ObserveModel: "openrouter/one", WriteModel: "openrouter/one", TargetLanguage: "ko",
-		CallCounts: map[string]int{"openrouter/one": 1},
-	}); err != nil {
+		CallCounts: map[string]int{"openrouter/one": 1}}, "post-a", "voice-alice")); err != nil {
 		t.Fatalf("enqueue: %v", err)
 	}
 	if got, want := callSummary(admitter.starts[0].Calls), "openrouter/one x1"; got != want {
@@ -987,17 +960,16 @@ func TestRefusedAdmissionCreatesNoJob(t *testing.T) {
 	admitter := &recordingAdmitter{refuse: refusal}
 	h.queue.Admit(admitter)
 
-	id, err := h.queue.Enqueue(context.Background(), job.NewJob{
-		Kind: job.KindGenerate, UserID: "alice", PostSlug: postSlug("post-a"), VoiceID: "voice-alice",
-		WriteModel: "openrouter/free", TargetLanguage: "ko",
-	})
+	id, err := h.queue.Enqueue(context.Background(), attach(job.NewJob{
+		Kind: job.KindGenerate, UserID: "alice",
+		WriteModel: "openrouter/free", TargetLanguage: "ko"}, "post-a", "voice-alice"))
 	if !errors.Is(err, refusal) {
 		t.Fatalf("error = %v, want the gate's own refusal unwrapped", err)
 	}
 	if id != "" {
 		t.Errorf("job id = %q, want none", id)
 	}
-	active, err := h.store.ActiveForPostUser(context.Background(), "post-a", "alice")
+	active, err := h.store.ActiveFor(context.Background(), job.Subject{Dimension: postSubject, ID: "post-a"}, job.Filter{UserID: "alice"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1013,10 +985,9 @@ func TestOneComparisonIsOneAdmissionOverBothCandidates(t *testing.T) {
 	admitter := &recordingAdmitter{}
 	h.queue.Admit(admitter)
 
-	id, err := h.queue.Enqueue(context.Background(), job.NewJob{
-		Kind: job.KindModelExperiment, UserID: "alice", PostSlug: postSlug("post-a"), VoiceID: "voice-alice",
-		ExtraModels: []string{"openrouter/a", "openrouter/b"},
-	})
+	id, err := h.queue.Enqueue(context.Background(), attach(job.NewJob{
+		Kind: job.KindModelExperiment, UserID: "alice",
+		ExtraModels: []string{"openrouter/a", "openrouter/b"}}, "post-a", "voice-alice"))
 	if err != nil {
 		t.Fatalf("enqueue: %v", err)
 	}
@@ -1038,10 +1009,9 @@ func TestAdmissionGatesBothStageModels(t *testing.T) {
 	admitter := &recordingAdmitter{}
 	h.queue.Admit(admitter)
 
-	if _, err := h.queue.Enqueue(context.Background(), job.NewJob{
-		Kind: job.KindGenerate, UserID: "alice", PostSlug: postSlug("post-a"), VoiceID: "voice-alice",
-		ObserveModel: "openrouter/vision", WriteModel: "openrouter/writer", TargetLanguage: "ko",
-	}); err != nil {
+	if _, err := h.queue.Enqueue(context.Background(), attach(job.NewJob{
+		Kind: job.KindGenerate, UserID: "alice",
+		ObserveModel: "openrouter/vision", WriteModel: "openrouter/writer", TargetLanguage: "ko"}, "post-a", "voice-alice")); err != nil {
 		t.Fatalf("enqueue: %v", err)
 	}
 	if got, want := callSummary(admitter.starts[0].Calls), "openrouter/vision x1,openrouter/writer x1"; got != want {
@@ -1051,10 +1021,9 @@ func TestAdmissionGatesBothStageModels(t *testing.T) {
 	// A second start on the same post is refused by the existing active-job guard, which runs
 	// BEFORE admission — so a duplicate request must not consume a start either.
 	before := len(admitter.starts)
-	if _, err := h.queue.Enqueue(context.Background(), job.NewJob{
-		Kind: job.KindGenerate, UserID: "alice", PostSlug: postSlug("post-a"), VoiceID: "voice-alice",
-		WriteModel: "openrouter/writer", TargetLanguage: "ko",
-	}); err == nil {
+	if _, err := h.queue.Enqueue(context.Background(), attach(job.NewJob{
+		Kind: job.KindGenerate, UserID: "alice",
+		WriteModel: "openrouter/writer", TargetLanguage: "ko"}, "post-a", "voice-alice")); err == nil {
 		t.Fatal("a second start on a busy post must be refused")
 	}
 	if len(admitter.starts) != before {

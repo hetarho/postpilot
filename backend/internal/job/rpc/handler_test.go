@@ -43,16 +43,15 @@ func newHandler(t *testing.T) (*jobrpc.Handler, *job.Queue) {
 		"INSERT INTO posts (slug, user_id, voice_id, created_at, updated_at) VALUES ('post-a', 'alice', 'voice-alice', ?, ?)", now, now); err != nil {
 		t.Fatal(err)
 	}
-	queue := job.New(jobstore.New(handle.Writer, handle.Reader), time.Second)
+	queue := job.New(jobstore.New(handle.Writer, handle.Reader, deferredKindsForTest()), time.Second)
 	return jobrpc.NewHandler(queue), queue
 }
 
 func TestGetGenerationMapsOwnershipAndMissing(t *testing.T) {
 	handler, queue := newHandler(t)
 	slug := "post-a"
-	id, err := queue.Enqueue(context.Background(), job.NewJob{
-		Kind: job.KindGenerate, UserID: "alice", PostSlug: &slug, TargetLanguage: "en",
-	})
+	id, err := queue.Enqueue(context.Background(), attach(job.NewJob{
+		Kind: job.KindGenerate, UserID: "alice", TargetLanguage: "en"}, slug, ""))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -33,7 +33,7 @@ func NewFinisher(writer *sql.DB, bind Binder, jobs JobReader, clips ClipStore, n
 
 func (f Finisher) resultCommitted(ctx context.Context, c clip.AttemptResult) bool {
 	j, err := f.jobs.GetByID(ctx, c.JobID)
-	if err != nil || j.Status != job.StatusDone || j.UserID != c.UserID || j.ClipProjectID != c.ProjectID {
+	if err != nil || j.Status != job.StatusDone || j.UserID != c.UserID || j.Subject(clip.JobSubject) != c.ProjectID {
 		return false
 	}
 	p, err := f.clips.GetProject(ctx, c.UserID, c.ProjectID)
@@ -55,7 +55,7 @@ func (f Finisher) Complete(ctx context.Context, c clip.AttemptResult) error {
 	if err != nil {
 		return err
 	}
-	if j.UserID != c.UserID || j.ClipProjectID != c.ProjectID || !job.ClipKind(j.Kind) {
+	if j.UserID != c.UserID || j.Subject(clip.JobSubject) != c.ProjectID || !job.ClipKind(j.Kind) {
 		return clip.ErrNotFound
 	}
 	if f.resultCommitted(cleanup, c) {
@@ -83,7 +83,7 @@ func (f Finisher) Complete(ctx context.Context, c clip.AttemptResult) error {
 		if j.CancelRequestedAt != nil {
 			return context.Canceled
 		}
-		if j.UserID != c.UserID || j.ClipProjectID != c.ProjectID || j.Status != job.StatusRunning {
+		if j.UserID != c.UserID || j.Subject(clip.JobSubject) != c.ProjectID || j.Status != job.StatusRunning {
 			return clip.ErrBusy
 		}
 		candidate := c
@@ -93,7 +93,7 @@ func (f Finisher) Complete(ctx context.Context, c clip.AttemptResult) error {
 				return err
 			}
 		}
-		if candidate.UserID != j.UserID || candidate.ProjectID != j.ClipProjectID || candidate.Result.Key != c.Result.Key || (j.Kind == job.KindGenerateClip) != (candidate.EditPlan != "") {
+		if candidate.UserID != j.UserID || candidate.ProjectID != j.Subject(clip.JobSubject) || candidate.Result.Key != c.Result.Key || (j.Kind == job.KindGenerateClip) != (candidate.EditPlan != "") {
 			return clip.ErrInvalid
 		}
 		if err := p.Clips.ApplyAttemptResult(ctx, candidate); err != nil {

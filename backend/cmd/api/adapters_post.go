@@ -185,14 +185,11 @@ func (a postPublications) LiveForPost(ctx context.Context, userID, slug string, 
 }
 
 func (a postJobFinder) ActiveForPost(ctx context.Context, slug string) (*post.ActiveJob, error) {
-	found, err := a.queue.ActiveForPost(ctx, slug)
+	found, err := a.queue.ActiveFor(ctx, job.Subject{Dimension: post.JobSubject, ID: slug}, job.Filter{})
 	if err != nil || found == nil {
 		return nil, err
 	}
-	postSlug := ""
-	if found.PostSlug != nil {
-		postSlug = *found.PostSlug
-	}
+	postSlug := found.Subject(post.JobSubject)
 	return &post.ActiveJob{
 		ID: found.ID, Kind: found.Kind, Status: found.Status, Stage: found.Stage,
 		ProgressDone: found.ProgressDone, ProgressTotal: found.ProgressTotal,

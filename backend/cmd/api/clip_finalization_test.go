@@ -169,7 +169,7 @@ func TestClipFinalizationPreservesMatchingResultAndFencesEveryMutation(t *testin
 	if _, err := h.generation.Quote(t.Context(), "alice", "clip", h.batch.ID, "p/o", "p/w"); !errors.Is(err, clip.ErrFinalized) {
 		t.Fatal(err)
 	}
-	if _, err := h.queue.Enqueue(t.Context(), job.NewJob{UserID: "alice", ClipProjectID: "clip", Kind: job.KindRenderClip, NonMetered: true}); !errors.Is(err, job.ErrInvalidTarget) {
+	if _, err := h.queue.Enqueue(t.Context(), clipJob(job.NewJob{UserID: "alice", Kind: job.KindRenderClip, NonMetered: true}, "clip")); !errors.Is(err, job.ErrInvalidTarget) {
 		t.Fatal("enqueue bypassed finalization", err)
 	}
 	again, err := h.service.FinalizeProject(t.Context(), h.request())
@@ -260,7 +260,7 @@ func TestClipFinalizationRejectsForeignStaleInvalidAndActiveRequests(t *testing.
 			default:
 				id := h.enqueue(t, job.KindRenderClip)
 				if mode != "queued" {
-					if err := h.queue.ActivateClip(t.Context(), "alice", id); err != nil {
+					if err := h.queue.Activate(t.Context(), "alice", id); err != nil {
 						t.Fatal(err)
 					}
 					if _, err := h.jobs.PickNextQueued(t.Context(), time.Now()); err != nil {
@@ -268,7 +268,7 @@ func TestClipFinalizationRejectsForeignStaleInvalidAndActiveRequests(t *testing.
 					}
 				}
 				if mode == "cancelling" {
-					if _, err := h.queue.CancelClipJob(t.Context(), "alice", "clip", id); err != nil {
+					if _, err := h.queue.CancelClipJob(t.Context(), "alice", job.Subject{Dimension: clip.JobSubject, ID: "clip"}, id); err != nil {
 						t.Fatal(err)
 					}
 				}
@@ -361,7 +361,7 @@ func TestClipFinalizationCompetesWithEditStartAndDelete(t *testing.T) {
 						}
 						_, err = h.clips.SaveCorrection(t.Context(), "alice", "clip", h.project.EditPlanRevision, raw)
 					case "start":
-						_, err = h.queue.Enqueue(t.Context(), job.NewJob{UserID: "alice", ClipProjectID: "clip", Kind: job.KindRenderClip, NonMetered: true})
+						_, err = h.queue.Enqueue(t.Context(), clipJob(job.NewJob{UserID: "alice", Kind: job.KindRenderClip, NonMetered: true}, "clip"))
 					case "delete":
 						err = h.service.DeleteProject(t.Context(), "alice", "clip")
 					}
@@ -383,7 +383,7 @@ func TestClipFinalizationCompetesWithEditStartAndDelete(t *testing.T) {
 					if p.EditPlanRevision != h.project.EditPlanRevision || p.Result.ID != h.project.Result.ID {
 						t.Fatal("confirmed a changed result", p)
 					}
-					active, err := h.jobs.ActiveForClip(t.Context(), "alice", "clip")
+					active, err := h.jobs.ActiveFor(t.Context(), job.Subject{Dimension: clip.JobSubject, ID: "clip"}, job.Filter{UserID: "alice"})
 					if err != nil || active != nil {
 						t.Fatal("finalized with active work", active, err)
 					}

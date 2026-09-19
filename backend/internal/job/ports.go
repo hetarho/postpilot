@@ -71,11 +71,15 @@ type Store interface {
 	FailQueued(ctx context.Context, id, userID string, failure Failure, now time.Time) (bool, error)
 	SweepRunning(ctx context.Context, failure Failure, now time.Time) (int64, error)
 	SweepQueuedPersonalization(ctx context.Context, failure Failure, now time.Time) (int64, error)
-	ActiveForPost(ctx context.Context, slug string) (*Job, error)
-	ActiveForPostUser(ctx context.Context, slug, userID string) (*Job, error)
-	ActiveForUserKind(ctx context.Context, userID, kind string) (*Job, error)
-	ActiveForVoiceKind(ctx context.Context, voiceID, kind string) (*Job, error)
-	ActiveForVoice(ctx context.Context, voiceID string) (*Job, error)
-	ActiveModelExperiment(ctx context.Context, experimentID string) (*Job, error)
+	// ActiveFor and LatestFor address a job by the subject it belongs to; the store maps
+	// the dimension to its column and refuses one it does not know.
+	ActiveFor(ctx context.Context, subject Subject, filter Filter) (*Job, error)
+	LatestFor(ctx context.Context, subject Subject, filter Filter) (*Job, error)
+	// ActiveUnattached guards work that belongs to no subject: one per user and kind.
+	ActiveUnattached(ctx context.Context, userID, kind string) (*Job, error)
+	// Activate releases a deferred-dispatch job; SweepUnactivated fails the ones boot finds
+	// still waiting. Which kinds defer is the store's construction-time answer.
+	Activate(ctx context.Context, userID, id string) (bool, error)
+	SweepUnactivated(ctx context.Context, failure Failure) (int64, error)
 	GetByID(ctx context.Context, id string) (Job, error)
 }

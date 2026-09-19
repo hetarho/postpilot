@@ -102,9 +102,11 @@ WHERE voice_id = ? AND status IN ('queued', 'running')
 ORDER BY created_at DESC, id DESC
 LIMIT 1;
 
--- name: ActiveModelExperiment :one
+-- name: ActiveForExperiment :one
+-- The experiment is the one subject with no column of its own: `experiment_id` is the
+-- generated column over the payload, indexed, so this is a lookup rather than a scan.
 SELECT * FROM generation_jobs
-WHERE kind = 'model_experiment' AND payload = ? AND status IN ('queued', 'running')
+WHERE experiment_id = ? AND status IN ('queued', 'running')
 ORDER BY created_at DESC, id DESC
 LIMIT 1;
 
@@ -115,10 +117,12 @@ SELECT * FROM generation_jobs WHERE id = ?;
 SELECT * FROM generation_jobs WHERE user_id=? AND clip_project_id=? AND status IN ('queued','running') LIMIT 1;
 -- name: LatestForClip :one
 SELECT * FROM generation_jobs WHERE user_id=? AND clip_project_id=? ORDER BY created_at DESC,id DESC LIMIT 1;
--- name: ActivateClip :execrows
-UPDATE generation_jobs SET dispatch_ready=1 WHERE user_id=? AND id=? AND kind IN ('generate_clip','render_clip','revise_clip') AND status='queued' AND dispatch_ready=0 AND cancel_requested_at IS NULL;
--- name: SweepUnactivatedClips :execrows
-UPDATE generation_jobs SET status='failed', error_reason=?, error_params=?, technical_detail=?, finished_at=?, updated_at=? WHERE kind IN ('generate_clip','render_clip','revise_clip') AND status='queued' AND dispatch_ready=0 AND cancel_requested_at IS NULL;
+-- name: Activate :execrows
+-- Which kinds defer their dispatch is the composition root's answer, passed in as a JSON
+-- array, so the queue's SQL names no product.
+UPDATE generation_jobs SET dispatch_ready=1 WHERE user_id=? AND id=? AND kind IN (SELECT value FROM json_each(sqlc.arg(kinds))) AND status='queued' AND dispatch_ready=0 AND cancel_requested_at IS NULL;
+-- name: SweepUnactivated :execrows
+UPDATE generation_jobs SET status='failed', error_reason=?, error_params=?, technical_detail=?, finished_at=?, updated_at=? WHERE kind IN (SELECT value FROM json_each(sqlc.arg(kinds))) AND status='queued' AND dispatch_ready=0 AND cancel_requested_at IS NULL;
 
 -- name: RequestClipCancellation :execrows
 UPDATE generation_jobs SET cancel_requested_at=sqlc.arg(now), updated_at=sqlc.arg(now),

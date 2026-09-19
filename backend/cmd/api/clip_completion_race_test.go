@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/job"
 )
 
@@ -21,14 +22,14 @@ func TestClipResultCommitRacingCancellationKeepsOneOutcome(t *testing.T) {
 			<-compete
 			return h.finisher.Complete(ctx, candidate)
 		})
-		if err := h.queue.ActivateClip(t.Context(), "alice", id); err != nil {
+		if err := h.queue.Activate(t.Context(), "alice", id); err != nil {
 			t.Fatal(err)
 		}
 		awaitCancellationSignal(t, ready)
 		cancelled := make(chan error, 1)
 		go func() {
 			<-compete
-			_, err := h.queue.CancelClipJob(t.Context(), "alice", "clip", id)
+			_, err := h.queue.CancelClipJob(t.Context(), "alice", job.Subject{Dimension: clip.JobSubject, ID: "clip"}, id)
 			cancelled <- err
 		}()
 		close(compete)

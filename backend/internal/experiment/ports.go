@@ -5,6 +5,11 @@ import (
 	"time"
 )
 
+// JobSubject is what the experiment context calls itself when it addresses the job
+// queue. An experiment carries no column of its own: its id is the job payload, which
+// the schema surfaces as a generated column for this lookup.
+const JobSubject = "model_experiment"
+
 type Store interface {
 	Create(ctx context.Context, found Experiment) error
 	Delete(ctx context.Context, id string) error

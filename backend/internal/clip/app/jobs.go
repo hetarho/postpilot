@@ -32,7 +32,14 @@ func (a Jobs) Enqueue(ctx context.Context, s clip.GenerationStart) (string, erro
 	if s.Quote != nil {
 		policy = s.Quote.Pricing.CancellationPolicyVersion
 	}
-	id, err := a.queue.Enqueue(ctx, job.NewJob{CancellationPolicyVersion: policy, Kind: kind, NonMetered: s.RenderOnly, UserID: s.UserID, ClipProjectID: s.ProjectID, ObserveModel: s.Observe, WriteModel: s.Write, Payload: s.Payload})
+	subject := job.Subject{Dimension: clip.JobSubject, ID: s.ProjectID}
+	id, err := a.queue.Enqueue(ctx, job.NewJob{
+		CancellationPolicyVersion: policy, Kind: kind, NonMetered: s.RenderOnly, UserID: s.UserID,
+		Subjects: []job.Subject{subject},
+		// One project runs one job at a time, whoever asked: the project is the lock.
+		Guards:       []job.Guard{{Subject: subject, Filter: job.Filter{UserID: s.UserID}}},
+		ObserveModel: s.Observe, WriteModel: s.Write, Payload: s.Payload,
+	})
 	if errors.Is(err, job.ErrActiveConflict) {
 		return "", clip.ErrBusy
 	}
@@ -43,7 +50,7 @@ func (a Jobs) Enqueue(ctx context.Context, s clip.GenerationStart) (string, erro
 }
 
 func (a Jobs) Activate(ctx context.Context, user, id string) error {
-	return a.queue.ActivateClip(ctx, user, id)
+	return a.queue.Activate(ctx, user, id)
 }
 
 func (a Jobs) FailQueued(ctx context.Context, user, id string) (bool, error) {
@@ -51,7 +58,7 @@ func (a Jobs) FailQueued(ctx context.Context, user, id string) (bool, error) {
 }
 
 func (a Jobs) Active(ctx context.Context, user, id string) (*clip.ClipJob, error) {
-	j, err := a.queue.ActiveForClip(ctx, user, id)
+	j, err := a.queue.ActiveFor(ctx, job.Subject{Dimension: clip.JobSubject, ID: id}, job.Filter{UserID: user})
 	return summary(j), err
 }
 
@@ -64,7 +71,7 @@ func (a Jobs) Get(ctx context.Context, user, id string) (*clip.ClipJob, error) {
 }
 
 func (a Jobs) Snapshot(ctx context.Context, user, project, id string) (*clip.ClipJob, error) {
-	j, err := a.queue.ClipJobSnapshot(ctx, user, project, id)
+	j, err := a.queue.Snapshot(ctx, user, job.Subject{Dimension: clip.JobSubject, ID: project}, id)
 	if errors.Is(err, job.ErrNotFound) {
 		return nil, clip.ErrNotFound
 	}
@@ -72,7 +79,7 @@ func (a Jobs) Snapshot(ctx context.Context, user, project, id string) (*clip.Cli
 }
 
 func (a Jobs) Latest(ctx context.Context, user, id string) (*clip.ClipJob, error) {
-	j, err := a.queue.LatestClipSnapshot(ctx, user, id)
+	j, err := a.queue.LatestSnapshot(ctx, user, job.Subject{Dimension: clip.JobSubject, ID: id})
 	return snapshot(j), err
 }
 

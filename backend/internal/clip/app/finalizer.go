@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/job"
 )
 
 // Finalizer is the clip.ProjectFinalizer port: confirming a result fences
@@ -42,7 +43,7 @@ func (f Finalizer) Finalize(ctx context.Context, req clip.FinalizationRequest) (
 			result = found
 			return nil
 		}
-		active, err := p.Jobs.ActiveForClip(ctx, req.UserID, req.ProjectID)
+		active, err := p.Jobs.ActiveFor(ctx, job.Subject{Dimension: clip.JobSubject, ID: req.ProjectID}, job.Filter{UserID: req.UserID})
 		if err != nil {
 			return err
 		}

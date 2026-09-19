@@ -11,7 +11,7 @@ import (
 )
 
 func runningJob(kind string) job.Job {
-	return job.Job{ID: "job", Kind: kind, UserID: "alice", ClipProjectID: "clip", Status: job.StatusRunning, Stage: "render"}
+	return job.Job{ID: "job", Kind: kind, UserID: "alice", Subjects: []job.Subject{{Dimension: clip.JobSubject, ID: "clip"}}, Status: job.StatusRunning, Stage: "render"}
 }
 func oldProject() clip.Project {
 	return clip.Project{ID: "clip", UserID: "alice", EditPlan: "old-plan", EditPlanRevision: 1, Result: &clip.Result{Key: "clip-results/alice/clip/old.mp4"}}

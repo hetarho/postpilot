@@ -54,7 +54,7 @@ func TestGenerationActivationCompensationNeverDeletesRunningInputs(t *testing.T)
 					t.Fatal("activation failure hidden")
 				}
 				h.assertClean(t)
-				latest, err := h.queue.LatestForClip(context.Background(), "alice", h.project.ID)
+				latest, err := h.queue.LatestFor(context.Background(), job.Subject{Dimension: clip.JobSubject, ID: h.project.ID}, job.Filter{UserID: "alice"})
 				if err != nil || latest == nil || latest.Status != "failed" {
 					t.Fatal(latest, err)
 				}
@@ -78,7 +78,7 @@ func TestGenerationLinkFailureLeavesReadyBatchRetryable(t *testing.T) {
 	if err != nil || b.State != "ready" || b.JobID != "" {
 		t.Fatal(b, err)
 	}
-	j, err := h.queue.LatestForClip(context.Background(), "alice", h.project.ID)
+	j, err := h.queue.LatestFor(context.Background(), job.Subject{Dimension: clip.JobSubject, ID: h.project.ID}, job.Filter{UserID: "alice"})
 	if err != nil || j.Status != "failed" || len(h.admitter.calls) != 0 {
 		t.Fatal(j, err)
 	}
@@ -100,7 +100,7 @@ func TestGenerationCanceledOrMalformedRunStillCleansLease(t *testing.T) {
 			stop()
 			payload = j.Payload
 		}
-		if err = h.service.Run(ctx, "alice", j.ID, j.ClipProjectID, payload, func(string, int, int) {}); err == nil {
+		if err = h.service.Run(ctx, "alice", j.ID, j.Subject(clip.JobSubject), payload, func(string, int, int) {}); err == nil {
 			t.Fatal("failure hidden")
 		}
 		h.assertClean(t)

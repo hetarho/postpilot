@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/job"
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/usage"
@@ -59,7 +60,7 @@ func TestClipRevisionReservesMetersAndSettlesLikeAGeneration(t *testing.T) {
 		close(metered)
 		return nil
 	})
-	if err := h.queue.ActivateClip(t.Context(), "alice", id); err != nil {
+	if err := h.queue.Activate(t.Context(), "alice", id); err != nil {
 		t.Fatal(err)
 	}
 	awaitCancellationSignal(t, metered)
@@ -93,11 +94,11 @@ func TestClipRevisionCancellationSettlesUnderItsPolicy(t *testing.T) {
 		<-ctx.Done()
 		return ctx.Err()
 	})
-	if err := h.queue.ActivateClip(t.Context(), "alice", id); err != nil {
+	if err := h.queue.Activate(t.Context(), "alice", id); err != nil {
 		t.Fatal(err)
 	}
 	awaitCancellationSignal(t, reserved)
-	if _, err := h.queue.CancelClipJob(t.Context(), "alice", "clip", id); err != nil {
+	if _, err := h.queue.CancelClipJob(t.Context(), "alice", job.Subject{Dimension: clip.JobSubject, ID: "clip"}, id); err != nil {
 		t.Fatal(err)
 	}
 	awaitCancellationSignal(t, terminal)

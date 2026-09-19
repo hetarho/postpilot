@@ -843,7 +843,7 @@ func TestDeletingLastSampleDuringAnalysisLeavesProfileUntouched(t *testing.T) {
 type queueJobs struct{ queue *job.Queue }
 
 func (a queueJobs) Enqueue(ctx context.Context, request voice.AnalysisJobRequest) (string, error) {
-	id, err := a.queue.Enqueue(ctx, job.NewJob{Kind: job.KindAnalyzeVoice, UserID: request.UserID, VoiceID: request.VoiceID, WriteModel: request.WriteModel})
+	id, err := a.queue.Enqueue(ctx, attach(job.NewJob{Kind: job.KindAnalyzeVoice, UserID: request.UserID, WriteModel: request.WriteModel}, "", request.VoiceID))
 	var active *job.ErrAlreadyInProgress
 	if errors.As(err, &active) {
 		return "", &voice.JobAlreadyInProgressError{ActiveID: active.ActiveID}
@@ -852,7 +852,7 @@ func (a queueJobs) Enqueue(ctx context.Context, request voice.AnalysisJobRequest
 }
 
 func (a queueJobs) ActiveForVoiceKind(ctx context.Context, voiceID, kind string) (*voice.ActiveJob, error) {
-	found, err := a.queue.ActiveForVoiceKind(ctx, voiceID, kind)
+	found, err := a.queue.ActiveFor(ctx, job.Subject{Dimension: voice.JobSubject, ID: voiceID}, job.Filter{Kind: kind})
 	if err != nil || found == nil {
 		return nil, err
 	}
@@ -860,7 +860,7 @@ func (a queueJobs) ActiveForVoiceKind(ctx context.Context, voiceID, kind string)
 }
 
 func (a queueJobs) HasActiveForVoice(ctx context.Context, voiceID string) (bool, error) {
-	return a.queue.HasActiveForVoice(ctx, voiceID)
+	return a.queue.HasActiveFor(ctx, job.Subject{Dimension: voice.JobSubject, ID: voiceID}, job.Filter{})
 }
 
 func TestAnalyzeHandlerFailureBecomesFailedJob(t *testing.T) {
@@ -868,15 +868,14 @@ func TestAnalyzeHandlerFailureBecomesFailedJob(t *testing.T) {
 	alice := h.voice("alice")
 	models := h.models
 	models.response = "## 문장 길이\n짧음"
-	queue := job.New(jobstore.New(h.db.Writer, h.db.Reader), 5*time.Millisecond)
+	queue := job.New(jobstore.New(h.db.Writer, h.db.Reader, deferredKindsForTest()), 5*time.Millisecond)
 	svc := voice.NewService(h.store, models, queueJobs{queue: queue})
 	queue.Register(job.KindAnalyzeVoice, func(ctx context.Context, found job.Job, progress job.Progress) error {
-		return svc.Analyze(ctx, voice.AnalysisJob{UserID: found.UserID, VoiceID: found.VoiceID, WriteModel: found.WriteModel}, voice.Progress(progress))
+		return svc.Analyze(ctx, voice.AnalysisJob{UserID: found.UserID, VoiceID: found.Subject(voice.JobSubject), WriteModel: found.WriteModel}, voice.Progress(progress))
 	})
 	h.addSample(t, "alice", alice, "sample", "post", longSample("문"), time.Now())
-	id, err := queue.Enqueue(context.Background(), job.NewJob{
-		Kind: job.KindAnalyzeVoice, UserID: "alice", VoiceID: alice, WriteModel: analyzeRef.String(),
-	})
+	id, err := queue.Enqueue(context.Background(), attach(job.NewJob{
+		Kind: job.KindAnalyzeVoice, UserID: "alice", WriteModel: analyzeRef.String()}, "", alice))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -903,7 +902,7 @@ func TestAnalysesAreGuardedPerVoiceThroughTheQueue(t *testing.T) {
 	h := newVoiceHarness(t)
 	casual := h.voice("alice")
 	formal, _, _ := h.svc.CreateVoice(context.Background(), "alice", "격식", voice.LanguageKorean, nil)
-	queue := job.New(jobstore.New(h.db.Writer, h.db.Reader), time.Second)
+	queue := job.New(jobstore.New(h.db.Writer, h.db.Reader, deferredKindsForTest()), time.Second)
 	svc := voice.NewService(h.store, h.models, queueJobs{queue: queue})
 	h.addSample(t, "alice", casual, "c", "casual", longSample("해"), time.Now())
 	h.addSample(t, "alice", formal.ID, "f", "formal", longSample("습"), time.Now())

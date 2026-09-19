@@ -16,24 +16,76 @@ import (
 
 const writeLayout = "2006-01-02T15:04:05.000000000Z07:00"
 
+// The subject dimensions this schema can address, and the column each one lives in. The
+// names are the owning contexts' words for their own subjects; this table is the only
+// place they meet a column, and an unknown dimension is refused rather than ignored.
+const (
+	dimensionPost        = "post"
+	dimensionVoice       = "voice"
+	dimensionClipProject = "clip_project"
+	dimensionExperiment  = "model_experiment"
+)
+
+// attachable dimensions are the ones a job is inserted with. The experiment dimension is
+// read-only: an experiment's id is its payload, surfaced by a generated column.
+func attachableDimension(dimension string) bool {
+	switch dimension {
+	case dimensionPost, dimensionVoice, dimensionClipProject:
+		return true
+	default:
+		return false
+	}
+}
+
 type Store struct {
 	write *sqlc.Queries
 	read  *sqlc.Queries
+	// deferredKinds are the kinds whose dispatch waits for an explicit activation. The
+	// composition root names them, so the queue's SQL never does.
+	deferredKinds []string
 }
 
-func New(writer, reader *sql.DB) *Store {
-	return &Store{write: sqlc.New(writer), read: sqlc.New(reader)}
+// New takes the deferred kinds explicitly — a nil list is a queue where every job
+// dispatches at once, which is a real mode and must be stated rather than defaulted into.
+func New(writer, reader *sql.DB, deferredKinds []string) *Store {
+	return &Store{write: sqlc.New(writer), read: sqlc.New(reader), deferredKinds: deferredKinds}
 }
 
-func NewTx(tx *sql.Tx) *Store {
-	return &Store{write: sqlc.New(tx), read: sqlc.New(tx)}
+func NewTx(tx *sql.Tx, deferredKinds []string) *Store {
+	return &Store{write: sqlc.New(tx), read: sqlc.New(tx), deferredKinds: deferredKinds}
+}
+
+func (s *Store) deferred(kind string) bool {
+	for _, deferredKind := range s.deferredKinds {
+		if deferredKind == kind {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *Store) deferredKindsJSON() (string, error) {
+	kinds := s.deferredKinds
+	if kinds == nil {
+		kinds = []string{}
+	}
+	raw, err := json.Marshal(kinds)
+	if err != nil {
+		return "", fmt.Errorf("encode deferred kinds: %w", err)
+	}
+	return string(raw), nil
 }
 
 func (s *Store) Insert(ctx context.Context, found job.Job) error {
+	for _, subject := range found.Subjects {
+		if !attachableDimension(subject.Dimension) {
+			return fmt.Errorf("insert generation job: subject dimension %q cannot be attached", subject.Dimension)
+		}
+	}
 	err := s.write.InsertJob(ctx, sqlc.InsertJobParams{
 		CancellationPolicyVersion: int64(found.CancellationPolicyVersion),
-		ID:                        found.ID, PostSlug: nullStringPtr(found.PostSlug), UserID: found.UserID, VoiceID: nullString(found.VoiceID),
-		ClipProjectID: nullString(found.ClipProjectID), DispatchReady: dispatchReady(found.Kind), Kind: found.Kind, ObserveModel: nullString(found.ObserveModel),
+		ID:                        found.ID, PostSlug: nullString(found.Subject(dimensionPost)), UserID: found.UserID, VoiceID: nullString(found.Subject(dimensionVoice)),
+		ClipProjectID: nullString(found.Subject(dimensionClipProject)), DispatchReady: s.dispatchReady(found.Kind), Kind: found.Kind, ObserveModel: nullString(found.ObserveModel),
 		WriteModel: nullString(found.WriteModel), Payload: string(found.Payload),
 		TargetLanguage: nullString(found.TargetLanguage),
 		CreatedAt:      formatTime(found.CreatedAt), UpdatedAt: formatTime(found.UpdatedAt),
@@ -98,7 +150,9 @@ func (s *Store) Finish(ctx context.Context, id, status string, failure *job.Fail
 	}
 	if changed != 1 {
 		j, readErr := s.GetByID(ctx, id)
-		if readErr == nil && job.ClipKind(j.Kind) && job.Terminal(j.Status) && j.Status == status {
+		// A deferred kind is also the cancellable one: its terminal write can legitimately
+		// run twice, once from the worker and once from the cancellation that raced it.
+		if readErr == nil && s.deferred(j.Kind) && job.Terminal(j.Status) && j.Status == status {
 			return nil
 		}
 		return errors.New("finish job: no running job changed")
@@ -151,75 +205,83 @@ func (s *Store) SweepQueuedPersonalization(ctx context.Context, failure job.Fail
 	return n, nil
 }
 
-func (s *Store) ActiveForPost(ctx context.Context, slug string) (*job.Job, error) {
-	row, err := s.read.ActiveForPost(ctx, sql.NullString{String: slug, Valid: true})
+// ActiveFor resolves the dimension the caller named to its column. A dimension this
+// schema does not know is an error: matching nothing would read as "not busy".
+func (s *Store) ActiveFor(ctx context.Context, subject job.Subject, filter job.Filter) (*job.Job, error) {
+	var (
+		row sqlc.GenerationJob
+		err error
+	)
+	switch subject.Dimension {
+	case dimensionPost:
+		switch {
+		case filter.Kind != "":
+			return nil, fmt.Errorf("active for post: kind filter unsupported")
+		case filter.UserID != "":
+			row, err = s.read.ActiveForPostUser(ctx, sqlc.ActiveForPostUserParams{PostSlug: nullString(subject.ID), UserID: filter.UserID})
+		default:
+			row, err = s.read.ActiveForPost(ctx, nullString(subject.ID))
+		}
+	case dimensionVoice:
+		switch {
+		case filter.UserID != "":
+			return nil, fmt.Errorf("active for voice: user filter unsupported")
+		case filter.Kind != "":
+			row, err = s.read.ActiveForVoiceKind(ctx, sqlc.ActiveForVoiceKindParams{VoiceID: nullString(subject.ID), Kind: filter.Kind})
+		default:
+			row, err = s.read.ActiveForVoice(ctx, nullString(subject.ID))
+		}
+	case dimensionClipProject:
+		if filter.Kind != "" {
+			return nil, fmt.Errorf("active for clip project: kind filter unsupported")
+		}
+		row, err = s.read.ActiveForClip(ctx, sqlc.ActiveForClipParams{UserID: filter.UserID, ClipProjectID: nullString(subject.ID)})
+	case dimensionExperiment:
+		if filter.UserID != "" || filter.Kind != "" {
+			return nil, fmt.Errorf("active for experiment: filters unsupported")
+		}
+		row, err = s.read.ActiveForExperiment(ctx, nullString(subject.ID))
+	default:
+		return nil, fmt.Errorf("active job lookup: unknown subject dimension %q", subject.Dimension)
+	}
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("select active post job: %w", err)
+		return nil, fmt.Errorf("select active job for %s: %w", subject.Dimension, err)
 	}
 	found, err := toJob(row)
 	return &found, err
 }
 
-func (s *Store) ActiveForPostUser(ctx context.Context, slug, userID string) (*job.Job, error) {
-	row, err := s.read.ActiveForPostUser(ctx, sqlc.ActiveForPostUserParams{
-		PostSlug: sql.NullString{String: slug, Valid: true}, UserID: userID,
-	})
+// LatestFor is the most recent job of a subject, terminal or not.
+func (s *Store) LatestFor(ctx context.Context, subject job.Subject, filter job.Filter) (*job.Job, error) {
+	if subject.Dimension != dimensionClipProject {
+		return nil, fmt.Errorf("latest job lookup: unsupported subject dimension %q", subject.Dimension)
+	}
+	if filter.Kind != "" {
+		return nil, fmt.Errorf("latest for clip project: kind filter unsupported")
+	}
+	row, err := s.read.LatestForClip(ctx, sqlc.LatestForClipParams{UserID: filter.UserID, ClipProjectID: nullString(subject.ID)})
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("select active post job for user: %w", err)
+		return nil, fmt.Errorf("select latest job for %s: %w", subject.Dimension, err)
 	}
 	found, err := toJob(row)
 	return &found, err
 }
 
-func (s *Store) ActiveForUserKind(ctx context.Context, userID, kind string) (*job.Job, error) {
+// ActiveUnattached guards work that carries neither a post nor a project: one per user
+// and kind. Voice-only work is deliberately still visible here, as it always has been.
+func (s *Store) ActiveUnattached(ctx context.Context, userID, kind string) (*job.Job, error) {
 	row, err := s.read.ActiveForUserKind(ctx, sqlc.ActiveForUserKindParams{UserID: userID, Kind: kind})
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("select active user job: %w", err)
-	}
-	found, err := toJob(row)
-	return &found, err
-}
-
-func (s *Store) ActiveForVoiceKind(ctx context.Context, voiceID, kind string) (*job.Job, error) {
-	row, err := s.read.ActiveForVoiceKind(ctx, sqlc.ActiveForVoiceKindParams{VoiceID: nullString(voiceID), Kind: kind})
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, fmt.Errorf("select active voice job: %w", err)
-	}
-	found, err := toJob(row)
-	return &found, err
-}
-
-func (s *Store) ActiveForVoice(ctx context.Context, voiceID string) (*job.Job, error) {
-	row, err := s.read.ActiveForVoice(ctx, nullString(voiceID))
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, fmt.Errorf("select active jobs for voice: %w", err)
-	}
-	found, err := toJob(row)
-	return &found, err
-}
-
-func (s *Store) ActiveModelExperiment(ctx context.Context, experimentID string) (*job.Job, error) {
-	row, err := s.read.ActiveModelExperiment(ctx, experimentID)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, fmt.Errorf("select active experiment job: %w", err)
+		return nil, fmt.Errorf("select active unattached job: %w", err)
 	}
 	found, err := toJob(row)
 	return &found, err
@@ -260,7 +322,7 @@ func toJob(row sqlc.GenerationJob) (job.Job, error) {
 	}
 	return job.Job{
 		CancelRequestedAt: cancelled, CancellationPolicyVersion: int(row.CancellationPolicyVersion),
-		ID: row.ID, PostSlug: stringPtr(row.PostSlug), UserID: row.UserID, VoiceID: row.VoiceID.String, Kind: row.Kind, ClipProjectID: row.ClipProjectID.String,
+		ID: row.ID, UserID: row.UserID, Kind: row.Kind, Subjects: rowSubjects(row),
 		DispatchReady: row.DispatchReady != 0,
 		Status:        row.Status, Stage: row.Stage.String, ProgressDone: int(row.ProgressDone),
 		ProgressTotal: int(row.ProgressTotal), Failure: failure,
@@ -379,44 +441,53 @@ func parseOptionalTime(value sql.NullString) (*time.Time, error) {
 	return &parsed, nil
 }
 
-func dispatchReady(kind string) int64 {
-	if job.ClipKind(kind) {
+// rowSubjects reads the attachments a row carries, in a fixed order so two reads of the
+// same job are equal. A model experiment's id is its payload, which the generated column
+// surfaces for lookups; it is not an attachment and never appears here.
+func rowSubjects(row sqlc.GenerationJob) []job.Subject {
+	subjects := make([]job.Subject, 0, 3)
+	for _, candidate := range []job.Subject{
+		{Dimension: dimensionPost, ID: row.PostSlug.String},
+		{Dimension: dimensionVoice, ID: row.VoiceID.String},
+		{Dimension: dimensionClipProject, ID: row.ClipProjectID.String},
+	} {
+		if candidate.ID != "" {
+			subjects = append(subjects, candidate)
+		}
+	}
+	if len(subjects) == 0 {
+		return nil
+	}
+	return subjects
+}
+
+func (s *Store) dispatchReady(kind string) int64 {
+	if s.deferred(kind) {
 		return 0
 	}
 	return 1
 }
 
-func (s *Store) LatestForClip(ctx context.Context, user, id string) (*job.Job, error) {
-	r, err := s.read.LatestForClip(ctx, sqlc.LatestForClipParams{UserID: user, ClipProjectID: nullString(id)})
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil
-	}
+// Activate releases one deferred job for dispatch.
+func (s *Store) Activate(ctx context.Context, user, id string) (bool, error) {
+	kinds, err := s.deferredKindsJSON()
 	if err != nil {
-		return nil, err
+		return false, err
 	}
-	j, err := toJob(r)
-	return &j, err
-}
-func (s *Store) ActiveForClip(ctx context.Context, user, id string) (*job.Job, error) {
-	r, err := s.read.ActiveForClip(ctx, sqlc.ActiveForClipParams{UserID: user, ClipProjectID: nullString(id)})
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	j, err := toJob(r)
-	return &j, err
-}
-func (s *Store) ActivateClip(ctx context.Context, user, id string) (bool, error) {
-	n, err := s.write.ActivateClip(ctx, sqlc.ActivateClipParams{UserID: user, ID: id})
+	n, err := s.write.Activate(ctx, sqlc.ActivateParams{UserID: user, ID: id, Kinds: kinds})
 	return n == 1, err
 }
-func (s *Store) SweepUnactivatedClips(ctx context.Context, f job.Failure) (int64, error) {
+
+// SweepUnactivated fails every deferred job boot finds still waiting for its activation.
+func (s *Store) SweepUnactivated(ctx context.Context, f job.Failure) (int64, error) {
 	r, p, d, err := failureColumns(&f)
 	if err != nil {
 		return 0, err
 	}
+	kinds, err := s.deferredKindsJSON()
+	if err != nil {
+		return 0, err
+	}
 	now := formatTime(time.Now())
-	return s.write.SweepUnactivatedClips(ctx, sqlc.SweepUnactivatedClipsParams{ErrorReason: r, ErrorParams: p, TechnicalDetail: d, FinishedAt: nullString(now), UpdatedAt: now})
+	return s.write.SweepUnactivated(ctx, sqlc.SweepUnactivatedParams{ErrorReason: r, ErrorParams: p, TechnicalDetail: d, FinishedAt: nullString(now), UpdatedAt: now, Kinds: kinds})
 }

@@ -18,7 +18,9 @@ func TestRenderClipAdmissionIsExplicitAndRejectsEveryPossibleCall(t *testing.T) 
 	a := &recordingAdmitter{refuse: errors.New("no credits")}
 	h.queue.Admit(a)
 	ctx := context.Background()
-	for _, mutate := range []func(*job.NewJob){func(n *job.NewJob) { n.NonMetered = false }, func(n *job.NewJob) { n.Kind = job.KindGenerate }, func(n *job.NewJob) { n.Kind = job.KindGenerateClip }, func(n *job.NewJob) { n.ClipProjectID = "" }, func(n *job.NewJob) { n.ObserveModel = "p/o" }, func(n *job.NewJob) { n.WriteModel = "p/w" }, func(n *job.NewJob) { n.ExtraModels = []string{"p/x"} }, func(n *job.NewJob) { n.CallCounts = map[string]int{"p/x": 0} }, func(n *job.NewJob) { n.PricingCalls = []job.PlannedCall{{Ref: "p/x", Count: 0}} }, func(n *job.NewJob) { s := "post"; n.PostSlug = &s }, func(n *job.NewJob) { n.VoiceID = "voice" }} {
+	for _, mutate := range []func(*job.NewJob){func(n *job.NewJob) { n.NonMetered = false }, func(n *job.NewJob) { n.Kind = job.KindGenerate }, func(n *job.NewJob) { n.Kind = job.KindGenerateClip }, func(n *job.NewJob) { n.Subjects = nil }, func(n *job.NewJob) { n.ObserveModel = "p/o" }, func(n *job.NewJob) { n.WriteModel = "p/w" }, func(n *job.NewJob) { n.ExtraModels = []string{"p/x"} }, func(n *job.NewJob) { n.CallCounts = map[string]int{"p/x": 0} }, func(n *job.NewJob) { n.PricingCalls = []job.PlannedCall{{Ref: "p/x", Count: 0}} }, func(n *job.NewJob) { n.Subjects = append(n.Subjects, job.Subject{Dimension: postSubject, ID: "post"}) }, func(n *job.NewJob) {
+		n.Subjects = append(n.Subjects, job.Subject{Dimension: voiceSubject, ID: "voice"})
+	}} {
 		bad := base
 		mutate(&bad)
 		if _, err := h.queue.Enqueue(ctx, bad); !errors.Is(err, job.ErrInvalidTarget) {
@@ -32,7 +34,7 @@ func TestRenderClipAdmissionIsExplicitAndRejectsEveryPossibleCall(t *testing.T) 
 	if _, err = h.store.PickNextQueued(ctx, time.Now()); !errors.Is(err, job.ErrNotFound) {
 		t.Fatal("unlinked render dispatched", err)
 	}
-	if err = h.queue.ActivateClip(ctx, "alice", id); err != nil {
+	if err = h.queue.Activate(ctx, "alice", id); err != nil {
 		t.Fatal(err)
 	}
 	h.queue.Register(job.KindRenderClip, func(ctx context.Context, j job.Job, progress job.Progress) error {
@@ -66,7 +68,7 @@ func TestRenderClipUnlinkedRecovery(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	n, err := h.queue.SweepUnactivatedClips(context.Background())
+	n, err := h.queue.SweepUnactivated(context.Background())
 	if err != nil || n != 1 {
 		t.Fatal(n, err)
 	}

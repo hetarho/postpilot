@@ -50,7 +50,7 @@ func TestClipQualityLifecycle(t *testing.T) {
 			reached, release := make(chan struct{}), make(chan struct{})
 			var once sync.Once
 			h.generationHandler = func(ctx context.Context, j job.Job, p job.Progress) error {
-				err := h.service.Run(ctx, j.UserID, j.ID, j.ClipProjectID, j.Payload, func(stage string, done, total int) {
+				err := h.service.Run(ctx, j.UserID, j.ID, j.Subject(clip.JobSubject), j.Payload, func(stage string, done, total int) {
 					p(stage, done, total)
 					if stage == boundary.stage && done == boundary.done {
 						once.Do(func() { close(reached); <-release })
@@ -116,7 +116,7 @@ func TestClipQualityLifecycle(t *testing.T) {
 			}
 			calls, balance := h.provider.posts.Load(), h.balance()
 			// A fresh queue reads only durable state and never replays paid work.
-			recovery := job.New(jobstore.New(h.d.Writer, h.d.Reader), time.Millisecond)
+			recovery := job.New(jobstore.New(h.d.Writer, h.d.Reader, deferredKindsForTest()), time.Millisecond)
 			recovery.Admit(h.admission)
 			for range 2 {
 				if _, err := recovery.SweepRunning(t.Context()); err != nil {

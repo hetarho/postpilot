@@ -30,17 +30,6 @@ func Terminal(status string) bool {
 	return status == StatusDone || status == StatusFailed || status == StatusCancelled
 }
 
-// voiceOwnedKind identifies personalization work whose writes are serialized per voice,
-// even when the job also points at the post or source that caused the work.
-func voiceOwnedKind(kind string) bool {
-	switch kind {
-	case KindAnalyzeVoice, KindLearnVoice, KindCompareVoiceRule, KindValidateVoiceProfile, KindSeedVoice:
-		return true
-	default:
-		return false
-	}
-}
-
 var (
 	ErrNotFound       = errors.New("job not found")
 	ErrForbidden      = errors.New("job belongs to another user")
@@ -69,12 +58,13 @@ func (e *ErrAlreadyInProgress) Unwrap() error { return ErrActiveConflict }
 type NewJob struct {
 	CancellationPolicyVersion int
 	// Only render_clip can opt out, and it must declare no possible model call.
-	NonMetered     bool
-	Kind           string
-	UserID         string
-	PostSlug       *string
-	VoiceID        string
-	ClipProjectID  string
+	NonMetered bool
+	Kind       string
+	UserID     string
+	// Subjects are the things this job belongs to, in the owning context's own words.
+	// Voice-owned work may carry two: the voice it writes into and the post that caused it.
+	Subjects       []Subject
+	Guards         []Guard
 	ObserveModel   string
 	WriteModel     string
 	TargetLanguage string
@@ -174,9 +164,7 @@ type Job struct {
 	ID                        string
 	Kind                      string
 	UserID                    string
-	PostSlug                  *string
-	VoiceID                   string
-	ClipProjectID             string
+	Subjects                  []Subject
 	Status                    string
 	Stage                     string
 	ProgressDone              int
@@ -200,9 +188,7 @@ type JobSummary struct {
 	ID                        string
 	Kind                      string
 	UserID                    string
-	PostSlug                  *string
-	VoiceID                   string
-	ClipProjectID             string
+	Subjects                  []Subject
 	Status                    string
 	Stage                     string
 	ProgressDone              int
@@ -218,7 +204,7 @@ type JobSummary struct {
 func summarize(found Job) *JobSummary {
 	return &JobSummary{
 		CancelRequestedAt: found.CancelRequestedAt, CancellationPolicyVersion: found.CancellationPolicyVersion,
-		ID: found.ID, Kind: found.Kind, UserID: found.UserID, PostSlug: found.PostSlug, VoiceID: found.VoiceID, ClipProjectID: found.ClipProjectID,
+		ID: found.ID, Kind: found.Kind, UserID: found.UserID, Subjects: cloneSubjects(found.Subjects),
 		Status: found.Status, Stage: found.Stage, ProgressDone: found.ProgressDone,
 		ProgressTotal: found.ProgressTotal, Failure: cloneFailure(found.Failure),
 		ObserveModel: found.ObserveModel, WriteModel: found.WriteModel, TargetLanguage: found.TargetLanguage,

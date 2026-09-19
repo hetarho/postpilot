@@ -26,7 +26,7 @@ type JobReader interface {
 type JobTx interface {
 	JobReader
 	Finish(ctx context.Context, id, status string, failure *job.Failure, now time.Time) error
-	ActiveForClip(ctx context.Context, user, id string) (*job.Job, error)
+	ActiveFor(ctx context.Context, subject job.Subject, filter job.Filter) (*job.Job, error)
 }
 
 // ClipStore is the clip persistence the sagas use outside a transaction: the
@@ -75,12 +75,12 @@ type Authorizer interface {
 // Queue is the job queue surface the clip jobs adapter drives.
 type Queue interface {
 	Enqueue(context.Context, job.NewJob) (string, error)
-	ActivateClip(ctx context.Context, user, id string) error
+	Activate(ctx context.Context, user, id string) error
 	FailQueued(ctx context.Context, id, user string, failure job.Failure) (bool, error)
-	ActiveForClip(ctx context.Context, user, id string) (*job.JobSummary, error)
+	ActiveFor(ctx context.Context, subject job.Subject, filter job.Filter) (*job.JobSummary, error)
 	Get(ctx context.Context, id, user string) (*job.JobSummary, error)
-	ClipJobSnapshot(ctx context.Context, user, project, id string) (*job.Job, error)
-	LatestClipSnapshot(ctx context.Context, user, id string) (*job.Job, error)
+	Snapshot(ctx context.Context, user string, subject job.Subject, id string) (*job.Job, error)
+	LatestSnapshot(ctx context.Context, user string, subject job.Subject) (*job.Job, error)
 	ReserveClip(ctx context.Context, user, id string, calls []job.PlannedCall, approval ...job.ClipReservation) (context.Context, error)
 }
 

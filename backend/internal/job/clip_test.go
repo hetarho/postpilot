@@ -19,7 +19,7 @@ func clipInput(t *testing.T, h *harness, id, user string) job.NewJob {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return job.NewJob{Kind: job.KindGenerateClip, UserID: user, ClipProjectID: id, ObserveModel: "p/observe", WriteModel: "p/write"}
+	return clipJob(job.NewJob{Kind: job.KindGenerateClip, UserID: user, ObserveModel: "p/observe", WriteModel: "p/write"}, id)
 }
 func TestClipDeferredAdmissionAndConcurrentCallAllowance(t *testing.T) {
 	h := newHarness(t)
@@ -41,11 +41,11 @@ func TestClipDeferredAdmissionAndConcurrentCallAllowance(t *testing.T) {
 	if _, err = h.queue.ReserveClip(ctx, "alice", id, calls, approvedClipCalls(3)); !errors.Is(err, job.ErrCreditAllowance) {
 		t.Fatal("queued job reserved", err)
 	}
-	if err = h.queue.ActivateClip(ctx, "alice", id); err != nil {
+	if err = h.queue.Activate(ctx, "alice", id); err != nil {
 		t.Fatal(err)
 	}
 	j, err := h.store.PickNextQueued(ctx, time.Now())
-	if err != nil || j.Stage != "prepare" || j.ClipProjectID != "clip" {
+	if err != nil || j.Stage != "prepare" || j.Subject(clipProjectSubject) != "clip" {
 		t.Fatal(j, err)
 	}
 	if _, err = h.queue.ReserveClip(ctx, "bob", id, calls, approvedClipCalls(3)); !errors.Is(err, job.ErrCreditAllowance) {
@@ -118,7 +118,7 @@ func TestClipOwnerGuardPerProjectAndUnactivatedRecovery(t *testing.T) {
 	if _, err = h.queue.Enqueue(ctx, two); err != nil {
 		t.Fatal("separate projects must not share account-kind guard", err)
 	}
-	if n, err := h.queue.SweepUnactivatedClips(ctx); n != 2 || err != nil {
+	if n, err := h.queue.SweepUnactivated(ctx); n != 2 || err != nil {
 		t.Fatal(n, err)
 	}
 	j, err := h.queue.Get(ctx, id, "alice")
@@ -135,7 +135,7 @@ func TestClipRefusedReservationReturnsNoAllowance(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = h.queue.ActivateClip(ctx, "alice", id); err != nil {
+	if err = h.queue.Activate(ctx, "alice", id); err != nil {
 		t.Fatal(err)
 	}
 	if _, err = h.store.PickNextQueued(ctx, time.Now()); err != nil {
@@ -170,7 +170,7 @@ func TestClipCorrectionAllowanceCannotExceedFourCallsPerStage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = h.queue.ActivateClip(t.Context(), "alice", id); err != nil {
+	if err = h.queue.Activate(t.Context(), "alice", id); err != nil {
 		t.Fatal(err)
 	}
 	if _, err = h.store.PickNextQueued(t.Context(), time.Now()); err != nil {

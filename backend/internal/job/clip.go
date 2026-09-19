@@ -32,92 +32,10 @@ const KindReviseClip = "revise_clip"
 
 var ErrCreditAllowance = errors.New("clip call has no reserved credit allowance")
 
-// ClipStore is the extension used only by the deferred-admission clip queue path.
-type ClipStore interface {
-	LatestForClip(context.Context, string, string) (*Job, error)
-	ActiveForClip(context.Context, string, string) (*Job, error)
-	ActivateClip(context.Context, string, string) (bool, error)
-	SweepUnactivatedClips(context.Context, Failure) (int64, error)
-}
-
-func (q *Queue) ClipJobSnapshot(ctx context.Context, user, project, id string) (*Job, error) {
-	j, err := q.store.GetByID(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	if j.UserID != user || j.ClipProjectID != project || !ClipKind(j.Kind) {
-		return nil, ErrNotFound
-	}
-	return &j, nil
-}
-
-// LatestClipSnapshot is an internal owner-scoped read for approval recovery. The
-// durable payload is never added to the public job summary or RPC projection.
-func (q *Queue) LatestClipSnapshot(ctx context.Context, user, id string) (*Job, error) {
-	s, ok := q.store.(ClipStore)
-	if !ok {
-		return nil, errors.New("clip job store unavailable")
-	}
-	j, err := s.LatestForClip(ctx, user, id)
-	if err != nil || j == nil {
-		return nil, err
-	}
-	if j.UserID != user || j.ClipProjectID != id {
-		return nil, ErrNotFound
-	}
-	return j, nil
-}
-
-func (q *Queue) LatestForClip(ctx context.Context, user, id string) (*JobSummary, error) {
-	s, ok := q.store.(ClipStore)
-	if !ok {
-		return nil, errors.New("clip job store unavailable")
-	}
-	j, err := s.LatestForClip(ctx, user, id)
-	if err != nil || j == nil {
-		return nil, err
-	}
-	return summarize(*j), nil
-}
-
-func (q *Queue) ActiveForClip(ctx context.Context, user, id string) (*JobSummary, error) {
-	s, ok := q.store.(ClipStore)
-	if !ok {
-		return nil, errors.New("clip job store unavailable")
-	}
-	j, err := s.ActiveForClip(ctx, user, id)
-	if j == nil || err != nil {
-		return nil, err
-	}
-	return summarize(*j), nil
-}
-func (q *Queue) ActivateClip(ctx context.Context, user, id string) error {
-	s, ok := q.store.(ClipStore)
-	if !ok {
-		return errors.New("clip job store unavailable")
-	}
-	yes, err := s.ActivateClip(ctx, user, id)
-	if err != nil {
-		return err
-	}
-	if !yes {
-		return ErrNotFound
-	}
-	select {
-	case q.wake <- struct{}{}:
-	default:
-	}
-	return nil
-}
-
-// Boot only, before any worker starts. The unactivated row has made no model call.
-func (q *Queue) SweepUnactivatedClips(ctx context.Context) (int64, error) {
-	s, ok := q.store.(ClipStore)
-	if !ok {
-		return 0, errors.New("clip job store unavailable")
-	}
-	return s.SweepUnactivatedClips(ctx, interruptedFailure)
-}
+// subjectClipProject is the dimension the clip context uses for its projects. It exists
+// here only for the clip enqueue rules above; T272 moves those rules to clip/app and this
+// constant leaves with them.
+const subjectClipProject = "clip_project"
 
 type allowanceKey struct{}
 type callKey struct {

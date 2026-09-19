@@ -280,8 +280,9 @@ func (a generationJobs) EnqueueGeneration(ctx context.Context, request generatio
 		}
 		calls[request.ObserveModel] = total
 	}
+	subjects, guards := postVoiceWork(job.KindGenerate, request.UserID, slug, request.VoiceID)
 	id, err := a.queue.Enqueue(ctx, job.NewJob{
-		Kind: job.KindGenerate, UserID: request.UserID, PostSlug: &slug, VoiceID: request.VoiceID,
+		Kind: job.KindGenerate, UserID: request.UserID, Subjects: subjects, Guards: guards,
 		ObserveModel: request.ObserveModel, WriteModel: request.WriteModel,
 		TargetLanguage: request.TargetLanguage.String(), Payload: payload,
 		CallCounts: calls, PricingCalls: generationPricingCalls(request, a.budget),
@@ -298,8 +299,9 @@ func (a generationJobs) EnqueueGeneration(ctx context.Context, request generatio
 
 func (a generationJobs) EnqueueRevision(ctx context.Context, request generation.StartRevisionRequest, payload []byte) (string, error) {
 	slug := request.PostSlug
+	subjects, guards := postVoiceWork(job.KindRevise, request.UserID, slug, request.VoiceID)
 	id, err := a.queue.Enqueue(ctx, job.NewJob{
-		Kind: job.KindRevise, UserID: request.UserID, PostSlug: &slug, VoiceID: request.VoiceID,
+		Kind: job.KindRevise, UserID: request.UserID, Subjects: subjects, Guards: guards,
 		WriteModel: request.WriteModel, TargetLanguage: request.ContentLanguage.String(), Payload: payload,
 		PricingCalls: revisionPricingCalls(request, a.budget),
 	})
@@ -350,10 +352,7 @@ func (a generationJobs) GetGeneration(ctx context.Context, id, userID string) (*
 			return nil, err
 		}
 	}
-	postSlug := ""
-	if found.PostSlug != nil {
-		postSlug = *found.PostSlug
-	}
+	postSlug := found.Subject(post.JobSubject)
 	return &generation.JobSummary{
 		ID: found.ID, Kind: found.Kind, Status: found.Status, Stage: found.Stage,
 		ProgressDone: found.ProgressDone, ProgressTotal: found.ProgressTotal,

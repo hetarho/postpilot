@@ -52,8 +52,9 @@ func (a voiceModels) ModelEnabled(ref llm.ModelRef, stage string) bool {
 type voiceJobs struct{ queue *job.Queue }
 
 func (a voiceJobs) Enqueue(ctx context.Context, request voice.AnalysisJobRequest) (string, error) {
+	subjects, guards := postVoiceWork(job.KindAnalyzeVoice, request.UserID, "", request.VoiceID)
 	id, err := a.queue.Enqueue(ctx, job.NewJob{
-		Kind: job.KindAnalyzeVoice, UserID: request.UserID, VoiceID: request.VoiceID, WriteModel: request.WriteModel,
+		Kind: job.KindAnalyzeVoice, UserID: request.UserID, Subjects: subjects, Guards: guards, WriteModel: request.WriteModel,
 	})
 	var active *job.ErrAlreadyInProgress
 	if errors.As(err, &active) {
@@ -66,13 +67,9 @@ func (a voiceJobs) Enqueue(ctx context.Context, request voice.AnalysisJobRequest
 }
 
 func (a voiceJobs) EnqueuePersonalization(ctx context.Context, request voice.PersonalizationJobRequest) (string, error) {
-	var postSlug *string
-	if request.PostSlug != "" {
-		value := request.PostSlug
-		postSlug = &value
-	}
+	subjects, guards := postVoiceWork(request.Kind, request.UserID, request.PostSlug, request.VoiceID)
 	id, err := a.queue.Enqueue(ctx, job.NewJob{
-		Kind: request.Kind, UserID: request.UserID, PostSlug: postSlug, VoiceID: request.VoiceID,
+		Kind: request.Kind, UserID: request.UserID, Subjects: subjects, Guards: guards,
 		WriteModel: request.Model, ExtraModels: request.ExtraModels, Payload: []byte(request.Payload),
 		CallCounts: request.CallCounts,
 	})
@@ -105,7 +102,7 @@ func (a voiceJobs) FailQueuedPersonalization(ctx context.Context, jobID, userID 
 }
 
 func (a voiceJobs) ActiveForVoiceKind(ctx context.Context, voiceID, kind string) (*voice.ActiveJob, error) {
-	found, err := a.queue.ActiveForVoiceKind(ctx, voiceID, kind)
+	found, err := a.queue.ActiveFor(ctx, job.Subject{Dimension: voice.JobSubject, ID: voiceID}, job.Filter{Kind: kind})
 	if err != nil || found == nil {
 		return nil, err
 	}
@@ -113,7 +110,7 @@ func (a voiceJobs) ActiveForVoiceKind(ctx context.Context, voiceID, kind string)
 }
 
 func (a voiceJobs) HasActiveForVoice(ctx context.Context, voiceID string) (bool, error) {
-	return a.queue.HasActiveForVoice(ctx, voiceID)
+	return a.queue.HasActiveFor(ctx, job.Subject{Dimension: voice.JobSubject, ID: voiceID}, job.Filter{})
 }
 
 // voiceExperiments adapts the experiment context's publishable-work guard for DeleteVoice.

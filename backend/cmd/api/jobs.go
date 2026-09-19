@@ -6,11 +6,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/postpilot/backend/internal/clip"
 	clipapp "github.com/postpilot/backend/internal/clip/app"
 
 	"github.com/postpilot/backend/internal/experiment"
 	"github.com/postpilot/backend/internal/generation"
 	"github.com/postpilot/backend/internal/job"
+	"github.com/postpilot/backend/internal/post"
 	"github.com/postpilot/backend/internal/usage"
 	"github.com/postpilot/backend/internal/voice"
 )
@@ -23,7 +25,7 @@ func registerJobs(c *contexts) {
 	voiceSvc, generationSvc, experimentSvc := c.voice, c.generation, c.experiment
 	q.Register(job.KindAnalyzeVoice, metered(func(ctx context.Context, found job.Job, progress job.Progress) error {
 		return voiceSvc.Analyze(ctx, voice.AnalysisJob{
-			UserID: found.UserID, VoiceID: found.VoiceID, WriteModel: found.WriteModel,
+			UserID: found.UserID, VoiceID: found.Subject(voice.JobSubject), WriteModel: found.WriteModel,
 		}, voice.Progress(progress))
 	}))
 	q.Register(job.KindLearnVoice, metered(func(ctx context.Context, found job.Job, progress job.Progress) error {
@@ -37,7 +39,7 @@ func registerJobs(c *contexts) {
 	}))
 	q.Register(job.KindSeedVoice, metered(func(ctx context.Context, found job.Job, progress job.Progress) error {
 		return voiceSvc.Seed(ctx, voice.SeedJob{
-			UserID: found.UserID, VoiceID: found.VoiceID, Description: string(found.Payload), WriteModel: found.WriteModel,
+			UserID: found.UserID, VoiceID: found.Subject(voice.JobSubject), Description: string(found.Payload), WriteModel: found.WriteModel,
 		}, voice.Progress(progress))
 	}))
 	q.Register(job.KindModelExperiment, metered(func(ctx context.Context, found job.Job, progress job.Progress) error {
@@ -48,7 +50,8 @@ func registerJobs(c *contexts) {
 		return experimentSvc.Handle(ctx, experimentID, experiment.Progress(progress))
 	}))
 	q.Register(job.KindGenerate, metered(func(ctx context.Context, found job.Job, progress job.Progress) error {
-		if found.PostSlug == nil {
+		slug := found.Subject(post.JobSubject)
+		if slug == "" {
 			return job.ErrInvalidTarget
 		}
 		options, err := generation.DecodeGenerationPayload(found.Payload)
@@ -56,7 +59,7 @@ func registerJobs(c *contexts) {
 			return err
 		}
 		return generationSvc.Generate(ctx, generation.GenerateJob{
-			UserID: found.UserID, PostSlug: *found.PostSlug, VoiceID: found.VoiceID,
+			UserID: found.UserID, PostSlug: slug, VoiceID: found.Subject(voice.JobSubject),
 			ObserveModel: found.ObserveModel, WriteModel: found.WriteModel,
 			TargetLanguage: options.TargetLanguage, TargetLength: options.TargetLength, TagCount: options.TagCount, Template: options.Template,
 			Guidelines: options.Guidelines, ObserveFiles: options.ObserveFiles, Observations: options.Observations,
@@ -64,11 +67,12 @@ func registerJobs(c *contexts) {
 		}, generation.Progress(progress))
 	}))
 	q.Register(job.KindRevise, metered(func(ctx context.Context, found job.Job, progress job.Progress) error {
-		if found.PostSlug == nil {
+		slug := found.Subject(post.JobSubject)
+		if slug == "" {
 			return job.ErrInvalidTarget
 		}
 		return generationSvc.Revise(ctx, generation.RevisionJob{
-			UserID: found.UserID, PostSlug: *found.PostSlug, VoiceID: found.VoiceID, WriteModel: found.WriteModel,
+			UserID: found.UserID, PostSlug: slug, VoiceID: found.Subject(voice.JobSubject), WriteModel: found.WriteModel,
 			Payload: found.Payload,
 		}, generation.Progress(progress))
 	}))
@@ -79,13 +83,13 @@ func registerJobs(c *contexts) {
 // when its job ends, whatever the outcome.
 func registerClipJobs(q *job.Queue, service *clipapp.GenerationService, sources *clipapp.SourceService) {
 	q.Register(job.KindGenerateClip, metered(func(ctx context.Context, j job.Job, progress job.Progress) error {
-		return service.Run(ctx, j.UserID, j.ID, j.ClipProjectID, j.Payload, progress)
+		return service.Run(ctx, j.UserID, j.ID, j.Subject(clip.JobSubject), j.Payload, progress)
 	}))
 	q.Register(job.KindRenderClip, metered(func(ctx context.Context, j job.Job, progress job.Progress) error {
-		return service.RunRender(ctx, j.UserID, j.ID, j.ClipProjectID, j.Payload, progress)
+		return service.RunRender(ctx, j.UserID, j.ID, j.Subject(clip.JobSubject), j.Payload, progress)
 	}))
 	q.Register(job.KindReviseClip, metered(func(ctx context.Context, j job.Job, progress job.Progress) error {
-		return service.RunRevision(ctx, j.UserID, j.ID, j.ClipProjectID, j.Payload, progress)
+		return service.RunRevision(ctx, j.UserID, j.ID, j.Subject(clip.JobSubject), j.Payload, progress)
 	}))
 	for _, kind := range []string{job.KindGenerateClip, job.KindRenderClip, job.KindReviseClip} {
 		q.OnTerminal(kind, func(ctx context.Context, j job.Job, at time.Time) error {

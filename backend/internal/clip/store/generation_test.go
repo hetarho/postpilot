@@ -400,10 +400,10 @@ func (j generationJobs) Enqueue(ctx context.Context, s clip.GenerationStart) (st
 	if s.Quote != nil {
 		policy = s.Quote.Pricing.CancellationPolicyVersion
 	}
-	return j.q.Enqueue(ctx, job.NewJob{CancellationPolicyVersion: policy, Kind: kind, NonMetered: s.RenderOnly, UserID: s.UserID, ClipProjectID: s.ProjectID, ObserveModel: s.Observe, WriteModel: s.Write, Payload: s.Payload})
+	return j.q.Enqueue(ctx, clipJob(job.NewJob{CancellationPolicyVersion: policy, Kind: kind, NonMetered: s.RenderOnly, UserID: s.UserID, ObserveModel: s.Observe, WriteModel: s.Write, Payload: s.Payload}, s.ProjectID))
 }
 func (j generationJobs) Activate(ctx context.Context, user, id string) error {
-	return j.q.ActivateClip(ctx, user, id)
+	return j.q.Activate(ctx, user, id)
 }
 func (j generationJobs) FailQueued(ctx context.Context, user, id string) (bool, error) {
 	return j.q.FailQueued(ctx, id, user, job.Failure{Reason: "CLIP_PROCESSING_FAILED"})
@@ -423,7 +423,7 @@ func (j generationJobs) ReserveApproved(ctx context.Context, user, id string, ap
 	return j.q.ReserveClip(ctx, user, id, calls, job.ClipReservation{CancellationPolicyVersion: p.CancellationPolicyVersion, ApprovedMaxCredits: approval.MaxCredits, Calls: []job.ClipCall{{Policy: p.Observe, Count: p.ObserveCalls(n)}, {Policy: p.Plan, Count: p.PlanCalls()}}})
 }
 func (j generationJobs) Active(ctx context.Context, user, id string) (*clip.ClipJob, error) {
-	found, err := j.q.ActiveForClip(ctx, user, id)
+	found, err := j.q.ActiveFor(ctx, job.Subject{Dimension: clip.JobSubject, ID: id}, job.Filter{UserID: user})
 	if found == nil || err != nil {
 		return nil, err
 	}
@@ -482,7 +482,7 @@ func generationSetup(t *testing.T) *generationHarness {
 	media := &mediaFake{root: t.TempDir(), durations: []int{60001, 15000}}
 	planner := &plannerFake{}
 	renderer := &rendererFake{}
-	jobs := jobstore.New(d.Writer, d.Reader)
+	jobs := jobstore.New(d.Writer, d.Reader, deferredKindsForTest())
 	queue := job.New(jobs, time.Millisecond)
 	admitter := &clipAdmitter{media: media}
 	queue.Admit(admitter)
@@ -523,7 +523,7 @@ func (h *generationHarness) run(t *testing.T) error {
 	case job.KindReviseClip:
 		run = h.service.RunRevision
 	}
-	err = run(ctx, j.UserID, j.ID, j.ClipProjectID, j.Payload, func(stage string, done, total int) {
+	err = run(ctx, j.UserID, j.ID, j.Subject(clip.JobSubject), j.Payload, func(stage string, done, total int) {
 		if e := h.jobs.UpdateProgress(ctx, j.ID, stage, done, total, time.Now()); e != nil {
 			t.Fatal(e)
 		}
@@ -804,7 +804,7 @@ func TestGenerationOwnerAndModelGatesBeforeEnqueue(t *testing.T) {
 	if _, err := startApproved(context.Background(), h.service, "alice", h.project.ID, h.batch.ID, "p/o", "p/w"); !errors.Is(err, llm.ErrUnsupported) {
 		t.Fatal(err)
 	}
-	if n, err := h.queue.ActiveForClip(context.Background(), "alice", h.project.ID); err != nil || n != nil {
+	if n, err := h.queue.ActiveFor(context.Background(), job.Subject{Dimension: clip.JobSubject, ID: h.project.ID}, job.Filter{UserID: "alice"}); err != nil || n != nil {
 		t.Fatal(n, err)
 	}
 }
@@ -826,7 +826,7 @@ func TestGenerationRefusesAnUnsetTargetDuration(t *testing.T) {
 	if h.planner.observe != 0 || h.planner.plans != 0 || h.media.probes != 0 {
 		t.Fatal("refusal ran preparation or a model call")
 	}
-	if n, err := h.queue.ActiveForClip(t.Context(), "alice", h.project.ID); err != nil || n != nil {
+	if n, err := h.queue.ActiveFor(t.Context(), job.Subject{Dimension: clip.JobSubject, ID: h.project.ID}, job.Filter{UserID: "alice"}); err != nil || n != nil {
 		t.Fatal(n, err)
 	}
 }

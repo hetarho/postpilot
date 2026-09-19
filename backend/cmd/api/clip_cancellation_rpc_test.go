@@ -25,7 +25,7 @@ func TestCancelClipRPCDistinguishesAcceptedRequestFromTerminalCancellation(t *te
 				t.Fatal(err)
 			}
 			if running {
-				if err := h.queue.ActivateClip(t.Context(), "alice", id); err != nil {
+				if err := h.queue.Activate(t.Context(), "alice", id); err != nil {
 					t.Fatal(err)
 				}
 				if _, err := h.jobs.PickNextQueued(t.Context(), time.Now()); err != nil {
