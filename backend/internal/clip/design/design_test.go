@@ -212,11 +212,11 @@ func TestStylesMotionTimingTransitionAudioAndLuma(t *testing.T) {
 // both sides read the same numbers. The frontend copy is the preview's and its
 // validators' source, so byte equality is the only check that catches drift.
 func TestFrontendMirrorIsByteIdentical(t *testing.T) {
-	mirror, err := os.ReadFile("../../../../frontend/src/shared/config/clip-design.json")
+	mirror, err := os.ReadFile("../../../../frontend/src/entities/clip-project/config/clip-design.json")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if string(mirror) != string(design.JSON()) {
-		t.Fatal("frontend/src/shared/config/clip-design.json drifted from the embedded design.json")
+		t.Fatal("frontend/src/entities/clip-project/config/clip-design.json drifted from the embedded design.json")
 	}
 }
