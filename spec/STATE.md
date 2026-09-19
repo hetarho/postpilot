@@ -43,7 +43,7 @@
 | clip-project-update-260914 | converted@260914 |
 | clip-failure-visibility-260914 | converted@260914 |
 | clip-release-smoke-260914 | converted@260916 |
-| arch-260919 | open@260919 |
+| arch-260919 | ready@260919 |
 
 ## tasks
 | id | title | ssot | dep | st |
@@ -52,9 +52,13 @@
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
 
 ## next
+- create-task review/arch-260919 (31 [o]; ARCH amendments for the four noted gaps come first, agent findings F24-F30 wait for T008).
 - No claimable todo tasks remain; T008 belongs to another session and T177 remains blocked.
 - post-quality-and-related-links remains open ideation, awaiting conversion when ready.
 ## log
+- 260919 review-code arch-260919 ready; owner adopted all 31 (rule: clear anything that accrues per change now); next create-task review/arch-260919
+- 260919 review-code arch-260919 FE re-verified at 19c19cc2; F9 widened (6 pages own RPC), F31 added (cross-domain cache keys in 8 features); 31 [?] awaiting triage
+- 260919 review-code arch-260919 findings written (30, 1×P1 F13 cmd/api sagas; FE 12 · BE 10 · agent/proto 8); awaiting triage
 - 260919 review-code arch-260919 start
 - 260918 T257 done; approval quotes the whole target before narration and actual styled captions afterward, in ko/en seconds with no sequence ceiling; all local gates pass.
 - 260918 T257 claimed (rnd)
