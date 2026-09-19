@@ -50,7 +50,6 @@
 |---|---|---|---|---|
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
-| T275 | job/store, template/rpc and modelcatalog/rpc have tests | ARCH | T285 | todo |
 | T276 | voice, post and publishing ports are per use-case | ARCH | - | todo |
 | T277 | experiment, usage and auth ports are per use-case | ARCH | T286 | todo |
 | T278 | a failure reason is a proto enum both sides compile against | ARCH | - | todo |
@@ -67,6 +66,8 @@
 - agent tasks T279 T282 T283 T284 wait for T008; T008 belongs to another session and T177 remains blocked
 - post-quality-and-related-links remains open ideation, awaiting conversion when ready
 ## log
+- 260920 T275 done; job/store has 7 lifecycle+authorization tests (dispatch vs cancellation serialization included) and template/rpc + modelcatalog/rpc have handler tests for every mapping and refusal; ARCH-26 green
+- 260920 T275 claimed (clp)
 - 260920 T268 done; router.tsx is 70 lines over app/routes/tree.ts + 11 group files, 12 search schemas moved to their pages, and tree.test pins all 45 addresses; ARCH-25 green
 - 260920 T268 claimed (clp)
 - 260920 T266 done; shared/lib/autosave carries the clip-settings and block-editor queues (223→82, 236→155) with 10 unit tests; save-draft stays bespoke (assignments + mid-flight rekey) and says why; ARCH-25 green
@@ -85,5 +86,3 @@
 - 260920 out of scope (T260): entities/@x holds a pre-existing cycle generation-job → voice → post → generation-job
 - 260920 T260 owner decision: config becomes a fifth leaf slice `entities/clip-design` — the four-noun @x graph cannot be acyclic while the aggregate embeds plan/observation types and both read the design config
 - 260920 T260 claimed (clp)
-- 260920 T267 done; one `invalidatePostsDependingOn` entry in entities/post replaces the post keys 8 verbs restated, entities/observation folded into post, and pages/clip gave up the last page-held transport; ARCH-25 green
-- 260920 T267 claimed (ent)
