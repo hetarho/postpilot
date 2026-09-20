@@ -63,7 +63,7 @@ it('switches four synchronous outputs with their guidance and keeps the Naver ti
   expect(screen.getByLabelText('네이버 제목')).toHaveValue(POST_CONTENT_FIXTURE.title)
   expect(
     screen.getByText(
-      '본문을 붙여넣은 뒤, 사진_1_사진 같은 자리마다 미리보기의 사진을 복사해 넣으세요. 캡션은 본문에 들어 있지 않으니 캡션도 따로 복사해 편집기의 캡션 칸에 넣어 주세요',
+      '본문을 붙여넣은 뒤, 사진_1_설명_사진 같은 자리마다 미리보기의 사진을 복사해 넣으세요. 마커는 더블클릭하면 한 번에 잡히고, 사진으로 대체되니 캡션은 따로 복사해 편집기의 캡션 칸에 넣어 주세요',
     ),
   ).toBeInTheDocument()
 
@@ -240,9 +240,9 @@ it('does not confirm a tag copy against the title field', async () => {
 
 // ── The rendered Naver preview (change 18) ────────────────────────────────────────────────────
 //
-// The Naver tab shows the POST, not the wire text: the `사진_<n>_사진` markers exist only in what
-// the copy button puts on the clipboard, and each photo renders inline at its marker position
-// with its own copy control — and its caption with a second one under it (EXPORT-24).
+// The Naver tab shows the POST, not the wire text: the `사진_<n>_…_사진` markers exist only in
+// what the copy button puts on the clipboard, and each photo renders inline at its marker
+// position with its own copy control — and its caption with a second one under it (EXPORT-24).
 
 it('renders the Naver tab as the post — no marker text, no raw field, photos inline in marker order', async () => {
   const user = userEvent.setup()
@@ -250,7 +250,7 @@ it('renders the Naver tab as the post — no marker text, no raw field, photos i
 
   const preview = screen.getByRole('article', { name: '네이버 미리보기' })
   // The markers are the copied text's business, not the preview's.
-  expect(preview.textContent).not.toMatch(/사진_\d+_사진/)
+  expect(preview.textContent).not.toMatch(/사진_\d+_/)
   expect(screen.queryByLabelText('내보내기 결과')).not.toBeInTheDocument()
   // The body renders as the reading view does, header excluded: the body copy does not paste the
   // title/summary/tags, and the title has its own field above.

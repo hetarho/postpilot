@@ -26,7 +26,7 @@
 | MODEL | 10 | 10 | - | 0 |
 | TMPL | 6 | 6 | - | 1 |
 | GUIDE | 3 | 3 | - | 0 |
-| EXPORT | 3 | 3 | - | 0 |
+| EXPORT | 4 | 4 | - | 0 |
 | PUB | 5 | 5 | - | 0 |
 | LANG | 3 | 3 | - | 0 |
 | THEME | 13 | 13 | - | 0 |
@@ -57,10 +57,15 @@
 | T284 | the agent generates only the protos it uses and drops the survey harness | ARCH | T008 T281 | todo |
 
 ## next
-- the MEM chain is complete (T287-T293 all in `tasks/done/`): nothing in the tasks table is unblocked any more — T279 T282 T283 T284 wait on T008, which belongs to another session, and T177 is blocked
-- `update-ssot TMPL` owes a rev: TMPL-17 TMPL-23 TMPL-39 still call the Naver photo marker `[사진 …]`, and TMPL-23 still tells a slot placeholder from it "by their filename suffix" — EXPORT r3 moved that to the brackets (README.md and PRD.md carry the old marker too)
-- the clip `release-smoke` stage is still red at HEAD on this host (9 of 28 modes end in `no result`) and still needs a fix task; a `review-code` pass over the new memory domain is also worth a look before it grows
+- `update-ssot TMPL` owes a rev: TMPL-17 TMPL-23 TMPL-39 describe the Naver photo marker as `[사진 …]`, two markers out of date now (README.md and PRD.md carry the old one too)
+- the clip `release-smoke` stage is still red at HEAD on this host (9 of 28 modes end in `no result`) and still needs a fix task; a `review-code` pass over the new memory domain is worth a look before it grows
+- every remaining task waits on T008 (another session) or is blocked (T177)
 ## log
+- 260921 T294 done; the Naver photo marker carries its caption folded to one `_`-joined token (`사진_1_비_뒤의_바다_사진`), captionless blocks keep the bare form, and both Naver snapshots moved by exactly those lines
+- 260921 T294 created from EXPORT r4: one task, the converter's fold plus its tests, goldens and the panel's guidance line (alt)
+- 260921 create-task EXPORT start (alt)
+- 260921 EXPORT r4: the Naver photo marker carries its caption folded into one double-clickable token; EXPORT-24's caption copy stays and its reason follows (alt)
+- 260921 update-ssot EXPORT start (alt)
 - 260920 T293 done; ① carries the 기억 사용 checkbox (autosaved, flag only) and ③ carries 기억으로 저장 with the candidate sheet that creates only what is checked — the MEM chain is complete
 - 260920 T292 done; /memories is the 글 group's fifth destination — an entity, three action features and a list-only page, with the kind and tags saved as one edit and the cap relayed from the server
 - 260920 T291 done; extract_memory is a credit-gated post-addressed job whose candidates live on its own job row — it writes no memory and touches no post; the queue gained SaveResult/Result for that one shape of work
@@ -76,8 +81,3 @@
 - 260920 create-ssot MEM start (mem)
 - 260920 T281 done; clip.proto is five files/services (template·source·generation·plan·render), buf breaks on PACKAGE, one BE handler serves all five and each FE entity names its family. BE+FE deploy together: the rpc paths changed
 - 260920 T281 claimed (clp)
-- 260920 T278 done; FailureReason is a 222-value proto enum both sides compile against, the 212-line allowlist is gone and two tests hold the contract at both ends; the wire is unchanged
-- 260920 T278 claimed (clp)
-- 260920 T277 done; experiment/usage/auth traded three 23-24 method Stores for 14 behaviour ports, none over 10, with the usage tx port kept as WriteScope; ARCH-26 green
-- 260920 T277 claimed (clp)
-- 260920 T276 done; post/voice/publishing traded four table-shaped Stores (31+22+37+29) for 22 behaviour ports, none over 10 methods, with the composites left only as the composition root handle; ARCH-26 green

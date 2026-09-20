@@ -11,7 +11,7 @@ export function naverVideoOrder(content: Pick<PostContent, 'blocks'>): string[] 
   ).filter((file): file is string => file !== null)
 }
 
-/** The `IMAGE` blocks' filenames in the exact order their `사진_<n>_사진` markers appear in
+/** The `IMAGE` blocks' filenames in the exact order their `사진_<n>_…_사진` markers appear in
  *  `toNaver`'s output — one entry per marker, always, so position n-1 here is marker n there.
  *
  *  It walks the same canonical block array `toNaver` does, so the photo strip beside the text and
@@ -31,6 +31,31 @@ export function naverPhotoOrder(content: Pick<PostContent, 'blocks'>): string[] 
   ).filter((file): file is string => file !== null)
 }
 
+/** One photo's marker: the word, the number, the folded caption, the word again. A block with
+ *  no caption — or one whose caption folds to nothing — is the bare `사진_<n>_사진`, which is
+ *  what the marker was before captions rode in it. */
+function photoMarker(contentLanguage: ContentLanguage, number: number, caption: string): string {
+  const word = contentLanguage === 'en' ? 'photo' : '사진'
+  const folded = foldCaption(caption)
+  return folded === '' ? `${word}_${number}_${word}` : `${word}_${number}_${folded}_${word}`
+}
+
+/** The caption as one `_`-joined token (EXPORT-5).
+ *
+ *  Every run of whitespace, punctuation and symbols becomes a single `_` and nothing else is
+ *  touched: a double-click selects a word, and a space or a comma inside the marker is exactly
+ *  where that selection would stop. `맥북(M4)` folds to `맥북_M4`; a caption of nothing but
+ *  emoji folds to the empty string, which is why the caller falls back to the bare marker.
+ *
+ *  The Unicode classes need the `u` flag. The build targets modern browsers only (ARCH-12), so
+ *  there is no polyfill and no hand-kept list of punctuation to fall out of date. */
+function foldCaption(caption: string): string {
+  return caption
+    .trim()
+    .replace(/[\s\p{P}\p{S}]+/gu, '_')
+    .replace(/^_+|_+$/g, '')
+}
+
 /** Plain text for SmartEditor ONE. The post title is copied separately by the panel. */
 export function toNaver(
   content: PostContent,
@@ -42,7 +67,7 @@ export function toNaver(
   void images
   // Marker numbers run from 1 in marker order over this one walk, which is the same order
   // `naverPhotoOrder` reports and the same order the preview renders.
-  let photoMarker = 0
+  let markerNumber = 0
   return walkBlocks(content, (block) => {
     // An unfilled template slot exports as the position it reserves, never as its copy
     // token: the token is machinery for the model, and what a person needs in the pasted
@@ -54,17 +79,16 @@ export function toNaver(
       case BlockType.HEADING:
         return block.content
       case BlockType.IMAGE:
-        // A number and nothing else (EXPORT-5). The marker is a POSITION the author replaces
-        // with the photo itself, and both values it used to carry travel on their own copy
-        // controls now — the filename was never something to paste, and the caption goes in
-        // SmartEditor's own caption box, not into the body text (EXPORT-12, EXPORT-24). It
-        // carries no brackets either, which is what tells it from an unfilled template slot.
-        // A block with an empty `file` still spends its number: the numbering and
-        // `naverPhotoOrder` agree by position, so a hole here would shift every later photo
-        // against its marker.
-        return `${contentLanguage === 'en' ? 'photo' : '사진'}_${++photoMarker}_${
-          contentLanguage === 'en' ? 'photo' : '사진'
-        }`
+        // A number and the caption, and no filename (EXPORT-5). The marker is a POSITION the
+        // author replaces with the photo itself; the number alone could not say WHICH photo
+        // that position was for, so the caption rides inside the marker as a label — folded,
+        // so the whole thing is one double-click selection. The caption still has its own
+        // copy control for the platform's caption box, because this one goes away with the
+        // marker (EXPORT-24). No brackets either, which is what tells it from an unfilled
+        // template slot (EXPORT-4). A block with an empty `file` still spends its number: the
+        // numbering and `naverPhotoOrder` agree by position, so a hole here would shift every
+        // later photo against its marker.
+        return photoMarker(contentLanguage, ++markerNumber, block.caption)
       case BlockType.VIDEO:
         // A marker, never a URL and never bytes: the clipboard cannot carry a video file from a
         // page, and the file the author filmed is on the device they are pasting from
