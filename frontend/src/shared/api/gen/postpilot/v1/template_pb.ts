@@ -352,4 +352,3 @@ export const TemplateService: GenService<{
   },
 }> = /*@__PURE__*/
   serviceDesc(file_postpilot_v1_template, 0);
-

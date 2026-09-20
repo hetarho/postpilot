@@ -356,4 +356,3 @@ export const ClipTemplateService: GenService<{
   },
 }> = /*@__PURE__*/
   serviceDesc(file_postpilot_v1_clip_template, 0);
-
