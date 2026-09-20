@@ -51,20 +51,31 @@ const englishGrounding = "State no concrete fact that the memo, the photo observ
 // would license stripping real facts out of blocks the request never mentioned — directly
 // against the byte-for-byte preservation rule beside it. Hence the split: the core prohibition
 // is shared, and each pass carries the clause its own material can support.
-const koreanGroundingWriteScope = "확인할 수 없는 것은 생략하거나 관찰된 범위 안에서만 쓰세요."
+const koreanGroundingWriteScope = "이 제약은 사실 진술에만 적용됩니다. 확인할 수 없는 사실은 생략하거나 관찰된 범위 안에서만 쓰고, 글쓴이의 감상과 의견, 화제 전환은 자유롭게 쓰세요."
 
-const englishGroundingWriteScope = "Omit whatever you cannot confirm, or keep it within what was observed."
+const englishGroundingWriteScope = "This binds factual claims alone: omit whatever fact you cannot confirm, or keep it within what was observed, while the author's impressions, opinions, and changes of subject stay yours to write."
 
 const koreanGroundingReviseScope = "이 기준은 수정 요청으로 새로 쓰거나 손대는 문장에만 적용하고, 요청 밖의 기존 문장은 사실 확인 없이 그대로 두세요."
 
 const englishGroundingReviseScope = "Apply this only to sentences the request makes you write or touch; leave every sentence outside the request exactly as it is, without re-checking its facts."
 
-const koreanNaming = "메모가 대상의 이름을 주고 사진 관찰은 그 대상을 일반적으로만 설명한다면, 본문과 IMAGE alt 및 caption에서 메모의 이름을 사용하세요. 사진 관찰이 뒷받침하지 않는 대상을 메모만으로 쓰면 안 됩니다."
+// koreanAltitude / englishAltitude are the fourth grounding constant (GEN-47) and, like the
+// naming rule, they are write-only: the revise pass holds no observations to stay above. The
+// grounding constraint above says what may be stated; without this one the model answered it
+// by covering the observation array entry by entry, so a post read as a caption for every
+// photograph. It is subtraction, worded the way NaturalnessBaseline is: it forbids describing
+// and licenses nothing new — whatever is written still has to survive the line above.
+const koreanAltitude = "사진 관찰은 글의 근거이자 사진을 놓을 자리를 알려주는 자료이지, 하나씩 묘사해야 할 목록이 아닙니다. 어떤 문단도 사진을 가리키며 설명할 필요가 없습니다. 조명, 벽, 천장, 집기, 공간 배치처럼 글에 아무것도 더하지 않는 시각적 묘사는 쓰지 마세요."
 
-const englishNaming = "When the memo names a subject that the photo observations describe only generically, use the memo's name in prose and in IMAGE alt and caption. This does not permit writing about any subject the photo observations do not support."
+const englishAltitude = "The photo observations are grounding and placement material, not a list to describe one by one. No paragraph has to point at a photo. Do not write visual detail that carries nothing for the post: lighting, walls, ceilings, fixtures, the arrangement of a room."
+
+const koreanNaming = "메모가 대상의 이름을 주고 사진 관찰은 그 대상을 일반적으로만 설명한다면, 본문과 IMAGE alt 및 caption에서 메모의 이름을 사용하세요. 다만 사진 관찰에 없는 것을 사진 안에 있는 것처럼 쓰지는 마세요."
+
+const englishNaming = "When the memo names a subject that the photo observations describe only generically, use the memo's name in prose and in IMAGE alt and caption. Do not write anything the photo observations do not show as being in the frame."
 
 const WritePrompt = `첨부 사진 관찰과 메모를 바탕으로 자연스러운 한국어 블로그 글을 작성하세요.
 ` + koreanGrounding + " " + koreanGroundingWriteScope + `
+` + koreanAltitude + `
 ` + koreanNaming + `
 반드시 하나의 문단마다 TEXT 블록 하나만 사용하세요.
 IMAGE 블록은 제공된 정확한 파일명만 사용하고, 목록에 없는 이미지를 절대 만들어내지 마세요.
@@ -74,6 +85,7 @@ IMAGE 블록은 사진이 글의 흐름상 가장 자연스러운 위치에 오�
 
 const englishWritePrompt = `Write a natural English blog post from the photo observations and memo.
 ` + englishGrounding + " " + englishGroundingWriteScope + `
+` + englishAltitude + `
 ` + englishNaming + `
 Use exactly one TEXT block for each paragraph.
 IMAGE blocks may use only the exact filenames provided. Never invent an image that is not in the list.

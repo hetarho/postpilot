@@ -79,27 +79,30 @@ func TestMemoNamingAuthorityIsInWritePromptsOnly(t *testing.T) {
 		prompt    string
 		grounding string
 		scope     string
+		altitude  string
 		naming    string
 	}{
 		"Korean": {
 			prompt:    firstOf(BuildWritePrompt(Profile{}, nil, "memo", "title", nil, nil, nil, nil)),
 			grounding: koreanGrounding,
 			scope:     koreanGroundingWriteScope,
+			altitude:  koreanAltitude,
 			naming:    koreanNaming,
 		},
 		"English": {
 			prompt:    firstOf(BuildWritePromptForLanguage(LanguageEnglish, Profile{}, nil, "memo", "title", nil, nil, nil, 4, nil, nil)),
 			grounding: englishGrounding,
 			scope:     englishGroundingWriteScope,
+			altitude:  englishAltitude,
 			naming:    englishNaming,
 		},
 	} {
 		if strings.Count(test.prompt, test.naming) != 1 {
 			t.Errorf("%s write prompt does not contain the naming rule exactly once", name)
 		}
-		wantLines := test.grounding + " " + test.scope + "\n" + test.naming + "\n"
+		wantLines := test.grounding + " " + test.scope + "\n" + test.altitude + "\n" + test.naming + "\n"
 		if !strings.Contains(test.prompt, wantLines) {
-			t.Errorf("%s naming rule is not on its own line immediately after grounding", name)
+			t.Errorf("%s grounding, altitude and naming lines are not in that order, each on its own line", name)
 		}
 	}
 
@@ -122,8 +125,96 @@ func TestMemoNamingAuthorityIsInWritePromptsOnly(t *testing.T) {
 	}
 }
 
+// GEN-47: the altitude rule reaches the write prompt and nothing else. The revise pass holds
+// no observations to stay above, and the two observe passes are the ones whose whole job is to
+// enumerate what is in a frame — telling either of them not to describe would be a bug.
+func TestAltitudeRuleIsInWritePromptsOnly(t *testing.T) {
+	for name, test := range map[string]struct {
+		prompt   string
+		altitude string
+	}{
+		"Korean bare":  {prompt: firstOf(BuildWritePrompt(goldenProfile(), nil, "memo", "title", nil, nil, nil, nil)), altitude: koreanAltitude},
+		"Korean full":  {prompt: firstOf(BuildWritePrompt(goldenProfile(), goldenObservations(), "memo", "title", nil, nil, testBrief(), testGuidelines())), altitude: koreanAltitude},
+		"English bare": {prompt: firstOf(BuildWritePromptForLanguage(LanguageEnglish, goldenProfile(), nil, "memo", "title", nil, nil, nil, 4, nil, nil)), altitude: englishAltitude},
+	} {
+		if strings.Count(test.prompt, test.altitude) != 1 {
+			t.Errorf("%s write prompt carries the altitude rule %d times", name, strings.Count(test.prompt, test.altitude))
+		}
+	}
+
+	for name, test := range map[string]struct {
+		prompt   string
+		altitude string
+	}{
+		"Korean revise":  {prompt: firstOf(BuildRevisePrompt(goldenProfile(), goldenContent(), nil, "고쳐줘", nil, testBrief(), testGuidelines())), altitude: koreanAltitude},
+		"English revise": {prompt: firstOf(BuildRevisePromptForLanguage(LanguageEnglish, goldenProfile(), goldenContent(), nil, "shorten", nil, 4, nil, nil)), altitude: englishAltitude},
+	} {
+		if strings.Contains(test.prompt, test.altitude) {
+			t.Errorf("%s prompt contains the write-only altitude rule", name)
+		}
+	}
+
+	for name, prompt := range map[string]string{"photo observe": ObservePrompt, "video observe": ObserveVideoPrompt} {
+		for _, altitude := range []string{koreanAltitude, englishAltitude} {
+			if strings.Contains(prompt, altitude) {
+				t.Errorf("the %s prompt gained the altitude rule", name)
+			}
+		}
+	}
+}
+
+// GEN-16: only the scope clause differs between the passes. The core prohibition is the same
+// bytes in the write and the revise prompt, which is what one shared constant is for — the
+// altitude rule sits after that shared line and must not have split it.
+func TestGroundingCoreIsByteIdenticalInWriteAndRevisePrompts(t *testing.T) {
+	for name, test := range map[string]struct {
+		write, revise           string
+		core                    string
+		writeScope, reviseScope string
+	}{
+		"Korean": {
+			write:       firstOf(BuildWritePrompt(goldenProfile(), nil, "memo", "title", nil, nil, nil, nil)),
+			revise:      firstOf(BuildRevisePrompt(goldenProfile(), goldenContent(), nil, "고쳐줘", nil, nil, nil)),
+			core:        koreanGrounding,
+			writeScope:  koreanGroundingWriteScope,
+			reviseScope: koreanGroundingReviseScope,
+		},
+		"English": {
+			write:       firstOf(BuildWritePromptForLanguage(LanguageEnglish, goldenProfile(), nil, "memo", "title", nil, nil, nil, 4, nil, nil)),
+			revise:      firstOf(BuildRevisePromptForLanguage(LanguageEnglish, goldenProfile(), goldenContent(), nil, "shorten", nil, 4, nil, nil)),
+			core:        englishGrounding,
+			writeScope:  englishGroundingWriteScope,
+			reviseScope: englishGroundingReviseScope,
+		},
+	} {
+		writeLine, reviseLine := lineContaining(test.write, test.core), lineContaining(test.revise, test.core)
+		if writeLine == "" || reviseLine == "" {
+			t.Fatalf("%s: the grounding core is missing from the write or the revise prompt", name)
+		}
+		if !strings.HasPrefix(writeLine, test.core+" ") || !strings.HasPrefix(reviseLine, test.core+" ") {
+			t.Fatalf("%s: the grounding core no longer opens its own line in both passes", name)
+		}
+		if writeLine != test.core+" "+test.writeScope {
+			t.Errorf("%s write grounding line = %q", name, writeLine)
+		}
+		if reviseLine != test.core+" "+test.reviseScope {
+			t.Errorf("%s revise grounding line = %q", name, reviseLine)
+		}
+	}
+}
+
+func lineContaining(prompt, needle string) string {
+	for _, line := range strings.Split(prompt, "\n") {
+		if strings.Contains(line, needle) {
+			return line
+		}
+	}
+	return ""
+}
+
 // The pre-naturalness goldens are the baseline the fixed-text additions are stated against:
-// job 36's stylistic section, job 35's grounding line, and T041's write-only naming line.
+// job 36's stylistic section, job 35's grounding line, T041's write-only naming line and
+// T287's write-only altitude line.
 // Removing exactly those additions leaves the legacy bytes, which keeps each delta checkable.
 //
 // Change 25 renamed the concept the fixed output-language line names (용도 → 템플릿) in BOTH
@@ -143,9 +234,10 @@ func TestFixedTextAdditionsAreTheOnlyGoldenDelta(t *testing.T) {
 		for _, scope := range []string{koreanGroundingWriteScope, koreanGroundingReviseScope} {
 			stripped = strings.Replace(stripped, "\n"+koreanGrounding+" "+scope, "", 1)
 		}
+		stripped = strings.Replace(stripped, "\n"+koreanAltitude, "", 1)
 		stripped = strings.Replace(stripped, "\n"+koreanNaming, "", 1)
 		if stripped != legacySystem {
-			t.Errorf("%s changed by more than the inserted baseline, grounding, and naming lines", pair.current)
+			t.Errorf("%s changed by more than the inserted baseline, grounding, altitude, and naming lines", pair.current)
 		}
 		if currentUser != legacyUser {
 			t.Errorf("%s changed the per-post user material", pair.current)

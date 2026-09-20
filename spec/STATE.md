@@ -55,7 +55,6 @@
 | T282 | the agent maps proto at one adapter and keeps preflight out of main | ARCH | T008 | todo |
 | T283 | SmartEditor scripts are files with a DOM test; naver is plan vs driver | ARCH | T282 | todo |
 | T284 | the agent generates only the protos it uses and drops the survey harness | ARCH | T008 T281 | todo |
-| T287 | the write prompt stops describing the photographs | GEN GUIDE | - | todo |
 | T288 | the Naver photo marker is a number and the caption copies itself | EXPORT | - | todo |
 | T289 | memories are a table, a context and a directory RPC family | MEM | - | todo |
 | T290 | retrieval, the frozen [기억] section and the draft's opt-in | MEM GEN GUIDE POST | T289 | todo |
@@ -64,13 +63,11 @@
 | T293 | ①'s 기억 사용 checkbox and ③'s candidate sheet | POST MEM | T290 T291 | todo |
 
 ## next
-- every unblocked task is done: the review's FE half (T259-T268) and BE half (T275-T281) are all in `tasks/done/`. What is left waits on T008, which belongs to another session — T279 T282 T283 T284 — or is blocked (T177)
-- T281 changed the clip rpc PATHS: the next deploy must ship the API image and the web build TOGETHER (ARCH-41), and `buf breaking` will report the removed `ClipService` once, which is that intended break
-- the clip `release-smoke` stage is red at HEAD on this host: 9 of 28 modes end in `no result` (generation ends on a plan since T255, harness still expects a Result) — still needs a fix task (review-code clip-release-smoke or update the harness)
-- post-quality-and-related-links remains open ideation, awaiting conversion when ready
-- `implement-task T287` first: the prompt half stands alone, needs no memory row and is the fix the whole memory chain was started for; T288 is independent of everything
+- `implement-task T288` next: it is independent of everything and the last non-memory todo with no dep
 - the memory chain is T289 → (T290 · T291 · T292) → T293; only T289 blocks anything
+- T279 T282 T283 T284 still wait on T008 (another session); T177 is blocked; the clip `release-smoke` stage is still red at HEAD on this host (9 of 28 modes end in `no result`) and still needs a fix task
 ## log
+- 260920 T287 done; the write prompt gained the altitude rule as a fourth grounding constant, the write scope now binds factual claims alone and the naming rule forbids the frame rather than the memo; only the write golden moved, by exactly three lines
 - 260920 T287-T293 created from MEM r1 + the five amendments: prompt altitude, Naver marker, the memory store, retrieval, extraction, the 기억 page, the two post surfaces (mem)
 - 260920 create-task MEM GEN GUIDE POST EXPORT QUOTA start (mem)
 - 260920 GEN r7 GUIDE r3 POST r8 EXPORT r3 QUOTA r13: the altitude rule, grounding bound to factual claims, the opt-in `[기억]` section, ①'s checkbox, ③'s extraction and the numbered photo marker (mem)
@@ -90,10 +87,3 @@
 - 260920 T275 done; job/store has 7 lifecycle+authorization tests (dispatch vs cancellation serialization included) and template/rpc + modelcatalog/rpc have handler tests for every mapping and refusal; ARCH-26 green
 - 260920 T275 claimed (clp)
 - 260920 T268 done; router.tsx is 70 lines over app/routes/tree.ts + 11 group files, 12 search schemas moved to their pages, and tree.test pins all 45 addresses; ARCH-25 green
-- 260920 T268 claimed (clp)
-- 260920 T266 done; shared/lib/autosave carries the clip-settings and block-editor queues (223→82, 236→155) with 10 unit tests; save-draft stays bespoke (assignments + mid-flight rekey) and says why; ARCH-25 green
-- 260920 T266 claimed (clp)
-- 260920 T265 done; the 1.1k-line clips namespace is 17 slice fragments (largest 209 lines/language) and app/providers/i18n keeps only the five cross-cutting namespaces; ARCH-25 green
-- 260920 T265 claimed (clp)
-- 260920 T264 done; 8 domain namespaces became 63 slice fragments assembled by app/providers/i18n (leaf-module imports, one steiger exception) and resources.test gained a no-duplicate-claim check; ARCH-25 green
-- 260920 T264 claimed (clp)
