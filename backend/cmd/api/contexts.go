@@ -261,7 +261,6 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 	// Template names are a live projection and owned-id validation, never a stored column or
 	// a SQL join: the guideline context asks the template context, through this adapter only.
 	c.guideline.SetTemplateDirectory(guidelineTemplates{service: c.template})
-
 	// The memory context stands alone: it reads no other context, and the only direction
 	// anything crosses is the post-delete hook above, which hands it a slug.
 	c.memory = memory.NewService(
@@ -278,6 +277,14 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 		providerstore.New(handle.Writer, handle.Reader), c.metered,
 		providerCredits{ledger: c.ledger, plans: c.auth, budget: cfg.LLMCompletionBudget},
 	)
+	// The extraction path: the account's analyze selection, the post it reads, and the
+	// durable job it runs as. Everything else the memory context does needs none of them.
+	c.memory.ConfigureExtraction(
+		memoryModels{selections: c.provider, registry: c.metered},
+		memoryPosts{service: c.post},
+		memoryExtractions{queue: c.jobs},
+	)
+
 	c.voice = voice.NewService(
 		voicestore.New(handle.Writer, handle.Reader),
 		voiceModels{selections: c.provider, registry: c.metered, plans: c.auth},

@@ -264,14 +264,16 @@ const (
 	// the browser's own: no status ever carries it, and it is named here so the catalogue it is rendered from stays one list
 	FailureReason_NETWORK_UNAVAILABLE FailureReason = 222
 	// 기억 (MEM r1): the field rules, the closed kind and the account cap
-	FailureReason_MEMORY_NOT_FOUND     FailureReason = 223
-	FailureReason_MEMORY_TEXT_REQUIRED FailureReason = 224
-	FailureReason_MEMORY_TEXT_TOO_LONG FailureReason = 225
-	FailureReason_MEMORY_KIND_INVALID  FailureReason = 226
-	FailureReason_MEMORY_TAGS_TOO_MANY FailureReason = 227
-	FailureReason_MEMORY_LIMIT_REACHED FailureReason = 228
-	FailureReason_MEMORY_TEXT_TAKEN    FailureReason = 229
-	FailureReason_MEMORY_TAG_REQUIRED  FailureReason = 230
+	FailureReason_MEMORY_NOT_FOUND              FailureReason = 223
+	FailureReason_MEMORY_TEXT_REQUIRED          FailureReason = 224
+	FailureReason_MEMORY_TEXT_TOO_LONG          FailureReason = 225
+	FailureReason_MEMORY_KIND_INVALID           FailureReason = 226
+	FailureReason_MEMORY_TAGS_TOO_MANY          FailureReason = 227
+	FailureReason_MEMORY_LIMIT_REACHED          FailureReason = 228
+	FailureReason_MEMORY_TEXT_TAKEN             FailureReason = 229
+	FailureReason_MEMORY_TAG_REQUIRED           FailureReason = 230
+	FailureReason_MEMORY_EXTRACTION_NOT_READY   FailureReason = 231
+	FailureReason_MEMORY_ANALYZE_MODEL_REQUIRED FailureReason = 232
 )
 
 // Enum value maps for FailureReason.
@@ -507,6 +509,8 @@ var (
 		228: "MEMORY_LIMIT_REACHED",
 		229: "MEMORY_TEXT_TAKEN",
 		230: "MEMORY_TAG_REQUIRED",
+		231: "MEMORY_EXTRACTION_NOT_READY",
+		232: "MEMORY_ANALYZE_MODEL_REQUIRED",
 	}
 	FailureReason_value = map[string]int32{
 		"UNKNOWN_FAILURE":                            0,
@@ -739,6 +743,8 @@ var (
 		"MEMORY_LIMIT_REACHED":                       228,
 		"MEMORY_TEXT_TAKEN":                          229,
 		"MEMORY_TAG_REQUIRED":                        230,
+		"MEMORY_EXTRACTION_NOT_READY":                231,
+		"MEMORY_ANALYZE_MODEL_REQUIRED":              232,
 	}
 )
 
@@ -909,7 +915,7 @@ const file_postpilot_v1_error_proto_rawDesc = "" +
 	"\x10technical_detail\x18\x03 \x01(\tR\x0ftechnicalDetail\x1a9\n" +
 	"\vParamsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\xaf2\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\xf52\n" +
 	"\rFailureReason\x12\x13\n" +
 	"\x0fUNKNOWN_FAILURE\x10\x00\x12\x11\n" +
 	"\rAUTH_REQUIRED\x10\x01\x12\x1d\n" +
@@ -1142,7 +1148,9 @@ const file_postpilot_v1_error_proto_rawDesc = "" +
 	"\x14MEMORY_TAGS_TOO_MANY\x10\xe3\x01\x12\x19\n" +
 	"\x14MEMORY_LIMIT_REACHED\x10\xe4\x01\x12\x16\n" +
 	"\x11MEMORY_TEXT_TAKEN\x10\xe5\x01\x12\x18\n" +
-	"\x13MEMORY_TAG_REQUIRED\x10\xe6\x01BDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
+	"\x13MEMORY_TAG_REQUIRED\x10\xe6\x01\x12 \n" +
+	"\x1bMEMORY_EXTRACTION_NOT_READY\x10\xe7\x01\x12\"\n" +
+	"\x1dMEMORY_ANALYZE_MODEL_REQUIRED\x10\xe8\x01BDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
 
 var (
 	file_postpilot_v1_error_proto_rawDescOnce sync.Once

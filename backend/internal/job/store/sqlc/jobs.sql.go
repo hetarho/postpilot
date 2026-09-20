@@ -679,6 +679,27 @@ func (q *Queries) RequestCancellation(ctx context.Context, arg RequestCancellati
 	return result.RowsAffected()
 }
 
+const saveJobPayload = `-- name: SaveJobPayload :execrows
+UPDATE generation_jobs SET payload = ?, updated_at = ? WHERE id = ? AND status = 'running'
+`
+
+type SaveJobPayloadParams struct {
+	Payload   string
+	UpdatedAt string
+	ID        string
+}
+
+// The RESULT of a kind whose output lives on the row rather than in a table of its own:
+// the running handler replaces its own payload with what it produced. Guarded by status so
+// a cancelled or finished job cannot be written into after the fact.
+func (q *Queries) SaveJobPayload(ctx context.Context, arg SaveJobPayloadParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, saveJobPayload, arg.Payload, arg.UpdatedAt, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const sweepQueuedPersonalization = `-- name: SweepQueuedPersonalization :execrows
 UPDATE generation_jobs
 SET status = 'failed', error = NULL, error_reason = ?, error_params = ?, technical_detail = ?,

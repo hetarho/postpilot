@@ -254,6 +254,8 @@ enum FailureReason {
   MEMORY_LIMIT_REACHED = 228;
   MEMORY_TEXT_TAKEN = 229;
   MEMORY_TAG_REQUIRED = 230;
+  MEMORY_EXTRACTION_NOT_READY = 231;
+  MEMORY_ANALYZE_MODEL_REQUIRED = 232;
 }
 
 // AppErrorDetail accompanies a synchronous Connect status. reason is a stable product

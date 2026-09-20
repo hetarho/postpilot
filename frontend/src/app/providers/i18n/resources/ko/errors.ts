@@ -164,6 +164,8 @@ export const errors = {
   MEMORY_KIND_INVALID: '기억 종류를 선택해 주세요.',
   MEMORY_TAG_REQUIRED: '빈 태그는 넣을 수 없어요.',
   MEMORY_TAGS_TOO_MANY: '태그는 {{max}}개까지예요. 현재 {{actual}}개예요.',
+  MEMORY_EXTRACTION_NOT_READY: '아직 뽑아낸 기억 후보가 없어요. 잠시 뒤에 다시 확인해 주세요.',
+  MEMORY_ANALYZE_MODEL_REQUIRED: '기억을 뽑으려면 분석 모델을 먼저 등록해 주세요.',
   MEMORY_LIMIT_REACHED:
     '기억은 {{max}}개까지 저장할 수 있어요. 필요 없는 기억을 지우고 다시 시도해 주세요.',
   GUIDELINE_SCOPE_INVALID:

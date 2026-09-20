@@ -99,6 +99,40 @@ func (h *Handler) DeleteMemory(ctx context.Context, req *connect.Request[postpil
 	return connect.NewResponse(&postpilotv1.DeleteMemoryResponse{}), nil
 }
 
+// StartMemoryExtraction starts the one credit-gated job. The refusal an account without
+// the balance meets is the queue's own (`resource_exhausted` / `INSUFFICIENT_CREDITS`), and
+// it reaches the client through the error it returns, unchanged — this handler adds no
+// refusal of its own for it.
+func (h *Handler) StartMemoryExtraction(ctx context.Context, req *connect.Request[postpilotv1.StartMemoryExtractionRequest]) (*connect.Response[postpilotv1.StartMemoryExtractionResponse], error) {
+	userID, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	id, err := h.service.StartExtraction(ctx, userID, req.Msg.GetPostSlug())
+	if err != nil {
+		return nil, toConnectError("start memory extraction", err)
+	}
+	return connect.NewResponse(&postpilotv1.StartMemoryExtractionResponse{JobId: id}), nil
+}
+
+func (h *Handler) GetMemoryExtraction(ctx context.Context, req *connect.Request[postpilotv1.GetMemoryExtractionRequest]) (*connect.Response[postpilotv1.GetMemoryExtractionResponse], error) {
+	userID, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	postSlug, candidates, err := h.service.Extraction(ctx, userID, req.Msg.GetJobId())
+	if err != nil {
+		return nil, toConnectError("get memory extraction", err)
+	}
+	out := make([]*postpilotv1.MemoryCandidate, 0, len(candidates))
+	for _, c := range candidates {
+		out = append(out, &postpilotv1.MemoryCandidate{
+			Text: c.Text, Kind: toProtoKind(c.Kind), Tags: append([]string(nil), c.Tags...),
+		})
+	}
+	return connect.NewResponse(&postpilotv1.GetMemoryExtractionResponse{PostSlug: postSlug, Candidates: out}), nil
+}
+
 func actingUser(ctx context.Context) (string, error) {
 	userID, ok := auth.UserFromContext(ctx)
 	if !ok {
@@ -171,6 +205,10 @@ func toConnectError(op string, err error) error {
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "memory tag is empty", postpilotv1.FailureReason_MEMORY_TAG_REQUIRED, nil)
 	case errors.Is(err, memory.ErrDuplicateText):
 		return rpcserver.NewAppError(connect.CodeAlreadyExists, "memory text already exists", postpilotv1.FailureReason_MEMORY_TEXT_TAKEN, nil)
+	case errors.Is(err, memory.ErrExtractionNotReady):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "memory extraction has no candidates yet", postpilotv1.FailureReason_MEMORY_EXTRACTION_NOT_READY, nil)
+	case errors.Is(err, memory.ErrAnalyzeModelRequired):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "an enabled analyze model is required", postpilotv1.FailureReason_MEMORY_ANALYZE_MODEL_REQUIRED, nil)
 	case errors.Is(err, memory.ErrNotFound):
 		return rpcserver.NewAppError(connect.CodeNotFound, "memory not found", postpilotv1.FailureReason_MEMORY_NOT_FOUND, nil)
 	default:

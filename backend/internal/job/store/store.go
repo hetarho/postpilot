@@ -497,3 +497,14 @@ func (s *Store) SweepUnactivated(ctx context.Context, f job.Failure) (int64, err
 	now := formatTime(time.Now())
 	return s.write.SweepUnactivated(ctx, sqlc.SweepUnactivatedParams{ErrorReason: r, ErrorParams: p, TechnicalDetail: d, FinishedAt: nullString(now), UpdatedAt: now, Kinds: kinds})
 }
+
+// SavePayload replaces a running job's payload with its handler's result.
+func (s *Store) SavePayload(ctx context.Context, id string, payload []byte, at time.Time) (bool, error) {
+	n, err := s.write.SaveJobPayload(ctx, sqlc.SaveJobPayloadParams{
+		Payload: string(payload), UpdatedAt: formatTime(at), ID: id,
+	})
+	if err != nil {
+		return false, fmt.Errorf("save job payload: %w", err)
+	}
+	return n == 1, nil
+}

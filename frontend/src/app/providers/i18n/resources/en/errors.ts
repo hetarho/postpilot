@@ -169,6 +169,8 @@ export const errors = {
   MEMORY_KIND_INVALID: 'Choose a memory kind.',
   MEMORY_TAG_REQUIRED: 'A tag cannot be empty.',
   MEMORY_TAGS_TOO_MANY: 'At most {{max}} tags. There are {{actual}} now.',
+  MEMORY_EXTRACTION_NOT_READY: 'No memory candidates yet. Check again in a moment.',
+  MEMORY_ANALYZE_MODEL_REQUIRED: 'Register an analyze model before extracting memories.',
   MEMORY_LIMIT_REACHED:
     'You can keep at most {{max}} memories. Delete one you no longer need and try again.',
   GUIDELINE_SCOPE_INVALID:

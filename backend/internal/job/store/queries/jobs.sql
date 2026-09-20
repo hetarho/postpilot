@@ -113,6 +113,12 @@ LIMIT 1;
 -- name: GetJobByID :one
 SELECT * FROM generation_jobs WHERE id = ?;
 
+-- name: SaveJobPayload :execrows
+-- The RESULT of a kind whose output lives on the row rather than in a table of its own:
+-- the running handler replaces its own payload with what it produced. Guarded by status so
+-- a cancelled or finished job cannot be written into after the fact.
+UPDATE generation_jobs SET payload = ?, updated_at = ? WHERE id = ? AND status = 'running';
+
 -- name: ActiveForProject :one
 SELECT * FROM generation_jobs WHERE user_id=? AND clip_project_id=? AND status IN ('queued','running') LIMIT 1;
 -- name: LatestForProject :one

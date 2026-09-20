@@ -73,6 +73,14 @@ var (
 	// the post instead (MEM-9) — but two rows cannot be merged behind the user's back, so
 	// the edit is refused and they decide which one to keep (MEM-10).
 	ErrDuplicateText = errors.New("a memory with that text already exists")
+	// ErrExtractionNotReady is a read of an extraction whose job has not produced its
+	// candidates yet, or whose payload is not one. The two are one answer on purpose: both
+	// mean "there is nothing to rule on here", and neither is a reason to say more.
+	ErrExtractionNotReady = errors.New("memory extraction has no candidates yet")
+	// ErrAnalyzeModelRequired is an account with no enabled analyze-stage model. Extraction
+	// reads finished prose, which is what that stage is for; there is no fallback, because
+	// a silent substitution would spend credits on a model the user did not choose.
+	ErrAnalyzeModelRequired = errors.New("an enabled analyze model is required")
 	// ErrInvalidTag is an empty-after-trim tag. The tag set is collapsed, not repaired:
 	// dropping a blank silently would save a set the user did not send.
 	ErrInvalidTag = errors.New("memory tag is empty")

@@ -63,4 +63,7 @@ type Store interface {
 	Activate(ctx context.Context, userID, id string) (bool, error)
 	SweepUnactivated(ctx context.Context, failure Failure) (int64, error)
 	GetByID(ctx context.Context, id string) (Job, error)
+	// SavePayload replaces a RUNNING job's payload with what its handler produced. Only a
+	// kind whose result lives on the row uses it (see Queue.SaveResult).
+	SavePayload(ctx context.Context, id string, payload []byte, at time.Time) (bool, error)
 }

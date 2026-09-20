@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file postpilot/v1/memory.proto.
  */
 export const file_postpilot_v1_memory: GenFile = /*@__PURE__*/
-  fileDesc("Chlwb3N0cGlsb3QvdjEvbWVtb3J5LnByb3RvEgxwb3N0cGlsb3QudjEisQEKBk1lbW9yeRIKCgJpZBgBIAEoCRIMCgR0ZXh0GAIgASgJEiYKBGtpbmQYAyABKA4yGC5wb3N0cGlsb3QudjEuTWVtb3J5S2luZBIMCgR0YWdzGAQgAygJEhkKEXNvdXJjZV9wb3N0X3NsdWdzGAUgAygJEhIKCmNyZWF0ZWRfYXQYBiABKAkSEgoKdXBkYXRlZF9hdBgHIAEoCRIUCgxsYXN0X3NlZW5fYXQYCCABKAkiFQoTTGlzdE1lbW9yaWVzUmVxdWVzdCI+ChRMaXN0TWVtb3JpZXNSZXNwb25zZRImCghtZW1vcmllcxgBIAMoCzIULnBvc3RwaWxvdC52MS5NZW1vcnkicwoTQ3JlYXRlTWVtb3J5UmVxdWVzdBIMCgR0ZXh0GAEgASgJEiYKBGtpbmQYAiABKA4yGC5wb3N0cGlsb3QudjEuTWVtb3J5S2luZBIMCgR0YWdzGAMgAygJEhgKEHNvdXJjZV9wb3N0X3NsdWcYBCABKAkiUgoUQ3JlYXRlTWVtb3J5UmVzcG9uc2USJAoGbWVtb3J5GAEgASgLMhQucG9zdHBpbG90LnYxLk1lbW9yeRIUCgxkZWR1cGxpY2F0ZWQYAiABKAgiHwoPTWVtb3J5VGFnc1BhdGNoEgwKBHRhZ3MYASADKAkioAEKE1VwZGF0ZU1lbW9yeVJlcXVlc3QSCgoCaWQYASABKAkSEQoEdGV4dBgCIAEoCUgAiAEBEisKBGtpbmQYAyABKA4yGC5wb3N0cGlsb3QudjEuTWVtb3J5S2luZEgBiAEBEisKBHRhZ3MYBCABKAsyHS5wb3N0cGlsb3QudjEuTWVtb3J5VGFnc1BhdGNoQgcKBV90ZXh0QgcKBV9raW5kIjwKFFVwZGF0ZU1lbW9yeVJlc3BvbnNlEiQKBm1lbW9yeRgBIAEoCzIULnBvc3RwaWxvdC52MS5NZW1vcnkiIQoTRGVsZXRlTWVtb3J5UmVxdWVzdBIKCgJpZBgBIAEoCSIWChREZWxldGVNZW1vcnlSZXNwb25zZSqmAQoKTWVtb3J5S2luZBIbChdNRU1PUllfS0lORF9VTlNQRUNJRklFRBAAEhoKFk1FTU9SWV9LSU5EX1BSRUZFUkVOQ0UQARIXChNNRU1PUllfS0lORF9QRVJTT05BEAISFQoRTUVNT1JZX0tJTkRfUExBQ0UQAxIWChJNRU1PUllfS0lORF9QRVJTT04QBBIXChNNRU1PUllfS0lORF9ISVNUT1JZEAUy8wIKDU1lbW9yeVNlcnZpY2USVwoMTGlzdE1lbW9yaWVzEiEucG9zdHBpbG90LnYxLkxpc3RNZW1vcmllc1JlcXVlc3QaIi5wb3N0cGlsb3QudjEuTGlzdE1lbW9yaWVzUmVzcG9uc2UiABJXCgxDcmVhdGVNZW1vcnkSIS5wb3N0cGlsb3QudjEuQ3JlYXRlTWVtb3J5UmVxdWVzdBoiLnBvc3RwaWxvdC52MS5DcmVhdGVNZW1vcnlSZXNwb25zZSIAElcKDFVwZGF0ZU1lbW9yeRIhLnBvc3RwaWxvdC52MS5VcGRhdGVNZW1vcnlSZXF1ZXN0GiIucG9zdHBpbG90LnYxLlVwZGF0ZU1lbW9yeVJlc3BvbnNlIgASVwoMRGVsZXRlTWVtb3J5EiEucG9zdHBpbG90LnYxLkRlbGV0ZU1lbW9yeVJlcXVlc3QaIi5wb3N0cGlsb3QudjEuRGVsZXRlTWVtb3J5UmVzcG9uc2UiAEJEWkJnaXRodWIuY29tL3Bvc3RwaWxvdC9iYWNrZW5kL2ludGVybmFsL2dlbi9wb3N0cGlsb3QvdjE7cG9zdHBpbG90djFiBnByb3RvMw");
+  fileDesc("Chlwb3N0cGlsb3QvdjEvbWVtb3J5LnByb3RvEgxwb3N0cGlsb3QudjEisQEKBk1lbW9yeRIKCgJpZBgBIAEoCRIMCgR0ZXh0GAIgASgJEiYKBGtpbmQYAyABKA4yGC5wb3N0cGlsb3QudjEuTWVtb3J5S2luZBIMCgR0YWdzGAQgAygJEhkKEXNvdXJjZV9wb3N0X3NsdWdzGAUgAygJEhIKCmNyZWF0ZWRfYXQYBiABKAkSEgoKdXBkYXRlZF9hdBgHIAEoCRIUCgxsYXN0X3NlZW5fYXQYCCABKAkiFQoTTGlzdE1lbW9yaWVzUmVxdWVzdCI+ChRMaXN0TWVtb3JpZXNSZXNwb25zZRImCghtZW1vcmllcxgBIAMoCzIULnBvc3RwaWxvdC52MS5NZW1vcnkicwoTQ3JlYXRlTWVtb3J5UmVxdWVzdBIMCgR0ZXh0GAEgASgJEiYKBGtpbmQYAiABKA4yGC5wb3N0cGlsb3QudjEuTWVtb3J5S2luZBIMCgR0YWdzGAMgAygJEhgKEHNvdXJjZV9wb3N0X3NsdWcYBCABKAkiUgoUQ3JlYXRlTWVtb3J5UmVzcG9uc2USJAoGbWVtb3J5GAEgASgLMhQucG9zdHBpbG90LnYxLk1lbW9yeRIUCgxkZWR1cGxpY2F0ZWQYAiABKAgiHwoPTWVtb3J5VGFnc1BhdGNoEgwKBHRhZ3MYASADKAkioAEKE1VwZGF0ZU1lbW9yeVJlcXVlc3QSCgoCaWQYASABKAkSEQoEdGV4dBgCIAEoCUgAiAEBEisKBGtpbmQYAyABKA4yGC5wb3N0cGlsb3QudjEuTWVtb3J5S2luZEgBiAEBEisKBHRhZ3MYBCABKAsyHS5wb3N0cGlsb3QudjEuTWVtb3J5VGFnc1BhdGNoQgcKBV90ZXh0QgcKBV9raW5kIjwKFFVwZGF0ZU1lbW9yeVJlc3BvbnNlEiQKBm1lbW9yeRgBIAEoCzIULnBvc3RwaWxvdC52MS5NZW1vcnkiIQoTRGVsZXRlTWVtb3J5UmVxdWVzdBIKCgJpZBgBIAEoCSIWChREZWxldGVNZW1vcnlSZXNwb25zZSIxChxTdGFydE1lbW9yeUV4dHJhY3Rpb25SZXF1ZXN0EhEKCXBvc3Rfc2x1ZxgBIAEoCSIvCh1TdGFydE1lbW9yeUV4dHJhY3Rpb25SZXNwb25zZRIOCgZqb2JfaWQYASABKAkiVQoPTWVtb3J5Q2FuZGlkYXRlEgwKBHRleHQYASABKAkSJgoEa2luZBgCIAEoDjIYLnBvc3RwaWxvdC52MS5NZW1vcnlLaW5kEgwKBHRhZ3MYAyADKAkiLAoaR2V0TWVtb3J5RXh0cmFjdGlvblJlcXVlc3QSDgoGam9iX2lkGAEgASgJImMKG0dldE1lbW9yeUV4dHJhY3Rpb25SZXNwb25zZRIRCglwb3N0X3NsdWcYASABKAkSMQoKY2FuZGlkYXRlcxgCIAMoCzIdLnBvc3RwaWxvdC52MS5NZW1vcnlDYW5kaWRhdGUqpgEKCk1lbW9yeUtpbmQSGwoXTUVNT1JZX0tJTkRfVU5TUEVDSUZJRUQQABIaChZNRU1PUllfS0lORF9QUkVGRVJFTkNFEAESFwoTTUVNT1JZX0tJTkRfUEVSU09OQRACEhUKEU1FTU9SWV9LSU5EX1BMQUNFEAMSFgoSTUVNT1JZX0tJTkRfUEVSU09OEAQSFwoTTUVNT1JZX0tJTkRfSElTVE9SWRAFMtUECg1NZW1vcnlTZXJ2aWNlElcKDExpc3RNZW1vcmllcxIhLnBvc3RwaWxvdC52MS5MaXN0TWVtb3JpZXNSZXF1ZXN0GiIucG9zdHBpbG90LnYxLkxpc3RNZW1vcmllc1Jlc3BvbnNlIgASVwoMQ3JlYXRlTWVtb3J5EiEucG9zdHBpbG90LnYxLkNyZWF0ZU1lbW9yeVJlcXVlc3QaIi5wb3N0cGlsb3QudjEuQ3JlYXRlTWVtb3J5UmVzcG9uc2UiABJXCgxVcGRhdGVNZW1vcnkSIS5wb3N0cGlsb3QudjEuVXBkYXRlTWVtb3J5UmVxdWVzdBoiLnBvc3RwaWxvdC52MS5VcGRhdGVNZW1vcnlSZXNwb25zZSIAElcKDERlbGV0ZU1lbW9yeRIhLnBvc3RwaWxvdC52MS5EZWxldGVNZW1vcnlSZXF1ZXN0GiIucG9zdHBpbG90LnYxLkRlbGV0ZU1lbW9yeVJlc3BvbnNlIgAScgoVU3RhcnRNZW1vcnlFeHRyYWN0aW9uEioucG9zdHBpbG90LnYxLlN0YXJ0TWVtb3J5RXh0cmFjdGlvblJlcXVlc3QaKy5wb3N0cGlsb3QudjEuU3RhcnRNZW1vcnlFeHRyYWN0aW9uUmVzcG9uc2UiABJsChNHZXRNZW1vcnlFeHRyYWN0aW9uEigucG9zdHBpbG90LnYxLkdldE1lbW9yeUV4dHJhY3Rpb25SZXF1ZXN0GikucG9zdHBpbG90LnYxLkdldE1lbW9yeUV4dHJhY3Rpb25SZXNwb25zZSIAQkRaQmdpdGh1Yi5jb20vcG9zdHBpbG90L2JhY2tlbmQvaW50ZXJuYWwvZ2VuL3Bvc3RwaWxvdC92MTtwb3N0cGlsb3R2MWIGcHJvdG8z");
 
 /**
  * @generated from message postpilot.v1.Memory
@@ -281,6 +281,119 @@ export const DeleteMemoryResponseSchema: GenMessage<DeleteMemoryResponse> = /*@_
   messageDesc(file_postpilot_v1_memory, 9);
 
 /**
+ * @generated from message postpilot.v1.StartMemoryExtractionRequest
+ */
+export type StartMemoryExtractionRequest = Message<"postpilot.v1.StartMemoryExtractionRequest"> & {
+  /**
+   * @generated from field: string post_slug = 1;
+   */
+  postSlug: string;
+};
+
+/**
+ * Describes the message postpilot.v1.StartMemoryExtractionRequest.
+ * Use `create(StartMemoryExtractionRequestSchema)` to create a new message.
+ */
+export const StartMemoryExtractionRequestSchema: GenMessage<StartMemoryExtractionRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_memory, 10);
+
+/**
+ * The durable job's id. The client polls it like every other job, and reads the result with
+ * GetMemoryExtraction once it is done.
+ *
+ * @generated from message postpilot.v1.StartMemoryExtractionResponse
+ */
+export type StartMemoryExtractionResponse = Message<"postpilot.v1.StartMemoryExtractionResponse"> & {
+  /**
+   * @generated from field: string job_id = 1;
+   */
+  jobId: string;
+};
+
+/**
+ * Describes the message postpilot.v1.StartMemoryExtractionResponse.
+ * Use `create(StartMemoryExtractionResponseSchema)` to create a new message.
+ */
+export const StartMemoryExtractionResponseSchema: GenMessage<StartMemoryExtractionResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_memory, 11);
+
+/**
+ * One proposed fact. It is NOT a memory: approving it is an ordinary CreateMemory carrying
+ * this text, kind and tags plus the post it came from, which is where every field rule and
+ * the account cap are applied.
+ *
+ * @generated from message postpilot.v1.MemoryCandidate
+ */
+export type MemoryCandidate = Message<"postpilot.v1.MemoryCandidate"> & {
+  /**
+   * @generated from field: string text = 1;
+   */
+  text: string;
+
+  /**
+   * @generated from field: postpilot.v1.MemoryKind kind = 2;
+   */
+  kind: MemoryKind;
+
+  /**
+   * @generated from field: repeated string tags = 3;
+   */
+  tags: string[];
+};
+
+/**
+ * Describes the message postpilot.v1.MemoryCandidate.
+ * Use `create(MemoryCandidateSchema)` to create a new message.
+ */
+export const MemoryCandidateSchema: GenMessage<MemoryCandidate> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_memory, 12);
+
+/**
+ * @generated from message postpilot.v1.GetMemoryExtractionRequest
+ */
+export type GetMemoryExtractionRequest = Message<"postpilot.v1.GetMemoryExtractionRequest"> & {
+  /**
+   * @generated from field: string job_id = 1;
+   */
+  jobId: string;
+};
+
+/**
+ * Describes the message postpilot.v1.GetMemoryExtractionRequest.
+ * Use `create(GetMemoryExtractionRequestSchema)` to create a new message.
+ */
+export const GetMemoryExtractionRequestSchema: GenMessage<GetMemoryExtractionRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_memory, 13);
+
+/**
+ * @generated from message postpilot.v1.GetMemoryExtractionResponse
+ */
+export type GetMemoryExtractionResponse = Message<"postpilot.v1.GetMemoryExtractionResponse"> & {
+  /**
+   * The post the extraction read, so an approval can name its source without the client
+   * having to remember which post it started from.
+   *
+   * @generated from field: string post_slug = 1;
+   */
+  postSlug: string;
+
+  /**
+   * May be empty: a post that yielded nothing is a real answer, and the surface says so
+   * rather than offering an empty sheet of checkboxes.
+   *
+   * @generated from field: repeated postpilot.v1.MemoryCandidate candidates = 2;
+   */
+  candidates: MemoryCandidate[];
+};
+
+/**
+ * Describes the message postpilot.v1.GetMemoryExtractionResponse.
+ * Use `create(GetMemoryExtractionResponseSchema)` to create a new message.
+ */
+export const GetMemoryExtractionResponseSchema: GenMessage<GetMemoryExtractionResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_memory, 14);
+
+/**
  * The closed five (MEM-5). There are no user-defined kinds and no sub-kinds: retrieval
  * behaviour rests on the enum being closed, and anything finer is a tag.
  *
@@ -342,9 +455,10 @@ export const MemoryKindSchema: GenEnum<MemoryKind> = /*@__PURE__*/
  * retires or deletes one, and no memory reaches a prompt except through a post that turned
  * the option on (MEM-23, MEM-19).
  *
- * Extraction is not part of this service: it is a durable job that proposes candidates and
- * stores nothing (MEM-13, MEM-14). Approving a candidate is CreateMemory — there is no
- * approve procedure, because the create already owns every field rule and every refusal.
+ * Extraction is a durable job that PROPOSES candidates and stores none (MEM-13, MEM-14):
+ * the two procedures below start it and read what it produced. Approving a candidate is
+ * CreateMemory — there is no approve procedure, because the create already owns every field
+ * rule and every refusal.
  *
  * Every procedure is scoped to the acting user from the session — no request carries a user
  * id, because a user id in a message is a claim by the caller, not a fact.
@@ -384,5 +498,28 @@ export const MemoryService: GenService<{
     input: typeof DeleteMemoryRequestSchema;
     output: typeof DeleteMemoryResponseSchema;
   },
+  /**
+   * 기억으로 저장 on a finished post: one durable, credit-gated job that reads the post and
+   * PROPOSES facts. It stores nothing (MEM-13, MEM-14).
+   *
+   * @generated from rpc postpilot.v1.MemoryService.StartMemoryExtraction
+   */
+  startMemoryExtraction: {
+    methodKind: "unary";
+    input: typeof StartMemoryExtractionRequestSchema;
+    output: typeof StartMemoryExtractionResponseSchema;
+  },
+  /**
+   * The candidates of a finished extraction. They live on the job row and nowhere else:
+   * an unchecked candidate is discarded with the job and never queued for later (MEM-15).
+   *
+   * @generated from rpc postpilot.v1.MemoryService.GetMemoryExtraction
+   */
+  getMemoryExtraction: {
+    methodKind: "unary";
+    input: typeof GetMemoryExtractionRequestSchema;
+    output: typeof GetMemoryExtractionResponseSchema;
+  },
 }> = /*@__PURE__*/
   serviceDesc(file_postpilot_v1_memory, 0);
+

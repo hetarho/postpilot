@@ -10,9 +10,10 @@ option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;post
 // retires or deletes one, and no memory reaches a prompt except through a post that turned
 // the option on (MEM-23, MEM-19).
 //
-// Extraction is not part of this service: it is a durable job that proposes candidates and
-// stores nothing (MEM-13, MEM-14). Approving a candidate is CreateMemory — there is no
-// approve procedure, because the create already owns every field rule and every refusal.
+// Extraction is a durable job that PROPOSES candidates and stores none (MEM-13, MEM-14):
+// the two procedures below start it and read what it produced. Approving a candidate is
+// CreateMemory — there is no approve procedure, because the create already owns every field
+// rule and every refusal.
 //
 // Every procedure is scoped to the acting user from the session — no request carries a user
 // id, because a user id in a message is a claim by the caller, not a fact.
@@ -21,6 +22,12 @@ service MemoryService {
   rpc CreateMemory(CreateMemoryRequest) returns (CreateMemoryResponse) {}
   rpc UpdateMemory(UpdateMemoryRequest) returns (UpdateMemoryResponse) {}
   rpc DeleteMemory(DeleteMemoryRequest) returns (DeleteMemoryResponse) {}
+  // 기억으로 저장 on a finished post: one durable, credit-gated job that reads the post and
+  // PROPOSES facts. It stores nothing (MEM-13, MEM-14).
+  rpc StartMemoryExtraction(StartMemoryExtractionRequest) returns (StartMemoryExtractionResponse) {}
+  // The candidates of a finished extraction. They live on the job row and nowhere else:
+  // an unchecked candidate is discarded with the job and never queued for later (MEM-15).
+  rpc GetMemoryExtraction(GetMemoryExtractionRequest) returns (GetMemoryExtractionResponse) {}
 }
 
 // The closed five (MEM-5). There are no user-defined kinds and no sub-kinds: retrieval
@@ -102,3 +109,27 @@ message DeleteMemoryRequest { string id = 1; }
 // Empty: a delete has no undo and nothing references a memory — a generation freezes the
 // selected TEXTS at enqueue (MEM-19), never an id — so there is nothing to report back.
 message DeleteMemoryResponse {}
+
+message StartMemoryExtractionRequest { string post_slug = 1; }
+// The durable job's id. The client polls it like every other job, and reads the result with
+// GetMemoryExtraction once it is done.
+message StartMemoryExtractionResponse { string job_id = 1; }
+
+// One proposed fact. It is NOT a memory: approving it is an ordinary CreateMemory carrying
+// this text, kind and tags plus the post it came from, which is where every field rule and
+// the account cap are applied.
+message MemoryCandidate {
+  string text = 1;
+  MemoryKind kind = 2;
+  repeated string tags = 3;
+}
+
+message GetMemoryExtractionRequest { string job_id = 1; }
+message GetMemoryExtractionResponse {
+  // The post the extraction read, so an approval can name its source without the client
+  // having to remember which post it started from.
+  string post_slug = 1;
+  // May be empty: a post that yielded nothing is a real answer, and the surface says so
+  // rather than offering an empty sheet of checkboxes.
+  repeated MemoryCandidate candidates = 2;
+}

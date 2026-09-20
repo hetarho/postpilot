@@ -18,6 +18,7 @@ const (
 	KindCompareVoiceRule     = "compare_voice_rule"
 	KindValidateVoiceProfile = "validate_voice_profile"
 	KindSeedVoice            = "seed_voice"
+	KindExtractMemory        = "extract_memory"
 
 	StatusQueued    = "queued"
 	StatusRunning   = "running"

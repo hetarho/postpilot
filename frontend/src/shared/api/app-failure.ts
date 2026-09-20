@@ -173,6 +173,8 @@ export const appFailureSpecs = {
   MEMORY_TAG_REQUIRED: {},
   MEMORY_TAGS_TOO_MANY: { required: ['actual', 'max'] },
   MEMORY_LIMIT_REACHED: { required: ['max'] },
+  MEMORY_EXTRACTION_NOT_READY: {},
+  MEMORY_ANALYZE_MODEL_REQUIRED: {},
   MODEL_STAGE_REQUIRED: {},
   MODEL_STAGE_INVALID: {},
   MODEL_NOT_REGISTERED: {},

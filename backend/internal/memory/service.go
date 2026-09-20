@@ -15,6 +15,12 @@ type Service struct {
 	limits Limits
 	now    func() time.Time
 	newID  func() string
+	// The extraction collaborators. They are set after construction, like the guideline
+	// context's template directory, because the memory store stands alone and everything
+	// below belongs to the ONE path that calls a provider (MEM-13).
+	models      Models
+	posts       Posts
+	extractions ExtractionJobs
 }
 
 func NewService(store Store, limits Limits) *Service {
@@ -24,7 +30,41 @@ func NewService(store Store, limits Limits) *Service {
 	return &Service{store: store, limits: limits, now: time.Now, newID: newID}
 }
 
+// ConfigureExtraction wires the one path that reads a post and calls a provider. Without
+// it the directory still works completely: a memory written by hand needs none of this.
+func (s *Service) ConfigureExtraction(models Models, posts Posts, jobs ExtractionJobs) {
+	s.models, s.posts, s.extractions = models, posts, jobs
+}
+
 func (s *Service) Limits() Limits { return s.limits }
+
+// StartExtraction is 기억으로 저장 (MEM-13): it resolves the account's analyze selection,
+// reads the finished post ONCE and enqueues a durable job with both frozen onto it. The
+// credit gate lives at the queue's enqueue seam, so an account without the balance is
+// refused there and no job row survives (QUOTA-13).
+func (s *Service) StartExtraction(ctx context.Context, userID, postSlug string) (string, error) {
+	if s.models == nil || s.posts == nil || s.extractions == nil {
+		return "", fmt.Errorf("memory: extraction is not wired")
+	}
+	slug := strings.TrimSpace(postSlug)
+	if slug == "" {
+		return "", ErrNotFound
+	}
+	model, ok, err := s.models.AnalyzeModel(ctx, userID)
+	if err != nil {
+		return "", fmt.Errorf("resolve analyze model: %w", err)
+	}
+	if !ok {
+		return "", ErrAnalyzeModelRequired
+	}
+	source, err := s.posts.ExtractionSource(ctx, userID, slug)
+	if err != nil {
+		return "", err
+	}
+	return s.extractions.Enqueue(ctx, ExtractionRequest{
+		UserID: userID, PostSlug: slug, Model: model.String(), Source: source,
+	})
+}
 
 // List returns the account's memories in injection order, so the management screen shows
 // exactly what a post that opted in would be given, in that order.

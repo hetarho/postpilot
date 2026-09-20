@@ -104,3 +104,35 @@ func (q *Queue) Activate(ctx context.Context, userID, id string) error {
 func (q *Queue) SweepUnactivated(ctx context.Context) (int64, error) {
 	return q.store.SweepUnactivated(ctx, interruptedFailure)
 }
+
+// Result is an owner-scoped read of one job INCLUDING its payload, addressed by id alone.
+//
+// Snapshot above requires the subject too, because its callers already know which thing the
+// job belongs to. A result read starts from the job id the enqueue handed back and nothing
+// else, so the account is the whole of the check — and a job of another account reads as
+// missing, exactly as an unknown id does.
+func (q *Queue) Result(ctx context.Context, userID, id string) (Job, error) {
+	found, err := q.store.GetByID(ctx, id)
+	if err != nil {
+		return Job{}, err
+	}
+	if found.UserID != userID {
+		return Job{}, ErrNotFound
+	}
+	return found, nil
+}
+
+// SaveResult replaces a RUNNING job's payload with what its handler produced. It exists for
+// the one shape of work whose output IS the payload — a proposal the user rules on and that
+// nothing stores until they do — and the store's guard is what keeps a cancelled or already
+// finished job from being written into.
+func (q *Queue) SaveResult(ctx context.Context, id string, payload []byte) error {
+	saved, err := q.store.SavePayload(ctx, id, payload, q.now())
+	if err != nil {
+		return err
+	}
+	if !saved {
+		return ErrNotFound
+	}
+	return nil
+}
