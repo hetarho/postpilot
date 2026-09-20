@@ -236,6 +236,9 @@ func TestFixedTextAdditionsAreTheOnlyGoldenDelta(t *testing.T) {
 		}
 		stripped = strings.Replace(stripped, "\n"+koreanAltitude, "", 1)
 		stripped = strings.Replace(stripped, "\n"+koreanNaming, "", 1)
+		// The two revise-only additions, stated against the same legacy baseline.
+		stripped = strings.Replace(stripped, "\n"+koreanReviseScope, "", 1)
+		stripped = strings.Replace(stripped, "\n"+koreanReviseLiteral, "", 1)
 		if stripped != legacySystem {
 			t.Errorf("%s changed by more than the inserted baseline, grounding, altitude, and naming lines", pair.current)
 		}

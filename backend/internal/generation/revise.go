@@ -8,9 +8,31 @@ import (
 	"github.com/postpilot/backend/internal/post"
 )
 
+// koreanReviseScope / englishReviseScope qualify the minimality rule directly above them,
+// because without a qualifier that rule loses whole-post requests. Four separate sentences in
+// this prompt — the opening 최소한, the byte-for-byte line, koreanGroundingReviseScope and
+// NaturalnessBaseline's own revise clause — all push toward touching as little as possible, so
+// "톤을 바꿔줘" or "구성을 다시 잡아줘" was answered with one local edit and the post's shape
+// never moved. This says what minimality is measured against: the request's scope, not the
+// number of blocks. It licenses nothing outside that scope, which is the property to keep.
+const koreanReviseScope = "요청이 글 전체를 대상으로 하면(구성, 순서, 분량, 어조, 전체 흐름) 그 범위 전체를 다시 쓰세요. 최소한이라는 것은 요청을 좁게 해석하라는 뜻이 아니라 요청 범위 밖을 건드리지 말라는 뜻입니다."
+
+const englishReviseScope = "When the request addresses the post as a whole — its structure, order, length, tone, or overall flow — rewrite that entire scope. The smallest possible change means leaving everything outside the request alone, not reading the request narrowly."
+
+// koreanReviseLiteral / englishReviseLiteral: the instruction arrives as free prose at the end
+// of the user message, and nothing told the model what it IS. A request phrased as a statement
+// — "주차장 넓어서 좋았음" — then reads as text to insert, and the post gains the sentence the
+// user typed, typos and all. This is the same move templateFactLegend makes for <facts>: name
+// what the material is before the model decides what to do with it.
+const koreanReviseLiteral = "수정 요청문은 지시이지 본문이 아닙니다. 요청 문장이나 그 표기와 오타를 글에 그대로 옮기지 말고, 요청이 말하는 내용을 위 말투 프로필에 맞춰 다시 쓰세요. 사용자가 따옴표로 정확한 문구를 지정했을 때만 그 문구를 그대로 씁니다."
+
+const englishReviseLiteral = "The request is an instruction, not body text. Never copy its sentences, wording, or typos into the post: write what it asks for in the voice profile above. Reproduce an exact phrase only when the user quoted it as the words to use."
+
 const RevisePrompt = `현재 블로그 글에 사용자의 수정 요청만 최소한으로 반영하세요.
 ` + koreanGrounding + " " + koreanGroundingReviseScope + `
 요청과 무관한 문장은 글자 그대로 유지하고, 손대지 않은 블록을 다듬거나 다시 쓰지 마세요.
+` + koreanReviseScope + `
+` + koreanReviseLiteral + `
 제목, 한 줄 요약, 태그는 사용자가 그것들을 고쳐 달라고 한 경우에만 바꾸세요.
 IMAGE 블록은 첨부된 정확한 파일명만 사용할 수 있습니다. 순서 변경이나 요청에 따른 제거는 가능하지만 파일명을 바꾸거나 새 이미지를 만들지 마세요.
 출력은 diff가 아니라 완전한 PostContent이며, 설명이나 마크다운 없이 {"title":"...","summary":"...","tags":[],"blocks":[]} 형태의 JSON 객체 하나여야 합니다.
@@ -19,6 +41,8 @@ IMAGE 블록은 첨부된 정확한 파일명만 사용할 수 있습니다. 순
 const englishRevisePrompt = `Apply only the user's requested edit to the current blog post, with the smallest possible change.
 ` + englishGrounding + " " + englishGroundingReviseScope + `
 Keep every unrelated sentence byte-for-byte and do not polish or rewrite untouched blocks.
+` + englishReviseScope + `
+` + englishReviseLiteral + `
 Change the title, one-line summary, or tags only when the user explicitly asks to change them.
 IMAGE blocks may use only exact attached filenames. They may be reordered or removed when requested, but never rename a file or invent an image.
 Return a complete replacement PostContent, not a diff: exactly one {"title":"...","summary":"...","tags":[],"blocks":[]} JSON object with no explanation or Markdown.
