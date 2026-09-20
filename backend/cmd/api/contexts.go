@@ -25,6 +25,8 @@ import (
 	guidelinestore "github.com/postpilot/backend/internal/guideline/store"
 	"github.com/postpilot/backend/internal/job"
 	jobstore "github.com/postpilot/backend/internal/job/store"
+	"github.com/postpilot/backend/internal/memory"
+	memorystore "github.com/postpilot/backend/internal/memory/store"
 	"github.com/postpilot/backend/internal/platform/config"
 	"github.com/postpilot/backend/internal/post"
 	poststore "github.com/postpilot/backend/internal/post/store"
@@ -68,6 +70,7 @@ type contexts struct {
 
 	template   *template.Service
 	guideline  *guideline.Service
+	memory     *memory.Service
 	provider   *provider.Service
 	voice      *voice.Service
 	generation *generation.Service
@@ -195,6 +198,9 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 			ContentPurger: postExperiments{app: c},
 			// Deleting a post drops the link its candidates named and nothing else.
 			CandidateLinks: postCandidateLinks{app: c},
+			// Deleting a post also drops the source links its memories named, and takes a
+			// memory with it only when that post held the last one (MEM-17).
+			MemoryLinks: postMemoryLinks{app: c},
 		},
 	)
 	c.publishing = publishing.NewService(
@@ -255,6 +261,17 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 	// Template names are a live projection and owned-id validation, never a stored column or
 	// a SQL join: the guideline context asks the template context, through this adapter only.
 	c.guideline.SetTemplateDirectory(guidelineTemplates{service: c.template})
+
+	// The memory context stands alone: it reads no other context, and the only direction
+	// anything crosses is the post-delete hook above, which hands it a slug.
+	c.memory = memory.NewService(
+		memorystore.New(handle.Writer, handle.Reader),
+		memory.Limits{
+			TextMaxChars:  cfg.MemoryTextMaxChars,
+			TagsMax:       cfg.MemoryTagsMax,
+			MaxPerAccount: cfg.MemoryMaxPerAccount,
+		},
+	)
 
 	c.provider = provider.NewService(
 		providerstore.New(handle.Writer, handle.Reader), c.metered,

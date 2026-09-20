@@ -263,6 +263,15 @@ const (
 	FailureReason_VOICE_PROFILE_FIELD_REQUIRED FailureReason = 221
 	// the browser's own: no status ever carries it, and it is named here so the catalogue it is rendered from stays one list
 	FailureReason_NETWORK_UNAVAILABLE FailureReason = 222
+	// 기억 (MEM r1): the field rules, the closed kind and the account cap
+	FailureReason_MEMORY_NOT_FOUND     FailureReason = 223
+	FailureReason_MEMORY_TEXT_REQUIRED FailureReason = 224
+	FailureReason_MEMORY_TEXT_TOO_LONG FailureReason = 225
+	FailureReason_MEMORY_KIND_INVALID  FailureReason = 226
+	FailureReason_MEMORY_TAGS_TOO_MANY FailureReason = 227
+	FailureReason_MEMORY_LIMIT_REACHED FailureReason = 228
+	FailureReason_MEMORY_TEXT_TAKEN    FailureReason = 229
+	FailureReason_MEMORY_TAG_REQUIRED  FailureReason = 230
 )
 
 // Enum value maps for FailureReason.
@@ -490,6 +499,14 @@ var (
 		220: "CLIP_LAYOUT_FREQUENCY",
 		221: "VOICE_PROFILE_FIELD_REQUIRED",
 		222: "NETWORK_UNAVAILABLE",
+		223: "MEMORY_NOT_FOUND",
+		224: "MEMORY_TEXT_REQUIRED",
+		225: "MEMORY_TEXT_TOO_LONG",
+		226: "MEMORY_KIND_INVALID",
+		227: "MEMORY_TAGS_TOO_MANY",
+		228: "MEMORY_LIMIT_REACHED",
+		229: "MEMORY_TEXT_TAKEN",
+		230: "MEMORY_TAG_REQUIRED",
 	}
 	FailureReason_value = map[string]int32{
 		"UNKNOWN_FAILURE":                            0,
@@ -714,6 +731,14 @@ var (
 		"CLIP_LAYOUT_FREQUENCY":                      220,
 		"VOICE_PROFILE_FIELD_REQUIRED":               221,
 		"NETWORK_UNAVAILABLE":                        222,
+		"MEMORY_NOT_FOUND":                           223,
+		"MEMORY_TEXT_REQUIRED":                       224,
+		"MEMORY_TEXT_TOO_LONG":                       225,
+		"MEMORY_KIND_INVALID":                        226,
+		"MEMORY_TAGS_TOO_MANY":                       227,
+		"MEMORY_LIMIT_REACHED":                       228,
+		"MEMORY_TEXT_TAKEN":                          229,
+		"MEMORY_TAG_REQUIRED":                        230,
 	}
 )
 
@@ -884,7 +909,7 @@ const file_postpilot_v1_error_proto_rawDesc = "" +
 	"\x10technical_detail\x18\x03 \x01(\tR\x0ftechnicalDetail\x1a9\n" +
 	"\vParamsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\xe00\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\xaf2\n" +
 	"\rFailureReason\x12\x13\n" +
 	"\x0fUNKNOWN_FAILURE\x10\x00\x12\x11\n" +
 	"\rAUTH_REQUIRED\x10\x01\x12\x1d\n" +
@@ -1109,7 +1134,15 @@ const file_postpilot_v1_error_proto_rawDesc = "" +
 	"\x16CLIP_PROCESSING_FAILED\x10\xda\x01\x12\x1a\n" +
 	"\x15CLIP_LAYOUT_FREQUENCY\x10\xdc\x01\x12!\n" +
 	"\x1cVOICE_PROFILE_FIELD_REQUIRED\x10\xdd\x01\x12\x18\n" +
-	"\x13NETWORK_UNAVAILABLE\x10\xde\x01BDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
+	"\x13NETWORK_UNAVAILABLE\x10\xde\x01\x12\x15\n" +
+	"\x10MEMORY_NOT_FOUND\x10\xdf\x01\x12\x19\n" +
+	"\x14MEMORY_TEXT_REQUIRED\x10\xe0\x01\x12\x19\n" +
+	"\x14MEMORY_TEXT_TOO_LONG\x10\xe1\x01\x12\x18\n" +
+	"\x13MEMORY_KIND_INVALID\x10\xe2\x01\x12\x19\n" +
+	"\x14MEMORY_TAGS_TOO_MANY\x10\xe3\x01\x12\x19\n" +
+	"\x14MEMORY_LIMIT_REACHED\x10\xe4\x01\x12\x16\n" +
+	"\x11MEMORY_TEXT_TAKEN\x10\xe5\x01\x12\x18\n" +
+	"\x13MEMORY_TAG_REQUIRED\x10\xe6\x01BDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
 
 var (
 	file_postpilot_v1_error_proto_rawDescOnce sync.Once

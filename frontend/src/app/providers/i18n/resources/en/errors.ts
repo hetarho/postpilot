@@ -162,6 +162,15 @@ export const errors = {
   GUIDELINE_TEXT_TOO_LONG:
     'A guideline must be no more than {{max}} characters. It is currently {{actual}}.',
   GUIDELINE_TEXT_TAKEN: 'You already have the same guideline.',
+  MEMORY_NOT_FOUND: 'Memory not found.',
+  MEMORY_TEXT_REQUIRED: 'Enter what to remember.',
+  MEMORY_TEXT_TOO_LONG: 'A memory can be at most {{max}} characters. It is {{actual}} now.',
+  MEMORY_TEXT_TAKEN: 'You already have that memory.',
+  MEMORY_KIND_INVALID: 'Choose a memory kind.',
+  MEMORY_TAG_REQUIRED: 'A tag cannot be empty.',
+  MEMORY_TAGS_TOO_MANY: 'At most {{max}} tags. There are {{actual}} now.',
+  MEMORY_LIMIT_REACHED:
+    'You can keep at most {{max}} memories. Delete one you no longer need and try again.',
   GUIDELINE_SCOPE_INVALID:
     'Pick the scope again: leave templates empty for everything, or pick at least one for specific templates.',
   GUIDELINE_TEMPLATE_NOT_FOUND:

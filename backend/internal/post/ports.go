@@ -98,6 +98,15 @@ type GuidelineCandidateDetacher interface {
 	DetachPost(ctx context.Context, userID, postSlug string) error
 }
 
+// MemorySourceDetacher drops the source link every memory of the account held on a post
+// being deleted, and deletes a memory only when that post held its LAST link (MEM-17). A
+// fact re-confirmed across several posts outlives any one of them; a fact that existed only
+// inside the deleted post leaves no orphan. Like the candidate detacher above it is called
+// after the row is gone and its failure does not fail the delete.
+type MemorySourceDetacher interface {
+	DetachPost(ctx context.Context, userID, postSlug string) error
+}
+
 // Store is the persistence this context needs.
 //
 // Ownership is a property of the query, not of a check the caller must remember: the

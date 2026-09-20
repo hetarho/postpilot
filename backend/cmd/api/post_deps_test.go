@@ -25,6 +25,7 @@ func testPostDepsWithLinks(voiceSvc *voice.Service, links post.GuidelineCandidat
 		Experiments:    noExperiments{},
 		ContentPurger:  noPurge{},
 		CandidateLinks: links,
+		MemoryLinks:    noDetach{},
 		LivePublish:    noLivePublish{},
 	}
 }

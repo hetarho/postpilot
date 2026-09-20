@@ -37,6 +37,7 @@ type Service struct {
 	experiments    PendingExperimentFinder
 	contentPurger  ExperimentContentPurger
 	candidateLinks GuidelineCandidateDetacher
+	memoryLinks    MemorySourceDetacher
 	livePublish    LivePublishFinder
 	voices         VoiceDirectory
 	templates      TemplateDirectory
@@ -77,13 +78,14 @@ type Deps struct {
 	Experiments    PendingExperimentFinder
 	ContentPurger  ExperimentContentPurger
 	CandidateLinks GuidelineCandidateDetacher
+	MemoryLinks    MemorySourceDetacher
 	LivePublish    LivePublishFinder
 }
 
 // NewService wires the context with its store, its object storage, its limits and its
 // collaborators.
 func NewService(store Storage, blobs ObjectStore, limits Limits, deps Deps) *Service {
-	for name, dep := range map[string]any{"jobs": deps.Jobs, "voices": deps.Voices, "experiments": deps.Experiments, "content purger": deps.ContentPurger, "candidate links": deps.CandidateLinks, "live publish": deps.LivePublish} {
+	for name, dep := range map[string]any{"jobs": deps.Jobs, "voices": deps.Voices, "experiments": deps.Experiments, "content purger": deps.ContentPurger, "candidate links": deps.CandidateLinks, "memory links": deps.MemoryLinks, "live publish": deps.LivePublish} {
 		if dep == nil {
 			panic("post: " + name + " collaborator is required")
 		}
@@ -111,6 +113,7 @@ func NewService(store Storage, blobs ObjectStore, limits Limits, deps Deps) *Ser
 		experiments:    deps.Experiments,
 		contentPurger:  deps.ContentPurger,
 		candidateLinks: deps.CandidateLinks,
+		memoryLinks:    deps.MemoryLinks,
 		livePublish:    deps.LivePublish,
 		now:            time.Now,
 		newID:          newObjectID,
@@ -643,6 +646,14 @@ func (s *Service) DeletePost(ctx context.Context, userID, slug string) error {
 	if s.candidateLinks != nil {
 		if err := s.candidateLinks.DetachPost(ctx, userID, slug); err != nil {
 			slog.WarnContext(ctx, "detach guideline candidate post link failed", "error", err, "slug", slug)
+		}
+	}
+	// The memory links go the same way and for the same reasons, with one difference of its
+	// own: a memory whose LAST link this was is deleted with it (MEM-17), which is why the
+	// memory context is told the slug rather than asked to forget a row id it never held.
+	if s.memoryLinks != nil {
+		if err := s.memoryLinks.DetachPost(ctx, userID, slug); err != nil {
+			slog.WarnContext(ctx, "detach memory post sources failed", "error", err, "slug", slug)
 		}
 	}
 	return nil

@@ -1,0 +1,104 @@
+syntax = "proto3";
+
+package postpilot.v1;
+
+option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
+
+// memory.proto is the 기억 slice: short atomic facts about the author's world that no single
+// post carries. A memory is authored — the user approves an extracted candidate or writes
+// one by hand — and nothing here is learned: no model creates, approves, edits, ranks,
+// retires or deletes one, and no memory reaches a prompt except through a post that turned
+// the option on (MEM-23, MEM-19).
+//
+// Extraction is not part of this service: it is a durable job that proposes candidates and
+// stores nothing (MEM-13, MEM-14). Approving a candidate is CreateMemory — there is no
+// approve procedure, because the create already owns every field rule and every refusal.
+//
+// Every procedure is scoped to the acting user from the session — no request carries a user
+// id, because a user id in a message is a claim by the caller, not a fact.
+service MemoryService {
+  rpc ListMemories(ListMemoriesRequest) returns (ListMemoriesResponse) {}
+  rpc CreateMemory(CreateMemoryRequest) returns (CreateMemoryResponse) {}
+  rpc UpdateMemory(UpdateMemoryRequest) returns (UpdateMemoryResponse) {}
+  rpc DeleteMemory(DeleteMemoryRequest) returns (DeleteMemoryResponse) {}
+}
+
+// The closed five (MEM-5). There are no user-defined kinds and no sub-kinds: retrieval
+// behaviour rests on the enum being closed, and anything finer is a tag.
+enum MemoryKind {
+  MEMORY_KIND_UNSPECIFIED = 0;
+  // 취향 — a standing preference of the author. A candidate for every post, tags or not.
+  MEMORY_KIND_PREFERENCE = 1;
+  // 설정 — who the author is when they write. A candidate for every post, tags or not.
+  MEMORY_KIND_PERSONA = 2;
+  // 장소 — a place. Selected only on tag overlap, so an unrelated shop cannot be stapled
+  // to the next post.
+  MEMORY_KIND_PLACE = 3;
+  // 인물 — a person. Selected only on tag overlap.
+  MEMORY_KIND_PERSON = 4;
+  // 이력 — something that happened. Selected only on tag overlap.
+  MEMORY_KIND_HISTORY = 5;
+}
+
+message Memory {
+  string id = 1;
+  // The atomic fact, exactly as the user approved or typed it.
+  string text = 2;
+  MemoryKind kind = 3;
+  // Distinct, trimmed, in the order they were authored.
+  repeated string tags = 4;
+  // The slug of every post this memory was approved from, oldest first. Empty for one
+  // written by hand. A memory outlives any single post it came from: a deleted post drops
+  // its link, and the memory goes only when that was its last (MEM-17).
+  repeated string source_post_slugs = 5;
+  string created_at = 6;
+  string updated_at = 7;
+  // When this text was last approved again. Retrieval breaks ties by it, so it is separate
+  // from updated_at, which belongs to an authored edit.
+  string last_seen_at = 8;
+}
+
+message ListMemoriesRequest {}
+message ListMemoriesResponse {
+  // Most recently used first, then most recently created: the order the write prompt would
+  // inject them in, so the management screen shows what the writer would see first.
+  repeated Memory memories = 1;
+}
+
+// CreateMemory is also the approval path for an extracted candidate (MEM-15) and the
+// hand-authoring path (MEM-25). One procedure, because a second would have to restate every
+// field rule, the text bound and the account cap to stay in agreement.
+message CreateMemoryRequest {
+  string text = 1;
+  // Required: an absent or unknown kind is refused, never defaulted (MEM-12).
+  MemoryKind kind = 2;
+  // At most MEMORY_TAGS_MAX distinct trimmed tags; duplicates within one request collapse.
+  repeated string tags = 3;
+  // The post this fact was approved from. Empty for a memory written by hand.
+  string source_post_slug = 4;
+}
+message CreateMemoryResponse {
+  Memory memory = 1;
+  // True when the account already held this exact text: the source link was added and the
+  // memory's last use advanced, and no row was created (MEM-9). The memory above is the
+  // existing one, with whatever kind and tags it already carried.
+  bool deduplicated = 2;
+}
+
+// The tag set as one value. Its MESSAGE presence in UpdateMemoryRequest is what tells
+// "leave the tags alone" from "replace them", so an empty set can be saved.
+message MemoryTagsPatch { repeated string tags = 1; }
+
+message UpdateMemoryRequest {
+  string id = 1;
+  optional string text = 2;
+  // Optional for presence, and still refused when present and UNSPECIFIED.
+  optional MemoryKind kind = 3;
+  MemoryTagsPatch tags = 4;
+}
+message UpdateMemoryResponse { Memory memory = 1; }
+
+message DeleteMemoryRequest { string id = 1; }
+// Empty: a delete has no undo and nothing references a memory — a generation freezes the
+// selected TEXTS at enqueue (MEM-19), never an id — so there is nothing to report back.
+message DeleteMemoryResponse {}

@@ -157,6 +157,15 @@ export const errors = {
   GUIDELINE_TEXT_REQUIRED: '지침 내용을 입력해 주세요.',
   GUIDELINE_TEXT_TOO_LONG: '지침은 {{max}}자 이하여야 해요. 현재 {{actual}}자예요.',
   GUIDELINE_TEXT_TAKEN: '이미 같은 지침이 있어요.',
+  MEMORY_NOT_FOUND: '기억을 찾을 수 없어요.',
+  MEMORY_TEXT_REQUIRED: '기억할 내용을 입력해 주세요.',
+  MEMORY_TEXT_TOO_LONG: '기억은 {{max}}자 이하여야 해요. 현재 {{actual}}자예요.',
+  MEMORY_TEXT_TAKEN: '이미 같은 기억이 있어요.',
+  MEMORY_KIND_INVALID: '기억 종류를 선택해 주세요.',
+  MEMORY_TAG_REQUIRED: '빈 태그는 넣을 수 없어요.',
+  MEMORY_TAGS_TOO_MANY: '태그는 {{max}}개까지예요. 현재 {{actual}}개예요.',
+  MEMORY_LIMIT_REACHED:
+    '기억은 {{max}}개까지 저장할 수 있어요. 필요 없는 기억을 지우고 다시 시도해 주세요.',
   GUIDELINE_SCOPE_INVALID:
     '적용 범위를 다시 골라 주세요. 전역이면 템플릿을 비우고, 특정 템플릿이면 하나 이상 골라야 해요.',
   GUIDELINE_TEMPLATE_NOT_FOUND:

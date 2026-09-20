@@ -589,6 +589,34 @@ func TestDeletePostDetachesGuidelineCandidateLinks(t *testing.T) {
 	}
 }
 
+// MEM-17: the same delete hands the memory context the slug, after the row is gone, so a
+// memory whose last source this post was can go with it.
+func TestDeletePostDetachesMemorySources(t *testing.T) {
+	svc, _, _ := newTestService(t)
+	found := mustCreatePost(t, svc, alice, "Jeju")
+	svc.contentPurger = &recordingContentPurger{}
+	memories := &recordingCandidateDetacher{}
+	svc.memoryLinks = memories
+	// A failure there is logged and swallowed too: the post is what the user asked to
+	// remove, and a link that outlives it is a dead link, not a reason to refuse.
+	svc.candidateLinks = &recordingCandidateDetacher{err: errors.New("database unavailable")}
+
+	if err := svc.DeletePost(context.Background(), alice, found.Slug); err != nil {
+		t.Fatal(err)
+	}
+	if len(memories.calls) != 1 || memories.calls[0] != alice+"/"+found.Slug {
+		t.Fatalf("memory detach calls = %v", memories.calls)
+	}
+
+	second := mustCreatePost(t, svc, alice, "Busan")
+	failing := &recordingCandidateDetacher{err: errors.New("database unavailable")}
+	svc.memoryLinks = failing
+	svc.candidateLinks = &recordingCandidateDetacher{}
+	if err := svc.DeletePost(context.Background(), alice, second.Slug); err != nil {
+		t.Fatalf("a memory detach failure failed the delete: %v", err)
+	}
+}
+
 // A detach failure is logged and swallowed: the post the user asked to remove is gone, and a
 // dead link is not worth reporting the delete as failed.
 func TestDeletePostSucceedsWhenTheDetachFails(t *testing.T) {

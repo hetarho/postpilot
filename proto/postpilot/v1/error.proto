@@ -245,6 +245,15 @@ enum FailureReason {
   VOICE_PROFILE_FIELD_REQUIRED = 221;
   // the browser's own: no status ever carries it, and it is named here so the catalogue it is rendered from stays one list
   NETWORK_UNAVAILABLE = 222;
+  // 기억 (MEM r1): the field rules, the closed kind and the account cap
+  MEMORY_NOT_FOUND = 223;
+  MEMORY_TEXT_REQUIRED = 224;
+  MEMORY_TEXT_TOO_LONG = 225;
+  MEMORY_KIND_INVALID = 226;
+  MEMORY_TAGS_TOO_MANY = 227;
+  MEMORY_LIMIT_REACHED = 228;
+  MEMORY_TEXT_TAKEN = 229;
+  MEMORY_TAG_REQUIRED = 230;
 }
 
 // AppErrorDetail accompanies a synchronous Connect status. reason is a stable product

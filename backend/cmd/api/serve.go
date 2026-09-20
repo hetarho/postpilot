@@ -20,6 +20,7 @@ import (
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
 	generationrpc "github.com/postpilot/backend/internal/generation/rpc"
 	guidelinerpc "github.com/postpilot/backend/internal/guideline/rpc"
+	memoryrpc "github.com/postpilot/backend/internal/memory/rpc"
 	modelcatalogrpc "github.com/postpilot/backend/internal/modelcatalog/rpc"
 	planrpc "github.com/postpilot/backend/internal/plan/rpc"
 	"github.com/postpilot/backend/internal/platform/config"
@@ -167,6 +168,9 @@ func handlers(c *contexts) []rpcserver.Registrar {
 		},
 		func(opts ...connect.HandlerOption) (string, http.Handler) {
 			return postpilotv1connect.NewGuidelineServiceHandler(guidelinerpc.NewHandler(c.guideline), opts...)
+		},
+		func(opts ...connect.HandlerOption) (string, http.Handler) {
+			return postpilotv1connect.NewMemoryServiceHandler(memoryrpc.NewHandler(c.memory), opts...)
 		},
 		func(opts ...connect.HandlerOption) (string, http.Handler) {
 			return postpilotv1connect.NewGenerationServiceHandler(generationrpc.NewHandler(c.generation), opts...)

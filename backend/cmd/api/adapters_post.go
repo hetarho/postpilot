@@ -9,6 +9,7 @@ import (
 	"github.com/postpilot/backend/internal/generation"
 	"github.com/postpilot/backend/internal/guideline"
 	"github.com/postpilot/backend/internal/job"
+	"github.com/postpilot/backend/internal/memory"
 	"github.com/postpilot/backend/internal/post"
 	"github.com/postpilot/backend/internal/publishing"
 	"github.com/postpilot/backend/internal/template"
@@ -154,6 +155,25 @@ func (a postCandidateLinks) guidelines() *guideline.Service {
 
 func (a postCandidateLinks) DetachPost(ctx context.Context, userID, postSlug string) error {
 	return a.guidelines().DetachCandidatePost(ctx, userID, postSlug)
+}
+
+// postMemoryLinks hands the post context the memory context's post-delete hook. Like the
+// candidate detacher above it resolves the service at call time, because the memory context
+// is constructed after post; and like it, nothing crosses but the account and the slug.
+type postMemoryLinks struct {
+	service *memory.Service
+	app     *contexts
+}
+
+func (a postMemoryLinks) memories() *memory.Service {
+	if a.service != nil {
+		return a.service
+	}
+	return a.app.memory
+}
+
+func (a postMemoryLinks) DetachPost(ctx context.Context, userID, postSlug string) error {
+	return a.memories().DetachPost(ctx, userID, postSlug)
 }
 
 // RenderedFor is the whole seam between the two contexts: generation hands over the account,

@@ -350,6 +350,16 @@ type Config struct {
 	// might still approve is discarded on their behalf. Server-side only: the frontend
 	// relays the refusal instead of predicting it, as it already does for the cap above.
 	GuidelineCandidateMaxPending int
+
+	// Memory ceilings (MEM r1). MemoryTextMaxChars and MemoryTagsMax bound one authored
+	// fact; MemoryMaxPerAccount is the hard cap at which nothing is saved and nothing is
+	// evicted; MemoryInjectMax bounds how many the write prompt may carry, because every
+	// selected memory is prompt text. All four are mirrored in the browser as VITE_* so the
+	// counters and the refusals the screens state are the server's numbers, not a copy.
+	MemoryTextMaxChars  int
+	MemoryTagsMax       int
+	MemoryMaxPerAccount int
+	MemoryInjectMax     int
 }
 
 // Load reads the environment, falling back to a repo-root .env when present so a
@@ -585,6 +595,27 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 	cfg.GuidelineCandidateMaxPending = candidateQueue
+
+	memoryText, err := positiveInt("MEMORY_TEXT_MAX_CHARS", "120")
+	if err != nil {
+		return nil, err
+	}
+	cfg.MemoryTextMaxChars = memoryText
+	memoryTags, err := positiveInt("MEMORY_TAGS_MAX", "5")
+	if err != nil {
+		return nil, err
+	}
+	cfg.MemoryTagsMax = memoryTags
+	memoryCap, err := positiveInt("MEMORY_MAX_PER_ACCOUNT", "300")
+	if err != nil {
+		return nil, err
+	}
+	cfg.MemoryMaxPerAccount = memoryCap
+	memoryInject, err := positiveInt("MEMORY_INJECT_MAX", "8")
+	if err != nil {
+		return nil, err
+	}
+	cfg.MemoryInjectMax = memoryInject
 
 	maxVideos, err := positiveInt("UPLOAD_MAX_VIDEOS_PER_POST", "3")
 	if err != nil {

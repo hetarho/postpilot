@@ -30,6 +30,10 @@ export const ENV_LIMIT_OVERRIDES = {
   templateAskValueMaxChars: import.meta.env.VITE_TEMPLATE_ASK_VALUE_MAX_CHARS,
   templateAskMaxPerBody: import.meta.env.VITE_TEMPLATE_ASK_MAX_PER_BODY,
   guidelineTextMaxChars: import.meta.env.VITE_GUIDELINE_TEXT_MAX_CHARS,
+  memoryTextMaxChars: import.meta.env.VITE_MEMORY_TEXT_MAX_CHARS,
+  memoryTagsMax: import.meta.env.VITE_MEMORY_TAGS_MAX,
+  memoryMaxPerAccount: import.meta.env.VITE_MEMORY_MAX_PER_ACCOUNT,
+  memoryInjectMax: import.meta.env.VITE_MEMORY_INJECT_MAX,
 } as const
 
 /** Reads a `VITE_*` mirror of a backend ceiling. A malformed or non-positive override falls

@@ -27,6 +27,7 @@ plugins:
       - Mpostpilot/v1/health.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
       - Mpostpilot/v1/guideline.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
       - Mpostpilot/v1/language.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
+      - Mpostpilot/v1/memory.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
       - Mpostpilot/v1/model_catalog.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
       - Mpostpilot/v1/model_experiment.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
       - Mpostpilot/v1/plan.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
@@ -53,6 +54,7 @@ plugins:
       - Mpostpilot/v1/health.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
       - Mpostpilot/v1/guideline.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
       - Mpostpilot/v1/language.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
+      - Mpostpilot/v1/memory.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
       - Mpostpilot/v1/model_catalog.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
       - Mpostpilot/v1/model_experiment.proto=github.com/postpilot/agent/internal/gen/postpilot/v1
       - Mpostpilot/v1/plan.proto=github.com/postpilot/agent/internal/gen/postpilot/v1

@@ -163,6 +163,16 @@ export const appFailureSpecs = {
   GUIDELINE_TEMPLATE_NOT_FOUND: {},
   GUIDELINE_LIMIT_REACHED: { required: ['max'] },
   GUIDELINE_CANDIDATE_NOT_FOUND: {},
+  // 기억 (MEM r1). The cap and the two ceilings name their numbers, because the copy the
+  // user reads has to say them and the client owns no copy of the bound.
+  MEMORY_NOT_FOUND: {},
+  MEMORY_TEXT_REQUIRED: {},
+  MEMORY_TEXT_TOO_LONG: { required: ['actual', 'max'] },
+  MEMORY_TEXT_TAKEN: {},
+  MEMORY_KIND_INVALID: {},
+  MEMORY_TAG_REQUIRED: {},
+  MEMORY_TAGS_TOO_MANY: { required: ['actual', 'max'] },
+  MEMORY_LIMIT_REACHED: { required: ['max'] },
   MODEL_STAGE_REQUIRED: {},
   MODEL_STAGE_INVALID: {},
   MODEL_NOT_REGISTERED: {},
