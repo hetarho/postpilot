@@ -245,7 +245,11 @@ type Post struct {
 	// row never saved with one as TagCountRange.Default, so no caller sees "unset". The
 	// one exception is a Post being CREATED, where 0 means "nobody named one" and the column
 	// stays NULL - a create seeds it only when the template it names has an opinion.
-	TagCount          int
+	TagCount int
+	// UseMemory is whether a run may carry the account's memories (MEM-18). A generation
+	// option, default false, and false is what every row saved before memories existed
+	// reads as — which is what keeps such a post's prompt byte-identical to today's.
+	UseMemory         bool
 	FinalizedRevision int64
 	FinalizedAt       *time.Time
 	Observations      []Observation

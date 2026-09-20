@@ -58,6 +58,10 @@ type generationPayload struct {
 	// The applicable guideline texts in injection order, frozen exactly as Template is. A
 	// payload written before guidelines existed decodes with this absent, which is "none".
 	Guidelines []string `json:"guidelines,omitempty"`
+	// The retrieved memory texts, frozen exactly as Guidelines are. Absent is "none", which
+	// is what a payload written before memories existed decodes as — and also what a post
+	// with the option off freezes, so the two are one state on the wire (MEM-19).
+	Memories []string `json:"memories,omitempty"`
 	// The photos this run observes, frozen at enqueue. A POINTER, and deliberately without
 	// `omitempty`: the three states are absent (a job queued before this contract — observe
 	// everything), present-and-empty (observe nothing), and present-with-names. A plain
@@ -79,6 +83,7 @@ type GenerationOptions struct {
 	TagCount       int
 	Template       *TemplateBrief
 	Guidelines     []string
+	Memories       []string
 	// ObserveFiles carries presence: nil observes every attached photo, non-nil-but-empty
 	// observes nothing. See generationPayload.ObserveFiles for why the distinction matters.
 	ObserveFiles      *[]string
@@ -97,6 +102,7 @@ func EncodeGenerationPayload(options GenerationOptions) ([]byte, error) {
 		TagCount:          options.TagCount,
 		Template:          encodeTemplate(options.Template),
 		Guidelines:        cloneTexts(options.Guidelines),
+		Memories:          cloneTexts(options.Memories),
 		ObserveFiles:      cloneOptionalTexts(options.ObserveFiles),
 		Observations:      encodeObservations(options.Observations),
 		WriteNativeEffort: options.WriteNativeEffort,
@@ -133,6 +139,7 @@ func DecodeGenerationPayload(raw []byte) (GenerationOptions, error) {
 		TagCount:          resolveTagCount(payload.TagCount),
 		Template:          decodeTemplate(payload.Template),
 		Guidelines:        cloneTexts(payload.Guidelines),
+		Memories:          cloneTexts(payload.Memories),
 		ObserveFiles:      cloneOptionalTexts(payload.ObserveFiles),
 		Observations:      decodeObservations(payload.Observations),
 		WriteNativeEffort: payload.WriteNativeEffort,

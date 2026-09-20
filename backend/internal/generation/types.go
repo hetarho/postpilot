@@ -165,6 +165,12 @@ type PostInput struct {
 	// Guidelines is the frozen 작문 지침 material in injection order, filled at enqueue from
 	// TemplateID like Template is. Handlers never resolve guidelines live either.
 	Guidelines []string
+	// UseMemory is the post's opt-in, read at enqueue. It is the ONLY thing that decides
+	// whether this context asks the memory context anything at all (MEM-18).
+	UseMemory bool
+	// Memories is the frozen 기억 material, retrieved at enqueue when UseMemory is set and
+	// never re-read: a memory edited or deleted afterwards cannot change queued work.
+	Memories []string
 	// TemplateAnswers is what the post answers to its template's data fields, read at
 	// enqueue like TemplateID. The freeze resolves them into the rendered brief, so no
 	// handler ever reads one: the payload already carries the result (POST-62, TEMPLATE-45).
@@ -222,6 +228,8 @@ type StartRequest struct {
 	Template *TemplateBrief
 	// Guidelines is resolved the same way, from the same template id, and frozen alongside.
 	Guidelines []string
+	// Memories is the retrieved 기억 texts, frozen alongside — empty unless the post opted in.
+	Memories []string
 	// ObserveCalls is how many observation calls the photos will take, resolved at Start
 	// where the post is already in hand. Observation batches photos, so this is not the
 	// photo count — and the credit hold has to price every call, not every photo.
@@ -248,6 +256,7 @@ type GenerateJob struct {
 	TagCount       int
 	Template       *TemplateBrief
 	Guidelines     []string
+	Memories       []string
 	// ObserveFiles carries PRESENCE, not just emptiness. Nil is a job queued before this
 	// contract existed and keeps the observe-everything behavior; non-nil but empty is the
 	// frozen decision to observe nothing at all.

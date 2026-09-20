@@ -21,6 +21,7 @@ type Service struct {
 	experiments PendingExperiments
 	templates   TemplateBriefs
 	guidelines  GuidelinesForPrompt
+	memories    MemoriesForPrompt
 	candidates  GuidelineCandidates
 	samples     VersionSampleWriter
 	batchSize   int
@@ -73,6 +74,9 @@ type Deps struct {
 	Templates TemplateBriefs
 	// Guidelines is the guideline context's published resolution, read once at enqueue.
 	Guidelines GuidelinesForPrompt
+	// Memories is the memory context's published retrieval, read once at enqueue and only
+	// for a post that opted in.
+	Memories MemoriesForPrompt
 	// Candidates records what a completed revision asked for.
 	Candidates GuidelineCandidates
 	// Samples is the voice context's per-version snapshot recorder.
@@ -93,7 +97,7 @@ func NewService(posts Posts, profiles Profiles, rules RuleWriter, models LLM, im
 	if budget == nil {
 		panic("generation: a completion budget policy is required")
 	}
-	for name, dep := range map[string]any{"experiments": deps.Experiments, "template briefs": deps.Templates, "guidelines": deps.Guidelines, "guideline candidates": deps.Candidates, "version samples": deps.Samples, "video linker": deps.Videos} {
+	for name, dep := range map[string]any{"experiments": deps.Experiments, "template briefs": deps.Templates, "guidelines": deps.Guidelines, "memories": deps.Memories, "guideline candidates": deps.Candidates, "version samples": deps.Samples, "video linker": deps.Videos} {
 		if dep == nil {
 			panic("generation: " + name + " collaborator is required")
 		}
@@ -102,7 +106,7 @@ func NewService(posts Posts, profiles Profiles, rules RuleWriter, models LLM, im
 		panic("generation: video link TTL must be positive")
 	}
 	return &Service{posts: posts, profiles: profiles, rules: rules, models: models, images: images, jobs: jobs, batchSize: batchSize, reasoning: reasoning, budget: budget,
-		experiments: deps.Experiments, templates: deps.Templates, guidelines: deps.Guidelines, candidates: deps.Candidates, samples: deps.Samples, videos: deps.Videos, videoURLTTL: deps.VideoURLTTL}
+		experiments: deps.Experiments, templates: deps.Templates, guidelines: deps.Guidelines, memories: deps.Memories, candidates: deps.Candidates, samples: deps.Samples, videos: deps.Videos, videoURLTTL: deps.VideoURLTTL}
 }
 
 // recordVersionSample copies what a run produced into the voice's current head version. It is
@@ -265,6 +269,11 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (string, erro
 		return "", err
 	}
 	request.Guidelines = texts
+	memories, err := s.freezeMemories(ctx, post)
+	if err != nil {
+		return "", err
+	}
+	request.Memories = memories
 	if len(post.Images) > 0 {
 		// Both halves of the reuse decision are resolved HERE, from one read of the post,
 		// and frozen into the payload by the enqueue. Attaching a photo, deleting one or
@@ -383,6 +392,45 @@ func (s *Service) freezeGuidelines(ctx context.Context, post PostInput) ([]strin
 		return nil, fmt.Errorf("load applicable guidelines: %w", err)
 	}
 	return texts, nil
+}
+
+// freezeMemories retrieves the post's memories once, at enqueue, and only when the post
+// opted in (MEM-18). Editing or deleting a memory afterwards cannot reach the queued work —
+// including across a restart-resume or an explicit retry — because the handlers read only
+// the payload, exactly as they do for the guideline texts above.
+//
+// The revise pass has no equivalent and never will: it holds neither the memo nor the
+// observations, so material it cannot check against would license rewriting sentences the
+// request never touched (MEM-22).
+func (s *Service) freezeMemories(ctx context.Context, post PostInput) ([]string, error) {
+	if s.memories == nil || !post.UseMemory {
+		return nil, nil
+	}
+	texts, err := s.memories.ForPost(ctx, post.UserID, memoryKeyParts(post))
+	if err != nil {
+		return nil, fmt.Errorf("retrieve memories: %w", err)
+	}
+	return texts, nil
+}
+
+// memoryKeyParts is the retrieval key (MEM-7): what this post is about, in the post's own
+// words. The memo and the 가제 are what the author wrote; the template answers are the facts
+// they filled in; and an observation contributes only `objects` and `visible_text` — the
+// nouns and the letters actually in the frame — because `scene` and `mood` are the observer's
+// prose and would match a tag on a word nobody in this post wrote.
+func memoryKeyParts(post PostInput) []string {
+	parts := make([]string, 0, 2+len(post.TemplateAnswers)+2*len(post.Observations))
+	parts = append(parts, post.Memo, post.Title)
+	for _, answer := range post.TemplateAnswers {
+		if answer.Enabled {
+			parts = append(parts, answer.Text)
+		}
+	}
+	for _, observation := range post.Observations {
+		parts = append(parts, observation.Objects...)
+		parts = append(parts, observation.VisibleText)
+	}
+	return parts
 }
 
 func (s *Service) GetJob(ctx context.Context, id, userID string) (*JobSummary, error) {

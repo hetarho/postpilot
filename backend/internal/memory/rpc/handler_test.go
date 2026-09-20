@@ -89,7 +89,7 @@ func appErrorDetail(t *testing.T, err error) *postpilotv1.AppErrorDetail {
 // The account comes from the session on every procedure, and the contract gives a caller
 // nowhere to claim one.
 func TestEveryProcedureRequiresASessionAndNoRequestCarriesAUserID(t *testing.T) {
-	handler := NewHandler(memory.NewService(nil, memory.Limits{TextMaxChars: 1, TagsMax: 1, MaxPerAccount: 1}))
+	handler := NewHandler(memory.NewService(nil, memory.Limits{TextMaxChars: 1, TagsMax: 1, MaxPerAccount: 1, InjectMax: 1}))
 	anonymous := context.Background()
 
 	if _, err := handler.ListMemories(anonymous, connect.NewRequest(&postpilotv1.ListMemoriesRequest{})); connect.CodeOf(err) != connect.CodeUnauthenticated {

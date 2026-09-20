@@ -270,6 +270,7 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 			TextMaxChars:  cfg.MemoryTextMaxChars,
 			TagsMax:       cfg.MemoryTagsMax,
 			MaxPerAccount: cfg.MemoryMaxPerAccount,
+			InjectMax:     cfg.MemoryInjectMax,
 		},
 	)
 
@@ -304,6 +305,9 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 			// template and guideline contexts never learn that generation exists.
 			Templates:  generationTemplates{service: c.template},
 			Guidelines: generationGuidelines{service: c.guideline},
+			// Retrieval happens at enqueue and only for a post that opted in; the memory
+			// context never learns that generation exists (MEM-19).
+			Memories: generationMemories{service: c.memory},
 			// A completed revision records what the user asked for as a candidate (change 26).
 			// This adapter is the only place the two contexts meet in that direction, and
 			// nothing crosses it but the account, the post and the user's own sentence.

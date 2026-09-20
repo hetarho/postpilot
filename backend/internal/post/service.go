@@ -795,10 +795,13 @@ func (s *Service) SaveContent(ctx context.Context, userID, slug string, content 
 }
 
 // SaveGenerationOptions replaces the target length (nil clears it to natural length) and,
-// when tagCount is present, the tag count; an absent tagCount keeps the stored one (POST-63).
-// The two presence rules differ because the two fields do: the length has a real "none",
-// the count never does, so absence can only mean "not this time".
-func (s *Service) SaveGenerationOptions(ctx context.Context, userID, slug string, targetLength *int, tagCount *int) (Post, error) {
+// when tagCount or useMemory is present, that option; an absent one keeps what is stored
+// (POST-63, POST-71). The presence rules differ because the fields do: the length has a real
+// "none", the count and the flag never do, so absence there can only mean "not this time".
+//
+// None of the three touches status, revision, baseline or learning eligibility: they are
+// options of the next RUN, not edits of the post (MEM-18).
+func (s *Service) SaveGenerationOptions(ctx context.Context, userID, slug string, targetLength *int, tagCount *int, useMemory *bool) (Post, error) {
 	if targetLength != nil && *targetLength <= 0 {
 		return Post{}, &InvalidContentError{Reason: "target length must be positive"}
 	}
@@ -813,14 +816,18 @@ func (s *Service) SaveGenerationOptions(ctx context.Context, userID, slug string
 	if tagCount != nil {
 		nextTagCount = *tagCount
 	}
-	if equalOptionalInt(found.TargetLength, targetLength) && nextTagCount == found.TagCount {
+	nextUseMemory := found.UseMemory
+	if useMemory != nil {
+		nextUseMemory = *useMemory
+	}
+	if equalOptionalInt(found.TargetLength, targetLength) && nextTagCount == found.TagCount && nextUseMemory == found.UseMemory {
 		return s.Get(ctx, userID, slug)
 	}
 	contentStore := s.content
 	if contentStore == nil {
 		return Post{}, errors.New("post content store is not configured")
 	}
-	updated, err := contentStore.SaveGenerationOptions(ctx, slug, userID, targetLength, nextTagCount, s.now())
+	updated, err := contentStore.SaveGenerationOptions(ctx, slug, userID, targetLength, nextTagCount, nextUseMemory, s.now())
 	if err != nil {
 		return Post{}, err
 	}

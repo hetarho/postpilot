@@ -294,7 +294,7 @@ func TestARunFreezesThePostsNumbersNotTheTemplates(t *testing.T) {
 
 	// The author types over both. The template still says 1800/7 and must not win.
 	typed := 1200
-	if _, err := postSvc.SaveGenerationOptions(ctx, "alice", saved.Slug, &typed, intPtr(3)); err != nil {
+	if _, err := postSvc.SaveGenerationOptions(ctx, "alice", saved.Slug, &typed, intPtr(3), nil); err != nil {
 		t.Fatal(err)
 	}
 	input, err := generationPosts{service: postSvc}.AttachedImages(ctx, "alice", saved.Slug)

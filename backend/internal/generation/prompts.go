@@ -201,16 +201,47 @@ func writeGuidelinesSection(out *strings.Builder, guidelines []string) {
 	fmt.Fprintf(out, "\n%s", guidelinePrecedence)
 }
 
+// memoryPrecedence closes the `[기억]` section (MEM-21, GUIDE-28). It states the one thing
+// the section exists to say — these facts are material for THIS post, not a list to work
+// through — and the precedence the user's own prohibitions keep over them: a guideline
+// outranks a memory exactly as it outranks a template instruction, because a prohibition
+// the user added is the reason the fact must stay out of this post.
+//
+// Fixed prompt text, so it lives in code (ARCHITECTURE §4), and appended only when the
+// section exists: a post with the option off must not read a word about a source it has
+// none of.
+const memoryPrecedence = "위 기억은 이 글에 쓸 수 있는 사실입니다. 이 글과 관계없는 기억은 쓰지 마세요. 지침이 기억과 충돌하면 지침을 우선하세요."
+
+// memorySection renders the frozen memories as ONE section of the PER-POST half, between the
+// memo and the attachments (GEN-14). It is the one grounding section that does NOT sit in
+// the stable prefix, and the reason is that the selected set differs per post while the
+// prefix is what the provider's cache and every prompt golden rest on (MEM-20).
+//
+// An empty slice writes nothing at all, so a post with the option off — or one whose key
+// matched no memory — produces a per-post half byte for byte identical to today's.
+func memorySection(memories []string) string {
+	if len(memories) == 0 {
+		return ""
+	}
+	var out strings.Builder
+	out.WriteString("[기억]")
+	for _, text := range memories {
+		fmt.Fprintf(&out, "\n- %s", text)
+	}
+	fmt.Fprintf(&out, "\n%s\n", memoryPrecedence)
+	return out.String()
+}
+
 // BuildWritePrompt preserves the legacy Korean call surface for prompt goldens and
 // consumers that explicitly request the established Korean contract. Runtime work uses
 // BuildWritePromptForLanguage with its frozen language.
 func BuildWritePrompt(profile Profile, observations []Observation, memo, title string, filenames []string, targetLength *int, template *TemplateBrief, guidelines []string) (string, string) {
-	return BuildWritePromptForLanguage(LanguageKorean, profile, observations, memo, title, filenames, nil, targetLength, post.TagCountRange.Default, template, guidelines)
+	return BuildWritePromptForLanguage(LanguageKorean, profile, observations, memo, title, filenames, nil, targetLength, post.TagCountRange.Default, template, guidelines, nil)
 }
 
 // tagCount is the frozen per-post count (GEN-46); the sentence stays in the stable part
 // where the fixed range used to be, so the golden order is unchanged.
-func BuildWritePromptForLanguage(language Language, profile Profile, observations []Observation, memo, title string, filenames, videoFilenames []string, targetLength *int, tagCount int, template *TemplateBrief, guidelines []string) (string, string) {
+func BuildWritePromptForLanguage(language Language, profile Profile, observations []Observation, memo, title string, filenames, videoFilenames []string, targetLength *int, tagCount int, template *TemplateBrief, guidelines, memories []string) (string, string) {
 	var stable strings.Builder
 	switch language {
 	case LanguageKorean:
@@ -237,7 +268,9 @@ func BuildWritePromptForLanguage(language Language, profile Profile, observation
 	writeGuidelinesSection(&stable, guidelines)
 
 	photoMaterial := attachmentMaterial(filenames, videoFilenames, observations)
-	perPost := fmt.Sprintf("[이번 글]\n가제: %s\n메모: %s\n%s", title, memo, photoMaterial)
+	// The section sits between the memo and the attachments, and renders to the empty string
+	// when there are no memories — which is what keeps the no-memory prompt byte-identical.
+	perPost := fmt.Sprintf("[이번 글]\n가제: %s\n메모: %s\n%s%s", title, memo, memorySection(memories), photoMaterial)
 	return stable.String(), perPost
 }
 

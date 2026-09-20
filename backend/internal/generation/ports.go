@@ -90,6 +90,18 @@ type GuidelinesForPrompt interface {
 	ForPrompt(ctx context.Context, userID string, templateID *string) ([]string, error)
 }
 
+// MemoriesForPrompt is the memory context's published retrieval, consumed only at enqueue
+// time and only for a post that opted in (MEM-18, MEM-19). What crosses is the post's own
+// words — its memo, its 가제, its template answers and the `objects` and `visible_text` of
+// its observations (MEM-7) — and what comes back is TEXTS. A memory row never reaches this
+// context, so nothing here learns the kind, the tags or the id that selected it (ARCH-7).
+//
+// An empty result is the ordinary case, not an error: a post whose key matched no memory
+// builds the same prompt as a post with the option off.
+type MemoriesForPrompt interface {
+	ForPost(ctx context.Context, userID string, keyParts []string) ([]string, error)
+}
+
 // GuidelineCandidates records a completed revision's instruction so the correction accrues
 // instead of vanishing with the tab (change 26). Declared here beside GuidelinesForPrompt
 // for the same reason: the generation context must not learn the guideline context's tables.

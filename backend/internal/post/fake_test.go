@@ -199,7 +199,7 @@ func (f *fakeStore) SaveContent(_ context.Context, slug, userID string, content 
 	return true, nil
 }
 
-func (f *fakeStore) SaveGenerationOptions(_ context.Context, slug, userID string, targetLength *int, tagCount int, updatedAt time.Time) (bool, error) {
+func (f *fakeStore) SaveGenerationOptions(_ context.Context, slug, userID string, targetLength *int, tagCount int, useMemory bool, updatedAt time.Time) (bool, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	existing, ok := f.posts[slug]
@@ -208,6 +208,7 @@ func (f *fakeStore) SaveGenerationOptions(_ context.Context, slug, userID string
 	}
 	existing.TargetLength = targetLength
 	existing.TagCount = tagCount
+	existing.UseMemory = useMemory
 	existing.UpdatedAt = updatedAt
 	f.posts[slug] = existing
 	return true, nil

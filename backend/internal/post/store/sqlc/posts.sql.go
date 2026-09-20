@@ -218,7 +218,7 @@ const getPost = `-- name: GetPost :one
 SELECT slug, user_id, voice_id, title, memo, observations, content, status, created_at, updated_at,
        content_revision, machine_baseline, machine_baseline_revision, machine_baseline_voice_id,
        target_length, finalized_revision, finalized_at, template_id, target_language, content_language,
-       tag_count
+       tag_count, use_memory
 FROM posts WHERE slug = ?
 `
 
@@ -247,6 +247,7 @@ func (q *Queries) GetPost(ctx context.Context, slug string) (Post, error) {
 		&i.TargetLanguage,
 		&i.ContentLanguage,
 		&i.TagCount,
+		&i.UseMemory,
 	)
 	return i, err
 }
@@ -373,22 +374,26 @@ func (q *Queries) SavePostContent(ctx context.Context, arg SavePostContentParams
 }
 
 const savePostGenerationOptions = `-- name: SavePostGenerationOptions :execrows
-UPDATE posts SET target_length = ?, tag_count = ?, updated_at = ?
+UPDATE posts SET target_length = ?, tag_count = ?, use_memory = ?, updated_at = ?
 WHERE slug = ? AND user_id = ?
 `
 
 type SavePostGenerationOptionsParams struct {
 	TargetLength sql.NullInt64
 	TagCount     sql.NullInt64
+	UseMemory    int64
 	UpdatedAt    string
 	Slug         string
 	UserID       string
 }
 
+// use_memory rides this save rather than the draft's: it is an option of the RUN, and like
+// the two numbers beside it, it changes no status, revision or baseline (MEM-18).
 func (q *Queries) SavePostGenerationOptions(ctx context.Context, arg SavePostGenerationOptionsParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, savePostGenerationOptions,
 		arg.TargetLength,
 		arg.TagCount,
+		arg.UseMemory,
 		arg.UpdatedAt,
 		arg.Slug,
 		arg.UserID,

@@ -596,7 +596,10 @@ type Post struct {
 	// How many tags a run asks the model for (POST-63). Always filled by the server — a post
 	// never saved with one reads as the default — and `optional` only so a client can tell
 	// "filled" from a zero an older server never sends.
-	TagCount      *int32 `protobuf:"varint,25,opt,name=tag_count,json=tagCount,proto3,oneof" json:"tag_count,omitempty"`
+	TagCount *int32 `protobuf:"varint,25,opt,name=tag_count,json=tagCount,proto3,oneof" json:"tag_count,omitempty"`
+	// Whether a run may carry the account's memories (MEM-18). Default off, and off is the
+	// shape every draft saved before memories existed decodes as.
+	UseMemory     bool `protobuf:"varint,26,opt,name=use_memory,json=useMemory,proto3" json:"use_memory,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -804,6 +807,13 @@ func (x *Post) GetTagCount() int32 {
 		return *x.TagCount
 	}
 	return 0
+}
+
+func (x *Post) GetUseMemory() bool {
+	if x != nil {
+		return x.UseMemory
+	}
+	return false
 }
 
 type Image struct {
@@ -2012,7 +2022,11 @@ type SavePostGenerationOptionsRequest struct {
 	TargetLength *int32                 `protobuf:"varint,2,opt,name=target_length,json=targetLength,proto3,oneof" json:"target_length,omitempty"`
 	// Presence-aware, unlike target_length: absent keeps the stored count, a value replaces it.
 	// The range is the server's (POST_TAG_COUNT_INVALID), 1–10.
-	TagCount      *int32 `protobuf:"varint,3,opt,name=tag_count,json=tagCount,proto3,oneof" json:"tag_count,omitempty"`
+	TagCount *int32 `protobuf:"varint,3,opt,name=tag_count,json=tagCount,proto3,oneof" json:"tag_count,omitempty"`
+	// Presence-aware like tag_count: absent keeps the stored flag, a value replaces it. It is
+	// a generation option, so it rides this save rather than the draft's — and it changes no
+	// status, revision, baseline or learning eligibility (MEM-18, POST-71).
+	UseMemory     *bool `protobuf:"varint,4,opt,name=use_memory,json=useMemory,proto3,oneof" json:"use_memory,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2066,6 +2080,13 @@ func (x *SavePostGenerationOptionsRequest) GetTagCount() int32 {
 		return *x.TagCount
 	}
 	return 0
+}
+
+func (x *SavePostGenerationOptionsRequest) GetUseMemory() bool {
+	if x != nil && x.UseMemory != nil {
+		return *x.UseMemory
+	}
+	return false
 }
 
 type SavePostGenerationOptionsResponse struct {
@@ -2908,7 +2929,7 @@ const file_postpilot_v1_post_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x18\n" +
 	"\adeleted\x18\x03 \x01(\bR\adeleted\x12F\n" +
-	"\x0fsource_language\x18\x04 \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0esourceLanguage\"\x9b\t\n" +
+	"\x0fsource_language\x18\x04 \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0esourceLanguage\"\xba\t\n" +
 	"\x04Post\x12\x12\n" +
 	"\x04slug\x18\x01 \x01(\tR\x04slug\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x12\n" +
@@ -2938,7 +2959,9 @@ const file_postpilot_v1_post_proto_rawDesc = "" +
 	"\x10content_language\x18\x16 \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0fcontentLanguage\x12+\n" +
 	"\x06videos\x18\x17 \x03(\v2\x13.postpilot.v1.VideoR\x06videos\x12G\n" +
 	"\x10template_answers\x18\x18 \x03(\v2\x1c.postpilot.v1.TemplateAnswerR\x0ftemplateAnswers\x12 \n" +
-	"\ttag_count\x18\x19 \x01(\x05H\x01R\btagCount\x88\x01\x01B\x10\n" +
+	"\ttag_count\x18\x19 \x01(\x05H\x01R\btagCount\x88\x01\x01\x12\x1d\n" +
+	"\n" +
+	"use_memory\x18\x1a \x01(\bR\tuseMemoryB\x10\n" +
 	"\x0e_target_lengthB\f\n" +
 	"\n" +
 	"_tag_count\"\x92\x01\n" +
@@ -3046,14 +3069,17 @@ const file_postpilot_v1_post_proto_rawDesc = "" +
 	"\acontent\x18\x02 \x01(\v2\x19.postpilot.v1.PostContentR\acontent\x12+\n" +
 	"\x11expected_revision\x18\x03 \x01(\x03R\x10expectedRevisionJ\x04\b\x04\x10\x05\"A\n" +
 	"\x17SavePostContentResponse\x12&\n" +
-	"\x04post\x18\x01 \x01(\v2\x12.postpilot.v1.PostR\x04post\"\xa2\x01\n" +
+	"\x04post\x18\x01 \x01(\v2\x12.postpilot.v1.PostR\x04post\"\xd5\x01\n" +
 	" SavePostGenerationOptionsRequest\x12\x12\n" +
 	"\x04slug\x18\x01 \x01(\tR\x04slug\x12(\n" +
 	"\rtarget_length\x18\x02 \x01(\x05H\x00R\ftargetLength\x88\x01\x01\x12 \n" +
-	"\ttag_count\x18\x03 \x01(\x05H\x01R\btagCount\x88\x01\x01B\x10\n" +
+	"\ttag_count\x18\x03 \x01(\x05H\x01R\btagCount\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"use_memory\x18\x04 \x01(\bH\x02R\tuseMemory\x88\x01\x01B\x10\n" +
 	"\x0e_target_lengthB\f\n" +
 	"\n" +
-	"_tag_count\"K\n" +
+	"_tag_countB\r\n" +
+	"\v_use_memory\"K\n" +
 	"!SavePostGenerationOptionsResponse\x12&\n" +
 	"\x04post\x18\x01 \x01(\v2\x12.postpilot.v1.PostR\x04post\"V\n" +
 	"\x13FinalizePostRequest\x12\x12\n" +

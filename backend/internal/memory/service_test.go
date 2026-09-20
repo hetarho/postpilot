@@ -22,6 +22,7 @@ type fakeStore struct {
 	patches     []Patch
 	dropped     []string
 	stored      Memory
+	list        []Memory
 }
 
 func (f *fakeStore) Insert(_ context.Context, m Memory, sourcePostSlug string, maxPerAccount int) (Memory, bool, error) {
@@ -34,7 +35,12 @@ func (f *fakeStore) Insert(_ context.Context, m Memory, sourcePostSlug string, m
 	return m, f.dedupe, nil
 }
 
-func (f *fakeStore) List(context.Context, string) ([]Memory, error) { return []Memory{f.stored}, nil }
+func (f *fakeStore) List(context.Context, string) ([]Memory, error) {
+	if f.list != nil {
+		return f.list, nil
+	}
+	return []Memory{f.stored}, nil
+}
 
 func (f *fakeStore) Get(context.Context, string, string) (Memory, error) { return f.stored, nil }
 
@@ -51,7 +57,7 @@ func (f *fakeStore) DropPostSources(_ context.Context, _, postSlug string) error
 }
 
 func newTestService(store Store) *Service {
-	s := NewService(store, Limits{TextMaxChars: 20, TagsMax: 3, MaxPerAccount: 5})
+	s := NewService(store, Limits{TextMaxChars: 20, TagsMax: 3, MaxPerAccount: 5, InjectMax: 3})
 	s.now = func() time.Time { return at }
 	s.newID = func() string { return "generated" }
 	return s

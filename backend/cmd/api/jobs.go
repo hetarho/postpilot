@@ -62,7 +62,8 @@ func registerJobs(c *contexts) {
 			UserID: found.UserID, PostSlug: slug, VoiceID: found.Subject(voice.JobSubject),
 			ObserveModel: found.ObserveModel, WriteModel: found.WriteModel,
 			TargetLanguage: options.TargetLanguage, TargetLength: options.TargetLength, TagCount: options.TagCount, Template: options.Template,
-			Guidelines: options.Guidelines, ObserveFiles: options.ObserveFiles, Observations: options.Observations,
+			Guidelines: options.Guidelines, Memories: options.Memories,
+			ObserveFiles: options.ObserveFiles, Observations: options.Observations,
 			WriteNativeEffort: options.WriteNativeEffort,
 		}, generation.Progress(progress))
 	}))

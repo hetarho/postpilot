@@ -24,6 +24,7 @@ func TestGenerationPayloadWireShapeIsPinned(t *testing.T) {
 			Facts: []TemplateFact{{Label: "장소", Value: "제주"}},
 		},
 		Guidelines:   []string{"문장은 짧게"},
+		Memories:     []string{"매운 음식을 못 먹는다"},
 		ObserveFiles: &observe,
 		Observations: []Observation{{
 			File: "a.jpg", Scene: "바다", Objects: []string{"파도"}, Model: "p/m",
@@ -36,7 +37,7 @@ func TestGenerationPayloadWireShapeIsPinned(t *testing.T) {
 	}
 	const want = `{"target_language":"ko","target_length":1200,"tag_count":7,` +
 		`"template":{"name":"여행","body":"# 제목","facts":[{"label":"장소","value":"제주"}]},` +
-		`"guidelines":["문장은 짧게"],"observe_files":["a.jpg"],` +
+		`"guidelines":["문장은 짧게"],"memories":["매운 음식을 못 먹는다"],"observe_files":["a.jpg"],` +
 		`"observations":[{"file":"a.jpg","scene":"바다","objects":["파도"],"model":"p/m",` +
 		`"events":["파도가 친다"],"speech":"좋다"}],"write_native_effort":true}`
 	if string(raw) != want {

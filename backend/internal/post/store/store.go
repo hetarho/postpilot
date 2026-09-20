@@ -250,9 +250,14 @@ func (s *Store) SaveContent(ctx context.Context, slug, userID string, content po
 	return n == 1, nil
 }
 
-func (s *Store) SaveGenerationOptions(ctx context.Context, slug, userID string, targetLength *int, tagCount int, updatedAt time.Time) (bool, error) {
+func (s *Store) SaveGenerationOptions(ctx context.Context, slug, userID string, targetLength *int, tagCount int, useMemory bool, updatedAt time.Time) (bool, error) {
+	memory := int64(0)
+	if useMemory {
+		memory = 1
+	}
 	n, err := s.write.SavePostGenerationOptions(ctx, sqlc.SavePostGenerationOptionsParams{
 		TargetLength: optionalInt64(targetLength), TagCount: sql.NullInt64{Int64: int64(tagCount), Valid: true},
+		UseMemory: memory,
 		UpdatedAt: formatTime(updatedAt), Slug: slug, UserID: userID,
 	})
 	if err != nil {
@@ -778,6 +783,7 @@ func toPost(row sqlc.Post) (post.Post, error) {
 		MachineBaselineVoiceID:  row.MachineBaselineVoiceID.String,
 		TargetLength:            optionalInt(row.TargetLength),
 		TagCount:                tagCountOrDefault(row.TagCount),
+		UseMemory:               row.UseMemory != 0,
 		FinalizedRevision:       row.FinalizedRevision.Int64,
 		FinalizedAt:             finalizedAt,
 		Observations:            observations,

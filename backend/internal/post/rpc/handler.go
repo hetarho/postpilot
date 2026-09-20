@@ -76,7 +76,7 @@ func (h *Handler) SavePostGenerationOptions(ctx context.Context, req *connect.Re
 	if err != nil {
 		return nil, err
 	}
-	saved, err := h.svc.SaveGenerationOptions(ctx, userID, req.Msg.GetSlug(), optionalTargetLength(req.Msg.TargetLength), optionalTargetLength(req.Msg.TagCount))
+	saved, err := h.svc.SaveGenerationOptions(ctx, userID, req.Msg.GetSlug(), optionalTargetLength(req.Msg.TargetLength), optionalTargetLength(req.Msg.TagCount), req.Msg.UseMemory)
 	if err != nil {
 		return nil, toConnectError("save post generation options", err)
 	}
@@ -375,6 +375,7 @@ func toProtoPost(p post.Post) *postpilotv1.Post {
 		CanFinalize:             p.Content != nil,
 		TargetLength:            protoTargetLength(p.TargetLength),
 		TagCount:                protoTargetLength(&p.TagCount),
+		UseMemory:               p.UseMemory,
 		FinalizedRevision:       p.FinalizedRevision,
 		FinalizedAt:             formatOptionalTime(p.FinalizedAt),
 		Voice:                   toProtoVoiceRef(p.Voice),

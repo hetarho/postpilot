@@ -117,10 +117,13 @@ type Limits struct {
 	TextMaxChars  int
 	TagsMax       int
 	MaxPerAccount int
+	// InjectMax bounds how many memories one write prompt may carry (MEM-7). Every selected
+	// memory is prompt text, so this is a prompt-size guard, not a storage one.
+	InjectMax int
 }
 
 func (l Limits) valid() bool {
-	return l.TextMaxChars > 0 && l.TagsMax > 0 && l.MaxPerAccount > 0
+	return l.TextMaxChars > 0 && l.TagsMax > 0 && l.MaxPerAccount > 0 && l.InjectMax > 0
 }
 
 // Memory is the aggregate: one atomic fact, one kind, its tags, the posts it was approved

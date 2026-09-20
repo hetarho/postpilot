@@ -14,6 +14,7 @@ func testDeps() Deps {
 		Experiments: neutralExperiments{},
 		Templates:   neutralBriefs{},
 		Guidelines:  neutralGuidelines{},
+		Memories:    neutralMemories{},
 		Candidates:  neutralCandidates{},
 		Samples:     neutralSamples{},
 		Videos:      neutralLinker{},
@@ -36,6 +37,14 @@ func (neutralBriefs) RenderedFor(context.Context, string, string, []string, []Te
 type neutralGuidelines struct{}
 
 func (neutralGuidelines) ForPrompt(context.Context, string, *string) ([]string, error) {
+	return nil, nil
+}
+
+// neutralMemories answers the way the context behaved before memories existed: none, for
+// every post. A post with the option off never reaches it in the first place.
+type neutralMemories struct{}
+
+func (neutralMemories) ForPost(context.Context, string, []string) ([]string, error) {
 	return nil, nil
 }
 

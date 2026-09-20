@@ -41,6 +41,7 @@ type Post struct {
 	TargetLanguage          string
 	ContentLanguage         sql.NullString
 	TagCount                sql.NullInt64
+	UseMemory               int64
 }
 
 type Upload struct {

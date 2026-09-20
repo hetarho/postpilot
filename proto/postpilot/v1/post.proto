@@ -166,6 +166,9 @@ message Post {
   // never saved with one reads as the default — and `optional` only so a client can tell
   // "filled" from a zero an older server never sends.
   optional int32 tag_count = 25;
+  // Whether a run may carry the account's memories (MEM-18). Default off, and off is the
+  // shape every draft saved before memories existed decodes as.
+  bool use_memory = 26;
 }
 
 message Image {
@@ -337,6 +340,10 @@ message SavePostGenerationOptionsRequest {
   // Presence-aware, unlike target_length: absent keeps the stored count, a value replaces it.
   // The range is the server's (POST_TAG_COUNT_INVALID), 1–10.
   optional int32 tag_count = 3;
+  // Presence-aware like tag_count: absent keeps the stored flag, a value replaces it. It is
+  // a generation option, so it rides this save rather than the draft's — and it changes no
+  // status, revision, baseline or learning eligibility (MEM-18, POST-71).
+  optional bool use_memory = 4;
 }
 message SavePostGenerationOptionsResponse { Post post = 1; }
 

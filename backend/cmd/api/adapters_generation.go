@@ -10,6 +10,7 @@ import (
 	"github.com/postpilot/backend/internal/guideline"
 	"github.com/postpilot/backend/internal/job"
 	"github.com/postpilot/backend/internal/llm"
+	"github.com/postpilot/backend/internal/memory"
 	"github.com/postpilot/backend/internal/platform/config"
 	"github.com/postpilot/backend/internal/post"
 	"github.com/postpilot/backend/internal/storage"
@@ -26,6 +27,16 @@ type generationGuidelines struct{ service *guideline.Service }
 
 func (a generationGuidelines) ForPrompt(ctx context.Context, userID string, templateID *string) ([]string, error) {
 	return a.service.ForPrompt(ctx, userID, templateID)
+}
+
+// generationMemories hands the generation context the memory context's retrieval. What
+// crosses is the post's own words and, coming back, TEXTS — the generation context never
+// learns that a memory has a kind, tags or an id, and the memory context never learns what a
+// job is. It is consulted once per enqueue, and only for a post that opted in.
+type generationMemories struct{ service *memory.Service }
+
+func (a generationMemories) ForPost(ctx context.Context, userID string, keyParts []string) ([]string, error) {
+	return a.service.TextsForPost(ctx, userID, keyParts)
 }
 
 // generationCandidates hands the generation context the candidate recorder. The instruction
@@ -155,7 +166,10 @@ func (a generationPosts) AttachedImages(ctx context.Context, userID, slug string
 		TemplateID:   found.TemplateID,
 		TargetLength: found.TargetLength,
 		TagCount:     found.TagCount,
-		Images:       make([]generation.Image, 0, len(found.Images)+len(found.Videos)),
+		// The opt-in, never the memories: like TemplateID, only the enqueue resolves it, and
+		// only through the memory context's own port (MEM-18, MEM-19).
+		UseMemory: found.UseMemory,
+		Images:    make([]generation.Image, 0, len(found.Images)+len(found.Videos)),
 		// The stored contact sheet, read here so the ENQUEUE can decide what to reuse. It
 		// was write-only from this context's point of view before change 21, which is why
 		// every retry re-paid for eyesight the post already had.
@@ -263,7 +277,8 @@ func (a generationJobs) EnqueueGeneration(ctx context.Context, request generatio
 	slug := request.PostSlug
 	payload, err := generation.EncodeGenerationPayload(generation.GenerationOptions{
 		TargetLanguage: request.TargetLanguage, TargetLength: request.TargetLength, TagCount: request.TagCount, Template: request.Template,
-		Guidelines: request.Guidelines, ObserveFiles: request.ObserveFiles, Observations: request.Observations,
+		Guidelines: request.Guidelines, Memories: request.Memories,
+		ObserveFiles: request.ObserveFiles, Observations: request.Observations,
 	})
 	if err != nil {
 		return "", err

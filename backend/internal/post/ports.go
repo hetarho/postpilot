@@ -232,7 +232,7 @@ type Storage interface {
 // drafting store so upload/sweeper collaborators do not acquire unrelated methods.
 type ContentStore interface {
 	SaveContent(ctx context.Context, slug, userID string, content PostContent, expectedRevision int64, updatedAt time.Time) (bool, error)
-	SaveGenerationOptions(ctx context.Context, slug, userID string, targetLength *int, tagCount int, updatedAt time.Time) (bool, error)
+	SaveGenerationOptions(ctx context.Context, slug, userID string, targetLength *int, tagCount int, useMemory bool, updatedAt time.Time) (bool, error)
 	// Finalize also writes title, which the caller has already resolved: the confirmed content's
 	// title, or the post's existing one when that is empty. The copy rides the same guarded
 	// statement as the finalization, so it can never land without it.
