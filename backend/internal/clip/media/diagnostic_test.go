@@ -133,3 +133,32 @@ func TestCompositionPassesAreNamedByTheirOwnOutput(t *testing.T) {
 		}
 	}
 }
+
+// A runner-only red is diagnosed from the one line the smoke prints. CLIP-88
+// makes the diagnostic's own sentence the privacy-safe one the SERVER may show,
+// so the failure underneath it is invisible unless the smoke unwraps it — and
+// twice now a red substage has reported only `check=render_encode values=map[]`,
+// which names the step and nothing about why it refused. Inside the image there
+// is no caller to keep it from, so renderFailure spells the cause out.
+func TestRenderFailureNamesTheCauseTheDiagnosticHides(t *testing.T) {
+	cause := commandDiagnostic(
+		errors.New("ffmpeg: no space left on device"),
+		Command{Binary: "/usr/local/bin/ffmpeg", Args: []string{"-i", "/w/in.mp4", "/w/clip-result.mp4"}},
+		3*time.Second,
+	)
+	err := clip.WithAttemptDiagnostic(cause, clip.AttemptDiagnostic{Check: "render_encode", Phase: "render"})
+	// The server's own sentence must stay exactly as bare as it is today.
+	if err.Error() != "clip attempt validation failed" {
+		t.Fatalf("the privacy-safe sentence changed: %v", err)
+	}
+	got := renderFailure(err).Error()
+	for _, want := range []string{
+		"check=render_encode", "phase=render",
+		"media=encode_final", "class=command_failed", "elapsed=3000ms",
+		"no space left on device",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("renderFailure dropped %q from: %s", want, got)
+		}
+	}
+}

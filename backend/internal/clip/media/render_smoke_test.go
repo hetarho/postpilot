@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"image"
 	"io"
@@ -37,11 +38,34 @@ func renderConfig(t *testing.T) clip.RenderConfig {
 // substage both arrive as the same sentence ("clip attempt validation failed"),
 // which on a CI runner is all the log holds — and the check, the phase and the
 // numbers it was measured against are the whole question (CLIP-88, CDS-52).
+//
+// The check alone is not always the answer: a substage that fails on an untyped
+// error reports its step with no values at all (`check=render_encode values=map[]`),
+// because CLIP-88 makes the diagnostic's own sentence the privacy-safe one the
+// server may show and the cause underneath it never prints. Inside the image
+// that privacy rule buys nothing, so the cause chain is spelled out here — and
+// with it the media operation, failure class and elapsed time a commandFailure
+// carries, which say whether ffmpeg ran at all.
 func renderFailure(err error) error {
+	detail := ""
 	if d, ok := clip.DiagnosticFromError(err); ok {
-		return fmt.Errorf("%w: check=%s phase=%s element=%s values=%v", err, d.Check, d.Phase, d.ElementID, d.Values)
+		detail = fmt.Sprintf(": check=%s phase=%s element=%s values=%v", d.Check, d.Phase, d.ElementID, d.Values)
 	}
-	return err
+	var c interface {
+		MediaOperation() string
+		MediaFailureClass() string
+		MediaElapsedMS() int64
+	}
+	if errors.As(err, &c) {
+		detail += fmt.Sprintf(" media=%s class=%s elapsed=%dms", c.MediaOperation(), c.MediaFailureClass(), c.MediaElapsedMS())
+	}
+	for e := errors.Unwrap(err); e != nil; e = errors.Unwrap(e) {
+		detail += fmt.Sprintf(" <- %T(%v)", e, e)
+	}
+	if detail == "" {
+		return err
+	}
+	return fmt.Errorf("%w%s", err, detail)
 }
 func path(key, fallback string) string {
 	if value := os.Getenv(key); value != "" {

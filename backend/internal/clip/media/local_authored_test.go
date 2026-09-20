@@ -106,11 +106,8 @@ func localFailure(err error) error {
 	if errors.As(err, &l) {
 		return fmt.Errorf("%w (cut=%d copy=%d)", renderFailure(err), l.Cut, l.Copy)
 	}
-	chain := ""
-	for e := err; e != nil; e = errors.Unwrap(e) {
-		chain += fmt.Sprintf(" <- %T(%v)", e, e)
-	}
-	return fmt.Errorf("%w [chain%s]", renderFailure(err), chain)
+	// renderFailure already spells out the cause chain.
+	return renderFailure(err)
 }
 
 func localMediaConfig(t *testing.T) clip.MediaConfig {
