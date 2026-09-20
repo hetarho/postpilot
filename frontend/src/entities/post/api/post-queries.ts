@@ -47,6 +47,7 @@ export function toPostDraft(post: Post): PostDraft {
     canFinalize: post.canFinalize,
     targetLength: post.targetLength,
     tagCount: post.tagCount ?? POST_TAG_COUNT_DEFAULT,
+    useMemory: post.useMemory,
     finalizedRevision: post.finalizedRevision,
     finalizedAt: post.finalizedAt,
     targetLanguage: requireContentLanguage(post.targetLanguage),

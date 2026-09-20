@@ -134,6 +134,9 @@ export interface FakePostRow {
   canFinalize?: boolean
   targetLength?: number
   tagCount?: number
+  /** The memory opt-in (MEM-18). Omitted means off, which is what every draft saved before
+   *  memories existed reads as. */
+  useMemory?: boolean
   finalizedRevision?: bigint
   finalizedAt?: string
   targetLanguage?: ContentLanguage
@@ -163,6 +166,11 @@ export interface FakePostsOptions {
   calls?: string[]
   /** Records target-length option saves, including an explicit clear as undefined. */
   generationOptionSaves?: Array<number | undefined>
+  /** Every SavePostGenerationOptions' `use_memory`, so a test can prove the checkbox autosaves
+   *  the flag — and that an ordinary option save carries none (MEM-18). */
+  memoryOptionSaves?: Array<boolean | undefined>
+  /** Refuse every option save, so the checkbox's failure path is testable. */
+  optionSaveFails?: boolean
   /** The voices a post may be assigned to. Omitted, only `DEFAULT_POST_VOICE` exists. */
   voices?: FakePostVoice[]
   /** The 템플릿 a post may be assigned to. Omitted, the account has none. */
@@ -200,6 +208,7 @@ type Row = {
   canFinalize: boolean
   targetLength?: number
   tagCount: number
+  useMemory: boolean
   finalizedRevision: bigint
   finalizedAt: string
   targetLanguage: ReturnType<typeof contentLanguageToProto>
@@ -319,6 +328,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       targetLength: row.targetLength,
       // The real server always fills it (POST-63): a row never saved with one is the default.
       tagCount: row.tagCount ?? 4,
+      useMemory: row.useMemory ?? false,
       finalizedRevision: row.finalizedRevision ?? 0n,
       finalizedAt: row.finalizedAt ?? '',
       targetLanguage: contentLanguageToProto(row.targetLanguage ?? 'ko'),
@@ -482,6 +492,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       canFinalize: reassigned ? Boolean(existing?.content) : (existing?.canFinalize ?? false),
       targetLength: seededLength,
       tagCount: seededTags,
+      useMemory: existing?.useMemory ?? false,
       finalizedRevision: existing?.finalizedRevision ?? 0n,
       finalizedAt: existing?.finalizedAt ?? '',
       targetLanguage: contentLanguageToProto(
@@ -540,12 +551,15 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
 
   rpc(PostService.method.savePostGenerationOptions, (req) => {
     calls?.push('SavePostGenerationOptions')
+    if (options.optionSaveFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
     options.generationOptionSaves?.push(req.targetLength)
+    options.memoryOptionSaves?.push(req.useMemory)
     const row = rows.get(req.slug)
     if (!row) throw connectAppError('POST_NOT_FOUND', Code.NotFound)
     row.targetLength = req.targetLength
     // Presence-aware like the server: absent keeps the stored count.
     if (req.tagCount !== undefined) row.tagCount = req.tagCount
+    if (req.useMemory !== undefined) row.useMemory = req.useMemory
     return create(SavePostGenerationOptionsResponseSchema, { post: toProto(row) })
   })
 

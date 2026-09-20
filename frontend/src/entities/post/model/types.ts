@@ -56,6 +56,10 @@ export interface PostDraft {
   targetLength?: number
   /** Always concrete: the server fills it and an older message falls back to the default. */
   tagCount: number
+  /** Whether a run may carry the account's memories (MEM-18). Default off, and off is what every
+   *  draft saved before memories existed reads as — such a post's prompt is byte-identical to the
+   *  one it produced before the domain existed. */
+  useMemory: boolean
   finalizedRevision: bigint
   finalizedAt: string
   targetLanguage: ContentLanguage

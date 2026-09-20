@@ -56,6 +56,8 @@ import { i18n as giveVoiceFeedbackI18n } from '@/features/give-voice-feedback/co
 import { i18n as guidelineI18n } from '@/entities/guideline/config/i18n'
 import { i18n as guidelinesI18n } from '@/pages/guidelines/config/i18n'
 import { i18n as memoryEntityI18n } from '@/entities/memory/config/i18n'
+import { i18n as extractMemoriesI18n } from '@/features/extract-memories/config/i18n'
+import { i18n as usePostMemoriesI18n } from '@/features/use-post-memories/config/i18n'
 import { i18n as createMemoryI18n } from '@/features/create-memory/config/i18n'
 import { i18n as editMemoryI18n } from '@/features/edit-memory/config/i18n'
 import { i18n as deleteMemoryI18n } from '@/features/delete-memory/config/i18n'
@@ -128,6 +130,8 @@ export const RESOURCE_NAMESPACES = [
  *  This list is the one file a new slice with its own strings touches — a one-line import
  *  instead of an edit inside a 1,100-line namespace file (ARCH-16). */
 export const FRAGMENTS: readonly I18nFragment[] = [
+  extractMemoriesI18n,
+  usePostMemoriesI18n,
   createMemoryI18n,
   deleteMemoryI18n,
   editMemoryI18n,
@@ -223,6 +227,8 @@ export const resources = {
     posts: {
       ...candidateComparisonI18n.ko,
       ...contactSheetI18n.ko,
+      ...extractMemoriesI18n.ko,
+      ...usePostMemoriesI18n.ko,
       ...editWithAiPostsI18n.ko,
       ...exportPanelI18n.ko,
       ...finalizePostI18n.ko,
@@ -335,6 +341,8 @@ export const resources = {
     posts: {
       ...candidateComparisonI18n.en,
       ...contactSheetI18n.en,
+      ...extractMemoriesI18n.en,
+      ...usePostMemoriesI18n.en,
       ...editWithAiPostsI18n.en,
       ...exportPanelI18n.en,
       ...finalizePostI18n.en,

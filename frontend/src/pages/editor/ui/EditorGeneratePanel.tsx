@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { isTerminal, type GenerationJob } from '@/entities/generation-job'
 import type { PostDraft } from '@/entities/post'
 import { typographyStyles } from '@/shared/ui'
+import { UseMemoriesField } from '@/features/use-post-memories'
 import { ContactSheet } from '@/widgets/contact-sheet'
 import { EditorPhotos } from './EditorPhotos'
 import { EditorVoiceWarning } from './EditorVoiceWarning'
@@ -33,6 +34,10 @@ export function EditorGeneratePanel({
       {titleField}
       {memoField}
       {answerFields}
+      {/* At the foot of the memo and the data fields, which is what it is about: whether this
+          draft's run may carry the account's memories (POST-71). It is NOT in the writing brief
+          — it silently changes what a run may write. */}
+      <UseMemoriesField slug={post.slug} useMemory={post.useMemory} className="mt-6" />
       <EditorPhotos post={post} ensureSlug={ensureSlug} />
       <EditorVoiceWarning ownerId={ownerId} voice={post.voice} />
 

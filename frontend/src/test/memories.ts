@@ -3,10 +3,13 @@ import { create } from '@bufbuild/protobuf'
 import {
   CreateMemoryResponseSchema,
   DeleteMemoryResponseSchema,
+  GetMemoryExtractionResponseSchema,
   ListMemoriesResponseSchema,
+  MemoryCandidateSchema,
   MemoryService,
   MemorySchema,
   ProtoMemoryKind,
+  StartMemoryExtractionResponseSchema,
   UpdateMemoryResponseSchema,
 } from '@/shared/api'
 import { MEMORY_TEXT_MAX_CHARS } from '@/entities/memory'
@@ -49,6 +52,17 @@ export interface FakeMemoriesOptions {
     sourcePostSlug: string
   }>
   deletions?: string[]
+  /** What the extraction job proposes. Omitted, it proposes nothing — the repeatable "this post
+   *  yielded nothing" answer (MEM-14). */
+  candidates?: Array<{ text: string; kind?: ProtoMemoryKind; tags?: string[] }>
+  /** Refuse StartMemoryExtraction the way the credit gate does: nothing is started and no job
+   *  row survives (QUOTA-13). */
+  extractionRefused?: boolean
+  /** Refuse every create whose text is this one, so the per-row refusal path is testable while
+   *  its neighbours still save. */
+  refuseCreateOf?: string
+  /** Every StartMemoryExtraction's post slug. */
+  extractions?: string[]
 }
 
 const DEFAULT_AT = '2026-09-20T12:00:00Z'
@@ -119,6 +133,9 @@ export function registerMemoryService(router: ConnectRouter, options: FakeMemori
     if (options.createAtCap) {
       throw connectAppError('MEMORY_LIMIT_REACHED', Code.FailedPrecondition, { max: '300' })
     }
+    if (options.refuseCreateOf === text) {
+      throw connectAppError('MEMORY_TEXT_TAKEN', Code.AlreadyExists)
+    }
     // Exact after trim: a second sighting links the post and answers the existing row (MEM-9).
     const existing = [...rows.values()].find((row) => row.text === text)
     if (existing) {
@@ -174,5 +191,33 @@ export function registerMemoryService(router: ConnectRouter, options: FakeMemori
     const at = order.indexOf(req.id)
     if (at >= 0) order.splice(at, 1)
     return create(DeleteMemoryResponseSchema, {})
+  })
+
+  rpc(MemoryService.method.startMemoryExtraction, (req) => {
+    calls?.push('StartMemoryExtraction')
+    options.extractions?.push(req.postSlug)
+    if (options.extractionRefused) {
+      throw connectAppError('INSUFFICIENT_CREDITS', Code.ResourceExhausted, {
+        required: '1',
+        balance: '0',
+        renews_at: DEFAULT_AT,
+      })
+    }
+    return create(StartMemoryExtractionResponseSchema, { jobId: 'extract-job' })
+  })
+
+  rpc(MemoryService.method.getMemoryExtraction, (req) => {
+    calls?.push('GetMemoryExtraction')
+    if (req.jobId !== 'extract-job') throw connectAppError('MEMORY_NOT_FOUND', Code.NotFound)
+    return create(GetMemoryExtractionResponseSchema, {
+      postSlug: 'draft',
+      candidates: (options.candidates ?? []).map((candidate) =>
+        create(MemoryCandidateSchema, {
+          text: candidate.text,
+          kind: candidate.kind ?? ProtoMemoryKind.PREFERENCE,
+          tags: candidate.tags ?? [],
+        }),
+      ),
+    })
   })
 }

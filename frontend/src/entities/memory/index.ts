@@ -13,6 +13,12 @@ export { memoryListQuery, useMemories } from './api/useMemories'
 export type { MemoryCandidate } from './api/memory-queries'
 export { memoriesQueryKey, toMemory, toMemoryCandidate } from './api/memory-queries'
 export { invalidateMemories } from './api/memory-cache'
+export type { CandidateSaveOutcome } from './api/memory-extraction'
+export {
+  useApproveMemoryCandidates,
+  useMemoryExtraction,
+  useStartMemoryExtraction,
+} from './api/memory-extraction'
 export { isMemoryLimitReached, memoryErrorMessage } from './api/memory-errors'
 export {
   useCreateMemoryCall,

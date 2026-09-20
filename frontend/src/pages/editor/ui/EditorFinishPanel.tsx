@@ -4,6 +4,7 @@ import type { PostDraft } from '@/entities/post'
 import { BlockType, type PostContent } from '@/shared/api'
 import { flushContentQueue, type BlockEditorHandle } from '@/features/edit-post-content'
 import { VoiceLearningPanel, type useVoiceLearning } from '@/features/finalize-post'
+import { ExtractMemoriesButton } from '@/features/extract-memories'
 import { SentenceFeedback } from '@/features/give-voice-feedback'
 import { hasVideoBlock } from '@/shared/lib'
 import { Notice } from '@/shared/ui'
@@ -82,6 +83,16 @@ export function EditorFinishPanel({
           beforeSubmit={() =>
             (flushContentQueue(post.slug) ?? Promise.resolve(0n)).then(() => undefined)
           }
+        />
+      )}
+      {/* Beside 말투 학습, and enabled by the same thing that makes this step exist: canonical
+          content (POST-72). It proposes; nothing is stored until the user checks a row. */}
+      {ownerId && (
+        <ExtractMemoriesButton
+          ownerId={ownerId}
+          postSlug={post.slug}
+          hasContent={Boolean(post.content)}
+          className="mt-10"
         />
       )}
       {post.contentLanguage ? (
