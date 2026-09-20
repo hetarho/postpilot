@@ -507,3 +507,54 @@ func TestAPhotoAttachedAfterEnqueueNeverReachesTheWritePrompt(t *testing.T) {
 		}
 	}
 }
+
+// Every photo is named by the part IMMEDIATELY BEFORE it, not only by the trailing list. An
+// image part carries no filename, so a batch naming its files only at the end leaves the model
+// binding name to photo by position — the binding that puts one photo's observation, and the
+// caption written from it, under another photo.
+//
+// fakeImages returns the key as the bytes, so this asserts the real pairing rather than the
+// shape: `file: IMG_3.jpg` has to sit in front of the photo read from `key-3`.
+func TestEachPhotoIsNamedRightBeforeItself(t *testing.T) {
+	images, _ := storedSnapshot(6, "old/observer")
+	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, Images: images}}
+	models := observingModels(t)
+	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, reobserveBatchSize, testReasoningPolicy, testBudget, testDeps())
+
+	if err := svc.Generate(context.Background(), GenerateJob{
+		UserID: "alice", PostSlug: "post", ObserveModel: observeRef.String(), WriteModel: writeRef.String(),
+	}, func(string, int, int) {}); err != nil {
+		t.Fatal(err)
+	}
+
+	var named []string
+	for _, call := range models.calls {
+		if !call.request.HasImages() {
+			continue
+		}
+		parts := call.request.Messages[0].Parts
+		for i := 0; i+1 < len(parts); i += 2 {
+			label, photo := parts[i], parts[i+1]
+			if photo.Image == nil {
+				t.Fatalf("part %d of an observation call is not a photo", i+1)
+			}
+			file, ok := strings.CutPrefix(label.Text, "file: ")
+			if !ok {
+				t.Fatalf("the part before a photo is %q, not its filename", label.Text)
+			}
+			// storedSnapshot pairs IMG_n.jpg with key-n, and fakeImages reads a key as bytes.
+			if want := "key-" + strings.TrimSuffix(strings.TrimPrefix(file, "IMG_"), ".jpg"); string(photo.Image) != want {
+				t.Fatalf("%q labels the photo read from %q", label.Text, photo.Image)
+			}
+			named = append(named, file)
+		}
+		// The trailing line still carries the batch's complete name set.
+		last := parts[len(parts)-1]
+		if !strings.HasPrefix(last.Text, "files: ") {
+			t.Fatalf("the last part is %q, not the batch's file list", last.Text)
+		}
+	}
+	if want := filenames(1, 2, 3, 4, 5, 6); !reflect.DeepEqual(named, want) {
+		t.Fatalf("labelled photos = %v, want %v", named, want)
+	}
+}

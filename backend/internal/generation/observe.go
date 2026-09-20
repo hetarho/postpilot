@@ -63,13 +63,22 @@ func (s *Service) observeCandidate(ctx context.Context, post PostInput, targets 
 	for start := 0; start < len(photos); start += s.batchSize {
 		end := min(start+s.batchSize, len(photos))
 		batch := photos[start:end]
-		parts := make([]llm.Part, 0, len(batch)+1)
+		// Two parts per photo: its name, then the photo itself. An image part carries no
+		// filename of its own, so a batch that named its files only in the trailing line
+		// left the model to bind name to photo by POSITION — and four photos of one room
+		// is exactly where that binding slips, which is how an observation, and then the
+		// caption written from it, ends up under the wrong photo.
+		//
+		// The trailing line stays: it is the batch's complete name set, which is what tells
+		// a model answering for several photos that it has answered for all of them.
+		parts := make([]llm.Part, 0, 2*len(batch)+1)
 		filenames := make([]string, 0, len(batch))
 		for _, image := range batch {
 			data, err := s.images.Read(ctx, image.Key)
 			if err != nil {
 				return nil, usage, fmt.Errorf("read photo %s: %w", image.Filename, err)
 			}
+			parts = append(parts, llm.TextPart("file: "+image.Filename))
 			parts = append(parts, llm.ImagePart(data, "image/jpeg"))
 			filenames = append(filenames, image.Filename)
 		}

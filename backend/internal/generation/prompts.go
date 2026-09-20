@@ -7,7 +7,11 @@ import (
 	"github.com/postpilot/backend/internal/post"
 )
 
+// The second line names the convention observe.go sends: `file: 이름` immediately before the
+// photo it names. Without it a model reads the labels as one more list and falls back to
+// position, which is the binding this change exists to remove.
 const ObservePrompt = `사진마다 파일명을 정확히 대응해 관찰 사실만 반환하세요. 추측하거나 이야기를 만들지 마세요.
+각 사진 바로 앞에 그 사진의 파일명이 "file: 이름" 한 줄로 옵니다. 파일명은 순서로 짐작하지 말고 그 사진 바로 앞 줄에서 그대로 가져오세요.
 출력은 설명이나 마크다운 없이 {"observations":[{"file":"...","scene":"...","mood":"...","visible_text":"...","objects":[],"people_present":false}]} 형태의 JSON 객체 하나여야 합니다.`
 
 // videoWriteInstructions are appended to the fixed write prompt ONLY for a post that actually
