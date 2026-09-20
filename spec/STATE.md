@@ -19,14 +19,14 @@
 |---|---|---|---|---|
 | ARCH | 5 | 5 | - | 0 |
 | AUTH | 5 | 5 | - | 0 |
-| QUOTA | 12 | 12 | - | 0 |
-| POST | 7 | 7 | - | 0 |
+| QUOTA | 13 | 12 | QUOTA-13✎ | 0 |
+| POST | 8 | 7 | POST-71+ POST-72+ POST-51✎ POST-54✎ | 0 |
 | VOICE | 3 | 3 | - | 1 |
-| GEN | 6 | 6 | - | 0 |
+| GEN | 7 | 6 | GEN-47+ GEN-16✎ GEN-44✎ GEN-14✎ GEN-5✎ GEN-15✎ GEN-30✎ | 0 |
 | MODEL | 10 | 10 | - | 0 |
 | TMPL | 6 | 6 | - | 1 |
-| GUIDE | 2 | 2 | - | 0 |
-| EXPORT | 2 | 2 | - | 0 |
+| GUIDE | 3 | 2 | GUIDE-28+ GUIDE-16✎ | 0 |
+| EXPORT | 3 | 2 | EXPORT-24+ EXPORT-5✎ EXPORT-4✎ EXPORT-9✎ EXPORT-12✎ | 0 |
 | PUB | 5 | 5 | - | 0 |
 | LANG | 3 | 3 | - | 0 |
 | THEME | 13 | 13 | - | 0 |
@@ -61,8 +61,11 @@
 - T281 changed the clip rpc PATHS: the next deploy must ship the API image and the web build TOGETHER (ARCH-41), and `buf breaking` will report the removed `ClipService` once, which is that intended break
 - the clip `release-smoke` stage is red at HEAD on this host: 9 of 28 modes end in `no result` (generation ends on a plan since T255, harness still expects a Result) — still needs a fix task (review-code clip-release-smoke or update the harness)
 - post-quality-and-related-links remains open ideation, awaiting conversion when ready
-- MEM is new and untasked: `create-task MEM` once the GEN/GUIDE/POST/EXPORT/QUOTA amendments that reference it are in
+- `create-task MEM GEN GUIDE POST EXPORT QUOTA` is the next step: MEM r1 is untasked and the five amendments are unconsumed
+- the prompt half of GEN r7 (GEN-47, GEN-16, GEN-44) stands alone and can ship before any memory row exists
 ## log
+- 260920 GEN r7 GUIDE r3 POST r8 EXPORT r3 QUOTA r13: the altitude rule, grounding bound to factual claims, the opt-in `[기억]` section, ①'s checkbox, ③'s extraction and the numbered photo marker (mem)
+- 260920 update-ssot GEN GUIDE POST EXPORT QUOTA start (mem)
 - 260920 MEM r1 written: memories are the write prompt's fourth grounding source, opt-in per draft, tag-retrieved with no embedding (mem)
 - 260920 create-ssot MEM start (mem)
 - 260920 T281 done; clip.proto is five files/services (template·source·generation·plan·render), buf breaks on PACKAGE, one BE handler serves all five and each FE entity names its family. BE+FE deploy together: the rpc paths changed
