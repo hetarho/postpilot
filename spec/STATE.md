@@ -24,7 +24,7 @@
 | VOICE | 3 | 3 | - | 1 |
 | GEN | 7 | 7 | - | 0 |
 | MODEL | 10 | 10 | - | 0 |
-| TMPL | 6 | 6 | - | 1 |
+| TMPL | 7 | 7 | - | 1 |
 | GUIDE | 3 | 3 | - | 0 |
 | EXPORT | 4 | 4 | - | 0 |
 | PUB | 5 | 5 | - | 0 |
@@ -57,10 +57,14 @@
 | T284 | the agent generates only the protos it uses and drops the survey harness | ARCH | T008 T281 | todo |
 
 ## next
-- `update-ssot TMPL` owes a rev: TMPL-17 TMPL-23 TMPL-39 describe the Naver photo marker as `[사진 …]`, two markers out of date now (README.md and PRD.md carry the old one too)
-- the clip `release-smoke` stage is still red at HEAD on this host (9 of 28 modes end in `no result`) and still needs a fix task; a `review-code` pass over the new memory domain is worth a look before it grows
-- every remaining task waits on T008 (another session) or is blocked (T177)
+- nothing is unblocked: every remaining task waits on T008 (another session) or is blocked (T177)
+- the clip `release-smoke` stage is still red at HEAD on this host (9 of 28 modes end in `no result`) and still needs a fix task
+- a `review-code` pass over the new memory domain is worth a look before it grows
 ## log
+- 260921 TMPL r7..r7 no-op (no code impact); the same stale marker prose in ExportPanel, BlockList, README and PRD was aligned in passing — comments and reference docs only, ARCH-25 green
+- 260921 create-task TMPL start (alt)
+- 260921 TMPL r7: TMPL-17 23 39 cite the current Naver photo marker, and a slot placeholder is told from it by its brackets (alt)
+- 260921 update-ssot TMPL start (alt)
 - 260921 T294 done; the Naver photo marker carries its caption folded to one `_`-joined token (`사진_1_비_뒤의_바다_사진`), captionless blocks keep the bare form, and both Naver snapshots moved by exactly those lines
 - 260921 T294 created from EXPORT r4: one task, the converter's fold plus its tests, goldens and the panel's guidance line (alt)
 - 260921 create-task EXPORT start (alt)
@@ -77,7 +81,3 @@
 - 260920 create-task MEM GEN GUIDE POST EXPORT QUOTA start (mem)
 - 260920 GEN r7 GUIDE r3 POST r8 EXPORT r3 QUOTA r13: the altitude rule, grounding bound to factual claims, the opt-in `[기억]` section, ①'s checkbox, ③'s extraction and the numbered photo marker (mem)
 - 260920 update-ssot GEN GUIDE POST EXPORT QUOTA start (mem)
-- 260920 MEM r1 written: memories are the write prompt's fourth grounding source, opt-in per draft, tag-retrieved with no embedding (mem)
-- 260920 create-ssot MEM start (mem)
-- 260920 T281 done; clip.proto is five files/services (template·source·generation·plan·render), buf breaks on PACKAGE, one BE handler serves all five and each FE entity names its family. BE+FE deploy together: the rpc paths changed
-- 260920 T281 claimed (clp)

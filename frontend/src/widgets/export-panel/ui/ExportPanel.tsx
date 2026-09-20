@@ -491,7 +491,7 @@ export function ExportPanel({
           </>
         ) : (
           /* The Naver preview IS the post (change 18): what SmartEditor gets is plain text with
-             `[사진 …]` markers, but what the human reads here is the rendering they are about to
+             `사진_<n>_…_사진` markers, but what the human reads here is the rendering they are about to
              publish — photos inline at their marker positions, each carrying its own copy. The
              header is suppressed because the body copy does not paste it; the title has its own
              field above. */
@@ -716,8 +716,9 @@ function PreviewPhoto({
           <div className="bg-surface-recessed aspect-square w-full rounded-lg" />
         )
       ) : (
-        // No photo behind this marker: the copied text still carries `[사진 <file>]`, so the
-        // preview says which file the reader is expected to place there.
+        // No photo behind this marker: the copied text still spends its number on it, so the
+        // preview says which file the reader is expected to place there — the marker itself
+        // carries no filename any more (EXPORT-5).
         <Typography
           variant="meta"
           as="p"

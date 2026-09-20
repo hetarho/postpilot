@@ -31,7 +31,7 @@ interface BlockListProps {
   /** Rendered in place of an IMAGE block whose file has no matching image. The default (nothing)
    *  is right for the reading and editing views; the export preview holds the marker's position
    *  with its own placeholder, because a dropped position would shift every later photo against
-   *  its `[사진 …]` marker. */
+   *  its `사진_<n>_…_사진` marker. */
   renderMissingImage?: (block: PostContent['blocks'][number], index: number) => ReactNode
   /** Wraps a rendered VIDEO block. The export preview uses it to put its own hint beside the
    *  clip; the reading and editing views take the default. */
