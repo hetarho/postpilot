@@ -73,9 +73,18 @@ const koreanAltitude = "사진 관찰은 글의 근거이자 사진을 놓을 �
 
 const englishAltitude = "The photo observations are grounding and placement material, not a list to describe one by one. No paragraph has to point at a photo. Do not write visual detail that carries nothing for the post: lighting, walls, ceilings, fixtures, the arrangement of a room."
 
-const koreanNaming = "메모가 대상의 이름을 주고 사진 관찰은 그 대상을 일반적으로만 설명한다면, 본문과 IMAGE alt 및 caption에서 메모의 이름을 사용하세요. 다만 사진 관찰에 없는 것을 사진 안에 있는 것처럼 쓰지는 마세요."
+// koreanNaming / englishNaming are write-only, and they are about IDENTITY, not only about a
+// proper name. The observation stage sees one photo at a time and is told to state facts
+// alone, so it can only ever say what a thing LOOKS like: "노을 지는 콘크리트 건물" for what
+// the memo already called 별채. A rule covering only names left that case out — 별채 is a
+// role, not a name — so the generic wording survived into the caption and the post read as a
+// stranger's description of the user's own trip.
+//
+// The three sources are the same three koreanGrounding names, and the trailing clause is the
+// bound: identity comes from the memo and the template, never a guess about the frame.
+const koreanNaming = "사진 관찰은 사진을 한 장씩 따로 본 결과라 그 대상이 무엇인지 모르는 채 적혀 있습니다. 메모나 템플릿 입력란이 그 대상의 정체나 이름을 알려주면 — 관찰의 \"콘크리트 건물\"이 메모의 \"별채\"라면 — 본문과 IMAGE alt 및 caption에서 관찰의 일반적인 표현 대신 그쪽을 쓰세요. 다만 사진 관찰에 없는 것을 사진 안에 있는 것처럼 쓰지는 마세요."
 
-const englishNaming = "When the memo names a subject that the photo observations describe only generically, use the memo's name in prose and in IMAGE alt and caption. Do not write anything the photo observations do not show as being in the frame."
+const englishNaming = "A photo observation was made one photo at a time, without knowing what its subject is. When the memo or a template field gives that subject an identity or a name — the observation's \"concrete building\" is the memo's \"annex\" — use that in prose and in IMAGE alt and caption instead of the observation's generic wording. Do not write anything the photo observations do not show as being in the frame."
 
 const WritePrompt = `첨부 사진 관찰과 메모를 바탕으로 자연스러운 한국어 블로그 글을 작성하세요.
 ` + koreanGrounding + " " + koreanGroundingWriteScope + `
