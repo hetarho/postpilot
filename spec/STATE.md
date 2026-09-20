@@ -19,14 +19,14 @@
 |---|---|---|---|---|
 | ARCH | 5 | 5 | - | 0 |
 | AUTH | 5 | 5 | - | 0 |
-| QUOTA | 13 | 12 | QUOTA-13✎ | 0 |
-| POST | 8 | 7 | POST-71+ POST-72+ POST-51✎ POST-54✎ | 0 |
+| QUOTA | 13 | 13 | - | 0 |
+| POST | 8 | 8 | - | 0 |
 | VOICE | 3 | 3 | - | 1 |
-| GEN | 7 | 6 | GEN-47+ GEN-16✎ GEN-44✎ GEN-14✎ GEN-5✎ GEN-15✎ GEN-30✎ | 0 |
+| GEN | 7 | 7 | - | 0 |
 | MODEL | 10 | 10 | - | 0 |
 | TMPL | 6 | 6 | - | 1 |
-| GUIDE | 3 | 2 | GUIDE-28+ GUIDE-16✎ | 0 |
-| EXPORT | 3 | 2 | EXPORT-24+ EXPORT-5✎ EXPORT-4✎ EXPORT-9✎ EXPORT-12✎ | 0 |
+| GUIDE | 3 | 3 | - | 0 |
+| EXPORT | 3 | 3 | - | 0 |
 | PUB | 5 | 5 | - | 0 |
 | LANG | 3 | 3 | - | 0 |
 | THEME | 13 | 13 | - | 0 |
@@ -35,7 +35,7 @@
 | CLIP | 40 | 40 | - | 1 |
 | CDS | 23 | 23 | - | 1 |
 | BILL | 4 | 4 | - | 0 |
-| MEM | 1 | 0 | all | 2 |
+| MEM | 1 | 1 | - | 2 |
 
 ## review
 | id | st |
@@ -55,15 +55,24 @@
 | T282 | the agent maps proto at one adapter and keeps preflight out of main | ARCH | T008 | todo |
 | T283 | SmartEditor scripts are files with a DOM test; naver is plan vs driver | ARCH | T282 | todo |
 | T284 | the agent generates only the protos it uses and drops the survey harness | ARCH | T008 T281 | todo |
+| T287 | the write prompt stops describing the photographs | GEN GUIDE | - | todo |
+| T288 | the Naver photo marker is a number and the caption copies itself | EXPORT | - | todo |
+| T289 | memories are a table, a context and a directory RPC family | MEM | - | todo |
+| T290 | retrieval, the frozen [기억] section and the draft's opt-in | MEM GEN GUIDE POST | T289 | todo |
+| T291 | extract_memory is a job that proposes candidates and stores none | MEM QUOTA | T289 | todo |
+| T292 | 기억 is the fifth destination of the 글 group | MEM | T289 | todo |
+| T293 | ①'s 기억 사용 checkbox and ③'s candidate sheet | POST MEM | T290 T291 | todo |
 
 ## next
 - every unblocked task is done: the review's FE half (T259-T268) and BE half (T275-T281) are all in `tasks/done/`. What is left waits on T008, which belongs to another session — T279 T282 T283 T284 — or is blocked (T177)
 - T281 changed the clip rpc PATHS: the next deploy must ship the API image and the web build TOGETHER (ARCH-41), and `buf breaking` will report the removed `ClipService` once, which is that intended break
 - the clip `release-smoke` stage is red at HEAD on this host: 9 of 28 modes end in `no result` (generation ends on a plan since T255, harness still expects a Result) — still needs a fix task (review-code clip-release-smoke or update the harness)
 - post-quality-and-related-links remains open ideation, awaiting conversion when ready
-- `create-task MEM GEN GUIDE POST EXPORT QUOTA` is the next step: MEM r1 is untasked and the five amendments are unconsumed
-- the prompt half of GEN r7 (GEN-47, GEN-16, GEN-44) stands alone and can ship before any memory row exists
+- `implement-task T287` first: the prompt half stands alone, needs no memory row and is the fix the whole memory chain was started for; T288 is independent of everything
+- the memory chain is T289 → (T290 · T291 · T292) → T293; only T289 blocks anything
 ## log
+- 260920 T287-T293 created from MEM r1 + the five amendments: prompt altitude, Naver marker, the memory store, retrieval, extraction, the 기억 page, the two post surfaces (mem)
+- 260920 create-task MEM GEN GUIDE POST EXPORT QUOTA start (mem)
 - 260920 GEN r7 GUIDE r3 POST r8 EXPORT r3 QUOTA r13: the altitude rule, grounding bound to factual claims, the opt-in `[기억]` section, ①'s checkbox, ③'s extraction and the numbered photo marker (mem)
 - 260920 update-ssot GEN GUIDE POST EXPORT QUOTA start (mem)
 - 260920 MEM r1 written: memories are the write prompt's fourth grounding source, opt-in per draft, tag-retrieved with no embedding (mem)
