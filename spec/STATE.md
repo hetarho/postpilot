@@ -35,6 +35,7 @@
 | CLIP | 40 | 40 | - | 1 |
 | CDS | 23 | 23 | - | 1 |
 | BILL | 4 | 4 | - | 0 |
+| MEM | 1 | 0 | all | 2 |
 
 ## review
 | id | st |
@@ -60,7 +61,10 @@
 - T281 changed the clip rpc PATHS: the next deploy must ship the API image and the web build TOGETHER (ARCH-41), and `buf breaking` will report the removed `ClipService` once, which is that intended break
 - the clip `release-smoke` stage is red at HEAD on this host: 9 of 28 modes end in `no result` (generation ends on a plan since T255, harness still expects a Result) — still needs a fix task (review-code clip-release-smoke or update the harness)
 - post-quality-and-related-links remains open ideation, awaiting conversion when ready
+- MEM is new and untasked: `create-task MEM` once the GEN/GUIDE/POST/EXPORT/QUOTA amendments that reference it are in
 ## log
+- 260920 MEM r1 written: memories are the write prompt's fourth grounding source, opt-in per draft, tag-retrieved with no embedding (mem)
+- 260920 create-ssot MEM start (mem)
 - 260920 T281 done; clip.proto is five files/services (template·source·generation·plan·render), buf breaks on PACKAGE, one BE handler serves all five and each FE entity names its family. BE+FE deploy together: the rpc paths changed
 - 260920 T281 claimed (clp)
 - 260920 T278 done; FailureReason is a 222-value proto enum both sides compile against, the 212-line allowlist is gone and two tests hold the contract at both ends; the wire is unchanged
