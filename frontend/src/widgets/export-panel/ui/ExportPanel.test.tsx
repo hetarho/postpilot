@@ -1,7 +1,7 @@
 import { afterEach, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { toNaver } from '@/features/export-naver'
+import { naverPhotoOrder, toNaver } from '@/features/export-naver'
 import { BlockType } from '@/shared/api'
 import {
   POST_CONTENT_FIXTURE,
@@ -38,9 +38,14 @@ function renderPanel({ onPhotoUrlsStale }: { onPhotoUrlsStale?: () => void } = {
 /** The photo the first copy control carries. The control IS the photo, so this is also the
  *  assertion that the two have not drifted apart into a control beside an image again. */
 function firstPreviewPhoto(): HTMLImageElement {
-  const control = screen.getAllByRole('button', { name: /사진 복사$/ })[0]
+  const control = screen.getAllByRole('button', { name: PHOTO_COPY })[0]
   return within(control).getByRole('img')
 }
+
+/** A photo copy control is named by its marker NUMBER and its filename (EXPORT-12); a caption
+ *  control by the number alone. Matched as patterns so one cannot be mistaken for the other. */
+const PHOTO_COPY = /^\d+번 사진 복사 · /
+const CAPTION_COPY = /^\d+번 사진 캡션 복사$/
 
 /** A view URL the way the API mints it, with a lifetime that has already run out. */
 function expiredUrl() {
@@ -57,7 +62,9 @@ it('switches four synchronous outputs with their guidance and keeps the Naver ti
 
   expect(screen.getByLabelText('네이버 제목')).toHaveValue(POST_CONTENT_FIXTURE.title)
   expect(
-    screen.getByText('본문을 붙여넣은 뒤, 미리보기의 사진을 복사해 [사진 …] 자리에 붙여넣으세요'),
+    screen.getByText(
+      '본문을 붙여넣은 뒤, 사진_1_사진 같은 자리마다 미리보기의 사진을 복사해 넣으세요. 캡션은 본문에 들어 있지 않으니 캡션도 따로 복사해 편집기의 캡션 칸에 넣어 주세요',
+    ),
   ).toBeInTheDocument()
 
   await user.click(screen.getByRole('tab', { name: '티스토리' }))
@@ -233,9 +240,9 @@ it('does not confirm a tag copy against the title field', async () => {
 
 // ── The rendered Naver preview (change 18) ────────────────────────────────────────────────────
 //
-// The Naver tab shows the POST, not the wire text: the `[사진 …]` markers exist only in what the
-// copy button puts on the clipboard, and each photo renders inline at its marker position with
-// its own copy control.
+// The Naver tab shows the POST, not the wire text: the `사진_<n>_사진` markers exist only in what
+// the copy button puts on the clipboard, and each photo renders inline at its marker position
+// with its own copy control — and its caption with a second one under it (EXPORT-24).
 
 it('renders the Naver tab as the post — no marker text, no raw field, photos inline in marker order', async () => {
   const user = userEvent.setup()
@@ -243,7 +250,7 @@ it('renders the Naver tab as the post — no marker text, no raw field, photos i
 
   const preview = screen.getByRole('article', { name: '네이버 미리보기' })
   // The markers are the copied text's business, not the preview's.
-  expect(preview.textContent).not.toContain('[사진')
+  expect(preview.textContent).not.toMatch(/사진_\d+_사진/)
   expect(screen.queryByLabelText('내보내기 결과')).not.toBeInTheDocument()
   // The body renders as the reading view does, header excluded: the body copy does not paste the
   // title/summary/tags, and the title has its own field above.
@@ -251,18 +258,18 @@ it('renders the Naver tab as the post — no marker text, no raw field, photos i
   expect(within(preview).getByRole('heading', { name: '바닷가로' })).toBeInTheDocument()
   expect(within(preview).queryByText(POST_CONTENT_FIXTURE.summary)).not.toBeInTheDocument()
 
-  // One copy control per `[사진 …]` marker, in marker order — asserted through the controls'
-  // accessible names, which bind each control to the marker it copies for.
-  const markers = [
-    ...toNaver(POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE, 'ko').matchAll(/\[사진 ([^\]:]+)/g),
-  ].map((match) => match[1])
-  expect(markers.length).toBeGreaterThan(1)
+  // One copy control per marker, in marker order, named by the NUMBER in the copied text and the
+  // filename — asserted through the controls' accessible names, which bind each control to the
+  // marker it copies for. The fixture's second photo carries no caption, so it gets no caption
+  // control: that is the whole of "a block with no caption renders no control".
+  const files = naverPhotoOrder(POST_CONTENT_FIXTURE)
+  expect(files.length).toBeGreaterThan(1)
   expect(
     within(preview)
       .getAllByRole('button')
       .map((button) => button.getAttribute('aria-label')),
-  ).toEqual(markers.map((file) => `${file} 사진 복사`))
-  expect(within(preview).getAllByRole('img')).toHaveLength(markers.length)
+  ).toEqual(['1번 사진 복사 · IMG_1.jpg', '1번 사진 캡션 복사', '2번 사진 복사 · IMG_2.jpg'])
+  expect(within(preview).getAllByRole('img')).toHaveLength(files.length)
 
   // The other three formats are source to be read, not a post to be seen.
   for (const format of ['티스토리', '자체 사이트', '마크다운']) {
@@ -270,6 +277,53 @@ it('renders the Naver tab as the post — no marker text, no raw field, photos i
     expect(screen.queryByRole('article', { name: '네이버 미리보기' })).not.toBeInTheDocument()
     expect(screen.getByLabelText('내보내기 결과')).toBeInTheDocument()
   }
+})
+
+// ── The caption copies (EXPORT-24) ───────────────────────────────────────────────────────────
+//
+// The caption left the marker, so a copy of its own is the only way it reaches the platform's
+// caption box. It follows the text-copy discipline the title and the body already follow.
+
+it('copies one caption, confirms it under its own photo, and leaves the other copies alone', async () => {
+  const user = userEvent.setup()
+  const writeText = vi.fn<Clipboard['writeText']>().mockResolvedValue(undefined)
+  setClipboard({ writeText })
+  renderPanel()
+
+  const caption = screen.getByRole('button', { name: CAPTION_COPY })
+  await user.click(caption)
+
+  await waitFor(() => expect(writeText).toHaveBeenCalledWith('비 뒤의 바다'))
+  expect(await screen.findByText('캡션이 복사됐어요')).toBeInTheDocument()
+  expect(screen.queryByText('제목이 복사됐어요')).not.toBeInTheDocument()
+  expect(screen.queryByText(/사진이 복사됐어요/)).not.toBeInTheDocument()
+  // The copied text carries the caption nowhere, which is why this control exists at all.
+  expect(toNaver(POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE, 'ko')).not.toContain('비 뒤의 바다')
+})
+
+it('reveals and selects a read-only caption field when the Clipboard API is unavailable', async () => {
+  const user = userEvent.setup()
+  setClipboard(undefined)
+  const select = vi.spyOn(HTMLInputElement.prototype, 'select')
+  renderPanel()
+
+  await user.click(screen.getByRole('button', { name: CAPTION_COPY }))
+
+  await waitFor(() => expect(select).toHaveBeenCalled())
+  const field = screen.getByLabelText<HTMLInputElement>('캡션 텍스트')
+  expect(field).toHaveFocus()
+  expect(field).toHaveValue('비 뒤의 바다')
+  expect(field).toHaveAttribute('readonly')
+  expect(
+    screen.getByText('자동 복사가 막혀 있어요. 선택된 텍스트를 길게 눌러 복사하세요'),
+  ).toBeInTheDocument()
+  // The photo's own preview is untouched by its caption's failure.
+  expect(screen.getAllByRole('button', { name: PHOTO_COPY })).toHaveLength(2)
+
+  // A copy that succeeds afterwards puts the field away again.
+  setClipboard({ writeText: vi.fn<Clipboard['writeText']>().mockResolvedValue(undefined) })
+  await user.click(screen.getByRole('button', { name: CAPTION_COPY }))
+  await waitFor(() => expect(screen.queryByLabelText('캡션 텍스트')).not.toBeInTheDocument())
 })
 
 it('renders no photo controls, and no photo guidance, for a post with no photos', () => {
@@ -284,7 +338,7 @@ it('renders no photo controls, and no photo guidance, for a post with no photos'
       contentLanguage="ko"
     />,
   )
-  expect(screen.queryByRole('button', { name: /사진 복사$/ })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: PHOTO_COPY })).not.toBeInTheDocument()
   expect(screen.getByText('본문을 그대로 붙여넣으세요')).toBeInTheDocument()
 })
 
@@ -459,7 +513,7 @@ it('writes exactly one ClipboardItem carrying image/png and nothing else', async
   const clipboard = stubImageClipboard()
   renderPanel()
 
-  await user.click(screen.getAllByRole('button', { name: /사진 복사$/ })[0])
+  await user.click(screen.getAllByRole('button', { name: PHOTO_COPY })[0])
 
   await waitFor(() => expect(clipboard.write).toHaveBeenCalledOnce())
   // ONE item, ONE flavor. A `text/html` flavor beside it makes the editor render a broken image,
@@ -482,7 +536,7 @@ it('names the failure on the photo that failed, with no text flavor substituted'
   })
   renderPanel()
 
-  await user.click(screen.getAllByRole('button', { name: /사진 복사$/ })[0])
+  await user.click(screen.getAllByRole('button', { name: PHOTO_COPY })[0])
 
   expect(await screen.findByText('사진 복사가 막혔어요. 다시 시도해 주세요.')).toBeInTheDocument()
   expect(clipboard.items).toHaveLength(1)
@@ -495,7 +549,7 @@ it('says so and offers no copy when the photo cannot be read', async () => {
   vi.stubGlobal('createImageBitmap', vi.fn().mockRejectedValue(new Error('not loaded')))
   renderPanel()
 
-  await user.click(screen.getAllByRole('button', { name: /사진 복사$/ })[0])
+  await user.click(screen.getAllByRole('button', { name: PHOTO_COPY })[0])
 
   expect(
     await screen.findByText('사진을 읽지 못했어요. 글을 다시 불러오면 사진 주소가 새로 발급돼요.'),
@@ -515,7 +569,7 @@ it('does not tell the user to reload when this origin may not read the pixels', 
   )
   renderPanel()
 
-  await user.click(screen.getAllByRole('button', { name: /사진 복사$/ })[0])
+  await user.click(screen.getAllByRole('button', { name: PHOTO_COPY })[0])
 
   expect(
     await screen.findByText(
@@ -620,7 +674,7 @@ it('says so when the browser has no image clipboard at all', async () => {
   setClipboard({ writeText: vi.fn() } as unknown as Clipboard)
   renderPanel()
 
-  await user.click(screen.getAllByRole('button', { name: /사진 복사$/ })[0])
+  await user.click(screen.getAllByRole('button', { name: PHOTO_COPY })[0])
 
   expect(
     await screen.findByText(
@@ -638,7 +692,7 @@ it('refuses to copy a photo that is still a local upload preview, but keeps its 
       contentLanguage="ko"
     />,
   )
-  const buttons = screen.getAllByRole('button', { name: /사진 복사$/ })
+  const buttons = screen.getAllByRole('button', { name: PHOTO_COPY })
   expect(buttons.length).toBeGreaterThan(0)
   for (const button of buttons) {
     expect(button).toBeDisabled()

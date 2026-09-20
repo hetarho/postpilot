@@ -7,11 +7,11 @@ exports[`converts every block to the Naver plain-text contract 1`] = `
 
 바닷가로
 
-[사진 IMG_1.jpg: 비 뒤의 바다]
+사진_1_사진
 
 챙긴 것
 
-[사진 IMG_2.jpg]
+사진_2_사진
 
 “서두르지 않아도 괜찮다.”
 
@@ -26,11 +26,11 @@ exports[`writes a video marker with the caption after a dash, and reports the vi
 
 바닷가로
 
-[사진 IMG_1.jpg: 비 뒤의 바다]
+사진_1_사진
 
 챙긴 것
 
-[사진 IMG_2.jpg]
+사진_2_사진
 
 “서두르지 않아도 괜찮다.”
 

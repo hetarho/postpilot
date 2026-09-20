@@ -55,7 +55,6 @@
 | T282 | the agent maps proto at one adapter and keeps preflight out of main | ARCH | T008 | todo |
 | T283 | SmartEditor scripts are files with a DOM test; naver is plan vs driver | ARCH | T282 | todo |
 | T284 | the agent generates only the protos it uses and drops the survey harness | ARCH | T008 T281 | todo |
-| T288 | the Naver photo marker is a number and the caption copies itself | EXPORT | - | todo |
 | T289 | memories are a table, a context and a directory RPC family | MEM | - | todo |
 | T290 | retrieval, the frozen [기억] section and the draft's opt-in | MEM GEN GUIDE POST | T289 | todo |
 | T291 | extract_memory is a job that proposes candidates and stores none | MEM QUOTA | T289 | todo |
@@ -63,10 +62,11 @@
 | T293 | ①'s 기억 사용 checkbox and ③'s candidate sheet | POST MEM | T290 T291 | todo |
 
 ## next
-- `implement-task T288` next: it is independent of everything and the last non-memory todo with no dep
-- the memory chain is T289 → (T290 · T291 · T292) → T293; only T289 blocks anything
+- the memory chain is next and it is all that is left outside T008: T289 → (T290 · T291 · T292) → T293; only T289 blocks anything
+- `update-ssot TMPL` owes a rev: TMPL-17 TMPL-23 TMPL-39 still call the Naver photo marker `[사진 …]`, and TMPL-23 still tells a slot placeholder from it "by their filename suffix" — EXPORT r3 moved that to the brackets (README.md and PRD.md carry the old marker too)
 - T279 T282 T283 T284 still wait on T008 (another session); T177 is blocked; the clip `release-smoke` stage is still red at HEAD on this host (9 of 28 modes end in `no result`) and still needs a fix task
 ## log
+- 260920 T288 done; the Naver photo marker is a bare `사진_<n>_사진` and each caption is its own copy control under its photo; TMPL still describes the old marker in three decisions (update-ssot owed)
 - 260920 T287 done; the write prompt gained the altitude rule as a fourth grounding constant, the write scope now binds factual claims alone and the naming rule forbids the frame rather than the memo; only the write golden moved, by exactly three lines
 - 260920 T287-T293 created from MEM r1 + the five amendments: prompt altitude, Naver marker, the memory store, retrieval, extraction, the 기억 page, the two post surfaces (mem)
 - 260920 create-task MEM GEN GUIDE POST EXPORT QUOTA start (mem)
@@ -86,4 +86,3 @@
 - 260920 T280 claimed (clp)
 - 260920 T275 done; job/store has 7 lifecycle+authorization tests (dispatch vs cancellation serialization included) and template/rpc + modelcatalog/rpc have handler tests for every mapping and refusal; ARCH-26 green
 - 260920 T275 claimed (clp)
-- 260920 T268 done; router.tsx is 70 lines over app/routes/tree.ts + 11 group files, 12 search schemas moved to their pages, and tree.test pins all 45 addresses; ARCH-25 green

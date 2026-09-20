@@ -17,8 +17,11 @@ export const i18n = {
       copyTags: '태그 복사',
       tagsCopied: '태그가 복사됐어요',
       preview: '네이버 미리보기',
-      photoCopyAria: '{{file}} 사진 복사',
+      photoCopyAria: '{{number}}번 사진 복사 · {{file}}',
       photoCopied: '{{file}} 사진이 복사됐어요',
+      captionCopyAria: '{{number}}번 사진 캡션 복사',
+      captionCopied: '캡션이 복사됐어요',
+      captionField: '캡션 텍스트',
       photoUnsupported:
         '이 브라우저는 사진 복사를 지원하지 않아요. 본문만 붙여넣고 사진은 직접 올려 주세요.',
       photoRefused: '사진 복사가 막혔어요. 다시 시도해 주세요.',
@@ -34,7 +37,8 @@ export const i18n = {
       },
       guidance: {
         naver: '본문을 그대로 붙여넣으세요',
-        naverPhotos: '본문을 붙여넣은 뒤, 미리보기의 사진을 복사해 [사진 …] 자리에 붙여넣으세요',
+        naverPhotos:
+          '본문을 붙여넣은 뒤, 사진_1_사진 같은 자리마다 미리보기의 사진을 복사해 넣으세요. 캡션은 본문에 들어 있지 않으니 캡션도 따로 복사해 편집기의 캡션 칸에 넣어 주세요',
         tistory: 'HTML 모드에 붙여넣고 사진 업로드 후 src를 교체하세요',
         site: '그대로 .html로 저장하고 사진 파일을 옆에 두세요',
         markdown: 'Hugo · Jekyll · Obsidian에 맞는 형식이에요. 사진 파일을 같은 폴더에 두세요',
@@ -55,8 +59,11 @@ export const i18n = {
       copyTags: 'Copy tags',
       tagsCopied: 'Tags copied',
       preview: 'Naver preview',
-      photoCopyAria: 'Copy the photo {{file}}',
+      photoCopyAria: 'Copy photo {{number}} · {{file}}',
       photoCopied: 'Copied the photo {{file}}',
+      captionCopyAria: 'Copy the caption of photo {{number}}',
+      captionCopied: 'Caption copied',
+      captionField: 'Caption text',
       photoUnsupported:
         'This browser cannot copy images. Paste the text and add the photos yourself.',
       photoRefused: 'The photo copy was blocked. Try again.',
@@ -75,7 +82,7 @@ export const i18n = {
       guidance: {
         naver: 'Paste the text as it is',
         naverPhotos:
-          'Paste the text, then copy each photo from the preview and paste it at its [Photo …] marker',
+          "Paste the text, then replace each photo_1_photo marker with the matching photo from the preview. The captions are not in the pasted text — copy each one and put it in the editor's caption box",
         tistory: 'Paste in HTML mode, upload the photos, then replace each src',
         site: 'Save it as an .html file and place the photo files beside it',
         markdown: 'For Hugo · Jekyll · Obsidian. Place the photo files in the same folder',

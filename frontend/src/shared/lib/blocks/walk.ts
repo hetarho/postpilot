@@ -22,8 +22,9 @@ export function headingTag(level: number): 'h2' | 'h3' {
  *
  *  Bracketed, because a person has to see a position they still have to fill after pasting.
  *  The label is the template author's own words and falls back to the slot's kind, so the
- *  placeholder is never an empty pair of brackets. The `[사진 …]` photo markers keep their
- *  filename suffix, which is what tells the two apart in the pasted body. */
+ *  placeholder is never an empty pair of brackets. The brackets are also what tell the two
+ *  apart in the pasted body: the Naver photo marker is a bare `사진_<n>_사진` and carries
+ *  none (EXPORT-4, EXPORT-5). */
 export function blockSlotPlaceholder(block: {
   slot?: { kind: string; label: string }
 }): string | null {
