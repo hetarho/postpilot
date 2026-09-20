@@ -55,6 +55,11 @@ import { i18n as finalizePostI18n } from '@/features/finalize-post/config/i18n'
 import { i18n as giveVoiceFeedbackI18n } from '@/features/give-voice-feedback/config/i18n'
 import { i18n as guidelineI18n } from '@/entities/guideline/config/i18n'
 import { i18n as guidelinesI18n } from '@/pages/guidelines/config/i18n'
+import { i18n as memoryEntityI18n } from '@/entities/memory/config/i18n'
+import { i18n as createMemoryI18n } from '@/features/create-memory/config/i18n'
+import { i18n as editMemoryI18n } from '@/features/edit-memory/config/i18n'
+import { i18n as deleteMemoryI18n } from '@/features/delete-memory/config/i18n'
+import { i18n as memoriesPageI18n } from '@/pages/memories/config/i18n'
 import { i18n as manageModelCatalogI18n } from '@/features/manage-model-catalog/config/i18n'
 import { i18n as manageSubscriptionI18n } from '@/features/manage-subscription/config/i18n'
 import { i18n as manageVoiceRulesI18n } from '@/features/manage-voice-rules/config/i18n'
@@ -105,6 +110,7 @@ export const RESOURCE_NAMESPACES = [
   'voices',
   'templates',
   'guidelines',
+  'memories',
   'models',
   'publishing',
   'errors',
@@ -122,6 +128,11 @@ export const RESOURCE_NAMESPACES = [
  *  This list is the one file a new slice with its own strings touches — a one-line import
  *  instead of an edit inside a 1,100-line namespace file (ARCH-16). */
 export const FRAGMENTS: readonly I18nFragment[] = [
+  createMemoryI18n,
+  deleteMemoryI18n,
+  editMemoryI18n,
+  memoriesPageI18n,
+  memoryEntityI18n,
   cancelClipClipsI18n,
   clipDesignClipsI18n,
   clipPreviewClipsI18n,
@@ -251,6 +262,13 @@ export const resources = {
       ...guidelinesI18n.ko,
       ...reviewGuidelineCandidateI18n.ko,
     },
+    memories: {
+      ...createMemoryI18n.ko,
+      ...deleteMemoryI18n.ko,
+      ...editMemoryI18n.ko,
+      ...memoriesPageI18n.ko,
+      ...memoryEntityI18n.ko,
+    },
     models: {
       ...aiModelsI18n.ko,
       ...applyModelRecommendationI18n.ko,
@@ -355,6 +373,13 @@ export const resources = {
       ...guidelineI18n.en,
       ...guidelinesI18n.en,
       ...reviewGuidelineCandidateI18n.en,
+    },
+    memories: {
+      ...createMemoryI18n.en,
+      ...deleteMemoryI18n.en,
+      ...editMemoryI18n.en,
+      ...memoriesPageI18n.en,
+      ...memoryEntityI18n.en,
     },
     models: {
       ...aiModelsI18n.en,

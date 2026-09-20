@@ -27,6 +27,18 @@ export const guidelinesRoute = createRoute({
   component: lazyRouteComponent(() => import('@/pages/guidelines'), 'GuidelinesPage'),
 })
 
+export const memoriesRoute = createRoute({
+  getParentRoute: () => writingGroupRoute,
+  path: '/memories',
+  component: lazyRouteComponent(() => import('@/pages/memories'), 'MemoriesPage'),
+})
+
 /** The group's routes, in the order the tree adds them: a static path always before the
  *  param that would otherwise swallow it. */
-export const templateRoutes = [templatesRoute, newTemplateRoute, templateRoute, guidelinesRoute]
+export const templateRoutes = [
+  templatesRoute,
+  newTemplateRoute,
+  templateRoute,
+  guidelinesRoute,
+  memoriesRoute,
+]

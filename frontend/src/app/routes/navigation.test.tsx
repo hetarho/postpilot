@@ -223,7 +223,7 @@ it('restores both active levels through browser history and keeps ko/en parity',
 // destination's name — the group's home by default — with one menu control holding the group, in
 // place of a row of pill links that read as buttons rather than as a menu.
 it.each([
-  ['/posts', '글 메뉴', ['내 글', '말투', '글 템플릿', '지침'], '/voices'],
+  ['/posts', '글 메뉴', ['내 글', '말투', '글 템플릿', '지침', '기억'], '/voices'],
   ['/clips', '영상 메뉴', ['내 영상', '영상 템플릿'], '/video-templates'],
 ] as const)(
   'names the group home at %s and keeps the rest of the group behind one menu',

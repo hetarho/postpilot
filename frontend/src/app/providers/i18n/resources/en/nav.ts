@@ -11,6 +11,7 @@ export const nav = {
   voices: 'Voices',
   templates: 'Post templates',
   guidelines: 'Guidelines',
+  memories: 'Memories',
   models: 'AI models',
   publishingAgents: 'Publishing tools',
   publishingShort: 'Publish',

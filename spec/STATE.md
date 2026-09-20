@@ -55,14 +55,14 @@
 | T282 | the agent maps proto at one adapter and keeps preflight out of main | ARCH | T008 | todo |
 | T283 | SmartEditor scripts are files with a DOM test; naver is plan vs driver | ARCH | T282 | todo |
 | T284 | the agent generates only the protos it uses and drops the survey harness | ARCH | T008 T281 | todo |
-| T292 | 기억 is the fifth destination of the 글 group | MEM | T289 | todo |
 | T293 | ①'s 기억 사용 checkbox and ③'s candidate sheet | POST MEM | T290 T291 | todo |
 
 ## next
-- `implement-task T292` next (the 기억 page), then T293 (①'s checkbox and ③'s candidate sheet) — every dep of both is now in `tasks/done/`
+- `implement-task T293` last of the memory chain: ①'s 기억 사용 checkbox and ③'s candidate sheet — both of its deps are now in `tasks/done/`
 - `update-ssot TMPL` owes a rev: TMPL-17 TMPL-23 TMPL-39 still call the Naver photo marker `[사진 …]`, and TMPL-23 still tells a slot placeholder from it "by their filename suffix" — EXPORT r3 moved that to the brackets (README.md and PRD.md carry the old marker too)
 - T279 T282 T283 T284 still wait on T008 (another session); T177 is blocked; the clip `release-smoke` stage is still red at HEAD on this host and still needs a fix task
 ## log
+- 260920 T292 done; /memories is the 글 group's fifth destination — an entity, three action features and a list-only page, with the kind and tags saved as one edit and the cap relayed from the server
 - 260920 T291 done; extract_memory is a credit-gated post-addressed job whose candidates live on its own job row — it writes no memory and touches no post; the queue gained SaveResult/Result for that one shape of work
 - 260920 T290 done; posts carry use_memory, retrieval is tag-overlap over folded substrings in internal/memory, and the frozen texts render as one [기억] section in the per-post half — a post with the option off is byte-identical to T287's goldens
 - 260920 T289 done; the memory aggregate exists end to end (0069, internal/memory, MemoryService, the post-delete hook, the four bounds); memory_sources.post_slug is deliberately FK-less — see the task result
@@ -82,4 +82,3 @@
 - 260920 T277 claimed (clp)
 - 260920 T276 done; post/voice/publishing traded four table-shaped Stores (31+22+37+29) for 22 behaviour ports, none over 10 methods, with the composites left only as the composition root handle; ARCH-26 green
 - 260920 T276 claimed (clp)
-- 260920 T280 done; billing/plan/publishing boundaries translate at the adapter, provision takes Settings, health moved under platform, and the generate payload is pinned by a golden test. The json-tag item is a mapper-in-the-same-package fact, not a leak — see the task result

@@ -1,5 +1,6 @@
 import {
   Bot,
+  Brain,
   Clapperboard,
   FileText,
   Film,
@@ -55,6 +56,7 @@ export const CONTENT_GROUPS = {
     { to: '/voices', labelKey: 'voices', icon: Speech },
     { to: '/templates', labelKey: 'templates', icon: LayoutTemplate },
     { to: '/guidelines', labelKey: 'guidelines', icon: ListChecks },
+    { to: '/memories', labelKey: 'memories', icon: Brain },
   ],
   video: [
     { to: '/clips', labelKey: 'myVideos', icon: Scissors },

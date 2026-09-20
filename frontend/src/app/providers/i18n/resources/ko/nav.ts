@@ -11,6 +11,7 @@ export const nav = {
   voices: '말투',
   templates: '글 템플릿',
   guidelines: '지침',
+  memories: '기억',
   models: 'AI 모델',
   publishingAgents: '발행 도구',
   publishingShort: '발행 도구',

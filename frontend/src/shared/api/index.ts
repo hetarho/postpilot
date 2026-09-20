@@ -372,6 +372,22 @@ export type {
   GuidelineCandidate as ProtoGuidelineCandidate,
 } from './gen/postpilot/v1/guideline_pb'
 export {
+  MemoryService,
+  MemorySchema,
+  MemoryKind as ProtoMemoryKind,
+  MemoryCandidateSchema,
+  ListMemoriesResponseSchema,
+  CreateMemoryResponseSchema,
+  UpdateMemoryResponseSchema,
+  DeleteMemoryResponseSchema,
+  StartMemoryExtractionResponseSchema,
+  GetMemoryExtractionResponseSchema,
+} from './gen/postpilot/v1/memory_pb'
+export type {
+  Memory as ProtoMemory,
+  MemoryCandidate as ProtoMemoryCandidate,
+} from './gen/postpilot/v1/memory_pb'
+export {
   TemplateService,
   TemplateSchema,
   TemplateRefSchema,

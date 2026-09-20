@@ -30,6 +30,7 @@ import { type FakeVoiceOptions, registerVoiceService } from './voice'
 import { type FakeExperimentsOptions, registerExperimentService } from './experiments'
 import { type FakePublishingOptions, registerPublishingService } from './publishing'
 import { type FakeGuidelinesOptions, registerGuidelineService } from './guidelines'
+import { type FakeMemoriesOptions, registerMemoryService } from './memories'
 import { type FakeTemplatesOptions, registerTemplateService } from './templates'
 import { type FakeClipsOptions, registerClipService } from './clips'
 import { type FakeModelCatalogOptions, registerModelCatalogService } from './model-catalog'
@@ -84,6 +85,10 @@ export interface FakeAuthOptions {
   /** The acting account's 작문 지침. Present by default with none, so a screen that mounts the
    *  list reads an empty one rather than an "unimplemented" error. */
   guidelines?: FakeGuidelinesOptions
+  /** The acting account's 기억. Present by default with none, for the same reason as the 지침
+   *  directory above: a screen that mounts the list reads an empty one rather than an
+   *  "unimplemented" error. */
+  memories?: FakeMemoriesOptions
   /** The plan ladder: the caller's own tier and usage, and the operator's account list. */
   plans?: FakePlansOptions
   billing?: FakeBillingOptions
@@ -268,6 +273,7 @@ export function createFakeAuthBackend(options: FakeAuthOptions = {}): FakeAuthBa
       ...options.clips,
     })
     registerGuidelineService(router, { calls, ...options.guidelines })
+    registerMemoryService(router, { calls, ...options.memories })
     registerPlanServices(router, { plan: user?.plan, calls, ...options.plans })
     registerBillingService(router, { calls, ...options.billing })
     registerModelCatalogService(router, { calls, ...options.modelCatalog })

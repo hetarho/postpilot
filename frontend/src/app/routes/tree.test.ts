@@ -37,6 +37,7 @@ it('addresses exactly the product’s URLs, whatever file assembles them', () =>
     '/guidelines',
     '/login',
     '/login/google/callback',
+    '/memories',
     '/plans',
     '/posts',
     '/posts/$slug',
