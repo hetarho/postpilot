@@ -25,6 +25,14 @@ const shapeStyles: Record<NavShape, string> = {
   phone: 'flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-1 px-1',
 }
 
+/** The group rail is the SECOND level and now says so with its DENSITY as well as its plane
+ *  (THEME-38): a shorter row, a tighter gutter, a smaller gap and a smaller glyph. The type role
+ *  does not shrink with it — a destination's own name is copy the user acts on, and THEME-19
+ *  keeps 12px for metadata — so the step down lives in the box, never in the letters. 36px is
+ *  THEME-23's fine-pointer floor for a menu row, and the touch floor is added back for a rail
+ *  under a thumb. */
+const RAIL_GROUP = 'flex min-h-9 items-center gap-2 rounded-md px-3 pointer-coarse:min-h-11'
+
 /** One step up from the level's own plane under the pointer, one further for the destination the
  *  user is on. The phone bar is not a rail — it floats over the page on `surface-raised` — so its
  *  current state is carried by weight and colour alone. */
@@ -62,9 +70,11 @@ export function NavLinks({
   current?: string
 }) {
   const plane = shape === 'phone' ? phoneStyles : planeStyles[level]
+  const box = shape === 'rail' && level === 'group' ? RAIL_GROUP : shapeStyles[shape]
+  const glyph = shape === 'rail' && level === 'group' ? 'size-4 shrink-0' : 'size-5 shrink-0'
   const className = typographyStyles({
     variant: 'label',
-    className: clsx('text-link-fg whitespace-nowrap', shapeStyles[shape]),
+    className: clsx('text-link-fg whitespace-nowrap', box),
   })
   return destinations.map((destination) => {
     // Both branches carry the same state when selection is computed here: a Link decides
@@ -86,7 +96,7 @@ export function NavLinks({
         activeProps={computed ?? { className: plane.current, 'aria-current': 'page' }}
         inactiveProps={computed ?? { className: plane.rest }}
       >
-        <destination.icon aria-hidden="true" className="size-5 shrink-0" />
+        <destination.icon aria-hidden="true" className={glyph} />
         {shape === 'phone' ? (destination.shortLabel ?? destination.label) : destination.label}
       </Link>
     )

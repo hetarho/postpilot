@@ -91,7 +91,13 @@ export function ClipsPage() {
     // The page gutter lives on each block rather than on `main`, so the rows can run edge to edge:
     // a pressed row that stops 16px short of the screen edge reads as a card (§4.2).
     <main
-      className={pageStyles({ width: 'wide', gutters: false, className: 'flex flex-1 flex-col' })}
+      className={pageStyles({
+        width: 'wide',
+        gutters: false,
+        // The group row above already names this place below the desk, so the page's own top
+        // padding under it would only push the search away from that name (THEME-38).
+        className: 'flex flex-1 flex-col pt-4 sm:pt-6 lg:pt-8',
+      })}
     >
       {/* Below the desk the group band above already names this place (내 영상), so the heading
           stays for the document outline and the desk alone (THEME-38, owner decision 2026-09-19). */}
@@ -103,7 +109,7 @@ export function ClipsPage() {
 
       {/* On the screen at every project count: a search that appears at some number of projects
           is a second layout for the same page. */}
-      <div className="mt-4 px-4 sm:px-6 lg:mt-6 lg:px-8">
+      <div className="px-4 sm:px-6 lg:mt-6 lg:px-8">
         <ClipListControls narrowing={narrowing} onChange={narrow} />
       </div>
 
@@ -228,12 +234,9 @@ export function ClipsPage() {
       <ActionBar
         dock="list"
         ariaLabel={t('project.newDockAria', { ns: 'clips' })}
-        className="mx-4 mt-auto sm:mx-6 lg:mx-8"
+        className="mt-auto mr-4 sm:mr-6 lg:mr-8"
       >
-        <Link
-          to="/clips/new"
-          className={buttonStyles({ variant: 'cta', className: 'w-full sm:w-auto' })}
-        >
+        <Link to="/clips/new" className={buttonStyles({ variant: 'cta' })}>
           {t('project.new', { ns: 'clips' })}
         </Link>
       </ActionBar>

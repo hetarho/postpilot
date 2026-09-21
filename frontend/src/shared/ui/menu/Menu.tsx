@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { clsx } from 'clsx'
-import { Check } from 'lucide-react'
+import { Check, ChevronDown } from 'lucide-react'
 import { Button } from '../button/Button'
 
 export interface MenuOption<T extends string> {
@@ -18,6 +18,7 @@ export interface MenuOption<T extends string> {
  *  returns to the trigger. */
 export function Menu<T extends string>({
   label,
+  triggerLabel,
   triggerDescription,
   value,
   options,
@@ -25,8 +26,15 @@ export function Menu<T extends string>({
   triggerIcon,
   triggerClassName,
 }: {
-  /** Accessible name of both the trigger and the menu — the trigger itself is icon-only. */
+  /** Accessible name of the menu, and of the trigger while that trigger is icon-only. */
   label: string
+  /** Makes the trigger WEAR the current choice instead of an icon alone: `triggerIcon`, this
+   *  text and a chevron, on no plane at rest. The visible text then IS the trigger's accessible
+   *  name (WCAG 2.5.3), so `label` names the open panel alone, and the panel aligns to the
+   *  trigger's left edge because the trigger is no longer a small square at the right of a row.
+   *  Used by the phone's group row, where the name of the destination the address is under is
+   *  itself what opens the group (THEME-38). */
+  triggerLabel?: string
   /** Optional state announced with the closed trigger without bloating its concise name. */
   triggerDescription?: string
   value: T
@@ -113,9 +121,9 @@ export function Menu<T extends string>({
     <div ref={rootRef} className="relative inline-flex">
       <Button
         ref={triggerRef}
-        variant="secondary"
-        size="icon"
-        aria-label={label}
+        variant={triggerLabel === undefined ? 'secondary' : 'ghost'}
+        size={triggerLabel === undefined ? 'icon' : 'default'}
+        aria-label={triggerLabel === undefined ? label : undefined}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? id : undefined}
@@ -125,6 +133,19 @@ export function Menu<T extends string>({
         onKeyDown={onTriggerKeyDown}
       >
         {triggerIcon}
+        {triggerLabel !== undefined && (
+          <>
+            <span className="min-w-0 truncate">{triggerLabel}</span>
+            {/* The one thing that says the name is pressable: it turns over with the panel. */}
+            <ChevronDown
+              aria-hidden="true"
+              className={clsx(
+                'duration-fast ease-standard size-4 shrink-0 transition-transform',
+                open && 'rotate-180',
+              )}
+            />
+          </>
+        )}
       </Button>
       {triggerDescription && (
         <span id={descriptionId} className="sr-only">
@@ -138,7 +159,10 @@ export function Menu<T extends string>({
           role="menu"
           aria-label={label}
           onKeyDown={onMenuKeyDown}
-          className="bg-surface-highest absolute top-full right-0 z-30 mt-2 min-w-44 rounded-lg p-1 shadow-lg select-none"
+          className={clsx(
+            'bg-surface-highest absolute top-full z-30 mt-2 min-w-44 rounded-lg p-1 shadow-lg select-none',
+            triggerLabel === undefined ? 'right-0' : 'left-0',
+          )}
         >
           {options.map((option) => {
             const checked = option.value === value

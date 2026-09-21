@@ -77,10 +77,7 @@ export function TemplatesPage() {
             ariaLabel={t('page.newDockAria', { ns: 'templates' })}
             className="mt-auto"
           >
-            <Link
-              to="/templates/new"
-              className={buttonStyles({ variant: 'cta', className: 'w-full sm:w-auto' })}
-            >
+            <Link to="/templates/new" className={buttonStyles({ variant: 'cta' })}>
               {t('page.new', { ns: 'templates' })}
             </Link>
           </ActionBar>

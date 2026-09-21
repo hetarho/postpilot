@@ -97,7 +97,7 @@ export function GuidelinesPage() {
             ariaLabel={t('create.dockAria', { ns: 'guidelines' })}
             className="mt-auto"
           >
-            <CreateGuidelineSheet ownerId={ownerId} className="w-full sm:w-auto" />
+            <CreateGuidelineSheet ownerId={ownerId} />
           </ActionBar>
         </>
       )}

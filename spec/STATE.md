@@ -29,7 +29,7 @@
 | EXPORT | 4 | 4 | - | 0 |
 | PUB | 5 | 5 | - | 0 |
 | LANG | 3 | 3 | - | 0 |
-| THEME | 13 | 13 | - | 0 |
+| THEME | 14 | 14 | - | 0 |
 | MKT | 4 | 4 | - | 0 |
 | VIDEO | 2 | 2 | - | 1 |
 | CLIP | 40 | 40 | - | 1 |
@@ -58,9 +58,14 @@
 
 ## next
 - nothing is unblocked: every remaining task waits on T008 (another session) or is blocked (T177)
+- five group directories (말투, 글 템플릿, 지침, 기억, 영상 템플릿) still draw their own heading under the phone's group row, which THEME-38 says yields there — only /posts and /clips follow it
 - the clip `release-smoke` stage is still red at HEAD on this host (9 of 28 modes end in `no result`) and still needs a fix task
 - a `review-code` pass over the new memory domain is worth a look before it grows
 ## log
+- 260921 T296 done; the current destination is told by the accent everywhere, the group rail is denser than the primary one, the phone group row's name is its own menu trigger, and a list's dock is the floating control alone (nav)
+- 260921 T296 created from THEME r14 and claimed (nav)
+- 260921 THEME r14: the second level is told by density too, the phone group row's name IS its menu trigger, the current destination takes the accent, and a list's dock loses its plane (nav)
+- 260921 update-ssot THEME start (nav)
 - 260921 T295 done; estimator cards and plan estimates now share value/balanced/premium/top, enforce same-level purpose registrations, and safely migrate only matching legacy pairs (eql)
 - 260921 T295 claimed (eql)
 - 260921 T295 created from MODEL r11 QUOTA r14: shared level vocabulary, ordinal migration, server enforcement and purpose-specific admin filtering (ops-model-levels)
@@ -77,7 +82,3 @@
 - 260921 EXPORT r4: the Naver photo marker carries its caption folded into one double-clickable token; EXPORT-24's caption copy stays and its reason follows (alt)
 - 260921 update-ssot EXPORT start (alt)
 - 260920 T293 done; ① carries the 기억 사용 checkbox (autosaved, flag only) and ③ carries 기억으로 저장 with the candidate sheet that creates only what is checked — the MEM chain is complete
-- 260920 T292 done; /memories is the 글 group's fifth destination — an entity, three action features and a list-only page, with the kind and tags saved as one edit and the cap relayed from the server
-- 260920 T291 done; extract_memory is a credit-gated post-addressed job whose candidates live on its own job row — it writes no memory and touches no post; the queue gained SaveResult/Result for that one shape of work
-- 260920 T290 done; posts carry use_memory, retrieval is tag-overlap over folded substrings in internal/memory, and the frozen texts render as one [기억] section in the per-post half — a post with the option off is byte-identical to T287's goldens
-- 260920 T289 done; the memory aggregate exists end to end (0069, internal/memory, MemoryService, the post-delete hook, the four bounds); memory_sources.post_slug is deliberately FK-less — see the task result

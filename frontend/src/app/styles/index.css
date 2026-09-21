@@ -338,8 +338,13 @@
   /* navigation and rows */
   --link-fg: var(--content-secondary);
   --link-fg-hover: var(--content-primary);
-  /* the destination the user is on. Weight + colour, never colour alone — design-language §9. */
-  --link-fg-current: var(--content-primary);
+  /* The destination the user is on. It takes the ACCENT — a selected state is exactly what §18
+     keeps accent for — because one surface step apart from the four rows beside it was not
+     legible at a glance in either theme (THEME-38). Never colour alone: the weight and, on a
+     rail, the plane step carry it too. Every plane a current row can sit on clears AA with it —
+     `surface-base` (the primary rail's current row) 5.30:1 in Day and 6.28:1 in Night,
+     `surface-raised` (the group rail's, the phone bar's) 5.54:1 and 5.58:1. */
+  --link-fg-current: var(--intent-accent);
   --row-bg-hover: var(--surface-raised);
   --row-bg-active: var(--surface-recessed);
   --divider: var(--stroke-subtle);

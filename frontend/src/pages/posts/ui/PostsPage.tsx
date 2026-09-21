@@ -76,7 +76,15 @@ export function PostsPage() {
     // edge: a pressed row that stops 16px short of the screen edge reads as a card, and a row inset
     // deeper than the page's own rhythm reads as a mistake (design-language §4.2).
     <main
-      className={pageStyles({ width: 'wide', gutters: false, className: 'flex flex-1 flex-col' })}
+      className={pageStyles({
+        width: 'wide',
+        gutters: false,
+        // Below the desk the group row is what names this place, and it is chrome stuck to the
+        // top of the viewport — the page's own top padding under it is a second gap between a
+        // title and the first control, which put the search a thumb-swipe below 내 글 (THEME-38).
+        // The desk, where the row is a rail and the heading is the page's own, keeps `py-8`.
+        className: 'flex flex-1 flex-col pt-4 sm:pt-6 lg:pt-8',
+      })}
     >
       {/* Below the desk the group band above already names this place (내 글), so the heading
           stays for the document outline and the desk alone (THEME-38, owner decision 2026-09-19). */}
@@ -89,7 +97,7 @@ export function PostsPage() {
       {/* On the screen at every post count (POST-68): a search that appears at some number of
           posts is a second layout for the same page, and the count it would appear at is exactly
           where someone starts needing it. */}
-      <div className="mt-4 px-4 sm:px-6 lg:mt-6 lg:px-8">
+      <div className="px-4 sm:px-6 lg:mt-6 lg:px-8">
         <PostListControls narrowing={narrowing} onChange={narrow} />
       </div>
 
@@ -229,12 +237,9 @@ export function PostsPage() {
       <ActionBar
         dock="list"
         ariaLabel={t('list.writingAria', { ns: 'posts' })}
-        className="mx-4 mt-auto sm:mx-6 lg:mx-8"
+        className="mt-auto mr-4 sm:mr-6 lg:mr-8"
       >
-        <Link
-          to="/posts/new"
-          className={buttonStyles({ variant: 'cta', className: 'w-full sm:w-auto' })}
-        >
+        <Link to="/posts/new" className={buttonStyles({ variant: 'cta' })}>
           {t('new', { ns: 'posts' })}
         </Link>
       </ActionBar>

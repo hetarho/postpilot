@@ -57,9 +57,10 @@ function assertPrimary(current: string | undefined, master = false, label = '주
     ).toEqual(current ? [current] : [])
   }
 }
-/** The group level is drawn twice — the band below the desk, which names the current destination
- *  and holds the rest behind one menu control, and the rail on the desk, which lists every
- *  destination as a link — because the two sit in different places in the document (THEME-38). */
+/** The group level is drawn twice — the band below the desk, whose ONE control is named by the
+ *  current destination and opens the rest of the group, and the rail on the desk, which lists
+ *  every destination as a link — because the two sit in different places in the document
+ *  (THEME-38). */
 function assertGroup(label: string, tab: string) {
   const shapes = screen.getAllByRole('navigation', { name: label })
   expect(shapes).toHaveLength(2)
@@ -72,17 +73,17 @@ function assertGroup(label: string, tab: string) {
   ).toEqual([tab])
   const current = links.find((l) => l.getAttribute('href') === tab)!
   expect(within(band!).queryAllByRole('link')).toHaveLength(0)
-  expect(band).toHaveTextContent(current.textContent!)
-  expect(within(band!).getByRole('button', { name: label })).toHaveAttribute(
-    'aria-haspopup',
-    'menu',
-  )
+  // One control, and the name of the place IS that control — not a name beside a menu button at
+  // the far right of the row. Its visible text is its accessible name (WCAG 2.5.3).
+  const trigger = within(band!).getByRole('button')
+  expect(trigger).toHaveAccessibleName(current.textContent!)
+  expect(trigger).toHaveAttribute('aria-haspopup', 'menu')
   return shapes
 }
 /** Opens the band's menu and answers with the open menu, scoped. */
 async function openGroupMenu(label: string) {
   const [band] = screen.getAllByRole('navigation', { name: label })
-  await userEvent.click(within(band!).getByRole('button', { name: label }))
+  await userEvent.click(within(band!).getByRole('button'))
   return within(await screen.findByRole('menu', { name: label }))
 }
 it.each(cases)(

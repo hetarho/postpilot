@@ -1,7 +1,6 @@
 import { Outlet, useMatches, useNavigate, useRouterState } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { Menu as MenuIcon } from 'lucide-react'
-import { Menu, typographyStyles } from '@/shared/ui'
+import { Menu } from '@/shared/ui'
 import { NavLinks } from './NavLinks'
 import { CONTENT_GROUPS } from './navigation'
 
@@ -13,12 +12,14 @@ import { CONTENT_GROUPS } from './navigation'
  *  stops at `top-0`; from `sm:` the header is sticky and it stops under it. It cannot read
  *  `top-chrome` for that, since it is itself what that token measures.
  *
- *  The band is ONE row: the name of the destination the address is under — the group's home,
- *  내 글 or 내 영상, by default — and a menu control at its right holding every destination of the
- *  group with the current one checked. It used to be the rail's links laid out as a scrolling row
- *  of pills, which on a phone read as a row of buttons rather than as a menu, and gave no sense of
- *  where the owner was (owner decision 2026-09-19). The rail on the desk keeps every destination
- *  as a link: there the row is a column with room for all of them.
+ *  The band is ONE row holding ONE control: the name of the destination the address is under —
+ *  the group's home, 내 글 or 내 영상, by default — and pressing that name opens the group. It was
+ *  first the rail's links as a scrolling row of pills, which read as a row of buttons rather than
+ *  as a menu and never said where the owner was (owner decision 2026-09-19); then a name on the
+ *  left with a menu button at the far right, which is two things for one job and puts the way
+ *  into the group as far from the name as the row allows (owner decision 2026-09-21). The rail on
+ *  the desk keeps every destination as a link: there the row is a column with room for all of
+ *  them.
  *
  *  `chrome-subnav` is what tells everything inside the group that the sticky chrome got taller. */
 export function ContentGroupLayout({ group }: { group: keyof typeof CONTENT_GROUPS }) {
@@ -51,31 +52,28 @@ export function ContentGroupLayout({ group }: { group: keyof typeof CONTENT_GROU
     <div className="chrome-subnav flex min-w-0 flex-1 flex-col lg:flex-row">
       <nav
         aria-label={label}
-        className="bg-surface-base sm:top-header h-subnav sticky top-0 z-10 flex items-center justify-between gap-2 px-4 sm:px-6 lg:hidden"
+        className="bg-surface-base sm:top-header h-subnav sticky top-0 z-10 flex items-center px-4 sm:px-6 lg:hidden"
       >
-        {/* Where the owner IS: the current destination's icon and name, in the rail's current
-            colour and no plane of its own — a name, not another button. The band itself sits on
+        {/* Where the owner IS and the way to the rest of the group, in one control: the current
+            destination's glyph and name in the current colour, with a chevron. It keeps no plane
+            at rest, so it still reads as the place's name rather than as a button parked in the
+            chrome. The negative margin pulls the NAME — not the control's box — onto the page
+            gutter, so it lines up with the first row of content under it. The band itself sits on
             the page's plane, opaque only so the page cannot scroll through it. */}
-        <span
-          aria-current="page"
-          className={typographyStyles({
-            variant: 'label',
-            className: 'text-link-fg-current inline-flex min-h-11 min-w-0 items-center gap-2 px-2',
-          })}
-        >
-          <current.icon aria-hidden="true" className="size-5 shrink-0" />
-          <span className="truncate">{current.label}</span>
-        </span>
         <Menu
           label={label}
           value={current.to}
           options={destinations.map((d) => ({ value: d.to, label: d.label }))}
           onChange={(to) => void navigate({ to })}
-          triggerIcon={<MenuIcon aria-hidden="true" className="size-5" />}
+          triggerLabel={current.label}
+          triggerIcon={<current.icon aria-hidden="true" className="size-5 shrink-0" />}
+          triggerClassName="text-link-fg-current -ml-4 max-w-full"
         />
       </nav>
-      <aside className="bg-surface-recessed lg:top-header lg:h-sidebar hidden shrink-0 lg:sticky lg:flex lg:w-48 lg:flex-col lg:overflow-y-auto lg:px-3 lg:py-4">
-        <nav aria-label={label} className="flex flex-col gap-2">
+      {/* Narrower, tighter and closer-packed than the primary rail beside it: the density is the
+          second half of what tells the two levels apart, the plane being the first (THEME-38). */}
+      <aside className="bg-surface-recessed lg:top-header lg:h-sidebar hidden shrink-0 lg:sticky lg:flex lg:w-44 lg:flex-col lg:overflow-y-auto lg:px-2 lg:py-3">
+        <nav aria-label={label} className="flex flex-col gap-1">
           <NavLinks shape="rail" level="group" destinations={destinations} />
         </nav>
       </aside>

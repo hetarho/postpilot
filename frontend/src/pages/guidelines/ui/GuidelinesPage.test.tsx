@@ -97,7 +97,8 @@ describe('the guideline list', () => {
   })
 
   // GUIDE-20: the page is the list. Authoring lives behind one docked trigger, the shape every
-  // sibling directory uses, and the dock keeps its natural width above the phone.
+  // sibling directory uses, and that dock is the trigger alone — floating over the rows at its
+  // natural width, with no plane behind it at any width (THEME-24).
   it('carries no standing form and docks one 새 지침 at every width', async () => {
     const user = userEvent.setup()
     renderGuidelines()
@@ -108,9 +109,9 @@ describe('the guideline list', () => {
     // Nothing to type into until the trigger is used: the rows are read-first (GUIDE-20).
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
 
-    expect(trigger).toHaveClass('w-full', 'sm:w-auto')
+    expect(trigger.className).not.toMatch(/w-full/)
     const dock = trigger.closest('[class*="sticky"]')
-    expect(dock).toHaveClass('sticky', 'sm:ml-auto', 'sm:w-fit', 'mt-auto')
+    expect(dock).toHaveClass('sticky', 'ml-auto', 'w-fit', 'mt-auto')
 
     const sheet = await openCreateSheet(user)
     // One create surface at any width, and it opens with 전역 chosen and the room left stated.

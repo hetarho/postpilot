@@ -100,7 +100,7 @@ export function VoicesPage() {
             ariaLabel={t('create.dockAria', { ns: 'voices' })}
             className="mt-auto"
           >
-            <CreateVoiceSheet ownerId={ownerId} className="w-full sm:w-auto" />
+            <CreateVoiceSheet ownerId={ownerId} />
           </ActionBar>
         </>
       )}

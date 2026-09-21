@@ -71,7 +71,7 @@ export function MemoriesPage() {
             ariaLabel={t('create.dockAria', { ns: 'memories' })}
             className="mt-auto"
           >
-            <CreateMemorySheet ownerId={ownerId} className="w-full sm:w-auto" />
+            <CreateMemorySheet ownerId={ownerId} />
           </ActionBar>
         </>
       )}

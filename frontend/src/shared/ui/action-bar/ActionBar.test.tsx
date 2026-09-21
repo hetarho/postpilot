@@ -2,10 +2,11 @@ import { render, screen } from '@testing-library/react'
 import { ActionBar } from './ActionBar'
 
 describe('ActionBar', () => {
-  // THEME-24: a list's add action is docked at every width. The regression this pins is the
-  // retired phone-only dock, which undid the position, plane, corner and shadow from `sm:` up
-  // and so let a long list carry 새 글 below the fold on a desk.
-  it('keeps the list dock sticky and raised at every width', () => {
+  // THEME-24: a list's add action is docked at every width — the regression this pins is the
+  // retired phone-only dock, which undid the position from `sm:` up and so let a long list carry
+  // 새 글 below the fold on a desk — and it docks with NO plane of its own, the control floating
+  // over the rows on its own shadow rather than sitting on a card holding one button.
+  it('floats the list dock at every width with no plane of its own', () => {
     render(
       <ActionBar dock="list" ariaLabel="글 작성">
         <button>새 글</button>
@@ -13,35 +14,24 @@ describe('ActionBar', () => {
     )
 
     const bar = screen.getByLabelText('글 작성')
-    expect(bar).toHaveClass('sticky', 'rounded-xl', 'shadow-md', 'bg-surface-highest')
-    for (const reset of [
-      'sm:static',
-      'sm:rounded-none',
-      'sm:shadow-none',
-      'sm:bg-transparent',
-      'sm:p-0',
-    ]) {
+    expect(bar).toHaveClass('sticky', 'ml-auto', 'w-fit', '*:shadow-lg')
+    expect(bar.className).not.toMatch(/bg-surface-highest|rounded|shadow-md|(?:^|[\s:])p-\d/)
+    for (const reset of ['sm:static', 'sm:ml-0', 'sm:w-full']) {
       expect(bar.className).not.toContain(reset)
     }
   })
 
-  // The other half of the same decision: above the phone the bar is only as wide as what it
-  // holds, so it is not the full-width card with one left-aligned button.
-  it('shrinks the list dock to its contents above the phone, and never the column-spanning one', () => {
-    const { rerender } = render(
-      <ActionBar dock="list" ariaLabel="글 작성">
-        <button>새 글</button>
-      </ActionBar>,
-    )
-    expect(screen.getByLabelText('글 작성')).toHaveClass('sm:w-fit', 'sm:ml-auto')
-
-    rerender(
+  // The column-spanning dock is the one that keeps a surface: it carries a view's committing
+  // controls and their refusals, not one add action.
+  it('keeps the column-spanning dock on its own plane', () => {
+    render(
       <ActionBar dock="always" ariaLabel="초안">
         <button>생성</button>
       </ActionBar>,
     )
+
     const spanning = screen.getByLabelText('초안')
-    expect(spanning).toHaveClass('sticky')
-    expect(spanning.className).not.toContain('sm:w-fit')
+    expect(spanning).toHaveClass('sticky', 'rounded-xl', 'shadow-md', 'bg-surface-highest')
+    expect(spanning.className).not.toMatch(/w-fit|ml-auto/)
   })
 })

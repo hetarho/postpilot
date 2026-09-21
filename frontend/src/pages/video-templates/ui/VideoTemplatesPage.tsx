@@ -75,10 +75,7 @@ export function VideoTemplatesPage() {
             ariaLabel={t('directory.newDockAria', { ns: 'clips' })}
             className="mt-auto"
           >
-            <Link
-              to="/video-templates/new"
-              className={buttonStyles({ variant: 'cta', className: 'w-full sm:w-auto' })}
-            >
+            <Link to="/video-templates/new" className={buttonStyles({ variant: 'cta' })}>
               {t('directory.create', { ns: 'clips' })}
             </Link>
           </ActionBar>
