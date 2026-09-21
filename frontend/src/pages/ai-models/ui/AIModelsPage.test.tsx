@@ -1,280 +1,145 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { expect, it } from 'vitest'
-import { create } from '@bufbuild/protobuf'
-import { ObservationSchema, Stage } from '@/shared/api'
-import type { FakeAnalyzeExperimentStart, FakeWriteExperimentStart } from '@/test/experiments'
-import { chooseOption } from '@/test/listbox'
+import { afterEach, expect, it } from 'vitest'
+import { initializeI18n } from '@/app/providers/i18n'
+import { ProtoPlan, Stage } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
+import type { FakeExperimentsOptions } from '@/test/experiments'
+import { chooseOption } from '@/test/listbox'
 
-const writeModels = [
-  { providerId: 'openrouter', modelId: 'writer-a', label: 'Writer A' },
-  { providerId: 'openrouter', modelId: 'writer-b', label: 'Writer B' },
-]
+afterEach(() => initializeI18n('ko'))
 
-const writePair = {
-  stage: Stage.WRITE,
-  candidateA: { providerId: 'openrouter', modelId: 'writer-a' },
-  candidateB: { providerId: 'openrouter', modelId: 'writer-b' },
-}
+const destinations = [
+  ['/ai-models', '모델 변경', 'Change models'],
+  ['/ai-models/compare', '모델 비교', 'Compare models'],
+  ['/ai-models/experiments', '최근 관찰 비교', 'Recent observation comparisons'],
+  ['/ai-models/leaderboard', '리더보드', 'Leaderboard'],
+] as const
 
-it('starts a no-photo write comparison from the model tab with the persisted target length', async () => {
+it.each(['ko', 'en'] as const)(
+  'separates four destinations without starting work in %s',
+  async (locale) => {
+    initializeI18n(locale)
+    const user = userEvent.setup()
+    const calls: string[] = []
+    const starts: string[] = []
+    const reads: NonNullable<FakeExperimentsOptions['reads']> = []
+    const { router } = renderAppAt('/ai-models', {
+      user: { id: 'alice', plan: ProtoPlan.FREE },
+      providers: { calls },
+      experiments: { calls: starts, reads },
+    })
+    const group = locale === 'ko' ? 'AI 모델 메뉴' : 'AI model navigation'
+    const [, rail] = await screen.findAllByRole('navigation', { name: group })
+    const nav = within(rail!)
+    expect(nav.getAllByRole('link').map((link) => link.textContent)).toEqual(
+      destinations.map((d) => d[locale === 'ko' ? 1 : 2]),
+    )
+    expect(within(screen.getByRole('main')).getAllByRole('combobox')).toHaveLength(3)
+    expect(reads).toEqual([])
+    for (const [path, ko, en] of destinations) {
+      await user.click(nav.getByRole('link', { name: locale === 'ko' ? ko : en }))
+      await waitFor(() => expect(router.state.location.pathname).toBe(path))
+      const main = within(screen.getByRole('main'))
+      expect(
+        main.getByRole('heading', { level: 1, name: locale === 'ko' ? ko : en }),
+      ).toBeInTheDocument()
+      const active = nav
+        .getAllByRole('link')
+        .filter((link) => link.getAttribute('aria-current') === 'page')
+      expect(active.map((link) => link.getAttribute('href'))).toEqual([path])
+      expect(
+        main.queryByRole('button', { name: locale === 'ko' ? '비교 시작' : 'Start comparison' }) !==
+          null,
+      ).toBe(path === '/ai-models/compare')
+      expect(
+        main.queryByRole('heading', { name: locale === 'ko' ? '추천 조합' : 'Recommended set' }) !==
+          null,
+      ).toBe(path === '/ai-models')
+    }
+    expect(calls.filter((call) => /Save|Apply/.test(call))).toEqual([])
+    expect(starts).toEqual([])
+  },
+)
+
+it('saves an active model only after a model change, separately from comparison candidates', async () => {
   const user = userEvent.setup()
-  const starts: FakeWriteExperimentStart[] = []
-  const { router } = renderAppAt('/ai-models', {
-    user: { id: 'owner-1' },
-    posts: {
-      posts: [{ slug: 'post-1', title: '첫 글', targetLength: 1_600 }],
-    },
-    providers: { models: writeModels, comparisonPairs: [writePair] },
-    experiments: { starts, experimentId: 'write-experiment-1' },
-  })
-
-  await user.click(await screen.findByRole('tab', { name: '글 작성' }))
-  expect(starts).toHaveLength(0)
-  await chooseOption(user, screen.getByRole('combobox', { name: /비교할 글/ }), '첫 글')
-
-  const start = screen.getByRole('button', { name: '비교 시작' })
-  await waitFor(() => expect(start).not.toHaveAttribute('aria-disabled'))
-  await user.click(start)
-
-  await waitFor(() =>
-    expect(starts).toEqual([
-      {
-        postSlug: 'post-1',
-        observeModel: undefined,
-        modelA: { providerId: 'openrouter', modelId: 'writer-a' },
-        modelB: { providerId: 'openrouter', modelId: 'writer-b' },
-        targetLength: 1_600,
-      },
-    ]),
-  )
-  await waitFor(() =>
-    expect(router.state.location.pathname).toBe('/ai-models/experiments/write-experiment-1'),
-  )
-})
-
-it('requires and sends the explicit active observe model for a post with photos', async () => {
-  const user = userEvent.setup()
-  const starts: FakeWriteExperimentStart[] = []
+  const calls: string[] = []
   renderAppAt('/ai-models', {
-    user: { id: 'owner-1' },
-    posts: {
-      posts: [
-        {
-          slug: 'photo-post',
-          title: '사진 글',
-          images: [{ id: 'image-1', filename: 'photo.jpg' }],
-        },
-      ],
-    },
+    user: { id: 'alice' },
     providers: {
-      models: [
-        ...writeModels,
-        { providerId: 'openrouter', modelId: 'vision', label: 'Vision', vision: true },
-      ],
-      selections: [{ stage: Stage.OBSERVE, providerId: 'openrouter', modelId: 'vision' }],
-      comparisonPairs: [writePair],
+      calls,
+      models: [{ providerId: 'openrouter', modelId: 'vision', label: 'Vision', vision: true }],
     },
-    experiments: { starts },
   })
-
-  await user.click(await screen.findByRole('tab', { name: '글 작성' }))
-  await chooseOption(user, screen.getByRole('combobox', { name: /비교할 글/ }), '사진 글')
-  const start = screen.getByRole('button', { name: '비교 시작' })
-  await waitFor(() => expect(start).not.toHaveAttribute('aria-disabled'))
-  await user.click(start)
-
-  await waitFor(() =>
-    expect(starts[0]?.observeModel).toEqual({
-      providerId: 'openrouter',
-      modelId: 'vision',
-    }),
-  )
+  const main = within(await screen.findByRole('main'))
+  await chooseOption(user, main.getByRole('combobox', { name: /관찰/ }), 'Vision')
+  await waitFor(() => expect(calls).toContain('SaveSelection'))
+  expect(calls).not.toContain('SaveComparisonPair')
+  expect(main.queryByRole('button', { name: '비교 시작' })).not.toBeInTheDocument()
 })
 
-// A8 (model-lab half): the write comparison's second entry point (change 06) goes through the
-// same re-observation picker with the same reuse contract as the editor's.
-it('routes a model-lab comparison through the re-observation picker', async () => {
+it('preserves the stage through the group menu, browser history, and saved experiment links', async () => {
   const user = userEvent.setup()
-  const starts: FakeWriteExperimentStart[] = []
-  renderAppAt('/ai-models', {
-    user: { id: 'owner-1' },
-    posts: {
-      posts: [
-        {
-          slug: 'photo-post',
-          title: '사진 글',
-          images: [
-            { id: 'image-1', filename: 'photo.jpg' },
-            { id: 'image-2', filename: 'other.jpg' },
-          ],
-          observations: [
-            create(ObservationSchema, {
-              file: 'photo.jpg',
-              scene: '이미 본 장면',
-              model: 'openrouter/vision',
-            }),
-            create(ObservationSchema, {
-              file: 'other.jpg',
-              scene: '또 다른 장면',
-              model: 'openrouter/vision',
-            }),
-          ],
-        },
-      ],
+  const { router } = renderAppAt('/ai-models/experiments?stage=analyze', {
+    user: { id: 'alice' },
+    voice: { voices: [{ id: 'voice-default', name: '기본 말투', isDefault: true }] },
+    experiments: {
+      history: [{ id: 'analysis-1', stage: Stage.ANALYZE, voiceId: 'voice-default' }],
     },
-    providers: {
-      models: [
-        ...writeModels,
-        { providerId: 'openrouter', modelId: 'vision', label: 'Vision', vision: true },
-      ],
-      selections: [{ stage: Stage.OBSERVE, providerId: 'openrouter', modelId: 'vision' }],
-      comparisonPairs: [writePair],
-    },
-    experiments: { starts },
   })
-
-  await user.click(await screen.findByRole('tab', { name: '글 작성' }))
-  await chooseOption(user, screen.getByRole('combobox', { name: /비교할 글/ }), '사진 글')
-  const start = screen.getByRole('button', { name: '비교 시작' })
-  await waitFor(() => expect(start).not.toHaveAttribute('aria-disabled'))
-  await user.click(start)
-
-  const picker = await screen.findByRole('dialog', { name: '다시 관찰할 사진 선택' })
-  expect(starts).toHaveLength(0)
-  await user.click(within(picker).getByRole('checkbox', { name: 'photo.jpg 다시 관찰' }))
-  await user.click(within(picker).getByRole('button', { name: '이대로 시작' }))
-
-  await waitFor(() => expect(starts).toHaveLength(1))
-  expect(starts[0].reobserveFiles).toEqual(['photo.jpg'])
+  const record = await screen.findByRole('link', { name: /기본 말투/ })
+  expect(record).toHaveAttribute('href', '/ai-models/experiments/analysis-1?stage=analyze')
+  const [band] = screen.getAllByRole('navigation', { name: 'AI 모델 메뉴' })
+  await user.click(within(band!).getByRole('button'))
+  await user.click(screen.getByRole('menuitemradio', { name: '리더보드' }))
+  await waitFor(() => expect(router.state.location.pathname).toBe('/ai-models/leaderboard'))
+  expect(screen.getByRole('tab', { name: '문체 분석' })).toHaveAttribute('aria-selected', 'true')
+  await user.click(screen.getByRole('tab', { name: '글 작성' }))
+  await waitFor(() => expect(router.state.location.search.stage).toBe('write'))
+  await act(async () => router.history.back())
+  await waitFor(() => expect(router.state.location.search.stage).toBe('analyze'))
+  await act(async () => router.history.back())
+  await waitFor(() => expect(router.state.location.pathname).toBe('/ai-models/experiments'))
+  await user.click(await screen.findByRole('link', { name: /기본 말투/ }))
+  const back = await screen.findByRole('link', { name: '← 비교 기록' })
+  expect(back).toHaveAttribute('href', '/ai-models/experiments?stage=analyze')
+  await user.click(back)
+  expect(await screen.findByRole('link', { name: /기본 말투/ })).toBeInTheDocument()
 })
 
-it('keeps photo-backed writing blocked without an active observe model and reports start errors', async () => {
-  const user = userEvent.setup()
-  renderAppAt('/ai-models', {
-    user: { id: 'owner-1' },
-    posts: {
-      posts: [
-        {
-          slug: 'photo-post',
-          title: '사진 글',
-          images: [{ id: 'image-1', filename: 'photo.jpg' }],
-        },
-        { slug: 'text-post', title: '텍스트 글' },
-      ],
-    },
-    providers: { models: writeModels, comparisonPairs: [writePair] },
-    experiments: { startError: 'provider unavailable' },
-  })
-
-  await user.click(await screen.findByRole('tab', { name: '글 작성' }))
-  await chooseOption(user, screen.getByRole('combobox', { name: /비교할 글/ }), '사진 글')
-  expect(await screen.findByText('관찰 모델을 선택하세요.')).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: '비교 시작' })).toHaveAttribute('aria-disabled', 'true')
-
-  await chooseOption(user, screen.getByRole('combobox', { name: /비교할 글/ }), '텍스트 글')
-  const start = screen.getByRole('button', { name: '비교 시작' })
-  await waitFor(() => expect(start).not.toHaveAttribute('aria-disabled'))
-  await user.click(start)
-  expect(await screen.findByText('네트워크에 연결할 수 없어요.')).toBeInTheDocument()
+it.each([
+  ['/ai-models/experiments?stage=invalid', 'history'],
+  ['/ai-models/leaderboard?stage=invalid', 'leaderboard'],
+] as const)('defaults invalid stages to observe on direct load at %s', async (path, kind) => {
+  const reads: NonNullable<FakeExperimentsOptions['reads']> = []
+  renderAppAt(path, { user: { id: 'alice' }, experiments: { reads } })
+  expect(await screen.findByRole('tab', { name: '관찰' })).toHaveAttribute('aria-selected', 'true')
+  await waitFor(() => expect(reads).toContainEqual({ kind, stage: Stage.OBSERVE }))
 })
 
-it('blocks posts with active work or an unresolved write experiment', async () => {
-  const user = userEvent.setup()
-  const starts: FakeWriteExperimentStart[] = []
-  renderAppAt('/ai-models', {
-    user: { id: 'owner-1' },
-    posts: {
-      posts: [
-        {
-          slug: 'busy-post',
-          title: '작업 중인 글',
-          activeJob: { id: 'job-1', status: 'running' },
-        },
-        {
-          slug: 'pending-post',
-          title: '결과 대기 글',
-          pendingExperimentId: 'experiment-pending',
-        },
-      ],
-    },
-    providers: { models: writeModels, comparisonPairs: [writePair] },
-    experiments: { starts },
-  })
+it.each([
+  ['/ai-models/experiments', 'listFails', '아직 비교가 없어요.'],
+  ['/ai-models/leaderboard', 'leaderboardFails', '아직 비교 결과가 없어요.'],
+] as const)(
+  'does not turn loading or failed reads into an empty history at %s',
+  async (path, failureKey, empty) => {
+    let release!: () => void
+    const readGate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    renderAppAt(path, { user: { id: 'alice' }, experiments: { readGate, [failureKey]: true } })
+    expect(await screen.findByRole('status')).toHaveTextContent('불러오는 중')
+    expect(screen.queryByText(empty)).not.toBeInTheDocument()
+    await act(async () => release())
+    expect(await screen.findByRole('alert')).toHaveTextContent('비교 정보를 불러오지 못했어요.')
+    expect(screen.getByRole('button', { name: '다시 시도' })).toBeInTheDocument()
+    expect(screen.queryByText(empty)).not.toBeInTheDocument()
+  },
+)
 
-  await user.click(await screen.findByRole('tab', { name: '글 작성' }))
-  await chooseOption(user, screen.getByRole('combobox', { name: /비교할 글/ }), '작업 중인 글')
-  expect(await screen.findByText('이미 생성 중이에요.')).toBeInTheDocument()
-
-  await chooseOption(user, screen.getByRole('combobox', { name: /비교할 글/ }), '결과 대기 글')
-  expect(await screen.findByText('먼저 대기 중인 A/B 결과를 확인해 주세요.')).toBeInTheDocument()
-  expect(starts).toHaveLength(0)
-})
-
-const analyzePair = {
-  stage: Stage.ANALYZE,
-  candidateA: { providerId: 'openrouter', modelId: 'writer-a' },
-  candidateB: { providerId: 'openrouter', modelId: 'writer-b' },
-}
-
-const twoVoices = [
-  { id: 'voice-default', name: '기본 말투', isDefault: true },
-  { id: 'voice-review', name: '리뷰' },
-]
-
-// Plan 10 A13: an analyze comparison names one voice — initialized to the default.
-it('starts an analyze comparison for the default voice unless another is chosen', async () => {
-  const user = userEvent.setup()
-  const analyzeStarts: FakeAnalyzeExperimentStart[] = []
-  const { router } = renderAppAt('/ai-models', {
-    user: { id: 'owner-1' },
-    providers: { models: writeModels, comparisonPairs: [analyzePair] },
-    voice: { voices: twoVoices },
-    experiments: { analyzeStarts, experimentId: 'analyze-experiment-1' },
-  })
-
-  await user.click(await screen.findByRole('tab', { name: '문체 분석' }))
-  const voice = await screen.findByRole('combobox', { name: /말투/ })
-  await waitFor(() => expect(voice).toHaveTextContent('기본 말투'))
-  expect(screen.queryByRole('combobox', { name: /비교할 글/ })).not.toBeInTheDocument()
-
-  const start = screen.getByRole('button', { name: '비교 시작' })
-  await waitFor(() => expect(start).not.toHaveAttribute('aria-disabled'))
-  await user.click(start)
-
-  await waitFor(() =>
-    expect(analyzeStarts).toEqual([
-      {
-        voiceId: 'voice-default',
-        modelA: { providerId: 'openrouter', modelId: 'writer-a' },
-        modelB: { providerId: 'openrouter', modelId: 'writer-b' },
-      },
-    ]),
-  )
-  await waitFor(() =>
-    expect(router.state.location.pathname).toBe('/ai-models/experiments/analyze-experiment-1'),
-  )
-})
-
-it('sends the explicitly chosen voice with an analyze comparison', async () => {
-  const user = userEvent.setup()
-  const analyzeStarts: FakeAnalyzeExperimentStart[] = []
-  renderAppAt('/ai-models', {
-    user: { id: 'owner-1' },
-    providers: { models: writeModels, comparisonPairs: [analyzePair] },
-    voice: { voices: twoVoices },
-    experiments: { analyzeStarts },
-  })
-
-  await user.click(await screen.findByRole('tab', { name: '문체 분석' }))
-  const voice = await screen.findByRole('combobox', { name: /말투/ })
-  await waitFor(() => expect(voice).toHaveTextContent('기본 말투'))
-  await chooseOption(user, voice, '리뷰')
-
-  const start = screen.getByRole('button', { name: '비교 시작' })
-  await waitFor(() => expect(start).not.toHaveAttribute('aria-disabled'))
-  await user.click(start)
-
-  await waitFor(() => expect(analyzeStarts[0]?.voiceId).toBe('voice-review'))
+it.each(destinations)('guards direct access to %s', async (path) => {
+  const { router } = renderAppAt(path)
+  await waitFor(() => expect(router.state.location.pathname).toBe('/login'))
+  expect(router.state.location.search.redirect).toBe(path)
 })

@@ -2,7 +2,7 @@ import { Outlet, useMatches, useNavigate, useRouterState } from '@tanstack/react
 import { useTranslation } from 'react-i18next'
 import { Menu } from '@/shared/ui'
 import { NavLinks } from './NavLinks'
-import { CONTENT_GROUPS } from './navigation'
+import { CONTENT_GROUP_LABELS, CONTENT_GROUPS } from './navigation'
 
 /** The second level of navigation: chrome, not page content (THEME-38).
  *
@@ -31,11 +31,14 @@ export function ContentGroupLayout({ group }: { group: keyof typeof CONTENT_GROU
     select: (matches) => matches.some((match) => match.staticData.groupNav === 'hidden'),
   })
   const pathname = useRouterState({ select: (state) => state.location.pathname })
-  const label = t(group === 'writing' ? 'writingGroup' : 'videoGroup')
+  const stage = useRouterState({ select: (state) => state.location.search.stage })
+  const from = useRouterState({ select: (state) => state.location.search.from })
+  const label = t(CONTENT_GROUP_LABELS[group])
   const destinations = CONTENT_GROUPS[group].map(({ labelKey, to, icon }) => ({
     to,
     label: t(labelKey),
     icon,
+    search: group === 'models' ? { stage } : undefined,
   }))
   if (hidden)
     return (
@@ -46,13 +49,18 @@ export function ContentGroupLayout({ group }: { group: keyof typeof CONTENT_GROU
   // The destination the address is under, resolved the way the rail's links mark themselves
   // current (a prefix match, so `/voices/one/rules` is still 말투); the group's home otherwise.
   const current =
-    destinations.find((d) => pathname === d.to || pathname.startsWith(`${d.to}/`)) ??
+    (group === 'models' && from === 'compare' && pathname.startsWith('/ai-models/experiments/')
+      ? destinations.find((d) => d.to === '/ai-models/compare')
+      : undefined) ??
+    destinations
+      .filter((d) => pathname === d.to || pathname.startsWith(`${d.to}/`))
+      .sort((a, b) => b.to.length - a.to.length)[0] ??
     destinations[0]!
   return (
     <div className="chrome-subnav flex min-w-0 flex-1 flex-col lg:flex-row">
       <nav
         aria-label={label}
-        className="bg-surface-base sm:top-header h-subnav sticky top-0 z-10 flex items-center justify-center px-4 pt-2 sm:px-6 lg:hidden"
+        className="bg-surface-base sm:top-header h-subnav sticky top-0 z-10 flex items-center justify-center px-4 pt-2 has-[[aria-expanded=true]]:z-40 sm:px-6 lg:hidden"
       >
         {/* Where the owner IS and the way to the rest of the group, in one control: the current
             destination's glyph and name in the current colour, with a chevron. It keeps no plane
@@ -65,7 +73,9 @@ export function ContentGroupLayout({ group }: { group: keyof typeof CONTENT_GROU
           label={label}
           value={current.to}
           options={destinations.map((d) => ({ value: d.to, label: d.label }))}
-          onChange={(to) => void navigate({ to })}
+          onChange={(to) =>
+            void navigate({ to, search: group === 'models' ? { stage } : undefined })
+          }
           triggerLabel={current.label}
           triggerIcon={<current.icon aria-hidden="true" className="size-5 shrink-0" />}
           triggerClassName="text-link-fg-current max-w-full"
@@ -75,7 +85,7 @@ export function ContentGroupLayout({ group }: { group: keyof typeof CONTENT_GROU
           second half of what tells the two levels apart, the plane being the first (THEME-38). */}
       <aside className="bg-surface-recessed lg:top-header lg:h-sidebar hidden shrink-0 lg:sticky lg:flex lg:w-44 lg:flex-col lg:overflow-y-auto lg:px-2 lg:py-3">
         <nav aria-label={label} className="flex flex-col gap-1">
-          <NavLinks shape="rail" level="group" destinations={destinations} />
+          <NavLinks shape="rail" level="group" destinations={destinations} current={current.to} />
         </nav>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">

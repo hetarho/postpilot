@@ -15,6 +15,7 @@ const writing = [
   ['/posts', '/posts'],
   ['/posts/new', '/posts'],
   ['/posts/example', '/posts'],
+  ['/posts/experiments/one', '/posts'],
   ['/voices', '/voices'],
   ['/voices/one', '/voices'],
   ['/voices/one/versions', '/voices'],
@@ -34,7 +35,15 @@ const video = [
   ['/video-templates/new', '/video-templates'],
   ['/video-templates/one', '/video-templates'],
 ] as const
+const models = [
+  ['/ai-models', '/ai-models'],
+  ['/ai-models/compare', '/ai-models/compare'],
+  ['/ai-models/experiments', '/ai-models/experiments'],
+  ['/ai-models/leaderboard', '/ai-models/leaderboard'],
+  ['/ai-models/experiments/one', '/ai-models/experiments'],
+] as const
 const cases = [
+  ...models.map(([path, tab]) => ({ path, tab, primary: '/ai-models', group: 'AI 모델 메뉴' })),
   ...writing.map(([path, tab]) => ({ path, tab, primary: '/posts', group: '글 메뉴' })),
   ...video.map(([path, tab]) => ({ path, tab, primary: '/clips', group: '영상 메뉴' })),
 ]
@@ -153,6 +162,9 @@ it('uses actual matched ids instead of prefix guesses', () => {
   )
   expect(currentDestination(['/authenticated/writing-lookalike', '/postsish'])).toBeUndefined()
   expect(currentDestination(['/authenticated/admin/models'])).toBeUndefined()
+  expect(
+    currentDestination(['/authenticated/models', '/authenticated/models/ai-models/compare']),
+  ).toBe('/ai-models')
 })
 it('restores both active levels through browser history and keeps ko/en parity', async () => {
   const { router } = renderAppAt('/posts', { user: { id: 'root', plan: ProtoPlan.MASTER } })
@@ -226,6 +238,12 @@ it('restores both active levels through browser history and keeps ko/en parity',
 it.each([
   ['/posts', '글 메뉴', ['내 글', '말투', '글 템플릿', '지침', '기억'], '/voices'],
   ['/clips', '영상 메뉴', ['내 영상', '영상 템플릿'], '/video-templates'],
+  [
+    '/ai-models',
+    'AI 모델 메뉴',
+    ['모델 변경', '모델 비교', '최근 관찰 비교', '리더보드'],
+    '/ai-models/compare',
+  ],
 ] as const)(
   'names the group home at %s and keeps the rest of the group behind one menu',
   async (path, label, all, second) => {

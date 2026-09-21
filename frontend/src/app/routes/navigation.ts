@@ -1,5 +1,9 @@
 import {
   Bot,
+  SlidersHorizontal,
+  GitCompareArrows,
+  History,
+  Trophy,
   Brain,
   Clapperboard,
   FileText,
@@ -32,7 +36,7 @@ export const DESTINATIONS = [
     to: '/ai-models',
     labelKey: 'models',
     icon: Bot,
-    routeIds: ['/authenticated/ai-models', '/authenticated/ai-models/experiments/$id'],
+    routeIds: ['/authenticated/models'],
     masterOnly: false,
   },
   {
@@ -50,6 +54,12 @@ export const DESTINATIONS = [
  *  deliberately — it is the same destination seen one level down, not a different place — and is
  *  named for what it lists (내 글 · 내 영상), which is also the name the phone's group row shows by
  *  default (owner decision 2026-09-19). */
+export const CONTENT_GROUP_LABELS = {
+  writing: 'writingGroup',
+  video: 'videoGroup',
+  models: 'modelsGroup',
+} as const
+
 export const CONTENT_GROUPS = {
   writing: [
     { to: '/posts', labelKey: 'myPosts', icon: FileText },
@@ -57,6 +67,12 @@ export const CONTENT_GROUPS = {
     { to: '/templates', labelKey: 'templates', icon: LayoutTemplate },
     { to: '/guidelines', labelKey: 'guidelines', icon: ListChecks },
     { to: '/memories', labelKey: 'memories', icon: Brain },
+  ],
+  models: [
+    { to: '/ai-models', labelKey: 'modelSettings', icon: SlidersHorizontal },
+    { to: '/ai-models/compare', labelKey: 'modelComparison', icon: GitCompareArrows },
+    { to: '/ai-models/experiments', labelKey: 'modelHistory', icon: History },
+    { to: '/ai-models/leaderboard', labelKey: 'modelLeaderboard', icon: Trophy },
   ],
   video: [
     { to: '/clips', labelKey: 'myVideos', icon: Scissors },

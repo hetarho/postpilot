@@ -17,7 +17,7 @@ import { AppFailureMessage, FieldLabel, Listbox, Typography, type ListboxOption 
 /** The A/B pair for one stage, as TWO dropdowns side by side, saved the moment both name a
  *  different model.
  *
- *  `ModelPairForm` is the same pair on the AI 모델 page, where it sits under the active model with
+ *  `ModelPairForm` is the same pair on the model comparison page, with
  *  its own 저장 button because that page is a settings form the user commits. This one is for the
  *  writing brief, which the editor opens over a draft: it used to be a LINK to that page, and
  *  following it mid-draft cost the user their place for a choice that is two dropdowns wide

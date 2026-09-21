@@ -1,7 +1,16 @@
-import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
+import {
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from 'react'
 import { clsx } from 'clsx'
 import { Check, ChevronDown } from 'lucide-react'
 import { Button } from '../button/Button'
+import { MENU_VIEWPORT_GUTTER_PX } from './config'
 
 export interface MenuOption<T extends string> {
   value: T
@@ -30,8 +39,8 @@ export function Menu<T extends string>({
   label: string
   /** Makes the trigger WEAR the current choice instead of an icon alone: `triggerIcon`, this
    *  text and a chevron, on no plane at rest. The visible text then IS the trigger's accessible
-   *  name (WCAG 2.5.3), so `label` names the open panel alone, and the panel aligns to the
-   *  trigger's left edge because the trigger is no longer a small square at the right of a row.
+   *  name (WCAG 2.5.3), so `label` names the open panel alone. The panel is centred under the
+   *  trigger and constrained to the viewport, including when translated labels wrap.
    *  Used by the phone's group row, where the name of the destination the address is under is
    *  itself what opens the group (THEME-38). */
   triggerLabel?: string
@@ -49,6 +58,30 @@ export function Menu<T extends string>({
   const rootRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
+  const [panelMaxHeight, setPanelMaxHeight] = useState<number>()
+
+  // The group name can sit below a tall, enlarged header. Measure the remaining room so every
+  // destination stays reachable inside the menu, even before that header has scrolled away.
+  useLayoutEffect(() => {
+    if (!open || triggerLabel === undefined) return
+    const measure = () => {
+      const panel = panelRef.current
+      if (panel)
+        setPanelMaxHeight(
+          Math.max(
+            0,
+            window.innerHeight - panel.getBoundingClientRect().top - MENU_VIEWPORT_GUTTER_PX,
+          ),
+        )
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    window.addEventListener('scroll', measure, true)
+    return () => {
+      window.removeEventListener('resize', measure)
+      window.removeEventListener('scroll', measure, true)
+    }
+  }, [open, triggerLabel])
 
   const items = () =>
     Array.from(
@@ -118,7 +151,7 @@ export function Menu<T extends string>({
   }
 
   return (
-    <div ref={rootRef} className="relative inline-flex">
+    <div ref={rootRef} className="relative inline-flex max-w-full min-w-0">
       <Button
         ref={triggerRef}
         variant={triggerLabel === undefined ? 'secondary' : 'ghost'}
@@ -128,7 +161,7 @@ export function Menu<T extends string>({
         aria-expanded={open}
         aria-controls={open ? id : undefined}
         aria-describedby={triggerDescription ? descriptionId : undefined}
-        className={triggerClassName}
+        className={clsx('max-w-full', triggerClassName)}
         onClick={() => setOpen((current) => !current)}
         onKeyDown={onTriggerKeyDown}
       >
@@ -159,9 +192,12 @@ export function Menu<T extends string>({
           role="menu"
           aria-label={label}
           onKeyDown={onMenuKeyDown}
+          style={triggerLabel === undefined ? undefined : { maxHeight: panelMaxHeight }}
           className={clsx(
-            'bg-surface-highest absolute top-full z-30 mt-2 min-w-44 rounded-lg p-1 shadow-lg select-none',
-            triggerLabel === undefined ? 'right-0' : 'left-0',
+            'bg-surface-highest absolute top-full z-30 mt-2 rounded-lg p-1 shadow-lg select-none',
+            triggerLabel === undefined
+              ? 'right-0 min-w-44'
+              : 'left-1/2 w-max max-w-[calc(100vw-2rem)] -translate-x-1/2 overflow-y-auto overscroll-contain',
           )}
         >
           {options.map((option) => {
@@ -175,11 +211,12 @@ export function Menu<T extends string>({
                 tabIndex={-1}
                 onClick={() => select(option.value)}
                 className={clsx(
-                  'hover:bg-row-bg-hover active:bg-row-bg-active flex min-h-9 w-full items-center gap-3 rounded-md px-3 text-sm whitespace-nowrap transition-colors pointer-coarse:min-h-11',
+                  'hover:bg-row-bg-hover active:bg-row-bg-active flex min-h-9 w-full items-center gap-3 rounded-md px-3 text-sm transition-colors pointer-coarse:min-h-11',
+                  triggerLabel === undefined ? 'whitespace-nowrap' : 'whitespace-normal',
                   checked ? 'text-content-primary font-medium' : 'text-content-secondary',
                 )}
               >
-                <span className="min-w-0 flex-1 text-left">{option.label}</span>
+                <span className="min-w-0 flex-1 text-left break-words">{option.label}</span>
                 {/* The unchecked check keeps its box so labels align and the panel width is stable. */}
                 <Check
                   aria-hidden="true"

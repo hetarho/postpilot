@@ -5,11 +5,19 @@ export const i18n = {
   namespace: 'models',
   ko: {
     page: {
-      description:
-        '추천 조합을 명시적으로 적용하거나, 내 사진·문체·글에서 더 나은 모델을 직접 비교합니다.',
+      modelSettings: '모델 변경',
+      comparison: '모델 비교',
+      history: '최근 관찰 비교',
+      leaderboardTitle: '리더보드',
+      settingsDescription: '관찰·문체 분석·글 작성에 실제로 사용할 모델을 고릅니다.',
+      comparisonDescription: '같은 입력으로 두 모델을 비교하고 더 나은 결과를 선택합니다.',
+      historyDescription:
+        '최근 비교 결과를 다시 확인합니다. 단계별로 관찰·문체 분석·글 작성 기록을 볼 수 있어요.',
+      leaderboardDescription: '내가 선택한 비교 결과를 바탕으로 모델별 순위를 확인합니다.',
+      pairSettings: '비교할 A/B 모델',
+      resultsFailed: '비교 정보를 불러오지 못했어요.',
       recommendation: '추천 조합',
       recommendationLoading: '추천 조합을 불러오는 중…',
-      settings: '단계별 설정과 비교',
       stageAria: 'AI 단계',
       voice: '말투',
       selectVoice: '말투를 선택하세요',
@@ -51,11 +59,19 @@ export const i18n = {
   },
   en: {
     page: {
-      description:
-        'Apply a recommended set explicitly, or compare which models work best with your photos, style, and posts.',
+      modelSettings: 'Change models',
+      comparison: 'Compare models',
+      history: 'Recent observation comparisons',
+      leaderboardTitle: 'Leaderboard',
+      settingsDescription: 'Choose the models used for observation, voice analysis, and writing.',
+      comparisonDescription: 'Compare two models on the same input and choose the better result.',
+      historyDescription:
+        'Review recent results. Switch stages to see observation, voice analysis, or writing comparisons.',
+      leaderboardDescription: 'See model rankings based on your own comparison choices.',
+      pairSettings: 'A/B comparison models',
+      resultsFailed: 'Could not load comparison information.',
       recommendation: 'Recommended set',
       recommendationLoading: 'Loading recommendations…',
-      settings: 'Stage settings and comparisons',
       stageAria: 'AI stage',
       voice: 'Voice',
       selectVoice: 'Select a voice',

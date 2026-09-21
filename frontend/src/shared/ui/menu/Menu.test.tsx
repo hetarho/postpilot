@@ -103,8 +103,7 @@ describe('Menu', () => {
   })
 
   // The phone's group row needs the CURRENT CHOICE to be the trigger (THEME-38): the name of the
-  // place is what opens the group, so its visible text is also its accessible name and the panel
-  // hangs from its left edge instead of from a small square at the right of a row.
+  // place is what opens the group, so its visible text is also its accessible name.
   it('wears the current choice as its trigger when given a trigger label', async () => {
     const user = userEvent.setup()
     render(
@@ -127,8 +126,7 @@ describe('Menu', () => {
     await user.click(trigger)
 
     const menu = screen.getByRole('menu', { name: 'Fruit' })
-    expect(menu).toHaveClass('left-0')
-    expect(menu.className).not.toContain('right-0')
+    expect(menu).toBeVisible()
     expect(screen.getByRole('menuitemradio', { name: 'Pear', checked: true })).toHaveFocus()
   })
 

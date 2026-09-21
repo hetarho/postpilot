@@ -402,7 +402,7 @@ describe('lazily loaded routes', () => {
     ['/templates', '템플릿'],
     ['/guidelines', '지침'],
     ['/about', '사진과 메모를 내 말투의 블로그 초안으로'],
-    ['/ai-models', 'AI 모델'],
+    ['/ai-models', '모델 변경'],
   ])('renders %s on a direct load', async (path, heading) => {
     const { router } = renderAppAt(path, { user: { id: 'alice' } })
 
@@ -668,7 +668,7 @@ describe('localized registered-route smoke', () => {
       import: '기존 글 가져오기',
       rules: '대조 규칙',
       validations: '프로필 검증',
-      models: 'AI 모델',
+      models: '모델 변경',
       retry: '다시 시도',
       title: '제목',
     },
@@ -685,7 +685,7 @@ describe('localized registered-route smoke', () => {
       import: 'Import existing posts',
       rules: 'Contrast rules',
       validations: 'Profile validation',
-      models: 'AI models',
+      models: 'Change models',
       retry: 'Try again',
       title: 'Title',
     },

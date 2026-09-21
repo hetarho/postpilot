@@ -1,1 +1,5 @@
 export { AIModelsPage } from './ui/AIModelsPage'
+export { ModelComparisonPage } from './ui/ModelComparisonPage'
+export { ModelHistoryPage } from './ui/ModelHistoryPage'
+export { ModelLeaderboardPage } from './ui/ModelLeaderboardPage'
+export { searchSchema as aiModelsSearchSchema } from './model/search'

@@ -43,7 +43,7 @@ export function EditorGeneratePanel({
 
       {post.pendingExperimentId && (!job || isTerminal(job)) && (
         <Link
-          to="/ai-models/experiments/$id"
+          to="/posts/experiments/$id"
           params={{ id: post.pendingExperimentId }}
           className={typographyStyles({
             variant: 'label',

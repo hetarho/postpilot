@@ -208,8 +208,9 @@ export function PostsPage() {
             <li key={post.slug}>
               {post.pendingExperimentId && !post.activeJob ? (
                 <Link
-                  to="/ai-models/experiments/$id"
+                  to="/posts/experiments/$id"
                   params={{ id: post.pendingExperimentId }}
+                  search={{ from: 'posts', q: narrowing.q, status: narrowing.status }}
                   className={rowClass}
                 >
                   {content}

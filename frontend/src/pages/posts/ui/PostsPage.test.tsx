@@ -70,7 +70,7 @@ describe('PostsPage', () => {
     expect(row).toHaveTextContent('AI 결과 확인')
     await user.click(row)
     await waitFor(() =>
-      expect(router.state.location.pathname).toBe('/ai-models/experiments/experiment-1'),
+      expect(router.state.location.pathname).toBe('/posts/experiments/experiment-1'),
     )
   })
 

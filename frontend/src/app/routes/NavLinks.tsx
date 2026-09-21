@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react'
 import { Link } from '@tanstack/react-router'
 import { clsx } from 'clsx'
+import type { StageName } from '@/entities/model-catalog'
 import { typographyStyles } from '@/shared/ui'
 
 export interface NavDestination {
@@ -9,6 +10,7 @@ export interface NavDestination {
   /** The phone bar's caption when four full labels would not fit across the bottom edge. */
   shortLabel?: string
   icon: ComponentType<{ className?: string }>
+  search?: { stage?: StageName }
 }
 
 /** Where the row is drawn. `header` and `row` are the laptop's two stacked bands, `rail` is either
@@ -31,7 +33,7 @@ const shapeStyles: Record<NavShape, string> = {
  *  keeps 12px for metadata — so the step down lives in the box, never in the letters. 36px is
  *  THEME-23's fine-pointer floor for a menu row, and the touch floor is added back for a rail
  *  under a thumb. */
-const RAIL_GROUP = 'flex min-h-9 items-center gap-2 rounded-md px-3 pointer-coarse:min-h-11'
+const RAIL_GROUP = 'flex min-h-9 items-center gap-2 rounded-md px-3 py-2 pointer-coarse:min-h-11'
 
 /** One step up from the level's own plane under the pointer, one further for the destination the
  *  user is on. The phone bar is not a rail — it floats over the page on `surface-raised` — so its
@@ -74,7 +76,11 @@ export function NavLinks({
   const glyph = shape === 'rail' && level === 'group' ? 'size-4 shrink-0' : 'size-5 shrink-0'
   const className = typographyStyles({
     variant: 'label',
-    className: clsx('text-link-fg whitespace-nowrap', box),
+    className: clsx(
+      'text-link-fg',
+      shape === 'rail' ? 'whitespace-normal' : 'whitespace-nowrap',
+      box,
+    ),
   })
   return destinations.map((destination) => {
     // Both branches carry the same state when selection is computed here: a Link decides
@@ -90,9 +96,12 @@ export function NavLinks({
       <Link
         key={destination.to}
         to={destination.to}
+        search={destination.search}
         aria-label={destination.label}
         className={className}
-        activeOptions={{ exact: false }}
+        // Once the group has resolved its current destination, a broader URL prefix must not
+        // independently mark its parent current too (for example /ai-models on /ai-models/compare).
+        activeOptions={{ exact: current !== undefined, includeSearch: false }}
         activeProps={computed ?? { className: plane.current, 'aria-current': 'page' }}
         inactiveProps={computed ?? { className: plane.rest }}
       >

@@ -45,7 +45,7 @@ export function EditorJobNotice({
                 : job.kind === 'model_experiment'
                   ? post.pendingExperimentId
                     ? void navigate({
-                        to: '/ai-models/experiments/$id',
+                        to: '/posts/experiments/$id',
                         params: { id: post.pendingExperimentId },
                       })
                     : undefined

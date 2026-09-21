@@ -1,4 +1,9 @@
 export const nav = {
+  modelsGroup: 'AI 모델 메뉴',
+  modelSettings: '모델 변경',
+  modelComparison: '모델 비교',
+  modelHistory: '최근 관찰 비교',
+  modelLeaderboard: '리더보드',
   primary: '주요',
   home: 'Postpilot 홈',
   posts: '글',

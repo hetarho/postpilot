@@ -1,7 +1,12 @@
 import type { ModelRef } from '@/entities/model-catalog'
 import { create } from '@bufbuild/protobuf'
 import { Code, createRouterTransport } from '@connectrpc/connect'
-import { ModelExperimentService, StartExperimentResponseSchema } from '@/shared/api'
+import {
+  ModelExperimentService,
+  StartExperimentResponseSchema,
+  ExperimentStatus,
+  Stage,
+} from '@/shared/api'
 import { connectAppError } from './app-error'
 
 type ConnectRouter = Parameters<Parameters<typeof createRouterTransport>[0]>[0]
@@ -23,6 +28,13 @@ export interface FakeAnalyzeExperimentStart {
 }
 
 export interface FakeExperimentsOptions {
+  observeStarts?: Array<{ postSlug: string; modelA?: ModelRef; modelB?: ModelRef }>
+  history?: Array<{ id: string; stage: Stage; postSlug?: string; voiceId?: string }>
+  reads?: Array<{ kind: 'history' | 'leaderboard'; stage: Stage }>
+  listFails?: boolean
+  leaderboardFails?: boolean
+  detailFails?: boolean
+  readGate?: Promise<void>
   starts?: FakeWriteExperimentStart[]
   analyzeStarts?: FakeAnalyzeExperimentStart[]
   calls?: string[]
@@ -35,6 +47,45 @@ export function registerExperimentService(
   router: ConnectRouter,
   options: FakeExperimentsOptions = {},
 ) {
+  router.rpc(ModelExperimentService.method.listExperiments, async (request) => {
+    options.reads?.push({ kind: 'history', stage: request.stage })
+    if (options.readGate) await options.readGate
+    if (options.listFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
+    return {
+      experiments: (options.history ?? [])
+        .filter((item) => request.stage === Stage.UNSPECIFIED || item.stage === request.stage)
+        .map((item) => ({ ...item, status: ExperimentStatus.DECIDED })),
+    }
+  })
+  router.rpc(ModelExperimentService.method.getLeaderboard, async (request) => {
+    options.reads?.push({ kind: 'leaderboard', stage: request.stage })
+    if (options.readGate) await options.readGate
+    if (options.leaderboardFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
+    return { entries: [] }
+  })
+  router.rpc(ModelExperimentService.method.getExperiment, async (request) => {
+    if (options.readGate) await options.readGate
+    if (options.detailFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
+    const item = options.history?.find((item) => item.id === request.id)
+    return { experiment: item ? { ...item, status: ExperimentStatus.DECIDED } : undefined }
+  })
+  router.rpc(ModelExperimentService.method.startObserveExperiment, (request) => {
+    options.calls?.push('StartObserveExperiment')
+    if (options.startError) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
+    options.observeStarts?.push({
+      postSlug: request.postSlug,
+      modelA: request.modelA
+        ? { providerId: request.modelA.providerId, modelId: request.modelA.modelId }
+        : undefined,
+      modelB: request.modelB
+        ? { providerId: request.modelB.providerId, modelId: request.modelB.modelId }
+        : undefined,
+    })
+    return {
+      jobId: options.jobId ?? 'experiment-job',
+      experimentId: options.experimentId ?? 'experiment-1',
+    }
+  })
   router.rpc(ModelExperimentService.method.startWriteExperiment, (request) => {
     options.calls?.push('StartWriteExperiment')
     if (options.startError) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)

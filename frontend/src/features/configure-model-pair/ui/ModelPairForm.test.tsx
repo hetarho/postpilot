@@ -8,6 +8,7 @@ import { createFakeProviderTransport } from '@/test/providers'
 import { chooseOption } from '@/test/listbox'
 import { createTestQueryClient, withProviders } from '@/test/session'
 import { ModelPairForm } from './ModelPairForm'
+import { ActiveModelForm } from './ActiveModelForm'
 
 afterEach(() => initializeI18n('ko'))
 
@@ -40,9 +41,15 @@ describe('ModelPairForm structured failures', () => {
         saveFailure: { reason: 'MODEL_DISABLED', code: Code.FailedPrecondition },
         savePairFailure: { reason: 'MODEL_CANDIDATES_DUPLICATE', code: Code.InvalidArgument },
       })
-      render(<ModelPairForm stage="write" />, {
-        wrapper: withProviders(transport, createTestQueryClient()),
-      })
+      render(
+        <>
+          <ActiveModelForm stage="write" />
+          <ModelPairForm stage="write" />
+        </>,
+        {
+          wrapper: withProviders(transport, createTestQueryClient()),
+        },
+      )
 
       const selects = await screen.findAllByRole('combobox')
       await waitFor(() => expect(selects[0]).toHaveTextContent('Writer A'))
@@ -87,9 +94,15 @@ describe('ModelPairForm levels (T095/MODEL-44)', () => {
   it('grades and orders the active field and both candidate fields alike', async () => {
     const user = userEvent.setup()
     const transport = createFakeProviderTransport({ models: GRADED })
-    render(<ModelPairForm stage="write" />, {
-      wrapper: withProviders(transport, createTestQueryClient()),
-    })
+    render(
+      <>
+        <ActiveModelForm stage="write" />
+        <ModelPairForm stage="write" />
+      </>,
+      {
+        wrapper: withProviders(transport, createTestQueryClient()),
+      },
+    )
 
     const selects = await screen.findAllByRole('combobox')
     expect(selects).toHaveLength(3)

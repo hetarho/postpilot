@@ -8,7 +8,7 @@ import { authRoutes } from './auth'
 import { billingRoutes } from './billing'
 import { clipRoutes } from './clips'
 import { marketingRoutes } from './marketing'
-import { modelRoutes } from './models'
+import { modelGroupRoute, modelRoutes } from './models'
 import { postRoutes } from './posts'
 import { publishingRoutes } from './publishing'
 import { templateRoutes } from './templates'
@@ -44,7 +44,7 @@ export const routeTree = rootRoute.addChildren([
     ...billingRoutes,
     ...accountRoutes,
     ...legacyVoiceRoutes,
-    ...modelRoutes,
+    modelGroupRoute.addChildren(modelRoutes),
   ]),
 ])
 

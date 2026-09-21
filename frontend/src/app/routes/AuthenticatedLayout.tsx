@@ -46,15 +46,15 @@ export function AuthenticatedLayout() {
       className="bg-surface-base text-content-primary relative isolate flex min-h-full flex-col"
     >
       {immersive && <PromoStage viewport />}
-      <header className="sm:min-h-header sm:sticky sm:top-0 sm:z-20">
+      <header
+        className={clsx(
+          'sm:min-h-header sm:sticky sm:top-0 sm:z-20',
+          immersive ? 'bg-surface-raised/70 backdrop-blur-xl' : 'bg-surface-raised',
+        )}
+      >
         {/* A wrapping cluster preserves every digit and the 44 px controls at 320 px.
             There is only one balance, theme, locale and account at any width. */}
-        <div
-          className={clsx(
-            'sm:min-h-bar lg:min-h-header flex min-h-14 flex-wrap items-center justify-between gap-x-2 px-4 py-2 sm:px-6 sm:py-1 lg:py-0',
-            immersive ? 'bg-surface-raised/70 backdrop-blur-xl' : 'bg-surface-raised',
-          )}
-        >
+        <div className="sm:min-h-bar lg:min-h-header flex min-h-14 flex-wrap items-center justify-between gap-x-2 px-4 py-2 sm:px-6 sm:py-1 lg:py-0">
           <Link
             to="/posts"
             className="inline-flex min-h-11 shrink-0 items-center px-2"
@@ -73,13 +73,11 @@ export function AuthenticatedLayout() {
             />
           </div>
         </div>
-        {/* The laptop's primary band. It is chrome, so it runs edge to edge on its own plane and
-            scrolls horizontally rather than crushing its targets. */}
+        {/* The tablet navigation shares the brand row's background. The header paints one
+            surface, including its translucent backdrop on /plans, so there is no dark band
+            between the brand and the page. Targets still scroll horizontally when needed. */}
         <nav
-          className={clsx(
-            'sm:h-primaryrow hidden items-center gap-1 overflow-x-auto overscroll-x-contain px-4 sm:flex sm:px-6 lg:hidden',
-            immersive ? 'bg-surface-lowest/70 backdrop-blur-xl' : 'bg-surface-lowest',
-          )}
+          className="sm:h-primaryrow hidden items-center gap-1 overflow-x-auto overscroll-x-contain px-4 sm:flex sm:px-6 lg:hidden"
           aria-label={t('primary')}
         >
           {primary('header')}

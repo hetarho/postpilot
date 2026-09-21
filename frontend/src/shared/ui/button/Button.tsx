@@ -29,7 +29,12 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
           and it stays in the ACCESSIBILITY TREE so the button keeps its name while busy —
           `opacity-0`, never `invisible`/`display:none`, both of which would leave a pending button
           with no accessible name at all (the spinner beside it is aria-hidden). */}
-      <span className={clsx('inline-flex items-center gap-2', pending && 'opacity-0')}>
+      <span
+        className={clsx(
+          'inline-flex max-w-full min-w-0 items-center gap-2',
+          pending && 'opacity-0',
+        )}
+      >
         {children}
       </span>
       {pending && (

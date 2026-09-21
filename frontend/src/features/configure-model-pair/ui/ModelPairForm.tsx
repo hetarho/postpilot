@@ -1,33 +1,20 @@
-import { useId, useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { ModelSelect } from './ModelSelect'
 import {
   filterForStage,
-  levelPrefix,
   refKey,
   type ModelRef,
   type StageName,
   useModels,
   useModelSetup,
   useSaveComparisonPair,
-  useSaveSelection,
-  useStageSelection,
 } from '@/entities/model-catalog'
-import { formatNumber } from '@/shared/lib'
-import type { AppFailure } from '@/shared/api'
-import {
-  AppFailureMessage,
-  Button,
-  FieldLabel,
-  FieldMessage,
-  Listbox,
-  Typography,
-} from '@/shared/ui'
+import { AppFailureMessage, Button, FieldMessage, Typography } from '@/shared/ui'
 
 export function ModelPairForm({ stage }: { stage: StageName }) {
   const { models } = useModels()
-  const active = useStageSelection(stage)
   const { pairs } = useModelSetup()
-  const saveActive = useSaveSelection()
   const savePair = useSaveComparisonPair()
   const suitable = filterForStage(models, stage)
   const pair = pairs.find((item) => item.stage === stage)
@@ -41,8 +28,6 @@ export function ModelPairForm({ stage }: { stage: StageName }) {
       initialA={initialA}
       initialB={initialB}
       suitable={suitable}
-      active={active}
-      saveActive={saveActive}
       savePair={savePair}
     />
   )
@@ -53,16 +38,12 @@ function ModelPairFields({
   initialA,
   initialB,
   suitable,
-  active,
-  saveActive,
   savePair,
 }: {
   stage: StageName
   initialA: string
   initialB: string
   suitable: ReturnType<typeof useModels>['models']
-  active: ReturnType<typeof useStageSelection>
-  saveActive: ReturnType<typeof useSaveSelection>
   savePair: ReturnType<typeof useSaveComparisonPair>
 }) {
   const { t } = useTranslation('models')
@@ -73,23 +54,7 @@ function ModelPairFields({
   const invalid = !a || !b || a === b || !find(a) || !find(b)
   return (
     <div className="space-y-4">
-      <ModelSelect
-        label={t('active')}
-        stage={stage}
-        value={active.selected ? refKey(active.selected) : ''}
-        models={suitable}
-        onChange={(key) => {
-          const ref = find(key)
-          if (ref) void saveActive.save(stage, ref)
-        }}
-        // This field is controlled by the SERVER value, so a save that fails snaps the choice back
-        // to the previous model on its own. On touch the native picker has just closed and this
-        // field is the only thing on screen the user is looking at, so both the in-flight state and
-        // the failure have to render right here or the undo has no explanation at all (§6).
-        saving={saveActive.isPending}
-        error={saveActive.failure}
-      />
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <ModelSelect
           label={t('candidateA')}
           stage={stage}
@@ -124,10 +89,7 @@ function ModelPairFields({
         >
           {t('savePair')}
         </Button>
-        {/* This is a commit point ~940px down the page, and the '비교 시작' CTA that depends on it
-            is another ~160px below. Without these two lines a failed save just returns the button
-            to rest — indistinguishable from success — and the user only learns something is wrong
-            from a CTA that stays disabled two screens away (§4.3). */}
+        {/* The comparison uses the saved pair, so its save result belongs beside this action. */}
         {savePair.failure && (
           <Typography
             variant="body"
@@ -145,109 +107,5 @@ function ModelPairFields({
         )}
       </div>
     </div>
-  )
-}
-
-function ModelSelect({
-  label,
-  stage,
-  value,
-  models,
-  onChange,
-  saving = false,
-  error,
-}: {
-  label: string
-  /** Which stage's grade to show: a model is graded per stage, not once (MODEL-57). */
-  stage: StageName
-  value: string
-  models: ReturnType<typeof useModels>['models']
-  onChange: (value: string) => void
-  /** A save of this field is in flight. Rendered in place under the field, not just implied by
-   *  the control greying out. */
-  saving?: boolean
-  /** Why the last save of this field failed, if it did. */
-  error?: AppFailure
-}) {
-  const { t } = useTranslation('models')
-  const id = useId()
-  const labelId = `${id}-label`
-  const errorId = `${id}-error`
-  return (
-    <div>
-      <FieldLabel id={labelId} htmlFor={id}>
-        {label}
-      </FieldLabel>
-      <Listbox
-        id={id}
-        aria-labelledby={labelId}
-        className="mt-1"
-        value={value}
-        options={[
-          { value: '', label: t('select') },
-          ...models.map((model) => ({
-            value: refKey(model.ref),
-            // The grade leads here too, so the three fields that render this same list
-            // read identically (MODEL-44).
-            label: `${levelPrefix(model, stage)}${model.label}${model.disabled ? ` · ${model.disabledReason}` : ''}`,
-            disabled: model.disabled,
-          })),
-        ]}
-        // Disabled only while a save is in flight: on 3G the round trip is seconds long and a
-        // second tap would fire a second SaveSelection against the first one's result.
-        disabled={saving}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={error ? errorId : undefined}
-        onChange={onChange}
-      />
-      {value && <ModelMeta model={models.find((model) => refKey(model.ref) === value)} />}
-      {/* The live region stays mounted so it announces when it fills, and `empty:hidden` keeps it
-          out of the layout while it is idle. */}
-      <Typography
-        variant="body"
-        as="p"
-        role="status"
-        className="text-content-tertiary mt-1 empty:hidden"
-      >
-        {saving ? t('pair.saving') : null}
-      </Typography>
-      {error && (
-        <Typography
-          variant="body"
-          as="div"
-          id={errorId}
-          role="alert"
-          className="text-field-error mt-1 break-words"
-        >
-          <AppFailureMessage failure={error} />
-        </Typography>
-      )}
-    </div>
-  )
-}
-
-function ModelMeta({
-  model,
-}: {
-  model: ReturnType<typeof useModels>['models'][number] | undefined
-}) {
-  const { t } = useTranslation('models')
-  if (!model) return null
-  const context = formatNumber(Number(model.contextTokens))
-  return (
-    <Typography variant="label" as="p" className="mt-1">
-      {t('pair.pricing', {
-        tokens: context,
-        input: model.inputUsdPerMillion || '?',
-        output: model.outputUsdPerMillion || '?',
-      })}
-      {/* The date the price was checked is provenance, not a decision input, and it is what pushed
-          this line to two rows under each of the three selects — 72px of the fold, three times
-          over, on a 360px phone. It appears only where there is width for it. */}
-      <span className="hidden sm:inline">
-        {' · '}
-        {model.pricingCheckedAt || t('pair.priceUnchecked')}
-      </span>
-    </Typography>
   )
 }

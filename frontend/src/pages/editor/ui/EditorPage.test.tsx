@@ -577,7 +577,7 @@ describe('opening a post', () => {
     await openStep(user, '글 생성')
     await user.click(await screen.findByRole('button', { name: '다시 시도' }))
     await waitFor(() =>
-      expect(router.state.location.pathname).toBe('/ai-models/experiments/experiment-pending'),
+      expect(router.state.location.pathname).toBe('/posts/experiments/experiment-pending'),
     )
   })
 

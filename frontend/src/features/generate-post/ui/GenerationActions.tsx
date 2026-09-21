@@ -313,7 +313,7 @@ export const GenerationActions = forwardRef<
       {reasons('mt-2')}
       {pendingExperiment && (
         <a
-          href={`/ai-models/experiments/${encodeURIComponent(post.pendingExperimentId)}`}
+          href={`/posts/experiments/${encodeURIComponent(post.pendingExperimentId)}`}
           className={buttonStyles({ variant: 'secondary', className: 'mt-2 w-full sm:w-auto' })}
         >
           {t('generation.reviewResult')}

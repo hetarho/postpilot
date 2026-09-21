@@ -1,4 +1,9 @@
 export const nav = {
+  modelsGroup: 'AI model navigation',
+  modelSettings: 'Change models',
+  modelComparison: 'Compare models',
+  modelHistory: 'Recent observation comparisons',
+  modelLeaderboard: 'Leaderboard',
   primary: 'Primary',
   home: 'Postpilot home',
   posts: 'Posts',
