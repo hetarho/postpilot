@@ -243,9 +243,9 @@ describe('the plan estimator', () => {
         plan: ProtoPlan.FREE,
         balance: { credits: 50, unlimited: false, monthlyGrant: 50 },
         estimatorCombos: [
-          { combo: 'balanced' },
-          // A cheaper tier: half the per-post base and a tenth of the character rate.
-          { combo: 'cheapest', perPostBaseMilli: 1900, perThousandCharsMilli: 360 },
+          { combo: 'value' },
+          // A second tier with distinct rates proves the chosen shared level drives pricing.
+          { combo: 'top', perPostBaseMilli: 1900, perThousandCharsMilli: 360 },
         ],
       },
     })
@@ -253,7 +253,7 @@ describe('the plan estimator', () => {
     let items = await rungs()
     expect(within(items[1]).getByText('매달 약 19편')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('tab', { name: '최저가' }))
+    await user.click(screen.getByRole('tab', { name: '최고' }))
     items = await rungs()
     // 1900 + 5x723 + 360 = 5,875 milli a post.
     expect(await within(items[1]).findByText('매달 약 37편')).toBeInTheDocument()
@@ -279,7 +279,7 @@ describe('the plan estimator', () => {
         plan: ProtoPlan.FREE,
         balance: { credits: 50, unlimited: false, monthlyGrant: 50 },
         // A tier expensive enough that the free grant buys nothing of that shape.
-        estimatorCombos: [{ combo: 'quality', perPostBaseMilli: 60_000 }],
+        estimatorCombos: [{ combo: 'top', perPostBaseMilli: 60_000 }],
       },
     })
 
@@ -303,7 +303,7 @@ describe('the plan estimator', () => {
     const items = await rungs()
     expect(within(items[1]).getByText('매달 220 크레딧')).toBeInTheDocument()
     expect(screen.queryByText(/매달 약/)).not.toBeInTheDocument()
-    expect(screen.queryByRole('tab', { name: '균형' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: '밸런스' })).not.toBeInTheDocument()
     expect(
       screen.getByText('아직 모델 조합이 지정되지 않아 편수를 계산할 수 없어요.'),
     ).toBeInTheDocument()

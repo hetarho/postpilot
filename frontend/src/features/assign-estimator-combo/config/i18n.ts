@@ -8,12 +8,6 @@ export const i18n = {
       title: '편수 기준 조합',
       description:
         '플랜 화면이 "매달 약 몇 편"을 계산할 때 쓰는 모델입니다. 두 모델을 모두 고르면 그 등급의 실제 단가로 편수를 계산합니다.',
-      name: {
-        quality: '품질',
-        balanced: '균형',
-        value: '가성비',
-        cheapest: '최저가',
-      },
       observe: '사진 분석',
       write: '글 작성',
       none: '고르지 않음',
@@ -27,12 +21,6 @@ export const i18n = {
       title: 'Post estimate combos',
       description:
         'The models the plan screen prices "about N posts a month" with. Choose both and the estimate uses that tier\'s real rates.',
-      name: {
-        quality: 'Quality',
-        balanced: 'Balanced',
-        value: 'Value',
-        cheapest: 'Cheapest',
-      },
       observe: 'Photo analysis',
       write: 'Writing',
       none: 'Not chosen',

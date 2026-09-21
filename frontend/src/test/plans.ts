@@ -98,17 +98,17 @@ export function registerPlanServices(router: ConnectRouter, options: FakePlansOp
         { plan: ProtoPlan.MAX, monthlyCredits: 1200, priceUsdCents: 1000 },
       ],
       // The rates plan_test pins for a $0.30/$2.50 observer and a $1.00/$10.00 writer.
-      estimatorCombos: (
-        options.estimatorCombos ?? [{ combo: 'balanced' }, { combo: 'cheapest' }]
-      ).map((combo) => ({
-        combo: combo.combo,
-        observeLabel: combo.observeLabel ?? 'vendor/eyes',
-        writeLabel: combo.writeLabel ?? 'vendor/pen',
-        perPhotoMilli: combo.perPhotoMilli ?? 723,
-        perVideoMilli: combo.perVideoMilli ?? 1100,
-        perThousandCharsMilli: combo.perThousandCharsMilli ?? 3600,
-        perPostBaseMilli: combo.perPostBaseMilli ?? 3800,
-      })),
+      estimatorCombos: (options.estimatorCombos ?? [{ combo: 'value' }, { combo: 'balanced' }]).map(
+        (combo) => ({
+          combo: combo.combo,
+          observeLabel: combo.observeLabel ?? 'vendor/eyes',
+          writeLabel: combo.writeLabel ?? 'vendor/pen',
+          perPhotoMilli: combo.perPhotoMilli ?? 723,
+          perVideoMilli: combo.perVideoMilli ?? 1100,
+          perThousandCharsMilli: combo.perThousandCharsMilli ?? 3600,
+          perPostBaseMilli: combo.perPostBaseMilli ?? 3800,
+        }),
+      ),
     })
   })
 

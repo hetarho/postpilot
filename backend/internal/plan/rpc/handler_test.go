@@ -21,7 +21,7 @@ func (stubLedger) BalanceFor(context.Context, string, plan.Plan) (planrpc.Balanc
 	return planrpc.Balance{Credits: 220}, nil
 }
 
-// stubEstimator publishes one priced combo, the way an operator who has assigned `quality`
+// stubEstimator publishes one priced combo, the way an operator who has assigned `top`
 // and nothing else leaves the catalog.
 type stubEstimator struct{ err error }
 
@@ -30,7 +30,7 @@ func (s stubEstimator) ComboRates(context.Context) ([]planrpc.EstimatorCombo, er
 		return nil, s.err
 	}
 	return []planrpc.EstimatorCombo{{
-		Combo: "quality", ObserveLabel: "vendor/eyes", WriteLabel: "vendor/pen",
+		Combo: "top", ObserveLabel: "vendor/eyes", WriteLabel: "vendor/pen",
 		PerPhotoMilli: 723, PerVideoMilli: 1100, Per1000CharsMilli: 3600, PerPostBaseMilli: 3800,
 	}}, nil
 }
@@ -78,7 +78,7 @@ func TestGetMyPlanPublishesTheRungsAndTheEstimatorRates(t *testing.T) {
 		t.Fatalf("combos = %d, want the one assigned", len(msg.EstimatorCombos))
 	}
 	combo := msg.EstimatorCombos[0]
-	if combo.Combo != "quality" || combo.PerPhotoMilli != 723 || combo.PerPostBaseMilli != 3800 {
+	if combo.Combo != "top" || combo.PerPhotoMilli != 723 || combo.PerPostBaseMilli != 3800 {
 		t.Errorf("combo = %+v", combo)
 	}
 	if combo.PerThousandCharsMilli != 3600 || combo.PerVideoMilli != 1100 {

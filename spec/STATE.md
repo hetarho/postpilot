@@ -19,11 +19,11 @@
 |---|---|---|---|---|
 | ARCH | 5 | 5 | - | 0 |
 | AUTH | 5 | 5 | - | 0 |
-| QUOTA | 13 | 13 | - | 0 |
+| QUOTA | 14 | 14 | - | 0 |
 | POST | 8 | 8 | - | 0 |
 | VOICE | 3 | 3 | - | 1 |
 | GEN | 7 | 7 | - | 0 |
-| MODEL | 10 | 10 | - | 0 |
+| MODEL | 11 | 11 | - | 0 |
 | TMPL | 7 | 7 | - | 1 |
 | GUIDE | 3 | 3 | - | 0 |
 | EXPORT | 4 | 4 | - | 0 |
@@ -61,6 +61,12 @@
 - the clip `release-smoke` stage is still red at HEAD on this host (9 of 28 modes end in `no result`) and still needs a fix task
 - a `review-code` pass over the new memory domain is worth a look before it grows
 ## log
+- 260921 T295 done; estimator cards and plan estimates now share value/balanced/premium/top, enforce same-level purpose registrations, and safely migrate only matching legacy pairs (eql)
+- 260921 T295 claimed (eql)
+- 260921 T295 created from MODEL r11 QUOTA r14: shared level vocabulary, ordinal migration, server enforcement and purpose-specific admin filtering (ops-model-levels)
+- 260921 create-task MODEL QUOTA start (ops-model-levels)
+- 260921 MODEL r11 QUOTA r14: estimator combos now share the four model levels and accept only same-level per-purpose registrations; ordinal migration drops mismatched assignments (ops-model-levels)
+- 260921 update-ssot MODEL QUOTA start (ops-model-levels)
 - 260921 TMPL r7..r7 no-op (no code impact); the same stale marker prose in ExportPanel, BlockList, README and PRD was aligned in passing — comments and reference docs only, ARCH-25 green
 - 260921 create-task TMPL start (alt)
 - 260921 TMPL r7: TMPL-17 23 39 cite the current Naver photo marker, and a slot placeholder is told from it by its brackets (alt)
@@ -75,9 +81,3 @@
 - 260920 T291 done; extract_memory is a credit-gated post-addressed job whose candidates live on its own job row — it writes no memory and touches no post; the queue gained SaveResult/Result for that one shape of work
 - 260920 T290 done; posts carry use_memory, retrieval is tag-overlap over folded substrings in internal/memory, and the frozen texts render as one [기억] section in the per-post half — a post with the option off is byte-identical to T287's goldens
 - 260920 T289 done; the memory aggregate exists end to end (0069, internal/memory, MemoryService, the post-delete hook, the four bounds); memory_sources.post_slug is deliberately FK-less — see the task result
-- 260920 T288 done; the Naver photo marker is a bare `사진_<n>_사진` and each caption is its own copy control under its photo; TMPL still describes the old marker in three decisions (update-ssot owed)
-- 260920 T287 done; the write prompt gained the altitude rule as a fourth grounding constant, the write scope now binds factual claims alone and the naming rule forbids the frame rather than the memo; only the write golden moved, by exactly three lines
-- 260920 T287-T293 created from MEM r1 + the five amendments: prompt altitude, Naver marker, the memory store, retrieval, extraction, the 기억 page, the two post surfaces (mem)
-- 260920 create-task MEM GEN GUIDE POST EXPORT QUOTA start (mem)
-- 260920 GEN r7 GUIDE r3 POST r8 EXPORT r3 QUOTA r13: the altitude rule, grounding bound to factual claims, the opt-in `[기억]` section, ①'s checkbox, ③'s extraction and the numbered photo marker (mem)
-- 260920 update-ssot GEN GUIDE POST EXPORT QUOTA start (mem)

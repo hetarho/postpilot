@@ -95,7 +95,7 @@ message PlanOffer {
 // The models behind a combo are named only for the operator's own screen; a comparison
 // names the combo (QUOTA-39).
 message EstimatorCombo {
-  // One of `quality` `balanced` `value` `cheapest`.
+  // One of the model levels `value` `balanced` `premium` `top`.
   string combo = 1;
   string observe_label = 2;
   string write_label = 3;
@@ -120,10 +120,10 @@ message GetMyPlanResponse {
 }
 
 message SetEstimatorComboRequest {
-  // One of `quality` `balanced` `value` `cheapest`.
+  // One of the model levels `value` `balanced` `premium` `top`.
   string combo = 1;
-  // Curated model ids. The observe model must be registered to `photo-analysis` and the
-  // write model to `writing`.
+  // Curated model ids. The observe model must be registered to `photo-analysis` at the
+  // combo's level and the write model to `writing` at the combo's level.
   string observe_model_id = 2;
   string write_model_id = 3;
 }

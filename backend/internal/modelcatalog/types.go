@@ -27,9 +27,9 @@ var (
 	ErrUnknownPurpose = errors.New("unknown purpose")
 	// ErrUnknownCombo is a combo name off the four the product has.
 	ErrUnknownCombo = errors.New("unknown estimator combo")
-	// ErrComboModelUnusable is a model that is not curated, or is curated but not
-	// registered to the purpose the combo needs it for.
-	ErrComboModelUnusable = errors.New("estimator combo model is not registered")
+	// ErrComboModelUnusable is a model that is not curated, is not registered to the
+	// purpose the combo needs, or whose purpose registration has another level.
+	ErrComboModelUnusable = errors.New("estimator combo model does not match the combo level")
 	// ErrPurposeIneligible: the model lacks the capability the purpose requires
 	// (photo-analysis needs vision; a generation purpose needs the matching output).
 	ErrPurposeIneligible = errors.New("model not capable of purpose")
@@ -121,7 +121,8 @@ func (p Purpose) EligibleFor(m Model) bool {
 // source reprices — a level computed from either would be wrong the week after it was
 // written. Free models get no level of their own: a $0 price already says free.
 //
-// It gates nothing (MODEL-58). Display and ordering only.
+// It gates estimator-combo assignment only (MODEL-58). Everywhere else it is display and
+// ordering metadata.
 type Level string
 
 const (
@@ -431,28 +432,35 @@ func ProviderSlugOf(modelID string) string {
 }
 
 // Combo is one estimator price tier: which model observes and which writes for it
-// (QUOTA-39). The four names are the product's, not the operator's, so a screen names the
-// tier while the operator names the models behind it.
-type Combo string
+// (QUOTA-39). It is deliberately a distinct type while its values come from Level — a combo
+// and a registration level are different facts, but they share one four-value vocabulary.
+type Combo Level
 
 const (
-	ComboQuality  Combo = "quality"
-	ComboBalanced Combo = "balanced"
-	ComboValue    Combo = "value"
-	ComboCheapest Combo = "cheapest"
+	ComboValue    Combo = Combo(LevelValue)
+	ComboBalanced Combo = Combo(LevelBalanced)
+	ComboPremium  Combo = Combo(LevelPremium)
+	ComboTop      Combo = Combo(LevelTop)
 )
 
-// Combos are the four tiers in ladder order, richest first.
-func Combos() []Combo { return []Combo{ComboQuality, ComboBalanced, ComboValue, ComboCheapest} }
+// Combos are the four model levels in the same ascending order every other surface uses.
+// Build the result from Levels so a future vocabulary change has one authority.
+func Combos() []Combo {
+	out := make([]Combo, 0, len(Levels))
+	for _, level := range Levels {
+		out = append(out, Combo(level))
+	}
+	return out
+}
 
 // Valid reports whether a wire value is one of the four.
 func (c Combo) Valid() bool {
-	switch c {
-	case ComboQuality, ComboBalanced, ComboValue, ComboCheapest:
-		return true
-	}
-	return false
+	level, err := ParseLevel(string(c))
+	return err == nil && level != ""
 }
+
+// Level is the registration level an assignment must match.
+func (c Combo) Level() Level { return Level(c) }
 
 // ComboAssignment is what the operator chose for one tier. Empty ids mean it has never been
 // assigned, which is a state the operator's screen shows rather than an error.

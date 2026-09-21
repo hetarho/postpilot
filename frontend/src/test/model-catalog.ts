@@ -154,9 +154,9 @@ export function registerModelCatalogService(
       fetchedAt: options.fetchFails ? '' : (options.fetchedAt ?? '2026-09-03T09:00:00Z'),
       fromCache: options.fromCache ?? false,
       fetchError: options.fetchFails ? 'the provider catalog could not be read' : '',
-      // All four in ladder order, the way the server answers, so an unassigned tier is a
+      // All four in model-level order, the way the server answers, so an unassigned tier is a
       // rendered state rather than a missing row.
-      estimatorCombos: ['quality', 'balanced', 'value', 'cheapest'].map((combo) => {
+      estimatorCombos: LEVEL_VALUES.map((combo) => {
         const assigned = combos.find((entry) => entry.combo === combo)
         return {
           combo,
@@ -345,11 +345,17 @@ export function registerModelCatalogService(
     if (options.comboWriteFails) {
       throw connectAppError('MODEL_NOT_REGISTERED', Code.FailedPrecondition)
     }
-    const registered = (modelId: string, purpose: string) =>
-      (entries.find((entry) => entry.modelId === modelId)?.purposes ?? []).includes(purpose)
+    const registeredAtLevel = (modelId: string, purpose: string) => {
+      const entry = entries.find((candidate) => candidate.modelId === modelId)
+      return (
+        (entry?.purposes ?? []).includes(purpose) &&
+        entry?.level?.[purpose] === req.combo &&
+        LEVEL_VALUES.includes(req.combo)
+      )
+    }
     if (
-      !registered(req.observeModelId, 'photo-analysis') ||
-      !registered(req.writeModelId, 'writing')
+      !registeredAtLevel(req.observeModelId, 'photo-analysis') ||
+      !registeredAtLevel(req.writeModelId, 'writing')
     ) {
       throw connectAppError('MODEL_NOT_REGISTERED', Code.FailedPrecondition)
     }

@@ -298,7 +298,7 @@ func TestSetEstimatorComboIsMasterOnlyAndMapsItsRefusals(t *testing.T) {
 
 	free := loginAs(t, authClient, "alice")
 	_, err := admin.SetEstimatorCombo(context.Background(), withCookie(&postpilotv1.SetEstimatorComboRequest{
-		Combo: "quality", ObserveModelId: "vendor/eyes", WriteModelId: "vendor/pen",
+		Combo: "top", ObserveModelId: "vendor/eyes", WriteModelId: "vendor/pen",
 	}, free))
 	if connect.CodeOf(err) != connect.CodePermissionDenied {
 		t.Fatalf("as free = %v, want permission_denied", err)
@@ -310,11 +310,11 @@ func TestSetEstimatorComboIsMasterOnlyAndMapsItsRefusals(t *testing.T) {
 	ctx := auth.WithActor(context.Background(), auth.Actor{UserID: "root", Plan: plan.Master})
 
 	if _, err := handler.SetEstimatorCombo(ctx, connect.NewRequest(&postpilotv1.SetEstimatorComboRequest{
-		Combo: "quality", ObserveModelId: "vendor/eyes", WriteModelId: "vendor/pen",
+		Combo: "top", ObserveModelId: "vendor/eyes", WriteModelId: "vendor/pen",
 	})); err != nil {
 		t.Fatalf("SetEstimatorCombo: %v", err)
 	}
-	if len(assigner.calls) != 1 || assigner.calls[0] != "quality:vendor/eyes/vendor/pen" {
+	if len(assigner.calls) != 1 || assigner.calls[0] != "top:vendor/eyes/vendor/pen" {
 		t.Errorf("assignments = %v", assigner.calls)
 	}
 
@@ -329,7 +329,7 @@ func TestSetEstimatorComboIsMasterOnlyAndMapsItsRefusals(t *testing.T) {
 	} {
 		assigner.err = tc.err
 		_, err := handler.SetEstimatorCombo(ctx, connect.NewRequest(&postpilotv1.SetEstimatorComboRequest{
-			Combo: "quality", ObserveModelId: "vendor/eyes", WriteModelId: "vendor/pen",
+			Combo: "top", ObserveModelId: "vendor/eyes", WriteModelId: "vendor/pen",
 		}))
 		if connect.CodeOf(err) != tc.code {
 			t.Errorf("%s code = %v, want %v", tc.name, connect.CodeOf(err), tc.code)
@@ -343,7 +343,7 @@ func TestSetEstimatorComboIsMasterOnlyAndMapsItsRefusals(t *testing.T) {
 	// An incomplete request never reaches the assigner.
 	before := len(assigner.calls)
 	if _, err := handler.SetEstimatorCombo(ctx, connect.NewRequest(&postpilotv1.SetEstimatorComboRequest{
-		Combo: "quality",
+		Combo: "top",
 	})); connect.CodeOf(err) != connect.CodeInvalidArgument {
 		t.Errorf("incomplete request = %v, want invalid_argument", err)
 	}

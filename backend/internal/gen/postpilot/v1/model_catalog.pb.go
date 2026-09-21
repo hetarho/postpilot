@@ -1055,8 +1055,8 @@ type ListCatalogResponse struct {
 	// Set when the live read failed. Entries then carry curated rows only, and no
 	// availability bookkeeping was written.
 	FetchError string `protobuf:"bytes,4,opt,name=fetch_error,json=fetchError,proto3" json:"fetch_error,omitempty"`
-	// All four estimator combos in ladder order, assigned or not, so the operator sees which
-	// price tier is still missing a model. The write is AdminService.SetEstimatorCombo.
+	// All four estimator combos in model-level order, assigned or not, so the operator sees
+	// which level is still missing a model. The write is AdminService.SetEstimatorCombo.
 	EstimatorCombos []*EstimatorComboAssignment `protobuf:"bytes,5,rep,name=estimator_combos,json=estimatorCombos,proto3" json:"estimator_combos,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache

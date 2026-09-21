@@ -619,8 +619,8 @@ export type ListCatalogResponse = Message<"postpilot.v1.ListCatalogResponse"> & 
   fetchError: string;
 
   /**
-   * All four estimator combos in ladder order, assigned or not, so the operator sees which
-   * price tier is still missing a model. The write is AdminService.SetEstimatorCombo.
+   * All four estimator combos in model-level order, assigned or not, so the operator sees
+   * which level is still missing a model. The write is AdminService.SetEstimatorCombo.
    *
    * @generated from field: repeated postpilot.v1.EstimatorComboAssignment estimator_combos = 5;
    */

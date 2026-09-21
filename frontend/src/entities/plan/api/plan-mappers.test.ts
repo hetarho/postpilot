@@ -60,7 +60,7 @@ describe('toMyPlan estimator combos', () => {
     const unknown = toMyPlan(
       create(GetMyPlanResponseSchema, {
         plan: ProtoPlan.FREE,
-        estimatorCombos: [{ combo: 'premium', perPostBaseMilli: 10 }],
+        estimatorCombos: [{ combo: 'legacy', perPostBaseMilli: 10 }],
       }),
     )
     expect(unknown?.estimatorCombos).toEqual([])

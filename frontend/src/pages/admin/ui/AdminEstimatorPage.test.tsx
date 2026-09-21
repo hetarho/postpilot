@@ -4,19 +4,27 @@ import userEvent from '@testing-library/user-event'
 import { ProtoPlan } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
 import { chooseOption } from '@/test/listbox'
+import type { FakeCatalogEntry } from '@/test/model-catalog'
 
 const MASTER = { id: 'root', plan: ProtoPlan.MASTER }
 
 /** Two models, each registered to exactly one of the stages a combo needs. */
-const COMBO_CATALOG = [
+const COMBO_CATALOG: FakeCatalogEntry[] = [
   {
     modelId: 'vendor/eyes',
     label: 'Eyes',
     vision: true,
     curated: true,
     purposes: ['photo-analysis'],
+    level: { 'photo-analysis': 'value' },
   },
-  { modelId: 'vendor/pen', label: 'Pen', curated: true, purposes: ['writing'] },
+  {
+    modelId: 'vendor/pen',
+    label: 'Pen',
+    curated: true,
+    purposes: ['writing'],
+    level: { writing: 'value' },
+  },
 ]
 
 describe('the estimator combos', () => {
@@ -34,7 +42,7 @@ describe('the estimator combos', () => {
     const section = within(await screen.findByRole('region', { name: '편수 기준 조합' }))
     const rows = section.getAllByRole('group')
     expect(rows).toHaveLength(4)
-    expect(within(rows[0]).getByRole('heading', { name: '품질' })).toBeInTheDocument()
+    expect(within(rows[0]).getByRole('heading', { name: '가성비' })).toBeInTheDocument()
     expect(
       within(rows[0]).getByText(
         '두 모델을 모두 고르기 전에는 플랜 화면에서 이 등급의 편수를 보여주지 않습니다.',
@@ -46,7 +54,7 @@ describe('the estimator combos', () => {
     expect(calls.filter((call) => call.startsWith('SetEstimatorCombo'))).toHaveLength(0)
 
     await chooseOption(user, within(rows[0]).getByRole('combobox', { name: /글 작성/ }), 'Pen')
-    await waitFor(() => expect(calls).toContain('SetEstimatorCombo:quality:vendor/eyes/vendor/pen'))
+    await waitFor(() => expect(calls).toContain('SetEstimatorCombo:value:vendor/eyes/vendor/pen'))
   })
 
   it('keeps an assignment the server refused out of the section and says so', async () => {
@@ -57,7 +65,7 @@ describe('the estimator combos', () => {
     })
 
     const section = within(await screen.findByRole('region', { name: '편수 기준 조합' }))
-    const row = within(section.getAllByRole('group')[1])
+    const row = within(section.getAllByRole('group')[0])
     await chooseOption(user, row.getByRole('combobox', { name: /사진 분석/ }), 'Eyes')
     await chooseOption(user, row.getByRole('combobox', { name: /글 작성/ }), 'Pen')
 
@@ -80,7 +88,7 @@ describe('the estimator combos', () => {
     const section = within(await screen.findByRole('region', { name: '편수 기준 조합' }))
     // The assignment arrives with the catalog read, so the row re-seeds once it lands.
     await section.findByRole('combobox', { name: /사진 분석 Eyes/ })
-    const row = within(section.getAllByRole('group')[2])
+    const row = within(section.getAllByRole('group')[0])
     expect(row.getByRole('heading', { name: '가성비' })).toBeInTheDocument()
     expect(row.getByRole('combobox', { name: /사진 분석 Eyes/ })).toBeInTheDocument()
     expect(row.getByRole('combobox', { name: /글 작성 Pen/ })).toBeInTheDocument()
@@ -89,5 +97,56 @@ describe('the estimator combos', () => {
         '두 모델을 모두 고르기 전에는 플랜 화면에서 이 등급의 편수를 보여주지 않습니다.',
       ),
     ).not.toBeInTheDocument()
+  })
+
+  it('offers only registrations carrying each card level for that picker purpose', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/admin/estimator', {
+      user: MASTER,
+      modelCatalog: {
+        entries: [
+          ...COMBO_CATALOG,
+          {
+            modelId: 'vendor/cross',
+            label: 'Cross-purpose',
+            vision: true,
+            curated: true,
+            purposes: ['photo-analysis', 'writing'],
+            level: { 'photo-analysis': 'value', writing: 'top' },
+          },
+          {
+            modelId: 'vendor/unlevelled',
+            label: 'Ungraded',
+            vision: true,
+            curated: true,
+            purposes: ['photo-analysis', 'writing'],
+          },
+        ],
+      },
+    })
+
+    const section = within(await screen.findByRole('region', { name: '편수 기준 조합' }))
+    const rows = section.getAllByRole('group')
+
+    await user.click(within(rows[0]).getByRole('combobox', { name: /사진 분석/ }))
+    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual([
+      '고르지 않음',
+      'Eyes',
+      'Cross-purpose',
+    ])
+    await user.keyboard('{Escape}')
+
+    await user.click(within(rows[0]).getByRole('combobox', { name: /글 작성/ }))
+    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual([
+      '고르지 않음',
+      'Pen',
+    ])
+    await user.keyboard('{Escape}')
+
+    await user.click(within(rows[3]).getByRole('combobox', { name: /글 작성/ }))
+    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual([
+      '고르지 않음',
+      'Cross-purpose',
+    ])
   })
 })

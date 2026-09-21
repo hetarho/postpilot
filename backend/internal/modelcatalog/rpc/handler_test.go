@@ -86,8 +86,11 @@ func curated() modelcatalog.Model {
 		Vision: true, StructuredOutput: true, ContextTokens: 400000,
 		InputUSDPerMillion: "1.25", OutputUSDPerMillion: "10",
 		Listed:   true,
-		Purposes: []modelcatalog.Purpose{modelcatalog.PurposeWriting},
-		Levels:   map[modelcatalog.Purpose]modelcatalog.Level{modelcatalog.PurposeWriting: modelcatalog.LevelPremium},
+		Purposes: []modelcatalog.Purpose{modelcatalog.PurposePhotoAnalysis, modelcatalog.PurposeWriting},
+		Levels: map[modelcatalog.Purpose]modelcatalog.Level{
+			modelcatalog.PurposePhotoAnalysis: modelcatalog.LevelPremium,
+			modelcatalog.PurposeWriting:       modelcatalog.LevelPremium,
+		},
 	}
 }
 
@@ -123,7 +126,7 @@ func TestListCatalogProjectsEveryCuratedFieldAndItsComboAssignments(t *testing.T
 	store := &fakeStore{
 		rows: map[string]modelcatalog.Model{"openai/gpt-5": curated()},
 		combos: []modelcatalog.ComboAssignment{{
-			Combo: modelcatalog.Combo("balanced"), ObserveModelID: "openai/gpt-5", WriteModelID: "openai/gpt-5",
+			Combo: modelcatalog.ComboPremium, ObserveModelID: "openai/gpt-5", WriteModelID: "openai/gpt-5",
 		}},
 	}
 	res, err := NewHandler(service(t, store)).ListCatalog(context.Background(),
@@ -146,7 +149,7 @@ func TestListCatalogProjectsEveryCuratedFieldAndItsComboAssignments(t *testing.T
 		t.Fatalf("pricing = %+v", entry)
 	}
 	if !entry.GetCurated() || entry.GetLevel() != string(modelcatalog.LevelPremium) ||
-		len(entry.GetPurposes()) != 1 {
+		len(entry.GetPurposes()) != 2 {
 		t.Fatalf("curation = %+v", entry)
 	}
 	// The estimator assignments ride this read so the operator's screen needs no second
@@ -155,7 +158,7 @@ func TestListCatalogProjectsEveryCuratedFieldAndItsComboAssignments(t *testing.T
 	for _, combo := range res.Msg.GetEstimatorCombos() {
 		assigned[combo.GetCombo()] = combo.GetWriteModelId()
 	}
-	if assigned["balanced"] != "openai/gpt-5" {
+	if assigned["premium"] != "openai/gpt-5" {
 		t.Fatalf("combos = %+v", res.Msg.GetEstimatorCombos())
 	}
 	if _, named := assigned["value"]; !named {

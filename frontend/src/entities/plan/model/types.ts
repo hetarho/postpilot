@@ -1,4 +1,5 @@
 import i18next from 'i18next'
+import { LEVELS, type LevelName } from '@/entities/model-catalog/@x/plan'
 
 /** The ladder, in order. A tier decides two things and no more: how many credits it is
  *  granted each month, and — for `master` alone — access to the operator-only surfaces.
@@ -57,11 +58,11 @@ export interface PlanOffer {
   recommended: boolean
 }
 
-/** The four price tiers a post estimate can be quoted at. The operator assigns the models
- *  behind each one; a screen names the tier (QUOTA-39). */
-export const ESTIMATOR_COMBOS = ['quality', 'balanced', 'value', 'cheapest'] as const
+/** The four model levels a post estimate can be quoted at. The operator assigns models
+ *  carrying the same per-purpose level behind each one (QUOTA-39). */
+export const ESTIMATOR_COMBOS = LEVELS
 
-export type EstimatorComboName = (typeof ESTIMATOR_COMBOS)[number]
+export type EstimatorComboName = LevelName
 
 /** One combo's unit costs in MILLI-credits — thousandths, so the arithmetic stays in
  *  integers. The server derives them from what its two models really charge (QUOTA-40) and

@@ -513,18 +513,17 @@ var _ llm.ModelSource = (*Service)(nil)
 
 // AssignCombo points one estimator combo at the two models that price it (QUOTA-39).
 //
-// Both must be curated AND registered to the purpose they serve: the estimate quotes what a
-// real run of that combo would cost, and a model no stage may run would be quoting a price
-// nothing can charge. The pair is written together, so a half-assigned combo is a client
-// state rather than a row.
+// Both must be curated, registered to the purpose they serve, AND carry this combo's level
+// on that registration: the estimate quotes what a real run of that level would cost. The
+// pair is written together, so a half-assigned combo is a client state rather than a row.
 func (s *Service) AssignCombo(ctx context.Context, combo Combo, observeModelID, writeModelID string) error {
 	if !combo.Valid() {
 		return fmt.Errorf("%w: %s", ErrUnknownCombo, combo)
 	}
-	if err := s.requireRegistered(ctx, observeModelID, PurposePhotoAnalysis); err != nil {
+	if err := s.requireComboModel(ctx, observeModelID, PurposePhotoAnalysis, combo); err != nil {
 		return err
 	}
-	if err := s.requireRegistered(ctx, writeModelID, PurposeWriting); err != nil {
+	if err := s.requireComboModel(ctx, writeModelID, PurposeWriting, combo); err != nil {
 		return err
 	}
 	assignment := ComboAssignment{Combo: combo, ObserveModelID: observeModelID, WriteModelID: writeModelID}
@@ -535,21 +534,32 @@ func (s *Service) AssignCombo(ctx context.Context, combo Combo, observeModelID, 
 	return nil
 }
 
-func (s *Service) requireRegistered(ctx context.Context, modelID string, purpose Purpose) error {
-	model, err := s.store.Get(ctx, modelID)
-	if errors.Is(err, ErrNotFound) {
-		return fmt.Errorf("%w: %s is not registered to %s", ErrComboModelUnusable, modelID, purpose)
-	}
+func (s *Service) requireComboModel(ctx context.Context, modelID string, purpose Purpose, combo Combo) error {
+	_, usable, err := s.comboModel(ctx, modelID, purpose, combo)
 	if err != nil {
-		return fmt.Errorf("read curated model: %w", err)
+		return err
 	}
-	if !slices.Contains(model.Purposes, purpose) {
-		return fmt.Errorf("%w: %s is not registered to %s", ErrComboModelUnusable, modelID, purpose)
+	if !usable {
+		return fmt.Errorf("%w: %s does not serve %s at %s", ErrComboModelUnusable, modelID, purpose, combo)
 	}
 	return nil
 }
 
-// Combos reads the operator's assignments for their own screen, all four in ladder order
+// comboModel is the one registration-and-level rule shared by writes and both reads. A
+// missing or stale registration is a normal false; a storage failure remains an error.
+func (s *Service) comboModel(ctx context.Context, modelID string, purpose Purpose, combo Combo) (Model, bool, error) {
+	model, err := s.store.Get(ctx, modelID)
+	if errors.Is(err, ErrNotFound) {
+		return Model{}, false, nil
+	}
+	if err != nil {
+		return Model{}, false, fmt.Errorf("read curated model: %w", err)
+	}
+	usable := slices.Contains(model.Purposes, purpose) && model.Levels[purpose] == combo.Level()
+	return model, usable, nil
+}
+
+// Combos reads the operator's assignments for their own screen, all four in model-level order
 // with the unassigned ones carrying empty ids.
 func (s *Service) Combos(ctx context.Context) ([]ComboAssignment, error) {
 	stored, err := s.store.ListCombos(ctx)
@@ -563,8 +573,18 @@ func (s *Service) Combos(ctx context.Context) ([]ComboAssignment, error) {
 	out := make([]ComboAssignment, 0, len(Combos()))
 	for _, combo := range Combos() {
 		if found, ok := byName[combo]; ok {
-			out = append(out, found)
-			continue
+			_, observeOK, observeErr := s.comboModel(ctx, found.ObserveModelID, PurposePhotoAnalysis, combo)
+			if observeErr != nil {
+				return nil, observeErr
+			}
+			_, writeOK, writeErr := s.comboModel(ctx, found.WriteModelID, PurposeWriting, combo)
+			if writeErr != nil {
+				return nil, writeErr
+			}
+			if observeOK && writeOK {
+				out = append(out, found)
+				continue
+			}
 		}
 		out = append(out, ComboAssignment{Combo: combo})
 	}
@@ -592,12 +612,18 @@ func (s *Service) ComboRates(ctx context.Context) ([]ComboRates, error) {
 		if !ok {
 			continue
 		}
-		observe, ok := s.priceable(ctx, assignment.ObserveModelID, PurposePhotoAnalysis)
-		if !ok {
+		observe, observeOK, observeErr := s.comboModel(ctx, assignment.ObserveModelID, PurposePhotoAnalysis, combo)
+		if observeErr != nil {
+			return nil, observeErr
+		}
+		if !observeOK || !priceable(observe) {
 			continue
 		}
-		write, ok := s.priceable(ctx, assignment.WriteModelID, PurposeWriting)
-		if !ok {
+		write, writeOK, writeErr := s.comboModel(ctx, assignment.WriteModelID, PurposeWriting, combo)
+		if writeErr != nil {
+			return nil, writeErr
+		}
+		if !writeOK || !priceable(write) {
 			continue
 		}
 		rates, ok := plan.EstimatorRates(pricerFor(observe), pricerFor(write))
@@ -614,17 +640,13 @@ func (s *Service) ComboRates(ctx context.Context) ([]ComboRates, error) {
 	return out, nil
 }
 
-func (s *Service) priceable(ctx context.Context, modelID string, purpose Purpose) (Model, bool) {
-	model, err := s.store.Get(ctx, modelID)
-	if err != nil || !slices.Contains(model.Purposes, purpose) {
-		return Model{}, false
-	}
+func priceable(model Model) bool {
 	// A model the provider stopped offering, or one with no published price, cannot be
 	// quoted: `listed = 0` is the catalog's own way of saying the run would fail.
 	if !model.Listed || model.InputUSDPerMillion == "" || model.OutputUSDPerMillion == "" {
-		return Model{}, false
+		return false
 	}
-	return model, true
+	return true
 }
 
 // pricerFor turns a curated row's published prices into the pricing function the plan

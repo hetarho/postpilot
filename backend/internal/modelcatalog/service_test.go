@@ -229,6 +229,14 @@ func priced(id string, in, out string, purposes ...modelcatalog.Purpose) modelca
 	return row
 }
 
+func atLevel(row modelcatalog.Model, purpose modelcatalog.Purpose, level modelcatalog.Level) modelcatalog.Model {
+	if row.Levels == nil {
+		row.Levels = map[modelcatalog.Purpose]modelcatalog.Level{}
+	}
+	row.Levels[purpose] = level
+	return row
+}
+
 func candidate(id string, created int64) modelcatalog.Candidate {
 	return modelcatalog.Candidate{
 		ModelID: id, ProviderSlug: modelcatalog.ProviderSlugOf(id), Label: id + " label",
@@ -1053,21 +1061,22 @@ func (f *fakeStore) AssignCombo(_ context.Context, a modelcatalog.ComboAssignmen
 	return nil
 }
 
-// QUOTA-39: a combo prices what a real run of it would cost, so both models must be
-// registered to the stage they serve. Assigning a writer as the observer is the mistake this
-// refusal exists for.
-func TestAssignCombo_RequiresBothModelsRegisteredForTheirStage(t *testing.T) {
+// QUOTA-39: a combo prices what a real run at one model level would cost, so both models must
+// be registered to the stage they serve at that exact level.
+func TestAssignCombo_RequiresBothModelsAtTheComboLevel(t *testing.T) {
 	store := newFakeStore(
-		priced("vendor/eyes", "0.30", "2.50", modelcatalog.PurposePhotoAnalysis),
-		priced("vendor/pen", "1.00", "10.00", modelcatalog.PurposeWriting),
+		atLevel(priced("vendor/eyes", "0.30", "2.50", modelcatalog.PurposePhotoAnalysis), modelcatalog.PurposePhotoAnalysis, modelcatalog.LevelValue),
+		atLevel(priced("vendor/pen", "1.00", "10.00", modelcatalog.PurposeWriting), modelcatalog.PurposeWriting, modelcatalog.LevelValue),
+		priced("vendor/unlevelled", "1.00", "10.00", modelcatalog.PurposeWriting),
+		atLevel(priced("vendor/top-pen", "1.00", "10.00", modelcatalog.PurposeWriting), modelcatalog.PurposeWriting, modelcatalog.LevelTop),
 	)
 	svc := newService(t, store, nil)
 	ctx := context.Background()
 
-	if err := svc.AssignCombo(ctx, modelcatalog.ComboQuality, "vendor/eyes", "vendor/pen"); err != nil {
+	if err := svc.AssignCombo(ctx, modelcatalog.ComboValue, "vendor/eyes", "vendor/pen"); err != nil {
 		t.Fatalf("AssignCombo: %v", err)
 	}
-	if err := svc.AssignCombo(ctx, "premium", "vendor/eyes", "vendor/pen"); !errors.Is(err, modelcatalog.ErrUnknownCombo) {
+	if err := svc.AssignCombo(ctx, "quality", "vendor/eyes", "vendor/pen"); !errors.Is(err, modelcatalog.ErrUnknownCombo) {
 		t.Errorf("unknown combo = %v, want ErrUnknownCombo", err)
 	}
 	// The writer cannot observe and the observer cannot write.
@@ -1080,29 +1089,53 @@ func TestAssignCombo_RequiresBothModelsRegisteredForTheirStage(t *testing.T) {
 	if err := svc.AssignCombo(ctx, modelcatalog.ComboValue, "vendor/ghost", "vendor/pen"); !errors.Is(err, modelcatalog.ErrComboModelUnusable) {
 		t.Errorf("uncurated model = %v, want ErrComboModelUnusable", err)
 	}
+	if err := svc.AssignCombo(ctx, modelcatalog.ComboValue, "vendor/eyes", "vendor/unlevelled"); !errors.Is(err, modelcatalog.ErrComboModelUnusable) {
+		t.Errorf("unlevelled writer = %v, want ErrComboModelUnusable", err)
+	}
+	if err := svc.AssignCombo(ctx, modelcatalog.ComboValue, "vendor/eyes", "vendor/top-pen"); !errors.Is(err, modelcatalog.ErrComboModelUnusable) {
+		t.Errorf("wrong-level writer = %v, want ErrComboModelUnusable", err)
+	}
 
-	// Combos reports all four so the operator sees which tier is still empty.
+	// Combos reports all four in model-level order so the operator sees which one is empty.
 	all, err := svc.Combos(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(all) != 4 || all[0].Combo != modelcatalog.ComboQuality || all[0].ObserveModelID != "vendor/eyes" {
+	if len(all) != 4 || all[0].Combo != modelcatalog.ComboValue || all[0].ObserveModelID != "vendor/eyes" {
 		t.Fatalf("combos = %+v", all)
 	}
 	if all[1].ObserveModelID != "" {
 		t.Errorf("balanced = %+v, want an empty assignment", all[1])
+	}
+
+	// A later relevel makes the stored assignment stale immediately without mutating it from
+	// this read. Both the operator projection and the priced plan projection omit it.
+	pen := store.rows["vendor/pen"]
+	pen.Levels[modelcatalog.PurposeWriting] = modelcatalog.LevelBalanced
+	store.rows[pen.ModelID] = pen
+	all, err = svc.Combos(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if all[0].ObserveModelID != "" || all[0].WriteModelID != "" {
+		t.Fatalf("relevelled assignment = %+v, want empty", all[0])
+	}
+	if rates, err := svc.ComboRates(ctx); err != nil || len(rates) != 0 {
+		t.Fatalf("rates after relevel = %+v err=%v, want none", rates, err)
 	}
 }
 
 // A combo whose model lost its registration, left the catalog or has no published price is
 // dropped from what a comparison screen is given rather than priced anyway.
 func TestComboRates_OmitsWhatCannotBeQuoted(t *testing.T) {
-	eyes := priced("vendor/eyes", "0.30", "2.50", modelcatalog.PurposePhotoAnalysis)
-	pen := priced("vendor/pen", "1.00", "10.00", modelcatalog.PurposeWriting)
-	freePen := priced("vendor/free-pen", "", "", modelcatalog.PurposeWriting)
-	goneEyes := priced("vendor/gone", "0.30", "2.50", modelcatalog.PurposePhotoAnalysis)
+	eyes := atLevel(priced("vendor/eyes", "0.30", "2.50", modelcatalog.PurposePhotoAnalysis), modelcatalog.PurposePhotoAnalysis, modelcatalog.LevelValue)
+	pen := atLevel(priced("vendor/pen", "1.00", "10.00", modelcatalog.PurposeWriting), modelcatalog.PurposeWriting, modelcatalog.LevelValue)
+	balancedEyes := atLevel(priced("vendor/balanced-eyes", "0.30", "2.50", modelcatalog.PurposePhotoAnalysis), modelcatalog.PurposePhotoAnalysis, modelcatalog.LevelBalanced)
+	freePen := atLevel(priced("vendor/free-pen", "", "", modelcatalog.PurposeWriting), modelcatalog.PurposeWriting, modelcatalog.LevelBalanced)
+	goneEyes := atLevel(priced("vendor/gone", "0.30", "2.50", modelcatalog.PurposePhotoAnalysis), modelcatalog.PurposePhotoAnalysis, modelcatalog.LevelPremium)
 	goneEyes.Listed = false
-	store := newFakeStore(eyes, pen, freePen, goneEyes)
+	premiumPen := atLevel(priced("vendor/premium-pen", "1.00", "10.00", modelcatalog.PurposeWriting), modelcatalog.PurposeWriting, modelcatalog.LevelPremium)
+	store := newFakeStore(eyes, pen, balancedEyes, freePen, goneEyes, premiumPen)
 	svc := newService(t, store, nil)
 	ctx := context.Background()
 
@@ -1110,9 +1143,9 @@ func TestComboRates_OmitsWhatCannotBeQuoted(t *testing.T) {
 		combo          modelcatalog.Combo
 		observe, write string
 	}{
-		{modelcatalog.ComboQuality, "vendor/eyes", "vendor/pen"},
-		{modelcatalog.ComboBalanced, "vendor/eyes", "vendor/free-pen"},
-		{modelcatalog.ComboValue, "vendor/gone", "vendor/pen"},
+		{modelcatalog.ComboValue, "vendor/eyes", "vendor/pen"},
+		{modelcatalog.ComboBalanced, "vendor/balanced-eyes", "vendor/free-pen"},
+		{modelcatalog.ComboPremium, "vendor/gone", "vendor/premium-pen"},
 	} {
 		if err := svc.AssignCombo(ctx, assignment.combo, assignment.observe, assignment.write); err != nil {
 			t.Fatalf("assign %s: %v", assignment.combo, err)
@@ -1123,8 +1156,8 @@ func TestComboRates_OmitsWhatCannotBeQuoted(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(priced) != 1 || priced[0].Combo != modelcatalog.ComboQuality {
-		t.Fatalf("priced combos = %+v, want only quality", priced)
+	if len(priced) != 1 || priced[0].Combo != modelcatalog.ComboValue {
+		t.Fatalf("priced combos = %+v, want only value", priced)
 	}
 	// The same figures plan_test pins, arriving through a real assignment.
 	rates := priced[0].Rates

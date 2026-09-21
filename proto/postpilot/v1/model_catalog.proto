@@ -246,8 +246,8 @@ message ListCatalogResponse {
   // Set when the live read failed. Entries then carry curated rows only, and no
   // availability bookkeeping was written.
   string fetch_error = 4;
-  // All four estimator combos in ladder order, assigned or not, so the operator sees which
-  // price tier is still missing a model. The write is AdminService.SetEstimatorCombo.
+  // All four estimator combos in model-level order, assigned or not, so the operator sees
+  // which level is still missing a model. The write is AdminService.SetEstimatorCombo.
   repeated EstimatorComboAssignment estimator_combos = 5;
 }
 

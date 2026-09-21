@@ -102,8 +102,8 @@ var _ postpilotv1connect.AdminServiceHandler = (*AdminHandler)(nil)
 // SetEstimatorCombo assigns the pair of models one combo is priced with (QUOTA-39).
 //
 // The refusals are the two the operator can act on: a combo name that is not one of the
-// four, and a model that is not registered to the purpose the combo needs it for. Both are
-// stated as reasons rather than as prose, so the client renders its own copy.
+// four levels, and a model that is not registered at that level for the purpose the combo
+// needs. Both are stated as reasons rather than as prose, so the client renders its own copy.
 func (h *AdminHandler) SetEstimatorCombo(ctx context.Context, req *connect.Request[postpilotv1.SetEstimatorComboRequest]) (*connect.Response[postpilotv1.SetEstimatorComboResponse], error) {
 	combo := req.Msg.GetCombo()
 	observe := req.Msg.GetObserveModelId()
@@ -119,7 +119,7 @@ func (h *AdminHandler) SetEstimatorCombo(ctx context.Context, req *connect.Reque
 			"unknown estimator combo", postpilotv1.FailureReason_COMBO_UNKNOWN, nil)
 	case errors.Is(err, ErrComboModelUnusable):
 		return nil, rpcserver.NewAppError(connect.CodeFailedPrecondition,
-			"the model is not registered for that stage", postpilotv1.FailureReason_MODEL_NOT_REGISTERED, nil)
+			"the model is not registered at the combo level for that stage", postpilotv1.FailureReason_MODEL_NOT_REGISTERED, nil)
 	case err != nil:
 		slog.Error("set estimator combo failed", "combo", combo, "err", err)
 		return nil, rpcserver.NewAppError(connect.CodeInternal,

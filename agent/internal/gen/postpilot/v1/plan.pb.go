@@ -326,7 +326,7 @@ func (x *PlanOffer) GetRecommended() bool {
 // names the combo (QUOTA-39).
 type EstimatorCombo struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// One of `quality` `balanced` `value` `cheapest`.
+	// One of the model levels `value` `balanced` `premium` `top`.
 	Combo                 string `protobuf:"bytes,1,opt,name=combo,proto3" json:"combo,omitempty"`
 	ObserveLabel          string `protobuf:"bytes,2,opt,name=observe_label,json=observeLabel,proto3" json:"observe_label,omitempty"`
 	WriteLabel            string `protobuf:"bytes,3,opt,name=write_label,json=writeLabel,proto3" json:"write_label,omitempty"`
@@ -528,10 +528,10 @@ func (x *GetMyPlanResponse) GetEstimatorCombos() []*EstimatorCombo {
 
 type SetEstimatorComboRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// One of `quality` `balanced` `value` `cheapest`.
+	// One of the model levels `value` `balanced` `premium` `top`.
 	Combo string `protobuf:"bytes,1,opt,name=combo,proto3" json:"combo,omitempty"`
-	// Curated model ids. The observe model must be registered to `photo-analysis` and the
-	// write model to `writing`.
+	// Curated model ids. The observe model must be registered to `photo-analysis` at the
+	// combo's level and the write model to `writing` at the combo's level.
 	ObserveModelId string `protobuf:"bytes,2,opt,name=observe_model_id,json=observeModelId,proto3" json:"observe_model_id,omitempty"`
 	WriteModelId   string `protobuf:"bytes,3,opt,name=write_model_id,json=writeModelId,proto3" json:"write_model_id,omitempty"`
 	unknownFields  protoimpl.UnknownFields

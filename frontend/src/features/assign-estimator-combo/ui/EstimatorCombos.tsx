@@ -1,9 +1,11 @@
 import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
+  LEVELS,
   useAdminCatalog,
   useAssignEstimatorCombo,
   type AdminCatalogEntry,
+  type LevelName,
 } from '@/entities/model-catalog'
 import {
   AppFailureMessage,
@@ -13,10 +15,6 @@ import {
   Typography,
   type ListboxOption,
 } from '@/shared/ui'
-
-/** The four estimator combos, richest first. The names are the product's (QUOTA-39) — the
- *  operator names the models behind each tier, not the tier itself. */
-const COMBOS = ['quality', 'balanced', 'value', 'cheapest'] as const
 
 /** Which models a comparison screen's post counts are priced with (QUOTA-39).
  *
@@ -31,13 +29,18 @@ const COMBOS = ['quality', 'balanced', 'value', 'cheapest'] as const
 export function EstimatorCombos() {
   const { t } = useTranslation('models')
   const titleId = useId()
-  // Any purpose serves: every entry carries its own registrations, and the purpose only
-  // decides which stage's reasoning annotations come with the row.
-  const { catalog, isPending, isError } = useAdminCatalog('photo-analysis')
+  // Level is per registration, so each picker needs the listing for its own purpose. Reading
+  // writing from the photo listing would apply the photo grade to a different registration.
+  const observe = useAdminCatalog('photo-analysis')
+  const write = useAdminCatalog('writing')
   const assign = useAssignEstimatorCombo()
 
-  const observers = catalog.entries.filter((entry) => entry.purposes.includes('photo-analysis'))
-  const writers = catalog.entries.filter((entry) => entry.purposes.includes('writing'))
+  const observers = observe.catalog.entries.filter((entry) =>
+    entry.purposes.includes('photo-analysis'),
+  )
+  const writers = write.catalog.entries.filter((entry) => entry.purposes.includes('writing'))
+  const isPending = observe.isPending || write.isPending
+  const isError = observe.isError || write.isError
 
   return (
     // Named so the section is a landmark an operator jumping by region can reach directly.
@@ -64,8 +67,8 @@ export function EstimatorCombos() {
 
       {!isError && (
         <div className="grid gap-4">
-          {COMBOS.map((combo) => {
-            const assigned = catalog.estimatorCombos.find((entry) => entry.combo === combo)
+          {LEVELS.map((combo) => {
+            const assigned = observe.catalog.estimatorCombos.find((entry) => entry.combo === combo)
             return (
               // The key carries the assignment, so a row re-seeds from the server after
               // every write rather than holding a draft that the store has moved past.
@@ -74,8 +77,8 @@ export function EstimatorCombos() {
                 combo={combo}
                 observeModelId={assigned?.observeModelId ?? ''}
                 writeModelId={assigned?.writeModelId ?? ''}
-                observers={observers}
-                writers={writers}
+                observers={observers.filter((entry) => entry.level === combo)}
+                writers={writers.filter((entry) => entry.level === combo)}
                 saving={assign.isPending}
                 loading={isPending}
                 onAssign={assign.assign}
@@ -98,7 +101,7 @@ function ComboRow({
   loading,
   onAssign,
 }: {
-  combo: (typeof COMBOS)[number]
+  combo: LevelName
   observeModelId: string
   writeModelId: string
   observers: readonly AdminCatalogEntry[]
@@ -133,7 +136,7 @@ function ComboRow({
     // inside it, and the page's one list is the catalog above.
     <div role="group" aria-labelledby={headingId} className="bg-surface-raised rounded-lg p-4">
       <Typography variant="fieldTitle" as="h3" id={headingId}>
-        {t(`combos.name.${combo}`)}
+        {t(`level.${combo}`)}
       </Typography>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <ComboPicker

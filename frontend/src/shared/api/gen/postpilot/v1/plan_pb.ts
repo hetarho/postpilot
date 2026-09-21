@@ -155,7 +155,7 @@ export const PlanOfferSchema: GenMessage<PlanOffer> = /*@__PURE__*/
  */
 export type EstimatorCombo = Message<"postpilot.v1.EstimatorCombo"> & {
   /**
-   * One of `quality` `balanced` `value` `cheapest`.
+   * One of the model levels `value` `balanced` `premium` `top`.
    *
    * @generated from field: string combo = 1;
    */
@@ -256,15 +256,15 @@ export const GetMyPlanResponseSchema: GenMessage<GetMyPlanResponse> = /*@__PURE_
  */
 export type SetEstimatorComboRequest = Message<"postpilot.v1.SetEstimatorComboRequest"> & {
   /**
-   * One of `quality` `balanced` `value` `cheapest`.
+   * One of the model levels `value` `balanced` `premium` `top`.
    *
    * @generated from field: string combo = 1;
    */
   combo: string;
 
   /**
-   * Curated model ids. The observe model must be registered to `photo-analysis` and the
-   * write model to `writing`.
+   * Curated model ids. The observe model must be registered to `photo-analysis` at the
+   * combo's level and the write model to `writing` at the combo's level.
    *
    * @generated from field: string observe_model_id = 2;
    */
