@@ -80,9 +80,9 @@ const (
 // unlimited, not a zero allowance: only master carries it, and master is never refused.
 var monthlyCredits = map[Plan]int{
 	Free:   50,
-	Basic:  220,
-	Pro:    575,
-	Max:    1200,
+	Basic:  330,
+	Pro:    1150,
+	Max:    2400,
 	Master: 0,
 }
 
@@ -97,9 +97,9 @@ var monthlyCredits = map[Plan]int{
 // Charging these figures is BILLING's, not this package's.
 var monthlyPriceUSDCents = map[Plan]int{
 	Free:  0,
-	Basic: 200,
-	Pro:   500,
-	Max:   1000,
+	Basic: 300,
+	Pro:   1000,
+	Max:   2000,
 }
 
 // What one unit of a post costs in TOKENS. A comparison screen's post count is proportional
@@ -192,6 +192,44 @@ type Rates struct {
 	PerPostBase  int
 }
 
+// EstimatorClipSourceSeconds is the disclosed length of each original video in the
+// plan comparison. The chosen duration is the finished clip, not its source footage.
+const EstimatorClipSourceSeconds = 60
+
+// ClipRates prices source observation, flow and narration. These are comparison
+// assumptions; execution still quotes and settles its actual work independently.
+type ClipRates struct {
+	PerSource       int
+	PerOutputSecond int
+	PerClipBase     int
+}
+
+func ClipEstimatorRates(observe, write Pricer) (ClipRates, bool) {
+	const observedTokens = 2_000
+	source, ok := observe(estimatorTokenAllowance(estimatorObservePromptTokens+EstimatorClipSourceSeconds*estimatorTokensPerVideoSec), estimatorTokenAllowance(observedTokens))
+	if !ok {
+		return ClipRates{}, false
+	}
+	// Both flow and narration consume the source observations.
+	context, ok := write(estimatorTokenAllowance(2*observedTokens), 0)
+	if !ok {
+		return ClipRates{}, false
+	}
+	prompts, ok := write(estimatorTokenAllowance(10_000+6_000), 0)
+	if !ok {
+		return ClipRates{}, false
+	}
+	output, ok := write(0, estimatorTokenAllowance(80))
+	if !ok {
+		return ClipRates{}, false
+	}
+	return ClipRates{
+		PerSource:       milliCredits(source) + milliCredits(context) + chargeBaseMilli,
+		PerOutputSecond: milliCredits(output),
+		PerClipBase:     milliCredits(prompts) + 2*chargeBaseMilli,
+	}, true
+}
+
 // EstimatorRates derives one combo's unit rates from what its two models charge.
 //
 // Each rate carries the call overhead it is responsible for. The write call belongs to every
@@ -205,23 +243,23 @@ type Rates struct {
 // False means a model published no usable price, and a combo that cannot be priced is not
 // published at all.
 func EstimatorRates(observe, write Pricer) (Rates, bool) {
-	observeShare, ok := observe(estimatorObservePromptTokens/estimatorObserveBatch, 0)
+	observeShare, ok := observe(estimatorTokenAllowance(estimatorObservePromptTokens/estimatorObserveBatch), 0)
 	if !ok {
 		return Rates{}, false
 	}
-	photoCost, ok := observe(estimatorTokensPerPhoto, estimatorObserveOutputPerItem)
+	photoCost, ok := observe(estimatorTokenAllowance(estimatorTokensPerPhoto), estimatorTokenAllowance(estimatorObserveOutputPerItem))
 	if !ok {
 		return Rates{}, false
 	}
-	videoCost, ok := observe(estimatorAssumedVideoSeconds*estimatorTokensPerVideoSec, estimatorObserveOutputPerItem)
+	videoCost, ok := observe(estimatorTokenAllowance(estimatorAssumedVideoSeconds*estimatorTokensPerVideoSec), estimatorTokenAllowance(estimatorObserveOutputPerItem))
 	if !ok {
 		return Rates{}, false
 	}
-	writePrompt, ok := write(estimatorWritePromptTokens, 0)
+	writePrompt, ok := write(estimatorTokenAllowance(estimatorWritePromptTokens), 0)
 	if !ok {
 		return Rates{}, false
 	}
-	charsCost, ok := write(0, 10*estimatorOutputTokensPer100Chars)
+	charsCost, ok := write(0, estimatorTokenAllowance(10*estimatorOutputTokensPer100Chars))
 	if !ok {
 		return Rates{}, false
 	}
@@ -234,6 +272,10 @@ func EstimatorRates(observe, write Pricer) (Rates, bool) {
 		PerPostBase:  milliCredits(writePrompt) + chargeBaseMilli,
 	}, true
 }
+
+// estimatorTokenAllowance budgets 50% more input/output tokens for AI revisions after
+// generation. It changes comparison estimates only, never reservations or ledger charges.
+func estimatorTokenAllowance(tokens int64) int64 { return (tokens*3 + 1) / 2 }
 
 // chargeBaseMilli is ChargeBase expressed in the same milli-credits the rates use.
 const chargeBaseMilli = ChargeBase * 1_000

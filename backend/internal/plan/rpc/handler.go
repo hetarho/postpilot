@@ -95,6 +95,7 @@ type EstimatorCombo struct {
 	PerVideoMilli     int
 	Per1000CharsMilli int
 	PerPostBaseMilli  int
+	ClipRates         *plan.ClipRates
 }
 
 // Estimator publishes the operator's priced combos (QUOTA-40). Declared here by its
@@ -170,6 +171,14 @@ func (h *Handler) GetMyPlan(ctx context.Context, _ *connect.Request[postpilotv1.
 		slog.Error("estimator combo read failed", "user_id", userID, "err", comboErr)
 	}
 	for _, combo := range priced {
+		var clipRates *postpilotv1.ClipEstimatorRates
+		if combo.ClipRates != nil {
+			clipRates = &postpilotv1.ClipEstimatorRates{
+				PerSourceMilli:       int32(combo.ClipRates.PerSource),
+				PerOutputSecondMilli: int32(combo.ClipRates.PerOutputSecond),
+				PerClipBaseMilli:     int32(combo.ClipRates.PerClipBase),
+			}
+		}
 		combos = append(combos, &postpilotv1.EstimatorCombo{
 			Combo:                 combo.Combo,
 			ObserveLabel:          combo.ObserveLabel,
@@ -178,13 +187,15 @@ func (h *Handler) GetMyPlan(ctx context.Context, _ *connect.Request[postpilotv1.
 			PerVideoMilli:         int32(combo.PerVideoMilli),
 			PerThousandCharsMilli: int32(combo.Per1000CharsMilli),
 			PerPostBaseMilli:      int32(combo.PerPostBaseMilli),
+			ClipRates:             clipRates,
 		})
 	}
 
 	return connect.NewResponse(&postpilotv1.GetMyPlanResponse{
-		Plan:            ToProto(acting),
-		Offers:          offers,
-		EstimatorCombos: combos,
+		Plan:              ToProto(acting),
+		Offers:            offers,
+		EstimatorCombos:   combos,
+		ClipSourceSeconds: plan.EstimatorClipSourceSeconds,
 		Balance: &postpilotv1.CreditBalance{
 			Credits:      int32(balance.Credits),
 			Unlimited:    balance.Unlimited,

@@ -169,7 +169,7 @@ describe('BillingPage', () => {
     expect(await screen.findByText('Pro')).toBeInTheDocument()
     expect(screen.getByText('월간')).toBeInTheDocument()
     expect(screen.getByText('매월 8일')).toBeInTheDocument()
-    expect(await screen.findByText(/오늘 기준 약 7,000원 · 변동/)).toBeInTheDocument()
+    expect(await screen.findByText(/오늘 기준 약 14,000원 · 변동/)).toBeInTheDocument()
     const history = screen.getByRole('heading', { name: '결제 및 지급 기록' }).parentElement
     const rows = within(history as HTMLElement).getAllByRole('listitem')
     expect(rows).toHaveLength(2)

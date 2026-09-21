@@ -68,6 +68,7 @@ func (e estimatorCombos) ComboRates(ctx context.Context) ([]planrpc.EstimatorCom
 			PerVideoMilli:     combo.Rates.PerVideo,
 			Per1000CharsMilli: combo.Rates.Per1000Chars,
 			PerPostBaseMilli:  combo.Rates.PerPostBase,
+			ClipRates:         combo.ClipRates,
 		})
 	}
 	return out, nil

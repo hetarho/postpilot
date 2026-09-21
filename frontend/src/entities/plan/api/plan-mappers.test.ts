@@ -69,3 +69,16 @@ describe('toMyPlan estimator combos', () => {
     expect(none?.estimatorCombos).toEqual([])
   })
 })
+
+it('preserves optional clip prices and the source assumption without inventing a free quote', () => {
+  const clipRates = { perSourceMilli: 1234, perOutputSecondMilli: 56, perClipBaseMilli: 7890 }
+  const mapped = toMyPlan(
+    create(GetMyPlanResponseSchema, {
+      clipSourceSeconds: 60,
+      estimatorCombos: [{ combo: 'value', clipRates }, { combo: 'balanced' }],
+    }),
+  )
+  expect(mapped?.clipSourceSeconds).toBe(60)
+  expect(mapped?.estimatorCombos[0].clipRates).toEqual(clipRates)
+  expect(mapped?.estimatorCombos[1].clipRates).toBeUndefined()
+})

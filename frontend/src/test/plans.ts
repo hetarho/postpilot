@@ -55,7 +55,13 @@ export interface FakePlansOptions {
     perVideoMilli?: number
     perThousandCharsMilli?: number
     perPostBaseMilli?: number
+    clipRates?: {
+      perSourceMilli: number
+      perOutputSecondMilli: number
+      perClipBaseMilli: number
+    } | null
   }>
+  clipSourceSeconds?: number
   /** Make GetMyPlan fail. */
   planFails?: boolean
   /** The accounts the admin screen lists. */
@@ -76,6 +82,7 @@ export function registerPlanServices(router: ConnectRouter, options: FakePlansOp
     if (options.planFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
     return create(GetMyPlanResponseSchema, {
       plan: options.plan ?? ProtoPlan.MASTER,
+      clipSourceSeconds: options.clipSourceSeconds ?? 60,
       balance: {
         credits: options.balance?.credits ?? 0,
         // The session fake signs in as master, whose balance is not a number at all.
@@ -93,9 +100,9 @@ export function registerPlanServices(router: ConnectRouter, options: FakePlansOp
       // what the server would actually send.
       offers: options.offers ?? [
         { plan: ProtoPlan.FREE, monthlyCredits: 50, priceUsdCents: 0 },
-        { plan: ProtoPlan.BASIC, monthlyCredits: 220, priceUsdCents: 200 },
-        { plan: ProtoPlan.PRO, monthlyCredits: 575, priceUsdCents: 500, recommended: true },
-        { plan: ProtoPlan.MAX, monthlyCredits: 1200, priceUsdCents: 1000 },
+        { plan: ProtoPlan.BASIC, monthlyCredits: 330, priceUsdCents: 300 },
+        { plan: ProtoPlan.PRO, monthlyCredits: 1150, priceUsdCents: 1000, recommended: true },
+        { plan: ProtoPlan.MAX, monthlyCredits: 2400, priceUsdCents: 2000 },
       ],
       // The rates plan_test pins for a $0.30/$2.50 observer and a $1.00/$10.00 writer.
       estimatorCombos: (options.estimatorCombos ?? [{ combo: 'value' }, { combo: 'balanced' }]).map(
@@ -103,10 +110,18 @@ export function registerPlanServices(router: ConnectRouter, options: FakePlansOp
           combo: combo.combo,
           observeLabel: combo.observeLabel ?? 'vendor/eyes',
           writeLabel: combo.writeLabel ?? 'vendor/pen',
-          perPhotoMilli: combo.perPhotoMilli ?? 723,
-          perVideoMilli: combo.perVideoMilli ?? 1100,
-          perThousandCharsMilli: combo.perThousandCharsMilli ?? 3600,
-          perPostBaseMilli: combo.perPostBaseMilli ?? 3800,
+          perPhotoMilli: combo.perPhotoMilli ?? 835,
+          perVideoMilli: combo.perVideoMilli ?? 1399,
+          perThousandCharsMilli: combo.perThousandCharsMilli ?? 5400,
+          perPostBaseMilli: combo.perPostBaseMilli ?? 4700,
+          clipRates:
+            combo.clipRates === null
+              ? undefined
+              : (combo.clipRates ?? {
+                  perSourceMilli: 8750,
+                  perOutputSecondMilli: 360,
+                  perClipBaseMilli: 11200,
+                }),
         }),
       ),
     })

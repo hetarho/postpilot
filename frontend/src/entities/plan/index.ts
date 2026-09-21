@@ -2,6 +2,7 @@ export * from './config'
 export type {
   CreditBalance,
   CreditLot,
+  ClipEstimatorRates,
   EstimatorCombo,
   EstimatorComboName,
   MyPlan,
@@ -15,9 +16,12 @@ export {
   PLANS,
   isPlanName,
   planLabel,
+  clipCostMilli,
+  clipsPerGrant,
   postCostMilli,
   postsAffordable,
   postsPerGrant,
+  subscriptionBonus,
 } from './model/types'
 export { planFromProto, planToProto, toPlanAccount } from './api/plan-mappers'
 export { myPlanQueryKey, useMyPlanQueryKey, useMyPlan } from './api/useMyPlan'

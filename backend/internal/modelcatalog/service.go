@@ -630,11 +630,18 @@ func (s *Service) ComboRates(ctx context.Context) ([]ComboRates, error) {
 		if !ok {
 			continue
 		}
+		var clipRates *plan.ClipRates
+		if observe.VideoInput && observe.StructuredOutput && write.StructuredOutput {
+			if quoted, ok := plan.ClipEstimatorRates(pricerFor(observe), pricerFor(write)); ok {
+				clipRates = &quoted
+			}
+		}
 		out = append(out, ComboRates{
 			Combo:        combo,
 			ObserveLabel: observe.Label,
 			WriteLabel:   write.Label,
 			Rates:        rates,
+			ClipRates:    clipRates,
 		})
 	}
 	return out, nil

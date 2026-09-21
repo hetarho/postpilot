@@ -1,7 +1,8 @@
+import { clipCostMilli, clipsPerGrant, subscriptionBonus } from './types'
 import { describe, expect, it } from 'vitest'
 import { postCostMilli, postsPerGrant, type EstimatorCombo } from './types'
 
-/** The rates `plan_test.go` pins: a $0.30/$2.50 observer and a $1.00/$10.00 writer. */
+/** Arbitrary published rates: the client multiplies without owning token assumptions. */
 const RATES: EstimatorCombo = {
   combo: 'balanced',
   observeLabel: 'vendor/eyes',
@@ -43,5 +44,50 @@ describe('postsPerGrant', () => {
   // Zero is what a screen must state in words rather than render as "about 0 posts".
   it('answers zero when the grant cannot cover one post', () => {
     expect(postsPerGrant(3, RATES, { chars: 1000, photos: 5, videos: 0 })).toBe(0)
+  })
+})
+
+describe('subscriptionBonus', () => {
+  it('compares the published grant with the same at-par purchase instead of tier names', () => {
+    expect(
+      subscriptionBonus({
+        plan: 'basic',
+        monthlyCredits: 480,
+        priceUsdCents: 400,
+        recommended: false,
+      }),
+    ).toEqual({ credits: 80, percent: 20 })
+    expect(
+      subscriptionBonus({ plan: 'free', monthlyCredits: 50, priceUsdCents: 0, recommended: false }),
+    ).toBeUndefined()
+    expect(
+      subscriptionBonus({
+        plan: 'pro',
+        monthlyCredits: 100,
+        priceUsdCents: 100,
+        recommended: false,
+      }),
+    ).toBeUndefined()
+  })
+})
+
+describe('clip estimates', () => {
+  const rates = { perSourceMilli: 8750, perOutputSecondMilli: 360, perClipBaseMilli: 11200 }
+  it('prices original count independently from finished seconds and floors the result', () => {
+    expect(clipCostMilli(rates, { sources: 3, seconds: 30 })).toBe(48250)
+    expect(clipCostMilli(rates, { sources: 4, seconds: 30 })).toBe(57000)
+    expect(clipCostMilli(rates, { sources: 3, seconds: 60 })).toBe(59050)
+    expect(clipsPerGrant(330, rates, { sources: 3, seconds: 30 })).toBe(6)
+    expect(clipsPerGrant(50, rates, { sources: 3, seconds: 60 })).toBe(0)
+  })
+  it('never refunds negative inputs or divides by zero', () => {
+    expect(clipCostMilli(rates, { sources: -2, seconds: -30 })).toBe(11200)
+    expect(
+      clipsPerGrant(
+        50,
+        { perSourceMilli: 0, perOutputSecondMilli: 0, perClipBaseMilli: 0 },
+        { sources: 3, seconds: 30 },
+      ),
+    ).toBe(0)
   })
 })

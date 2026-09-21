@@ -147,7 +147,7 @@ export function registerBillingService(router: ConnectRouter, options: FakeBilli
   router.rpc(BillingService.method.quotePrice, (request) => {
     calls?.push('QuotePrice')
     const monthly =
-      request.plan === ProtoPlan.BASIC ? 200 : request.plan === ProtoPlan.MAX ? 1000 : 500
+      request.plan === ProtoPlan.BASIC ? 300 : request.plan === ProtoPlan.MAX ? 2000 : 1000
     const usdCents = request.term === ProtoTerm.ANNUAL ? monthly * 10 : monthly
     return create(QuotePriceResponseSchema, {
       usdCents,
@@ -159,9 +159,9 @@ export function registerBillingService(router: ConnectRouter, options: FakeBilli
   router.rpc(BillingService.method.quoteChange, (request) => {
     calls?.push('QuoteChange')
     const monthly =
-      request.plan === ProtoPlan.BASIC ? 200 : request.plan === ProtoPlan.MAX ? 1000 : 500
+      request.plan === ProtoPlan.BASIC ? 300 : request.plan === ProtoPlan.MAX ? 2000 : 1000
     const currentMonthly =
-      currentPlan === ProtoPlan.BASIC ? 200 : currentPlan === ProtoPlan.MAX ? 1000 : 500
+      currentPlan === ProtoPlan.BASIC ? 300 : currentPlan === ProtoPlan.MAX ? 2000 : 1000
     const appliedNow =
       planRank(request.plan) > planRank(currentPlan) && request.term === currentTerm
     const usdCents = appliedNow ? Math.max(0, monthly - currentMonthly) : monthly

@@ -1,8 +1,14 @@
 import type { ComponentType, ReactNode } from 'react'
 import { clsx } from 'clsx'
-import { Crown, Leaf, Rocket, Sparkles, Zap } from 'lucide-react'
+import { Check, Crown, Gift, Leaf, Rocket, Sparkles, Zap } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { planLabel, type PlanName, type PlanOffer } from '@/entities/plan'
+import {
+  planLabel,
+  subscriptionBonus,
+  type EstimatorComboName,
+  type PlanName,
+  type PlanOffer,
+} from '@/entities/plan'
 import { PROMO_COUNT_UP_MS, PROMO_RISE_STAGGER_MS } from '../config'
 import { Badge, PromoFrame, PromoText, Typography } from '@/shared/ui'
 import { useCountUp } from '../model/useCountUp'
@@ -33,7 +39,7 @@ const TIER_ICON: Record<PlanName, ComponentType<{ className?: string }>> = {
 export function PlanLadder({
   offers,
   currentPlan,
-  estimate,
+  estimates,
   action,
   headingLevel = 'h2',
   className,
@@ -41,8 +47,8 @@ export function PlanLadder({
   offers: readonly PlanOffer[]
   /** The rung the reader is on, which is named and offered no action. */
   currentPlan?: PlanName
-  /** How many posts of the reader's case a rung's grant buys; `undefined` shows no estimate. */
-  estimate?: (offer: PlanOffer) => number | undefined
+  /** Model-level capacities for the chosen conditions. Omitted on the public about page. */
+  estimates?: (offer: PlanOffer) => readonly PlanEstimate[]
   /** The rung's action, or nothing. The caller owns what an action is and where it leads. */
   action?: (offer: PlanOffer) => ReactNode
   /** The outline level the tier names take: `h2` on `/plans`, whose title is the page's `h1`;
@@ -58,7 +64,7 @@ export function PlanLadder({
             offer={offer}
             index={index}
             current={offer.plan === currentPlan}
-            posts={estimate?.(offer)}
+            estimates={estimates?.(offer)}
             action={action?.(offer)}
             headingLevel={headingLevel}
           />
@@ -85,7 +91,7 @@ function PlanCard({
   offer,
   index,
   current,
-  posts,
+  estimates,
   action,
   headingLevel,
 }: {
@@ -93,13 +99,14 @@ function PlanCard({
   /** The rung's position, which sets how long after the first it rises into place. */
   index: number
   current: boolean
-  posts: number | undefined
+  estimates: readonly PlanEstimate[] | undefined
   action: ReactNode
   headingLevel: 'h2' | 'h3'
 }) {
   const { t } = useTranslation('plans')
   const Icon = TIER_ICON[offer.plan ?? 'free']
   const priced = offer.priceUsdCents > 0
+  const bonus = subscriptionBonus(offer)
 
   return (
     <PromoFrame
@@ -116,9 +123,9 @@ function PlanCard({
               it wears — so the card opens with one violet mark and nothing competing for it. */}
           <span
             aria-hidden="true"
-            className="bg-badge-accent-bg text-badge-accent-fg inline-flex size-10 shrink-0 items-center justify-center rounded-full"
+            className="bg-badge-accent-bg text-badge-accent-fg inline-flex size-12 shrink-0 items-center justify-center rounded-full"
           >
-            <Icon className="size-5" />
+            <Icon className="size-6" />
           </span>
           {current && <Badge tone="accent">{t('compare.current')}</Badge>}
           {!current && offer.recommended && <Badge tone="accent">{t('compare.recommended')}</Badge>}
@@ -138,29 +145,64 @@ function PlanCard({
             </Typography>
           )}
         </p>
-        {posts !== undefined && <PostEstimate posts={posts} />}
+        {estimates && (
+          <dl className="border-divider divide-divider mt-5 divide-y border-y">
+            {estimates.map((estimate) => (
+              <ModelEstimate key={`${estimate.kind}-${estimate.level}`} estimate={estimate} />
+            ))}
+          </dl>
+        )}
         <Typography variant="body" className="text-content-secondary mt-3 block">
           {t('compare.monthlyCredits', { credits: offer.monthlyCredits })}
         </Typography>
+        {bonus && (
+          <div className="bg-badge-accent-bg text-badge-accent-fg mt-4 rounded-lg px-3 py-3">
+            <Typography variant="fieldTitle" as="p" className="flex items-center gap-2">
+              <Gift aria-hidden="true" className="size-4 shrink-0" />
+              {t('benefits.extra', { credits: bonus.credits })}
+            </Typography>
+            <Typography variant="body" className="mt-1">
+              {t('benefits.percent', { percent: bonus.percent })}
+            </Typography>
+          </div>
+        )}
+        <div className="mt-5 space-y-2">
+          <Typography variant="body" className="text-content-secondary flex items-center gap-2">
+            <Check aria-hidden="true" className="text-badge-accent-fg size-4 shrink-0" />
+            {t('benefits.models')}
+          </Typography>
+          <Typography variant="body" className="text-content-secondary flex items-center gap-2">
+            <Check aria-hidden="true" className="text-badge-accent-fg size-4 shrink-0" />
+            {t(priced ? 'benefits.renewal' : 'benefits.free')}
+          </Typography>
+        </div>
         {action && <div className="mt-auto pt-5">{action}</div>}
       </div>
     </PromoFrame>
   )
 }
 
-/** The card's own headline once a case is set — what THIS grant buys of the reader's post — on
- *  the accent plate so the four figures line up as the row a reader actually compares. The count
- *  climbs to its new value as a slider moves rather than flickering through replacements. */
-function PostEstimate({ posts }: { posts: number }) {
+interface PlanEstimate {
+  level: EstimatorComboName
+  kind: 'blog' | 'clip'
+  count: number | undefined
+}
+
+function ModelEstimate({ estimate }: { estimate: PlanEstimate }) {
   const { t } = useTranslation('plans')
-  const shown = useCountUp(posts, PROMO_COUNT_UP_MS)
+  const shown = useCountUp(estimate.count ?? 0, PROMO_COUNT_UP_MS)
   return (
-    <Typography
-      variant="fieldTitle"
-      as="p"
-      className="bg-badge-accent-bg text-badge-accent-fg mt-4 rounded-md px-3 py-2 tabular-nums"
-    >
-      {shown > 0 ? t('estimator.posts', { count: shown }) : t('estimator.tooSmall')}
-    </Typography>
+    <div className="py-3">
+      <Typography variant="meta" as="dt" className="text-content-secondary">
+        {t('estimator.model', { level: t(`estimator.combos.${estimate.level}`) })}
+      </Typography>
+      <Typography variant="label" as="dd" className="text-badge-accent-fg mt-1 tabular-nums">
+        {estimate.count === undefined
+          ? t(estimate.kind === 'clip' ? 'estimator.clipUnavailable' : 'estimator.unavailable')
+          : estimate.count === 0
+            ? t('estimator.tooSmall')
+            : t(estimate.kind === 'clip' ? 'estimator.clips' : 'estimator.posts', { count: shown })}
+      </Typography>
+    </div>
   )
 }

@@ -34,7 +34,7 @@ describe('BillingCheckoutPage', () => {
     })
 
     await waitFor(() => expect(calls).toContain('QuoteChange'))
-    expect(await screen.findByText('$5.00 · 7,000원')).toBeInTheDocument()
+    expect(await screen.findByText('$10.00 · 14,000원')).toBeInTheDocument()
     expect(screen.getByText('지금 결제되는 업그레이드 금액입니다.')).toBeInTheDocument()
     expect(screen.queryByRole('tab', { name: '연간' })).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '지금 결제하고 업그레이드' }))
@@ -54,11 +54,11 @@ describe('BillingCheckoutPage', () => {
     })
 
     expect(await screen.findByRole('heading', { name: 'Pro' })).toBeInTheDocument()
-    expect(screen.getByText('매달 575 크레딧')).toBeInTheDocument()
-    expect(screen.getByText('$5.00 · 7,000원')).toBeInTheDocument()
+    expect(screen.getByText('매달 1150 크레딧')).toBeInTheDocument()
+    expect(screen.getByText('$10.00 · 14,000원')).toBeInTheDocument()
     await user.click(screen.getByRole('tab', { name: '연간' }))
     expect(screen.getByText('12개월에 10개월 요금')).toBeInTheDocument()
-    expect(await screen.findByText('$50.00 · 70,000원')).toBeInTheDocument()
+    expect(await screen.findByText('$100.00 · 140,000원')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '결제하고 구독하기' }))
     await waitFor(() => expect(router.state.location.pathname).toBe('/billing'))

@@ -19,7 +19,16 @@ import { startAurora } from './aurora'
  *  a still aurora rather than a blank panel. It is one of the three promotional primitives and,
  *  like `PromoFrame`, it is named for the exemption it carries: a reviewer who sees `PromoStage`
  *  under an ordinary list has found the exception spreading, not a new pattern. */
-export function PromoStage({ children, className }: { children: ReactNode; className?: string }) {
+export function PromoStage({
+  children,
+  className,
+  viewport = false,
+}: {
+  children?: ReactNode
+  className?: string
+  /** The authenticated plans shell owns this fixed, edge-to-edge backdrop. */
+  viewport?: boolean
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [live, setLive] = useState(false)
   const grainId = useId()
@@ -38,14 +47,25 @@ export function PromoStage({ children, className }: { children: ReactNode; class
   }, [])
 
   return (
-    <div className={twMerge('relative isolate rounded-xl p-4 sm:p-6', className)}>
+    <div
+      data-promo-stage={viewport ? 'viewport' : 'panel'}
+      className={twMerge(
+        viewport
+          ? 'pointer-events-none fixed inset-0 isolate -z-10'
+          : 'relative isolate rounded-xl p-4 sm:p-6',
+        className,
+      )}
+    >
       <div
         aria-hidden="true"
         data-promo-aurora=""
         // The panel's own plane is one step below the page, so the cards on `surface-raised`
         // read as standing on a stage, and the clip is on THIS layer rather than the root so a
         // marked card's halo and scale step are not cut at the panel's edge.
-        className="bg-surface-recessed pointer-events-none absolute inset-0 -z-10 overflow-hidden rounded-xl"
+        className={twMerge(
+          'bg-surface-recessed pointer-events-none absolute inset-0 -z-10 overflow-hidden',
+          !viewport && 'rounded-xl',
+        )}
       >
         <div className="bg-promo-aurora-1 animate-aurora-1 absolute -top-1/4 -left-1/6 size-2/3 rounded-full opacity-45 blur-3xl" />
         <div className="bg-promo-aurora-2 animate-aurora-2 absolute top-1/4 -right-1/4 size-2/3 rounded-full opacity-40 blur-3xl" />

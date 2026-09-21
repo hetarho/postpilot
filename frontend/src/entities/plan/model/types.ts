@@ -76,6 +76,13 @@ export interface EstimatorCombo {
   perVideoMilli: number
   perThousandCharsMilli: number
   perPostBaseMilli: number
+  clipRates?: ClipEstimatorRates
+}
+
+export interface ClipEstimatorRates {
+  perSourceMilli: number
+  perOutputSecondMilli: number
+  perClipBaseMilli: number
 }
 
 export interface MyPlan {
@@ -85,6 +92,7 @@ export interface MyPlan {
   /** The combos the operator has assigned and the server could price. Empty means a
    *  comparison shows grants and prices with no post estimate. */
   estimatorCombos: EstimatorCombo[]
+  clipSourceSeconds: number
 }
 
 /** How many posts a balance covers at a given per-post estimate. It is deliberately a
@@ -126,9 +134,42 @@ export function postsPerGrant(
   return Math.floor((monthlyCredits * 1000) / costMilli)
 }
 
+/** Clip conditions describe original count and FINISHED duration. Original duration is
+ * assumed by the server and is already included in the per-source rate. */
+export function clipCostMilli(
+  rates: ClipEstimatorRates,
+  input: { sources: number; seconds: number },
+): number {
+  return (
+    rates.perClipBaseMilli +
+    Math.max(0, input.sources) * rates.perSourceMilli +
+    Math.max(0, input.seconds) * rates.perOutputSecondMilli
+  )
+}
+
+export function clipsPerGrant(
+  monthlyCredits: number,
+  rates: ClipEstimatorRates,
+  input: { sources: number; seconds: number },
+): number {
+  const cost = clipCostMilli(rates, input)
+  return cost > 0 ? Math.floor((monthlyCredits * 1000) / cost) : 0
+}
+
 /** One account as the operator screen sees it. */
 export interface PlanAccount {
   id: string
   plan: PlanName | undefined
   createdAt: string
+}
+
+/** Top-ups are at par: one credit per USD cent (QUOTA-34). Compare an offer with
+ * the same spend, so changing the server's ladder also changes its advertised bonus. */
+export function subscriptionBonus(
+  offer: PlanOffer,
+): { credits: number; percent: number } | undefined {
+  if (offer.priceUsdCents <= 0) return undefined
+  const credits = offer.monthlyCredits - offer.priceUsdCents
+  if (credits <= 0) return undefined
+  return { credits, percent: Math.round((credits * 100) / offer.priceUsdCents) }
 }

@@ -477,4 +477,5 @@ type ComboRates struct {
 	ObserveLabel string
 	WriteLabel   string
 	Rates        plan.Rates
+	ClipRates    *plan.ClipRates
 }

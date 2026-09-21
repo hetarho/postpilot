@@ -1161,7 +1161,7 @@ func TestComboRates_OmitsWhatCannotBeQuoted(t *testing.T) {
 	}
 	// The same figures plan_test pins, arriving through a real assignment.
 	rates := priced[0].Rates
-	if rates.PerPhoto != 723 || rates.PerVideo != 1100 || rates.Per1000Chars != 3600 || rates.PerPostBase != 3800 {
+	if rates.PerPhoto != 835 || rates.PerVideo != 1399 || rates.Per1000Chars != 5400 || rates.PerPostBase != 4700 {
 		t.Errorf("rates = %+v", rates)
 	}
 	if priced[0].ObserveLabel != "vendor/eyes" || priced[0].WriteLabel != "vendor/pen" {
@@ -1285,5 +1285,40 @@ func TestBrowse_ReportsTheListedPurposesLevel(t *testing.T) {
 		if !found {
 			t.Fatalf("%s tab did not list the model", tc.purpose)
 		}
+	}
+}
+
+func TestComboClipRatesRequireVideoAndStructuredModels(t *testing.T) {
+	for _, tc := range []struct {
+		name                                                string
+		video, observeStructured, writeStructured, wantClip bool
+	}{
+		{"compatible", true, true, true, true},
+		{"photo only", false, true, true, false},
+		{"unstructured observer", true, false, true, false},
+		{"unstructured writer", true, true, false, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			eyes := atLevel(priced("vendor/eyes", "0.30", "2.50", modelcatalog.PurposePhotoAnalysis), modelcatalog.PurposePhotoAnalysis, modelcatalog.LevelValue)
+			pen := atLevel(priced("vendor/pen", "1.00", "10.00", modelcatalog.PurposeWriting), modelcatalog.PurposeWriting, modelcatalog.LevelValue)
+			eyes.VideoInput, eyes.StructuredOutput = tc.video, tc.observeStructured
+			pen.StructuredOutput = tc.writeStructured
+			svc := newService(t, newFakeStore(eyes, pen), nil)
+			ctx := context.Background()
+			if err := svc.AssignCombo(ctx, modelcatalog.ComboValue, eyes.ModelID, pen.ModelID); err != nil {
+				t.Fatal(err)
+			}
+			rates, err := svc.ComboRates(ctx)
+			if err != nil || len(rates) != 1 {
+				t.Fatalf("blog estimate lost: %+v %v", rates, err)
+			}
+			clip := rates[0].ClipRates
+			if (clip != nil) != tc.wantClip {
+				t.Fatalf("clip rates = %+v, want present=%v", clip, tc.wantClip)
+			}
+			if clip != nil && (clip.PerSource != 8750 || clip.PerOutputSecond != 360 || clip.PerClipBase != 11200) {
+				t.Fatalf("wrong assigned-model prices: %+v", clip)
+			}
+		})
 	}
 }

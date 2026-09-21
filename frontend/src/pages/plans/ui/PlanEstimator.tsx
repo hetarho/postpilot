@@ -1,96 +1,62 @@
 import { useTranslation } from 'react-i18next'
-import type { EstimatorCombo, EstimatorComboName } from '@/entities/plan'
-import { PLAN_ESTIMATE_BOUNDS } from '../config'
-import { PromoFrame, SegmentedControl, Slider, Typography } from '@/shared/ui'
-import type { EstimateInput } from '../model/estimate-input'
+import { CLIP_ESTIMATE_BOUNDS, PLAN_ESTIMATE_BOUNDS } from '../config'
+import { Slider, Typography } from '@/shared/ui'
+import type { ClipEstimateInput, EstimateInput, EstimateKind } from '../model/estimate-input'
 
-/** The three sliders and the combo switch above the rungs.
- *
- *  Every rung's post count is derived from these three numbers and the selected combo's
- *  published rates, so the control belongs above the list it changes rather than inside any
- *  one card.
- *
- *  Nothing here asks the server: the rates arrived with GetMyPlan and the page multiplies
- *  (QUOTA-40), which is what lets a slider answer while it is being dragged. */
+/** Conditions for ONE finished item. Capacity comparisons stay in the plan cards. */
 export function PlanEstimator({
-  combos,
-  combo,
+  kind,
   input,
-  onComboChange,
+  clipInput,
+  sourceSeconds,
   onInputChange,
+  onClipInputChange,
 }: {
-  combos: readonly EstimatorCombo[]
-  combo: EstimatorComboName | undefined
+  kind: EstimateKind
   input: EstimateInput
-  onComboChange: (combo: EstimatorComboName) => void
+  clipInput: ClipEstimateInput
+  sourceSeconds: number
   onInputChange: (input: EstimateInput) => void
+  onClipInputChange: (input: ClipEstimateInput) => void
 }) {
   const { t } = useTranslation('plans')
-
   return (
-    // The estimator wears the same stroke as the rungs it prices: it is one promotional
-    // surface, and a plain panel above four framed cards would read as a different screen. The
-    // caller's stage supplies the spacing above it.
-    <PromoFrame>
-      <Typography variant="title" as="h2">
-        {t('estimator.title')}
+    <div className="grid gap-6">
+      <Typography variant="body" className="text-content-secondary">
+        {t(kind === 'blog' ? 'estimator.description' : 'estimator.clipDescription')}
       </Typography>
-      <Typography variant="body" className="text-content-secondary max-w-measure mt-1 block">
-        {t('estimator.description')}
-      </Typography>
-
-      <div className="mt-4 grid gap-4 md:grid-cols-3">
-        <Slider
-          label={t('estimator.chars')}
-          value={input.chars}
-          min={PLAN_ESTIMATE_BOUNDS.chars.min}
-          max={PLAN_ESTIMATE_BOUNDS.chars.max}
-          step={PLAN_ESTIMATE_BOUNDS.chars.step}
-          valueText={t('estimator.charsValue', { count: input.chars })}
-          onChange={(chars) => onInputChange({ ...input, chars })}
-        />
-        <Slider
-          label={t('estimator.photos')}
-          value={input.photos}
-          min={PLAN_ESTIMATE_BOUNDS.photos.min}
-          max={PLAN_ESTIMATE_BOUNDS.photos.max}
-          step={PLAN_ESTIMATE_BOUNDS.photos.step}
-          valueText={t('estimator.photosValue', { count: input.photos })}
-          onChange={(photos) => onInputChange({ ...input, photos })}
-        />
-        <Slider
-          label={t('estimator.videos')}
-          value={input.videos}
-          min={PLAN_ESTIMATE_BOUNDS.videos.min}
-          max={PLAN_ESTIMATE_BOUNDS.videos.max}
-          step={PLAN_ESTIMATE_BOUNDS.videos.step}
-          valueText={t('estimator.videosValue', { count: input.videos })}
-          onChange={(videos) => onInputChange({ ...input, videos })}
-        />
-      </div>
-
-      {combo !== undefined && combos.length > 0 ? (
-        <div className="mt-4">
-          <Typography variant="label" as="p" className="mb-1 block">
-            {t('estimator.combo')}
-          </Typography>
-          <SegmentedControl
-            ariaLabel={t('estimator.combo')}
-            value={combo}
-            options={combos.map((assigned) => ({
-              value: assigned.combo,
-              label: t(`estimator.combos.${assigned.combo}`),
-            }))}
-            onChange={onComboChange}
-          />
-        </div>
+      {kind === 'blog' ? (
+        <>
+          {(['chars', 'photos', 'videos'] as const).map((field) => (
+            <Slider
+              key={field}
+              label={t(`estimator.${field}`)}
+              value={input[field]}
+              {...PLAN_ESTIMATE_BOUNDS[field]}
+              valueText={t(`estimator.${field}Value`, { count: input[field] })}
+              onChange={(value) => onInputChange({ ...input, [field]: value })}
+            />
+          ))}
+        </>
       ) : (
-        // No combo assigned is an operator state, not a failure: the rungs still say what
-        // they grant, and nothing pretends to know what that buys.
-        <Typography variant="meta" role="status" className="text-content-tertiary mt-4 block">
-          {t('estimator.unset')}
-        </Typography>
+        <>
+          {(['sources', 'seconds'] as const).map((field) => (
+            <Slider
+              key={field}
+              label={t(`estimator.${field}`)}
+              value={clipInput[field]}
+              {...CLIP_ESTIMATE_BOUNDS[field]}
+              valueText={t(`estimator.${field}Value`, { count: clipInput[field] })}
+              onChange={(value) => onClipInputChange({ ...clipInput, [field]: value })}
+            />
+          ))}
+          {sourceSeconds > 0 && (
+            <Typography variant="meta" className="text-content-secondary">
+              {t('estimator.sourceAssumption', { seconds: sourceSeconds })}
+            </Typography>
+          )}
+        </>
       )}
-    </PromoFrame>
+    </div>
   )
 }

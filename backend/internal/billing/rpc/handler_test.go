@@ -141,7 +141,7 @@ func TestBillingHandlerReturnsTheContractQuoteWithoutDerivingItInTheTransport(t 
 	if err != nil {
 		t.Fatal(err)
 	}
-	if response.Msg.GetUsdCents() != 2000 || response.Msg.GetKrw() != 27850 || response.Msg.GetKrwPerUsdE4() != 13925000 || response.Msg.GetRateDate() == "" {
+	if response.Msg.GetUsdCents() != 3000 || response.Msg.GetKrw() != 41775 || response.Msg.GetKrwPerUsdE4() != 13925000 || response.Msg.GetRateDate() == "" {
 		t.Fatalf("quote = %+v", response.Msg)
 	}
 }
@@ -160,7 +160,7 @@ func TestBillingHandlerMapsAnUpgradeQuote(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if response.Msg.GetUsdCents() != 800 || response.Msg.GetKrw() != 11_140 || !response.Msg.GetAppliedNow() || response.Msg.GetEffectiveAt() == "" {
+	if response.Msg.GetUsdCents() != 1700 || response.Msg.GetKrw() != 23_673 || !response.Msg.GetAppliedNow() || response.Msg.GetEffectiveAt() == "" {
 		t.Fatalf("quote = %+v", response.Msg)
 	}
 }

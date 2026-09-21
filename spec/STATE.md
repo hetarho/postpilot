@@ -49,7 +49,7 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T300 | Blog and clip plan estimates | QUOTA | - | doing@260921.est |
+| T300 | Blog and clip plan estimates | QUOTA | - | todo |
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
 | T279 | every hand-kept enum mirror is pinned to the generated enum | ARCH | T008 | todo |
@@ -58,10 +58,12 @@
 | T284 | the agent generates only the protos it uses and drops the survey harness | ARCH | T008 T281 | todo |
 
 ## next
+- T300 is a user-requested WIP checkpoint: implementation saved, verification incomplete; resume only when requested
 - create-task CDS CLIP THEME for the Wanted Sans delta — the code already carries it, so the task verifies and records rather than implements
 - remaining tasks wait on T008 (another session) or remain blocked at T177
 - follow-up: group-directory mobile headings duplicate the group row, and the clip release smoke still needs a fix task
 ## log
+- 260921 T300 WIP checkpoint requested; stopped verification, released claim to todo, and deferred any additional live billing price work per user (est)
 - 260921 T300 created from QUOTA r17 and claimed (est)
 - 260921 create-task QUOTA start (est)
 - 260921 QUOTA r17: per-item condition editor and four simultaneous blog/clip estimates; finished clip length selected, original sources assume 60 seconds each; THEME needs no new exception (est)

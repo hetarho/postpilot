@@ -103,6 +103,16 @@ message EstimatorCombo {
   int32 per_video_milli = 5;
   int32 per_thousand_chars_milli = 6;
   int32 per_post_base_milli = 7;
+  // Absent when this pair cannot price video observation and structured writing.
+  ClipEstimatorRates clip_rates = 8;
+}
+
+// A clip costs base + sources * per_source + finished_seconds * per_output_second.
+// Includes observation, flow, narration and the 1.5x token allowance (QUOTA-57).
+message ClipEstimatorRates {
+  int32 per_source_milli = 1;
+  int32 per_output_second_milli = 2;
+  int32 per_clip_base_milli = 3;
 }
 
 message GetMyPlanRequest {}
@@ -117,6 +127,8 @@ message GetMyPlanResponse {
   // when the models behind them are no longer curated — a comparison then shows the grants
   // with no post estimate rather than a figure nobody stands behind.
   repeated EstimatorCombo estimator_combos = 4;
+  // Assumed duration of EACH original video, independent of finished clip length.
+  int32 clip_source_seconds = 5;
 }
 
 message SetEstimatorComboRequest {

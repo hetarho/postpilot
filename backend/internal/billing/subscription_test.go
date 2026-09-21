@@ -72,10 +72,10 @@ func TestSubscribeWritesAnchorChargeTierAndMonthlyLot(t *testing.T) {
 	if !window.start.Equal(now) || !window.end.Equal(subscription.NextGrantAt) || window.tier != plan.Pro {
 		t.Fatalf("window = %+v", window)
 	}
-	if len(provider.requests) != 1 || provider.requests[0].KRW != 69_625 || provider.requests[0].OrderID != "sub:alice:2026-01-31" {
+	if len(provider.requests) != 1 || provider.requests[0].KRW != 139_250 || provider.requests[0].OrderID != "sub:alice:2026-01-31" {
 		t.Fatalf("charge requests = %+v", provider.requests)
 	}
-	if kinds(store.events) != "charge,tier_change" || store.events[0].USDCents == nil || *store.events[0].USDCents != 5_000 {
+	if kinds(store.events) != "charge,tier_change" || store.events[0].USDCents == nil || *store.events[0].USDCents != 10_000 {
 		t.Fatalf("events = %+v", store.events)
 	}
 }

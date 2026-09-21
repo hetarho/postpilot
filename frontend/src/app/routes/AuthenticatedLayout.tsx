@@ -1,7 +1,8 @@
 import { Link, Outlet, useMatches, useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useSession } from '@/entities/session'
-import { Logo } from '@/shared/ui'
+import { Logo, PromoStage } from '@/shared/ui'
+import { clsx } from 'clsx'
 import { AccountMenu } from '@/widgets/account-menu'
 import { CreditBadge } from '@/widgets/credit-badge'
 import { InterfacePreferences } from '@/widgets/interface-preferences'
@@ -24,6 +25,9 @@ export function AuthenticatedLayout() {
   const current = useMatches({
     select: (matches) => currentDestination(matches.map((m) => m.routeId)),
   })
+  const immersive = useMatches({
+    select: (matches) => matches.some((m) => m.pathname === '/plans'),
+  })
   const destinations: NavDestination[] = DESTINATIONS.filter(
     (d) => !d.masterOnly || user?.plan === 'master',
   ).map((d) => ({
@@ -37,11 +41,20 @@ export function AuthenticatedLayout() {
   )
 
   return (
-    <div className="bg-surface-base text-content-primary flex min-h-full flex-col">
+    <div
+      data-plans-shell={immersive || undefined}
+      className="bg-surface-base text-content-primary relative isolate flex min-h-full flex-col"
+    >
+      {immersive && <PromoStage viewport />}
       <header className="sm:min-h-header sm:sticky sm:top-0 sm:z-20">
         {/* A wrapping cluster preserves every digit and the 44 px controls at 320 px.
             There is only one balance, theme, locale and account at any width. */}
-        <div className="bg-surface-raised sm:min-h-bar lg:min-h-header flex min-h-14 flex-wrap items-center justify-between gap-x-2 px-4 py-2 sm:px-6 sm:py-1 lg:py-0">
+        <div
+          className={clsx(
+            'sm:min-h-bar lg:min-h-header flex min-h-14 flex-wrap items-center justify-between gap-x-2 px-4 py-2 sm:px-6 sm:py-1 lg:py-0',
+            immersive ? 'bg-surface-raised/70 backdrop-blur-xl' : 'bg-surface-raised',
+          )}
+        >
           <Link
             to="/posts"
             className="inline-flex min-h-11 shrink-0 items-center px-2"
@@ -63,14 +76,22 @@ export function AuthenticatedLayout() {
         {/* The laptop's primary band. It is chrome, so it runs edge to edge on its own plane and
             scrolls horizontally rather than crushing its targets. */}
         <nav
-          className="bg-surface-lowest sm:h-primaryrow hidden items-center gap-1 overflow-x-auto overscroll-x-contain px-4 sm:flex sm:px-6 lg:hidden"
+          className={clsx(
+            'sm:h-primaryrow hidden items-center gap-1 overflow-x-auto overscroll-x-contain px-4 sm:flex sm:px-6 lg:hidden',
+            immersive ? 'bg-surface-lowest/70 backdrop-blur-xl' : 'bg-surface-lowest',
+          )}
           aria-label={t('primary')}
         >
           {primary('header')}
         </nav>
       </header>
       <div className="flex flex-1 flex-col lg:flex-row">
-        <aside className="bg-surface-lowest lg:top-header lg:h-sidebar hidden shrink-0 lg:sticky lg:flex lg:w-52 lg:flex-col lg:overflow-y-auto lg:px-3 lg:py-4">
+        <aside
+          className={clsx(
+            'lg:top-header lg:h-sidebar hidden shrink-0 lg:sticky lg:flex lg:w-52 lg:flex-col lg:overflow-y-auto lg:px-3 lg:py-4',
+            immersive ? 'bg-surface-lowest/70 backdrop-blur-xl' : 'bg-surface-lowest',
+          )}
+        >
           <nav className="flex flex-col gap-2" aria-label={t('primary')}>
             {primary('rail')}
           </nav>
@@ -80,7 +101,10 @@ export function AuthenticatedLayout() {
         </div>
       </div>
       <nav
-        className="bg-surface-raised pb-safe-b fixed inset-x-0 bottom-0 z-30 flex gap-2 shadow-lg sm:hidden"
+        className={clsx(
+          'pb-safe-b fixed inset-x-0 bottom-0 z-30 flex gap-2 shadow-lg sm:hidden',
+          immersive ? 'bg-surface-raised/70 backdrop-blur-xl' : 'bg-surface-raised',
+        )}
         aria-label={t('primary')}
       >
         {primary('phone')}

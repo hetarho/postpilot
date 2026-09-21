@@ -46,7 +46,7 @@ func TestChangeSubscriptionClassifiesAndChargesOnlyUpgrades(t *testing.T) {
 		service := newSubscriptionService(store, provider, now)
 
 		quote, err := service.QuoteChange(ctx, "alice", plan.Pro, TermMonthly)
-		if err != nil || !quote.AppliedNow || quote.USDCents != 300 || !quote.EffectiveAt.Equal(now) {
+		if err != nil || !quote.AppliedNow || quote.USDCents != 700 || !quote.EffectiveAt.Equal(now) {
 			t.Fatalf("quote = %+v, err=%v", quote, err)
 		}
 		updated, appliedNow, err := service.ChangeSubscription(ctx, "alice", plan.Pro, TermMonthly)
@@ -56,10 +56,10 @@ func TestChangeSubscriptionClassifiesAndChargesOnlyUpgrades(t *testing.T) {
 		if !appliedNow || updated.Tier != plan.Pro || updated.ScheduledTier != nil || updated.ScheduledTerm != nil {
 			t.Fatalf("updated = %+v applied=%v", updated, appliedNow)
 		}
-		if len(provider.requests) != 1 || provider.requests[0].OrderID != "upg:alice:2026-06-14T03:00:00Z" || provider.requests[0].KRW != 4_178 {
+		if len(provider.requests) != 1 || provider.requests[0].OrderID != "upg:alice:2026-06-14T03:00:00Z" || provider.requests[0].KRW != 9_748 {
 			t.Fatalf("requests = %+v", provider.requests)
 		}
-		if kinds(store.events) != "charge,tier_change" || len(store.credits.raises) != 1 || store.credits.raises[0] != 355 || store.plans.tiers["alice"] != plan.Pro {
+		if kinds(store.events) != "charge,tier_change" || len(store.credits.raises) != 1 || store.credits.raises[0] != 820 || store.plans.tiers["alice"] != plan.Pro {
 			t.Fatalf("events=%s raises=%v tier=%s", kinds(store.events), store.credits.raises, store.plans.tiers["alice"])
 		}
 
@@ -67,7 +67,7 @@ func TestChangeSubscriptionClassifiesAndChargesOnlyUpgrades(t *testing.T) {
 		if _, _, err := service.ChangeSubscription(ctx, "alice", plan.Max, TermMonthly); err != nil {
 			t.Fatal(err)
 		}
-		if got := *store.events[2].USDCents; got != 500 {
+		if got := *store.events[2].USDCents; got != 1000 {
 			t.Fatalf("second upgrade cents = %d", got)
 		}
 	})
@@ -132,12 +132,12 @@ func TestUpgradeChargesTheMonthsStillToRunAtTheTermsOwnUnitPrice(t *testing.T) {
 		{
 			name: "mid-term counts the running month whole",
 			term: TermAnnual, termEnd: annualEnd, now: time.Date(2026, 6, 14, 23, 0, 0, 0, seoul),
-			wantCents: 2_000,
+			wantCents: 4_666,
 		},
 		{
 			name: "an anchor boundary belongs to the window it opens",
 			term: TermAnnual, termEnd: annualEnd, now: time.Date(2026, 6, 15, 0, 0, 0, 0, seoul),
-			wantCents: 1_750,
+			wantCents: 4_083,
 		},
 		{
 			name: "the last window is charged for one month, never nothing",
@@ -202,7 +202,7 @@ func TestScheduledChangesReplaceCancelAndApplyAtTermEnd(t *testing.T) {
 	service := newSubscriptionService(store, provider, now)
 
 	quote, err := service.QuoteChange(ctx, "alice", plan.Basic, TermMonthly)
-	if err != nil || quote.AppliedNow || !quote.EffectiveAt.Equal(termEnd) || quote.USDCents != 200 {
+	if err != nil || quote.AppliedNow || !quote.EffectiveAt.Equal(termEnd) || quote.USDCents != 300 {
 		t.Fatalf("scheduled quote=%+v err=%v", quote, err)
 	}
 	updated, applied, err := service.ChangeSubscription(ctx, "alice", plan.Basic, TermMonthly)
@@ -231,7 +231,7 @@ func TestScheduledChangesReplaceCancelAndApplyAtTermEnd(t *testing.T) {
 	if landed.Tier != plan.Basic || landed.Term != TermMonthly || landed.ScheduledTier != nil || landed.ScheduledTerm != nil || store.plans.tiers["alice"] != plan.Basic {
 		t.Fatalf("landed=%+v assigned=%s", landed, store.plans.tiers["alice"])
 	}
-	if len(provider.requests) != 1 || provider.requests[0].KRW != 2_785 || kinds(store.events) != "change_scheduled,change_scheduled,change_scheduled,charge,tier_change" {
+	if len(provider.requests) != 1 || provider.requests[0].KRW != 4_178 || kinds(store.events) != "change_scheduled,change_scheduled,change_scheduled,charge,tier_change" {
 		t.Fatalf("requests=%+v events=%s", provider.requests, kinds(store.events))
 	}
 }

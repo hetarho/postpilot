@@ -66,9 +66,9 @@ const COPY = {
  *  the test states the numbers rather than reading them from anywhere. */
 const PLANS = [
   { name: 'Free', credits: /\b50\b/, price: /무료|Free/ },
-  { name: 'Basic', credits: /\b220\b/, price: '$2' },
-  { name: 'Pro', credits: /\b575\b/, price: '$5' },
-  { name: 'Max', credits: /\b1200\b/, price: '$10' },
+  { name: 'Basic', credits: /\b330\b/, price: '$3' },
+  { name: 'Pro', credits: /\b1150\b/, price: '$10' },
+  { name: 'Max', credits: /\b2400\b/, price: '$20' },
 ] as const
 
 afterEach(() => {

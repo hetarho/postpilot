@@ -8,6 +8,7 @@ import {
 import {
   ESTIMATOR_COMBOS,
   type CreditBalance,
+  type ClipEstimatorRates,
   type CreditLot,
   type EstimatorCombo,
   type EstimatorComboName,
@@ -86,6 +87,7 @@ function toCombo(combo: {
   perVideoMilli: number
   perThousandCharsMilli: number
   perPostBaseMilli: number
+  clipRates?: ClipEstimatorRates
 }): EstimatorCombo | undefined {
   if (!(ESTIMATOR_COMBOS as readonly string[]).includes(combo.combo)) return undefined
   return {
@@ -96,6 +98,13 @@ function toCombo(combo: {
     perVideoMilli: combo.perVideoMilli,
     perThousandCharsMilli: combo.perThousandCharsMilli,
     perPostBaseMilli: combo.perPostBaseMilli,
+    ...(combo.clipRates && {
+      clipRates: {
+        perSourceMilli: combo.clipRates.perSourceMilli,
+        perOutputSecondMilli: combo.clipRates.perOutputSecondMilli,
+        perClipBaseMilli: combo.clipRates.perClipBaseMilli,
+      },
+    }),
   }
 }
 
@@ -104,6 +113,7 @@ export function toMyPlan(response: GetMyPlanResponse | undefined): MyPlan | unde
   return {
     plan: planFromProto(response.plan),
     balance: toBalance(response.balance),
+    clipSourceSeconds: response.clipSourceSeconds,
     // A tier this build cannot name is dropped rather than rendered as unknown: an offer
     // nobody can identify is not something to put a price next to.
     offers: (response.offers ?? []).map(toOffer).filter((offer) => offer.plan !== undefined),

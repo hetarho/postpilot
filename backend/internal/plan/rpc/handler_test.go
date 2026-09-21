@@ -23,7 +23,10 @@ func (stubLedger) BalanceFor(context.Context, string, plan.Plan) (planrpc.Balanc
 
 // stubEstimator publishes one priced combo, the way an operator who has assigned `top`
 // and nothing else leaves the catalog.
-type stubEstimator struct{ err error }
+type stubEstimator struct {
+	err       error
+	clipRates *plan.ClipRates
+}
 
 func (s stubEstimator) ComboRates(context.Context) ([]planrpc.EstimatorCombo, error) {
 	if s.err != nil {
@@ -32,6 +35,7 @@ func (s stubEstimator) ComboRates(context.Context) ([]planrpc.EstimatorCombo, er
 	return []planrpc.EstimatorCombo{{
 		Combo: "top", ObserveLabel: "vendor/eyes", WriteLabel: "vendor/pen",
 		PerPhotoMilli: 723, PerVideoMilli: 1100, Per1000CharsMilli: 3600, PerPostBaseMilli: 3800,
+		ClipRates: s.clipRates,
 	}}, nil
 }
 
@@ -96,5 +100,23 @@ func TestGetMyPlanSurvivesAnEstimatorFailure(t *testing.T) {
 	}
 	if len(msg.EstimatorCombos) != 0 {
 		t.Errorf("combos = %+v, want none", msg.EstimatorCombos)
+	}
+}
+
+func TestGetMyPlanPublishesOptionalClipRatesAndSourceAssumption(t *testing.T) {
+	msg := getMyPlanWith(t, plan.Basic, stubEstimator{clipRates: &plan.ClipRates{PerSource: 7654, PerOutputSecond: 123, PerClipBase: 4321}})
+	got := msg.EstimatorCombos[0].ClipRates
+	if got == nil || got.PerSourceMilli != 7654 || got.PerOutputSecondMilli != 123 || got.PerClipBaseMilli != 4321 {
+		t.Fatalf("clip rates lost at transport: %+v", got)
+	}
+	without := getMyPlan(t, plan.Basic)
+	if without.EstimatorCombos[0].ClipRates != nil {
+		t.Fatal("missing clip rate became a zero-cost quote")
+	}
+	failed := getMyPlanWith(t, plan.Basic, stubEstimator{err: errors.New("no catalog")})
+	for _, response := range []*postpilotv1.GetMyPlanResponse{msg, without, failed} {
+		if response.ClipSourceSeconds != plan.EstimatorClipSourceSeconds {
+			t.Fatalf("source assumption lost: %d", response.ClipSourceSeconds)
+		}
 	}
 }

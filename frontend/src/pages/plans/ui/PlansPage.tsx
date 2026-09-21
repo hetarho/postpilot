@@ -1,25 +1,32 @@
 import { Link } from '@tanstack/react-router'
 import { useState } from 'react'
+import { Check, SlidersHorizontal, Sparkles, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import {
+  clipsPerGrant,
+  ESTIMATOR_COMBOS,
   postsPerGrant,
   PLANS,
   useMyPlan,
-  type EstimatorComboName,
   type PlanOffer,
 } from '@/entities/plan'
 import { billablePlan, useMyBilling } from '@/entities/subscription'
 import { ScheduledChangeButton } from '@/features/manage-subscription'
 import {
+  ActionBar,
+  Badge,
+  Button,
   Notice,
-  PromoStage,
+  PromoText,
+  Sheet,
+  SegmentedControl,
   Typography,
   buttonStyles,
   pageStyles,
   typographyStyles,
 } from '@/shared/ui'
 import { PlanLadder } from '@/widgets/plan-ladder'
-import { firstCombo, useEstimateInput } from '../model/estimate-input'
+import { useClipEstimateInput, useEstimateInput, type EstimateKind } from '../model/estimate-input'
 import { PlanEstimator } from './PlanEstimator'
 
 /** The plan comparison and the place a subscription starts (QUOTA-28). Composition
@@ -39,14 +46,10 @@ export function PlansPage() {
   const { myPlan, isPending, isError } = useMyPlan()
   const { myBilling } = useMyBilling()
   const [input, setInput] = useEstimateInput()
-  const [chosen, setChosen] = useState<EstimatorComboName | undefined>(undefined)
-
+  const [estimatorOpen, setEstimatorOpen] = useState(false)
+  const [kind, setKind] = useState<EstimateKind>('blog')
+  const [clipInput, setClipInput] = useClipEstimateInput()
   const combos = myPlan?.estimatorCombos ?? []
-  // The reader's choice while it is still assigned, otherwise the first tier the server
-  // published: a combo the operator has since replaced must not leave the page with a
-  // selection nothing can price.
-  const combo = combos.some((assigned) => assigned.combo === chosen) ? chosen : firstCombo(combos)
-  const rates = combos.find((assigned) => assigned.combo === combo)
 
   const empty = myPlan !== undefined && !myPlan.balance.unlimited && myPlan.balance.credits <= 0
   const subscribedPlan =
@@ -100,11 +103,48 @@ export function PlansPage() {
   }
 
   return (
-    <main className={pageStyles({ width: 'board' })}>
-      <Typography variant="display">{t('compare.title', { ns: 'plans' })}</Typography>
-      <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
-        {t('compare.description', { ns: 'plans' })}
-      </Typography>
+    <main
+      className={pageStyles({
+        width: 'board',
+        className: 'relative flex-1 pb-28 sm:pt-10 sm:pb-28',
+      })}
+    >
+      <SegmentedControl
+        ariaLabel={t('estimator.basis', { ns: 'plans' })}
+        className="mx-auto mb-8 max-w-md"
+        value={kind}
+        options={[
+          { value: 'blog', label: t('estimator.blogBasis', { ns: 'plans' }) },
+          { value: 'clip', label: t('estimator.clipBasis', { ns: 'plans' }) },
+        ]}
+        onChange={setKind}
+      />
+      <header className="animate-rise mx-auto flex max-w-3xl flex-col items-center pb-8 text-center sm:pb-12">
+        <Badge tone="accent">
+          <Sparkles aria-hidden="true" className="mr-1.5 inline size-3.5" />
+          {t('compare.title', { ns: 'plans' })}
+        </Badge>
+        <Typography variant="promoDisplay" className="mt-6 text-balance">
+          {t('compare.headline', { ns: 'plans' })}
+          <PromoText variant="promoDisplay" as="span" className="mt-1 block">
+            {t('compare.headlineAccent', { ns: 'plans' })}
+          </PromoText>
+        </Typography>
+        <Typography
+          variant="body"
+          className="text-content-secondary max-w-measure mt-5 text-balance"
+        >
+          {t('compare.description', { ns: 'plans' })}
+        </Typography>
+        <div className="mt-5 flex flex-wrap justify-center gap-x-5 gap-y-2">
+          {(['allModels', 'monthlyRefill', 'editAllowance'] as const).map((benefit) => (
+            <Typography key={benefit} variant="label" className="inline-flex items-center gap-1.5">
+              <Check aria-hidden="true" className="text-badge-accent-fg size-4 shrink-0" />
+              {t(`compare.${benefit}`, { ns: 'plans' })}
+            </Typography>
+          ))}
+        </div>
+      </header>
 
       {/* The one thing a user arriving here from a refusal needs told: what still works. */}
       {empty && (
@@ -141,35 +181,115 @@ export function PlansPage() {
       )}
 
       {!isError && !isPending && myPlan && (
-        // The estimator and the ladder it prices share one stage: they are one promotional
-        // surface (THEME-37), and a plain estimator above a lit ladder would read as two screens.
-        <PromoStage className="mt-8">
-          <PlanEstimator
-            combos={combos}
-            combo={combo}
-            input={input}
-            onComboChange={setChosen}
-            onInputChange={setInput}
-          />
+        <section aria-label={t('compare.title', { ns: 'plans' })}>
+          <div
+            className="mx-auto mb-8 flex max-w-3xl flex-col items-center gap-2 text-center"
+            aria-live="polite"
+          >
+            <Typography variant="label" className="text-badge-accent-fg">
+              {t(kind === 'blog' ? 'estimator.blogCondition' : 'estimator.clipCondition', {
+                ns: 'plans',
+              })}
+            </Typography>
+            <Typography variant="fieldTitle" className="text-balance tabular-nums">
+              {kind === 'blog'
+                ? t('estimator.summary', { ns: 'plans', ...input })
+                : t('estimator.clipSummary', { ns: 'plans', ...clipInput })}
+            </Typography>
+            {kind === 'clip' && myPlan.clipSourceSeconds > 0 && (
+              <Typography variant="meta" className="text-content-secondary">
+                {t('estimator.sourceAssumption', {
+                  ns: 'plans',
+                  seconds: myPlan.clipSourceSeconds,
+                })}
+              </Typography>
+            )}
+          </div>
+          <Typography variant="body" className="text-content-secondary mt-6 mb-6 text-center">
+            {t('benefits.baseline', { ns: 'plans' })}
+          </Typography>
           <PlanLadder
-            className="mt-6"
+            className="mt-2 md:mt-10"
             offers={myPlan.offers}
             currentPlan={myPlan.plan}
-            // The whole of this page's arithmetic: the server owns the charge formula and
-            // published the rates (QUOTA-40). `master` is not on offer, so no rung is unlimited.
-            estimate={
-              rates ? (offer) => postsPerGrant(offer.monthlyCredits, rates, input) : undefined
+            estimates={(offer) =>
+              ESTIMATOR_COMBOS.map((level) => {
+                const rates = combos.find((assigned) => assigned.combo === level)
+                const count =
+                  kind === 'blog'
+                    ? rates && postsPerGrant(offer.monthlyCredits, rates, input)
+                    : rates?.clipRates &&
+                      clipsPerGrant(offer.monthlyCredits, rates.clipRates, clipInput)
+                return { level, kind, count }
+              })
             }
             action={action}
           />
-          {rates && (
-            /* The assumption behind every count, once under the list rather than four times
-               inside it: repeated in every card it would read as fine print. */
-            <Typography variant="meta" className="text-content-tertiary mt-4 block">
-              {t('estimator.caveat', { ns: 'plans' })}
+          <Typography
+            variant="meta"
+            className="text-content-secondary max-w-measure mx-auto mt-8 block text-center"
+          >
+            {t(kind === 'blog' ? 'estimator.caveat' : 'estimator.clipCaveat', { ns: 'plans' })}
+          </Typography>
+          <ActionBar dock="list" className="fixed right-4 sm:right-6 lg:right-8">
+            <Button
+              variant="secondary"
+              className="gap-2 rounded-full px-5"
+              aria-haspopup="dialog"
+              aria-expanded={estimatorOpen}
+              onClick={() => setEstimatorOpen(true)}
+            >
+              <SlidersHorizontal aria-hidden="true" className="size-4 shrink-0" />
+              {t('estimator.title', { ns: 'plans' })}
+            </Button>
+          </ActionBar>
+          <Typography variant="body" className="text-content-secondary mt-5 text-center">
+            {t('compare.closing', { ns: 'plans' })}
+          </Typography>
+          <Sheet
+            open={estimatorOpen}
+            onClose={() => setEstimatorOpen(false)}
+            labelledBy="plan-estimator-title"
+            header={
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <Typography variant="title" id="plan-estimator-title">
+                  {t(kind === 'blog' ? 'estimator.blogCondition' : 'estimator.clipCondition', {
+                    ns: 'plans',
+                  })}
+                </Typography>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={t('action.close', { ns: 'common' })}
+                  onClick={() => setEstimatorOpen(false)}
+                >
+                  <X aria-hidden="true" className="size-5" />
+                </Button>
+              </div>
+            }
+            footer={
+              <Button
+                variant="secondary"
+                className="mt-5 w-full"
+                onClick={() => setEstimatorOpen(false)}
+              >
+                {t('estimator.viewPlans', { ns: 'plans' })}
+              </Button>
+            }
+          >
+            <PlanEstimator
+              kind={kind}
+              input={input}
+              clipInput={clipInput}
+              sourceSeconds={myPlan.clipSourceSeconds}
+              onInputChange={setInput}
+              onClipInputChange={setClipInput}
+            />
+            <Typography variant="meta" as="p" className="mt-4">
+              {t('estimator.allowance', { ns: 'plans' })}
             </Typography>
-          )}
-        </PromoStage>
+          </Sheet>
+        </section>
       )}
     </main>
   )

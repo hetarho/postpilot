@@ -376,13 +376,13 @@ func TestBillingCreditOperationsPreserveLotInvariants(t *testing.T) {
 		t.Fatalf("monthly lot count = %d, want 1", got)
 	}
 	monthly := store.lots[0]
-	if monthly.ID != monthlyLotID("alice", start) || monthly.Kind != LotMonthly || monthly.Granted != 575 || monthly.Remaining != 575 || monthly.ExpiresAt == nil || !monthly.ExpiresAt.Equal(end) {
+	if monthly.ID != monthlyLotID("alice", start) || monthly.Kind != LotMonthly || monthly.Granted != 1150 || monthly.Remaining != 1150 || monthly.ExpiresAt == nil || !monthly.ExpiresAt.Equal(end) {
 		t.Fatalf("monthly lot = %+v", monthly)
 	}
 	if err := svc.RaiseMonthlyLot(ctx, "alice", 25); err != nil {
 		t.Fatalf("RaiseMonthlyLot: %v", err)
 	}
-	if store.lots[0].Granted != 600 || store.lots[0].Remaining != 600 {
+	if store.lots[0].Granted != 1175 || store.lots[0].Remaining != 1175 {
 		t.Fatalf("raised monthly lot = %+v", store.lots[0])
 	}
 

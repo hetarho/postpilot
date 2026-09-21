@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ProtoPlan, ProtoTerm } from '@/shared/api'
-import { PLAN_ESTIMATE_STORAGE_KEY } from '../config'
+import { CLIP_ESTIMATE_STORAGE_KEY, PLAN_ESTIMATE_STORAGE_KEY } from '../config'
 import { renderAppAt } from '@/test/app'
 
 const USER = { id: 'alice' }
@@ -11,6 +11,7 @@ const USER = { id: 'alice' }
 // otherwise become the next case's defaults.
 beforeEach(() => {
   localStorage.removeItem(PLAN_ESTIMATE_STORAGE_KEY)
+  localStorage.removeItem(CLIP_ESTIMATE_STORAGE_KEY)
 })
 
 async function rungs() {
@@ -55,11 +56,13 @@ describe('the plan comparison', () => {
       user: { ...USER, plan: ProtoPlan.BASIC },
       plans: {
         plan: ProtoPlan.BASIC,
-        balance: { credits: 137, unlimited: false, monthlyGrant: 220 },
+        balance: { credits: 137, unlimited: false, monthlyGrant: 330 },
       },
     })
 
-    expect(await screen.findByRole('heading', { name: '플랜', level: 1 })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { name: '기록은 더 많이.가능성은 더 넓게.', level: 1 }),
+    ).toBeInTheDocument()
     const items = await rungs()
     expect(items).toHaveLength(4)
 
@@ -67,9 +70,9 @@ describe('the plan comparison', () => {
     expect(screen.getByRole('list')).toHaveClass('grid', 'md:grid-cols-2', 'lg:grid-cols-4')
 
     // Every figure is the server's, including how many posts the grant covers (QUOTA-36).
-    expect(within(items[1]).getByText('매달 220 크레딧')).toBeInTheDocument()
+    expect(within(items[1]).getByText('매달 330 크레딧')).toBeInTheDocument()
     // The price is the card's one hero figure, with the period beside it rather than inside it.
-    expect(within(items[1]).getByText('$2')).toHaveClass('text-3xl')
+    expect(within(items[1]).getByText('$3')).toHaveClass('text-3xl')
     expect(within(items[1]).getByText('/ 월')).toBeInTheDocument()
     expect(within(items[0]).getByText('무료')).toHaveClass('text-3xl')
     expect(within(items[0]).queryByText('/ 월')).not.toBeInTheDocument()
@@ -167,18 +170,18 @@ describe('the plan comparison', () => {
 describe('the promotional stroke', () => {
   // THEME-37 scopes the one gradient in this design language to a surface whose job is to be
   // chosen from. Another route rendering it would be the exception spreading.
-  it('frames the ladder and its estimator, and nothing on another screen', async () => {
+  it('frames the four rungs without an inline condition editor', async () => {
     renderAppAt('/plans', {
       user: { ...USER, plan: ProtoPlan.FREE },
       plans: { plan: ProtoPlan.FREE, balance: { credits: 50, unlimited: false, monthlyGrant: 50 } },
     })
 
     await rungs()
-    // Four rungs plus the estimator above them, all on one aurora stage.
-    expect(document.querySelectorAll('[data-promo-stroke]')).toHaveLength(5)
+    // Four rungs share the full viewport aurora stage.
+    expect(document.querySelectorAll('[data-promo-stroke]')).toHaveLength(4)
     expect(document.querySelectorAll('[data-promo-aurora]')).toHaveLength(1)
     // The hero figure is gradient ink, clipped to the glyphs.
-    expect(screen.getByText('$5')).toHaveClass('bg-promo-text', 'bg-clip-text', 'text-transparent')
+    expect(screen.getByText('$10')).toHaveClass('bg-promo-text', 'bg-clip-text', 'text-transparent')
   })
 
   it('leaves other screens unframed', async () => {
@@ -190,122 +193,163 @@ describe('the promotional stroke', () => {
   })
 })
 
-describe('the plan estimator', () => {
-  // QUOTA-41: the counts are derived from the three inputs and the selected combo's rates,
-  // and the defaults are the shape most posts in this product have.
-  it('counts posts for the default case on every rung', async () => {
+describe('blog and clip conditions', () => {
+  it('shows all four model levels at once with each assigned price on every plan', async () => {
     renderAppAt('/plans', {
       user: { ...USER, plan: ProtoPlan.FREE },
-      plans: { plan: ProtoPlan.FREE, balance: { credits: 50, unlimited: false, monthlyGrant: 50 } },
+      plans: {
+        estimatorCombos: ['value', 'balanced', 'premium', 'top'].map((combo, index) => ({
+          combo,
+          perPhotoMilli: 835 * (index + 1),
+          perVideoMilli: 1399 * (index + 1),
+          perThousandCharsMilli: 5400 * (index + 1),
+          perPostBaseMilli: 4700 * (index + 1),
+        })),
+      },
     })
-
     const items = await rungs()
-    // 3800 + 5x723 + 1x3600 = 11,015 milli-credits a post, so 50 credits covers four.
-    expect(within(items[0]).getByText('매달 약 4편')).toBeInTheDocument()
-    expect(within(items[1]).getByText('매달 약 19편')).toBeInTheDocument()
-    expect(within(items[2]).getByText('매달 약 52편')).toBeInTheDocument()
-    expect(within(items[3]).getByText('매달 약 108편')).toBeInTheDocument()
-
-    expect(screen.getByRole('slider', { name: '글자 수' })).toHaveValue('1000')
-    expect(screen.getByRole('slider', { name: '사진' })).toHaveValue('5')
-    expect(screen.getByRole('slider', { name: '영상' })).toHaveValue('0')
+    for (const [index, grant] of [50, 330, 1150, 2400].entries()) {
+      expect(
+        within(items[index])
+          .getAllByRole('term')
+          .map((el) => el.textContent),
+      ).toEqual([
+        '가성비 모델 사용 시',
+        '밸런스 모델 사용 시',
+        '고급 모델 사용 시',
+        '최고 모델 사용 시',
+      ])
+      expect(
+        within(items[index])
+          .getAllByRole('definition')
+          .map((el) => el.textContent),
+      ).toEqual(
+        [1, 2, 3, 4].map((factor) => {
+          const count = Math.floor((grant * 1000) / (14275 * factor))
+          return count ? `글 약 ${count}편 제작 가능` : '이 조건으로 1편 미만'
+        }),
+      )
+    }
+    expect(screen.queryByRole('slider')).not.toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: '블로그 글 기준' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+    expect(screen.getByRole('button', { name: '조건 바꾸기' }).parentElement).toHaveClass(
+      'fixed',
+      'right-4',
+    )
   })
 
-  // The point of the control: the reader's own case, answered while they set it, with no
-  // round trip (QUOTA-40).
-  it('recomputes every count as the sliders move, asking nothing of the server', async () => {
-    const calls: string[] = []
-    renderAppAt('/plans', {
-      user: { ...USER, plan: ProtoPlan.FREE },
-      calls,
-      plans: { plan: ProtoPlan.FREE, balance: { credits: 50, unlimited: false, monthlyGrant: 50 } },
-    })
-
-    await rungs()
-    const before = [...calls]
-
-    // A shorter post with nothing attached: 3800 + 3600 = 7,400 milli a post.
-    fireEvent.change(screen.getByRole('slider', { name: '글자 수' }), { target: { value: '600' } })
-    fireEvent.change(screen.getByRole('slider', { name: '사진' }), { target: { value: '0' } })
-
-    // The figure COUNTS to its new value rather than swapping (THEME-37), so it is awaited.
-    const items = await rungs()
-    expect(await within(items[1]).findByText('매달 약 29편')).toBeInTheDocument()
-    expect(await within(items[3]).findByText('매달 약 162편')).toBeInTheDocument()
-    expect(calls).toEqual(before)
-  })
-
-  it('prices the chosen combo and remembers the case for the next visit', async () => {
+  it('edits only per-post conditions, recomputes every plan without RPCs and restores focus', async () => {
     const user = userEvent.setup()
-    const { unmount } = renderAppAt('/plans', {
-      user: { ...USER, plan: ProtoPlan.FREE },
-      plans: {
-        plan: ProtoPlan.FREE,
-        balance: { credits: 50, unlimited: false, monthlyGrant: 50 },
-        estimatorCombos: [
-          { combo: 'value' },
-          // A second tier with distinct rates proves the chosen shared level drives pricing.
-          { combo: 'top', perPostBaseMilli: 1900, perThousandCharsMilli: 360 },
-        ],
-      },
-    })
-
-    let items = await rungs()
-    expect(within(items[1]).getByText('매달 약 19편')).toBeInTheDocument()
-
-    await user.click(screen.getByRole('tab', { name: '최고' }))
-    items = await rungs()
-    // 1900 + 5x723 + 360 = 5,875 milli a post.
-    expect(await within(items[1]).findByText('매달 약 37편')).toBeInTheDocument()
-
-    fireEvent.change(screen.getByRole('slider', { name: '사진' }), { target: { value: '12' } })
-    await waitFor(() => expect(screen.getByRole('slider', { name: '사진' })).toHaveValue('12'))
-    unmount()
-
-    renderAppAt('/plans', {
-      user: { ...USER, plan: ProtoPlan.FREE },
-      plans: { plan: ProtoPlan.FREE, balance: { credits: 50, unlimited: false, monthlyGrant: 50 } },
-    })
+    const calls: string[] = []
+    renderAppAt('/plans', { user: USER, calls })
     await rungs()
-    expect(screen.getByRole('slider', { name: '사진' })).toHaveValue('12')
+    const opener = screen.getByRole('button', { name: '조건 바꾸기' })
+    await user.click(opener)
+    const sheet = await screen.findByRole('dialog', { name: '글 한 편의 조건' })
+    expect(within(sheet).getAllByRole('slider')).toHaveLength(3)
+    expect(within(sheet).queryByRole('tab')).not.toBeInTheDocument()
+    expect(within(sheet).queryByText(/제작 가능/)).not.toBeInTheDocument()
+    const before = [...calls]
+    fireEvent.change(within(sheet).getByRole('slider', { name: '글자 수' }), {
+      target: { value: '600' },
+    })
+    fireEvent.change(within(sheet).getByRole('slider', { name: '사진' }), {
+      target: { value: '0' },
+    })
+    await user.keyboard('{Escape}')
+    expect(opener).toHaveFocus()
+    const items = await rungs()
+    await waitFor(() =>
+      expect(within(items[1]).getAllByText('글 약 32편 제작 가능')).toHaveLength(2),
+    )
+    await waitFor(() =>
+      expect(within(items[3]).getAllByText('글 약 237편 제작 가능')).toHaveLength(2),
+    )
+    expect(calls).toEqual(before)
+    await user.click(opener)
+    expect(screen.getByRole('slider', { name: '사진' })).toHaveValue('0')
   })
 
-  // A grant that cannot cover one post of the chosen shape is stated in words: "about 0
-  // posts" is a figure nobody can act on.
-  it('says a grant cannot cover one post rather than counting zero', async () => {
-    renderAppAt('/plans', {
-      user: { ...USER, plan: ProtoPlan.FREE },
-      plans: {
-        plan: ProtoPlan.FREE,
-        balance: { credits: 50, unlimited: false, monthlyGrant: 50 },
-        // A tier expensive enough that the free grant buys nothing of that shape.
-        estimatorCombos: [{ combo: 'top', perPostBaseMilli: 60_000 }],
-      },
+  it('uses finished duration for clip pricing and persists both condition sets independently', async () => {
+    const user = userEvent.setup()
+    const calls: string[] = []
+    const { unmount } = renderAppAt('/plans', { user: USER, calls })
+    await rungs()
+    await user.click(screen.getByRole('button', { name: '조건 바꾸기' }))
+    fireEvent.change(screen.getByRole('slider', { name: '사진' }), { target: { value: '12' } })
+    await user.keyboard('{Escape}')
+    await user.click(screen.getByRole('tab', { name: '클립 기준' }))
+    expect(screen.getByText('원본 영상 3개 → 완성 클립 30초')).toBeInTheDocument()
+    expect(screen.getByText('원본 영상은 개당 60초로 가정해요.')).toBeInTheDocument()
+    expect(within((await rungs())[1]).getAllByText('클립 약 6편 제작 가능')).toHaveLength(2)
+    await user.click(screen.getByRole('button', { name: '조건 바꾸기' }))
+    const sheet = await screen.findByRole('dialog', { name: '클립 한 편의 조건' })
+    expect(within(sheet).getAllByRole('slider')).toHaveLength(2)
+    const before = [...calls]
+    fireEvent.change(within(sheet).getByRole('slider', { name: '원본 영상 개수' }), {
+      target: { value: '4' },
     })
-
-    const items = await rungs()
-    expect(within(items[0]).getByText('이 조건으로는 한 편도 어려워요')).toBeInTheDocument()
-    expect(within(items[3]).getByText(/매달 약/)).toBeInTheDocument()
+    fireEvent.change(within(sheet).getByRole('slider', { name: '완성할 클립 길이' }), {
+      target: { value: '45' },
+    })
+    await user.click(within(sheet).getByRole('button', { name: '이 조건으로 비교하기' }))
+    // 11200 + 4*8750 + 45*360 = 62400 milli-credits.
+    await waitFor(() =>
+      expect(
+        within(screen.getAllByRole('listitem')[1]).getAllByText('클립 약 5편 제작 가능'),
+      ).toHaveLength(2),
+    )
+    expect(calls).toEqual(before)
+    await user.click(screen.getByRole('tab', { name: '블로그 글 기준' }))
+    expect(screen.getByText('1000자 · 사진 12장 · 영상 0개 기준')).toBeInTheDocument()
+    unmount()
+    renderAppAt('/plans', { user: USER })
+    await rungs()
+    expect(screen.getByText('1000자 · 사진 12장 · 영상 0개 기준')).toBeInTheDocument()
+    await user.click(screen.getByRole('tab', { name: '클립 기준' }))
+    expect(screen.getByText('원본 영상 4개 → 완성 클립 45초')).toBeInTheDocument()
   })
 
-  // An operator who has assigned nothing leaves the rungs saying what they grant and nothing
-  // pretending to know what that buys.
-  it('shows the grants with no count when no combo is assigned', async () => {
+  it('keeps unassigned and clip-incompatible levels visible without fabricating zero estimates', async () => {
+    const user = userEvent.setup()
     renderAppAt('/plans', {
-      user: { ...USER, plan: ProtoPlan.FREE },
-      plans: {
-        plan: ProtoPlan.FREE,
-        balance: { credits: 50, unlimited: false, monthlyGrant: 50 },
-        estimatorCombos: [],
-      },
+      user: USER,
+      plans: { estimatorCombos: [{ combo: 'top', clipRates: null }] },
     })
-
     const items = await rungs()
-    expect(within(items[1]).getByText('매달 220 크레딧')).toBeInTheDocument()
-    expect(screen.queryByText(/매달 약/)).not.toBeInTheDocument()
-    expect(screen.queryByRole('tab', { name: '밸런스' })).not.toBeInTheDocument()
+    expect(within(items[1]).getAllByText('모델·가격 정보 준비 중')).toHaveLength(3)
+    expect(within(items[1]).getByText('글 약 23편 제작 가능')).toBeInTheDocument()
+    await user.click(screen.getByRole('tab', { name: '클립 기준' }))
+    expect(within(items[1]).getAllByText('클립 계산 가능한 모델 미지정')).toHaveLength(4)
+    expect(screen.queryByText(/클립 약/)).not.toBeInTheDocument()
+  })
+
+  it('keeps four unavailable rows when no models are assigned', async () => {
+    renderAppAt('/plans', { user: USER, plans: { estimatorCombos: [] } })
+    const items = await rungs()
+    for (const item of items)
+      expect(within(item).getAllByText('모델·가격 정보 준비 중')).toHaveLength(4)
+    expect(screen.queryByText(/글 약/)).not.toBeInTheDocument()
+  })
+
+  it('states the top-up baseline and derives each paid bonus from its offer', async () => {
+    renderAppAt('/plans', { user: { ...USER, plan: ProtoPlan.FREE } })
+    const items = await rungs()
     expect(
-      screen.getByText('아직 모델 조합이 지정되지 않아 편수를 계산할 수 없어요.'),
+      screen.getByText('일반 충전은 $1당 100크레딧. 구독하면 매달 더 받아요.'),
     ).toBeInTheDocument()
+    expect(within(items[0]).queryByText(/크레딧 추가/)).not.toBeInTheDocument()
+    for (const [index, credits, percent] of [
+      [1, 30, 10],
+      [2, 150, 15],
+      [3, 400, 20],
+    ]) {
+      expect(within(items[index]).getByText(`매달 ${credits}크레딧 추가`)).toBeInTheDocument()
+      expect(within(items[index]).getByText(`같은 금액 충전보다 +${percent}%`)).toBeInTheDocument()
+    }
+    expect(document.querySelector('[data-promo-stage="viewport"]')).toHaveClass('fixed', 'inset-0')
   })
 })

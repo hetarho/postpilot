@@ -10,7 +10,7 @@ import type { PlanOffer } from '@/entities/plan'
  *  estimate does not travel here because it needs the operator's priced combos. */
 export const PUBLIC_LADDER: readonly PlanOffer[] = [
   { plan: 'free', monthlyCredits: 50, priceUsdCents: 0, recommended: false },
-  { plan: 'basic', monthlyCredits: 220, priceUsdCents: 200, recommended: false },
-  { plan: 'pro', monthlyCredits: 575, priceUsdCents: 500, recommended: true },
-  { plan: 'max', monthlyCredits: 1200, priceUsdCents: 1000, recommended: false },
+  { plan: 'basic', monthlyCredits: 330, priceUsdCents: 300, recommended: false },
+  { plan: 'pro', monthlyCredits: 1150, priceUsdCents: 1000, recommended: true },
+  { plan: 'max', monthlyCredits: 2400, priceUsdCents: 2000, recommended: false },
 ]

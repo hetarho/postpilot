@@ -6,6 +6,12 @@ export const i18n = {
   ko: {
     compare: {
       title: '플랜',
+      headline: '기록은 더 많이.',
+      headlineAccent: '가능성은 더 넓게.',
+      allModels: '모든 AI 모델 이용',
+      monthlyRefill: '매달 새로운 크레딧',
+      editAllowance: '수정까지 고려한 예상 편수',
+      closing: '당신의 이야기에 맞는 플랜으로, 다음 이야기를 시작하세요.',
       description: '플랜마다 매달 받는 크레딧이 달라요. 쓸 수 있는 모델은 모든 플랜이 같아요.',
       nav: '플랜',
       monthlyCredits: '매달 {{credits}} 크레딧',
@@ -27,6 +33,12 @@ export const i18n = {
   en: {
     compare: {
       title: 'Plans',
+      headline: 'More stories.',
+      headlineAccent: 'More possibilities.',
+      allModels: 'Every AI model',
+      monthlyRefill: 'Fresh credits every month',
+      editAllowance: 'Edits included in estimates',
+      closing: 'Your next story starts with a plan that fits.',
       description:
         'Plans differ in the credits they grant each month. Every plan can run every model.',
       nav: 'Plans',

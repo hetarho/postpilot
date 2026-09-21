@@ -20,7 +20,7 @@ func TestMoneyAndTermRules(t *testing.T) {
 		tier                     plan.Plan
 		monthly, annual, credits int
 	}{
-		{plan.Basic, 200, 2_000, 220}, {plan.Pro, 500, 5_000, 575}, {plan.Max, 1_000, 10_000, 1_200},
+		{plan.Basic, 300, 3_000, 330}, {plan.Pro, 1_000, 10_000, 1_150}, {plan.Max, 2_000, 20_000, 2_400},
 	} {
 		if got := PriceCents(tc.tier, TermMonthly); got != tc.monthly {
 			t.Errorf("%s monthly=%d", tc.tier, got)

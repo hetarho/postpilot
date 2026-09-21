@@ -107,7 +107,7 @@ export function PromoFrame({
         {/* `isolate` here too: the spotlight sits at a negative z-index so it paints ABOVE this
             box's surface and BELOW its text, which only holds inside a stacking context this box
             itself roots. */}
-        <div className="bg-surface-raised relative isolate h-full rounded-lg p-4">
+        <div className="bg-surface-raised relative isolate h-full rounded-lg p-5 sm:p-6">
           <div
             aria-hidden="true"
             data-promo-spot=""
