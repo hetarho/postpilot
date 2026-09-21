@@ -4,6 +4,19 @@ import type { I18nFragment } from '@/shared/lib'
 export const i18n = {
   namespace: 'clips',
   ko: {
+    reading: {
+      source: '원본',
+      outputRange: '영상 구간',
+      sourceRange: '원본 구간',
+      interval: '노출 구간',
+      style: '자막 스타일',
+      pace: '자막 속도',
+      paceSteady: '문장형',
+      paceRapid: '빠른 구절형',
+      keyword: '강조 단어',
+      placement: '자막 위치',
+      size: '자막 크기',
+    },
     assembly: {
       addTitle: '관찰한 장면에서 컷 추가',
       addStart: '추가할 원본 시작 (초)',
@@ -173,6 +186,19 @@ export const i18n = {
     aligns: { center: '가운데', left: '왼쪽', right: '오른쪽' },
   },
   en: {
+    reading: {
+      source: 'Source',
+      outputRange: 'Clip range',
+      sourceRange: 'Source range',
+      interval: 'On screen',
+      style: 'Caption style',
+      pace: 'Caption pace',
+      paceSteady: 'Sentence',
+      paceRapid: 'Rapid phrases',
+      keyword: 'Accent word',
+      placement: 'Placement',
+      size: 'Caption size',
+    },
     assembly: {
       addTitle: 'Add a cut from this observed scene',
       addStart: 'New source start (s)',

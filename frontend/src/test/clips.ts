@@ -381,8 +381,8 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
         planRevision: req.expectedRevision,
         resultId: req.expectedResultId,
       }
-      p.editing = undefined
-      p.observations = undefined
+      // The plan and the evidence survive finalization and are served as
+      // readings (CLIP-160); only the originals behind them are deleted.
     }
     return { project: projectProto(p) }
   })

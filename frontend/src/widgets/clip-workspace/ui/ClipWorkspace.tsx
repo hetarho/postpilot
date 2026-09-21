@@ -50,6 +50,9 @@ export function ClipWorkspace({
   const upload = sources.upload
   const step = workspace.step.value
   const setStep = workspace.step.set
+  // A finalized project is READ in ① and ②: the same steps, the same places, values instead of
+  // controls, and no original behind them (CLIP-160, CLIP-76).
+  const reading = !!project.finalized
   const job = run.job
   const browserStatus = (
     <ClipBrowserRenderStatus state={render.browser.state} cancel={render.browser.cancel} />
@@ -70,15 +73,17 @@ export function ClipWorkspace({
     <ClipObservationViewer
       project={project}
       onAddCut={
-        observations.addCut &&
-        (async (selection) => {
-          await observations.addCut?.(selection, observations.soundOf(selection))
-          setReferenceOpen(false)
-        })
+        reading
+          ? undefined
+          : observations.addCut &&
+            (async (selection) => {
+              await observations.addCut?.(selection, observations.soundOf(selection))
+              setReferenceOpen(false)
+            })
       }
       draftPlan={observations.draftPlan}
-      resolvePlayback={observations.resolvePlayback}
-      localSources={observations.localSources}
+      resolvePlayback={reading ? undefined : observations.resolvePlayback}
+      localSources={reading ? [] : observations.localSources}
     />
   )
 
@@ -86,83 +91,94 @@ export function ClipWorkspace({
     <ClipProjectForm
       ownerId={ownerId}
       stored={project}
-      disabled={pending}
+      disabled={pending || reading}
+      readOnly={reading}
       onUploadAllowed={sources.allow}
-      refusal={<ClipFailureNotice failure={generation.failure} />}
-      actions={(ready) => (
-        <ClipApprovalAction
-          ownerId={ownerId}
-          project={project}
-          batch={upload.readyBatch}
-          observe={generation.observeRef}
-          write={generation.writeRef}
-          observeStatus={generation.observeStatus}
-          ready={ready && generation.canQuote && !generation.busy && !render.browser.busy}
-          pending={generation.starting}
-          // The queue is flushed BEFORE the run starts, so an approval can never be committed
-          // against settings the server has not taken (CLIP-39). A refusal stops the start; the
-          // status line is already saying the save failed.
-          onApprove={(quote) => {
-            void save
-              .flush()
-              .then(() => correction.flush())
-              .then(() => generation.start(upload.readyBatch, ready, quote, generation.ownership))
-              .catch(() => undefined)
-          }}
-        />
-      )}
+      refusal={reading ? undefined : <ClipFailureNotice failure={generation.failure} />}
+      actions={
+        reading
+          ? undefined
+          : (ready) => (
+              <ClipApprovalAction
+                ownerId={ownerId}
+                project={project}
+                batch={upload.readyBatch}
+                observe={generation.observeRef}
+                write={generation.writeRef}
+                observeStatus={generation.observeStatus}
+                ready={ready && generation.canQuote && !generation.busy && !render.browser.busy}
+                pending={generation.starting}
+                // The queue is flushed BEFORE the run starts, so an approval can never be committed
+                // against settings the server has not taken (CLIP-39). A refusal stops the start; the
+                // status line is already saying the save failed.
+                onApprove={(quote) => {
+                  void save
+                    .flush()
+                    .then(() => correction.flush())
+                    .then(() =>
+                      generation.start(upload.readyBatch, ready, quote, generation.ownership),
+                    )
+                    .catch(() => undefined)
+                }}
+              />
+            )
+      }
     >
-      {(project.result || job?.status === 'failed' || job?.status === 'cancelled') && (
+      {!reading && (project.result || job?.status === 'failed' || job?.status === 'cancelled') && (
         <Typography variant="body" className="text-content-secondary mt-6">
           {t('generation.reselection')}
         </Typography>
       )}
       {/* Bind a whole source to an item before generating, where footage of one
           cut of meat carries nothing that tells it from another (CLIP-123). */}
-      <ClipSourcePicker
-        upload={upload}
-        sound={sources.sound}
-        order={sources.order}
-        binding={sources.binding.items.length ? sources.binding : undefined}
-        disabled={!sources.allowed || generation.busy || render.browser.busy || finalization.busy}
-        processing={generation.busy}
-      />
+      {!reading && (
+        <ClipSourcePicker
+          upload={upload}
+          sound={sources.sound}
+          order={sources.order}
+          binding={sources.binding.items.length ? sources.binding : undefined}
+          disabled={!sources.allowed || generation.busy || render.browser.busy || finalization.busy}
+          processing={generation.busy}
+        />
+      )}
       {observationPanel}
       {requestRecord}
-      <section aria-labelledby="clip-models-heading" className="mt-10 mb-8 space-y-4">
-        <Typography id="clip-models-heading" variant="title">
-          {t('generation.models')}
-        </Typography>
-        {/* The 영상 템플릿 and the two model selectors stay in ①'s PANEL rather than riding the
+      {!reading && (
+        <section aria-labelledby="clip-models-heading" className="mt-10 mb-8 space-y-4">
+          <Typography id="clip-models-heading" variant="title">
+            {t('generation.models')}
+          </Typography>
+          {/* The 영상 템플릿 and the two model selectors stay in ①'s PANEL rather than riding the
             dock's header the way the post editor's 말투 does: choosing a template rewrites the
             answer fields directly beneath it (CLIP-40). */}
-        {/* T111's live eligibility is the observe picker's verdict for THIS workflow: the
+          {/* T111's live eligibility is the observe picker's verdict for THIS workflow: the
             picker greys what it refuses with the reason, and the note below is the action's
             one readiness line. The saved choice is never cleared or swapped here; it may
             still serve photo-only posts. */}
-        <StageModelSelect
-          stage="observe"
-          disabled={generation.busy || render.browser.busy}
-          availability={generation.availability}
-        />
-        <StageModelSelect stage="write" disabled={generation.busy || render.browser.busy} />
-        {!generation.modelsReady && (
-          <Typography variant="body" role="status" className="text-content-secondary break-words">
-            {generation.eligibility.kind === 'loading'
-              ? t('generation.eligibility.loading')
-              : generation.eligibility.kind === 'failed'
-                ? t('generation.eligibility.failed')
-                : !generation.observeRef || !generation.writeRef
-                  ? t('generation.selectModels')
-                  : generation.observeStatus && generation.observeStatus !== 'eligible'
-                    ? t(`generation.eligibility.reason.${generation.observeStatus}`)
-                    : t('generation.eligibility.unresolved')}
+          <StageModelSelect
+            stage="observe"
+            disabled={generation.busy || render.browser.busy}
+            availability={generation.availability}
+          />
+          <StageModelSelect stage="write" disabled={generation.busy || render.browser.busy} />
+          {!generation.modelsReady && (
+            <Typography variant="body" role="status" className="text-content-secondary break-words">
+              {generation.eligibility.kind === 'loading'
+                ? t('generation.eligibility.loading')
+                : generation.eligibility.kind === 'failed'
+                  ? t('generation.eligibility.failed')
+                  : !generation.observeRef || !generation.writeRef
+                    ? t('generation.selectModels')
+                    : generation.observeStatus && generation.observeStatus !== 'eligible'
+                      ? t(`generation.eligibility.reason.${generation.observeStatus}`)
+                      : t('generation.eligibility.unresolved')}
+            </Typography>
+          )}
+          <Typography variant="body" className="text-content-secondary">
+            {t('generation.creditPolicy')}
           </Typography>
-        )}
-        <Typography variant="body" className="text-content-secondary">
-          {t('generation.creditPolicy')}
-        </Typography>
-      </section>
+        </section>
+      )}
     </ClipProjectForm>
   )
 
@@ -255,6 +271,7 @@ export function ClipWorkspace({
         language: project.language,
       }}
       correction={correction}
+      readOnly={reading}
       render={{
         ready: render.ready,
         pending: render.pending,
@@ -265,21 +282,27 @@ export function ClipWorkspace({
         capability: render.capability,
         start: render.start,
       }}
-      footage={{ localSources: sources.localSources, resolvePlayback: sources.resolvePlayback }}
-      disabled={pending}
+      footage={{
+        localSources: reading ? [] : sources.localSources,
+        resolvePlayback: reading ? undefined : sources.resolvePlayback,
+      }}
+      disabled={pending || reading}
       slots={{
-        preview: (controls) => (
-          <ClipDraftPreviewPanel
-            {...controls}
-            projectId={project.id}
-            revision={correction.revision}
-            plan={correction.previewPlan}
-            ratio={project.ratio}
-            sources={plan.sources}
-            resolvePlayback={sources.resolvePlayback}
-          />
-        ),
-        comparison: project.result && (
+        preview: (controls) =>
+          reading ? (
+            <ClipResult ownerId={ownerId} project={project} />
+          ) : (
+            <ClipDraftPreviewPanel
+              {...controls}
+              projectId={project.id}
+              revision={correction.revision}
+              plan={correction.previewPlan}
+              ratio={project.ratio}
+              sources={plan.sources}
+              resolvePlayback={sources.resolvePlayback}
+            />
+          ),
+        comparison: !reading && project.result && (
           <details className="mt-4">
             <summary className="text-content-secondary cursor-pointer">
               {t('preview.renderedRevision', { revision: project.renderedPlanRevision })}
@@ -287,50 +310,54 @@ export function ClipWorkspace({
             <ClipResult ownerId={ownerId} project={project} />
           </details>
         ),
-        revision: (actions) => (
-          <ClipRevisionRequest
-            ownerId={ownerId}
-            project={project}
-            observe={generation.observeRef}
-            write={generation.writeRef}
-            job={job}
-            disabled={revision.disabled}
-            flush={revision.flush}
-            cancelAction={
-              <CancelClipAction
-                action={revision.cancellation}
+        revision: reading
+          ? undefined
+          : (actions) => (
+              <ClipRevisionRequest
+                ownerId={ownerId}
+                project={project}
+                observe={generation.observeRef}
+                write={generation.writeRef}
                 job={job}
-                accounting={generation.accounting}
+                disabled={revision.disabled}
+                flush={revision.flush}
+                cancelAction={
+                  <CancelClipAction
+                    action={revision.cancellation}
+                    job={job}
+                    accounting={generation.accounting}
+                  />
+                }
+                action={actions}
               />
-            }
-            action={actions}
-          />
-        ),
-        downloadAction: project.result?.downloadUrl ? (
-          <ClipDownloadAction icon project={project} />
-        ) : undefined,
+            ),
+        downloadAction:
+          !reading && project.result?.downloadUrl ? (
+            <ClipDownloadAction icon project={project} />
+          ) : undefined,
         // 확정하기 stands only once the project has a render to confirm (CLIP-40, CLIP-152):
         // before that the dock's one action is the render, and a disabled 확정하기 beside it
         // only said so in smaller type.
-        finalizeAction: project.result ? (
-          <FinalizeClipAction
-            action={finalization}
-            project={project}
-            disabled={
-              uploading ||
-              generation.busy ||
-              render.browser.busy ||
-              !correction.validation?.saveable
-            }
-            localRefusal={
-              uploading || generation.busy || render.browser.busy
-                ? 'busy'
-                : !correction.validation?.saveable
-                  ? 'invalid_plan'
-                  : undefined
-            }
-          />
-        ) : undefined,
+        finalizeAction:
+          !reading && project.result ? (
+            <FinalizeClipAction
+              action={finalization}
+              project={project}
+              disabled={
+                uploading ||
+                generation.busy ||
+                render.browser.busy ||
+                !correction.validation?.saveable
+              }
+              localRefusal={
+                uploading || generation.busy || render.browser.busy
+                  ? 'busy'
+                  : !correction.validation?.saveable
+                    ? 'invalid_plan'
+                    : undefined
+              }
+            />
+          ) : undefined,
         referenceAction,
       }}
     />
@@ -344,17 +371,21 @@ export function ClipWorkspace({
             {t('preview.renderedRevision', { revision: project.renderedPlanRevision })}
           </Typography>
           <ClipResult ownerId={ownerId} project={project} />
-          <ClipDownloadAction project={project} />
-          <ActionBar ariaLabel={t('correction.actions')}>
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              <FinalizeClipAction
-                action={finalization}
-                project={project}
-                disabled
-                localRefusal="invalid_plan"
-              />
-            </div>
-          </ActionBar>
+          {!reading && (
+            <>
+              <ClipDownloadAction project={project} />
+              <ActionBar ariaLabel={t('correction.actions')}>
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  <FinalizeClipAction
+                    action={finalization}
+                    project={project}
+                    disabled
+                    localRefusal="invalid_plan"
+                  />
+                </div>
+              </ActionBar>
+            </>
+          )}
         </>
       )}
       {referenceAction}
@@ -395,8 +426,7 @@ export function ClipWorkspace({
           )
         }
         steps={
-          !run.focused &&
-          !project.finalized && (
+          !run.focused && (
             <SegmentedControl
               value={step}
               options={clipSteps()}
@@ -498,23 +528,13 @@ export function ClipWorkspace({
       )}
       {!run.focused && step !== 'refine' && browserStatus}
       {!run.focused && (
-        <div
-          id={STEP_PANEL_ID}
-          role="tabpanel"
-          aria-label={clipStepLabel(project.finalized ? 'finish' : step)}
-        >
-          {project.finalized
-            ? finishPanel
-            : step === 'generate'
-              ? generatePanel
-              : step === 'refine'
-                ? refinePanel
-                : finishPanel}
+        <div id={STEP_PANEL_ID} role="tabpanel" aria-label={clipStepLabel(step)}>
+          {step === 'generate' ? generatePanel : step === 'refine' ? refinePanel : finishPanel}
         </div>
       )}
       {/* ONE dock per step: ① and ② carry their own (the settings form's and the correction
           workspace's), so the page docks only ③'s 다운로드 (CLIP-40). */}
-      {project.finalized && project.result?.downloadUrl && (
+      {project.finalized && step === 'finish' && project.result?.downloadUrl && (
         <ActionBar className="mt-auto" ariaLabel={t('steps.finishDockAria')}>
           <div className="flex flex-wrap justify-end gap-3">
             <ClipDownloadAction project={project} />

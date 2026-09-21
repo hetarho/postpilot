@@ -64,7 +64,7 @@ it('downloads without confirming, guards the result tab and confirms only once o
   expect(calls).not.toContain('FinalizeClipProject')
   await userEvent.dblClick(dialog.getByRole('button', { name: '확정하기' }))
   await waitFor(() =>
-    expect(screen.queryByRole('tablist', { name: '클립 단계' })).not.toBeInTheDocument(),
+    expect(screen.getByRole('tab', { name: '완성' })).toHaveAttribute('aria-selected', 'true'),
   )
   expect(screen.getByLabelText('클립 미리보기')).toHaveAttribute('src', project().result!.viewUrl)
   expect(screen.getByRole('link', { name: '영상 다운로드' })).toBeVisible()
@@ -125,7 +125,7 @@ it('resolves a lost confirmation reply by reading the owned project and reopens 
   const reads: string[] = []
   mount({ projects: [saved!], calls: reads })
   await screen.findByRole('link', { name: '영상 다운로드' })
-  expect(screen.queryByRole('tablist', { name: '클립 단계' })).not.toBeInTheDocument()
+  expect(screen.getByRole('tab', { name: '완성' })).toHaveAttribute('aria-selected', 'true')
   expect(reads).not.toContain('GetClipSources')
 })
 

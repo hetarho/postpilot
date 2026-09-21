@@ -406,13 +406,14 @@ func (h *Handler) GetClipProject(ctx context.Context, req *connect.Request[v1.Ge
 		return nil, toConnectError(err)
 	}
 	out := projectProto(value)
-	if value.Finalized == nil {
-		out.Observations = observationsProto(value)
-	}
+	// A finalized project is read in ① and ② as well as played in ③ (CLIP-160),
+	// and both readings are projections of the stored plan and evidence: no
+	// original is touched here, and every write stays refused where it is made.
+	out.Observations = observationsProto(value)
 	if h.generation != nil {
 		// Unreadable evidence must not hide an otherwise downloadable result.
 		// Its dependent correction projection cannot be used in that case.
-		if value.Finalized == nil && out.Observations.Status != "unavailable" {
+		if out.Observations.Status != "unavailable" {
 			state, err := h.generation.EditingState(value)
 			if err != nil {
 				return nil, toConnectError(err)

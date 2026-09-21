@@ -53,6 +53,7 @@ export function ClipProjectForm({
   onUploadAllowed,
   children,
   disabled = false,
+  readOnly = false,
   actions,
   refusal,
 }: {
@@ -61,6 +62,9 @@ export function ClipProjectForm({
   onUploadAllowed?: (allowed: boolean) => void
   children?: ReactNode
   disabled?: boolean
+  /** A finalized project reads its settings here rather than editing them (CLIP-160): the fields
+   *  state what the clip was made with and nothing on the panel commits anything. */
+  readOnly?: boolean
   actions?: (ready: boolean, dirty: boolean) => ReactNode
   refusal?: ReactNode
 }) {
@@ -123,7 +127,7 @@ export function ClipProjectForm({
   // is lost by leaving them open: the queue sends the LATEST draft, so a keystroke made during a
   // flight goes out after it rather than racing it (CLIP-39). `/clips/new` still locks, because
   // there `save.isPending` is the one committing action and it navigates away.
-  const locked = disabled || (save.isPending && !stored)
+  const locked = disabled || readOnly || (save.isPending && !stored)
   if (!synced && !dirty && !save.isPending) {
     const refreshed = JSON.parse(storedJSON) as ClipProjectDraft
     setDraft(refreshed)
@@ -478,31 +482,34 @@ export function ClipProjectForm({
         </fieldset>
       </form>
       {children}
-      <ActionBar className="mt-auto">
-        {refusal}
-        {failure && (
-          <div role="alert" className="mb-3">
-            <AppFailureMessage failure={appFailureFromConnect(failure)} />
-          </div>
-        )}
-        <div className="flex flex-wrap justify-end gap-3">
-          {/* Only `/clips/new` commits by hand (CLIP-39). An existing project has no 저장: the
-              queue saves it a beat after each pause and the page's one status line says so. */}
-          {!stored && (
-            <Button
-              form="clip-project-form"
-              type="submit"
-              variant="cta"
-              className="w-full sm:w-auto"
-              pending={save.isPending}
-              disabled={!valid || pending}
-            >
-              {t('project.create')}
-            </Button>
+      {/* A reading commits nothing, so it docks nothing (CLIP-160, CLIP-40). */}
+      {!readOnly && (
+        <ActionBar className="mt-auto">
+          {refusal}
+          {failure && (
+            <div role="alert" className="mb-3">
+              <AppFailureMessage failure={appFailureFromConnect(failure)} />
+            </div>
           )}
-          {actions?.(valid && !dirty && synced && !pending && !templateChanged, dirty)}
-        </div>
-      </ActionBar>
+          <div className="flex flex-wrap justify-end gap-3">
+            {/* Only `/clips/new` commits by hand (CLIP-39). An existing project has no 저장: the
+              queue saves it a beat after each pause and the page's one status line says so. */}
+            {!stored && (
+              <Button
+                form="clip-project-form"
+                type="submit"
+                variant="cta"
+                className="w-full sm:w-auto"
+                pending={save.isPending}
+                disabled={!valid || pending}
+              >
+                {t('project.create')}
+              </Button>
+            )}
+            {actions?.(valid && !dirty && synced && !pending && !templateChanged, dirty)}
+          </div>
+        </ActionBar>
+      )}
       <Dialog
         open={blocker.status === 'blocked'}
         title={t('project.leaveTitle')}

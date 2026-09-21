@@ -329,8 +329,13 @@ func TestClipFinalizationRPCIsOwnedAndReturnsCurrentIdentityOnConflict(t *testin
 		t.Fatal(err)
 	}
 	p := response.Msg.Project
-	if p.FinalizedResultId != h.project.Result.ID || p.GetCanEdit() || p.GetCanFinalize() || p.FinalizationRefusal != "finalized" || p.Editing != nil || p.Observations != nil || p.Result.DownloadUrl == "" {
+	// The confirmation hands back the readings ① and ② open afterwards (CLIP-160)
+	// while refusing every write the project can no longer take (CLIP-76).
+	if p.FinalizedResultId != h.project.Result.ID || p.GetCanEdit() || p.GetCanFinalize() || p.FinalizationRefusal != "finalized" || p.Result.DownloadUrl == "" {
 		t.Fatal(p)
+	}
+	if p.Editing == nil || len(p.Editing.GetPlan().GetCuts()) == 0 || p.Observations.GetStatus() != "available" {
+		t.Fatal("a confirmed clip lost the plan and the evidence it was made from", p)
 	}
 }
 
