@@ -1,5 +1,5 @@
 # AUTH accounts, passwords, sessions
-> r5 | Self-signed-up and operator-provisioned accounts, email + password or Google login, 30-day HttpOnly cookie sessions, and the single interceptor that turns a request into an acting user. Migrated from legacy policy/auth.md and plan/01.
+> r6 | Self-signed-up and operator-provisioned accounts, email + password or Google login, 30-day HttpOnly cookie sessions, and the single interceptor that turns a request into an acting user. Migrated from legacy policy/auth.md and plan/01.
 
 ## decisions
 - AUTH-1 [o] anyone may sign themselves up: AuthService carries Login · Logout · GetMe plus Signup, ResendVerification, VerifyEmail, RequestPasswordReset, ResetPassword and the Google sign-in exchange, and every one of the added procedures is public (→AUTH-17) ← paid subscriptions need an account a stranger can open without the operator
@@ -27,7 +27,7 @@
 - AUTH-23 [o] a 401 returns the app to `/login` only from a screen that required a session; on a public page it is the expected answer to that page's own reverse guard and changes nothing, and Login's 401 is the form's own wrong-password message ← read as a lost session from anywhere, a visitor's own probe threw them off `/signup` and `/forgot-password` before either form could render
 - AUTH-24 [o] every protected screen is a child of one pathless guard route (`id: 'authenticated'`) — protected by placement, not by remembering; `/login`, `/signup` and `/forgot-password` each carry the reverse guard and, unlike the protected one, swallow an outage so the form always renders
 - AUTH-25 [o] the guard trusts a resolved session for `SESSION_STALE_MS` (30 s) before re-checking ← a session revoked elsewhere must stop granting access without a full reload, without paying a round-trip per click
-- AUTH-26 [o] `loadSession` answers `active | signed-out` and throws only for failures that are not an answer; a 200 with no user is signed-out; an outage is not a logout and reaches the error boundary instead of a login form that cannot work
+- AUTH-26 [o] `loadSession` answers `active | signed-out` and throws only for failures that are not an answer; a 200 with no user is signed-out; an HTTP 5xx, proxy failure or network failure is an outage, never a logout, so it preserves client session state and reaches the error boundary instead of `/login`, where authentication cannot work
 - AUTH-27 [o] the post-login `redirect` param is followed only if resolving it against the origin stays in the app (`//host` and `/\host` both leave); anything else falls back to `/` ← the router does not check `to` against known routes
 - AUTH-28 [o] one cache entry is the session: `entities/session` owns the GetMe query, `useLogin` seeds it from the login response, `useLogout` removes it on success; the connect-query key takes the transport object the router carries ← a guard built on a different transport would silently read a different entry
 - AUTH-29 [o] logout lives in the header avatar popover (`widgets/account-menu`) beside the account id and plan material: pending state held in place, a failure stays in the open popover as a notice, only success drops the cache and navigates to `/login`
@@ -63,6 +63,7 @@
 - tests that pin it: dummy-path timing test (AUTH-9) · 401 on every non-public procedure · exact cookie attributes · replayed cookie after Logout is 401 · redirect validation · guard and reverse-guard behaviour
 
 ## chg
+- r6 260921 AUTH-26✎ an unspecified outage reached the error boundary→HTTP 5xx, proxy and network failures preserve client session state and never redirect to `/login`
 - r5 260909 AUTH-42✎ signup fields "email + password"→email + password + confirmation refused on mismatch in the form · AUTH-45 [?]→[x] no signed-out free-tier use, Google is the friction answer
 - r4 260909 AUTH-30✎ the way to `/signup` "bare 회원가입 / Sign up label"→a question-and-answer sentence · AUTH-42+ login and signup titled apart · AUTH-43+ Google sign-in live in production (one OAuth client, env on both ends, button absent until set) · AUTH-44 [x] hosted identity platform · AUTH-45 [?] signed-out free-tier use on a device identity · quote✎ "operator-provisioned, id + password"→self-signed-up or operator-provisioned, email + password or Google · constraints✎ Google env pair and placement
 - r3 260909 AUTH-23✎ a 401 "any procedure except Login → back to /login"→only from a screen that required a session · AUTH-24✎ the reverse guard "/login"→/login + /signup + /forgot-password

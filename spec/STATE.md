@@ -17,8 +17,8 @@
 ## ssot
 | id | rev | tasked | pending | [?] |
 |---|---|---|---|---|
-| ARCH | 5 | 5 | - | 0 |
-| AUTH | 5 | 5 | - | 0 |
+| ARCH | 6 | 6 | - | 0 |
+| AUTH | 6 | 6 | - | 0 |
 | QUOTA | 14 | 14 | - | 0 |
 | POST | 8 | 8 | - | 0 |
 | VOICE | 3 | 3 | - | 1 |
@@ -62,6 +62,12 @@
 - the clip `release-smoke` stage is still red at HEAD on this host (9 of 28 modes end in `no result`) and still needs a fix task
 - a `review-code` pass over the new memory domain is worth a look before it grows
 ## log
+- 260921 T297 done; dev media tuning 6/8 now passes bounded validation, GetMe 5xx preserves the session, and boot migrations remain pending-only (adr)
+- 260921 T297 claimed (adr)
+- 260921 T297 created from AUTH r6 ARCH r6: retain 401-only logout, pin pending-only boot migrations, and restore dev media readiness (auth-dev-readiness)
+- 260921 create-task AUTH ARCH start (auth-dev-readiness)
+- 260921 AUTH r6 ARCH r6: 5xx/proxy/network failures preserve the session; each boot applies only pending embedded migrations, and dev overrides pass bounded context validation (auth-dev-readiness)
+- 260921 update-ssot AUTH ARCH start: investigate GetMe 502, define terminal auth-failure redirect, and automate dev database readiness (auth-dev-readiness)
 - 260921 T296 done; the current destination is told by the accent everywhere, the group rail is denser than the primary one, the phone group row's name is its own menu trigger, and a list's dock is the floating control alone (nav)
 - 260921 T296 created from THEME r14 and claimed (nav)
 - 260921 THEME r14: the second level is told by density too, the phone group row's name IS its menu trigger, the current destination takes the accent, and a list's dock loses its plane (nav)
@@ -76,9 +82,3 @@
 - 260921 create-task TMPL start (alt)
 - 260921 TMPL r7: TMPL-17 23 39 cite the current Naver photo marker, and a slot placeholder is told from it by its brackets (alt)
 - 260921 update-ssot TMPL start (alt)
-- 260921 T294 done; the Naver photo marker carries its caption folded to one `_`-joined token (`사진_1_비_뒤의_바다_사진`), captionless blocks keep the bare form, and both Naver snapshots moved by exactly those lines
-- 260921 T294 created from EXPORT r4: one task, the converter's fold plus its tests, goldens and the panel's guidance line (alt)
-- 260921 create-task EXPORT start (alt)
-- 260921 EXPORT r4: the Naver photo marker carries its caption folded into one double-clickable token; EXPORT-24's caption copy stays and its reason follows (alt)
-- 260921 update-ssot EXPORT start (alt)
-- 260920 T293 done; ① carries the 기억 사용 checkbox (autosaved, flag only) and ③ carries 기억으로 저장 with the candidate sheet that creates only what is checked — the MEM chain is complete

@@ -29,18 +29,22 @@ const (
 	// crop rather than the style. This is the upper-mid of that measured range,
 	// an estimate rather than a wall-clock guarantee. CLIP-145 quotes the longest
 	// permitted frame count with it and imposes no ceiling on sequence captions.
-	SequenceFrameCostMS       = 30
-	LabelChars                = 40
-	PromptChars               = 200
-	TitleChars                = 100
-	AnswerChars               = 500
-	InstructionChars          = 1000
-	MinDurationMS             = 15000
-	MaxDurationMS             = 90000
-	SourceCount               = 20
-	SourceDurationMS          = 30 * 60 * 1000
-	SourceFileBytes     int64 = 2 * 1024 * 1024 * 1024
-	SourceBatchBytes    int64 = 8 * 1024 * 1024 * 1024
+	SequenceFrameCostMS = 30
+	LabelChars          = 40
+	PromptChars         = 200
+	TitleChars          = 100
+	AnswerChars         = 500
+	InstructionChars    = 1000
+	MinDurationMS       = 15000
+	MaxDurationMS       = 90000
+	// MediaThreadMax bounds deployment tuning for both ffmpeg roles. Production
+	// keeps the single encoder thread default for reproducibility; local dev may
+	// spend more cores without turning a typo into an unbounded process.
+	MediaThreadMax         = 8
+	SourceCount            = 20
+	SourceDurationMS       = 30 * 60 * 1000
+	SourceFileBytes  int64 = 2 * 1024 * 1024 * 1024
+	SourceBatchBytes int64 = 8 * 1024 * 1024 * 1024
 )
 
 // OriginalRetention is how long a confirmed original is kept. Confirmed

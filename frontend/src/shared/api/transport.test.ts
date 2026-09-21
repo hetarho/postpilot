@@ -121,9 +121,9 @@ describe('unauthenticatedInterceptor', () => {
     expect(fired).toBe(1)
   })
 
-  it('stays quiet for a failure that is not a 401', async () => {
+  it('does not turn a GetMe 5xx into a logout', async () => {
     const transport = transportWith(({ rpc }) => {
-      rpc(HealthService.method.ping, () => {
+      rpc(AuthService.method.getMe, () => {
         throw new ConnectError('boom', Code.Internal)
       })
     })
@@ -132,7 +132,7 @@ describe('unauthenticatedInterceptor', () => {
       fired += 1
     })
 
-    await expect(createClient(HealthService, transport).ping({})).rejects.toThrow()
+    await expect(createClient(AuthService, transport).getMe({})).rejects.toThrow()
     off()
 
     expect(fired).toBe(0)

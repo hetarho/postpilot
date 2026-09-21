@@ -37,6 +37,38 @@ func newAdapter(t *testing.T, r Runner) *Adapter {
 	}
 	return a
 }
+
+func TestNewAcceptsBoundedDevelopmentThreadCounts(t *testing.T) {
+	cfg := mediaConfig(t)
+	cfg.EncodeThreads = 6
+	cfg.DecodeThreads = 8
+
+	a, err := New(cfg, nil)
+	if err != nil {
+		t.Fatalf("documented development tuning was refused: %v", err)
+	}
+	if a.cfg.EncodeThreads != 6 || a.cfg.DecodeThreads != 8 {
+		t.Fatalf("thread tuning was not retained: encode=%d decode=%d", a.cfg.EncodeThreads, a.cfg.DecodeThreads)
+	}
+
+	for _, tc := range []struct {
+		name   string
+		change func(*clip.MediaConfig)
+		want   string
+	}{
+		{name: "encode", change: func(c *clip.MediaConfig) { c.EncodeThreads = clip.MediaThreadMax + 1 }, want: "clip encode threads"},
+		{name: "decode", change: func(c *clip.MediaConfig) { c.DecodeThreads = clip.MediaThreadMax + 1 }, want: "clip decode threads"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			invalid := mediaConfig(t)
+			tc.change(&invalid)
+			if _, err := New(invalid, nil); err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("error = %v, want named %q failure", err, tc.want)
+			}
+		})
+	}
+}
+
 func sourceFile(t *testing.T, ws clip.MediaWorkspace) string {
 	t.Helper()
 	p := filepath.Join(ws.Path, "source.mp4")
