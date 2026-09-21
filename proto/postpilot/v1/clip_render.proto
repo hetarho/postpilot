@@ -8,6 +8,7 @@ import "postpilot/v1/clip.proto";
 // and the three steps a browser render's bytes are stored through.
 service ClipRenderService {
   rpc PrepareClipPreview(PrepareClipPreviewRequest) returns (PrepareClipPreviewResponse) {}
+  rpc PrepareClipCaptionFrames(PrepareClipCaptionFramesRequest) returns (PrepareClipCaptionFramesResponse) {}
   rpc StartClipRender(StartClipRenderRequest) returns (StartClipRenderResponse) {}
   rpc ReportClipRenderVerdict(ReportClipRenderVerdictRequest) returns (ReportClipRenderVerdictResponse) {}
   rpc PrepareClipRenderUpload(PrepareClipRenderUploadRequest) returns (PrepareClipRenderUploadResponse) {}
@@ -33,6 +34,43 @@ message PrepareClipPreviewResponse {
   // -1 means this requested element page is complete.
   int32 next_offset = 5;
   repeated ClipPreviewParity parity = 6;
+}
+
+// One sequence-rendered caption's own frames, for a browser render to draw from
+// (CLIP-159). The frames are the ones a server render would draw — same crop,
+// same progress per frame, same painter — so the two kinds deliver the same
+// picture. Serving them changes nothing and costs nothing.
+message PrepareClipCaptionFramesRequest {
+  string project_id = 1;
+  int32 expected_revision = 2;
+  // SHA-256 of the deterministic protobuf encoding of plan.
+  string draft_hash = 3;
+  ClipEditPlan plan = 4;
+  // The caption whose frames these are. A static style is refused: its one
+  // raster is what the draft preview already serves.
+  string instance_id = 5;
+  // The first frame of this run, counted from the caption's own first frame.
+  int32 frame_offset = 6;
+}
+
+message PrepareClipCaptionFramesResponse {
+  string draft_hash = 1;
+  // One PNG holding the run's frames as cells, left to right then top to
+  // bottom. The caller blits a cell; nothing is decoded twice.
+  bytes sheet = 2;
+  int32 cell_width = 3;
+  int32 cell_height = 4;
+  int32 columns = 5;
+  int32 cells = 6;
+  // Where a cell sits on the canvas: the same origin the server's own overlay
+  // places this caption's layer at.
+  int32 x = 7;
+  int32 y = 8;
+  // The caption's first OUTPUT frame, and the frame this run starts at.
+  int32 first_frame = 9;
+  int32 frame_offset = 10;
+  // -1 once this caption has no further frames.
+  int32 next_offset = 11;
 }
 
 message StartClipRenderRequest { string project_id = 1; int32 expected_revision = 2; string batch_id = 3; ClipRenderKind render_kind = 4; }

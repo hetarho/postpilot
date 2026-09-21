@@ -56,6 +56,8 @@ export {
   StartClipRevisionResponseSchema,
 } from './gen/postpilot/v1/clip_plan_pb'
 export {
+  PrepareClipCaptionFramesRequestSchema,
+  PrepareClipCaptionFramesResponseSchema,
   PrepareClipPreviewRequestSchema,
   PrepareClipPreviewResponseSchema,
   StartClipRenderResponseSchema,

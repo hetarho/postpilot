@@ -72,6 +72,64 @@ func TestPreviewRPCAuthenticatesHashOwnerAndReadOnlyResponse(t *testing.T) {
 		t.Fatal("stale body hash accepted", err)
 	}
 }
+func (previewRPCRenderer) PrepareCaptionFrames(_ context.Context, _ clip.EditPlan, _ []clip.RenderSource, instance string, offset int, _ clip.PreviewConfig) (clip.CaptionFrames, error) {
+	return clip.CaptionFrames{Sheet: []byte{1, 2, 3}, CellWidth: 900, CellHeight: 250, Columns: 4, Cells: 30,
+		X: 90, Y: 640, FirstFrame: 30, FrameOffset: offset, NextOffset: -1}, nil
+}
+
+// The frames a browser render draws from are admitted exactly as a draft preview
+// is: the owner's own project, at the revision they were looking at, pinned to
+// the plan they hold (CLIP-159, CLIP-154).
+func TestCaptionFramesRPCIsOwnerScopedAndPinnedToTheDraft(t *testing.T) {
+	plan := clip.EditPlan{Ratio: "vertical", DurationMS: 15000, Cuts: []clip.Cut{{ID: "cut", SourceID: "source", Fingerprint: "fp", EndMS: 15000, Focal: clip.Point{X: .5, Y: .5}}}}
+	raw, err := clip.EncodeEditPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	analysis, _ := json.Marshal([]clip.SourceAnalysis{{Source: clip.AnalysisSource{RenderSource: clip.RenderSource{ID: "source", Fingerprint: "fp", Info: clip.MediaInfo{DurationMS: 15000, Width: 1920, Height: 1080}}}}})
+	store := previewRPCStore{project: clip.Project{ID: "owned", UserID: "alice", Ratio: "vertical", EditPlan: raw, EditPlanRevision: 1, Analysis: string(analysis)}}
+	projects := testProjects(store)
+	cfg := clip.DefaultGenerationConfig(clip.Environment{GetTTL: time.Minute, OrphanMinAge: time.Hour})
+	generation := clipapp.NewGenerationService(nil, projects, nil, neutralProcessing{}, nil, nil, previewRPCRenderer{}, neutralJobs{}, cfg, neutralGenerationDeps())
+	h := NewHandler(projects).WithGeneration(generation, nil)
+	wire := editingProto(&clip.CorrectionState{Plan: clip.CorrectionFromPlan(plan)}).Plan
+	encoded, _ := (proto.MarshalOptions{Deterministic: true}).Marshal(wire)
+	hash := sha256.Sum256(encoded)
+	body := &v1.PrepareClipCaptionFramesRequest{ProjectId: "owned", ExpectedRevision: 1, Plan: wire,
+		DraftHash: hex.EncodeToString(hash[:]), InstanceId: "caption/cut"}
+	if _, err := h.PrepareClipCaptionFrames(t.Context(), connect.NewRequest(body)); connect.CodeOf(err) != connect.CodeUnauthenticated {
+		t.Fatal(err)
+	}
+	if _, err := h.PrepareClipCaptionFrames(auth.WithUser(t.Context(), "bob"), connect.NewRequest(body)); connect.CodeOf(err) != connect.CodeNotFound {
+		t.Fatal(err)
+	}
+	ctx := auth.WithUser(t.Context(), "alice")
+	out, err := h.PrepareClipCaptionFrames(ctx, connect.NewRequest(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out.Msg.DraftHash != body.DraftHash || out.Msg.Cells != 30 || out.Msg.NextOffset != -1 || out.Header().Get("Cache-Control") != "private, no-store" {
+		t.Fatal(out.Msg)
+	}
+	stale := &v1.PrepareClipCaptionFramesRequest{ProjectId: body.ProjectId, ExpectedRevision: 2, Plan: body.Plan,
+		DraftHash: body.DraftHash, InstanceId: body.InstanceId}
+	if _, err := h.PrepareClipCaptionFrames(ctx, connect.NewRequest(stale)); connect.CodeOf(err) != connect.CodeAborted {
+		t.Fatal("a stale revision was served", err)
+	}
+	body.Plan.Hook = "changed"
+	if _, err := h.PrepareClipCaptionFrames(ctx, connect.NewRequest(body)); connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Fatal("stale body hash accepted", err)
+	}
+	// A finalized project has no draft to read frames of (CLIP-76).
+	store.project.Finalized = &clip.Finalization{PlanRevision: 1, ResultID: "result"}
+	finalized := NewHandler(testProjects(store)).WithGeneration(
+		clipapp.NewGenerationService(nil, testProjects(store), nil, neutralProcessing{}, nil, nil, previewRPCRenderer{}, neutralJobs{}, cfg, neutralGenerationDeps()), nil)
+	body.Plan.Hook = ""
+	if _, err := finalized.PrepareClipCaptionFrames(ctx, connect.NewRequest(body)); connect.CodeOf(err) != connect.CodeFailedPrecondition {
+		t.Fatal("a finalized project served frames", err)
+	}
+}
+
 func TestNativeEditingWireKeepsOptionalTimingAndBoundRows(t *testing.T) {
 	zero, end := 0, 1200
 	value := clip.CorrectionText{InstanceID: "owned", ElementID: "label", Kind: "fixed", Role: "info", Text: "<정확한 문구>", Rows: []composition.ResolvedRow{{Role: "caption", Text: "9,900원"}}, Style: "auto", Position: "header", Align: "center", Basis: "output-start", StartMS: &zero, EndMS: &end, GroupID: "menu", ItemID: "one", ResolvedEndMS: end}

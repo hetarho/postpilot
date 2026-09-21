@@ -36,6 +36,9 @@ const (
 	// ClipRenderServicePrepareClipPreviewProcedure is the fully-qualified name of the
 	// ClipRenderService's PrepareClipPreview RPC.
 	ClipRenderServicePrepareClipPreviewProcedure = "/postpilot.v1.ClipRenderService/PrepareClipPreview"
+	// ClipRenderServicePrepareClipCaptionFramesProcedure is the fully-qualified name of the
+	// ClipRenderService's PrepareClipCaptionFrames RPC.
+	ClipRenderServicePrepareClipCaptionFramesProcedure = "/postpilot.v1.ClipRenderService/PrepareClipCaptionFrames"
 	// ClipRenderServiceStartClipRenderProcedure is the fully-qualified name of the ClipRenderService's
 	// StartClipRender RPC.
 	ClipRenderServiceStartClipRenderProcedure = "/postpilot.v1.ClipRenderService/StartClipRender"
@@ -56,6 +59,7 @@ const (
 // ClipRenderServiceClient is a client for the postpilot.v1.ClipRenderService service.
 type ClipRenderServiceClient interface {
 	PrepareClipPreview(context.Context, *connect.Request[v1.PrepareClipPreviewRequest]) (*connect.Response[v1.PrepareClipPreviewResponse], error)
+	PrepareClipCaptionFrames(context.Context, *connect.Request[v1.PrepareClipCaptionFramesRequest]) (*connect.Response[v1.PrepareClipCaptionFramesResponse], error)
 	StartClipRender(context.Context, *connect.Request[v1.StartClipRenderRequest]) (*connect.Response[v1.StartClipRenderResponse], error)
 	ReportClipRenderVerdict(context.Context, *connect.Request[v1.ReportClipRenderVerdictRequest]) (*connect.Response[v1.ReportClipRenderVerdictResponse], error)
 	PrepareClipRenderUpload(context.Context, *connect.Request[v1.PrepareClipRenderUploadRequest]) (*connect.Response[v1.PrepareClipRenderUploadResponse], error)
@@ -78,6 +82,12 @@ func NewClipRenderServiceClient(httpClient connect.HTTPClient, baseURL string, o
 			httpClient,
 			baseURL+ClipRenderServicePrepareClipPreviewProcedure,
 			connect.WithSchema(clipRenderServiceMethods.ByName("PrepareClipPreview")),
+			connect.WithClientOptions(opts...),
+		),
+		prepareClipCaptionFrames: connect.NewClient[v1.PrepareClipCaptionFramesRequest, v1.PrepareClipCaptionFramesResponse](
+			httpClient,
+			baseURL+ClipRenderServicePrepareClipCaptionFramesProcedure,
+			connect.WithSchema(clipRenderServiceMethods.ByName("PrepareClipCaptionFrames")),
 			connect.WithClientOptions(opts...),
 		),
 		startClipRender: connect.NewClient[v1.StartClipRenderRequest, v1.StartClipRenderResponse](
@@ -116,6 +126,7 @@ func NewClipRenderServiceClient(httpClient connect.HTTPClient, baseURL string, o
 // clipRenderServiceClient implements ClipRenderServiceClient.
 type clipRenderServiceClient struct {
 	prepareClipPreview       *connect.Client[v1.PrepareClipPreviewRequest, v1.PrepareClipPreviewResponse]
+	prepareClipCaptionFrames *connect.Client[v1.PrepareClipCaptionFramesRequest, v1.PrepareClipCaptionFramesResponse]
 	startClipRender          *connect.Client[v1.StartClipRenderRequest, v1.StartClipRenderResponse]
 	reportClipRenderVerdict  *connect.Client[v1.ReportClipRenderVerdictRequest, v1.ReportClipRenderVerdictResponse]
 	prepareClipRenderUpload  *connect.Client[v1.PrepareClipRenderUploadRequest, v1.PrepareClipRenderUploadResponse]
@@ -126,6 +137,11 @@ type clipRenderServiceClient struct {
 // PrepareClipPreview calls postpilot.v1.ClipRenderService.PrepareClipPreview.
 func (c *clipRenderServiceClient) PrepareClipPreview(ctx context.Context, req *connect.Request[v1.PrepareClipPreviewRequest]) (*connect.Response[v1.PrepareClipPreviewResponse], error) {
 	return c.prepareClipPreview.CallUnary(ctx, req)
+}
+
+// PrepareClipCaptionFrames calls postpilot.v1.ClipRenderService.PrepareClipCaptionFrames.
+func (c *clipRenderServiceClient) PrepareClipCaptionFrames(ctx context.Context, req *connect.Request[v1.PrepareClipCaptionFramesRequest]) (*connect.Response[v1.PrepareClipCaptionFramesResponse], error) {
+	return c.prepareClipCaptionFrames.CallUnary(ctx, req)
 }
 
 // StartClipRender calls postpilot.v1.ClipRenderService.StartClipRender.
@@ -156,6 +172,7 @@ func (c *clipRenderServiceClient) CancelClipBrowserRender(ctx context.Context, r
 // ClipRenderServiceHandler is an implementation of the postpilot.v1.ClipRenderService service.
 type ClipRenderServiceHandler interface {
 	PrepareClipPreview(context.Context, *connect.Request[v1.PrepareClipPreviewRequest]) (*connect.Response[v1.PrepareClipPreviewResponse], error)
+	PrepareClipCaptionFrames(context.Context, *connect.Request[v1.PrepareClipCaptionFramesRequest]) (*connect.Response[v1.PrepareClipCaptionFramesResponse], error)
 	StartClipRender(context.Context, *connect.Request[v1.StartClipRenderRequest]) (*connect.Response[v1.StartClipRenderResponse], error)
 	ReportClipRenderVerdict(context.Context, *connect.Request[v1.ReportClipRenderVerdictRequest]) (*connect.Response[v1.ReportClipRenderVerdictResponse], error)
 	PrepareClipRenderUpload(context.Context, *connect.Request[v1.PrepareClipRenderUploadRequest]) (*connect.Response[v1.PrepareClipRenderUploadResponse], error)
@@ -174,6 +191,12 @@ func NewClipRenderServiceHandler(svc ClipRenderServiceHandler, opts ...connect.H
 		ClipRenderServicePrepareClipPreviewProcedure,
 		svc.PrepareClipPreview,
 		connect.WithSchema(clipRenderServiceMethods.ByName("PrepareClipPreview")),
+		connect.WithHandlerOptions(opts...),
+	)
+	clipRenderServicePrepareClipCaptionFramesHandler := connect.NewUnaryHandler(
+		ClipRenderServicePrepareClipCaptionFramesProcedure,
+		svc.PrepareClipCaptionFrames,
+		connect.WithSchema(clipRenderServiceMethods.ByName("PrepareClipCaptionFrames")),
 		connect.WithHandlerOptions(opts...),
 	)
 	clipRenderServiceStartClipRenderHandler := connect.NewUnaryHandler(
@@ -210,6 +233,8 @@ func NewClipRenderServiceHandler(svc ClipRenderServiceHandler, opts ...connect.H
 		switch r.URL.Path {
 		case ClipRenderServicePrepareClipPreviewProcedure:
 			clipRenderServicePrepareClipPreviewHandler.ServeHTTP(w, r)
+		case ClipRenderServicePrepareClipCaptionFramesProcedure:
+			clipRenderServicePrepareClipCaptionFramesHandler.ServeHTTP(w, r)
 		case ClipRenderServiceStartClipRenderProcedure:
 			clipRenderServiceStartClipRenderHandler.ServeHTTP(w, r)
 		case ClipRenderServiceReportClipRenderVerdictProcedure:
@@ -231,6 +256,10 @@ type UnimplementedClipRenderServiceHandler struct{}
 
 func (UnimplementedClipRenderServiceHandler) PrepareClipPreview(context.Context, *connect.Request[v1.PrepareClipPreviewRequest]) (*connect.Response[v1.PrepareClipPreviewResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipRenderService.PrepareClipPreview is not implemented"))
+}
+
+func (UnimplementedClipRenderServiceHandler) PrepareClipCaptionFrames(context.Context, *connect.Request[v1.PrepareClipCaptionFramesRequest]) (*connect.Response[v1.PrepareClipCaptionFramesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipRenderService.PrepareClipCaptionFrames is not implemented"))
 }
 
 func (UnimplementedClipRenderServiceHandler) StartClipRender(context.Context, *connect.Request[v1.StartClipRenderRequest]) (*connect.Response[v1.StartClipRenderResponse], error) {

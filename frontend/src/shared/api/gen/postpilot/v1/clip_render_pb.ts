@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file postpilot/v1/clip_render.proto.
  */
 export const file_postpilot_v1_clip_render: GenFile = /*@__PURE__*/
-  fileDesc("Ch5wb3N0cGlsb3QvdjEvY2xpcF9yZW5kZXIucHJvdG8SDHBvc3RwaWxvdC52MSKzAQoZUHJlcGFyZUNsaXBQcmV2aWV3UmVxdWVzdBISCgpwcm9qZWN0X2lkGAEgASgJEhkKEWV4cGVjdGVkX3JldmlzaW9uGAIgASgFEhIKCmRyYWZ0X2hhc2gYAyABKAkSKAoEcGxhbhgEIAEoCzIaLnBvc3RwaWxvdC52MS5DbGlwRWRpdFBsYW4SEwoLZWxlbWVudF9pZHMYBSADKAkSFAoMYXNzZXRfb2Zmc2V0GAYgASgFItMBChpQcmVwYXJlQ2xpcFByZXZpZXdSZXNwb25zZRISCgpkcmFmdF9oYXNoGAEgASgJEhQKDGNhbnZhc193aWR0aBgCIAEoBRIVCg1jYW52YXNfaGVpZ2h0GAMgASgFEi4KBmFzc2V0cxgEIAMoCzIeLnBvc3RwaWxvdC52MS5DbGlwUHJldmlld0Fzc2V0EhMKC25leHRfb2Zmc2V0GAUgASgFEi8KBnBhcml0eRgGIAMoDjIfLnBvc3RwaWxvdC52MS5DbGlwUHJldmlld1Bhcml0eSKMAQoWU3RhcnRDbGlwUmVuZGVyUmVxdWVzdBISCgpwcm9qZWN0X2lkGAEgASgJEhkKEWV4cGVjdGVkX3JldmlzaW9uGAIgASgFEhAKCGJhdGNoX2lkGAMgASgJEjEKC3JlbmRlcl9raW5kGAQgASgOMhwucG9zdHBpbG90LnYxLkNsaXBSZW5kZXJLaW5kIjwKF1N0YXJ0Q2xpcFJlbmRlclJlc3BvbnNlEg4KBmpvYl9pZBgBIAEoCRIRCglyZW5kZXJfaWQYAiABKAkifwoeUmVwb3J0Q2xpcFJlbmRlclZlcmRpY3RSZXF1ZXN0EhEKCXJlbmRlcl9pZBgBIAEoCRI6CgxtZWFzdXJlbWVudHMYAiABKAsyJC5wb3N0cGlsb3QudjEuQ2xpcFJlbmRlck1lYXN1cmVtZW50cxIOCgZwYXNzZWQYAyABKAgiXAofUmVwb3J0Q2xpcFJlbmRlclZlcmRpY3RSZXNwb25zZRIOCgZwYXNzZWQYASABKAgSKQoHbm90aWNlcxgCIAMoCzIYLnBvc3RwaWxvdC52MS5DbGlwTm90aWNlIkIKHlByZXBhcmVDbGlwUmVuZGVyVXBsb2FkUmVxdWVzdBIRCglyZW5kZXJfaWQYASABKAkSDQoFYnl0ZXMYAiABKAMirwEKH1ByZXBhcmVDbGlwUmVuZGVyVXBsb2FkUmVzcG9uc2USDwoHcHV0X3VybBgBIAEoCRJLCgdoZWFkZXJzGAIgAygLMjoucG9zdHBpbG90LnYxLlByZXBhcmVDbGlwUmVuZGVyVXBsb2FkUmVzcG9uc2UuSGVhZGVyc0VudHJ5Gi4KDEhlYWRlcnNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIjQKH0NvbXBsZXRlQ2xpcFJlbmRlclVwbG9hZFJlcXVlc3QSEQoJcmVuZGVyX2lkGAEgASgJIk4KIENvbXBsZXRlQ2xpcFJlbmRlclVwbG9hZFJlc3BvbnNlEioKB3Byb2plY3QYASABKAsyGS5wb3N0cGlsb3QudjEuQ2xpcFByb2plY3QiMwoeQ2FuY2VsQ2xpcEJyb3dzZXJSZW5kZXJSZXF1ZXN0EhEKCXJlbmRlcl9pZBgBIAEoCSI0Ch9DYW5jZWxDbGlwQnJvd3NlclJlbmRlclJlc3BvbnNlEhEKCWNhbmNlbGxlZBgBIAEoCDLLBQoRQ2xpcFJlbmRlclNlcnZpY2USaQoSUHJlcGFyZUNsaXBQcmV2aWV3EicucG9zdHBpbG90LnYxLlByZXBhcmVDbGlwUHJldmlld1JlcXVlc3QaKC5wb3N0cGlsb3QudjEuUHJlcGFyZUNsaXBQcmV2aWV3UmVzcG9uc2UiABJgCg9TdGFydENsaXBSZW5kZXISJC5wb3N0cGlsb3QudjEuU3RhcnRDbGlwUmVuZGVyUmVxdWVzdBolLnBvc3RwaWxvdC52MS5TdGFydENsaXBSZW5kZXJSZXNwb25zZSIAEngKF1JlcG9ydENsaXBSZW5kZXJWZXJkaWN0EiwucG9zdHBpbG90LnYxLlJlcG9ydENsaXBSZW5kZXJWZXJkaWN0UmVxdWVzdBotLnBvc3RwaWxvdC52MS5SZXBvcnRDbGlwUmVuZGVyVmVyZGljdFJlc3BvbnNlIgASeAoXUHJlcGFyZUNsaXBSZW5kZXJVcGxvYWQSLC5wb3N0cGlsb3QudjEuUHJlcGFyZUNsaXBSZW5kZXJVcGxvYWRSZXF1ZXN0Gi0ucG9zdHBpbG90LnYxLlByZXBhcmVDbGlwUmVuZGVyVXBsb2FkUmVzcG9uc2UiABJ7ChhDb21wbGV0ZUNsaXBSZW5kZXJVcGxvYWQSLS5wb3N0cGlsb3QudjEuQ29tcGxldGVDbGlwUmVuZGVyVXBsb2FkUmVxdWVzdBouLnBvc3RwaWxvdC52MS5Db21wbGV0ZUNsaXBSZW5kZXJVcGxvYWRSZXNwb25zZSIAEngKF0NhbmNlbENsaXBCcm93c2VyUmVuZGVyEiwucG9zdHBpbG90LnYxLkNhbmNlbENsaXBCcm93c2VyUmVuZGVyUmVxdWVzdBotLnBvc3RwaWxvdC52MS5DYW5jZWxDbGlwQnJvd3NlclJlbmRlclJlc3BvbnNlIgBCRFpCZ2l0aHViLmNvbS9wb3N0cGlsb3QvYmFja2VuZC9pbnRlcm5hbC9nZW4vcG9zdHBpbG90L3YxO3Bvc3RwaWxvdHYxYgZwcm90bzM", [file_postpilot_v1_clip]);
+  fileDesc("Ch5wb3N0cGlsb3QvdjEvY2xpcF9yZW5kZXIucHJvdG8SDHBvc3RwaWxvdC52MSKzAQoZUHJlcGFyZUNsaXBQcmV2aWV3UmVxdWVzdBISCgpwcm9qZWN0X2lkGAEgASgJEhkKEWV4cGVjdGVkX3JldmlzaW9uGAIgASgFEhIKCmRyYWZ0X2hhc2gYAyABKAkSKAoEcGxhbhgEIAEoCzIaLnBvc3RwaWxvdC52MS5DbGlwRWRpdFBsYW4SEwoLZWxlbWVudF9pZHMYBSADKAkSFAoMYXNzZXRfb2Zmc2V0GAYgASgFItMBChpQcmVwYXJlQ2xpcFByZXZpZXdSZXNwb25zZRISCgpkcmFmdF9oYXNoGAEgASgJEhQKDGNhbnZhc193aWR0aBgCIAEoBRIVCg1jYW52YXNfaGVpZ2h0GAMgASgFEi4KBmFzc2V0cxgEIAMoCzIeLnBvc3RwaWxvdC52MS5DbGlwUHJldmlld0Fzc2V0EhMKC25leHRfb2Zmc2V0GAUgASgFEi8KBnBhcml0eRgGIAMoDjIfLnBvc3RwaWxvdC52MS5DbGlwUHJldmlld1Bhcml0eSK5AQofUHJlcGFyZUNsaXBDYXB0aW9uRnJhbWVzUmVxdWVzdBISCgpwcm9qZWN0X2lkGAEgASgJEhkKEWV4cGVjdGVkX3JldmlzaW9uGAIgASgFEhIKCmRyYWZ0X2hhc2gYAyABKAkSKAoEcGxhbhgEIAEoCzIaLnBvc3RwaWxvdC52MS5DbGlwRWRpdFBsYW4SEwoLaW5zdGFuY2VfaWQYBSABKAkSFAoMZnJhbWVfb2Zmc2V0GAYgASgFIuQBCiBQcmVwYXJlQ2xpcENhcHRpb25GcmFtZXNSZXNwb25zZRISCgpkcmFmdF9oYXNoGAEgASgJEg0KBXNoZWV0GAIgASgMEhIKCmNlbGxfd2lkdGgYAyABKAUSEwoLY2VsbF9oZWlnaHQYBCABKAUSDwoHY29sdW1ucxgFIAEoBRINCgVjZWxscxgGIAEoBRIJCgF4GAcgASgFEgkKAXkYCCABKAUSEwoLZmlyc3RfZnJhbWUYCSABKAUSFAoMZnJhbWVfb2Zmc2V0GAogASgFEhMKC25leHRfb2Zmc2V0GAsgASgFIowBChZTdGFydENsaXBSZW5kZXJSZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkSGQoRZXhwZWN0ZWRfcmV2aXNpb24YAiABKAUSEAoIYmF0Y2hfaWQYAyABKAkSMQoLcmVuZGVyX2tpbmQYBCABKA4yHC5wb3N0cGlsb3QudjEuQ2xpcFJlbmRlcktpbmQiPAoXU3RhcnRDbGlwUmVuZGVyUmVzcG9uc2USDgoGam9iX2lkGAEgASgJEhEKCXJlbmRlcl9pZBgCIAEoCSJ/Ch5SZXBvcnRDbGlwUmVuZGVyVmVyZGljdFJlcXVlc3QSEQoJcmVuZGVyX2lkGAEgASgJEjoKDG1lYXN1cmVtZW50cxgCIAEoCzIkLnBvc3RwaWxvdC52MS5DbGlwUmVuZGVyTWVhc3VyZW1lbnRzEg4KBnBhc3NlZBgDIAEoCCJcCh9SZXBvcnRDbGlwUmVuZGVyVmVyZGljdFJlc3BvbnNlEg4KBnBhc3NlZBgBIAEoCBIpCgdub3RpY2VzGAIgAygLMhgucG9zdHBpbG90LnYxLkNsaXBOb3RpY2UiQgoeUHJlcGFyZUNsaXBSZW5kZXJVcGxvYWRSZXF1ZXN0EhEKCXJlbmRlcl9pZBgBIAEoCRINCgVieXRlcxgCIAEoAyKvAQofUHJlcGFyZUNsaXBSZW5kZXJVcGxvYWRSZXNwb25zZRIPCgdwdXRfdXJsGAEgASgJEksKB2hlYWRlcnMYAiADKAsyOi5wb3N0cGlsb3QudjEuUHJlcGFyZUNsaXBSZW5kZXJVcGxvYWRSZXNwb25zZS5IZWFkZXJzRW50cnkaLgoMSGVhZGVyc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiNAofQ29tcGxldGVDbGlwUmVuZGVyVXBsb2FkUmVxdWVzdBIRCglyZW5kZXJfaWQYASABKAkiTgogQ29tcGxldGVDbGlwUmVuZGVyVXBsb2FkUmVzcG9uc2USKgoHcHJvamVjdBgBIAEoCzIZLnBvc3RwaWxvdC52MS5DbGlwUHJvamVjdCIzCh5DYW5jZWxDbGlwQnJvd3NlclJlbmRlclJlcXVlc3QSEQoJcmVuZGVyX2lkGAEgASgJIjQKH0NhbmNlbENsaXBCcm93c2VyUmVuZGVyUmVzcG9uc2USEQoJY2FuY2VsbGVkGAEgASgIMsgGChFDbGlwUmVuZGVyU2VydmljZRJpChJQcmVwYXJlQ2xpcFByZXZpZXcSJy5wb3N0cGlsb3QudjEuUHJlcGFyZUNsaXBQcmV2aWV3UmVxdWVzdBooLnBvc3RwaWxvdC52MS5QcmVwYXJlQ2xpcFByZXZpZXdSZXNwb25zZSIAEnsKGFByZXBhcmVDbGlwQ2FwdGlvbkZyYW1lcxItLnBvc3RwaWxvdC52MS5QcmVwYXJlQ2xpcENhcHRpb25GcmFtZXNSZXF1ZXN0Gi4ucG9zdHBpbG90LnYxLlByZXBhcmVDbGlwQ2FwdGlvbkZyYW1lc1Jlc3BvbnNlIgASYAoPU3RhcnRDbGlwUmVuZGVyEiQucG9zdHBpbG90LnYxLlN0YXJ0Q2xpcFJlbmRlclJlcXVlc3QaJS5wb3N0cGlsb3QudjEuU3RhcnRDbGlwUmVuZGVyUmVzcG9uc2UiABJ4ChdSZXBvcnRDbGlwUmVuZGVyVmVyZGljdBIsLnBvc3RwaWxvdC52MS5SZXBvcnRDbGlwUmVuZGVyVmVyZGljdFJlcXVlc3QaLS5wb3N0cGlsb3QudjEuUmVwb3J0Q2xpcFJlbmRlclZlcmRpY3RSZXNwb25zZSIAEngKF1ByZXBhcmVDbGlwUmVuZGVyVXBsb2FkEiwucG9zdHBpbG90LnYxLlByZXBhcmVDbGlwUmVuZGVyVXBsb2FkUmVxdWVzdBotLnBvc3RwaWxvdC52MS5QcmVwYXJlQ2xpcFJlbmRlclVwbG9hZFJlc3BvbnNlIgASewoYQ29tcGxldGVDbGlwUmVuZGVyVXBsb2FkEi0ucG9zdHBpbG90LnYxLkNvbXBsZXRlQ2xpcFJlbmRlclVwbG9hZFJlcXVlc3QaLi5wb3N0cGlsb3QudjEuQ29tcGxldGVDbGlwUmVuZGVyVXBsb2FkUmVzcG9uc2UiABJ4ChdDYW5jZWxDbGlwQnJvd3NlclJlbmRlchIsLnBvc3RwaWxvdC52MS5DYW5jZWxDbGlwQnJvd3NlclJlbmRlclJlcXVlc3QaLS5wb3N0cGlsb3QudjEuQ2FuY2VsQ2xpcEJyb3dzZXJSZW5kZXJSZXNwb25zZSIAQkRaQmdpdGh1Yi5jb20vcG9zdHBpbG90L2JhY2tlbmQvaW50ZXJuYWwvZ2VuL3Bvc3RwaWxvdC92MTtwb3N0cGlsb3R2MWIGcHJvdG8z", [file_postpilot_v1_clip]);
 
 /**
  * @generated from message postpilot.v1.PrepareClipPreviewRequest
@@ -103,6 +103,137 @@ export const PrepareClipPreviewResponseSchema: GenMessage<PrepareClipPreviewResp
   messageDesc(file_postpilot_v1_clip_render, 1);
 
 /**
+ * One sequence-rendered caption's own frames, for a browser render to draw from
+ * (CLIP-159). The frames are the ones a server render would draw — same crop,
+ * same progress per frame, same painter — so the two kinds deliver the same
+ * picture. Serving them changes nothing and costs nothing.
+ *
+ * @generated from message postpilot.v1.PrepareClipCaptionFramesRequest
+ */
+export type PrepareClipCaptionFramesRequest = Message<"postpilot.v1.PrepareClipCaptionFramesRequest"> & {
+  /**
+   * @generated from field: string project_id = 1;
+   */
+  projectId: string;
+
+  /**
+   * @generated from field: int32 expected_revision = 2;
+   */
+  expectedRevision: number;
+
+  /**
+   * SHA-256 of the deterministic protobuf encoding of plan.
+   *
+   * @generated from field: string draft_hash = 3;
+   */
+  draftHash: string;
+
+  /**
+   * @generated from field: postpilot.v1.ClipEditPlan plan = 4;
+   */
+  plan?: ClipEditPlan | undefined;
+
+  /**
+   * The caption whose frames these are. A static style is refused: its one
+   * raster is what the draft preview already serves.
+   *
+   * @generated from field: string instance_id = 5;
+   */
+  instanceId: string;
+
+  /**
+   * The first frame of this run, counted from the caption's own first frame.
+   *
+   * @generated from field: int32 frame_offset = 6;
+   */
+  frameOffset: number;
+};
+
+/**
+ * Describes the message postpilot.v1.PrepareClipCaptionFramesRequest.
+ * Use `create(PrepareClipCaptionFramesRequestSchema)` to create a new message.
+ */
+export const PrepareClipCaptionFramesRequestSchema: GenMessage<PrepareClipCaptionFramesRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_clip_render, 2);
+
+/**
+ * @generated from message postpilot.v1.PrepareClipCaptionFramesResponse
+ */
+export type PrepareClipCaptionFramesResponse = Message<"postpilot.v1.PrepareClipCaptionFramesResponse"> & {
+  /**
+   * @generated from field: string draft_hash = 1;
+   */
+  draftHash: string;
+
+  /**
+   * One PNG holding the run's frames as cells, left to right then top to
+   * bottom. The caller blits a cell; nothing is decoded twice.
+   *
+   * @generated from field: bytes sheet = 2;
+   */
+  sheet: Uint8Array;
+
+  /**
+   * @generated from field: int32 cell_width = 3;
+   */
+  cellWidth: number;
+
+  /**
+   * @generated from field: int32 cell_height = 4;
+   */
+  cellHeight: number;
+
+  /**
+   * @generated from field: int32 columns = 5;
+   */
+  columns: number;
+
+  /**
+   * @generated from field: int32 cells = 6;
+   */
+  cells: number;
+
+  /**
+   * Where a cell sits on the canvas: the same origin the server's own overlay
+   * places this caption's layer at.
+   *
+   * @generated from field: int32 x = 7;
+   */
+  x: number;
+
+  /**
+   * @generated from field: int32 y = 8;
+   */
+  y: number;
+
+  /**
+   * The caption's first OUTPUT frame, and the frame this run starts at.
+   *
+   * @generated from field: int32 first_frame = 9;
+   */
+  firstFrame: number;
+
+  /**
+   * @generated from field: int32 frame_offset = 10;
+   */
+  frameOffset: number;
+
+  /**
+   * -1 once this caption has no further frames.
+   *
+   * @generated from field: int32 next_offset = 11;
+   */
+  nextOffset: number;
+};
+
+/**
+ * Describes the message postpilot.v1.PrepareClipCaptionFramesResponse.
+ * Use `create(PrepareClipCaptionFramesResponseSchema)` to create a new message.
+ */
+export const PrepareClipCaptionFramesResponseSchema: GenMessage<PrepareClipCaptionFramesResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_clip_render, 3);
+
+/**
  * @generated from message postpilot.v1.StartClipRenderRequest
  */
 export type StartClipRenderRequest = Message<"postpilot.v1.StartClipRenderRequest"> & {
@@ -132,7 +263,7 @@ export type StartClipRenderRequest = Message<"postpilot.v1.StartClipRenderReques
  * Use `create(StartClipRenderRequestSchema)` to create a new message.
  */
 export const StartClipRenderRequestSchema: GenMessage<StartClipRenderRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip_render, 2);
+  messageDesc(file_postpilot_v1_clip_render, 4);
 
 /**
  * @generated from message postpilot.v1.StartClipRenderResponse
@@ -154,7 +285,7 @@ export type StartClipRenderResponse = Message<"postpilot.v1.StartClipRenderRespo
  * Use `create(StartClipRenderResponseSchema)` to create a new message.
  */
 export const StartClipRenderResponseSchema: GenMessage<StartClipRenderResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip_render, 3);
+  messageDesc(file_postpilot_v1_clip_render, 5);
 
 /**
  * @generated from message postpilot.v1.ReportClipRenderVerdictRequest
@@ -181,7 +312,7 @@ export type ReportClipRenderVerdictRequest = Message<"postpilot.v1.ReportClipRen
  * Use `create(ReportClipRenderVerdictRequestSchema)` to create a new message.
  */
 export const ReportClipRenderVerdictRequestSchema: GenMessage<ReportClipRenderVerdictRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip_render, 4);
+  messageDesc(file_postpilot_v1_clip_render, 6);
 
 /**
  * The verdict is recorded; it never makes an unstored local file a result.
@@ -205,7 +336,7 @@ export type ReportClipRenderVerdictResponse = Message<"postpilot.v1.ReportClipRe
  * Use `create(ReportClipRenderVerdictResponseSchema)` to create a new message.
  */
 export const ReportClipRenderVerdictResponseSchema: GenMessage<ReportClipRenderVerdictResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip_render, 5);
+  messageDesc(file_postpilot_v1_clip_render, 7);
 
 /**
  * The admitted render determines the immutable object key; no media enters RPC.
@@ -229,7 +360,7 @@ export type PrepareClipRenderUploadRequest = Message<"postpilot.v1.PrepareClipRe
  * Use `create(PrepareClipRenderUploadRequestSchema)` to create a new message.
  */
 export const PrepareClipRenderUploadRequestSchema: GenMessage<PrepareClipRenderUploadRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip_render, 6);
+  messageDesc(file_postpilot_v1_clip_render, 8);
 
 /**
  * @generated from message postpilot.v1.PrepareClipRenderUploadResponse
@@ -251,7 +382,7 @@ export type PrepareClipRenderUploadResponse = Message<"postpilot.v1.PrepareClipR
  * Use `create(PrepareClipRenderUploadResponseSchema)` to create a new message.
  */
 export const PrepareClipRenderUploadResponseSchema: GenMessage<PrepareClipRenderUploadResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip_render, 7);
+  messageDesc(file_postpilot_v1_clip_render, 9);
 
 /**
  * @generated from message postpilot.v1.CompleteClipRenderUploadRequest
@@ -268,7 +399,7 @@ export type CompleteClipRenderUploadRequest = Message<"postpilot.v1.CompleteClip
  * Use `create(CompleteClipRenderUploadRequestSchema)` to create a new message.
  */
 export const CompleteClipRenderUploadRequestSchema: GenMessage<CompleteClipRenderUploadRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip_render, 8);
+  messageDesc(file_postpilot_v1_clip_render, 10);
 
 /**
  * @generated from message postpilot.v1.CompleteClipRenderUploadResponse
@@ -285,7 +416,7 @@ export type CompleteClipRenderUploadResponse = Message<"postpilot.v1.CompleteCli
  * Use `create(CompleteClipRenderUploadResponseSchema)` to create a new message.
  */
 export const CompleteClipRenderUploadResponseSchema: GenMessage<CompleteClipRenderUploadResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip_render, 9);
+  messageDesc(file_postpilot_v1_clip_render, 11);
 
 /**
  * @generated from message postpilot.v1.CancelClipBrowserRenderRequest
@@ -302,7 +433,7 @@ export type CancelClipBrowserRenderRequest = Message<"postpilot.v1.CancelClipBro
  * Use `create(CancelClipBrowserRenderRequestSchema)` to create a new message.
  */
 export const CancelClipBrowserRenderRequestSchema: GenMessage<CancelClipBrowserRenderRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip_render, 10);
+  messageDesc(file_postpilot_v1_clip_render, 12);
 
 /**
  * False means completion already won; a stored result is never undone.
@@ -321,7 +452,7 @@ export type CancelClipBrowserRenderResponse = Message<"postpilot.v1.CancelClipBr
  * Use `create(CancelClipBrowserRenderResponseSchema)` to create a new message.
  */
 export const CancelClipBrowserRenderResponseSchema: GenMessage<CancelClipBrowserRenderResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip_render, 11);
+  messageDesc(file_postpilot_v1_clip_render, 13);
 
 /**
  * Everything that turns a plan into a file: the draft preview's assets, the server render,
@@ -337,6 +468,14 @@ export const ClipRenderService: GenService<{
     methodKind: "unary";
     input: typeof PrepareClipPreviewRequestSchema;
     output: typeof PrepareClipPreviewResponseSchema;
+  },
+  /**
+   * @generated from rpc postpilot.v1.ClipRenderService.PrepareClipCaptionFrames
+   */
+  prepareClipCaptionFrames: {
+    methodKind: "unary";
+    input: typeof PrepareClipCaptionFramesRequestSchema;
+    output: typeof PrepareClipCaptionFramesResponseSchema;
   },
   /**
    * @generated from rpc postpilot.v1.ClipRenderService.StartClipRender

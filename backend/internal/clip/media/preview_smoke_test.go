@@ -116,3 +116,69 @@ func TestRenderSmokePreviewSequenceRepresentative(t *testing.T) {
 		t.Fatal("sequence caption missing")
 	}
 }
+
+// CLIP-159: the sheet a browser render draws a sequence caption from is a real
+// PNG, rasterised by the same resvg the render uses, with one visible cell per
+// output frame of the run.
+func TestRenderSmokeCaptionFrames(t *testing.T) {
+	if os.Getenv("CLIP_MEDIA_SMOKE") != "1" {
+		t.Skip("real caption-frame gate runs inside Docker")
+	}
+	t.Parallel()
+	a, err := New(mediaConfig(t), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r, err := NewRenderer(a, renderConfig(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	plan := declaredPlan(t, `<clip version="1" styles="word-pop"><scene id="scene"><text id="copy" kind="ai" role="caption" basis="cut">Describe the scene.</text></scene></clip>`, "vertical")
+	for i := range plan.Portable.Elements {
+		if plan.Portable.Elements[i].Resolved.Element.Kind == "ai" {
+			plan.Portable.Elements[i].Resolved.Text = "오늘은 철판 요리를 먹어요"
+		}
+	}
+	plan.CaptionStyles = []string{"word-pop"}
+	refs := []clip.RenderSource{{ID: "source", Fingerprint: "fp", Info: clip.MediaInfo{DurationMS: 15000, Width: 1920, Height: 1080}}}
+	cfg := clip.DefaultGenerationConfig(clip.Environment{}).Preview
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+	defer cancel()
+	started := time.Now()
+	frames, err := r.PrepareCaptionFrames(ctx, plan, refs, "copy/cut", 0, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("real-font caption sheet: %d cells in %s, %d bytes", frames.Cells, time.Since(started), len(frames.Sheet))
+	img, err := png.Decode(bytes.NewReader(frames.Sheet))
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows := (frames.Cells + frames.Columns - 1) / frames.Columns
+	if img.Bounds().Dx() != frames.Columns*frames.CellWidth || img.Bounds().Dy() != rows*frames.CellHeight {
+		t.Fatalf("the sheet is %v for %d cells of %dx%d", img.Bounds(), frames.Cells, frames.CellWidth, frames.CellHeight)
+	}
+	// The cells are the caption's own motion, so they DIFFER: a style that fades
+	// in draws its first frame transparent — the render's own first frame is the
+	// same — and the frames after it carry the drawing.
+	ink := make([]uint64, frames.Cells)
+	for cell := range frames.Cells {
+		col, row := cell%frames.Columns, cell/frames.Columns
+		for y := row * frames.CellHeight; y < (row+1)*frames.CellHeight; y += 4 {
+			for x := col * frames.CellWidth; x < (col+1)*frames.CellWidth; x += 4 {
+				r, g, b, alpha := img.At(x, y).RGBA()
+				ink[cell] += uint64(alpha>>8)*1 + uint64(r>>8)<<8 + uint64(g>>8)<<16 + uint64(b>>8)<<24
+			}
+		}
+	}
+	if ink[frames.Cells-1] == 0 {
+		t.Fatal("the settled cell of the sheet is empty")
+	}
+	distinct := map[uint64]bool{}
+	for _, value := range ink {
+		distinct[value] = true
+	}
+	if len(distinct) < 2 {
+		t.Fatalf("every cell drew the same picture: %v", ink)
+	}
+}

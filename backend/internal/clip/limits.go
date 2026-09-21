@@ -136,5 +136,5 @@ func DefaultAnalysisLimits() AnalysisLimits {
 
 // DefaultGenerationConfig is what one generation run is allowed to spend.
 func DefaultGenerationConfig(env Environment) GenerationConfig {
-	return GenerationConfig{Preview: PreviewConfig{MaxAssets: 8, MaxAssetBytes: 512 * 1024, MaxResponseBytes: 4 * 1024 * 1024, Timeout: 5 * time.Second}, Render: DefaultRenderConfig(env), Media: DefaultMediaConfig(env), Analysis: DefaultAnalysisLimits(), ReadTTL: env.GetTTL, CleanupTimeout: 30 * time.Second, OrphanMinAge: env.OrphanMinAge, QuoteTTL: env.QuoteTTL}
+	return GenerationConfig{Preview: PreviewConfig{MaxAssets: 8, MaxAssetBytes: 512 * 1024, MaxResponseBytes: 4 * 1024 * 1024, MaxFrameCells: 30, MaxSheetPixels: 4096, Timeout: 5 * time.Second}, Render: DefaultRenderConfig(env), Media: DefaultMediaConfig(env), Analysis: DefaultAnalysisLimits(), ReadTTL: env.GetTTL, CleanupTimeout: 30 * time.Second, OrphanMinAge: env.OrphanMinAge, QuoteTTL: env.QuoteTTL}
 }

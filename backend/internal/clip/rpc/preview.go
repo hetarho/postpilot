@@ -60,6 +60,44 @@ func (h *Handler) PrepareClipPreview(ctx context.Context, req *connect.Request[v
 	return response, nil
 }
 
+// PrepareClipCaptionFrames hands a browser render the server's own drawing of a
+// sequence-rendered caption's output frames, as one sprite sheet per run
+// (CLIP-159). Admitted exactly as a draft preview is, and it changes nothing.
+func (h *Handler) PrepareClipCaptionFrames(ctx context.Context, req *connect.Request[v1.PrepareClipCaptionFramesRequest]) (*connect.Response[v1.PrepareClipCaptionFramesResponse], error) {
+	user, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if h.generation == nil {
+		return nil, toConnectError(clip.ErrPreviewUnavailable)
+	}
+	if req.Msg.Plan == nil {
+		return nil, toConnectError(clip.ErrInvalid)
+	}
+	bytes, err := (proto.MarshalOptions{Deterministic: true}).Marshal(req.Msg.Plan)
+	if err != nil {
+		return nil, toConnectError(clip.ErrInvalid)
+	}
+	digest := sha256.Sum256(bytes)
+	if req.Msg.DraftHash != hex.EncodeToString(digest[:]) {
+		return nil, toConnectError(clip.ErrInvalid)
+	}
+	result, err := h.generation.PrepareCaptionFrames(ctx, user, req.Msg.ProjectId, int(req.Msg.ExpectedRevision), req.Msg.DraftHash, correctionPlan(req.Msg.Plan), req.Msg.InstanceId, int(req.Msg.FrameOffset))
+	if err != nil {
+		return nil, previewConnectError(err)
+	}
+	out := &v1.PrepareClipCaptionFramesResponse{DraftHash: result.DraftHash, Sheet: result.Sheet,
+		CellWidth: int32(result.CellWidth), CellHeight: int32(result.CellHeight), Columns: int32(result.Columns),
+		Cells: int32(result.Cells), X: int32(result.X), Y: int32(result.Y), FirstFrame: int32(result.FirstFrame),
+		FrameOffset: int32(result.FrameOffset), NextOffset: int32(result.NextOffset)}
+	if !responseFits(out, h.generation.PreviewResponseLimit()) {
+		return nil, toConnectError(clip.ErrPreviewTooLarge)
+	}
+	response := connect.NewResponse(out)
+	response.Header().Set("Cache-Control", "private, no-store")
+	return response, nil
+}
+
 func previewConnectError(err error) error {
 	if errors.Is(err, context.DeadlineExceeded) {
 		return rpcserver.NewAppError(connect.CodeDeadlineExceeded, "clip preview preparation timed out", postpilotv1.FailureReason_CLIP_PREVIEW_TIMEOUT, nil)
@@ -73,6 +111,10 @@ func previewConnectError(err error) error {
 // PNG bytes expand in Connect JSON. Bound the uncompressed response in both
 // supported codecs, including all manifest fields, before writing any body.
 func previewResponseFits(out *v1.PrepareClipPreviewResponse, limit int) bool {
+	return responseFits(out, limit)
+}
+
+func responseFits(out proto.Message, limit int) bool {
 	if proto.Size(out) > limit {
 		return false
 	}
