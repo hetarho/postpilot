@@ -11,7 +11,7 @@ import (
 // media run are allowed to spend is a clip rule, and only the Environment half
 // comes from the deployment.
 func TestDefaultRenderAndMediaShape(t *testing.T) {
-	env := clip.Environment{ResvgPath: "/usr/local/bin/resvg", FontPaths: map[string]string{"pretendard": "a.ttf"}, MediaTimeout: 15 * time.Minute}
+	env := clip.Environment{ResvgPath: "/usr/local/bin/resvg", FontPaths: map[string]string{"wantedsans": "a.ttf"}, MediaTimeout: 15 * time.Minute}
 	r := clip.DefaultRenderConfig(env)
 	if r.FadeMS != 200 || r.FPS != 30 || r.MinDurationMS != 15000 || r.MaxDurationMS != 90000 || r.ResvgPath != "/usr/local/bin/resvg" || len(r.FontPaths) != 1 {
 		t.Fatalf("%+v", r)

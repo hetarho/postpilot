@@ -117,10 +117,10 @@ func TestTypeScaleAndCharacterCountsMatchCDS19And20(t *testing.T) {
 		// CDS-17 gives the hook title and 크게 강조 to the secondary face, which
 		// CDS-25's parenthetical made conditional on it being bundled. It is now.
 		"title":   {Size: 72, Min: 64, Face: "paperlogy", Weight: 800, Tracking: -0.02, LineHeight: 1.2, Chars: 11},
-		"body":    {Size: 56, Min: 48, Face: "pretendard", Weight: 700, Tracking: -0.01, LineHeight: 1.3, Chars: 14},
-		"caption": {Size: 44, Min: 40, Face: "pretendard", Weight: 600, Tracking: 0, LineHeight: 1.3, Chars: 18},
-		"label":   {Size: 36, Min: 34, Face: "pretendard", Weight: 600, Tracking: 0.02, LineHeight: 1.2, Chars: 22},
-		"badge":   {Size: 36, Min: 36, Face: "pretendard", Weight: 800, Tracking: 0.02, LineHeight: 1},
+		"body":    {Size: 56, Min: 48, Face: "wantedsans", Weight: 700, Tracking: -0.01, LineHeight: 1.3, Chars: 14},
+		"caption": {Size: 44, Min: 40, Face: "wantedsans", Weight: 600, Tracking: 0, LineHeight: 1.3, Chars: 18},
+		"label":   {Size: 36, Min: 34, Face: "wantedsans", Weight: 600, Tracking: 0.02, LineHeight: 1.2, Chars: 22},
+		"badge":   {Size: 36, Min: 36, Face: "wantedsans", Weight: 800, Tracking: 0.02, LineHeight: 1},
 	}
 	if !reflect.DeepEqual(design.Type, want) {
 		t.Fatalf("type scale\n got %+v\nwant %+v", design.Type, want)
@@ -128,7 +128,7 @@ func TestTypeScaleAndCharacterCountsMatchCDS19And20(t *testing.T) {
 	// Exactly the four faces CDS-17 names, each as the bundled file itself
 	// declares it: a name SVG cannot parse as a CSS family silently falls back.
 	if !reflect.DeepEqual(design.Faces, map[string]string{
-		"pretendard": "Pretendard Variable", "paperlogy": "Paperlogy",
+		"wantedsans": "Wanted Sans Variable", "paperlogy": "Paperlogy",
 		"jua": "Jua", "nanummyeongjo": "NanumMyeongjo",
 	}) {
 		t.Fatalf("faces %+v", design.Faces)

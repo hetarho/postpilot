@@ -21,7 +21,7 @@ import (
 func bundledFontPaths(t *testing.T) map[string]string {
 	t.Helper()
 	files := map[string]string{
-		"pretendard":        "pretendard/PretendardVariable.ttf",
+		"wantedsans":        "wantedsans/WantedSansVariable.ttf",
 		"paperlogy":         "paperlogy/Paperlogy-8ExtraBold.ttf",
 		"jua":               "jua/Jua-Regular.ttf",
 		"nanummyeongjo":     "nanummyeongjo/NanumMyeongjo-Regular.ttf",
@@ -100,12 +100,12 @@ func TestBundledFontAndGraphemeBoundaries(t *testing.T) {
 	}
 	// Every face CDS-17 names is bundled, and a role — or a caption style
 	// wearing one — is set in the file its own face and weight name.
-	for _, face := range []string{"pretendard", "paperlogy", "jua", "nanummyeongjo"} {
+	for _, face := range []string{"wantedsans", "paperlogy", "jua", "nanummyeongjo"} {
 		if r.face(design.TypeRole{Face: face}) == nil || r.family(design.TypeRole{Face: face}) != design.FontFamily(face) {
 			t.Fatalf("face %q did not resolve", face)
 		}
 	}
-	if r.face(design.Type["hook"]) != r.fonts["paperlogy"] || r.face(design.Type["body"]) != r.fonts["pretendard"] {
+	if r.face(design.Type["hook"]) != r.fonts["paperlogy"] || r.face(design.Type["body"]) != r.fonts["wantedsans"] {
 		t.Fatal("the coverage check reads the wrong face")
 	}
 	// NanumMyeongjo is the one face bundled at two weights, and each weight is
@@ -117,10 +117,10 @@ func TestBundledFontAndGraphemeBoundaries(t *testing.T) {
 		t.Fatal("the two NanumMyeongjo weights did not resolve to their own files")
 	}
 	// And it reads it per text, so a character only SOME faces carry is refused
-	// exactly where it cannot be drawn (CLIP-13): Paperlogy has no ♥ or 〃.
-	for _, text := range []string{"♥", "〃"} {
+	// exactly where it cannot be drawn (CLIP-13): Paperlogy has no ♥ or ℃.
+	for _, text := range []string{"♥", "℃"} {
 		if err := r.checkCopy(text, design.Type["body"]); err != nil {
-			t.Fatalf("Pretendard carries %q: %v", text, err)
+			t.Fatalf("Wanted Sans carries %q: %v", text, err)
 		}
 		if err := r.checkCopy(text, design.Type["title"]); !errors.Is(err, clip.ErrInvalid) {
 			t.Fatalf("Paperlogy does not carry %q, so it may not be substituted: %v", text, err)

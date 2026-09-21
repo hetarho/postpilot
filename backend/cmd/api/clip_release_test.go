@@ -402,7 +402,7 @@ func newReleaseHarness(t *testing.T, mode string, stress bool, clocks ...func() 
 		t.Fatal(err)
 	}
 	cfg := &config.Config{ClipWorkRoot: filepath.Join(root, "work"), ClipFFmpegPath: "/usr/local/bin/ffmpeg", ClipFFprobePath: "/usr/local/bin/ffprobe", ClipResvgPath: "/usr/local/bin/resvg", ClipFontPaths: map[string]string{
-		"pretendard":        "/usr/share/postpilot-fonts/pretendard/PretendardVariable.ttf",
+		"wantedsans":        "/usr/share/postpilot-fonts/wantedsans/WantedSansVariable.ttf",
 		"paperlogy":         "/usr/share/postpilot-fonts/paperlogy/Paperlogy-8ExtraBold.ttf",
 		"jua":               "/usr/share/postpilot-fonts/jua/Jua-Regular.ttf",
 		"nanummyeongjo":     "/usr/share/postpilot-fonts/nanummyeongjo/NanumMyeongjo-Regular.ttf",

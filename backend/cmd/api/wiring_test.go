@@ -30,7 +30,7 @@ func TestBuildContextsWiresEveryRequiredCollaborator(t *testing.T) {
 	// The renderer pins the bundled faces by checksum; on a host they live in the repo.
 	cfg.ClipFontPaths = map[string]string{}
 	for key, name := range map[string]string{
-		"pretendard":        "pretendard/PretendardVariable.ttf",
+		"wantedsans":        "wantedsans/WantedSansVariable.ttf",
 		"paperlogy":         "paperlogy/Paperlogy-8ExtraBold.ttf",
 		"jua":               "jua/Jua-Regular.ttf",
 		"nanummyeongjo":     "nanummyeongjo/NanumMyeongjo-Regular.ttf",

@@ -24,6 +24,19 @@
          or not; `apple-touch-icon.png` is what iOS uses for "홈 화면에 추가" — Safari ignores SVG
          there, and without it iOS screenshots the page instead. All three are generated from
          public/favicon.svg; regenerate the two rasters if it changes. -->
+    <!-- The app's one sans face. It is what every line of copy is shaped with, so it is fetched
+         alongside the module rather than after the CSS that names it has been parsed; `crossorigin`
+         because a font request is CORS-mode even same-origin, and without it the preload is
+         discarded and the file fetched a second time. `font-display: swap` still covers the beat
+         before it lands (app/styles/index.css). It lives under `fonts/clip/` because it is the
+         very file the renderer pins, which the clip preview must shape with too (CDS-83). -->
+    <link
+      rel="preload"
+      as="font"
+      type="font/ttf"
+      crossorigin
+      href="/fonts/clip/WantedSansVariable.ttf"
+    />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="icon" href="/favicon.ico" sizes="48x48" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />

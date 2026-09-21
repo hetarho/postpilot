@@ -161,10 +161,12 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
           in, and this one has to hold the page's top edge while a draft thousands of pixels tall
           scrolls past it. It adds no layout height. */}
       <EditorProgressBar job={jobView.job} />
-      {/* `flex-wrap` so the delete refusal, which asks for the full width, drops to its own line
+      {/* ONE row holding the way out, the step bar and the delete, the way the clip workspace's
+          top row does (CLIP-37) — so the two detail screens present their lifecycle identically.
+          `flex-wrap` so the delete refusal, which asks for the full width, drops to its own line
           rather than crushing the way out beside it (§8.5). The Korean refusal copy is over 40
           characters, which is more than a 360px row can hold beside anything. */}
-      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         {/* Underlined: `link-fg` resolves to `content-secondary`, so at rest this was pixel-identical
             to ordinary copy and the only thing marking it as the way out was a `hover:` colour no
             touchscreen ever matches (§6). */}
@@ -173,28 +175,36 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
           className={typographyStyles({
             variant: 'label',
             className:
-              'text-link-fg hover:text-link-fg-hover inline-flex min-h-11 min-w-0 items-center underline',
+              'text-link-fg hover:text-link-fg-hover inline-flex min-h-11 min-w-0 shrink-0 items-center underline',
           })}
         >
           {t('editor.backToList')}
         </Link>
-        <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
-          {/* The editor's ONE state indicator. It replaced the status badge that stood here: the
-              row may not carry two of them (change 15). Mounted for `/posts/new` as well, which
-              has no status of its own but does have an autosave that can fail — and no save
-              button anywhere to fall back on (PRD F-2). */}
-          <EditorStatusLine
-            job={jobView.job}
-            saveState={autosave.state}
-            status={post?.status ?? ''}
-            photoCount={post?.images.length ?? 0}
-            videoCount={post?.videos.length ?? 0}
+
+        {/* A post with a lifecycle navigates it first. `/posts/new` has none, so it shows no bar.
+            Drawn as stations — 글 생성 › 글 다듬기 › 글 완성, the current one told by colour — rather
+            than as a row of pills, which read as three more buttons parked in the chrome (THEME-39).
+            Its three names are longer than the clip workspace's 생성 · 수정 · 완성 and cannot share a
+            360px row with the two 44px targets, so below `sm:` the bar takes a line of its own and
+            joins the row only once there is width for it. */}
+        {post && (
+          <SegmentedControl
+            value={step}
+            options={editorSteps()}
+            onChange={setStep}
+            ariaLabel={t('editor.stepAria')}
+            controls={STEP_PANEL_ID}
+            variant="steps"
+            className="order-last w-full sm:order-none sm:w-auto sm:min-w-0 sm:flex-1"
           />
-          {post && (
-            /* A queue outlives its editor, so a retry left running would keep saving a slug the
-               server no longer has and report that failure for a post the user destroyed on
-               template (tech/draft-autosave.md). Discarded before the navigation unmounts the
-               editor, and only for this slug. */
+        )}
+
+        {post && (
+          <div className="ml-auto flex shrink-0 items-center gap-2">
+            {/* A queue outlives its editor, so a retry left running would keep saving a slug the
+                server no longer has and report that failure for a post the user destroyed on
+                template (tech/draft-autosave.md). Discarded before the navigation unmounts the
+                editor, and only for this slug. */}
             <DeletePostButton
               post={post}
               onDeleted={() => {
@@ -202,21 +212,23 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
                 discardContentQueue(post.slug)
               }}
             />
-          )}
-        </div>
-      </div>
+          </div>
+        )}
 
-      {/* A post with a lifecycle navigates it first. `/posts/new` has none, so it shows no bar. */}
-      {post && (
-        <SegmentedControl
-          value={step}
-          options={editorSteps()}
-          onChange={setStep}
-          ariaLabel={t('editor.stepAria')}
-          controls={STEP_PANEL_ID}
-          className="mt-4"
+        {/* The editor's ONE state indicator. It replaced the status badge that stood here: the
+            row may not carry two of them (change 15). Mounted for `/posts/new` as well, which
+            has no status of its own but does have an autosave that can fail — and no save
+            button anywhere to fall back on (PRD F-2). It takes the row's last line whole, so a
+            message never competes with the step names for width. */}
+        <EditorStatusLine
+          job={jobView.job}
+          saveState={autosave.state}
+          status={post?.status ?? ''}
+          photoCount={post?.images.length ?? 0}
+          videoCount={post?.videos.length ?? 0}
+          className="order-last w-full sm:text-right"
         />
-      )}
+      </div>
 
       {post ? (
         <LifecycleSteps

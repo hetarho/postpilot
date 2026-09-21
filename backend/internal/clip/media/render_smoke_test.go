@@ -25,7 +25,7 @@ func renderConfig(t *testing.T) clip.RenderConfig {
 	return clip.DefaultRenderConfig(clip.Environment{
 		ResvgPath: path("CLIP_RESVG_PATH", "/usr/local/bin/resvg"),
 		FontPaths: map[string]string{
-			"pretendard":        path("CLIP_FONT_PATH", "/usr/share/postpilot-fonts/pretendard/PretendardVariable.ttf"),
+			"wantedsans":        path("CLIP_FONT_PATH", "/usr/share/postpilot-fonts/wantedsans/WantedSansVariable.ttf"),
 			"paperlogy":         path("CLIP_FONT_PAPERLOGY_PATH", "/usr/share/postpilot-fonts/paperlogy/Paperlogy-8ExtraBold.ttf"),
 			"jua":               path("CLIP_FONT_JUA_PATH", "/usr/share/postpilot-fonts/jua/Jua-Regular.ttf"),
 			"nanummyeongjo":     path("CLIP_FONT_NANUM_MYEONGJO_PATH", "/usr/share/postpilot-fonts/nanummyeongjo/NanumMyeongjo-Regular.ttf"),

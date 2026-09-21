@@ -66,7 +66,7 @@ func TestApprovedCaptionStyleSet(t *testing.T) {
 	}
 	// CDS-17 bundles four caption faces; a face nothing sets is dead weight in
 	// the image and a face nothing bundles cannot be set at all.
-	for _, face := range []string{"pretendard", "paperlogy", "jua", "nanummyeongjo"} {
+	for _, face := range []string{"wantedsans", "paperlogy", "jua", "nanummyeongjo"} {
 		if !faces[face] {
 			t.Fatalf("no approved style is set in %q", face)
 		}

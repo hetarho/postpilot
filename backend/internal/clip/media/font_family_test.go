@@ -10,7 +10,7 @@ import (
 
 func TestBundledFontFamilyNames(t *testing.T) {
 	r := testRenderer(t, newAdapter(t, &fakeRunner{}))
-	for _, family := range []string{"Paperlogy 8 ExtraBold", "8Paperlogy", "Paperlogy -8", "Pretendard Variable", "", "Paperlogy, serif"} {
+	for _, family := range []string{"Paperlogy 8 ExtraBold", "8Paperlogy", "Paperlogy -8", "Wanted Sans Variable", "", "Paperlogy, serif"} {
 		if resolvesFontFamily(r.fonts["paperlogy"], family) {
 			t.Fatalf("Paperlogy file accepted %q", family)
 		}
@@ -22,7 +22,7 @@ func TestBundledFontFamilyNames(t *testing.T) {
 		t.Fatal("a family name SVG cannot parse was accepted")
 	}
 	for key, family := range map[string]string{
-		"pretendard": "Pretendard Variable", "paperlogy": "Paperlogy", "jua": "Jua",
+		"wantedsans": "Wanted Sans Variable", "paperlogy": "Paperlogy", "jua": "Jua",
 		"nanummyeongjo": "NanumMyeongjo", "nanummyeongjo-800": "NanumMyeongjo",
 	} {
 		if !resolvesFontFamily(r.fonts[key], family) {

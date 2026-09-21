@@ -158,7 +158,7 @@
     "body": {
       "size": 56,
       "min": 48,
-      "face": "pretendard",
+      "face": "wantedsans",
       "weight": 700,
       "tracking": -0.01,
       "line_height": 1.3,
@@ -167,7 +167,7 @@
     "caption": {
       "size": 44,
       "min": 40,
-      "face": "pretendard",
+      "face": "wantedsans",
       "weight": 600,
       "tracking": 0,
       "line_height": 1.3,
@@ -176,7 +176,7 @@
     "label": {
       "size": 36,
       "min": 34,
-      "face": "pretendard",
+      "face": "wantedsans",
       "weight": 600,
       "tracking": 0.02,
       "line_height": 1.2,
@@ -185,7 +185,7 @@
     "badge": {
       "size": 36,
       "min": 36,
-      "face": "pretendard",
+      "face": "wantedsans",
       "weight": 800,
       "tracking": 0.02,
       "line_height": 1,
@@ -375,7 +375,7 @@
     }
   },
   "faces": {
-    "pretendard": "Pretendard Variable",
+    "wantedsans": "Wanted Sans Variable",
     "paperlogy": "Paperlogy",
     "jua": "Jua",
     "nanummyeongjo": "NanumMyeongjo"

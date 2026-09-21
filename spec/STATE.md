@@ -19,7 +19,7 @@
 |---|---|---|---|---|
 | ARCH | 6 | 6 | - | 0 |
 | AUTH | 6 | 6 | - | 0 |
-| QUOTA | 14 | 14 | - | 0 |
+| QUOTA | 17 | 17 | - | 0 |
 | POST | 8 | 8 | - | 0 |
 | VOICE | 3 | 3 | - | 1 |
 | GEN | 7 | 7 | - | 0 |
@@ -29,11 +29,11 @@
 | EXPORT | 4 | 4 | - | 0 |
 | PUB | 5 | 5 | - | 0 |
 | LANG | 3 | 3 | - | 0 |
-| THEME | 14 | 14 | - | 0 |
+| THEME | 16 | 15 | THEME-19✎ | 0 |
 | MKT | 4 | 4 | - | 0 |
 | VIDEO | 2 | 2 | - | 1 |
-| CLIP | 40 | 40 | - | 1 |
-| CDS | 23 | 23 | - | 1 |
+| CLIP | 41 | 40 | CLIP-13✎ | 1 |
+| CDS | 24 | 23 | CDS-17✎ CDS-19✎ CDS-21✎ CDS-84✎ | 1 |
 | BILL | 4 | 4 | - | 0 |
 | MEM | 1 | 1 | - | 2 |
 
@@ -49,6 +49,7 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
+| T300 | Blog and clip plan estimates | QUOTA | - | doing@260921.est |
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
 | T279 | every hand-kept enum mirror is pinned to the generated enum | ARCH | T008 | todo |
@@ -57,28 +58,27 @@
 | T284 | the agent generates only the protos it uses and drops the survey harness | ARCH | T008 T281 | todo |
 
 ## next
-- nothing is unblocked: every remaining task waits on T008 (another session) or is blocked (T177)
-- five group directories (말투, 글 템플릿, 지침, 기억, 영상 템플릿) still draw their own heading under the phone's group row, which THEME-38 says yields there — only /posts and /clips follow it
-- the clip `release-smoke` stage is still red at HEAD on this host (9 of 28 modes end in `no result`) and still needs a fix task
-- a `review-code` pass over the new memory domain is worth a look before it grows
+- create-task CDS CLIP THEME for the Wanted Sans delta — the code already carries it, so the task verifies and records rather than implements
+- remaining tasks wait on T008 (another session) or remain blocked at T177
+- follow-up: group-directory mobile headings duplicate the group row, and the clip release smoke still needs a fix task
 ## log
+- 260921 T300 created from QUOTA r17 and claimed (est)
+- 260921 create-task QUOTA start (est)
+- 260921 QUOTA r17: per-item condition editor and four simultaneous blog/clip estimates; finished clip length selected, original sources assume 60 seconds each; THEME needs no new exception (est)
+- 260921 update-ssot QUOTA THEME start: separate per-item conditions from four model-level estimates, add blog/clip modes and a floating condition editor (est)
+- 260921 blocked T177 release QA predates the face swap: its viewing checklist must be re-read against Wanted Sans before it unblocks (fnt)
+- 260921 CDS r24 CLIP r41 THEME r16: Wanted Sans Variable is the one bundled sans face for the app and the renderer; the frontend, backend, bundled assets and 23 goldens already carry it, so the delta is pending verification rather than implementation (fnt)
+- 260921 update-ssot CDS CLIP THEME start: Wanted Sans replaces Pretendard as the bundled sans face (fnt)
+- 260921 T298 done; viewport plans aurora, mobile estimate sheet, $3/$10/$20 pricing and 1.5x estimate token allowance verified (pln)
+- 260921 T299 done; paid cards show extra credits and percentages against $1/100-credit manual top-ups (pln)
+- 260921 T299 created and claimed; T298 remains fresh because r16 adds only the separately implemented benefit copy (pln)
+- 260921 create-task QUOTA start (pln)
+- 260921 QUOTA r16: subscription benefits compared with at-par top-ups (pln)
+- 260921 update-ssot QUOTA start: show subscription bonuses against at-par top-ups (pln)
+- 260921 T298 created from QUOTA r15 THEME r15 and claimed (pln)
+- 260921 create-task QUOTA THEME start (pln)
+- 260921 QUOTA r15 THEME r15: $3/$10/$20 ladder, revision-aware estimates and immersive responsive plans; BILL consumes the same price rule without policy changes (pln)
+- 260921 update-ssot QUOTA BILL THEME start: immersive plans page, mobile estimate sheet, $3/$10/$20 tiers and 1.5x generation allowance (pln)
 - 260921 T297 done; dev media tuning 6/8 now passes bounded validation, GetMe 5xx preserves the session, and boot migrations remain pending-only (adr)
 - 260921 T297 claimed (adr)
 - 260921 T297 created from AUTH r6 ARCH r6: retain 401-only logout, pin pending-only boot migrations, and restore dev media readiness (auth-dev-readiness)
-- 260921 create-task AUTH ARCH start (auth-dev-readiness)
-- 260921 AUTH r6 ARCH r6: 5xx/proxy/network failures preserve the session; each boot applies only pending embedded migrations, and dev overrides pass bounded context validation (auth-dev-readiness)
-- 260921 update-ssot AUTH ARCH start: investigate GetMe 502, define terminal auth-failure redirect, and automate dev database readiness (auth-dev-readiness)
-- 260921 T296 done; the current destination is told by the accent everywhere, the group rail is denser than the primary one, the phone group row's name is its own menu trigger, and a list's dock is the floating control alone (nav)
-- 260921 T296 created from THEME r14 and claimed (nav)
-- 260921 THEME r14: the second level is told by density too, the phone group row's name IS its menu trigger, the current destination takes the accent, and a list's dock loses its plane (nav)
-- 260921 update-ssot THEME start (nav)
-- 260921 T295 done; estimator cards and plan estimates now share value/balanced/premium/top, enforce same-level purpose registrations, and safely migrate only matching legacy pairs (eql)
-- 260921 T295 claimed (eql)
-- 260921 T295 created from MODEL r11 QUOTA r14: shared level vocabulary, ordinal migration, server enforcement and purpose-specific admin filtering (ops-model-levels)
-- 260921 create-task MODEL QUOTA start (ops-model-levels)
-- 260921 MODEL r11 QUOTA r14: estimator combos now share the four model levels and accept only same-level per-purpose registrations; ordinal migration drops mismatched assignments (ops-model-levels)
-- 260921 update-ssot MODEL QUOTA start (ops-model-levels)
-- 260921 TMPL r7..r7 no-op (no code impact); the same stale marker prose in ExportPanel, BlockList, README and PRD was aligned in passing — comments and reference docs only, ARCH-25 green
-- 260921 create-task TMPL start (alt)
-- 260921 TMPL r7: TMPL-17 23 39 cite the current Naver photo marker, and a slot placeholder is told from it by its brackets (alt)
-- 260921 update-ssot TMPL start (alt)

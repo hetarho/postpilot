@@ -128,7 +128,7 @@ type StyleRule struct {
 	Highlight bool    `json:"highlight"`
 }
 
-// StrokeWidth resolves the Paperlogy and small Pretendard outlines (CDS-21).
+// StrokeWidth resolves the Paperlogy and small Wanted Sans outlines (CDS-21).
 func (s StyleRule) StrokeWidth() float64 {
 	switch s.Stroke {
 	case "text":

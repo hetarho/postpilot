@@ -36,7 +36,7 @@ type bundledFont struct {
 }
 
 var bundledFonts = []bundledFont{
-	{Key: "pretendard", Face: "pretendard", Bytes: 6739336, SHA256: "3090ccde0442bb347aa7685d9ba8b17436a60682df6e8f92a9a670de14056e22"},
+	{Key: "wantedsans", Face: "wantedsans", Bytes: 4669352, SHA256: "9953a7cfc4a3cba4ef1242abaf89779b3cd15fd9729c2d67d9e9d37a0da967f5"},
 	{Key: "paperlogy", Face: "paperlogy", Bytes: 1304560, SHA256: "fb0324f8ac057e50f4f4632331617e347bfe5a04184f7b0db514be682fb6b25c"},
 	{Key: "jua", Face: "jua", Bytes: 2119352, SHA256: "769677aef240bfc3b9965f2b50748075bff885e6c6992fc591a3fb268279f898"},
 	{Key: "nanummyeongjo", Face: "nanummyeongjo", Weight: 400, Bytes: 3058408, SHA256: "7ed9e8653a8ed04285d51dc343ffea6eb3d9c73afc27383ea8929ee4ffd03205"},
@@ -45,7 +45,7 @@ var bundledFonts = []bundledFont{
 
 // The family resvg falls back to for text that names none, which no element in
 // this package emits: every text carries its own font-family.
-const fontFamily = "Pretendard Variable"
+const fontFamily = "Wanted Sans Variable"
 
 type Rendering struct {
 	media *Adapter
@@ -139,7 +139,7 @@ func fontFileKey(face string, weight int) string {
 			return f.Key
 		}
 	}
-	return "pretendard"
+	return "wantedsans"
 }
 
 func escaped(value string) string {

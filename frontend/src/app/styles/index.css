@@ -1,13 +1,28 @@
 @import 'tailwindcss';
 
+/*
+ * The app's ONE sans face, in the ONE file the renderer pins by SHA-256 (CDS-83, CDS-17). It is
+ * the interface's face AND the face a clip preview shapes 자막 with, and it has to be a single
+ * declaration: two @font-face rules under one family name are a fight the cascade settles, and
+ * a preview shaped with a different build from the one resvg loads would place text the render
+ * will not reproduce. `swap`, so the first paint is never blocked on it. The wght axis runs
+ * 400–1000 and the UI asks for nothing lighter.
+ *
+ * It replaced Pretendard on 2026-09-21 (owner decision). Pretendard had never taken effect in the
+ * UI anyway: `--font-sans` named 'Pretendard' while the only bundled family was the quite
+ * different 'Pretendard Variable', so every screen had been painting in the platform's own face.
+ */
 @font-face {
-  font-family: 'Pretendard Variable';
+  font-family: 'Wanted Sans Variable';
   font-style: normal;
-  font-weight: 100 900;
+  font-weight: 400 1000;
   font-display: swap;
-  src: url('/fonts/clip/PretendardVariable.ttf') format('truetype');
+  src: url('/fonts/clip/WantedSansVariable.ttf') format('truetype-variations');
 }
 
+/*
+ * The hook and emphasis face (CDS-17), preview-side: 크게 강조 and both region blocks name it.
+ */
 @font-face {
   font-family: 'Paperlogy';
   font-style: normal;
@@ -426,9 +441,13 @@
 @theme {
   --color-*: initial;
 
+  /* The app's face FIRST: the whole point of bundling one is that every visitor reads the same
+     shapes, so a platform face can only stand behind it as the fallback for the beat before the
+     woff2 lands and for a client that refuses it. */
   --font-sans:
-    -apple-system, BlinkMacSystemFont, system-ui, 'Segoe UI', 'Apple SD Gothic Neo', 'Pretendard',
-    'Noto Sans KR', 'Malgun Gothic', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif;
+    'Wanted Sans Variable', -apple-system, BlinkMacSystemFont, system-ui, 'Segoe UI',
+    'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', 'Apple Color Emoji', 'Segoe UI Emoji',
+    sans-serif;
 
   --radius-sm: 0.375rem;
   --radius-md: 0.625rem;
@@ -466,7 +485,10 @@
      and --spacing-subnav the group row that stands in for the group rail below the desk. */
   --spacing-bar: 3.25rem;
   --spacing-primaryrow: 2.75rem;
-  --spacing-subnav: 3rem;
+  /* The group row carries a `pt-2` breather above its one control, so the name does not sit
+     flush against the header's bottom edge (owner decision 2026-09-21). The token is the row's
+     FULL height, padding included, because that is what everything below it has to clear. */
+  --spacing-subnav: 3.5rem;
   /* The bottom edge of everything STICKY at the current width, which is what a page-level sticky
      element must clear. It is 0 on a phone — the header scrolls away there and only a group row
      sticks, which `chrome-subnav` adds back — the header from `sm:`, and the header alone again at

@@ -11,7 +11,7 @@ func TestClipMediaEnvironmentIsValidated(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.ClipResvgPath != "/usr/local/bin/resvg" || len(cfg.ClipFontPaths) != 5 || cfg.ClipFontPaths["pretendard"] != "/usr/share/postpilot-fonts/pretendard/PretendardVariable.ttf" || cfg.ClipFontPaths["nanummyeongjo-800"] != "/usr/share/postpilot-fonts/nanummyeongjo/NanumMyeongjo-ExtraBold.ttf" {
+	if cfg.ClipResvgPath != "/usr/local/bin/resvg" || len(cfg.ClipFontPaths) != 5 || cfg.ClipFontPaths["wantedsans"] != "/usr/share/postpilot-fonts/wantedsans/WantedSansVariable.ttf" || cfg.ClipFontPaths["nanummyeongjo-800"] != "/usr/share/postpilot-fonts/nanummyeongjo/NanumMyeongjo-ExtraBold.ttf" {
 		t.Fatalf("%+v", cfg.ClipFontPaths)
 	}
 	for key, value := range map[string]string{"CLIP_WORK_ROOT": "/", "CLIP_FFMPEG_PATH": "ffmpeg", "CLIP_FFPROBE_PATH": "$BIN/ffprobe", "CLIP_RESVG_PATH": "resvg", "CLIP_FONT_PATH": "$FONT/file.ttf", "CLIP_FONT_JUA_PATH": "jua.ttf", "CLIP_WORK_STALE_AGE": "0s", "CLIP_MEDIA_TIMEOUT": "-1m"} {

@@ -17,10 +17,15 @@ Readelf rejects a dynamically linked executable. Both development and production
 copy the same build output; production remains distroless nonroot.
 
 Four faces ship in five files, and the renderer passes every one of them as its
-own `--use-font-file` argument with system fonts off (CDS-17). Pretendard
+own `--use-font-file` argument with system fonts off (CDS-17). Wanted Sans
 Variable sets every role but two; Paperlogy 8 ExtraBold sets `t.hook` and
 `t.title`, which is 크게 강조's face (CDS-25); Jua and NanumMyeongjo, at 400 and
-800, are the remaining caption faces a style may name. Each file is pinned by
+800, are the remaining caption faces a style may name. Wanted Sans replaced
+Pretendard Variable on 2026-09-21 (owner decision): its `wght` axis starts at
+400 rather than 250, which 키노트 now asks for, and it maps 2,345 fewer
+characters — all Hangul and Latin-1 intact, but no Cyrillic, Greek, kana,
+full-width forms or CJK compatibility units, each of which the coverage check
+now refuses rather than draws (`kg` sets, `㎏` does not). Each file is pinned by
 exact size and SHA-256 at construction, so a swapped one fails the renderer's
 constructor rather than a render, and the glyph-coverage check runs against the
 face the text will actually be set in — a caption reads its STYLE's face
@@ -28,7 +33,9 @@ face the text will actually be set in — a caption reads its STYLE's face
 runs with system fonts disabled, so that fallback is a frontend preview concern
 only.
 
-The two Google Fonts faces come from the `ofl/` trees of google/fonts; Paperlogy
+Wanted Sans comes from the Wanted Lab release archive
+([github.com/wanteddev/wanted-sans](https://github.com/wanteddev/wanted-sans/releases/tag/v1.0.3));
+the two Google Fonts faces come from the `ofl/` trees of google/fonts; Paperlogy
 comes from the designer's own distribution page
 ([freesentation.blog/paperlogyfont](https://freesentation.blog/paperlogyfont)) and
 the release archive it links. Each face's `README.md` under `backend/assets/fonts`

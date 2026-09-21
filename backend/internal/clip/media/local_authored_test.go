@@ -30,7 +30,7 @@ import (
 //	  CLIP_LOCAL_ORIGINALS=/path/to/originals CLIP_LOCAL_OUTPUT=/path/to/output \
 //	  CLIP_FFMPEG_PATH=$PWD/../bin/ffmpeg CLIP_FFPROBE_PATH=$PWD/../bin/ffprobe \
 //	  CLIP_RESVG_PATH=$PWD/../bin/resvg \
-//	  CLIP_FONT_PATH=$PWD/assets/fonts/pretendard/PretendardVariable.ttf \
+//	  CLIP_FONT_PATH=$PWD/assets/fonts/wantedsans/WantedSansVariable.ttf \
 //	  CLIP_FONT_PAPERLOGY_PATH=$PWD/assets/fonts/paperlogy/Paperlogy-8ExtraBold.ttf \
 //	  CLIP_FONT_JUA_PATH=$PWD/assets/fonts/jua/Jua-Regular.ttf \
 //	  CLIP_FONT_NANUM_MYEONGJO_PATH=$PWD/assets/fonts/nanummyeongjo/NanumMyeongjo-Regular.ttf \

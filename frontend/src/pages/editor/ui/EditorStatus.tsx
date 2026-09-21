@@ -54,6 +54,7 @@ export function EditorStatusLine({
   status,
   photoCount = 0,
   videoCount = 0,
+  className,
 }: {
   job: GenerationJob | undefined
   saveState: SaveState
@@ -61,6 +62,9 @@ export function EditorStatusLine({
   /** What the post carries, so the line can say WHICH observation is running (VIDEO-18). */
   photoCount?: number
   videoCount?: number
+  /** Where the line sits on the top row. The row gives it its own full-width second line, so a
+   *  message never competes with the step bar for the width the three names need. */
+  className?: string
 }) {
   const { t } = useTranslation('posts')
   const save = useSaveStatus(saveState)
@@ -83,7 +87,7 @@ export function EditorStatusLine({
       role="status"
       aria-live="polite"
       aria-label={t('editor.statusAria')}
-      className={clsx('min-w-0 truncate', failing && 'text-notice-danger-fg')}
+      className={clsx('min-w-0 truncate', failing && 'text-notice-danger-fg', className)}
     >
       {failing ? save.label : running || save.label || postStatusLabel(status)}
     </Typography>

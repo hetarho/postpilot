@@ -52,14 +52,15 @@ export function ContentGroupLayout({ group }: { group: keyof typeof CONTENT_GROU
     <div className="chrome-subnav flex min-w-0 flex-1 flex-col lg:flex-row">
       <nav
         aria-label={label}
-        className="bg-surface-base sm:top-header h-subnav sticky top-0 z-10 flex items-center px-4 sm:px-6 lg:hidden"
+        className="bg-surface-base sm:top-header h-subnav sticky top-0 z-10 flex items-center justify-center px-4 pt-2 sm:px-6 lg:hidden"
       >
         {/* Where the owner IS and the way to the rest of the group, in one control: the current
             destination's glyph and name in the current colour, with a chevron. It keeps no plane
             at rest, so it still reads as the place's name rather than as a button parked in the
-            chrome. The negative margin pulls the NAME — not the control's box — onto the page
-            gutter, so it lines up with the first row of content under it. The band itself sits on
-            the page's plane, opaque only so the page cannot scroll through it. */}
+            chrome. It is CENTRED in the row rather than pulled onto the page gutter: the row
+            holds nothing else, so a name parked at the left edge read as the start of a list that
+            was not there (owner decision 2026-09-21). The band itself sits on the page's plane,
+            opaque only so the page cannot scroll through it. */}
         <Menu
           label={label}
           value={current.to}
@@ -67,7 +68,7 @@ export function ContentGroupLayout({ group }: { group: keyof typeof CONTENT_GROU
           onChange={(to) => void navigate({ to })}
           triggerLabel={current.label}
           triggerIcon={<current.icon aria-hidden="true" className="size-5 shrink-0" />}
-          triggerClassName="text-link-fg-current -ml-4 max-w-full"
+          triggerClassName="text-link-fg-current max-w-full"
         />
       </nav>
       {/* Narrower, tighter and closer-packed than the primary rail beside it: the density is the

@@ -15,7 +15,7 @@ func loadClipMedia(cfg *Config) error {
 	// file without the others. NanumMyeongjo ships the two weights CDS-17 asks
 	// for as two files under one family.
 	cfg.ClipFontPaths = map[string]string{
-		"pretendard":        getenv("CLIP_FONT_PATH", "/usr/share/postpilot-fonts/pretendard/PretendardVariable.ttf"),
+		"wantedsans":        getenv("CLIP_FONT_PATH", "/usr/share/postpilot-fonts/wantedsans/WantedSansVariable.ttf"),
 		"paperlogy":         getenv("CLIP_FONT_PAPERLOGY_PATH", "/usr/share/postpilot-fonts/paperlogy/Paperlogy-8ExtraBold.ttf"),
 		"jua":               getenv("CLIP_FONT_JUA_PATH", "/usr/share/postpilot-fonts/jua/Jua-Regular.ttf"),
 		"nanummyeongjo":     getenv("CLIP_FONT_NANUM_MYEONGJO_PATH", "/usr/share/postpilot-fonts/nanummyeongjo/NanumMyeongjo-Regular.ttf"),

@@ -104,7 +104,11 @@ func buildCaptionStyles() []CaptionStyle {
 		ID: DefaultCaptionStyle, Description: "Large, bold emphasis with a dark outline.", Name: "크게 강조", Face: "paperlogy", Weight: 800, Rendering: StaticCaption, Motion: Motion,
 		Paint: CaptionPaint{Fill: white, Stroke: Color["stroke_dark"].Hex, Shadow: Shadow["text"], Accent: true, Scrim: true},
 	}, {
-		ID: "keynote", Description: "Quiet, light sans-serif presentation.", Name: "키노트", Face: "pretendard", Weight: 250, Tracking: -0.026, Rendering: StaticCaption,
+		// 400 is the LIGHTEST weight this face has: Wanted Sans Variable's wght axis runs
+		// 400–1000, where the face it replaced ran 250–900 (owner decision 2026-09-21). A style
+		// asking for 250 would not fail — the renderer would silently clamp it — so the number
+		// states the weight the render actually carries.
+		ID: "keynote", Description: "Quiet, light sans-serif presentation.", Name: "키노트", Face: "wantedsans", Weight: 400, Tracking: -0.026, Rendering: StaticCaption,
 		Motion: MotionTokens{InMS: 320, InDY: 10, OutMS: 200, Ease: Motion.Ease},
 		Paint:  CaptionPaint{Fill: white, Shadow: ShadowPaint{Hex: "#000000", Alpha: 0.5, Blur: 28, DY: 2}, Scrim: true},
 	}, {
@@ -112,19 +116,19 @@ func buildCaptionStyles() []CaptionStyle {
 		Motion: MotionTokens{InMS: 200, InDY: 0, OutMS: 280, Ease: Motion.Ease},
 		Paint:  CaptionPaint{Fill: "#F2F2EE", Shadow: ShadowPaint{Hex: "#000000", Alpha: 0.92, Blur: 10, DY: 2}},
 	}, {
-		ID: "word-pop", Description: "Words highlighted one at a time for rhythmic emphasis.", Name: "워드 팝", Face: "pretendard", Weight: 800, Rendering: SequenceCaption,
+		ID: "word-pop", Description: "Words highlighted one at a time for rhythmic emphasis.", Name: "워드 팝", Face: "wantedsans", Weight: 800, Rendering: SequenceCaption,
 		Motion: MotionTokens{InMS: 80, InDY: 0, OutMS: 120, Ease: Motion.Ease},
 		Paint:  CaptionPaint{Fill: white, Stroke: "#0A0C10", Accent: true},
 	}, {
-		ID: "blur-in", Description: "Text comes into focus from a soft blur.", Name: "블러 인", Face: "pretendard", Weight: 700, Tracking: -0.016, Rendering: SequenceCaption,
+		ID: "blur-in", Description: "Text comes into focus from a soft blur.", Name: "블러 인", Face: "wantedsans", Weight: 700, Tracking: -0.016, Rendering: SequenceCaption,
 		Motion: MotionTokens{InMS: 360, InDY: 0, OutMS: 200, Ease: Motion.Ease},
 		Paint:  CaptionPaint{Fill: white, Shadow: Shadow["text"], Scrim: true},
 	}, {
-		ID: "ambient", Description: "Soft light drifting around the text.", Name: "소프트 앰비언트", Face: "pretendard", Weight: 700, Tracking: -0.011, Rendering: SequenceCaption,
+		ID: "ambient", Description: "Soft light drifting around the text.", Name: "소프트 앰비언트", Face: "wantedsans", Weight: 700, Tracking: -0.011, Rendering: SequenceCaption,
 		Motion: Motion,
 		Paint:  CaptionPaint{Fill: white, Shadow: ShadowPaint{Hex: "#0A0C10", Alpha: 0.55, Blur: 14, DY: 0}},
 	}, {
-		ID: "neon", Description: "A bright cyan neon glow.", Name: "네온 사인", Face: "pretendard", Weight: 800, Tracking: -0.01, Rendering: SequenceCaption,
+		ID: "neon", Description: "A bright cyan neon glow.", Name: "네온 사인", Face: "wantedsans", Weight: 800, Tracking: -0.01, Rendering: SequenceCaption,
 		Motion: Motion,
 		Paint:  CaptionPaint{Fill: "#EAFEFF"},
 	}, {

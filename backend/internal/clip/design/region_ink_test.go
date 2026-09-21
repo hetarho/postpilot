@@ -20,7 +20,7 @@ type inkFaces map[string]*sfnt.Font
 func bundledFaces(t *testing.T) inkFaces {
 	t.Helper()
 	faces := inkFaces{}
-	for face, name := range map[string]string{"pretendard": "pretendard/PretendardVariable.ttf", "paperlogy": "paperlogy/Paperlogy-8ExtraBold.ttf"} {
+	for face, name := range map[string]string{"wantedsans": "wantedsans/WantedSansVariable.ttf", "paperlogy": "paperlogy/Paperlogy-8ExtraBold.ttf"} {
 		data, err := os.ReadFile(filepath.Join("..", "..", "..", "assets", "fonts", filepath.FromSlash(name)))
 		if err != nil {
 			t.Fatal(err)
