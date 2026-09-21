@@ -49,8 +49,7 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T306 | a rapid-paced caption keeps its own style's drawing | CDS CLIP | - | todo |
-| T307 | a browser render applies every caption's declared motion | CDS CLIP | - | todo |
+| T306 | a rapid-paced caption keeps its own style's drawing | CDS CLIP | - | doing@260922.vid |
 | T308 | the server serves a sequence caption's own frames | CLIP CDS | - | todo |
 | T309 | a browser render draws sequence captions from the server's frames | CLIP CDS | T307 T308 | todo |
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
@@ -65,6 +64,9 @@
 - create-task MKT THEME for the existing /about header overflow at 320px/200% text
 - create-task CLIP CDS THEME for the r41/r24 Wanted Sans delta, which T305..T309 did not consume
 ## log
+- 260922 T307 done; a browser render now moves every caption its style declares, the static ones included; 2,295 frontend tests and every gate pass (vid)
+- 260922 T307 claimed beside T306, whose media smoke is building (vid)
+- 260922 T306 claimed (vid)
 - 260922 T305 done; a finalized clip opens ① and ② as readings, the server serves its plan and evidence again, and every write still refuses; frontend 2,295 tests and backend gates pass (vid)
 - 260922 CLIP r43: a finalized ① cannot state models the project never recorded; T305 carries the amended CLIP-160 (vid)
 - 260922 T305 claimed (vid)
@@ -82,6 +84,3 @@
 - 260921 create-task MODEL start (aim)
 - 260921 MODEL r12: four AI-model destinations share group navigation; history defaults to observe while other stage records remain reachable (aim)
 - 260921 update-ssot MODEL start: split AI models into settings, comparison, recent observation comparisons and leaderboard navigation (aim)
-- 260921 T302 done; tablet menu shares one header background, 28 browser combinations and all frontend gates pass; THEME-19 remains pending (nav)
-- 260921 T302 created and claimed; THEME-38 consumed, THEME-19 remains pending (nav)
-- 260921 create-task THEME-38 start; unrelated THEME-19 font verification remains pending (nav)

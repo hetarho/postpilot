@@ -7,9 +7,9 @@ import { RenderRasterCache } from './render-raster-cache'
 function bitmap(name: string) {
   return { name, width: 1920, height: 1080, close: vi.fn() } as unknown as ImageBitmap
 }
-function raster(representativeFrame: boolean): PreparedAsset {
+function raster(representativeFrame: boolean, rapid = false): PreparedAsset {
   return {
-    key: representativeFrame ? 'sequence' : 'static',
+    key: rapid ? 'rapid' : representativeFrame ? 'sequence' : 'static',
     instanceId: 'caption',
     url: 'server.png',
     x: 40,
@@ -18,9 +18,11 @@ function raster(representativeFrame: boolean): PreparedAsset {
     height: 50,
     startMs: 1000,
     endMs: 2000,
-    inMs: 200,
-    outMs: 200,
-    dy: 20,
+    // A rapid phrase declares no motion at all (CDS-4); every other style
+    // declares its own fade and settle, which the server chain applies too.
+    inMs: rapid ? 0 : 200,
+    outMs: rapid ? 0 : 200,
+    dy: rapid ? 0 : 20,
     layer: 2,
     representativeFrame,
   }
@@ -56,7 +58,7 @@ async function run(transitionMs = 200) {
   }
   const progress = vi.fn()
   const result = await compositeBrowserVideo(
-    { plan, ratio: 'vertical', assets: [raster(false), raster(true)] },
+    { plan, ratio: 'vertical', assets: [raster(false), raster(true), raster(false, true)] },
     {
       context: context as unknown as OffscreenCanvasRenderingContext2D,
       source: async (fingerprint, timeMs) => {
@@ -92,18 +94,26 @@ describe('browser video composition', () => {
     ).toBe(true)
     expect(value.progress).toHaveBeenLastCalledWith({ completedFrames: 144, totalFrames: 144 })
   })
-  it('holds a static raster and animates the representative raster only inside the half-open interval', async () => {
+  it('moves every caption the way its style declares, inside the half-open interval alone', async () => {
     const value = await run()
-    expect(value.load).toHaveBeenCalledTimes(2)
-    for (const [i, sequence] of [false, true].entries()) {
+    expect(value.load).toHaveBeenCalledTimes(3)
+    // A static style and a sequence style both animate: the server fades and
+    // settles a static plate from the same manifest numbers (CDS-4, CLIP-157).
+    for (const i of [0, 1]) {
       const image = await value.load.mock.results[i].value
       const draws = value.draws.filter((draw) => draw.image === image)
       expect(draws.map((draw) => draw.frame)).toEqual(Array.from({ length: 30 }, (_, i) => i + 30))
-      expect(draws[0].args).toEqual([40, sequence ? 100 : 80, 200, 50])
-      expect(draws[0].alpha).toBe(sequence ? 0 : 1)
+      expect(draws[0].args).toEqual([40, 100, 200, 50])
+      expect(draws[0].alpha).toBe(0)
       expect(draws[6].alpha).toBe(1)
       expect(image.close).toHaveBeenCalledOnce()
     }
+    // A rapid phrase appears whole and does not move.
+    const rapid = await value.load.mock.results[2].value
+    const phrase = value.draws.filter((draw) => draw.image === rapid)
+    expect(phrase.map((draw) => draw.frame)).toEqual(Array.from({ length: 30 }, (_, i) => i + 30))
+    expect(phrase.every((draw) => draw.alpha === 1)).toBe(true)
+    expect(phrase.every((draw) => draw.args[1] === 80)).toBe(true)
   })
   it('does not blend a hard cut', async () => {
     const value = await run(0)

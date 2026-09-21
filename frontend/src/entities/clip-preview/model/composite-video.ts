@@ -58,9 +58,12 @@ export async function compositeBrowserVideo(input: BrowserVideoInput, ports: Com
     ports.releaseAssets(new Set(active.map((asset) => asset.key)))
     for (const asset of active) {
       const bitmap = await ports.asset(asset)
-      const motion = asset.representativeFrame
-        ? previewMotion(asset, timeMs)
-        : { opacity: 1, dy: 0 }
+      // Every caption moves the way its own style declares (CDS-4): the server
+      // chain fades and settles a static plate from these very in/out/dy
+      // numbers, so a browser render that held them still delivered a different
+      // clip from the same plan (CLIP-157). A rapid phrase carries 0/0/0 and is
+      // held by the same call.
+      const motion = previewMotion(asset, timeMs)
       ctx.globalAlpha = motion.opacity
       ctx.drawImage(bitmap, asset.x, asset.y + motion.dy, asset.width, asset.height)
     }
