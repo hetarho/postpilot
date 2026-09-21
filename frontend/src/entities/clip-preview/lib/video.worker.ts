@@ -4,11 +4,13 @@ import type { BrowserVideoInput, EncodedClipChunk } from '../model/browser-video
 import type { VideoWorkerInput, VideoWorkerOutput } from '../model/video-worker-protocol'
 import { compositeBrowserVideo } from '../model/composite-video'
 import { RenderRasterCache } from '../model/render-raster-cache'
+import type { CaptionCell } from '../model/caption-sheets'
 
 const send = (message: VideoWorkerOutput, transfer: Transferable[] = []) =>
   self.postMessage(message, { transfer })
 let requestId = 0
 const waiting = new Map<number, (bitmap: ImageBitmap) => void>()
+const waitingCells = new Map<number, (cell: CaptionCell | undefined) => void>()
 
 async function render(input: BrowserVideoInput) {
   const config = clipBrowserEncoderConfig(input.ratio).video
@@ -50,6 +52,13 @@ async function render(input: BrowserVideoInput) {
           send({ type: 'source', requestId: id, fingerprint, timeMs })
         }),
       asset: (asset) => bitmaps.get(asset),
+      // The server drew this caption's frame; the page fetches and cuts it out.
+      captionFrame: (asset, frame) =>
+        new Promise((resolve) => {
+          const id = ++requestId
+          waitingCells.set(id, resolve)
+          send({ type: 'frames', requestId: id, instanceId: asset.instanceId, frame })
+        }),
       releaseAssets: (keys) => bitmaps.retain(keys),
       encode: async (timestamp, duration, keyFrame) => {
         // A bounded batch also surfaces codec failures before requesting more source frames.
@@ -84,6 +93,14 @@ self.onmessage = (event: MessageEvent<VideoWorkerInput>) => {
     void render(message.input).catch((error: unknown) =>
       send({ type: 'error', error: error instanceof Error ? error.message : String(error) }),
     )
+    return
+  }
+  if (message.type === 'frames') {
+    const cell = waitingCells.get(message.requestId)
+    waitingCells.delete(message.requestId)
+    const { bitmap, x, y, width, height } = message
+    if (!cell) bitmap?.close()
+    else cell(bitmap ? { bitmap, x, y, width, height } : undefined)
     return
   }
   const pending = waiting.get(message.requestId)

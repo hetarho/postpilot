@@ -27,7 +27,17 @@ function raster(representativeFrame: boolean, rapid = false): PreparedAsset {
     representativeFrame,
   }
 }
-async function run(transitionMs = 200) {
+/** The server's own drawing of one caption frame, as the page hands it over. */
+function cellFor(frame: number) {
+  return {
+    bitmap: { name: `cell-${frame}`, close: vi.fn() } as unknown as ImageBitmap,
+    x: 90,
+    y: 640,
+    width: 900,
+    height: 250,
+  }
+}
+async function run(transitionMs = 200, captionFrame?: CompositeFramePort) {
   const plan = clipTimelineFixture().plan
   plan.cuts[0] = {
     ...plan.cuts[0],
@@ -57,6 +67,14 @@ async function run(transitionMs = 200) {
     },
   }
   const progress = vi.fn()
+  const cells: { frame: number; cell: ReturnType<typeof cellFor> }[] = []
+  const frames_ =
+    captionFrame ??
+    (async (_asset: PreparedAsset, frame: number) => {
+      const cell = cellFor(frame)
+      cells.push({ frame, cell })
+      return cell
+    })
   const result = await compositeBrowserVideo(
     { plan, ratio: 'vertical', assets: [raster(false), raster(true), raster(false, true)] },
     {
@@ -67,6 +85,7 @@ async function run(transitionMs = 200) {
         return image
       },
       asset: (asset) => cache.get(asset),
+      captionFrame: frames_,
       releaseAssets: (keys) => cache.retain(keys),
       encode: async (timestamp, duration, keyFrame) => {
         frames.push({ timestamp, duration, keyFrame })
@@ -74,8 +93,12 @@ async function run(transitionMs = 200) {
       progress,
     },
   )
-  return { result, sources, draws, load, frames, progress, context }
+  return { result, sources, draws, load, frames, progress, context, cells }
 }
+type CompositeFramePort = (
+  asset: PreparedAsset,
+  frame: number,
+) => Promise<ReturnType<typeof cellFor> | undefined>
 describe('browser video composition', () => {
   it('uses rate-adjusted output intervals, focal cover crop, a 200 ms fade and 30 fps', async () => {
     const value = await run()
@@ -94,26 +117,45 @@ describe('browser video composition', () => {
     ).toBe(true)
     expect(value.progress).toHaveBeenLastCalledWith({ completedFrames: 144, totalFrames: 144 })
   })
-  it('moves every caption the way its style declares, inside the half-open interval alone', async () => {
+  it('moves a static caption the way its style declares and holds a rapid phrase', async () => {
     const value = await run()
-    expect(value.load).toHaveBeenCalledTimes(3)
-    // A static style and a sequence style both animate: the server fades and
-    // settles a static plate from the same manifest numbers (CDS-4, CLIP-157).
-    for (const i of [0, 1]) {
-      const image = await value.load.mock.results[i].value
-      const draws = value.draws.filter((draw) => draw.image === image)
-      expect(draws.map((draw) => draw.frame)).toEqual(Array.from({ length: 30 }, (_, i) => i + 30))
-      expect(draws[0].args).toEqual([40, 100, 200, 50])
-      expect(draws[0].alpha).toBe(0)
-      expect(draws[6].alpha).toBe(1)
-      expect(image.close).toHaveBeenCalledOnce()
-    }
-    // A rapid phrase appears whole and does not move.
-    const rapid = await value.load.mock.results[2].value
+    // Only the rasters are loaded: a sequence caption's pixels arrive per frame.
+    expect(value.load).toHaveBeenCalledTimes(2)
+    const image = await value.load.mock.results[0].value
+    const draws = value.draws.filter((draw) => draw.image === image)
+    expect(draws.map((draw) => draw.frame)).toEqual(Array.from({ length: 30 }, (_, i) => i + 30))
+    expect(draws[0].args).toEqual([40, 100, 200, 50])
+    expect(draws[0].alpha).toBe(0)
+    expect(draws[6].alpha).toBe(1)
+    expect(image.close).toHaveBeenCalledOnce()
+    const rapid = await value.load.mock.results[1].value
     const phrase = value.draws.filter((draw) => draw.image === rapid)
     expect(phrase.map((draw) => draw.frame)).toEqual(Array.from({ length: 30 }, (_, i) => i + 30))
     expect(phrase.every((draw) => draw.alpha === 1)).toBe(true)
     expect(phrase.every((draw) => draw.args[1] === 80)).toBe(true)
+  })
+  it('draws a sequence caption from the server frame of each output frame', async () => {
+    const value = await run()
+    // One cell per output frame of the caption's interval, at the origin the
+    // server's own overlay uses, and released behind the walk (CLIP-159).
+    expect(value.cells.map((c) => c.frame)).toEqual(Array.from({ length: 30 }, (_, i) => i + 30))
+    const drawn = value.draws.filter((draw) =>
+      String((draw.image as { name?: string }).name ?? '').startsWith('cell-'),
+    )
+    expect(drawn).toHaveLength(30)
+    expect(
+      new Set(drawn.map((draw) => (draw.image as unknown as { name: string }).name)).size,
+    ).toBe(30)
+    expect(drawn.every((draw) => draw.alpha === 1)).toBe(true)
+    expect(drawn[0].args).toEqual([90, 640, 900, 250])
+    expect(value.cells.every((c) => vi.mocked(c.cell.bitmap.close).mock.calls.length === 1)).toBe(
+      true,
+    )
+  })
+  it('refuses the render when a caption frame cannot be obtained', async () => {
+    await expect(
+      run(200, () => Promise.reject(new Error('CLIP_CAPTION_FRAMES_UNAVAILABLE'))),
+    ).rejects.toThrow('CLIP_CAPTION_FRAMES_UNAVAILABLE')
   })
   it('does not blend a hard cut', async () => {
     const value = await run(0)

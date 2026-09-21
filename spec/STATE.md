@@ -49,8 +49,6 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T308 | the server serves a sequence caption's own frames | CLIP CDS | - | doing@260922.vid |
-| T309 | a browser render draws sequence captions from the server's frames | CLIP CDS | T307 T308 | todo |
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
 | T279 | every hand-kept enum mirror is pinned to the generated enum | ARCH | T008 | todo |
@@ -59,10 +57,13 @@
 | T284 | the agent generates only the protos it uses and drops the survey harness | ARCH | T008 T281 | todo |
 
 ## next
-- implement-task T306, then T307; T308 before T309; T008 and T177 stand as they were
+- T305..T309 are done; T008 and T177 stand as they were
 - create-task MKT THEME for the existing /about header overflow at 320px/200% text
 - create-task CLIP CDS THEME for the r41/r24 Wanted Sans delta, which T305..T309 did not consume
 ## log
+- 260922 T309 done; a browser render draws each sequence caption from the server's own frame, refusing by name when it cannot; real Chrome decoded a sheet, cropped cells and encoded them on all three canvases (vid)
+- 260922 T308 done; one RPC serves a sequence caption's frames as bounded sprite sheets, one resvg run per sheet; backend gates, proto regeneration and the media-smoke image stage pass (vid)
+- 260922 T309 claimed while T308's media smoke builds; T307 is done and T308's code is verified but for it (vid)
 - 260922 T306 done; a rapid phrase keeps its style's drawing, the template refuses a sequence style, V9 checks the drawing; backend gates and the media-smoke image stage pass (vid)
 - 260922 T308 claimed (vid)
 - 260922 T307 done; a browser render now moves every caption its style declares, the static ones included; 2,295 frontend tests and every gate pass (vid)
@@ -80,6 +81,3 @@
 - 260921 create-task MODEL-44 MODEL-60 start (ret)
 - 260921 MODEL r13: model/writing review routes retain the entry destination, stage and post-list filters (ret)
 - 260921 update-ssot MODEL start: preserve the comparison entry point and distinguish model-lab and writing navigation (ret)
-- 260921 T303 done; four AI-model destinations, URL stage filters and responsive group menus; 2,271 tests plus 66 final targeted checks and browser checks pass (aim)
-- 260921 T303 created and claimed (aim)
-- 260921 create-task MODEL start (aim)

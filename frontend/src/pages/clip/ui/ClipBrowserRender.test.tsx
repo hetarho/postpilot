@@ -10,7 +10,7 @@ import { clipTimelineFixture } from '@/test/clip-editing'
 import { renderAppAt } from '@/test/app'
 import { discardClipDraftQueues } from '@/features/edit-clip-project'
 
-const media = vi.hoisted(() => ({ video: vi.fn(), dispose: vi.fn() }))
+const media = vi.hoisted(() => ({ video: vi.fn(), dispose: vi.fn(), captionFrames: vi.fn() }))
 vi.mock('@/features/render-clip-browser/api/run-render', async (original) => {
   const actual = await original<typeof import('@/features/render-clip-browser/api/run-render')>()
   const { storeBrowserResult, createBrowserResultStore } =
@@ -20,7 +20,13 @@ vi.mock('@/features/render-clip-browser/api/run-render', async (original) => {
     browserRenderOperations: (calls: Parameters<typeof actual.browserRenderOperations>[0]) =>
       ({
         ...actual.browserRenderOperations(calls),
-        prepare: async () => ({ assets: [], width: 1080, height: 1920, dispose: media.dispose }),
+        prepare: async () => ({
+          assets: [],
+          width: 1080,
+          height: 1920,
+          captionFrames: media.captionFrames,
+          dispose: media.dispose,
+        }),
         video: media.video,
         audio: async () => undefined,
         store: (id, video, audio, input, signal, progress) =>

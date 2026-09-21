@@ -6,11 +6,13 @@ import {
   ClipEditPlanSchema,
   ClipPreviewParity,
   ClipRenderService,
+  PrepareClipCaptionFramesRequestSchema,
   PrepareClipPreviewRequestSchema,
 } from '@/shared/api'
 import { CLIP_DRAFT_PREVIEW } from '@/entities/clip-design/@x/clip-preview'
 import type { ClipEditPlan } from '@/entities/clip-plan/@x/clip-preview'
 import type { PreviewPage } from '../model/draft-preview'
+import type { CaptionFramePage } from '../model/caption-sheets'
 import { clipPlanToProto } from '@/entities/clip-plan/@x/clip-preview'
 
 export async function clipPreviewRequest(
@@ -27,6 +29,38 @@ export async function clipPreviewRequest(
   const hash = [...digest].map((v) => v.toString(16).padStart(2, '0')).join('')
   return {
     hash,
+    /** One run of a sequence-rendered caption's own frames, for a browser render to draw
+     *  from (CLIP-159). The plan and its hash are the ones this request already pinned. */
+    async frames(
+      instanceId: string,
+      frameOffset: number,
+      signal: AbortSignal,
+    ): Promise<CaptionFramePage> {
+      const request = create(PrepareClipCaptionFramesRequestSchema, {
+        projectId,
+        expectedRevision: revision,
+        draftHash: hash,
+        plan,
+        instanceId,
+        frameOffset,
+      })
+      const value = await createClient(ClipRenderService, transport).prepareClipCaptionFrames(
+        request,
+        { signal },
+      )
+      return {
+        sheet: value.sheet,
+        cellWidth: value.cellWidth,
+        cellHeight: value.cellHeight,
+        columns: value.columns,
+        cells: value.cells,
+        x: value.x,
+        y: value.y,
+        firstFrame: value.firstFrame,
+        frameOffset: value.frameOffset,
+        nextOffset: value.nextOffset,
+      }
+    },
     async load(
       elementIds: string[],
       assetOffset: number,

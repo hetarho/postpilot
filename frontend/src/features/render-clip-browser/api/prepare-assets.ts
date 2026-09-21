@@ -2,6 +2,7 @@ import { type ClipEditPlan } from '@/entities/clip-plan'
 import {
   PreviewAssetCache,
   PreviewPreparation,
+  type CaptionFrameLoader,
   type ClipPreviewRequest,
   type PreparedAsset,
 } from '@/entities/clip-preview'
@@ -20,7 +21,15 @@ export async function prepareBrowserRenderAssets(
   revision: number,
   plan: ClipEditPlan,
   signal: AbortSignal,
-): Promise<{ assets: PreparedAsset[]; width: number; height: number; dispose: () => void }> {
+): Promise<{
+  assets: PreparedAsset[]
+  width: number
+  height: number
+  /** The server's own drawing of each frame of a sequence caption, pinned to this
+   *  request's plan and hash (CLIP-159). */
+  captionFrames: CaptionFrameLoader
+  dispose: () => void
+}> {
   signal.throwIfAborted()
   const request = await requestPreview(projectId, revision, plan)
   signal.throwIfAborted()
@@ -52,6 +61,7 @@ export async function prepareBrowserRenderAssets(
             assets: snapshot.assets,
             width: snapshot.canvasWidth,
             height: snapshot.canvasHeight,
+            captionFrames: request.frames,
             dispose: () => preparation.dispose(),
           })
         }

@@ -15,6 +15,8 @@ export type {
 } from './model/browser-video'
 export { previewElementIDs, previewTimeline } from './model/draft-preview'
 export type { ClipPreviewOverlay } from './model/draft-preview'
+export { CaptionSheets } from './model/caption-sheets'
+export type { CaptionCell, CaptionFrameLoader, CaptionFramePage } from './model/caption-sheets'
 export { PreviewAssetCache, PreviewPreparation } from './model/preview-assets'
 export type { PreparedAsset } from './model/preview-assets'
 export type { VideoWorkerInput, VideoWorkerOutput } from './model/video-worker-protocol'

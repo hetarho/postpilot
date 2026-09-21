@@ -2,6 +2,7 @@ import { clipBrowserEncoderConfig } from './browser-render-capability'
 import { previewCrop, previewFrame, previewMotion } from './draft-preview'
 import { timelineCuts } from '@/entities/clip-plan/@x/clip-preview'
 import type { PreparedAsset } from './preview-assets'
+import type { CaptionCell } from './caption-sheets'
 import { CLIP_BROWSER_RENDER } from '@/entities/clip-design/@x/clip-preview'
 import type { BrowserVideoInput, BrowserVideoProgress } from './browser-video'
 
@@ -12,6 +13,8 @@ interface CompositePorts {
   >
   source: (fingerprint: string, timeMs: number) => Promise<ImageBitmap>
   asset: (asset: PreparedAsset) => Promise<ImageBitmap>
+  /** One frame of a sequence-rendered caption, drawn by the server (CLIP-159). */
+  captionFrame: (asset: PreparedAsset, frame: number) => Promise<CaptionCell | undefined>
   releaseAssets: (keys: Set<string>) => void
   encode: (timestamp: number, duration: number, keyFrame: boolean) => Promise<void>
   progress: (value: BrowserVideoProgress) => void
@@ -57,12 +60,26 @@ export async function compositeBrowserVideo(input: BrowserVideoInput, ports: Com
     const active = assets.filter((asset) => timeMs >= asset.startMs && timeMs < asset.endMs)
     ports.releaseAssets(new Set(active.map((asset) => asset.key)))
     for (const asset of active) {
+      // A sequence-rendered style is drawn by the server for THIS output frame,
+      // motion and all, so nothing here adds to it: the browser owns only which
+      // frame belongs where (CLIP-159).
+      if (asset.representativeFrame) {
+        const cell = await ports.captionFrame(asset, frame)
+        if (!cell) continue
+        try {
+          ctx.globalAlpha = 1
+          ctx.drawImage(cell.bitmap, cell.x, cell.y, cell.width, cell.height)
+        } finally {
+          cell.bitmap.close()
+        }
+        continue
+      }
       const bitmap = await ports.asset(asset)
-      // Every caption moves the way its own style declares (CDS-4): the server
-      // chain fades and settles a static plate from these very in/out/dy
-      // numbers, so a browser render that held them still delivered a different
-      // clip from the same plan (CLIP-157). A rapid phrase carries 0/0/0 and is
-      // held by the same call.
+      // A static style is one raster moved the way that style declares (CDS-4):
+      // the server chain fades and settles it from these very in/out/dy numbers,
+      // so a browser render that held it still delivered a different clip from
+      // the same plan (CLIP-157). A rapid phrase carries 0/0/0 and is held by
+      // the same call.
       const motion = previewMotion(asset, timeMs)
       ctx.globalAlpha = motion.opacity
       ctx.drawImage(bitmap, asset.x, asset.y + motion.dy, asset.width, asset.height)

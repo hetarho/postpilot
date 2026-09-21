@@ -152,6 +152,7 @@ export async function runBrowserRender(
       input.resolvePlayback,
       controller.signal,
       originals,
+      assets.captionFrames,
     )
     jobs.push(
       handle.result.then((track) => {

@@ -82,9 +82,15 @@ export function useBrowserRender(ownerId: string, projectId: string) {
         update({
           phase: 'failed',
           failure:
-            failure.reason === 'UNKNOWN_FAILURE'
-              ? { reason: 'CLIP_PROCESSING_FAILED', params: {} }
-              : failure,
+            failure.reason !== 'UNKNOWN_FAILURE'
+              ? failure
+              : // A sequence caption the page could not obtain the server's frames
+                // for refuses the browser kind by that one reason and leaves the
+                // server render as the choice, rather than delivering a caption
+                // that stands still (CLIP-155, CLIP-159).
+                error instanceof Error && error.message === 'CLIP_CAPTION_FRAMES_UNAVAILABLE'
+                ? { reason: 'CLIP_PREVIEW_UNAVAILABLE', params: {} }
+                : { reason: 'CLIP_PROCESSING_FAILED', params: {} },
         })
       }
     } finally {

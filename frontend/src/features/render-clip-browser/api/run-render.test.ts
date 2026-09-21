@@ -28,13 +28,14 @@ function fixture() {
   }
   const dispose = vi.fn(),
     cancelVideo = vi.fn()
+  const captionFrames = vi.fn()
   const track = { chunks: [] } as unknown as BrowserVideoTrack
   const project = { id: 'project' } as ClipProject
   const operations: BrowserRenderOperations = {
     admit: vi.fn(async () => 'render'),
     cancel: vi.fn(async () => true),
     refresh: vi.fn(async () => project),
-    prepare: vi.fn(async () => ({ assets: [], width: 1080, height: 1080, dispose })),
+    prepare: vi.fn(async () => ({ assets: [], width: 1080, height: 1080, captionFrames, dispose })),
     video: vi.fn(() => ({
       result: Promise.resolve(track),
       cancel: cancelVideo,
