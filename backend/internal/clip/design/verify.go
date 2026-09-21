@@ -61,6 +61,12 @@ type Element struct {
 	Fill, Background string
 	InMS, OutMS      int
 	DY               float64
+	// Which drawing actually produced this caption — StaticCaption for the
+	// bundled template's one plate, SequenceCaption for the style's own painter
+	// (CDS-80, CDS-85). The renderer stamps it where it draws; a manifest built
+	// without drawing anything leaves it empty and V9 has nothing to hold it to:
+	// omitted from the wire so a layout's own manifest identity is unchanged.
+	Drawing string `json:",omitempty"`
 }
 type Manifest []Element
 
@@ -218,6 +224,14 @@ func verify(m Manifest, ratio string, checkOverlap, hideDisclosure bool) error {
 		motion := CaptionMotion(e.Style, e.Pace)
 		if !ValidPace(e.Pace) || e.InMS != motion.InMS || e.OutMS != motion.OutMS || e.DY != motion.InDY {
 			return at(ViolationMotion, e)
+		}
+		// A caption is drawn by its own style's drawing at every pace: the pace
+		// takes the motion away and never the plate, the outline or the ink
+		// (CDS-4, CDS-85).
+		if e.Drawing != "" {
+			if style, known := LookupCaptionStyle(e.Style); !known || e.Drawing != style.Rendering {
+				return at(ViolationMotion, e)
+			}
 		}
 		// CDS-32: a scrim appears only under an UNPLATED style and never lies on
 		// a plate. A wash under ink at α ≥ 0.72 would darken nothing and dim the

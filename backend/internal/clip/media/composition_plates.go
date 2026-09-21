@@ -76,15 +76,29 @@ func (l captionLayer) paths() []string {
 }
 
 func (r *Rendering) declaredLayer(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, visual *declaredVisual, source clip.MediaSource, index int) (captionLayer, error) {
-	// A rapid phrase replaces its neighbour with no fade and no movement
-	// whatever style it carries (CDS-4), so it has nothing to animate and takes
-	// the one rasterisation its style would otherwise spend per frame.
-	if visual.manifest.Role == "caption" && !visual.caption.Caption.Static() && visual.copy.Pace != "rapid" {
-		sequence, err := r.captionSequence(ctx, ws, canvas, visual.copy, visual.caption, visual.manifest.StartMS, visual.manifest.EndMS, index)
+	if visual.manifest.Role == "caption" && !visual.caption.Caption.Static() {
+		visual.manifest.RecordDrawing(design.SequenceCaption)
+		// A rapid phrase replaces its neighbour with no fade and no movement
+		// whatever style it carries (CDS-4), so it has nothing to animate: it
+		// takes ONE frame of its style's own drawing — the frame the preview
+		// showed — instead of one per output frame, and never the bundled
+		// template, which knows no style's plate, outline or ink (CDS-85).
+		if visual.copy.Pace != "rapid" {
+			sequence, err := r.captionSequence(ctx, ws, canvas, visual.copy, visual.caption, visual.manifest.StartMS, visual.manifest.EndMS, index)
+			if err != nil {
+				return captionLayer{}, err
+			}
+			return captionLayer{Sequence: &sequence}, nil
+		}
+		body, err := r.captionDocument(canvas, *visual)
 		if err != nil {
 			return captionLayer{}, err
 		}
-		return captionLayer{Sequence: &sequence}, nil
+		plate, err := r.rasterize(ctx, ws, canvas, body, fmt.Sprintf("declared-%04d", index))
+		return captionLayer{Plate: plate}, err
+	}
+	if visual.manifest.Role == "caption" {
+		visual.manifest.RecordDrawing(design.StaticCaption)
 	}
 	body, err := r.declaredSVG(canvas, *visual)
 	if err != nil {
@@ -118,6 +132,12 @@ func (r *Rendering) layerInput(args []string, layer captionLayer, window overlay
 func (r *Rendering) declaredSVG(canvas clip.Canvas, visual declaredVisual) (string, error) {
 	switch visual.manifest.Role {
 	case "caption":
+		// The bundled template draws what a RULE states, which carries no style's
+		// plate and no style's ink. A sequence-rendered style asking for it would
+		// be drawn as something else, so it is refused by name (CDS-85).
+		if !visual.caption.Caption.Static() {
+			return "", elementProblem(visual.text, "invalid_design")
+		}
 		return r.overlays.Render("copy."+visual.copy.Style, copyView(canvas, visual.copy, visual.caption, visual.ground))
 	case "badge":
 		return r.overlays.Render("furniture", furnitureView(canvas, visual.furniture))

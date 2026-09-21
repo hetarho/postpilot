@@ -29,6 +29,17 @@ type CompositionElement struct {
 	Cues           []CompositionCue
 }
 
+// RecordDrawing stamps which drawing produced this caption on the parts the
+// verifier reads, so a caption drawn as something else fails CDS-52's V9 rather
+// than reaching the owner (CDS-85).
+func (e *CompositionElement) RecordDrawing(drawing string) {
+	for i := range e.Parts {
+		if e.Parts[i].Kind == "copy" {
+			e.Parts[i].Drawing = drawing
+		}
+	}
+}
+
 func CompositionLayer(role string) int {
 	switch role {
 	case "badge":

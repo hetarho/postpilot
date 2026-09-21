@@ -49,8 +49,7 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T306 | a rapid-paced caption keeps its own style's drawing | CDS CLIP | - | doing@260922.vid |
-| T308 | the server serves a sequence caption's own frames | CLIP CDS | - | todo |
+| T308 | the server serves a sequence caption's own frames | CLIP CDS | - | doing@260922.vid |
 | T309 | a browser render draws sequence captions from the server's frames | CLIP CDS | T307 T308 | todo |
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
@@ -64,6 +63,8 @@
 - create-task MKT THEME for the existing /about header overflow at 320px/200% text
 - create-task CLIP CDS THEME for the r41/r24 Wanted Sans delta, which T305..T309 did not consume
 ## log
+- 260922 T306 done; a rapid phrase keeps its style's drawing, the template refuses a sequence style, V9 checks the drawing; backend gates and the media-smoke image stage pass (vid)
+- 260922 T308 claimed (vid)
 - 260922 T307 done; a browser render now moves every caption its style declares, the static ones included; 2,295 frontend tests and every gate pass (vid)
 - 260922 T307 claimed beside T306, whose media smoke is building (vid)
 - 260922 T306 claimed (vid)
@@ -82,5 +83,3 @@
 - 260921 T303 done; four AI-model destinations, URL stage filters and responsive group menus; 2,271 tests plus 66 final targeted checks and browser checks pass (aim)
 - 260921 T303 created and claimed (aim)
 - 260921 create-task MODEL start (aim)
-- 260921 MODEL r12: four AI-model destinations share group navigation; history defaults to observe while other stage records remain reachable (aim)
-- 260921 update-ssot MODEL start: split AI models into settings, comparison, recent observation comparisons and leaderboard navigation (aim)

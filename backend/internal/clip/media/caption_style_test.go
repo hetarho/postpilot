@@ -50,7 +50,9 @@ func TestACaptionIsSetInTheFaceItsStyleNames(t *testing.T) {
 		}
 		canvas, _ := clip.ClipCanvas("vertical")
 		_, r := measured(t)
-		svg, err := r.declaredSVG(canvas, visual)
+		// One style, one drawing: the bundled template for a static style and the
+		// style's own painter for a sequence-rendered one (CDS-85).
+		svg, err := r.captionDocument(canvas, visual)
 		if err != nil {
 			t.Fatal(err)
 		}
