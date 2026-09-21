@@ -121,6 +121,21 @@ describe('the plan comparison', () => {
     expect(document.querySelectorAll('.bg-button-cta-bg')).toHaveLength(1)
   })
 
+  // The glyph plate never shrinks and a Badge never wraps its label, both by design — so on one
+  // line that pair fixes the card's min-content, and a grid item's automatic minimum size pushes
+  // the whole column past a 320px viewport at 200% text size. The row is allowed to wrap instead.
+  it('wraps the marked rung chip below its glyph rather than widening the column', async () => {
+    renderAppAt('/plans', {
+      user: { ...USER, plan: ProtoPlan.FREE },
+      plans: { plan: ProtoPlan.FREE, balance: { credits: 50, unlimited: false, monthlyGrant: 50 } },
+    })
+
+    await rungs()
+    const chip = screen.getByText('가장 합리적')
+    expect(chip).toHaveClass('shrink-0', 'whitespace-nowrap')
+    expect(chip.parentElement).toHaveClass('flex', 'flex-wrap')
+  })
+
   // The ladder arrives as one gesture: each rung rises a beat after the one before it, once, on
   // mount — sliders moving afterwards recompute the figures without replaying it.
   it('staggers the rungs into place on arrival', async () => {

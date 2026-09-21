@@ -118,7 +118,12 @@ function PlanCard({
       style={{ animationDelay: `${index * PROMO_RISE_STAGGER_MS}ms` }}
     >
       <div className="flex h-full flex-col">
-        <div className="flex items-start justify-between gap-2">
+        {/* `flex-wrap`: the glyph plate is `shrink-0` and a Badge never wraps its label (both by
+            design), so on one line the pair fixes the card's min-content — and a grid item's
+            automatic minimum size then pushes the whole column past a 320px viewport once the
+            reader's text size doubles. Wrapping is the only give in the row; it costs nothing at
+            ordinary sizes, where the pair has always fitted. */}
+        <div className="flex flex-wrap items-start justify-between gap-2">
           {/* The glyph sits on the accent's quiet plate — the same pair the status chip beside
               it wears — so the card opens with one violet mark and nothing competing for it. */}
           <span

@@ -49,7 +49,6 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T300 | Blog and clip plan estimates | QUOTA | - | todo |
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
 | T279 | every hand-kept enum mirror is pinned to the generated enum | ARCH | T008 | todo |
@@ -58,11 +57,13 @@
 | T284 | the agent generates only the protos it uses and drops the survey harness | ARCH | T008 T281 | todo |
 
 ## next
-- T300 is a user-requested WIP checkpoint: implementation saved, verification incomplete; resume only when requested
+- create-task MKT THEME for /about at 320px/200% text: the marketing header overflows the viewport and the nested ladder column stays ~38px over
 - create-task CDS CLIP THEME for the Wanted Sans delta — the code already carries it, so the task verifies and records rather than implements
 - remaining tasks wait on T008 (another session) or remain blocked at T177
 - follow-up: group-directory mobile headings duplicate the group row, and the clip release smoke still needs a fix task
 ## log
+- 260921 T300 done; the 320px/200% overflow was the ladder card header pinning min-content at 341.7px, now wrapped; every ARCH gate green (plr)
+- 260921 T300 claimed to resume the WIP checkpoint verification (plr)
 - 260921 T300 WIP checkpoint requested; stopped verification, released claim to todo, and deferred any additional live billing price work per user (est)
 - 260921 T300 created from QUOTA r17 and claimed (est)
 - 260921 create-task QUOTA start (est)
@@ -81,6 +82,3 @@
 - 260921 create-task QUOTA THEME start (pln)
 - 260921 QUOTA r15 THEME r15: $3/$10/$20 ladder, revision-aware estimates and immersive responsive plans; BILL consumes the same price rule without policy changes (pln)
 - 260921 update-ssot QUOTA BILL THEME start: immersive plans page, mobile estimate sheet, $3/$10/$20 tiers and 1.5x generation allowance (pln)
-- 260921 T297 done; dev media tuning 6/8 now passes bounded validation, GetMe 5xx preserves the session, and boot migrations remain pending-only (adr)
-- 260921 T297 claimed (adr)
-- 260921 T297 created from AUTH r6 ARCH r6: retain 401-only logout, pin pending-only boot migrations, and restore dev media readiness (auth-dev-readiness)
