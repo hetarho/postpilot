@@ -19,7 +19,7 @@
 |---|---|---|---|---|
 | ARCH | 6 | 6 | - | 0 |
 | AUTH | 6 | 6 | - | 0 |
-| QUOTA | 17 | 17 | - | 0 |
+| QUOTA | 18 | 18 | - | 0 |
 | POST | 8 | 8 | - | 0 |
 | VOICE | 3 | 3 | - | 1 |
 | GEN | 7 | 7 | - | 0 |
@@ -30,7 +30,7 @@
 | PUB | 5 | 5 | - | 0 |
 | LANG | 3 | 3 | - | 0 |
 | THEME | 16 | 15 | THEME-19✎ | 0 |
-| MKT | 4 | 4 | - | 0 |
+| MKT | 5 | 5 | - | 0 |
 | VIDEO | 2 | 2 | - | 1 |
 | CLIP | 41 | 40 | CLIP-13✎ | 1 |
 | CDS | 24 | 23 | CDS-17✎ CDS-19✎ CDS-21✎ CDS-84✎ | 1 |
@@ -57,11 +57,16 @@
 | T284 | the agent generates only the protos it uses and drops the survey harness | ARCH | T008 T281 | todo |
 
 ## next
-- create-task MKT THEME for /about at 320px/200% text: the marketing header overflows the viewport and the nested ladder column stays ~38px over
-- create-task CDS CLIP THEME for the Wanted Sans delta — the code already carries it, so the task verifies and records rather than implements
-- remaining tasks wait on T008 (another session) or remain blocked at T177
-- follow-up: group-directory mobile headings duplicate the group row, and the clip release smoke still needs a fix task
+- remaining implementation tasks wait on T008 or remain blocked at T177
+- create-task MKT THEME for the existing /about header overflow at 320px/200% text; T301 resolves the nested plan-card overflow
+- create-task CDS CLIP THEME for the Wanted Sans verification delta; follow-up group-directory headings and clip release smoke remain
 ## log
+- 260921 T301 done; mobile card heights reduced ~62% on /plans and ~71% on /about, all ARCH gates green; existing enlarged-text About header remains (cmp)
+- 260921 T301 claimed (cmp)
+- 260921 T301 created from QUOTA r18 MKT r5 (cmp)
+- 260921 create-task QUOTA MKT start (cmp)
+- 260921 QUOTA r18 MKT r5: compact mobile summaries and shared benefits; existing THEME promotional primitives remain applicable (cmp)
+- 260921 update-ssot QUOTA THEME start: research compact mobile plan cards shared by /plans and /about (cmp)
 - 260921 T300 done; the 320px/200% overflow was the ladder card header pinning min-content at 341.7px, now wrapped; every ARCH gate green (plr)
 - 260921 T300 claimed to resume the WIP checkpoint verification (plr)
 - 260921 T300 WIP checkpoint requested; stopped verification, released claim to todo, and deferred any additional live billing price work per user (est)
@@ -76,9 +81,3 @@
 - 260921 T299 done; paid cards show extra credits and percentages against $1/100-credit manual top-ups (pln)
 - 260921 T299 created and claimed; T298 remains fresh because r16 adds only the separately implemented benefit copy (pln)
 - 260921 create-task QUOTA start (pln)
-- 260921 QUOTA r16: subscription benefits compared with at-par top-ups (pln)
-- 260921 update-ssot QUOTA start: show subscription bonuses against at-par top-ups (pln)
-- 260921 T298 created from QUOTA r15 THEME r15 and claimed (pln)
-- 260921 create-task QUOTA THEME start (pln)
-- 260921 QUOTA r15 THEME r15: $3/$10/$20 ladder, revision-aware estimates and immersive responsive plans; BILL consumes the same price rule without policy changes (pln)
-- 260921 update-ssot QUOTA BILL THEME start: immersive plans page, mobile estimate sheet, $3/$10/$20 tiers and 1.5x generation allowance (pln)

@@ -146,7 +146,7 @@ export function AboutPage() {
               static figures, the code-owned recommended mark, no action on any card — plans are
               presented here, never sold (MARKETING-6). The section title is this page's `h2`, so
               the tier names take `h3`. */}
-          <PromoStage className="mt-5">
+          <PromoStage className="mt-5 px-2 py-3 sm:px-6 sm:py-6">
             <PlanLadder offers={PUBLIC_LADDER} headingLevel="h3" />
           </PromoStage>
           <Typography variant="body" className="text-content-secondary max-w-measure mt-5">

@@ -40,11 +40,14 @@ import { prefersReducedMotion } from '@/shared/lib'
 export function PromoFrame({
   children,
   marked,
+  density = 'comfortable',
   className,
   style,
 }: {
   children: ReactNode
   marked?: boolean
+  /** Compact comparison cards keep their phone summary close without reducing type sizes. */
+  density?: 'comfortable' | 'compact'
   className?: string
   /** For a per-instance animation delay a ladder staggers its rungs with; nothing else. */
   style?: CSSProperties
@@ -107,7 +110,12 @@ export function PromoFrame({
         {/* `isolate` here too: the spotlight sits at a negative z-index so it paints ABOVE this
             box's surface and BELOW its text, which only holds inside a stacking context this box
             itself roots. */}
-        <div className="bg-surface-raised relative isolate h-full rounded-lg p-5 sm:p-6">
+        <div
+          className={clsx(
+            'bg-surface-raised relative isolate h-full rounded-lg',
+            density === 'compact' ? 'px-4 py-3 md:px-5 md:py-4' : 'p-5 sm:p-6',
+          )}
+        >
           <div
             aria-hidden="true"
             data-promo-spot=""

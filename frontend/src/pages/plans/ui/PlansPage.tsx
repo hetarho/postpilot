@@ -111,7 +111,7 @@ export function PlansPage() {
     >
       <SegmentedControl
         ariaLabel={t('estimator.basis', { ns: 'plans' })}
-        className="mx-auto mb-8 max-w-md"
+        className="mx-auto mb-4 max-w-md sm:mb-8"
         value={kind}
         options={[
           { value: 'blog', label: t('estimator.blogBasis', { ns: 'plans' }) },
@@ -119,12 +119,12 @@ export function PlansPage() {
         ]}
         onChange={setKind}
       />
-      <header className="animate-rise mx-auto flex max-w-3xl flex-col items-center pb-8 text-center sm:pb-12">
+      <header className="animate-rise mx-auto flex max-w-3xl flex-col items-center pb-4 text-center sm:pb-10">
         <Badge tone="accent">
           <Sparkles aria-hidden="true" className="mr-1.5 inline size-3.5" />
           {t('compare.title', { ns: 'plans' })}
         </Badge>
-        <Typography variant="promoDisplay" className="mt-6 text-balance">
+        <Typography variant="promoDisplay" className="mt-3 text-balance sm:mt-6">
           {t('compare.headline', { ns: 'plans' })}
           <PromoText variant="promoDisplay" as="span" className="mt-1 block">
             {t('compare.headlineAccent', { ns: 'plans' })}
@@ -132,11 +132,11 @@ export function PlansPage() {
         </Typography>
         <Typography
           variant="body"
-          className="text-content-secondary max-w-measure mt-5 text-balance"
+          className="text-content-secondary max-w-measure mt-3 text-balance sm:mt-5"
         >
           {t('compare.description', { ns: 'plans' })}
         </Typography>
-        <div className="mt-5 flex flex-wrap justify-center gap-x-5 gap-y-2">
+        <div className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-1 sm:mt-5">
           {(['allModels', 'monthlyRefill', 'editAllowance'] as const).map((benefit) => (
             <Typography key={benefit} variant="label" className="inline-flex items-center gap-1.5">
               <Check aria-hidden="true" className="text-badge-accent-fg size-4 shrink-0" />
@@ -183,7 +183,7 @@ export function PlansPage() {
       {!isError && !isPending && myPlan && (
         <section aria-label={t('compare.title', { ns: 'plans' })}>
           <div
-            className="mx-auto mb-8 flex max-w-3xl flex-col items-center gap-2 text-center"
+            className="mx-auto mb-3 flex max-w-3xl flex-col items-center gap-2 text-center"
             aria-live="polite"
           >
             <Typography variant="label" className="text-badge-accent-fg">
@@ -205,11 +205,11 @@ export function PlansPage() {
               </Typography>
             )}
           </div>
-          <Typography variant="body" className="text-content-secondary mt-6 mb-6 text-center">
+          <Typography variant="body" className="text-content-secondary mt-3 mb-4 text-center">
             {t('benefits.baseline', { ns: 'plans' })}
           </Typography>
           <PlanLadder
-            className="mt-2 md:mt-10"
+            className="mt-2 md:mt-6"
             offers={myPlan.offers}
             currentPlan={myPlan.plan}
             estimates={(offer) =>
