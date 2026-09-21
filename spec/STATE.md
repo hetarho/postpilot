@@ -32,8 +32,8 @@
 | THEME | 17 | 15 | THEME-19✎ | 0 |
 | MKT | 5 | 5 | - | 0 |
 | VIDEO | 2 | 2 | - | 1 |
-| CLIP | 41 | 40 | CLIP-13✎ | 1 |
-| CDS | 24 | 23 | CDS-17✎ CDS-19✎ CDS-21✎ CDS-84✎ | 1 |
+| CLIP | 42 | 40 | CLIP-13✎ | 1 |
+| CDS | 25 | 23 | CDS-17✎ CDS-19✎ CDS-21✎ CDS-84✎ | 1 |
 | BILL | 4 | 4 | - | 0 |
 | MEM | 1 | 1 | - | 2 |
 
@@ -49,6 +49,11 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
+| T305 | a finalized clip's ① and ② open read-only | CLIP | - | todo |
+| T306 | a rapid-paced caption keeps its own style's drawing | CDS CLIP | - | todo |
+| T307 | a browser render applies every caption's declared motion | CDS CLIP | - | todo |
+| T308 | the server serves a sequence caption's own frames | CLIP CDS | - | todo |
+| T309 | a browser render draws sequence captions from the server's frames | CLIP CDS | T307 T308 | todo |
 | T008 | End-to-end verification and the authorized live Naver smoke publish | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
 | T279 | every hand-kept enum mirror is pinned to the generated enum | ARCH | T008 | todo |
@@ -57,11 +62,15 @@
 | T284 | the agent generates only the protos it uses and drops the survey harness | ARCH | T008 T281 | todo |
 
 ## next
-- implementation tasks wait on T008 or remain blocked at T177
-- create-task MKT THEME for the existing /about header overflow at 320px/200% text; T301 resolves the nested plan-card overflow
-- create-task CDS CLIP THEME for the Wanted Sans verification delta; follow-up group-directory headings and clip release smoke remain
+- implement-task T305, then T306 and T307; T308 before T309; T008 and T177 stand as they were
+- create-task MKT THEME for the existing /about header overflow at 320px/200% text
+- create-task CLIP CDS THEME for the r41/r24 Wanted Sans delta, which T305..T309 did not consume
 ## log
+- 260922 T305..T309 created from CLIP r42 CDS r25; tasked stays 40/23 because the r41/r24 Wanted Sans delta is still untasked (vid)
+- 260921 create-task CLIP r42 CDS r25 start; the r41/r24 Wanted Sans delta stays untasked (vid)
+- 260921 CLIP r42 CDS r25: a finalized clip's ① and ② open read-only, and one style's drawing and motion are owed by the preview and by both render kinds (vid)
 - 260921 T304 done; shared comparison review with distinct model/writing pages and durable entry-aware return links; 2,292 tests, 24 browser combinations and frontend gates pass (ret)
+- 260921 update-ssot CLIP CDS start: a finalized clip keeps its earlier steps readable, and caption motion and drawing must agree across preview and both render kinds (vid)
 - 260921 T304 created and claimed (ret)
 - 260921 create-task MODEL-44 MODEL-60 start (ret)
 - 260921 MODEL r13: model/writing review routes retain the entry destination, stage and post-list filters (ret)
@@ -77,6 +86,3 @@
 - 260921 THEME r17: tablet primary navigation shares the brand header background (nav)
 - 260921 update-ssot THEME start: remove the tablet navigation background band (nav)
 - 260921 T301 done; mobile card heights reduced ~62% on /plans and ~71% on /about, all ARCH gates green; existing enlarged-text About header remains (cmp)
-- 260921 T301 claimed (cmp)
-- 260921 T301 created from QUOTA r18 MKT r5 (cmp)
-- 260921 create-task QUOTA MKT start (cmp)
