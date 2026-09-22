@@ -8,6 +8,18 @@ import {
 } from './language'
 
 describe('content language transport mapping', () => {
+  it('covers every generated enum value without treating absence as a language', () => {
+    const generated = Object.values(ProtoContentLanguage).filter(
+      (value): value is ProtoContentLanguage => typeof value === 'number',
+    )
+    expect(generated).toEqual([
+      ProtoContentLanguage.UNSPECIFIED,
+      ProtoContentLanguage.KOREAN,
+      ProtoContentLanguage.ENGLISH,
+    ])
+    expect(generated.map(contentLanguageFromProto)).toEqual([undefined, 'ko', 'en'])
+  })
+
   it.each([
     ['ko', ProtoContentLanguage.KOREAN],
     ['en', ProtoContentLanguage.ENGLISH],

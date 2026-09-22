@@ -230,7 +230,10 @@ export type {
   StartRevisionResponse,
   SavePostContentResponse,
 } from './gen/postpilot/v1/post_pb'
-export { ModelCatalogService } from './gen/postpilot/v1/model_catalog_pb'
+export {
+  ModelCatalogService,
+  ModelPurpose as ProtoModelPurpose,
+} from './gen/postpilot/v1/model_catalog_pb'
 export {
   ApplyCatalogDocumentResponseSchema,
   CatalogEntrySchema,

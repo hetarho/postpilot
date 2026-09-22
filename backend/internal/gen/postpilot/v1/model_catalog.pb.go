@@ -21,6 +21,67 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// The closed vocabulary used by the catalog's string purpose fields. Those fields remain
+// strings for wire compatibility; this enum gives generators and contract tests one schema
+// definition against which the Go and TypeScript domain mirrors are checked.
+type ModelPurpose int32
+
+const (
+	ModelPurpose_MODEL_PURPOSE_UNSPECIFIED      ModelPurpose = 0
+	ModelPurpose_MODEL_PURPOSE_PHOTO_ANALYSIS   ModelPurpose = 1
+	ModelPurpose_MODEL_PURPOSE_STYLE_ANALYSIS   ModelPurpose = 2
+	ModelPurpose_MODEL_PURPOSE_WRITING          ModelPurpose = 3
+	ModelPurpose_MODEL_PURPOSE_IMAGE_GENERATION ModelPurpose = 4
+	ModelPurpose_MODEL_PURPOSE_VIDEO_GENERATION ModelPurpose = 5
+)
+
+// Enum value maps for ModelPurpose.
+var (
+	ModelPurpose_name = map[int32]string{
+		0: "MODEL_PURPOSE_UNSPECIFIED",
+		1: "MODEL_PURPOSE_PHOTO_ANALYSIS",
+		2: "MODEL_PURPOSE_STYLE_ANALYSIS",
+		3: "MODEL_PURPOSE_WRITING",
+		4: "MODEL_PURPOSE_IMAGE_GENERATION",
+		5: "MODEL_PURPOSE_VIDEO_GENERATION",
+	}
+	ModelPurpose_value = map[string]int32{
+		"MODEL_PURPOSE_UNSPECIFIED":      0,
+		"MODEL_PURPOSE_PHOTO_ANALYSIS":   1,
+		"MODEL_PURPOSE_STYLE_ANALYSIS":   2,
+		"MODEL_PURPOSE_WRITING":          3,
+		"MODEL_PURPOSE_IMAGE_GENERATION": 4,
+		"MODEL_PURPOSE_VIDEO_GENERATION": 5,
+	}
+)
+
+func (x ModelPurpose) Enum() *ModelPurpose {
+	p := new(ModelPurpose)
+	*p = x
+	return p
+}
+
+func (x ModelPurpose) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ModelPurpose) Descriptor() protoreflect.EnumDescriptor {
+	return file_postpilot_v1_model_catalog_proto_enumTypes[0].Descriptor()
+}
+
+func (ModelPurpose) Type() protoreflect.EnumType {
+	return &file_postpilot_v1_model_catalog_proto_enumTypes[0]
+}
+
+func (x ModelPurpose) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ModelPurpose.Descriptor instead.
+func (ModelPurpose) EnumDescriptor() ([]byte, []int) {
+	return file_postpilot_v1_model_catalog_proto_rawDescGZIP(), []int{0}
+}
+
 // CatalogDocumentIssue is one refused line. Any issue at all refuses the WHOLE document: a
 // half-applied sync would silently deregister what the refused lines were meant to keep.
 //
@@ -1473,7 +1534,14 @@ const file_postpilot_v1_model_catalog_proto_rawDesc = "" +
 	"\x11_reasoning_effortB\b\n" +
 	"\x06_levelJ\x04\b\x02\x10\x03J\x04\b\x03\x10\x04\"G\n" +
 	"\x13UpdateModelResponse\x120\n" +
-	"\x05entry\x18\x01 \x01(\v2\x1a.postpilot.v1.CatalogEntryR\x05entry2\xff\x04\n" +
+	"\x05entry\x18\x01 \x01(\v2\x1a.postpilot.v1.CatalogEntryR\x05entry*\xd4\x01\n" +
+	"\fModelPurpose\x12\x1d\n" +
+	"\x19MODEL_PURPOSE_UNSPECIFIED\x10\x00\x12 \n" +
+	"\x1cMODEL_PURPOSE_PHOTO_ANALYSIS\x10\x01\x12 \n" +
+	"\x1cMODEL_PURPOSE_STYLE_ANALYSIS\x10\x02\x12\x19\n" +
+	"\x15MODEL_PURPOSE_WRITING\x10\x03\x12\"\n" +
+	"\x1eMODEL_PURPOSE_IMAGE_GENERATION\x10\x04\x12\"\n" +
+	"\x1eMODEL_PURPOSE_VIDEO_GENERATION\x10\x052\xff\x04\n" +
 	"\x13ModelCatalogService\x12T\n" +
 	"\vListCatalog\x12 .postpilot.v1.ListCatalogRequest\x1a!.postpilot.v1.ListCatalogResponse\"\x00\x12`\n" +
 	"\x0fSetModelPurpose\x12$.postpilot.v1.SetModelPurposeRequest\x1a%.postpilot.v1.SetModelPurposeResponse\"\x00\x12T\n" +
@@ -1494,50 +1562,52 @@ func file_postpilot_v1_model_catalog_proto_rawDescGZIP() []byte {
 	return file_postpilot_v1_model_catalog_proto_rawDescData
 }
 
+var file_postpilot_v1_model_catalog_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_postpilot_v1_model_catalog_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
 var file_postpilot_v1_model_catalog_proto_goTypes = []any{
-	(*CatalogDocumentIssue)(nil),           // 0: postpilot.v1.CatalogDocumentIssue
-	(*CatalogDocumentPurposePlan)(nil),     // 1: postpilot.v1.CatalogDocumentPurposePlan
-	(*CatalogDocumentLevelChange)(nil),     // 2: postpilot.v1.CatalogDocumentLevelChange
-	(*PreviewCatalogDocumentRequest)(nil),  // 3: postpilot.v1.PreviewCatalogDocumentRequest
-	(*PreviewCatalogDocumentResponse)(nil), // 4: postpilot.v1.PreviewCatalogDocumentResponse
-	(*ApplyCatalogDocumentRequest)(nil),    // 5: postpilot.v1.ApplyCatalogDocumentRequest
-	(*ApplyCatalogDocumentResponse)(nil),   // 6: postpilot.v1.ApplyCatalogDocumentResponse
-	(*ExportCatalogDocumentRequest)(nil),   // 7: postpilot.v1.ExportCatalogDocumentRequest
-	(*ExportCatalogDocumentResponse)(nil),  // 8: postpilot.v1.ExportCatalogDocumentResponse
-	(*CatalogEntry)(nil),                   // 9: postpilot.v1.CatalogEntry
-	(*ReasoningSpend)(nil),                 // 10: postpilot.v1.ReasoningSpend
-	(*ListCatalogRequest)(nil),             // 11: postpilot.v1.ListCatalogRequest
-	(*EstimatorComboAssignment)(nil),       // 12: postpilot.v1.EstimatorComboAssignment
-	(*ListCatalogResponse)(nil),            // 13: postpilot.v1.ListCatalogResponse
-	(*SetModelPurposeRequest)(nil),         // 14: postpilot.v1.SetModelPurposeRequest
-	(*SetModelPurposeResponse)(nil),        // 15: postpilot.v1.SetModelPurposeResponse
-	(*UpdateModelRequest)(nil),             // 16: postpilot.v1.UpdateModelRequest
-	(*UpdateModelResponse)(nil),            // 17: postpilot.v1.UpdateModelResponse
+	(ModelPurpose)(0),                      // 0: postpilot.v1.ModelPurpose
+	(*CatalogDocumentIssue)(nil),           // 1: postpilot.v1.CatalogDocumentIssue
+	(*CatalogDocumentPurposePlan)(nil),     // 2: postpilot.v1.CatalogDocumentPurposePlan
+	(*CatalogDocumentLevelChange)(nil),     // 3: postpilot.v1.CatalogDocumentLevelChange
+	(*PreviewCatalogDocumentRequest)(nil),  // 4: postpilot.v1.PreviewCatalogDocumentRequest
+	(*PreviewCatalogDocumentResponse)(nil), // 5: postpilot.v1.PreviewCatalogDocumentResponse
+	(*ApplyCatalogDocumentRequest)(nil),    // 6: postpilot.v1.ApplyCatalogDocumentRequest
+	(*ApplyCatalogDocumentResponse)(nil),   // 7: postpilot.v1.ApplyCatalogDocumentResponse
+	(*ExportCatalogDocumentRequest)(nil),   // 8: postpilot.v1.ExportCatalogDocumentRequest
+	(*ExportCatalogDocumentResponse)(nil),  // 9: postpilot.v1.ExportCatalogDocumentResponse
+	(*CatalogEntry)(nil),                   // 10: postpilot.v1.CatalogEntry
+	(*ReasoningSpend)(nil),                 // 11: postpilot.v1.ReasoningSpend
+	(*ListCatalogRequest)(nil),             // 12: postpilot.v1.ListCatalogRequest
+	(*EstimatorComboAssignment)(nil),       // 13: postpilot.v1.EstimatorComboAssignment
+	(*ListCatalogResponse)(nil),            // 14: postpilot.v1.ListCatalogResponse
+	(*SetModelPurposeRequest)(nil),         // 15: postpilot.v1.SetModelPurposeRequest
+	(*SetModelPurposeResponse)(nil),        // 16: postpilot.v1.SetModelPurposeResponse
+	(*UpdateModelRequest)(nil),             // 17: postpilot.v1.UpdateModelRequest
+	(*UpdateModelResponse)(nil),            // 18: postpilot.v1.UpdateModelResponse
 }
 var file_postpilot_v1_model_catalog_proto_depIdxs = []int32{
-	2,  // 0: postpilot.v1.CatalogDocumentPurposePlan.relevel:type_name -> postpilot.v1.CatalogDocumentLevelChange
-	1,  // 1: postpilot.v1.PreviewCatalogDocumentResponse.purposes:type_name -> postpilot.v1.CatalogDocumentPurposePlan
-	0,  // 2: postpilot.v1.PreviewCatalogDocumentResponse.issues:type_name -> postpilot.v1.CatalogDocumentIssue
-	1,  // 3: postpilot.v1.ApplyCatalogDocumentResponse.purposes:type_name -> postpilot.v1.CatalogDocumentPurposePlan
-	0,  // 4: postpilot.v1.ApplyCatalogDocumentResponse.issues:type_name -> postpilot.v1.CatalogDocumentIssue
-	10, // 5: postpilot.v1.CatalogEntry.reasoning_spend:type_name -> postpilot.v1.ReasoningSpend
-	9,  // 6: postpilot.v1.ListCatalogResponse.entries:type_name -> postpilot.v1.CatalogEntry
-	12, // 7: postpilot.v1.ListCatalogResponse.estimator_combos:type_name -> postpilot.v1.EstimatorComboAssignment
-	9,  // 8: postpilot.v1.SetModelPurposeResponse.entry:type_name -> postpilot.v1.CatalogEntry
-	9,  // 9: postpilot.v1.UpdateModelResponse.entry:type_name -> postpilot.v1.CatalogEntry
-	11, // 10: postpilot.v1.ModelCatalogService.ListCatalog:input_type -> postpilot.v1.ListCatalogRequest
-	14, // 11: postpilot.v1.ModelCatalogService.SetModelPurpose:input_type -> postpilot.v1.SetModelPurposeRequest
-	16, // 12: postpilot.v1.ModelCatalogService.UpdateModel:input_type -> postpilot.v1.UpdateModelRequest
-	3,  // 13: postpilot.v1.ModelCatalogService.PreviewCatalogDocument:input_type -> postpilot.v1.PreviewCatalogDocumentRequest
-	5,  // 14: postpilot.v1.ModelCatalogService.ApplyCatalogDocument:input_type -> postpilot.v1.ApplyCatalogDocumentRequest
-	7,  // 15: postpilot.v1.ModelCatalogService.ExportCatalogDocument:input_type -> postpilot.v1.ExportCatalogDocumentRequest
-	13, // 16: postpilot.v1.ModelCatalogService.ListCatalog:output_type -> postpilot.v1.ListCatalogResponse
-	15, // 17: postpilot.v1.ModelCatalogService.SetModelPurpose:output_type -> postpilot.v1.SetModelPurposeResponse
-	17, // 18: postpilot.v1.ModelCatalogService.UpdateModel:output_type -> postpilot.v1.UpdateModelResponse
-	4,  // 19: postpilot.v1.ModelCatalogService.PreviewCatalogDocument:output_type -> postpilot.v1.PreviewCatalogDocumentResponse
-	6,  // 20: postpilot.v1.ModelCatalogService.ApplyCatalogDocument:output_type -> postpilot.v1.ApplyCatalogDocumentResponse
-	8,  // 21: postpilot.v1.ModelCatalogService.ExportCatalogDocument:output_type -> postpilot.v1.ExportCatalogDocumentResponse
+	3,  // 0: postpilot.v1.CatalogDocumentPurposePlan.relevel:type_name -> postpilot.v1.CatalogDocumentLevelChange
+	2,  // 1: postpilot.v1.PreviewCatalogDocumentResponse.purposes:type_name -> postpilot.v1.CatalogDocumentPurposePlan
+	1,  // 2: postpilot.v1.PreviewCatalogDocumentResponse.issues:type_name -> postpilot.v1.CatalogDocumentIssue
+	2,  // 3: postpilot.v1.ApplyCatalogDocumentResponse.purposes:type_name -> postpilot.v1.CatalogDocumentPurposePlan
+	1,  // 4: postpilot.v1.ApplyCatalogDocumentResponse.issues:type_name -> postpilot.v1.CatalogDocumentIssue
+	11, // 5: postpilot.v1.CatalogEntry.reasoning_spend:type_name -> postpilot.v1.ReasoningSpend
+	10, // 6: postpilot.v1.ListCatalogResponse.entries:type_name -> postpilot.v1.CatalogEntry
+	13, // 7: postpilot.v1.ListCatalogResponse.estimator_combos:type_name -> postpilot.v1.EstimatorComboAssignment
+	10, // 8: postpilot.v1.SetModelPurposeResponse.entry:type_name -> postpilot.v1.CatalogEntry
+	10, // 9: postpilot.v1.UpdateModelResponse.entry:type_name -> postpilot.v1.CatalogEntry
+	12, // 10: postpilot.v1.ModelCatalogService.ListCatalog:input_type -> postpilot.v1.ListCatalogRequest
+	15, // 11: postpilot.v1.ModelCatalogService.SetModelPurpose:input_type -> postpilot.v1.SetModelPurposeRequest
+	17, // 12: postpilot.v1.ModelCatalogService.UpdateModel:input_type -> postpilot.v1.UpdateModelRequest
+	4,  // 13: postpilot.v1.ModelCatalogService.PreviewCatalogDocument:input_type -> postpilot.v1.PreviewCatalogDocumentRequest
+	6,  // 14: postpilot.v1.ModelCatalogService.ApplyCatalogDocument:input_type -> postpilot.v1.ApplyCatalogDocumentRequest
+	8,  // 15: postpilot.v1.ModelCatalogService.ExportCatalogDocument:input_type -> postpilot.v1.ExportCatalogDocumentRequest
+	14, // 16: postpilot.v1.ModelCatalogService.ListCatalog:output_type -> postpilot.v1.ListCatalogResponse
+	16, // 17: postpilot.v1.ModelCatalogService.SetModelPurpose:output_type -> postpilot.v1.SetModelPurposeResponse
+	18, // 18: postpilot.v1.ModelCatalogService.UpdateModel:output_type -> postpilot.v1.UpdateModelResponse
+	5,  // 19: postpilot.v1.ModelCatalogService.PreviewCatalogDocument:output_type -> postpilot.v1.PreviewCatalogDocumentResponse
+	7,  // 20: postpilot.v1.ModelCatalogService.ApplyCatalogDocument:output_type -> postpilot.v1.ApplyCatalogDocumentResponse
+	9,  // 21: postpilot.v1.ModelCatalogService.ExportCatalogDocument:output_type -> postpilot.v1.ExportCatalogDocumentResponse
 	16, // [16:22] is the sub-list for method output_type
 	10, // [10:16] is the sub-list for method input_type
 	10, // [10:10] is the sub-list for extension type_name
@@ -1557,13 +1627,14 @@ func file_postpilot_v1_model_catalog_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_postpilot_v1_model_catalog_proto_rawDesc), len(file_postpilot_v1_model_catalog_proto_rawDesc)),
-			NumEnums:      0,
+			NumEnums:      1,
 			NumMessages:   18,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_postpilot_v1_model_catalog_proto_goTypes,
 		DependencyIndexes: file_postpilot_v1_model_catalog_proto_depIdxs,
+		EnumInfos:         file_postpilot_v1_model_catalog_proto_enumTypes,
 		MessageInfos:      file_postpilot_v1_model_catalog_proto_msgTypes,
 	}.Build()
 	File_postpilot_v1_model_catalog_proto = out.File

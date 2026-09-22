@@ -413,25 +413,15 @@ func optionalLanguageFromProto(value *postpilotv1.ContentLanguage) (*post.Langua
 }
 
 func languageFromProto(value postpilotv1.ContentLanguage) (post.Language, error) {
-	switch value {
-	case postpilotv1.ContentLanguage_CONTENT_LANGUAGE_KOREAN:
-		return post.LanguageKorean, nil
-	case postpilotv1.ContentLanguage_CONTENT_LANGUAGE_ENGLISH:
-		return post.LanguageEnglish, nil
-	default:
+	tag, ok := rpcserver.ContentLanguageFromProto(value)
+	if !ok {
 		return "", post.ErrLanguageRequired
 	}
+	return post.ParseLanguage(tag)
 }
 
 func languageToProto(value post.Language) postpilotv1.ContentLanguage {
-	switch value {
-	case post.LanguageKorean:
-		return postpilotv1.ContentLanguage_CONTENT_LANGUAGE_KOREAN
-	case post.LanguageEnglish:
-		return postpilotv1.ContentLanguage_CONTENT_LANGUAGE_ENGLISH
-	default:
-		return postpilotv1.ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED
-	}
+	return rpcserver.ContentLanguageToProto(string(value))
 }
 
 func optionalLanguageToProto(value *post.Language) postpilotv1.ContentLanguage {

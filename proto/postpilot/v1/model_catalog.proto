@@ -38,6 +38,18 @@ service ModelCatalogService {
   rpc ExportCatalogDocument(ExportCatalogDocumentRequest) returns (ExportCatalogDocumentResponse) {}
 }
 
+// The closed vocabulary used by the catalog's string purpose fields. Those fields remain
+// strings for wire compatibility; this enum gives generators and contract tests one schema
+// definition against which the Go and TypeScript domain mirrors are checked.
+enum ModelPurpose {
+  MODEL_PURPOSE_UNSPECIFIED = 0;
+  MODEL_PURPOSE_PHOTO_ANALYSIS = 1;
+  MODEL_PURPOSE_STYLE_ANALYSIS = 2;
+  MODEL_PURPOSE_WRITING = 3;
+  MODEL_PURPOSE_IMAGE_GENERATION = 4;
+  MODEL_PURPOSE_VIDEO_GENERATION = 5;
+}
+
 // CatalogDocumentIssue is one refused line. Any issue at all refuses the WHOLE document: a
 // half-applied sync would silently deregister what the refused lines were meant to keep.
 //

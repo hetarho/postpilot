@@ -343,27 +343,18 @@ func toProtoVoice(v voice.Voice) *postpilotv1.Voice {
 }
 
 func languageFromProto(value postpilotv1.ContentLanguage) (voice.Language, error) {
-	switch value {
-	case postpilotv1.ContentLanguage_CONTENT_LANGUAGE_KOREAN:
-		return voice.LanguageKorean, nil
-	case postpilotv1.ContentLanguage_CONTENT_LANGUAGE_ENGLISH:
-		return voice.LanguageEnglish, nil
-	case postpilotv1.ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED:
-		return "", voice.ErrLanguageRequired
-	default:
+	tag, ok := rpcserver.ContentLanguageFromProto(value)
+	if !ok {
+		if value == postpilotv1.ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED {
+			return "", voice.ErrLanguageRequired
+		}
 		return "", voice.ErrLanguageUnsupported
 	}
+	return voice.ParseLanguage(tag)
 }
 
 func languageToProto(value voice.Language) postpilotv1.ContentLanguage {
-	switch value {
-	case voice.LanguageKorean:
-		return postpilotv1.ContentLanguage_CONTENT_LANGUAGE_KOREAN
-	case voice.LanguageEnglish:
-		return postpilotv1.ContentLanguage_CONTENT_LANGUAGE_ENGLISH
-	default:
-		return postpilotv1.ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED
-	}
+	return rpcserver.ContentLanguageToProto(string(value))
 }
 
 func toProtoFailure(value *voice.Failure) *postpilotv1.Failure {

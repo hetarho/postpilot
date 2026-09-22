@@ -325,14 +325,7 @@ func toProtoLanguage(value *experiment.Language) postpilotv1.ContentLanguage {
 	if value == nil {
 		return postpilotv1.ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED
 	}
-	switch *value {
-	case experiment.LanguageKorean:
-		return postpilotv1.ContentLanguage_CONTENT_LANGUAGE_KOREAN
-	case experiment.LanguageEnglish:
-		return postpilotv1.ContentLanguage_CONTENT_LANGUAGE_ENGLISH
-	default:
-		return postpilotv1.ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED
-	}
+	return rpcserver.ContentLanguageToProto(string(*value))
 }
 
 // reobserveFiles maps the picker's answer to the presence-carrying value, exactly as the

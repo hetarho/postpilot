@@ -210,14 +210,7 @@ func failureToProto(found *generation.Failure) *postpilotv1.Failure {
 }
 
 func languageToProto(value generation.Language) postpilotv1.ContentLanguage {
-	switch value {
-	case generation.LanguageKorean:
-		return postpilotv1.ContentLanguage_CONTENT_LANGUAGE_KOREAN
-	case generation.LanguageEnglish:
-		return postpilotv1.ContentLanguage_CONTENT_LANGUAGE_ENGLISH
-	default:
-		return postpilotv1.ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED
-	}
+	return rpcserver.ContentLanguageToProto(string(value))
 }
 
 func splitModelRef(value string) *postpilotv1.ModelRef {

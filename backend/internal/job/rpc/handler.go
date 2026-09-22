@@ -81,14 +81,7 @@ func failureToProto(found *job.Failure) *postpilotv1.Failure {
 }
 
 func languageToProto(value string) postpilotv1.ContentLanguage {
-	switch value {
-	case "ko":
-		return postpilotv1.ContentLanguage_CONTENT_LANGUAGE_KOREAN
-	case "en":
-		return postpilotv1.ContentLanguage_CONTENT_LANGUAGE_ENGLISH
-	default:
-		return postpilotv1.ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED
-	}
+	return rpcserver.ContentLanguageToProto(value)
 }
 
 func modelRef(value string) *postpilotv1.ModelRef {
