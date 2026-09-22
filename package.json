@@ -15,7 +15,7 @@
     "lint": "pnpm --filter ./frontend lint && pnpm run format:check",
     "format:check": "pnpm --filter ./frontend format:check",
     "lint:fsd": "pnpm --filter ./frontend lint:fsd",
-    "lint:retirement": "node scripts/check-publishing-retirement.mjs",
+    "lint:retirement": "node --test scripts/check-publishing-retirement.test.mjs && node scripts/check-publishing-retirement.mjs",
     "lint:style": "node scripts/lint-style-escapes.mjs",
     "lint:style:probe": "node scripts/lint-style-escapes.mjs --probe",
     "test": "pnpm --filter ./frontend test",

@@ -53,8 +53,10 @@
 
 ## next
 - create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
-- automatic publishing retirement implementation and verification are complete; deployed-environment rollout receipts remain operationally pending
+- publishing retirement implementation is complete; DEPLOY.md records the prod checkpoint and receipts at c6af0418, with staging not deployed
 ## log
+- 260922 CI guard repaired; completed and pending retirement guides both pass while missing cleanup evidence arguments and restored runtime fail; 11 regressions and the real retirement gate pass locally; remote verification awaits push
+- 260922 CI investigation start; run 35739196970 failed after the deployment-checkpoint documentation commit
 - 260922 T321 done; short email-free seed ids and independent automatic-login/saved-id controls; 2328 FE tests, full BE gate, codegen and CI support checks pass (lgn)
 - 260922 T321 claimed (lgn)
 - 260922 create-task AUTH complete; T321 consumes AUTH r8
@@ -73,5 +75,3 @@
 - 260922 obsolete T008 and T177 task records removed; publishing retirement superseded the live smoke and the owner cancelled the remaining manual clip-viewing follow-up
 - 260922 T279 done; surviving BlockType, ModelPurpose and language mirrors are generated-enum pinned, shared transport conversion is centralized, and retirement absence remains enforced (enm)
 - 260922 T279 claimed (enm)
-- 260922 T313 done; final absence, fresh/upgrade preservation, manual export and pending rollout evidence verified; no Naver request issued (ret)
-- 260922 T284 done; companion module, publishing contracts and build hooks removed; retired enum identities reserved and two-runtime generation/build gates pass (ret)

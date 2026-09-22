@@ -170,11 +170,17 @@ rejectMatches(
 )
 
 const deploy = read('DEPLOY.md')
+// Rollout status changes as environments are retired. Keep requiring the bridge and
+// evidence-bearing cleanup procedure, without freezing the runbook in its pending state.
 for (const required of [
   'T312 bridge 이미지',
   'migration 0072',
   'migration 0076',
-  '운영 실행과 production purge는 여전히 pending',
+  '--report-digest',
+  '--shutdown-inventory',
+  '--shutdown-digest',
+  '--receipt',
+  '--verify',
 ]) {
   if (!deploy.includes(required)) failures.push(`DEPLOY retirement bridge lost: ${required}`)
 }
