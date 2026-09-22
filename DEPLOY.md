@@ -269,7 +269,25 @@ verify   브라우저 origin으로 API CORS preflight 확인 (credentials 포함
 migration 0072부터 자동 발행은 영구 차단된다. 아래 보고·정리 명령은 `/retirepublishing`을 포함한
 **T312 bridge 이미지**에서만 실행한다. 최종 이미지에는 이 명령이 없으므로 bridge image SHA를 환경별
 checkpoint가 끝날 때까지 보관한다. 배포 전 구 API 프로세스를 완전히 내리고 bridge 이미지
-하나만 기동한다. 이 경계에서는 구 이미지와 새 이미지를 동시에 실행하지 않는다. 마이그레이션은
+하나만 기동한다.
+
+**bridge 이미지가 GHCR에 없을 때.** T310→T283 체인이 한 번의 푸시로 main에 올라가면 그 사이 커밋에는
+deploy 실행이 없고, 따라서 bridge 이미지가 GHCR에 존재하지 않는다(prod에서 실제로 이렇게 됐다 — 아래
+checkpoint 참고). 이때는 bridge 커밋에서 정적 바이너리만 만들어 현재 이미지에 bind-mount하면 같은
+경계를 만족한다. 컨테이너는 그대로 distroless/nonroot로 돌고, 명령·검증·영수증은 전부 동일하다.
+
+```bash
+git worktree add --detach /tmp/postpilot-bridge <T312-bridge-commit-SHA>
+cd /tmp/postpilot-bridge/backend
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" \
+  -o /tmp/retirepublishing ./cmd/retirepublishing
+scp /tmp/retirepublishing <vps>:/home/ubuntu/retirepublishing-bridge-<sha>
+```
+
+그러면 아래 모든 명령에서 `IMAGE_TAG=<T312-bridge-image-SHA>` 대신
+`-v /home/ubuntu/retirepublishing-bridge-<sha>:/retirepublishing:ro`를 붙이고 `--no-deps`로 실행한다.
+`/data`의 보고서·inventory·receipt는 mode 0600에 uid 65532 소유여야 하므로, 호스트에서 만들지 말고
+`docker run --rm -u 65532:65532 -v /srv/postpilot-<env>/data:/data ... sh -c 'umask 077; ...'`로 쓴다. 이 경계에서는 구 이미지와 새 이미지를 동시에 실행하지 않는다. 마이그레이션은
 연결 코드와 에이전트 토큰을 무효화하고, 커밋 전 작업은 `canceled`, 커밋 가능성이 있는 작업은
 `outcome_unknown`으로 고정한다. 구 클라이언트의 SQL 쓰기도 트리거가 거절한다.
 
@@ -288,8 +306,8 @@ IMAGE_TAG=<T312-bridge-image-SHA> docker compose -f docker-compose.prod.yml run 
 이미지 SHA, migration 0072 적용 여부, 명령이 출력한 digest와 보고서 파일의 보관 위치를 환경별로
 기록한다. 저장된 Naver URL과 `outcome_unknown` 결과는 운영자가 Naver에서 직접 확인하며 자동 재시도나
 삭제를 하지 않는다. 설치된 Mac 동반 프로그램을 모두 중지했다는 영수증이 모이기 전에는 staged
-object나 발행 레코드를 지우지 않는다. 이 저장소에는 현재 배포된 환경이 없으므로 실제 운영 영수증은
-아직 없고, 코드·fixture 검증과 운영 실행을 구분한다.
+object나 발행 레코드를 지우지 않는다. prod는 아래 checkpoint로 실행을 마쳤고, staging은 아직 배포된
+적이 없어 해당 없음이다.
 
 보고서에 대응하는 모든 Mac에서는 **T282 retirement bridge가 들어간 동일한 검토 커밋 SHA**를 따로
 기록하고, 현재 main이 아니라 그 보관 커밋을 임시 worktree로 체크아웃해 읽기 전용 점검을 실행한다.
@@ -360,15 +378,31 @@ DB transaction을 열지 않는다. 실패 시 mode 0600 cleanup receipt가 이�
 apply 성공 후 같은 명령의 `--verify`로 현재 다섯 테이블과 `publishing/` 목록이 모두 0이고 complete receipt의
 digest가 같은 증거를 가리키는지 다시 확인한다. 환경별로 bridge image SHA, 원본 report digest, shutdown
 inventory digest, complete cleanup receipt digest를 기록한다. 실제 환경에서 이 checkpoint가 끝나기 전에는
-publishing 테이블·bridge command·guard를 제거하는 T283 이미지를 배포하지 않는다. 현재 저장소에는 배포된
-환경이 없으므로 이 절차의 운영 실행과 production purge는 여전히 pending이다.
+publishing 테이블·bridge command·guard를 제거하는 T283 이미지를 배포하지 않는다.
+
+#### prod checkpoint (260922, 완료)
+
+| 항목 | 값 |
+| --- | --- |
+| bridge 커밋 | `cb0575abbc33e47bcec9bbf04b538b17dfa71644` (GHCR 이미지 없음 — 위 bind-mount 방식) |
+| T282 Mac 영수증 | `sha256:bcf0004f31fc76e83d08463f0cb97d2a20e1d2d634a305d0253fdc0ca2ed0768` (`retire --apply --delete-profiles`, status complete) |
+| report digest | `c32ebce5609e73f0d53c4324c0c67a8c50ac56f43aba88879b8b230f499d888b` |
+| shutdown inventory digest | `sha256:a8579b9c37afbfdec8146dedce4b8252f1b4d463921c8200f76d69539098a4cf` |
+| cleanup receipt digest | `93cb45caffcc95548571a3bde8167585b823fe43f21c8823b17e0038f3b9d882` (status complete) |
+| 정리 규모 | rows 18 → 0 (pairings 10, agents 4, jobs 2, job_id 2, assets 0), `publishing/` objects 0 |
+| 최종 이미지 | `4122c499539255b9b9b1f1ff2ec34b60c73b9bb3`, goose 76 |
+
+보고서·inventory·receipt 원본은 `/srv/postpilot-prod/data/publishing-{retirement,shutdown,cleanup}-prod.json`에
+mode 0600으로 남아 있다. 이 checkpoint 이전에 T283 이미지가 먼저 배포돼 `Deploy backend` rollout이
+0076에서 실패했고(run 35704843925), 헬스 게이트가 구 이미지로 롤백했다. 순서를 지켰다면 발생하지 않는다.
 
 최종 이미지는 migration 0076에서 다섯 테이블의 row 수가 모두 0인지 다시 확인하고, 그 뒤에만 trigger,
 index와 테이블을 FK 순서로 제거한다. migration은 object storage를 읽거나 지우지 않으므로 complete receipt가
 `publishing/` 정리의 유일한 배포 증거다. row가 하나라도 남으면 `publishing cleanup required before final
 removal`로 기동이 실패하고 migration transaction은 어떤 테이블도 지우지 않는다. 이 경우 final migration을
 약화하거나 row를 수동 삭제하지 말고, 해당 환경을 기록된 bridge image SHA로 되돌려 위 inspect → apply →
-verify를 반복한다. 모든 환경의 complete receipt와 final image SHA를 기록한 뒤에만 bridge 이미지를 폐기한다.
+verify를 반복한다(그 이미지가 GHCR에 없으면 bridge 커밋에서 바이너리를 빌드해 bind-mount한다). 모든
+환경의 complete receipt와 final image SHA를 기록한 뒤에만 bridge 이미지를 폐기한다.
 
 ## 6. 롤백
 
