@@ -52,9 +52,17 @@
 |---|---|---|---|---|
 
 ## next
+- ideation post-quality-and-related-links 계속 (6 live opens): the exact 주제 names from Naver's own picker, whether title+excerpt is a large enough vocabulary sample, the tag rule against POST-65, an English target, 확정 rewriting `posts.title`, and what ①'s dock shows before an account has published enough to measure
 - create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 - publishing retirement implementation is complete; DEPLOY.md records the prod checkpoint and receipts at c6af0418, with staging not deployed
 ## log
+- 260923 ideation post-quality round 5-6; 분야 becomes a per-post attribute and a third 지침 scope kind; one fixed 상위 노출 단어 사용 preset with a multi-select 적용할 분야 keeps GUIDE-18 intact; guidelinePrecedence narrows 어휘 out; 11 of 17 opens are parked with 추천글/GEO
+- 260923 ideation post-quality round 4; word choice moved off the 말투 tab into per-분야 지침 presets filled by a daily product-side 네이버 검색 API batch; 도배율 numerator = most frequent noun, bands product-owned; rule text = code constant overridable by 지침
+- 260923 ideation post-quality-and-related-links round 3; body word rule → a recommendation surface in the 말투 tab adopted into [사용자 규칙]; tags by prompt rule only, no search data; 추천글 deferred and reshaped around explicitly saved links
+- 260923 ideation post-quality-and-related-links: GEO deferred out of v1 (citation unobservable); title area optional; blanket phrase bans rejected for measured per-account repetition; word choice extended to tags and body
+- 260923 template generation freshness investigation complete; each new StartGeneration reads the current saved template body and freezes it in the job; running jobs keep their frozen copy, while template length/tag defaults seed only when assigned
+- 260923 template generation freshness investigation start; trace saved template edits into a subsequent post generation request
+- 260922 ideation post-quality-and-related-links continue; adding SEO/GEO methodology, title templates, high-value vocabulary
 - 260922 CI guard repaired; completed and pending retirement guides both pass while missing cleanup evidence arguments and restored runtime fail; 11 regressions and the real retirement gate pass locally; remote verification awaits push
 - 260922 CI investigation start; run 35739196970 failed after the deployment-checkpoint documentation commit
 - 260922 T321 done; short email-free seed ids and independent automatic-login/saved-id controls; 2328 FE tests, full BE gate, codegen and CI support checks pass (lgn)
@@ -68,10 +76,3 @@
 - 260922 T320 claimed (gate)
 - 260922 create-task ARCH complete; T320 created from r9
 - 260922 update-ssot ARCH complete; ARCH r9 gives the backend gate a 30m bound because cmd/api (1018s) and internal/clip/store (828s) pass the Go default on their own; create-task pending
-- 260922 update-ssot ARCH start; the backend verify command expires on Go's per-package default
-- 260922 Jev applicability research complete; recommend an offline Korean draft-grounding evaluation first, clip candidate scoring second; official docs and live OpenRouter catalog verified, decisions excluded from current modality query; no inference calls or product/spec decisions changed
-- 260922 Jev applicability research start; verify official capabilities against current Postpilot implementation
-- 260922 ARCH r8; dev-only fixture tooling placement and its production-image exclusion recorded, implemented ahead of the record in 63f41404 so the delta is already consumed and owes no task
-- 260922 obsolete T008 and T177 task records removed; publishing retirement superseded the live smoke and the owner cancelled the remaining manual clip-viewing follow-up
-- 260922 T279 done; surviving BlockType, ModelPurpose and language mirrors are generated-enum pinned, shared transport conversion is centralized, and retirement absence remains enforced (enm)
-- 260922 T279 claimed (enm)
