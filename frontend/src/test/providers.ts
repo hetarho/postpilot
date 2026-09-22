@@ -90,6 +90,9 @@ export interface FakeProvidersOptions {
     candidateA: { providerId: string; modelId: string }
     candidateB: { providerId: string; modelId: string }
   }>
+  /** Every SaveComparisonPair the screen sent, by model id. A form that writes as it is
+   *  chosen is tested by what it wrote and when, not by what it rendered. */
+  onSavePair?: (pair: { a: string; b: string }) => void
 }
 
 export function registerProviderService(router: ConnectRouter, options: FakeProvidersOptions = {}) {
@@ -216,6 +219,7 @@ export function registerProviderService(router: ConnectRouter, options: FakeProv
     if (options.savePairFailure) throwFakeMutationFailure(options.savePairFailure)
     const candidateA = request.candidateA ?? create(ModelRefSchema, {})
     const candidateB = request.candidateB ?? create(ModelRefSchema, {})
+    options.onSavePair?.({ a: candidateA.modelId, b: candidateB.modelId })
     comparisonPairs = [
       ...comparisonPairs.filter((pair) => pair.stage !== request.stage),
       { stage: request.stage, candidateA, candidateB },
