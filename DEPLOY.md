@@ -313,6 +313,53 @@ idempotent하게 이어진다.
 중지 완료로 간주하지 않는다. 이 명령은 Naver나 Postpilot API에 접속하지 않고 실제 발행도 검증하지
 않는다.
 
+모든 장치를 해소한 뒤 환경별 shutdown inventory를 mode 0600으로 만든다. `devices`는 최초 보고서의
+agent id를 정확히 한 번씩 포함해야 하고, `disposition`은 `shutdown`·`never_installed`·`destroyed` 중
+하나다. `evidence_digest`에는 Mac 로컬 영수증 또는 별도 inventory reconciliation의 `sha256:` digest만
+기록한다. 로컬 경로와 영수증 원문은 넣지 않는다. agent가 0개인 환경도 빈 `devices` 배열을 가진 파일이
+필요하다.
+
+```json
+{
+  "schema_version": 1,
+  "environment": "<env>",
+  "report_digest": "<report 명령이 출력한 digest>",
+  "devices": [
+    {"agent_id": "<agent id>", "disposition": "shutdown", "evidence_digest": "sha256:<64 hex>"}
+  ]
+}
+```
+
+원본 retirement report의 mode 0600 파일과 출력 digest를 그대로 보관한다. cleanup은 그 digest뿐 아니라
+현재 database identity, migration 0072 cutoff, agent/job inventory와 다섯 테이블의 row 수를 원본 보고서와
+대조한다. shutdown inventory의 정확한 파일 digest도 함께 넘긴다(`sha256sum` 결과 앞에 `sha256:`를 붙임).
+기본 실행은 DB와 `publishing/` 전체 목록을 읽기만 하며 파일이나 row를 지우지 않는다.
+
+```bash
+cd /srv/postpilot-<env>
+docker compose -f docker-compose.prod.yml run --rm \
+  --entrypoint /retirepublishing api cleanup \
+  --environment <env> \
+  --report /data/publishing-retirement-<env>.json \
+  --report-digest <report-digest> \
+  --shutdown-inventory /data/publishing-shutdown-<env>.json \
+  --shutdown-digest sha256:<shutdown-file-hex> \
+  --receipt /data/publishing-cleanup-<env>.json
+```
+
+점검 결과가 원본 inventory와 일치할 때 같은 명령에 `--apply`를 추가한다. apply는 완전히 pagination된
+`publishing/` 목록에서 참조 copy와 orphan을 exact key로 먼저 지우고, 새 전체 목록이 0임을 확인한 뒤
+`publish_assets` → `publish_jobs` → `publish_job_ids` → `publishing_agents` → `publishing_pairings` 순서의
+짧은 DB transaction을 실행한다. `posts/`, `clip-inputs/`와 다른 prefix는 대상이 아니다. object I/O 중에는
+DB transaction을 열지 않는다. 실패 시 mode 0600 cleanup receipt가 이미 처리한 exact key와 증거 digest를
+보관하므로 같은 `--apply` 명령을 반복한다. 원본 retirement report는 덮어쓰지 않는다.
+
+apply 성공 후 같은 명령의 `--verify`로 현재 다섯 테이블과 `publishing/` 목록이 모두 0이고 complete receipt의
+digest가 같은 증거를 가리키는지 다시 확인한다. 환경별로 bridge image SHA, 원본 report digest, shutdown
+inventory digest, complete cleanup receipt digest를 기록한다. 실제 환경에서 이 checkpoint가 끝나기 전에는
+publishing 테이블·bridge command·guard를 제거하는 T283 이미지를 배포하지 않는다. 현재 저장소에는 배포된
+환경이 없으므로 이 절차의 운영 실행과 production purge는 여전히 pending이다.
+
 ## 6. 롤백
 
 - **백엔드**: VPS `/srv/postpilot-<env>/.env`의 `IMAGE_TAG=<이전 SHA>`로 바꾸고

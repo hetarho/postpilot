@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/postpilot/backend/internal/publishing"
@@ -70,4 +71,47 @@ func (s *Store) RetirementSnapshot(ctx context.Context) (publishing.RetirementSn
 
 func (s *Store) readDB() *sql.DB {
 	return s.reader
+}
+
+func (s *Store) RetirementAssetKeys(ctx context.Context) ([]string, error) {
+	rows, err := s.readDB().QueryContext(ctx, `SELECT staged_key FROM publish_assets ORDER BY staged_key`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var keys []string
+	for rows.Next() {
+		var key string
+		if err := rows.Scan(&key); err != nil {
+			return nil, err
+		}
+		keys = append(keys, key)
+	}
+	return keys, rows.Err()
+}
+
+// DeleteRetirementRows owns one short SQLite transaction and performs no object
+// storage I/O. The object prefix is verified empty before this method is called.
+func (s *Store) DeleteRetirementRows(ctx context.Context) (err error) {
+	tx, err := s.writer.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if rollbackErr := tx.Rollback(); rollbackErr != nil && !errors.Is(rollbackErr, sql.ErrTxDone) {
+			err = errors.Join(err, rollbackErr)
+		}
+	}()
+	for _, statement := range []string{
+		`DELETE FROM publish_assets`,
+		`DELETE FROM publish_jobs`,
+		`DELETE FROM publish_job_ids`,
+		`DELETE FROM publishing_agents`,
+		`DELETE FROM publishing_pairings`,
+	} {
+		if _, err := tx.ExecContext(ctx, statement); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }

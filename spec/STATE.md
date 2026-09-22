@@ -55,7 +55,6 @@
 | T279 | Pin enum mirrors in the surviving backend and frontend | ARCH | T313 | todo |
 | T283 | Remove publishing backend, deletion guards and database tables | PUB POST AUTH QUOTA LANG ARCH | T312 | todo |
 | T284 | Delete companion source, publishing contracts and build integration | PUB AUTH LANG VIDEO ARCH | T283 | todo |
-| T312 | Export retirement outcomes and purge publishing-owned data | PUB ARCH | T282 | todo |
 | T313 | Verify complete retirement and preserved manual publishing workflow | PUB EXPORT POST MKT AUTH ARCH | T284 | todo |
 | T315 | Leaderboards keyed by scope, stage and window | MODEL LANG ARCH | - | todo |
 | T316 | A winner verdict carries badges through one confirmation sheet | MODEL ARCH THEME | T314 | todo |
@@ -63,9 +62,11 @@
 
 ## next
 - implement-task T315 (independent) or T316 (T314 is done); then T317 last
-- implement-task T312; retirement order T312 → T283 → T284 → T313; T008 must not resume, T279 follows removal
+- implement-task T283; retirement order T283 → T284 → T313; T008 must not resume, T279 follows removal
 - create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 ## log
+- 260922 T312 done; verified evidence-gated object-first cleanup, retry receipt and foreign-key-ordered row purge; focused retirement gates pass and the contended clip regression passes alone (ret)
+- 260922 T312 claimed (ret)
 - 260922 T282 done; local retirement now verifies shutdown, deletes stored credentials and owned files with a retry receipt, preserves profiles by default, and blocks all former execution entry points; ARCH-27 passes (ret)
 - 260922 T282 claimed (ret)
 - 260922 T311 done; all publishing product surfaces and clients removed, legacy link redirects after auth, manual export preserved; 2,286 frontend tests and ARCH-25 gates pass (ret)
@@ -83,6 +84,4 @@
 - 260922 create-task retirement complete: T310/T311/T312/T313 created, T282/T283/T284 repurposed for removal, T279 narrowed to surviving enums; all 10 retirement SSOT deltas consumed, unrelated pending retained
 - 260922 TMPL r8 consumed without a standalone implementation task: only removes the retired-agent dependency from the still-open photo-row question; PUB-49 is covered by T313
 - 260922 create-task PUB ARCH AUTH QUOTA POST EXPORT MKT VIDEO TMPL LANG start; plan phased removal and replace obsolete todo agent refactors
-- 260922 update-ssot PUB ARCH AUTH QUOTA POST EXPORT MKT VIDEO TMPL LANG complete; phased retirement adopted, content/manual export preserved; create-task pending
 - 260922 warning: T008 doing claim is superseded by PUB r6; do not resume live publishing or use T008 as a retirement dependency; its task file remains immutable
-- 260922 create-architecture ARCH retirement alignment start; remove the companion architecture through the PUB cutover stages
