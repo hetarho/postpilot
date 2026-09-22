@@ -22,8 +22,8 @@
 | QUOTA | 19 | 19 | - | 0 |
 | POST | 9 | 9 | - | 0 |
 | VOICE | 3 | 3 | - | 1 |
-| GEN | 7 | 7 | - | 0 |
-| MODEL | 14 | 14 | - | 0 |
+| GEN | 8 | 8 | - | 0 |
+| MODEL | 16 | 16 | - | 0 |
 | TMPL | 8 | 8 | - | 1 |
 | GUIDE | 3 | 3 | - | 0 |
 | EXPORT | 5 | 5 | - | 0 |
@@ -53,31 +53,31 @@
 | T008 | Superseded by PUB r6; original live-smoke claim retained, do not resume | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
 | T279 | Pin enum mirrors in the surviving backend and frontend | ARCH | T313 | todo |
-| T284 | Delete companion source, publishing contracts and build integration | PUB AUTH LANG VIDEO ARCH | T283 | todo |
+| T284 | Delete companion source, publishing contracts and build integration | PUB AUTH LANG VIDEO ARCH | T283 | doing@260922.ret |
 | T313 | Verify complete retirement and preserved manual publishing workflow | PUB EXPORT POST MKT AUTH ARCH | T284 | todo |
 
 ## next
-- MODEL r14 is fully built (T314..T317); no model-comparison work remains
+- MODEL r16 and GEN r8 are fully built; no model-comparison work remains
 - implement-task T284; retirement order T284 → T313; T008 must not resume, T279 follows removal
 - create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 ## log
+- 260922 T319 done; a lab write comparison keeps its preparing observation in the snapshot, so a comparison on a finalized post changes nothing; every backend package passes, cmd/api at 690s needing a raised limit (obs)
+- 260922 T318 done; the A/B pair writes as it is chosen, with no save action; the pair form, model, generation and editor suites and every frontend gate pass (pr)
+- 260922 T319 claimed (obs)
+- 260922 create-task MODEL GEN complete; T319 created from r16/r8
+- 260922 create-task MODEL GEN start; r16/r8 delta
+- 260922 update-ssot MODEL GEN complete; MODEL r16 adds MODEL-66 and GEN r8 amends GEN-19: a lab comparison keeps its observation in the snapshot and writes nothing to the post; create-task pending
+- 260922 defect found: a lab write comparison persisted its preparing observation onto the source post whatever its status, so running one on a finalized post changed it; MODEL-66 and GEN-19 now forbid it
+- 260922 update-ssot MODEL GEN start; a lab comparison must not write to its source post at start
+- 260922 T318 claimed (pr)
+- 260922 create-task MODEL complete; T318 created from r15
+- 260922 create-task MODEL start; r15 delta
+- 260922 update-ssot MODEL complete; MODEL r15 adds MODEL-65, the A/B pair saves as it is chosen; create-task pending
+- 260922 update-ssot MODEL start; the A/B pair saves as it is chosen
+- 260922 T284 claimed (ret)
 - 260922 T283 done; publishing backend/runtime removed, migration 0076 enforces a clean checkpoint before dropping five tables, and ARCH-26 plus SQL generation pass; production rollout remains pending (ret)
 - 260922 T315 T316 T317 done; windowed me/all leaderboards, the verdict badge sheet and per-row badge tallies. Committed as one change: the three share every backend file they touch. Every package and gate passes on its own; the backend's whole-suite migration failures and the frontend's clip/plans failures reproduce only under load (brd bdg tly)
 - 260922 T283 claimed (ret)
 - 260922 T312 done; verified evidence-gated object-first cleanup, retry receipt and foreign-key-ordered row purge; focused retirement gates pass and the contended clip regression passes alone (ret)
 - 260922 T317 claimed (tly); T315 and T316 are code-complete with gates running, and share every backend file they touch
 - 260922 T316 claimed (bdg) beside T315, whose gates are running
-- 260922 T312 claimed (ret)
-- 260922 T282 done; local retirement now verifies shutdown, deletes stored credentials and owned files with a retry receipt, preserves profiles by default, and blocks all former execution entry points; ARCH-27 passes (ret)
-- 260922 T315 claimed (brd)
-- 260922 T282 claimed (ret)
-- 260922 T311 done; all publishing product surfaces and clients removed, legacy link redirects after auth, manual export preserved; 2,286 frontend tests and ARCH-25 gates pass (ret)
-- 260922 T314 done; a comparison freezes its origin, a lab verdict picks without applying and its follow-ups are gated to draft/review, migration 0073 backfills; whole backend suite, frontend gates and build pass, clip suite failures are the known whole-suite flake (org)
-- 260922 T314 claimed (org)
-- 260922 T311 claimed (ret)
-- 260922 T310 done; migration 0072 permanently refuses automatic publishing, revokes capabilities, conservatively settles jobs and exports a private retirement report; backend and spec gates pass (ret)
-- 260922 create-task MODEL LANG complete: T314 origin-aware verdicts, T315 windowed me/all leaderboards (consumes LANG-18), T316 badge sheet, T317 leaderboard tallies; MODEL tasked 14, LANG tasked 5
-- 260922 LANG r5 changes only LANG-18's leaderboard key; T283 T284 T311 (base LANG@4) are unaffected in scope and need no re-planning
-- 260922 update-ssot MODEL LANG complete; MODEL r14 (lab picks apply nothing, follow-ups gated to draft/review, `(scope, stage, window)` leaderboards, verdict badges), LANG r5 syncs the leaderboard key; create-task pending
-- 260922 T310 claimed (ret)
-- 260922 warning: T008 doing claim is superseded by PUB r6; do not resume live publishing or use T008 as a retirement dependency; its task file remains immutable

@@ -28,6 +28,11 @@ type experimentSnapshot struct {
 	// PrepareWriteInput merges what it observes into it. Both candidates then read one
 	// complete set, which is what makes the frozen input the experiment's identity.
 	Observations []Observation `json:"observations,omitempty"`
+	// SnapshotOnly keeps the preparing observation in this snapshot instead of writing it
+	// onto the post (MODEL-66, GEN-19). Absent is false, which persists: that is what every
+	// snapshot frozen before the field meant, so a job that survives a deploy behaves as it
+	// was started.
+	SnapshotOnly bool `json:"snapshot_only,omitempty"`
 }
 
 // observeExperimentSnapshot is intentionally narrower than PostInput. Target/content
@@ -51,7 +56,10 @@ type CandidateUsage struct {
 	CostReported     bool
 }
 
-func (s *Service) SnapshotWriteInput(ctx context.Context, userID, postSlug string, observeModel llm.ModelRef, targetLength *int, observeFiles *[]string) ([]byte, error) {
+// snapshotOnly is true for a comparison that may not write to the post it reads. It travels
+// in the frozen snapshot because preparation happens later, in the worker, from the snapshot
+// alone.
+func (s *Service) SnapshotWriteInput(ctx context.Context, userID, postSlug string, observeModel llm.ModelRef, targetLength *int, observeFiles *[]string, snapshotOnly bool) ([]byte, error) {
 	post, err := s.posts.AttachedImages(ctx, userID, postSlug)
 	if err != nil {
 		return nil, err
@@ -109,7 +117,7 @@ func (s *Service) SnapshotWriteInput(ctx context.Context, userID, postSlug strin
 	return json.Marshal(experimentSnapshot{
 		Kind: "write", TargetLanguage: post.TargetLanguage,
 		ObserveModel: observeModel.String(), ObserveFiles: frozen,
-		Post: post, Profile: profile, Observations: known,
+		Post: post, Profile: profile, Observations: known, SnapshotOnly: snapshotOnly,
 	})
 }
 
@@ -136,8 +144,13 @@ func (s *Service) PrepareWriteInput(ctx context.Context, raw []byte, progress Pr
 	}
 	if len(snapshot.Post.Images) == 0 {
 		progress("observe", 0, 0)
-		if err := s.posts.SetObservations(ctx, snapshot.Post.UserID, snapshot.Post.Slug, nil); err != nil {
-			return nil, err
+		// A post with nothing attached has nothing to observe. Ordinary generation clears
+		// what the post held so its contact sheet stops describing attachments that are
+		// gone; a comparison that may not write to the post leaves that alone.
+		if !snapshot.SnapshotOnly {
+			if err := s.posts.SetObservations(ctx, snapshot.Post.UserID, snapshot.Post.Slug, nil); err != nil {
+				return nil, err
+			}
 		}
 		snapshot.Observations = nil
 	} else {
@@ -150,7 +163,7 @@ func (s *Service) PrepareWriteInput(ctx context.Context, raw []byte, progress Pr
 			progress("observe", 0, 0)
 			snapshot.Observations = mergeObservations(snapshot.Post.Images, seed, nil)
 		} else {
-			observations, _, err := s.observeCandidate(ctx, snapshot.Post, targets, seed, model, progress, true)
+			observations, _, err := s.observeCandidate(ctx, snapshot.Post, targets, seed, model, progress, !snapshot.SnapshotOnly)
 			if err != nil {
 				return nil, err
 			}

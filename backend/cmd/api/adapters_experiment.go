@@ -154,7 +154,10 @@ type experimentRunner struct {
 func (a experimentRunner) Snapshot(ctx context.Context, request experiment.StartRequest) (experiment.Snapshot, error) {
 	switch request.Stage {
 	case experiment.StageWrite:
-		content, err := a.generation.SnapshotWriteInput(ctx, request.UserID, request.PostSlug, llmRef(request.ObserveModel), request.TargetLength, request.ObserveFiles)
+		// A lab comparison reads the post and writes nothing to it (MODEL-66). Generation is
+		// told a plain bool rather than an origin: it must not learn that comparisons have
+		// one (ARCH-7).
+		content, err := a.generation.SnapshotWriteInput(ctx, request.UserID, request.PostSlug, llmRef(request.ObserveModel), request.TargetLength, request.ObserveFiles, request.Origin == experiment.OriginLab)
 		targetLanguage := experiment.Language(generation.SnapshotTargetLanguage(content))
 		var frozenTarget *experiment.Language
 		if targetLanguage.Valid() {

@@ -283,3 +283,31 @@ func TestAdoptWinnerServesALabPick(t *testing.T) {
 		t.Fatalf("adopt = %v/%v err=%v adopted=%v applies=%d", ref, stage, err, catalog.adopted, runner.applyCalls)
 	}
 }
+
+// The origin has to reach whatever freezes the input, because the freezing side is what
+// decides whether the preparing observation is written onto the post (MODEL-66).
+func TestTheFrozenInputIsToldWhereTheComparisonStarted(t *testing.T) {
+	cases := []struct {
+		name    string
+		request StartRequest
+		want    Origin
+	}{
+		{"a lab write comparison", writeRequest(OriginLab), OriginLab},
+		{"an editor write comparison", writeRequest(OriginEditor), OriginEditor},
+		{"an unstated one, which is the editor", writeRequest(""), OriginEditor},
+	}
+	for _, sample := range cases {
+		t.Run(sample.name, func(t *testing.T) {
+			svc, _, _, _, runner := newTestService()
+			if _, err := svc.Start(context.Background(), sample.request); err != nil {
+				t.Fatal(err)
+			}
+			if len(runner.snapshotRequests) != 1 {
+				t.Fatalf("snapshot requests = %d", len(runner.snapshotRequests))
+			}
+			if got := startOrigin(runner.snapshotRequests[0]); got != sample.want {
+				t.Fatalf("the freezing side was told %q, want %q", got, sample.want)
+			}
+		})
+	}
+}

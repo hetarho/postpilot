@@ -290,7 +290,7 @@ func TestWriteExperimentFreezesTheSameGuidelinesForBothCandidates(t *testing.T) 
 	models.complete = func(llm.ModelRef, llm.Request) (llm.Response, error) { return okContent(), nil }
 	svc := guidelineAwareService(t, guidelines, &fakeTemplateBriefs{brief: *testBrief()}, posts, &fakeJobs{id: "job"}, models)
 
-	snapshot, err := svc.SnapshotWriteInput(ctx, "alice", "post", llm.ModelRef{}, nil, nil)
+	snapshot, err := svc.SnapshotWriteInput(ctx, "alice", "post", llm.ModelRef{}, nil, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -316,7 +316,7 @@ func TestWriteExperimentFreezesTheSameGuidelinesForBothCandidates(t *testing.T) 
 	// The experiment's input hash is taken over these bytes, so a different applicable set is
 	// a different comparison rather than a rerun of the same one.
 	guidelines.texts = nil
-	without, err := svc.SnapshotWriteInput(ctx, "alice", "post", llm.ModelRef{}, nil, nil)
+	without, err := svc.SnapshotWriteInput(ctx, "alice", "post", llm.ModelRef{}, nil, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}

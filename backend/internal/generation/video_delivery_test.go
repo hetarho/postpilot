@@ -28,7 +28,7 @@ func TestSignedVideoGateRefusesInlineOnlyModelEvenWhenAllObservationsAreReused(t
 		if !errors.Is(err, ErrVideoUnsupported) {
 			t.Fatalf("start reuse=%v err=%v", reuse, err)
 		}
-		_, err = svc.SnapshotWriteInput(context.Background(), "alice", "p", videoObserveRef, nil, selected)
+		_, err = svc.SnapshotWriteInput(context.Background(), "alice", "p", videoObserveRef, nil, selected, false)
 		if !errors.Is(err, ErrVideoUnsupported) {
 			t.Fatalf("comparison reuse=%v err=%v", reuse, err)
 		}

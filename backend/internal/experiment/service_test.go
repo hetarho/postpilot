@@ -518,19 +518,23 @@ func (j *fakeJobs) HasRunnableExperiment(_ context.Context, id string) (bool, er
 type fakeRunner struct {
 	runMu                               sync.Mutex
 	snapshotCalls, runCalls, applyCalls int
-	fail                                map[string]error
-	results                             map[string]CandidateResult
-	applyErr                            error
-	snapshotErr                         error
-	snapshotVoice                       string
-	snapshotTarget                      Language
-	omitSnapshotTarget                  bool
+	// snapshotRequests is what the domain handed the runner to freeze. The origin rides in
+	// it, and the freezing side is what decides whether the post is written to (MODEL-66).
+	snapshotRequests   []StartRequest
+	fail               map[string]error
+	results            map[string]CandidateResult
+	applyErr           error
+	snapshotErr        error
+	snapshotVoice      string
+	snapshotTarget     Language
+	omitSnapshotTarget bool
 }
 
 // Snapshot freezes the request's voice, as the real runner does from the post or the
 // explicit analyze voice.
 func (r *fakeRunner) Snapshot(_ context.Context, request StartRequest) (Snapshot, error) {
 	r.snapshotCalls++
+	r.snapshotRequests = append(r.snapshotRequests, request)
 	if r.snapshotErr != nil {
 		return Snapshot{}, r.snapshotErr
 	}

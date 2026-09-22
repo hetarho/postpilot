@@ -173,7 +173,7 @@ func TestWriteExperimentFreezesTargetForCandidatesAndWinner(t *testing.T) {
 	}
 	profiles := &languageRecordingProfiles{profile: Profile{Styleguide: "PORTABLE", SourceLanguage: LanguageKorean, Portable: true}}
 	svc := NewService(posts, profiles, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
-	raw, err := svc.SnapshotWriteInput(context.Background(), "alice", "post", llm.ModelRef{}, nil, nil)
+	raw, err := svc.SnapshotWriteInput(context.Background(), "alice", "post", llm.ModelRef{}, nil, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}

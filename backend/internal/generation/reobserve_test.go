@@ -435,7 +435,7 @@ func TestWriteComparisonHonorsTheSameReuse(t *testing.T) {
 			models := observingModels(t)
 			svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, reobserveBatchSize, testReasoningPolicy, testBudget, testDeps())
 
-			raw, err := svc.SnapshotWriteInput(context.Background(), "alice", "post", observeRef, nil, test.requested)
+			raw, err := svc.SnapshotWriteInput(context.Background(), "alice", "post", observeRef, nil, test.requested, false)
 			if err != nil {
 				t.Fatal(err)
 			}

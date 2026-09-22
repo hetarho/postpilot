@@ -1,7 +1,9 @@
 package generation
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -444,7 +446,7 @@ func TestWriteExperimentUsesOnePreparedSnapshotAndDoesNotApplyBeforeChoice(t *te
 		}, nil
 	}
 	svc := NewService(posts, fakeProfiles{profile: Profile{Styleguide: "말투"}}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
-	raw, err := svc.SnapshotWriteInput(context.Background(), "alice", "post", llm.ModelRef{}, nil, nil)
+	raw, err := svc.SnapshotWriteInput(context.Background(), "alice", "post", llm.ModelRef{}, nil, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -519,7 +521,7 @@ func TestWriteExperimentObservesPhotosExactlyOnceBeforeTwoWriters(t *testing.T) 
 		return llm.Response{Text: `{"title":"글","summary":"요약","tags":["a","b","c"],"blocks":[{"type":"TEXT","content":"본문"}]}`}, nil
 	}
 	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
-	raw, err := svc.SnapshotWriteInput(context.Background(), "alice", "post", observeRef, nil, nil)
+	raw, err := svc.SnapshotWriteInput(context.Background(), "alice", "post", observeRef, nil, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -709,4 +711,114 @@ func (b fakeBudget) withHeadroom(value int, nativeEffort bool) int {
 		return value
 	}
 	return min(value*2, b.ceiling)
+}
+
+// A comparison run to rank two models is a reading of the post, and a reading that edits what
+// it read makes the model lab unusable on anything already finished (MODEL-66, GEN-19). The
+// preparing observation is the one write a comparison used to make, so it is the one this
+// pins: the lab keeps it in the snapshot, the editor still puts it on the post.
+func TestALabWriteComparisonObservesWithoutWritingToThePost(t *testing.T) {
+	newService := func(images []Image) (*Service, *fakePosts, *fakeModels) {
+		posts := &fakePosts{input: PostInput{
+			Slug: "post", UserID: "alice", Voice: liveVoice, Memo: "memo", Images: images,
+		}}
+		models := newFakeModels()
+		models.infos[writeRefB] = llm.ModelInfo{Ref: writeRefB, StructuredOutput: true}
+		models.complete = func(_ llm.ModelRef, request llm.Request) (llm.Response, error) {
+			if request.HasImages() {
+				return llm.Response{Text: `{"observations":[{"file":"IMG_1.jpg","scene":"바다","mood":"","visible_text":"","objects":[],"people_present":false}]}`}, nil
+			}
+			return llm.Response{Text: `{"title":"글","summary":"요약","tags":["a","b","c"],"blocks":[{"type":"TEXT","content":"본문"}]}`}, nil
+		}
+		return NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps()), posts, models
+	}
+
+	cases := []struct {
+		name         string
+		images       []Image
+		snapshotOnly bool
+		wantWrites   int
+	}{
+		{"the lab observes photos into its snapshot alone", []Image{{Filename: "IMG_1.jpg", Key: "key"}}, true, 0},
+		{"the editor still persists what it observed", []Image{{Filename: "IMG_1.jpg", Key: "key"}}, false, 1},
+		{"the lab leaves an attachment-less post's observations alone", nil, true, 0},
+		{"the editor still clears an attachment-less post's observations", nil, false, 1},
+	}
+	for _, sample := range cases {
+		t.Run(sample.name, func(t *testing.T) {
+			svc, posts, models := newService(sample.images)
+			raw, err := svc.SnapshotWriteInput(context.Background(), "alice", "post", observeRef, nil, nil, sample.snapshotOnly)
+			if err != nil {
+				t.Fatal(err)
+			}
+			prepared, err := svc.PrepareWriteInput(context.Background(), raw, func(string, int, int) {})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(posts.observationWrites) != sample.wantWrites {
+				t.Fatalf("observation writes = %d, want %d (%#v)", len(posts.observationWrites), sample.wantWrites, posts.observationWrites)
+			}
+			if len(posts.contents) != 0 {
+				t.Fatalf("preparing wrote content: %+v", posts.contents)
+			}
+			// Both writers still read one complete set, whichever way it was prepared.
+			if _, _, err := svc.RunWriteCandidate(context.Background(), prepared, writeRef); err != nil {
+				t.Fatal(err)
+			}
+			if _, _, err := svc.RunWriteCandidate(context.Background(), prepared, writeRefB); err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(models.calls[len(models.calls)-2].request, models.calls[len(models.calls)-1].request) {
+				t.Fatal("the two writers did not receive the same prepared input")
+			}
+			// Preparing again is the retry path, and a prepared snapshot observes nothing.
+			again, err := svc.PrepareWriteInput(context.Background(), prepared, func(string, int, int) {})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(again, prepared) {
+				t.Fatal("re-preparing a prepared snapshot changed it")
+			}
+			if len(posts.observationWrites) != sample.wantWrites {
+				t.Fatalf("re-preparing wrote again: %#v", posts.observationWrites)
+			}
+		})
+	}
+}
+
+// A snapshot frozen before the flag existed is an editor comparison: it has to keep writing
+// what it observes, so a job that survives the deploy behaves as it was started.
+func TestASnapshotFrozenBeforeTheFlagStillPersists(t *testing.T) {
+	posts := &fakePosts{input: PostInput{
+		Slug: "post", UserID: "alice", Voice: liveVoice, Memo: "memo",
+		Images: []Image{{Filename: "IMG_1.jpg", Key: "key"}},
+	}}
+	models := newFakeModels()
+	models.complete = func(_ llm.ModelRef, request llm.Request) (llm.Response, error) {
+		if request.HasImages() {
+			return llm.Response{Text: `{"observations":[{"file":"IMG_1.jpg","scene":"바다","mood":"","visible_text":"","objects":[],"people_present":false}]}`}, nil
+		}
+		return llm.Response{Text: `{"title":"글","summary":"요약","tags":["a","b","c"],"blocks":[{"type":"TEXT","content":"본문"}]}`}, nil
+	}
+	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
+	raw, err := svc.SnapshotWriteInput(context.Background(), "alice", "post", observeRef, nil, nil, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Exactly what the stored JSON looked like before the field was added.
+	var decoded map[string]any
+	if err := json.Unmarshal(raw, &decoded); err != nil {
+		t.Fatal(err)
+	}
+	delete(decoded, "snapshot_only")
+	legacy, err := json.Marshal(decoded)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.PrepareWriteInput(context.Background(), legacy, func(string, int, int) {}); err != nil {
+		t.Fatal(err)
+	}
+	if len(posts.observationWrites) != 1 {
+		t.Fatalf("a pre-flag snapshot stopped persisting: %#v", posts.observationWrites)
+	}
 }
