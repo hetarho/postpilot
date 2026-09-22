@@ -29,6 +29,7 @@ jobs:
       - run: pnpm --filter ./frontend lint
       - run: pnpm --filter ./frontend format:check
       - run: pnpm --filter ./frontend lint:fsd
+      - run: pnpm lint:retirement
       - run: pnpm lint:style:probe
       - run: pnpm lint:style
       - run: pnpm exec haeram-spec-creator check
