@@ -396,6 +396,9 @@ publishing 테이블·bridge command·guard를 제거하는 T283 이미지를 �
 mode 0600으로 남아 있다. 이 checkpoint 이전에 T283 이미지가 먼저 배포돼 `Deploy backend` rollout이
 0076에서 실패했고(run 35704843925), 헬스 게이트가 구 이미지로 롤백했다. 순서를 지켰다면 발생하지 않는다.
 
+prod가 유일한 배포 환경이고 그 receipt가 complete이므로 bridge 바이너리는 checkpoint 직후 VPS에서
+폐기했다. 다시 필요하면 위 커밋에서 그대로 빌드한다 — 최종 이미지에는 이 명령이 없다.
+
 최종 이미지는 migration 0076에서 다섯 테이블의 row 수가 모두 0인지 다시 확인하고, 그 뒤에만 trigger,
 index와 테이블을 FK 순서로 제거한다. migration은 object storage를 읽거나 지우지 않으므로 complete receipt가
 `publishing/` 정리의 유일한 배포 증거다. row가 하나라도 남으면 `publishing cleanup required before final
