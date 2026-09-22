@@ -19,12 +19,13 @@ const writeLayout = "2006-01-02T15:04:05.000000000Z07:00"
 
 type Store struct {
 	writer *sql.DB
+	reader *sql.DB
 	read   *sqlc.Queries
 	write  *sqlc.Queries
 }
 
 func New(writer, reader *sql.DB) *Store {
-	return &Store{writer: writer, read: sqlc.New(reader), write: sqlc.New(writer)}
+	return &Store{writer: writer, reader: reader, read: sqlc.New(reader), write: sqlc.New(writer)}
 }
 
 func (s *Store) CreatePairing(ctx context.Context, codeHash, userID, label string, expiresAt, createdAt time.Time, maxPending int) error {

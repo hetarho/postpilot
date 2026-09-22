@@ -213,12 +213,6 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 			AgentHeartbeatInterval: cfg.PublishAgentHeartbeatInterval,
 		},
 	)
-	if requeued, unknown, err := c.publishing.RecoverExpired(ctx); err != nil {
-		return nil, fmt.Errorf("publishing recovery: %w", err)
-	} else if requeued > 0 || unknown > 0 {
-		slog.Info("publishing jobs recovered", "requeued", requeued, "outcome_unknown", unknown)
-	}
-
 	c.clipStore = clipstore.New(handle.Writer, handle.Reader)
 	c.clipSources = clipapp.NewSourceService(c.clipStore, p.bucket, clip.DefaultSourceLimits(clipEnvironment(cfg)))
 	c.clip = clipapp.NewService(c.clipStore, clip.DefaultLimits(), c.clipSources, clipapp.NewFinalizer(handle.Writer, c.clipPorts, c.clipStore, clip.DefaultRenderConfig(clipEnvironment(cfg)), nil))

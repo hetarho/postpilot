@@ -2,27 +2,18 @@ package rpc
 
 import (
 	"context"
-	"errors"
 	"net/http"
-	"strings"
 
 	"connectrpc.com/connect"
 
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
 	"github.com/postpilot/backend/internal/platform/rpcserver"
-	"github.com/postpilot/backend/internal/publishing"
 )
 
-type AgentAuthenticator interface {
-	AuthenticateAgent(ctx context.Context, rawToken string) (publishing.Agent, error)
-}
+type AgentInterceptor struct{}
 
-type AgentInterceptor struct{ auth AgentAuthenticator }
-
-func NewAgentInterceptor(auth AgentAuthenticator) *AgentInterceptor {
-	return &AgentInterceptor{auth: auth}
-}
+func NewAgentInterceptor() *AgentInterceptor { return &AgentInterceptor{} }
 
 func (i *AgentInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 	return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
@@ -49,25 +40,10 @@ func (i *AgentInterceptor) WrapStreamingClient(next connect.StreamingClientFunc)
 }
 
 func (i *AgentInterceptor) authorize(ctx context.Context, procedure string, header http.Header) (context.Context, error) {
-	if !isAgentProcedure(procedure) || procedure == postpilotv1connect.PublishingAgentServiceEnrollPublishingAgentProcedure {
+	if !isAgentProcedure(procedure) {
 		return ctx, nil
 	}
-	scheme, token, ok := strings.Cut(strings.TrimSpace(header.Get("Authorization")), " ")
-	if !ok || !strings.EqualFold(scheme, "Bearer") || strings.TrimSpace(token) == "" {
-		return nil, rpcserver.NewAppError(connect.CodeUnauthenticated, "publishing agent authentication required", postpilotv1.FailureReason_AUTH_REQUIRED, nil)
-	}
-	agent, err := i.auth.AuthenticateAgent(ctx, token)
-	if err != nil {
-		if errors.Is(err, publishing.ErrAgentRevoked) {
-			return nil, rpcserver.NewAppError(connect.CodeUnauthenticated, "publishing agent authentication failed", postpilotv1.FailureReason_PUBLISH_AGENT_REVOKED, nil)
-		}
-		// A token lookup failure is operational, not credential revocation. Returning
-		// Unauthenticated would make the Mac supervisor stop permanently instead of
-		// applying its transient-error backoff. The last_seen_at refresh cannot arrive
-		// here: the service keeps it non-fatal so a failed write costs only freshness.
-		return nil, rpcserver.NewAppError(connect.CodeUnavailable, "publishing agent authentication is temporarily unavailable", postpilotv1.FailureReason_PUBLISH_AGENT_UNAVAILABLE, nil)
-	}
-	return withAgent(ctx, agent), nil
+	return nil, rpcserver.NewAppError(connect.CodeUnauthenticated, "publishing agent capability retired", postpilotv1.FailureReason_PUBLISH_AGENT_REVOKED, nil)
 }
 
 func isAgentProcedure(procedure string) bool {

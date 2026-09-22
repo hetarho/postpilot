@@ -97,6 +97,7 @@ var (
 	ErrCommitFence         = errors.New("publish job crossed the commit fence")
 	ErrPublishedURLInvalid = errors.New("published URL does not belong to the paired blog")
 	ErrLanguageRequired    = errors.New("canonical publishing languages are required")
+	ErrRetired             = errors.New("automatic publishing is retired")
 	// ErrVideoNotPublishable is a finalized post whose content holds a VIDEO block. The
 	// author's way through is the export tab, where the clip plays and the instruction says
 	// to attach the original by hand (VIDEO-15, VIDEO-16). A post with videos ATTACHED but

@@ -4,13 +4,16 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"os"
 	"path/filepath"
+	"runtime"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/postpilot/backend/internal/platform/db"
 	"github.com/postpilot/backend/internal/publishing"
+	"github.com/pressly/goose/v3"
 )
 
 func TestPendingPairingCapIsAtomicUnderConcurrency(t *testing.T) {
@@ -56,7 +59,16 @@ func testStore(t *testing.T) (*Store, *db.DB) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { handle.Close() })
-	if err := db.Migrate(context.Background(), handle.Writer); err != nil {
+	_, source, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("resolve legacy publishing migration fixture")
+	}
+	migrations := os.DirFS(filepath.Join(filepath.Dir(source), "..", "..", "platform", "db", "migrations"))
+	provider, err := goose.NewProvider(goose.DialectSQLite3, handle.Writer, migrations, goose.WithLogger(goose.NopLogger()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := provider.UpTo(context.Background(), 71); err != nil {
 		t.Fatal(err)
 	}
 	return New(handle.Writer, handle.Reader), handle

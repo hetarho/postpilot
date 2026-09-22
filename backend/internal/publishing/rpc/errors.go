@@ -13,6 +13,8 @@ import (
 
 func toConnectError(err error) error {
 	switch {
+	case errors.Is(err, publishing.ErrRetired):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "automatic publishing is retired", postpilotv1.FailureReason_PUBLISH_AGENT_UNAVAILABLE, nil)
 	case errors.Is(err, publishing.ErrNotFound):
 		return rpcserver.NewAppError(connect.CodeNotFound, "publishing resource not found", postpilotv1.FailureReason_PUBLISH_NOT_FOUND, nil)
 	case errors.Is(err, publishing.ErrForbidden):

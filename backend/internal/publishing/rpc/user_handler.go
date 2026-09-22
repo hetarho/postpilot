@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"context"
-	"time"
 
 	"connectrpc.com/connect"
 
@@ -18,15 +17,10 @@ type UserHandler struct{ service *publishing.Service }
 func NewUserHandler(service *publishing.Service) *UserHandler { return &UserHandler{service: service} }
 
 func (h *UserHandler) CreateAgentPairing(ctx context.Context, req *connect.Request[postpilotv1.CreateAgentPairingRequest]) (*connect.Response[postpilotv1.CreateAgentPairingResponse], error) {
-	userID, err := actingUser(ctx)
-	if err != nil {
+	if _, err := actingUser(ctx); err != nil {
 		return nil, err
 	}
-	pairing, err := h.service.CreatePairing(ctx, userID, req.Msg.GetLabel())
-	if err != nil {
-		return nil, toConnectError(err)
-	}
-	return connect.NewResponse(&postpilotv1.CreateAgentPairingResponse{DeviceCode: pairing.DeviceCode, ExpiresAt: pairing.ExpiresAt.UTC().Format(time.RFC3339)}), nil
+	return nil, toConnectError(publishing.ErrRetired)
 }
 
 func (h *UserHandler) ListPublishingAgents(ctx context.Context, _ *connect.Request[postpilotv1.ListPublishingAgentsRequest]) (*connect.Response[postpilotv1.ListPublishingAgentsResponse], error) {
@@ -46,38 +40,24 @@ func (h *UserHandler) ListPublishingAgents(ctx context.Context, _ *connect.Reque
 }
 
 func (h *UserHandler) UpdatePublishingAgent(ctx context.Context, req *connect.Request[postpilotv1.UpdatePublishingAgentRequest]) (*connect.Response[postpilotv1.UpdatePublishingAgentResponse], error) {
-	userID, err := actingUser(ctx)
-	if err != nil {
+	if _, err := actingUser(ctx); err != nil {
 		return nil, err
 	}
-	agent, err := h.service.UpdateAgent(ctx, userID, req.Msg.GetAgentId(), req.Msg.GetLabel(), req.Msg.GetDefaultCategoryId(), fromProtoVisibility(req.Msg.GetDefaultVisibility()))
-	if err != nil {
-		return nil, toConnectError(err)
-	}
-	return connect.NewResponse(&postpilotv1.UpdatePublishingAgentResponse{Agent: toProtoAgent(agent)}), nil
+	return nil, toConnectError(publishing.ErrRetired)
 }
 
 func (h *UserHandler) RevokePublishingAgent(ctx context.Context, req *connect.Request[postpilotv1.RevokePublishingAgentRequest]) (*connect.Response[postpilotv1.RevokePublishingAgentResponse], error) {
-	userID, err := actingUser(ctx)
-	if err != nil {
+	if _, err := actingUser(ctx); err != nil {
 		return nil, err
 	}
-	if err := h.service.RevokeAgent(ctx, userID, req.Msg.GetAgentId()); err != nil {
-		return nil, toConnectError(err)
-	}
-	return connect.NewResponse(&postpilotv1.RevokePublishingAgentResponse{}), nil
+	return nil, toConnectError(publishing.ErrRetired)
 }
 
 func (h *UserHandler) StartPublish(ctx context.Context, req *connect.Request[postpilotv1.StartPublishRequest]) (*connect.Response[postpilotv1.StartPublishResponse], error) {
-	userID, err := actingUser(ctx)
-	if err != nil {
+	if _, err := actingUser(ctx); err != nil {
 		return nil, err
 	}
-	job, err := h.service.Start(ctx, publishing.StartRequest{UserID: userID, PostSlug: req.Msg.GetPostSlug(), ExpectedContentRevision: req.Msg.GetExpectedContentRevision(), AgentID: req.Msg.GetAgentId(), CategoryID: req.Msg.GetCategoryId(), Visibility: fromProtoVisibility(req.Msg.GetVisibility())})
-	if err != nil {
-		return nil, toConnectError(err)
-	}
-	return connect.NewResponse(&postpilotv1.StartPublishResponse{Job: toProtoJob(job)}), nil
+	return nil, toConnectError(publishing.ErrRetired)
 }
 
 func (h *UserHandler) GetPublishJob(ctx context.Context, req *connect.Request[postpilotv1.GetPublishJobRequest]) (*connect.Response[postpilotv1.GetPublishJobResponse], error) {
@@ -109,27 +89,17 @@ func (h *UserHandler) ListRetryablePublishJobs(ctx context.Context, _ *connect.R
 }
 
 func (h *UserHandler) RetryPublish(ctx context.Context, req *connect.Request[postpilotv1.RetryPublishRequest]) (*connect.Response[postpilotv1.RetryPublishResponse], error) {
-	userID, err := actingUser(ctx)
-	if err != nil {
+	if _, err := actingUser(ctx); err != nil {
 		return nil, err
 	}
-	job, err := h.service.Retry(ctx, userID, req.Msg.GetJobId())
-	if err != nil {
-		return nil, toConnectError(err)
-	}
-	return connect.NewResponse(&postpilotv1.RetryPublishResponse{Job: toProtoJob(job)}), nil
+	return nil, toConnectError(publishing.ErrRetired)
 }
 
 func (h *UserHandler) CancelPublish(ctx context.Context, req *connect.Request[postpilotv1.CancelPublishRequest]) (*connect.Response[postpilotv1.CancelPublishResponse], error) {
-	userID, err := actingUser(ctx)
-	if err != nil {
+	if _, err := actingUser(ctx); err != nil {
 		return nil, err
 	}
-	job, err := h.service.Cancel(ctx, userID, req.Msg.GetJobId())
-	if err != nil {
-		return nil, toConnectError(err)
-	}
-	return connect.NewResponse(&postpilotv1.CancelPublishResponse{Job: toProtoJob(job)}), nil
+	return nil, toConnectError(publishing.ErrRetired)
 }
 
 func actingUser(ctx context.Context) (string, error) {

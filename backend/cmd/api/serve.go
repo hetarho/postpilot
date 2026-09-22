@@ -30,7 +30,6 @@ import (
 	postrpc "github.com/postpilot/backend/internal/post/rpc"
 	poststore "github.com/postpilot/backend/internal/post/store"
 	providerrpc "github.com/postpilot/backend/internal/provider/rpc"
-	"github.com/postpilot/backend/internal/publishing"
 	publishingrpc "github.com/postpilot/backend/internal/publishing/rpc"
 	templaterpc "github.com/postpilot/backend/internal/template/rpc"
 	voicerpc "github.com/postpilot/backend/internal/voice/rpc"
@@ -44,7 +43,7 @@ func serve(ctx context.Context, c *contexts) error {
 	p := c.platform
 	cfg, handle := p.cfg, p.db
 	server := rpcserver.New(cfg, version, rpcserver.Options{
-		Interceptors: []connect.Interceptor{authrpc.NewInterceptor(c.auth, c.throttle, cfg.ClientIPHeader), publishingrpc.NewAgentInterceptor(c.publishing)},
+		Interceptors: []connect.Interceptor{authrpc.NewInterceptor(c.auth, c.throttle, cfg.ClientIPHeader), publishingrpc.NewAgentInterceptor()},
 		Handlers:     handlers(c),
 		Routes: map[string]http.Handler{
 			// These plain routes bypass the Connect interceptors, so the throttle the
@@ -69,7 +68,6 @@ func serve(ctx context.Context, c *contexts) error {
 	go sweeper.Run(ctx, cfg.OrphanSweepInterval)
 	go c.clipGeneration.RunSweep(ctx, cfg.ClipSourceSweepInterval)
 	go experiment.NewSweeper(c.experimentStore).Run(ctx, cfg.ExperimentSweepInterval)
-	go publishing.NewSweeper(c.publishing, cfg.PublishOrphanMinAge, cfg.PublishLeaseTTL).Run(ctx, cfg.PublishOrphanSweepInterval)
 	go func() {
 		ticker := time.NewTicker(config.ThrottleSweepInterval)
 		defer ticker.Stop()
@@ -191,7 +189,7 @@ func handlers(c *contexts) []rpcserver.Registrar {
 			return postpilotv1connect.NewPublishingServiceHandler(publishingrpc.NewUserHandler(c.publishing), opts...)
 		},
 		func(opts ...connect.HandlerOption) (string, http.Handler) {
-			return postpilotv1connect.NewPublishingAgentServiceHandler(publishingrpc.NewAgentHandler(c.publishing), opts...)
+			return postpilotv1connect.NewPublishingAgentServiceHandler(publishingrpc.NewAgentHandler(), opts...)
 		},
 	}
 }

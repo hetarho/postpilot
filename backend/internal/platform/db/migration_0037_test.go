@@ -2,8 +2,11 @@ package db
 
 import (
 	"context"
+	"io/fs"
 	"strings"
 	"testing"
+
+	"github.com/pressly/goose/v3"
 )
 
 // 0037 rebuilds publish_jobs to widen the stage CHECK. A rebuild is where an FK parent
@@ -12,7 +15,16 @@ import (
 // their cascade intact, and every index from 0010 is back.
 func TestMigration0037WidensTheStageCheckWithoutLosingAssetsOrIndexes(t *testing.T) {
 	d := openTemp(t)
-	if err := Migrate(context.Background(), d.Writer); err != nil {
+	ctx := context.Background()
+	sub, err := fs.Sub(migrationsFS, "migrations")
+	if err != nil {
+		t.Fatal(err)
+	}
+	provider, err := goose.NewProvider(goose.DialectSQLite3, d.Writer, sub, goose.WithLogger(goose.NopLogger()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := provider.UpTo(ctx, 36); err != nil {
 		t.Fatal(err)
 	}
 	const at = "2026-09-10T00:00:00Z"
@@ -29,6 +41,9 @@ func TestMigration0037WidensTheStageCheckWithoutLosingAssetsOrIndexes(t *testing
 		if _, err := d.Writer.Exec(statement); err != nil {
 			t.Fatalf("seed %q: %v", statement, err)
 		}
+	}
+	if _, err := provider.UpTo(ctx, 37); err != nil {
+		t.Fatal(err)
 	}
 
 	// The stage PUB-13 r4 added is storable, and the ones around it still are.

@@ -835,7 +835,15 @@ func TestMigration0009PartitionsVoicesAndRollsBack(t *testing.T) {
 func TestMigration0010PublishingConstraintsAndRollback(t *testing.T) {
 	handle := openTemp(t)
 	ctx := context.Background()
-	if err := Migrate(ctx, handle.Writer); err != nil {
+	sub, err := fs.Sub(migrationsFS, "migrations")
+	if err != nil {
+		t.Fatal(err)
+	}
+	provider, err := goose.NewProvider(goose.DialectSQLite3, handle.Writer, sub, goose.WithLogger(goose.NopLogger()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := provider.UpTo(ctx, 10); err != nil {
 		t.Fatal(err)
 	}
 	const at = "2026-08-30T00:00:00.000000000Z"
@@ -883,14 +891,6 @@ func TestMigration0010PublishingConstraintsAndRollback(t *testing.T) {
 		t.Fatalf("safe retry after failure was rejected: %v", err)
 	}
 
-	sub, err := fs.Sub(migrationsFS, "migrations")
-	if err != nil {
-		t.Fatal(err)
-	}
-	provider, err := goose.NewProvider(goose.DialectSQLite3, handle.Writer, sub, goose.WithLogger(goose.NopLogger()))
-	if err != nil {
-		t.Fatal(err)
-	}
 	if _, err := provider.DownTo(ctx, 9); err != nil {
 		t.Fatal(err)
 	}

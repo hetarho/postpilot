@@ -20,6 +20,7 @@ RUN go mod download
 COPY backend/ .
 # Static, stripped, reproducible binary. CGO off so it runs on distroless/static.
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /api ./cmd/api
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /retirepublishing ./cmd/retirepublishing
 RUN CGO_ENABLED=0 GOOS=linux go test -c -o /media.test ./internal/clip/media
 
 FROM builder AS release-builder
@@ -28,6 +29,7 @@ RUN CGO_ENABLED=0 GOOS=linux go test -c -o /clip-release.test ./cmd/api
 FROM gcr.io/distroless/static-debian12:nonroot AS runtime
 WORKDIR /
 COPY --from=builder /api /api
+COPY --from=builder /retirepublishing /retirepublishing
 COPY --from=media-build /opt/media/bin/ffmpeg /opt/media/bin/ffprobe /usr/local/bin/
 COPY --from=media-build /opt/media/share/ /usr/share/postpilot-media/
 COPY --from=render-build /opt/render/bin/resvg /usr/local/bin/resvg
