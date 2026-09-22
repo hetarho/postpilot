@@ -274,6 +274,10 @@ const (
 	FailureReason_MEMORY_TAG_REQUIRED           FailureReason = 230
 	FailureReason_MEMORY_EXTRACTION_NOT_READY   FailureReason = 231
 	FailureReason_MEMORY_ANALYZE_MODEL_REQUIRED FailureReason = 232
+	// a comparison started in the model lab may only be applied while its source post is
+	// still draft or review (MODEL-37): a finalized post's confirmed content is not
+	// rewritten from a comparison.
+	FailureReason_EXPERIMENT_POST_FINALIZED FailureReason = 233
 )
 
 // Enum value maps for FailureReason.
@@ -511,6 +515,7 @@ var (
 		230: "MEMORY_TAG_REQUIRED",
 		231: "MEMORY_EXTRACTION_NOT_READY",
 		232: "MEMORY_ANALYZE_MODEL_REQUIRED",
+		233: "EXPERIMENT_POST_FINALIZED",
 	}
 	FailureReason_value = map[string]int32{
 		"UNKNOWN_FAILURE":                            0,
@@ -745,6 +750,7 @@ var (
 		"MEMORY_TAG_REQUIRED":                        230,
 		"MEMORY_EXTRACTION_NOT_READY":                231,
 		"MEMORY_ANALYZE_MODEL_REQUIRED":              232,
+		"EXPERIMENT_POST_FINALIZED":                  233,
 	}
 )
 
@@ -915,7 +921,7 @@ const file_postpilot_v1_error_proto_rawDesc = "" +
 	"\x10technical_detail\x18\x03 \x01(\tR\x0ftechnicalDetail\x1a9\n" +
 	"\vParamsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\xf52\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\x953\n" +
 	"\rFailureReason\x12\x13\n" +
 	"\x0fUNKNOWN_FAILURE\x10\x00\x12\x11\n" +
 	"\rAUTH_REQUIRED\x10\x01\x12\x1d\n" +
@@ -1150,7 +1156,8 @@ const file_postpilot_v1_error_proto_rawDesc = "" +
 	"\x11MEMORY_TEXT_TAKEN\x10\xe5\x01\x12\x18\n" +
 	"\x13MEMORY_TAG_REQUIRED\x10\xe6\x01\x12 \n" +
 	"\x1bMEMORY_EXTRACTION_NOT_READY\x10\xe7\x01\x12\"\n" +
-	"\x1dMEMORY_ANALYZE_MODEL_REQUIRED\x10\xe8\x01BDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
+	"\x1dMEMORY_ANALYZE_MODEL_REQUIRED\x10\xe8\x01\x12\x1e\n" +
+	"\x19EXPERIMENT_POST_FINALIZED\x10\xe9\x01BDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
 
 var (
 	file_postpilot_v1_error_proto_rawDescOnce sync.Once

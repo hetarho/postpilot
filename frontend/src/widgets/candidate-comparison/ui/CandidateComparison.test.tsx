@@ -6,6 +6,7 @@ import { CandidateComparison } from './CandidateComparison'
 const base: ModelExperiment = {
   id: 'exp',
   stage: 'analyze',
+  origin: 'editor',
   status: 'review',
   postSlug: '',
   voiceId: '',

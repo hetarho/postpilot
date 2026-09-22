@@ -29,6 +29,7 @@ vi.mock('@/features/review-model-experiment', () => ({
 const experiment: ModelExperiment = {
   id: 'experiment-1',
   stage: 'analyze',
+  origin: 'editor',
   status: 'review',
   postSlug: '',
   voiceId: 'voice-default',
