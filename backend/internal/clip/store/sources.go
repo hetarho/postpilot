@@ -276,3 +276,16 @@ func (s *Store) RemoveSourceBatch(ctx context.Context, user, id string, now time
 func (s *Store) SourceKeyExists(ctx context.Context, key string) (bool, error) {
 	return s.read.SourceKeyExists(ctx, key)
 }
+
+// DeleteAllSourceBatches empties source staging, reporting how many batches went with it.
+// Leases, attempts and proxy rows follow through their cascades.
+//
+// It exists because this table deliberately carries no foreign key to `users` (migration
+// 0036: a cleanup identity has to outlive the project it belonged to), so it is the one
+// account-owned table that deleting every account does not reach. Only the dev fixture
+// loader (internal/devseed) calls it, through `cmd/seed`, which the production image does
+// not build. Object storage is NOT touched here: the keys these rows name are removed by
+// whoever runs the seed, because this store cannot reach a bucket.
+func (s *Store) DeleteAllSourceBatches(ctx context.Context) (int64, error) {
+	return s.write.DeleteAllSourceBatches(ctx)
+}

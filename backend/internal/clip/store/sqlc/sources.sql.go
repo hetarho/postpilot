@@ -10,6 +10,21 @@ import (
 	"database/sql"
 )
 
+const deleteAllSourceBatches = `-- name: DeleteAllSourceBatches :execrows
+DELETE FROM clip_source_batches
+`
+
+// Source staging carries a user_id but deliberately no foreign key to users, so deleting
+// every account leaves these rows behind. Only the dev fixture loader (internal/devseed)
+// calls it, through cmd/seed, which the production image does not build.
+func (q *Queries) DeleteAllSourceBatches(ctx context.Context) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteAllSourceBatches)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const fenceSourceProjectDeletion = `-- name: FenceSourceProjectDeletion :execrows
 UPDATE clip_projects SET deleting=1 WHERE id=? AND user_id=?
 `

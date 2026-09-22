@@ -75,6 +75,37 @@ cd backend && go run ./cmd/adduser <login_id>   # 비밀번호 2회 입력
 `docker compose run --rm backend go run ./cmd/api adduser <login_id>` (운영은 `DEPLOY.md §4`).
 `/health`를 제외한 모든 RPC는 세션 쿠키가 없으면 401이다.
 
+### 테스트 데이터 시드
+
+화면을 보려면 계정마다 글이 몇 개씩은 있어야 한다. `--seed`는 로컬 설치의 계정 데이터를
+지우고 고정된 테스트 계정 다섯 개로 바꾼다:
+
+```bash
+pnpm dev --seed                   # 시드 후 dev 서버 기동
+pnpm dev --seed --purge-objects   # MinIO 버킷까지 비운다
+```
+
+| 로그인 | 플랜 | 글 | 초안 / 검토 / 확정 |
+|---|---|---|---|
+| `seed-free` | free | 0 | 0 / 0 / 0 |
+| `seed-basic` | basic | 3 | 2 / 1 / 0 |
+| `seed-pro` | pro | 8 | 3 / 2 / 3 |
+| `seed-max` | max | 14 | 4 / 3 / 7 |
+| `seed-master` | master | 23 | 5 / 4 / 14 |
+
+비밀번호는 다섯 계정 모두 `seed-only`이고, 주소는 `<로그인>@postpilot.test`로 이미 인증된
+상태다. 계정이 하나라도 비어 있어야 새 가입 직후의 화면을 확인할 수 있으므로 `seed-free`는
+일부러 글이 없다.
+
+시드는 `users`를 지우고 스키마의 CASCADE에 나머지를 맡긴다. 따라서 글·말투·크레딧·clip
+프로젝트는 함께 사라지지만, 설치 전체가 공유하는 큐레이션 — `/admin`에서 등록한 모델과
+그 용도 — 은 남는다. 후보 목록은 OpenRouter가 다시 주지만 어떤 모델을 어떤 용도로 쓸지는
+운영자의 선택이고, 그것까지 지우면 시드 직후에는 아무것도 생성할 수 없다.
+
+무엇을 만드는지는 `backend/internal/devseed`가 정하고, 실행은 `backend/cmd/seed`다.
+운영 이미지는 `./cmd/api`만 빌드하므로 이 명령은 배포된 바이너리에 존재하지 않는다 —
+계정을 전부 지우는 명령이 운영 ENTRYPOINT에서 닿지 않는다는 뜻이다.
+
 > 개발 포트는 전화 키패드로 프로젝트를 읽은 것이다 — **2564 = B-L-O-G**(웹),
 > **7678 = P-O-S-T**(api). 흔한 개발 기본값과도, 같은 머신의 cosimosi 스택(8080/1214)과도
 > 겹치지 않는다. 컨테이너·운영 스택 안에서는 api가 평소대로 8080을 쓴다(compose가 7678→8080으로 매핑).
@@ -126,13 +157,15 @@ proto/postpilot/v1/     전송 계약 (단일 진실)
 backend/
   cmd/api/              합성 루트 — 설정·마이그레이션·서버 조립만
   cmd/adduser/          운영자용 계정 생성 (api 서브커맨드와 같은 코드)
+  cmd/seed/             로컬 테스트 데이터 시드 — 운영 이미지에 빌드되지 않는다
+  internal/devseed/     시드가 만드는 계정·글 픽스처 (무엇을 만드는지의 단일 진실)
   internal/auth/        계정·세션 컨텍스트 (service · store · rpc · provision)
   internal/health/      HealthService 구현
   internal/platform/    config, db(SQLite·마이그레이션), rpcserver (mux·h2c·CORS·/health)
   internal/gen/         buf 생성물 (수정 금지)
 frontend/src/           FSD: app / pages / widgets / features / entities / shared
 deploy/edge/            VPS 공유 Caddy (80/443 단일 소유자)
-scripts/                codegen 래퍼 (Docker 경유) · docker-gc
+scripts/                dev 런처(--seed) · codegen 래퍼 (Docker 경유) · docker-gc
 ```
 
 ## 규칙

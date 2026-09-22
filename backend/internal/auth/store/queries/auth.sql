@@ -120,3 +120,9 @@ RETURNING token_hash, user_id, purpose, email, expires_at, used_at, created_at;
 -- name: InvalidateLinks :exec
 UPDATE auth_links SET used_at = ?
 WHERE user_id = ? AND purpose = ? AND used_at IS NULL;
+
+-- name: DeleteAllUsers :execrows
+-- Every account, and by cascade everything any context owns behind one. It exists for the
+-- dev fixture loader (internal/devseed) and has no caller inside the api binary: cmd/seed
+-- is not built into the production image, so the deployed ENTRYPOINT carries no path here.
+DELETE FROM users;

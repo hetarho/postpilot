@@ -48,3 +48,9 @@ SELECT EXISTS(SELECT clip_source_leases.object_key FROM clip_source_leases WHERE
 
 -- name: ListBatchProxies :many
 SELECT object_key FROM clip_proxy_leases WHERE batch_id=?;
+
+-- name: DeleteAllSourceBatches :execrows
+-- Source staging carries a user_id but deliberately no foreign key to users, so deleting
+-- every account leaves these rows behind. Only the dev fixture loader (internal/devseed)
+-- calls it, through cmd/seed, which the production image does not build.
+DELETE FROM clip_source_batches;

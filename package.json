@@ -4,7 +4,7 @@
   "private": true,
   "description": "Photos + what happened → a ready-to-paste blog post, per platform",
   "scripts": {
-    "dev": "concurrently -n web,api -c cyan,magenta \"pnpm run dev:web\" \"pnpm run dev:api\"",
+    "dev": "node scripts/dev.mjs",
     "dev:web": "pnpm --filter ./frontend dev",
     "dev:api": "docker compose --profile dev up --build backend",
     "gen": "node scripts/gen.mjs",

@@ -260,6 +260,21 @@ func (s *Store) ListUsers(ctx context.Context) ([]auth.User, error) {
 	return users, nil
 }
 
+// DeleteAllUsers empties the installation, reporting how many accounts went with it.
+// Everything any context owns behind an account follows through the schema's cascades,
+// which is why this is one statement rather than a sweep across contexts.
+//
+// It is the dev fixture loader's wipe (internal/devseed) and nothing in the api binary
+// calls it: `cmd/seed` is the only caller and the production image builds `./cmd/api`
+// alone, so no path from the deployed ENTRYPOINT reaches here.
+func (s *Store) DeleteAllUsers(ctx context.Context) (int64, error) {
+	deleted, err := s.write.DeleteAllUsers(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("delete all users: %w", err)
+	}
+	return deleted, nil
+}
+
 func (s *Store) CreateSession(ctx context.Context, sess auth.Session) error {
 	err := s.write.CreateSession(ctx, sqlc.CreateSessionParams{
 		Token:     sess.Token,

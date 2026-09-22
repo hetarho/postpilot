@@ -168,6 +168,21 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
 	return err
 }
 
+const deleteAllUsers = `-- name: DeleteAllUsers :execrows
+DELETE FROM users
+`
+
+// Every account, and by cascade everything any context owns behind one. It exists for the
+// dev fixture loader (internal/devseed) and has no caller inside the api binary: cmd/seed
+// is not built into the production image, so the deployed ENTRYPOINT carries no path here.
+func (q *Queries) DeleteAllUsers(ctx context.Context) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteAllUsers)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const deleteExpiredSessions = `-- name: DeleteExpiredSessions :execrows
 DELETE FROM sessions WHERE expires_at < ?
 `
