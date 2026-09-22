@@ -266,7 +266,9 @@ verify   브라우저 origin으로 API CORS preflight 확인 (credentials 포함
 
 ### 자동 발행 폐기 브리지
 
-migration 0072부터 자동 발행은 영구 차단된다. 배포 전 구 API 프로세스를 완전히 내리고 새 이미지
+migration 0072부터 자동 발행은 영구 차단된다. 아래 보고·정리 명령은 `/retirepublishing`을 포함한
+**T312 bridge 이미지**에서만 실행한다. 최종 이미지에는 이 명령이 없으므로 bridge image SHA를 환경별
+checkpoint가 끝날 때까지 보관한다. 배포 전 구 API 프로세스를 완전히 내리고 bridge 이미지
 하나만 기동한다. 이 경계에서는 구 이미지와 새 이미지를 동시에 실행하지 않는다. 마이그레이션은
 연결 코드와 에이전트 토큰을 무효화하고, 커밋 전 작업은 `canceled`, 커밋 가능성이 있는 작업은
 `outcome_unknown`으로 고정한다. 구 클라이언트의 SQL 쓰기도 트리거가 거절한다.
@@ -277,7 +279,7 @@ migration 0072부터 자동 발행은 영구 차단된다. 배포 전 구 API �
 
 ```bash
 cd /srv/postpilot-<env>
-docker compose -f docker-compose.prod.yml run --rm \
+IMAGE_TAG=<T312-bridge-image-SHA> docker compose -f docker-compose.prod.yml run --rm \
   --entrypoint /retirepublishing api report \
   --environment <env> \
   --output /data/publishing-retirement-<env>.json
@@ -337,7 +339,7 @@ agent id를 정확히 한 번씩 포함해야 하고, `disposition`은 `shutdown
 
 ```bash
 cd /srv/postpilot-<env>
-docker compose -f docker-compose.prod.yml run --rm \
+IMAGE_TAG=<T312-bridge-image-SHA> docker compose -f docker-compose.prod.yml run --rm \
   --entrypoint /retirepublishing api cleanup \
   --environment <env> \
   --report /data/publishing-retirement-<env>.json \
@@ -360,6 +362,13 @@ inventory digest, complete cleanup receipt digest를 기록한다. 실제 환경
 publishing 테이블·bridge command·guard를 제거하는 T283 이미지를 배포하지 않는다. 현재 저장소에는 배포된
 환경이 없으므로 이 절차의 운영 실행과 production purge는 여전히 pending이다.
 
+최종 이미지는 migration 0076에서 다섯 테이블의 row 수가 모두 0인지 다시 확인하고, 그 뒤에만 trigger,
+index와 테이블을 FK 순서로 제거한다. migration은 object storage를 읽거나 지우지 않으므로 complete receipt가
+`publishing/` 정리의 유일한 배포 증거다. row가 하나라도 남으면 `publishing cleanup required before final
+removal`로 기동이 실패하고 migration transaction은 어떤 테이블도 지우지 않는다. 이 경우 final migration을
+약화하거나 row를 수동 삭제하지 말고, 해당 환경을 기록된 bridge image SHA로 되돌려 위 inspect → apply →
+verify를 반복한다. 모든 환경의 complete receipt와 final image SHA를 기록한 뒤에만 bridge 이미지를 폐기한다.
+
 ## 6. 롤백
 
 - **백엔드**: VPS `/srv/postpilot-<env>/.env`의 `IMAGE_TAG=<이전 SHA>`로 바꾸고
@@ -371,6 +380,8 @@ publishing 테이블·bridge command·guard를 제거하는 T283 이미지를 �
   복구 후 `/health` 응답과 `docker compose -f docker-compose.prod.yml ps -a`의 실행 이미지를 확인한다.
   migration 0072를 지난 환경은 이 경계 아래로 되돌리지 않는다. 구 이미지가 필요해도 데이터베이스의
   폐기 트리거와 무효화된 자격증명을 유지해야 하며 자동 발행을 다시 활성화하는 설정은 없다.
+  migration 0076을 지난 환경은 publishing 테이블을 요구하는 bridge/구 바이너리로 롤백할 수 없다. 0076의
+  Down도 실행 기능이나 테이블을 복원하지 않으므로, 롤백 대상은 최종 스키마와 호환되는 이미지여야 한다.
 - **기동 실패 진단**: `docker compose -f docker-compose.prod.yml logs --no-color --tail 80 api`.
   `migration failed`가 있으면 DB의 `goose_db_version`과 해당 마이그레이션을 확인한다.
   확정된 클립은 변경할 수 없으므로 데이터 정리 마이그레이션에서도 보존해야 한다.

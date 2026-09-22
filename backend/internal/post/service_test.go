@@ -633,22 +633,6 @@ func TestDeletePostSucceedsWhenTheDetachFails(t *testing.T) {
 	}
 }
 
-func TestDeletePostDoesNotDetachWhenItIsRefused(t *testing.T) {
-	svc, _, _ := newTestService(t)
-	found := mustCreatePost(t, svc, alice, "Jeju")
-	svc.contentPurger = &recordingContentPurger{}
-	detacher := &recordingCandidateDetacher{}
-	svc.candidateLinks = detacher
-	svc.livePublish = &fakeLivePublish{live: true}
-
-	if err := svc.DeletePost(context.Background(), alice, found.Slug); !errors.Is(err, ErrPostPublishing) {
-		t.Fatalf("DeletePost = %v, want ErrPostPublishing", err)
-	}
-	if len(detacher.calls) != 0 {
-		t.Fatalf("a refused delete detached candidate links: %v", detacher.calls)
-	}
-}
-
 func TestDeletePostPurgesExperimentContentBeforeRemovingSource(t *testing.T) {
 	svc, store, blobs := newTestService(t)
 	ctx := context.Background()
@@ -688,83 +672,6 @@ func TestDeletePostStopsBeforeDeleteWhenExperimentPurgeFails(t *testing.T) {
 	}
 }
 
-// TestDeletePostRefusesWhileAPublicationIsLive is job 40 A6: the refusal lands before the
-// purge, so a post whose publication is still running loses nothing at all.
-func TestDeletePostRefusesWhileAPublicationIsLive(t *testing.T) {
-	svc, store, blobs := newTestService(t)
-	ctx := context.Background()
-	found := mustCreatePost(t, svc, alice, "Jeju")
-	upload, _, _, _ := svc.CreateUpload(ctx, alice, found.Slug, "IMG_1.jpg", AttachmentPhoto)
-	blobs.put(upload.Key, 100, testNow)
-	if _, err := svc.ConfirmUpload(ctx, alice, upload.ID, 1, 1, 0); err != nil {
-		t.Fatal(err)
-	}
-	purger := &recordingContentPurger{}
-	svc.contentPurger = purger
-	live := &fakeLivePublish{live: true}
-	svc.livePublish = live
-
-	if err := svc.DeletePost(ctx, alice, found.Slug); !errors.Is(err, ErrPostPublishing) {
-		t.Fatalf("DeletePost = %v, want ErrPostPublishing", err)
-	}
-	if len(purger.calls) != 0 {
-		t.Fatalf("experiment content was purged despite the refusal: %v", purger.calls)
-	}
-	if _, err := store.GetPost(ctx, found.Slug); err != nil {
-		t.Fatalf("post was deleted despite the refusal: %v", err)
-	}
-	images, _ := store.ListImages(ctx, found.Slug)
-	if len(images) != 1 {
-		t.Fatalf("images = %d, want the photo to survive", len(images))
-	}
-	if !blobs.has(upload.Key) {
-		t.Fatal("post image object was deleted despite the refusal")
-	}
-	// The query must name this incarnation, not just the slug: a later post reusing a
-	// freed slug must not inherit the previous post's publication.
-	if len(live.createdAt) != 1 || !live.createdAt[0].Equal(found.CreatedAt) {
-		t.Fatalf("createdAt passed to the port = %v, want %v", live.createdAt, found.CreatedAt)
-	}
-}
-
-// TestDeletePostProceedsWithTerminalPublishHistory is job 40 A7: only a non-terminal job
-// blocks, so a post that was already published deletes normally.
-func TestDeletePostProceedsWithTerminalPublishHistory(t *testing.T) {
-	svc, store, _ := newTestService(t)
-	ctx := context.Background()
-	found := mustCreatePost(t, svc, alice, "Jeju")
-	svc.contentPurger = &recordingContentPurger{}
-	svc.livePublish = &fakeLivePublish{live: false}
-
-	if err := svc.DeletePost(ctx, alice, found.Slug); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := store.GetPost(ctx, found.Slug); !errors.Is(err, ErrNotFound) {
-		t.Fatalf("post survived delete: %v", err)
-	}
-}
-
-// TestDeletePostRefusesWithoutALivePublishFinder pins the fail-closed default: a server
-// that cannot ask whether a publication is live must not destroy the post.
-func TestDeletePostRefusesWithoutALivePublishFinder(t *testing.T) {
-	svc, store, _ := newTestService(t)
-	ctx := context.Background()
-	found := mustCreatePost(t, svc, alice, "Jeju")
-	purger := &recordingContentPurger{}
-	svc.contentPurger = purger
-	svc.livePublish = nil
-
-	if err := svc.DeletePost(ctx, alice, found.Slug); err == nil {
-		t.Fatal("delete succeeded with no live publish finder wired")
-	}
-	if len(purger.calls) != 0 {
-		t.Fatalf("experiment content was purged despite the refusal: %v", purger.calls)
-	}
-	if _, err := store.GetPost(ctx, found.Slug); err != nil {
-		t.Fatalf("post was deleted despite the refusal: %v", err)
-	}
-}
-
 func TestWinnerApplicationIsIdempotentAtPostBoundary(t *testing.T) {
 	svc, store, _ := newTestService(t)
 	found := mustCreatePost(t, svc, alice, "Jeju")
@@ -794,71 +701,6 @@ func TestWinnerApplicationIsIdempotentAtPostBoundary(t *testing.T) {
 	third, _ := store.GetPost(context.Background(), found.Slug)
 	if third.ContentRevision != first.ContentRevision+2 || third.MachineBaselineRevision != third.ContentRevision {
 		t.Fatalf("equal manual winner did not establish a baseline: %+v", third)
-	}
-}
-
-func TestPublishingSnapshotIsExactFinalizedDetachedRead(t *testing.T) {
-	svc, store, blobs := newTestService(t)
-	ctx := context.Background()
-	post := mustCreatePost(t, svc, alice, "Jeju")
-	upload, _, _, err := svc.CreateUpload(ctx, alice, post.Slug, "photo.jpg", AttachmentPhoto)
-	if err != nil {
-		t.Fatal(err)
-	}
-	blobs.put(upload.Key, 123, testNow)
-	if _, err := svc.ConfirmUpload(ctx, alice, upload.ID, 1024, 768, 0); err != nil {
-		t.Fatal(err)
-	}
-	content := PostContent{Title: "완성 글", Tags: []string{"여행"}, Blocks: []Block{
-		{Type: BlockText, Content: "첫 문단"},
-		{Type: BlockList, Items: []string{"하나", "둘"}},
-		{Type: BlockImage, File: "photo.jpg", Caption: "바다"},
-	}}
-	if err := svc.SetGeneratedContent(ctx, alice, post.Slug, content, LanguageKorean); err != nil {
-		t.Fatal(err)
-	}
-	current, err := store.GetPost(ctx, post.Slug)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := svc.Finalize(ctx, alice, post.Slug, current.ContentRevision); err != nil {
-		t.Fatal(err)
-	}
-
-	snapshot, err := svc.PublishingSnapshot(ctx, alice, post.Slug)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if snapshot.ContentRevision != current.ContentRevision || snapshot.FinalizedRevision != current.ContentRevision || snapshot.Images[0].Key != upload.Key {
-		t.Fatalf("snapshot=%#v", snapshot)
-	}
-	snapshot.Content.Tags[0] = "mutated"
-	snapshot.Content.Blocks[1].Items[0] = "mutated"
-	snapshot.Images[0].Filename = "mutated.jpg"
-	again, err := svc.PublishingSnapshot(ctx, alice, post.Slug)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if again.Content.Tags[0] != "여행" || again.Content.Blocks[1].Items[0] != "하나" || again.Images[0].Filename != "photo.jpg" {
-		t.Fatal("publishing snapshot aliases canonical post state")
-	}
-}
-
-func TestPublishingSnapshotRejectsLegacyInvalidCanonicalContent(t *testing.T) {
-	svc, store, _ := newTestService(t)
-	finalizedAt := testNow
-	content := PostContent{
-		Title:  "기존 완성 글",
-		Tags:   []string{"여행", "#여행"},
-		Blocks: []Block{{Type: BlockText, Content: "본문"}},
-	}
-	store.posts["legacy"] = Post{
-		Slug: "legacy", UserID: alice, Status: StatusFinalized, Content: &content,
-		ContentRevision: 1, FinalizedRevision: 1, FinalizedAt: &finalizedAt,
-	}
-
-	if _, err := svc.PublishingSnapshot(context.Background(), alice, "legacy"); !errors.Is(err, ErrInvalidContent) {
-		t.Fatalf("legacy invalid content error=%v", err)
 	}
 }
 

@@ -26,6 +26,22 @@ func migrationsThrough(t *testing.T, names ...string) fstest.MapFS {
 	return selected
 }
 
+// migrateBeforePublishingRemoval preserves historical tests that intentionally exercise
+// the complete reversible schema and then roll back. Migration 0076 is forward-only, so
+// letting those fixtures call Migrate would destroy the tables their rollback path expects.
+func migrateBeforePublishingRemoval(ctx context.Context, database *sql.DB) error {
+	sub, err := fs.Sub(migrationsFS, "migrations")
+	if err != nil {
+		return err
+	}
+	provider, err := goose.NewProvider(goose.DialectSQLite3, database, sub, goose.WithLogger(goose.NopLogger()))
+	if err != nil {
+		return err
+	}
+	_, err = provider.UpTo(ctx, 75)
+	return err
+}
+
 func openTemp(t *testing.T) *DB {
 	t.Helper()
 	// A nested directory proves Open creates the parent — on a fresh volume the
@@ -84,6 +100,7 @@ func TestMigrateAppliesSchemaAndIsIdempotent(t *testing.T) {
 			t.Errorf("table %s missing after migration: %v", table, err)
 		}
 	}
+	assertPublishingTablesAbsent(t, handle)
 }
 
 func TestMigration0012BackfillsLanguagesAndFailuresWithoutLosingLegacyRows(t *testing.T) {
@@ -196,11 +213,16 @@ func TestMigration0012BackfillsLanguagesAndFailuresWithoutLosingLegacyRows(t *te
 		}
 		beforeCounts[table] = count
 	}
-	if err := Migrate(ctx, handle.Writer); err != nil {
+	migrationTwelve, err := fs.ReadFile(migrationsFS, "migrations/0012_languages_and_failures.sql")
+	if err != nil {
 		t.Fatal(err)
 	}
-	// Boot runs migration discovery every time. The already-applied version must be a no-op.
-	if err := Migrate(ctx, handle.Writer); err != nil {
+	throughEleven["0012_languages_and_failures.sql"] = &fstest.MapFile{Data: migrationTwelve}
+	if err := migrate(ctx, handle.Writer, throughEleven); err != nil {
+		t.Fatal(err)
+	}
+	// Re-running the historical slice must be a no-op.
+	if err := migrate(ctx, handle.Writer, throughEleven); err != nil {
 		t.Fatalf("second boot migrate: %v", err)
 	}
 
@@ -336,11 +358,7 @@ func TestMigration0012BackfillsLanguagesAndFailuresWithoutLosingLegacyRows(t *te
 		t.Fatal("migration left a foreign-key violation")
 	}
 
-	sub, err := fs.Sub(migrationsFS, "migrations")
-	if err != nil {
-		t.Fatal(err)
-	}
-	provider, err := goose.NewProvider(goose.DialectSQLite3, handle.Writer, sub, goose.WithLogger(goose.NopLogger()))
+	provider, err := goose.NewProvider(goose.DialectSQLite3, handle.Writer, throughEleven, goose.WithLogger(goose.NopLogger()))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -399,7 +417,7 @@ func TestMigration0006UpgradesActiveSelectionsAndRollsBack(t *testing.T) {
 	if _, err := handle.Writer.Exec(`INSERT INTO model_selections(user_id,stage,provider_id,model_id,updated_at) VALUES('alice','write','p','m','2026-08-29T00:00:00Z')`); err != nil {
 		t.Fatal(err)
 	}
-	if err := Migrate(ctx, handle.Writer); err != nil {
+	if err := migrateBeforePublishingRemoval(ctx, handle.Writer); err != nil {
 		t.Fatal(err)
 	}
 	var slot, model string
@@ -460,7 +478,7 @@ func TestMigration0007PreservesLegacyVoiceAndRollsBack(t *testing.T) {
 	if _, err := handle.Writer.Exec(`INSERT INTO posts(slug,user_id,title,memo,status,created_at,updated_at) VALUES('p','alice','t','','review','2026-08-29T00:00:00Z','2026-08-29T00:00:00Z')`); err != nil {
 		t.Fatal(err)
 	}
-	if err := Migrate(ctx, handle.Writer); err != nil {
+	if err := migrateBeforePublishingRemoval(ctx, handle.Writer); err != nil {
 		t.Fatal(err)
 	}
 	// 0017 dropped `styleguide` and kept `rules`. What 0007 has to preserve is therefore only
@@ -533,7 +551,7 @@ func TestMigration0008PreservesTargetsAndAddsFinalizationProgress(t *testing.T) 
 			t.Fatal(err)
 		}
 	}
-	if err := Migrate(ctx, handle.Writer); err != nil {
+	if err := migrateBeforePublishingRemoval(ctx, handle.Writer); err != nil {
 		t.Fatal(err)
 	}
 	for _, row := range []struct {
@@ -690,7 +708,7 @@ func TestMigration0009PartitionsVoicesAndRollsBack(t *testing.T) {
 		}
 	}
 
-	if err := Migrate(ctx, handle.Writer); err != nil {
+	if err := migrateBeforePublishingRemoval(ctx, handle.Writer); err != nil {
 		t.Fatal(err)
 	}
 
@@ -960,7 +978,7 @@ func TestMigration0009SerializesVoiceDeletionAgainstNewWork(t *testing.T) {
 func TestMigration0022ReplacesPurposesWithTemplates(t *testing.T) {
 	handle := openTemp(t)
 	ctx := context.Background()
-	if err := Migrate(ctx, handle.Writer); err != nil {
+	if err := migrateBeforePublishingRemoval(ctx, handle.Writer); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1137,7 +1155,7 @@ func TestMigration0013BackfillsExistingAccountsToMasterAndRollsBack(t *testing.T
 		t.Fatal(err)
 	}
 
-	if err := Migrate(ctx, handle.Writer); err != nil {
+	if err := migrateBeforePublishingRemoval(ctx, handle.Writer); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1215,7 +1233,7 @@ func TestMigration0013BackfillsExistingAccountsToMasterAndRollsBack(t *testing.T
 func TestMigration0014AddsAccountScopedGuidelinesAndCascadesLinks(t *testing.T) {
 	handle := openTemp(t)
 	ctx := context.Background()
-	if err := Migrate(ctx, handle.Writer); err != nil {
+	if err := migrateBeforePublishingRemoval(ctx, handle.Writer); err != nil {
 		t.Fatal(err)
 	}
 	const at = "2026-09-01T00:00:00.000000000Z"
@@ -1512,7 +1530,7 @@ func TestMigration0019CreatesCreditLotsAndWidensTheLadder(t *testing.T) {
 func TestMigration0023CreatesGuidelineCandidatesWithoutTouchingGuidelines(t *testing.T) {
 	handle := openTemp(t)
 	ctx := context.Background()
-	if err := Migrate(ctx, handle.Writer); err != nil {
+	if err := migrateBeforePublishingRemoval(ctx, handle.Writer); err != nil {
 		t.Fatal(err)
 	}
 	const at = "2026-09-05T00:00:00.000000000Z"
@@ -1599,7 +1617,7 @@ func TestMigration0023CreatesGuidelineCandidatesWithoutTouchingGuidelines(t *tes
 func TestMigration0024AddsCatalogReasoningColumnsAsUnknown(t *testing.T) {
 	handle := openTemp(t)
 	ctx := context.Background()
-	if err := Migrate(ctx, handle.Writer); err != nil {
+	if err := migrateBeforePublishingRemoval(ctx, handle.Writer); err != nil {
 		t.Fatal(err)
 	}
 	columns := []string{

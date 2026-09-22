@@ -53,40 +53,14 @@ var throttledProcedures = map[string]string{
 	postpilotv1connect.AuthServiceSignInWithGoogleProcedure:     auth.ThrottleGoogle,
 }
 
-// Agent procedures are not authenticated by the human HttpOnly session. The
-// publishing context applies its own bearer-token interceptor; bypassing here is what
-// prevents either credential from being accepted in the other's trust domain.
-var agentProcedures = map[string]bool{
-	postpilotv1connect.PublishingAgentServiceEnrollPublishingAgentProcedure: true,
-	postpilotv1connect.PublishingAgentServiceSyncAgentProfileProcedure:      true,
-	postpilotv1connect.PublishingAgentServiceClaimPublishJobProcedure:       true,
-	postpilotv1connect.PublishingAgentServiceRenewPublishLeaseProcedure:     true,
-	postpilotv1connect.PublishingAgentServiceReportPublishProgressProcedure: true,
-	postpilotv1connect.PublishingAgentServiceCompletePublishProcedure:       true,
-	postpilotv1connect.PublishingAgentServiceFailPublishProcedure:           true,
-}
-
 // masterProcedures may be called only by the operator tier.
 //
-// Publishing is here as a whole surface, not per capability: it runs through OUR paired
-// agent and OUR infrastructure ([I1]), so an account that cannot be billed for it must
-// not be able to pair one, start one, or drive an existing one. Administration is here
-// because it is what assigns the tiers.
+// Administration is here because it is what assigns the tiers.
 //
 // The set is closed by default in the same sense as publicProcedures: a procedure absent
 // from it is reachable by any authenticated plan, so a NEW master-only procedure must be
 // added here in the same change that adds it to the proto.
 var masterProcedures = map[string]bool{
-	postpilotv1connect.PublishingServiceCreateAgentPairingProcedure:       true,
-	postpilotv1connect.PublishingServiceListPublishingAgentsProcedure:     true,
-	postpilotv1connect.PublishingServiceUpdatePublishingAgentProcedure:    true,
-	postpilotv1connect.PublishingServiceRevokePublishingAgentProcedure:    true,
-	postpilotv1connect.PublishingServiceStartPublishProcedure:             true,
-	postpilotv1connect.PublishingServiceGetPublishJobProcedure:            true,
-	postpilotv1connect.PublishingServiceListRetryablePublishJobsProcedure: true,
-	postpilotv1connect.PublishingServiceRetryPublishProcedure:             true,
-	postpilotv1connect.PublishingServiceCancelPublishProcedure:            true,
-
 	postpilotv1connect.AdminServiceListUsersProcedure:         true,
 	postpilotv1connect.AdminServiceSetUserPlanProcedure:       true,
 	postpilotv1connect.AdminServiceSetEstimatorComboProcedure: true,
@@ -167,7 +141,7 @@ func (i *Interceptor) authorize(ctx context.Context, procedure string, header ht
 			})
 		}
 	}
-	if publicProcedures[procedure] || agentProcedures[procedure] {
+	if publicProcedures[procedure] {
 		return ctx, nil
 	}
 

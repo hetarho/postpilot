@@ -95,11 +95,7 @@ var (
 	ErrObjectMissing = errors.New("uploaded object not found in storage")
 	// ErrPostBusy prevents deleting a source while a handler could still write new
 	// experiment output after the privacy purge.
-	ErrPostBusy = errors.New("post has an active job")
-	// ErrPostPublishing prevents deleting a post whose publication is still in flight.
-	// It is deliberately distinct from ErrPostBusy because the remedy differs: the user
-	// cancels or finishes a publication, they do not wait for a generation to end.
-	ErrPostPublishing       = errors.New("post has a live publish job")
+	ErrPostBusy             = errors.New("post has an active job")
 	ErrStaleContentRevision = errors.New("post content revision is stale")
 	ErrInvalidContent       = errors.New("invalid post content")
 	ErrInvalidTagCount      = errors.New("tag count out of range")
@@ -281,22 +277,6 @@ type LearningSnapshot struct {
 	UpdatedAt              time.Time
 	ContentLanguage        Language
 	VoiceSourceLanguage    Language
-}
-
-// PublishingSnapshot is the post context's immutable, ownership-checked hand-off.
-// Reading it never finalizes, learns, signs URLs, or mutates the post; publishing copies
-// the named already-normalized JPEG objects through its own storage port.
-type PublishingSnapshot struct {
-	PostSlug            string
-	UserID              string
-	CreatedAt           time.Time
-	Content             PostContent
-	ContentRevision     int64
-	FinalizedRevision   int64
-	Images              []Image
-	TargetLanguage      Language
-	ContentLanguage     Language
-	VoiceSourceLanguage Language
 }
 
 // BlockType is kept as the LLM/protojson spelling at the domain boundary.

@@ -53,15 +53,15 @@
 | T008 | Superseded by PUB r6; original live-smoke claim retained, do not resume | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
 | T279 | Pin enum mirrors in the surviving backend and frontend | ARCH | T313 | todo |
-| T283 | Remove publishing backend, deletion guards and database tables | PUB POST AUTH QUOTA LANG ARCH | T312 | doing@260922.ret |
 | T284 | Delete companion source, publishing contracts and build integration | PUB AUTH LANG VIDEO ARCH | T283 | todo |
 | T313 | Verify complete retirement and preserved manual publishing workflow | PUB EXPORT POST MKT AUTH ARCH | T284 | todo |
 
 ## next
 - MODEL r14 is fully built (T314..T317); no model-comparison work remains
-- implement-task T283; retirement order T283 → T284 → T313; T008 must not resume, T279 follows removal
+- implement-task T284; retirement order T284 → T313; T008 must not resume, T279 follows removal
 - create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 ## log
+- 260922 T283 done; publishing backend/runtime removed, migration 0076 enforces a clean checkpoint before dropping five tables, and ARCH-26 plus SQL generation pass; production rollout remains pending (ret)
 - 260922 T315 T316 T317 done; windowed me/all leaderboards, the verdict badge sheet and per-row badge tallies. Committed as one change: the three share every backend file they touch. Every package and gate passes on its own; the backend's whole-suite migration failures and the frontend's clip/plans failures reproduce only under load (brd bdg tly)
 - 260922 T283 claimed (ret)
 - 260922 T312 done; verified evidence-gated object-first cleanup, retry receipt and foreign-key-ordered row purge; focused retirement gates pass and the contended clip regression passes alone (ret)
@@ -80,5 +80,4 @@
 - 260922 LANG r5 changes only LANG-18's leaderboard key; T283 T284 T311 (base LANG@4) are unaffected in scope and need no re-planning
 - 260922 update-ssot MODEL LANG complete; MODEL r14 (lab picks apply nothing, follow-ups gated to draft/review, `(scope, stage, window)` leaderboards, verdict badges), LANG r5 syncs the leaderboard key; create-task pending
 - 260922 T310 claimed (ret)
-- 260922 retirement planning validation passed: 10 SSOT revisions/change entries, 8 task references/bases, acyclic dependencies and STATE consistency; T008 and unrelated pending preserved; review adoption synchronized; implementation not started
-- 260922 create-task retirement complete: T310/T311/T312/T313 created, T282/T283/T284 repurposed for removal, T279 narrowed to surviving enums; all 10 retirement SSOT deltas consumed, unrelated pending retained
+- 260922 warning: T008 doing claim is superseded by PUB r6; do not resume live publishing or use T008 as a retirement dependency; its task file remains immutable

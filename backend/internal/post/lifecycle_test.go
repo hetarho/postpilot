@@ -83,10 +83,6 @@ func TestFinalizeAllowsCrossLanguageContentAndPreservesProvenance(t *testing.T) 
 	if err != nil || learning.ContentLanguage != LanguageEnglish || learning.VoiceSourceLanguage != LanguageKorean {
 		t.Fatalf("learning language projection = %#v, err=%v", learning, err)
 	}
-	snapshot, err := svc.PublishingSnapshot(ctx, alice, created.Slug)
-	if err != nil || snapshot.TargetLanguage != LanguageEnglish || snapshot.ContentLanguage != LanguageEnglish || snapshot.VoiceSourceLanguage != LanguageKorean {
-		t.Fatalf("cross-language publishing provenance = %#v, err=%v", snapshot, err)
-	}
 }
 
 // A8/A9: 확정 copies the confirmed content title into posts.title, and nothing else moves with it.

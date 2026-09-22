@@ -54,10 +54,10 @@ func TestMigration0051PreservesInspectionAtRecoverySizeBoundary(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if err := Migrate(t.Context(), d.Writer); err != nil {
+	if err := migrateBeforePublishingRemoval(t.Context(), d.Writer); err != nil {
 		t.Fatal("valid legacy evidence prevented startup", err)
 	}
-	if err := Migrate(t.Context(), d.Writer); err != nil {
+	if err := migrateBeforePublishingRemoval(t.Context(), d.Writer); err != nil {
 		t.Fatal("migration was not idempotent", err)
 	}
 	var copied, retained, bytes int

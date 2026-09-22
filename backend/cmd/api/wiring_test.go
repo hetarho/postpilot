@@ -4,6 +4,7 @@ import (
 	"context"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/postpilot/backend/internal/llm"
@@ -73,7 +74,14 @@ func TestBuildContextsWiresEveryRequiredCollaborator(t *testing.T) {
 		}
 	}
 	registerJobs(app)
-	if got := handlers(app); len(got) != 23 {
+	got := handlers(app)
+	if len(got) != 21 {
 		t.Fatalf("handlers = %d, want every Connect service", len(got))
+	}
+	for _, register := range got {
+		path, _ := register()
+		if strings.Contains(path, "Publishing") {
+			t.Fatalf("retired publishing route is still registered: %s", path)
+		}
 	}
 }

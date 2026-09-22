@@ -532,59 +532,6 @@ func TestLoadExperimentRetentionAndSweepIntervals(t *testing.T) {
 	}
 }
 
-func TestLoadPublishingDefaultsAndValidation(t *testing.T) {
-	t.Setenv("CORS_ORIGIN", "http://localhost:2564")
-	for _, name := range []string{
-		"PUBLISH_PAIRING_TTL", "PUBLISH_MAX_PENDING_PAIRINGS", "PUBLISH_LEASE_TTL",
-		"PUBLISH_ASSET_URL_TTL", "PUBLISH_ORPHAN_SWEEP_INTERVAL", "PUBLISH_ORPHAN_MIN_AGE",
-		"PUBLISH_AGENT_HEARTBEAT_INTERVAL",
-	} {
-		t.Setenv(name, "")
-	}
-	cfg, err := Load()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if cfg.PublishPairingTTL != 10*time.Minute || cfg.PublishMaxPendingPairings != 8 ||
-		cfg.PublishLeaseTTL != 45*time.Second || cfg.PublishAssetURLTTL != 10*time.Minute ||
-		cfg.PublishOrphanSweepInterval != 24*time.Hour || cfg.PublishOrphanMinAge != time.Hour ||
-		cfg.PublishAgentHeartbeatInterval != 15*time.Second {
-		t.Fatalf("publishing defaults = %+v", cfg)
-	}
-	// The frontend hides an agent after PUBLISH_AGENT_STALE_MS = 30s, and a refresh only
-	// lands on the poll that follows the elapsed interval, so the budget is the heartbeat
-	// plus the agent's 5s poll — not the heartbeat alone. No gate spans the three seams
-	// those values live in, so the relationship is asserted here.
-	const staleWindow, agentPoll = 30 * time.Second, 5 * time.Second
-	if cfg.PublishAgentHeartbeatInterval+agentPoll >= staleWindow {
-		t.Fatalf("heartbeat %s plus a %s poll does not fit the %s staleness window",
-			cfg.PublishAgentHeartbeatInterval, agentPoll, staleWindow)
-	}
-
-	for _, name := range []string{
-		"PUBLISH_PAIRING_TTL", "PUBLISH_LEASE_TTL", "PUBLISH_ASSET_URL_TTL",
-		"PUBLISH_ORPHAN_SWEEP_INTERVAL", "PUBLISH_ORPHAN_MIN_AGE",
-		"PUBLISH_AGENT_HEARTBEAT_INTERVAL",
-	} {
-		for _, bad := range []string{"invalid", "0s", "-1s"} {
-			t.Run(name+"="+bad, func(t *testing.T) {
-				t.Setenv(name, bad)
-				if _, err := Load(); err == nil || !strings.Contains(err.Error(), name) {
-					t.Fatalf("%s=%q error = %v", name, bad, err)
-				}
-			})
-		}
-	}
-	for _, bad := range []string{"invalid", "0", "-1"} {
-		t.Run("PUBLISH_MAX_PENDING_PAIRINGS="+bad, func(t *testing.T) {
-			t.Setenv("PUBLISH_MAX_PENDING_PAIRINGS", bad)
-			if _, err := Load(); err == nil || !strings.Contains(err.Error(), "PUBLISH_MAX_PENDING_PAIRINGS") {
-				t.Fatalf("error = %v", err)
-			}
-		})
-	}
-}
-
 func TestLoadTemplateLimitDefaultsAndValidation(t *testing.T) {
 	t.Setenv("CORS_ORIGIN", "http://localhost:2564")
 	names := []string{

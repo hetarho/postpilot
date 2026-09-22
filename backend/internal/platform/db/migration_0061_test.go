@@ -20,7 +20,7 @@ func TestMigration0061ReturnsUngeneratedProjectsToRevisionZero(t *testing.T) {
 	}
 	defer handle.Close()
 	ctx := context.Background()
-	if err := Migrate(ctx, handle.Writer); err != nil {
+	if err := migrateBeforePublishingRemoval(ctx, handle.Writer); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
 	sub, err := fs.Sub(migrationsFS, "migrations")

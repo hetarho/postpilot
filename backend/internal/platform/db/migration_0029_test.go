@@ -11,7 +11,7 @@ import (
 func TestMigration0029AddsNullableUniqueIdentitiesAndCheckedLinks(t *testing.T) {
 	handle := openTemp(t)
 	ctx := context.Background()
-	if err := Migrate(ctx, handle.Writer); err != nil {
+	if err := migrateBeforePublishingRemoval(ctx, handle.Writer); err != nil {
 		t.Fatal(err)
 	}
 	const created = "2026-09-08T00:00:00.000000000Z"

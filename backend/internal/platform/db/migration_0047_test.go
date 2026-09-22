@@ -48,7 +48,7 @@ func TestMigration0047BackfillsBindingsAndPreservesOriginalIdentityAcrossRestart
 			t.Fatal(err)
 		}
 	}
-	if err = Migrate(ctx, d.Writer); err != nil {
+	if err = migrateBeforePublishingRemoval(ctx, d.Writer); err != nil {
 		t.Fatal(err)
 	}
 	if err = d.Close(); err != nil {
@@ -58,7 +58,7 @@ func TestMigration0047BackfillsBindingsAndPreservesOriginalIdentityAcrossRestart
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = Migrate(ctx, d.Writer); err != nil {
+	if err = migrateBeforePublishingRemoval(ctx, d.Writer); err != nil {
 		t.Fatal(err)
 	}
 	var job, batch, canonical, key, expires, plan, result string
@@ -77,7 +77,7 @@ func TestMigration0047BackfillsBindingsAndPreservesOriginalIdentityAcrossRestart
 	if _, err = provider.DownTo(ctx, 46); err != nil {
 		t.Fatal("retention rollback failed", err)
 	}
-	if err = Migrate(ctx, d.Writer); err != nil {
+	if err = migrateBeforePublishingRemoval(ctx, d.Writer); err != nil {
 		t.Fatal(err)
 	}
 	var n int

@@ -297,23 +297,6 @@ type Config struct {
 	ExperimentContentRetention time.Duration
 	// ExperimentSweepInterval is how often terminal experiment content is purged.
 	ExperimentSweepInterval time.Duration
-	// Publishing owns a separate durable queue because a browser-side external commit
-	// has lease and ambiguity semantics that generation jobs do not have (plan 12).
-	PublishPairingTTL          time.Duration
-	PublishMaxPendingPairings  int
-	PublishLeaseTTL            time.Duration
-	PublishAssetURLTTL         time.Duration
-	PublishOrphanSweepInterval time.Duration
-	PublishOrphanMinAge        time.Duration
-	// PublishAgentHeartbeatInterval is the minimum spacing between last_seen_at writes
-	// for one agent; calls arriving sooner are served without touching the writer. The
-	// refresh only happens on a poll that lands after the interval has elapsed, so the
-	// worst observed staleness is this interval plus the agent's poll (5s), and that sum
-	// must stay under the frontend's PUBLISH_AGENT_STALE_MS (30s) or a live agent renders
-	// as offline. The three values sit in three different seams, so nothing but this note
-	// connects them.
-	PublishAgentHeartbeatInterval time.Duration
-
 	// Template field ceilings, counted in Unicode scalar values like the voice sample
 	// minimum. They are env-owned rather than constants because a template that is too
 	// short to be useful is a per-account editorial judgement, not a product rule.
@@ -497,42 +480,6 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 	cfg.ExperimentSweepInterval = experimentSweep
-
-	pairingTTL, err := positiveDuration("PUBLISH_PAIRING_TTL", "10m")
-	if err != nil {
-		return nil, err
-	}
-	cfg.PublishPairingTTL = pairingTTL
-	maxPairings, err := positiveInt("PUBLISH_MAX_PENDING_PAIRINGS", "8")
-	if err != nil {
-		return nil, err
-	}
-	cfg.PublishMaxPendingPairings = maxPairings
-	leaseTTL, err := positiveDuration("PUBLISH_LEASE_TTL", "45s")
-	if err != nil {
-		return nil, err
-	}
-	cfg.PublishLeaseTTL = leaseTTL
-	assetURLTTL, err := positiveDuration("PUBLISH_ASSET_URL_TTL", "10m")
-	if err != nil {
-		return nil, err
-	}
-	cfg.PublishAssetURLTTL = assetURLTTL
-	publishSweep, err := positiveDuration("PUBLISH_ORPHAN_SWEEP_INTERVAL", "24h")
-	if err != nil {
-		return nil, err
-	}
-	cfg.PublishOrphanSweepInterval = publishSweep
-	publishMinAge, err := positiveDuration("PUBLISH_ORPHAN_MIN_AGE", "1h")
-	if err != nil {
-		return nil, err
-	}
-	cfg.PublishOrphanMinAge = publishMinAge
-	agentHeartbeat, err := positiveDuration("PUBLISH_AGENT_HEARTBEAT_INTERVAL", "15s")
-	if err != nil {
-		return nil, err
-	}
-	cfg.PublishAgentHeartbeatInterval = agentHeartbeat
 
 	templateName, err := positiveInt("TEMPLATE_NAME_MAX_CHARS", "40")
 	if err != nil {

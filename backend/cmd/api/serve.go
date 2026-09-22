@@ -30,7 +30,6 @@ import (
 	postrpc "github.com/postpilot/backend/internal/post/rpc"
 	poststore "github.com/postpilot/backend/internal/post/store"
 	providerrpc "github.com/postpilot/backend/internal/provider/rpc"
-	publishingrpc "github.com/postpilot/backend/internal/publishing/rpc"
 	templaterpc "github.com/postpilot/backend/internal/template/rpc"
 	voicerpc "github.com/postpilot/backend/internal/voice/rpc"
 )
@@ -43,7 +42,7 @@ func serve(ctx context.Context, c *contexts) error {
 	p := c.platform
 	cfg, handle := p.cfg, p.db
 	server := rpcserver.New(cfg, version, rpcserver.Options{
-		Interceptors: []connect.Interceptor{authrpc.NewInterceptor(c.auth, c.throttle, cfg.ClientIPHeader), publishingrpc.NewAgentInterceptor()},
+		Interceptors: []connect.Interceptor{authrpc.NewInterceptor(c.auth, c.throttle, cfg.ClientIPHeader)},
 		Handlers:     handlers(c),
 		Routes: map[string]http.Handler{
 			// These plain routes bypass the Connect interceptors, so the throttle the
@@ -184,12 +183,6 @@ func handlers(c *contexts) []rpcserver.Registrar {
 		},
 		func(opts ...connect.HandlerOption) (string, http.Handler) {
 			return postpilotv1connect.NewModelExperimentServiceHandler(experimentrpc.NewHandler(c.experiment), opts...)
-		},
-		func(opts ...connect.HandlerOption) (string, http.Handler) {
-			return postpilotv1connect.NewPublishingServiceHandler(publishingrpc.NewUserHandler(c.publishing), opts...)
-		},
-		func(opts ...connect.HandlerOption) (string, http.Handler) {
-			return postpilotv1connect.NewPublishingAgentServiceHandler(publishingrpc.NewAgentHandler(), opts...)
 		},
 	}
 }

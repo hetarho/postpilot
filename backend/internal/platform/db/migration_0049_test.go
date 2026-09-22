@@ -42,7 +42,7 @@ func TestMigration0049KeepsOldRendersUnfinalizedAndConfirmationIrreversible(t *t
 			t.Fatal(err)
 		}
 	}
-	if err := Migrate(t.Context(), d.Writer); err != nil {
+	if err := migrateBeforePublishingRemoval(t.Context(), d.Writer); err != nil {
 		t.Fatal(err)
 	}
 	if err := d.Close(); err != nil {
@@ -52,7 +52,7 @@ func TestMigration0049KeepsOldRendersUnfinalizedAndConfirmationIrreversible(t *t
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := Migrate(t.Context(), d.Writer); err != nil {
+	if err := migrateBeforePublishingRemoval(t.Context(), d.Writer); err != nil {
 		t.Fatal(err)
 	}
 	var n int

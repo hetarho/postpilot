@@ -53,13 +53,24 @@ func TestEveryTypedReasonIsEmitted(t *testing.T) {
 	allowed := map[string]bool{
 		// the zero value every unmapped failure falls back to
 		"UNKNOWN_FAILURE": true,
-		// the agent's, written into a publish job's durable failure by the Mac
-		"PUBLISH_FAILURE_SAFE": true, "PUBLISH_FAILURE_ATTENTION": true,
 		// the browser's own, raised when no answer arrives at all
 		"NETWORK_UNAVAILABLE": true,
 		// notice codes the clip plan and the voice profile carry as data, rendered from the
 		// same catalogue as a failure
 		"CLIP_LAYOUT_FREQUENCY": true, "VOICE_PROFILE_FIELD_REQUIRED": true,
+		// T283 removes every producer before T284 removes and reserves the obsolete wire
+		// values. Keep this bridge exact so an unrelated dead reason still fails the test.
+		"POST_PUBLISHING":         true,
+		"PUBLISH_AGENT_NOT_READY": true, "PUBLISH_AGENT_REVOKED": true,
+		"PUBLISH_AGENT_UNAVAILABLE": true, "PUBLISH_ALREADY_EXISTS": true,
+		"PUBLISH_CATEGORY_NOT_FOUND": true, "PUBLISH_COMMIT_FENCE": true,
+		"PUBLISH_FORBIDDEN": true, "PUBLISH_LEASE_INVALID": true,
+		"PUBLISH_NEEDS_ATTENTION": true, "PUBLISH_NOT_FOUND": true,
+		"PUBLISH_OUTCOME_UNKNOWN": true, "PUBLISH_PAIRING_INVALID": true,
+		"PUBLISH_PAIRING_LIMIT": true, "PUBLISH_POST_NOT_FINALIZED": true,
+		"PUBLISH_REQUEST_INVALID": true, "PUBLISH_STALE_REVISION": true,
+		"PUBLISH_TRANSITION_INVALID": true, "PUBLISH_URL_INVALID": true,
+		"VIDEO_NOT_PUBLISHABLE": true,
 	}
 	var dead []string
 	for name := range postpilotv1.FailureReason_value {

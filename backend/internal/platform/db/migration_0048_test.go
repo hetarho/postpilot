@@ -69,7 +69,7 @@ func TestMigration0048PreservesJobGuardsAndHistoricalSettlement(t *testing.T) {
 		return out
 	}
 	before := guards()
-	if err := Migrate(ctx, d.Writer); err != nil {
+	if err := migrateBeforePublishingRemoval(ctx, d.Writer); err != nil {
 		t.Fatal(err)
 	}
 	after := guards()
@@ -93,7 +93,7 @@ func TestMigration0048PreservesJobGuardsAndHistoricalSettlement(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := Migrate(ctx, d.Writer); err != nil {
+	if err := migrateBeforePublishingRemoval(ctx, d.Writer); err != nil {
 		t.Fatal(err)
 	}
 	var n int

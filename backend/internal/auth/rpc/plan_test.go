@@ -19,7 +19,7 @@ import (
 // newPlanServer mounts the auth and admin surfaces behind the real interceptor over a real
 // SQLite store, seeded with one account per tier. It returns clients for both services so a
 // test can prove what an ordinary account is refused and what the operator is not.
-func newPlanServer(t *testing.T) (postpilotv1connect.AuthServiceClient, postpilotv1connect.AdminServiceClient, postpilotv1connect.PublishingServiceClient, postpilotv1connect.ModelCatalogServiceClient) {
+func newPlanServer(t *testing.T) (postpilotv1connect.AuthServiceClient, postpilotv1connect.AdminServiceClient, postpilotv1connect.ModelCatalogServiceClient) {
 	t.Helper()
 
 	// Production wires the ledger's top-up here (QUOTA-35). These cases are about the
@@ -37,10 +37,6 @@ func newPlanServer(t *testing.T) (postpilotv1connect.AuthServiceClient, postpilo
 	mux.Handle(postpilotv1connect.NewAuthServiceHandler(authrpc.NewHandler(svc, sessionTTL), interceptor))
 	mux.Handle(postpilotv1connect.NewAdminServiceHandler(
 		authrpc.NewAdminHandler(svc, &fakeComboAssigner{}), interceptor))
-	// Unimplemented on purpose: the gate is the interceptor, so a refusal must arrive without
-	// the handler ever running. Reaching the handler would answer `unimplemented` instead.
-	mux.Handle(postpilotv1connect.NewPublishingServiceHandler(
-		postpilotv1connect.UnimplementedPublishingServiceHandler{}, interceptor))
 	mux.Handle(postpilotv1connect.NewModelCatalogServiceHandler(
 		postpilotv1connect.UnimplementedModelCatalogServiceHandler{}, interceptor))
 
@@ -49,7 +45,6 @@ func newPlanServer(t *testing.T) (postpilotv1connect.AuthServiceClient, postpilo
 
 	return postpilotv1connect.NewAuthServiceClient(server.Client(), server.URL),
 		postpilotv1connect.NewAdminServiceClient(server.Client(), server.URL),
-		postpilotv1connect.NewPublishingServiceClient(server.Client(), server.URL),
 		postpilotv1connect.NewModelCatalogServiceClient(server.Client(), server.URL)
 }
 
@@ -70,7 +65,7 @@ func loginAs(t *testing.T, client postpilotv1connect.AuthServiceClient, id strin
 
 // A12: the session probe carries the tier, so the app gates without a second round-trip.
 func TestGetMeCarriesTheTier(t *testing.T) {
-	authClient, _, _, _ := newPlanServer(t)
+	authClient, _, _ := newPlanServer(t)
 
 	for id, want := range map[string]postpilotv1.Plan{
 		"alice": postpilotv1.Plan_PLAN_FREE,
@@ -87,36 +82,11 @@ func TestGetMeCarriesTheTier(t *testing.T) {
 	}
 }
 
-// A8: every human publishing procedure is master-only, and the refusal is the typed one the
-// frontend renders from.
-func TestPublishingIsMasterOnly(t *testing.T) {
-	authClient, _, publishing, _ := newPlanServer(t)
-	free := loginAs(t, authClient, "alice")
-
-	_, err := publishing.CreateAgentPairing(context.Background(),
-		withCookie(&postpilotv1.CreateAgentPairingRequest{}, free))
-	if connect.CodeOf(err) != connect.CodePermissionDenied {
-		t.Fatalf("pairing as free = %v, want permission_denied", err)
-	}
-	if detail := authAppErrorDetail(t, err); detail.GetReason() != plan.ReasonMasterOnly {
-		t.Errorf("reason = %q, want %q", detail.GetReason(), plan.ReasonMasterOnly)
-	}
-
-	// The operator reaches the handler — which is unimplemented here, and that is the point:
-	// the gate let it through.
-	master := loginAs(t, authClient, "root")
-	_, err = publishing.CreateAgentPairing(context.Background(),
-		withCookie(&postpilotv1.CreateAgentPairingRequest{}, master))
-	if connect.CodeOf(err) != connect.CodeUnimplemented {
-		t.Errorf("pairing as master = %v, want the handler to have been reached", err)
-	}
-}
-
 // A1 (plan 18): curating the model catalog decides what every account may spend money on,
 // so the whole service sits behind the same gate as the tier assignment — enforced here,
 // whatever the client rendered.
 func TestModelCatalogIsMasterOnly(t *testing.T) {
-	authClient, _, _, catalog := newPlanServer(t)
+	authClient, _, catalog := newPlanServer(t)
 
 	free := loginAs(t, authClient, "alice")
 	for name, call := range map[string]func(string) error{
@@ -156,7 +126,7 @@ func TestModelCatalogIsMasterOnly(t *testing.T) {
 
 // A10: the admin surface answers the operator and refuses everyone else.
 func TestAdminIsMasterOnly(t *testing.T) {
-	authClient, admin, _, _ := newPlanServer(t)
+	authClient, admin, _ := newPlanServer(t)
 
 	free := loginAs(t, authClient, "alice")
 	_, err := admin.ListUsers(context.Background(), withCookie(&postpilotv1.ListUsersRequest{}, free))
@@ -192,7 +162,7 @@ func TestAdminIsMasterOnly(t *testing.T) {
 
 // A10: the ladder must not be able to lock administration out of the deployment.
 func TestTheLastMasterCannotBeDemoted(t *testing.T) {
-	authClient, admin, _, _ := newPlanServer(t)
+	authClient, admin, _ := newPlanServer(t)
 	master := loginAs(t, authClient, "root")
 
 	_, err := admin.SetUserPlan(context.Background(),
@@ -294,7 +264,7 @@ func (f *fakeComboAssigner) AssignCombo(_ context.Context, combo, observe, write
 // The estimator assignment is privileged like every other admin action, and its two refusals
 // reach the client as reasons it can render copy from (QUOTA-39).
 func TestSetEstimatorComboIsMasterOnlyAndMapsItsRefusals(t *testing.T) {
-	authClient, admin, _, _ := newPlanServer(t)
+	authClient, admin, _ := newPlanServer(t)
 
 	free := loginAs(t, authClient, "alice")
 	_, err := admin.SetEstimatorCombo(context.Background(), withCookie(&postpilotv1.SetEstimatorComboRequest{

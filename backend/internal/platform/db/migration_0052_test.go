@@ -87,10 +87,10 @@ func TestMigration0052BackfillsOwnerSoundFromEverySavedPlanShape(t *testing.T) {
 			t.Fatal(c.project, err)
 		}
 	}
-	if err := Migrate(t.Context(), d.Writer); err != nil {
+	if err := migrateBeforePublishingRemoval(t.Context(), d.Writer); err != nil {
 		t.Fatal("a saved plan prevented startup", err)
 	}
-	if err := Migrate(t.Context(), d.Writer); err != nil {
+	if err := migrateBeforePublishingRemoval(t.Context(), d.Writer); err != nil {
 		t.Fatal("migration was not idempotent", err)
 	}
 	for _, c := range cases {
@@ -132,7 +132,7 @@ func TestMigration0052BackfillsOwnerSoundFromEverySavedPlanShape(t *testing.T) {
 	if err := d.Reader.QueryRow(`SELECT count(*) FROM pragma_table_info('clip_source_leases') WHERE name='retain_original_audio'`).Scan(&leases); err != nil || leases != 0 {
 		t.Fatal("rollback kept the column", leases, err)
 	}
-	if err := Migrate(t.Context(), d.Writer); err != nil {
+	if err := migrateBeforePublishingRemoval(t.Context(), d.Writer); err != nil {
 		t.Fatal("re-applying after rollback failed", err)
 	}
 }

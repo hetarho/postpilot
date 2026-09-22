@@ -16,7 +16,7 @@ func TestMigration0031AddsAndRollsBackScheduledChangeEvent(t *testing.T) {
 	}
 	defer handle.Close()
 	ctx := context.Background()
-	if err := Migrate(ctx, handle.Writer); err != nil {
+	if err := migrateBeforePublishingRemoval(ctx, handle.Writer); err != nil {
 		t.Fatal(err)
 	}
 	const at = "2026-09-08T00:00:00Z"

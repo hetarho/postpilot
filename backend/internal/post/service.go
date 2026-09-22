@@ -38,7 +38,6 @@ type Service struct {
 	contentPurger  ExperimentContentPurger
 	candidateLinks GuidelineCandidateDetacher
 	memoryLinks    MemorySourceDetacher
-	livePublish    LivePublishFinder
 	voices         VoiceDirectory
 	templates      TemplateDirectory
 
@@ -79,13 +78,12 @@ type Deps struct {
 	ContentPurger  ExperimentContentPurger
 	CandidateLinks GuidelineCandidateDetacher
 	MemoryLinks    MemorySourceDetacher
-	LivePublish    LivePublishFinder
 }
 
 // NewService wires the context with its store, its object storage, its limits and its
 // collaborators.
 func NewService(store Storage, blobs ObjectStore, limits Limits, deps Deps) *Service {
-	for name, dep := range map[string]any{"jobs": deps.Jobs, "voices": deps.Voices, "experiments": deps.Experiments, "content purger": deps.ContentPurger, "candidate links": deps.CandidateLinks, "memory links": deps.MemoryLinks, "live publish": deps.LivePublish} {
+	for name, dep := range map[string]any{"jobs": deps.Jobs, "voices": deps.Voices, "experiments": deps.Experiments, "content purger": deps.ContentPurger, "candidate links": deps.CandidateLinks, "memory links": deps.MemoryLinks} {
 		if dep == nil {
 			panic("post: " + name + " collaborator is required")
 		}
@@ -114,7 +112,6 @@ func NewService(store Storage, blobs ObjectStore, limits Limits, deps Deps) *Ser
 		contentPurger:  deps.ContentPurger,
 		candidateLinks: deps.CandidateLinks,
 		memoryLinks:    deps.MemoryLinks,
-		livePublish:    deps.LivePublish,
 		now:            time.Now,
 		newID:          newObjectID,
 	}
@@ -591,27 +588,6 @@ func (s *Service) DeletePost(ctx context.Context, userID, slug string) error {
 			return ErrPostBusy
 		}
 	}
-	// Both remaining preconditions must clear BEFORE the purge: past this point the
-	// deletion is destructive and cannot be undone. Unlike the generation-job port
-	// above, this one is deliberately not nil-tolerant — a server that cannot ask
-	// whether a publication is live must not delete a post out from under an agent.
-	//
-	// It is a read, not a lock, so a publication started between this answer and the row
-	// delete is not prevented. That end state is one the publishing schema was already
-	// built for: the frozen manifest and the staged assets are the job's own, under
-	// publish_assets.staged_key rather than the post's prefix, and LatestJobForDeletedPost
-	// exists to serve exactly a publication whose post is gone. Closing the window would
-	// take a transactional gate spanning both contexts.
-	if s.livePublish == nil {
-		return errors.New("live publish finder is not configured")
-	}
-	live, err := s.livePublish.LiveForPost(ctx, userID, found.Slug, found.CreatedAt)
-	if err != nil {
-		return fmt.Errorf("check live publish job before post delete: %w", err)
-	}
-	if live {
-		return ErrPostPublishing
-	}
 	if s.contentPurger == nil {
 		return errors.New("experiment content purger is not configured")
 	}
@@ -891,72 +867,13 @@ func (s *Service) LearningSnapshot(ctx context.Context, userID, slug string) (Le
 	// The post store owns content provenance but does not own the voice directory. Enrich the
 	// hand-off through the published directory projection so the voice context can enforce
 	// equality without reading either sibling's tables. ownedPost intentionally returns only
-	// stored post state, so resolve the reference here just as Get and PublishingSnapshot do.
+	// stored post state, so resolve the reference here just as Get does.
 	refs, err := s.voiceRefs(ctx, userID)
 	if err != nil {
 		return LearningSnapshot{}, err
 	}
 	snapshot.VoiceSourceLanguage = projectVoice(refs, found.VoiceID).SourceLanguage
 	return snapshot, nil
-}
-
-// PublishingSnapshot returns the exact current finalized revision without changing any
-// post, voice, generation, experiment, or export state. It deliberately does not call
-// Get: that read mints browser view URLs, while the publishing context needs stable
-// object identities for server-side copies.
-func (s *Service) PublishingSnapshot(ctx context.Context, userID, slug string) (PublishingSnapshot, error) {
-	found, err := s.ownedPost(ctx, userID, slug)
-	if err != nil {
-		return PublishingSnapshot{}, err
-	}
-	if found.Status != StatusFinalized || found.Content == nil || found.ContentRevision <= 0 ||
-		found.FinalizedRevision != found.ContentRevision || found.FinalizedAt == nil {
-		return PublishingSnapshot{}, ErrPostNotFinalized
-	}
-	images, err := s.images.ListImages(ctx, found.Slug)
-	if err != nil {
-		return PublishingSnapshot{}, fmt.Errorf("list publishing images: %w", err)
-	}
-	// Read for the revalidation below and deliberately NOT carried into the snapshot:
-	// publishing does not stage videos, and a validator that could not see them would
-	// reject a legitimately attached clip as an unknown file.
-	videos, err := s.videos.ListVideos(ctx, found.Slug)
-	if err != nil {
-		return PublishingSnapshot{}, fmt.Errorf("list publishing videos: %w", err)
-	}
-	if strings.TrimSpace(found.Content.Title) == "" {
-		return PublishingSnapshot{}, ErrInvalidContent
-	}
-	// Revalidate at the publishing hand-off as well as at current write paths.
-	// Posts finalized before a validator was tightened must not bypass the frozen
-	// manifest boundary merely because no new save occurs after deployment.
-	if err := ValidateContent(*found.Content, images, videos); err != nil {
-		return PublishingSnapshot{}, err
-	}
-	if found.ContentLanguage == nil || !found.ContentLanguage.Valid() || !found.TargetLanguage.Valid() {
-		return PublishingSnapshot{}, ErrLanguageRequired
-	}
-	refs, err := s.voiceRefs(ctx, userID)
-	if err != nil {
-		return PublishingSnapshot{}, err
-	}
-	voice := projectVoice(refs, found.VoiceID)
-	if !voice.SourceLanguage.Valid() {
-		return PublishingSnapshot{}, ErrLanguageRequired
-	}
-	return PublishingSnapshot{PostSlug: found.Slug, UserID: found.UserID, CreatedAt: found.CreatedAt, Content: clonePostContent(*found.Content),
-		ContentRevision: found.ContentRevision, FinalizedRevision: found.FinalizedRevision, Images: append([]Image(nil), images...),
-		TargetLanguage: found.TargetLanguage, ContentLanguage: *found.ContentLanguage, VoiceSourceLanguage: voice.SourceLanguage}, nil
-}
-
-// PostIdentity returns the immutable incarnation marker used by consumers whose
-// history must not attach to a later post that happens to reuse a deleted slug.
-func (s *Service) PostIdentity(ctx context.Context, userID, slug string) (time.Time, error) {
-	found, err := s.ownedPost(ctx, userID, slug)
-	if err != nil {
-		return time.Time{}, err
-	}
-	return found.CreatedAt, nil
 }
 
 // PostStatus returns one owned post's lifecycle status. It exists for a consumer that must

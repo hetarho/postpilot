@@ -840,9 +840,3 @@ func TestGuidelineCandidateAdaptersRecordReviewAndApproveAcrossTheSeam(t *testin
 type noPurge struct{}
 
 func (noPurge) PurgePost(context.Context, string, string) error { return nil }
-
-type noLivePublish struct{}
-
-func (noLivePublish) LiveForPost(context.Context, string, string, time.Time) (bool, error) {
-	return false, nil
-}

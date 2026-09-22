@@ -286,8 +286,6 @@ func toConnectError(op string, err error) error {
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "uploaded object is missing", postpilotv1.FailureReason_UPLOAD_OBJECT_MISSING, nil)
 	case errors.Is(err, post.ErrPostBusy):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post has an active job", postpilotv1.FailureReason_POST_BUSY, nil)
-	case errors.Is(err, post.ErrPostPublishing):
-		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post has a live publish job", postpilotv1.FailureReason_POST_PUBLISHING, nil)
 	case errors.Is(err, post.ErrStaleContentRevision):
 		return rpcserver.NewAppError(connect.CodeAborted, "post content revision is stale", postpilotv1.FailureReason_POST_CONTENT_STALE, nil)
 	case errors.Is(err, post.ErrNoMachineBaseline):

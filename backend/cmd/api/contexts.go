@@ -32,8 +32,6 @@ import (
 	poststore "github.com/postpilot/backend/internal/post/store"
 	"github.com/postpilot/backend/internal/provider"
 	providerstore "github.com/postpilot/backend/internal/provider/store"
-	"github.com/postpilot/backend/internal/publishing"
-	publishingstore "github.com/postpilot/backend/internal/publishing/store"
 	"github.com/postpilot/backend/internal/template"
 	templatestore "github.com/postpilot/backend/internal/template/store"
 	"github.com/postpilot/backend/internal/tosspay"
@@ -58,8 +56,7 @@ type contexts struct {
 	payments     billing.Provider
 	billing      *billing.Service
 
-	post       *post.Service
-	publishing *publishing.Service
+	post *post.Service
 
 	clipStore      *clipstore.Store
 	clipPorts      clipapp.Binder
@@ -175,9 +172,8 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 		slog.Info("settled holds left open by an interrupted finish", "count", n)
 	}
 
-	// post reads voice, guideline, experiment and publishing, and publishing reads post:
-	// those adapters resolve their service through c at call time, after every context
-	// below exists (see adapters_post.go).
+	// Post reads voice, guideline and experiment through adapters that resolve their
+	// service after every context below exists (see adapters_post.go).
 	c.post = post.NewService(
 		poststore.New(handle.Writer, handle.Reader),
 		p.bucket,
@@ -188,12 +184,8 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 			AnswerLabelMax: cfg.TemplateAskLabelMaxChars, AnswerValueMax: cfg.TemplateAskValueMaxChars,
 		},
 		post.Deps{
-			Jobs:   postJobFinder{queue: c.jobs},
-			Voices: postVoices{app: c},
-			// The post context refuses to delete a post whose publication is still in
-			// flight; it learns that only through this adapter, never by importing
-			// internal/publishing.
-			LivePublish:   postPublications{app: c},
+			Jobs:          postJobFinder{queue: c.jobs},
+			Voices:        postVoices{app: c},
 			Experiments:   postExperiments{app: c},
 			ContentPurger: postExperiments{app: c},
 			// Deleting a post drops the link its candidates named and nothing else.
@@ -201,16 +193,6 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 			// Deleting a post also drops the source links its memories named, and takes a
 			// memory with it only when that post held the last one (MEM-17).
 			MemoryLinks: postMemoryLinks{app: c},
-		},
-	)
-	c.publishing = publishing.NewService(
-		publishingstore.New(handle.Writer, handle.Reader),
-		publishingPosts{service: c.post},
-		p.bucket,
-		publishing.Config{
-			PairingTTL: cfg.PublishPairingTTL, MaxPendingPairings: cfg.PublishMaxPendingPairings,
-			LeaseTTL: cfg.PublishLeaseTTL, AssetURLTTL: cfg.PublishAssetURLTTL,
-			AgentHeartbeatInterval: cfg.PublishAgentHeartbeatInterval,
 		},
 	)
 	c.clipStore = clipstore.New(handle.Writer, handle.Reader)

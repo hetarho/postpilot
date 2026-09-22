@@ -13,7 +13,6 @@ func testDeps() Deps {
 		ContentPurger:  &recordingContentPurger{},
 		CandidateLinks: neutralDetacher{},
 		MemoryLinks:    neutralDetacher{},
-		LivePublish:    &fakeLivePublish{},
 	}
 }
 

@@ -19,7 +19,7 @@ func TestMigration0027RollsBackPurchasedLotsToBonus(t *testing.T) {
 	}
 	defer handle.Close()
 	ctx := context.Background()
-	if err := Migrate(ctx, handle.Writer); err != nil {
+	if err := migrateBeforePublishingRemoval(ctx, handle.Writer); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
 
