@@ -153,12 +153,25 @@ describe('template-defined project inputs', () => {
     await user.click(screen.getByRole('button', { name: '메뉴 추가' }))
     fireEvent.change(screen.getAllByLabelText('메뉴 이름')[0], { target: { value: '파스타' } })
     fireEvent.change(screen.getAllByLabelText('메뉴 이름')[1], { target: { value: '피자' } })
+    // Let the autosave those edits started land before pressing anything. It re-seeds the form
+    // from its own answer, which replaces these rows' nodes; a click captured before that
+    // lands on a node React has already dropped, and the removal silently never happens.
+    await waitFor(() => expect(writes.length).toBeGreaterThan(0))
+    const beforeRemoval = writes.length
     const secondId = screen.getAllByLabelText('메뉴 이름')[1].id
     await user.click(screen.getByRole('button', { name: '메뉴 1 삭제' }))
-    expect(screen.getByLabelText('메뉴 이름')).toHaveValue('피자')
-    expect(screen.getByLabelText('메뉴 이름').id).toBe(secondId)
-    expect(screen.getByLabelText('가격')).toHaveValue('')
-    await waitFor(() => expect(writes.length).toBeGreaterThan(0), { timeout: 4000 })
+    // Asserted together on the state the form settles into, rather than one line at a time:
+    // a save that was already on its way re-seeds the fields from the answer it gets, so the
+    // removed row can flash back for a frame before the newer draft wins.
+    await waitFor(() => {
+      const names = screen.getAllByLabelText('메뉴 이름')
+      expect(names).toHaveLength(1)
+      expect(names[0]).toHaveValue('피자')
+      expect(names[0].id).toBe(secondId)
+      expect(screen.getByLabelText('가격')).toHaveValue('')
+    })
+    // The removal's own save, not the edit's: the edit already wrote one before the click.
+    await waitFor(() => expect(writes.length).toBeGreaterThan(beforeRemoval))
     expect(writes.at(-1)?.compositionInputs?.items.menu).toEqual([
       { id: expect.any(String), values: { name: '피자' } },
     ])

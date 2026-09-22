@@ -74,7 +74,11 @@ export default defineConfig(({ mode }) => {
       // fake transport, so a run is CPU-bound and vitest's 5s default starts expiring on a busy
       // machine — in whichever files happen to be scheduled together, not in a failing one. The
       // waits inside the tests are `findBy`/`waitFor`, which resolve as soon as the app does.
-      testTimeout: 20_000,
+      //
+      // It stays above the 15s testing-library deadline in `test/setup.ts` so that a wait which
+      // never resolves is reported as the query it was, naming the element it wanted, rather
+      // than as a test that ran out of time.
+      testTimeout: 30_000,
     },
   }
 })

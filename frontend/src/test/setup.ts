@@ -4,12 +4,18 @@ import { initializeI18n } from '@/app/providers/i18n'
 
 initializeI18n('ko')
 
-// The suite runs 70+ files in parallel, so a page-level `findBy*` can exceed testing-library's
+// The suite runs 290 files in parallel, so a page-level `findBy*` can exceed testing-library's
 // 1s default from scheduling pressure alone rather than from anything being wrong — PostsPage's
 // first render did, on roughly half of full-suite runs, long before this line existed. Only the
 // deadline moves; every assertion stays exactly as strict, and a genuinely broken query still
 // fails, just later.
-configure({ asyncUtilTimeout: 5_000 })
+//
+// 5s was this line's first value and stopped being enough as the suite grew: the clip pages,
+// which mount the heaviest route tree the product has, expired it in whichever files happened
+// to be scheduled beside them. The deadline sits under `testTimeout` with room to spare, so a
+// wait that genuinely never resolves is still reported as itself rather than as the test
+// running out of time.
+configure({ asyncUtilTimeout: 15_000 })
 
 // jsdom has no layout engine, so every router navigation would otherwise log
 // "Not implemented: Window's scrollTo()" and bury the real test output.

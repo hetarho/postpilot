@@ -17,7 +17,7 @@
 ## ssot
 | id | rev | tasked | pending | [?] |
 |---|---|---|---|---|
-| ARCH | 8 | 8 | - | 0 |
+| ARCH | 9 | 9 | - | 0 |
 | AUTH | 7 | 7 | - | 0 |
 | QUOTA | 19 | 19 | - | 0 |
 | POST | 9 | 9 | - | 0 |
@@ -55,6 +55,14 @@
 - create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 - automatic publishing retirement implementation and verification are complete; deployed-environment rollout receipts remain operationally pending
 ## log
+- 260922 T320 done; the backend gate carries a 30m bound and now reports per-package results (gate)
+- 260922 found with T320: internal/clip/store fails TestTheSoundSettingDoesNotInvalidateAnInterruptedCandidate in a package run and passes alone; it was invisible while the package only reported a timeout, and needs its own task
+- 260922 T320 claimed (gate)
+- 260922 create-task ARCH complete; T320 created from r9
+- 260922 update-ssot ARCH complete; ARCH r9 gives the backend gate a 30m bound because cmd/api (1018s) and internal/clip/store (828s) pass the Go default on their own; create-task pending
+- 260922 update-ssot ARCH start; the backend verify command expires on Go's per-package default
+- 260922 Jev applicability research complete; recommend an offline Korean draft-grounding evaluation first, clip candidate scoring second; official docs and live OpenRouter catalog verified, decisions excluded from current modality query; no inference calls or product/spec decisions changed
+- 260922 Jev applicability research start; verify official capabilities against current Postpilot implementation
 - 260922 ARCH r8; dev-only fixture tooling placement and its production-image exclusion recorded, implemented ahead of the record in 63f41404 so the delta is already consumed and owes no task
 - 260922 obsolete T008 and T177 task records removed; publishing retirement superseded the live smoke and the owner cancelled the remaining manual clip-viewing follow-up
 - 260922 T279 done; surviving BlockType, ModelPurpose and language mirrors are generated-enum pinned, shared transport conversion is centralized, and retirement absence remains enforced (enm)
@@ -67,10 +75,3 @@
 - 260922 create-task MODEL GEN complete; T319 created from r16/r8
 - 260922 create-task MODEL GEN start; r16/r8 delta
 - 260922 update-ssot MODEL GEN complete; MODEL r16 adds MODEL-66 and GEN r8 amends GEN-19: a lab comparison keeps its observation in the snapshot and writes nothing to the post; create-task pending
-- 260922 defect found: a lab write comparison persisted its preparing observation onto the source post whatever its status, so running one on a finalized post changed it; MODEL-66 and GEN-19 now forbid it
-- 260922 update-ssot MODEL GEN start; a lab comparison must not write to its source post at start
-- 260922 T318 claimed (pr)
-- 260922 create-task MODEL complete; T318 created from r15
-- 260922 create-task MODEL start; r15 delta
-- 260922 update-ssot MODEL complete; MODEL r15 adds MODEL-65, the A/B pair saves as it is chosen; create-task pending
-- 260922 update-ssot MODEL start; the A/B pair saves as it is chosen

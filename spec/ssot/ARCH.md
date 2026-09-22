@@ -1,5 +1,5 @@
 # ARCH postpilot architecture
-> r8 | Where code goes, which way dependencies point, and the gates every task must pass. Supersedes spec/legacy/ARCHITECTURE.md, legacy 00.overview.md §3, PRD.md §6, and the retired be-architecture / fe-architecture / library-setup skills.
+> r9 | Where code goes, which way dependencies point, and the gates every task must pass. Supersedes spec/legacy/ARCHITECTURE.md, legacy 00.overview.md §3, PRD.md §6, and the retired be-architecture / fe-architecture / library-setup skills.
 
 ## decisions
 - ARCH-1 [o] product: a paid product anyone may sign up for (→AUTH-1, →BILL) — photos + notes → a blog draft in the user's own voice → per-platform copy export for manual posting; ko/en UI. Behavior lives in the domain SSOTs; root PRD.md is the historical v1.4 brief and ssot/ wins on conflict
@@ -27,7 +27,7 @@
 - ARCH-23 [o] auth mechanics: self-signup with the email as the login id and verification before the first session, Google sign-in, and the operator CLI beside it (`cmd/adduser`, or `api adduser` in the container); argon2id, HttpOnly cookie session; the session token never appears in a body, log, or URL; authenticated handlers read the actor from the interceptor-set context, never from the payload; every RPC except `/health` is 401 without a session (behavior in AUTH)
 - ARCH-24 [o] tests are mandatory for every task: FE vitest (jsdom + Testing Library) beside the code, BE `go test` beside the code (agent too while its retirement code still exists); a task's acceptance names the tests that pin it
 - ARCH-25 [o] verify FE: `pnpm --filter ./frontend test` · `pnpm lint` · `pnpm lint:fsd` · `pnpm lint:style:probe && pnpm lint:style` · `pnpm build:web`
-- ARCH-26 [o] verify BE: `cd backend && test -z "$(gofmt -l .)" && go vet ./... && go build ./... && go test ./...`
+- ARCH-26 [o] verify BE: `cd backend && test -z "$(gofmt -l .)" && go vet ./... && go build ./... && go test -timeout 30m ./...` ← two packages run real SQLite and the whole boot sequence and pass Go's ten-minute per-package default on their own, so the documented gate reported a clock rather than a result; the flag bounds a hang without failing work that is merely long
 - ARCH-27 [o] verify the companion only during retirement while its module exists: `if [ -d agent ]; then (cd agent && test -z "$(gofmt -l .)" && go vet ./... && go build ./... && go test ./... && sh -n packaging/install.sh packaging/uninstall.sh); fi`; after removal, ARCH-43 absence checks replace the Mac CI job
 - ARCH-28 [o] verify generated code (buf and sqlc run through Docker): `pnpm gen:proto && git diff --exit-code -- backend/internal/gen frontend/src/shared/api/gen` · `pnpm gen:sql && git diff --exit-code -- backend`
 - ARCH-29 [o] format: `pnpm --filter ./frontend format` (Prettier; `dist/` and `shared/api/gen` are ignored) · `cd backend && gofmt -w .`
@@ -57,6 +57,7 @@
 - dev ports: web 2564, api 7678 (compose maps 7678 → 8080; containers use 8080)
 
 ## chg
+- r9 260922 ARCH-26✎ `go test ./...`→`go test -timeout 30m ./...`, which the two long packages need to report a result at all
 - r8 260922 ARCH-42✎ `pnpm dev` a concurrently one-liner→a Node launcher whose database-writing flags run with the api stopped · ARCH-44+ dev-only tooling sits outside the context list, reaches contexts through consumer-owned ports, ships no destructive command in the production image, and leaves installation-wide curation standing
 - r7 260922 ARCH-1✎ ARCH-2✎ ARCH-3✎ ARCH-5✎ ARCH-12- ARCH-24✎ ARCH-27✎ ARCH-28✎ ARCH-29✎ ARCH-31✎ ARCH-34✎ ARCH-41✎ ARCH-43+ paired-companion product/module/context/invariant→manual export without platform execution; permanent agent gates→transition-only gates and final absence/upgrade checks
 - r6 260921 ARCH-10✎ migrations merely ran at boot→each boot reads the stored version and applies only pending embedded migrations with no separate command · ARCH-42+ local dev uses the production boot sequence and its documented overrides must pass bounded context validation
