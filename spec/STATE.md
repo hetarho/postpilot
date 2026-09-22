@@ -50,14 +50,12 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T008 | Superseded by PUB r6; original live-smoke claim retained, do not resume | PUB MKT | T007 T046 | doing@260910.e2e |
-| T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
 
 ## next
-- automatic publishing retirement implementation is complete; production rollout receipts remain pending in T313; T008 must not resume
-- T177 remains blocked on owner viewing answers over real recorded footage
 - create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
+- automatic publishing retirement implementation and verification are complete; deployed-environment rollout receipts remain operationally pending
 ## log
+- 260922 obsolete T008 and T177 task records removed; publishing retirement superseded the live smoke and the owner cancelled the remaining manual clip-viewing follow-up
 - 260922 T279 done; surviving BlockType, ModelPurpose and language mirrors are generated-enum pinned, shared transport conversion is centralized, and retirement absence remains enforced (enm)
 - 260922 T279 claimed (enm)
 - 260922 T313 done; final absence, fresh/upgrade preservation, manual export and pending rollout evidence verified; no Naver request issued (ret)
@@ -77,4 +75,3 @@
 - 260922 update-ssot MODEL start; the A/B pair saves as it is chosen
 - 260922 T284 claimed (ret)
 - 260922 T283 done; publishing backend/runtime removed, migration 0076 enforces a clean checkpoint before dropping five tables, and ARCH-26 plus SQL generation pass; production rollout remains pending (ret)
-- 260922 T315 T316 T317 done; windowed me/all leaderboards, the verdict badge sheet and per-row badge tallies. Committed as one change: the three share every backend file they touch. Every package and gate passes on its own; the backend's whole-suite migration failures and the frontend's clip/plans failures reproduce only under load (brd bdg tly)
