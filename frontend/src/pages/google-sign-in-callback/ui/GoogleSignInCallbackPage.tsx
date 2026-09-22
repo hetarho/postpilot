@@ -46,6 +46,7 @@ export function GoogleSignInCallbackPage() {
     mutation.mutate(
       {
         code: search.code,
+        rememberMe: attempt.rememberMe,
         codeVerifier: attempt.verifier,
         redirectUri: `${window.location.origin}/login/google/callback`,
       },

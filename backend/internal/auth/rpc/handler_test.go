@@ -2,7 +2,9 @@ package rpc_test
 
 import (
 	"context"
+	"crypto/sha256"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -75,71 +77,88 @@ func newServer(t *testing.T) (postpilotv1connect.AuthServiceClient, *httptest.Se
 // TestLoginSetCookieAttributes is plan 01 AC7 + AC10: the exact attribute set, and a
 // Max-Age that matches the session lifetime the server stamped into the row.
 func TestLoginSetCookieAttributes(t *testing.T) {
-	client, _ := newServer(t)
+	for _, rememberMe := range []bool{false, true} {
+		t.Run(fmt.Sprint(rememberMe), func(t *testing.T) {
+			client, _ := newServer(t)
 
-	res, err := client.Login(context.Background(), connect.NewRequest(&postpilotv1.LoginRequest{
-		LoginId:  "alice",
-		Password: "s3cret",
-	}))
-	if err != nil {
-		t.Fatalf("Login: %v", err)
-	}
+			res, err := client.Login(context.Background(), connect.NewRequest(&postpilotv1.LoginRequest{
+				LoginId:    "alice",
+				Password:   "s3cret",
+				RememberMe: rememberMe,
+			}))
+			if err != nil {
+				t.Fatalf("Login: %v", err)
+			}
 
-	setCookie := res.Header().Get("Set-Cookie")
-	token := sessionToken(t, setCookie)
+			setCookie := res.Header().Get("Set-Cookie")
+			token := sessionToken(t, setCookie)
 
-	if got, want := setCookie, "pp_session="+token+"; Path=/; Max-Age=2592000; HttpOnly; Secure; SameSite=Lax"; got != want {
-		t.Errorf("Set-Cookie mismatch\n got: %s\nwant: %s", got, want)
-	}
-	if strings.Contains(strings.ToLower(setCookie), "domain") {
-		t.Error("the cookie carries a Domain attribute — it must stay host-only")
-	}
+			persistence := ""
+			if rememberMe {
+				persistence = "; Max-Age=2592000"
+			}
+			if got, want := setCookie, "pp_session="+token+"; Path=/"+persistence+"; HttpOnly; Secure; SameSite=Lax"; got != want {
+				t.Errorf("Set-Cookie mismatch\n got: %s\nwant: %s", got, want)
+			}
+			if strings.Contains(strings.ToLower(setCookie), "domain") {
+				t.Error("the cookie carries a Domain attribute — it must stay host-only")
+			}
 
-	// Plan 01 AC4 (server half): the token is in the header and nowhere else.
-	if res.Msg.GetUser().GetId() != "alice" {
-		t.Errorf("user id = %q, want alice", res.Msg.GetUser().GetId())
-	}
-	if got := res.Msg.GetUser().GetEmail(); got != "alice@example.com" {
-		t.Errorf("user email = %q, want alice@example.com", got)
-	}
-	if !res.Msg.GetUser().GetEmailVerified() {
-		t.Error("user email_verified = false, want true")
-	}
-	if !res.Msg.GetUser().GetHasPassword() {
-		t.Error("user has_password = false, want true")
-	}
-	if strings.Contains(res.Msg.String(), token) {
-		t.Errorf("the session token leaked into the response body: %s", res.Msg.String())
+			// Plan 01 AC4 (server half): the token is in the header and nowhere else.
+			if res.Msg.GetUser().GetId() != "alice" {
+				t.Errorf("user id = %q, want alice", res.Msg.GetUser().GetId())
+			}
+			if got := res.Msg.GetUser().GetEmail(); got != "alice@example.com" {
+				t.Errorf("user email = %q, want alice@example.com", got)
+			}
+			if !res.Msg.GetUser().GetEmailVerified() {
+				t.Error("user email_verified = false, want true")
+			}
+			if !res.Msg.GetUser().GetHasPassword() {
+				t.Error("user has_password = false, want true")
+			}
+			if strings.Contains(res.Msg.String(), token) {
+				t.Errorf("the session token leaked into the response body: %s", res.Msg.String())
+			}
+		})
 	}
 }
 
 func TestGoogleSignInIsPublicAndSetsTheLoginCookie(t *testing.T) {
-	store := newStore(t)
-	svc := auth.NewService(store, sessionTTL, auth.Deps{Mailer: discardMailer{}, Google: googleIdentity{claims: auth.GoogleClaims{
-		Subject: "google-1", Email: "person@example.com", EmailVerified: true,
-	}}})
-	mux := http.NewServeMux()
-	mux.Handle(postpilotv1connect.NewAuthServiceHandler(
-		authrpc.NewHandler(svc, sessionTTL),
-		connect.WithInterceptors(authrpc.NewInterceptor(svc, auth.NewThrottle(), "")),
-	))
-	server := httptest.NewServer(mux)
-	defer server.Close()
-	client := postpilotv1connect.NewAuthServiceClient(server.Client(), server.URL)
+	for _, rememberMe := range []bool{false, true} {
+		t.Run(fmt.Sprint(rememberMe), func(t *testing.T) {
+			store := newStore(t)
+			svc := auth.NewService(store, sessionTTL, auth.Deps{Mailer: discardMailer{}, Google: googleIdentity{claims: auth.GoogleClaims{
+				Subject: "google-1", Email: "person@example.com", EmailVerified: true,
+			}}})
+			mux := http.NewServeMux()
+			mux.Handle(postpilotv1connect.NewAuthServiceHandler(
+				authrpc.NewHandler(svc, sessionTTL),
+				connect.WithInterceptors(authrpc.NewInterceptor(svc, auth.NewThrottle(), "")),
+			))
+			server := httptest.NewServer(mux)
+			defer server.Close()
+			client := postpilotv1connect.NewAuthServiceClient(server.Client(), server.URL)
 
-	res, err := client.SignInWithGoogle(context.Background(), connect.NewRequest(&postpilotv1.SignInWithGoogleRequest{
-		Code: "code", CodeVerifier: "verifier", RedirectUri: "https://postpilot.example.com/login/google/callback",
-	}))
-	if err != nil {
-		t.Fatalf("SignInWithGoogle: %v", err)
-	}
-	token := sessionToken(t, res.Header().Get("Set-Cookie"))
-	wantCookie := "pp_session=" + token + "; Path=/; Max-Age=2592000; HttpOnly; Secure; SameSite=Lax"
-	if got := res.Header().Get("Set-Cookie"); got != wantCookie {
-		t.Fatalf("Set-Cookie = %q, want %q", got, wantCookie)
-	}
-	if res.Msg.GetUser().GetId() != "person@example.com" || res.Msg.GetPlan() != postpilotv1.Plan_PLAN_FREE {
-		t.Fatalf("response = %v", res.Msg)
+			res, err := client.SignInWithGoogle(context.Background(), connect.NewRequest(&postpilotv1.SignInWithGoogleRequest{
+				RememberMe: rememberMe, Code: "code", CodeVerifier: "verifier", RedirectUri: "https://postpilot.example.com/login/google/callback",
+			}))
+			if err != nil {
+				t.Fatalf("SignInWithGoogle: %v", err)
+			}
+			token := sessionToken(t, res.Header().Get("Set-Cookie"))
+			persistence := ""
+			if rememberMe {
+				persistence = "; Max-Age=2592000"
+			}
+			wantCookie := "pp_session=" + token + "; Path=/" + persistence + "; HttpOnly; Secure; SameSite=Lax"
+			if got := res.Header().Get("Set-Cookie"); got != wantCookie {
+				t.Fatalf("Set-Cookie = %q, want %q", got, wantCookie)
+			}
+			if res.Msg.GetUser().GetId() != "person@example.com" || res.Msg.GetPlan() != postpilotv1.Plan_PLAN_FREE {
+				t.Fatalf("response = %v", res.Msg)
+			}
+		})
 	}
 }
 
@@ -661,4 +680,64 @@ func authAppErrorDetail(t *testing.T, err error) *postpilotv1.AppErrorDetail {
 		t.Fatalf("detail type = %T", value)
 	}
 	return detail
+}
+
+func TestLoginPersistenceUsesConfiguredTTLAndBothModesAreRevocable(t *testing.T) {
+	for _, rememberMe := range []bool{false, true} {
+		t.Run(fmt.Sprint(rememberMe), func(t *testing.T) {
+			ctx := context.Background()
+			store := newStore(t)
+			ttl := 2 * time.Hour
+			svc := auth.NewService(store, ttl, auth.Deps{Mailer: discardMailer{}})
+			if err := svc.CreateUser(ctx, "base", "seed-only", plan.Basic); err != nil {
+				t.Fatal(err)
+			}
+			mux := http.NewServeMux()
+			mux.Handle(postpilotv1connect.NewAuthServiceHandler(authrpc.NewHandler(svc, ttl), connect.WithInterceptors(authrpc.NewInterceptor(svc, auth.NewThrottle(), ""))))
+			server := httptest.NewServer(mux)
+			defer server.Close()
+			client := postpilotv1connect.NewAuthServiceClient(server.Client(), server.URL)
+			res, err := client.Login(ctx, connect.NewRequest(&postpilotv1.LoginRequest{LoginId: "base", Password: "seed-only", RememberMe: rememberMe}))
+			if err != nil {
+				t.Fatal(err)
+			}
+			cookies := (&http.Response{Header: res.Header()}).Cookies()
+			if len(cookies) != 1 {
+				t.Fatalf("cookie count = %d", len(cookies))
+			}
+			cookie := cookies[0]
+			maxAge := 0
+			if rememberMe {
+				maxAge = int(ttl.Seconds())
+			}
+			if cookie.MaxAge != maxAge || !cookie.Expires.IsZero() {
+				t.Fatal("cookie persistence differs from selection")
+			}
+			digest := sha256.Sum256([]byte(cookie.Value))
+			session, err := store.GetSession(ctx, fmt.Sprintf("%x", digest))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if delta := time.Until(session.ExpiresAt); delta < ttl-time.Minute || delta > ttl {
+				t.Fatalf("session TTL = %v", delta)
+			}
+			probe := connect.NewRequest(&postpilotv1.GetMeRequest{})
+			probe.Header().Set("Cookie", cookie.Name+"="+cookie.Value)
+			if _, err := client.GetMe(ctx, probe); err != nil {
+				t.Fatal(err)
+			}
+			logout := connect.NewRequest(&postpilotv1.LogoutRequest{})
+			logout.Header().Set("Cookie", cookie.Name+"="+cookie.Value)
+			out, err := client.Logout(ctx, logout)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(out.Header().Get("Set-Cookie"), "Max-Age=0") {
+				t.Fatal("logout did not clear cookie")
+			}
+			if _, err := client.GetMe(ctx, probe); connect.CodeOf(err) != connect.CodeUnauthenticated {
+				t.Fatalf("replayed cookie: %v", err)
+			}
+		})
+	}
 }

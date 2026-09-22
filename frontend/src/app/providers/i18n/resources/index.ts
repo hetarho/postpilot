@@ -1,3 +1,4 @@
+import { i18n as logInI18n } from '@/features/log-in/config/i18n'
 import type { I18nFragment } from '@/shared/lib'
 import { common as enCommon } from './en/common'
 import { auth as enAuth } from './en/auth'
@@ -121,6 +122,7 @@ export const RESOURCE_NAMESPACES = [
  *  This list is the one file a new slice with its own strings touches — a one-line import
  *  instead of an edit inside a 1,100-line namespace file (ARCH-16). */
 export const FRAGMENTS: readonly I18nFragment[] = [
+  logInI18n,
   extractMemoriesI18n,
   usePostMemoriesI18n,
   createMemoryI18n,
@@ -205,7 +207,7 @@ export const FRAGMENTS: readonly I18nFragment[] = [
 export const resources = {
   ko: {
     common: koCommon,
-    auth: koAuth,
+    auth: { ...koAuth, ...logInI18n.ko },
     nav: koNav,
     posts: {
       ...candidateComparisonI18n.ko,
@@ -309,7 +311,7 @@ export const resources = {
   },
   en: {
     common: enCommon,
-    auth: enAuth,
+    auth: { ...enAuth, ...logInI18n.en },
     nav: enNav,
     posts: {
       ...candidateComparisonI18n.en,

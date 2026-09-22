@@ -95,7 +95,7 @@ func (h *Handler) Login(ctx context.Context, req *connect.Request[postpilotv1.Lo
 	// response field. HttpOnly keeps it away from JavaScript (so an XSS cannot read
 	// it), Secure keeps it off plaintext HTTP, and no Domain attribute makes it
 	// host-only so sibling projects on the same registered domain never see it.
-	res.Header().Add("Set-Cookie", h.sessionCookie(rawToken, int(h.sessionTTL.Seconds())).String())
+	res.Header().Add("Set-Cookie", h.loginCookie(rawToken, req.Msg.GetRememberMe()).String())
 	return res, nil
 }
 
@@ -111,7 +111,7 @@ func (h *Handler) SignInWithGoogle(ctx context.Context, req *connect.Request[pos
 	res := connect.NewResponse(&postpilotv1.SignInWithGoogleResponse{
 		User: userToProto(user), Plan: planrpc.ToProto(user.Plan),
 	})
-	res.Header().Add("Set-Cookie", h.sessionCookie(rawToken, int(h.sessionTTL.Seconds())).String())
+	res.Header().Add("Set-Cookie", h.loginCookie(rawToken, req.Msg.GetRememberMe()).String())
 	return res, nil
 }
 
@@ -218,6 +218,14 @@ func googleSignInError(err error) error {
 		slog.Error("google sign-in failed", "err", err)
 		return rpcserver.NewAppError(connect.CodeInternal, "google sign-in failed", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
 	}
+}
+
+func (h *Handler) loginCookie(value string, rememberMe bool) *http.Cookie {
+	maxAge := 0
+	if rememberMe {
+		maxAge = int(h.sessionTTL.Seconds())
+	}
+	return h.sessionCookie(value, maxAge)
 }
 
 func (h *Handler) sessionCookie(value string, maxAge int) *http.Cookie {

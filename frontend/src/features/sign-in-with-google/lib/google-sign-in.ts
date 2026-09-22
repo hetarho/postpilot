@@ -5,6 +5,7 @@ export interface GoogleSignInAttempt {
   state: string
   verifier: string
   redirect: string
+  rememberMe: boolean
 }
 
 interface GoogleSignInEnvironment {
@@ -38,6 +39,7 @@ function randomBase64url(crypto: Crypto, length: number): string {
 /** Starts the browser-owned half of authorization code + PKCE. */
 export async function startGoogleSignIn(
   redirect?: string,
+  rememberMe = false,
   environment: GoogleSignInEnvironment = browserEnvironment(),
 ): Promise<void> {
   if (!environment.clientID) throw new Error('Google sign-in is disabled')
@@ -49,7 +51,7 @@ export async function startGoogleSignIn(
     new TextEncoder().encode(verifier),
   )
   const challenge = base64url(new Uint8Array(digest))
-  const attempt: GoogleSignInAttempt = { state, verifier, redirect: redirect ?? '' }
+  const attempt: GoogleSignInAttempt = { state, verifier, redirect: redirect ?? '', rememberMe }
   try {
     environment.storage.setItem(GOOGLE_SIGN_IN_STORAGE_KEY, JSON.stringify(attempt))
   } catch (error) {
@@ -82,7 +84,12 @@ export function readGoogleSignInAttempt(storage: Storage = window.sessionStorage
     ) {
       return undefined
     }
-    return value as GoogleSignInAttempt
+    return {
+      state: value.state,
+      verifier: value.verifier,
+      redirect: value.redirect,
+      rememberMe: value.rememberMe === true,
+    }
   } catch {
     return undefined
   }

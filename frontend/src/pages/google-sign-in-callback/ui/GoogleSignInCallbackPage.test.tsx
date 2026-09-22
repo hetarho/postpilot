@@ -3,10 +3,10 @@ import { screen, waitFor } from '@testing-library/react'
 import { GOOGLE_SIGN_IN_STORAGE_KEY } from '@/features/sign-in-with-google'
 import { renderAppAt } from '@/test/app'
 
-function storeAttempt(redirect = '/posts') {
+function storeAttempt(redirect = '/posts', rememberMe?: boolean) {
   sessionStorage.setItem(
     GOOGLE_SIGN_IN_STORAGE_KEY,
-    JSON.stringify({ state: 'expected-state', verifier: 'verifier', redirect }),
+    JSON.stringify({ state: 'expected-state', verifier: 'verifier', redirect, rememberMe }),
   )
 }
 
@@ -53,4 +53,17 @@ describe('GoogleSignInCallbackPage', () => {
     expect(calls.filter((call) => call === 'GetMe')).toHaveLength(0)
     expect(sessionStorage.getItem(GOOGLE_SIGN_IN_STORAGE_KEY)).toBeNull()
   })
+  it.each([undefined, false, true])(
+    'passes the stored automatic-login choice %s to the exchange',
+    async (rememberMe) => {
+      const choices: boolean[] = []
+      storeAttempt('/posts', rememberMe)
+      const { router } = renderAppAt('/login/google/callback?code=code&state=expected-state', {
+        onGoogleSignIn: (request) => choices.push(request.rememberMe),
+      })
+      await waitFor(() => expect(router.state.location.pathname).toBe('/posts'))
+      expect(choices).toEqual([rememberMe === true])
+      expect(sessionStorage.getItem(GOOGLE_SIGN_IN_STORAGE_KEY)).toBeNull()
+    },
+  )
 })

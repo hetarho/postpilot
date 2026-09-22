@@ -63,10 +63,6 @@ func TestRunWritesEveryFixtureAccount(t *testing.T) {
 		if created.password != devseed.Password {
 			t.Errorf("account %q password %q, want the shared fixture password", fixture.LoginID, created.password)
 		}
-		// Unverified accounts cannot reach the screens the seed exists to fill.
-		if got := h.accounts.verified[fixture.LoginID]; got != fixture.Email() {
-			t.Errorf("account %q verified as %q, want %q", fixture.LoginID, got, fixture.Email())
-		}
 		if h.credits.opened[fixture.LoginID] != fixture.Plan {
 			t.Errorf("account %q got no monthly grant for its plan", fixture.LoginID)
 		}
@@ -271,13 +267,13 @@ func splitRepeat(title string) (string, int) {
 
 func TestRunReportsWhichAccountItFailedOn(t *testing.T) {
 	h := newHarness()
-	h.posts.failOn = "seed-pro"
+	h.posts.failOn = "pro"
 
 	_, err := devseed.Run(context.Background(), h.deps())
 	if err == nil {
 		t.Fatal("Run succeeded although a post write failed")
 	}
-	if !strings.Contains(err.Error(), "seed-pro") {
+	if !strings.Contains(err.Error(), "pro") {
 		t.Fatalf("error %q does not name the account it stopped on", err)
 	}
 }
@@ -342,7 +338,7 @@ type harness struct {
 func newHarness() *harness {
 	h := &harness{}
 	record := func(step string) { h.order = append(h.order, step) }
-	h.accounts = &fakeAccounts{record: record, created: map[string]createdAccount{}, verified: map[string]string{}}
+	h.accounts = &fakeAccounts{record: record, created: map[string]createdAccount{}}
 	h.voices = &fakeVoices{record: record, ensured: map[string]int{}}
 	h.credits = &fakeCredits{record: record, opened: map[string]plan.Plan{}}
 	h.posts = &fakePosts{record: record, byUser: map[string][]devseed.Article{}}
@@ -371,7 +367,6 @@ type fakeAccounts struct {
 	existing int64
 	deleted  bool
 	created  map[string]createdAccount
-	verified map[string]string
 }
 
 func (f *fakeAccounts) DeleteAll(context.Context) (int64, error) {
@@ -386,12 +381,6 @@ func (f *fakeAccounts) Create(_ context.Context, loginID, password string, tier 
 		return fmt.Errorf("duplicate account %q", loginID)
 	}
 	f.created[loginID] = createdAccount{password: password, tier: tier}
-	return nil
-}
-
-func (f *fakeAccounts) VerifyEmail(_ context.Context, loginID, email string, _ time.Time) error {
-	f.record("verify:" + loginID)
-	f.verified[loginID] = email
 	return nil
 }
 

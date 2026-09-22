@@ -54,6 +54,8 @@ export interface FakeAuthOptions {
   }
   /** Makes Login answer 401, like wrong credentials. */
   loginFails?: boolean
+  onLogin?: (request: { loginId: string; password: string; rememberMe: boolean }) => void
+  onGoogleSignIn?: (request: { rememberMe: boolean }) => void
   /** Makes Logout fail, like an API that went away mid-session. */
   logoutFails?: boolean
   signupFails?: boolean
@@ -137,6 +139,7 @@ export function createFakeAuthBackend(options: FakeAuthOptions = {}): FakeAuthBa
     })
     rpc(AuthService.method.login, (req) => {
       calls?.push('Login')
+      options.onLogin?.(req)
       if (tooManyAttempts === 'login') {
         throw connectAppError('TOO_MANY_ATTEMPTS', Code.ResourceExhausted, {
           retry_at: '2026-09-30T15:00:00Z',
@@ -160,7 +163,8 @@ export function createFakeAuthBackend(options: FakeAuthOptions = {}): FakeAuthBa
         plan: session.plan ?? ProtoPlan.MASTER,
       })
     })
-    rpc(AuthService.method.signInWithGoogle, () => {
+    rpc(AuthService.method.signInWithGoogle, (req) => {
+      options.onGoogleSignIn?.(req)
       calls?.push('SignInWithGoogle')
       if (tooManyAttempts === 'google') {
         throw connectAppError('TOO_MANY_ATTEMPTS', Code.ResourceExhausted, {

@@ -438,9 +438,11 @@ func (*ResetPasswordResponse) Descriptor() ([]byte, []int) {
 }
 
 type LoginRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	LoginId       string                 `protobuf:"bytes,1,opt,name=login_id,json=loginId,proto3" json:"login_id,omitempty"`
-	Password      string                 `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	LoginId  string                 `protobuf:"bytes,1,opt,name=login_id,json=loginId,proto3" json:"login_id,omitempty"`
+	Password string                 `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
+	// Keep the cookie across browser sessions; absent/false means a session cookie.
+	RememberMe    bool `protobuf:"varint,3,opt,name=remember_me,json=rememberMe,proto3" json:"remember_me,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -487,6 +489,13 @@ func (x *LoginRequest) GetPassword() string {
 		return x.Password
 	}
 	return ""
+}
+
+func (x *LoginRequest) GetRememberMe() bool {
+	if x != nil {
+		return x.RememberMe
+	}
+	return false
 }
 
 type LoginResponse struct {
@@ -548,6 +557,7 @@ type SignInWithGoogleRequest struct {
 	Code          string                 `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
 	CodeVerifier  string                 `protobuf:"bytes,2,opt,name=code_verifier,json=codeVerifier,proto3" json:"code_verifier,omitempty"`
 	RedirectUri   string                 `protobuf:"bytes,3,opt,name=redirect_uri,json=redirectUri,proto3" json:"redirect_uri,omitempty"`
+	RememberMe    bool                   `protobuf:"varint,4,opt,name=remember_me,json=rememberMe,proto3" json:"remember_me,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -601,6 +611,13 @@ func (x *SignInWithGoogleRequest) GetRedirectUri() string {
 		return x.RedirectUri
 	}
 	return ""
+}
+
+func (x *SignInWithGoogleRequest) GetRememberMe() bool {
+	if x != nil {
+		return x.RememberMe
+	}
+	return false
 }
 
 type SignInWithGoogleResponse struct {
@@ -1076,17 +1093,21 @@ const file_postpilot_v1_auth_proto_rawDesc = "" +
 	"\x14ResetPasswordRequest\x12\x14\n" +
 	"\x05token\x18\x01 \x01(\tR\x05token\x12!\n" +
 	"\fnew_password\x18\x02 \x01(\tR\vnewPassword\"\x17\n" +
-	"\x15ResetPasswordResponse\"E\n" +
+	"\x15ResetPasswordResponse\"f\n" +
 	"\fLoginRequest\x12\x19\n" +
 	"\blogin_id\x18\x01 \x01(\tR\aloginId\x12\x1a\n" +
-	"\bpassword\x18\x02 \x01(\tR\bpassword\"_\n" +
+	"\bpassword\x18\x02 \x01(\tR\bpassword\x12\x1f\n" +
+	"\vremember_me\x18\x03 \x01(\bR\n" +
+	"rememberMe\"_\n" +
 	"\rLoginResponse\x12&\n" +
 	"\x04user\x18\x01 \x01(\v2\x12.postpilot.v1.UserR\x04user\x12&\n" +
-	"\x04plan\x18\x02 \x01(\x0e2\x12.postpilot.v1.PlanR\x04plan\"u\n" +
+	"\x04plan\x18\x02 \x01(\x0e2\x12.postpilot.v1.PlanR\x04plan\"\x96\x01\n" +
 	"\x17SignInWithGoogleRequest\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x12#\n" +
 	"\rcode_verifier\x18\x02 \x01(\tR\fcodeVerifier\x12!\n" +
-	"\fredirect_uri\x18\x03 \x01(\tR\vredirectUri\"j\n" +
+	"\fredirect_uri\x18\x03 \x01(\tR\vredirectUri\x12\x1f\n" +
+	"\vremember_me\x18\x04 \x01(\bR\n" +
+	"rememberMe\"j\n" +
 	"\x18SignInWithGoogleResponse\x12&\n" +
 	"\x04user\x18\x01 \x01(\v2\x12.postpilot.v1.UserR\x04user\x12&\n" +
 	"\x04plan\x18\x02 \x01(\x0e2\x12.postpilot.v1.PlanR\x04plan\"\x0f\n" +

@@ -18,7 +18,7 @@
 | id | rev | tasked | pending | [?] |
 |---|---|---|---|---|
 | ARCH | 9 | 9 | - | 0 |
-| AUTH | 7 | 7 | - | 0 |
+| AUTH | 8 | 8 | - | 0 |
 | QUOTA | 19 | 19 | - | 0 |
 | POST | 9 | 9 | - | 0 |
 | VOICE | 3 | 3 | - | 1 |
@@ -55,6 +55,12 @@
 - create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 - automatic publishing retirement implementation and verification are complete; deployed-environment rollout receipts remain operationally pending
 ## log
+- 260922 T321 done; short email-free seed ids and independent automatic-login/saved-id controls; 2328 FE tests, full BE gate, codegen and CI support checks pass (lgn)
+- 260922 T321 claimed (lgn)
+- 260922 create-task AUTH complete; T321 consumes AUTH r8
+- 260922 create-task AUTH start; AUTH r8 login convenience and development accounts
+- 260922 update-ssot AUTH complete; AUTH r8 records short email-free seed ids and independent automatic-login/save-id choices; no active tasks overlap
+- 260922 update-ssot AUTH start; short dev seed login ids, opt-in automatic login and saved login ids
 - 260922 T320 done; the backend gate carries a 30m bound and now reports per-package results (gate)
 - 260922 found with T320: internal/clip/store fails TestTheSoundSettingDoesNotInvalidateAnInterruptedCandidate in a package run and passes alone; it was invisible while the package only reported a timeout, and needs its own task
 - 260922 T320 claimed (gate)
@@ -69,9 +75,3 @@
 - 260922 T279 claimed (enm)
 - 260922 T313 done; final absence, fresh/upgrade preservation, manual export and pending rollout evidence verified; no Naver request issued (ret)
 - 260922 T284 done; companion module, publishing contracts and build hooks removed; retired enum identities reserved and two-runtime generation/build gates pass (ret)
-- 260922 T319 done; a lab write comparison keeps its preparing observation in the snapshot, so a comparison on a finalized post changes nothing; every backend package passes, cmd/api at 690s needing a raised limit (obs)
-- 260922 T318 done; the A/B pair writes as it is chosen, with no save action; the pair form, model, generation and editor suites and every frontend gate pass (pr)
-- 260922 T319 claimed (obs)
-- 260922 create-task MODEL GEN complete; T319 created from r16/r8
-- 260922 create-task MODEL GEN start; r16/r8 delta
-- 260922 update-ssot MODEL GEN complete; MODEL r16 adds MODEL-66 and GEN r8 amends GEN-19: a lab comparison keeps its observation in the snapshot and writes nothing to the post; create-task pending

@@ -13,11 +13,6 @@ import (
 // time, and a plausible-looking password invites being reused somewhere it matters.
 const Password = "seed-only"
 
-// emailDomain is reserved by RFC 2606 for exactly this: an address that is syntactically
-// real, so the verified-email screens have something to render, and that can never reach
-// an inbox if a dev stack is ever pointed at a live mailer by accident.
-const emailDomain = "postpilot.test"
-
 // Statuses a seeded article is written in. They are devseed's own spellings, mapped to the
 // post context's at the adapter — this package describes an installation, and importing
 // the drafting context's constants would make the fixture depend on its vocabulary.
@@ -40,10 +35,6 @@ type Account struct {
 	Drafts, Reviews, Finalized int
 }
 
-// Email is the account's verified address, derived rather than stored so an id and its
-// address can never drift apart.
-func (a Account) Email() string { return a.LoginID + "@" + emailDomain }
-
 // Posts is the account's total.
 func (a Account) Posts() int { return a.Drafts + a.Reviews + a.Finalized }
 
@@ -51,18 +42,18 @@ func (a Account) Posts() int { return a.Drafts + a.Reviews + a.Finalized }
 // worth differing in, the plan and how much work sits behind them.
 //
 // The spread is chosen so that every state a screen has to handle is reachable without
-// creating anything by hand. `seed-free` is empty, which is the state every new account
+// creating anything by hand. `free` is empty, which is the state every new account
 // opens in and the one most easily broken by a change that assumes at least one row.
-// `seed-basic` holds so few posts that a list, a count and a pagination control are all
-// trivially checkable by eye. `seed-master` holds enough that a long list, its scrolling
+// `base` holds so few posts that a list, a count and a pagination control are all
+// trivially checkable by eye. `master` holds enough that a long list, its scrolling
 // and its ordering are exercised, and it sits on the plan with no credit ceiling so the
 // generation screens can be driven without the balance running out mid-review.
 var Fixtures = []Account{
-	{LoginID: "seed-free", Plan: plan.Free, Drafts: 0, Reviews: 0, Finalized: 0},
-	{LoginID: "seed-basic", Plan: plan.Basic, Drafts: 2, Reviews: 1, Finalized: 0},
-	{LoginID: "seed-pro", Plan: plan.Pro, Drafts: 3, Reviews: 2, Finalized: 3},
-	{LoginID: "seed-max", Plan: plan.Max, Drafts: 4, Reviews: 3, Finalized: 7},
-	{LoginID: "seed-master", Plan: plan.Master, Drafts: 5, Reviews: 4, Finalized: 14},
+	{LoginID: "free", Plan: plan.Free, Drafts: 0, Reviews: 0, Finalized: 0},
+	{LoginID: "base", Plan: plan.Basic, Drafts: 2, Reviews: 1, Finalized: 0},
+	{LoginID: "pro", Plan: plan.Pro, Drafts: 3, Reviews: 2, Finalized: 3},
+	{LoginID: "max", Plan: plan.Max, Drafts: 4, Reviews: 3, Finalized: 7},
+	{LoginID: "master", Plan: plan.Master, Drafts: 5, Reviews: 4, Finalized: 14},
 }
 
 // Article is one seeded post, complete: what it was created as, and — unless it is a draft

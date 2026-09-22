@@ -93,8 +93,7 @@ func run(ctx context.Context) error {
 }
 
 // accounts adapts the auth context. Creation goes through the service because hashing the
-// password is its rule, while the wipe and the verified address are store operations with
-// no use-case above them.
+// password is its rule, while the wipe is a store operation with no use-case above it.
 type accounts struct {
 	svc   *auth.Service
 	store *authstore.Store
@@ -106,13 +105,6 @@ func (a accounts) DeleteAll(ctx context.Context) (int64, error) {
 
 func (a accounts) Create(ctx context.Context, loginID, password string, tier plan.Plan) error {
 	return a.svc.CreateUser(ctx, loginID, password, tier)
-}
-
-// VerifyEmail writes the address as already verified. It bypasses auth.RegisterEmail
-// deliberately: that use-case mails a link and waits, and there is no inbox in a dev stack
-// to open it from.
-func (a accounts) VerifyEmail(ctx context.Context, loginID, email string, at time.Time) error {
-	return a.store.SetEmail(ctx, loginID, email, &at)
 }
 
 // voices adapts the voice context. The service is built without a model port or a job queue

@@ -4,6 +4,7 @@ import {
   GOOGLE_SIGN_IN_STORAGE_KEY,
   type GoogleSignInAttempt,
   startGoogleSignIn,
+  readGoogleSignInAttempt,
 } from './google-sign-in'
 
 describe('startGoogleSignIn', () => {
@@ -11,7 +12,7 @@ describe('startGoogleSignIn', () => {
 
   it('stores per-tab state and sends the verifier SHA-256 as a base64url challenge', async () => {
     let destination = ''
-    await startGoogleSignIn('/posts/welcome', {
+    await startGoogleSignIn('/posts/welcome', true, {
       clientID: 'client-id',
       origin: 'https://postpilot.example.com',
       crypto: webcrypto as unknown as Crypto,
@@ -34,6 +35,7 @@ describe('startGoogleSignIn', () => {
     expect(Buffer.from(attempt.state, 'base64url')).toHaveLength(16)
     expect(Buffer.from(attempt.verifier, 'base64url')).toHaveLength(32)
     expect(attempt.redirect).toBe('/posts/welcome')
+    expect(attempt.rememberMe).toBe(true)
     expect(url.origin + url.pathname).toBe('https://accounts.google.com/o/oauth2/v2/auth')
     expect(Object.fromEntries(url.searchParams)).toEqual({
       client_id: 'client-id',
@@ -46,4 +48,17 @@ describe('startGoogleSignIn', () => {
       prompt: 'select_account',
     })
   })
+})
+
+describe('readGoogleSignInAttempt', () => {
+  it.each([undefined, false, true, 'true', 1])(
+    'requires an explicit boolean choice: %s',
+    (rememberMe) => {
+      sessionStorage.setItem(
+        GOOGLE_SIGN_IN_STORAGE_KEY,
+        JSON.stringify({ state: 'state', verifier: 'verifier', redirect: '/posts', rememberMe }),
+      )
+      expect(readGoogleSignInAttempt()?.rememberMe).toBe(rememberMe === true)
+    },
+  )
 })

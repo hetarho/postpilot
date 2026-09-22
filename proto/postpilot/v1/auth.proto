@@ -74,6 +74,8 @@ message ResetPasswordResponse {}
 message LoginRequest {
   string login_id = 1;
   string password = 2;
+  // Keep the cookie across browser sessions; absent/false means a session cookie.
+  bool remember_me = 3;
 }
 
 message LoginResponse {
@@ -87,6 +89,7 @@ message SignInWithGoogleRequest {
   string code = 1;
   string code_verifier = 2;
   string redirect_uri = 3;
+  bool remember_me = 4;
 }
 
 message SignInWithGoogleResponse {

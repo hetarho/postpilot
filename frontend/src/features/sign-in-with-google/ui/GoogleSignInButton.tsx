@@ -3,7 +3,13 @@ import { GOOGLE_CLIENT_ID } from '@/shared/config'
 import { Button } from '@/shared/ui'
 import { startGoogleSignIn } from '../lib/google-sign-in'
 
-export function GoogleSignInButton({ redirect }: { redirect?: string }) {
+export function GoogleSignInButton({
+  redirect,
+  rememberMe = false,
+}: {
+  redirect?: string
+  rememberMe?: boolean
+}) {
   const { t } = useTranslation('auth')
   if (!GOOGLE_CLIENT_ID) return null
 
@@ -11,7 +17,7 @@ export function GoogleSignInButton({ redirect }: { redirect?: string }) {
     <Button
       variant="secondary"
       className="mt-3 w-full"
-      onClick={() => void startGoogleSignIn(redirect)}
+      onClick={() => void startGoogleSignIn(redirect, rememberMe)}
     >
       <svg
         aria-hidden="true"

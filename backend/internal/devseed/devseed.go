@@ -28,7 +28,7 @@ import (
 )
 
 // Accounts is the auth context's half of a seed: emptying the installation, then
-// establishing each fixture account with its plan and its verified address.
+// establishing each fixture account with its plan and no email address.
 //
 // DeleteAll is the only destructive call in any of these ports, and it is deliberately
 // all-or-nothing rather than a list of ids: a seed that deleted only the accounts it was
@@ -37,10 +37,6 @@ import (
 type Accounts interface {
 	DeleteAll(ctx context.Context) (int64, error)
 	Create(ctx context.Context, loginID, password string, tier plan.Plan) error
-	// VerifyEmail attaches an already-verified address. The fixture skips the mail round
-	// trip because there is no inbox to read in a dev stack, and an account stuck at
-	// "verify your email" cannot reach any of the screens the seed exists to fill.
-	VerifyEmail(ctx context.Context, loginID, email string, at time.Time) error
 }
 
 // Voices is the voice context's half. An account cannot hold a post without a default
@@ -100,7 +96,6 @@ type Report struct {
 type AccountReport struct {
 	LoginID   string
 	Password  string
-	Email     string
 	Plan      plan.Plan
 	Drafts    int
 	Reviews   int
@@ -146,14 +141,11 @@ func Run(ctx context.Context, deps Deps) (Report, error) {
 }
 
 // seedAccount establishes one account and everything behind it, in the order the product's
-// own rules require: the account exists, then it can be verified and funded, then it has a
+// own rules require: the account exists, then it can be funded, then it has a
 // voice, and only then can it hold a post.
 func seedAccount(ctx context.Context, deps Deps, fixture Account, now time.Time) (AccountReport, error) {
 	if err := deps.Accounts.Create(ctx, fixture.LoginID, Password, fixture.Plan); err != nil {
 		return AccountReport{}, fmt.Errorf("create: %w", err)
-	}
-	if err := deps.Accounts.VerifyEmail(ctx, fixture.LoginID, fixture.Email(), now); err != nil {
-		return AccountReport{}, fmt.Errorf("verify email: %w", err)
 	}
 	if err := deps.Credits.OpenMonthlyLot(ctx, fixture.LoginID, fixture.Plan); err != nil {
 		return AccountReport{}, fmt.Errorf("open monthly grant: %w", err)
@@ -171,7 +163,6 @@ func seedAccount(ctx context.Context, deps Deps, fixture Account, now time.Time)
 	return AccountReport{
 		LoginID:   fixture.LoginID,
 		Password:  Password,
-		Email:     fixture.Email(),
 		Plan:      fixture.Plan,
 		Drafts:    fixture.Drafts,
 		Reviews:   fixture.Reviews,

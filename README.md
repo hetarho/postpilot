@@ -87,14 +87,13 @@ pnpm dev --seed --purge-objects   # MinIO 버킷까지 비운다
 
 | 로그인 | 플랜 | 글 | 초안 / 검토 / 확정 |
 |---|---|---|---|
-| `seed-free` | free | 0 | 0 / 0 / 0 |
-| `seed-basic` | basic | 3 | 2 / 1 / 0 |
-| `seed-pro` | pro | 8 | 3 / 2 / 3 |
-| `seed-max` | max | 14 | 4 / 3 / 7 |
-| `seed-master` | master | 23 | 5 / 4 / 14 |
+| `free` | free | 0 | 0 / 0 / 0 |
+| `base` | basic | 3 | 2 / 1 / 0 |
+| `pro` | pro | 8 | 3 / 2 / 3 |
+| `max` | max | 14 | 4 / 3 / 7 |
+| `master` | master | 23 | 5 / 4 / 14 |
 
-비밀번호는 다섯 계정 모두 `seed-only`이고, 주소는 `<로그인>@postpilot.test`로 이미 인증된
-상태다. 계정이 하나라도 비어 있어야 새 가입 직후의 화면을 확인할 수 있으므로 `seed-free`는
+비밀번호는 다섯 계정 모두 `seed-only`이고, 이메일 없이 위 아이디로 로그인한다. 계정이 하나라도 비어 있어야 새 가입 직후의 화면을 확인할 수 있으므로 `free`는
 일부러 글이 없다.
 
 시드는 `users`를 지우고 스키마의 CASCADE에 나머지를 맡긴다. 따라서 글·말투·크레딧·clip
