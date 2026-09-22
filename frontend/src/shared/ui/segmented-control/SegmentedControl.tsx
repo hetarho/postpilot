@@ -1,12 +1,6 @@
-import {
-  Fragment,
-  useLayoutEffect,
-  useRef,
-  useState,
-  type KeyboardEvent,
-  type ReactNode,
-} from 'react'
+import { Fragment, useId, type KeyboardEvent, type ReactNode } from 'react'
 import { clsx } from 'clsx'
+import { motion, useReducedMotion } from 'motion/react'
 import { ChevronRight } from 'lucide-react'
 import { twMerge } from 'tailwind-merge'
 
@@ -64,35 +58,13 @@ export function SegmentedControl<T extends string>({
 }: SegmentedControlProps<T>) {
   const steps = variant === 'steps'
   const compact = size === 'compact'
-  // The selected plane is ONE element that TRAVELS between the options instead of a background
+  // The selected plane is ONE element that travels between the options instead of a background
   // that blinks from one to the next: the switch then shows which way the choice moved, which is
-  // the point of laying the options out side by side (owner decision 2026-09-22).
-  //
-  // Measured here and moved by a CSS transition, rather than by a layout animation: the options
-  // are not always equal width — a long label makes the strip scroll — so the position cannot be
-  // computed from the index, and a per-frame layout animation on a control this common made the
-  // clip workspace's suites time out. A reduced-motion request is already honoured by the global
-  // rule in app/styles/index.css, which is another thing a CSS transition gets for free.
-  const listRef = useRef<HTMLDivElement>(null)
-  const [thumb, setThumb] = useState<{ left: number; width: number }>()
-  const shape = options.map((option) => option.value).join('|')
-  useLayoutEffect(() => {
-    if (steps) return
-    const measure = () => {
-      const selected = listRef.current?.querySelector<HTMLElement>(
-        '[role="tab"][aria-selected="true"]',
-      )
-      if (!selected) return setThumb(undefined)
-      const next = { left: selected.offsetLeft, width: selected.offsetWidth }
-      // Same box, same object: a new one every measure would restart this effect forever.
-      setThumb((previous) =>
-        previous && previous.left === next.left && previous.width === next.width ? previous : next,
-      )
-    }
-    measure()
-    window.addEventListener('resize', measure)
-    return () => window.removeEventListener('resize', measure)
-  }, [steps, value, shape, compact])
+  // the whole point of laying the options out side by side (owner decision 2026-09-22). A shared
+  // `layoutId` is what lets motion carry it across two different children; the id is per-instance
+  // so two switches on one screen cannot trade thumbs.
+  const thumbId = useId()
+  const reduced = useReducedMotion()
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (disabled) return
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
@@ -105,7 +77,6 @@ export function SegmentedControl<T extends string>({
   }
   return (
     <div
-      ref={listRef}
       role="tablist"
       aria-label={ariaLabel}
       onKeyDown={onKeyDown}
@@ -115,7 +86,7 @@ export function SegmentedControl<T extends string>({
         clsx(
           steps
             ? 'flex min-h-10 items-center justify-center gap-1 select-none pointer-coarse:min-h-11'
-            : 'bg-surface-recessed relative flex gap-1 overflow-x-auto overscroll-x-contain rounded-md p-1 select-none',
+            : 'bg-surface-recessed flex gap-1 overflow-x-auto overscroll-x-contain rounded-md p-1 select-none',
           !steps &&
             (compact ? 'min-h-8 pointer-coarse:min-h-9' : 'min-h-10 pointer-coarse:min-h-11'),
           disabled && 'opacity-50',
@@ -123,16 +94,6 @@ export function SegmentedControl<T extends string>({
         className,
       )}
     >
-      {/* The travelling plane, once, under every option: one element that moves is what says the
-          choice slid left or right. It is absent until the first measure, so a control rendered
-          where there is no layout — a test environment, a hidden panel — simply has none. */}
-      {!steps && thumb && (
-        <span
-          aria-hidden="true"
-          style={{ transform: `translateX(${thumb.left}px)`, width: thumb.width }}
-          className="bg-surface-raised duration-base ease-standard absolute top-1 bottom-1 left-0 rounded-sm shadow-sm transition-[transform,width]"
-        />
-      )}
       {options.map((option, index) => (
         <Fragment key={option.value}>
           {/* The path between stations. Decoration: the tabs' order already says it. */}
@@ -174,7 +135,16 @@ export function SegmentedControl<T extends string>({
                   ),
             )}
           >
-            <span className="inline-flex items-center justify-center gap-1">
+            {!steps && option.value === value && (
+              <motion.span
+                aria-hidden="true"
+                layoutId={thumbId}
+                transition={{ duration: reduced ? 0 : 0.2, ease: [0.2, 0, 0, 1] }}
+                className="bg-surface-raised absolute inset-0 rounded-sm shadow-sm"
+              />
+            )}
+            {/* Above the travelling plane, which is painted inside the same button box. */}
+            <span className="relative inline-flex items-center justify-center gap-1">
               {option.preview}
               {option.label}
             </span>

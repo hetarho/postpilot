@@ -2,10 +2,15 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { act, renderHook } from '@testing-library/react'
 import { useCountUp } from './useCountUp'
 
-/** A frame scheduler under test control: `step` runs every pending callback at the given clock. */
+/** A frame scheduler under test control: `step` runs every pending callback at the given clock.
+ *
+ *  It also says this reader WANTS motion. The suite's setup answers `matchMedia` with the
+ *  preference a headless environment actually has — reduced — and the count is one of the few
+ *  things whose whole behaviour is the motion itself, so it states the opposite for itself. */
 function fakeFrames() {
   let queue: FrameRequestCallback[] = []
   let now = 0
+  vi.stubGlobal('matchMedia', (query: string) => ({ matches: false, media: query }))
   vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
     queue.push(callback)
     return queue.length

@@ -1,6 +1,8 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { PromoFrame } from './PromoFrame'
+
+afterEach(() => vi.unstubAllGlobals())
 
 describe('PromoFrame', () => {
   // The effect is a STROKE: the content keeps its own opaque surface, so the gradient shows
@@ -38,6 +40,9 @@ describe('PromoFrame', () => {
   })
 
   it('writes the pointer position into the frame and tilts toward it as a mouse moves', () => {
+    // The tilt IS the motion, so this case states that its reader wants motion: the suite's setup
+    // answers `matchMedia` with a headless environment's real preference, which is reduced.
+    vi.stubGlobal('matchMedia', (query: string) => ({ matches: false, media: query }))
     const { container } = render(
       <PromoFrame>
         <p>Pro</p>

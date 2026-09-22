@@ -69,3 +69,27 @@ for (const name of ['localStorage', 'sessionStorage'] as const) {
     })
   }
 }
+
+// jsdom implements no `matchMedia`, and a component that asks it about motion therefore hears
+// "no preference" and runs its animations for real — measuring, scheduling frames and holding
+// React updates open while a test waits on them. The heaviest suites lost tests to that alone.
+// The honest stand-in is the preference a headless environment actually has: it paints nothing,
+// so it wants no motion. Every animation then completes in one frame and nothing else changes —
+// what an animation ends AT is what a test asserts on, and that is unaffected.
+if (typeof globalThis.matchMedia !== 'function') {
+  Object.defineProperty(globalThis, 'matchMedia', {
+    value: (query: string): MediaQueryList =>
+      ({
+        matches: /prefers-reduced-motion:\s*reduce/.test(query),
+        media: query,
+        onchange: null,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        addListener: () => {},
+        removeListener: () => {},
+        dispatchEvent: () => false,
+      }) as MediaQueryList,
+    configurable: true,
+    writable: true,
+  })
+}
