@@ -45,12 +45,12 @@ describe('InterfacePreferences', () => {
       const container = screen.getByRole('group', { name: group })
       const themeTrigger = within(container).getByRole('button', { name: theme })
       const localeTrigger = within(container).getByRole('button', { name: language })
-      // Icon-only 44px triggers; the theme one wears the stored preference (System = monitor).
+      // Icon-only 44px triggers; each names its own subject and neither restates its stored value.
       for (const trigger of [themeTrigger, localeTrigger]) {
         expect(trigger).toHaveClass('size-10', 'pointer-coarse:size-11')
         expect(trigger).toHaveAttribute('aria-haspopup', 'menu')
       }
-      expect(themeTrigger.querySelector('svg')).toHaveClass('lucide-monitor')
+      expect(themeTrigger.querySelector('svg')).toHaveClass('lucide-palette')
       expect(localeTrigger.querySelector('svg')).toHaveClass('lucide-languages')
     },
   )
@@ -61,8 +61,9 @@ describe('InterfacePreferences', () => {
 
     await user.click(screen.getByRole('button', { name: '테마' }))
     await user.click(screen.getByRole('menuitemradio', { name: '어둡게' }))
-    expect(screen.getByRole('button', { name: '테마' }).querySelector('svg')).toHaveClass(
-      'lucide-moon',
+    // The closed trigger keeps its palette and says the stored choice to a screen reader instead.
+    expect(screen.getByRole('button', { name: '테마' })).toHaveAccessibleDescription(
+      '현재 테마 설정: 어둡게',
     )
 
     await user.click(screen.getByRole('button', { name: '언어' }))
@@ -73,8 +74,8 @@ describe('InterfacePreferences', () => {
 
     // Locale changed while the theme choice stayed.
     expect(await screen.findByRole('button', { name: 'Theme' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Theme' }).querySelector('svg')).toHaveClass(
-      'lucide-moon',
+    expect(screen.getByRole('button', { name: 'Theme' })).toHaveAccessibleDescription(
+      'Current theme preference: Dark',
     )
     expect(screen.queryByRole('menu')).not.toBeInTheDocument()
   })

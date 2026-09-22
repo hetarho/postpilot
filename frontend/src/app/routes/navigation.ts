@@ -15,10 +15,15 @@ import {
 } from 'lucide-react'
 
 /** Shared by all three shell shapes. Group activity comes from an actual ancestor
- * match, never from a URL prefix (voices belongs to writing, not to /posts). */
+ * match, never from a URL prefix (voices belongs to writing, not to /posts).
+ *
+ * `group` is what makes ONE sidebar possible (owner decision 2026-09-22): the shell reads the
+ * group a primary destination opens straight off this list, instead of a second layout telling it
+ * from further down the tree. */
 export const DESTINATIONS = [
   {
     to: '/posts',
+    group: 'writing',
     labelKey: 'posts',
     icon: FileText,
     routeIds: ['/authenticated/writing'],
@@ -26,6 +31,7 @@ export const DESTINATIONS = [
   },
   {
     to: '/clips',
+    group: 'video',
     labelKey: 'videos',
     icon: Film,
     routeIds: ['/authenticated/video'],
@@ -33,6 +39,7 @@ export const DESTINATIONS = [
   },
   {
     to: '/ai-models',
+    group: 'models',
     labelKey: 'models',
     icon: Bot,
     routeIds: ['/authenticated/models'],
@@ -75,4 +82,34 @@ export function currentDestination(routeIds: readonly string[]) {
   return DESTINATIONS.find((destination) =>
     destination.routeIds.some((id) => routeIds.includes(id)),
   )?.to
+}
+
+export type ContentGroup = keyof typeof CONTENT_GROUPS
+
+/** The group the shell is inside, if any: the primary destination's own, so `/voices` is 글's
+ *  group without sharing its address. */
+export function currentGroup(routeIds: readonly string[]): ContentGroup | undefined {
+  return DESTINATIONS.find((destination) =>
+    destination.routeIds.some((id) => routeIds.includes(id)),
+  )?.group
+}
+
+/** Which destination of a group the address is under. A PREFIX match, so `/voices/one/rules` is
+ *  still 말투, longest first so `/ai-models/compare` wins over `/ai-models`; the group's home
+ *  otherwise. `/ai-models/experiments/$id?from=compare` is the one address that belongs to a
+ *  sibling rather than to its own prefix: it was reached from 모델 비교 and returns there. */
+export function currentGroupDestination(
+  group: ContentGroup,
+  pathname: string,
+  from?: string,
+): (typeof CONTENT_GROUPS)[ContentGroup][number] {
+  const destinations: readonly { to: string }[] = CONTENT_GROUPS[group]
+  const reached =
+    group === 'models' && from === 'compare' && pathname.startsWith('/ai-models/experiments/')
+      ? destinations.find((d) => d.to === '/ai-models/compare')
+      : undefined
+  const under = destinations
+    .filter((d) => pathname === d.to || pathname.startsWith(`${d.to}/`))
+    .sort((a, b) => b.to.length - a.to.length)[0]
+  return (reached ?? under ?? destinations[0]!) as (typeof CONTENT_GROUPS)[ContentGroup][number]
 }

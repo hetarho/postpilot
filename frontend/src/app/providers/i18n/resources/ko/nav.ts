@@ -5,6 +5,14 @@ export const nav = {
   modelHistory: '최근 관찰 비교',
   modelLeaderboard: '리더보드',
   primary: '주요',
+  groupSidebar: {
+    open: '{{group}} 열기',
+    close: '{{group}} 닫기',
+  },
+  sidebar: {
+    open: '주요 메뉴 열기',
+    close: '주요 메뉴 닫기',
+  },
   home: 'Postpilot 홈',
   posts: '글',
   videos: '영상',

@@ -1,7 +1,6 @@
 import type { ComponentType } from 'react'
 import { Link } from '@tanstack/react-router'
 import { clsx } from 'clsx'
-import type { StageName } from '@/entities/model-catalog'
 import { typographyStyles } from '@/shared/ui'
 
 export interface NavDestination {
@@ -10,102 +9,69 @@ export interface NavDestination {
   /** The phone bar's caption when four full labels would not fit across the bottom edge. */
   shortLabel?: string
   icon: ComponentType<{ className?: string }>
-  search?: { stage?: StageName }
 }
 
-/** Where the row is drawn. `header` and `row` are the laptop's two stacked bands, `rail` is either
- *  desk rail, `phone` is the bottom bar. */
-export type NavShape = 'header' | 'row' | 'rail' | 'phone'
-/** Which level the row IS, which is what decides its plane walk: the primary level sits on
- *  `surface-lowest` and the group level one step up on `surface-recessed` (THEME-26, THEME-38). */
-export type NavLevel = 'primary' | 'group'
+/** Where the row is drawn. `header` is the laptop's own navigation band under the brand row,
+ *  `phone` is the bottom bar. The desk rail is `RailNav`, which draws both levels at once. */
+export type NavShape = 'header' | 'phone'
 
 const shapeStyles: Record<NavShape, string> = {
-  header: 'inline-flex min-h-11 min-w-11 shrink-0 items-center gap-2 rounded-md px-3',
-  row: 'inline-flex min-h-11 min-w-11 shrink-0 items-center gap-2 rounded-md px-4',
-  rail: 'flex min-h-11 items-center gap-3 rounded-md px-4',
+  // The tablet row fills the header's full primary band and sits flush on the page, so its
+  // current destination reads as a tab that the page continues, not as a button floating in the
+  // band: only the top corners are rounded.
+  header: 'inline-flex min-h-11 min-w-11 shrink-0 items-center gap-2 rounded-t-md px-3',
   phone: 'flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-1 px-1',
 }
 
-/** The group rail is the SECOND level and now says so with its DENSITY as well as its plane
- *  (THEME-38): a shorter row, a tighter gutter, a smaller gap and a smaller glyph. The type role
- *  does not shrink with it — a destination's own name is copy the user acts on, and THEME-19
- *  keeps 12px for metadata — so the step down lives in the box, never in the letters. 36px is
- *  THEME-23's fine-pointer floor for a menu row, and the touch floor is added back for a rail
- *  under a thumb. */
-const RAIL_GROUP = 'flex min-h-9 items-center gap-2 rounded-md px-3 py-2 pointer-coarse:min-h-11'
-
-/** One step up from the level's own plane under the pointer, one further for the destination the
- *  user is on. The phone bar is not a rail — it floats over the page on `surface-raised` — so its
+/** One step up from the band's plane under the pointer, one further for the destination the user
+ *  is on. The phone bar is not a band — it floats over the page on `surface-raised` — so its
  *  current state is carried by weight and colour alone. */
-const planeStyles: Record<NavLevel, { rest: string; current: string }> = {
-  primary: {
+const planeStyles = {
+  header: {
     rest: 'hover:bg-surface-recessed active:bg-surface-recessed hover:text-link-fg-hover',
     current: 'bg-surface-base text-link-fg-current font-medium', // style-escape: current navigation emphasis
   },
-  group: {
-    rest: 'hover:bg-surface-base active:bg-surface-base hover:text-link-fg-hover',
-    current: 'bg-surface-raised text-link-fg-current font-medium', // style-escape: current navigation emphasis
+  phone: {
+    rest: 'active:bg-row-bg-active',
+    current: 'text-link-fg-current font-medium', // style-escape: current navigation emphasis
   },
-}
-const phoneStyles = {
-  rest: 'active:bg-row-bg-active',
-  current: 'text-link-fg-current font-medium', // style-escape: current navigation emphasis
-}
+} as const
 
-/** The one renderer behind every navigation row in the shell, so the two levels cannot drift into
- *  two different controls (THEME-38: the second level is drawn with the first level's row shape).
+/** The primary level below the desk: a band of tabs on the laptop, the bottom bar on a phone.
  *
- *  Selection arrives one of two ways and both are needed: the primary level passes `current`,
- *  resolved from the ACTUAL matched route ids because `/voices` belongs to 글 without sharing its
- *  address, while the group level leaves it undefined and lets the router mark a destination
- *  current on its descendants too (`/templates/new` is still 글 템플릿). */
+ *  Selection is resolved from the ACTUAL matched route ids by the caller, because `/voices`
+ *  belongs to 글 without sharing its address, so a `Link` deciding from its own href would leave
+ *  글 unmarked there. */
 export function NavLinks({
   shape,
-  level,
   destinations,
   current,
 }: {
   shape: NavShape
-  level: NavLevel
   destinations: readonly NavDestination[]
   current?: string
 }) {
-  const plane = shape === 'phone' ? phoneStyles : planeStyles[level]
-  const box = shape === 'rail' && level === 'group' ? RAIL_GROUP : shapeStyles[shape]
-  const glyph = shape === 'rail' && level === 'group' ? 'size-4 shrink-0' : 'size-5 shrink-0'
+  const plane = planeStyles[shape]
   const className = typographyStyles({
     variant: 'label',
-    className: clsx(
-      'text-link-fg',
-      shape === 'rail' ? 'whitespace-normal' : 'whitespace-nowrap',
-      box,
-    ),
+    className: clsx('text-link-fg whitespace-nowrap', shapeStyles[shape]),
   })
   return destinations.map((destination) => {
-    // Both branches carry the same state when selection is computed here: a Link decides
-    // `activeProps` from its own href, which would leave 글 unmarked on /voices.
-    const computed =
-      current === undefined
-        ? undefined
-        : {
-            className: current === destination.to ? plane.current : plane.rest,
-            'aria-current': current === destination.to ? ('page' as const) : undefined,
-          }
+    const isCurrent = current === destination.to
     return (
       <Link
         key={destination.to}
         to={destination.to}
-        search={destination.search}
         aria-label={destination.label}
-        className={className}
-        // Once the group has resolved its current destination, a broader URL prefix must not
-        // independently mark its parent current too (for example /ai-models on /ai-models/compare).
-        activeOptions={{ exact: current !== undefined, includeSearch: false }}
-        activeProps={computed ?? { className: plane.current, 'aria-current': 'page' }}
-        inactiveProps={computed ?? { className: plane.rest }}
+        className={clsx(className, isCurrent ? plane.current : plane.rest)}
+        // The caller has already decided: `exact` stops the router's own prefix match and both
+        // props carry the one answer, which is how 글 stays marked on /voices — an address it
+        // does not own — and how no second destination lights up under a shared prefix.
+        activeOptions={{ exact: true, includeSearch: false }}
+        activeProps={{ 'aria-current': isCurrent ? 'page' : undefined }}
+        inactiveProps={{ 'aria-current': isCurrent ? 'page' : undefined }}
       >
-        <destination.icon aria-hidden="true" className={glyph} />
+        <destination.icon aria-hidden="true" className="size-5 shrink-0" />
         {shape === 'phone' ? (destination.shortLabel ?? destination.label) : destination.label}
       </Link>
     )

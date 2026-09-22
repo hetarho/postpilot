@@ -160,15 +160,26 @@ describe('clip directory and setup', () => {
     // button is what says to select sources.
     expect(await screen.findByRole('status', { name: '클립 상태' })).toHaveTextContent('')
   })
-  it('draws the group row on the directory but not on the workspace, whose 목록 link is the way back', async () => {
+  it('draws the group level on the directory but not on the workspace, whose 목록 link is the way back', async () => {
     const directory = mount('/clips')
     await screen.findByRole('list', { name: '저장된 클립' })
-    expect(screen.getAllByRole('navigation', { name: '영상 메뉴' })).toHaveLength(2)
+    // One control in the brand row, and the group's own destinations inside the one sidebar.
+    expect(screen.getByRole('navigation', { name: '영상 메뉴' })).toBeInTheDocument()
+    expect(
+      within(document.querySelector('aside')!)
+        .getAllByRole('link')
+        .filter((link) => link.dataset.navLevel === 'group')
+        .map((link) => link.getAttribute('href')),
+    ).toEqual(['/clips', '/video-templates'])
     directory.unmount()
     mount('/clips/project')
     await screen.findByLabelText('클립 제목')
     expect(screen.queryByRole('navigation', { name: '영상 메뉴' })).not.toBeInTheDocument()
-    expect(document.querySelector('.chrome-subnav')).toBeNull()
+    expect(
+      within(document.querySelector('aside')!)
+        .getAllByRole('link')
+        .filter((link) => link.dataset.navLevel === 'group'),
+    ).toHaveLength(0)
     // One row (CLIP-37): the way back, the step bar and 삭제, in that order.
     const back = screen.getByRole('link', { name: '클립 목록' })
     expect(back).toHaveAttribute('href', '/clips')

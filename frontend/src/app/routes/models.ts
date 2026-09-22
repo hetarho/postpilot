@@ -2,13 +2,13 @@ import { createRoute, lazyRouteComponent } from '@tanstack/react-router'
 import { aiModelsSearchSchema } from '@/pages/ai-models'
 import { modelReviewSearchSchema } from '@/pages/model-experiment'
 import { authenticatedRoute } from './tree'
-import { ModelLayout } from './ModelLayout'
+import { ContentGroupLayout } from './ContentGroupLayout'
 
 export const modelGroupRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   id: 'models',
   validateSearch: aiModelsSearchSchema,
-  component: ModelLayout,
+  component: ContentGroupLayout,
 })
 
 export const aiModelsRoute = createRoute({

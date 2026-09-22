@@ -69,26 +69,32 @@ describe('ThemeMenu', () => {
       expect(trigger).toHaveAccessibleDescription(
         locale === 'ko' ? '현재 테마 설정: 어둡게' : 'Current theme preference: Dark',
       )
-      expect(trigger.querySelector('svg')).toHaveClass('lucide-moon')
+      // The subject, not the stored value: the palette stays put while Dark is the preference.
+      expect(trigger.querySelector('svg')).toHaveClass('lucide-palette')
       expect(trigger.querySelector('svg')).toHaveClass('size-4')
       await user.click(trigger)
 
       const menu = screen.getByRole('menu', { name: label })
       expect(menu).toHaveClass('bg-surface-highest')
-      expect(screen.getAllByRole('menuitemradio').map((option) => option.textContent)).toEqual(
-        options,
-      )
+      const rows = screen.getAllByRole('menuitemradio')
+      expect(rows.map((option) => option.textContent)).toEqual(options)
+      // Every preference states itself inside the panel, where a row means one choice alone.
+      expect(rows.map((option) => option.querySelector('svg')?.getAttribute('class'))).toEqual([
+        expect.stringContaining('lucide-monitor'),
+        expect.stringContaining('lucide-sun'),
+        expect.stringContaining('lucide-moon'),
+      ])
       expect(screen.getByRole('menuitemradio', { checked: true })).toHaveTextContent(options[2])
     },
   )
 
   it.each([
-    ['light', 'dark', 'lucide-moon'],
-    ['dark', 'system', 'lucide-monitor'],
-    ['system', 'light', 'lucide-sun'],
+    ['light', 'dark'],
+    ['dark', 'system'],
+    ['system', 'light'],
   ] as const)(
-    'changes %s to %s through the injected controller only, and the trigger icon follows',
-    async (initial, next, iconClass) => {
+    'changes %s to %s through the injected controller only, and the trigger icon holds still',
+    async (initial, next) => {
       history.replaceState(null, '', '/posts?view=recent#draft')
       const invalidate = vi.spyOn(QueryClient.prototype, 'invalidateQueries')
       const fetch = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('unexpected request'))
@@ -101,10 +107,11 @@ describe('ThemeMenu', () => {
       await user.click(screen.getByRole('menuitemradio', { name: koLabels[next] }))
 
       expect(onChange).toHaveBeenCalledWith(next)
-      // The menu closed, focus came home, and the trigger now wears the new preference.
+      // The menu closed and focus came home. The glyph does not move — the new preference is
+      // carried by the description a screen reader hears and by the check inside the panel.
       expect(screen.queryByRole('menu')).not.toBeInTheDocument()
       expect(trigger).toHaveFocus()
-      expect(trigger.querySelector('svg')).toHaveClass(iconClass)
+      expect(trigger.querySelector('svg')).toHaveClass('lucide-palette')
       expect(trigger).toHaveAccessibleDescription(`현재 테마 설정: ${koLabels[next]}`)
       expect(document.documentElement.lang).toBe('ko')
       expect(location.pathname + location.search + location.hash).toBe('/posts?view=recent#draft')

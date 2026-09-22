@@ -1,4 +1,11 @@
-import { Fragment, type KeyboardEvent, type ReactNode } from 'react'
+import {
+  Fragment,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from 'react'
 import { clsx } from 'clsx'
 import { ChevronRight } from 'lucide-react'
 import { twMerge } from 'tailwind-merge'
@@ -27,6 +34,12 @@ interface SegmentedControlProps<T extends string> {
    *  for a step bar that rides a page's top row between two controls, where a row of pills read
    *  as three more buttons (THEME-39, owner decision 2026-09-19). */
   variant?: 'segments' | 'steps'
+  /** `default` is the standalone control, at the 40px fine-pointer row and the 44px touch floor.
+   *  `compact` is the same control inside a surface that is itself a control — the preferences in
+   *  the account panel — where a full-height row reads as three buttons stacked in a popover
+   *  rather than as one setting (owner decision 2026-09-22). It keeps a 32px row and a 36px touch
+   *  floor: still a comfortable target for a switch whose options sit side by side. */
+  size?: 'default' | 'compact'
   className?: string
 }
 
@@ -46,9 +59,40 @@ export function SegmentedControl<T extends string>({
   controls,
   disabled = false,
   variant = 'segments',
+  size = 'default',
   className,
 }: SegmentedControlProps<T>) {
   const steps = variant === 'steps'
+  const compact = size === 'compact'
+  // The selected plane is ONE element that TRAVELS between the options instead of a background
+  // that blinks from one to the next: the switch then shows which way the choice moved, which is
+  // the point of laying the options out side by side (owner decision 2026-09-22).
+  //
+  // Measured here and moved by a CSS transition, rather than by a layout animation: the options
+  // are not always equal width — a long label makes the strip scroll — so the position cannot be
+  // computed from the index, and a per-frame layout animation on a control this common made the
+  // clip workspace's suites time out. A reduced-motion request is already honoured by the global
+  // rule in app/styles/index.css, which is another thing a CSS transition gets for free.
+  const listRef = useRef<HTMLDivElement>(null)
+  const [thumb, setThumb] = useState<{ left: number; width: number }>()
+  const shape = options.map((option) => option.value).join('|')
+  useLayoutEffect(() => {
+    if (steps) return
+    const measure = () => {
+      const selected = listRef.current?.querySelector<HTMLElement>(
+        '[role="tab"][aria-selected="true"]',
+      )
+      if (!selected) return setThumb(undefined)
+      const next = { left: selected.offsetLeft, width: selected.offsetWidth }
+      // Same box, same object: a new one every measure would restart this effect forever.
+      setThumb((previous) =>
+        previous && previous.left === next.left && previous.width === next.width ? previous : next,
+      )
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [steps, value, shape, compact])
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (disabled) return
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
@@ -61,6 +105,7 @@ export function SegmentedControl<T extends string>({
   }
   return (
     <div
+      ref={listRef}
       role="tablist"
       aria-label={ariaLabel}
       onKeyDown={onKeyDown}
@@ -70,12 +115,24 @@ export function SegmentedControl<T extends string>({
         clsx(
           steps
             ? 'flex min-h-10 items-center justify-center gap-1 select-none pointer-coarse:min-h-11'
-            : 'bg-surface-recessed flex min-h-10 gap-1 overflow-x-auto overscroll-x-contain rounded-md p-1 select-none pointer-coarse:min-h-11',
+            : 'bg-surface-recessed relative flex gap-1 overflow-x-auto overscroll-x-contain rounded-md p-1 select-none',
+          !steps &&
+            (compact ? 'min-h-8 pointer-coarse:min-h-9' : 'min-h-10 pointer-coarse:min-h-11'),
           disabled && 'opacity-50',
         ),
         className,
       )}
     >
+      {/* The travelling plane, once, under every option: one element that moves is what says the
+          choice slid left or right. It is absent until the first measure, so a control rendered
+          where there is no layout — a test environment, a hidden panel — simply has none. */}
+      {!steps && thumb && (
+        <span
+          aria-hidden="true"
+          style={{ transform: `translateX(${thumb.left}px)`, width: thumb.width }}
+          className="bg-surface-raised duration-base ease-standard absolute top-1 bottom-1 left-0 rounded-sm shadow-sm transition-[transform,width]"
+        />
+      )}
       {options.map((option, index) => (
         <Fragment key={option.value}>
           {/* The path between stations. Decoration: the tabs' order already says it. */}
@@ -107,15 +164,20 @@ export function SegmentedControl<T extends string>({
                       : 'text-content-tertiary hover:text-content-secondary active:text-content-secondary',
                   )
                 : clsx(
-                    'min-h-10 flex-1 shrink-0 rounded-sm px-4 text-sm whitespace-nowrap transition-colors pointer-coarse:min-h-11',
+                    'relative flex-1 shrink-0 rounded-sm whitespace-nowrap transition-colors',
+                    compact
+                      ? 'min-h-8 px-2 text-xs pointer-coarse:min-h-9'
+                      : 'min-h-10 px-4 text-sm pointer-coarse:min-h-11',
                     option.value === value
-                      ? 'bg-surface-raised text-content-primary shadow-sm'
+                      ? 'text-content-primary'
                       : 'text-content-secondary hover:bg-row-bg-hover active:bg-row-bg-active',
                   ),
             )}
           >
-            {option.preview}
-            {option.label}
+            <span className="inline-flex items-center justify-center gap-1">
+              {option.preview}
+              {option.label}
+            </span>
           </button>
         </Fragment>
       ))}

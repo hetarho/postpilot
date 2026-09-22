@@ -6,8 +6,7 @@ import { SIGNED_IN_HOME } from '@/shared/lib'
 import { AuthenticatedLayout } from './AuthenticatedLayout'
 import { RootLayout } from './RootLayout'
 import { RouteError } from './RouteError'
-import { VideoLayout } from './VideoLayout'
-import { WritingLayout } from './WritingLayout'
+import { ContentGroupLayout } from './ContentGroupLayout'
 
 /** What every route's `beforeLoad` can reach. The transport travels with the query
  *  client because the session cache key is built from it — a guard using a different
@@ -48,13 +47,13 @@ export const authenticatedRoute = createRoute({
 export const writingGroupRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   id: 'writing',
-  component: WritingLayout,
+  component: ContentGroupLayout,
 })
 
 export const videoGroupRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   id: 'video',
-  component: VideoLayout,
+  component: ContentGroupLayout,
 })
 
 // Kept as a redirect rather than dropped: '/' is what a bookmark, a bare domain and an
@@ -67,10 +66,9 @@ export const indexRoute = createRoute({
   },
 })
 
-/** Every authenticated screen is refused to a non-master account the same way: redirected
- *  rather than refused, because the account HAS a session and bouncing it to /login would be a
- *  lie. The redirect is UX only — every admin and publishing procedure is refused server-side
- *  for a non-master caller, whatever route the client managed to render. */
+/** Every master-only administration screen is redirected rather than refused, because the
+ *  account HAS a session and bouncing it to /login would be a lie. The redirect is UX only —
+ *  every admin procedure is still refused server-side for a non-master caller. */
 export function masterOnly({ context }: { context: { user?: { plan?: string } } }): void {
   if (context.user?.plan !== 'master') throw redirect({ to: SIGNED_IN_HOME, replace: true })
 }

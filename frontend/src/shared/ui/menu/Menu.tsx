@@ -4,6 +4,7 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type ComponentType,
   type KeyboardEvent,
   type ReactNode,
 } from 'react'
@@ -15,6 +16,11 @@ import { MENU_VIEWPORT_GUTTER_PX } from './config'
 export interface MenuOption<T extends string> {
   value: T
   label: string
+  /** Drawn before the label when a choice has a glyph of its own. It belongs to the OPTION, not
+   *  to the trigger: a trigger that changes glyph with the stored value has to stand for every
+   *  choice at once, which is what makes it unreadable, while a row states one choice only. Give
+   *  it to every option of a menu or to none, so the labels stay on one column. */
+  icon?: ComponentType<{ className?: string }>
 }
 
 /** The app-drawn dropdown for one bounded choice (design-language §7). A native select's open
@@ -216,6 +222,7 @@ export function Menu<T extends string>({
                   checked ? 'text-content-primary font-medium' : 'text-content-secondary',
                 )}
               >
+                {option.icon && <option.icon aria-hidden="true" className="size-4 shrink-0" />}
                 <span className="min-w-0 flex-1 text-left break-words">{option.label}</span>
                 {/* The unchecked check keeps its box so labels align and the panel width is stable. */}
                 <Check

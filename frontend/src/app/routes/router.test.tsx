@@ -464,19 +464,22 @@ describe('theme preferences in the real route tree', () => {
 
       await user.click(screen.getByRole('menuitemradio', { name: '밝게' }))
       expect(screen.queryByRole('menu')).not.toBeInTheDocument()
-      expect(themeTrigger().querySelector('svg')).toHaveClass('lucide-sun')
+      // The trigger names the subject at every preference, so what a selection moved is the
+      // document's theme, the stored value and the description the trigger carries.
+      expect(themeTrigger().querySelector('svg')).toHaveClass('lucide-palette')
+      expect(themeTrigger()).toHaveAccessibleDescription('현재 테마 설정: 밝게')
       expect(document.documentElement).toHaveAttribute('data-theme', 'day')
       expect(theme.storage.getItem(THEME_PREFERENCE_STORAGE_KEY)).toBe('light')
 
       await user.click(themeTrigger())
       await user.click(screen.getByRole('menuitemradio', { name: '어둡게' }))
-      expect(themeTrigger().querySelector('svg')).toHaveClass('lucide-moon')
+      expect(themeTrigger()).toHaveAccessibleDescription('현재 테마 설정: 어둡게')
       expect(document.documentElement).toHaveAttribute('data-theme', 'night')
       expect(theme.storage.getItem(THEME_PREFERENCE_STORAGE_KEY)).toBe('dark')
 
       await user.click(themeTrigger())
       await user.click(screen.getByRole('menuitemradio', { name: '시스템' }))
-      expect(themeTrigger().querySelector('svg')).toHaveClass('lucide-monitor')
+      expect(themeTrigger()).toHaveAccessibleDescription('현재 테마 설정: 시스템')
       expect(document.documentElement).toHaveAttribute('data-theme', 'day')
       expect(theme.storage.getItem(THEME_PREFERENCE_STORAGE_KEY)).toBeNull()
 

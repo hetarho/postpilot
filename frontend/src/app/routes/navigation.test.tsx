@@ -48,11 +48,24 @@ const cases = [
   ...video.map(([path, tab]) => ({ path, tab, primary: '/clips', group: '영상 메뉴' })),
 ]
 
+/** The desk's one sidebar. It holds BOTH levels since 2026-09-22, so a row says which level it
+ *  is: a group's home repeats its primary destination's address (내 글 IS /posts) and nothing
+ *  could tell the two apart by href. */
+const rail = () => document.querySelector('aside')!
+const rows = (level: 'primary' | 'group', scope: HTMLElement = rail()) =>
+  within(scope)
+    .queryAllByRole('link')
+    .filter((link) => link.dataset.navLevel === level)
+
+/** The primary level is drawn three times: the laptop's band, the desk's rail, the phone's bar.
+ *  Only the rail carries a second level, which is filtered out here. */
 function assertPrimary(current: string | undefined, label = '주요') {
   const shapes = screen.getAllByRole('navigation', { name: label })
   expect(shapes).toHaveLength(3)
   for (const shape of shapes) {
-    const links = within(shape).getAllByRole('link')
+    const links = within(shape)
+      .getAllByRole('link')
+      .filter((link) => link.dataset.navLevel !== 'group')
     expect(links.map((l) => l.getAttribute('href'))).toEqual(['/posts', '/clips', '/ai-models'])
     expect(
       links
@@ -61,33 +74,31 @@ function assertPrimary(current: string | undefined, label = '주요') {
     ).toEqual(current ? [current] : [])
   }
 }
-/** The group level is drawn twice — the band below the desk, whose ONE control is named by the
- *  current destination and opens the rest of the group, and the rail on the desk, which lists
- *  every destination as a link — because the two sit in different places in the document
- *  (THEME-38). */
+
+/** The group level is drawn twice, in the two places it fits: inside the desk's one sidebar,
+ *  indented under the destination that opens it, and as ONE menu control in the middle of the
+ *  brand row at every narrower width (owner decision 2026-09-22). */
 function assertGroup(label: string, tab: string) {
-  const shapes = screen.getAllByRole('navigation', { name: label })
-  expect(shapes).toHaveLength(2)
-  const [band, rail] = shapes
-  const links = within(rail!).getAllByRole('link')
+  const band = screen.getByRole('navigation', { name: label })
+  const links = rows('group')
   expect(
     links
       .filter((l) => l.getAttribute('aria-current') === 'page')
       .map((l) => l.getAttribute('href')),
   ).toEqual([tab])
   const current = links.find((l) => l.getAttribute('href') === tab)!
-  expect(within(band!).queryAllByRole('link')).toHaveLength(0)
+  expect(within(band).queryAllByRole('link')).toHaveLength(0)
   // One control, and the name of the place IS that control — not a name beside a menu button at
   // the far right of the row. Its visible text is its accessible name (WCAG 2.5.3).
-  const trigger = within(band!).getByRole('button')
+  const trigger = within(band).getByRole('button')
   expect(trigger).toHaveAccessibleName(current.textContent!)
   expect(trigger).toHaveAttribute('aria-haspopup', 'menu')
-  return shapes
+  return [band, rail()] as const
 }
-/** Opens the band's menu and answers with the open menu, scoped. */
+/** Opens the brand row's group menu and answers with the open menu, scoped. */
 async function openGroupMenu(label: string) {
-  const [band] = screen.getAllByRole('navigation', { name: label })
-  await userEvent.click(within(band!).getByRole('button'))
+  const band = screen.getByRole('navigation', { name: label })
+  await userEvent.click(within(band).getByRole('button'))
   return within(await screen.findByRole('menu', { name: label }))
 }
 it.each(cases)(
@@ -98,15 +109,17 @@ it.each(cases)(
     await waitFor(() => expect(router.state.status).toBe('idle'))
     expect(router.state.location.pathname).toBe(path)
     assertPrimary(primary)
-    const [band, rail] = assertGroup(group, tab)
+    const [band, railEl] = assertGroup(group, tab)
     // The band is chrome that stays put while the page scrolls: `top-0` while the header still
     // scrolls away, under the header once that is sticky, and never its own vertical scroller.
-    expect(band).toHaveClass('sticky', 'top-0', 'sm:top-header', 'h-subnav')
-    expect(band!.className).not.toMatch(/(?:fixed|overflow-y-auto|overflow-x-auto)/)
-    expect(rail!.closest('aside')).toHaveClass('lg:sticky', 'lg:top-header', 'lg:h-sidebar')
-    // Everything under the group clears the taller chrome; the page stays the one scroller.
-    expect(band!.closest('.chrome-subnav')).not.toBeNull()
-    expect(band!.closest('.pb-nav')?.querySelectorAll('[class~="overflow-y-auto"]')).toHaveLength(0)
+    // The group's control rides the header, which is the one thing that sticks; the rail hangs
+    // from the header's bottom edge. Neither is on the page, so the page stays the one scroller.
+    expect(band.closest('header')).not.toBeNull()
+    expect(band.className).not.toMatch(/(?:fixed|sticky|overflow-y-auto|overflow-x-auto)/)
+    expect(railEl).toHaveClass('lg:sticky', 'lg:top-header', 'lg:h-sidebar')
+    expect(
+      document.querySelector('.pb-nav')?.querySelectorAll('[class~="overflow-y-auto"]'),
+    ).toHaveLength(0)
   },
 )
 
@@ -122,7 +135,7 @@ it.each(['/clips/new', '/clips/one'])(
     expect(router.state.location.pathname).toBe(path)
     assertPrimary('/clips')
     expect(screen.queryAllByRole('navigation', { name: '영상 메뉴' })).toHaveLength(0)
-    expect(document.querySelector('.chrome-subnav')).toBeNull()
+    expect(rows('group')).toHaveLength(0)
   },
 )
 
@@ -135,7 +148,7 @@ it.each(['/plans', '/billing', '/account', '/admin', '/admin/models', '/admin/es
     assertPrimary(undefined)
     expect(screen.queryAllByRole('navigation', { name: '글 메뉴' })).toHaveLength(0)
     expect(screen.queryAllByRole('navigation', { name: '영상 메뉴' })).toHaveLength(0)
-    expect(document.querySelector('.chrome-subnav')).toBeNull()
+    expect(rows('group')).toHaveLength(0)
     expect(screen.getByRole('link', { name: 'Postpilot 홈' })).toHaveAttribute('href', '/posts')
   },
 )
@@ -212,6 +225,18 @@ it('restores both active levels through browser history and keeps ko/en parity',
   ).toEqual(['Posts', 'Videos', 'AI models'])
   const [band] = assertGroup('Video navigation', '/clips')
   expect(band).toHaveTextContent('My videos')
+  // The one sidebar lists both levels in one column, the group's under the row that opened it.
+  expect(
+    within(rail())
+      .getAllByRole('link')
+      .map((l) => `${l.dataset.navLevel}:${l.getAttribute('href')}`),
+  ).toEqual([
+    'primary:/posts',
+    'primary:/clips',
+    'group:/clips',
+    'group:/video-templates',
+    'primary:/ai-models',
+  ])
   const menu = await openGroupMenu('Video navigation')
   expect(menu.getAllByRole('menuitemradio').map((item) => item.textContent)).toEqual([
     'My videos',
@@ -250,6 +275,82 @@ it.each([
     await userEvent.click(items[1]!)
     await waitFor(() => expect(router.state.location.pathname).toBe(second))
     expect(screen.queryByRole('menu')).not.toBeInTheDocument()
-    expect(screen.getAllByRole('navigation', { name: label })[0]).toHaveTextContent(all[1])
+    expect(screen.getByRole('navigation', { name: label })).toHaveTextContent(all[1])
   },
 )
+
+// The desk rail FOLDS rather than leaves (owner decision 2026-09-22): the destinations stay, the
+// names go, and the way back moves to the brand row, where a folded column has no room for it.
+it('folds the one sidebar down to its glyphs and back', async () => {
+  const user = userEvent.setup()
+  const { router } = renderAppAt('/posts', { user: { id: 'alice', plan: ProtoPlan.FREE } })
+  await screen.findAllByRole('navigation', { name: '주요' })
+  await waitFor(() => expect(router.state.status).toBe('idle'))
+  expect(screen.queryByRole('button', { name: '주요 메뉴 열기' })).not.toBeInTheDocument()
+
+  // One control for both halves, beside the brand mark at either width.
+  const close = screen.getByRole('button', { name: '주요 메뉴 닫기' })
+  expect(close.closest('header')).not.toBeNull()
+  expect(close).toHaveAttribute('aria-expanded', 'true')
+  const named = within(rail()).getAllByRole('link')
+  expect(named[0]).toHaveTextContent(/\S/)
+
+  await user.click(close)
+
+  // Folded: the same rail, both levels intact, every name still on the link for a screen reader.
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: '주요 메뉴 열기' })).toBeInTheDocument(),
+  )
+  expect(screen.queryByRole('button', { name: '주요 메뉴 닫기' })).not.toBeInTheDocument()
+  // The same control, in the same place, now saying the other half.
+  const open = screen.getByRole('button', { name: '주요 메뉴 열기' })
+  expect(open).toBe(close)
+  expect(open).toHaveAttribute('aria-expanded', 'false')
+  expect(within(rail()).queryAllByRole('button')).toHaveLength(0)
+  const glyphs = within(rail()).getAllByRole('link')
+  expect(glyphs.map((l) => l.getAttribute('href'))).toEqual(
+    named.map((l) => l.getAttribute('href')),
+  )
+  expect(rows('group').length).toBeGreaterThan(0)
+  for (const link of glyphs) {
+    expect(link).toHaveClass('size-11')
+    expect(link).toHaveAccessibleName()
+    // The name is not gone, it is a tooltip the app draws beside the glyph on hover or focus.
+    const tip = link.querySelector('span')!
+    expect(tip).toHaveTextContent(/\S/)
+    expect(tip).toHaveClass('hidden', 'group-hover:block', 'group-focus-visible:block')
+  }
+  expect(router.state.location.pathname).toBe('/posts')
+
+  await user.click(screen.getByRole('button', { name: '주요 메뉴 열기' }))
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: '주요 메뉴 닫기' })).toBeInTheDocument(),
+  )
+  expect(within(rail()).getAllByRole('link')[0]).toHaveTextContent(/\S/)
+  assertPrimary('/posts')
+})
+
+// One sidebar, two levels: pressing a primary destination opens ITS group under it, and the
+// group that was open closes with the address that held it.
+it('moves the open group in the sidebar when the primary destination changes', async () => {
+  const user = userEvent.setup()
+  const { router } = renderAppAt('/posts', { user: { id: 'alice', plan: ProtoPlan.FREE } })
+  await screen.findAllByRole('navigation', { name: '글 메뉴' })
+  await waitFor(() => expect(router.state.status).toBe('idle'))
+  expect(rows('group').map((l) => l.getAttribute('href'))).toEqual([
+    '/posts',
+    '/voices',
+    '/templates',
+    '/guidelines',
+    '/memories',
+  ])
+
+  await user.click(within(rail()).getByRole('link', { name: '영상' }))
+  await waitFor(() => expect(router.state.location.pathname).toBe('/clips'))
+
+  expect(rows('group').map((l) => l.getAttribute('href'))).toEqual(['/clips', '/video-templates'])
+  assertPrimary('/clips')
+  assertGroup('영상 메뉴', '/clips')
+  // A group destination of the group that closed is no longer anywhere in the sidebar.
+  expect(within(rail()).queryByRole('link', { name: '말투' })).toBeNull()
+})

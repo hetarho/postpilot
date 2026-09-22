@@ -5,6 +5,14 @@ export const nav = {
   modelHistory: 'Recent observation comparisons',
   modelLeaderboard: 'Leaderboard',
   primary: 'Primary',
+  groupSidebar: {
+    open: 'Open {{group}}',
+    close: 'Close {{group}}',
+  },
+  sidebar: {
+    open: 'Open primary navigation',
+    close: 'Close primary navigation',
+  },
   home: 'Postpilot home',
   posts: 'Posts',
   videos: 'Videos',

@@ -24,7 +24,17 @@ import {
  *  gains an observer at that moment, which is what makes "refreshed when opened" fall out of the
  *  query rather than out of a timer. The shell already reads the same cache entry for the header
  *  figure, so opening adds no request when that read is fresh. */
-export function AccountMenu({ onLoggedOut }: { onLoggedOut: () => void }) {
+export function AccountMenu({
+  onLoggedOut,
+  preferences,
+}: {
+  onLoggedOut: () => void
+  /** The interface preferences, composed by the shell. They live in this panel rather than beside
+   *  it (owner decision 2026-09-22): everything about the session is behind the one avatar, and
+   *  the 320px header keeps two fewer controls. The shell passes them in because both are widgets
+   *  and a widget does not reach across to another one. */
+  preferences?: ReactNode
+}) {
   const { t } = useTranslation('auth')
 
   return (
@@ -38,7 +48,9 @@ export function AccountMenu({ onLoggedOut }: { onLoggedOut: () => void }) {
       triggerClassName="size-10 rounded-full px-0 pointer-coarse:size-11"
       placement="below"
     >
-      {(close) => <AccountPanel close={close} onLoggedOut={onLoggedOut} />}
+      {(close) => (
+        <AccountPanel close={close} onLoggedOut={onLoggedOut} preferences={preferences} />
+      )}
     </Popover>
   )
 }
@@ -84,7 +96,15 @@ function MenuRow({
  *  mutation first is what keeps the guard from reading a stale session. A FAILED logout leaves
  *  the cookie valid, so the popover stays open and says so where the user is already looking
  *  (design-language §4.3) instead of pretending the session ended. */
-function AccountPanel({ close, onLoggedOut }: { close: () => void; onLoggedOut: () => void }) {
+function AccountPanel({
+  close,
+  onLoggedOut,
+  preferences,
+}: {
+  close: () => void
+  onLoggedOut: () => void
+  preferences?: ReactNode
+}) {
   const { t } = useTranslation(['auth', 'billing', 'common', 'plans'])
   const { user } = useSession()
   const { myPlan, isPending, isError } = useMyPlan()
@@ -139,6 +159,13 @@ function AccountPanel({ close, onLoggedOut }: { close: () => void; onLoggedOut: 
           </MenuRow>
         )}
       </nav>
+
+      {/* Between where the session GOES and the one action that ends it: a preference is neither,
+          and putting it last would sit it under a destructive control.
+          `lg:hidden`, because the desk header has the room to keep both preferences as their own
+          controls and the owner wants them there (owner decision 2026-09-22); this panel is where
+          they go once that room is gone. */}
+      {preferences && <section className="py-3 lg:hidden">{preferences}</section>}
 
       <div className="grid gap-2 pt-2">
         {/* The same row shape as the destinations above — widened into the padding, icon first —
