@@ -37,7 +37,7 @@ export const marketing = {
     },
     step4: {
       title: 'Revise, finalize, and export',
-      body: 'Ask for the change you want and only that part is rewritten; then copy the finalized post in the format your platform wants.',
+      body: 'Ask for the change you want and only that part is rewritten; then copy the finalized post in the format your platform wants and publish it manually on the destination service.',
     },
   },
   different: {
@@ -61,13 +61,11 @@ export const marketing = {
   },
   outputs: {
     title: 'Where the result goes',
-    body: 'One finalized post produces every format below. Nothing is rewritten per format.',
+    body: 'One finalized post produces every format below. Nothing is rewritten per format, and you manually publish the copied result on the destination service.',
     naver: 'Naver Blog',
     tistory: 'Tistory',
     html: 'HTML for your own site',
     markdown: 'Markdown',
-    publishing:
-      'Automated Naver publishing is a separate action you trigger for a finalized post, carried out by a paired Mac. It is currently an operator-tier surface and its live verification is still in progress.',
   },
   plans: {
     title: 'Plans',
@@ -75,14 +73,14 @@ export const marketing = {
     assignment:
       'Subscribers choose a tier on the Plans screen and pay there to start a subscription.',
     master:
-      'master is the operator tier. It has no usage limits and owns automated Naver publishing and account administration. It is not a tier a user can be given.',
+      'master is the operator tier. It has no usage limits and owns account administration. It is not a tier a user can be given.',
   },
   facts: {
     title: 'Control and data',
     images: 'Original photos are converted in your browser before upload.',
     isolation: 'Learning material is kept separate per account and per voice.',
     noBackground: 'Opening a screen never starts AI work. Every run is something you press.',
-    credentials: 'Naver credentials and browser state stay on the paired Mac.',
+    credentials: 'Copying and exporting require no credentials for a destination service.',
   },
   footer: {
     tagline: 'From photos and notes to a blog draft',

@@ -18,8 +18,6 @@ export const nav = {
   guidelines: '지침',
   memories: '기억',
   models: 'AI 모델',
-  publishingAgents: '발행 도구',
-  publishingShort: '발행 도구',
   voice: {
     profile: '프로필',
     versions: '버전 기록',

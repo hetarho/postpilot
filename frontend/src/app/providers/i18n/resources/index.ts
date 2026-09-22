@@ -38,10 +38,8 @@ import { i18n as applyModelRecommendationI18n } from '@/features/apply-model-rec
 import { i18n as assignEstimatorComboI18n } from '@/features/assign-estimator-combo/config/i18n'
 import { i18n as billingCheckoutI18n } from '@/pages/billing-checkout/config/i18n'
 import { i18n as billingI18n } from '@/pages/billing/config/i18n'
-import { i18n as cancelPublishI18n } from '@/features/cancel-publish/config/i18n'
 import { i18n as candidateComparisonI18n } from '@/widgets/candidate-comparison/config/i18n'
 import { i18n as configureModelPairI18n } from '@/features/configure-model-pair/config/i18n'
-import { i18n as configurePublishingAgentI18n } from '@/features/configure-publishing-agent/config/i18n'
 import { i18n as contactSheetI18n } from '@/widgets/contact-sheet/config/i18n'
 import { i18n as createVoiceI18n } from '@/features/create-voice/config/i18n'
 import { i18n as creditBadgeI18n } from '@/widgets/credit-badge/config/i18n'
@@ -69,21 +67,14 @@ import { i18n as manageVoiceSamplesI18n } from '@/features/manage-voice-samples/
 import { i18n as modelCatalogI18n } from '@/entities/model-catalog/config/i18n'
 import { i18n as modelExperimentI18n } from '@/pages/model-experiment/config/i18n'
 import { i18n as modelLeaderboardI18n } from '@/widgets/model-leaderboard/config/i18n'
-import { i18n as pairPublishingAgentI18n } from '@/features/pair-publishing-agent/config/i18n'
 import { i18n as planI18n } from '@/entities/plan/config/i18n'
 import { i18n as plansI18n } from '@/pages/plans/config/i18n'
 import { i18n as postI18n } from '@/entities/post/config/i18n'
 import { i18n as postsI18n } from '@/pages/posts/config/i18n'
-import { i18n as publishJobI18n } from '@/entities/publish-job/config/i18n'
-import { i18n as publishPanelI18n } from '@/widgets/publish-panel/config/i18n'
-import { i18n as publishPostI18n } from '@/features/publish-post/config/i18n'
-import { i18n as publishingAgentsI18n } from '@/pages/publishing-agents/config/i18n'
 import { i18n as purchaseCreditsI18n } from '@/features/purchase-credits/config/i18n'
 import { i18n as renameVoiceI18n } from '@/features/rename-voice/config/i18n'
-import { i18n as retryPublishI18n } from '@/features/retry-publish/config/i18n'
 import { i18n as reviewGuidelineCandidateI18n } from '@/features/review-guideline-candidate/config/i18n'
 import { i18n as reviewModelExperimentI18n } from '@/features/review-model-experiment/config/i18n'
-import { i18n as revokePublishingAgentI18n } from '@/features/revoke-publishing-agent/config/i18n'
 import { i18n as selectPostTemplateI18n } from '@/features/select-post-template/config/i18n'
 import { i18n as selectPostVoiceI18n } from '@/features/select-post-voice/config/i18n'
 import { i18n as setDefaultVoiceI18n } from '@/features/set-default-voice/config/i18n'
@@ -114,7 +105,6 @@ export const RESOURCE_NAMESPACES = [
   'guidelines',
   'memories',
   'models',
-  'publishing',
   'errors',
   'marketing',
   'plans',
@@ -188,15 +178,6 @@ export const FRAGMENTS: readonly I18nFragment[] = [
   postI18n,
   postsI18n,
   uploadPhotosI18n,
-  cancelPublishI18n,
-  configurePublishingAgentI18n,
-  pairPublishingAgentI18n,
-  publishJobI18n,
-  publishPanelI18n,
-  publishPostI18n,
-  publishingAgentsI18n,
-  retryPublishI18n,
-  revokePublishingAgentI18n,
   deleteTemplateI18n,
   selectPostTemplateI18n,
   templateEntityI18n,
@@ -286,17 +267,6 @@ export const resources = {
       ...modelLeaderboardI18n.ko,
       ...reviewModelExperimentI18n.ko,
       ...selectModelModelsI18n.ko,
-    },
-    publishing: {
-      ...cancelPublishI18n.ko,
-      ...configurePublishingAgentI18n.ko,
-      ...pairPublishingAgentI18n.ko,
-      ...publishJobI18n.ko,
-      ...publishPanelI18n.ko,
-      ...publishPostI18n.ko,
-      ...publishingAgentsI18n.ko,
-      ...retryPublishI18n.ko,
-      ...revokePublishingAgentI18n.ko,
     },
     errors: koErrors,
     marketing: koMarketing,
@@ -400,17 +370,6 @@ export const resources = {
       ...modelLeaderboardI18n.en,
       ...reviewModelExperimentI18n.en,
       ...selectModelModelsI18n.en,
-    },
-    publishing: {
-      ...cancelPublishI18n.en,
-      ...configurePublishingAgentI18n.en,
-      ...pairPublishingAgentI18n.en,
-      ...publishJobI18n.en,
-      ...publishPanelI18n.en,
-      ...publishPostI18n.en,
-      ...publishingAgentsI18n.en,
-      ...retryPublishI18n.en,
-      ...revokePublishingAgentI18n.en,
     },
     errors: enErrors,
     marketing: enMarketing,

@@ -397,7 +397,6 @@ describe('the guideline management route', () => {
 // boundary that only resolves via in-app navigation would fail here.
 describe('lazily loaded routes', () => {
   it.each([
-    ['/publishing-agents', '발행 Mac'],
     ['/voices', '말투'],
     ['/templates', '템플릿'],
     ['/guidelines', '지침'],
@@ -658,7 +657,6 @@ describe('localized registered-route smoke', () => {
     ko: {
       login: '로그인',
       posts: '내 글',
-      publishing: '발행 Mac',
       voices: '말투',
       templates: '템플릿',
       guidelines: '지침',
@@ -675,7 +673,6 @@ describe('localized registered-route smoke', () => {
     en: {
       login: 'Log in',
       posts: 'My posts',
-      publishing: 'Publishing Macs',
       voices: 'Voices',
       templates: 'Templates',
       guidelines: 'Guidelines',
@@ -718,8 +715,9 @@ describe('localized registered-route smoke', () => {
         {
           path: '/publishing-agents',
           role: 'heading',
-          name: text.publishing,
+          name: text.posts,
           signedIn: true,
+          expectedPath: '/posts',
         },
         { path: '/voices', role: 'heading', name: text.voices, signedIn: true },
         { path: '/templates', role: 'heading', name: text.templates, signedIn: true },
@@ -866,31 +864,31 @@ describe('localized registered-route smoke', () => {
   )
 })
 
-// Job 37: publishing runs through OUR paired agent and OUR infrastructure ([I1]), so it is the
-// operator's surface. The server refuses every one of its procedures to another tier — these
-// prove the shell does not offer what the server would refuse.
-describe('plan-gated navigation', () => {
-  it('offers 발행 Mac only to the operator tier', async () => {
-    renderAppAt('/posts', { user: { id: 'root', plan: ProtoPlan.MASTER } })
-    await screen.findByRole('heading', { level: 1, name: '내 글' })
-    expect(hrefs().filter((href) => href === '/publishing-agents')).not.toHaveLength(0)
+describe('retired publishing route', () => {
+  it.each([
+    ['free', { id: 'alice', plan: ProtoPlan.FREE }],
+    ['master', { id: 'root', plan: ProtoPlan.MASTER }],
+  ])('omits publishing navigation and redirects the old link for %s', async (_tier, account) => {
+    const calls: string[] = []
+    const { router } = renderAppAt('/publishing-agents', { user: account, calls })
 
-    cleanup()
-    renderAppAt('/posts', { user: { id: 'alice', plan: ProtoPlan.FREE } })
-    await screen.findByRole('heading', { level: 1, name: '내 글' })
-    expect(hrefs()).not.toContain('/publishing-agents')
-  })
-
-  it('sends a non-operator away from /publishing-agents', async () => {
-    renderAppAt('/publishing-agents', { user: { id: 'alice', plan: ProtoPlan.FREE } })
     expect(await screen.findByRole('heading', { level: 1, name: '내 글' })).toBeInTheDocument()
-
-    cleanup()
-    renderAppAt('/publishing-agents', { user: { id: 'root', plan: ProtoPlan.MASTER } })
-    expect(await screen.findByRole('heading', { level: 1, name: '발행 Mac' })).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe('/posts')
+    expect(hrefs()).not.toContain('/publishing-agents')
+    expect(calls.filter((call) => /publish/i.test(call))).toEqual([])
   })
 
-  it('keeps the other five destinations for every tier', async () => {
+  it('keeps the old link protected by the ordinary session guard', async () => {
+    const calls: string[] = []
+    const { router } = renderAppAt('/publishing-agents', { calls })
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/login'))
+    expect(router.state.location.search).toEqual({ redirect: '/publishing-agents' })
+    expect(await screen.findByRole('button', { name: '로그인' })).toBeInTheDocument()
+    expect(calls.filter((call) => /publish/i.test(call))).toEqual([])
+  })
+
+  it('keeps the writing and model destinations for every tier', async () => {
     renderAppAt('/posts', { user: { id: 'alice', plan: ProtoPlan.FREE } })
     await screen.findByRole('heading', { level: 1, name: '내 글' })
     for (const destination of ['/posts', '/voices', '/templates', '/guidelines', '/ai-models']) {

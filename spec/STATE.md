@@ -56,7 +56,6 @@
 | T282 | Stop and uninstall existing Mac publishing companions | PUB ARCH | T311 | todo |
 | T283 | Remove publishing backend, deletion guards and database tables | PUB POST AUTH QUOTA LANG ARCH | T312 | todo |
 | T284 | Delete companion source, publishing contracts and build integration | PUB AUTH LANG VIDEO ARCH | T283 | todo |
-| T311 | Remove publishing screens, polling and product promises | PUB EXPORT POST MKT QUOTA LANG VIDEO ARCH | T310 | doing@260922.ret |
 | T312 | Export retirement outcomes and purge publishing-owned data | PUB ARCH | T282 | todo |
 | T313 | Verify complete retirement and preserved manual publishing workflow | PUB EXPORT POST MKT AUTH ARCH | T284 | todo |
 | T315 | Leaderboards keyed by scope, stage and window | MODEL LANG ARCH | - | todo |
@@ -65,10 +64,11 @@
 
 ## next
 - implement-task T315 (independent) or T316 (T314 is done); then T317 last
-- implement-task T311; retirement order T311 → T282 → T312 → T283 → T284 → T313; T008 must not resume, T279 follows removal
+- implement-task T282; retirement order T282 → T312 → T283 → T284 → T313; T008 must not resume, T279 follows removal
 - create-task MKT THEME for the existing /about header overflow at 320px/200% text
 - create-task CLIP CDS THEME for the r41/r24 Wanted Sans delta, which T305..T309 did not consume
 ## log
+- 260922 T311 done; all publishing product surfaces and clients removed, legacy link redirects after auth, manual export preserved; 2,286 frontend tests and ARCH-25 gates pass (ret)
 - 260922 T314 done; a comparison freezes its origin, a lab verdict picks without applying and its follow-ups are gated to draft/review, migration 0073 backfills; whole backend suite, frontend gates and build pass, clip suite failures are the known whole-suite flake (org)
 - 260922 T314 claimed (org)
 - 260922 T311 claimed (ret)
@@ -88,4 +88,3 @@
 - 260922 create-architecture ARCH retirement alignment start; remove the companion architecture through the PUB cutover stages
 - 260922 update-ssot PUB and dependent domains start; approved phased retirement of automatic publishing, followed by create-task planning
 - 260922 review-code publishing-260922 complete; recommend retiring automatic Naver publish and retaining export, based on official automation restrictions and missing live acceptance; no adoption or implementation
-- 260922 review-code publishing-260922 start; assess publishing viability and Naver automation/account restrictions

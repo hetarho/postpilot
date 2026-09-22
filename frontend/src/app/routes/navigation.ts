@@ -11,7 +11,6 @@ import {
   LayoutTemplate,
   ListChecks,
   Scissors,
-  Send,
   Speech,
 } from 'lucide-react'
 
@@ -38,14 +37,6 @@ export const DESTINATIONS = [
     icon: Bot,
     routeIds: ['/authenticated/models'],
     masterOnly: false,
-  },
-  {
-    to: '/publishing-agents',
-    labelKey: 'publishingAgents',
-    phoneLabelKey: 'publishingShort',
-    icon: Send,
-    routeIds: ['/authenticated/publishing-agents'],
-    masterOnly: true,
   },
 ] as const
 

@@ -6,8 +6,6 @@ export {
   providerClient,
   modelCatalogClient,
   generationClient,
-  publishingClient,
-  publishingClientFor,
   templateClient,
   voiceClient,
   voiceLearningClient,
@@ -335,28 +333,6 @@ export {
   ModelExperimentSchema,
   StartExperimentResponseSchema,
 } from './gen/postpilot/v1/model_experiment_pb'
-export {
-  PublishingService,
-  PublishVisibility,
-  PublishStatus,
-  PublishStage,
-  PublishingAgentSchema,
-  PublishJobSchema,
-  CreateAgentPairingResponseSchema,
-  ListPublishingAgentsResponseSchema,
-  UpdatePublishingAgentResponseSchema,
-  RevokePublishingAgentResponseSchema,
-  StartPublishResponseSchema,
-  GetPublishJobResponseSchema,
-  ListRetryablePublishJobsResponseSchema,
-  RetryPublishResponseSchema,
-  CancelPublishResponseSchema,
-} from './gen/postpilot/v1/publishing_pb'
-export type {
-  PublishingAgent as ProtoPublishingAgent,
-  PublishingCategory as ProtoPublishingCategory,
-  PublishJob as ProtoPublishJob,
-} from './gen/postpilot/v1/publishing_pb'
 export {
   GuidelineService,
   GuidelineSchema,

@@ -18,8 +18,6 @@ export const nav = {
   guidelines: 'Guidelines',
   memories: 'Memories',
   models: 'AI models',
-  publishingAgents: 'Publishing tools',
-  publishingShort: 'Publish',
   voice: {
     profile: 'Profile',
     versions: 'Version history',

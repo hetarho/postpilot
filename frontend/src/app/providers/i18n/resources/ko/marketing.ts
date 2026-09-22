@@ -2,10 +2,8 @@
  *  string lives here so the page composes keys rather than one language.
  *
  *  Claim discipline (spec/legacy/policy/public-marketing.md): every sentence here must be true of
- *  SHIPPED behavior. Two boundaries are load-bearing and must not be softened:
- *  - automated Naver publishing is an operator-tier surface AND still in live verification
- *    (plan 12 / job 25), so it is stated as such, never as a generally available feature;
- *  - the plan numbers below mirror the code-owned limits table in `backend/internal/plan`
+ *  SHIPPED behavior. The plan numbers below mirror the code-owned limits table in
+ *  `backend/internal/plan`
  *    (spec/legacy/policy/plans.md). Changing the ladder means changing this copy in the same change. */
 export const marketing = {
   metadata: {
@@ -44,7 +42,7 @@ export const marketing = {
     },
     step4: {
       title: '고치고 확정한 뒤 내보냅니다',
-      body: '수정 요청으로 필요한 부분만 다시 쓰고, 확정한 글을 원하는 플랫폼 형식으로 복사합니다.',
+      body: '수정 요청으로 필요한 부분만 다시 쓰고, 확정한 글을 원하는 플랫폼 형식으로 복사한 뒤 목적지 서비스에 직접 게시합니다.',
     },
   },
   different: {
@@ -68,27 +66,25 @@ export const marketing = {
   },
   outputs: {
     title: '결과물은 어디로 가나요',
-    body: '확정한 글 하나에서 아래 형식들을 만듭니다. 형식마다 글을 다시 쓰지 않습니다.',
+    body: '확정한 글 하나에서 아래 형식들을 만듭니다. 형식마다 글을 다시 쓰지 않고, 복사한 결과는 사용자가 목적지 서비스에 직접 게시합니다.',
     naver: '네이버 블로그용',
     tistory: '티스토리용',
     html: '개인 사이트용 HTML',
     markdown: '마크다운',
-    publishing:
-      '네이버 자동 발행은 짝지은 Mac이 확정된 글에 대해 사용자가 직접 실행하는 별도 동작이며, 현재 운영자 등급에서만 쓰이고 실제 환경 검증이 진행 중입니다.',
   },
   plans: {
     title: '요금제',
     body: '요금제가 정하는 것은 매달 받는 크레딧뿐입니다. AI 작업은 크레딧으로 계산되고, 고를 수 있는 모델은 모든 요금제가 같습니다.',
     assignment: '구독자는 플랜 화면에서 원하는 등급을 고르고 결제해 구독을 시작할 수 있습니다.',
     master:
-      'master는 운영자 등급입니다. 사용량 제한이 없고 네이버 자동 발행과 계정 관리를 담당하며, 사용자가 받을 수 있는 등급이 아닙니다.',
+      'master는 운영자 등급입니다. 사용량 제한이 없고 계정 관리를 담당하며, 사용자가 받을 수 있는 등급이 아닙니다.',
   },
   facts: {
     title: '통제와 데이터',
     images: '사진 원본은 브라우저에서 변환한 뒤 올라갑니다.',
     isolation: '계정과 말투별로 학습 자료가 분리돼 있습니다.',
     noBackground: '화면을 여는 것만으로는 AI 작업이 시작되지 않습니다. 실행은 항상 직접 누릅니다.',
-    credentials: '네이버 로그인 정보와 브라우저 상태는 짝지은 Mac에 남습니다.',
+    credentials: '복사와 내보내기에는 목적지 서비스의 로그인 정보가 필요하지 않습니다.',
   },
   footer: {
     tagline: '사진과 메모에서 블로그 초안까지',

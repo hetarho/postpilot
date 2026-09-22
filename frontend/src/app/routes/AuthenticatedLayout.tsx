@@ -33,7 +33,6 @@ export function AuthenticatedLayout() {
   ).map((d) => ({
     to: d.to,
     label: t(d.labelKey),
-    shortLabel: 'phoneLabelKey' in d ? t(d.phoneLabelKey) : undefined,
     icon: d.icon,
   }))
   const primary = (shape: NavShape) => (

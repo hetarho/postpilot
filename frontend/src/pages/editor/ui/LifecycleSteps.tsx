@@ -1,7 +1,6 @@
 import { useCallback, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { hasContent, useRefreshPostImages, type PostDraft } from '@/entities/post'
-import { useSession } from '@/entities/session'
 import { voiceContentLanguageMismatch } from '@/entities/voice'
 import type { PostContent } from '@/shared/api'
 import { useVoiceLearning } from '@/features/finalize-post'
@@ -70,7 +69,6 @@ export function LifecycleSteps({
   // learning outcome is reported on 글 완성, so the run has to outlive the step change that the
   // finalize itself causes.
   const learning = useVoiceLearning(ownerId, post)
-  const { user } = useSession()
   const languageMismatch = voiceContentLanguageMismatch(
     post.contentLanguage,
     post.voice.sourceLanguage,
@@ -121,8 +119,6 @@ export function LifecycleSteps({
       liveContent={liveContent}
       learning={learning}
       languageMismatch={languageMismatch}
-      isOperator={user?.plan === 'master'}
-      editorRef={contentEditorRef}
       onPhotoUrlsStale={refreshPhotoUrls}
       onGoGenerate={() => onStepChange('generate')}
       onGoRefine={() => onStepChange('refine')}

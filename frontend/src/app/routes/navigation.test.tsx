@@ -48,17 +48,12 @@ const cases = [
   ...video.map(([path, tab]) => ({ path, tab, primary: '/clips', group: '영상 메뉴' })),
 ]
 
-function assertPrimary(current: string | undefined, master = false, label = '주요') {
+function assertPrimary(current: string | undefined, label = '주요') {
   const shapes = screen.getAllByRole('navigation', { name: label })
   expect(shapes).toHaveLength(3)
   for (const shape of shapes) {
     const links = within(shape).getAllByRole('link')
-    expect(links.map((l) => l.getAttribute('href'))).toEqual([
-      '/posts',
-      '/clips',
-      '/ai-models',
-      ...(master ? ['/publishing-agents'] : []),
-    ])
+    expect(links.map((l) => l.getAttribute('href'))).toEqual(['/posts', '/clips', '/ai-models'])
     expect(
       links
         .filter((l) => l.getAttribute('aria-current') === 'page')
@@ -137,20 +132,20 @@ it.each(['/plans', '/billing', '/account', '/admin', '/admin/models', '/admin/es
     const { router } = renderAppAt(path, { user: { id: 'root', plan: ProtoPlan.MASTER } })
     await screen.findAllByRole('navigation', { name: '주요' })
     await waitFor(() => expect(router.state.status).toBe('idle'))
-    assertPrimary(undefined, true)
+    assertPrimary(undefined)
     expect(screen.queryAllByRole('navigation', { name: '글 메뉴' })).toHaveLength(0)
     expect(screen.queryAllByRole('navigation', { name: '영상 메뉴' })).toHaveLength(0)
     expect(document.querySelector('.chrome-subnav')).toBeNull()
     expect(screen.getByRole('link', { name: 'Postpilot 홈' })).toHaveAttribute('href', '/posts')
   },
 )
-it.each(['/ai-models', '/ai-models/experiments/one', '/publishing-agents'])(
+it.each(['/ai-models', '/ai-models/experiments/one'])(
   'marks the standalone matched destination at %s',
   async (path) => {
     const { router } = renderAppAt(path, { user: { id: 'root', plan: ProtoPlan.MASTER } })
     await screen.findAllByRole('navigation', { name: '주요' })
     await waitFor(() => expect(router.state.status).toBe('idle'))
-    assertPrimary(path === '/publishing-agents' ? path : '/ai-models', true)
+    assertPrimary('/ai-models')
   },
 )
 it('uses actual matched ids instead of prefix guesses', () => {
@@ -183,32 +178,28 @@ it('restores both active levels through browser history and keeps ko/en parity',
     (await openGroupMenu('영상 메뉴')).getByRole('menuitemradio', { name: '영상 템플릿' }),
   )
   await waitFor(() => expect(router.state.location.pathname).toBe('/video-templates'))
-  assertPrimary('/clips', true)
+  assertPrimary('/clips')
   await act(async () => {
     router.history.back()
   })
   await waitFor(() => expect(router.state.location.pathname).toBe('/clips'))
-  assertPrimary('/clips', true)
+  assertPrimary('/clips')
   await act(async () => {
     router.history.back()
   })
   await screen.findAllByRole('navigation', { name: '글 메뉴' })
   expect(router.state.location.pathname).toBe('/voices')
-  assertPrimary('/posts', true)
+  assertPrimary('/posts')
   assertGroup('글 메뉴', '/voices')
   await act(async () => {
     router.history.forward()
   })
   await screen.findAllByRole('navigation', { name: '영상 메뉴' })
-  assertPrimary('/clips', true)
+  assertPrimary('/clips')
   await act(async () => {
     initializeI18n('en')
   })
-  assertPrimary('/clips', true, 'Primary')
-  const phone = screen.getAllByRole('navigation', { name: 'Primary' })[2]!
-  const publish = within(phone).getByRole('link', { name: 'Publishing tools' })
-  expect(publish).toHaveTextContent('Publish')
-  expect(publish).toHaveClass('min-h-14', 'flex-1')
+  assertPrimary('/clips', 'Primary')
   expect(
     within(screen.getAllByRole('navigation', { name: 'Primary' })[0]!).getByRole('link', {
       name: 'Posts',
@@ -218,7 +209,7 @@ it('restores both active levels through browser history and keeps ko/en parity',
     within(screen.getAllByRole('navigation', { name: 'Primary' })[0]!)
       .getAllByRole('link')
       .map((l) => l.textContent),
-  ).toEqual(['Posts', 'Videos', 'AI models', 'Publishing tools'])
+  ).toEqual(['Posts', 'Videos', 'AI models'])
   const [band] = assertGroup('Video navigation', '/clips')
   expect(band).toHaveTextContent('My videos')
   const menu = await openGroupMenu('Video navigation')

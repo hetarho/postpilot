@@ -10,7 +10,7 @@ import { clipRoutes } from './clips'
 import { marketingRoutes } from './marketing'
 import { modelGroupRoute, modelRoutes } from './models'
 import { postRoutes } from './posts'
-import { publishingRoutes } from './publishing'
+import { legacyPublishingRoutes } from './publishing'
 import { templateRoutes } from './templates'
 import {
   authenticatedRoute,
@@ -39,7 +39,7 @@ export const routeTree = rootRoute.addChildren([
       voiceLayoutRoute.addChildren(voiceTabRoutes),
     ]),
     videoGroupRoute.addChildren(clipRoutes),
-    ...publishingRoutes,
+    ...legacyPublishingRoutes,
     adminRoute.addChildren(adminRoutes),
     ...billingRoutes,
     ...accountRoutes,

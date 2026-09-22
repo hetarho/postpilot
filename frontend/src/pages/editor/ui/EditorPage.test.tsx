@@ -3,15 +3,7 @@ import { cleanup, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { initializeI18n } from '@/app/providers/i18n'
 import { discardUploadBatches } from '@/features/upload-photos'
-import { create } from '@bufbuild/protobuf'
-import {
-  ExperimentOrigin,
-  PublishJobSchema,
-  PublishStatus,
-  PublishVisibility,
-  PublishingAgentSchema,
-  Stage,
-} from '@/shared/api'
+import { ExperimentOrigin, ProtoPlan, Stage } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
 import {
   OBSERVATION_FIXTURE,
@@ -26,6 +18,7 @@ import { FAKE_STORAGE_ORIGIN, type FakeDraftSave } from '@/test/posts'
 import { clearCaret } from '@/features/edit-post-content/model/caret-handoff'
 
 const USER = { id: 'alice' }
+const originalClipboard = navigator.clipboard
 
 // This integration file mounts the full routed editor 71 times. Individual cases finish well
 // below this bound, but the default 5s becomes flaky while all test files transform in parallel.
@@ -96,6 +89,7 @@ const templateField = (user: ReturnType<typeof userEvent.setup>) => dockField(us
 
 afterEach(() => {
   cleanup()
+  Object.defineProperty(navigator, 'clipboard', { configurable: true, value: originalClipboard })
   // Module state, so an unconsumed handoff would leak into the next test.
   clearCaret()
   discardUploadBatches()
@@ -178,244 +172,55 @@ describe('opening a post', () => {
     expect(calls).toEqual([])
   })
 
-  it('renders publishing after export without starting on mount', async () => {
-    const calls: string[] = []
-    const user = userEvent.setup()
-    renderAppAt('/posts/20260820-jeju', {
-      user: USER,
-      calls,
-      posts: {
-        posts: [
-          {
-            slug: '20260820-jeju',
-            status: 'review',
-            createdAt: '2026-08-20T12:00:00Z',
-            content: POST_CONTENT_FIXTURE,
-          },
-        ],
-      },
-    })
+  it.each([
+    {
+      locale: 'ko' as const,
+      account: { id: 'alice', plan: ProtoPlan.FREE },
+      finish: '글 완성',
+      exportHeading: '내보내기',
+      copyTitle: '제목 복사',
+    },
+    {
+      locale: 'en' as const,
+      account: { id: 'root', plan: ProtoPlan.MASTER },
+      finish: 'Finish',
+      exportHeading: 'Export',
+      copyTitle: 'Copy title',
+    },
+  ])(
+    'keeps manual export and makes no publishing call for $locale/$account.plan',
+    async ({ locale, account, finish, exportHeading, copyTitle }) => {
+      initializeI18n(locale)
+      const calls: string[] = []
+      const user = userEvent.setup()
+      const writeText = vi.fn(async () => undefined)
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: { writeText },
+      })
+      renderAppAt('/posts/20260820-jeju', {
+        user: account,
+        calls,
+        posts: {
+          posts: [
+            {
+              slug: '20260820-jeju',
+              status: 'review',
+              createdAt: '2026-08-20T12:00:00Z',
+              content: POST_CONTENT_FIXTURE,
+            },
+          ],
+        },
+      })
 
-    await openStep(user, '글 완성')
-    const exportHeading = await screen.findByRole('heading', { name: '내보내기' })
-    const publishHeading = await screen.findByRole('heading', { name: '발행하기' })
-    expect(
-      exportHeading.compareDocumentPosition(publishHeading) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy()
-    expect(calls).not.toContain('StartPublish')
-  })
-
-  it('starts only after the explicit final-publish confirmation', async () => {
-    const calls: string[] = []
-    const user = userEvent.setup()
-    const agent = create(PublishingAgentSchema, {
-      id: 'agent-1',
-      label: '침실 Mac',
-      platformAccountId: 'my-blog',
-      platformAccountLabel: '내 네이버 블로그',
-      browserLabel: 'Google Chrome',
-      categories: [{ id: 'daily', name: '일상' }],
-      defaultCategoryId: 'daily',
-      defaultVisibility: PublishVisibility.PUBLIC,
-      lastSeenAt: new Date().toISOString(),
-      ready: true,
-    })
-    renderAppAt('/posts/20260820-jeju', {
-      user: USER,
-      calls,
-      posts: {
-        posts: [
-          {
-            slug: '20260820-jeju',
-            status: 'finalized',
-            createdAt: '2026-08-20T12:00:00Z',
-            content: POST_CONTENT_FIXTURE,
-            contentRevision: 3n,
-            finalizedRevision: 3n,
-          },
-        ],
-      },
-      publishing: { agents: [agent] },
-    })
-
-    const publishButton = await screen.findByRole('button', { name: '네이버에 발행' })
-    expect(calls).not.toContain('StartPublish')
-    await user.click(publishButton)
-    expect(calls).not.toContain('StartPublish')
-    expect(screen.getByRole('dialog', { name: '네이버에 최종 발행할까요?' })).toHaveTextContent(
-      '추가 확인을 요청하지 않습니다',
-    )
-    await user.click(
-      within(screen.getByRole('dialog')).getByRole('button', { name: '네이버에 발행' }),
-    )
-    await waitFor(() => expect(calls).toContain('StartPublish'))
-  })
-
-  it('flushes a pending edit and refuses to publish the formerly finalized revision', async () => {
-    const calls: string[] = []
-    const user = userEvent.setup()
-    let releaseSave!: () => void
-    const contentSaveGate = new Promise<void>((resolve) => {
-      releaseSave = resolve
-    })
-    const agent = create(PublishingAgentSchema, {
-      id: 'agent-1',
-      label: '침실 Mac',
-      platformAccountId: 'my-blog',
-      platformAccountLabel: '내 네이버 블로그',
-      browserLabel: 'Google Chrome',
-      categories: [{ id: 'daily', name: '일상' }],
-      defaultCategoryId: 'daily',
-      defaultVisibility: PublishVisibility.PUBLIC,
-      ready: true,
-    })
-    renderAppAt('/posts/20260820-jeju', {
-      user: USER,
-      calls,
-      posts: {
-        contentSaveGate,
-        posts: [
-          {
-            slug: '20260820-jeju',
-            status: 'finalized',
-            content: POST_CONTENT_FIXTURE,
-            images: POST_IMAGES_FIXTURE,
-            contentRevision: 3n,
-            finalizedRevision: 3n,
-            machineBaselineRevision: 3n,
-          },
-        ],
-      },
-      publishing: { agents: [agent] },
-    })
-
-    await openStep(user, '글 다듬기')
-    await user.click(await screen.findByRole('button', { name: '1번째 블록 수정' }))
-    const field = screen.getByLabelText('1번째 블록 내용')
-    await user.clear(field)
-    await user.type(field, '발행 직전에 고친 문단')
-    await user.click(screen.getByRole('button', { name: '저장' }))
-    await waitFor(() => expect(calls).toContain('SavePostContent'), { timeout: 4_000 })
-    await openStep(user, '글 완성')
-    await user.click(await screen.findByRole('button', { name: '네이버에 발행' }))
-
-    expect(calls).not.toContain('StartPublish')
-    expect(
-      screen.queryByRole('dialog', { name: '네이버에 최종 발행할까요?' }),
-    ).not.toBeInTheDocument()
-    releaseSave()
-    await waitFor(() =>
-      expect(
-        screen.getByText('현재 내용을 먼저 확정해야 정확히 이 버전을 발행할 수 있어요.'),
-      ).toBeInTheDocument(),
-    )
-  })
-
-  it('keeps the frozen category and visibility for a safe attention retry', async () => {
-    const calls: string[] = []
-    const startRequests: Array<{
-      expectedContentRevision: bigint
-      agentId: string
-      categoryId: string
-      visibility: number
-    }> = []
-    const user = userEvent.setup()
-    const agent = create(PublishingAgentSchema, {
-      id: 'agent-1',
-      label: '침실 Mac',
-      platformAccountId: 'my-blog',
-      platformAccountLabel: '내 네이버 블로그',
-      browserLabel: 'Google Chrome',
-      categories: [
-        { id: 'daily', name: '일상' },
-        { id: 'travel', name: '여행' },
-      ],
-      defaultCategoryId: 'daily',
-      defaultVisibility: PublishVisibility.PUBLIC,
-      ready: true,
-    })
-    const job = create(PublishJobSchema, {
-      id: 'publish-job-1',
-      postSlug: '20260820-jeju',
-      agentId: 'agent-1',
-      status: PublishStatus.NEEDS_ATTENTION,
-      contentRevision: 3n,
-      categoryId: 'travel',
-      visibility: PublishVisibility.PRIVATE,
-    })
-    renderAppAt('/posts/20260820-jeju', {
-      user: USER,
-      posts: {
-        posts: [
-          {
-            slug: '20260820-jeju',
-            status: 'review',
-            content: POST_CONTENT_FIXTURE,
-            contentRevision: 9n,
-            finalizedRevision: 3n,
-          },
-        ],
-      },
-      publishing: { calls, agents: [agent], jobs: [job], startRequests },
-    })
-
-    await openStep(user, '글 완성')
-    const retry = await screen.findByRole('button', { name: '안전하게 다시 시도' })
-    expect(retry).toBeEnabled()
-    const category = screen.getByRole('combobox', { name: /카테고리/ })
-    const visibility = screen.getByRole('combobox', { name: /공개 설정/ })
-    expect(category).toHaveTextContent('여행')
-    expect(category).toBeDisabled()
-    expect(visibility).toHaveTextContent('비공개')
-    expect(visibility).toBeDisabled()
-
-    await user.click(retry)
-    await user.click(
-      within(screen.getByRole('dialog')).getByRole('button', { name: '네이버에 발행' }),
-    )
-    await waitFor(() => expect(calls).toContain('StartPublish'))
-    expect(startRequests).toEqual([
-      {
-        expectedContentRevision: 3n,
-        agentId: 'agent-1',
-        categoryId: 'travel',
-        visibility: PublishVisibility.PRIVATE,
-      },
-    ])
-  })
-
-  it('keeps pre-commit cancellation available when the paired agent is unavailable', async () => {
-    const calls: string[] = []
-    const user = userEvent.setup()
-    const job = create(PublishJobSchema, {
-      id: 'publish-job-queued',
-      postSlug: '20260820-jeju',
-      agentId: 'revoked-agent',
-      status: PublishStatus.QUEUED,
-      contentRevision: 3n,
-      categoryId: 'travel',
-      visibility: PublishVisibility.PRIVATE,
-    })
-    renderAppAt('/posts/20260820-jeju', {
-      user: USER,
-      calls,
-      posts: {
-        posts: [
-          {
-            slug: '20260820-jeju',
-            status: 'finalized',
-            content: POST_CONTENT_FIXTURE,
-            contentRevision: 3n,
-            finalizedRevision: 3n,
-          },
-        ],
-      },
-      publishing: { agents: [], jobs: [job] },
-    })
-
-    await user.click(await screen.findByRole('button', { name: '발행 취소' }))
-    await waitFor(() => expect(calls).toContain('CancelPublish'))
-  })
+      await openStep(user, finish)
+      expect(await screen.findByRole('heading', { name: exportHeading })).toBeInTheDocument()
+      await user.click(screen.getByRole('button', { name: copyTitle }))
+      await waitFor(() => expect(writeText).toHaveBeenCalledWith(POST_CONTENT_FIXTURE.title))
+      expect(screen.queryByText(/^(?:발행하기|Publish)$/)).not.toBeInTheDocument()
+      expect(calls.filter((call) => /publish/i.test(call))).toEqual([])
+    },
+  )
 
   it('resumes polling the active job exposed by the post', async () => {
     const calls: string[] = []

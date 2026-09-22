@@ -21,7 +21,7 @@ const COPY = {
       '고치고 확정한 뒤 내보냅니다',
     ],
     formats: ['네이버 블로그용', '티스토리용', '개인 사이트용 HTML', '마크다운'],
-    publishing: /실제 환경 검증이 진행 중/,
+    manualOutput: /목적지 서비스에 직접 게시합니다/,
     assignment: /플랜 화면에서 원하는 등급을 고르고 결제해 구독을 시작할 수 있습니다/,
     master: /사용자가 받을 수 있는 등급이 아닙니다/,
     recommended: '가장 합리적',
@@ -30,6 +30,7 @@ const COPY = {
     // and nothing else — no daily job count, no spend allowance, no model range.
     unownedPlanClaims: ['하루', '일일', '사용 금액', '범위'],
     facts: /화면을 여는 것만으로는 AI 작업이 시작되지 않습니다/,
+    credentials: /목적지 서비스의 로그인 정보가 필요하지 않습니다/,
   },
   en: {
     h1: 'Photos and rough notes into a blog draft in your own voice',
@@ -51,13 +52,14 @@ const COPY = {
       'Revise, finalize, and export',
     ],
     formats: ['Naver Blog', 'Tistory', 'HTML for your own site', 'Markdown'],
-    publishing: /live verification is still in progress/,
+    manualOutput: /manually publish the copied result on the destination service/,
     assignment: /choose a tier on the Plans screen and pay there to start a subscription/,
     master: /not a tier a user can be given/,
     recommended: 'Best value',
     haveAccount: 'Already have an account?',
     unownedPlanClaims: ['per day', 'daily', 'spend', 'range of'],
     facts: /Opening a screen never starts AI work/,
+    credentials: /require no credentials for a destination service/,
   },
 } as const
 
@@ -95,6 +97,7 @@ describe.each(['ko', 'en'] as const)('the public About page in %s', (locale) => 
     }
     expect(screen.getByText(copy.access)).toBeInTheDocument()
     expect(screen.getByText(copy.facts)).toBeInTheDocument()
+    expect(screen.getByText(copy.credentials)).toBeInTheDocument()
 
     const flow = within(screen.getByRole('region', { name: copy.sections[0] }))
     const steps = flow.getAllByRole('listitem')
@@ -111,17 +114,13 @@ describe.each(['ko', 'en'] as const)('the public About page in %s', (locale) => 
   // A8: the four export formats all come from the one canonical post.
   it('lists the four output formats', async () => {
     render()
-    const outputs = within(await screen.findByRole('region', { name: copy.sections[2] }))
+    const outputRegion = await screen.findByRole('region', { name: copy.sections[2] })
+    const outputs = within(outputRegion)
     for (const format of copy.formats) {
       expect(outputs.getByText(format)).toBeInTheDocument()
     }
-  })
-
-  // A9: publishing is stated as an operator-tier surface still in verification, never as shipped.
-  it('states the publishing claim boundary rather than marketing it', async () => {
-    render()
-    const outputs = within(await screen.findByRole('region', { name: copy.sections[2] }))
-    expect(outputs.getByText(copy.publishing)).toBeInTheDocument()
+    expect(outputs.getByText(copy.manualOutput)).toBeInTheDocument()
+    expect(outputRegion).not.toHaveTextContent(/자동 발행|Automated Naver publishing|paired Mac/)
   })
 
   // A17 / MARKETING-5: the tier values equal the shipped grant table and are presented as the

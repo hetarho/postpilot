@@ -1,15 +1,12 @@
-import type { RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { PostDraft } from '@/entities/post'
 import { BlockType, type PostContent } from '@/shared/api'
-import { flushContentQueue, type BlockEditorHandle } from '@/features/edit-post-content'
+import { flushContentQueue } from '@/features/edit-post-content'
 import { VoiceLearningPanel, type useVoiceLearning } from '@/features/finalize-post'
 import { ExtractMemoriesButton } from '@/features/extract-memories'
 import { SentenceFeedback } from '@/features/give-voice-feedback'
-import { hasVideoBlock } from '@/shared/lib'
 import { Notice } from '@/shared/ui'
 import { ExportPanel } from '@/widgets/export-panel'
-import { PublishPanel } from '@/widgets/publish-panel'
 import { EmptyStep } from './EmptyStep'
 
 /** The finalized text 문장 의견 chooses a sentence from.
@@ -31,8 +28,8 @@ function sentenceSource(content: PostContent): string {
     .join('\n')
 }
 
-/** ③'s panel: what the finished post is for — the learning report, the feedback it earns, the
- *  per-platform export, and publishing for the operator. */
+/** ③'s panel: what the finished post is for — the learning report, the feedback it earns and
+ *  the manual per-platform export. */
 export function EditorFinishPanel({
   post,
   ownerId,
@@ -40,8 +37,6 @@ export function EditorFinishPanel({
   liveContent,
   learning,
   languageMismatch,
-  isOperator,
-  editorRef,
   onPhotoUrlsStale,
   onGoGenerate,
   onGoRefine,
@@ -53,8 +48,6 @@ export function EditorFinishPanel({
   liveContent?: PostContent
   learning: ReturnType<typeof useVoiceLearning>
   languageMismatch: boolean
-  isOperator: boolean
-  editorRef: RefObject<BlockEditorHandle | null>
   onPhotoUrlsStale: () => void
   onGoGenerate: () => void
   onGoRefine: () => void
@@ -108,24 +101,6 @@ export function EditorFinishPanel({
         <Notice tone="danger" role="alert" className="mt-10">
           {t('export.languageMissing')}
         </Notice>
-      )}
-      {/* Publishing is the operator's surface (plan 17): every PublishingService procedure is
-          refused to another tier, so the panel would show a pair-and-publish flow that cannot
-          complete. The server stays authoritative — this only keeps the promise off the screen. */}
-      {isOperator && (
-        <PublishPanel
-          ownerId={ownerId}
-          postSlug={post.slug}
-          contentRevision={post.contentRevision}
-          finalizedRevision={post.finalizedRevision}
-          status={post.status}
-          hasVideoBlock={post.content ? hasVideoBlock(post.content) : false}
-          beforePublish={() =>
-            editorRef.current?.flush() ??
-            flushContentQueue(post.slug) ??
-            Promise.resolve(post.contentRevision)
-          }
-        />
       )}
     </>
   )

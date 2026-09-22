@@ -131,11 +131,6 @@ export function AboutPage() {
               </Typography>
             ))}
           </ul>
-          {/* The publishing boundary, stated rather than marketed: an operator-tier surface whose
-              live verification is still open (plan 12). Never softened into a shipped feature. */}
-          <Typography variant="body" className="text-content-tertiary max-w-measure mt-4">
-            {t('outputs.publishing')}
-          </Typography>
         </Section>
 
         <Section id="about-plans" title={t('plans.title')}>
