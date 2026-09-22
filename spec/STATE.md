@@ -17,7 +17,7 @@
 ## ssot
 | id | rev | tasked | pending | [?] |
 |---|---|---|---|---|
-| ARCH | 7 | 7 | - | 0 |
+| ARCH | 8 | 8 | - | 0 |
 | AUTH | 7 | 7 | - | 0 |
 | QUOTA | 19 | 19 | - | 0 |
 | POST | 9 | 9 | - | 0 |
@@ -55,6 +55,7 @@
 - create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 - automatic publishing retirement implementation and verification are complete; deployed-environment rollout receipts remain operationally pending
 ## log
+- 260922 ARCH r8; dev-only fixture tooling placement and its production-image exclusion recorded, implemented ahead of the record in 63f41404 so the delta is already consumed and owes no task
 - 260922 obsolete T008 and T177 task records removed; publishing retirement superseded the live smoke and the owner cancelled the remaining manual clip-viewing follow-up
 - 260922 T279 done; surviving BlockType, ModelPurpose and language mirrors are generated-enum pinned, shared transport conversion is centralized, and retirement absence remains enforced (enm)
 - 260922 T279 claimed (enm)
@@ -73,5 +74,3 @@
 - 260922 create-task MODEL start; r15 delta
 - 260922 update-ssot MODEL complete; MODEL r15 adds MODEL-65, the A/B pair saves as it is chosen; create-task pending
 - 260922 update-ssot MODEL start; the A/B pair saves as it is chosen
-- 260922 T284 claimed (ret)
-- 260922 T283 done; publishing backend/runtime removed, migration 0076 enforces a clean checkpoint before dropping five tables, and ARCH-26 plus SQL generation pass; production rollout remains pending (ret)
