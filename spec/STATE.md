@@ -53,7 +53,6 @@
 | T008 | Superseded by PUB r6; original live-smoke claim retained, do not resume | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
 | T279 | Pin enum mirrors in the surviving backend and frontend | ARCH | T313 | todo |
-| T282 | Stop and uninstall existing Mac publishing companions | PUB ARCH | T311 | todo |
 | T283 | Remove publishing backend, deletion guards and database tables | PUB POST AUTH QUOTA LANG ARCH | T312 | todo |
 | T284 | Delete companion source, publishing contracts and build integration | PUB AUTH LANG VIDEO ARCH | T283 | todo |
 | T312 | Export retirement outcomes and purge publishing-owned data | PUB ARCH | T282 | todo |
@@ -64,10 +63,11 @@
 
 ## next
 - implement-task T315 (independent) or T316 (T314 is done); then T317 last
-- implement-task T282; retirement order T282 → T312 → T283 → T284 → T313; T008 must not resume, T279 follows removal
-- create-task MKT THEME for the existing /about header overflow at 320px/200% text
-- create-task CLIP CDS THEME for the r41/r24 Wanted Sans delta, which T305..T309 did not consume
+- implement-task T312; retirement order T312 → T283 → T284 → T313; T008 must not resume, T279 follows removal
+- create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 ## log
+- 260922 T282 done; local retirement now verifies shutdown, deletes stored credentials and owned files with a retry receipt, preserves profiles by default, and blocks all former execution entry points; ARCH-27 passes (ret)
+- 260922 T282 claimed (ret)
 - 260922 T311 done; all publishing product surfaces and clients removed, legacy link redirects after auth, manual export preserved; 2,286 frontend tests and ARCH-25 gates pass (ret)
 - 260922 T314 done; a comparison freezes its origin, a lab verdict picks without applying and its follow-ups are gated to draft/review, migration 0073 backfills; whole backend suite, frontend gates and build pass, clip suite failures are the known whole-suite flake (org)
 - 260922 T314 claimed (org)
@@ -86,5 +86,3 @@
 - 260922 update-ssot PUB ARCH AUTH QUOTA POST EXPORT MKT VIDEO TMPL LANG complete; phased retirement adopted, content/manual export preserved; create-task pending
 - 260922 warning: T008 doing claim is superseded by PUB r6; do not resume live publishing or use T008 as a retirement dependency; its task file remains immutable
 - 260922 create-architecture ARCH retirement alignment start; remove the companion architecture through the PUB cutover stages
-- 260922 update-ssot PUB and dependent domains start; approved phased retirement of automatic publishing, followed by create-task planning
-- 260922 review-code publishing-260922 complete; recommend retiring automatic Naver publish and retaining export, based on official automation restrictions and missing live acceptance; no adoption or implementation

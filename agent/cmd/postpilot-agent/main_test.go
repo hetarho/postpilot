@@ -9,7 +9,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -331,34 +330,47 @@ func TestASecondDaemonLeavesTheRunningOnesJobPayloadsUntouched(t *testing.T) {
 	}
 }
 
-// The packaging scripts are the reproducible half of PUBLISH-29 and the one place the
-// uninstall promise is actually kept, so both are asserted as content rather than trusted.
-func TestPackagingScriptsInstallReproduciblyAndUninstallKeepsCredentials(t *testing.T) {
+func TestPackagingScriptsOnlyDirectOwnersToRetirement(t *testing.T) {
 	install, err := os.ReadFile(filepath.Join("..", "..", "packaging", "install.sh"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, required := range []string{"set -eu", "go build -trimpath", "launchctl bootout", "postpilot-agent\" install"} {
+	for _, required := range []string{"set -eu", "postpilot-agent", "retire"} {
 		if !strings.Contains(string(install), required) {
 			t.Fatalf("install.sh lacks %q", required)
+		}
+	}
+	for _, forbidden := range []string{"go build -trimpath", "launchctl bootstrap", `postpilot-agent" install`} {
+		if strings.Contains(string(install), forbidden) {
+			t.Fatalf("install.sh can still activate publishing through %q", forbidden)
 		}
 	}
 	uninstall, err := os.ReadFile(filepath.Join("..", "..", "packaging", "uninstall.sh"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(uninstall), `"$BIN" uninstall`) {
-		t.Fatal("uninstall.sh does not remove the LaunchAgent through the reviewed subcommand")
+	if !strings.Contains(string(uninstall), `go run ./cmd/postpilot-agent retire "$@"`) {
+		t.Fatal("uninstall.sh does not route to the reviewed retirement command")
 	}
-	// Nothing here may delete a browser profile, the config or a Keychain credential: each
-	// needs its own explicit confirmation, which a script cannot give on the user's behalf.
-	destructive := regexp.MustCompile(`(?i)\brm\s+-[a-z]*r|security\s+delete-generic-password|defaults\s+delete|browser-profiles|config\.json`)
-	if match := destructive.FindString(string(uninstall)); match != "" {
-		t.Fatalf("uninstall.sh removes user data without a separate confirmation: %q", match)
+	if strings.Contains(string(uninstall), "--delete-profiles") {
+		t.Fatal("uninstall.sh opts into browser profile deletion on the owner's behalf")
 	}
-	for _, promised := range []string{"browser profiles", "Keychain"} {
-		if !strings.Contains(string(uninstall), promised) {
-			t.Fatalf("uninstall.sh does not tell the user %q was kept", promised)
+}
+
+func TestRetiredEntryPointsFailBeforeCreatingLocalState(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	original := os.Args
+	t.Cleanup(func() { os.Args = original })
+	for _, command := range []string{"setup", "run", "install", "diagnostics"} {
+		os.Args = []string{"postpilot-agent", command}
+		err := run()
+		if err == nil || !strings.Contains(err.Error(), "automatic publishing has been retired") {
+			t.Fatalf("%s error = %v", command, err)
+		}
+		root := filepath.Join(home, "Library", "Application Support", "Postpilot Agent")
+		if _, statErr := os.Stat(root); !errors.Is(statErr, os.ErrNotExist) {
+			t.Fatalf("%s created local state: %v", command, statErr)
 		}
 	}
 }

@@ -2,8 +2,12 @@ package launchd
 
 import (
 	"bytes"
+	"context"
+	"errors"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -32,6 +36,74 @@ func TestWritePlistProducesAnOwnerOnlyReproducibleUserAgent(t *testing.T) {
 	}
 	if info.Mode().Perm() != 0o600 {
 		t.Fatalf("plist mode=%v", info.Mode().Perm())
+	}
+}
+
+func exitedCommandError(t *testing.T) error {
+	t.Helper()
+	err := exec.Command("sh", "-c", "exit 1").Run()
+	var exitErr *exec.ExitError
+	if !errors.As(err, &exitErr) {
+		t.Fatalf("test setup did not create ExitError: %v", err)
+	}
+	return err
+}
+
+func TestStopAndVerifyBootsOutTheCurrentUserAgentAndVerifiesAbsence(t *testing.T) {
+	lock := filepath.Join(t.TempDir(), "missing.lock")
+	original := commandOutput
+	t.Cleanup(func() { commandOutput = original })
+	var calls []string
+	prints := 0
+	commandOutput = func(_ context.Context, name string, args ...string) ([]byte, error) {
+		calls = append(calls, name+" "+strings.Join(args, " "))
+		if name == "/bin/launchctl" && args[0] == "print" {
+			prints++
+			if prints == 1 {
+				return []byte("loaded"), nil
+			}
+			return []byte("Could not find service"), exitedCommandError(t)
+		}
+		return nil, nil
+	}
+	if err := StopAndVerify(context.Background(), "/owned/postpilot-agent", lock); err != nil {
+		t.Fatal(err)
+	}
+	want := []string{
+		"/bin/launchctl print " + domainTarget(),
+		"/bin/launchctl bootout " + domainTarget(),
+		"/bin/launchctl print " + domainTarget(),
+		"/bin/launchctl print " + domainTarget(),
+	}
+	if !reflect.DeepEqual(calls, want) {
+		t.Fatalf("calls = %v, want %v", calls, want)
+	}
+}
+
+func TestStopAndVerifyDoesNotTreatEveryLaunchctlErrorAsAbsence(t *testing.T) {
+	original := commandOutput
+	t.Cleanup(func() { commandOutput = original })
+	commandOutput = func(context.Context, string, ...string) ([]byte, error) {
+		return []byte("Operation not permitted"), exitedCommandError(t)
+	}
+	err := StopAndVerify(context.Background(), "/owned/postpilot-agent", filepath.Join(t.TempDir(), "missing.lock"))
+	if err == nil || !strings.Contains(err.Error(), "Operation not permitted") {
+		t.Fatalf("inspection error = %v", err)
+	}
+}
+
+func TestStopAndVerifyRefusesSuccessWhileAgentRemainsLoaded(t *testing.T) {
+	original := commandOutput
+	t.Cleanup(func() { commandOutput = original })
+	commandOutput = func(_ context.Context, name string, args ...string) ([]byte, error) {
+		if name == "/bin/launchctl" && args[0] == "bootout" {
+			return nil, errors.New("denied")
+		}
+		return []byte("still loaded"), nil
+	}
+	err := StopAndVerify(context.Background(), "/owned/postpilot-agent", filepath.Join(t.TempDir(), "missing.lock"))
+	if err == nil || !strings.Contains(err.Error(), "stop LaunchAgent") {
+		t.Fatalf("stop error = %v", err)
 	}
 }
 

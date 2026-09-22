@@ -42,5 +42,19 @@ func (Keychain) Get(ctx context.Context, account string) (string, error) {
 }
 
 func (Keychain) Delete(ctx context.Context, account string) error {
-	return exec.CommandContext(ctx, "/usr/bin/security", "delete-generic-password", "-a", account, "-s", service).Run()
+	if account == "" {
+		return errors.New("empty keychain account")
+	}
+	output, err := exec.CommandContext(ctx, "/usr/bin/security", "delete-generic-password", "-a", account, "-s", service).CombinedOutput()
+	if err == nil {
+		return nil
+	}
+	// macOS security exits 44 when the requested item does not exist. A repeated
+	// retirement must be safe, so absence is success without first retrieving the
+	// secret. Keep the text check for older security builds that return exit 1.
+	var exitErr *exec.ExitError
+	if (errors.As(err, &exitErr) && exitErr.ExitCode() == 44) || strings.Contains(strings.ToLower(string(output)), "could not be found") {
+		return nil
+	}
+	return err
 }

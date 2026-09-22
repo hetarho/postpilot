@@ -1,74 +1,48 @@
-# Postpilot Mac publishing agent
+# Postpilot Mac companion retirement bridge
 
-This Go runtime is the always-on receiver for mobile publication requests. It pairs each Postpilot account with one
-Mac Keychain token and one dedicated Chromium profile. It exposes no public listener: setup binds to `127.0.0.1`, and
-the background worker obtains durable jobs through authenticated outbound polling.
+Automatic publishing has been retired. This temporary Go module exists only so a Mac that previously installed
+`com.postpilot.publishing-agent` can stop it and remove its app-owned local state. The binary does not pair an account,
+open Naver, poll for work, install a LaunchAgent, or execute a publication. The old `setup`, `run`, `install`, and
+`diagnostics` entry points return a retirement error.
 
-The publication path is intentionally deterministic:
-
-```text
-mobile StartPublish
-  -> Postpilot durable queue and immutable manifest
-  -> Mac LaunchAgent outbound claim/lease
-  -> versioned local Naver DOM/Accessibility/CDP driver
-  -> synchronous commit fence
-  -> final click, URL/readback verification, terminal report
-```
-
-There is no model or general-purpose agent in the execution path. The server sends typed manifest data, never browser
-selectors, JavaScript, shell commands, arbitrary URLs, credentials, cookies, profile paths, or CDP endpoints. Driver
-behavior ships as reviewed local code. A changed editor, ambiguous control, missing asset, login challenge, or failed
-readback must fail closed before commit or become `outcome_unknown` after the commit fence.
-
-## Release status
-
-The previous model-driven executor has been removed. The replacement uses a closed typed state machine, versioned
-compatibility probe, durable commit fence and exact readback. `postpilot-agent diagnostics` runs the non-publishing
-probe and prints only the connection label plus reviewed browser/driver versions. `packaging/install.sh` builds the
-current source, installs the mode-0600 user LaunchAgent and loads it; no credential or browser profile is packaged.
-
-For a Mac that ran the retired package, deploy backend migration 0015 first. It disarms every legacy connection and
-terminates any old lease conservatively (`needs_attention` before the commit fence, `outcome_unknown` after it). Then
-run `./packaging/install.sh`: it boots out and removes the old KeepAlive LaunchAgent before replacing the binary and
-loading the new per-user job. Existing browser profiles, config, logs, and Keychain credentials are deliberately
-retained for account recovery.
-
-## Pairing and recovery contract
-
-Local setup first creates an explicit Mac-owned connection draft with a random id and dedicated browser/work paths.
-The draft survives setup restarts and device-code replacement, so reopening it always uses the same Naver cookie jar.
-After login, setup navigates that same sole page to Naver's generic writer and reads the resolved blog identity and
-categories through local CDP. Successful enrollment binds the server agent id and Keychain token to the existing
-draft paths; the one-time device code never selects a profile. A per-run nonce plus exact Host/Origin checks protect
-the loopback form. The raw agent token is returned once and stored only in macOS Keychain.
-
-Each additional Postpilot account receives separate Keychain, browser-profile, and job directories. Reopening a
-connection for login, CAPTCHA, or two-factor repair must reuse the same stable browser profile without issuing a new
-device code. Postpilot retains a pre-commit retry action; the driver never attempts to bypass a challenge.
-
-## Development commands
+Use the reviewed retirement build pinned by the deployment record. Inspection is the default and changes nothing:
 
 ```sh
-./packaging/install.sh
-"$HOME/Library/Application Support/Postpilot Agent/bin/postpilot-agent" setup
-"$HOME/Library/Application Support/Postpilot Agent/bin/postpilot-agent" diagnostics
-
-go test ./...
-go vet ./...
-go build ./cmd/postpilot-agent
-sh -n packaging/install.sh packaging/uninstall.sh
+go run ./cmd/postpilot-agent retire
 ```
 
-`uninstall` removes only the user LaunchAgent. Browser profiles, config, logs, and Keychain credentials remain until
-the user explicitly removes the account-specific data.
+The inspection lists exact known browser profile paths but preserves them. After reviewing the inventory, apply the
+ordinary retirement:
 
-## Release gate
+```sh
+go run ./cmd/postpilot-agent retire --apply
+```
 
-The deterministic publisher must bind one CDP page and target id across all DOM/accessibility operations. It must
-verify title, ordered blocks, up to eight JPEGs and captions, ordered unique tags, category, visibility, final-control
-uniqueness, and post-publication readback. The server must acknowledge `committing` before exactly one final click.
+Apply first unloads and verifies the current user's `com.postpilot.publishing-agent`, then stops only a manual process
+proven to be the installed companion binary. It deletes Keychain entries by the account names stored in `config.json`
+without reading their tokens. It removes the installed binary, plist, known per-connection jobs, config, and logs.
+Unrelated files, browser binaries, unknown legacy directories, and all browser profiles remain.
 
-Automated tests require a fake Naver editor covering normal publication, editor fingerprint drift, login challenges,
-target changes, asset mismatch, pre/post-commit process death, duplicate/late progress, and cleanup. A release is not
-live-verified until an explicitly authorized Naver test-blog smoke run exercises every canonical block type and eight
-JPEGs across the durable commit fence.
+Profile deletion is a separate local choice. First inspect the exact paths above, then opt in explicitly:
+
+```sh
+go run ./cmd/postpilot-agent retire --apply --delete-profiles
+```
+
+The command refuses profile paths that escape the owned profile root, pass through a symlink, or have uncertain
+ownership. It never contacts Naver or the Postpilot API.
+
+Every apply writes an owner-only receipt at
+`~/Library/Application Support/Postpilot Agent Retirement/shutdown-receipt.json` before deleting anything. The receipt
+retains the minimum account and path inventory needed for an interrupted retry. Keep the receipt on that Mac; deployment
+records use only its completion status and an operator-managed digest, never its local browser paths.
+
+Validation for this temporary bridge uses fakes and does not stop a developer's daemon or access their Keychain:
+
+```sh
+test -z "$(gofmt -l .)"
+go vet ./...
+go build ./...
+go test ./...
+sh -n packaging/install.sh packaging/uninstall.sh
+```

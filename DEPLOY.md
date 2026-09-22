@@ -289,6 +289,30 @@ docker compose -f docker-compose.prod.yml run --rm \
 object나 발행 레코드를 지우지 않는다. 이 저장소에는 현재 배포된 환경이 없으므로 실제 운영 영수증은
 아직 없고, 코드·fixture 검증과 운영 실행을 구분한다.
 
+보고서에 대응하는 모든 Mac에서는 **T282 retirement bridge가 들어간 동일한 검토 커밋 SHA**를 따로
+기록하고 그 revision의 `agent/`에서 먼저 읽기 전용 점검을 실행한다. 예전 `install.sh`로 바이너리를
+교체하거나 LaunchAgent를 다시 올리지 않는다.
+
+```bash
+cd agent
+go run ./cmd/postpilot-agent retire
+# 표시된 credential 수와 보존될 browser profile 경로를 Mac 소유자가 확인한 뒤
+go run ./cmd/postpilot-agent retire --apply
+```
+
+`--apply`는 현재 사용자 LaunchAgent와 확인된 수동 companion을 먼저 중지·재확인하고, mode 0600 로컬
+영수증을 `~/Library/Application Support/Postpilot Agent Retirement/shutdown-receipt.json`에 남긴다.
+브라우저 프로필은 기본적으로 보존한다. 프로필까지 지워야 하는 Mac에서만 점검에 나온 정확한 경로를
+확인한 뒤 `retire --apply --delete-profiles`를 별도로 실행한다. 영수증이 `complete`가 아니면 해당 장치는
+미해결 상태이며 서버 cleanup을 진행하지 않는다. 재실행은 같은 영수증의 계정·경로 inventory로
+idempotent하게 이어진다.
+
+운영 기록에는 Mac별 bridge 커밋 SHA, 영수증 상태, 운영자가 계산한 digest와 장치 식별용 별칭만 적는다.
+영수증 파일 자체나 로컬 브라우저 경로는 서버·Git·공유 로그에 업로드하지 않는다. 폐기됐거나 설치된
+적이 없는 장치는 별도 inventory reconciliation으로 근거를 남기며, 연락되지 않는 장치를 자동으로
+중지 완료로 간주하지 않는다. 이 명령은 Naver나 Postpilot API에 접속하지 않고 실제 발행도 검증하지
+않는다.
+
 ## 6. 롤백
 
 - **백엔드**: VPS `/srv/postpilot-<env>/.env`의 `IMAGE_TAG=<이전 SHA>`로 바꾸고

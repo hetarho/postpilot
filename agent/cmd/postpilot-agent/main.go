@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"log/slog"
@@ -19,7 +20,7 @@ import (
 	"github.com/postpilot/agent/internal/naver"
 	"github.com/postpilot/agent/internal/postpilot"
 	"github.com/postpilot/agent/internal/publishing"
-	"github.com/postpilot/agent/internal/setup"
+	"github.com/postpilot/agent/internal/retirement"
 	"github.com/postpilot/agent/internal/singleton"
 	"github.com/postpilot/agent/internal/workdir"
 )
@@ -36,41 +37,68 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	if err := config.Ensure(paths); err != nil {
-		return err
-	}
-	command := "setup"
+	command := "retire"
 	if len(os.Args) > 1 {
 		command = os.Args[1]
 	}
 	switch command {
-	case "setup":
-		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-		defer stop()
-		return (setup.Server{Paths: paths, Keychain: credentials.Keychain{}, ProbePublisher: naver.Probe}).Run(ctx)
-	case "run":
-		return runAgents(paths, newPublisher)
-	case "install":
-		binary, err := os.Executable()
-		if err != nil {
-			return err
-		}
-		if err := launchd.Install(binary, paths.Logs); err != nil {
-			return err
-		}
-		fmt.Println("Postpilot publishing LaunchAgent installed. Browser profiles and Keychain credentials remain account-isolated.")
-		return nil
-	case "uninstall":
-		if err := launchd.Uninstall(); err != nil {
-			return err
-		}
-		fmt.Println("LaunchAgent removed. Browser profiles and Keychain credentials were kept; remove them separately only if intended.")
-		return nil
-	case "diagnostics":
-		return diagnostics(paths)
+	case "retire", "uninstall":
+		return runRetirement(paths, os.Args[2:], os.Stdout)
+	case "setup", "run", "install", "diagnostics":
+		return fmt.Errorf("automatic publishing has been retired; run `postpilot-agent retire` to inspect local cleanup, then add `--apply` to perform it")
 	default:
-		return fmt.Errorf("unknown command %q (setup|run|install|uninstall|diagnostics)", command)
+		return fmt.Errorf("unknown command %q (retire)", command)
 	}
+}
+
+func runRetirement(paths config.Paths, args []string, output io.Writer) error {
+	flags := flag.NewFlagSet("retire", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	apply := flags.Bool("apply", false, "stop the companion and remove owned local state")
+	deleteProfiles := flags.Bool("delete-profiles", false, "also remove the exact owned browser profile paths shown by inspection")
+	if err := flags.Parse(args); err != nil {
+		return fmt.Errorf("retire options: %w", err)
+	}
+	if flags.NArg() != 0 {
+		return fmt.Errorf("retire takes no positional arguments")
+	}
+	plist, err := launchd.PlistPath()
+	if err != nil {
+		return err
+	}
+	runner := retirement.Runner{
+		Paths:       paths,
+		BinaryPath:  filepath.Join(paths.Root, "bin", "postpilot-agent"),
+		PlistPath:   plist,
+		ReceiptPath: retirement.DefaultReceiptPath(paths),
+		Credentials: credentials.Keychain{},
+		Stop:        launchd.StopAndVerify,
+	}
+	result, runErr := runner.Run(context.Background(), retirement.Options{Apply: *apply, DeleteProfiles: *deleteProfiles})
+	fmt.Fprintf(output, "Postpilot automatic publishing retirement: %s\n", result.Receipt.Status)
+	fmt.Fprintf(output, "Stored credential accounts: %d; owned local paths: %d\n", len(result.Receipt.CredentialAccounts), len(result.Receipt.OwnedPaths))
+	for _, profile := range result.Receipt.ProfilePaths {
+		action := "preserve"
+		if *deleteProfiles {
+			action = "delete"
+		}
+		fmt.Fprintf(output, "Browser profile (%s): %s\n", action, profile.Path)
+	}
+	for _, warning := range result.Receipt.ProfileWarnings {
+		fmt.Fprintf(output, "Browser profile preserved (ownership unresolved): %s\n", warning)
+	}
+	for _, failure := range result.Receipt.Failures {
+		fmt.Fprintf(output, "Unresolved inventory or cleanup item: %s\n", failure)
+	}
+	if !*apply {
+		fmt.Fprintln(output, "Inspection only; nothing was changed. Re-run with `retire --apply` to stop and remove the companion.")
+		if len(result.Receipt.ProfilePaths) > 0 {
+			fmt.Fprintln(output, "Profiles remain by default. Use `retire --apply --delete-profiles` only after reviewing the exact paths above.")
+		}
+	} else {
+		fmt.Fprintf(output, "Local shutdown receipt: %s\n", result.ReceiptPath)
+	}
+	return runErr
 }
 
 type publisherFactory func(config.Connection) (publishing.Publisher, error)
