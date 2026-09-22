@@ -24,7 +24,7 @@ jobs:
           node-version-file: .node-version
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm gen:proto && git diff --exit-code -- backend/internal/gen frontend/src/shared/api/gen agent/internal/gen
+      - run: pnpm gen:proto && git diff --exit-code -- backend/internal/gen frontend/src/shared/api/gen
       - run: pnpm gen:sql && git diff --exit-code -- backend
       - run: pnpm --filter ./frontend lint
       - run: pnpm --filter ./frontend format:check
@@ -52,19 +52,3 @@ jobs:
       - run: go vet ./...
       - run: go build ./...
       - run: go test ./...
-
-  agent:
-    runs-on: macos-latest
-    defaults:
-      run:
-        working-directory: agent
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: agent/go.mod
-          cache-dependency-path: agent/go.sum
-      - run: go vet ./...
-      - run: go build ./...
-      - run: go test ./...
-      - run: sh -n packaging/install.sh packaging/uninstall.sh

@@ -82,8 +82,6 @@ export const i18n = {
         title: '이 글을 삭제할까요?',
         description:
           '‘{{title}}’과 이 글에 붙인 사진, 그리고 생성·수정 기록이 모두 영구히 지워져요. 삭제한 뒤에는 되돌릴 수 없습니다.',
-        publishing:
-          '이 글에는 폐기된 자동 발행 기록이 남아 있어 아직 삭제할 수 없어요. 운영 정리가 끝난 뒤 다시 시도해 주세요.',
         busy: '이 글에서 AI 작업이 진행 중이에요. 작업이 끝난 뒤에 다시 시도해 주세요.',
       },
       language: {
@@ -242,8 +240,6 @@ export const i18n = {
         title: 'Delete this post?',
         description:
           '“{{title}}”, the photos attached to it, and its generation and revision history are all removed permanently. This cannot be undone.',
-        publishing:
-          'Retired automatic-publishing records still refer to this post, so it cannot be deleted yet. Try again after the operator cleanup is complete.',
         busy: 'An AI job is running for this post. Try again once it finishes.',
       },
       language: {

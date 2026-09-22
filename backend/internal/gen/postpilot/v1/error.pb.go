@@ -29,8 +29,8 @@ const (
 // copy reaching a user (ARCH-3).
 //
 // The WIRE stays a string — `AppErrorDetail.reason` carries `FailureReason.String()` — so an
-// older client and the Mac agent need nothing. A value is never renumbered or reused; a
-// retired reason keeps its number and is deleted from the emitting adapter only.
+// older client needs nothing. A value is never renumbered or reused; a retired reason has
+// both its name and number reserved after its emitting adapter disappears.
 type FailureReason int32
 
 const (
@@ -169,7 +169,6 @@ const (
 	FailureReason_POST_NOT_FINALIZED                         FailureReason = 132
 	FailureReason_POST_NOT_FOUND                             FailureReason = 133
 	FailureReason_POST_PHOTO_LIMIT                           FailureReason = 134
-	FailureReason_POST_PUBLISHING                            FailureReason = 135
 	FailureReason_POST_TAG_COUNT_INVALID                     FailureReason = 136
 	FailureReason_POST_TARGET_LANGUAGE_REQUIRED              FailureReason = 137
 	FailureReason_POST_TARGET_LANGUAGE_UNSUPPORTED           FailureReason = 138
@@ -177,24 +176,6 @@ const (
 	FailureReason_POST_TEMPLATE_ANSWER_TOO_LONG              FailureReason = 140
 	FailureReason_POST_VIDEO_LIMIT                           FailureReason = 141
 	FailureReason_PROVIDER_DISABLED                          FailureReason = 142
-	FailureReason_PUBLISH_AGENT_NOT_READY                    FailureReason = 143
-	FailureReason_PUBLISH_AGENT_REVOKED                      FailureReason = 144
-	FailureReason_PUBLISH_AGENT_UNAVAILABLE                  FailureReason = 145
-	FailureReason_PUBLISH_ALREADY_EXISTS                     FailureReason = 146
-	FailureReason_PUBLISH_CATEGORY_NOT_FOUND                 FailureReason = 147
-	FailureReason_PUBLISH_COMMIT_FENCE                       FailureReason = 148
-	FailureReason_PUBLISH_FORBIDDEN                          FailureReason = 149
-	FailureReason_PUBLISH_LEASE_INVALID                      FailureReason = 150
-	FailureReason_PUBLISH_NEEDS_ATTENTION                    FailureReason = 151
-	FailureReason_PUBLISH_NOT_FOUND                          FailureReason = 152
-	FailureReason_PUBLISH_OUTCOME_UNKNOWN                    FailureReason = 153
-	FailureReason_PUBLISH_PAIRING_INVALID                    FailureReason = 154
-	FailureReason_PUBLISH_PAIRING_LIMIT                      FailureReason = 155
-	FailureReason_PUBLISH_POST_NOT_FINALIZED                 FailureReason = 156
-	FailureReason_PUBLISH_REQUEST_INVALID                    FailureReason = 157
-	FailureReason_PUBLISH_STALE_REVISION                     FailureReason = 158
-	FailureReason_PUBLISH_TRANSITION_INVALID                 FailureReason = 159
-	FailureReason_PUBLISH_URL_INVALID                        FailureReason = 160
 	FailureReason_PURCHASE_NOT_FOUND                         FailureReason = 161
 	FailureReason_PURCHASE_SPENT                             FailureReason = 162
 	FailureReason_PURCHASE_TOO_SMALL                         FailureReason = 163
@@ -226,7 +207,6 @@ const (
 	FailureReason_USER_ID_REQUIRED                           FailureReason = 189
 	FailureReason_USER_NOT_FOUND                             FailureReason = 190
 	FailureReason_VERIFICATION_LINK_INVALID                  FailureReason = 191
-	FailureReason_VIDEO_NOT_PUBLISHABLE                      FailureReason = 192
 	FailureReason_VOICE_ANALYZE_MODEL_REQUIRED               FailureReason = 193
 	FailureReason_VOICE_BASELINE_MISMATCH                    FailureReason = 194
 	FailureReason_VOICE_BUSY                                 FailureReason = 195
@@ -421,7 +401,6 @@ var (
 		132: "POST_NOT_FINALIZED",
 		133: "POST_NOT_FOUND",
 		134: "POST_PHOTO_LIMIT",
-		135: "POST_PUBLISHING",
 		136: "POST_TAG_COUNT_INVALID",
 		137: "POST_TARGET_LANGUAGE_REQUIRED",
 		138: "POST_TARGET_LANGUAGE_UNSUPPORTED",
@@ -429,24 +408,6 @@ var (
 		140: "POST_TEMPLATE_ANSWER_TOO_LONG",
 		141: "POST_VIDEO_LIMIT",
 		142: "PROVIDER_DISABLED",
-		143: "PUBLISH_AGENT_NOT_READY",
-		144: "PUBLISH_AGENT_REVOKED",
-		145: "PUBLISH_AGENT_UNAVAILABLE",
-		146: "PUBLISH_ALREADY_EXISTS",
-		147: "PUBLISH_CATEGORY_NOT_FOUND",
-		148: "PUBLISH_COMMIT_FENCE",
-		149: "PUBLISH_FORBIDDEN",
-		150: "PUBLISH_LEASE_INVALID",
-		151: "PUBLISH_NEEDS_ATTENTION",
-		152: "PUBLISH_NOT_FOUND",
-		153: "PUBLISH_OUTCOME_UNKNOWN",
-		154: "PUBLISH_PAIRING_INVALID",
-		155: "PUBLISH_PAIRING_LIMIT",
-		156: "PUBLISH_POST_NOT_FINALIZED",
-		157: "PUBLISH_REQUEST_INVALID",
-		158: "PUBLISH_STALE_REVISION",
-		159: "PUBLISH_TRANSITION_INVALID",
-		160: "PUBLISH_URL_INVALID",
 		161: "PURCHASE_NOT_FOUND",
 		162: "PURCHASE_SPENT",
 		163: "PURCHASE_TOO_SMALL",
@@ -478,7 +439,6 @@ var (
 		189: "USER_ID_REQUIRED",
 		190: "USER_NOT_FOUND",
 		191: "VERIFICATION_LINK_INVALID",
-		192: "VIDEO_NOT_PUBLISHABLE",
 		193: "VOICE_ANALYZE_MODEL_REQUIRED",
 		194: "VOICE_BASELINE_MISMATCH",
 		195: "VOICE_BUSY",
@@ -657,7 +617,6 @@ var (
 		"POST_NOT_FINALIZED":                         132,
 		"POST_NOT_FOUND":                             133,
 		"POST_PHOTO_LIMIT":                           134,
-		"POST_PUBLISHING":                            135,
 		"POST_TAG_COUNT_INVALID":                     136,
 		"POST_TARGET_LANGUAGE_REQUIRED":              137,
 		"POST_TARGET_LANGUAGE_UNSUPPORTED":           138,
@@ -665,24 +624,6 @@ var (
 		"POST_TEMPLATE_ANSWER_TOO_LONG":              140,
 		"POST_VIDEO_LIMIT":                           141,
 		"PROVIDER_DISABLED":                          142,
-		"PUBLISH_AGENT_NOT_READY":                    143,
-		"PUBLISH_AGENT_REVOKED":                      144,
-		"PUBLISH_AGENT_UNAVAILABLE":                  145,
-		"PUBLISH_ALREADY_EXISTS":                     146,
-		"PUBLISH_CATEGORY_NOT_FOUND":                 147,
-		"PUBLISH_COMMIT_FENCE":                       148,
-		"PUBLISH_FORBIDDEN":                          149,
-		"PUBLISH_LEASE_INVALID":                      150,
-		"PUBLISH_NEEDS_ATTENTION":                    151,
-		"PUBLISH_NOT_FOUND":                          152,
-		"PUBLISH_OUTCOME_UNKNOWN":                    153,
-		"PUBLISH_PAIRING_INVALID":                    154,
-		"PUBLISH_PAIRING_LIMIT":                      155,
-		"PUBLISH_POST_NOT_FINALIZED":                 156,
-		"PUBLISH_REQUEST_INVALID":                    157,
-		"PUBLISH_STALE_REVISION":                     158,
-		"PUBLISH_TRANSITION_INVALID":                 159,
-		"PUBLISH_URL_INVALID":                        160,
 		"PURCHASE_NOT_FOUND":                         161,
 		"PURCHASE_SPENT":                             162,
 		"PURCHASE_TOO_SMALL":                         163,
@@ -714,7 +655,6 @@ var (
 		"USER_ID_REQUIRED":                           189,
 		"USER_NOT_FOUND":                             190,
 		"VERIFICATION_LINK_INVALID":                  191,
-		"VIDEO_NOT_PUBLISHABLE":                      192,
 		"VOICE_ANALYZE_MODEL_REQUIRED":               193,
 		"VOICE_BASELINE_MISMATCH":                    194,
 		"VOICE_BUSY":                                 195,
@@ -926,7 +866,7 @@ const file_postpilot_v1_error_proto_rawDesc = "" +
 	"\x10technical_detail\x18\x03 \x01(\tR\x0ftechnicalDetail\x1a9\n" +
 	"\vParamsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\xb53\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\xe92\n" +
 	"\rFailureReason\x12\x13\n" +
 	"\x0fUNKNOWN_FAILURE\x10\x00\x12\x11\n" +
 	"\rAUTH_REQUIRED\x10\x01\x12\x1d\n" +
@@ -1063,33 +1003,14 @@ const file_postpilot_v1_error_proto_rawDesc = "" +
 	"\x1ePOST_MACHINE_BASELINE_REQUIRED\x10\x83\x01\x12\x17\n" +
 	"\x12POST_NOT_FINALIZED\x10\x84\x01\x12\x13\n" +
 	"\x0ePOST_NOT_FOUND\x10\x85\x01\x12\x15\n" +
-	"\x10POST_PHOTO_LIMIT\x10\x86\x01\x12\x14\n" +
-	"\x0fPOST_PUBLISHING\x10\x87\x01\x12\x1b\n" +
+	"\x10POST_PHOTO_LIMIT\x10\x86\x01\x12\x1b\n" +
 	"\x16POST_TAG_COUNT_INVALID\x10\x88\x01\x12\"\n" +
 	"\x1dPOST_TARGET_LANGUAGE_REQUIRED\x10\x89\x01\x12%\n" +
 	" POST_TARGET_LANGUAGE_UNSUPPORTED\x10\x8a\x01\x12!\n" +
 	"\x1cPOST_TEMPLATE_ANSWER_INVALID\x10\x8b\x01\x12\"\n" +
 	"\x1dPOST_TEMPLATE_ANSWER_TOO_LONG\x10\x8c\x01\x12\x15\n" +
 	"\x10POST_VIDEO_LIMIT\x10\x8d\x01\x12\x16\n" +
-	"\x11PROVIDER_DISABLED\x10\x8e\x01\x12\x1c\n" +
-	"\x17PUBLISH_AGENT_NOT_READY\x10\x8f\x01\x12\x1a\n" +
-	"\x15PUBLISH_AGENT_REVOKED\x10\x90\x01\x12\x1e\n" +
-	"\x19PUBLISH_AGENT_UNAVAILABLE\x10\x91\x01\x12\x1b\n" +
-	"\x16PUBLISH_ALREADY_EXISTS\x10\x92\x01\x12\x1f\n" +
-	"\x1aPUBLISH_CATEGORY_NOT_FOUND\x10\x93\x01\x12\x19\n" +
-	"\x14PUBLISH_COMMIT_FENCE\x10\x94\x01\x12\x16\n" +
-	"\x11PUBLISH_FORBIDDEN\x10\x95\x01\x12\x1a\n" +
-	"\x15PUBLISH_LEASE_INVALID\x10\x96\x01\x12\x1c\n" +
-	"\x17PUBLISH_NEEDS_ATTENTION\x10\x97\x01\x12\x16\n" +
-	"\x11PUBLISH_NOT_FOUND\x10\x98\x01\x12\x1c\n" +
-	"\x17PUBLISH_OUTCOME_UNKNOWN\x10\x99\x01\x12\x1c\n" +
-	"\x17PUBLISH_PAIRING_INVALID\x10\x9a\x01\x12\x1a\n" +
-	"\x15PUBLISH_PAIRING_LIMIT\x10\x9b\x01\x12\x1f\n" +
-	"\x1aPUBLISH_POST_NOT_FINALIZED\x10\x9c\x01\x12\x1c\n" +
-	"\x17PUBLISH_REQUEST_INVALID\x10\x9d\x01\x12\x1b\n" +
-	"\x16PUBLISH_STALE_REVISION\x10\x9e\x01\x12\x1f\n" +
-	"\x1aPUBLISH_TRANSITION_INVALID\x10\x9f\x01\x12\x18\n" +
-	"\x13PUBLISH_URL_INVALID\x10\xa0\x01\x12\x17\n" +
+	"\x11PROVIDER_DISABLED\x10\x8e\x01\x12\x17\n" +
 	"\x12PURCHASE_NOT_FOUND\x10\xa1\x01\x12\x13\n" +
 	"\x0ePURCHASE_SPENT\x10\xa2\x01\x12\x17\n" +
 	"\x12PURCHASE_TOO_SMALL\x10\xa3\x01\x12\x16\n" +
@@ -1120,8 +1041,7 @@ const file_postpilot_v1_error_proto_rawDesc = "" +
 	"\x18UPLOAD_VIDEO_UNSUPPORTED\x10\xbc\x01\x12\x15\n" +
 	"\x10USER_ID_REQUIRED\x10\xbd\x01\x12\x13\n" +
 	"\x0eUSER_NOT_FOUND\x10\xbe\x01\x12\x1e\n" +
-	"\x19VERIFICATION_LINK_INVALID\x10\xbf\x01\x12\x1a\n" +
-	"\x15VIDEO_NOT_PUBLISHABLE\x10\xc0\x01\x12!\n" +
+	"\x19VERIFICATION_LINK_INVALID\x10\xbf\x01\x12!\n" +
 	"\x1cVOICE_ANALYZE_MODEL_REQUIRED\x10\xc1\x01\x12\x1c\n" +
 	"\x17VOICE_BASELINE_MISMATCH\x10\xc2\x01\x12\x0f\n" +
 	"\n" +
@@ -1163,7 +1083,7 @@ const file_postpilot_v1_error_proto_rawDesc = "" +
 	"\x1bMEMORY_EXTRACTION_NOT_READY\x10\xe7\x01\x12\"\n" +
 	"\x1dMEMORY_ANALYZE_MODEL_REQUIRED\x10\xe8\x01\x12\x1e\n" +
 	"\x19EXPERIMENT_POST_FINALIZED\x10\xe9\x01\x12\x1e\n" +
-	"\x19EXPERIMENT_BADGES_INVALID\x10\xea\x01BDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
+	"\x19EXPERIMENT_BADGES_INVALID\x10\xea\x01\"\x06\b\x87\x01\x10\x87\x01\"\x06\b\x8f\x01\x10\xa0\x01\"\x06\b\xc0\x01\x10\xc0\x01*\x0fPOST_PUBLISHING*\x15VIDEO_NOT_PUBLISHABLE*\x17PUBLISH_AGENT_NOT_READY*\x15PUBLISH_AGENT_REVOKED*\x19PUBLISH_AGENT_UNAVAILABLE*\x16PUBLISH_ALREADY_EXISTS*\x1aPUBLISH_CATEGORY_NOT_FOUND*\x14PUBLISH_COMMIT_FENCE*\x11PUBLISH_FORBIDDEN*\x15PUBLISH_LEASE_INVALID*\x17PUBLISH_NEEDS_ATTENTION*\x11PUBLISH_NOT_FOUND*\x17PUBLISH_OUTCOME_UNKNOWN*\x17PUBLISH_PAIRING_INVALID*\x15PUBLISH_PAIRING_LIMIT*\x1aPUBLISH_POST_NOT_FINALIZED*\x17PUBLISH_REQUEST_INVALID*\x16PUBLISH_STALE_REVISION*\x1aPUBLISH_TRANSITION_INVALID*\x13PUBLISH_URL_INVALIDBDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
 
 var (
 	file_postpilot_v1_error_proto_rawDescOnce sync.Once

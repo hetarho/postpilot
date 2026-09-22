@@ -12,10 +12,20 @@ option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;post
 // copy reaching a user (ARCH-3).
 //
 // The WIRE stays a string — `AppErrorDetail.reason` carries `FailureReason.String()` — so an
-// older client and the Mac agent need nothing. A value is never renumbered or reused; a
-// retired reason keeps its number and is deleted from the emitting adapter only.
+// older client needs nothing. A value is never renumbered or reused; a retired reason has
+// both its name and number reserved after its emitting adapter disappears.
 enum FailureReason {
   UNKNOWN_FAILURE = 0;
+
+  // Automatic publishing was retired in T284. Names and numbers stay unavailable forever.
+  reserved 135, 143 to 160, 192;
+  reserved "POST_PUBLISHING", "VIDEO_NOT_PUBLISHABLE";
+  reserved "PUBLISH_AGENT_NOT_READY", "PUBLISH_AGENT_REVOKED", "PUBLISH_AGENT_UNAVAILABLE";
+  reserved "PUBLISH_ALREADY_EXISTS", "PUBLISH_CATEGORY_NOT_FOUND", "PUBLISH_COMMIT_FENCE";
+  reserved "PUBLISH_FORBIDDEN", "PUBLISH_LEASE_INVALID", "PUBLISH_NEEDS_ATTENTION";
+  reserved "PUBLISH_NOT_FOUND", "PUBLISH_OUTCOME_UNKNOWN", "PUBLISH_PAIRING_INVALID";
+  reserved "PUBLISH_PAIRING_LIMIT", "PUBLISH_POST_NOT_FINALIZED", "PUBLISH_REQUEST_INVALID";
+  reserved "PUBLISH_STALE_REVISION", "PUBLISH_TRANSITION_INVALID", "PUBLISH_URL_INVALID";
   AUTH_REQUIRED = 1;
   BILLING_SELECTION_INVALID = 2;
   BILLING_UNAVAILABLE = 3;
@@ -150,7 +160,6 @@ enum FailureReason {
   POST_NOT_FINALIZED = 132;
   POST_NOT_FOUND = 133;
   POST_PHOTO_LIMIT = 134;
-  POST_PUBLISHING = 135;
   POST_TAG_COUNT_INVALID = 136;
   POST_TARGET_LANGUAGE_REQUIRED = 137;
   POST_TARGET_LANGUAGE_UNSUPPORTED = 138;
@@ -158,24 +167,6 @@ enum FailureReason {
   POST_TEMPLATE_ANSWER_TOO_LONG = 140;
   POST_VIDEO_LIMIT = 141;
   PROVIDER_DISABLED = 142;
-  PUBLISH_AGENT_NOT_READY = 143;
-  PUBLISH_AGENT_REVOKED = 144;
-  PUBLISH_AGENT_UNAVAILABLE = 145;
-  PUBLISH_ALREADY_EXISTS = 146;
-  PUBLISH_CATEGORY_NOT_FOUND = 147;
-  PUBLISH_COMMIT_FENCE = 148;
-  PUBLISH_FORBIDDEN = 149;
-  PUBLISH_LEASE_INVALID = 150;
-  PUBLISH_NEEDS_ATTENTION = 151;
-  PUBLISH_NOT_FOUND = 152;
-  PUBLISH_OUTCOME_UNKNOWN = 153;
-  PUBLISH_PAIRING_INVALID = 154;
-  PUBLISH_PAIRING_LIMIT = 155;
-  PUBLISH_POST_NOT_FINALIZED = 156;
-  PUBLISH_REQUEST_INVALID = 157;
-  PUBLISH_STALE_REVISION = 158;
-  PUBLISH_TRANSITION_INVALID = 159;
-  PUBLISH_URL_INVALID = 160;
   PURCHASE_NOT_FOUND = 161;
   PURCHASE_SPENT = 162;
   PURCHASE_TOO_SMALL = 163;
@@ -207,7 +198,6 @@ enum FailureReason {
   USER_ID_REQUIRED = 189;
   USER_NOT_FOUND = 190;
   VERIFICATION_LINK_INVALID = 191;
-  VIDEO_NOT_PUBLISHABLE = 192;
   VOICE_ANALYZE_MODEL_REQUIRED = 193;
   VOICE_BASELINE_MISMATCH = 194;
   VOICE_BUSY = 195;

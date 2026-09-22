@@ -55,11 +55,9 @@ export function DeletePostButton({
           renders where the user is looking). */}
       {remove.isError && (
         <FieldMessage className="w-full">
-          {remove.failure?.reason === 'POST_PUBLISHING'
-            ? t('editor.delete.publishing', { ns: 'posts' })
-            : remove.failure?.reason === 'POST_BUSY'
-              ? t('editor.delete.busy', { ns: 'posts' })
-              : remove.errorMessage}
+          {remove.failure?.reason === 'POST_BUSY'
+            ? t('editor.delete.busy', { ns: 'posts' })
+            : remove.errorMessage}
         </FieldMessage>
       )}
       <Dialog

@@ -53,14 +53,14 @@
 | T008 | Superseded by PUB r6; original live-smoke claim retained, do not resume | PUB MKT | T007 T046 | doing@260910.e2e |
 | T177 | Release QA viewing checklist | CDS CLIP | T176 | blocked@260916 |
 | T279 | Pin enum mirrors in the surviving backend and frontend | ARCH | T313 | todo |
-| T284 | Delete companion source, publishing contracts and build integration | PUB AUTH LANG VIDEO ARCH | T283 | doing@260922.ret |
 | T313 | Verify complete retirement and preserved manual publishing workflow | PUB EXPORT POST MKT AUTH ARCH | T284 | todo |
 
 ## next
 - MODEL r16 and GEN r8 are fully built; no model-comparison work remains
-- implement-task T284; retirement order T284 → T313; T008 must not resume, T279 follows removal
+- implement-task T313; retirement order T313 → T279; T008 must not resume
 - create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 ## log
+- 260922 T284 done; companion module, publishing contracts and build hooks removed; retired enum identities reserved and two-runtime generation/build gates pass (ret)
 - 260922 T319 done; a lab write comparison keeps its preparing observation in the snapshot, so a comparison on a finalized post changes nothing; every backend package passes, cmd/api at 690s needing a raised limit (obs)
 - 260922 T318 done; the A/B pair writes as it is chosen, with no save action; the pair form, model, generation and editor suites and every frontend gate pass (pr)
 - 260922 T319 claimed (obs)
@@ -80,4 +80,3 @@
 - 260922 T283 claimed (ret)
 - 260922 T312 done; verified evidence-gated object-first cleanup, retry receipt and foreign-key-ordered row purge; focused retirement gates pass and the contended clip regression passes alone (ret)
 - 260922 T317 claimed (tly); T315 and T316 are code-complete with gates running, and share every backend file they touch
-- 260922 T316 claimed (bdg) beside T315, whose gates are running

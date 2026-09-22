@@ -55,7 +55,6 @@ export const appFailureSpecs = {
   POST_NOT_FOUND: {},
   POST_FORBIDDEN: {},
   POST_BUSY: { optional: ['active_job_id'] },
-  POST_PUBLISHING: {},
   POST_CONTENT_STALE: {},
   POST_CONTENT_INVALID: {},
   POST_NOT_FINALIZED: {},
@@ -203,8 +202,6 @@ export const appFailureSpecs = {
   // The chosen observe model cannot watch a clip. The ref is allowlisted because the fix is to
   // pick another model and the message names the one that cannot (VIDEO-11).
   MODEL_VIDEO_UNSUPPORTED: { optional: ['model'] },
-  // The finalized content places a clip, which the agent cannot carry yet (VIDEO-16).
-  VIDEO_NOT_PUBLISHABLE: {},
   POST_VIDEO_LIMIT: {},
   POST_PHOTO_LIMIT: {},
   // A data-field answer the client should have bounded itself: the write screen counts both
@@ -248,24 +245,6 @@ export const appFailureSpecs = {
   MODEL_UNSUPPORTED: {},
   MODEL_OUTPUT_INVALID: {},
   MODEL_OUTPUT_TRUNCATED: {},
-  PUBLISH_NOT_FOUND: {},
-  PUBLISH_FORBIDDEN: {},
-  PUBLISH_REQUEST_INVALID: {},
-  PUBLISH_PAIRING_LIMIT: {},
-  PUBLISH_PAIRING_INVALID: {},
-  PUBLISH_AGENT_REVOKED: {},
-  PUBLISH_AGENT_NOT_READY: {},
-  PUBLISH_CATEGORY_NOT_FOUND: {},
-  PUBLISH_POST_NOT_FINALIZED: {},
-  PUBLISH_STALE_REVISION: {},
-  PUBLISH_ALREADY_EXISTS: {},
-  PUBLISH_LEASE_INVALID: {},
-  PUBLISH_TRANSITION_INVALID: {},
-  PUBLISH_COMMIT_FENCE: {},
-  PUBLISH_URL_INVALID: {},
-  PUBLISH_AGENT_UNAVAILABLE: {},
-  PUBLISH_NEEDS_ATTENTION: {},
-  PUBLISH_OUTCOME_UNKNOWN: {},
   NETWORK_UNAVAILABLE: {},
   // Plan enforcement (plan 17). The two budget axes carry micro-USD integers and the count
   // axis carries a plain count; both are rendered through the catalogs' formatters, so the

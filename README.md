@@ -58,14 +58,10 @@ Docker 없이 백엔드만 띄우려면 (`.env`의 `PORT`를 따른다):
 cd backend && go run ./cmd/api
 ```
 
-### Mac 발행 에이전트
+### 발행
 
-Job 25는 모바일의 발행 요청을 durable queue에 보관하고, 집 Mac의 `postpilot-agent`가
-outbound polling으로 가져가는 구조다. 로컬 실행기는 모델 기반 에이전트가 아니라 버전이 고정된
-DOM·Accessibility·CDP 기반 Naver 퍼블리셔로 구현한다.
-
-현재 전환 중으로, 결정론적 퍼블리셔와 실 Naver 검증이 완료되기 전에는 LaunchAgent를 배포하지
-않는다. 로컬 런타임의 설계·개발 명령은 [`agent/README.md`](./agent/README.md)에 있다.
+자동 발행 기능은 폐기됐다. 확정한 글은 내보내기에서 플랫폼별 형식으로 복사하고, 사진과 영상은
+사용자가 해당 플랫폼 편집기에 직접 옮긴다.
 
 ### 계정 만들기
 

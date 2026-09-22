@@ -292,11 +292,12 @@ object나 발행 레코드를 지우지 않는다. 이 저장소에는 현재 �
 아직 없고, 코드·fixture 검증과 운영 실행을 구분한다.
 
 보고서에 대응하는 모든 Mac에서는 **T282 retirement bridge가 들어간 동일한 검토 커밋 SHA**를 따로
-기록하고 그 revision의 `agent/`에서 먼저 읽기 전용 점검을 실행한다. 예전 `install.sh`로 바이너리를
-교체하거나 LaunchAgent를 다시 올리지 않는다.
+기록하고, 현재 main이 아니라 그 보관 커밋을 임시 worktree로 체크아웃해 읽기 전용 점검을 실행한다.
+최종 소스에는 `agent/`가 없다. 예전 `install.sh`로 바이너리를 교체하거나 LaunchAgent를 다시 올리지 않는다.
 
 ```bash
-cd agent
+git worktree add --detach /tmp/postpilot-agent-retirement <T282-bridge-commit-SHA>
+cd /tmp/postpilot-agent-retirement/agent
 go run ./cmd/postpilot-agent retire
 # 표시된 credential 수와 보존될 browser profile 경로를 Mac 소유자가 확인한 뒤
 go run ./cmd/postpilot-agent retire --apply

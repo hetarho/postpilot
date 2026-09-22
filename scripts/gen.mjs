@@ -46,15 +46,6 @@ if (wantProto) {
       'bufbuild/buf:latest',
       'generate', '--template', 'backend/buf.gen.yaml', 'proto',
     ])
-    // The Mac companion is a separate Go module and therefore receives its own Go
-    // package mapping instead of importing backend/internal generated code.
-    run('docker', [
-      'run', '--rm', ...dockerUser(),
-      '-e', 'HOME=/tmp',
-      '-v', mount('', '/work'), '-w', '/work',
-      'bufbuild/buf:latest',
-      'generate', '--template', 'agent/buf.gen.yaml', 'proto',
-    ])
     // Remote plugin releases do not agree on whether generated TS ends with one
     // or two newlines. Normalize only EOF whitespace so `git diff --check` stays
     // deterministic without hand-editing generated contracts.

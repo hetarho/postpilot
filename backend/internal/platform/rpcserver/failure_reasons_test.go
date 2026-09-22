@@ -12,6 +12,8 @@ import (
 	"strings"
 	"testing"
 
+	"google.golang.org/protobuf/reflect/protoreflect"
+
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 )
 
@@ -58,19 +60,6 @@ func TestEveryTypedReasonIsEmitted(t *testing.T) {
 		// notice codes the clip plan and the voice profile carry as data, rendered from the
 		// same catalogue as a failure
 		"CLIP_LAYOUT_FREQUENCY": true, "VOICE_PROFILE_FIELD_REQUIRED": true,
-		// T283 removes every producer before T284 removes and reserves the obsolete wire
-		// values. Keep this bridge exact so an unrelated dead reason still fails the test.
-		"POST_PUBLISHING":         true,
-		"PUBLISH_AGENT_NOT_READY": true, "PUBLISH_AGENT_REVOKED": true,
-		"PUBLISH_AGENT_UNAVAILABLE": true, "PUBLISH_ALREADY_EXISTS": true,
-		"PUBLISH_CATEGORY_NOT_FOUND": true, "PUBLISH_COMMIT_FENCE": true,
-		"PUBLISH_FORBIDDEN": true, "PUBLISH_LEASE_INVALID": true,
-		"PUBLISH_NEEDS_ATTENTION": true, "PUBLISH_NOT_FOUND": true,
-		"PUBLISH_OUTCOME_UNKNOWN": true, "PUBLISH_PAIRING_INVALID": true,
-		"PUBLISH_PAIRING_LIMIT": true, "PUBLISH_POST_NOT_FINALIZED": true,
-		"PUBLISH_REQUEST_INVALID": true, "PUBLISH_STALE_REVISION": true,
-		"PUBLISH_TRANSITION_INVALID": true, "PUBLISH_URL_INVALID": true,
-		"VIDEO_NOT_PUBLISHABLE": true,
 	}
 	var dead []string
 	for name := range postpilotv1.FailureReason_value {
@@ -81,6 +70,48 @@ func TestEveryTypedReasonIsEmitted(t *testing.T) {
 	sort.Strings(dead)
 	if len(dead) > 0 {
 		t.Errorf("these FailureReason values are emitted by nothing: %v", dead)
+	}
+}
+
+// TestRetiredPublishingFailureReasonsStayReserved prevents a later feature from silently
+// reusing the public names or wire numbers removed with the publishing contract.
+func TestRetiredPublishingFailureReasonsStayReserved(t *testing.T) {
+	descriptor := postpilotv1.FailureReason(0).Type().Descriptor()
+	retired := map[protoreflect.Name]protoreflect.EnumNumber{
+		"POST_PUBLISHING":            135,
+		"PUBLISH_AGENT_NOT_READY":    143,
+		"PUBLISH_AGENT_REVOKED":      144,
+		"PUBLISH_AGENT_UNAVAILABLE":  145,
+		"PUBLISH_ALREADY_EXISTS":     146,
+		"PUBLISH_CATEGORY_NOT_FOUND": 147,
+		"PUBLISH_COMMIT_FENCE":       148,
+		"PUBLISH_FORBIDDEN":          149,
+		"PUBLISH_LEASE_INVALID":      150,
+		"PUBLISH_NEEDS_ATTENTION":    151,
+		"PUBLISH_NOT_FOUND":          152,
+		"PUBLISH_OUTCOME_UNKNOWN":    153,
+		"PUBLISH_PAIRING_INVALID":    154,
+		"PUBLISH_PAIRING_LIMIT":      155,
+		"PUBLISH_POST_NOT_FINALIZED": 156,
+		"PUBLISH_REQUEST_INVALID":    157,
+		"PUBLISH_STALE_REVISION":     158,
+		"PUBLISH_TRANSITION_INVALID": 159,
+		"PUBLISH_URL_INVALID":        160,
+		"VIDEO_NOT_PUBLISHABLE":      192,
+	}
+	for name, number := range retired {
+		if _, present := postpilotv1.FailureReason_value[string(name)]; present {
+			t.Errorf("retired failure name %s is active", name)
+		}
+		if _, present := postpilotv1.FailureReason_name[int32(number)]; present {
+			t.Errorf("retired failure number %d is active", number)
+		}
+		if !descriptor.ReservedNames().Has(name) {
+			t.Errorf("retired failure name %s is not reserved", name)
+		}
+		if !descriptor.ReservedRanges().Has(number) {
+			t.Errorf("retired failure number %d is not reserved", number)
+		}
 	}
 }
 

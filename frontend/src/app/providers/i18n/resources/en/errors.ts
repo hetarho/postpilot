@@ -25,8 +25,6 @@ export const errors = {
   POST_NOT_FOUND: 'Could not find the post.',
   POST_FORBIDDEN: 'You do not have access to this post.',
   POST_BUSY: 'Another job is already running for this post.',
-  POST_PUBLISHING:
-    'This post is being published. Cancel or finish the publication first, then delete it.',
   POST_CONTENT_STALE: 'This post changed in another screen. Load the latest version and try again.',
   POST_CONTENT_INVALID: 'Check the post content and try again.',
   POST_NOT_FINALIZED: 'Finalize the post first.',
@@ -201,8 +199,6 @@ export const errors = {
   GENERATION_OBSERVE_MODEL_REQUIRED: 'Select a photo-observation model.',
   MODEL_VIDEO_UNSUPPORTED:
     'The selected observation model cannot read this post’s video links. Choose a model that supports signed video URLs.',
-  VIDEO_NOT_PUBLISHABLE:
-    'A post with a video cannot be published yet. Paste it yourself from the export tab.',
   POST_VIDEO_LIMIT: 'This post already holds the maximum number of videos.',
   POST_PHOTO_LIMIT: 'This post already holds the maximum number of photos.',
   UPLOAD_VIDEO_UNSUPPORTED: 'That video format is not supported.',
@@ -255,25 +251,6 @@ export const errors = {
   REFUND_WINDOW_CLOSED: 'This purchase is more than seven days old and cannot be refunded.',
   PURCHASE_SPENT: 'Some of these purchased credits were used, so the purchase cannot be refunded.',
   REFUND_FAILED: 'The refund could not be completed. Try again shortly.',
-  PUBLISH_NOT_FOUND: 'Could not find the publishing job.',
-  PUBLISH_FORBIDDEN: 'You do not have access to this publishing job.',
-  PUBLISH_REQUEST_INVALID: 'Check the publishing settings.',
-  PUBLISH_PAIRING_LIMIT: 'Too many Mac pairing codes are active.',
-  PUBLISH_PAIRING_INVALID: 'The Mac pairing code is invalid or expired.',
-  PUBLISH_AGENT_REVOKED: 'This Mac connection has been revoked.',
-  PUBLISH_AGENT_NOT_READY: 'Finish setting up publishing on the Mac.',
-  PUBLISH_CATEGORY_NOT_FOUND: 'Could not find the publishing category.',
-  PUBLISH_POST_NOT_FINALIZED: 'Finalize the post first.',
-  PUBLISH_STALE_REVISION: 'The post changed. Publish the latest content instead.',
-  PUBLISH_ALREADY_EXISTS: 'A publishing job already exists for this post.',
-  PUBLISH_LEASE_INVALID: 'The Mac publishing lease expired.',
-  PUBLISH_TRANSITION_INVALID: 'That change is not available in the current publishing state.',
-  PUBLISH_COMMIT_FENCE:
-    'Final publishing may have started, so the job will not retry automatically.',
-  PUBLISH_URL_INVALID: 'The published post URL is invalid.',
-  PUBLISH_AGENT_UNAVAILABLE: 'No publishing Mac is available.',
-  PUBLISH_NEEDS_ATTENTION: "Check the login in the Mac's dedicated browser.",
-  PUBLISH_OUTCOME_UNKNOWN: 'The publishing result is uncertain. Check the blog directly.',
   INSUFFICIENT_CREDITS:
     'This needs {{required}} credits and you have {{balance}}. Tops up {{renews_at, instant}}.',
   PLAN_REQUIRED: 'Choose a plan.',

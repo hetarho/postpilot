@@ -61,17 +61,7 @@ it("deletes, ends the post's autosave, then leaves for the list", async () => {
   expect(navigate).toHaveBeenCalledWith({ to: '/posts' })
 })
 
-it('explains a retained retired-publishing record and stays on the editor', async () => {
-  navigate.mockClear()
-  const { user } = renderButton({ refusal: 'POST_PUBLISHING' })
-
-  await openAndConfirm(user)
-
-  expect(await screen.findByRole('alert')).toHaveTextContent('폐기된 자동 발행 기록이 남아 있어')
-  expect(navigate).not.toHaveBeenCalled()
-})
-
-it('distinguishes a running AI job from retained publishing history', async () => {
+it('explains a running AI job and stays on the editor', async () => {
   navigate.mockClear()
   const { user } = renderButton({ refusal: 'POST_BUSY' })
 
