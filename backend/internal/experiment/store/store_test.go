@@ -47,7 +47,7 @@ func TestStorePersistsVoiceAndCountsPublishableWork(t *testing.T) {
 	ctx := context.Background()
 	now := time.Date(2026, 8, 29, 0, 0, 0, 0, time.UTC)
 	found := sample("exp-voice", "alice", "", now)
-	found.Stage = experiment.StageAnalyze
+	found.Stage, found.Origin = experiment.StageAnalyze, experiment.OriginLab
 	found.TargetLanguage = nil
 	found.VoiceID = "voice-alice"
 	if err := store.Create(ctx, found); err != nil {
@@ -83,7 +83,7 @@ func TestStorePersistsVoiceAndCountsPublishableWork(t *testing.T) {
 		t.Fatal("review does not hold the voice")
 	}
 	decided := now.Add(2 * time.Second)
-	if changed, err := store.Decide(ctx, found.ID, "alice", found.Candidates[0].ID, experiment.StatusDecided, experiment.OutcomeWinner, false, decided, decided.Add(time.Hour)); err != nil || !changed {
+	if changed, err := store.Decide(ctx, found.ID, "alice", found.Candidates[0].ID, experiment.StatusDecided, experiment.OutcomeWinner, true, false, decided, decided.Add(time.Hour)); err != nil || !changed {
 		t.Fatalf("decide = %v, %v", changed, err)
 	}
 	if count("alice", "voice-alice") != 1 {
@@ -100,7 +100,7 @@ func TestStorePersistsVoiceAndCountsPublishableWork(t *testing.T) {
 func sample(id, user, slug string, at time.Time) experiment.Experiment {
 	targetLanguage := experiment.LanguageKorean
 	return experiment.Experiment{
-		ID: id, UserID: user, PostSlug: slug, Stage: experiment.StageWrite, Status: experiment.StatusQueued,
+		ID: id, UserID: user, PostSlug: slug, Stage: experiment.StageWrite, Origin: experiment.OriginEditor, Status: experiment.StatusQueued,
 		TargetLanguage: &targetLanguage,
 		InputSnapshot:  []byte(`{"private":true}`), InputHash: "hash", PromptVersion: "v1", CreatedAt: at,
 		Candidates: []experiment.Candidate{
@@ -143,7 +143,7 @@ func TestStorePersistsAndValidatesFrozenTargetLanguage(t *testing.T) {
 	}
 
 	observe := sample("exp-observe", "alice", "", now.Add(3*time.Second))
-	observe.Stage = experiment.StageObserve
+	observe.Stage, observe.Origin = experiment.StageObserve, experiment.OriginLab
 	observe.TargetLanguage = nil
 	if err := store.Create(ctx, observe); err != nil {
 		t.Fatal(err)
@@ -253,7 +253,7 @@ func TestStorePreservesSiblingOutputAndPurgesPrivateContent(t *testing.T) {
 		t.Fatalf("failure params alias store state: %+v, err=%v", reloadedAgain.Candidates[1], err)
 	}
 	decided := now.Add(2 * time.Second)
-	changed, err := store.Decide(ctx, found.ID, "alice", left.ID, experiment.StatusDecided, experiment.OutcomeUnpaired, false, decided, decided)
+	changed, err := store.Decide(ctx, found.ID, "alice", left.ID, experiment.StatusDecided, experiment.OutcomeUnpaired, true, false, decided, decided)
 	if err != nil || !changed {
 		t.Fatalf("decide = %v, %v", changed, err)
 	}
@@ -552,7 +552,7 @@ func TestPendingWriteKeepsUnappliedVerdictRecoverable(t *testing.T) {
 		t.Fatal(err)
 	}
 	decided := now.Add(2 * time.Second)
-	if changed, err := store.Decide(ctx, found.ID, "alice", found.Candidates[0].ID, experiment.StatusDecided, experiment.OutcomeWinner, true, decided, decided.Add(30*24*time.Hour)); err != nil || !changed {
+	if changed, err := store.Decide(ctx, found.ID, "alice", found.Candidates[0].ID, experiment.StatusDecided, experiment.OutcomeWinner, true, true, decided, decided.Add(30*24*time.Hour)); err != nil || !changed {
 		t.Fatalf("decide = %v, %v", changed, err)
 	}
 	if pending, err := store.PendingForPost(ctx, "alice", "post-a"); err != nil || pending == nil || pending.ID != found.ID {
@@ -618,4 +618,81 @@ func TestPendingWriteKeepsUnappliedVerdictRecoverable(t *testing.T) {
 	if err := store.Create(ctx, sample("exp-next", "alice", "post-a", decided.Add(3*time.Second))); err != nil {
 		t.Fatalf("new comparison after adoption = %v", err)
 	}
+}
+
+// The unresolved-per-post guard and its query read the same definition: a decided comparison
+// holds its post only while an application or adoption it asked for is incomplete. A lab pick
+// asks for neither, so it releases the post the moment it is decided and the next comparison
+// may start.
+func TestLabPickReleasesThePostAndAnAskedApplicationHoldsIt(t *testing.T) {
+	t.Run("a pick that applies nothing releases the post", func(t *testing.T) {
+		store, _ := testStore(t)
+		ctx := context.Background()
+		now := time.Date(2026, 8, 29, 0, 0, 0, 0, time.UTC)
+		found := sample("exp-pick", "alice", "post-a", now)
+		found.Origin = experiment.OriginLab
+		if err := store.Create(ctx, found); err != nil {
+			t.Fatal(err)
+		}
+		if err := store.SetStatus(ctx, found.ID, experiment.StatusReview, &now); err != nil {
+			t.Fatal(err)
+		}
+		if reloaded, err := store.Get(ctx, found.ID); err != nil || reloaded.Origin != experiment.OriginLab || reloaded.ApplyRequested {
+			t.Fatalf("lab round trip = %+v, %v", reloaded, err)
+		}
+		decided := now.Add(time.Second)
+		if changed, err := store.Decide(ctx, found.ID, "alice", found.Candidates[0].ID, experiment.StatusDecided, experiment.OutcomeWinner, false, false, decided, decided.Add(time.Hour)); err != nil || !changed {
+			t.Fatalf("decide = %v, %v", changed, err)
+		}
+		if pending, err := store.PendingForPost(ctx, "alice", "post-a"); err != nil || pending != nil {
+			t.Fatalf("pick still holds the post = %+v, %v", pending, err)
+		}
+		if err := store.Create(ctx, sample("exp-after-pick", "alice", "post-a", decided.Add(time.Second))); err != nil {
+			t.Fatalf("new comparison after a pick = %v", err)
+		}
+	})
+
+	t.Run("an asked application holds the post until it completes", func(t *testing.T) {
+		store, _ := testStore(t)
+		ctx := context.Background()
+		now := time.Date(2026, 8, 29, 0, 0, 0, 0, time.UTC)
+		found := sample("exp-ask", "alice", "post-a", now)
+		found.Origin = experiment.OriginLab
+		if err := store.Create(ctx, found); err != nil {
+			t.Fatal(err)
+		}
+		if err := store.SetStatus(ctx, found.ID, experiment.StatusReview, &now); err != nil {
+			t.Fatal(err)
+		}
+		decided := now.Add(time.Second)
+		if changed, err := store.Decide(ctx, found.ID, "alice", found.Candidates[0].ID, experiment.StatusDecided, experiment.OutcomeWinner, false, false, decided, decided.Add(time.Hour)); err != nil || !changed {
+			t.Fatalf("decide = %v, %v", changed, err)
+		}
+		if err := store.SetApplyRequested(ctx, found.ID, "alice"); err != nil {
+			t.Fatal(err)
+		}
+		reloaded, err := store.Get(ctx, found.ID)
+		if err != nil || !reloaded.ApplyRequested {
+			t.Fatalf("asked application = %+v, %v", reloaded, err)
+		}
+		if pending, err := store.PendingForPost(ctx, "alice", "post-a"); err != nil || pending == nil || pending.ID != found.ID {
+			t.Fatalf("asked application does not hold the post = %+v, %v", pending, err)
+		}
+		if err := store.Create(ctx, sample("exp-blocked-by-ask", "alice", "post-a", decided.Add(time.Second))); !errors.Is(err, experiment.ErrInvalidState) {
+			t.Fatalf("new comparison during an owed application = %v", err)
+		}
+		if err := store.SetApplied(ctx, found.ID, "alice", decided.Add(2*time.Second)); err != nil {
+			t.Fatal(err)
+		}
+		if pending, err := store.PendingForPost(ctx, "alice", "post-a"); err != nil || pending != nil {
+			t.Fatalf("completed application still holds the post = %+v, %v", pending, err)
+		}
+		// Asking again after the application completed changes nothing: the debt is over.
+		if err := store.SetApplyRequested(ctx, found.ID, "alice"); err != nil {
+			t.Fatal(err)
+		}
+		if pending, err := store.PendingForPost(ctx, "alice", "post-a"); err != nil || pending != nil {
+			t.Fatalf("repeat ask revived the debt = %+v, %v", pending, err)
+		}
+	})
 }

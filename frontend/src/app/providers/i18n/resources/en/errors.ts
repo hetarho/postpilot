@@ -229,6 +229,7 @@ export const errors = {
   EXPERIMENT_VOICE_REQUIRED: 'Select a voice for the style comparison.',
   EXPERIMENT_VOICE_UNAVAILABLE: 'The voice required by this comparison is unavailable.',
   EXPERIMENT_ALREADY_RUNNING: 'Another A/B comparison is already running.',
+  EXPERIMENT_POST_FINALIZED: 'A finalized post cannot take a comparison result.',
   JOB_NOT_FOUND: 'Could not find the job.',
   JOB_FORBIDDEN: 'You do not have access to this job.',
   JOB_INTERRUPTED: 'The server restarted and interrupted the job.',

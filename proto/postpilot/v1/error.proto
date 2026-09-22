@@ -256,6 +256,10 @@ enum FailureReason {
   MEMORY_TAG_REQUIRED = 230;
   MEMORY_EXTRACTION_NOT_READY = 231;
   MEMORY_ANALYZE_MODEL_REQUIRED = 232;
+  // a comparison started in the model lab may only be applied while its source post is
+  // still draft or review (MODEL-37): a finalized post's confirmed content is not
+  // rewritten from a comparison.
+  EXPERIMENT_POST_FINALIZED = 233;
 }
 
 // AppErrorDetail accompanies a synchronous Connect status. reason is a stable product

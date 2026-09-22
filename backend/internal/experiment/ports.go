@@ -38,7 +38,10 @@ type CandidateLedger interface {
 
 // OutcomeLedger is what the owner decided and what happened when it was applied.
 type OutcomeLedger interface {
-	Decide(ctx context.Context, id, userID, candidateID string, status Status, outcome Outcome, adoptionRequested bool, decidedAt, expiresAt time.Time) (bool, error)
+	Decide(ctx context.Context, id, userID, candidateID string, status Status, outcome Outcome, applyRequested, adoptionRequested bool, decidedAt, expiresAt time.Time) (bool, error)
+	// SetApplyRequested records that a decided verdict now owes a content application, so a
+	// failure leaves the comparison unresolved for its post. Idempotent.
+	SetApplyRequested(ctx context.Context, id, userID string) error
 	SetApplyFailure(ctx context.Context, id, userID string, failure Failure) error
 	SetApplied(ctx context.Context, id, userID string, now time.Time) error
 	SetAdoptionFailure(ctx context.Context, id, userID string, failure Failure) error
@@ -60,6 +63,14 @@ type Storage interface {
 	CandidateLedger
 	OutcomeLedger
 	RunRetention
+}
+
+// PostDirectory is the post context's published status of one owned post, consumed before a
+// lab comparison's content application: a finalized post's confirmed content is not rewritten
+// from a comparison (MODEL-37). The composition root adapts it; this context never reads post
+// tables.
+type PostDirectory interface {
+	Status(ctx context.Context, userID, slug string) (string, error)
 }
 
 // VoiceDirectory is the voice context's published check that a voice is owned and alive,

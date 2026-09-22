@@ -1,8 +1,8 @@
 -- name: InsertExperiment :exec
 INSERT INTO model_experiments (
-  id, user_id, post_slug, voice_id, template_name, target_language, stage, status, job_id, input_snapshot, input_hash,
+  id, user_id, post_slug, voice_id, template_name, target_language, stage, origin, status, job_id, input_snapshot, input_hash,
   prompt_version, created_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 -- name: InsertCandidate :exec
 INSERT INTO model_experiment_candidates (
@@ -39,7 +39,10 @@ SELECT * FROM model_experiments
 WHERE user_id = ? AND post_slug = ? AND stage = 'write'
   AND (
     status IN ('queued', 'running', 'review', 'partial', 'failed')
-	OR (status = 'decided' AND (applied_at IS NULL OR (adoption_requested = 1 AND adopted_at IS NULL)))
+	OR (status = 'decided' AND (
+	      (apply_requested = 1 AND applied_at IS NULL)
+	      OR (adoption_requested = 1 AND adopted_at IS NULL)
+	   ))
   )
 ORDER BY created_at DESC, id DESC LIMIT 1;
 
@@ -112,10 +115,16 @@ UPDATE model_experiments
 SET status = ?, winner_candidate_id = ?, outcome = ?, decided_at = ?,
     content_expires_at = ?, apply_error = NULL, apply_error_reason = NULL,
     apply_error_params = NULL, apply_technical_detail = NULL, applied_at = NULL,
-	adoption_requested = ?, adoption_error = NULL, adoption_error_reason = NULL,
+	apply_requested = ?, adoption_requested = ?, adoption_error = NULL, adoption_error_reason = NULL,
     adoption_error_params = NULL, adoption_technical_detail = NULL, adopted_at = NULL
 WHERE id = ? AND user_id = ?
   AND status IN ('review', 'partial', 'failed');
+
+-- name: SetApplyRequested :execrows
+-- Marks that this decided verdict now owes a content application, so a failure leaves the
+-- comparison unresolved for its post with a visible retry. Idempotent: a repeat is a no-op.
+UPDATE model_experiments SET apply_requested = 1
+WHERE id = ? AND user_id = ? AND status = 'decided' AND applied_at IS NULL;
 
 -- name: SetApplyFailure :exec
 UPDATE model_experiments

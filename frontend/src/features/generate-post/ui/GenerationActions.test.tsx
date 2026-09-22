@@ -1,7 +1,7 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it, vi } from 'vitest'
-import { Stage } from '@/shared/api'
+import { ExperimentOrigin, Stage } from '@/shared/api'
 import { createFakeAuthTransport, createTestQueryClient, withProviders } from '@/test/session'
 import type { FakeGenerationStart } from '@/test/jobs'
 import type { FakeWriteExperimentStart } from '@/test/experiments'
@@ -88,5 +88,7 @@ it.each(['생성', 'A/B 비교'])(
     await waitFor(() => expect(requests).toHaveLength(1))
     expect(requests[0].observeModel).toEqual(observe)
     expect(beforeStart).toHaveBeenCalledTimes(1)
+    // A comparison started here writes the post the editor is on, so its verdict applies.
+    if (name !== '생성') expect(comparisons[0].origin).toBe(ExperimentOrigin.EDITOR)
   },
 )

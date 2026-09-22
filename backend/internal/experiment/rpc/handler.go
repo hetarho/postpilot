@@ -63,6 +63,7 @@ func (h *Handler) StartWriteExperiment(ctx context.Context, req *connect.Request
 		ObserveModel: fromProtoRef(req.Msg.GetObserveModel()), ModelA: fromProtoRef(req.Msg.GetModelA()), ModelB: fromProtoRef(req.Msg.GetModelB()),
 		TargetLength: optionalTargetLength(req.Msg.TargetLength),
 		ObserveFiles: reobserveFiles(req.Msg.GetReobserve()),
+		Origin:       fromProtoOrigin(req.Msg.GetOrigin()),
 	})
 	if err != nil {
 		return nil, toConnectError("start write experiment", err)
@@ -269,6 +270,8 @@ func toConnectError(op string, err error) error {
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "experiment retry model is unavailable", postpilotv1.FailureReason_EXPERIMENT_RETRY_MODEL_UNAVAILABLE, nil)
 	case errors.Is(err, experiment.ErrVoiceUnavailable):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "experiment voice is unavailable", postpilotv1.FailureReason_EXPERIMENT_VOICE_UNAVAILABLE, nil)
+	case errors.Is(err, experiment.ErrPostFinalized):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "a finalized post cannot take a comparison result", postpilotv1.FailureReason_EXPERIMENT_POST_FINALIZED, nil)
 	case errors.As(err, &active):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "experiment is already in progress", postpilotv1.FailureReason_EXPERIMENT_ALREADY_RUNNING, activeJobParams(active.ActiveID))
 	default:
@@ -302,6 +305,7 @@ func toProtoExperiment(found experiment.Experiment) *postpilotv1.ModelExperiment
 		TargetLanguage: toProtoLanguage(found.TargetLanguage),
 		Outcome:        toProtoOutcome(found.Outcome), CreatedAt: formatTime(found.CreatedAt),
 		FinishedAt: formatOptional(found.FinishedAt), DecidedAt: formatOptional(found.DecidedAt), Revealed: found.Revealed(),
+		Origin:            toProtoOrigin(found.Origin),
 		AppliedAt:         formatOptional(found.AppliedAt),
 		AdoptionRequested: found.AdoptionRequested,
 		AdoptedAt:         formatOptional(found.AdoptedAt),
@@ -435,6 +439,24 @@ func fromProtoRef(ref *postpilotv1.ModelRef) experiment.ModelRef {
 func toProtoRef(ref experiment.ModelRef) *postpilotv1.ModelRef {
 	return &postpilotv1.ModelRef{ProviderId: ref.ProviderID, ModelId: ref.ModelID}
 }
+
+// fromProtoOrigin reads the caller's declared origin. UNSPECIFIED means the editor, the
+// behaviour every client predating the field was written against, so the domain decides it
+// rather than this mapper guessing per stage.
+func fromProtoOrigin(origin postpilotv1.ExperimentOrigin) experiment.Origin {
+	if origin == postpilotv1.ExperimentOrigin_EXPERIMENT_ORIGIN_LAB {
+		return experiment.OriginLab
+	}
+	return experiment.OriginEditor
+}
+
+func toProtoOrigin(origin experiment.Origin) postpilotv1.ExperimentOrigin {
+	if origin == experiment.OriginLab {
+		return postpilotv1.ExperimentOrigin_EXPERIMENT_ORIGIN_LAB
+	}
+	return postpilotv1.ExperimentOrigin_EXPERIMENT_ORIGIN_EDITOR
+}
+
 func fromProtoStage(stage postpilotv1.Stage) experiment.Stage {
 	switch stage {
 	case postpilotv1.Stage_STAGE_OBSERVE:

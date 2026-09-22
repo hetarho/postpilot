@@ -329,8 +329,10 @@ export {
   DisplaySide,
   CandidateStatus,
   ExperimentOutcome,
+  ExperimentOrigin,
   CostSource,
   ListExperimentsResponseSchema,
+  ModelExperimentSchema,
   StartExperimentResponseSchema,
 } from './gen/postpilot/v1/model_experiment_pb'
 export {

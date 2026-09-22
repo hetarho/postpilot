@@ -2,6 +2,7 @@ import type { ModelRef } from '@/entities/model-catalog'
 import { create } from '@bufbuild/protobuf'
 import { Code, createRouterTransport } from '@connectrpc/connect'
 import {
+  ExperimentOrigin,
   ModelExperimentService,
   StartExperimentResponseSchema,
   ExperimentStatus,
@@ -13,6 +14,8 @@ type ConnectRouter = Parameters<Parameters<typeof createRouterTransport>[0]>[0]
 
 export interface FakeWriteExperimentStart {
   postSlug: string
+  /** Which verdict form the started comparison will offer. */
+  origin: ExperimentOrigin
   observeModel?: ModelRef
   modelA?: ModelRef
   modelB?: ModelRef
@@ -91,6 +94,7 @@ export function registerExperimentService(
     if (options.startError) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
     options.starts?.push({
       postSlug: request.postSlug,
+      origin: request.origin,
       observeModel: request.observeModel
         ? { providerId: request.observeModel.providerId, modelId: request.observeModel.modelId }
         : undefined,

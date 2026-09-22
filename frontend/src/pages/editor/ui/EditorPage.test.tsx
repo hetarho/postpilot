@@ -5,6 +5,7 @@ import { initializeI18n } from '@/app/providers/i18n'
 import { discardUploadBatches } from '@/features/upload-photos'
 import { create } from '@bufbuild/protobuf'
 import {
+  ExperimentOrigin,
   PublishJobSchema,
   PublishStatus,
   PublishVisibility,
@@ -976,12 +977,7 @@ describe('opening a post', () => {
   })
 
   it('starts an explicit A/B comparison with the configured pair and optional target', async () => {
-    const starts: Array<{
-      postSlug: string
-      modelA?: { providerId: string; modelId: string }
-      modelB?: { providerId: string; modelId: string }
-      targetLength?: number
-    }> = []
+    const starts: FakeWriteExperimentStart[] = []
     const calls: string[] = []
     const user = userEvent.setup()
     renderAppAt('/posts/20260820-memo', {
@@ -1019,6 +1015,8 @@ describe('opening a post', () => {
     expect(starts).toEqual([
       {
         postSlug: '20260820-memo',
+        // Started from the editor, so its verdict will apply the winner to this very post.
+        origin: ExperimentOrigin.EDITOR,
         observeModel: undefined,
         modelA: { providerId: 'openrouter', modelId: 'candidate-a' },
         modelB: { providerId: 'openrouter', modelId: 'candidate-b' },

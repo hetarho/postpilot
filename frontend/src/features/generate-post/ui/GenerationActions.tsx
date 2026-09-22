@@ -132,6 +132,7 @@ export const GenerationActions = forwardRef<
               )
             : await comparison.start(
                 post.slug,
+                'editor',
                 post.images.length || post.videos.length ? observeSelection?.ref : undefined,
                 writeA!.ref,
                 writeB!.ref,

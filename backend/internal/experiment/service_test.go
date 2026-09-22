@@ -63,7 +63,16 @@ func (s *memoryStore) PendingForPost(_ context.Context, userID, slug string) (*E
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for _, row := range s.rows {
-		if row.UserID == userID && row.PostSlug == slug && row.Stage == StageWrite && !row.Revealed() {
+		if row.UserID != userID || row.PostSlug != slug || row.Stage != StageWrite {
+			continue
+		}
+		// The same definition the unresolved-per-post index carries: a decided comparison
+		// still holds its post only while an application or adoption it asked for is
+		// incomplete. A lab pick asks for neither, so it releases the post at once.
+		unresolved := !row.Revealed() ||
+			(row.Status == StatusDecided &&
+				((row.ApplyRequested && row.AppliedAt == nil) || (row.AdoptionRequested && row.AdoptedAt == nil)))
+		if unresolved {
 			copy := cloneExperiment(row)
 			return &copy, nil
 		}
@@ -213,7 +222,7 @@ func (s *memoryStore) RestoreFailedCandidates(_ context.Context, id string, cand
 	s.rows[id] = row
 	return nil
 }
-func (s *memoryStore) Decide(_ context.Context, id, userID, candidateID string, status Status, outcome Outcome, adoptionRequested bool, decidedAt, expiresAt time.Time) (bool, error) {
+func (s *memoryStore) Decide(_ context.Context, id, userID, candidateID string, status Status, outcome Outcome, applyRequested, adoptionRequested bool, decidedAt, expiresAt time.Time) (bool, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	row := s.rows[id]
@@ -221,11 +230,23 @@ func (s *memoryStore) Decide(_ context.Context, id, userID, candidateID string, 
 		return false, nil
 	}
 	row.Status, row.WinnerCandidateID, row.Outcome = status, candidateID, outcome
-	row.AdoptionRequested = adoptionRequested
+	row.ApplyRequested, row.AdoptionRequested = applyRequested, adoptionRequested
+	row.AppliedAt = nil
 	row.ApplyFailure, row.AdoptionFailure = nil, nil
 	row.DecidedAt, row.ContentExpiresAt = &decidedAt, &expiresAt
 	s.rows[id] = row
 	return true, nil
+}
+func (s *memoryStore) SetApplyRequested(_ context.Context, id, userID string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	row := s.rows[id]
+	if row.UserID != userID || row.Status != StatusDecided || row.AppliedAt != nil {
+		return nil
+	}
+	row.ApplyRequested = true
+	s.rows[id] = row
+	return nil
 }
 func (s *memoryStore) SetApplyFailure(_ context.Context, id, userID string, failure Failure) error {
 	s.mu.Lock()
@@ -569,6 +590,25 @@ func (r *fakeRunner) ApplyWinner(context.Context, Experiment, Candidate, bool) e
 	return r.applyErr
 }
 
+// fakePosts answers the status gate. An unnamed post is a draft: most tests are about the
+// verdict, not about the post's lifecycle, and a draft is the state they are written in.
+type fakePosts struct {
+	statuses map[string]string
+	err      error
+	calls    int
+}
+
+func (p *fakePosts) Status(_ context.Context, _, slug string) (string, error) {
+	p.calls++
+	if p.err != nil {
+		return "", p.err
+	}
+	if status, ok := p.statuses[slug]; ok {
+		return status, nil
+	}
+	return "draft", nil
+}
+
 func newTestService() (*Service, *memoryStore, *fakeCatalog, *fakeJobs, *fakeRunner) {
 	a := ModelRef{ProviderID: "p", ModelID: "a"}
 	b := ModelRef{ProviderID: "p", ModelID: "b"}
@@ -576,7 +616,8 @@ func newTestService() (*Service, *memoryStore, *fakeCatalog, *fakeJobs, *fakeRun
 	catalog := &fakeCatalog{models: map[ModelRef]Model{a: {Ref: a, Label: "A", Enabled: true, Vision: true, Stages: allStages, InputUSDPerMillion: "1", OutputUSDPerMillion: "2"}, b: {Ref: b, Label: "B", Enabled: true, Vision: true, Stages: allStages, InputUSDPerMillion: "1", OutputUSDPerMillion: "2"}}}
 	jobs := &fakeJobs{runnable: map[string]bool{}}
 	runner := &fakeRunner{fail: map[string]error{}, results: map[string]CandidateResult{}}
-	svc := NewService(store, catalog, jobs, runner, 30*24*time.Hour)
+	posts := &fakePosts{statuses: map[string]string{}}
+	svc := NewService(store, catalog, jobs, runner, posts, 30*24*time.Hour)
 	n := 0
 	svc.newID = func() string { n++; return fmt.Sprintf("id-%d", n) }
 	svc.now = func() time.Time { return time.Date(2026, 8, 29, 0, 0, 0, 0, time.UTC) }
@@ -614,12 +655,12 @@ func TestStartHandleChooseWriteExperiment(t *testing.T) {
 	if found.Status != StatusReview || runner.runCalls != 2 {
 		t.Fatalf("after handle = %+v calls=%d", found, runner.runCalls)
 	}
-	chosen, err := svc.Choose(context.Background(), "alice", found.ID, found.Candidates[0].ID, false)
+	chosen, err := svc.DecideWrite(context.Background(), "alice", found.ID, found.Candidates[0].ID, false)
 	if err != nil || chosen.Status != StatusDecided || chosen.Outcome != OutcomeWinner || runner.applyCalls != 1 {
-		t.Fatalf("choose = %+v, %v applies=%d", chosen, err, runner.applyCalls)
+		t.Fatalf("decide = %+v, %v applies=%d", chosen, err, runner.applyCalls)
 	}
-	if _, err := svc.Choose(context.Background(), "alice", found.ID, found.Candidates[0].ID, false); err != nil || runner.applyCalls != 1 {
-		t.Fatalf("idempotent choose err=%v applies=%d", err, runner.applyCalls)
+	if _, err := svc.DecideWrite(context.Background(), "alice", found.ID, found.Candidates[0].ID, false); err != nil || runner.applyCalls != 1 {
+		t.Fatalf("idempotent decide err=%v applies=%d", err, runner.applyCalls)
 	}
 	if _, err := svc.ApplyWinner(context.Background(), "alice", found.ID, false); err != nil || runner.applyCalls != 1 {
 		t.Fatalf("idempotent apply err=%v applies=%d", err, runner.applyCalls)
@@ -886,7 +927,7 @@ func TestApplyFailureStoresOnlyStableReason(t *testing.T) {
 		t.Fatal(err)
 	}
 	found, _ := store.Get(context.Background(), started.ExperimentID)
-	chosen, err := svc.Choose(context.Background(), "alice", found.ID, found.Candidates[0].ID, false)
+	chosen, err := svc.DecideWrite(context.Background(), "alice", found.ID, found.Candidates[0].ID, false)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -6,6 +6,9 @@ export type ExperimentStatusName =
 export type CandidateStatusName = 'pending' | 'running' | 'succeeded' | 'failed'
 export type DisplaySideName = 'left' | 'right'
 export type CostSourceName = 'reported' | 'estimated' | 'unavailable' | 'mixed'
+/** Where a comparison was started, frozen by the server at start. It decides which verdict
+ *  the review offers, and it is never the address the review was opened from. */
+export type ExperimentOriginName = 'editor' | 'lab'
 
 export interface CandidateUsage {
   promptTokens: bigint
@@ -34,6 +37,10 @@ export interface ExperimentCandidate {
 export interface ModelExperiment {
   id: string
   stage: StageName
+  /** `editor`: this comparison wrote a post that has no content until one side is applied,
+   *  so its verdict applies the winner. `lab`: the verdict is a ranking pick that applies
+   *  nothing, and every application is a separate follow-up. */
+  origin: ExperimentOriginName
   status: ExperimentStatusName
   postSlug: string
   /** The frozen voice for analyze/write work; observe compares the image snapshot only. */

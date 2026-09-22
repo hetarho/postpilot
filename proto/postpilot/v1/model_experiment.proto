@@ -50,6 +50,17 @@ enum CandidateStatus {
   CANDIDATE_STATUS_FAILED = 4;
 }
 
+// Where a comparison was started, frozen at start. It decides the verdict form the review
+// offers (MODEL-31, MODEL-36): an editor comparison writes a post that has no content until
+// one side is applied, so its verdict applies; a lab comparison is a ranking pick that
+// applies nothing and offers its applications as separate, status-gated follow-ups.
+// It is NOT the address the review was opened from (MODEL-60) and it names no model.
+enum ExperimentOrigin {
+  EXPERIMENT_ORIGIN_UNSPECIFIED = 0;
+  EXPERIMENT_ORIGIN_EDITOR = 1;
+  EXPERIMENT_ORIGIN_LAB = 2;
+}
+
 enum ExperimentOutcome {
   EXPERIMENT_OUTCOME_UNSPECIFIED = 0;
   EXPERIMENT_OUTCOME_WINNER = 1;
@@ -120,6 +131,8 @@ message ModelExperiment {
   ContentLanguage target_language = 20;
   Failure apply_failure = 21;
   Failure adoption_failure = 22;
+  // Which verdict form this comparison's review offers. Observe and analyze are always LAB.
+  ExperimentOrigin origin = 23;
 }
 
 message StartObserveExperimentRequest {
@@ -143,6 +156,9 @@ message StartWriteExperimentRequest {
   // Same ReobserveSelection contract as StartGenerationRequest: the A/B write comparison
   // shares the observation stage, so it shares the reuse decision.
   ReobserveSelection reobserve = 6;
+  // UNSPECIFIED is stored as EDITOR: the pre-origin behaviour, so a stale tab that still
+  // starts a comparison from the editor never turns a forced application into a silent pick.
+  ExperimentOrigin origin = 7;
 }
 message StartExperimentResponse { string experiment_id = 1; string job_id = 2; }
 

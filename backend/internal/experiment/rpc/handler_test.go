@@ -36,6 +36,7 @@ func TestExperimentErrorsHaveStableReasonsCodesAndAllowlistedParams(t *testing.T
 		"snapshot":                 {experiment.ErrSnapshotUnavailable, connect.CodeFailedPrecondition, "EXPERIMENT_SNAPSHOT_UNAVAILABLE", nil},
 		"retry model":              {experiment.ErrRetryModelUnavailable, connect.CodeFailedPrecondition, "EXPERIMENT_RETRY_MODEL_UNAVAILABLE", nil},
 		"voice unavailable":        {experiment.ErrVoiceUnavailable, connect.CodeFailedPrecondition, "EXPERIMENT_VOICE_UNAVAILABLE", nil},
+		"post finalized":           {experiment.ErrPostFinalized, connect.CodeFailedPrecondition, "EXPERIMENT_POST_FINALIZED", nil},
 		"already running wrapped":  {errors.Join(errors.New("private queue detail"), active), connect.CodeFailedPrecondition, "EXPERIMENT_ALREADY_RUNNING", map[string]string{"active_job_id": "job-active"}},
 	}
 
@@ -150,4 +151,55 @@ func TestExperimentMappingProjectsStructuredAggregateFailuresOnly(t *testing.T) 
 	if mapped.GetApplyError() != "" || mapped.GetAdoptionError() != "" {
 		t.Fatalf("deprecated raw failures populated: %+v", mapped)
 	}
+}
+
+// A comparison's origin crosses the wire in both directions and is not an identity: it says
+// which verdict form the review offers, and it is stated on the experiment rather than
+// derived per stage, so the browser never has to guess.
+func TestExperimentOriginMapsBothWays(t *testing.T) {
+	t.Run("into the domain", func(t *testing.T) {
+		cases := map[postpilotv1.ExperimentOrigin]experiment.Origin{
+			postpilotv1.ExperimentOrigin_EXPERIMENT_ORIGIN_LAB:         experiment.OriginLab,
+			postpilotv1.ExperimentOrigin_EXPERIMENT_ORIGIN_EDITOR:      experiment.OriginEditor,
+			postpilotv1.ExperimentOrigin_EXPERIMENT_ORIGIN_UNSPECIFIED: experiment.OriginEditor,
+		}
+		for wire, want := range cases {
+			if got := fromProtoOrigin(wire); got != want {
+				t.Errorf("fromProtoOrigin(%v) = %q, want %q", wire, got, want)
+			}
+		}
+	})
+
+	t.Run("onto the wire", func(t *testing.T) {
+		cases := []struct {
+			origin experiment.Origin
+			want   postpilotv1.ExperimentOrigin
+		}{
+			{experiment.OriginLab, postpilotv1.ExperimentOrigin_EXPERIMENT_ORIGIN_LAB},
+			{experiment.OriginEditor, postpilotv1.ExperimentOrigin_EXPERIMENT_ORIGIN_EDITOR},
+		}
+		for _, sample := range cases {
+			found := experiment.Experiment{ID: "exp", Stage: experiment.StageWrite, Origin: sample.origin, Status: experiment.StatusReview}
+			if got := toProtoExperiment(found).GetOrigin(); got != sample.want {
+				t.Errorf("origin %q maps to %v, want %v", sample.origin, got, sample.want)
+			}
+		}
+	})
+
+	t.Run("a blind comparison still names no model", func(t *testing.T) {
+		found := experiment.Experiment{
+			ID: "exp", Stage: experiment.StageWrite, Origin: experiment.OriginLab, Status: experiment.StatusReview,
+			Candidates: []experiment.Candidate{{
+				ID: "left", ExperimentID: "exp", DisplaySide: experiment.SideLeft, Status: experiment.CandidateSucceeded,
+				Model: experiment.ModelRef{ProviderID: "p", ModelID: "a"}, ModelLabel: "A",
+			}},
+		}
+		mapped := toProtoExperiment(found)
+		if mapped.GetOrigin() != postpilotv1.ExperimentOrigin_EXPERIMENT_ORIGIN_LAB {
+			t.Fatalf("origin = %v", mapped.GetOrigin())
+		}
+		if mapped.GetCandidates()[0].GetModel() != nil || mapped.GetCandidates()[0].GetModelLabel() != "" {
+			t.Fatalf("origin mapping revealed an identity: %+v", mapped.GetCandidates()[0])
+		}
+	})
 }

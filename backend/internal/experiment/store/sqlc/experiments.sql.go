@@ -84,7 +84,7 @@ UPDATE model_experiments
 SET status = ?, winner_candidate_id = ?, outcome = ?, decided_at = ?,
     content_expires_at = ?, apply_error = NULL, apply_error_reason = NULL,
     apply_error_params = NULL, apply_technical_detail = NULL, applied_at = NULL,
-	adoption_requested = ?, adoption_error = NULL, adoption_error_reason = NULL,
+	apply_requested = ?, adoption_requested = ?, adoption_error = NULL, adoption_error_reason = NULL,
     adoption_error_params = NULL, adoption_technical_detail = NULL, adopted_at = NULL
 WHERE id = ? AND user_id = ?
   AND status IN ('review', 'partial', 'failed')
@@ -96,6 +96,7 @@ type DecideExperimentParams struct {
 	Outcome           sql.NullString
 	DecidedAt         sql.NullString
 	ContentExpiresAt  sql.NullString
+	ApplyRequested    int64
 	AdoptionRequested int64
 	ID                string
 	UserID            string
@@ -108,6 +109,7 @@ func (q *Queries) DecideExperiment(ctx context.Context, arg DecideExperimentPara
 		arg.Outcome,
 		arg.DecidedAt,
 		arg.ContentExpiresAt,
+		arg.ApplyRequested,
 		arg.AdoptionRequested,
 		arg.ID,
 		arg.UserID,
@@ -183,7 +185,7 @@ func (q *Queries) FinishInterruptedExperiment(ctx context.Context, arg FinishInt
 }
 
 const getExperiment = `-- name: GetExperiment :one
-SELECT id, user_id, post_slug, voice_id, stage, status, job_id, input_snapshot, input_hash, prompt_version, winner_candidate_id, outcome, apply_error, applied_at, created_at, finished_at, decided_at, content_expires_at, adoption_error, adopted_at, adoption_requested, template_name, target_language, apply_error_reason, apply_error_params, apply_technical_detail, adoption_error_reason, adoption_error_params, adoption_technical_detail FROM model_experiments WHERE id = ?
+SELECT id, user_id, post_slug, voice_id, stage, status, job_id, input_snapshot, input_hash, prompt_version, winner_candidate_id, outcome, apply_error, applied_at, created_at, finished_at, decided_at, content_expires_at, adoption_error, adopted_at, adoption_requested, template_name, target_language, apply_error_reason, apply_error_params, apply_technical_detail, adoption_error_reason, adoption_error_params, adoption_technical_detail, origin, apply_requested FROM model_experiments WHERE id = ?
 `
 
 func (q *Queries) GetExperiment(ctx context.Context, id string) (ModelExperiment, error) {
@@ -219,12 +221,14 @@ func (q *Queries) GetExperiment(ctx context.Context, id string) (ModelExperiment
 		&i.AdoptionErrorReason,
 		&i.AdoptionErrorParams,
 		&i.AdoptionTechnicalDetail,
+		&i.Origin,
+		&i.ApplyRequested,
 	)
 	return i, err
 }
 
 const getExperimentForUser = `-- name: GetExperimentForUser :one
-SELECT id, user_id, post_slug, voice_id, stage, status, job_id, input_snapshot, input_hash, prompt_version, winner_candidate_id, outcome, apply_error, applied_at, created_at, finished_at, decided_at, content_expires_at, adoption_error, adopted_at, adoption_requested, template_name, target_language, apply_error_reason, apply_error_params, apply_technical_detail, adoption_error_reason, adoption_error_params, adoption_technical_detail FROM model_experiments WHERE id = ? AND user_id = ?
+SELECT id, user_id, post_slug, voice_id, stage, status, job_id, input_snapshot, input_hash, prompt_version, winner_candidate_id, outcome, apply_error, applied_at, created_at, finished_at, decided_at, content_expires_at, adoption_error, adopted_at, adoption_requested, template_name, target_language, apply_error_reason, apply_error_params, apply_technical_detail, adoption_error_reason, adoption_error_params, adoption_technical_detail, origin, apply_requested FROM model_experiments WHERE id = ? AND user_id = ?
 `
 
 type GetExperimentForUserParams struct {
@@ -265,6 +269,8 @@ func (q *Queries) GetExperimentForUser(ctx context.Context, arg GetExperimentFor
 		&i.AdoptionErrorReason,
 		&i.AdoptionErrorParams,
 		&i.AdoptionTechnicalDetail,
+		&i.Origin,
+		&i.ApplyRequested,
 	)
 	return i, err
 }
@@ -300,9 +306,9 @@ func (q *Queries) InsertCandidate(ctx context.Context, arg InsertCandidateParams
 
 const insertExperiment = `-- name: InsertExperiment :exec
 INSERT INTO model_experiments (
-  id, user_id, post_slug, voice_id, template_name, target_language, stage, status, job_id, input_snapshot, input_hash,
+  id, user_id, post_slug, voice_id, template_name, target_language, stage, origin, status, job_id, input_snapshot, input_hash,
   prompt_version, created_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `
 
 type InsertExperimentParams struct {
@@ -313,6 +319,7 @@ type InsertExperimentParams struct {
 	TemplateName   string
 	TargetLanguage sql.NullString
 	Stage          string
+	Origin         string
 	Status         string
 	JobID          sql.NullString
 	InputSnapshot  sql.NullString
@@ -330,6 +337,7 @@ func (q *Queries) InsertExperiment(ctx context.Context, arg InsertExperimentPara
 		arg.TemplateName,
 		arg.TargetLanguage,
 		arg.Stage,
+		arg.Origin,
 		arg.Status,
 		arg.JobID,
 		arg.InputSnapshot,
@@ -443,7 +451,7 @@ func (q *Queries) ListCandidatesForLeaderboard(ctx context.Context, arg ListCand
 }
 
 const listDecidedForLeaderboard = `-- name: ListDecidedForLeaderboard :many
-SELECT id, user_id, post_slug, voice_id, stage, status, job_id, input_snapshot, input_hash, prompt_version, winner_candidate_id, outcome, apply_error, applied_at, created_at, finished_at, decided_at, content_expires_at, adoption_error, adopted_at, adoption_requested, template_name, target_language, apply_error_reason, apply_error_params, apply_technical_detail, adoption_error_reason, adoption_error_params, adoption_technical_detail FROM model_experiments
+SELECT id, user_id, post_slug, voice_id, stage, status, job_id, input_snapshot, input_hash, prompt_version, winner_candidate_id, outcome, apply_error, applied_at, created_at, finished_at, decided_at, content_expires_at, adoption_error, adopted_at, adoption_requested, template_name, target_language, apply_error_reason, apply_error_params, apply_technical_detail, adoption_error_reason, adoption_error_params, adoption_technical_detail, origin, apply_requested FROM model_experiments
 WHERE user_id = ? AND stage = ? AND outcome = 'winner' AND winner_candidate_id IS NOT NULL
 ORDER BY decided_at, id
 `
@@ -492,6 +500,8 @@ func (q *Queries) ListDecidedForLeaderboard(ctx context.Context, arg ListDecided
 			&i.AdoptionErrorReason,
 			&i.AdoptionErrorParams,
 			&i.AdoptionTechnicalDetail,
+			&i.Origin,
+			&i.ApplyRequested,
 		); err != nil {
 			return nil, err
 		}
@@ -507,7 +517,7 @@ func (q *Queries) ListDecidedForLeaderboard(ctx context.Context, arg ListDecided
 }
 
 const listExperimentsForUser = `-- name: ListExperimentsForUser :many
-SELECT id, user_id, post_slug, voice_id, stage, status, job_id, input_snapshot, input_hash, prompt_version, winner_candidate_id, outcome, apply_error, applied_at, created_at, finished_at, decided_at, content_expires_at, adoption_error, adopted_at, adoption_requested, template_name, target_language, apply_error_reason, apply_error_params, apply_technical_detail, adoption_error_reason, adoption_error_params, adoption_technical_detail FROM model_experiments
+SELECT id, user_id, post_slug, voice_id, stage, status, job_id, input_snapshot, input_hash, prompt_version, winner_candidate_id, outcome, apply_error, applied_at, created_at, finished_at, decided_at, content_expires_at, adoption_error, adopted_at, adoption_requested, template_name, target_language, apply_error_reason, apply_error_params, apply_technical_detail, adoption_error_reason, adoption_error_params, adoption_technical_detail, origin, apply_requested FROM model_experiments
 WHERE user_id = ? AND (? = '' OR stage = ?)
 ORDER BY created_at DESC, id DESC
 `
@@ -557,6 +567,8 @@ func (q *Queries) ListExperimentsForUser(ctx context.Context, arg ListExperiment
 			&i.AdoptionErrorReason,
 			&i.AdoptionErrorParams,
 			&i.AdoptionTechnicalDetail,
+			&i.Origin,
+			&i.ApplyRequested,
 		); err != nil {
 			return nil, err
 		}
@@ -626,11 +638,14 @@ func (q *Queries) ListQueuedExperimentIDs(ctx context.Context) ([]string, error)
 }
 
 const pendingWriteForPost = `-- name: PendingWriteForPost :one
-SELECT id, user_id, post_slug, voice_id, stage, status, job_id, input_snapshot, input_hash, prompt_version, winner_candidate_id, outcome, apply_error, applied_at, created_at, finished_at, decided_at, content_expires_at, adoption_error, adopted_at, adoption_requested, template_name, target_language, apply_error_reason, apply_error_params, apply_technical_detail, adoption_error_reason, adoption_error_params, adoption_technical_detail FROM model_experiments
+SELECT id, user_id, post_slug, voice_id, stage, status, job_id, input_snapshot, input_hash, prompt_version, winner_candidate_id, outcome, apply_error, applied_at, created_at, finished_at, decided_at, content_expires_at, adoption_error, adopted_at, adoption_requested, template_name, target_language, apply_error_reason, apply_error_params, apply_technical_detail, adoption_error_reason, adoption_error_params, adoption_technical_detail, origin, apply_requested FROM model_experiments
 WHERE user_id = ? AND post_slug = ? AND stage = 'write'
   AND (
     status IN ('queued', 'running', 'review', 'partial', 'failed')
-	OR (status = 'decided' AND (applied_at IS NULL OR (adoption_requested = 1 AND adopted_at IS NULL)))
+	OR (status = 'decided' AND (
+	      (apply_requested = 1 AND applied_at IS NULL)
+	      OR (adoption_requested = 1 AND adopted_at IS NULL)
+	   ))
   )
 ORDER BY created_at DESC, id DESC LIMIT 1
 `
@@ -673,6 +688,8 @@ func (q *Queries) PendingWriteForPost(ctx context.Context, arg PendingWriteForPo
 		&i.AdoptionErrorReason,
 		&i.AdoptionErrorParams,
 		&i.AdoptionTechnicalDetail,
+		&i.Origin,
+		&i.ApplyRequested,
 	)
 	return i, err
 }
@@ -837,6 +854,26 @@ func (q *Queries) SetApplyFailure(ctx context.Context, arg SetApplyFailureParams
 		arg.UserID,
 	)
 	return err
+}
+
+const setApplyRequested = `-- name: SetApplyRequested :execrows
+UPDATE model_experiments SET apply_requested = 1
+WHERE id = ? AND user_id = ? AND status = 'decided' AND applied_at IS NULL
+`
+
+type SetApplyRequestedParams struct {
+	ID     string
+	UserID string
+}
+
+// Marks that this decided verdict now owes a content application, so a failure leaves the
+// comparison unresolved for its post with a visible retry. Idempotent: a repeat is a no-op.
+func (q *Queries) SetApplyRequested(ctx context.Context, arg SetApplyRequestedParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, setApplyRequested, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const setExperimentAdopted = `-- name: SetExperimentAdopted :execrows

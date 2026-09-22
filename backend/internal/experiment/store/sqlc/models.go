@@ -38,6 +38,8 @@ type ModelExperiment struct {
 	AdoptionErrorReason     sql.NullString
 	AdoptionErrorParams     sql.NullString
 	AdoptionTechnicalDetail sql.NullString
+	Origin                  string
+	ApplyRequested          int64
 }
 
 type ModelExperimentCandidate struct {

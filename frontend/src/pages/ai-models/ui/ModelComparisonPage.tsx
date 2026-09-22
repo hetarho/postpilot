@@ -285,6 +285,7 @@ function SelectedPostWriteComparison({
     try {
       const response = await start.start(
         post.slug,
+        'lab',
         post.images.length ? observeSelection?.ref : undefined,
         writeA.ref,
         writeB.ref,

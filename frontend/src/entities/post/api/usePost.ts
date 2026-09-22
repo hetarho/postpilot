@@ -11,7 +11,14 @@ import { toPostDraft } from './post-queries'
  *  would then have to visit every screen. */
 export type PostLoadFailure = AppFailure
 
-export function usePost(slug: string): {
+/** `enabled` exists for a consumer that needs the post only in some of its states — a
+ *  comparison review asks for the post it ran on only while it still offers to write to it.
+ *  Disabled, the hook reports a settled empty read instead of asking for a post nobody is
+ *  waiting on. */
+export function usePost(
+  slug: string,
+  { enabled = true }: { enabled?: boolean } = {},
+): {
   post: PostDraft | undefined
   isPending: boolean
   isFetching: boolean
@@ -21,10 +28,12 @@ export function usePost(slug: string): {
   // `retry: false` because the two failures that matter here are answers, not transient
   // faults: retrying a 403 or a 404 just asks the same question again, and the editor
   // would sit on a spinner for the length of the retry before saying so.
+  const asking = enabled && Boolean(slug)
   const { data, isPending, isFetching, error, refetch } = useQuery(
     PostService.method.getPost,
     { slug },
     {
+      enabled: asking,
       retry: false,
       // A cached post may still be fresh while its image capabilities are not. Draft
       // saves deliberately preserve the cached image list, so they also keep its
@@ -43,7 +52,10 @@ export function usePost(slug: string): {
 
   return {
     post,
-    isPending,
+    // A disabled query stays `pending` in react-query's own vocabulary because its data has
+    // never arrived. To a caller that deliberately did not ask, that is settled, not
+    // loading — reporting it as pending would park the screen on a spinner forever.
+    isPending: asking && isPending,
     isFetching,
     failure: error ? appFailureFromConnect(error) : undefined,
     refetch: () => void refetch(),

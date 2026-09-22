@@ -20,6 +20,7 @@ type Service struct {
 	catalog    Catalog
 	jobs       Jobs
 	runner     Runner
+	posts      PostDirectory
 	voices     VoiceDirectory
 	retention  time.Duration
 	applyMu    sync.Mutex
@@ -28,11 +29,14 @@ type Service struct {
 	newID      func() string
 }
 
-func NewService(store Storage, catalog Catalog, jobs Jobs, runner Runner, retention time.Duration) *Service {
+func NewService(store Storage, catalog Catalog, jobs Jobs, runner Runner, posts PostDirectory, retention time.Duration) *Service {
 	if retention <= 0 {
 		panic("experiment: retention must be positive")
 	}
-	return &Service{runs: store, candidates: store, outcome: store, purge: store, catalog: catalog, jobs: jobs, runner: runner, retention: retention, now: time.Now, newID: newID}
+	if posts == nil {
+		panic("experiment: post directory is required")
+	}
+	return &Service{runs: store, candidates: store, outcome: store, purge: store, catalog: catalog, jobs: jobs, runner: runner, posts: posts, retention: retention, now: time.Now, newID: newID}
 }
 
 // SetVoiceDirectory wires the voice context's published check once both services exist.
@@ -103,7 +107,7 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (StartResult,
 	found := Experiment{
 		ID: s.newID(), UserID: request.UserID, PostSlug: request.PostSlug, VoiceID: frozen.VoiceID,
 		TemplateName: frozen.TemplateName, TargetLanguage: cloneLanguage(frozen.TargetLanguage), Stage: request.Stage,
-		Status: StatusQueued, InputSnapshot: frozen.Content, InputHash: hash,
+		Origin: startOrigin(request), Status: StatusQueued, InputSnapshot: frozen.Content, InputHash: hash,
 		PromptVersion: frozen.PromptVersion, CreatedAt: s.now(),
 	}
 	found.Candidates = []Candidate{
@@ -239,7 +243,34 @@ func (s *Service) Retry(ctx context.Context, userID, id string) (StartResult, er
 	return StartResult{ExperimentID: found.ID, JobID: jobID}, nil
 }
 
+// startOrigin freezes where a comparison was started. Observe and analyze can only be
+// started in the lab; a write comparison honours its caller, and an absent value means the
+// editor so that a client predating the field keeps the behaviour it was written against.
+func startOrigin(request StartRequest) Origin {
+	if request.Stage != StageWrite {
+		return OriginLab
+	}
+	if request.Origin == OriginLab {
+		return OriginLab
+	}
+	return OriginEditor
+}
+
+// Choose records a verdict. For a paired winner it is the lab's whole decision (MODEL-36):
+// the verdict is written and nothing is applied, so an editor write comparison — whose
+// verdict commits — has no pick-only form and is decided through DecideWrite instead.
+//
+// single is the other path entirely: the survivor of a comparison whose sibling failed. It
+// ranks nothing (MODEL-34) and stays available to both origins, because a post written as an
+// editor comparison still has no content until that survivor is applied (MODEL-37).
 func (s *Service) Choose(ctx context.Context, userID, id, candidateID string, single bool) (Experiment, error) {
+	found, err := s.owned(ctx, userID, id)
+	if err != nil {
+		return Experiment{}, err
+	}
+	if !single && found.AppliesOnVerdict() {
+		return Experiment{}, ErrInvalidState
+	}
 	return s.choose(ctx, userID, id, candidateID, single, false)
 }
 
@@ -249,7 +280,7 @@ func (s *Service) choose(ctx context.Context, userID, id, candidateID string, si
 		return Experiment{}, err
 	}
 	if found.Status == StatusDecided && found.WinnerCandidateID == candidateID {
-		if found.Stage == StageWrite && found.AppliedAt == nil {
+		if found.AppliesOnVerdict() && found.AppliedAt == nil {
 			return s.apply(ctx, found, false)
 		}
 		return found, nil
@@ -263,14 +294,14 @@ func (s *Service) choose(ctx context.Context, userID, id, candidateID string, si
 		outcome = OutcomeUnpaired
 	}
 	now := s.now()
-	changed, err := s.outcome.Decide(ctx, found.ID, userID, candidate.ID, StatusDecided, outcome, adoptionRequested, now, now.Add(s.retention))
+	changed, err := s.outcome.Decide(ctx, found.ID, userID, candidate.ID, StatusDecided, outcome, found.AppliesOnVerdict(), adoptionRequested, now, now.Add(s.retention))
 	if err != nil {
 		return Experiment{}, err
 	}
 	if !changed {
 		current, loadErr := s.owned(ctx, userID, id)
 		if loadErr == nil && current.Status == StatusDecided && current.WinnerCandidateID == candidateID {
-			if current.Stage == StageWrite && current.AppliedAt == nil {
+			if current.AppliesOnVerdict() && current.AppliedAt == nil {
 				return s.apply(ctx, current, false)
 			}
 			return current, nil
@@ -281,7 +312,7 @@ func (s *Service) choose(ctx context.Context, userID, id, candidateID string, si
 	if err != nil {
 		return Experiment{}, err
 	}
-	if found.Stage == StageWrite {
+	if found.AppliesOnVerdict() {
 		return s.apply(ctx, found, false)
 	}
 	return found, nil
@@ -299,7 +330,7 @@ func (s *Service) Dismiss(ctx context.Context, userID, id string) (Experiment, e
 		return Experiment{}, ErrInvalidState
 	}
 	now := s.now()
-	changed, err := s.outcome.Decide(ctx, found.ID, userID, "", StatusDismissed, OutcomeSkipped, false, now, now.Add(s.retention))
+	changed, err := s.outcome.Decide(ctx, found.ID, userID, "", StatusDismissed, OutcomeSkipped, false, false, now, now.Add(s.retention))
 	if err != nil {
 		return Experiment{}, err
 	}
@@ -323,7 +354,42 @@ func (s *Service) ApplyWinner(ctx context.Context, userID, id string, confirmSty
 	if found.Stage == StageAnalyze && !confirmStyleguide {
 		return Experiment{}, ErrConfirmationRequired
 	}
+	if err := s.allowPostWrite(ctx, found); err != nil {
+		return Experiment{}, err
+	}
+	// Mark the debt BEFORE the runner is called: from here on a failure has to leave the
+	// comparison unresolved for its post, with the retry the owner can see. A lab pick
+	// carried no such debt until this moment, so without the mark a failed application
+	// would silently resolve (MODEL-36).
+	if !found.ApplyRequested {
+		if err := s.outcome.SetApplyRequested(ctx, found.ID, userID); err != nil {
+			return Experiment{}, err
+		}
+		if found, err = s.owned(ctx, userID, id); err != nil {
+			return Experiment{}, err
+		}
+	}
 	return s.apply(ctx, found, confirmStyleguide)
+}
+
+// allowPostWrite refuses a content application that would rewrite a post the owner already
+// finalized (MODEL-37). It asks only where the question exists: an analyze winner publishes
+// into a voice, and an editor comparison's post is by definition mid-writing.
+func (s *Service) allowPostWrite(ctx context.Context, found Experiment) error {
+	if found.Stage == StageAnalyze || found.Origin != OriginLab {
+		return nil
+	}
+	if found.PostSlug == "" {
+		return ErrInvalidState
+	}
+	status, err := s.posts.Status(ctx, found.UserID, found.PostSlug)
+	if err != nil {
+		return err
+	}
+	if status == PostStatusFinalized {
+		return ErrPostFinalized
+	}
+	return nil
 }
 
 func (s *Service) AdoptWinner(ctx context.Context, userID, id string) (ModelRef, Stage, error) {
@@ -354,6 +420,11 @@ func (s *Service) DecideWrite(ctx context.Context, userID, id, candidateID strin
 	}
 	if found.Stage != StageWrite {
 		return Experiment{}, ErrInvalidStage
+	}
+	// The committing write verdict belongs to the editor alone: a lab comparison picks a
+	// winner and applies nothing (MODEL-36).
+	if found.Origin != OriginEditor {
+		return Experiment{}, ErrInvalidState
 	}
 	found, err = s.choose(ctx, userID, id, candidateID, false, adopt)
 	if err != nil || !found.AdoptionRequested || found.AppliedAt == nil {

@@ -25,6 +25,25 @@ func ParseStage(value string) (Stage, error) {
 	}
 }
 
+// Origin is where a comparison was started, frozen at start. It decides the verdict form
+// the review offers (MODEL-31, MODEL-36), and it is not the address the review was opened
+// from (MODEL-60).
+type Origin string
+
+const (
+	// OriginEditor: the editor's A/B comparison generation. The post it writes has no
+	// content until one side is applied, so its verdict applies the winner.
+	OriginEditor Origin = "editor"
+	// OriginLab: the model lab. The verdict is a ranking pick that applies nothing; its
+	// applications are separate follow-ups gated by the source post's status.
+	OriginLab Origin = "lab"
+)
+
+// PostStatusFinalized is the one post status this context reacts to, mirrored as a plain
+// string because the domain imports no other context's types (ARCH-7). The adapter that
+// implements PostDirectory is what keeps the two spellings in step.
+const PostStatusFinalized = "finalized"
+
 type Status string
 
 const (
@@ -110,6 +129,7 @@ type Experiment struct {
 	TemplateName      string
 	TargetLanguage    *Language
 	Stage             Stage
+	Origin            Origin
 	Status            Status
 	JobID             string
 	InputSnapshot     []byte
@@ -118,6 +138,10 @@ type Experiment struct {
 	WinnerCandidateID string
 	Outcome           Outcome
 	ApplyFailure      *Failure
+	// ApplyRequested records that this verdict owes a content application, so a failed one
+	// keeps the comparison unresolved for its post. An editor verdict always owes one; a lab
+	// pick owes one only once its separate application follow-up is taken.
+	ApplyRequested    bool
 	AppliedAt         *time.Time
 	AdoptionRequested bool
 	AdoptionFailure   *Failure
@@ -127,6 +151,12 @@ type Experiment struct {
 	DecidedAt         *time.Time
 	ContentExpiresAt  *time.Time
 	Candidates        []Candidate
+}
+
+// AppliesOnVerdict reports whether recording this comparison's verdict also applies its
+// winner. Only the editor's write comparison does: a lab pick applies nothing (MODEL-36).
+func (e Experiment) AppliesOnVerdict() bool {
+	return e.Stage == StageWrite && e.Origin == OriginEditor
 }
 
 func (e Experiment) Revealed() bool {
@@ -183,8 +213,12 @@ type StartRequest struct {
 	PostSlug string
 	// VoiceID is required for an analyze comparison and ignored otherwise: a write or
 	// observe comparison takes its voice from the post.
-	VoiceID      string
-	Stage        Stage
+	VoiceID string
+	Stage   Stage
+	// Origin is honoured for a write comparison only; observe and analyze can only be
+	// started in the lab. An empty value means the editor, which is what every caller
+	// predating the field was.
+	Origin       Origin
 	ObserveModel ModelRef
 	ModelA       ModelRef
 	ModelB       ModelRef
@@ -243,4 +277,5 @@ var (
 	ErrRetryModelUnavailable = errors.New("experiment retry model is unavailable")
 	ErrVoiceRequired         = errors.New("an active voice is required to compare analyze models")
 	ErrVoiceUnavailable      = errors.New("the voice this comparison belongs to is deleted or unknown")
+	ErrPostFinalized         = errors.New("a finalized post cannot take a comparison result")
 )

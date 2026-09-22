@@ -6,6 +6,7 @@ import {
   useExperimentActions,
   useExperimentOwnerRefresh,
 } from '@/entities/model-experiment'
+import { usePost } from '@/entities/post'
 import { useSession } from '@/entities/session'
 import { useVoices } from '@/entities/voice'
 import { AppFailureMessage, Button, Dialog, Notice } from '@/shared/ui'
@@ -46,6 +47,18 @@ export function ExperimentActions({
   const selected = experiment.candidates.find((candidate) => candidate.id === activeCandidateId)
   const survivor = experiment.status === 'partial' && selected?.status === 'succeeded'
   const canChoose = experiment.status === 'review' && selected?.status === 'succeeded'
+  // The editor's write comparison wrote a post that holds no content until one side is
+  // applied, so its verdict commits. Every lab comparison picks a winner and applies
+  // nothing; what it may still write is offered afterwards, one action at a time.
+  const commits = experiment.stage === 'write' && experiment.origin === 'editor'
+  const offersContent =
+    experiment.origin === 'lab' && (experiment.stage === 'write' || experiment.stage === 'observe')
+  // Asked for only where the answer changes the screen: what a decided lab comparison may
+  // still write to. A finalized post keeps its confirmed content, so it is offered nothing.
+  const { post, isPending: postPending } = usePost(experiment.postSlug, {
+    enabled: offersContent && experiment.status === 'decided' && !experiment.appliedAt,
+  })
+  const postWritable = Boolean(post && (post.status === 'draft' || post.status === 'review'))
   if (!hasExperimentActions(experiment)) return null
   return (
     <div className="grid gap-3">
@@ -87,7 +100,7 @@ export function ExperimentActions({
             pending={pressed === 'apply'}
             onClick={() =>
               run('apply', () =>
-                experiment.stage === 'write'
+                commits
                   ? actions.decideWrite(experiment.winnerCandidateId, experiment.adoptionRequested)
                   : actions.apply(experiment.stage === 'analyze'),
               )
@@ -96,7 +109,7 @@ export function ExperimentActions({
             {t('actions.retryApply')}
           </Button>
         )}
-        {experiment.status === 'decided' && experiment.stage !== 'write' && (
+        {experiment.status === 'decided' && !commits && (
           <Button
             variant="secondary"
             disabled={actions.isPending}
@@ -128,7 +141,7 @@ export function ExperimentActions({
             {t('actions.useSingle')}
           </Button>
         )}
-        {canChoose && experiment.stage !== 'write' && (
+        {canChoose && !commits && (
           <Button
             variant="cta"
             disabled={actions.isPending}
@@ -138,7 +151,7 @@ export function ExperimentActions({
             {t('actions.choose')}
           </Button>
         )}
-        {canChoose && experiment.stage === 'write' && (
+        {canChoose && commits && (
           /* The write decision is the one status that offers TWO committing actions, and stacking
              both full-width put 100px of dock over the draft they are about. Side by side on the
              phone — the plain apply left, the one that also moves the active model right (§4) —
@@ -165,9 +178,12 @@ export function ExperimentActions({
           </div>
         )}
         {experiment.status === 'decided' &&
-          experiment.stage !== 'write' &&
+          !commits &&
           !experiment.appliedAt &&
-          !experiment.applyFailure && (
+          !experiment.applyFailure &&
+          // A comparison that writes to a post offers it only while that post still takes
+          // writing, and never while the answer is still on its way.
+          (offersContent ? postWritable && !postPending : true) && (
             <Button
               variant="cta"
               disabled={actions.isPending || voiceWorkBlocked}

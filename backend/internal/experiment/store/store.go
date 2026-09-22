@@ -40,7 +40,7 @@ func (s *Store) Create(ctx context.Context, found experiment.Experiment) error {
 	err = queries.InsertExperiment(ctx, sqlc.InsertExperimentParams{
 		ID: found.ID, UserID: found.UserID, PostSlug: nullString(found.PostSlug), VoiceID: nullString(found.VoiceID),
 		TemplateName: found.TemplateName, TargetLanguage: targetLanguage,
-		Stage: string(found.Stage), Status: string(found.Status), JobID: nullString(found.JobID),
+		Stage: string(found.Stage), Origin: string(found.Origin), Status: string(found.Status), JobID: nullString(found.JobID),
 		InputSnapshot: nullBytes(found.InputSnapshot), InputHash: found.InputHash,
 		PromptVersion: found.PromptVersion, CreatedAt: formatTime(found.CreatedAt),
 	})
@@ -277,13 +277,23 @@ func (s *Store) RestoreFailedCandidates(ctx context.Context, experimentID string
 	return nil
 }
 
-func (s *Store) Decide(ctx context.Context, id, userID, candidateID string, status experiment.Status, outcome experiment.Outcome, adoptionRequested bool, decidedAt, expiresAt time.Time) (bool, error) {
+func (s *Store) Decide(ctx context.Context, id, userID, candidateID string, status experiment.Status, outcome experiment.Outcome, applyRequested, adoptionRequested bool, decidedAt, expiresAt time.Time) (bool, error) {
 	count, err := s.write.DecideExperiment(ctx, sqlc.DecideExperimentParams{
 		Status: string(status), WinnerCandidateID: nullString(candidateID), Outcome: nullString(string(outcome)),
 		DecidedAt: nullTime(&decidedAt), ContentExpiresAt: nullTime(&expiresAt),
-		AdoptionRequested: boolValue(adoptionRequested), ID: id, UserID: userID,
+		ApplyRequested: boolValue(applyRequested), AdoptionRequested: boolValue(adoptionRequested), ID: id, UserID: userID,
 	})
 	return count == 1, err
+}
+
+// SetApplyRequested records the application a decided verdict now owes. A repeat, or a
+// verdict whose application already completed, writes nothing and is not a failure: the
+// caller only needs the debt to exist before the runner is invoked.
+func (s *Store) SetApplyRequested(ctx context.Context, id, userID string) error {
+	if _, err := s.write.SetApplyRequested(ctx, sqlc.SetApplyRequestedParams{ID: id, UserID: userID}); err != nil {
+		return fmt.Errorf("set apply requested: %w", err)
+	}
+	return nil
 }
 
 func (s *Store) SetApplyFailure(ctx context.Context, id, userID string, failure experiment.Failure) error {
@@ -436,10 +446,12 @@ func toExperiment(row sqlc.ModelExperiment) (experiment.Experiment, error) {
 	return experiment.Experiment{
 		ID: row.ID, UserID: row.UserID, PostSlug: row.PostSlug.String, VoiceID: row.VoiceID.String,
 		TemplateName: row.TemplateName, TargetLanguage: targetLanguage, Stage: experiment.Stage(row.Stage),
+		Origin: experiment.Origin(row.Origin),
 		Status: experiment.Status(row.Status), JobID: row.JobID.String, InputSnapshot: []byte(row.InputSnapshot.String),
 		InputHash: row.InputHash, PromptVersion: row.PromptVersion, WinnerCandidateID: row.WinnerCandidateID.String,
 		Outcome: experiment.Outcome(row.Outcome.String), ApplyFailure: applyFailure, CreatedAt: created,
-		AppliedAt: parseOptional(row.AppliedAt), AdoptionRequested: row.AdoptionRequested == 1, AdoptionFailure: adoptionFailure,
+		ApplyRequested: row.ApplyRequested == 1,
+		AppliedAt:      parseOptional(row.AppliedAt), AdoptionRequested: row.AdoptionRequested == 1, AdoptionFailure: adoptionFailure,
 		AdoptedAt:  parseOptional(row.AdoptedAt),
 		FinishedAt: parseOptional(row.FinishedAt), DecidedAt: parseOptional(row.DecidedAt),
 		ContentExpiresAt: parseOptional(row.ContentExpiresAt),

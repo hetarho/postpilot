@@ -6,6 +6,7 @@ import {
   contentLanguageFromProto,
   CostSource,
   DisplaySide,
+  ExperimentOrigin,
   ExperimentOutcome,
   ExperimentStatus,
   ModelExperimentService,
@@ -18,6 +19,7 @@ import type {
   CandidateStatusName,
   CostSourceName,
   ExperimentCandidate,
+  ExperimentOriginName,
   ExperimentStatusName,
   LeaderboardEntry,
   ModelExperiment,
@@ -27,6 +29,7 @@ export function toExperiment(value: ProtoModelExperiment): ModelExperiment {
   return {
     id: value.id,
     stage: stageName(value.stage),
+    origin: originName(value.origin),
     status: statusName(value.status),
     postSlug: value.postSlug,
     voiceId: value.voiceId,
@@ -184,6 +187,12 @@ function outcomeName(value: ExperimentOutcome): ModelExperiment['outcome'] {
   if (value === ExperimentOutcome.SKIPPED) return 'skipped'
   if (value === ExperimentOutcome.UNPAIRED) return 'unpaired'
   return ''
+}
+/** UNSPECIFIED reads as the editor, matching the server: it is the behaviour every client
+ *  predating the field was written against, so an unstated origin never silently turns a
+ *  committing verdict into a pick. */
+function originName(value: ExperimentOrigin): ExperimentOriginName {
+  return value === ExperimentOrigin.LAB ? 'lab' : 'editor'
 }
 function stageName(value: number): StageName {
   if (value === 1) return 'observe'

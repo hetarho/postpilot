@@ -12,9 +12,28 @@ import (
 	"github.com/postpilot/backend/internal/generation"
 	"github.com/postpilot/backend/internal/job"
 	"github.com/postpilot/backend/internal/llm"
+	"github.com/postpilot/backend/internal/post"
 	"github.com/postpilot/backend/internal/provider"
 	"github.com/postpilot/backend/internal/voice"
 )
+
+// experimentPosts publishes one owned post's status to the experiment context, which uses it
+// to refuse a lab comparison's content application on a post the owner already finalized
+// (MODEL-37). A post that is gone, or that belongs to someone else, is an invalid state for
+// the application rather than a post-shaped failure: the comparison names a post it may no
+// longer write to either way.
+type experimentPosts struct{ service *post.Service }
+
+func (a experimentPosts) Status(ctx context.Context, userID, slug string) (string, error) {
+	status, err := a.service.PostStatus(ctx, userID, slug)
+	switch {
+	case errors.Is(err, post.ErrNotFound), errors.Is(err, post.ErrForbidden):
+		return "", experiment.ErrInvalidState
+	case err != nil:
+		return "", err
+	}
+	return status, nil
+}
 
 type experimentVoices struct{ service *voice.Service }
 

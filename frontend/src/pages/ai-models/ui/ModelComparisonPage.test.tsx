@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, it } from 'vitest'
 import { create } from '@bufbuild/protobuf'
-import { ObservationSchema, Stage } from '@/shared/api'
+import { ExperimentOrigin, ObservationSchema, Stage } from '@/shared/api'
 import type {
   FakeAnalyzeExperimentStart,
   FakeWriteExperimentStart,
@@ -46,6 +46,8 @@ it('starts a no-photo write comparison from the model tab with the persisted tar
     expect(starts).toEqual([
       {
         postSlug: 'post-1',
+        // Started in the lab, so its verdict will be a pick that applies nothing.
+        origin: ExperimentOrigin.LAB,
         observeModel: undefined,
         modelA: { providerId: 'openrouter', modelId: 'writer-a' },
         modelB: { providerId: 'openrouter', modelId: 'writer-b' },

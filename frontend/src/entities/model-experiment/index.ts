@@ -5,6 +5,7 @@ export type {
   CostSourceName,
   DisplaySideName,
   ExperimentCandidate,
+  ExperimentOriginName,
   ExperimentStatusName,
   LeaderboardEntry,
   ModelExperiment,

@@ -959,6 +959,17 @@ func (s *Service) PostIdentity(ctx context.Context, userID, slug string) (time.T
 	return found.CreatedAt, nil
 }
 
+// PostStatus returns one owned post's lifecycle status. It exists for a consumer that must
+// refuse work on a finalized post without reading any other part of it, so it deliberately
+// skips the image listing and presigning Get performs.
+func (s *Service) PostStatus(ctx context.Context, userID, slug string) (string, error) {
+	found, err := s.ownedPost(ctx, userID, slug)
+	if err != nil {
+		return "", err
+	}
+	return found.Status, nil
+}
+
 func clonePostContent(content PostContent) PostContent {
 	cloned := content
 	cloned.Tags = append([]string(nil), content.Tags...)

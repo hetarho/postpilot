@@ -329,6 +329,7 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 		experimentCatalog{selections: c.provider, registry: c.metered, plans: c.auth},
 		experimentJobs{queue: c.jobs},
 		experimentRunner{generation: c.generation, voice: c.voice},
+		experimentPosts{service: c.post},
 		cfg.ExperimentContentRetention,
 	)
 	if n, err := c.experiment.RecoverInterrupted(ctx); err != nil {

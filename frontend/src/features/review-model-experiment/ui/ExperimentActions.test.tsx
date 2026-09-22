@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, expect, it, vi } from 'vitest'
 import type { ModelExperiment } from '@/entities/model-experiment'
+import type { FakePostRow } from '@/test/posts'
 import { createFakeAuthBackend, createTestQueryClient, withProviders } from '@/test/session'
 import type { FakeVoiceRow } from '@/test/voice'
 import { ExperimentActions } from './ExperimentActions'
@@ -15,6 +16,7 @@ vi.mock('@/entities/model-experiment', async (importOriginal) => ({
 const base: ModelExperiment = {
   id: 'experiment-1',
   stage: 'write',
+  origin: 'editor',
   status: 'review',
   postSlug: 'post',
   voiceId: '',
@@ -71,14 +73,16 @@ const base: ModelExperiment = {
 }
 
 function actionSet() {
+  // Every action resolves: the bar awaits what it calls to clear its pressed state, so a
+  // mock returning undefined fails inside React's event handler rather than in the assertion.
   return {
-    choose: vi.fn(),
+    choose: vi.fn().mockResolvedValue({}),
     decideWrite: vi.fn().mockResolvedValue({}),
-    useSingle: vi.fn(),
-    dismiss: vi.fn(),
-    retry: vi.fn(),
-    apply: vi.fn(),
-    adopt: vi.fn(),
+    useSingle: vi.fn().mockResolvedValue({}),
+    dismiss: vi.fn().mockResolvedValue({}),
+    retry: vi.fn().mockResolvedValue({}),
+    apply: vi.fn().mockResolvedValue({}),
+    adopt: vi.fn().mockResolvedValue({}),
     isPending: false,
     failure: undefined,
   }
@@ -87,9 +91,14 @@ function actionSet() {
 function renderActions(
   experiment = base,
   voices: FakeVoiceRow[] = [{ id: 'voice-default', name: '기본 말투', isDefault: true }],
+  posts: FakePostRow[] = [{ slug: 'post', status: 'draft' }],
 ) {
-  const backend = createFakeAuthBackend({ user: { id: 'alice' }, voice: { voices } })
-  render(<ExperimentActions experiment={experiment} activeCandidateId="left" />, {
+  const backend = createFakeAuthBackend({
+    user: { id: 'alice' },
+    voice: { voices },
+    posts: { posts },
+  })
+  return render(<ExperimentActions experiment={experiment} activeCandidateId="left" />, {
     wrapper: withProviders(backend.transport, createTestQueryClient()),
   })
 }
@@ -164,4 +173,71 @@ it('blocks provider and apply work when the experiment voice is deleted', async 
   expect(await screen.findByText(/삭제되었거나 찾을 수 없는 말투/)).toBeInTheDocument()
   expect(screen.getByRole('button', { name: '결과 적용' })).toBeDisabled()
   expect(actions.apply).not.toHaveBeenCalled()
+})
+
+const labPair: ModelExperiment = { ...base, origin: 'lab' }
+const decidedLabPair: ModelExperiment = {
+  ...labPair,
+  status: 'decided',
+  winnerCandidateId: 'left',
+  revealed: true,
+}
+
+it('offers the lab only a pick, and offers the editor no pick at all', async () => {
+  const actions = actionSet()
+  mocks.useExperimentActions.mockReturnValue(actions)
+  renderActions(labPair)
+  expect(screen.queryByRole('button', { name: '결과 적용' })).not.toBeInTheDocument()
+  expect(
+    screen.queryByRole('button', { name: '결과 적용하고 활성 모델로 변경' }),
+  ).not.toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: '이 결과로 선택' }))
+  expect(actions.choose).toHaveBeenCalledWith('left')
+  expect(actions.decideWrite).not.toHaveBeenCalled()
+})
+
+it('offers a decided lab pick the model adoption and, on a draft, the content application', async () => {
+  const actions = actionSet()
+  mocks.useExperimentActions.mockReturnValue(actions)
+  renderActions(decidedLabPair)
+  await userEvent.click(await screen.findByRole('button', { name: '결과 적용' }))
+  expect(actions.apply).toHaveBeenCalled()
+  await userEvent.click(screen.getByRole('button', { name: '활성 모델로 사용' }))
+  expect(actions.adopt).toHaveBeenCalled()
+  expect(actions.decideWrite).not.toHaveBeenCalled()
+})
+
+it('withholds the content application from a finalized post and keeps the adoption', async () => {
+  const actions = actionSet()
+  mocks.useExperimentActions.mockReturnValue(actions)
+  renderActions(decidedLabPair, undefined, [{ slug: 'post', status: 'finalized' }])
+  expect(await screen.findByRole('button', { name: '활성 모델로 사용' })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: '결과 적용' })).not.toBeInTheDocument()
+})
+
+it('withholds the content application when the post it ran on is gone', async () => {
+  const actions = actionSet()
+  mocks.useExperimentActions.mockReturnValue(actions)
+  renderActions(decidedLabPair, undefined, [])
+  expect(await screen.findByRole('button', { name: '활성 모델로 사용' })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: '결과 적용' })).not.toBeInTheDocument()
+})
+
+it('keeps the survivor of a half-failed comparison usable from either surface', async () => {
+  for (const experiment of [base, labPair]) {
+    mocks.useExperimentActions.mockReset()
+    const actions = actionSet()
+    mocks.useExperimentActions.mockReturnValue(actions)
+    const { unmount } = renderActions({
+      ...experiment,
+      status: 'partial',
+      candidates: [
+        experiment.candidates[0],
+        { ...experiment.candidates[1], status: 'failed', output: undefined },
+      ],
+    })
+    await userEvent.click(screen.getByRole('button', { name: '이 결과만 사용' }))
+    expect(actions.useSingle).toHaveBeenCalledWith('left')
+    unmount()
+  }
 })
