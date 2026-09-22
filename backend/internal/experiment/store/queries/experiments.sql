@@ -120,6 +120,37 @@ SET status = ?, winner_candidate_id = ?, outcome = ?, decided_at = ?,
 WHERE id = ? AND user_id = ?
   AND status IN ('review', 'partial', 'failed');
 
+-- name: InsertVerdictBadge :exec
+-- Written in the same transaction as the verdict it explains. A repeat of the same badge for
+-- the same candidate is the same row, so a retried write changes nothing.
+INSERT INTO model_experiment_badges (experiment_id, candidate_id, badge, note)
+VALUES (?, ?, ?, ?)
+ON CONFLICT (experiment_id, candidate_id, badge) DO NOTHING;
+
+-- name: ClearVerdictBadges :exec
+-- A verdict may be recorded again on the same comparison (an application retry replays it),
+-- so the badge rows are replaced with the verdict rather than accumulated across attempts.
+DELETE FROM model_experiment_badges WHERE experiment_id = ?;
+
+-- name: ListVerdictBadges :many
+SELECT * FROM model_experiment_badges
+WHERE experiment_id = ?
+ORDER BY candidate_id, badge;
+
+-- name: PurgeExpiredBadgeNotes :exec
+-- The free note is private payload and leaves with the rest of it; the badge ids stay, so a
+-- leaderboard can still tally what a model earned (MODEL-42).
+UPDATE model_experiment_badges SET note = NULL
+WHERE experiment_id IN (
+  SELECT id FROM model_experiments
+  WHERE content_expires_at IS NOT NULL AND content_expires_at <= ?
+    AND status IN ('decided', 'dismissed')
+);
+
+-- name: PurgePostBadgeNotes :exec
+UPDATE model_experiment_badges SET note = NULL
+WHERE experiment_id IN (SELECT id FROM model_experiments WHERE user_id = ? AND post_slug = ?);
+
 -- name: SetApplyRequested :execrows
 -- Marks that this decided verdict now owes a content application, so a failure leaves the
 -- comparison unresolved for its post with a visible retry. Idempotent: a repeat is a no-op.
@@ -174,12 +205,56 @@ UPDATE model_experiment_candidates SET output = NULL
 WHERE experiment_id IN (SELECT id FROM model_experiments WHERE user_id = ? AND post_slug = ?);
 
 -- name: ListDecidedForLeaderboard :many
+-- The winner verdicts one account reached inside the window. decided_at is stored in a
+-- fixed-width UTC layout, so the string comparison is the chronological one.
 SELECT * FROM model_experiments
 WHERE user_id = ? AND stage = ? AND outcome = 'winner' AND winner_candidate_id IS NOT NULL
+  AND decided_at IS NOT NULL AND decided_at >= ?
+ORDER BY decided_at, id;
+
+-- name: ListDecidedForLeaderboardAll :many
+-- The same, over every account. Only the candidates' model refs leave this query, so no
+-- account, experiment or output reaches the board it feeds.
+SELECT * FROM model_experiments
+WHERE stage = ? AND outcome = 'winner' AND winner_candidate_id IS NOT NULL
+  AND decided_at IS NOT NULL AND decided_at >= ?
 ORDER BY decided_at, id;
 
 -- name: ListCandidatesForLeaderboard :many
+-- The call accounting beside those verdicts, from the comparisons that were resolved inside
+-- the same window: a comparison still awaiting a verdict has not earned a place on a board.
 SELECT c.* FROM model_experiment_candidates c
 JOIN model_experiments e ON e.id = c.experiment_id
 WHERE e.user_id = ? AND e.stage = ?
+  AND e.status IN ('decided', 'dismissed')
+  AND e.decided_at IS NOT NULL AND e.decided_at >= ?
+ORDER BY e.decided_at, e.id, c.display_side;
+
+-- name: ListBadgeTalliesForLeaderboard :many
+-- How often each model earned each badge inside this board's window. Grouped by the model a
+-- candidate ran, not by the candidate: a board ranks models, and two comparisons of the same
+-- model are the same row here. The note is deliberately not selected.
+SELECT c.model_provider_id, c.model_id, b.badge, count(*) AS total
+FROM model_experiment_badges b
+JOIN model_experiment_candidates c ON c.experiment_id = b.experiment_id AND c.id = b.candidate_id
+JOIN model_experiments e ON e.id = b.experiment_id
+WHERE e.user_id = ? AND e.stage = ? AND e.outcome = 'winner'
+  AND e.decided_at IS NOT NULL AND e.decided_at >= ?
+GROUP BY c.model_provider_id, c.model_id, b.badge;
+
+-- name: ListBadgeTalliesForLeaderboardAll :many
+SELECT c.model_provider_id, c.model_id, b.badge, count(*) AS total
+FROM model_experiment_badges b
+JOIN model_experiment_candidates c ON c.experiment_id = b.experiment_id AND c.id = b.candidate_id
+JOIN model_experiments e ON e.id = b.experiment_id
+WHERE e.stage = ? AND e.outcome = 'winner'
+  AND e.decided_at IS NOT NULL AND e.decided_at >= ?
+GROUP BY c.model_provider_id, c.model_id, b.badge;
+
+-- name: ListCandidatesForLeaderboardAll :many
+SELECT c.* FROM model_experiment_candidates c
+JOIN model_experiments e ON e.id = c.experiment_id
+WHERE e.stage = ?
+  AND e.status IN ('decided', 'dismissed')
+  AND e.decided_at IS NOT NULL AND e.decided_at >= ?
 ORDER BY e.decided_at, e.id, c.display_side;

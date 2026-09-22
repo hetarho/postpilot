@@ -65,6 +65,7 @@ import { i18n as manageSubscriptionI18n } from '@/features/manage-subscription/c
 import { i18n as manageVoiceRulesI18n } from '@/features/manage-voice-rules/config/i18n'
 import { i18n as manageVoiceSamplesI18n } from '@/features/manage-voice-samples/config/i18n'
 import { i18n as modelCatalogI18n } from '@/entities/model-catalog/config/i18n'
+import { i18n as modelExperimentEntityI18n } from '@/entities/model-experiment/config/i18n'
 import { i18n as modelExperimentI18n } from '@/pages/model-experiment/config/i18n'
 import { i18n as modelLeaderboardI18n } from '@/widgets/model-leaderboard/config/i18n'
 import { i18n as planI18n } from '@/entities/plan/config/i18n'
@@ -162,6 +163,7 @@ export const FRAGMENTS: readonly I18nFragment[] = [
   configureModelPairI18n,
   manageModelCatalogI18n,
   modelCatalogI18n,
+  modelExperimentEntityI18n,
   modelExperimentI18n,
   modelLeaderboardI18n,
   reviewModelExperimentI18n,
@@ -263,6 +265,7 @@ export const resources = {
       ...configureModelPairI18n.ko,
       ...manageModelCatalogI18n.ko,
       ...modelCatalogI18n.ko,
+      ...modelExperimentEntityI18n.ko,
       ...modelExperimentI18n.ko,
       ...modelLeaderboardI18n.ko,
       ...reviewModelExperimentI18n.ko,
@@ -366,6 +369,7 @@ export const resources = {
       ...configureModelPairI18n.en,
       ...manageModelCatalogI18n.en,
       ...modelCatalogI18n.en,
+      ...modelExperimentEntityI18n.en,
       ...modelExperimentI18n.en,
       ...modelLeaderboardI18n.en,
       ...reviewModelExperimentI18n.en,

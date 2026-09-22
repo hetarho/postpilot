@@ -224,6 +224,7 @@ export const errors = {
   EXPERIMENT_VOICE_UNAVAILABLE: '비교에 사용할 말투를 사용할 수 없어요.',
   EXPERIMENT_ALREADY_RUNNING: '다른 A/B 비교가 이미 진행 중이에요.',
   EXPERIMENT_POST_FINALIZED: '완성된 글에는 비교 결과를 적용할 수 없어요.',
+  EXPERIMENT_BADGES_INVALID: '선택 이유를 저장할 수 없어요. 다시 확인해 주세요.',
   JOB_NOT_FOUND: '작업을 찾을 수 없어요.',
   JOB_FORBIDDEN: '이 작업에 접근할 수 없어요.',
   JOB_INTERRUPTED: '서버가 다시 시작되어 작업이 중단됐어요.',

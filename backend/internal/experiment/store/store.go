@@ -277,13 +277,43 @@ func (s *Store) RestoreFailedCandidates(ctx context.Context, experimentID string
 	return nil
 }
 
-func (s *Store) Decide(ctx context.Context, id, userID, candidateID string, status experiment.Status, outcome experiment.Outcome, applyRequested, adoptionRequested bool, decidedAt, expiresAt time.Time) (bool, error) {
-	count, err := s.write.DecideExperiment(ctx, sqlc.DecideExperimentParams{
+func (s *Store) Decide(ctx context.Context, id, userID, candidateID string, status experiment.Status, outcome experiment.Outcome, applyRequested, adoptionRequested bool, badges []experiment.CandidateBadges, decidedAt, expiresAt time.Time) (bool, error) {
+	tx, err := s.writer.BeginTx(ctx, nil)
+	if err != nil {
+		return false, fmt.Errorf("begin verdict: %w", err)
+	}
+	defer tx.Rollback()
+	queries := sqlc.New(tx)
+	count, err := queries.DecideExperiment(ctx, sqlc.DecideExperimentParams{
 		Status: string(status), WinnerCandidateID: nullString(candidateID), Outcome: nullString(string(outcome)),
 		DecidedAt: nullTime(&decidedAt), ContentExpiresAt: nullTime(&expiresAt),
 		ApplyRequested: boolValue(applyRequested), AdoptionRequested: boolValue(adoptionRequested), ID: id, UserID: userID,
 	})
-	return count == 1, err
+	if err != nil || count != 1 {
+		return false, err
+	}
+	// Replaced rather than appended: the badges belong to the verdict this call writes, and
+	// an earlier attempt's must not survive under a later verdict.
+	if err := queries.ClearVerdictBadges(ctx, id); err != nil {
+		return false, fmt.Errorf("clear verdict badges: %w", err)
+	}
+	for _, candidate := range badges {
+		for _, badge := range candidate.Badges {
+			note := sql.NullString{}
+			if badge == experiment.BadgeOther && candidate.OtherNote != "" {
+				note = nullString(candidate.OtherNote)
+			}
+			if err := queries.InsertVerdictBadge(ctx, sqlc.InsertVerdictBadgeParams{
+				ExperimentID: id, CandidateID: candidate.CandidateID, Badge: string(badge), Note: note,
+			}); err != nil {
+				return false, fmt.Errorf("insert verdict badge: %w", err)
+			}
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return false, fmt.Errorf("commit verdict: %w", err)
+	}
+	return true, nil
 }
 
 // SetApplyRequested records the application a decided verdict now owes. A repeat, or a
@@ -342,38 +372,80 @@ func (s *Store) SetAdopted(ctx context.Context, id, userID string, now time.Time
 	return nil
 }
 
-func (s *Store) LeaderboardData(ctx context.Context, userID string, stage experiment.Stage) ([]experiment.Experiment, []experiment.Candidate, error) {
-	experimentRows, err := s.read.ListDecidedForLeaderboard(ctx, sqlc.ListDecidedForLeaderboardParams{UserID: userID, Stage: string(stage)})
+func (s *Store) LeaderboardData(ctx context.Context, userID string, stage experiment.Stage, since time.Time, scope experiment.Scope) ([]experiment.Experiment, []experiment.Candidate, []experiment.BadgeTally, error) {
+	// Formatted through the same writer the column was filled by: the stored layout is
+	// fixed-width UTC, so `>=` on the text is `>=` on the instant.
+	from := formatTime(since)
+	var experimentRows []sqlc.ModelExperiment
+	var err error
+	if scope == experiment.ScopeAll {
+		experimentRows, err = s.read.ListDecidedForLeaderboardAll(ctx, sqlc.ListDecidedForLeaderboardAllParams{Stage: string(stage), DecidedAt: nullString(from)})
+	} else {
+		experimentRows, err = s.read.ListDecidedForLeaderboard(ctx, sqlc.ListDecidedForLeaderboardParams{UserID: userID, Stage: string(stage), DecidedAt: nullString(from)})
+	}
 	if err != nil {
-		return nil, nil, fmt.Errorf("list decided experiments: %w", err)
+		return nil, nil, nil, fmt.Errorf("list decided experiments: %w", err)
 	}
 	found := make([]experiment.Experiment, 0, len(experimentRows))
 	for _, row := range experimentRows {
 		mapped, err := toExperiment(row)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		found = append(found, mapped)
 	}
-	candidateRows, err := s.read.ListCandidatesForLeaderboard(ctx, sqlc.ListCandidatesForLeaderboardParams{UserID: userID, Stage: string(stage)})
+	var candidateRows []sqlc.ModelExperimentCandidate
+	if scope == experiment.ScopeAll {
+		candidateRows, err = s.read.ListCandidatesForLeaderboardAll(ctx, sqlc.ListCandidatesForLeaderboardAllParams{Stage: string(stage), DecidedAt: nullString(from)})
+	} else {
+		candidateRows, err = s.read.ListCandidatesForLeaderboard(ctx, sqlc.ListCandidatesForLeaderboardParams{UserID: userID, Stage: string(stage), DecidedAt: nullString(from)})
+	}
 	if err != nil {
-		return nil, nil, fmt.Errorf("list leaderboard candidates: %w", err)
+		return nil, nil, nil, fmt.Errorf("list leaderboard candidates: %w", err)
 	}
 	candidates := make([]experiment.Candidate, 0, len(candidateRows))
 	for _, row := range candidateRows {
 		mapped, err := toCandidate(row)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		candidates = append(candidates, mapped)
 	}
-	return found, candidates, nil
+	var tallyRows []sqlc.ListBadgeTalliesForLeaderboardRow
+	if scope == experiment.ScopeAll {
+		allRows, allErr := s.read.ListBadgeTalliesForLeaderboardAll(ctx, sqlc.ListBadgeTalliesForLeaderboardAllParams{Stage: string(stage), DecidedAt: nullString(from)})
+		if allErr != nil {
+			return nil, nil, nil, fmt.Errorf("list leaderboard badge tallies: %w", allErr)
+		}
+		for _, row := range allRows {
+			tallyRows = append(tallyRows, sqlc.ListBadgeTalliesForLeaderboardRow(row))
+		}
+	} else {
+		tallyRows, err = s.read.ListBadgeTalliesForLeaderboard(ctx, sqlc.ListBadgeTalliesForLeaderboardParams{UserID: userID, Stage: string(stage), DecidedAt: nullString(from)})
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("list leaderboard badge tallies: %w", err)
+		}
+	}
+	tallies := make([]experiment.BadgeTally, 0, len(tallyRows))
+	for _, row := range tallyRows {
+		tallies = append(tallies, experiment.BadgeTally{
+			Model: experiment.ModelRef{ProviderID: row.ModelProviderID, ModelID: row.ModelID},
+			Badge: experiment.Badge(row.Badge),
+			Count: int(row.Total),
+		})
+	}
+	return found, candidates, tallies, nil
 }
 
 func (s *Store) PurgeExpired(ctx context.Context, before time.Time) (int64, error) {
 	value := nullTime(&before)
 	if _, err := s.write.PurgeExpiredCandidateOutput(ctx, value); err != nil {
 		return 0, fmt.Errorf("purge candidate output: %w", err)
+	}
+	// The free note is private payload; the badge ids stay so a board can still tally what a
+	// model earned (MODEL-42).
+	if err := s.write.PurgeExpiredBadgeNotes(ctx, value); err != nil {
+		return 0, fmt.Errorf("purge badge notes: %w", err)
 	}
 	count, err := s.write.PurgeExpiredContent(ctx, value)
 	if err != nil {
@@ -401,6 +473,9 @@ func (s *Store) PurgePost(ctx context.Context, userID, postSlug string) error {
 	if err := queries.PurgePostCandidateOutput(ctx, params); err != nil {
 		return err
 	}
+	if err := queries.PurgePostBadgeNotes(ctx, sqlc.PurgePostBadgeNotesParams{UserID: userID, PostSlug: nullString(postSlug)}); err != nil {
+		return err
+	}
 	if err := queries.PurgePostContent(ctx, sqlc.PurgePostContentParams{UserID: userID, PostSlug: nullString(postSlug)}); err != nil {
 		return err
 	}
@@ -416,11 +491,25 @@ func (s *Store) withCandidates(ctx context.Context, row sqlc.ModelExperiment) (e
 	if err != nil {
 		return experiment.Experiment{}, fmt.Errorf("list candidates: %w", err)
 	}
+	badgeRows, err := s.read.ListVerdictBadges(ctx, row.ID)
+	if err != nil {
+		return experiment.Experiment{}, fmt.Errorf("list verdict badges: %w", err)
+	}
+	badges := map[string][]experiment.Badge{}
+	notes := map[string]string{}
+	for _, badgeRow := range badgeRows {
+		badges[badgeRow.CandidateID] = append(badges[badgeRow.CandidateID], experiment.Badge(badgeRow.Badge))
+		if badgeRow.Note.Valid && badgeRow.Note.String != "" {
+			notes[badgeRow.CandidateID] = badgeRow.Note.String
+		}
+	}
 	for _, row := range rows {
 		candidate, err := toCandidate(row)
 		if err != nil {
 			return experiment.Experiment{}, err
 		}
+		candidate.Badges = badges[candidate.ID]
+		candidate.OtherNote = notes[candidate.ID]
 		found.Candidates = append(found.Candidates, candidate)
 	}
 	return found, nil

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, expect, it, vi } from 'vitest'
 import type { ModelExperiment } from '@/entities/model-experiment'
@@ -49,6 +49,8 @@ const base: ModelExperiment = {
           blocks: [],
         },
       },
+      badges: [],
+      otherNote: '',
       failure: undefined,
       modelLabel: '',
     },
@@ -66,6 +68,8 @@ const base: ModelExperiment = {
           blocks: [],
         },
       },
+      badges: [],
+      otherNote: '',
       failure: undefined,
       modelLabel: '',
     },
@@ -84,6 +88,8 @@ function actionSet() {
     apply: vi.fn().mockResolvedValue({}),
     adopt: vi.fn().mockResolvedValue({}),
     isPending: false,
+    badges: [],
+    otherNote: '',
     failure: undefined,
   }
 }
@@ -103,8 +109,17 @@ function renderActions(
   })
 }
 
+/** The sheet's confirm, told apart from the dock button that opened it: both carry the same
+ *  label, and only one of them is inside the dialog. */
+async function confirmVerdict(user: ReturnType<typeof userEvent.setup>, label: string) {
+  const sheet = await screen.findByRole('dialog')
+  await user.click(within(sheet).getByRole('button', { name: label }))
+}
+
 beforeEach(() => mocks.useExperimentActions.mockReset())
 
+// Both committing write actions pass through the one sheet, and the badges the sheet
+// collected ride along with the verdict they explain (MODEL-61).
 it('offers direct apply-only and apply-and-adopt decisions for a ready write pair', async () => {
   const actions = actionSet()
   mocks.useExperimentActions.mockReturnValue(actions)
@@ -112,9 +127,11 @@ it('offers direct apply-only and apply-and-adopt decisions for a ready write pai
   const user = userEvent.setup()
   expect(screen.queryByRole('button', { name: '이 결과로 선택' })).not.toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: '결과 적용' }))
-  expect(actions.decideWrite).toHaveBeenCalledWith('left', false)
+  await confirmVerdict(user, '결과 적용')
+  expect(actions.decideWrite).toHaveBeenCalledWith('left', false, [])
   await user.click(screen.getByRole('button', { name: '결과 적용하고 활성 모델로 변경' }))
-  expect(actions.decideWrite).toHaveBeenCalledWith('left', true)
+  await confirmVerdict(user, '결과 적용하고 활성 모델로 변경')
+  expect(actions.decideWrite).toHaveBeenCalledWith('left', true, [])
 })
 
 it('reports applied content separately and retries only model adoption', async () => {
@@ -191,8 +208,14 @@ it('offers the lab only a pick, and offers the editor no pick at all', async () 
   expect(
     screen.queryByRole('button', { name: '결과 적용하고 활성 모델로 변경' }),
   ).not.toBeInTheDocument()
-  await userEvent.click(screen.getByRole('button', { name: '이 결과로 선택' }))
-  expect(actions.choose).toHaveBeenCalledWith('left')
+  const user = userEvent.setup()
+  await user.click(screen.getByRole('button', { name: '이 결과로 선택' }))
+  // A badge chosen in the sheet reaches the verdict it explains.
+  await user.click(screen.getAllByRole('button', { name: '속도가 빨라요' })[0])
+  await confirmVerdict(user, '이 결과로 선택')
+  expect(actions.choose).toHaveBeenCalledWith('left', [
+    { candidateId: 'left', badges: ['fast'], otherNote: '' },
+  ])
   expect(actions.decideWrite).not.toHaveBeenCalled()
 })
 

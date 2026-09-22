@@ -19,7 +19,9 @@ export function ModelStageTabs({
           value,
           label: t(`stage.${value}`),
         }))}
-        onChange={(stage) => void navigate({ to, search: { stage } })}
+        // The other filters ride along: changing the stage on the leaderboard must not throw
+        // away the window and scope the reader chose (MODEL-44).
+        onChange={(stage) => void navigate({ to, search: (previous) => ({ ...previous, stage }) })}
         ariaLabel={t('page.stageAria')}
       />
     </div>

@@ -30,6 +30,8 @@ const base: ModelExperiment = {
       displaySide: 'right',
       status: 'succeeded',
       output: { kind: 'analyze', styleguide: '오른쪽 결과' },
+      badges: [],
+      otherNote: '',
       failure: undefined,
       modelLabel: '',
     },
@@ -38,6 +40,8 @@ const base: ModelExperiment = {
       displaySide: 'left',
       status: 'succeeded',
       output: { kind: 'analyze', styleguide: '왼쪽 결과' },
+      badges: [],
+      otherNote: '',
       failure: undefined,
       modelLabel: '',
     },
@@ -78,4 +82,39 @@ it('reveals label, tokens, latency, and estimated cost only after verdict', () =
   // Both candidates' accounting is on screen at once, outside the panels, so the reveal can be
   // compared without switching (design-language §4.3).
   expect(screen.getAllByText(/≈ \$0\.000012/)).toHaveLength(2)
+})
+
+// Once the blind is lifted, what the verdict said about each candidate is read beside the
+// model it was said about: the reason one result won is only legible next to the reason the
+// other lost.
+it('states each revealed candidate its own badges and note', () => {
+  render(
+    <CandidateComparison
+      experiment={{
+        ...base,
+        status: 'decided',
+        revealed: true,
+        winnerCandidateId: 'left',
+        candidates: [
+          {
+            ...base.candidates[0],
+            modelLabel: 'A model',
+            badges: ['fast', 'in_voice'],
+            otherNote: '',
+          },
+          {
+            ...base.candidates[1],
+            modelLabel: 'B model',
+            badges: ['ai_like', 'other'],
+            otherNote: '제목이 비슷해요',
+          },
+        ],
+      }}
+      activeCandidateId="left"
+    />,
+  )
+  expect(screen.getByText('속도가 빨라요')).toBeInTheDocument()
+  expect(screen.getByText('문체가 잘 맞아요')).toBeInTheDocument()
+  expect(screen.getByText('AI 같아요')).toBeInTheDocument()
+  expect(screen.getByText('제목이 비슷해요')).toBeInTheDocument()
 })

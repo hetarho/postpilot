@@ -117,7 +117,7 @@ func (h *Handler) RetryCandidate(ctx context.Context, req *connect.Request[postp
 }
 
 func (h *Handler) ChooseWinner(ctx context.Context, req *connect.Request[postpilotv1.ChooseWinnerRequest]) (*connect.Response[postpilotv1.ChooseWinnerResponse], error) {
-	found, err := h.choose(ctx, req.Msg.GetExperimentId(), req.Msg.GetCandidateId(), false)
+	found, err := h.choose(ctx, req.Msg.GetExperimentId(), req.Msg.GetCandidateId(), false, fromProtoBadges(req.Msg.GetBadges()))
 	if err != nil {
 		return nil, err
 	}
@@ -125,19 +125,21 @@ func (h *Handler) ChooseWinner(ctx context.Context, req *connect.Request[postpil
 }
 
 func (h *Handler) UseSingleCandidate(ctx context.Context, req *connect.Request[postpilotv1.UseSingleCandidateRequest]) (*connect.Response[postpilotv1.ChooseWinnerResponse], error) {
-	found, err := h.choose(ctx, req.Msg.GetExperimentId(), req.Msg.GetCandidateId(), true)
+	// The survivor of a half-failed comparison ranks nothing and opens no sheet (MODEL-61),
+	// so it carries no badges.
+	found, err := h.choose(ctx, req.Msg.GetExperimentId(), req.Msg.GetCandidateId(), true, nil)
 	if err != nil {
 		return nil, err
 	}
 	return connect.NewResponse(&postpilotv1.ChooseWinnerResponse{Experiment: toProtoExperiment(found)}), nil
 }
 
-func (h *Handler) choose(ctx context.Context, experimentID, candidateID string, single bool) (experiment.Experiment, error) {
+func (h *Handler) choose(ctx context.Context, experimentID, candidateID string, single bool, badges []experiment.CandidateBadges) (experiment.Experiment, error) {
 	userID, err := actingUser(ctx)
 	if err != nil {
 		return experiment.Experiment{}, err
 	}
-	found, err := h.service.Choose(ctx, userID, experimentID, candidateID, single)
+	found, err := h.service.Choose(ctx, userID, experimentID, candidateID, single, badges)
 	if err != nil {
 		return experiment.Experiment{}, toConnectError("choose experiment candidate", err)
 	}
@@ -187,7 +189,8 @@ func (h *Handler) DecideWriteExperiment(ctx context.Context, req *connect.Reques
 	if err != nil {
 		return nil, err
 	}
-	found, err := h.service.DecideWrite(ctx, userID, req.Msg.GetExperimentId(), req.Msg.GetCandidateId(), req.Msg.GetAdoptWinnerModel())
+	found, err := h.service.DecideWrite(ctx, userID, req.Msg.GetExperimentId(), req.Msg.GetCandidateId(),
+		req.Msg.GetAdoptWinnerModel(), fromProtoBadges(req.Msg.GetBadges()))
 	if err != nil {
 		return nil, toConnectError("decide write experiment", err)
 	}
@@ -199,7 +202,8 @@ func (h *Handler) GetLeaderboard(ctx context.Context, req *connect.Request[postp
 	if err != nil {
 		return nil, err
 	}
-	entries, err := h.service.Leaderboard(ctx, userID, fromProtoStage(req.Msg.GetStage()))
+	entries, err := h.service.Leaderboard(ctx, userID, fromProtoStage(req.Msg.GetStage()),
+		fromProtoWindow(req.Msg.GetWindow()), fromProtoScope(req.Msg.GetScope()))
 	if err != nil {
 		return nil, toConnectError("get leaderboard", err)
 	}
@@ -212,6 +216,7 @@ func (h *Handler) GetLeaderboard(ctx context.Context, req *connect.Request[postp
 			PromptTokens: entry.PromptTokens, CompletionTokens: entry.CompletionTokens, TotalCostMicrousd: entry.TotalCostMicrousd,
 			CostQuality: toProtoCost(entry.CostQuality), Provisional: entry.Provisional, Active: entry.Active,
 			Recommended: entry.Recommended, Disappeared: entry.Disappeared,
+			BadgeTallies: toProtoTallies(entry.BadgeTallies),
 		})
 	}
 	return connect.NewResponse(&postpilotv1.GetLeaderboardResponse{Entries: out}), nil
@@ -241,7 +246,7 @@ func toConnectError(op string, err error) error {
 		return rpcserver.NewAppError(connect.CodeNotFound, "experiment candidate not found", postpilotv1.FailureReason_EXPERIMENT_CANDIDATE_NOT_FOUND, nil)
 	case errors.Is(err, experiment.ErrForbidden):
 		return rpcserver.NewAppError(connect.CodePermissionDenied, "experiment belongs to another user", postpilotv1.FailureReason_EXPERIMENT_FORBIDDEN, nil)
-	case errors.Is(err, experiment.ErrInvalidStage):
+	case errors.Is(err, experiment.ErrInvalidStage), errors.Is(err, experiment.ErrInvalidWindow), errors.Is(err, experiment.ErrInvalidScope):
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid experiment stage", postpilotv1.FailureReason_EXPERIMENT_STAGE_INVALID, nil)
 	case errors.Is(err, experiment.ErrDuplicateCandidates):
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "experiment candidates must differ", postpilotv1.FailureReason_EXPERIMENT_CANDIDATES_DUPLICATE, nil)
@@ -270,6 +275,8 @@ func toConnectError(op string, err error) error {
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "experiment retry model is unavailable", postpilotv1.FailureReason_EXPERIMENT_RETRY_MODEL_UNAVAILABLE, nil)
 	case errors.Is(err, experiment.ErrVoiceUnavailable):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "experiment voice is unavailable", postpilotv1.FailureReason_EXPERIMENT_VOICE_UNAVAILABLE, nil)
+	case errors.Is(err, experiment.ErrBadgesInvalid):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "the badges offered with this verdict are not ones it can carry", postpilotv1.FailureReason_EXPERIMENT_BADGES_INVALID, nil)
 	case errors.Is(err, experiment.ErrPostFinalized):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "a finalized post cannot take a comparison result", postpilotv1.FailureReason_EXPERIMENT_POST_FINALIZED, nil)
 	case errors.As(err, &active):
@@ -358,6 +365,12 @@ func toProtoCandidate(found experiment.Experiment, candidate experiment.Candidat
 		out.Failure = failureToProto(candidate.Failure)
 		out.Usage = &postpilotv1.CandidateUsage{PromptTokens: candidate.Usage.PromptTokens, CompletionTokens: candidate.Usage.CompletionTokens,
 			CostMicrousd: candidate.Usage.CostMicrousd, CostSource: toProtoCost(candidate.Usage.CostSource), LatencyMs: candidate.Usage.LatencyMS}
+		// Inside the reveal, beside the identity: a badge attached to the unchosen candidate
+		// would otherwise say which one it was before the owner decided (MODEL-32).
+		for _, badge := range candidate.Badges {
+			out.Badges = append(out.Badges, toProtoBadge(badge))
+		}
+		out.OtherNote = candidate.OtherNote
 	}
 	return out
 }
@@ -438,6 +451,86 @@ func fromProtoRef(ref *postpilotv1.ModelRef) experiment.ModelRef {
 }
 func toProtoRef(ref experiment.ModelRef) *postpilotv1.ModelRef {
 	return &postpilotv1.ModelRef{ProviderId: ref.ProviderID, ModelId: ref.ModelID}
+}
+
+// An unspecified window is the week and an unspecified scope is the caller's own: the
+// defaults resolve here so a client that states nothing and one that states them agree
+// (MODEL-38, MODEL-44).
+func fromProtoWindow(window postpilotv1.LeaderboardWindow) experiment.Window {
+	switch window {
+	case postpilotv1.LeaderboardWindow_LEADERBOARD_WINDOW_DAY:
+		return experiment.WindowDay
+	case postpilotv1.LeaderboardWindow_LEADERBOARD_WINDOW_MONTH:
+		return experiment.WindowMonth
+	default:
+		return experiment.WindowWeek
+	}
+}
+
+func fromProtoScope(scope postpilotv1.LeaderboardScope) experiment.Scope {
+	if scope == postpilotv1.LeaderboardScope_LEADERBOARD_SCOPE_ALL {
+		return experiment.ScopeAll
+	}
+	return experiment.ScopeMe
+}
+
+// The badge catalog is a fixed enum on both sides, so the mapping is a table rather than a
+// parse: a value this build does not know is dropped here and refused by the domain.
+var badgeNames = map[postpilotv1.VerdictBadge]experiment.Badge{
+	postpilotv1.VerdictBadge_VERDICT_BADGE_FAST:          experiment.BadgeFast,
+	postpilotv1.VerdictBadge_VERDICT_BADGE_NATURAL:       experiment.BadgeNatural,
+	postpilotv1.VerdictBadge_VERDICT_BADGE_ON_BRIEF:      experiment.BadgeOnBrief,
+	postpilotv1.VerdictBadge_VERDICT_BADGE_STRUCTURED:    experiment.BadgeStructured,
+	postpilotv1.VerdictBadge_VERDICT_BADGE_ACCURATE:      experiment.BadgeAccurate,
+	postpilotv1.VerdictBadge_VERDICT_BADGE_IN_VOICE:      experiment.BadgeInVoice,
+	postpilotv1.VerdictBadge_VERDICT_BADGE_CONCISE:       experiment.BadgeConcise,
+	postpilotv1.VerdictBadge_VERDICT_BADGE_SLOW:          experiment.BadgeSlow,
+	postpilotv1.VerdictBadge_VERDICT_BADGE_AI_LIKE:       experiment.BadgeAILike,
+	postpilotv1.VerdictBadge_VERDICT_BADGE_OFF_BRIEF:     experiment.BadgeOffBrief,
+	postpilotv1.VerdictBadge_VERDICT_BADGE_VERBOSE:       experiment.BadgeVerbose,
+	postpilotv1.VerdictBadge_VERDICT_BADGE_INACCURATE:    experiment.BadgeInaccurate,
+	postpilotv1.VerdictBadge_VERDICT_BADGE_OFF_VOICE:     experiment.BadgeOffVoice,
+	postpilotv1.VerdictBadge_VERDICT_BADGE_REPETITIVE:    experiment.BadgeRepetitive,
+	postpilotv1.VerdictBadge_VERDICT_BADGE_BROKEN_FORMAT: experiment.BadgeBrokenFormat,
+	postpilotv1.VerdictBadge_VERDICT_BADGE_OTHER:         experiment.BadgeOther,
+}
+
+// A tally names a model and a badge and nothing else: no account, no experiment, no note.
+func toProtoTallies(tallies []experiment.BadgeTally) []*postpilotv1.BadgeTally {
+	if len(tallies) == 0 {
+		return nil
+	}
+	out := make([]*postpilotv1.BadgeTally, 0, len(tallies))
+	for _, tally := range tallies {
+		out = append(out, &postpilotv1.BadgeTally{Badge: toProtoBadge(tally.Badge), Count: int32(tally.Count)})
+	}
+	return out
+}
+
+func fromProtoBadges(offered []*postpilotv1.CandidateBadges) []experiment.CandidateBadges {
+	if len(offered) == 0 {
+		return nil
+	}
+	out := make([]experiment.CandidateBadges, 0, len(offered))
+	for _, candidate := range offered {
+		entry := experiment.CandidateBadges{CandidateID: candidate.GetCandidateId(), OtherNote: candidate.GetOtherNote()}
+		for _, badge := range candidate.GetBadges() {
+			if name, ok := badgeNames[badge]; ok {
+				entry.Badges = append(entry.Badges, name)
+			}
+		}
+		out = append(out, entry)
+	}
+	return out
+}
+
+func toProtoBadge(badge experiment.Badge) postpilotv1.VerdictBadge {
+	for wire, name := range badgeNames {
+		if name == badge {
+			return wire
+		}
+	}
+	return postpilotv1.VerdictBadge_VERDICT_BADGE_UNSPECIFIED
 }
 
 // fromProtoOrigin reads the caller's declared origin. UNSPECIFIED means the editor, the

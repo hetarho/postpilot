@@ -2,13 +2,15 @@ import { useMemo } from 'react'
 import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import type {
+  CandidateSide,
   CandidateStatusName,
   ExperimentCandidate,
   ModelExperiment,
 } from '@/entities/model-experiment'
+import { candidateSides } from '@/entities/model-experiment'
+import { isPositiveBadge } from '@/entities/model-experiment'
 import { AppFailureMessage, Badge, Notice, Typography, type BadgeTone } from '@/shared/ui'
 import { formatNumber } from '@/shared/lib'
-import { candidateSides, type CandidateSide } from '../model/sides'
 
 interface CandidateComparisonProps {
   experiment: ModelExperiment
@@ -167,7 +169,7 @@ function CandidateOutput({ candidate }: { candidate: ExperimentCandidate }) {
  *  bottom of a post-length column — so comparing the two costs, the payoff of the whole exercise,
  *  meant memorising one number and switching (design-language §4.3). */
 function RevealBand({ sides }: { sides: CandidateSide[] }) {
-  const { t } = useTranslation('posts')
+  const { t } = useTranslation(['posts', 'models'])
   return (
     <dl className="bg-surface-recessed divide-divider mt-6 divide-y rounded-lg px-4">
       {sides.map(({ candidate, label }) => (
@@ -190,6 +192,23 @@ function RevealBand({ sides }: { sides: CandidateSide[] }) {
               <Typography variant="meta" as="p" mono className="mt-1 break-words">
                 {candidate.model.providerId}/{candidate.model.modelId}
               </Typography>
+            )}
+            {/* What the verdict said about this candidate, beside the identity it was said
+                about. Read here rather than in the panels because the reason one result won
+                is only legible next to the reason the other lost. */}
+            {(candidate.badges.length > 0 || candidate.otherNote) && (
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                {candidate.badges.map((badge) => (
+                  <Badge key={badge} tone={isPositiveBadge(badge) ? 'success' : 'warning'}>
+                    {t(`badge.${badge}`, { ns: 'models' })}
+                  </Badge>
+                ))}
+                {candidate.otherNote && (
+                  <Typography variant="meta" as="p" className="w-full break-words">
+                    {candidate.otherNote}
+                  </Typography>
+                )}
+              </div>
             )}
           </dd>
         </div>

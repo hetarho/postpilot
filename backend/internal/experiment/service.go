@@ -263,7 +263,7 @@ func startOrigin(request StartRequest) Origin {
 // single is the other path entirely: the survivor of a comparison whose sibling failed. It
 // ranks nothing (MODEL-34) and stays available to both origins, because a post written as an
 // editor comparison still has no content until that survivor is applied (MODEL-37).
-func (s *Service) Choose(ctx context.Context, userID, id, candidateID string, single bool) (Experiment, error) {
+func (s *Service) Choose(ctx context.Context, userID, id, candidateID string, single bool, badges []CandidateBadges) (Experiment, error) {
 	found, err := s.owned(ctx, userID, id)
 	if err != nil {
 		return Experiment{}, err
@@ -271,10 +271,10 @@ func (s *Service) Choose(ctx context.Context, userID, id, candidateID string, si
 	if !single && found.AppliesOnVerdict() {
 		return Experiment{}, ErrInvalidState
 	}
-	return s.choose(ctx, userID, id, candidateID, single, false)
+	return s.choose(ctx, userID, id, candidateID, single, false, badges)
 }
 
-func (s *Service) choose(ctx context.Context, userID, id, candidateID string, single, adoptionRequested bool) (Experiment, error) {
+func (s *Service) choose(ctx context.Context, userID, id, candidateID string, single, adoptionRequested bool, badges []CandidateBadges) (Experiment, error) {
 	found, err := s.owned(ctx, userID, id)
 	if err != nil {
 		return Experiment{}, err
@@ -289,12 +289,18 @@ func (s *Service) choose(ctx context.Context, userID, id, candidateID string, si
 	if err != nil {
 		return Experiment{}, err
 	}
+	// Refused before the verdict is written: a verdict recorded with its explanation dropped
+	// would be a verdict the owner did not give.
+	normalized, err := NormalizeBadges(found, badges)
+	if err != nil {
+		return Experiment{}, err
+	}
 	outcome := OutcomeWinner
 	if single {
 		outcome = OutcomeUnpaired
 	}
 	now := s.now()
-	changed, err := s.outcome.Decide(ctx, found.ID, userID, candidate.ID, StatusDecided, outcome, found.AppliesOnVerdict(), adoptionRequested, now, now.Add(s.retention))
+	changed, err := s.outcome.Decide(ctx, found.ID, userID, candidate.ID, StatusDecided, outcome, found.AppliesOnVerdict(), adoptionRequested, normalized, now, now.Add(s.retention))
 	if err != nil {
 		return Experiment{}, err
 	}
@@ -330,7 +336,9 @@ func (s *Service) Dismiss(ctx context.Context, userID, id string) (Experiment, e
 		return Experiment{}, ErrInvalidState
 	}
 	now := s.now()
-	changed, err := s.outcome.Decide(ctx, found.ID, userID, "", StatusDismissed, OutcomeSkipped, false, false, now, now.Add(s.retention))
+	// Dismissal carries no badges: nothing was chosen, so there is nothing to explain
+	// (MODEL-37).
+	changed, err := s.outcome.Decide(ctx, found.ID, userID, "", StatusDismissed, OutcomeSkipped, false, false, nil, now, now.Add(s.retention))
 	if err != nil {
 		return Experiment{}, err
 	}
@@ -413,7 +421,7 @@ func (s *Service) AdoptWinner(ctx context.Context, userID, id string) (ModelRef,
 // DecideWrite records one blind write verdict, applies the selected content exactly
 // once, and optionally adopts only the winner's write model. Each completed boundary
 // is persisted so an adoption retry never reapplies content or reranks the verdict.
-func (s *Service) DecideWrite(ctx context.Context, userID, id, candidateID string, adopt bool) (Experiment, error) {
+func (s *Service) DecideWrite(ctx context.Context, userID, id, candidateID string, adopt bool, badges []CandidateBadges) (Experiment, error) {
 	found, err := s.owned(ctx, userID, id)
 	if err != nil {
 		return Experiment{}, err
@@ -426,7 +434,7 @@ func (s *Service) DecideWrite(ctx context.Context, userID, id, candidateID strin
 	if found.Origin != OriginEditor {
 		return Experiment{}, ErrInvalidState
 	}
-	found, err = s.choose(ctx, userID, id, candidateID, false, adopt)
+	found, err = s.choose(ctx, userID, id, candidateID, false, adopt, badges)
 	if err != nil || !found.AdoptionRequested || found.AppliedAt == nil {
 		return found, err
 	}
@@ -486,11 +494,19 @@ func (s *Service) DecideWrite(ctx context.Context, userID, id, candidateID strin
 	return s.owned(ctx, userID, id)
 }
 
-func (s *Service) Leaderboard(ctx context.Context, userID string, stage Stage) ([]LeaderboardEntry, error) {
+// Leaderboard replays the winner verdicts of one (scope, stage, window) from 1500. The
+// window is rolling and measured here, at the moment of the request (MODEL-38).
+func (s *Service) Leaderboard(ctx context.Context, userID string, stage Stage, window Window, scope Scope) ([]LeaderboardEntry, error) {
 	if _, err := ParseStage(string(stage)); err != nil {
 		return nil, err
 	}
-	decided, calls, err := s.outcome.LeaderboardData(ctx, userID, stage)
+	if _, err := ParseWindow(string(window)); err != nil {
+		return nil, err
+	}
+	if _, err := ParseScope(string(scope)); err != nil {
+		return nil, err
+	}
+	decided, calls, tallies, err := s.outcome.LeaderboardData(ctx, userID, stage, s.now().Add(-window.Length()), scope)
 	if err != nil {
 		return nil, err
 	}
@@ -515,7 +531,7 @@ func (s *Service) Leaderboard(ctx context.Context, userID string, stage Stage) (
 			matches = append(matches, Match{Winner: winner.Model, Loser: loser.Model})
 		}
 	}
-	entries := BuildLeaderboard(matches, calls, labels)
+	entries := BuildLeaderboard(matches, calls, labels, tallies)
 	active, hasActive, err := s.catalog.Active(ctx, userID, stage)
 	if err != nil {
 		return nil, err

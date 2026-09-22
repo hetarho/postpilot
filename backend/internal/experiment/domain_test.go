@@ -90,8 +90,8 @@ func TestLeaderboardReplaysInOrderAndKeepsUnavailableCostExplicit(t *testing.T) 
 		{Model: a, ModelLabel: "A", Status: CandidateSucceeded, Usage: Usage{PromptTokens: 10, CostSource: CostUnavailable, LatencyMS: 100}},
 		{Model: b, ModelLabel: "B", Status: CandidateSucceeded, Usage: Usage{PromptTokens: 20, CostMicrousd: 5, CostSource: CostReported, LatencyMS: 300}},
 	}
-	forward := BuildLeaderboard([]Match{{Winner: a, Loser: b}, {Winner: a, Loser: b}, {Winner: b, Loser: a}}, calls, nil)
-	reversed := BuildLeaderboard([]Match{{Winner: b, Loser: a}, {Winner: a, Loser: b}, {Winner: a, Loser: b}}, calls, nil)
+	forward := BuildLeaderboard([]Match{{Winner: a, Loser: b}, {Winner: a, Loser: b}, {Winner: b, Loser: a}}, calls, nil, nil)
+	reversed := BuildLeaderboard([]Match{{Winner: b, Loser: a}, {Winner: a, Loser: b}, {Winner: a, Loser: b}}, calls, nil, nil)
 	byModel := func(entries []LeaderboardEntry, ref ModelRef) LeaderboardEntry {
 		for _, entry := range entries {
 			if entry.Model == ref {

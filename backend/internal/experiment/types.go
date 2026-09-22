@@ -39,6 +39,56 @@ const (
 	OriginLab Origin = "lab"
 )
 
+// Window is how far back a leaderboard reads. There is no all-time value: an unbounded
+// board ranks today's models by last year's verdicts (MODEL-38).
+type Window string
+
+const (
+	WindowDay   Window = "day"
+	WindowWeek  Window = "week"
+	WindowMonth Window = "month"
+)
+
+// Length is the window measured back from the moment of the request.
+func (w Window) Length() time.Duration {
+	switch w {
+	case WindowDay:
+		return LeaderboardWindowDay
+	case WindowMonth:
+		return LeaderboardWindowMonth
+	default:
+		return LeaderboardWindowWeek
+	}
+}
+
+func ParseWindow(value string) (Window, error) {
+	switch Window(value) {
+	case WindowDay, WindowWeek, WindowMonth:
+		return Window(value), nil
+	default:
+		return "", fmt.Errorf("%w: %q", ErrInvalidWindow, value)
+	}
+}
+
+// Scope is whose verdicts a leaderboard replays. ScopeAll is a flag, never an account id:
+// it aggregates every account's verdicts into per-model figures and names no account,
+// experiment, output or note (MODEL-41).
+type Scope string
+
+const (
+	ScopeMe  Scope = "me"
+	ScopeAll Scope = "all"
+)
+
+func ParseScope(value string) (Scope, error) {
+	switch Scope(value) {
+	case ScopeMe, ScopeAll:
+		return Scope(value), nil
+	default:
+		return "", fmt.Errorf("%w: %q", ErrInvalidScope, value)
+	}
+}
+
 // PostStatusFinalized is the one post status this context reacts to, mirrored as a plain
 // string because the domain imports no other context's types (ARCH-7). The adapter that
 // implements PostDirectory is what keeps the two spellings in step.
@@ -105,6 +155,12 @@ type Usage struct {
 }
 
 type Candidate struct {
+	// Badges and OtherNote are verdict metadata: written once with the verdict, immutable
+	// afterwards, and never weighed into a rating (MODEL-63). They are revealed with the
+	// candidate's identity, never before it.
+	Badges    []Badge
+	OtherNote string
+
 	ID           string
 	ExperimentID string
 	Model        ModelRef
@@ -278,4 +334,7 @@ var (
 	ErrVoiceRequired         = errors.New("an active voice is required to compare analyze models")
 	ErrVoiceUnavailable      = errors.New("the voice this comparison belongs to is deleted or unknown")
 	ErrPostFinalized         = errors.New("a finalized post cannot take a comparison result")
+	ErrInvalidWindow         = errors.New("invalid leaderboard window")
+	ErrInvalidScope          = errors.New("invalid leaderboard scope")
+	ErrBadgesInvalid         = errors.New("the badges offered with this verdict are not ones it can carry")
 )

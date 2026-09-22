@@ -1,7 +1,13 @@
 import { useMutation, useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
 import { appFailureFromConnect, ModelExperimentService } from '@/shared/api'
-import { experimentQueryKey, experimentsQueryKey, leaderboardQueryKey } from './experiment-mappers'
+import type { CandidateBadges } from '../model/badges'
+import {
+  badgesToProto,
+  experimentQueryKey,
+  experimentsQueryKey,
+  leaderboardQueriesKey,
+} from './experiment-mappers'
 
 export function useExperimentActions(id: string, onChanged?: () => Promise<unknown>) {
   const transport = useTransport()
@@ -19,23 +25,32 @@ export function useExperimentActions(id: string, onChanged?: () => Promise<unkno
       ...[undefined, 1, 2, 3].map((stage) =>
         queryClient.invalidateQueries({ queryKey: experimentsQueryKey(transport, stage) }),
       ),
-      ...[1, 2, 3].map((stage) =>
-        queryClient.invalidateQueries({ queryKey: leaderboardQueryKey(transport, stage) }),
-      ),
+      // Every board at once: a verdict lands in its own window and in every wider one, on
+      // the account's board and on the shared one.
+      queryClient.invalidateQueries({ queryKey: leaderboardQueriesKey(transport) }),
     ])
     await onChanged?.()
   }
   return {
-    choose: async (candidateId: string) => {
-      const value = await choose.mutateAsync({ experimentId: id, candidateId })
+    choose: async (candidateId: string, badges: CandidateBadges[] = []) => {
+      const value = await choose.mutateAsync({
+        experimentId: id,
+        candidateId,
+        badges: badgesToProto(badges),
+      })
       await refresh()
       return value
     },
-    decideWrite: async (candidateId: string, adoptWinnerModel: boolean) => {
+    decideWrite: async (
+      candidateId: string,
+      adoptWinnerModel: boolean,
+      badges: CandidateBadges[] = [],
+    ) => {
       const value = await decideWrite.mutateAsync({
         experimentId: id,
         candidateId,
         adoptWinnerModel,
+        badges: badgesToProto(badges),
       })
       await refresh()
       return value

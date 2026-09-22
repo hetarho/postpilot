@@ -4,6 +4,14 @@ import type { I18nFragment } from '@/shared/lib'
 export const i18n = {
   namespace: 'models',
   ko: {
+    verdict: {
+      badgesOptional: '고른 이유를 남기면 다음 비교에 도움이 돼요. 안 골라도 그대로 확정돼요.',
+      chosen: '선택한 결과 {{label}}',
+      unchosen: '선택하지 않은 결과 {{label}}',
+      positive: '좋았던 점',
+      negative: '아쉬운 점',
+      noteLabel: '기타 이유',
+    },
     actions: {
       retryFailed: '실패 후보 재시도',
       dismiss: '둘 다 사용하지 않기',
@@ -29,6 +37,15 @@ export const i18n = {
     },
   },
   en: {
+    verdict: {
+      badgesOptional:
+        'Telling us why helps the next comparison. Leaving it blank confirms just the same.',
+      chosen: 'Chosen result {{label}}',
+      unchosen: 'Result you did not choose, {{label}}',
+      positive: 'What was good',
+      negative: 'What fell short',
+      noteLabel: 'Other reason',
+    },
     actions: {
       retryFailed: 'Retry failed candidate',
       dismiss: 'Use neither result',

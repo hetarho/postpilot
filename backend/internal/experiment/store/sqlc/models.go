@@ -42,6 +42,13 @@ type ModelExperiment struct {
 	ApplyRequested          int64
 }
 
+type ModelExperimentBadge struct {
+	ExperimentID string
+	CandidateID  string
+	Badge        string
+	Note         sql.NullString
+}
+
 type ModelExperimentCandidate struct {
 	ID               string
 	ExperimentID     string

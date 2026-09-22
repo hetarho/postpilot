@@ -83,7 +83,7 @@ func TestStorePersistsVoiceAndCountsPublishableWork(t *testing.T) {
 		t.Fatal("review does not hold the voice")
 	}
 	decided := now.Add(2 * time.Second)
-	if changed, err := store.Decide(ctx, found.ID, "alice", found.Candidates[0].ID, experiment.StatusDecided, experiment.OutcomeWinner, true, false, decided, decided.Add(time.Hour)); err != nil || !changed {
+	if changed, err := store.Decide(ctx, found.ID, "alice", found.Candidates[0].ID, experiment.StatusDecided, experiment.OutcomeWinner, true, false, nil, decided, decided.Add(time.Hour)); err != nil || !changed {
 		t.Fatalf("decide = %v, %v", changed, err)
 	}
 	if count("alice", "voice-alice") != 1 {
@@ -253,7 +253,7 @@ func TestStorePreservesSiblingOutputAndPurgesPrivateContent(t *testing.T) {
 		t.Fatalf("failure params alias store state: %+v, err=%v", reloadedAgain.Candidates[1], err)
 	}
 	decided := now.Add(2 * time.Second)
-	changed, err := store.Decide(ctx, found.ID, "alice", left.ID, experiment.StatusDecided, experiment.OutcomeUnpaired, true, false, decided, decided)
+	changed, err := store.Decide(ctx, found.ID, "alice", left.ID, experiment.StatusDecided, experiment.OutcomeUnpaired, true, false, nil, decided, decided)
 	if err != nil || !changed {
 		t.Fatalf("decide = %v, %v", changed, err)
 	}
@@ -552,7 +552,7 @@ func TestPendingWriteKeepsUnappliedVerdictRecoverable(t *testing.T) {
 		t.Fatal(err)
 	}
 	decided := now.Add(2 * time.Second)
-	if changed, err := store.Decide(ctx, found.ID, "alice", found.Candidates[0].ID, experiment.StatusDecided, experiment.OutcomeWinner, true, true, decided, decided.Add(30*24*time.Hour)); err != nil || !changed {
+	if changed, err := store.Decide(ctx, found.ID, "alice", found.Candidates[0].ID, experiment.StatusDecided, experiment.OutcomeWinner, true, true, nil, decided, decided.Add(30*24*time.Hour)); err != nil || !changed {
 		t.Fatalf("decide = %v, %v", changed, err)
 	}
 	if pending, err := store.PendingForPost(ctx, "alice", "post-a"); err != nil || pending == nil || pending.ID != found.ID {
@@ -641,7 +641,7 @@ func TestLabPickReleasesThePostAndAnAskedApplicationHoldsIt(t *testing.T) {
 			t.Fatalf("lab round trip = %+v, %v", reloaded, err)
 		}
 		decided := now.Add(time.Second)
-		if changed, err := store.Decide(ctx, found.ID, "alice", found.Candidates[0].ID, experiment.StatusDecided, experiment.OutcomeWinner, false, false, decided, decided.Add(time.Hour)); err != nil || !changed {
+		if changed, err := store.Decide(ctx, found.ID, "alice", found.Candidates[0].ID, experiment.StatusDecided, experiment.OutcomeWinner, false, false, nil, decided, decided.Add(time.Hour)); err != nil || !changed {
 			t.Fatalf("decide = %v, %v", changed, err)
 		}
 		if pending, err := store.PendingForPost(ctx, "alice", "post-a"); err != nil || pending != nil {
@@ -665,7 +665,7 @@ func TestLabPickReleasesThePostAndAnAskedApplicationHoldsIt(t *testing.T) {
 			t.Fatal(err)
 		}
 		decided := now.Add(time.Second)
-		if changed, err := store.Decide(ctx, found.ID, "alice", found.Candidates[0].ID, experiment.StatusDecided, experiment.OutcomeWinner, false, false, decided, decided.Add(time.Hour)); err != nil || !changed {
+		if changed, err := store.Decide(ctx, found.ID, "alice", found.Candidates[0].ID, experiment.StatusDecided, experiment.OutcomeWinner, false, false, nil, decided, decided.Add(time.Hour)); err != nil || !changed {
 			t.Fatalf("decide = %v, %v", changed, err)
 		}
 		if err := store.SetApplyRequested(ctx, found.ID, "alice"); err != nil {
@@ -695,4 +695,313 @@ func TestLabPickReleasesThePostAndAnAskedApplicationHoldsIt(t *testing.T) {
 			t.Fatalf("repeat ask revived the debt = %+v, %v", pending, err)
 		}
 	})
+}
+
+// The board's two scopes read the same rows through different predicates: `me` is the
+// caller's own verdicts, `all` is every account's. Both are bounded by the window, and both
+// leave a comparison still awaiting its verdict out of the call accounting.
+func TestLeaderboardDataFollowsItsScopeAndWindow(t *testing.T) {
+	store, handle := testStore(t)
+	ctx := context.Background()
+	now := time.Date(2026, 9, 22, 12, 0, 0, 0, time.UTC)
+	if _, err := handle.Writer.ExecContext(ctx,
+		`INSERT INTO posts(slug,user_id,voice_id,created_at,updated_at) VALUES('post-c','alice','voice-alice',?,?)`,
+		"2026-08-29T00:00:00Z", "2026-08-29T00:00:00Z"); err != nil {
+		t.Fatal(err)
+	}
+	decide := func(id, user, slug string, at time.Time) {
+		t.Helper()
+		found := sample(id, user, slug, at)
+		found.Origin = experiment.OriginLab
+		if err := store.Create(ctx, found); err != nil {
+			t.Fatal(err)
+		}
+		for _, candidate := range found.Candidates {
+			candidate.Status = experiment.CandidateSucceeded
+			candidate.Output = []byte(`{"title":"ok"}`)
+			candidate.FinishedAt = &at
+			if err := store.CompleteCandidate(ctx, candidate); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if err := store.SetStatus(ctx, id, experiment.StatusReview, &at); err != nil {
+			t.Fatal(err)
+		}
+		if changed, err := store.Decide(ctx, id, user, found.Candidates[0].ID, experiment.StatusDecided,
+			experiment.OutcomeWinner, false, false, nil, at, at.Add(time.Hour)); err != nil || !changed {
+			t.Fatalf("decide %s = %v, %v", id, changed, err)
+		}
+	}
+	decide("exp-mine-fresh", "alice", "post-a", now.Add(-2*time.Hour))
+	decide("exp-mine-stale", "alice", "post-c", now.Add(-20*24*time.Hour))
+	decide("exp-theirs", "bob", "post-b", now.Add(-3*time.Hour))
+	// Still awaiting its verdict: it belongs to no board.
+	undecided := sample("exp-open", "alice", "", now.Add(-time.Hour))
+	undecided.Stage, undecided.Origin, undecided.TargetLanguage = experiment.StageObserve, experiment.OriginLab, nil
+	if err := store.Create(ctx, undecided); err != nil {
+		t.Fatal(err)
+	}
+
+	week := now.Add(-7 * 24 * time.Hour)
+	mine, mineCalls, _, err := store.LeaderboardData(ctx, "alice", experiment.StageWrite, week, experiment.ScopeMe)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(mine) != 1 || mine[0].ID != "exp-mine-fresh" || len(mineCalls) != 2 {
+		t.Fatalf("my week = %d verdicts %d calls (%+v)", len(mine), len(mineCalls), mine)
+	}
+	all, allCalls, _, err := store.LeaderboardData(ctx, "alice", experiment.StageWrite, week, experiment.ScopeAll)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(all) != 2 || len(allCalls) != 4 {
+		t.Fatalf("the shared week = %d verdicts %d calls (%+v)", len(all), len(allCalls), all)
+	}
+	// Verdicts arrive in decision order, which is the order the replay depends on.
+	if all[0].ID != "exp-theirs" || all[1].ID != "exp-mine-fresh" {
+		t.Fatalf("shared verdicts out of decision order: %s then %s", all[0].ID, all[1].ID)
+	}
+	month, _, _, err := store.LeaderboardData(ctx, "alice", experiment.StageWrite, now.Add(-30*24*time.Hour), experiment.ScopeMe)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(month) != 2 {
+		t.Fatalf("my month = %d verdicts, want the stale one back (%+v)", len(month), month)
+	}
+	observe, observeCalls, _, err := store.LeaderboardData(ctx, "alice", experiment.StageObserve, week, experiment.ScopeAll)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(observe) != 0 || len(observeCalls) != 0 {
+		t.Fatalf("an undecided comparison reached a board: %d verdicts %d calls", len(observe), len(observeCalls))
+	}
+}
+
+// Target language does not partition the board (LANG-18): two comparisons frozen to
+// different targets replay onto the same one.
+func TestLeaderboardDataDoesNotPartitionByTargetLanguage(t *testing.T) {
+	store, _ := testStore(t)
+	ctx := context.Background()
+	now := time.Date(2026, 9, 22, 12, 0, 0, 0, time.UTC)
+	english := experiment.LanguageEnglish
+	for i, target := range []*experiment.Language{nil, &english} {
+		id := []string{"exp-ko", "exp-en"}[i]
+		slug := []string{"post-a", "post-b"}[i]
+		user := []string{"alice", "bob"}[i]
+		found := sample(id, user, slug, now.Add(-time.Duration(i+1)*time.Hour))
+		found.Origin = experiment.OriginLab
+		if target != nil {
+			found.TargetLanguage = target
+		}
+		if err := store.Create(ctx, found); err != nil {
+			t.Fatal(err)
+		}
+		at := now.Add(-time.Duration(i+1) * time.Hour)
+		if err := store.SetStatus(ctx, id, experiment.StatusReview, &at); err != nil {
+			t.Fatal(err)
+		}
+		if changed, err := store.Decide(ctx, id, user, found.Candidates[0].ID, experiment.StatusDecided,
+			experiment.OutcomeWinner, false, false, nil, at, at.Add(time.Hour)); err != nil || !changed {
+			t.Fatalf("decide %s = %v, %v", id, changed, err)
+		}
+	}
+	all, _, _, err := store.LeaderboardData(ctx, "alice", experiment.StageWrite, now.Add(-7*24*time.Hour), experiment.ScopeAll)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(all) != 2 {
+		t.Fatalf("target language partitioned the board: %+v", all)
+	}
+}
+
+// Badges ride the verdict's own transaction, survive a reload, and their free note leaves
+// with the rest of the private payload while the ids stay for a board to tally (MODEL-42).
+func TestVerdictBadgesArePersistedAndTheirNotesPurged(t *testing.T) {
+	store, handle := testStore(t)
+	ctx := context.Background()
+	now := time.Date(2026, 9, 22, 12, 0, 0, 0, time.UTC)
+	found := sample("exp-badges", "alice", "post-a", now)
+	found.Origin = experiment.OriginLab
+	if err := store.Create(ctx, found); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.SetStatus(ctx, found.ID, experiment.StatusReview, &now); err != nil {
+		t.Fatal(err)
+	}
+	decided := now.Add(time.Second)
+	badges := []experiment.CandidateBadges{
+		{CandidateID: found.Candidates[0].ID, Badges: []experiment.Badge{experiment.BadgeFast, experiment.BadgeAccurate}},
+		{CandidateID: found.Candidates[1].ID, Badges: []experiment.Badge{experiment.BadgeOther}, OtherNote: "형식이 흔들려요"},
+	}
+	if changed, err := store.Decide(ctx, found.ID, "alice", found.Candidates[0].ID, experiment.StatusDecided,
+		experiment.OutcomeWinner, false, false, badges, decided, decided); err != nil || !changed {
+		t.Fatalf("decide = %v, %v", changed, err)
+	}
+	reloaded, err := store.Get(ctx, found.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, candidate := range reloaded.Candidates {
+		switch candidate.ID {
+		case found.Candidates[0].ID:
+			if len(candidate.Badges) != 2 {
+				t.Fatalf("winner badges = %v", candidate.Badges)
+			}
+		case found.Candidates[1].ID:
+			if candidate.OtherNote != "형식이 흔들려요" {
+				t.Fatalf("loser note = %q", candidate.OtherNote)
+			}
+		}
+	}
+	if _, err := store.PurgeExpired(ctx, decided.Add(time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	purged, err := store.Get(ctx, found.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	kept := 0
+	for _, candidate := range purged.Candidates {
+		kept += len(candidate.Badges)
+		if candidate.OtherNote != "" {
+			t.Fatalf("a private note outlived the retention window: %q", candidate.OtherNote)
+		}
+	}
+	if kept != 3 {
+		t.Fatalf("badge ids kept = %d, want all three", kept)
+	}
+	// The row itself is gone with the experiment, never orphaned.
+	if _, err := handle.Writer.ExecContext(ctx, `DELETE FROM model_experiments WHERE id = ?`, found.ID); err != nil {
+		t.Fatal(err)
+	}
+	var orphans int
+	if err := handle.Reader.QueryRowContext(ctx,
+		`SELECT count(*) FROM model_experiment_badges WHERE experiment_id = ?`, found.ID).Scan(&orphans); err != nil {
+		t.Fatal(err)
+	}
+	if orphans != 0 {
+		t.Fatalf("badges outlived their experiment: %d", orphans)
+	}
+}
+
+// A verdict written again replaces its explanation rather than accumulating one.
+func TestVerdictBadgesAreReplacedRatherThanAccumulated(t *testing.T) {
+	store, _ := testStore(t)
+	ctx := context.Background()
+	now := time.Date(2026, 9, 22, 12, 0, 0, 0, time.UTC)
+	found := sample("exp-replace", "alice", "post-a", now)
+	found.Origin = experiment.OriginLab
+	if err := store.Create(ctx, found); err != nil {
+		t.Fatal(err)
+	}
+	decide := func(badge experiment.Badge) {
+		t.Helper()
+		if err := store.SetStatus(ctx, found.ID, experiment.StatusReview, &now); err != nil {
+			t.Fatal(err)
+		}
+		if changed, err := store.Decide(ctx, found.ID, "alice", found.Candidates[0].ID, experiment.StatusDecided,
+			experiment.OutcomeWinner, false, false,
+			[]experiment.CandidateBadges{{CandidateID: found.Candidates[0].ID, Badges: []experiment.Badge{badge}}},
+			now.Add(time.Second), now.Add(time.Hour)); err != nil || !changed {
+			t.Fatalf("decide = %v, %v", changed, err)
+		}
+	}
+	decide(experiment.BadgeFast)
+	decide(experiment.BadgeConcise)
+	reloaded, err := store.Get(ctx, found.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, candidate := range reloaded.Candidates {
+		if candidate.ID != found.Candidates[0].ID {
+			continue
+		}
+		if len(candidate.Badges) != 1 || candidate.Badges[0] != experiment.BadgeConcise {
+			t.Fatalf("badges accumulated across verdicts: %v", candidate.Badges)
+		}
+	}
+}
+
+// The board's tallies are grouped by the model a candidate ran, not by the candidate, and
+// they follow the same scope and window the ratings do. The note is never selected.
+func TestBadgeTalliesFollowTheBoardsScopeAndWindow(t *testing.T) {
+	store, handle := testStore(t)
+	ctx := context.Background()
+	now := time.Date(2026, 9, 22, 12, 0, 0, 0, time.UTC)
+	if _, err := handle.Writer.ExecContext(ctx,
+		`INSERT INTO posts(slug,user_id,voice_id,created_at,updated_at) VALUES('post-c','alice','voice-alice',?,?)`,
+		"2026-08-29T00:00:00Z", "2026-08-29T00:00:00Z"); err != nil {
+		t.Fatal(err)
+	}
+	decide := func(id, user, slug string, at time.Time, badges []experiment.CandidateBadges) {
+		t.Helper()
+		found := sample(id, user, slug, at)
+		found.Origin = experiment.OriginLab
+		if err := store.Create(ctx, found); err != nil {
+			t.Fatal(err)
+		}
+		if err := store.SetStatus(ctx, id, experiment.StatusReview, &at); err != nil {
+			t.Fatal(err)
+		}
+		for i := range badges {
+			badges[i].CandidateID = found.Candidates[i].ID
+		}
+		if changed, err := store.Decide(ctx, id, user, found.Candidates[0].ID, experiment.StatusDecided,
+			experiment.OutcomeWinner, false, false, badges, at, at.Add(time.Hour)); err != nil || !changed {
+			t.Fatalf("decide %s = %v, %v", id, changed, err)
+		}
+	}
+	// Two of my own comparisons in the week, one of them older than a day, plus one that is
+	// someone else's and one of mine that aged out of the month.
+	decide("exp-1", "alice", "post-a", now.Add(-2*time.Hour), []experiment.CandidateBadges{
+		{Badges: []experiment.Badge{experiment.BadgeFast}},
+		{Badges: []experiment.Badge{experiment.BadgeSlow, experiment.BadgeOther}, OtherNote: "사적인 메모"},
+	})
+	decide("exp-2", "alice", "post-c", now.Add(-3*24*time.Hour), []experiment.CandidateBadges{
+		{Badges: []experiment.Badge{experiment.BadgeFast}},
+	})
+	decide("exp-3", "bob", "post-b", now.Add(-4*time.Hour), []experiment.CandidateBadges{
+		{Badges: []experiment.Badge{experiment.BadgeFast}},
+	})
+
+	countOf := func(tallies []experiment.BadgeTally, model string, badge experiment.Badge) int {
+		for _, tally := range tallies {
+			if tally.Model.ModelID == model && tally.Badge == badge {
+				return tally.Count
+			}
+		}
+		return 0
+	}
+
+	_, _, day, err := store.LeaderboardData(ctx, "alice", experiment.StageWrite, now.Add(-24*time.Hour), experiment.ScopeMe)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if countOf(day, "a", experiment.BadgeFast) != 1 || countOf(day, "b", experiment.BadgeSlow) != 1 {
+		t.Fatalf("day tallies = %+v", day)
+	}
+	_, _, week, err := store.LeaderboardData(ctx, "alice", experiment.StageWrite, now.Add(-7*24*time.Hour), experiment.ScopeMe)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The same model earned the same badge in two of my comparisons: one row, count two.
+	if countOf(week, "a", experiment.BadgeFast) != 2 {
+		t.Fatalf("week tallies did not group by model: %+v", week)
+	}
+	_, _, all, err := store.LeaderboardData(ctx, "alice", experiment.StageWrite, now.Add(-7*24*time.Hour), experiment.ScopeAll)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if countOf(all, "a", experiment.BadgeFast) != 3 {
+		t.Fatalf("shared tallies = %+v", all)
+	}
+	// `other` is counted; its note is not part of a tally at all.
+	if countOf(week, "b", experiment.BadgeOther) != 1 {
+		t.Fatalf("other was not counted: %+v", week)
+	}
+	for _, tally := range all {
+		if tally.Badge == "" || tally.Count <= 0 {
+			t.Fatalf("a tally carried nothing usable: %+v", tally)
+		}
+	}
 }

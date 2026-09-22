@@ -10,6 +10,17 @@ import (
 	"database/sql"
 )
 
+const clearVerdictBadges = `-- name: ClearVerdictBadges :exec
+DELETE FROM model_experiment_badges WHERE experiment_id = ?
+`
+
+// A verdict may be recorded again on the same comparison (an application retry replays it),
+// so the badge rows are replaced with the verdict rather than accumulated across attempts.
+func (q *Queries) ClearVerdictBadges(ctx context.Context, experimentID string) error {
+	_, err := q.db.ExecContext(ctx, clearVerdictBadges, experimentID)
+	return err
+}
+
 const completeCandidate = `-- name: CompleteCandidate :execrows
 UPDATE model_experiment_candidates
 SET status = ?, output = ?, error = NULL, error_reason = ?, error_params = ?,
@@ -348,6 +359,135 @@ func (q *Queries) InsertExperiment(ctx context.Context, arg InsertExperimentPara
 	return err
 }
 
+const insertVerdictBadge = `-- name: InsertVerdictBadge :exec
+INSERT INTO model_experiment_badges (experiment_id, candidate_id, badge, note)
+VALUES (?, ?, ?, ?)
+ON CONFLICT (experiment_id, candidate_id, badge) DO NOTHING
+`
+
+type InsertVerdictBadgeParams struct {
+	ExperimentID string
+	CandidateID  string
+	Badge        string
+	Note         sql.NullString
+}
+
+// Written in the same transaction as the verdict it explains. A repeat of the same badge for
+// the same candidate is the same row, so a retried write changes nothing.
+func (q *Queries) InsertVerdictBadge(ctx context.Context, arg InsertVerdictBadgeParams) error {
+	_, err := q.db.ExecContext(ctx, insertVerdictBadge,
+		arg.ExperimentID,
+		arg.CandidateID,
+		arg.Badge,
+		arg.Note,
+	)
+	return err
+}
+
+const listBadgeTalliesForLeaderboard = `-- name: ListBadgeTalliesForLeaderboard :many
+SELECT c.model_provider_id, c.model_id, b.badge, count(*) AS total
+FROM model_experiment_badges b
+JOIN model_experiment_candidates c ON c.experiment_id = b.experiment_id AND c.id = b.candidate_id
+JOIN model_experiments e ON e.id = b.experiment_id
+WHERE e.user_id = ? AND e.stage = ? AND e.outcome = 'winner'
+  AND e.decided_at IS NOT NULL AND e.decided_at >= ?
+GROUP BY c.model_provider_id, c.model_id, b.badge
+`
+
+type ListBadgeTalliesForLeaderboardParams struct {
+	UserID    string
+	Stage     string
+	DecidedAt sql.NullString
+}
+
+type ListBadgeTalliesForLeaderboardRow struct {
+	ModelProviderID string
+	ModelID         string
+	Badge           string
+	Total           int64
+}
+
+// How often each model earned each badge inside this board's window. Grouped by the model a
+// candidate ran, not by the candidate: a board ranks models, and two comparisons of the same
+// model are the same row here. The note is deliberately not selected.
+func (q *Queries) ListBadgeTalliesForLeaderboard(ctx context.Context, arg ListBadgeTalliesForLeaderboardParams) ([]ListBadgeTalliesForLeaderboardRow, error) {
+	rows, err := q.db.QueryContext(ctx, listBadgeTalliesForLeaderboard, arg.UserID, arg.Stage, arg.DecidedAt)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListBadgeTalliesForLeaderboardRow
+	for rows.Next() {
+		var i ListBadgeTalliesForLeaderboardRow
+		if err := rows.Scan(
+			&i.ModelProviderID,
+			&i.ModelID,
+			&i.Badge,
+			&i.Total,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listBadgeTalliesForLeaderboardAll = `-- name: ListBadgeTalliesForLeaderboardAll :many
+SELECT c.model_provider_id, c.model_id, b.badge, count(*) AS total
+FROM model_experiment_badges b
+JOIN model_experiment_candidates c ON c.experiment_id = b.experiment_id AND c.id = b.candidate_id
+JOIN model_experiments e ON e.id = b.experiment_id
+WHERE e.stage = ? AND e.outcome = 'winner'
+  AND e.decided_at IS NOT NULL AND e.decided_at >= ?
+GROUP BY c.model_provider_id, c.model_id, b.badge
+`
+
+type ListBadgeTalliesForLeaderboardAllParams struct {
+	Stage     string
+	DecidedAt sql.NullString
+}
+
+type ListBadgeTalliesForLeaderboardAllRow struct {
+	ModelProviderID string
+	ModelID         string
+	Badge           string
+	Total           int64
+}
+
+func (q *Queries) ListBadgeTalliesForLeaderboardAll(ctx context.Context, arg ListBadgeTalliesForLeaderboardAllParams) ([]ListBadgeTalliesForLeaderboardAllRow, error) {
+	rows, err := q.db.QueryContext(ctx, listBadgeTalliesForLeaderboardAll, arg.Stage, arg.DecidedAt)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListBadgeTalliesForLeaderboardAllRow
+	for rows.Next() {
+		var i ListBadgeTalliesForLeaderboardAllRow
+		if err := rows.Scan(
+			&i.ModelProviderID,
+			&i.ModelID,
+			&i.Badge,
+			&i.Total,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listCandidates = `-- name: ListCandidates :many
 SELECT id, experiment_id, model_provider_id, model_id, model_label, display_side, status, output, error, prompt_tokens, completion_tokens, cost_microusd, cost_source, latency_ms, started_at, finished_at, error_reason, error_params, technical_detail FROM model_experiment_candidates WHERE experiment_id = ? ORDER BY display_side
 `
@@ -399,16 +539,78 @@ const listCandidatesForLeaderboard = `-- name: ListCandidatesForLeaderboard :man
 SELECT c.id, c.experiment_id, c.model_provider_id, c.model_id, c.model_label, c.display_side, c.status, c.output, c.error, c.prompt_tokens, c.completion_tokens, c.cost_microusd, c.cost_source, c.latency_ms, c.started_at, c.finished_at, c.error_reason, c.error_params, c.technical_detail FROM model_experiment_candidates c
 JOIN model_experiments e ON e.id = c.experiment_id
 WHERE e.user_id = ? AND e.stage = ?
+  AND e.status IN ('decided', 'dismissed')
+  AND e.decided_at IS NOT NULL AND e.decided_at >= ?
 ORDER BY e.decided_at, e.id, c.display_side
 `
 
 type ListCandidatesForLeaderboardParams struct {
-	UserID string
-	Stage  string
+	UserID    string
+	Stage     string
+	DecidedAt sql.NullString
 }
 
+// The call accounting beside those verdicts, from the comparisons that were resolved inside
+// the same window: a comparison still awaiting a verdict has not earned a place on a board.
 func (q *Queries) ListCandidatesForLeaderboard(ctx context.Context, arg ListCandidatesForLeaderboardParams) ([]ModelExperimentCandidate, error) {
-	rows, err := q.db.QueryContext(ctx, listCandidatesForLeaderboard, arg.UserID, arg.Stage)
+	rows, err := q.db.QueryContext(ctx, listCandidatesForLeaderboard, arg.UserID, arg.Stage, arg.DecidedAt)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ModelExperimentCandidate
+	for rows.Next() {
+		var i ModelExperimentCandidate
+		if err := rows.Scan(
+			&i.ID,
+			&i.ExperimentID,
+			&i.ModelProviderID,
+			&i.ModelID,
+			&i.ModelLabel,
+			&i.DisplaySide,
+			&i.Status,
+			&i.Output,
+			&i.Error,
+			&i.PromptTokens,
+			&i.CompletionTokens,
+			&i.CostMicrousd,
+			&i.CostSource,
+			&i.LatencyMs,
+			&i.StartedAt,
+			&i.FinishedAt,
+			&i.ErrorReason,
+			&i.ErrorParams,
+			&i.TechnicalDetail,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listCandidatesForLeaderboardAll = `-- name: ListCandidatesForLeaderboardAll :many
+SELECT c.id, c.experiment_id, c.model_provider_id, c.model_id, c.model_label, c.display_side, c.status, c.output, c.error, c.prompt_tokens, c.completion_tokens, c.cost_microusd, c.cost_source, c.latency_ms, c.started_at, c.finished_at, c.error_reason, c.error_params, c.technical_detail FROM model_experiment_candidates c
+JOIN model_experiments e ON e.id = c.experiment_id
+WHERE e.stage = ?
+  AND e.status IN ('decided', 'dismissed')
+  AND e.decided_at IS NOT NULL AND e.decided_at >= ?
+ORDER BY e.decided_at, e.id, c.display_side
+`
+
+type ListCandidatesForLeaderboardAllParams struct {
+	Stage     string
+	DecidedAt sql.NullString
+}
+
+func (q *Queries) ListCandidatesForLeaderboardAll(ctx context.Context, arg ListCandidatesForLeaderboardAllParams) ([]ModelExperimentCandidate, error) {
+	rows, err := q.db.QueryContext(ctx, listCandidatesForLeaderboardAll, arg.Stage, arg.DecidedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -453,16 +655,89 @@ func (q *Queries) ListCandidatesForLeaderboard(ctx context.Context, arg ListCand
 const listDecidedForLeaderboard = `-- name: ListDecidedForLeaderboard :many
 SELECT id, user_id, post_slug, voice_id, stage, status, job_id, input_snapshot, input_hash, prompt_version, winner_candidate_id, outcome, apply_error, applied_at, created_at, finished_at, decided_at, content_expires_at, adoption_error, adopted_at, adoption_requested, template_name, target_language, apply_error_reason, apply_error_params, apply_technical_detail, adoption_error_reason, adoption_error_params, adoption_technical_detail, origin, apply_requested FROM model_experiments
 WHERE user_id = ? AND stage = ? AND outcome = 'winner' AND winner_candidate_id IS NOT NULL
+  AND decided_at IS NOT NULL AND decided_at >= ?
 ORDER BY decided_at, id
 `
 
 type ListDecidedForLeaderboardParams struct {
-	UserID string
-	Stage  string
+	UserID    string
+	Stage     string
+	DecidedAt sql.NullString
 }
 
+// The winner verdicts one account reached inside the window. decided_at is stored in a
+// fixed-width UTC layout, so the string comparison is the chronological one.
 func (q *Queries) ListDecidedForLeaderboard(ctx context.Context, arg ListDecidedForLeaderboardParams) ([]ModelExperiment, error) {
-	rows, err := q.db.QueryContext(ctx, listDecidedForLeaderboard, arg.UserID, arg.Stage)
+	rows, err := q.db.QueryContext(ctx, listDecidedForLeaderboard, arg.UserID, arg.Stage, arg.DecidedAt)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ModelExperiment
+	for rows.Next() {
+		var i ModelExperiment
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.PostSlug,
+			&i.VoiceID,
+			&i.Stage,
+			&i.Status,
+			&i.JobID,
+			&i.InputSnapshot,
+			&i.InputHash,
+			&i.PromptVersion,
+			&i.WinnerCandidateID,
+			&i.Outcome,
+			&i.ApplyError,
+			&i.AppliedAt,
+			&i.CreatedAt,
+			&i.FinishedAt,
+			&i.DecidedAt,
+			&i.ContentExpiresAt,
+			&i.AdoptionError,
+			&i.AdoptedAt,
+			&i.AdoptionRequested,
+			&i.TemplateName,
+			&i.TargetLanguage,
+			&i.ApplyErrorReason,
+			&i.ApplyErrorParams,
+			&i.ApplyTechnicalDetail,
+			&i.AdoptionErrorReason,
+			&i.AdoptionErrorParams,
+			&i.AdoptionTechnicalDetail,
+			&i.Origin,
+			&i.ApplyRequested,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listDecidedForLeaderboardAll = `-- name: ListDecidedForLeaderboardAll :many
+SELECT id, user_id, post_slug, voice_id, stage, status, job_id, input_snapshot, input_hash, prompt_version, winner_candidate_id, outcome, apply_error, applied_at, created_at, finished_at, decided_at, content_expires_at, adoption_error, adopted_at, adoption_requested, template_name, target_language, apply_error_reason, apply_error_params, apply_technical_detail, adoption_error_reason, adoption_error_params, adoption_technical_detail, origin, apply_requested FROM model_experiments
+WHERE stage = ? AND outcome = 'winner' AND winner_candidate_id IS NOT NULL
+  AND decided_at IS NOT NULL AND decided_at >= ?
+ORDER BY decided_at, id
+`
+
+type ListDecidedForLeaderboardAllParams struct {
+	Stage     string
+	DecidedAt sql.NullString
+}
+
+// The same, over every account. Only the candidates' model refs leave this query, so no
+// account, experiment or output reaches the board it feeds.
+func (q *Queries) ListDecidedForLeaderboardAll(ctx context.Context, arg ListDecidedForLeaderboardAllParams) ([]ModelExperiment, error) {
+	rows, err := q.db.QueryContext(ctx, listDecidedForLeaderboardAll, arg.Stage, arg.DecidedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -637,6 +912,40 @@ func (q *Queries) ListQueuedExperimentIDs(ctx context.Context) ([]string, error)
 	return items, nil
 }
 
+const listVerdictBadges = `-- name: ListVerdictBadges :many
+SELECT experiment_id, candidate_id, badge, note FROM model_experiment_badges
+WHERE experiment_id = ?
+ORDER BY candidate_id, badge
+`
+
+func (q *Queries) ListVerdictBadges(ctx context.Context, experimentID string) ([]ModelExperimentBadge, error) {
+	rows, err := q.db.QueryContext(ctx, listVerdictBadges, experimentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ModelExperimentBadge
+	for rows.Next() {
+		var i ModelExperimentBadge
+		if err := rows.Scan(
+			&i.ExperimentID,
+			&i.CandidateID,
+			&i.Badge,
+			&i.Note,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const pendingWriteForPost = `-- name: PendingWriteForPost :one
 SELECT id, user_id, post_slug, voice_id, stage, status, job_id, input_snapshot, input_hash, prompt_version, winner_candidate_id, outcome, apply_error, applied_at, created_at, finished_at, decided_at, content_expires_at, adoption_error, adopted_at, adoption_requested, template_name, target_language, apply_error_reason, apply_error_params, apply_technical_detail, adoption_error_reason, adoption_error_params, adoption_technical_detail, origin, apply_requested FROM model_experiments
 WHERE user_id = ? AND post_slug = ? AND stage = 'write'
@@ -694,6 +1003,22 @@ func (q *Queries) PendingWriteForPost(ctx context.Context, arg PendingWriteForPo
 	return i, err
 }
 
+const purgeExpiredBadgeNotes = `-- name: PurgeExpiredBadgeNotes :exec
+UPDATE model_experiment_badges SET note = NULL
+WHERE experiment_id IN (
+  SELECT id FROM model_experiments
+  WHERE content_expires_at IS NOT NULL AND content_expires_at <= ?
+    AND status IN ('decided', 'dismissed')
+)
+`
+
+// The free note is private payload and leaves with the rest of it; the badge ids stay, so a
+// leaderboard can still tally what a model earned (MODEL-42).
+func (q *Queries) PurgeExpiredBadgeNotes(ctx context.Context, contentExpiresAt sql.NullString) error {
+	_, err := q.db.ExecContext(ctx, purgeExpiredBadgeNotes, contentExpiresAt)
+	return err
+}
+
 const purgeExpiredCandidateOutput = `-- name: PurgeExpiredCandidateOutput :execrows
 UPDATE model_experiment_candidates
 SET output = NULL
@@ -725,6 +1050,21 @@ func (q *Queries) PurgeExpiredContent(ctx context.Context, contentExpiresAt sql.
 		return 0, err
 	}
 	return result.RowsAffected()
+}
+
+const purgePostBadgeNotes = `-- name: PurgePostBadgeNotes :exec
+UPDATE model_experiment_badges SET note = NULL
+WHERE experiment_id IN (SELECT id FROM model_experiments WHERE user_id = ? AND post_slug = ?)
+`
+
+type PurgePostBadgeNotesParams struct {
+	UserID   string
+	PostSlug sql.NullString
+}
+
+func (q *Queries) PurgePostBadgeNotes(ctx context.Context, arg PurgePostBadgeNotesParams) error {
+	_, err := q.db.ExecContext(ctx, purgePostBadgeNotes, arg.UserID, arg.PostSlug)
+	return err
 }
 
 const purgePostCandidateOutput = `-- name: PurgePostCandidateOutput :exec

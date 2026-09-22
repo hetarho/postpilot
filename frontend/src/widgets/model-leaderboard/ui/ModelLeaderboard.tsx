@@ -1,15 +1,28 @@
 import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
-import type { LeaderboardEntry } from '@/entities/model-experiment'
+import type {
+  BadgeTally,
+  LeaderboardEntry,
+  LeaderboardWindowName,
+} from '@/entities/model-experiment'
+import { isPositiveBadge } from '@/entities/model-experiment'
 import { formatNumber } from '@/shared/lib'
 import { Badge, Typography } from '@/shared/ui'
 
-export function ModelLeaderboard({ entries }: { entries: LeaderboardEntry[] }) {
+export function ModelLeaderboard({
+  entries,
+  window,
+}: {
+  entries: LeaderboardEntry[]
+  window: LeaderboardWindowName
+}) {
   const { t } = useTranslation('models')
+  // The empty state names the window, because 'no results' on a board that reads back one
+  // day means something the reader can act on: ask for a longer one.
   if (entries.length === 0)
     return (
       <Typography variant="body" className="text-content-tertiary">
-        {t('leaderboard.empty')}
+        {t(`leaderboard.emptyIn.${window}`)}
       </Typography>
     )
   return (
@@ -40,6 +53,7 @@ export function ModelLeaderboard({ entries }: { entries: LeaderboardEntry[] }) {
               {entry.recommended && <Badge tone="info">{t('leaderboard.recommended')}</Badge>}
               {entry.disappeared && <Badge tone="warning">{t('leaderboard.disappeared')}</Badge>}
             </div>
+            <BadgeTallies tallies={entry.badgeTallies} />
             <Typography variant="meta" as="p" className="mt-1">
               {t('leaderboard.record', {
                 matches: entry.matches,
@@ -68,6 +82,27 @@ export function ModelLeaderboard({ entries }: { entries: LeaderboardEntry[] }) {
         </li>
       ))}
     </ol>
+  )
+}
+
+/** What this model's verdicts said about it, in the same span the rating covers. Three of
+ *  each at most: the row is a ranking, and a dozen chips under every label would bury the
+ *  rank and the rating the board exists to show. */
+function BadgeTallies({ tallies }: { tallies: BadgeTally[] }) {
+  const { t } = useTranslation('models')
+  if (tallies.length === 0) return null
+  const shown = [
+    ...tallies.filter((tally) => isPositiveBadge(tally.badge)).slice(0, 3),
+    ...tallies.filter((tally) => !isPositiveBadge(tally.badge)).slice(0, 3),
+  ]
+  return (
+    <div className="mt-1 flex flex-wrap gap-1">
+      {shown.map((tally) => (
+        <Badge key={tally.badge} tone={isPositiveBadge(tally.badge) ? 'success' : 'warning'}>
+          {t('leaderboard.tally', { label: t(`badge.${tally.badge}`), count: tally.count })}
+        </Badge>
+      ))}
+    </div>
   )
 }
 

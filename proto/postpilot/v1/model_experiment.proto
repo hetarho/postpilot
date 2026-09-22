@@ -61,6 +61,42 @@ enum ExperimentOrigin {
   EXPERIMENT_ORIGIN_LAB = 2;
 }
 
+// The fixed badge catalog a verdict may attach to each candidate (MODEL-62). Ids are stable
+// and code-owned: the operator does not edit this list, and the copy for each one lives in
+// the UI locale resources. Badges explain a verdict; they never enter a rating (MODEL-63).
+enum VerdictBadge {
+  VERDICT_BADGE_UNSPECIFIED = 0;
+  // positive
+  VERDICT_BADGE_FAST = 1;
+  VERDICT_BADGE_NATURAL = 2;
+  VERDICT_BADGE_ON_BRIEF = 3;
+  VERDICT_BADGE_STRUCTURED = 4;
+  VERDICT_BADGE_ACCURATE = 5;
+  VERDICT_BADGE_IN_VOICE = 6;
+  VERDICT_BADGE_CONCISE = 7;
+  // negative
+  VERDICT_BADGE_SLOW = 8;
+  VERDICT_BADGE_AI_LIKE = 9;
+  VERDICT_BADGE_OFF_BRIEF = 10;
+  VERDICT_BADGE_VERBOSE = 11;
+  VERDICT_BADGE_INACCURATE = 12;
+  VERDICT_BADGE_OFF_VOICE = 13;
+  VERDICT_BADGE_REPETITIVE = 14;
+  VERDICT_BADGE_BROKEN_FORMAT = 15;
+  // its own group, carrying an optional free note
+  VERDICT_BADGE_OTHER = 16;
+}
+
+// What one candidate was given at the verdict. Zero badges is as valid as ten: a badge is
+// evidence offered, never a toll on the verdict (MODEL-61).
+message CandidateBadges {
+  string candidate_id = 1;
+  repeated VerdictBadge badges = 2;
+  // Only meaningful beside VERDICT_BADGE_OTHER, and purged with the rest of the private
+  // payload when the retention window closes (MODEL-42).
+  string other_note = 3;
+}
+
 enum ExperimentOutcome {
   EXPERIMENT_OUTCOME_UNSPECIFIED = 0;
   EXPERIMENT_OUTCOME_WINNER = 1;
@@ -101,6 +137,9 @@ message ExperimentCandidate {
   string model_label = 9;
   CandidateUsage usage = 10;
   Failure failure = 11;
+  // Populated only after a verdict/dismissal, beside the revealed identity.
+  repeated VerdictBadge badges = 12;
+  string other_note = 13;
 }
 
 message ModelExperiment {
@@ -171,11 +210,17 @@ message ListExperimentsResponse { repeated ModelExperiment experiments = 1; }
 message RetryCandidateRequest { string experiment_id = 1; }
 message RetryCandidateResponse { string job_id = 1; ModelExperiment experiment = 2; }
 
-message ChooseWinnerRequest { string experiment_id = 1; string candidate_id = 2; }
+message ChooseWinnerRequest {
+  string experiment_id = 1;
+  string candidate_id = 2;
+  // At most one entry per candidate of this comparison, chosen or not.
+  repeated CandidateBadges badges = 3;
+}
 message DecideWriteExperimentRequest {
   string experiment_id = 1;
   string candidate_id = 2;
   bool adopt_winner_model = 3;
+  repeated CandidateBadges badges = 4;
 }
 message UseSingleCandidateRequest { string experiment_id = 1; string candidate_id = 2; }
 message ChooseWinnerResponse { ModelExperiment experiment = 1; }
@@ -191,6 +236,13 @@ message ApplyWinnerOutputResponse { ModelExperiment experiment = 1; }
 
 message AdoptWinnerModelRequest { string experiment_id = 1; }
 message AdoptWinnerModelResponse { Selection selection = 1; }
+
+// How often one model earned one badge inside the board's own scope, stage and window. A
+// tally explains a rank; it never changes one (MODEL-63).
+message BadgeTally {
+  VerdictBadge badge = 1;
+  int32 count = 2;
+}
 
 message LeaderboardEntry {
   int32 rank = 1;
@@ -211,7 +263,31 @@ message LeaderboardEntry {
   bool active = 16;
   bool recommended = 17;
   bool disappeared = 18;
+  // `other` is counted without its notes, in every scope.
+  repeated BadgeTally badge_tallies = 19;
 }
 
-message GetLeaderboardRequest { Stage stage = 1; }
+// A leaderboard is keyed by (scope, stage, window): model quality moves with every release,
+// so there is no all-time board (MODEL-38). Unspecified values resolve server-side to the
+// week and to the caller's own verdicts, so an old client and an explicit one agree.
+enum LeaderboardWindow {
+  LEADERBOARD_WINDOW_UNSPECIFIED = 0;
+  LEADERBOARD_WINDOW_DAY = 1;
+  LEADERBOARD_WINDOW_WEEK = 2;
+  LEADERBOARD_WINDOW_MONTH = 3;
+}
+
+// ME is the caller's own verdicts. ALL aggregates every account's into per-model figures and
+// names no account, experiment, output or note (MODEL-41). It is a flag, never an account id.
+enum LeaderboardScope {
+  LEADERBOARD_SCOPE_UNSPECIFIED = 0;
+  LEADERBOARD_SCOPE_ME = 1;
+  LEADERBOARD_SCOPE_ALL = 2;
+}
+
+message GetLeaderboardRequest {
+  Stage stage = 1;
+  LeaderboardWindow window = 2;
+  LeaderboardScope scope = 3;
+}
 message GetLeaderboardResponse { repeated LeaderboardEntry entries = 1; }

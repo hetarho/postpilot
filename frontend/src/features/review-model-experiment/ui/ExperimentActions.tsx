@@ -9,8 +9,10 @@ import {
 import { usePost } from '@/entities/post'
 import { useSession } from '@/entities/session'
 import { useVoices } from '@/entities/voice'
+import type { CandidateBadges } from '@/entities/model-experiment'
 import { AppFailureMessage, Button, Dialog, Notice } from '@/shared/ui'
 import { hasExperimentActions } from '../model/experiment-actions'
+import { VerdictSheet } from './VerdictSheet'
 
 export function ExperimentActions({
   experiment,
@@ -35,6 +37,9 @@ export function ExperimentActions({
   const refreshOwner = useExperimentOwnerRefresh(ownerId, experiment)
   const actions = useExperimentActions(experiment.id, refreshOwner)
   const [confirmStyle, setConfirmStyle] = useState(false)
+  // Which winner action is waiting on its sheet. Non-empty IS the sheet's open state: there
+  // is one sheet, and what it confirms is whichever action opened it (MODEL-61).
+  const [verdict, setVerdict] = useState<'choose' | 'decide' | 'decideAdopt' | ''>('')
   // `useExperimentActions` reports one `isPending` for all six mutations, so the button the thumb
   // actually pressed has to be remembered here — otherwise the whole bar spins at once. Without a
   // pending state at all, a tap on a cellular connection only dropped the button to 50% opacity,
@@ -146,7 +151,7 @@ export function ExperimentActions({
             variant="cta"
             disabled={actions.isPending}
             pending={pressed === 'choose'}
-            onClick={() => run('choose', () => actions.choose(activeCandidateId))}
+            onClick={() => setVerdict('choose')}
           >
             {t('actions.choose')}
           </Button>
@@ -163,7 +168,7 @@ export function ExperimentActions({
               variant="secondary"
               disabled={actions.isPending || voiceWorkBlocked}
               pending={pressed === 'decide'}
-              onClick={() => run('decide', () => actions.decideWrite(activeCandidateId, false))}
+              onClick={() => setVerdict('decide')}
             >
               {t('actions.apply')}
             </Button>
@@ -171,7 +176,7 @@ export function ExperimentActions({
               variant="cta"
               disabled={actions.isPending || voiceWorkBlocked}
               pending={pressed === 'decideAdopt'}
-              onClick={() => run('decideAdopt', () => actions.decideWrite(activeCandidateId, true))}
+              onClick={() => setVerdict('decideAdopt')}
             >
               {t('actions.applyAndAdopt')}
             </Button>
@@ -229,6 +234,34 @@ export function ExperimentActions({
           <AppFailureMessage failure={experiment.adoptionFailure} />
         </Notice>
       )}
+      {/* One sheet for all three winner actions. Dismissal and the single-survivor
+          application open none: nothing was chosen, so there is nothing to explain. */}
+      <VerdictSheet
+        experiment={experiment}
+        chosenCandidateId={activeCandidateId}
+        open={Boolean(verdict)}
+        pending={Boolean(pressed)}
+        title={t(verdict === 'choose' ? 'actions.choose' : 'actions.apply')}
+        confirmLabel={t(
+          verdict === 'decideAdopt'
+            ? 'actions.applyAndAdopt'
+            : verdict === 'decide'
+              ? 'actions.apply'
+              : 'actions.choose',
+        )}
+        onClose={() => setVerdict('')}
+        onConfirm={(badges: CandidateBadges[]) => {
+          const committing = verdict
+          setVerdict('')
+          if (committing === 'choose') {
+            run('choose', () => actions.choose(activeCandidateId, badges))
+            return
+          }
+          run(committing, () =>
+            actions.decideWrite(activeCandidateId, committing === 'decideAdopt', badges),
+          )
+        }}
+      />
       <Dialog
         open={confirmStyle}
         title={t('actions.confirmStyleTitle')}

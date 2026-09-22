@@ -73,7 +73,7 @@ func (okVoices) ActiveVoice(context.Context, string, string) error { return nil 
 func TestLabVerdictPicksWithoutApplyingAndReleasesThePost(t *testing.T) {
 	svc, store, _, _, runner := newTestService()
 	pair := ready(t, svc, store, writeRequest(OriginLab))
-	decided, err := svc.Choose(context.Background(), "alice", pair.ID, pair.Candidates[0].ID, false)
+	decided, err := svc.Choose(context.Background(), "alice", pair.ID, pair.Candidates[0].ID, false, nil)
 	if err != nil {
 		t.Fatalf("choose: %v", err)
 	}
@@ -96,7 +96,7 @@ func TestVerdictFormsRefuseEachOther(t *testing.T) {
 	t.Run("the editor has no pick-only verdict", func(t *testing.T) {
 		svc, store, _, _, runner := newTestService()
 		pair := ready(t, svc, store, writeRequest(OriginEditor))
-		if _, err := svc.Choose(context.Background(), "alice", pair.ID, pair.Candidates[0].ID, false); !errors.Is(err, ErrInvalidState) {
+		if _, err := svc.Choose(context.Background(), "alice", pair.ID, pair.Candidates[0].ID, false, nil); !errors.Is(err, ErrInvalidState) {
 			t.Fatalf("choose = %v, want ErrInvalidState", err)
 		}
 		after, _ := store.Get(context.Background(), pair.ID)
@@ -108,7 +108,7 @@ func TestVerdictFormsRefuseEachOther(t *testing.T) {
 	t.Run("the lab has no committing verdict", func(t *testing.T) {
 		svc, store, catalog, _, runner := newTestService()
 		pair := ready(t, svc, store, writeRequest(OriginLab))
-		if _, err := svc.DecideWrite(context.Background(), "alice", pair.ID, pair.Candidates[0].ID, true); !errors.Is(err, ErrInvalidState) {
+		if _, err := svc.DecideWrite(context.Background(), "alice", pair.ID, pair.Candidates[0].ID, true, nil); !errors.Is(err, ErrInvalidState) {
 			t.Fatalf("decide write = %v, want ErrInvalidState", err)
 		}
 		after, _ := store.Get(context.Background(), pair.ID)
@@ -144,7 +144,7 @@ func TestUnpairedSurvivorServesBothOrigins(t *testing.T) {
 					survivor = candidate.ID
 				}
 			}
-			used, err := svc.Choose(context.Background(), "alice", pair.ID, survivor, true)
+			used, err := svc.Choose(context.Background(), "alice", pair.ID, survivor, true, nil)
 			if err != nil || used.Outcome != OutcomeUnpaired || used.Status != StatusDecided {
 				t.Fatalf("use single = %+v, %v", used, err)
 			}
@@ -173,7 +173,7 @@ func TestLabApplicationFollowsThePostStatus(t *testing.T) {
 			svc, store, _, _, runner := newTestService()
 			svc.posts.(*fakePosts).statuses["post"] = sample.status
 			pair := ready(t, svc, store, writeRequest(OriginLab))
-			if _, err := svc.Choose(context.Background(), "alice", pair.ID, pair.Candidates[0].ID, false); err != nil {
+			if _, err := svc.Choose(context.Background(), "alice", pair.ID, pair.Candidates[0].ID, false, nil); err != nil {
 				t.Fatal(err)
 			}
 			applied, err := svc.ApplyWinner(context.Background(), "alice", pair.ID, false)
@@ -199,7 +199,7 @@ func TestLabApplicationFollowsThePostStatus(t *testing.T) {
 	t.Run("a post that is gone is not a destination", func(t *testing.T) {
 		svc, store, _, _, runner := newTestService()
 		pair := ready(t, svc, store, writeRequest(OriginLab))
-		if _, err := svc.Choose(context.Background(), "alice", pair.ID, pair.Candidates[0].ID, false); err != nil {
+		if _, err := svc.Choose(context.Background(), "alice", pair.ID, pair.Candidates[0].ID, false, nil); err != nil {
 			t.Fatal(err)
 		}
 		svc.posts.(*fakePosts).err = ErrInvalidState
@@ -216,7 +216,7 @@ func TestLabApplicationFollowsThePostStatus(t *testing.T) {
 		posts := svc.posts.(*fakePosts)
 		posts.statuses["post"] = "finalized"
 		pair := ready(t, svc, store, writeRequest(OriginEditor))
-		decided, err := svc.DecideWrite(context.Background(), "alice", pair.ID, pair.Candidates[0].ID, false)
+		decided, err := svc.DecideWrite(context.Background(), "alice", pair.ID, pair.Candidates[0].ID, false, nil)
 		if err != nil || decided.AppliedAt == nil || runner.applyCalls != 1 || posts.calls != 0 {
 			t.Fatalf("editor verdict = %+v err=%v applies=%d post reads=%d", decided, err, runner.applyCalls, posts.calls)
 		}
@@ -227,7 +227,7 @@ func TestLabApplicationFollowsThePostStatus(t *testing.T) {
 		svc.SetVoiceDirectory(okVoices{})
 		posts := svc.posts.(*fakePosts)
 		pair := ready(t, svc, store, StartRequest{UserID: "alice", VoiceID: "voice", Stage: StageAnalyze, ModelA: ModelRef{"p", "a"}, ModelB: ModelRef{"p", "b"}})
-		if _, err := svc.Choose(context.Background(), "alice", pair.ID, pair.Candidates[0].ID, false); err != nil {
+		if _, err := svc.Choose(context.Background(), "alice", pair.ID, pair.Candidates[0].ID, false, nil); err != nil {
 			t.Fatal(err)
 		}
 		applied, err := svc.ApplyWinner(context.Background(), "alice", pair.ID, true)
@@ -243,7 +243,7 @@ func TestLabApplicationFollowsThePostStatus(t *testing.T) {
 func TestFailedLabApplicationKeepsThePostHeldUntilItSucceeds(t *testing.T) {
 	svc, store, _, _, runner := newTestService()
 	pair := ready(t, svc, store, writeRequest(OriginLab))
-	if _, err := svc.Choose(context.Background(), "alice", pair.ID, pair.Candidates[0].ID, false); err != nil {
+	if _, err := svc.Choose(context.Background(), "alice", pair.ID, pair.Candidates[0].ID, false, nil); err != nil {
 		t.Fatal(err)
 	}
 	runner.applyErr = errors.New("post unavailable")
@@ -273,7 +273,7 @@ func TestFailedLabApplicationKeepsThePostHeldUntilItSucceeds(t *testing.T) {
 func TestAdoptWinnerServesALabPick(t *testing.T) {
 	svc, store, catalog, _, runner := newTestService()
 	pair := ready(t, svc, store, writeRequest(OriginLab))
-	decided, err := svc.Choose(context.Background(), "alice", pair.ID, pair.Candidates[0].ID, false)
+	decided, err := svc.Choose(context.Background(), "alice", pair.ID, pair.Candidates[0].ID, false, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -4,7 +4,13 @@ import { stageToProto, type StageName } from '@/entities/model-catalog/@x/model-
 import { ModelExperimentService } from '@/shared/api'
 import { POLL_INTERVAL_MS } from '@/shared/config'
 import { isExperimentActive } from '../model/types'
-import { toExperiment, toLeaderboardEntry } from './experiment-mappers'
+import type { LeaderboardScopeName, LeaderboardWindowName } from '../model/types'
+import {
+  leaderboardScopeToProto,
+  leaderboardWindowToProto,
+  toExperiment,
+  toLeaderboardEntry,
+} from './experiment-mappers'
 
 export function useExperiment(id: string) {
   const query = useQuery(
@@ -41,9 +47,15 @@ export function useExperiments(stage?: StageName) {
   return { ...query, experiments }
 }
 
-export function useLeaderboard(stage: StageName) {
+export function useLeaderboard(
+  stage: StageName,
+  window: LeaderboardWindowName,
+  scope: LeaderboardScopeName,
+) {
   const query = useQuery(ModelExperimentService.method.getLeaderboard, {
     stage: stageToProto(stage),
+    window: leaderboardWindowToProto(window),
+    scope: leaderboardScopeToProto(scope),
   })
   const entries = useMemo(() => query.data?.entries.map(toLeaderboardEntry) ?? [], [query.data])
   return { ...query, entries }

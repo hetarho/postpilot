@@ -30,11 +30,16 @@ it.each(['ko', 'en'] as const)(
       experiments: { calls: starts, reads },
     })
     const group = locale === 'ko' ? 'AI 모델 메뉴' : 'AI model navigation'
-    const [, rail] = await screen.findAllByRole('navigation', { name: group })
-    const nav = within(rail!)
-    expect(nav.getAllByRole('link').map((link) => link.textContent)).toEqual(
-      destinations.map((d) => d[locale === 'ko' ? 1 : 2]),
-    )
+    await screen.findByRole('navigation', { name: group })
+    // The group's destinations live inside the one sidebar, under the primary row that opens
+    // them, and say which level they are because a group's home repeats a primary address.
+    const nav = within(document.querySelector('aside')!)
+    expect(
+      nav
+        .getAllByRole('link')
+        .filter((link) => link.dataset.navLevel === 'group')
+        .map((link) => link.textContent),
+    ).toEqual(destinations.map((d) => d[locale === 'ko' ? 1 : 2]))
     expect(within(screen.getByRole('main')).getAllByRole('combobox')).toHaveLength(3)
     expect(reads).toEqual([])
     for (const [path, ko, en] of destinations) {
@@ -44,9 +49,14 @@ it.each(['ko', 'en'] as const)(
       expect(
         main.getByRole('heading', { level: 1, name: locale === 'ko' ? ko : en }),
       ).toBeInTheDocument()
+      // The group level alone: the primary row above it is current for the whole group, and on
+      // /ai-models it carries the same address as the group's home.
       const active = nav
         .getAllByRole('link')
-        .filter((link) => link.getAttribute('aria-current') === 'page')
+        .filter(
+          (link) =>
+            link.dataset.navLevel === 'group' && link.getAttribute('aria-current') === 'page',
+        )
       expect(active.map((link) => link.getAttribute('href'))).toEqual([path])
       expect(
         main.queryByRole('button', { name: locale === 'ko' ? '비교 시작' : 'Start comparison' }) !==
@@ -115,12 +125,14 @@ it.each([
   const reads: NonNullable<FakeExperimentsOptions['reads']> = []
   renderAppAt(path, { user: { id: 'alice' }, experiments: { reads } })
   expect(await screen.findByRole('tab', { name: '관찰' })).toHaveAttribute('aria-selected', 'true')
-  await waitFor(() => expect(reads).toContainEqual({ kind, stage: Stage.OBSERVE }))
+  await waitFor(() =>
+    expect(reads).toContainEqual(expect.objectContaining({ kind, stage: Stage.OBSERVE })),
+  )
 })
 
 it.each([
   ['/ai-models/experiments', 'listFails', '아직 비교가 없어요.'],
-  ['/ai-models/leaderboard', 'leaderboardFails', '아직 비교 결과가 없어요.'],
+  ['/ai-models/leaderboard', 'leaderboardFails', '최근 7일 안에는 비교 결과가 없어요.'],
 ] as const)(
   'does not turn loading or failed reads into an empty history at %s',
   async (path, failureKey, empty) => {

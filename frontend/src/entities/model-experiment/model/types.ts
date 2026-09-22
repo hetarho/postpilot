@@ -1,4 +1,5 @@
 import type { ModelRef, StageName } from '@/entities/model-catalog/@x/model-experiment'
+import type { VerdictBadgeName } from './badges'
 import type { AppFailure, ContentLanguage, Observation, PostContent } from '@/shared/api'
 
 export type ExperimentStatusName =
@@ -9,6 +10,12 @@ export type CostSourceName = 'reported' | 'estimated' | 'unavailable' | 'mixed'
 /** Where a comparison was started, frozen by the server at start. It decides which verdict
  *  the review offers, and it is never the address the review was opened from. */
 export type ExperimentOriginName = 'editor' | 'lab'
+/** How far back a leaderboard reads, measured from the moment of the request. There is no
+ *  all-time value: model quality moves with every release. */
+export type LeaderboardWindowName = 'day' | 'week' | 'month'
+/** Whose verdicts a leaderboard replays: the account's own, or everyone's as model-level
+ *  figures that name no account. */
+export type LeaderboardScopeName = 'me' | 'all'
 
 export interface CandidateUsage {
   promptTokens: bigint
@@ -27,6 +34,9 @@ export interface ExperimentCandidate {
   id: string
   displaySide: DisplaySideName
   status: CandidateStatusName
+  /** What the verdict said about this candidate. Revealed with its identity, never before. */
+  badges: VerdictBadgeName[]
+  otherNote: string
   output?: CandidateOutput
   failure: AppFailure | undefined
   model?: ModelRef
@@ -64,6 +74,12 @@ export interface ModelExperiment {
   targetLanguage: ContentLanguage | undefined
 }
 
+/** How often one model earned one badge inside this board's own scope, stage and window. */
+export interface BadgeTally {
+  badge: VerdictBadgeName
+  count: number
+}
+
 export interface LeaderboardEntry {
   rank: number
   model: ModelRef
@@ -83,6 +99,8 @@ export interface LeaderboardEntry {
   active: boolean
   recommended: boolean
   disappeared: boolean
+  /** Most often first, then in catalog order. It explains a rank, never produces one. */
+  badgeTallies: BadgeTally[]
 }
 
 export function isExperimentActive(status: ExperimentStatusName): boolean {

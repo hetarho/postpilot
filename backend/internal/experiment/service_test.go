@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"reflect"
+	"sort"
 	"strings"
 	"sync"
 	"testing"
@@ -16,8 +17,11 @@ import (
 )
 
 type memoryStore struct {
-	mu   sync.Mutex
-	rows map[string]Experiment
+	mu sync.Mutex
+	// tallies is what the badge join would return for the board under test: the fake does not
+	// recompute them from its rows, because what a tally test states is how they attach.
+	tallies []BadgeTally
+	rows    map[string]Experiment
 }
 
 func newMemoryStore() *memoryStore { return &memoryStore{rows: map[string]Experiment{}} }
@@ -222,7 +226,7 @@ func (s *memoryStore) RestoreFailedCandidates(_ context.Context, id string, cand
 	s.rows[id] = row
 	return nil
 }
-func (s *memoryStore) Decide(_ context.Context, id, userID, candidateID string, status Status, outcome Outcome, applyRequested, adoptionRequested bool, decidedAt, expiresAt time.Time) (bool, error) {
+func (s *memoryStore) Decide(_ context.Context, id, userID, candidateID string, status Status, outcome Outcome, applyRequested, adoptionRequested bool, badges []CandidateBadges, decidedAt, expiresAt time.Time) (bool, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	row := s.rows[id]
@@ -233,6 +237,18 @@ func (s *memoryStore) Decide(_ context.Context, id, userID, candidateID string, 
 	row.ApplyRequested, row.AdoptionRequested = applyRequested, adoptionRequested
 	row.AppliedAt = nil
 	row.ApplyFailure, row.AdoptionFailure = nil, nil
+	// Replaced with the verdict, as the store does: badges belong to the verdict written here.
+	for i := range row.Candidates {
+		row.Candidates[i].Badges, row.Candidates[i].OtherNote = nil, ""
+	}
+	for _, given := range badges {
+		for i := range row.Candidates {
+			if row.Candidates[i].ID == given.CandidateID {
+				row.Candidates[i].Badges = append([]Badge(nil), given.Badges...)
+				row.Candidates[i].OtherNote = given.OtherNote
+			}
+		}
+	}
 	row.DecidedAt, row.ContentExpiresAt = &decidedAt, &expiresAt
 	s.rows[id] = row
 	return true, nil
@@ -294,8 +310,35 @@ func (s *memoryStore) SetAdopted(_ context.Context, id, userID string, now time.
 	s.rows[id] = row
 	return nil
 }
-func (s *memoryStore) LeaderboardData(context.Context, string, Stage) ([]Experiment, []Candidate, error) {
-	return nil, nil, nil
+
+// The fake honours the window and the scope so a service test can state what a board reads:
+// ScopeAll ignores the owner, and a verdict decided before `since` is outside the board.
+func (s *memoryStore) LeaderboardData(_ context.Context, userID string, stage Stage, since time.Time, scope Scope) ([]Experiment, []Candidate, []BadgeTally, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var decided []Experiment
+	var calls []Candidate
+	for _, row := range s.rows {
+		if row.Stage != stage || (scope == ScopeMe && row.UserID != userID) {
+			continue
+		}
+		if row.DecidedAt == nil || row.DecidedAt.Before(since) {
+			continue
+		}
+		if row.Status == StatusDecided || row.Status == StatusDismissed {
+			calls = append(calls, cloneExperiment(row).Candidates...)
+		}
+		if row.Outcome == OutcomeWinner && row.WinnerCandidateID != "" {
+			decided = append(decided, cloneExperiment(row))
+		}
+	}
+	sort.Slice(decided, func(i, j int) bool {
+		if !decided[i].DecidedAt.Equal(*decided[j].DecidedAt) {
+			return decided[i].DecidedAt.Before(*decided[j].DecidedAt)
+		}
+		return decided[i].ID < decided[j].ID
+	})
+	return decided, calls, s.tallies, nil
 }
 func (s *memoryStore) PurgeExpired(context.Context, time.Time) (int64, error) { return 0, nil }
 func (s *memoryStore) PurgePost(context.Context, string, string) error        { return nil }
@@ -362,7 +405,7 @@ func TestDecideWriteSeparatesApplyOnlyFromAdoptionAndRecoversPartialFailure(t *t
 			t.Fatal(err)
 		}
 		ready, _ := store.Get(context.Background(), started.ExperimentID)
-		decided, err := svc.DecideWrite(context.Background(), "alice", ready.ID, ready.Candidates[0].ID, false)
+		decided, err := svc.DecideWrite(context.Background(), "alice", ready.ID, ready.Candidates[0].ID, false, nil)
 		if err != nil || decided.AppliedAt == nil || decided.AdoptionRequested || decided.AdoptedAt != nil || len(catalog.adopted) != 0 || runner.applyCalls != 1 {
 			t.Fatalf("apply only = %+v err=%v adopted=%v applies=%d", decided, err, catalog.adopted, runner.applyCalls)
 		}
@@ -376,13 +419,13 @@ func TestDecideWriteSeparatesApplyOnlyFromAdoptionAndRecoversPartialFailure(t *t
 		}
 		ready, _ := store.Get(context.Background(), started.ExperimentID)
 		runner.applyErr = errors.New("post unavailable")
-		partial, err := svc.DecideWrite(context.Background(), "alice", ready.ID, ready.Candidates[0].ID, true)
+		partial, err := svc.DecideWrite(context.Background(), "alice", ready.ID, ready.Candidates[0].ID, true, nil)
 		if err != nil || !partial.AdoptionRequested || partial.AppliedAt != nil || partial.ApplyFailure == nil ||
 			partial.ApplyFailure.Reason != FailureReasonUnknown || len(catalog.adopted) != 0 {
 			t.Fatalf("partial = %+v err=%v adopted=%v", partial, err, catalog.adopted)
 		}
 		runner.applyErr = nil
-		recovered, err := svc.DecideWrite(context.Background(), "alice", ready.ID, ready.Candidates[0].ID, partial.AdoptionRequested)
+		recovered, err := svc.DecideWrite(context.Background(), "alice", ready.ID, ready.Candidates[0].ID, partial.AdoptionRequested, nil)
 		if err != nil || recovered.AppliedAt == nil || recovered.AdoptedAt == nil || len(catalog.adopted) != 1 || runner.applyCalls != 2 {
 			t.Fatalf("recovered = %+v err=%v adopted=%v applies=%d", recovered, err, catalog.adopted, runner.applyCalls)
 		}
@@ -396,17 +439,17 @@ func TestDecideWriteSeparatesApplyOnlyFromAdoptionAndRecoversPartialFailure(t *t
 		}
 		ready, _ := store.Get(context.Background(), started.ExperimentID)
 		catalog.adoptErr = errors.New("selection unavailable")
-		partial, err := svc.DecideWrite(context.Background(), "alice", ready.ID, ready.Candidates[0].ID, true)
+		partial, err := svc.DecideWrite(context.Background(), "alice", ready.ID, ready.Candidates[0].ID, true, nil)
 		if err != nil || partial.AppliedAt == nil || partial.AdoptionFailure == nil ||
 			partial.AdoptionFailure.Reason != FailureReasonUnknown || partial.AdoptedAt != nil || runner.applyCalls != 1 {
 			t.Fatalf("partial = %+v err=%v applies=%d", partial, err, runner.applyCalls)
 		}
 		catalog.adoptErr = nil
-		recovered, err := svc.DecideWrite(context.Background(), "alice", ready.ID, ready.Candidates[0].ID, true)
+		recovered, err := svc.DecideWrite(context.Background(), "alice", ready.ID, ready.Candidates[0].ID, true, nil)
 		if err != nil || recovered.AdoptedAt == nil || recovered.AdoptionFailure != nil || len(catalog.adopted) != 1 || runner.applyCalls != 1 {
 			t.Fatalf("recovered = %+v err=%v adopted=%v applies=%d", recovered, err, catalog.adopted, runner.applyCalls)
 		}
-		if _, err := svc.DecideWrite(context.Background(), "alice", ready.ID, ready.Candidates[0].ID, true); err != nil || len(catalog.adopted) != 1 || runner.applyCalls != 1 {
+		if _, err := svc.DecideWrite(context.Background(), "alice", ready.ID, ready.Candidates[0].ID, true, nil); err != nil || len(catalog.adopted) != 1 || runner.applyCalls != 1 {
 			t.Fatalf("idempotent retry err=%v adopted=%v applies=%d", err, catalog.adopted, runner.applyCalls)
 		}
 	})
@@ -428,7 +471,7 @@ func TestConcurrentWriteDecisionAppliesAndAdoptsExactlyOnce(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			_, err := svc.DecideWrite(context.Background(), "alice", ready.ID, ready.Candidates[0].ID, true)
+			_, err := svc.DecideWrite(context.Background(), "alice", ready.ID, ready.Candidates[0].ID, true, nil)
 			errs <- err
 		}()
 	}
@@ -655,11 +698,11 @@ func TestStartHandleChooseWriteExperiment(t *testing.T) {
 	if found.Status != StatusReview || runner.runCalls != 2 {
 		t.Fatalf("after handle = %+v calls=%d", found, runner.runCalls)
 	}
-	chosen, err := svc.DecideWrite(context.Background(), "alice", found.ID, found.Candidates[0].ID, false)
+	chosen, err := svc.DecideWrite(context.Background(), "alice", found.ID, found.Candidates[0].ID, false, nil)
 	if err != nil || chosen.Status != StatusDecided || chosen.Outcome != OutcomeWinner || runner.applyCalls != 1 {
 		t.Fatalf("decide = %+v, %v applies=%d", chosen, err, runner.applyCalls)
 	}
-	if _, err := svc.DecideWrite(context.Background(), "alice", found.ID, found.Candidates[0].ID, false); err != nil || runner.applyCalls != 1 {
+	if _, err := svc.DecideWrite(context.Background(), "alice", found.ID, found.Candidates[0].ID, false, nil); err != nil || runner.applyCalls != 1 {
 		t.Fatalf("idempotent decide err=%v applies=%d", err, runner.applyCalls)
 	}
 	if _, err := svc.ApplyWinner(context.Background(), "alice", found.ID, false); err != nil || runner.applyCalls != 1 {
@@ -751,7 +794,7 @@ func TestPartialRetryRunsOnlyFailedCandidateAndUseSingleDoesNotRank(t *testing.T
 			survivor = candidate.ID
 		}
 	}
-	used, err := svc2.Choose(context.Background(), "alice", partial.ID, survivor, true)
+	used, err := svc2.Choose(context.Background(), "alice", partial.ID, survivor, true, nil)
 	if err != nil || used.Outcome != OutcomeUnpaired {
 		t.Fatalf("use single = %+v, %v", used, err)
 	}
@@ -927,7 +970,7 @@ func TestApplyFailureStoresOnlyStableReason(t *testing.T) {
 		t.Fatal(err)
 	}
 	found, _ := store.Get(context.Background(), started.ExperimentID)
-	chosen, err := svc.DecideWrite(context.Background(), "alice", found.ID, found.Candidates[0].ID, false)
+	chosen, err := svc.DecideWrite(context.Background(), "alice", found.ID, found.Candidates[0].ID, false, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

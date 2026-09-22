@@ -260,6 +260,9 @@ enum FailureReason {
   // still draft or review (MODEL-37): a finalized post's confirmed content is not
   // rewritten from a comparison.
   EXPERIMENT_POST_FINALIZED = 233;
+  // the badges offered with a verdict are not ones this comparison can carry: an unknown
+  // candidate, a badge the stage does not offer, or a note without the badge it belongs to.
+  EXPERIMENT_BADGES_INVALID = 234;
 }
 
 // AppErrorDetail accompanies a synchronous Connect status. reason is a stable product

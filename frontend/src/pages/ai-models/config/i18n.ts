@@ -13,7 +13,8 @@ export const i18n = {
       comparisonDescription: '같은 입력으로 두 모델을 비교하고 더 나은 결과를 선택합니다.',
       historyDescription:
         '최근 비교 결과를 다시 확인합니다. 단계별로 관찰·문체 분석·글 작성 기록을 볼 수 있어요.',
-      leaderboardDescription: '내가 선택한 비교 결과를 바탕으로 모델별 순위를 확인합니다.',
+      leaderboardDescription:
+        '기간과 범위를 골라 그 안의 비교 결과로 매겨진 모델 순위를 확인합니다.',
       pairSettings: '비교할 A/B 모델',
       resultsFailed: '비교 정보를 불러오지 못했어요.',
       recommendation: '추천 조합',
@@ -30,7 +31,8 @@ export const i18n = {
       startFailed: '비교를 시작하지 못했어요.',
       recent: '최근 {{stage}} 비교',
       noComparison: '아직 비교가 없어요.',
-      myLeaderboard: '내 {{stage}} 리더보드',
+      leaderboardMe: '내 {{stage}} 리더보드',
+      leaderboardAll: '전체 {{stage}} 리더보드',
       choosePostHelp: '비교할 글을 선택하면 비교를 시작할 수 있어요.',
       requirement: {
         pair: 'A/B 조합을 저장',
@@ -67,7 +69,8 @@ export const i18n = {
       comparisonDescription: 'Compare two models on the same input and choose the better result.',
       historyDescription:
         'Review recent results. Switch stages to see observation, voice analysis, or writing comparisons.',
-      leaderboardDescription: 'See model rankings based on your own comparison choices.',
+      leaderboardDescription:
+        'Pick a period and a scope to see the model ranking the comparisons inside it produce.',
       pairSettings: 'A/B comparison models',
       resultsFailed: 'Could not load comparison information.',
       recommendation: 'Recommended set',
@@ -85,7 +88,8 @@ export const i18n = {
       startFailed: 'Could not start the comparison.',
       recent: 'Recent {{stage}} comparisons',
       noComparison: 'There are no comparisons yet.',
-      myLeaderboard: 'My {{stage}} leaderboard',
+      leaderboardMe: 'My {{stage}} leaderboard',
+      leaderboardAll: "Everyone's {{stage}} leaderboard",
       choosePostHelp: 'Select a post to start a comparison.',
       requirement: {
         pair: 'save an A/B pair',

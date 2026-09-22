@@ -6,7 +6,10 @@ import { ExperimentReview } from './ExperimentReview'
 
 const mocks = vi.hoisted(() => ({ useExperiment: vi.fn() }))
 
-vi.mock('@/entities/model-experiment', () => ({
+// Partial: only the read is faked. `candidateSides` is the entity's own pure ordering, and a
+// test that replaced it would stop checking that A and B mean the same candidate everywhere.
+vi.mock('@/entities/model-experiment', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/entities/model-experiment')>()),
   useExperiment: mocks.useExperiment,
 }))
 
@@ -41,6 +44,8 @@ const experiment: ModelExperiment = {
       displaySide: 'right',
       status: 'succeeded',
       output: { kind: 'analyze', styleguide: 'B 결과' },
+      badges: [],
+      otherNote: '',
       failure: undefined,
       modelLabel: '',
     },
@@ -49,6 +54,8 @@ const experiment: ModelExperiment = {
       displaySide: 'left',
       status: 'succeeded',
       output: { kind: 'analyze', styleguide: 'A 결과' },
+      badges: [],
+      otherNote: '',
       failure: undefined,
       modelLabel: '',
     },

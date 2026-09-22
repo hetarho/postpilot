@@ -37,6 +37,7 @@ func TestExperimentErrorsHaveStableReasonsCodesAndAllowlistedParams(t *testing.T
 		"retry model":              {experiment.ErrRetryModelUnavailable, connect.CodeFailedPrecondition, "EXPERIMENT_RETRY_MODEL_UNAVAILABLE", nil},
 		"voice unavailable":        {experiment.ErrVoiceUnavailable, connect.CodeFailedPrecondition, "EXPERIMENT_VOICE_UNAVAILABLE", nil},
 		"post finalized":           {experiment.ErrPostFinalized, connect.CodeFailedPrecondition, "EXPERIMENT_POST_FINALIZED", nil},
+		"badges invalid":           {experiment.ErrBadgesInvalid, connect.CodeInvalidArgument, "EXPERIMENT_BADGES_INVALID", nil},
 		"already running wrapped":  {errors.Join(errors.New("private queue detail"), active), connect.CodeFailedPrecondition, "EXPERIMENT_ALREADY_RUNNING", map[string]string{"active_job_id": "job-active"}},
 	}
 
@@ -202,4 +203,138 @@ func TestExperimentOriginMapsBothWays(t *testing.T) {
 			t.Fatalf("origin mapping revealed an identity: %+v", mapped.GetCandidates()[0])
 		}
 	})
+}
+
+// A board's window and scope resolve here so that a client stating nothing and one stating
+// the defaults get the same board, and nothing on the wire can ask for an all-time board.
+func TestLeaderboardRequestResolvesItsDefaults(t *testing.T) {
+	t.Run("window", func(t *testing.T) {
+		cases := map[postpilotv1.LeaderboardWindow]experiment.Window{
+			postpilotv1.LeaderboardWindow_LEADERBOARD_WINDOW_DAY:         experiment.WindowDay,
+			postpilotv1.LeaderboardWindow_LEADERBOARD_WINDOW_WEEK:        experiment.WindowWeek,
+			postpilotv1.LeaderboardWindow_LEADERBOARD_WINDOW_MONTH:       experiment.WindowMonth,
+			postpilotv1.LeaderboardWindow_LEADERBOARD_WINDOW_UNSPECIFIED: experiment.WindowWeek,
+		}
+		for wire, want := range cases {
+			if got := fromProtoWindow(wire); got != want {
+				t.Errorf("fromProtoWindow(%v) = %q, want %q", wire, got, want)
+			}
+		}
+	})
+
+	t.Run("scope", func(t *testing.T) {
+		cases := map[postpilotv1.LeaderboardScope]experiment.Scope{
+			postpilotv1.LeaderboardScope_LEADERBOARD_SCOPE_ALL:         experiment.ScopeAll,
+			postpilotv1.LeaderboardScope_LEADERBOARD_SCOPE_ME:          experiment.ScopeMe,
+			postpilotv1.LeaderboardScope_LEADERBOARD_SCOPE_UNSPECIFIED: experiment.ScopeMe,
+		}
+		for wire, want := range cases {
+			if got := fromProtoScope(wire); got != want {
+				t.Errorf("fromProtoScope(%v) = %q, want %q", wire, got, want)
+			}
+		}
+	})
+
+	t.Run("every window the wire names is a bounded one", func(t *testing.T) {
+		for _, wire := range []postpilotv1.LeaderboardWindow{
+			postpilotv1.LeaderboardWindow_LEADERBOARD_WINDOW_DAY,
+			postpilotv1.LeaderboardWindow_LEADERBOARD_WINDOW_WEEK,
+			postpilotv1.LeaderboardWindow_LEADERBOARD_WINDOW_MONTH,
+			postpilotv1.LeaderboardWindow_LEADERBOARD_WINDOW_UNSPECIFIED,
+		} {
+			if length := fromProtoWindow(wire).Length(); length <= 0 || length > experiment.LeaderboardWindowMonth {
+				t.Errorf("%v resolves to %v, which is not one of the three bounded windows", wire, length)
+			}
+		}
+	})
+
+	t.Run("a window or scope outside the vocabulary is an invalid argument", func(t *testing.T) {
+		for _, err := range []error{experiment.ErrInvalidWindow, experiment.ErrInvalidScope} {
+			mapped := toConnectError("get leaderboard", err)
+			if got := connect.CodeOf(mapped); got != connect.CodeInvalidArgument {
+				t.Errorf("%v mapped to %v, want InvalidArgument", err, got)
+			}
+			if detail := experimentAppErrorDetail(t, mapped); detail.GetReason() != "EXPERIMENT_STAGE_INVALID" {
+				t.Errorf("%v reason = %q", err, detail.GetReason())
+			}
+		}
+	})
+}
+
+// Badges cross the wire only inside the reveal. Before a verdict they would say which
+// candidate the owner had already judged, which is the one thing the blind pair hides.
+func TestBadgesCrossTheWireOnlyWithTheIdentity(t *testing.T) {
+	candidates := []experiment.Candidate{{
+		ID: "left", ExperimentID: "exp", DisplaySide: experiment.SideLeft, Status: experiment.CandidateSucceeded,
+		Model: experiment.ModelRef{ProviderID: "p", ModelID: "a"}, ModelLabel: "A",
+		Badges: []experiment.Badge{experiment.BadgeFast, experiment.BadgeOther}, OtherNote: "설명",
+	}}
+
+	blind := toProtoExperiment(experiment.Experiment{
+		ID: "exp", Stage: experiment.StageWrite, Origin: experiment.OriginLab,
+		Status: experiment.StatusReview, Candidates: candidates,
+	})
+	if len(blind.GetCandidates()[0].GetBadges()) != 0 || blind.GetCandidates()[0].GetOtherNote() != "" {
+		t.Fatalf("badges leaked before the verdict: %+v", blind.GetCandidates()[0])
+	}
+
+	revealed := toProtoExperiment(experiment.Experiment{
+		ID: "exp", Stage: experiment.StageWrite, Origin: experiment.OriginLab,
+		Status: experiment.StatusDecided, WinnerCandidateID: "left", Candidates: candidates,
+	})
+	got := revealed.GetCandidates()[0]
+	if len(got.GetBadges()) != 2 || got.GetOtherNote() != "설명" {
+		t.Fatalf("revealed candidate = %+v", got)
+	}
+	if got.GetBadges()[0] != postpilotv1.VerdictBadge_VERDICT_BADGE_FAST ||
+		got.GetBadges()[1] != postpilotv1.VerdictBadge_VERDICT_BADGE_OTHER {
+		t.Fatalf("badge mapping = %v", got.GetBadges())
+	}
+}
+
+// The catalog is one list on both sides. Every value the wire names maps to a domain badge
+// and back, so a badge added to one end without the other fails here rather than silently
+// dropping on a verdict.
+func TestEveryWireBadgeMapsBothWays(t *testing.T) {
+	for wire, name := range postpilotv1.VerdictBadge_name {
+		badge := postpilotv1.VerdictBadge(wire)
+		if badge == postpilotv1.VerdictBadge_VERDICT_BADGE_UNSPECIFIED {
+			continue
+		}
+		mapped := fromProtoBadges([]*postpilotv1.CandidateBadges{{CandidateId: "c", Badges: []postpilotv1.VerdictBadge{badge}}})
+		if len(mapped) != 1 || len(mapped[0].Badges) != 1 {
+			t.Fatalf("%s does not map into the domain", name)
+		}
+		if back := toProtoBadge(mapped[0].Badges[0]); back != badge {
+			t.Fatalf("%s mapped back as %v", name, back)
+		}
+	}
+	if toProtoBadge(experiment.Badge("vibes")) != postpilotv1.VerdictBadge_VERDICT_BADGE_UNSPECIFIED {
+		t.Fatal("a badge outside the catalog produced a wire value")
+	}
+}
+
+// A tally crossing the wire names a model's badge and how often it was earned, and nothing
+// else: no account, no experiment, no note (MODEL-41).
+func TestBadgeTalliesCrossTheWireAsCountsAlone(t *testing.T) {
+	mapped := toProtoTallies([]experiment.BadgeTally{
+		{Model: experiment.ModelRef{ProviderID: "p", ModelID: "a"}, Badge: experiment.BadgeFast, Count: 4},
+		{Model: experiment.ModelRef{ProviderID: "p", ModelID: "a"}, Badge: experiment.BadgeOther, Count: 1},
+	})
+	if len(mapped) != 2 {
+		t.Fatalf("tallies = %+v", mapped)
+	}
+	if mapped[0].GetBadge() != postpilotv1.VerdictBadge_VERDICT_BADGE_FAST || mapped[0].GetCount() != 4 {
+		t.Fatalf("first tally = %+v", mapped[0])
+	}
+	// `other` is counted like any other badge; the note it came with is not part of a tally.
+	if mapped[1].GetBadge() != postpilotv1.VerdictBadge_VERDICT_BADGE_OTHER || mapped[1].GetCount() != 1 {
+		t.Fatalf("other tally = %+v", mapped[1])
+	}
+	if fields := mapped[0].ProtoReflect().Descriptor().Fields(); fields.Len() != 2 {
+		t.Fatalf("a tally carries %d fields, want only the badge and the count", fields.Len())
+	}
+	if len(toProtoTallies(nil)) != 0 {
+		t.Fatal("an empty tally list produced a row")
+	}
 }

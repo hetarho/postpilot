@@ -236,6 +236,7 @@ export const appFailureSpecs = {
   EXPERIMENT_VOICE_UNAVAILABLE: {},
   EXPERIMENT_ALREADY_RUNNING: { optional: ['active_job_id'] },
   EXPERIMENT_POST_FINALIZED: {},
+  EXPERIMENT_BADGES_INVALID: {},
   JOB_NOT_FOUND: {},
   JOB_FORBIDDEN: {},
   JOB_INTERRUPTED: {},

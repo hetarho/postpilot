@@ -3,6 +3,8 @@ import { create } from '@bufbuild/protobuf'
 import { Code, createRouterTransport } from '@connectrpc/connect'
 import {
   ExperimentOrigin,
+  LeaderboardScope,
+  LeaderboardWindow,
   ModelExperimentService,
   StartExperimentResponseSchema,
   ExperimentStatus,
@@ -33,7 +35,12 @@ export interface FakeAnalyzeExperimentStart {
 export interface FakeExperimentsOptions {
   observeStarts?: Array<{ postSlug: string; modelA?: ModelRef; modelB?: ModelRef }>
   history?: Array<{ id: string; stage: Stage; postSlug?: string; voiceId?: string }>
-  reads?: Array<{ kind: 'history' | 'leaderboard'; stage: Stage }>
+  reads?: Array<{
+    kind: 'history' | 'leaderboard'
+    stage: Stage
+    window?: LeaderboardWindow
+    scope?: LeaderboardScope
+  }>
   listFails?: boolean
   leaderboardFails?: boolean
   detailFails?: boolean
@@ -61,7 +68,12 @@ export function registerExperimentService(
     }
   })
   router.rpc(ModelExperimentService.method.getLeaderboard, async (request) => {
-    options.reads?.push({ kind: 'leaderboard', stage: request.stage })
+    options.reads?.push({
+      kind: 'leaderboard',
+      stage: request.stage,
+      window: request.window,
+      scope: request.scope,
+    })
     if (options.readGate) await options.readGate
     if (options.leaderboardFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
     return { entries: [] }

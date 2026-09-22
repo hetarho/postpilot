@@ -10,6 +10,14 @@ type Match struct {
 	Loser  ModelRef
 }
 
+// BadgeTally is how often one model earned one badge inside a board's own scope, stage and
+// window. It carries no note and names no account (MODEL-41, MODEL-63).
+type BadgeTally struct {
+	Model ModelRef
+	Badge Badge
+	Count int
+}
+
 type LeaderboardEntry struct {
 	Rank              int
 	Model             ModelRef
@@ -28,6 +36,9 @@ type LeaderboardEntry struct {
 	Active            bool
 	Recommended       bool
 	Disappeared       bool
+	// What this model's verdicts said about it in the same span, most often first. It
+	// explains a rank rather than producing one.
+	BadgeTallies []BadgeTally
 }
 
 func (e LeaderboardEntry) WinRate() float64 {
@@ -44,7 +55,7 @@ func (e LeaderboardEntry) AverageLatencyMS() int64 {
 	return e.TotalLatencyMS / int64(e.SuccessfulCalls)
 }
 
-func BuildLeaderboard(matches []Match, candidates []Candidate, labels map[ModelRef]string) []LeaderboardEntry {
+func BuildLeaderboard(matches []Match, candidates []Candidate, labels map[ModelRef]string, tallies []BadgeTally) []LeaderboardEntry {
 	entries := map[ModelRef]*LeaderboardEntry{}
 	entry := func(ref ModelRef) *LeaderboardEntry {
 		if entries[ref] == nil {
@@ -96,6 +107,26 @@ func BuildLeaderboard(matches []Match, candidates []Candidate, labels map[ModelR
 	})
 	for i := range out {
 		out[i].Rank = i + 1
+	}
+	// Attached after the ranking, and only to a model the board already holds: a badge given
+	// to a model whose verdicts all aged out of this window has nothing to explain here.
+	byModel := map[ModelRef][]BadgeTally{}
+	for _, tally := range tallies {
+		byModel[tally.Model] = append(byModel[tally.Model], tally)
+	}
+	order := map[Badge]int{}
+	for index, badge := range catalogOrder() {
+		order[badge] = index
+	}
+	for i := range out {
+		attached := byModel[out[i].Model]
+		sort.Slice(attached, func(a, b int) bool {
+			if attached[a].Count != attached[b].Count {
+				return attached[a].Count > attached[b].Count
+			}
+			return order[attached[a].Badge] < order[attached[b].Badge]
+		})
+		out[i].BadgeTallies = attached
 	}
 	return out
 }

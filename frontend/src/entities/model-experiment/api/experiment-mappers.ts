@@ -9,12 +9,16 @@ import {
   ExperimentOrigin,
   ExperimentOutcome,
   ExperimentStatus,
+  LeaderboardScope,
+  LeaderboardWindow,
   ModelExperimentService,
+  VerdictBadge,
   appFailureFromProto,
   type ProtoExperimentCandidate,
   type ProtoLeaderboardEntry,
   type ProtoModelExperiment,
 } from '@/shared/api'
+import type { CandidateBadges, VerdictBadgeName } from '../model/badges'
 import type {
   CandidateStatusName,
   CostSourceName,
@@ -22,6 +26,8 @@ import type {
   ExperimentOriginName,
   ExperimentStatusName,
   LeaderboardEntry,
+  LeaderboardScopeName,
+  LeaderboardWindowName,
   ModelExperiment,
 } from '../model/types'
 
@@ -57,6 +63,8 @@ function toCandidate(value: ProtoExperimentCandidate): ExperimentCandidate {
     id: value.id,
     displaySide: value.displaySide === DisplaySide.LEFT ? 'left' : 'right',
     status: candidateStatusName(value.status),
+    badges: value.badges.map(badgeFromProto).filter((badge) => badge !== undefined),
+    otherNote: value.otherNote,
     output:
       output.case === 'postContent'
         ? { kind: 'write', content: output.value }
@@ -103,6 +111,11 @@ export function toLeaderboardEntry(value: ProtoLeaderboardEntry): LeaderboardEnt
     active: value.active,
     recommended: value.recommended,
     disappeared: value.disappeared,
+    // A badge this build does not know is dropped rather than rendered as a blank chip.
+    badgeTallies: value.badgeTallies.flatMap((tally) => {
+      const badge = badgeFromProto(tally.badge)
+      return badge ? [{ badge, count: tally.count }] : []
+    }),
   }
 }
 
@@ -134,13 +147,67 @@ export function experimentListQueriesKey(transport: Transport) {
   })
 }
 
-export function leaderboardQueryKey(transport: Transport, stage: number) {
+/** Matches every cached leaderboard, whatever its stage, window or scope. A verdict changes
+ *  all of them at once — it enters its own window and every wider one — so the invalidation
+ *  is stated here rather than enumerated by the caller. */
+export function leaderboardQueriesKey(transport: Transport) {
   return createConnectQueryKey({
     schema: ModelExperimentService.method.getLeaderboard,
-    input: { stage },
     transport,
     cardinality: 'finite',
   })
+}
+
+export function leaderboardWindowToProto(window: LeaderboardWindowName): LeaderboardWindow {
+  if (window === 'day') return LeaderboardWindow.DAY
+  if (window === 'month') return LeaderboardWindow.MONTH
+  return LeaderboardWindow.WEEK
+}
+
+export function leaderboardScopeToProto(scope: LeaderboardScopeName): LeaderboardScope {
+  return scope === 'all' ? LeaderboardScope.ALL : LeaderboardScope.ME
+}
+
+/** One table, read both ways. A badge the other end knows and this one does not would drop
+ *  silently on a verdict, so the pairing is stated once and pinned by a test. */
+const BADGE_TO_PROTO: Record<VerdictBadgeName, VerdictBadge> = {
+  fast: VerdictBadge.FAST,
+  natural: VerdictBadge.NATURAL,
+  on_brief: VerdictBadge.ON_BRIEF,
+  structured: VerdictBadge.STRUCTURED,
+  accurate: VerdictBadge.ACCURATE,
+  in_voice: VerdictBadge.IN_VOICE,
+  concise: VerdictBadge.CONCISE,
+  slow: VerdictBadge.SLOW,
+  ai_like: VerdictBadge.AI_LIKE,
+  off_brief: VerdictBadge.OFF_BRIEF,
+  verbose: VerdictBadge.VERBOSE,
+  inaccurate: VerdictBadge.INACCURATE,
+  off_voice: VerdictBadge.OFF_VOICE,
+  repetitive: VerdictBadge.REPETITIVE,
+  broken_format: VerdictBadge.BROKEN_FORMAT,
+  other: VerdictBadge.OTHER,
+}
+
+export function badgeToProto(badge: VerdictBadgeName): VerdictBadge {
+  return BADGE_TO_PROTO[badge]
+}
+
+export function badgeFromProto(value: VerdictBadge): VerdictBadgeName | undefined {
+  for (const [name, wire] of Object.entries(BADGE_TO_PROTO) as [VerdictBadgeName, VerdictBadge][]) {
+    if (wire === value) return name
+  }
+  return undefined
+}
+
+/** The payload a verdict carries. Built here rather than in the sheet, so no screen names a
+ *  proto symbol (ARCH-17). */
+export function badgesToProto(badges: CandidateBadges[]) {
+  return badges.map((candidate) => ({
+    candidateId: candidate.candidateId,
+    badges: candidate.badges.map(badgeToProto),
+    otherNote: candidate.otherNote,
+  }))
 }
 
 function statusName(value: ExperimentStatus): ExperimentStatusName {

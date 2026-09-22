@@ -38,7 +38,9 @@ type CandidateLedger interface {
 
 // OutcomeLedger is what the owner decided and what happened when it was applied.
 type OutcomeLedger interface {
-	Decide(ctx context.Context, id, userID, candidateID string, status Status, outcome Outcome, applyRequested, adoptionRequested bool, decidedAt, expiresAt time.Time) (bool, error)
+	// Decide writes the verdict and the badges that explain it in one transaction: a board
+	// that counted a badge whose verdict was never recorded would be counting nothing.
+	Decide(ctx context.Context, id, userID, candidateID string, status Status, outcome Outcome, applyRequested, adoptionRequested bool, badges []CandidateBadges, decidedAt, expiresAt time.Time) (bool, error)
 	// SetApplyRequested records that a decided verdict now owes a content application, so a
 	// failure leaves the comparison unresolved for its post. Idempotent.
 	SetApplyRequested(ctx context.Context, id, userID string) error
@@ -46,7 +48,10 @@ type OutcomeLedger interface {
 	SetApplied(ctx context.Context, id, userID string, now time.Time) error
 	SetAdoptionFailure(ctx context.Context, id, userID string, failure Failure) error
 	SetAdopted(ctx context.Context, id, userID string, now time.Time) error
-	LeaderboardData(ctx context.Context, userID string, stage Stage) ([]Experiment, []Candidate, error)
+	// LeaderboardData returns the winner verdicts decided at or after `since` and the call
+	// accounting of the comparisons resolved in the same span. `userID` is honoured only for
+	// ScopeMe; ScopeAll reads every account and the caller's id never reaches the rows.
+	LeaderboardData(ctx context.Context, userID string, stage Stage, since time.Time, scope Scope) ([]Experiment, []Candidate, []BadgeTally, error)
 }
 
 // RunRetention is the cleanup: a run that has outlived its window, and one whose post is

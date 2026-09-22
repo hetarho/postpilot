@@ -1,14 +1,15 @@
 import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useExperiment, type ModelExperiment } from '@/entities/model-experiment'
+import {
+  candidateSides,
+  useExperiment,
+  type CandidateSide,
+  type ModelExperiment,
+} from '@/entities/model-experiment'
 import { useSession } from '@/entities/session'
 import { useVoices, voiceRefLabel } from '@/entities/voice'
 import { ExperimentActions, hasExperimentActions } from '@/features/review-model-experiment'
-import {
-  CandidateComparison,
-  candidateSides,
-  type CandidateSide,
-} from '@/widgets/candidate-comparison'
+import { CandidateComparison } from '@/widgets/candidate-comparison'
 import { ActionBar, Badge, Button, SegmentedControl, Typography, pageStyles } from '@/shared/ui'
 
 export function ExperimentReview({
