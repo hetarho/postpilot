@@ -275,6 +275,11 @@ type StartRequest struct {
 	Guidelines []string
 	// Memories is the retrieved 기억 texts, frozen alongside — empty unless the post opted in.
 	Memories []string
+	// QualityRules and FieldPhrases are the ticked rule texts still over band and the 분야's
+	// first phrases, resolved at Start and frozen alongside — none for a post with nothing
+	// ticked and no list (GEN-51, GEN-48).
+	QualityRules []string
+	FieldPhrases []string
 	// ObserveCalls is how many observation calls the photos will take, resolved at Start
 	// where the post is already in hand. Observation batches photos, so this is not the
 	// photo count — and the credit hold has to price every call, not every photo.
@@ -302,6 +307,10 @@ type GenerateJob struct {
 	Template       *TemplateBrief
 	Guidelines     []string
 	Memories       []string
+	// QualityRules and FieldPhrases are what Start froze; the run reads them from here and
+	// never from the quality context.
+	QualityRules []string
+	FieldPhrases []string
 	// ObserveFiles carries PRESENCE, not just emptiness. Nil is a job queued before this
 	// contract existed and keeps the observe-everything behavior; non-nil but empty is the
 	// frozen decision to observe nothing at all.

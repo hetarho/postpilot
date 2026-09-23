@@ -43,6 +43,10 @@ func (s *Service) Generate(ctx context.Context, job GenerateJob, progress Progre
 	post.Template = cloneTemplate(job.Template)
 	// Same rule for the 지침: the frozen texts, never a fresh resolution.
 	post.Guidelines = cloneTexts(job.Guidelines)
+	// The frozen rule texts and phrases reach the write from the payload alone; the quality
+	// context is never asked again here.
+	post.QualityRules = cloneTexts(job.QualityRules)
+	post.FieldPhrases = cloneTexts(job.FieldPhrases)
 	// An empty observe model records that StartGeneration accepted a zero-photo input.
 	// Photos attached while the queued job waits belong to the next generation; without
 	// this snapshot bit the accepted job would fail later for lacking a vision model.

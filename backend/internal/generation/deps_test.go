@@ -19,8 +19,21 @@ func testDeps() Deps {
 		Samples:     neutralSamples{},
 		Videos:      neutralLinker{},
 		VideoURLTTL: time.Minute,
+		// Nothing ticked and no list: what every post answered before quality existed.
+		QualityRules: neutralQualityRules{},
+		FieldPhrases: neutralFieldPhrases{},
 	}
 }
+
+type neutralQualityRules struct{}
+
+func (neutralQualityRules) RulesFor(context.Context, string, string, []string, Language) ([]string, error) {
+	return nil, nil
+}
+
+type neutralFieldPhrases struct{}
+
+func (neutralFieldPhrases) For(context.Context, string) ([]string, error) { return nil, nil }
 
 type neutralExperiments struct{}
 

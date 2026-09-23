@@ -26,18 +26,33 @@ func annotatingModels(text string) *fakeModels {
 	return models
 }
 
+// The frozen phrase list the validator keeps the title span against.
+var annotatedPhrases = []string{"분위기 좋은 카페"}
+
+// listedPhrases is a phrase port answering one fixed list, for the paths that freeze through it.
+type listedPhrases []string
+
+func (l listedPhrases) For(context.Context, string) ([]string, error) { return l, nil }
+
+// phrasedPost is a post with a 분야, so the snapshot freezes its list through the port.
 func phrasedPost() *fakePosts {
 	return &fakePosts{input: PostInput{
-		Slug: "post", UserID: "alice", Voice: liveVoice, Title: "가제", Memo: "메모",
-		FieldPhrases: []string{"분위기 좋은 카페"},
+		Slug: "post", UserID: "alice", Voice: liveVoice, Title: "가제", Memo: "메모", Field: "cafe",
 	}}
+}
+
+func phrasedService(posts *fakePosts, models *fakeModels) *Service {
+	deps := testDeps()
+	deps.FieldPhrases = listedPhrases(annotatedPhrases)
+	return NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, deps)
 }
 
 // GEN-53, GEN-55: a generation hands the post the write's nouns and candidates beside its content.
 func TestGenerateHandsTheWriteAnswerToThePost(t *testing.T) {
 	posts := phrasedPost()
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, annotatingModels(annotatedAnswer), fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
-	if err := svc.Generate(context.Background(), GenerateJob{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()}, func(string, int, int) {}); err != nil {
+	svc := phrasedService(posts, annotatingModels(annotatedAnswer))
+	// The phrases arrive frozen in the job, as Start froze them.
+	if err := svc.Generate(context.Background(), GenerateJob{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(), FieldPhrases: annotatedPhrases}, func(string, int, int) {}); err != nil {
 		t.Fatal(err)
 	}
 	if len(posts.annotations) != 1 || posts.annotations[0] == nil {
@@ -53,8 +68,7 @@ func TestGenerateHandsTheWriteAnswerToThePost(t *testing.T) {
 // answer — non-nil, with none — so the last generation's candidates are cleared, not kept.
 func TestAPhraselessWriteClearsCandidates(t *testing.T) {
 	posts := phrasedPost()
-	posts.input.FieldPhrases = nil
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, annotatingModels(annotatedAnswer), fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
+	svc := phrasedService(posts, annotatingModels(annotatedAnswer))
 	if err := svc.Generate(context.Background(), GenerateJob{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()}, func(string, int, int) {}); err != nil {
 		t.Fatal(err)
 	}
@@ -70,8 +84,7 @@ func TestAPhraselessWriteClearsCandidates(t *testing.T) {
 // holds by handing nil.
 func TestReviseKeepsTheStoredAnnotations(t *testing.T) {
 	posts := &fakePosts{input: PostInput{
-		Slug: "post", UserID: "alice", Voice: liveVoice, Content: revisionContent("body"),
-		FieldPhrases: []string{"분위기 좋은 카페"},
+		Slug: "post", UserID: "alice", Voice: liveVoice, Content: revisionContent("body"), Field: "cafe",
 	}}
 	models := annotatingModels(`{"title":"제목","summary":"요약","tags":["a"],"blocks":[{"type":"TEXT","content":"고친 본문"}]}`)
 	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
@@ -88,7 +101,7 @@ func TestReviseKeepsTheStoredAnnotations(t *testing.T) {
 // A write-experiment candidate returns its whole answer, so a winner can carry its own.
 func TestRunWriteCandidateReturnsTheAnswer(t *testing.T) {
 	posts := phrasedPost()
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, annotatingModels(annotatedAnswer), fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
+	svc := phrasedService(posts, annotatingModels(annotatedAnswer))
 	raw, err := svc.SnapshotWriteInput(context.Background(), "alice", "post", llm.ModelRef{}, nil, nil, false)
 	if err != nil {
 		t.Fatal(err)
@@ -113,7 +126,7 @@ func TestRunWriteCandidateReturnsTheAnswer(t *testing.T) {
 // carries none, and applying it clears them.
 func TestApplyWriteWinnerForwardsTheWinnersAnnotations(t *testing.T) {
 	posts := phrasedPost()
-	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, annotatingModels(annotatedAnswer), fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
+	svc := phrasedService(posts, annotatingModels(annotatedAnswer))
 	snapshot, err := svc.SnapshotWriteInput(context.Background(), "alice", "post", llm.ModelRef{}, nil, nil, false)
 	if err != nil {
 		t.Fatal(err)

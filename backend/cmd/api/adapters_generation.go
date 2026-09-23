@@ -13,6 +13,7 @@ import (
 	"github.com/postpilot/backend/internal/memory"
 	"github.com/postpilot/backend/internal/platform/config"
 	"github.com/postpilot/backend/internal/post"
+	"github.com/postpilot/backend/internal/quality"
 	"github.com/postpilot/backend/internal/storage"
 	"github.com/postpilot/backend/internal/template"
 	"github.com/postpilot/backend/internal/voice"
@@ -23,6 +24,31 @@ type generationTemplates struct{ service *template.Service }
 
 // guidelineTemplates hands the guideline context the account's template directory: the ids it
 // must prove are owned before saving a scope, and the names it projects when listing.
+// generationQuality hands generation the quality context's rendering of the ticked rules. What
+// crosses in is the post, the ASCII metric ids and the language; what comes back is TEXTS —
+// generation never learns a metric, a band or a measurement (ARCH-7).
+type generationQuality struct{ service *quality.Service }
+
+func (a generationQuality) RulesFor(ctx context.Context, userID, slug string, ticked []string, language generation.Language) ([]string, error) {
+	var lang quality.Language
+	switch language {
+	case generation.LanguageKorean:
+		lang = quality.LanguageKorean
+	case generation.LanguageEnglish:
+		lang = quality.LanguageEnglish
+	default:
+		return nil, fmt.Errorf("quality rules for unknown language %q", language)
+	}
+	return a.service.RulesFor(ctx, userID, slug, ticked, lang)
+}
+
+// generationFieldPhrases hands generation a 분야's phrase list in rank order.
+type generationFieldPhrases struct{ service *quality.Service }
+
+func (a generationFieldPhrases) For(ctx context.Context, field string) ([]string, error) {
+	return a.service.PhrasesFor(ctx, field)
+}
+
 type generationGuidelines struct{ service *guideline.Service }
 
 func (a generationGuidelines) ForPrompt(ctx context.Context, userID string, templateID, field *string, forRevision bool) ([]string, error) {
@@ -324,6 +350,7 @@ func (a generationJobs) EnqueueGeneration(ctx context.Context, request generatio
 	payload, err := generation.EncodeGenerationPayload(generation.GenerationOptions{
 		TargetLanguage: request.TargetLanguage, TargetLength: request.TargetLength, TagCount: request.TagCount, Template: request.Template,
 		Guidelines: request.Guidelines, Memories: request.Memories,
+		QualityRules: request.QualityRules, FieldPhrases: request.FieldPhrases,
 		ObserveFiles: request.ObserveFiles, Observations: request.Observations,
 	})
 	if err != nil {

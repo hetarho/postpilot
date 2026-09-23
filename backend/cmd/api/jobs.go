@@ -66,22 +66,11 @@ func registerJobs(c *contexts) {
 		return experimentSvc.Handle(ctx, experimentID, experiment.Progress(progress))
 	}))
 	q.Register(job.KindGenerate, metered(func(ctx context.Context, found job.Job, progress job.Progress) error {
-		slug := found.Subject(post.JobSubject)
-		if slug == "" {
-			return job.ErrInvalidTarget
-		}
-		options, err := generation.DecodeGenerationPayload(found.Payload)
+		run, err := generateJob(found)
 		if err != nil {
 			return err
 		}
-		return generationSvc.Generate(ctx, generation.GenerateJob{
-			UserID: found.UserID, PostSlug: slug, VoiceID: found.Subject(voice.JobSubject),
-			ObserveModel: found.ObserveModel, WriteModel: found.WriteModel,
-			TargetLanguage: options.TargetLanguage, TargetLength: options.TargetLength, TagCount: options.TagCount, Template: options.Template,
-			Guidelines: options.Guidelines, Memories: options.Memories,
-			ObserveFiles: options.ObserveFiles, Observations: options.Observations,
-			WriteNativeEffort: options.WriteNativeEffort,
-		}, generation.Progress(progress))
+		return generationSvc.Generate(ctx, run, generation.Progress(progress))
 	}))
 	q.Register(job.KindRevise, metered(func(ctx context.Context, found job.Job, progress job.Progress) error {
 		slug := found.Subject(post.JobSubject)
@@ -125,4 +114,27 @@ func metered(handler job.Handler) job.Handler {
 			ObserveModel: found.ObserveModel, WriteModel: found.WriteModel,
 		}), found, progress)
 	}
+}
+
+// generateJob maps a stored generate job onto the run the worker executes: the subjects name the
+// post and the voice, and everything else is the payload's frozen decision. It is its own
+// function so a test drives exactly the mapping the worker uses.
+func generateJob(found job.Job) (generation.GenerateJob, error) {
+	slug := found.Subject(post.JobSubject)
+	if slug == "" {
+		return generation.GenerateJob{}, job.ErrInvalidTarget
+	}
+	options, err := generation.DecodeGenerationPayload(found.Payload)
+	if err != nil {
+		return generation.GenerateJob{}, err
+	}
+	return generation.GenerateJob{
+		UserID: found.UserID, PostSlug: slug, VoiceID: found.Subject(voice.JobSubject),
+		ObserveModel: found.ObserveModel, WriteModel: found.WriteModel,
+		TargetLanguage: options.TargetLanguage, TargetLength: options.TargetLength, TagCount: options.TagCount, Template: options.Template,
+		Guidelines: options.Guidelines, Memories: options.Memories,
+		QualityRules: options.QualityRules, FieldPhrases: options.FieldPhrases,
+		ObserveFiles: options.ObserveFiles, Observations: options.Observations,
+		WriteNativeEffort: options.WriteNativeEffort,
+	}, nil
 }

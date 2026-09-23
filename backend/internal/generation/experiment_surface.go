@@ -89,6 +89,14 @@ func (s *Service) SnapshotWriteInput(ctx context.Context, userID, postSlug strin
 		return nil, err
 	}
 	post.Guidelines = texts
+	// The same two freezes Start makes, so both candidates read one identical set, and a
+	// different set is a different frozen input — a different hash.
+	if post.QualityRules, err = s.freezeQualityRules(ctx, post); err != nil {
+		return nil, err
+	}
+	if post.FieldPhrases, err = s.freezeFieldPhrases(ctx, post); err != nil {
+		return nil, err
+	}
 	voiceID, err := activeVoice(post)
 	if err != nil {
 		return nil, err

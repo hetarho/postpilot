@@ -310,6 +310,10 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 			// This adapter is the only place the two contexts meet in that direction, and
 			// nothing crosses it but the account, the post and the user's own sentence.
 			Candidates: generationCandidates{service: c.guideline},
+			// The ticked rule texts and the 분야 phrases are read at enqueue, for a write only;
+			// the quality context never learns that generation exists (ARCH-7).
+			QualityRules: generationQuality{service: c.quality},
+			FieldPhrases: generationFieldPhrases{service: c.quality},
 			// The per-version generation snapshot (change 16). Generation is the only context
 			// that depends on both post and voice, so it is the only one that may join a
 			// machine baseline to the profile version that produced it.

@@ -117,3 +117,18 @@ type GuidelineCandidates interface {
 }
 
 type Progress func(stage string, done, total int)
+
+// QualityRulesForPrompt is the quality context's published rendering of the ticked rules,
+// consumed only at enqueue: the texts of the ticked metrics the post's account is still over
+// band on, in the target language (GEN-51, POST-81). What crosses in is the post and the ASCII
+// metric ids; what comes back is TEXTS, so no metric, band or measurement reaches this context
+// (ARCH-7).
+type QualityRulesForPrompt interface {
+	RulesFor(ctx context.Context, userID, slug string, ticked []string, language Language) ([]string, error)
+}
+
+// FieldPhrasesForPrompt is the quality context's published 분야 phrase list, consumed only at
+// enqueue, in the list's own rank order (GEN-48). An empty or missing list is none (QUAL-41).
+type FieldPhrasesForPrompt interface {
+	For(ctx context.Context, field string) ([]string, error)
+}

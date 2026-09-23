@@ -12,23 +12,25 @@ import (
 )
 
 type Service struct {
-	posts       Posts
-	profiles    Profiles
-	rules       RuleWriter
-	models      LLM
-	images      ImageReader
-	jobs        Jobs
-	experiments PendingExperiments
-	templates   TemplateBriefs
-	guidelines  GuidelinesForPrompt
-	memories    MemoriesForPrompt
-	candidates  GuidelineCandidates
-	samples     VersionSampleWriter
-	batchSize   int
-	videos      VideoLinker
-	videoURLTTL time.Duration
-	reasoning   ReasoningPolicy
-	budget      CompletionBudget
+	posts        Posts
+	profiles     Profiles
+	rules        RuleWriter
+	models       LLM
+	images       ImageReader
+	jobs         Jobs
+	experiments  PendingExperiments
+	templates    TemplateBriefs
+	guidelines   GuidelinesForPrompt
+	memories     MemoriesForPrompt
+	candidates   GuidelineCandidates
+	samples      VersionSampleWriter
+	batchSize    int
+	videos       VideoLinker
+	videoURLTTL  time.Duration
+	qualityRules QualityRulesForPrompt
+	fieldPhrases FieldPhrasesForPrompt
+	reasoning    ReasoningPolicy
+	budget       CompletionBudget
 }
 
 type ReasoningPolicy struct {
@@ -79,6 +81,10 @@ type Deps struct {
 	Memories MemoriesForPrompt
 	// Candidates records what a completed revision asked for.
 	Candidates GuidelineCandidates
+	// QualityRules renders the ticked rules still over band, and FieldPhrases reads the 분야
+	// phrase list; both are read once at enqueue, for a write only (GEN-51, GEN-48).
+	QualityRules QualityRulesForPrompt
+	FieldPhrases FieldPhrasesForPrompt
 	// Samples is the voice context's per-version snapshot recorder.
 	Samples VersionSampleWriter
 	// Videos mints the signed link a video reaches a model through (VIDEO-10); the
@@ -97,7 +103,7 @@ func NewService(posts Posts, profiles Profiles, rules RuleWriter, models LLM, im
 	if budget == nil {
 		panic("generation: a completion budget policy is required")
 	}
-	for name, dep := range map[string]any{"experiments": deps.Experiments, "template briefs": deps.Templates, "guidelines": deps.Guidelines, "memories": deps.Memories, "guideline candidates": deps.Candidates, "version samples": deps.Samples, "video linker": deps.Videos} {
+	for name, dep := range map[string]any{"experiments": deps.Experiments, "template briefs": deps.Templates, "guidelines": deps.Guidelines, "memories": deps.Memories, "guideline candidates": deps.Candidates, "version samples": deps.Samples, "video linker": deps.Videos, "quality rules": deps.QualityRules, "field phrases": deps.FieldPhrases} {
 		if dep == nil {
 			panic("generation: " + name + " collaborator is required")
 		}
@@ -106,7 +112,8 @@ func NewService(posts Posts, profiles Profiles, rules RuleWriter, models LLM, im
 		panic("generation: video link TTL must be positive")
 	}
 	return &Service{posts: posts, profiles: profiles, rules: rules, models: models, images: images, jobs: jobs, batchSize: batchSize, reasoning: reasoning, budget: budget,
-		experiments: deps.Experiments, templates: deps.Templates, guidelines: deps.Guidelines, memories: deps.Memories, candidates: deps.Candidates, samples: deps.Samples, videos: deps.Videos, videoURLTTL: deps.VideoURLTTL}
+		experiments: deps.Experiments, templates: deps.Templates, guidelines: deps.Guidelines, memories: deps.Memories, candidates: deps.Candidates, samples: deps.Samples, videos: deps.Videos, videoURLTTL: deps.VideoURLTTL,
+		qualityRules: deps.QualityRules, fieldPhrases: deps.FieldPhrases}
 }
 
 // recordVersionSample copies what a run produced into the voice's current head version. It is
@@ -283,6 +290,16 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (string, erro
 		return "", err
 	}
 	request.Memories = memories
+	rules, err := s.freezeQualityRules(ctx, post)
+	if err != nil {
+		return "", err
+	}
+	request.QualityRules = rules
+	phrases, err := s.freezeFieldPhrases(ctx, post)
+	if err != nil {
+		return "", err
+	}
+	request.FieldPhrases = phrases
 	if len(post.Images) > 0 {
 		// Both halves of the reuse decision are resolved HERE, from one read of the post,
 		// and frozen into the payload by the enqueue. Attaching a photo, deleting one or
@@ -406,6 +423,39 @@ func (s *Service) freezeGuidelines(ctx context.Context, post PostInput, forRevis
 		return nil, fmt.Errorf("load applicable guidelines: %w", err)
 	}
 	return texts, nil
+}
+
+// freezeQualityRules renders the ticked rules once, at enqueue, in the run's target language.
+// A post with nothing ticked never reaches the quality context; a tick that comes back with no
+// text (within band, below its minimum, never measured) freezes nothing. The handlers read only
+// the payload, so ticking, publishing or measuring afterwards cannot reach queued work.
+func (s *Service) freezeQualityRules(ctx context.Context, post PostInput) ([]string, error) {
+	if len(post.QualityRuleIDs) == 0 {
+		return nil, nil
+	}
+	texts, err := s.qualityRules.RulesFor(ctx, post.UserID, post.Slug, post.QualityRuleIDs, post.TargetLanguage)
+	if err != nil {
+		return nil, fmt.Errorf("load quality rules: %w", err)
+	}
+	return cloneTexts(texts), nil
+}
+
+// freezeFieldPhrases reads the post's 분야 list once, at enqueue, and keeps its first
+// FieldPhrasesMax in rank order (GEN-48). A post with no 분야 never reaches the quality context,
+// and an empty or missing list is none, exactly like no 분야 (QUAL-41). The 상위 노출 단어 사용
+// preset plays no part here: it is a guideline line, frozen by freezeGuidelines (GUIDE-31).
+func (s *Service) freezeFieldPhrases(ctx context.Context, post PostInput) ([]string, error) {
+	if post.Field == "" {
+		return nil, nil
+	}
+	phrases, err := s.fieldPhrases.For(ctx, post.Field)
+	if err != nil {
+		return nil, fmt.Errorf("load field phrases: %w", err)
+	}
+	if len(phrases) > FieldPhrasesMax {
+		phrases = phrases[:FieldPhrasesMax]
+	}
+	return cloneTexts(phrases), nil
 }
 
 // freezeMemories retrieves the post's memories once, at enqueue, and only when the post
