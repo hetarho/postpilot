@@ -266,7 +266,7 @@ func TestARunFreezesThePostsNumbersNotTheTemplates(t *testing.T) {
 	templateSvc := template.NewService(
 		templatestore.New(handle.Writer, handle.Reader),
 		template.Limits{
-			NameMaxChars: 40, DescriptionMaxChars: 200, BodyMaxChars: 4000,
+			NameMaxChars: 40, DescriptionMaxChars: 200, BodyMaxChars: 4000, TitleAreaMaxChars: 200,
 			MaxPerAccount: 50, MaxRepeatExpansion: 40, PhotoRowMax: 4,
 			AskLabelMaxChars: 40, AskMaxPerBody: 10,
 			TargetLengthMin: 1, TagCountMin: 1, TagCountMax: 10,
@@ -275,7 +275,7 @@ func TestARunFreezesThePostsNumbersNotTheTemplates(t *testing.T) {
 	postSvc.SetTemplateDirectory(postTemplates{service: templateSvc})
 
 	shaped, err := templateSvc.Create(ctx, "alice", "정보성 식당 리뷰", "", "<write>인트로</write>",
-		template.Numbers{TargetLength: intPtr(1800), TagCount: intPtr(7)})
+		"", template.Numbers{TargetLength: intPtr(1800), TagCount: intPtr(7)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -341,7 +341,7 @@ func TestGenerationAdapterCarriesThePostTemplateThroughToTheFrozenBrief(t *testi
 	templateSvc := template.NewService(
 		templatestore.New(handle.Writer, handle.Reader),
 		template.Limits{
-			NameMaxChars: 40, DescriptionMaxChars: 200, BodyMaxChars: 4000,
+			NameMaxChars: 40, DescriptionMaxChars: 200, BodyMaxChars: 4000, TitleAreaMaxChars: 200,
 			MaxPerAccount: 50, MaxRepeatExpansion: 40, PhotoRowMax: 4,
 			AskLabelMaxChars: 40, AskMaxPerBody: 10,
 			TargetLengthMin: 1, TagCountMin: 1, TagCountMax: 10,
@@ -350,7 +350,7 @@ func TestGenerationAdapterCarriesThePostTemplateThroughToTheFrozenBrief(t *testi
 	postSvc.SetTemplateDirectory(postTemplates{service: templateSvc})
 
 	created, err := templateSvc.Create(ctx, "alice", "정보성 식당 리뷰", "협찬 방문 리뷰",
-		"<write>인트로</write>\n<slot kind=\"place\" label=\"네이버 지도\"/>\n<repeat each=\"photo\">\n<slot kind=\"photo\"/>\n<write>사진 설명</write>\n</repeat>", template.Numbers{})
+		"<write>인트로</write>\n<slot kind=\"place\" label=\"네이버 지도\"/>\n<repeat each=\"photo\">\n<slot kind=\"photo\"/>\n<write>사진 설명</write>\n</repeat>", "", template.Numbers{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -448,6 +448,84 @@ func TestGenerationAdapterCarriesThePostTemplateThroughToTheFrozenBrief(t *testi
 	}
 	if bare.TemplateID != "" {
 		t.Fatalf("a post with no template reported %q", bare.TemplateID)
+	}
+}
+
+// TMPL-50, TMPL-51: a template's title area reaches the frozen brief through the real stores
+// and both adapters, rendered with the post's own answers, and the prompts carry it inside the
+// template section ahead of the body.
+func TestGenerationAdapterCarriesTheTitleAreaIntoTheFrozenBrief(t *testing.T) {
+	handle, err := db.Open(filepath.Join(t.TempDir(), "title-area.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer handle.Close()
+	ctx := context.Background()
+	if err := db.Migrate(ctx, handle.Writer); err != nil {
+		t.Fatal(err)
+	}
+	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: time.Now()}); err != nil {
+		t.Fatal(err)
+	}
+	if err := defaultVoiceBootstrap(ctx, handle, "alice"); err != nil {
+		t.Fatal(err)
+	}
+
+	voiceSvc := voice.NewService(voicestore.New(handle.Writer, handle.Reader), nil, nil)
+	postSvc := post.NewService(poststore.New(handle.Writer, handle.Reader), noBlobs{}, testPostLimits(), testPostDeps(voiceSvc))
+	templateSvc := template.NewService(
+		templatestore.New(handle.Writer, handle.Reader),
+		template.Limits{
+			NameMaxChars: 40, DescriptionMaxChars: 200, BodyMaxChars: 4000, TitleAreaMaxChars: 200,
+			MaxPerAccount: 50, MaxRepeatExpansion: 40, PhotoRowMax: 4,
+			AskLabelMaxChars: 40, AskMaxPerBody: 10,
+			TargetLengthMin: 1, TagCountMin: 1, TagCountMax: 10,
+		},
+	)
+	postSvc.SetTemplateDirectory(postTemplates{service: templateSvc})
+
+	created, err := templateSvc.Create(ctx, "alice", "맛집 후기", "", `<ask label="총평">총평을 쓰세요</ask>`,
+		`<ask label="가게 이름">가게 이름을 넣어 쓰세요</ask> 방문 후기`, template.Numbers{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defaultVoice, err := voiceSvc.DefaultVoice(ctx, "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	language := post.LanguageKorean
+	saved, err := postSvc.SaveDraft(ctx, "alice", "", "을지로", "", &defaultVoice.ID, &created.ID, &language,
+		[]post.TemplateAnswer{
+			{Label: "가게 이름", Text: "을지로 노포", Enabled: true},
+			{Label: "총평", Text: "뼈가 푸짐했다", Enabled: true},
+		})
+	if err != nil {
+		t.Fatal(err)
+	}
+	input, err := generationPosts{service: postSvc}.AttachedImages(ctx, "alice", saved.Slug)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	brief, ok, err := (generationTemplates{service: templateSvc}).RenderedFor(ctx, "alice", input.TemplateID, nil, input.TemplateAnswers)
+	if err != nil || !ok {
+		t.Fatalf("render: ok=%v err=%v", ok, err)
+	}
+	if !strings.Contains(brief.TitleArea, `<facts label="가게 이름">을지로 노포</facts>`) || !strings.HasSuffix(brief.TitleArea, " 방문 후기") {
+		t.Fatalf("title area = %q", brief.TitleArea)
+	}
+	want := []generation.TemplateFact{{Label: "가게 이름", Value: "을지로 노포"}, {Label: "총평", Value: "뼈가 푸짐했다"}}
+	if len(brief.Facts) != 2 || brief.Facts[0] != want[0] || brief.Facts[1] != want[1] {
+		t.Fatalf("facts = %+v, want the title's first", brief.Facts)
+	}
+
+	write, _ := generation.BuildWritePrompt(generation.Profile{}, nil, "", "", nil, nil, &brief, nil)
+	revise, _ := generation.BuildRevisePrompt(generation.Profile{}, generation.PostContent{Title: "을지로 노포 방문 후기"}, nil, "고쳐줘", nil, &brief, nil)
+	for name, system := range map[string]string{"write": write, "revise": revise} {
+		section, title, body := strings.Index(system, "[글 템플릿:"), strings.Index(system, brief.TitleArea), strings.Index(system, brief.Body)
+		if section < 0 || title <= section || body <= title {
+			t.Fatalf("%s prompt: section at %d, title area at %d, body at %d:\n%s", name, section, title, body, system)
+		}
 	}
 }
 
@@ -558,7 +636,7 @@ func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.
 	templateSvc := template.NewService(
 		templatestore.New(handle.Writer, handle.Reader),
 		template.Limits{
-			NameMaxChars: 40, DescriptionMaxChars: 200, BodyMaxChars: 4000,
+			NameMaxChars: 40, DescriptionMaxChars: 200, BodyMaxChars: 4000, TitleAreaMaxChars: 200,
 			MaxPerAccount: 50, MaxRepeatExpansion: 40, PhotoRowMax: 4,
 			AskLabelMaxChars: 40, AskMaxPerBody: 10,
 			TargetLengthMin: 1, TagCountMin: 1, TagCountMax: 10,
@@ -572,11 +650,11 @@ func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.
 	)
 	guidelineSvc.SetTemplateDirectory(guidelineTemplates{service: templateSvc})
 
-	review, err := templateSvc.Create(ctx, "alice", "무인가게 리뷰", "", "사진마다 설명하세요", template.Numbers{})
+	review, err := templateSvc.Create(ctx, "alice", "무인가게 리뷰", "", "사진마다 설명하세요", "", template.Numbers{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	other, err := templateSvc.Create(ctx, "alice", "협찬 리뷰", "", "협찬을 밝히세요", template.Numbers{})
+	other, err := templateSvc.Create(ctx, "alice", "협찬 리뷰", "", "협찬을 밝히세요", "", template.Numbers{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -673,7 +751,7 @@ func TestGuidelineCandidateAdaptersRecordReviewAndApproveAcrossTheSeam(t *testin
 	templateSvc := template.NewService(
 		templatestore.New(handle.Writer, handle.Reader),
 		template.Limits{
-			NameMaxChars: 40, DescriptionMaxChars: 200, BodyMaxChars: 4000,
+			NameMaxChars: 40, DescriptionMaxChars: 200, BodyMaxChars: 4000, TitleAreaMaxChars: 200,
 			MaxPerAccount: 50, MaxRepeatExpansion: 40, PhotoRowMax: 4,
 			AskLabelMaxChars: 40, AskMaxPerBody: 10,
 			TargetLengthMin: 1, TagCountMin: 1, TagCountMax: 10,
@@ -743,7 +821,7 @@ func TestGuidelineCandidateAdaptersRecordReviewAndApproveAcrossTheSeam(t *testin
 	}
 
 	// A5: approval is the standard create, with the scope chosen here and nowhere earlier.
-	review, err := templateSvc.Create(ctx, "alice", "무인가게 리뷰", "", "사진마다 설명하세요", template.Numbers{})
+	review, err := templateSvc.Create(ctx, "alice", "무인가게 리뷰", "", "사진마다 설명하세요", "", template.Numbers{})
 	if err != nil {
 		t.Fatal(err)
 	}

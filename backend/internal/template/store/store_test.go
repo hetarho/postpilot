@@ -106,7 +106,7 @@ func TestUpdateTouchesOnlyThePresentFields(t *testing.T) {
 	name := "정보성 리뷰"
 	later := testNow.Add(time.Minute)
 
-	updated, err := s.Update(ctx, "alice", "t1", template.Patch{Name: &name}, later)
+	updated, err := s.Update(ctx, "alice", "t1", template.Patch{Name: &name}, later, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -116,7 +116,7 @@ func TestUpdateTouchesOnlyThePresentFields(t *testing.T) {
 	if !updated.UpdatedAt.Equal(later) {
 		t.Fatalf("updated_at = %v, want %v", updated.UpdatedAt, later)
 	}
-	if _, err := s.Update(ctx, "alice", "b1", template.Patch{Name: &name}, later); !errors.Is(err, template.ErrNotFound) {
+	if _, err := s.Update(ctx, "alice", "b1", template.Patch{Name: &name}, later, nil); !errors.Is(err, template.ErrNotFound) {
 		t.Fatalf("a foreign update error = %v", err)
 	}
 }

@@ -62,6 +62,27 @@ func Render(name string, nodes []Node, filenames []string, maxIterations int, an
 	return Rendered{Name: name, Body: body.String(), Slots: state.slots, Rows: state.rows, Facts: state.facts}, nil
 }
 
+// RenderTemplate renders a template's two areas for one post (TMPL-50). The body renders
+// exactly as Render renders it. The title area renders with the same answers and no photos: it
+// holds no photo position and no repeat, so it binds nothing and costs nothing against the
+// bound. A title left blank once its asks drop is no title form at all, so it renders as "".
+// The facts read in document order, the title's first (TMPL-55).
+func RenderTemplate(name string, title, body []Node, filenames []string, maxIterations int, answers []Answer) (Rendered, error) {
+	rendered, err := Render(name, body, filenames, maxIterations, answers)
+	if err != nil {
+		return Rendered{}, err
+	}
+	heading, err := Render(name, title, nil, maxIterations, answers)
+	if err != nil {
+		return Rendered{}, err
+	}
+	if !isBlank(heading.Body) {
+		rendered.TitleArea = heading.Body
+	}
+	rendered.Facts = append(heading.Facts, rendered.Facts...)
+	return rendered, nil
+}
+
 // resolveAsks replaces every data field with what the post actually answered, and REMOVES the
 // node of a field that is off, blank or unanswered.
 //

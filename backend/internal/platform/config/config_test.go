@@ -596,7 +596,7 @@ func TestLoadTemplateLimitDefaultsAndValidation(t *testing.T) {
 	t.Setenv("CORS_ORIGIN", "http://localhost:2564")
 	names := []string{
 		"TEMPLATE_NAME_MAX_CHARS", "TEMPLATE_DESCRIPTION_MAX_CHARS", "TEMPLATE_BODY_MAX_CHARS",
-		"TEMPLATE_MAX_PER_ACCOUNT", "TEMPLATE_MAX_REPEAT_EXPANSION",
+		"TEMPLATE_MAX_PER_ACCOUNT", "TEMPLATE_MAX_REPEAT_EXPANSION", "TEMPLATE_TITLE_AREA_MAX_CHARS",
 	}
 	for _, name := range names {
 		t.Setenv(name, "")
@@ -606,7 +606,7 @@ func TestLoadTemplateLimitDefaultsAndValidation(t *testing.T) {
 		t.Fatal(err)
 	}
 	if cfg.TemplateNameMaxChars != 40 || cfg.TemplateDescriptionMaxChars != 200 || cfg.TemplateBodyMaxChars != 4000 ||
-		cfg.TemplateMaxPerAccount != 50 || cfg.TemplateMaxRepeatExpansion != 40 {
+		cfg.TemplateMaxPerAccount != 50 || cfg.TemplateMaxRepeatExpansion != 40 || cfg.TemplateTitleAreaMaxChars != 200 {
 		t.Fatalf("template limit defaults = %+v", cfg)
 	}
 

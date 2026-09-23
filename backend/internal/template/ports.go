@@ -20,7 +20,12 @@ type Store interface {
 	// transaction, so a field saved concurrently from elsewhere is not read-modify-written
 	// back to its old value. It reports ErrNotFound for an unknown or foreign id and
 	// ErrDuplicateName on collision.
-	Update(ctx context.Context, userID, id string, patch Patch, updatedAt time.Time) (Template, error)
+	//
+	// A non-nil check is handed the stored row, read inside that transaction before any
+	// statement runs, and its error refuses the update with nothing written. That is how a
+	// patch carrying one area is checked against the other area as stored: no write can move
+	// the counterpart between the read and the statements.
+	Update(ctx context.Context, userID, id string, patch Patch, updatedAt time.Time, check func(current Template) error) (Template, error)
 	// Delete removes the template and detaches the posts pointing at it IN ONE TRANSACTION,
 	// returning how many were detached. Splitting the two would let a crash in between
 	// leave posts naming a template that no longer exists.

@@ -57,7 +57,7 @@ func (q *Queries) DeleteTemplate(ctx context.Context, arg DeleteTemplateParams) 
 }
 
 const getTemplate = `-- name: GetTemplate :one
-SELECT t.id, t.user_id, t.name, t.description, t.body, t.target_length, t.tag_count, t.created_at, t.updated_at,
+SELECT t.id, t.user_id, t.name, t.description, t.body, t.title_area, t.target_length, t.tag_count, t.created_at, t.updated_at,
        (SELECT count(*) FROM posts po WHERE po.template_id = t.id AND po.user_id = t.user_id) AS post_count
 FROM templates t
 WHERE t.id = ? AND t.user_id = ?
@@ -74,6 +74,7 @@ type GetTemplateRow struct {
 	Name         string
 	Description  string
 	Body         string
+	TitleArea    string
 	TargetLength sql.NullInt64
 	TagCount     sql.NullInt64
 	CreatedAt    string
@@ -90,6 +91,7 @@ func (q *Queries) GetTemplate(ctx context.Context, arg GetTemplateParams) (GetTe
 		&i.Name,
 		&i.Description,
 		&i.Body,
+		&i.TitleArea,
 		&i.TargetLength,
 		&i.TagCount,
 		&i.CreatedAt,
@@ -101,8 +103,8 @@ func (q *Queries) GetTemplate(ctx context.Context, arg GetTemplateParams) (GetTe
 
 const insertTemplate = `-- name: InsertTemplate :exec
 
-INSERT INTO templates (id, user_id, name, description, body, target_length, tag_count, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO templates (id, user_id, name, description, body, title_area, target_length, tag_count, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `
 
 type InsertTemplateParams struct {
@@ -111,6 +113,7 @@ type InsertTemplateParams struct {
 	Name         string
 	Description  string
 	Body         string
+	TitleArea    string
 	TargetLength sql.NullInt64
 	TagCount     sql.NullInt64
 	CreatedAt    string
@@ -130,6 +133,7 @@ func (q *Queries) InsertTemplate(ctx context.Context, arg InsertTemplateParams) 
 		arg.Name,
 		arg.Description,
 		arg.Body,
+		arg.TitleArea,
 		arg.TargetLength,
 		arg.TagCount,
 		arg.CreatedAt,
@@ -139,7 +143,7 @@ func (q *Queries) InsertTemplate(ctx context.Context, arg InsertTemplateParams) 
 }
 
 const listTemplates = `-- name: ListTemplates :many
-SELECT t.id, t.user_id, t.name, t.description, t.body, t.target_length, t.tag_count, t.created_at, t.updated_at,
+SELECT t.id, t.user_id, t.name, t.description, t.body, t.title_area, t.target_length, t.tag_count, t.created_at, t.updated_at,
        (SELECT count(*) FROM posts po WHERE po.template_id = t.id AND po.user_id = t.user_id) AS post_count
 FROM templates t
 WHERE t.user_id = ?
@@ -152,6 +156,7 @@ type ListTemplatesRow struct {
 	Name         string
 	Description  string
 	Body         string
+	TitleArea    string
 	TargetLength sql.NullInt64
 	TagCount     sql.NullInt64
 	CreatedAt    string
@@ -174,6 +179,7 @@ func (q *Queries) ListTemplates(ctx context.Context, userID string) ([]ListTempl
 			&i.Name,
 			&i.Description,
 			&i.Body,
+			&i.TitleArea,
 			&i.TargetLength,
 			&i.TagCount,
 			&i.CreatedAt,
@@ -254,7 +260,7 @@ type UpdateTemplateNameParams struct {
 }
 
 // An edit is one statement PER PRESENT FIELD, run together in one transaction, rather than
-// one statement that writes all three. A field the request did not send is then never named
+// one statement that writes them all. A field the request did not send is then never named
 // by any statement at all, so two fields edited from two tabs cannot overwrite each other
 // and no read-modify-write can put a stale value back. (A single COALESCE statement would
 // say the same thing, but sqlc types a NOT NULL column's parameter as a plain string, which
@@ -295,6 +301,31 @@ func (q *Queries) UpdateTemplateNumbers(ctx context.Context, arg UpdateTemplateN
 	result, err := q.db.ExecContext(ctx, updateTemplateNumbers,
 		arg.TargetLength,
 		arg.TagCount,
+		arg.UpdatedAt,
+		arg.ID,
+		arg.UserID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const updateTemplateTitleArea = `-- name: UpdateTemplateTitleArea :execrows
+UPDATE templates SET title_area = ?, updated_at = ? WHERE id = ? AND user_id = ?
+`
+
+type UpdateTemplateTitleAreaParams struct {
+	TitleArea string
+	UpdatedAt string
+	ID        string
+	UserID    string
+}
+
+// A present empty title area is a real value: it clears the title form (TMPL-8).
+func (q *Queries) UpdateTemplateTitleArea(ctx context.Context, arg UpdateTemplateTitleAreaParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateTemplateTitleArea,
+		arg.TitleArea,
 		arg.UpdatedAt,
 		arg.ID,
 		arg.UserID,

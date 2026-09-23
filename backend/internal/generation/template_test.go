@@ -1,7 +1,9 @@
 package generation
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"os"
 	"strings"
 	"testing"
@@ -380,5 +382,138 @@ func TestTheEnqueuePassesThePostAnswersToTheRenderOnce(t *testing.T) {
 	}
 	if len(briefs.answers) != 2 || briefs.answers[0] != answers[0] || briefs.answers[1] != answers[1] {
 		t.Fatalf("render saw answers %+v, want %+v", briefs.answers, answers)
+	}
+}
+
+// TMPL-51: the title area freezes with the body on both paths, as `template.title_area`, and a
+// payload written before the member existed decodes as a template with none. A brief without
+// one writes no key at all, so every payload frozen before the member stays byte-identical.
+func TestTheTitleAreaRidesBothPayloadsAndALegacyOneDecodesAsNone(t *testing.T) {
+	brief := titleAreaBrief()
+	generate, err := EncodeGenerationPayload(GenerationOptions{TargetLanguage: LanguageKorean, Template: brief})
+	if err != nil {
+		t.Fatal(err)
+	}
+	revise, err := encodeRevisionPayload("INSTRUCTION", false, brief, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, raw := range map[string][]byte{"generate": generate, "revise": revise} {
+		var wire struct {
+			Template map[string]any `json:"template"`
+		}
+		if err := json.Unmarshal(raw, &wire); err != nil {
+			t.Fatal(err)
+		}
+		if wire.Template["title_area"] != brief.TitleArea {
+			t.Fatalf("%s payload template = %v", name, wire.Template)
+		}
+	}
+	decoded, err := DecodeGenerationPayload(generate)
+	if err != nil || decoded.Template == nil || decoded.Template.TitleArea != brief.TitleArea {
+		t.Fatalf("decoded generate template = %+v, %v", decoded.Template, err)
+	}
+	parsed, err := parseRevisionPayload(revise)
+	if err != nil || decodeTemplate(parsed.Template).TitleArea != brief.TitleArea {
+		t.Fatalf("decoded revision template = %+v, %v", parsed.Template, err)
+	}
+
+	plainGenerate, err := EncodeGenerationPayload(GenerationOptions{TargetLanguage: LanguageKorean, Template: testBrief()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	plainRevise, err := encodeRevisionPayload("INSTRUCTION", false, testBrief(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Contains(plainGenerate, []byte("title_area")) || bytes.Contains(plainRevise, []byte("title_area")) {
+		t.Fatalf("a brief without a title area wrote the key:\n%s\n%s", plainGenerate, plainRevise)
+	}
+
+	legacy, err := DecodeGenerationPayload([]byte(`{"template":{"name":"정보성 식당 리뷰","body":"<write>인트로</write>"}}`))
+	if err != nil || legacy.Template == nil || legacy.Template.TitleArea != "" || legacy.Template.Body != "<write>인트로</write>" {
+		t.Fatalf("legacy generate payload = %+v, %v", legacy.Template, err)
+	}
+	old, err := parseRevisionPayload([]byte(`{"instruction":"고쳐줘","save_as_rule":false,"template":{"name":"n","body":"b"}}`))
+	if err != nil || decodeTemplate(old.Template).TitleArea != "" {
+		t.Fatalf("legacy revision payload = %+v, %v", old.Template, err)
+	}
+}
+
+// TMPL-51: the title area the enqueue froze is the one the drain prompts with, whatever the live
+// row holds by then.
+func TestTheFrozenTitleAreaSurvivesAnEditOfTheLiveRow(t *testing.T) {
+	ctx := context.Background()
+	briefs := &fakeTemplateBriefs{brief: *titleAreaBrief()}
+	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, TemplateID: "template-review"}}
+	jobs := &fakeJobs{id: "job"}
+	models := newFakeModels()
+	models.complete = func(llm.ModelRef, llm.Request) (llm.Response, error) { return okContent(), nil }
+	svc := templateAwareService(t, briefs, posts, jobs, models)
+
+	if _, err := svc.Start(ctx, StartRequest{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()}); err != nil {
+		t.Fatal(err)
+	}
+	want := titleAreaBrief().TitleArea
+	if len(jobs.generations) != 1 || jobs.generations[0].Template == nil || jobs.generations[0].Template.TitleArea != want {
+		t.Fatalf("the start froze %+v", jobs.generations)
+	}
+	// The payload crosses the queue as bytes, and the live row's title area is rewritten
+	// between the enqueue and the drain.
+	raw, err := EncodeGenerationPayload(GenerationOptions{TargetLanguage: LanguageKorean, Template: jobs.generations[0].Template})
+	if err != nil {
+		t.Fatal(err)
+	}
+	briefs.brief.TitleArea = "[편집됨] <write>다른 제목</write>"
+	decoded, err := DecodeGenerationPayload(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := svc.Generate(ctx, GenerateJob{
+		UserID: "alice", PostSlug: "post", VoiceID: liveVoice.ID, WriteModel: writeRef.String(), Template: decoded.Template,
+	}, func(string, int, int) {}); err != nil {
+		t.Fatal(err)
+	}
+	system := models.calls[0].request.System
+	if !strings.Contains(system, want) || strings.Contains(system, "다른 제목") {
+		t.Fatalf("the drain did not prompt with the frozen title area:\n%s", system)
+	}
+	if briefs.calls != 1 {
+		t.Fatalf("the template context was consulted %d times, want exactly 1 (the enqueue)", briefs.calls)
+	}
+}
+
+// The brief is part of the frozen comparison input, so a different title area is a different
+// input and a different hash. A brief with none marshals no member at all, which is what keeps
+// every snapshot frozen before the member existed byte-identical.
+func TestADifferentTitleAreaIsADifferentWriteSnapshot(t *testing.T) {
+	ctx := context.Background()
+	briefs := &fakeTemplateBriefs{brief: *titleAreaBrief()}
+	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, TemplateID: "template-review"}}
+	svc := templateAwareService(t, briefs, posts, &fakeJobs{id: "job"}, newFakeModels())
+
+	snapshot := func() []byte {
+		t.Helper()
+		raw, err := svc.SnapshotWriteInput(ctx, "alice", "post", llm.ModelRef{}, nil, nil, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return raw
+	}
+	first := snapshot()
+	if !bytes.Contains(first, []byte(`"TitleArea":`)) {
+		t.Fatalf("the snapshot does not carry the title area:\n%s", first)
+	}
+	if again := snapshot(); !bytes.Equal(again, first) {
+		t.Fatal("the same title area froze two different inputs")
+	}
+	briefs.brief.TitleArea = "[카페] <write>카페 이름</write>"
+	if other := snapshot(); bytes.Equal(other, first) {
+		t.Fatal("a different title area left the frozen input identical")
+	}
+	briefs.brief.TitleArea = ""
+	if none := snapshot(); bytes.Contains(none, []byte("TitleArea")) {
+		t.Fatalf("a brief without a title area marshalled the member:\n%s", none)
 	}
 }

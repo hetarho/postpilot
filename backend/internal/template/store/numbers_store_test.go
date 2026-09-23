@@ -67,7 +67,7 @@ func TestUpdateWritesBothNumbersAndCanUnsetThem(t *testing.T) {
 	// One member cleared, the other replaced: both columns are named by this one save.
 	updated, err := s.Update(ctx, "alice", "seeded", template.Patch{
 		Numbers: &template.Numbers{TagCount: number(3)},
-	}, testNow)
+	}, testNow, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,7 +77,7 @@ func TestUpdateWritesBothNumbersAndCanUnsetThem(t *testing.T) {
 
 	// A patch with no pair is an edit of the text alone and leaves the numbers as they are.
 	name := "이름만"
-	renamed, err := s.Update(ctx, "alice", "seeded", template.Patch{Name: &name}, testNow)
+	renamed, err := s.Update(ctx, "alice", "seeded", template.Patch{Name: &name}, testNow, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

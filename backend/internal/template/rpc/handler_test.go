@@ -37,10 +37,15 @@ func (f *fakeStore) Get(context.Context, string, string) (template.Template, err
 	}
 	return f.templates[0], f.err
 }
-func (f *fakeStore) Update(_ context.Context, _, _ string, patch template.Patch, _ time.Time) (template.Template, error) {
+func (f *fakeStore) Update(_ context.Context, _, _ string, patch template.Patch, _ time.Time, check func(template.Template) error) (template.Template, error) {
 	f.patch = patch
 	if f.err != nil {
 		return template.Template{}, f.err
+	}
+	if check != nil {
+		if err := check(f.templates[0]); err != nil {
+			return template.Template{}, err
+		}
 	}
 	return f.templates[0], nil
 }
@@ -51,7 +56,7 @@ func (f *fakeStore) Delete(_ context.Context, _, id string) (int, error) {
 
 func handler(store *fakeStore) *Handler {
 	return NewHandler(template.NewService(store, template.Limits{
-		NameMaxChars: 40, DescriptionMaxChars: 200, BodyMaxChars: 4000,
+		NameMaxChars: 40, DescriptionMaxChars: 200, BodyMaxChars: 4000, TitleAreaMaxChars: 200,
 		MaxPerAccount: 3, MaxRepeatExpansion: 40, PhotoRowMax: 4,
 		AskLabelMaxChars: 40, AskMaxPerBody: 8,
 		TargetLengthMin: 1, TagCountMin: 1, TagCountMax: 10,
@@ -87,7 +92,7 @@ func length(value int) *int { return &value }
 func TestListTemplatesCarriesEveryFieldAcrossTheWireEdge(t *testing.T) {
 	created := time.Date(2026, 9, 20, 1, 2, 3, 0, time.UTC)
 	store := &fakeStore{templates: []template.Template{{
-		ID: "t1", Name: "여행", Description: "여행 글", Body: "# 제목", PostCount: 3,
+		ID: "t1", Name: "여행", Description: "여행 글", Body: "# 제목", TitleArea: "[여행] <write>여행지</write>", PostCount: 3,
 		TargetLength: length(1200), CreatedAt: created, UpdatedAt: created,
 	}, {ID: "t2", Name: "리뷰"}}}
 	res, err := handler(store).ListTemplates(signedIn(t), connect.NewRequest(&postpilotv1.ListTemplatesRequest{}))
@@ -100,6 +105,9 @@ func TestListTemplatesCarriesEveryFieldAcrossTheWireEdge(t *testing.T) {
 	}
 	if out[0].GetPostCount() != 3 || out[0].GetTargetLength() != 1200 {
 		t.Fatalf("counts = %+v", out[0])
+	}
+	if out[0].GetTitleArea() != "[여행] <write>여행지</write>" || out[1].GetTitleArea() != "" {
+		t.Fatalf("title areas = %q, %q", out[0].GetTitleArea(), out[1].GetTitleArea())
 	}
 	// "No opinion" survives the edge as an absent field rather than as a zero.
 	if out[1].TargetLength != nil || out[1].TagCount != nil {
@@ -115,13 +123,16 @@ func TestCreateAndUpdateCarryPresenceRatherThanZeroes(t *testing.T) {
 	h := handler(store)
 	length := int32(900)
 	_, err := h.CreateTemplate(signedIn(t), connect.NewRequest(&postpilotv1.CreateTemplateRequest{
-		Name: "여행", Description: "설명", Body: "# 제목", TargetLength: &length,
+		Name: "여행", Description: "설명", Body: "# 제목", TitleArea: "[여행] <write>여행지</write>", TargetLength: &length,
 	}))
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
 	if store.inserted.Name != "여행" || store.inserted.TargetLength == nil || *store.inserted.TargetLength != 900 {
 		t.Fatalf("inserted = %+v", store.inserted)
+	}
+	if store.inserted.TitleArea != "[여행] <write>여행지</write>" {
+		t.Fatalf("inserted title area = %q", store.inserted.TitleArea)
 	}
 	if store.inserted.TagCount != nil {
 		t.Fatalf("an absent tag count became a value: %+v", store.inserted.TagCount)
@@ -138,11 +149,21 @@ func TestCreateAndUpdateCarryPresenceRatherThanZeroes(t *testing.T) {
 	if store.patch.Name == nil || *store.patch.Name != "여행 2" {
 		t.Fatalf("patch name = %+v", store.patch.Name)
 	}
-	if store.patch.Description != nil || store.patch.Body != nil {
+	if store.patch.Description != nil || store.patch.Body != nil || store.patch.TitleArea != nil {
 		t.Fatalf("an untouched field reached the patch: %+v", store.patch)
 	}
 	if store.patch.Numbers == nil || store.patch.Numbers.TargetLength != nil {
 		t.Fatalf("numbers = %+v", store.patch.Numbers)
+	}
+	// A present empty title area is an edit that clears it, not an absent field.
+	empty := ""
+	if _, err := h.UpdateTemplate(signedIn(t), connect.NewRequest(&postpilotv1.UpdateTemplateRequest{
+		Id: "t1", TitleArea: &empty,
+	})); err != nil {
+		t.Fatalf("update: %v", err)
+	}
+	if store.patch.TitleArea == nil || *store.patch.TitleArea != "" || store.patch.Name != nil {
+		t.Fatalf("patch = %+v", store.patch)
 	}
 }
 
@@ -177,10 +198,23 @@ func TestEveryDomainRefusalHasItsOwnCodeAndReason(t *testing.T) {
 		}
 	}
 
-	// The editor points at the offending line, so the parse failure carries it as a param.
-	parse := detail(t, toConnectError("create template", &template.ParseError{Line: 4, Reason: "unknown_directive"}))
-	if parse.GetParams()["line"] != "4" || parse.GetParams()["reason"] != "unknown_directive" {
-		t.Fatalf("parse params = %+v", parse.GetParams())
+	// The editor points at the offending line, so the parse failure carries it as a param. A
+	// failure in the title area also names the area; one in the body carries exactly the two
+	// params it always has.
+	for _, area := range []string{"", template.AreaBody} {
+		parse := detail(t, toConnectError("create template", &template.ParseError{Line: 4, Reason: "unknown_directive", Area: area}))
+		if len(parse.GetParams()) != 2 || parse.GetParams()["line"] != "4" || parse.GetParams()["reason"] != "unknown_directive" {
+			t.Fatalf("body parse params = %+v", parse.GetParams())
+		}
+	}
+	titleErr := toConnectError("update template", &template.ParseError{Line: 1, Reason: template.ReasonNotInTitle, Area: template.AreaTitle})
+	title := detail(t, titleErr)
+	if len(title.GetParams()) != 3 || title.GetParams()["area"] != "title_area" || title.GetParams()["line"] != "1" || title.GetParams()["reason"] != "not_in_title" {
+		t.Fatalf("title parse params = %+v", title.GetParams())
+	}
+	var connectErr *connect.Error
+	if !errors.As(titleErr, &connectErr) || connectErr.Message() != "template does not parse" {
+		t.Fatalf("parse message = %v", titleErr)
 	}
 	// A number with no product ceiling claims none.
 	open := detail(t, toConnectError("create template", &template.NumberOutOfRangeError{Field: "targetLength", Min: 1, Value: 0}))

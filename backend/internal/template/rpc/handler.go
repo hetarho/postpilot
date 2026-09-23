@@ -42,7 +42,7 @@ func (h *Handler) CreateTemplate(ctx context.Context, req *connect.Request[postp
 	if err != nil {
 		return nil, err
 	}
-	created, err := h.service.Create(ctx, userID, req.Msg.GetName(), req.Msg.GetDescription(), req.Msg.GetBody(),
+	created, err := h.service.Create(ctx, userID, req.Msg.GetName(), req.Msg.GetDescription(), req.Msg.GetBody(), req.Msg.GetTitleArea(),
 		template.Numbers{TargetLength: number(req.Msg.TargetLength), TagCount: number(req.Msg.TagCount)})
 	if err != nil {
 		return nil, toConnectError("create template", err)
@@ -62,7 +62,7 @@ func (h *Handler) UpdateTemplate(ctx context.Context, req *connect.Request[postp
 	// is always written, an absent member meaning "no opinion" rather than "not part of this
 	// edit", because the template screen holds both and sends both on every save.
 	patch := template.Patch{
-		Name: req.Msg.Name, Description: req.Msg.Description, Body: req.Msg.Body,
+		Name: req.Msg.Name, Description: req.Msg.Description, Body: req.Msg.Body, TitleArea: req.Msg.TitleArea,
 		Numbers: &template.Numbers{
 			TargetLength: number(req.Msg.TargetLength), TagCount: number(req.Msg.TagCount),
 		},
@@ -99,6 +99,8 @@ func actingUser(ctx context.Context) (string, error) {
 //
 // A parse failure carries the line and the reason as allowlisted params, because the editor
 // has to point at the offending line and it must not parse wire prose to find out which one.
+// A failure in the title area also names that area; one in the body names none, so a body
+// refusal reads exactly as it always has.
 func toConnectError(op string, err error) error {
 	var tooLong *template.FieldTooLongError
 	var outOfRange *template.NumberOutOfRangeError
@@ -120,9 +122,11 @@ func toConnectError(op string, err error) error {
 			"field": tooLong.Field, "max": strconv.Itoa(tooLong.Max), "actual": strconv.Itoa(tooLong.Chars),
 		})
 	case errors.As(err, &parseErr):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "template body does not parse", postpilotv1.FailureReason_TEMPLATE_PARSE_FAILED, map[string]string{
-			"line": strconv.Itoa(parseErr.Line), "reason": parseErr.Reason,
-		})
+		params := map[string]string{"line": strconv.Itoa(parseErr.Line), "reason": parseErr.Reason}
+		if parseErr.Area == template.AreaTitle {
+			params["area"] = template.AreaTitle
+		}
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "template does not parse", postpilotv1.FailureReason_TEMPLATE_PARSE_FAILED, params)
 	case errors.Is(err, template.ErrNameRequired):
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "template name is required", postpilotv1.FailureReason_TEMPLATE_NAME_REQUIRED, nil)
 	case errors.Is(err, template.ErrBodyRequired):
@@ -144,7 +148,7 @@ func toProtoTemplate(t template.Template) *postpilotv1.Template {
 		return nil
 	}
 	return &postpilotv1.Template{
-		Id: t.ID, Name: t.Name, Description: t.Description, Body: t.Body,
+		Id: t.ID, Name: t.Name, Description: t.Description, Body: t.Body, TitleArea: t.TitleArea,
 		TargetLength: protoNumber(t.TargetLength), TagCount: protoNumber(t.TagCount),
 		PostCount: int32(t.PostCount),
 		CreatedAt: t.CreatedAt.UTC().Format(timeLayout),

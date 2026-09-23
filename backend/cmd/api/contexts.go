@@ -214,7 +214,8 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 		templatestore.New(handle.Writer, handle.Reader),
 		template.Limits{
 			NameMaxChars: cfg.TemplateNameMaxChars, DescriptionMaxChars: cfg.TemplateDescriptionMaxChars,
-			BodyMaxChars: cfg.TemplateBodyMaxChars, MaxPerAccount: cfg.TemplateMaxPerAccount,
+			BodyMaxChars: cfg.TemplateBodyMaxChars, TitleAreaMaxChars: cfg.TemplateTitleAreaMaxChars,
+			MaxPerAccount:      cfg.TemplateMaxPerAccount,
 			MaxRepeatExpansion: cfg.TemplateMaxRepeatExpansion,
 			PhotoRowMax:        cfg.TemplatePhotoRowMax,
 			AskLabelMaxChars:   cfg.TemplateAskLabelMaxChars,

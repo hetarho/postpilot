@@ -332,6 +332,9 @@ type Config struct {
 	TemplateAskLabelMaxChars int
 	TemplateAskValueMaxChars int
 	TemplateAskMaxPerBody    int
+	// TemplateTitleAreaMaxChars bounds a template's title area (TMPL-50). A title is one line
+	// of a post, so its source is bounded like a short field rather than like the body.
+	TemplateTitleAreaMaxChars int
 
 	// Writing-guideline ceilings. GuidelineTextMaxChars bounds one authored rule;
 	// GuidelineMaxPerAccount bounds how many an account may hold, because every applicable
@@ -546,6 +549,11 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 	cfg.TemplateAskMaxPerBody = templateAskCount
+	templateTitleArea, err := positiveInt("TEMPLATE_TITLE_AREA_MAX_CHARS", "200")
+	if err != nil {
+		return nil, err
+	}
+	cfg.TemplateTitleAreaMaxChars = templateTitleArea
 
 	guidelineText, err := positiveInt("GUIDELINE_TEXT_MAX_CHARS", "300")
 	if err != nil {

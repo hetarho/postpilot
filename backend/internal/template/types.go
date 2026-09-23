@@ -77,6 +77,7 @@ type Limits struct {
 	NameMaxChars        int
 	DescriptionMaxChars int
 	BodyMaxChars        int
+	TitleAreaMaxChars   int
 	MaxPerAccount       int
 	MaxRepeatExpansion  int
 	// PhotoRowMax is the largest `count` a photo position may carry (TEMPLATE-38). It bounds
@@ -100,7 +101,7 @@ type Limits struct {
 }
 
 func (l Limits) valid() bool {
-	return l.NameMaxChars > 0 && l.DescriptionMaxChars > 0 && l.BodyMaxChars > 0 &&
+	return l.NameMaxChars > 0 && l.DescriptionMaxChars > 0 && l.BodyMaxChars > 0 && l.TitleAreaMaxChars > 0 &&
 		l.MaxPerAccount > 0 && l.MaxRepeatExpansion > 0 && l.PhotoRowMax > 0 &&
 		l.AskLabelMaxChars > 0 && l.AskMaxPerBody > 0 &&
 		l.TargetLengthMin > 0 && l.TagCountMin > 0 && l.TagCountMax >= l.TagCountMin
@@ -118,6 +119,9 @@ type Template struct {
 	Name        string
 	Description string
 	Body        string
+	// TitleArea is the title form in the body's grammar, "" meaning none (TMPL-50). It is the
+	// single source of truth for the title's shape exactly as Body is for the body's (TMPL-2).
+	TitleArea string
 	// TargetLength and TagCount are what the posts this template shapes usually want
 	// (TEMPLATE-47). nil is "no opinion": assigning the template then leaves the post's own
 	// option alone. Neither ever reaches a prompt - they are seeds for the post's options and
@@ -135,6 +139,8 @@ type Patch struct {
 	Name        *string
 	Description *string
 	Body        *string
+	// TitleArea present and empty clears the title form, like Description (TMPL-8).
+	TitleArea *string
 	// The two numbers break the presence rule on purpose (TEMPLATE-8): Numbers present means
 	// "write both", each member nil meaning no opinion, because the template screen holds
 	// both and sends both on every save. A second meaning for an absent number would only
@@ -149,7 +155,7 @@ type Numbers struct {
 }
 
 func (p Patch) empty() bool {
-	return p.Name == nil && p.Description == nil && p.Body == nil && p.Numbers == nil
+	return p.Name == nil && p.Description == nil && p.Body == nil && p.TitleArea == nil && p.Numbers == nil
 }
 
 // Answer is what one post supplies for one data field, handed in by the caller at enqueue.
@@ -183,6 +189,9 @@ type Fact struct {
 type Rendered struct {
 	Name string
 	Body string
+	// TitleArea is the title form rendered with the post's answers, "" when the template has
+	// none or nothing is left of it once its asks drop (TMPL-50).
+	TitleArea string
 	// Slots holds the UNFILLED kinds (place · link) in the order they appear, so index+1 is
 	// the number the body's {{slot:n}} tokens carry and the post-processing pass can match
 	// them back. Photo slots are absent by design: they render as their bound filename and
@@ -194,9 +203,10 @@ type Rendered struct {
 	// downstream (→TEMPLATE-39); the rendered body itself stays n adjacent single-photo
 	// tokens in the meantime (TEMPLATE-40).
 	Rows []PhotoRow
-	// Facts are the data fields this render resolved, in body order. Empty means the body
-	// declared none or every one of them was off or blank — which is the same thing to
-	// everything downstream (TEMPLATE-45).
+	// Facts are the data fields this render resolved, the title area's first and then the
+	// body's, each in document order (TMPL-55). Empty means the template declared none or
+	// every one of them was off or blank — which is the same thing to everything downstream
+	// (TEMPLATE-45).
 	Facts []Fact
 }
 

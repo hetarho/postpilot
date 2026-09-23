@@ -9,8 +9,12 @@ type templatePayload struct {
 	Name string `json:"name"`
 	// The expanded, rendered body — not the authored source. What the worker prompts with
 	// must be exactly what enqueue decided.
-	Body  string             `json:"body"`
-	Slots []templateSlotJSON `json:"slots,omitempty"`
+	Body string `json:"body"`
+	// TitleArea is the rendered title form, frozen with the body (TMPL-51). omitempty keeps a
+	// template with none byte-identical to a payload written before the member existed, which
+	// decodes as none.
+	TitleArea string             `json:"title_area,omitempty"`
+	Slots     []templateSlotJSON `json:"slots,omitempty"`
 	// Rows is omitempty so a payload written before photo rows existed decodes as a
 	// template with none, which is exactly what it is.
 	Rows []templateRowJSON `json:"rows,omitempty"`
@@ -214,7 +218,7 @@ func encodeTemplate(brief *TemplateBrief) *templatePayload {
 	for _, fact := range brief.Facts {
 		facts = append(facts, templateFactJSON{Label: fact.Label, Value: fact.Value})
 	}
-	return &templatePayload{Name: brief.Name, Body: brief.Body, Slots: slots, Rows: rows, Facts: facts}
+	return &templatePayload{Name: brief.Name, Body: brief.Body, TitleArea: brief.TitleArea, Slots: slots, Rows: rows, Facts: facts}
 }
 
 // decodeTemplate reads a payload written before templates existed as "no template" rather
@@ -235,5 +239,5 @@ func decodeTemplate(payload *templatePayload) *TemplateBrief {
 	for _, fact := range payload.Facts {
 		facts = append(facts, TemplateFact{Label: fact.Label, Value: fact.Value})
 	}
-	return &TemplateBrief{Name: payload.Name, Body: payload.Body, Slots: slots, Rows: rows, Facts: facts}
+	return &TemplateBrief{Name: payload.Name, Body: payload.Body, Slots: slots, Rows: rows, Facts: facts, TitleArea: payload.TitleArea}
 }

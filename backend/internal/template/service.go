@@ -42,7 +42,9 @@ func (s *Service) List(ctx context.Context, userID string) ([]Template, error) {
 	return templates, nil
 }
 
-func (s *Service) Create(ctx context.Context, userID, name, description, body string, numbers Numbers) (Template, error) {
+// Create validates the two areas together: they are one document with one data-field
+// namespace (TMPL-50, TMPL-55), so neither can be judged without the other.
+func (s *Service) Create(ctx context.Context, userID, name, description, body, titleArea string, numbers Numbers) (Template, error) {
 	name, err := s.validName(name)
 	if err != nil {
 		return Template{}, err
@@ -55,13 +57,20 @@ func (s *Service) Create(ctx context.Context, userID, name, description, body st
 	if err != nil {
 		return Template{}, err
 	}
+	titleArea, err = s.validTitleArea(titleArea)
+	if err != nil {
+		return Template{}, err
+	}
+	if err := s.validShape(titleArea, body); err != nil {
+		return Template{}, err
+	}
 	if err := s.validNumbers(numbers); err != nil {
 		return Template{}, err
 	}
 	now := s.now()
 	created := Template{
 		ID: s.newID(), UserID: userID, Name: name, Description: description,
-		Body: body, TargetLength: numbers.TargetLength, TagCount: numbers.TagCount,
+		Body: body, TitleArea: titleArea, TargetLength: numbers.TargetLength, TagCount: numbers.TagCount,
 		CreatedAt: now, UpdatedAt: now,
 	}
 	if err := s.store.Insert(ctx, created, s.limits.MaxPerAccount); err != nil {
@@ -73,6 +82,10 @@ func (s *Service) Create(ctx context.Context, userID, name, description, body st
 // Update applies only the fields the request carried. The validation runs per present
 // field, so an edit of `body` alone can never be refused for a `name` it did not send —
 // and can never quietly rewrite one either.
+//
+// The one check that needs both areas runs inside the store's transaction, on the stored
+// counterpart of whichever area the patch leaves out: a title that reuses a label the stored
+// body holds is refused although the request never sent the body.
 func (s *Service) Update(ctx context.Context, userID, id string, patch Patch) (Template, error) {
 	if strings.TrimSpace(id) == "" {
 		return Template{}, ErrNotFound
@@ -101,12 +114,34 @@ func (s *Service) Update(ctx context.Context, userID, id string, patch Patch) (T
 		}
 		patch.Body = &body
 	}
+	if patch.TitleArea != nil {
+		titleArea, err := s.validTitleArea(*patch.TitleArea)
+		if err != nil {
+			return Template{}, err
+		}
+		patch.TitleArea = &titleArea
+	}
 	if patch.Numbers != nil {
 		if err := s.validNumbers(*patch.Numbers); err != nil {
 			return Template{}, err
 		}
 	}
-	return s.store.Update(ctx, userID, id, patch, s.now())
+	// An edit that names neither area parses nothing, as it never has.
+	var check func(current Template) error
+	if patch.Body != nil || patch.TitleArea != nil {
+		body, titleArea := patch.Body, patch.TitleArea
+		check = func(current Template) error {
+			shapeBody, shapeTitle := current.Body, current.TitleArea
+			if body != nil {
+				shapeBody = *body
+			}
+			if titleArea != nil {
+				shapeTitle = *titleArea
+			}
+			return s.validShape(shapeTitle, shapeBody)
+		}
+	}
+	return s.store.Update(ctx, userID, id, patch, s.now(), check)
 }
 
 // Delete removes the template and reports how many posts it was detached from. The count is
@@ -128,10 +163,10 @@ func (s *Service) Delete(ctx context.Context, userID, id string) (int, error) {
 // edited between the two reads change what was frozen.
 //
 // `ok` false is the ordinary "the post has none, or it was deleted since" case: absence is
-// not an error, because a prompt without a template is a valid prompt. A body that no longer
-// parses is treated the same way rather than failing the run — it can only happen if a row
-// was edited outside the service, and refusing to generate would be a worse answer than
-// generating without a shape.
+// not an error, because a prompt without a template is a valid prompt. A template whose title
+// area or body no longer parses is treated the same way rather than failing the run — it can
+// only happen if a row was edited outside the service, and refusing to generate would be a
+// worse answer than generating without a shape.
 func (s *Service) RenderedFor(ctx context.Context, userID, id string, filenames []string, answers []Answer) (Rendered, bool, error) {
 	if strings.TrimSpace(id) == "" {
 		return Rendered{}, false, nil
@@ -143,11 +178,11 @@ func (s *Service) RenderedFor(ctx context.Context, userID, id string, filenames 
 		}
 		return Rendered{}, false, fmt.Errorf("load template: %w", err)
 	}
-	nodes, err := Parse(found.Body, s.parseOptions())
+	title, nodes, err := ParseTemplate(found.TitleArea, found.Body, s.parseOptions())
 	if err != nil {
 		return Rendered{}, false, nil
 	}
-	rendered, err := Render(found.Name, nodes, filenames, s.limits.MaxRepeatExpansion, answers)
+	rendered, err := RenderTemplate(found.Name, title, nodes, filenames, s.limits.MaxRepeatExpansion, answers)
 	if err != nil {
 		return Rendered{}, false, err
 	}
@@ -202,9 +237,8 @@ func (s *Service) validNumbers(numbers Numbers) error {
 	return nil
 }
 
-// validBody trims, bounds, and PARSES. Parsing is part of validation rather than a later
-// concern because a body that does not parse has no meaning: it would reach a prompt as
-// prose the model prints back, and the builder could not open it either.
+// validBody trims and bounds the body. Its parse is validShape's, because the body and the
+// title area are one document and neither parses alone.
 //
 // Only the outer whitespace is trimmed. Everything inside is the author's, down to the
 // blank lines, because the body is what the prompt receives and what the builder
@@ -217,21 +251,39 @@ func (s *Service) validBody(value string) (string, error) {
 	if chars := utf8.RuneCountInString(trimmed); chars > s.limits.BodyMaxChars {
 		return "", &FieldTooLongError{Field: "body", Chars: chars, Max: s.limits.BodyMaxChars}
 	}
-	nodes, err := Parse(trimmed, s.parseOptions())
+	return trimmed, nil
+}
+
+// validTitleArea trims and bounds the title area with the body's edge trim. Unlike the body it
+// may be empty: a title form is opted into, not a field every template must answer (TMPL-52).
+func (s *Service) validTitleArea(value string) (string, error) {
+	trimmed := strings.TrimSpace(value)
+	if chars := utf8.RuneCountInString(trimmed); chars > s.limits.TitleAreaMaxChars {
+		return "", &FieldTooLongError{Field: "title_area", Chars: chars, Max: s.limits.TitleAreaMaxChars}
+	}
+	return trimmed, nil
+}
+
+// validShape PARSES the two areas as the one document they are. Parsing is part of validation
+// rather than a later concern because text that does not parse has no meaning: it would reach
+// a prompt as prose the model prints back, and the builder could not open it either. An error
+// names its area, title first, as ParseTemplate reports it.
+func (s *Service) validShape(titleArea, body string) error {
+	title, nodes, err := ParseTemplate(titleArea, body, s.parseOptions())
 	if err != nil {
-		return "", err
+		return err
 	}
 	// A data field's TITLE is bounded here rather than by a parse reason: TEMPLATE-20's
 	// reason list is the grammar's, and a configured ceiling inside it would make the shared
 	// fixture depend on the deployment. It refuses like any other over-long field, which is
 	// a message the editor already renders.
-	for _, ask := range Asks(nodes) {
+	for _, ask := range append(Asks(title), Asks(nodes)...) {
 		label := Decode(ask.Label)
 		if chars := utf8.RuneCountInString(label); chars > s.limits.AskLabelMaxChars {
-			return "", &FieldTooLongError{Field: "ask_label", Chars: chars, Max: s.limits.AskLabelMaxChars}
+			return &FieldTooLongError{Field: "ask_label", Chars: chars, Max: s.limits.AskLabelMaxChars}
 		}
 	}
-	return trimmed, nil
+	return nil
 }
 
 func newID() string {

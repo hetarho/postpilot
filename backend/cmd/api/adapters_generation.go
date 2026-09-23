@@ -71,7 +71,9 @@ func (a generationTemplates) RenderedFor(ctx context.Context, userID, templateID
 	for _, fact := range rendered.Facts {
 		facts = append(facts, generation.TemplateFact{Label: fact.Label, Value: fact.Value})
 	}
-	return generation.TemplateBrief{Name: rendered.Name, Body: rendered.Body, Slots: slots, Rows: rows, Facts: facts}, true, nil
+	return generation.TemplateBrief{
+		Name: rendered.Name, Body: rendered.Body, Slots: slots, Rows: rows, Facts: facts, TitleArea: rendered.TitleArea,
+	}, true, nil
 }
 
 // experimentVoices adapts the directory for the experiment context: only an owned, active

@@ -47,7 +47,7 @@ func (s *Store) Insert(ctx context.Context, t template.Template, maxPerAccount i
 	}
 	err = q.InsertTemplate(ctx, sqlc.InsertTemplateParams{
 		ID: t.ID, UserID: t.UserID, Name: t.Name, Description: t.Description,
-		Body: t.Body, TargetLength: nullNumber(t.TargetLength), TagCount: nullNumber(t.TagCount),
+		Body: t.Body, TitleArea: t.TitleArea, TargetLength: nullNumber(t.TargetLength), TagCount: nullNumber(t.TagCount),
 		CreatedAt: formatTime(t.CreatedAt), UpdatedAt: formatTime(t.UpdatedAt),
 	})
 	if err != nil {
@@ -69,7 +69,7 @@ func (s *Store) List(ctx context.Context, userID string) ([]template.Template, e
 	}
 	out := make([]template.Template, 0, len(rows))
 	for _, row := range rows {
-		value, err := toTemplate(row.ID, row.UserID, row.Name, row.Description, row.Body,
+		value, err := toTemplate(row.ID, row.UserID, row.Name, row.Description, row.Body, row.TitleArea,
 			row.TargetLength, row.TagCount, row.CreatedAt, row.UpdatedAt, row.PostCount)
 		if err != nil {
 			return nil, err
@@ -91,13 +91,17 @@ func (s *Store) get(ctx context.Context, q *sqlc.Queries, userID, id string) (te
 	if err != nil {
 		return template.Template{}, fmt.Errorf("select template: %w", err)
 	}
-	return toTemplate(row.ID, row.UserID, row.Name, row.Description, row.Body,
+	return toTemplate(row.ID, row.UserID, row.Name, row.Description, row.Body, row.TitleArea,
 		row.TargetLength, row.TagCount, row.CreatedAt, row.UpdatedAt, row.PostCount)
 }
 
 // Update runs one statement per present field inside a single transaction, so a field the
 // patch does not carry is never written — not even back to the value this call read.
-func (s *Store) Update(ctx context.Context, userID, id string, patch template.Patch, updatedAt time.Time) (template.Template, error) {
+//
+// A check runs on the row as this transaction reads it, before any statement: the writer
+// takes its lock at BEGIN, so the counterpart it checks against cannot move before the
+// statements run, and a refusal leaves everything as it was, updated_at included.
+func (s *Store) Update(ctx context.Context, userID, id string, patch template.Patch, updatedAt time.Time, check func(current template.Template) error) (template.Template, error) {
 	tx, err := s.writer.BeginTx(ctx, nil)
 	if err != nil {
 		return template.Template{}, fmt.Errorf("begin update template: %w", err)
@@ -105,6 +109,16 @@ func (s *Store) Update(ctx context.Context, userID, id string, patch template.Pa
 	defer tx.Rollback()
 	q := s.write.WithTx(tx)
 	stamp := formatTime(updatedAt)
+
+	if check != nil {
+		current, err := s.get(ctx, q, userID, id)
+		if err != nil {
+			return template.Template{}, err
+		}
+		if err := check(current); err != nil {
+			return template.Template{}, err
+		}
+	}
 
 	// The first statement that runs also answers "does this template exist and is it mine":
 	// zero rows means the id is unknown or belongs to another account, which read the same.
@@ -136,6 +150,16 @@ func (s *Store) Update(ctx context.Context, userID, id string, patch template.Pa
 		n, err := q.UpdateTemplateBody(ctx, sqlc.UpdateTemplateBodyParams{Body: *patch.Body, UpdatedAt: stamp, ID: id, UserID: userID})
 		if err != nil {
 			return template.Template{}, fmt.Errorf("update template body: %w", err)
+		}
+		if n == 0 {
+			return template.Template{}, template.ErrNotFound
+		}
+		touched = true
+	}
+	if patch.TitleArea != nil {
+		n, err := q.UpdateTemplateTitleArea(ctx, sqlc.UpdateTemplateTitleAreaParams{TitleArea: *patch.TitleArea, UpdatedAt: stamp, ID: id, UserID: userID})
+		if err != nil {
+			return template.Template{}, fmt.Errorf("update template title area: %w", err)
 		}
 		if n == 0 {
 			return template.Template{}, template.ErrNotFound
@@ -202,7 +226,7 @@ func (s *Store) Delete(ctx context.Context, userID, id string) (int, error) {
 	return int(attached), nil
 }
 
-func toTemplate(id, userID, name, description, body string, targetLength, tagCount sql.NullInt64,
+func toTemplate(id, userID, name, description, body, titleArea string, targetLength, tagCount sql.NullInt64,
 	createdAt, updatedAt string, postCount int64) (template.Template, error) {
 	created, err := parseTime(createdAt)
 	if err != nil {
@@ -213,7 +237,7 @@ func toTemplate(id, userID, name, description, body string, targetLength, tagCou
 		return template.Template{}, fmt.Errorf("parse template updated_at: %w", err)
 	}
 	return template.Template{
-		ID: id, UserID: userID, Name: name, Description: description, Body: body,
+		ID: id, UserID: userID, Name: name, Description: description, Body: body, TitleArea: titleArea,
 		TargetLength: numberOf(targetLength), TagCount: numberOf(tagCount),
 		PostCount: int(postCount), CreatedAt: created, UpdatedAt: updated,
 	}, nil
