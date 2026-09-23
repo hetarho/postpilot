@@ -56,6 +56,9 @@ type PostContent struct {
 type WriteAnswer struct {
 	Content PostContent
 	Nouns   []string
+	// Replacements are the spans the pass offered listed 분야 phrases for, validated against the
+	// final content (GEN-53); none unless the run froze phrases.
+	Replacements []Replacement
 }
 
 type Observation struct {
@@ -187,6 +190,9 @@ type PostInput struct {
 	// in the target language, in the order the write prompt lists them (GEN-51). The snapshot
 	// marshals PostInput directly, so omitempty keeps every earlier snapshot's bytes and hash.
 	QualityRules []string `json:"quality_rules,omitempty"`
+	// FieldPhrases is the frozen phrase list of the post's 분야 (GEN-48), empty for a post with
+	// no 분야 or one whose list is still empty. omitempty keeps every earlier snapshot's bytes.
+	FieldPhrases []string `json:"field_phrases,omitempty"`
 	// TemplateAnswers is what the post answers to its template's data fields, read at
 	// enqueue like TemplateID. The freeze resolves them into the rendered brief, so no
 	// handler ever reads one: the payload already carries the result (POST-62, TEMPLATE-45).

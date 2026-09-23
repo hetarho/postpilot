@@ -1,0 +1,43 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["title", "summary", "tags", "blocks", "nouns", "replacements"],
+  "properties": {
+    "title": {"type": "string"},
+    "summary": {"type": "string"},
+    "tags": {"type": "array", "items": {"type": "string"}},
+    "blocks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "content", "level", "file", "alt", "caption", "items"],
+        "properties": {
+          "type": {"type": "string", "enum": ["TEXT", "HEADING", "IMAGE", "VIDEO", "QUOTE", "LIST"]},
+          "content": {"type": "string"},
+          "level": {"type": "integer"},
+          "file": {"type": "string"},
+          "alt": {"type": "string"},
+          "caption": {"type": "string"},
+          "items": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    },
+    "nouns": {"type": "array", "maxItems": 40, "items": {"type": "string"}},
+    "replacements": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["surface", "index", "source", "phrases"],
+        "properties": {
+          "surface": {"type": "string", "enum": ["title", "tag", "body"]},
+          "index": {"type": "integer"},
+          "source": {"type": "string"},
+          "phrases": {"type": "array", "maxItems": 3, "items": {"type": "string"}}
+        }
+      }
+    }
+  }
+}

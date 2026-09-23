@@ -124,7 +124,7 @@ func TestWritePromptExplainsSlotsOnlyWhenTheBriefHasThem(t *testing.T) {
 // at that same section; the template section, title form included, never may.
 func TestTheWord지침NeverAppearsInTheTemplateSection(t *testing.T) {
 	system, _ := BuildWritePromptForLanguage(LanguageKorean, goldenProfile(), goldenObservations(), "MEMO", "TITLE",
-		[]string{"IMG_1.jpg"}, nil, nil, 4, titleAreaBrief(), testGuidelines(), nil, testQualityRules())
+		[]string{"IMG_1.jpg"}, nil, nil, 4, titleAreaBrief(), testGuidelines(), nil, testQualityRules(), nil)
 
 	start, end := strings.Index(system, "[글 템플릿:"), strings.Index(system, "\n\n[작문 지침]")
 	if start < 0 || end < start {

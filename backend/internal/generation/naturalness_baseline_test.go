@@ -90,7 +90,7 @@ func TestMemoNamingAuthorityIsInWritePromptsOnly(t *testing.T) {
 			naming:    koreanNaming,
 		},
 		"English": {
-			prompt:    firstOf(BuildWritePromptForLanguage(LanguageEnglish, Profile{}, nil, "memo", "title", nil, nil, nil, 4, nil, nil, nil, nil)),
+			prompt:    firstOf(BuildWritePromptForLanguage(LanguageEnglish, Profile{}, nil, "memo", "title", nil, nil, nil, 4, nil, nil, nil, nil, nil)),
 			grounding: englishGrounding,
 			scope:     englishGroundingWriteScope,
 			altitude:  englishAltitude,
@@ -135,7 +135,7 @@ func TestAltitudeRuleIsInWritePromptsOnly(t *testing.T) {
 	}{
 		"Korean bare":  {prompt: firstOf(BuildWritePrompt(goldenProfile(), nil, "memo", "title", nil, nil, nil, nil)), altitude: koreanAltitude},
 		"Korean full":  {prompt: firstOf(BuildWritePrompt(goldenProfile(), goldenObservations(), "memo", "title", nil, nil, testBrief(), testGuidelines())), altitude: koreanAltitude},
-		"English bare": {prompt: firstOf(BuildWritePromptForLanguage(LanguageEnglish, goldenProfile(), nil, "memo", "title", nil, nil, nil, 4, nil, nil, nil, nil)), altitude: englishAltitude},
+		"English bare": {prompt: firstOf(BuildWritePromptForLanguage(LanguageEnglish, goldenProfile(), nil, "memo", "title", nil, nil, nil, 4, nil, nil, nil, nil, nil)), altitude: englishAltitude},
 	} {
 		if strings.Count(test.prompt, test.altitude) != 1 {
 			t.Errorf("%s write prompt carries the altitude rule %d times", name, strings.Count(test.prompt, test.altitude))
@@ -180,7 +180,7 @@ func TestGroundingCoreIsByteIdenticalInWriteAndRevisePrompts(t *testing.T) {
 			reviseScope: koreanGroundingReviseScope,
 		},
 		"English": {
-			write:       firstOf(BuildWritePromptForLanguage(LanguageEnglish, goldenProfile(), nil, "memo", "title", nil, nil, nil, 4, nil, nil, nil, nil)),
+			write:       firstOf(BuildWritePromptForLanguage(LanguageEnglish, goldenProfile(), nil, "memo", "title", nil, nil, nil, 4, nil, nil, nil, nil, nil)),
 			revise:      firstOf(BuildRevisePromptForLanguage(LanguageEnglish, goldenProfile(), goldenContent(), nil, "shorten", nil, 4, nil, nil)),
 			core:        englishGrounding,
 			writeScope:  englishGroundingWriteScope,

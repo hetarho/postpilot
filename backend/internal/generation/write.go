@@ -24,7 +24,7 @@ func (s *Service) writeCandidate(ctx context.Context, post PostInput, profile Pr
 	// A snapshot frozen before the member existed carries 0 here; the prompt and the parser
 	// must agree on one number, so it is resolved once.
 	tagCount := resolveTagCount(post.TagCount)
-	system, user := BuildWritePromptForLanguage(post.TargetLanguage, profile, observations, post.Memo, post.Title, photos, videos, post.TargetLength, tagCount, post.Template, post.Guidelines, post.Memories, post.QualityRules)
+	system, user := BuildWritePromptForLanguage(post.TargetLanguage, profile, observations, post.Memo, post.Title, photos, videos, post.TargetLength, tagCount, post.Template, post.Guidelines, post.Memories, post.QualityRules, post.FieldPhrases)
 	request := llm.Request{
 		System:    system,
 		Messages:  []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(user)}}},
@@ -34,6 +34,9 @@ func (s *Service) writeCandidate(ctx context.Context, post PostInput, profile Pr
 	}
 	if info, ok := s.models.Resolve(model); ok && info.StructuredOutput {
 		request.JSONSchema = WriteAnswerSchema()
+		if len(post.FieldPhrases) > 0 {
+			request.JSONSchema = WriteAnswerReplacementsSchema()
+		}
 	}
 	response, err := s.models.Complete(ctx, model, request)
 	if err != nil {
@@ -47,6 +50,13 @@ func (s *Service) writeCandidate(ctx context.Context, post PostInput, profile Pr
 	// Slot resolution runs LAST, after the attachment filter: a slot block carries no file,
 	// so filtering first keeps that pass unaware of templates entirely.
 	answer.Content = ApplyTemplateSlots(FilterAttachments(answer.Content, photos, videos), post.Template)
+	// Judged against the FINAL content, which is what gets stored: an index names what stands
+	// there now. A run that froze no phrases asked for none, so whatever came back is ignored.
+	if len(post.FieldPhrases) > 0 {
+		answer.Replacements = ValidateReplacements(answer.Replacements, answer.Content, post.FieldPhrases)
+	} else {
+		answer.Replacements = nil
+	}
 	return *answer, response.Usage, nil
 }
 

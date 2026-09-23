@@ -91,7 +91,51 @@ func ParseWriteAnswer(raw string, tagCount int) (*WriteAnswer, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &WriteAnswer{Content: *content, Nouns: boundedNouns(fields["nouns"])}, nil
+	return &WriteAnswer{
+		Content:      *content,
+		Nouns:        boundedNouns(fields["nouns"]),
+		Replacements: shapedReplacements(fields["replacements"]),
+	}, nil
+}
+
+// replacementJSON is one candidate as the write answer carries it (GEN-53).
+type replacementJSON struct {
+	Surface string   `json:"surface"`
+	Index   int      `json:"index"`
+	Source  string   `json:"source"`
+	Phrases []string `json:"phrases"`
+}
+
+// shapedReplacements only shapes: a missing, null or non-array member is none, and an item
+// lacking one of its four keys, or failing to decode, is dropped alone. What survives is
+// ValidateReplacements' to judge against the final content — and like the nouns, none of it
+// can fail a paid write.
+func shapedReplacements(raw json.RawMessage) []Replacement {
+	if len(raw) == 0 || string(raw) == "null" {
+		return nil
+	}
+	var items []json.RawMessage
+	if err := json.Unmarshal(raw, &items); err != nil {
+		slog.Warn("dropping malformed generated replacements", "err", err)
+		return nil
+	}
+	var out []Replacement
+	for _, item := range items {
+		var fields map[string]json.RawMessage
+		if err := json.Unmarshal(item, &fields); err != nil || !hasFields(fields, "surface", "index", "source", "phrases") {
+			slog.Warn("dropping a malformed generated replacement candidate")
+			continue
+		}
+		var wire replacementJSON
+		if err := json.Unmarshal(item, &wire); err != nil {
+			slog.Warn("dropping a malformed generated replacement candidate", "err", err)
+			continue
+		}
+		out = append(out, Replacement{
+			Surface: ReplacementSurface(wire.Surface), Index: wire.Index, Source: wire.Source, Phrases: wire.Phrases,
+		})
+	}
+	return out
 }
 
 // parseContentFields is what both parsers share: the candidate extraction, the four required

@@ -39,7 +39,7 @@ func TestQualityRulesSectionSitsBetweenTheStaticRulesAndTheBaseline(t *testing.T
 		"English portable profile": {LanguageEnglish, portable, nil, englishLanguageLine, "\n\n[휴대 가능한 말투 프로필 / Portable voice profile]\n"},
 	} {
 		system, user := BuildWritePromptForLanguage(test.language, test.profile, goldenObservations(), "memo", "title",
-			[]string{"IMG_1.jpg"}, test.videos, nil, 4, testBrief(), testGuidelines(), nil, rules)
+			[]string{"IMG_1.jpg"}, test.videos, nil, 4, testBrief(), testGuidelines(), nil, rules, nil)
 		if got := strings.Count(system, qualityRulesHeading); got != 1 {
 			t.Errorf("%s: the section appears %d times", name, got)
 		}
@@ -54,7 +54,7 @@ func TestQualityRulesSectionSitsBetweenTheStaticRulesAndTheBaseline(t *testing.T
 	wantSystem, wantUser := loadGolden(t, "write_prompt_no_template.golden")
 	for name, none := range map[string][]string{"nil": nil, "empty": {}} {
 		system, user := BuildWritePromptForLanguage(LanguageKorean, goldenProfile(), goldenObservations(), "MEMO 본문", "가제 TITLE",
-			[]string{"IMG_1.jpg", "IMG_2.jpg"}, nil, nil, post.TagCountRange.Default, nil, nil, nil, none)
+			[]string{"IMG_1.jpg", "IMG_2.jpg"}, nil, nil, post.TagCountRange.Default, nil, nil, nil, none, nil)
 		if system != wantSystem || user != wantUser {
 			t.Errorf("%s quality rules moved the prompt off its golden", name)
 		}

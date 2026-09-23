@@ -51,7 +51,6 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T330 | Frozen 분야 phrases in per-post material and the write answer's replacement candidates | GEN QUAL POST ARCH | T324 | todo |
 | T331 | Quality metrics M1–M4, bands, verdicts and rule texts as pure code | QUAL ARCH | T325 | todo |
 | T332 | Rebuild guidelines for the fields scope, and add the 분야 link and preset tables | GUIDE ARCH | T323 | todo |
 | T333 | Templates store, validate and render a title area into the frozen brief | TMPL GEN ARCH | T322 T323 T324 T327 | todo |
@@ -77,10 +76,12 @@
 | T353 | Toggling 기억 사용 keeps the post's 목표 글자 수 | POST MEM ARCH | - | todo |
 
 ## next
-- implement-task T330 (then the dep order in the tasks table; T330, T331, T332 and T334 are unblocked)
+- implement-task T331 (then the dep order in the tasks table; T331, T332 and T334 are unblocked)
 - T352 and T353 are independent pre-existing bug fixes (frozen memories never reach a durable generate; the 기억 사용 toggle clears 목표 글자 수)
 - create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 ## log
+- 260924 T330 done; a write with frozen 분야 phrases carries them once in the per-post half with the replacements instruction and schema, and keeps only candidates the final content bears out (bounded 20 x 3); without phrases nothing changes; BE gate passes (p35)
+- 260924 T330 claimed (p35)
 - 260924 T329 done; a finalized post becomes published from a pasted Naver Blog address (normalized, shared fixture), is replaced or cleared back to finalized, stays learnable, and exposes the published window; only content-writing jobs block the save; BE gate, gen:sql and lint:retirement pass (p35)
 - 260924 T329 claimed (p35)
 - 260924 T328 done; shared/ui gains InlinePopover and Toggletip on a useAnchoredPanel hook extracted from Listbox, whose behaviour is unchanged, and Popover treats a press in any anchored panel as inside; 2376 FE tests and the FE gates pass (p35)
@@ -99,5 +100,3 @@
 - 260924 T322 claimed (p35)
 - 260924 create-task QUAL POST GEN GUIDE TMPL complete; T322..T351 from the handoff plan (QUAL r3 closed the M3/M4 rule-text gap), plus T352 T353 for two pre-existing bugs found while writing them; handoff folder removed
 - 260924 update-ssot QUAL complete; r3 decides M3's and M4's rule texts (no repeated noun, cover the title; at least three block types from what the material fits) and makes every rule text yield to natural writing
-- 260924 update-ssot QUAL start; the M3 and M4 rule texts carry no decided substance (T331 SSOT-GAP)
-- 260923 create-task QUAL POST GEN GUIDE TMPL paused for a machine switch; mapping, SSOT fixes and the 30-task plan are done, task files not yet written; handoff in spec/handoff/create-task-260923/

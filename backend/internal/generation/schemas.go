@@ -21,7 +21,17 @@ var postContentSchema []byte
 //go:embed schemas/write_answer.schema.json
 var writeAnswerSchema []byte
 
+// The write answer with replacement candidates beside the nouns (GEN-48), asked for only when
+// the run froze 분야 phrases. Its surface enum is strings alone: a numeric enum makes Gemini
+// answer an empty object for the whole schema.
+//
+//go:embed schemas/write_answer_replacements.schema.json
+var writeAnswerReplacementsSchema []byte
+
 func ObservationsSchema() []byte      { return append([]byte(nil), observationsSchema...) }
 func VideoObservationsSchema() []byte { return append([]byte(nil), videoObservationsSchema...) }
 func PostContentSchema() []byte       { return append([]byte(nil), postContentSchema...) }
 func WriteAnswerSchema() []byte       { return append([]byte(nil), writeAnswerSchema...) }
+func WriteAnswerReplacementsSchema() []byte {
+	return append([]byte(nil), writeAnswerReplacementsSchema...)
+}

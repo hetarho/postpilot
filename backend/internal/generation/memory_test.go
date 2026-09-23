@@ -18,7 +18,7 @@ func testMemories() []string {
 func TestMemoriesRenderInThePerPostHalfOnly(t *testing.T) {
 	baselineSystem, baselineUser := loadGolden(t, "write_prompt_no_template.golden")
 	system, user := BuildWritePromptForLanguage(LanguageKorean, goldenProfile(), goldenObservations(),
-		"MEMO 본문", "가제 TITLE", []string{"IMG_1.jpg", "IMG_2.jpg"}, nil, nil, post.TagCountRange.Default, nil, nil, testMemories(), nil)
+		"MEMO 본문", "가제 TITLE", []string{"IMG_1.jpg", "IMG_2.jpg"}, nil, nil, post.TagCountRange.Default, nil, nil, testMemories(), nil, nil)
 
 	if system != baselineSystem {
 		t.Fatalf("the memories reached the stable prefix:\n%s", system)
@@ -59,7 +59,7 @@ func TestAPostWithoutMemoriesIsByteIdenticalToTheBaseline(t *testing.T) {
 			t.Fatalf("%s memories drifted from the baseline", name)
 		}
 		withExplicit, userExplicit := BuildWritePromptForLanguage(LanguageKorean, goldenProfile(), goldenObservations(),
-			"MEMO 본문", "가제 TITLE", []string{"IMG_1.jpg", "IMG_2.jpg"}, nil, nil, post.TagCountRange.Default, nil, nil, memories, nil)
+			"MEMO 본문", "가제 TITLE", []string{"IMG_1.jpg", "IMG_2.jpg"}, nil, nil, post.TagCountRange.Default, nil, nil, memories, nil, nil)
 		if withExplicit != wantSystem || userExplicit != wantUser {
 			t.Fatalf("%s memories drifted from the baseline through the language builder", name)
 		}
@@ -74,7 +74,7 @@ func TestAPostWithoutMemoriesIsByteIdenticalToTheBaseline(t *testing.T) {
 func TestWritePromptWithMemoriesMatchesItsGolden(t *testing.T) {
 	wantSystem, wantUser := loadGolden(t, "write_prompt_memories.golden")
 	system, user := BuildWritePromptForLanguage(LanguageKorean, goldenProfile(), goldenObservations(),
-		"MEMO 본문", "가제 TITLE", []string{"IMG_1.jpg", "IMG_2.jpg"}, nil, nil, post.TagCountRange.Default, nil, nil, testMemories(), nil)
+		"MEMO 본문", "가제 TITLE", []string{"IMG_1.jpg", "IMG_2.jpg"}, nil, nil, post.TagCountRange.Default, nil, nil, testMemories(), nil, nil)
 	if system != wantSystem {
 		t.Fatalf("system drifted:\n--- got ---\n%s\n--- want ---\n%s", system, wantSystem)
 	}
