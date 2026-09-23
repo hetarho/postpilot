@@ -20,12 +20,12 @@
 | ARCH | 9 | 9 | - | 0 |
 | AUTH | 8 | 8 | - | 0 |
 | QUOTA | 19 | 19 | - | 0 |
-| POST | 10 | 9 | POST-73+ POST-74+ POST-75+ POST-76+ POST-77+ POST-78+ POST-79+ POST-80+ POST-81+ POST-82+ POST-83+ POST-84+ POST-85+ POST-13✎ POST-66✎ POST-54✎ POST-51✎ | 0 |
+| POST | 11 | 9 | POST-73..87+ POST-13✎ POST-21✎ POST-44✎ POST-51✎ POST-54✎ POST-66✎ | 0 |
 | VOICE | 3 | 3 | - | 1 |
-| GEN | 9 | 8 | GEN-48+ GEN-49+ GEN-50+ GEN-51+ GEN-52+ GEN-53+ GEN-54+ GEN-14✎ | 0 |
+| GEN | 10 | 8 | GEN-48..57+ GEN-14✎ | 0 |
 | MODEL | 16 | 16 | - | 0 |
-| TMPL | 9 | 8 | TMPL-50+ TMPL-51+ TMPL-52+ TMPL-53x TMPL-54x TMPL-55+ | 1 |
-| GUIDE | 4 | 3 | GUIDE-29+ GUIDE-30+ GUIDE-31+ GUIDE-32+ GUIDE-33+ GUIDE-34+ GUIDE-35+ GUIDE-36+ GUIDE-37+ GUIDE-38+ GUIDE-39+ GUIDE-5✎ GUIDE-14✎ | 0 |
+| TMPL | 10 | 8 | TMPL-50..55 TMPL-2✎ TMPL-8✎ TMPL-20✎ TMPL-26✎ TMPL-30✎ TMPL-43✎ | 1 |
+| GUIDE | 5 | 3 | GUIDE-29..39+ GUIDE-5✎ GUIDE-14✎ GUIDE-15✎ GUIDE-17✎ GUIDE-20✎ | 0 |
 | EXPORT | 5 | 5 | - | 0 |
 | PUB | 6 | 6 | - | 0 |
 | LANG | 5 | 5 | - | 0 |
@@ -36,7 +36,7 @@
 | CDS | 25 | 23 | CDS-17✎ CDS-19✎ CDS-21✎ CDS-84✎ | 1 |
 | BILL | 4 | 4 | - | 0 |
 | MEM | 1 | 1 | - | 2 |
-| QUAL | 1 | 0 | all | 0 |
+| QUAL | 2 | 0 | all | 0 |
 
 ## review
 | id | st |
@@ -57,6 +57,8 @@
 - no [?] remains in any of the five; TMPL-39 (a photo row of n > 1 through export) predates this work and is unrelated to it
 - create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 ## log
+- 260923 update-ssot complete; QUAL r2 POST r11 GEN r10 GUIDE r5 TMPL r10 close 34 of the 42 mapping gaps (a published post refuses every write but URL replace/clear and delete; the write pass returns nouns; the ② offer needs only a 분야; revise drops the preset line); the other 8 are implementation rules for the tasks
+- 260923 create-task QUAL POST GEN GUIDE TMPL start; QUAL r1 all, POST r10, GEN r9, GUIDE r4, TMPL r9
 - 260923 the five domains' opens all closed ahead of create-task; measurement split into a per-post layer shown from ② and an aggregate over 발행됨 posts only, vocabulary ranked guideline > template > voice with the preset injected last, and 분야 picked on ①'s panel
 - 260923 ideation post-quality-and-related-links converted; QUAL r1 created and POST r10, GEN r9, GUIDE r4, TMPL r9 carry the rest; 추천글 and GEO stay parked in the ideation doc
 - 260923 update-ssot TMPL complete; r9 adds the optional title area limited to literal text, `<write>` and `<ask>`
@@ -75,5 +77,3 @@
 - 260923 template generation freshness investigation complete; each new StartGeneration reads the current saved template body and freezes it in the job; running jobs keep their frozen copy, while template length/tag defaults seed only when assigned
 - 260923 template generation freshness investigation start; trace saved template edits into a subsequent post generation request
 - 260922 ideation post-quality-and-related-links continue; adding SEO/GEO methodology, title templates, high-value vocabulary
-- 260922 CI guard repaired; completed and pending retirement guides both pass while missing cleanup evidence arguments and restored runtime fail; 11 regressions and the real retirement gate pass locally; remote verification awaits push
-- 260922 CI investigation start; run 35739196970 failed after the deployment-checkpoint documentation commit
