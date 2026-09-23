@@ -76,10 +76,9 @@ func TestToConnectErrorMapsEveryDomainError(t *testing.T) {
 	}
 }
 
-// The published address has a wire shape before it has a behaviour (T329). Until then the
-// procedure still answers only a session, and it answers that session Unimplemented with no
-// reason, so the failure catalogue gains nothing it would have to translate.
-func TestSavePostPublishedUrlRequiresASessionAndIsNotYetImplemented(t *testing.T) {
+// The address is saved only for the session's own account, and the request gives a caller
+// nowhere to claim one. What a signed-in save does is pinned by the service tests.
+func TestSavePostPublishedUrlRequiresASession(t *testing.T) {
 	handler := NewHandler(nil)
 	request := connect.NewRequest(&postpilotv1.SavePostPublishedUrlRequest{Slug: "20260924-jeju", Url: "https://blog.naver.com/alice/1"})
 
@@ -88,21 +87,33 @@ func TestSavePostPublishedUrlRequiresASessionAndIsNotYetImplemented(t *testing.T
 		t.Fatalf("anonymous = %v", err)
 	}
 
-	_, err = handler.SavePostPublishedUrl(auth.WithUser(context.Background(), "alice"), request)
-	if connect.CodeOf(err) != connect.CodeUnimplemented {
-		t.Fatalf("signed in = %v, want unimplemented", err)
-	}
-	var connectErr *connect.Error
-	if !errors.As(err, &connectErr) || len(connectErr.Details()) != 0 {
-		t.Fatalf("signed in carries a reason: %v", err)
-	}
-
 	fields := (&postpilotv1.SavePostPublishedUrlRequest{}).ProtoReflect().Descriptor().Fields()
 	for i := 0; i < fields.Len(); i++ {
 		switch name := string(fields.Get(i).Name()); name {
 		case "user_id", "account_id", "owner_id":
 			t.Fatalf("SavePostPublishedUrlRequest carries %s", name)
 		}
+	}
+}
+
+// A published post carries its address and when it was recorded, and it can no longer be
+// finalized: its way back is clearing the address (POST-75).
+func TestToProtoPostCarriesThePublication(t *testing.T) {
+	at := time.Date(2026, 9, 24, 3, 4, 5, 0, time.UTC)
+	content := &post.PostContent{Title: "제주 3일"}
+	published := toProtoPost(post.Post{
+		Slug: "20260924-jeju", Status: post.StatusPublished, Content: content,
+		PublishedURL: "https://blog.naver.com/alice/223000000000", PublishedAt: &at,
+	})
+	if published.GetPublishedUrl() != "https://blog.naver.com/alice/223000000000" || published.GetPublishedAt() != "2026-09-24T03:04:05Z" {
+		t.Fatalf("publication = %q at %q", published.GetPublishedUrl(), published.GetPublishedAt())
+	}
+	if published.GetCanFinalize() {
+		t.Fatal("a published post offers finalization")
+	}
+	finalized := toProtoPost(post.Post{Slug: "20260924-jeju", Status: post.StatusFinalized, Content: content})
+	if finalized.GetPublishedUrl() != "" || finalized.GetPublishedAt() != "" || !finalized.GetCanFinalize() {
+		t.Fatalf("an unpublished post = %q at %q, can finalize %v", finalized.GetPublishedUrl(), finalized.GetPublishedAt(), finalized.GetCanFinalize())
 	}
 }
 

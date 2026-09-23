@@ -309,6 +309,58 @@ func (q *Queries) ListPostsByUser(ctx context.Context, userID string) ([]ListPos
 	return items, nil
 }
 
+const listPublishedPostsByUser = `-- name: ListPublishedPostsByUser :many
+SELECT slug, content, content_language, content_revision, content_nouns, published_at
+FROM posts WHERE user_id = ? AND status = 'published'
+ORDER BY published_at DESC, slug DESC LIMIT ?
+`
+
+type ListPublishedPostsByUserParams struct {
+	UserID string
+	Limit  int64
+}
+
+type ListPublishedPostsByUserRow struct {
+	Slug            string
+	Content         sql.NullString
+	ContentLanguage sql.NullString
+	ContentRevision int64
+	ContentNouns    sql.NullString
+	PublishedAt     sql.NullString
+}
+
+// The account's published window, newest publication first (QUAL-39). Repeating the status in
+// the WHERE is what lets SQLite use the partial index posts_user_published_idx.
+func (q *Queries) ListPublishedPostsByUser(ctx context.Context, arg ListPublishedPostsByUserParams) ([]ListPublishedPostsByUserRow, error) {
+	rows, err := q.db.QueryContext(ctx, listPublishedPostsByUser, arg.UserID, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListPublishedPostsByUserRow
+	for rows.Next() {
+		var i ListPublishedPostsByUserRow
+		if err := rows.Scan(
+			&i.Slug,
+			&i.Content,
+			&i.ContentLanguage,
+			&i.ContentRevision,
+			&i.ContentNouns,
+			&i.PublishedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const postSlugExists = `-- name: PostSlugExists :one
 SELECT EXISTS (SELECT 1 FROM posts WHERE slug = ?)
 `
@@ -318,6 +370,36 @@ func (q *Queries) PostSlugExists(ctx context.Context, slug string) (bool, error)
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
+}
+
+const publishPost = `-- name: PublishPost :execrows
+UPDATE posts SET status = 'published', published_url = ?, published_at = ?, updated_at = ?
+WHERE slug = ? AND user_id = ?
+  AND ((status = 'finalized' AND finalized_revision = content_revision) OR status = 'published')
+`
+
+type PublishPostParams struct {
+	PublishedUrl sql.NullString
+	PublishedAt  sql.NullString
+	UpdatedAt    string
+	Slug         string
+	UserID       string
+}
+
+// Records or replaces the Naver Blog address. Only a post whose current revision is its
+// finalized one, or one already published, can take it (POST-73, POST-75).
+func (q *Queries) PublishPost(ctx context.Context, arg PublishPostParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, publishPost,
+		arg.PublishedUrl,
+		arg.PublishedAt,
+		arg.UpdatedAt,
+		arg.Slug,
+		arg.UserID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const reassignPostVoice = `-- name: ReassignPostVoice :execrows
@@ -405,6 +487,26 @@ func (q *Queries) SavePostGenerationOptions(ctx context.Context, arg SavePostGen
 		arg.Slug,
 		arg.UserID,
 	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const unpublishPost = `-- name: UnpublishPost :execrows
+UPDATE posts SET status = 'finalized', published_url = NULL, published_at = NULL, updated_at = ?
+WHERE slug = ? AND user_id = ? AND status = 'published'
+`
+
+type UnpublishPostParams struct {
+	UpdatedAt string
+	Slug      string
+	UserID    string
+}
+
+// Clearing the address returns the post to finalized; the finalization itself is untouched.
+func (q *Queries) UnpublishPost(ctx context.Context, arg UnpublishPostParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, unpublishPost, arg.UpdatedAt, arg.Slug, arg.UserID)
 	if err != nil {
 		return 0, err
 	}

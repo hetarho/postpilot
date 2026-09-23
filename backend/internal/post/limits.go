@@ -14,3 +14,7 @@ type TagCount struct {
 
 // Allows reports whether an explicitly requested tag count is in range.
 func (t TagCount) Allows(count int) bool { return count >= t.Min && count <= t.Max }
+
+// PublishedURLMaxChars bounds a pasted Naver Blog address, in Unicode scalar values like every
+// other *MaxChars bound. The frontend mirrors it for its pre-check.
+const PublishedURLMaxChars = 2048

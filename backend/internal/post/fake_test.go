@@ -242,7 +242,7 @@ func (f *fakeStore) LearningSnapshot(_ context.Context, slug, userID string) (Le
 	if existing.UserID != userID {
 		return LearningSnapshot{}, ErrForbidden
 	}
-	if existing.Status != StatusFinalized || existing.FinalizedRevision != existing.ContentRevision || existing.FinalizedAt == nil {
+	if (existing.Status != StatusFinalized && existing.Status != StatusPublished) || existing.FinalizedRevision != existing.ContentRevision || existing.FinalizedAt == nil {
 		return LearningSnapshot{}, ErrPostNotFinalized
 	}
 	if existing.Content == nil || existing.MachineBaselineRevision <= 0 {
@@ -255,6 +255,67 @@ func (f *fakeStore) LearningSnapshot(_ context.Context, slug, userID string) (Le
 		FinalizedAt: *existing.FinalizedAt, UpdatedAt: existing.UpdatedAt,
 		ContentLanguage: valueLanguage(existing.ContentLanguage),
 	}, nil
+}
+
+// PublishPost mirrors the store's guarded statement: a post whose current revision is its
+// finalized one, or one already published.
+func (f *fakeStore) PublishPost(_ context.Context, slug, userID, url string, publishedAt time.Time) (bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	existing, ok := f.posts[slug]
+	if !ok || existing.UserID != userID {
+		return false, nil
+	}
+	finalized := existing.Status == StatusFinalized && existing.FinalizedRevision == existing.ContentRevision
+	if !finalized && existing.Status != StatusPublished {
+		return false, nil
+	}
+	existing.Status = StatusPublished
+	existing.PublishedURL = url
+	existing.PublishedAt = &publishedAt
+	existing.UpdatedAt = publishedAt
+	f.posts[slug] = existing
+	return true, nil
+}
+
+func (f *fakeStore) UnpublishPost(_ context.Context, slug, userID string, updatedAt time.Time) (bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	existing, ok := f.posts[slug]
+	if !ok || existing.UserID != userID || existing.Status != StatusPublished {
+		return false, nil
+	}
+	existing.Status = StatusFinalized
+	existing.PublishedURL = ""
+	existing.PublishedAt = nil
+	existing.UpdatedAt = updatedAt
+	f.posts[slug] = existing
+	return true, nil
+}
+
+func (f *fakeStore) ListPublishedPosts(_ context.Context, userID string, limit int) ([]PublishedPost, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	var out []PublishedPost
+	for _, p := range f.posts {
+		if p.UserID != userID || p.Status != StatusPublished || p.Content == nil || p.PublishedAt == nil {
+			continue
+		}
+		out = append(out, PublishedPost{
+			Slug: p.Slug, ContentRevision: p.ContentRevision, Content: *p.Content,
+			ContentLanguage: p.ContentLanguage, Nouns: p.ContentNouns, PublishedAt: *p.PublishedAt,
+		})
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if !out[i].PublishedAt.Equal(out[j].PublishedAt) {
+			return out[i].PublishedAt.After(out[j].PublishedAt)
+		}
+		return out[i].Slug > out[j].Slug
+	})
+	if len(out) > limit {
+		out = out[:limit]
+	}
+	return out, nil
 }
 
 func (f *fakeStore) GetPost(_ context.Context, slug string) (Post, error) {

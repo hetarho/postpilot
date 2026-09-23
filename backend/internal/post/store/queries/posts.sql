@@ -58,6 +58,25 @@ SELECT slug, user_id, voice_id, title, memo, observations, content, status, crea
        quality_rules
 FROM posts WHERE slug = ?;
 
+-- name: PublishPost :execrows
+-- Records or replaces the Naver Blog address. Only a post whose current revision is its
+-- finalized one, or one already published, can take it (POST-73, POST-75).
+UPDATE posts SET status = 'published', published_url = ?, published_at = ?, updated_at = ?
+WHERE slug = ? AND user_id = ?
+  AND ((status = 'finalized' AND finalized_revision = content_revision) OR status = 'published');
+
+-- name: UnpublishPost :execrows
+-- Clearing the address returns the post to finalized; the finalization itself is untouched.
+UPDATE posts SET status = 'finalized', published_url = NULL, published_at = NULL, updated_at = ?
+WHERE slug = ? AND user_id = ? AND status = 'published';
+
+-- name: ListPublishedPostsByUser :many
+-- The account's published window, newest publication first (QUAL-39). Repeating the status in
+-- the WHERE is what lets SQLite use the partial index posts_user_published_idx.
+SELECT slug, content, content_language, content_revision, content_nouns, published_at
+FROM posts WHERE user_id = ? AND status = 'published'
+ORDER BY published_at DESC, slug DESC LIMIT ?;
+
 -- name: GetLearningSnapshot :one
 SELECT slug, user_id, voice_id, content, content_revision, machine_baseline, machine_baseline_revision,
        machine_baseline_voice_id, target_length, status, finalized_revision, finalized_at, updated_at,

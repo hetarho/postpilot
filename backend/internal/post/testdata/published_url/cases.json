@@ -1,0 +1,131 @@
+{
+  "_comment": [
+    "The Naver Blog address contract (POST-77). The Go parser (internal/post/publication_test.go) and",
+    "the frontend pre-check both run every case of this file, so a rule cannot change on one side",
+    "only. `stored` is the normalized address an accepted input is saved as, and null means the",
+    "input is refused. The at-limit and over-limit lengths are built by each harness from",
+    "PublishedURLMaxChars rather than spelled out here."
+  ],
+  "cases": [
+    {
+      "name": "a desktop post address",
+      "input": "https://blog.naver.com/alice/223000000000",
+      "stored": "https://blog.naver.com/alice/223000000000"
+    },
+    {
+      "name": "http is stored as https",
+      "input": "http://blog.naver.com/alice/223000000000",
+      "stored": "https://blog.naver.com/alice/223000000000"
+    },
+    {
+      "name": "the mobile share host is stored as the desktop one",
+      "input": "https://m.blog.naver.com/alice/223000000000",
+      "stored": "https://blog.naver.com/alice/223000000000"
+    },
+    {
+      "name": "a mobile address keeps its query",
+      "input": "https://m.blog.naver.com/PostView.naver?blogId=alice&logNo=223000000000",
+      "stored": "https://blog.naver.com/PostView.naver?blogId=alice&logNo=223000000000"
+    },
+    {
+      "name": "an upper-case host is the same host",
+      "input": "https://BLOG.Naver.COM/alice/223000000000",
+      "stored": "https://blog.naver.com/alice/223000000000"
+    },
+    {
+      "name": "the path keeps its case",
+      "input": "https://blog.naver.com/Alice_Kim/223000000000",
+      "stored": "https://blog.naver.com/Alice_Kim/223000000000"
+    },
+    {
+      "name": "the fragment is dropped",
+      "input": "https://blog.naver.com/alice/223000000000#comments",
+      "stored": "https://blog.naver.com/alice/223000000000"
+    },
+    {
+      "name": "a bare query mark is dropped",
+      "input": "https://blog.naver.com/alice/223000000000?",
+      "stored": "https://blog.naver.com/alice/223000000000"
+    },
+    {
+      "name": "surrounding whitespace is trimmed",
+      "input": "  https://blog.naver.com/alice/223000000000 \n",
+      "stored": "https://blog.naver.com/alice/223000000000"
+    },
+    {
+      "name": "an escaped path stays escaped",
+      "input": "https://blog.naver.com/alice/%ED%9B%84%EA%B8%B0",
+      "stored": "https://blog.naver.com/alice/%ED%9B%84%EA%B8%B0"
+    },
+    {
+      "name": "a look-alike host is refused",
+      "input": "https://blog.naver.com.evil.com/alice/223000000000",
+      "stored": null
+    },
+    {
+      "name": "a subdomain of the blog host is refused",
+      "input": "https://section.blog.naver.com/alice/223000000000",
+      "stored": null
+    },
+    {
+      "name": "another Naver host is refused",
+      "input": "https://cafe.naver.com/alice/223000000000",
+      "stored": null
+    },
+    {
+      "name": "an address with no scheme is refused",
+      "input": "blog.naver.com/alice/223000000000",
+      "stored": null
+    },
+    {
+      "name": "an ftp address is refused",
+      "input": "ftp://blog.naver.com/alice/223000000000",
+      "stored": null
+    },
+    {
+      "name": "a javascript address is refused",
+      "input": "javascript:alert(1)",
+      "stored": null
+    },
+    {
+      "name": "a port is refused",
+      "input": "https://blog.naver.com:443/alice/223000000000",
+      "stored": null
+    },
+    {
+      "name": "an empty port is refused",
+      "input": "https://blog.naver.com:/alice/223000000000",
+      "stored": null
+    },
+    {
+      "name": "userinfo is refused",
+      "input": "https://user@blog.naver.com/alice/223000000000",
+      "stored": null
+    },
+    {
+      "name": "the blog's home is not a post",
+      "input": "https://blog.naver.com/",
+      "stored": null
+    },
+    {
+      "name": "an empty path is refused",
+      "input": "https://blog.naver.com",
+      "stored": null
+    },
+    {
+      "name": "a path of slashes is refused",
+      "input": "https://blog.naver.com///",
+      "stored": null
+    },
+    {
+      "name": "an empty address is refused",
+      "input": "",
+      "stored": null
+    },
+    {
+      "name": "text that is not a URL is refused",
+      "input": "네이버 블로그 주소",
+      "stored": null
+    }
+  ]
+}

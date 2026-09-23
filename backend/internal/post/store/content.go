@@ -1,6 +1,7 @@
 package store
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 
@@ -104,4 +105,21 @@ func unmarshalObservations(data string) ([]post.Observation, error) {
 		})
 	}
 	return out, nil
+}
+
+// unmarshalNouns reads the write pass's nouns (GEN-55). A NULL column and an empty array both
+// mean the pass returned none, so both read as nil; anything that is not a JSON string array
+// is a broken row.
+func unmarshalNouns(value sql.NullString) ([]string, error) {
+	if !value.Valid {
+		return nil, nil
+	}
+	var nouns []string
+	if err := json.Unmarshal([]byte(value.String), &nouns); err != nil {
+		return nil, fmt.Errorf("decode content nouns: %w", err)
+	}
+	if len(nouns) == 0 {
+		return nil, nil
+	}
+	return nouns, nil
 }

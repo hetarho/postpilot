@@ -95,14 +95,18 @@ func (h *Handler) FinalizePost(ctx context.Context, req *connect.Request[postpil
 	return connect.NewResponse(&postpilotv1.FinalizePostResponse{Post: toProtoPost(saved)}), nil
 }
 
-// SavePostPublishedUrl is a placeholder until the published status exists (T329). Like the
-// clip render refusal it answers Unimplemented with no reason: nothing a browser can do
-// changes the answer, so there is nothing for the failure catalogue to say.
-func (h *Handler) SavePostPublishedUrl(ctx context.Context, _ *connect.Request[postpilotv1.SavePostPublishedUrlRequest]) (*connect.Response[postpilotv1.SavePostPublishedUrlResponse], error) {
-	if _, err := actingUser(ctx); err != nil {
+// SavePostPublishedUrl records, replaces or clears the post's Naver Blog address (POST-73,
+// POST-75); a trimmed empty url clears it.
+func (h *Handler) SavePostPublishedUrl(ctx context.Context, req *connect.Request[postpilotv1.SavePostPublishedUrlRequest]) (*connect.Response[postpilotv1.SavePostPublishedUrlResponse], error) {
+	userID, err := actingUser(ctx)
+	if err != nil {
 		return nil, err
 	}
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("saving a published address is not available yet"))
+	saved, err := h.svc.SavePublishedURL(ctx, userID, req.Msg.GetSlug(), req.Msg.GetUrl())
+	if err != nil {
+		return nil, toConnectError("save published url", err)
+	}
+	return connect.NewResponse(&postpilotv1.SavePostPublishedUrlResponse{Post: toProtoPost(saved)}), nil
 }
 
 func (h *Handler) GetPost(ctx context.Context, req *connect.Request[postpilotv1.GetPostRequest]) (*connect.Response[postpilotv1.GetPostResponse], error) {
@@ -388,18 +392,21 @@ func toProtoPost(p post.Post) *postpilotv1.Post {
 		PendingExperimentId:     p.PendingExperimentID,
 		ContentRevision:         p.ContentRevision,
 		MachineBaselineRevision: p.MachineBaselineRevision,
-		CanFinalize:             p.Content != nil,
-		TargetLength:            protoTargetLength(p.TargetLength),
-		TagCount:                protoTargetLength(&p.TagCount),
-		UseMemory:               p.UseMemory,
-		FinalizedRevision:       p.FinalizedRevision,
-		FinalizedAt:             formatOptionalTime(p.FinalizedAt),
-		Voice:                   toProtoVoiceRef(p.Voice),
-		MachineBaselineVoiceId:  p.MachineBaselineVoiceID,
-		Template:                toProtoTemplateRef(p.Template),
-		TargetLanguage:          languageToProto(p.TargetLanguage),
-		ContentLanguage:         optionalLanguageToProto(p.ContentLanguage),
-		TemplateAnswers:         toProtoTemplateAnswers(p.TemplateAnswers),
+		// A published post is already past finalization: its way back is clearing the address.
+		CanFinalize:            p.Content != nil && p.Status != post.StatusPublished,
+		TargetLength:           protoTargetLength(p.TargetLength),
+		TagCount:               protoTargetLength(&p.TagCount),
+		UseMemory:              p.UseMemory,
+		FinalizedRevision:      p.FinalizedRevision,
+		FinalizedAt:            formatOptionalTime(p.FinalizedAt),
+		Voice:                  toProtoVoiceRef(p.Voice),
+		MachineBaselineVoiceId: p.MachineBaselineVoiceID,
+		Template:               toProtoTemplateRef(p.Template),
+		TargetLanguage:         languageToProto(p.TargetLanguage),
+		ContentLanguage:        optionalLanguageToProto(p.ContentLanguage),
+		TemplateAnswers:        toProtoTemplateAnswers(p.TemplateAnswers),
+		PublishedUrl:           p.PublishedURL,
+		PublishedAt:            formatOptionalTime(p.PublishedAt),
 	}
 }
 

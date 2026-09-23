@@ -22,6 +22,8 @@ type Service struct {
 	images  ImageCatalog
 	videos  VideoCatalog
 	uploads UploadLedger
+	// publications is the post's Naver Blog address and the account's published window.
+	publications Publication
 	// content is the progressive editor's capability: present only when the store wired in
 	// implements it, which is what the editor's use-cases check before writing.
 	content        ContentStore
@@ -95,6 +97,7 @@ func NewService(store Storage, blobs ObjectStore, limits Limits, deps Deps) *Ser
 		images:         store,
 		videos:         store,
 		uploads:        store,
+		publications:   store,
 		content:        contentStoreOf(store),
 		blobs:          blobs,
 		putTTL:         limits.PutTTL,
@@ -853,7 +856,8 @@ func (s *Service) LearningSnapshot(ctx context.Context, userID, slug string) (Le
 	if err != nil {
 		return LearningSnapshot{}, err
 	}
-	if found.Status != StatusFinalized || found.FinalizedRevision != found.ContentRevision {
+	// A published post is a finalized one with an address, so it stays learnable (POST-21).
+	if (found.Status != StatusFinalized && found.Status != StatusPublished) || found.FinalizedRevision != found.ContentRevision {
 		return LearningSnapshot{}, ErrPostNotFinalized
 	}
 	contentStore := s.content
@@ -874,6 +878,82 @@ func (s *Service) LearningSnapshot(ctx context.Context, userID, slug string) (Le
 	}
 	snapshot.VoiceSourceLanguage = projectVoice(refs, found.VoiceID).SourceLanguage
 	return snapshot, nil
+}
+
+// SavePublishedURL records, replaces or clears the post's Naver Blog address (POST-73,
+// POST-75). A valid address publishes a post whose current revision is its finalized one, and
+// replaces the address of one already published, restamping the time; the same address again
+// writes nothing. An empty one returns a published post to finalized and is a no-op anywhere
+// else. An address that is not a Naver Blog post's is refused before anything is read, and a
+// job that writes the post's content makes the save wait (ErrPostBusy); a job that only learns
+// from it does not.
+func (s *Service) SavePublishedURL(ctx context.Context, userID, slug, raw string) (Post, error) {
+	value := strings.TrimSpace(raw)
+	var address string
+	if value != "" {
+		normalized, err := ParseNaverBlogURL(value)
+		if err != nil {
+			return Post{}, err
+		}
+		address = normalized
+	}
+	found, err := s.ownedPost(ctx, userID, slug)
+	if err != nil {
+		return Post{}, err
+	}
+	switch {
+	case address == "" && found.Status != StatusPublished:
+		return s.Get(ctx, userID, slug)
+	case address != "" && found.Status == StatusPublished && found.PublishedURL == address:
+		return s.Get(ctx, userID, slug)
+	case address != "" && found.Status != StatusPublished &&
+		(found.Status != StatusFinalized || found.FinalizedRevision != found.ContentRevision):
+		return Post{}, ErrPostNotFinalized
+	}
+	active, err := s.jobs.ActiveForPost(ctx, slug)
+	if err != nil {
+		return Post{}, fmt.Errorf("check active job before saving the published address: %w", err)
+	}
+	if active != nil && active.WritesContent {
+		return Post{}, ErrPostBusy
+	}
+	if address == "" {
+		cleared, err := s.publications.UnpublishPost(ctx, slug, userID, s.now())
+		if err != nil {
+			return Post{}, err
+		}
+		if !cleared {
+			// Someone else moved it first. A post that is no longer published is what the
+			// clear asked for.
+			if _, err := s.ownedPost(ctx, userID, slug); err != nil {
+				return Post{}, err
+			}
+		}
+		return s.Get(ctx, userID, slug)
+	}
+	published, err := s.publications.PublishPost(ctx, slug, userID, address, s.now())
+	if err != nil {
+		return Post{}, err
+	}
+	if !published {
+		current, err := s.ownedPost(ctx, userID, slug)
+		if err != nil {
+			return Post{}, err
+		}
+		if current.Status != StatusPublished || current.PublishedURL != address {
+			return Post{}, ErrPostNotFinalized
+		}
+	}
+	return s.Get(ctx, userID, slug)
+}
+
+// PublishedPosts is the account's published window, newest publication first and at most
+// limit long (QUAL-39). It is what the quality context reads the account through.
+func (s *Service) PublishedPosts(ctx context.Context, userID string, limit int) ([]PublishedPost, error) {
+	if limit <= 0 {
+		return nil, fmt.Errorf("published posts: limit %d is not positive", limit)
+	}
+	return s.publications.ListPublishedPosts(ctx, userID, limit)
 }
 
 // PostStatus returns one owned post's lifecycle status. It exists for a consumer that must

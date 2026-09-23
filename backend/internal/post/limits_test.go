@@ -19,3 +19,10 @@ func TestTagCountRange(t *testing.T) {
 		}
 	}
 }
+
+// The address bound the frontend mirrors for its pre-check.
+func TestPublishedURLMaxChars(t *testing.T) {
+	if PublishedURLMaxChars != 2048 {
+		t.Fatalf("PublishedURLMaxChars = %d, want 2048", PublishedURLMaxChars)
+	}
+}

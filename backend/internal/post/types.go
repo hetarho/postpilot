@@ -10,12 +10,15 @@ import (
 	"time"
 )
 
-// Status values a post can hold. `review` is set by the generation pipeline (plan 06);
-// this context only ever writes `draft`.
+// Status values a post can hold, and who writes each: the create writes draft; generation,
+// revision and an applied comparison write review; FinalizePost writes finalized;
+// SavePublishedURL writes published, and clearing the address writes finalized again
+// (POST-73, POST-75).
 const (
 	StatusDraft     = "draft"
 	StatusReview    = "review"
 	StatusFinalized = "finalized"
+	StatusPublished = "published"
 )
 
 // uploadContentType is what a presigned PUT is signed for. The browser pipeline
@@ -94,7 +97,8 @@ var (
 	// ErrObjectMissing is a confirm for an object that never landed in storage.
 	ErrObjectMissing = errors.New("uploaded object not found in storage")
 	// ErrPostBusy prevents deleting a source while a handler could still write new
-	// experiment output after the privacy purge.
+	// experiment output after the privacy purge, and saving a published address while a job
+	// that writes the post's content is still running.
 	ErrPostBusy             = errors.New("post has an active job")
 	ErrStaleContentRevision = errors.New("post content revision is stale")
 	ErrInvalidContent       = errors.New("invalid post content")
@@ -257,7 +261,14 @@ type Post struct {
 	UseMemory         bool
 	FinalizedRevision int64
 	FinalizedAt       *time.Time
-	Observations      []Observation
+	// PublishedURL is the post's Naver Blog address, stored normalized, and "" when it has
+	// none; PublishedAt is when it was recorded, restamped by a replacement (POST-73, POST-75).
+	PublishedURL string
+	PublishedAt  *time.Time
+	// ContentNouns are the distinct nouns the latest write pass returned for this content, nil
+	// when none were returned (GEN-55).
+	ContentNouns []string
+	Observations []Observation
 
 	// TemplateAnswers is what this post answers to its template's data fields, by label,
 	// ordered by label. Populated by Get like Images and Videos are.
@@ -268,6 +279,17 @@ type Post struct {
 	Videos              []Video
 	ActiveJob           *ActiveJob
 	PendingExperimentID string
+}
+
+// PublishedPost is one published post as the quality context reads the account's window
+// (QUAL-39). A nil ContentLanguage is for the reader to interpret; post does not default it.
+type PublishedPost struct {
+	Slug            string
+	ContentRevision int64
+	Content         PostContent
+	ContentLanguage *Language
+	Nouns           []string
+	PublishedAt     time.Time
 }
 
 // LearningSnapshot is the post context's ownership-checked hand-off to voice. The
@@ -374,6 +396,9 @@ type ActiveJob struct {
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 	TargetLanguage Language
+	// WritesContent marks a job that writes this post's content or observations when it
+	// completes. The composition root sets it, so this context never names a job kind.
+	WritesContent bool
 }
 
 // Failure is the post read model's consumer-owned durable job failure projection.

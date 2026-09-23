@@ -55,6 +55,20 @@ func voiceOwnedKind(kind string) bool {
 	}
 }
 
+// postContentWork identifies the work that writes a post's content or observations when it
+// completes: generation, revision and a model comparison, whose editor-origin verdict may apply
+// its winner. The post context cannot see a comparison's origin, so every comparison counts. It
+// is what makes saving a published address wait (post.ErrPostBusy), while work that only learns
+// from a post — voice learning, memory extraction, a rule comparison — does not.
+func postContentWork(kind string) bool {
+	switch kind {
+	case job.KindGenerate, job.KindRevise, job.KindModelExperiment:
+		return true
+	default:
+		return false
+	}
+}
+
 // postVoiceWork states what a post/voice job is attached to and which conflicts refuse
 // it, in the order the queue checks them: one job at a time per post for its owner, and
 // voice-owned work additionally one per (voice, kind). A voice-owned job that also names

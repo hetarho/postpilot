@@ -302,7 +302,9 @@ func (s *Store) LearningSnapshot(ctx context.Context, slug, userID string) (post
 	if err != nil {
 		return post.LearningSnapshot{}, err
 	}
-	if row.Status != post.StatusFinalized || !row.FinalizedRevision.Valid || row.FinalizedRevision.Int64 != row.ContentRevision || !row.FinalizedAt.Valid {
+	// A published post is a finalized one with an address, so it stays learnable (POST-21).
+	finalized := row.Status == post.StatusFinalized || row.Status == post.StatusPublished
+	if !finalized || !row.FinalizedRevision.Valid || row.FinalizedRevision.Int64 != row.ContentRevision || !row.FinalizedAt.Valid {
 		return post.LearningSnapshot{}, post.ErrPostNotFinalized
 	}
 	finalizedAt, err := parseTime(row.FinalizedAt.String)
@@ -318,6 +320,64 @@ func (s *Store) LearningSnapshot(ctx context.Context, slug, userID string) (post
 		ContentRevision: row.ContentRevision, MachineBaseline: *baseline,
 		BaselineRevision: row.MachineBaselineRevision, TargetLength: optionalInt(row.TargetLength),
 		FinalizedAt: finalizedAt, UpdatedAt: updated, ContentLanguage: contentLanguage}, nil
+}
+
+// --- publication ---
+
+func (s *Store) PublishPost(ctx context.Context, slug, userID, url string, publishedAt time.Time) (bool, error) {
+	stamp := formatTime(publishedAt)
+	n, err := s.write.PublishPost(ctx, sqlc.PublishPostParams{
+		PublishedUrl: sql.NullString{String: url, Valid: true},
+		PublishedAt:  sql.NullString{String: stamp, Valid: true},
+		UpdatedAt:    stamp, Slug: slug, UserID: userID,
+	})
+	if err != nil {
+		return false, fmt.Errorf("publish post: %w", err)
+	}
+	return n == 1, nil
+}
+
+func (s *Store) UnpublishPost(ctx context.Context, slug, userID string, updatedAt time.Time) (bool, error) {
+	n, err := s.write.UnpublishPost(ctx, sqlc.UnpublishPostParams{UpdatedAt: formatTime(updatedAt), Slug: slug, UserID: userID})
+	if err != nil {
+		return false, fmt.Errorf("unpublish post: %w", err)
+	}
+	return n == 1, nil
+}
+
+func (s *Store) ListPublishedPosts(ctx context.Context, userID string, limit int) ([]post.PublishedPost, error) {
+	rows, err := s.read.ListPublishedPostsByUser(ctx, sqlc.ListPublishedPostsByUserParams{UserID: userID, Limit: int64(limit)})
+	if err != nil {
+		return nil, fmt.Errorf("select published posts: %w", err)
+	}
+	out := make([]post.PublishedPost, 0, len(rows))
+	for _, row := range rows {
+		content, err := unmarshalContent(row.Content.String)
+		if err != nil {
+			return nil, fmt.Errorf("published post %s: %w", row.Slug, err)
+		}
+		// Finalizing requires content, so a published row without any is a broken invariant.
+		if content == nil {
+			return nil, fmt.Errorf("published post %s has no content", row.Slug)
+		}
+		publishedAt, err := parseTime(row.PublishedAt.String)
+		if err != nil {
+			return nil, fmt.Errorf("published post %s published_at: %w", row.Slug, err)
+		}
+		language, err := parseNullableLanguage(row.ContentLanguage)
+		if err != nil {
+			return nil, fmt.Errorf("published post %s content language: %w", row.Slug, err)
+		}
+		nouns, err := unmarshalNouns(row.ContentNouns)
+		if err != nil {
+			return nil, fmt.Errorf("published post %s: %w", row.Slug, err)
+		}
+		out = append(out, post.PublishedPost{
+			Slug: row.Slug, ContentRevision: row.ContentRevision, Content: *content,
+			ContentLanguage: language, Nouns: nouns, PublishedAt: publishedAt,
+		})
+	}
+	return out, nil
 }
 
 func (s *Store) GetPost(ctx context.Context, slug string) (post.Post, error) {
@@ -755,6 +815,18 @@ func toPost(row sqlc.Post) (post.Post, error) {
 		}
 		finalizedAt = &value
 	}
+	var publishedAt *time.Time
+	if row.PublishedAt.Valid {
+		value, parseErr := parseTime(row.PublishedAt.String)
+		if parseErr != nil {
+			return post.Post{}, fmt.Errorf("post %s published_at: %w", row.Slug, parseErr)
+		}
+		publishedAt = &value
+	}
+	nouns, err := unmarshalNouns(row.ContentNouns)
+	if err != nil {
+		return post.Post{}, fmt.Errorf("post %s: %w", row.Slug, err)
+	}
 	targetLanguage, err := post.ParseLanguage(row.TargetLanguage)
 	if err != nil {
 		return post.Post{}, fmt.Errorf("post %s target language: %w", row.Slug, err)
@@ -786,6 +858,9 @@ func toPost(row sqlc.Post) (post.Post, error) {
 		UseMemory:               row.UseMemory != 0,
 		FinalizedRevision:       row.FinalizedRevision.Int64,
 		FinalizedAt:             finalizedAt,
+		PublishedURL:            row.PublishedUrl.String,
+		PublishedAt:             publishedAt,
+		ContentNouns:            nouns,
 		Observations:            observations,
 	}, nil
 }

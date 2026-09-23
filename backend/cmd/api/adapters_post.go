@@ -145,6 +145,7 @@ func (a postJobFinder) ActiveForPost(ctx context.Context, slug string) (*post.Ac
 		PostSlug: postSlug, ObserveModel: found.ObserveModel, WriteModel: found.WriteModel,
 		TargetLanguage: post.Language(found.TargetLanguage),
 		CreatedAt:      found.CreatedAt, UpdatedAt: found.UpdatedAt,
+		WritesContent: postContentWork(found.Kind),
 	}, nil
 }
 

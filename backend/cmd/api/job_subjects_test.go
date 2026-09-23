@@ -3,6 +3,7 @@ package main
 import (
 	"testing"
 
+	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/job"
 )
 
@@ -72,5 +73,30 @@ func TestPostVoiceWorkLeavesUnattachedWorkToTheQueueDefault(t *testing.T) {
 	subjects, guards := postVoiceWork(job.KindGenerate, "alice", "", "")
 	if subjects != nil || guards != nil {
 		t.Fatalf("subjects/guards = %v/%v, want none", subjects, guards)
+	}
+}
+
+// Saving a published address waits only for work that writes the post (POST-73): a job that
+// learns from it or reads it must not hold a URL paste hostage.
+func TestOnlyGenerationRevisionAndComparisonsWritePostContent(t *testing.T) {
+	for kind, want := range map[string]bool{
+		job.KindGenerate:             true,
+		job.KindRevise:               true,
+		job.KindModelExperiment:      true,
+		job.KindLearnVoice:           false,
+		job.KindExtractMemory:        false,
+		job.KindCompareVoiceRule:     false,
+		job.KindAnalyzeVoice:         false,
+		job.KindValidateVoiceProfile: false,
+		job.KindSeedVoice:            false,
+	} {
+		if got := postContentWork(kind); got != want {
+			t.Errorf("postContentWork(%q) = %v, want %v", kind, got, want)
+		}
+	}
+	for _, kind := range []string{clip.JobKindGenerate, clip.JobKindRender, clip.JobKindRevise, ""} {
+		if postContentWork(kind) {
+			t.Errorf("postContentWork(%q) = true", kind)
+		}
 	}
 }

@@ -198,6 +198,20 @@ type UploadLedger interface {
 	AllReferencedKeys(ctx context.Context) (map[string]struct{}, error)
 }
 
+// Publication is the post's Naver Blog address and the account's published window (POST-73,
+// POST-75, QUAL-39).
+type Publication interface {
+	// PublishPost records the address on a post whose current revision is its finalized one,
+	// or replaces it on a post already published, in one guarded statement. It reports false
+	// when the post is neither.
+	PublishPost(ctx context.Context, slug, userID, url string, publishedAt time.Time) (bool, error)
+	// UnpublishPost returns a published post to finalized, clearing its address; the
+	// finalization itself is untouched. It reports false when the post is not published.
+	UnpublishPost(ctx context.Context, slug, userID string, updatedAt time.Time) (bool, error)
+	// ListPublishedPosts is the account's published posts, newest publication first.
+	ListPublishedPosts(ctx context.Context, userID string, limit int) ([]PublishedPost, error)
+}
+
 // SweepLedger is what the object sweep needs and nothing else: the expired uploads, the two
 // "does a row still point at this key" questions, and the whole referenced set.
 type SweepLedger interface {
@@ -218,6 +232,7 @@ type Storage interface {
 	ImageCatalog
 	VideoCatalog
 	UploadLedger
+	Publication
 }
 
 // ContentStore is the progressive editor capability. It is separated from the base
