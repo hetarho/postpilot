@@ -54,6 +54,7 @@ import { i18n as exportPanelI18n } from '@/widgets/export-panel/config/i18n'
 import { i18n as finalizePostI18n } from '@/features/finalize-post/config/i18n'
 import { i18n as recordPublishedUrlI18n } from '@/features/record-published-url/config/i18n'
 import { i18n as selectPostFieldI18n } from '@/features/select-post-field/config/i18n'
+import { i18n as qualityI18n } from '@/entities/quality/config/i18n'
 import { i18n as giveVoiceFeedbackI18n } from '@/features/give-voice-feedback/config/i18n'
 import { i18n as guidelineI18n } from '@/entities/guideline/config/i18n'
 import { i18n as guidelinesI18n } from '@/pages/guidelines/config/i18n'
@@ -185,6 +186,7 @@ export const FRAGMENTS: readonly I18nFragment[] = [
   finalizePostI18n,
   recordPublishedUrlI18n,
   selectPostFieldI18n,
+  qualityI18n,
   postI18n,
   postsI18n,
   uploadPhotosI18n,
@@ -226,6 +228,7 @@ export const resources = {
       ...finalizePostI18n.ko,
       ...recordPublishedUrlI18n.ko,
       ...selectPostFieldI18n.ko,
+      ...qualityI18n.ko,
       ...postI18n.ko,
       ...postsI18n.ko,
       ...uploadPhotosI18n.ko,
@@ -333,6 +336,7 @@ export const resources = {
       ...finalizePostI18n.en,
       ...recordPublishedUrlI18n.en,
       ...selectPostFieldI18n.en,
+      ...qualityI18n.en,
       ...postI18n.en,
       ...postsI18n.en,
       ...uploadPhotosI18n.en,

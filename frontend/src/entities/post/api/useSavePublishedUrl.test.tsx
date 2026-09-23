@@ -35,7 +35,7 @@ function setup(options: FakePostsOptions = {}) {
   const view = renderHook(() => useSavePublishedUrl(), {
     wrapper: withProviders(transport, queryClient),
   })
-  return { ...view, queryClient, postKey, listKey }
+  return { ...view, transport, queryClient, postKey, listKey }
 }
 
 // The answer IS the post, so the detail entry is replaced — never refetched — and the list's
@@ -55,6 +55,20 @@ it('replaces the GetPost entry with the answer and invalidates the list', async 
   expect(cached?.post?.publishedUrl).toBe('https://blog.naver.com/alice/1')
   expect(queryClient.getQueryState(postKey)?.isInvalidated).toBe(false)
   expect(queryClient.getQueryState(listKey)?.isInvalidated).toBe(true)
+})
+
+// QUAL-3: each changes which posts are 발행됨, and so the window M2 and the aggregate read.
+it('marks every quality query stale after a paste, a replace and a clear', async () => {
+  const { result, transport, queryClient } = setup()
+  const qualityKey = ['quality', transport, 'alice', 'measurement', 'post-a', '1']
+  for (const url of ['https://blog.naver.com/alice/1', 'https://blog.naver.com/alice/2', '']) {
+    queryClient.setQueryData(qualityKey, {})
+    expect(queryClient.getQueryState(qualityKey)?.isInvalidated).toBe(false)
+    await act(async () => {
+      await result.current.save('post', url)
+    })
+    await waitFor(() => expect(queryClient.getQueryState(qualityKey)?.isInvalidated).toBe(true))
+  }
 })
 
 it('exposes a refusal as an AppFailure and leaves the cache alone', async () => {

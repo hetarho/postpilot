@@ -2,6 +2,7 @@ import { clone, create } from '@bufbuild/protobuf'
 import { useMutation, useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
 import i18next from 'i18next'
+import { invalidateQuality } from '@/entities/quality/@x/post'
 import {
   appFailureFromConnect,
   GetPostResponseSchema,
@@ -40,6 +41,9 @@ export function useSavePostContent() {
       post.updatedAt = saved.updatedAt
       queryClient.setQueryData(key, create(GetPostResponseSchema, { post }))
       void queryClient.invalidateQueries({ queryKey: listPostsQueryKey(transport) })
+      // A new revision is a new measurement (QUAL-3); the row reads it by revision already, and
+      // this reaches every other reading that counted the old text.
+      void invalidateQuality(queryClient, transport)
     },
     // Published elsewhere (POST-86): the refetch reads the post locked, which unmounts ②'s
     // editor and its queue.

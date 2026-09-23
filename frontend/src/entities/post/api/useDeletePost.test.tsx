@@ -56,9 +56,13 @@ it("invalidates the post list and drops the deleted post's own entry", async () 
     transport,
     cardinality: 'finite',
   })
+  // A literal quality entry: this entity reaches the quality one only through its `@x`, and the
+  // literal proves the prefix reaches a real entry's shape.
+  const qualityKey = ['quality', transport, 'alice', 'measurement', 'post-b', '1']
   queryClient.setQueryData(listKey, create(ListPostsResponseSchema, {}))
   queryClient.setQueryData(detailKey, create(GetPostResponseSchema, {}))
   queryClient.setQueryData(experimentsKey, create(ListExperimentsResponseSchema, {}))
+  queryClient.setQueryData(qualityKey, {})
 
   const view = renderHook(() => useDeletePost(), {
     wrapper: withProviders(transport, queryClient),
@@ -77,4 +81,6 @@ it("invalidates the post list and drops the deleted post's own entry", async () 
   // The post's experiments survive detached (`model_experiments.post_slug` → NULL), so the
   // list that names them is stale.
   expect(queryClient.getQueryState(experimentsKey)?.isInvalidated).toBe(true)
+  // A deleted published post leaves the window every other post's M2 reads (POST-85).
+  expect(queryClient.getQueryState(qualityKey)?.isInvalidated).toBe(true)
 })

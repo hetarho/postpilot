@@ -30,6 +30,7 @@ import { type FakeVoiceOptions, registerVoiceService } from './voice'
 import { type FakeExperimentsOptions, registerExperimentService } from './experiments'
 import { type FakeGuidelinesOptions, registerGuidelineService } from './guidelines'
 import { type FakeMemoriesOptions, registerMemoryService } from './memories'
+import { type FakeQualityOptions, registerQualityService } from './quality'
 import { type FakeTemplatesOptions, registerTemplateService } from './templates'
 import { type FakeClipsOptions, registerClipService } from './clips'
 import { type FakeModelCatalogOptions, registerModelCatalogService } from './model-catalog'
@@ -89,6 +90,9 @@ export interface FakeAuthOptions {
    *  directory above: a screen that mounts the list reads an empty one rather than an
    *  "unimplemented" error. */
   memories?: FakeMemoriesOptions
+  /** The acting account's quality readings. Present by default, every post answering its three
+   *  metrics as absent, so ② reads a row rather than an "unimplemented" error. */
+  quality?: FakeQualityOptions
   /** The plan ladder: the caller's own tier and usage, and the operator's account list. */
   plans?: FakePlansOptions
   billing?: FakeBillingOptions
@@ -275,6 +279,7 @@ export function createFakeAuthBackend(options: FakeAuthOptions = {}): FakeAuthBa
     })
     registerGuidelineService(router, { calls, ...options.guidelines })
     registerMemoryService(router, { calls, ...options.memories })
+    registerQualityService(router, { calls, ...options.quality })
     registerPlanServices(router, { plan: user?.plan, calls, ...options.plans })
     registerBillingService(router, { calls, ...options.billing })
     registerModelCatalogService(router, { calls, ...options.modelCatalog })

@@ -2930,6 +2930,151 @@ describe('the post 분야', () => {
   })
 })
 
+// QUAL-36, POST-83: ② carries this post's own M2, M3 and M4 above the article it measures, read at
+// the revision on screen.
+describe('the post measurement row', () => {
+  const HEADING = '이 글의 측정값'
+  const REVIEW = {
+    slug: '20260820-measured',
+    status: 'review',
+    content: POST_CONTENT_FIXTURE,
+    images: POST_IMAGES_FIXTURE,
+    contentRevision: 1n,
+    machineBaselineRevision: 1n,
+    canFinalize: true,
+  }
+  const MEASURED = {
+    [REVIEW.slug]: [
+      {
+        metric: 'cross_post_phrases' as const,
+        verdict: 'within_band' as const,
+        minimum: 3,
+        publishedCount: 4,
+        values: { share: 0.05, shareWarnAbove: 0.1 },
+      },
+      {
+        metric: 'in_post_repetition' as const,
+        verdict: 'over_band' as const,
+        values: {
+          repetitionShare: 0.12,
+          titleRelevance: 0.6,
+          repetitionShareWarnAbove: 0.08,
+          titleRelevanceWarnBelow: 0.5,
+        },
+      },
+      {
+        metric: 'composition' as const,
+        verdict: 'within_band' as const,
+        values: {
+          charCount: 820,
+          photoCount: 2,
+          distinctBlockTypes: 3,
+          averageSentenceLength: 12.5,
+          distinctBlockTypesWarnAtOrBelow: 2,
+        },
+      },
+    ],
+  }
+  const measurementReads = (calls: string[]) =>
+    calls.filter((call) => call === 'GetPostMeasurement').length
+
+  it('sits above the article on ②', async () => {
+    // English content under the Korean interface: a sentence is counted in the content's words.
+    renderAppAt(`/posts/${REVIEW.slug}`, {
+      user: USER,
+      posts: { posts: [{ ...REVIEW, contentLanguage: 'en' }] },
+      quality: { measurements: MEASURED },
+    })
+
+    const region = await screen.findByRole('region', { name: HEADING })
+    // Directly above the article, under 글 다듬기 and its save status.
+    expect(region.nextElementSibling).toBe(screen.getByRole('article', { name: '생성된 글' }))
+    expect(screen.getByRole('region', { name: '글 다듬기' })).toContainElement(region)
+    expect(await within(region).findByText('본문 명사 중 가장 잦은 명사')).toBeInTheDocument()
+    expect(within(region).getByText('주의')).toBeInTheDocument()
+    expect(within(region).getAllByText('양호')).toHaveLength(2)
+    expect(within(region).getByText('12.5단어')).toBeInTheDocument()
+  })
+
+  it('refetches after a block save', async () => {
+    const calls: string[] = []
+    const user = userEvent.setup()
+    const { queryClient } = renderAppAt(`/posts/${REVIEW.slug}`, {
+      user: USER,
+      calls,
+      posts: { calls, posts: [REVIEW] },
+      quality: { measurements: MEASURED },
+    })
+    const region = await screen.findByRole('region', { name: HEADING })
+    await within(region).findByText('글자 수')
+    expect(measurementReads(calls)).toBe(1)
+
+    await user.click(screen.getByRole('button', { name: '1번째 블록 수정' }))
+    const field = screen.getByLabelText('1번째 블록 내용')
+    await user.clear(field)
+    await user.type(field, '측정을 다시 부르는 문단')
+    await user.click(screen.getByRole('button', { name: '저장' }))
+
+    // The save moves the revision the row reads, so the next revision is read — once the save
+    // has landed, and not before.
+    await waitFor(() => expect(calls).toContain('SavePostContent'), { timeout: 4_000 })
+    await waitFor(() => expect(measurementReads(calls)).toBeGreaterThan(1))
+    expect(calls.indexOf('SavePostContent')).toBeLessThan(calls.lastIndexOf('GetPostMeasurement'))
+    // Read at the revision the save produced, which is what a generation moves too (QUAL-3).
+    const revisions = queryClient
+      .getQueryCache()
+      .findAll({ queryKey: ['quality'] })
+      .map((query) => query.queryKey.at(-1))
+    expect(revisions).toContain('2')
+    // The previous reading stays on screen while the next one loads: never the loading line again.
+    expect(within(region).queryByText('측정하는 중이에요.')).toBeNull()
+  })
+
+  it('is hidden on a published post', async () => {
+    const calls: string[] = []
+    const user = userEvent.setup()
+    renderAppAt(`/posts/${REVIEW.slug}`, {
+      user: USER,
+      calls,
+      posts: {
+        calls,
+        posts: [
+          {
+            ...REVIEW,
+            status: 'published',
+            finalizedRevision: 1n,
+            finalizedAt: '2026-08-20T12:00:00Z',
+            publishedUrl: 'https://blog.naver.com/alice/1',
+            publishedAt: '2026-08-21T09:00:00Z',
+          },
+        ],
+      },
+      quality: { measurements: MEASURED },
+    })
+
+    await openStep(user, '글 다듬기')
+    expect(await screen.findByRole('article', { name: '생성된 글' })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: HEADING })).toBeNull()
+    expect(measurementReads(calls)).toBe(0)
+  })
+
+  it('is absent while ② has no draft', async () => {
+    const calls: string[] = []
+    const user = userEvent.setup()
+    renderAppAt(`/posts/${REVIEW.slug}`, {
+      user: USER,
+      calls,
+      posts: { calls, posts: [{ slug: REVIEW.slug, title: '제주' }] },
+      quality: { measurements: MEASURED },
+    })
+
+    await openStep(user, '글 다듬기')
+    expect(await screen.findByText(/아직 다듬을 글이 없어요/)).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: HEADING })).toBeNull()
+    expect(measurementReads(calls)).toBe(0)
+  })
+})
+
 // POST-86: a published post takes no write but its address and the delete. It opens on 글 완성,
 // ② reads its prose, ① shows its material read-only and says why exactly once, and a save refused
 // because the post was published elsewhere is an answer rather than an outage.

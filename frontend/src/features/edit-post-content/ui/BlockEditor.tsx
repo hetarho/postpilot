@@ -49,8 +49,11 @@ export const BlockEditor = forwardRef<
   {
     post: PostDraft
     onContentChange?: (content: PostContent) => void
+    /** Rendered directly above the article, under the heading and its save status — where ②
+     *  shows this post's own measurements (POST-83). */
+    beforeArticle?: ReactNode
   }
->(function BlockEditor({ post, onContentChange }, ref) {
+>(function BlockEditor({ post, onContentChange, beforeArticle }, ref) {
   const { t } = useTranslation('posts')
   const { t: tTemplates } = useTranslation('templates')
   const [content, setContent] = useState(() => copyPostContent(post.content!))
@@ -117,6 +120,7 @@ export const BlockEditor = forwardRef<
         </Typography>
       )}
 
+      {beforeArticle}
       <BlockList
         content={content}
         images={post.images}

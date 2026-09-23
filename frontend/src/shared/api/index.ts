@@ -376,6 +376,23 @@ export type {
   MemoryCandidate as ProtoMemoryCandidate,
 } from './gen/postpilot/v1/memory_pb'
 export {
+  QualityService,
+  QualityMetric as ProtoQualityMetric,
+  QualityVerdict as ProtoQualityVerdict,
+  GetPostMeasurementResponseSchema,
+  GetAccountQualityResponseSchema,
+  QualityReadingSchema,
+  QualityTitleSaturationSchema,
+  QualityCrossPostPhrasesSchema,
+  QualityInPostRepetitionSchema,
+  QualityCompositionSchema,
+} from './gen/postpilot/v1/quality_pb'
+export type {
+  QualityReading as ProtoQualityReading,
+  GetPostMeasurementResponse as ProtoPostMeasurement,
+  GetAccountQualityResponse as ProtoAccountQuality,
+} from './gen/postpilot/v1/quality_pb'
+export {
   TemplateService,
   TemplateSchema,
   TemplateRefSchema,

@@ -10,6 +10,7 @@ import {
   PostContentSchema,
   PostSchema,
   PostService,
+  SavePostContentResponseSchema,
 } from '@/shared/api'
 import { connectAppError } from '@/test/app-error'
 import { withProviders } from '@/test/session'
@@ -28,6 +29,26 @@ function saveAgainst(cause: ConnectError) {
   })
   return view.result.current.save('post', create(PostContentSchema), 1n)
 }
+
+// QUAL-3: a saved block is a new revision, and every reading that counted the old text is stale.
+it('marks every quality query stale after a save', async () => {
+  const transport = createRouterTransport(({ rpc }) => {
+    rpc(PostService.method.savePostContent, (req) =>
+      create(SavePostContentResponseSchema, {
+        post: create(PostSchema, { slug: req.slug, contentRevision: 2n, content: req.content }),
+      }),
+    )
+  })
+  const queryClient = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
+  const qualityKey = ['quality', transport, 'alice', 'measurement', 'post-a', '1']
+  queryClient.setQueryData(qualityKey, {})
+  const view = renderHook(() => useSavePostContent(), {
+    wrapper: withProviders(transport, queryClient),
+  })
+
+  await expect(view.result.current.save('post-a', create(PostContentSchema), 1n)).resolves.toBe(2n)
+  await waitFor(() => expect(queryClient.getQueryState(qualityKey)?.isInvalidated).toBe(true))
+})
 
 it('turns only POST_CONTENT_STALE into the local revision-conflict control state', async () => {
   await expect(

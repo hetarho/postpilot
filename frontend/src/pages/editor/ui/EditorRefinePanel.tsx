@@ -1,6 +1,7 @@
 import type { RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
 import { BlockList, isPublished, type PostDraft } from '@/entities/post'
+import { PostMeasurementRow } from '@/entities/quality'
 import { voiceContentLanguageMismatchReason } from '@/entities/voice'
 import { BlockEditor, type BlockEditorHandle } from '@/features/edit-post-content'
 import type { PostContent } from '@/shared/api'
@@ -12,6 +13,7 @@ import { EmptyStep } from './EmptyStep'
  *  says why and how to reopen it (POST-86): no editor is mounted, so no content save can start. */
 export function EditorRefinePanel({
   post,
+  ownerId,
   result,
   languageMismatch,
   editorRef,
@@ -19,6 +21,8 @@ export function EditorRefinePanel({
   onGoGenerate,
 }: {
   post: PostDraft
+  /** The signed-in account, whose readings the measurement row is keyed by. */
+  ownerId: string
   /** The generated content this step edits; absent until a run has produced one. */
   result?: PostContent
   languageMismatch: boolean
@@ -57,6 +61,19 @@ export function EditorRefinePanel({
           ref={editorRef}
           post={post}
           onContentChange={onContentChange}
+          // This post's own M2, M3 and M4 (QUAL-36), read at the revision on screen. Never on a
+          // published post, which has no editor here anyway (POST-86).
+          beforeArticle={
+            !isPublished(post) && (
+              <PostMeasurementRow
+                ownerId={ownerId}
+                slug={post.slug}
+                revision={post.contentRevision}
+                contentLanguage={post.contentLanguage}
+                className="mt-4"
+              />
+            )
+          }
         />
       )}
     </>

@@ -112,6 +112,7 @@ export function LifecycleSteps({
   const refinePanel = (
     <EditorRefinePanel
       post={post}
+      ownerId={ownerId}
       result={result}
       languageMismatch={languageMismatch}
       editorRef={contentEditorRef}

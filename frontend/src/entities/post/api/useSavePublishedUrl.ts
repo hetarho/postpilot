@@ -1,6 +1,7 @@
 import { create } from '@bufbuild/protobuf'
 import { useMutation, useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
+import { invalidateQuality } from '@/entities/quality/@x/post'
 import { appFailureFromConnect, GetPostResponseSchema, PostService } from '@/shared/api'
 import type { PostDraft } from '../model/types'
 import { getPostQueryKey, listPostsQueryKey, toPostDraft } from './post-queries'
@@ -19,6 +20,9 @@ export function useSavePublishedUrl() {
         create(GetPostResponseSchema, { post: response.post }),
       )
       void queryClient.invalidateQueries({ queryKey: listPostsQueryKey(transport) })
+      // A paste, a replace or a clear changes which posts are 발행됨, and so the window M2 and the
+      // aggregate read (QUAL-3).
+      void invalidateQuality(queryClient, transport)
     },
   })
   return {
