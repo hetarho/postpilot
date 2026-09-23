@@ -50,6 +50,14 @@ type PostContent struct {
 	Blocks  []Block
 }
 
+// WriteAnswer is what the write pass returns: the content, plus what it says about that
+// content beside it. Nouns are the distinct nouns the title and the body use, already bounded
+// by the parser (GEN-55); none is a real answer and never a failed write.
+type WriteAnswer struct {
+	Content PostContent
+	Nouns   []string
+}
+
 type Observation struct {
 	File          string
 	Scene         string
@@ -123,6 +131,10 @@ type TemplateBrief struct {
 	// builder can tell whether this brief holds any fact at all without re-parsing it, which
 	// is what decides one legend line (TEMPLATE-45, TEMPLATE-46).
 	Facts []TemplateFact
+	// TitleArea is the rendered title form, empty when the template authored none (TMPL-50).
+	// The experiment snapshot marshals the brief by field name, so omitempty is what keeps
+	// every snapshot frozen before the member existed byte-identical, hash and all.
+	TitleArea string `json:",omitempty"`
 }
 
 // TemplateFact is one data field that survived the freeze: the title the author asked under
@@ -171,6 +183,10 @@ type PostInput struct {
 	// Memories is the frozen 기억 material, retrieved at enqueue when UseMemory is set and
 	// never re-read: a memory edited or deleted afterwards cannot change queued work.
 	Memories []string
+	// QualityRules is the frozen text of each quality rule the owner ticked, already rendered
+	// in the target language, in the order the write prompt lists them (GEN-51). The snapshot
+	// marshals PostInput directly, so omitempty keeps every earlier snapshot's bytes and hash.
+	QualityRules []string `json:"quality_rules,omitempty"`
 	// TemplateAnswers is what the post answers to its template's data fields, read at
 	// enqueue like TemplateID. The freeze resolves them into the rendered brief, so no
 	// handler ever reads one: the payload already carries the result (POST-62, TEMPLATE-45).
@@ -190,9 +206,8 @@ type PostInput struct {
 	// and frozen like TargetLength; a write-experiment snapshot carries it inside this struct,
 	// so a different count is a different input hash. 0 is only ever a legacy decode and
 	// resolves to the default.
-	// The one struct tag in this file, and a load-bearing one: an experiment snapshot
-	// marshals PostInput directly, so this key IS the frozen input's wire shape and the hash
-	// taken over it (`experimentSnapshot`). Changing it would re-key every stored snapshot,
+	// A load-bearing struct tag: an experiment snapshot marshals PostInput directly, so this
+	// key IS the frozen input's wire shape and the hash taken over it (`experimentSnapshot`). Changing it would re-key every stored snapshot,
 	// which is why the snapshot's own wire struct — the honest fix — is its own change.
 	TagCount int `json:"tag_count,omitempty"`
 	// WriteNativeEffort is frozen from the selected catalog model at enqueue, so the hold

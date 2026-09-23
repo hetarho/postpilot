@@ -117,19 +117,62 @@ func TestWritePromptExplainsSlotsOnlyWhenTheBriefHasThem(t *testing.T) {
 	}
 }
 
-// A5: the word 지침 must name exactly one thing in the prompt. The retired purpose section
-// used it for its own field AND the guideline section used it for the entity, one section
-// apart, which made "지침이 …의 요구와 충돌하면 지침을 우선하고" self-referential.
-func TestTheWord지침AppearsOnlyInTheGuidelineSection(t *testing.T) {
-	system, _ := BuildWritePrompt(goldenProfile(), goldenObservations(), "MEMO", "TITLE", []string{"IMG_1.jpg"}, nil, testBrief(), testGuidelines())
+// A5: the word 지침 must name exactly one thing in the prompt, the [작문 지침] section. The
+// retired purpose section used it for its own field AND the guideline section used it for the
+// entity, one section apart, which made "지침이 …의 요구와 충돌하면 지침을 우선하고"
+// self-referential (TMPL-13). The quality rules' closing line may name 지침, because it points
+// at that same section; the template section, title form included, never may.
+func TestTheWord지침NeverAppearsInTheTemplateSection(t *testing.T) {
+	system, _ := BuildWritePromptForLanguage(LanguageKorean, goldenProfile(), goldenObservations(), "MEMO", "TITLE",
+		[]string{"IMG_1.jpg"}, nil, nil, 4, titleAreaBrief(), testGuidelines(), nil, testQualityRules())
 
-	guidelineSection := system[strings.Index(system, "[작문 지침]"):]
-	withoutGuidelines := system[:strings.Index(system, "[작문 지침]")]
-	if strings.Contains(withoutGuidelines, "지침") {
-		t.Fatalf("지침 appears outside the guideline section:\n%s", withoutGuidelines)
+	start, end := strings.Index(system, "[글 템플릿:"), strings.Index(system, "\n\n[작문 지침]")
+	if start < 0 || end < start {
+		t.Fatalf("template section at %d, guideline section at %d:\n%s", start, end, system)
 	}
-	if !strings.Contains(guidelineSection, "지침이 템플릿의 요구와 충돌하면 지침을 우선하고") {
-		t.Fatalf("the guideline precedence no longer names the template:\n%s", guidelineSection)
+	if section := system[start:end]; strings.Contains(section, "지침") {
+		t.Fatalf("지침 appears in the template section:\n%s", section)
+	}
+	for name, text := range map[string]string{
+		"legend": templateLegend, "slot legend": templateSlotLegend, "fact legend": templateFactLegend,
+		"precedence": templatePrecedence, "title instruction": templateTitleInstruction,
+	} {
+		if strings.Contains(text, "지침") {
+			t.Errorf("the template %s says 지침: %q", name, text)
+		}
+	}
+	if !strings.Contains(system[end:], "지침이 템플릿의 요구와 충돌하면 지침을 우선하고") {
+		t.Fatalf("the guideline precedence no longer names the template:\n%s", system[end:])
+	}
+}
+
+// GEN-52, TMPL-50: a frozen title area is its own instruction inside the brief, fenced above
+// the body form; the section is byte-identical in the write and the revise prompt (TMPL-51);
+// and an empty title area adds no bytes at all. The sections are compared by slicing from
+// their heading, because a title-area write prompt's static prefix is the title-form variant.
+func TestTemplateTitleAreaPrecedesTheBodyFence(t *testing.T) {
+	brief := titleAreaBrief()
+	templateSection := func(system string) string { return system[strings.Index(system, "\n\n[글 템플릿:"):] }
+	write, _ := BuildWritePrompt(goldenProfile(), goldenObservations(), "MEMO 본문", "가제 TITLE", []string{"IMG_1.jpg"}, nil, brief, nil)
+	revise, _ := BuildRevisePrompt(goldenProfile(), goldenContent(), []string{"IMG_1.jpg"}, "INSTRUCTION 수정 요청", nil, brief, nil)
+
+	want := "\n\n[글 템플릿: 정보성 식당 리뷰]" +
+		"\n아래 템플릿의 구성을 그대로 따르세요. " + templateLegend + templateSlotLegend +
+		"\n" + templateTitleInstruction + "\n---\n" + brief.TitleArea + "\n---" +
+		"\n---\n" + brief.Body + "\n---" +
+		"\n" + templatePrecedence
+	if got := templateSection(write); got != want {
+		t.Fatalf("template section =\n%q\nwant\n%q", got, want)
+	}
+	if templateSection(revise) != templateSection(write) {
+		t.Fatalf("the revise section differs from the write section:\n%q", templateSection(revise))
+	}
+
+	baseline, _ := loadGolden(t, "write_prompt_no_template.golden")
+	plain, _ := BuildWritePrompt(goldenProfile(), goldenObservations(), "MEMO 본문", "가제 TITLE", []string{"IMG_1.jpg"}, nil, testBrief(), nil)
+	withoutTitle := strings.Replace(want, "\n"+templateTitleInstruction+"\n---\n"+brief.TitleArea+"\n---", "", 1)
+	if got := strings.TrimPrefix(plain, baseline); got != withoutTitle {
+		t.Fatalf("an empty title area changed the section:\n%q\nwant\n%q", got, withoutTitle)
 	}
 }
 

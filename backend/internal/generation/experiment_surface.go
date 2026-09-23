@@ -182,8 +182,8 @@ func (s *Service) RunWriteCandidate(ctx context.Context, raw []byte, model llm.M
 	if !snapshot.Prepared {
 		return PostContent{}, CandidateUsage{}, fmt.Errorf("write snapshot is not prepared")
 	}
-	content, usage, err := s.writeCandidate(ctx, snapshot.Post, snapshot.Profile, snapshot.Observations, model)
-	return content, candidateUsage(usage), err
+	answer, usage, err := s.writeCandidate(ctx, snapshot.Post, snapshot.Profile, snapshot.Observations, model)
+	return answer.Content, candidateUsage(usage), err
 }
 
 func (s *Service) RunObserveCandidate(ctx context.Context, raw []byte, model llm.ModelRef, progress Progress) ([]Observation, CandidateUsage, error) {

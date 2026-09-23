@@ -3,6 +3,7 @@ package generation
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/postpilot/backend/internal/llm"
@@ -77,17 +78,37 @@ type observationsJSON struct {
 // is accepted as written (GEN-46) — failing a paid write over a miscount is worse than a
 // shorter list. A missing `tags` key is still bad output.
 func ParseContent(raw string, tagCount int) (*PostContent, error) {
+	content, _, err := parseContentFields(raw, tagCount)
+	return content, err
+}
+
+// ParseWriteAnswer is ParseContent for the write pass, whose answer also carries `nouns`
+// (GEN-55). The content comes from the same helper, so it is exactly what ParseContent would
+// return. The nouns never fail a paid write: a missing, null or malformed member is none, the
+// way a tag miscount is accepted rather than refused (GEN-46).
+func ParseWriteAnswer(raw string, tagCount int) (*WriteAnswer, error) {
+	content, fields, err := parseContentFields(raw, tagCount)
+	if err != nil {
+		return nil, err
+	}
+	return &WriteAnswer{Content: *content, Nouns: boundedNouns(fields["nouns"])}, nil
+}
+
+// parseContentFields is what both parsers share: the candidate extraction, the four required
+// members, the tag bound and the block mapping. It hands the decoded members back as well, so
+// the write pass reads the one it adds without parsing the answer twice.
+func parseContentFields(raw string, tagCount int) (*PostContent, map[string]json.RawMessage, error) {
 	candidate, ok := jsonCandidate(raw)
 	if !ok {
-		return nil, badOutput(raw)
+		return nil, nil, badOutput(raw)
 	}
 	var fields map[string]json.RawMessage
 	if err := json.Unmarshal([]byte(candidate), &fields); err != nil || !hasFields(fields, "title", "summary", "tags", "blocks") {
-		return nil, badOutput(raw)
+		return nil, nil, badOutput(raw)
 	}
 	var wire contentJSON
 	if err := json.Unmarshal([]byte(candidate), &wire); err != nil {
-		return nil, badOutput(raw)
+		return nil, nil, badOutput(raw)
 	}
 	if tagCount > 0 && len(wire.Tags) > tagCount {
 		wire.Tags = wire.Tags[:tagCount]
@@ -100,7 +121,37 @@ func ParseContent(raw string, tagCount int) (*PostContent, error) {
 			Slot: fromSlotJSON(block.Slot),
 		})
 	}
-	return content, nil
+	return content, fields, nil
+}
+
+// boundedNouns is the authoritative bound on the write answer's nouns; the schema's maxItems
+// and the prompt's number only ask for it. Each is trimmed and a blank one dropped; a repeat is
+// dropped by case-insensitive comparison, keeping the first spelling, because QUAL-7's English
+// containment is case-insensitive; and at most WriteNounsMax survive, in model order.
+func boundedNouns(raw json.RawMessage) []string {
+	if len(raw) == 0 || string(raw) == "null" {
+		return nil
+	}
+	var values []string
+	if err := json.Unmarshal(raw, &values); err != nil {
+		slog.Warn("dropping malformed generated nouns", "err", err)
+		return nil
+	}
+	var nouns []string
+	seen := make(map[string]bool, len(values))
+	for _, value := range values {
+		noun := strings.TrimSpace(value)
+		key := strings.ToLower(noun)
+		if noun == "" || seen[key] {
+			continue
+		}
+		seen[key] = true
+		nouns = append(nouns, noun)
+		if len(nouns) == WriteNounsMax {
+			break
+		}
+	}
+	return nouns
 }
 
 func parseObservations(raw string) ([]Observation, error) {

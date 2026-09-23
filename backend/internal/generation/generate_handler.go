@@ -82,10 +82,11 @@ func (s *Service) Generate(ctx context.Context, job GenerateJob, progress Progre
 		return ErrWriteModelRequired
 	}
 	progress("write", 0, 1)
-	content, err := s.write(ctx, post, observations, writeModel)
+	answer, err := s.write(ctx, post, observations, writeModel)
 	if err != nil {
 		return err
 	}
+	content := answer.Content
 	if err := s.posts.SetGeneratedContent(ctx, post.UserID, post.Slug, content, job.TargetLanguage); err != nil {
 		return fmt.Errorf("persist generated content: %w", err)
 	}

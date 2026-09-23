@@ -90,7 +90,7 @@ func TestMemoNamingAuthorityIsInWritePromptsOnly(t *testing.T) {
 			naming:    koreanNaming,
 		},
 		"English": {
-			prompt:    firstOf(BuildWritePromptForLanguage(LanguageEnglish, Profile{}, nil, "memo", "title", nil, nil, nil, 4, nil, nil, nil)),
+			prompt:    firstOf(BuildWritePromptForLanguage(LanguageEnglish, Profile{}, nil, "memo", "title", nil, nil, nil, 4, nil, nil, nil, nil)),
 			grounding: englishGrounding,
 			scope:     englishGroundingWriteScope,
 			altitude:  englishAltitude,
@@ -135,7 +135,7 @@ func TestAltitudeRuleIsInWritePromptsOnly(t *testing.T) {
 	}{
 		"Korean bare":  {prompt: firstOf(BuildWritePrompt(goldenProfile(), nil, "memo", "title", nil, nil, nil, nil)), altitude: koreanAltitude},
 		"Korean full":  {prompt: firstOf(BuildWritePrompt(goldenProfile(), goldenObservations(), "memo", "title", nil, nil, testBrief(), testGuidelines())), altitude: koreanAltitude},
-		"English bare": {prompt: firstOf(BuildWritePromptForLanguage(LanguageEnglish, goldenProfile(), nil, "memo", "title", nil, nil, nil, 4, nil, nil, nil)), altitude: englishAltitude},
+		"English bare": {prompt: firstOf(BuildWritePromptForLanguage(LanguageEnglish, goldenProfile(), nil, "memo", "title", nil, nil, nil, 4, nil, nil, nil, nil)), altitude: englishAltitude},
 	} {
 		if strings.Count(test.prompt, test.altitude) != 1 {
 			t.Errorf("%s write prompt carries the altitude rule %d times", name, strings.Count(test.prompt, test.altitude))
@@ -180,7 +180,7 @@ func TestGroundingCoreIsByteIdenticalInWriteAndRevisePrompts(t *testing.T) {
 			reviseScope: koreanGroundingReviseScope,
 		},
 		"English": {
-			write:       firstOf(BuildWritePromptForLanguage(LanguageEnglish, goldenProfile(), nil, "memo", "title", nil, nil, nil, 4, nil, nil, nil)),
+			write:       firstOf(BuildWritePromptForLanguage(LanguageEnglish, goldenProfile(), nil, "memo", "title", nil, nil, nil, 4, nil, nil, nil, nil)),
 			revise:      firstOf(BuildRevisePromptForLanguage(LanguageEnglish, goldenProfile(), goldenContent(), nil, "shorten", nil, 4, nil, nil)),
 			core:        englishGrounding,
 			writeScope:  englishGroundingWriteScope,
@@ -213,8 +213,9 @@ func lineContaining(prompt, needle string) string {
 }
 
 // The pre-naturalness goldens are the baseline the fixed-text additions are stated against:
-// job 36's stylistic section, job 35's grounding line, T041's write-only naming line and
-// T287's write-only altitude line.
+// job 36's stylistic section, job 35's grounding line, T041's write-only naming line, T287's
+// write-only altitude line, and T324's write-only title, tag and nouns lines with the nouns
+// member of the answer shape.
 // Removing exactly those additions leaves the legacy bytes, which keeps each delta checkable.
 //
 // Change 25 renamed the concept the fixed output-language line names (용도 → 템플릿) in BOTH
@@ -236,11 +237,17 @@ func TestFixedTextAdditionsAreTheOnlyGoldenDelta(t *testing.T) {
 		}
 		stripped = strings.Replace(stripped, "\n"+koreanAltitude, "", 1)
 		stripped = strings.Replace(stripped, "\n"+koreanNaming, "", 1)
+		// T324's write-only additions: the two title prohibitions, the tag rule, the nouns rule
+		// and the nouns member of the answer shape.
+		stripped = strings.Replace(stripped, "\n"+koreanTitleProhibitions, "", 1)
+		stripped = strings.Replace(stripped, "\n"+koreanTagRule, "", 1)
+		stripped = strings.Replace(stripped, "\n"+koreanNounsRule, "", 1)
+		stripped = strings.Replace(stripped, `"blocks":[],"nouns":[]}`, `"blocks":[]}`, 1)
 		// The two revise-only additions, stated against the same legacy baseline.
 		stripped = strings.Replace(stripped, "\n"+koreanReviseScope, "", 1)
 		stripped = strings.Replace(stripped, "\n"+koreanReviseLiteral, "", 1)
 		if stripped != legacySystem {
-			t.Errorf("%s changed by more than the inserted baseline, grounding, altitude, and naming lines", pair.current)
+			t.Errorf("%s changed by more than the inserted baseline, grounding, altitude, naming, title, tag and nouns lines and the nouns member", pair.current)
 		}
 		if currentUser != legacyUser {
 			t.Errorf("%s changed the per-post user material", pair.current)

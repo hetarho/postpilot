@@ -5,6 +5,9 @@ import "github.com/postpilot/backend/internal/post"
 const (
 	BadOutputErrorHeadChars     = 200
 	RevisionInstructionMaxChars = 500
+	// WriteNounsMax bounds the write answer's nouns (GEN-55). The parser enforces it; the
+	// schema's maxItems and the prompt's number only ask the provider for the same.
+	WriteNounsMax = 40
 )
 
 // resolveTagCount is the one place an absent tag count becomes the default (GEN-46): a

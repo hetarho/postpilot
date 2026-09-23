@@ -332,9 +332,9 @@ func TestWriteStructuredAndPlainFallback(t *testing.T) {
 				return llm.Response{Text: raw}, nil
 			}
 			svc := NewService(&fakePosts{}, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
-			content, err := svc.write(context.Background(), PostInput{UserID: "alice", Voice: liveVoice, TargetLanguage: LanguageKorean}, nil, writeRef)
-			if err != nil || len(content.Blocks) != 1 {
-				t.Fatalf("content=%+v err=%v", content, err)
+			answer, err := svc.write(context.Background(), PostInput{UserID: "alice", Voice: liveVoice, TargetLanguage: LanguageKorean}, nil, writeRef)
+			if err != nil || len(answer.Content.Blocks) != 1 {
+				t.Fatalf("content=%+v err=%v", answer.Content, err)
 			}
 		})
 	}

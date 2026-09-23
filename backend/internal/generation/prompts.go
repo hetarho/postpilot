@@ -86,25 +86,68 @@ const koreanNaming = "사진 관찰은 사진을 한 장씩 따로 본 결과라
 
 const englishNaming = "A photo observation was made one photo at a time, without knowing what its subject is. When the memo or a template field gives that subject an identity or a name — the observation's \"concrete building\" is the memo's \"annex\" — use that in prose and in IMAGE alt and caption instead of the observation's generic wording. Do not write anything the photo observations do not show as being in the frame."
 
+// koreanTitleProhibitions / englishTitleProhibitions are the only two title rules with a
+// primary source, and the only two that ship (GEN-49). Google Search Central names boilerplate
+// titles — long text in which only a single piece of information varies — as a practice to
+// avoid, and Naver 서치어드바이저's content-markup guide warns that a keyword repeated twice or
+// more in one title risks a penalty (QUAL-6). Everything else said about titles — ideal length,
+// keyword position, bracket forms, number-first openings — has no primary source and stays out
+// (spec/ideation/post-quality-and-related-links.md). Write-only, like the naming rule: a
+// revision changes a title only when asked to.
+const koreanTitleProhibitions = "제목을 정보 하나만 바꿔 넣은 긴 상투 문구로 쓰지 말고, 한 제목 안에서 같은 키워드를 두 번 이상 쓰지 마세요."
+
+const englishTitleProhibitions = "Do not write the title as long boilerplate in which only a single piece of information changes, and do not use any keyword twice or more within one title."
+
+// koreanTitleFormProhibitions / englishTitleFormProhibitions take the plain line's place when
+// the frozen template authored a title area (TMPL-52): the owner's form outranks both
+// prohibitions, which then bind only what the model writes inside the form's <write>. Neither
+// variant contains the other, so a prompt can be checked for carrying exactly one of them.
+const koreanTitleFormProhibitions = "제목은 템플릿의 제목 형식을 우선해 따르세요. 그 형식의 <write> 안에서 직접 쓰는 부분은 정보 하나만 바꿔 넣은 긴 상투 문구로 쓰지 말고, 그 안에서 같은 키워드를 두 번 이상 쓰지 마세요."
+
+const englishTitleFormProhibitions = "The template's title form comes first. In what you write inside its <write>, do not use long boilerplate in which only a single piece of information changes, and do not use any keyword twice or more."
+
+// koreanTagRule / englishTagRule are the one tag rule (GEN-50): choose among labels already
+// true of the post rather than the first ones reached for. It reads nothing but the post's own
+// material — no search-demand data is read anywhere (QUAL-34) — so it cannot license a tag the
+// post does not bear out.
+const koreanTagRule = "tags는 먼저 떠오르는 단어를 그대로 쓰지 말고, 이 글의 내용에 이미 들어맞는 이름 가운데서 고르세요."
+
+const englishTagRule = "Choose the tags among labels already true of this post, not the first words that come to mind."
+
+// koreanNounsRule / englishNounsRule define the write answer's `nouns` member (GEN-55): the
+// distinct nouns the title and the body use, which the quality metrics count with no tokenizer
+// and no second call (QUAL-16). The bare form is load-bearing: QUAL-7's containment matches a
+// Korean 어절 that STARTS with the noun, so a listed "카페에서" would never match "카페는". The
+// 40 is WriteNounsMax, which the parser enforces whatever the model returns.
+const koreanNounsRule = "nouns에는 제목과 본문에 쓴 명사를 중복 없이 최대 40개까지 한국어로 적고, 각 명사는 조사를 붙이지 않은 형태로 쓰세요."
+
+const englishNounsRule = "List in nouns the distinct nouns the title and the body use, at most 40, in English, each as a bare word without an article."
+
 const WritePrompt = `첨부 사진 관찰과 메모를 바탕으로 자연스러운 한국어 블로그 글을 작성하세요.
 ` + koreanGrounding + " " + koreanGroundingWriteScope + `
 ` + koreanAltitude + `
 ` + koreanNaming + `
+` + koreanTitleProhibitions + `
+` + koreanTagRule + `
 반드시 하나의 문단마다 TEXT 블록 하나만 사용하세요.
 IMAGE 블록은 제공된 정확한 파일명만 사용하고, 목록에 없는 이미지를 절대 만들어내지 마세요.
 IMAGE 블록은 사진이 글의 흐름상 가장 자연스러운 위치에 오도록 배치하세요.
-출력은 설명이나 마크다운 없이 {"title":"...","summary":"...","tags":[],"blocks":[]} 형태의 JSON 객체 하나여야 합니다.
-각 block은 type, content, level, file, alt, caption, items 필드를 사용하며 type은 TEXT, HEADING, IMAGE, QUOTE, LIST 중 하나입니다.`
+출력은 설명이나 마크다운 없이 {"title":"...","summary":"...","tags":[],"blocks":[],"nouns":[]} 형태의 JSON 객체 하나여야 합니다.
+각 block은 type, content, level, file, alt, caption, items 필드를 사용하며 type은 TEXT, HEADING, IMAGE, QUOTE, LIST 중 하나입니다.
+` + koreanNounsRule
 
 const englishWritePrompt = `Write a natural English blog post from the photo observations and memo.
 ` + englishGrounding + " " + englishGroundingWriteScope + `
 ` + englishAltitude + `
 ` + englishNaming + `
+` + englishTitleProhibitions + `
+` + englishTagRule + `
 Use exactly one TEXT block for each paragraph.
 IMAGE blocks may use only the exact filenames provided. Never invent an image that is not in the list.
 Place each IMAGE block where the photo fits most naturally in the flow of the post.
-Return exactly one JSON object shaped as {"title":"...","summary":"...","tags":[],"blocks":[]} with no explanation or Markdown.
-Each block uses the type, content, level, file, alt, caption, and items fields. type must be one of TEXT, HEADING, IMAGE, QUOTE, or LIST.`
+Return exactly one JSON object shaped as {"title":"...","summary":"...","tags":[],"blocks":[],"nouns":[]} with no explanation or Markdown.
+Each block uses the type, content, level, file, alt, caption, and items fields. type must be one of TEXT, HEADING, IMAGE, QUOTE, or LIST.
+` + englishNounsRule
 
 const NaturalnessBaseline = `[한국어 자연 문체 기준선]
 - 아래 기준은 새로 쓰거나 수정 요청으로 손대는 TEXT 본문에만 적용하세요. 제목·요약·HEADING·LIST에는 적용하지 말고, 수정에서는 요청 밖의 기존 문장을 그대로 두세요.
@@ -156,7 +199,17 @@ const templateFactLegend = "\n- <facts label=\"…\">…</facts>: 사용자가 �
 // one prompt, and the guideline-beats-brief rule could be read as pointing at the brief
 // itself. After this change 지침 names exactly one thing in the prompt, and that is the
 // property to preserve when editing this text.
-const templatePrecedence = "템플릿은 글의 구성·순서·포함할 내용을 정하고, 문체·종결어미·어휘는 위의 말투 프로필을 따릅니다."
+//
+// Vocabulary is the one exception to "the voice owns register" (GUIDE-35, GUIDE-36): a
+// concrete substitution the template states — write B where the source says A — beats the
+// profile, while an abstract instruction about better words carries no such authority,
+// because nothing could check it against the source.
+const templatePrecedence = "템플릿은 글의 구성·순서·포함할 내용을 정하고, 문체·종결어미는 위의 말투 프로필을 따릅니다. 템플릿이 \"A 대신 B라고 쓰세요\"처럼 바꿔 쓸 표현을 구체적으로 정하면 그 치환은 말투 프로필보다 우선하지만, 더 나은 단어를 쓰라는 막연한 요구에는 그런 우선권이 없습니다."
+
+// templateTitleInstruction introduces a frozen template's title area (GEN-52, TMPL-50), which
+// renders in its own fences above the body form. Like the rest of the section it never says
+// 지침 (TMPL-13).
+const templateTitleInstruction = "JSON의 title은 바로 다음 --- 사이의 제목 형식을 따르세요. 그 뒤 --- 사이의 내용은 본문의 형식입니다."
 
 // writeTemplateSection appends the frozen template AFTER the complete voice profile and
 // before the per-post material. That position is load-bearing twice over, exactly as the
@@ -182,6 +235,11 @@ func writeTemplateSection(out *strings.Builder, brief *TemplateBrief) {
 		legend += templateFactLegend
 	}
 	fmt.Fprintf(out, "\n아래 템플릿의 구성을 그대로 따르세요. %s", legend)
+	// The title form sits above the body form, in fences of its own (GEN-52). An empty title
+	// area writes nothing, so every template authored before it existed keeps its bytes.
+	if brief.TitleArea != "" {
+		fmt.Fprintf(out, "\n%s\n---\n%s\n---", templateTitleInstruction, brief.TitleArea)
+	}
 	fmt.Fprintf(out, "\n---\n%s\n---", brief.Body)
 	fmt.Fprintf(out, "\n%s", templatePrecedence)
 }
@@ -190,7 +248,37 @@ func writeTemplateSection(out *strings.Builder, brief *TemplateBrief) {
 // prohibition the user added precisely because the default output was wrong, so it must beat
 // the template's content instruction — while register stays with the voice profile,
 // consistent with templatePrecedence. Fixed prompt text, so it lives in code (ARCHITECTURE §4).
-const guidelinePrecedence = "지침은 이 글에서 지켜야 할 주의 사항과 피해야 할 내용·표현을 정합니다. 지침이 템플릿의 요구와 충돌하면 지침을 우선하고, 문체·종결어미·어휘는 위의 말투 프로필을 따르세요."
+//
+// Vocabulary carries its own order (GUIDE-35, GUIDE-36): a concrete substitution ranks the
+// guideline over the template over the profile, and an abstract one carries no authority at
+// all. Inside the section the earlier line wins (GUIDE-37), which is what lets an owner's own
+// guideline beat the product's preset, injected last.
+const guidelinePrecedence = "지침은 이 글에서 지켜야 할 주의 사항과 피해야 할 내용·표현을 정합니다. 지침이 템플릿의 요구와 충돌하면 지침을 우선하고, 문체·종결어미는 위의 말투 프로필을 따르세요. \"A 대신 B라고 쓰세요\"처럼 구체적으로 정한 치환은 지침, 템플릿, 말투 프로필 순으로 우선하고, 더 나은 단어를 쓰라는 막연한 요구에는 그런 우선권이 없습니다. 지침끼리 충돌하면 먼저 적힌 지침을 따르세요."
+
+// qualityRulesHeading and qualityRulesPrecedence frame the ticked quality rules (GEN-51,
+// POST-81): the rule texts the owner ticked on the writing brief, frozen at enqueue and
+// already rendered in the target language. The heading stays Korean for every target, like
+// every other section heading. The closing line says a 지침 outranks them (QUAL-13), and 지침
+// still names one thing: the [작문 지침] section further down.
+const qualityRulesHeading = "[발행 글 측정 규칙]"
+
+const qualityRulesPrecedence = "지침이 위 규칙과 충돌하면 지침을 우선하세요."
+
+// writeQualityRulesSection renders the ticked rules after the static rules and before the
+// naturalness baseline or the voice profile (GEN-14, GEN-51). An empty slice writes nothing
+// at all, so ticking nothing leaves the run identical to one before the rules existed
+// (POST-81). Write-only: a revision keeps unrelated sentences verbatim, and a rule sweep
+// would rewrite them.
+func writeQualityRulesSection(out *strings.Builder, rules []string) {
+	if len(rules) == 0 {
+		return
+	}
+	out.WriteString("\n\n" + qualityRulesHeading)
+	for _, text := range rules {
+		out.WriteString("\n- " + text)
+	}
+	out.WriteString("\n" + qualityRulesPrecedence)
+}
 
 // writeGuidelinesSection appends the frozen guideline texts as ONE section at ONE position:
 // after the template section when the post has one, otherwise directly after the complete
@@ -249,23 +337,25 @@ func memorySection(memories []string) string {
 // consumers that explicitly request the established Korean contract. Runtime work uses
 // BuildWritePromptForLanguage with its frozen language.
 func BuildWritePrompt(profile Profile, observations []Observation, memo, title string, filenames []string, targetLength *int, template *TemplateBrief, guidelines []string) (string, string) {
-	return BuildWritePromptForLanguage(LanguageKorean, profile, observations, memo, title, filenames, nil, targetLength, post.TagCountRange.Default, template, guidelines, nil)
+	return BuildWritePromptForLanguage(LanguageKorean, profile, observations, memo, title, filenames, nil, targetLength, post.TagCountRange.Default, template, guidelines, nil, nil)
 }
 
 // tagCount is the frozen per-post count (GEN-46); the sentence stays in the stable part
-// where the fixed range used to be, so the golden order is unchanged.
-func BuildWritePromptForLanguage(language Language, profile Profile, observations []Observation, memo, title string, filenames, videoFilenames []string, targetLength *int, tagCount int, template *TemplateBrief, guidelines, memories []string) (string, string) {
+// where the fixed range used to be, so the golden order is unchanged. qualityRules are the
+// frozen ticked rule texts (GEN-51), empty for a run that ticked none.
+func BuildWritePromptForLanguage(language Language, profile Profile, observations []Observation, memo, title string, filenames, videoFilenames []string, targetLength *int, tagCount int, template *TemplateBrief, guidelines, memories, qualityRules []string) (string, string) {
 	var stable strings.Builder
+	titleForm := template != nil && template.TitleArea != ""
 	switch language {
 	case LanguageKorean:
-		stable.WriteString(WritePrompt)
+		stable.WriteString(writeStaticRules(language, titleForm))
 		fmt.Fprintf(&stable, "\ntitle, 한 줄 summary, 정확히 %d개의 tags, blocks를 반환하세요.", tagCount)
 		stable.WriteString("\n출력 언어는 한국어입니다. title, summary, tags, 모든 본문, IMAGE alt와 caption을 한국어로 작성하세요. 말투 프로필, 템플릿, 메모, 가제의 언어 지시가 충돌해도 이 출력 언어를 우선하세요.")
 		if len(videoFilenames) > 0 {
 			stable.WriteString(videoWriteInstructions)
 		}
 	case LanguageEnglish:
-		stable.WriteString(englishWritePrompt)
+		stable.WriteString(writeStaticRules(language, titleForm))
 		fmt.Fprintf(&stable, "\nReturn title, a one-line summary, exactly %d tags, and blocks.", tagCount)
 		stable.WriteString("\nThe output language is English. Write the title, summary, tags, all prose, and every IMAGE alt and caption in English. This requirement overrides conflicting language instructions in the voice profile, template, memo, or title hint.")
 		if len(videoFilenames) > 0 {
@@ -276,6 +366,7 @@ func BuildWritePromptForLanguage(language Language, profile Profile, observation
 		// direct prompt use fail closed instead of silently defaulting to Korean.
 		stable.WriteString("Unsupported output language; do not generate content.")
 	}
+	writeQualityRulesSection(&stable, qualityRules)
 	writeProfileSection(&stable, language, profile, targetLength)
 	writeTemplateSection(&stable, template)
 	writeGuidelinesSection(&stable, guidelines)
@@ -285,6 +376,26 @@ func BuildWritePromptForLanguage(language Language, profile Profile, observation
 	// when there are no memories — which is what keeps the no-memory prompt byte-identical.
 	perPost := fmt.Sprintf("[이번 글]\n가제: %s\n메모: %s\n%s%s", title, memo, memorySection(memories), photoMaterial)
 	return stable.String(), perPost
+}
+
+// writeStaticRules is the fixed write prompt for a target, with the plain title line swapped
+// for the title-form one when the frozen template authored a title (TMPL-52). That gives two
+// stable prefixes per target and never a per-post one.
+func writeStaticRules(language Language, titleForm bool) string {
+	switch language {
+	case LanguageKorean:
+		if titleForm {
+			return strings.Replace(WritePrompt, koreanTitleProhibitions, koreanTitleFormProhibitions, 1)
+		}
+		return WritePrompt
+	case LanguageEnglish:
+		if titleForm {
+			return strings.Replace(englishWritePrompt, englishTitleProhibitions, englishTitleFormProhibitions, 1)
+		}
+		return englishWritePrompt
+	default:
+		return ""
+	}
 }
 
 func writeProfileSection(stable *strings.Builder, language Language, profile Profile, targetLength *int) {
