@@ -160,6 +160,7 @@ export const appFailureSpecs = {
   GUIDELINE_TEXT_TAKEN: {},
   GUIDELINE_SCOPE_INVALID: {},
   GUIDELINE_TEMPLATE_NOT_FOUND: {},
+  GUIDELINE_FIELD_NOT_FOUND: {},
   GUIDELINE_LIMIT_REACHED: { required: ['max'] },
   GUIDELINE_CANDIDATE_NOT_FOUND: {},
   // 기억 (MEM r1). The cap and the two ceilings name their numbers, because the copy the
@@ -208,6 +209,11 @@ export const appFailureSpecs = {
   // halves down, so these only appear when something bypassed it (TEMPLATE-43).
   POST_TEMPLATE_ANSWER_TOO_LONG: { required: ['max'], optional: ['field', 'actual'] },
   POST_TEMPLATE_ANSWER_INVALID: {},
+  // 발행됨 and 분야 (POST r11, QUAL r3). None carries a param: each copy is fixed text.
+  POST_PUBLISHED_LOCKED: {},
+  POST_PUBLISHED_URL_INVALID: {},
+  POST_FIELD_NOT_FOUND: {},
+  POST_QUALITY_RULE_INVALID: {},
   UPLOAD_VIDEO_UNSUPPORTED: {},
   UPLOAD_VIDEO_INVALID: {},
   GENERATION_TARGET_LENGTH_INVALID: {},

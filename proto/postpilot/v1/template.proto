@@ -42,6 +42,9 @@ message Template {
   // freezing the post's values.
   optional int32 target_length = 8;
   optional int32 tag_count = 9;
+  // The optional title area (TMPL-50), in the body's grammar but admitting literal text,
+  // `<write>` and `<ask>` only. '' leaves the title to the model.
+  string title_area = 10;
 }
 
 // The template a post is written from, as the post screens need it. Transport-only, and
@@ -66,6 +69,7 @@ message CreateTemplateRequest {
   // lands in a post's option.
   optional int32 target_length = 4;
   optional int32 tag_count = 5;
+  string title_area = 6;
 }
 message CreateTemplateResponse { Template template = 1; }
 
@@ -82,6 +86,9 @@ message UpdateTemplateRequest {
   // ways to be written.
   optional int32 target_length = 5;
   optional int32 tag_count = 6;
+  // Follows the presence rule, not the numbers' exception: absent keeps the stored title area
+  // and a present '' clears it (TMPL-8).
+  optional string title_area = 7;
 }
 message UpdateTemplateResponse { Template template = 1; }
 

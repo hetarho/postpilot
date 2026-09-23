@@ -34,6 +34,12 @@ export const errors = {
   POST_TARGET_LANGUAGE_UNSUPPORTED: '지원하지 않는 글 언어예요.',
   POST_TEMPLATE_ANSWER_TOO_LONG: '입력한 내용이 너무 길어요. {{max}}자까지 쓸 수 있어요.',
   POST_TEMPLATE_ANSWER_INVALID: '입력란을 확인해 주세요.',
+  POST_PUBLISHED_LOCKED:
+    '발행된 글은 바꿀 수 없어요. 글 완성에서 발행 주소를 지우면 다시 고칠 수 있어요.',
+  POST_PUBLISHED_URL_INVALID:
+    '네이버 블로그 글 주소만 저장할 수 있어요. blog.naver.com 또는 m.blog.naver.com 글 주소를 붙여 넣어 주세요.',
+  POST_FIELD_NOT_FOUND: '선택한 분야를 찾을 수 없어요. 다시 선택해 주세요.',
+  POST_QUALITY_RULE_INVALID: '품질 규칙 선택을 저장할 수 없어요. 다시 확인해 주세요.',
   POST_FILENAME_TAKEN: '같은 이름의 사진이 이미 있어요.',
   UPLOAD_INVALID: '업로드한 사진 정보를 확인해 주세요.',
   UPLOAD_NOT_FOUND: '업로드를 찾을 수 없어요.',
@@ -171,6 +177,7 @@ export const errors = {
     '적용 범위를 다시 골라 주세요. 전역이면 템플릿을 비우고, 특정 템플릿이면 하나 이상 골라야 해요.',
   GUIDELINE_TEMPLATE_NOT_FOUND:
     '고른 템플릿을 찾을 수 없어요. 목록을 새로 고친 뒤 다시 시도해 주세요.',
+  GUIDELINE_FIELD_NOT_FOUND: '선택한 분야를 찾을 수 없어요. 다시 선택해 주세요.',
   GUIDELINE_LIMIT_REACHED:
     '지침은 최대 {{max}}개까지 저장할 수 있어요. 쓰지 않는 지침을 지운 뒤 다시 시도해 주세요.',
   MODEL_STAGE_REQUIRED: 'AI 단계를 선택해 주세요.',

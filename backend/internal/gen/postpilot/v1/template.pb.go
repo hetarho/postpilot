@@ -41,8 +41,11 @@ type Template struct {
 	// template has no opinion about them, and both are SEEDS: assigning the template copies a
 	// set one onto the post's own option, and nothing here ever reaches a prompt — a run keeps
 	// freezing the post's values.
-	TargetLength  *int32 `protobuf:"varint,8,opt,name=target_length,json=targetLength,proto3,oneof" json:"target_length,omitempty"`
-	TagCount      *int32 `protobuf:"varint,9,opt,name=tag_count,json=tagCount,proto3,oneof" json:"tag_count,omitempty"`
+	TargetLength *int32 `protobuf:"varint,8,opt,name=target_length,json=targetLength,proto3,oneof" json:"target_length,omitempty"`
+	TagCount     *int32 `protobuf:"varint,9,opt,name=tag_count,json=tagCount,proto3,oneof" json:"tag_count,omitempty"`
+	// The optional title area (TMPL-50), in the body's grammar but admitting literal text,
+	// `<write>` and `<ask>` only. ” leaves the title to the model.
+	TitleArea     string `protobuf:"bytes,10,opt,name=title_area,json=titleArea,proto3" json:"title_area,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -138,6 +141,13 @@ func (x *Template) GetTagCount() int32 {
 		return *x.TagCount
 	}
 	return 0
+}
+
+func (x *Template) GetTitleArea() string {
+	if x != nil {
+		return x.TitleArea
+	}
+	return ""
 }
 
 // The template a post is written from, as the post screens need it. Transport-only, and
@@ -285,6 +295,7 @@ type CreateTemplateRequest struct {
 	// lands in a post's option.
 	TargetLength  *int32 `protobuf:"varint,4,opt,name=target_length,json=targetLength,proto3,oneof" json:"target_length,omitempty"`
 	TagCount      *int32 `protobuf:"varint,5,opt,name=tag_count,json=tagCount,proto3,oneof" json:"tag_count,omitempty"`
+	TitleArea     string `protobuf:"bytes,6,opt,name=title_area,json=titleArea,proto3" json:"title_area,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -354,6 +365,13 @@ func (x *CreateTemplateRequest) GetTagCount() int32 {
 	return 0
 }
 
+func (x *CreateTemplateRequest) GetTitleArea() string {
+	if x != nil {
+		return x.TitleArea
+	}
+	return ""
+}
+
 type CreateTemplateResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Template      *Template              `protobuf:"bytes,1,opt,name=template,proto3" json:"template,omitempty"`
@@ -410,8 +428,11 @@ type UpdateTemplateRequest struct {
 	// clears the stored one, because the template screen holds both and sends both on every
 	// save (TEMPLATE-8). A second meaning for absence would only give an unset number two
 	// ways to be written.
-	TargetLength  *int32 `protobuf:"varint,5,opt,name=target_length,json=targetLength,proto3,oneof" json:"target_length,omitempty"`
-	TagCount      *int32 `protobuf:"varint,6,opt,name=tag_count,json=tagCount,proto3,oneof" json:"tag_count,omitempty"`
+	TargetLength *int32 `protobuf:"varint,5,opt,name=target_length,json=targetLength,proto3,oneof" json:"target_length,omitempty"`
+	TagCount     *int32 `protobuf:"varint,6,opt,name=tag_count,json=tagCount,proto3,oneof" json:"tag_count,omitempty"`
+	// Follows the presence rule, not the numbers' exception: absent keeps the stored title area
+	// and a present ” clears it (TMPL-8).
+	TitleArea     *string `protobuf:"bytes,7,opt,name=title_area,json=titleArea,proto3,oneof" json:"title_area,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -486,6 +507,13 @@ func (x *UpdateTemplateRequest) GetTagCount() int32 {
 		return *x.TagCount
 	}
 	return 0
+}
+
+func (x *UpdateTemplateRequest) GetTitleArea() string {
+	if x != nil && x.TitleArea != nil {
+		return *x.TitleArea
+	}
+	return ""
 }
 
 type UpdateTemplateResponse struct {
@@ -626,7 +654,7 @@ var File_postpilot_v1_template_proto protoreflect.FileDescriptor
 
 const file_postpilot_v1_template_proto_rawDesc = "" +
 	"\n" +
-	"\x1bpostpilot/v1/template.proto\x12\fpostpilot.v1\"\xad\x02\n" +
+	"\x1bpostpilot/v1/template.proto\x12\fpostpilot.v1\"\xcc\x02\n" +
 	"\bTemplate\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
@@ -639,7 +667,10 @@ const file_postpilot_v1_template_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\a \x01(\tR\tupdatedAt\x12(\n" +
 	"\rtarget_length\x18\b \x01(\x05H\x00R\ftargetLength\x88\x01\x01\x12 \n" +
-	"\ttag_count\x18\t \x01(\x05H\x01R\btagCount\x88\x01\x01B\x10\n" +
+	"\ttag_count\x18\t \x01(\x05H\x01R\btagCount\x88\x01\x01\x12\x1d\n" +
+	"\n" +
+	"title_area\x18\n" +
+	" \x01(\tR\ttitleAreaB\x10\n" +
 	"\x0e_target_lengthB\f\n" +
 	"\n" +
 	"_tag_count\"1\n" +
@@ -648,31 +679,36 @@ const file_postpilot_v1_template_proto_rawDesc = "" +
 	"\x04name\x18\x02 \x01(\tR\x04name\"\x16\n" +
 	"\x14ListTemplatesRequest\"M\n" +
 	"\x15ListTemplatesResponse\x124\n" +
-	"\ttemplates\x18\x01 \x03(\v2\x16.postpilot.v1.TemplateR\ttemplates\"\xcd\x01\n" +
+	"\ttemplates\x18\x01 \x03(\v2\x16.postpilot.v1.TemplateR\ttemplates\"\xec\x01\n" +
 	"\x15CreateTemplateRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
 	"\vdescription\x18\x02 \x01(\tR\vdescription\x12\x12\n" +
 	"\x04body\x18\x03 \x01(\tR\x04body\x12(\n" +
 	"\rtarget_length\x18\x04 \x01(\x05H\x00R\ftargetLength\x88\x01\x01\x12 \n" +
-	"\ttag_count\x18\x05 \x01(\x05H\x01R\btagCount\x88\x01\x01B\x10\n" +
+	"\ttag_count\x18\x05 \x01(\x05H\x01R\btagCount\x88\x01\x01\x12\x1d\n" +
+	"\n" +
+	"title_area\x18\x06 \x01(\tR\ttitleAreaB\x10\n" +
 	"\x0e_target_lengthB\f\n" +
 	"\n" +
 	"_tag_count\"L\n" +
 	"\x16CreateTemplateResponse\x122\n" +
-	"\btemplate\x18\x01 \x01(\v2\x16.postpilot.v1.TemplateR\btemplate\"\x8e\x02\n" +
+	"\btemplate\x18\x01 \x01(\v2\x16.postpilot.v1.TemplateR\btemplate\"\xc1\x02\n" +
 	"\x15UpdateTemplateRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12%\n" +
 	"\vdescription\x18\x03 \x01(\tH\x01R\vdescription\x88\x01\x01\x12\x17\n" +
 	"\x04body\x18\x04 \x01(\tH\x02R\x04body\x88\x01\x01\x12(\n" +
 	"\rtarget_length\x18\x05 \x01(\x05H\x03R\ftargetLength\x88\x01\x01\x12 \n" +
-	"\ttag_count\x18\x06 \x01(\x05H\x04R\btagCount\x88\x01\x01B\a\n" +
+	"\ttag_count\x18\x06 \x01(\x05H\x04R\btagCount\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"title_area\x18\a \x01(\tH\x05R\ttitleArea\x88\x01\x01B\a\n" +
 	"\x05_nameB\x0e\n" +
 	"\f_descriptionB\a\n" +
 	"\x05_bodyB\x10\n" +
 	"\x0e_target_lengthB\f\n" +
 	"\n" +
-	"_tag_count\"L\n" +
+	"_tag_countB\r\n" +
+	"\v_title_area\"L\n" +
 	"\x16UpdateTemplateResponse\x122\n" +
 	"\btemplate\x18\x01 \x01(\v2\x16.postpilot.v1.TemplateR\btemplate\"'\n" +
 	"\x15DeleteTemplateRequest\x12\x0e\n" +

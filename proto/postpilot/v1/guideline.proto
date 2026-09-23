@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package postpilot.v1;
 
+import "postpilot/v1/post.proto";
+
 option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
 
 // guideline.proto is the 작문 지침 slice: reusable account-owned rules about what a post
@@ -18,6 +20,8 @@ service GuidelineService {
   rpc CreateGuideline(CreateGuidelineRequest) returns (CreateGuidelineResponse) {}
   rpc UpdateGuideline(UpdateGuidelineRequest) returns (UpdateGuidelineResponse) {}
   rpc DeleteGuideline(DeleteGuidelineRequest) returns (DeleteGuidelineResponse) {}
+  // Switches the product-owned 상위 노출 단어 사용 preset and sets its 적용할 분야 (GUIDE-29).
+  rpc UpdateGuidelinePreset(UpdateGuidelinePresetRequest) returns (UpdateGuidelinePresetResponse) {}
   // The candidate review surface. A candidate is a completed revision's instruction,
   // recorded verbatim — never learned, never generalized, and never injected into a
   // prompt. Approval is CreateGuideline with from_candidate_id, not a procedure of its
@@ -32,6 +36,8 @@ enum GuidelineScope {
   GUIDELINE_SCOPE_GLOBAL = 1;
   // Applies only to posts whose selected template is in the guideline's template set.
   GUIDELINE_SCOPE_TEMPLATES = 2;
+  // Applies only to posts whose 분야 is in the guideline's 분야 set (GUIDE-5).
+  GUIDELINE_SCOPE_FIELDS = 3;
 }
 
 // A template a guideline is scoped to, projected by name for the management screen. It is a
@@ -51,6 +57,16 @@ message Guideline {
   repeated GuidelineTemplateRef templates = 4;
   string created_at = 5;
   string updated_at = 6;
+  // The 분야 set of a FIELDS guideline, empty for every other scope.
+  repeated BlogField fields = 7;
+}
+
+// The one product-owned guideline, 상위 노출 단어 사용 (GUIDE-29). Its multi-select 적용할 분야
+// IS its `fields` scope, so there is no second selector meaning the same thing.
+message GuidelinePreset {
+  string text = 1;
+  bool enabled = 2;
+  repeated BlogField fields = 3;
 }
 
 message ListGuidelinesRequest {}
@@ -58,6 +74,8 @@ message ListGuidelinesResponse {
   // In injection order: the global group first, then the scoped group, each by creation
   // time — exactly the order the writer will see them in.
   repeated Guideline guidelines = 1;
+  // Shown as a fixed row above the owner's own guidelines.
+  GuidelinePreset preset = 2;
 }
 
 message CreateGuidelineRequest {
@@ -69,6 +87,8 @@ message CreateGuidelineRequest {
   // candidate's text no longer matches the row: an unedited approval, and the on-the-spot
   // 지침으로 저장, are matched by text in the same transaction.
   optional string from_candidate_id = 4;
+  // Required (>= 1 분야 from the product's list) for FIELDS; an unknown 분야 is NotFound.
+  repeated BlogField fields = 5;
 }
 message CreateGuidelineResponse { Guideline guideline = 1; }
 
@@ -78,6 +98,7 @@ message CreateGuidelineResponse { Guideline guideline = 1; }
 message GuidelineScopePatch {
   GuidelineScope scope = 1;
   repeated string template_ids = 2;
+  repeated BlogField fields = 3;
 }
 
 message UpdateGuidelineRequest {
@@ -91,6 +112,20 @@ message DeleteGuidelineRequest { string id = 1; }
 // Empty: nothing references a guideline, so a delete detaches nothing and has nothing to
 // report back.
 message DeleteGuidelineResponse {}
+
+// The preset's 분야 set as one value, whose message presence is what tells "leave the set
+// alone" from "replace it", as GuidelineScopePatch does for a scope.
+message GuidelinePresetFields {
+  repeated BlogField fields = 1;
+}
+
+// Presence is the edit unit: an absent `enabled` keeps the switch, and an absent `fields`
+// keeps the set.
+message UpdateGuidelinePresetRequest {
+  optional bool enabled = 1;
+  GuidelinePresetFields fields = 2;
+}
+message UpdateGuidelinePresetResponse { GuidelinePreset preset = 1; }
 
 // A recorded revision instruction awaiting review. It carries NO scope by design: scope is
 // a durable decision about every future post, so it is made at approval time and never at

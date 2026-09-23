@@ -10,6 +10,7 @@ import (
 	"connectrpc.com/connect"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/postpilot/backend/internal/auth"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/guideline"
 )
@@ -30,8 +31,14 @@ func TestConnectCodesAndStableReasons(t *testing.T) {
 		"text too long":      {&guideline.TextTooLongError{Chars: 301, Max: 300}, connect.CodeInvalidArgument, "GUIDELINE_TEXT_TOO_LONG"},
 		"account cap":        {&guideline.AccountCapError{Max: 100}, connect.CodeFailedPrecondition, "GUIDELINE_LIMIT_REACHED"},
 		"unknown candidate":  {guideline.ErrCandidateNotFound, connect.CodeNotFound, "GUIDELINE_CANDIDATE_NOT_FOUND"},
+		"unknown 분야":         {guideline.ErrFieldNotFound, connect.CodeNotFound, "GUIDELINE_FIELD_NOT_FOUND"},
 	} {
 		t.Run(name, func(t *testing.T) {
+			// A service error arrives wrapped as often as bare, and both must keep the reason.
+			wrapped := toConnectError("op", errors.Join(errors.New("private context"), tc.err))
+			if connect.CodeOf(wrapped) != tc.code || appErrorDetail(t, wrapped).GetReason() != tc.reason {
+				t.Fatalf("wrapped = %v, want %v %s", wrapped, tc.code, tc.reason)
+			}
 			mapped := toConnectError("op", tc.err)
 			if connect.CodeOf(mapped) != tc.code {
 				t.Fatalf("code = %v, want %v", connect.CodeOf(mapped), tc.code)
@@ -107,11 +114,24 @@ func TestEveryProcedureRequiresASessionAndNoRequestCarriesAUserID(t *testing.T) 
 	if _, err := handler.DismissGuidelineCandidate(anonymous, connect.NewRequest(&postpilotv1.DismissGuidelineCandidateRequest{})); connect.CodeOf(err) != connect.CodeUnauthenticated {
 		t.Fatalf("dismiss candidate = %v", err)
 	}
+	// The preset has a wire shape before it has a behaviour (T342): it still answers only a
+	// session, and answers that session Unimplemented with no reason.
+	enabled := true
+	preset := connect.NewRequest(&postpilotv1.UpdateGuidelinePresetRequest{Enabled: &enabled})
+	if _, err := handler.UpdateGuidelinePreset(anonymous, preset); connect.CodeOf(err) != connect.CodeUnauthenticated || appErrorDetail(t, err).GetReason() != "AUTH_REQUIRED" {
+		t.Fatalf("update preset = %v", err)
+	}
+	_, err := handler.UpdateGuidelinePreset(auth.WithUser(anonymous, "alice"), preset)
+	var connectErr *connect.Error
+	if connect.CodeOf(err) != connect.CodeUnimplemented || !errors.As(err, &connectErr) || len(connectErr.Details()) != 0 {
+		t.Fatalf("signed-in update preset = %v, want unimplemented with no reason", err)
+	}
 
 	for _, message := range []proto.Message{
 		&postpilotv1.ListGuidelinesRequest{}, &postpilotv1.CreateGuidelineRequest{},
 		&postpilotv1.UpdateGuidelineRequest{}, &postpilotv1.DeleteGuidelineRequest{},
 		&postpilotv1.ListGuidelineCandidatesRequest{}, &postpilotv1.DismissGuidelineCandidateRequest{},
+		&postpilotv1.UpdateGuidelinePresetRequest{},
 	} {
 		fields := message.ProtoReflect().Descriptor().Fields()
 		for i := 0; i < fields.Len(); i++ {

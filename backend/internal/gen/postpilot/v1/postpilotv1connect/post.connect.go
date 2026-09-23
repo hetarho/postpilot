@@ -47,6 +47,9 @@ const (
 	// PostServiceFinalizePostProcedure is the fully-qualified name of the PostService's FinalizePost
 	// RPC.
 	PostServiceFinalizePostProcedure = "/postpilot.v1.PostService/FinalizePost"
+	// PostServiceSavePostPublishedUrlProcedure is the fully-qualified name of the PostService's
+	// SavePostPublishedUrl RPC.
+	PostServiceSavePostPublishedUrlProcedure = "/postpilot.v1.PostService/SavePostPublishedUrl"
 	// PostServiceGetPostProcedure is the fully-qualified name of the PostService's GetPost RPC.
 	PostServiceGetPostProcedure = "/postpilot.v1.PostService/GetPost"
 	// PostServiceListPostsProcedure is the fully-qualified name of the PostService's ListPosts RPC.
@@ -82,6 +85,9 @@ type PostServiceClient interface {
 	SavePostContent(context.Context, *connect.Request[v1.SavePostContentRequest]) (*connect.Response[v1.SavePostContentResponse], error)
 	SavePostGenerationOptions(context.Context, *connect.Request[v1.SavePostGenerationOptionsRequest]) (*connect.Response[v1.SavePostGenerationOptionsResponse], error)
 	FinalizePost(context.Context, *connect.Request[v1.FinalizePostRequest]) (*connect.Response[v1.FinalizePostResponse], error)
+	// Records, replaces or clears the Naver Blog address of a finalized or published post
+	// (POST-73, POST-75). It is the only way into and out of published.
+	SavePostPublishedUrl(context.Context, *connect.Request[v1.SavePostPublishedUrlRequest]) (*connect.Response[v1.SavePostPublishedUrlResponse], error)
 	GetPost(context.Context, *connect.Request[v1.GetPostRequest]) (*connect.Response[v1.GetPostResponse], error)
 	ListPosts(context.Context, *connect.Request[v1.ListPostsRequest]) (*connect.Response[v1.ListPostsResponse], error)
 	DeletePost(context.Context, *connect.Request[v1.DeletePostRequest]) (*connect.Response[v1.DeletePostResponse], error)
@@ -126,6 +132,12 @@ func NewPostServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			httpClient,
 			baseURL+PostServiceFinalizePostProcedure,
 			connect.WithSchema(postServiceMethods.ByName("FinalizePost")),
+			connect.WithClientOptions(opts...),
+		),
+		savePostPublishedUrl: connect.NewClient[v1.SavePostPublishedUrlRequest, v1.SavePostPublishedUrlResponse](
+			httpClient,
+			baseURL+PostServiceSavePostPublishedUrlProcedure,
+			connect.WithSchema(postServiceMethods.ByName("SavePostPublishedUrl")),
 			connect.WithClientOptions(opts...),
 		),
 		getPost: connect.NewClient[v1.GetPostRequest, v1.GetPostResponse](
@@ -179,6 +191,7 @@ type postServiceClient struct {
 	savePostContent           *connect.Client[v1.SavePostContentRequest, v1.SavePostContentResponse]
 	savePostGenerationOptions *connect.Client[v1.SavePostGenerationOptionsRequest, v1.SavePostGenerationOptionsResponse]
 	finalizePost              *connect.Client[v1.FinalizePostRequest, v1.FinalizePostResponse]
+	savePostPublishedUrl      *connect.Client[v1.SavePostPublishedUrlRequest, v1.SavePostPublishedUrlResponse]
 	getPost                   *connect.Client[v1.GetPostRequest, v1.GetPostResponse]
 	listPosts                 *connect.Client[v1.ListPostsRequest, v1.ListPostsResponse]
 	deletePost                *connect.Client[v1.DeletePostRequest, v1.DeletePostResponse]
@@ -206,6 +219,11 @@ func (c *postServiceClient) SavePostGenerationOptions(ctx context.Context, req *
 // FinalizePost calls postpilot.v1.PostService.FinalizePost.
 func (c *postServiceClient) FinalizePost(ctx context.Context, req *connect.Request[v1.FinalizePostRequest]) (*connect.Response[v1.FinalizePostResponse], error) {
 	return c.finalizePost.CallUnary(ctx, req)
+}
+
+// SavePostPublishedUrl calls postpilot.v1.PostService.SavePostPublishedUrl.
+func (c *postServiceClient) SavePostPublishedUrl(ctx context.Context, req *connect.Request[v1.SavePostPublishedUrlRequest]) (*connect.Response[v1.SavePostPublishedUrlResponse], error) {
+	return c.savePostPublishedUrl.CallUnary(ctx, req)
 }
 
 // GetPost calls postpilot.v1.PostService.GetPost.
@@ -251,6 +269,9 @@ type PostServiceHandler interface {
 	SavePostContent(context.Context, *connect.Request[v1.SavePostContentRequest]) (*connect.Response[v1.SavePostContentResponse], error)
 	SavePostGenerationOptions(context.Context, *connect.Request[v1.SavePostGenerationOptionsRequest]) (*connect.Response[v1.SavePostGenerationOptionsResponse], error)
 	FinalizePost(context.Context, *connect.Request[v1.FinalizePostRequest]) (*connect.Response[v1.FinalizePostResponse], error)
+	// Records, replaces or clears the Naver Blog address of a finalized or published post
+	// (POST-73, POST-75). It is the only way into and out of published.
+	SavePostPublishedUrl(context.Context, *connect.Request[v1.SavePostPublishedUrlRequest]) (*connect.Response[v1.SavePostPublishedUrlResponse], error)
 	GetPost(context.Context, *connect.Request[v1.GetPostRequest]) (*connect.Response[v1.GetPostResponse], error)
 	ListPosts(context.Context, *connect.Request[v1.ListPostsRequest]) (*connect.Response[v1.ListPostsResponse], error)
 	DeletePost(context.Context, *connect.Request[v1.DeletePostRequest]) (*connect.Response[v1.DeletePostResponse], error)
@@ -291,6 +312,12 @@ func NewPostServiceHandler(svc PostServiceHandler, opts ...connect.HandlerOption
 		PostServiceFinalizePostProcedure,
 		svc.FinalizePost,
 		connect.WithSchema(postServiceMethods.ByName("FinalizePost")),
+		connect.WithHandlerOptions(opts...),
+	)
+	postServiceSavePostPublishedUrlHandler := connect.NewUnaryHandler(
+		PostServiceSavePostPublishedUrlProcedure,
+		svc.SavePostPublishedUrl,
+		connect.WithSchema(postServiceMethods.ByName("SavePostPublishedUrl")),
 		connect.WithHandlerOptions(opts...),
 	)
 	postServiceGetPostHandler := connect.NewUnaryHandler(
@@ -345,6 +372,8 @@ func NewPostServiceHandler(svc PostServiceHandler, opts ...connect.HandlerOption
 			postServiceSavePostGenerationOptionsHandler.ServeHTTP(w, r)
 		case PostServiceFinalizePostProcedure:
 			postServiceFinalizePostHandler.ServeHTTP(w, r)
+		case PostServiceSavePostPublishedUrlProcedure:
+			postServiceSavePostPublishedUrlHandler.ServeHTTP(w, r)
 		case PostServiceGetPostProcedure:
 			postServiceGetPostHandler.ServeHTTP(w, r)
 		case PostServiceListPostsProcedure:
@@ -382,6 +411,10 @@ func (UnimplementedPostServiceHandler) SavePostGenerationOptions(context.Context
 
 func (UnimplementedPostServiceHandler) FinalizePost(context.Context, *connect.Request[v1.FinalizePostRequest]) (*connect.Response[v1.FinalizePostResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.PostService.FinalizePost is not implemented"))
+}
+
+func (UnimplementedPostServiceHandler) SavePostPublishedUrl(context.Context, *connect.Request[v1.SavePostPublishedUrlRequest]) (*connect.Response[v1.SavePostPublishedUrlResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.PostService.SavePostPublishedUrl is not implemented"))
 }
 
 func (UnimplementedPostServiceHandler) GetPost(context.Context, *connect.Request[v1.GetPostRequest]) (*connect.Response[v1.GetPostResponse], error) {

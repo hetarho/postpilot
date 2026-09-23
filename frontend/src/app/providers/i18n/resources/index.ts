@@ -39,6 +39,7 @@ import { i18n as applyModelRecommendationI18n } from '@/features/apply-model-rec
 import { i18n as assignEstimatorComboI18n } from '@/features/assign-estimator-combo/config/i18n'
 import { i18n as billingCheckoutI18n } from '@/pages/billing-checkout/config/i18n'
 import { i18n as billingI18n } from '@/pages/billing/config/i18n'
+import { i18n as blogFieldI18n } from '@/entities/blog-field/config/i18n'
 import { i18n as candidateComparisonI18n } from '@/widgets/candidate-comparison/config/i18n'
 import { i18n as configureModelPairI18n } from '@/features/configure-model-pair/config/i18n'
 import { i18n as contactSheetI18n } from '@/widgets/contact-sheet/config/i18n'
@@ -174,6 +175,7 @@ export const FRAGMENTS: readonly I18nFragment[] = [
   planI18n,
   plansI18n,
   selectModelPlansI18n,
+  blogFieldI18n,
   candidateComparisonI18n,
   contactSheetI18n,
   editWithAiPostsI18n,
@@ -210,6 +212,7 @@ export const resources = {
     auth: { ...koAuth, ...logInI18n.ko },
     nav: koNav,
     posts: {
+      ...blogFieldI18n.ko,
       ...candidateComparisonI18n.ko,
       ...contactSheetI18n.ko,
       ...extractMemoriesI18n.ko,
@@ -314,6 +317,7 @@ export const resources = {
     auth: { ...enAuth, ...logInI18n.en },
     nav: enNav,
     posts: {
+      ...blogFieldI18n.en,
       ...candidateComparisonI18n.en,
       ...contactSheetI18n.en,
       ...extractMemoriesI18n.en,

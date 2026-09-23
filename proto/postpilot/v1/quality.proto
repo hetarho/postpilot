@@ -1,0 +1,116 @@
+syntax = "proto3";
+
+package postpilot.v1;
+
+option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
+
+// quality.proto is the 품질 slice: what code can count about a post while it can still be
+// changed, and about an account's 발행됨 posts next to each other (QUAL-1, QUAL-2). A
+// measurement calls no provider and costs no credit (QUAL-16), and nothing here writes.
+//
+// Every procedure is scoped to the acting user from the session — no request carries a
+// user id, because a user id in a message is a claim by the caller, not a fact.
+service QualityService {
+  // This post's own M2, M3 and M4 at its current content revision, as ② shows them (QUAL-36).
+  rpc GetPostMeasurement(GetPostMeasurementRequest) returns (GetPostMeasurementResponse) {}
+  // The account aggregate over its 발행됨 posts, as the writing brief shows it (POST-81).
+  rpc GetAccountQuality(GetAccountQualityRequest) returns (GetAccountQualityResponse) {}
+}
+
+// The four metrics (QUAL-5), each a pass/warn badge and never part of a score.
+enum QualityMetric {
+  QUALITY_METRIC_UNSPECIFIED = 0;
+  // M1 제목 도배율: an account metric with no per-post value (QUAL-7).
+  QUALITY_METRIC_TITLE_SATURATION = 1;
+  // M2 글 간 고정 문구 (QUAL-8).
+  QUALITY_METRIC_CROSS_POST_PHRASES = 2;
+  // M3 글 안 반복과 제목 관련성 (QUAL-9).
+  QUALITY_METRIC_IN_POST_REPETITION = 3;
+  // M4 분량·구성 (QUAL-10).
+  QUALITY_METRIC_COMPOSITION = 4;
+}
+
+// The four row states (QUAL-12). ABSENT is a value that cannot be computed, which neither
+// passes nor warns (QUAL-40).
+enum QualityVerdict {
+  QUALITY_VERDICT_UNSPECIFIED = 0;
+  QUALITY_VERDICT_OVER_BAND = 1;
+  QUALITY_VERDICT_WITHIN_BAND = 2;
+  QUALITY_VERDICT_BELOW_MINIMUM = 3;
+  QUALITY_VERDICT_ABSENT = 4;
+}
+
+// The four value messages share three rules. Every measured value is `optional`: unset means
+// it cannot be computed and never reads as zero (QUAL-40). A share is a fraction in [0,1],
+// and a count is a double because the account value is a median. The band edges ride beside
+// the values, so the browser mirrors no band yet can still say where each one sits (QUAL-6).
+
+// M1, account only.
+message QualityTitleSaturation {
+  optional double share = 1;
+  double share_warn_above = 2;
+}
+
+// M2.
+message QualityCrossPostPhrases {
+  optional double share = 1;
+  double share_warn_above = 2;
+}
+
+// M3.
+message QualityInPostRepetition {
+  optional double repetition_share = 1;
+  optional double title_relevance = 2;
+  double repetition_share_warn_above = 3;
+  double title_relevance_warn_below = 4;
+}
+
+// M4. Only the distinct block types carry a band; the other three are context shown beside
+// the badge (QUAL-10).
+message QualityComposition {
+  optional double char_count = 1;
+  optional double photo_count = 2;
+  optional double distinct_block_types = 3;
+  optional double average_sentence_length = 4;
+  double distinct_block_types_warn_at_or_below = 5;
+}
+
+// One metric's row.
+message QualityReading {
+  QualityMetric metric = 1;
+  QualityVerdict verdict = 2;
+  // The 발행됨 count the metric needs, and the account's own count (QUAL-12). In a
+  // GetPostMeasurement answer they mean something on M2 only, the one per-post metric that
+  // reads the published window.
+  int32 minimum = 3;
+  int32 published_count = 4;
+  // The exact text ticking this metric adds to the write prompt, in the post's target
+  // language. Set only by GetAccountQuality, and only on OVER_BAND.
+  string rule_text = 5;
+  // The member set matches `metric`.
+  oneof values {
+    QualityTitleSaturation title_saturation = 6;
+    QualityCrossPostPhrases cross_post_phrases = 7;
+    QualityInPostRepetition in_post_repetition = 8;
+    QualityComposition composition = 9;
+  }
+}
+
+message GetPostMeasurementRequest {
+  string slug = 1;
+}
+message GetPostMeasurementResponse {
+  // The content revision the readings describe (QUAL-3).
+  int64 content_revision = 1;
+  // M2, M3 and M4 in that order, never M1 (QUAL-36).
+  repeated QualityReading readings = 2;
+}
+
+// It takes a post's slug because a rule text renders in that post's target language.
+message GetAccountQualityRequest {
+  string slug = 1;
+}
+message GetAccountQualityResponse {
+  // Always all four metrics, in enum order (POST-81).
+  repeated QualityReading readings = 1;
+}

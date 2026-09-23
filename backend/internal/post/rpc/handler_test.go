@@ -46,23 +46,63 @@ func TestToConnectErrorMapsEveryDomainError(t *testing.T) {
 		{"video container", "create upload", post.ErrUnsupportedVideo, connect.CodeInvalidArgument, "UPLOAD_VIDEO_UNSUPPORTED"},
 		{"video", "confirm upload", post.ErrInvalidVideo, connect.CodeInvalidArgument, "UPLOAD_VIDEO_INVALID"},
 		{"answer invalid", "save draft", post.ErrTemplateAnswerInvalid, connect.CodeInvalidArgument, "POST_TEMPLATE_ANSWER_INVALID"},
+		{"published", "save post content", post.ErrPostPublished, connect.CodeFailedPrecondition, "POST_PUBLISHED_LOCKED"},
+		{"published url", "save published url", post.ErrPublishedURLInvalid, connect.CodeInvalidArgument, "POST_PUBLISHED_URL_INVALID"},
+		{"field missing", "save draft", post.ErrFieldNotFound, connect.CodeNotFound, "POST_FIELD_NOT_FOUND"},
+		{"quality rule", "save post generation options", post.ErrQualityRuleInvalid, connect.CodeInvalidArgument, "POST_QUALITY_RULE_INVALID"},
 	}
 
 	for _, test := range cases {
 		t.Run(test.name, func(t *testing.T) {
-			// Wrapped, as the service actually returns them.
-			got := toConnectError(test.op, errors.Join(errors.New("private context"), test.err))
-			if connect.CodeOf(got) != test.code {
-				t.Errorf("code = %v, want %v", connect.CodeOf(got), test.code)
-			}
-			detail := postAppErrorDetail(t, got)
-			if detail.GetReason() != test.reason || !reflect.DeepEqual(detail.GetParams(), map[string]string(nil)) {
-				t.Errorf("detail = %#v, want reason %q", detail, test.reason)
-			}
-			if strings.Contains(got.Error(), "private") {
-				t.Errorf("private detail leaked: %v", got)
+			// Wrapped, as the service actually returns them, and bare, as a handler raises
+			// one before the service is called.
+			for shape, err := range map[string]error{
+				"wrapped": errors.Join(errors.New("private context"), test.err),
+				"bare":    test.err,
+			} {
+				got := toConnectError(test.op, err)
+				if connect.CodeOf(got) != test.code {
+					t.Errorf("%s: code = %v, want %v", shape, connect.CodeOf(got), test.code)
+				}
+				detail := postAppErrorDetail(t, got)
+				if detail.GetReason() != test.reason || !reflect.DeepEqual(detail.GetParams(), map[string]string(nil)) {
+					t.Errorf("%s: detail = %#v, want reason %q", shape, detail, test.reason)
+				}
+				if strings.Contains(got.Error(), "private") {
+					t.Errorf("%s: private detail leaked: %v", shape, got)
+				}
 			}
 		})
+	}
+}
+
+// The published address has a wire shape before it has a behaviour (T329). Until then the
+// procedure still answers only a session, and it answers that session Unimplemented with no
+// reason, so the failure catalogue gains nothing it would have to translate.
+func TestSavePostPublishedUrlRequiresASessionAndIsNotYetImplemented(t *testing.T) {
+	handler := NewHandler(nil)
+	request := connect.NewRequest(&postpilotv1.SavePostPublishedUrlRequest{Slug: "20260924-jeju", Url: "https://blog.naver.com/alice/1"})
+
+	_, err := handler.SavePostPublishedUrl(context.Background(), request)
+	if connect.CodeOf(err) != connect.CodeUnauthenticated || postAppErrorDetail(t, err).GetReason() != "AUTH_REQUIRED" {
+		t.Fatalf("anonymous = %v", err)
+	}
+
+	_, err = handler.SavePostPublishedUrl(auth.WithUser(context.Background(), "alice"), request)
+	if connect.CodeOf(err) != connect.CodeUnimplemented {
+		t.Fatalf("signed in = %v, want unimplemented", err)
+	}
+	var connectErr *connect.Error
+	if !errors.As(err, &connectErr) || len(connectErr.Details()) != 0 {
+		t.Fatalf("signed in carries a reason: %v", err)
+	}
+
+	fields := (&postpilotv1.SavePostPublishedUrlRequest{}).ProtoReflect().Descriptor().Fields()
+	for i := 0; i < fields.Len(); i++ {
+		switch name := string(fields.Get(i).Name()); name {
+		case "user_id", "account_id", "owner_id":
+			t.Fatalf("SavePostPublishedUrlRequest carries %s", name)
+		}
 	}
 }
 

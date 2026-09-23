@@ -119,6 +119,15 @@ var (
 	// naming the same one. Both are the client sending something no screen can produce, so
 	// they share a refusal rather than each carrying their own wire reason.
 	ErrTemplateAnswerInvalid = errors.New("a template answer needs a label, and one label at most once")
+	// ErrPostPublished is any write to a published post other than replacing or clearing its
+	// address and deleting it (POST-86 names the way out: clear the address).
+	ErrPostPublished = errors.New("post is published")
+	// ErrPublishedURLInvalid is an address that is not a Naver Blog post's (POST-77).
+	ErrPublishedURLInvalid = errors.New("not a naver blog post address")
+	// ErrFieldNotFound is a 분야 that is not on the product's list (QUAL-23).
+	ErrFieldNotFound = errors.New("blog field not found")
+	// ErrQualityRuleInvalid is a quality tick that names none of the four metrics.
+	ErrQualityRuleInvalid = errors.New("quality rule is invalid")
 )
 
 // TemplateAnswer is what a post answers to one data field its template declared (POST-62).

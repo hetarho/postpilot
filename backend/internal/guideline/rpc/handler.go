@@ -89,6 +89,15 @@ func (h *Handler) DeleteGuideline(ctx context.Context, req *connect.Request[post
 	return connect.NewResponse(&postpilotv1.DeleteGuidelineResponse{}), nil
 }
 
+// UpdateGuidelinePreset is a placeholder until the preset exists (T342), answering
+// Unimplemented with no reason, as the post context's published-address placeholder does.
+func (h *Handler) UpdateGuidelinePreset(ctx context.Context, _ *connect.Request[postpilotv1.UpdateGuidelinePresetRequest]) (*connect.Response[postpilotv1.UpdateGuidelinePresetResponse], error) {
+	if _, err := actingUser(ctx); err != nil {
+		return nil, err
+	}
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("the guideline preset is not available yet"))
+}
+
 // ListGuidelineCandidates serves the review list. queue_full comes from the server because
 // the pending bound is server-side: the client relays it rather than predicting it, exactly
 // as it does for the account guideline cap.
@@ -141,7 +150,8 @@ func fromProtoScope(scope postpilotv1.GuidelineScope) (guideline.Scope, error) {
 }
 
 // toConnectError maps the context's sentinels to wire codes. A foreign guideline is NotFound
-// like an unknown one — the two must not be distinguishable — and so is a foreign template.
+// like an unknown one — the two must not be distinguishable — and so is a foreign template
+// and a 분야 the product does not list.
 func toConnectError(op string, err error) error {
 	var tooLong *guideline.TextTooLongError
 	var atCap *guideline.AccountCapError
@@ -162,6 +172,8 @@ func toConnectError(op string, err error) error {
 		return rpcserver.NewAppError(connect.CodeAlreadyExists, "guideline text already exists", postpilotv1.FailureReason_GUIDELINE_TEXT_TAKEN, nil)
 	case errors.Is(err, guideline.ErrTemplateNotFound):
 		return rpcserver.NewAppError(connect.CodeNotFound, "scoped template not found", postpilotv1.FailureReason_GUIDELINE_TEMPLATE_NOT_FOUND, nil)
+	case errors.Is(err, guideline.ErrFieldNotFound):
+		return rpcserver.NewAppError(connect.CodeNotFound, "scoped blog field not found", postpilotv1.FailureReason_GUIDELINE_FIELD_NOT_FOUND, nil)
 	case errors.Is(err, guideline.ErrNotFound):
 		return rpcserver.NewAppError(connect.CodeNotFound, "guideline not found", postpilotv1.FailureReason_GUIDELINE_NOT_FOUND, nil)
 	case errors.Is(err, guideline.ErrCandidateNotFound):

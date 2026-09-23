@@ -95,6 +95,16 @@ func (h *Handler) FinalizePost(ctx context.Context, req *connect.Request[postpil
 	return connect.NewResponse(&postpilotv1.FinalizePostResponse{Post: toProtoPost(saved)}), nil
 }
 
+// SavePostPublishedUrl is a placeholder until the published status exists (T329). Like the
+// clip render refusal it answers Unimplemented with no reason: nothing a browser can do
+// changes the answer, so there is nothing for the failure catalogue to say.
+func (h *Handler) SavePostPublishedUrl(ctx context.Context, _ *connect.Request[postpilotv1.SavePostPublishedUrlRequest]) (*connect.Response[postpilotv1.SavePostPublishedUrlResponse], error) {
+	if _, err := actingUser(ctx); err != nil {
+		return nil, err
+	}
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("saving a published address is not available yet"))
+}
+
 func (h *Handler) GetPost(ctx context.Context, req *connect.Request[postpilotv1.GetPostRequest]) (*connect.Response[postpilotv1.GetPostResponse], error) {
 	userID, err := actingUser(ctx)
 	if err != nil {
@@ -306,6 +316,14 @@ func toConnectError(op string, err error) error {
 		return rpcserver.NewAppError(connect.CodeNotFound, "template not found", postpilotv1.FailureReason_PURPOSE_NOT_FOUND, nil)
 	case errors.Is(err, post.ErrVoiceDeleted):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "voice is deleted", postpilotv1.FailureReason_VOICE_DELETED, nil)
+	case errors.Is(err, post.ErrPostPublished):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post is published", postpilotv1.FailureReason_POST_PUBLISHED_LOCKED, nil)
+	case errors.Is(err, post.ErrPublishedURLInvalid):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "not a naver blog post address", postpilotv1.FailureReason_POST_PUBLISHED_URL_INVALID, nil)
+	case errors.Is(err, post.ErrFieldNotFound):
+		return rpcserver.NewAppError(connect.CodeNotFound, "blog field not found", postpilotv1.FailureReason_POST_FIELD_NOT_FOUND, nil)
+	case errors.Is(err, post.ErrQualityRuleInvalid):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "quality rule is invalid", postpilotv1.FailureReason_POST_QUALITY_RULE_INVALID, nil)
 	default:
 		slog.Error(op+" failed", "err", err)
 		return rpcserver.NewAppError(connect.CodeInternal, op+" failed", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)

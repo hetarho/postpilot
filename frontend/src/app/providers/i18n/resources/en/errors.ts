@@ -33,6 +33,12 @@ export const errors = {
   POST_TARGET_LANGUAGE_UNSUPPORTED: 'That post language is not supported.',
   POST_TEMPLATE_ANSWER_TOO_LONG: 'That is too long. Up to {{max}} characters.',
   POST_TEMPLATE_ANSWER_INVALID: 'Check the fields you filled in.',
+  POST_PUBLISHED_LOCKED:
+    'A published post cannot be changed. Clear its address on Finish to change it again.',
+  POST_PUBLISHED_URL_INVALID:
+    'Only a Naver Blog post address can be saved. Paste a post address on blog.naver.com or m.blog.naver.com.',
+  POST_FIELD_NOT_FOUND: 'That category is not available. Pick one again.',
+  POST_QUALITY_RULE_INVALID: 'The quality rules could not be saved. Check them and try again.',
   POST_FILENAME_TAKEN: 'A photo with that filename already exists.',
   UPLOAD_INVALID: 'Check the uploaded photo and try again.',
   UPLOAD_NOT_FOUND: 'Could not find the upload.',
@@ -175,6 +181,7 @@ export const errors = {
     'Pick the scope again: leave templates empty for everything, or pick at least one for specific templates.',
   GUIDELINE_TEMPLATE_NOT_FOUND:
     'Could not find the purpose you picked. Refresh the list and try again.',
+  GUIDELINE_FIELD_NOT_FOUND: 'That category is not available. Pick one again.',
   GUIDELINE_LIMIT_REACHED:
     'You can save at most {{max}} guidelines. Delete one you no longer use and try again.',
   MODEL_STAGE_REQUIRED: 'Select an AI stage.',

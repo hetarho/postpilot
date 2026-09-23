@@ -253,6 +253,14 @@ enum FailureReason {
   // the badges offered with a verdict are not ones this comparison can carry: an unknown
   // candidate, a badge the stage does not offer, or a note without the badge it belongs to.
   EXPERIMENT_BADGES_INVALID = 234;
+  // 발행됨 and 분야 (POST r11, QUAL r3, GUIDE r5): the published lock, the Naver-only address,
+  // an unknown 분야 on a post or a guideline, and a quality tick that names none of the four
+  // metrics.
+  POST_PUBLISHED_LOCKED = 235;
+  POST_PUBLISHED_URL_INVALID = 236;
+  POST_FIELD_NOT_FOUND = 237;
+  POST_QUALITY_RULE_INVALID = 238;
+  GUIDELINE_FIELD_NOT_FOUND = 239;
 }
 
 // AppErrorDetail accompanies a synchronous Connect status. reason is a stable product

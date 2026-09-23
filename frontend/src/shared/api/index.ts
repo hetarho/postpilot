@@ -182,6 +182,7 @@ export type { PingResponse } from './gen/postpilot/v1/health_pb'
 export { GenerationService, PostService } from './gen/postpilot/v1/post_pb'
 export {
   AttachmentKind,
+  BlogField as ProtoBlogField,
   BlockSchema,
   BlockType,
   ConfirmUploadResponseSchema,

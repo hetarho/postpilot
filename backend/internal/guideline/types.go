@@ -44,6 +44,9 @@ var (
 	// carrying template ids, or `templates` carrying none. Silently repairing either would
 	// save a scope the user did not ask for.
 	ErrScopeShape = errors.New("guideline scope shape is invalid")
+	// ErrFieldNotFound is a 분야 in a scope or in the preset's set that is not on the
+	// product's list. Like a foreign template, nothing about the request is applied.
+	ErrFieldNotFound = errors.New("guideline blog field not found")
 )
 
 // TextTooLongError carries both counts so the handler can report the limit that was hit

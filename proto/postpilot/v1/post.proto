@@ -6,6 +6,7 @@ import "postpilot/v1/provider.proto";
 import "postpilot/v1/template.proto";
 import "postpilot/v1/error.proto";
 import "postpilot/v1/language.proto";
+import "postpilot/v1/quality.proto";
 
 option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
 
@@ -21,6 +22,9 @@ service PostService {
   rpc SavePostContent(SavePostContentRequest) returns (SavePostContentResponse) {}
   rpc SavePostGenerationOptions(SavePostGenerationOptionsRequest) returns (SavePostGenerationOptionsResponse) {}
   rpc FinalizePost(FinalizePostRequest) returns (FinalizePostResponse) {}
+  // Records, replaces or clears the Naver Blog address of a finalized or published post
+  // (POST-73, POST-75). It is the only way into and out of published.
+  rpc SavePostPublishedUrl(SavePostPublishedUrlRequest) returns (SavePostPublishedUrlResponse) {}
   rpc GetPost(GetPostRequest) returns (GetPostResponse) {}
   rpc ListPosts(ListPostsRequest) returns (ListPostsResponse) {}
   rpc DeletePost(DeletePostRequest) returns (DeletePostResponse) {}
@@ -61,6 +65,46 @@ enum AttachmentKind {
   ATTACHMENT_KIND_UNSPECIFIED = 0;
   ATTACHMENT_KIND_PHOTO = 1;
   ATTACHMENT_KIND_VIDEO = 2;
+}
+
+// A post's 분야, in the product's own v1 list (QUAL-23). UNSPECIFIED is 없음, a real answer
+// rather than a missing one.
+//
+// SQL stores the ASCII id (restaurant, cafe, …), never the number: the number belongs to this
+// contract and the id to the product.
+enum BlogField {
+  BLOG_FIELD_UNSPECIFIED = 0;
+  BLOG_FIELD_RESTAURANT = 1;
+  BLOG_FIELD_CAFE = 2;
+  BLOG_FIELD_DOMESTIC_TRAVEL = 3;
+  BLOG_FIELD_FASHION_BEAUTY = 4;
+  BLOG_FIELD_PRODUCT_REVIEW = 5;
+  BLOG_FIELD_PARENTING_MARRIAGE = 6;
+  BLOG_FIELD_PETS = 7;
+  BLOG_FIELD_INTERIOR_DIY = 8;
+  BLOG_FIELD_DAILY_LIFE = 9;
+}
+
+// Where a replacement candidate stands (GEN-53).
+enum ReplacementSurface {
+  REPLACEMENT_SURFACE_UNSPECIFIED = 0;
+  REPLACEMENT_SURFACE_TITLE = 1;
+  REPLACEMENT_SURFACE_TAG = 2;
+  REPLACEMENT_SURFACE_BODY = 3;
+}
+
+// A phrase the write pass offers to replace, with the phrases offered for it, as captured at
+// write time (GEN-53, POST-79).
+//
+// `index` is the tag's index for TAG, the block's index for BODY and 0 for TITLE. Blocks carry
+// no identity, so the candidate holds only while `source` still stands at that place: a move,
+// delete or insert that shifts an index drops it silently, and a dropped offer changes
+// nothing. `phrases` holds at most 3.
+message ReplacementCandidate {
+  ReplacementSurface surface = 1;
+  int32 index = 2;
+  string source = 3;
+  repeated string phrases = 4;
 }
 
 // A position a template reserved for content the app cannot invent — a place link, an
@@ -130,7 +174,8 @@ message Post {
   string slug = 1;
   string title = 2;
   string memo = 3;
-  // draft | review | finalized. Machine output moves it to review; only FinalizePost finalizes it.
+  // draft | review | finalized | published. Machine output moves it to review; only
+  // FinalizePost finalizes it; SavePostPublishedUrl is the only way into and out of published.
   string status = 4;
   repeated Image images = 5;
   string created_at = 6;
@@ -169,6 +214,18 @@ message Post {
   // Whether a run may carry the account's memories (MEM-18). Default off, and off is the
   // shape every draft saved before memories existed decodes as.
   bool use_memory = 26;
+  // The post's Naver Blog address, '' when it has none. Stored normalized, so a mobile share
+  // address reads as its https://blog.naver.com/… form (POST-77).
+  string published_url = 27;
+  // RFC3339, or '' when unpublished. Replacing the address restamps it (POST-75).
+  string published_at = 28;
+  // UNSPECIFIED is 없음, the default (POST-82).
+  BlogField field = 29;
+  // The latest write pass's offers (GEN-53). Each holds only while its source still stands
+  // where it was captured.
+  repeated ReplacementCandidate replacement_candidates = 30;
+  // The quality rules ticked for this post's runs, saved as a generation option (POST-81).
+  repeated QualityMetric quality_rules = 31;
 }
 
 message Image {
@@ -265,6 +322,13 @@ message ReobserveSelection {
   repeated string files = 1;
 }
 
+// The quality rules ticked on the writing brief (POST-81). A MESSAGE for ReobserveSelection's
+// reason: presence is the contract. Absent keeps the saved ticks, present replaces them, and
+// present with no `metrics` clears them.
+message QualityRuleTicks {
+  repeated QualityMetric metrics = 1;
+}
+
 message StartGenerationRequest {
   string post_slug = 1;
   ModelRef observe_model = 2;
@@ -319,6 +383,9 @@ message SavePostDraftRequest {
   // changes nothing, and nothing here ever deletes an answer. Clearing one is an empty
   // `text`, which the enqueue reads the same way it reads a switched-off field.
   repeated TemplateAnswer template_answers = 7;
+  // Presence decides the meaning, as for template_id: absent keeps the stored 분야 (what
+  // ordinary autosave sends), UNSPECIFIED clears it to 없음, and any other value assigns it.
+  optional BlogField field = 8;
 }
 
 message SavePostDraftResponse {
@@ -344,6 +411,9 @@ message SavePostGenerationOptionsRequest {
   // a generation option, so it rides this save rather than the draft's — and it changes no
   // status, revision, baseline or learning eligibility (MEM-18, POST-71).
   optional bool use_memory = 4;
+  // Message presence decides (see QualityRuleTicks): absent keeps the saved ticks, present
+  // replaces them, and present and empty clears them.
+  QualityRuleTicks quality_rules = 5;
 }
 message SavePostGenerationOptionsResponse { Post post = 1; }
 
@@ -352,6 +422,13 @@ message FinalizePostRequest {
   int64 expected_revision = 2;
 }
 message FinalizePostResponse { Post post = 1; }
+
+message SavePostPublishedUrlRequest {
+  string slug = 1;
+  // A trimmed empty url clears the address.
+  string url = 2;
+}
+message SavePostPublishedUrlResponse { Post post = 1; }
 
 message GetPostRequest {
   string slug = 1;
