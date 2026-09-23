@@ -51,7 +51,6 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T331 | Quality metrics M1–M4, bands, verdicts and rule texts as pure code | QUAL ARCH | T325 | todo |
 | T332 | Rebuild guidelines for the fields scope, and add the 분야 link and preset tables | GUIDE ARCH | T323 | todo |
 | T333 | Templates store, validate and render a title area into the frozen brief | TMPL GEN ARCH | T322 T323 T324 T327 | todo |
 | T334 | A published post refuses every write except replacing or clearing its URL and deleting it | POST GEN MODEL ARCH | T329 | todo |
@@ -76,10 +75,12 @@
 | T353 | Toggling 기억 사용 keeps the post's 목표 글자 수 | POST MEM ARCH | - | todo |
 
 ## next
-- implement-task T331 (then the dep order in the tasks table; T331, T332 and T334 are unblocked)
+- implement-task T332 (then the dep order in the tasks table; T332, T333, T334 and T335 are unblocked)
 - T352 and T353 are independent pre-existing bug fixes (frozen memories never reach a durable generate; the 기억 사용 toggle clears 목표 글자 수)
 - create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 ## log
+- 260924 T331 done; quality measures M1-M4 per post and per account (absent rather than zero when uncomputable), judges each against the pinned bands and minimums with four verdicts, names the M2 run standing in the most window posts, and renders the eight rule texts; no provider, usage or job dependency; full BE gate passes (p35)
+- 260924 T331 claimed (p35)
 - 260924 T330 done; a write with frozen 분야 phrases carries them once in the per-post half with the replacements instruction and schema, and keeps only candidates the final content bears out (bounded 20 x 3); without phrases nothing changes; BE gate passes (p35)
 - 260924 T330 claimed (p35)
 - 260924 T329 done; a finalized post becomes published from a pasted Naver Blog address (normalized, shared fixture), is replaced or cleared back to finalized, stays learnable, and exposes the published window; only content-writing jobs block the save; BE gate, gen:sql and lint:retirement pass (p35)
@@ -98,5 +99,3 @@
 - 260924 T323 claimed (p35)
 - 260924 T322 done; the 발행됨/분야/quality/preset/title-area wire exists on both sides with the five new reasons emitted, the 분야 catalogue in `quality` and its closed wire mappers; 2336 FE tests, full BE gate, codegen reproduction and buf lint/breaking pass (p35)
 - 260924 T322 claimed (p35)
-- 260924 create-task QUAL POST GEN GUIDE TMPL complete; T322..T351 from the handoff plan (QUAL r3 closed the M3/M4 rule-text gap), plus T352 T353 for two pre-existing bugs found while writing them; handoff folder removed
-- 260924 update-ssot QUAL complete; r3 decides M3's and M4's rule texts (no repeated noun, cover the title; at least three block types from what the material fits) and makes every rule text yield to natural writing
