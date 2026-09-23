@@ -31,6 +31,9 @@ export const EditorDockHeader = forwardRef<
     onTemplateSelect: (id: string) => void
     onTargetLanguageSelect: (language: ContentLanguage) => void
     onBriefSaved: (values: { targetLength?: number; tagCount: number }) => void
+    /** A published post (POST-86): every post write here is off, and none of these fields names
+     *  a reason — ① says it once, above its actions. */
+    locked?: boolean
   }
 >(function EditorDockHeader(
   {
@@ -45,6 +48,7 @@ export const EditorDockHeader = forwardRef<
     onTemplateSelect,
     onTargetLanguageSelect,
     onBriefSaved,
+    locked = false,
   },
   briefRef,
 ) {
@@ -63,6 +67,7 @@ export const EditorDockHeader = forwardRef<
       }
       onTargetLanguageSelect={onTargetLanguageSelect}
       photoCount={post?.images.length ?? 0}
+      locked={locked}
       options={
         post
           ? {
@@ -90,9 +95,10 @@ export const EditorDockHeader = forwardRef<
       ownerId={ownerId}
       value={voiceId}
       current={post?.voice}
-      blocked={post ? reassignmentBlocker(post) : ''}
+      blocked={locked || !post ? '' : reassignmentBlocker(post)}
       confirm={Boolean(post)}
       onSelect={onVoiceSelect}
+      disabled={locked}
       className="min-w-0 flex-1"
     />
   )
@@ -102,8 +108,9 @@ export const EditorDockHeader = forwardRef<
       ownerId={ownerId}
       value={templateId}
       current={post?.template}
-      jobRunning={Boolean(post?.activeJob && !isTerminal(post.activeJob))}
+      jobRunning={!locked && Boolean(post?.activeJob && !isTerminal(post.activeJob))}
       onSelect={onTemplateSelect}
+      disabled={locked}
       className="min-w-0 flex-1"
     />
   )

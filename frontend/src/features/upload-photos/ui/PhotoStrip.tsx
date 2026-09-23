@@ -21,6 +21,8 @@ interface PhotoStripProps {
   deleteFailure?: AppFailure
   onRetry: (id: string) => void
   onDismiss: (id: string) => void
+  /** Shows the attachments without their delete controls, for a post that takes no write. */
+  readOnly?: boolean
 }
 
 /** Saved photos first, then the ones still on their way. */
@@ -35,6 +37,7 @@ export function PhotoStrip({
   deleteFailure,
   onRetry,
   onDismiss,
+  readOnly = false,
 }: PhotoStripProps) {
   const { t } = useTranslation(['posts', 'common'])
   // The photo the confirm sheet is asking about, and whether this sheet has already fired its
@@ -112,19 +115,21 @@ export function PhotoStrip({
               height={image.height}
               dimmed={deletingId === image.id}
             >
-              <Button
-                variant="danger"
-                size="icon"
-                onClick={() => {
-                  setConfirmingId(image.id)
-                  setAttempted(false)
-                }}
-                disabled={deletingId === image.id}
-                aria-label={t('upload.deleteAria', { ns: 'posts', filename: image.filename })}
-                className="bg-media-scrim-bg hover:bg-media-scrim-bg active:bg-media-scrim-bg absolute top-1 right-1"
-              >
-                <X aria-hidden="true" className="size-5" />
-              </Button>
+              {!readOnly && (
+                <Button
+                  variant="danger"
+                  size="icon"
+                  onClick={() => {
+                    setConfirmingId(image.id)
+                    setAttempted(false)
+                  }}
+                  disabled={deletingId === image.id}
+                  aria-label={t('upload.deleteAria', { ns: 'posts', filename: image.filename })}
+                  className="bg-media-scrim-bg hover:bg-media-scrim-bg active:bg-media-scrim-bg absolute top-1 right-1"
+                >
+                  <X aria-hidden="true" className="size-5" />
+                </Button>
+              )}
             </Thumbnail>
           </li>
         ))}
@@ -136,19 +141,21 @@ export function PhotoStrip({
               contentType={video.contentType}
               dimmed={deletingId === video.id}
             >
-              <Button
-                variant="danger"
-                size="icon"
-                onClick={() => {
-                  setConfirmingId(video.id)
-                  setAttempted(false)
-                }}
-                disabled={deletingId === video.id}
-                aria-label={t('upload.deleteAria', { ns: 'posts', filename: video.filename })}
-                className="bg-media-scrim-bg hover:bg-media-scrim-bg active:bg-media-scrim-bg absolute top-1 right-1"
-              >
-                <X aria-hidden="true" className="size-5" />
-              </Button>
+              {!readOnly && (
+                <Button
+                  variant="danger"
+                  size="icon"
+                  onClick={() => {
+                    setConfirmingId(video.id)
+                    setAttempted(false)
+                  }}
+                  disabled={deletingId === video.id}
+                  aria-label={t('upload.deleteAria', { ns: 'posts', filename: video.filename })}
+                  className="bg-media-scrim-bg hover:bg-media-scrim-bg active:bg-media-scrim-bg absolute top-1 right-1"
+                >
+                  <X aria-hidden="true" className="size-5" />
+                </Button>
+              )}
             </VideoTile>
           </li>
         ))}

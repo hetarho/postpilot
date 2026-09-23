@@ -25,6 +25,8 @@ interface PostVoiceSelectProps {
    *  since nothing has been learned under either voice. */
   confirm: boolean
   onSelect: (voiceId: string) => Promise<void> | void
+  /** Off for a reason the caller states elsewhere, so this field adds none of its own. */
+  disabled?: boolean
   className?: string
 }
 
@@ -43,6 +45,7 @@ export function PostVoiceSelect({
   blocked = '',
   confirm,
   onSelect,
+  disabled: off = false,
   className,
 }: PostVoiceSelectProps) {
   const { t } = useTranslation(['voices', 'common'])
@@ -54,7 +57,7 @@ export function PostVoiceSelect({
   const [target, setTarget] = useState('')
   const [applying, setApplying] = useState(false)
   const [error, setError] = useState('')
-  const disabled = Boolean(blocked) || isPending || applying
+  const disabled = off || Boolean(blocked) || isPending || applying
   // The post's own voice is listed even while the directory is still loading — a select with no
   // option under a post that plainly has a voice reads as broken — and a deleted one stays
   // listed, disabled, so the field can still say what the post is written in.

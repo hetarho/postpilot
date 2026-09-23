@@ -5,6 +5,7 @@ it('starts on the step the post’s status belongs to, unknown statuses included
   expect(draftStepStart('draft').step).toBe('generate')
   expect(draftStepStart('review').step).toBe('refine')
   expect(draftStepStart('finalized').step).toBe('finish')
+  expect(draftStepStart('published').step).toBe('finish')
   expect(draftStepStart('').step).toBe('generate')
   expect(draftStepStart('archived-in-some-later-plan').step).toBe('generate')
 })
@@ -29,4 +30,10 @@ it('follows every later status change, including one back to an earlier step', (
   state = draftStep(state, { type: 'select', step: 'refine' })
   state = draftStep(state, { type: 'status', status: 'draft' })
   expect(state).toEqual({ step: 'generate', followed: 'draft' })
+})
+
+it('keeps the reader on 글 완성 when a finalized post is published', () => {
+  let state = draftStepStart('finalized')
+  state = draftStep(state, { type: 'status', status: 'published' })
+  expect(state).toEqual({ step: 'finish', followed: 'published' })
 })

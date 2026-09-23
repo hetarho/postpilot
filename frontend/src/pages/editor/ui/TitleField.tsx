@@ -16,11 +16,14 @@ export function TitleField({
   onChange,
   fieldRef,
   nextRef,
+  readOnly = false,
 }: {
   value: string
   onChange: (value: string) => void
   fieldRef: RefObject<HTMLTextAreaElement | null>
   nextRef: RefObject<HTMLTextAreaElement | null>
+  /** A published post's 가제: readable and selectable, never edited (POST-86). */
+  readOnly?: boolean
 }) {
   const { t } = useTranslation('posts')
   return (
@@ -40,6 +43,7 @@ export function TitleField({
         rows={1}
         autoGrow
         value={value}
+        readOnly={readOnly}
         // A pasted newline would otherwise be saved inside the title; the single-line input this
         // replaced dropped one for free.
         onChange={(event) => onChange(event.target.value.replace(/\n/g, ' '))}

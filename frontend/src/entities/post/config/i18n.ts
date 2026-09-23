@@ -6,7 +6,10 @@ export const i18n = {
   ko: {
     title: '글',
     untitled: '제목 없음',
-    status: { draft: '초안', review: '검토', finalized: '확정' },
+    status: { draft: '초안', review: '검토', finalized: '확정', published: '발행됨' },
+    published: {
+      locked: '발행된 글은 바꿀 수 없어요. 글 완성에서 발행 URL을 지우면 다시 고칠 수 있어요.',
+    },
     loadFailed: '글을 불러오지 못했어요.',
     generatedContent: '생성된 글',
     draftLabel: '초안',
@@ -159,7 +162,10 @@ export const i18n = {
   en: {
     title: 'Posts',
     untitled: 'Untitled',
-    status: { draft: 'Draft', review: 'Review', finalized: 'Finalized' },
+    status: { draft: 'Draft', review: 'Review', finalized: 'Finalized', published: 'Published' },
+    published: {
+      locked: 'A published post cannot be changed. Clear its URL in Finish to reopen it.',
+    },
     loadFailed: 'Could not load the post.',
     generatedContent: 'Generated post',
     draftLabel: 'Draft',

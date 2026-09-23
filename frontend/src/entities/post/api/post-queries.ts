@@ -50,6 +50,8 @@ export function toPostDraft(post: Post): PostDraft {
     useMemory: post.useMemory,
     finalizedRevision: post.finalizedRevision,
     finalizedAt: post.finalizedAt,
+    publishedUrl: post.publishedUrl,
+    publishedAt: post.publishedAt,
     targetLanguage: requireContentLanguage(post.targetLanguage),
     contentLanguage: contentLanguageFromProto(post.contentLanguage),
   }

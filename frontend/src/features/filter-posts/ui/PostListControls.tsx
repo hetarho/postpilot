@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next'
-import type { PostStatus } from '@/entities/post'
+import { POST_STATUSES, type PostStatus } from '@/entities/post'
 import { ListControls } from '@/shared/ui'
 import type { PostNarrowing } from '../model/narrow'
 
-const STATUSES: readonly (PostStatus | 'all')[] = ['all', 'draft', 'review', 'finalized']
+const STATUSES: readonly (PostStatus | 'all')[] = ['all', ...POST_STATUSES]
 
 /** The post list's search field and status filter (POST-65, POST-66), over the shared
  *  `ListControls`. Both write straight to the URL through the caller, which is the single source

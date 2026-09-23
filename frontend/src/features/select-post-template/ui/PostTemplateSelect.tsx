@@ -28,6 +28,8 @@ interface PostTemplateSelectProps {
    *  only decides whether the note about the frozen brief is shown. */
   jobRunning?: boolean
   onSelect: (templateId: string) => Promise<void> | void
+  /** Off for a reason the caller states elsewhere, so this field adds none of its own. */
+  disabled?: boolean
   className?: string
 }
 
@@ -45,6 +47,7 @@ export function PostTemplateSelect({
   current,
   jobRunning = false,
   onSelect,
+  disabled = false,
   className,
 }: PostTemplateSelectProps) {
   const { t } = useTranslation(['templates', 'common'])
@@ -104,7 +107,7 @@ export function PostTemplateSelect({
             value={value}
             options={options}
             onChange={onChange}
-            disabled={applying || isError || (isPending && !unlisted)}
+            disabled={disabled || applying || isError || (isPending && !unlisted)}
             aria-invalid={error || isError ? true : undefined}
             aria-describedby={describedBy || undefined}
           />

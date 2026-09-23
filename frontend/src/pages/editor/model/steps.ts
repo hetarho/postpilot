@@ -20,6 +20,8 @@ const BY_STATUS: Record<PostStatus, EditorStep> = {
   draft: 'generate',
   review: 'refine',
   finalized: 'finish',
+  // A published post has nothing left to write (POST-44): it opens where its address lives.
+  published: 'finish',
 }
 
 /** The step a post's status puts it in. The status IS the state — nothing new is persisted, so a

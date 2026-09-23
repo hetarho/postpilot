@@ -1,4 +1,4 @@
-import type { PostContent } from '@/shared/api'
+import { appFailureFromConnect, type PostContent } from '@/shared/api'
 import { createAutosaveQueue } from '@/shared/lib'
 import { ContentRevisionConflictError, copyPostContent } from '@/entities/post'
 
@@ -42,6 +42,9 @@ const queue = createAutosaveQueue<ContentSnapshot, bigint>({
   // keystroke, and the revision each save carries is the one the last answer returned.
   follow: 'debounce',
   conflict: (error) => error instanceof ContentRevisionConflictError,
+  // A post published in another tab refuses every content save (POST-86). Retrying would only
+  // repeat the refusal; the post's refetch unmounts the editor instead.
+  retry: (error) => appFailureFromConnect(error).reason !== 'POST_PUBLISHED_LOCKED',
   // A keystroke that lands back on what the server holds — or on what the request now out is
   // making it hold — is not a change, and a failing save keeps its own backoff.
   retryOnEdit: 'keep',

@@ -16,6 +16,9 @@ interface GenerationBriefProps {
   onTargetLanguageSelect: (language: ContentLanguage) => Promise<void> | void
   /** Decides whether the observe model is optional — a post with no photo never observes. */
   photoCount: number
+  /** A published post (POST-86): the post's own 글 언어 and options are shown and not changed.
+   *  The model selects stay usable — they are the account's settings, not the post's. */
+  locked?: boolean
   /** Absent for a draft with no post yet: the options have no slug to save against. */
   options?: {
     slug: string
@@ -47,6 +50,7 @@ export const GenerationBrief = forwardRef<PopoverHandle, GenerationBriefProps>(
       frozenLanguage,
       onTargetLanguageSelect,
       photoCount,
+      locked = false,
       options,
     },
     ref,
@@ -95,6 +99,7 @@ export const GenerationBrief = forwardRef<PopoverHandle, GenerationBriefProps>(
               contentLanguage={contentLanguage}
               frozenLanguage={frozenLanguage}
               onSelect={onTargetLanguageSelect}
+              disabled={locked}
             />
             {options && (
               <div>
@@ -106,7 +111,7 @@ export const GenerationBrief = forwardRef<PopoverHandle, GenerationBriefProps>(
                   slug={options.slug}
                   targetLength={options.targetLength}
                   tagCount={options.tagCount}
-                  disabled={options.disabled}
+                  disabled={locked || options.disabled}
                   onSaved={options.onSaved}
                   onClose={close}
                 />

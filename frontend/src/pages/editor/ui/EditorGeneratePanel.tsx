@@ -19,6 +19,7 @@ export function EditorGeneratePanel({
   answerFields,
   ensureSlug,
   job,
+  locked = false,
 }: {
   post: PostDraft
   ownerId: string
@@ -27,6 +28,8 @@ export function EditorGeneratePanel({
   answerFields: ReactNode
   ensureSlug: () => Promise<string>
   job?: GenerationJob
+  /** A published post: its material is shown and nothing in it is changed (POST-86). */
+  locked?: boolean
 }) {
   const { t } = useTranslation('posts')
   return (
@@ -37,8 +40,13 @@ export function EditorGeneratePanel({
       {/* At the foot of the memo and the data fields, which is what it is about: whether this
           draft's run may carry the account's memories (POST-71). It is NOT in the writing brief
           — it silently changes what a run may write. */}
-      <UseMemoriesField slug={post.slug} useMemory={post.useMemory} className="mt-6" />
-      <EditorPhotos post={post} ensureSlug={ensureSlug} />
+      <UseMemoriesField
+        slug={post.slug}
+        useMemory={post.useMemory}
+        disabled={locked}
+        className="mt-6"
+      />
+      <EditorPhotos post={post} ensureSlug={ensureSlug} locked={locked} />
       <EditorVoiceWarning ownerId={ownerId} voice={post.voice} />
 
       {post.pendingExperimentId && (!job || isTerminal(job)) && (

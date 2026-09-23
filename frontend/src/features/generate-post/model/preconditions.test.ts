@@ -241,3 +241,58 @@ describe('a post with a video', () => {
     expect(result.blocker).toBe('observe')
   })
 })
+
+// A published post takes no write at all (POST-86), so its refusal outranks every other one —
+// a deleted voice and a running job included — and it is not a setup blocker: the brief cannot
+// fix it, only clearing the post's URL on 글 완성 can.
+describe('a published post', () => {
+  const running = { status: 'running' }
+  const deleted = { deleted: true }
+  const locked = {
+    ok: false,
+    reason: '발행된 글은 바꿀 수 없어요. 글 완성에서 발행 URL을 지우면 다시 고칠 수 있어요.',
+    blocker: 'published',
+  }
+
+  it('refuses an ordinary generation before the voice, the job or the models', () => {
+    expect(
+      ordinaryGenerationPreconditions([image], undefined, undefined, running, deleted, [], true),
+    ).toEqual(locked)
+    expect(
+      ordinaryGenerationPreconditions([], undefined, text, undefined, undefined, [], true),
+    ).toEqual(locked)
+  })
+
+  it('refuses the comparison the same way', () => {
+    expect(
+      comparisonGenerationPreconditions([image], undefined, text, text, running, deleted, [], true),
+    ).toEqual(locked)
+    expect(
+      comparisonGenerationPreconditions([], undefined, text, textB, undefined, undefined, [], true),
+    ).toEqual(locked)
+  })
+
+  it('is not a setup blocker', () => {
+    const result = ordinaryGenerationPreconditions(
+      [],
+      undefined,
+      text,
+      undefined,
+      undefined,
+      [],
+      true,
+    )
+    expect(isSetupBlocker(result.blocker)).toBe(false)
+    expect(setupBlockerTarget(result.blocker)).toBeUndefined()
+  })
+
+  it('changes nothing for a post that is not published', () => {
+    expect(
+      ordinaryGenerationPreconditions([], undefined, text, undefined, undefined, [], false),
+    ).toEqual({ ok: true, reason: '' })
+    expect(
+      comparisonGenerationPreconditions([], undefined, text, textB, running, undefined, [], false)
+        .blocker,
+    ).toBe('activeJob')
+  })
+})

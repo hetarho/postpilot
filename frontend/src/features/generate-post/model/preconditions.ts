@@ -17,6 +17,7 @@ export interface GenerationModelSelection {
  *  which it answers with a way to go and set them up — from "a job is already running", which it
  *  answers by waiting. */
 export type GenerationBlocker =
+  | 'published'
   | 'voiceDeleted'
   | 'activeJob'
   | 'observe'
@@ -55,8 +56,9 @@ export type GenerationPreconditions =
   | { ok: true; reason: ''; blocker?: undefined }
   | { ok: false; reason: string; blocker: GenerationBlocker }
 
-/** Mirrors the server gate so an impossible generation never looks clickable. The voice comes
- *  first: a deleted voice refuses every machine result before any model is even asked about
+/** Mirrors the server gate so an impossible generation never looks clickable. A published post
+ *  comes first: it takes no write at all (POST-86), so nothing else about the run matters. Then
+ *  the voice: a deleted voice refuses every machine result before any model is even asked about
  *  (spec/legacy/policy/generation.md). */
 function sharedPreconditions(
   images: readonly Pick<PostImage, 'id'>[],
@@ -64,7 +66,14 @@ function sharedPreconditions(
   activeJob: Pick<GenerationJob, 'status'> | undefined,
   voice: Pick<VoiceRef, 'deleted'> | undefined,
   videos: readonly unknown[] = [],
+  published = false,
 ): GenerationPreconditions {
+  if (published)
+    return {
+      ok: false,
+      reason: i18next.t('published.locked', { ns: 'posts' }),
+      blocker: 'published',
+    }
   if (voice?.deleted) return { ok: false, reason: deletedVoiceAIReason(), blocker: 'voiceDeleted' }
   if (activeJob && activeJob.status !== 'done' && activeJob.status !== 'failed') {
     return {
@@ -115,8 +124,9 @@ export function ordinaryGenerationPreconditions(
   activeJob: Pick<GenerationJob, 'status'> | undefined,
   voice?: Pick<VoiceRef, 'deleted'>,
   videos: readonly unknown[] = [],
+  published = false,
 ): GenerationPreconditions {
-  const shared = sharedPreconditions(images, observeSelection, activeJob, voice, videos)
+  const shared = sharedPreconditions(images, observeSelection, activeJob, voice, videos, published)
   if (!shared.ok) return shared
   if (!writeSelection)
     return {
@@ -135,8 +145,9 @@ export function comparisonGenerationPreconditions(
   activeJob: Pick<GenerationJob, 'status'> | undefined,
   voice?: Pick<VoiceRef, 'deleted'>,
   videos: readonly unknown[] = [],
+  published = false,
 ): GenerationPreconditions {
-  const shared = sharedPreconditions(images, observeSelection, activeJob, voice, videos)
+  const shared = sharedPreconditions(images, observeSelection, activeJob, voice, videos, published)
   if (!shared.ok) return shared
   if (!writeSelectionA || !writeSelectionB)
     return {

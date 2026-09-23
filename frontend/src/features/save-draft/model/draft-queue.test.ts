@@ -64,6 +64,7 @@ function attach(
     voiceId?: string
     templateId?: string
     targetLanguage?: ContentLanguage
+    retry?: (cause: unknown) => boolean
   } = {},
 ) {
   const states: SaveState[] = []
@@ -75,6 +76,7 @@ function attach(
     templateId: options.templateId ?? '',
     targetLanguage: options.targetLanguage ?? 'ko',
     send,
+    retry: options.retry,
     onState: (state) => states.push(state),
     onMinted: (slug) => minted.push(slug),
   })
@@ -681,5 +683,129 @@ describe('the per-slug discard', () => {
 
   it('is a no-op for a slug with no queue', () => {
     expect(() => discardDraftQueue('never-attached')).not.toThrow()
+  })
+})
+
+/** A backend that refuses every save with `errors` in turn, then with its last one — the way the
+ *  server answers every save of a published post (POST-86). `holds` keeps the first requests
+ *  in flight until `open`. */
+function refusing(options: { errors?: Error[]; holds?: number } = {}) {
+  const locked = new Error('POST_PUBLISHED_LOCKED')
+  const errors = options.errors ?? [locked]
+  let holds = options.holds ?? 0
+  const sent: Array<{
+    draft: Draft
+    voiceId: string | undefined
+    templateId: string | undefined
+    targetLanguage: ContentLanguage | undefined
+  }> = []
+  const held: Array<() => void> = []
+  const send: SendDraft = async (_slug, value, voiceId, templateId, targetLanguage) => {
+    sent.push({ draft: { ...value }, voiceId, templateId, targetLanguage })
+    if (holds > 0) {
+      holds -= 1
+      await new Promise<void>((resolve) => held.push(resolve))
+    }
+    throw errors[Math.min(sent.length - 1, errors.length - 1)]
+  }
+  return {
+    send,
+    sent,
+    locked,
+    /** The editor's predicate: everything but the lock is worth another attempt. */
+    retry: (cause: unknown) => cause !== locked,
+    open: () => held.shift()?.(),
+  }
+}
+
+describe('a refusal that is an answer', () => {
+  it('drops the text, reports no failure and schedules no retry', async () => {
+    const api = refusing()
+    const { handle, states } = attach(api.send, {
+      slug: 'p',
+      saved: draft('제주'),
+      retry: api.retry,
+    })
+
+    handle.queue(draft('제주 3일'))
+    await advance(AUTOSAVE_DEBOUNCE_MS)
+    expect(api.sent).toHaveLength(1)
+    // Nothing was ever saved by this queue, so it is quiet — never 다시 시도 중.
+    expect(handle.state()).toBe('idle')
+    expect(states).not.toContain('error')
+    expect(peekPendingDraft('p')).toBeUndefined()
+
+    await advance(AUTOSAVE_RETRY_BASE_MS * 16)
+    expect(api.sent).toHaveLength(1)
+  })
+
+  it('takes back every assignment still waiting and rejects every waiter', async () => {
+    const api = refusing({ holds: 1 })
+    const { handle } = attach(api.send, {
+      slug: 'p',
+      saved: draft('제주'),
+      voiceId: 'voice-a',
+      templateId: '',
+      targetLanguage: 'ko',
+      retry: api.retry,
+    })
+
+    handle.queue(draft('제주 3일'))
+    await advance(AUTOSAVE_DEBOUNCE_MS)
+    // Chosen while the text save is out, so none of them is on the request that is refused.
+    const settled = Promise.all([
+      expect(handle.assignVoice('voice-b')).rejects.toBe(api.locked),
+      expect(handle.assignTemplate('template-1')).rejects.toBe(api.locked),
+      expect(handle.assignTargetLanguage('en')).rejects.toBe(api.locked),
+      expect(handle.flush()).rejects.toBe(api.locked),
+    ])
+    api.open()
+    await advance(0)
+    await settled
+
+    await advance(AUTOSAVE_RETRY_BASE_MS * 16)
+    expect(api.sent).toHaveLength(1)
+    expect(handle.state()).toBe('idle')
+
+    // What the next save carries is text alone: the queue holds the server's assignments again.
+    handle.queue(draft('제주 4일'))
+    await advance(AUTOSAVE_DEBOUNCE_MS)
+    expect(api.sent[1]).toEqual({
+      draft: draft('제주 4일'),
+      voiceId: undefined,
+      templateId: undefined,
+      targetLanguage: undefined,
+    })
+  })
+
+  it('still retries every other failure', async () => {
+    const offline = new Error('offline')
+    const api = refusing({ errors: [offline, offline] })
+    const { handle } = attach(api.send, { slug: 'p', saved: draft('제주'), retry: api.retry })
+
+    handle.queue(draft('제주 3일'))
+    await advance(AUTOSAVE_DEBOUNCE_MS)
+    expect(handle.state()).toBe('error')
+    await advance(AUTOSAVE_RETRY_BASE_MS)
+    expect(api.sent).toHaveLength(2)
+  })
+
+  // A queue outlives its editor, and the editor that adopts it brings its own answer rule, as it
+  // brings its own transport.
+  it('asks the editor attached now, not the one that queued the text', async () => {
+    const api = refusing()
+    const first = attach(api.send, { slug: 'p', saved: draft('제주') })
+    first.handle.queue(draft('제주 3일'))
+    await advance(AUTOSAVE_DEBOUNCE_MS)
+    // The first editor gave no rule, so the refusal read as an outage and a retry is waiting.
+    expect(first.handle.state()).toBe('error')
+    first.handle.release()
+
+    const second = attach(api.send, { slug: 'p', saved: draft('제주'), retry: api.retry })
+    await advance(AUTOSAVE_RETRY_BASE_MS)
+    expect(api.sent).toHaveLength(2)
+    expect(second.handle.state()).toBe('idle')
+    await advance(AUTOSAVE_RETRY_BASE_MS * 16)
+    expect(api.sent).toHaveLength(2)
   })
 })

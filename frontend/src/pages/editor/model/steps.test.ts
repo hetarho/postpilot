@@ -6,6 +6,8 @@ describe('stepForStatus', () => {
     expect(stepForStatus('draft')).toBe('generate')
     expect(stepForStatus('review')).toBe('refine')
     expect(stepForStatus('finalized')).toBe('finish')
+    // A published post has nothing left to write: it opens where its address lives (POST-44).
+    expect(stepForStatus('published')).toBe('finish')
   })
 
   // A status a later plan adds must not land the editor on an empty panel with no way back.

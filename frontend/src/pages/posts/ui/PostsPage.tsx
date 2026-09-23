@@ -1,7 +1,14 @@
 import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
-import { displayTitle, postStatusLabel, usePosts, type PostListItem } from '@/entities/post'
+import {
+  displayTitle,
+  isPostStatus,
+  postStatusLabel,
+  usePosts,
+  type PostListItem,
+  type PostStatus,
+} from '@/entities/post'
 import { useExperiments, type ModelExperiment } from '@/entities/model-experiment'
 import { narrowPosts, PostListControls, type PostNarrowing } from '@/features/filter-posts'
 import { TemplateRefLabel } from '@/entities/template'
@@ -35,11 +42,17 @@ function rowStatus(
 
 /** 초안 · 검토 · 확정 sat in one grey and were indistinguishable at a glance. Draft stays neutral
  *  (nothing has happened yet), review takes the accent (the user is mid-way), finalized takes
- *  success (done). The label still carries the meaning on its own (§2.6). */
+ *  success (done). Published is a done state too, and its label is what tells it from 확정: the
+ *  label carries the meaning on its own (§2.6, THEME-29). */
+const STATUS_TONE: Record<PostStatus, BadgeTone> = {
+  draft: 'neutral',
+  review: 'accent',
+  finalized: 'success',
+  published: 'success',
+}
+
 function postStatusTone(status: string): BadgeTone {
-  if (status === 'review') return 'accent'
-  if (status === 'finalized') return 'success'
-  return 'neutral'
+  return isPostStatus(status) ? STATUS_TONE[status] : 'neutral'
 }
 
 /** The way back to unfinished work (PRD F-8). The server returns only the acting user's posts,

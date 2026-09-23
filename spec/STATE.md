@@ -51,7 +51,6 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T339 | 발행됨 is the fourth status everywhere, and a published post reads as locked | POST ARCH THEME | T334 | todo |
 | T340 | The template screen authors a title area in the builder and in 원문 | TMPL ARCH THEME | T336 | todo |
 | T341 | Write results store nouns and replacement candidates beside the content | GEN POST ARCH | T337 T330 | todo |
 | T342 | Guidelines scoped by 분야, the 상위 노출 단어 사용 preset, and 분야-aware freezing | GUIDE GEN ARCH | T332 T337 T330 | todo |
@@ -68,10 +67,12 @@
 | T353 | Toggling 기억 사용 keeps the post's 목표 글자 수 | POST MEM ARCH | - | todo |
 
 ## next
-- implement-task T339 (then the dep order in the tasks table; T339, T340, T341 and T342 are unblocked)
+- implement-task T340 (then the dep order in the tasks table; T340, T341, T342 and T343 are unblocked)
 - T352 and T353 are independent pre-existing bug fixes (frozen memories never reach a durable generate; the 기억 사용 toggle clears 목표 글자 수)
 - create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 ## log
+- 260924 T339 done; the FE knows published everywhere the status union is exhaustive (label, steps, filter, URL, badge) and a published post reads as locked: it opens on ③, ② reads its prose under one sentence with only the road onward, ① is read-only with that sentence once and sends no write, ③ keeps learning and export, and a draft or content save refused as published is an answer that refetches instead of retrying; FE gates pass (p35)
+- 260924 T339 claimed (p35)
 - 260924 T338 done; an in-process pass keeps each 분야's top-50 phrase list fresh from up to three pages of Naver blog results through the one extractor (2-5 tokens, never only stopwords, counted once per title or description, subsumed, ranked), on a durable per-field next refresh with a boot catch-up off the listener path and a retry that keeps the last list; without both Naver keys nothing runs; BE gate passes (p35)
 - 260924 T338 claimed (p35)
 - 260924 T337 done; a post saves its 분야 through SavePostDraft (presence-aware, on create in the same insert, validated through a consumer-owned field directory) and its quality ticks through SavePostGenerationOptions (canonical order, cleared by an empty set), neither touching the lifecycle; SaveDraft takes a DraftSave; PostInput carries both as json:"-" inputs; BE gate and gen:sql pass (p35)
@@ -90,5 +91,3 @@
 - 260924 T331 done; quality measures M1-M4 per post and per account (absent rather than zero when uncomputable), judges each against the pinned bands and minimums with four verdicts, names the M2 run standing in the most window posts, and renders the eight rule texts; no provider, usage or job dependency; full BE gate passes (p35)
 - 260924 T331 claimed (p35)
 - 260924 T330 done; a write with frozen 분야 phrases carries them once in the per-post half with the replacements instruction and schema, and keeps only candidates the final content bears out (bounded 20 x 3); without phrases nothing changes; BE gate passes (p35)
-- 260924 T330 claimed (p35)
-- 260924 T329 done; a finalized post becomes published from a pasted Naver Blog address (normalized, shared fixture), is replaced or cleared back to finalized, stays learnable, and exposes the published window; only content-writing jobs block the save; BE gate, gen:sql and lint:retirement pass (p35)

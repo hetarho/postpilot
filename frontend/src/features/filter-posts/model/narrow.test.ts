@@ -61,6 +61,22 @@ describe('narrowPosts', () => {
     ])
   })
 
+  // 발행됨 is a status like the others (POST-66): it narrows to the published rows alone, and a
+  // finalized post is not one of them.
+  it('filters on the published status', () => {
+    const published = post({ slug: 'published', title: '성수 카페', status: 'published' })
+    const posts = [...POSTS, published]
+    expect(narrowPosts(posts, { status: 'published' }).map((kept) => kept.post.slug)).toEqual([
+      'published',
+    ])
+    expect(narrowPosts(posts, { status: 'finalized' }).map((kept) => kept.post.slug)).toEqual([
+      'seoul',
+    ])
+    expect(narrowPosts(posts, { q: '카페', status: 'published' }).map((k) => k.post.slug)).toEqual([
+      'published',
+    ])
+  })
+
   // A generating draft is still a draft: the badge says AI 생성 중, the status does not (POST-66).
   it('keeps a post with a running job under its own status', () => {
     const generating = post({

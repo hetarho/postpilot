@@ -2,6 +2,7 @@ import { clone, create } from '@bufbuild/protobuf'
 import { useMutation, useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
 import {
+  appFailureFromConnect,
   type GetPostResponse,
   GetPostResponseSchema,
   type Post,
@@ -86,6 +87,13 @@ export function useSavePostDraft() {
       // The list is ordered by updated_at and shows the title, so every save changes it.
       // Marking it stale is enough — the list is on another route, and react-query
       // refetches an inactive query when it is next mounted rather than now.
+      void queryClient.invalidateQueries({ queryKey: listPostsQueryKey(transport) })
+    },
+    // Refused because the post was published elsewhere (POST-86): the cached post still reads
+    // writable, so refetch it and the list for ① to re-render locked.
+    onError: (error, variables) => {
+      if (!variables.slug || appFailureFromConnect(error).reason !== 'POST_PUBLISHED_LOCKED') return
+      void queryClient.invalidateQueries({ queryKey: getPostQueryKey(transport, variables.slug) })
       void queryClient.invalidateQueries({ queryKey: listPostsQueryKey(transport) })
     },
   })

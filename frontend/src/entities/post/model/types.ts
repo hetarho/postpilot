@@ -11,7 +11,20 @@ import type { ContentLanguage, Observation, PostContent } from '@/shared/api'
  *  Deliberately not the generated `Post` message: the screens should speak the app's
  *  vocabulary, so a proto change is absorbed by this entity's api mappers instead of
  *  rippling into every consumer. */
-export type PostStatus = 'draft' | 'review' | 'finalized'
+export type PostStatus = 'draft' | 'review' | 'finalized' | 'published'
+
+/** Every status in lifecycle order, which is also the order the list's filter offers them. */
+export const POST_STATUSES: readonly PostStatus[] = ['draft', 'review', 'finalized', 'published']
+
+export function isPostStatus(value: unknown): value is PostStatus {
+  return (POST_STATUSES as readonly unknown[]).includes(value)
+}
+
+/** The one question every published-post lock asks (POST-86): a published post takes no write
+ *  but its address and the delete, so each screen that offers one reads this, not the literal. */
+export function isPublished(post: { status: string }): boolean {
+  return post.status === 'published'
+}
 
 /** One answer a post gives to a data field its template declared. `enabled` off means "I have
  *  nothing for this": the text is kept and the enqueue drops the whole block. */
@@ -62,6 +75,9 @@ export interface PostDraft {
   useMemory: boolean
   finalizedRevision: bigint
   finalizedAt: string
+  /** The Naver Blog address the post was published at, and when; both `''` until it is. */
+  publishedUrl: string
+  publishedAt: string
   targetLanguage: ContentLanguage
   contentLanguage: ContentLanguage | undefined
 }
@@ -89,14 +105,10 @@ export function untitledTitle(): string {
   return i18next.t('untitled', { ns: 'posts' })
 }
 
-/** `draft` and `review` are the statuses the drafting context knows
- *  (spec/legacy/policy/posts.md); generation is what moves a post to `review`. An unknown value
- *  falls through to itself rather than being hidden, so a status a later plan adds shows
- *  up as something rather than as a blank badge. */
+/** The status's own word. An unknown value falls through to itself rather than being hidden, so
+ *  a status a later plan adds shows up as something rather than as a blank badge. */
 export function postStatusLabel(status: string): string {
-  if (status === 'draft' || status === 'review' || status === 'finalized') {
-    return i18next.t(`status.${status}`, { ns: 'posts' })
-  }
+  if (isPostStatus(status)) return i18next.t(`status.${status}`, { ns: 'posts' })
   return status
 }
 

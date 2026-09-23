@@ -9,10 +9,13 @@ export function MemoField({
   value,
   onChange,
   fieldRef,
+  readOnly = false,
 }: {
   value: string
   onChange: (value: string) => void
   fieldRef: RefObject<HTMLTextAreaElement | null>
+  /** A published post's memo: readable and selectable, never edited (POST-86). */
+  readOnly?: boolean
 }) {
   const { t } = useTranslation('posts')
   return (
@@ -31,6 +34,7 @@ export function MemoField({
         rows={6}
         autoGrow
         value={value}
+        readOnly={readOnly}
         onChange={(event) => onChange(event.target.value)}
         placeholder={t('editor.memoPlaceholder')}
         enterKeyHint="enter"

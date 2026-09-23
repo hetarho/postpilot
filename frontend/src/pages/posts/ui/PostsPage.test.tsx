@@ -188,6 +188,65 @@ describe('PostsPage', () => {
     await waitFor(() => expect(router.state.location.search).toEqual({}))
   })
 
+  const WITH_PUBLISHED: FakePostsOptions = {
+    posts: [
+      ...(NARROWABLE.posts ?? []),
+      {
+        slug: '20260801-seongsu',
+        title: '성수 카페',
+        status: 'published',
+        publishedUrl: 'https://blog.naver.com/alice/1',
+        publishedAt: '2026-08-02T09:00:00Z',
+      },
+    ],
+  }
+
+  // Published is a done state like 확정, and its label is what tells the two apart (THEME-29).
+  it('wears 발행됨 on a published row', async () => {
+    renderList(WITH_PUBLISHED)
+
+    expect(await screen.findByRole('link', { name: /성수 카페/ })).toHaveTextContent('발행됨')
+    expect(screen.getByRole('link', { name: /서울 산책/ })).toHaveTextContent('확정')
+    expect(screen.getByRole('link', { name: /서울 산책/ })).not.toHaveTextContent('발행됨')
+  })
+
+  // POST-66: the filter offers every status in lifecycle order, and 발행됨 narrows to it alone.
+  it('narrows to the published posts, and the address survives a reload', async () => {
+    const user = userEvent.setup()
+    const { router, unmount } = renderList(WITH_PUBLISHED)
+    await screen.findByRole('link', { name: /성수 카페/ })
+
+    await user.click(screen.getByRole('combobox', { name: /^상태/ }))
+    expect((await screen.findAllByRole('option')).map((option) => option.textContent)).toEqual([
+      '전체',
+      '초안',
+      '검토',
+      '확정',
+      '발행됨',
+    ])
+    await user.click(screen.getByRole('option', { name: '발행됨' }))
+
+    await waitFor(() => expect(router.state.location.search).toEqual({ status: 'published' }))
+    expect(screen.getByRole('link', { name: /성수 카페/ })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /서울 산책/ })).toBeNull()
+    const address = router.state.location.href
+    unmount()
+
+    renderAppAt(address, { user: USER, posts: WITH_PUBLISHED })
+    expect(await screen.findByRole('link', { name: /성수 카페/ })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /제주 3일/ })).toBeNull()
+    expect(screen.getByRole('combobox', { name: /^상태/ })).toHaveTextContent('발행됨')
+  })
+
+  it('honours ?status=published on load', async () => {
+    renderAppAt('/posts?status=published', { user: USER, posts: WITH_PUBLISHED })
+
+    expect(await screen.findByRole('link', { name: /성수 카페/ })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /서울 산책/ })).toBeNull()
+    expect(screen.queryByRole('link', { name: /부산 밥상/ })).toBeNull()
+    expect(screen.getByRole('combobox', { name: /^상태/ })).toHaveTextContent('발행됨')
+  })
+
   // POST-65: the tag is why the row is still here, so the row says which tag it was.
   it('searches the tags and names the tag that matched', async () => {
     const user = userEvent.setup()

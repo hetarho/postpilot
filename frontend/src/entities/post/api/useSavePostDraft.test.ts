@@ -1,16 +1,24 @@
 import { create } from '@bufbuild/protobuf'
+import { Code, createRouterTransport, type ConnectError } from '@connectrpc/connect'
+import { QueryClient } from '@tanstack/react-query'
+import { renderHook, waitFor } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import {
   GenerationJobSchema,
   GetPostResponseSchema,
   ImageSchema,
+  ListPostsResponseSchema,
   ObservationSchema,
   PostContentSchema,
   PostSchema,
+  PostService,
   TemplateRefSchema,
   VoiceRefSchema,
 } from '@/shared/api'
-import { applyingSavedDraft } from './useSavePostDraft'
+import { connectAppError } from '@/test/app-error'
+import { withProviders } from '@/test/session'
+import { getPostQueryKey, listPostsQueryKey } from './post-queries'
+import { applyingSavedDraft, useSavePostDraft } from './useSavePostDraft'
 
 describe('applying a draft save response', () => {
   it('updates its text without rolling server-owned generation fields back', () => {
@@ -148,5 +156,57 @@ describe('applying a draft save response', () => {
     })
 
     expect(applyingSavedDraft(created, undefined)).toBe(created)
+  })
+})
+
+/** A draft save the server refuses with `cause`, against a cache that holds the post and the list. */
+async function refusedDraftSave(cause: ConnectError, slug: string) {
+  const transport = createRouterTransport(({ rpc }) => {
+    rpc(PostService.method.savePostDraft, () => {
+      throw cause
+    })
+  })
+  const queryClient = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
+  const postKey = getPostQueryKey(transport, 'post')
+  const listKey = listPostsQueryKey(transport)
+  queryClient.setQueryData(
+    postKey,
+    create(GetPostResponseSchema, { post: create(PostSchema, { slug: 'post' }) }),
+  )
+  queryClient.setQueryData(listKey, create(ListPostsResponseSchema, {}))
+  const view = renderHook(() => useSavePostDraft(), {
+    wrapper: withProviders(transport, queryClient),
+  })
+  await view.result.current.mutateAsync({ slug, title: '제주' }).catch(() => undefined)
+  return {
+    post: () => queryClient.getQueryState(postKey)?.isInvalidated,
+    list: () => queryClient.getQueryState(listKey)?.isInvalidated,
+  }
+}
+
+// POST-86: a post published in another tab still reads writable in this cache, so a lock refusal
+// is what refetches it — the refetch is what re-renders ① locked.
+describe('a draft save refused because the post is published', () => {
+  it('refetches the post and the list', async () => {
+    const cache = await refusedDraftSave(
+      connectAppError('POST_PUBLISHED_LOCKED', Code.FailedPrecondition),
+      'post',
+    )
+    await waitFor(() => expect(cache.post()).toBe(true))
+    expect(cache.list()).toBe(true)
+  })
+
+  it('refetches nothing for any other refusal, or for a create', async () => {
+    const outage = await refusedDraftSave(
+      connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable),
+      'post',
+    )
+    expect(outage.post()).toBe(false)
+    expect(outage.list()).toBe(false)
+    const create = await refusedDraftSave(
+      connectAppError('POST_PUBLISHED_LOCKED', Code.FailedPrecondition),
+      '',
+    )
+    expect(create.post()).toBe(false)
   })
 })

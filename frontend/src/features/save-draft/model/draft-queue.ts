@@ -161,6 +161,8 @@ interface Queue {
   debounceTimer: number | undefined
   retryTimer: number | undefined
   send: SendDraft
+  /** Whether a refused save is worth retrying. Taken from the attaching editor like `send`. */
+  retry: (cause: unknown) => boolean
   listener: ((state: SaveState) => void) | undefined
   onMinted: ((slug: string) => void) | undefined
   /** Callers of `mint` waiting for the first save to land. On the queue, not the handle,
@@ -489,6 +491,28 @@ async function run(queue: Queue): Promise<void> {
       rejectTargetLanguageWaiters(queue, cause)
     }
 
+    if (queue.slug && !queue.retry(cause)) {
+      // An answer the server will repeat, such as a post published in another tab (POST-86): the
+      // rule a refused reassignment follows, applied to the text too. Nothing is retried, the
+      // text and every assignment still waiting are taken back, and the status line is not left
+      // saying 다시 시도 중 over a save that will never land.
+      queue.pending = undefined
+      queue.failed = false
+      queue.attempts = 0
+      queue.urgent = false
+      queue.voiceId = queue.savedVoiceId
+      queue.templateId = queue.savedTemplateId
+      queue.targetLanguage = queue.savedTargetLanguage ?? queue.targetLanguage
+      rejectVoiceWaiters(queue, cause)
+      rejectTemplateWaiters(queue, cause)
+      rejectTargetLanguageWaiters(queue, cause)
+      clearTimers(queue)
+      publish(queue)
+      rejectFlushes(queue, cause)
+      collect(queue)
+      return
+    }
+
     if (
       queue.pending &&
       sameDraft(queue.pending, queue.saved) &&
@@ -525,6 +549,8 @@ async function run(queue: Queue): Promise<void> {
   collect(queue)
 }
 
+const alwaysRetry = () => true
+
 export function attachDraftQueue(options: {
   /** The post being written to, or undefined for a draft with no slug yet. */
   slug: string | undefined
@@ -539,6 +565,9 @@ export function attachDraftQueue(options: {
   /** Concrete on both new and existing editors; a new draft sends it only when it is created. */
   targetLanguage: ContentLanguage
   send: SendDraft
+  /** Whether a refused save of an existing post is retried. Default: always, since most
+   *  refusals are an outage the next attempt outlasts. False takes the text back instead. */
+  retry?: (cause: unknown) => boolean
   onState: (state: SaveState) => void
   onMinted: (slug: string) => void
 }): DraftQueueHandle {
@@ -569,6 +598,7 @@ export function attachDraftQueue(options: {
       debounceTimer: undefined,
       retryTimer: undefined,
       send: options.send,
+      retry: alwaysRetry,
       listener: undefined,
       onMinted: undefined,
       mintWaiters: [],
@@ -585,6 +615,7 @@ export function attachDraftQueue(options: {
   // observer that is gone.
   const attached = queue
   attached.send = options.send
+  attached.retry = options.retry ?? alwaysRetry
   attached.listener = options.onState
   attached.onMinted = options.onMinted
 

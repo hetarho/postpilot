@@ -1,6 +1,6 @@
 import { forwardRef } from 'react'
 import type { GenerationJob } from '@/entities/generation-job'
-import type { PostDraft } from '@/entities/post'
+import { isPublished, type PostDraft } from '@/entities/post'
 import { ReviseForm, type ReviseFormHandle } from '@/features/edit-with-ai'
 import { FinalizeActions, type VoiceLearning } from '@/features/finalize-post'
 
@@ -56,6 +56,17 @@ export const RefineDock = forwardRef<ReviseFormHandle, RefineDockProps>(function
   },
   reviseRef,
 ) {
+  const finalize = (
+    <FinalizeActions
+      post={post}
+      learning={learning}
+      beforeFinalize={beforeFinalize}
+      onFinalized={onFinalized}
+    />
+  )
+  // A published post takes no revision (POST-86): the dock keeps only the road onward to 글 완성,
+  // where its address lives.
+  if (isPublished(post)) return finalize
   return (
     <ReviseForm
       ref={reviseRef}
@@ -68,14 +79,7 @@ export const RefineDock = forwardRef<ReviseFormHandle, RefineDockProps>(function
       jobPending={jobPending}
       onStarted={onRevisionStarted}
       beforeStart={beforeStart}
-      action={
-        <FinalizeActions
-          post={post}
-          learning={learning}
-          beforeFinalize={beforeFinalize}
-          onFinalized={onFinalized}
-        />
-      }
+      action={finalize}
     />
   )
 })

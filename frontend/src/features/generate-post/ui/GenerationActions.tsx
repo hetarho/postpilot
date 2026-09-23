@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { clsx } from 'clsx'
 import { useStartGeneration, type GenerationJob } from '@/entities/generation-job'
 import { useStartWriteExperiment } from '@/entities/model-experiment'
-import type { PostDraft } from '@/entities/post'
+import { isPublished, type PostDraft } from '@/entities/post'
 import {
   sameRef,
   useModelSetup,
@@ -38,7 +38,7 @@ export const GenerationActions = forwardRef<
   {
     post: Pick<
       PostDraft,
-      'slug' | 'images' | 'videos' | 'observations' | 'pendingExperimentId' | 'voice'
+      'slug' | 'status' | 'images' | 'videos' | 'observations' | 'pendingExperimentId' | 'voice'
     >
     /** Owned by the editor, not by this action: the writing brief sets it from another layer
      *  (`widgets/generation-brief`) and the two must agree on what the next run is given. */
@@ -74,6 +74,7 @@ export const GenerationActions = forwardRef<
   const pair = setup.pairs.find((value) => value.stage === 'write')
   const writeA = resolveSelection(write.models, pair?.candidateA?.ref ?? null)
   const writeB = resolveSelection(write.models, pair?.candidateB?.ref ?? null)
+  const published = isPublished(post)
   const ordinary = ordinaryGenerationPreconditions(
     post.images,
     observeSelection,
@@ -81,6 +82,7 @@ export const GenerationActions = forwardRef<
     activeJob,
     post.voice,
     post.videos,
+    published,
   )
   const ab = comparisonGenerationPreconditions(
     post.images,
@@ -90,6 +92,7 @@ export const GenerationActions = forwardRef<
     activeJob,
     post.voice,
     post.videos,
+    published,
   )
   const pendingExperiment = Boolean(post.pendingExperimentId)
   const modelPending = observe.isPending || write.isPending || setup.isPending || selectionSaving
@@ -285,6 +288,13 @@ export const GenerationActions = forwardRef<
 
   return (
     <div>
+      {/* The one place ① says why it is locked (POST-86): both actions are refused for it, and no
+          control under the lock names a reason of its own. */}
+      {ordinary.blocker === 'published' && (
+        <Typography variant="label" as="p" role="status" className="mb-2">
+          {ordinary.reason}
+        </Typography>
+      )}
       {/* ONE row on a phone, 3 : 7: A/B 비교 left, 생성 — the committing action — right, which is
           both the §4 emphasis order and the side the thumb of a right-handed one-handed grip
           reaches first. Not halves: an ordinary generation is what this step is FOR and an A/B
@@ -311,7 +321,7 @@ export const GenerationActions = forwardRef<
           {t('generation.generate')}
         </Button>
       </div>
-      {reasons('mt-2')}
+      {ordinary.blocker !== 'published' && reasons('mt-2')}
       {pendingExperiment && (
         <a
           href={`/posts/experiments/${encodeURIComponent(post.pendingExperimentId)}`}

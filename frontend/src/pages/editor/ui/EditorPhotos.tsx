@@ -13,10 +13,12 @@ import { AppFailureMessage, Notice } from '@/shared/ui'
 interface EditorPhotosProps {
   post: PostDraft | undefined
   ensureSlug: () => Promise<string>
+  /** A published post: its photos and clips are shown, and none is added or deleted (POST-86). */
+  locked?: boolean
 }
 
 /** The editor's photo slot: pick (or drop), watch them convert and upload, delete. */
-export function EditorPhotos({ post, ensureSlug }: EditorPhotosProps) {
+export function EditorPhotos({ post, ensureSlug, locked = false }: EditorPhotosProps) {
   const slug = post?.slug
   const images = post?.images ?? []
   const videos = post?.videos ?? []
@@ -36,12 +38,15 @@ export function EditorPhotos({ post, ensureSlug }: EditorPhotosProps) {
   } = useDeletePhoto(slug)
 
   return (
-    <PhotoDropZone onFiles={(files) => void upload.addFiles(files)} disabled={upload.creatingPost}>
+    <PhotoDropZone
+      onFiles={(files) => void upload.addFiles(files)}
+      disabled={locked || upload.creatingPost}
+    >
       <div data-slot="photos" className="mt-5 flex flex-col gap-3">
         <div className="flex items-center gap-3">
           <PhotoPicker
             onFiles={(files) => void upload.addFiles(files)}
-            disabled={upload.creatingPost}
+            disabled={locked || upload.creatingPost}
           />
           <UploadProgress
             items={upload.items}
@@ -67,6 +72,7 @@ export function EditorPhotos({ post, ensureSlug }: EditorPhotosProps) {
           deleteFailure={deleteFailure}
           onRetry={upload.retry}
           onDismiss={upload.dismiss}
+          readOnly={locked}
         />
         <SkippedList items={upload.items} onDismiss={upload.dismiss} />
       </div>

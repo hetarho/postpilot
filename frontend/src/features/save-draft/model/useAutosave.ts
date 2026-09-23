@@ -1,6 +1,6 @@
 import { useLayoutEffect, useEffect, useRef, useState } from 'react'
 import { useSavePostDraft } from '@/entities/post'
-import { contentLanguageToProto, type ContentLanguage } from '@/shared/api'
+import { appFailureFromConnect, contentLanguageToProto, type ContentLanguage } from '@/shared/api'
 import {
   attachDraftQueue,
   type DraftQueueHandle,
@@ -133,6 +133,9 @@ export function useAutosave({
         if (!response.post?.slug) throw new Error('SavePostDraft returned no post')
         return response.post.slug
       },
+      // A post published in another tab refuses every save the same way (POST-86), so the text is
+      // taken back rather than retried, and the post's refetch re-renders ① locked.
+      retry: (cause) => appFailureFromConnect(cause).reason !== 'POST_PUBLISHED_LOCKED',
       onState: setState,
       onMinted: (slug) => onMintedRef.current?.(slug),
     })

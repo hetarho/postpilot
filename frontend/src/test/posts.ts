@@ -139,6 +139,10 @@ export interface FakePostRow {
   useMemory?: boolean
   finalizedRevision?: bigint
   finalizedAt?: string
+  /** A published post's Naver Blog address and when it was recorded; `status: 'published'` is
+   *  what locks it. */
+  publishedUrl?: string
+  publishedAt?: string
   targetLanguage?: ContentLanguage
   /** `null` deliberately models malformed pre-migration data; learned content defaults to the
    *  migration's Korean backfill when a fixture omits the field. */
@@ -179,7 +183,13 @@ export interface FakePostsOptions {
   draftSaves?: FakeDraftSave[]
   /** Holds SavePostContent in flight until a test releases it. */
   contentSaveGate?: Promise<void>
+  /** The next SavePostDraft on this slug first publishes the post and is then refused as
+   *  locked, the way a publish from another tab lands between two autosaves (POST-86). */
+  publishOnDraftSave?: string
 }
+
+/** The address a publish from another tab records in `publishOnDraftSave`. */
+export const FAKE_PUBLISHED_URL = 'https://blog.naver.com/alice/1'
 
 const DEFAULT_UPDATED_AT = '2026-08-28T12:00:00Z'
 
@@ -211,14 +221,23 @@ type Row = {
   useMemory: boolean
   finalizedRevision: bigint
   finalizedAt: string
+  publishedUrl: string
+  publishedAt: string
   targetLanguage: ReturnType<typeof contentLanguageToProto>
   contentLanguage: ReturnType<typeof contentLanguageToProto>
+}
+
+/** Like the server (T334): a published post takes no write but its address and the delete. */
+function refuseIfPublished(row: Row): void {
+  if (row.status === 'published')
+    throw connectAppError('POST_PUBLISHED_LOCKED', Code.FailedPrecondition)
 }
 
 export function registerPostService(router: ConnectRouter, options: FakePostsOptions = {}) {
   const { rpc } = router
   const { foreign = [], listFails, today = '20260828', calls } = options
   let failuresLeft = options.failSaves ?? 0
+  let publishOnDraftSave = options.publishOnDraftSave
   let uploadSequence = 0
   let getSequenceIndex = 0
   // `video` is the RESERVATION's kind: the confirm answers with the half the upload asked for,
@@ -331,6 +350,8 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       useMemory: row.useMemory ?? false,
       finalizedRevision: row.finalizedRevision ?? 0n,
       finalizedAt: row.finalizedAt ?? '',
+      publishedUrl: row.publishedUrl ?? '',
+      publishedAt: row.publishedAt ?? '',
       targetLanguage: contentLanguageToProto(row.targetLanguage ?? 'ko'),
       contentLanguage:
         row.contentLanguage === null
@@ -426,6 +447,14 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       throw connectAppError('POST_FORBIDDEN', Code.PermissionDenied)
     }
     const existing = req.slug ? rows.get(req.slug) : undefined
+    if (existing && publishOnDraftSave === existing.slug) {
+      publishOnDraftSave = undefined
+      existing.status = 'published'
+      existing.publishedUrl = FAKE_PUBLISHED_URL
+      existing.publishedAt = '2026-08-28T12:30:00Z'
+    }
+    // Before any validation or write, like the server: a locked post changes nothing.
+    if (existing) refuseIfPublished(existing)
     const requestedTarget =
       req.targetLanguage === undefined ? undefined : contentLanguageFromProto(req.targetLanguage)
     if (!req.slug && !requestedTarget)
@@ -495,6 +524,8 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       useMemory: existing?.useMemory ?? false,
       finalizedRevision: existing?.finalizedRevision ?? 0n,
       finalizedAt: existing?.finalizedAt ?? '',
+      publishedUrl: existing?.publishedUrl ?? '',
+      publishedAt: existing?.publishedAt ?? '',
       targetLanguage: contentLanguageToProto(
         requestedTarget ??
           (existing ? contentLanguageFromProto(existing.targetLanguage) : undefined) ??
@@ -510,6 +541,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
     calls?.push('CreateUpload')
     const row = rows.get(req.postSlug)
     if (!row) throw connectAppError('POST_NOT_FOUND', Code.NotFound)
+    refuseIfPublished(row)
     // ONE filename namespace across both kinds, like the server's (VIDEO-5).
     const taken =
       row.images.some((image) => image.filename === req.filename) ||
@@ -539,7 +571,9 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
     if (row.contentRevision !== req.expectedRevision)
       throw connectAppError('POST_CONTENT_STALE', Code.Aborted)
     if (!req.content) throw connectAppError('POST_CONTENT_INVALID', Code.InvalidArgument)
+    // Only a save that changes something is refused: an identical one stays a no-op (R7).
     if (JSON.stringify(row.content) !== JSON.stringify(req.content)) {
+      refuseIfPublished(row)
       row.content = req.content
       row.contentRevision += 1n
       row.status = 'review'
@@ -556,6 +590,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
     options.memoryOptionSaves?.push(req.useMemory)
     const row = rows.get(req.slug)
     if (!row) throw connectAppError('POST_NOT_FOUND', Code.NotFound)
+    refuseIfPublished(row)
     row.targetLength = req.targetLength
     // Presence-aware like the server: absent keeps the stored count.
     if (req.tagCount !== undefined) row.tagCount = req.tagCount
@@ -567,6 +602,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
     calls?.push('FinalizePost')
     const row = rows.get(req.slug)
     if (!row) throw connectAppError('POST_NOT_FOUND', Code.NotFound)
+    refuseIfPublished(row)
     if (row.contentRevision !== req.expectedRevision)
       throw connectAppError('POST_CONTENT_STALE', Code.Aborted)
     if (!row.content || row.machineBaselineRevision <= 0n)
@@ -616,6 +652,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
     for (const row of rows.values()) {
       const index = row.videos.findIndex((video) => video.id === req.videoId)
       if (index !== -1) {
+        refuseIfPublished(row)
         row.videos.splice(index, 1)
         return create(DeleteVideoResponseSchema, {})
       }
@@ -629,6 +666,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
     for (const row of rows.values()) {
       const index = row.images.findIndex((image) => image.id === req.imageId)
       if (index !== -1) {
+        refuseIfPublished(row)
         row.images.splice(index, 1)
         return create(DeleteImageResponseSchema, {})
       }

@@ -41,6 +41,13 @@ export function useSavePostContent() {
       queryClient.setQueryData(key, create(GetPostResponseSchema, { post }))
       void queryClient.invalidateQueries({ queryKey: listPostsQueryKey(transport) })
     },
+    // Published elsewhere (POST-86): the refetch reads the post locked, which unmounts ②'s
+    // editor and its queue.
+    onError: (error, variables) => {
+      if (!variables.slug || appFailureFromConnect(error).reason !== 'POST_PUBLISHED_LOCKED') return
+      void queryClient.invalidateQueries({ queryKey: getPostQueryKey(transport, variables.slug) })
+      void queryClient.invalidateQueries({ queryKey: listPostsQueryKey(transport) })
+    },
   })
 
   return {

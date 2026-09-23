@@ -37,6 +37,7 @@ function setup(signedVideoUrl: boolean) {
     <GenerationActions
       post={{
         slug: 'post',
+        status: 'draft',
         images: [],
         observations: [],
         pendingExperimentId: '',

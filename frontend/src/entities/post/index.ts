@@ -1,6 +1,13 @@
 export * from './config'
 export type { PostDraft, PostListItem, PostStatus, PostTemplateAnswer } from './model/types'
-export { untitledTitle, displayTitle, postStatusLabel } from './model/types'
+export {
+  POST_STATUSES,
+  displayTitle,
+  isPostStatus,
+  isPublished,
+  postStatusLabel,
+  untitledTitle,
+} from './model/types'
 export {
   blockKey,
   blockWith,

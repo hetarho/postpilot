@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, renderHook } from '@testing-library/react'
-import { AUTOSAVE_DEBOUNCE_MS } from '@/shared/config'
+import { AUTOSAVE_DEBOUNCE_MS, AUTOSAVE_RETRY_BASE_MS } from '@/shared/config'
 import { type FakeDraftSave, type FakePostsOptions, createFakePostsTransport } from '@/test/posts'
 import { createTestQueryClient, withProviders } from '@/test/session'
 import { discardDraftQueues } from './draft-queue'
@@ -10,6 +10,10 @@ interface Typed {
   title: string
   memo: string
 }
+
+/** One identity for every render, as `DraftEditor`'s memoized answers have: a fresh array per
+ *  render would re-run the queue effect on renders where nothing was typed. */
+const NO_ANSWERS: [] = []
 
 function setup(
   post:
@@ -36,7 +40,7 @@ function setup(
         title,
         memo,
         // These cases are about the text pipeline; the data fields have their own file.
-        answers: [],
+        answers: NO_ANSWERS,
         voiceId: post?.voice.id ?? 'voice-default',
         templateId: '',
         targetLanguage: post?.targetLanguage ?? initialTarget,
@@ -205,5 +209,23 @@ describe('useAutosave', () => {
     await tick(AUTOSAVE_DEBOUNCE_MS)
 
     expect(result.current.state).toBe('error')
+  })
+
+  // POST-86: a post published in another tab refuses every save the same way, so the text is
+  // taken back rather than retried, and the line never reads 다시 시도 중 over it.
+  it('takes a save refused as published back instead of retrying it', async () => {
+    const { rerender, saves, result } = setup(EXISTING, {
+      posts: [{ slug: EXISTING.slug, title: EXISTING.title, memo: EXISTING.memo }],
+      publishOnDraftSave: EXISTING.slug,
+    })
+
+    act(() => rerender({ title: '제주 3일', memo: '첫날', answers: [] }))
+    await tick(AUTOSAVE_DEBOUNCE_MS)
+    expect(saves()).toHaveLength(1)
+    expect(result.current.state).toBe('idle')
+
+    await tick(AUTOSAVE_RETRY_BASE_MS * 16)
+    expect(saves()).toHaveLength(1)
+    expect(result.current.state).toBe('idle')
   })
 })

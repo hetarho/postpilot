@@ -9,12 +9,15 @@ export function PostLanguageSelect({
   contentLanguage,
   frozenLanguage,
   onSelect,
+  disabled = false,
   className,
 }: {
   value: ContentLanguage
   contentLanguage?: ContentLanguage
   frozenLanguage?: ContentLanguage
   onSelect: (language: ContentLanguage) => Promise<void> | void
+  /** Off for a reason the caller states elsewhere. */
+  disabled?: boolean
   className?: string
 }) {
   const { t } = useTranslation(['posts', 'common'])
@@ -51,7 +54,7 @@ export function PostLanguageSelect({
           { value: 'ko', label: t('contentLanguage.ko', { ns: 'common' }) },
           { value: 'en', label: t('contentLanguage.en', { ns: 'common' }) },
         ]}
-        disabled={pending}
+        disabled={disabled || pending}
         aria-invalid={failure ? true : undefined}
         aria-describedby={`${hintId}${failure ? ` ${errorId}` : ''}`}
         onChange={(next) => void select(next)}

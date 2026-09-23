@@ -1,8 +1,10 @@
 import { create } from '@bufbuild/protobuf'
+import { Code } from '@connectrpc/connect'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ContentRevisionConflictError } from '@/entities/post'
 import { BlockSchema, BlockType, PostContentSchema } from '@/shared/api'
 import { AUTOSAVE_DEBOUNCE_MS, AUTOSAVE_RETRY_BASE_MS } from '@/shared/config'
+import { connectAppError } from '@/test/app-error'
 import {
   attachContentQueue,
   discardContentQueue,
@@ -149,5 +151,42 @@ describe('content save queue', () => {
     expect(states.at(-1)).toBe('conflict')
     await vi.advanceTimersByTimeAsync(AUTOSAVE_RETRY_BASE_MS * 2)
     expect(send).toHaveBeenCalledTimes(1)
+  })
+
+  // Published in another tab (POST-86): every retry would be refused the same way, and the post's
+  // refetch unmounts the editor this queue serves.
+  it('does not retry a save refused because the post is published', async () => {
+    vi.useFakeTimers()
+    const locked = connectAppError('POST_PUBLISHED_LOCKED', Code.FailedPrecondition)
+    const send = vi.fn().mockRejectedValue(locked)
+    const handle = attachContentQueue({
+      slug: 'post',
+      revision: 7n,
+      saved: snapshot('A'),
+      send,
+      onState: vi.fn(),
+    })
+
+    handle.queue(snapshot('B'))
+    await vi.advanceTimersByTimeAsync(AUTOSAVE_DEBOUNCE_MS)
+    expect(send).toHaveBeenCalledTimes(1)
+    await vi.advanceTimersByTimeAsync(AUTOSAVE_RETRY_BASE_MS * 16)
+    expect(send).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps retrying an outage', async () => {
+    vi.useFakeTimers()
+    const send = vi.fn().mockRejectedValue(connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable))
+    const handle = attachContentQueue({
+      slug: 'post',
+      revision: 7n,
+      saved: snapshot('A'),
+      send,
+      onState: vi.fn(),
+    })
+
+    handle.queue(snapshot('B'))
+    await vi.advanceTimersByTimeAsync(AUTOSAVE_DEBOUNCE_MS + AUTOSAVE_RETRY_BASE_MS)
+    expect(send).toHaveBeenCalledTimes(2)
   })
 })

@@ -1,6 +1,11 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { type PostDraft, ContentRevisionConflictError, useFinalizePost } from '@/entities/post'
+import {
+  type PostDraft,
+  ContentRevisionConflictError,
+  isPublished,
+  useFinalizePost,
+} from '@/entities/post'
 import { appFailureFromConnect, type AppFailure } from '@/shared/api'
 import { AppFailureMessage, Button, Notice, Popover, Typography } from '@/shared/ui'
 import type { VoiceLearning } from '../model/useVoiceLearning'
@@ -45,8 +50,9 @@ export function FinalizeActions({
   const [preparing, setPreparing] = useState<FinalizeMode | ''>('')
   const [prepareFailure, setPrepareFailure] = useState<AppFailure | 'content-conflict'>()
   // The status is the state (policy/posts.md): a content save after a finalize returns the post
-  // to `review`, so this comes back on its own when the user edits again.
-  const finalized = post.status === 'finalized'
+  // to `review`, so this comes back on its own when the user edits again. A published post is past
+  // 확정 and takes no finalize (POST-86), so it gets the same road onward.
+  const finalized = post.status === 'finalized' || isPublished(post)
 
   const run = async (mode: FinalizeMode, close: () => void) => {
     if (mode === 'learn' && !learning.canLearn) return

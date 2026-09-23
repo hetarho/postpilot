@@ -43,7 +43,8 @@ function renderDock(beforeStart = vi.fn().mockResolvedValue(undefined), post: Po
     },
   })
   const beforeFinalize = vi.fn().mockResolvedValue(1n)
-  render(
+  const onFinalized = vi.fn()
+  const view = render(
     <RefineDock
       ownerId="alice"
       post={post}
@@ -53,11 +54,11 @@ function renderDock(beforeStart = vi.fn().mockResolvedValue(undefined), post: Po
       onRevisionStarted={vi.fn()}
       beforeStart={beforeStart}
       beforeFinalize={beforeFinalize}
-      onFinalized={vi.fn()}
+      onFinalized={onFinalized}
     />,
     { wrapper: withProviders(transport, createTestQueryClient()) },
   )
-  return { beforeStart, beforeFinalize }
+  return { beforeStart, beforeFinalize, onFinalized, container: view.container }
 }
 
 describe('RefineDock', () => {
@@ -109,6 +110,26 @@ describe('RefineDock', () => {
   // A post that is already finalized keeps the road onward and NOTHING standing beside it: the
   // editor's own status badge says 확정, and the first changed content save returns the post to
   // `review`, which brings the way out back by itself.
+  // A published post takes no revision and no finalize (POST-86): the dock is the road onward to
+  // 글 완성, where its address lives, and nothing else — no field, no send, no 확정하기.
+  it('gives a published post only the road onward', async () => {
+    const user = userEvent.setup()
+    const { container, onFinalized, beforeFinalize } = renderDock(undefined, {
+      ...POST,
+      status: 'published',
+      finalizedRevision: 1n,
+    } as PostDraft)
+
+    const onward = screen.getByRole('button', { name: '글 완성으로 가기' })
+    expect(screen.getAllByRole('button')).toEqual([onward])
+    expect(screen.queryByLabelText('수정 요청을 입력하세요')).not.toBeInTheDocument()
+    expect(container.querySelector('textarea, input')).toBeNull()
+
+    await user.click(onward)
+    expect(onFinalized).toHaveBeenCalledWith('가제')
+    expect(beforeFinalize).not.toHaveBeenCalled()
+  })
+
   it('replaces the way out with the road onward once the post is finalized', () => {
     renderDock(undefined, { ...POST, status: 'finalized' } as PostDraft)
 

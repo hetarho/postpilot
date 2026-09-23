@@ -19,6 +19,7 @@ export const i18n = {
         draft: '초안',
         review: '검토',
         finalized: '확정',
+        published: '발행됨',
       },
       noMatch: {
         query: '"{{q}}"에 맞는 글이 없어요.',
@@ -44,6 +45,7 @@ export const i18n = {
         draft: 'Draft',
         review: 'Review',
         finalized: 'Finalized',
+        published: 'Published',
       },
       noMatch: {
         query: 'No post matches "{{q}}".',
