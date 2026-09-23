@@ -123,7 +123,9 @@ type PostCatalog interface {
 type DraftWriter interface {
 	UpdateDraft(ctx context.Context, slug, userID, title, memo string, targetLanguage *Language, updatedAt time.Time) (bool, error)
 	UpdateObservations(ctx context.Context, slug, userID string, observations []Observation, updatedAt time.Time) (bool, error)
-	UpdateGeneratedContent(ctx context.Context, slug, userID string, content PostContent, language Language, updatedAt time.Time) (bool, error)
+	// UpdateGeneratedContent receives the annotations already resolved: the service decides what
+	// a nil means, so the store writes exactly what it is given, NULL for none.
+	UpdateGeneratedContent(ctx context.Context, slug, userID string, content PostContent, language Language, annotations WriteAnnotations, updatedAt time.Time) (bool, error)
 	// ReassignVoice moves the post to another voice in one statement that also drops the
 	// machine baseline's voice association — the part of the post that belonged to the old
 	// voice. Content, revisions, photos and finalization state are untouched. It reports

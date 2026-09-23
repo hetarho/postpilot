@@ -236,7 +236,7 @@ func (s *Store) UpdateObservations(ctx context.Context, slug, userID string, obs
 	return n > 0, nil
 }
 
-func (s *Store) UpdateGeneratedContent(ctx context.Context, slug, userID string, content post.PostContent, language post.Language, updatedAt time.Time) (bool, error) {
+func (s *Store) UpdateGeneratedContent(ctx context.Context, slug, userID string, content post.PostContent, language post.Language, annotations post.WriteAnnotations, updatedAt time.Time) (bool, error) {
 	if !language.Valid() {
 		return false, post.ErrLanguageRequired
 	}
@@ -244,9 +244,18 @@ func (s *Store) UpdateGeneratedContent(ctx context.Context, slug, userID string,
 	if err != nil {
 		return false, fmt.Errorf("encode content: %w", err)
 	}
+	nouns, err := marshalNouns(annotations.Nouns)
+	if err != nil {
+		return false, err
+	}
+	candidates, err := marshalCandidates(annotations.Candidates)
+	if err != nil {
+		return false, err
+	}
 	n, err := s.write.UpdateGeneratedContent(ctx, sqlc.UpdateGeneratedContentParams{
 		Content: sql.NullString{String: encoded, Valid: true}, MachineBaseline: sql.NullString{String: encoded, Valid: true},
-		ContentLanguage: sql.NullString{String: string(language), Valid: true}, UpdatedAt: formatTime(updatedAt),
+		ContentLanguage: sql.NullString{String: string(language), Valid: true},
+		ContentNouns:    nouns, ReplacementCandidates: candidates, UpdatedAt: formatTime(updatedAt),
 		Slug: slug, UserID: userID,
 	})
 	if err != nil {
@@ -891,6 +900,10 @@ func toPost(row sqlc.Post) (post.Post, error) {
 	if err != nil {
 		return post.Post{}, fmt.Errorf("post %s: %w", row.Slug, err)
 	}
+	candidates, err := unmarshalCandidates(row.ReplacementCandidates)
+	if err != nil {
+		return post.Post{}, fmt.Errorf("post %s: %w", row.Slug, err)
+	}
 	qualityRules, err := unmarshalQualityRules(row.QualityRules)
 	if err != nil {
 		return post.Post{}, fmt.Errorf("post %s: %w", row.Slug, err)
@@ -929,6 +942,7 @@ func toPost(row sqlc.Post) (post.Post, error) {
 		PublishedURL:            row.PublishedUrl.String,
 		PublishedAt:             publishedAt,
 		ContentNouns:            nouns,
+		ReplacementCandidates:   candidates,
 		Field:                   row.Field.String,
 		QualityRules:            qualityRules,
 		Observations:            observations,

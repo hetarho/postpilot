@@ -172,7 +172,7 @@ func TestSavingAnAnswerIsAnOptionSave(t *testing.T) {
 		t.Fatalf("create: %v", err)
 	}
 	content := PostContent{Title: "완성", Blocks: []Block{{Type: BlockText, Content: "생성 문장"}}}
-	if err := svc.SetGeneratedContent(ctx, alice, created.Slug, content, LanguageKorean); err != nil {
+	if err := svc.SetGeneratedContent(ctx, alice, created.Slug, content, LanguageKorean, nil); err != nil {
 		t.Fatalf("SetGeneratedContent: %v", err)
 	}
 	finalized, err := svc.Finalize(ctx, alice, created.Slug, 1)

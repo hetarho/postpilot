@@ -180,16 +180,18 @@ func (s *Service) PrepareWriteInput(ctx context.Context, raw []byte, progress Pr
 	return json.Marshal(snapshot)
 }
 
-func (s *Service) RunWriteCandidate(ctx context.Context, raw []byte, model llm.ModelRef) (PostContent, CandidateUsage, error) {
+// RunWriteCandidate returns the candidate's whole answer, so the winner, once applied, carries
+// its own nouns and replacement candidates into the post.
+func (s *Service) RunWriteCandidate(ctx context.Context, raw []byte, model llm.ModelRef) (WriteAnswer, CandidateUsage, error) {
 	snapshot, err := decodeExperimentSnapshot(raw, "write")
 	if err != nil {
-		return PostContent{}, CandidateUsage{}, err
+		return WriteAnswer{}, CandidateUsage{}, err
 	}
 	if !snapshot.Prepared {
-		return PostContent{}, CandidateUsage{}, fmt.Errorf("write snapshot is not prepared")
+		return WriteAnswer{}, CandidateUsage{}, fmt.Errorf("write snapshot is not prepared")
 	}
 	answer, usage, err := s.writeCandidate(ctx, snapshot.Post, snapshot.Profile, snapshot.Observations, model)
-	return answer.Content, candidateUsage(usage), err
+	return answer, candidateUsage(usage), err
 }
 
 func (s *Service) RunObserveCandidate(ctx context.Context, raw []byte, model llm.ModelRef, progress Progress) ([]Observation, CandidateUsage, error) {
@@ -205,8 +207,10 @@ func (s *Service) RunObserveCandidate(ctx context.Context, raw []byte, model llm
 }
 
 // ApplyWriteWinner establishes a machine baseline, so it is an AI result landing in a
-// voice: the post's current voice must still be alive and match the frozen snapshot's.
-func (s *Service) ApplyWriteWinner(ctx context.Context, userID, postSlug string, content PostContent, raw ...[]byte) error {
+// voice: the post's current voice must still be alive and match the frozen snapshot's. The
+// winner's annotations replace the post's; a candidate recorded before they existed carries
+// none and clears them (GEN-4).
+func (s *Service) ApplyWriteWinner(ctx context.Context, userID, postSlug string, answer WriteAnswer, raw ...[]byte) error {
 	current, err := s.posts.AttachedImages(ctx, userID, postSlug)
 	if err != nil {
 		return err
@@ -228,10 +232,10 @@ func (s *Service) ApplyWriteWinner(ctx context.Context, userID, postSlug string,
 	if !frozenLanguage.Valid() {
 		return ErrLanguageRequired
 	}
-	if err := s.posts.SetGeneratedContent(ctx, userID, postSlug, content, frozenLanguage); err != nil {
+	if err := s.posts.SetGeneratedContent(ctx, userID, postSlug, answer.Content, frozenLanguage, answer.Annotations()); err != nil {
 		return err
 	}
-	s.recordVersionSample(ctx, userID, frozenVoiceID, content)
+	s.recordVersionSample(ctx, userID, frozenVoiceID, answer.Content)
 	return nil
 }
 

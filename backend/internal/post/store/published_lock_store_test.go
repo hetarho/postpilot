@@ -41,7 +41,7 @@ func publishedRow(t *testing.T) *store.Store {
 		t.Fatal(err)
 	}
 	content := post.PostContent{Title: "제주 3일", Blocks: []post.Block{{Type: post.BlockText, Content: "협재 해변은 물빛이 맑았다."}}}
-	if updated, err := s.UpdateGeneratedContent(ctx, "p", "alice", content, post.LanguageKorean, testNow); err != nil || !updated {
+	if updated, err := s.UpdateGeneratedContent(ctx, "p", "alice", content, post.LanguageKorean, post.WriteAnnotations{}, testNow); err != nil || !updated {
 		t.Fatalf("machine save: %v, %v", updated, err)
 	}
 	if updated, err := s.Finalize(ctx, "p", "alice", "제주 3일", 1, testNow.Add(time.Minute)); err != nil || !updated {
@@ -101,7 +101,7 @@ func TestEveryGuardedStatementRefusesAPublishedPost(t *testing.T) {
 			return s.UpdateObservations(context.Background(), "p", "alice", []post.Observation{{File: "IMG_1.jpg", Scene: "바다"}}, later)
 		},
 		"UpdateGeneratedContent": func(s *store.Store) (bool, error) {
-			return s.UpdateGeneratedContent(context.Background(), "p", "alice", other, post.LanguageKorean, later)
+			return s.UpdateGeneratedContent(context.Background(), "p", "alice", other, post.LanguageKorean, post.WriteAnnotations{}, later)
 		},
 		"SavePostContent": func(s *store.Store) (bool, error) {
 			return s.SaveContent(context.Background(), "p", "alice", other, 1, later)

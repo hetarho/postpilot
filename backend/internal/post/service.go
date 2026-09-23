@@ -752,7 +752,12 @@ func (s *Service) SetObservations(ctx context.Context, userID, slug string, obse
 }
 
 // SetGeneratedContent atomically replaces canonical content and moves the post to review.
-func (s *Service) SetGeneratedContent(ctx context.Context, userID, slug string, content PostContent, language Language) error {
+//
+// annotations is what the write said beside the content. nil keeps what the post holds — a
+// revision has no nouns answer and no phrase list (GEN-55, GEN-57) — and non-nil replaces both,
+// where empty clears. The presence is the pointer, never a slice's nil-ness: a write that
+// returned no nouns must still clear the last generation's.
+func (s *Service) SetGeneratedContent(ctx context.Context, userID, slug string, content PostContent, language Language, annotations *WriteAnnotations) error {
 	if !language.Valid() {
 		return ErrLanguageRequired
 	}
@@ -763,7 +768,18 @@ func (s *Service) SetGeneratedContent(ctx context.Context, userID, slug string, 
 	if err := refusePublished(found); err != nil {
 		return err
 	}
-	if found.Status == StatusReview && found.MachineBaselineRevision == found.ContentRevision && found.Content != nil && found.ContentLanguage != nil && *found.ContentLanguage == language && reflect.DeepEqual(*found.Content, content) {
+	next := WriteAnnotations{Nouns: found.ContentNouns, Candidates: found.ReplacementCandidates}
+	if annotations != nil {
+		next = *annotations
+	}
+	// The bounds are generation's (GEN-54); what post owns is that a span names a surface it has
+	// and a position that can exist.
+	for _, candidate := range next.Candidates {
+		if !candidate.Surface.Valid() || candidate.Index < 0 {
+			return &InvalidContentError{Reason: "replacement candidate"}
+		}
+	}
+	if generatedAlready(found, content, language, next) {
 		return nil
 	}
 	images, err := s.images.ListImages(ctx, slug)
@@ -777,7 +793,7 @@ func (s *Service) SetGeneratedContent(ctx context.Context, userID, slug string, 
 	if err := ValidateContent(content, images, videos); err != nil {
 		return err
 	}
-	updated, err := s.drafts.UpdateGeneratedContent(ctx, slug, userID, content, language, s.now())
+	updated, err := s.drafts.UpdateGeneratedContent(ctx, slug, userID, content, language, next, s.now())
 	if err != nil {
 		return err
 	}
@@ -786,7 +802,7 @@ func (s *Service) SetGeneratedContent(ctx context.Context, userID, slug string, 
 		// retries. Re-read after a zero-row update so the loser succeeds without
 		// advancing the revision, while deletion/ownership changes remain errors.
 		current, loadErr := s.ownedPost(ctx, userID, slug)
-		if loadErr == nil && current.Status == StatusReview && current.MachineBaselineRevision == current.ContentRevision && current.Content != nil && current.ContentLanguage != nil && *current.ContentLanguage == language && reflect.DeepEqual(*current.Content, content) {
+		if loadErr == nil && generatedAlready(current, content, language, next) {
 			return nil
 		}
 		if loadErr != nil {
@@ -798,6 +814,22 @@ func (s *Service) SetGeneratedContent(ctx context.Context, userID, slug string, 
 		return ErrNotFound
 	}
 	return nil
+}
+
+// generatedAlready is whether the post already holds exactly this machine write: the same
+// content in the same language, as its current machine baseline, with the same annotations. An
+// identical content with different nouns or candidates is a new write. nil and empty compare
+// equal, since both mean none.
+func generatedAlready(p Post, content PostContent, language Language, annotations WriteAnnotations) bool {
+	return p.Status == StatusReview && p.MachineBaselineRevision == p.ContentRevision &&
+		p.Content != nil && p.ContentLanguage != nil && *p.ContentLanguage == language &&
+		reflect.DeepEqual(*p.Content, content) &&
+		slices.Equal(p.ContentNouns, annotations.Nouns) &&
+		slices.EqualFunc(p.ReplacementCandidates, annotations.Candidates, equalCandidate)
+}
+
+func equalCandidate(a, b ReplacementCandidate) bool {
+	return a.Surface == b.Surface && a.Index == b.Index && a.Source == b.Source && slices.Equal(a.Phrases, b.Phrases)
 }
 
 // SaveContent optimistically saves only canonical content. The machine baseline is

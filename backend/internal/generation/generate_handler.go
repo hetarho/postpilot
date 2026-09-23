@@ -91,11 +91,12 @@ func (s *Service) Generate(ctx context.Context, job GenerateJob, progress Progre
 	if err != nil {
 		return err
 	}
-	content := answer.Content
-	if err := s.posts.SetGeneratedContent(ctx, post.UserID, post.Slug, content, job.TargetLanguage); err != nil {
+	// The answer's annotations replace the post's, a phrase-less write's included: its nil
+	// replacements clear the candidates the last generation offered (GEN-48).
+	if err := s.posts.SetGeneratedContent(ctx, post.UserID, post.Slug, answer.Content, job.TargetLanguage, answer.Annotations()); err != nil {
 		return fmt.Errorf("persist generated content: %w", err)
 	}
-	s.recordVersionSample(ctx, post.UserID, post.Voice.ID, content)
+	s.recordVersionSample(ctx, post.UserID, post.Voice.ID, answer.Content)
 	progress("write", 1, 1)
 	return nil
 }

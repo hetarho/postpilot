@@ -124,6 +124,73 @@ func unmarshalNouns(value sql.NullString) ([]string, error) {
 	return nouns, nil
 }
 
+// marshalNouns stores the write's nouns as JSON, NULL for none (GEN-55).
+func marshalNouns(nouns []string) (sql.NullString, error) {
+	if len(nouns) == 0 {
+		return sql.NullString{}, nil
+	}
+	encoded, err := json.Marshal(nouns)
+	if err != nil {
+		return sql.NullString{}, fmt.Errorf("encode content nouns: %w", err)
+	}
+	return sql.NullString{String: string(encoded), Valid: true}, nil
+}
+
+// replacementCandidateJSON is the column's shape, owned here so the domain carries no JSON tags
+// (ARCH-7). Every member is always written, phrases as [] rather than null, so equal values
+// encode to equal bytes and the statement's IS NOT compares them.
+type replacementCandidateJSON struct {
+	Surface string   `json:"surface"`
+	Index   int      `json:"index"`
+	Source  string   `json:"source"`
+	Phrases []string `json:"phrases"`
+}
+
+// marshalCandidates stores the write's replacement candidates in order, NULL for none (GEN-53).
+func marshalCandidates(candidates []post.ReplacementCandidate) (sql.NullString, error) {
+	if len(candidates) == 0 {
+		return sql.NullString{}, nil
+	}
+	values := make([]replacementCandidateJSON, len(candidates))
+	for i, candidate := range candidates {
+		phrases := candidate.Phrases
+		if phrases == nil {
+			phrases = []string{}
+		}
+		values[i] = replacementCandidateJSON{
+			Surface: string(candidate.Surface), Index: candidate.Index, Source: candidate.Source, Phrases: phrases,
+		}
+	}
+	encoded, err := json.Marshal(values)
+	if err != nil {
+		return sql.NullString{}, fmt.Errorf("encode replacement candidates: %w", err)
+	}
+	return sql.NullString{String: string(encoded), Valid: true}, nil
+}
+
+// unmarshalCandidates reads NULL and [] alike as none; anything that is not the column's shape
+// is a broken row.
+func unmarshalCandidates(value sql.NullString) ([]post.ReplacementCandidate, error) {
+	if !value.Valid {
+		return nil, nil
+	}
+	var values []replacementCandidateJSON
+	if err := json.Unmarshal([]byte(value.String), &values); err != nil {
+		return nil, fmt.Errorf("decode replacement candidates: %w", err)
+	}
+	if len(values) == 0 {
+		return nil, nil
+	}
+	out := make([]post.ReplacementCandidate, len(values))
+	for i, candidate := range values {
+		out[i] = post.ReplacementCandidate{
+			Surface: post.ReplacementSurface(candidate.Surface), Index: candidate.Index,
+			Source: candidate.Source, Phrases: candidate.Phrases,
+		}
+	}
+	return out, nil
+}
+
 // marshalQualityRules stores the ticks as JSON, NULL for none: an empty set and "never ticked"
 // read back the same way.
 func marshalQualityRules(ids []string) (sql.NullString, error) {

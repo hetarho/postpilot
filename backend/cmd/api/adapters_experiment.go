@@ -195,8 +195,8 @@ func (a experimentRunner) RunCandidate(ctx context.Context, found experiment.Exp
 	ref := llmRef(candidate.Model)
 	switch found.Stage {
 	case experiment.StageWrite:
-		content, usage, err := a.generation.RunWriteCandidate(ctx, found.InputSnapshot, ref)
-		encoded, encodeErr := json.Marshal(toOutputPost(content))
+		answer, usage, err := a.generation.RunWriteCandidate(ctx, found.InputSnapshot, ref)
+		encoded, encodeErr := json.Marshal(toOutputPost(answer))
 		if err == nil {
 			err = encodeErr
 		}
@@ -255,6 +255,17 @@ type outputPost struct {
 	Summary string        `json:"summary"`
 	Tags    []string      `json:"tags"`
 	Blocks  []outputBlock `json:"blocks"`
+	// The candidate's annotations, so an applied winner brings its own. `omitempty` keeps a
+	// noun-less, phrase-less candidate's bytes what they were, and an output recorded before
+	// these existed decodes as none.
+	Nouns        []string            `json:"nouns,omitempty"`
+	Replacements []outputReplacement `json:"replacements,omitempty"`
+}
+type outputReplacement struct {
+	Surface string   `json:"surface"`
+	Index   int      `json:"index"`
+	Source  string   `json:"source"`
+	Phrases []string `json:"phrases"`
 }
 type outputBlock struct {
 	Type    string   `json:"type"`
@@ -278,17 +289,30 @@ type outputObservation struct {
 	Model string `json:"model,omitempty"`
 }
 
-func toOutputPost(content generation.PostContent) outputPost {
-	out := outputPost{Title: content.Title, Summary: content.Summary, Tags: content.Tags}
+func toOutputPost(answer generation.WriteAnswer) outputPost {
+	content := answer.Content
+	out := outputPost{Title: content.Title, Summary: content.Summary, Tags: content.Tags, Nouns: answer.Nouns}
 	for _, block := range content.Blocks {
 		out.Blocks = append(out.Blocks, outputBlock{Type: string(block.Type), Content: block.Content, Level: block.Level, File: block.File, Alt: block.Alt, Caption: block.Caption, Items: block.Items})
 	}
+	for _, replacement := range answer.Replacements {
+		out.Replacements = append(out.Replacements, outputReplacement{Surface: string(replacement.Surface), Index: replacement.Index, Source: replacement.Source, Phrases: replacement.Phrases})
+	}
 	return out
 }
-func fromOutputPost(value outputPost) generation.PostContent {
-	out := generation.PostContent{Title: value.Title, Summary: value.Summary, Tags: value.Tags}
+
+// fromOutputPost reads a candidate's output back. Its surface is taken as written; the post
+// validates it when the winner is applied.
+func fromOutputPost(value outputPost) generation.WriteAnswer {
+	out := generation.WriteAnswer{
+		Content: generation.PostContent{Title: value.Title, Summary: value.Summary, Tags: value.Tags},
+		Nouns:   value.Nouns,
+	}
 	for _, block := range value.Blocks {
-		out.Blocks = append(out.Blocks, generation.Block{Type: generation.BlockType(block.Type), Content: block.Content, Level: block.Level, File: block.File, Alt: block.Alt, Caption: block.Caption, Items: block.Items})
+		out.Content.Blocks = append(out.Content.Blocks, generation.Block{Type: generation.BlockType(block.Type), Content: block.Content, Level: block.Level, File: block.File, Alt: block.Alt, Caption: block.Caption, Items: block.Items})
+	}
+	for _, replacement := range value.Replacements {
+		out.Replacements = append(out.Replacements, generation.Replacement{Surface: generation.ReplacementSurface(replacement.Surface), Index: replacement.Index, Source: replacement.Source, Phrases: replacement.Phrases})
 	}
 	return out
 }

@@ -88,7 +88,7 @@ func TestReassignmentPreservesContentAndClearsTheBaselineVoice(t *testing.T) {
 	ctx := context.Background()
 	created := mustCreatePost(t, svc, alice, "Jeju")
 	content := PostContent{Title: "generated", Blocks: []Block{{Type: BlockText, Content: "body"}}}
-	if err := svc.SetGeneratedContent(ctx, alice, created.Slug, content, LanguageKorean); err != nil {
+	if err := svc.SetGeneratedContent(ctx, alice, created.Slug, content, LanguageKorean, nil); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := svc.Finalize(ctx, alice, created.Slug, 1); err != nil {
@@ -120,7 +120,7 @@ func TestReassignmentPreservesContentAndClearsTheBaselineVoice(t *testing.T) {
 		t.Fatalf("snapshot after reassignment = %v, want ErrNoMachineBaseline", err)
 	}
 	// A fresh machine result re-establishes a baseline in the new voice.
-	if err := svc.SetGeneratedContent(ctx, alice, created.Slug, PostContent{Title: "again", Blocks: []Block{{Type: BlockText, Content: "new"}}}, LanguageKorean); err != nil {
+	if err := svc.SetGeneratedContent(ctx, alice, created.Slug, PostContent{Title: "again", Blocks: []Block{{Type: BlockText, Content: "new"}}}, LanguageKorean, nil); err != nil {
 		t.Fatal(err)
 	}
 	if after := store.posts[created.Slug]; after.MachineBaselineVoiceID != aliceReview {
@@ -141,7 +141,7 @@ func TestReassignedReviewCanFinalizeWithoutPublishingLearningEvidence(t *testing
 	ctx := context.Background()
 	created := mustCreatePost(t, svc, alice, "Finalize after move")
 	content := PostContent{Title: "kept", Blocks: []Block{{Type: BlockText, Content: "body"}}}
-	if err := svc.SetGeneratedContent(ctx, alice, created.Slug, content, LanguageKorean); err != nil {
+	if err := svc.SetGeneratedContent(ctx, alice, created.Slug, content, LanguageKorean, nil); err != nil {
 		t.Fatal(err)
 	}
 	target := aliceReview

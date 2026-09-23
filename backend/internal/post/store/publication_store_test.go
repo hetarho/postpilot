@@ -22,7 +22,7 @@ func finalizedRow(t *testing.T, s *store.Store, slug, userID string) {
 	ctx := context.Background()
 	seedPost(t, s, slug, userID, testNow)
 	content := post.PostContent{Title: "제주 3일", Blocks: []post.Block{{Type: post.BlockText, Content: "협재 해변은 물빛이 맑았다."}}}
-	if updated, err := s.UpdateGeneratedContent(ctx, slug, userID, content, post.LanguageKorean, testNow); err != nil || !updated {
+	if updated, err := s.UpdateGeneratedContent(ctx, slug, userID, content, post.LanguageKorean, post.WriteAnnotations{}, testNow); err != nil || !updated {
 		t.Fatalf("machine save: updated=%v err=%v", updated, err)
 	}
 	if updated, err := s.Finalize(ctx, slug, userID, "제주 3일", 1, testNow.Add(time.Minute)); err != nil || !updated {

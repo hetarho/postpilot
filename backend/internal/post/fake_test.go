@@ -3,7 +3,6 @@ package post
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"sort"
 	"strings"
 	"sync"
@@ -105,7 +104,7 @@ func (f *fakeStore) UpdateObservations(_ context.Context, slug, userID string, o
 	return true, nil
 }
 
-func (f *fakeStore) UpdateGeneratedContent(_ context.Context, slug, userID string, content PostContent, language Language, updatedAt time.Time) (bool, error) {
+func (f *fakeStore) UpdateGeneratedContent(_ context.Context, slug, userID string, content PostContent, language Language, annotations WriteAnnotations, updatedAt time.Time) (bool, error) {
 	f.guarded(slug)
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -113,11 +112,19 @@ func (f *fakeStore) UpdateGeneratedContent(_ context.Context, slug, userID strin
 	if !ok || existing.UserID != userID || f.publishedLocked(slug) {
 		return false, nil
 	}
-	if existing.Status == StatusReview && existing.MachineBaselineRevision == existing.ContentRevision && existing.Content != nil && existing.ContentLanguage != nil && *existing.ContentLanguage == language && reflect.DeepEqual(*existing.Content, content) {
+	// The statement's idempotence group: an identical content with identical annotations is
+	// no write; different nouns or candidates are.
+	if generatedAlready(existing, content, language, annotations) {
 		return false, nil
 	}
 	existing.Content = &content
 	existing.ContentLanguage = &language
+	// NULL for none, as the columns store it.
+	existing.ContentNouns = nilIfEmpty(annotations.Nouns)
+	existing.ReplacementCandidates = nil
+	if len(annotations.Candidates) > 0 {
+		existing.ReplacementCandidates = append([]ReplacementCandidate(nil), annotations.Candidates...)
+	}
 	existing.ContentRevision++
 	existing.MachineBaselineRevision = existing.ContentRevision
 	existing.MachineBaselineVoiceID = existing.VoiceID
@@ -817,4 +824,11 @@ func (f *fakeBlobs) List(_ context.Context, prefix string) ([]Object, error) {
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Key < out[j].Key })
 	return out, nil
+}
+
+func nilIfEmpty(values []string) []string {
+	if len(values) == 0 {
+		return nil
+	}
+	return append([]string(nil), values...)
 }

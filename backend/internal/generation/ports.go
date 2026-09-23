@@ -21,7 +21,9 @@ type VideoLinker interface {
 type Posts interface {
 	AttachedImages(ctx context.Context, userID, slug string) (PostInput, error)
 	SetObservations(ctx context.Context, userID, slug string, observations []Observation) error
-	SetGeneratedContent(ctx context.Context, userID, slug string, content PostContent, language Language) error
+	// SetGeneratedContent stores a machine write. annotations nil keeps the post's nouns and
+	// candidates (a revision); non-nil replaces both, where empty clears.
+	SetGeneratedContent(ctx context.Context, userID, slug string, content PostContent, language Language, annotations *WriteAnnotations) error
 }
 
 // Profiles projects exactly the post's voice; the voice context never falls back to a

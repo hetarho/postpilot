@@ -11,7 +11,7 @@ func TestFinalizedLifecycleKeepsIdenticalSavesAndDemotesChangedContent(t *testin
 	svc, _, _ := newTestService(t)
 	created := mustCreatePost(t, svc, alice, "Final")
 	content := PostContent{Title: "완성", Blocks: []Block{{Type: BlockText, Content: "생성 문장"}}}
-	if err := svc.SetGeneratedContent(context.Background(), alice, created.Slug, content, LanguageKorean); err != nil {
+	if err := svc.SetGeneratedContent(context.Background(), alice, created.Slug, content, LanguageKorean, nil); err != nil {
 		t.Fatal(err)
 	}
 	target := 900
@@ -44,7 +44,7 @@ func TestFinalizeIsRevisionCheckedOwnedAndIdempotent(t *testing.T) {
 		t.Fatalf("finalize without baseline = %v", err)
 	}
 	content := PostContent{Blocks: []Block{{Type: BlockText, Content: "본문"}}}
-	if err := svc.SetGeneratedContent(context.Background(), alice, created.Slug, content, LanguageKorean); err != nil {
+	if err := svc.SetGeneratedContent(context.Background(), alice, created.Slug, content, LanguageKorean, nil); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := svc.Finalize(context.Background(), bob, created.Slug, 1); !errors.Is(err, ErrForbidden) {
@@ -73,7 +73,7 @@ func TestFinalizeAllowsCrossLanguageContentAndPreservesProvenance(t *testing.T) 
 		t.Fatal(err)
 	}
 	content := PostContent{Title: "An English post", Blocks: []Block{{Type: BlockText, Content: "English content remains publishable under a Korean source voice."}}}
-	if err := svc.SetGeneratedContent(ctx, alice, created.Slug, content, LanguageEnglish); err != nil {
+	if err := svc.SetGeneratedContent(ctx, alice, created.Slug, content, LanguageEnglish, nil); err != nil {
 		t.Fatal(err)
 	}
 	finalized, err := svc.Finalize(ctx, alice, created.Slug, 1)
@@ -92,7 +92,7 @@ func TestFinalizeCopiesContentTitleIntoThePost(t *testing.T) {
 	ctx := context.Background()
 	created := mustCreatePost(t, svc, alice, "가제")
 	content := PostContent{Title: "  모델이 지은 제목  ", Blocks: []Block{{Type: BlockText, Content: "본문"}}}
-	if err := svc.SetGeneratedContent(ctx, alice, created.Slug, content, LanguageKorean); err != nil {
+	if err := svc.SetGeneratedContent(ctx, alice, created.Slug, content, LanguageKorean, nil); err != nil {
 		t.Fatal(err)
 	}
 	// The list read falls back to content.title only while the working title is empty, so a
@@ -132,7 +132,7 @@ func TestFinalizeLeavesTheWorkingTitleWhenTheContentHasNone(t *testing.T) {
 	ctx := context.Background()
 	created := mustCreatePost(t, svc, alice, "가제")
 	content := PostContent{Title: "   ", Blocks: []Block{{Type: BlockText, Content: "본문"}}}
-	if err := svc.SetGeneratedContent(ctx, alice, created.Slug, content, LanguageKorean); err != nil {
+	if err := svc.SetGeneratedContent(ctx, alice, created.Slug, content, LanguageKorean, nil); err != nil {
 		t.Fatal(err)
 	}
 	finalized, err := svc.Finalize(ctx, alice, created.Slug, 1)
@@ -148,7 +148,7 @@ func TestSecondFinalizeOfTheSameRevisionDoesNotRewriteTheTitle(t *testing.T) {
 	ctx := context.Background()
 	created := mustCreatePost(t, svc, alice, "가제")
 	content := PostContent{Title: "모델 제목", Blocks: []Block{{Type: BlockText, Content: "본문"}}}
-	if err := svc.SetGeneratedContent(ctx, alice, created.Slug, content, LanguageKorean); err != nil {
+	if err := svc.SetGeneratedContent(ctx, alice, created.Slug, content, LanguageKorean, nil); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := svc.Finalize(ctx, alice, created.Slug, 1); err != nil {
@@ -213,7 +213,7 @@ func newPublishedFixture(t *testing.T) (*Service, *fakeStore, *fakeBlobs, publis
 	blobs.putTyped(videoUpload.Key, 1_000_000, contentType, testNow)
 
 	content := PostContent{Title: "제주 3일 기록", Blocks: []Block{{Type: BlockText, Content: "협재 해변은 물빛이 맑았다."}}}
-	if err := svc.SetGeneratedContent(ctx, alice, created.Slug, content, LanguageKorean); err != nil {
+	if err := svc.SetGeneratedContent(ctx, alice, created.Slug, content, LanguageKorean, nil); err != nil {
 		t.Fatal(err)
 	}
 	finalized, err := svc.Finalize(ctx, alice, created.Slug, 1)

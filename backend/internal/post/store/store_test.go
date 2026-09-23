@@ -2,9 +2,11 @@ package store_test
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -134,11 +136,11 @@ func TestGeneratedContentAndObservationsRoundTrip(t *testing.T) {
 		{Type: post.BlockText, Content: "본문"},
 		{Type: post.BlockImage, File: "IMG_1.jpg", Caption: "바다"},
 	}}
-	updated, err = s.UpdateGeneratedContent(ctx, "p", "alice", content, post.LanguageKorean, testNow.Add(2*time.Minute))
+	updated, err = s.UpdateGeneratedContent(ctx, "p", "alice", content, post.LanguageKorean, post.WriteAnnotations{}, testNow.Add(2*time.Minute))
 	if err != nil || !updated {
 		t.Fatalf("UpdateGeneratedContent: updated=%v err=%v", updated, err)
 	}
-	updated, err = s.UpdateGeneratedContent(ctx, "p", "alice", content, post.LanguageKorean, testNow.Add(3*time.Minute))
+	updated, err = s.UpdateGeneratedContent(ctx, "p", "alice", content, post.LanguageKorean, post.WriteAnnotations{}, testNow.Add(3*time.Minute))
 	if err != nil || updated {
 		t.Fatalf("identical machine retry: updated=%v err=%v", updated, err)
 	}
@@ -155,7 +157,7 @@ func TestGeneratedContentAndObservationsRoundTrip(t *testing.T) {
 	if len(got.Observations) != 1 || got.Observations[0].VisibleText != "표지판" || !got.Observations[0].PeoplePresent {
 		t.Fatalf("observations = %+v", got.Observations)
 	}
-	updated, err = s.UpdateGeneratedContent(ctx, "p", "bob", post.PostContent{Title: "hijack"}, post.LanguageKorean, testNow)
+	updated, err = s.UpdateGeneratedContent(ctx, "p", "bob", post.PostContent{Title: "hijack"}, post.LanguageKorean, post.WriteAnnotations{}, testNow)
 	if err != nil || updated {
 		t.Fatalf("foreign update: updated=%v err=%v", updated, err)
 	}
@@ -170,7 +172,7 @@ func TestTargetChangePreservesPostStateAndFrozenMachineWriteKeepsItsOwnLanguage(
 		t.Fatalf("observations: updated=%v err=%v", updated, err)
 	}
 	content := post.PostContent{Title: "동일 본문", Summary: "raw-summary", Tags: []string{"raw-tag"}, Blocks: []post.Block{{Type: post.BlockText, Content: "raw-content"}}}
-	if updated, err := s.UpdateGeneratedContent(ctx, "language-transition", "alice", content, post.LanguageKorean, testNow.Add(2*time.Minute)); err != nil || !updated {
+	if updated, err := s.UpdateGeneratedContent(ctx, "language-transition", "alice", content, post.LanguageKorean, post.WriteAnnotations{}, testNow.Add(2*time.Minute)); err != nil || !updated {
 		t.Fatalf("machine write: updated=%v err=%v", updated, err)
 	}
 	before, err := s.GetPost(ctx, "language-transition")
@@ -199,7 +201,7 @@ func TestTargetChangePreservesPostStateAndFrozenMachineWriteKeepsItsOwnLanguage(
 	// A Korean run frozen before the target changed may still complete afterwards. Its
 	// content provenance follows the frozen run, not the post's newer English target.
 	oldFrozenResult := post.PostContent{Title: "늦게 도착한 결과", Blocks: []post.Block{{Type: post.BlockText, Content: "한국어 결과"}}}
-	if updated, err := s.UpdateGeneratedContent(ctx, after.Slug, after.UserID, oldFrozenResult, post.LanguageKorean, testNow.Add(4*time.Minute)); err != nil || !updated {
+	if updated, err := s.UpdateGeneratedContent(ctx, after.Slug, after.UserID, oldFrozenResult, post.LanguageKorean, post.WriteAnnotations{}, testNow.Add(4*time.Minute)); err != nil || !updated {
 		t.Fatalf("old frozen write: updated=%v err=%v", updated, err)
 	}
 	landed, err := s.GetPost(ctx, after.Slug)
@@ -212,7 +214,7 @@ func TestTargetChangePreservesPostStateAndFrozenMachineWriteKeepsItsOwnLanguage(
 
 	// Provenance is part of idempotence: identical bytes with a different canonical
 	// language still require one atomic machine write.
-	if updated, err := s.UpdateGeneratedContent(ctx, after.Slug, after.UserID, oldFrozenResult, post.LanguageEnglish, testNow.Add(5*time.Minute)); err != nil || !updated {
+	if updated, err := s.UpdateGeneratedContent(ctx, after.Slug, after.UserID, oldFrozenResult, post.LanguageEnglish, post.WriteAnnotations{}, testNow.Add(5*time.Minute)); err != nil || !updated {
 		t.Fatalf("provenance-only machine write: updated=%v err=%v", updated, err)
 	}
 	remapped, err := s.GetPost(ctx, after.Slug)
@@ -230,7 +232,7 @@ func TestContentSavePreservesFrozenMachineBaseline(t *testing.T) {
 	if updated, err := s.SaveGenerationOptions(ctx, "editable", "alice", &target1400, 4, false, nil, testNow); err != nil || !updated {
 		t.Fatalf("option save: updated=%v err=%v", updated, err)
 	}
-	if updated, err := s.UpdateGeneratedContent(ctx, "editable", "alice", baseline, post.LanguageKorean, testNow); err != nil || !updated {
+	if updated, err := s.UpdateGeneratedContent(ctx, "editable", "alice", baseline, post.LanguageKorean, post.WriteAnnotations{}, testNow); err != nil || !updated {
 		t.Fatalf("machine save: updated=%v err=%v", updated, err)
 	}
 	final := post.PostContent{Title: "mine", Blocks: []post.Block{{Type: post.BlockText, Content: "제가 고친 문장이에요."}}}
@@ -258,7 +260,7 @@ func TestContentSavePreservesFrozenMachineBaseline(t *testing.T) {
 		t.Fatalf("snapshot voices = %q / %q", snapshot.VoiceID, snapshot.MachineBaselineVoiceID)
 	}
 	nextBaseline := post.PostContent{Title: "machine 2", Blocks: []post.Block{{Type: post.BlockText, Content: "새 기준 문장입니다."}}}
-	if updated, err := s.UpdateGeneratedContent(ctx, "editable", "alice", nextBaseline, post.LanguageKorean, testNow.Add(3*time.Minute)); err != nil || !updated {
+	if updated, err := s.UpdateGeneratedContent(ctx, "editable", "alice", nextBaseline, post.LanguageKorean, post.WriteAnnotations{}, testNow.Add(3*time.Minute)); err != nil || !updated {
 		t.Fatalf("second machine save: updated=%v err=%v", updated, err)
 	}
 	if _, err = s.LearningSnapshot(ctx, "editable", "alice"); !errors.Is(err, post.ErrPostNotFinalized) {
@@ -335,7 +337,7 @@ func TestListPostsFallsBackToGeneratedTitle(t *testing.T) {
 	if updated, err := s.UpdateDraft(ctx, p.Slug, p.UserID, "", "memo", nil, testNow); err != nil || !updated {
 		t.Fatalf("clear title: updated=%v err=%v", updated, err)
 	}
-	if updated, err := s.UpdateGeneratedContent(ctx, p.Slug, p.UserID, post.PostContent{Title: "Generated title"}, post.LanguageKorean, testNow); err != nil || !updated {
+	if updated, err := s.UpdateGeneratedContent(ctx, p.Slug, p.UserID, post.PostContent{Title: "Generated title"}, post.LanguageKorean, post.WriteAnnotations{}, testNow); err != nil || !updated {
 		t.Fatalf("generated content: updated=%v err=%v", updated, err)
 	}
 	got, err := s.ListPosts(ctx, "alice")
@@ -358,11 +360,11 @@ func TestListPostsCarriesContentTags(t *testing.T) {
 	seedPost(t, s, "no-content", "alice", testNow.Add(-2*time.Hour))
 
 	if updated, err := s.UpdateGeneratedContent(ctx, tagged.Slug, tagged.UserID,
-		post.PostContent{Title: "Jeju", Tags: []string{"제주", "카페"}}, post.LanguageKorean, testNow); err != nil || !updated {
+		post.PostContent{Title: "Jeju", Tags: []string{"제주", "카페"}}, post.LanguageKorean, post.WriteAnnotations{}, testNow); err != nil || !updated {
 		t.Fatalf("generated content: updated=%v err=%v", updated, err)
 	}
 	if updated, err := s.UpdateGeneratedContent(ctx, empty.Slug, empty.UserID,
-		post.PostContent{Title: "Busan"}, post.LanguageKorean, testNow); err != nil || !updated {
+		post.PostContent{Title: "Busan"}, post.LanguageKorean, post.WriteAnnotations{}, testNow); err != nil || !updated {
 		t.Fatalf("generated content: updated=%v err=%v", updated, err)
 	}
 
@@ -587,7 +589,7 @@ func TestReassignVoiceIsOneOwnedWriteThatKeepsContent(t *testing.T) {
 	s := newStore(t)
 	seedPost(t, s, "moving", "alice", testNow)
 	baseline := post.PostContent{Title: "machine", Blocks: []post.Block{{Type: post.BlockText, Content: "생성 문장입니다."}}}
-	if updated, err := s.UpdateGeneratedContent(ctx, "moving", "alice", baseline, post.LanguageKorean, testNow); err != nil || !updated {
+	if updated, err := s.UpdateGeneratedContent(ctx, "moving", "alice", baseline, post.LanguageKorean, post.WriteAnnotations{}, testNow); err != nil || !updated {
 		t.Fatalf("machine save: updated=%v err=%v", updated, err)
 	}
 	if updated, err := s.Finalize(ctx, "moving", "alice", "machine", 1, testNow.Add(time.Minute)); err != nil || !updated {
@@ -618,7 +620,7 @@ func TestReassignVoiceIsOneOwnedWriteThatKeepsContent(t *testing.T) {
 	}
 	// A later machine result under the new voice establishes a fresh baseline and restores
 	// learn eligibility there.
-	if updated, err := s.UpdateGeneratedContent(ctx, "moving", "alice", post.PostContent{Title: "again", Blocks: []post.Block{{Type: post.BlockText, Content: "새 문장입니다."}}}, post.LanguageKorean, testNow.Add(3*time.Minute)); err != nil || !updated {
+	if updated, err := s.UpdateGeneratedContent(ctx, "moving", "alice", post.PostContent{Title: "again", Blocks: []post.Block{{Type: post.BlockText, Content: "새 문장입니다."}}}, post.LanguageKorean, post.WriteAnnotations{}, testNow.Add(3*time.Minute)); err != nil || !updated {
 		t.Fatalf("second machine save: updated=%v err=%v", updated, err)
 	}
 	if got, _ = s.GetPost(ctx, "moving"); got.MachineBaselineVoiceID != "voice-alice-review" {
@@ -631,7 +633,7 @@ func TestFinalizeAfterReassignmentDoesNotRequireALearningBaseline(t *testing.T) 
 	s := newStore(t)
 	seedPost(t, s, "moving-review", "alice", testNow)
 	content := post.PostContent{Title: "machine", Blocks: []post.Block{{Type: post.BlockText, Content: "본문"}}}
-	if updated, err := s.UpdateGeneratedContent(ctx, "moving-review", "alice", content, post.LanguageKorean, testNow); err != nil || !updated {
+	if updated, err := s.UpdateGeneratedContent(ctx, "moving-review", "alice", content, post.LanguageKorean, post.WriteAnnotations{}, testNow); err != nil || !updated {
 		t.Fatalf("machine save: updated=%v err=%v", updated, err)
 	}
 	if moved, err := s.ReassignVoice(ctx, "moving-review", "alice", "voice-alice-review", testNow.Add(time.Minute)); err != nil || !moved {
@@ -781,7 +783,7 @@ func TestAssignPostFieldWritesOnlyAChange(t *testing.T) {
 	s := newStore(t)
 	seedPost(t, s, "p", "alice", testNow)
 	content := post.PostContent{Title: "제주", Blocks: []post.Block{{Type: post.BlockText, Content: "바다"}}}
-	if ok, err := s.UpdateGeneratedContent(ctx, "p", "alice", content, post.LanguageKorean, testNow); err != nil || !ok {
+	if ok, err := s.UpdateGeneratedContent(ctx, "p", "alice", content, post.LanguageKorean, post.WriteAnnotations{}, testNow); err != nil || !ok {
 		t.Fatal(err)
 	}
 	if ok, err := s.Finalize(ctx, "p", "alice", "제주", 1, testNow.Add(time.Minute)); err != nil || !ok {
@@ -813,5 +815,109 @@ func TestAssignPostFieldWritesOnlyAChange(t *testing.T) {
 	}
 	if ok, err := s.AssignField(ctx, "p", "bob", &cafe, testNow); err != nil || ok {
 		t.Fatalf("another account's write = %v, %v", ok, err)
+	}
+}
+
+// GEN-53, GEN-55, R29: the write's nouns and candidates ride the generated-content statement in
+// columns of their own, never inside the content or the machine baseline, and NULL is the one
+// "none". Identical values are no write; different ones are, even over identical content.
+func TestWriteAnnotationsRoundTripOutsideTheContent(t *testing.T) {
+	ctx := context.Background()
+	s, handle := newStoreWithHandle(t)
+	p := seedPost(t, s, "annotated", "alice", testNow)
+	content := post.PostContent{
+		Title: "성수 카페 투어", Tags: []string{"성수 카페", "라떼"},
+		Blocks: []post.Block{{Type: post.BlockText, Content: "분위기 좋은 성수 카페."}},
+	}
+	annotations := post.WriteAnnotations{
+		Nouns: []string{"성수", "카페"},
+		Candidates: []post.ReplacementCandidate{
+			{Surface: post.ReplacementSurfaceTag, Index: 0, Source: "성수 카페", Phrases: []string{"성수동 카페", "성수 핫플"}},
+			// No phrases stored as [] rather than null, so equal values encode to equal bytes.
+			{Surface: post.ReplacementSurfaceBody, Index: 0, Source: "분위기 좋은"},
+		},
+	}
+	if updated, err := s.UpdateGeneratedContent(ctx, p.Slug, p.UserID, content, post.LanguageKorean, annotations, testNow); err != nil || !updated {
+		t.Fatalf("write: updated=%v err=%v", updated, err)
+	}
+
+	got, err := s.GetPost(ctx, p.Slug)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(got.ContentNouns, annotations.Nouns) {
+		t.Fatalf("nouns = %v", got.ContentNouns)
+	}
+	wantCandidates := []post.ReplacementCandidate{annotations.Candidates[0], {Surface: post.ReplacementSurfaceBody, Index: 0, Source: "분위기 좋은", Phrases: []string{}}}
+	if !reflect.DeepEqual(got.ReplacementCandidates, wantCandidates) {
+		t.Fatalf("candidates = %+v", got.ReplacementCandidates)
+	}
+
+	var stored, baseline, nouns, candidates string
+	if err := handle.Reader.QueryRow("SELECT content, machine_baseline, content_nouns, replacement_candidates FROM posts WHERE slug = ?", p.Slug).Scan(&stored, &baseline, &nouns, &candidates); err != nil {
+		t.Fatal(err)
+	}
+	for name, value := range map[string]string{"content": stored, "machine_baseline": baseline} {
+		for _, key := range []string{`"nouns"`, `"replacements"`, `"phrases"`, `"surface"`} {
+			if strings.Contains(value, key) {
+				t.Errorf("%s carries %s: %s", name, key, value)
+			}
+		}
+	}
+	if nouns != `["성수","카페"]` {
+		t.Errorf("content_nouns = %s", nouns)
+	}
+	if want := `[{"surface":"tag","index":0,"source":"성수 카페","phrases":["성수동 카페","성수 핫플"]},{"surface":"body","index":0,"source":"분위기 좋은","phrases":[]}]`; candidates != want {
+		t.Errorf("replacement_candidates = %s\nwant %s", candidates, want)
+	}
+
+	// The same write again changes nothing; the same content with other nouns is a new write.
+	if updated, err := s.UpdateGeneratedContent(ctx, p.Slug, p.UserID, content, post.LanguageKorean, annotations, testNow); err != nil || updated {
+		t.Fatalf("an identical write: updated=%v err=%v", updated, err)
+	}
+
+	if updated, err := s.UpdateGeneratedContent(ctx, p.Slug, p.UserID, content, post.LanguageKorean, post.WriteAnnotations{Nouns: []string{"성수"}, Candidates: annotations.Candidates}, testNow); err != nil || !updated {
+		t.Fatalf("other nouns over the same content: updated=%v err=%v", updated, err)
+	}
+	if updated, err := s.UpdateGeneratedContent(ctx, p.Slug, p.UserID, content, post.LanguageKorean, post.WriteAnnotations{Nouns: []string{"성수"}}, testNow); err != nil || !updated {
+		t.Fatalf("other candidates over the same content: updated=%v err=%v", updated, err)
+	}
+	var nounsAfter string
+	var candidatesAfter sql.NullString
+	if err := handle.Reader.QueryRow("SELECT content_nouns, replacement_candidates FROM posts WHERE slug = ?", p.Slug).Scan(&nounsAfter, &candidatesAfter); err != nil {
+		t.Fatal(err)
+	}
+	if nounsAfter != `["성수"]` || candidatesAfter.Valid {
+		t.Fatalf("after the rewrite: nouns %s candidates %+v, want NULL candidates", nounsAfter, candidatesAfter)
+	}
+
+	// None at all is NULL in both, and reads back as nil.
+	if updated, err := s.UpdateGeneratedContent(ctx, p.Slug, p.UserID, content, post.LanguageKorean, post.WriteAnnotations{}, testNow); err != nil || !updated {
+		t.Fatalf("a write with none: updated=%v err=%v", updated, err)
+	}
+	cleared, err := s.GetPost(ctx, p.Slug)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cleared.ContentNouns != nil || cleared.ReplacementCandidates != nil {
+		t.Fatalf("none read back as nouns %v candidates %+v", cleared.ContentNouns, cleared.ReplacementCandidates)
+	}
+
+	// A manual save touches neither column (POST-80): stale spans are the browser's to drop.
+	hand := seedPost(t, s, "saved-by-hand", "alice", testNow)
+	if updated, err := s.UpdateGeneratedContent(ctx, hand.Slug, hand.UserID, content, post.LanguageKorean, annotations, testNow); err != nil || !updated {
+		t.Fatalf("write: updated=%v err=%v", updated, err)
+	}
+	edited := content
+	edited.Title = "성수동 카페 투어"
+	if saved, err := s.SaveContent(ctx, hand.Slug, hand.UserID, edited, 1, testNow); err != nil || !saved {
+		t.Fatalf("manual save: saved=%v err=%v", saved, err)
+	}
+	afterSave, err := s.GetPost(ctx, hand.Slug)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if afterSave.Content == nil || afterSave.Content.Title != edited.Title || !reflect.DeepEqual(afterSave.ContentNouns, annotations.Nouns) || !reflect.DeepEqual(afterSave.ReplacementCandidates, wantCandidates) {
+		t.Fatalf("a manual save moved nouns %v candidates %+v", afterSave.ContentNouns, afterSave.ReplacementCandidates)
 	}
 }

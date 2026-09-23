@@ -61,6 +61,19 @@ type WriteAnswer struct {
 	Replacements []Replacement
 }
 
+// WriteAnnotations is what a write hands the post beside its content: its nouns and its
+// replacement candidates. Handed as a pointer, where nil keeps what the post holds.
+type WriteAnnotations struct {
+	Nouns        []string
+	Replacements []Replacement
+}
+
+// Annotations is this answer's, always non-nil: a write replaces what the last one said, and
+// a write with no nouns or no candidates clears them rather than keeping stale ones (GEN-48).
+func (a WriteAnswer) Annotations() *WriteAnnotations {
+	return &WriteAnnotations{Nouns: a.Nouns, Replacements: a.Replacements}
+}
+
 type Observation struct {
 	File          string
 	Scene         string

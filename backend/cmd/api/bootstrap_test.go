@@ -614,7 +614,7 @@ func TestVoiceLearningAdapterCarriesBothLanguagesBeforeTheEqualityGate(t *testin
 		Title:  "An English post",
 		Blocks: []post.Block{{Type: post.BlockText, Content: "English content under a Korean-source voice."}},
 	}
-	if err := postSvc.SetGeneratedContent(ctx, "alice", created.Slug, content, post.LanguageEnglish); err != nil {
+	if err := postSvc.SetGeneratedContent(ctx, "alice", created.Slug, content, post.LanguageEnglish, nil); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := postSvc.Finalize(ctx, "alice", created.Slug, 1); err != nil {

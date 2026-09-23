@@ -174,7 +174,7 @@ func TestApplyWriteWinnerRequiresTheFrozenVoice(t *testing.T) {
 	if got := SnapshotVoice(raw); got != liveVoice.ID {
 		t.Fatalf("SnapshotVoice = %q", got)
 	}
-	winner := PostContent{Title: "w", Blocks: []Block{{Type: BlockText, Content: "ok"}}}
+	winner := WriteAnswer{Content: PostContent{Title: "w", Blocks: []Block{{Type: BlockText, Content: "ok"}}}}
 	posts.input.Voice = VoiceRef{ID: "voice-other", Name: "리뷰"}
 	if err := svc.ApplyWriteWinner(context.Background(), "alice", "post", winner, raw); !errors.Is(err, ErrVoiceMismatch) || len(posts.contents) != 0 {
 		t.Fatalf("apply after reassignment: err=%v contents=%d", err, len(posts.contents))

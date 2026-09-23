@@ -465,7 +465,7 @@ func TestWriteExperimentUsesOnePreparedSnapshotAndDoesNotApplyBeforeChoice(t *te
 	if len(posts.contents) != 0 {
 		t.Fatalf("candidate completion wrote canonical content: %+v", posts.contents)
 	}
-	if left.Title == right.Title || len(models.calls) != 2 || !reflect.DeepEqual(models.calls[0].request, models.calls[1].request) {
+	if left.Content.Title == right.Content.Title || len(models.calls) != 2 || !reflect.DeepEqual(models.calls[0].request, models.calls[1].request) {
 		t.Fatalf("writers did not receive equal request snapshots: left=%+v right=%+v calls=%+v", left, right, models.calls)
 	}
 	if !strings.Contains(models.calls[0].request.System, NaturalnessBaseline) {
@@ -547,11 +547,13 @@ func TestWriteExperimentObservesPhotosExactlyOnceBeforeTwoWriters(t *testing.T) 
 }
 
 type fakePosts struct {
-	input                    PostInput
-	err                      error
-	reads                    int
-	observationWrites        [][]Observation
-	contents                 []PostContent
+	input             PostInput
+	err               error
+	reads             int
+	observationWrites [][]Observation
+	contents          []PostContent
+	// annotations is what each write handed the post beside its content, nil for "keep".
+	annotations              []*WriteAnnotations
 	contentLanguages         []Language
 	preserveMissingLanguages bool
 }
@@ -575,8 +577,9 @@ func (f *fakePosts) SetObservations(_ context.Context, _, _ string, values []Obs
 	f.observationWrites = append(f.observationWrites, append([]Observation(nil), values...))
 	return nil
 }
-func (f *fakePosts) SetGeneratedContent(_ context.Context, _, _ string, value PostContent, language Language) error {
+func (f *fakePosts) SetGeneratedContent(_ context.Context, _, _ string, value PostContent, language Language, annotations *WriteAnnotations) error {
 	f.contents = append(f.contents, value)
+	f.annotations = append(f.annotations, annotations)
 	f.contentLanguages = append(f.contentLanguages, language)
 	f.input.Content = &value
 	f.input.ContentLanguage = &language
@@ -916,7 +919,7 @@ func TestApplyWriteWinnerRefusesAPublishedPost(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	winner := PostContent{Title: "승자", Blocks: []Block{{Type: BlockText, Content: "승자의 문장"}}}
+	winner := WriteAnswer{Content: PostContent{Title: "승자", Blocks: []Block{{Type: BlockText, Content: "승자의 문장"}}}}
 
 	posts.input.Published = true
 	if err := svc.ApplyWriteWinner(ctx, "alice", "post", winner, snapshot); !errors.Is(err, ErrPostPublished) {

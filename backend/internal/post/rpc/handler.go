@@ -436,6 +436,8 @@ func toProtoPost(p post.Post) *postpilotv1.Post {
 		Field:                  protoField(p.Field),
 		QualityRules:           protoQualityRules(p.QualityRules),
 		PublishedAt:            formatOptionalTime(p.PublishedAt),
+		// The candidates reach the wire; the nouns never do (GEN-55).
+		ReplacementCandidates: protoReplacementCandidates(p.ReplacementCandidates),
 	}
 }
 

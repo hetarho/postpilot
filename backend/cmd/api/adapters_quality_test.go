@@ -86,7 +86,7 @@ func TestTheAggregateCountsPublishedPostsOnlyAndForgetsADeletedOne(t *testing.T)
 			{Type: post.BlockHeading, Content: "첫날", Level: 2},
 			{Type: post.BlockText, Content: fmt.Sprintf("협재 해변은 물빛이 맑았고 %d번째 날에도 바람이 잔잔했다.", i+1)},
 		}}
-		if err := postSvc.SetGeneratedContent(ctx, "alice", created.Slug, content, post.LanguageKorean); err != nil {
+		if err := postSvc.SetGeneratedContent(ctx, "alice", created.Slug, content, post.LanguageKorean, nil); err != nil {
 			t.Fatal(err)
 		}
 		if _, err := postSvc.Finalize(ctx, "alice", created.Slug, 1); err != nil {

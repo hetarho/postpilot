@@ -51,7 +51,6 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T341 | Write results store nouns and replacement candidates beside the content | GEN POST ARCH | T337 T330 | todo |
 | T342 | Guidelines scoped by 분야, the 상위 노출 단어 사용 preset, and 분야-aware freezing | GUIDE GEN ARCH | T332 T337 T330 | todo |
 | T343 | ③ records, replaces and clears the post's Naver address | POST ARCH THEME | T339 | todo |
 | T344 | Generation freezes the ticked rule texts and the 분야 phrase list at enqueue | GEN POST QUAL GUIDE ARCH | T335 T342 T341 T333 | todo |
@@ -66,10 +65,12 @@
 | T353 | Toggling 기억 사용 keeps the post's 목표 글자 수 | POST MEM ARCH | - | todo |
 
 ## next
-- implement-task T341 (then the dep order in the tasks table; T341, T342 and T343 are unblocked)
+- implement-task T342 (then the dep order in the tasks table; T342, T343 and T348 are unblocked)
 - T352 and T353 are independent pre-existing bug fixes (frozen memories never reach a durable generate; the 기억 사용 toggle clears 목표 글자 수)
 - create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 ## log
+- 260924 T341 done; a generation and an applied write winner replace the post's stored nouns and replacement candidates (none clears them), a revision and a manual save keep them, an identical content with other annotations is a new machine write, Post.replacement_candidates carries them in stored order while nouns stay off the wire, and a lab candidate's output carries both with a legacy output reading as none; BE gate and gen:sql pass (p35)
+- 260924 T341 claimed (p35)
 - 260924 T340 done; the template screen authors an optional 제목 형식 above 템플릿 구성 under one 블록 · 원문 switch: the title builder offers only AI가 쓰는 글 and 고정 문구 on one line joined by spaces, a body row asking under a title label says so and stays out until the title lets it go, 제목 원문 has its own field, counter and failure, an unreadable title is fixed or cleared from its own section, and the parse refusal keeps its area; FE gates pass (p35)
 - 260924 T340 claimed (p35)
 - 260924 T339 done; the FE knows published everywhere the status union is exhaustive (label, steps, filter, URL, badge) and a published post reads as locked: it opens on ③, ② reads its prose under one sentence with only the road onward, ① is read-only with that sentence once and sends no write, ③ keeps learning and export, and a draft or content save refused as published is an answer that refetches instead of retrying; FE gates pass (p35)
@@ -88,5 +89,3 @@
 - 260924 T333 found: .env.production.example still carries a dead PURPOSE_* block that nothing reads (out of scope)
 - 260924 T333 claimed (p35)
 - 260924 T332 done; migration 0078 rebuilds guidelines so scope admits fields with every row and template link intact (reversible: fields fall back to link-less templates), adds guideline_fields and the preset tables, and the store reads and writes all three groups in injection order plus the preset as a presence patch; the service still refuses a fields scope; BE gate and gen:sql reproduction pass (p35)
-- 260924 T332 claimed (p35)
-- 260924 T331 done; quality measures M1-M4 per post and per account (absent rather than zero when uncomputable), judges each against the pinned bands and minimums with four verdicts, names the M2 run standing in the most window posts, and renders the eight rule texts; no provider, usage or job dependency; full BE gate passes (p35)

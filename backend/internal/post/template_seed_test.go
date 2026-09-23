@@ -171,7 +171,7 @@ func TestSeedingAdvancesNoRevisionAndMovesNoBaseline(t *testing.T) {
 	created := mustCreatePost(t, svc, alice, "Jeju")
 
 	generated := PostContent{Title: "생성됨", Blocks: []Block{{Type: BlockText, Content: "본문"}}}
-	if err := svc.SetGeneratedContent(ctx, alice, created.Slug, generated, LanguageKorean); err != nil {
+	if err := svc.SetGeneratedContent(ctx, alice, created.Slug, generated, LanguageKorean, nil); err != nil {
 		t.Fatal(err)
 	}
 	baseline := store.posts[created.Slug]

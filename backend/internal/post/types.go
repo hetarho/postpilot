@@ -268,6 +268,10 @@ type Post struct {
 	// ContentNouns are the distinct nouns the latest write pass returned for this content, nil
 	// when none were returned (GEN-55).
 	ContentNouns []string
+	// ReplacementCandidates are the spans the latest generation offered 분야 phrases for, in
+	// the order it returned them, nil for none (GEN-53). Like the nouns they live beside the
+	// content, never in it: the content is what the baseline, exports and learning copy (R29).
+	ReplacementCandidates []ReplacementCandidate
 	// Field is the post's 분야 as its ASCII id, "" for 없음 (QUAL-23). Like the quality ticks
 	// below it is an input of the next run, never an edit of the post (POST-82).
 	Field string
@@ -285,6 +289,41 @@ type Post struct {
 	Videos              []Video
 	ActiveJob           *ActiveJob
 	PendingExperimentID string
+}
+
+// ReplacementSurface is where a replacement candidate stands in the content (GEN-53).
+type ReplacementSurface string
+
+const (
+	ReplacementSurfaceTitle ReplacementSurface = "title"
+	ReplacementSurfaceTag   ReplacementSurface = "tag"
+	ReplacementSurfaceBody  ReplacementSurface = "body"
+)
+
+func (s ReplacementSurface) Valid() bool {
+	switch s {
+	case ReplacementSurfaceTitle, ReplacementSurfaceTag, ReplacementSurfaceBody:
+		return true
+	}
+	return false
+}
+
+// ReplacementCandidate is one span a write offered listed 분야 phrases for: its surface, the
+// tag's index for a tag or the block's for body and 0 for the title, the exact text written
+// there, and the phrases offered in its place (GEN-53).
+type ReplacementCandidate struct {
+	Surface ReplacementSurface
+	Index   int
+	Source  string
+	Phrases []string
+}
+
+// WriteAnnotations is what a machine write says about its content beside it: the nouns it
+// used (GEN-55) and the spans it offered replacements for (GEN-53). Empty is a real answer —
+// none — and clears what the post held.
+type WriteAnnotations struct {
+	Nouns      []string
+	Candidates []ReplacementCandidate
 }
 
 // PublishedPost is one published post as the quality context reads the account's window

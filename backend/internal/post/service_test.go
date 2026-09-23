@@ -676,12 +676,12 @@ func TestWinnerApplicationIsIdempotentAtPostBoundary(t *testing.T) {
 	svc, store, _ := newTestService(t)
 	found := mustCreatePost(t, svc, alice, "Jeju")
 	content := PostContent{Title: "generated", Blocks: []Block{{Type: BlockText, Content: "body"}}}
-	if err := svc.SetGeneratedContent(context.Background(), alice, found.Slug, content, LanguageKorean); err != nil {
+	if err := svc.SetGeneratedContent(context.Background(), alice, found.Slug, content, LanguageKorean, nil); err != nil {
 		t.Fatal(err)
 	}
 	first, _ := store.GetPost(context.Background(), found.Slug)
 	svc.now = func() time.Time { return testNow.Add(time.Hour) }
-	if err := svc.SetGeneratedContent(context.Background(), alice, found.Slug, content, LanguageKorean); err != nil {
+	if err := svc.SetGeneratedContent(context.Background(), alice, found.Slug, content, LanguageKorean, nil); err != nil {
 		t.Fatal(err)
 	}
 	second, _ := store.GetPost(context.Background(), found.Slug)
@@ -695,7 +695,7 @@ func TestWinnerApplicationIsIdempotentAtPostBoundary(t *testing.T) {
 	if _, err := svc.SaveContent(context.Background(), alice, found.Slug, manual, first.ContentRevision); err != nil {
 		t.Fatal(err)
 	}
-	if err := svc.SetGeneratedContent(context.Background(), alice, found.Slug, manual, LanguageKorean); err != nil {
+	if err := svc.SetGeneratedContent(context.Background(), alice, found.Slug, manual, LanguageKorean, nil); err != nil {
 		t.Fatal(err)
 	}
 	third, _ := store.GetPost(context.Background(), found.Slug)

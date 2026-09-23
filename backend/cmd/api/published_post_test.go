@@ -60,7 +60,7 @@ func TestPublishedRefusalsCrossTheAdapters(t *testing.T) {
 	posts := generationPosts{service: postSvc}
 	if err := posts.SetGeneratedContent(ctx, "alice", slug, generation.PostContent{
 		Title: "덮어쓰기", Blocks: []generation.Block{{Type: generation.BlockText, Content: "새 문장"}},
-	}, generation.LanguageKorean); !errors.Is(err, generation.ErrPostPublished) {
+	}, generation.LanguageKorean, nil); !errors.Is(err, generation.ErrPostPublished) {
 		t.Fatalf("writing into a published post = %v, want generation.ErrPostPublished", err)
 	}
 }
@@ -120,7 +120,7 @@ func publishedSlug(t *testing.T, postSvc *post.Service, voiceSvc *voice.Service)
 		t.Fatal(err)
 	}
 	content := post.PostContent{Title: "제주 3일", Blocks: []post.Block{{Type: post.BlockText, Content: "협재 해변은 물빛이 맑았다."}}}
-	if err := postSvc.SetGeneratedContent(ctx, "alice", created.Slug, content, post.LanguageKorean); err != nil {
+	if err := postSvc.SetGeneratedContent(ctx, "alice", created.Slug, content, post.LanguageKorean, nil); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := postSvc.Finalize(ctx, "alice", created.Slug, 1); err != nil {

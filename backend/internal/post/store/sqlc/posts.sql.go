@@ -569,29 +569,40 @@ func (q *Queries) UnpublishPost(ctx context.Context, arg UnpublishPostParams) (i
 const updateGeneratedContent = `-- name: UpdateGeneratedContent :execrows
 UPDATE posts SET content = ?1, machine_baseline = ?2, machine_baseline_voice_id = voice_id,
     content_language = ?3,
+    content_nouns = ?4,
+    replacement_candidates = ?5,
     content_revision = content_revision + 1,
     machine_baseline_revision = content_revision + 1,
-    status = 'review', finalized_revision = NULL, finalized_at = NULL, updated_at = ?4
-WHERE slug = ?5 AND user_id = ?6 AND status <> 'published'
+    status = 'review', finalized_revision = NULL, finalized_at = NULL, updated_at = ?6
+WHERE slug = ?7 AND user_id = ?8 AND status <> 'published'
   AND (content IS NULL OR content <> ?1 OR status <> 'review'
        OR machine_baseline_revision <> content_revision
-       OR content_language IS NULL OR content_language <> ?3)
+       OR content_language IS NULL OR content_language <> ?3
+       OR content_nouns IS NOT ?4
+       OR replacement_candidates IS NOT ?5)
 `
 
 type UpdateGeneratedContentParams struct {
-	Content         sql.NullString
-	MachineBaseline sql.NullString
-	ContentLanguage sql.NullString
-	UpdatedAt       string
-	Slug            string
-	UserID          string
+	Content               sql.NullString
+	MachineBaseline       sql.NullString
+	ContentLanguage       sql.NullString
+	ContentNouns          sql.NullString
+	ReplacementCandidates sql.NullString
+	UpdatedAt             string
+	Slug                  string
+	UserID                string
 }
 
+// The write's nouns and replacement candidates ride the same statement, beside the content and
+// never inside it (GEN-53, GEN-55). The service resolves them first, so NULL here always means
+// none, and an identical content with different ones is a new machine write.
 func (q *Queries) UpdateGeneratedContent(ctx context.Context, arg UpdateGeneratedContentParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, updateGeneratedContent,
 		arg.Content,
 		arg.MachineBaseline,
 		arg.ContentLanguage,
+		arg.ContentNouns,
+		arg.ReplacementCandidates,
 		arg.UpdatedAt,
 		arg.Slug,
 		arg.UserID,

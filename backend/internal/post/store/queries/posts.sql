@@ -24,15 +24,22 @@ UPDATE posts SET observations = ?, updated_at = ?
 WHERE slug = ? AND user_id = ? AND status <> 'published';
 
 -- name: UpdateGeneratedContent :execrows
+-- The write's nouns and replacement candidates ride the same statement, beside the content and
+-- never inside it (GEN-53, GEN-55). The service resolves them first, so NULL here always means
+-- none, and an identical content with different ones is a new machine write.
 UPDATE posts SET content = sqlc.arg(content), machine_baseline = sqlc.arg(machine_baseline), machine_baseline_voice_id = voice_id,
     content_language = sqlc.arg(content_language),
+    content_nouns = sqlc.narg(content_nouns),
+    replacement_candidates = sqlc.narg(replacement_candidates),
     content_revision = content_revision + 1,
     machine_baseline_revision = content_revision + 1,
     status = 'review', finalized_revision = NULL, finalized_at = NULL, updated_at = sqlc.arg(updated_at)
 WHERE slug = sqlc.arg(slug) AND user_id = sqlc.arg(user_id) AND status <> 'published'
   AND (content IS NULL OR content <> sqlc.arg(content) OR status <> 'review'
        OR machine_baseline_revision <> content_revision
-       OR content_language IS NULL OR content_language <> sqlc.arg(content_language));
+       OR content_language IS NULL OR content_language <> sqlc.arg(content_language)
+       OR content_nouns IS NOT sqlc.narg(content_nouns)
+       OR replacement_candidates IS NOT sqlc.narg(replacement_candidates));
 
 -- name: SavePostContent :execrows
 UPDATE posts SET content = ?, content_revision = content_revision + 1,

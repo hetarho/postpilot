@@ -188,7 +188,7 @@ func (p posts) Write(ctx context.Context, article devseed.Article) error {
 	if err := post.ValidateContent(content, nil, nil); err != nil {
 		return err
 	}
-	written, err := p.store.UpdateGeneratedContent(ctx, slug, article.UserID, content, language, article.CreatedAt)
+	written, err := p.store.UpdateGeneratedContent(ctx, slug, article.UserID, content, language, post.WriteAnnotations{}, article.CreatedAt)
 	if err != nil {
 		return err
 	}

@@ -75,7 +75,7 @@ func finalizedPost(t *testing.T, svc *Service, userID string) Post {
 	ctx := context.Background()
 	created := mustCreatePost(t, svc, userID, "제주 3일")
 	content := PostContent{Title: "제주 3일 기록", Blocks: []Block{{Type: BlockText, Content: "협재 해변은 물빛이 맑았다."}}}
-	if err := svc.SetGeneratedContent(ctx, userID, created.Slug, content, LanguageKorean); err != nil {
+	if err := svc.SetGeneratedContent(ctx, userID, created.Slug, content, LanguageKorean, nil); err != nil {
 		t.Fatal(err)
 	}
 	finalized, err := svc.Finalize(ctx, userID, created.Slug, 1)
@@ -174,7 +174,7 @@ func TestSavePublishedURLNeedsTheCurrentFinalizedRevision(t *testing.T) {
 		t.Fatalf("a draft = %v", err)
 	}
 	review := mustCreatePost(t, svc, alice, "검토")
-	if err := svc.SetGeneratedContent(ctx, alice, review.Slug, PostContent{Title: "검토", Blocks: []Block{{Type: BlockText, Content: "본문"}}}, LanguageKorean); err != nil {
+	if err := svc.SetGeneratedContent(ctx, alice, review.Slug, PostContent{Title: "검토", Blocks: []Block{{Type: BlockText, Content: "본문"}}}, LanguageKorean, nil); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := svc.SavePublishedURL(ctx, alice, review.Slug, firstAddress); !errors.Is(err, ErrPostNotFinalized) {
