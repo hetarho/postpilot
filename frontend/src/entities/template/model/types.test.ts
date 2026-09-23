@@ -21,7 +21,7 @@ describe('template field rules', () => {
   })
 
   it('requires a name and body, allows an empty description, and bounds all three', () => {
-    const ok = { name: '리뷰', description: '', body: '지침' }
+    const ok = { name: '리뷰', description: '', body: '지침', titleArea: '' }
     expect(canSaveTemplate(ok)).toBe(true)
     expect(canSaveTemplate({ ...ok, name: '   ' })).toBe(false)
     expect(canSaveTemplate({ ...ok, body: '  ' })).toBe(false)
@@ -31,6 +31,20 @@ describe('template field rules', () => {
       canSaveTemplate({ ...ok, description: '가'.repeat(TEMPLATE_LIMITS.description + 1) }),
     ).toBe(false)
     expect(canSaveTemplate({ ...ok, body: '가'.repeat(TEMPLATE_LIMITS.body + 1) })).toBe(false)
+  })
+
+  // TMPL-50: the title area may be empty and is bounded by its own mirrored ceiling, counted
+  // after the edge trim the server applies.
+  it('allows no title area and bounds one at its ceiling', () => {
+    const ok = { name: '리뷰', description: '', body: '지침', titleArea: '' }
+    expect(TEMPLATE_LIMITS.titleArea).toBe(200)
+    expect(canSaveTemplate(ok)).toBe(true)
+    expect(
+      canSaveTemplate({ ...ok, titleArea: ' ' + '가'.repeat(TEMPLATE_LIMITS.titleArea) + ' ' }),
+    ).toBe(true)
+    expect(canSaveTemplate({ ...ok, titleArea: '가'.repeat(TEMPLATE_LIMITS.titleArea + 1) })).toBe(
+      false,
+    )
   })
 
   // The delete detaches; it never removes a post or its content.

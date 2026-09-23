@@ -1,5 +1,5 @@
 import {
-  askFields,
+  templateAskFields,
   TEMPLATE_PARSE_OPTIONS,
   type AskField,
   type Template,
@@ -13,7 +13,8 @@ export interface AnswerField extends AskField {
   enabled: boolean
 }
 
-/** The fields the selected template declares, in BODY order, each carrying this post's answer.
+/** The fields the selected template declares, the title area's first and then the body's
+ *  (TMPL-55), each carrying this post's answer.
  *
  *  A label with no stored answer renders switched ON with empty text: the field exists because
  *  the template requires that data, and a blank one is dropped at the freeze anyway, so an
@@ -27,10 +28,12 @@ export function answerFields(
 ): AnswerField[] {
   if (!template) return []
   const stored = new Map(answers.map((answer) => [answer.label, answer]))
-  return askFields(template.body, TEMPLATE_PARSE_OPTIONS).map((field) => {
-    const answer = stored.get(field.label)
-    return { ...field, text: answer?.text ?? '', enabled: answer?.enabled ?? true }
-  })
+  return templateAskFields(template.titleArea, template.body, TEMPLATE_PARSE_OPTIONS).map(
+    (field) => {
+      const answer = stored.get(field.label)
+      return { ...field, text: answer?.text ?? '', enabled: answer?.enabled ?? true }
+    },
+  )
 }
 
 /** What the draft queue carries. It is the whole current set rather than the one field that

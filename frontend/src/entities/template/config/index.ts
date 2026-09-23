@@ -22,6 +22,12 @@ export const TEMPLATE_BODY_MAX_CHARS = positiveIntEnv(
   ENV_LIMIT_OVERRIDES.templateBodyMaxChars,
   4000,
 )
+/** The title area's ceiling (TMPL-50): a title is one line of a post, so its source is bounded
+ *  like a short field rather than like the body. */
+export const TEMPLATE_TITLE_AREA_MAX_CHARS = positiveIntEnv(
+  ENV_LIMIT_OVERRIDES.templateTitleAreaMaxChars,
+  200,
+)
 
 /** How many photos one photo position may place side by side. Unlike the ceilings above this
  *  one is not only a counter: the builder's stepper cannot offer a value the server's parser

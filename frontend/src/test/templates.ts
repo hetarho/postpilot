@@ -17,6 +17,8 @@ export interface FakeTemplateRow {
   name: string
   description?: string
   body?: string
+  /** The title form (TMPL-50). Absent is none, `''`. */
+  titleArea?: string
   /** The two generation numbers a template may author. Absent is 의견 없음 (TEMPLATE-47). */
   targetLength?: number
   tagCount?: number
@@ -37,6 +39,7 @@ export interface FakeTemplatesOptions {
     name: string | undefined
     description: string | undefined
     body: string | undefined
+    titleArea: string | undefined
     targetLength: number | undefined
     tagCount: number | undefined
   }>
@@ -46,6 +49,7 @@ export interface FakeTemplatesOptions {
     name: string
     description: string
     body: string
+    titleArea: string
     targetLength: number | undefined
     tagCount: number | undefined
   }>
@@ -58,6 +62,7 @@ interface Row {
   name: string
   description: string
   body: string
+  titleArea: string
   targetLength?: number
   tagCount?: number
   postCount: number
@@ -75,6 +80,7 @@ export function registerTemplateService(router: ConnectRouter, options: FakeTemp
         name: row.name,
         description: row.description ?? '',
         body: row.body ?? '지침',
+        titleArea: row.titleArea ?? '',
         targetLength: row.targetLength,
         tagCount: row.tagCount,
         postCount: row.postCount ?? 0,
@@ -107,6 +113,7 @@ export function registerTemplateService(router: ConnectRouter, options: FakeTemp
       name: req.name,
       description: req.description,
       body: req.body,
+      titleArea: req.titleArea,
       targetLength: req.targetLength,
       tagCount: req.tagCount,
     })
@@ -120,6 +127,7 @@ export function registerTemplateService(router: ConnectRouter, options: FakeTemp
       name,
       description: req.description.trim(),
       body: req.body.trim(),
+      titleArea: req.titleArea.trim(),
       targetLength: req.targetLength,
       tagCount: req.tagCount,
       postCount: 0,
@@ -135,6 +143,7 @@ export function registerTemplateService(router: ConnectRouter, options: FakeTemp
       name: req.name,
       description: req.description,
       body: req.body,
+      titleArea: req.titleArea,
       targetLength: req.targetLength,
       tagCount: req.tagCount,
     })
@@ -153,6 +162,8 @@ export function registerTemplateService(router: ConnectRouter, options: FakeTemp
       if (!body) throw connectAppError('TEMPLATE_BODY_REQUIRED', Code.InvalidArgument)
       row.body = body
     }
+    // Present and empty clears it; absent leaves it alone (TMPL-8).
+    if (req.titleArea !== undefined) row.titleArea = req.titleArea.trim()
     // The two numbers are written TOGETHER on every save, like the server: absence is 의견 없음
     // and clears the stored one (TEMPLATE-8).
     row.targetLength = req.targetLength

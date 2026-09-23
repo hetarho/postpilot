@@ -85,6 +85,7 @@ describe('the template screen', () => {
       name: '정보성 식당 리뷰 2편',
       description: '협찬 방문 리뷰',
       body: REVIEW.body,
+      titleArea: '',
       targetLength: undefined,
       tagCount: undefined,
     })
@@ -140,9 +141,39 @@ describe('the template screen', () => {
       name: '카페 방문기',
       description: '동네 카페',
       body: '<write>첫인상을 씁니다</write>',
+      titleArea: '',
       targetLength: undefined,
       tagCount: undefined,
     })
+  })
+
+  // TMPL-8: every save sends the title area, so the screen must carry the stored one even though
+  // nothing on it edits the title yet — otherwise a rename would clear it.
+  it('keeps a stored title area when only the name is saved', async () => {
+    const user = userEvent.setup()
+    const updates: FakeTemplatesOptions['updates'] = []
+    const titleArea = '  [맛집] <write>가게 이름과 대표 메뉴</write>\n'
+    renderTemplate('/templates/template-review', { templates: [{ ...REVIEW, titleArea }], updates })
+
+    await user.type(await screen.findByLabelText('이름'), '!')
+    await user.click(screen.getByRole('button', { name: '저장' }))
+
+    await waitFor(() => expect(updates).toHaveLength(1))
+    expect(updates[0].titleArea).toBe(titleArea)
+  })
+
+  it('creates with an empty title area', async () => {
+    const user = userEvent.setup()
+    const creates: FakeTemplatesOptions['creates'] = []
+    renderTemplate('/templates/new', { creates })
+
+    await user.type(await screen.findByLabelText('이름'), '카페 방문기')
+    await user.click(paletteButton('AI가 쓰는 글'))
+    await user.type(screen.getByLabelText('무엇을 쓸지'), '첫인상을 씁니다')
+    await user.click(screen.getByRole('button', { name: '저장' }))
+
+    await waitFor(() => expect(creates).toHaveLength(1))
+    expect(creates[0].titleArea).toBe('')
   })
 
   // The save's baseline comes from the mutation's OWN response, not from the directory query

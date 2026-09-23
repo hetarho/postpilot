@@ -7,6 +7,7 @@ import {
   TEMPLATE_BODY_MAX_CHARS,
   TEMPLATE_NAME_MAX_CHARS,
   TEMPLATE_PHOTO_ROW_MAX,
+  TEMPLATE_TITLE_AREA_MAX_CHARS,
 } from '../config'
 import type { ParseOptions } from '../lib/grammar'
 
@@ -19,6 +20,8 @@ export interface Template {
   /** May be empty. Shown as help text under the selector and injected as the 이 글의 템플릿 line. */
   description: string
   body: string
+  /** The title form in the body's grammar (TMPL-50); `''` is none, which leaves the title to the model. */
+  titleArea: string
   /** What the posts this template shapes usually want (TEMPLATE-47). `undefined` is 의견 없음:
    *  assigning the template then leaves the post's own option alone. Neither reaches a prompt —
    *  they are seeds for the post's two options, and a run freezes what the POST holds. */
@@ -43,6 +46,7 @@ export const TEMPLATE_LIMITS = {
   name: TEMPLATE_NAME_MAX_CHARS,
   description: TEMPLATE_DESCRIPTION_MAX_CHARS,
   body: TEMPLATE_BODY_MAX_CHARS,
+  titleArea: TEMPLATE_TITLE_AREA_MAX_CHARS,
   /** A data field's title, and one post's answer to it (TEMPLATE-43). */
   askLabel: TEMPLATE_ASK_LABEL_MAX_CHARS,
   askValue: TEMPLATE_ASK_VALUE_MAX_CHARS,
@@ -85,13 +89,16 @@ export function canSaveTemplate(fields: {
   name: string
   description: string
   body: string
+  titleArea: string
 }): boolean {
   return (
     templateChars(fields.name) > 0 &&
     templateChars(fields.name) <= TEMPLATE_LIMITS.name &&
     templateChars(fields.description) <= TEMPLATE_LIMITS.description &&
     templateChars(fields.body) > 0 &&
-    templateChars(fields.body) <= TEMPLATE_LIMITS.body
+    templateChars(fields.body) <= TEMPLATE_LIMITS.body &&
+    // May be empty: a title form is opted into, not a field every template must answer (TMPL-52).
+    templateChars(fields.titleArea) <= TEMPLATE_LIMITS.titleArea
   )
 }
 

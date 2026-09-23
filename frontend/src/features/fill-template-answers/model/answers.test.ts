@@ -2,11 +2,12 @@ import { describe, expect, it } from 'vitest'
 import type { Template } from '@/entities/template'
 import { answerFields, toAnswerPatch, withAnswer } from './answers'
 
-const template = (body: string): Template => ({
+const template = (body: string, titleArea = ''): Template => ({
   id: 'template-review',
   name: '리뷰',
   description: '',
   body,
+  titleArea,
   postCount: 0,
   createdAt: '',
   updatedAt: '',
@@ -45,6 +46,33 @@ describe('the fields the write screen asks for', () => {
     ])
     expect(fields).toEqual([{ label: '방문일', flavor: 'verbatim', text: '', enabled: true }])
     expect(toAnswerPatch(fields)).toEqual([{ label: '방문일', text: '', enabled: true }])
+  })
+
+  // TMPL-55: one namespace, read title first.
+  it('lists the title area’s fields before the body’s', () => {
+    const fields = answerFields(
+      template('<ask label="총평">총평을 쓰세요</ask>', '<ask label="가게 이름"></ask> 방문 후기'),
+      [{ label: '가게 이름', text: '을지로 노포', enabled: true }],
+    )
+    expect(fields).toEqual([
+      { label: '가게 이름', flavor: 'verbatim', text: '을지로 노포', enabled: true },
+      { label: '총평', flavor: 'write', text: '', enabled: true },
+    ])
+  })
+
+  it('asks exactly what the body asks when the title area is empty', () => {
+    const body = '오늘의 기록\n<ask label="방문일"/>\n<ask label="총평">총평을 쓰세요</ask>'
+    expect(answerFields(template(body, ''), [])).toEqual([
+      { label: '방문일', flavor: 'verbatim', text: '', enabled: true },
+      { label: '총평', flavor: 'write', text: '', enabled: true },
+    ])
+  })
+
+  it('asks for nothing when a label is used in both areas or the title area does not parse', () => {
+    expect(answerFields(template('<ask label="총평"/>', '<ask label="총평"></ask>'), [])).toEqual(
+      [],
+    )
+    expect(answerFields(template('<ask label="총평"/>', '<slot kind="photo"/>'), [])).toEqual([])
   })
 
   it('applies one edit by label and leaves the others alone', () => {

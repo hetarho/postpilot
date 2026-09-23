@@ -6,10 +6,9 @@ import { TemplateService } from '@/shared/api'
 import { invalidateTemplates } from './template-cache'
 import { templateErrorMessage } from './template-errors'
 
-/** Presence is the edit unit. `saveAll` sends the three fields the template screen edits as one
+/** Presence is the edit unit. `saveAll` sends all six fields the template screen edits as one
  *  draft, which is one transaction on the server rather than a read-modify-write: the screen is
- *  the only place all three are edited, so there is no other tab's value for it to put back
- *  (spec/legacy/policy/templates.md). */
+ *  the only place they are edited, so there is no other tab's value for it to put back (TMPL-8). */
 export function useUpdateTemplate(ownerId: string, templateId: string) {
   const transport = useTransport()
   const queryClient = useQueryClient()
@@ -34,6 +33,7 @@ export function useUpdateTemplate(ownerId: string, templateId: string) {
       name: string
       description: string
       body: string
+      titleArea: string
       targetLength?: number
       tagCount?: number
     }) =>
@@ -44,6 +44,8 @@ export function useUpdateTemplate(ownerId: string, templateId: string) {
         // NOT trimmed: the body is the canonical serialization of the composition, and trimming
         // it here would rewrite a stored body that carries significant outer bytes (change 30 A11).
         body: fields.body,
+        // Always present and never trimmed, for the body's reason; a present `''` clears the area.
+        titleArea: fields.titleArea,
         // Both numbers go out on every save, absence meaning 의견 없음 rather than "not part of
         // this edit": this screen is the only place either is authored and it always holds both,
         // so unticking one has to be able to clear it (TEMPLATE-8).

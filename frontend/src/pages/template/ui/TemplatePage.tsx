@@ -130,6 +130,8 @@ interface Draft {
   name: string
   description: string
   body: string
+  /** Carried as loaded so a save here cannot clear it. Nothing on this screen edits it yet. */
+  titleArea: string
   /** `undefined` is 의견 없음 — this template says nothing about that number, and assigning it
    *  leaves the post's own option alone (TEMPLATE-47). */
   targetLength?: number
@@ -141,6 +143,7 @@ function draftOf(stored: Template | undefined): Draft {
     name: stored?.name ?? '',
     description: stored?.description ?? '',
     body: stored?.body ?? '',
+    titleArea: stored?.titleArea ?? '',
     targetLength: stored?.targetLength,
     tagCount: stored?.tagCount,
   }
@@ -207,6 +210,8 @@ function Editor({ ownerId, stored }: { ownerId: string; stored: Template | undef
     name: draft.name.trim(),
     description: draft.description.trim(),
     body: draft.body,
+    // Untrimmed, for the body's reason.
+    titleArea: draft.titleArea,
     targetLength: numberValue(lengthField),
     tagCount: numberValue(tagsField),
   }
