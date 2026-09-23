@@ -28,6 +28,7 @@ export function LifecycleSteps({
   titleField,
   memoField,
   answerFields,
+  fieldPicker,
   dockHeader,
   onOpenBrief,
   targetLength,
@@ -46,6 +47,8 @@ export function LifecycleSteps({
   /** The selected template's data fields. ①'s material, so it renders with the memo it sits
    *  under rather than anywhere the run is configured (POST-54). */
   answerFields: ReactNode
+  /** The post's 분야, rendered under the data fields and above 기억 사용 (POST-54). */
+  fieldPicker: ReactNode
   dockHeader: ReactNode
   onOpenBrief: () => void
   targetLength?: number
@@ -100,6 +103,7 @@ export function LifecycleSteps({
       titleField={titleField}
       memoField={memoField}
       answerFields={answerFields}
+      fieldPicker={fieldPicker}
       ensureSlug={ensureSlug}
       job={job}
       locked={locked}

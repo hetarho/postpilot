@@ -19,7 +19,7 @@ import { getPostQueryKey, listPostsQueryKey } from './post-queries'
  *  SavePostDraft answers with a whole post snapshot, but the request is in flight while
  *  uploads and generation independently advance images, observations, active_job and
  *  content. Installing that snapshot wholesale could roll any of them back in the cache.
- *  Title, memo and the two assignments are the fields this mutation settles; every other
+ *  Title, memo and the assignments are the fields this mutation settles; every other
  *  field remains owned by GetPost or its focused mutation patch.
  *
  *  A reassignment is the one save that also moves the machine baseline: the server clears
@@ -53,6 +53,9 @@ export function applyingSavedDraft(saved: Post, cached: GetPostResponse | undefi
   // unset one is a real answer (없음). A `if (saved.template)` guard would make a clear
   // invisible until the next GetPost.
   post.template = saved.template ? clone(TemplateRefSchema, saved.template) : undefined
+  // Unconditional too: the response always reports the current 분야, and UNSPECIFIED is 없음, so
+  // a guard would hide a clear until the next GetPost (POST-82).
+  post.field = saved.field
   // Unconditional for the same reason: the response always reports the post's whole answer
   // set, and a save that cleared one has to be visible before the next GetPost (POST-62).
   post.templateAnswers = saved.templateAnswers.map((answer) => clone(TemplateAnswerSchema, answer))

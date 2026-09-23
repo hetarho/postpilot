@@ -36,11 +36,13 @@ import {
   SavePostGenerationOptionsResponseSchema,
   SavePostPublishedUrlResponseSchema,
   type ProtoVoiceRef,
+  ProtoBlogField,
   VoiceRefSchema,
   contentLanguageFromProto,
   contentLanguageToProto,
   type ContentLanguage,
 } from '@/shared/api'
+import { blogFieldFromProto, blogFieldToProto, isBlogFieldId } from '@/entities/blog-field'
 import { parseNaverBlogUrl } from '@/entities/post'
 import { type FakeGenerationJobRow, toFakeProto } from './jobs'
 import { connectAppError } from './app-error'
@@ -91,6 +93,9 @@ export interface FakeDraftSave {
   voiceId: string | undefined
   templateId: string | undefined
   targetLanguage: ContentLanguage | undefined
+  /** The 분야 this save carried: undefined when absent, '' for a present UNSPECIFIED — the clear —
+   *  and otherwise the id (POST-82). */
+  field: string | undefined
   /** The data-field answers this save carried, exactly as they arrived. Every entry is an
    *  upsert of that label, so a test can prove one save carried the whole set on screen and
    *  nothing else (POST-62). */
@@ -118,6 +123,8 @@ export interface FakePostRow {
   updatedAt?: string
   voice?: FakePostVoice
   template?: FakePostTemplate
+  /** The post's 분야 as an `entities/blog-field` id; omitted is 없음. */
+  field?: string
   /** What this post already answers to its template's data fields. */
   templateAnswers?: Array<{ label: string; text?: string; enabled?: boolean }>
   /** Shorthand for a post whose content carries these tags. A tag lives inside the content
@@ -183,6 +190,9 @@ export interface FakePostsOptions {
   templates?: FakePostTemplate[]
   /** Records every SavePostDraft's slug and assignment presence. */
   draftSaves?: FakeDraftSave[]
+  /** Refuse every SavePostDraft that carries a 분야 as POST_FIELD_NOT_FOUND, the way an id a
+   *  server does not know is answered, so a refused pick is testable. */
+  refuseField?: boolean
   /** Holds SavePostContent in flight until a test releases it. */
   contentSaveGate?: Promise<void>
   /** The next SavePostDraft on this slug first publishes the post and is then refused as
@@ -211,6 +221,7 @@ type Row = {
   updatedAt: string
   voice: ProtoVoiceRef
   template?: ProtoTemplateRef
+  field: ProtoBlogField
   templateAnswers: ProtoTemplateAnswer[]
   images: Image[]
   videos: Video[]
@@ -231,6 +242,13 @@ type Row = {
   publishedAt: string
   targetLanguage: ReturnType<typeof contentLanguageToProto>
   contentLanguage: ReturnType<typeof contentLanguageToProto>
+}
+
+/** A fixture's 분야. An id the catalogue does not hold is a mistake in the test, not 없음. */
+function fixtureField(id: string | undefined): ProtoBlogField {
+  if (!id) return ProtoBlogField.UNSPECIFIED
+  if (!isBlogFieldId(id)) throw new Error(`fake post: unknown 분야 ${id}`)
+  return blogFieldToProto(id)
 }
 
 /** Like the server (T334): a published post takes no write but its address and the delete. */
@@ -307,6 +325,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       updatedAt: row.updatedAt ?? DEFAULT_UPDATED_AT,
       voice: toVoiceRef(voice),
       template: row.template ? toTemplateRef(row.template) : undefined,
+      field: fixtureField(row.field),
       templateAnswers: (row.templateAnswers ?? []).map((answer) =>
         create(TemplateAnswerSchema, {
           label: answer.label,
@@ -445,6 +464,8 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       })),
       targetLanguage:
         req.targetLanguage === undefined ? undefined : contentLanguageFromProto(req.targetLanguage),
+      field:
+        req.field === undefined ? undefined : (blogFieldFromProto(req.field) ?? `?${req.field}`),
     })
     if (failuresLeft > 0) {
       failuresLeft -= 1
@@ -475,6 +496,14 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
     // Validated before anything else is applied, like the server: a bad 템플릿 must leave the
     // title and memo exactly as they were.
     let template = existing?.template
+    // The 분야 the same way (POST-82): absent keeps, UNSPECIFIED clears, and a number the server
+    // does not know is 404 before anything is written.
+    let field = existing?.field ?? ProtoBlogField.UNSPECIFIED
+    if (req.field !== undefined) {
+      if (options.refuseField || blogFieldFromProto(req.field) === undefined)
+        throw connectAppError('POST_FIELD_NOT_FOUND', Code.NotFound)
+      field = req.field
+    }
     // What the assignment seeds, resolved before anything is written: only an assignment that
     // CHANGES the template seeds, and only for the numbers that template has an opinion about
     // (TEMPLATE-48).
@@ -514,6 +543,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       updatedAt: DEFAULT_UPDATED_AT,
       voice,
       template,
+      field,
       // Upsert per label, never a replacement of the set — the server's rule, so a test cannot
       // pass here on behavior the server would not produce.
       templateAnswers: upsertAnswers(existing?.templateAnswers ?? [], req.templateAnswers),

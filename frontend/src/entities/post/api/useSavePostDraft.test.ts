@@ -12,6 +12,7 @@ import {
   PostContentSchema,
   PostSchema,
   PostService,
+  ProtoBlogField,
   TemplateRefSchema,
   VoiceRefSchema,
 } from '@/shared/api'
@@ -146,6 +147,25 @@ describe('applying a draft save response', () => {
     expect(moved.machineBaselineRevision).toBe(0n)
     expect(moved.machineBaselineVoiceId).toBe('')
     expect(moved.canFinalize).toBe(false)
+  })
+
+  // POST-82: the response always reports the post's current 분야, and UNSPECIFIED is 없음 — so a
+  // guard on it would keep a clear invisible until the next GetPost.
+  it('takes the 분야 from every save, a clear included', () => {
+    const cachedWith = (field: ProtoBlogField) =>
+      create(GetPostResponseSchema, { post: create(PostSchema, { slug: 'post', field }) })
+
+    const assigned = applyingSavedDraft(
+      create(PostSchema, { slug: 'post', field: ProtoBlogField.CAFE }),
+      cachedWith(ProtoBlogField.UNSPECIFIED),
+    )
+    expect(assigned.field).toBe(ProtoBlogField.CAFE)
+
+    const cleared = applyingSavedDraft(
+      create(PostSchema, { slug: 'post', field: ProtoBlogField.UNSPECIFIED }),
+      cachedWith(ProtoBlogField.CAFE),
+    )
+    expect(cleared.field).toBe(ProtoBlogField.UNSPECIFIED)
   })
 
   it('uses the full response when a newly minted post has no cache entry yet', () => {

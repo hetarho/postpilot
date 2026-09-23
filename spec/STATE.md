@@ -51,7 +51,6 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T345 | ① picks the post's 분야 and autosaves it through the draft queue | POST QUAL ARCH THEME | T337 T343 | todo |
 | T346 | ② shows this post's own M2, M3 and M4 above the article | POST QUAL ARCH THEME | T335 T343 | todo |
 | T347 | /guidelines creates, rescopes and badges guidelines by 분야 | GUIDE ARCH THEME | T342 | todo |
 | T348 | The dev seed shows published posts, nouns, candidates, a phrase list and a title-area template without Naver keys | ARCH POST GEN QUAL TMPL | T341 T335 T333 | todo |
@@ -62,10 +61,12 @@
 | T353 | Toggling 기억 사용 keeps the post's 목표 글자 수 | POST MEM ARCH | - | todo |
 
 ## next
-- implement-task T345 (then the dep order in the tasks table; T345, T346, T347 and T348 are unblocked)
+- implement-task T346 (then the dep order in the tasks table; T346, T347 and T348 are unblocked)
 - T352 and T353 are independent pre-existing bug fixes (frozen memories never reach a durable generate; the 기억 사용 toggle clears 목표 글자 수)
 - create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 ## log
+- 260924 T345 done; ① picks the post's 분야 under the data fields and above 기억 사용 (before the photos on /posts/new) through a fifth draft-queue channel with the 템플릿's presence rules: a create carries a chosen 분야 and omits 없음, a saved post sends a pick at once and 없음 as a present clear, a refusal is taken back with its reason under the field, and a published post shows it disabled under T339's one reason; FE gates pass (p35)
+- 260924 T345 claimed (p35)
 - 260924 T344 done; StartGeneration and the write-comparison snapshot freeze the ticked rule texts still over band (in the run's language) and the 분야's first 30 phrases, the job row and the worker carry both, the drain and a revision never ask the quality context, and a post with nothing ticked and no list writes the payload and prompt it wrote before; end to end the phrase section and the preset line reach the write and never the revision; BE gate passes (p35)
 - 260924 T344 claimed (p35)
 - 260924 T343 done; ③ ends with a 발행 field that pastes, replaces or clears the post's Naver address through SavePostPublishedUrl, refuses a non-Naver address in place with the server's own sentence before sending (the shared fixture pins the pre-check), stays closed with its reason before 확정, and shows server refusals under the field; FE gates and lint:retirement pass (p35)
@@ -84,5 +85,3 @@
 - 260924 T337 claimed (p35)
 - 260924 T336 done; the FE template entity round-trips titleArea untrimmed on every create and save under a mirrored 200-character ceiling, the template screen carries the stored one so a rename cannot clear it, and ① lists title-area fields first; 2382 FE tests and the FE gates pass (p35)
 - 260924 T336 claimed (p35)
-- 260924 T335 done; QualityService answers a post's M2/M3/M4 from lazily stored per-revision rows and the account aggregate over published posts with over-band rule texts in the target language, plus RulesFor and PhrasesFor; the quality store, rpc and adapter are wired (22 handlers); BE gate, gen:sql and gen:proto reproduction pass (p35)
-- 260924 T335 claimed (p35)

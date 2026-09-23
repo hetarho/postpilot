@@ -2739,6 +2739,197 @@ describe('the template data fields in ①', () => {
   })
 })
 
+// POST-82: ① picks the post's 분야 — the 템플릿's mechanism on the draft queue, placed with the
+// post's own material rather than in the brief (POST-51's stated exception, POST-54).
+describe('the post 분야', () => {
+  const AUTOSAVED = { timeout: 4_000 }
+  const SLUG = '20260301-jeju'
+  const HELP =
+    '다음 생성부터 이 분야의 지침과, 네이버 검색 결과의 제목·설명에서 자주 보인 표현을 함께 참고해요.'
+  const WITH_FIELDS = [
+    {
+      id: 'template-review',
+      name: '정보성 식당 리뷰',
+      body: '<write>인트로</write>\n<ask label="방문일"/>\n<ask label="총평 별점">별점과 총평</ask>',
+    },
+  ]
+  const POST_TEMPLATES = [{ id: 'template-review', name: '정보성 식당 리뷰' }]
+  const following = (first: Node, second: Node) =>
+    Boolean(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING)
+
+  const fieldPicker = () => screen.findByRole('combobox', { name: /^분야 / })
+  async function pickField(user: ReturnType<typeof userEvent.setup>, name: string) {
+    const picker = await fieldPicker()
+    await waitFor(() => expect(picker).toBeEnabled())
+    await user.click(picker)
+    await user.click(await screen.findByRole('option', { name }))
+    return picker
+  }
+
+  it('sits between the data fields and 기억 사용', async () => {
+    const user = userEvent.setup()
+    renderAppAt(`/posts/${SLUG}`, {
+      user: USER,
+      posts: {
+        posts: [
+          {
+            slug: SLUG,
+            title: '제주',
+            template: { id: 'template-review', name: '정보성 식당 리뷰' },
+          },
+        ],
+        templates: POST_TEMPLATES,
+      },
+      templates: { templates: WITH_FIELDS },
+    })
+
+    const lastAnswer = await screen.findByLabelText('총평 별점')
+    // A post with no 분야 reads 없음, under a label a sighted user can read.
+    const picker = await screen.findByRole('combobox', { name: '분야 없음' })
+    expect(screen.getByText('분야', { selector: 'label' })).not.toHaveClass('sr-only')
+    expect(picker).toHaveAccessibleDescription(HELP)
+    const memories = screen.getByRole('checkbox', { name: '기억 사용' })
+    expect(following(lastAnswer, picker)).toBe(true)
+    expect(following(picker, memories)).toBe(true)
+
+    // It is ①'s field, so the writing brief holds no 분야 of its own.
+    const brief = await openBrief(user)
+    expect(within(brief).queryByRole('combobox', { name: /^분야/ })).toBeNull()
+  })
+
+  it('autosaves a pick on a saved post and keeps it across a reload', async () => {
+    const user = userEvent.setup()
+    const draftSaves: FakeDraftSave[] = []
+    const first = renderAppAt(`/posts/${SLUG}`, {
+      user: USER,
+      posts: { draftSaves, posts: [{ slug: SLUG, title: '제주' }] },
+    })
+
+    const picker = await pickField(user, '카페')
+    await waitFor(() => expect(draftSaves).toHaveLength(1))
+    expect(draftSaves[0]).toMatchObject({ slug: SLUG, field: 'cafe' })
+    await waitFor(() => expect(picker).toHaveAccessibleName('분야 카페'))
+    await waitFor(() => expect(picker).toBeEnabled())
+
+    // The title save that follows is text alone.
+    await user.type(screen.getByLabelText('제목'), ' 여행')
+    await waitFor(() => expect(draftSaves).toHaveLength(2), AUTOSAVED)
+    expect(draftSaves[1].field).toBeUndefined()
+
+    first.unmount()
+    renderAppAt(`/posts/${SLUG}`, { transport: first.transport })
+    expect(await screen.findByRole('combobox', { name: '분야 카페' })).toBeInTheDocument()
+  })
+
+  it('carries a 분야 chosen on /posts/new into the create', async () => {
+    const user = userEvent.setup()
+    const draftSaves: FakeDraftSave[] = []
+    renderAppAt('/posts/new', {
+      user: USER,
+      posts: { draftSaves, templates: POST_TEMPLATES },
+      templates: { templates: WITH_FIELDS },
+    })
+
+    // After the data fields and before the photos, with no 기억 사용 to sit above: that needs a slug.
+    const template = await templateField(user)
+    await waitFor(() => expect(template).toBeEnabled())
+    await user.click(template)
+    await user.click(await screen.findByRole('option', { name: '정보성 식당 리뷰' }))
+    const lastAnswer = await screen.findByLabelText('총평 별점')
+    const picker = await fieldPicker()
+    expect(following(lastAnswer, picker)).toBe(true)
+    expect(following(picker, screen.getByLabelText('사진·영상 추가'))).toBe(true)
+    expect(screen.queryByRole('checkbox', { name: '기억 사용' })).toBeNull()
+
+    await pickField(user, '맛집')
+    // A choice is not a keystroke: nothing is saved until there is something to save.
+    expect(draftSaves).toHaveLength(0)
+    expect(picker).toHaveAccessibleName('분야 맛집')
+
+    await user.type(screen.getByLabelText('제목'), '리뷰 글')
+    await waitFor(
+      () => expect(draftSaves[0]).toMatchObject({ slug: '', field: 'restaurant' }),
+      AUTOSAVED,
+    )
+    expect(await screen.findByRole('combobox', { name: '분야 맛집' })).toBeInTheDocument()
+  })
+
+  it('clears with 없음', async () => {
+    const user = userEvent.setup()
+    const draftSaves: FakeDraftSave[] = []
+    renderAppAt(`/posts/${SLUG}`, {
+      user: USER,
+      posts: { draftSaves, posts: [{ slug: SLUG, title: '제주', field: 'cafe' }] },
+    })
+
+    const picker = await screen.findByRole('combobox', { name: '분야 카페' })
+    await pickField(user, '없음')
+    // A present UNSPECIFIED, which is what clears it — distinct from omitting the field.
+    await waitFor(() => expect(draftSaves).toHaveLength(1))
+    expect(draftSaves[0]).toMatchObject({ slug: SLUG, field: '' })
+    await waitFor(() => expect(picker).toHaveAccessibleName('분야 없음'))
+  })
+
+  it('takes a refused pick back and says why', async () => {
+    const user = userEvent.setup()
+    const draftSaves: FakeDraftSave[] = []
+    renderAppAt(`/posts/${SLUG}`, {
+      user: USER,
+      posts: { draftSaves, refuseField: true, posts: [{ slug: SLUG, title: '제주' }] },
+    })
+
+    const picker = await pickField(user, '카페')
+    const why = '선택한 분야를 찾을 수 없어요. 다시 선택해 주세요.'
+    expect(await screen.findByText(why)).toBeInTheDocument()
+    // Nothing landed, so the picker still shows what the server holds.
+    await waitFor(() => expect(picker).toBeEnabled())
+    expect(picker).toHaveAccessibleName('분야 없음')
+    expect(picker).toHaveAttribute('aria-invalid', 'true')
+    expect(picker).toHaveAccessibleDescription(expect.stringContaining(why))
+
+    // The next title save carries text only, so the refused pick is not retried with every save.
+    await user.type(screen.getByLabelText('제목'), ' 여행')
+    await waitFor(() => expect(draftSaves).toHaveLength(2), AUTOSAVED)
+    expect(draftSaves.map((save) => save.field)).toEqual(['cafe', undefined])
+  })
+
+  it('is disabled on a published post', async () => {
+    const user = userEvent.setup()
+    renderAppAt(`/posts/${SLUG}`, {
+      user: USER,
+      posts: {
+        posts: [
+          {
+            slug: SLUG,
+            title: '제주',
+            status: 'published',
+            field: 'cafe',
+            content: POST_CONTENT_FIXTURE,
+            contentRevision: 1n,
+            machineBaselineRevision: 1n,
+            canFinalize: true,
+            finalizedRevision: 1n,
+            finalizedAt: '2026-08-20T12:00:00Z',
+            publishedUrl: 'https://blog.naver.com/alice/1',
+            publishedAt: '2026-08-21T09:00:00Z',
+          },
+        ],
+      },
+    })
+
+    await openStep(user, '글 생성')
+    const picker = await screen.findByRole('combobox', { name: '분야 카페' })
+    expect(picker).toBeDisabled()
+    // T339's one sentence is the reason (POST-86); the picker adds none of its own.
+    expect(
+      screen.getAllByText(
+        '발행된 글은 바꿀 수 없어요. 글 완성에서 발행 URL을 지우면 다시 고칠 수 있어요.',
+      ),
+    ).toHaveLength(1)
+    expect(picker).toHaveAccessibleDescription(HELP)
+  })
+})
+
 // POST-86: a published post takes no write but its address and the delete. It opens on 글 완성,
 // ② reads its prose, ① shows its material read-only and says why exactly once, and a save refused
 // because the post was published elsewhere is an answer rather than an outage.

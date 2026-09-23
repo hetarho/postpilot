@@ -21,13 +21,15 @@ describe('mint', () => {
     })
 
     await expect(handle.mint()).resolves.toBe('20260828-untitled')
-    // The create names its voice even though nothing else was typed (spec/legacy/policy/posts.md).
+    // The create names its voice even though nothing else was typed (spec/legacy/policy/posts.md),
+    // and neither a 템플릿 nor a 분야 that was never chosen.
     expect(send).toHaveBeenCalledWith(
       '',
       { title: '', memo: '', answers: [] },
       'voice-a',
       undefined,
       'ko',
+      undefined,
     )
     expect(onMinted).toHaveBeenCalledWith('20260828-untitled')
   })
@@ -54,6 +56,7 @@ describe('mint', () => {
       'voice-a',
       undefined,
       'ko',
+      undefined,
     )
   })
 

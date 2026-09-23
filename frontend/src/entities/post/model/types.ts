@@ -1,4 +1,5 @@
 import i18next from 'i18next'
+import type { BlogFieldChoice } from '@/entities/blog-field/@x/post'
 import type { PostImage } from '@/entities/image/@x/post'
 import type { PostVideo } from '@/entities/video/@x/post'
 import type { GenerationJob } from '@/entities/generation-job/@x/post'
@@ -47,6 +48,9 @@ export interface PostDraft {
   /** The 템플릿 the post is written for, or an empty ref for 없음. Optional by design: unlike the
    *  voice, the server never picks one (spec/legacy/policy/templates.md). */
   template: TemplateRef
+  /** The post's 분야, '' for 없음 (POST-82). A number a newer server adds reads as 없음: it is
+   *  not one this build can offer or show. */
+  field: BlogFieldChoice
   /** What this post answers to its template's data fields, by label. ① seeds its fields from
    *  these; a label the current template does not declare is kept and never rendered
    *  (POST-62). */

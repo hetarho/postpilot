@@ -1,4 +1,5 @@
 import { useLayoutEffect, useEffect, useRef, useState } from 'react'
+import { blogFieldToProto, type BlogFieldChoice } from '@/entities/blog-field'
 import { useSavePostDraft } from '@/entities/post'
 import { appFailureFromConnect, contentLanguageToProto, type ContentLanguage } from '@/shared/api'
 import {
@@ -18,6 +19,8 @@ export interface UseAutosaveArgs {
         memo: string
         voice: { id: string }
         template: { id: string }
+        /** The post's 분야, '' for 없음; omitted means 없음. */
+        field?: string
         targetLanguage: ContentLanguage
         templateAnswers: TemplateAnswerDraft[]
       }
@@ -35,6 +38,9 @@ export interface UseAutosaveArgs {
   /** The 템플릿 a draft with no post yet will be created with, '' for 없음. Same rule as
    *  `voiceId`: once the post exists its assignment changes only through `assignTemplate`. */
   templateId: string
+  /** The 분야 a draft with no post yet will be created with, '' for 없음 and when omitted. The
+   *  템플릿's rule: once the post exists it changes only through `assignField`. */
+  fieldId?: string
   /** The next full-write language; local-only until an unsaved draft is first created. */
   targetLanguage: ContentLanguage
   /** Called with the slug the first save minted. */
@@ -53,6 +59,7 @@ export function useAutosave({
   answers,
   voiceId,
   templateId,
+  fieldId = '',
   targetLanguage,
   onMinted,
 }: UseAutosaveArgs): {
@@ -69,6 +76,8 @@ export function useAutosave({
   /** Assigns or clears ('') an existing post's 템플릿 through the same queue as the text, so a
    *  title save still in flight cannot carry the old assignment over a newer selection. */
   assignTemplate: (templateId: string) => Promise<void>
+  /** Assigns or clears ('') an existing post's 분야, the 템플릿's way (POST-82). */
+  assignField: (fieldId: string) => Promise<void>
   assignTargetLanguage: (language: ContentLanguage) => Promise<void>
 } {
   const slug = post?.slug
@@ -80,6 +89,7 @@ export function useAutosave({
   const postRef = useRef(post)
   const voiceRef = useRef(voiceId)
   const templateRef = useRef(templateId)
+  const fieldRef = useRef(fieldId)
   const targetLanguageRef = useRef(targetLanguage)
   const answersRef = useRef(answers)
 
@@ -92,6 +102,7 @@ export function useAutosave({
     postRef.current = post
     voiceRef.current = voiceId
     templateRef.current = templateId
+    fieldRef.current = fieldId
     targetLanguageRef.current = targetLanguage
     answersRef.current = answers
   })
@@ -113,8 +124,9 @@ export function useAutosave({
       },
       voiceId: opened?.voice.id ?? voiceRef.current,
       templateId: opened?.template.id ?? templateRef.current,
+      fieldId: opened ? (opened.field ?? '') : fieldRef.current,
       targetLanguage: opened?.targetLanguage ?? targetLanguageRef.current,
-      send: async (slug, draft, voiceId, templateId, targetLanguage) => {
+      send: async (slug, draft, voiceId, templateId, targetLanguage, fieldId) => {
         const response = await sendRef.current({
           slug,
           title: draft.title,
@@ -126,6 +138,8 @@ export function useAutosave({
           templateId,
           targetLanguage:
             targetLanguage === undefined ? undefined : contentLanguageToProto(targetLanguage),
+          // '' is 없음, which goes as a present UNSPECIFIED: the clear (POST-82).
+          field: fieldId === undefined ? undefined : blogFieldToProto(fieldId as BlogFieldChoice),
         })
         // A 200 carrying no post is not a confirmation. Taking it as one would mark the
         // text saved, and for a draft with no slug yet would leave the next edit creating
@@ -169,6 +183,10 @@ export function useAutosave({
   }, [templateId])
 
   useLayoutEffect(() => {
+    if (!postRef.current) void queueRef.current?.assignField(fieldId)
+  }, [fieldId])
+
+  useLayoutEffect(() => {
     if (!postRef.current) void queueRef.current?.assignTargetLanguage(targetLanguage)
   }, [targetLanguage])
 
@@ -200,6 +218,9 @@ export function useAutosave({
       Promise.reject(new Error('editor is not attached to a draft')),
     assignTemplate: (templateId) =>
       queueRef.current?.assignTemplate(templateId) ??
+      Promise.reject(new Error('editor is not attached to a draft')),
+    assignField: (fieldId) =>
+      queueRef.current?.assignField(fieldId) ??
       Promise.reject(new Error('editor is not attached to a draft')),
     assignTargetLanguage: (language) =>
       queueRef.current?.assignTargetLanguage(language) ??

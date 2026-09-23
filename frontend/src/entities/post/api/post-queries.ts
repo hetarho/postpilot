@@ -2,6 +2,7 @@
 import { useMemo } from 'react'
 import type { Transport } from '@connectrpc/connect'
 import { createConnectQueryKey, useTransport } from '@connectrpc/connect-query'
+import { blogFieldFromProto } from '@/entities/blog-field/@x/post'
 import { toPostImage } from '@/entities/image/@x/post'
 import { toPostVideo } from '@/entities/video/@x/post'
 import { toGenerationJob } from '@/entities/generation-job/@x/post'
@@ -27,6 +28,7 @@ export function toPostDraft(post: Post): PostDraft {
     updatedAt: post.updatedAt,
     voice: toVoiceRef(post.voice),
     template: toTemplateRef(post.template),
+    field: blogFieldFromProto(post.field) ?? '',
     // Plain data, and deliberately not filtered against the current template here: which
     // labels are shown is the write screen's business, and dropping the rest would lose an
     // answer typed under a template the post is about to be assigned again (POST-62).

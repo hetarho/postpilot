@@ -9,14 +9,15 @@ import { ContactSheet } from '@/widgets/contact-sheet'
 import { EditorPhotos } from './EditorPhotos'
 import { EditorVoiceWarning } from './EditorVoiceWarning'
 
-/** ①'s panel: the post's own material — 제목 · 메모 · 템플릿 답변 · 사진 · the voice caveat. Everything
- *  that DESCRIBES the next AI run lives in the dock's brief instead. */
+/** ①'s panel: the post's own material — 제목 · 메모 · 템플릿 답변 · 분야 · 사진 · the voice caveat.
+ *  Everything that DESCRIBES the next AI run lives in the dock's brief instead. */
 export function EditorGeneratePanel({
   post,
   ownerId,
   titleField,
   memoField,
   answerFields,
+  fieldPicker,
   ensureSlug,
   job,
   locked = false,
@@ -26,6 +27,8 @@ export function EditorGeneratePanel({
   titleField: ReactNode
   memoField: ReactNode
   answerFields: ReactNode
+  /** The post's 분야: what the post is about, so it follows the data fields (POST-54). */
+  fieldPicker: ReactNode
   ensureSlug: () => Promise<string>
   job?: GenerationJob
   /** A published post: its material is shown and nothing in it is changed (POST-86). */
@@ -37,6 +40,7 @@ export function EditorGeneratePanel({
       {titleField}
       {memoField}
       {answerFields}
+      {fieldPicker}
       {/* At the foot of the memo and the data fields, which is what it is about: whether this
           draft's run may carry the account's memories (POST-71). It is NOT in the writing brief
           — it silently changes what a run may write. */}
