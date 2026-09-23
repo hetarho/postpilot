@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useBlocker, useNavigate, useParams } from '@tanstack/react-router'
 import { useSession } from '@/entities/session'
@@ -7,13 +7,15 @@ import {
   TEMPLATE_PARSE_OPTIONS,
   TemplateComposition,
   TemplateSource,
+  askFields,
   canSaveTemplate,
-  parse,
+  parseTemplate,
   remainingChars,
   useCreateTemplate,
   useTemplates,
   useUpdateTemplate,
   type Template,
+  type TemplateArea,
 } from '@/entities/template'
 import {
   POST_TAG_COUNT_DEFAULT,
@@ -130,7 +132,7 @@ interface Draft {
   name: string
   description: string
   body: string
-  /** Carried as loaded so a save here cannot clear it. Nothing on this screen edits it yet. */
+  /** The 제목 형식 (TMPL-50): '' is none, and the AI writes the title. */
   titleArea: string
   /** `undefined` is 의견 없음 — this template says nothing about that number, and assigning it
    *  leaves the post's own option alone (TEMPLATE-47). */
@@ -196,9 +198,10 @@ function Editor({ ownerId, stored }: { ownerId: string; stored: Template | undef
   // the builder reseeds its rows from the body on mount, which is the same "value from outside"
   // path a refetch takes (TEMPLATE-29), so switching needs no synchronisation of its own.
   const [mode, setMode] = useState<'builder' | 'source'>('builder')
-  // Set only by 원문에서 고치기: arriving there by the user's own choice of the tab should not
-  // steal the caret, but arriving there to fix a parse error should put it in the text.
-  const [focusSource, setFocusSource] = useState(false)
+  // Set only by 원문에서 고치기, to the area that failed: arriving there by the user's own choice
+  // of the tab should not steal the caret, but arriving there to fix a parse error should put it
+  // in the text that has the error.
+  const [focusSource, setFocusSource] = useState<TemplateArea | null>(null)
   const create = useCreateTemplate(ownerId)
   const update = useUpdateTemplate(ownerId, stored?.id ?? '')
 
@@ -220,27 +223,45 @@ function Editor({ ownerId, stored }: { ownerId: string; stored: Template | undef
     trimmed.name !== baseline.name ||
     trimmed.description !== baseline.description ||
     trimmed.body !== baseline.body ||
+    trimmed.titleArea !== baseline.titleArea ||
     trimmed.targetLength !== baseline.targetLength ||
     trimmed.tagCount !== baseline.tagCount
   const pending = create.isPending || update.isPending
   const errorMessage = create.errorMessage || update.errorMessage
   const failed = create.isError || update.isError
-  // Parsed ONCE, here: the save gate and the error the source mode shows are the same answer, so
-  // they cannot disagree. The builder emits only bodies that parse, so this changes nothing for a
-  // builder-only flow — it is what makes "a body that does not parse cannot be saved from EITHER
-  // mode" true (TEMPLATE-30, TEMPLATE-7).
-  const parsed = parse(trimmed.body, TEMPLATE_PARSE_OPTIONS)
-  // Two rows asking under one title. The composition leaves such a row OUT of the body, so the
-  // draft parses and nothing here would otherwise notice — and saving would silently drop the
-  // row the author is looking at (TEMPLATE-44).
-  const [askConflict, setAskConflict] = useState(false)
+  // Parsed ONCE, here, as the one document the two areas are (TMPL-50): the save gate and the
+  // error each area shows are the same answer, so they cannot disagree. The builder emits only
+  // text that parses, so this changes nothing for a builder-only flow — it is what makes "a
+  // template that does not parse cannot be saved from EITHER mode" true (TEMPLATE-30,
+  // TEMPLATE-7), and what catches a failure only the two areas together have.
+  const parsed = parseTemplate(trimmed.titleArea, trimmed.body, TEMPLATE_PARSE_OPTIONS)
+  const failureIn = (area: TemplateArea) =>
+    !parsed.ok && parsed.failure.area === area ? parsed.failure : null
+  // Two rows asking under one title, in either area. A composition leaves such a row OUT of its
+  // text, so the draft parses and nothing here would otherwise notice — and saving would
+  // silently drop the row the author is looking at (TEMPLATE-44). One flag per area, each setter
+  // handed over as is: a stable reference, so neither composition re-reports on every render.
+  const [titleAskConflict, setTitleAskConflict] = useState(false)
+  const [bodyAskConflict, setBodyAskConflict] = useState(false)
+  // The title's data fields come first in the one namespace (TMPL-55), so a body row asking
+  // under one of them is the row that yields.
+  const titleAskLabels = useMemo(
+    () =>
+      new Set(
+        askFields(draft.titleArea, { ...TEMPLATE_PARSE_OPTIONS, titleArea: true }).map(
+          (field) => field.label,
+        ),
+      ),
+    [draft.titleArea],
+  )
   const blocked =
     !dirty ||
     !canSaveTemplate(trimmed) ||
     !lengthValid ||
     !tagsValid ||
     !parsed.ok ||
-    askConflict ||
+    titleAskConflict ||
+    bodyAskConflict ||
     pending
 
   // A REF, not state: the post-save redirect below runs in the same tick as the state update
@@ -292,7 +313,7 @@ function Editor({ ownerId, stored }: { ownerId: string; stored: Template | undef
     }
   }
 
-  const field = (key: 'name' | 'description' | 'body') => (value: string) => {
+  const field = (key: 'name' | 'description' | 'body' | 'titleArea') => (value: string) => {
     setDraft((current) => ({ ...current, [key]: value }))
     setSaved(false)
   }
@@ -351,56 +372,96 @@ function Editor({ ownerId, stored }: { ownerId: string; stored: Template | undef
         onChange={numberField(setTagsField, POST_TAG_COUNT_DEFAULT)}
       />
 
-      <section aria-labelledby="template-composition-heading" className="mt-8">
-        <Typography variant="title" id="template-composition-heading">
-          {t('create.body', { ns: 'templates' })}
-        </Typography>
-        <Typography variant="body" as="p" className="text-content-secondary max-w-measure mt-1">
-          {t(mode === 'source' ? 'screen.sourceHelp' : 'screen.compositionHelp', {
-            ns: 'templates',
-          })}
-        </Typography>
-        <SegmentedControl
-          value={mode}
-          options={[
-            { value: 'builder', label: t('screen.mode.builder', { ns: 'templates' }) },
-            { value: 'source', label: t('screen.mode.source', { ns: 'templates' }) },
-          ]}
-          onChange={(next) => {
-            setMode(next)
-            // Only the fix button asks for the caret; picking the tab does not.
-            if (next === 'builder') setFocusSource(false)
-          }}
-          ariaLabel={t('screen.mode.aria', { ns: 'templates' })}
-          controls={COMPOSITION_PANEL_ID}
-          disabled={pending}
-          className="mt-3"
-        />
-        <div id={COMPOSITION_PANEL_ID} role="tabpanel">
+      {/* ONE switch for both texts: they are two parts of one template, edited the same way. */}
+      <SegmentedControl
+        value={mode}
+        options={[
+          { value: 'builder', label: t('screen.mode.builder', { ns: 'templates' }) },
+          { value: 'source', label: t('screen.mode.source', { ns: 'templates' }) },
+        ]}
+        onChange={(next) => {
+          setMode(next)
+          // Only the fix button asks for the caret; picking the tab does not.
+          if (next === 'builder') setFocusSource(null)
+        }}
+        ariaLabel={t('screen.mode.aria', { ns: 'templates' })}
+        controls={COMPOSITION_PANEL_ID}
+        disabled={pending}
+        className="mt-8"
+      />
+      <div id={COMPOSITION_PANEL_ID} role="tabpanel">
+        {/* The title comes first because it reads first — in the post and in the one data-field
+            namespace (TMPL-50, TMPL-55). */}
+        <section aria-labelledby="template-title-area-heading" className="mt-6">
+          <Typography variant="title" id="template-title-area-heading">
+            {t('screen.titleArea.heading', { ns: 'templates' })}{' '}
+            {t('form.optional', { ns: 'common' })}
+          </Typography>
+          <Typography variant="body" as="p" className="text-content-secondary max-w-measure mt-1">
+            {t('screen.titleArea.help', { ns: 'templates' })}
+          </Typography>
           {mode === 'source' ? (
             <TemplateSource
-              value={draft.body}
-              onChange={field('body')}
+              area="title_area"
+              value={draft.titleArea}
+              onChange={field('titleArea')}
               disabled={pending}
-              failure={parsed.ok ? null : parsed.failure}
-              autoFocus={focusSource}
+              failure={failureIn('title_area')}
+              autoFocus={focusSource === 'title_area'}
               className="mt-3"
             />
           ) : (
             <TemplateComposition
-              onAskConflict={setAskConflict}
-              value={draft.body}
-              onChange={field('body')}
+              area="title_area"
+              onAskConflict={setTitleAskConflict}
+              value={draft.titleArea}
+              onChange={field('titleArea')}
               disabled={pending}
+              failure={failureIn('title_area')}
               onFixInSource={() => {
-                setFocusSource(true)
+                setFocusSource('title_area')
                 setMode('source')
               }}
               className="mt-3"
             />
           )}
-        </div>
-      </section>
+        </section>
+
+        <section aria-labelledby="template-composition-heading" className="mt-8">
+          <Typography variant="title" id="template-composition-heading">
+            {t('create.body', { ns: 'templates' })}
+          </Typography>
+          <Typography variant="body" as="p" className="text-content-secondary max-w-measure mt-1">
+            {t(mode === 'source' ? 'screen.sourceHelp' : 'screen.compositionHelp', {
+              ns: 'templates',
+            })}
+          </Typography>
+          {mode === 'source' ? (
+            <TemplateSource
+              value={draft.body}
+              onChange={field('body')}
+              disabled={pending}
+              failure={failureIn('body')}
+              autoFocus={focusSource === 'body'}
+              className="mt-3"
+            />
+          ) : (
+            <TemplateComposition
+              onAskConflict={setBodyAskConflict}
+              value={draft.body}
+              onChange={field('body')}
+              disabled={pending}
+              takenAskTitles={titleAskLabels}
+              failure={failureIn('body')}
+              onFixInSource={() => {
+                setFocusSource('body')
+                setMode('source')
+              }}
+              className="mt-3"
+            />
+          )}
+        </section>
+      </div>
 
       {/* The state this screen has to report goes in one place, above the control that produced
           it, so a refusal is read where the thumb already is (design-language §4.3). */}

@@ -138,3 +138,48 @@ describe('the source editor', () => {
     expect(screen.getByText(`${TEMPLATE_LIMITS.body - 3}자 남음`)).toBeInTheDocument()
   })
 })
+
+// TMPL-50: the title area in source is its own short field with its own failure and counter.
+// Copying, the format guide and the guide's copy belong to the body alone (TMPL-26, TMPL-42).
+describe('the title area source', () => {
+  it('is labelled 제목 원문 and counts against the title ceiling', async () => {
+    const user = userEvent.setup()
+    function TitleSource() {
+      const [title, setTitle] = useState('')
+      return <TemplateSource area="title_area" value={title} onChange={setTitle} failure={null} />
+    }
+    render(<TitleSource />)
+
+    const field = screen.getByLabelText('제목 원문')
+    expect(field).toHaveAttribute('id', 'template-title-source')
+    expect(screen.getByText(`${TEMPLATE_LIMITS.titleArea}자 남음`)).toBeInTheDocument()
+    await user.type(field, '방문 후기')
+    expect(screen.getByText(`${TEMPLATE_LIMITS.titleArea - 5}자 남음`)).toBeInTheDocument()
+  })
+
+  it('shows its own failure at its line and marks itself invalid', () => {
+    render(
+      <TemplateSource
+        area="title_area"
+        value={'<slot kind="photo"/>'}
+        onChange={() => {}}
+        failure={{ line: 1, reason: 'not_in_title', area: 'title_area' }}
+      />,
+    )
+    const field = screen.getByLabelText('제목 원문')
+    const message = screen.getByRole('alert')
+    expect(message).toHaveTextContent(
+      '1번째 줄: 사진·사진마다 반복·AI에게만 하는 말은 제목에 넣을 수 없어요',
+    )
+    expect(message).toHaveAttribute('id', 'template-title-source-error')
+    expect(field).toHaveAttribute('aria-invalid', 'true')
+    expect(field).toHaveAttribute('aria-describedby', message.id)
+  })
+
+  it('offers no copy and no guide', () => {
+    render(<TemplateSource area="title_area" value="" onChange={() => {}} failure={null} />)
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+    expect(screen.queryByText('형식 안내 보기')).not.toBeInTheDocument()
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  })
+})

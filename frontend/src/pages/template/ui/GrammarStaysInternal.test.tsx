@@ -8,11 +8,12 @@ const USER = { id: 'alice' }
 
 /** Every construct the grammar has, so no single one can slip through unnoticed. Two of them —
  *  the place and link positions — are retired and appear only in stored bodies, which is exactly
- *  why the fixture keeps them. */
+ *  why the fixture keeps them. The title area carries the constructs it admits (TMPL-50). */
 const EVERY_CONSTRUCT: FakeTemplateRow = {
   id: 'template-all',
   name: '전부',
   description: '모든 구성요소',
+  titleArea: '<ask label="가게 이름"/> 방문 후기 <write>메뉴를 한 줄로</write>',
   body:
     '<write>인트로를 씁니다</write>\n머리말 그대로\n<slot kind="place" label="네이버 지도"/>\n' +
     '<repeat each="photo">\n<slot kind="photo" count="3"/>\n<write>이 사진에 대한 설명</write>\n</repeat>\n' +
@@ -23,6 +24,8 @@ const EVERY_CONSTRUCT: FakeTemplateRow = {
 const SYNTAX = [
   '<write',
   '</write',
+  '<ask',
+  '</ask',
   '<repeat',
   '</repeat',
   '<slot',
@@ -60,7 +63,7 @@ describe('the template grammar is visible in 원문 and nowhere else', () => {
     expectNoGrammar()
   })
 
-  it('renders no grammar in the builder, with every construct and every row open', async () => {
+  it('renders no grammar in the builder, with every construct and every row open in both areas', async () => {
     const user = userEvent.setup()
     renderAppAt('/templates/template-all', {
       user: USER,
@@ -75,6 +78,12 @@ describe('the template grammar is visible in 원문 and nowhere else', () => {
     const toggles = screen
       .getAllByRole('button')
       .filter((button) => button.getAttribute('aria-expanded') !== null)
+    // Both areas' rows are here: the title's three and the body's.
+    expect(
+      toggles.filter((control) =>
+        control.closest('section[aria-labelledby="template-title-area-heading"]'),
+      ),
+    ).toHaveLength(3)
     for (const control of toggles) {
       await user.click(control)
       expectNoGrammar()
@@ -85,11 +94,19 @@ describe('the template grammar is visible in 원문 and nowhere else', () => {
     renderAppAt('/templates/template-broken', {
       user: USER,
       templates: {
-        templates: [{ id: 'template-broken', name: '옛 템플릿', body: '<write>닫히지 않음' }],
+        templates: [
+          {
+            id: 'template-broken',
+            name: '옛 템플릿',
+            body: '<write>닫히지 않음',
+            titleArea: '<note>톤</note>',
+          },
+        ],
       },
     })
 
     expect(await screen.findByText(/구성을 읽을 수 없어요/)).toBeInTheDocument()
+    expect(screen.getByText(/제목 형식을 읽을 수 없어요/)).toBeInTheDocument()
     // The state that OFFERS the source view still shows none of it.
     expectNoGrammar()
   })
@@ -108,11 +125,13 @@ describe('the template grammar is visible in 원문 and nowhere else', () => {
     expect(screen.getByRole('tab', { name: '블록' })).toBeInTheDocument()
 
     await user.click(screen.getByRole('tab', { name: '원문' }))
+    expect(screen.getByLabelText('제목 원문')).toHaveValue(EVERY_CONSTRUCT.titleArea)
     expect(screen.getByLabelText('원문')).toHaveValue(EVERY_CONSTRUCT.body)
     // And the guide that teaches the same grammar is here too, and only here.
     expect(screen.getByText('형식 안내 보기')).toBeInTheDocument()
 
     await user.click(screen.getByRole('tab', { name: '블록' }))
+    expect(screen.queryByLabelText('제목 원문')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('원문')).not.toBeInTheDocument()
     expect(screen.queryByText('형식 안내 보기')).not.toBeInTheDocument()
     expectNoGrammar()

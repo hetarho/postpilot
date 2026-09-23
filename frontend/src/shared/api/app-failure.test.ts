@@ -19,6 +19,19 @@ describe('application failure boundary', () => {
       params: {},
     })
   })
+  // T333's refusal names the area that failed once a template has a title area (TMPL-50). Without
+  // `area` in the spec it would degrade to the generic reason and lose the line and the reason.
+  it('keeps a template parse refusal typed with or without the area that failed', () => {
+    const reason = 'TEMPLATE_PARSE_FAILED'
+    const body = { line: '2', reason: 'unclosed_tag' }
+    const title = { ...body, area: 'title_area' }
+    expect(normalizeAppFailure({ reason, params: body })).toEqual({ reason, params: body })
+    expect(normalizeAppFailure({ reason, params: title })).toEqual({ reason, params: title })
+    expect(normalizeAppFailure({ reason, params: { area: 'title_area' } })).toEqual({
+      reason: 'UNKNOWN_FAILURE',
+      params: {},
+    })
+  })
   it('decodes one known Connect detail without consulting rawMessage', () => {
     const error = new ConnectError('private backend prose', Code.InvalidArgument, undefined, [
       {

@@ -5,6 +5,7 @@ import {
   blockKindKey,
   blockSummary,
   canInsert,
+  duplicateAskTitles,
   endPosition,
   fromBody,
   insertAt,
@@ -17,6 +18,7 @@ import {
   reorder,
   toBody,
   toValidBody,
+  TITLE_AREA_PALETTE,
   type BuilderBlock,
 } from './blocks'
 
@@ -337,5 +339,95 @@ describe('a row that asks the post for its data', () => {
     expect(asksForData({ id: 'a', kind: 'write', text: 'x', ask: '총평' })).toBe(true)
     expect(asksForData({ id: 'b', kind: 'write', text: 'x' })).toBe(false)
     expect(asksForData({ id: 'c', kind: 'photo', count: 1 })).toBe(false)
+  })
+})
+
+// TMPL-50: the title area is one line of words. Its blocks join by a space, a literal loses exactly
+// one space at each edge on the way back, and only the two word kinds may go in.
+describe('the title area', () => {
+  const readTitle = (title: string) => {
+    const result = fromBody(title, decode, options, legacy, 'title_area')
+    if (!result.ok) throw new Error(`unexpected parse failure: ${JSON.stringify(result.failure)}`)
+    return result.blocks
+  }
+
+  it('joins its blocks by one space, and round-trips byte for byte', () => {
+    const blocks: BuilderBlock[] = [
+      { id: 'a', kind: 'text', text: '', ask: '가게 이름' },
+      { id: 'b', kind: 'text', text: '방문 후기' },
+      { id: 'c', kind: 'write', text: '메뉴를 한 줄로' },
+    ]
+    const title = toBody(blocks, 'title_area')
+    expect(title).toBe('<ask label="가게 이름"/> 방문 후기 <write>메뉴를 한 줄로</write>')
+    expect(toBody(readTitle(title), 'title_area')).toBe(title)
+    expect(readTitle(title).map((block) => block.kind)).toEqual(['text', 'text', 'write'])
+  })
+
+  it('strips exactly one space from each edge of a literal, and drops a bare separator', () => {
+    // Two tags side by side: the space between them is the separator, never a row.
+    expect(readTitle('<write>a</write> <write>b</write>').map((block) => block.kind)).toEqual([
+      'write',
+      'write',
+    ])
+    // A space the author typed beyond the separator is theirs, and survives the trip.
+    const blocks: BuilderBlock[] = [
+      { id: 'a', kind: 'write', text: 'a' },
+      { id: 'b', kind: 'text', text: ' 두 칸 ' },
+      { id: 'c', kind: 'write', text: 'b' },
+    ]
+    const title = toBody(blocks, 'title_area')
+    expect(readTitle(title)[1]).toMatchObject({ kind: 'text', text: ' 두 칸 ' })
+    expect(toBody(readTitle(title), 'title_area')).toBe(title)
+  })
+
+  it('reads with the title rules, so a photo in it does not parse', () => {
+    expect(fromBody('<slot kind="photo"/>', decode, options, legacy, 'title_area')).toMatchObject({
+      ok: false,
+      failure: { reason: 'not_in_title', area: 'title_area' },
+    })
+    // The same text is a body's photo row.
+    expect(read('<slot kind="photo"/>').map((block) => block.kind)).toEqual(['photo'])
+  })
+
+  it('offers and admits only AI가 쓰는 글 and 고정 문구', () => {
+    expect(TITLE_AREA_PALETTE).toEqual(['write', 'text'])
+    const end = endPosition([])
+    for (const kind of ['photo', 'repeat', 'note'] as const) {
+      expect(canInsert(kind, end, 'title_area')).toBe(false)
+      expect(insertAt([], end, kind, 'title_area')).toEqual({ blocks: [], inserted: null })
+      // The body keeps them.
+      expect(canInsert(kind, end)).toBe(true)
+    }
+    for (const kind of TITLE_AREA_PALETTE) expect(canInsert(kind, end, 'title_area')).toBe(true)
+  })
+
+  it('keeps every body call byte for byte what it was', () => {
+    const blocks: BuilderBlock[] = [
+      { id: 'a', kind: 'write', text: 'a' },
+      { id: 'b', kind: 'text', text: 'b' },
+    ]
+    expect(toBody(blocks)).toBe('<write>a</write>\nb')
+    expect(toValidBody(blocks)).toBe(toBody(blocks, 'body'))
+  })
+})
+
+// TMPL-55: the title reads first in the one data-field namespace, so a body row asking under a
+// title the title area already uses is the one that collides.
+describe('titles another area already asks under', () => {
+  const body: BuilderBlock[] = [
+    { id: 'a', kind: 'text', text: '', ask: '가게 이름' },
+    { id: 'b', kind: 'write', text: '분위기', ask: '분위기' },
+  ]
+
+  it('collide on their first use in this area', () => {
+    expect(duplicateAskTitles(body)).toEqual(new Set())
+    expect(duplicateAskTitles(body, new Set(['가게 이름']))).toEqual(new Set(['가게 이름']))
+  })
+
+  it('leave the colliding row out of the valid text, and nothing else', () => {
+    expect(toValidBody(body, 'body', new Set(['가게 이름']))).toBe(
+      '<ask label="분위기">분위기</ask>',
+    )
+    expect(toValidBody(body)).toBe('<ask label="가게 이름"/>\n<ask label="분위기">분위기</ask>')
   })
 })

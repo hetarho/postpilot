@@ -14,7 +14,7 @@ import {
 } from '@/shared/ui'
 import { formatGuide } from '../model/guide'
 import { TEMPLATE_LIMITS, remainingChars } from '../model/types'
-import type { ParseFailure } from '../lib/grammar'
+import type { ParseFailure, TemplateArea } from '../lib/grammar'
 
 interface TemplateSourceProps {
   value: string
@@ -26,6 +26,10 @@ interface TemplateSourceProps {
   /** Focused on mount. Set only when the user arrived here from 원문에서 고치기: they asked to fix
    *  the text, so the caret belongs in it. */
   autoFocus?: boolean
+  /** Which of the template's two texts this is (TMPL-50). The title area is its own field with its
+   *  own counter; copying, the format guide and the guide's copy belong to the body alone
+   *  (TMPL-26, TMPL-42). */
+  area?: TemplateArea
   className?: string
 }
 
@@ -45,8 +49,96 @@ export function TemplateSource({
   disabled = false,
   failure,
   autoFocus = false,
+  area = 'body',
   className,
 }: TemplateSourceProps) {
+  if (area === 'title_area') {
+    return (
+      <TitleAreaSource
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+        failure={failure}
+        autoFocus={autoFocus}
+        className={className}
+      />
+    )
+  }
+  return (
+    <BodySource
+      value={value}
+      onChange={onChange}
+      disabled={disabled}
+      failure={failure}
+      autoFocus={autoFocus}
+      className={className}
+    />
+  )
+}
+
+/** The title area as text: one short field, its failure and its counter, and nothing else. */
+function TitleAreaSource({
+  value,
+  onChange,
+  disabled = false,
+  failure,
+  autoFocus = false,
+  className,
+}: Omit<TemplateSourceProps, 'area'>) {
+  const { t } = useTranslation('templates')
+  const ref = useRef<HTMLTextAreaElement>(null)
+  const errorId = 'template-title-source-error'
+  useEffect(() => {
+    if (autoFocus) ref.current?.focus()
+  }, [autoFocus])
+  return (
+    <div className={className}>
+      <FieldLabel htmlFor="template-title-source">{t('source.titleAreaLabel')}</FieldLabel>
+      <Textarea
+        id="template-title-source"
+        ref={ref}
+        value={value}
+        disabled={disabled}
+        rows={2}
+        autoGrow
+        spellCheck={false}
+        autoComplete="off"
+        aria-invalid={failure ? true : undefined}
+        aria-describedby={failure ? errorId : undefined}
+        onChange={(event) => onChange(event.target.value)}
+        className={typographyStyles({ variant: 'body', mono: true, className: 'mt-1' })}
+      />
+      {failure && <SourceError id={errorId} failure={failure} />}
+      <FieldCount left={remainingChars(value, TEMPLATE_LIMITS.titleArea)} />
+    </div>
+  )
+}
+
+/** A parse failure at its line, with both ceilings passed to every reason: two of them
+ *  interpolate one, and a reason rendered without its number shows the user a literal `{{max}}`. */
+function SourceError({ id, failure }: { id: string; failure: ParseFailure }) {
+  const { t } = useTranslation('templates')
+  return (
+    <FieldMessage id={id} role="alert">
+      {t('source.error', {
+        line: failure.line,
+        reason: t(`builder.reasons.${failure.reason}`, {
+          max: TEMPLATE_PHOTO_ROW_MAX,
+          askMax: TEMPLATE_ASK_MAX_PER_BODY,
+        }),
+      })}
+    </FieldMessage>
+  )
+}
+
+function BodySource({
+  value,
+  onChange,
+  disabled = false,
+  failure,
+  autoFocus = false,
+  className,
+}: Omit<TemplateSourceProps, 'area'>) {
   const { t } = useTranslation('templates')
   const bodyRef = useRef<HTMLTextAreaElement>(null)
   const guideRef = useRef<HTMLTextAreaElement>(null)
@@ -97,19 +189,7 @@ export function TemplateSource({
         onChange={(event) => onChange(event.target.value)}
         className={typographyStyles({ variant: 'body', mono: true, className: 'mt-1' })}
       />
-      {failure && (
-        <FieldMessage id={errorId} role="alert">
-          {t('source.error', {
-            line: failure.line,
-            // Both ceilings travel with every reason: two of them interpolate one, and a
-            // reason rendered without its number shows the user a literal `{{max}}`.
-            reason: t(`builder.reasons.${failure.reason}`, {
-              max: TEMPLATE_PHOTO_ROW_MAX,
-              askMax: TEMPLATE_ASK_MAX_PER_BODY,
-            }),
-          })}
-        </FieldMessage>
-      )}
+      {failure && <SourceError id={errorId} failure={failure} />}
       <FieldCount left={left} />
 
       <div className="mt-3 flex flex-wrap gap-2">

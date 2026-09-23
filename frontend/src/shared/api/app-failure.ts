@@ -152,7 +152,9 @@ export const appFailureSpecs = {
   // `max` is optional: the target length has a floor and no ceiling, because the post option
   // this number seeds has none either.
   TEMPLATE_NUMBER_OUT_OF_RANGE: { required: ['actual', 'min'], optional: ['field', 'max'] },
-  TEMPLATE_PARSE_FAILED: { required: ['line', 'reason'] },
+  // `area` names the part that failed once a template has a title area (TMPL-50); a refusal
+  // without it is a body's, as every one was before.
+  TEMPLATE_PARSE_FAILED: { required: ['line', 'reason'], optional: ['area'] },
   PURPOSE_NOT_FOUND: {},
   GUIDELINE_NOT_FOUND: {},
   GUIDELINE_TEXT_REQUIRED: {},

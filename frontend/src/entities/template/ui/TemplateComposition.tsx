@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
 import { Trash2 } from 'lucide-react'
-import { decode } from '../lib/grammar'
+import { decode, type ParseFailure, type TemplateArea } from '../lib/grammar'
 import {
   asksForData,
   askTitle,
@@ -18,6 +18,7 @@ import {
   repeatPhotoCount,
   reorder,
   toValidBody,
+  TITLE_AREA_PALETTE,
   type AskableBlock,
   type BodyRead,
   type BuilderBlock,
@@ -25,7 +26,7 @@ import {
   type Position,
 } from '../model/blocks'
 import { remainingChars, TEMPLATE_LIMITS, TEMPLATE_PARSE_OPTIONS } from '../model/types'
-import { TEMPLATE_PHOTO_ROW_MAX } from '../config'
+import { TEMPLATE_ASK_MAX_PER_BODY, TEMPLATE_PHOTO_ROW_MAX } from '../config'
 import {
   Badge,
   Button,
@@ -62,6 +63,9 @@ export function TemplateComposition({
   className,
   onFixInSource,
   onAskConflict,
+  area = 'body',
+  takenAskTitles = NO_TITLES,
+  failure = null,
 }: {
   value: string
   onChange: (body: string) => void
@@ -75,18 +79,32 @@ export function TemplateComposition({
    *  read back — so the caller has to refuse 저장 or the row would be silently dropped from a
    *  saved template (TEMPLATE-44). */
   onAskConflict?: (conflicted: boolean) => void
+  /** Which of the template's two texts this edits (TMPL-50). The title area takes only AI가 쓰는
+   *  글 and 고정 문구, on one line, joined by spaces. */
+  area?: TemplateArea
+  /** Titles the other area already asks under. The title area reads first in the one namespace
+   *  (TMPL-55), so only the body is handed these, and a body row asking under one says so and is
+   *  left out until the title lets it go. */
+  takenAskTitles?: ReadonlySet<string>
+  /** A failure the screen found across BOTH areas that names this one — `too_many_asks` counting
+   *  the title and the body together — which no single area's rows can see. */
+  failure?: ParseFailure | null
 }) {
   const { t } = useTranslation('templates')
-  return readBody(value, t).ok ? (
+  return readBody(value, t, area).ok ? (
     <Composition
       value={value}
       onChange={onChange}
       disabled={disabled}
       className={className}
       onAskConflict={onAskConflict}
+      area={area}
+      taken={takenAskTitles}
+      failure={failure}
     />
   ) : (
     <Unreadable
+      area={area}
       disabled={disabled}
       onClear={() => onChange('')}
       onFixInSource={onFixInSource}
@@ -94,6 +112,8 @@ export function TemplateComposition({
     />
   )
 }
+
+const NO_TITLES: ReadonlySet<string> = new Set()
 
 /** A body from before the builder existed, one written by an outside AI, or one edited elsewhere.
  *  The composition cannot be shown, and inventing a structure the author did not write would be
@@ -104,20 +124,25 @@ export function TemplateComposition({
  *  needs; clearing throws it away, so it is the second, destructive one. Neither writes anything:
  *  the screen's 저장 is still the only write. */
 function Unreadable({
+  area,
   disabled,
   onClear,
   onFixInSource,
   className,
 }: {
+  area: TemplateArea
   disabled: boolean
   onClear: () => void
   onFixInSource?: () => void
   className?: string
 }) {
   const { t } = useTranslation('templates')
+  const title = area === 'title_area'
   return (
     <div className={className}>
-      <FieldMessage role="alert">{t('composition.unreadable')}</FieldMessage>
+      <FieldMessage role="alert">
+        {t(title ? 'composition.titleArea.unreadable' : 'composition.unreadable')}
+      </FieldMessage>
       <div className="mt-3 flex flex-wrap gap-2">
         {onFixInSource && (
           <Button variant="secondary" disabled={disabled} onClick={onFixInSource}>
@@ -125,7 +150,7 @@ function Unreadable({
           </Button>
         )}
         <Button variant="danger" disabled={disabled} onClick={onClear}>
-          {t('composition.clearAndRestart')}
+          {t(title ? 'composition.titleArea.clearAndRestart' : 'composition.clearAndRestart')}
         </Button>
       </div>
     </div>
@@ -138,12 +163,18 @@ function Composition({
   disabled,
   className,
   onAskConflict,
+  area,
+  taken,
+  failure,
 }: {
   value: string
   onChange: (body: string) => void
   disabled: boolean
   className?: string
   onAskConflict?: (conflicted: boolean) => void
+  area: TemplateArea
+  taken: ReadonlySet<string>
+  failure: ParseFailure | null
 }) {
   const { t } = useTranslation('templates')
   const id = useId()
@@ -154,13 +185,28 @@ function Composition({
   //
   // `emitted` closes the loop: a value that is not what this editor last produced came from
   // outside (a refetch, the unreadable state's clear), and only then are the rows reseeded.
-  const [blocks, setBlocks] = useState<BuilderBlock[]>(() => readBlocks(value, t))
+  const [blocks, setBlocks] = useState<BuilderBlock[]>(() => readBlocks(value, t, area))
   const emitted = useRef(value)
   useEffect(() => {
     if (value === emitted.current) return
     emitted.current = value
-    setBlocks(readBlocks(value, t))
-  }, [value, t])
+    setBlocks(readBlocks(value, t, area))
+  }, [value, t, area])
+  // A row the other area's title collided with is out of the emitted body, so when that title is
+  // let go the row has to come back in — or it would stay out of the saved template with nothing
+  // on screen saying so (TMPL-44). Keyed on the LABELS, not the set's identity, and acting only
+  // when they have changed since the last look: the mount run and a reseed from outside must not
+  // rewrite, and so dirty, a hand-written stored body.
+  const takenKey = [...taken].sort().join('\u0000')
+  const takenSeen = useRef(takenKey)
+  useEffect(() => {
+    if (takenSeen.current === takenKey) return
+    takenSeen.current = takenKey
+    const body = toValidBody(blocks, area, taken)
+    if (body === emitted.current) return
+    emitted.current = body
+    onChange(body)
+  }, [takenKey, blocks, area, taken, onChange])
   // The two pieces of view state, both keyed by BLOCK ID rather than by index so an insertion or
   // a reorder above them cannot silently move either.
   //
@@ -177,13 +223,13 @@ function Composition({
 
   const push = (next: BuilderBlock[]) => {
     setBlocks(next)
-    const body = toValidBody(next)
+    const body = toValidBody(next, area, taken)
     emitted.current = body
     onChange(body)
   }
 
   const add = (kind: PaletteKind) => {
-    const result = insertAt(blocks, target, kind)
+    const result = insertAt(blocks, target, kind, area)
     if (!result.inserted) return
     push(result.blocks)
     // The new block opens for typing and becomes the aim, so adding three in a row builds
@@ -192,13 +238,14 @@ function Composition({
     setAimedAt(result.inserted.id)
   }
 
-  const duplicates = duplicateAskTitles(blocks)
+  const duplicates = duplicateAskTitles(blocks, taken)
   // Reported upward rather than derived by the caller: the colliding row is not in the body it
   // can see, so there would be nothing left there to notice.
   const conflicted = duplicates.size > 0
   useEffect(() => onAskConflict?.(conflicted), [conflicted, onAskConflict])
 
   const context: RowContext = {
+    area,
     disabled,
     nested: false,
     duplicates,
@@ -214,14 +261,20 @@ function Composition({
 
   return (
     <div className={className}>
-      <AddToolbar id={`${id}-toolbar`} disabled={disabled} target={target} onAdd={add} />
+      <AddToolbar
+        id={`${id}-toolbar`}
+        area={area}
+        disabled={disabled}
+        target={target}
+        onAdd={add}
+      />
 
       {/* A surface step rather than a border, and NO nested scroller: the page scrolls this
           (design-language §1.3, §4.4). */}
       <div className="bg-surface-recessed mt-2 rounded-lg px-2">
         {blocks.length === 0 ? (
           <Typography variant="body" className="text-content-tertiary block px-2 py-6 text-center">
-            {t('composition.empty')}
+            {t(area === 'title_area' ? 'composition.titleArea.empty' : 'composition.empty')}
           </Typography>
         ) : (
           <BlockList blocks={blocks} context={context} onChange={push} />
@@ -230,30 +283,48 @@ function Composition({
         {aimIsAtEnd && blocks.length > 0 && <InsertionPoint />}
       </div>
 
-      {/* The body is what the server bounds, so the count is over the body and not over the rows:
+      {/* A duplicate names its own row, so only the reasons no row can show render here. */}
+      {failure && failure.reason !== 'duplicate_ask_label' && (
+        <FieldMessage role="alert" className="mt-2">
+          {t(`builder.reasons.${failure.reason}`, {
+            max: TEMPLATE_PHOTO_ROW_MAX,
+            askMax: TEMPLATE_ASK_MAX_PER_BODY,
+          })}
+        </FieldMessage>
+      )}
+
+      {/* The text is what the server bounds, so the count is over the text and not over the rows:
           an incomplete row contributes none of it yet. */}
-      <BodyCount value={value} />
+      <BodyCount
+        value={value}
+        max={area === 'title_area' ? TEMPLATE_LIMITS.titleArea : TEMPLATE_LIMITS.body}
+      />
     </div>
   )
 }
 
 /** The one place the two things the model cannot look up are supplied: the configured row
  *  ceiling, and what an unlabelled legacy position is called once it is read as fixed text. */
-function readBody(body: string, t: TFunction<'templates'>): BodyRead {
-  return fromBody(body, decode, TEMPLATE_PARSE_OPTIONS, {
-    place: t('builder.legacy.place'),
-    link: t('builder.legacy.link'),
-  })
+function readBody(body: string, t: TFunction<'templates'>, area: TemplateArea): BodyRead {
+  return fromBody(
+    body,
+    decode,
+    TEMPLATE_PARSE_OPTIONS,
+    { place: t('builder.legacy.place'), link: t('builder.legacy.link') },
+    area,
+  )
 }
 
-function readBlocks(body: string, t: TFunction<'templates'>): BuilderBlock[] {
-  const result = readBody(body, t)
+function readBlocks(body: string, t: TFunction<'templates'>, area: TemplateArea): BuilderBlock[] {
+  const result = readBody(body, t, area)
   return result.ok ? result.blocks : []
 }
 
 /** What every row needs from the composition, passed as one value so a repeat's children get it
  *  unchanged one level down. */
 interface RowContext {
+  /** Which text the rows belong to; the title area's fields are all single-line. */
+  area: TemplateArea
   disabled: boolean
   openId: string | null
   aimedAt: string | null
@@ -317,30 +388,44 @@ function BlockList({
  *  reason there is one toolbar instead of one per nesting level. */
 function AddToolbar({
   id,
+  area,
   disabled,
   target,
   onAdd,
 }: {
   id: string
+  area: TemplateArea
   disabled: boolean
   target: Position
   onAdd: (kind: PaletteKind) => void
 }) {
   const { t } = useTranslation('templates')
+  const title = area === 'title_area'
   // Five buttons, named for what the reader gets rather than for what the grammar calls it,
   // in the order a post is usually built (TEMPLATE-36). The place and link positions are gone:
-  // a thing the author fills in later is fixed text in their own words (TEMPLATE-37).
-  const kinds: PaletteKind[] = ['write', 'text', 'photo', 'repeat', 'note']
+  // a thing the author fills in later is fixed text in their own words (TEMPLATE-37). A title
+  // takes only the two that are words (TMPL-50).
+  const kinds: readonly PaletteKind[] = title
+    ? TITLE_AREA_PALETTE
+    : ['write', 'text', 'photo', 'repeat', 'note']
   return (
-    <div className="bg-surface-base top-chrome sticky z-10 -mx-4 px-4 py-2 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+    // Only the body's toolbar sticks: two sticky bars would stack under the header while the body
+    // scrolls, and the title's composition is a line or two long.
+    <div
+      className={
+        title
+          ? 'py-2'
+          : 'bg-surface-base top-chrome sticky z-10 -mx-4 px-4 py-2 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8'
+      }
+    >
       <Typography variant="label" as="p" id={id}>
-        {t('composition.add')}
+        {t(title ? 'composition.titleArea.add' : 'composition.add')}
       </Typography>
       <div role="group" aria-labelledby={id} className="mt-1 flex flex-wrap gap-2">
         {kinds
           // A repeat inside a repeat is refused by the grammar, so the button is not offered where
           // the aim is inside one. The model refuses it too — this is only the affordance.
-          .filter((kind) => canInsert(kind, target))
+          .filter((kind) => canInsert(kind, target, area))
           .map((kind) => (
             <Button
               key={kind}
@@ -530,7 +615,8 @@ function BlockFields({
               label={t('builder.block.text')}
               value={block.text}
               disabled={disabled}
-              multiline
+              // A title is one line, so its fixed text is too.
+              multiline={context.area !== 'title_area'}
               onChange={(text) => onChange({ ...block, text })}
             />
           )}
@@ -695,9 +781,9 @@ function Field({
   )
 }
 
-function BodyCount({ value }: { value: string }) {
+function BodyCount({ value, max }: { value: string; max: number }) {
   const { t } = useTranslation('common')
-  const left = remainingChars(value, TEMPLATE_LIMITS.body)
+  const left = remainingChars(value, max)
   return left < 0 ? (
     <FieldMessage role="status" className="mt-2">
       {t('count.exceeded', { count: -left })}

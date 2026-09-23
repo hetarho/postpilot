@@ -37,6 +37,10 @@ export const i18n = {
       notFound: '이 템플릿을 찾을 수 없어요. 목록에서 다시 골라 주세요.',
       compositionHelp:
         '위에서 블록을 더해 글의 순서를 짜세요. 줄을 누르면 내용을 고칠 수 있고, 끌어서 순서를 바꿀 수 있어요.',
+      titleArea: {
+        heading: '제목 형식',
+        help: '비워 두면 제목은 AI가 정해요. 채우면 글 제목이 이 형식을 따라요.',
+      },
       saved: '저장했어요.',
       saveDockAria: '템플릿 저장',
       leaveTitle: '저장하지 않고 나갈까요?',
@@ -78,6 +82,10 @@ export const i18n = {
       notFound: 'Could not find this template. Pick one from the list again.',
       compositionHelp:
         'Add blocks above to lay out the post. Tap a line to edit it, and drag to reorder.',
+      titleArea: {
+        heading: 'Title format',
+        help: 'Leave it empty and the AI writes the title. Fill it in and the post title follows this format.',
+      },
       saved: 'Saved.',
       saveDockAria: 'Save template',
       leaveTitle: 'Leave without saving?',

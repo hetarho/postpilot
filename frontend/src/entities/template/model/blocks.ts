@@ -3,6 +3,7 @@ import {
   parse,
   type ParseFailure,
   type ParseOptions,
+  type TemplateArea,
   type TemplateNode,
 } from '../lib/grammar'
 
@@ -50,6 +51,10 @@ export function asksForData(block: BuilderBlock): boolean {
 export type PaletteKind = 'write' | 'text' | 'photo' | 'repeat' | 'note'
 
 export type BuilderBlockKind = PaletteKind
+
+/** What a title area may hold (TMPL-50): words an AI writes and words fixed by the template, each
+ *  able to ask. A photo, a repeat or a note has no place in a post's title. */
+export const TITLE_AREA_PALETTE: readonly PaletteKind[] = ['write', 'text']
 
 let sequence = 0
 /** Local identity for React keys and for the reorder calls. It never reaches the body: two
@@ -110,17 +115,29 @@ function blockSource(block: BuilderBlock): string {
   }
 }
 
-/** Blocks are joined by ONE newline. That is the canonical form: `fromBody` strips exactly one
- *  newline from each side of a literal, so the pair is each other's inverse. A blank line the
- *  author wants lives inside a text block. */
-export function toBody(blocks: readonly BuilderBlock[]): string {
-  return blocks.map(blockSource).join('\n')
+/** Blocks are joined by ONE newline in a body. That is the canonical form: `fromBody` strips
+ *  exactly one newline from each side of a literal, so the pair is each other's inverse. A blank
+ *  line the author wants lives inside a text block.
+ *
+ *  A title area joins by ONE space instead: a title is one line and its parts are words, so a
+ *  newline join would put line breaks into the post's title. */
+export function toBody(blocks: readonly BuilderBlock[], area: TemplateArea = 'body'): string {
+  return blocks.map(blockSource).join(area === 'title_area' ? ' ' : '\n')
 }
 
 function stripOneNewline(value: string): string {
+  return stripOne(value, '\n')
+}
+
+/** The title area's twin of `stripOneNewline`, over the space `toBody` joins a title with. */
+function stripOneSpace(value: string): string {
+  return stripOne(value, ' ')
+}
+
+function stripOne(value: string, separator: string): string {
   let out = value
-  if (out.startsWith('\n')) out = out.slice(1)
-  if (out.endsWith('\n')) out = out.slice(0, -1)
+  if (out.startsWith(separator)) out = out.slice(1)
+  if (out.endsWith(separator)) out = out.slice(0, -1)
   // Whitespace between two tags is separator, never content: a repeat with no children
   // serializes to an open/close pair around a newline, and that must not read back as a row.
   return out.trim() === '' ? '' : out
@@ -137,12 +154,13 @@ function fromNodes(
   nodes: readonly TemplateNode[],
   decodeText: (raw: string) => string,
   legacyNames: LegacyNames,
+  strip: (value: string) => string,
 ): BuilderBlock[] {
   const blocks: BuilderBlock[] = []
   for (const node of nodes) {
     switch (node.kind) {
       case 'literal': {
-        const text = stripOneNewline(node.text ?? '')
+        const text = strip(node.text ?? '')
         // A literal that was only the separator between two tags carries no content of its
         // own, so it becomes no row rather than an empty one.
         if (text === '') break
@@ -185,7 +203,7 @@ function fromNodes(
         blocks.push({
           id: nextBlockId(),
           kind: 'repeat',
-          children: fromNodes(node.children ?? [], decodeText, legacyNames),
+          children: fromNodes(node.children ?? [], decodeText, legacyNames, strip),
         })
         break
     }
@@ -200,10 +218,20 @@ export function fromBody(
   decodeText: (raw: string) => string,
   options: ParseOptions,
   legacyNames: LegacyNames,
+  area: TemplateArea = 'body',
 ): BodyRead {
-  const result = parse(body, options)
+  const title = area === 'title_area'
+  const result = parse(body, { ...options, titleArea: title })
   if (!result.ok) return { ok: false, failure: result.failure }
-  return { ok: true, blocks: fromNodes(result.nodes, decodeText, legacyNames) }
+  return {
+    ok: true,
+    blocks: fromNodes(
+      result.nodes,
+      decodeText,
+      legacyNames,
+      title ? stripOneSpace : stripOneNewline,
+    ),
+  }
 }
 
 /** Moves `from` so that it sits at `to`, clamped. Splice-based rather than swap-based: a drag
@@ -244,9 +272,16 @@ export function isCompleteBlock(block: BuilderBlock): boolean {
 /** The body a block list contributes, incomplete rows omitted — and a row whose data-field
  *  title collides with an earlier one, because the parser refuses such a body outright and the
  *  builder must never emit one it cannot read back (TEMPLATE-29). The row stays in the editor
- *  saying why it is not in the template yet, and 저장 is refused while it is. */
-export function toValidBody(blocks: readonly BuilderBlock[]): string {
-  const colliding = duplicateAskTitles(blocks)
+ *  saying why it is not in the template yet, and 저장 is refused while it is.
+ *
+ *  `taken` is the titles another area already asks under — the title area's, for a body (TMPL-55:
+ *  the title reads first in the one namespace) — so a body row colliding with one is left out too. */
+export function toValidBody(
+  blocks: readonly BuilderBlock[],
+  area: TemplateArea = 'body',
+  taken: ReadonlySet<string> = new Set(),
+): string {
+  const colliding = duplicateAskTitles(blocks, taken)
   const contributes = (block: BuilderBlock) =>
     isCompleteBlock(block) && !colliding.has(askTitle(block))
   return toBody(
@@ -257,6 +292,7 @@ export function toValidBody(blocks: readonly BuilderBlock[]): string {
           ? { ...block, children: block.children.filter(contributes) }
           : block,
       ),
+    area,
   )
 }
 
@@ -318,9 +354,15 @@ export function photoSummaryKey(
 
 /** Which titles more than one row asks under. The parser refuses such a body outright
  *  (`duplicate_ask_label`), so the editor has to be able to say WHICH two collided — a refusal
- *  naming a line number cannot point at a row (TEMPLATE-44). */
-export function duplicateAskTitles(blocks: readonly BuilderBlock[]): Set<string> {
-  const seen = new Set<string>()
+ *  naming a line number cannot point at a row (TEMPLATE-44).
+ *
+ *  `taken` counts as already seen, so a row asking under a title another area uses collides on
+ *  its first use. */
+export function duplicateAskTitles(
+  blocks: readonly BuilderBlock[],
+  taken: ReadonlySet<string> = new Set(),
+): Set<string> {
+  const seen = new Set<string>(taken)
   const duplicates = new Set<string>()
   const walk = (list: readonly BuilderBlock[]) => {
     for (const block of list) {
@@ -395,9 +437,15 @@ export function positionAfter(blocks: readonly BuilderBlock[], blockId: string):
 }
 
 /** Whether a kind may be inserted at a position. The grammar forbids a repeat inside a repeat, and
- *  that rule lives HERE rather than in the palette: hiding the button is the affordance, and this
- *  is the enforcement — so a position that drifts cannot produce a body the parser refuses. */
-export function canInsert(kind: BuilderBlockKind, position: Position): boolean {
+ *  a photo, a repeat or a note in a title area (TMPL-50), and those rules live HERE rather than in
+ *  the palette: hiding the button is the affordance, and this is the enforcement — so a position
+ *  that drifts cannot produce text the parser refuses. */
+export function canInsert(
+  kind: BuilderBlockKind,
+  position: Position,
+  area: TemplateArea = 'body',
+): boolean {
+  if (area === 'title_area' && !TITLE_AREA_PALETTE.includes(kind)) return false
   return !(kind === 'repeat' && position.parentId !== null)
 }
 
@@ -411,8 +459,9 @@ export function insertAt(
   blocks: readonly BuilderBlock[],
   position: Position,
   kind: BuilderBlockKind,
+  area: TemplateArea = 'body',
 ): { blocks: BuilderBlock[]; inserted: BuilderBlock | null } {
-  if (!canInsert(kind, position)) return { blocks: [...blocks], inserted: null }
+  if (!canInsert(kind, position, area)) return { blocks: [...blocks], inserted: null }
   const inserted = newBlock(kind)
   if (position.parentId === null) {
     const next = [...blocks]

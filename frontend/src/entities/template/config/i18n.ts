@@ -19,6 +19,15 @@ export const i18n = {
       unreadable:
         '이 템플릿의 구성을 읽을 수 없어요. 원문에서 직접 고치거나, 구성을 비우고 다시 만들 수 있어요.',
       clearAndRestart: '구성 비우고 다시 만들기',
+      // The title area's own composition (TMPL-50): a toolbar the page tests can tell from the
+      // body's, and an unreadable state that names the title rather than the post's shape.
+      titleArea: {
+        add: '제목에 추가',
+        empty: '위에서 블록을 더해 제목을 짜 주세요.',
+        unreadable:
+          '제목 형식을 읽을 수 없어요. 원문에서 직접 고치거나, 비우고 다시 만들 수 있어요.',
+        clearAndRestart: '제목 비우고 다시 만들기',
+      },
       summary: {
         photo: '사진 {{count}}장',
         photoRow: '사진 {{count}}장 가로로',
@@ -34,6 +43,7 @@ export const i18n = {
     // The one surface where this app's grammar is visible (TEMPLATE-26).
     source: {
       label: '원문',
+      titleAreaLabel: '제목 원문',
       copy: '원문 복사',
       copyGuide: '형식 안내 복사',
       copied: '복사했어요',
@@ -159,6 +169,13 @@ export const i18n = {
       unreadable:
         "This template's composition can't be read. Fix it in the source, or clear it and start over.",
       clearAndRestart: 'Clear and start over',
+      titleArea: {
+        add: 'Add to the title',
+        empty: 'Add blocks above to lay out the title.',
+        unreadable:
+          "This title format can't be read. Fix it in the source, or clear it and start over.",
+        clearAndRestart: 'Clear the title and start over',
+      },
       summary: {
         // Only ever formatted with a count of one — photoSummaryKey sends anything above it to
         // photoRow — so no plural form is needed on either side.
@@ -176,6 +193,7 @@ export const i18n = {
     // The one surface where this app's grammar is visible (TEMPLATE-26).
     source: {
       label: 'Source',
+      titleAreaLabel: 'Title source',
       copy: 'Copy source',
       copyGuide: 'Copy format guide',
       copied: 'Copied',

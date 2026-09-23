@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { TEMPLATE_ASK_MAX_PER_BODY } from '../config'
+import { TEMPLATE_LIMITS } from '../model/types'
 import { TemplateComposition } from './TemplateComposition'
 
 /** The editor is a controlled input, so every test drives it through a real parent — which is
@@ -408,5 +410,161 @@ describe('데이터 받기', () => {
     expect(body()).toBe(initial)
     expect(summaries()[1]).toContain('방문일')
     expect(summaries()[2]).toContain('총평')
+  })
+})
+
+// TMPL-50: the title area is its own, smaller composition — words only, on one line.
+describe('the title area', () => {
+  function TitleEditor({ initial = '' }: { initial?: string }) {
+    const [title, setTitle] = useState(initial)
+    return (
+      <>
+        <TemplateComposition area="title_area" value={title} onChange={setTitle} />
+        <output data-testid="body">{title}</output>
+      </>
+    )
+  }
+  const titlePalette = () => within(screen.getByRole('group', { name: '제목에 추가' }))
+
+  it('offers exactly AI가 쓰는 글 and 고정 문구, under its own name', () => {
+    render(<TitleEditor />)
+    expect(
+      titlePalette()
+        .getAllByRole('button')
+        .map((button) => button.textContent),
+    ).toEqual([expect.stringMatching(/^AI가 쓰는 글/), expect.stringMatching(/^고정 문구/)])
+    // Not the body's toolbar, which page tests find by its own name.
+    expect(screen.queryByRole('group', { name: '블록 추가' })).not.toBeInTheDocument()
+    expect(screen.getByText('위에서 블록을 더해 제목을 짜 주세요.')).toBeInTheDocument()
+  })
+
+  it('writes its rows on one line, joined by spaces, under its own counter', async () => {
+    const user = userEvent.setup()
+    render(<TitleEditor />)
+    expect(screen.getByText(`${TEMPLATE_LIMITS.titleArea}자 남음`)).toBeInTheDocument()
+
+    await user.click(titlePalette().getByRole('button', { name: /^고정 문구/ }))
+    const text = screen.getByLabelText('들어갈 문구')
+    // Single-line: a title has no line breaks to type.
+    expect(text.tagName).toBe('INPUT')
+    await user.type(text, '방문 후기')
+    await user.click(titlePalette().getByRole('button', { name: /^AI가 쓰는 글/ }))
+    await user.type(screen.getByLabelText('무엇을 쓸지'), '메뉴를 한 줄로')
+
+    expect(body()).toBe('방문 후기 <write>메뉴를 한 줄로</write>')
+    expect(
+      screen.getByText(`${TEMPLATE_LIMITS.titleArea - body().length}자 남음`),
+    ).toBeInTheDocument()
+  })
+
+  it('lets both rows ask for data', async () => {
+    const user = userEvent.setup()
+    render(<TitleEditor initial={'<write>메뉴</write> 가게'} />)
+    for (const index of [0, 1]) {
+      await user.click(toggle(index))
+      expect(within(rows()[index]).getByRole('switch')).toBeEnabled()
+      await user.click(toggle(index))
+    }
+  })
+
+  it('names the title when it cannot be read, and clears only it', async () => {
+    const user = userEvent.setup()
+    render(<TitleEditor initial={'<note>톤</note>'} />)
+    expect(screen.getByRole('alert')).toHaveTextContent('제목 형식을 읽을 수 없어요.')
+    await user.click(screen.getByRole('button', { name: '제목 비우고 다시 만들기' }))
+    expect(body()).toBe('')
+  })
+})
+
+// TMPL-55: the title reads first in the one namespace, so the BODY row asking under a title the
+// title area already uses is the one that yields — and it comes back when the title lets go.
+describe('titles the other area asks under', () => {
+  function BodyEditor({ initial }: { initial: string }) {
+    const [value, setValue] = useState(initial)
+    const [taken, setTaken] = useState<ReadonlySet<string>>(new Set())
+    const [conflict, setConflict] = useState(false)
+    return (
+      <>
+        <TemplateComposition
+          value={value}
+          onChange={setValue}
+          takenAskTitles={taken}
+          onAskConflict={setConflict}
+        />
+        <button type="button" onClick={() => setTaken(new Set(['가게 이름']))}>
+          take
+        </button>
+        <button type="button" onClick={() => setTaken(new Set())}>
+          release
+        </button>
+        <output data-testid="body">{value}</output>
+        <output data-testid="conflict">{String(conflict)}</output>
+      </>
+    )
+  }
+  const INITIAL = '<ask label="가게 이름"/>\n<write>인트로</write>'
+
+  it('raises the row message and leaves the row out, then puts it back when released', async () => {
+    const user = userEvent.setup()
+    render(<BodyEditor initial={INITIAL} />)
+    expect(body()).toBe(INITIAL)
+
+    await user.click(screen.getByRole('button', { name: 'take' }))
+    expect(body()).toBe('<write>인트로</write>')
+    expect(screen.getByTestId('conflict')).toHaveTextContent('true')
+    await user.click(toggle(0))
+    expect(within(rows()[0]).getByRole('alert').textContent).toContain('제목')
+
+    await user.click(screen.getByRole('button', { name: 'release' }))
+    expect(body()).toBe(INITIAL)
+    expect(screen.getByTestId('conflict')).toHaveTextContent('false')
+  })
+
+  it('does not rewrite a stored body when it opens', () => {
+    // Hand-written spacing the builder would not produce: opening must leave it exactly as stored.
+    const stored = '<write>인트로</write>\n\n\n<write>본문</write>'
+    function Opened() {
+      const [value, setValue] = useState(stored)
+      return (
+        <>
+          <TemplateComposition
+            value={value}
+            onChange={setValue}
+            takenAskTitles={new Set(['가게 이름'])}
+          />
+          <output data-testid="body">{value}</output>
+        </>
+      )
+    }
+    render(<Opened />)
+    expect(body()).toBe(stored)
+  })
+})
+
+// A failure only the two areas together have — the ceiling counting the title and the body — is
+// the screen's to find, and it renders under the area it names.
+describe('a failure found across both areas', () => {
+  it('renders its reason under the list', () => {
+    render(
+      <TemplateComposition
+        value={'<ask label="하나"/>'}
+        onChange={vi.fn()}
+        failure={{ line: 1, reason: 'too_many_asks', area: 'body' }}
+      />,
+    )
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      `데이터 받기는 최대 ${TEMPLATE_ASK_MAX_PER_BODY}개까지예요`,
+    )
+  })
+
+  it('leaves a duplicate to the row that states it', () => {
+    render(
+      <TemplateComposition
+        value={'<ask label="하나"/>'}
+        onChange={vi.fn()}
+        failure={{ line: 1, reason: 'duplicate_ask_label', area: 'body' }}
+      />,
+    )
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 })

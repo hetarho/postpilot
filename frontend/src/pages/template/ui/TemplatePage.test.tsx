@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { TEMPLATE_ASK_MAX_PER_BODY } from '@/entities/template'
 import { renderAppAt } from '@/test/app'
 import type { FakeTemplateRow, FakeTemplatesOptions } from '@/test/templates'
 
@@ -398,5 +399,201 @@ describe('a template whose rows ask the post for data', () => {
 
     expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
     expect(screen.getByRole('alert').textContent).toContain('제목')
+  })
+})
+
+// TMPL-50: the 제목 형식 is an optional second text of the template, edited by the same switch,
+// saved by the same 저장, and fixed from the area that failed.
+describe('the title area', () => {
+  const titleSection = () => screen.getByRole('region', { name: /^제목 형식/ })
+  const bodySection = () => screen.getByRole('region', { name: '템플릿 구성' })
+  const titlePalette = () => within(screen.getByRole('group', { name: '제목에 추가' }))
+  const TITLED: FakeTemplateRow = {
+    id: 'template-titled',
+    name: '카페 리뷰',
+    body: '<write>인트로를 씁니다</write>',
+    titleArea: '<ask label="가게 이름"/> 방문 후기 <write>메뉴를 한 줄로</write>',
+  }
+
+  it('comes first, above 템플릿 구성, under the one 블록 · 원문 switch', async () => {
+    renderTemplate('/templates/template-titled', { templates: [TITLED] })
+    await screen.findByLabelText('이름')
+
+    expect(screen.getAllByRole('tablist')).toHaveLength(1)
+    const title = titleSection()
+    expect(
+      title.compareDocumentPosition(bodySection()) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    expect(within(title).getByText('제목 형식 (선택)')).toBeInTheDocument()
+  })
+
+  it('makes the draft dirty on a title edit alone, and saves the title area', async () => {
+    const user = userEvent.setup()
+    const updates: FakeTemplatesOptions['updates'] = []
+    renderTemplate('/templates/template-review', { updates })
+
+    const save = await screen.findByRole('button', { name: '저장' })
+    expect(save).toBeDisabled()
+    await user.click(titlePalette().getByRole('button', { name: /^고정 문구/ }))
+    await user.type(within(titleSection()).getByLabelText('들어갈 문구'), '방문 후기')
+    await user.click(titlePalette().getByRole('button', { name: /^AI가 쓰는 글/ }))
+    await user.type(within(titleSection()).getByLabelText('무엇을 쓸지'), '메뉴')
+    expect(save).toBeEnabled()
+
+    await user.click(save)
+    await waitFor(() => expect(updates).toHaveLength(1))
+    expect(updates[0]).toMatchObject({
+      titleArea: '방문 후기 <write>메뉴</write>',
+      body: REVIEW.body,
+    })
+  })
+
+  it('round-trips the title builder → 원문 → builder byte for byte', async () => {
+    const user = userEvent.setup()
+    renderTemplate('/templates/template-titled', { templates: [TITLED] })
+    await screen.findByLabelText('이름')
+
+    await user.click(screen.getByRole('tab', { name: '원문' }))
+    expect(screen.getByLabelText('제목 원문')).toHaveValue(TITLED.titleArea)
+    expect(screen.getByLabelText('원문')).toHaveValue(TITLED.body)
+    // Copying and the guide belong to the body alone.
+    expect(within(titleSection()).queryByRole('button')).not.toBeInTheDocument()
+    expect(within(bodySection()).getByRole('button', { name: '원문 복사' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('tab', { name: '블록' }))
+    expect(within(titleSection()).getByText('가게 이름')).toBeInTheDocument()
+    expect(within(titleSection()).getByText('방문 후기')).toBeInTheDocument()
+    expect(within(titleSection()).getByText('메뉴를 한 줄로')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
+  })
+
+  // TMPL-55: the title reads first in the one namespace, so the body row is the one that yields.
+  it('refuses 저장 while a body row asks under a title label, and says so on the body row', async () => {
+    const user = userEvent.setup()
+    const updates: FakeTemplatesOptions['updates'] = []
+    renderTemplate('/templates/template-titled', { templates: [TITLED], updates })
+    // Dirty first, so the conflict is the only thing that can hold 저장.
+    await user.type(await screen.findByLabelText('이름'), ' 2편')
+
+    const body = bodySection()
+    await user.click(paletteButton('고정 문구'))
+    await user.type(within(body).getByLabelText('들어갈 문구'), '가게 이름')
+    await user.click(within(body).getByRole('switch', { name: '데이터 받기' }))
+
+    expect(within(body).getByRole('alert').textContent).toContain('제목')
+    expect(within(titleSection()).queryByRole('alert')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
+
+    // The title lets the label go, and the body row is back in the template.
+    await user.click(within(titleSection()).getByRole('button', { name: /가게 이름/ }))
+    const label = within(titleSection()).getByLabelText('입력란 제목')
+    await user.clear(label)
+    await user.type(label, '상호')
+    await waitFor(() => expect(screen.getByRole('button', { name: '저장' })).toBeEnabled())
+    await user.click(screen.getByRole('button', { name: '저장' }))
+    await waitFor(() => expect(updates).toHaveLength(1))
+    expect(updates[0].body).toBe('<write>인트로를 씁니다</write>\n<ask label="가게 이름"/>')
+    expect(updates[0].titleArea).toBe('<ask label="상호"/> 방문 후기 <write>메뉴를 한 줄로</write>')
+  })
+
+  it('refuses 저장 while two title rows ask under one label', async () => {
+    const user = userEvent.setup()
+    renderTemplate('/templates/template-titled', { templates: [TITLED] })
+    await screen.findByLabelText('이름')
+
+    await user.click(within(titleSection()).getByRole('button', { name: /방문 후기/ }))
+    await user.click(within(titleSection()).getByRole('switch', { name: '데이터 받기' }))
+    const label = within(titleSection()).getByLabelText('입력란 제목')
+    await user.clear(label)
+    await user.type(label, '가게 이름')
+
+    expect(within(titleSection()).getByRole('alert').textContent).toContain('제목')
+    expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
+  })
+
+  // The title is compared and saved as it is, like the body: trimming it would make a stored
+  // title with an outer space read as dirty on open and be rewritten on save.
+  it('never trims the stored title area', async () => {
+    const user = userEvent.setup()
+    const updates: FakeTemplatesOptions['updates'] = []
+    const SPACED: FakeTemplateRow = { ...TITLED, titleArea: ' 방문 후기 ' }
+    renderTemplate('/templates/template-titled', { templates: [SPACED], updates })
+
+    const save = await screen.findByRole('button', { name: '저장' })
+    expect(save).toBeDisabled()
+    await user.type(screen.getByLabelText('이름'), ' 2편')
+    await user.click(save)
+    await waitFor(() => expect(updates).toHaveLength(1))
+    expect(updates[0].titleArea).toBe(' 방문 후기 ')
+  })
+
+  describe('a title that does not read', () => {
+    const BROKEN: FakeTemplateRow = {
+      id: 'template-broken-title',
+      name: '옛 템플릿',
+      body: '<write>인트로를 씁니다</write>',
+      titleArea: '<note>톤</note>',
+    }
+
+    it('shows the title unreadable, leaves the body alone, and fixes it in 제목 원문', async () => {
+      const user = userEvent.setup()
+      renderTemplate('/templates/template-broken-title', { templates: [BROKEN] })
+
+      const title = await screen.findByText(
+        '제목 형식을 읽을 수 없어요. 원문에서 직접 고치거나, 비우고 다시 만들 수 있어요.',
+      )
+      expect(title.closest('section')).toBe(titleSection())
+      // The body section is untouched: its outline reads as usual.
+      expect(within(bodySection()).getByText('인트로를 씁니다')).toBeInTheDocument()
+
+      await user.click(within(titleSection()).getByRole('button', { name: '원문에서 고치기' }))
+      const source = screen.getByLabelText('제목 원문')
+      expect(source).toHaveValue('<note>톤</note>')
+      expect(source).toHaveFocus()
+      expect(within(titleSection()).getByRole('alert')).toHaveTextContent(
+        '1번째 줄: 사진·사진마다 반복·AI에게만 하는 말은 제목에 넣을 수 없어요',
+      )
+      expect(within(bodySection()).queryByRole('alert')).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
+    })
+
+    it('empties only the title on 제목 비우고 다시 만들기, and writes nothing until 저장', async () => {
+      const user = userEvent.setup()
+      const updates: FakeTemplatesOptions['updates'] = []
+      renderTemplate('/templates/template-broken-title', { templates: [BROKEN], updates })
+
+      await user.click(await screen.findByRole('button', { name: '제목 비우고 다시 만들기' }))
+      expect(
+        within(titleSection()).getByText('위에서 블록을 더해 제목을 짜 주세요.'),
+      ).toBeInTheDocument()
+      expect(within(bodySection()).getByText('인트로를 씁니다')).toBeInTheDocument()
+      expect(updates).toEqual([])
+
+      await user.click(screen.getByRole('button', { name: '저장' }))
+      await waitFor(() => expect(updates).toHaveLength(1))
+      expect(updates[0]).toMatchObject({ titleArea: '', body: BROKEN.body })
+    })
+  })
+
+  // The ceiling counts the title and the body together, title first, so only the two areas at
+  // once can break it — and the reason renders under the area it names.
+  it('shows a ceiling crossed only across both areas under the body', async () => {
+    const titleAsks = 3
+    const asks = (count: number, prefix: string) =>
+      Array.from({ length: count }, (_, index) => `<ask label="${prefix}${index}"/>`)
+    const OVER: FakeTemplateRow = {
+      id: 'template-over',
+      name: '많이 묻는 템플릿',
+      titleArea: asks(titleAsks, '제목').join(' '),
+      body: asks(TEMPLATE_ASK_MAX_PER_BODY - titleAsks + 1, '본문').join('\n'),
+    }
+    renderTemplate('/templates/template-over', { templates: [OVER] })
+    await screen.findByLabelText('이름')
+
+    expect(within(bodySection()).getByRole('alert')).toHaveTextContent(
+      `데이터 받기는 최대 ${TEMPLATE_ASK_MAX_PER_BODY}개까지예요`,
+    )
+    expect(within(titleSection()).queryByRole('alert')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
   })
 })
