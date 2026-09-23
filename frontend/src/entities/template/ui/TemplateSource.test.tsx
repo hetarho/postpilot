@@ -51,7 +51,7 @@ describe('the source editor', () => {
       <TemplateSource
         value="<write>닫히지 않음"
         onChange={() => {}}
-        failure={{ line: 1, reason: 'unclosed_tag' }}
+        failure={{ line: 1, reason: 'unclosed_tag', area: 'body' }}
       />,
     )
 

@@ -61,6 +61,9 @@ export type ParseReason =
   | 'duplicate_ask_label'
   | 'ask_in_repeat'
   | 'too_many_asks'
+  /** A photo position, a repeat or a note inside the title area, which admits literal text,
+   *  `<write>` and `<ask>` only. Like `ask_in_repeat` it names the PLACE (TMPL-50). */
+  | 'not_in_title'
 
 /** Every reason a body can be refused, as a list.
  *
@@ -82,15 +85,28 @@ export const PARSE_REASONS: readonly ParseReason[] = [
   'duplicate_ask_label',
   'ask_in_repeat',
   'too_many_asks',
+  'not_in_title',
 ]
 
+/** The two areas a template's text lives in (TMPL-50). A line counts within its own area. */
+export type TemplateArea = 'title_area' | 'body'
+
 export interface ParseFailure {
-  /** 1-based, so it matches what the source editor shows. */
+  /** 1-based within `area`, so it matches what that area's editor shows. */
   line: number
   reason: ParseReason
+  area: TemplateArea
 }
 
+/** What the scanners report: a line and a reason. `parse` and `parseTemplate` add the area on
+ *  the way out, so no scanner has to know which area it is reading. */
+type ScanFailure = Omit<ParseFailure, 'area'>
+
 export type ParseResult = { ok: true; nodes: TemplateNode[] } | { ok: false; failure: ParseFailure }
+
+export type TemplateParseResult =
+  | { ok: true; titleNodes: TemplateNode[]; nodes: TemplateNode[] }
+  | { ok: false; failure: ParseFailure }
 
 /** What the grammar cannot know by itself. The photo-row ceiling is configuration, and a
  *  parser that read it from the environment would make the shared fixture depend on where the
@@ -98,8 +114,12 @@ export type ParseResult = { ok: true; nodes: TemplateNode[] } | { ok: false; fai
 export interface ParseOptions {
   photoRowMax: number
   /** How many data fields one body may declare (`TEMPLATE_ASK_MAX_PER_BODY`). Configuration
-   *  for the same reason `photoRowMax` is, and the shared fixture declares its own. */
+   *  for the same reason `photoRowMax` is, and the shared fixture declares its own. A template's
+   *  title area and body share it, title first. */
   askMaxPerBody: number
+  /** Parse the text as a title area rather than a body. Absent is a body, which is what every
+   *  caller that predates title areas means; `parseTemplate` sets it per area. */
+  titleArea?: boolean
 }
 
 /** The ONE definition of "this text says nothing", shared with the Go parser.
@@ -146,41 +166,78 @@ export function serialize(nodes: readonly TemplateNode[]): string {
   return nodes.map((node) => node.source).join('')
 }
 
-export function parse(body: string, options: ParseOptions): ParseResult {
-  const scan = parseNodes(body, 0, false, options)
-  if (!scan.ok) return scan
-  if (scan.end !== body.length) {
-    return { ok: false, failure: { line: lineAt(body, scan.end), reason: 'unexpected_close' } }
-  }
-  const asks = checkAsks(scan.nodes, options.askMaxPerBody)
+/** Parses one area's text — a body unless `options.titleArea` says it is a title area. Every
+ *  failure names the area it was parsed as. */
+export function parse(text: string, options: ParseOptions): ParseResult {
+  const area: TemplateArea = options.titleArea ? 'title_area' : 'body'
+  const scan = parseArea(text, options)
+  if (!scan.ok) return { ok: false, failure: { ...scan.failure, area } }
+  const asks = options.titleArea
+    ? checkAsks(scan.nodes, [], options.askMaxPerBody)
+    : checkAsks([], scan.nodes, options.askMaxPerBody)
   if (asks) return { ok: false, failure: asks }
   return { ok: true, nodes: scan.nodes }
 }
 
-/** The two body-WIDE rules a single tag cannot see: titles are unique and there are at most
- *  `askMaxPerBody` of them.
+/** Parses a template's title area and body as the one document they are (TMPL-50): the
+ *  title's structure, then the body's, then one data-field namespace and one ceiling across
+ *  both, title first. An empty title area gives exactly `parse(body)`'s verdict. The Go parser's
+ *  `ParseTemplate` runs the same three steps, which the shared fixture pins. */
+export function parseTemplate(
+  titleArea: string,
+  body: string,
+  options: ParseOptions,
+): TemplateParseResult {
+  const title = parseArea(titleArea, { ...options, titleArea: true })
+  if (!title.ok) return { ok: false, failure: { ...title.failure, area: 'title_area' } }
+  const content = parseArea(body, { ...options, titleArea: false })
+  if (!content.ok) return { ok: false, failure: { ...content.failure, area: 'body' } }
+  const asks = checkAsks(title.nodes, content.nodes, options.askMaxPerBody)
+  if (asks) return { ok: false, failure: asks }
+  return { ok: true, titleNodes: title.nodes, nodes: content.nodes }
+}
+
+type AreaScan = { ok: true; nodes: TemplateNode[] } | { ok: false; failure: ScanFailure }
+
+/** The structure pass over one area, with no data-field rule: every node, and the top-level
+ *  check that nothing closes what was never opened. */
+function parseArea(text: string, options: ParseOptions): AreaScan {
+  const scan = parseNodes(text, 0, false, options)
+  if (!scan.ok) return scan
+  if (scan.end !== text.length) {
+    return { ok: false, failure: { line: lineAt(text, scan.end), reason: 'unexpected_close' } }
+  }
+  return { ok: true, nodes: scan.nodes }
+}
+
+/** The two template-WIDE rules a single tag cannot see: titles are unique and there are at most
+ *  `askMaxPerBody` of them, across the title area and the body together, title first.
  *
- *  One pass in body order, duplicate before count on the same node — a duplicate names the
+ *  One pass in document order, duplicate before count on the same node — a duplicate names the
  *  exact thing to go fix, while the count only says there is one field too many. The Go parser
  *  walks it identically, which is what keeps the shared fixture meaningful. */
 function checkAsks(
-  nodes: readonly TemplateNode[],
+  title: readonly TemplateNode[],
+  body: readonly TemplateNode[],
   maxPerBody: number,
-  seen: Set<string> = new Set(),
 ): ParseFailure | null {
-  for (const node of nodes) {
-    if (node.kind === 'repeat') {
-      const nested = checkAsks(node.children ?? [], maxPerBody, seen)
-      if (nested) return nested
-      continue
+  const seen = new Set<string>()
+  const walk = (nodes: readonly TemplateNode[], area: TemplateArea): ParseFailure | null => {
+    for (const node of nodes) {
+      if (node.kind === 'repeat') {
+        const nested = walk(node.children ?? [], area)
+        if (nested) return nested
+        continue
+      }
+      if (node.kind !== 'ask') continue
+      const label = decode(node.label ?? '')
+      if (seen.has(label)) return { line: node.line, reason: 'duplicate_ask_label', area }
+      seen.add(label)
+      if (seen.size > maxPerBody) return { line: node.line, reason: 'too_many_asks', area }
     }
-    if (node.kind !== 'ask') continue
-    const label = decode(node.label ?? '')
-    if (seen.has(label)) return { line: node.line, reason: 'duplicate_ask_label' }
-    seen.add(label)
-    if (seen.size > maxPerBody) return { line: node.line, reason: 'too_many_asks' }
+    return null
   }
-  return null
+  return walk(title, 'title_area') ?? walk(body, 'body')
 }
 
 /** The body's data fields in body order, as the write screen needs them: a title to put over a
@@ -191,7 +248,23 @@ function checkAsks(
 export function askFields(body: string, options: ParseOptions): AskField[] {
   const result = parse(body, options)
   if (!result.ok) return []
-  return result.nodes
+  return toAskFields(result.nodes)
+}
+
+/** A template's data fields, the title area's first and then the body's — the order the one
+ *  namespace is read in. Like `askFields` it asks for nothing when either area does not parse. */
+export function templateAskFields(
+  titleArea: string,
+  body: string,
+  options: ParseOptions,
+): AskField[] {
+  const result = parseTemplate(titleArea, body, options)
+  if (!result.ok) return []
+  return toAskFields([...result.titleNodes, ...result.nodes])
+}
+
+function toAskFields(nodes: readonly TemplateNode[]): AskField[] {
+  return nodes
     .filter((node) => node.kind === 'ask')
     .map((node) => ({
       label: decode(node.label ?? ''),
@@ -206,7 +279,7 @@ export interface AskField {
   flavor: 'verbatim' | 'write'
 }
 
-type Scan = { ok: true; nodes: TemplateNode[]; end: number } | { ok: false; failure: ParseFailure }
+type Scan = { ok: true; nodes: TemplateNode[]; end: number } | { ok: false; failure: ScanFailure }
 
 function parseNodes(body: string, from: number, inRepeat: boolean, options: ParseOptions): Scan {
   const nodes: TemplateNode[] = []
@@ -249,7 +322,7 @@ function parseNodes(body: string, from: number, inRepeat: boolean, options: Pars
 }
 
 type TagResult =
-  { ok: true; node: TemplateNode; after: number } | { ok: false; failure: ParseFailure }
+  { ok: true; node: TemplateNode; after: number } | { ok: false; failure: ScanFailure }
 
 function parseTag(
   body: string,
@@ -261,6 +334,12 @@ function parseTag(
   const line = lineAt(body, at)
   const head = parseTagHead(body, at, name)
   if (!head.ok) return head
+  // The PLACE is checked once the head reads and before any rule of the tag's own kind, as
+  // ask_in_repeat is: a photo position in a title is wrong whatever its attributes say, while a
+  // head that does not read stays the reason it is.
+  if (options.titleArea && (name === 'slot' || name === 'repeat' || name === 'note')) {
+    return { ok: false, failure: { line, reason: 'not_in_title' } }
+  }
 
   if (name === 'slot') {
     if (!head.selfClosing) {
@@ -394,7 +473,7 @@ function trimBlank(value: string): string {
 
 type HeadResult =
   | { ok: true; attrs: Map<string, string>; selfClosing: boolean; after: number }
-  | { ok: false; failure: ParseFailure }
+  | { ok: false; failure: ScanFailure }
 
 /** Reads one opening tag's attribute list. A bare `key=value` is refused: accepting it would
  *  make `kind=photo/>` ambiguous about whether the slash is part of the value. */
@@ -431,7 +510,7 @@ function parseTagHead(body: string, at: number, name: string): HeadResult {
   return { ok: false, failure: { line, reason: 'unclosed_tag' } }
 }
 
-type TextResult = { ok: true; text: string; after: number } | { ok: false; failure: ParseFailure }
+type TextResult = { ok: true; text: string; after: number } | { ok: false; failure: ScanFailure }
 
 /** Reads the inner text of a write or note. A known tag inside it is a malformed tag rather
  *  than a nested node: neither construct wraps content, so `<write>a <write>b` is a mistake
@@ -457,7 +536,7 @@ function readTextBody(body: string, from: number, name: string, openLine: number
   return { ok: false, failure: { line: openLine, reason: 'unclosed_tag' } }
 }
 
-type CloseResult = { ok: true; after: number } | { ok: false; failure: ParseFailure }
+type CloseResult = { ok: true; after: number } | { ok: false; failure: ScanFailure }
 
 /** Steps over the closing tag that stopped a child parse, and reports the OPENING tag's line
  *  when nothing closed it — the line the author has to go fix. */

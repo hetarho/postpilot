@@ -16,7 +16,13 @@
     "`askMaxPerBody` is the data-field ceiling BOTH harnesses parse with, deliberately smaller than",
     "the deployment's TEMPLATE_ASK_MAX_PER_BODY so a too_many_asks case stays short. An ask's `text`",
     "is empty for the verbatim flavor — the self-closing form, the empty element and a blank one all",
-    "normalize to it — and non-empty for the write flavor."
+    "normalize to it — and non-empty for the write flavor.",
+    "A case may carry a title area (TMPL-50) under three optional keys. `titleArea` is the title",
+    "area's text, \"\" when absent; `titleNodes` its nodes, which an ok case also serializes back to",
+    "`titleArea`; and `error.area` names where a refusal sits, `title_area` or `body` (absent means",
+    "`body`). Both harnesses parse every case as a (titleArea, body) pair: the title first, then the",
+    "body, then one data-field namespace and one ceiling across both, title first. A case with no",
+    "title area must also give the body-only parse's identical verdict."
   ],
   "photoRowMax": 4,
   "askMaxPerBody": 3,
@@ -759,6 +765,149 @@
         "line": 1,
         "reason": "unexpected_close"
       }
+    },
+    {
+      "name": "a title area of literal text, a write and a data field",
+      "titleArea": "맛집 | <ask label=\"가게 이름\"/> <write>메뉴를 한 줄로</write>",
+      "body": "<write>인트로</write>",
+      "titleNodes": [
+        {
+          "t": "literal",
+          "raw": "맛집 | "
+        },
+        {
+          "t": "ask",
+          "label": "가게 이름",
+          "text": ""
+        },
+        {
+          "t": "literal",
+          "raw": " "
+        },
+        {
+          "t": "write",
+          "text": "메뉴를 한 줄로"
+        }
+      ],
+      "nodes": [
+        {
+          "t": "write",
+          "text": "인트로"
+        }
+      ]
+    },
+    {
+      "name": "a photo position in the title area",
+      "titleArea": "맛집 후기\n<slot kind=\"photo\"/>",
+      "body": "<write>인트로</write>",
+      "error": {
+        "line": 2,
+        "reason": "not_in_title",
+        "area": "title_area"
+      }
+    },
+    {
+      "name": "a repeat in the title area",
+      "titleArea": "<repeat each=\"photo\"><write>a</write></repeat>",
+      "body": "",
+      "error": {
+        "line": 1,
+        "reason": "not_in_title",
+        "area": "title_area"
+      }
+    },
+    {
+      "name": "a note in the title area",
+      "titleArea": "<note>짧게</note>",
+      "body": "",
+      "error": {
+        "line": 1,
+        "reason": "not_in_title",
+        "area": "title_area"
+      }
+    },
+    {
+      "name": "the place outranks the attributes in the title area",
+      "titleArea": "<slot kind=\"video\"></slot>",
+      "body": "",
+      "error": {
+        "line": 1,
+        "reason": "not_in_title",
+        "area": "title_area"
+      }
+    },
+    {
+      "name": "a structural error in the title area names the title area",
+      "titleArea": "<write>메뉴",
+      "body": "",
+      "error": {
+        "line": 1,
+        "reason": "unclosed_tag",
+        "area": "title_area"
+      }
+    },
+    {
+      "name": "two data fields with one title in the title area",
+      "titleArea": "<ask label=\"가게\"/> <ask label=\"가게\"/>",
+      "body": "",
+      "error": {
+        "line": 1,
+        "reason": "duplicate_ask_label",
+        "area": "title_area"
+      }
+    },
+    {
+      "name": "a body data field reusing a title area label",
+      "titleArea": "<ask label=\"가게\"/>",
+      "body": "<write>인트로</write>\n<ask label=\"가게\"/>",
+      "error": {
+        "line": 2,
+        "reason": "duplicate_ask_label",
+        "area": "body"
+      }
+    },
+    {
+      "name": "the data-field ceiling counts both areas, title first",
+      "titleArea": "<ask label=\"a\"/> <ask label=\"b\"/>",
+      "body": "<ask label=\"c\"/>\n<ask label=\"d\"/>",
+      "error": {
+        "line": 2,
+        "reason": "too_many_asks",
+        "area": "body"
+      }
+    },
+    {
+      "name": "the title area is read before the body",
+      "titleArea": "<note>톤</note>",
+      "body": "<writer>",
+      "error": {
+        "line": 1,
+        "reason": "not_in_title",
+        "area": "title_area"
+      }
+    },
+    {
+      "name": "a body structural error outranks a cross-area duplicate",
+      "titleArea": "<ask label=\"가게\"/>",
+      "body": "<ask label=\"가게\"/>\n<writer>",
+      "error": {
+        "line": 2,
+        "reason": "unknown_tag",
+        "area": "body"
+      }
+    },
+    {
+      "name": "an empty title area is the body alone",
+      "titleArea": "",
+      "body": "<ask label=\"방문일\"/>",
+      "titleNodes": [],
+      "nodes": [
+        {
+          "t": "ask",
+          "label": "방문일",
+          "text": ""
+        }
+      ]
     }
   ]
 }

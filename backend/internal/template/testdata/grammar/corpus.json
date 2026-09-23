@@ -3363,5 +3363,1532 @@
    "line": 1,
    "reason": "missing_attribute"
   }
+ ],
+ "titleCases": [
+  {
+   "titleArea": "\u003cask label=\"총평\"\u003e별점\u003c/ask\u003e3 \u003c 5\u003crepeat each=\"photo\"\u003e\u003cask label=\"총평\"/\u003e\u003c/ask\u003e\u0026lt;",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003c/ask\u003e \u003c/ask\u003e",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "가",
+   "body": "",
+   "ok": true
+  },
+  {
+   "titleArea": "\u0026lt;\u003c/write\u003e",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cwriter\u003e\u003cask label=\"총평\"/\u003e\u003cask label=\"가게\"/\u003e ",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unknown_tag",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cslot kind=\"video\"\u003e\u003c/slot\u003e",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "3 \u003c 5\u003cslot kind=\"photo\"/\u003e\u003cask label=\"가게\"/\u003e\u003cwriter\u003e",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cask label=\"총평\"/\u003e\n\u003c/ask\u003e | ",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": false,
+   "line": 2,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u0026lt;\n\u003cslot kind=\"video\"\u003e\u003c/slot\u003e",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": false,
+   "line": 2,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cwrite\u003e메뉴\u003c/write\u003e\u003c/repeat\u003e\u003cask label=\"총평\"/\u003e",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cask/\u003e가\u003cwriter\u003e\u003cslot kind=\"video\"\u003e\u003c/slot\u003e",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "missing_attribute",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003c/ask\u003e\u003cask label=\"총평\"\u003e별점\u003c/ask\u003e",
+   "body": "",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": " | ",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": true
+  },
+  {
+   "titleArea": "\u003cask/\u003e \u003c/repeat\u003e",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "missing_attribute",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cslot kind=\"photo\"/\u003e",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cask label=\"총평\"/\u003e\u003cslot kind=\"video\"\u003e\u003c/slot\u003e\u003cwrite\u003e메뉴\u003c/write\u003e\u003cwrite\u003e메뉴\u003c/write\u003e",
+   "body": "",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cslot kind=\"photo\"/\u003e \u003c/repeat\u003e",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cnote\u003e톤\u003c/note\u003e",
+   "body": "",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cnote\u003e톤\u003c/note\u003e\u003cwrite\u003e메뉴\u003c/write\u003e | 3 \u003c 5\u003c/ask\u003e",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": " \u003cask label=\"가게\"/\u003e3 \u003c 5\u003c/ask\u003e\u003c/write\u003e",
+   "body": "",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "3 \u003c 5\u003c/repeat\u003e가\u003cask label=\"총평\"/\u003e\n | ",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003c/repeat\u003e\u003crepeat each=\"photo\"\u003e\u003cslot kind=\"photo\"/\u003e\u003cwrite\u003e\u003c/write\u003e",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cwriter\u003e\u003c/repeat\u003e\u003cwrite\u003e메뉴\u003c/write\u003e\u003crepeat each=\"photo\"\u003e\u003cnote\u003e톤\u003c/note\u003e ",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unknown_tag",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003c/write\u003e가\u0026lt;",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": " \u003crepeat each=\"photo\"\u003e\u003cask label=\"총평\"\u003e별점\u003c/ask\u003e",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003c/repeat\u003e\u0026lt;\u003cslot kind=\"photo\"/\u003e\u003c/write\u003e\u003cwrite\u003e\u003cnote\u003e톤\u003c/note\u003e",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cask label=\"총평\"\u003e별점\u003c/ask\u003e\n가\u0026lt;",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "duplicate_ask_label",
+   "area": "body"
+  },
+  {
+   "titleArea": "\u003c/repeat\u003e\u003crepeat each=\"photo\"\u003e\u003cwriter\u003e",
+   "body": "",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cwrite\u003e메뉴\u003c/write\u003e",
+   "body": "",
+   "ok": true
+  },
+  {
+   "titleArea": "\u003cask label=\"가게\"/\u003e\u003cask label=\"총평\"/\u003e\u003cask label=\"총평\"\u003e별점\u003c/ask\u003e | \n",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "duplicate_ask_label",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cask label=\"가게\"/\u003e3 \u003c 5\u003c/write\u003e\u003c/ask\u003e",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cask label=\"가게\"/\u003e\u003c/repeat\u003e가\u003cwrite\u003e메뉴\u003c/write\u003e\u003c/repeat\u003e",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cwrite\u003e\u003cask label=\"가게\"/\u003e\n\u0026lt; | \u003cask label=\"총평\"\u003e별점\u003c/ask\u003e",
+   "body": "",
+   "ok": false,
+   "line": 1,
+   "reason": "malformed_tag",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cask label=\"총평\"/\u003e\u003cask/\u003e | \u003c/write\u003e\u003cask/\u003e\u003cwrite\u003e",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "missing_attribute",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u0026lt;\u003cask/\u003e\u0026lt;\u003cwrite\u003e메뉴\u003c/write\u003e\u003cask label=\"총평\"\u003e별점\u003c/ask\u003e\u003c/repeat\u003e",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "missing_attribute",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003c/ask\u003e\u003crepeat each=\"photo\"\u003e\u003c/ask\u003e\n\u003cwrite\u003e메뉴\u003c/write\u003e",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cwriter\u003e\u003crepeat each=\"photo\"\u003e3 \u003c 5  ",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unknown_tag",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cask/\u003e\u003c/repeat\u003e",
+   "body": "",
+   "ok": false,
+   "line": 1,
+   "reason": "missing_attribute",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cask label=\"총평\"/\u003e3 \u003c 5",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": true
+  },
+  {
+   "titleArea": " \u003cwrite\u003e메뉴\u003c/write\u003e\u003cwrite\u003e",
+   "body": "",
+   "ok": false,
+   "line": 1,
+   "reason": "unclosed_tag",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003crepeat each=\"photo\"\u003e\n\u003cwriter\u003e\u003cnote\u003e톤\u003c/note\u003e\u003cask label=\"총평\"\u003e별점\u003c/ask\u003e",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003c/write\u003e",
+   "body": "",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": " \u003cwrite\u003e메뉴\u003c/write\u003e",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": true
+  },
+  {
+   "titleArea": "\u003crepeat each=\"photo\"\u003e",
+   "body": "",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003c/ask\u003e\u003cnote\u003e톤\u003c/note\u003e\u003c/write\u003e\u003cwrite\u003e\u003cwriter\u003e",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cask label=\"총평\"/\u003e\u003cslot kind=\"video\"\u003e\u003c/slot\u003e\u003cwrite\u003e | \u003cask label=\"가게\"/\u003e",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": " | ",
+   "body": "",
+   "ok": true
+  },
+  {
+   "titleArea": "\u003cnote\u003e톤\u003c/note\u003e\u003cwrite\u003e메뉴\u003c/write\u003e\u003cask label=\"총평\"/\u003e\u0026lt;\u003cwriter\u003e",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cslot kind=\"video\"\u003e\u003c/slot\u003e",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cslot kind=\"photo\"/\u003e\u003cask/\u003e\u003cask label=\"총평\"\u003e별점\u003c/ask\u003e\u003cwriter\u003e",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\n | ",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": true
+  },
+  {
+   "titleArea": "\u003cask label=\"가게\"/\u003e\u003cask/\u003e\u003cask/\u003e\n\u003cslot kind=\"video\"\u003e\u003c/slot\u003e",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "missing_attribute",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003crepeat each=\"photo\"\u003e\u003cwrite\u003e메뉴\u003c/write\u003e",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cwrite\u003e메뉴\u003c/write\u003e\u003c/write\u003e | ",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cask label=\"가게\"/\u003e\u003c/ask\u003e",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cask label=\"가게\"/\u003e\u0026lt;\u003cslot kind=\"photo\"/\u003e",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cslot kind=\"video\"\u003e\u003c/slot\u003e\u003cslot kind=\"video\"\u003e\u003c/slot\u003e\u003cask label=\"가게\"/\u003e\u003cwrite\u003e\n",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u0026lt;\u003c/ask\u003e\u003cwriter\u003e\u003c/write\u003e\u003c/ask\u003e",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cwriter\u003e\u0026lt; |  \u003cask label=\"가게\"/\u003e\u003crepeat each=\"photo\"\u003e",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unknown_tag",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "가\u003cask label=\"가게\"/\u003e\u003crepeat each=\"photo\"\u003e",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "3 \u003c 5\u003cslot kind=\"photo\"/\u003e",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "3 \u003c 5가\u003cask label=\"총평\"/\u003e\u003cask label=\"총평\"\u003e별점\u003c/ask\u003e",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "duplicate_ask_label",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\n\u003c/write\u003e3 \u003c 5\u003crepeat each=\"photo\"\u003e ",
+   "body": "",
+   "ok": false,
+   "line": 2,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cwrite\u003e메뉴\u003c/write\u003e\u003cslot kind=\"video\"\u003e\u003c/slot\u003e",
+   "body": "",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cask label=\"총평\"\u003e별점\u003c/ask\u003e",
+   "body": "",
+   "ok": true
+  },
+  {
+   "titleArea": "\u003cwrite\u003e메뉴\u003c/write\u003e\n",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": true
+  },
+  {
+   "titleArea": "\u003cnote\u003e톤\u003c/note\u003e",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "가\u003cslot kind=\"video\"\u003e\u003c/slot\u003e\u003crepeat each=\"photo\"\u003e\u003crepeat each=\"photo\"\u003e",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cask/\u003e\u003cwrite\u003e",
+   "body": "",
+   "ok": false,
+   "line": 1,
+   "reason": "missing_attribute",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\n",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": true
+  },
+  {
+   "titleArea": "\u003c/repeat\u003e\n",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": " \u003c/write\u003e | \n\u003cnote\u003e톤\u003c/note\u003e",
+   "body": "",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\n가\u003cslot kind=\"video\"\u003e\u003c/slot\u003e \u003crepeat each=\"photo\"\u003e",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": false,
+   "line": 2,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cnote\u003e톤\u003c/note\u003e | \u003c/write\u003e\u003cwriter\u003e\u003c/repeat\u003e",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\n",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": true
+  },
+  {
+   "titleArea": "\u003crepeat each=\"photo\"\u003e | \u003cslot kind=\"photo\"/\u003e\u003cwrite\u003e메뉴\u003c/write\u003e",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003crepeat each=\"photo\"\u003e\u003c/ask\u003e\u003cnote\u003e톤\u003c/note\u003e\u003crepeat each=\"photo\"\u003e",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003c/repeat\u003e\u003c/repeat\u003e가\u003cslot kind=\"video\"\u003e\u003c/slot\u003e |  | ",
+   "body": "",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cask/\u003e  | ",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "missing_attribute",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cnote\u003e톤\u003c/note\u003e가\u003crepeat each=\"photo\"\u003e\n가\u003crepeat each=\"photo\"\u003e",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "3 \u003c 5",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": true
+  },
+  {
+   "titleArea": "\u003cask label=\"총평\"\u003e별점\u003c/ask\u003e\n\u003cask/\u003e",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 2,
+   "reason": "missing_attribute",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "3 \u003c 5\u003cwrite\u003e메뉴\u003c/write\u003e가",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": true
+  },
+  {
+   "titleArea": "\u003cslot kind=\"photo\"/\u003e\u003cask label=\"가게\"/\u003e\u003cwrite\u003e\u003cask/\u003e",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003c/repeat\u003e\u0026lt;\u003cwrite\u003e\u003c/ask\u003e",
+   "body": "",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003c/repeat\u003e\u003cwrite\u003e메뉴\u003c/write\u003e\u0026lt;\u003cask/\u003e | ",
+   "body": "",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "가 ",
+   "body": "",
+   "ok": true
+  },
+  {
+   "titleArea": "\u003cnote\u003e톤\u003c/note\u003e가\u003cask label=\"가게\"/\u003e | \u003cask label=\"총평\"/\u003e\u003cslot kind=\"photo\"/\u003e",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "3 \u003c 5\u003crepeat each=\"photo\"\u003e\u003crepeat each=\"photo\"\u003e\u003cwrite\u003e\u003cwriter\u003e",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cwrite\u003e메뉴\u003c/write\u003e\u003cask/\u003e\u003cslot kind=\"photo\"/\u003e",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "missing_attribute",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "3 \u003c 5\u003c/ask\u003e",
+   "body": "",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\n\u003c/repeat\u003e\u003c/write\u003e",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 2,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003c/write\u003e\u003c/repeat\u003e\u003cwriter\u003e3 \u003c 5\u003c/repeat\u003e",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": " | \u003cwriter\u003e\u003cslot kind=\"photo\"/\u003e\u003cwrite\u003e\u0026lt;3 \u003c 5",
+   "body": "",
+   "ok": false,
+   "line": 1,
+   "reason": "unknown_tag",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003c/ask\u003e\u003cask label=\"총평\"\u003e별점\u003c/ask\u003e\u003c/write\u003e\u003cask label=\"가게\"/\u003e3 \u003c 5",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cask label=\"총평\"\u003e별점\u003c/ask\u003e\u003cwriter\u003e",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unknown_tag",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003c/write\u003e\u003cwrite\u003e",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\n가 \u003c/repeat\u003e | ",
+   "body": "",
+   "ok": false,
+   "line": 2,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003c/ask\u003e",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": " | \u003cask label=\"총평\"\u003e별점\u003c/ask\u003e\u003cask/\u003e\u003cwrite\u003e",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "missing_attribute",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003crepeat each=\"photo\"\u003e가\u003cask label=\"가게\"/\u003e\u003cnote\u003e톤\u003c/note\u003e\u003cslot kind=\"video\"\u003e\u003c/slot\u003e\u003cslot kind=\"video\"\u003e\u003c/slot\u003e",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "3 \u003c 5\u003cwrite\u003e",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unclosed_tag",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cslot kind=\"video\"\u003e\u003c/slot\u003e\u003cask label=\"총평\"\u003e별점\u003c/ask\u003e",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003crepeat each=\"photo\"\u003e\u003c/repeat\u003e\u003cask label=\"가게\"/\u003e\u003cslot kind=\"video\"\u003e\u003c/slot\u003e\u003cslot kind=\"photo\"/\u003e\u003cask/\u003e",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cask label=\"가게\"/\u003e\n\u003cnote\u003e톤\u003c/note\u003e\u003c/ask\u003e\u003cslot kind=\"video\"\u003e\u003c/slot\u003e\u0026lt;",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": false,
+   "line": 2,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003c/ask\u003e\u003cask/\u003e\u003cnote\u003e톤\u003c/note\u003e\u003cslot kind=\"video\"\u003e\u003c/slot\u003e",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cask label=\"가게\"/\u003e",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": true
+  },
+  {
+   "titleArea": " | \u003c/repeat\u003e",
+   "body": "",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "3 \u003c 5\u003c/ask\u003e",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cask label=\"총평\"\u003e별점\u003c/ask\u003e3 \u003c 5\u003cnote\u003e톤\u003c/note\u003e",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cask label=\"총평\"\u003e별점\u003c/ask\u003e\u003cslot kind=\"video\"\u003e\u003c/slot\u003e\u0026lt;",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cnote\u003e톤\u003c/note\u003e\u003c/write\u003e",
+   "body": "",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003c/ask\u003e\u003cwrite\u003e메뉴\u003c/write\u003e",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\n\u003c/write\u003e\u003cask label=\"가게\"/\u003e3 \u003c 5\u003cslot kind=\"photo\"/\u003e\u0026lt;",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": false,
+   "line": 2,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cnote\u003e톤\u003c/note\u003e\u003c/ask\u003e",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003c/ask\u003e\n\u003cask/\u003e\u003cask label=\"가게\"/\u003e\u003cslot kind=\"video\"\u003e\u003c/slot\u003e",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003c/write\u003e\u003cask label=\"총평\"\u003e별점\u003c/ask\u003e\u003cwrite\u003e메뉴\u003c/write\u003e",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cask label=\"가게\"/\u003e\u003cwriter\u003e\u003crepeat each=\"photo\"\u003e",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unknown_tag",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\n\u003cask/\u003e",
+   "body": "",
+   "ok": false,
+   "line": 2,
+   "reason": "missing_attribute",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cnote\u003e톤\u003c/note\u003e\u003c/repeat\u003e\u003cwriter\u003e\u003cwrite\u003e\u0026lt;",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cask label=\"총평\"\u003e별점\u003c/ask\u003e\u003cask/\u003e",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "missing_attribute",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cwrite\u003e메뉴\u003c/write\u003e\n\u003crepeat each=\"photo\"\u003e\u003cwrite\u003e\u003cslot kind=\"video\"\u003e\u003c/slot\u003e가",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": false,
+   "line": 2,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cwrite\u003e메뉴\u003c/write\u003e\u003cwrite\u003e \u003c/write\u003e",
+   "body": "",
+   "ok": false,
+   "line": 1,
+   "reason": "empty_write",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cwrite\u003e메뉴\u003c/write\u003e\u003c/ask\u003e\u0026lt;\u003cask label=\"가게\"/\u003e",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cask label=\"가게\"/\u003e ",
+   "body": "",
+   "ok": true
+  },
+  {
+   "titleArea": "가\u003cask label=\"총평\"/\u003e |  | \u003cwriter\u003e",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unknown_tag",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003c/repeat\u003e3 \u003c 5\u003cslot kind=\"video\"\u003e\u003c/slot\u003e\u003cask/\u003e",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cwrite\u003e메뉴\u003c/write\u003e",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": true
+  },
+  {
+   "titleArea": "\u003cask label=\"총평\"\u003e별점\u003c/ask\u003e\u003crepeat each=\"photo\"\u003e\u003cslot kind=\"video\"\u003e\u003c/slot\u003e",
+   "body": "",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cslot kind=\"photo\"/\u003e\u003cwrite\u003e메뉴\u003c/write\u003e\u003c/write\u003e",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cwrite\u003e 가",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unclosed_tag",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cask label=\"총평\"/\u003e\u003c/ask\u003e\u003cslot kind=\"video\"\u003e\u003c/slot\u003e | \u003cslot kind=\"video\"\u003e\u003c/slot\u003e\n",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u0026lt;\u003cask label=\"총평\"\u003e별점\u003c/ask\u003e",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "duplicate_ask_label",
+   "area": "body"
+  },
+  {
+   "titleArea": "\u003c/write\u003e\n\u003cwrite\u003e메뉴\u003c/write\u003e\u0026lt;",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "3 \u003c 5\u003cask label=\"총평\"\u003e별점\u003c/ask\u003e",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": true
+  },
+  {
+   "titleArea": "\u003cask label=\"총평\"/\u003e | \u003crepeat each=\"photo\"\u003e\u003cask label=\"가게\"/\u003e\u003cask label=\"총평\"/\u003e",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\n",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": true
+  },
+  {
+   "titleArea": "\u003cwrite\u003e메뉴\u003c/write\u003e\u003cnote\u003e톤\u003c/note\u003e \u003cask label=\"총평\"\u003e별점\u003c/ask\u003e\u003crepeat each=\"photo\"\u003e",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "3 \u003c 5가\u003cask label=\"총평\"/\u003e\u003c/repeat\u003e3 \u003c 5",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cwrite\u003e3 \u003c 5\u003c/write\u003e\u003cwriter\u003e\u003cslot kind=\"photo\"/\u003e",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unknown_tag",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cask label=\"총평\"/\u003e\u003cwrite\u003e",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unclosed_tag",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cwrite\u003e\u003cask label=\"총평\"\u003e별점\u003c/ask\u003e\u003cask label=\"총평\"/\u003e\u003cask label=\"총평\"/\u003e  | ",
+   "body": "",
+   "ok": false,
+   "line": 1,
+   "reason": "malformed_tag",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "3 \u003c 5\u003cslot kind=\"video\"\u003e\u003c/slot\u003e\n\u003cslot kind=\"video\"\u003e\u003c/slot\u003e\u003cask label=\"가게\"/\u003e\u003cwrite\u003e",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": " \u003cnote\u003e톤\u003c/note\u003e\u003c/ask\u003e\u0026lt;",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003c/repeat\u003e\u003c/repeat\u003e\u003cwriter\u003e\u003cask label=\"총평\"\u003e별점\u003c/ask\u003e\u003cask label=\"총평\"/\u003e",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "3 \u003c 5\u003c/write\u003e | ",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cask label=\"총평\"\u003e별점\u003c/ask\u003e | 가",
+   "body": "",
+   "ok": true
+  },
+  {
+   "titleArea": " \n\u003cnote\u003e톤\u003c/note\u003e가\u003cask label=\"가게\"/\u003e",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 2,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cask label=\"총평\"\u003e별점\u003c/ask\u003e\u003c/repeat\u003e\u003cask label=\"가게\"/\u003e\u003cask/\u003e",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\n\u003c/write\u003e",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": false,
+   "line": 2,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": " \u003cask label=\"총평\"/\u003e\u003cwrite\u003e\u003cwrite\u003e메뉴\u003c/write\u003e\u003crepeat each=\"photo\"\u003e\u003cslot kind=\"photo\"/\u003e",
+   "body": "",
+   "ok": false,
+   "line": 1,
+   "reason": "malformed_tag",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cnote\u003e톤\u003c/note\u003e ",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cwrite\u003e\u003c/write\u003e",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "empty_write",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cslot kind=\"video\"\u003e\u003c/slot\u003e\u003c/repeat\u003e \u003cask/\u003e\u003c/repeat\u003e",
+   "body": "",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003c/ask\u003e",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003c/write\u003e ",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cslot kind=\"photo\"/\u003e",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cslot kind=\"photo\"/\u003e\u0026lt;\u003cwrite\u003e메뉴\u003c/write\u003e",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cask label=\"가게\"/\u003e",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": true
+  },
+  {
+   "titleArea": "\u003cnote\u003e톤\u003c/note\u003e\u003cask label=\"총평\"\u003e별점\u003c/ask\u003e\u003crepeat each=\"photo\"\u003e\u003cwrite\u003e가\u003c/write\u003e",
+   "body": "",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003c/write\u003e 가\u003c/ask\u003e ",
+   "body": "",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cslot kind=\"photo\"/\u003e | ",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cslot kind=\"video\"\u003e\u003c/slot\u003e\u003cask label=\"가게\"/\u003e\u003cwriter\u003e",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003crepeat each=\"photo\"\u003e가\u003c/repeat\u003e\u003c/ask\u003e",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cask label=\"총평\"/\u003e\u003cwrite\u003e메뉴\u003c/write\u003e",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "duplicate_ask_label",
+   "area": "body"
+  },
+  {
+   "titleArea": "\u003cask label=\"총평\"\u003e별점\u003c/ask\u003e\u003crepeat each=\"photo\"\u003e",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "3 \u003c 5가",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": true
+  },
+  {
+   "titleArea": "\u003c/repeat\u003e",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u0026lt;\u003cwrite\u003e가\u003cask label=\"가게\"/\u003e\u003cask label=\"가게\"/\u003e\u003c/write\u003e",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "malformed_tag",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u0026lt; |  | \u003cask/\u003e",
+   "body": "",
+   "ok": false,
+   "line": 1,
+   "reason": "missing_attribute",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003c/ask\u003e\u003cnote\u003e톤\u003c/note\u003e\u003cask label=\"총평\"\u003e별점\u003c/ask\u003e\u003c/ask\u003e",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003c/repeat\u003e\u003cslot kind=\"photo\"/\u003e\u003cask label=\"총평\"\u003e별점\u003c/ask\u003e",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u0026lt;\u003c/write\u003e\u0026lt;\u003cslot kind=\"video\"\u003e\u003c/slot\u003e\u003cslot kind=\"video\"\u003e\u003c/slot\u003e",
+   "body": "",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cwrite\u003e\u003cask/\u003e\u003cwrite\u003e\u003c/write\u003e\u003c/write\u003e",
+   "body": "",
+   "ok": false,
+   "line": 1,
+   "reason": "malformed_tag",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003c/write\u003e\u003c/write\u003e\n",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cask label=\"가게\"/\u003e\u0026lt;",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": true
+  },
+  {
+   "titleArea": "\u003cask/\u003e\u003cask label=\"총평\"/\u003e",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "missing_attribute",
+   "area": "title_area"
+  },
+  {
+   "titleArea": " | \u003cask label=\"총평\"\u003e별점\u003c/ask\u003e\u003c/write\u003e\u003cnote\u003e톤\u003c/note\u003e\u003c/ask\u003e가",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003c/write\u003e\n\u003cwrite\u003e",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cnote\u003e톤\u003c/note\u003e | \u003cwriter\u003e\u003cwrite\u003e메뉴\u003c/write\u003e\u003c/write\u003e",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "3 \u003c 5\u003c/repeat\u003e\u003cnote\u003e톤\u003c/note\u003e가\u003c/ask\u003e\u003crepeat each=\"photo\"\u003e",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cslot kind=\"video\"\u003e\u003c/slot\u003e3 \u003c 5\u003cwriter\u003e",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "3 \u003c 53 \u003c 5\u003cwriter\u003e | ",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unknown_tag",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cwrite\u003e\u003c/ask\u003e\u003c/ask\u003e | ",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cask/\u003e\u003cnote\u003e톤\u003c/note\u003e\u003cwrite\u003e\u003cask label=\"가게\"/\u003e3 \u003c 5\n",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "missing_attribute",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u0026lt;\u003cnote\u003e톤\u003c/note\u003e\u003cslot kind=\"video\"\u003e\u003c/slot\u003e3 \u003c 5\u0026lt;",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": " ",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": true
+  },
+  {
+   "titleArea": "\u003cask/\u003e",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "missing_attribute",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "3 \u003c 53 \u003c 5\u003crepeat each=\"photo\"\u003e\u003cask label=\"가게\"/\u003e",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": " 가\u003c/repeat\u003e3 \u003c 5\u003c/repeat\u003e\u003c/ask\u003e",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003c/write\u003e\u003crepeat each=\"photo\"\u003e\u003cask label=\"총평\"\u003e별점\u003c/ask\u003e",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "가 | \u003c/repeat\u003e\u003cask label=\"가게\"/\u003e",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unexpected_close",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "3 \u003c 5",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": true
+  },
+  {
+   "titleArea": "\u003cask/\u003e",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "missing_attribute",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cslot kind=\"photo\"/\u003e\u003cask label=\"총평\"\u003e별점\u003c/ask\u003e",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cwriter\u003e\u003cwriter\u003e\n\u003crepeat each=\"photo\"\u003e\u003cask/\u003e",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "unknown_tag",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003crepeat each=\"photo\"\u003e3 \u003c 5",
+   "body": "\u003cask label=\"a\"/\u003e\n\u003cask label=\"b\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003crepeat each=\"photo\"\u003e\u003cnote\u003e톤\u003c/note\u003e\u003cwrite\u003e메뉴\u003c/write\u003e\u003c/ask\u003e ",
+   "body": "\u003cask label=\"총평\"/\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u003cslot kind=\"video\"\u003e\u003c/slot\u003e  ",
+   "body": "\u003cwrite\u003e본문\u003c/write\u003e",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  },
+  {
+   "titleArea": "\u0026lt;\u003crepeat each=\"photo\"\u003e\u003cwriter\u003e\u003cask/\u003e",
+   "body": "",
+   "ok": false,
+   "line": 1,
+   "reason": "not_in_title",
+   "area": "title_area"
+  }
  ]
 }

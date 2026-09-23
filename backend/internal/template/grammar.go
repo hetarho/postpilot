@@ -1,6 +1,7 @@
 package template
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -60,15 +61,27 @@ type Node struct {
 }
 
 // ParseError names a 1-based line and one reason, both of which the editor shows on the
-// offending line. Every reason is listed in the grammar spec §4.
+// offending line, and the area the line counts within. Every reason is listed in the grammar
+// spec §4.
+//
+// Inner functions build it with a line and a reason alone; the entry points stamp the area on
+// the way out (inArea), so no inner call site has to know which area it is reading.
 type ParseError struct {
 	Line   int
 	Reason string
+	Area   string
 }
 
 func (e *ParseError) Error() string {
-	return fmt.Sprintf("template body line %d: %s", e.Line, e.Reason)
+	return fmt.Sprintf("template %s line %d: %s", e.Area, e.Line, e.Reason)
 }
+
+// The two areas a template's text lives in (TMPL-50). They are plain strings because the same
+// value is the shared fixture's `error.area` and the param a refusal carries on the wire.
+const (
+	AreaTitle = "title_area"
+	AreaBody  = "body"
+)
 
 const (
 	ReasonUnknownTag       = "unknown_tag"
@@ -92,6 +105,10 @@ const (
 	ReasonDuplicateAskLabel = "duplicate_ask_label"
 	ReasonAskInRepeat       = "ask_in_repeat"
 	ReasonTooManyAsks       = "too_many_asks"
+	// ReasonNotInTitle is a photo position, a repeat or a note inside the title area, which
+	// admits literal text, <write> and <ask> only (TMPL-50). Like ask_in_repeat it names the
+	// PLACE: the tag is real, and a title has no photo, nothing to repeat and no one to note.
+	ReasonNotInTitle = "not_in_title"
 )
 
 // ParseOptions carries what the grammar cannot know by itself. The photo-row ceiling is
@@ -101,8 +118,12 @@ type ParseOptions struct {
 	PhotoRowMax int
 	// AskMaxPerBody bounds how many data fields one body may declare
 	// (TEMPLATE_ASK_MAX_PER_BODY). It is configuration for the same reason PhotoRowMax is,
-	// and the shared fixture declares its own so a case means one thing on both sides.
+	// and the shared fixture declares its own so a case means one thing on both sides. A
+	// template's title area and body share it, title first (TMPL-20).
 	AskMaxPerBody int
+	// TitleArea parses the text as a title area rather than a body. ParseTemplate sets it per
+	// area; a caller parsing one area on its own sets it itself.
+	TitleArea bool
 }
 
 var tagNames = map[string]NodeKind{
@@ -113,38 +134,89 @@ var tagNames = map[string]NodeKind{
 	"ask":    NodeAsk,
 }
 
-// Parse turns a body into an ordered node list. A body that does not parse cannot be saved:
-// there is no lenient fallback, because a template that half-parses would silently drop the
-// structure the author asked for.
-func Parse(body string, opts ParseOptions) ([]Node, error) {
-	nodes, end, err := parseNodes(body, 0, false, opts)
+// Parse turns one area's text into an ordered node list — a body unless opts.TitleArea says
+// it is a title area. Text that does not parse cannot be saved: there is no lenient fallback,
+// because a template that half-parses would silently drop the structure the author asked for.
+// Every error names the area it was parsed as.
+func Parse(text string, opts ParseOptions) ([]Node, error) {
+	area := AreaBody
+	if opts.TitleArea {
+		area = AreaTitle
+	}
+	nodes, err := parseArea(text, opts)
 	if err != nil {
-		return nil, err
+		return nil, inArea(err, area)
 	}
-	if end != len(body) {
-		// parseNodes only stops early on a closing tag, and at the top level there is
-		// nothing it could be closing.
-		return nil, &ParseError{Line: lineAt(body, end), Reason: ReasonUnexpectedClose}
+	var title, body []Node
+	if opts.TitleArea {
+		title = nodes
+	} else {
+		body = nodes
 	}
-	if err := checkAsks(nodes, opts.AskMaxPerBody); err != nil {
+	if err := checkAsks(title, body, opts.AskMaxPerBody); err != nil {
 		return nil, err
 	}
 	return nodes, nil
 }
 
-// checkAsks enforces the two body-WIDE rules a single tag cannot see: labels are unique and
-// there are at most AskMaxPerBody of them (TEMPLATE-43).
+// ParseTemplate parses a template's title area and body as the one document they are
+// (TMPL-50): the title's structure, then the body's, then one data-field namespace and one
+// ceiling across both, title first. Line numbers count within each area, and every error names
+// its area. An empty title area gives exactly Parse(body)'s verdict. opts.TitleArea is ignored:
+// each area is parsed as what it is.
+func ParseTemplate(titleArea, body string, opts ParseOptions) (title, nodes []Node, err error) {
+	titleOpts, bodyOpts := opts, opts
+	titleOpts.TitleArea, bodyOpts.TitleArea = true, false
+	if title, err = parseArea(titleArea, titleOpts); err != nil {
+		return nil, nil, inArea(err, AreaTitle)
+	}
+	if nodes, err = parseArea(body, bodyOpts); err != nil {
+		return nil, nil, inArea(err, AreaBody)
+	}
+	if err := checkAsks(title, nodes, opts.AskMaxPerBody); err != nil {
+		return nil, nil, err
+	}
+	return title, nodes, nil
+}
+
+// parseArea is the structure pass over one area, with no data-field rule: every node, and the
+// top-level check that nothing closes what was never opened.
+func parseArea(text string, opts ParseOptions) ([]Node, error) {
+	nodes, end, err := parseNodes(text, 0, false, opts)
+	if err != nil {
+		return nil, err
+	}
+	if end != len(text) {
+		// parseNodes only stops early on a closing tag, and at the top level there is
+		// nothing it could be closing.
+		return nil, &ParseError{Line: lineAt(text, end), Reason: ReasonUnexpectedClose}
+	}
+	return nodes, nil
+}
+
+// inArea stamps the area an inner parse error sits in.
+func inArea(err error, area string) error {
+	var parseErr *ParseError
+	if errors.As(err, &parseErr) {
+		parseErr.Area = area
+	}
+	return err
+}
+
+// checkAsks enforces the two template-WIDE rules a single tag cannot see: labels are unique
+// and there are at most maxPerBody of them (TEMPLATE-43), across the title area and the body
+// together, title first (TMPL-20).
 //
-// One pass in body order, duplicate before count on the same node: a duplicate names the
+// One pass in document order, duplicate before count on the same node: a duplicate names the
 // exact thing to go fix, while the count only says there is one field too many. Both parsers
 // walk it identically, which is what keeps the shared fixture meaningful.
-func checkAsks(nodes []Node, maxPerBody int) error {
+func checkAsks(title, body []Node, maxPerBody int) error {
 	seen := map[string]bool{}
-	var walk func([]Node) error
-	walk = func(list []Node) error {
+	var walk func(list []Node, area string) error
+	walk = func(list []Node, area string) error {
 		for _, node := range list {
 			if node.Kind == NodeRepeat {
-				if err := walk(node.Children); err != nil {
+				if err := walk(node.Children, area); err != nil {
 					return err
 				}
 				continue
@@ -154,16 +226,19 @@ func checkAsks(nodes []Node, maxPerBody int) error {
 			}
 			label := Decode(node.Label)
 			if seen[label] {
-				return &ParseError{Line: node.Line, Reason: ReasonDuplicateAskLabel}
+				return &ParseError{Line: node.Line, Reason: ReasonDuplicateAskLabel, Area: area}
 			}
 			seen[label] = true
 			if len(seen) > maxPerBody {
-				return &ParseError{Line: node.Line, Reason: ReasonTooManyAsks}
+				return &ParseError{Line: node.Line, Reason: ReasonTooManyAsks, Area: area}
 			}
 		}
 		return nil
 	}
-	return walk(nodes)
+	if err := walk(title, AreaTitle); err != nil {
+		return err
+	}
+	return walk(body, AreaBody)
 }
 
 // Asks returns the body's data fields in body order. It is how the save path reaches their
@@ -285,6 +360,15 @@ func parseTag(body string, at int, name string, inRepeat bool, opts ParseOptions
 	attrs, selfClosing, afterOpen, err := parseTagHead(body, at, name)
 	if err != nil {
 		return Node{}, 0, err
+	}
+	// The PLACE is checked once the head reads and before any rule of the tag's own kind, as
+	// ask_in_repeat is: a photo position in a title is wrong whatever its attributes say, while
+	// a head that does not read stays the reason it is.
+	if opts.TitleArea {
+		switch tagNames[name] {
+		case NodeSlot, NodeRepeat, NodeNote:
+			return Node{}, 0, &ParseError{Line: line, Reason: ReasonNotInTitle}
+		}
 	}
 
 	switch tagNames[name] {

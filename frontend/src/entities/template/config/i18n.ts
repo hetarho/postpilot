@@ -124,6 +124,7 @@ export const i18n = {
         duplicate_ask_label: '같은 제목의 데이터 받기가 이미 있어요',
         ask_in_repeat: '사진마다 반복 안에서는 데이터를 받을 수 없어요',
         too_many_asks: '데이터 받기는 최대 {{askMax}}개까지예요',
+        not_in_title: '사진·사진마다 반복·AI에게만 하는 말은 제목에 넣을 수 없어요',
       },
     },
     slot: {
@@ -265,6 +266,7 @@ Send the body only — no explanation and no code fence. Write it in the languag
         duplicate_ask_label: 'another field already asks under that title',
         ask_in_repeat: 'a field inside 사진마다 반복 cannot ask for data',
         too_many_asks: 'at most {{askMax}} fields may ask for data',
+        not_in_title: 'a photo, 사진마다 반복 or a note to the AI cannot go in the title',
       },
     },
     slot: {

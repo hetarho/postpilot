@@ -24,13 +24,16 @@ export {
   decode,
   encode,
   parse,
+  parseTemplate,
   serialize,
+  templateAskFields,
   PARSE_REASONS,
   type ParseFailure,
   type ParseOptions,
   type ParseReason,
   type AskField,
   type SlotKind,
+  type TemplateArea,
   type TemplateNode,
 } from './lib/grammar'
 export { GUIDE_EXAMPLE_BODY, formatGuide } from './model/guide'

@@ -2,7 +2,15 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { askFields, decode, parse, serialize, type TemplateNode } from './grammar'
+import {
+  askFields,
+  decode,
+  parse,
+  parseTemplate,
+  serialize,
+  templateAskFields,
+  type TemplateNode,
+} from './grammar'
 
 // The node reference is local to this file on purpose: the app tsconfig deliberately does not
 // expose node types, so app code cannot reach the filesystem. Reading the shared fixture is a
@@ -22,9 +30,13 @@ interface FixtureNode {
 }
 interface FixtureCase {
   name: string
+  /** "" when the case has no title area (TMPL-50). */
+  titleArea?: string
   body: string
+  titleNodes?: FixtureNode[]
   nodes?: FixtureNode[]
-  error?: { line: number; reason: string }
+  /** `area` is absent for a refusal in the body. */
+  error?: { line: number; reason: string; area?: string }
 }
 
 const fixturePath = resolve(
@@ -79,22 +91,51 @@ describe('template grammar against the shared fixtures', () => {
     expect(cases.filter((c) => c.error).length).toBeGreaterThan(0)
   })
 
+  it('reads at least one title-area case', () => {
+    expect(cases.filter((c) => (c.titleArea ?? '') !== '').length).toBeGreaterThan(0)
+  })
+
+  // Every case is a (title area, body) pair parsed as one template. One with no title area must
+  // also give the body-only parse's identical verdict, which keeps every template saved before
+  // title areas existed exactly where it was.
   cases.forEach((testCase) => {
     it(testCase.name, () => {
-      const result = parse(testCase.body, options)
+      const titleArea = testCase.titleArea ?? ''
+      const result = parseTemplate(titleArea, testCase.body, options)
+      if (titleArea === '') {
+        const bodyOnly = parse(testCase.body, options)
+        expect(bodyOnly.ok).toBe(result.ok)
+        if (!bodyOnly.ok && !result.ok) expect(bodyOnly.failure).toEqual(result.failure)
+        if (bodyOnly.ok && result.ok)
+          expect(serialize(bodyOnly.nodes)).toBe(serialize(result.nodes))
+      }
       if (testCase.error) {
         expect(result.ok, 'expected a parse failure').toBe(false)
         if (result.ok) return
-        expect(result.failure).toEqual(testCase.error)
+        expect(result.failure).toEqual({ area: 'body', ...testCase.error })
         return
       }
       expect(result.ok, `unexpected failure: ${JSON.stringify(result)}`).toBe(true)
       if (!result.ok) return
+      expectNodes(result.titleNodes, testCase.titleNodes ?? [], 'titleNodes')
       expectNodes(result.nodes, testCase.nodes ?? [], 'nodes')
-      // Every accepted body must serialize back byte for byte: this is the round-trip
+      // Every accepted area must serialize back byte for byte: this is the round-trip
       // guarantee the builder's source toggle rests on (change 25 AC8).
+      expect(serialize(result.titleNodes)).toBe(titleArea)
       expect(serialize(result.nodes)).toBe(testCase.body)
     })
+  })
+
+  it('names the area a failure sits in, a body on its own included', () => {
+    const body = parse('<writer>', options)
+    expect(body.ok ? null : body.failure.area).toBe('body')
+    const title = parse('<note>톤</note>', { ...options, titleArea: true })
+    expect(title.ok ? null : title.failure).toEqual({
+      line: 1,
+      reason: 'not_in_title',
+      area: 'title_area',
+    })
+    expect(parse('<slot kind="photo"/>', options).ok).toBe(true)
   })
 })
 
@@ -110,7 +151,16 @@ interface CorpusCase {
   reason?: string
 }
 
-const corpus: CorpusCase[] = JSON.parse(
+interface TitleCorpusCase {
+  titleArea: string
+  body: string
+  ok: boolean
+  line?: number
+  reason?: string
+  area?: string
+}
+
+const corpusFile = JSON.parse(
   readFileSync(
     resolve(
       import.meta.dirname,
@@ -118,7 +168,10 @@ const corpus: CorpusCase[] = JSON.parse(
     ),
     'utf8',
   ),
-).cases
+)
+const corpus: CorpusCase[] = corpusFile.cases
+/** 200 generated (title area, body) pairs with the Go parser's verdict (TMPL-50). */
+const titleCorpus: TitleCorpusCase[] = corpusFile.titleCases
 
 describe('the TypeScript parser agrees with the Go parser', () => {
   it('reaches the same verdict, line and reason on every corpus body', () => {
@@ -145,6 +198,37 @@ describe('the TypeScript parser agrees with the Go parser', () => {
       }
       if (serialize(result.nodes) !== testCase.body) {
         disagreements.push(`${JSON.stringify(testCase.body)}: ts round trip changed the body`)
+      }
+    }
+    expect(disagreements.slice(0, 10)).toEqual([])
+  })
+
+  it('reaches the same verdict, line, reason and area on every title-area pair', () => {
+    expect(titleCorpus.length).toBe(200)
+    const disagreements: string[] = []
+    for (const testCase of titleCorpus) {
+      const pair = `${JSON.stringify(testCase.titleArea)} | ${JSON.stringify(testCase.body)}`
+      const result = parseTemplate(testCase.titleArea, testCase.body, options)
+      if (result.ok !== testCase.ok) {
+        disagreements.push(
+          `${pair}: go ${testCase.ok ? 'accepted' : 'refused'}, ts ${result.ok ? 'accepted' : 'refused'}`,
+        )
+        continue
+      }
+      if (!result.ok) {
+        const { line, reason, area } = result.failure
+        if (line !== testCase.line || reason !== testCase.reason || area !== testCase.area) {
+          disagreements.push(
+            `${pair}: go ${testCase.reason}@${testCase.area}:${testCase.line}, ts ${reason}@${area}:${line}`,
+          )
+        }
+        continue
+      }
+      if (
+        serialize(result.titleNodes) !== testCase.titleArea ||
+        serialize(result.nodes) !== testCase.body
+      ) {
+        disagreements.push(`${pair}: ts round trip changed the pair`)
       }
     }
     expect(disagreements.slice(0, 10)).toEqual([])
@@ -180,5 +264,38 @@ describe('the data fields a body asks for', () => {
   it('asks for nothing when the body does not parse', () => {
     expect(askFields('<ask label="총평"/>\n<ask label="총평"/>', options)).toEqual([])
     expect(askFields('<writer>', options)).toEqual([])
+  })
+})
+
+/** What ① will read off a template once it has a title area: one namespace, title first. */
+describe('the data fields a template asks for', () => {
+  it('lists the fields of the title area first, then those of the body', () => {
+    expect(
+      templateAskFields(
+        '맛집 | <ask label="가게 이름"/>',
+        '<write>인트로</write>\n<ask label="총평">총평을 쓰세요</ask>',
+        options,
+      ),
+    ).toEqual([
+      { label: '가게 이름', flavor: 'verbatim' },
+      { label: '총평', flavor: 'write' },
+    ])
+  })
+
+  it('asks for nothing when the title area does not parse', () => {
+    expect(templateAskFields('<note>톤</note>', '<ask label="총평"/>', options)).toEqual([])
+  })
+
+  it('asks for nothing when the body does not parse', () => {
+    expect(templateAskFields('<ask label="가게"/>', '<writer>', options)).toEqual([])
+  })
+
+  it('asks for nothing when the two areas reuse a title', () => {
+    expect(templateAskFields('<ask label="가게"/>', '<ask label="가게"/>', options)).toEqual([])
+  })
+
+  it('reads an empty title area as the body alone', () => {
+    const body = '오늘의 기록\n<ask label="방문일"/>\n<ask label="총평">총평을 쓰세요</ask>'
+    expect(templateAskFields('', body, options)).toEqual(askFields(body, options))
   })
 })

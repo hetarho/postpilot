@@ -51,7 +51,6 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T327 | The template grammar parses a title area in lockstep in Go and TypeScript | TMPL ARCH | - | todo |
 | T328 | shared/ui InlinePopover and Toggletip on one extracted anchored-panel hook | POST THEME ARCH | - | todo |
 | T329 | A finalized post becomes 발행됨 from a pasted Naver URL, replaceable and clearable | POST QUAL ARCH | T322 T323 | todo |
 | T330 | Frozen 분야 phrases in per-post material and the write answer's replacement candidates | GEN QUAL POST ARCH | T324 | todo |
@@ -80,10 +79,12 @@
 | T353 | Toggling 기억 사용 keeps the post's 목표 글자 수 | POST MEM ARCH | - | todo |
 
 ## next
-- implement-task T327 (then the dep order in the tasks table; T327 and T328 have no dep and can run in parallel sessions)
+- implement-task T328 (then the dep order in the tasks table; T328 has no dep, and T329 and T330 are unblocked)
 - T352 and T353 are independent pre-existing bug fixes (frozen memories never reach a durable generate; the 기억 사용 toggle clears 목표 글자 수)
 - create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 ## log
+- 260924 T327 done; the Go and TS grammars parse a title area (literal, write, ask) and refuse a slot, repeat or note there as not_in_title, one ask namespace and ceiling across both areas, title first; fixture +12 cases and 200 title corpus pairs; BE gate and FE gates pass (p35)
+- 260924 T327 claimed (p35)
 - 260924 T326 done; internal/naversearch reads one page of the blog search as plain titles and descriptions, and config carries the optional Naver pair and a refresh-interval override; full BE gate and the deploy tests pass (p35)
 - 260924 T326 claimed (p35)
 - 260924 T325 done; quality gains NFC 어절 tokens, block units that skip slots, containment by language, 8-어절 run matching with its rune share and maximal runs, and sentence splitting; x/text v0.42.0 is now a direct require; full BE gate passes (p35)
@@ -102,5 +103,3 @@
 - 260923 create-task QUAL POST GEN GUIDE TMPL start; QUAL r1 all, POST r10, GEN r9, GUIDE r4, TMPL r9
 - 260923 the five domains' opens all closed ahead of create-task; measurement split into a per-post layer shown from ② and an aggregate over 발행됨 posts only, vocabulary ranked guideline > template > voice with the preset injected last, and 분야 picked on ①'s panel
 - 260923 ideation post-quality-and-related-links converted; QUAL r1 created and POST r10, GEN r9, GUIDE r4, TMPL r9 carry the rest; 추천글 and GEO stay parked in the ideation doc
-- 260923 update-ssot TMPL complete; r9 adds the optional title area limited to literal text, `<write>` and `<ask>`
-- 260923 update-ssot GUIDE complete; r4 adds the preset, the `fields` scope kind and the precedence narrowing, with `templatePrecedence`'s identical wording left as [?]

@@ -115,7 +115,7 @@ describe('builder blocks', () => {
   it('reports a body that does not parse instead of guessing', () => {
     const result = fromBody('<repaet each="photo">\n</repaet>', decode, options, legacy)
     expect(result.ok).toBe(false)
-    if (!result.ok) expect(result.failure).toEqual({ line: 1, reason: 'unknown_tag' })
+    if (!result.ok) expect(result.failure).toEqual({ line: 1, reason: 'unknown_tag', area: 'body' })
   })
 
   it('moves a block across the list in one splice, not a chain of swaps', () => {

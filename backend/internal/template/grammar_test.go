@@ -27,12 +27,17 @@ type fixtureNode struct {
 var fixtureParseOptions = ParseOptions{PhotoRowMax: 4, AskMaxPerBody: 3}
 
 type fixtureCase struct {
-	Name  string        `json:"name"`
-	Body  string        `json:"body"`
-	Nodes []fixtureNode `json:"nodes"`
-	Error *struct {
+	Name string `json:"name"`
+	// TitleArea is "" when the case has none (TMPL-50).
+	TitleArea  string        `json:"titleArea"`
+	Body       string        `json:"body"`
+	TitleNodes []fixtureNode `json:"titleNodes"`
+	Nodes      []fixtureNode `json:"nodes"`
+	Error      *struct {
 		Line   int    `json:"line"`
 		Reason string `json:"reason"`
+		// Area is where the refusal sits; absent means the body.
+		Area string `json:"area"`
 	} `json:"error"`
 }
 
@@ -64,35 +69,84 @@ func loadFixtures(t *testing.T) []fixtureCase {
 	return file.Cases
 }
 
+// Every case is a (title area, body) pair parsed as one template. A case with no title area
+// must also give the body-only Parse's identical verdict, which is what keeps every template
+// saved before title areas existed exactly where it was.
 func TestParseAgainstSharedFixtures(t *testing.T) {
 	for _, tc := range loadFixtures(t) {
 		t.Run(tc.Name, func(t *testing.T) {
-			nodes, err := Parse(tc.Body, fixtureParseOptions)
+			title, nodes, err := ParseTemplate(tc.TitleArea, tc.Body, fixtureParseOptions)
+			if tc.TitleArea == "" {
+				bodyOnly, bodyErr := Parse(tc.Body, fixtureParseOptions)
+				if !sameVerdict(nodes, err, bodyOnly, bodyErr) {
+					t.Fatalf("ParseTemplate with no title area = (%v, %v), Parse = (%v, %v)", kinds(nodes), err, kinds(bodyOnly), bodyErr)
+				}
+			}
 			if tc.Error != nil {
-				var parseErr *ParseError
 				if err == nil {
-					t.Fatalf("expected %s on line %d, parsed %d nodes", tc.Error.Reason, tc.Error.Line, len(nodes))
+					t.Fatalf("expected %s on line %d, parsed %d title and %d body nodes", tc.Error.Reason, tc.Error.Line, len(title), len(nodes))
 				}
 				parseErr, ok := err.(*ParseError)
 				if !ok {
 					t.Fatalf("error %v is not a ParseError", err)
 				}
-				if parseErr.Reason != tc.Error.Reason || parseErr.Line != tc.Error.Line {
-					t.Fatalf("got %s on line %d, want %s on line %d",
-						parseErr.Reason, parseErr.Line, tc.Error.Reason, tc.Error.Line)
+				wantArea := tc.Error.Area
+				if wantArea == "" {
+					wantArea = AreaBody
+				}
+				if parseErr.Reason != tc.Error.Reason || parseErr.Line != tc.Error.Line || parseErr.Area != wantArea {
+					t.Fatalf("got %s on %s line %d, want %s on %s line %d",
+						parseErr.Reason, parseErr.Area, parseErr.Line, tc.Error.Reason, wantArea, tc.Error.Line)
 				}
 				return
 			}
 			if err != nil {
 				t.Fatalf("unexpected parse error: %v", err)
 			}
+			assertNodes(t, title, tc.TitleNodes, "titleNodes")
 			assertNodes(t, nodes, tc.Nodes, "")
-			// Every accepted body must serialize back byte-for-byte: this is the round-trip
+			// Every accepted area must serialize back byte-for-byte: this is the round-trip
 			// guarantee the builder's 원문 toggle rests on (change 25 AC8).
+			if round := Serialize(title); round != tc.TitleArea {
+				t.Fatalf("round trip changed the title area:\n got %q\nwant %q", round, tc.TitleArea)
+			}
 			if round := Serialize(nodes); round != tc.Body {
 				t.Fatalf("round trip changed the body:\n got %q\nwant %q", round, tc.Body)
 			}
 		})
+	}
+}
+
+// sameVerdict compares two parses by acceptance, node kinds and the error each refused with.
+func sameVerdict(nodes []Node, err error, otherNodes []Node, otherErr error) bool {
+	if (err == nil) != (otherErr == nil) {
+		return false
+	}
+	if err != nil {
+		first, firstOK := err.(*ParseError)
+		second, secondOK := otherErr.(*ParseError)
+		return firstOK && secondOK && *first == *second
+	}
+	return Serialize(nodes) == Serialize(otherNodes) && len(kinds(nodes)) == len(kinds(otherNodes))
+}
+
+// A body parsed on its own names the body, and one parsed as a title area names the title.
+func TestParseNamesTheAreaItParsed(t *testing.T) {
+	for _, body := range []string{"<writer>", "<write>메뉴", "<ask label=\"a\"/><ask label=\"a\"/>", "</write>"} {
+		_, err := Parse(body, fixtureParseOptions)
+		parseErr, ok := err.(*ParseError)
+		if !ok || parseErr.Area != AreaBody {
+			t.Errorf("Parse(%q) error = %#v, want the body", body, err)
+		}
+		titleOpts := fixtureParseOptions
+		titleOpts.TitleArea = true
+		_, err = Parse(body, titleOpts)
+		if parseErr, ok := err.(*ParseError); !ok || parseErr.Area != AreaTitle {
+			t.Errorf("Parse(%q) as a title area error = %#v, want the title area", body, err)
+		}
+	}
+	if _, err := Parse(`<slot kind="photo"/>`, fixtureParseOptions); err != nil {
+		t.Fatalf("a body still admits a photo position: %v", err)
 	}
 }
 
