@@ -14,7 +14,12 @@ import {
 } from '@/test/fixtures/postContent'
 import type { FakeWriteExperimentStart } from '@/test/experiments'
 import type { FakeGenerationStart } from '@/test/jobs'
-import { FAKE_STORAGE_ORIGIN, type FakeDraftSave } from '@/test/posts'
+import {
+  FAKE_STORAGE_ORIGIN,
+  type FakeDraftSave,
+  type FakePostRow,
+  type FakePostsOptions,
+} from '@/test/posts'
 import { clearCaret } from '@/features/edit-post-content/model/caret-handoff'
 
 const USER = { id: 'alice' }
@@ -217,7 +222,12 @@ describe('opening a post', () => {
       expect(await screen.findByRole('heading', { name: exportHeading })).toBeInTheDocument()
       await user.click(screen.getByRole('button', { name: copyTitle }))
       await waitFor(() => expect(writeText).toHaveBeenCalledWith(POST_CONTENT_FIXTURE.title))
-      expect(screen.queryByText(/^(?:발행하기|Publish)$/)).not.toBeInTheDocument()
+      // The retired publishing ACTION: no control starts one. ③'s 발행 section records an address
+      // the owner published by hand, and its heading is not a control.
+      expect(
+        screen.queryByRole('button', { name: /^(?:발행하기|Publish)$/ }),
+      ).not.toBeInTheDocument()
+      expect(screen.queryByRole('link', { name: /^(?:발행하기|Publish)$/ })).not.toBeInTheDocument()
       expect(calls.filter((call) => /publish/i.test(call))).toEqual([])
     },
   )
@@ -3028,4 +3038,186 @@ describe('a published post', () => {
     expect(screen.getByLabelText('메모')).toHaveValue('갔다')
     expect(screen.queryByText(LOCKED)).toBeNull()
   }, 15_000)
+})
+
+// POST-73, POST-75, POST-77, POST-87: ③'s foot records, replaces and clears the post's Naver
+// address, refuses anything else before sending, and waits for 확정.
+describe('the 발행 URL field', () => {
+  const slug = '20260820-seongsu'
+  const finalizedPost = {
+    slug,
+    title: '성수 카페',
+    status: 'finalized',
+    content: POST_CONTENT_FIXTURE,
+    contentRevision: 1n,
+    machineBaselineRevision: 1n,
+    canFinalize: true,
+    finalizedRevision: 1n,
+    finalizedAt: '2026-08-20T12:00:00Z',
+  }
+  const publishedPost = {
+    ...finalizedPost,
+    status: 'published',
+    publishedUrl: 'https://blog.naver.com/alice/1',
+    publishedAt: '2026-08-21T09:00:00Z',
+  }
+  const statusLine = () => screen.getByRole('status', { name: '글 상태' })
+  const section = () => screen.getByRole('region', { name: '발행' })
+  const field = () => within(section()).getByLabelText('네이버 블로그 글 주소')
+  const saveButton = () => within(section()).getByRole('button', { name: '저장' })
+
+  function renderPost(row: FakePostRow, extra: FakePostsOptions = {}) {
+    const calls: string[] = []
+    const saves: string[] = []
+    renderAppAt(`/posts/${slug}`, {
+      user: USER,
+      calls,
+      posts: { calls, posts: [row], publishedUrlSaves: saves, ...extra },
+    })
+    return { calls, saves }
+  }
+
+  it('is a url field at the foot of ③, typed for the keyboard that pastes an address', async () => {
+    renderPost(finalizedPost)
+    const input = await screen.findByLabelText('네이버 블로그 글 주소')
+    for (const [name, value] of Object.entries({
+      type: 'url',
+      inputmode: 'url',
+      autocomplete: 'url',
+      autocapitalize: 'none',
+      autocorrect: 'off',
+      enterkeyhint: 'done',
+    })) {
+      expect(input).toHaveAttribute(name, value)
+    }
+    expect(input).toHaveValue('')
+    expect(saveButton()).toBeEnabled()
+    expect(within(section()).queryByRole('button', { name: '지우기' })).toBeNull()
+  })
+
+  it('publishes on a pasted address and stays on ③', async () => {
+    const user = userEvent.setup()
+    const { saves } = renderPost(finalizedPost)
+    await user.click(await screen.findByLabelText('네이버 블로그 글 주소'))
+    await user.paste('  https://blog.naver.com/alice/223000000001  ')
+    await user.click(saveButton())
+
+    await waitFor(() => expect(statusLine()).toHaveTextContent('발행됨'))
+    expect(saves).toEqual(['https://blog.naver.com/alice/223000000001'])
+    expect(screen.getByRole('tab', { name: '글 완성' })).toHaveAttribute('aria-selected', 'true')
+    expect(field()).toHaveValue('https://blog.naver.com/alice/223000000001')
+  })
+
+  it('accepts the mobile share address and shows it normalized', async () => {
+    const user = userEvent.setup()
+    const { saves } = renderPost(finalizedPost)
+    await user.type(
+      await screen.findByLabelText('네이버 블로그 글 주소'),
+      'https://m.blog.naver.com/alice/7{Enter}',
+    )
+
+    await waitFor(() => expect(field()).toHaveValue('https://blog.naver.com/alice/7'))
+    // What is sent is the input as typed, trimmed; the normalization is the server's answer.
+    expect(saves).toEqual(['https://m.blog.naver.com/alice/7'])
+    expect(statusLine()).toHaveTextContent('발행됨')
+  })
+
+  it('refuses another address in place and sends nothing', async () => {
+    const user = userEvent.setup()
+    const { calls } = renderPost(finalizedPost)
+    const input = await screen.findByLabelText('네이버 블로그 글 주소')
+    for (const bad of [
+      'https://cafe.naver.com/alice/1',
+      'https://blog.naver.com:443/alice/1',
+      'https://user@blog.naver.com/alice/1',
+    ]) {
+      await user.clear(input)
+      await user.type(input, bad)
+      await user.click(saveButton())
+      const message = await within(section()).findByRole('alert')
+      expect(message).toHaveTextContent('네이버 블로그 글 주소만 저장할 수 있어요.')
+      expect(input).toHaveAttribute('aria-invalid', 'true')
+      expect(input.getAttribute('aria-describedby')).toContain(message.id)
+    }
+    expect(calls).not.toContain('SavePostPublishedUrl')
+    expect(statusLine()).toHaveTextContent('확정')
+  })
+
+  it('sends nothing for an empty 저장 on a post with no address', async () => {
+    const user = userEvent.setup()
+    const { calls } = renderPost(finalizedPost)
+    await screen.findByLabelText('네이버 블로그 글 주소')
+    await user.click(saveButton())
+    expect(calls).not.toContain('SavePostPublishedUrl')
+  })
+
+  it('replaces a published address and stays 발행됨', async () => {
+    const user = userEvent.setup()
+    const { saves } = renderPost(publishedPost)
+    const input = await screen.findByLabelText('네이버 블로그 글 주소')
+    expect(input).toHaveValue('https://blog.naver.com/alice/1')
+    await user.clear(input)
+    await user.type(input, 'https://blog.naver.com/alice/2')
+    await user.click(saveButton())
+
+    await waitFor(() => expect(field()).toHaveValue('https://blog.naver.com/alice/2'))
+    expect(saves).toEqual(['https://blog.naver.com/alice/2'])
+    expect(statusLine()).toHaveTextContent('발행됨')
+  })
+
+  it.each([
+    [
+      '지우기',
+      async (user: ReturnType<typeof userEvent.setup>) =>
+        user.click(within(section()).getByRole('button', { name: '지우기' })),
+    ],
+    [
+      'an emptied field and 저장',
+      async (user: ReturnType<typeof userEvent.setup>) => {
+        await user.clear(field())
+        await user.click(saveButton())
+      },
+    ],
+  ])('clears by %s back to 확정, and ② is editable again', async (_name, clear) => {
+    const user = userEvent.setup()
+    const { saves } = renderPost(publishedPost)
+    await screen.findByLabelText('네이버 블로그 글 주소')
+    await clear(user)
+
+    await waitFor(() => expect(statusLine()).toHaveTextContent('확정'))
+    expect(saves).toEqual([''])
+    expect(field()).toHaveValue('')
+    await openStep(user, '글 다듬기')
+    expect(
+      await screen.findByRole('button', { name: '제목과 요약, 태그 수정' }),
+    ).toBeInTheDocument()
+  })
+
+  it('stays closed with its reason until the post is 확정', async () => {
+    const user = userEvent.setup()
+    const { calls } = renderPost({ ...finalizedPost, status: 'review', finalizedRevision: 0n })
+    await openStep(user, '글 완성')
+    const input = await screen.findByLabelText('네이버 블로그 글 주소')
+    expect(input).toBeDisabled()
+    expect(saveButton()).toBeDisabled()
+    const reason = within(section()).getByText('글을 확정하면 발행 URL을 입력할 수 있어요.')
+    expect(input.getAttribute('aria-describedby')).toContain(reason.id)
+    expect(calls).not.toContain('SavePostPublishedUrl')
+  })
+
+  it('says a busy refusal in place and leaves the post as it was', async () => {
+    const user = userEvent.setup()
+    renderPost(finalizedPost, { publishedUrlBusy: true })
+    await user.type(
+      await screen.findByLabelText('네이버 블로그 글 주소'),
+      'https://blog.naver.com/alice/1',
+    )
+    await user.click(saveButton())
+
+    expect(await within(section()).findByRole('alert')).toHaveTextContent(
+      '이 글에서 다른 작업이 진행 중이에요.',
+    )
+    expect(statusLine()).toHaveTextContent('확정')
+    expect(field()).toHaveValue('https://blog.naver.com/alice/1')
+  })
 })

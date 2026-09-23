@@ -20,3 +20,7 @@ export const POST_TARGET_LENGTH_DEFAULT = 1_000
 export const POST_TAG_COUNT_DEFAULT = 4
 export const POST_TAG_COUNT_MIN = 1
 export const POST_TAG_COUNT_MAX = 10
+
+/** The longest Naver Blog address a post stores, in code points. Mirrors the server's
+ *  `post.PublishedURLMaxChars` (ARCH-21), which stays authoritative. */
+export const POST_PUBLISHED_URL_MAX_CHARS = 2048

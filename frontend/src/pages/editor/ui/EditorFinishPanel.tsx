@@ -4,6 +4,7 @@ import { BlockType, type PostContent } from '@/shared/api'
 import { flushContentQueue } from '@/features/edit-post-content'
 import { VoiceLearningPanel, type useVoiceLearning } from '@/features/finalize-post'
 import { ExtractMemoriesButton } from '@/features/extract-memories'
+import { PublishedUrlField } from '@/features/record-published-url'
 import { SentenceFeedback } from '@/features/give-voice-feedback'
 import { Notice } from '@/shared/ui'
 import { ExportPanel } from '@/widgets/export-panel'
@@ -102,6 +103,8 @@ export function EditorFinishPanel({
           {t('export.languageMissing')}
         </Notice>
       )}
+      {/* The panel's foot (POST-54): what the finished post ends with is where it was published. */}
+      <PublishedUrlField post={post} className="mt-10" />
     </>
   )
 }

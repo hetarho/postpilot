@@ -51,7 +51,6 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T343 | ③ records, replaces and clears the post's Naver address | POST ARCH THEME | T339 | todo |
 | T344 | Generation freezes the ticked rule texts and the 분야 phrase list at enqueue | GEN POST QUAL GUIDE ARCH | T335 T342 T341 T333 | todo |
 | T345 | ① picks the post's 분야 and autosaves it through the draft queue | POST QUAL ARCH THEME | T337 T343 | todo |
 | T346 | ② shows this post's own M2, M3 and M4 above the article | POST QUAL ARCH THEME | T335 T343 | todo |
@@ -64,10 +63,12 @@
 | T353 | Toggling 기억 사용 keeps the post's 목표 글자 수 | POST MEM ARCH | - | todo |
 
 ## next
-- implement-task T343 (then the dep order in the tasks table; T343, T344, T347 and T348 are unblocked)
+- implement-task T344 (then the dep order in the tasks table; T344, T345, T346, T347 and T348 are unblocked)
 - T352 and T353 are independent pre-existing bug fixes (frozen memories never reach a durable generate; the 기억 사용 toggle clears 목표 글자 수)
 - create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 ## log
+- 260924 T343 done; ③ ends with a 발행 field that pastes, replaces or clears the post's Naver address through SavePostPublishedUrl, refuses a non-Naver address in place with the server's own sentence before sending (the shared fixture pins the pre-check), stays closed with its reason before 확정, and shows server refusals under the field; FE gates and lint:retirement pass (p35)
+- 260924 T343 claimed (p35)
 - 260924 T342 done; a guideline can be scoped to listed 분야 (all three shapes validated, collapsed, rescoped as one normalized patch), the owner switches the 상위 노출 단어 사용 preset and picks its 분야 as a presence patch outside the cap and text uniqueness, and every generation and write snapshot freezes global, template and 분야 texts with the preset line last while a revision never carries it; only the owner's procedures write guideline rows (structural test); BE gate passes (p35)
 - 260924 T342 claimed (p35)
 - 260924 T341 done; a generation and an applied write winner replace the post's stored nouns and replacement candidates (none clears them), a revision and a manual save keep them, an identical content with other annotations is a new machine write, Post.replacement_candidates carries them in stored order while nouns stay off the wire, and a lab candidate's output carries both with a legacy output reading as none; BE gate and gen:sql pass (p35)
@@ -86,5 +87,3 @@
 - 260924 T335 claimed (p35)
 - 260924 T334 done; a published post refuses every draft, content, option, observation, media, generation, revision, winner and finalize write before anything changes, each backed by a SQL predicate or an in-transaction guard (a lost race answers the lock); the address and the delete stay open and lab comparisons still run; BE gate, gen:sql and lint:retirement pass (p35)
 - 260924 T334 claimed (p35)
-- 260924 T333 done; templates store an edge-trimmed, bounded title area with presence semantics, create and update parse both areas together (an update checks the stored counterpart inside its transaction), and RenderedFor renders the title with the post answers into the frozen generate, revise and experiment briefs; nothing moves without one; BE gate, gen:sql and deploy tests pass (p35)
-- 260924 T333 found: .env.production.example still carries a dead PURPOSE_* block that nothing reads (out of scope)

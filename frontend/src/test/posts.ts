@@ -34,12 +34,14 @@ import {
   SavePostDraftResponseSchema,
   SavePostContentResponseSchema,
   SavePostGenerationOptionsResponseSchema,
+  SavePostPublishedUrlResponseSchema,
   type ProtoVoiceRef,
   VoiceRefSchema,
   contentLanguageFromProto,
   contentLanguageToProto,
   type ContentLanguage,
 } from '@/shared/api'
+import { parseNaverBlogUrl } from '@/entities/post'
 import { type FakeGenerationJobRow, toFakeProto } from './jobs'
 import { connectAppError } from './app-error'
 
@@ -186,6 +188,10 @@ export interface FakePostsOptions {
   /** The next SavePostDraft on this slug first publishes the post and is then refused as
    *  locked, the way a publish from another tab lands between two autosaves (POST-86). */
   publishOnDraftSave?: string
+  /** Every SavePostPublishedUrl's `url`, as sent. */
+  publishedUrlSaves?: string[]
+  /** Refuse every SavePostPublishedUrl as POST_BUSY, the way a running content job does. */
+  publishedUrlBusy?: boolean
 }
 
 /** The address a publish from another tab records in `publishOnDraftSave`. */
@@ -238,6 +244,8 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
   const { foreign = [], listFails, today = '20260828', calls } = options
   let failuresLeft = options.failSaves ?? 0
   let publishOnDraftSave = options.publishOnDraftSave
+  // The fake clock a publish is stamped with: each one later than the last (POST-75).
+  let publishSequence = 0
   let uploadSequence = 0
   let getSequenceIndex = 0
   // `video` is the RESERVATION's kind: the confirm answers with the half the upload asked for,
@@ -644,6 +652,38 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
     })
     rows.get(upload.slug)?.images.push(image)
     return create(ConfirmUploadResponseSchema, { image })
+  })
+
+  // Like the server (T329): an empty address clears a published post back to finalized; only a
+  // finalized or published post takes one; the rule is POST-77's, the same parser the pre-check
+  // runs; the same address is a no-op, and another replaces it and restamps the publish.
+  rpc(PostService.method.savePostPublishedUrl, (req) => {
+    calls?.push('SavePostPublishedUrl')
+    options.publishedUrlSaves?.push(req.url)
+    if (foreign.includes(req.slug)) throw connectAppError('POST_FORBIDDEN', Code.PermissionDenied)
+    const row = rows.get(req.slug)
+    if (!row) throw connectAppError('POST_NOT_FOUND', Code.NotFound)
+    if (options.publishedUrlBusy) throw connectAppError('POST_BUSY', Code.FailedPrecondition)
+    if (req.url.trim() === '') {
+      if (row.status === 'published') {
+        row.status = 'finalized'
+        row.publishedUrl = ''
+        row.publishedAt = ''
+      }
+      return create(SavePostPublishedUrlResponseSchema, { post: toProto(row) })
+    }
+    if (row.status !== 'finalized' && row.status !== 'published')
+      throw connectAppError('POST_NOT_FINALIZED', Code.FailedPrecondition)
+    const stored = parseNaverBlogUrl(req.url)
+    if (stored === undefined)
+      throw connectAppError('POST_PUBLISHED_URL_INVALID', Code.InvalidArgument)
+    if (row.status === 'published' && row.publishedUrl === stored)
+      return create(SavePostPublishedUrlResponseSchema, { post: toProto(row) })
+    publishSequence += 1
+    row.status = 'published'
+    row.publishedUrl = stored
+    row.publishedAt = `2026-08-28T13:${String(publishSequence).padStart(2, '0')}:00Z`
+    return create(SavePostPublishedUrlResponseSchema, { post: toProto(row) })
   })
 
   rpc(PostService.method.deleteVideo, (req) => {

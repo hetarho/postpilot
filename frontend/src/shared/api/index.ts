@@ -203,6 +203,7 @@ export {
   SavePostContentResponseSchema,
   SavePostGenerationOptionsResponseSchema,
   FinalizePostResponseSchema,
+  SavePostPublishedUrlResponseSchema,
   DeleteVideoResponseSchema,
   VideoSchema,
   StartGenerationRequestSchema,
