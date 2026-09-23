@@ -30,6 +30,7 @@ import (
 	postrpc "github.com/postpilot/backend/internal/post/rpc"
 	poststore "github.com/postpilot/backend/internal/post/store"
 	providerrpc "github.com/postpilot/backend/internal/provider/rpc"
+	qualityrpc "github.com/postpilot/backend/internal/quality/rpc"
 	templaterpc "github.com/postpilot/backend/internal/template/rpc"
 	voicerpc "github.com/postpilot/backend/internal/voice/rpc"
 )
@@ -168,6 +169,9 @@ func handlers(c *contexts) []rpcserver.Registrar {
 		},
 		func(opts ...connect.HandlerOption) (string, http.Handler) {
 			return postpilotv1connect.NewMemoryServiceHandler(memoryrpc.NewHandler(c.memory), opts...)
+		},
+		func(opts ...connect.HandlerOption) (string, http.Handler) {
+			return postpilotv1connect.NewQualityServiceHandler(qualityrpc.NewHandler(c.quality), opts...)
 		},
 		func(opts ...connect.HandlerOption) (string, http.Handler) {
 			return postpilotv1connect.NewGenerationServiceHandler(generationrpc.NewHandler(c.generation), opts...)

@@ -1,5 +1,56 @@
 package quality
 
+import (
+	"errors"
+	"time"
+)
+
+// ErrPostNotFound covers an unknown slug and another account's alike: the two must not be
+// distinguishable.
+var ErrPostNotFound = errors.New("quality: post not found")
+
+// StoredMeasurement is one revision's self-measurement as it is stored (QUAL-4): M3 and M4,
+// stamped with the content revision and the MeasureVersion that produced them, so a row with
+// either stamp different is stale.
+type StoredMeasurement struct {
+	PostSlug, UserID string
+	Revision         int64
+	MeasureVersion   int
+	Self             Self
+	ComputedAt       time.Time
+}
+
+// PhraseList is one field's phrases in rank order, as the daily batch last wrote them
+// (QUAL-41). RefreshedAt is nil for a field whose first fetch failed.
+type PhraseList struct {
+	Field         string
+	Phrases       []string
+	CorpusSize    int
+	RefreshedAt   *time.Time
+	NextRefreshAt time.Time
+}
+
+// PostSnapshot is one post as this context reads it. Content nil means the post has none yet.
+type PostSnapshot struct {
+	Slug            string
+	Revision        int64
+	Content         *Document
+	ContentLanguage *Language
+	TargetLanguage  Language
+	Nouns           []string
+}
+
+// PublishedPost is one post of the account's published window, which is read newest
+// publication first (QUAL-39).
+type PublishedPost struct {
+	Slug            string
+	Revision        int64
+	Content         Document
+	ContentLanguage *Language
+	Nouns           []string
+	PublishedAt     time.Time
+}
+
 // Language is the language a post's content is measured in. It decides the containment rule
 // (QUAL-7) and nothing else.
 type Language string

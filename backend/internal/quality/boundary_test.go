@@ -28,14 +28,14 @@ func TestMeasurementCallsNoProviderAndCostsNoCredit(t *testing.T) {
 	listing := goOutput(t, goBin, "list", "-C", root, "-f", `{{.ImportPath}} {{join .Deps " "}}`,
 		"github.com/postpilot/backend/internal/quality/...")
 
-	checked := 0
+	checked := map[string]bool{}
 	for _, line := range strings.Split(strings.TrimSpace(listing), "\n") {
 		fields := strings.Fields(line)
 		if len(fields) == 0 {
 			continue
 		}
 		pkg, deps := fields[0], fields[1:]
-		checked++
+		checked[pkg] = true
 		for _, dep := range deps {
 			for _, bad := range measurementForbidden {
 				if dep == bad || strings.HasPrefix(dep, bad+"/") {
@@ -44,8 +44,19 @@ func TestMeasurementCallsNoProviderAndCostsNoCredit(t *testing.T) {
 			}
 		}
 	}
-	if checked == 0 {
+	if len(checked) == 0 {
 		t.Fatal("no quality package was checked")
+	}
+	// The store and the Connect edge are held to the same rule as the measurements: neither may
+	// reach a provider or the ledger either.
+	for _, pkg := range []string{
+		"github.com/postpilot/backend/internal/quality",
+		"github.com/postpilot/backend/internal/quality/store",
+		"github.com/postpilot/backend/internal/quality/rpc",
+	} {
+		if !checked[pkg] {
+			t.Errorf("%s was not among the checked packages", pkg)
+		}
 	}
 }
 

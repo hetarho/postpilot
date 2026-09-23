@@ -32,6 +32,8 @@ import (
 	poststore "github.com/postpilot/backend/internal/post/store"
 	"github.com/postpilot/backend/internal/provider"
 	providerstore "github.com/postpilot/backend/internal/provider/store"
+	"github.com/postpilot/backend/internal/quality"
+	qualitystore "github.com/postpilot/backend/internal/quality/store"
 	"github.com/postpilot/backend/internal/template"
 	templatestore "github.com/postpilot/backend/internal/template/store"
 	"github.com/postpilot/backend/internal/tosspay"
@@ -56,7 +58,8 @@ type contexts struct {
 	payments     billing.Provider
 	billing      *billing.Service
 
-	post *post.Service
+	post    *post.Service
+	quality *quality.Service
 
 	clipStore      *clipstore.Store
 	clipPorts      clipapp.Binder
@@ -195,6 +198,11 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 			MemoryLinks: postMemoryLinks{app: c},
 		},
 	)
+	// Quality reads only post, which exists by now, so its adapter holds the service directly.
+	qualityStore := qualitystore.New(handle.Writer, handle.Reader)
+	c.quality = quality.NewService(quality.Deps{
+		Measurements: qualityStore, Phrases: qualityStore, Posts: qualityPosts{service: c.post}, Now: time.Now,
+	})
 	c.clipStore = clipstore.New(handle.Writer, handle.Reader)
 	c.clipSources = clipapp.NewSourceService(c.clipStore, p.bucket, clip.DefaultSourceLimits(clipEnvironment(cfg)))
 	c.clip = clipapp.NewService(c.clipStore, clip.DefaultLimits(), c.clipSources, clipapp.NewFinalizer(handle.Writer, c.clipPorts, c.clipStore, clip.DefaultRenderConfig(clipEnvironment(cfg)), nil))
