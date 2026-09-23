@@ -36,7 +36,7 @@
 | CDS | 25 | 23 | CDS-17✎ CDS-19✎ CDS-21✎ CDS-84✎ | 1 |
 | BILL | 4 | 4 | - | 0 |
 | MEM | 1 | 1 | - | 2 |
-| QUAL | 2 | 0 | all | 0 |
+| QUAL | 3 | 0 | all | 0 |
 
 ## review
 | id | st |
@@ -56,6 +56,8 @@
 - resume create-task QUAL POST GEN GUIDE TMPL from spec/handoff/create-task-260923/ (plan.json = 30 tasks T322..T351, resolutions.md = R1..R42); no task file is written yet
 - create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 ## log
+- 260924 update-ssot QUAL complete; r3 decides M3's and M4's rule texts (no repeated noun, cover the title; at least three block types from what the material fits) and makes every rule text yield to natural writing
+- 260924 update-ssot QUAL start; the M3 and M4 rule texts carry no decided substance (T331 SSOT-GAP)
 - 260923 create-task QUAL POST GEN GUIDE TMPL paused for a machine switch; mapping, SSOT fixes and the 30-task plan are done, task files not yet written; handoff in spec/handoff/create-task-260923/
 - 260923 update-ssot complete; QUAL r2 POST r11 GEN r10 GUIDE r5 TMPL r10 close 34 of the 42 mapping gaps (a published post refuses every write but URL replace/clear and delete; the write pass returns nouns; the ② offer needs only a 분야; revise drops the preset line); the other 8 are implementation rules for the tasks
 - 260923 create-task QUAL POST GEN GUIDE TMPL start; QUAL r1 all, POST r10, GEN r9, GUIDE r4, TMPL r9

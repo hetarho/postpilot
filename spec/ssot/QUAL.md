@@ -1,5 +1,5 @@
 # QUAL published-post measurement and 분야 phrases
-> r2 | Measure what code can count about a post while it can still be changed and across the account's published Naver posts, offer one rule per finding, and collect each 분야's top-ranking phrases from the official search API.
+> r3 | Measure what code can count about a post while it can still be changed and across the account's published Naver posts, offer one rule per finding, and collect each 분야's top-ranking phrases from the official search API.
 
 ## decisions
 - QUAL-1 [o] QUAL owns the two observations the product makes outside a single post: how an account's published posts look next to each other, and which phrases rank for a 분야 on Naver
@@ -44,6 +44,9 @@
 - QUAL-40 [o] a measurement that cannot be computed is absent rather than zero, and an absent value neither passes nor warns
 - QUAL-41 [o] a 분야 whose phrase list is empty, before its first batch or on a box without Naver keys, behaves as no 분야 (→GEN-48)
 - QUAL-42 [o] the product runs without Naver keys: the batch does not run, every list stays empty, and nothing on screen names the missing keys
+- QUAL-43 [o] M3's rule text tells the writer not to keep repeating one noun through the body, varying or dropping the repeats, and to cover in the body what the title names; it names no noun ← M3 is measured inside each post, so no noun from earlier posts belongs in the next one
+- QUAL-44 [o] M4's rule text tells the writer to build the body from at least three distinct block types, mixing in whichever of HEADING, LIST and QUOTE the material fits, and to invent nothing the source lacks to fill one
+- QUAL-45 [o] every rule text yields to natural writing: it asks for no synonym, cut or block that would read forced ← a rule that makes the post read unnatural costs more than the band it chases
 
 ## flow
 - measure (post): content revision changes → that post's own metrics computed and stored → ② renders them
@@ -59,5 +62,6 @@
 - config: the M2 run length (8 어절), M1's window (100 titles), M2/M3/M4's window (20 posts), the per-metric minimums, the bands and the batch interval are product-owned settings, not per-account options
 
 ## chg
+- r3 260924 QUAL-43+ 44+ M3's and M4's rule texts decided · QUAL-45+ every rule text yields to natural writing
 - r2 260923 QUAL-41+ 42+ an empty list behaves as no 분야 and the product runs without Naver keys · QUAL-4✎ everything stored per revision→M3 and M4 stored, M2 and the aggregate at read · QUAL-7✎ posts' most frequent noun→the write pass's nouns matched against content titles · QUAL-9✎ counts by the same containment rule, absent with no nouns · QUAL-10✎ minimum 3, photos are IMAGE blocks · QUAL-12✎ four row states · QUAL-14✎ the account-level M2 run · QUAL-16✎ nouns ride the write call · QUAL-23✎ ids and query strings · QUAL-26✎ tokenizers→write-pass nouns with a Korean fallback and two stopword lists · QUAL-36✎ ② renders M2's minimum · schema line for post_measurements and field_phrase_lists · constraint "a byte-identical prompt"→"no quality-rule bytes", since every write answer now carries `nouns`
 - r1 260923 initial
