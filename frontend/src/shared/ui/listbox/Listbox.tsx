@@ -1,4 +1,4 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
@@ -9,6 +9,15 @@ import {
   LISTBOX_TRIGGER_GAP_PX,
   LISTBOX_VIEWPORT_GUTTER_PX,
 } from './config'
+import { useAnchoredPanel } from '../anchored-panel/useAnchoredPanel'
+
+const PLACEMENT = {
+  gapPx: LISTBOX_TRIGGER_GAP_PX,
+  gutterPx: LISTBOX_VIEWPORT_GUTTER_PX,
+  minPx: LISTBOX_MIN_PANEL_PX,
+  maxViewportRatio: LISTBOX_MAX_VIEWPORT_RATIO,
+}
+
 export interface ListboxOption<T> {
   value: T
   label: string
@@ -33,31 +42,6 @@ interface ListboxProps<T> {
   'aria-label'?: string
   'aria-describedby'?: string
   'aria-invalid'?: boolean
-}
-
-/** Where the open panel is painted, in viewport coordinates. It is `position: fixed` at the
- *  document body, so these are the measured trigger's own numbers rather than an offset inside
- *  some containing block. */
-interface PanelBox {
-  left: number
-  width: number
-  /** Set for a panel that drops DOWN — the distance from the viewport's top edge. */
-  top?: number
-  /** Set for a panel that flipped UP — the distance from the viewport's bottom edge. */
-  bottom?: number
-  maxHeight: number
-  drop: 'down' | 'up'
-}
-
-function samePanelBox(a: PanelBox, b: PanelBox): boolean {
-  return (
-    a.left === b.left &&
-    a.width === b.width &&
-    a.top === b.top &&
-    a.bottom === b.bottom &&
-    a.maxHeight === b.maxHeight &&
-    a.drop === b.drop
-  )
 }
 
 /** The app-drawn replacement for the native select element (design-language §7, owner decision
@@ -99,7 +83,6 @@ export function Listbox<T>({
   const panelId = `${generatedId}-panel`
   const valueId = `${generatedId}-value`
   const [open, setOpen] = useState(false)
-  const [box, setBox] = useState<PanelBox>()
   const rootRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
@@ -120,74 +103,22 @@ export function Listbox<T>({
     if (option.value !== value) onChange(option.value)
   }
 
-  // A trigger can sit anywhere in the viewport, and nothing in CSS knows where — a `dvh` ceiling
-  // is the same number for a field at the top of the page and for one in the docked bar, where a
-  // panel half the screen tall opens entirely past the bottom edge. So the room is MEASURED: the
-  // panel opens downward into the gap it actually has, flips above the trigger when that gap is
-  // too small and the one overhead is larger, and scrolls inside whichever it took. The ratio
-  // caps it where there is more room than a list needs; the floor keeps it usable rather than
-  // squeezing it to a sliver for a trigger pinned against an edge.
-  //
-  // Since the panel is portalled, the same measurement also supplies its POSITION, and it has to
-  // be repeated for as long as the panel is open: a page or overlay scroll moves the trigger out
-  // from under a panel that no longer travels with it.
-  useLayoutEffect(() => {
-    const trigger = triggerRef.current
-    if (!open || !trigger) return
-    const measure = () => {
-      const anchor = trigger.getBoundingClientRect()
-      // Gone from the viewport, which happens when its own scroller carries it away. A panel
-      // anchored to nothing is worse than no panel, so it closes — but without stealing focus
-      // back, since a scroll is not a dismissal the user aimed at the trigger.
-      //
-      // `height > 0` is what separates "laid out, and scrolled out of sight" from "not laid out
-      // at all": scrolling never changes a rect's size, while an environment with no layout engine
-      // reports every rect as zero. Without it the panel would refuse to open in jsdom — and in
-      // any browser during the frame before layout.
-      const gone =
-        anchor.height > 0 &&
-        (anchor.bottom <= 0 ||
-          anchor.top >= window.innerHeight ||
-          anchor.right <= 0 ||
-          anchor.left >= window.innerWidth)
-      if (gone) {
-        // Focus is on an OPTION at this point (the panel takes it on open), and that node is about
-        // to be unmounted — leaving `document.body` focused, which is outside any sheet's trap and
-        // lets the next Tab escape the modal. So focus goes back to the trigger even though the
-        // user did not dismiss anything, with `preventScroll` so returning it does not undo the
-        // scroll that caused this.
-        close(panelRef.current?.contains(document.activeElement) ?? false, true)
-        return
-      }
-      const gap = LISTBOX_TRIGGER_GAP_PX + LISTBOX_VIEWPORT_GUTTER_PX
-      const below = window.innerHeight - anchor.bottom - gap
-      const above = anchor.top - gap
-      const flip = below < LISTBOX_MIN_PANEL_PX && above > below
-      const room = Math.min(flip ? above : below, window.innerHeight * LISTBOX_MAX_VIEWPORT_RATIO)
-      const next: PanelBox = {
-        drop: flip ? 'up' : 'down',
-        left: anchor.left,
-        width: anchor.width,
-        top: flip ? undefined : anchor.bottom + LISTBOX_TRIGGER_GAP_PX,
-        bottom: flip ? window.innerHeight - anchor.top + LISTBOX_TRIGGER_GAP_PX : undefined,
-        maxHeight: Math.max(room, LISTBOX_MIN_PANEL_PX),
-      }
-      // Kept BY VALUE. Callers pass their options inline, so this effect re-runs on every render
-      // of the field's parent; a fresh object each time would be a new state on every render and
-      // a new render on every state. It is also what keeps a scroll from re-rendering the panel
-      // once the trigger has stopped moving.
-      setBox((current) => (current && samePanelBox(current, next) ? current : next))
-    }
-    measure()
-    // Capture, so a scroll inside ANY ancestor — a sheet's body, the page — is seen; `scroll`
-    // does not bubble.
-    window.addEventListener('scroll', measure, true)
-    window.addEventListener('resize', measure)
-    return () => {
-      window.removeEventListener('scroll', measure, true)
-      window.removeEventListener('resize', measure)
-    }
-  }, [open, options])
+  // The panel is measured against the trigger for as long as it is open (useAnchoredPanel). When
+  // its own scroller carries the trigger out of the viewport the panel is given up — without
+  // stealing focus back, since a scroll is not a dismissal the user aimed at the trigger. Unless
+  // focus is on an OPTION at that point (the panel takes it on open): that node is about to be
+  // unmounted, which would leave `document.body` focused, outside any sheet's trap, and let the
+  // next Tab escape the modal. So focus then goes back to the trigger, with `preventScroll` so
+  // returning it does not undo the scroll that caused this.
+  const box = useAnchoredPanel({
+    open,
+    triggerRef,
+    panelRef,
+    placement: PLACEMENT,
+    width: 'trigger',
+    onGone: (focusWasInside) => close(focusWasInside, true),
+    remeasure: options,
+  })
 
   useEffect(() => {
     if (!open) return

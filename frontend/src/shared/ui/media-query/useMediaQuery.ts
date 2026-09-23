@@ -7,11 +7,16 @@ import { useCallback, useSyncExternalStore } from 'react'
  *  from the moment it renders, so hiding it with `sm:hidden` beside a popover would leave the wide
  *  screen unable to scroll. `Popover` therefore has to pick one, and it picks here.
  *
- *  It lives beside its one caller rather than in `shared/lib`, which is a react-free layer by
- *  construction (the ESLint boundaries rule). Move it to its own `shared/ui` directory when a
- *  second primitive needs it — note that a dialog-or-sheet surface is NOT one: `Sheet` already
- *  is a bottom sheet on a phone and a centred dialog from `md:` up, in CSS, on one mount. */
+ *  The hook lives in `shared/ui` rather than `shared/lib`, which is a react-free layer by
+ *  construction (the ESLint boundaries rule), and in its own directory since a second primitive
+ *  needed it — note that a dialog-or-sheet surface is NOT one: `Sheet` already is a bottom sheet
+ *  on a phone and a centred dialog from `md:` up, in CSS, on one mount. */
 export const SM_MEDIA_QUERY = '(min-width: 40rem)'
+
+/** A pointer that can hover and aim finely: a mouse or a trackpad. Only under it does hovering
+ *  open an anchored panel — on touch an emulated enter would open one a tap never asked for, and
+ *  nothing may be reachable only by hovering (THEME-32). */
+export const FINE_HOVER_MEDIA_QUERY = '(hover: hover) and (pointer: fine)'
 
 /** Subscribes to a media query, re-rendering when it starts or stops matching. Reports `false`
  *  wherever `matchMedia` is absent, so a component's phone shape is the fallback — the base

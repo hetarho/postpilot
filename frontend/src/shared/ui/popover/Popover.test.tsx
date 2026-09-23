@@ -2,9 +2,11 @@ import { useState } from 'react'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, it } from 'vitest'
-import { SM_MEDIA_QUERY } from './useMediaQuery'
+import { SM_MEDIA_QUERY } from '../media-query/useMediaQuery'
 import { Dialog } from '../dialog/Dialog'
+import { InlinePopover } from '../inline-popover/InlinePopover'
 import { Listbox } from '../listbox/Listbox'
+import { Toggletip } from '../toggletip/Toggletip'
 import { Popover } from './Popover'
 
 it('opens from the keyboard, closes on Escape, and restores trigger focus', async () => {
@@ -206,6 +208,37 @@ it('survives a modal opened from inside its own panel', async () => {
   await user.click(screen.getByRole('button', { name: '바꾸기' }))
 
   // The panel is still open, so the control that opened the dialog is still mounted.
+  expect(screen.getByRole('dialog', { name: '테스트 옵션' })).toBeInTheDocument()
+})
+
+// `InlinePopover` and `Toggletip` portal their panels to the body, as a listbox does, so a press
+// inside one opened from this panel lands outside its root. It must still count as inside.
+it('survives a press inside an anchored panel opened from its own panel', async () => {
+  const user = userEvent.setup()
+  render(
+    <Popover label="테스트 옵션">
+      {() => (
+        <p>
+          <InlinePopover label="바꿔 쓸 표현" panel={() => <span>솔직한 방문기</span>}>
+            솔직 후기
+          </InlinePopover>
+          <Toggletip label="반복 줄이기 설명">가장 많이 쓴 명사의 비율이에요.</Toggletip>
+        </p>
+      )}
+    </Popover>,
+  )
+  await user.click(screen.getByRole('button', { name: '테스트 옵션' }))
+
+  await user.click(screen.getByRole('button', { name: '솔직 후기' }))
+  await user.click(screen.getByText('솔직한 방문기'))
+  expect(screen.getByRole('dialog', { name: '테스트 옵션' })).toBeInTheDocument()
+
+  await user.click(screen.getByRole('button', { name: '반복 줄이기 설명' }))
+  const bubble = document.body.querySelector<HTMLElement>(
+    '[data-anchored-panel][aria-hidden="true"]',
+  )
+  expect(bubble).not.toBeNull()
+  await user.pointer({ keys: '[MouseLeft]', target: bubble! })
   expect(screen.getByRole('dialog', { name: '테스트 옵션' })).toBeInTheDocument()
 })
 

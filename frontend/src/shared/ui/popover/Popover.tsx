@@ -15,7 +15,8 @@ import { POPOVER_VIEWPORT_GUTTER_PX, POPOVER_MIN_PANEL_PX, POPOVER_TRIGGER_GAP_P
 import { Button } from '../button/Button'
 import type { ButtonSize, ButtonVariant } from '../button/buttonStyles'
 import { Sheet } from '../sheet/Sheet'
-import { SM_MEDIA_QUERY, useMediaQuery } from './useMediaQuery'
+import { SM_MEDIA_QUERY, useMediaQuery } from '../media-query/useMediaQuery'
+import { ANCHORED_PANEL_ATTRIBUTE } from '../anchored-panel/useAnchoredPanel'
 
 const focusableSelector =
   'a[href], summary, input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"]):not([disabled])'
@@ -140,6 +141,9 @@ export const Popover = forwardRef<
       // its open option list to the body so no scroller can clip it, which puts the option the
       // user is choosing outside this root. Closing here would unmount the field mid-choice.
       if (target?.closest?.('[role="listbox"]')) return
+      // Nor on the panel of an `InlinePopover` or a `Toggletip` opened from inside this one, which
+      // are portalled for the same reason and carry the anchored-panel attribute.
+      if (target?.closest?.(`[${ANCHORED_PANEL_ATTRIBUTE}]`)) return
       if (!rootRef.current?.contains(target)) close()
     }
     const onKeyDown = (event: KeyboardEvent) => {
