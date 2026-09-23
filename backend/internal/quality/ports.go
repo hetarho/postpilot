@@ -28,3 +28,10 @@ type PostSource interface {
 	// Published is the account's published posts, newest publication first, at most limit.
 	Published(ctx context.Context, userID string, limit int) ([]PublishedPost, error)
 }
+
+// BlogSearch is the Naver blog search as the phrase batch reads it: one page of plain titles
+// and descriptions from start (1-based). The port is this context's, so the wrapper that
+// implements it never imports quality (ARCH-6).
+type BlogSearch interface {
+	SearchBlog(ctx context.Context, query string, start int) ([]SearchItem, error)
+}

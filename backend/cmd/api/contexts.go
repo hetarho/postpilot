@@ -58,8 +58,9 @@ type contexts struct {
 	payments     billing.Provider
 	billing      *billing.Service
 
-	post    *post.Service
-	quality *quality.Service
+	post        *post.Service
+	quality     *quality.Service
+	phraseBatch *quality.PhraseBatch
 
 	clipStore      *clipstore.Store
 	clipPorts      clipapp.Binder
@@ -204,6 +205,8 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 	c.quality = quality.NewService(quality.Deps{
 		Measurements: qualityStore, Phrases: qualityStore, Posts: qualityPosts{service: c.post}, Now: time.Now,
 	})
+	// Built in every mode: without both Naver keys its search is a true nil and it runs no pass.
+	c.phraseBatch = quality.NewPhraseBatch(qualityStore, phraseSearch(cfg), cfg.QualityPhraseRefreshInterval, time.Now)
 	c.clipStore = clipstore.New(handle.Writer, handle.Reader)
 	c.clipSources = clipapp.NewSourceService(c.clipStore, p.bucket, clip.DefaultSourceLimits(clipEnvironment(cfg)))
 	c.clip = clipapp.NewService(c.clipStore, clip.DefaultLimits(), c.clipSources, clipapp.NewFinalizer(handle.Writer, c.clipPorts, c.clipStore, clip.DefaultRenderConfig(clipEnvironment(cfg)), nil))

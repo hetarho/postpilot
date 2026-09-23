@@ -1,6 +1,9 @@
 package quality
 
-import "math"
+import (
+	"math"
+	"time"
+)
 
 // The product's own measurement settings (QUAL-6, QUAL-11). They are code constants rather than
 // env: they are product-owned, not per-account options, and changing a band rewrites what every
@@ -41,3 +44,21 @@ func Minimum(m Metric) int {
 		return math.MaxInt
 	}
 }
+
+// The daily phrase batch (QUAL-17, QUAL-38). PhraseRefreshInterval is the product default the
+// QUALITY_PHRASE_REFRESH_INTERVAL override replaces. PhraseRefreshCheck is how often the loop
+// looks for a due field: separate from the interval on purpose, because ticking once per
+// interval against a next refresh stamped a moment after the tick finds nothing due on the next
+// tick, and would refresh every second interval.
+const (
+	PhraseRefreshInterval = 24 * time.Hour
+	PhraseRefreshCheck    = 10 * time.Minute
+	PhraseRetryDelay      = time.Hour
+	// PhrasePageSize is one search page, which must equal the search client's display size;
+	// PhrasePages of them make QUAL-17's 300 results.
+	PhrasePageSize  = 100
+	PhrasePages     = 3
+	PhraseMinTokens = 2
+	PhraseMaxTokens = 5
+	PhraseListMax   = 50
+)

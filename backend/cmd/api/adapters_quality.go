@@ -4,7 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 
+	"github.com/postpilot/backend/internal/naversearch"
+	"github.com/postpilot/backend/internal/platform/config"
 	"github.com/postpilot/backend/internal/post"
 	"github.com/postpilot/backend/internal/quality"
 )
@@ -120,4 +123,33 @@ func qualityContentLanguage(language *post.Language) (*quality.Language, error) 
 		return nil, fmt.Errorf("unknown content language %q", *language)
 	}
 	return &mapped, nil
+}
+
+// naverBlog is the search client as the adapter below uses it, so a test can stand one in.
+type naverBlog interface {
+	SearchBlog(ctx context.Context, query string, start int) ([]naversearch.Item, error)
+}
+
+// qualityBlogSearch hands the phrase batch the Naver blog search, item for item in its order.
+type qualityBlogSearch struct{ client naverBlog }
+
+func (a qualityBlogSearch) SearchBlog(ctx context.Context, query string, start int) ([]quality.SearchItem, error) {
+	items, err := a.client.SearchBlog(ctx, query, start)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]quality.SearchItem, len(items))
+	for i, item := range items {
+		out[i] = quality.SearchItem{Title: item.Title, Description: item.Description}
+	}
+	return out, nil
+}
+
+// phraseSearch is the batch's search, or nil without both Naver keys (QUAL-42). It returns the
+// interface so that disabled is a true nil, never a typed nil that would read as enabled.
+func phraseSearch(cfg *config.Config) quality.BlogSearch {
+	if !cfg.NaverSearchEnabled {
+		return nil
+	}
+	return qualityBlogSearch{client: naversearch.New(cfg.NaverSearchClientID, cfg.NaverSearchClientSecret, http.DefaultClient)}
 }

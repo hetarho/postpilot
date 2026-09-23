@@ -7,12 +7,16 @@ import (
 )
 
 // What a measurement must never reach (QUAL-16): the model port, a provider, the credit ledger
-// or the job queue. Each is the package itself and anything under it.
+// or the job queue. The phrase batch adds two: no guideline package, since a phrase list writes
+// no guideline text (GUIDE-33), and not the search wrapper, whose port quality owns (ARCH-6).
+// Each is the package itself and anything under it.
 var measurementForbidden = []string{
 	"github.com/postpilot/backend/internal/llm",
 	"github.com/postpilot/backend/internal/provider",
 	"github.com/postpilot/backend/internal/usage",
 	"github.com/postpilot/backend/internal/job",
+	"github.com/postpilot/backend/internal/guideline",
+	"github.com/postpilot/backend/internal/naversearch",
 }
 
 // TestMeasurementCallsNoProviderAndCostsNoCredit asks the Go toolchain for the real dependency
@@ -39,7 +43,7 @@ func TestMeasurementCallsNoProviderAndCostsNoCredit(t *testing.T) {
 		for _, dep := range deps {
 			for _, bad := range measurementForbidden {
 				if dep == bad || strings.HasPrefix(dep, bad+"/") {
-					t.Errorf("%s depends on %s — a measurement calls no provider and costs no credit", pkg, dep)
+					t.Errorf("%s depends on %s, which quality must never reach", pkg, dep)
 				}
 			}
 		}

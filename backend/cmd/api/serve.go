@@ -83,6 +83,8 @@ func serve(ctx context.Context, c *contexts) error {
 	if cfg.BillingEnabled {
 		go runBillingWorker(ctx, c.billing)
 	}
+	// Its catch-up runs inside its own goroutine, so a slow search never holds /health shut.
+	go c.phraseBatch.Run(ctx)
 
 	workerCtx, cancelWorkers := context.WithCancel(ctx)
 	defer cancelWorkers()
