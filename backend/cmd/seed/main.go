@@ -21,6 +21,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"time"
@@ -36,6 +37,10 @@ import (
 	"github.com/postpilot/backend/internal/platform/db"
 	"github.com/postpilot/backend/internal/post"
 	poststore "github.com/postpilot/backend/internal/post/store"
+	"github.com/postpilot/backend/internal/quality"
+	qualitystore "github.com/postpilot/backend/internal/quality/store"
+	"github.com/postpilot/backend/internal/template"
+	templatestore "github.com/postpilot/backend/internal/template/store"
 	"github.com/postpilot/backend/internal/usage"
 	usagestore "github.com/postpilot/backend/internal/usage/store"
 	"github.com/postpilot/backend/internal/voice"
@@ -83,12 +88,30 @@ func run(ctx context.Context) error {
 		)},
 		Posts: posts{store: poststore.New(handle.Writer, handle.Reader)},
 		Media: media{store: clipstore.New(handle.Writer, handle.Reader)},
-		Now:   time.Now,
+		Templates: templates{svc: template.NewService(
+			templatestore.New(handle.Writer, handle.Reader),
+			// The limits cmd/api builds the context with, so the fixture is held to the same
+			// ceilings a real save is.
+			template.Limits{
+				NameMaxChars: cfg.TemplateNameMaxChars, DescriptionMaxChars: cfg.TemplateDescriptionMaxChars,
+				BodyMaxChars: cfg.TemplateBodyMaxChars, TitleAreaMaxChars: cfg.TemplateTitleAreaMaxChars,
+				MaxPerAccount:      cfg.TemplateMaxPerAccount,
+				MaxRepeatExpansion: cfg.TemplateMaxRepeatExpansion,
+				PhotoRowMax:        cfg.TemplatePhotoRowMax,
+				AskLabelMaxChars:   cfg.TemplateAskLabelMaxChars,
+				AskMaxPerBody:      cfg.TemplateAskMaxPerBody,
+				TargetLengthMin:    1,
+				TagCountMin:        post.TagCountRange.Min,
+				TagCountMax:        post.TagCountRange.Max,
+			},
+		)},
+		PhraseLists: phraseLists{store: qualitystore.New(handle.Writer, handle.Reader)},
+		Now:         time.Now,
 	})
 	if err != nil {
 		return err
 	}
-	printReport(report, cfg.DBPath)
+	printReport(os.Stdout, report, cfg.DBPath)
 	return nil
 }
 
@@ -175,12 +198,39 @@ func (p posts) Write(ctx context.Context, article devseed.Article) error {
 	if err := p.store.CreatePost(ctx, created); err != nil {
 		return err
 	}
+	// The 분야 and the template come before any content, since every write after the publish
+	// below is refused on a published post (POST-86).
+	if article.Field != "" {
+		if !quality.Known(article.Field) {
+			return fmt.Errorf("unknown blog field %q", article.Field)
+		}
+		assigned, err := p.store.AssignField(ctx, slug, article.UserID, &article.Field, article.CreatedAt)
+		if err != nil {
+			return err
+		}
+		if !assigned {
+			return fmt.Errorf("blog field for %q changed nothing", slug)
+		}
+	}
+	if article.TemplateID != "" {
+		assigned, err := p.store.AssignTemplate(ctx, slug, article.UserID, &article.TemplateID, post.TemplateNumbers{}, article.CreatedAt)
+		if err != nil {
+			return err
+		}
+		if !assigned {
+			return fmt.Errorf("template for %q changed nothing", slug)
+		}
+	}
 	if article.Content == nil {
-		// A draft is finished at the create: NULL content is what "never generated" means.
+		// A draft is finished here: NULL content is what "never generated" means.
 		return nil
 	}
 
 	content := mapContent(article.Title, *article.Content)
+	candidates, err := mapCandidates(article.Content.Replacements)
+	if err != nil {
+		return err
+	}
 	// The fixture's own guard. ValidateContent is the rule the editor and the generation
 	// pipeline both apply, and applying it here means a malformed fixture fails the seed
 	// instead of producing a post no screen can render. A seeded post has no attachments,
@@ -188,14 +238,17 @@ func (p posts) Write(ctx context.Context, article devseed.Article) error {
 	if err := post.ValidateContent(content, nil, nil); err != nil {
 		return err
 	}
-	written, err := p.store.UpdateGeneratedContent(ctx, slug, article.UserID, content, language, post.WriteAnnotations{}, article.CreatedAt)
+	// The nouns and candidates a write returns beside its content, stored apart from it the way
+	// a real write stores them; no candidates is written as NULL (GEN-53, GEN-55).
+	annotations := post.WriteAnnotations{Nouns: article.Content.Nouns, Candidates: candidates}
+	written, err := p.store.UpdateGeneratedContent(ctx, slug, article.UserID, content, language, annotations, article.CreatedAt)
 	if err != nil {
 		return err
 	}
 	if !written {
 		return fmt.Errorf("generated content for %q changed nothing", slug)
 	}
-	if article.Status != devseed.StatusFinalized {
+	if article.Status != devseed.StatusFinalized && article.Status != devseed.StatusPublished {
 		return nil
 	}
 
@@ -213,7 +266,47 @@ func (p posts) Write(ctx context.Context, article devseed.Article) error {
 	if !finalized {
 		return fmt.Errorf("finalize %q was refused at revision %d", slug, stored.ContentRevision)
 	}
+	if article.Status != devseed.StatusPublished {
+		return nil
+	}
+
+	// The post context's own address rule is the fixture's guard, and what it returns is what
+	// a real paste would store.
+	address, err := post.ParseNaverBlogURL(article.PublishedURL)
+	if err != nil {
+		return err
+	}
+	published, err := p.store.PublishPost(ctx, slug, article.UserID, address, article.PublishedAt)
+	if err != nil {
+		return err
+	}
+	if !published {
+		return fmt.Errorf("publish %q was refused", slug)
+	}
 	return nil
+}
+
+// mapCandidates spells each fixture candidate the drafting context's way. The surface mapping
+// is closed: an unknown spelling fails the seed, as an unknown status would.
+func mapCandidates(replacements []devseed.Replacement) ([]post.ReplacementCandidate, error) {
+	candidates := make([]post.ReplacementCandidate, 0, len(replacements))
+	for _, replacement := range replacements {
+		var surface post.ReplacementSurface
+		switch replacement.Surface {
+		case devseed.SurfaceTitle:
+			surface = post.ReplacementSurfaceTitle
+		case devseed.SurfaceTag:
+			surface = post.ReplacementSurfaceTag
+		case devseed.SurfaceBody:
+			surface = post.ReplacementSurfaceBody
+		default:
+			return nil, fmt.Errorf("unknown replacement surface %q", replacement.Surface)
+		}
+		candidates = append(candidates, post.ReplacementCandidate{
+			Surface: surface, Index: replacement.Index, Source: replacement.Source, Phrases: replacement.Phrases,
+		})
+	}
+	return candidates, nil
 }
 
 // mintSlug asks the post context for the slug its own rule produces, so a seeded post's
@@ -254,6 +347,42 @@ func mapContent(fallbackTitle string, content devseed.Content) post.PostContent 
 	return post.PostContent{Title: title, Summary: content.Summary, Tags: content.Tags, Blocks: blocks}
 }
 
+// templates adapts the template context through its service, so the fixture's title area and
+// body pass the same parse and limits a save from the builder does (TMPL-50).
+type templates struct{ svc *template.Service }
+
+func (t templates) Create(ctx context.Context, fixture devseed.Template) (string, error) {
+	created, err := t.svc.Create(ctx, fixture.UserID, fixture.Name, fixture.Description, fixture.Body, fixture.TitleArea, template.Numbers{})
+	if err != nil {
+		return "", err
+	}
+	return created.ID, nil
+}
+
+// phraseLists adapts the quality context's phrase-list store. A list already present — from
+// an earlier seed, or a real batch on a box with Naver keys — is left byte-identical. A missing
+// one is written due at once, so a keyed box replaces the fixture on its next pass while a box
+// without keys keeps it (QUAL-42).
+type phraseLists struct{ store *qualitystore.Store }
+
+func (p phraseLists) EnsureList(ctx context.Context, list devseed.PhraseListFixture, at time.Time) (bool, error) {
+	if !quality.Known(list.Field) {
+		return false, fmt.Errorf("unknown blog field %q", list.Field)
+	}
+	_, found, err := p.store.PhraseList(ctx, list.Field)
+	if err != nil || found {
+		return false, err
+	}
+	refreshed := at
+	if err := p.store.ReplacePhraseList(ctx, quality.PhraseList{
+		Field: list.Field, Phrases: list.Phrases, CorpusSize: list.CorpusSize,
+		RefreshedAt: &refreshed, NextRefreshAt: at,
+	}); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 // media adapts the clip context's source staging, the one account-owned table the cascade
 // from `users` does not reach.
 type media struct{ store *clipstore.Store }
@@ -265,15 +394,22 @@ func (m media) DeleteAllSourceBatches(ctx context.Context) (int64, error) {
 // printReport is the command's output. It goes to stdout rather than the logger because it is the
 // answer to "what can I log in as now", and it is the only reason someone reads this
 // command's output at all.
-func printReport(report devseed.Report, dbPath string) {
-	fmt.Fprintf(os.Stdout, "seeded %s\n", dbPath)
-	fmt.Fprintf(os.Stdout, "  removed %d account(s) and %d source batch(es)\n\n", report.DeletedAccounts, report.DeletedBatches)
-	fmt.Fprintf(os.Stdout, "  %-14s %-8s %-6s %-7s %-7s %s\n", "LOGIN", "PLAN", "POSTS", "DRAFT", "REVIEW", "FINAL")
+func printReport(out io.Writer, report devseed.Report, dbPath string) {
+	fmt.Fprintf(out, "seeded %s\n", dbPath)
+	fmt.Fprintf(out, "  removed %d account(s) and %d source batch(es)\n\n", report.DeletedAccounts, report.DeletedBatches)
+	fmt.Fprintf(out, "  %-14s %-8s %-6s %-7s %-7s %-7s %s\n", "LOGIN", "PLAN", "POSTS", "DRAFT", "REVIEW", "FINAL", "PUBL")
 	for _, account := range report.Accounts {
-		fmt.Fprintf(os.Stdout, "  %-14s %-8s %-6d %-7d %-7d %d\n",
-			account.LoginID, account.Plan, account.Posts(), account.Drafts, account.Reviews, account.Finalized)
+		fmt.Fprintf(out, "  %-14s %-8s %-6d %-7d %-7d %-7d %d\n",
+			account.LoginID, account.Plan, account.Posts(), account.Drafts, account.Reviews, account.Finalized, account.Published)
 	}
+	// Whether the fixture's list went in or a list already there stood, which on a box with
+	// Naver keys is the difference between fixture phrases and collected ones.
+	standing := "left standing"
+	if report.PhraseListWritten {
+		standing = "written"
+	}
+	fmt.Fprintf(out, "\n  phrase list %s: %s\n", devseed.PhraseList.Field, standing)
 	if len(report.Accounts) > 0 {
-		fmt.Fprintf(os.Stdout, "\n  password for every account: %s\n", report.Accounts[0].Password)
+		fmt.Fprintf(out, "\n  password for every account: %s\n", report.Accounts[0].Password)
 	}
 }
