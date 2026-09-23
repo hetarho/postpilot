@@ -25,8 +25,7 @@ func TestSaveDraftStoresTemplateAnswersPerLabel(t *testing.T) {
 	ctx := context.Background()
 	svc, _ := newAnswerService(t)
 
-	created, err := svc.SaveDraft(ctx, alice, "", "제주", "갔다", ptrOf(defaultVoiceFor(alice)), ptrOf("template-review"),
-		ptrOf(LanguageKorean), []TemplateAnswer{{Label: "총평 별점", Text: "4.5점", Enabled: true}})
+	created, err := svc.SaveDraft(ctx, alice, DraftSave{Title: "제주", Memo: "갔다", VoiceID: ptrOf(defaultVoiceFor(alice)), TemplateID: ptrOf("template-review"), TargetLanguage: ptrOf(LanguageKorean), Answers: []TemplateAnswer{{Label: "총평 별점", Text: "4.5점", Enabled: true}}})
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
@@ -36,12 +35,10 @@ func TestSaveDraftStoresTemplateAnswersPerLabel(t *testing.T) {
 
 	// One field saved alone leaves the other where it was: absent is preserved, which is what
 	// keeps two tabs answering two fields from overwriting each other (POST-62).
-	if _, err := svc.SaveDraft(ctx, alice, created.Slug, "제주", "갔다", nil, nil, nil,
-		[]TemplateAnswer{{Label: "방문일", Text: "2026-03-01", Enabled: true}}); err != nil {
+	if _, err := svc.SaveDraft(ctx, alice, DraftSave{Slug: created.Slug, Title: "제주", Memo: "갔다", Answers: []TemplateAnswer{{Label: "방문일", Text: "2026-03-01", Enabled: true}}}); err != nil {
 		t.Fatalf("second save: %v", err)
 	}
-	saved, err := svc.SaveDraft(ctx, alice, created.Slug, "제주", "갔다", nil, nil, nil,
-		[]TemplateAnswer{{Label: "총평 별점", Text: "5점", Enabled: false}})
+	saved, err := svc.SaveDraft(ctx, alice, DraftSave{Slug: created.Slug, Title: "제주", Memo: "갔다", Answers: []TemplateAnswer{{Label: "총평 별점", Text: "5점", Enabled: false}}})
 	if err != nil {
 		t.Fatalf("third save: %v", err)
 	}
@@ -59,7 +56,7 @@ func TestSaveDraftStoresTemplateAnswersPerLabel(t *testing.T) {
 	}
 
 	// An ordinary autosave carries no answers and disturbs none.
-	plain, err := svc.SaveDraft(ctx, alice, created.Slug, "제주도", "갔다 왔다", nil, nil, nil, nil)
+	plain, err := svc.SaveDraft(ctx, alice, DraftSave{Slug: created.Slug, Title: "제주도", Memo: "갔다 왔다"})
 	if err != nil {
 		t.Fatalf("plain autosave: %v", err)
 	}
@@ -72,22 +69,21 @@ func TestTemplateAnswersOutliveTheirTemplate(t *testing.T) {
 	ctx := context.Background()
 	svc, _ := newAnswerService(t)
 
-	created, err := svc.SaveDraft(ctx, alice, "", "제주", "갔다", ptrOf(defaultVoiceFor(alice)), ptrOf("template-review"),
-		ptrOf(LanguageKorean), []TemplateAnswer{{Label: "총평 별점", Text: "4.5점", Enabled: true}})
+	created, err := svc.SaveDraft(ctx, alice, DraftSave{Title: "제주", Memo: "갔다", VoiceID: ptrOf(defaultVoiceFor(alice)), TemplateID: ptrOf("template-review"), TargetLanguage: ptrOf(LanguageKorean), Answers: []TemplateAnswer{{Label: "총평 별점", Text: "4.5점", Enabled: true}}})
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
 
 	// Swapping the template, then clearing it, touches no answer: the label is the key, and a
 	// swap back has to find what was typed still there (POST-62).
-	swapped, err := svc.SaveDraft(ctx, alice, created.Slug, "제주", "갔다", nil, ptrOf("template-diary"), nil, nil)
+	swapped, err := svc.SaveDraft(ctx, alice, DraftSave{Slug: created.Slug, Title: "제주", Memo: "갔다", TemplateID: ptrOf("template-diary")})
 	if err != nil {
 		t.Fatalf("swap: %v", err)
 	}
 	if len(swapped.TemplateAnswers) != 1 || swapped.Template.ID != "template-diary" {
 		t.Fatalf("after the swap: template=%s answers=%+v", swapped.Template.ID, swapped.TemplateAnswers)
 	}
-	cleared, err := svc.SaveDraft(ctx, alice, created.Slug, "제주", "갔다", nil, ptrOf(""), nil, nil)
+	cleared, err := svc.SaveDraft(ctx, alice, DraftSave{Slug: created.Slug, Title: "제주", Memo: "갔다", TemplateID: ptrOf("")})
 	if err != nil {
 		t.Fatalf("clear: %v", err)
 	}
@@ -100,7 +96,7 @@ func TestSaveDraftRefusesAnswersBeforeAnythingElse(t *testing.T) {
 	ctx := context.Background()
 	svc, store := newAnswerService(t)
 
-	created, err := svc.SaveDraft(ctx, alice, "", "제주", "갔다", ptrOf(defaultVoiceFor(alice)), nil, ptrOf(LanguageKorean), nil)
+	created, err := svc.SaveDraft(ctx, alice, DraftSave{Title: "제주", Memo: "갔다", VoiceID: ptrOf(defaultVoiceFor(alice)), TargetLanguage: ptrOf(LanguageKorean)})
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
@@ -118,7 +114,7 @@ func TestSaveDraftRefusesAnswersBeforeAnythingElse(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			if _, err := svc.SaveDraft(ctx, alice, created.Slug, "다른 제목", "다른 메모", nil, nil, nil, tc.answers); !errors.Is(err, tc.want) {
+			if _, err := svc.SaveDraft(ctx, alice, DraftSave{Slug: created.Slug, Title: "다른 제목", Memo: "다른 메모", Answers: tc.answers}); !errors.Is(err, tc.want) {
 				t.Fatalf("err = %v, want %v", err, tc.want)
 			}
 			// Refused ahead of every write: the title it carried must not have landed.
@@ -134,20 +130,17 @@ func TestSaveDraftRefusesAnswersBeforeAnythingElse(t *testing.T) {
 
 	// Too long, on either half, names the field and both counts.
 	var tooLong *TemplateAnswerTooLongError
-	_, err = svc.SaveDraft(ctx, alice, created.Slug, "제주", "갔다", nil, nil, nil,
-		[]TemplateAnswer{{Label: strings.Repeat("가", 41), Text: "x", Enabled: true}})
+	_, err = svc.SaveDraft(ctx, alice, DraftSave{Slug: created.Slug, Title: "제주", Memo: "갔다", Answers: []TemplateAnswer{{Label: strings.Repeat("가", 41), Text: "x", Enabled: true}}})
 	if !errors.As(err, &tooLong) || tooLong.Field != "label" || tooLong.Max != 40 || tooLong.Chars != 41 {
 		t.Fatalf("label bound: err = %v (%+v)", err, tooLong)
 	}
-	_, err = svc.SaveDraft(ctx, alice, created.Slug, "제주", "갔다", nil, nil, nil,
-		[]TemplateAnswer{{Label: "총평", Text: strings.Repeat("가", 501), Enabled: true}})
+	_, err = svc.SaveDraft(ctx, alice, DraftSave{Slug: created.Slug, Title: "제주", Memo: "갔다", Answers: []TemplateAnswer{{Label: "총평", Text: strings.Repeat("가", 501), Enabled: true}}})
 	if !errors.As(err, &tooLong) || tooLong.Field != "text" || tooLong.Max != 500 {
 		t.Fatalf("text bound: err = %v (%+v)", err, tooLong)
 	}
 
 	// A mint is a write like any other: a bad answer on a create leaves no post behind.
-	if _, err := svc.SaveDraft(ctx, alice, "", "새 글", "메모", ptrOf(defaultVoiceFor(alice)), nil, ptrOf(LanguageKorean),
-		[]TemplateAnswer{{Label: "", Text: "x", Enabled: true}}); !errors.Is(err, ErrTemplateAnswerInvalid) {
+	if _, err := svc.SaveDraft(ctx, alice, DraftSave{Title: "새 글", Memo: "메모", VoiceID: ptrOf(defaultVoiceFor(alice)), TargetLanguage: ptrOf(LanguageKorean), Answers: []TemplateAnswer{{Label: "", Text: "x", Enabled: true}}}); !errors.Is(err, ErrTemplateAnswerInvalid) {
 		t.Fatalf("create with a bad answer: %v", err)
 	}
 	if len(store.posts) != 1 {
@@ -162,8 +155,7 @@ func TestTemplateAnswersRefusedWithoutConfiguredLimits(t *testing.T) {
 	svc, _ := newTemplateAwareService(t)
 
 	var tooLong *TemplateAnswerTooLongError
-	if _, err := svc.SaveDraft(ctx, alice, "", "제주", "갔다", ptrOf(defaultVoiceFor(alice)), nil, ptrOf(LanguageKorean),
-		[]TemplateAnswer{{Label: "총평", Text: "4.5점", Enabled: true}}); !errors.As(err, &tooLong) {
+	if _, err := svc.SaveDraft(ctx, alice, DraftSave{Title: "제주", Memo: "갔다", VoiceID: ptrOf(defaultVoiceFor(alice)), TargetLanguage: ptrOf(LanguageKorean), Answers: []TemplateAnswer{{Label: "총평", Text: "4.5점", Enabled: true}}}); !errors.As(err, &tooLong) {
 		t.Fatalf("err = %v, want a too-long refusal", err)
 	}
 }
@@ -175,8 +167,7 @@ func TestSavingAnAnswerIsAnOptionSave(t *testing.T) {
 	ctx := context.Background()
 	svc, _ := newAnswerService(t)
 
-	created, err := svc.SaveDraft(ctx, alice, "", "제주", "갔다", ptrOf(defaultVoiceFor(alice)), ptrOf("template-review"),
-		ptrOf(LanguageKorean), nil)
+	created, err := svc.SaveDraft(ctx, alice, DraftSave{Title: "제주", Memo: "갔다", VoiceID: ptrOf(defaultVoiceFor(alice)), TemplateID: ptrOf("template-review"), TargetLanguage: ptrOf(LanguageKorean)})
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
@@ -189,8 +180,7 @@ func TestSavingAnAnswerIsAnOptionSave(t *testing.T) {
 		t.Fatalf("finalize: %v", err)
 	}
 
-	answered, err := svc.SaveDraft(ctx, alice, created.Slug, finalized.Title, finalized.Memo, nil, nil, nil,
-		[]TemplateAnswer{{Label: "총평 별점", Text: "4.5점", Enabled: true}})
+	answered, err := svc.SaveDraft(ctx, alice, DraftSave{Slug: created.Slug, Title: finalized.Title, Memo: finalized.Memo, Answers: []TemplateAnswer{{Label: "총평 별점", Text: "4.5점", Enabled: true}}})
 	if err != nil {
 		t.Fatalf("answering a finalized post: %v", err)
 	}

@@ -268,6 +268,12 @@ type Post struct {
 	// ContentNouns are the distinct nouns the latest write pass returned for this content, nil
 	// when none were returned (GEN-55).
 	ContentNouns []string
+	// Field is the post's 분야 as its ASCII id, "" for 없음 (QUAL-23). Like the quality ticks
+	// below it is an input of the next run, never an edit of the post (POST-82).
+	Field string
+	// QualityRules are the quality metrics the owner ticked for the next run, as metric ids in
+	// canonical order, nil for none (POST-81).
+	QualityRules []string
 	Observations []Observation
 
 	// TemplateAnswers is what this post answers to its template's data fields, by label,
@@ -484,4 +490,45 @@ func ObjectKey(postSlug, imageID string) string {
 // what it says it is. Sharing the prefix is what lets the orphan sweep keep one listing.
 func VideoObjectKey(postSlug, videoID, extension string) string {
 	return "posts/" + postSlug + "/" + videoID + "." + extension
+}
+
+// The quality metrics a post may tick, by their ASCII ids (R3). They mirror the quality
+// context's own four as a closed list, because post imports no other context (ARCH-7).
+const (
+	QualityRuleTitleSaturation  = "title_saturation"
+	QualityRuleCrossPostPhrases = "cross_post_phrases"
+	QualityRuleInPostRepetition = "in_post_repetition"
+	QualityRuleComposition      = "composition"
+)
+
+// qualityRules is the canonical order, the one the quality context renders rows in.
+var qualityRules = []string{
+	QualityRuleTitleSaturation, QualityRuleCrossPostPhrases, QualityRuleInPostRepetition, QualityRuleComposition,
+}
+
+// NormalizeQualityRules validates a tick set and returns its distinct ids in canonical order,
+// which makes an equality check blind to the order they were ticked in. An id outside the four
+// is ErrQualityRuleInvalid; an empty set is an empty, non-nil slice.
+func NormalizeQualityRules(ids []string) ([]string, error) {
+	ticked := make(map[string]bool, len(ids))
+	for _, id := range ids {
+		known := false
+		for _, rule := range qualityRules {
+			if id == rule {
+				known = true
+				break
+			}
+		}
+		if !known {
+			return nil, ErrQualityRuleInvalid
+		}
+		ticked[id] = true
+	}
+	out := make([]string, 0, len(ticked))
+	for _, rule := range qualityRules {
+		if ticked[rule] {
+			out = append(out, rule)
+		}
+	}
+	return out, nil
 }

@@ -8,9 +8,10 @@
 -- name: CreatePost :exec
 -- target_length and tag_count are the template's seeds when the create names one, and NULL
 -- otherwise: a post nobody gave a number to reads as natural length and the default count.
-INSERT INTO posts (slug, user_id, voice_id, template_id, title, memo, target_language,
+-- field is the blog field the create named, NULL for none.
+INSERT INTO posts (slug, user_id, voice_id, template_id, field, title, memo, target_language,
     target_length, tag_count, status, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?);
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?);
 
 -- name: UpdatePostDraft :execrows
 UPDATE posts SET title = sqlc.arg(title), memo = sqlc.arg(memo),
@@ -39,9 +40,10 @@ UPDATE posts SET content = ?, content_revision = content_revision + 1,
 WHERE slug = ? AND user_id = ? AND content_revision = ? AND status <> 'published';
 
 -- name: SavePostGenerationOptions :execrows
--- use_memory rides this save rather than the draft's: it is an option of the RUN, and like
--- the two numbers beside it, it changes no status, revision or baseline (MEM-18).
-UPDATE posts SET target_length = ?, tag_count = ?, use_memory = ?, updated_at = ?
+-- use_memory and the quality ticks ride this save rather than the draft's: they are options of
+-- the RUN, and like the two numbers beside them they change no status, revision or baseline
+-- (MEM-18, POST-82). quality_rules is JSON, NULL for none.
+UPDATE posts SET target_length = ?, tag_count = ?, use_memory = ?, quality_rules = ?, updated_at = ?
 WHERE slug = ? AND user_id = ? AND status <> 'published';
 
 -- Finalizing also copies the confirmed AI title into posts.title (spec/legacy/policy/posts.md). ONE
@@ -124,6 +126,14 @@ UPDATE posts SET template_id = sqlc.narg(template_id),
     tag_count = COALESCE(sqlc.narg(seed_tag_count), tag_count),
     updated_at = sqlc.arg(updated_at)
 WHERE slug = sqlc.arg(slug) AND user_id = sqlc.arg(user_id) AND status <> 'published';
+
+-- name: AssignPostField :execrows
+-- The blog field, NULL for none. Like the template it touches no status, revision, baseline or
+-- finalization column (POST-82). An equal value matches no row: IS NOT is SQLite's NULL-safe
+-- inequality, so clearing a field that is already none writes nothing either.
+UPDATE posts SET field = sqlc.narg(field), updated_at = sqlc.arg(updated_at)
+WHERE slug = sqlc.arg(slug) AND user_id = sqlc.arg(user_id) AND status <> 'published'
+  AND field IS NOT sqlc.narg(field);
 
 -- name: CountPostsByVoice :one
 SELECT count(*) FROM posts WHERE voice_id = ? AND user_id = ?;

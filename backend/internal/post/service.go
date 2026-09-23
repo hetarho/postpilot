@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"reflect"
+	"slices"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -42,6 +43,7 @@ type Service struct {
 	memoryLinks    MemorySourceDetacher
 	voices         VoiceDirectory
 	templates      TemplateDirectory
+	fields         FieldDirectory
 
 	// answerLabelMax and answerValueMax bound one data-field answer (TEMPLATE-43). Zero
 	// refuses every non-empty answer, which is the safe direction for a server whose config
@@ -80,12 +82,15 @@ type Deps struct {
 	ContentPurger  ExperimentContentPurger
 	CandidateLinks GuidelineCandidateDetacher
 	MemoryLinks    MemorySourceDetacher
+	// Fields is the product's 분야 list: without it no 분야 could be validated, so none could
+	// be saved (QUAL-23).
+	Fields FieldDirectory
 }
 
 // NewService wires the context with its store, its object storage, its limits and its
 // collaborators.
 func NewService(store Storage, blobs ObjectStore, limits Limits, deps Deps) *Service {
-	for name, dep := range map[string]any{"jobs": deps.Jobs, "voices": deps.Voices, "experiments": deps.Experiments, "content purger": deps.ContentPurger, "candidate links": deps.CandidateLinks, "memory links": deps.MemoryLinks} {
+	for name, dep := range map[string]any{"jobs": deps.Jobs, "voices": deps.Voices, "experiments": deps.Experiments, "content purger": deps.ContentPurger, "candidate links": deps.CandidateLinks, "memory links": deps.MemoryLinks, "fields": deps.Fields} {
 		if dep == nil {
 			panic("post: " + name + " collaborator is required")
 		}
@@ -115,6 +120,7 @@ func NewService(store Storage, blobs ObjectStore, limits Limits, deps Deps) *Ser
 		contentPurger:  deps.ContentPurger,
 		candidateLinks: deps.CandidateLinks,
 		memoryLinks:    deps.MemoryLinks,
+		fields:         deps.Fields,
 		now:            time.Now,
 		newID:          newObjectID,
 	}
@@ -138,14 +144,17 @@ func (s *Service) SetTemplateDirectory(directory TemplateDirectory) {
 //
 // templateID is presence-aware too, with one more case, because a post may legitimately have
 // none: nil preserves, a present empty string clears, and a present non-empty value assigns.
-// It is validated before anything else is written, so a bad id applies nothing at all.
-func (s *Service) SaveDraft(ctx context.Context, userID, slug, title, memo string, voiceID, templateID *string, targetLanguage *Language, answers []TemplateAnswer) (Post, error) {
+// It is validated before anything else is written, so a bad id applies nothing at all. The
+// 분야 follows the same rule for the same reason.
+func (s *Service) SaveDraft(ctx context.Context, userID string, save DraftSave) (Post, error) {
+	slug, title, memo := save.Slug, save.Title, save.Memo
+	voiceID, templateID, targetLanguage := save.VoiceID, save.TemplateID, save.TargetLanguage
 	if targetLanguage != nil && !targetLanguage.Valid() {
 		return Post{}, ErrLanguageRequired
 	}
 	// Validated with the template assignment, ahead of every write: a request carrying a bad
 	// answer must mint no post and change no title (POST-62).
-	answers, err := s.validTemplateAnswers(answers)
+	answers, err := s.validTemplateAnswers(save.Answers)
 	if err != nil {
 		return Post{}, err
 	}
@@ -154,6 +163,14 @@ func (s *Service) SaveDraft(ctx context.Context, userID, slug, title, memo strin
 	targetTemplate, err := s.assignableTemplate(ctx, userID, templateID)
 	if err != nil {
 		return Post{}, err
+	}
+	// The same for the 분야: an id the product does not know mints nothing and changes nothing.
+	field := ""
+	if save.Field != nil {
+		field = *save.Field
+		if field != "" && !s.fields.Known(field) {
+			return Post{}, ErrFieldNotFound
+		}
 	}
 
 	if slug == "" {
@@ -167,7 +184,7 @@ func (s *Service) SaveDraft(ctx context.Context, userID, slug, title, memo strin
 		if err != nil {
 			return Post{}, err
 		}
-		created, err := s.createPost(ctx, userID, title, memo, target.ID, targetTemplate, *targetLanguage)
+		created, err := s.createPost(ctx, userID, title, memo, target.ID, targetTemplate, field, *targetLanguage)
 		if err != nil {
 			return Post{}, err
 		}
@@ -204,6 +221,19 @@ func (s *Service) SaveDraft(ctx context.Context, userID, slug, title, memo strin
 			return Post{}, s.lockedOrGone(ctx, userID, slug, ErrNotFound)
 		}
 	}
+	if save.Field != nil && field != found.Field {
+		assigned, err := s.drafts.AssignField(ctx, slug, userID, save.Field, s.now())
+		if err != nil {
+			return Post{}, fmt.Errorf("assign field: %w", err)
+		}
+		// No row is a published post, a vanished one, or a concurrent save of the same field,
+		// and only the first two are errors.
+		if !assigned {
+			if err := s.lockedOrGone(ctx, userID, slug, nil); err != nil {
+				return Post{}, err
+			}
+		}
+	}
 
 	now := s.now()
 	// Written after ownedPost, which is what scopes the answer rows to this account: the
@@ -225,6 +255,16 @@ func (s *Service) SaveDraft(ctx context.Context, userID, slug, title, memo strin
 	}
 
 	return s.Get(ctx, userID, slug)
+}
+
+// DraftSave is one autosave. Slug empty is the create. Every pointer is presence-aware — nil
+// keeps what the post holds — and VoiceID, TemplateID and Field are ids, TemplateID and Field
+// clearing with a present "" because a post may legitimately have neither.
+type DraftSave struct {
+	Slug, Title, Memo          string
+	VoiceID, TemplateID, Field *string
+	TargetLanguage             *Language
+	Answers                    []TemplateAnswer
 }
 
 // validTemplateAnswers trims what a label may not carry and bounds both halves. It is a pure
@@ -414,7 +454,7 @@ func projectVoice(refs map[string]VoiceRef, voiceID string) VoiceRef {
 // and each attempt sees one more taken slug, so it converges immediately.
 const slugAttempts = 5
 
-func (s *Service) createPost(ctx context.Context, userID, title, memo, voiceID string, assigned TemplateRef, targetLanguage Language) (Post, error) {
+func (s *Service) createPost(ctx context.Context, userID, title, memo, voiceID string, assigned TemplateRef, field string, targetLanguage Language) (Post, error) {
 	now := s.now()
 
 	// Mint-then-insert is a check-then-act, so the insert is what actually decides:
@@ -443,6 +483,7 @@ func (s *Service) createPost(ctx context.Context, userID, title, memo, voiceID s
 			UserID:     userID,
 			VoiceID:    voiceID,
 			TemplateID: assigned.ID,
+			Field:      field,
 			// Seeded by the template this post is created with, exactly as a later assignment
 			// seeds it (TEMPLATE-48). A template with no opinion leaves both unset, which is
 			// natural length and the default count.
@@ -803,18 +844,27 @@ func (s *Service) SaveContent(ctx context.Context, userID, slug string, content 
 }
 
 // SaveGenerationOptions replaces the target length (nil clears it to natural length) and,
-// when tagCount or useMemory is present, that option; an absent one keeps what is stored
-// (POST-63, POST-71). The presence rules differ because the fields do: the length has a real
-// "none", the count and the flag never do, so absence there can only mean "not this time".
+// when tagCount, useMemory or qualityRules is present, that option; an absent one keeps what is
+// stored (POST-63, POST-71, POST-81). The presence rules differ because the fields do: the
+// length has a real "none", the count and the flag never do, so absence there can only mean
+// "not this time"; a present empty tick set clears the ticks.
 //
-// None of the three touches status, revision, baseline or learning eligibility: they are
-// options of the next RUN, not edits of the post (MEM-18).
-func (s *Service) SaveGenerationOptions(ctx context.Context, userID, slug string, targetLength *int, tagCount *int, useMemory *bool) (Post, error) {
+// None of them touches status, revision, baseline or learning eligibility: they are options of
+// the next RUN, not edits of the post (MEM-18, POST-82).
+func (s *Service) SaveGenerationOptions(ctx context.Context, userID, slug string, targetLength *int, tagCount *int, useMemory *bool, qualityRules *[]string) (Post, error) {
 	if targetLength != nil && *targetLength <= 0 {
 		return Post{}, &InvalidContentError{Reason: "target length must be positive"}
 	}
 	if tagCount != nil && !TagCountRange.Allows(*tagCount) {
 		return Post{}, ErrInvalidTagCount
+	}
+	var ticks []string
+	if qualityRules != nil {
+		normalized, err := NormalizeQualityRules(*qualityRules)
+		if err != nil {
+			return Post{}, err
+		}
+		ticks = normalized
 	}
 	found, err := s.ownedPost(ctx, userID, slug)
 	if err != nil {
@@ -831,14 +881,19 @@ func (s *Service) SaveGenerationOptions(ctx context.Context, userID, slug string
 	if useMemory != nil {
 		nextUseMemory = *useMemory
 	}
-	if equalOptionalInt(found.TargetLength, targetLength) && nextTagCount == found.TagCount && nextUseMemory == found.UseMemory {
+	nextRules := found.QualityRules
+	if qualityRules != nil {
+		nextRules = ticks
+	}
+	if equalOptionalInt(found.TargetLength, targetLength) && nextTagCount == found.TagCount && nextUseMemory == found.UseMemory &&
+		slices.Equal(nextRules, found.QualityRules) {
 		return s.Get(ctx, userID, slug)
 	}
 	contentStore := s.content
 	if contentStore == nil {
 		return Post{}, errors.New("post content store is not configured")
 	}
-	updated, err := contentStore.SaveGenerationOptions(ctx, slug, userID, targetLength, nextTagCount, nextUseMemory, s.now())
+	updated, err := contentStore.SaveGenerationOptions(ctx, slug, userID, targetLength, nextTagCount, nextUseMemory, nextRules, s.now())
 	if err != nil {
 		return Post{}, err
 	}

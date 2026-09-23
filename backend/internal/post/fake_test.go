@@ -28,6 +28,8 @@ type fakeStore struct {
 	// lock, so a test can publish the post after the service's check and before the write:
 	// the race the statements' own predicates and guards exist for.
 	beforeGuardedWrite func(slug string)
+	// fieldAssignments counts AssignField calls, so a test can say a save named no 분야 write.
+	fieldAssignments int
 }
 
 // guarded runs the race hook for one guarded write.
@@ -212,6 +214,27 @@ func (f *fakeStore) AssignTemplate(_ context.Context, slug, userID string, templ
 	return true, nil
 }
 
+// AssignField mirrors AssignPostField: it refuses a published row, and an equal field matches
+// no row, NULL-safely.
+func (f *fakeStore) AssignField(_ context.Context, slug, userID string, field *string, updatedAt time.Time) (bool, error) {
+	f.guarded(slug)
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.fieldAssignments++
+	value := ""
+	if field != nil {
+		value = *field
+	}
+	existing, ok := f.posts[slug]
+	if !ok || existing.UserID != userID || f.publishedLocked(slug) || existing.Field == value {
+		return false, nil
+	}
+	existing.Field = value
+	existing.UpdatedAt = updatedAt
+	f.posts[slug] = existing
+	return true, nil
+}
+
 func (f *fakeStore) SaveContent(_ context.Context, slug, userID string, content PostContent, expectedRevision int64, updatedAt time.Time) (bool, error) {
 	f.guarded(slug)
 	f.mu.Lock()
@@ -230,7 +253,7 @@ func (f *fakeStore) SaveContent(_ context.Context, slug, userID string, content 
 	return true, nil
 }
 
-func (f *fakeStore) SaveGenerationOptions(_ context.Context, slug, userID string, targetLength *int, tagCount int, useMemory bool, updatedAt time.Time) (bool, error) {
+func (f *fakeStore) SaveGenerationOptions(_ context.Context, slug, userID string, targetLength *int, tagCount int, useMemory bool, qualityRules []string, updatedAt time.Time) (bool, error) {
 	f.guarded(slug)
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -241,6 +264,11 @@ func (f *fakeStore) SaveGenerationOptions(_ context.Context, slug, userID string
 	existing.TargetLength = targetLength
 	existing.TagCount = tagCount
 	existing.UseMemory = useMemory
+	// NULL for none, like the column: an empty set reads back as nil.
+	existing.QualityRules = nil
+	if len(qualityRules) > 0 {
+		existing.QualityRules = append([]string(nil), qualityRules...)
+	}
 	existing.UpdatedAt = updatedAt
 	f.posts[slug] = existing
 	return true, nil

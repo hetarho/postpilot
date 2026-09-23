@@ -10,6 +10,35 @@ import (
 	"database/sql"
 )
 
+const assignPostField = `-- name: AssignPostField :execrows
+UPDATE posts SET field = ?1, updated_at = ?2
+WHERE slug = ?3 AND user_id = ?4 AND status <> 'published'
+  AND field IS NOT ?1
+`
+
+type AssignPostFieldParams struct {
+	Field     sql.NullString
+	UpdatedAt string
+	Slug      string
+	UserID    string
+}
+
+// The blog field, NULL for none. Like the template it touches no status, revision, baseline or
+// finalization column (POST-82). An equal value matches no row: IS NOT is SQLite's NULL-safe
+// inequality, so clearing a field that is already none writes nothing either.
+func (q *Queries) AssignPostField(ctx context.Context, arg AssignPostFieldParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, assignPostField,
+		arg.Field,
+		arg.UpdatedAt,
+		arg.Slug,
+		arg.UserID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const assignPostTemplate = `-- name: AssignPostTemplate :execrows
 UPDATE posts SET template_id = ?1,
     target_length = COALESCE(?2, target_length),
@@ -69,9 +98,9 @@ func (q *Queries) CountPostsByVoice(ctx context.Context, arg CountPostsByVoicePa
 
 const createPost = `-- name: CreatePost :exec
 
-INSERT INTO posts (slug, user_id, voice_id, template_id, title, memo, target_language,
+INSERT INTO posts (slug, user_id, voice_id, template_id, field, title, memo, target_language,
     target_length, tag_count, status, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?)
 `
 
 type CreatePostParams struct {
@@ -79,6 +108,7 @@ type CreatePostParams struct {
 	UserID         string
 	VoiceID        string
 	TemplateID     sql.NullString
+	Field          sql.NullString
 	Title          string
 	Memo           string
 	TargetLanguage string
@@ -96,12 +126,14 @@ type CreatePostParams struct {
 // the race to a publish matches zero rows instead of rewriting a post that is already live.
 // target_length and tag_count are the template's seeds when the create names one, and NULL
 // otherwise: a post nobody gave a number to reads as natural length and the default count.
+// field is the blog field the create named, NULL for none.
 func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) error {
 	_, err := q.db.ExecContext(ctx, createPost,
 		arg.Slug,
 		arg.UserID,
 		arg.VoiceID,
 		arg.TemplateID,
+		arg.Field,
 		arg.Title,
 		arg.Memo,
 		arg.TargetLanguage,
@@ -481,7 +513,7 @@ func (q *Queries) SavePostContent(ctx context.Context, arg SavePostContentParams
 }
 
 const savePostGenerationOptions = `-- name: SavePostGenerationOptions :execrows
-UPDATE posts SET target_length = ?, tag_count = ?, use_memory = ?, updated_at = ?
+UPDATE posts SET target_length = ?, tag_count = ?, use_memory = ?, quality_rules = ?, updated_at = ?
 WHERE slug = ? AND user_id = ? AND status <> 'published'
 `
 
@@ -489,18 +521,21 @@ type SavePostGenerationOptionsParams struct {
 	TargetLength sql.NullInt64
 	TagCount     sql.NullInt64
 	UseMemory    int64
+	QualityRules sql.NullString
 	UpdatedAt    string
 	Slug         string
 	UserID       string
 }
 
-// use_memory rides this save rather than the draft's: it is an option of the RUN, and like
-// the two numbers beside it, it changes no status, revision or baseline (MEM-18).
+// use_memory and the quality ticks ride this save rather than the draft's: they are options of
+// the RUN, and like the two numbers beside them they change no status, revision or baseline
+// (MEM-18, POST-82). quality_rules is JSON, NULL for none.
 func (q *Queries) SavePostGenerationOptions(ctx context.Context, arg SavePostGenerationOptionsParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, savePostGenerationOptions,
 		arg.TargetLength,
 		arg.TagCount,
 		arg.UseMemory,
+		arg.QualityRules,
 		arg.UpdatedAt,
 		arg.Slug,
 		arg.UserID,

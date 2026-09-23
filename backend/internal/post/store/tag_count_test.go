@@ -27,7 +27,7 @@ func TestTagCountDefaultsAndRoundTrips(t *testing.T) {
 	}
 
 	length := 1200
-	if updated, err := s.SaveGenerationOptions(ctx, "tagged", "alice", &length, 7, false, testNow.Add(time.Minute)); err != nil || !updated {
+	if updated, err := s.SaveGenerationOptions(ctx, "tagged", "alice", &length, 7, false, nil, testNow.Add(time.Minute)); err != nil || !updated {
 		t.Fatalf("option save: updated=%v err=%v", updated, err)
 	}
 	got, err = s.GetPost(ctx, "tagged")
@@ -39,7 +39,7 @@ func TestTagCountDefaultsAndRoundTrips(t *testing.T) {
 	}
 	// Clearing the length leaves the count where it was: the two columns travel together but
 	// mean different things.
-	if updated, err := s.SaveGenerationOptions(ctx, "tagged", "alice", nil, 7, false, testNow.Add(2*time.Minute)); err != nil || !updated {
+	if updated, err := s.SaveGenerationOptions(ctx, "tagged", "alice", nil, 7, false, nil, testNow.Add(2*time.Minute)); err != nil || !updated {
 		t.Fatalf("option clear: updated=%v err=%v", updated, err)
 	}
 	got, _ = s.GetPost(ctx, "tagged")
@@ -59,14 +59,14 @@ func TestStoreRoundTripsTheMemoryOptIn(t *testing.T) {
 	if err != nil || found.UseMemory {
 		t.Fatalf("a freshly created post = %v (%v), want the option off", found.UseMemory, err)
 	}
-	if updated, err := s.SaveGenerationOptions(ctx, "remembering", "alice", nil, 4, true, testNow.Add(time.Minute)); err != nil || !updated {
+	if updated, err := s.SaveGenerationOptions(ctx, "remembering", "alice", nil, 4, true, nil, testNow.Add(time.Minute)); err != nil || !updated {
 		t.Fatalf("save: %v %v", updated, err)
 	}
 	found, err = s.GetPost(ctx, "remembering")
 	if err != nil || !found.UseMemory {
 		t.Fatalf("reread = %v (%v)", found.UseMemory, err)
 	}
-	if updated, err := s.SaveGenerationOptions(ctx, "remembering", "alice", nil, 4, false, testNow.Add(2*time.Minute)); err != nil || !updated {
+	if updated, err := s.SaveGenerationOptions(ctx, "remembering", "alice", nil, 4, false, nil, testNow.Add(2*time.Minute)); err != nil || !updated {
 		t.Fatalf("clear: %v %v", updated, err)
 	}
 	if found, err = s.GetPost(ctx, "remembering"); err != nil || found.UseMemory {

@@ -15,7 +15,7 @@ func TestFinalizedLifecycleKeepsIdenticalSavesAndDemotesChangedContent(t *testin
 		t.Fatal(err)
 	}
 	target := 900
-	withOption, err := svc.SaveGenerationOptions(context.Background(), alice, created.Slug, &target, nil, nil)
+	withOption, err := svc.SaveGenerationOptions(context.Background(), alice, created.Slug, &target, nil, nil, nil)
 	if err != nil || withOption.ContentRevision != 1 || withOption.Status != StatusReview {
 		t.Fatalf("option changed lifecycle: %+v err=%v", withOption, err)
 	}
@@ -68,7 +68,7 @@ func TestFinalizeAllowsCrossLanguageContentAndPreservesProvenance(t *testing.T) 
 	ctx := context.Background()
 	voiceID := aliceVoice // Korean source voice.
 	target := LanguageEnglish
-	created, err := svc.SaveDraft(ctx, alice, "", "English target", "", &voiceID, nil, &target, nil)
+	created, err := svc.SaveDraft(ctx, alice, DraftSave{Title: "English target", VoiceID: &voiceID, TargetLanguage: &target})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -154,7 +154,7 @@ func TestSecondFinalizeOfTheSameRevisionDoesNotRewriteTheTitle(t *testing.T) {
 	if _, err := svc.Finalize(ctx, alice, created.Slug, 1); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := svc.SaveDraft(ctx, alice, created.Slug, "사람이 고친 제목", "", nil, nil, nil, nil); err != nil {
+	if _, err := svc.SaveDraft(ctx, alice, DraftSave{Slug: created.Slug, Title: "사람이 고친 제목"}); err != nil {
 		t.Fatal(err)
 	}
 	again, err := svc.Finalize(ctx, alice, created.Slug, 1)
@@ -196,8 +196,7 @@ func newPublishedFixture(t *testing.T) (*Service, *fakeStore, *fakeBlobs, publis
 	svc.answerLabelMax, svc.answerValueMax = 40, 500
 	created := mustCreatePost(t, svc, alice, "제주 3일")
 	voiceID := aliceVoice
-	if _, err := svc.SaveDraft(ctx, alice, created.Slug, created.Title, "", &voiceID, nil, nil,
-		[]TemplateAnswer{{Label: "총평", Text: "맑았다", Enabled: true}}); err != nil {
+	if _, err := svc.SaveDraft(ctx, alice, DraftSave{Slug: created.Slug, Title: created.Title, VoiceID: &voiceID, Answers: []TemplateAnswer{{Label: "총평", Text: "맑았다", Enabled: true}}}); err != nil {
 		t.Fatal(err)
 	}
 	image := attachPhoto(t, svc, blobs, created.Slug, "IMG_1.jpg")
@@ -276,24 +275,23 @@ func TestPublishedPostRefusesEveryWriteBeforeChangingAnything(t *testing.T) {
 	template := "template-review"
 	operations := map[string]func(*Service, publishedFixture) error{
 		"SavePostDraft title and memo": func(svc *Service, f publishedFixture) error {
-			_, err := svc.SaveDraft(context.Background(), alice, f.slug, "새 제목", "새 메모", nil, nil, nil, nil)
+			_, err := svc.SaveDraft(context.Background(), alice, DraftSave{Slug: f.slug, Title: "새 제목", Memo: "새 메모"})
 			return err
 		},
 		"SavePostDraft voice": func(svc *Service, f publishedFixture) error {
-			_, err := svc.SaveDraft(context.Background(), alice, f.slug, "제주 3일 기록", "", &review, nil, nil, nil)
+			_, err := svc.SaveDraft(context.Background(), alice, DraftSave{Slug: f.slug, Title: "제주 3일 기록", VoiceID: &review})
 			return err
 		},
 		"SavePostDraft template": func(svc *Service, f publishedFixture) error {
-			_, err := svc.SaveDraft(context.Background(), alice, f.slug, "제주 3일 기록", "", nil, &template, nil, nil)
+			_, err := svc.SaveDraft(context.Background(), alice, DraftSave{Slug: f.slug, Title: "제주 3일 기록", TemplateID: &template})
 			return err
 		},
 		"SavePostDraft answers": func(svc *Service, f publishedFixture) error {
-			_, err := svc.SaveDraft(context.Background(), alice, f.slug, "제주 3일 기록", "", nil, nil, nil,
-				[]TemplateAnswer{{Label: "총평", Text: "흐렸다", Enabled: true}})
+			_, err := svc.SaveDraft(context.Background(), alice, DraftSave{Slug: f.slug, Title: "제주 3일 기록", Answers: []TemplateAnswer{{Label: "총평", Text: "흐렸다", Enabled: true}}})
 			return err
 		},
 		"SavePostDraft target language": func(svc *Service, f publishedFixture) error {
-			_, err := svc.SaveDraft(context.Background(), alice, f.slug, "제주 3일 기록", "", nil, nil, &english, nil)
+			_, err := svc.SaveDraft(context.Background(), alice, DraftSave{Slug: f.slug, Title: "제주 3일 기록", TargetLanguage: &english})
 			return err
 		},
 		"a changed SavePostContent": func(svc *Service, f publishedFixture) error {
@@ -301,7 +299,7 @@ func TestPublishedPostRefusesEveryWriteBeforeChangingAnything(t *testing.T) {
 			return err
 		},
 		"SavePostGenerationOptions": func(svc *Service, f publishedFixture) error {
-			_, err := svc.SaveGenerationOptions(context.Background(), alice, f.slug, &length, nil, nil)
+			_, err := svc.SaveGenerationOptions(context.Background(), alice, f.slug, &length, nil, nil, nil)
 			return err
 		},
 		"FinalizePost": func(svc *Service, f publishedFixture) error {
@@ -411,7 +409,7 @@ func TestAWriteThatLosesTheRaceToAPublishIsRefusedAsLocked(t *testing.T) {
 		finalized := finalizedPost(t, svc, alice)
 		before := store.posts[finalized.Slug]
 		race(store)
-		if _, err := svc.SaveDraft(context.Background(), alice, finalized.Slug, "새 제목", "새 메모", nil, nil, nil, nil); !errors.Is(err, ErrPostPublished) {
+		if _, err := svc.SaveDraft(context.Background(), alice, DraftSave{Slug: finalized.Slug, Title: "새 제목", Memo: "새 메모"}); !errors.Is(err, ErrPostPublished) {
 			t.Fatalf("err = %v, want ErrPostPublished", err)
 		}
 		if got := store.posts[finalized.Slug]; !reflect.DeepEqual(got, publish(before)) {

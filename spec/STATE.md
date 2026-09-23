@@ -51,7 +51,6 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T337 | A post saves its 분야 through the draft save and its quality ticks as a generation option | POST QUAL ARCH | T334 | todo |
 | T338 | The daily per-분야 phrase extraction and refresh pass | QUAL GUIDE ARCH | T335 T326 | todo |
 | T339 | 발행됨 is the fourth status everywhere, and a published post reads as locked | POST ARCH THEME | T334 | todo |
 | T340 | The template screen authors a title area in the builder and in 원문 | TMPL ARCH THEME | T336 | todo |
@@ -70,10 +69,12 @@
 | T353 | Toggling 기억 사용 keeps the post's 목표 글자 수 | POST MEM ARCH | - | todo |
 
 ## next
-- implement-task T337 (then the dep order in the tasks table; T337, T338, T339 and T340 are unblocked)
+- implement-task T338 (then the dep order in the tasks table; T338, T339, T340, T341 and T342 are unblocked)
 - T352 and T353 are independent pre-existing bug fixes (frozen memories never reach a durable generate; the 기억 사용 toggle clears 목표 글자 수)
 - create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 ## log
+- 260924 T337 done; a post saves its 분야 through SavePostDraft (presence-aware, on create in the same insert, validated through a consumer-owned field directory) and its quality ticks through SavePostGenerationOptions (canonical order, cleared by an empty set), neither touching the lifecycle; SaveDraft takes a DraftSave; PostInput carries both as json:"-" inputs; BE gate and gen:sql pass (p35)
+- 260924 T337 claimed (p35)
 - 260924 T336 done; the FE template entity round-trips titleArea untrimmed on every create and save under a mirrored 200-character ceiling, the template screen carries the stored one so a rename cannot clear it, and ① lists title-area fields first; 2382 FE tests and the FE gates pass (p35)
 - 260924 T336 claimed (p35)
 - 260924 T335 done; QualityService answers a post's M2/M3/M4 from lazily stored per-revision rows and the account aggregate over published posts with over-band rule texts in the target language, plus RulesFor and PhrasesFor; the quality store, rpc and adapter are wired (22 handlers); BE gate, gen:sql and gen:proto reproduction pass (p35)
@@ -92,5 +93,3 @@
 - 260924 T329 done; a finalized post becomes published from a pasted Naver Blog address (normalized, shared fixture), is replaced or cleared back to finalized, stays learnable, and exposes the published window; only content-writing jobs block the save; BE gate, gen:sql and lint:retirement pass (p35)
 - 260924 T329 claimed (p35)
 - 260924 T328 done; shared/ui gains InlinePopover and Toggletip on a useAnchoredPanel hook extracted from Listbox, whose behaviour is unchanged, and Popover treats a press in any anchored panel as inside; 2376 FE tests and the FE gates pass (p35)
-- 260924 T328 claimed (p35)
-- 260924 T327 done; the Go and TS grammars parse a title area (literal, write, ask) and refuse a slot, repeat or note there as not_in_title, one ask namespace and ceiling across both areas, title first; fixture +12 cases and 200 title corpus pairs; BE gate and FE gates pass (p35)

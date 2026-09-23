@@ -77,6 +77,12 @@ type TemplateDirectory interface {
 	Templates(ctx context.Context, userID string) ([]TemplateRef, error)
 }
 
+// FieldDirectory says whether a 분야 id is on the product's list (QUAL-23). It is declared here
+// by its consumer, so post never imports the context that owns the list (ARCH-6).
+type FieldDirectory interface {
+	Known(id string) bool
+}
+
 // ExperimentContentPurger is the required privacy hook for post deletion. The post
 // context calls it before the FK detaches experiment history from the source slug.
 type ExperimentContentPurger interface {
@@ -132,6 +138,10 @@ type DraftWriter interface {
 	// (TEMPLATE-48), in the same statement: a nil member of seed is a number that template has
 	// no opinion about and leaves the post's own value alone.
 	AssignTemplate(ctx context.Context, slug, userID string, templateID *string, seed TemplateNumbers, updatedAt time.Time) (bool, error)
+	// AssignField sets or clears (nil or "") the post's 분야. Like the template it writes that
+	// column and updated_at and nothing else (POST-82); it reports false when the post already
+	// carried that field, is published, or is gone.
+	AssignField(ctx context.Context, slug, userID string, field *string, updatedAt time.Time) (bool, error)
 }
 
 // TemplateAnswers is the post's answers to its template's data fields (TEMPLATE-43).
@@ -245,7 +255,9 @@ type Storage interface {
 // drafting store so upload/sweeper collaborators do not acquire unrelated methods.
 type ContentStore interface {
 	SaveContent(ctx context.Context, slug, userID string, content PostContent, expectedRevision int64, updatedAt time.Time) (bool, error)
-	SaveGenerationOptions(ctx context.Context, slug, userID string, targetLength *int, tagCount int, useMemory bool, updatedAt time.Time) (bool, error)
+	// SaveGenerationOptions always carries the full next value of every option, the quality
+	// ticks included (canonical order, empty for none).
+	SaveGenerationOptions(ctx context.Context, slug, userID string, targetLength *int, tagCount int, useMemory bool, qualityRules []string, updatedAt time.Time) (bool, error)
 	// Finalize also writes title, which the caller has already resolved: the confirmed content's
 	// title, or the post's existing one when that is empty. The copy rides the same guarded
 	// statement as the finalization, so it can never land without it.

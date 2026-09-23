@@ -50,6 +50,7 @@ func (s *Store) CreatePost(ctx context.Context, p post.Post) error {
 		UserID:         p.UserID,
 		VoiceID:        p.VoiceID,
 		TemplateID:     optionalText(p.TemplateID),
+		Field:          optionalText(p.Field),
 		Title:          p.Title,
 		Memo:           p.Memo,
 		TargetLanguage: string(p.TargetLanguage),
@@ -125,6 +126,22 @@ func (s *Store) AssignTemplate(ctx context.Context, slug, userID string, templat
 			return false, post.ErrTemplateNotFound
 		}
 		return false, fmt.Errorf("assign post template: %w", err)
+	}
+	return n == 1, nil
+}
+
+// AssignField sets or clears the post's blog field in one guarded statement. It reports false
+// for a field equal to the stored one, a published post, or one that is gone.
+func (s *Store) AssignField(ctx context.Context, slug, userID string, field *string, updatedAt time.Time) (bool, error) {
+	value := ""
+	if field != nil {
+		value = *field
+	}
+	n, err := s.write.AssignPostField(ctx, sqlc.AssignPostFieldParams{
+		Field: optionalText(value), UpdatedAt: formatTime(updatedAt), Slug: slug, UserID: userID,
+	})
+	if err != nil {
+		return false, fmt.Errorf("assign post field: %w", err)
 	}
 	return n == 1, nil
 }
@@ -253,14 +270,18 @@ func (s *Store) SaveContent(ctx context.Context, slug, userID string, content po
 	return n == 1, nil
 }
 
-func (s *Store) SaveGenerationOptions(ctx context.Context, slug, userID string, targetLength *int, tagCount int, useMemory bool, updatedAt time.Time) (bool, error) {
+func (s *Store) SaveGenerationOptions(ctx context.Context, slug, userID string, targetLength *int, tagCount int, useMemory bool, qualityRules []string, updatedAt time.Time) (bool, error) {
 	memory := int64(0)
 	if useMemory {
 		memory = 1
 	}
+	rules, err := marshalQualityRules(qualityRules)
+	if err != nil {
+		return false, err
+	}
 	n, err := s.write.SavePostGenerationOptions(ctx, sqlc.SavePostGenerationOptionsParams{
 		TargetLength: optionalInt64(targetLength), TagCount: sql.NullInt64{Int64: int64(tagCount), Valid: true},
-		UseMemory: memory,
+		UseMemory: memory, QualityRules: rules,
 		UpdatedAt: formatTime(updatedAt), Slug: slug, UserID: userID,
 	})
 	if err != nil {
@@ -870,6 +891,10 @@ func toPost(row sqlc.Post) (post.Post, error) {
 	if err != nil {
 		return post.Post{}, fmt.Errorf("post %s: %w", row.Slug, err)
 	}
+	qualityRules, err := unmarshalQualityRules(row.QualityRules)
+	if err != nil {
+		return post.Post{}, fmt.Errorf("post %s: %w", row.Slug, err)
+	}
 	targetLanguage, err := post.ParseLanguage(row.TargetLanguage)
 	if err != nil {
 		return post.Post{}, fmt.Errorf("post %s target language: %w", row.Slug, err)
@@ -904,6 +929,8 @@ func toPost(row sqlc.Post) (post.Post, error) {
 		PublishedURL:            row.PublishedUrl.String,
 		PublishedAt:             publishedAt,
 		ContentNouns:            nouns,
+		Field:                   row.Field.String,
+		QualityRules:            qualityRules,
 		Observations:            observations,
 	}, nil
 }

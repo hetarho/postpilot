@@ -115,7 +115,7 @@ func publishedSlug(t *testing.T, postSvc *post.Service, voiceSvc *voice.Service)
 		t.Fatal(err)
 	}
 	language := post.LanguageKorean
-	created, err := postSvc.SaveDraft(ctx, "alice", "", "제주", "", &defaultVoice.ID, nil, &language, nil)
+	created, err := postSvc.SaveDraft(ctx, "alice", post.DraftSave{Title: "제주", VoiceID: &defaultVoice.ID, TargetLanguage: &language})
 	if err != nil {
 		t.Fatal(err)
 	}

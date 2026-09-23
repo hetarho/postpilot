@@ -35,7 +35,7 @@ func TestCreateRequiresAnOwnedActiveVoice(t *testing.T) {
 		"deleted": {&deleted, ErrVoiceDeleted},
 	} {
 		t.Run(name, func(t *testing.T) {
-			if _, err := svc.SaveDraft(ctx, alice, "", "Jeju", "", tc.voice, nil, &language, nil); !errors.Is(err, tc.want) {
+			if _, err := svc.SaveDraft(ctx, alice, DraftSave{Title: "Jeju", VoiceID: tc.voice, TargetLanguage: &language}); !errors.Is(err, tc.want) {
 				t.Fatalf("SaveDraft = %v, want %v", err, tc.want)
 			}
 		})
@@ -104,7 +104,7 @@ func TestReassignmentPreservesContentAndClearsTheBaselineVoice(t *testing.T) {
 	}
 
 	review := aliceReview
-	moved, err := svc.SaveDraft(ctx, alice, created.Slug, "Jeju", "memo", &review, nil, nil, nil)
+	moved, err := svc.SaveDraft(ctx, alice, DraftSave{Slug: created.Slug, Title: "Jeju", Memo: "memo", VoiceID: &review})
 	if err != nil {
 		t.Fatalf("reassign: %v", err)
 	}
@@ -128,7 +128,7 @@ func TestReassignmentPreservesContentAndClearsTheBaselineVoice(t *testing.T) {
 	}
 	// The same present value is not a reassignment: an ordinary autosave patch.
 	same := aliceReview
-	if _, err := svc.SaveDraft(ctx, alice, created.Slug, "Jeju", "memo 2", &same, nil, nil, nil); err != nil {
+	if _, err := svc.SaveDraft(ctx, alice, DraftSave{Slug: created.Slug, Title: "Jeju", Memo: "memo 2", VoiceID: &same}); err != nil {
 		t.Fatalf("unchanged assignment: %v", err)
 	}
 	if store.posts[created.Slug].MachineBaselineVoiceID != aliceReview {
@@ -145,7 +145,7 @@ func TestReassignedReviewCanFinalizeWithoutPublishingLearningEvidence(t *testing
 		t.Fatal(err)
 	}
 	target := aliceReview
-	moved, err := svc.SaveDraft(ctx, alice, created.Slug, created.Title, created.Memo, &target, nil, nil, nil)
+	moved, err := svc.SaveDraft(ctx, alice, DraftSave{Slug: created.Slug, Title: created.Title, Memo: created.Memo, VoiceID: &target})
 	if err != nil || moved.Content == nil || moved.MachineBaselineRevision != 0 {
 		t.Fatalf("reassign = %+v err=%v", moved, err)
 	}
@@ -173,7 +173,7 @@ func TestReassignmentTargetsAndBusyPostsAreRefused(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			voiceID := tc.voice
-			if _, err := svc.SaveDraft(ctx, alice, created.Slug, "Jeju", "", &voiceID, nil, nil, nil); !errors.Is(err, tc.want) {
+			if _, err := svc.SaveDraft(ctx, alice, DraftSave{Slug: created.Slug, Title: "Jeju", VoiceID: &voiceID}); !errors.Is(err, tc.want) {
 				t.Fatalf("reassign to %q = %v, want %v", tc.voice, err, tc.want)
 			}
 			if store.posts[created.Slug].VoiceID != aliceVoice {
@@ -183,23 +183,23 @@ func TestReassignmentTargetsAndBusyPostsAreRefused(t *testing.T) {
 	}
 	review := aliceReview
 	svc.jobs = fakeActiveJobs{created.Slug: {ID: "job-1", Status: "running"}}
-	if _, err := svc.SaveDraft(ctx, alice, created.Slug, "Jeju", "", &review, nil, nil, nil); !errors.Is(err, ErrPostBusy) {
+	if _, err := svc.SaveDraft(ctx, alice, DraftSave{Slug: created.Slug, Title: "Jeju", VoiceID: &review}); !errors.Is(err, ErrPostBusy) {
 		t.Fatalf("reassign during a job = %v", err)
 	}
 	svc.jobs = fakeActiveJobs{}
 	svc.experiments = fakePendingExperiments{created.Slug: "experiment-1"}
-	if _, err := svc.SaveDraft(ctx, alice, created.Slug, "Jeju", "", &review, nil, nil, nil); !errors.Is(err, ErrPostBusy) {
+	if _, err := svc.SaveDraft(ctx, alice, DraftSave{Slug: created.Slug, Title: "Jeju", VoiceID: &review}); !errors.Is(err, ErrPostBusy) {
 		t.Fatalf("reassign during an undecided experiment = %v", err)
 	}
 	if store.posts[created.Slug].VoiceID != aliceVoice {
 		t.Fatal("a refused reassignment moved the post")
 	}
 	svc.experiments = fakePendingExperiments{}
-	if moved, err := svc.SaveDraft(ctx, alice, created.Slug, "Jeju", "", &review, nil, nil, nil); err != nil || moved.VoiceID != aliceReview {
+	if moved, err := svc.SaveDraft(ctx, alice, DraftSave{Slug: created.Slug, Title: "Jeju", VoiceID: &review}); err != nil || moved.VoiceID != aliceReview {
 		t.Fatalf("idle reassign = %+v err=%v", moved, err)
 	}
 	// A title-only autosave arriving afterwards preserves the newer assignment.
-	if kept, err := svc.SaveDraft(ctx, alice, created.Slug, "Jeju 2", "", nil, nil, nil, nil); err != nil || kept.VoiceID != aliceReview {
+	if kept, err := svc.SaveDraft(ctx, alice, DraftSave{Slug: created.Slug, Title: "Jeju 2"}); err != nil || kept.VoiceID != aliceReview {
 		t.Fatalf("absent voice_id changed the assignment: %+v err=%v", kept, err)
 	}
 }

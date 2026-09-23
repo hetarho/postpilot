@@ -196,6 +196,7 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 			// Deleting a post also drops the source links its memories named, and takes a
 			// memory with it only when that post held the last one (MEM-17).
 			MemoryLinks: postMemoryLinks{app: c},
+			Fields:      blogFields{},
 		},
 	)
 	// Quality reads only post, which exists by now, so its adapter holds the service directly.

@@ -78,7 +78,7 @@ func TestTheAggregateCountsPublishedPostsOnlyAndForgetsADeletedOne(t *testing.T)
 	language := post.LanguageKorean
 	var slugs []string
 	for i := 0; i < 4; i++ {
-		created, err := postSvc.SaveDraft(ctx, "alice", "", fmt.Sprintf("제주 %d일", i+1), "", &defaultVoice.ID, nil, &language, nil)
+		created, err := postSvc.SaveDraft(ctx, "alice", post.DraftSave{Title: fmt.Sprintf("제주 %d일", i+1), VoiceID: &defaultVoice.ID, TargetLanguage: &language})
 		if err != nil {
 			t.Fatal(err)
 		}

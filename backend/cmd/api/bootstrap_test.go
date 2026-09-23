@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/url"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -221,7 +222,7 @@ func TestAccountBootstrapPrecedesPostCreation(t *testing.T) {
 	}
 	guess := "any"
 	language := post.LanguageKorean
-	if _, err := postSvc.SaveDraft(ctx, "alice", "", "first", "", &guess, nil, &language, nil); !errors.Is(err, post.ErrVoiceNotFound) {
+	if _, err := postSvc.SaveDraft(ctx, "alice", post.DraftSave{Title: "first", VoiceID: &guess, TargetLanguage: &language}); !errors.Is(err, post.ErrVoiceNotFound) {
 		t.Fatalf("post before bootstrap = %v", err)
 	}
 	for range 2 {
@@ -233,7 +234,7 @@ func TestAccountBootstrapPrecedesPostCreation(t *testing.T) {
 	if err != nil || len(voices) != 1 || !voices[0].IsDefault || voices[0].Name != voice.DefaultVoiceName {
 		t.Fatalf("voices after two bootstraps = %+v err=%v", voices, err)
 	}
-	created, err := postSvc.SaveDraft(ctx, "alice", "", "first", "", &voices[0].ID, nil, &language, nil)
+	created, err := postSvc.SaveDraft(ctx, "alice", post.DraftSave{Title: "first", VoiceID: &voices[0].ID, TargetLanguage: &language})
 	if err != nil || created.VoiceID != voices[0].ID || created.Voice.Name != voice.DefaultVoiceName {
 		t.Fatalf("post after bootstrap = %+v err=%v", created, err)
 	}
@@ -284,7 +285,7 @@ func TestARunFreezesThePostsNumbersNotTheTemplates(t *testing.T) {
 		t.Fatal(err)
 	}
 	language := post.LanguageKorean
-	saved, err := postSvc.SaveDraft(ctx, "alice", "", "제주", "", &defaultVoice.ID, &shaped.ID, &language, nil)
+	saved, err := postSvc.SaveDraft(ctx, "alice", post.DraftSave{Title: "제주", VoiceID: &defaultVoice.ID, TemplateID: &shaped.ID, TargetLanguage: &language})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -294,7 +295,7 @@ func TestARunFreezesThePostsNumbersNotTheTemplates(t *testing.T) {
 
 	// The author types over both. The template still says 1800/7 and must not win.
 	typed := 1200
-	if _, err := postSvc.SaveGenerationOptions(ctx, "alice", saved.Slug, &typed, intPtr(3), nil); err != nil {
+	if _, err := postSvc.SaveGenerationOptions(ctx, "alice", saved.Slug, &typed, intPtr(3), nil, nil); err != nil {
 		t.Fatal(err)
 	}
 	input, err := generationPosts{service: postSvc}.AttachedImages(ctx, "alice", saved.Slug)
@@ -359,11 +360,10 @@ func TestGenerationAdapterCarriesThePostTemplateThroughToTheFrozenBrief(t *testi
 		t.Fatal(err)
 	}
 	language := post.LanguageKorean
-	saved, err := postSvc.SaveDraft(ctx, "alice", "", "제주", "", &defaultVoice.ID, &created.ID, &language,
-		[]post.TemplateAnswer{
-			{Label: "총평 별점", Text: "4.5점", Enabled: true},
-			{Label: "방문일", Text: "2026-03-01", Enabled: false},
-		})
+	saved, err := postSvc.SaveDraft(ctx, "alice", post.DraftSave{Title: "제주", VoiceID: &defaultVoice.ID, TemplateID: &created.ID, TargetLanguage: &language, Answers: []post.TemplateAnswer{
+		{Label: "총평 별점", Text: "4.5점", Enabled: true},
+		{Label: "방문일", Text: "2026-03-01", Enabled: false},
+	}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -438,7 +438,7 @@ func TestGenerationAdapterCarriesThePostTemplateThroughToTheFrozenBrief(t *testi
 	}
 
 	// A post left on 없음 resolves to no brief, so the prompt is the pre-template one.
-	plain, err := postSvc.SaveDraft(ctx, "alice", "", "템플릿 없는 글", "", &defaultVoice.ID, nil, &language, nil)
+	plain, err := postSvc.SaveDraft(ctx, "alice", post.DraftSave{Title: "템플릿 없는 글", VoiceID: &defaultVoice.ID, TargetLanguage: &language})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -494,11 +494,10 @@ func TestGenerationAdapterCarriesTheTitleAreaIntoTheFrozenBrief(t *testing.T) {
 		t.Fatal(err)
 	}
 	language := post.LanguageKorean
-	saved, err := postSvc.SaveDraft(ctx, "alice", "", "을지로", "", &defaultVoice.ID, &created.ID, &language,
-		[]post.TemplateAnswer{
-			{Label: "가게 이름", Text: "을지로 노포", Enabled: true},
-			{Label: "총평", Text: "뼈가 푸짐했다", Enabled: true},
-		})
+	saved, err := postSvc.SaveDraft(ctx, "alice", post.DraftSave{Title: "을지로", VoiceID: &defaultVoice.ID, TemplateID: &created.ID, TargetLanguage: &language, Answers: []post.TemplateAnswer{
+		{Label: "가게 이름", Text: "을지로 노포", Enabled: true},
+		{Label: "총평", Text: "뼈가 푸짐했다", Enabled: true},
+	}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -526,6 +525,53 @@ func TestGenerationAdapterCarriesTheTitleAreaIntoTheFrozenBrief(t *testing.T) {
 		if section < 0 || title <= section || body <= title {
 			t.Fatalf("%s prompt: section at %d, title area at %d, body at %d:\n%s", name, section, title, body, system)
 		}
+	}
+}
+
+// The 분야 and the ticked metrics are the run's inputs, read by the enqueue through the adapter
+// like the template id is; an adapter that dropped them would make every run resolve as if the
+// post had neither.
+func TestGenerationAdapterCarriesTheFieldAndTheTicks(t *testing.T) {
+	handle, err := db.Open(filepath.Join(t.TempDir(), "field.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer handle.Close()
+	ctx := context.Background()
+	if err := db.Migrate(ctx, handle.Writer); err != nil {
+		t.Fatal(err)
+	}
+	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: time.Now()}); err != nil {
+		t.Fatal(err)
+	}
+	if err := defaultVoiceBootstrap(ctx, handle, "alice"); err != nil {
+		t.Fatal(err)
+	}
+	voiceSvc := voice.NewService(voicestore.New(handle.Writer, handle.Reader), nil, nil)
+	postSvc := post.NewService(poststore.New(handle.Writer, handle.Reader), noBlobs{}, testPostLimits(), testPostDeps(voiceSvc))
+	defaultVoice, err := voiceSvc.DefaultVoice(ctx, "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	language, field := post.LanguageKorean, "restaurant"
+	saved, err := postSvc.SaveDraft(ctx, "alice", post.DraftSave{Title: "을지로", VoiceID: &defaultVoice.ID, TargetLanguage: &language, Field: &field})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ticks := []string{post.QualityRuleComposition, post.QualityRuleTitleSaturation}
+	if _, err := postSvc.SaveGenerationOptions(ctx, "alice", saved.Slug, nil, nil, nil, &ticks); err != nil {
+		t.Fatal(err)
+	}
+
+	input, err := generationPosts{service: postSvc}.AttachedImages(ctx, "alice", saved.Slug)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if input.Field != "restaurant" {
+		t.Fatalf("the adapter dropped the 분야: %q", input.Field)
+	}
+	if want := []string{post.QualityRuleTitleSaturation, post.QualityRuleComposition}; !reflect.DeepEqual(input.QualityRuleIDs, want) {
+		t.Fatalf("the adapter carried ticks %q, want %q", input.QualityRuleIDs, want)
 	}
 }
 
@@ -560,7 +606,7 @@ func TestVoiceLearningAdapterCarriesBothLanguagesBeforeTheEqualityGate(t *testin
 		t.Fatal(err)
 	}
 	target := post.LanguageEnglish
-	created, err := postSvc.SaveDraft(ctx, "alice", "", "English final", "", &defaultVoice.ID, nil, &target, nil)
+	created, err := postSvc.SaveDraft(ctx, "alice", post.DraftSave{Title: "English final", VoiceID: &defaultVoice.ID, TargetLanguage: &target})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -674,7 +720,7 @@ func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.
 		t.Fatal(err)
 	}
 	language := post.LanguageKorean
-	saved, err := postSvc.SaveDraft(ctx, "alice", "", "무인 떡집", "", &defaultVoice.ID, &review.ID, &language, nil)
+	saved, err := postSvc.SaveDraft(ctx, "alice", post.DraftSave{Title: "무인 떡집", VoiceID: &defaultVoice.ID, TemplateID: &review.ID, TargetLanguage: &language})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -706,7 +752,7 @@ func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.
 	}
 
 	// A post left on 없음 receives the global group alone.
-	plain, err := postSvc.SaveDraft(ctx, "alice", "", "템플릿 없는 글", "", &defaultVoice.ID, nil, &language, nil)
+	plain, err := postSvc.SaveDraft(ctx, "alice", post.DraftSave{Title: "템플릿 없는 글", VoiceID: &defaultVoice.ID, TargetLanguage: &language})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -771,7 +817,7 @@ func TestGuidelineCandidateAdaptersRecordReviewAndApproveAcrossTheSeam(t *testin
 		t.Fatal(err)
 	}
 	language := post.LanguageKorean
-	saved, err := postSvc.SaveDraft(ctx, "alice", "", "무인 떡집", "", &defaultVoice.ID, nil, &language, nil)
+	saved, err := postSvc.SaveDraft(ctx, "alice", post.DraftSave{Title: "무인 떡집", VoiceID: &defaultVoice.ID, TargetLanguage: &language})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -107,7 +107,7 @@ func TestEveryGuardedStatementRefusesAPublishedPost(t *testing.T) {
 			return s.SaveContent(context.Background(), "p", "alice", other, 1, later)
 		},
 		"SavePostGenerationOptions": func(s *store.Store) (bool, error) {
-			return s.SaveGenerationOptions(context.Background(), "p", "alice", &length, 5, true, later)
+			return s.SaveGenerationOptions(context.Background(), "p", "alice", &length, 5, true, nil, later)
 		},
 		"FinalizePost": func(s *store.Store) (bool, error) {
 			return s.Finalize(context.Background(), "p", "alice", "제주 3일", 1, later)
@@ -117,6 +117,10 @@ func TestEveryGuardedStatementRefusesAPublishedPost(t *testing.T) {
 		},
 		"AssignPostTemplate": func(s *store.Store) (bool, error) {
 			return s.AssignTemplate(context.Background(), "p", "alice", nil, post.TemplateNumbers{}, later)
+		},
+		"AssignPostField": func(s *store.Store) (bool, error) {
+			field := "cafe"
+			return s.AssignField(context.Background(), "p", "alice", &field, later)
 		},
 		"DeleteImage": func(s *store.Store) (bool, error) { return s.DeleteImage(context.Background(), "i1") },
 		"DeleteVideo": func(s *store.Store) (bool, error) { return s.DeleteVideo(context.Background(), "v1") },

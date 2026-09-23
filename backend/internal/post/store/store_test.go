@@ -227,7 +227,7 @@ func TestContentSavePreservesFrozenMachineBaseline(t *testing.T) {
 	seedPost(t, s, "editable", "alice", testNow)
 	baseline := post.PostContent{Title: "machine", Blocks: []post.Block{{Type: post.BlockText, Content: "생성 문장입니다."}}}
 	target1400 := 1400
-	if updated, err := s.SaveGenerationOptions(ctx, "editable", "alice", &target1400, 4, false, testNow); err != nil || !updated {
+	if updated, err := s.SaveGenerationOptions(ctx, "editable", "alice", &target1400, 4, false, nil, testNow); err != nil || !updated {
 		t.Fatalf("option save: updated=%v err=%v", updated, err)
 	}
 	if updated, err := s.UpdateGeneratedContent(ctx, "editable", "alice", baseline, post.LanguageKorean, testNow); err != nil || !updated {
@@ -241,7 +241,7 @@ func TestContentSavePreservesFrozenMachineBaseline(t *testing.T) {
 		t.Fatalf("stale save: updated=%v err=%v", updated, err)
 	}
 	target1500 := 1500
-	if updated, err := s.SaveGenerationOptions(ctx, "editable", "alice", &target1500, 7, false, testNow.Add(time.Minute)); err != nil || !updated {
+	if updated, err := s.SaveGenerationOptions(ctx, "editable", "alice", &target1500, 7, false, nil, testNow.Add(time.Minute)); err != nil || !updated {
 		t.Fatalf("option update: updated=%v err=%v", updated, err)
 	}
 	if updated, err := s.Finalize(ctx, "editable", "alice", "machine", 2, testNow.Add(2*time.Minute)); err != nil || !updated {
@@ -731,5 +731,87 @@ func TestImageRequiresItsPost(t *testing.T) {
 		Key: "k", Width: 1, Height: 1, Bytes: 1, CreatedAt: testNow})
 	if err == nil {
 		t.Error("an image for an unknown post was accepted — foreign keys are off")
+	}
+}
+
+// The 분야 rides the create's own insert and reads back; the ticks round-trip through the
+// options save, and an empty set is stored as NULL and read as none.
+func TestFieldAndTicksRoundTrip(t *testing.T) {
+	ctx := context.Background()
+	s, handle := newStoreWithHandle(t)
+	p := post.Post{
+		Slug: "p", UserID: "alice", VoiceID: voiceIDFor("alice", 0), Title: "p", Field: "cafe",
+		Status: post.StatusDraft, TargetLanguage: post.LanguageKorean, CreatedAt: testNow, UpdatedAt: testNow,
+	}
+	if err := s.CreatePost(ctx, p); err != nil {
+		t.Fatal(err)
+	}
+	got, err := s.GetPost(ctx, "p")
+	if err != nil || got.Field != "cafe" || got.QualityRules != nil {
+		t.Fatalf("created = %q %q, %v", got.Field, got.QualityRules, err)
+	}
+	ticks := []string{post.QualityRuleTitleSaturation, post.QualityRuleComposition}
+	if ok, err := s.SaveGenerationOptions(ctx, "p", "alice", nil, 4, false, ticks, testNow.Add(time.Minute)); err != nil || !ok {
+		t.Fatalf("save ticks: %v, %v", ok, err)
+	}
+	if got, _ := s.GetPost(ctx, "p"); !reflect.DeepEqual(got.QualityRules, ticks) {
+		t.Fatalf("ticks = %q", got.QualityRules)
+	}
+	if ok, err := s.SaveGenerationOptions(ctx, "p", "alice", nil, 4, false, []string{}, testNow.Add(2*time.Minute)); err != nil || !ok {
+		t.Fatalf("clear ticks: %v, %v", ok, err)
+	}
+	var isNull bool
+	if err := handle.Reader.QueryRow(`SELECT quality_rules IS NULL FROM posts WHERE slug = 'p'`).Scan(&isNull); err != nil || !isNull {
+		t.Fatalf("cleared ticks stored as NULL = %v, %v", isNull, err)
+	}
+	if got, _ := s.GetPost(ctx, "p"); got.QualityRules != nil {
+		t.Fatalf("cleared ticks read back as %q", got.QualityRules)
+	}
+	if ok, err := s.AssignField(ctx, "p", "alice", nil, testNow.Add(3*time.Minute)); err != nil || !ok {
+		t.Fatalf("clear field: %v, %v", ok, err)
+	}
+	if got, _ := s.GetPost(ctx, "p"); got.Field != "" {
+		t.Fatalf("cleared field reads %q", got.Field)
+	}
+}
+
+// AssignPostField writes only a change, NULL-safely, and touches nothing of the lifecycle.
+func TestAssignPostFieldWritesOnlyAChange(t *testing.T) {
+	ctx := context.Background()
+	s := newStore(t)
+	seedPost(t, s, "p", "alice", testNow)
+	content := post.PostContent{Title: "제주", Blocks: []post.Block{{Type: post.BlockText, Content: "바다"}}}
+	if ok, err := s.UpdateGeneratedContent(ctx, "p", "alice", content, post.LanguageKorean, testNow); err != nil || !ok {
+		t.Fatal(err)
+	}
+	if ok, err := s.Finalize(ctx, "p", "alice", "제주", 1, testNow.Add(time.Minute)); err != nil || !ok {
+		t.Fatal(err)
+	}
+	before, _ := s.GetPost(ctx, "p")
+	cafe := "cafe"
+	for _, step := range []struct {
+		name    string
+		field   *string
+		written bool
+	}{
+		{"none to none", nil, false},
+		{"assign", &cafe, true},
+		{"the same again", &cafe, false},
+		{"clear", nil, true},
+		{"clear again", nil, false},
+	} {
+		ok, err := s.AssignField(ctx, "p", "alice", step.field, testNow.Add(time.Hour))
+		if err != nil || ok != step.written {
+			t.Fatalf("%s: wrote %v, %v; want %v", step.name, ok, err, step.written)
+		}
+	}
+	after, _ := s.GetPost(ctx, "p")
+	if after.Status != post.StatusFinalized || after.ContentRevision != before.ContentRevision ||
+		after.MachineBaselineRevision != before.MachineBaselineRevision || after.FinalizedRevision != before.FinalizedRevision ||
+		!after.FinalizedAt.Equal(*before.FinalizedAt) {
+		t.Fatalf("the 분야 write moved the lifecycle: %+v", after)
+	}
+	if ok, err := s.AssignField(ctx, "p", "bob", &cafe, testNow); err != nil || ok {
+		t.Fatalf("another account's write = %v, %v", ok, err)
 	}
 }

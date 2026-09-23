@@ -9,6 +9,7 @@ import (
 	"github.com/postpilot/backend/internal/job"
 	"github.com/postpilot/backend/internal/memory"
 	"github.com/postpilot/backend/internal/post"
+	"github.com/postpilot/backend/internal/quality"
 	"github.com/postpilot/backend/internal/template"
 	"github.com/postpilot/backend/internal/voice"
 )
@@ -51,6 +52,13 @@ func (a postVoices) Voices(ctx context.Context, userID string) ([]post.VoiceRef,
 // tombstones: a deleted template simply stops being listed, and the composite foreign key has
 // already cleared the assignments that named it.
 type postTemplates struct{ service *template.Service }
+
+// blogFields is the product's 분야 list as a context that stores a 분야 needs it: whether an id
+// is on it. It is named for what it is rather than for post, because the guideline context
+// validates the same ids through it.
+type blogFields struct{}
+
+func (blogFields) Known(id string) bool { return quality.Known(id) }
 
 func (a postTemplates) Templates(ctx context.Context, userID string) ([]post.TemplateRef, error) {
 	templates, err := a.service.List(ctx, userID)

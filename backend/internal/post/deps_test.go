@@ -13,8 +13,14 @@ func testDeps() Deps {
 		ContentPurger:  &recordingContentPurger{},
 		CandidateLinks: neutralDetacher{},
 		MemoryLinks:    neutralDetacher{},
+		Fields:         knownFields{"restaurant": true, "cafe": true},
 	}
 }
+
+// knownFields is the 분야 directory: the ids it lists are the product's.
+type knownFields map[string]bool
+
+func (f knownFields) Known(id string) bool { return f[id] }
 
 type neutralJobs struct{}
 

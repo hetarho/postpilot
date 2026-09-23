@@ -123,3 +123,31 @@ func unmarshalNouns(value sql.NullString) ([]string, error) {
 	}
 	return nouns, nil
 }
+
+// marshalQualityRules stores the ticks as JSON, NULL for none: an empty set and "never ticked"
+// read back the same way.
+func marshalQualityRules(ids []string) (sql.NullString, error) {
+	if len(ids) == 0 {
+		return sql.NullString{}, nil
+	}
+	encoded, err := json.Marshal(ids)
+	if err != nil {
+		return sql.NullString{}, fmt.Errorf("encode quality rules: %w", err)
+	}
+	return sql.NullString{String: string(encoded), Valid: true}, nil
+}
+
+// unmarshalQualityRules reads NULL and [] alike as no ticks.
+func unmarshalQualityRules(value sql.NullString) ([]string, error) {
+	if !value.Valid {
+		return nil, nil
+	}
+	var ids []string
+	if err := json.Unmarshal([]byte(value.String), &ids); err != nil {
+		return nil, fmt.Errorf("decode quality rules: %w", err)
+	}
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	return ids, nil
+}

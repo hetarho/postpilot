@@ -219,6 +219,12 @@ type PostInput struct {
 	// WriteNativeEffort is frozen from the selected catalog model at enqueue, so the hold
 	// and a delayed execution use the same completion budget even if curation changes.
 	WriteNativeEffort bool
+	// Field and QualityRuleIDs are the post's 분야 and its quality ticks, read at enqueue as
+	// inputs to resolve and never frozen themselves: the frozen guideline texts, phrases and
+	// rule texts they resolve into carry the run's identity. `json:"-"` keeps every snapshot's
+	// bytes and hash (the same reason Published has it).
+	Field          string   `json:"-"`
+	QualityRuleIDs []string `json:"-"`
 	// Published is the post's lock (POST-74): no run starts on it and no result lands in it.
 	// It is read from the post and never frozen, and its `json:"-"` is load-bearing: an
 	// experiment snapshot marshals PostInput by field name, so any new key would re-hash

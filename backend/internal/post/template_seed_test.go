@@ -35,7 +35,7 @@ func TestAssigningATemplateSeedsThePostsGenerationOptions(t *testing.T) {
 	created := mustCreatePost(t, svc, alice, "Jeju")
 
 	review := "template-review"
-	seeded, err := svc.SaveDraft(ctx, alice, created.Slug, created.Title, created.Memo, nil, &review, nil, nil)
+	seeded, err := svc.SaveDraft(ctx, alice, DraftSave{Slug: created.Slug, Title: created.Title, Memo: created.Memo, TemplateID: &review})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,10 +45,10 @@ func TestAssigningATemplateSeedsThePostsGenerationOptions(t *testing.T) {
 
 	// The author types over the seeded values, and the template is not consulted again.
 	typed := 1200
-	if _, err := svc.SaveGenerationOptions(ctx, alice, created.Slug, &typed, number(3), nil); err != nil {
+	if _, err := svc.SaveGenerationOptions(ctx, alice, created.Slug, &typed, number(3), nil, nil); err != nil {
 		t.Fatal(err)
 	}
-	kept, err := svc.SaveDraft(ctx, alice, created.Slug, "Jeju 2", created.Memo, nil, nil, nil, nil)
+	kept, err := svc.SaveDraft(ctx, alice, DraftSave{Slug: created.Slug, Title: "Jeju 2", Memo: created.Memo})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -58,7 +58,7 @@ func TestAssigningATemplateSeedsThePostsGenerationOptions(t *testing.T) {
 
 	// A template with an opinion about one number only leaves the other as it stands.
 	long := "template-long"
-	partial, err := svc.SaveDraft(ctx, alice, created.Slug, "Jeju 2", created.Memo, nil, &long, nil, nil)
+	partial, err := svc.SaveDraft(ctx, alice, DraftSave{Slug: created.Slug, Title: "Jeju 2", Memo: created.Memo, TemplateID: &long})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,7 +68,7 @@ func TestAssigningATemplateSeedsThePostsGenerationOptions(t *testing.T) {
 
 	// A template with no opinion at all changes neither.
 	quiet := "template-quiet"
-	untouched, err := svc.SaveDraft(ctx, alice, created.Slug, "Jeju 2", created.Memo, nil, &quiet, nil, nil)
+	untouched, err := svc.SaveDraft(ctx, alice, DraftSave{Slug: created.Slug, Title: "Jeju 2", Memo: created.Memo, TemplateID: &quiet})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,16 +85,16 @@ func TestOnlyAnAssignmentSeeds(t *testing.T) {
 	created := mustCreatePost(t, svc, alice, "Jeju")
 
 	review := "template-review"
-	if _, err := svc.SaveDraft(ctx, alice, created.Slug, created.Title, created.Memo, nil, &review, nil, nil); err != nil {
+	if _, err := svc.SaveDraft(ctx, alice, DraftSave{Slug: created.Slug, Title: created.Title, Memo: created.Memo, TemplateID: &review}); err != nil {
 		t.Fatal(err)
 	}
 	typed := 1200
-	if _, err := svc.SaveGenerationOptions(ctx, alice, created.Slug, &typed, number(3), nil); err != nil {
+	if _, err := svc.SaveGenerationOptions(ctx, alice, created.Slug, &typed, number(3), nil, nil); err != nil {
 		t.Fatal(err)
 	}
 
 	// The same id again: nothing to assign, so nothing to seed.
-	same, err := svc.SaveDraft(ctx, alice, created.Slug, created.Title, created.Memo, nil, &review, nil, nil)
+	same, err := svc.SaveDraft(ctx, alice, DraftSave{Slug: created.Slug, Title: created.Title, Memo: created.Memo, TemplateID: &review})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -104,7 +104,7 @@ func TestOnlyAnAssignmentSeeds(t *testing.T) {
 
 	// 없음 clears the assignment and keeps the numbers the post last received.
 	blank := ""
-	cleared, err := svc.SaveDraft(ctx, alice, created.Slug, created.Title, created.Memo, nil, &blank, nil, nil)
+	cleared, err := svc.SaveDraft(ctx, alice, DraftSave{Slug: created.Slug, Title: created.Title, Memo: created.Memo, TemplateID: &blank})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -123,7 +123,7 @@ func TestARefusedAssignmentSeedsNothing(t *testing.T) {
 	created := mustCreatePost(t, svc, alice, "Jeju")
 
 	foreign := "template-bob"
-	if _, err := svc.SaveDraft(ctx, alice, created.Slug, created.Title, created.Memo, nil, &foreign, nil, nil); err == nil {
+	if _, err := svc.SaveDraft(ctx, alice, DraftSave{Slug: created.Slug, Title: created.Title, Memo: created.Memo, TemplateID: &foreign}); err == nil {
 		t.Fatal("a foreign template was accepted")
 	}
 	after, err := svc.Get(ctx, alice, created.Slug)
@@ -143,7 +143,7 @@ func TestCreatingAPostWithATemplateSeedsIt(t *testing.T) {
 	language := LanguageKorean
 
 	review := "template-review"
-	created, err := svc.SaveDraft(ctx, alice, "", "Jeju", "memo", &voiceID, &review, &language, nil)
+	created, err := svc.SaveDraft(ctx, alice, DraftSave{Title: "Jeju", Memo: "memo", VoiceID: &voiceID, TemplateID: &review, TargetLanguage: &language})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -154,7 +154,7 @@ func TestCreatingAPostWithATemplateSeedsIt(t *testing.T) {
 	// A create naming a template with no opinion stores no number at all: natural length and
 	// the configured default count, exactly as a create with no template does.
 	quiet := "template-quiet"
-	plain, err := svc.SaveDraft(ctx, alice, "", "Busan", "memo", &voiceID, &quiet, &language, nil)
+	plain, err := svc.SaveDraft(ctx, alice, DraftSave{Title: "Busan", Memo: "memo", VoiceID: &voiceID, TemplateID: &quiet, TargetLanguage: &language})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -181,7 +181,7 @@ func TestSeedingAdvancesNoRevisionAndMovesNoBaseline(t *testing.T) {
 	before := store.posts[created.Slug]
 
 	review := "template-review"
-	if _, err := svc.SaveDraft(ctx, alice, created.Slug, before.Title, before.Memo, nil, &review, nil, nil); err != nil {
+	if _, err := svc.SaveDraft(ctx, alice, DraftSave{Slug: created.Slug, Title: before.Title, Memo: before.Memo, TemplateID: &review}); err != nil {
 		t.Fatal(err)
 	}
 	after := store.posts[created.Slug]

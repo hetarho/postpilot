@@ -171,6 +171,9 @@ func (a generationPosts) AttachedImages(ctx context.Context, userID, slug string
 		// The lock, read here so every generation path refuses a published post before it
 		// freezes, holds or calls anything (POST-74, GEN-56).
 		Published: found.Status == post.StatusPublished,
+		// Inputs the enqueue resolves, like TemplateID: the 분야 and the ticked metrics.
+		Field:          found.Field,
+		QualityRuleIDs: append([]string(nil), found.QualityRules...),
 		// The opt-in, never the memories: like TemplateID, only the enqueue resolves it, and
 		// only through the memory context's own port (MEM-18, MEM-19).
 		UseMemory: found.UseMemory,

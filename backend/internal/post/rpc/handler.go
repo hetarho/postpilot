@@ -47,8 +47,21 @@ func (h *Handler) SavePostDraft(ctx context.Context, req *connect.Request[postpi
 		}
 		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid post target language", rpcserver.ReasonOf(reason), nil)
 	}
-	saved, err := h.svc.SaveDraft(ctx, userID, req.Msg.GetSlug(), req.Msg.GetTitle(), req.Msg.GetMemo(),
-		req.Msg.VoiceId, req.Msg.TemplateId, targetLanguage, fromProtoTemplateAnswers(req.Msg.GetTemplateAnswers()))
+	// The 분야 is presence-aware: absent keeps it, UNSPECIFIED clears it, and a number the enum
+	// does not name is refused like an id the product does not know.
+	var field *string
+	if req.Msg.Field != nil {
+		id, ok := rpcserver.BlogFieldFromProto(*req.Msg.Field)
+		if !ok {
+			return nil, toConnectError("save draft", post.ErrFieldNotFound)
+		}
+		field = &id
+	}
+	saved, err := h.svc.SaveDraft(ctx, userID, post.DraftSave{
+		Slug: req.Msg.GetSlug(), Title: req.Msg.GetTitle(), Memo: req.Msg.GetMemo(),
+		VoiceID: req.Msg.VoiceId, TemplateID: req.Msg.TemplateId, Field: field,
+		TargetLanguage: targetLanguage, Answers: fromProtoTemplateAnswers(req.Msg.GetTemplateAnswers()),
+	})
 	if err != nil {
 		return nil, toConnectError("save draft", err)
 	}
@@ -76,7 +89,21 @@ func (h *Handler) SavePostGenerationOptions(ctx context.Context, req *connect.Re
 	if err != nil {
 		return nil, err
 	}
-	saved, err := h.svc.SaveGenerationOptions(ctx, userID, req.Msg.GetSlug(), optionalTargetLength(req.Msg.TargetLength), optionalTargetLength(req.Msg.TagCount), req.Msg.UseMemory)
+	// The ticks are present when the message is: an empty one clears them. A tick the enum does
+	// not name is refused before anything in the request is applied.
+	var qualityRules *[]string
+	if ticks := req.Msg.GetQualityRules(); ticks != nil {
+		ids := make([]string, 0, len(ticks.GetMetrics()))
+		for _, metric := range ticks.GetMetrics() {
+			id, ok := qualityRuleFromProto(metric)
+			if !ok {
+				return nil, toConnectError("save post generation options", post.ErrQualityRuleInvalid)
+			}
+			ids = append(ids, id)
+		}
+		qualityRules = &ids
+	}
+	saved, err := h.svc.SaveGenerationOptions(ctx, userID, req.Msg.GetSlug(), optionalTargetLength(req.Msg.TargetLength), optionalTargetLength(req.Msg.TagCount), req.Msg.UseMemory, qualityRules)
 	if err != nil {
 		return nil, toConnectError("save post generation options", err)
 	}
@@ -406,6 +433,8 @@ func toProtoPost(p post.Post) *postpilotv1.Post {
 		ContentLanguage:        optionalLanguageToProto(p.ContentLanguage),
 		TemplateAnswers:        toProtoTemplateAnswers(p.TemplateAnswers),
 		PublishedUrl:           p.PublishedURL,
+		Field:                  protoField(p.Field),
+		QualityRules:           protoQualityRules(p.QualityRules),
 		PublishedAt:            formatOptionalTime(p.PublishedAt),
 	}
 }
@@ -615,3 +644,21 @@ func toProtoVideo(video post.Video) *postpilotv1.Video {
 }
 
 var _ postpilotv1connect.PostServiceHandler = (*Handler)(nil)
+
+// protoField reads a stored id the product no longer lists as none rather than failing a read.
+func protoField(id string) postpilotv1.BlogField {
+	field, _ := rpcserver.BlogFieldToProto(id)
+	return field
+}
+
+// protoQualityRules drops an id the enum does not name; stored ids are validated on the way
+// in, so none is ever dropped in practice.
+func protoQualityRules(ids []string) []postpilotv1.QualityMetric {
+	out := make([]postpilotv1.QualityMetric, 0, len(ids))
+	for _, id := range ids {
+		if metric, ok := qualityRuleToProto(id); ok {
+			out = append(out, metric)
+		}
+	}
+	return out
+}

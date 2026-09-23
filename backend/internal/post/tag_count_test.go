@@ -16,7 +16,7 @@ func TestSaveGenerationOptionsTagCount(t *testing.T) {
 	}
 
 	seven := 7
-	saved, err := svc.SaveGenerationOptions(context.Background(), alice, created.Slug, nil, &seven, nil)
+	saved, err := svc.SaveGenerationOptions(context.Background(), alice, created.Slug, nil, &seven, nil, nil)
 	if err != nil || saved.TagCount != 7 || saved.TargetLength != nil {
 		t.Fatalf("saved = %+v err=%v", saved, err)
 	}
@@ -26,13 +26,13 @@ func TestSaveGenerationOptionsTagCount(t *testing.T) {
 
 	// Absent keeps the stored count while the length is replaced.
 	length := 900
-	kept, err := svc.SaveGenerationOptions(context.Background(), alice, created.Slug, &length, nil, nil)
+	kept, err := svc.SaveGenerationOptions(context.Background(), alice, created.Slug, &length, nil, nil, nil)
 	if err != nil || kept.TagCount != 7 || kept.TargetLength == nil || *kept.TargetLength != 900 {
 		t.Fatalf("kept = %+v err=%v", kept, err)
 	}
 
 	for _, bad := range []int{0, -1, 11} {
-		_, err := svc.SaveGenerationOptions(context.Background(), alice, created.Slug, nil, &bad, nil)
+		_, err := svc.SaveGenerationOptions(context.Background(), alice, created.Slug, nil, &bad, nil, nil)
 		if !errors.Is(err, ErrInvalidTagCount) {
 			t.Fatalf("tag count %d: err = %v, want ErrInvalidTagCount", bad, err)
 		}
@@ -58,7 +58,7 @@ func TestSaveGenerationOptionsUseMemory(t *testing.T) {
 	}
 
 	on := true
-	saved, err := svc.SaveGenerationOptions(ctx, alice, created.Slug, nil, nil, &on)
+	saved, err := svc.SaveGenerationOptions(ctx, alice, created.Slug, nil, nil, &on, nil)
 	if err != nil || !saved.UseMemory {
 		t.Fatalf("save = %+v, %v", saved.UseMemory, err)
 	}
@@ -69,12 +69,12 @@ func TestSaveGenerationOptionsUseMemory(t *testing.T) {
 
 	// Absent keeps the stored flag, exactly as an absent tag count keeps the stored count.
 	length := 1200
-	kept, err := svc.SaveGenerationOptions(ctx, alice, created.Slug, &length, nil, nil)
+	kept, err := svc.SaveGenerationOptions(ctx, alice, created.Slug, &length, nil, nil, nil)
 	if err != nil || !kept.UseMemory {
 		t.Fatalf("an absent flag cleared the option: %+v, %v", kept.UseMemory, err)
 	}
 	off := false
-	cleared, err := svc.SaveGenerationOptions(ctx, alice, created.Slug, &length, nil, &off)
+	cleared, err := svc.SaveGenerationOptions(ctx, alice, created.Slug, &length, nil, &off, nil)
 	if err != nil || cleared.UseMemory {
 		t.Fatalf("the option could not be turned off: %+v, %v", cleared.UseMemory, err)
 	}
