@@ -20,12 +20,12 @@
 | ARCH | 9 | 9 | - | 0 |
 | AUTH | 8 | 8 | - | 0 |
 | QUOTA | 19 | 19 | - | 0 |
-| POST | 11 | 9 | POST-73..87+ POST-13✎ POST-21✎ POST-44✎ POST-51✎ POST-54✎ POST-66✎ | 0 |
+| POST | 11 | 11 | - | 0 |
 | VOICE | 3 | 3 | - | 1 |
-| GEN | 10 | 8 | GEN-48..57+ GEN-14✎ | 0 |
+| GEN | 10 | 10 | - | 0 |
 | MODEL | 16 | 16 | - | 0 |
-| TMPL | 10 | 8 | TMPL-50..55 TMPL-2✎ TMPL-8✎ TMPL-20✎ TMPL-26✎ TMPL-30✎ TMPL-43✎ | 1 |
-| GUIDE | 5 | 3 | GUIDE-29..39+ GUIDE-5✎ GUIDE-14✎ GUIDE-15✎ GUIDE-17✎ GUIDE-20✎ | 0 |
+| TMPL | 10 | 10 | - | 1 |
+| GUIDE | 5 | 5 | - | 0 |
 | EXPORT | 5 | 5 | - | 0 |
 | PUB | 6 | 6 | - | 0 |
 | LANG | 5 | 5 | - | 0 |
@@ -36,7 +36,7 @@
 | CDS | 25 | 23 | CDS-17✎ CDS-19✎ CDS-21✎ CDS-84✎ | 1 |
 | BILL | 4 | 4 | - | 0 |
 | MEM | 1 | 1 | - | 2 |
-| QUAL | 3 | 0 | all | 0 |
+| QUAL | 3 | 3 | - | 0 |
 
 ## review
 | id | st |
@@ -51,11 +51,45 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
+| T322 | The wire contract for 발행됨, 분야, quality, the guideline preset and the template title area | QUAL POST GEN GUIDE TMPL ARCH | - | todo |
+| T323 | One additive migration for publication, 분야, nouns, candidates, ticks, measurements, phrase lists and the title area | POST QUAL GEN TMPL ARCH | - | todo |
+| T324 | The write prompt gains the title and tag rules, the vocabulary precedence, the quality and title-area sections, and a nouns answer | GEN GUIDE TMPL QUAL ARCH | - | todo |
+| T325 | Quality text primitives: Korean and English containment, 8-어절 run hashing and sentence splitting | QUAL ARCH | - | todo |
+| T326 | The 네이버 검색 API blog client and its optional credentials | QUAL ARCH | - | todo |
+| T327 | The template grammar parses a title area in lockstep in Go and TypeScript | TMPL ARCH | - | todo |
+| T328 | shared/ui InlinePopover and Toggletip on one extracted anchored-panel hook | POST THEME ARCH | - | todo |
+| T329 | A finalized post becomes 발행됨 from a pasted Naver URL, replaceable and clearable | POST QUAL ARCH | T322 T323 | todo |
+| T330 | Frozen 분야 phrases in per-post material and the write answer's replacement candidates | GEN QUAL POST ARCH | T324 | todo |
+| T331 | Quality metrics M1–M4, bands, verdicts and rule texts as pure code | QUAL ARCH | T325 | todo |
+| T332 | Rebuild guidelines for the fields scope, and add the 분야 link and preset tables | GUIDE ARCH | T323 | todo |
+| T333 | Templates store, validate and render a title area into the frozen brief | TMPL GEN ARCH | T322 T323 T324 T327 | todo |
+| T334 | A published post refuses every write except replacing or clearing its URL and deleting it | POST GEN MODEL ARCH | T329 | todo |
+| T335 | QualityService: stored per-revision measurements, the read-time aggregate, rule texts and phrase reads | QUAL POST ARCH | T329 T331 | todo |
+| T336 | FE templates carry the title area, and ① lists title-area asks first | TMPL ARCH | T333 | todo |
+| T337 | A post saves its 분야 through the draft save and its quality ticks as a generation option | POST QUAL ARCH | T334 | todo |
+| T338 | The daily per-분야 phrase extraction and refresh pass | QUAL GUIDE ARCH | T335 T326 | todo |
+| T339 | 발행됨 is the fourth status everywhere, and a published post reads as locked | POST ARCH THEME | T334 | todo |
+| T340 | The template screen authors a title area in the builder and in 원문 | TMPL ARCH THEME | T336 | todo |
+| T341 | Write results store nouns and replacement candidates beside the content | GEN POST ARCH | T337 T330 | todo |
+| T342 | Guidelines scoped by 분야, the 상위 노출 단어 사용 preset, and 분야-aware freezing | GUIDE GEN ARCH | T332 T337 T330 | todo |
+| T343 | ③ records, replaces and clears the post's Naver address | POST ARCH THEME | T339 | todo |
+| T344 | Generation freezes the ticked rule texts and the 분야 phrase list at enqueue | GEN POST QUAL GUIDE ARCH | T335 T342 T341 T333 | todo |
+| T345 | ① picks the post's 분야 and autosaves it through the draft queue | POST QUAL ARCH THEME | T337 T343 | todo |
+| T346 | ② shows this post's own M2, M3 and M4 above the article | POST QUAL ARCH THEME | T335 T343 | todo |
+| T347 | /guidelines creates, rescopes and badges guidelines by 분야 | GUIDE ARCH THEME | T342 | todo |
+| T348 | The dev seed shows published posts, nouns, candidates, a phrase list and a title-area template without Naver keys | ARCH POST GEN QUAL TMPL | T341 T335 T333 | todo |
+| T349 | The writing brief offers one quality row per metric, with a toggletip when over band | POST QUAL ARCH THEME | T328 T344 T345 T346 | todo |
+| T350 | /guidelines pins the 상위 노출 단어 사용 preset row with its switch and 적용할 분야 | GUIDE QUAL ARCH THEME | T347 | todo |
+| T351 | ② marks replacement spans over the title, tags and body, and taking one is a manual edit | POST GEN QUAL ARCH THEME | T349 | todo |
+| T352 | A durable generate carries its frozen memories into the write prompt | MEM GEN ARCH | - | todo |
+| T353 | Toggling 기억 사용 keeps the post's 목표 글자 수 | POST MEM ARCH | - | todo |
 
 ## next
-- resume create-task QUAL POST GEN GUIDE TMPL from spec/handoff/create-task-260923/ (plan.json = 30 tasks T322..T351, resolutions.md = R1..R42); no task file is written yet
+- implement-task T322 (then the dep order in the tasks table; T322..T328 have no dep and can run in parallel sessions)
+- T352 and T353 are independent pre-existing bug fixes (frozen memories never reach a durable generate; the 기억 사용 toggle clears 목표 글자 수)
 - create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 ## log
+- 260924 create-task QUAL POST GEN GUIDE TMPL complete; T322..T351 from the handoff plan (QUAL r3 closed the M3/M4 rule-text gap), plus T352 T353 for two pre-existing bugs found while writing them; handoff folder removed
 - 260924 update-ssot QUAL complete; r3 decides M3's and M4's rule texts (no repeated noun, cover the title; at least three block types from what the material fits) and makes every rule text yield to natural writing
 - 260924 update-ssot QUAL start; the M3 and M4 rule texts carry no decided substance (T331 SSOT-GAP)
 - 260923 create-task QUAL POST GEN GUIDE TMPL paused for a machine switch; mapping, SSOT fixes and the 30-task plan are done, task files not yet written; handoff in spec/handoff/create-task-260923/
@@ -75,6 +109,3 @@
 - 260923 ideation post-quality round 5-6; 분야 becomes a per-post attribute and a third 지침 scope kind; one fixed 상위 노출 단어 사용 preset with a multi-select 적용할 분야 keeps GUIDE-18 intact; guidelinePrecedence narrows 어휘 out; 11 of 17 opens are parked with 추천글/GEO
 - 260923 ideation post-quality round 4; word choice moved off the 말투 tab into per-분야 지침 presets filled by a daily product-side 네이버 검색 API batch; 도배율 numerator = most frequent noun, bands product-owned; rule text = code constant overridable by 지침
 - 260923 ideation post-quality-and-related-links round 3; body word rule → a recommendation surface in the 말투 tab adopted into [사용자 규칙]; tags by prompt rule only, no search data; 추천글 deferred and reshaped around explicitly saved links
-- 260923 ideation post-quality-and-related-links: GEO deferred out of v1 (citation unobservable); title area optional; blanket phrase bans rejected for measured per-account repetition; word choice extended to tags and body
-- 260923 template generation freshness investigation complete; each new StartGeneration reads the current saved template body and freezes it in the job; running jobs keep their frozen copy, while template length/tag defaults seed only when assigned
-- 260923 template generation freshness investigation start; trace saved template edits into a subsequent post generation request
