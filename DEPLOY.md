@@ -84,6 +84,8 @@ verify   브라우저 origin으로 API CORS preflight 확인 (credentials 포함
 | `TOSS_SECRET_KEY` / `TOSS_CLIENT_KEY` | 스택 `.env` | Toss Payments 자동결제 API 키. 둘 다 `EXIM_API_KEY`와 함께 설정하거나 모두 비운다 |
 | `VITE_TOSS_CLIENT_KEY` | Cloudflare Worker → Settings → Build → Variables | 카드 등록창에 쓰는 공개 Toss client key. 서버의 `TOSS_CLIENT_KEY`와 같은 값 |
 | `EXIM_API_KEY` | 스택 `.env` | 한국수출입은행 전일 매매기준율 조회 키. Toss 키와 함께 설정하지 않으면 결제 quote/write가 비활성화된다 |
+| `NAVER_SEARCH_CLIENT_ID` / `NAVER_SEARCH_CLIENT_SECRET` | 스택 `.env` | 네이버 개발자센터에 등록한 애플리케이션의 검색 API 키(사용 API에 **검색**이 켜져 있어야 한다 — 403이면 꺼진 것). 매일 도는 분야 문구 배치만 쓴다. 둘 중 하나라도 비면 배치가 돌지 않고 모든 문구 목록이 비어 있을 뿐, API는 그대로 뜬다 |
+| `QUALITY_PHRASE_REFRESH_INTERVAL` | 스택 `.env` (선택) | 분야마다 문구 목록을 새로 받는 주기. 비우면 제품 기본값 24h. 형식이 틀렸거나 0·음수면 API가 기동하지 않는다 |
 | `postpilot build token` | Cloudflare가 자동 관리 (Worker → Settings → Build → API token) | Workers Builds 배포 인증. 빌드가 10001 인증 에러로 죽으면 여기서 재발급 |
 | 스택 `.env` | VPS `/srv/postpilot-{staging,prod}/.env` (`chmod 600`, 비추적) | 런타임 설정 — 키 목록은 `.env.production.example` |
 | edge `.env` | VPS `/srv/edge/.env` (박스 공유 — **덮어쓰지 말고 append**) | `POSTPILOT_API_DOMAIN_PROD`(+staging을 띄울 때만 `..._STAGING`). 도메인만, 접두사 필수 — 이유는 §4. 템플릿: `deploy/edge/.env.example` |

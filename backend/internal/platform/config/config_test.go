@@ -105,6 +105,66 @@ func TestLoadGoogleCredentialsArePaired(t *testing.T) {
 	})
 }
 
+// The Naver pair is optional in both halves: without both keys the phrase batch does not run,
+// which is a legal mode rather than a boot error (QUAL-42). Every case sets both keys, because
+// a developer's shell or the repo .env may carry real ones.
+func TestLoadNaverSearchCredentials(t *testing.T) {
+	for name, test := range map[string]struct {
+		id, secret         string
+		wantID, wantSecret string
+		enabled            bool
+	}{
+		"neither":          {"", "", "", "", false},
+		"id only":          {"client-id", "", "client-id", "", false},
+		"secret only":      {"", "client-secret", "", "client-secret", false},
+		"whitespace only":  {"   ", "\t", "", "", false},
+		"both, trimmed":    {"  client-id  ", "  client-secret  ", "client-id", "client-secret", true},
+		"both, whitespace": {"client-id", "   ", "client-id", "", false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Setenv("NAVER_SEARCH_CLIENT_ID", test.id)
+			t.Setenv("NAVER_SEARCH_CLIENT_SECRET", test.secret)
+			cfg, err := Load()
+			if err != nil {
+				t.Fatalf("Load error = %v; a Naver pair never fails the boot", err)
+			}
+			if cfg.NaverSearchClientID != test.wantID || cfg.NaverSearchClientSecret != test.wantSecret || cfg.NaverSearchEnabled != test.enabled {
+				t.Fatalf("Naver search = (%q, %q, %v), want (%q, %q, %v)", cfg.NaverSearchClientID, cfg.NaverSearchClientSecret,
+					cfg.NaverSearchEnabled, test.wantID, test.wantSecret, test.enabled)
+			}
+		})
+	}
+}
+
+// Unset leaves the override zero, so the quality context's own default applies; a set value
+// must be a positive duration or the boot stops, naming the key.
+func TestLoadQualityPhraseRefreshInterval(t *testing.T) {
+	for name, test := range map[string]struct {
+		value string
+		want  time.Duration
+	}{
+		"unset": {"", 0},
+		"36h":   {"36h", 36 * time.Hour},
+		"30m":   {" 30m ", 30 * time.Minute},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Setenv("QUALITY_PHRASE_REFRESH_INTERVAL", test.value)
+			cfg, err := Load()
+			if err != nil || cfg.QualityPhraseRefreshInterval != test.want {
+				t.Fatalf("Load = (%v, %v), want %s", cfg.QualityPhraseRefreshInterval, err, test.want)
+			}
+		})
+	}
+	for _, value := range []string{"nonsense", "0s", "-1h", "24"} {
+		t.Run(value, func(t *testing.T) {
+			t.Setenv("QUALITY_PHRASE_REFRESH_INTERVAL", value)
+			if _, err := Load(); err == nil || !strings.Contains(err.Error(), "QUALITY_PHRASE_REFRESH_INTERVAL") {
+				t.Fatalf("Load error = %v, want one naming the key", err)
+			}
+		})
+	}
+}
+
 func TestLoadBillingCredentialsAreAllOrNothing(t *testing.T) {
 	for _, name := range []string{"TOSS_SECRET_KEY", "TOSS_CLIENT_KEY", "EXIM_API_KEY"} {
 		t.Run(name+" only", func(t *testing.T) {

@@ -220,6 +220,17 @@ type Config struct {
 	TossClientKey  string
 	EximAPIKey     string
 	BillingEnabled bool
+	// The 네이버 검색 API application the daily 분야 phrase batch reads with (QUAL-17). The
+	// pair is optional, and unlike Google's a half-configured one is not boot-fatal: without
+	// both the batch simply does not run and every phrase list stays empty (QUAL-42), which
+	// is a legal product mode rather than a misconfiguration that could charge or sign in.
+	NaverSearchClientID     string
+	NaverSearchClientSecret string
+	NaverSearchEnabled      bool
+	// QualityPhraseRefreshInterval overrides how often each 분야's phrase list is refreshed.
+	// Zero means unset: the default is the quality context's own constant, which this
+	// package may not import.
+	QualityPhraseRefreshInterval time.Duration
 
 	// R2Endpoint is the S3-compatible endpoint the API itself calls (HEAD, DELETE, LIST).
 	R2Endpoint string
@@ -372,6 +383,9 @@ func Load() (*Config, error) {
 		TossClientKey:      strings.TrimSpace(os.Getenv("TOSS_CLIENT_KEY")),
 		EximAPIKey:         strings.TrimSpace(os.Getenv("EXIM_API_KEY")),
 
+		NaverSearchClientID:     strings.TrimSpace(os.Getenv("NAVER_SEARCH_CLIENT_ID")),
+		NaverSearchClientSecret: strings.TrimSpace(os.Getenv("NAVER_SEARCH_CLIENT_SECRET")),
+
 		R2Endpoint:        os.Getenv("R2_ENDPOINT"),
 		R2AccessKeyID:     os.Getenv("R2_ACCESS_KEY_ID"),
 		R2SecretAccessKey: os.Getenv("R2_SECRET_ACCESS_KEY"),
@@ -422,6 +436,12 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("TOSS_SECRET_KEY, TOSS_CLIENT_KEY, and EXIM_API_KEY must all be set or all be empty")
 	}
 	cfg.BillingEnabled = configured == len(billingValues)
+	cfg.NaverSearchEnabled = cfg.NaverSearchClientID != "" && cfg.NaverSearchClientSecret != ""
+	refresh, err := optionalPositiveDuration("QUALITY_PHRASE_REFRESH_INTERVAL")
+	if err != nil {
+		return nil, err
+	}
+	cfg.QualityPhraseRefreshInterval = refresh
 
 	if err := validateOrigin(cfg.CORSOrigin); err != nil {
 		return nil, fmt.Errorf("CORS_ORIGIN: %w", err)
@@ -580,6 +600,23 @@ func Load() (*Config, error) {
 
 func positiveDuration(name, fallback string) (time.Duration, error) {
 	value, err := time.ParseDuration(getenv(name, fallback))
+	if err != nil {
+		return 0, fmt.Errorf("%s: %w", name, err)
+	}
+	if value <= 0 {
+		return 0, fmt.Errorf("%s: must be positive, got %s", name, value)
+	}
+	return value, nil
+}
+
+// optionalPositiveDuration reads an override that has no default here: unset or empty is 0,
+// and anything else must parse as a positive duration.
+func optionalPositiveDuration(name string) (time.Duration, error) {
+	raw := strings.TrimSpace(os.Getenv(name))
+	if raw == "" {
+		return 0, nil
+	}
+	value, err := time.ParseDuration(raw)
 	if err != nil {
 		return 0, fmt.Errorf("%s: %w", name, err)
 	}

@@ -51,7 +51,6 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T326 | The 네이버 검색 API blog client and its optional credentials | QUAL ARCH | - | todo |
 | T327 | The template grammar parses a title area in lockstep in Go and TypeScript | TMPL ARCH | - | todo |
 | T328 | shared/ui InlinePopover and Toggletip on one extracted anchored-panel hook | POST THEME ARCH | - | todo |
 | T329 | A finalized post becomes 발행됨 from a pasted Naver URL, replaceable and clearable | POST QUAL ARCH | T322 T323 | todo |
@@ -81,10 +80,12 @@
 | T353 | Toggling 기억 사용 keeps the post's 목표 글자 수 | POST MEM ARCH | - | todo |
 
 ## next
-- implement-task T326 (then the dep order in the tasks table; T326..T328 have no dep and can run in parallel sessions)
+- implement-task T327 (then the dep order in the tasks table; T327 and T328 have no dep and can run in parallel sessions)
 - T352 and T353 are independent pre-existing bug fixes (frozen memories never reach a durable generate; the 기억 사용 toggle clears 목표 글자 수)
 - create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 ## log
+- 260924 T326 done; internal/naversearch reads one page of the blog search as plain titles and descriptions, and config carries the optional Naver pair and a refresh-interval override; full BE gate and the deploy tests pass (p35)
+- 260924 T326 claimed (p35)
 - 260924 T325 done; quality gains NFC 어절 tokens, block units that skip slots, containment by language, 8-어절 run matching with its rune share and maximal runs, and sentence splitting; x/text v0.42.0 is now a direct require; full BE gate passes (p35)
 - 260924 T325 claimed (p35)
 - 260924 T324 done; the write prompts carry the sourced title prohibitions (a title-form variant when the template authored one), the tag rule, the rewritten vocabulary precedence, the ticked-rules and title-area sections, and a bounded nouns answer; both write goldens regenerated, full BE gate passes (p35)
@@ -103,5 +104,3 @@
 - 260923 ideation post-quality-and-related-links converted; QUAL r1 created and POST r10, GEN r9, GUIDE r4, TMPL r9 carry the rest; 추천글 and GEO stay parked in the ideation doc
 - 260923 update-ssot TMPL complete; r9 adds the optional title area limited to literal text, `<write>` and `<ask>`
 - 260923 update-ssot GUIDE complete; r4 adds the preset, the `fields` scope kind and the precedence narrowing, with `templatePrecedence`'s identical wording left as [?]
-- 260923 update-ssot GEN complete; r9 adds the frozen 분야 phrase list, the write answer's replacement candidates, the two sourced title prohibitions, the tag rule and the ticked quality rules' position
-- 260923 update-ssot POST complete; r10 adds the 발행됨 status and its pasted URL, the content lock that spares export/copy/말투 학습, the fourth badge and filter, ②'s replacement spans and the brief's quality checkboxes
