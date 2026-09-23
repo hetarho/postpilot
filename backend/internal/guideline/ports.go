@@ -19,19 +19,32 @@ type Store interface {
 	// candidate pending. A named id that matches no candidate of the account is refused —
 	// approving something that is not there is a request that did not happen.
 	Insert(ctx context.Context, g Guideline, maxPerAccount int, approval CandidateApproval) error
-	// List returns the account's guidelines in injection order — the global group first,
-	// then the scoped group, each by created_at then id — with TemplateIDs populated.
+	// List returns the account's guidelines in injection order — the global group, then the
+	// template group, then the 분야 group, each by created_at then id (GUIDE-14) — with
+	// TemplateIDs and Fields populated.
 	List(ctx context.Context, userID string) ([]Guideline, error)
 	Get(ctx context.Context, userID, id string) (Guideline, error)
 	// Update applies only the present parts of the patch in one transaction. A present scope
-	// replaces the kind and the whole link set together; an absent one is not written at all,
-	// so a text edit cannot revert a scope another tab saved.
+	// replaces the kind, the template links and the 분야 links together, so a rescope leaves no
+	// link of the other kind; an absent one is not written at all, so a text edit cannot
+	// revert a scope another tab saved.
 	Update(ctx context.Context, userID, id string, patch Patch, updatedAt time.Time) (Guideline, error)
 	Delete(ctx context.Context, userID, id string) error
-	// ApplicableTexts returns the texts that apply to one post, in injection order: the
-	// account's global guidelines plus those linked to templateID. An empty templateID is a
-	// post with no template and matches no link, so it yields the global group alone.
-	ApplicableTexts(ctx context.Context, userID, templateID string) ([]string, error)
+	// ApplicableTexts returns the texts that apply to one post, in injection order (GUIDE-14):
+	// the account's global guidelines, then those linked to templateID, then those linked to
+	// field. An empty templateID is a post with no template and an empty field a post with no
+	// 분야; each matches no link, so a post missing either receives only the groups it has.
+	ApplicableTexts(ctx context.Context, userID, templateID, field string) ([]string, error)
+
+	// Preset reads the account's preset state. A missing row is the preset off with no 분야:
+	// nothing is seeded (GUIDE-34), so an account that never touched it has no row at all.
+	Preset(ctx context.Context, userID string) (Preset, error)
+	// UpdatePreset applies only the present parts of the patch in one transaction and returns
+	// the result. Enabled alone keeps the 분야; 분야 alone keeps Enabled, and a first write of
+	// them creates the row switched off; a present empty set clears them; an empty patch writes
+	// nothing. The preset is not a guideline row, so it spends neither the account cap nor text
+	// uniqueness (GUIDE-39).
+	UpdatePreset(ctx context.Context, userID string, patch PresetPatch, updatedAt time.Time) (Preset, error)
 
 	// RecordCandidate carries out the whole recording rule in ONE transaction: it reads the
 	// existing candidate's status, whether a guideline already holds the text and the pending

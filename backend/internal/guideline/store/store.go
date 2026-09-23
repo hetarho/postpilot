@@ -57,6 +57,9 @@ func (s *Store) Insert(ctx context.Context, g guideline.Guideline, maxPerAccount
 	if err := insertScope(ctx, q, g.UserID, g.ID, g.TemplateIDs); err != nil {
 		return err
 	}
+	if err := insertFields(ctx, q, g.UserID, g.ID, g.Fields); err != nil {
+		return err
+	}
 	if err := approve(ctx, q, g.UserID, approval); err != nil {
 		return err
 	}
@@ -216,6 +219,14 @@ func (s *Store) List(ctx context.Context, userID string) ([]guideline.Guideline,
 	for _, link := range links {
 		scoped[link.GuidelineID] = append(scoped[link.GuidelineID], link.TemplateID)
 	}
+	fieldLinks, err := s.read.ListGuidelineFieldLinks(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("select guideline field links: %w", err)
+	}
+	fields := make(map[string][]string, len(fieldLinks))
+	for _, link := range fieldLinks {
+		fields[link.GuidelineID] = append(fields[link.GuidelineID], link.Field)
+	}
 	out := make([]guideline.Guideline, 0, len(rows))
 	for _, row := range rows {
 		value, err := toGuideline(row)
@@ -223,6 +234,7 @@ func (s *Store) List(ctx context.Context, userID string) ([]guideline.Guideline,
 			return nil, err
 		}
 		value.TemplateIDs = scoped[row.ID]
+		value.Fields = fields[row.ID]
 		out = append(out, value)
 	}
 	return out, nil
@@ -249,6 +261,11 @@ func (s *Store) get(ctx context.Context, q *sqlc.Queries, userID, id string) (gu
 		return guideline.Guideline{}, fmt.Errorf("select guideline scope: %w", err)
 	}
 	value.TemplateIDs = ids
+	fields, err := q.ListGuidelineFields(ctx, sqlc.ListGuidelineFieldsParams{GuidelineID: id, UserID: userID})
+	if err != nil {
+		return guideline.Guideline{}, fmt.Errorf("select guideline fields: %w", err)
+	}
+	value.Fields = fields
 	return value, nil
 }
 
@@ -295,12 +312,19 @@ func (s *Store) Update(ctx context.Context, userID, id string, patch guideline.P
 		if n == 0 {
 			return guideline.Guideline{}, guideline.ErrNotFound
 		}
-		// The kind and the link set are replaced together: a scope is one value, so a crash
-		// between the two must not leave 'global' still carrying links, or the reverse.
+		// The kind and both link sets are replaced together: a scope is one value, so a crash
+		// between them must not leave 'global' still carrying links, or a rescope still
+		// carrying the links of the kind it left.
 		if err := q.DeleteGuidelineScope(ctx, sqlc.DeleteGuidelineScopeParams{GuidelineID: id, UserID: userID}); err != nil {
 			return guideline.Guideline{}, fmt.Errorf("clear guideline scope: %w", err)
 		}
+		if err := q.DeleteGuidelineFieldLinks(ctx, sqlc.DeleteGuidelineFieldLinksParams{GuidelineID: id, UserID: userID}); err != nil {
+			return guideline.Guideline{}, fmt.Errorf("clear guideline fields: %w", err)
+		}
 		if err := insertScope(ctx, q, userID, id, patch.Scope.TemplateIDs); err != nil {
+			return guideline.Guideline{}, err
+		}
+		if err := insertFields(ctx, q, userID, id, patch.Scope.Fields); err != nil {
 			return guideline.Guideline{}, err
 		}
 		touched = true
@@ -332,12 +356,84 @@ func (s *Store) Delete(ctx context.Context, userID, id string) error {
 	return nil
 }
 
-func (s *Store) ApplicableTexts(ctx context.Context, userID, templateID string) ([]string, error) {
-	texts, err := s.read.ListApplicableGuidelineTexts(ctx, sqlc.ListApplicableGuidelineTextsParams{UserID: userID, TemplateID: templateID})
+func (s *Store) ApplicableTexts(ctx context.Context, userID, templateID, field string) ([]string, error) {
+	texts, err := s.read.ListApplicableGuidelineTexts(ctx, sqlc.ListApplicableGuidelineTextsParams{
+		UserID: userID, TemplateID: templateID, Field: field,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("select applicable guidelines: %w", err)
 	}
 	return texts, nil
+}
+
+// Preset reads the row and then its 분야, as List reads guidelines and then their links.
+func (s *Store) Preset(ctx context.Context, userID string) (guideline.Preset, error) {
+	return preset(ctx, s.read, userID)
+}
+
+// UpdatePreset writes only the present parts of the patch, in one transaction, and reads the
+// result back inside it. A 분야-only edit touches the row first, so the child rows always have
+// their parent, and a first write creates it switched off.
+func (s *Store) UpdatePreset(ctx context.Context, userID string, patch guideline.PresetPatch, updatedAt time.Time) (guideline.Preset, error) {
+	if patch.Enabled == nil && patch.Fields == nil {
+		return s.Preset(ctx, userID)
+	}
+	tx, err := s.writer.BeginTx(ctx, nil)
+	if err != nil {
+		return guideline.Preset{}, fmt.Errorf("begin update guideline preset: %w", err)
+	}
+	defer tx.Rollback()
+	q := s.write.WithTx(tx)
+	stamp := formatTime(updatedAt)
+
+	if patch.Enabled != nil {
+		enabled := int64(0)
+		if *patch.Enabled {
+			enabled = 1
+		}
+		err := q.UpsertGuidelinePresetEnabled(ctx, sqlc.UpsertGuidelinePresetEnabledParams{UserID: userID, Enabled: enabled, UpdatedAt: stamp})
+		if err != nil {
+			return guideline.Preset{}, fmt.Errorf("switch guideline preset: %w", err)
+		}
+	} else if err := q.TouchGuidelinePreset(ctx, sqlc.TouchGuidelinePresetParams{UserID: userID, UpdatedAt: stamp}); err != nil {
+		return guideline.Preset{}, fmt.Errorf("touch guideline preset: %w", err)
+	}
+	if patch.Fields != nil {
+		if err := q.DeleteGuidelinePresetFields(ctx, userID); err != nil {
+			return guideline.Preset{}, fmt.Errorf("clear guideline preset fields: %w", err)
+		}
+		for _, field := range *patch.Fields {
+			if err := q.InsertGuidelinePresetField(ctx, sqlc.InsertGuidelinePresetFieldParams{UserID: userID, Field: field}); err != nil {
+				return guideline.Preset{}, fmt.Errorf("insert guideline preset field: %w", err)
+			}
+		}
+	}
+
+	updated, err := preset(ctx, q, userID)
+	if err != nil {
+		return guideline.Preset{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return guideline.Preset{}, fmt.Errorf("commit update guideline preset: %w", err)
+	}
+	return updated, nil
+}
+
+// preset is the one read of the preset state. A missing row is not an error: nothing is
+// seeded, so an account that never touched the preset has it off with no 분야.
+func preset(ctx context.Context, q *sqlc.Queries, userID string) (guideline.Preset, error) {
+	row, err := q.GetGuidelinePreset(ctx, userID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return guideline.Preset{}, nil
+	}
+	if err != nil {
+		return guideline.Preset{}, fmt.Errorf("select guideline preset: %w", err)
+	}
+	fields, err := q.ListGuidelinePresetFields(ctx, userID)
+	if err != nil {
+		return guideline.Preset{}, fmt.Errorf("select guideline preset fields: %w", err)
+	}
+	return guideline.Preset{Enabled: row.Enabled == 1, Fields: fields}, nil
 }
 
 // insertScope writes the link rows. A foreign template id is refused by the composite foreign
@@ -352,6 +448,20 @@ func insertScope(ctx context.Context, q *sqlc.Queries, userID, guidelineID strin
 				return guideline.ErrTemplateNotFound
 			}
 			return fmt.Errorf("insert guideline scope link: %w", err)
+		}
+	}
+	return nil
+}
+
+// insertFields writes a fields scope's links. The input is already deduplicated, as template
+// ids are, by the service; the composite foreign key keeps every link inside the account.
+func insertFields(ctx context.Context, q *sqlc.Queries, userID, guidelineID string, fields []string) error {
+	for _, field := range fields {
+		err := q.InsertGuidelineFieldLink(ctx, sqlc.InsertGuidelineFieldLinkParams{
+			GuidelineID: guidelineID, Field: field, UserID: userID,
+		})
+		if err != nil {
+			return fmt.Errorf("insert guideline field link: %w", err)
 		}
 	}
 	return nil

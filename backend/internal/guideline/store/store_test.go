@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"path/filepath"
+	"reflect"
 	"testing"
 	"time"
 
@@ -52,6 +53,22 @@ func newGuideline(id, userID, text string, scope guideline.Scope, at time.Time, 
 		ID: id, UserID: userID, Text: text, Scope: scope, TemplateIDs: templateIDs,
 		CreatedAt: at, UpdatedAt: at,
 	}
+}
+
+func newFieldsGuideline(id, userID, text string, at time.Time, fields ...string) guideline.Guideline {
+	return guideline.Guideline{
+		ID: id, UserID: userID, Text: text, Scope: guideline.ScopeFields, Fields: fields,
+		CreatedAt: at, UpdatedAt: at,
+	}
+}
+
+func count(t *testing.T, handle *db.DB, query string, args ...any) int {
+	t.Helper()
+	var n int
+	if err := handle.Reader.QueryRow(query, args...).Scan(&n); err != nil {
+		t.Fatalf("%s: %v", query, err)
+	}
+	return n
 }
 
 func TestInsertRefusesADuplicateTextWithinTheAccountOnly(t *testing.T) {
@@ -110,14 +127,17 @@ func TestInsertRefusesAForeignTemplateLink(t *testing.T) {
 	}
 }
 
-// A2: the list order IS the injection order — global group first, then scoped, each by
-// creation time — so the screen and the prompt cannot disagree.
+// A2: the list order IS the injection order — the global group, then the template group,
+// then the 분야 group, each by creation time (GUIDE-14) — so the screen and the prompt cannot
+// disagree. The creation times interleave across the groups, and the group still wins.
 func TestListReturnsInjectionOrder(t *testing.T) {
 	ctx := context.Background()
 	s, _ := newStore(t)
 	for _, g := range []guideline.Guideline{
-		newGuideline("s2", "alice", "scoped later", guideline.ScopeTemplates, testNow.Add(4*time.Minute), "alice-p1"),
-		newGuideline("g2", "alice", "global later", guideline.ScopeGlobal, testNow.Add(3*time.Minute)),
+		newFieldsGuideline("f2", "alice", "field later", testNow.Add(6*time.Minute), "domestic_travel"),
+		newGuideline("s2", "alice", "scoped later", guideline.ScopeTemplates, testNow.Add(5*time.Minute), "alice-p1"),
+		newFieldsGuideline("f1", "alice", "field early", testNow, "restaurant", "cafe"),
+		newGuideline("g2", "alice", "global later", guideline.ScopeGlobal, testNow.Add(4*time.Minute)),
 		newGuideline("s1", "alice", "scoped early", guideline.ScopeTemplates, testNow.Add(2*time.Minute), "alice-p2"),
 		newGuideline("g1", "alice", "global early", guideline.ScopeGlobal, testNow.Add(time.Minute)),
 	} {
@@ -129,7 +149,7 @@ func TestListReturnsInjectionOrder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"g1", "g2", "s1", "s2"}
+	want := []string{"g1", "g2", "s1", "s2", "f1", "f2"}
 	if len(listed) != len(want) {
 		t.Fatalf("listed %d guidelines", len(listed))
 	}
@@ -141,8 +161,36 @@ func TestListReturnsInjectionOrder(t *testing.T) {
 	if got := listed[2].TemplateIDs; len(got) != 1 || got[0] != "alice-p2" {
 		t.Fatalf("scope links = %v", got)
 	}
-	if len(listed[0].TemplateIDs) != 0 {
-		t.Fatalf("a global guideline carried links: %v", listed[0].TemplateIDs)
+	if len(listed[0].TemplateIDs) != 0 || len(listed[0].Fields) != 0 {
+		t.Fatalf("a global guideline carried links: %+v", listed[0])
+	}
+	// 분야 come back in id order; display order is the client's.
+	if got := listed[4]; !reflect.DeepEqual(got.Fields, []string{"cafe", "restaurant"}) || len(got.TemplateIDs) != 0 {
+		t.Fatalf("fields guideline = %+v", got)
+	}
+	if len(listed[2].Fields) != 0 {
+		t.Fatalf("a templates guideline carried 분야: %v", listed[2].Fields)
+	}
+	got, err := s.Get(ctx, "alice", "f1")
+	if err != nil || !reflect.DeepEqual(got.Fields, []string{"cafe", "restaurant"}) {
+		t.Fatalf("Get = %+v, %v", got, err)
+	}
+}
+
+// The 분야 links are written by the insert's own transaction: a link the table refuses rolls
+// the whole create back rather than leaving a fields guideline with part of its set.
+func TestInsertWritesFieldLinksInItsOwnTransaction(t *testing.T) {
+	ctx := context.Background()
+	s, handle := newStore(t)
+	err := s.Insert(ctx, newFieldsGuideline("f1", "alice", "a", testNow, "cafe", "cafe"), 10, guideline.CandidateApproval{})
+	if err == nil {
+		t.Fatal("a repeated 분야 link was accepted")
+	}
+	if _, err := s.Get(ctx, "alice", "f1"); !errors.Is(err, guideline.ErrNotFound) {
+		t.Fatalf("the refused insert left a row: %v", err)
+	}
+	if n := count(t, handle, "SELECT count(*) FROM guideline_fields"); n != 0 {
+		t.Fatalf("the refused insert left %d 분야 links", n)
 	}
 }
 
@@ -176,7 +224,7 @@ func TestUpdateTextLeavesAConcurrentScopeEditIntact(t *testing.T) {
 // replacement back rather than leaving a half-applied scope.
 func TestUpdateScopeReplacesAtomically(t *testing.T) {
 	ctx := context.Background()
-	s, _ := newStore(t)
+	s, handle := newStore(t)
 	if err := s.Insert(ctx, newGuideline("g1", "alice", "a", guideline.ScopeTemplates, testNow, "alice-p1", "alice-p2"), 10, guideline.CandidateApproval{}); err != nil {
 		t.Fatal(err)
 	}
@@ -213,6 +261,56 @@ func TestUpdateScopeReplacesAtomically(t *testing.T) {
 	if global.Scope != guideline.ScopeGlobal || len(global.TemplateIDs) != 0 {
 		t.Fatalf("global scope kept links: %+v", global)
 	}
+
+	// A rescope in either direction between templates and 분야 leaves no link of the kind it left.
+	if _, err := s.Update(ctx, "alice", "g1", guideline.Patch{
+		Scope: &guideline.ScopePatch{Scope: guideline.ScopeTemplates, TemplateIDs: []string{"alice-p1"}},
+	}, testNow.Add(4*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	fields, err := s.Update(ctx, "alice", "g1", guideline.Patch{
+		Scope: &guideline.ScopePatch{Scope: guideline.ScopeFields, Fields: []string{"restaurant", "cafe"}},
+	}, testNow.Add(5*time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fields.Scope != guideline.ScopeFields || !reflect.DeepEqual(fields.Fields, []string{"cafe", "restaurant"}) || len(fields.TemplateIDs) != 0 {
+		t.Fatalf("templates to 분야 = %+v", fields)
+	}
+	if n := count(t, handle, "SELECT count(*) FROM guideline_templates WHERE guideline_id = 'g1'"); n != 0 {
+		t.Fatalf("the rescope to 분야 left %d template links", n)
+	}
+	back, err := s.Update(ctx, "alice", "g1", guideline.Patch{
+		Scope: &guideline.ScopePatch{Scope: guideline.ScopeTemplates, TemplateIDs: []string{"alice-p2"}},
+	}, testNow.Add(6*time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if back.Scope != guideline.ScopeTemplates || !reflect.DeepEqual(back.TemplateIDs, []string{"alice-p2"}) || len(back.Fields) != 0 {
+		t.Fatalf("분야 to templates = %+v", back)
+	}
+	if n := count(t, handle, "SELECT count(*) FROM guideline_fields WHERE guideline_id = 'g1'"); n != 0 {
+		t.Fatalf("the rescope to templates left %d 분야 links", n)
+	}
+
+	// A refused template link rolls the 분야 back with everything else.
+	if _, err := s.Update(ctx, "alice", "g1", guideline.Patch{
+		Scope: &guideline.ScopePatch{Scope: guideline.ScopeFields, Fields: []string{"cafe"}},
+	}, testNow.Add(7*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Update(ctx, "alice", "g1", guideline.Patch{
+		Scope: &guideline.ScopePatch{Scope: guideline.ScopeTemplates, TemplateIDs: []string{"bob-p1"}},
+	}, testNow.Add(8*time.Minute)); !errors.Is(err, guideline.ErrTemplateNotFound) {
+		t.Fatalf("foreign link in a rescope from 분야 err = %v", err)
+	}
+	kept, err := s.Get(ctx, "alice", "g1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if kept.Scope != guideline.ScopeFields || !reflect.DeepEqual(kept.Fields, []string{"cafe"}) || len(kept.TemplateIDs) != 0 {
+		t.Fatalf("a refused rescope left %+v", kept)
+	}
 }
 
 func TestUpdateAndDeleteTreatForeignIdsAsUnknown(t *testing.T) {
@@ -239,10 +337,14 @@ func TestApplicableTextsResolvesScopeExactly(t *testing.T) {
 	ctx := context.Background()
 	s, handle := newStore(t)
 	for _, g := range []guideline.Guideline{
+		// Created first of all, and still injected after every template guideline.
+		newFieldsGuideline("f1", "alice", "맛집·카페 전용", testNow, "restaurant", "cafe"),
 		newGuideline("g1", "alice", "전역", guideline.ScopeGlobal, testNow.Add(time.Minute)),
 		newGuideline("s1", "alice", "p1 전용", guideline.ScopeTemplates, testNow.Add(2*time.Minute), "alice-p1"),
 		newGuideline("s2", "alice", "p2 전용", guideline.ScopeTemplates, testNow.Add(3*time.Minute), "alice-p2"),
+		newFieldsGuideline("f2", "alice", "여행 전용", testNow.Add(4*time.Minute), "domestic_travel"),
 		newGuideline("gb", "bob", "밥의 전역", guideline.ScopeGlobal, testNow),
+		newFieldsGuideline("fb", "bob", "밥의 맛집", testNow, "restaurant"),
 	} {
 		if err := s.Insert(ctx, g, 10, guideline.CandidateApproval{}); err != nil {
 			t.Fatal(err)
@@ -250,16 +352,20 @@ func TestApplicableTextsResolvesScopeExactly(t *testing.T) {
 	}
 
 	for name, tc := range map[string]struct {
-		templateID string
-		want       []string
+		templateID, field string
+		want              []string
 	}{
 		"with p1":     {templateID: "alice-p1", want: []string{"전역", "p1 전용"}},
 		"with p2":     {templateID: "alice-p2", want: []string{"전역", "p2 전용"}},
 		"no template": {templateID: "", want: []string{"전역"}},
 		// A template id that is not the account's reaches no link row.
-		"foreign template": {templateID: "bob-p1", want: []string{"전역"}},
+		"foreign template":   {templateID: "bob-p1", want: []string{"전역"}},
+		"p1 and a 분야":        {templateID: "alice-p1", field: "restaurant", want: []string{"전역", "p1 전용", "맛집·카페 전용"}},
+		"a 분야 only":          {field: "cafe", want: []string{"전역", "맛집·카페 전용"}},
+		"another 분야":         {field: "domestic_travel", want: []string{"전역", "여행 전용"}},
+		"a 분야 nothing names": {templateID: "alice-p2", field: "pets", want: []string{"전역", "p2 전용"}},
 	} {
-		got, err := s.ApplicableTexts(ctx, "alice", tc.templateID)
+		got, err := s.ApplicableTexts(ctx, "alice", tc.templateID, tc.field)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -277,7 +383,7 @@ func TestApplicableTextsResolvesScopeExactly(t *testing.T) {
 	if _, err := handle.Writer.Exec("DELETE FROM templates WHERE id='alice-p1'"); err != nil {
 		t.Fatal(err)
 	}
-	got, err := s.ApplicableTexts(ctx, "alice", "alice-p2")
+	got, err := s.ApplicableTexts(ctx, "alice", "alice-p2", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -315,6 +421,119 @@ func TestDeleteRemovesOnlyItsOwnLinks(t *testing.T) {
 	}
 	if links != 1 || templates != 2 {
 		t.Fatalf("delete cascaded wrong: links=%d templates=%d", links, templates)
+	}
+
+	// A fields guideline's 분야 links go with it, and another guideline's stay.
+	if err := s.Insert(ctx, newFieldsGuideline("f1", "alice", "c", testNow.Add(2*time.Minute), "restaurant", "cafe"), 10, guideline.CandidateApproval{}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Insert(ctx, newFieldsGuideline("f2", "alice", "d", testNow.Add(3*time.Minute), "restaurant"), 10, guideline.CandidateApproval{}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Delete(ctx, "alice", "f1"); err != nil {
+		t.Fatal(err)
+	}
+	if n := count(t, handle, "SELECT count(*) FROM guideline_fields WHERE guideline_id = 'f1'"); n != 0 {
+		t.Fatalf("deleting f1 left %d of its 분야 links", n)
+	}
+	if n := count(t, handle, "SELECT count(*) FROM guideline_fields WHERE guideline_id = 'f2'"); n != 1 {
+		t.Fatalf("deleting f1 took f2's 분야 links: %d left", n)
+	}
+}
+
+// presetIs compares a preset, reading a nil and an empty 분야 set as the same none.
+func presetIs(t *testing.T, name string, got guideline.Preset, enabled bool, fields ...string) {
+	t.Helper()
+	if got.Enabled != enabled || len(got.Fields) != len(fields) || (len(fields) > 0 && !reflect.DeepEqual(got.Fields, fields)) {
+		t.Fatalf("%s: preset = %+v, want enabled %v with %v", name, got, enabled, fields)
+	}
+}
+
+// GUIDE-34: nothing is seeded, so an account that never touched the preset has no row, and that
+// reads as off with no 분야 rather than as an error.
+func TestPresetReadsOffWithNoFieldsWithoutARow(t *testing.T) {
+	ctx := context.Background()
+	s, handle := newStore(t)
+	got, err := s.Preset(ctx, "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	presetIs(t, "never touched", got, false)
+	// An empty patch is a read: it answers the same and writes nothing.
+	got, err = s.UpdatePreset(ctx, "alice", guideline.PresetPatch{}, testNow)
+	if err != nil {
+		t.Fatal(err)
+	}
+	presetIs(t, "empty patch", got, false)
+	if n := count(t, handle, "SELECT count(*) FROM guideline_presets"); n != 0 {
+		t.Fatalf("reading the preset wrote %d rows", n)
+	}
+}
+
+func TestUpdatePresetIsAPresencePatch(t *testing.T) {
+	ctx := context.Background()
+	s, handle := newStore(t)
+	on, off := true, false
+	set := func(ids ...string) *[]string { return &ids }
+	update := func(name, userID string, patch guideline.PresetPatch, at time.Time, enabled bool, fields ...string) {
+		t.Helper()
+		got, err := s.UpdatePreset(ctx, userID, patch, at)
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		presetIs(t, name, got, enabled, fields...)
+		// The answer is what the transaction committed.
+		read, err := s.Preset(ctx, userID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		presetIs(t, name+" read back", read, enabled, fields...)
+	}
+
+	update("분야 alone on a first write", "alice", guideline.PresetPatch{Fields: set("restaurant", "cafe")}, testNow, false, "cafe", "restaurant")
+	update("enabled alone keeps the 분야", "alice", guideline.PresetPatch{Enabled: &on}, testNow.Add(time.Minute), true, "cafe", "restaurant")
+	update("분야 alone keeps enabled", "alice", guideline.PresetPatch{Fields: set("domestic_travel")}, testNow.Add(2*time.Minute), true, "domestic_travel")
+	update("both at once", "alice", guideline.PresetPatch{Enabled: &off, Fields: set("pets", "cafe")}, testNow.Add(3*time.Minute), false, "cafe", "pets")
+	update("a present empty set clears the 분야", "alice", guideline.PresetPatch{Enabled: &on, Fields: set()}, testNow.Add(4*time.Minute), true)
+	update("enabled alone on a first write", "bob", guideline.PresetPatch{Enabled: &on}, testNow, true)
+
+	// An empty patch writes nothing, not even the timestamp.
+	var before, after string
+	if err := handle.Reader.QueryRow("SELECT updated_at FROM guideline_presets WHERE user_id = 'alice'").Scan(&before); err != nil {
+		t.Fatal(err)
+	}
+	update("an empty patch", "alice", guideline.PresetPatch{}, testNow.Add(time.Hour), true)
+	if err := handle.Reader.QueryRow("SELECT updated_at FROM guideline_presets WHERE user_id = 'alice'").Scan(&after); err != nil {
+		t.Fatal(err)
+	}
+	if before != after {
+		t.Fatalf("an empty patch moved updated_at from %s to %s", before, after)
+	}
+}
+
+// GUIDE-39: the preset lives outside guidelines, so the cap counts guideline rows alone and the
+// text uniqueness covers them alone.
+func TestThePresetSpendsNeitherTheCapNorTextUniqueness(t *testing.T) {
+	ctx := context.Background()
+	s, _ := newStore(t)
+	const maxPerAccount = 3
+	on := true
+	if _, err := s.UpdatePreset(ctx, "alice", guideline.PresetPatch{Enabled: &on, Fields: &[]string{"restaurant", "cafe"}}, testNow); err != nil {
+		t.Fatal(err)
+	}
+	for i, text := range []string{"a", "b"} {
+		if err := s.Insert(ctx, newGuideline("g"+text, "alice", text, guideline.ScopeGlobal, testNow.Add(time.Duration(i)*time.Minute)), maxPerAccount, guideline.CandidateApproval{}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// At the cap less one with the preset on, one more guideline still fits. The preset stores no
+	// text, so none is taken, not even its own name.
+	if err := s.Insert(ctx, newGuideline("g-last", "alice", "상위 노출 단어 사용", guideline.ScopeGlobal, testNow.Add(time.Hour)), maxPerAccount, guideline.CandidateApproval{}); err != nil {
+		t.Fatalf("the preset spent the cap or a text: %v", err)
+	}
+	var atCap *guideline.AccountCapError
+	if err := s.Insert(ctx, newGuideline("g-over", "alice", "c", guideline.ScopeGlobal, testNow.Add(2*time.Hour)), maxPerAccount, guideline.CandidateApproval{}); !errors.As(err, &atCap) {
+		t.Fatalf("past the cap err = %v", err)
 	}
 }
 

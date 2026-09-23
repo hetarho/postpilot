@@ -21,8 +21,13 @@ type fakeStore struct {
 	patched       Patch
 	texts         []string
 	askedTemplate string
+	askedField    string
 	askedAccount  string
 	applicableErr error
+
+	// The preset half, kept in memory: the presence rules are the store's, so the fake only
+	// has to hold what it was last given.
+	preset Preset
 
 	// The candidate half. The store owns the whole recording decision, so the fake records
 	// what it was asked to record rather than re-deciding it.
@@ -132,9 +137,21 @@ func (f *fakeStore) Delete(_ context.Context, userID, id string) error {
 	return nil
 }
 
-func (f *fakeStore) ApplicableTexts(_ context.Context, userID, templateID string) ([]string, error) {
-	f.askedAccount, f.askedTemplate = userID, templateID
+func (f *fakeStore) ApplicableTexts(_ context.Context, userID, templateID, field string) ([]string, error) {
+	f.askedAccount, f.askedTemplate, f.askedField = userID, templateID, field
 	return f.texts, f.applicableErr
+}
+
+func (f *fakeStore) Preset(context.Context, string) (Preset, error) { return f.preset, nil }
+
+func (f *fakeStore) UpdatePreset(_ context.Context, _ string, patch PresetPatch, _ time.Time) (Preset, error) {
+	if patch.Enabled != nil {
+		f.preset.Enabled = *patch.Enabled
+	}
+	if patch.Fields != nil {
+		f.preset.Fields = append([]string(nil), *patch.Fields...)
+	}
+	return f.preset, nil
 }
 
 type fakeDirectory struct {
@@ -201,6 +218,33 @@ func TestCreateRefusesContradictoryScopeShapes(t *testing.T) {
 	}
 	if _, err := svc.Create(context.Background(), "alice", "a", Scope("voice"), nil, ""); !errors.Is(err, ErrScopeShape) {
 		t.Fatalf("unknown scope err = %v", err)
+	}
+}
+
+// The fields scope exists in storage before anything validates a 분야 id, so the service
+// refuses it outright rather than saving links nothing has checked, and every answer stays as
+// it was until 분야 validation is wired.
+func TestCreateRefusesTheFieldsScopeUntilItIsValidated(t *testing.T) {
+	directory := &fakeDirectory{templates: []TemplateRef{{ID: "p1", Name: "리뷰"}}}
+	svc, store := newTestService(t, directory)
+	for name, ids := range map[string][]string{"without template ids": nil, "with template ids": {"p1"}} {
+		if _, err := svc.Create(context.Background(), "alice", "a", ScopeFields, ids, ""); !errors.Is(err, ErrScopeShape) {
+			t.Fatalf("create %s: err = %v, want the scope shape refusal", name, err)
+		}
+	}
+	if len(store.inserted) != 0 {
+		t.Fatalf("a refused fields scope wrote %d rows", len(store.inserted))
+	}
+	if directory.calls != 0 {
+		t.Fatalf("the refusal read the template directory %d times; it comes before any other check", directory.calls)
+	}
+
+	store.rows["g1"] = Guideline{ID: "g1", UserID: "alice", Text: "old", Scope: ScopeGlobal}
+	if _, err := svc.Update(context.Background(), "alice", "g1", Patch{Scope: &ScopePatch{Scope: ScopeFields, Fields: []string{"food"}}}); !errors.Is(err, ErrScopeShape) {
+		t.Fatalf("rescope to fields: err = %v", err)
+	}
+	if store.patched.Scope != nil || store.rows["g1"].Scope != ScopeGlobal {
+		t.Fatalf("a refused rescope reached the store: %+v", store.patched)
 	}
 }
 
@@ -286,6 +330,10 @@ func TestForPromptDistinguishesNoTemplateFromATemplate(t *testing.T) {
 	}
 	if store.askedTemplate != "" || store.askedAccount != "alice" {
 		t.Fatalf("no-template resolution asked for %q / %q", store.askedAccount, store.askedTemplate)
+	}
+	// Until 분야 are validated no fields guideline exists, so no post asks for a 분야 group.
+	if store.askedField != "" {
+		t.Fatalf("resolution asked for the 분야 %q", store.askedField)
 	}
 	if len(texts) != 2 {
 		t.Fatalf("texts = %v", texts)

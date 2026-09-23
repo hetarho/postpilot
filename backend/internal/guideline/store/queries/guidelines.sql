@@ -6,9 +6,10 @@
 --
 -- templates is another context's table and is never joined here: the scope links carry only
 -- ids, and the names shown on screen are projected through the template directory port
--- (ARCHITECTURE section 2.2). The ordering below is the INJECTION order: the global group
--- first, then the scoped group, each by creation time. So the list, the prompt, and the
--- experiment snapshot cannot disagree about what the writer sees first.
+-- (ARCHITECTURE section 2.2). A field link carries the field's ASCII id, whose list lives in
+-- code. The ordering below is the INJECTION order (GUIDE-14): the global group first, then the
+-- template group, then the field group, each by creation time. So the list, the prompt, and
+-- the experiment snapshot cannot disagree about what the writer sees first.
 
 -- name: InsertGuideline :exec
 INSERT INTO guidelines (id, user_id, text, scope, created_at, updated_at)
@@ -21,7 +22,7 @@ SELECT count(*) FROM guidelines WHERE user_id = ?;
 SELECT id, user_id, text, scope, created_at, updated_at
 FROM guidelines
 WHERE user_id = ?
-ORDER BY CASE scope WHEN 'global' THEN 0 ELSE 1 END, created_at, id;
+ORDER BY CASE scope WHEN 'global' THEN 0 WHEN 'templates' THEN 1 ELSE 2 END, created_at, id;
 
 -- name: GetGuideline :one
 SELECT id, user_id, text, scope, created_at, updated_at
@@ -40,6 +41,21 @@ FROM guideline_templates
 WHERE guideline_id = ? AND user_id = ?
 ORDER BY template_id;
 
+-- Field links come back in id order. Display order follows the product's list, which is the
+-- client's to apply.
+
+-- name: ListGuidelineFieldLinks :many
+SELECT guideline_id, field
+FROM guideline_fields
+WHERE user_id = ?
+ORDER BY guideline_id, field;
+
+-- name: ListGuidelineFields :many
+SELECT field
+FROM guideline_fields
+WHERE guideline_id = ? AND user_id = ?
+ORDER BY field;
+
 -- A text edit and a scope replacement are separate statements run in one transaction, so an
 -- edit that carries only one of them never names the other at all, and two tabs editing the two
 -- halves cannot overwrite each other, and no read-modify-write can put a stale value back.
@@ -56,13 +72,20 @@ DELETE FROM guideline_templates WHERE guideline_id = ? AND user_id = ?;
 -- name: InsertGuidelineScopeLink :exec
 INSERT INTO guideline_templates (guideline_id, template_id, user_id) VALUES (?, ?, ?);
 
+-- name: DeleteGuidelineFieldLinks :exec
+DELETE FROM guideline_fields WHERE guideline_id = ? AND user_id = ?;
+
+-- name: InsertGuidelineFieldLink :exec
+INSERT INTO guideline_fields (guideline_id, field, user_id) VALUES (?, ?, ?);
+
 -- name: DeleteGuideline :execrows
 -- The schema cascades this guideline's own scope links. No template row is ever touched.
 DELETE FROM guidelines WHERE id = ? AND user_id = ?;
 
 -- name: ListApplicableGuidelineTexts :many
 -- The texts that apply to one post, in injection order. An empty template id is a post with
--- no template: it matches no link row, so the result is the global group alone.
+-- no template and an empty field a post with no field: each matches no link row, so the
+-- result holds only the groups the post has.
 SELECT g.text
 FROM guidelines g
 WHERE g.user_id = ?
@@ -72,8 +95,37 @@ WHERE g.user_id = ?
       SELECT 1 FROM guideline_templates gt
       WHERE gt.guideline_id = g.id AND gt.user_id = g.user_id AND gt.template_id = ?
     )
+    OR EXISTS (
+      SELECT 1 FROM guideline_fields gf
+      WHERE gf.guideline_id = g.id AND gf.user_id = g.user_id AND gf.field = ?
+    )
   )
-ORDER BY CASE g.scope WHEN 'global' THEN 0 ELSE 1 END, g.created_at, g.id;
+ORDER BY CASE g.scope WHEN 'global' THEN 0 WHEN 'templates' THEN 1 ELSE 2 END, g.created_at, g.id;
+
+-- The preset's state (GUIDE-34, GUIDE-39). It lives outside guidelines, so CountGuidelines and
+-- the text UNIQUE constraint never see it. A missing row is the preset off with no field.
+
+-- name: GetGuidelinePreset :one
+SELECT enabled, updated_at FROM guideline_presets WHERE user_id = ?;
+
+-- name: ListGuidelinePresetFields :many
+SELECT field FROM guideline_preset_fields WHERE user_id = ? ORDER BY field;
+
+-- name: UpsertGuidelinePresetEnabled :exec
+INSERT INTO guideline_presets (user_id, enabled, updated_at) VALUES (?, ?, ?)
+ON CONFLICT (user_id) DO UPDATE SET enabled = excluded.enabled, updated_at = excluded.updated_at;
+
+-- name: TouchGuidelinePreset :exec
+-- A field edit with no switch: the fields need their parent row, and a first write creates it
+-- switched off, while an existing row keeps its switch.
+INSERT INTO guideline_presets (user_id, enabled, updated_at) VALUES (?, 0, ?)
+ON CONFLICT (user_id) DO UPDATE SET updated_at = excluded.updated_at;
+
+-- name: DeleteGuidelinePresetFields :exec
+DELETE FROM guideline_preset_fields WHERE user_id = ?;
+
+-- name: InsertGuidelinePresetField :exec
+INSERT INTO guideline_preset_fields (user_id, field) VALUES (?, ?);
 
 -- Guideline candidates (change 26). A candidate is one completed revision's instruction,
 -- recorded verbatim. Rows in every state are kept: 'approved' and 'dismissed' rows are what

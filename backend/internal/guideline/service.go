@@ -183,7 +183,9 @@ func (s *Service) ForPrompt(ctx context.Context, userID string, templateID *stri
 	if templateID != nil {
 		scoped = strings.TrimSpace(*templateID)
 	}
-	texts, err := s.store.ApplicableTexts(ctx, userID, scoped)
+	// No 분야 yet: nothing can save a fields guideline until its ids are validated, so the
+	// 분야 group is empty for every post and the field matches no link.
+	texts, err := s.store.ApplicableTexts(ctx, userID, scoped, "")
 	if err != nil {
 		return nil, fmt.Errorf("resolve applicable guidelines: %w", err)
 	}
@@ -265,7 +267,9 @@ func (s *Service) validText(value string) (string, error) {
 // `templates` scope must name at least one at creation and on every scope update: only a
 // template deletion may leave the set empty (plan 16 invariant 2).
 func (s *Service) validScope(ctx context.Context, userID string, scope Scope, templateIDs []string) ([]string, error) {
-	if !scope.Valid() {
+	// A fields scope is refused before anything else until 분야 ids are validated: the rpc
+	// cannot send one yet, and nothing here proves a 분야 is on the product's list.
+	if scope == ScopeFields || !scope.Valid() {
 		return nil, ErrScopeShape
 	}
 	unique := make([]string, 0, len(templateIDs))

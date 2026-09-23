@@ -103,6 +103,29 @@ func (q *Queries) DeleteGuideline(ctx context.Context, arg DeleteGuidelineParams
 	return result.RowsAffected()
 }
 
+const deleteGuidelineFieldLinks = `-- name: DeleteGuidelineFieldLinks :exec
+DELETE FROM guideline_fields WHERE guideline_id = ? AND user_id = ?
+`
+
+type DeleteGuidelineFieldLinksParams struct {
+	GuidelineID string
+	UserID      string
+}
+
+func (q *Queries) DeleteGuidelineFieldLinks(ctx context.Context, arg DeleteGuidelineFieldLinksParams) error {
+	_, err := q.db.ExecContext(ctx, deleteGuidelineFieldLinks, arg.GuidelineID, arg.UserID)
+	return err
+}
+
+const deleteGuidelinePresetFields = `-- name: DeleteGuidelinePresetFields :exec
+DELETE FROM guideline_preset_fields WHERE user_id = ?
+`
+
+func (q *Queries) DeleteGuidelinePresetFields(ctx context.Context, userID string) error {
+	_, err := q.db.ExecContext(ctx, deleteGuidelinePresetFields, userID)
+	return err
+}
+
 const deleteGuidelineScope = `-- name: DeleteGuidelineScope :exec
 DELETE FROM guideline_templates WHERE guideline_id = ? AND user_id = ?
 `
@@ -154,6 +177,25 @@ func (q *Queries) GetGuideline(ctx context.Context, arg GetGuidelineParams) (Gui
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
+	return i, err
+}
+
+const getGuidelinePreset = `-- name: GetGuidelinePreset :one
+
+SELECT enabled, updated_at FROM guideline_presets WHERE user_id = ?
+`
+
+type GetGuidelinePresetRow struct {
+	Enabled   int64
+	UpdatedAt string
+}
+
+// The preset's state (GUIDE-34, GUIDE-39). It lives outside guidelines, so CountGuidelines and
+// the text UNIQUE constraint never see it. A missing row is the preset off with no field.
+func (q *Queries) GetGuidelinePreset(ctx context.Context, userID string) (GetGuidelinePresetRow, error) {
+	row := q.db.QueryRowContext(ctx, getGuidelinePreset, userID)
+	var i GetGuidelinePresetRow
+	err := row.Scan(&i.Enabled, &i.UpdatedAt)
 	return i, err
 }
 
@@ -224,9 +266,10 @@ type InsertGuidelineParams struct {
 //
 // templates is another context's table and is never joined here: the scope links carry only
 // ids, and the names shown on screen are projected through the template directory port
-// (ARCHITECTURE section 2.2). The ordering below is the INJECTION order: the global group
-// first, then the scoped group, each by creation time. So the list, the prompt, and the
-// experiment snapshot cannot disagree about what the writer sees first.
+// (ARCHITECTURE section 2.2). A field link carries the field's ASCII id, whose list lives in
+// code. The ordering below is the INJECTION order (GUIDE-14): the global group first, then the
+// template group, then the field group, each by creation time. So the list, the prompt, and
+// the experiment snapshot cannot disagree about what the writer sees first.
 func (q *Queries) InsertGuideline(ctx context.Context, arg InsertGuidelineParams) error {
 	_, err := q.db.ExecContext(ctx, insertGuideline,
 		arg.ID,
@@ -236,6 +279,35 @@ func (q *Queries) InsertGuideline(ctx context.Context, arg InsertGuidelineParams
 		arg.CreatedAt,
 		arg.UpdatedAt,
 	)
+	return err
+}
+
+const insertGuidelineFieldLink = `-- name: InsertGuidelineFieldLink :exec
+INSERT INTO guideline_fields (guideline_id, field, user_id) VALUES (?, ?, ?)
+`
+
+type InsertGuidelineFieldLinkParams struct {
+	GuidelineID string
+	Field       string
+	UserID      string
+}
+
+func (q *Queries) InsertGuidelineFieldLink(ctx context.Context, arg InsertGuidelineFieldLinkParams) error {
+	_, err := q.db.ExecContext(ctx, insertGuidelineFieldLink, arg.GuidelineID, arg.Field, arg.UserID)
+	return err
+}
+
+const insertGuidelinePresetField = `-- name: InsertGuidelinePresetField :exec
+INSERT INTO guideline_preset_fields (user_id, field) VALUES (?, ?)
+`
+
+type InsertGuidelinePresetFieldParams struct {
+	UserID string
+	Field  string
+}
+
+func (q *Queries) InsertGuidelinePresetField(ctx context.Context, arg InsertGuidelinePresetFieldParams) error {
+	_, err := q.db.ExecContext(ctx, insertGuidelinePresetField, arg.UserID, arg.Field)
 	return err
 }
 
@@ -264,19 +336,25 @@ WHERE g.user_id = ?
       SELECT 1 FROM guideline_templates gt
       WHERE gt.guideline_id = g.id AND gt.user_id = g.user_id AND gt.template_id = ?
     )
+    OR EXISTS (
+      SELECT 1 FROM guideline_fields gf
+      WHERE gf.guideline_id = g.id AND gf.user_id = g.user_id AND gf.field = ?
+    )
   )
-ORDER BY CASE g.scope WHEN 'global' THEN 0 ELSE 1 END, g.created_at, g.id
+ORDER BY CASE g.scope WHEN 'global' THEN 0 WHEN 'templates' THEN 1 ELSE 2 END, g.created_at, g.id
 `
 
 type ListApplicableGuidelineTextsParams struct {
 	UserID     string
 	TemplateID string
+	Field      string
 }
 
 // The texts that apply to one post, in injection order. An empty template id is a post with
-// no template: it matches no link row, so the result is the global group alone.
+// no template and an empty field a post with no field: each matches no link row, so the
+// result holds only the groups the post has.
 func (q *Queries) ListApplicableGuidelineTexts(ctx context.Context, arg ListApplicableGuidelineTextsParams) ([]string, error) {
-	rows, err := q.db.QueryContext(ctx, listApplicableGuidelineTexts, arg.UserID, arg.TemplateID)
+	rows, err := q.db.QueryContext(ctx, listApplicableGuidelineTexts, arg.UserID, arg.TemplateID, arg.Field)
 	if err != nil {
 		return nil, err
 	}
@@ -288,6 +366,106 @@ func (q *Queries) ListApplicableGuidelineTexts(ctx context.Context, arg ListAppl
 			return nil, err
 		}
 		items = append(items, text)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listGuidelineFieldLinks = `-- name: ListGuidelineFieldLinks :many
+
+SELECT guideline_id, field
+FROM guideline_fields
+WHERE user_id = ?
+ORDER BY guideline_id, field
+`
+
+type ListGuidelineFieldLinksRow struct {
+	GuidelineID string
+	Field       string
+}
+
+// Field links come back in id order. Display order follows the product's list, which is the
+// client's to apply.
+func (q *Queries) ListGuidelineFieldLinks(ctx context.Context, userID string) ([]ListGuidelineFieldLinksRow, error) {
+	rows, err := q.db.QueryContext(ctx, listGuidelineFieldLinks, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListGuidelineFieldLinksRow
+	for rows.Next() {
+		var i ListGuidelineFieldLinksRow
+		if err := rows.Scan(&i.GuidelineID, &i.Field); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listGuidelineFields = `-- name: ListGuidelineFields :many
+SELECT field
+FROM guideline_fields
+WHERE guideline_id = ? AND user_id = ?
+ORDER BY field
+`
+
+type ListGuidelineFieldsParams struct {
+	GuidelineID string
+	UserID      string
+}
+
+func (q *Queries) ListGuidelineFields(ctx context.Context, arg ListGuidelineFieldsParams) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, listGuidelineFields, arg.GuidelineID, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var field string
+		if err := rows.Scan(&field); err != nil {
+			return nil, err
+		}
+		items = append(items, field)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listGuidelinePresetFields = `-- name: ListGuidelinePresetFields :many
+SELECT field FROM guideline_preset_fields WHERE user_id = ? ORDER BY field
+`
+
+func (q *Queries) ListGuidelinePresetFields(ctx context.Context, userID string) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, listGuidelinePresetFields, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var field string
+		if err := rows.Scan(&field); err != nil {
+			return nil, err
+		}
+		items = append(items, field)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err
@@ -372,7 +550,7 @@ const listGuidelines = `-- name: ListGuidelines :many
 SELECT id, user_id, text, scope, created_at, updated_at
 FROM guidelines
 WHERE user_id = ?
-ORDER BY CASE scope WHEN 'global' THEN 0 ELSE 1 END, created_at, id
+ORDER BY CASE scope WHEN 'global' THEN 0 WHEN 'templates' THEN 1 ELSE 2 END, created_at, id
 `
 
 func (q *Queries) ListGuidelines(ctx context.Context, userID string) ([]Guideline, error) {
@@ -488,6 +666,23 @@ func (q *Queries) SetCandidateStatusByText(ctx context.Context, arg SetCandidate
 	return err
 }
 
+const touchGuidelinePreset = `-- name: TouchGuidelinePreset :exec
+INSERT INTO guideline_presets (user_id, enabled, updated_at) VALUES (?, 0, ?)
+ON CONFLICT (user_id) DO UPDATE SET updated_at = excluded.updated_at
+`
+
+type TouchGuidelinePresetParams struct {
+	UserID    string
+	UpdatedAt string
+}
+
+// A field edit with no switch: the fields need their parent row, and a first write creates it
+// switched off, while an existing row keeps its switch.
+func (q *Queries) TouchGuidelinePreset(ctx context.Context, arg TouchGuidelinePresetParams) error {
+	_, err := q.db.ExecContext(ctx, touchGuidelinePreset, arg.UserID, arg.UpdatedAt)
+	return err
+}
+
 const updateGuidelineScope = `-- name: UpdateGuidelineScope :execrows
 UPDATE guidelines SET scope = ?, updated_at = ? WHERE id = ? AND user_id = ?
 `
@@ -538,4 +733,20 @@ func (q *Queries) UpdateGuidelineText(ctx context.Context, arg UpdateGuidelineTe
 		return 0, err
 	}
 	return result.RowsAffected()
+}
+
+const upsertGuidelinePresetEnabled = `-- name: UpsertGuidelinePresetEnabled :exec
+INSERT INTO guideline_presets (user_id, enabled, updated_at) VALUES (?, ?, ?)
+ON CONFLICT (user_id) DO UPDATE SET enabled = excluded.enabled, updated_at = excluded.updated_at
+`
+
+type UpsertGuidelinePresetEnabledParams struct {
+	UserID    string
+	Enabled   int64
+	UpdatedAt string
+}
+
+func (q *Queries) UpsertGuidelinePresetEnabled(ctx context.Context, arg UpsertGuidelinePresetEnabledParams) error {
+	_, err := q.db.ExecContext(ctx, upsertGuidelinePresetEnabled, arg.UserID, arg.Enabled, arg.UpdatedAt)
+	return err
 }

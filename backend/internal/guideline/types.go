@@ -24,9 +24,11 @@ type Scope string
 const (
 	ScopeGlobal    Scope = "global"
 	ScopeTemplates Scope = "templates"
+	// ScopeFields reaches the posts whose 분야 is one of the guideline's (GUIDE-5).
+	ScopeFields Scope = "fields"
 )
 
-func (s Scope) Valid() bool { return s == ScopeGlobal || s == ScopeTemplates }
+func (s Scope) Valid() bool { return s == ScopeGlobal || s == ScopeTemplates || s == ScopeFields }
 
 var (
 	// ErrNotFound covers unknown and foreign ids alike. A guideline belonging to another
@@ -87,14 +89,16 @@ type TemplateRef struct {
 	Name string
 }
 
-// Guideline is the aggregate. TemplateIDs is stored scope state; Templates is the name
-// projection the service fills for reads and is never accepted on a write.
+// Guideline is the aggregate. TemplateIDs and Fields are stored scope state, Fields as the
+// ASCII 분야 ids in id order; Templates is the name projection the service fills for reads and
+// is never accepted on a write.
 type Guideline struct {
 	ID          string
 	UserID      string
 	Text        string
 	Scope       Scope
 	TemplateIDs []string
+	Fields      []string
 	Templates   []TemplateRef
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
@@ -105,6 +109,7 @@ type Guideline struct {
 type ScopePatch struct {
 	Scope       Scope
 	TemplateIDs []string
+	Fields      []string
 }
 
 // Patch is a presence-based update: a nil field is not part of the edit. A text-only edit
@@ -115,3 +120,19 @@ type Patch struct {
 }
 
 func (p Patch) empty() bool { return p.Text == nil && p.Scope == nil }
+
+// Preset is the account's state of the product's 상위 노출 단어 사용 preset: whether it is on and
+// the 분야 it applies to. It is not a guideline row — its text is a product constant and never
+// stored — so it spends neither the account cap nor text uniqueness (GUIDE-39). An account that
+// never touched it holds the zero value, off with no 분야 (GUIDE-34).
+type Preset struct {
+	Enabled bool
+	Fields  []string
+}
+
+// PresetPatch is a presence-based edit like Patch: a nil field is not part of the edit, so
+// switching the preset keeps its 분야 and editing the 분야 keeps the switch.
+type PresetPatch struct {
+	Enabled *bool
+	Fields  *[]string
+}

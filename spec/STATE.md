@@ -51,7 +51,6 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T332 | Rebuild guidelines for the fields scope, and add the 분야 link and preset tables | GUIDE ARCH | T323 | todo |
 | T333 | Templates store, validate and render a title area into the frozen brief | TMPL GEN ARCH | T322 T323 T324 T327 | todo |
 | T334 | A published post refuses every write except replacing or clearing its URL and deleting it | POST GEN MODEL ARCH | T329 | todo |
 | T335 | QualityService: stored per-revision measurements, the read-time aggregate, rule texts and phrase reads | QUAL POST ARCH | T329 T331 | todo |
@@ -75,10 +74,12 @@
 | T353 | Toggling 기억 사용 keeps the post's 목표 글자 수 | POST MEM ARCH | - | todo |
 
 ## next
-- implement-task T332 (then the dep order in the tasks table; T332, T333, T334 and T335 are unblocked)
+- implement-task T333 (then the dep order in the tasks table; T333, T334 and T335 are unblocked)
 - T352 and T353 are independent pre-existing bug fixes (frozen memories never reach a durable generate; the 기억 사용 toggle clears 목표 글자 수)
 - create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 ## log
+- 260924 T332 done; migration 0078 rebuilds guidelines so scope admits fields with every row and template link intact (reversible: fields fall back to link-less templates), adds guideline_fields and the preset tables, and the store reads and writes all three groups in injection order plus the preset as a presence patch; the service still refuses a fields scope; BE gate and gen:sql reproduction pass (p35)
+- 260924 T332 claimed (p35)
 - 260924 T331 done; quality measures M1-M4 per post and per account (absent rather than zero when uncomputable), judges each against the pinned bands and minimums with four verdicts, names the M2 run standing in the most window posts, and renders the eight rule texts; no provider, usage or job dependency; full BE gate passes (p35)
 - 260924 T331 claimed (p35)
 - 260924 T330 done; a write with frozen 분야 phrases carries them once in the per-post half with the replacements instruction and schema, and keeps only candidates the final content bears out (bounded 20 x 3); without phrases nothing changes; BE gate passes (p35)
@@ -97,5 +98,3 @@
 - 260924 T324 claimed (p35)
 - 260924 T323 done; migration 0077 adds the six post columns, the published index, post_measurements, field_phrase_lists and templates.title_area, reversible to 76; nullable columns carry no explicit NULL because sqlc reads `TEXT NULL` as untyped; full BE gate and gen:sql pass (p35)
 - 260924 T323 claimed (p35)
-- 260924 T322 done; the 발행됨/분야/quality/preset/title-area wire exists on both sides with the five new reasons emitted, the 분야 catalogue in `quality` and its closed wire mappers; 2336 FE tests, full BE gate, codegen reproduction and buf lint/breaking pass (p35)
-- 260924 T322 claimed (p35)
