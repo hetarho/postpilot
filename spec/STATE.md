@@ -12,7 +12,7 @@
 |---|---|
 | clip-source-observation-visibility | converted@260912 |
 | clip-template-as-preset | converted@260917 |
-| post-quality-and-related-links | open@260918 |
+| post-quality-and-related-links | converted@260923 |
 
 ## ssot
 | id | rev | tasked | pending | [?] |
@@ -20,12 +20,12 @@
 | ARCH | 9 | 9 | - | 0 |
 | AUTH | 8 | 8 | - | 0 |
 | QUOTA | 19 | 19 | - | 0 |
-| POST | 9 | 9 | - | 0 |
+| POST | 10 | 9 | POST-73+ POST-74+ POST-75+ POST-76+ POST-77+ POST-78+ POST-79+ POST-80+ POST-81+ POST-82+ POST-83+ POST-84+ POST-85+ POST-13✎ POST-66✎ POST-54✎ POST-51✎ | 0 |
 | VOICE | 3 | 3 | - | 1 |
-| GEN | 8 | 8 | - | 0 |
+| GEN | 9 | 8 | GEN-48+ GEN-49+ GEN-50+ GEN-51+ GEN-52+ GEN-53+ GEN-54+ GEN-14✎ | 0 |
 | MODEL | 16 | 16 | - | 0 |
-| TMPL | 8 | 8 | - | 1 |
-| GUIDE | 3 | 3 | - | 0 |
+| TMPL | 9 | 8 | TMPL-50+ TMPL-51+ TMPL-52+ TMPL-53x TMPL-54x TMPL-55+ | 1 |
+| GUIDE | 4 | 3 | GUIDE-29+ GUIDE-30+ GUIDE-31+ GUIDE-32+ GUIDE-33+ GUIDE-34+ GUIDE-35+ GUIDE-36+ GUIDE-37+ GUIDE-38+ GUIDE-39+ GUIDE-5✎ GUIDE-14✎ | 0 |
 | EXPORT | 5 | 5 | - | 0 |
 | PUB | 6 | 6 | - | 0 |
 | LANG | 5 | 5 | - | 0 |
@@ -36,6 +36,7 @@
 | CDS | 25 | 23 | CDS-17✎ CDS-19✎ CDS-21✎ CDS-84✎ | 1 |
 | BILL | 4 | 4 | - | 0 |
 | MEM | 1 | 1 | - | 2 |
+| QUAL | 1 | 0 | all | 0 |
 
 ## review
 | id | st |
@@ -52,10 +53,21 @@
 |---|---|---|---|---|
 
 ## next
-- ideation post-quality-and-related-links 계속 (6 live opens): the exact 주제 names from Naver's own picker, whether title+excerpt is a large enough vocabulary sample, the tag rule against POST-65, an English target, 확정 rewriting `posts.title`, and what ①'s dock shows before an account has published enough to measure
+- create-task QUAL POST GEN GUIDE TMPL for the 발행됨 status and post measurement — QUAL r1 is a new domain (`all`), the other four carry deltas; QUAL and POST come first because GEN, GUIDE and TMPL all reference the status, the 분야 attribute and the phrase list
+- no [?] remains in any of the five; TMPL-39 (a photo row of n > 1 through export) predates this work and is unrelated to it
 - create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
-- publishing retirement implementation is complete; DEPLOY.md records the prod checkpoint and receipts at c6af0418, with staging not deployed
 ## log
+- 260923 the five domains' opens all closed ahead of create-task; measurement split into a per-post layer shown from ② and an aggregate over 발행됨 posts only, vocabulary ranked guideline > template > voice with the preset injected last, and 분야 picked on ①'s panel
+- 260923 ideation post-quality-and-related-links converted; QUAL r1 created and POST r10, GEN r9, GUIDE r4, TMPL r9 carry the rest; 추천글 and GEO stay parked in the ideation doc
+- 260923 update-ssot TMPL complete; r9 adds the optional title area limited to literal text, `<write>` and `<ask>`
+- 260923 update-ssot GUIDE complete; r4 adds the preset, the `fields` scope kind and the precedence narrowing, with `templatePrecedence`'s identical wording left as [?]
+- 260923 update-ssot GEN complete; r9 adds the frozen 분야 phrase list, the write answer's replacement candidates, the two sourced title prohibitions, the tag rule and the ticked quality rules' position
+- 260923 update-ssot POST complete; r10 adds the 발행됨 status and its pasted URL, the content lock that spares export/copy/말투 학습, the fourth badge and filter, ②'s replacement spans and the brief's quality checkboxes
+- 260923 create-ssot QUAL complete; r1 carries four metrics over 발행됨 posts with per-metric minimums, stored per-post measurements, and the daily 네이버 검색 API phrase batch; bands, 분야 names and English-target analysis stay [?]
+- 260923 ideation post-quality-and-related-links ready; 10 rounds, v1 is the 발행됨 status and its measurement set, four metrics with offered rules, an optional template title area, and per-분야 phrases reaching a post by two routes; 추천글 and GEO stay parked
+- 260923 ideation post-quality round 10; Jev examined and rejected for v1 against the owner's own test (price not lower — the write pass adds no call while Jev resends the post per span; quality unevidenced), so the write pass returns candidate spans as JSON; a chosen replacement is a manual edit; the 발행됨 lock covers content edits only
+- 260923 ideation post-quality round 9; the 지침 and ②'s offer split by what the source contains (same meaning already stated → substituted in the prompt; absent → offered on hover), so rounds 5-6 stand; candidate spans come from the write pass as JSON; the offer covers body, title and tags; clearing the URL unlocks a 발행됨 post back to 확정
+- 260923 ideation post-quality round 7-8; the doc's PUB-15/22/25 footing was retired on 260922, so a manual Naver URL now enters a new terminal 발행됨 status that supplies both the measured title set and the future link pool; body vocabulary leaves the write prompt entirely and becomes a hover replacement offer on ②; every rule is language-blind
 - 260923 ideation post-quality round 5-6; 분야 becomes a per-post attribute and a third 지침 scope kind; one fixed 상위 노출 단어 사용 preset with a multi-select 적용할 분야 keeps GUIDE-18 intact; guidelinePrecedence narrows 어휘 out; 11 of 17 opens are parked with 추천글/GEO
 - 260923 ideation post-quality round 4; word choice moved off the 말투 tab into per-분야 지침 presets filled by a daily product-side 네이버 검색 API batch; 도배율 numerator = most frequent noun, bands product-owned; rule text = code constant overridable by 지침
 - 260923 ideation post-quality-and-related-links round 3; body word rule → a recommendation surface in the 말투 tab adopted into [사용자 규칙]; tags by prompt rule only, no search data; 추천글 deferred and reshaped around explicitly saved links
@@ -65,14 +77,3 @@
 - 260922 ideation post-quality-and-related-links continue; adding SEO/GEO methodology, title templates, high-value vocabulary
 - 260922 CI guard repaired; completed and pending retirement guides both pass while missing cleanup evidence arguments and restored runtime fail; 11 regressions and the real retirement gate pass locally; remote verification awaits push
 - 260922 CI investigation start; run 35739196970 failed after the deployment-checkpoint documentation commit
-- 260922 T321 done; short email-free seed ids and independent automatic-login/saved-id controls; 2328 FE tests, full BE gate, codegen and CI support checks pass (lgn)
-- 260922 T321 claimed (lgn)
-- 260922 create-task AUTH complete; T321 consumes AUTH r8
-- 260922 create-task AUTH start; AUTH r8 login convenience and development accounts
-- 260922 update-ssot AUTH complete; AUTH r8 records short email-free seed ids and independent automatic-login/save-id choices; no active tasks overlap
-- 260922 update-ssot AUTH start; short dev seed login ids, opt-in automatic login and saved login ids
-- 260922 T320 done; the backend gate carries a 30m bound and now reports per-package results (gate)
-- 260922 found with T320: internal/clip/store fails TestTheSoundSettingDoesNotInvalidateAnInterruptedCandidate in a package run and passes alone; it was invisible while the package only reported a timeout, and needs its own task
-- 260922 T320 claimed (gate)
-- 260922 create-task ARCH complete; T320 created from r9
-- 260922 update-ssot ARCH complete; ARCH r9 gives the backend gate a 30m bound because cmd/api (1018s) and internal/clip/store (828s) pass the Go default on their own; create-task pending
