@@ -25,6 +25,9 @@ var (
 	// ErrVoiceMismatch: the post was reassigned after this job was queued, so its frozen
 	// voice no longer matches — the result would land in the wrong profile.
 	ErrVoiceMismatch = errors.New("the post was assigned to another voice after this job was queued")
+	// ErrPostPublished: a published post is locked (POST-74, GEN-56). It is refused before
+	// anything is frozen, appended, held or called, so a run on it costs nothing.
+	ErrPostPublished = errors.New("a published post cannot be generated, revised or rewritten")
 )
 
 // VideoUnsupportedError names the observe model that cannot watch a clip, so the transport can

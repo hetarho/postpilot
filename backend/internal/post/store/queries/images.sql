@@ -13,8 +13,10 @@ FROM images WHERE post_slug = ? ORDER BY created_at, id;
 SELECT id, post_slug, filename, r2_key, width, height, bytes, created_at
 FROM images WHERE id = ?;
 
--- name: DeleteImage :exec
-DELETE FROM images WHERE id = ?;
+-- name: DeleteImage :execrows
+-- A published post's photos are locked with it (POST-74): zero rows is a row already gone or
+-- a post that is published, and the service re-reads the post to tell which.
+DELETE FROM images WHERE id = ? AND post_slug IN (SELECT slug FROM posts WHERE status <> 'published');
 
 -- name: ImageFilenameTaken :one
 SELECT EXISTS (SELECT 1 FROM images WHERE post_slug = ? AND filename = ?);

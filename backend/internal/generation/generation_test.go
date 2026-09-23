@@ -822,3 +822,112 @@ func TestASnapshotFrozenBeforeTheFlagStillPersists(t *testing.T) {
 		t.Fatalf("a pre-flag snapshot stopped persisting: %#v", posts.observationWrites)
 	}
 }
+
+// GEN-56: a published post starts no generation and no revision. Both refuse right after the
+// post is read, so nothing downstream happens: no rule reaches the voice, no template,
+// guideline or memory is frozen, nothing is queued or held, and no provider is called. The two
+// handlers refuse it too, as a backstop no product path reaches.
+func TestStartAndStartRevisionRefuseAPublishedPostBeforeAnything(t *testing.T) {
+	ctx := context.Background()
+	posts := &fakePosts{input: PostInput{
+		Slug: "post", UserID: "alice", Voice: liveVoice, Content: revisionContent("existing"),
+		TemplateID: "template-review", UseMemory: true, Published: true,
+		Images: []Image{{Filename: "IMG_1.jpg", Key: "key"}},
+	}}
+	jobs := &fakeJobs{id: "should-not-enqueue"}
+	rules := &fakeRules{}
+	models := newFakeModels()
+	svc := NewService(posts, fakeProfiles{}, rules, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, testDeps())
+	briefs := &fakeTemplateBriefs{brief: *testBrief()}
+	guidelines := &fakeGuidelines{texts: testGuidelines()}
+	memories := &recordingMemories{texts: testMemories()}
+	svc.templates, svc.guidelines, svc.memories = briefs, guidelines, memories
+
+	if _, err := svc.Start(ctx, StartRequest{
+		UserID: "alice", PostSlug: "post", ObserveModel: observeRef.String(), WriteModel: writeRef.String(),
+	}); !errors.Is(err, ErrPostPublished) {
+		t.Fatalf("start = %v, want ErrPostPublished", err)
+	}
+	if _, err := svc.StartRevision(ctx, StartRevisionRequest{
+		UserID: "alice", PostSlug: "post", Instruction: "더 짧게", WriteModel: writeRef.String(), SaveAsRule: true,
+	}); !errors.Is(err, ErrPostPublished) {
+		t.Fatalf("revision = %v, want ErrPostPublished", err)
+	}
+	if err := svc.Generate(ctx, GenerateJob{
+		UserID: "alice", PostSlug: "post", VoiceID: liveVoice.ID, WriteModel: writeRef.String(),
+	}, func(string, int, int) {}); !errors.Is(err, ErrPostPublished) {
+		t.Fatalf("generate handler = %v, want ErrPostPublished", err)
+	}
+	if err := svc.Revise(ctx, RevisionJob{
+		UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(), Payload: mustRevisionPayload(t, "고쳐줘", false),
+	}, func(string, int, int) {}); !errors.Is(err, ErrPostPublished) {
+		t.Fatalf("revise handler = %v, want ErrPostPublished", err)
+	}
+	if jobs.enqueues != 0 || len(rules.lines) != 0 || len(models.calls) != 0 {
+		t.Fatalf("a refused start did something: jobs=%d rules=%v calls=%d", jobs.enqueues, rules.lines, len(models.calls))
+	}
+	if briefs.calls != 0 || guidelines.calls != 0 || memories.calls != 0 {
+		t.Fatalf("a refused start froze something: templates=%d guidelines=%d memories=%d", briefs.calls, guidelines.calls, memories.calls)
+	}
+	if len(posts.contents) != 0 || len(posts.observationWrites) != 0 {
+		t.Fatal("a refused run wrote to the post")
+	}
+}
+
+// MODEL-31: the editor's write comparison lands its result in the post, so a published post
+// refuses its snapshot before anything is frozen. The lab's snapshot-only comparison writes
+// nothing there and reads the post freely — and the flag never reaches the frozen bytes, so it
+// freezes exactly what it would for the same post unpublished.
+func TestWriteSnapshotRefusesAPublishedPostOnlyForTheEditor(t *testing.T) {
+	ctx := context.Background()
+	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, Memo: "memo", TemplateID: "template-review", Published: true}}
+	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, newFakeModels(), fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
+	briefs := &fakeTemplateBriefs{brief: *testBrief()}
+	svc.templates = briefs
+
+	if _, err := svc.SnapshotWriteInput(ctx, "alice", "post", llm.ModelRef{}, nil, nil, false); !errors.Is(err, ErrPostPublished) {
+		t.Fatalf("editor snapshot = %v, want ErrPostPublished", err)
+	}
+	if briefs.calls != 0 {
+		t.Fatalf("the refused snapshot froze a template (%d renders)", briefs.calls)
+	}
+
+	lab, err := svc.SnapshotWriteInput(ctx, "alice", "post", llm.ModelRef{}, nil, nil, true)
+	if err != nil {
+		t.Fatalf("lab snapshot of a published post: %v", err)
+	}
+	posts.input.Published = false
+	unpublished, err := svc.SnapshotWriteInput(ctx, "alice", "post", llm.ModelRef{}, nil, nil, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(lab, unpublished) || bytes.Contains(lab, []byte("Published")) {
+		t.Fatalf("the published flag reached the frozen input:\n%s\n%s", lab, unpublished)
+	}
+}
+
+// MODEL-37: a comparison's winner lands nowhere on a published post, whichever path applies
+// it, and it lands as before once the address is cleared.
+func TestApplyWriteWinnerRefusesAPublishedPost(t *testing.T) {
+	ctx := context.Background()
+	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, Memo: "memo"}}
+	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, newFakeModels(), fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
+	snapshot, err := svc.SnapshotWriteInput(ctx, "alice", "post", llm.ModelRef{}, nil, nil, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	winner := PostContent{Title: "승자", Blocks: []Block{{Type: BlockText, Content: "승자의 문장"}}}
+
+	posts.input.Published = true
+	if err := svc.ApplyWriteWinner(ctx, "alice", "post", winner, snapshot); !errors.Is(err, ErrPostPublished) {
+		t.Fatalf("apply = %v, want ErrPostPublished", err)
+	}
+	if len(posts.contents) != 0 {
+		t.Fatalf("a refused application wrote %d contents", len(posts.contents))
+	}
+
+	posts.input.Published = false
+	if err := svc.ApplyWriteWinner(ctx, "alice", "post", winner, snapshot); err != nil || len(posts.contents) != 1 {
+		t.Fatalf("apply after the clear = %v with %d contents", err, len(posts.contents))
+	}
+}

@@ -15,7 +15,7 @@ UPDATE posts SET template_id = ?1,
     target_length = COALESCE(?2, target_length),
     tag_count = COALESCE(?3, tag_count),
     updated_at = ?4
-WHERE slug = ?5 AND user_id = ?6
+WHERE slug = ?5 AND user_id = ?6 AND status <> 'published'
 `
 
 type AssignPostTemplateParams struct {
@@ -29,7 +29,7 @@ type AssignPostTemplateParams struct {
 
 // Assignment is not a reassignment: unlike the voice, a template is never learned from, so
 // this touches no content, revision, machine baseline or finalization column and is allowed
-// in every status. NULL is the clear.
+// in every status but published, which is locked. NULL is the clear.
 //
 // It also SEEDS the two generation options from the template that is being assigned
 // (TEMPLATE-48): a seed parameter is non-NULL only for a number that template has set, so
@@ -90,6 +90,10 @@ type CreatePostParams struct {
 
 // Posts. Every query is scoped by user_id: ownership is enforced in SQL, not by a
 // caller remembering to check it.
+//
+// A published post is locked (POST-74): every write to it but the address's and the delete
+// carries `status <> 'published'`, so a write that passed the service's check and then lost
+// the race to a publish matches zero rows instead of rewriting a post that is already live.
 // target_length and tag_count are the template's seeds when the create names one, and NULL
 // otherwise: a post nobody gave a number to reads as natural length and the default count.
 func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) error {
@@ -130,7 +134,7 @@ const finalizePost = `-- name: FinalizePost :execrows
 UPDATE posts SET status = 'finalized', finalized_revision = content_revision,
     title = ?, finalized_at = ?, updated_at = ?
 WHERE slug = ? AND user_id = ? AND content_revision = ?
-  AND content IS NOT NULL
+  AND content IS NOT NULL AND status <> 'published'
 `
 
 type FinalizePostParams struct {
@@ -361,6 +365,20 @@ func (q *Queries) ListPublishedPostsByUser(ctx context.Context, arg ListPublishe
 	return items, nil
 }
 
+const postIsPublished = `-- name: PostIsPublished :one
+SELECT EXISTS (SELECT 1 FROM posts WHERE slug = ? AND status = 'published')
+`
+
+// The guard an insert under a post runs first in its own write transaction. It is a guard and
+// not an INSERT ... SELECT, which would insert nothing for an unknown post too: zero rows would
+// then say two things, and the composite foreign key's refusal would be lost.
+func (q *Queries) PostIsPublished(ctx context.Context, slug string) (bool, error) {
+	row := q.db.QueryRowContext(ctx, postIsPublished, slug)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const postSlugExists = `-- name: PostSlugExists :one
 SELECT EXISTS (SELECT 1 FROM posts WHERE slug = ?)
 `
@@ -406,7 +424,7 @@ const reassignPostVoice = `-- name: ReassignPostVoice :execrows
 UPDATE posts SET voice_id = ?, machine_baseline = NULL, machine_baseline_revision = 0,
     machine_baseline_voice_id = NULL,
     updated_at = ?
-WHERE slug = ? AND user_id = ? AND voice_id <> ?
+WHERE slug = ? AND user_id = ? AND voice_id <> ? AND status <> 'published'
 `
 
 type ReassignPostVoiceParams struct {
@@ -437,7 +455,7 @@ func (q *Queries) ReassignPostVoice(ctx context.Context, arg ReassignPostVoicePa
 const savePostContent = `-- name: SavePostContent :execrows
 UPDATE posts SET content = ?, content_revision = content_revision + 1,
     status = 'review', finalized_revision = NULL, finalized_at = NULL, updated_at = ?
-WHERE slug = ? AND user_id = ? AND content_revision = ?
+WHERE slug = ? AND user_id = ? AND content_revision = ? AND status <> 'published'
 `
 
 type SavePostContentParams struct {
@@ -464,7 +482,7 @@ func (q *Queries) SavePostContent(ctx context.Context, arg SavePostContentParams
 
 const savePostGenerationOptions = `-- name: SavePostGenerationOptions :execrows
 UPDATE posts SET target_length = ?, tag_count = ?, use_memory = ?, updated_at = ?
-WHERE slug = ? AND user_id = ?
+WHERE slug = ? AND user_id = ? AND status <> 'published'
 `
 
 type SavePostGenerationOptionsParams struct {
@@ -519,7 +537,7 @@ UPDATE posts SET content = ?1, machine_baseline = ?2, machine_baseline_voice_id 
     content_revision = content_revision + 1,
     machine_baseline_revision = content_revision + 1,
     status = 'review', finalized_revision = NULL, finalized_at = NULL, updated_at = ?4
-WHERE slug = ?5 AND user_id = ?6
+WHERE slug = ?5 AND user_id = ?6 AND status <> 'published'
   AND (content IS NULL OR content <> ?1 OR status <> 'review'
        OR machine_baseline_revision <> content_revision
        OR content_language IS NULL OR content_language <> ?3)
@@ -553,7 +571,7 @@ const updatePostDraft = `-- name: UpdatePostDraft :execrows
 UPDATE posts SET title = ?1, memo = ?2,
     target_language = COALESCE(?3, target_language),
     updated_at = ?4
-WHERE slug = ?5 AND user_id = ?6
+WHERE slug = ?5 AND user_id = ?6 AND status <> 'published'
 `
 
 type UpdatePostDraftParams struct {
@@ -582,7 +600,7 @@ func (q *Queries) UpdatePostDraft(ctx context.Context, arg UpdatePostDraftParams
 
 const updatePostObservations = `-- name: UpdatePostObservations :execrows
 UPDATE posts SET observations = ?, updated_at = ?
-WHERE slug = ? AND user_id = ?
+WHERE slug = ? AND user_id = ? AND status <> 'published'
 `
 
 type UpdatePostObservationsParams struct {

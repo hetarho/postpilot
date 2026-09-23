@@ -51,8 +51,8 @@ func TestVideoRoundTripAndDelete(t *testing.T) {
 		t.Errorf("VideoKeyInUse = %v, %v; want true", inUse, err)
 	}
 
-	if err := s.DeleteVideo(ctx, "v1"); err != nil {
-		t.Fatalf("DeleteVideo: %v", err)
+	if deleted, err := s.DeleteVideo(ctx, "v1"); err != nil || !deleted {
+		t.Fatalf("DeleteVideo = %v, %v", deleted, err)
 	}
 	if _, err := s.GetVideo(ctx, "v1"); !errors.Is(err, post.ErrNotFound) {
 		t.Errorf("err = %v, want ErrNotFound", err)

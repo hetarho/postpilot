@@ -163,6 +163,11 @@ func (s *Service) StartRevision(ctx context.Context, request StartRevisionReques
 	if err != nil {
 		return "", err
 	}
+	// Ahead of everything else, the rule append included: that writes to the voice, and a
+	// revision that cannot land must not teach it anything (GEN-56).
+	if post.Published {
+		return "", ErrPostPublished
+	}
 	if post.Content == nil {
 		return "", ErrRevisionContentRequired
 	}
@@ -220,6 +225,10 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (string, erro
 	post, err := s.posts.AttachedImages(ctx, request.UserID, request.PostSlug)
 	if err != nil {
 		return "", err
+	}
+	// Before anything is frozen, held or queued (GEN-56).
+	if post.Published {
+		return "", ErrPostPublished
 	}
 	if !post.TargetLanguage.Valid() {
 		return "", ErrLanguageRequired

@@ -13,8 +13,9 @@ FROM videos WHERE post_slug = ? ORDER BY created_at, id;
 SELECT id, post_slug, filename, r2_key, content_type, bytes, duration_ms, width, height, created_at
 FROM videos WHERE id = ?;
 
--- name: DeleteVideo :exec
-DELETE FROM videos WHERE id = ?;
+-- name: DeleteVideo :execrows
+-- Locked with a published post, as a photo is.
+DELETE FROM videos WHERE id = ? AND post_slug IN (SELECT slug FROM posts WHERE status <> 'published');
 
 -- name: VideoFilenameTaken :one
 SELECT EXISTS (SELECT 1 FROM videos WHERE post_slug = ? AND filename = ?);

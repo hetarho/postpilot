@@ -279,6 +279,8 @@ func toConnectError(op string, err error) error {
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "the badges offered with this verdict are not ones it can carry", postpilotv1.FailureReason_EXPERIMENT_BADGES_INVALID, nil)
 	case errors.Is(err, experiment.ErrPostFinalized):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "a finalized post cannot take a comparison result", postpilotv1.FailureReason_EXPERIMENT_POST_FINALIZED, nil)
+	case errors.Is(err, experiment.ErrPostPublished):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "a published post is locked", postpilotv1.FailureReason_POST_PUBLISHED_LOCKED, nil)
 	case errors.As(err, &active):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "experiment is already in progress", postpilotv1.FailureReason_EXPERIMENT_ALREADY_RUNNING, activeJobParams(active.ActiveID))
 	default:

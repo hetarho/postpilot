@@ -425,8 +425,8 @@ func TestImageRoundTripAndDelete(t *testing.T) {
 		t.Errorf("image = %+v", got)
 	}
 
-	if err := s.DeleteImage(ctx, "i1"); err != nil {
-		t.Fatalf("DeleteImage: %v", err)
+	if deleted, err := s.DeleteImage(ctx, "i1"); err != nil || !deleted {
+		t.Fatalf("DeleteImage = %v, %v", deleted, err)
 	}
 	if _, err := s.GetImage(ctx, "i1"); !errors.Is(err, post.ErrNotFound) {
 		t.Errorf("err = %v, want ErrNotFound", err)

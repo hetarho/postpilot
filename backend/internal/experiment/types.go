@@ -89,10 +89,16 @@ func ParseScope(value string) (Scope, error) {
 	}
 }
 
-// PostStatusFinalized is the one post status this context reacts to, mirrored as a plain
-// string because the domain imports no other context's types (ARCH-7). The adapter that
-// implements PostDirectory is what keeps the two spellings in step.
-const PostStatusFinalized = "finalized"
+// The four post statuses this context reacts to, mirrored as plain strings because the domain
+// imports no other context's types (ARCH-7). A draft or a post in revision takes a comparison's
+// result; a finalized one takes only the editor's, which reopens it; a published one takes none
+// (MODEL-37). The adapter that implements PostDirectory is what keeps the spellings in step.
+const (
+	PostStatusDraft     = "draft"
+	PostStatusReview    = "review"
+	PostStatusFinalized = "finalized"
+	PostStatusPublished = "published"
+)
 
 type Status string
 
@@ -334,6 +340,7 @@ var (
 	ErrVoiceRequired         = errors.New("an active voice is required to compare analyze models")
 	ErrVoiceUnavailable      = errors.New("the voice this comparison belongs to is deleted or unknown")
 	ErrPostFinalized         = errors.New("a finalized post cannot take a comparison result")
+	ErrPostPublished         = errors.New("a published post cannot take a comparison result")
 	ErrInvalidWindow         = errors.New("invalid leaderboard window")
 	ErrInvalidScope          = errors.New("invalid leaderboard scope")
 	ErrBadgesInvalid         = errors.New("the badges offered with this verdict are not ones it can carry")

@@ -139,7 +139,8 @@ type TemplateAnswers interface {
 	// UpsertTemplateAnswers writes one row per answer in ONE transaction, keyed by label.
 	// It never deletes: clearing an answer is an empty Text, which the enqueue reads the way
 	// it reads a switched-off field, and a label the current template no longer declares is
-	// kept so a rename or a swap back does not destroy what was typed.
+	// kept so a rename or a swap back does not destroy what was typed. A published post is
+	// refused with ErrPostPublished inside that transaction (POST-74).
 	UpsertTemplateAnswers(ctx context.Context, slug string, answers []TemplateAnswer, updatedAt time.Time) error
 	// ListTemplateAnswers returns the post's answers ordered by label.
 	ListTemplateAnswers(ctx context.Context, slug string) ([]TemplateAnswer, error)
@@ -149,7 +150,9 @@ type TemplateAnswers interface {
 type ImageCatalog interface {
 	ListImages(ctx context.Context, postSlug string) ([]Image, error)
 	GetImage(ctx context.Context, id string) (Image, error)
-	DeleteImage(ctx context.Context, id string) error
+	// DeleteImage reports false when nothing was deleted: the row is already gone, or its
+	// post is published and the photo is locked with it (POST-74).
+	DeleteImage(ctx context.Context, id string) (bool, error)
 	// ImageFilenameTaken reports a CONFIRMED photo with this name. A pending upload
 	// does not count — that case is a retry, which CreateUpload replaces.
 	ImageFilenameTaken(ctx context.Context, postSlug, filename string) (bool, error)
@@ -163,7 +166,8 @@ type ImageCatalog interface {
 type VideoCatalog interface {
 	ListVideos(ctx context.Context, postSlug string) ([]Video, error)
 	GetVideo(ctx context.Context, id string) (Video, error)
-	DeleteVideo(ctx context.Context, id string) error
+	// DeleteVideo reports false as DeleteImage does.
+	DeleteVideo(ctx context.Context, id string) (bool, error)
 	// VideoFilenameTaken reports a CONFIRMED video with this name. CreateUpload asks it
 	// alongside ImageFilenameTaken: one post has ONE filename namespace across both kinds.
 	VideoFilenameTaken(ctx context.Context, postSlug, filename string) (bool, error)
@@ -177,6 +181,8 @@ type VideoCatalog interface {
 // UploadLedger is an upload in flight and what the sweep needs to decide whether an object
 // still has an owner.
 type UploadLedger interface {
+	// CreateUpload, ConfirmUpload and ConfirmVideoUpload refuse a published post with
+	// ErrPostPublished inside their own transaction (POST-74).
 	CreateUpload(ctx context.Context, u Upload) error
 	GetUpload(ctx context.Context, id string) (Upload, error)
 	GetUploadByFilename(ctx context.Context, postSlug, filename string) (Upload, error)

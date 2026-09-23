@@ -215,6 +215,13 @@ func (s *Service) Retry(ctx context.Context, userID, id string) (StartResult, er
 			}
 		}
 	}
+	// An editor retry re-prepares into the post, so it asks first; a lab retry writes nothing
+	// to the post and stays open whatever its status.
+	if found.AppliesOnVerdict() {
+		if err := s.allowPostWrite(ctx, found); err != nil {
+			return StartResult{}, err
+		}
+	}
 	count, err := s.candidates.ResetFailedCandidates(ctx, found.ID)
 	if err != nil {
 		return StartResult{}, err
@@ -280,10 +287,21 @@ func (s *Service) choose(ctx context.Context, userID, id, candidateID string, si
 		return Experiment{}, err
 	}
 	if found.Status == StatusDecided && found.WinnerCandidateID == candidateID {
+		// An applied verdict repeated answers what is stored, whatever the post is now.
 		if found.AppliesOnVerdict() && found.AppliedAt == nil {
+			if err := s.allowPostWrite(ctx, found); err != nil {
+				return Experiment{}, err
+			}
 			return s.apply(ctx, found, false)
 		}
 		return found, nil
+	}
+	// A verdict that commits is refused before it is recorded: an editor verdict on a post that
+	// cannot take its result records nothing.
+	if found.AppliesOnVerdict() {
+		if err := s.allowPostWrite(ctx, found); err != nil {
+			return Experiment{}, err
+		}
 	}
 	candidate, err := ValidateVerdict(found, candidateID, single)
 	if err != nil {
@@ -380,11 +398,13 @@ func (s *Service) ApplyWinner(ctx context.Context, userID, id string, confirmSty
 	return s.apply(ctx, found, confirmStyleguide)
 }
 
-// allowPostWrite refuses a content application that would rewrite a post the owner already
-// finalized (MODEL-37). It asks only where the question exists: an analyze winner publishes
-// into a voice, and an editor comparison's post is by definition mid-writing.
+// allowPostWrite decides whether a comparison's result may land in its post as the post is
+// now (MODEL-37). An analyze winner publishes into a voice and never asks. A draft or a post in
+// revision takes either origin's result, and a published post takes neither, since it is locked
+// (POST-74). Any other status takes the editor's, whose result reopens a finalized post as
+// saving content does (POST-13), and refuses the lab's: its gate is an allowlist.
 func (s *Service) allowPostWrite(ctx context.Context, found Experiment) error {
-	if found.Stage == StageAnalyze || found.Origin != OriginLab {
+	if found.Stage == StageAnalyze {
 		return nil
 	}
 	if found.PostSlug == "" {
@@ -394,10 +414,16 @@ func (s *Service) allowPostWrite(ctx context.Context, found Experiment) error {
 	if err != nil {
 		return err
 	}
-	if status == PostStatusFinalized {
-		return ErrPostFinalized
+	switch status {
+	case PostStatusDraft, PostStatusReview:
+		return nil
+	case PostStatusPublished:
+		return ErrPostPublished
 	}
-	return nil
+	if found.Origin != OriginLab {
+		return nil
+	}
+	return ErrPostFinalized
 }
 
 func (s *Service) AdoptWinner(ctx context.Context, userID, id string) (ModelRef, Stage, error) {

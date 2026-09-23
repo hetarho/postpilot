@@ -57,13 +57,17 @@ func (q *Queries) CreateVideo(ctx context.Context, arg CreateVideoParams) error 
 	return err
 }
 
-const deleteVideo = `-- name: DeleteVideo :exec
-DELETE FROM videos WHERE id = ?
+const deleteVideo = `-- name: DeleteVideo :execrows
+DELETE FROM videos WHERE id = ? AND post_slug IN (SELECT slug FROM posts WHERE status <> 'published')
 `
 
-func (q *Queries) DeleteVideo(ctx context.Context, id string) error {
-	_, err := q.db.ExecContext(ctx, deleteVideo, id)
-	return err
+// Locked with a published post, as a photo is.
+func (q *Queries) DeleteVideo(ctx context.Context, id string) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteVideo, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const getVideo = `-- name: GetVideo :one

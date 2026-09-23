@@ -168,6 +168,9 @@ func (a generationPosts) AttachedImages(ctx context.Context, userID, slug string
 		TemplateID:   found.TemplateID,
 		TargetLength: found.TargetLength,
 		TagCount:     found.TagCount,
+		// The lock, read here so every generation path refuses a published post before it
+		// freezes, holds or calls anything (POST-74, GEN-56).
+		Published: found.Status == post.StatusPublished,
 		// The opt-in, never the memories: like TemplateID, only the enqueue resolves it, and
 		// only through the memory context's own port (MEM-18, MEM-19).
 		UseMemory: found.UseMemory,
@@ -257,6 +260,8 @@ func generationPostError(err error) error {
 		return generation.ErrNotFound
 	case errors.Is(err, post.ErrForbidden):
 		return generation.ErrForbidden
+	case errors.Is(err, post.ErrPostPublished):
+		return generation.ErrPostPublished
 	default:
 		return err
 	}

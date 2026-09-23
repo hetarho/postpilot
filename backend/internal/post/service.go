@@ -182,6 +182,11 @@ func (s *Service) SaveDraft(ctx context.Context, userID, slug, title, memo strin
 	if err != nil {
 		return Post{}, err
 	}
+	// Before any of the draft's writes: a published post is locked (POST-74), so the request
+	// changes nothing rather than whatever part of it happened to run first.
+	if err := refusePublished(found); err != nil {
+		return Post{}, err
+	}
 	if voiceID != nil && *voiceID != found.VoiceID {
 		if err := s.reassignVoice(ctx, found, *voiceID); err != nil {
 			return Post{}, err
@@ -191,8 +196,12 @@ func (s *Service) SaveDraft(ctx context.Context, userID, slug, title, memo strin
 		// The seeds ride on the assignment's own statement (TEMPLATE-48): a template with an
 		// opinion overwrites that option, one without leaves the post's value alone, and
 		// clearing to 없음 seeds nothing at all.
-		if _, err := s.drafts.AssignTemplate(ctx, slug, userID, &targetTemplate.ID, targetTemplate.Seeds(), s.now()); err != nil {
+		assigned, err := s.drafts.AssignTemplate(ctx, slug, userID, &targetTemplate.ID, targetTemplate.Seeds(), s.now())
+		if err != nil {
 			return Post{}, fmt.Errorf("assign template: %w", err)
+		}
+		if !assigned {
+			return Post{}, s.lockedOrGone(ctx, userID, slug, ErrNotFound)
 		}
 	}
 
@@ -200,6 +209,9 @@ func (s *Service) SaveDraft(ctx context.Context, userID, slug, title, memo strin
 	// Written after ownedPost, which is what scopes the answer rows to this account: the
 	// table is keyed by slug alone, like the post's images and videos.
 	if err := s.answers.UpsertTemplateAnswers(ctx, slug, answers, now); err != nil {
+		if errors.Is(err, ErrPostPublished) {
+			return Post{}, s.lockedOrGone(ctx, userID, slug, ErrNotFound)
+		}
 		return Post{}, fmt.Errorf("save template answers: %w", err)
 	}
 	updated, err := s.drafts.UpdateDraft(ctx, slug, userID, title, memo, targetLanguage, now)
@@ -207,9 +219,9 @@ func (s *Service) SaveDraft(ctx context.Context, userID, slug, title, memo strin
 		return Post{}, fmt.Errorf("update draft: %w", err)
 	}
 	if !updated {
-		// ownedPost just succeeded, so a miss here means the row vanished between the
-		// two statements. Report it as gone rather than inventing a post.
-		return Post{}, ErrNotFound
+		// ownedPost just succeeded, so a miss here means the row vanished between the two
+		// statements or was published in between. Report which rather than inventing a post.
+		return Post{}, s.lockedOrGone(ctx, userID, slug, ErrNotFound)
 	}
 
 	return s.Get(ctx, userID, slug)
@@ -280,6 +292,9 @@ func (s *Service) reassignVoice(ctx context.Context, found Post, voiceID string)
 		// Zero rows means another save already moved it; only a vanished post is an error.
 		current, err := s.ownedPost(ctx, found.UserID, found.Slug)
 		if err != nil {
+			return err
+		}
+		if err := refusePublished(current); err != nil {
 			return err
 		}
 		if current.VoiceID != target.ID {
@@ -679,6 +694,9 @@ func (s *Service) SetObservations(ctx context.Context, userID, slug string, obse
 	if err != nil {
 		return err
 	}
+	if err := refusePublished(found); err != nil {
+		return err
+	}
 	if reflect.DeepEqual(found.Observations, observations) {
 		return nil
 	}
@@ -687,7 +705,7 @@ func (s *Service) SetObservations(ctx context.Context, userID, slug string, obse
 		return err
 	}
 	if !updated {
-		return ErrNotFound
+		return s.lockedOrGone(ctx, userID, slug, ErrNotFound)
 	}
 	return nil
 }
@@ -699,6 +717,9 @@ func (s *Service) SetGeneratedContent(ctx context.Context, userID, slug string, 
 	}
 	found, err := s.ownedPost(ctx, userID, slug)
 	if err != nil {
+		return err
+	}
+	if err := refusePublished(found); err != nil {
 		return err
 	}
 	if found.Status == StatusReview && found.MachineBaselineRevision == found.ContentRevision && found.Content != nil && found.ContentLanguage != nil && *found.ContentLanguage == language && reflect.DeepEqual(*found.Content, content) {
@@ -730,6 +751,9 @@ func (s *Service) SetGeneratedContent(ctx context.Context, userID, slug string, 
 		if loadErr != nil {
 			return loadErr
 		}
+		if err := refusePublished(current); err != nil {
+			return err
+		}
 		return ErrNotFound
 	}
 	return nil
@@ -745,8 +769,13 @@ func (s *Service) SaveContent(ctx context.Context, userID, slug string, content 
 	if found.ContentRevision != expectedRevision {
 		return Post{}, ErrStaleContentRevision
 	}
+	// The identical save stays a no-op on every post, a published one included (POST-15): it
+	// writes nothing, so there is nothing for the lock to refuse.
 	if found.Content != nil && reflect.DeepEqual(*found.Content, content) {
 		return s.Get(ctx, userID, slug)
+	}
+	if err := refusePublished(found); err != nil {
+		return Post{}, err
 	}
 	images, err := s.images.ListImages(ctx, slug)
 	if err != nil {
@@ -768,7 +797,7 @@ func (s *Service) SaveContent(ctx context.Context, userID, slug string, content 
 		return Post{}, err
 	}
 	if !updated {
-		return Post{}, ErrStaleContentRevision
+		return Post{}, s.lockedOrGone(ctx, userID, slug, ErrStaleContentRevision)
 	}
 	return s.Get(ctx, userID, slug)
 }
@@ -791,6 +820,9 @@ func (s *Service) SaveGenerationOptions(ctx context.Context, userID, slug string
 	if err != nil {
 		return Post{}, err
 	}
+	if err := refusePublished(found); err != nil {
+		return Post{}, err
+	}
 	nextTagCount := found.TagCount
 	if tagCount != nil {
 		nextTagCount = *tagCount
@@ -811,7 +843,7 @@ func (s *Service) SaveGenerationOptions(ctx context.Context, userID, slug string
 		return Post{}, err
 	}
 	if !updated {
-		return Post{}, ErrNotFound
+		return Post{}, s.lockedOrGone(ctx, userID, slug, ErrNotFound)
 	}
 	return s.Get(ctx, userID, slug)
 }
@@ -819,6 +851,9 @@ func (s *Service) SaveGenerationOptions(ctx context.Context, userID, slug string
 func (s *Service) Finalize(ctx context.Context, userID, slug string, expectedRevision int64) (Post, error) {
 	found, err := s.ownedPost(ctx, userID, slug)
 	if err != nil {
+		return Post{}, err
+	}
+	if err := refusePublished(found); err != nil {
 		return Post{}, err
 	}
 	if found.ContentRevision != expectedRevision {
@@ -846,7 +881,7 @@ func (s *Service) Finalize(ctx context.Context, userID, slug string, expectedRev
 		return Post{}, err
 	}
 	if !updated {
-		return Post{}, ErrStaleContentRevision
+		return Post{}, s.lockedOrGone(ctx, userID, slug, ErrStaleContentRevision)
 	}
 	return s.Get(ctx, userID, slug)
 }
@@ -1001,7 +1036,12 @@ func (s *Service) CreateUpload(ctx context.Context, userID, postSlug, filename s
 	if !kind.Valid() {
 		return Upload{}, "", "", fmt.Errorf("unknown attachment kind %q", kind)
 	}
-	if _, err := s.ownedPost(ctx, userID, postSlug); err != nil {
+	found, err := s.ownedPost(ctx, userID, postSlug)
+	if err != nil {
+		return Upload{}, "", "", err
+	}
+	// Before anything is reserved or signed: a published post takes no new attachment.
+	if err := refusePublished(found); err != nil {
 		return Upload{}, "", "", err
 	}
 
@@ -1059,6 +1099,9 @@ func (s *Service) CreateUpload(ctx context.Context, userID, postSlug, filename s
 		// claimed the name between the checks above and this insert.
 		if errors.Is(err, ErrDuplicateFilename) {
 			return Upload{}, "", "", ErrDuplicateFilename
+		}
+		if errors.Is(err, ErrPostPublished) {
+			return Upload{}, "", "", s.lockedOrGone(ctx, userID, postSlug, ErrNotFound)
 		}
 		return Upload{}, "", "", fmt.Errorf("create upload: %w", err)
 	}
@@ -1148,13 +1191,19 @@ func (s *Service) ConfirmUpload(ctx context.Context, userID, uploadID string, wi
 		}
 		return Attachment{}, fmt.Errorf("load upload: %w", err)
 	}
-	if _, err := s.ownedPost(ctx, userID, upload.PostSlug); err != nil {
+	found, err := s.ownedPost(ctx, userID, upload.PostSlug)
+	if err != nil {
+		return Attachment{}, err
+	}
+	// Before the object is looked at or dropped: the upload row and its bytes stay for the
+	// sweep, so a retry after the address is cleared can still confirm them.
+	if err := refusePublished(found); err != nil {
 		return Attachment{}, err
 	}
 	// The KIND comes from the reservation, never from this request: a client cannot turn a
 	// photo's slot into a video's by asking, and the object it PUT was signed for one of them.
 	if upload.Kind == AttachmentVideo {
-		return s.confirmVideo(ctx, upload, width, height, durationMs)
+		return s.confirmVideo(ctx, userID, upload, width, height, durationMs)
 	}
 
 	head, err := s.blobs.Head(ctx, upload.Key)
@@ -1192,6 +1241,9 @@ func (s *Service) ConfirmUpload(ctx context.Context, userID, uploadID string, wi
 		if errors.Is(err, ErrDuplicateFilename) {
 			return Attachment{}, ErrDuplicateFilename
 		}
+		if errors.Is(err, ErrPostPublished) {
+			return Attachment{}, s.lockedOrGone(ctx, userID, upload.PostSlug, ErrNotFound)
+		}
 		return Attachment{}, fmt.Errorf("confirm upload: %w", err)
 	}
 
@@ -1201,7 +1253,7 @@ func (s *Service) ConfirmUpload(ctx context.Context, userID, uploadID string, wi
 // confirmVideo is the video half of the confirm. Its extra checks are the duration the
 // browser read and the Content-Type the object reports: the PUT was signed for the
 // container's type, so an object claiming another one is not what was reserved.
-func (s *Service) confirmVideo(ctx context.Context, upload Upload, width, height int32, durationMs int64) (Attachment, error) {
+func (s *Service) confirmVideo(ctx context.Context, userID string, upload Upload, width, height int32, durationMs int64) (Attachment, error) {
 	if durationMs <= 0 || durationMs > s.maxVideoMillis {
 		return Attachment{}, fmt.Errorf("%w: duration %d ms", ErrInvalidVideo, durationMs)
 	}
@@ -1237,6 +1289,9 @@ func (s *Service) confirmVideo(ctx context.Context, upload Upload, width, height
 	if err := s.uploads.ConfirmVideoUpload(ctx, video, upload.ID); err != nil {
 		if errors.Is(err, ErrDuplicateFilename) {
 			return Attachment{}, ErrDuplicateFilename
+		}
+		if errors.Is(err, ErrPostPublished) {
+			return Attachment{}, s.lockedOrGone(ctx, userID, upload.PostSlug, ErrNotFound)
 		}
 		return Attachment{}, fmt.Errorf("confirm video upload: %w", err)
 	}
@@ -1302,12 +1357,23 @@ func (s *Service) DeleteImage(ctx context.Context, userID, imageID string) error
 	if err != nil {
 		return err
 	}
+	// Before storage is touched: a published post's photos are locked with it.
+	if err := refusePublished(found); err != nil {
+		return err
+	}
 
 	if err := s.blobs.Delete(ctx, image.Key); err != nil {
 		return fmt.Errorf("delete object: %w", err)
 	}
-	if err := s.images.DeleteImage(ctx, imageID); err != nil {
+	deleted, err := s.images.DeleteImage(ctx, imageID)
+	if err != nil {
 		return fmt.Errorf("delete image row: %w", err)
+	}
+	if !deleted {
+		// Already gone is the idempotent success it always was; published is the lock.
+		if err := s.lockedOrGone(ctx, userID, image.PostSlug, nil); err != nil {
+			return err
+		}
 	}
 	// The observation goes with the photo. Observations are paired to photos by FILENAME
 	// alone, and a filename is only taken while its photo is attached — so a leftover entry
@@ -1333,12 +1399,21 @@ func (s *Service) DeleteVideo(ctx context.Context, userID, videoID string) error
 	if err != nil {
 		return err
 	}
+	if err := refusePublished(found); err != nil {
+		return err
+	}
 
 	if err := s.blobs.Delete(ctx, video.Key); err != nil {
 		return fmt.Errorf("delete object: %w", err)
 	}
-	if err := s.videos.DeleteVideo(ctx, videoID); err != nil {
+	deleted, err := s.videos.DeleteVideo(ctx, videoID)
+	if err != nil {
 		return fmt.Errorf("delete video row: %w", err)
+	}
+	if !deleted {
+		if err := s.lockedOrGone(ctx, userID, video.PostSlug, nil); err != nil {
+			return err
+		}
 	}
 	if err := s.dropObservation(ctx, found, video.Filename); err != nil {
 		return err
@@ -1380,6 +1455,29 @@ func (s *Service) ownedPost(ctx context.Context, userID, slug string) (Post, err
 		return Post{}, ErrForbidden
 	}
 	return found, nil
+}
+
+// refusePublished is the lock (POST-74): a published post takes no write but its address's
+// and its own deletion, which never ask.
+func refusePublished(found Post) error {
+	if found.Status == StatusPublished {
+		return ErrPostPublished
+	}
+	return nil
+}
+
+// lockedOrGone explains a guarded write that changed nothing. The post is read again: its own
+// error wins, a published post is the lock — a write that passed the check above and then lost
+// the race to a publish — and anything else is the write's ordinary miss, otherwise.
+func (s *Service) lockedOrGone(ctx context.Context, userID, slug string, otherwise error) error {
+	current, err := s.ownedPost(ctx, userID, slug)
+	if err != nil {
+		return err
+	}
+	if err := refusePublished(current); err != nil {
+		return err
+	}
+	return otherwise
 }
 
 // newObjectID mints an image/upload id. 16 random bytes rather than a counter or a

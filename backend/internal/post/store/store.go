@@ -147,6 +147,9 @@ func (s *Store) UpsertTemplateAnswers(ctx context.Context, slug string, answers 
 	defer tx.Rollback() //nolint:errcheck // no-op once committed
 
 	q := s.write.WithTx(tx)
+	if err := refusePublished(ctx, q, slug); err != nil {
+		return err
+	}
 	stamp := formatTime(updatedAt)
 	for _, answer := range answers {
 		enabled := int64(0)
@@ -501,11 +504,14 @@ func (s *Store) GetImage(ctx context.Context, id string) (post.Image, error) {
 	return toImage(row)
 }
 
-func (s *Store) DeleteImage(ctx context.Context, id string) error {
-	if err := s.write.DeleteImage(ctx, id); err != nil {
-		return fmt.Errorf("delete image: %w", err)
+// DeleteImage reports false for a photo already gone or one whose post is published: the
+// statement refuses the second (POST-74), and the caller re-reads the post to tell them apart.
+func (s *Store) DeleteImage(ctx context.Context, id string) (bool, error) {
+	n, err := s.write.DeleteImage(ctx, id)
+	if err != nil {
+		return false, fmt.Errorf("delete image: %w", err)
 	}
-	return nil
+	return n > 0, nil
 }
 
 // ImageFilenameTaken reports a CONFIRMED photo with this name. A pending upload is
@@ -570,11 +576,14 @@ func (s *Store) GetVideo(ctx context.Context, id string) (post.Video, error) {
 	return toVideo(row)
 }
 
-func (s *Store) DeleteVideo(ctx context.Context, id string) error {
-	if err := s.write.DeleteVideo(ctx, id); err != nil {
-		return fmt.Errorf("delete video: %w", err)
+// DeleteVideo reports false for a clip already gone or one whose post is published, as
+// DeleteImage does.
+func (s *Store) DeleteVideo(ctx context.Context, id string) (bool, error) {
+	n, err := s.write.DeleteVideo(ctx, id)
+	if err != nil {
+		return false, fmt.Errorf("delete video: %w", err)
 	}
-	return nil
+	return n > 0, nil
 }
 
 // VideoFilenameTaken reports a CONFIRMED video with this name, the video half of the
@@ -609,8 +618,20 @@ func (s *Store) VideoKeyInUse(ctx context.Context, key string) (bool, error) {
 
 // --- uploads ---
 
+// CreateUpload refuses a published post with post.ErrPostPublished: the guard and the insert
+// share one write transaction, so a publish cannot land between them.
 func (s *Store) CreateUpload(ctx context.Context, u post.Upload) error {
-	err := s.write.CreateUpload(ctx, sqlc.CreateUploadParams{
+	tx, err := s.writer.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin create upload: %w", err)
+	}
+	defer tx.Rollback() //nolint:errcheck // no-op once committed
+
+	q := s.write.WithTx(tx)
+	if err := refusePublished(ctx, q, u.PostSlug); err != nil {
+		return err
+	}
+	err = q.CreateUpload(ctx, sqlc.CreateUploadParams{
 		ID:          u.ID,
 		PostSlug:    u.PostSlug,
 		Filename:    u.Filename,
@@ -628,6 +649,9 @@ func (s *Store) CreateUpload(ctx context.Context, u post.Upload) error {
 			return post.ErrDuplicateFilename
 		}
 		return fmt.Errorf("insert upload: %w", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit create upload: %w", err)
 	}
 	return nil
 }
@@ -695,6 +719,9 @@ func (s *Store) ConfirmUpload(ctx context.Context, img post.Image, uploadID stri
 	defer tx.Rollback() //nolint:errcheck // no-op once committed
 
 	q := s.write.WithTx(tx)
+	if err := refusePublished(ctx, q, img.PostSlug); err != nil {
+		return err
+	}
 	err = q.CreateImage(ctx, sqlc.CreateImageParams{
 		ID:        img.ID,
 		PostSlug:  img.PostSlug,
@@ -732,6 +759,9 @@ func (s *Store) ConfirmVideoUpload(ctx context.Context, video post.Video, upload
 	defer tx.Rollback() //nolint:errcheck // no-op once committed
 
 	q := s.write.WithTx(tx)
+	if err := refusePublished(ctx, q, video.PostSlug); err != nil {
+		return err
+	}
 	if err := q.CreateVideo(ctx, createVideoParams(video)); err != nil {
 		if isUniqueViolation(err) {
 			return post.ErrDuplicateFilename
@@ -744,6 +774,19 @@ func (s *Store) ConfirmVideoUpload(ctx context.Context, video post.Video, upload
 
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit video confirm: %w", err)
+	}
+	return nil
+}
+
+// refusePublished is the guard an insert under a post runs first in its own transaction
+// (POST-74). The single serialized writer makes the guard and the insert after it one step.
+func refusePublished(ctx context.Context, q *sqlc.Queries, slug string) error {
+	published, err := q.PostIsPublished(ctx, slug)
+	if err != nil {
+		return fmt.Errorf("check published post: %w", err)
+	}
+	if published {
+		return post.ErrPostPublished
 	}
 	return nil
 }

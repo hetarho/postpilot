@@ -42,13 +42,18 @@ func (q *Queries) CreateImage(ctx context.Context, arg CreateImageParams) error 
 	return err
 }
 
-const deleteImage = `-- name: DeleteImage :exec
-DELETE FROM images WHERE id = ?
+const deleteImage = `-- name: DeleteImage :execrows
+DELETE FROM images WHERE id = ? AND post_slug IN (SELECT slug FROM posts WHERE status <> 'published')
 `
 
-func (q *Queries) DeleteImage(ctx context.Context, id string) error {
-	_, err := q.db.ExecContext(ctx, deleteImage, id)
-	return err
+// A published post's photos are locked with it (POST-74): zero rows is a row already gone or
+// a post that is published, and the service re-reads the post to tell which.
+func (q *Queries) DeleteImage(ctx context.Context, id string) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteImage, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const getImage = `-- name: GetImage :one

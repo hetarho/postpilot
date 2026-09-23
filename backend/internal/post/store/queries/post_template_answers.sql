@@ -5,6 +5,8 @@
 -- answers belong to the post aggregate, and the service establishes ownership by loading the
 -- owned post before it writes. (An ownership-scoped upsert would have to be an
 -- INSERT/SELECT/ON CONFLICT, which sqlc's SQLite parser cannot read.)
+-- A published post's answers are locked (POST-74) by a guard the store runs in the upsert's
+-- own transaction, not by the upsert itself.
 --
 -- Keep this file ASCII: sqlc slices the query text by byte offset, and a multi-byte character
 -- anywhere in the file shifts every constant it generates from it.

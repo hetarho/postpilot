@@ -24,6 +24,26 @@ type fakeStore struct {
 	// slugTaken lets a test simulate another request claiming a slug between the
 	// existence check and the insert — the race the retry loop exists for.
 	slugTaken func(slug string)
+	// beforeGuardedWrite runs first in every write the published lock guards, outside the
+	// lock, so a test can publish the post after the service's check and before the write:
+	// the race the statements' own predicates and guards exist for.
+	beforeGuardedWrite func(slug string)
+}
+
+// guarded runs the race hook for one guarded write.
+func (f *fakeStore) guarded(slug string) {
+	f.mu.Lock()
+	hook := f.beforeGuardedWrite
+	f.mu.Unlock()
+	if hook != nil {
+		hook(slug)
+	}
+}
+
+// publishedLocked mirrors `status <> 'published'` and the insert guard: it reads the stored
+// row, so a post published by the race hook is refused like the real statement refuses it.
+func (f *fakeStore) publishedLocked(slug string) bool {
+	return f.posts[slug].Status == StatusPublished
 }
 
 func newFakeStore() *fakeStore {
@@ -52,10 +72,11 @@ func (f *fakeStore) CreatePost(_ context.Context, p Post) error {
 }
 
 func (f *fakeStore) UpdateDraft(_ context.Context, slug, userID, title, memo string, targetLanguage *Language, updatedAt time.Time) (bool, error) {
+	f.guarded(slug)
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	existing, ok := f.posts[slug]
-	if !ok || existing.UserID != userID {
+	if !ok || existing.UserID != userID || f.publishedLocked(slug) {
 		return false, nil
 	}
 	existing.Title = title
@@ -69,10 +90,11 @@ func (f *fakeStore) UpdateDraft(_ context.Context, slug, userID, title, memo str
 }
 
 func (f *fakeStore) UpdateObservations(_ context.Context, slug, userID string, observations []Observation, updatedAt time.Time) (bool, error) {
+	f.guarded(slug)
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	existing, ok := f.posts[slug]
-	if !ok || existing.UserID != userID {
+	if !ok || existing.UserID != userID || f.publishedLocked(slug) {
 		return false, nil
 	}
 	existing.Observations = append([]Observation(nil), observations...)
@@ -82,10 +104,11 @@ func (f *fakeStore) UpdateObservations(_ context.Context, slug, userID string, o
 }
 
 func (f *fakeStore) UpdateGeneratedContent(_ context.Context, slug, userID string, content PostContent, language Language, updatedAt time.Time) (bool, error) {
+	f.guarded(slug)
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	existing, ok := f.posts[slug]
-	if !ok || existing.UserID != userID {
+	if !ok || existing.UserID != userID || f.publishedLocked(slug) {
 		return false, nil
 	}
 	if existing.Status == StatusReview && existing.MachineBaselineRevision == existing.ContentRevision && existing.Content != nil && existing.ContentLanguage != nil && *existing.ContentLanguage == language && reflect.DeepEqual(*existing.Content, content) {
@@ -107,10 +130,11 @@ func (f *fakeStore) UpdateGeneratedContent(_ context.Context, slug, userID strin
 // ReassignVoice mirrors the real single UPDATE: the id moves and the machine baseline is
 // withdrawn; canonical content, its revision, and finalization state stay.
 func (f *fakeStore) ReassignVoice(_ context.Context, slug, userID, voiceID string, updatedAt time.Time) (bool, error) {
+	f.guarded(slug)
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	existing, ok := f.posts[slug]
-	if !ok || existing.UserID != userID || existing.VoiceID == voiceID {
+	if !ok || existing.UserID != userID || existing.VoiceID == voiceID || f.publishedLocked(slug) {
 		return false, nil
 	}
 	existing.VoiceID = voiceID
@@ -124,10 +148,15 @@ func (f *fakeStore) ReassignVoice(_ context.Context, slug, userID, voiceID strin
 // UpsertTemplateAnswers mirrors the real upsert: one row per label, nothing ever deleted, so
 // a label the current template no longer declares stays where it is.
 func (f *fakeStore) UpsertTemplateAnswers(_ context.Context, slug string, answers []TemplateAnswer, _ time.Time) error {
-	f.mu.Lock()
-	defer f.mu.Unlock()
+	// An empty set writes nothing and opens no transaction, so it meets no guard either.
 	if len(answers) == 0 {
 		return nil
+	}
+	f.guarded(slug)
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.publishedLocked(slug) {
+		return ErrPostPublished
 	}
 	if f.answers[slug] == nil {
 		f.answers[slug] = map[string]TemplateAnswer{}
@@ -159,10 +188,11 @@ func (f *fakeStore) ListTemplateAnswers(_ context.Context, slug string) ([]Templ
 // left alone here — a template is never learned from, so assigning one may not cost a post its
 // learn eligibility.
 func (f *fakeStore) AssignTemplate(_ context.Context, slug, userID string, templateID *string, seed TemplateNumbers, updatedAt time.Time) (bool, error) {
+	f.guarded(slug)
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	existing, ok := f.posts[slug]
-	if !ok || existing.UserID != userID {
+	if !ok || existing.UserID != userID || f.publishedLocked(slug) {
 		return false, nil
 	}
 	if templateID == nil {
@@ -183,10 +213,11 @@ func (f *fakeStore) AssignTemplate(_ context.Context, slug, userID string, templ
 }
 
 func (f *fakeStore) SaveContent(_ context.Context, slug, userID string, content PostContent, expectedRevision int64, updatedAt time.Time) (bool, error) {
+	f.guarded(slug)
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	existing, ok := f.posts[slug]
-	if !ok || existing.UserID != userID || existing.ContentRevision != expectedRevision {
+	if !ok || existing.UserID != userID || existing.ContentRevision != expectedRevision || f.publishedLocked(slug) {
 		return false, nil
 	}
 	existing.Content = &content
@@ -200,10 +231,11 @@ func (f *fakeStore) SaveContent(_ context.Context, slug, userID string, content 
 }
 
 func (f *fakeStore) SaveGenerationOptions(_ context.Context, slug, userID string, targetLength *int, tagCount int, useMemory bool, updatedAt time.Time) (bool, error) {
+	f.guarded(slug)
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	existing, ok := f.posts[slug]
-	if !ok || existing.UserID != userID {
+	if !ok || existing.UserID != userID || f.publishedLocked(slug) {
 		return false, nil
 	}
 	existing.TargetLength = targetLength
@@ -215,10 +247,11 @@ func (f *fakeStore) SaveGenerationOptions(_ context.Context, slug, userID string
 }
 
 func (f *fakeStore) Finalize(_ context.Context, slug, userID, title string, expectedRevision int64, finalizedAt time.Time) (bool, error) {
+	f.guarded(slug)
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	existing, ok := f.posts[slug]
-	if !ok || existing.UserID != userID || existing.ContentRevision != expectedRevision || existing.Content == nil {
+	if !ok || existing.UserID != userID || existing.ContentRevision != expectedRevision || existing.Content == nil || f.publishedLocked(slug) {
 		return false, nil
 	}
 	existing.Status = StatusFinalized
@@ -415,8 +448,12 @@ func (f *fakeStore) createImageLocked(img Image) error {
 // ConfirmUpload is atomic here too — a fake that let the two writes come apart would
 // hide the very bug the real transaction exists to prevent.
 func (f *fakeStore) ConfirmUpload(_ context.Context, img Image, uploadID string) error {
+	f.guarded(img.PostSlug)
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	if f.publishedLocked(img.PostSlug) {
+		return ErrPostPublished
+	}
 	if err := f.createImageLocked(img); err != nil {
 		return err
 	}
@@ -447,11 +484,23 @@ func (f *fakeStore) GetImage(_ context.Context, id string) (Image, error) {
 	return img, nil
 }
 
-func (f *fakeStore) DeleteImage(_ context.Context, id string) error {
+// DeleteImage mirrors the statement's subquery: a published post's photo stays, and zero
+// rows says so or says the row was already gone.
+func (f *fakeStore) DeleteImage(_ context.Context, id string) (bool, error) {
+	f.mu.Lock()
+	image, ok := f.images[id]
+	f.mu.Unlock()
+	if ok {
+		f.guarded(image.PostSlug)
+	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	image, ok = f.images[id]
+	if !ok || f.publishedLocked(image.PostSlug) {
+		return false, nil
+	}
 	delete(f.images, id)
-	return nil
+	return true, nil
 }
 
 func (f *fakeStore) ImageFilenameTaken(_ context.Context, postSlug, filename string) (bool, error) {
@@ -491,8 +540,12 @@ func (f *fakeStore) createVideoLocked(video Video) error {
 }
 
 func (f *fakeStore) ConfirmVideoUpload(_ context.Context, video Video, uploadID string) error {
+	f.guarded(video.PostSlug)
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	if f.publishedLocked(video.PostSlug) {
+		return ErrPostPublished
+	}
 	if err := f.createVideoLocked(video); err != nil {
 		return err
 	}
@@ -523,11 +576,22 @@ func (f *fakeStore) GetVideo(_ context.Context, id string) (Video, error) {
 	return video, nil
 }
 
-func (f *fakeStore) DeleteVideo(_ context.Context, id string) error {
+// DeleteVideo mirrors the statement's subquery, as DeleteImage does.
+func (f *fakeStore) DeleteVideo(_ context.Context, id string) (bool, error) {
+	f.mu.Lock()
+	video, ok := f.videos[id]
+	f.mu.Unlock()
+	if ok {
+		f.guarded(video.PostSlug)
+	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	video, ok = f.videos[id]
+	if !ok || f.publishedLocked(video.PostSlug) {
+		return false, nil
+	}
 	delete(f.videos, id)
-	return nil
+	return true, nil
 }
 
 func (f *fakeStore) VideoFilenameTaken(_ context.Context, postSlug, filename string) (bool, error) {
@@ -565,8 +629,12 @@ func (f *fakeStore) VideoKeyInUse(_ context.Context, key string) (bool, error) {
 }
 
 func (f *fakeStore) CreateUpload(_ context.Context, u Upload) error {
+	f.guarded(u.PostSlug)
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	if f.publishedLocked(u.PostSlug) {
+		return ErrPostPublished
+	}
 	// UNIQUE(post_slug, filename), as in the schema.
 	for _, existing := range f.uploads {
 		if existing.PostSlug == u.PostSlug && existing.Filename == u.Filename {

@@ -142,6 +142,8 @@ func toConnectError(op string, err error) error {
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post voice is deleted", postpilotv1.FailureReason_VOICE_DELETED, nil)
 	case errors.Is(err, generation.ErrVoiceMismatch):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post voice changed after enqueue", postpilotv1.FailureReason_GENERATION_VOICE_MISMATCH, nil)
+	case errors.Is(err, generation.ErrPostPublished):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "a published post is locked", postpilotv1.FailureReason_POST_PUBLISHED_LOCKED, nil)
 	case errors.Is(err, generation.ErrVoiceContentLanguageMismatch):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post content language does not match the voice source language", postpilotv1.FailureReason_VOICE_CONTENT_LANGUAGE_MISMATCH, nil)
 	case errors.Is(err, generation.ErrVoiceRequired):

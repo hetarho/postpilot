@@ -13,6 +13,11 @@ func (s *Service) Generate(ctx context.Context, job GenerateJob, progress Progre
 	if err != nil {
 		return fmt.Errorf("load generation input: %w", err)
 	}
+	// A backstop no product path reaches, since a paste waits while this job is active: a
+	// post published after the enqueue calls no provider.
+	if post.Published {
+		return ErrPostPublished
+	}
 	if _, err := frozenVoice(post, job.VoiceID); err != nil {
 		return err
 	}

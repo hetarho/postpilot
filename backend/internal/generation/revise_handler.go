@@ -19,6 +19,10 @@ func (s *Service) Revise(ctx context.Context, job RevisionJob, progress Progress
 	if err != nil {
 		return fmt.Errorf("load revision input: %w", err)
 	}
+	// The same backstop as the generate handler's.
+	if post.Published {
+		return ErrPostPublished
+	}
 	if post.Content == nil {
 		return ErrRevisionContentRequired
 	}

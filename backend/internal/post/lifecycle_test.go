@@ -3,6 +3,7 @@ package post
 import (
 	"context"
 	"errors"
+	"reflect"
 	"testing"
 )
 
@@ -164,4 +165,273 @@ func TestSecondFinalizeOfTheSameRevisionDoesNotRewriteTheTitle(t *testing.T) {
 	if err != nil || stored.Title != "사람이 고친 제목" {
 		t.Fatalf("stored title = %+v err=%v", stored, err)
 	}
+}
+
+// publishedFixture is a published post carrying everything the lock has to leave alone: an
+// answer, a confirmed photo and clip, and a pending photo and clip upload whose objects landed.
+type publishedFixture struct {
+	slug, image, video, photoUpload, videoUpload string
+	revision                                     int64
+}
+
+func attachPhoto(t *testing.T, svc *Service, blobs *fakeBlobs, slug, filename string) Image {
+	t.Helper()
+	upload, _, _, err := svc.CreateUpload(context.Background(), alice, slug, filename, AttachmentPhoto)
+	if err != nil {
+		t.Fatalf("CreateUpload(%s): %v", filename, err)
+	}
+	blobs.put(upload.Key, 200_000, testNow)
+	confirmed, err := svc.ConfirmUpload(context.Background(), alice, upload.ID, 1024, 768, 0)
+	if err != nil {
+		t.Fatalf("ConfirmUpload(%s): %v", filename, err)
+	}
+	return confirmed.Image
+}
+
+func newPublishedFixture(t *testing.T) (*Service, *fakeStore, *fakeBlobs, publishedFixture) {
+	t.Helper()
+	ctx := context.Background()
+	svc, store, blobs := newTestService(t)
+	svc.SetTemplateDirectory(testTemplates())
+	svc.answerLabelMax, svc.answerValueMax = 40, 500
+	created := mustCreatePost(t, svc, alice, "제주 3일")
+	voiceID := aliceVoice
+	if _, err := svc.SaveDraft(ctx, alice, created.Slug, created.Title, "", &voiceID, nil, nil,
+		[]TemplateAnswer{{Label: "총평", Text: "맑았다", Enabled: true}}); err != nil {
+		t.Fatal(err)
+	}
+	image := attachPhoto(t, svc, blobs, created.Slug, "IMG_1.jpg")
+	video := mustAttachVideo(t, svc, blobs, alice, created.Slug, "clip.mp4", 3000)
+	photoUpload, _, _, err := svc.CreateUpload(ctx, alice, created.Slug, "IMG_2.jpg", AttachmentPhoto)
+	if err != nil {
+		t.Fatal(err)
+	}
+	blobs.put(photoUpload.Key, 200_000, testNow)
+	videoUpload, _, contentType, err := svc.CreateUpload(ctx, alice, created.Slug, "clip2.mp4", AttachmentVideo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	blobs.putTyped(videoUpload.Key, 1_000_000, contentType, testNow)
+
+	content := PostContent{Title: "제주 3일 기록", Blocks: []Block{{Type: BlockText, Content: "협재 해변은 물빛이 맑았다."}}}
+	if err := svc.SetGeneratedContent(ctx, alice, created.Slug, content, LanguageKorean); err != nil {
+		t.Fatal(err)
+	}
+	finalized, err := svc.Finalize(ctx, alice, created.Slug, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	published, err := svc.SavePublishedURL(ctx, alice, created.Slug, firstAddress)
+	if err != nil || published.Status != StatusPublished {
+		t.Fatalf("publish = %s, %v", published.Status, err)
+	}
+	return svc, store, blobs, publishedFixture{
+		slug: created.Slug, image: image.ID, video: video.ID,
+		photoUpload: photoUpload.ID, videoUpload: videoUpload.ID, revision: finalized.ContentRevision,
+	}
+}
+
+// lockedState is everything a refused write must leave exactly as it was.
+type lockedState struct {
+	post    Post
+	answers map[string]TemplateAnswer
+	images  map[string]Image
+	videos  map[string]Video
+	uploads map[string]Upload
+	deleted []string
+}
+
+func lockedSnapshot(store *fakeStore, blobs *fakeBlobs, slug string) lockedState {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	blobs.mu.Lock()
+	defer blobs.mu.Unlock()
+	state := lockedState{
+		post: store.posts[slug], answers: map[string]TemplateAnswer{}, images: map[string]Image{},
+		videos: map[string]Video{}, uploads: map[string]Upload{}, deleted: append([]string(nil), blobs.deleted...),
+	}
+	for label, answer := range store.answers[slug] {
+		state.answers[label] = answer
+	}
+	for id, image := range store.images {
+		state.images[id] = image
+	}
+	for id, video := range store.videos {
+		state.videos[id] = video
+	}
+	for id, upload := range store.uploads {
+		state.uploads[id] = upload
+	}
+	return state
+}
+
+// POST-74: a published post refuses every write but its address's and its own deletion, and
+// the refusal comes before anything changes — the row, its updated_at, its answers, its
+// attachments, its pending uploads and the storage objects all stay as they were.
+func TestPublishedPostRefusesEveryWriteBeforeChangingAnything(t *testing.T) {
+	changed := PostContent{Title: "직접 수정", Blocks: []Block{{Type: BlockText, Content: "내 문장"}}}
+	length := 1200
+	english := LanguageEnglish
+	review := aliceReview
+	template := "template-review"
+	operations := map[string]func(*Service, publishedFixture) error{
+		"SavePostDraft title and memo": func(svc *Service, f publishedFixture) error {
+			_, err := svc.SaveDraft(context.Background(), alice, f.slug, "새 제목", "새 메모", nil, nil, nil, nil)
+			return err
+		},
+		"SavePostDraft voice": func(svc *Service, f publishedFixture) error {
+			_, err := svc.SaveDraft(context.Background(), alice, f.slug, "제주 3일 기록", "", &review, nil, nil, nil)
+			return err
+		},
+		"SavePostDraft template": func(svc *Service, f publishedFixture) error {
+			_, err := svc.SaveDraft(context.Background(), alice, f.slug, "제주 3일 기록", "", nil, &template, nil, nil)
+			return err
+		},
+		"SavePostDraft answers": func(svc *Service, f publishedFixture) error {
+			_, err := svc.SaveDraft(context.Background(), alice, f.slug, "제주 3일 기록", "", nil, nil, nil,
+				[]TemplateAnswer{{Label: "총평", Text: "흐렸다", Enabled: true}})
+			return err
+		},
+		"SavePostDraft target language": func(svc *Service, f publishedFixture) error {
+			_, err := svc.SaveDraft(context.Background(), alice, f.slug, "제주 3일 기록", "", nil, nil, &english, nil)
+			return err
+		},
+		"a changed SavePostContent": func(svc *Service, f publishedFixture) error {
+			_, err := svc.SaveContent(context.Background(), alice, f.slug, changed, f.revision)
+			return err
+		},
+		"SavePostGenerationOptions": func(svc *Service, f publishedFixture) error {
+			_, err := svc.SaveGenerationOptions(context.Background(), alice, f.slug, &length, nil, nil)
+			return err
+		},
+		"FinalizePost": func(svc *Service, f publishedFixture) error {
+			_, err := svc.Finalize(context.Background(), alice, f.slug, f.revision)
+			return err
+		},
+		"CreateUpload": func(svc *Service, f publishedFixture) error {
+			_, _, _, err := svc.CreateUpload(context.Background(), alice, f.slug, "IMG_3.jpg", AttachmentPhoto)
+			return err
+		},
+		"ConfirmUpload of a photo": func(svc *Service, f publishedFixture) error {
+			_, err := svc.ConfirmUpload(context.Background(), alice, f.photoUpload, 1024, 768, 0)
+			return err
+		},
+		"ConfirmUpload of a video": func(svc *Service, f publishedFixture) error {
+			_, err := svc.ConfirmUpload(context.Background(), alice, f.videoUpload, 1920, 1080, 3000)
+			return err
+		},
+		"DeleteImage": func(svc *Service, f publishedFixture) error {
+			return svc.DeleteImage(context.Background(), alice, f.image)
+		},
+		"DeleteVideo": func(svc *Service, f publishedFixture) error {
+			return svc.DeleteVideo(context.Background(), alice, f.video)
+		},
+	}
+	for name, operation := range operations {
+		t.Run(name, func(t *testing.T) {
+			svc, store, blobs, fixture := newPublishedFixture(t)
+			before := lockedSnapshot(store, blobs, fixture.slug)
+			if err := operation(svc, fixture); !errors.Is(err, ErrPostPublished) {
+				t.Fatalf("err = %v, want ErrPostPublished", err)
+			}
+			if after := lockedSnapshot(store, blobs, fixture.slug); !reflect.DeepEqual(after, before) {
+				t.Fatalf("a refused write changed something:\nbefore %+v\nafter  %+v", before, after)
+			}
+		})
+	}
+}
+
+// POST-15: an identical save writes nothing, so it stays the no-op answer it is on every post
+// rather than turning into a refusal on a published one.
+func TestIdenticalContentSaveOnAPublishedPostIsStillANoOp(t *testing.T) {
+	svc, store, blobs, fixture := newPublishedFixture(t)
+	before := lockedSnapshot(store, blobs, fixture.slug)
+	same := *before.post.Content
+	got, err := svc.SaveContent(context.Background(), alice, fixture.slug, same, fixture.revision)
+	if err != nil || got.Status != StatusPublished || got.ContentRevision != fixture.revision {
+		t.Fatalf("identical save = %s rev %d, %v", got.Status, got.ContentRevision, err)
+	}
+	if after := lockedSnapshot(store, blobs, fixture.slug); !reflect.DeepEqual(after, before) {
+		t.Fatal("an identical save wrote something")
+	}
+}
+
+// The two writes the lock leaves open: the address is still replaced or cleared, and the post
+// can still be deleted, except while a job is active (POST-29).
+func TestDeletePostStillRemovesAPublishedPost(t *testing.T) {
+	svc, store, blobs, fixture := newPublishedFixture(t)
+	ctx := context.Background()
+	replaced, err := svc.SavePublishedURL(ctx, alice, fixture.slug, secondAddress)
+	if err != nil || replaced.Status != StatusPublished || replaced.PublishedURL != secondAddress {
+		t.Fatalf("replacing the address = %+v, %v", replaced, err)
+	}
+
+	svc.jobs = fakeActiveJobs{fixture.slug: {ID: "job-1", Status: "running"}}
+	if err := svc.DeletePost(ctx, alice, fixture.slug); !errors.Is(err, ErrPostBusy) {
+		t.Fatalf("delete while a job is active = %v, want ErrPostBusy", err)
+	}
+	if _, ok := store.posts[fixture.slug]; !ok {
+		t.Fatal("a refused delete removed the post")
+	}
+
+	svc.jobs = neutralJobs{}
+	image, video := store.images[fixture.image], store.videos[fixture.video]
+	if err := svc.DeletePost(ctx, alice, fixture.slug); err != nil {
+		t.Fatalf("delete a published post: %v", err)
+	}
+	if _, ok := store.posts[fixture.slug]; ok {
+		t.Fatal("the published post survived its delete")
+	}
+	if blobs.has(image.Key) || blobs.has(video.Key) {
+		t.Fatal("the delete left the post's objects behind")
+	}
+}
+
+// A write that passed the service's check and then lost the race to a publish is refused by
+// the store's own guard, and the answer names the lock rather than a missing post.
+func TestAWriteThatLosesTheRaceToAPublishIsRefusedAsLocked(t *testing.T) {
+	publish := func(p Post) Post {
+		p.Status = StatusPublished
+		p.PublishedURL = firstAddress
+		stamp := testNow
+		p.PublishedAt = &stamp
+		return p
+	}
+	race := func(store *fakeStore) {
+		store.beforeGuardedWrite = func(slug string) {
+			store.mu.Lock()
+			defer store.mu.Unlock()
+			store.beforeGuardedWrite = nil
+			store.posts[slug] = publish(store.posts[slug])
+		}
+	}
+
+	t.Run("a row update", func(t *testing.T) {
+		svc, store, _ := newTestService(t)
+		finalized := finalizedPost(t, svc, alice)
+		before := store.posts[finalized.Slug]
+		race(store)
+		if _, err := svc.SaveDraft(context.Background(), alice, finalized.Slug, "새 제목", "새 메모", nil, nil, nil, nil); !errors.Is(err, ErrPostPublished) {
+			t.Fatalf("err = %v, want ErrPostPublished", err)
+		}
+		if got := store.posts[finalized.Slug]; !reflect.DeepEqual(got, publish(before)) {
+			t.Fatalf("the losing write changed the row: %+v", got)
+		}
+	})
+
+	t.Run("a guarded insert", func(t *testing.T) {
+		svc, store, _ := newTestService(t)
+		finalized := finalizedPost(t, svc, alice)
+		before := store.posts[finalized.Slug]
+		race(store)
+		if _, _, _, err := svc.CreateUpload(context.Background(), alice, finalized.Slug, "IMG_1.jpg", AttachmentPhoto); !errors.Is(err, ErrPostPublished) {
+			t.Fatalf("err = %v, want ErrPostPublished", err)
+		}
+		if len(store.uploads) != 0 {
+			t.Fatalf("the losing insert wrote %d upload rows", len(store.uploads))
+		}
+		if got := store.posts[finalized.Slug]; !reflect.DeepEqual(got, publish(before)) {
+			t.Fatalf("the losing insert changed the row: %+v", got)
+		}
+	})
 }

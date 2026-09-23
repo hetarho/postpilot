@@ -3,6 +3,7 @@ package experiment
 import (
 	"context"
 	"errors"
+	"reflect"
 	"testing"
 )
 
@@ -156,8 +157,8 @@ func TestUnpairedSurvivorServesBothOrigins(t *testing.T) {
 }
 
 // A lab comparison's content application is offered against the post as it is now: a draft or
-// a post in revision takes it, a finalized one does not, and a post that is gone is not a
-// destination at all. Analyze publishes into a voice and never consults the post.
+// a post in revision takes it, a finalized or published one does not, and a post that is gone
+// is not a destination at all. Analyze publishes into a voice and never consults the post.
 func TestLabApplicationFollowsThePostStatus(t *testing.T) {
 	cases := []struct {
 		name   string
@@ -167,6 +168,7 @@ func TestLabApplicationFollowsThePostStatus(t *testing.T) {
 		{"draft", "draft", nil},
 		{"in revision", "review", nil},
 		{"finalized", "finalized", ErrPostFinalized},
+		{"published", "published", ErrPostPublished},
 	}
 	for _, sample := range cases {
 		t.Run(sample.name, func(t *testing.T) {
@@ -211,14 +213,27 @@ func TestLabApplicationFollowsThePostStatus(t *testing.T) {
 		}
 	})
 
-	t.Run("an editor verdict never asks about the post", func(t *testing.T) {
+	t.Run("an editor verdict on a finalized post still applies", func(t *testing.T) {
 		svc, store, _, _, runner := newTestService()
 		posts := svc.posts.(*fakePosts)
 		posts.statuses["post"] = "finalized"
 		pair := ready(t, svc, store, writeRequest(OriginEditor))
 		decided, err := svc.DecideWrite(context.Background(), "alice", pair.ID, pair.Candidates[0].ID, false, nil)
-		if err != nil || decided.AppliedAt == nil || runner.applyCalls != 1 || posts.calls != 0 {
+		if err != nil || decided.AppliedAt == nil || runner.applyCalls != 1 || posts.calls != 1 {
 			t.Fatalf("editor verdict = %+v err=%v applies=%d post reads=%d", decided, err, runner.applyCalls, posts.calls)
+		}
+	})
+
+	t.Run("an editor verdict on a published post records nothing", func(t *testing.T) {
+		svc, store, _, _, runner := newTestService()
+		svc.posts.(*fakePosts).statuses["post"] = "published"
+		pair := ready(t, svc, store, writeRequest(OriginEditor))
+		if _, err := svc.DecideWrite(context.Background(), "alice", pair.ID, pair.Candidates[0].ID, false, nil); !errors.Is(err, ErrPostPublished) {
+			t.Fatalf("decide write = %v, want ErrPostPublished", err)
+		}
+		after, _ := store.Get(context.Background(), pair.ID)
+		if after.Status != StatusReview || after.WinnerCandidateID != "" || runner.applyCalls != 0 {
+			t.Fatalf("the refused verdict recorded something: %+v applies=%d", after, runner.applyCalls)
 		}
 	})
 
@@ -310,4 +325,71 @@ func TestTheFrozenInputIsToldWhereTheComparisonStarted(t *testing.T) {
 			}
 		})
 	}
+}
+
+// MODEL-31: an editor comparison writes its result into the post, so a published post refuses
+// it at every step that would: the start, before any row or job exists; a retry, before the
+// failed candidates are reset; and the survivor of a half-failed pair, before it is chosen.
+func TestEditorComparisonIsRefusedOnAPublishedPost(t *testing.T) {
+	t.Run("start", func(t *testing.T) {
+		svc, store, _, jobs, runner := newTestService()
+		runner.snapshotErr = ErrPostPublished
+		if _, err := svc.Start(context.Background(), writeRequest(OriginEditor)); !errors.Is(err, ErrPostPublished) {
+			t.Fatalf("start = %v, want ErrPostPublished", err)
+		}
+		if len(store.rows) != 0 || len(jobs.ids) != 0 || runner.runCalls != 0 {
+			t.Fatalf("a refused start left rows=%d jobs=%d runs=%d", len(store.rows), len(jobs.ids), runner.runCalls)
+		}
+	})
+
+	t.Run("retry", func(t *testing.T) {
+		svc, store, _, jobs, runner := newTestService()
+		runner.fail["b"] = errors.New("provider failed")
+		partial := ready(t, svc, store, writeRequest(OriginEditor))
+		if partial.Status != StatusPartial {
+			t.Fatalf("status = %q, want partial", partial.Status)
+		}
+		svc.posts.(*fakePosts).statuses["post"] = "published"
+		enqueued := len(jobs.ids)
+		if _, err := svc.Retry(context.Background(), "alice", partial.ID); !errors.Is(err, ErrPostPublished) {
+			t.Fatalf("retry = %v, want ErrPostPublished", err)
+		}
+		after, _ := store.Get(context.Background(), partial.ID)
+		if len(jobs.ids) != enqueued || after.Status != StatusPartial || !reflect.DeepEqual(after.Candidates, partial.Candidates) {
+			t.Fatalf("a refused retry queued work or reset a candidate: jobs=%d %+v", len(jobs.ids)-enqueued, after)
+		}
+	})
+
+	t.Run("the survivor of a half-failed pair", func(t *testing.T) {
+		svc, store, _, _, runner := newTestService()
+		runner.fail["b"] = errors.New("provider failed")
+		pair := ready(t, svc, store, writeRequest(OriginEditor))
+		var survivor string
+		for _, candidate := range pair.Candidates {
+			if candidate.Status == CandidateSucceeded {
+				survivor = candidate.ID
+			}
+		}
+		svc.posts.(*fakePosts).statuses["post"] = "published"
+		if _, err := svc.Choose(context.Background(), "alice", pair.ID, survivor, true, nil); !errors.Is(err, ErrPostPublished) {
+			t.Fatalf("choose single = %v, want ErrPostPublished", err)
+		}
+		after, _ := store.Get(context.Background(), pair.ID)
+		if after.Status != StatusPartial || after.WinnerCandidateID != "" || runner.applyCalls != 0 {
+			t.Fatalf("the refused survivor was recorded: %+v applies=%d", after, runner.applyCalls)
+		}
+	})
+
+	// A lab comparison of the same published post starts and runs: it writes nothing there.
+	t.Run("a lab comparison still runs", func(t *testing.T) {
+		svc, store, _, _, runner := newTestService()
+		svc.posts.(*fakePosts).statuses["post"] = "published"
+		pair := ready(t, svc, store, writeRequest(OriginLab))
+		if pair.Status != StatusReview || runner.runCalls != 2 {
+			t.Fatalf("lab comparison = %s after %d runs", pair.Status, runner.runCalls)
+		}
+		if _, err := svc.Choose(context.Background(), "alice", pair.ID, pair.Candidates[0].ID, false, nil); err != nil || runner.applyCalls != 0 {
+			t.Fatalf("lab pick on a published post = %v, applies=%d", err, runner.applyCalls)
+		}
+	})
 }

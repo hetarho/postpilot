@@ -219,6 +219,11 @@ type PostInput struct {
 	// WriteNativeEffort is frozen from the selected catalog model at enqueue, so the hold
 	// and a delayed execution use the same completion budget even if curation changes.
 	WriteNativeEffort bool
+	// Published is the post's lock (POST-74): no run starts on it and no result lands in it.
+	// It is read from the post and never frozen, and its `json:"-"` is load-bearing: an
+	// experiment snapshot marshals PostInput by field name, so any new key would re-hash
+	// every stored snapshot.
+	Published bool `json:"-"`
 }
 
 type Profile struct {

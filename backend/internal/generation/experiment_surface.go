@@ -64,6 +64,12 @@ func (s *Service) SnapshotWriteInput(ctx context.Context, userID, postSlug strin
 	if err != nil {
 		return nil, err
 	}
+	// The editor's comparison writes its result into the post, so a published one refuses it.
+	// A snapshot-only comparison writes nothing there and reads a published post freely
+	// (MODEL-31).
+	if post.Published && !snapshotOnly {
+		return nil, ErrPostPublished
+	}
 	if !post.TargetLanguage.Valid() {
 		return nil, ErrLanguageRequired
 	}
@@ -204,6 +210,9 @@ func (s *Service) ApplyWriteWinner(ctx context.Context, userID, postSlug string,
 	current, err := s.posts.AttachedImages(ctx, userID, postSlug)
 	if err != nil {
 		return err
+	}
+	if current.Published {
+		return ErrPostPublished
 	}
 	frozenVoiceID := ""
 	var frozenLanguage Language
