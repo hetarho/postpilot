@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { BLOG_FIELD_IDS, blogFieldLabelKey } from '@/entities/blog-field'
 import {
   GuidelineScopeField,
   canSaveGuideline,
@@ -11,8 +12,8 @@ import { Badge, Button, Editable, FieldMessage, Typography } from '@/shared/ui'
 
 /** A guideline's whole scope, read first and replaced as one patch on save.
  *
- *  The read view is the badge row the list shows anyway: `전역`, the template-name chips, or
- *  `적용 대상 없음` for a scope whose every template was deleted. */
+ *  The read view is the badge row the list shows anyway: `전역`, the template-name chips, the 분야
+ *  chips, or `적용 대상 없음` for a scope whose every template was deleted (GUIDE-20). */
 export function EditableGuidelineScope({
   ownerId,
   guideline,
@@ -22,7 +23,7 @@ export function EditableGuidelineScope({
   className,
 }: {
   ownerId: string
-  guideline: Pick<Guideline, 'scope' | 'templates'>
+  guideline: Pick<Guideline, 'scope' | 'templates' | 'fields'>
   save: (next: GuidelineScope) => Promise<unknown>
   errorMessage: string
   pending: boolean
@@ -57,21 +58,34 @@ export function EditableGuidelineScope({
 export function GuidelineScopeBadges({
   guideline,
 }: {
-  guideline: Pick<Guideline, 'scope' | 'templates'>
+  guideline: Pick<Guideline, 'scope' | 'templates' | 'fields'>
 }) {
-  const { t } = useTranslation('guidelines')
+  const { t } = useTranslation(['guidelines', 'posts'])
   if (isOrphanedScope(guideline)) {
     return (
       <div>
-        <Badge tone="warning">{t('scope.orphaned')}</Badge>
+        <Badge tone="warning">{t('scope.orphaned', { ns: 'guidelines' })}</Badge>
         <Typography variant="body" as="p" className="text-content-secondary mt-1">
-          {t('scope.orphanedHelp')}
+          {t('scope.orphanedHelp', { ns: 'guidelines' })}
         </Typography>
       </div>
     )
   }
   if (guideline.scope === 'global') {
-    return <Badge tone="neutral">{t('scope.global')}</Badge>
+    return <Badge tone="neutral">{t('scope.global', { ns: 'guidelines' })}</Badge>
+  }
+  if (guideline.scope === 'fields') {
+    // In catalogue order, whatever order the set arrived in; the names are the posts namespace's
+    // own, never retyped here.
+    return (
+      <div className="flex flex-wrap gap-1">
+        {BLOG_FIELD_IDS.filter((field) => guideline.fields.includes(field)).map((field) => (
+          <Badge key={field} tone="neutral">
+            {t(blogFieldLabelKey(field), { ns: 'posts' })}
+          </Badge>
+        ))}
+      </div>
+    )
   }
   return (
     <div className="flex flex-wrap gap-1">
@@ -93,7 +107,7 @@ function ScopeEditor({
   exit,
 }: {
   ownerId: string
-  guideline: Pick<Guideline, 'scope' | 'templates'>
+  guideline: Pick<Guideline, 'scope' | 'templates' | 'fields'>
   save: (next: GuidelineScope) => Promise<unknown>
   errorMessage: string
   pending: boolean
@@ -105,6 +119,7 @@ function ScopeEditor({
   const [draft, setDraft] = useState<GuidelineScope>({
     kind: guideline.scope,
     templateIds: guideline.templates.map((template) => template.id),
+    fields: guideline.fields,
   })
   const [failed, setFailed] = useState(false)
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { ProtoGuidelineScope } from '@/shared/api'
+import { ProtoBlogField, ProtoGuidelineScope } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
 import type { FakeGuidelineRow, FakeGuidelinesOptions } from '@/test/guidelines'
 import type { FakeTemplateRow } from '@/test/templates'
@@ -136,6 +136,7 @@ describe('the guideline list', () => {
       text: '가격을 지어내지 않기',
       scope: ProtoGuidelineScope.GLOBAL,
       templateIds: [],
+      fields: [],
     })
     const list = await section('저장된 지침')
     await waitFor(() => expect(list.getByText('가격을 지어내지 않기')).toBeInTheDocument())
@@ -163,6 +164,7 @@ describe('the guideline list', () => {
       text: '협찬 표기를 빠뜨리지 않기',
       scope: ProtoGuidelineScope.TEMPLATES,
       templateIds: ['template-sponsored'],
+      fields: [],
     })
   })
 
@@ -221,7 +223,11 @@ describe('the guideline list', () => {
     expect(updates[0]).toEqual({
       id: 'guideline-global',
       text: undefined,
-      scope: { scope: ProtoGuidelineScope.TEMPLATES, templateIds: ['template-review'] },
+      scope: {
+        scope: ProtoGuidelineScope.TEMPLATES,
+        templateIds: ['template-review'],
+        fields: [],
+      },
     })
   })
 
@@ -238,7 +244,11 @@ describe('the guideline list', () => {
     await user.click(orphan.getByRole('button', { name: '저장' }))
 
     await waitFor(() => expect(updates).toHaveLength(1))
-    expect(updates[0]?.scope).toEqual({ scope: ProtoGuidelineScope.GLOBAL, templateIds: [] })
+    expect(updates[0]?.scope).toEqual({
+      scope: ProtoGuidelineScope.GLOBAL,
+      templateIds: [],
+      fields: [],
+    })
   })
 
   it('keeps the draft and the editor open when a save is refused', async () => {
@@ -287,6 +297,228 @@ describe('the guideline list', () => {
     renderGuidelines({ listFails: true })
     expect(await screen.findByText('지침 목록을 불러오지 못했어요.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '다시 시도' })).toBeInTheDocument()
+  })
+})
+
+/** GUIDE-5, GUIDE-14, GUIDE-20: a guideline can be scoped to the product's 분야. The nine labels are
+ *  queried inside the sheet or the row, never on the whole screen. */
+describe('the 분야 scope', () => {
+  it('creates a 분야 guideline, clearing the templates it was switched away from', async () => {
+    const user = userEvent.setup()
+    const creates: NonNullable<FakeGuidelinesOptions['creates']> = []
+    renderGuidelines({ guidelines: [], creates })
+    const form = await openCreateSheet(user)
+
+    await user.type(form.getByLabelText('지침'), '메뉴 가격을 지어내지 않기')
+    await user.click(form.getByRole('tab', { name: '특정 템플릿' }))
+    await user.click(form.getByLabelText('협찬 리뷰'))
+    await user.click(form.getByRole('tab', { name: '특정 분야' }))
+    expect(form.getByText('고른 분야가 지정된 글에만 적용돼요.')).toBeInTheDocument()
+    // The nine 분야 as checkboxes in catalogue order — never a native select.
+    expect(
+      form
+        .getAllByRole('checkbox')
+        .map((box) => (box as HTMLInputElement).labels?.[0]?.textContent),
+    ).toEqual([
+      '맛집',
+      '카페',
+      '국내여행',
+      '패션·미용',
+      '상품리뷰',
+      '육아·결혼',
+      '반려동물',
+      '인테리어·DIY',
+      '일상·생각',
+    ])
+    expect(form.queryByRole('combobox')).toBeNull()
+    await user.click(form.getByLabelText('카페'))
+    await user.click(form.getByLabelText('맛집'))
+    await user.click(form.getByRole('button', { name: '지침 만들기' }))
+
+    await waitFor(() => expect(creates).toHaveLength(1))
+    // Catalogue order whatever the press order, and no template carried over from the other kind.
+    expect(creates[0]).toEqual({
+      text: '메뉴 가격을 지어내지 않기',
+      scope: ProtoGuidelineScope.FIELDS,
+      templateIds: [],
+      fields: [ProtoBlogField.RESTAURANT, ProtoBlogField.CAFE],
+    })
+  })
+
+  it('keeps the save disabled until a 분야 is checked', async () => {
+    const user = userEvent.setup()
+    renderGuidelines({ guidelines: [] })
+    const form = await openCreateSheet(user)
+
+    await user.type(form.getByLabelText('지침'), '메뉴 가격을 지어내지 않기')
+    await user.click(form.getByRole('tab', { name: '특정 분야' }))
+    const submit = form.getByRole('button', { name: '지침 만들기' })
+    expect(submit).toBeDisabled()
+    await user.click(form.getByLabelText('카페'))
+    expect(submit).toBeEnabled()
+    await user.click(form.getByLabelText('카페'))
+    expect(submit).toBeDisabled()
+  })
+
+  it('rescopes a template guideline to 분야 in one patch', async () => {
+    const user = userEvent.setup()
+    const updates: NonNullable<FakeGuidelinesOptions['updates']> = []
+    renderGuidelines({ updates })
+
+    const scoped = await row('CCTV를 언급하지 않기')
+    await user.click(scoped.getByRole('button', { name: '적용 범위 수정' }))
+    await user.click(scoped.getByRole('tab', { name: '특정 분야' }))
+    await user.click(scoped.getByLabelText('카페'))
+    await user.click(scoped.getByRole('button', { name: '저장' }))
+
+    await waitFor(() => expect(updates).toHaveLength(1))
+    // Kind and both sets together: the template set it left is sent empty, not omitted.
+    expect(updates[0]).toEqual({
+      id: 'guideline-scoped',
+      text: undefined,
+      scope: { scope: ProtoGuidelineScope.FIELDS, templateIds: [], fields: [ProtoBlogField.CAFE] },
+    })
+    await waitFor(() => expect(scoped.getByText('카페')).toBeInTheDocument())
+  })
+
+  // Round trips with nothing checked between them: the other kind's set is gone, not remembered,
+  // so templates and 분야 are never held together.
+  it('clears the other kind’s set on every switch', async () => {
+    const user = userEvent.setup()
+    renderGuidelines({ guidelines: [] })
+    const form = await openCreateSheet(user)
+    await user.type(form.getByLabelText('지침'), '메뉴 가격을 지어내지 않기')
+
+    await user.click(form.getByRole('tab', { name: '특정 템플릿' }))
+    await user.click(form.getByLabelText('협찬 리뷰'))
+    await user.click(form.getByRole('tab', { name: '특정 분야' }))
+    await user.click(form.getByRole('tab', { name: '특정 템플릿' }))
+    expect(form.getByLabelText('협찬 리뷰')).not.toBeChecked()
+
+    await user.click(form.getByRole('tab', { name: '특정 분야' }))
+    await user.click(form.getByLabelText('카페'))
+    await user.click(form.getByRole('tab', { name: '특정 템플릿' }))
+    await user.click(form.getByRole('tab', { name: '특정 분야' }))
+    expect(form.getByLabelText('카페')).not.toBeChecked()
+    expect(form.getByRole('button', { name: '지침 만들기' })).toBeDisabled()
+  })
+
+  it('drops the 분야 when switched back to 전역', async () => {
+    const user = userEvent.setup()
+    const creates: NonNullable<FakeGuidelinesOptions['creates']> = []
+    renderGuidelines({ guidelines: [], creates })
+    const form = await openCreateSheet(user)
+
+    await user.type(form.getByLabelText('지침'), '메뉴 가격을 지어내지 않기')
+    await user.click(form.getByRole('tab', { name: '특정 분야' }))
+    await user.click(form.getByLabelText('카페'))
+    await user.click(form.getByRole('tab', { name: '전역' }))
+    await user.click(form.getByRole('button', { name: '지침 만들기' }))
+
+    await waitFor(() => expect(creates).toHaveLength(1))
+    expect(creates[0]).toMatchObject({ scope: ProtoGuidelineScope.GLOBAL, fields: [] })
+  })
+
+  it('opens a 분야 guideline’s scope with its 분야 checked, and clears them for templates', async () => {
+    const user = userEvent.setup()
+    const updates: NonNullable<FakeGuidelinesOptions['updates']> = []
+    renderGuidelines({
+      updates,
+      guidelines: [
+        ...GUIDELINES,
+        { id: 'guideline-fields', text: '메뉴 가격을 지어내지 않기', fields: ['cafe'] },
+      ],
+    })
+
+    const fields = await row('메뉴 가격을 지어내지 않기')
+    await user.click(fields.getByRole('button', { name: '적용 범위 수정' }))
+    expect(fields.getByRole('tab', { name: '특정 분야' })).toHaveAttribute('aria-selected', 'true')
+    expect(fields.getByLabelText('카페')).toBeChecked()
+    expect(fields.getByLabelText('맛집')).not.toBeChecked()
+    await user.click(fields.getByRole('tab', { name: '특정 템플릿' }))
+    await user.click(fields.getByLabelText('무인가게 리뷰'))
+    await user.click(fields.getByRole('button', { name: '저장' }))
+
+    await waitFor(() => expect(updates).toHaveLength(1))
+    expect(updates[0]?.scope).toEqual({
+      scope: ProtoGuidelineScope.TEMPLATES,
+      templateIds: ['template-review'],
+      fields: [],
+    })
+  })
+
+  it('badges a 분야 guideline with one chip per 분야, in catalogue order', async () => {
+    renderGuidelines({
+      guidelines: [
+        {
+          id: 'guideline-fields',
+          text: '메뉴 가격을 지어내지 않기',
+          fields: ['cafe', 'restaurant'],
+        },
+      ],
+    })
+
+    const fields = await row('메뉴 가격을 지어내지 않기')
+    const chips = fields.getAllByText(/^(맛집|카페)$/)
+    expect(chips.map((chip) => chip.textContent)).toEqual(['맛집', '카페'])
+    expect(fields.queryByText('전역')).toBeNull()
+    expect(fields.queryByText('적용 대상 없음')).toBeNull()
+  })
+
+  // GUIDE-14: the list is the injection order, global then template then 분야, and the screen
+  // shows exactly what the server sent.
+  it('lists the global, template and 분야 groups in the server’s order', async () => {
+    renderGuidelines({
+      guidelines: [
+        { id: 'guideline-fields', text: '메뉴 가격을 지어내지 않기', fields: ['restaurant'] },
+        ...GUIDELINES,
+      ],
+    })
+
+    const list = await section('저장된 지침')
+    await waitFor(() => expect(list.getAllByRole('listitem')).toHaveLength(4))
+    expect(
+      screen.getByText('지침은 전역 지침, 템플릿 지침, 분야 지침 순서로 적용돼요.'),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/특정 템플릿이나 분야에만 적용되게 좁힐 수도 있어요/),
+    ).toBeInTheDocument()
+    expect(list.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      expect.stringContaining('없는 사실을 쓰지 않기'),
+      expect.stringContaining('CCTV를 언급하지 않기'),
+      expect.stringContaining('주인 이야기를 쓰지 않기'),
+      expect.stringContaining('메뉴 가격을 지어내지 않기'),
+    ])
+  })
+
+  it('says why an unknown 분야 was refused and keeps the draft', async () => {
+    const user = userEvent.setup()
+    renderGuidelines({ guidelines: [], refuseFields: true })
+    const form = await openCreateSheet(user)
+
+    await user.type(form.getByLabelText('지침'), '메뉴 가격을 지어내지 않기')
+    await user.click(form.getByRole('tab', { name: '특정 분야' }))
+    await user.click(form.getByLabelText('카페'))
+    await user.click(form.getByRole('button', { name: '지침 만들기' }))
+
+    expect(
+      await form.findByText('선택한 분야를 찾을 수 없어요. 다시 선택해 주세요.'),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(form.getByLabelText('지침')).toHaveValue('메뉴 가격을 지어내지 않기')
+    expect(form.getByRole('tab', { name: '특정 분야' })).toHaveAttribute('aria-selected', 'true')
+    expect(form.getByLabelText('카페')).toBeChecked()
+  })
+
+  // ARCH-3: a scope number this build cannot read is a read failure, never a guessed scope.
+  it('fails the list read on a scope it cannot read', async () => {
+    renderGuidelines({
+      guidelines: [{ id: 'guideline-future', text: '앞으로 올 범위', wireScope: 99 }],
+    })
+
+    expect(await screen.findByText('지침 목록을 불러오지 못했어요.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '다시 시도' })).toBeInTheDocument()
+    expect(screen.queryByText('앞으로 올 범위')).toBeNull()
   })
 })
 
@@ -346,6 +578,7 @@ describe('the guideline candidate section', () => {
     ])
     expect(creates.every((call) => call.scope === ProtoGuidelineScope.GLOBAL)).toBe(true)
     expect(creates.every((call) => call.templateIds.length === 0)).toBe(true)
+    expect(creates.every((call) => call.fields.length === 0)).toBe(true)
     expect(
       await screen.findByText('3개를 지침으로 저장했어요. 0개는 그대로 남았어요.'),
     ).toBeInTheDocument()
@@ -454,8 +687,14 @@ describe('the guideline candidate section', () => {
 
     const dialog = within(await screen.findByRole('dialog'))
     expect(dialog.getByLabelText('지침')).toHaveValue('여기 너무 광고 같아')
-    // 전역 is preselected: a rule applies everywhere unless the user narrows it.
+    // 전역 is preselected: a rule applies everywhere unless the user narrows it — to templates or
+    // to 분야, the shared control's three choices.
     expect(dialog.getByRole('tab', { name: '전역' })).toHaveAttribute('aria-selected', 'true')
+    expect(dialog.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
+      '전역',
+      '특정 템플릿',
+      '특정 분야',
+    ])
     await user.click(dialog.getByRole('button', { name: '지침으로 저장' }))
 
     await waitFor(() => expect(creates).toHaveLength(1))

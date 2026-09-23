@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { createClient, type Transport } from '@connectrpc/connect'
 import { useTransport } from '@connectrpc/connect-query'
 import { useQuery } from '@tanstack/react-query'
@@ -15,11 +14,18 @@ import { guidelinesQueryKey, toGuideline } from './guideline-queries'
 export function guidelineListQuery(transport: Transport, ownerId: string) {
   return {
     queryKey: guidelinesQueryKey(transport, ownerId),
-    queryFn: () => createClient(GuidelineService, transport).listGuidelines({}),
+    // Mapped here, not in the hook: a scope this build cannot read throws, and inside the query it
+    // is a read failure the page shows with its retry rather than a crash.
+    queryFn: () =>
+      createClient(GuidelineService, transport)
+        .listGuidelines({})
+        .then((response) => response.guidelines.map(toGuideline)),
     staleTime: 0,
     refetchOnMount: 'always' as const,
   }
 }
+
+const NO_GUIDELINES: Guideline[] = []
 
 export function useGuidelines(ownerId: string): {
   guidelines: Guideline[]
@@ -32,9 +38,8 @@ export function useGuidelines(ownerId: string): {
   const query = useQuery({ ...guidelineListQuery(transport, ownerId), enabled: ownerId !== '' })
   // The server returns them in injection order; the client never reorders them, so the screen
   // shows exactly the order the writer will be given.
-  const guidelines = useMemo(() => query.data?.guidelines.map(toGuideline) ?? [], [query.data])
   return {
-    guidelines,
+    guidelines: query.data ?? NO_GUIDELINES,
     isPending: query.isPending,
     isError: query.isError,
     isFetching: query.isFetching,

@@ -1,6 +1,11 @@
 // Query keys and the proto→domain mappers for the guideline entity.
 import type { Transport } from '@connectrpc/connect'
 import {
+  blogFieldFromProto,
+  blogFieldToProto,
+  type BlogFieldId,
+} from '@/entities/blog-field/@x/guideline'
+import {
   ProtoGuidelineScope,
   type ProtoGuideline,
   type ProtoGuidelineCandidate,
@@ -13,26 +18,46 @@ import type {
   GuidelineScopeKind,
 } from '../model/types'
 
-function toScopeKind(scope: ProtoGuidelineScope): GuidelineScopeKind {
-  // An unset scope reads as `templates` with no links rather than `global`: the one shape that
-  // must never be guessed is the one that would apply a rule to every post of the account.
-  return scope === ProtoGuidelineScope.GLOBAL ? 'global' : 'templates'
+const SCOPE_TO_PROTO: Record<GuidelineScopeKind, ProtoGuidelineScope> = {
+  global: ProtoGuidelineScope.GLOBAL,
+  templates: ProtoGuidelineScope.TEMPLATES,
+  fields: ProtoGuidelineScope.FIELDS,
+}
+
+/** Undefined for UNSPECIFIED and for a number this build does not know (ARCH-3). No scope is ever
+ *  guessed: a guessed one would misstate which posts a rule reaches (GUIDE-14). */
+export function toScopeKind(scope: ProtoGuidelineScope): GuidelineScopeKind | undefined {
+  for (const [kind, wire] of Object.entries(SCOPE_TO_PROTO) as [
+    GuidelineScopeKind,
+    ProtoGuidelineScope,
+  ][]) {
+    if (wire === scope) return kind
+  }
+  return undefined
 }
 
 export function fromScopeKind(kind: GuidelineScopeKind): ProtoGuidelineScope {
-  return kind === 'global' ? ProtoGuidelineScope.GLOBAL : ProtoGuidelineScope.TEMPLATES
+  return SCOPE_TO_PROTO[kind]
 }
 
 function toTemplateRef(ref: ProtoGuidelineTemplateRef) {
   return { id: ref.id, name: ref.name }
 }
 
+/** Throws on a scope it cannot read, which fails the list read: the page then says so and offers a
+ *  retry rather than listing a rule under a scope it may not have. */
 export function toGuideline(guideline: ProtoGuideline): Guideline {
+  const scope = toScopeKind(guideline.scope)
+  if (!scope) throw new Error(`unsupported guideline scope enum: ${String(guideline.scope)}`)
   return {
     id: guideline.id,
     text: guideline.text,
-    scope: toScopeKind(guideline.scope),
+    scope,
     templates: guideline.templates.map(toTemplateRef),
+    // Neither 없음 nor a number this build does not know names a 분야, so neither is listed.
+    fields: guideline.fields
+      .map(blogFieldFromProto)
+      .filter((field): field is BlogFieldId => field !== undefined && field !== ''),
     createdAt: guideline.createdAt,
     updatedAt: guideline.updatedAt,
   }
@@ -51,7 +76,11 @@ export function toGuidelineCandidate(candidate: ProtoGuidelineCandidate): Guidel
 
 /** The wire form of a whole scope, used by both the create request and the update patch. */
 export function toScopePatch(scope: GuidelineScope) {
-  return { scope: fromScopeKind(scope.kind), templateIds: scope.templateIds }
+  return {
+    scope: fromScopeKind(scope.kind),
+    templateIds: scope.templateIds,
+    fields: scope.fields.map(blogFieldToProto),
+  }
 }
 
 /** Per account, like the template directory: an account switch on the same device must never read

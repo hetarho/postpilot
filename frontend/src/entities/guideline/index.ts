@@ -38,3 +38,4 @@ export {
 } from './api/guideline-mutations'
 export { guidelineErrorMessage, isDuplicateGuideline } from './api/guideline-errors'
 export { GuidelineScopeField } from './ui/GuidelineScopeField'
+export { GuidelineFieldPicker } from './ui/GuidelineFieldPicker'

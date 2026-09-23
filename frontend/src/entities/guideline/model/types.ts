@@ -1,8 +1,9 @@
+import type { BlogFieldId } from '@/entities/blog-field/@x/guideline'
 import { GUIDELINE_TEXT_MAX_CHARS } from '../config'
-/** What a guideline applies to (spec/legacy/policy/guidelines.md). `templates` with an empty set is a
- *  real state, not a missing value: every template it named was deleted, so it reaches no post
- *  until it is rescoped. */
-export type GuidelineScopeKind = 'global' | 'templates'
+/** What a guideline applies to (GUIDE-5). `templates` with an empty set is a real state, not a
+ *  missing value: every template it named was deleted, so it reaches no post until it is
+ *  rescoped. `fields` never empties that way — a 분야 is the product's and is never deleted. */
+export type GuidelineScopeKind = 'global' | 'templates' | 'fields'
 
 /** A template a guideline is scoped to, projected by name. A read projection through the template
  *  directory — the guideline itself stores only ids. */
@@ -19,6 +20,8 @@ export interface Guideline {
   scope: GuidelineScopeKind
   /** Empty for `global`, and also empty for an orphaned `templates` scope. */
   templates: GuidelineTemplateRef[]
+  /** The 분야 a `fields` guideline reaches; empty for every other scope. */
+  fields: BlogFieldId[]
   createdAt: string
   updatedAt: string
 }
@@ -49,6 +52,7 @@ export interface GuidelineCandidate {
 export interface GuidelineScope {
   kind: GuidelineScopeKind
   templateIds: string[]
+  fields: BlogFieldId[]
 }
 
 /** Mirrored from the backend so the field can count down before the round trip; the server stays
@@ -57,7 +61,7 @@ export interface GuidelineScope {
 export const GUIDELINE_LIMITS = { text: GUIDELINE_TEXT_MAX_CHARS } as const
 
 export function globalScope(): GuidelineScope {
-  return { kind: 'global', templateIds: [] }
+  return { kind: 'global', templateIds: [], fields: [] }
 }
 
 /** Counted the way the backend counts: in Unicode scalar values, so a Hangul syllable is one
@@ -80,5 +84,14 @@ export function isOrphanedScope(guideline: Pick<Guideline, 'scope' | 'templates'
 export function canSaveGuideline(text: string, scope: GuidelineScope): boolean {
   const chars = guidelineChars(text)
   if (chars === 0 || chars > GUIDELINE_LIMITS.text) return false
-  return scope.kind === 'global' ? scope.templateIds.length === 0 : scope.templateIds.length > 0
+  // The three shapes the server accepts (GUIDE-5): each kind carries its own set and never the
+  // other one.
+  switch (scope.kind) {
+    case 'global':
+      return scope.templateIds.length === 0 && scope.fields.length === 0
+    case 'templates':
+      return scope.templateIds.length > 0 && scope.fields.length === 0
+    case 'fields':
+      return scope.fields.length > 0 && scope.templateIds.length === 0
+  }
 }

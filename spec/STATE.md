@@ -51,7 +51,6 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T347 | /guidelines creates, rescopes and badges guidelines by 분야 | GUIDE ARCH THEME | T342 | todo |
 | T348 | The dev seed shows published posts, nouns, candidates, a phrase list and a title-area template without Naver keys | ARCH POST GEN QUAL TMPL | T341 T335 T333 | todo |
 | T349 | The writing brief offers one quality row per metric, with a toggletip when over band | POST QUAL ARCH THEME | T328 T344 T345 T346 | todo |
 | T350 | /guidelines pins the 상위 노출 단어 사용 preset row with its switch and 적용할 분야 | GUIDE QUAL ARCH THEME | T347 | todo |
@@ -60,10 +59,12 @@
 | T353 | Toggling 기억 사용 keeps the post's 목표 글자 수 | POST MEM ARCH | - | todo |
 
 ## next
-- implement-task T347 (then the dep order in the tasks table; T347, T348 and T349 are unblocked)
+- implement-task T348 (then the dep order in the tasks table; T348, T349 and T350 are unblocked)
 - T352 and T353 are independent pre-existing bug fixes (frozen memories never reach a durable generate; the 기억 사용 toggle clears 목표 글자 수)
 - create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 ## log
+- 260924 T347 done; the shared scope control offers 전역, 특정 템플릿 and 특정 분야 with the nine 분야 as a catalogue-order checkbox list (새 지침, 승인 and the whole-scope edit), each kind clearing the other's set; a 분야 create or rescope sends kind and both sets in one shape, a 분야 guideline badges one chip per 분야, the list keeps the server's three groups, a refusal keeps the draft, and an unreadable scope fails the read; FE gates pass (p35)
+- 260924 T347 claimed (p35)
 - 260924 T346 done; ② shows one 이 글의 측정값 row directly above the article on a post with content that is not published: M2, M3 and M4 in three groups with the server's band edges, 주의 or 양호 only where a band was judged, 측정할 수 없어요 for an unset value and 0 for a stored one, M2's minimum line while under it, the bands-are-ours line, and loading and failure lines; it reads per content revision and refetches after content, URL and delete saves; FE gates pass (p35)
 - 260924 T346 claimed (p35)
 - 260924 T345 done; ① picks the post's 분야 under the data fields and above 기억 사용 (before the photos on /posts/new) through a fifth draft-queue channel with the 템플릿's presence rules: a create carries a chosen 분야 and omits 없음, a saved post sends a pick at once and 없음 as a present clear, a refusal is taken back with its reason under the field, and a published post shows it disabled under T339's one reason; FE gates pass (p35)
@@ -82,5 +83,3 @@
 - 260924 T339 claimed (p35)
 - 260924 T338 done; an in-process pass keeps each 분야's top-50 phrase list fresh from up to three pages of Naver blog results through the one extractor (2-5 tokens, never only stopwords, counted once per title or description, subsumed, ranked), on a durable per-field next refresh with a boot catch-up off the listener path and a retry that keeps the last list; without both Naver keys nothing runs; BE gate passes (p35)
 - 260924 T338 claimed (p35)
-- 260924 T337 done; a post saves its 분야 through SavePostDraft (presence-aware, on create in the same insert, validated through a consumer-owned field directory) and its quality ticks through SavePostGenerationOptions (canonical order, cleared by an empty set), neither touching the lifecycle; SaveDraft takes a DraftSave; PostInput carries both as json:"-" inputs; BE gate and gen:sql pass (p35)
-- 260924 T337 claimed (p35)

@@ -150,7 +150,11 @@ export function SaveAsGuidelineButton({
                 },
               ]}
               onChange={(kind) =>
-                setScope(kind === 'global' ? globalScope() : { kind, templateIds: [template.id] })
+                setScope(
+                  kind === 'global'
+                    ? globalScope()
+                    : { kind: 'templates', templateIds: [template.id], fields: [] },
+                )
               }
               ariaLabel={t('scope.label', { ns: 'guidelines' })}
               className="mt-2"

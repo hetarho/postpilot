@@ -15,6 +15,9 @@ export const i18n = {
       orphanedHelp:
         '지정했던 템플릿이 삭제돼서 지금은 어떤 글에도 적용되지 않아요. 범위를 다시 고르거나 삭제해 주세요.',
       templatesEmpty: '먼저 템플릿을 하나 만들어 주세요.',
+      fields: '특정 분야',
+      fieldsHelp: '고른 분야가 지정된 글에만 적용돼요.',
+      pickFields: '적용할 분야',
     },
     create: {
       open: '새 지침',
@@ -38,6 +41,9 @@ export const i18n = {
       orphanedHelp:
         'Every template this was scoped to has been deleted, so it currently reaches no post. Pick a scope again, or delete it.',
       templatesEmpty: 'Create a template first.',
+      fields: 'Specific categories',
+      fieldsHelp: 'Applies only to posts set to one of the categories you pick.',
+      pickFields: 'Categories',
     },
     create: {
       open: 'New guideline',

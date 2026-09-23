@@ -236,8 +236,10 @@ it('seeds the dialog with the instruction and saves it scoped to the post templa
   const dialog = await screen.findByRole('dialog')
   const field = within(dialog).getByLabelText('지침')
   expect(field).toHaveValue('무인 매장이니까 주인 얘기 빼줘')
-  // 전역 is the default; the post's template is offered beside it, by name.
+  // 전역 is the default; the post's template is offered beside it, by name — and nothing else: the
+  // capture offers no 분야 scope (GUIDE-21).
   expect(within(dialog).getByRole('tab', { name: '전역', selected: true })).toBeInTheDocument()
+  expect(within(dialog).getAllByRole('tab')).toHaveLength(2)
 
   // Generalized before saving, which is the whole point of letting the user edit it.
   await user.clear(field)
@@ -250,6 +252,7 @@ it('seeds the dialog with the instruction and saves it scoped to the post templa
     text: '무인 매장 글에서 주인 이야기를 쓰지 않기',
     scope: ProtoGuidelineScope.TEMPLATES,
     templateIds: ['template-review'],
+    fields: [],
   })
   expect(await screen.findByText('지침으로 저장했어요.')).toBeInTheDocument()
   // A15: the capture is a plain create — it starts nothing and calls no provider ([I5]).
@@ -273,6 +276,7 @@ it('offers no template scope when the post has none', async () => {
     text: '문장을 짧게 해줘',
     scope: ProtoGuidelineScope.GLOBAL,
     templateIds: [],
+    fields: [],
   })
 })
 
