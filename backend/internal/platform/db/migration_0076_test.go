@@ -94,9 +94,10 @@ func TestFreshInstallationHasNoPublishingSchema(t *testing.T) {
 	}
 	assertPublishingTablesAbsent(t, handle)
 
-	var version int
-	if err := handle.Reader.QueryRowContext(ctx, `SELECT MAX(version_id) FROM goose_db_version WHERE is_applied=1`).Scan(&version); err != nil || version != 76 {
-		t.Fatalf("fresh schema version=%d err=%v, want 76", version, err)
+	// 76 is applied, whatever later migrations follow it.
+	var applied int
+	if err := handle.Reader.QueryRowContext(ctx, `SELECT COUNT(*) FROM goose_db_version WHERE version_id = 76 AND is_applied = 1`).Scan(&applied); err != nil || applied != 1 {
+		t.Fatalf("fresh install applied 76 %d times, err=%v; want once", applied, err)
 	}
 	var retiredTriggers int
 	if err := handle.Reader.QueryRowContext(ctx, `SELECT COUNT(*) FROM sqlite_master WHERE type='trigger' AND name LIKE 'publishing_%'`).Scan(&retiredTriggers); err != nil || retiredTriggers != 0 {

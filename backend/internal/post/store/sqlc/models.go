@@ -42,6 +42,12 @@ type Post struct {
 	ContentLanguage         sql.NullString
 	TagCount                sql.NullInt64
 	UseMemory               int64
+	PublishedUrl            sql.NullString
+	PublishedAt             sql.NullString
+	Field                   sql.NullString
+	ContentNouns            sql.NullString
+	ReplacementCandidates   sql.NullString
+	QualityRules            sql.NullString
 }
 
 type Upload struct {

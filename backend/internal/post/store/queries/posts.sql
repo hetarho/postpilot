@@ -54,7 +54,8 @@ WHERE slug = ? AND user_id = ? AND content_revision = ?
 SELECT slug, user_id, voice_id, title, memo, observations, content, status, created_at, updated_at,
        content_revision, machine_baseline, machine_baseline_revision, machine_baseline_voice_id,
        target_length, finalized_revision, finalized_at, template_id, target_language, content_language,
-       tag_count, use_memory
+       tag_count, use_memory, published_url, published_at, field, content_nouns, replacement_candidates,
+       quality_rules
 FROM posts WHERE slug = ?;
 
 -- name: GetLearningSnapshot :one
