@@ -82,3 +82,10 @@ type CandidateApproval struct {
 type TemplateDirectory interface {
 	Templates(ctx context.Context, userID string) ([]TemplateRef, error)
 }
+
+// FieldDirectory answers whether a 분야 id is on the product's list, consumed to validate a
+// fields scope and the preset's set before anything is written. It is declared here by its
+// consumer, so this context never imports the one that owns the list (ARCH-6, ARCH-7).
+type FieldDirectory interface {
+	Known(id string) bool
+}

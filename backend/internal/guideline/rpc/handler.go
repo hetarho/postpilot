@@ -30,11 +30,15 @@ func (h *Handler) ListGuidelines(ctx context.Context, _ *connect.Request[postpil
 	if err != nil {
 		return nil, toConnectError("list guidelines", err)
 	}
+	preset, err := h.service.Preset(ctx, userID)
+	if err != nil {
+		return nil, toConnectError("list guidelines", err)
+	}
 	out := make([]*postpilotv1.Guideline, 0, len(guidelines))
 	for _, g := range guidelines {
 		out = append(out, toProtoGuideline(g))
 	}
-	return connect.NewResponse(&postpilotv1.ListGuidelinesResponse{Guidelines: out}), nil
+	return connect.NewResponse(&postpilotv1.ListGuidelinesResponse{Guidelines: out, Preset: toProtoPreset(preset)}), nil
 }
 
 func (h *Handler) CreateGuideline(ctx context.Context, req *connect.Request[postpilotv1.CreateGuidelineRequest]) (*connect.Response[postpilotv1.CreateGuidelineResponse], error) {
@@ -46,7 +50,13 @@ func (h *Handler) CreateGuideline(ctx context.Context, req *connect.Request[post
 	if err != nil {
 		return nil, toConnectError("create guideline", err)
 	}
-	created, err := h.service.Create(ctx, userID, req.Msg.GetText(), scope, req.Msg.GetTemplateIds(), req.Msg.GetFromCandidateId())
+	fields, err := fromProtoFields(req.Msg.GetFields())
+	if err != nil {
+		return nil, toConnectError("create guideline", err)
+	}
+	created, err := h.service.Create(ctx, userID, req.Msg.GetText(), guideline.ScopePatch{
+		Scope: scope, TemplateIDs: req.Msg.GetTemplateIds(), Fields: fields,
+	}, req.Msg.GetFromCandidateId())
 	if err != nil {
 		return nil, toConnectError("create guideline", err)
 	}
@@ -69,7 +79,11 @@ func (h *Handler) UpdateGuideline(ctx context.Context, req *connect.Request[post
 		if err != nil {
 			return nil, toConnectError("update guideline", err)
 		}
-		patch.Scope = &guideline.ScopePatch{Scope: scope, TemplateIDs: sent.GetTemplateIds()}
+		fields, err := fromProtoFields(sent.GetFields())
+		if err != nil {
+			return nil, toConnectError("update guideline", err)
+		}
+		patch.Scope = &guideline.ScopePatch{Scope: scope, TemplateIDs: sent.GetTemplateIds(), Fields: fields}
 	}
 	updated, err := h.service.Update(ctx, userID, req.Msg.GetId(), patch)
 	if err != nil {
@@ -89,13 +103,30 @@ func (h *Handler) DeleteGuideline(ctx context.Context, req *connect.Request[post
 	return connect.NewResponse(&postpilotv1.DeleteGuidelineResponse{}), nil
 }
 
-// UpdateGuidelinePreset is a placeholder until the preset exists (T342), answering
-// Unimplemented with no reason, as the post context's published-address placeholder does.
-func (h *Handler) UpdateGuidelinePreset(ctx context.Context, _ *connect.Request[postpilotv1.UpdateGuidelinePresetRequest]) (*connect.Response[postpilotv1.UpdateGuidelinePresetResponse], error) {
-	if _, err := actingUser(ctx); err != nil {
+// UpdateGuidelinePreset switches the product's 상위 노출 단어 사용 preset and picks its 분야, a
+// presence patch: an absent `enabled` keeps the switch, and an absent `fields` MESSAGE keeps the
+// set while a present one replaces it — present and empty clears it (GUIDE-38).
+func (h *Handler) UpdateGuidelinePreset(ctx context.Context, req *connect.Request[postpilotv1.UpdateGuidelinePresetRequest]) (*connect.Response[postpilotv1.UpdateGuidelinePresetResponse], error) {
+	userID, err := actingUser(ctx)
+	if err != nil {
 		return nil, err
 	}
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("the guideline preset is not available yet"))
+	patch := guideline.PresetPatch{Enabled: req.Msg.Enabled}
+	if sent := req.Msg.GetFields(); sent != nil {
+		fields, err := fromProtoFields(sent.GetFields())
+		if err != nil {
+			return nil, toConnectError("update guideline preset", err)
+		}
+		if fields == nil {
+			fields = []string{}
+		}
+		patch.Fields = &fields
+	}
+	preset, err := h.service.UpdatePreset(ctx, userID, patch)
+	if err != nil {
+		return nil, toConnectError("update guideline preset", err)
+	}
+	return connect.NewResponse(&postpilotv1.UpdateGuidelinePresetResponse{Preset: toProtoPreset(preset)}), nil
 }
 
 // ListGuidelineCandidates serves the review list. queue_full comes from the server because
@@ -138,15 +169,67 @@ func actingUser(ctx context.Context) (string, error) {
 
 // fromProtoScope refuses UNSPECIFIED rather than defaulting to global: a client that forgot
 // the field would otherwise silently save a rule that applies to every post of the account.
+// Any number the enum does not name is the same refusal, never a value (ARCH-3).
 func fromProtoScope(scope postpilotv1.GuidelineScope) (guideline.Scope, error) {
 	switch scope {
 	case postpilotv1.GuidelineScope_GUIDELINE_SCOPE_GLOBAL:
 		return guideline.ScopeGlobal, nil
 	case postpilotv1.GuidelineScope_GUIDELINE_SCOPE_TEMPLATES:
 		return guideline.ScopeTemplates, nil
-	default:
-		return "", guideline.ErrScopeShape
+	case postpilotv1.GuidelineScope_GUIDELINE_SCOPE_FIELDS:
+		return guideline.ScopeFields, nil
 	}
+	return "", guideline.ErrScopeShape
+}
+
+// toProtoScope maps a stored kind to the wire. Anything else is UNSPECIFIED, never GLOBAL: a
+// kind this edge cannot name must not read as a rule that reaches every post.
+func toProtoScope(scope guideline.Scope) postpilotv1.GuidelineScope {
+	switch scope {
+	case guideline.ScopeGlobal:
+		return postpilotv1.GuidelineScope_GUIDELINE_SCOPE_GLOBAL
+	case guideline.ScopeTemplates:
+		return postpilotv1.GuidelineScope_GUIDELINE_SCOPE_TEMPLATES
+	case guideline.ScopeFields:
+		return postpilotv1.GuidelineScope_GUIDELINE_SCOPE_FIELDS
+	}
+	return postpilotv1.GuidelineScope_GUIDELINE_SCOPE_UNSPECIFIED
+}
+
+// fromProtoFields brings 분야 in through the shared mapper. An unknown number, and UNSPECIFIED —
+// which names no 분야 — are both a 분야 not on the list.
+func fromProtoFields(values []postpilotv1.BlogField) ([]string, error) {
+	if len(values) == 0 {
+		return nil, nil
+	}
+	out := make([]string, 0, len(values))
+	for _, value := range values {
+		id, ok := rpcserver.BlogFieldFromProto(value)
+		if !ok || id == "" {
+			return nil, guideline.ErrFieldNotFound
+		}
+		out = append(out, id)
+	}
+	return out, nil
+}
+
+// toProtoFields sends 분야 out through the same mapper, dropping an id it cannot name the way
+// the template projection drops a deleted template.
+func toProtoFields(ids []string) []postpilotv1.BlogField {
+	if len(ids) == 0 {
+		return nil
+	}
+	out := make([]postpilotv1.BlogField, 0, len(ids))
+	for _, id := range ids {
+		if value, ok := rpcserver.BlogFieldToProto(id); ok && value != postpilotv1.BlogField_BLOG_FIELD_UNSPECIFIED {
+			out = append(out, value)
+		}
+	}
+	return out
+}
+
+func toProtoPreset(preset guideline.Preset) *postpilotv1.GuidelinePreset {
+	return &postpilotv1.GuidelinePreset{Text: guideline.PresetText, Enabled: preset.Enabled, Fields: toProtoFields(preset.Fields)}
 }
 
 // toConnectError maps the context's sentinels to wire codes. A foreign guideline is NotFound
@@ -192,12 +275,8 @@ func toProtoGuideline(g guideline.Guideline) *postpilotv1.Guideline {
 	for _, ref := range g.Templates {
 		templates = append(templates, &postpilotv1.GuidelineTemplateRef{Id: ref.ID, Name: ref.Name})
 	}
-	scope := postpilotv1.GuidelineScope_GUIDELINE_SCOPE_GLOBAL
-	if g.Scope == guideline.ScopeTemplates {
-		scope = postpilotv1.GuidelineScope_GUIDELINE_SCOPE_TEMPLATES
-	}
 	return &postpilotv1.Guideline{
-		Id: g.ID, Text: g.Text, Scope: scope, Templates: templates,
+		Id: g.ID, Text: g.Text, Scope: toProtoScope(g.Scope), Templates: templates, Fields: toProtoFields(g.Fields),
 		CreatedAt: g.CreatedAt.UTC().Format(timeLayout), UpdatedAt: g.UpdatedAt.UTC().Format(timeLayout),
 	}
 }

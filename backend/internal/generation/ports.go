@@ -86,10 +86,12 @@ type TemplateBriefs interface {
 }
 
 // GuidelinesForPrompt is the guideline context's published resolution, consumed only at
-// enqueue time. templateID is nil for a post with no template, which yields the account's
-// global guidelines alone — an empty result is the ordinary case, not an error.
+// enqueue time: the global group, the template group, then the 분야 group, with the 상위 노출
+// 단어 사용 preset's line last where it applies. templateID and field are nil for a post with
+// none, which yields only the groups the post has — an empty result is the ordinary case, not
+// an error. forRevision leaves the preset line out: a revision never carries it (GEN-57).
 type GuidelinesForPrompt interface {
-	ForPrompt(ctx context.Context, userID string, templateID *string) ([]string, error)
+	ForPrompt(ctx context.Context, userID string, templateID, field *string, forRevision bool) ([]string, error)
 }
 
 // MemoriesForPrompt is the memory context's published retrieval, consumed only at enqueue

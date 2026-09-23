@@ -84,7 +84,7 @@ func (s *Service) SnapshotWriteInput(ctx context.Context, userID, postSlug strin
 	post.Template = brief
 	// The same freeze, for the same reason: both candidates then read one identical set out
 	// of this snapshot, and a different applicable set is a different experiment input.
-	texts, err := s.freezeGuidelines(ctx, post)
+	texts, err := s.freezeGuidelines(ctx, post, false)
 	if err != nil {
 		return nil, err
 	}

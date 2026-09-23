@@ -25,8 +25,8 @@ type generationTemplates struct{ service *template.Service }
 // must prove are owned before saving a scope, and the names it projects when listing.
 type generationGuidelines struct{ service *guideline.Service }
 
-func (a generationGuidelines) ForPrompt(ctx context.Context, userID string, templateID *string) ([]string, error) {
-	return a.service.ForPrompt(ctx, userID, templateID)
+func (a generationGuidelines) ForPrompt(ctx context.Context, userID string, templateID, field *string, forRevision bool) ([]string, error) {
+	return a.service.ForPrompt(ctx, userID, templateID, field, forRevision)
 }
 
 // generationMemories hands the generation context the memory context's retrieval. What

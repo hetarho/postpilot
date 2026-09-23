@@ -36,7 +36,7 @@ func (neutralBriefs) RenderedFor(context.Context, string, string, []string, []Te
 
 type neutralGuidelines struct{}
 
-func (neutralGuidelines) ForPrompt(context.Context, string, *string) ([]string, error) {
+func (neutralGuidelines) ForPrompt(context.Context, string, *string, *string, bool) ([]string, error) {
 	return nil, nil
 }
 

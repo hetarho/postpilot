@@ -691,6 +691,7 @@ func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.
 	postSvc.SetTemplateDirectory(postTemplates{service: templateSvc})
 	guidelineSvc := guideline.NewService(
 		guidelinestore.New(handle.Writer, handle.Reader),
+		blogFields{},
 		guideline.Limits{TextMaxChars: 300, MaxPerAccount: 100},
 		50,
 	)
@@ -704,14 +705,14 @@ func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := guidelineSvc.Create(ctx, "alice", "없는 사실을 쓰지 않기", guideline.ScopeGlobal, nil, ""); err != nil {
+	if _, err := guidelineSvc.Create(ctx, "alice", "없는 사실을 쓰지 않기", guideline.ScopePatch{Scope: guideline.ScopeGlobal}, ""); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := guidelineSvc.Create(ctx, "alice", "CCTV를 언급하지 않기", guideline.ScopeTemplates, []string{review.ID}, ""); err != nil {
+	if _, err := guidelineSvc.Create(ctx, "alice", "CCTV를 언급하지 않기", guideline.ScopePatch{Scope: guideline.ScopeTemplates, TemplateIDs: []string{review.ID}}, ""); err != nil {
 		t.Fatal(err)
 	}
 	// Scoped to the OTHER template, so it must never reach this post's prompt.
-	if _, err := guidelineSvc.Create(ctx, "alice", "협찬 표기를 빠뜨리지 않기", guideline.ScopeTemplates, []string{other.ID}, ""); err != nil {
+	if _, err := guidelineSvc.Create(ctx, "alice", "협찬 표기를 빠뜨리지 않기", guideline.ScopePatch{Scope: guideline.ScopeTemplates, TemplateIDs: []string{other.ID}}, ""); err != nil {
 		t.Fatal(err)
 	}
 
@@ -730,7 +731,7 @@ func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.
 	}
 
 	adapter := generationGuidelines{service: guidelineSvc}
-	texts, err := adapter.ForPrompt(ctx, "alice", &input.TemplateID)
+	texts, err := adapter.ForPrompt(ctx, "alice", &input.TemplateID, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -760,7 +761,7 @@ func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	global, err := adapter.ForPrompt(ctx, "alice", nil)
+	global, err := adapter.ForPrompt(ctx, "alice", nil, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -807,6 +808,7 @@ func TestGuidelineCandidateAdaptersRecordReviewAndApproveAcrossTheSeam(t *testin
 	// Two pending candidates allowed, so the bound is reachable in a test without 50 rows.
 	guidelineSvc = guideline.NewService(
 		guidelinestore.New(handle.Writer, handle.Reader),
+		blogFields{},
 		guideline.Limits{TextMaxChars: 300, MaxPerAccount: 100},
 		2,
 	)
@@ -871,7 +873,7 @@ func TestGuidelineCandidateAdaptersRecordReviewAndApproveAcrossTheSeam(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
-	created, err := guidelineSvc.Create(ctx, "alice", "광고처럼 읽히는 문장을 쓰지 않기", guideline.ScopeTemplates, []string{review.ID}, candidates[0].ID)
+	created, err := guidelineSvc.Create(ctx, "alice", "광고처럼 읽히는 문장을 쓰지 않기", guideline.ScopePatch{Scope: guideline.ScopeTemplates, TemplateIDs: []string{review.ID}}, candidates[0].ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -904,7 +906,7 @@ func TestGuidelineCandidateAdaptersRecordReviewAndApproveAcrossTheSeam(t *testin
 
 	// A4: with candidates recorded and only the approved guideline saved, the prompt carries the
 	// guideline and nothing else — no candidate text reaches it.
-	texts, err := generationGuidelines{service: guidelineSvc}.ForPrompt(ctx, "alice", &review.ID)
+	texts, err := generationGuidelines{service: guidelineSvc}.ForPrompt(ctx, "alice", &review.ID, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -964,3 +966,148 @@ func TestGuidelineCandidateAdaptersRecordReviewAndApproveAcrossTheSeam(t *testin
 type noPurge struct{}
 
 func (noPurge) PurgePost(context.Context, string, string) error { return nil }
+
+// GUIDE-14, GUIDE-17, GUIDE-29, GUIDE-33 on the real stores: a post with a template and a 분야
+// freezes global → template → 분야, the preset's line last once it is on for that 분야 and never
+// for a revision; another 분야's guideline never reaches it; and the preset writes no guideline
+// row.
+func TestGuidelineAdapterFreezesTheFieldGroupThenThePreset(t *testing.T) {
+	handle, err := db.Open(filepath.Join(t.TempDir(), "guideline-fields.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer handle.Close()
+	ctx := context.Background()
+	if err := db.Migrate(ctx, handle.Writer); err != nil {
+		t.Fatal(err)
+	}
+	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: time.Now()}); err != nil {
+		t.Fatal(err)
+	}
+	if err := defaultVoiceBootstrap(ctx, handle, "alice"); err != nil {
+		t.Fatal(err)
+	}
+	voiceSvc := voice.NewService(voicestore.New(handle.Writer, handle.Reader), nil, nil)
+	postSvc := post.NewService(poststore.New(handle.Writer, handle.Reader), noBlobs{}, testPostLimits(), testPostDeps(voiceSvc))
+	templateSvc := template.NewService(
+		templatestore.New(handle.Writer, handle.Reader),
+		template.Limits{
+			NameMaxChars: 40, DescriptionMaxChars: 200, BodyMaxChars: 4000, TitleAreaMaxChars: 200,
+			MaxPerAccount: 50, MaxRepeatExpansion: 40, PhotoRowMax: 4,
+			AskLabelMaxChars: 40, AskMaxPerBody: 10,
+			TargetLengthMin: 1, TagCountMin: 1, TagCountMax: 10,
+		},
+	)
+	postSvc.SetTemplateDirectory(postTemplates{service: templateSvc})
+	guidelineSvc := guideline.NewService(guidelinestore.New(handle.Writer, handle.Reader), blogFields{}, guideline.Limits{TextMaxChars: 300, MaxPerAccount: 100}, 50)
+	guidelineSvc.SetTemplateDirectory(guidelineTemplates{service: templateSvc})
+
+	review, err := templateSvc.Create(ctx, "alice", "카페 리뷰", "", "분위기를 쓰세요", "", template.Numbers{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, create := range []struct {
+		text  string
+		scope guideline.ScopePatch
+	}{
+		{"없는 사실을 쓰지 않기", guideline.ScopePatch{Scope: guideline.ScopeGlobal}},
+		{"CCTV를 언급하지 않기", guideline.ScopePatch{Scope: guideline.ScopeTemplates, TemplateIDs: []string{review.ID}}},
+		{"메뉴 가격은 쓰지 않기", guideline.ScopePatch{Scope: guideline.ScopeFields, Fields: []string{"cafe"}}},
+		// Scoped to ANOTHER 분야, so it must never reach this post.
+		{"반려동물 이름을 쓰지 않기", guideline.ScopePatch{Scope: guideline.ScopeFields, Fields: []string{"pets"}}},
+	} {
+		if _, err := guidelineSvc.Create(ctx, "alice", create.text, create.scope, ""); err != nil {
+			t.Fatalf("create %q: %v", create.text, err)
+		}
+	}
+	defaultVoice, err := voiceSvc.DefaultVoice(ctx, "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	language, field := post.LanguageKorean, "cafe"
+	saved, err := postSvc.SaveDraft(ctx, "alice", post.DraftSave{Title: "성수 카페", VoiceID: &defaultVoice.ID, TemplateID: &review.ID, Field: &field, TargetLanguage: &language})
+	if err != nil {
+		t.Fatal(err)
+	}
+	input, err := generationPosts{service: postSvc}.AttachedImages(ctx, "alice", saved.Slug)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if input.Field != "cafe" {
+		t.Fatalf("the post reached generation with 분야 %q", input.Field)
+	}
+	adapter := generationGuidelines{service: guidelineSvc}
+	resolve := func(forRevision bool) []string {
+		t.Helper()
+		texts, err := adapter.ForPrompt(ctx, "alice", &input.TemplateID, &input.Field, forRevision)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return texts
+	}
+	groups := []string{"없는 사실을 쓰지 않기", "CCTV를 언급하지 않기", "메뉴 가격은 쓰지 않기"}
+
+	if got := resolve(false); !reflect.DeepEqual(got, groups) {
+		t.Fatalf("before the preset: %q, want %q", got, groups)
+	}
+	system, _ := generation.BuildWritePrompt(generation.Profile{}, nil, "", "", nil, nil, nil, resolve(false))
+	if !strings.Contains(system, "[작문 지침]\n- 없는 사실을 쓰지 않기\n- CCTV를 언급하지 않기\n- 메뉴 가격은 쓰지 않기") || strings.Contains(system, guideline.PresetText) {
+		t.Fatalf("the frozen section before the preset:\n%s", system)
+	}
+
+	countRows := func(query string, args ...any) int {
+		t.Helper()
+		var n int
+		if err := handle.Reader.QueryRow(query, args...).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+	before := countRows("SELECT count(*) FROM guidelines WHERE user_id = 'alice'")
+	on, cafe := true, []string{"cafe"}
+	if _, err := guidelineSvc.UpdatePreset(ctx, "alice", guideline.PresetPatch{Enabled: &on, Fields: &cafe}); err != nil {
+		t.Fatal(err)
+	}
+	if after := countRows("SELECT count(*) FROM guidelines WHERE user_id = 'alice'"); after != before {
+		t.Fatalf("switching the preset changed the guideline rows: %d → %d", before, after)
+	}
+	if held := countRows("SELECT count(*) FROM guidelines WHERE text = ?", guideline.PresetText); held != 0 {
+		t.Fatalf("%d guideline rows hold the preset's text", held)
+	}
+
+	if got, want := resolve(false), append(append([]string(nil), groups...), guideline.PresetText); !reflect.DeepEqual(got, want) {
+		t.Fatalf("with the preset on: %q, want %q", got, want)
+	}
+	if got := resolve(true); !reflect.DeepEqual(got, groups) {
+		t.Fatalf("a revision carried %q, want the groups alone", got)
+	}
+	for _, text := range resolve(false) {
+		if text == "반려동물 이름을 쓰지 않기" {
+			t.Fatal("another 분야's guideline reached the post")
+		}
+	}
+
+	// Deleting the 분야 guideline removes it from the next resolution.
+	listed, err := guidelineSvc.List(ctx, "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, g := range listed {
+		if g.Text == "메뉴 가격은 쓰지 않기" {
+			if err := guidelineSvc.Delete(ctx, "alice", g.ID); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	if got, want := resolve(false), []string{"없는 사실을 쓰지 않기", "CCTV를 언급하지 않기", guideline.PresetText}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("after deleting the 분야 guideline: %q, want %q", got, want)
+	}
+}
+
+// The preset binds the phrase section by its heading, and guideline may not import generation,
+// so the heading is copied: this pins the copy to the original.
+func TestPresetTextNamesThePhraseSectionHeading(t *testing.T) {
+	if !strings.Contains(guideline.PresetText, generation.FieldPhrasesHeading) {
+		t.Fatalf("PresetText %q does not name the phrase section %q", guideline.PresetText, generation.FieldPhrasesHeading)
+	}
+}

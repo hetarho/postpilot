@@ -205,7 +205,7 @@ func (s *Service) StartRevision(ctx context.Context, request StartRevisionReques
 		return "", err
 	}
 	request.Template = brief
-	texts, err := s.freezeGuidelines(ctx, post)
+	texts, err := s.freezeGuidelines(ctx, post, true)
 	if err != nil {
 		return "", err
 	}
@@ -273,7 +273,7 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (string, erro
 		return "", err
 	}
 	request.Template = brief
-	texts, err := s.freezeGuidelines(ctx, post)
+	texts, err := s.freezeGuidelines(ctx, post, false)
 	if err != nil {
 		return "", err
 	}
@@ -384,19 +384,24 @@ func postFilenames(post PostInput) []string {
 }
 
 // freezeGuidelines resolves the applicable 지침 once, at enqueue, from the SAME template id
-// the brief was resolved from — one read, one consistent view. Editing, rescoping or
-// deleting a guideline afterwards cannot reach the queued work, including across a
-// restart-resume or an explicit retry, because the handlers read only the payload.
-func (s *Service) freezeGuidelines(ctx context.Context, post PostInput) ([]string, error) {
+// the brief was resolved from and the post's 분야 — one read, one consistent view. Editing,
+// rescoping or deleting a guideline, or switching the preset, afterwards cannot reach the
+// queued work, including across a restart-resume or an explicit retry, because the handlers
+// read only the payload. forRevision leaves the preset line out (GEN-57, GUIDE-17).
+func (s *Service) freezeGuidelines(ctx context.Context, post PostInput, forRevision bool) ([]string, error) {
 	if s.guidelines == nil {
 		return nil, nil
 	}
-	var templateID *string
+	var templateID, field *string
 	if post.TemplateID != "" {
 		id := post.TemplateID
 		templateID = &id
 	}
-	texts, err := s.guidelines.ForPrompt(ctx, post.UserID, templateID)
+	if post.Field != "" {
+		id := post.Field
+		field = &id
+	}
+	texts, err := s.guidelines.ForPrompt(ctx, post.UserID, templateID, field, forRevision)
 	if err != nil {
 		return nil, fmt.Errorf("load applicable guidelines: %w", err)
 	}

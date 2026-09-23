@@ -191,7 +191,7 @@ type PostInput struct {
 	TemplateID string
 	Template   *TemplateBrief
 	// Guidelines is the frozen 작문 지침 material in injection order, filled at enqueue from
-	// TemplateID like Template is. Handlers never resolve guidelines live either.
+	// TemplateID and Field like Template is. Handlers never resolve guidelines live either.
 	Guidelines []string
 	// UseMemory is the post's opt-in, read at enqueue. It is the ONLY thing that decides
 	// whether this context asks the memory context anything at all (MEM-18).

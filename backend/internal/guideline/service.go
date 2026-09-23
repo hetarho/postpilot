@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -14,20 +15,27 @@ import (
 type Service struct {
 	store      Store
 	templates  TemplateDirectory
+	fields     FieldDirectory
 	limits     Limits
 	maxPending int
 	now        func() time.Time
 	newID      func() string
 }
 
-func NewService(store Store, limits Limits, maxPendingCandidates int) *Service {
+// NewService takes the field directory as a constructor argument rather than a setter: every
+// fields scope and every preset write needs it, so a service without it is a wiring error
+// (ARCH-40).
+func NewService(store Store, fields FieldDirectory, limits Limits, maxPendingCandidates int) *Service {
+	if fields == nil {
+		panic("guideline: a field directory is required")
+	}
 	if !limits.valid() {
 		panic("guideline: limits must be positive")
 	}
 	if maxPendingCandidates <= 0 {
 		panic("guideline: the pending candidate bound must be positive")
 	}
-	return &Service{store: store, limits: limits, maxPending: maxPendingCandidates, now: time.Now, newID: newID}
+	return &Service{store: store, fields: fields, limits: limits, maxPending: maxPendingCandidates, now: time.Now, newID: newID}
 }
 
 // SetTemplateDirectory wires the template context's directory. Without it a scoped guideline
@@ -56,19 +64,22 @@ func (s *Service) List(ctx context.Context, userID string) ([]Guideline, error) 
 // fromCandidateID is set only when the user edited the candidate's text before approving,
 // so the row can no longer be found by text. The text match happens either way, which is
 // what marks the candidate an on-the-spot 지침으로 저장 recorded.
-func (s *Service) Create(ctx context.Context, userID, text string, scope Scope, templateIDs []string, fromCandidateID string) (Guideline, error) {
+//
+// The scope is one value — a kind with both sets — so a templates set and a 분야 set cannot be
+// passed in each other's place.
+func (s *Service) Create(ctx context.Context, userID, text string, scope ScopePatch, fromCandidateID string) (Guideline, error) {
 	text, err := s.validText(text)
 	if err != nil {
 		return Guideline{}, err
 	}
-	ids, err := s.validScope(ctx, userID, scope, templateIDs)
+	valid, err := s.validScope(ctx, userID, scope)
 	if err != nil {
 		return Guideline{}, err
 	}
 	now := s.now()
 	created := Guideline{
-		ID: s.newID(), UserID: userID, Text: text, Scope: scope, TemplateIDs: ids,
-		CreatedAt: now, UpdatedAt: now,
+		ID: s.newID(), UserID: userID, Text: text, Scope: valid.Scope, TemplateIDs: valid.TemplateIDs,
+		Fields: valid.Fields, CreatedAt: now, UpdatedAt: now,
 	}
 	approval := CandidateApproval{ID: strings.TrimSpace(fromCandidateID), Text: text}
 	if err := s.store.Insert(ctx, created, s.limits.MaxPerAccount, approval); err != nil {
@@ -152,11 +163,13 @@ func (s *Service) Update(ctx context.Context, userID, id string, patch Patch) (G
 		patch.Text = &text
 	}
 	if patch.Scope != nil {
-		ids, err := s.validScope(ctx, userID, patch.Scope.Scope, patch.Scope.TemplateIDs)
+		// The normalized patch carries the other kind's set as nil, so a rescope between
+		// templates and fields can never leave a link of the kind it left.
+		valid, err := s.validScope(ctx, userID, *patch.Scope)
 		if err != nil {
 			return Guideline{}, err
 		}
-		patch.Scope = &ScopePatch{Scope: patch.Scope.Scope, TemplateIDs: ids}
+		patch.Scope = &valid
 	}
 	updated, err := s.store.Update(ctx, userID, id, patch, s.now())
 	if err != nil {
@@ -172,24 +185,80 @@ func (s *Service) Delete(ctx context.Context, userID, id string) error {
 	return s.store.Delete(ctx, userID, id)
 }
 
-// ForPrompt is this context's published behavior for prompt builders: the ordered texts that
-// apply to one post, resolved from the post's CURRENT template. Absence is not an error — a
-// prompt with no guidelines is a valid prompt — so the caller gets an empty slice.
-//
-// templateID is a pointer because "the post has no template" and "the post has template X" are
-// different questions, and the first must not be spelled as the empty-string id of the second.
-func (s *Service) ForPrompt(ctx context.Context, userID string, templateID *string) ([]string, error) {
-	scoped := ""
-	if templateID != nil {
-		scoped = strings.TrimSpace(*templateID)
+// Preset is the account's 상위 노출 단어 사용 state; an account that never touched it reads as off
+// with no 분야 (GUIDE-34).
+func (s *Service) Preset(ctx context.Context, userID string) (Preset, error) {
+	preset, err := s.store.Preset(ctx, userID)
+	if err != nil {
+		return Preset{}, fmt.Errorf("read guideline preset: %w", err)
 	}
-	// No 분야 yet: nothing can save a fields guideline until its ids are validated, so the
-	// 분야 group is empty for every post and the field matches no link.
-	texts, err := s.store.ApplicableTexts(ctx, userID, scoped, "")
+	return preset, nil
+}
+
+// UpdatePreset is the owner's switch and 분야 set for the preset, a presence patch. A present
+// set replaces the whole set, an empty one included (GUIDE-38), and every 분야 in it is proved
+// before anything is written. It spends no cap, checks no text and approves no candidate
+// (GUIDE-39), and nothing but the owner's procedure calls it (GUIDE-33).
+func (s *Service) UpdatePreset(ctx context.Context, userID string, patch PresetPatch) (Preset, error) {
+	if patch.Enabled == nil && patch.Fields == nil {
+		return s.Preset(ctx, userID)
+	}
+	normalized := PresetPatch{Enabled: patch.Enabled}
+	if patch.Fields != nil {
+		fields, err := collapse(*patch.Fields, ErrFieldNotFound)
+		if err != nil {
+			return Preset{}, err
+		}
+		if err := s.knownFields(fields); err != nil {
+			return Preset{}, err
+		}
+		normalized.Fields = &fields
+	}
+	preset, err := s.store.UpdatePreset(ctx, userID, normalized, s.now())
+	if err != nil {
+		return Preset{}, fmt.Errorf("update guideline preset: %w", err)
+	}
+	return preset, nil
+}
+
+// ForPrompt is this context's published behavior for prompt builders: the ordered texts that
+// apply to one post, resolved from the post's CURRENT template and 분야 — global, then template,
+// then 분야 (GUIDE-14) — with the preset's line last where it applies. Absence is not an error:
+// a prompt with no guidelines is a valid prompt.
+//
+// templateID and field are pointers because "the post has none" and "the post has X" are
+// different questions, and the first must not be spelled as the empty-string id of the second.
+// A revision never carries the preset line (GEN-57): it rewrites the owner's own text, and the
+// phrase list the line binds is not part of a revision.
+func (s *Service) ForPrompt(ctx context.Context, userID string, templateID, field *string, forRevision bool) ([]string, error) {
+	scoped := trimmed(templateID)
+	blogField := trimmed(field)
+	texts, err := s.store.ApplicableTexts(ctx, userID, scoped, blogField)
 	if err != nil {
 		return nil, fmt.Errorf("resolve applicable guidelines: %w", err)
 	}
+	// The preset is only ever read for a generation of a post that has a 분야, so a post without
+	// one never pays for it and never receives it (GUIDE-17, GUIDE-29).
+	if forRevision || blogField == "" {
+		return texts, nil
+	}
+	preset, err := s.store.Preset(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("read guideline preset: %w", err)
+	}
+	// Not deduplicated against an owner line with the same text: the two are independent
+	// (GUIDE-39). Not gated on the 분야's phrase list either; the phrase freeze decides that.
+	if preset.Enabled && slices.Contains(preset.Fields, blogField) {
+		texts = append(texts, PresetText)
+	}
 	return texts, nil
+}
+
+func trimmed(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return strings.TrimSpace(*value)
 }
 
 func (s *Service) projectOne(ctx context.Context, userID string, g Guideline) (Guideline, error) {
@@ -263,21 +332,63 @@ func (s *Service) validText(value string) (string, error) {
 	return trimmed, nil
 }
 
-// validScope collapses duplicate ids and proves every remaining one is an owned template. A
-// `templates` scope must name at least one at creation and on every scope update: only a
-// template deletion may leave the set empty (plan 16 invariant 2).
-func (s *Service) validScope(ctx context.Context, userID string, scope Scope, templateIDs []string) ([]string, error) {
-	// A fields scope is refused before anything else until 분야 ids are validated: the rpc
-	// cannot send one yet, and nothing here proves a 분야 is on the product's list.
-	if scope == ScopeFields || !scope.Valid() {
-		return nil, ErrScopeShape
+// validScope normalizes a scope and proves it: the kind, then both sets trimmed and collapsed
+// in first-seen order, then the shape, then that every id exists. A `templates` scope must name
+// at least one template and a `fields` scope at least one 분야, at creation and on every scope
+// update: only a template deletion may leave a templates set empty (plan 16 invariant 2). The
+// normalized patch carries the other kind's set as nil.
+func (s *Service) validScope(ctx context.Context, userID string, patch ScopePatch) (ScopePatch, error) {
+	if !patch.Scope.Valid() {
+		return ScopePatch{}, ErrScopeShape
 	}
-	unique := make([]string, 0, len(templateIDs))
-	seen := make(map[string]struct{}, len(templateIDs))
-	for _, raw := range templateIDs {
+	templates, err := collapse(patch.TemplateIDs, ErrTemplateNotFound)
+	if err != nil {
+		return ScopePatch{}, err
+	}
+	fields, err := collapse(patch.Fields, ErrFieldNotFound)
+	if err != nil {
+		return ScopePatch{}, err
+	}
+	switch patch.Scope {
+	case ScopeGlobal:
+		if len(templates) > 0 || len(fields) > 0 {
+			return ScopePatch{}, ErrScopeShape
+		}
+		return ScopePatch{Scope: ScopeGlobal}, nil
+	case ScopeTemplates:
+		if len(fields) > 0 || len(templates) == 0 {
+			return ScopePatch{}, ErrScopeShape
+		}
+		names, err := s.directory(ctx, userID)
+		if err != nil {
+			return ScopePatch{}, err
+		}
+		for _, id := range templates {
+			if _, ok := names[id]; !ok {
+				return ScopePatch{}, ErrTemplateNotFound
+			}
+		}
+		return ScopePatch{Scope: ScopeTemplates, TemplateIDs: templates}, nil
+	default: // ScopeFields: Valid admits no fourth kind.
+		if len(templates) > 0 || len(fields) == 0 {
+			return ScopePatch{}, ErrScopeShape
+		}
+		if err := s.knownFields(fields); err != nil {
+			return ScopePatch{}, err
+		}
+		return ScopePatch{Scope: ScopeFields, Fields: fields}, nil
+	}
+}
+
+// collapse trims each id and keeps the first of every duplicate, in order. A blank id is the
+// given refusal: an id that names nothing is a request for nothing.
+func collapse(values []string, blank error) ([]string, error) {
+	unique := make([]string, 0, len(values))
+	seen := make(map[string]struct{}, len(values))
+	for _, raw := range values {
 		id := strings.TrimSpace(raw)
 		if id == "" {
-			return nil, ErrTemplateNotFound
+			return nil, blank
 		}
 		if _, duplicate := seen[id]; duplicate {
 			continue
@@ -285,25 +396,17 @@ func (s *Service) validScope(ctx context.Context, userID string, scope Scope, te
 		seen[id] = struct{}{}
 		unique = append(unique, id)
 	}
-	if scope == ScopeGlobal {
-		if len(unique) > 0 {
-			return nil, ErrScopeShape
-		}
-		return nil, nil
-	}
-	if len(unique) == 0 {
-		return nil, ErrScopeShape
-	}
-	names, err := s.directory(ctx, userID)
-	if err != nil {
-		return nil, err
-	}
-	for _, id := range unique {
-		if _, ok := names[id]; !ok {
-			return nil, ErrTemplateNotFound
-		}
-	}
 	return unique, nil
+}
+
+// knownFields proves every 분야 is on the product's list.
+func (s *Service) knownFields(fields []string) error {
+	for _, id := range fields {
+		if !s.fields.Known(id) {
+			return ErrFieldNotFound
+		}
+	}
+	return nil
 }
 
 func newID() string {

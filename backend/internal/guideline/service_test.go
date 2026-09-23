@@ -3,6 +3,7 @@ package guideline
 import (
 	"context"
 	"errors"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -26,8 +27,11 @@ type fakeStore struct {
 	applicableErr error
 
 	// The preset half, kept in memory: the presence rules are the store's, so the fake only
-	// has to hold what it was last given.
-	preset Preset
+	// has to hold what it was last given. presetReads counts how often it was read, and
+	// presetWrites how often written.
+	preset       Preset
+	presetReads  int
+	presetWrites []PresetPatch
 
 	// The candidate half. The store owns the whole recording decision, so the fake records
 	// what it was asked to record rather than re-deciding it.
@@ -123,6 +127,7 @@ func (f *fakeStore) Update(_ context.Context, userID, id string, patch Patch, _ 
 	if patch.Scope != nil {
 		g.Scope = patch.Scope.Scope
 		g.TemplateIDs = patch.Scope.TemplateIDs
+		g.Fields = patch.Scope.Fields
 	}
 	f.rows[id] = g
 	return g, nil
@@ -142,9 +147,13 @@ func (f *fakeStore) ApplicableTexts(_ context.Context, userID, templateID, field
 	return f.texts, f.applicableErr
 }
 
-func (f *fakeStore) Preset(context.Context, string) (Preset, error) { return f.preset, nil }
+func (f *fakeStore) Preset(context.Context, string) (Preset, error) {
+	f.presetReads++
+	return f.preset, nil
+}
 
 func (f *fakeStore) UpdatePreset(_ context.Context, _ string, patch PresetPatch, _ time.Time) (Preset, error) {
+	f.presetWrites = append(f.presetWrites, patch)
 	if patch.Enabled != nil {
 		f.preset.Enabled = *patch.Enabled
 	}
@@ -153,6 +162,13 @@ func (f *fakeStore) UpdatePreset(_ context.Context, _ string, patch PresetPatch,
 	}
 	return f.preset, nil
 }
+
+// fakeFields knows the 분야 it lists.
+type fakeFields map[string]bool
+
+func (f fakeFields) Known(id string) bool { return f[id] }
+
+var testFields = fakeFields{"cafe": true, "restaurant": true, "pets": true}
 
 type fakeDirectory struct {
 	templates []TemplateRef
@@ -168,7 +184,7 @@ func (f *fakeDirectory) Templates(_ context.Context, _ string) ([]TemplateRef, e
 func newTestService(t *testing.T, directory *fakeDirectory) (*Service, *fakeStore) {
 	t.Helper()
 	store := newFakeStore()
-	svc := NewService(store, Limits{TextMaxChars: 10, MaxPerAccount: 3}, 2)
+	svc := NewService(store, testFields, Limits{TextMaxChars: 10, MaxPerAccount: 3}, 2)
 	svc.now = func() time.Time { return testNow }
 	ids := 0
 	svc.newID = func() string { ids++; return "g" + string(rune('0'+ids)) }
@@ -182,7 +198,7 @@ func newTestService(t *testing.T, directory *fakeDirectory) (*Service, *fakeStor
 // business, because only the store can count and insert atomically.
 func TestCreateTrimsBoundsAndPassesTheCap(t *testing.T) {
 	svc, store := newTestService(t, nil)
-	created, err := svc.Create(context.Background(), "alice", "  CCTV 언급 금지  ", ScopeGlobal, nil, "")
+	created, err := svc.Create(context.Background(), "alice", "  CCTV 언급 금지  ", ScopePatch{Scope: ScopeGlobal}, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -192,59 +208,189 @@ func TestCreateTrimsBoundsAndPassesTheCap(t *testing.T) {
 	if store.insertedCap != 3 {
 		t.Fatalf("cap handed to the store = %d, want 3", store.insertedCap)
 	}
-	if _, err := svc.Create(context.Background(), "alice", "   ", ScopeGlobal, nil, ""); !errors.Is(err, ErrInvalidText) {
+	if _, err := svc.Create(context.Background(), "alice", "   ", ScopePatch{Scope: ScopeGlobal}, ""); !errors.Is(err, ErrInvalidText) {
 		t.Fatalf("blank text err = %v", err)
 	}
 	var tooLong *TextTooLongError
-	_, err = svc.Create(context.Background(), "alice", strings.Repeat("가", 11), ScopeGlobal, nil, "")
+	_, err = svc.Create(context.Background(), "alice", strings.Repeat("가", 11), ScopePatch{Scope: ScopeGlobal}, "")
 	if !errors.As(err, &tooLong) || tooLong.Chars != 11 || tooLong.Max != 10 {
 		t.Fatalf("over-limit err = %v", err)
 	}
 	// The limit counts Unicode scalar values: exactly ten Hangul syllables must fit.
-	if _, err := svc.Create(context.Background(), "alice", strings.Repeat("나", 10), ScopeGlobal, nil, ""); err != nil {
+	if _, err := svc.Create(context.Background(), "alice", strings.Repeat("나", 10), ScopePatch{Scope: ScopeGlobal}, ""); err != nil {
 		t.Fatalf("exactly-at-limit refused: %v", err)
 	}
 }
 
-// A2: the two contradictory scope shapes are refused rather than repaired.
+// A2: every contradictory shape of the three kinds is refused rather than repaired, and nothing
+// is written.
 func TestCreateRefusesContradictoryScopeShapes(t *testing.T) {
 	directory := &fakeDirectory{templates: []TemplateRef{{ID: "p1", Name: "리뷰"}}}
-	svc, _ := newTestService(t, directory)
-	if _, err := svc.Create(context.Background(), "alice", "a", ScopeGlobal, []string{"p1"}, ""); !errors.Is(err, ErrScopeShape) {
-		t.Fatalf("global with ids err = %v", err)
-	}
-	if _, err := svc.Create(context.Background(), "alice", "a", ScopeTemplates, nil, ""); !errors.Is(err, ErrScopeShape) {
-		t.Fatalf("templates with no ids err = %v", err)
-	}
-	if _, err := svc.Create(context.Background(), "alice", "a", Scope("voice"), nil, ""); !errors.Is(err, ErrScopeShape) {
-		t.Fatalf("unknown scope err = %v", err)
-	}
-}
-
-// The fields scope exists in storage before anything validates a 분야 id, so the service
-// refuses it outright rather than saving links nothing has checked, and every answer stays as
-// it was until 분야 validation is wired.
-func TestCreateRefusesTheFieldsScopeUntilItIsValidated(t *testing.T) {
-	directory := &fakeDirectory{templates: []TemplateRef{{ID: "p1", Name: "리뷰"}}}
 	svc, store := newTestService(t, directory)
-	for name, ids := range map[string][]string{"without template ids": nil, "with template ids": {"p1"}} {
-		if _, err := svc.Create(context.Background(), "alice", "a", ScopeFields, ids, ""); !errors.Is(err, ErrScopeShape) {
-			t.Fatalf("create %s: err = %v, want the scope shape refusal", name, err)
+	for name, scope := range map[string]ScopePatch{
+		"global with template ids": {Scope: ScopeGlobal, TemplateIDs: []string{"p1"}},
+		"global with 분야":           {Scope: ScopeGlobal, Fields: []string{"cafe"}},
+		"templates with no ids":    {Scope: ScopeTemplates},
+		"templates with 분야":        {Scope: ScopeTemplates, TemplateIDs: []string{"p1"}, Fields: []string{"cafe"}},
+		"fields with no 분야":        {Scope: ScopeFields},
+		"fields with template ids": {Scope: ScopeFields, TemplateIDs: []string{"p1"}, Fields: []string{"cafe"}},
+		"an unknown kind":          {Scope: Scope("voice")},
+		"no kind at all":           {},
+	} {
+		if _, err := svc.Create(context.Background(), "alice", "a", scope, ""); !errors.Is(err, ErrScopeShape) {
+			t.Errorf("%s: err = %v, want the scope shape refusal", name, err)
 		}
 	}
 	if len(store.inserted) != 0 {
-		t.Fatalf("a refused fields scope wrote %d rows", len(store.inserted))
+		t.Fatalf("a refused shape wrote %d rows", len(store.inserted))
 	}
-	if directory.calls != 0 {
-		t.Fatalf("the refusal read the template directory %d times; it comes before any other check", directory.calls)
-	}
+}
 
-	store.rows["g1"] = Guideline{ID: "g1", UserID: "alice", Text: "old", Scope: ScopeGlobal}
-	if _, err := svc.Update(context.Background(), "alice", "g1", Patch{Scope: &ScopePatch{Scope: ScopeFields, Fields: []string{"food"}}}); !errors.Is(err, ErrScopeShape) {
-		t.Fatalf("rescope to fields: err = %v", err)
+// GUIDE-5: a fields scope names at least one listed 분야, collapsed to one link each in first-seen
+// order; an unlisted or blank one is not-found and nothing is written.
+func TestCreateWithFieldsCollapsesAndValidates(t *testing.T) {
+	svc, store := newTestService(t, nil)
+	created, err := svc.Create(context.Background(), "alice", "a", ScopePatch{Scope: ScopeFields, Fields: []string{" pets ", "cafe", "pets"}}, "")
+	if err != nil {
+		t.Fatal(err)
 	}
-	if store.patched.Scope != nil || store.rows["g1"].Scope != ScopeGlobal {
-		t.Fatalf("a refused rescope reached the store: %+v", store.patched)
+	if created.Scope != ScopeFields || !reflect.DeepEqual(created.Fields, []string{"pets", "cafe"}) || created.TemplateIDs != nil {
+		t.Fatalf("created = %+v", created)
+	}
+	for name, fields := range map[string][]string{"an unlisted 분야": {"cafe", "moon"}, "a blank 분야": {"cafe", "  "}} {
+		if _, err := svc.Create(context.Background(), "alice", "b", ScopePatch{Scope: ScopeFields, Fields: fields}, ""); !errors.Is(err, ErrFieldNotFound) {
+			t.Errorf("%s: err = %v", name, err)
+		}
+	}
+	if len(store.inserted) != 1 {
+		t.Fatalf("a refused 분야 wrote a row: %d inserted", len(store.inserted))
+	}
+}
+
+// A rescope between templates and fields is ONE normalized patch: the kind with its own set and
+// the other kind's set nil, so the store's replacement leaves no link of the kind it left.
+func TestRescopeBetweenTemplatesAndFieldsIsOneNormalizedPatch(t *testing.T) {
+	directory := &fakeDirectory{templates: []TemplateRef{{ID: "p1", Name: "리뷰"}}}
+	svc, store := newTestService(t, directory)
+	store.rows["g1"] = Guideline{ID: "g1", UserID: "alice", Text: "a", Scope: ScopeTemplates, TemplateIDs: []string{"p1"}}
+
+	if _, err := svc.Update(context.Background(), "alice", "g1", Patch{Scope: &ScopePatch{Scope: ScopeFields, Fields: []string{"cafe", "cafe"}}}); err != nil {
+		t.Fatal(err)
+	}
+	if want := (ScopePatch{Scope: ScopeFields, Fields: []string{"cafe"}}); !reflect.DeepEqual(*store.patched.Scope, want) {
+		t.Fatalf("to fields: patch = %+v, want %+v", *store.patched.Scope, want)
+	}
+	if _, err := svc.Update(context.Background(), "alice", "g1", Patch{Scope: &ScopePatch{Scope: ScopeTemplates, TemplateIDs: []string{"p1"}}}); err != nil {
+		t.Fatal(err)
+	}
+	if want := (ScopePatch{Scope: ScopeTemplates, TemplateIDs: []string{"p1"}}); !reflect.DeepEqual(*store.patched.Scope, want) {
+		t.Fatalf("to templates: patch = %+v, want %+v", *store.patched.Scope, want)
+	}
+	// A text-only edit leaves the 분야 set alone: no scope reaches the store at all.
+	text := "b"
+	if _, err := svc.Update(context.Background(), "alice", "g1", Patch{Text: &text}); err != nil || store.patched.Scope != nil {
+		t.Fatalf("a text edit carried %+v (%v)", store.patched.Scope, err)
+	}
+}
+
+// GUIDE-38, GUIDE-39: the preset is a presence patch. Every 분야 is proved before anything is
+// written, an empty set is legal, and an empty patch writes nothing.
+func TestUpdatePresetIsAPresencePatch(t *testing.T) {
+	svc, store := newTestService(t, nil)
+	ctx := context.Background()
+	store.preset = Preset{Enabled: true, Fields: []string{"cafe"}}
+
+	if got, err := svc.UpdatePreset(ctx, "alice", PresetPatch{}); err != nil || !reflect.DeepEqual(got, store.preset) || len(store.presetWrites) != 0 {
+		t.Fatalf("an empty patch = %+v (%v), %d writes", got, err, len(store.presetWrites))
+	}
+	off := false
+	if _, err := svc.UpdatePreset(ctx, "alice", PresetPatch{Enabled: &off}); err != nil {
+		t.Fatal(err)
+	}
+	if write := store.presetWrites[0]; write.Fields != nil || *write.Enabled {
+		t.Fatalf("the switch alone wrote %+v", write)
+	}
+	fields := []string{"pets", " cafe ", "pets"}
+	if _, err := svc.UpdatePreset(ctx, "alice", PresetPatch{Fields: &fields}); err != nil {
+		t.Fatal(err)
+	}
+	if write := store.presetWrites[1]; write.Enabled != nil || !reflect.DeepEqual(*write.Fields, []string{"pets", "cafe"}) {
+		t.Fatalf("the 분야 alone wrote %+v", write)
+	}
+	for name, bad := range map[string][]string{"an unlisted 분야": {"cafe", "moon"}, "a blank 분야": {" "}} {
+		on := true
+		if _, err := svc.UpdatePreset(ctx, "alice", PresetPatch{Enabled: &on, Fields: &bad}); !errors.Is(err, ErrFieldNotFound) {
+			t.Errorf("%s: err = %v", name, err)
+		}
+	}
+	if len(store.presetWrites) != 2 {
+		t.Fatalf("a refused preset wrote: %d writes", len(store.presetWrites))
+	}
+	empty := []string{}
+	if got, err := svc.UpdatePreset(ctx, "alice", PresetPatch{Fields: &empty}); err != nil || len(got.Fields) != 0 {
+		t.Fatalf("the empty set = %+v (%v)", got, err)
+	}
+}
+
+// GUIDE-17, GUIDE-29, GEN-57: the preset's line comes last, and only for a generation of a post
+// whose 분야 the preset is switched on for.
+func TestForPromptAppendsThePresetLastWhereItApplies(t *testing.T) {
+	cafe, pets := "cafe", "pets"
+	for name, tc := range map[string]struct {
+		preset      Preset
+		field       *string
+		forRevision bool
+		want        []string
+		reads       int
+	}{
+		"the preset off":       {Preset{Fields: []string{"cafe"}}, &cafe, false, []string{"전역", "분야"}, 1},
+		"on with no 분야":        {Preset{Enabled: true}, &cafe, false, []string{"전역", "분야"}, 1},
+		"on for another 분야":    {Preset{Enabled: true, Fields: []string{"pets"}}, &cafe, false, []string{"전역", "분야"}, 1},
+		"on for the post's 분야": {Preset{Enabled: true, Fields: []string{"pets", "cafe"}}, &cafe, false, []string{"전역", "분야", PresetText}, 1},
+		"a revision":           {Preset{Enabled: true, Fields: []string{"cafe"}}, &cafe, true, []string{"전역", "분야"}, 0},
+		"a post with no 분야":    {Preset{Enabled: true, Fields: []string{"cafe"}}, nil, false, []string{"전역", "분야"}, 0},
+		"a blank 분야 is none":   {Preset{Enabled: true, Fields: []string{"cafe"}}, new(string), false, []string{"전역", "분야"}, 0},
+	} {
+		t.Run(name, func(t *testing.T) {
+			svc, store := newTestService(t, nil)
+			store.texts = []string{"전역", "분야"}
+			store.preset = tc.preset
+			texts, err := svc.ForPrompt(context.Background(), "alice", nil, tc.field, tc.forRevision)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(texts, tc.want) {
+				t.Fatalf("texts = %q, want %q", texts, tc.want)
+			}
+			if store.presetReads != tc.reads {
+				t.Fatalf("the preset was read %d times, want %d", store.presetReads, tc.reads)
+			}
+		})
+	}
+	// The 분야 asked of the store is the post's, trimmed.
+	svc, store := newTestService(t, nil)
+	spaced := "  pets  "
+	if _, err := svc.ForPrompt(context.Background(), "alice", nil, &spaced, false); err != nil || store.askedField != pets {
+		t.Fatalf("asked the store for %q (%v)", store.askedField, err)
+	}
+}
+
+// GUIDE-39: the preset is not a guideline row, so it spends no cap and takes no text: an account
+// at the cap with the preset on is refused at exactly the same count, and an owner guideline
+// holding the preset's own text is an ordinary guideline.
+func TestThePresetSpendsNoCapAndNoTextUniqueness(t *testing.T) {
+	store := newFakeStore()
+	store.preset = Preset{Enabled: true, Fields: []string{"cafe"}}
+	svc := NewService(store, testFields, Limits{TextMaxChars: 300, MaxPerAccount: 3}, 2)
+	created, err := svc.Create(context.Background(), "alice", PresetText, ScopePatch{Scope: ScopeFields, Fields: []string{"cafe"}}, "")
+	if err != nil || created.Text != PresetText {
+		t.Fatalf("an owner line equal to the preset: %+v (%v)", created, err)
+	}
+	if store.insertedCap != 3 {
+		t.Fatalf("the cap reached the store as %d with the preset on, want 3", store.insertedCap)
+	}
+	if store.presetReads != 0 || len(store.presetWrites) != 0 {
+		t.Fatalf("a create touched the preset: %d reads, %d writes", store.presetReads, len(store.presetWrites))
 	}
 }
 
@@ -254,13 +400,13 @@ func TestCreateValidatesScopedTemplatesAndCollapsesDuplicates(t *testing.T) {
 	directory := &fakeDirectory{templates: []TemplateRef{{ID: "p1", Name: "리뷰"}, {ID: "p2", Name: "후기"}}}
 	svc, store := newTestService(t, directory)
 
-	if _, err := svc.Create(context.Background(), "alice", "a", ScopeTemplates, []string{"p1", "nope"}, ""); !errors.Is(err, ErrTemplateNotFound) {
+	if _, err := svc.Create(context.Background(), "alice", "a", ScopePatch{Scope: ScopeTemplates, TemplateIDs: []string{"p1", "nope"}}, ""); !errors.Is(err, ErrTemplateNotFound) {
 		t.Fatalf("unknown template err = %v", err)
 	}
 	if len(store.inserted) != 0 {
 		t.Fatal("a refused scope still wrote a row")
 	}
-	created, err := svc.Create(context.Background(), "alice", "a", ScopeTemplates, []string{"p2", "p1", "p2"}, "")
+	created, err := svc.Create(context.Background(), "alice", "a", ScopePatch{Scope: ScopeTemplates, TemplateIDs: []string{"p2", "p1", "p2"}}, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -324,14 +470,14 @@ func TestForPromptDistinguishesNoTemplateFromATemplate(t *testing.T) {
 	svc, store := newTestService(t, nil)
 	store.texts = []string{"전역 1", "템플릿 1"}
 
-	texts, err := svc.ForPrompt(context.Background(), "alice", nil)
+	texts, err := svc.ForPrompt(context.Background(), "alice", nil, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if store.askedTemplate != "" || store.askedAccount != "alice" {
 		t.Fatalf("no-template resolution asked for %q / %q", store.askedAccount, store.askedTemplate)
 	}
-	// Until 분야 are validated no fields guideline exists, so no post asks for a 분야 group.
+	// A post with no 분야 asks for no 분야 group.
 	if store.askedField != "" {
 		t.Fatalf("resolution asked for the 분야 %q", store.askedField)
 	}
@@ -339,7 +485,7 @@ func TestForPromptDistinguishesNoTemplateFromATemplate(t *testing.T) {
 		t.Fatalf("texts = %v", texts)
 	}
 	id := "  p1  "
-	if _, err := svc.ForPrompt(context.Background(), "alice", &id); err != nil {
+	if _, err := svc.ForPrompt(context.Background(), "alice", &id, nil, false); err != nil {
 		t.Fatal(err)
 	}
 	if store.askedTemplate != "p1" {
@@ -383,7 +529,7 @@ func TestListSkipsTheDirectoryWhenNothingIsScoped(t *testing.T) {
 // A scope write with no directory wired must fail closed rather than save an unvalidated set.
 func TestScopedWriteWithoutADirectoryFails(t *testing.T) {
 	svc, _ := newTestService(t, nil)
-	if _, err := svc.Create(context.Background(), "alice", "a", ScopeTemplates, []string{"p1"}, ""); err == nil {
+	if _, err := svc.Create(context.Background(), "alice", "a", ScopePatch{Scope: ScopeTemplates, TemplateIDs: []string{"p1"}}, ""); err == nil {
 		t.Fatal("a scoped create was accepted with no template directory")
 	}
 }
@@ -394,7 +540,7 @@ func TestNewServiceRejectsNonPositiveLimits(t *testing.T) {
 			t.Fatal("a zero limit was accepted")
 		}
 	}()
-	NewService(newFakeStore(), Limits{TextMaxChars: 0, MaxPerAccount: 1}, 2)
+	NewService(newFakeStore(), testFields, Limits{TextMaxChars: 0, MaxPerAccount: 1}, 2)
 }
 
 // --- candidates (change 26) ---
@@ -482,13 +628,13 @@ func TestDismissCandidateMarksRatherThanDeletes(t *testing.T) {
 // reappearing as a pending candidate.
 func TestCreateCarriesTheCandidateApproval(t *testing.T) {
 	svc, store := newTestService(t, &fakeDirectory{})
-	if _, err := svc.Create(context.Background(), "alice", "  광고 금지  ", ScopeGlobal, nil, ""); err != nil {
+	if _, err := svc.Create(context.Background(), "alice", "  광고 금지  ", ScopePatch{Scope: ScopeGlobal}, ""); err != nil {
 		t.Fatal(err)
 	}
 	if got := store.approvals[0]; got.Text != "광고 금지" || got.ID != "" {
 		t.Fatalf("approval = %+v", got)
 	}
-	if _, err := svc.Create(context.Background(), "alice", "짧게", ScopeGlobal, nil, "  c9  "); err != nil {
+	if _, err := svc.Create(context.Background(), "alice", "짧게", ScopePatch{Scope: ScopeGlobal}, "  c9  "); err != nil {
 		t.Fatal(err)
 	}
 	if got := store.approvals[1]; got.ID != "c9" || got.Text != "짧게" {
@@ -500,7 +646,7 @@ func TestCreateCarriesTheCandidateApproval(t *testing.T) {
 // shorten it and try again (change 26's bound split).
 func TestCreateRefusedByTheTextBoundApprovesNothing(t *testing.T) {
 	svc, store := newTestService(t, &fakeDirectory{})
-	_, err := svc.Create(context.Background(), "alice", strings.Repeat("가", 11), ScopeGlobal, nil, "c1")
+	_, err := svc.Create(context.Background(), "alice", strings.Repeat("가", 11), ScopePatch{Scope: ScopeGlobal}, "c1")
 	var tooLong *TextTooLongError
 	if !errors.As(err, &tooLong) {
 		t.Fatalf("over-bound create err = %v", err)
@@ -532,5 +678,16 @@ func TestNewServiceRefusesANonPositivePendingBound(t *testing.T) {
 			t.Fatal("a non-positive pending bound was accepted")
 		}
 	}()
-	NewService(newFakeStore(), Limits{TextMaxChars: 10, MaxPerAccount: 1}, 0)
+	NewService(newFakeStore(), testFields, Limits{TextMaxChars: 10, MaxPerAccount: 1}, 0)
+}
+
+// ARCH-40: every fields scope and every preset write needs the directory, so a service without
+// one is a wiring error, not a mode.
+func TestNewServiceRequiresAFieldDirectory(t *testing.T) {
+	defer func() {
+		if recovered := recover(); recovered != "guideline: a field directory is required" {
+			t.Fatalf("recovered %v", recovered)
+		}
+	}()
+	NewService(newFakeStore(), nil, Limits{TextMaxChars: 10, MaxPerAccount: 1}, 1)
 }

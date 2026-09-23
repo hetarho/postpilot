@@ -18,9 +18,11 @@ type fakeGuidelines struct {
 	texts         []string
 	calls         int
 	askedTemplate *string
+	askedField    *string
+	askedRevision bool
 }
 
-func (f *fakeGuidelines) ForPrompt(_ context.Context, _ string, templateID *string) ([]string, error) {
+func (f *fakeGuidelines) ForPrompt(_ context.Context, _ string, templateID, field *string, forRevision bool) ([]string, error) {
 	f.calls++
 	if templateID == nil {
 		f.askedTemplate = nil
@@ -28,6 +30,13 @@ func (f *fakeGuidelines) ForPrompt(_ context.Context, _ string, templateID *stri
 		id := *templateID
 		f.askedTemplate = &id
 	}
+	if field == nil {
+		f.askedField = nil
+	} else {
+		id := *field
+		f.askedField = &id
+	}
+	f.askedRevision = forRevision
 	return f.texts, nil
 }
 
@@ -337,5 +346,46 @@ func TestAnUnwiredResolverPromptsWithoutGuidelines(t *testing.T) {
 	}
 	if len(jobs.generations[0].Guidelines) != 0 {
 		t.Fatalf("an unwired resolver produced %v", jobs.generations[0].Guidelines)
+	}
+}
+
+// GUIDE-17, GEN-57: every entry point freezes with the post's 분야, and only a revision asks
+// without the preset line. A post with no 분야 is asked for none, not for the empty id.
+func TestEveryEntryPointAsksWithThePostsFieldAndItsRevisionFlag(t *testing.T) {
+	ctx := context.Background()
+	guidelines := &fakeGuidelines{texts: testGuidelines()}
+	posts := &fakePosts{input: PostInput{
+		Slug: "post", UserID: "alice", Voice: liveVoice, TemplateID: "template-review", Field: "cafe",
+		Content: revisionContent("body"),
+	}}
+	models := newFakeModels()
+	models.complete = func(llm.ModelRef, llm.Request) (llm.Response, error) { return okContent(), nil }
+	svc := guidelineAwareService(t, guidelines, &fakeTemplateBriefs{brief: *testBrief()}, posts, &fakeJobs{id: "job"}, models)
+	asked := func(entry string, revision bool) {
+		t.Helper()
+		if guidelines.askedField == nil || *guidelines.askedField != "cafe" || guidelines.askedRevision != revision {
+			t.Fatalf("%s asked for 분야 %v with forRevision=%v, want cafe and %v", entry, guidelines.askedField, guidelines.askedRevision, revision)
+		}
+	}
+
+	if _, err := svc.Start(ctx, StartRequest{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()}); err != nil {
+		t.Fatal(err)
+	}
+	asked("Start", false)
+	if _, err := svc.StartRevision(ctx, StartRevisionRequest{UserID: "alice", PostSlug: "post", Instruction: "더 짧게", WriteModel: writeRef.String()}); err != nil {
+		t.Fatal(err)
+	}
+	asked("StartRevision", true)
+	if _, err := svc.SnapshotWriteInput(ctx, "alice", "post", llm.ModelRef{}, nil, nil, false); err != nil {
+		t.Fatal(err)
+	}
+	asked("SnapshotWriteInput", false)
+
+	posts.input.Field = ""
+	if _, err := svc.Start(ctx, StartRequest{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()}); err != nil {
+		t.Fatal(err)
+	}
+	if guidelines.askedField != nil {
+		t.Fatalf("a post with no 분야 asked for %q", *guidelines.askedField)
 	}
 }

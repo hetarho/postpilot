@@ -51,7 +51,6 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T342 | Guidelines scoped by 분야, the 상위 노출 단어 사용 preset, and 분야-aware freezing | GUIDE GEN ARCH | T332 T337 T330 | todo |
 | T343 | ③ records, replaces and clears the post's Naver address | POST ARCH THEME | T339 | todo |
 | T344 | Generation freezes the ticked rule texts and the 분야 phrase list at enqueue | GEN POST QUAL GUIDE ARCH | T335 T342 T341 T333 | todo |
 | T345 | ① picks the post's 분야 and autosaves it through the draft queue | POST QUAL ARCH THEME | T337 T343 | todo |
@@ -65,10 +64,12 @@
 | T353 | Toggling 기억 사용 keeps the post's 목표 글자 수 | POST MEM ARCH | - | todo |
 
 ## next
-- implement-task T342 (then the dep order in the tasks table; T342, T343 and T348 are unblocked)
+- implement-task T343 (then the dep order in the tasks table; T343, T344, T347 and T348 are unblocked)
 - T352 and T353 are independent pre-existing bug fixes (frozen memories never reach a durable generate; the 기억 사용 toggle clears 목표 글자 수)
 - create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 ## log
+- 260924 T342 done; a guideline can be scoped to listed 분야 (all three shapes validated, collapsed, rescoped as one normalized patch), the owner switches the 상위 노출 단어 사용 preset and picks its 분야 as a presence patch outside the cap and text uniqueness, and every generation and write snapshot freezes global, template and 분야 texts with the preset line last while a revision never carries it; only the owner's procedures write guideline rows (structural test); BE gate passes (p35)
+- 260924 T342 claimed (p35)
 - 260924 T341 done; a generation and an applied write winner replace the post's stored nouns and replacement candidates (none clears them), a revision and a manual save keep them, an identical content with other annotations is a new machine write, Post.replacement_candidates carries them in stored order while nouns stay off the wire, and a lab candidate's output carries both with a legacy output reading as none; BE gate and gen:sql pass (p35)
 - 260924 T341 claimed (p35)
 - 260924 T340 done; the template screen authors an optional 제목 형식 above 템플릿 구성 under one 블록 · 원문 switch: the title builder offers only AI가 쓰는 글 and 고정 문구 on one line joined by spaces, a body row asking under a title label says so and stays out until the title lets it go, 제목 원문 has its own field, counter and failure, an unreadable title is fixed or cleared from its own section, and the parse refusal keeps its area; FE gates pass (p35)
@@ -87,5 +88,3 @@
 - 260924 T334 claimed (p35)
 - 260924 T333 done; templates store an edge-trimmed, bounded title area with presence semantics, create and update parse both areas together (an update checks the stored counterpart inside its transaction), and RenderedFor renders the title with the post answers into the frozen generate, revise and experiment briefs; nothing moves without one; BE gate, gen:sql and deploy tests pass (p35)
 - 260924 T333 found: .env.production.example still carries a dead PURPOSE_* block that nothing reads (out of scope)
-- 260924 T333 claimed (p35)
-- 260924 T332 done; migration 0078 rebuilds guidelines so scope admits fields with every row and template link intact (reversible: fields fall back to link-less templates), adds guideline_fields and the preset tables, and the store reads and writes all three groups in injection order plus the preset as a presence patch; the service still refuses a fields scope; BE gate and gen:sql reproduction pass (p35)

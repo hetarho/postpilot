@@ -244,6 +244,8 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 
 	c.guideline = guideline.NewService(
 		guidelinestore.New(handle.Writer, handle.Reader),
+		// The same 분야 directory post uses: one adapter over quality's list, not a second.
+		blogFields{},
 		guideline.Limits{TextMaxChars: cfg.GuidelineTextMaxChars, MaxPerAccount: cfg.GuidelineMaxPerAccount},
 		cfg.GuidelineCandidateMaxPending,
 	)

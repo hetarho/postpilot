@@ -3,6 +3,8 @@ package rpc
 import (
 	"context"
 	"errors"
+	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -11,8 +13,12 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/postpilot/backend/internal/auth"
+	authstore "github.com/postpilot/backend/internal/auth/store"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/guideline"
+	guidelinestore "github.com/postpilot/backend/internal/guideline/store"
+	"github.com/postpilot/backend/internal/plan"
+	"github.com/postpilot/backend/internal/platform/db"
 )
 
 // A1/A2: every refusal the user can provoke has a stable code and reason, and the two
@@ -93,7 +99,7 @@ func appErrorDetail(t *testing.T, err error) *postpilotv1.AppErrorDetail {
 // A1: the account comes from the session on every procedure, and the contract gives a caller
 // nowhere to claim one.
 func TestEveryProcedureRequiresASessionAndNoRequestCarriesAUserID(t *testing.T) {
-	handler := NewHandler(guideline.NewService(nil, guideline.Limits{TextMaxChars: 1, MaxPerAccount: 1}, 1))
+	handler := NewHandler(guideline.NewService(nil, knownFields{}, guideline.Limits{TextMaxChars: 1, MaxPerAccount: 1}, 1))
 	anonymous := context.Background()
 
 	if _, err := handler.ListGuidelines(anonymous, connect.NewRequest(&postpilotv1.ListGuidelinesRequest{})); connect.CodeOf(err) != connect.CodeUnauthenticated {
@@ -114,17 +120,12 @@ func TestEveryProcedureRequiresASessionAndNoRequestCarriesAUserID(t *testing.T) 
 	if _, err := handler.DismissGuidelineCandidate(anonymous, connect.NewRequest(&postpilotv1.DismissGuidelineCandidateRequest{})); connect.CodeOf(err) != connect.CodeUnauthenticated {
 		t.Fatalf("dismiss candidate = %v", err)
 	}
-	// The preset has a wire shape before it has a behaviour (T342): it still answers only a
-	// session, and answers that session Unimplemented with no reason.
+	// The preset answers only a session too. Its signed-in behaviour needs a store, which this
+	// handler's service does not have; the presence-mapping test covers it instead.
 	enabled := true
 	preset := connect.NewRequest(&postpilotv1.UpdateGuidelinePresetRequest{Enabled: &enabled})
 	if _, err := handler.UpdateGuidelinePreset(anonymous, preset); connect.CodeOf(err) != connect.CodeUnauthenticated || appErrorDetail(t, err).GetReason() != "AUTH_REQUIRED" {
 		t.Fatalf("update preset = %v", err)
-	}
-	_, err := handler.UpdateGuidelinePreset(auth.WithUser(anonymous, "alice"), preset)
-	var connectErr *connect.Error
-	if connect.CodeOf(err) != connect.CodeUnimplemented || !errors.As(err, &connectErr) || len(connectErr.Details()) != 0 {
-		t.Fatalf("signed-in update preset = %v, want unimplemented with no reason", err)
 	}
 
 	for _, message := range []proto.Message{
@@ -196,5 +197,151 @@ func TestGuidelineCandidateCarriesNoScope(t *testing.T) {
 		case "scope", "template_ids":
 			t.Fatalf("GuidelineCandidate carries %s", name)
 		}
+	}
+}
+
+// knownFields is a field directory that knows every 분야, for tests about everything else.
+type knownFields struct{}
+
+func (knownFields) Known(string) bool { return true }
+
+// ARCH-3, both ways: every named scope but UNSPECIFIED is one domain kind and back, UNSPECIFIED
+// and any unnamed number are refused, and a kind the edge cannot name goes out as UNSPECIFIED,
+// never as GLOBAL.
+func TestGuidelineScopeWalksTheGeneratedEnum(t *testing.T) {
+	seen := map[guideline.Scope]bool{}
+	for number := range postpilotv1.GuidelineScope_name {
+		wire := postpilotv1.GuidelineScope(number)
+		scope, err := fromProtoScope(wire)
+		if wire == postpilotv1.GuidelineScope_GUIDELINE_SCOPE_UNSPECIFIED {
+			if !errors.Is(err, guideline.ErrScopeShape) {
+				t.Fatalf("UNSPECIFIED mapped to %q (%v)", scope, err)
+			}
+			continue
+		}
+		if err != nil || seen[scope] || !scope.Valid() {
+			t.Fatalf("%s mapped to %q (%v, seen=%v)", wire, scope, err, seen[scope])
+		}
+		seen[scope] = true
+		if back := toProtoScope(scope); back != wire {
+			t.Fatalf("%q came back as %s", scope, back)
+		}
+	}
+	if len(seen) != 3 {
+		t.Fatalf("the enum names %d kinds, want global, templates and fields", len(seen))
+	}
+	if _, err := fromProtoScope(postpilotv1.GuidelineScope(99)); !errors.Is(err, guideline.ErrScopeShape) {
+		t.Fatalf("an unnamed number mapped: %v", err)
+	}
+	if got := toProtoScope("voice"); got != postpilotv1.GuidelineScope_GUIDELINE_SCOPE_UNSPECIFIED {
+		t.Fatalf("an unknown kind went out as %s", got)
+	}
+}
+
+// 분야 cross the edge only through the shared mapper: out, an id it cannot name is dropped;
+// the preset carries the product's text with the account's state.
+func TestFieldsAndThePresetProject(t *testing.T) {
+	at := time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
+	projected := toProtoGuideline(guideline.Guideline{
+		ID: "g1", Text: "메뉴 가격은 쓰지 않기", Scope: guideline.ScopeFields,
+		Fields: []string{"cafe", "retired", "pets"}, CreatedAt: at, UpdatedAt: at,
+	})
+	if projected.GetScope() != postpilotv1.GuidelineScope_GUIDELINE_SCOPE_FIELDS {
+		t.Fatalf("scope = %s", projected.GetScope())
+	}
+	if want := []postpilotv1.BlogField{postpilotv1.BlogField_BLOG_FIELD_CAFE, postpilotv1.BlogField_BLOG_FIELD_PETS}; !reflect.DeepEqual(projected.GetFields(), want) {
+		t.Fatalf("fields = %v, want %v", projected.GetFields(), want)
+	}
+	preset := toProtoPreset(guideline.Preset{Enabled: true, Fields: []string{"restaurant"}})
+	if preset.GetText() != guideline.PresetText || !preset.GetEnabled() || !reflect.DeepEqual(preset.GetFields(), []postpilotv1.BlogField{postpilotv1.BlogField_BLOG_FIELD_RESTAURANT}) {
+		t.Fatalf("preset = %+v", preset)
+	}
+	if off := toProtoPreset(guideline.Preset{}); off.GetText() != guideline.PresetText || off.GetEnabled() || len(off.GetFields()) != 0 {
+		t.Fatalf("an untouched preset = %+v", off)
+	}
+}
+
+// UpdateGuidelinePreset is a presence patch over the wire: optional `enabled`, and the `fields`
+// MESSAGE, whose presence replaces the set — present and empty clears it. A 분야 the mapper cannot
+// name is GUIDELINE_FIELD_NOT_FOUND and applies nothing.
+func TestUpdateGuidelinePresetMapsPresence(t *testing.T) {
+	handle, err := db.Open(filepath.Join(t.TempDir(), "guidelines.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { handle.Close() })
+	ctx := context.Background()
+	if err := db.Migrate(ctx, handle.Writer); err != nil {
+		t.Fatal(err)
+	}
+	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: time.Now()}); err != nil {
+		t.Fatal(err)
+	}
+	handler := NewHandler(guideline.NewService(guidelinestore.New(handle.Writer, handle.Reader), knownFields{}, guideline.Limits{TextMaxChars: 300, MaxPerAccount: 10}, 5))
+	alice := auth.WithUser(ctx, "alice")
+	on, off := true, false
+	update := func(request *postpilotv1.UpdateGuidelinePresetRequest) (*postpilotv1.GuidelinePreset, error) {
+		response, err := handler.UpdateGuidelinePreset(alice, connect.NewRequest(request))
+		if err != nil {
+			return nil, err
+		}
+		return response.Msg.GetPreset(), nil
+	}
+	expect := func(step string, got *postpilotv1.GuidelinePreset, enabled bool, fields ...postpilotv1.BlogField) {
+		t.Helper()
+		if got.GetText() != guideline.PresetText || got.GetEnabled() != enabled || len(got.GetFields()) != len(fields) || (len(fields) > 0 && !reflect.DeepEqual(got.GetFields(), fields)) {
+			t.Fatalf("%s: preset = %+v, want enabled=%v fields=%v", step, got, enabled, fields)
+		}
+	}
+	cafe, pets := postpilotv1.BlogField_BLOG_FIELD_CAFE, postpilotv1.BlogField_BLOG_FIELD_PETS
+
+	got, err := update(&postpilotv1.UpdateGuidelinePresetRequest{Enabled: &on})
+	if err != nil {
+		t.Fatal(err)
+	}
+	expect("switched on", got, true)
+	got, err = update(&postpilotv1.UpdateGuidelinePresetRequest{Fields: &postpilotv1.GuidelinePresetFields{Fields: []postpilotv1.BlogField{pets, cafe, pets}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	expect("fields alone keep the switch", got, true, cafe, pets)
+	got, err = update(&postpilotv1.UpdateGuidelinePresetRequest{Enabled: &off})
+	if err != nil {
+		t.Fatal(err)
+	}
+	expect("the switch alone keeps the fields", got, false, cafe, pets)
+
+	for name, bad := range map[string]postpilotv1.BlogField{"UNSPECIFIED": postpilotv1.BlogField_BLOG_FIELD_UNSPECIFIED, "an unnamed number": postpilotv1.BlogField(99)} {
+		_, err := update(&postpilotv1.UpdateGuidelinePresetRequest{Enabled: &on, Fields: &postpilotv1.GuidelinePresetFields{Fields: []postpilotv1.BlogField{cafe, bad}}})
+		if connect.CodeOf(err) != connect.CodeNotFound || appErrorDetail(t, err).GetReason() != "GUIDELINE_FIELD_NOT_FOUND" {
+			t.Fatalf("%s: err = %v", name, err)
+		}
+	}
+	listed, err := handler.ListGuidelines(alice, connect.NewRequest(&postpilotv1.ListGuidelinesRequest{}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	expect("a refused update applied nothing", listed.Msg.GetPreset(), false, cafe, pets)
+
+	got, err = update(&postpilotv1.UpdateGuidelinePresetRequest{Fields: &postpilotv1.GuidelinePresetFields{}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	expect("present and empty clears", got, false)
+}
+
+// The edge refuses what names no 분야 itself — UNSPECIFIED and unnamed numbers — rather than
+// relying on the service's blank-id refusal behind it.
+func TestFromProtoFieldsRefusesWhatNamesNoField(t *testing.T) {
+	for name, values := range map[string][]postpilotv1.BlogField{
+		"UNSPECIFIED":       {postpilotv1.BlogField_BLOG_FIELD_CAFE, postpilotv1.BlogField_BLOG_FIELD_UNSPECIFIED},
+		"an unnamed number": {postpilotv1.BlogField(99)},
+	} {
+		if ids, err := fromProtoFields(values); !errors.Is(err, guideline.ErrFieldNotFound) || ids != nil {
+			t.Errorf("%s: %v, %v", name, ids, err)
+		}
+	}
+	if ids, err := fromProtoFields([]postpilotv1.BlogField{postpilotv1.BlogField_BLOG_FIELD_PETS, postpilotv1.BlogField_BLOG_FIELD_CAFE}); err != nil || !reflect.DeepEqual(ids, []string{"pets", "cafe"}) {
+		t.Fatalf("named 분야 = %v, %v", ids, err)
 	}
 }
