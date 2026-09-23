@@ -53,10 +53,10 @@
 |---|---|---|---|---|
 
 ## next
-- create-task QUAL POST GEN GUIDE TMPL for the 발행됨 status and post measurement — QUAL r1 is a new domain (`all`), the other four carry deltas; QUAL and POST come first because GEN, GUIDE and TMPL all reference the status, the 분야 attribute and the phrase list
-- no [?] remains in any of the five; TMPL-39 (a photo row of n > 1 through export) predates this work and is unrelated to it
+- resume create-task QUAL POST GEN GUIDE TMPL from spec/handoff/create-task-260923/ (plan.json = 30 tasks T322..T351, resolutions.md = R1..R42); no task file is written yet
 - create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 ## log
+- 260923 create-task QUAL POST GEN GUIDE TMPL paused for a machine switch; mapping, SSOT fixes and the 30-task plan are done, task files not yet written; handoff in spec/handoff/create-task-260923/
 - 260923 update-ssot complete; QUAL r2 POST r11 GEN r10 GUIDE r5 TMPL r10 close 34 of the 42 mapping gaps (a published post refuses every write but URL replace/clear and delete; the write pass returns nouns; the ② offer needs only a 분야; revise drops the preset line); the other 8 are implementation rules for the tasks
 - 260923 create-task QUAL POST GEN GUIDE TMPL start; QUAL r1 all, POST r10, GEN r9, GUIDE r4, TMPL r9
 - 260923 the five domains' opens all closed ahead of create-task; measurement split into a per-post layer shown from ② and an aggregate over 발행됨 posts only, vocabulary ranked guideline > template > voice with the preset injected last, and 분야 picked on ①'s panel
@@ -76,4 +76,3 @@
 - 260923 ideation post-quality-and-related-links: GEO deferred out of v1 (citation unobservable); title area optional; blanket phrase bans rejected for measured per-account repetition; word choice extended to tags and body
 - 260923 template generation freshness investigation complete; each new StartGeneration reads the current saved template body and freezes it in the job; running jobs keep their frozen copy, while template length/tag defaults seed only when assigned
 - 260923 template generation freshness investigation start; trace saved template edits into a subsequent post generation request
-- 260922 ideation post-quality-and-related-links continue; adding SEO/GEO methodology, title templates, high-value vocabulary

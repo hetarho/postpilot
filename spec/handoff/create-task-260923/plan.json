@@ -1,0 +1,1523 @@
+[
+ {
+  "key": "wire-contract-for-published-quality",
+  "title": "The wire contract for 발행됨, 분야, quality, the guideline preset and the template title area",
+  "ssot_ids": [
+   "QUAL-23",
+   "QUAL-40",
+   "POST-73",
+   "POST-75",
+   "POST-79",
+   "POST-81",
+   "POST-82",
+   "GEN-53",
+   "GUIDE-5",
+   "GUIDE-29",
+   "TMPL-2",
+   "TMPL-8",
+   "ARCH-3",
+   "ARCH-17",
+   "ARCH-41",
+   "ARCH-24"
+  ],
+  "base": [
+   "POST@11",
+   "QUAL@2",
+   "GEN@10",
+   "GUIDE@5",
+   "TMPL@10",
+   "ARCH@9"
+  ],
+  "deps": [],
+  "goal": "Every proto message, enum, rpc and failure reason this delta needs exists exactly once. Each is generated and committed on both sides and pinned by walk tests. No later task runs buf generate.",
+  "scope": [
+   "proto/postpilot/v1/post.proto:\n- enum BlogField exactly per R1 (BLOG_FIELD_UNSPECIFIED = 0 means 없음 … BLOG_FIELD_DAILY_LIFE = 9).\n- enum ReplacementSurface { REPLACEMENT_SURFACE_UNSPECIFIED = 0; _TITLE = 1; _TAG = 2; _BODY = 3 } and message ReplacementCandidate { ReplacementSurface surface; int32 index; string source; repeated string phrases } (R29).\n- Post gains, from field 27 (HEAD's next free number): string published_url ('' = none), string published_at (RFC3339 or ''), BlogField field, repeated ReplacementCandidate replacement_candidates, repeated QualityMetric quality_rules.\n- SavePostDraftRequest gains `optional BlogField field = 8`: absent keeps, UNSPECIFIED clears (R12).\n- SavePostGenerationOptionsRequest gains `optional QualityRuleTicks quality_rules = 5`, where `message QualityRuleTicks { repeated QualityMetric metrics }`: absent keeps, present-and-empty clears (R23).\n- `rpc SavePostPublishedUrl(SavePostPublishedUrlRequest{slug, url}) returns (SavePostPublishedUrlResponse{Post post})`; an empty url clears (R5).\n- The Post.status comment names published, and the file imports quality.proto.",
+   "proto/postpilot/v1/quality.proto (new; one file, one service, ARCH-41; imports nothing from post.proto):\n- QualityMetric and QualityVerdict exactly per R3.\n- `service QualityService { rpc GetPostMeasurement; rpc GetAccountQuality }`, both taking {slug}.\n- GetPostMeasurement answers content_revision plus three metrics, every value `optional` and each metric with its verdict (QUAL-40): M2 (fixed-phrase share, with the minimum and published count it was judged against, QUAL-36), M3 (repetition share, title relevance) and M4 (character count, photo count, distinct block types, average sentence length).\n- GetAccountQuality answers one entry per QualityMetric: verdict, optional value(s) (M3 two, M4 four with the banded one marked), band, minimum, published_count, and rule_text set only when OVER_BAND (R22).",
+   "proto/postpilot/v1/guideline.proto (imports post.proto for BlogField):\n- GUIDELINE_SCOPE_FIELDS = 3.\n- `repeated BlogField fields` on Guideline, CreateGuidelineRequest and GuidelineScopePatch.\n- message GuidelinePreset { string text; bool enabled; repeated BlogField fields }, and ListGuidelinesResponse.preset.\n- `rpc UpdateGuidelinePreset(UpdateGuidelinePresetRequest{ optional bool enabled; optional GuidelinePresetFields fields })` returning the preset, where GuidelinePresetFields { repeated BlogField fields } (R33).",
+   "proto/postpilot/v1/template.proto: Template.title_area, CreateTemplateRequest.title_area, and UpdateTemplateRequest `optional string title_area` (absent keeps, '' clears; R35, TMPL-8).",
+   "proto/postpilot/v1/error.proto: append after the highest used number (234 at HEAD), never reusing a reserved PUBLISH_* name or number. The five new reasons are POST_PUBLISHED_LOCKED, POST_PUBLISHED_URL_INVALID (R5), POST_FIELD_NOT_FOUND, POST_QUALITY_RULE_INVALID and GUIDELINE_FIELD_NOT_FOUND. Run `pnpm gen:proto` and commit backend/internal/gen and frontend/src/shared/api/gen.",
+   "Emit every new reason now, because TestEveryTypedReasonIsEmitted scans NewAppError calls:\n- backend/internal/post/types.go declares ErrPostPublished → FailedPrecondition POST_PUBLISHED_LOCKED, ErrPublishedURLInvalid → InvalidArgument POST_PUBLISHED_URL_INVALID, ErrFieldNotFound → NotFound POST_FIELD_NOT_FOUND (the ErrTemplateNotFound precedent) and ErrQualityRuleInvalid → InvalidArgument POST_QUALITY_RULE_INVALID, all mapped in post/rpc toConnectError.\n- backend/internal/guideline/types.go declares ErrFieldNotFound → NotFound GUIDELINE_FIELD_NOT_FOUND (GUIDE-5), mapped in guideline/rpc.\n- Extend both handlers' error-mapping tests.",
+   "Temporary handlers: post/rpc SavePostPublishedUrl and guideline/rpc UpdateGuidelinePreset return CodeUnimplemented until post-published-status-and-url and guideline-fields-scope-and-preset-service replace them. The session and no-user-id procedure tests cover both. QualityService gets no handler here; quality-service-store-and-rpc registers it.",
+   "backend/internal/quality/fields.go, the package's first file:\n- Its doc comment records that ARCH-5's context list is already stale (clip and memory are missing) and that no ARCH edit blocks this (R13).\n- It holds the ordered v1 catalogue per QUAL-23: ASCII id, Korean name, and the batch query (the name with · replaced by a space). It exports Fields(), FieldByID(id) and Known(id).\n- fields_test.go pins all nine in order.",
+   "One BE BlogField ↔ ASCII id mapper in backend/internal/platform/rpcserver beside language.go, the shared precedent. It has no default branch, and post/rpc and guideline/rpc both use it. A walk test covers postpilotv1.BlogField_name in both directions, and a cmd/api test asserts its ids equal quality.Fields() (ARCH-3, R1).",
+   "Frontend: specs in frontend/src/shared/api/app-failure.ts plus ko/en copy in app/providers/i18n/resources/{ko,en}/errors.ts for the five reasons. POST_PUBLISHED_LOCKED names the way out, clearing the URL on ③ (POST-86). POST_PUBLISHED_URL_INVALID states POST-77's rule. resources.test.ts parity stays green. shared/api re-exports ProtoBlogField.",
+   "frontend/src/entities/blog-field (never a bare `field` slice, R2):\n- model: the id union, the ordered list and '' = 없음.\n- api: an enum ↔ id mapper with a generated-enum walk test and no fallback.\n- A ko/en label fragment in the posts namespace under its own top-level key (R38): 맛집 · 카페 · 국내여행 · 패션·미용 · 상품리뷰 · 육아·결혼 · 반려동물 · 인테리어·DIY · 일상·생각, 없음. Register it in app/providers/i18n/resources/index.ts.\n- index.ts.",
+   "Verify with ARCH-26 including `test -z \"$(gofmt -l .)\"`, ARCH-28's `pnpm gen:proto && git diff --exit-code -- backend/internal/gen frontend/src/shared/api/gen`, and ARCH-25."
+  ],
+  "out_of_scope": [
+   "any behaviour behind the new fields and rpcs (status, lock, URL, 분야 and tick saves, measurement, preset, title area)",
+   "the QualityMetric, QualityVerdict and ReplacementSurface hand mirrors; each consuming task adds its own with a walk test",
+   "FE post, guideline and template domain mapping beyond entities/blog-field and the failure catalogue"
+  ],
+  "migration": false,
+  "proto_files": [
+   "proto/postpilot/v1/post.proto",
+   "proto/postpilot/v1/quality.proto",
+   "proto/postpilot/v1/guideline.proto",
+   "proto/postpilot/v1/template.proto",
+   "proto/postpilot/v1/error.proto"
+  ],
+  "size": "M",
+  "num": 322,
+  "id": "T322",
+  "wave": 0,
+  "dep_ids": [],
+  "base_line": "QUAL@2 POST@11 GEN@10 GUIDE@5 TMPL@10 ARCH@9"
+ },
+ {
+  "key": "schema-for-published-quality",
+  "title": "One additive migration for publication, 분야, nouns, candidates, ticks, measurements, phrase lists and the title area",
+  "ssot_ids": [
+   "POST-73",
+   "POST-75",
+   "POST-81",
+   "POST-82",
+   "POST-85",
+   "QUAL-4",
+   "QUAL-22",
+   "QUAL-39",
+   "GEN-48",
+   "GEN-53",
+   "GEN-55",
+   "TMPL-2",
+   "TMPL-52",
+   "ARCH-10",
+   "ARCH-24"
+  ],
+  "base": [
+   "POST@11",
+   "QUAL@2",
+   "GEN@10",
+   "TMPL@10",
+   "ARCH@9"
+  ],
+  "deps": [],
+  "goal": "One low-risk additive migration creates every new column and table except the guidelines rebuild. Later tasks add no migration and cannot race for a number (R41).",
+  "scope": [
+   "backend/internal/platform/db/migrations/NNNN_published_quality.sql takes the next free number at implementation time (0077 at HEAD). posts gains:\n- published_url and published_at TEXT NULL, with a CHECK that both are NULL or both are NOT NULL (R8). Rebuild the table only if SQLite's ALTER cannot express the pair.\n- field TEXT NULL, with no CHECK (R1, R12).\n- content_nouns TEXT NULL (R16), replacement_candidates TEXT NULL (R29) and quality_rules TEXT NULL (R23). Each JSON column carries `CHECK (col IS NULL OR json_valid(col))`.\n- A partial index posts(user_id, published_at) WHERE status = 'published', for the published_at-descending windows (QUAL-39).",
+   "The same file also creates:\n- post_measurements exactly per R15, with FOREIGN KEY (post_slug, user_id) REFERENCES posts(slug, user_id) ON DELETE CASCADE (POST-85). posts_slug_user_idx already backs the key.\n- field_phrase_lists exactly per R24, with no user_id (QUAL-22).\n- templates.title_area TEXT NOT NULL DEFAULT '', with no backfill (R35, TMPL-52).",
+   "The goose Down block first returns published rows to finalized. It then drops the tables, the index and the columns in an order SQLite's DROP COLUMN accepts: a CHECK-bearing column goes before the column it names. db_test.go's rollback exercises it.",
+   "backend/internal/platform/db/migration_NNNN_test.go (UpTo(prev), seed, migrate) proves:\n- legacy posts read NULL and keep their status;\n- legacy templates read '' with the body byte-identical;\n- a half-set published pair is refused, and so is invalid JSON;\n- deleting a post removes its post_measurements row;\n- a second Migrate is a no-op.\nAlso relax migration_0076_test.go's `version != 76` pin to \"76 is applied\".",
+   "backend/internal/post/store/queries/posts.sql and backend/internal/template/store/queries/templates.sql (ASCII only): append the new columns in table order to GetPost and to every query that returns the full row, so sqlc keeps returning its model types. toPost and toTemplate ignore the new columns; each owning task maps its own. Run `pnpm gen:sql`.",
+   "Verify with ARCH-26 including gofmt, and ARCH-28's `pnpm gen:sql && git diff --exit-code -- backend`."
+  ],
+  "out_of_scope": [
+   "any read or write behaviour for the new columns",
+   "the quality sqlc entry and queries (quality-service-store-and-rpc)",
+   "the guidelines tables (guidelines-rebuild-for-fields-and-preset)"
+  ],
+  "migration": true,
+  "proto_files": [],
+  "size": "M",
+  "num": 323,
+  "id": "T323",
+  "wave": 0,
+  "dep_ids": [],
+  "base_line": "POST@11 QUAL@2 GEN@10 TMPL@10 ARCH@9"
+ },
+ {
+  "key": "write-prompt-rules-sections-and-nouns",
+  "title": "The write prompt gains the title and tag rules, the vocabulary precedence, the quality and title-area sections, and a nouns answer",
+  "ssot_ids": [
+   "GEN-14",
+   "GEN-49",
+   "GEN-50",
+   "GEN-51",
+   "GEN-52",
+   "GEN-55",
+   "GUIDE-35",
+   "GUIDE-36",
+   "GUIDE-37",
+   "TMPL-52",
+   "QUAL-13",
+   "QUAL-16",
+   "QUAL-26",
+   "QUAL-34",
+   "ARCH-24"
+  ],
+  "base": [
+   "GEN@10",
+   "GUIDE@5",
+   "TMPL@10",
+   "QUAL@2",
+   "ARCH@9"
+  ],
+  "deps": [],
+  "goal": "This is the one owner of prompts.go's fixed text and of the write goldens.\n- It adds the always-present rules.\n- It rewrites both precedence sentences.\n- It adds two sections that are zero bytes when absent: ticked quality rules and the template title area.\n- It adds the `nouns` member of every write answer.\n- It regenerates the goldens deliberately.",
+  "scope": [
+   "backend/internal/generation/prompts.go: Korean and English constants for the two GEN-49 title prohibitions and the GEN-50 tag rule. Each has a doc comment naming its primary source, as koreanAltitude has. They sit inside WritePrompt and englishWritePrompt after the naming line, so TestNaturalnessBaselineIsSharedByWriteAndRevise's prefix still holds, and never appear in the revise or observe prompts. No search-demand data is read anywhere (GEN-50, QUAL-34).",
+   "Rewrite templatePrecedence and guidelinePrecedence per GUIDE-35/36/37 (R27):\n- 문체 and 종결어미 stay with the voice.\n- A concrete write-B-where-the-source-says-A substitution ranks guideline > template > profile.\n- An abstract vocabulary instruction carries no such authority.\n- guidelinePrecedence also states that the earlier line inside [작문 지침] wins.\n- templatePrecedence still never contains 지침 (TMPL-13).",
+   "The nouns answer (R28):\n- The write output-format line requests `nouns`.\n- A new schema under schemas/, with an accessor in schemas.go, is PostContent plus `nouns: string[]` with maxItems 40. write.go selects it; revise keeps PostContentSchema() and its format line.\n- parse.go gains ParseWriteAnswer, returning content plus nouns: trimmed, distinct, empties dropped, capped at 40, with a missing or null member meaning none. ParseContent is unchanged for revise.\n- writeCandidate returns the nouns; write-answer-persists-nouns-and-candidates persists them.",
+   "The quality section: PostInput.QualityRules []string `json:\"quality_rules,omitempty\"` holds the frozen rendered texts, which enqueue-freezes-quality-rules-and-phrases fills. writeQualityRulesSection places them after the static, tag, language and video lines and before `[한국어 자연 문체 기준선]` (before the profile for an English target). One fixed line closes the section, saying a 지침 outranks these rules (GEN-51, R27). It appears in write only and is zero bytes when empty.",
+   "The template title area: TemplateBrief.TitleArea string `json:\",omitempty\"`.\n- writeTemplateSection follows R31: after the legend and before the body fence it writes one fixed sentence saying the JSON `title` follows this form, then the title area between its own `---` fences.\n- This is shared by write and revise, is zero bytes when empty, and uses no 지침 wording.\n- When the brief carries a title area, the GEN-49 prohibitions are worded to bind only what the model writes inside the form's `<write>` (R27, TMPL-52). A template-less or title-less prompt keeps the plain wording byte for byte.",
+   "Narrow TestTheWord지침AppearsOnlyInTheGuidelineSection to what TMPL-13 governs (the template heading, legend, precedence and title instruction), so the GEN-51 closing line may name 지침.",
+   "Goldens:\n- Regenerate write_prompt_no_template.golden and write_prompt_memories.golden deliberately, plus write_prompt_pre_naturalness.golden if the new static text reaches it, and quote the reviewed diff in the task result.\n- Extend TestFixedTextAdditionsAreTheOnlyGoldenDelta to strip the new lines.\n- The revise goldens stay byte-identical, since they carry no template or guideline section.",
+   "Tests:\n- each rule constant appears exactly once in both write prompts and in no revise or observe prompt;\n- the precedence properties;\n- nouns parse bounds and absence;\n- the quality section's position for ko and en targets, its absence equal to the goldens, and no quality section in revise;\n- the title instruction precedes the body fence in write and revise;\n- the prohibition variant appears only with a title area.",
+   "Verify with ARCH-26 including gofmt."
+  ],
+  "out_of_scope": [
+   "filling QualityRules (enqueue-freezes-quality-rules-and-phrases) or TitleArea (template-title-area-storage-and-brief)",
+   "persisting nouns (write-answer-persists-nouns-and-candidates)",
+   "the phrase section and the replacements answer (phrase-material-and-replacement-answer)"
+  ],
+  "migration": false,
+  "proto_files": [],
+  "size": "L",
+  "num": 324,
+  "id": "T324",
+  "wave": 0,
+  "dep_ids": [],
+  "base_line": "GEN@10 GUIDE@5 TMPL@10 QUAL@2 ARCH@9"
+ },
+ {
+  "key": "quality-text-containment-and-run-hashing",
+  "title": "Quality text primitives: Korean and English containment, 8-어절 run hashing and sentence splitting",
+  "ssot_ids": [
+   "QUAL-7",
+   "QUAL-8",
+   "QUAL-9",
+   "QUAL-10",
+   "QUAL-14",
+   "QUAL-26",
+   "ARCH-7",
+   "ARCH-33",
+   "ARCH-24"
+  ],
+  "base": [
+   "QUAL@2",
+   "ARCH@9"
+  ],
+  "deps": [],
+  "goal": "The risky text core is pure, table-tested Go with no tokenizer dependency. It covers NFC 어절 tokenization, noun containment by language, M2's window hashing with covered-rune share and maximal runs, and sentence splitting with a decimal guard.",
+  "scope": [
+   "backend/internal/quality/types.go: pure domain types (Document{Title, Blocks}, Block, BlockType, Language) with no proto, SQL or JSON tags (ARCH-7).",
+   "backend/internal/quality/text.go:\n- NFC via golang.org/x/text/unicode/norm, promoted to a direct require with `go get` per ARCH-33; confirm the resolved version in go.mod.\n- Split on whitespace into 어절, trimming leading and trailing punctuation.\n- Text units are TEXT/HEADING/QUOTE content and LIST items, in block order, skipping an unfilled `{{slot:N}}` TEXT.",
+   "backend/internal/quality/containment.go (R16): a Korean 어절 contains a noun when it starts with it; an English word contains it when equal case-insensitively. A nil content_language means Korean (QUAL-26).",
+   "backend/internal/quality/runs.go (R18): hashed windows of 8 consecutive 어절 over a post against a set of other documents.\n- It returns the share: runes of tokens inside any matched window over runes of all tokens.\n- It also returns the maximal matched runs, each with the set of other documents it stands in.\n- It is absent when there are no others or the post has fewer than 8 tokens.",
+   "backend/internal/quality/sentence.go (R20): split on . ! ? … and newlines, with a guard so a decimal number is not split.",
+   "Table tests on real 맛집, 카페 and 여행 prose: a particle-bearing 어절 contains its noun; NFD input; edge punctuation; English case; windows at block and document edges; overlapping runs; decimals.",
+   "Verify with ARCH-26 including gofmt."
+  ],
+  "out_of_scope": [
+   "metric assembly, bands and rule texts",
+   "phrase extraction and stopwords",
+   "any noun extraction heuristic; the nouns come from the write pass (QUAL-26)"
+  ],
+  "migration": false,
+  "proto_files": [],
+  "size": "M",
+  "num": 325,
+  "id": "T325",
+  "wave": 0,
+  "dep_ids": [],
+  "base_line": "QUAL@2 ARCH@9"
+ },
+ {
+  "key": "naver-search-client",
+  "title": "The 네이버 검색 API blog client and its optional credentials",
+  "ssot_ids": [
+   "QUAL-17",
+   "QUAL-18",
+   "QUAL-25",
+   "QUAL-33",
+   "QUAL-34",
+   "QUAL-42",
+   "ARCH-6",
+   "ARCH-21",
+   "ARCH-33",
+   "ARCH-42",
+   "ARCH-24"
+  ],
+  "base": [
+   "QUAL@2",
+   "ARCH@9"
+  ],
+  "deps": [],
+  "goal": "A tested wrapper returns plain titles and descriptions for one page of /v1/search/blog.json. Boot config carries the two keys and the refresh interval. With either key unset, the product runs without the batch.",
+  "scope": [
+   "Read the official Naver Search API docs before coding (ARCH-33) and copy the header and parameter names verbatim.",
+   "backend/internal/naversearch/client.go (the fxrate precedent):\n- Sends GET https://openapi.naver.com/v1/search/blog.json?query=…&display=100&start=…&sort=sim with X-Naver-Client-Id and X-Naver-Client-Secret and a per-request timeout.\n- Reads the body through a bounded reader.\n- Reduces items to title and description, stripping `<b>`/`</b>` and applying html.UnescapeString (QUAL-18).\n- A non-200 returns an error carrying the status and Naver's errorCode, never the credentials.",
+   "backend/internal/platform/config:\n- NAVER_SEARCH_CLIENT_ID and NAVER_SEARCH_CLIENT_SECRET, trimmed. The batch is enabled only when both are set; either unset is a legal, tested disabled mode (R24, QUAL-42).\n- QUALITY_PHRASE_REFRESH_INTERVAL: a positive duration, default 24h. A malformed value is boot-fatal.",
+   "Declare the three keys wherever the repo declares secrets: .env.example, .env.production.example, DEPLOY.md's stack .env table, and docker-compose if it lists them.\n- They are backend-only, never VITE_.\n- DEPLOY.md notes that the operator registers a 네이버 개발자센터 application with 검색 API enabled, and that without the keys every list stays empty.",
+   "Tests:\n- httptest checks the path, the exact RawQuery for a Korean query, both headers, tag and entity stripping, an empty items array, and 401/429/500.\n- Config tests cover both, one or neither key, and the interval (default, nonsense, zero, negative).",
+   "Verify with ARCH-26 including gofmt."
+  ],
+  "out_of_scope": [
+   "phrase extraction and the refresh pass",
+   "any search-demand or 검색광고 API (QUAL-34)",
+   "reading blog.naver.com pages (QUAL-18, QUAL-33)",
+   "any owner-facing screen naming the keys (QUAL-42)"
+  ],
+  "migration": false,
+  "proto_files": [],
+  "size": "S",
+  "num": 326,
+  "id": "T326",
+  "wave": 0,
+  "dep_ids": [],
+  "base_line": "QUAL@2 ARCH@9"
+ },
+ {
+  "key": "template-title-area-grammar",
+  "title": "The template grammar parses a title area in lockstep in Go and TypeScript",
+  "ssot_ids": [
+   "TMPL-20",
+   "TMPL-43",
+   "TMPL-50",
+   "TMPL-55",
+   "ARCH-24"
+  ],
+  "base": [
+   "TMPL@10",
+   "ARCH@9"
+  ],
+  "deps": [],
+  "goal": "The risky parser change lands with its shared fixture first.\n- Both parsers accept a title area of literal text, `<write>` and `<ask>` only.\n- Both refuse slot, repeat and note there as `not_in_title`, naming the area.\n- Labels share one namespace, title first, and the ask ceiling counts both areas.",
+  "scope": [
+   "backend/internal/template/testdata/grammar/cases.json FIRST: cases gain an optional titleArea, titleNodes and error.area ('title_area' or 'body'). New cases:\n- an accepted literal + write + ask title, round-tripped;\n- slot, repeat and note in the title, each refused at its title line;\n- a duplicate label within the title;\n- a body ask reusing a title label, refused as duplicate_ask_label in the body;\n- a combined too_many_asks;\n- an empty title equivalent to Parse(body).",
+   "backend/internal/template/grammar.go:\n- ParseOptions.TitleArea.\n- The reason `not_in_title`, checked at the open tag before attributes, like ask_in_repeat.\n- ParseError.Area.\n- ParseTemplate(titleArea, body, opts) parses the title under TitleArea and the body as today, then runs one checkAsks walk over title nodes before body nodes, tagging the area, so TEMPLATE_ASK_MAX_PER_BODY counts both (R35).\n- corpus_test.go gains a separate titleCases list with its own seed, so the 600 body verdicts do not reshuffle.",
+   "frontend/src/entities/template/lib/grammar.ts:\n- Mirror the option, the reason, ParseFailure.area and parseTemplate.\n- templateAskFields(titleArea, body, opts) returns title fields first, then body fields, and [] when either area fails. Export both from the entity index.\n- grammar.test.ts reads the new keys and titleCases and asserts an identical verdict, line, reason and area.",
+   "frontend/src/entities/template/config/i18n.ts: ko/en builder.reasons copy for not_in_title (guide.test.ts forces it).",
+   "Verify with ARCH-26 including gofmt, and ARCH-25."
+  ],
+  "out_of_scope": [
+   "storage, service validation, rpc and render (template-title-area-storage-and-brief)",
+   "the builder UI"
+  ],
+  "migration": false,
+  "proto_files": [],
+  "size": "M",
+  "num": 327,
+  "id": "T327",
+  "wave": 0,
+  "dep_ids": [],
+  "base_line": "TMPL@10 ARCH@9"
+ },
+ {
+  "key": "anchored-panel-primitives",
+  "title": "shared/ui InlinePopover and Toggletip on one extracted anchored-panel hook",
+  "ssot_ids": [
+   "POST-79",
+   "POST-81",
+   "THEME-23",
+   "THEME-30",
+   "THEME-32",
+   "THEME-33",
+   "ARCH-20",
+   "ARCH-24"
+  ],
+  "base": [
+   "POST@11",
+   "THEME@17",
+   "ARCH@9"
+  ],
+  "deps": [],
+  "goal": "The two new overlay primitives ship domain-agnostic and press-operable, built on the positioning logic Listbox already has. Listbox's behaviour does not change.",
+  "scope": [
+   "frontend/src/shared/ui: extract Listbox's panel measurement into useAnchoredPanel.\n- It positions fixed from the trigger's rect and flips.\n- It captures scroll and resize, and closes once the trigger leaves the viewport.\n- It portals on the overlay layer (THEME-30).\nListbox keeps its tests green.",
+   "InlinePopover:\n- The trigger is a native `<button type=button>` inside prose (whitespace-normal, text-left, break-words).\n- A press, Enter or Space toggles it on every pointer. Hover opens it additionally only under `(hover: hover) and (pointer: fine)` (THEME-32).\n- Escape closes only the innermost panel and returns focus, and an outside press closes it.",
+   "Toggletip:\n- An icon button at the pointer floor with aria-label and aria-expanded, rendered as a sibling of a checkbox's label, so a press never toggles the box.\n- A portalled bubble with the same press/hover behaviour.\n- Escape closes the tip without closing a containing Popover or Sheet.",
+   "shared/ui/popover/Popover.tsx: the outside-press check treats both new portalled panels as inside, with a test mirroring 'survives a modal opened from inside its own panel'.",
+   "Styling uses existing functional tokens only, with no new colour role. The component doc and impl notes state that inline marks inside prose take WCAG 2.5.8's inline exception (R37).",
+   "Tests (matchMedia is stubbed in setup.ts): press and keyboard opening; hover only under a fine pointer; Escape layering inside an open Popover or Sheet; outside press; focus return; a Listbox regression. Run ARCH-25."
+  ],
+  "out_of_scope": [
+   "any domain copy or consumer (brief-quality-rule-rows-fe, refine-replacement-marks-fe)"
+  ],
+  "migration": false,
+  "proto_files": [],
+  "size": "M",
+  "num": 328,
+  "id": "T328",
+  "wave": 0,
+  "dep_ids": [],
+  "base_line": "POST@11 THEME@17 ARCH@9"
+ },
+ {
+  "key": "post-published-status-and-url",
+  "title": "A finalized post becomes 발행됨 from a pasted Naver URL, replaceable and clearable",
+  "ssot_ids": [
+   "POST-13",
+   "POST-21",
+   "POST-73",
+   "POST-75",
+   "POST-77",
+   "POST-78",
+   "POST-84",
+   "QUAL-25",
+   "QUAL-39",
+   "ARCH-6",
+   "ARCH-7",
+   "ARCH-24"
+  ],
+  "base": [
+   "POST@11",
+   "QUAL@2",
+   "ARCH@9"
+  ],
+  "deps": [
+   "wire-contract-for-published-quality",
+   "schema-for-published-quality"
+  ],
+  "goal": "The post context knows the published status. Pasting a valid Naver address on a finalized post whose current revision is the finalized one publishes it. Replacing the address restamps it, and clearing it returns the post to 확정. VOICE learning keeps working on a published post, and QUAL can read the published window.",
+  "scope": [
+   "backend/internal/post/types.go:\n- StatusPublished = \"published\" beside draft/review/finalized, with a test pinning the full set (R4).\n- Post gains PublishedURL, PublishedAt and ContentNouns.\n- Fix the stale 'this context only ever writes draft' comment.",
+   "backend/internal/post/publication.go: a pure ParseNaverBlogURL per R9.\n- Trim, then require scheme http or https and host blog.naver.com or m.blog.naver.com (case-insensitive).\n- Refuse userinfo, a port and an empty path.\n- Store `https://blog.naver.com` + path (+ query).\n- limits.go gains PublishedURLMaxChars = 2048.\n- Table tests cover every rule and the mobile normalization.",
+   "store/queries/posts.sql (ASCII), then `pnpm gen:sql`:\n- PublishPost (:execrows) is one statement setting status='published', published_url, published_at=now and updated_at, applied when (status='finalized' AND finalized_revision = content_revision) OR status='published'.\n- UnpublishPost sets status='finalized' with both columns NULL.\n- ListPublishedPostsByUser selects slug, content, content_language, content_revision, content_nouns and published_at WHERE status='published' ORDER BY published_at DESC, slug DESC LIMIT ? (R14).\n- toPost maps published_url and published_at and decodes content_nouns (NULL = none); write-answer-persists-nouns-and-candidates is the writer. fakeStore follows.",
+   "service.go SavePublishedURL(ctx, user, slug, raw), per R8:\n- A trimmed empty value clears; it is a no-op on a post that is not published.\n- An invalid address returns ErrPublishedURLInvalid, and nothing is written (POST-84).\n- A draft or review post returns the existing ErrPostNotFinalized (POST_NOT_FINALIZED = 132).\n- An identical URL is a no-op, and a replacement restamps published_at (POST-75).\n- ErrPostBusy while a generate, revise or model_experiment job targets the post; a learn_voice or extract_memory job does not block it. The cmd/api postJobFinder adapter classifies the kind (e.g. ActiveJob.WritesContent), so post never names a job kind (ARCH-6).\n- There is no cross-post blog-id check (POST-78).\n- A zero-row update re-reads the row and maps the error.",
+   "service.go PublishedPosts(ctx, user, limit) returns {slug, revision, content, contentLanguage, nouns, publishedAt} in published_at DESC order. It is the read QUAL's PostSource adapter consumes (R14, QUAL-39).",
+   "LearningSnapshot in the service and the store: `status == finalized` becomes `status IN (finalized, published)`, with revision equality unchanged (R11, POST-21).",
+   "rpc/handler.go: SavePostPublishedUrl replaces the contract task's stub. toProtoPost maps published_url and published_at (RFC3339 or ''), and can_finalize is false on a published post.",
+   "Tests:\n- new publication_test.go covers paste; replace moving published_at; clear back to finalized; an invalid host, scheme, userinfo, port, empty path or a value over 2048 refused with nothing changed; the mobile host normalized; draft/review refused with POST_NOT_FINALIZED; a stale finalized revision refused; busy only for content-writing kinds; a foreign or unknown slug.\n- The store round trip and the published window order.\n- The learning snapshot on a published post.\n- A published row lists with status published.\n- DeletePost of a published post still works, cascades its measurement row and keeps POST-29's busy refusal.",
+   "Verify with ARCH-26 including gofmt, and `pnpm gen:sql`."
+  ],
+  "out_of_scope": [
+   "refusing writes on a published post (published-post-refuses-writes)",
+   "분야 and tick saves, and the nouns/candidates writer",
+   "every FE surface"
+  ],
+  "migration": false,
+  "proto_files": [],
+  "size": "M",
+  "num": 329,
+  "id": "T329",
+  "wave": 1,
+  "dep_ids": [
+   "T322",
+   "T323"
+  ],
+  "base_line": "POST@11 QUAL@2 ARCH@9"
+ },
+ {
+  "key": "phrase-material-and-replacement-answer",
+  "title": "Frozen 분야 phrases in per-post material and the write answer's replacement candidates",
+  "ssot_ids": [
+   "GEN-14",
+   "GEN-48",
+   "GEN-53",
+   "GEN-54",
+   "GEN-57",
+   "QUAL-21",
+   "POST-79",
+   "ARCH-24"
+  ],
+  "base": [
+   "GEN@10",
+   "QUAL@2",
+   "POST@11",
+   "ARCH@9"
+  ],
+  "deps": [
+   "write-prompt-rules-sections-and-nouns"
+  ],
+  "goal": "When phrases are frozen, the write prompt carries them once as per-post material, together with the replacements instruction. The answer's candidates are parsed, bounded and validated against the final stored content. With no phrases, the bytes and the schema are exactly those the previous task left.",
+  "scope": [
+   "types.go: PostInput.FieldPhrases []string `json:\"field_phrases,omitempty\"`.\n- prompts.go renders one per-post section between the 메모 line and [기억], carrying the phrases in their frozen order under an exported heading constant (e.g. FieldPhrasesHeading). The guideline preset text names that heading verbatim.\n- The wording states only what was observed (the phrases are frequent in top Naver results' titles and descriptions) and never what they improve (QUAL-21). It includes the instruction describing the `replacements` array (R27).\n- The section is present only when phrases are present, so TestWriteSystemPrefixIsStableAcrossPostMaterial stays true.",
+   "schemas/ plus schemas.go: a write-schema variant adds `replacements: [{surface: title|tag|body, index, source, phrases ≤3}]`, at most 20, with string-only enums (R28). write.go selects it only when phrases are present, and the parse treats a missing or null array as none.",
+   "backend/internal/generation/replacements.go: a Replacement type {Surface, Index, Source, Phrases}. ValidateReplacements runs after ValidateBlocks, FilterAttachments and ApplyTemplateSlots, on the final content, with a strict index and no fallback. It keeps an entry only while its source is present:\n- TITLE: content.title contains it.\n- TAG: tags[index], after the frozen tag_count trim, contains it.\n- BODY: blocks[index] is a TEXT (not an unfilled slot), HEADING or QUOTE block whose content contains it, or a LIST with an item containing it.\nIt drops offered phrases outside the frozen list, source == phrase and duplicates, then keeps the first 20 spans and the first 3 phrases each in model order. Each drop is logged as ValidateBlocks does. These rules are the ones the FE visibleSpans mirrors.",
+   "writeCandidate returns the replacements beside content and nouns; write-answer-persists-nouns-and-candidates persists them.",
+   "Revise: BuildRevisePromptForLanguage never renders phrases (GEN-57, R30), and a test asserts it.",
+   "Tests:\n- crafted answers for every drop reason and both caps;\n- index re-resolution after a dropped IMAGE and after an inserted slot;\n- the phrase-less path byte-identical: goldens, schema and parse unchanged;\n- the schema file is valid JSON with additionalProperties:false.",
+   "Verify with ARCH-26 including gofmt."
+  ],
+  "out_of_scope": [
+   "freezing phrases at enqueue (enqueue-freezes-quality-rules-and-phrases)",
+   "persisting candidates",
+   "the ② marks",
+   "a tokenizer or a second provider call (GEN-55, QUAL-16)"
+  ],
+  "migration": false,
+  "proto_files": [],
+  "size": "L",
+  "num": 330,
+  "id": "T330",
+  "wave": 1,
+  "dep_ids": [
+   "T324"
+  ],
+  "base_line": "GEN@10 QUAL@2 POST@11 ARCH@9"
+ },
+ {
+  "key": "quality-metrics-verdicts-and-rule-texts",
+  "title": "Quality metrics M1–M4, bands, verdicts and rule texts as pure code",
+  "ssot_ids": [
+   "QUAL-5",
+   "QUAL-7",
+   "QUAL-8",
+   "QUAL-9",
+   "QUAL-10",
+   "QUAL-11",
+   "QUAL-12",
+   "QUAL-13",
+   "QUAL-14",
+   "QUAL-15",
+   "QUAL-16",
+   "QUAL-27",
+   "QUAL-28",
+   "QUAL-31",
+   "QUAL-32",
+   "QUAL-40",
+   "ARCH-24"
+  ],
+  "base": [
+   "QUAL@2",
+   "ARCH@9"
+  ],
+  "deps": [
+   "quality-text-containment-and-run-hashing"
+  ],
+  "goal": "Given documents, nouns and a published window, internal/quality computes every per-post and account value.\n- An uncomputable value is absent, never zero.\n- Each metric gets one of four verdicts against the product's own bands and minimums.\n- Each over-band metric renders its one rule text naming the measured string.",
+  "scope": [
+   "metrics.go:\n- The canonical metric ids per R3.\n- M1 per R17 runs over the content titles (never posts.title) of the last 100 published posts. The candidates are the union of their stored nouns; ties go to the longer noun, then lexicographic order.\n- M2: the per-post share, plus the account median over the last 20, each measured against its 20 most recent others. The named run per R18 is the one standing in the most of the 20; ties go to the longer run, then the earliest.\n- M3 per R19, absent without nouns.\n- M4 per R20: NFC rune count; photos are IMAGE blocks with a file; distinct types among the six; average sentence length over TEXT only (Korean runes, English words).\n- A median helper ignores absent values.",
+   "limits.go (R21): the QUAL-11 bands; the minimums (M1 10, M2 3, M3 1, M4 3); the windows (100 and 20); run length 8; measure_version. A test pins the values.",
+   "verdict.go:\n- Account verdicts are OVER_BAND, WITHIN_BAND, BELOW_MINIMUM and ABSENT, with the minimum checked against the published count.\n- M3 is over band when repetition > 8% or title relevance < 50%.\n- Per-post verdicts: M3/M4 against bands only; M2's is BELOW_MINIMUM while the account has fewer published posts other than this one than M2's minimum.\n- An absent value neither passes nor warns (QUAL-12, QUAL-40).",
+   "rules.go: one Korean and one English rule text per metric (QUAL-13). M1 names its noun and M2 names its run (QUAL-14). An account with nothing published names nothing (QUAL-15).",
+   "An import test: internal/quality imports no llm, provider, usage or job package (QUAL-16).",
+   "Tests: tables per metric; the tie rules; below minimum versus absent; M3's combined badge; M4's minimum of 3; the rendered texts in both languages.",
+   "Verify with ARCH-26 including gofmt."
+  ],
+  "out_of_scope": [
+   "a composite score (QUAL-27)",
+   "density, length or character targets, alt or heading checks, and index prediction (QUAL-28)",
+   "블라이's bands (QUAL-31)",
+   "a commercial keyword dictionary for M1 (QUAL-32)",
+   "storage, rpc and wiring"
+  ],
+  "migration": false,
+  "proto_files": [],
+  "size": "M",
+  "num": 331,
+  "id": "T331",
+  "wave": 1,
+  "dep_ids": [
+   "T325"
+  ],
+  "base_line": "QUAL@2 ARCH@9"
+ },
+ {
+  "key": "guidelines-rebuild-for-fields-and-preset",
+  "title": "Rebuild guidelines for the fields scope, and add the 분야 link and preset tables",
+  "ssot_ids": [
+   "GUIDE-5",
+   "GUIDE-14",
+   "GUIDE-34",
+   "GUIDE-39",
+   "ARCH-10",
+   "ARCH-24"
+  ],
+  "base": [
+   "GUIDE@5",
+   "ARCH@9"
+  ],
+  "deps": [
+   "schema-for-published-quality"
+  ],
+  "goal": "The risky table rebuild lands on its own.\n- The guidelines scope CHECK admits 'fields', and every row and template link survives.\n- The 분야 links and the preset state live beside it.\n- The store reads and writes all three groups in injection order.",
+  "scope": [
+   "backend/internal/platform/db/migrations/NNNN_guideline_fields.sql takes the next free number, after schema-for-published-quality.\n- Use `-- +goose NO TRANSACTION` with PRAGMA foreign_keys=OFF.\n- Rebuild guidelines with `CHECK (scope IN ('global','templates','fields'))` and the same columns and uniques: copy, drop, rename, recreate the index, and run a 0022-style foreign_key_check guard before commit.\n- Create guideline_fields(guideline_id, user_id, field), with a composite FK to guidelines(id, user_id) ON DELETE CASCADE and UNIQUE(guideline_id, field) (R32).\n- Create guideline_presets(user_id PK, enabled INTEGER NOT NULL, updated_at) and guideline_preset_fields(user_id, field, PK(user_id, field)), outside guidelines (GUIDE-39, R33).\n- Seed nothing (GUIDE-34), and include a Down block.",
+   "migration_NNNN_test.go:\n- global and templates guidelines and their links survive;\n- 'fields' is accepted and 'bogus' refused;\n- a cross-account link is refused;\n- the preset tables are empty;\n- a second Migrate is a no-op.",
+   "backend/internal/guideline/store/queries (ASCII), then `pnpm gen:sql`:\n- ListGuidelines and ListApplicableGuidelineTexts order by global, templates, fields, then created_at, id.\n- The applicable texts take a field parameter.\n- Add field-link insert, delete and list, plus a preset get and presence patch.",
+   "store.go:\n- Insert and the scope Update write field links in the existing transaction, and a rescope clears both link tables.\n- List and get fill fields, and toGuideline accepts 'fields'.\n- A missing preset row reads as off with no 분야.\n- Store tests extend the injection-order, applicable-texts, rescope and delete suites. The cap and text uniqueness ignore the preset.",
+   "Verify with ARCH-26 including gofmt, and `pnpm gen:sql`."
+  ],
+  "out_of_scope": [
+   "service validation, the preset text, rpc and prompt freezing (guideline-fields-scope-and-preset-service)"
+  ],
+  "migration": true,
+  "proto_files": [],
+  "size": "M",
+  "num": 332,
+  "id": "T332",
+  "wave": 1,
+  "dep_ids": [
+   "T323"
+  ],
+  "base_line": "GUIDE@5 ARCH@9"
+ },
+ {
+  "key": "template-title-area-storage-and-brief",
+  "title": "Templates store, validate and render a title area into the frozen brief",
+  "ssot_ids": [
+   "TMPL-2",
+   "TMPL-8",
+   "TMPL-43",
+   "TMPL-50",
+   "TMPL-51",
+   "TMPL-52",
+   "TMPL-53",
+   "TMPL-54",
+   "GEN-52",
+   "ARCH-21",
+   "ARCH-24"
+  ],
+  "base": [
+   "TMPL@10",
+   "GEN@10",
+   "ARCH@9"
+  ],
+  "deps": [
+   "wire-contract-for-published-quality",
+   "schema-for-published-quality",
+   "write-prompt-rules-sections-and-nouns",
+   "template-title-area-grammar"
+  ],
+  "goal": "A template's title area is saved with presence semantics and validated against the body inside the update transaction. It is expanded with its asks at enqueue and frozen with the body into the generate, revise and A/B inputs. Stored templates and template-less posts are untouched.",
+  "scope": [
+   "backend/internal/template/store: InsertTemplate carries title_area, and toTemplate maps it. A new ASCII `UpdateTemplateTitleArea :execrows` runs inside the existing per-field transaction when Patch.TitleArea is present (TMPL-8). Run `pnpm gen:sql`.",
+   "types.go and service.go:\n- Template.TitleArea, Patch.TitleArea, and Limits.TitleAreaMaxChars from a TEMPLATE_TITLE_AREA_MAX_CHARS key: default 200, boot-fatal when malformed, set in platform/config, cmd/api contexts.go and both env examples (R35).\n- validTitleArea bounds the area as FieldTooLongError{Field:\"title_area\"} and runs ParseTemplate against the body. The area is stored as authored, like body, and a present '' clears it.\n- On Update, when either area is present, validate against the patch value and the stored counterpart inside the update transaction, keeping labels unique across both (TMPL-43).\n- Create takes the title area.",
+   "expand.go and RenderedFor:\n- Parse both areas; either failing gives ok=false, as today.\n- Render the title with its asks resolved and zero photos.\n- Rendered.TitleArea is '' when the area is empty or blank after its asks drop.\n- The title facts are prepended so title labels come first (TMPL-55).",
+   "rpc/handler.go: map title_area on create, update and read. TEMPLATE_PARSE_FAILED carries an `area` param when the error sits in the title, and TEMPLATE_FIELD_TOO_LONG already names its field. No new FailureReason.",
+   "backend/cmd/api/adapters_generation.go copies Rendered.TitleArea into TemplateBrief.TitleArea. generation_payload.go templatePayload gains `title_area,omitempty` in both the generate and the revise payload, and a legacy payload decodes as none (TMPL-51). The snapshot carries it through PostInput.",
+   "Tests:\n- store, service and rpc round trips;\n- update validation against the stored counterpart;\n- a cross-area duplicate refused;\n- too_many_asks across both areas;\n- render with asks off, blank and answered;\n- a payload round trip plus legacy decode;\n- a frozen payload surviving a live edit;\n- a different title area gives a different snapshot;\n- the title section's position in the write and revise prompts;\n- an empty title leaves every golden and pinned payload unchanged.",
+   "Verify with ARCH-26 including gofmt, and `pnpm gen:sql`."
+  ],
+  "out_of_scope": [
+   "a separate 제목 템플릿 entity (TMPL-53 rejected)",
+   "an account-level default title form (TMPL-54 rejected)",
+   "prompt wording, owned by write-prompt-rules-sections-and-nouns",
+   "FE"
+  ],
+  "migration": false,
+  "proto_files": [],
+  "size": "L",
+  "num": 333,
+  "id": "T333",
+  "wave": 1,
+  "dep_ids": [
+   "T322",
+   "T323",
+   "T324",
+   "T327"
+  ],
+  "base_line": "TMPL@10 GEN@10 ARCH@9"
+ },
+ {
+  "key": "published-post-refuses-writes",
+  "title": "A published post refuses every write except replacing or clearing its URL and deleting it",
+  "ssot_ids": [
+   "POST-74",
+   "GEN-56",
+   "MODEL-31",
+   "MODEL-37",
+   "ARCH-7",
+   "ARCH-24"
+  ],
+  "base": [
+   "POST@11",
+   "GEN@10",
+   "MODEL@16",
+   "ARCH@9"
+  ],
+  "deps": [
+   "post-published-status-and-url"
+  ],
+  "goal": "The lock matrix of R7 and R10 holds on the server. On a published post, every content, draft, option, media, generation, revision, winner and finalize write is refused before anything changes, and a SQL predicate backs each refusal.",
+  "scope": [
+   "backend/internal/post/store/queries (ASCII): add `AND status <> 'published'` to UpdatePostDraft, SavePostContent, UpdateGeneratedContent, SavePostGenerationOptions, FinalizePost, ReassignPostVoice, AssignPostTemplate, the template-answer saves, CreateUpload/ConfirmUpload and DeleteImage/DeleteVideo. A statement that targets images, videos or uploads checks the owning post row. Run `pnpm gen:sql`.",
+   "backend/internal/post/service.go:\n- Each of those operations returns ErrPostPublished (→ POST_PUBLISHED_LOCKED) after the ownership check and before any write.\n- A zero-row update whose re-read finds the row published maps to ErrPostPublished.\n- An identical SavePostContent on a published post stays a no-op (POST-15).\n- DeletePost is untouched (R7), and SavePublishedURL is exempt.",
+   "backend/internal/generation:\n- PostInput gains `Published bool json:\"-\"`, so snapshot hashes stay unchanged. cmd/api/adapters_generation.go generationPosts sets it from the post status.\n- Start and StartRevision return a new generation.ErrPostPublished before any freeze, job, credit hold, snapshot or provider call (GEN-56).\n- SnapshotWriteInput refuses only an editor-origin (not snapshot-only) comparison.\n- generation/rpc maps the error to POST_PUBLISHED_LOCKED, and generationPostError maps post.ErrPostPublished to it.",
+   "backend/internal/experiment:\n- Mirror PostStatusDraft, PostStatusReview and PostStatusPublished beside PostStatusFinalized (R4).\n- allowPostWrite becomes an allowlist of draft and review (MODEL-37).\n- An editor-origin write comparison Start and applying a winner on a published post both return experiment.ErrPostPublished → POST_PUBLISHED_LOCKED.\n- Lab comparisons that write nothing stay allowed (MODEL-31, R10).",
+   "Tests:\n- extend internal/post/lifecycle_test.go with one published case per locked operation (refused, row and updated_at unchanged, no storage write), plus the identical-save no-op and DeletePost still working;\n- a store test per predicate;\n- generation Start and StartRevision refusals that leave no job or snapshot;\n- TestLabApplicationFollowsThePostStatus gains a published case, plus an editor-start refusal test;\n- the rpc mapping in the post, generation and experiment handlers.\npayload_golden_test and the experiment snapshot hashes stay byte-identical.",
+   "Verify with ARCH-26 including gofmt, and `pnpm gen:sql`."
+  ],
+  "out_of_scope": [
+   "statements added by later tasks, which carry their own predicate (post-field-and-quality-ticks, write-answer-persists-nouns-and-candidates)",
+   "FE read-only rendering (published-status-reads-locked-fe)",
+   "any change to export, copy or VOICE"
+  ],
+  "migration": false,
+  "proto_files": [],
+  "size": "L",
+  "num": 334,
+  "id": "T334",
+  "wave": 2,
+  "dep_ids": [
+   "T329"
+  ],
+  "base_line": "POST@11 GEN@10 MODEL@16 ARCH@9"
+ },
+ {
+  "key": "quality-service-store-and-rpc",
+  "title": "QualityService: stored per-revision measurements, the read-time aggregate, rule texts and phrase reads",
+  "ssot_ids": [
+   "QUAL-1",
+   "QUAL-2",
+   "QUAL-3",
+   "QUAL-4",
+   "QUAL-12",
+   "QUAL-13",
+   "QUAL-15",
+   "QUAL-16",
+   "QUAL-29",
+   "QUAL-35",
+   "QUAL-36",
+   "QUAL-39",
+   "QUAL-40",
+   "QUAL-41",
+   "POST-81",
+   "POST-85",
+   "ARCH-5",
+   "ARCH-6",
+   "ARCH-7",
+   "ARCH-40",
+   "ARCH-24"
+  ],
+  "base": [
+   "QUAL@2",
+   "POST@11",
+   "ARCH@9"
+  ],
+  "deps": [
+   "post-published-status-and-url",
+   "quality-metrics-verdicts-and-rule-texts"
+  ],
+  "goal": "The quality context comes alive.\n- GetPostMeasurement returns this revision's M2/M3/M4.\n- GetAccountQuality returns the four-state aggregate over 발행됨 posts, with rule texts in the post's target language.\n- RulesFor and PhrasesFor are ready for the enqueue freeze.\n- The phrase-list store the batch writes is ready.",
+  "scope": [
+   "backend/sqlc.yaml gains an entry for internal/quality/store. The ASCII queries in store/queries cover:\n- post_measurements: get, and an upsert keyed by revision and measure_version.\n- field_phrase_lists: get, a replace-upsert with corpus_size, refreshed_at and next_refresh_at, and a due listing.\nstore.go uses the writer and reader handles. Run `pnpm gen:sql`. Store tests run against real SQLite.",
+   "service.go takes Deps (store, PostSource, clock) and panics on nil (ARCH-40). ports.go declares PostSource{ Post(ctx,user,slug) → {revision, content, contentLanguage, targetLanguage, nouns, status}; Published(ctx,user,limit) } (R14).\n- GetPostMeasurement, for any post with content, computes M3 and M4 lazily and upserts them when the row is missing or its revision or measure_version differs.\n- M2 is computed at read against the last 20 published posts, excluding this one (QUAL-4, R15). It is BELOW_MINIMUM with the minimum stated while fewer than M2's minimum exist (QUAL-36).\n- A post with no content answers every value absent.",
+   "GetAccountQuality(slug) derives the aggregate at read from published posts only (QUAL-2), in published_at DESC order (QUAL-39). Each metric carries verdict, values, band, minimum and published count. An OVER_BAND metric also carries its rule text rendered in THAT post's target language (R22).",
+   "RulesFor(ctx, user, slug, ticked, lang) keeps only the ticks whose metric is OVER_BAND now and returns their rendered texts (R23). PhrasesFor(ctx, field) returns the stored list in rank order, and an empty list when there is none (QUAL-41, R26).",
+   "backend/internal/quality/rpc/handler.go:\n- both rpcs, with QualityMetric and QualityVerdict switches that have generated-enum walk tests and no default branch;\n- every value `optional` on the wire;\n- an unknown or foreign slug answers the existing POST_NOT_FOUND;\n- the session and no-user-id tests cover both rpcs.",
+   "backend/cmd/api:\n- contexts.go gains a `quality` field, constructed after post. Use the lazily-resolving adapter pattern (postVoices{app: c}) wherever construction would otherwise cycle.\n- adapters_quality.go implements PostSource over post.Service (Get, and PublishedPosts). It maps blocks and language with a closed switch, and a test proves all six block types map.\n- serve.go registers QualityService, and wiring_test.go's handler count goes 21 → 22.",
+   "Tests:\n- stale-revision recompute and measure_version recompute;\n- the aggregate counts published posts only;\n- the below-minimum and absent states;\n- M2 on ② below its minimum;\n- the RulesFor intersection;\n- the rule text follows the post's language;\n- a deleted post's measurement row is gone through the cascade;\n- the QUAL-16 import test extended to quality/store and quality/rpc.",
+   "Verify with ARCH-26 including gofmt, and `pnpm gen:sql`."
+  ],
+  "out_of_scope": [
+   "a correction pass over the finished draft (QUAL-29)",
+   "citation measurement (QUAL-35)",
+   "the Naver batch pass",
+   "editing proto files: the contract task's shape is binding. If an amendment proves unavoidable it is confined to quality.proto, which no concurrent task touches"
+  ],
+  "migration": false,
+  "proto_files": [],
+  "size": "L",
+  "num": 335,
+  "id": "T335",
+  "wave": 2,
+  "dep_ids": [
+   "T329",
+   "T331"
+  ],
+  "base_line": "QUAL@2 POST@11 ARCH@9"
+ },
+ {
+  "key": "template-title-area-entity-and-fields-fe",
+  "title": "FE templates carry the title area, and ① lists title-area asks first",
+  "ssot_ids": [
+   "TMPL-2",
+   "TMPL-8",
+   "TMPL-55",
+   "ARCH-21",
+   "ARCH-24"
+  ],
+  "base": [
+   "TMPL@10",
+   "POST@11",
+   "ARCH@9"
+  ],
+  "deps": [
+   "template-title-area-storage-and-brief"
+  ],
+  "goal": "The template entity round-trips titleArea on every save, untrimmed like the body. The ceiling is mirrored in shared/config. ①'s data fields come from both areas, title labels first.",
+  "scope": [
+   "entities/template:\n- Template.titleArea ('' when none) is mapped from proto.\n- useCreateTemplate and useUpdateTemplate.saveAll send it on every save, untrimmed (TMPL-8).\n- canSaveTemplate bounds it with TEMPLATE_TITLE_AREA_MAX_CHARS, mirrored in shared/config via VITE_TEMPLATE_TITLE_AREA_MAX_CHARS with a fallback of 200 (R35).",
+   "pages/template: Draft carries titleArea from the loaded template unchanged, so a save before the builder task lands round-trips it rather than clearing it.",
+   "features/fill-template-answers/model/answers.ts: answerFields uses templateAskFields(titleArea, body), title first, and returns [] when either area fails (TMPL-55).",
+   "frontend/src/test/templates.ts stores and records titleArea; update every Template literal in tests.",
+   "Tests: title-first order; unchanged behaviour with an empty title area; a cross-area duplicate gives no fields; a screen save keeps a stored title area. Run ARCH-25."
+  ],
+  "out_of_scope": [
+   "the builder and 원문 UI (template-title-area-builder-fe)"
+  ],
+  "migration": false,
+  "proto_files": [],
+  "size": "S",
+  "num": 336,
+  "id": "T336",
+  "wave": 2,
+  "dep_ids": [
+   "T333"
+  ],
+  "base_line": "TMPL@10 ARCH@9"
+ },
+ {
+  "key": "post-field-and-quality-ticks",
+  "title": "A post saves its 분야 through the draft save and its quality ticks as a generation option",
+  "ssot_ids": [
+   "POST-13",
+   "POST-81",
+   "POST-82",
+   "QUAL-23",
+   "ARCH-3",
+   "ARCH-6",
+   "ARCH-40",
+   "ARCH-24"
+  ],
+  "base": [
+   "POST@11",
+   "QUAL@2",
+   "GEN@10",
+   "ARCH@9"
+  ],
+  "deps": [
+   "published-post-refuses-writes"
+  ],
+  "goal": "The two new per-post inputs a run reads are stored and exposed. 분야 rides SavePostDraft with presence semantics, including on create. Quality ticks ride SavePostGenerationOptions. Neither changes status, revision, baseline or learning eligibility.",
+  "scope": [
+   "backend/internal/post/ports.go: a consumer-owned `FieldDirectory{ Known(id string) bool }` (R2), required in Deps. Add it to the NewService nil-panic map, internal/post/deps_test.go testDeps and cmd/api/post_deps_test.go. cmd/api/adapters_post.go implements it over quality.Known, wired in contexts.go. post never imports quality.",
+   "SaveDraft gains a presence-aware field. Absent keeps, '' clears to 없음, and an id assigns.\n- It is validated with the template id before any write or slug mint, including on create. An unknown id returns ErrFieldNotFound, and nothing is minted or saved.\n- A new ASCII `AssignPostField :execrows` writes only when the value differs. It carries `status <> 'published'` and maps a lock to ErrPostPublished.\n- Update every SaveDraft call site (about 63); switching to a request struct is allowed. Run `pnpm gen:sql`.",
+   "SaveGenerationOptions gains presence-aware quality ticks.\n- They are validated against post's closed mirror of R3's four ASCII metric ids (an unknown id returns ErrQualityRuleInvalid), deduplicated, and stored as a JSON array in posts.quality_rules; an empty set clears.\n- The write goes through the existing SavePostGenerationOptions statement and keeps its lock predicate.\n- toPost decodes field and quality_rules.",
+   "rpc/handler.go:\n- SavePostDraft maps `optional BlogField` through the shared rpcserver mapper. UNSPECIFIED clears, and an out-of-range number returns POST_FIELD_NOT_FOUND.\n- SavePostGenerationOptions maps the QualityRuleTicks wrapper through a QualityMetric ↔ id switch with a generated-enum walk test and no default. UNSPECIFIED or an unknown number returns POST_QUALITY_RULE_INVALID.\n- toProtoPost emits field and quality_rules.",
+   "backend/internal/generation/types.go: PostInput gains `Field string json:\"-\"` and `QualityRuleIDs []string json:\"-\"`. They are resolution inputs only; the frozen material they resolve to carries the identity, so snapshot hashes stay unchanged. cmd/api generationPosts fills both. Their consumers are guideline-fields-scope-and-preset-service and enqueue-freezes-quality-rules-and-phrases.",
+   "Tests:\n- new internal/post/field_test.go, mirroring template_test.go: assign; keep; clear; create with a 분야; unknown refused with nothing minted; refused on a published post; no status, revision or baseline change.\n- Tick tests: save; absent keeps; empty clears; duplicates collapse; unknown refused; refused on a published post.\n- The handler walks and error mapping.\n- The generationPosts adapter mapping both onto PostInput.",
+   "Verify with ARCH-26 including gofmt, and `pnpm gen:sql`."
+  ],
+  "out_of_scope": [
+   "freezing rule texts or phrases",
+   "guideline resolution by 분야",
+   "the FE picker and the brief rows"
+  ],
+  "migration": false,
+  "proto_files": [],
+  "size": "L",
+  "num": 337,
+  "id": "T337",
+  "wave": 3,
+  "dep_ids": [
+   "T334"
+  ],
+  "base_line": "POST@11 QUAL@2 ARCH@9"
+ },
+ {
+  "key": "field-phrase-batch",
+  "title": "The daily per-분야 phrase extraction and refresh pass",
+  "ssot_ids": [
+   "QUAL-1",
+   "QUAL-17",
+   "QUAL-20",
+   "QUAL-22",
+   "QUAL-23",
+   "QUAL-24",
+   "QUAL-26",
+   "QUAL-38",
+   "QUAL-41",
+   "QUAL-42",
+   "GUIDE-33",
+   "ARCH-11",
+   "ARCH-40",
+   "ARCH-24"
+  ],
+  "base": [
+   "QUAL@2",
+   "GUIDE@5",
+   "ARCH@9"
+  ],
+  "deps": [
+   "quality-service-store-and-rpc",
+   "naver-search-client"
+  ],
+  "goal": "An in-process pass keeps each 분야's top-50 phrase list fresh from 300 search results, with one extraction implementation. A durable per-field schedule survives restarts. A failed field keeps its last list, and without keys the pass does nothing.",
+  "scope": [
+   "backend/internal/quality/phrases.go and stopwords.go, the ONE implementation (R26). They reuse text.go's NFC 어절 tokenization.\n- Emit runs of 2–5 tokens within one item (a title or a description), dropping runs made only of stopwords (ko and en lists).\n- Frequency is the number of items containing the run.\n- Drop a run contained in a longer run of equal count.\n- Keep the top 50 by count desc, then fewer tokens, then lexicographic.\n- Table tests: a single token excluded, the 6-token cap, stopword-only runs dropped, one count per item, subsumption, ties, the 50 cutoff, Korean and English.",
+   "backend/internal/quality/batch.go:\n- A consumer port BlogSearch{ SearchBlog(ctx, query, start) } that the naversearch client satisfies.\n- For each field in quality.Fields() whose next_refresh_at is due, fetch starts 1, 101 and 201 with its query string, extract, and replace the list with corpus_size, refreshed_at and next_refresh_at.\n- No write transaction stays open across an HTTP call.\n- A failed page keeps the last successful list and reschedules that field; per-field errors are joined.\n- There is no usage or credit accounting (QUAL-24). The pass writes only field_phrase_lists and imports no guideline package (GUIDE-33). No owner-editable path exists (QUAL-22).",
+   "backend/cmd/api:\n- contexts.go builds the client only when both keys are set, through an interface-typed variable so a typed nil cannot pass as enabled, and hands it to the pass with the configured interval. The pass value is non-nil even when disabled (wiring_test).\n- serve.go starts it as a goroutine: a catch-up pass on boot off the listener path, then the interval tick (the billing renewal precedent).",
+   "impl notes state why this is not an ARCH-11 job record: it has no owner, and generation_jobs requires one (R24).",
+   "Tests with a fake search, a fake store and a fixed clock: due selection; the three starts; a short corpus is a success; a page-2 failure keeps the old list; one failing field does not block the others; disabled mode makes zero calls; catch-up on boot; ctx cancel.",
+   "Verify with ARCH-26 including gofmt."
+  ],
+  "out_of_scope": [
+   "an owner-editable list (QUAL-22)",
+   "full-text collection (QUAL-33)",
+   "the store queries, owned by quality-service-store-and-rpc",
+   "generation reading the list (enqueue-freezes-quality-rules-and-phrases)"
+  ],
+  "migration": false,
+  "proto_files": [],
+  "size": "M",
+  "num": 338,
+  "id": "T338",
+  "wave": 3,
+  "dep_ids": [
+   "T335",
+   "T326"
+  ],
+  "base_line": "QUAL@2 GUIDE@5 ARCH@9"
+ },
+ {
+  "key": "published-status-reads-locked-fe",
+  "title": "발행됨 is the fourth status everywhere, and a published post reads as locked",
+  "ssot_ids": [
+   "POST-13",
+   "POST-21",
+   "POST-44",
+   "POST-66",
+   "POST-74",
+   "POST-76",
+   "POST-86",
+   "ARCH-13",
+   "ARCH-16",
+   "ARCH-20",
+   "ARCH-24",
+   "THEME-29"
+  ],
+  "base": [
+   "POST@11",
+   "ARCH@9",
+   "THEME@17"
+  ],
+  "deps": [
+   "published-post-refuses-writes"
+  ],
+  "goal": "The FE knows the fourth status everywhere the union is exhaustive, and a published post reads as locked.\n- ② is read-only and names the way out, and ②'s dock holds only 글 완성으로 가기.\n- ①'s 생성 and A/B 비교 are disabled, with the reason said once.\n- ③'s 말투 학습 and export stay available.",
+  "scope": [
+   "frontend/src/entities/post:\n- PostStatus gains 'published', with status.published 발행됨 / Published.\n- A pure isPublished predicate that every lock uses.\n- Update every exhaustive Record<PostStatus, …> (R4).\n- PostDraft.publishedUrl and publishedAt are mapped in api/post-queries.ts toPostDraft.",
+   "pages/editor/model/steps.ts: BY_STATUS maps published to ③ (POST-44); update steps.test.ts and useDraftSteps.test.ts.\n/posts:\n- pages/posts/model/search.ts accepts status=published.\n- features/filter-posts STATUSES gains published (전체 · 초안 · 검토 · 확정 · 발행됨) with list.filter.published.\n- PostsPage's badge tone becomes an exhaustive Record (POST-66, POST-76).",
+   "③: features/finalize-post FinalizeActions renders 글 완성으로 가기 on a published post. useVoiceLearning treats published like finalized, so learning and sentence feedback stay available (R11, POST-21). Export is untouched.",
+   "②: EditorRefinePanel renders the entities/post BlockList read-only on a published post: no BlockEditor, no content queue, no 문단 추가. One line says a published post cannot be changed and that clearing its URL on ③ reopens it. EditorStepDock and widgets/refine-dock hold only 글 완성으로 가기 on ② (POST-86).",
+   "①:\n- features/generate-post/model/preconditions.ts gains a 'published' blocker, checked first, that disables 생성 and A/B 비교 with its reason rendered once.\n- ①'s write controls render read-only or disabled under that same single reason: 가제, memo, data fields, the 말투 and 템플릿 dropdowns, brief options, photo add/remove and 기억 사용. POST-74 refuses every draft save, and a text save would otherwise retry forever.\n- As a backstop, features/save-draft treats POST_PUBLISHED_LOCKED as an answer (taken back, not retried, as the reassignment path is), so a post published in another tab never loops on 다시 시도 중.",
+   "frontend/src/test/posts.ts: rows model status published, publishedUrl and publishedAt. POST_PUBLISHED_LOCKED refuses content saves, draft saves, finalize and generation on published rows.",
+   "Strings go in each slice's config fragment under posts, with distinct top-level keys (R38).",
+   "Tests:\n- the status label, badge, filter and URL status=published (PostsPage, narrow.test.ts);\n- the steps;\n- ② read-only with its dock;\n- ① disabled with one reason;\n- a locked draft save is not retried;\n- 말투 학습 and export still available.\nRun ARCH-25."
+  ],
+  "out_of_scope": [
+   "the ③ URL field (record-published-url-fe)",
+   "hiding measurements and marks, which each task does itself"
+  ],
+  "migration": false,
+  "proto_files": [],
+  "size": "L",
+  "num": 339,
+  "id": "T339",
+  "wave": 3,
+  "dep_ids": [
+   "T334"
+  ],
+  "base_line": "POST@11 ARCH@9 THEME@17"
+ },
+ {
+  "key": "template-title-area-builder-fe",
+  "title": "The template screen authors a title area in the builder and in 원문",
+  "ssot_ids": [
+   "TMPL-2",
+   "TMPL-20",
+   "TMPL-26",
+   "TMPL-30",
+   "TMPL-43",
+   "TMPL-50",
+   "ARCH-20",
+   "ARCH-24",
+   "THEME-29"
+  ],
+  "base": [
+   "TMPL@10",
+   "ARCH@9",
+   "THEME@17"
+  ],
+  "deps": [
+   "template-title-area-entity-and-fields-fe"
+  ],
+  "goal": "An optional title section above 템플릿 구성 is authored through the same builder/원문 switch.\n- The builder variant offers only AI가 쓰는 글 and 고정 문구, each with 데이터 받기.\n- 원문 shows a second textarea with its own error and counter.\n- A parse failure opens the area that failed.",
+  "scope": [
+   "entities/template/model/blocks.ts and ui/TemplateComposition.tsx take an area variant (R36).\n- The palette is limited to write and literal, with 데이터 받기 on both, and no photo, repeat or note.\n- Title rows use single-line fields and their own counter against the ceiling.\n- takenAskTitles spans both areas, so a body data field reusing a title label shows its message on the body row (TMPL-43).",
+   "ui/TemplateSource.tsx and pages/template: 원문 shows the title area as its own textarea above the body, with its own error and counter. 형식 안내 stays body-only (TMPL-26, R36).",
+   "pages/template/ui/TemplatePage.tsx:\n- Dirty tracking covers titleArea, and the save gate is one parseTemplate.\n- A failure renders under the area it names.\n- 원문에서 고치기 opens that area at its line; an unreadable title area offers its own 원문에서 고치기 and 비우고 다시 만들기 (TMPL-30).\n- The FE TEMPLATE_PARSE_FAILED spec in shared/api/app-failure.ts gains the optional area param.",
+   "ko/en strings live in the slices' config fragments.",
+   "Tests:\n- blocks, composition, source, and the page's save and failure routing;\n- a lossless builder ↔ 원문 round trip;\n- restricted kinds;\n- the cross-area label message;\n- GrammarStaysInternal still finds no grammar outside 원문 with the title builder open.\nRun ARCH-25."
+  ],
+  "out_of_scope": [
+   "teaching the title area in 형식 안내 (TMPL-26 keeps it body-only)"
+  ],
+  "migration": false,
+  "proto_files": [],
+  "size": "L",
+  "num": 340,
+  "id": "T340",
+  "wave": 3,
+  "dep_ids": [
+   "T336"
+  ],
+  "base_line": "TMPL@10 ARCH@9 THEME@17"
+ },
+ {
+  "key": "write-answer-persists-nouns-and-candidates",
+  "title": "Write results store nouns and replacement candidates beside the content",
+  "ssot_ids": [
+   "GEN-48",
+   "GEN-53",
+   "GEN-55",
+   "POST-79",
+   "ARCH-3",
+   "ARCH-7",
+   "ARCH-24"
+  ],
+  "base": [
+   "GEN@10",
+   "POST@11",
+   "MODEL@16",
+   "ARCH@9"
+  ],
+  "deps": [
+   "post-field-and-quality-ticks",
+   "phrase-material-and-replacement-answer"
+  ],
+  "goal": "Generation and an applied write winner replace the post's stored nouns and candidates. A revision and a manual save keep them. Post exposes the candidates on the wire, and the A/B candidate output carries both.",
+  "scope": [
+   "backend/internal/post:\n- A ReplacementCandidate domain type (Surface, Index, Source, Phrases), and Post.ReplacementCandidates decoded in toPost.\n- The store encodes content_nouns and replacement_candidates as JSON, outside PostContent (R29).\n- UpdateGeneratedContent (ASCII) writes both with presence semantics (nil keeps) and keeps its lock predicate.\n- Service.SetGeneratedContent gains nouns and candidates: nil keeps, non-nil replaces, empty clears. Its idempotence check compares them.\n- SavePostContent never touches them.\n- Run `pnpm gen:sql`.",
+   "post/rpc toProtoPost emits replacement_candidates through a ReplacementSurface ↔ domain switch with a generated-enum walk test and no default branch.",
+   "backend/internal/generation: the Posts.SetGeneratedContent port gains nouns and replacements.\n- generate_handler passes the write result's; a phrase-less write passes empty candidates, which clears stale ones.\n- revise_handler passes nil, which keeps both (R16, R29).\n- RunWriteCandidate returns them, and ApplyWriteWinner forwards the winner's (GEN-4).",
+   "backend/cmd/api:\n- adapters_generation.go generationPosts maps both.\n- adapters_experiment.go outputPost gains `nouns` and `replacements` with omitempty in toOutputPost/fromOutputPost; a legacy output decodes as none.\n- Update internal/post/fake_test.go and generation's fakePosts.",
+   "Tests:\n- generate stores both;\n- revise keeps both;\n- a manual save keeps both;\n- an applied winner replaces both;\n- an identical retried write still stores them;\n- the wire walk;\n- a legacy candidate output decodes.",
+   "Verify with ARCH-26 including gofmt, and `pnpm gen:sql`."
+  ],
+  "out_of_scope": [
+   "a server-side staleness filter; the FE drops stale spans at render (GEN-53)",
+   "FE rendering",
+   "QUAL's read of nouns, which post-published-status-and-url already maps"
+  ],
+  "migration": false,
+  "proto_files": [],
+  "size": "L",
+  "num": 341,
+  "id": "T341",
+  "wave": 4,
+  "dep_ids": [
+   "T337",
+   "T330"
+  ],
+  "base_line": "GEN@10 POST@11 ARCH@9"
+ },
+ {
+  "key": "guideline-fields-scope-and-preset-service",
+  "title": "Guidelines scoped by 분야, the 상위 노출 단어 사용 preset, and 분야-aware freezing",
+  "ssot_ids": [
+   "GUIDE-5",
+   "GUIDE-14",
+   "GUIDE-15",
+   "GUIDE-17",
+   "GUIDE-29",
+   "GUIDE-30",
+   "GUIDE-31",
+   "GUIDE-32",
+   "GUIDE-33",
+   "GUIDE-34",
+   "GUIDE-36",
+   "GUIDE-37",
+   "GUIDE-38",
+   "GUIDE-39",
+   "GEN-57",
+   "ARCH-3",
+   "ARCH-40",
+   "ARCH-24"
+  ],
+  "base": [
+   "GUIDE@5",
+   "GEN@10",
+   "QUAL@2",
+   "ARCH@9"
+  ],
+  "deps": [
+   "guidelines-rebuild-for-fields-and-preset",
+   "post-field-and-quality-ticks",
+   "phrase-material-and-replacement-answer"
+  ],
+  "goal": "An owner can scope a guideline to 분야 and switch the product preset on per 분야. Every generation, revision and A/B snapshot freezes the global, then template, then 분야 texts, with the preset line last. A revision never carries the preset line.",
+  "scope": [
+   "backend/internal/guideline: ScopeFields and a three-way validScope.\n- global carries neither templates nor fields.\n- templates needs ≥ 1 owned template and no fields.\n- fields needs ≥ 1 known 분야 and no templates. Duplicates collapse, and an unknown id returns ErrFieldNotFound with nothing applied.\n- Validation goes through a consumer-owned FieldDirectory{Known} constructor argument (R2, ARCH-40), wired in cmd/api over quality.Known.",
+   "preset.go: the preset text is a Go constant, never a row or config (GUIDE-30/32).\n- It tells the writer to substitute a phrase listed under the phrase section's heading (generation.FieldPhrasesHeading, named verbatim) only where the source already states the same thing, and to add nothing the source lacks (GUIDE-31/36).\n- Preset(ctx, user) and UpdatePreset(ctx, user, patch) take a presence patch of enabled and fields, validated like the fields scope.\n- The preset has no cap or uniqueness effect (GUIDE-39), and no model or batch writes it (GUIDE-33).",
+   "ForPrompt(ctx, user, templateID, field *string, forRevision bool) returns the ordered groups (GUIDE-14) and appends the preset line LAST only when:\n- the preset is enabled,\n- the post's 분야 is in its set, and\n- forRevision is false (R33, GUIDE-15/37, GEN-57).\nSwitched on with no 분야, it applies to no post (GUIDE-38). Per R33 the line does not depend on whether the 분야's phrase list is empty; the text binds only listed phrases.",
+   "rpc/handler.go:\n- Scope maps exhaustively in both directions, with the GLOBAL fallback removed and a GuidelineScope walk test (ARCH-3).\n- fields map through the shared BlogField mapper.\n- ListGuidelines carries the preset, and UpdateGuidelinePreset replaces the contract task's stub.",
+   "backend/internal/generation:\n- The GuidelinesForPrompt port takes the field and a revision flag.\n- freezeGuidelines passes PostInput.Field in Start and SnapshotWriteInput, and forRevision=true in StartRevision (R30, GUIDE-17).\n- Update the deps_test and guideline_test fakes, cmd/api adapters_generation.go generationGuidelines, and contexts.go.",
+   "A structural test for GUIDE-33: no guideline row is ever written by a non-owner path, and the preset never appears as a guidelines row. A cmd/api test asserts the preset text contains generation.FieldPhrasesHeading.",
+   "Tests:\n- shape refusals, and fields create and rescope (atomic templates↔fields);\n- an unknown 분야;\n- field links deleted with their guideline;\n- the preset off, on with no 분야, on for another 분야, and on for the post's 분야;\n- the preset line last, after an owner 분야 guideline;\n- revise without it;\n- the cap test green with the preset on;\n- an owner guideline whose text equals the preset text is accepted;\n- a cmd/api bootstrap test pinning global → template → 분야 → preset in the frozen section, with another 분야's guideline excluded;\n- the never-enabled prompt unchanged;\n- the experiment snapshot freezing the same set for both candidates.",
+   "Verify with ARCH-26 including gofmt."
+  ],
+  "out_of_scope": [
+   "the precedence sentences (write-prompt-rules-sections-and-nouns)",
+   "FE /guidelines changes",
+   "seeding a preset (GUIDE-34)",
+   "an owner-editable preset text (GUIDE-32)"
+  ],
+  "migration": false,
+  "proto_files": [],
+  "size": "L",
+  "num": 342,
+  "id": "T342",
+  "wave": 4,
+  "dep_ids": [
+   "T332",
+   "T337",
+   "T330"
+  ],
+  "base_line": "GUIDE@5 GEN@10 ARCH@9"
+ },
+ {
+  "key": "record-published-url-fe",
+  "title": "③ records, replaces and clears the post's Naver address",
+  "ssot_ids": [
+   "POST-54",
+   "POST-73",
+   "POST-75",
+   "POST-77",
+   "POST-84",
+   "POST-87",
+   "ARCH-13",
+   "ARCH-16",
+   "ARCH-17",
+   "ARCH-20",
+   "ARCH-21",
+   "ARCH-24",
+   "THEME-20"
+  ],
+  "base": [
+   "POST@11",
+   "ARCH@9",
+   "THEME@17"
+  ],
+  "deps": [
+   "published-status-reads-locked-fe"
+  ],
+  "goal": "The 발행 URL field sits at the foot of ③.\n- It pastes, replaces or clears the address.\n- It refuses a non-Naver address in place before sending.\n- It stays disabled with its reason until the post is 확정.",
+  "scope": [
+   "frontend/src/entities/post:\n- A pure Naver blog URL check in model that mirrors R9 exactly (hosts, scheme, userinfo, port, path, normalization), with the 2048 limit constant in entities/post/config. Its unit test reuses the BE table's cases.\n- api/useSavePublishedUrl (R6), in the useFinalizePost shape: on success it replaces the GetPost cache entry with the returned post and invalidates the list, and it exposes failure as an AppFailure.",
+   "frontend/src/features/record-published-url (R6; features/publish-post is forbidden by lint:retirement):\n- An in-flow section with a TextField (type=url, inputMode=url, autoComplete=url, autoCapitalize=none, autoCorrect=off, enterKeyHint=done), a visible FieldLabel and a 저장.\n- An empty submit, or 지우기 on a published post, clears the URL without confirmation.\n- A failing address is refused in place with a FieldMessage and aria-invalid, and nothing is sent. The status and any existing URL stay (POST-84).\n- Server refusals (POST_PUBLISHED_URL_INVALID, POST_BUSY) render in place.\n- On a draft or review post the field is disabled, with the reason that it opens once the post is 확정 (POST-87).\n- Strings go in its config fragment under posts (R38).",
+   "pages/editor EditorFinishPanel mounts it after ExportPanel, as the panel's foot (POST-54).",
+   "frontend/src/test/posts.ts implements SavePostPublishedUrl: the R9 check, a replace that restamps, '' clearing to finalized, and a busy refusal.",
+   "Tests (EditorPage):\n- paste → 발행됨 on the status line while staying on ③;\n- the mobile host accepted;\n- an invalid address refused with no request;\n- replace;\n- clear → 확정 with ② editable again;\n- disabled before 확정;\n- the busy refusal.\nRun ARCH-25 and `pnpm lint:retirement`."
+  ],
+  "out_of_scope": [
+   "quality query invalidation (refine-measurement-row-fe adds it)",
+   "server behaviour"
+  ],
+  "migration": false,
+  "proto_files": [],
+  "size": "M",
+  "num": 343,
+  "id": "T343",
+  "wave": 4,
+  "dep_ids": [
+   "T339"
+  ],
+  "base_line": "POST@11 ARCH@9 THEME@17"
+ },
+ {
+  "key": "enqueue-freezes-quality-rules-and-phrases",
+  "title": "Generation freezes the ticked rule texts and the 분야 phrase list at enqueue",
+  "ssot_ids": [
+   "GEN-14",
+   "GEN-48",
+   "GEN-51",
+   "GEN-57",
+   "POST-81",
+   "QUAL-13",
+   "QUAL-29",
+   "QUAL-41",
+   "GUIDE-30",
+   "GUIDE-31",
+   "ARCH-7",
+   "ARCH-40",
+   "ARCH-24"
+  ],
+  "base": [
+   "GEN@10",
+   "QUAL@2",
+   "POST@11",
+   "GUIDE@5",
+   "ARCH@9"
+  ],
+  "deps": [
+   "quality-service-store-and-rpc",
+   "guideline-fields-scope-and-preset-service",
+   "write-answer-persists-nouns-and-candidates",
+   "template-title-area-storage-and-brief"
+  ],
+  "goal": "StartGeneration and the write-experiment snapshot freeze two things: the ticked rule texts still over band, and the first 30 phrases of the post's 분야. Handlers read only the payload. With nothing ticked or no list, payloads and prompts stay byte-identical.",
+  "scope": [
+   "backend/internal/generation/ports.go: consumer ports QualityRules{ RulesFor(ctx, user, slug, ticked, lang) []string } and FieldPhrases{ For(ctx, field) }. Add them to Deps, the nil-panic map and neutral fakes in deps_test.go.",
+   "service.go:\n- Start freezes RulesFor(PostInput.QualityRuleIDs, the frozen target language) and the first 30 phrases (a generation constant) for PostInput.Field.\n- An empty or missing list means no 분야 (QUAL-41), independent of the preset (GUIDE-31, GEN-48).\n- StartRevision freezes neither (R30; GEN-51 is write-only).",
+   "generation_payload.go: `quality_rules,omitempty` and `field_phrases,omitempty`; an absent member decodes as none. Extend TestGenerationPayloadWireShapeIsPinned.",
+   "experiment_surface.go SnapshotWriteInput freezes both onto the snapshot's PostInput through the same helpers, so both candidates are identical and a different set is a different hash.",
+   "backend/cmd/api:\n- EnqueueGeneration, jobs.go KindGenerate and generate_handler copy both members. A test goes through the adapter, because EnqueueGeneration is known to drop members (WriteNativeEffort).\n- Adapters in contexts.go and adapters_generation.go call quality.Service.RulesFor and PhrasesFor.",
+   "A cmd/api bootstrap test covers a post with a 분야, a stored list and the preset on:\n- the frozen write prompt carries the phrase section under FieldPhrasesHeading and the preset line naming it;\n- a revise prompt carries neither (GEN-57).",
+   "Tests:\n- no ticks or no list gives a byte-identical payload and prompt;\n- a within-band tick freezes nothing;\n- the drain ignores live rows changed after enqueue;\n- the snapshot hash differs by list and by rule set;\n- the revision payload carries neither;\n- the 30 cap;\n- no post-hoc correction pass exists (QUAL-29).",
+   "Verify with ARCH-26 including gofmt."
+  ],
+  "out_of_scope": [
+   "fixing EnqueueGeneration's pre-existing WriteNativeEffort drop",
+   "gating the preset line on a non-empty list (R33 names its conditions; QUAL-41 applies at the phrase freeze)",
+   "the brief checkboxes (brief-quality-rule-rows-fe)"
+  ],
+  "migration": false,
+  "proto_files": [],
+  "size": "M",
+  "num": 344,
+  "id": "T344",
+  "wave": 5,
+  "dep_ids": [
+   "T335",
+   "T342",
+   "T341",
+   "T333"
+  ],
+  "base_line": "GEN@10 POST@11 QUAL@2 GUIDE@5 ARCH@9"
+ },
+ {
+  "key": "post-field-picker-fe",
+  "title": "① picks the post's 분야 and autosaves it through the draft queue",
+  "ssot_ids": [
+   "POST-51",
+   "POST-54",
+   "POST-82",
+   "QUAL-19",
+   "ARCH-13",
+   "ARCH-20",
+   "ARCH-24",
+   "THEME-29"
+  ],
+  "base": [
+   "POST@11",
+   "QUAL@2",
+   "ARCH@9",
+   "THEME@17"
+  ],
+  "deps": [
+   "post-field-and-quality-ticks",
+   "record-published-url-fe"
+  ],
+  "goal": "An app-drawn Listbox labelled 분야 sits under ①'s template data fields and above 기억 사용, defaulting to 없음.\n- It saves at once through the draft queue with presence semantics, including on the create from /posts/new.\n- It takes the choice back on refusal.\n- It is disabled on a published post.",
+  "scope": [
+   "frontend/src/features/save-draft/model/draft-queue.ts plus useAutosave.ts: a 분야 channel modelled on the template channel.\n- It keeps a saved baseline, dirty/toSend helpers and waiters that settle, reject, supersede and discard.\n- '' clears on an existing post; 없음 is omitted on a create.\n- It is sent as SavePostDraftRequest.field and taken back on refusal. useAutosave returns assignField.\n- Tests go beside answers-queue.test.ts.",
+   "entities/post: PostDraft.field is mapped in toPostDraft. useSavePostDraft's applyingSavedDraft copies field unconditionally, so the picker does not snap back.",
+   "frontend/src/features/select-post-field (the PostTemplateSelect shape):\n- A Listbox with a visible 분야 FieldLabel, offering 없음 plus the nine from entities/blog-field.\n- Pending and disabled while saving, with a FieldMessage on refusal.\n- Disabled on a published post under published-status-reads-locked-fe's single reason.\n- Help copy implies no exposure gain (QUAL constraints).\n- Its config fragment lives under posts (R38).",
+   "pages/editor:\n- useDraftAssignments holds fieldId for /posts/new.\n- DraftEditor, LifecycleSteps and EditorGeneratePanel render the picker between the template data fields and UseMemoriesField, in the /posts/new branch too (POST-54).\n- The brief does not hold it (POST-51's stated exception).",
+   "frontend/src/test/posts.ts: rows carry field. SavePostDraft takes the field with presence semantics and records it in FakeDraftSave.",
+   "Tests (test/listbox.ts chooseOption):\n- picking a 분야 on an existing post autosaves and survives a reload;\n- the create from /posts/new carries it;\n- 없음 clears it;\n- a refusal takes the choice back;\n- it is disabled on a published post.\nRun ARCH-25."
+  ],
+  "out_of_scope": [
+   "the /guidelines 분야 picker (guideline-fields-scope-fe)"
+  ],
+  "migration": false,
+  "proto_files": [],
+  "size": "M",
+  "num": 345,
+  "id": "T345",
+  "wave": 5,
+  "dep_ids": [
+   "T337",
+   "T343"
+  ],
+  "base_line": "POST@11 QUAL@2 ARCH@9 THEME@17"
+ },
+ {
+  "key": "refine-measurement-row-fe",
+  "title": "② shows this post's own M2, M3 and M4 above the article",
+  "ssot_ids": [
+   "POST-83",
+   "POST-85",
+   "QUAL-3",
+   "QUAL-6",
+   "QUAL-12",
+   "QUAL-19",
+   "QUAL-27",
+   "QUAL-36",
+   "QUAL-37",
+   "QUAL-40",
+   "ARCH-3",
+   "ARCH-13",
+   "ARCH-16",
+   "ARCH-17",
+   "ARCH-18",
+   "ARCH-24",
+   "THEME-29"
+  ],
+  "base": [
+   "POST@11",
+   "QUAL@2",
+   "ARCH@9",
+   "THEME@17"
+  ],
+  "deps": [
+   "quality-service-store-and-rpc",
+   "record-published-url-fe"
+  ],
+  "goal": "Create entities/quality over QualityService. On ②, one row above the article shows the current revision's own numbers against the same bands, whether or not a band is crossed.\n- An absent value is never zero.\n- An M2 under the account minimum names that minimum.\n- The row is hidden on a published post.\n- It refreshes after content saves, URL saves and deletes.",
+  "scope": [
+   "frontend/src/shared/api re-exports the QualityService descriptor, its schemas, and ProtoQualityMetric/ProtoQualityVerdict. frontend/src/entities/quality holds:\n- model types, React-free (ARCH-18);\n- api/usePostMeasurement, the only place naming QualityService outside shared/api (ARCH-17);\n- QualityMetric and QualityVerdict mappers with generated-enum walk tests and no default;\n- every query key under one (accountId, 'quality') prefix;\n- an @x/post invalidateQuality export;\n- a config i18n fragment under posts (R38).",
+   "Invalidate the quality queries through that export after a useSavePostContent success, a useSavePublishedUrl success (paste, replace or clear) and a useDeletePost success (R15, QUAL-3, POST-85).",
+   "The row is a display component in entities/quality/ui, mounted by pages/editor/ui/EditorRefinePanel.tsx above the article (R39). It shows:\n- M2 as the fixed-phrase share;\n- M3 as repetition share and title relevance;\n- M4 as character count, photos, distinct block types (banded) and average sentence length.",
+   "Row rules:\n- Each banded value is a Badge with a text label, never colour alone.\n- An absent value reads 측정할 수 없어요 with no badge (QUAL-40).\n- An M2 below its minimum names that minimum exactly as the brief does (QUAL-36).\n- One line says the bands are PostPilot's own (QUAL-6).\n- No M1 and no composite score (QUAL-27).\n- The copy never implies a whole post was read or promises exposure (QUAL-19).\n- The row is shown only where ② shows prose, and hidden on a published post.",
+   "frontend/src/test/quality.ts: a fake QualityService registered in the router transport.",
+   "Tests:\n- each state;\n- absent versus zero;\n- the M2 below-minimum line;\n- hidden on published;\n- a refetch after a content save, a URL save and a delete;\n- the enum walks.\nRun ARCH-25."
+  ],
+  "out_of_scope": [
+   "the account aggregate and the brief rows (brief-quality-rule-rows-fe)",
+   "any band mirrored in the FE (R21)"
+  ],
+  "migration": false,
+  "proto_files": [],
+  "size": "M",
+  "num": 346,
+  "id": "T346",
+  "wave": 5,
+  "dep_ids": [
+   "T335",
+   "T343"
+  ],
+  "base_line": "POST@11 QUAL@2 ARCH@9 THEME@17"
+ },
+ {
+  "key": "guideline-fields-scope-fe",
+  "title": "/guidelines creates, rescopes and badges guidelines by 분야",
+  "ssot_ids": [
+   "GUIDE-5",
+   "GUIDE-14",
+   "GUIDE-20",
+   "ARCH-3",
+   "ARCH-13",
+   "ARCH-20",
+   "ARCH-24",
+   "THEME-29"
+  ],
+  "base": [
+   "GUIDE@5",
+   "ARCH@9",
+   "THEME@17"
+  ],
+  "deps": [
+   "guideline-fields-scope-and-preset-service"
+  ],
+  "goal": "The scope control offers 전역, 특정 템플릿 and 분야, with a checkbox list of the product's 분야, for both create and rescope. 분야-scoped guidelines show 분야 chips, and the list keeps the server's injection order.",
+  "scope": [
+   "entities/guideline:\n- GuidelineScopeKind gains 'fields', and Guideline and GuidelineScope gain fields.\n- toScopeKind/fromScopeKind become an exhaustive mapping with a walk test, replacing the 'templates' fallback (ARCH-3).\n- toGuideline and toScopePatch carry fields.\n- canSaveGuideline checks all three shapes.",
+   "entities/blog-field gains @x/guideline.ts. entities/guideline/ui:\n- GuidelineScopeField gains the third choice, 특정 분야; switching kind clears the other set.\n- A GuidelineFieldPicker is a Checkbox list, never a native select.\n- GuidelineScopeBadges shows 분야 label chips.",
+   "features/edit-guideline and every GuidelineScope literal (edit-with-ai, review-guideline-candidate, bulk) gain fields: []. The capture dialog still offers only 전역 and the post's template.",
+   "pages/guidelines: order and description copy for the 분야 group, in the guidelines namespace (R38). frontend/src/test/guidelines.ts supports the fields scope.",
+   "Tests: create and rescope a fields guideline; chips; the list keeps server order; GUIDELINE_FIELD_NOT_FOUND copy. Run ARCH-25."
+  ],
+  "out_of_scope": [
+   "the preset row (guideline-preset-row-fe)"
+  ],
+  "migration": false,
+  "proto_files": [],
+  "size": "M",
+  "num": 347,
+  "id": "T347",
+  "wave": 5,
+  "dep_ids": [
+   "T342"
+  ],
+  "base_line": "GUIDE@5 ARCH@9 THEME@17"
+ },
+ {
+  "key": "seed-published-quality-surfaces",
+  "title": "The dev seed shows published posts, nouns, candidates, a phrase list and a title-area template without Naver keys",
+  "ssot_ids": [
+   "ARCH-42",
+   "ARCH-44",
+   "ARCH-24",
+   "POST-73",
+   "GEN-53",
+   "QUAL-36",
+   "QUAL-42",
+   "TMPL-50"
+  ],
+  "base": [
+   "ARCH@9",
+   "POST@11",
+   "GEN@10",
+   "QUAL@2",
+   "TMPL@10"
+  ],
+  "deps": [
+   "write-answer-persists-nouns-and-candidates",
+   "quality-service-store-and-rpc",
+   "template-title-area-storage-and-brief"
+  ],
+  "goal": "`pnpm dev --seed` makes every new surface visible locally with no Naver credentials (R42): the brief rows, ②'s numbers and marks, and a title-area template.",
+  "scope": [
+   "backend/internal/devseed and cmd/seed seed:\n- at least 10 published posts with spread published_at, URLs, a 분야 and stored nouns, so every minimum is met;\n- a review post with replacement candidates;\n- one 분야's field_phrase_lists row;\n- a template with a title area.\nEvery write goes through consumer-owned ports the composition root adapts from each owning context's store, never another context's tables (ARCH-44). The fixture wipes account-owned rows only and leaves the installation-wide phrase list standing. No preset row is seeded (GUIDE-34).",
+   "README seed notes.",
+   "Tests: the temp-SQLite seed integration test asserts the new rows and idempotence.",
+   "Verify with ARCH-26 including gofmt."
+  ],
+  "out_of_scope": [
+   "running the Naver batch",
+   "seeding a guideline preset",
+   "any product behaviour change"
+  ],
+  "migration": false,
+  "proto_files": [],
+  "size": "S",
+  "num": 348,
+  "id": "T348",
+  "wave": 5,
+  "dep_ids": [
+   "T341",
+   "T335",
+   "T333"
+  ],
+  "base_line": "ARCH@9 POST@11 GEN@10 QUAL@2 TMPL@10"
+ },
+ {
+  "key": "brief-quality-rule-rows-fe",
+  "title": "The writing brief offers one quality row per metric, with a toggletip when over band",
+  "ssot_ids": [
+   "POST-51",
+   "POST-81",
+   "QUAL-5",
+   "QUAL-6",
+   "QUAL-12",
+   "QUAL-13",
+   "QUAL-14",
+   "QUAL-19",
+   "QUAL-21",
+   "QUAL-27",
+   "QUAL-30",
+   "QUAL-36",
+   "QUAL-40",
+   "ARCH-3",
+   "ARCH-13",
+   "ARCH-20",
+   "ARCH-24",
+   "THEME-23",
+   "THEME-32"
+  ],
+  "base": [
+   "POST@11",
+   "QUAL@2",
+   "ARCH@9",
+   "THEME@17"
+  ],
+  "deps": [
+   "anchored-panel-primitives",
+   "enqueue-freezes-quality-rules-and-phrases",
+   "post-field-picker-fe",
+   "refine-measurement-row-fe"
+  ],
+  "goal": "①'s writing brief renders M1–M4 in their four states from the server's aggregate. An over-band row is a checkbox with a press-operable toggletip quoting the exact rule text that ticking adds. Ticks autosave per post and reach the next run's prompt.",
+  "scope": [
+   "entities/quality: useAccountQuality(slug) over GetAccountQuality under the shared quality prefix, so the existing invalidations cover it, prefetched from the ① dock.",
+   "entities/post:\n- PostDraft.qualityRules is mapped through a QualityMetric walk-pinned mapper.\n- useGenerationOptions gains saveQualityRules(slug, ids): a presence patch applied optimistically, in the UseMemoriesField shape.",
+   "frontend/src/features/choose-quality-rules renders one row per metric, always (POST-81):\n- Over band: a Checkbox with a Toggletip as a sibling of its label. The tip says what the metric is, why it appeared, and the server's rule text verbatim; M1 and M2 name the measured phrase (QUAL-13/14).\n- Within band: the value marked 양호.\n- Below minimum: that minimum (QUAL-12).\n- Absent: 측정할 수 없어요 (QUAL-40).\n- One line says the bands are PostPilot's own (QUAL-6).\n- The copy states observations only, never an exposure gain or a whole-post read (QUAL-19/21). There is no composite score and no hand-typed number (QUAL-27/30).",
+   "widgets/generation-brief/ui/GenerationBrief.tsx gains the rows after 목표 분량 through a slot supplied by pages/editor. They are:\n- disabled while a job runs and on a published post;\n- omitted on /posts/new (R39).\nM1 appears only here (QUAL-36).",
+   "Test fakes: frontend/src/test/quality.ts gains the aggregate handler, and frontend/src/test/posts.ts records ticks on SavePostGenerationOptions.",
+   "Tests:\n- the four states in GenerationBrief;\n- a tick saves (presence and optimism) and survives a reload;\n- pressing the toggletip does not toggle the box;\n- Escape closes only the tip;\n- omitted without a slug;\n- a refetch after a URL save.\nRun ARCH-25."
+  ],
+  "out_of_scope": [
+   "any band mirrored in the FE (R21)",
+   "server computation and prompt freezing"
+  ],
+  "migration": false,
+  "proto_files": [],
+  "size": "M",
+  "num": 349,
+  "id": "T349",
+  "wave": 6,
+  "dep_ids": [
+   "T328",
+   "T344",
+   "T345",
+   "T346"
+  ],
+  "base_line": "POST@11 QUAL@2 ARCH@9 THEME@17"
+ },
+ {
+  "key": "guideline-preset-row-fe",
+  "title": "/guidelines pins the 상위 노출 단어 사용 preset row with its switch and 적용할 분야",
+  "ssot_ids": [
+   "GUIDE-14",
+   "GUIDE-20",
+   "GUIDE-29",
+   "GUIDE-30",
+   "GUIDE-32",
+   "GUIDE-37",
+   "GUIDE-38",
+   "QUAL-19",
+   "QUAL-21",
+   "ARCH-13",
+   "ARCH-20",
+   "ARCH-24",
+   "THEME-23",
+   "THEME-29"
+  ],
+  "base": [
+   "GUIDE@5",
+   "QUAL@2",
+   "ARCH@9",
+   "THEME@17"
+  ],
+  "deps": [
+   "guideline-fields-scope-fe"
+  ],
+  "goal": "The preset is always on screen above the owner's list.\n- Its text is read-only.\n- It has its own switch and a 적용할 분야 multi-select, which is its fields scope.\n- It says it yields to the owner's rules.\n- When it is on with no 분야, it asks for a first one.",
+  "scope": [
+   "entities/guideline: useGuidelines returns the preset. useUpdateGuidelinePreset sends presence patches (enabled, fields) and invalidates the guideline list.",
+   "A new feature slice for the row (e.g. features/adopt-guideline-preset) contains:\n- the name and the read-only server text, with no Editable (GUIDE-32);\n- a Switch-semantics control within THEME-29's primitives;\n- the 적용할 분야 GuidelineFieldPicker;\n- copy saying it yields to the owner's rules (R34, GUIDE-37);\n- a prompt for a first 분야 when on with none (GUIDE-38);\n- refusals through guidelineErrorMessage.\nThe copy states only what is observed (QUAL-19/21), and targets are 44 px under a coarse pointer.",
+   "pages/guidelines/ui/GuidelinesPage.tsx pins the row above the saved list and above the empty state, and updates page.order and page.description (GUIDE-14/20).",
+   "frontend/src/test/guidelines.ts: the listGuidelines preset and a recording updateGuidelinePreset handler.",
+   "Tests: the row is always shown and not editable; toggling and 분야 picks send presence patches; the on-with-no-분야 prompt; the row above an empty list. Run ARCH-25."
+  ],
+  "out_of_scope": [
+   "editing the preset text (GUIDE-32)",
+   "seeding the preset (GUIDE-34)"
+  ],
+  "migration": false,
+  "proto_files": [],
+  "size": "M",
+  "num": 350,
+  "id": "T350",
+  "wave": 6,
+  "dep_ids": [
+   "T347"
+  ],
+  "base_line": "GUIDE@5 QUAL@2 ARCH@9 THEME@17"
+ },
+ {
+  "key": "refine-replacement-marks-fe",
+  "title": "② marks replacement spans over the title, tags and body, and taking one is a manual edit",
+  "ssot_ids": [
+   "POST-79",
+   "POST-80",
+   "GEN-53",
+   "GEN-54",
+   "QUAL-19",
+   "QUAL-21",
+   "ARCH-3",
+   "ARCH-18",
+   "ARCH-20",
+   "ARCH-24",
+   "THEME-23"
+  ],
+  "base": [
+   "POST@11",
+   "GEN@10",
+   "QUAL@2",
+   "ARCH@9",
+   "THEME@17"
+  ],
+  "deps": [
+   "brief-quality-rule-rows-fe"
+  ],
+  "goal": "Stored candidates render as pressable marks while their source still stands at that surface and index. A press lists up to 3 phrases. Taking one writes through the ordinary content save with no provenance. A published post shows no marks.",
+  "scope": [
+   "entities/post: PostDraft.replacementCandidates, mapped through a ReplacementSurface walk test with no default. model/replacements.ts is pure (no React, ARCH-18).\n- visibleSpans(content, candidates) uses the same strict index as the server: TITLE is content.title containing the source; TAG is tags[index] containing it; BODY is blocks[index] as a TEXT (not a slot), HEADING or QUOTE block containing it, or a LIST with an item containing it.\n- Only the first occurrence is marked, and overlaps are dropped in answer order. A stale candidate drops silently (GEN-53), and phrases are capped at 3 (GEN-54).\n- applyReplacement(content, span, phrase) is pure too. A tag phrase that would canonically duplicate another tag is not offered.",
+   "entities/post/ui/BlockList.tsx: a renderText seam for the title, tag chip text, TEXT/HEADING/QUOTE content and LIST items. It is the identity by default, so the export preview shows no marks. Tag chips grow to 44 px under pointer-coarse (THEME-23, R37).",
+   "features/edit-post-content:\n- BlockEditor and a new ReplacementMark over InlinePopover render marks in read views only; open editors show plain fields.\n- The panel shows the source, up to 3 phrase buttons and one observed-only line (QUAL-19/21).\n- Taking a phrase is setContent(applyReplacement) through the existing content queue and expected revision. It gets the same revision increment, the same return to review and the same learning eligibility, and nothing records provenance (POST-80).\n- No marks appear on a published post or when there are no candidates (R39).\n- Its config fragment lives under posts. The WCAG 2.5.8 inline exception is noted.",
+   "frontend/src/test/posts.ts: rows carry candidates.",
+   "Tests:\n- pure span and visibility cases;\n- EditorPage integration: marks on the title, a tag and a TEXT block; ≤ 3 phrases; a take sends SavePostContent with the expected revision and returns 확정 to 검토; a neighbouring span survives; editing the source away drops its span; ignoring a mark sends nothing; a duplicate tag is not offered; hidden on published.\nRun ARCH-25."
+  ],
+  "out_of_scope": [
+   "producing candidates (phrase-material-and-replacement-answer, enqueue-freezes-quality-rules-and-phrases)",
+   "any server-side staleness filter"
+  ],
+  "migration": false,
+  "proto_files": [],
+  "size": "L",
+  "num": 351,
+  "id": "T351",
+  "wave": 7,
+  "dep_ids": [
+   "T349"
+  ],
+  "base_line": "POST@11 GEN@10 QUAL@2 ARCH@9 THEME@17"
+ }
+]
