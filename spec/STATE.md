@@ -66,7 +66,6 @@
 | T372 | The test harness pins what it claims, and template limits have one constructor | ARCH | T354 T355 T359 T369 T371 | todo |
 | T373 | Entity boundaries for 분야 and post status | ARCH | T356 T367 | todo |
 | T375 | The editor's per-control cases live in the tests of the slices that own them | ARCH | T368 | todo |
-| T380 | A standalone CPU worker prepares and renders frozen media jobs | ARCH CLIP | T378 T379 | todo |
 | T381 | Generation resumes from prepared artifacts without repeating AI work | ARCH GEN CLIP | T376 T377 T379 T380 | todo |
 | T382 | A worker render becomes the result through one durable API commit | ARCH CLIP | T381 | todo |
 | T383 | Recovery bounds media retries and cleans cancelled or abandoned work | ARCH CLIP GEN | T381 T382 | todo |
@@ -77,11 +76,13 @@
 | T388 | GPU setup tooling and guides cover all three deployment environments | ARCH CLIP | T387 | todo |
 
 ## next
-- implement-task T380 next for the media-worker wave (T376..T379 are done; T387 verifies CPU/VPS compatibility locally; T388 completes README/DEPLOY guides for all three environments and GPU setup tooling without live migration)
+- implement-task T381 next for the media-worker wave (T376..T380 are done; T387 verifies CPU/VPS compatibility locally; T388 completes README/DEPLOY guides for all three environments and GPU setup tooling without live migration)
 - Later: update-ssot CLIP-163, then create-task ARCH CLIP for real-GPU validation, profile approval/automatic selection and concurrency tuning; ARCH r11 and CLIP r44 remain partially consumed, and physical host setup/migration remain operator actions
 - implement-task T371 (continuing T354..T375 in dependency order, p42); create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 
 ## log
+- 260925 T380 done (mw): standalone CPU execution, bounded transfers/leases/drain and measured runtime profiles; byte/frame parity including sequence captions, Linux reaping, health and isolated CI pass; T381 next
+- 260925 T380 claimed (mw); T379 committed as fa6d9517; standalone CPU executor only
 - 260925 T374 done; an ask conflict a 블록 composition raised is lowered when it unmounts, so 원문 saves a source that parses; FE gates pass (p42)
 - 260925 T374 claimed (p42)
 - 260925 T369 done; an empty search answer keeps a field's stored phrase list and retries after the delay (QUAL-46), and a refresh interval below the quality context's 1h floor fails the boot naming its key; BE gate passes (p42)
@@ -100,5 +101,3 @@
 - 260925 T359 claimed (p42)
 - 260925 T354 done; a generate's payload is encoded by Start and decoded by Generate, cmd/api carries opaque bytes; the native-effort flag now reaches the drain and each A/B candidate takes its own model's headroom; BE gate passes (p42)
 - 260925 T354 claimed (p42)
-- 260925 T378 done (mw): authenticated separate worker API, compatible claims, fenced reports, bounded transport and private runtime status; HTTP/SQLite/race, isolated ARCH-26/FE/CI/codegen checks pass; T379 next
-- 260925 T378 claimed (mw); T377 committed as b56a62bc; sequential media-wave scope only

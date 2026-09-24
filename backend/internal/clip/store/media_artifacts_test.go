@@ -171,6 +171,20 @@ func TestMediaArtifactsReservationReceiptAndRestart(t *testing.T) {
 		t.Fatal("reservation was not durable", err)
 	}
 	key := rows[0].ObjectKey
+	outputSlot := "output/" + rows[0].Slot
+	read, err := f.a.Read(t.Context(), f.lease, outputSlot)
+	if err != nil || read.Bytes != rows[0].Bytes || !strings.HasSuffix(read.URL, key) {
+		t.Fatal("own candidate read", err)
+	}
+	stolen := f.lease
+	stolen.WorkerID = "foreign"
+	if _, err = f.a.Read(t.Context(), stolen, outputSlot); !errors.Is(err, clip.ErrMediaLeaseLost) {
+		t.Fatal("foreign candidate signed", err)
+	}
+	if _, err = f.a.Read(t.Context(), f.lease, "output/foreign"); err == nil {
+		t.Fatal("unknown candidate signed")
+	}
+
 	f.objects.failSign = false
 	access, err := f.a.Reserve(t.Context(), f.lease, f.result.Outputs)
 	if err != nil || len(access) != 1 || !strings.HasSuffix(access[0].URL, key) || access[0].Headers["If-None-Match"] != "*" {

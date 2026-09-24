@@ -96,6 +96,20 @@ func (a *MediaArtifacts) Read(ctx context.Context, auth clip.MediaLeaseCredentia
 		if err != nil {
 			return err
 		}
+		if output, ok := strings.CutPrefix(slot, "output/"); ok {
+			artifacts, err := p.Media.MediaArtifacts(ctx, auth.AttemptID)
+			if err != nil {
+				return err
+			}
+			for _, artifact := range artifacts {
+				if artifact.Slot == output {
+					source.Key, source.ActualBytes, source.ContentType = artifact.ObjectKey, artifact.Bytes, artifact.ContentType
+					deadline = stage.DeadlineAt
+					return nil
+				}
+			}
+			return clip.ErrInvalid
+		}
 		if !strings.HasPrefix(slot, "source/") {
 			return clip.ErrInvalid
 		}

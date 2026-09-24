@@ -5,7 +5,9 @@ package overlay
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"embed"
+	"encoding/hex"
 	"encoding/json"
 	"encoding/xml"
 	"errors"
@@ -45,6 +47,7 @@ type entry struct {
 	template *template.Template
 }
 type Catalog struct {
+	digest   string
 	bindings map[string]string
 	entries  map[string]entry
 }
@@ -62,6 +65,7 @@ func Builtin() (*Catalog, error) {
 // fsys must be a trusted deployment filesystem, not a request-controlled path.
 func Load(fsys fs.FS) (*Catalog, error) {
 	used := 0
+	digest := sha256.New()
 	read := func(name string) ([]byte, error) {
 		info, err := fs.Stat(fsys, name)
 		if err != nil {
@@ -80,6 +84,8 @@ func Load(fsys fs.FS) (*Catalog, error) {
 		if len(data) > maxAssetBytes || used > maxCatalogBytes {
 			return nil, errors.New("overlay catalog exceeds byte limit")
 		}
+		fmt.Fprintf(digest, "%s:%d:", name, len(data))
+		digest.Write(data)
 		return data, err
 	}
 	data, err := read("bindings.json")
@@ -148,6 +154,7 @@ func Load(fsys fs.FS) (*Catalog, error) {
 			return nil, fmt.Errorf("overlay binding %s has incompatible view", binding)
 		}
 	}
+	c.digest = hex.EncodeToString(digest.Sum(nil))
 	return c, nil
 }
 
@@ -263,3 +270,6 @@ func validateSVG(data []byte) error {
 	}
 	return nil
 }
+
+// Digest identifies the exact immutable asset snapshot loaded at boot.
+func (c *Catalog) Digest() string { return c.digest }

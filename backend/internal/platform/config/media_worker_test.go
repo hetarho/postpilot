@@ -84,3 +84,46 @@ func TestMediaStorageEndpointIsIndependentAndDefaultsToAPIEndpoint(t *testing.T)
 		t.Fatal("invalid worker storage origin accepted")
 	}
 }
+
+func TestStandaloneWorkerResourcesRequireNoAPISettings(t *testing.T) {
+	t.Setenv("MEDIA_API_URL", "http://api:9000")
+	t.Setenv("MEDIA_WORKER_ID", "cpu")
+	t.Setenv("MEDIA_WORKER_TOKEN", workerSecret())
+	t.Setenv("MEDIA_ACCEL", "")
+	t.Setenv("MEDIA_WORKER_CONCURRENCY", "")
+	t.Setenv("MEDIA_DRAIN_TIMEOUT", "")
+	t.Setenv("CLIP_ENCODE_THREADS", "")
+	t.Setenv("CLIP_DECODE_THREADS", "")
+	t.Setenv("CLIP_MEDIA_STAGE_TIMEOUT", "invalid-api-only-setting")
+	c, err := LoadWorkerConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.Accel != "cpu" || c.Concurrency != 1 || c.EncodeThreads != 1 || c.DecodeThreads != 2 {
+		t.Fatal("CPU defaults", c.Accel, c.Concurrency, c.EncodeThreads, c.DecodeThreads)
+	}
+	for _, name := range []string{"MEDIA_ACCEL", "MEDIA_WORKER_CONCURRENCY", "MEDIA_DRAIN_TIMEOUT"} {
+		t.Run(name, func(t *testing.T) {
+			t.Setenv(name, "invalid")
+			if _, err := LoadWorkerConfig(); err == nil {
+				t.Fatal("invalid resource accepted")
+			}
+		})
+	}
+	t.Setenv("MEDIA_WORKER_CONCURRENCY", "2")
+	if _, err := LoadWorkerConfig(); err == nil {
+		t.Fatal("untested parallelism enabled")
+	}
+}
+
+func TestAPIMediaSettingsStillLoadStageBudgets(t *testing.T) {
+	t.Setenv("CLIP_MEDIA_STAGE_TIMEOUT", "47m")
+	t.Setenv("CLIP_MEDIA_MAX_ATTEMPTS", "4")
+	var c Config
+	if err := loadClipMedia(&c); err != nil {
+		t.Fatal(err)
+	}
+	if c.ClipMediaStageTimeout.String() != "47m0s" || c.ClipMediaMaxAttempts != 4 {
+		t.Fatal("API stage budgets were dropped")
+	}
+}

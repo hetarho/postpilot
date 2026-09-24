@@ -106,30 +106,6 @@ func reportedNames(t *testing.T, binary, flag string) map[string]bool {
 	return parseListing(string(out))
 }
 
-func parseListing(out string) map[string]bool {
-	names := map[string]bool{}
-	body := false
-	for _, line := range strings.Split(out, "\n") {
-		trimmed := strings.TrimSpace(line)
-		if !body {
-			// The legend ends at a rule of dashes; rows follow it.
-			if trimmed != "" && strings.Trim(trimmed, "-") == "" {
-				body = true
-			}
-			continue
-		}
-		fields := strings.Fields(trimmed)
-		if len(fields) < 2 {
-			continue
-		}
-		// A format row can name several at once, e.g. `matroska,webm`.
-		for _, name := range strings.Split(fields[1], ",") {
-			names[name] = true
-		}
-	}
-	return names
-}
-
 func missingFrom(reported map[string]bool, required []string) []string {
 	var missing []string
 	for _, name := range required {

@@ -22,6 +22,8 @@ COPY backend/ .
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /api ./cmd/api
 RUN CGO_ENABLED=0 GOOS=linux go test -c -o /media.test ./internal/clip/media
 
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /media-worker ./cmd/media-worker
+
 FROM builder AS release-builder
 RUN CGO_ENABLED=0 GOOS=linux go test -c -o /clip-release.test ./cmd/api
 
@@ -56,6 +58,14 @@ FROM runtime AS identity-smoke
 COPY --from=builder /media.test /media.test
 ENV CLIP_MEDIA_SMOKE=1
 ENTRYPOINT ["/media.test", "-test.run=^Test(DeliveredClipIdentity|AnalysisCopyIdentityAcrossDecoderThreads|PreparationDecodesEachOriginalOnce|SampledGroundsSurviveTheBatchedRead)$", "-test.v", "-test.timeout=45m"]
+
+# Same-host embedded/worker byte, frame and measurement parity, CPU profile.
+FROM runtime AS worker-execution-smoke
+COPY --from=builder /media.test /media.test
+COPY --from=builder /media-worker /media-worker
+ENV CLIP_MEDIA_SMOKE=1
+RUN ["/media.test", "-test.run=^TestExecRunnerReapsDescendants$", "-test.v", "-test.timeout=1m"]
+ENTRYPOINT ["/media.test", "-test.run=^Test(WorkerExecutionParity|WorkerCommandHealth)$", "-test.v", "-test.timeout=45m"]
 
 # Explicit local regression target: never contacts a real provider or stack.
 FROM runtime AS release-smoke

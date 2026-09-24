@@ -9,6 +9,14 @@ import (
 )
 
 func loadClipMedia(cfg *Config) error {
+	if err := loadClipTools(cfg); err != nil {
+		return err
+	}
+	return loadMediaStageOverrides(cfg)
+}
+
+// Shared tool settings only: this does not initialize API or persistence services.
+func loadClipTools(cfg *Config) error {
 	cfg.ClipWorkRoot = getenv("CLIP_WORK_ROOT", "/tmp/postpilot-clip-work")
 	cfg.ClipFFmpegPath = getenv("CLIP_FFMPEG_PATH", "/usr/local/bin/ffmpeg")
 	cfg.ClipFFprobePath = getenv("CLIP_FFPROBE_PATH", "/usr/local/bin/ffprobe")
@@ -53,7 +61,7 @@ func loadClipMedia(cfg *Config) error {
 	if err != nil {
 		return err
 	}
-	return loadMediaStageOverrides(cfg)
+	return nil
 }
 
 // Domain defaults and upper bounds are merged/validated by the clip constructor.

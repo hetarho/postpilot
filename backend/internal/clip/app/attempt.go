@@ -7,11 +7,11 @@ import (
 	"log/slog"
 	"net/url"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/clip/localmedia"
 	"github.com/postpilot/backend/internal/llm"
 )
 
@@ -23,134 +23,32 @@ func (s *GenerationService) withSource(ctx context.Context, ws clip.MediaWorkspa
 	return errors.Join(fn(source), release())
 }
 
-// fetchSource downloads one verified original into the workspace and hands back
-// the file and the call that removes it. The bytes are BoundedText by the lease and
-// the workspace's capacity before and during the download.
-func (s *GenerationService) fetchSource(ctx context.Context, ws clip.MediaWorkspace, v clip.SourceLease, info clip.MediaInfo) (source clip.MediaSource, release func() error, err error) {
-	if v.Bytes <= 0 || v.Bytes > s.cfg.Media.Sources.MaxFileBytes || v.ActualBytes != v.Bytes {
-		return clip.MediaSource{}, nil, clip.ErrInvalidMedia
-	}
-	if ws.CheckCapacity == nil {
-		return clip.MediaSource{}, nil, clip.ErrWorkspaceLimit
-	}
-	if err := ws.CheckCapacity(v.Bytes); err != nil {
-		return clip.MediaSource{}, nil, err
-	}
-	f, err := os.CreateTemp(ws.Path, "source-*"+filepath.Ext(v.Filename))
-	if err != nil {
-		return clip.MediaSource{}, nil, err
-	}
-	name := f.Name()
-	remove := func() error {
-		if remove := os.Remove(name); remove != nil && !os.IsNotExist(remove) {
-			return remove
-		}
-		return nil
-	}
-	// A failed download leaves nothing behind; the caller gets no release to call.
-	defer func() {
-		if err != nil {
-			_ = f.Close()
-			err = errors.Join(err, remove())
-		}
-	}()
-	w := &sourceWriter{ctx: ctx, file: f, remaining: v.Bytes, capacity: ws.CheckCapacity}
-	n, err := s.objects.Download(ctx, v.Key, w, v.Bytes)
-	if err != nil {
-		if ctx.Err() != nil {
-			return clip.MediaSource{}, nil, ctx.Err()
-		}
-		if w.err != nil {
-			return clip.MediaSource{}, nil, w.err
-		}
-		return clip.MediaSource{}, nil, errors.New("clip source download failed")
-	}
-	if w.err != nil {
-		return clip.MediaSource{}, nil, w.err
-	}
-	if n != v.Bytes || w.remaining != 0 {
-		return clip.MediaSource{}, nil, clip.ErrInvalidMedia
-	}
-	if err = f.Close(); err != nil {
-		return clip.MediaSource{}, nil, err
-	}
-	return clip.MediaSource{Path: name, SourceID: v.ID, Fingerprint: v.Fingerprint, Info: info}, remove, nil
+func (s *GenerationService) fetchSource(ctx context.Context, ws clip.MediaWorkspace, v clip.SourceLease, info clip.MediaInfo) (clip.MediaSource, func() error, error) {
+	return localmedia.Fetch(ctx, ws, v, info, s.cfg.Media.Sources.MaxFileBytes, false, s.objects.Download)
 }
 
-// renderLoader serves the renderer's per-cut source requests from one held
-// download at a time: consecutive cuts of the same source read the copy the
-// previous cut fetched, and asking for another source releases it first. A take
-// cut three times is downloaded once, and never more than one original sits in
-// the workspace beside the proxies — the bound the release gate holds. The
-// returned release drops whatever is still held once the render is over.
 func (s *GenerationService) renderLoader(ws clip.MediaWorkspace, resolve func(string) (clip.SourceLease, clip.MediaInfo, bool), verifyRetained ...bool) (clip.RenderSourceLoader, func() error) {
-	var heldID string
-	var held clip.MediaSource
-	var drop func() error
-	release := func() error {
-		if drop == nil {
-			return nil
-		}
-		d := drop
-		drop, heldID = nil, ""
-		return d()
-	}
-	loader := func(ctx context.Context, id string, fn func(clip.MediaSource) error) error {
-		if drop != nil && heldID == id {
-			return fn(held)
-		}
-		if err := release(); err != nil {
-			return err
-		}
+	return localmedia.Loader(func(ctx context.Context, id string) (clip.MediaSource, func() error, error) {
 		lease, info, ok := resolve(id)
 		if !ok {
-			return clip.ErrNotFound
+			return clip.MediaSource{}, nil, clip.ErrNotFound
 		}
-		source, d, err := s.fetchSource(ctx, ws, lease, info)
+		source, drop, err := s.fetchSource(ctx, ws, lease, info)
 		if err != nil {
-			return err
+			return source, nil, err
 		}
 		if len(verifyRetained) > 0 && verifyRetained[0] {
-			actual, e := s.media.Probe(ctx, ws, source.Path)
-			if e != nil {
-				return errors.Join(e, d())
+			actual, err := s.media.Probe(ctx, ws, source.Path)
+			if err == nil && !localmedia.SameIdentity(info, actual) {
+				err = clip.ErrInvalidMedia
 			}
-			if actual.DurationMS != info.DurationMS || actual.Width != info.Width || actual.Height != info.Height || actual.HasAudio != info.HasAudio {
-				return errors.Join(clip.ErrInvalidMedia, d())
+			if err != nil {
+				return clip.MediaSource{}, nil, errors.Join(err, drop())
 			}
 			source.Info = actual
 		}
-		held, heldID, drop = source, id, d
-		return fn(source)
-	}
-	return loader, release
-}
-
-type sourceWriter struct {
-	ctx       context.Context
-	file      *os.File
-	remaining int64
-	capacity  func(int64) error
-	err       error
-}
-
-func (w *sourceWriter) Write(p []byte) (int, error) {
-	if w.err == nil {
-		w.err = w.ctx.Err()
-	}
-	if w.err == nil && int64(len(p)) > w.remaining {
-		w.err = clip.ErrInvalidMedia
-	}
-	if w.err == nil {
-		w.err = w.capacity(int64(len(p)))
-	}
-	if w.err != nil {
-		return 0, w.err
-	}
-	n, err := w.file.Write(p)
-	w.remaining -= int64(n)
-	w.err = err
-	return n, err
+		return source, drop, nil
+	})
 }
 
 func (s *GenerationService) probeBatch(ctx context.Context, ws clip.MediaWorkspace, b clip.SourceBatch, progress func(int)) ([]clip.AnalysisSource, []clip.MediaInfo, int, error) {

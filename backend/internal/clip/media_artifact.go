@@ -14,6 +14,7 @@ type MediaTask struct {
 	Sources        []MediaTaskSource
 	Plan           string
 	HideDisclosure bool
+	Render         MediaRenderInputs
 }
 
 type MediaTaskSource struct {
@@ -57,4 +58,23 @@ type MediaArtifactAccess struct {
 	Headers                map[string]string
 	Bytes                  int64
 	ExpiresAfter           time.Duration
+}
+
+// MediaRenderInputs freezes the project-owned inputs intentionally absent from
+// the persisted editing plan. Workers must never load current project state.
+type MediaRenderInputs struct {
+	Disclosure, Preset, CTA, Accent, CaptionPace, IntroPreset, OutroPreset string
+	Facts                                                                  []Answer
+	CaptionStyles                                                          []string
+	Written                                                                []Written
+	Decisions                                                              []Composition
+}
+
+func FreezeMediaRenderInputs(p EditPlan) MediaRenderInputs {
+	return MediaRenderInputs{p.Disclosure, p.Preset, p.CTA, p.Accent, p.CaptionPace, p.IntroPreset, p.OutroPreset, p.Facts, p.CaptionStyles, p.Written, p.Decisions}
+}
+func (r MediaRenderInputs) Apply(p EditPlan) EditPlan {
+	p.Disclosure, p.Preset, p.CTA, p.Accent, p.CaptionPace, p.IntroPreset, p.OutroPreset = r.Disclosure, r.Preset, r.CTA, r.Accent, r.CaptionPace, r.IntroPreset, r.OutroPreset
+	p.Facts, p.CaptionStyles, p.Written, p.Decisions = r.Facts, r.CaptionStyles, r.Written, r.Decisions
+	return p
 }

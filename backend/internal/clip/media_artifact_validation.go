@@ -47,6 +47,8 @@ func ValidateMediaTask(op MediaOperation, task MediaTask, cfg MediaConfig) error
 		if err != nil {
 			return err
 		}
+		plan = task.Render.Apply(plan)
+		plan.HideDisclosure = task.HideDisclosure
 		sources := make([]RenderSource, len(task.Sources))
 		for i, s := range task.Sources {
 			sources[i] = RenderSource{ID: s.ID, Fingerprint: s.Fingerprint, Info: s.Info}

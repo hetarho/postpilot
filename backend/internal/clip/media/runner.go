@@ -44,12 +44,18 @@ func (r ExecRunner) Run(ctx context.Context, command Command) ([]byte, error) {
 		return nil, errors.New("invalid media runner limits")
 	}
 	cmd := exec.CommandContext(ctx, command.Binary, command.Args...)
+	if err := ownProcessGroup(cmd); err != nil {
+		return nil, err
+	}
 	cmd.Dir = command.Dir
 	cmd.WaitDelay = r.WaitDelay
 	out := &boundedBuffer{limit: r.StdoutLimit}
 	stderr := &boundedBuffer{limit: r.StderrLimit}
 	cmd.Stdout, cmd.Stderr = out, stderr
 	err := cmd.Run()
+	if cmd.Process != nil {
+		stopProcessGroup(cmd, r.WaitDelay)
+	}
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}

@@ -1,5 +1,7 @@
 package media
 
+import "strings"
+
 // What this package hands to the bundled binaries by name.
 //
 // The image ships a `--disable-everything` ffmpeg (backend/build/media-tools.sh), so a
@@ -32,3 +34,27 @@ var requiredMuxers = []string{"mp4", "null", "wav"}
 // loudness on. A source's own codec is not here — the render code never names it, ffmpeg
 // selects it from the container.
 var requiredDecoders = []string{"aac", "h264", "pcm_s16le", "png"}
+
+func parseListing(out string) map[string]bool {
+	names := map[string]bool{}
+	body := false
+	for _, line := range strings.Split(out, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if !body {
+			// The legend ends at a rule of dashes; rows follow it.
+			if trimmed != "" && strings.Trim(trimmed, "-") == "" {
+				body = true
+			}
+			continue
+		}
+		fields := strings.Fields(trimmed)
+		if len(fields) < 2 {
+			continue
+		}
+		// A format row can name several at once, e.g. `matroska,webm`.
+		for _, name := range strings.Split(fields[1], ",") {
+			names[name] = true
+		}
+	}
+	return names
+}

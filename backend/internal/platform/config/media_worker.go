@@ -10,6 +10,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const maxWorkerCredentials = 64
@@ -104,5 +105,44 @@ func LoadMediaWorker() (MediaWorker, error) {
 		return MediaWorker{}, errors.New("MEDIA_WORKER_ID and MEDIA_WORKER_TOKEN must match a configured worker credential")
 	}
 	c.APIURL = strings.TrimSuffix(c.APIURL, "/")
+	return c, nil
+}
+
+// WorkerConfig contains no database, provider, storage credentials or user auth.
+type WorkerConfig struct {
+	MediaWorker
+	Accel                                                    string
+	Concurrency                                              int
+	DrainTimeout                                             time.Duration
+	WorkRoot, FFmpegPath, FFprobePath, ResvgPath, OverlayDir string
+	FontPaths                                                map[string]string
+	WorkStaleAge, MediaTimeout                               time.Duration
+	EncodeThreads, DecodeThreads                             int
+}
+
+func LoadWorkerConfig() (WorkerConfig, error) {
+	auth, err := LoadMediaWorker()
+	if err != nil {
+		return WorkerConfig{}, err
+	}
+	c := WorkerConfig{MediaWorker: auth, Accel: getenv("MEDIA_ACCEL", "cpu")}
+	if c.Accel != "cpu" && c.Accel != "auto" && c.Accel != "nvenc" {
+		return c, errors.New("MEDIA_ACCEL must be cpu, auto or nvenc")
+	}
+	c.Concurrency, err = positiveInt("MEDIA_WORKER_CONCURRENCY", "1")
+	if err != nil || c.Concurrency != 1 {
+		return c, errors.New("MEDIA_WORKER_CONCURRENCY must be 1")
+	}
+	c.DrainTimeout, err = positiveDuration("MEDIA_DRAIN_TIMEOUT", "30s")
+	if err != nil || c.DrainTimeout > 15*time.Minute {
+		return c, errors.New("MEDIA_DRAIN_TIMEOUT must be positive and at most 15m")
+	}
+	var media Config // reuse only the pure media settings parser, never Load.
+	if err = loadClipTools(&media); err != nil {
+		return c, err
+	}
+	c.WorkRoot, c.FFmpegPath, c.FFprobePath, c.ResvgPath, c.OverlayDir = media.ClipWorkRoot, media.ClipFFmpegPath, media.ClipFFprobePath, media.ClipResvgPath, media.ClipOverlayDir
+	c.FontPaths, c.WorkStaleAge, c.MediaTimeout = media.ClipFontPaths, media.ClipWorkStaleAge, media.ClipMediaTimeout
+	c.EncodeThreads, c.DecodeThreads = media.ClipEncodeThreads, media.ClipDecodeThreads
 	return c, nil
 }
