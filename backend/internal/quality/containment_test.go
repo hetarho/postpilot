@@ -95,3 +95,10 @@ func TestAMissingContentLanguageMeasuresAsKorean(t *testing.T) {
 		t.Error("a post with no content language did not take the Korean rule")
 	}
 }
+
+// Review F10: a trailing emoji no longer hides the word it follows.
+func TestAnEnglishWordContainsANounBeforeATrailingEmoji(t *testing.T) {
+	if !Contains(Tokens("I love latte☕\ufe0f"), Tokens("latte"), LanguageEnglish) {
+		t.Fatal("an emoji-tailed word did not contain its noun")
+	}
+}

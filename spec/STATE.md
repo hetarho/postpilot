@@ -57,7 +57,6 @@
 | T357 | The published lock is one guard, and an unclassified write fails a test | ARCH | T355 | todo |
 | T358 | A photo's row goes before its object, and "finalized at the current revision" is one rule | ARCH | T357 | todo |
 | T363 | A taken replacement candidate is spent | GEN POST ARCH | T355 T362 | todo |
-| T364 | A measurement change cannot ship without its version bump, and emoji tails trim | ARCH | - | todo |
 | T365 | Generation preconditions take one named input | ARCH | - | todo |
 | T366 | The draft queue's assignments are one record per channel | ARCH | T355 | todo |
 | T367 | The autosave owns the published lock, and every control reads the lock from the post it holds | ARCH | T355 T365 T366 | todo |
@@ -82,9 +81,11 @@
 ## next
 - implement-task T380 next for the media-worker wave (T376..T379 are done; T387 verifies CPU/VPS compatibility locally; T388 completes README/DEPLOY guides for all three environments and GPU setup tooling without live migration)
 - Later: update-ssot CLIP-163, then create-task ARCH CLIP for real-GPU validation, profile approval/automatic selection and concurrency tuning; ARCH r11 and CLIP r44 remain partially consumed, and physical host setup/migration remain operator actions
-- implement-task T364 (continuing T354..T375 in dependency order, p42); create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
+- implement-task T369 (continuing T354..T375 in dependency order, p42); create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 
 ## log
+- 260925 T364 done; MeasureSelf's answer is pinned per MeasureVersion by a golden digest over a 20-post corpus, and emoji tails (variation selectors, ZWJ, format runes, keycaps) trim at 어절 edges under MeasureVersion 2; BE gate passes (p42)
+- 260925 T364 claimed (p42)
 - 260925 T362 done; one replacement-placement fixture and one tag-identity fixture are run by the Go and TS suites alike, and the browser's whitespace is now Go's unicode.IsSpace set; BE and FE gates pass (p42)
 - 260925 T362 claimed (p42)
 - 260925 T361 done; a write comparison freezes the material Start freezes (memories included), the preset line rides only with frozen phrases, and the snapshot has its own tagged wire struct with every stored byte unchanged; BE gate passes (p42)
@@ -103,5 +104,3 @@
 - 260925 create-task POST MEM start (r14, r3: 분야 and 기억 사용 in the brief, saved together by its 저장; updates todo T355 T356 T366 T367 T368 T373 T375)
 - 260925 T377 done (mw): durable park/wake and replay policies, continued queue processing and fenced cancellation acknowledgement; SQLite/queue/race, ARCH-26, FE/CI/codegen and spec checks pass; T378 next
 - 260925 T377 claimed (mw); T376 committed as 2554cef1; sequential media-wave scope only
-- 260925 T376 done (mw): durable fenced media stages/attempts/artifact reservations and bounded env limits; SQLite concurrency/race/upgrade, ARCH-26, FE/CI/codegen and spec checks pass; production dispatch unchanged; commit per task, T377 next
-- 260925 T376 claimed (mw); implementation scope T376..T388 only, sequential; other sessions own the remaining wave

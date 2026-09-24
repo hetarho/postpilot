@@ -3,6 +3,7 @@ package quality
 import (
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 
 	"golang.org/x/text/unicode/norm"
@@ -68,5 +69,25 @@ func TestExtractPhrases(t *testing.T) {
 	ranked := ExtractPhrases([]string{"성수 카페 라떼", "성수 카페 라떼", "성수 카페 쿠키"})
 	if ranked[0] != (Phrase{Text: "성수 카페", Tokens: 2, Count: 3}) || ranked[1] != (Phrase{Text: "성수 카페 라떼", Tokens: 3, Count: 2}) {
 		t.Fatalf("ranked = %+v", ranked)
+	}
+}
+
+// Review F10: an emoji-tailed run is the same phrase, and no emoji reaches a phrase list.
+func TestExtractPhrasesCountsAnEmojiTailedRunAsTheSamePhrase(t *testing.T) {
+	phrases := ExtractPhrases([]string{"성수 카페 추천", "성수 카페 추천❤\ufe0f", "오늘도 성수 카페 추천☕\ufe0f"})
+	found := false
+	for _, phrase := range phrases {
+		if strings.ContainsAny(phrase.Text, "\ufe0f❤☕") {
+			t.Errorf("a phrase carries an emoji: %q", phrase.Text)
+		}
+		if phrase.Text == "성수 카페 추천" {
+			found = true
+			if phrase.Count != 3 {
+				t.Errorf("성수 카페 추천 counted %d, want 3", phrase.Count)
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("the phrase is missing: %+v", phrases)
 	}
 }

@@ -9,7 +9,6 @@ import (
 // changed band rewrites what every badge means, so a change here is a deliberate diff.
 func TestBandsMinimumsAndWindowsArePinned(t *testing.T) {
 	for name, pin := range map[string]struct{ got, want float64 }{
-		"MeasureVersion":         {MeasureVersion, 1},
 		"RunLength":              {RunLength, 8},
 		"TitleWindow":            {TitleWindow, 100},
 		"PostWindow":             {PostWindow, 20},

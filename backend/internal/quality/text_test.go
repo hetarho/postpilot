@@ -25,7 +25,7 @@ func TestTokensNormalizeSplitAndTrimEdgePunctuation(t *testing.T) {
 			want: []string{"협재", "해변", "물빛이", "맑았다"},
 		},
 		"any Unicode whitespace splits": {
-			text: "제주 협재\t해변\n물빛",
+			text: "제주\u00a0협재\t해변\n물빛",
 			want: []string{"제주", "협재", "해변", "물빛"},
 		},
 		"an emoji or a hashtag at the edge never blocks a match": {
@@ -83,5 +83,34 @@ func TestUnitsFollowBlockOrderAndSkipUnfilledSlots(t *testing.T) {
 	}
 	if got := Units(Document{Title: "제목만 있는 글"}); len(got) != 0 {
 		t.Errorf("a document with no blocks has units %+v", got)
+	}
+}
+
+// Review F10: an emoji's invisible parts — variation selectors, ZWJ and other format runes,
+// enclosing marks — trim at an 어절's edges like its visible symbol, and a keycap goes whole, so
+// an emoji-tailed noun still matches and a lone emoji is no word.
+func TestTokensTrimEmojiAtTheEdges(t *testing.T) {
+	for input, want := range map[string][]string{
+		"맛있어요❤\ufe0f latte☕\ufe0f":                   {"맛있어요", "latte"},
+		"☕\ufe0f":                                    nil,
+		"1\ufe0f\u20e3":                              nil,
+		"추천1\ufe0f\u20e3":                            {"추천"},
+		"#\ufe0f\u20e3맛집":                            {"맛집"},
+		"!#\ufe0f\u20e3추천":                           {"추천"},
+		"추천1\ufe0f\u20e3!":                           {"추천"},
+		"\U0001f468\u200d\U0001f469\u200d\U0001f467": nil,
+		"\U0001f44d\U0001f3fb":                       nil,
+		"\U0001f1f0\U0001f1f7서울":                     {"서울"},
+		"카페\u200b":                                   {"카페"},
+		"\ufeff카페":                                   {"카페"},
+		"10":                                         {"10"},
+		"#1":                                         {"1"},
+		"café":                                       {"café"},
+		"3.5km.":                                     {"3.5km"},
+		"6,500원,":                                    {"6,500원"},
+	} {
+		if got := Tokens(input); !reflect.DeepEqual(got, want) && !(len(got) == 0 && len(want) == 0) {
+			t.Errorf("Tokens(%q) = %q, want %q", input, got, want)
+		}
 	}
 }
