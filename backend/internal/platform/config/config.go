@@ -192,6 +192,8 @@ const BillingTickInterval = 10 * time.Minute
 
 // Config is the fully-resolved process configuration.
 type Config struct {
+	MediaInternalAddr      string
+	MediaWorkerCredentials map[string]string
 	// Port the HTTP server listens on.
 	Port string
 	// CORSOrigin is the single browser origin allowed to call the API. In production
@@ -605,6 +607,9 @@ func Load() (*Config, error) {
 	}
 	cfg.MaxVideoSeconds = maxVideoSeconds
 
+	if err := loadMediaListener(cfg); err != nil {
+		return nil, err
+	}
 	return cfg, nil
 }
 

@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -14,6 +12,7 @@ import (
 	authrpc "github.com/postpilot/backend/internal/auth/rpc"
 	"github.com/postpilot/backend/internal/billing"
 	billingrpc "github.com/postpilot/backend/internal/billing/rpc"
+	clipapp "github.com/postpilot/backend/internal/clip/app"
 	cliprpc "github.com/postpilot/backend/internal/clip/rpc"
 	"github.com/postpilot/backend/internal/experiment"
 	experimentrpc "github.com/postpilot/backend/internal/experiment/rpc"
@@ -92,28 +91,12 @@ func serve(ctx context.Context, c *contexts) error {
 		go c.jobs.Run(workerCtx)
 	}
 
-	serveErr := make(chan error, 1)
-	go func() {
-		slog.Info("server starting", "port", cfg.Port, "version", version)
-		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			serveErr <- err
-		}
-	}()
-
-	select {
-	case <-ctx.Done():
-		slog.Info("shutting down")
-	case err := <-serveErr:
-		return fmt.Errorf("listen: %w", err)
+	servers := []*http.Server{server}
+	if cfg.MediaInternalAddr != "" {
+		servers = append(servers, cliprpc.NewMediaWorkerServer(cfg.MediaInternalAddr, cfg.MediaWorkerCredentials, clipapp.NewMediaWorker(c.clipStore, nil)))
 	}
-	cancelWorkers()
-
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	if err := server.Shutdown(shutdownCtx); err != nil {
-		slog.Error("shutdown failed", "err", err)
-	}
-	return nil
+	slog.Info("server starting", "port", cfg.Port, "version", version)
+	return rpcserver.Serve(ctx, servers...)
 }
 
 // handlers is every Connect service the server exposes, each over its own context.

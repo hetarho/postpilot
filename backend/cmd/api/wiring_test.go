@@ -1,7 +1,12 @@
 package main
 
 import (
+	"connectrpc.com/connect"
 	"context"
+	authrpc "github.com/postpilot/backend/internal/auth/rpc"
+	"github.com/postpilot/backend/internal/platform/rpcserver"
+	"net/http"
+	"net/http/httptest"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -82,6 +87,21 @@ func TestBuildContextsWiresEveryRequiredCollaborator(t *testing.T) {
 		path, _ := register()
 		if strings.Contains(path, "Publishing") {
 			t.Fatalf("retired publishing route is still registered: %s", path)
+		}
+	}
+	public := rpcserver.New(cfg, "test", rpcserver.Options{Handlers: got, Interceptors: []connect.Interceptor{authrpc.NewInterceptor(app.auth, app.throttle, cfg.ClientIPHeader)}})
+	for path, want := range map[string]int{
+		"/postpilot.v1.ClipMediaWorkerService/GetMediaRuntimeStatus": http.StatusNotFound,
+		"/postpilot.v1.PostService/ListPosts":                        http.StatusUnauthorized,
+	} {
+		r := httptest.NewRequest(http.MethodPost, path, strings.NewReader("{}"))
+		r.Header.Set("X-Media-Worker-ID", "prod-worker")
+		r.Header.Set("Authorization", "Bearer worker-secret")
+		r.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		public.Handler.ServeHTTP(w, r)
+		if w.Code != want {
+			t.Fatalf("worker authority on public %s = %d, want %d", path, w.Code, want)
 		}
 	}
 }

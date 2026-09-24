@@ -147,7 +147,7 @@ func (s *Store) RenewMediaLease(ctx context.Context, auth clip.MediaLeaseCredent
 		return time.Time{}, clip.ErrInvalid
 	}
 	return transact(ctx, s, func(q *sqlc.Queries) (time.Time, error) {
-		r, err := q.GetMediaStage(ctx, auth.StageID)
+		r, err := authenticatedMediaStage(ctx, q, auth)
 		if err != nil {
 			return time.Time{}, leaseError(err)
 		}
@@ -169,7 +169,7 @@ func (s *Store) AcceptMediaResult(ctx context.Context, auth clip.MediaLeaseCrede
 		return clip.MediaStage{}, clip.ErrInvalid
 	}
 	return transact(ctx, s, func(q *sqlc.Queries) (clip.MediaStage, error) {
-		r, err := q.GetMediaStage(ctx, auth.StageID)
+		r, err := authenticatedMediaStage(ctx, q, auth)
 		if err != nil {
 			return clip.MediaStage{}, leaseError(err)
 		}

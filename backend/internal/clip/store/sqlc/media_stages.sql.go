@@ -136,6 +136,73 @@ func (q *Queries) ExpireMediaAttempts(ctx context.Context, arg ExpireMediaAttemp
 	return err
 }
 
+const failMediaAttempt = `-- name: FailMediaAttempt :exec
+UPDATE clip_media_attempts SET outcome='failed',finished_at=? WHERE id=?
+`
+
+type FailMediaAttemptParams struct {
+	FinishedAt sql.NullString
+	ID         string
+}
+
+func (q *Queries) FailMediaAttempt(ctx context.Context, arg FailMediaAttemptParams) error {
+	_, err := q.db.ExecContext(ctx, failMediaAttempt, arg.FinishedAt, arg.ID)
+	return err
+}
+
+const failMediaStage = `-- name: FailMediaStage :one
+UPDATE clip_media_stages SET state='failed',failure=?1
+WHERE clip_media_stages.id=?2 AND clip_media_stages.state='running' AND clip_media_stages.current_attempt_id=?3 AND clip_media_stages.deadline_at>?4
+AND EXISTS(SELECT 1 FROM clip_media_attempts a WHERE a.id=clip_media_stages.current_attempt_id AND a.worker_id=?5 AND a.token_hash=?6 AND a.outcome IS NULL AND a.lease_expires_at>?4)
+RETURNING id, parent_job_id, user_id, project_id, expected_revision, stage_key, operation, contract_version, input_digest, input_payload, renderer_version, asset_version, state, current_attempt_id, attempt_count, created_at, queue_deadline_at, deadline_at, lease_ttl_ns, attempt_limit, accepted_result, failure
+`
+
+type FailMediaStageParams struct {
+	Failure   sql.NullString
+	StageID   string
+	AttemptID sql.NullString
+	Now       string
+	WorkerID  string
+	TokenHash string
+}
+
+func (q *Queries) FailMediaStage(ctx context.Context, arg FailMediaStageParams) (ClipMediaStage, error) {
+	row := q.db.QueryRowContext(ctx, failMediaStage,
+		arg.Failure,
+		arg.StageID,
+		arg.AttemptID,
+		arg.Now,
+		arg.WorkerID,
+		arg.TokenHash,
+	)
+	var i ClipMediaStage
+	err := row.Scan(
+		&i.ID,
+		&i.ParentJobID,
+		&i.UserID,
+		&i.ProjectID,
+		&i.ExpectedRevision,
+		&i.StageKey,
+		&i.Operation,
+		&i.ContractVersion,
+		&i.InputDigest,
+		&i.InputPayload,
+		&i.RendererVersion,
+		&i.AssetVersion,
+		&i.State,
+		&i.CurrentAttemptID,
+		&i.AttemptCount,
+		&i.CreatedAt,
+		&i.QueueDeadlineAt,
+		&i.DeadlineAt,
+		&i.LeaseTtlNs,
+		&i.AttemptLimit,
+		&i.AcceptedResult,
+		&i.Failure,
+	)
+	return i, err
+}
+
 const finishMediaAttempt = `-- name: FinishMediaAttempt :exec
 UPDATE clip_media_attempts SET outcome='succeeded',finished_at=?,progress=1000 WHERE id=?
 `
@@ -325,6 +392,78 @@ func (q *Queries) InsertMediaStage(ctx context.Context, arg InsertMediaStagePara
 		arg.AttemptLimit,
 	)
 	return err
+}
+
+const mediaActiveCount = `-- name: MediaActiveCount :one
+SELECT COUNT(*) FROM clip_media_stages s JOIN clip_media_attempts a ON a.id=s.current_attempt_id
+WHERE s.state='running' AND s.deadline_at>?1 AND a.outcome IS NULL AND a.lease_expires_at>?1
+`
+
+func (q *Queries) MediaActiveCount(ctx context.Context, now string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, mediaActiveCount, now)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const mediaIncompatibleCount = `-- name: MediaIncompatibleCount :one
+SELECT COUNT(*) FROM clip_media_stages s LEFT JOIN clip_media_attempts a ON a.id=s.current_attempt_id
+WHERE s.operation=?1 AND s.deadline_at>?2 AND s.attempt_count<s.attempt_limit
+AND (s.attempt_count>0 OR s.queue_deadline_at>?2)
+AND (s.state='queued' OR (s.state='running' AND a.lease_expires_at<=?2))
+AND (s.contract_version!=?3 OR s.renderer_version!=?4 OR s.asset_version!=?5)
+`
+
+type MediaIncompatibleCountParams struct {
+	Operation       string
+	Now             string
+	ContractVersion int64
+	RendererVersion string
+	AssetVersion    string
+}
+
+func (q *Queries) MediaIncompatibleCount(ctx context.Context, arg MediaIncompatibleCountParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, mediaIncompatibleCount,
+		arg.Operation,
+		arg.Now,
+		arg.ContractVersion,
+		arg.RendererVersion,
+		arg.AssetVersion,
+	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const mediaOwnActiveCount = `-- name: MediaOwnActiveCount :one
+SELECT COUNT(*) FROM clip_media_stages s JOIN clip_media_attempts a ON a.id=s.current_attempt_id
+WHERE s.state='running' AND s.deadline_at>?1 AND a.outcome IS NULL AND a.lease_expires_at>?1 AND a.worker_id=?2
+`
+
+type MediaOwnActiveCountParams struct {
+	Now      string
+	WorkerID string
+}
+
+func (q *Queries) MediaOwnActiveCount(ctx context.Context, arg MediaOwnActiveCountParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, mediaOwnActiveCount, arg.Now, arg.WorkerID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const mediaWaitingCount = `-- name: MediaWaitingCount :one
+SELECT COUNT(*) FROM clip_media_stages s LEFT JOIN clip_media_attempts a ON a.id=s.current_attempt_id
+WHERE s.deadline_at>?1 AND s.attempt_count<s.attempt_limit
+AND (s.attempt_count>0 OR s.queue_deadline_at>?1)
+AND (s.state='queued' OR (s.state='running' AND a.lease_expires_at<=?1))
+`
+
+func (q *Queries) MediaWaitingCount(ctx context.Context, now string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, mediaWaitingCount, now)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }
 
 const renewMediaAttempt = `-- name: RenewMediaAttempt :one

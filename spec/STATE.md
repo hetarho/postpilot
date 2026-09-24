@@ -74,7 +74,6 @@
 | T373 | Entity boundaries for 분야 and post status | ARCH | T356 T367 | todo |
 | T374 | The template screen's ask-conflict flags follow the mounted composition | ARCH | - | todo |
 | T375 | The editor's per-control cases live in the tests of the slices that own them | ARCH | T368 | todo |
-| T378 | Workers authenticate to a separate versioned media API | ARCH | T376 | todo |
 | T379 | Media bytes cross stages through authorized private artifacts | ARCH CLIP | T376 T378 | todo |
 | T380 | A standalone CPU worker prepares and renders frozen media jobs | ARCH CLIP | T378 T379 | todo |
 | T381 | Generation resumes from prepared artifacts without repeating AI work | ARCH GEN CLIP | T376 T377 T379 T380 | todo |
@@ -87,11 +86,13 @@
 | T388 | GPU setup tooling and guides cover all three deployment environments | ARCH CLIP | T387 | todo |
 
 ## next
-- implement-task T378 next for the media-worker wave (T376 and T377 are done; T387 verifies CPU/VPS compatibility locally; T388 completes README/DEPLOY guides for all three environments and GPU setup tooling without live migration)
+- implement-task T379 next for the media-worker wave (T376..T378 are done; T387 verifies CPU/VPS compatibility locally; T388 completes README/DEPLOY guides for all three environments and GPU setup tooling without live migration)
 - Later: update-ssot CLIP-163, then create-task ARCH CLIP for real-GPU validation, profile approval/automatic selection and concurrency tuning; ARCH r11 and CLIP r44 remain partially consumed, and physical host setup/migration remain operator actions
 - implement-task T354 (then T355 T356 by dep; 22 todo from review/published-quality-260924, T355 now the brief's whole-set 저장); create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 
 ## log
+- 260925 T378 done (mw): authenticated separate worker API, compatible claims, fenced reports, bounded transport and private runtime status; HTTP/SQLite/race, isolated ARCH-26/FE/CI/codegen checks pass; T379 next
+- 260925 T378 claimed (mw); T377 committed as b56a62bc; sequential media-wave scope only
 - 260925 create-task POST MEM done: T355 rewritten as the brief's whole-set 저장 (분야 joins SavePostGenerationOptions, a partial request is refused, 분야 and 기억 사용 leave ①'s panel, the draft queue's 분야 channel goes); T356 T357 T361 T363 T366 T367 T368 T372 T373 T375 updated to match, T366 now after T355, T373 also refuses an unknown quality tick
 - 260925 create-task POST MEM start (r14, r3: 분야 and 기억 사용 in the brief, saved together by its 저장; updates todo T355 T356 T366 T367 T368 T373 T375)
 - 260925 T377 done (mw): durable park/wake and replay policies, continued queue processing and fenced cancellation acknowledgement; SQLite/queue/race, ARCH-26, FE/CI/codegen and spec checks pass; T378 next
@@ -110,5 +111,3 @@
 - 260925 update-ssot POST MEM start: 분야 and 기억 사용 move into the writing brief
 - 260925 create-task done: T354..T375 (22 todo) from review/published-quality-260924 (29 findings, now converted) and this wave's POST MEM MODEL QUAL GUIDE GEN TMPL THEME-42 deltas; P1 first: T354 (F1 F2, plus the same native-effort drop in A/B write candidates), T355 (F4), T356 (F18, THEME-42)
 - 260925 POST r12..r13 POST-77 no-op (no code impact: the shared URL fixture already refuses the blog's home)
-- 260924 POST r13: POST-88 removed and POST-20 back to its r11 text — an options save's presence rules are a request contract for the F4 task's impl notes, not product behavior
-- 260924 create-task review/published-quality-260924 + POST MEM MODEL QUAL GUIDE GEN TMPL THEME start (this wave's deltas only)

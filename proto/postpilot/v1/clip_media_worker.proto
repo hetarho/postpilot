@@ -1,0 +1,97 @@
+syntax = "proto3";
+package postpilot.v1;
+option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
+
+// Internal listener only. Identity comes exclusively from authenticated headers.
+service ClipMediaWorkerService {
+  rpc ClaimMediaStage(ClaimMediaStageRequest) returns (ClaimMediaStageResponse) {}
+  rpc RenewMediaStage(RenewMediaStageRequest) returns (RenewMediaStageResponse) {}
+  rpc GetMediaArtifactAccess(GetMediaArtifactAccessRequest) returns (GetMediaArtifactAccessResponse) {}
+  rpc ReserveMediaOutputs(ReserveMediaOutputsRequest) returns (ReserveMediaOutputsResponse) {}
+  rpc CompleteMediaStage(CompleteMediaStageRequest) returns (CompleteMediaStageResponse) {}
+  rpc FailMediaStage(FailMediaStageRequest) returns (FailMediaStageResponse) {}
+  rpc GetMediaRuntimeStatus(GetMediaRuntimeStatusRequest) returns (GetMediaRuntimeStatusResponse) {}
+}
+
+message MediaWorkerProfile {
+  // Closed operation names: prepare, render. Unknown names are refused.
+  string operation = 1;
+  int32 contract_version = 2;
+  string renderer_version = 3;
+  string asset_version = 4;
+  string profile = 5;
+  // Bounded version/resource metadata, never subprocess output or credentials.
+  string runtime_manifest = 6;
+}
+message MediaLeaseCredentials {
+  string stage_id = 1;
+  string attempt_id = 2;
+  string token = 3;
+}
+message MediaWork {
+  MediaLeaseCredentials lease = 1;
+  string operation = 2;
+  int32 contract_version = 3;
+  string renderer_version = 4;
+  string asset_version = 5;
+  string input_digest = 6;
+  // Versioned domain snapshot with artifact references, never paths/commands/URLs.
+  string payload = 7;
+  int64 lease_remaining_ms = 8;
+  int64 heartbeat_after_ms = 9;
+  int64 stage_remaining_ms = 10;
+}
+message ClaimMediaStageRequest { MediaWorkerProfile profile = 1; }
+message ClaimMediaStageResponse {
+  // Absent means no work; incompatibility is failed_precondition.
+  MediaWork work = 1;
+  int64 retry_after_ms = 2;
+}
+message RenewMediaStageRequest {
+  MediaLeaseCredentials lease = 1;
+  int32 progress = 2; // 0..1000, monotonic on the API.
+}
+message RenewMediaStageResponse {
+  int64 lease_remaining_ms = 1;
+  bool cancelled = 2;
+}
+message GetMediaArtifactAccessRequest {
+  MediaLeaseCredentials lease = 1;
+  string slot = 2;
+}
+message MediaArtifactAccess {
+  string slot = 1;
+  string url = 2;
+  string content_type = 3;
+  int64 max_bytes = 4;
+  int64 expires_after_ms = 5;
+}
+message GetMediaArtifactAccessResponse { MediaArtifactAccess access = 1; }
+message ReserveMediaOutputsRequest {
+  MediaLeaseCredentials lease = 1;
+  repeated string slots = 2;
+}
+message ReserveMediaOutputsResponse { repeated MediaArtifactAccess outputs = 1; }
+message CompleteMediaStageRequest {
+  MediaLeaseCredentials lease = 1;
+  // Bounded versioned result metadata; binaries travel through private storage.
+  string result = 2;
+}
+message CompleteMediaStageResponse {}
+message FailMediaStageRequest {
+  MediaLeaseCredentials lease = 1;
+  // Closed diagnostic code; free-form subprocess/provider messages are refused.
+  string failure = 2;
+}
+message FailMediaStageResponse {}
+message GetMediaRuntimeStatusRequest {}
+message GetMediaRuntimeStatusResponse {
+  int32 contract_version = 1;
+  string renderer_version = 2;
+  string asset_version = 3;
+  repeated string profiles = 4;
+  int64 waiting = 5;
+  int64 active = 6;
+  int64 own_active = 7;
+  bool ready = 8;
+}

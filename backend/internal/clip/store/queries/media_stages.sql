@@ -54,3 +54,33 @@ WHERE s.id=sqlc.arg(stage_id) AND a.id=sqlc.arg(attempt_id) AND a.worker_id=sqlc
 AND s.state='running' AND s.deadline_at>sqlc.arg(now) AND a.lease_expires_at>sqlc.arg(now) AND a.outcome IS NULL
 ON CONFLICT(attempt_id,slot) DO UPDATE SET slot=excluded.slot
 WHERE clip_media_artifacts.object_key=excluded.object_key AND clip_media_artifacts.content_type=excluded.content_type AND clip_media_artifacts.max_bytes=excluded.max_bytes;
+
+-- name: FailMediaStage :one
+UPDATE clip_media_stages SET state='failed',failure=sqlc.arg(failure)
+WHERE clip_media_stages.id=sqlc.arg(stage_id) AND clip_media_stages.state='running' AND clip_media_stages.current_attempt_id=sqlc.arg(attempt_id) AND clip_media_stages.deadline_at>sqlc.arg(now)
+AND EXISTS(SELECT 1 FROM clip_media_attempts a WHERE a.id=clip_media_stages.current_attempt_id AND a.worker_id=sqlc.arg(worker_id) AND a.token_hash=sqlc.arg(token_hash) AND a.outcome IS NULL AND a.lease_expires_at>sqlc.arg(now))
+RETURNING *;
+
+-- name: FailMediaAttempt :exec
+UPDATE clip_media_attempts SET outcome='failed',finished_at=? WHERE id=?;
+
+-- name: MediaWaitingCount :one
+SELECT COUNT(*) FROM clip_media_stages s LEFT JOIN clip_media_attempts a ON a.id=s.current_attempt_id
+WHERE s.deadline_at>sqlc.arg(now) AND s.attempt_count<s.attempt_limit
+AND (s.attempt_count>0 OR s.queue_deadline_at>sqlc.arg(now))
+AND (s.state='queued' OR (s.state='running' AND a.lease_expires_at<=sqlc.arg(now)));
+
+-- name: MediaActiveCount :one
+SELECT COUNT(*) FROM clip_media_stages s JOIN clip_media_attempts a ON a.id=s.current_attempt_id
+WHERE s.state='running' AND s.deadline_at>sqlc.arg(now) AND a.outcome IS NULL AND a.lease_expires_at>sqlc.arg(now);
+
+-- name: MediaOwnActiveCount :one
+SELECT COUNT(*) FROM clip_media_stages s JOIN clip_media_attempts a ON a.id=s.current_attempt_id
+WHERE s.state='running' AND s.deadline_at>sqlc.arg(now) AND a.outcome IS NULL AND a.lease_expires_at>sqlc.arg(now) AND a.worker_id=sqlc.arg(worker_id);
+
+-- name: MediaIncompatibleCount :one
+SELECT COUNT(*) FROM clip_media_stages s LEFT JOIN clip_media_attempts a ON a.id=s.current_attempt_id
+WHERE s.operation=sqlc.arg(operation) AND s.deadline_at>sqlc.arg(now) AND s.attempt_count<s.attempt_limit
+AND (s.attempt_count>0 OR s.queue_deadline_at>sqlc.arg(now))
+AND (s.state='queued' OR (s.state='running' AND a.lease_expires_at<=sqlc.arg(now)))
+AND (s.contract_version!=sqlc.arg(contract_version) OR s.renderer_version!=sqlc.arg(renderer_version) OR s.asset_version!=sqlc.arg(asset_version));
