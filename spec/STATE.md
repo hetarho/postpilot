@@ -20,23 +20,23 @@
 | ARCH | 9 | 9 | - | 0 |
 | AUTH | 8 | 8 | - | 0 |
 | QUOTA | 19 | 19 | - | 0 |
-| POST | 13 | 11 | POST-77✎ POST-79✎ | 0 |
+| POST | 13 | 13 | - | 0 |
 | VOICE | 3 | 3 | - | 1 |
-| GEN | 11 | 10 | GEN-14✎ GEN-18✎ GEN-51✎ GEN-53✎ | 0 |
-| MODEL | 17 | 16 | MODEL-30✎ | 0 |
-| TMPL | 11 | 10 | TMPL-51✎ | 1 |
-| GUIDE | 6 | 5 | GUIDE-40+ | 0 |
+| GEN | 11 | 11 | - | 0 |
+| MODEL | 17 | 17 | - | 0 |
+| TMPL | 11 | 11 | - | 1 |
+| GUIDE | 6 | 6 | - | 0 |
 | EXPORT | 5 | 5 | - | 0 |
 | PUB | 6 | 6 | - | 0 |
 | LANG | 5 | 5 | - | 0 |
-| THEME | 18 | 15 | THEME-19✎ THEME-42+ | 0 |
+| THEME | 18 | 15 | THEME-19✎ | 0 |
 | MKT | 6 | 6 | - | 0 |
 | VIDEO | 3 | 3 | - | 0 |
 | CLIP | 43 | 40 | CLIP-13✎ | 1 |
 | CDS | 25 | 23 | CDS-17✎ CDS-19✎ CDS-21✎ CDS-84✎ | 1 |
 | BILL | 4 | 4 | - | 0 |
-| MEM | 2 | 1 | MEM-19✎ | 2 |
-| QUAL | 4 | 3 | QUAL-41✎ QUAL-46+ | 0 |
+| MEM | 2 | 2 | - | 2 |
+| QUAL | 4 | 4 | - | 0 |
 
 ## review
 | id | st |
@@ -47,16 +47,40 @@
 | clip-release-smoke-260914 | converted@260916 |
 | arch-260919 | converted@260919 |
 | publishing-260922 | converted@260922 |
-| published-quality-260924 | ready@260924 |
+| published-quality-260924 | converted@260925 |
 
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
+| T354 | A generate's payload is encoded and decoded inside generation | ARCH | - | todo |
+| T355 | Saving one generation option never touches another | POST ARCH | - | todo |
+| T356 | Tab moves through an anchored panel; a hover-opened panel closes on Escape | THEME ARCH | T355 | todo |
+| T357 | The published lock is one guard, and an unclassified write fails a test | ARCH | T355 | todo |
+| T358 | A photo's row goes before its object, and "finalized at the current revision" is one rule | ARCH | T357 | todo |
+| T359 | The write prompt builder and template Create each take one named input | ARCH | T354 | todo |
+| T360 | Ticked quality rules open the per-post half; in revise the title form binds only a title request | GEN TMPL ARCH | T359 | todo |
+| T361 | A write comparison freezes the same write material as Start | MEM MODEL GEN GUIDE QUAL ARCH | T354 T359 | todo |
+| T362 | One replacement-rule fixture both sides read | ARCH | - | todo |
+| T363 | A taken replacement candidate is spent | GEN POST ARCH | T355 T362 | todo |
+| T364 | A measurement change cannot ship without its version bump, and emoji tails trim | ARCH | - | todo |
+| T365 | Generation preconditions take one named input | ARCH | - | todo |
+| T366 | The draft queue's assignments are one record per channel | ARCH | - | todo |
+| T367 | The autosave owns the published lock, and every control reads the lock from the post it holds | ARCH | T355 T365 T366 | todo |
+| T368 | The editor page suites pin behavior, not wiring | ARCH | T355 T356 T363 T365 T367 | todo |
+| T369 | An empty search answer keeps the stored list, and the refresh interval has a floor | QUAL ARCH | T364 | todo |
+| T370 | Quality reads the post it needs and nothing more, and TopNoun is gone | ARCH | T357 T364 | todo |
+| T371 | The small mirrors are pinned | ARCH | T362 T364 T369 | todo |
+| T372 | The test harness pins what it claims, and template limits have one constructor | ARCH | T354 T355 T359 T369 T371 | todo |
+| T373 | Entity boundaries for 분야 and post status | ARCH | T356 T367 | todo |
+| T374 | The template screen's ask-conflict flags follow the mounted composition | ARCH | - | todo |
+| T375 | The editor's per-control cases live in the tests of the slices that own them | ARCH | T368 | todo |
 
 ## next
-- create-task review/published-quality-260924 + POST MEM MODEL QUAL GUIDE GEN TMPL THEME (this wave's deltas only; P1 F1 F2 F4 F18 first)
+- implement-task T354 (then T355 T356 by dep; 22 todo from review/published-quality-260924 and this wave's deltas)
 - create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 ## log
+- 260925 create-task done: T354..T375 (22 todo) from review/published-quality-260924 (29 findings, now converted) and this wave's POST MEM MODEL QUAL GUIDE GEN TMPL THEME-42 deltas; P1 first: T354 (F1 F2, plus the same native-effort drop in A/B write candidates), T355 (F4), T356 (F18, THEME-42)
+- 260925 POST r12..r13 POST-77 no-op (no code impact: the shared URL fixture already refuses the blog's home)
 - 260924 POST r13: POST-88 removed and POST-20 back to its r11 text — an options save's presence rules are a request contract for the F4 task's impl notes, not product behavior
 - 260924 create-task review/published-quality-260924 + POST MEM MODEL QUAL GUIDE GEN TMPL THEME start (this wave's deltas only)
 - 260924 update-ssot done: POST r12 (POST-20✎ POST-77✎ POST-79✎ POST-88+ options saves are partial, a taken candidate is spent), MEM r2 MEM-19✎ + MODEL r17 MODEL-30✎ + GEN-18✎ a write comparison freezes 기억, GEN-14✎ GEN-51✎ ticked rules move to the per-post half, GEN-53✎, TMPL r11 TMPL-51✎ the title form binds only a title request in revise, GUIDE r6 GUIDE-40+ QUAL r4 QUAL-41✎ QUAL-46+, THEME r18 THEME-42+; no doing task affected
@@ -75,5 +99,3 @@
 - 260924 T350 claimed (p35)
 - 260924 T349 done; ①'s brief shows 발행 글 점검 after 목표 분량 with M1–M4 in their four states from the account aggregate: an over-band row is a checkbox whose toggletip quotes the rule text it adds, ticks autosave the whole set with the length, a stored within-band tick is kept, the boxes hold still for a running job or the publish lock, and the read is prefetched, follows the target language and refreshes after URL, content and delete saves; FE gates pass (p35)
 - 260924 T349 claimed (p35)
-- 260924 T348 done; `pnpm dev --seed` shows the quality surfaces with no Naver keys: pro and master publish 2 and 11 posts at valid Naver addresses (master meeting every minimum), every generated post stores nouns its text contains, pro's and master's posts carry 일상·생각 with three candidates on each review post, master's first draft uses the 하루 기록 title-area template, and the daily_life phrase list is written only when absent and survives every seed; BE gate passes (p35)
-- 260924 T348 claimed (p35)
