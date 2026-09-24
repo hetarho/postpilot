@@ -28,7 +28,7 @@ func TestNumbersAreBoundedByThePostOptionsRules(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			var outOfRange *NumberOutOfRangeError
-			if _, err := svc.Create(ctx, "alice", "리뷰 "+tc.name, "", okBody, "", tc.numbers); !errors.As(err, &outOfRange) {
+			if _, err := svc.Create(ctx, "alice", Authored{Name: "리뷰 " + tc.name, Body: okBody, Numbers: tc.numbers}); !errors.As(err, &outOfRange) {
 				t.Fatalf("create accepted %+v: %v", tc.numbers, err)
 			}
 			if outOfRange.Field != tc.field {
@@ -38,14 +38,14 @@ func TestNumbersAreBoundedByThePostOptionsRules(t *testing.T) {
 	}
 
 	// The edges are accepted, and so is "no opinion" on both.
-	created, err := svc.Create(ctx, "alice", "리뷰", "", okBody, "", Numbers{TargetLength: ptr(1), TagCount: ptr(10)})
+	created, err := svc.Create(ctx, "alice", Authored{Name: "리뷰", Body: okBody, Numbers: Numbers{TargetLength: ptr(1), TagCount: ptr(10)}})
 	if err != nil {
 		t.Fatalf("the edges were refused: %v", err)
 	}
 	if created.TargetLength == nil || *created.TargetLength != 1 || created.TagCount == nil || *created.TagCount != 10 {
 		t.Fatalf("the numbers were not stored: %+v", created)
 	}
-	quiet, err := svc.Create(ctx, "alice", "의견 없음", "", okBody, "", Numbers{})
+	quiet, err := svc.Create(ctx, "alice", Authored{Name: "의견 없음", Body: okBody})
 	if err != nil {
 		t.Fatal(err)
 	}

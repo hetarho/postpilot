@@ -71,8 +71,8 @@ func TestRevisionPayloadFreezesTheTagCount(t *testing.T) {
 }
 
 func TestPromptsAskForExactlyTheFrozenTagCount(t *testing.T) {
-	writeKo, _ := BuildWritePromptForLanguage(LanguageKorean, goldenProfile(), nil, "memo", "title", nil, nil, nil, 7, nil, nil, nil, nil, nil)
-	writeEn, _ := BuildWritePromptForLanguage(LanguageEnglish, goldenProfile(), nil, "memo", "title", nil, nil, nil, 7, nil, nil, nil, nil, nil)
+	writeKo, _ := BuildWritePromptForLanguage(WritePromptInput{Language: LanguageKorean, Profile: goldenProfile(), Memo: "memo", Title: "title", TagCount: 7})
+	writeEn, _ := BuildWritePromptForLanguage(WritePromptInput{Language: LanguageEnglish, Profile: goldenProfile(), Memo: "memo", Title: "title", TagCount: 7})
 	reviseKo, _ := BuildRevisePromptForLanguage(LanguageKorean, goldenProfile(), goldenContent(), nil, "shorten", nil, 7, nil, nil)
 	reviseEn, _ := BuildRevisePromptForLanguage(LanguageEnglish, goldenProfile(), goldenContent(), nil, "shorten", nil, 7, nil, nil)
 	for name, tc := range map[string]struct{ prompt, want string }{

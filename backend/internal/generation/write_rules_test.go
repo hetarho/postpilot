@@ -21,7 +21,7 @@ func TestTitleAndTagRulesAreInWritePromptsOnly(t *testing.T) {
 		return firstOf(BuildWritePrompt(goldenProfile(), goldenObservations(), "memo", "title", []string{"IMG_1.jpg"}, nil, brief, guidelines))
 	}
 	english := func(brief *TemplateBrief) string {
-		return firstOf(BuildWritePromptForLanguage(LanguageEnglish, goldenProfile(), goldenObservations(), "memo", "title", []string{"IMG_1.jpg"}, nil, nil, 4, brief, nil, nil, nil, nil))
+		return firstOf(BuildWritePromptForLanguage(WritePromptInput{Language: LanguageEnglish, Profile: goldenProfile(), Observations: goldenObservations(), Memo: "memo", Title: "title", Photos: []string{"IMG_1.jpg"}, TagCount: 4, Template: brief}))
 	}
 	for name, test := range map[string]struct {
 		prompt, naming, prohibitions, tags, paragraphRule string
@@ -78,7 +78,7 @@ func TestTitleProhibitionsYieldToATemplateTitleForm(t *testing.T) {
 			t.Fatalf("%s: the form variant does not say the prohibitions bind only what is written inside <write>", name)
 		}
 		build := func(brief *TemplateBrief) string {
-			return firstOf(BuildWritePromptForLanguage(test.language, goldenProfile(), nil, "memo", "title", nil, nil, nil, 4, brief, nil, nil, nil, nil))
+			return firstOf(BuildWritePromptForLanguage(WritePromptInput{Language: test.language, Profile: goldenProfile(), Memo: "memo", Title: "title", TagCount: 4, Template: brief}))
 		}
 		for label, prompt := range map[string]string{"no template": build(nil), "a template with no title area": build(testBrief())} {
 			if !strings.HasPrefix(prompt, test.static) || strings.Contains(prompt, test.form) {

@@ -275,8 +275,7 @@ func TestARunFreezesThePostsNumbersNotTheTemplates(t *testing.T) {
 	)
 	postSvc.SetTemplateDirectory(postTemplates{service: templateSvc})
 
-	shaped, err := templateSvc.Create(ctx, "alice", "정보성 식당 리뷰", "", "<write>인트로</write>",
-		"", template.Numbers{TargetLength: intPtr(1800), TagCount: intPtr(7)})
+	shaped, err := templateSvc.Create(ctx, "alice", template.Authored{Name: "정보성 식당 리뷰", Body: "<write>인트로</write>", Numbers: template.Numbers{TargetLength: intPtr(1800), TagCount: intPtr(7)}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -350,8 +349,7 @@ func TestGenerationAdapterCarriesThePostTemplateThroughToTheFrozenBrief(t *testi
 	)
 	postSvc.SetTemplateDirectory(postTemplates{service: templateSvc})
 
-	created, err := templateSvc.Create(ctx, "alice", "정보성 식당 리뷰", "협찬 방문 리뷰",
-		"<write>인트로</write>\n<slot kind=\"place\" label=\"네이버 지도\"/>\n<repeat each=\"photo\">\n<slot kind=\"photo\"/>\n<write>사진 설명</write>\n</repeat>", "", template.Numbers{})
+	created, err := templateSvc.Create(ctx, "alice", template.Authored{Name: "정보성 식당 리뷰", Description: "협찬 방문 리뷰", Body: "<write>인트로</write>\n<slot kind=\"place\" label=\"네이버 지도\"/>\n<repeat each=\"photo\">\n<slot kind=\"photo\"/>\n<write>사진 설명</write>\n</repeat>"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -484,8 +482,7 @@ func TestGenerationAdapterCarriesTheTitleAreaIntoTheFrozenBrief(t *testing.T) {
 	)
 	postSvc.SetTemplateDirectory(postTemplates{service: templateSvc})
 
-	created, err := templateSvc.Create(ctx, "alice", "맛집 후기", "", `<ask label="총평">총평을 쓰세요</ask>`,
-		`<ask label="가게 이름">가게 이름을 넣어 쓰세요</ask> 방문 후기`, template.Numbers{})
+	created, err := templateSvc.Create(ctx, "alice", template.Authored{Name: "맛집 후기", Body: `<ask label="총평">총평을 쓰세요</ask>`, TitleArea: `<ask label="가게 이름">가게 이름을 넣어 쓰세요</ask> 방문 후기`})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -697,11 +694,11 @@ func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.
 	)
 	guidelineSvc.SetTemplateDirectory(guidelineTemplates{service: templateSvc})
 
-	review, err := templateSvc.Create(ctx, "alice", "무인가게 리뷰", "", "사진마다 설명하세요", "", template.Numbers{})
+	review, err := templateSvc.Create(ctx, "alice", template.Authored{Name: "무인가게 리뷰", Body: "사진마다 설명하세요"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	other, err := templateSvc.Create(ctx, "alice", "협찬 리뷰", "", "협찬을 밝히세요", "", template.Numbers{})
+	other, err := templateSvc.Create(ctx, "alice", template.Authored{Name: "협찬 리뷰", Body: "협찬을 밝히세요"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -869,7 +866,7 @@ func TestGuidelineCandidateAdaptersRecordReviewAndApproveAcrossTheSeam(t *testin
 	}
 
 	// A5: approval is the standard create, with the scope chosen here and nowhere earlier.
-	review, err := templateSvc.Create(ctx, "alice", "무인가게 리뷰", "", "사진마다 설명하세요", "", template.Numbers{})
+	review, err := templateSvc.Create(ctx, "alice", template.Authored{Name: "무인가게 리뷰", Body: "사진마다 설명하세요"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1002,7 +999,7 @@ func TestGuidelineAdapterFreezesTheFieldGroupThenThePreset(t *testing.T) {
 	guidelineSvc := guideline.NewService(guidelinestore.New(handle.Writer, handle.Reader), blogFields{}, guideline.Limits{TextMaxChars: 300, MaxPerAccount: 100}, 50)
 	guidelineSvc.SetTemplateDirectory(guidelineTemplates{service: templateSvc})
 
-	review, err := templateSvc.Create(ctx, "alice", "카페 리뷰", "", "분위기를 쓰세요", "", template.Numbers{})
+	review, err := templateSvc.Create(ctx, "alice", template.Authored{Name: "카페 리뷰", Body: "분위기를 쓰세요"})
 	if err != nil {
 		t.Fatal(err)
 	}

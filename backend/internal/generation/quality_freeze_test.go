@@ -142,8 +142,17 @@ func TestNoTicksAndNoListLeaveThePayloadAndPromptByteIdentical(t *testing.T) {
 		t.Fatal(err)
 	}
 	wantSystem, wantUser := loadGolden(t, "write_prompt_no_template.golden")
-	system, user := BuildWritePromptForLanguage(LanguageKorean, goldenProfile(), goldenObservations(), "MEMO 본문", "가제 TITLE",
-		[]string{"IMG_1.jpg", "IMG_2.jpg"}, nil, nil, post.TagCountRange.Default, nil, nil, nil, decoded.QualityRules, decoded.FieldPhrases)
+	system, user := BuildWritePromptForLanguage(WritePromptInput{
+		Language:     LanguageKorean,
+		Profile:      goldenProfile(),
+		Observations: goldenObservations(),
+		Memo:         "MEMO 본문",
+		Title:        "가제 TITLE",
+		Photos:       []string{"IMG_1.jpg", "IMG_2.jpg"},
+		TagCount:     post.TagCountRange.Default,
+		QualityRules: decoded.QualityRules,
+		FieldPhrases: decoded.FieldPhrases,
+	})
 	if system != wantSystem || user != wantUser {
 		t.Fatal("the no-tick, no-list prompt moved off the golden")
 	}

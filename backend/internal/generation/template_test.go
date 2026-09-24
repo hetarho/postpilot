@@ -125,8 +125,18 @@ func TestWritePromptExplainsSlotsOnlyWhenTheBriefHasThem(t *testing.T) {
 // self-referential (TMPL-13). The quality rules' closing line may name 지침, because it points
 // at that same section; the template section, title form included, never may.
 func TestTheWord지침NeverAppearsInTheTemplateSection(t *testing.T) {
-	system, _ := BuildWritePromptForLanguage(LanguageKorean, goldenProfile(), goldenObservations(), "MEMO", "TITLE",
-		[]string{"IMG_1.jpg"}, nil, nil, 4, titleAreaBrief(), testGuidelines(), nil, testQualityRules(), nil)
+	system, _ := BuildWritePromptForLanguage(WritePromptInput{
+		Language:     LanguageKorean,
+		Profile:      goldenProfile(),
+		Observations: goldenObservations(),
+		Memo:         "MEMO",
+		Title:        "TITLE",
+		Photos:       []string{"IMG_1.jpg"},
+		TagCount:     4,
+		Template:     titleAreaBrief(),
+		Guidelines:   testGuidelines(),
+		QualityRules: testQualityRules(),
+	})
 
 	start, end := strings.Index(system, "[글 템플릿:"), strings.Index(system, "\n\n[작문 지침]")
 	if start < 0 || end < start {

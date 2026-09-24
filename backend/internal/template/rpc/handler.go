@@ -42,8 +42,10 @@ func (h *Handler) CreateTemplate(ctx context.Context, req *connect.Request[postp
 	if err != nil {
 		return nil, err
 	}
-	created, err := h.service.Create(ctx, userID, req.Msg.GetName(), req.Msg.GetDescription(), req.Msg.GetBody(), req.Msg.GetTitleArea(),
-		template.Numbers{TargetLength: number(req.Msg.TargetLength), TagCount: number(req.Msg.TagCount)})
+	created, err := h.service.Create(ctx, userID, template.Authored{
+		Name: req.Msg.GetName(), Description: req.Msg.GetDescription(), Body: req.Msg.GetBody(), TitleArea: req.Msg.GetTitleArea(),
+		Numbers: template.Numbers{TargetLength: number(req.Msg.TargetLength), TagCount: number(req.Msg.TagCount)},
+	})
 	if err != nil {
 		return nil, toConnectError("create template", err)
 	}

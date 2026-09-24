@@ -154,6 +154,16 @@ type Numbers struct {
 	TagCount     *int
 }
 
+// Authored is a new template's six authored fields (TMPL-2), named so two same-typed values
+// cannot trade places at a call site.
+type Authored struct {
+	Name        string
+	Description string
+	Body        string
+	TitleArea   string
+	Numbers     Numbers
+}
+
 func (p Patch) empty() bool {
 	return p.Name == nil && p.Description == nil && p.Body == nil && p.TitleArea == nil && p.Numbers == nil
 }

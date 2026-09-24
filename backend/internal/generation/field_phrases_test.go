@@ -18,10 +18,27 @@ func TestFieldPhrasesRenderOnceInThePerPostHalf(t *testing.T) {
 	phrases := []string{"분위기 좋은 카페", "디저트 맛집"}
 	section := FieldPhrasesHeading + "\n- 분위기 좋은 카페\n- 디저트 맛집\n" + fieldPhrasesObservation + "\n" + replacementsInstruction + "\n"
 	for _, language := range []Language{LanguageKorean, LanguageEnglish} {
-		baseSystem, baseUser := BuildWritePromptForLanguage(language, goldenProfile(), goldenObservations(), "MEMO 본문", "가제 TITLE",
-			[]string{"IMG_1.jpg"}, nil, nil, 4, nil, nil, testMemories(), nil, nil)
-		system, user := BuildWritePromptForLanguage(language, goldenProfile(), goldenObservations(), "MEMO 본문", "가제 TITLE",
-			[]string{"IMG_1.jpg"}, nil, nil, 4, nil, nil, testMemories(), nil, phrases)
+		baseSystem, baseUser := BuildWritePromptForLanguage(WritePromptInput{
+			Language:     language,
+			Profile:      goldenProfile(),
+			Observations: goldenObservations(),
+			Memo:         "MEMO 본문",
+			Title:        "가제 TITLE",
+			Photos:       []string{"IMG_1.jpg"},
+			TagCount:     4,
+			Memories:     testMemories(),
+		})
+		system, user := BuildWritePromptForLanguage(WritePromptInput{
+			Language:     language,
+			Profile:      goldenProfile(),
+			Observations: goldenObservations(),
+			Memo:         "MEMO 본문",
+			Title:        "가제 TITLE",
+			Photos:       []string{"IMG_1.jpg"},
+			TagCount:     4,
+			Memories:     testMemories(),
+			FieldPhrases: phrases,
+		})
 		if system != baseSystem {
 			t.Fatalf("%s: the phrases reached the system prompt", language)
 		}
@@ -59,13 +76,30 @@ func TestAWriteWithoutPhrasesIsUnchanged(t *testing.T) {
 	wantSystem, wantUser := loadGolden(t, "write_prompt_no_template.golden")
 	memoriesSystem, memoriesUser := loadGolden(t, "write_prompt_memories.golden")
 	for name, none := range map[string][]string{"nil": nil, "empty": {}} {
-		system, user := BuildWritePromptForLanguage(LanguageKorean, goldenProfile(), goldenObservations(), "MEMO 본문", "가제 TITLE",
-			[]string{"IMG_1.jpg", "IMG_2.jpg"}, nil, nil, post.TagCountRange.Default, nil, nil, nil, nil, none)
+		system, user := BuildWritePromptForLanguage(WritePromptInput{
+			Language:     LanguageKorean,
+			Profile:      goldenProfile(),
+			Observations: goldenObservations(),
+			Memo:         "MEMO 본문",
+			Title:        "가제 TITLE",
+			Photos:       []string{"IMG_1.jpg", "IMG_2.jpg"},
+			TagCount:     post.TagCountRange.Default,
+			FieldPhrases: none,
+		})
 		if system != wantSystem || user != wantUser {
 			t.Errorf("%s phrases moved the no-template golden", name)
 		}
-		system, user = BuildWritePromptForLanguage(LanguageKorean, goldenProfile(), goldenObservations(), "MEMO 본문", "가제 TITLE",
-			[]string{"IMG_1.jpg", "IMG_2.jpg"}, nil, nil, post.TagCountRange.Default, nil, nil, testMemories(), nil, none)
+		system, user = BuildWritePromptForLanguage(WritePromptInput{
+			Language:     LanguageKorean,
+			Profile:      goldenProfile(),
+			Observations: goldenObservations(),
+			Memo:         "MEMO 본문",
+			Title:        "가제 TITLE",
+			Photos:       []string{"IMG_1.jpg", "IMG_2.jpg"},
+			TagCount:     post.TagCountRange.Default,
+			Memories:     testMemories(),
+			FieldPhrases: none,
+		})
 		if system != memoriesSystem || user != memoriesUser {
 			t.Errorf("%s phrases moved the memories golden", name)
 		}

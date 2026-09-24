@@ -24,7 +24,12 @@ func (s *Service) writeCandidate(ctx context.Context, post PostInput, profile Pr
 	// A snapshot frozen before the member existed carries 0 here; the prompt and the parser
 	// must agree on one number, so it is resolved once.
 	tagCount := resolveTagCount(post.TagCount)
-	system, user := BuildWritePromptForLanguage(post.TargetLanguage, profile, observations, post.Memo, post.Title, photos, videos, post.TargetLength, tagCount, post.Template, post.Guidelines, post.Memories, post.QualityRules, post.FieldPhrases)
+	system, user := BuildWritePromptForLanguage(WritePromptInput{
+		Language: post.TargetLanguage, Profile: profile, Observations: observations,
+		Memo: post.Memo, Title: post.Title, Photos: photos, Videos: videos,
+		TargetLength: post.TargetLength, TagCount: tagCount, Template: post.Template,
+		Guidelines: post.Guidelines, Memories: post.Memories, QualityRules: post.QualityRules, FieldPhrases: post.FieldPhrases,
+	})
 	request := llm.Request{
 		System:    system,
 		Messages:  []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(user)}}},

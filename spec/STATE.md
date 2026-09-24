@@ -56,7 +56,6 @@
 | T356 | Tab moves through an anchored panel; a hover-opened panel closes on Escape | THEME ARCH | T355 | todo |
 | T357 | The published lock is one guard, and an unclassified write fails a test | ARCH | T355 | todo |
 | T358 | A photo's row goes before its object, and "finalized at the current revision" is one rule | ARCH | T357 | todo |
-| T359 | The write prompt builder and template Create each take one named input | ARCH | T354 | todo |
 | T360 | Ticked quality rules open the per-post half; in revise the title form binds only a title request | GEN TMPL ARCH | T359 | todo |
 | T361 | A write comparison freezes the same write material as Start | MEM MODEL GEN GUIDE QUAL ARCH | T354 T359 | todo |
 | T362 | One replacement-rule fixture both sides read | ARCH | - | todo |
@@ -87,9 +86,11 @@
 ## next
 - implement-task T379 next for the media-worker wave (T376..T378 are done; T387 verifies CPU/VPS compatibility locally; T388 completes README/DEPLOY guides for all three environments and GPU setup tooling without live migration)
 - Later: update-ssot CLIP-163, then create-task ARCH CLIP for real-GPU validation, profile approval/automatic selection and concurrency tuning; ARCH r11 and CLIP r44 remain partially consumed, and physical host setup/migration remain operator actions
-- implement-task T355 (continuing T354..T375 in dependency order, p42); create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
+- implement-task T360 (continuing T354..T375 in dependency order, p42); create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 
 ## log
+- 260925 T359 done; the write prompt builder takes one WritePromptInput and template Create one Authored; prompts byte-identical, BE gate passes (p42)
+- 260925 T359 claimed (p42)
 - 260925 T354 done; a generate's payload is encoded by Start and decoded by Generate, cmd/api carries opaque bytes; the native-effort flag now reaches the drain and each A/B candidate takes its own model's headroom; BE gate passes (p42)
 - 260925 T354 claimed (p42)
 - 260925 T378 done (mw): authenticated separate worker API, compatible claims, fenced reports, bounded transport and private runtime status; HTTP/SQLite/race, isolated ARCH-26/FE/CI/codegen checks pass; T379 next
@@ -108,5 +109,3 @@
 - 260925 GEN r11..r12 fully tasked: GEN-33/35 in T377 T381 T383 T387; r12 deltas already covered by T360 T361 T363; ARCH r10 partial pending ARCH-52/53/56/57 GPU activation/tuning until CLIP-163 is decided, ARCH-58 deferred with no code task; CLIP r44 partial pending CLIP-163 plus prior CLIP-13; existing T354..T375 preserved
 - 260925 create-task ARCH GEN CLIP start (media-worker deployment delta only; preserve unrelated tasks and pending; GPU output acceptance remains CLIP-163)
 - 260924 ARCH r10, GEN r11, CLIP r44 documented separate CPU/GPU media execution, private stage artifacts and bounded recovery; CLIP-163 output equivalence remains open; prior pending deltas preserved, no tasks changed
-- 260925 update-ssot done: POST r14 MEM r3 — 분야 and 기억 사용 move from ①'s panel into the writing brief (POST-51✎ POST-54✎ POST-71✎ POST-82✎ MEM-18✎ MEM-26✎), and the brief's run options (목표 분량, 태그 수, quality ticks, 분야, 기억 사용) save together by its 저장 (POST-81✎ POST-89+); no doing task affected, todo T355 T366 T367 T368 T373 T375 assume the old placement
-- 260925 update-ssot POST MEM start: 분야 and 기억 사용 move into the writing brief

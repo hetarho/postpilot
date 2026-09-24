@@ -38,8 +38,19 @@ func TestQualityRulesSectionSitsBetweenTheStaticRulesAndTheBaseline(t *testing.T
 		"English full profile":     {LanguageEnglish, goldenProfile(), nil, englishLanguageLine, "\n\n[스타일가이드]\n"},
 		"English portable profile": {LanguageEnglish, portable, nil, englishLanguageLine, "\n\n[휴대 가능한 말투 프로필 / Portable voice profile]\n"},
 	} {
-		system, user := BuildWritePromptForLanguage(test.language, test.profile, goldenObservations(), "memo", "title",
-			[]string{"IMG_1.jpg"}, test.videos, nil, 4, testBrief(), testGuidelines(), nil, rules, nil)
+		system, user := BuildWritePromptForLanguage(WritePromptInput{
+			Language:     test.language,
+			Profile:      test.profile,
+			Observations: goldenObservations(),
+			Memo:         "memo",
+			Title:        "title",
+			Photos:       []string{"IMG_1.jpg"},
+			Videos:       test.videos,
+			TagCount:     4,
+			Template:     testBrief(),
+			Guidelines:   testGuidelines(),
+			QualityRules: rules,
+		})
 		if got := strings.Count(system, qualityRulesHeading); got != 1 {
 			t.Errorf("%s: the section appears %d times", name, got)
 		}
@@ -53,8 +64,16 @@ func TestQualityRulesSectionSitsBetweenTheStaticRulesAndTheBaseline(t *testing.T
 
 	wantSystem, wantUser := loadGolden(t, "write_prompt_no_template.golden")
 	for name, none := range map[string][]string{"nil": nil, "empty": {}} {
-		system, user := BuildWritePromptForLanguage(LanguageKorean, goldenProfile(), goldenObservations(), "MEMO 본문", "가제 TITLE",
-			[]string{"IMG_1.jpg", "IMG_2.jpg"}, nil, nil, post.TagCountRange.Default, nil, nil, nil, none, nil)
+		system, user := BuildWritePromptForLanguage(WritePromptInput{
+			Language:     LanguageKorean,
+			Profile:      goldenProfile(),
+			Observations: goldenObservations(),
+			Memo:         "MEMO 본문",
+			Title:        "가제 TITLE",
+			Photos:       []string{"IMG_1.jpg", "IMG_2.jpg"},
+			TagCount:     post.TagCountRange.Default,
+			QualityRules: none,
+		})
 		if system != wantSystem || user != wantUser {
 			t.Errorf("%s quality rules moved the prompt off its golden", name)
 		}

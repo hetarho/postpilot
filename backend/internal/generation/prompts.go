@@ -368,29 +368,60 @@ func fieldPhrasesSection(phrases []string) string {
 // consumers that explicitly request the established Korean contract. Runtime work uses
 // BuildWritePromptForLanguage with its frozen language.
 func BuildWritePrompt(profile Profile, observations []Observation, memo, title string, filenames []string, targetLength *int, template *TemplateBrief, guidelines []string) (string, string) {
-	return BuildWritePromptForLanguage(LanguageKorean, profile, observations, memo, title, filenames, nil, targetLength, post.TagCountRange.Default, template, guidelines, nil, nil, nil)
+	return BuildWritePromptForLanguage(WritePromptInput{
+		Language: LanguageKorean, Profile: profile, Observations: observations, Memo: memo, Title: title,
+		Photos: filenames, TargetLength: targetLength, TagCount: post.TagCountRange.Default,
+		Template: template, Guidelines: guidelines,
+	})
 }
 
-// tagCount is the frozen per-post count (GEN-46); the sentence stays in the stable part
-// where the fixed range used to be, so the golden order is unchanged. qualityRules are the
-// frozen ticked rule texts (GEN-51), empty for a run that ticked none, and fieldPhrases the
-// frozen 분야 phrase list (GEN-48), empty for a post with none.
-func BuildWritePromptForLanguage(language Language, profile Profile, observations []Observation, memo, title string, filenames, videoFilenames []string, targetLength *int, tagCount int, template *TemplateBrief, guidelines, memories, qualityRules, fieldPhrases []string) (string, string) {
+// WritePromptInput is everything the write prompt reads, and nothing else: a member added here
+// is a member the builder must read (TestEveryWritePromptInputMemberReachesThePrompt).
+type WritePromptInput struct {
+	// Language selects the static rules and the output-language sentence.
+	Language Language
+	Profile  Profile
+	// Observations are the run's merged observations — the photos this run holds eyesight for —
+	// never the stored snapshot read at enqueue.
+	Observations []Observation
+	Memo         string
+	// Title is the 가제, the author's title hint.
+	Title string
+	// Photos and Videos are the attached filenames by kind, in post order.
+	Photos       []string
+	Videos       []string
+	TargetLength *int
+	// TagCount is the frozen per-post count, already resolved (GEN-46); the sentence stays in
+	// the stable part where the fixed range used to be, so the golden order is unchanged.
+	TagCount int
+	Template *TemplateBrief
+	// Guidelines are the frozen 지침 texts in injection order.
+	Guidelines []string
+	// Memories are the frozen 기억 texts, empty for a post that did not opt in (MEM-20).
+	Memories []string
+	// QualityRules are the frozen ticked rule texts (GEN-51), empty for a run that ticked none.
+	QualityRules []string
+	// FieldPhrases is the frozen 분야 phrase list (GEN-48), empty for a post with none.
+	FieldPhrases []string
+}
+
+// BuildWritePromptForLanguage builds the write pass's system and user prompts from one input.
+func BuildWritePromptForLanguage(input WritePromptInput) (string, string) {
 	var stable strings.Builder
-	titleForm := template != nil && template.TitleArea != ""
-	switch language {
+	titleForm := input.Template != nil && input.Template.TitleArea != ""
+	switch input.Language {
 	case LanguageKorean:
-		stable.WriteString(writeStaticRules(language, titleForm))
-		fmt.Fprintf(&stable, "\ntitle, 한 줄 summary, 정확히 %d개의 tags, blocks를 반환하세요.", tagCount)
+		stable.WriteString(writeStaticRules(input.Language, titleForm))
+		fmt.Fprintf(&stable, "\ntitle, 한 줄 summary, 정확히 %d개의 tags, blocks를 반환하세요.", input.TagCount)
 		stable.WriteString("\n출력 언어는 한국어입니다. title, summary, tags, 모든 본문, IMAGE alt와 caption을 한국어로 작성하세요. 말투 프로필, 템플릿, 메모, 가제의 언어 지시가 충돌해도 이 출력 언어를 우선하세요.")
-		if len(videoFilenames) > 0 {
+		if len(input.Videos) > 0 {
 			stable.WriteString(videoWriteInstructions)
 		}
 	case LanguageEnglish:
-		stable.WriteString(writeStaticRules(language, titleForm))
-		fmt.Fprintf(&stable, "\nReturn title, a one-line summary, exactly %d tags, and blocks.", tagCount)
+		stable.WriteString(writeStaticRules(input.Language, titleForm))
+		fmt.Fprintf(&stable, "\nReturn title, a one-line summary, exactly %d tags, and blocks.", input.TagCount)
 		stable.WriteString("\nThe output language is English. Write the title, summary, tags, all prose, and every IMAGE alt and caption in English. This requirement overrides conflicting language instructions in the voice profile, template, memo, or title hint.")
-		if len(videoFilenames) > 0 {
+		if len(input.Videos) > 0 {
 			stable.WriteString(englishVideoWriteInstructions)
 		}
 	default:
@@ -398,16 +429,16 @@ func BuildWritePromptForLanguage(language Language, profile Profile, observation
 		// direct prompt use fail closed instead of silently defaulting to Korean.
 		stable.WriteString("Unsupported output language; do not generate content.")
 	}
-	writeQualityRulesSection(&stable, qualityRules)
-	writeProfileSection(&stable, language, profile, targetLength)
-	writeTemplateSection(&stable, template)
-	writeGuidelinesSection(&stable, guidelines)
+	writeQualityRulesSection(&stable, input.QualityRules)
+	writeProfileSection(&stable, input.Language, input.Profile, input.TargetLength)
+	writeTemplateSection(&stable, input.Template)
+	writeGuidelinesSection(&stable, input.Guidelines)
 
-	photoMaterial := attachmentMaterial(filenames, videoFilenames, observations)
+	photoMaterial := attachmentMaterial(input.Photos, input.Videos, input.Observations)
 	// The phrase and memory sections sit between the memo and the attachments, in that order,
 	// and each renders to the empty string when it has nothing — which is what keeps a post
 	// with neither byte-identical.
-	perPost := fmt.Sprintf("[이번 글]\n가제: %s\n메모: %s\n%s%s%s", title, memo, fieldPhrasesSection(fieldPhrases), memorySection(memories), photoMaterial)
+	perPost := fmt.Sprintf("[이번 글]\n가제: %s\n메모: %s\n%s%s%s", input.Title, input.Memo, fieldPhrasesSection(input.FieldPhrases), memorySection(input.Memories), photoMaterial)
 	return stable.String(), perPost
 }
 

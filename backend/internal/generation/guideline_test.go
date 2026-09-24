@@ -148,7 +148,7 @@ func TestGroundingConstraintIsInEveryWriteAndRevisePrompt(t *testing.T) {
 		}
 	}
 	for name, prompt := range map[string]string{
-		"english write":  firstOf(BuildWritePromptForLanguage(LanguageEnglish, goldenProfile(), nil, "memo", "title", nil, nil, nil, 4, nil, nil, nil, nil, nil)),
+		"english write":  firstOf(BuildWritePromptForLanguage(WritePromptInput{Language: LanguageEnglish, Profile: goldenProfile(), Memo: "memo", Title: "title", TagCount: 4})),
 		"english revise": firstOf(BuildRevisePromptForLanguage(LanguageEnglish, goldenProfile(), goldenContent(), nil, "shorten", nil, 4, nil, nil)),
 	} {
 		if strings.Count(prompt, englishGrounding) != 1 {

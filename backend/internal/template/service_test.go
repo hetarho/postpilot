@@ -133,7 +133,7 @@ func TestCreateRefusesABodyThatDoesNotParse(t *testing.T) {
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			_, err := svc.Create(context.Background(), "alice", "리뷰", "", tc.body, "", Numbers{})
+			_, err := svc.Create(context.Background(), "alice", Authored{Name: "리뷰", Body: tc.body})
 			var parseErr *ParseError
 			if !errors.As(err, &parseErr) {
 				t.Fatalf("error = %v, want a ParseError", err)
@@ -155,22 +155,22 @@ func TestFieldRules(t *testing.T) {
 	svc, _ := newService(t)
 	ctx := context.Background()
 
-	if _, err := svc.Create(ctx, "alice", "  ", "", okBody, "", Numbers{}); !errors.Is(err, ErrNameRequired) {
+	if _, err := svc.Create(ctx, "alice", Authored{Name: "  ", Body: okBody}); !errors.Is(err, ErrNameRequired) {
 		t.Fatalf("empty name error = %v", err)
 	}
-	if _, err := svc.Create(ctx, "alice", "리뷰", "", "   ", "", Numbers{}); !errors.Is(err, ErrBodyRequired) {
+	if _, err := svc.Create(ctx, "alice", Authored{Name: "리뷰", Body: "   "}); !errors.Is(err, ErrBodyRequired) {
 		t.Fatalf("empty body error = %v", err)
 	}
 	var tooLong *FieldTooLongError
-	if _, err := svc.Create(ctx, "alice", strings.Repeat("가", 41), "", okBody, "", Numbers{}); !errors.As(err, &tooLong) || tooLong.Field != "name" {
+	if _, err := svc.Create(ctx, "alice", Authored{Name: strings.Repeat("가", 41), Body: okBody}); !errors.As(err, &tooLong) || tooLong.Field != "name" {
 		t.Fatalf("long name error = %v", err)
 	}
 	// A Hangul syllable counts as ONE character on both sides of the wire.
-	if _, err := svc.Create(ctx, "alice", strings.Repeat("가", 40), "", okBody, "", Numbers{}); err != nil {
+	if _, err := svc.Create(ctx, "alice", Authored{Name: strings.Repeat("가", 40), Body: okBody}); err != nil {
 		t.Fatalf("a 40-syllable name must fit: %v", err)
 	}
 
-	created, err := svc.Create(ctx, "alice", "다른 이름", "", okBody, "", Numbers{})
+	created, err := svc.Create(ctx, "alice", Authored{Name: "다른 이름", Body: okBody})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -187,22 +187,22 @@ func TestFieldRules(t *testing.T) {
 func TestCreateRefusesADuplicateNameAndTheCap(t *testing.T) {
 	svc, _ := newService(t)
 	ctx := context.Background()
-	if _, err := svc.Create(ctx, "alice", "리뷰", "", okBody, "", Numbers{}); err != nil {
+	if _, err := svc.Create(ctx, "alice", Authored{Name: "리뷰", Body: okBody}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := svc.Create(ctx, "alice", " 리뷰 ", "", okBody, "", Numbers{}); !errors.Is(err, ErrDuplicateName) {
+	if _, err := svc.Create(ctx, "alice", Authored{Name: " 리뷰 ", Body: okBody}); !errors.Is(err, ErrDuplicateName) {
 		t.Fatalf("duplicate after trim error = %v", err)
 	}
 	// Another account may hold the same name.
-	if _, err := svc.Create(ctx, "bob", "리뷰", "", okBody, "", Numbers{}); err != nil {
+	if _, err := svc.Create(ctx, "bob", Authored{Name: "리뷰", Body: okBody}); err != nil {
 		t.Fatalf("a foreign account's name collided: %v", err)
 	}
 	for _, name := range []string{"둘", "셋"} {
-		if _, err := svc.Create(ctx, "alice", name, "", okBody, "", Numbers{}); err != nil {
+		if _, err := svc.Create(ctx, "alice", Authored{Name: name, Body: okBody}); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if _, err := svc.Create(ctx, "alice", "넷", "", okBody, "", Numbers{}); !errors.Is(err, ErrTooMany) {
+	if _, err := svc.Create(ctx, "alice", Authored{Name: "넷", Body: okBody}); !errors.Is(err, ErrTooMany) {
 		t.Fatalf("cap error = %v", err)
 	}
 }
@@ -211,7 +211,7 @@ func TestCreateRefusesADuplicateNameAndTheCap(t *testing.T) {
 func TestAForeignIDIsIndistinguishableFromAnUnknownOne(t *testing.T) {
 	svc, _ := newService(t)
 	ctx := context.Background()
-	bobs, err := svc.Create(ctx, "bob", "리뷰", "", okBody, "", Numbers{})
+	bobs, err := svc.Create(ctx, "bob", Authored{Name: "리뷰", Body: okBody})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -234,7 +234,7 @@ func TestAForeignIDIsIndistinguishableFromAnUnknownOne(t *testing.T) {
 func TestRenderedForExpandsAndBounds(t *testing.T) {
 	svc, _ := newService(t)
 	ctx := context.Background()
-	created, err := svc.Create(ctx, "alice", "리뷰", "", okBody, "", Numbers{})
+	created, err := svc.Create(ctx, "alice", Authored{Name: "리뷰", Body: okBody})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -271,7 +271,7 @@ func TestRenderedForExpandsAndBounds(t *testing.T) {
 func TestDeleteReportsTheDetachCount(t *testing.T) {
 	svc, store := newService(t)
 	ctx := context.Background()
-	created, err := svc.Create(ctx, "alice", "리뷰", "", okBody, "", Numbers{})
+	created, err := svc.Create(ctx, "alice", Authored{Name: "리뷰", Body: okBody})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -289,7 +289,7 @@ func TestDeleteReportsTheDetachCount(t *testing.T) {
 func TestAnEmptyPatchWritesNothing(t *testing.T) {
 	svc, store := newService(t)
 	ctx := context.Background()
-	created, err := svc.Create(ctx, "alice", "리뷰", "", okBody, "", Numbers{})
+	created, err := svc.Create(ctx, "alice", Authored{Name: "리뷰", Body: okBody})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -318,14 +318,14 @@ func TestCreateStoresATitleAreaAndRefusesOneThatDoesNotParse(t *testing.T) {
 	svc, store := newService(t)
 	ctx := context.Background()
 
-	created, err := svc.Create(ctx, "alice", "리뷰", "", okBody, "  "+titleForm+"\n", Numbers{})
+	created, err := svc.Create(ctx, "alice", Authored{Name: "리뷰", Body: okBody, TitleArea: "  " + titleForm + "\n"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if created.TitleArea != titleForm || store.rows[created.ID].TitleArea != titleForm {
 		t.Fatalf("title area = %q, stored %q", created.TitleArea, store.rows[created.ID].TitleArea)
 	}
-	blank, err := svc.Create(ctx, "alice", "제목 없음", "", okBody, " \n ", Numbers{})
+	blank, err := svc.Create(ctx, "alice", Authored{Name: "제목 없음", Body: okBody, TitleArea: " \n "})
 	if err != nil || blank.TitleArea != "" {
 		t.Fatalf("a blank title area = %q, %v", blank.TitleArea, err)
 	}
@@ -340,14 +340,14 @@ func TestCreateStoresATitleAreaAndRefusesOneThatDoesNotParse(t *testing.T) {
 		"a note":           {"<note>메모</note>", 1, ReasonNotInTitle},
 		"unclosed":         {"<write>제목", 1, ReasonUnclosedTag},
 	} {
-		_, err := svc.Create(ctx, "alice", "거부 "+name, "", okBody, tc.title, Numbers{})
+		_, err := svc.Create(ctx, "alice", Authored{Name: "거부 " + name, Body: okBody, TitleArea: tc.title})
 		var parseErr *ParseError
 		if !errors.As(err, &parseErr) || parseErr.Area != AreaTitle || parseErr.Line != tc.line || parseErr.Reason != tc.reason {
 			t.Errorf("%s: error = %v, want %s on title line %d", name, err, tc.reason, tc.line)
 		}
 	}
 	// A body error keeps naming the body.
-	_, err = svc.Create(ctx, "alice", "본문 오류", "", "<write>인트로", titleForm, Numbers{})
+	_, err = svc.Create(ctx, "alice", Authored{Name: "본문 오류", Body: "<write>인트로", TitleArea: titleForm})
 	var parseErr *ParseError
 	if !errors.As(err, &parseErr) || parseErr.Area != AreaBody || parseErr.Reason != ReasonUnclosedTag {
 		t.Fatalf("a body error = %v", err)
@@ -355,14 +355,14 @@ func TestCreateStoresATitleAreaAndRefusesOneThatDoesNotParse(t *testing.T) {
 
 	// Bounded in Unicode scalar values after the trim: exactly the bound fits.
 	var tooLong *FieldTooLongError
-	_, err = svc.Create(ctx, "alice", "긴 제목", "", okBody, strings.Repeat("가", 201), Numbers{})
+	_, err = svc.Create(ctx, "alice", Authored{Name: "긴 제목", Body: okBody, TitleArea: strings.Repeat("가", 201)})
 	if !errors.As(err, &tooLong) || tooLong.Field != "title_area" || tooLong.Max != 200 || tooLong.Chars != 201 {
 		t.Fatalf("an over-long title area = %v", err)
 	}
 	if store.inserts != inserted {
 		t.Fatalf("a refused title area wrote %d rows", store.inserts-inserted)
 	}
-	if _, err := svc.Create(ctx, "alice", "꽉 찬 제목", "", okBody, strings.Repeat("가", 200), Numbers{}); err != nil {
+	if _, err := svc.Create(ctx, "alice", Authored{Name: "꽉 찬 제목", Body: okBody, TitleArea: strings.Repeat("가", 200)}); err != nil {
 		t.Fatalf("a title area at the bound was refused: %v", err)
 	}
 }
@@ -373,7 +373,7 @@ func TestCreateStoresATitleAreaAndRefusesOneThatDoesNotParse(t *testing.T) {
 func TestUpdateChecksTheTitleAreaAgainstTheStoredBody(t *testing.T) {
 	svc, store := newService(t)
 	ctx := context.Background()
-	created, err := svc.Create(ctx, "alice", "리뷰", "", "<write>인트로</write>\n"+reviewBody, "", Numbers{})
+	created, err := svc.Create(ctx, "alice", Authored{Name: "리뷰", Body: "<write>인트로</write>\n" + reviewBody})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -411,7 +411,7 @@ func TestUpdateChecksTheTitleAreaAgainstTheStoredBody(t *testing.T) {
 func TestUpdateChecksTheBodyAgainstTheStoredTitleArea(t *testing.T) {
 	svc, store := newService(t)
 	ctx := context.Background()
-	created, err := svc.Create(ctx, "alice", "리뷰", "", "<write>본문</write>", plainTitle, Numbers{})
+	created, err := svc.Create(ctx, "alice", Authored{Name: "리뷰", Body: "<write>본문</write>", TitleArea: plainTitle})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -452,22 +452,22 @@ func TestTheAskCeilingCountsBothAreas(t *testing.T) {
 		return out.String()
 	}
 	// The ceiling is three: two in the title and one in the body fit, a fourth anywhere does not.
-	if _, err := svc.Create(ctx, "alice", "셋", "", asks("c"), asks("a", "b"), Numbers{}); err != nil {
+	if _, err := svc.Create(ctx, "alice", Authored{Name: "셋", Body: asks("c"), TitleArea: asks("a", "b")}); err != nil {
 		t.Fatalf("three asks across both areas were refused: %v", err)
 	}
-	_, err := svc.Create(ctx, "alice", "넷", "", asks("c", "d"), asks("a", "b"), Numbers{})
+	_, err := svc.Create(ctx, "alice", Authored{Name: "넷", Body: asks("c", "d"), TitleArea: asks("a", "b")})
 	var parseErr *ParseError
 	if !errors.As(err, &parseErr) || parseErr.Reason != ReasonTooManyAsks || parseErr.Area != AreaBody {
 		t.Fatalf("a fourth ask in the body = %v", err)
 	}
-	if _, err := svc.Create(ctx, "alice", "넷 제목", "", "<write>본문</write>", asks("a", "b", "c", "d"), Numbers{}); !errors.As(err, &parseErr) || parseErr.Area != AreaTitle {
+	if _, err := svc.Create(ctx, "alice", Authored{Name: "넷 제목", Body: "<write>본문</write>", TitleArea: asks("a", "b", "c", "d")}); !errors.As(err, &parseErr) || parseErr.Area != AreaTitle {
 		t.Fatalf("a fourth ask in the title = %v", err)
 	}
 
 	// A title-area data field's title is bounded like a body one.
 	var tooLong *FieldTooLongError
 	long := strings.Repeat("가", 41)
-	if _, err := svc.Create(ctx, "alice", "긴 라벨", "", "<write>본문</write>", asks(long), Numbers{}); !errors.As(err, &tooLong) || tooLong.Field != "ask_label" || tooLong.Chars != 41 {
+	if _, err := svc.Create(ctx, "alice", Authored{Name: "긴 라벨", Body: "<write>본문</write>", TitleArea: asks(long)}); !errors.As(err, &tooLong) || tooLong.Field != "ask_label" || tooLong.Chars != 41 {
 		t.Fatalf("an over-long title-area label = %v", err)
 	}
 }
@@ -477,7 +477,7 @@ func TestTheAskCeilingCountsBothAreas(t *testing.T) {
 func TestRenderedForRendersTheTitleAreaFirst(t *testing.T) {
 	svc, store := newService(t)
 	ctx := context.Background()
-	shaped, err := svc.Create(ctx, "alice", "리뷰", "", "<repeat each=\"photo\">\n<slot kind=\"photo\"/>\n</repeat>\n"+reviewBody, titleForm, Numbers{})
+	shaped, err := svc.Create(ctx, "alice", Authored{Name: "리뷰", Body: "<repeat each=\"photo\">\n<slot kind=\"photo\"/>\n</repeat>\n" + reviewBody, TitleArea: titleForm})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -510,7 +510,7 @@ func TestRenderedForRendersTheTitleAreaFirst(t *testing.T) {
 
 	// A title that is nothing but a verbatim field: answered it is the answer, while off or
 	// blank it is blank, and a blank title is no title form at all.
-	plain, err := svc.Create(ctx, "alice", "가게 이름만", "", "<write>본문</write>", plainTitle, Numbers{})
+	plain, err := svc.Create(ctx, "alice", Authored{Name: "가게 이름만", Body: "<write>본문</write>", TitleArea: plainTitle})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -530,7 +530,7 @@ func TestRenderedForRendersTheTitleAreaFirst(t *testing.T) {
 	}
 
 	// A template without a title area renders exactly as before, with none.
-	bare, err := svc.Create(ctx, "alice", "제목 없음", "", okBody, "", Numbers{})
+	bare, err := svc.Create(ctx, "alice", Authored{Name: "제목 없음", Body: okBody})
 	if err != nil {
 		t.Fatal(err)
 	}

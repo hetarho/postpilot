@@ -44,26 +44,27 @@ func (s *Service) List(ctx context.Context, userID string) ([]Template, error) {
 
 // Create validates the two areas together: they are one document with one data-field
 // namespace (TMPL-50, TMPL-55), so neither can be judged without the other.
-func (s *Service) Create(ctx context.Context, userID, name, description, body, titleArea string, numbers Numbers) (Template, error) {
-	name, err := s.validName(name)
+func (s *Service) Create(ctx context.Context, userID string, authored Authored) (Template, error) {
+	name, err := s.validName(authored.Name)
 	if err != nil {
 		return Template{}, err
 	}
-	description, err = s.validDescription(description)
+	description, err := s.validDescription(authored.Description)
 	if err != nil {
 		return Template{}, err
 	}
-	body, err = s.validBody(body)
+	body, err := s.validBody(authored.Body)
 	if err != nil {
 		return Template{}, err
 	}
-	titleArea, err = s.validTitleArea(titleArea)
+	titleArea, err := s.validTitleArea(authored.TitleArea)
 	if err != nil {
 		return Template{}, err
 	}
 	if err := s.validShape(titleArea, body); err != nil {
 		return Template{}, err
 	}
+	numbers := authored.Numbers
 	if err := s.validNumbers(numbers); err != nil {
 		return Template{}, err
 	}

@@ -352,7 +352,7 @@ func mapContent(fallbackTitle string, content devseed.Content) post.PostContent 
 type templates struct{ svc *template.Service }
 
 func (t templates) Create(ctx context.Context, fixture devseed.Template) (string, error) {
-	created, err := t.svc.Create(ctx, fixture.UserID, fixture.Name, fixture.Description, fixture.Body, fixture.TitleArea, template.Numbers{})
+	created, err := t.svc.Create(ctx, fixture.UserID, template.Authored{Name: fixture.Name, Description: fixture.Description, Body: fixture.Body, TitleArea: fixture.TitleArea})
 	if err != nil {
 		return "", err
 	}
