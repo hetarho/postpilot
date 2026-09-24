@@ -212,10 +212,12 @@ func (s *Service) StartRevision(ctx context.Context, request StartRevisionReques
 		return "", err
 	}
 	request.Template = brief
-	texts, err := s.freezeGuidelines(ctx, post, true)
+	resolved, err := s.freezeGuidelines(ctx, post, true)
 	if err != nil {
 		return "", err
 	}
+	// A revision freezes the owner's texts only: it never carries the preset's line (GEN-57).
+	texts := resolved.Owner
 	request.Guidelines = texts
 	payload, err := encodeRevisionPayloadForLanguage(request.Instruction, request.SaveAsRule, request.ContentLanguage, brief, texts, request.TagCount, request.WriteNativeEffort)
 	if err != nil {
@@ -271,23 +273,7 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (string, erro
 	if request.TargetLength != nil && *request.TargetLength <= 0 {
 		return "", ErrInvalidTargetLength
 	}
-	brief, err := s.freezeTemplate(ctx, post)
-	if err != nil {
-		return "", err
-	}
-	texts, err := s.freezeGuidelines(ctx, post, false)
-	if err != nil {
-		return "", err
-	}
-	memories, err := s.freezeMemories(ctx, post)
-	if err != nil {
-		return "", err
-	}
-	rules, err := s.freezeQualityRules(ctx, post)
-	if err != nil {
-		return "", err
-	}
-	phrases, err := s.freezeFieldPhrases(ctx, post)
+	material, err := s.freezeWriteMaterial(ctx, post)
 	if err != nil {
 		return "", err
 	}
@@ -295,8 +281,8 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (string, erro
 		TargetLanguage: post.TargetLanguage,
 		TargetLength:   cloneOptionalInt(request.TargetLength),
 		// From the post, never from the request: there is no per-run override to carry (GEN-46).
-		TagCount: resolveTagCount(post.TagCount),
-		Template: brief, Guidelines: texts, Memories: memories, QualityRules: rules, FieldPhrases: phrases,
+		TagCount:          resolveTagCount(post.TagCount),
+		writeMaterial:     material,
 		WriteNativeEffort: writeInfo.ReasoningNativeEffort,
 	}
 	if len(post.Images) > 0 {
@@ -408,9 +394,9 @@ func postFilenames(post PostInput) []string {
 // rescoping or deleting a guideline, or switching the preset, afterwards cannot reach the
 // queued work, including across a restart-resume or an explicit retry, because the handlers
 // read only the payload. forRevision leaves the preset line out (GEN-57, GUIDE-17).
-func (s *Service) freezeGuidelines(ctx context.Context, post PostInput, forRevision bool) ([]string, error) {
+func (s *Service) freezeGuidelines(ctx context.Context, post PostInput, forRevision bool) (GuidelineTexts, error) {
 	if s.guidelines == nil {
-		return nil, nil
+		return GuidelineTexts{}, nil
 	}
 	var templateID, field *string
 	if post.TemplateID != "" {
@@ -423,9 +409,64 @@ func (s *Service) freezeGuidelines(ctx context.Context, post PostInput, forRevis
 	}
 	texts, err := s.guidelines.ForPrompt(ctx, post.UserID, templateID, field, forRevision)
 	if err != nil {
-		return nil, fmt.Errorf("load applicable guidelines: %w", err)
+		return GuidelineTexts{}, fmt.Errorf("load applicable guidelines: %w", err)
 	}
 	return texts, nil
+}
+
+// writeMaterial is a write's frozen material: the brief, the 지침, the 기억, the ticked rule
+// texts and the 분야 phrases. freezeWriteMaterial is the one place it is resolved, for the
+// ordinary generate and the write comparison alike (GEN-15, GEN-18, MEM-19).
+type writeMaterial struct {
+	Template     *TemplateBrief
+	Guidelines   []string
+	Memories     []string
+	QualityRules []string
+	FieldPhrases []string
+}
+
+// onto lays the material over the post as-is: the values are freshly resolved or decoded, and
+// a clone would turn an empty slice into null in snapshot bytes.
+func (m writeMaterial) onto(post PostInput) PostInput {
+	post.Template = m.Template
+	post.Guidelines = m.Guidelines
+	post.Memories = m.Memories
+	post.QualityRules = m.QualityRules
+	post.FieldPhrases = m.FieldPhrases
+	return post
+}
+
+// freezeWriteMaterial resolves everything a write freezes, once. Start and SnapshotWriteInput
+// both call it, so a comparison can never freeze less than the run it compares — the drop that
+// left a comparison of a post with 기억 사용 on without its memories. The preset's line rides
+// only with frozen phrases (GUIDE-40, QUAL-41): without them it would point the writer at a
+// phrase section the prompt does not carry. It stays last (GUIDE-14, GUIDE-37).
+func (s *Service) freezeWriteMaterial(ctx context.Context, post PostInput) (writeMaterial, error) {
+	brief, err := s.freezeTemplate(ctx, post)
+	if err != nil {
+		return writeMaterial{}, err
+	}
+	texts, err := s.freezeGuidelines(ctx, post, false)
+	if err != nil {
+		return writeMaterial{}, err
+	}
+	memories, err := s.freezeMemories(ctx, post)
+	if err != nil {
+		return writeMaterial{}, err
+	}
+	rules, err := s.freezeQualityRules(ctx, post)
+	if err != nil {
+		return writeMaterial{}, err
+	}
+	phrases, err := s.freezeFieldPhrases(ctx, post)
+	if err != nil {
+		return writeMaterial{}, err
+	}
+	guidelines := texts.Owner
+	if texts.Preset != "" && len(phrases) > 0 {
+		guidelines = append(guidelines[:len(guidelines):len(guidelines)], texts.Preset)
+	}
+	return writeMaterial{Template: brief, Guidelines: guidelines, Memories: memories, QualityRules: rules, FieldPhrases: phrases}, nil
 }
 
 // freezeQualityRules renders the ticked rules once, at enqueue, in the run's target language.
@@ -477,7 +518,9 @@ func (s *Service) freezeMemories(ctx context.Context, post PostInput) ([]string,
 	if err != nil {
 		return nil, fmt.Errorf("retrieve memories: %w", err)
 	}
-	return texts, nil
+	// A retrieval that finds nothing is nil, which a snapshot stores as `"Memories":null` —
+	// the bytes every snapshot carried before comparisons froze memories.
+	return cloneTexts(texts), nil
 }
 
 // memoryKeyParts is the retrieval key (MEM-7): what this post is about, in the post's own

@@ -182,7 +182,7 @@ func TestTheDrainIgnoresRowsChangedAfterEnqueue(t *testing.T) {
 		PostSlug:   "post",
 		VoiceID:    liveVoice.ID,
 		WriteModel: writeRef.String(),
-		Payload:    mustGeneratePayload(t, generationOptions{TargetLanguage: decoded.TargetLanguage, QualityRules: decoded.QualityRules, FieldPhrases: decoded.FieldPhrases}),
+		Payload:    mustGeneratePayload(t, generationOptions{TargetLanguage: decoded.TargetLanguage, writeMaterial: writeMaterial{QualityRules: decoded.QualityRules, FieldPhrases: decoded.FieldPhrases}}),
 	}, func(string, int, int) {}); err != nil {
 		t.Fatal(err)
 	}
@@ -215,7 +215,7 @@ func TestAFrozenRuleRunMakesOneWriteCall(t *testing.T) {
 		PostSlug:   "post",
 		VoiceID:    liveVoice.ID,
 		WriteModel: writeRef.String(),
-		Payload:    mustGeneratePayload(t, generationOptions{TargetLanguage: LanguageEnglish, QualityRules: []string{"frozen rule"}, FieldPhrases: []string{"frozen phrase"}}),
+		Payload:    mustGeneratePayload(t, generationOptions{TargetLanguage: LanguageEnglish, writeMaterial: writeMaterial{QualityRules: []string{"frozen rule"}, FieldPhrases: []string{"frozen phrase"}}}),
 	}, func(string, int, int) {}); err != nil {
 		t.Fatal(err)
 	}

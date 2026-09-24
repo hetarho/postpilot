@@ -95,11 +95,9 @@ type generationOptions struct {
 	TargetLanguage Language
 	TargetLength   *int
 	TagCount       int
-	Template       *TemplateBrief
-	Guidelines     []string
-	Memories       []string
-	QualityRules   []string
-	FieldPhrases   []string
+	// writeMaterial is what freezeWriteMaterial resolved: the brief, 지침, 기억, rules and
+	// phrases, the same set a write comparison freezes.
+	writeMaterial
 	// ObserveFiles carries presence: nil observes every attached photo, non-nil-but-empty
 	// observes nothing. See generationPayload.ObserveFiles for why the distinction matters.
 	ObserveFiles      *[]string
@@ -152,14 +150,16 @@ func decodeGenerationPayload(raw []byte) (generationOptions, error) {
 		}
 	}
 	return generationOptions{
-		TargetLanguage:    language,
-		TargetLength:      cloneOptionalInt(payload.TargetLength),
-		TagCount:          resolveTagCount(payload.TagCount),
-		Template:          decodeTemplate(payload.Template),
-		Guidelines:        cloneTexts(payload.Guidelines),
-		Memories:          cloneTexts(payload.Memories),
-		QualityRules:      cloneTexts(payload.QualityRules),
-		FieldPhrases:      cloneTexts(payload.FieldPhrases),
+		TargetLanguage: language,
+		TargetLength:   cloneOptionalInt(payload.TargetLength),
+		TagCount:       resolveTagCount(payload.TagCount),
+		writeMaterial: writeMaterial{
+			Template:     decodeTemplate(payload.Template),
+			Guidelines:   cloneTexts(payload.Guidelines),
+			Memories:     cloneTexts(payload.Memories),
+			QualityRules: cloneTexts(payload.QualityRules),
+			FieldPhrases: cloneTexts(payload.FieldPhrases),
+		},
 		ObserveFiles:      cloneOptionalTexts(payload.ObserveFiles),
 		Observations:      decodeObservations(payload.Observations),
 		WriteNativeEffort: payload.WriteNativeEffort,
@@ -175,12 +175,7 @@ func (o generationOptions) onto(post PostInput) PostInput {
 	post.TargetLength = cloneOptionalInt(o.TargetLength)
 	post.TagCount = resolveTagCount(o.TagCount)
 	post.WriteNativeEffort = o.WriteNativeEffort
-	post.Template = cloneTemplate(o.Template)
-	post.Guidelines = cloneTexts(o.Guidelines)
-	post.Memories = cloneTexts(o.Memories)
-	post.QualityRules = cloneTexts(o.QualityRules)
-	post.FieldPhrases = cloneTexts(o.FieldPhrases)
-	return post
+	return o.writeMaterial.onto(post)
 }
 
 // cloneOptionalTexts keeps the frozen set frozen while PRESERVING presence: a non-nil empty

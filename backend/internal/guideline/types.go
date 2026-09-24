@@ -136,3 +136,13 @@ type PresetPatch struct {
 	Enabled *bool
 	Fields  *[]string
 }
+
+// PromptTexts is what a prompt builder receives: the owner's texts that apply, in injection
+// order (global, template, 분야), and the product preset's line — set when the preset is on for
+// the post's 분야 and this is not a revision, "" otherwise. The line is apart so the caller that
+// knows whether its phrases froze decides whether it rides (GUIDE-40), and appends it last
+// (GUIDE-14, GUIDE-37).
+type PromptTexts struct {
+	Owner  []string
+	Preset string
+}

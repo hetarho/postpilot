@@ -88,12 +88,21 @@ type TemplateBriefs interface {
 }
 
 // GuidelinesForPrompt is the guideline context's published resolution, consumed only at
-// enqueue time: the global group, the template group, then the 분야 group, with the 상위 노출
-// 단어 사용 preset's line last where it applies. templateID and field are nil for a post with
-// none, which yields only the groups the post has — an empty result is the ordinary case, not
-// an error. forRevision leaves the preset line out: a revision never carries it (GEN-57).
+// enqueue time: the owner texts — the global group, the template group, then the 분야 group —
+// and, apart from them, the 상위 노출 단어 사용 preset's line where it applies. templateID and
+// field are nil for a post with none, which yields only the groups the post has — an empty
+// result is the ordinary case, not an error. forRevision leaves the preset line out: a
+// revision never carries it (GEN-57).
 type GuidelinesForPrompt interface {
-	ForPrompt(ctx context.Context, userID string, templateID, field *string, forRevision bool) ([]string, error)
+	ForPrompt(ctx context.Context, userID string, templateID, field *string, forRevision bool) (GuidelineTexts, error)
+}
+
+// GuidelineTexts is what the guideline context resolves for one post. Preset is "" unless the
+// preset is on for the post's 분야 and this is not a revision; the write keeps it only when the
+// 분야's phrases froze (GUIDE-40), and appends it last (GUIDE-14, GUIDE-37).
+type GuidelineTexts struct {
+	Owner  []string
+	Preset string
 }
 
 // MemoriesForPrompt is the memory context's published retrieval, consumed only at enqueue

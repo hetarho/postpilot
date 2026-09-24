@@ -221,37 +221,40 @@ func (s *Service) UpdatePreset(ctx context.Context, userID string, patch PresetP
 	return preset, nil
 }
 
-// ForPrompt is this context's published behavior for prompt builders: the ordered texts that
+// ForPrompt is this context's published behavior for prompt builders: the owner's texts that
 // apply to one post, resolved from the post's CURRENT template and 분야 — global, then template,
-// then 분야 (GUIDE-14) — with the preset's line last where it applies. Absence is not an error:
-// a prompt with no guidelines is a valid prompt.
+// then 분야 (GUIDE-14) — and, apart from them, the preset's line where it applies. Absence is
+// not an error: a prompt with no guidelines is a valid prompt.
 //
 // templateID and field are pointers because "the post has none" and "the post has X" are
 // different questions, and the first must not be spelled as the empty-string id of the second.
 // A revision never carries the preset line (GEN-57): it rewrites the owner's own text, and the
-// phrase list the line binds is not part of a revision.
-func (s *Service) ForPrompt(ctx context.Context, userID string, templateID, field *string, forRevision bool) ([]string, error) {
+// phrase list the line binds is not part of a revision — so a revision does not even read the
+// preset. The line comes back apart because whether a write keeps it depends on the phrases
+// generation freezes (GUIDE-40), which only freezeWriteMaterial sees.
+func (s *Service) ForPrompt(ctx context.Context, userID string, templateID, field *string, forRevision bool) (PromptTexts, error) {
 	scoped := trimmed(templateID)
 	blogField := trimmed(field)
 	texts, err := s.store.ApplicableTexts(ctx, userID, scoped, blogField)
 	if err != nil {
-		return nil, fmt.Errorf("resolve applicable guidelines: %w", err)
+		return PromptTexts{}, fmt.Errorf("resolve applicable guidelines: %w", err)
 	}
 	// The preset is only ever read for a generation of a post that has a 분야, so a post without
 	// one never pays for it and never receives it (GUIDE-17, GUIDE-29).
 	if forRevision || blogField == "" {
-		return texts, nil
+		return PromptTexts{Owner: texts}, nil
 	}
 	preset, err := s.store.Preset(ctx, userID)
 	if err != nil {
-		return nil, fmt.Errorf("read guideline preset: %w", err)
+		return PromptTexts{}, fmt.Errorf("read guideline preset: %w", err)
 	}
 	// Not deduplicated against an owner line with the same text: the two are independent
-	// (GUIDE-39). Not gated on the 분야's phrase list either; the phrase freeze decides that.
+	// (GUIDE-39).
+	result := PromptTexts{Owner: texts}
 	if preset.Enabled && slices.Contains(preset.Fields, blogField) {
-		texts = append(texts, PresetText)
+		result.Preset = PresetText
 	}
-	return texts, nil
+	return result, nil
 }
 
 func trimmed(value *string) string {

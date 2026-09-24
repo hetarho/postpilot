@@ -51,8 +51,12 @@ func (a generationFieldPhrases) For(ctx context.Context, field string) ([]string
 
 type generationGuidelines struct{ service *guideline.Service }
 
-func (a generationGuidelines) ForPrompt(ctx context.Context, userID string, templateID, field *string, forRevision bool) ([]string, error) {
-	return a.service.ForPrompt(ctx, userID, templateID, field, forRevision)
+func (a generationGuidelines) ForPrompt(ctx context.Context, userID string, templateID, field *string, forRevision bool) (generation.GuidelineTexts, error) {
+	texts, err := a.service.ForPrompt(ctx, userID, templateID, field, forRevision)
+	if err != nil {
+		return generation.GuidelineTexts{}, err
+	}
+	return generation.GuidelineTexts{Owner: texts.Owner, Preset: texts.Preset}, nil
 }
 
 // generationMemories hands the generation context the memory context's retrieval. What

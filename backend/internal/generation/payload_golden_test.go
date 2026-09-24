@@ -20,20 +20,16 @@ func TestGenerationPayloadWireShapeIsPinned(t *testing.T) {
 		TargetLanguage: LanguageKorean,
 		TargetLength:   &length,
 		TagCount:       7,
-		Template: &TemplateBrief{
-			Name: "여행", Body: "# 제목",
-			Facts: []TemplateFact{{Label: "장소", Value: "제주"}},
-		},
-		Guidelines:   []string{"문장은 짧게"},
-		Memories:     []string{"매운 음식을 못 먹는다"},
-		QualityRules: []string{"제목에 같은 말을 되풀이하지 않는다"},
-		FieldPhrases: []string{"분위기 좋은 카페"},
-		ObserveFiles: &observe,
+		ObserveFiles:   &observe,
 		Observations: []Observation{{
 			File: "a.jpg", Scene: "바다", Objects: []string{"파도"}, Model: "p/m",
 			Events: []string{"파도가 친다"}, Speech: "좋다",
 		}},
 		WriteNativeEffort: true,
+		writeMaterial: writeMaterial{Template: &TemplateBrief{
+			Name: "여행", Body: "# 제목",
+			Facts: []TemplateFact{{Label: "장소", Value: "제주"}},
+		}, Guidelines: []string{"문장은 짧게"}, Memories: []string{"매운 음식을 못 먹는다"}, QualityRules: []string{"제목에 같은 말을 되풀이하지 않는다"}, FieldPhrases: []string{"분위기 좋은 카페"}},
 	})
 	if err != nil {
 		t.Fatalf("encode: %v", err)

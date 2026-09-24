@@ -332,24 +332,25 @@ func TestUpdatePresetIsAPresencePatch(t *testing.T) {
 	}
 }
 
-// GUIDE-17, GUIDE-29, GEN-57: the preset's line comes last, and only for a generation of a post
-// whose 분야 the preset is switched on for.
-func TestForPromptAppendsThePresetLastWhereItApplies(t *testing.T) {
+// GUIDE-17, GUIDE-29, GEN-57: the owner texts come back as the store resolved them, and the
+// preset's line comes back apart — set only for a generation of a post whose 분야 the preset is
+// switched on for. Whether a write keeps it is generation's decision (GUIDE-40).
+func TestForPromptReturnsThePresetLineApart(t *testing.T) {
 	cafe, pets := "cafe", "pets"
 	for name, tc := range map[string]struct {
 		preset      Preset
 		field       *string
 		forRevision bool
-		want        []string
+		wantPreset  string
 		reads       int
 	}{
-		"the preset off":       {Preset{Fields: []string{"cafe"}}, &cafe, false, []string{"전역", "분야"}, 1},
-		"on with no 분야":        {Preset{Enabled: true}, &cafe, false, []string{"전역", "분야"}, 1},
-		"on for another 분야":    {Preset{Enabled: true, Fields: []string{"pets"}}, &cafe, false, []string{"전역", "분야"}, 1},
-		"on for the post's 분야": {Preset{Enabled: true, Fields: []string{"pets", "cafe"}}, &cafe, false, []string{"전역", "분야", PresetText}, 1},
-		"a revision":           {Preset{Enabled: true, Fields: []string{"cafe"}}, &cafe, true, []string{"전역", "분야"}, 0},
-		"a post with no 분야":    {Preset{Enabled: true, Fields: []string{"cafe"}}, nil, false, []string{"전역", "분야"}, 0},
-		"a blank 분야 is none":   {Preset{Enabled: true, Fields: []string{"cafe"}}, new(string), false, []string{"전역", "분야"}, 0},
+		"the preset off":       {Preset{Fields: []string{"cafe"}}, &cafe, false, "", 1},
+		"on with no 분야":        {Preset{Enabled: true}, &cafe, false, "", 1},
+		"on for another 분야":    {Preset{Enabled: true, Fields: []string{"pets"}}, &cafe, false, "", 1},
+		"on for the post's 분야": {Preset{Enabled: true, Fields: []string{"pets", "cafe"}}, &cafe, false, PresetText, 1},
+		"a revision":           {Preset{Enabled: true, Fields: []string{"cafe"}}, &cafe, true, "", 0},
+		"a post with no 분야":    {Preset{Enabled: true, Fields: []string{"cafe"}}, nil, false, "", 0},
+		"a blank 분야 is none":   {Preset{Enabled: true, Fields: []string{"cafe"}}, new(string), false, "", 0},
 	} {
 		t.Run(name, func(t *testing.T) {
 			svc, store := newTestService(t, nil)
@@ -359,8 +360,8 @@ func TestForPromptAppendsThePresetLastWhereItApplies(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if !reflect.DeepEqual(texts, tc.want) {
-				t.Fatalf("texts = %q, want %q", texts, tc.want)
+			if !reflect.DeepEqual(texts.Owner, []string{"전역", "분야"}) || texts.Preset != tc.wantPreset {
+				t.Fatalf("texts = %+v, want owner [전역 분야] and preset %q", texts, tc.wantPreset)
 			}
 			if store.presetReads != tc.reads {
 				t.Fatalf("the preset was read %d times, want %d", store.presetReads, tc.reads)
@@ -481,8 +482,8 @@ func TestForPromptDistinguishesNoTemplateFromATemplate(t *testing.T) {
 	if store.askedField != "" {
 		t.Fatalf("resolution asked for the 분야 %q", store.askedField)
 	}
-	if len(texts) != 2 {
-		t.Fatalf("texts = %v", texts)
+	if len(texts.Owner) != 2 || texts.Preset != "" {
+		t.Fatalf("texts = %+v", texts)
 	}
 	id := "  p1  "
 	if _, err := svc.ForPrompt(context.Background(), "alice", &id, nil, false); err != nil {

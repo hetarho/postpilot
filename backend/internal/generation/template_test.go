@@ -236,7 +236,7 @@ func TestRevisePromptInjectsTheSameSectionAtTheSamePosition(t *testing.T) {
 // enqueue — the case a restart-resume or an explicit retry also lands in — changes nothing.
 func TestTheFrozenPayloadSurvivesAnEditOrDeletionOfTheLiveRow(t *testing.T) {
 	frozen := testBrief()
-	raw, err := encodeGenerationPayload(generationOptions{TargetLanguage: LanguageKorean, Template: frozen})
+	raw, err := encodeGenerationPayload(generationOptions{TargetLanguage: LanguageKorean, writeMaterial: writeMaterial{Template: frozen}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -356,7 +356,7 @@ func TestGenerationFreezesTheTemplateAtEnqueueAndTheDrainIgnoresTheLiveRow(t *te
 		PostSlug:   "post",
 		VoiceID:    liveVoice.ID,
 		WriteModel: writeRef.String(),
-		Payload:    mustGeneratePayload(t, generationOptions{Template: &frozen}),
+		Payload:    mustGeneratePayload(t, generationOptions{writeMaterial: writeMaterial{Template: &frozen}}),
 	}, func(string, int, int) {}); err != nil {
 		t.Fatal(err)
 	}
@@ -432,7 +432,7 @@ func TestTheEnqueuePassesThePostAnswersToTheRenderOnce(t *testing.T) {
 // one writes no key at all, so every payload frozen before the member stays byte-identical.
 func TestTheTitleAreaRidesBothPayloadsAndALegacyOneDecodesAsNone(t *testing.T) {
 	brief := titleAreaBrief()
-	generate, err := encodeGenerationPayload(generationOptions{TargetLanguage: LanguageKorean, Template: brief})
+	generate, err := encodeGenerationPayload(generationOptions{TargetLanguage: LanguageKorean, writeMaterial: writeMaterial{Template: brief}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -460,7 +460,7 @@ func TestTheTitleAreaRidesBothPayloadsAndALegacyOneDecodesAsNone(t *testing.T) {
 		t.Fatalf("decoded revision template = %+v, %v", parsed.Template, err)
 	}
 
-	plainGenerate, err := encodeGenerationPayload(generationOptions{TargetLanguage: LanguageKorean, Template: testBrief()})
+	plainGenerate, err := encodeGenerationPayload(generationOptions{TargetLanguage: LanguageKorean, writeMaterial: writeMaterial{Template: testBrief()}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -502,7 +502,7 @@ func TestTheFrozenTitleAreaSurvivesAnEditOfTheLiveRow(t *testing.T) {
 	}
 	// The payload crosses the queue as bytes, and the live row's title area is rewritten
 	// between the enqueue and the drain.
-	raw, err := encodeGenerationPayload(generationOptions{TargetLanguage: LanguageKorean, Template: jobs.frozen(t, 0).Template})
+	raw, err := encodeGenerationPayload(generationOptions{TargetLanguage: LanguageKorean, writeMaterial: writeMaterial{Template: jobs.frozen(t, 0).Template}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -517,7 +517,7 @@ func TestTheFrozenTitleAreaSurvivesAnEditOfTheLiveRow(t *testing.T) {
 		PostSlug:   "post",
 		VoiceID:    liveVoice.ID,
 		WriteModel: writeRef.String(),
-		Payload:    mustGeneratePayload(t, generationOptions{Template: decoded.Template}),
+		Payload:    mustGeneratePayload(t, generationOptions{writeMaterial: writeMaterial{Template: decoded.Template}}),
 	}, func(string, int, int) {}); err != nil {
 		t.Fatal(err)
 	}

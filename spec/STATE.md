@@ -56,7 +56,6 @@
 | T356 | Tab moves through an anchored panel; a hover-opened panel closes on Escape | THEME ARCH | T355 | todo |
 | T357 | The published lock is one guard, and an unclassified write fails a test | ARCH | T355 | todo |
 | T358 | A photo's row goes before its object, and "finalized at the current revision" is one rule | ARCH | T357 | todo |
-| T361 | A write comparison freezes the same write material as Start | MEM MODEL GEN GUIDE QUAL ARCH | T354 T359 | todo |
 | T362 | One replacement-rule fixture both sides read | ARCH | - | todo |
 | T363 | A taken replacement candidate is spent | GEN POST ARCH | T355 T362 | todo |
 | T364 | A measurement change cannot ship without its version bump, and emoji tails trim | ARCH | - | todo |
@@ -84,9 +83,11 @@
 ## next
 - implement-task T380 next for the media-worker wave (T376..T379 are done; T387 verifies CPU/VPS compatibility locally; T388 completes README/DEPLOY guides for all three environments and GPU setup tooling without live migration)
 - Later: update-ssot CLIP-163, then create-task ARCH CLIP for real-GPU validation, profile approval/automatic selection and concurrency tuning; ARCH r11 and CLIP r44 remain partially consumed, and physical host setup/migration remain operator actions
-- implement-task T361 (continuing T354..T375 in dependency order, p42); create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
+- implement-task T362 (continuing T354..T375 in dependency order, p42); create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 
 ## log
+- 260925 T361 done; a write comparison freezes the material Start freezes (memories included), the preset line rides only with frozen phrases, and the snapshot has its own tagged wire struct with every stored byte unchanged; BE gate passes (p42)
+- 260925 T361 claimed (p42)
 - 260925 T379 done (mw): private artifact access, immutable conditional uploads, verified receipts and durable deletion intent; real MinIO plus SQLite/HTTP/race and isolated full CI/codegen checks pass; T380 next
 - 260925 T379 claimed (mw); T378 committed as 0d43a284; private artifact handoff only
 - 260925 T360 done; ticked quality rules open the per-post half with the stable prefix unmoved, and the revise title form binds only a title request; BE gate passes (one parallel-session test aside) (p42)
@@ -105,5 +106,3 @@
 - 260925 T376 claimed (mw); implementation scope T376..T388 only, sequential; other sessions own the remaining wave
 - 260925 create-task media-worker scope correction done: T386 keeps CPU VPS deployment as default, T387 verifies both layouts locally, T388 delivers three-environment README/DEPLOY guides and CPU-verifiable GPU setup tooling; no live deployment, friend-PC installation, migration or hardware benchmark is required by this wave; T376..T388 remain 13 todo with ARCH@11 bases; references, dependencies, STATE/format and diff checks pass
 - 260925 ARCH r11 ARCH-37/59 and delivery portion of ARCH-57 tasked in T386..T388; ARCH-52/53/56/57 GPU activation/tuning and CLIP-163 remain pending; POST/MEM and other unrelated tasks/deltas preserved
-- 260925 ARCH r11 ready for create-task: ARCH-37/57 narrow hardware gates to future GPU activation; ARCH-59 makes the current CPU VPS default and requires deployment guides for all three environments; provisioning and live migration are later operator actions
-- 260925 create-architecture ARCH / create-task media-worker scope correction start: keep the current CPU VPS deployment; deliver guides for CPU co-location, GPU co-location and a remote GPU worker; physical GPU setup and migration are later operator work

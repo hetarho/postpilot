@@ -2,6 +2,7 @@ package generation
 
 import (
 	"context"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -15,14 +16,17 @@ func testGuidelines() []string {
 // fakeGuidelines is the guideline context's published resolution. Changing `texts` after an
 // enqueue is how a test edits, rescopes or deletes rows between enqueue and drain.
 type fakeGuidelines struct {
-	texts         []string
+	texts []string
+	// preset is returned whatever forRevision is, so generation's own tests prove a revision
+	// ignores it.
+	preset        string
 	calls         int
 	askedTemplate *string
 	askedField    *string
 	askedRevision bool
 }
 
-func (f *fakeGuidelines) ForPrompt(_ context.Context, _ string, templateID, field *string, forRevision bool) ([]string, error) {
+func (f *fakeGuidelines) ForPrompt(_ context.Context, _ string, templateID, field *string, forRevision bool) (GuidelineTexts, error) {
 	f.calls++
 	if templateID == nil {
 		f.askedTemplate = nil
@@ -37,7 +41,7 @@ func (f *fakeGuidelines) ForPrompt(_ context.Context, _ string, templateID, fiel
 		f.askedField = &id
 	}
 	f.askedRevision = forRevision
-	return f.texts, nil
+	return GuidelineTexts{Owner: f.texts, Preset: f.preset}, nil
 }
 
 func guidelineAwareService(t *testing.T, guidelines *fakeGuidelines, briefs *fakeTemplateBriefs, posts *fakePosts, jobs *fakeJobs, models *fakeModels) *Service {
@@ -208,7 +212,7 @@ func TestGenerationFreezesGuidelinesAtEnqueueAndTheDrainIgnoresLiveRows(t *testi
 		PostSlug:   "post",
 		VoiceID:    liveVoice.ID,
 		WriteModel: writeRef.String(),
-		Payload:    mustGeneratePayload(t, generationOptions{Guidelines: frozen}),
+		Payload:    mustGeneratePayload(t, generationOptions{writeMaterial: writeMaterial{Guidelines: frozen}}),
 	}, func(string, int, int) {}); err != nil {
 		t.Fatal(err)
 	}
@@ -225,7 +229,7 @@ func TestGenerationFreezesGuidelinesAtEnqueueAndTheDrainIgnoresLiveRows(t *testi
 // same prompt; a payload written before guidelines existed decodes as none.
 func TestFrozenGuidelinesSurviveAResumeAndALegacyPayloadDecodesAsNone(t *testing.T) {
 	texts := testGuidelines()
-	raw, err := encodeGenerationPayload(generationOptions{TargetLanguage: LanguageKorean, Guidelines: texts})
+	raw, err := encodeGenerationPayload(generationOptions{TargetLanguage: LanguageKorean, writeMaterial: writeMaterial{Guidelines: texts}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -391,5 +395,96 @@ func TestEveryEntryPointAsksWithThePostsFieldAndItsRevisionFlag(t *testing.T) {
 	}
 	if guidelines.askedField != nil {
 		t.Fatalf("a post with no 분야 asked for %q", *guidelines.askedField)
+	}
+}
+
+// GUIDE-40, QUAL-41: the preset's line rides only with frozen phrases. A post whose 분야 froze
+// none keeps every owner guideline, 분야-scoped ones included, and loses only the preset line —
+// in Start's payload and in the comparison snapshot alike. With phrases it is appended last. A
+// revision never carries it, even when the guideline port hands one back.
+func TestThePresetLineRidesOnlyWithFrozenPhrases(t *testing.T) {
+	ctx := context.Background()
+	for name, phrases := range map[string][]string{"no phrases": nil, "phrases": {"성수 카페"}} {
+		posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, Field: "cafe", Content: revisionContent("body")}}
+		guidelines := &fakeGuidelines{texts: testGuidelines(), preset: "PRESET"}
+		deps := testDeps()
+		deps.Guidelines = guidelines
+		deps.FieldPhrases = &recordingPhrases{answer: phrases}
+		jobs := &fakeJobs{id: "job"}
+		svc := NewService(posts, fakeProfiles{}, &fakeRules{}, newFakeModels(), fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, deps)
+		want := testGuidelines()
+		if phrases != nil {
+			want = append(testGuidelines(), "PRESET")
+		}
+		if _, err := svc.Start(ctx, StartRequest{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()}); err != nil {
+			t.Fatal(err)
+		}
+		if got := jobs.frozen(t, 0).Guidelines; !reflect.DeepEqual(got, want) {
+			t.Errorf("%s: Start froze %q, want %q", name, got, want)
+		}
+		raw, err := svc.SnapshotWriteInput(ctx, "alice", "post", llm.ModelRef{}, nil, nil, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		snapshot, err := decodeWriteSnapshot(raw)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := snapshot.Post.Guidelines; !reflect.DeepEqual(got, want) {
+			t.Errorf("%s: the snapshot froze %q, want %q", name, got, want)
+		}
+		if phrases == nil {
+			continue
+		}
+		if _, err := svc.StartRevision(ctx, StartRevisionRequest{UserID: "alice", PostSlug: "post", Instruction: "짧게", WriteModel: writeRef.String()}); err != nil {
+			t.Fatal(err)
+		}
+		revision, err := parseRevisionPayload(jobs.payloads[0])
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(revision.Guidelines, testGuidelines()) {
+			t.Errorf("the revision froze %q, want the owner texts only", revision.Guidelines)
+		}
+	}
+}
+
+// GEN-18, MEM-19, MODEL-30: a comparison freezes exactly the write material Start freezes — one
+// helper resolves both, so neither can carry a member the other lacks.
+func TestAComparisonFreezesTheWriteMaterialStartFreezes(t *testing.T) {
+	ctx := context.Background()
+	posts := &fakePosts{input: PostInput{
+		Slug: "post", UserID: "alice", Voice: liveVoice, TemplateID: "tmpl", UseMemory: true,
+		QualityRuleIDs: []string{"composition"}, Field: "cafe", Memo: "메모",
+	}}
+	deps := testDeps()
+	// Every brief member set: the payload's decoder turns an absent slice into an empty one, so
+	// only a full brief compares the two freezes rather than the two codecs.
+	deps.Templates = &fakeTemplateBriefs{brief: *filledGenerationOptions().Template}
+	deps.Guidelines = &fakeGuidelines{texts: testGuidelines(), preset: "PRESET"}
+	deps.Memories = &recordingMemories{texts: testMemories()}
+	deps.QualityRules = &recordingRules{answer: testQualityRules()}
+	deps.FieldPhrases = &recordingPhrases{answer: []string{"성수 카페"}}
+	jobs := &fakeJobs{id: "job"}
+	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, newFakeModels(), fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, deps)
+	if _, err := svc.Start(ctx, StartRequest{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()}); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := svc.SnapshotWriteInput(ctx, "alice", "post", llm.ModelRef{}, nil, nil, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	snapshot, err := decodeWriteSnapshot(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	frozen := jobs.frozen(t, 0).writeMaterial
+	compared := writeMaterial{
+		Template: snapshot.Post.Template, Guidelines: snapshot.Post.Guidelines, Memories: snapshot.Post.Memories,
+		QualityRules: snapshot.Post.QualityRules, FieldPhrases: snapshot.Post.FieldPhrases,
+	}
+	requireNoZero(t, "frozen", reflect.ValueOf(frozen))
+	if !reflect.DeepEqual(frozen, compared) {
+		t.Fatalf("the comparison froze a different material:\n start %+v\n  snap %+v", frozen, compared)
 	}
 }

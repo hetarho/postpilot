@@ -16,23 +16,19 @@ func filledGenerationOptions() generationOptions {
 		TargetLanguage: LanguageEnglish,
 		TargetLength:   &target,
 		TagCount:       7,
-		Template: &TemplateBrief{
-			Name: "하루 기록", Body: "<write>인트로</write>{{slot:1}}",
-			Slots:     []TemplateSlot{{Kind: "place", Label: "가게"}},
-			Rows:      []TemplatePhotoRow{{Count: 2, Filenames: []string{"IMG_1.jpg", "IMG_2.jpg"}}},
-			Facts:     []TemplateFact{{Label: "가게 이름", Value: "을지로 노포"}},
-			TitleArea: "<ask>가게 이름</ask> 다녀온 날",
-		},
-		Guidelines:   []string{"CCTV를 언급하지 않기"},
-		Memories:     []string{"매운 음식을 못 먹는다"},
-		QualityRules: []string{"제목에 같은 말을 되풀이하지 않는다"},
-		FieldPhrases: []string{"분위기 좋은 카페"},
-		ObserveFiles: &files,
+		ObserveFiles:   &files,
 		Observations: []Observation{{
 			File: "IMG_1.jpg", Scene: "골목", Mood: "차분함", VisibleText: "영업중", Objects: []string{"간판"},
 			PeoplePresent: true, Model: "p/observer", Events: []string{"문이 열린다"}, Speech: "어서 오세요",
 		}},
 		WriteNativeEffort: true,
+		writeMaterial: writeMaterial{Template: &TemplateBrief{
+			Name: "하루 기록", Body: "<write>인트로</write>{{slot:1}}",
+			Slots:     []TemplateSlot{{Kind: "place", Label: "가게"}},
+			Rows:      []TemplatePhotoRow{{Count: 2, Filenames: []string{"IMG_1.jpg", "IMG_2.jpg"}}},
+			Facts:     []TemplateFact{{Label: "가게 이름", Value: "을지로 노포"}},
+			TitleArea: "<ask>가게 이름</ask> 다녀온 날",
+		}, Guidelines: []string{"CCTV를 언급하지 않기"}, Memories: []string{"매운 음식을 못 먹는다"}, QualityRules: []string{"제목에 같은 말을 되풀이하지 않는다"}, FieldPhrases: []string{"분위기 좋은 카페"}},
 	}
 }
 
@@ -98,9 +94,11 @@ func TestEveryFrozenOptionReachesTheRun(t *testing.T) {
 	fixture := filledGenerationOptions()
 	got := reflect.ValueOf(fixture.onto(PostInput{}))
 	options := reflect.ValueOf(fixture)
-	for i := 0; i < options.NumField(); i++ {
-		name := options.Type().Field(i).Name
-		if name == "ObserveFiles" || name == "Observations" {
+	// VisibleFields reaches the members writeMaterial promotes; the embedded struct itself is
+	// not a post member, its five fields are.
+	for _, field := range reflect.VisibleFields(options.Type()) {
+		name := field.Name
+		if field.Anonymous || name == "ObserveFiles" || name == "Observations" {
 			continue
 		}
 		member := got.FieldByName(name)
@@ -108,8 +106,9 @@ func TestEveryFrozenOptionReachesTheRun(t *testing.T) {
 			t.Errorf("PostInput has no %s: add it to PostInput and onto", name)
 			continue
 		}
-		if !reflect.DeepEqual(member.Interface(), options.Field(i).Interface()) {
-			t.Errorf("%s = %v, want %v: add it to onto", name, member.Interface(), options.Field(i).Interface())
+		want := options.FieldByIndex(field.Index).Interface()
+		if !reflect.DeepEqual(member.Interface(), want) {
+			t.Errorf("%s = %v, want %v: add it to onto", name, member.Interface(), want)
 		}
 	}
 	if fixture.onto(PostInput{}).Observations != nil {

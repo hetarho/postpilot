@@ -1,7 +1,6 @@
 package generation
 
 import (
-	"encoding/json"
 	"strings"
 	"testing"
 )
@@ -91,19 +90,19 @@ func TestPromptsAskForExactlyTheFrozenTagCount(t *testing.T) {
 }
 
 func TestWriteSnapshotCarriesTheTagCount(t *testing.T) {
-	four, _ := json.Marshal(experimentSnapshot{Kind: "write", TargetLanguage: LanguageKorean, Post: PostInput{TargetLanguage: LanguageKorean, TagCount: 4}})
-	seven, _ := json.Marshal(experimentSnapshot{Kind: "write", TargetLanguage: LanguageKorean, Post: PostInput{TargetLanguage: LanguageKorean, TagCount: 7}})
+	four, _ := encodeWriteSnapshot(writeSnapshot{TargetLanguage: LanguageKorean, Post: PostInput{TargetLanguage: LanguageKorean, TagCount: 4}})
+	seven, _ := encodeWriteSnapshot(writeSnapshot{TargetLanguage: LanguageKorean, Post: PostInput{TargetLanguage: LanguageKorean, TagCount: 7}})
 	if string(four) == string(seven) {
 		t.Fatal("two tag counts froze to the same snapshot bytes, so their hashes would collide")
 	}
 	if !strings.Contains(string(seven), `"tag_count":7`) {
 		t.Fatalf("snapshot does not carry the count: %s", seven)
 	}
-	decoded, err := decodeExperimentSnapshot([]byte(`{"kind":"write","target_language":"ko","post":{"target_language":"ko"}}`), "write")
+	decoded, err := decodeWriteSnapshot([]byte(`{"kind":"write","target_language":"ko","post":{"target_language":"ko"}}`))
 	if err != nil || decoded.Post.TagCount != 4 {
 		t.Fatalf("legacy snapshot = %+v err=%v, want the default 4", decoded.Post, err)
 	}
-	decodedSeven, err := decodeExperimentSnapshot(seven, "write")
+	decodedSeven, err := decodeWriteSnapshot(seven)
 	if err != nil || decodedSeven.Post.TagCount != 7 {
 		t.Fatalf("snapshot round trip = %+v err=%v", decodedSeven.Post, err)
 	}

@@ -128,7 +128,7 @@ func TestTheRevisePromptCarriesNoMemories(t *testing.T) {
 // The payload is what the worker reads, so the freeze is only real if it survives the
 // encode: a memory edited or deleted after the start cannot reach queued work.
 func TestMemoriesAreFrozenIntoThePayload(t *testing.T) {
-	raw, err := encodeGenerationPayload(generationOptions{TargetLanguage: LanguageKorean, Memories: testMemories()})
+	raw, err := encodeGenerationPayload(generationOptions{TargetLanguage: LanguageKorean, writeMaterial: writeMaterial{Memories: testMemories()}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -238,7 +238,7 @@ func TestADurableGenerateCarriesItsFrozenMemories(t *testing.T) {
 	// Between the enqueue and the drain every memory is edited or deleted.
 	recorder.texts = []string{"바뀐 기억"}
 
-	job := GenerateJob{UserID: "alice", PostSlug: "post", VoiceID: liveVoice.ID, WriteModel: writeRef.String(), Payload: mustGeneratePayload(t, generationOptions{Memories: frozen})}
+	job := GenerateJob{UserID: "alice", PostSlug: "post", VoiceID: liveVoice.ID, WriteModel: writeRef.String(), Payload: mustGeneratePayload(t, generationOptions{writeMaterial: writeMaterial{Memories: frozen}})}
 	if err := svc.Generate(ctx, job, func(string, int, int) {}); err != nil {
 		t.Fatal(err)
 	}
@@ -285,7 +285,7 @@ func TestADurableGenerateWithoutMemoriesIsUnchanged(t *testing.T) {
 			PostSlug:   "post",
 			VoiceID:    liveVoice.ID,
 			WriteModel: writeRef.String(),
-			Payload:    mustGeneratePayload(t, generationOptions{Memories: memories}),
+			Payload:    mustGeneratePayload(t, generationOptions{writeMaterial: writeMaterial{Memories: memories}}),
 		}, func(string, int, int) {}); err != nil {
 			t.Fatalf("%s: %v", name, err)
 		}
@@ -321,4 +321,49 @@ func (r *recordingMemories) ForPost(_ context.Context, _ string, keyParts []stri
 	r.calls++
 	r.lastKey = keyParts
 	return r.texts, nil
+}
+
+// MEM-19, GEN-18, MODEL-30: a write comparison of a post with 기억 사용 on freezes the memories
+// once, at snapshot time, and both candidates write with the same [기억] section. A memory edited
+// after the snapshot reaches neither; a retrieval that finds nothing snapshots `null`, as every
+// snapshot did before, and so differs from one that found memories.
+func TestWriteSnapshotFreezesMemoriesForBothCandidates(t *testing.T) {
+	ctx := context.Background()
+	recorder := &recordingMemories{texts: testMemories()}
+	svc, _, models := memoryDrainService(recorder)
+	raw, err := svc.SnapshotWriteInput(ctx, "alice", "post", llm.ModelRef{}, nil, nil, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prepared, err := svc.PrepareWriteInput(ctx, raw, func(string, int, int) {})
+	if err != nil {
+		t.Fatal(err)
+	}
+	recorder.texts = []string{"편집됨"}
+	for _, ref := range []llm.ModelRef{writeRef, observeRef} {
+		if _, _, err := svc.RunWriteCandidate(ctx, prepared, ref); err != nil {
+			t.Fatal(err)
+		}
+	}
+	left, right := models.calls[0].request.Messages[0].Parts[0].Text, models.calls[1].request.Messages[0].Parts[0].Text
+	if left != right {
+		t.Fatalf("the candidates wrote from different per-post halves:\n%s\n---\n%s", left, right)
+	}
+	for _, want := range append([]string{"[기억]"}, testMemories()...) {
+		if !strings.Contains(left, want) {
+			t.Errorf("the comparison's per-post half lacks %q:\n%s", want, left)
+		}
+	}
+	if strings.Contains(left, "편집됨") || recorder.calls != 1 {
+		t.Fatalf("the comparison read the memories again: %d calls\n%s", recorder.calls, left)
+	}
+
+	recorder.texts = nil
+	none, err := svc.SnapshotWriteInput(ctx, "alice", "post", llm.ModelRef{}, nil, nil, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(none), `"Memories":null`) || string(none) == string(raw) {
+		t.Fatalf("a retrieval that found nothing snapshotted %s", none)
+	}
 }

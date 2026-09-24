@@ -85,7 +85,7 @@ func TestGroundingNamesTheTemplateFields(t *testing.T) {
 func TestFactsSurviveTheGenerationPayload(t *testing.T) {
 	raw, err := encodeGenerationPayload(generationOptions{
 		TargetLanguage: LanguageKorean,
-		Template:       briefWithFacts(),
+		writeMaterial:  writeMaterial{Template: briefWithFacts()},
 	})
 	if err != nil {
 		t.Fatalf("encode: %v", err)
@@ -104,7 +104,7 @@ func TestFactsSurviveTheGenerationPayload(t *testing.T) {
 
 	// A brief with no fact encodes no `facts` key at all: a template whose fields were all
 	// switched off has to be byte-identical to one that never declared any.
-	bare, err := encodeGenerationPayload(generationOptions{TargetLanguage: LanguageKorean, Template: testBrief()})
+	bare, err := encodeGenerationPayload(generationOptions{TargetLanguage: LanguageKorean, writeMaterial: writeMaterial{Template: testBrief()}})
 	if err != nil {
 		t.Fatalf("encode bare: %v", err)
 	}

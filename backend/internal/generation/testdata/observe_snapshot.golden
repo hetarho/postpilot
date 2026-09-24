@@ -1,0 +1,1 @@
+{"kind":"observe","post":{"slug":"post","user_id":"alice","images":[{"Filename":"IMG_1.jpg","Key":"key-1","Kind":"photo","ContentType":"image/jpeg","DurationMs":0},{"Filename":"clip.mp4","Key":"key-2","Kind":"video","ContentType":"video/mp4","DurationMs":4200}]}}
