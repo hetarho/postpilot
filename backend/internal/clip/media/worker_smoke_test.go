@@ -179,16 +179,22 @@ func TestWorkerExecutionParity(t *testing.T) {
 			t.Fatal(err)
 		}
 	})
-	for _, sequence := range []bool{false, true} {
-		name := "footage-audio-fade"
-		if sequence {
-			name = "sequence-caption"
-		}
+	for _, test := range []struct {
+		name, ratio string
+		sequence    bool
+	}{
+		{"footage-audio-fade", "vertical", false},
+		{"sequence-caption", "vertical", true},
+		{"horizontal-footage-audio-fade", "horizontal", false},
+		{"square-sequence-caption", "square", true},
+	} {
+		name, sequence := test.name, test.sequence
 		t.Run(name, func(t *testing.T) {
 			plan, err := qaPlan(qaClipCases()[0], sources)
 			if err != nil {
 				t.Fatal(err)
 			}
+			plan.Ratio = test.ratio
 			for i := range plan.Cuts {
 				for _, s := range sources {
 					if s.ID == plan.Cuts[i].SourceID {

@@ -44,7 +44,6 @@ services:
       # Production keeps 1 encode / 2 decode threads and one job per worker.
       CLIP_ENCODE_THREADS: "6"
       CLIP_DECODE_THREADS: "8"
-      CLIP_MEDIA_EXECUTION: worker
       MEDIA_INTERNAL_ADDR: ":9000"
       MEDIA_STORAGE_ENDPOINT: http://minio:9000
     # Provider API keys come from the repo-root .env, whatever names providers.yaml's

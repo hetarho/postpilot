@@ -455,3 +455,29 @@ rejection was reported. This verifies T074's owner-assisted acceptance gate;
 the agent did not publish, register or submit anything. Future manual checks
 must likewise avoid publish/register/submit and cannot be replaced by the
 documentation or local media checks alone.
+
+### CPU release and host capacity
+
+`pnpm smoke:media-worker` checks same-machine direct/worker output identity in all
+three ratios, including original audio, transitions and sequence captions.
+`pnpm smoke:media-release` extends the `cmd/api` release fixtures through a real
+API child process, private MinIO and a standalone worker, in colocated and isolated
+remote networks. The fixture registry is explicitly synthetic; production `/api`
+contains no fixture control routes. A restart loses API memory, and the worker
+has no SQLite mount or shared work directory.
+
+The fixture caps API+driver at 256MiB/1CPU and the worker at 512MiB/1CPU, leaving
+256MiB of the historical 1GiB envelope for other colocated services. Private MinIO
+and the test network relay are separately capped infrastructure outside that
+execution envelope, replacing external R2/network services. Reports include the
+sum of container memory peaks (a conservative upper bound), sampled disk peaks,
+project RPC latency, and claim-to-reservation / reservation-to-completion timings
+(download+compute / reserve+upload). No result is a current VPS measurement or a
+worst-case 20-source benchmark. `DEPLOY.md` §8.6 owns the read-only host preflight
+and optional later disposable staging smoke.
+
+API media dependencies remain for authored-plan validation, preview rasterization
+and browser caption assets. Server preparation and final rendering always use the
+durable worker protocol. Embedded execution
+in the old release/identity fixtures is only a comparison baseline, never a worker
+failure fallback in the production composition root.

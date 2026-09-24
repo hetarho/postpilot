@@ -33,7 +33,6 @@ class MediaComposeTest(unittest.TestCase):
                     if topology != 'worker':
                         api = cfg['services']['api']
                         self.assertEqual(api['environment']['MEDIA_INTERNAL_ADDR'], ':9000')
-                        self.assertEqual(api['environment']['CLIP_MEDIA_EXECUTION'], 'worker')
                         self.assertEqual(api['volumes'][0]['target'], '/data')
                         ports = api.get('ports', [])
                         if topology == 'remote':

@@ -601,3 +601,43 @@ before switching live traffic. Turning off this PC makes media work wait/retry w
 its existing budgets; the API and web remain available. NVIDIA images/device setup
 and the three-environment matrix are completed by the GPU guide; production GPU
 activation remains gated by CLIP-163 and later real-hardware validation.
+
+### 8.6 CPU 릴리스 검증과 실제 호스트 용량 점검
+
+현재 VPS는 **colocated CPU / 워커 1개 작업**이 기본이다. 로컬 테스트 통과는 현재 VPS의 여유 메모리 측정이나 배포 완료를 뜻하지 않는다. API에는 편집안 검증, 미리보기와 브라우저 자막 에셋용 FFmpeg/resvg/폰트가 계속 필요하다. 서버 영상의 준비·최종 렌더는 같은 서버에서도 전용 워커가 처리한다.
+
+배포 전 **실제 Linux Docker 호스트**에서 실행한다. `--work-root`는 워커 볼륨이 놓이는 파일시스템의 기존 디렉터리로 바꾼다. Docker Desktop을 쓰는 Mac의 메모리를 VPS 용량으로 해석하지 않는다.
+
+```bash
+python3 deploy/media_preflight.py \
+  --work-root /var/lib/docker \
+  --worker-memory 512m --worker-cpus 1 \
+  --api-extra-memory 256m --reserve-memory 256m \
+  --workspace 8g --reserve-disk 2g
+```
+
+`worker.env`의 `MEDIA_WORKER_MEMORY`/`MEDIA_WORKER_CPUS`와 같은 값을 넣는다. 메모리는 전체 RAM이 아니라 **현재 MemAvailable**과 cgroup 잔여량 중 작은 값이다. 이미 실행 중인 DB/API/Caddy 등은 현재 사용량으로 반영되며, API 추가 여유와 다른 서비스의 증가분도 별도로 남긴다. 원격 워커 전용 호스트에서는 `--api-extra-memory 0`을 사용한다. 기본 디스크 요구량은 제품의 작업 공간 상한 8GiB + 여유 2GiB다. 실패(exit 1)하면 서버 증설, 동시 워크로드 축소 또는 별도 워커 호스트를 결정한 뒤 다시 점검한다. 이 일회성 검사는 미래 부하와 처리 속도를 보장하지 않는다.
+
+개발 머신에서 재현하는 명령이다. 자원 측정 smoke에는 cgroup v2의 `memory.peak`를 제공하는 Linux Docker 환경이 필요하다. 지표를 읽을 수 없으면 검증은 실패한다.
+
+```bash
+pnpm smoke:media-worker
+pnpm smoke:media-release
+```
+
+첫 명령은 동일 머신·동일 CPU 프로필의 직접 실행과 워커 실행을 비교한다. 세 화면 비율, 원본 오디오, 전환과 프레임별 자막을 포함하며 기존 파일 해시를 다른 아키텍처에 맞춰 갱신하지 않는다. 두 번째 명령은 실제 API 자식 프로세스, 독립 워커 컨테이너, 비공개 MinIO를 사용한다. 모델 응답만 명시적인 합성 fixture다. 같은 네트워크와 두 네트워크 사이의 제한된 릴레이 환경을 모두 실행하며 API 재시작, 워커 강제 종료/회수, 취소·중복 완료·삭제 재시도를 검증한다.
+
+실행 기본 한도는 API 256MiB/1CPU + 워커 512MiB/1CPU, 같은 호스트의 다른 서비스용 예비 256MiB로 합계 1GiB다. MinIO(256MiB/0.5CPU)와 원격 테스트 릴레이(64MiB/0.25CPU)는 실제 배포의 외부 R2/네트워크를 대신하는 **별도 테스트 인프라**이므로 실행 한도 밖에 두고 보고서에 구분한다. 합산 메모리 피크는 두 컨테이너 `memory.peak`의 합으로 계산한 보수적인 상한이며, 디스크 피크는 주기적 표본의 최대값이다. 큰 실제 사용자 입력의 최악 조건 벤치마크와 같지 않다.
+
+2026-09-25 개발 머신의 Linux/arm64 컨테이너에서 얻은 최종 결과다. 16초짜리 합성 원본 1개로 15초 결과를 만들고, 별도의 출력 동일성 검사는 세 비율의 오디오·전환·자막 사례를 비교했다. GPU와 실제 VPS에서는 실행하지 않았다.
+
+| 로컬 배치 | API+워커 메모리 피크 상한 | 표본 디스크 피크 합계 | 프로젝트 RPC 최대 | 준비(다운로드+처리) | 렌더(다운로드+처리) | 준비/결과 업로드 구간 |
+| --- | --- | --- | --- | --- | --- | --- |
+| colocated | 544.4MiB | 16.4MiB | 37ms | 1,371ms | 79,796ms | 13ms / 15ms |
+| remote 네트워크 | 522.3MiB | 15.1MiB | 12ms | 1,183ms | 78,523ms | 17ms / 10ms |
+
+렌더 시간은 작업 회수 대기와 분리해 기록한 마지막 실제 처리 구간이다. 최초 렌더의 강제 종료·회수·API 재시작을 포함한 전체 시간은 각각 99,779ms/94,258ms였다. 업로드 구간에는 슬롯 예약 RPC가 포함된다. 이 작은 합성 입력의 값으로 실제 영상 최대 크기나 GPU 속도를 추정하지 않는다.
+
+`MEDIA_RELEASE_REPORT`와 `MEDIA_RESOURCE_REPORT`가 검증 범위, RPC 응답 시간, 준비·렌더·업로드 구간, 자원 사용량을 기록한다. OOM, 예산 초과, 시간 초과, 누락된 자원 보고는 실패다. 필요한 경우 `python3 scripts/media-release.py --help`의 명시적인 한도를 바꿔 더 큰 호스트용 결과를 별도로 남긴다.
+
+**나중에 운영자가 staging/VPS에서 실행할 선택적 smoke:** 저장소를 별도 체크아웃하고, 위 사전 점검 후 테스트 인프라와 이미지 빌드에 필요한 추가 용량까지 확보한 경우에만 `python3 scripts/media-release.py --layout colocated`를 실행한다. 운영 `.env`를 복사하거나 production Compose를 이 명령과 합치지 않는다. 도구는 매번 `postpilot-release-<random>` 컨테이너·네트워크·워커 볼륨과 일회용 MinIO `release` 버킷을 만들고, API의 SQLite/임시 원본은 해당 테스트 컨테이너에만 둔다. 제어 포트는 `127.0.0.1`의 임의 포트이고 내부 워커 포트는 테스트 네트워크의 9002다. `finally` 정리는 자신이 생성한 이름만 제거하며 기존 프로젝트·DB·원본·볼륨을 열지 않는다. 실행 중 호스트 자체가 종료되면 해당 실행의 이름과 `postpilot.disposable-media-release` 라벨을 확인해 그 일회용 리소스만 정리한다. 이번 작업에서는 실제 VPS에서 이 절차를 실행하지 않는다.

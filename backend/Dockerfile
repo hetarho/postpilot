@@ -137,6 +137,14 @@ COPY --from=builder /media.test /media.test
 ENV CLIP_MEDIA_SMOKE=1
 ENTRYPOINT ["/media.test", "-test.run=^Test(WorkerExecutionParity|WorkerCommandHealth|WorkerImageIsolation|ExecRunnerReapsDescendants)$", "-test.v", "-test.timeout=45m"]
 
+# Disposable multi-process gate; fixture endpoints exist only in this test binary.
+FROM release-smoke AS media-release-api
+ENV MEDIA_RELEASE_SMOKE=1
+ENTRYPOINT ["/clip-release.test", "-test.run=^TestMediaRelease$", "-test.v", "-test.timeout=30m"]
+
+FROM media-worker-deployable AS media-release-worker
+COPY --from=release-builder /clip-release.test /clip-release.test
+
 FROM deployable AS production
 # This dependency makes the real-binary nonroot smoke a mandatory image-build gate.
 COPY --from=media-smoke /usr/local/bin/ffmpeg /usr/local/bin/ffmpeg

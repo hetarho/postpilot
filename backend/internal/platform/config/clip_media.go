@@ -9,10 +9,6 @@ import (
 )
 
 func loadClipMedia(cfg *Config) error {
-	cfg.ClipMediaExecution = getenv("CLIP_MEDIA_EXECUTION", "embedded")
-	if cfg.ClipMediaExecution != "embedded" && cfg.ClipMediaExecution != "worker" {
-		return fmt.Errorf("CLIP_MEDIA_EXECUTION must be embedded or worker")
-	}
 	if err := loadClipTools(cfg); err != nil {
 		return err
 	}

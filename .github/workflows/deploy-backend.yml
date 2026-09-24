@@ -28,6 +28,9 @@ on:
       - 'deploy/media_rollout.py'
       - 'deploy/media/**'
       - 'deploy/*_test.py'
+      - 'deploy/requirements-test.txt'
+      - 'deploy/media_preflight.py'
+      - 'scripts/media-release.py'
       - '.github/workflows/deploy-backend.yml'
 
 # Serialize deploys per environment (never roll two images at once).
@@ -70,7 +73,10 @@ jobs:
           docker compose --env-file worker.env -f deploy/media/docker-compose.yml config --quiet --no-env-resolution
 
       - name: Verify rollout recovery and the deploy workflow's shape
-        run: python3 -m unittest discover -s deploy -p '*_test.py' -v
+        run: |
+          python3 -m venv /tmp/postpilot-deploy-checks
+          /tmp/postpilot-deploy-checks/bin/pip install -r deploy/requirements-test.txt
+          /tmp/postpilot-deploy-checks/bin/python -m unittest discover -s deploy -p '*_test.py' -v
 
       # Login only needed when we actually push (DEPLOY_ENABLED). GITHUB_TOKEN is automatic.
       - name: Log in to GHCR
@@ -157,6 +163,9 @@ jobs:
       - name: Run CPU worker parity, isolation and health
         run: docker run --rm --cpus=2 --memory=1g postpilot-worker-smoke:ci
 
+      - name: Run separate-process CPU release in both private layouts
+        run: python3 scripts/media-release.py
+
   rollout:
     needs: build
     runs-on: ubuntu-latest
@@ -178,7 +187,7 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
-          source: 'docker-compose.prod.yml,docker-compose.media.colocated.yml,docker-compose.media.remote.yml,deploy/backend-rollout.sh,deploy/media_rollout.py,deploy/media/worker.env.example'
+          source: 'docker-compose.prod.yml,docker-compose.media.colocated.yml,docker-compose.media.remote.yml,deploy/backend-rollout.sh,deploy/media_rollout.py,deploy/media_preflight.py,deploy/media/worker.env.example'
           target: '/srv/postpilot-${{ env.ENV_NAME }}'
 
       - name: Pull → swap → health gate → roll back on failure

@@ -3,7 +3,6 @@
 services:
   api:
     environment:
-      CLIP_MEDIA_EXECUTION: worker
       MEDIA_INTERNAL_ADDR: ":9000"
     networks:
       media: {}

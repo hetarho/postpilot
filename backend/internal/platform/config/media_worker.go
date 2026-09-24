@@ -153,3 +153,11 @@ func LoadWorkerRuntime() (WorkerConfig, error) {
 	c.EncodeThreads, c.DecodeThreads = media.ClipEncodeThreads, media.ClipDecodeThreads
 	return c, nil
 }
+
+// RequireMediaControl applies to server startup, not offline tooling or adduser.
+func (c *Config) RequireMediaControl() error {
+	if c.MediaInternalAddr == "" || len(c.MediaWorkerCredentials) == 0 {
+		return errors.New("server rendering requires MEDIA_INTERNAL_ADDR and MEDIA_WORKER_CREDENTIALS; configure the colocated or remote worker from DEPLOY.md")
+	}
+	return nil
+}

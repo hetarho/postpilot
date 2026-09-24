@@ -23,7 +23,6 @@ class MediaDevTest(unittest.TestCase):
         self.assertFalse(any(k.startswith(('R2_', 'DB_', 'PROVIDERS')) for k in worker['environment']))
         self.assertEqual(api['environment']['MEDIA_STORAGE_ENDPOINT'], 'http://minio:9000')
         self.assertEqual(api['environment']['MEDIA_INTERNAL_ADDR'], ':9000')
-        self.assertEqual(api['environment']['CLIP_MEDIA_EXECUTION'], 'worker')
         self.assertNotIn('ports', worker)
         self.assertFalse(any('9000' in port for port in api['ports']))
         self.assertNotIn('devices', worker)

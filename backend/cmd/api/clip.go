@@ -66,12 +66,11 @@ func newClipGeneration(ctx context.Context, cfg *config.Config, store *clipstore
 		return nil, err
 	}
 	finisher := clipapp.NewFinisher(writer, bind, jobstore.New(writer, writer, jobKinds()), store, nil)
-	var remote *clipapp.MediaDispatch
-	if cfg.ClipMediaExecution == "worker" {
-		remote, err = clipapp.NewMediaDispatch(writer, bind, clip.DefaultMediaStageLimits(clipEnvironment(cfg)), clip.DefaultMediaConfig(clipEnvironment(cfg)), nil)
-		if err != nil {
-			return nil, err
-		}
+	// Server preparation and final delivery always cross the durable worker
+	// boundary. Renderer stays here for authored-plan checks and preview assets.
+	remote, err := clipapp.NewMediaDispatch(writer, bind, clip.DefaultMediaStageLimits(clipEnvironment(cfg)), clip.DefaultMediaConfig(clipEnvironment(cfg)), nil)
+	if err != nil {
+		return nil, err
 	}
 	service := clipapp.NewGenerationService(store, projects, sources, bucket, media, planner, renderer, clipapp.NewJobs(queue, guard), clip.DefaultGenerationConfig(clipEnvironment(cfg)), clipapp.GenerationDeps{
 		RemoteMedia: remote,

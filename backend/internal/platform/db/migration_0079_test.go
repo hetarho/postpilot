@@ -28,6 +28,8 @@ func TestMigration0079PreservesExistingWorkAndAccounting(t *testing.T) {
 		`INSERT INTO clip_projects(id,user_id,title,ratio,target_duration_ms,created_at,updated_at,result_key,result_id,result_content_type,result_bytes,result_duration_ms,result_created_at,edit_plan_revision,rendered_plan_revision,source_retention_expires_at) VALUES('media-project','media-owner','retained','vertical',15000,'2026-09-25T00:00:00Z','2026-09-25T00:00:00Z','private/result.mp4','result-id','video/mp4',1234,15000,'2026-09-25T00:00:00Z',1,1,'2026-09-26T00:00:00Z')`,
 		`INSERT INTO generation_jobs(id,user_id,clip_project_id,kind,status,payload,created_at,updated_at) VALUES('existing-render','media-owner','media-project','render_clip','running','frozen','2026-09-25T00:00:00Z','2026-09-25T00:00:00Z')`,
 		`INSERT INTO credit_lots(id,user_id,kind,granted,remaining,created_at) VALUES('media-credit','media-owner','purchased',100,75,'2026-09-25T00:00:00Z')`,
+		`INSERT INTO clip_source_batches(id,user_id,project_id,state,created_at,expires_at) VALUES('legacy-batch','media-owner','media-project','ready','2026-09-25T00:00:00Z','2026-09-26T00:00:00Z')`,
+		`INSERT INTO clip_generation_quotes(id,user_id,project_id,batch_id,input_digest,pricing_json,max_credits,expires_at) VALUES('legacy-quote','media-owner','media-project','legacy-batch','frozen-digest','{}',25,'2026-09-26T00:00:00Z')`,
 	} {
 		if _, err := d.Writer.ExecContext(ctx, statement); err != nil {
 			t.Fatal(err)
@@ -37,6 +39,8 @@ func TestMigration0079PreservesExistingWorkAndAccounting(t *testing.T) {
 		`SELECT id,user_id,title,result_key,result_id,result_bytes,edit_plan_revision,rendered_plan_revision,source_retention_expires_at FROM clip_projects WHERE id='media-project'`,
 		`SELECT id,user_id,clip_project_id,kind,status,payload,created_at,updated_at FROM generation_jobs WHERE id='existing-render'`,
 		`SELECT id,user_id,kind,granted,remaining,created_at FROM credit_lots WHERE id='media-credit'`,
+		`SELECT id,user_id,project_id,state,created_at,expires_at FROM clip_source_batches WHERE id='legacy-batch'`,
+		`SELECT id,user_id,project_id,batch_id,input_digest,pricing_json,max_credits,expires_at,consumed_job_id FROM clip_generation_quotes WHERE id='legacy-quote'`,
 	}
 	snapshot := func() [][]any {
 		t.Helper()

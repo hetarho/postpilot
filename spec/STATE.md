@@ -65,15 +65,16 @@
 | T372 | The test harness pins what it claims, and template limits have one constructor | ARCH | T354 T355 T359 T369 T371 | todo |
 | T373 | Entity boundaries for 분야 and post status | ARCH | T356 T367 | todo |
 | T375 | The editor's per-control cases live in the tests of the slices that own them | ARCH | T368 | todo |
-| T387 | CPU separation passes local release checks with the VPS layout as default | ARCH CLIP GEN | T384 T386 | todo |
 | T388 | GPU setup tooling and guides cover all three deployment environments | ARCH CLIP | T387 | todo |
 
 ## next
-- implement-task T387 next for the media-worker wave (T376..T386 are done; T387 verifies CPU/VPS compatibility locally; T388 completes README/DEPLOY guides for all three environments and GPU setup tooling without live migration)
+- implement-task T388 next for the media-worker wave (T376..T387 are done; T388 completes the three-environment README/DEPLOY guides and isolated NVIDIA setup diagnostics; no live migration)
 - Later: update-ssot CLIP-163, then create-task ARCH CLIP for real-GPU validation, profile approval/automatic selection and concurrency tuning; ARCH r11 and CLIP r44 remain partially consumed, and physical host setup/migration remain operator actions
 - implement-task T355 (continuing T354..T375 in dependency order, p42); create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 
 ## log
+- 260925 T387 done (mw): CPU worker-only production dispatch, separate-process colocated/remote release and capacity preflight; parity, restart/reclaim/cancel/cleanup, API image, 28 release cases and all CI gates pass; T388 next
+- 260925 T387 claimed (mw); T386 committed as 4de3ce80; separate-process CPU release fixtures, capacity preflight and production worker-only dispatch
 - 260925 T386 done (mw): explicit private CPU/remote layouts, independent image pins, drain and version-aware env/config rollback; fixture failures, real image contracts and all CI gates pass; T387 next
 - 260925 T386 claimed (mw); T385 committed as 305ccc72; explicit deployment topology, private worker configuration and compatible image rollout/recovery only
 - 260925 T385 done (mw): nonroot CPU worker image, complete watched dev stack and process-aware health; isolated CI, real startup/reload/rebuild recovery, API image smoke and CPU byte/frame parity pass; T386 next
@@ -92,5 +93,3 @@
 - 260925 T380 claimed (mw); T379 committed as fa6d9517; standalone CPU executor only
 - 260925 T374 done; an ask conflict a 블록 composition raised is lowered when it unmounts, so 원문 saves a source that parses; FE gates pass (p42)
 - 260925 T374 claimed (p42)
-- 260925 T369 done; an empty search answer keeps a field's stored phrase list and retries after the delay (QUAL-46), and a refresh interval below the quality context's 1h floor fails the boot naming its key; BE gate passes (p42)
-- 260925 T369 claimed (p42)

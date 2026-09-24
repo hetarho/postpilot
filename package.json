@@ -26,7 +26,9 @@
     "smoke:release": "docker build --progress=plain --target release-smoke -t postpilot:gate-release -f backend/Dockerfile . && docker run --rm --network none --memory 1g --cpus 2 postpilot:gate-release",
     "docker:gc": "node scripts/docker-gc.mjs",
     "infra:up": "docker compose up -d",
-    "infra:down": "docker compose down"
+    "infra:down": "docker compose down",
+    "smoke:media-worker": "docker build --target media-worker-smoke -t postpilot:gate-media-worker -f backend/Dockerfile . && docker run --rm --network none --memory 1g --cpus 2 postpilot:gate-media-worker",
+    "smoke:media-release": "python3 scripts/media-release.py"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",

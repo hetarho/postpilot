@@ -49,6 +49,9 @@ func loadPlatform(ctx context.Context) (*platform, error) {
 
 func (p *platform) load(ctx context.Context) error {
 	cfg := p.cfg
+	if err := cfg.RequireMediaControl(); err != nil {
+		return fmt.Errorf("media control config invalid: %w", err)
+	}
 	// Migrations run before the listener exists, and a failure exits non-zero ([I7]).
 	// That ordering is the whole rollback mechanism: the container never answers
 	// /health, so the deploy gate restores the previous image (DEPLOY.md §2).

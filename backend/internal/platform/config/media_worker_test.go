@@ -141,18 +141,14 @@ func TestAPIMediaSettingsStillLoadStageBudgets(t *testing.T) {
 	}
 }
 
-func TestTemporaryMediaRolloutDefaultsToExistingVPSPath(t *testing.T) {
-	t.Setenv("CLIP_MEDIA_EXECUTION", "")
-	var c Config
-	if err := loadClipMedia(&c); err != nil || c.ClipMediaExecution != "embedded" {
-		t.Fatal(c.ClipMediaExecution, err)
+func TestServerRequiresExplicitPrivateWorkerSettings(t *testing.T) {
+	for _, c := range []Config{{}, {MediaInternalAddr: ":9000"}, {MediaWorkerCredentials: map[string]string{"worker": "configured"}}} {
+		if err := c.RequireMediaControl(); err == nil {
+			t.Fatal("server accepted an unreachable media control setup")
+		}
 	}
-	t.Setenv("CLIP_MEDIA_EXECUTION", "worker")
-	if err := loadClipMedia(&c); err != nil || c.ClipMediaExecution != "worker" {
-		t.Fatal(c.ClipMediaExecution, err)
-	}
-	t.Setenv("CLIP_MEDIA_EXECUTION", "automatic")
-	if err := loadClipMedia(&c); err == nil {
-		t.Fatal("unknown dispatch mode accepted")
+	c := Config{MediaInternalAddr: ":9000", MediaWorkerCredentials: map[string]string{"worker": "configured"}}
+	if err := c.RequireMediaControl(); err != nil {
+		t.Fatal(err)
 	}
 }
