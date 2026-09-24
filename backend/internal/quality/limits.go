@@ -53,8 +53,15 @@ func Minimum(m Metric) int {
 // tick, and would refresh every second interval.
 const (
 	PhraseRefreshInterval = 24 * time.Hour
-	PhraseRefreshCheck    = 10 * time.Minute
-	PhraseRetryDelay      = time.Hour
+	// PhraseRefreshMinInterval is the floor an override may not go below (ARCH-42). One pass is 9
+	// fields × 3 pages = 27 search calls; at one an hour that is 648 a day, and a failing field
+	// retries within the same hourly cadence, so the batch cannot exceed it — about 2.6% of the
+	// 25,000/day quota of the Naver application every stack using the keys shares (staging, prod,
+	// dev). A one-minute interval would be 38,880 a day, over the quota. It equals
+	// PhraseRetryDelay, so a failing field never retries faster than the floor either.
+	PhraseRefreshMinInterval = time.Hour
+	PhraseRefreshCheck       = 10 * time.Minute
+	PhraseRetryDelay         = time.Hour
 	// PhrasePageSize is one search page, which must equal the search client's display size;
 	// PhrasePages of them make QUAL-17's 300 results.
 	PhrasePageSize  = 100

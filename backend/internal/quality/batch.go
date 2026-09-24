@@ -22,34 +22,48 @@ type PhraseBatch struct {
 	store    PhraseLists
 	search   BlogSearch
 	interval time.Duration
-	now      func() time.Time
+	// check is how often Run looks for due fields: PhraseRefreshCheck, lowered only by tests.
+	check time.Duration
+	now   func() time.Time
 }
 
+// ErrEmptySearchAnswer is a refresh whose search answered no results for a field that already
+// holds a list: an empty answer to a live query is an outage symptom, so the list stays and the
+// field is tried again (QUAL-46).
+var ErrEmptySearchAnswer = errors.New("quality: the search answered no results")
+
+// ErrPhraseRefreshTooFrequent refuses an interval below PhraseRefreshMinInterval (ARCH-42).
+var ErrPhraseRefreshTooFrequent = errors.New("quality: the phrase refresh interval is below its floor")
+
 // NewPhraseBatch builds the batch. A nil search is the legal disabled mode (QUAL-42): the box has
-// no Naver keys, no pass runs and every list stays empty. A non-positive interval is the
-// product default.
-func NewPhraseBatch(store PhraseLists, search BlogSearch, interval time.Duration, now func() time.Time) *PhraseBatch {
+// no Naver keys, no pass runs and every list stays empty. A zero interval is the product default;
+// the resolved interval must be at least PhraseRefreshMinInterval, so an override meets the same
+// bound the default does (ARCH-42).
+func NewPhraseBatch(store PhraseLists, search BlogSearch, interval time.Duration, now func() time.Time) (*PhraseBatch, error) {
 	if store == nil {
 		panic("quality: phrase store collaborator is required")
 	}
 	if now == nil {
 		panic("quality: phrase clock collaborator is required")
 	}
-	if interval <= 0 {
+	if interval == 0 {
 		interval = PhraseRefreshInterval
 	}
-	return &PhraseBatch{store: store, search: search, interval: interval, now: now}
+	if interval < PhraseRefreshMinInterval {
+		return nil, fmt.Errorf("%w: %s is below the %s floor", ErrPhraseRefreshTooFrequent, interval, PhraseRefreshMinInterval)
+	}
+	return &PhraseBatch{store: store, search: search, interval: interval, check: PhraseRefreshCheck, now: now}, nil
 }
 
-// Run catches up once and then checks every min(interval, PhraseRefreshCheck) until the context
-// ends, all inside the caller's goroutine, so a slow search never holds the listener shut. A
-// failed pass is logged and costs its own tick and nothing else.
+// Run catches up once and then checks every PhraseRefreshCheck until the context ends, all inside
+// the caller's goroutine, so a slow search never holds the listener shut. A failed pass is logged
+// and costs its own tick and nothing else.
 func (b *PhraseBatch) Run(ctx context.Context) {
 	if b.search == nil {
 		slog.Info("quality phrase refresh disabled: no Naver search credentials")
 		return
 	}
-	ticker := time.NewTicker(min(b.interval, PhraseRefreshCheck))
+	ticker := time.NewTicker(b.check)
 	defer ticker.Stop()
 	if err := b.RunOnce(ctx); err != nil && ctx.Err() == nil {
 		slog.Error("quality phrase refresh failed", "err", err, "boot", true)
@@ -93,13 +107,19 @@ func (b *PhraseBatch) RunOnce(ctx context.Context) error {
 		if err := ctx.Err(); err != nil {
 			return errors.Join(append(errs, err)...)
 		}
+		// QUAL-46: a field that already holds a list keeps it through an empty answer, which then
+		// takes the ordinary failure path. A field with no list yet (no row, or an empty one)
+		// simply stores the empty answer.
+		if fetchErr == nil && len(items) == 0 && found && len(stored.Phrases) > 0 {
+			fetchErr = ErrEmptySearchAnswer
+		}
 		now := b.now()
 		if fetchErr != nil {
 			row := PhraseList{Field: field.ID, Phrases: []string{}}
 			if found {
 				row = stored
 			}
-			row.NextRefreshAt = now.Add(min(b.interval, PhraseRetryDelay))
+			row.NextRefreshAt = now.Add(PhraseRetryDelay)
 			if err := b.store.ReplacePhraseList(ctx, row); err != nil {
 				errs = append(errs, fmt.Errorf("refresh %s: %w", field.ID, err))
 			}

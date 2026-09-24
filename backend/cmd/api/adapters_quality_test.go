@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"github.com/postpilot/backend/internal/platform/config"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -145,4 +147,40 @@ func TestTheAggregateCountsPublishedPostsOnlyAndForgetsADeletedOne(t *testing.T)
 	if _, err := qualitySvc.PostMeasurement(ctx, "alice", slugs[0]); err == nil || !strings.Contains(err.Error(), "not found") {
 		t.Fatalf("the deleted post still measures: %v", err)
 	}
+}
+
+// ARCH-42: an override below the quality context's floor passes config's format check but fails
+// the boot here, naming the key; the floor itself and the default boot.
+func TestAPhraseRefreshBelowTheFloorFailsTheBoot(t *testing.T) {
+	store := qualityPhraseListsForTest{}
+	for value, refused := range map[string]bool{"1m": true, "1h": false, "": false} {
+		t.Run("QUALITY_PHRASE_REFRESH_INTERVAL="+value, func(t *testing.T) {
+			t.Setenv("MAIL_DRIVER", "log")
+			t.Setenv("QUALITY_PHRASE_REFRESH_INTERVAL", value)
+			cfg, err := config.Load()
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, err = newPhraseBatch(cfg, store)
+			if !refused {
+				if err != nil {
+					t.Fatalf("refused: %v", err)
+				}
+				return
+			}
+			if !errors.Is(err, quality.ErrPhraseRefreshTooFrequent) || !strings.Contains(err.Error(), "QUALITY_PHRASE_REFRESH_INTERVAL") {
+				t.Fatalf("err = %v, want the floor refusal naming the key", err)
+			}
+		})
+	}
+}
+
+// qualityPhraseListsForTest is a store the batch is never run against: construction only.
+type qualityPhraseListsForTest struct{}
+
+func (qualityPhraseListsForTest) PhraseList(context.Context, string) (quality.PhraseList, bool, error) {
+	return quality.PhraseList{}, false, nil
+}
+func (qualityPhraseListsForTest) ReplacePhraseList(context.Context, quality.PhraseList) error {
+	return nil
 }

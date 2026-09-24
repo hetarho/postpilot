@@ -232,7 +232,8 @@ type Config struct {
 	NaverSearchEnabled      bool
 	// QualityPhraseRefreshInterval overrides how often each 분야's phrase list is refreshed.
 	// Zero means unset: the default is the quality context's own constant, which this
-	// package may not import.
+	// package may not import. Only format and positivity are checked here; the quality context
+	// validates its floor.
 	QualityPhraseRefreshInterval time.Duration
 
 	// R2Endpoint is the S3-compatible endpoint the API itself calls (HEAD, DELETE, LIST).

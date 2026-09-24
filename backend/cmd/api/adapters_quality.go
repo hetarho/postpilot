@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/postpilot/backend/internal/naversearch"
 	"github.com/postpilot/backend/internal/platform/config"
@@ -147,6 +148,17 @@ func (a qualityBlogSearch) SearchBlog(ctx context.Context, query string, start i
 
 // phraseSearch is the batch's search, or nil without both Naver keys (QUAL-42). It returns the
 // interface so that disabled is a true nil, never a typed nil that would read as enabled.
+// newPhraseBatch builds the 분야 phrase batch from its configuration. The quality context bounds
+// the interval (ARCH-42); the key is named here because quality does not know env names, so a
+// boot refused for it says which setting to fix.
+func newPhraseBatch(cfg *config.Config, store quality.PhraseLists) (*quality.PhraseBatch, error) {
+	batch, err := quality.NewPhraseBatch(store, phraseSearch(cfg), cfg.QualityPhraseRefreshInterval, time.Now)
+	if err != nil {
+		return nil, fmt.Errorf("QUALITY_PHRASE_REFRESH_INTERVAL: %w", err)
+	}
+	return batch, nil
+}
+
 func phraseSearch(cfg *config.Config) quality.BlogSearch {
 	if !cfg.NaverSearchEnabled {
 		return nil

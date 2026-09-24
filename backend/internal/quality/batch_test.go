@@ -83,9 +83,14 @@ func (f *fakePhraseStore) ReplacePhraseList(_ context.Context, list PhraseList) 
 	return nil
 }
 
-func newBatch(search BlogSearch, interval time.Duration) (*PhraseBatch, *fakePhraseStore) {
+func newBatch(t *testing.T, search BlogSearch, interval time.Duration) (*PhraseBatch, *fakePhraseStore) {
+	t.Helper()
 	store := &fakePhraseStore{rows: map[string]PhraseList{}}
-	return NewPhraseBatch(store, search, interval, func() time.Time { return batchNow }), store
+	batch, err := NewPhraseBatch(store, search, interval, func() time.Time { return batchNow })
+	if err != nil {
+		t.Fatal(err)
+	}
+	return batch, store
 }
 
 // notDue seeds every field but the named ones with a row due tomorrow.
@@ -120,7 +125,7 @@ func queryOf(t *testing.T, id string) string {
 
 func TestPhraseBatchRefreshesOnlyDueFields(t *testing.T) {
 	search := &fakeSearch{}
-	batch, store := newBatch(search, time.Hour)
+	batch, store := newBatch(t, search, time.Hour)
 	notDue(store)
 	// One field due exactly now and one with no row at all; the rest are due tomorrow.
 	store.rows["cafe"] = PhraseList{Field: "cafe", NextRefreshAt: batchNow}
@@ -144,7 +149,7 @@ func TestPhraseBatchFetchesThreePagesOfOneHundred(t *testing.T) {
 	search := &fakeSearch{pages: func(_ string, start int) []SearchItem {
 		return items(PhrasePageSize, fmt.Sprintf("성수 카페 %d", start))
 	}}
-	batch, store := newBatch(search, time.Hour)
+	batch, store := newBatch(t, search, time.Hour)
 	notDue(store, "cafe")
 	if err := batch.RunOnce(context.Background()); err != nil {
 		t.Fatal(err)
@@ -173,7 +178,7 @@ func TestPhraseBatchFetchesThreePagesOfOneHundred(t *testing.T) {
 
 func TestPhraseBatchShortCorpusIsASuccess(t *testing.T) {
 	search := &fakeSearch{pages: func(string, int) []SearchItem { return items(40, "을지로 노포") }}
-	batch, store := newBatch(search, 6*time.Hour)
+	batch, store := newBatch(t, search, 6*time.Hour)
 	notDue(store, "restaurant")
 	if err := batch.RunOnce(context.Background()); err != nil {
 		t.Fatal(err)
@@ -186,7 +191,7 @@ func TestPhraseBatchShortCorpusIsASuccess(t *testing.T) {
 		t.Fatalf("row = %+v", row)
 	}
 	// An empty corpus is a success too: an empty list, refreshed now.
-	empty, emptyStore := newBatch(&fakeSearch{}, time.Hour)
+	empty, emptyStore := newBatch(t, &fakeSearch{}, time.Hour)
 	notDue(emptyStore, "restaurant")
 	if err := empty.RunOnce(context.Background()); err != nil {
 		t.Fatal(err)
@@ -207,7 +212,7 @@ func TestPhraseBatchPageFailureKeepsTheLastList(t *testing.T) {
 			return nil
 		},
 	}
-	batch, store := newBatch(search, 24*time.Hour)
+	batch, store := newBatch(t, search, 24*time.Hour)
 	notDue(store, "cafe")
 	refreshed := batchNow.Add(-30 * time.Hour)
 	last := PhraseList{Field: "cafe", Phrases: []string{"분위기 좋은", "성수 카페"}, CorpusSize: 287, RefreshedAt: &refreshed, NextRefreshAt: batchNow.Add(-time.Hour)}
@@ -226,13 +231,12 @@ func TestPhraseBatchPageFailureKeepsTheLastList(t *testing.T) {
 
 func TestPhraseBatchFirstFailureSchedulesAnEmptyRow(t *testing.T) {
 	search := &fakeSearch{fail: func(string, int) error { return errors.New("unavailable") }}
-	batch, store := newBatch(search, 30*time.Minute)
+	batch, store := newBatch(t, search, time.Hour)
 	notDue(store, "pets")
 	if err := batch.RunOnce(context.Background()); err == nil {
 		t.Fatal("a failed first fetch reported success")
 	}
-	// The retry is min(interval, PhraseRetryDelay): thirty minutes here.
-	want := PhraseList{Field: "pets", Phrases: []string{}, NextRefreshAt: batchNow.Add(30 * time.Minute)}
+	want := PhraseList{Field: "pets", Phrases: []string{}, NextRefreshAt: batchNow.Add(PhraseRetryDelay)}
 	if got := store.rows["pets"]; !reflect.DeepEqual(got, want) {
 		t.Fatalf("first failure row = %+v, want %+v", got, want)
 	}
@@ -249,7 +253,7 @@ func TestPhraseBatchOneFailingFieldDoesNotBlockTheOthers(t *testing.T) {
 			return nil
 		},
 	}
-	batch, store := newBatch(search, time.Hour)
+	batch, store := newBatch(t, search, time.Hour)
 	err := batch.RunOnce(context.Background())
 	if err == nil || !strings.Contains(err.Error(), "refresh domestic_travel") || strings.Count(err.Error(), "refresh ") != 1 {
 		t.Fatalf("err = %v, want one failure naming domestic_travel", err)
@@ -268,7 +272,7 @@ func TestPhraseBatchOneFailingFieldDoesNotBlockTheOthers(t *testing.T) {
 }
 
 func TestPhraseBatchDisabledMakesNoCalls(t *testing.T) {
-	batch, store := newBatch(nil, time.Hour)
+	batch, store := newBatch(t, nil, time.Hour)
 	if err := batch.RunOnce(context.Background()); err != nil {
 		t.Fatal(err)
 	}
@@ -287,7 +291,7 @@ func TestPhraseBatchDisabledMakesNoCalls(t *testing.T) {
 func TestPhraseBatchCatchesUpOnBoot(t *testing.T) {
 	// An hour between checks: whatever runs within the test ran before any tick.
 	search := &fakeSearch{started: make(chan struct{}, 1)}
-	batch, _ := newBatch(search, time.Hour)
+	batch, _ := newBatch(t, search, time.Hour)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go batch.Run(ctx)
@@ -297,10 +301,22 @@ func TestPhraseBatchCatchesUpOnBoot(t *testing.T) {
 		t.Fatal("the boot catch-up never searched")
 	}
 
-	// A millisecond interval on the wall clock: every field falls due again, and the ticks run
-	// further passes after the catch-up.
+	// The floor's interval on a clock that jumps two hours per read, and a millisecond between
+	// checks: every field is due on every tick, and the ticks run further passes after the
+	// catch-up.
 	fastStore := &fakePhraseStore{rows: map[string]PhraseList{}}
-	fast := NewPhraseBatch(fastStore, &fakeSearch{}, time.Millisecond, time.Now)
+	var clockMu sync.Mutex
+	clock := batchNow
+	fast, err := NewPhraseBatch(fastStore, &fakeSearch{}, PhraseRefreshMinInterval, func() time.Time {
+		clockMu.Lock()
+		defer clockMu.Unlock()
+		clock = clock.Add(2 * time.Hour)
+		return clock
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	fast.check = time.Millisecond
 	fastCtx, stop := context.WithCancel(context.Background())
 	defer stop()
 	go fast.Run(fastCtx)
@@ -322,7 +338,7 @@ func TestPhraseBatchCatchesUpOnBoot(t *testing.T) {
 
 func TestPhraseBatchStopsOnCancel(t *testing.T) {
 	search := &fakeSearch{block: true, started: make(chan struct{}, 1)}
-	batch, store := newBatch(search, time.Hour)
+	batch, store := newBatch(t, search, time.Hour)
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
 	go func() { batch.Run(ctx); close(done) }()
@@ -343,12 +359,74 @@ func TestPhraseBatchStopsOnCancel(t *testing.T) {
 }
 
 func TestPhraseBatchZeroIntervalUsesTheProductDefault(t *testing.T) {
-	batch, store := newBatch(&fakeSearch{}, 0)
+	batch, store := newBatch(t, &fakeSearch{}, 0)
 	notDue(store, "cafe")
 	if err := batch.RunOnce(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 	if row := store.rows["cafe"]; !row.NextRefreshAt.Equal(batchNow.Add(PhraseRefreshInterval)) {
 		t.Fatalf("next refresh = %v, want the %v default", row.NextRefreshAt, PhraseRefreshInterval)
+	}
+}
+
+// QUAL-46: an empty answer for a field that already holds a list is a failed refresh — the list
+// stays, the field is tried again after the retry delay, and the pass says why.
+func TestPhraseBatchAnEmptyAnswerKeepsTheStoredList(t *testing.T) {
+	search := &fakeSearch{}
+	batch, store := newBatch(t, search, 24*time.Hour)
+	notDue(store, "restaurant")
+	refreshed := batchNow.Add(-48 * time.Hour)
+	stored := PhraseList{Field: "restaurant", Phrases: []string{"을지로 노포", "웨이팅 맛집"}, CorpusSize: 300, RefreshedAt: &refreshed, NextRefreshAt: batchNow.Add(-time.Minute)}
+	store.rows["restaurant"] = stored
+	err := batch.RunOnce(context.Background())
+	if !errors.Is(err, ErrEmptySearchAnswer) || !strings.Contains(err.Error(), "refresh restaurant") {
+		t.Fatalf("RunOnce = %v, want the empty answer named for restaurant", err)
+	}
+	want := stored
+	want.NextRefreshAt = batchNow.Add(PhraseRetryDelay)
+	if got := store.rows["restaurant"]; !reflect.DeepEqual(got, want) {
+		t.Fatalf("row = %+v, want %+v", got, want)
+	}
+	if calls := search.recorded(); len(calls) != 1 {
+		t.Fatalf("the empty first page was followed by %+v", calls)
+	}
+}
+
+// QUAL-46: a field with no list yet — no row, or an empty one — stores the empty answer as a
+// refresh, as before.
+func TestPhraseBatchAnEmptyAnswerWithNoListStoresEmpty(t *testing.T) {
+	for name, seed := range map[string]*PhraseList{"no row": nil, "an empty row": {Field: "restaurant", Phrases: []string{}, NextRefreshAt: batchNow.Add(-time.Minute)}} {
+		batch, store := newBatch(t, &fakeSearch{}, 24*time.Hour)
+		notDue(store, "restaurant")
+		if seed != nil {
+			store.rows["restaurant"] = *seed
+		}
+		if err := batch.RunOnce(context.Background()); err != nil {
+			t.Fatalf("%s: RunOnce = %v", name, err)
+		}
+		row := store.rows["restaurant"]
+		if len(row.Phrases) != 0 || row.Phrases == nil || row.CorpusSize != 0 || row.RefreshedAt == nil || !row.RefreshedAt.Equal(batchNow) || !row.NextRefreshAt.Equal(batchNow.Add(24*time.Hour)) {
+			t.Fatalf("%s: row = %+v", name, row)
+		}
+	}
+}
+
+// ARCH-42: the interval is bounded by the owning context, override and default alike.
+func TestPhraseBatchRefusesAnIntervalBelowTheFloor(t *testing.T) {
+	store := &fakePhraseStore{rows: map[string]PhraseList{}}
+	clock := func() time.Time { return batchNow }
+	for _, interval := range []time.Duration{59 * time.Minute, time.Minute, -time.Hour} {
+		if _, err := NewPhraseBatch(store, &fakeSearch{}, interval, clock); !errors.Is(err, ErrPhraseRefreshTooFrequent) {
+			t.Errorf("%v: err = %v, want ErrPhraseRefreshTooFrequent", interval, err)
+		}
+	}
+	for _, interval := range []time.Duration{time.Hour, 0} {
+		batch, err := NewPhraseBatch(store, &fakeSearch{}, interval, clock)
+		if err != nil {
+			t.Fatalf("%v: %v", interval, err)
+		}
+		if interval == 0 && batch.interval != PhraseRefreshInterval {
+			t.Fatalf("zero resolved to %v, want the product default", batch.interval)
+		}
 	}
 }
