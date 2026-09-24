@@ -14,7 +14,7 @@ const acceptMediaStage = `-- name: AcceptMediaStage :one
 UPDATE clip_media_stages SET state='succeeded',accepted_result=?1
 WHERE clip_media_stages.id=?2 AND clip_media_stages.state='running' AND clip_media_stages.current_attempt_id=?3 AND clip_media_stages.deadline_at>?4
 AND EXISTS(SELECT 1 FROM clip_media_attempts a WHERE a.id=clip_media_stages.current_attempt_id AND a.worker_id=?5 AND a.token_hash=?6 AND a.outcome IS NULL AND a.lease_expires_at>?4)
-RETURNING id, parent_job_id, user_id, project_id, expected_revision, stage_key, operation, contract_version, input_digest, input_payload, renderer_version, asset_version, state, current_attempt_id, attempt_count, created_at, queue_deadline_at, deadline_at, lease_ttl_ns, attempt_limit, accepted_result, failure
+RETURNING id, parent_job_id, user_id, project_id, expected_revision, stage_key, operation, contract_version, input_digest, input_payload, renderer_version, asset_version, state, current_attempt_id, attempt_count, created_at, queue_deadline_at, deadline_at, lease_ttl_ns, attempt_limit, accepted_result, failure, retry_not_before, failure_detail, reconciled_at
 `
 
 type AcceptMediaStageParams struct {
@@ -59,6 +59,9 @@ func (q *Queries) AcceptMediaStage(ctx context.Context, arg AcceptMediaStagePara
 		&i.AttemptLimit,
 		&i.AcceptedResult,
 		&i.Failure,
+		&i.RetryNotBefore,
+		&i.FailureDetail,
+		&i.ReconciledAt,
 	)
 	return i, err
 }
@@ -70,9 +73,10 @@ WHERE id=(SELECT s.id FROM clip_media_stages s LEFT JOIN clip_media_attempts a O
  AND s.renderer_version=?4 AND s.asset_version=?5
  AND s.deadline_at>?6 AND s.attempt_count<s.attempt_limit
  AND (s.attempt_count>0 OR s.queue_deadline_at>?6)
+ AND (s.retry_not_before IS NULL OR s.retry_not_before<=?6)
  AND (s.state='queued' OR (s.state='running' AND a.lease_expires_at<=?6))
  ORDER BY s.created_at,s.id LIMIT 1)
-RETURNING id, parent_job_id, user_id, project_id, expected_revision, stage_key, operation, contract_version, input_digest, input_payload, renderer_version, asset_version, state, current_attempt_id, attempt_count, created_at, queue_deadline_at, deadline_at, lease_ttl_ns, attempt_limit, accepted_result, failure
+RETURNING id, parent_job_id, user_id, project_id, expected_revision, stage_key, operation, contract_version, input_digest, input_payload, renderer_version, asset_version, state, current_attempt_id, attempt_count, created_at, queue_deadline_at, deadline_at, lease_ttl_ns, attempt_limit, accepted_result, failure, retry_not_before, failure_detail, reconciled_at
 `
 
 type ClaimMediaStageParams struct {
@@ -117,6 +121,9 @@ func (q *Queries) ClaimMediaStage(ctx context.Context, arg ClaimMediaStageParams
 		&i.AttemptLimit,
 		&i.AcceptedResult,
 		&i.Failure,
+		&i.RetryNotBefore,
+		&i.FailureDetail,
+		&i.ReconciledAt,
 	)
 	return i, err
 }
@@ -151,24 +158,26 @@ func (q *Queries) FailMediaAttempt(ctx context.Context, arg FailMediaAttemptPara
 }
 
 const failMediaStage = `-- name: FailMediaStage :one
-UPDATE clip_media_stages SET state='failed',failure=?1
-WHERE clip_media_stages.id=?2 AND clip_media_stages.state='running' AND clip_media_stages.current_attempt_id=?3 AND clip_media_stages.deadline_at>?4
-AND EXISTS(SELECT 1 FROM clip_media_attempts a WHERE a.id=clip_media_stages.current_attempt_id AND a.worker_id=?5 AND a.token_hash=?6 AND a.outcome IS NULL AND a.lease_expires_at>?4)
-RETURNING id, parent_job_id, user_id, project_id, expected_revision, stage_key, operation, contract_version, input_digest, input_payload, renderer_version, asset_version, state, current_attempt_id, attempt_count, created_at, queue_deadline_at, deadline_at, lease_ttl_ns, attempt_limit, accepted_result, failure
+UPDATE clip_media_stages SET state='failed',failure=?1,failure_detail=?2
+WHERE clip_media_stages.id=?3 AND clip_media_stages.state='running' AND clip_media_stages.current_attempt_id=?4 AND clip_media_stages.deadline_at>?5
+AND EXISTS(SELECT 1 FROM clip_media_attempts a WHERE a.id=clip_media_stages.current_attempt_id AND a.worker_id=?6 AND a.token_hash=?7 AND a.outcome IS NULL AND a.lease_expires_at>?5)
+RETURNING id, parent_job_id, user_id, project_id, expected_revision, stage_key, operation, contract_version, input_digest, input_payload, renderer_version, asset_version, state, current_attempt_id, attempt_count, created_at, queue_deadline_at, deadline_at, lease_ttl_ns, attempt_limit, accepted_result, failure, retry_not_before, failure_detail, reconciled_at
 `
 
 type FailMediaStageParams struct {
-	Failure   sql.NullString
-	StageID   string
-	AttemptID sql.NullString
-	Now       string
-	WorkerID  string
-	TokenHash string
+	Failure       sql.NullString
+	FailureDetail sql.NullString
+	StageID       string
+	AttemptID     sql.NullString
+	Now           string
+	WorkerID      string
+	TokenHash     string
 }
 
 func (q *Queries) FailMediaStage(ctx context.Context, arg FailMediaStageParams) (ClipMediaStage, error) {
 	row := q.db.QueryRowContext(ctx, failMediaStage,
 		arg.Failure,
+		arg.FailureDetail,
 		arg.StageID,
 		arg.AttemptID,
 		arg.Now,
@@ -199,6 +208,9 @@ func (q *Queries) FailMediaStage(ctx context.Context, arg FailMediaStageParams) 
 		&i.AttemptLimit,
 		&i.AcceptedResult,
 		&i.Failure,
+		&i.RetryNotBefore,
+		&i.FailureDetail,
+		&i.ReconciledAt,
 	)
 	return i, err
 }
@@ -242,7 +254,7 @@ func (q *Queries) GetMediaAttempt(ctx context.Context, id string) (ClipMediaAtte
 }
 
 const getMediaStage = `-- name: GetMediaStage :one
-SELECT id, parent_job_id, user_id, project_id, expected_revision, stage_key, operation, contract_version, input_digest, input_payload, renderer_version, asset_version, state, current_attempt_id, attempt_count, created_at, queue_deadline_at, deadline_at, lease_ttl_ns, attempt_limit, accepted_result, failure FROM clip_media_stages WHERE id=?
+SELECT id, parent_job_id, user_id, project_id, expected_revision, stage_key, operation, contract_version, input_digest, input_payload, renderer_version, asset_version, state, current_attempt_id, attempt_count, created_at, queue_deadline_at, deadline_at, lease_ttl_ns, attempt_limit, accepted_result, failure, retry_not_before, failure_detail, reconciled_at FROM clip_media_stages WHERE id=?
 `
 
 func (q *Queries) GetMediaStage(ctx context.Context, id string) (ClipMediaStage, error) {
@@ -271,12 +283,15 @@ func (q *Queries) GetMediaStage(ctx context.Context, id string) (ClipMediaStage,
 		&i.AttemptLimit,
 		&i.AcceptedResult,
 		&i.Failure,
+		&i.RetryNotBefore,
+		&i.FailureDetail,
+		&i.ReconciledAt,
 	)
 	return i, err
 }
 
 const getMediaStageByParent = `-- name: GetMediaStageByParent :one
-SELECT id, parent_job_id, user_id, project_id, expected_revision, stage_key, operation, contract_version, input_digest, input_payload, renderer_version, asset_version, state, current_attempt_id, attempt_count, created_at, queue_deadline_at, deadline_at, lease_ttl_ns, attempt_limit, accepted_result, failure FROM clip_media_stages WHERE parent_job_id=? AND stage_key=?
+SELECT id, parent_job_id, user_id, project_id, expected_revision, stage_key, operation, contract_version, input_digest, input_payload, renderer_version, asset_version, state, current_attempt_id, attempt_count, created_at, queue_deadline_at, deadline_at, lease_ttl_ns, attempt_limit, accepted_result, failure, retry_not_before, failure_detail, reconciled_at FROM clip_media_stages WHERE parent_job_id=? AND stage_key=?
 `
 
 type GetMediaStageByParentParams struct {
@@ -310,6 +325,9 @@ func (q *Queries) GetMediaStageByParent(ctx context.Context, arg GetMediaStageBy
 		&i.AttemptLimit,
 		&i.AcceptedResult,
 		&i.Failure,
+		&i.RetryNotBefore,
+		&i.FailureDetail,
+		&i.ReconciledAt,
 	)
 	return i, err
 }

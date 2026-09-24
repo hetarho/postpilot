@@ -43,6 +43,37 @@ type ContinuationStore interface {
 	AcknowledgeWaitCancellation(context.Context, string, string, time.Time) (bool, error)
 }
 
+// ExternalRecoveryStore exposes opaque waits to their owner without learning
+// anything about the service responsible for the external work.
+type ExternalRecoveryStore interface {
+	WaitingContinuations(context.Context, string, string) ([]Continuation, error)
+	FailWaitingContinuation(context.Context, string, string, Failure, time.Time) (bool, error)
+}
+
+func (q *Queue) FailWait(ctx context.Context, id, key string, failure Failure) (bool, error) {
+	s, ok := q.store.(ExternalRecoveryStore)
+	if !ok {
+		return false, ErrInvalidWait
+	}
+	changed, err := s.FailWaitingContinuation(ctx, id, key, failure, q.now())
+	if err != nil || !changed {
+		return changed, err
+	}
+	finishCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), finishTimeout)
+	defer cancel()
+	j, err := q.store.GetByID(finishCtx, id)
+	if err != nil {
+		return true, err
+	}
+	if q.admitter != nil {
+		q.admitter.Settle(finishCtx, id, j.Status)
+	}
+	if j.FinishedAt != nil {
+		err = q.notifyTerminal(finishCtx, j, *j.FinishedAt)
+	}
+	return true, err
+}
+
 func (q *Queue) Park(ctx context.Context, id, key string, policy ResumePolicy) error {
 	s, ok := q.store.(ContinuationStore)
 	if !ok {

@@ -75,6 +75,8 @@ type Ports struct {
 	Media       MediaArtifactTx
 	Stages      MediaDispatchTx
 	Publication MediaPublicationTx
+	Recovery    MediaRecoveryTx
+	Control     MediaControlTx
 	Clips       ClipTx
 	Admission   Admission
 }

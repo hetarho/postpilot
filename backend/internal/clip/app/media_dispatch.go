@@ -166,7 +166,7 @@ func (d *MediaDispatch) Request(ctx context.Context, in MediaDispatchRequest) (s
 		case clip.MediaCancelled:
 			return clip.ErrMediaCancelled
 		default:
-			return clip.ErrInvalidMedia
+			return &clip.MediaStageFailure{Code: stage.Failure}
 		}
 	})
 	if err == nil && pending {

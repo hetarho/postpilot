@@ -62,12 +62,13 @@ type contexts struct {
 	quality     *quality.Service
 	phraseBatch *quality.PhraseBatch
 
-	clipStore      *clipstore.Store
-	clipPorts      clipapp.Binder
-	clipGuard      clipapp.Guard
-	clip           *clipapp.Service
-	clipSources    *clipapp.SourceService
-	clipGeneration *clipapp.GenerationService
+	clipStore         *clipstore.Store
+	clipPorts         clipapp.Binder
+	clipGuard         clipapp.Guard
+	clip              *clipapp.Service
+	clipSources       *clipapp.SourceService
+	clipGeneration    *clipapp.GenerationService
+	clipMediaRecovery *clipapp.MediaReconciler
 
 	template   *template.Service
 	guideline  *guideline.Service
@@ -89,11 +90,6 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 
 	c.jobs = job.New(jobstore.New(handle.Writer, handle.Reader, jobKinds()), config.WorkerPollInterval, jobReporting{})
 	c.jobs.AllowCancellation(clipCancellation{})
-	if n, err := c.jobs.SweepRunning(ctx); err != nil {
-		return nil, fmt.Errorf("running job sweep: %w", err)
-	} else if n > 0 {
-		slog.Info("swept interrupted jobs", "count", n)
-	}
 	if n, err := c.jobs.SweepQueuedPersonalization(ctx); err != nil {
 		return nil, fmt.Errorf("queued personalization sweep: %w", err)
 	} else if n > 0 {
@@ -171,14 +167,6 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 	c.clipPorts = clipTxPorts(c.ledger, registry, c.auth)
 	c.clipGuard = clipapp.NewGuard(handle.Writer, c.clipPorts, jobstore.New(handle.Writer, handle.Writer, jobKinds()))
 
-	// After the admitter is attached, not with the other boot sweeps: an open hold can only
-	// be settled through it, and a sweep that ran first would silently find nothing.
-	if n, err := c.jobs.SweepOpenHolds(ctx); err != nil {
-		return nil, fmt.Errorf("open credit hold sweep: %w", err)
-	} else if n > 0 {
-		slog.Info("settled holds left open by an interrupted finish", "count", n)
-	}
-
 	// Post reads voice, guideline and experiment through adapters that resolve their
 	// service after every context below exists (see adapters_post.go).
 	c.post = post.NewService(
@@ -218,6 +206,24 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 	c.clipStore = clipstore.New(handle.Writer, handle.Reader)
 	c.clipSources = clipapp.NewSourceService(c.clipStore, p.bucket, clip.DefaultSourceLimits(clipEnvironment(cfg)))
 	c.clip = clipapp.NewService(c.clipStore, clip.DefaultLimits(), c.clipSources, clipapp.NewFinalizer(handle.Writer, c.clipPorts, c.clipStore, clip.DefaultRenderConfig(clipEnvironment(cfg)), nil))
+	c.clipMediaRecovery = clipapp.NewMediaReconciler(handle.Writer, c.clipPorts, c.clipStore, jobstore.New(handle.Writer, handle.Reader, jobKinds()), c.jobs, p.bucket, cfg.OrphanMinAge, nil)
+	// External handoffs are reconciled before interruption/hold/source cleanup.
+	if err := c.clipMediaRecovery.Reconcile(ctx); err != nil {
+		return nil, fmt.Errorf("media handoff recovery: %w", err)
+	}
+	if n, err := c.jobs.SweepRunning(ctx); err != nil {
+		return nil, fmt.Errorf("running job sweep: %w", err)
+	} else if n > 0 {
+		slog.Info("swept interrupted jobs", "count", n)
+	}
+	// After the admitter is attached, not with the other boot sweeps: an open hold can only
+	// be settled through it, and a sweep that ran first would silently find nothing.
+	if n, err := c.jobs.SweepOpenHolds(ctx); err != nil {
+		return nil, fmt.Errorf("open credit hold sweep: %w", err)
+	} else if n > 0 {
+		slog.Info("settled holds left open by an interrupted finish", "count", n)
+	}
+
 	clipMedia, err := clipmedia.New(clip.DefaultMediaConfig(clipEnvironment(cfg)), nil)
 	if err != nil {
 		return nil, fmt.Errorf("clip media initialization: %w", err)

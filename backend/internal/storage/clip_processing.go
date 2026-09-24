@@ -77,3 +77,17 @@ func (b *Bucket) ListResults(ctx context.Context) ([]clip.StoredObject, error) {
 	}
 	return out, nil
 }
+
+func (b *Bucket) ListMediaOutputs(ctx context.Context) ([]clip.StoredObject, error) {
+	var out []clip.StoredObject
+	for _, prefix := range []string{clip.MediaAnalysisPrefix, clip.ResultPrefix} {
+		found, err := b.List(ctx, prefix)
+		if err != nil {
+			return nil, errors.New("media output listing failed")
+		}
+		for _, object := range found {
+			out = append(out, clip.StoredObject{Key: object.Key, Modified: object.LastModified})
+		}
+	}
+	return out, nil
+}

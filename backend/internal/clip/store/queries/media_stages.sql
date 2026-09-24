@@ -15,6 +15,7 @@ WHERE id=(SELECT s.id FROM clip_media_stages s LEFT JOIN clip_media_attempts a O
  AND s.renderer_version=sqlc.arg(renderer_version) AND s.asset_version=sqlc.arg(asset_version)
  AND s.deadline_at>sqlc.arg(now) AND s.attempt_count<s.attempt_limit
  AND (s.attempt_count>0 OR s.queue_deadline_at>sqlc.arg(now))
+ AND (s.retry_not_before IS NULL OR s.retry_not_before<=sqlc.arg(now))
  AND (s.state='queued' OR (s.state='running' AND a.lease_expires_at<=sqlc.arg(now)))
  ORDER BY s.created_at,s.id LIMIT 1)
 RETURNING *;
@@ -56,7 +57,7 @@ ON CONFLICT(attempt_id,slot) DO UPDATE SET slot=excluded.slot
 WHERE clip_media_artifacts.object_key=excluded.object_key AND clip_media_artifacts.content_type=excluded.content_type AND clip_media_artifacts.max_bytes=excluded.max_bytes;
 
 -- name: FailMediaStage :one
-UPDATE clip_media_stages SET state='failed',failure=sqlc.arg(failure)
+UPDATE clip_media_stages SET state='failed',failure=sqlc.arg(failure),failure_detail=sqlc.narg(failure_detail)
 WHERE clip_media_stages.id=sqlc.arg(stage_id) AND clip_media_stages.state='running' AND clip_media_stages.current_attempt_id=sqlc.arg(attempt_id) AND clip_media_stages.deadline_at>sqlc.arg(now)
 AND EXISTS(SELECT 1 FROM clip_media_attempts a WHERE a.id=clip_media_stages.current_attempt_id AND a.worker_id=sqlc.arg(worker_id) AND a.token_hash=sqlc.arg(token_hash) AND a.outcome IS NULL AND a.lease_expires_at>sqlc.arg(now))
 RETURNING *;

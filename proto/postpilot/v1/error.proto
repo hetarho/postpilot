@@ -261,6 +261,10 @@ enum FailureReason {
   POST_FIELD_NOT_FOUND = 237;
   POST_QUALITY_RULE_INVALID = 238;
   GUIDELINE_FIELD_NOT_FOUND = 239;
+  // Bounded media execution; retries keep the existing owning job.
+  CLIP_MEDIA_UNAVAILABLE = 240;
+  CLIP_MEDIA_RETRY_EXHAUSTED = 241;
+  CLIP_MEDIA_TIMEOUT = 242;
 }
 
 // AppErrorDetail accompanies a synchronous Connect status. reason is a stable product

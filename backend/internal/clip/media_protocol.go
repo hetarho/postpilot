@@ -32,7 +32,7 @@ func (p MediaWorkerProfile) Compatible() bool {
 
 func (f MediaFailure) Valid() bool {
 	switch f {
-	case MediaFailureWorkerLost, MediaFailureWaitExpired, MediaFailureDeadlineExceeded, MediaFailureAttemptsExhausted, MediaFailureInvalidInput, MediaFailureInvalidOutput, MediaFailureInternal:
+	case MediaFailureWorkerLost, MediaFailureWaitExpired, MediaFailureDeadlineExceeded, MediaFailureAttemptsExhausted, MediaFailureInvalidInput, MediaFailureInvalidOutput, MediaFailureInternal, MediaFailureCancelled, MediaFailureWorkspaceLimit, MediaFailureInputTooLarge, MediaFailureAnalysisTooLarge:
 		return true
 	}
 	return false

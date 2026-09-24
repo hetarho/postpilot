@@ -50,7 +50,10 @@ func (q *Queries) BatchForJob(ctx context.Context, arg BatchForJobParams) (ClipS
 }
 
 const deletionKeys = `-- name: DeletionKeys :many
-SELECT object_key FROM clip_object_deletions ORDER BY created_at,object_key
+SELECT object_key FROM clip_object_deletions d
+WHERE NOT EXISTS(SELECT 1 FROM clip_media_artifacts a WHERE a.object_key=d.object_key)
+AND NOT EXISTS(SELECT 1 FROM clip_media_deletions m WHERE m.object_key=d.object_key)
+ORDER BY created_at,object_key
 `
 
 func (q *Queries) DeletionKeys(ctx context.Context) ([]string, error) {
@@ -201,6 +204,7 @@ func (q *Queries) RemoveProxy(ctx context.Context, objectKey string) error {
 const resultKeys = `-- name: ResultKeys :many
 SELECT result_key FROM clip_projects WHERE result_key IS NOT NULL UNION SELECT result_key FROM clip_attempt_results
 UNION SELECT object_key FROM clip_media_artifacts WHERE state IN ('reserved','uploaded','accepted')
+UNION SELECT object_key FROM clip_media_deletions
 `
 
 func (q *Queries) ResultKeys(ctx context.Context) ([]sql.NullString, error) {

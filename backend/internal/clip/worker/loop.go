@@ -156,7 +156,21 @@ func (l Loop) RunLease(parent context.Context, w clip.MediaWork) error {
 	}
 	if err == nil {
 		err = retryControl(ctx, func() error { return l.Control.Complete(ctx, w.Credentials, result) })
-	} else if ctx.Err() == nil {
+		if ctx.Err() != nil {
+			err = context.Cause(ctx)
+		}
+		if err != nil && !errors.Is(err, clip.ErrMediaUnavailable) && !errors.Is(err, context.DeadlineExceeded) && !errors.Is(err, clip.ErrMediaCancelled) && !errors.Is(err, clip.ErrMediaLeaseLost) {
+			// A permanent receipt rejection is an output failure, not worker
+			// disappearance that would silently re-encode the same bad result.
+			report, stop := context.WithTimeout(context.WithoutCancel(parent), 3*time.Second)
+			_ = l.Control.Fail(report, w.Credentials, clip.MediaFailureInvalidOutput)
+			stop()
+			cancel(nil)
+			<-done
+			return err
+		}
+	}
+	if err != nil && !errors.Is(err, clip.ErrMediaLeaseLost) {
 		code := clip.MediaFailureInternal
 		if errors.Is(err, clip.ErrInvalid) || errors.Is(err, clip.ErrInvalidMedia) || errors.Is(err, clip.ErrMediaIncompatible) {
 			code = clip.MediaFailureInvalidInput
@@ -164,7 +178,33 @@ func (l Loop) RunLease(parent context.Context, w clip.MediaWork) error {
 		if errors.Is(err, clip.ErrMediaUnavailable) {
 			code = clip.MediaFailureWorkerLost
 		}
-		_ = retryControl(ctx, func() error { return l.Control.Fail(ctx, w.Credentials, code) })
+		if errors.Is(err, context.Canceled) {
+			code = clip.MediaFailureWorkerLost
+		}
+		if errors.Is(err, context.DeadlineExceeded) {
+			// A bounded HTTP request can time out while the frozen stage still
+			// has time left. Only the stage deadline is a terminal timeout.
+			code = clip.MediaFailureWorkerLost
+			if errors.Is(stage.Err(), context.DeadlineExceeded) {
+				code = clip.MediaFailureDeadlineExceeded
+			}
+		}
+		if errors.Is(err, clip.ErrMediaCancelled) {
+			code = clip.MediaFailureCancelled
+		}
+		switch {
+		case errors.Is(err, clip.ErrWorkspaceLimit):
+			code = clip.MediaFailureWorkspaceLimit
+		case errors.Is(err, clip.ErrInputTooLarge):
+			code = clip.MediaFailureInputTooLarge
+		case errors.Is(err, clip.ErrAnalysisTooLarge):
+			code = clip.MediaFailureAnalysisTooLarge
+		}
+		// Execute has returned and reaped its descendants before acknowledging
+		// cancellation. Its cancelled context must not suppress that receipt.
+		report, stop := context.WithTimeout(context.WithoutCancel(parent), 3*time.Second)
+		_ = retryControl(report, func() error { return l.Control.Fail(report, w.Credentials, code) })
+		stop()
 	}
 	cancel(nil)
 	<-done

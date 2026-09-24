@@ -40,6 +40,11 @@ const (
 	MediaFailureInvalidInput      MediaFailure = "invalid_input"
 	MediaFailureInvalidOutput     MediaFailure = "invalid_output"
 	MediaFailureInternal          MediaFailure = "internal"
+	MediaFailureWorkspaceLimit    MediaFailure = "workspace_limit"
+	MediaFailureInputTooLarge     MediaFailure = "input_too_large"
+	MediaFailureAnalysisTooLarge  MediaFailure = "analysis_too_large"
+	// A control acknowledgement; never stored in the stage failure column.
+	MediaFailureCancelled MediaFailure = "cancelled"
 )
 
 // MediaStageInput is the immutable, versioned work envelope. Payload is an
@@ -94,6 +99,7 @@ type MediaStage struct {
 	CreatedAt, QueueDeadlineAt, DeadlineAt time.Time
 	AcceptedResult                         string
 	Failure                                MediaFailure
+	RetryNotBefore                         time.Time
 }
 
 type MediaWorkerProfile struct {

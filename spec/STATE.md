@@ -65,7 +65,6 @@
 | T372 | The test harness pins what it claims, and template limits have one constructor | ARCH | T354 T355 T359 T369 T371 | todo |
 | T373 | Entity boundaries for 분야 and post status | ARCH | T356 T367 | todo |
 | T375 | The editor's per-control cases live in the tests of the slices that own them | ARCH | T368 | todo |
-| T383 | Recovery bounds media retries and cleans cancelled or abandoned work | ARCH CLIP GEN | T381 T382 | todo |
 | T384 | Clip progress distinguishes waiting, execution and media recovery | ARCH CLIP | T383 | todo |
 | T385 | Local development and CPU images run API and worker separately | ARCH | T383 | todo |
 | T386 | Deployment configuration keeps the CPU VPS default and supports a separate worker | ARCH CLIP | T383 T385 | todo |
@@ -73,11 +72,13 @@
 | T388 | GPU setup tooling and guides cover all three deployment environments | ARCH CLIP | T387 | todo |
 
 ## next
-- implement-task T383 next for the media-worker wave (T376..T382 are done; T387 verifies CPU/VPS compatibility locally; T388 completes README/DEPLOY guides for all three environments and GPU setup tooling without live migration)
+- implement-task T384 next for the media-worker wave (T376..T383 are done; T387 verifies CPU/VPS compatibility locally; T388 completes README/DEPLOY guides for all three environments and GPU setup tooling without live migration)
 - Later: update-ssot CLIP-163, then create-task ARCH CLIP for real-GPU validation, profile approval/automatic selection and concurrency tuning; ARCH r11 and CLIP r44 remain partially consumed, and physical host setup/migration remain operator actions
 - implement-task T355 (continuing T354..T375 in dependency order, p42); create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 
 ## log
+- 260925 T383 done (mw): bounded recovery, cancellation acknowledgement, durable artifact cleanup and isolated worker workspaces; full CI, race checks, CPU parity and all 28 release scenarios pass; T384 next
+- 260925 T383 claimed (mw); T382 committed; bounded media recovery, cancellation and artifact cleanup only
 - 260925 T382 done (mw): frozen remote render, replay-safe publication and source/revision fencing; two-worker crash/cancel races, isolated CI, CPU byte/frame parity and all 28 real release scenarios pass; T383 next
 - 260925 T382 claimed (mw); T381 committed as f6b22fe0; durable worker render publication only
 - 260925 T381 done (mw): atomic remote preparation handoff, verified inline artifacts and retained recovery; exact hold/call fault tests, ledger replay, isolated CI and real CPU/input smokes pass; T382 next
@@ -96,5 +97,3 @@
 - 260925 T362 claimed (p42)
 - 260925 T361 done; a write comparison freezes the material Start freezes (memories included), the preset line rides only with frozen phrases, and the snapshot has its own tagged wire struct with every stored byte unchanged; BE gate passes (p42)
 - 260925 T361 claimed (p42)
-- 260925 T379 done (mw): private artifact access, immutable conditional uploads, verified receipts and durable deletion intent; real MinIO plus SQLite/HTTP/race and isolated full CI/codegen checks pass; T380 next
-- 260925 T379 claimed (mw); T378 committed as 0d43a284; private artifact handoff only

@@ -27,7 +27,7 @@ func clipTxPorts(ledger *usage.Service, registry *llm.Registry, plans *auth.Serv
 	return func(tx *sql.Tx) clipapp.Ports {
 		jobs := jobstore.NewTx(tx, jobKinds())
 		clips := clipstore.NewTx(tx)
-		ports := clipapp.Ports{Jobs: jobs, Waits: jobs, Clips: clips, Media: clips, Stages: clips, Publication: clips}
+		ports := clipapp.Ports{Jobs: jobs, Waits: jobs, Clips: clips, Media: clips, Stages: clips, Publication: clips, Recovery: clips, Control: clips}
 		if ledger != nil {
 			ports.Admission = clipAdmission{jobAdmission{ledger: ledger.WithStore(usagestore.NewTx(tx)), registry: registry, plans: plans}}
 		}

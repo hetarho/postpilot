@@ -66,6 +66,8 @@ func serve(ctx context.Context, c *contexts) error {
 		cfg.OrphanMinAge,
 	)
 	go sweeper.Run(ctx, cfg.OrphanSweepInterval)
+	go c.clipMediaRecovery.Run(ctx)
+	go c.clipMediaRecovery.RunOrphans(ctx, cfg.OrphanSweepInterval)
 	go c.clipGeneration.RunSweep(ctx, cfg.ClipSourceSweepInterval)
 	go experiment.NewSweeper(c.experimentStore).Run(ctx, cfg.ExperimentSweepInterval)
 	go func() {
@@ -95,7 +97,16 @@ func serve(ctx context.Context, c *contexts) error {
 	servers := []*http.Server{server}
 	if cfg.MediaInternalAddr != "" {
 		artifacts := clipapp.NewMediaArtifacts(handle.Writer, c.clipPorts, p.bucket, clip.DefaultMediaConfig(clipEnvironment(cfg)), nil)
-		servers = append(servers, cliprpc.NewMediaWorkerServer(cfg.MediaInternalAddr, cfg.MediaWorkerCredentials, clipapp.NewMediaWorker(c.clipStore, artifacts, nil)))
+		private := cliprpc.NewMediaWorkerServer(cfg.MediaInternalAddr, cfg.MediaWorkerCredentials, clipapp.NewMediaWorker(clipapp.NewMediaControl(handle.Writer, c.clipPorts, c.clipStore), artifacts, nil))
+		handler := private.Handler
+		private.Handler = http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			if ctx.Err() != nil {
+				http.Error(w, "media control is draining", http.StatusServiceUnavailable)
+				return
+			}
+			handler.ServeHTTP(w, req)
+		})
+		servers = append(servers, private)
 	}
 	slog.Info("server starting", "port", cfg.Port, "version", version)
 	return rpcserver.Serve(ctx, servers...)

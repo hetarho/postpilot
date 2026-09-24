@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"database/sql"
+	"errors"
 	"net/url"
 	"reflect"
 	"strings"
@@ -60,31 +61,42 @@ func (a *MediaArtifacts) authorized(ctx context.Context, p Ports, auth clip.Medi
 	if allowAccepted && stage.State == clip.MediaSucceeded {
 		return stage, task, nil
 	}
+	err = authorizeMediaParent(ctx, p, stage, task, a.now())
+	return stage, task, err
+}
+
+func authorizeMediaParent(ctx context.Context, p Ports, stage clip.MediaStage, task clip.MediaTask, now time.Time) error {
 	j, err := p.Jobs.GetByID(ctx, stage.ParentJobID)
 	if err != nil {
-		return stage, task, clip.ErrMediaLeaseLost
+		if errors.Is(err, job.ErrNotFound) {
+			return clip.ErrMediaLeaseLost
+		}
+		return err
 	}
 	if j.CancelRequestedAt != nil {
-		return stage, task, clip.ErrMediaCancelled
+		return clip.ErrMediaCancelled
 	}
 	if j.Status != job.StatusRunning || !j.DispatchReady || j.UserID != stage.UserID || j.Subject(clip.JobSubject) != stage.ProjectID || !clip.IsJobKind(j.Kind) {
-		return stage, task, clip.ErrMediaLeaseLost
+		return clip.ErrMediaLeaseLost
 	}
 	project, err := p.Clips.GetProject(ctx, stage.UserID, stage.ProjectID)
 	if err != nil {
-		return stage, task, clip.ErrMediaLeaseLost
+		if errors.Is(err, clip.ErrNotFound) {
+			return clip.ErrMediaLeaseLost
+		}
+		return err
 	}
 	if project.Finalized != nil || project.EditPlanRevision != stage.ExpectedRevision {
-		return stage, task, clip.ErrMediaCancelled
+		return clip.ErrMediaCancelled
 	}
 	batch, err := p.Media.MediaSourceBatch(ctx, stage.UserID, stage.ParentJobID)
-	if err != nil || batch.ProjectID != stage.ProjectID {
-		return stage, task, clip.ErrSourceState
+	if err != nil {
+		return err
 	}
-	if err := clip.ValidateMediaSourceBinding(stage.Operation, task, batch, a.now()); err != nil {
-		return stage, task, err
+	if batch.ProjectID != stage.ProjectID {
+		return clip.ErrSourceState
 	}
-	return stage, task, nil
+	return clip.ValidateMediaSourceBinding(stage.Operation, task, batch, now)
 }
 
 func accessTTL(deadline, now time.Time) (time.Duration, error) {

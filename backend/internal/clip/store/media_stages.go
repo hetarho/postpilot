@@ -28,13 +28,21 @@ func mediaStageRow(r sqlc.ClipMediaStage) (clip.MediaStage, error) {
 	if err != nil {
 		return clip.MediaStage{}, err
 	}
+	var retry time.Time
+	if r.RetryNotBefore.Valid {
+		retry, err = time.Parse(time.RFC3339Nano, r.RetryNotBefore.String)
+		if err != nil {
+			return clip.MediaStage{}, err
+		}
+	}
 	return clip.MediaStage{
 		MediaStageInput: clip.MediaStageInput{ID: r.ID, ParentJobID: r.ParentJobID, UserID: r.UserID, ProjectID: r.ProjectID,
 			ExpectedRevision: int(r.ExpectedRevision), Operation: clip.MediaOperation(r.Operation), ContractVersion: int(r.ContractVersion),
 			InputDigest: r.InputDigest, Payload: r.InputPayload, RendererVersion: r.RendererVersion, AssetVersion: r.AssetVersion,
 			Limits: clip.MediaStageLimits{LeaseTTL: time.Duration(r.LeaseTtlNs), WaitTimeout: wait.Sub(created), StageTimeout: deadline.Sub(created), MaxAttempts: int(r.AttemptLimit)}},
 		State: clip.MediaStageState(r.State), CurrentAttemptID: r.CurrentAttemptID.String, AttemptCount: int(r.AttemptCount),
-		CreatedAt: created, QueueDeadlineAt: wait, DeadlineAt: deadline, AcceptedResult: r.AcceptedResult.String, Failure: clip.MediaFailure(r.Failure.String),
+		CreatedAt: created, QueueDeadlineAt: wait, DeadlineAt: deadline, AcceptedResult: r.AcceptedResult.String, Failure: storedMediaFailure(r),
+		RetryNotBefore: retry,
 	}, nil
 }
 

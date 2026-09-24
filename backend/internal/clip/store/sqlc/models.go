@@ -83,6 +83,12 @@ type ClipMediaAttempt struct {
 	Outcome         sql.NullString
 }
 
+type ClipMediaDeletion struct {
+	ObjectKey string
+	NotBefore string
+	CreatedAt string
+}
+
 type ClipMediaStage struct {
 	ID               string
 	ParentJobID      string
@@ -106,6 +112,9 @@ type ClipMediaStage struct {
 	AttemptLimit     int64
 	AcceptedResult   sql.NullString
 	Failure          sql.NullString
+	RetryNotBefore   sql.NullString
+	FailureDetail    sql.NullString
+	ReconciledAt     sql.NullString
 }
 
 type ClipProject struct {

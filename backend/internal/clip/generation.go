@@ -82,7 +82,29 @@ func (e *StageFailure) Failure() llm.Failure {
 	var facts *MissingFactsError
 	var admission *ModelAdmissionError
 	var element *composition.Problem
+	var media *MediaStageFailure
 	switch {
+	case errors.As(e.Cause, &media):
+		reason := "CLIP_PROCESSING_FAILED"
+		switch media.Code {
+		case MediaFailureWaitExpired:
+			reason = "CLIP_MEDIA_UNAVAILABLE"
+		case MediaFailureAttemptsExhausted:
+			reason = "CLIP_MEDIA_RETRY_EXHAUSTED"
+		case MediaFailureDeadlineExceeded:
+			reason = "CLIP_MEDIA_TIMEOUT"
+		case MediaFailureWorkspaceLimit:
+			reason = "CLIP_WORKSPACE_LIMIT"
+		case MediaFailureInputTooLarge:
+			reason = "CLIP_INPUT_TOO_LARGE"
+		case MediaFailureAnalysisTooLarge:
+			reason = "CLIP_ANALYSIS_TOO_LARGE"
+		case MediaFailureInvalidInput:
+			reason = "CLIP_INVALID_MEDIA"
+		case MediaFailureInvalidOutput:
+			reason = "CLIP_PROCESSING_FAILED"
+		}
+		f = llm.Failure{Reason: reason}
 	case errors.As(e.Cause, &element):
 		f = llm.Failure{Reason: "CLIP_COMPOSITION_INVALID", Params: element.FailureParams()}
 	case errors.Is(e.Cause, ErrCompositionUnavailable):

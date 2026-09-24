@@ -49,6 +49,35 @@ func (q *Queries) ClaimContinuation(ctx context.Context, arg ClaimContinuationPa
 	return result.RowsAffected()
 }
 
+const failWaitingContinuation = `-- name: FailWaitingContinuation :execrows
+UPDATE generation_jobs SET status='failed',finished_at=?1,updated_at=?1,
+error=NULL,error_reason=?2,error_params=?3,technical_detail=NULL
+WHERE id=?4 AND status='running' AND cancel_requested_at IS NULL
+AND EXISTS(SELECT 1 FROM job_continuations c WHERE c.job_id=generation_jobs.id AND c.wait_key=?5 AND c.state IN ('waiting','ready'))
+`
+
+type FailWaitingContinuationParams struct {
+	Now     sql.NullString
+	Reason  sql.NullString
+	Params  sql.NullString
+	JobID   string
+	WaitKey string
+}
+
+func (q *Queries) FailWaitingContinuation(ctx context.Context, arg FailWaitingContinuationParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, failWaitingContinuation,
+		arg.Now,
+		arg.Reason,
+		arg.Params,
+		arg.JobID,
+		arg.WaitKey,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const getContinuation = `-- name: GetContinuation :one
 SELECT job_id, wait_key, state, resume_policy, ready_at, created_at, updated_at FROM job_continuations WHERE job_id=?
 `
@@ -118,6 +147,49 @@ AND EXISTS(SELECT 1 FROM generation_jobs j WHERE j.id=job_continuations.job_id A
 func (q *Queries) ReadyReplaySafeContinuations(ctx context.Context, now sql.NullString) error {
 	_, err := q.db.ExecContext(ctx, readyReplaySafeContinuations, now)
 	return err
+}
+
+const waitingContinuations = `-- name: WaitingContinuations :many
+SELECT c.job_id, c.wait_key, c.state, c.resume_policy, c.ready_at, c.created_at, c.updated_at FROM job_continuations c JOIN generation_jobs j ON j.id=c.job_id
+WHERE j.status='running' AND c.state IN ('waiting','ready') AND c.job_id>?1
+AND substr(c.wait_key,1,length(?2))=?2
+ORDER BY c.job_id LIMIT 100
+`
+
+type WaitingContinuationsParams struct {
+	AfterID string
+	Prefix  interface{}
+}
+
+func (q *Queries) WaitingContinuations(ctx context.Context, arg WaitingContinuationsParams) ([]JobContinuation, error) {
+	rows, err := q.db.QueryContext(ctx, waitingContinuations, arg.AfterID, arg.Prefix)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []JobContinuation
+	for rows.Next() {
+		var i JobContinuation
+		if err := rows.Scan(
+			&i.JobID,
+			&i.WaitKey,
+			&i.State,
+			&i.ResumePolicy,
+			&i.ReadyAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const wakeContinuation = `-- name: WakeContinuation :execrows

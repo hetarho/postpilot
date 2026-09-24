@@ -218,6 +218,15 @@ func (a *Adapter) removeWorkspace(ws clip.MediaWorkspace) error {
 	return os.RemoveAll(ws.Path) // validated direct child only, never the root or an unresolved path
 }
 func (a *Adapter) CleanupStale(ctx context.Context, now time.Time) error {
+	return a.cleanupWorkspaces(ctx, now, false)
+}
+
+// Only a standalone worker holding its identity's exclusive root lock calls
+// this on startup. Normal/API sweeps retain their conservative age threshold.
+func (a *Adapter) CleanupAbandoned(ctx context.Context) error {
+	return a.cleanupWorkspaces(ctx, time.Now(), true)
+}
+func (a *Adapter) cleanupWorkspaces(ctx context.Context, now time.Time, abandoned bool) error {
 	if err := a.validRoot(); err != nil {
 		return err
 	}
@@ -243,7 +252,7 @@ func (a *Adapter) CleanupStale(ctx context.Context, now time.Time) error {
 		if err != nil {
 			return err
 		}
-		if now.Sub(info.ModTime()) < a.cfg.StaleAge {
+		if !abandoned && now.Sub(info.ModTime()) < a.cfg.StaleAge {
 			continue
 		}
 		if err := a.removeWorkspace(clip.MediaWorkspace{Path: path}); err != nil {

@@ -146,6 +146,12 @@ export const errors = {
     'Video processing stopped because temporary storage is insufficient. Your previous result is preserved. Try again later.',
   CLIP_MODEL_INPUT_UNSUPPORTED:
     'The selected model does not support clip video input. Choose a model that supports clip analysis.',
+  CLIP_MEDIA_UNAVAILABLE:
+    'Video processing could not start. Try again later. Completed observations and your previous result are kept.',
+  CLIP_MEDIA_RETRY_EXHAUSTED:
+    'Video processing stopped after several attempts. Try again later. Completed observations and your previous result are kept.',
+  CLIP_MEDIA_TIMEOUT:
+    'Video processing exceeded its time limit. Try again later. Completed observations and your previous result are kept.',
   CLIP_PROCESSING_FAILED:
     'Clip processing failed. Your previous result is preserved. Select the sources again to retry.',
   CLIP_TEMPLATE_NAME_TAKEN: 'A video template with that name already exists.',

@@ -90,3 +90,23 @@ func (s *Store) Continuation(ctx context.Context, id string) (job.Continuation, 
 	}
 	return job.Continuation{JobID: c.JobID, WaitKey: c.WaitKey, State: job.ContinuationState(c.State), Policy: job.ResumePolicy(c.ResumePolicy)}, nil
 }
+
+func (s *Store) WaitingContinuations(ctx context.Context, prefix, after string) ([]job.Continuation, error) {
+	rows, err := s.read.WaitingContinuations(ctx, sqlc.WaitingContinuationsParams{Prefix: prefix, AfterID: after})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]job.Continuation, 0, len(rows))
+	for _, c := range rows {
+		out = append(out, job.Continuation{JobID: c.JobID, WaitKey: c.WaitKey, State: job.ContinuationState(c.State), Policy: job.ResumePolicy(c.ResumePolicy)})
+	}
+	return out, nil
+}
+func (s *Store) FailWaitingContinuation(ctx context.Context, id, key string, failure job.Failure, now time.Time) (bool, error) {
+	reason, params, _, err := failureColumns(&failure)
+	if err != nil {
+		return false, err
+	}
+	n, err := s.write.FailWaitingContinuation(ctx, sqlc.FailWaitingContinuationParams{JobID: id, WaitKey: key, Reason: reason, Params: params, Now: nullString(formatTime(now))})
+	return n == 1, err
+}

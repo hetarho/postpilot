@@ -32,3 +32,15 @@ UPDATE generation_jobs SET status='cancelled',finished_at=sqlc.arg(now),updated_
 error=NULL,error_reason=NULL,error_params=NULL,technical_detail=NULL
 WHERE generation_jobs.id=sqlc.arg(job_id) AND generation_jobs.status='running' AND generation_jobs.cancel_requested_at IS NOT NULL
 AND EXISTS(SELECT 1 FROM job_continuations c WHERE c.job_id=generation_jobs.id AND c.wait_key=sqlc.arg(wait_key) AND c.state IN ('waiting','ready'));
+
+-- name: WaitingContinuations :many
+SELECT c.* FROM job_continuations c JOIN generation_jobs j ON j.id=c.job_id
+WHERE j.status='running' AND c.state IN ('waiting','ready') AND c.job_id>sqlc.arg(after_id)
+AND substr(c.wait_key,1,length(sqlc.arg(prefix)))=sqlc.arg(prefix)
+ORDER BY c.job_id LIMIT 100;
+
+-- name: FailWaitingContinuation :execrows
+UPDATE generation_jobs SET status='failed',finished_at=sqlc.arg(now),updated_at=sqlc.arg(now),
+error=NULL,error_reason=sqlc.arg(reason),error_params=sqlc.narg(params),technical_detail=NULL
+WHERE id=sqlc.arg(job_id) AND status='running' AND cancel_requested_at IS NULL
+AND EXISTS(SELECT 1 FROM job_continuations c WHERE c.job_id=generation_jobs.id AND c.wait_key=sqlc.arg(wait_key) AND c.state IN ('waiting','ready'));

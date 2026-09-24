@@ -44,6 +44,7 @@ func run() error {
 	if cfg.Accel == "nvenc" {
 		return errors.New("nvenc profile is not approved; use MEDIA_ACCEL=cpu or auto")
 	}
+	cfg.WorkRoot = worker.WorkRoot(cfg.WorkRoot, cfg.ID)
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 	mcfg := clip.DefaultMediaConfig(environment(cfg))
@@ -79,7 +80,12 @@ func run() error {
 		fmt.Println(string(raw))
 		return nil
 	}
-	if err = adapter.CleanupStale(ctx, time.Now()); err != nil {
+	releaseRoot, err := worker.LockWorkRoot(cfg.WorkRoot)
+	if err != nil {
+		return err
+	}
+	defer releaseRoot()
+	if err = adapter.CleanupAbandoned(ctx); err != nil {
 		return errors.New("media workspace recovery failed")
 	}
 	// The adapter tracks active workspaces, so the cleanup cannot reap live work.
