@@ -4,6 +4,8 @@
 # runtime is distroless/static (no shell, non-root) with the API, pinned static
 # media executables and the CA certs it needs for outbound TLS.
 
+ARG MEDIA_ASSET_DIGEST=b5c4259aba11561d02cf7230a7db9154905f194d58c920fc24b42bd3d33f3af3
+
 FROM golang:1.26-alpine@sha256:ce864e7223ac17b1775e6fd0b4c0db580c2eb50e7953a427916379e4b92a1628 AS media-build
 COPY backend/build/media-tools.sh /build-media-tools.sh
 RUN sh /build-media-tools.sh
@@ -24,6 +26,7 @@ RUN CGO_ENABLED=0 GOOS=linux go test -c -o /media.test ./internal/clip/media
 
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /media-worker ./cmd/media-worker
 RUN mkdir -p /worker-work
+RUN CGO_ENABLED=0 GOOS=linux go test -c -o /diagnostic.test ./internal/clip/diagnostic
 
 FROM builder AS release-builder
 RUN CGO_ENABLED=0 GOOS=linux go test -c -o /clip-release.test ./cmd/api
@@ -32,7 +35,7 @@ FROM gcr.io/distroless/static-debian12:nonroot@sha256:afa5c872c891853ca7fcf1f12c
 # Both independently versioned images declare the same contract and asset inputs.
 ARG SOURCE_REVISION=local
 ARG TARGETARCH
-ARG MEDIA_ASSET_DIGEST=b5c4259aba11561d02cf7230a7db9154905f194d58c920fc24b42bd3d33f3af3
+ARG MEDIA_ASSET_DIGEST
 LABEL org.opencontainers.image.revision=$SOURCE_REVISION \
       org.opencontainers.image.architecture=$TARGETARCH \
       org.postpilot.media.protocol="1" \
@@ -144,6 +147,50 @@ ENTRYPOINT ["/clip-release.test", "-test.run=^TestMediaRelease$", "-test.v", "-t
 
 FROM media-worker-deployable AS media-release-worker
 COPY --from=release-builder /clip-release.test /clip-release.test
+
+# Candidate NVIDIA packaging is independent of the CPU deploy critical path.
+FROM debian:bookworm-slim@sha256:3783cc01769c7b2b1b83a5c5ad96c815348e28ed7da68e2e3687004faa906251 AS nvidia-build
+COPY --from=media-runtime /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+COPY backend/build/nvidia-tools.sh /build-nvidia-tools.sh
+RUN sh /build-nvidia-tools.sh
+
+FROM debian:bookworm-slim@sha256:3783cc01769c7b2b1b83a5c5ad96c815348e28ed7da68e2e3687004faa906251 AS media-worker-nvidia-runtime
+ARG SOURCE_REVISION=local
+ARG TARGETARCH
+ARG MEDIA_ASSET_DIGEST
+LABEL org.opencontainers.image.revision=$SOURCE_REVISION \
+      org.opencontainers.image.architecture=$TARGETARCH \
+      org.opencontainers.image.title="Postpilot NVIDIA candidate worker" \
+      org.postpilot.media.protocol="1" org.postpilot.media.renderer="cpu-v1" \
+      org.postpilot.media.assets="assets-v1" org.postpilot.media.asset-input-sha256=$MEDIA_ASSET_DIGEST \
+      org.postpilot.media.gpu-candidate="nvenc-candidate-v1" \
+      org.postpilot.media.gpu-production-approved="false"
+COPY --from=media-worker-deployable /media-worker /media-worker
+COPY --from=media-runtime /usr/local/bin/ /usr/local/bin/
+COPY --from=media-runtime /usr/share/postpilot-fonts/ /usr/share/postpilot-fonts/
+COPY --from=media-runtime /usr/share/postpilot-media/ /usr/share/postpilot-media/
+COPY --from=media-runtime /usr/share/postpilot-render/ /usr/share/postpilot-render/
+COPY --from=media-runtime /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+COPY --from=nvidia-build /opt/nvidia/ /opt/nvidia/
+COPY backend/build/nvidia-tools.sh /opt/nvidia/share/build-nvidia-tools.sh
+COPY --from=builder --chown=65532:65532 /worker-work /var/lib/postpilot-media/work
+RUN mkdir /reports && chown 65532:65532 /reports
+ENV MEDIA_ACCEL=cpu CLIP_WORK_ROOT=/var/lib/postpilot-media/work \
+    NVIDIA_DRIVER_CAPABILITIES=compute,video,utility \
+    LD_LIBRARY_PATH=/usr/local/nvidia/lib:/usr/local/nvidia/lib64
+USER 65532:65532
+ENTRYPOINT ["/media-worker"]
+
+FROM media-worker-nvidia-runtime AS media-worker-nvidia-candidate
+# Real CPU execution works without driver/device exposure. GPU checks run later.
+RUN ["/media-worker", "manifest"]
+
+# Test binaries and fixture export stay outside the candidate execution image.
+FROM media-worker-nvidia-candidate AS media-worker-nvidia-smoke
+COPY --from=builder /media.test /media.test
+COPY --from=builder /diagnostic.test /diagnostic.test
+ENV CLIP_MEDIA_SMOKE=1
+ENTRYPOINT ["/diagnostic.test", "-test.v", "-test.timeout=20m"]
 
 FROM deployable AS production
 # This dependency makes the real-binary nonroot smoke a mandatory image-build gate.

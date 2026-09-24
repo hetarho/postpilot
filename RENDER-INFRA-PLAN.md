@@ -2,7 +2,9 @@
 
 > Historical investigation, not the deployment contract. The implemented pull/lease,
 > private artifact and recovery contracts are in `spec/ssot/ARCH.md` (ARCH-45..59)
-> and `backend/build/RENDER.md`; current commands are in `DEPLOY.md` §8.
+> and `backend/build/RENDER.md`; current commands are in [DEPLOY.md §8](DEPLOY.md#media-environments).
+> The three supported layouts and future isolated NVIDIA checks are documented there;
+> production GPU selection is still pending CLIP-163 approval and hardware validation.
 > The host inventory, open queue notes and timings below describe 2026-09-18 and
 > must not be used as current capacity measurements or GPU activation evidence.
 

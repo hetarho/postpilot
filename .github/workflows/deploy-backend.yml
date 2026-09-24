@@ -187,7 +187,7 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
-          source: 'docker-compose.prod.yml,docker-compose.media.colocated.yml,docker-compose.media.remote.yml,deploy/backend-rollout.sh,deploy/media_rollout.py,deploy/media_preflight.py,deploy/media/worker.env.example'
+          source: 'docker-compose.prod.yml,docker-compose.media.colocated.yml,docker-compose.media.remote.yml,docker-compose.media.nvidia.yml,deploy/backend-rollout.sh,deploy/media_rollout.py,deploy/media_preflight.py,deploy/media/worker.env.example'
           target: '/srv/postpilot-${{ env.ENV_NAME }}'
 
       - name: Pull → swap → health gate → roll back on failure

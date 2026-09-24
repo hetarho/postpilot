@@ -481,3 +481,49 @@ and browser caption assets. Server preparation and final rendering always use th
 durable worker protocol. Embedded execution
 in the old release/identity fixtures is only a comparison baseline, never a worker
 failure fallback in the production composition root.
+
+## NVIDIA candidate diagnostics (not a production profile)
+
+The supported CPU worker remains the production executor. `MEDIA_ACCEL=auto`
+resolves to CPU; strict `nvenc` refuses readiness until CLIP-163 qualification and
+implementation. Placement and image/device selection are explicit, not detected
+from a hosting provider. The operational source is [DEPLOY.md §8](../../DEPLOY.md#media-environments),
+including three layouts, pinned images, private connectivity, drain and rollback.
+
+`media-worker-nvidia-candidate` copies the same static CPU tools, fonts, resvg and
+worker into a pinned glibc Debian image. A separate `/opt/nvidia/bin/ffmpeg` uses
+FFmpeg 9.0.1 with nv-codec-headers n13.0.19.0; Linux driver 570.0 or newer and a
+supported device are prerequisites, not evidence of successful execution.
+`nvidia-tools.sh` pins source hashes and Debian package snapshots and bundles
+source archives, licenses, build configuration and package provenance. The build
+checks declared NVENC/CUVID names; only the later hardware probe can prove execution.
+No CUDA SDK, NPP or `--enable-nonfree` is included. CPU Compose does not reserve GPUs.
+
+The independent `media-nvidia-candidate.yml` workflow publishes only on explicit
+dispatch. API rollouts retain a candidate worker's independently selected image
+pin, including on a colocated host. Remote API hosts never reserve a GPU.
+
+`media-worker gpu-probe --output NEW_DIR` and `benchmark --manifest FILE --output
+NEW_DIR [--cpu-only]` load tool settings only, without a worker client, database or
+provider. The separate diagnostic Compose service has no job credential or network.
+Reports always state `ProductionApproved=false`. Missing hardware produces an error
+report; CPU-only runs leave GPU timings null/unverified. Device/driver, tools/assets,
+parameters, cgroup resource observations, output hashes/measurements, sampled decoded
+frame differences and decoded audio equality accompany the timing results.
+
+`CLIP_DIAGNOSTIC_FIXTURES` on the test-only `TestWorkerExecutionParity` exports four
+synthetic delivered MP4s in all three ratios, with motion, audio, transitions and
+sequence captions, plus a local manifest and CPU composition+encode times. The
+candidate comparison re-encodes those already compressed, CPU-composed inputs.
+It isolates delivery encoding; it is not a lossless-master quality comparison or
+an end-to-end speedup. CPU composition, intermediate representation, resvg and
+existing audio processing remain unchanged. NVENC p4/hq/VBR/CQ20 and x264
+veryfast/CRF20 are explicit candidate parameters, not equivalent quality claims.
+CUVID decode is probed independently; CUDA scaling is not built/qualified.
+
+Local CPU-only candidate builds, actual execution, missing-device behavior and
+Compose checks can pass without a GPU. Real NVIDIA execution, representative
+end-to-end timings, reviewed caption/motion/transition/audio output, resource bounds
+and failure policy remain unverified activation gates. Follow the [isolated
+hardware procedure](../../DEPLOY.md#media-gpu-diagnostics) later; never interpret a
+passing packaging test or an encoder name as GPU production approval.

@@ -34,6 +34,20 @@ DB와 인증은 들어와 있다 — SQLite(순수 Go 드라이버, WAL, 바이�
 마이그레이션이 기동 때 실행) + argon2id · HttpOnly 쿠키 세션. 사진 저장소(Cloudflare R2)는
 아직 없다. 근거와 대안 비교는 `PRD.md §6`, 붙이는 순서는 `PRD.md §10`.
 
+## 영상 렌더 배포 환경
+
+현재 기본값은 기존 VPS에서 API와 CPU 워커를 함께 실행하는 구성이다. 실제 서버 이동은 운영자가 나중에 진행한다.
+
+| 환경 | 배포 절차 |
+| --- | --- |
+| 한 서버, GPU 없음 — 기본 | [DEPLOY 8.2](DEPLOY.md#media-cpu) |
+| 한 서버, NVIDIA GPU 있음 | [DEPLOY 8.3](DEPLOY.md#media-single-gpu) |
+| API 서버 + 별도 NVIDIA GPU 서버 | [DEPLOY 8.4](DEPLOY.md#media-remote-gpu) |
+
+GPU 후보 이미지·장치 설정·격리 진단은 준비되어 있다. 사용자 작업은 현재 CPU를 사용하며,
+GPU 자동 선택은 실물 장비의 품질/시간 검증과 프로필 승인 뒤 별도 구현한다.
+전체 설정, 자원 점검과 롤백은 [배포 문서](DEPLOY.md#media-environments)에 있다.
+
 ## 로컬 실행
 
 Node 버전은 `.node-version`에 고정되어 있다. fnm·nvm·asdf 같은 도구는 이 파일을 읽어

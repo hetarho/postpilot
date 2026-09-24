@@ -1,0 +1,13 @@
+# Explicit candidate packaging only. Product jobs still execute the CPU profile.
+services:
+  media-worker:
+    image: ghcr.io/hetarho/postpilot-media-worker-nvidia:${MEDIA_WORKER_IMAGE_TAG:?Set a published NVIDIA candidate SHA}
+    environment:
+      NVIDIA_DRIVER_CAPABILITIES: compute,video,utility
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

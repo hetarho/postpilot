@@ -34,7 +34,7 @@ elif args[:2]==['image','inspect']:
     if args[-2]=='{{.Created}}':print('2020-01-01T00:00:00Z')
     else:
         labels={prefix+k:v for k,v in {'protocol':'1','renderer':'cpu-v1','assets':'assets-v1','asset-input-sha256':'a'*64,'rollback-safe':'1'}.items()}
-        if mode in ['protocol_mismatch','asset_mismatch'] and 'media-worker:' in ref and ref.endswith(target):labels[prefix+('protocol' if mode=='protocol_mismatch' else 'assets')]='different'
+        if mode in ['protocol_mismatch','asset_mismatch'] and 'postpilot-media-worker' in ref and ref.endswith(target):labels[prefix+('protocol' if mode=='protocol_mismatch' else 'assets')]='different'
         if mode in ['legacy_previous','bootstrap_failure'] and 'postpilot-api:' in ref and ref.endswith(previous):labels.pop(prefix+'rollback-safe')
         if mode=='legacy_target' and 'postpilot-api:' in ref and ref.endswith(target):labels.pop(prefix+'rollback-safe')
         print(json.dumps(labels))
@@ -76,9 +76,10 @@ class RolloutTest(unittest.TestCase):
         self.directory = tempfile.TemporaryDirectory(prefix='postpilot-rollout-')
         self.addCleanup(self.directory.cleanup)
         self.stack = Path(self.directory.name)
-        for name in ['docker-compose.prod.yml', 'docker-compose.media.colocated.yml', 'docker-compose.media.remote.yml']:
+        for name in ['docker-compose.prod.yml', 'docker-compose.media.colocated.yml', 'docker-compose.media.remote.yml', 'docker-compose.media.nvidia.yml']:
             shutil.copyfile(ROOT / name, self.stack / name)
         shutil.copyfile(ROOT / 'deploy/media/docker-compose.yml', self.stack / 'docker-compose.yml')
+        shutil.copyfile(ROOT / 'deploy/media/docker-compose.nvidia.yml', self.stack / 'docker-compose.nvidia.yml')
         self.original = (
             f'IMAGE_TAG={PREVIOUS}\nAPI_UPSTREAM=postpilot-api-test\n'
             'CORS_ORIGIN=https://web.invalid\nMEDIA_TOPOLOGY=colocated\n'
@@ -120,6 +121,60 @@ class RolloutTest(unittest.TestCase):
         self.assertFalse(any('up' in e['args'] or e['args'][0] == 'stop' for e in events))
         self.assertEqual((self.stack / '.env').read_text(), self.original)
         self.assertEqual((self.stack / 'worker.env').read_text(), self.worker_original)
+
+    def test_cpu_to_candidate_rollback_restores_cpu_without_device_override(self):
+        result, _ = self.run_rollout()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        worker = self.stack / 'worker.env'
+        worker.write_text(worker.read_text().replace('MEDIA_WORKER_VARIANT=cpu', 'MEDIA_WORKER_VARIANT=nvidia-candidate'))
+        result, _ = self.run_rollout()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        (self.stack / 'events').unlink()
+        result, events = self.run_rollout('success', '--rollback')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        updates = [e for e in events if 'up' in e['args']]
+        self.assertIn('MEDIA_WORKER_VARIANT=cpu', worker.read_text())
+        self.assertNotIn('docker-compose.media.nvidia.yml', updates[-1]['args'])
+        self.assertEqual(updates[-1]['images']['media-worker'], 'ghcr.io/hetarho/postpilot-media-worker:' + TARGET)
+
+    def test_unknown_variant_is_rejected_before_container_changes(self):
+        self.worker_original = self.worker_original.replace('MEDIA_WORKER_VARIANT=cpu', 'MEDIA_WORKER_VARIANT=guessed-cloud')
+        self.write_env()
+        result, events = self.run_rollout()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('MEDIA_WORKER_VARIANT', result.stderr)
+        self.assert_no_swap(events)
+
+    def test_candidate_pin_is_independent_and_snapshotted(self):
+        self.worker_original = self.worker_original.replace('MEDIA_WORKER_VARIANT=cpu', 'MEDIA_WORKER_VARIANT=nvidia-candidate')
+        self.write_env()
+        result, events = self.run_rollout()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        updates = [e for e in events if 'up' in e['args']]
+        self.assertTrue(updates[-1]['images']['media-worker'].endswith('postpilot-media-worker-nvidia:' + PREVIOUS))
+        self.assertTrue((self.stack / '.deploy/last-good/docker-compose.media.nvidia.yml').exists())
+        result, _ = self.run_rollout('success', '--rollback')
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_remote_candidate_never_reserves_gpu_on_api(self):
+        self.remote()
+        self.worker_original = self.worker_original.replace('MEDIA_WORKER_VARIANT=cpu', 'MEDIA_WORKER_VARIANT=nvidia-candidate')
+        self.write_env()
+        result, events = self.run_rollout()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(any('docker-compose.media.nvidia.yml' in e['args'] for e in events))
+        self.assertFalse(any('media-worker' in e['images'] for e in events))
+        self.assertTrue(any(e['args'] == ['pull', 'ghcr.io/hetarho/postpilot-media-worker-nvidia:' + PREVIOUS] for e in events))
+
+    def test_standalone_candidate_uses_explicit_new_pin(self):
+        self.remote()
+        self.worker_original = self.worker_original.replace('MEDIA_WORKER_VARIANT=cpu', 'MEDIA_WORKER_VARIANT=nvidia-candidate')
+        self.write_env()
+        result, events = self.run_rollout(role='worker')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        updates = [e for e in events if 'up' in e['args']]
+        self.assertTrue(updates[-1]['images']['media-worker'].endswith('postpilot-media-worker-nvidia:' + TARGET))
+        self.assertTrue((self.stack / '.deploy/last-good/docker-compose.nvidia.yml').exists())
 
     def test_colocated_success_drains_then_starts_both_and_preserves_rollback_pins(self):
         result, events = self.run_rollout()

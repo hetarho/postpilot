@@ -1,0 +1,28 @@
+# Separate from worker.env: no job credential, DB, API network or artifact access.
+services:
+  diagnostic:
+    image: ghcr.io/hetarho/postpilot-media-worker-nvidia:${MEDIA_WORKER_IMAGE_TAG:?Set a published candidate SHA}
+    network_mode: none
+    read_only: true
+    cpus: 1.0
+    mem_limit: 1g
+    memswap_limit: 1g
+    pids_limit: 128
+    environment:
+      NVIDIA_DRIVER_CAPABILITIES: compute,video,utility
+      CLIP_WORK_ROOT: /reports/work
+      CLIP_ENCODE_THREADS: "1"
+      CLIP_DECODE_THREADS: "2"
+    volumes:
+      - ./fixtures:/fixtures:ro
+      - ./reports:/reports
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    command: [gpu-probe, --output, /reports/probe]

@@ -97,11 +97,11 @@ func TestWorkerExecutionParity(t *testing.T) {
 	cfg.OperationTimeout = 15 * time.Minute
 	a, err := New(cfg, nil)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatal(renderFailure(err))
 	}
 	r, err := NewRenderer(a, renderConfig(t))
 	if err != nil {
-		t.Fatal(err)
+		t.Fatal(renderFailure(err))
 	}
 	profile, err := r.RuntimeProfile(t.Context(), "auto")
 	if err != nil || !profile.Compatible() {
@@ -133,7 +133,7 @@ func TestWorkerExecutionParity(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Fatal(err)
+		t.Fatal(renderFailure(err))
 	}
 	executor := worker.NewExecutor(a, r, transfer, cfg)
 	t.Run("preparation", func(t *testing.T) {
@@ -143,7 +143,7 @@ func TestWorkerExecutionParity(t *testing.T) {
 		prepare.Sources[1].ReusedChunks = []int{0}
 		raw, err := executor.Execute(t.Context(), parityWork(t, clip.MediaPrepare, prepare))
 		if err != nil {
-			t.Fatal(err)
+			t.Fatal(renderFailure(err))
 		}
 		result, err := mediacodec.DecodeResult(raw)
 		if err != nil || len(result.Outputs) != 1 {
@@ -176,9 +176,24 @@ func TestWorkerExecutionParity(t *testing.T) {
 			return err
 		})
 		if err != nil {
-			t.Fatal(err)
+			t.Fatal(renderFailure(err))
 		}
 	})
+	// Optional export is test-only and contains exclusively synthetic footage.
+	exportRoot := os.Getenv("CLIP_DIAGNOSTIC_FIXTURES")
+	type fixture struct {
+		Name, File                string
+		CPUCompositionAndEncodeMS int64
+	}
+	exported := struct {
+		Version  int
+		Fixtures []fixture
+	}{Version: 1}
+	if exportRoot != "" {
+		if err := os.Mkdir(exportRoot, 0700); err != nil {
+			t.Fatal(renderFailure(err))
+		}
+	}
 	for _, test := range []struct {
 		name, ratio string
 		sequence    bool
@@ -192,7 +207,7 @@ func TestWorkerExecutionParity(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			plan, err := qaPlan(qaClipCases()[0], sources)
 			if err != nil {
-				t.Fatal(err)
+				t.Fatal(renderFailure(err))
 			}
 			plan.Ratio = test.ratio
 			for i := range plan.Cuts {
@@ -212,17 +227,18 @@ func TestWorkerExecutionParity(t *testing.T) {
 			}
 			plan, _, err = r.Layout(t.Context(), plan, sources)
 			if err != nil {
-				t.Fatal(err)
+				t.Fatal(renderFailure(err))
 			}
 			frozen := task
 			frozen.Plan, err = clip.EncodeEditPlan(plan)
 			if err != nil {
-				t.Fatal(err)
+				t.Fatal(renderFailure(err))
 			}
 			frozen.Render = clip.FreezeMediaRenderInputs(plan)
 			frozen.HideDisclosure = plan.HideDisclosure
 			embedded := filepath.Join(transfer.dir, name+"-embedded.mp4")
 			var expected clip.RenderedVideo
+			started := time.Now()
 			err = a.WithWorkspace(t.Context(), "embedded-render", func(ws clip.MediaWorkspace) error {
 				expected, err = r.Render(t.Context(), ws, plan, sources, func(ctx context.Context, id string, consume func(clip.MediaSource) error) error {
 					path := filepath.Join(ws.Path, "original.mp4")
@@ -243,7 +259,14 @@ func TestWorkerExecutionParity(t *testing.T) {
 				return copyIdentityFile(expected.Path, embedded)
 			})
 			if err != nil {
-				t.Fatal(err)
+				t.Fatal(renderFailure(err))
+			}
+			if exportRoot != "" {
+				file := name + ".mp4"
+				if err := copyIdentityFile(embedded, filepath.Join(exportRoot, file)); err != nil {
+					t.Fatal(renderFailure(err))
+				}
+				exported.Fixtures = append(exported.Fixtures, fixture{name, file, time.Since(started).Milliseconds()})
 			}
 			if sequence {
 				found := false
@@ -258,11 +281,11 @@ func TestWorkerExecutionParity(t *testing.T) {
 			}
 			raw, err := executor.Execute(t.Context(), parityWork(t, clip.MediaRender, frozen))
 			if err != nil {
-				t.Fatal(err)
+				t.Fatal(renderFailure(err))
 			}
 			result, err := mediacodec.DecodeResult(raw)
 			if err != nil {
-				t.Fatal(err)
+				t.Fatal(renderFailure(err))
 			}
 			if !reflect.DeepEqual(expected.Info, result.Outputs[0].Info) || expected.Bytes != result.Outputs[0].Bytes {
 				t.Fatal("CDS output measurements changed")
@@ -277,13 +300,22 @@ func TestWorkerExecutionParity(t *testing.T) {
 				return nil
 			})
 			if err != nil {
-				t.Fatal(err)
+				t.Fatal(renderFailure(err))
 			}
 		})
 	}
+	if exportRoot != "" {
+		raw, err := json.MarshalIndent(exported, "", "  ")
+		if err != nil {
+			t.Fatal(renderFailure(err))
+		}
+		if err = os.WriteFile(filepath.Join(exportRoot, "manifest.json"), raw, 0600); err != nil {
+			t.Fatal(renderFailure(err))
+		}
+	}
 	entries, err := os.ReadDir(cfg.WorkRoot)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatal(renderFailure(err))
 	}
 	for _, entry := range entries {
 		if entry.IsDir() {

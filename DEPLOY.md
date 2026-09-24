@@ -441,167 +441,220 @@ verify를 반복한다(그 이미지가 GHCR에 없으면 bridge 커밋에서 �
 - **관측(Sentry/PostHog)** — 사용자가 생기면.
 
 
-## 8. Media worker deployment
+## 8. 영상 워커 배포
 
-### Files, services and prerequisites
+<a id="media-environments"></a>
+### 8.1 환경 선택과 공통 설정
 
-Linux Docker hosts need Docker Engine, Compose 2.24+, Python 3, `curl`, registry pull
-access and writable nonroot data/work storage. The API/SQLite and shared edge Caddy
-stay on the VPS. Never copy the API `.env`, database, provider keys, billing keys or
-R2 credentials to the executor. Signed object URLs must be reachable from that host;
-`MEDIA_STORAGE_ENDPOINT` is independently configurable and defaults to `R2_ENDPOINT`.
-A remote Linux host needs outbound private API/TLS and object-storage access only.
-Windows/WSL2 is not a validated production host in this delivery.
+**현재 기본값은 GPU 없는 기존 VPS 한 대에서 API + CPU 워커를 실행하는 구성이다.** 이번 변경으로 운영 서버를 옮기거나 재배포하지 않는다. 호스트 배치는 `MEDIA_TOPOLOGY`, 이미지 종류는 `MEDIA_WORKER_VARIANT`, 실행 프로필은 `MEDIA_ACCEL`로 선택한다. 환경을 추측해서 드라이버를 설치하거나 다른 서버를 발견하지 않는다.
 
-| Placement | Compose files, in order | Services managed on this host |
-|---|---|---|
-| Default CPU VPS | `docker-compose.prod.yml`, `docker-compose.media.colocated.yml` | `api`, `media-worker` |
-| API VPS with remote worker | `docker-compose.prod.yml`, `docker-compose.media.remote.yml` | `api` |
-| Separate CPU worker | Copy `deploy/media/docker-compose.yml` to that stack's `docker-compose.yml` | `media-worker` |
+| 환경 | 호스트별 서비스 | 순서대로 선택하는 Compose 파일 | 절차 |
+| --- | --- | --- | --- |
+| 1 server without GPU — 기본 | VPS: API, SQLite, Caddy, CPU 워커 | `docker-compose.prod.yml` + `docker-compose.media.colocated.yml` | [8.2](#media-cpu) |
+| 1 server with NVIDIA GPU | 같은 호스트: API, SQLite, Caddy, 워커 | 위 두 파일 + `docker-compose.media.nvidia.yml` | [8.3](#media-single-gpu) |
+| 1 server + 1 GPU server | VPS: API/SQLite/Caddy, GPU PC: 워커만 | VPS: prod + remote; PC: `docker-compose.yml` + `docker-compose.nvidia.yml` | [8.4](#media-remote-gpu) |
 
-The VPS `.env` selects `MEDIA_TOPOLOGY=colocated` (default) or `remote` and keeps
-`IMAGE_TAG=<full API commit SHA>`. In both layouts a separate `worker.env` records
-`MEDIA_WORKER_IMAGE_TAG=<full worker commit SHA>` and the executor's settings.
-The API VPS retains that worker pin for compatibility inspection; a routine remote
-API rollout does not change it or require the PC to be powered on. Synchronize this
-pin after an independently verified worker upgrade. Compatible revisions can differ.
+**GPU 후보 이미지에서도 실제 사용자 작업은 현재 CPU로 실행한다.** `cpu`와 `auto`는 CPU 프로필을 사용하고, `nvenc`는 승인되지 않은 프로필이므로 시작을 거부한다. [8.7의 격리 진단](#media-gpu-diagnostics)은 실행할 수 있지만, GPU 자동 선택·장애 후 CPU 전환은 CLIP-163 품질/시간 검증과 다음 구현 이후에 활성화한다.
 
-Copy `deploy/media/worker.env.example` to `worker.env`, fill its image pin and use
-`chmod 600 .env worker.env`. Generate a unique token per environment/executor:
+지원 호스트는 **Linux + Docker Engine + Compose 2.24 이상**, Python 3, `curl`, GHCR pull 권한이다. Windows/WSL2와 친구 PC의 실제 OS/GPU는 검증하지 않았다. API/워커 이미지 태그는 **게시된 40자리 commit SHA**이고 서로 다른 SHA여도 프로토콜·렌더러·에셋 계약이 같아야 한다. `<api-sha>`, `<worker-sha>`, `<candidate-sha>`, `<token>`, `<api-domain>`, `<vps>.<tailnet>.ts.net`은 모두 실제 값으로 바꿀 자리다. GPU 후보는 별도 수동 워크플로 `media-nvidia-candidate.yml`에서 게시하며, CPU 배포는 그 완료를 기다리지 않는다.
 
-```bash
-python3 -c 'import secrets; print(secrets.token_urlsafe(32))'
+처음 설치하는 API 호스트는 §4–5의 Caddy/edge/DB 소유권/스토리지/메일 설정을 먼저 완료한다. API 전체 env 예제는 [`.env.production.example`](.env.production.example)이며, 기존 VPS에서는 기존 값을 보존하고 아래 배치 설정만 추가한다. API 이미지에는 미리보기·편집안 검증용 미디어 도구도 계속 포함된다.
+
+```dotenv
+# VPS의 .env: 전체 파일은 .env.production.example을 사용한다.
+# 기존 DB_PATH, CORS_ORIGIN, API_UPSTREAM, R2_*, 메일·인증·모델 값은 보존한다.
+IMAGE_TAG=<api-sha>
+MEDIA_TOPOLOGY=colocated
+MEDIA_WORKER_CREDENTIALS={"prod-cpu-1":"<token>"}
+# 비우면 R2_ENDPOINT 사용. 원격 PC에서 접근 가능한 서명용 주소여야 한다.
+MEDIA_STORAGE_ENDPOINT=
 ```
 
-Set the token in `worker.env` as `MEDIA_WORKER_TOKEN`; put the same ID/token pair in
-API `.env` as `MEDIA_WORKER_CREDENTIALS={"prod-cpu-1":"<token>"}`. Rotate by allowing
-both identities in the API, starting the new identity after draining the old one,
-then removing the old credential. Never run two executors with one identity.
+아래는 워커의 **전체 env 예제**다. `deploy/media/worker.env.example`에서 복사해 스택 디렉터리의 `worker.env`로 둔다. GPU/원격 절차에서는 명시한 값만 바꾼다. API의 `.env`, DB, R2 키, 모델·결제 키를 PC로 복사하지 않는다. VPS에도 `worker.env`를 남겨 워커 이미지 호환성을 검사한다.
 
-For colocation use `MEDIA_API_URL=http://api:9000`. The API and executor share a
-private Compose bridge, with outbound access for signed storage transfers. No worker
-port is published and the executor never joins the shared edge network. Public Caddy
-continues to forward only to API port 8080; media operations exist on port 9000 only.
+```dotenv
+MEDIA_WORKER_IMAGE_TAG=<worker-sha>
+MEDIA_WORKER_VARIANT=cpu
+MEDIA_API_URL=http://api:9000
+MEDIA_WORKER_ID=prod-cpu-1
+MEDIA_WORKER_TOKEN=<token>
+MEDIA_ACCEL=cpu
+MEDIA_WORKER_CONCURRENCY=1
+MEDIA_WORKER_CPUS=1.0
+MEDIA_WORKER_MEMORY=512m
+MEDIA_DRAIN_TIMEOUT=30s
+MEDIA_STOP_TIMEOUT=45
+CLIP_WORK_ROOT=/var/lib/postpilot-media/work
+CLIP_WORK_STALE_AGE=6h
+CLIP_MEDIA_TIMEOUT=15m
+CLIP_ENCODE_THREADS=1
+CLIP_DECODE_THREADS=2
+```
 
-The 1 CPU / 512 MiB executor example is a starting limit, not a claim about free
-capacity on the shared VPS. It disables worker swap, keeps one job and 1/2 encode/decode
-threads, and leaves the existing finite 8 GiB workspace limit. Reserve memory/CPU for
-API, Caddy, the OS and other applications; use the CPU release/preflight procedure
-before selecting production limits. Container limits do not provision host capacity.
-Do not carry old `CLIP_FONT_PATH=.../pretendard/...` settings forward: remove those
-obsolete overrides to use the image's validated Wanted Sans defaults. API preview
-assets remain in the API image.
+토큰은 `python3 -c 'import secrets; print(secrets.token_urlsafe(32))'`로 생성한다. 환경/워커별 ID와 토큰을 따로 쓰고 API `MEDIA_WORKER_CREDENTIALS`의 해당 항목과 일치시킨다. 두 실행기에 같은 ID를 사용하지 않는다. 교체 시 API에 두 ID를 일시 허용 → 이전 워커 drain → 새 ID 기동 → 이전 자격 제거 순서다. `.env`와 `worker.env`는 `chmod 600`으로 보호한다. 오래된 Pretendard 등 폰트 경로 override는 제거해 검증된 이미지 기본값을 사용한다.
 
-### Initial CPU VPS upgrade
+워커 한 개의 시작 예산은 CPU 1개/메모리 512MiB, swap 없음, 동시 작업 1개, 인코딩/디코딩 스레드 1/2다. 작업 공간 8GiB, 준비 산출물 512MiB, 입력 파일 2GiB 한도는 유지한다. API/Caddy/OS/다른 서비스의 여유를 별도로 남긴다. **배포 전에 [8.6](#media-capacity)의 실제 호스트 용량 점검을 통과해야 한다.** 제한값은 실제 서버의 여유나 최악 입력의 완료를 보장하지 않는다.
 
-The first worker-aware deployment is a forward-only maintenance step when the old
-API lacks media rollback version 1. Prepare files and credentials first; retain the
-existing `data/` directory and its ownership. Pause new submissions and let current
-in-process work finish, take a consistent SQLite backup, and retain the previous
-runtime configuration. Do not restore an old database to force an image rollback.
-The old service stays up while configuration/image checks run.
+<a id="media-cpu"></a>
+### 8.2 GPU 없는 한 서버 — 현재 VPS 기본값
+
+VPS `/srv/postpilot-prod`에 root의 prod/colocated/remote/nvidia Compose 파일, `deploy/backend-rollout.sh`, `deploy/media_rollout.py`, `deploy/media_preflight.py`, `deploy/media/worker.env.example`을 저장소와 같은 상대 경로로 둔다. 배포 워크플로가 이 파일들을 동기화한다. 첫 수동 배포 전에는 같은 revision의 파일을 먼저 복사한다. 공유 Caddy는 `/srv/edge`에 그대로 둔다.
+
+8.1의 `.env`와 `worker.env` 값을 사용한다. API와 워커는 비공개 `media` bridge로 연결되며 `http://api:9000`은 컨테이너 내부 주소다. 워커 포트는 공개하지 않고 Caddy는 API의 8080으로만 연결한다. 기존 `data/`와 소유권을 보존한다.
+
+**처음 워커 구조로 올릴 때:** 신규 요청을 잠시 중지하고 기존 처리 완료 → 일관된 SQLite 백업과 이전 설정 보관 → 아래 점검/배포 순서다. 이전 API에 `rollback-safe=1` 라벨이 없으면 이 첫 전환은 구버전 이미지로 돌아갈 수 없다.
 
 ```bash
 cd /srv/postpilot-prod
-# Existing .env: keep provider/storage/auth values; set MEDIA_TOPOLOGY=colocated.
-# Both files must already contain their initial full SHA pins and matching identity.
 chmod 600 .env worker.env
 IMAGE_TAG='<api-sha>' MEDIA_WORKER_IMAGE_TAG='<worker-sha>' \
   API_ORIGIN='https://<api-domain>' sh deploy/backend-rollout.sh --check --bootstrap
 IMAGE_TAG='<api-sha>' MEDIA_WORKER_IMAGE_TAG='<worker-sha>' \
   API_ORIGIN='https://<api-domain>' sh deploy/backend-rollout.sh --bootstrap
-```
 
-`--check` may pull images and execute disposable offline/status probes; it never
-stops services or persists incoming tags. The initial upgrade retains its original
-files in `.deploy/bootstrap-before`. If startup fails and the prior API is below the
-rollback floor, the controller refuses to boot that legacy image, keeps the new pins
-and reports fix-forward recovery. After the first successful deployment, ordinary
-failures restore `.deploy/last-good` automatically. `--bootstrap` is unnecessary for
-subsequent supported updates. No command above is executed by repository verification.
-
-### Routine rollout, drain and recovery
-
-```bash
-# VPS: topology comes from .env. Remote mode preserves worker.env's image pin.
+# 이후 일상 업데이트: --bootstrap 생략
 IMAGE_TAG='<api-sha>' MEDIA_WORKER_IMAGE_TAG='<worker-sha>' \
   API_ORIGIN='https://<api-domain>' sh deploy/backend-rollout.sh
-# Supported manual rollback restores image pins, credentials and Compose together.
-API_ORIGIN='https://<api-domain>' sh deploy/backend-rollout.sh --rollback
-# Stop taking work and finish or relinquish the active lease before stopping locally.
-API_ORIGIN='https://<api-domain>' sh deploy/backend-rollout.sh --drain
+# 상태 / 로그 / 워커 실제 실행과 API 인증 확인
+cpu_compose() { docker compose --env-file .env --env-file worker.env \
+  -f docker-compose.prod.yml -f docker-compose.media.colocated.yml "$@"; }
+cpu_compose ps
+cpu_compose logs --tail 80 api media-worker
+cpu_compose exec -T media-worker /media-worker health
+curl --fail 'https://<api-domain>/health'
+# drain과 롤백은 8.5의 공통 명령 사용
 ```
 
-SIGTERM stops claims immediately. The default 30-second worker drain is followed by
-15 seconds for cancellation reporting and process reaping; `MEDIA_STOP_TIMEOUT`
-controls the container grace and must be at least drain + 15 seconds. An interrupted
-lease is recovered by the API without replaying paid calls. Rollout never uses
-`--remove-orphans` to discard a busy worker. When later changing colocation to remote,
-explicit selection drains the old local executor; remove its stopped container only
-after checking that it is no longer executing. SQLite remains in its original volume.
+`--check`는 이미지를 pull하고 일회용 검사 컨테이너를 실행하지만 운영 서비스를 중지하거나 입력 태그를 영구 반영하지 않는다. 첫 전환 설정은 `.deploy/bootstrap-before`에 보관한다. 구 API로 롤백할 수 없는 첫 배포가 실패하면 새 버전을 유지하고 로그의 원인을 수정한다. 오래된 DB 복원으로 이미지 롤백을 강제하지 않는다. 이후 지원 버전끼리는 자동 롤백이 동작한다.
 
-The controller checks protocol, renderer and asset versions plus the asset-input
-hash, and probes actual configured fonts/tools before replacing a service. The
-rollback floor is a media-aware API with `org.postpilot.media.rollback-safe=1`;
-pre-worker APIs are rejected even if a tag is still available. Application migrations
-remain forward-only. Inspect startup logs and keep `.deploy` private: its snapshots
-contain credentials. Current and immediately previous pins are retained during image
-cleanup; only older unused tags in the two Postpilot repositories are removed.
+<a id="media-single-gpu"></a>
+### 8.3 NVIDIA GPU가 있는 한 서버
 
-For logs/status, use the same explicit file list from the table. Example:
+**CPU 실행만 원하면 8.2를 그대로 사용한다. GPU 드라이버도 필요 없다.** GPU 장치 노출/진단을 준비할 때만 8.7의 1회성 드라이버·toolkit 설정을 먼저 완료한다. API/SQLite/Caddy 위치, 네트워크, 데이터 디렉터리는 8.2와 같다.
 
-```bash
-docker compose --env-file .env --env-file worker.env \
-  -f docker-compose.prod.yml -f docker-compose.media.colocated.yml ps
-docker compose --env-file .env --env-file worker.env \
-  -f docker-compose.prod.yml -f docker-compose.media.colocated.yml logs --tail 80 api media-worker
+8.1의 전체 `worker.env` 중 다음 값을 바꾸고, API `.env`의 credential ID도 같은 것으로 바꾼다. 나머지 env와 자원 한도는 유지한다. `MEDIA_ACCEL=cpu`는 의도적이다.
+
+```dotenv
+MEDIA_WORKER_IMAGE_TAG=<candidate-sha>
+MEDIA_WORKER_VARIANT=nvidia-candidate
+MEDIA_WORKER_ID=prod-gpu-1
+MEDIA_WORKER_TOKEN=<new-token>
+MEDIA_API_URL=http://api:9000
+MEDIA_ACCEL=cpu
 ```
 
-### Preparing a private remote Linux worker later
-
-On the VPS select `MEDIA_TOPOLOGY=remote`. The remote override publishes only
-`127.0.0.1:9000:9000`; configure private Tailscale ingress explicitly after installing
-and enrolling both hosts, enabling tailnet HTTPS, and granting only the worker
-identity/device access to this port. Use an unused Serve port and retain other
-applications' Serve rules:
+API `.env`는 `MEDIA_TOPOLOGY=colocated`, `MEDIA_WORKER_CREDENTIALS={"prod-gpu-1":"<new-token>"}`이다. controller가 `docker-compose.media.nvidia.yml`을 추가해 후보 이미지와 GPU 1개를 선택한다. **후보 태그는 `worker.env`에서 직접 선택한다.** API CI가 넘긴 CPU 워커 SHA로 덮어쓰지 않는다. 공개 이미지: `ghcr.io/hetarho/postpilot-media-worker-nvidia:<candidate-sha>`; API 이미지는 기존 `postpilot-api:<api-sha>`다.
 
 ```bash
+cd /srv/postpilot-prod
+chmod 600 .env worker.env
+# 신규 스택/첫 구버전 전환에서만 8.2의 유지보수 후 --bootstrap 추가
+IMAGE_TAG='<api-sha>' API_ORIGIN='https://<api-domain>' \
+  sh deploy/backend-rollout.sh --check
+IMAGE_TAG='<api-sha>' API_ORIGIN='https://<api-domain>' \
+  sh deploy/backend-rollout.sh
+# 이후 업데이트도 후보 태그를 worker.env에 먼저 기록한 뒤 같은 명령 사용
+nvidia_compose() { docker compose --env-file .env --env-file worker.env \
+  -f docker-compose.prod.yml -f docker-compose.media.colocated.yml \
+  -f docker-compose.media.nvidia.yml "$@"; }
+nvidia_compose ps
+nvidia_compose logs --tail 80 api media-worker
+nvidia_compose exec -T media-worker /media-worker health
+curl --fail 'https://<api-domain>/health'
+```
+
+운영 워커의 상태는 계속 `Profile: cpu`다. GPU가 없거나 Docker가 장치를 노출할 수 없으면 **GPU override를 선택한 컨테이너의 기동이 실패**한다. 드라이버 복구 또는 8.5의 이전 CPU 구성 롤백을 사용한다. GPU 호스트용 이미지에서 CPU 합성·resvg·폰트는 기존 바이너리를 그대로 사용한다.
+
+<a id="media-remote-gpu"></a>
+### 8.4 API VPS 한 대 + 별도 NVIDIA PC 한 대 — 나중에 이동할 때
+
+VPS에는 API/SQLite/Caddy만, PC에는 `media-worker`만 배치한다. PC는 API의 비공개 HTTPS와 오브젝트 저장소로 **먼저 나가는 연결**을 만든다. PC에 공개 수신 포트, 공유 DB/볼륨, API 비밀키가 필요 없다. API 이미지가 준비·렌더를 대신 수행하는 자동 fallback도 없다.
+
+**1회성 네트워크 설정:** 양쪽 Linux 호스트에 Tailscale을 설치·등록하고 tailnet HTTPS를 활성화한다. tailnet 접근 정책에서 이 PC의 태그/신원에 VPS의 TCP 9443만 허용한다. 다른 tailnet 기기에 광범위하게 열어두지 않는다. VPS의 기존 Serve 설정과 충돌하지 않는 포트를 고르고 아래 규칙을 추가한다. 선택한 포트를 바꾸면 URL과 정책도 함께 바꾼다.
+
+```bash
+# VPS: remote override가 127.0.0.1:9000을 바인딩한 뒤 사용
 sudo tailscale serve --bg --https=9443 http://127.0.0.1:9000
 tailscale serve status
 ```
 
-Use Serve, never public Funnel. Set `MEDIA_API_URL=https://<vps>.<tailnet>.ts.net:9443`
-in the remote worker's `worker.env` (and the VPS copy used to record its configuration).
-Do not add media paths to the public Caddy fragment or open public port 9000.
-These one-time network/host steps are operator work, not application auto-discovery.
-See [Tailscale Serve](https://tailscale.com/docs/features/tailscale-serve) and its
-[CLI reference](https://tailscale.com/docs/reference/tailscale-cli/serve).
+[비공개 Serve](https://tailscale.com/docs/features/tailscale-serve)와 [명령 문서](https://tailscale.com/docs/reference/tailscale-cli/serve)를 따른다. public Funnel을 사용하지 않는다. VPS의 공개 방화벽/Caddy에 9000/9443을 추가하지 않는다. PC에서는 기존 방화벽을 유지하고 Tailscale의 연결 및 HTTPS 스토리지 송수신을 허용한다. `MEDIA_STORAGE_ENDPOINT`가 localhost/Compose의 `minio` 이름이면 원격에서 접근할 수 없다. R2처럼 양쪽에서 접근 가능한 endpoint를 API에 설정하고 서명 URL의 hostname을 중간 프록시에서 바꾸지 않는다. 워커는 짧은 수명의 권한만 받는다.
 
-On the separate host copy `deploy/media/docker-compose.yml` as `docker-compose.yml`,
-`deploy/media/rollout.sh` and `deploy/media_rollout.py` preserving their relative
-`deploy/` paths, and only its filled `worker.env`. Pin the worker image independently.
-The first activation must pass the actual worker host's CPU/tooling + authenticated
-private API smoke before it is allowed to claim work:
+**VPS 설정:** 기존 `.env` 전체를 보존하되 아래 항목을 바꾼다. `worker.env`는 8.1 전체 예제에 아래 PC 변경분을 적용한 사본이다. VPS의 호환성 점검용 후보 이미지 pull/CPU 검사는 GPU 없이 실행된다.
 
-```bash
-cd /srv/postpilot-media
-chmod 600 worker.env
-docker compose --env-file worker.env pull media-worker
-docker compose --env-file worker.env run --rm --no-deps media-worker status
-MEDIA_WORKER_IMAGE_TAG='<worker-sha>' sh deploy/media/rollout.sh --bootstrap
-# Later updates/rollback/drain on this same host:
-MEDIA_WORKER_IMAGE_TAG='<worker-sha>' sh deploy/media/rollout.sh
-sh deploy/media/rollout.sh --rollback
-sh deploy/media/rollout.sh --drain
+```dotenv
+IMAGE_TAG=<api-sha>
+MEDIA_TOPOLOGY=remote
+MEDIA_WORKER_CREDENTIALS={"prod-gpu-remote-1":"<new-token>"}
+MEDIA_STORAGE_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
 ```
 
-The standalone rollout repeats that real-host status probe before downtime and then
-checks the running worker. Verify a disposable end-to-end render and object cleanup
-before switching live traffic. Turning off this PC makes media work wait/retry within
-its existing budgets; the API and web remain available. NVIDIA images/device setup
-and the three-environment matrix are completed by the GPU guide; production GPU
-activation remains gated by CLIP-163 and later real-hardware validation.
+**PC와 VPS의 `worker.env` 변경분:** 나머지는 8.1 그대로다. PC의 이미지 태그는 독립적으로 선택한다.
 
+```dotenv
+MEDIA_WORKER_IMAGE_TAG=<candidate-sha>
+MEDIA_WORKER_VARIANT=nvidia-candidate
+MEDIA_API_URL=https://<vps>.<tailnet>.ts.net:9443
+MEDIA_WORKER_ID=prod-gpu-remote-1
+MEDIA_WORKER_TOKEN=<new-token>
+MEDIA_ACCEL=cpu
+```
+
+**파일 배치:** PC에 `/srv/postpilot-media`를 만들고 `deploy/media/docker-compose.yml` → `docker-compose.yml`, `deploy/media/docker-compose.nvidia.yml` → `docker-compose.nvidia.yml`로 복사한다. `deploy/media/rollout.sh`, `deploy/media_rollout.py`, `deploy/media_preflight.py`는 저장소의 상대 경로를 유지한다. 그 디렉터리에는 PC의 `worker.env`만 둔다. GPU 진단 파일/fixture는 별도 디렉터리를 쓴다. 8.7의 드라이버/toolkit과 8.6의 용량 점검(`--api-extra-memory 0`)을 이 PC에서 완료한다.
+
+```bash
+# VPS: 로컬 워커를 멈춘 뒤 새 배치를 적용하고 API 상태 확인
+cd /srv/postpilot-prod
+IMAGE_TAG='<api-sha>' API_ORIGIN='https://<api-domain>' \
+  sh deploy/backend-rollout.sh --check
+IMAGE_TAG='<api-sha>' API_ORIGIN='https://<api-domain>' \
+  sh deploy/backend-rollout.sh
+remote_api() { docker compose --env-file .env --env-file worker.env \
+  -f docker-compose.prod.yml -f docker-compose.media.remote.yml "$@"; }
+remote_api ps
+remote_api logs --tail 80 api
+curl --fail 'https://<api-domain>/health'
+
+# PC: 첫 활성화. API와 연결되는 status는 아직 사용자 작업을 claim하지 않는다.
+cd /srv/postpilot-media
+chmod 600 worker.env
+remote_worker() { docker compose --env-file worker.env \
+  -f docker-compose.yml -f docker-compose.nvidia.yml "$@"; }
+remote_worker pull media-worker
+remote_worker run --rm --no-deps -T media-worker status
+MEDIA_WORKER_IMAGE_TAG='<candidate-sha>' sh deploy/media/rollout.sh --check --bootstrap
+MEDIA_WORKER_IMAGE_TAG='<candidate-sha>' sh deploy/media/rollout.sh --bootstrap
+remote_worker ps
+remote_worker logs --tail 80 media-worker
+remote_worker exec -T media-worker /media-worker health
+# 이후 PC에서 독립 업데이트 / 중지 / 롤백
+MEDIA_WORKER_IMAGE_TAG='<next-candidate-sha>' sh deploy/media/rollout.sh
+sh deploy/media/rollout.sh --drain
+sh deploy/media/rollout.sh --rollback
+```
+
+VPS 배포 controller가 같은 Compose 프로젝트의 이전 로컬 워커를 먼저 drain한다. 중지된 이전 컨테이너는 실행 중인 작업이 없는 것을 확인한 후에만 정리하며 `--remove-orphans`를 사용하지 않는다. PC의 `status`와 운영자 소유 테스트 프로젝트의 렌더/삭제를 확인한 뒤 전환을 완료한다. PC 업데이트가 검증되면 VPS `worker.env`에도 그 후보 SHA를 기록한다. API의 다음 배포는 PC의 켜짐 여부나 동시 릴리스를 요구하지 않는다.
+
+PC가 꺼지면 작업은 유한한 대기/재시도 예산(기본 대기 30분, 전체 stage 2시간, 최대 3회) 안에서 기다리거나 실패한다. API/웹은 계속 응답한다. CPU 보조 워커를 원하면 VPS에 **별도 Compose 프로젝트의 standalone CPU 워커**, 고유 ID/토큰, 비공개 HTTPS 주소와 충분한 자원을 명시적으로 배포하고 API에 그 ID를 허용해야 한다. 해당 작업의 프로필·렌더러·에셋 계약이 맞을 때만 받을 수 있다. 엄격한 GPU 작업을 CPU가 몰래 대신 처리하는 정책은 없다.
+
+<a id="media-recovery"></a>
+### 8.5 중지·롤백·버전 호환성
+
+VPS에서 다음 명령은 세 배치 모두 동일하다. PC의 워커 전용 명령은 8.4에 있다.
+
+```bash
+cd /srv/postpilot-prod
+API_ORIGIN='https://<api-domain>' sh deploy/backend-rollout.sh --drain
+API_ORIGIN='https://<api-domain>' sh deploy/backend-rollout.sh --rollback
+```
+
+SIGTERM은 새 claim을 중단한다. 기본 drain 30초 + 최종 보고/프로세스 회수 15초이며 `MEDIA_STOP_TIMEOUT`은 drain보다 최소 15초 길어야 한다. 끝내지 못한 lease는 API가 복구하며 결제된 모델 호출을 재실행하지 않는다. `--drain`은 중지 명령이며, 재개는 선택한 이미지의 정상 rollout을 다시 실행한다.
+
+controller는 protocol/renderer/assets/asset-input 해시, 실제 CPU 도구·폰트, private 인증을 확인한 뒤 교체한다. 실패 시 `.deploy/last-good`의 **이미지, env, Compose 파일**을 함께 복원하고 건강 상태를 다시 검사한다. 수동 `--rollback`은 `.deploy/previous`를 사용한다. 첫 기동에는 이전 지원 스냅샷이 없을 수 있다. CPU↔GPU 후보 전환도 스냅샷으로 되돌릴 수 있지만 원격 PC를 자동으로 켜거나 설정을 바꾸지는 않는다. `MEDIA_TOPOLOGY` 변경을 되돌릴 때 PC를 먼저 drain하여 중복 신원을 피한다.
+
+`.deploy`에는 토큰이 있으므로 비공개로 유지한다. 현재/직전 이미지와 컨테이너가 참조하는 이미지는 보존하며 API/CPU 워커/NVIDIA 후보 저장소의 오래된 미사용 태그만 정리한다. SQLite 마이그레이션은 forward-only다. `rollback-safe=1` 이전 API 부팅은 거부한다. 자동 롤백 자체도 실패하면 `.deploy` 스냅샷과 시작 로그로 복구한다.
+
+<a id="media-capacity"></a>
 ### 8.6 CPU 릴리스 검증과 실제 호스트 용량 점검
 
 현재 VPS는 **colocated CPU / 워커 1개 작업**이 기본이다. 로컬 테스트 통과는 현재 VPS의 여유 메모리 측정이나 배포 완료를 뜻하지 않는다. API에는 편집안 검증, 미리보기와 브라우저 자막 에셋용 FFmpeg/resvg/폰트가 계속 필요하다. 서버 영상의 준비·최종 렌더는 같은 서버에서도 전용 워커가 처리한다.
@@ -641,3 +694,100 @@ pnpm smoke:media-release
 `MEDIA_RELEASE_REPORT`와 `MEDIA_RESOURCE_REPORT`가 검증 범위, RPC 응답 시간, 준비·렌더·업로드 구간, 자원 사용량을 기록한다. OOM, 예산 초과, 시간 초과, 누락된 자원 보고는 실패다. 필요한 경우 `python3 scripts/media-release.py --help`의 명시적인 한도를 바꿔 더 큰 호스트용 결과를 별도로 남긴다.
 
 **나중에 운영자가 staging/VPS에서 실행할 선택적 smoke:** 저장소를 별도 체크아웃하고, 위 사전 점검 후 테스트 인프라와 이미지 빌드에 필요한 추가 용량까지 확보한 경우에만 `python3 scripts/media-release.py --layout colocated`를 실행한다. 운영 `.env`를 복사하거나 production Compose를 이 명령과 합치지 않는다. 도구는 매번 `postpilot-release-<random>` 컨테이너·네트워크·워커 볼륨과 일회용 MinIO `release` 버킷을 만들고, API의 SQLite/임시 원본은 해당 테스트 컨테이너에만 둔다. 제어 포트는 `127.0.0.1`의 임의 포트이고 내부 워커 포트는 테스트 네트워크의 9002다. `finally` 정리는 자신이 생성한 이름만 제거하며 기존 프로젝트·DB·원본·볼륨을 열지 않는다. 실행 중 호스트 자체가 종료되면 해당 실행의 이름과 `postpilot.disposable-media-release` 라벨을 확인해 그 일회용 리소스만 정리한다. 이번 작업에서는 실제 VPS에서 이 절차를 실행하지 않는다.
+
+<a id="media-gpu-diagnostics"></a>
+### 8.7 NVIDIA 1회성 설치와 격리 진단 — 나중에 GPU 호스트에서
+
+이 절차는 **GPU 가속의 운영 활성화가 아니다.** 후보는 최종 H.264 인코딩에 NVENC를 사용해 비교한다. CPU 합성, xfade/overlay, resvg 자막, 기존 중간 표현과 오디오 처리는 그대로 남는다. GPU 디코딩은 별도 짧은 probe이고 benchmark 입력 디코딩은 CPU다. `scale_cuda`는 CUDA 컴파일러를 포함하지 않은 이 이미지에서는 미검증/미포함이다.
+
+**호스트 준비(최초 1회):** [NVIDIA 지원 GPU/드라이버 안내](https://docs.nvidia.com/video-technologies/video-codec-sdk/13.1/ffmpeg-with-nvidia-gpu/index.html)를 통해 실제 모델의 H.264 NVENC 지원을 확인하고 배포판의 공식 방법으로 드라이버를 설치한다. 고정한 [nv-codec-headers n13.0.19.0](https://github.com/FFmpeg/nv-codec-headers/blob/n13.0.19.0/README)의 Linux 최소 드라이버는 **570.0**이다. 버전 숫자만 충족해도 장치 지원과 실제 실행은 별도로 확인해야 한다. 호스트에서 `nvidia-smi`가 먼저 성공해야 한다.
+
+Ubuntu/Debian 계열의 [공식 Container Toolkit 설치법](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)을 따른 예다(확인일 2026-09-25, 1.20.1-1). 다른 배포판에는 해당 문서의 패키지 관리 절차를 적용한다. Docker 재시작은 서비스에 영향을 주므로 운영자가 정한 설치 시간에 실행한다.
+
+```bash
+sudo apt-get update
+sudo apt-get install -y ca-certificates curl gnupg2
+curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
+  sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+  sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+  sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+sudo apt-get update
+NVIDIA_CONTAINER_TOOLKIT_VERSION=1.20.1-1
+sudo apt-get install -y \
+  nvidia-container-toolkit=${NVIDIA_CONTAINER_TOOLKIT_VERSION} \
+  nvidia-container-toolkit-base=${NVIDIA_CONTAINER_TOOLKIT_VERSION} \
+  libnvidia-container-tools=${NVIDIA_CONTAINER_TOOLKIT_VERSION} \
+  libnvidia-container1=${NVIDIA_CONTAINER_TOOLKIT_VERSION}
+sudo nvidia-ctk runtime configure --runtime=docker
+sudo systemctl restart docker
+nvidia-smi
+```
+
+후보 이미지는 glibc Debian bookworm 기반이다. 기존 정적 CPU 도구는 `/usr/local/bin`, 별도 FFmpeg NVENC 도구는 `/opt/nvidia/bin`에 둔다. Debian digest/날짜 고정 패키지 저장소, FFmpeg 9.0.1과 headers의 SHA-256, 빌드 설정·패키지 목록·소스·라이선스는 `backend/build/nvidia-tools.sh`와 이미지의 `/opt/nvidia/share`에 기록한다. CUDA SDK/NPP를 호스트에 설치하는 절차는 필요하지 않다. [NVIDIA 컨테이너 capability](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/docker-specialized.html)의 `compute,video,utility`로 드라이버 라이브러리를 주입하며, [Compose GPU 예약](https://docs.docker.com/compose/how-tos/gpu-support/)으로 GPU 1개를 명시한다. CPU 기본 Compose에는 GPU 예약이 없다.
+
+**같은 장비에서 합성 fixture 생성:** 운영 워커가 없는 별도 저장소 체크아웃에서 해당 candidate SHA로 빌드한다. 기존 출력 동일성 smoke와 같은 CPU 2개/1GiB 예산을 사용하며 30분 제한과 추가 빌드 디스크 여유가 필요하다. 다음 테스트 전용 이미지에는 fixture 테스트 바이너리가 있고, 실제 배포 후보에는 없다.
+
+```bash
+# GPU Linux 호스트의 별도 체크아웃에서 실행; 실제 운영 env를 가져오지 않는다.
+docker build -f backend/Dockerfile --target media-worker-nvidia-smoke \
+  -t postpilot-nvidia-diagnostic:local .
+sudo install -d -o 65532 -g 65532 /srv/postpilot-gpu-check
+# /srv/postpilot-gpu-check/fixtures는 아직 없어야 한다.
+docker run --rm --network none --cpus 2 --memory 1g --memory-swap 1g \
+  --mount type=bind,src=/srv/postpilot-gpu-check,dst=/reports \
+  -e CLIP_DIAGNOSTIC_FIXTURES=/reports/fixtures \
+  --entrypoint /media.test postpilot-nvidia-diagnostic:local \
+  '-test.run=^TestWorkerExecutionParity$' -test.v -test.timeout=30m
+sudo install -d -o 65532 -g 65532 /srv/postpilot-gpu-check/reports
+sudo cp deploy/media/docker-compose.diagnostics.yml /srv/postpilot-gpu-check/
+# 이 파일에는 태그만 넣는다. worker.env/API .env를 사용하지 않는다.
+printf 'MEDIA_WORKER_IMAGE_TAG=%s\n' '<candidate-sha>' | \
+  sudo tee /srv/postpilot-gpu-check/diagnostic.env
+```
+
+fixture는 세 비율의 움직임·전환·원본 오디오·프레임별 자막을 담은 합성 MP4 네 개와 `manifest.json`이다. 직접 CPU 렌더와 워커 출력의 바이트/프레임 동일성을 확인하면서 내보낸다. manifest의 `CPUCompositionAndEncodeMS`는 fixture 생성 때의 합성+CPU 인코딩 시간이며 별도 재인코딩 시간과 합산해 운영 속도 향상으로 해석하지 않는다.
+
+**오프라인 장치/인코더 확인 및 비교:** 다음 컨테이너는 `network_mode: none`, API credential 없음, 입력 read-only, 별도 report 폴더, CPU 1개/메모리 1GiB/swap 없음으로 실행한다. 프로세스당 최대 3분, 전체 15분, 최대 fixture 6개/파일 128MiB/영상 90초/1080p 면적, 결과 MP4 각 128MiB 한도다. 한도가 부족하면 진단이 실패하며 운영 설정을 자동 변경하지 않는다. report/fixture를 위한 여유 디스크 4GiB 이상을 남긴다. 결과 디렉터리는 매번 새 이름이어야 한다.
+
+```bash
+cd /srv/postpilot-gpu-check
+diag() { docker compose --env-file diagnostic.env \
+  -f docker-compose.diagnostics.yml "$@"; }
+diag config --quiet
+diag pull diagnostic
+# 컨테이너 내부 장치 주입 확인
+# nvidia-smi의 성공과 실제 NVENC encode 성공을 모두 확인해야 한다.
+diag run --rm --entrypoint nvidia-smi diagnostic
+diag run --rm diagnostic gpu-probe --output /reports/probe-01
+diag run --rm diagnostic benchmark \
+  --manifest /fixtures/manifest.json --output /reports/compare-01
+sudo cat reports/probe-01/report.json
+sudo cat reports/compare-01/report.json
+```
+
+`gpu-probe`는 device/UUID/driver/VRAM 관찰값, 실제 NVENC 3프레임 인코딩, 별도 CUVID 디코딩 결과를 기록한다. 장치/인코더가 없으면 JSON 실패 보고서를 남기고 exit 1이다. Compose가 GPU 장치를 예약하지 못해 프로세스 자체가 시작하지 않으면 보고서는 생기지 않으므로 먼저 Docker/드라이버 설정을 확인한다. CUVID 실패는 독립 결과이며 NVENC 지원과 혼동하지 않는다.
+
+**GPU 없는 개발 장비의 검사:** 위 GPU Compose 대신 아래처럼 장치 옵션 없이 candidate smoke를 실행한다. 첫 명령은 CPU 실행/잘못된 옵션/보고서 덮어쓰기 거부/장치 누락의 실패 보고를 테스트한다. 두 번째는 이미 생성한 fixture를 CPU만 재인코딩한다. `/reports/cpu-01`은 아직 없어야 한다.
+
+```bash
+docker run --rm --network none --cpus 1 --memory 512m --memory-swap 512m \
+  postpilot-nvidia-diagnostic:local
+docker run --rm --network none --cpus 1 --memory 1g --memory-swap 1g \
+  --mount type=bind,src=/srv/postpilot-gpu-check/fixtures,dst=/fixtures,readonly \
+  --mount type=bind,src=/srv/postpilot-gpu-check/reports,dst=/reports \
+  --entrypoint /media-worker postpilot-nvidia-diagnostic:local \
+  benchmark --cpu-only --manifest /fixtures/manifest.json --output /reports/cpu-01
+```
+
+`report.json`은 profile/실행 범위, OS/아키텍처, CPU 도구·폰트·에셋 해시, NVIDIA FFmpeg 버전/해시, 장치/드라이버, 정확한 인코더 인자, 입력 해시, CPU/GPU 인코딩 ms, 파일 크기/해시, ffprobe 스트림/시간 정보, 8개 시점 PNG 해시·평균 RGB 절대 차이, 디코딩한 오디오 동일 여부, cgroup CPU/메모리 상한·피크, 남긴 파일 총 바이트를 담는다. PNG/MP4/WAV도 비교용으로 남는다. VRAM은 probe 시점 관찰값이며 peak 측정이 아니다. 메모리 peak는 해당 컨테이너 전체, 파일 바이트는 report.json을 쓰기 직전 산출 파일의 합계다. cgroup 지표가 없는 호스트에서는 빠진 값을 미측정으로 간주하고, 실제 승인용 측정은 cgroup v2 지표가 제공되는 환경에서 수행한다.
+
+CPU는 x264 `veryfast/CRF 20`, GPU 후보는 NVENC `p4/hq/vbr/CQ 20/b:v 0`이다. **CRF 20과 CQ 20은 같은 품질이라는 뜻이 아니다.** 이미 CPU로 합성·인코딩한 MP4를 각각 다시 인코딩하므로 이 비교는 최종 인코더 차이를 보는 진단이며, 무손실 master 기반 비교나 전체 렌더 성능 검증을 대신하지 않는다. 오디오는 이미 검증된 fixture의 AAC를 copy하고 decoded PCM/스트림 길이로 변화 여부를 확인한다.
+
+같은 GPU 장비·이미지·fixture 해시·자원 한도로 반복하고, 자막 테두리/움직임/전환 구간을 직접 확대 비교하며 오디오와 A/V 타이밍을 확인한다. 임의의 perceptual 합격 수치나 속도 향상률을 코드에 넣지 않았다. 이후 CLIP-163 단계에서 무손실 입력과 실제 전체 파이프라인, 품질 기준, GPU 장애 처리까지 검증·승인하고 production 프로필을 구현해야 `auto`가 GPU를 선택할 수 있다. 모든 진단의 `ProductionApproved`는 항상 `false`다.
+
+### 8.8 이번 검증 범위와 이후 운영 작업
+
+2026-09-25 Linux/arm64 CPU 컨테이너에서 후보 이미지 빌드, CPU 실제 encode/decode와 오프라인 실행, 장치 누락 실패 보고, 세 배치의 Compose 렌더링/롤백 계약을 검증했다. 세 비율 합성 fixture 네 개를 후보 이미지의 CPU 경로로 내보내고 기존 워커/직접 렌더의 파일 해시와 각 16개 프레임이 일치하는 것을 확인했다(636.98초, 테스트 컨테이너 CPU 2개/1GiB, 관찰 메모리 peak 약 690.9MiB, OOM 0). 같은 복잡한 fixture의 512MiB/1CPU 시도에서는 최종 인코더가 process_signal로 종료되어 그 조건을 통과한 것으로 기록하지 않았다. 이는 8.6의 작은 분리 프로세스 fixture와 다른 부하이며, 512MiB를 모든 입력에 충분한 운영 용량으로 해석하지 않는다. **실제 NVIDIA 장치의 encode/decode, GPU 시간/화질/VRAM, Linux/amd64 GPU 하드웨어 동작은 미검증이다.** CI의 수동 후보 게시도 하드웨어 검증으로 간주하지 않는다.
+
+현재 VPS 재배포, 친구 PC 접근, 드라이버/Tailscale 설치, 실물 GPU benchmark와 실제 워커 이동은 이번 저장소 작업에서 실행하지 않았다. 나중에 운영자가 이 문서의 해당 환경 절차를 실행한다. 최초 설치가 완료된 호스트 사이의 배치 변경은 env·게시 이미지·Compose 선택으로 처리하며, 다른 OS/장치의 설치 요구를 env만으로 해결하지 않는다.

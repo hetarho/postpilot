@@ -53,6 +53,33 @@ class MediaComposeTest(unittest.TestCase):
                         self.assertEqual(w['memswap_limit'], w['mem_limit'])
                         self.assertEqual(w['stop_grace_period'], '45s')
 
+    def test_explicit_candidate_overrides_and_offline_diagnostics(self):
+        gpu = ROOT / 'deploy/media/docker-compose.nvidia.yml'
+        self.assertEqual(gpu.read_text(), (ROOT / 'docker-compose.media.nvidia.yml').read_text())
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for name in ['docker-compose.prod.yml', 'docker-compose.media.colocated.yml', 'docker-compose.media.nvidia.yml']:
+                shutil.copy2(ROOT / name, root / name)
+            for name in ['docker-compose.yml', 'docker-compose.nvidia.yml', 'docker-compose.diagnostics.yml']:
+                shutil.copy2(ROOT / 'deploy/media' / name, root / name)
+            (root / '.env').write_text('IMAGE_TAG=' + '1'*40 + '\nAPI_UPSTREAM=fixture\n')
+            (root / 'worker.env').write_text('MEDIA_WORKER_IMAGE_TAG='+'2'*40+'\nMEDIA_ACCEL=cpu\nMEDIA_WORKER_TOKEN=fixture-secret\n')
+            for files in [['docker-compose.prod.yml', 'docker-compose.media.colocated.yml', 'docker-compose.media.nvidia.yml'], ['docker-compose.yml', 'docker-compose.nvidia.yml'], ['docker-compose.diagnostics.yml']]:
+                args=['docker','compose','--env-file','.env','--env-file','worker.env']
+                for name in files: args += ['-f',name]
+                cfg=json.loads(subprocess.check_output(args+['config','--format','json'],cwd=root,text=True))
+                service='diagnostic' if len(files)==1 else 'media-worker'
+                w=cfg['services'][service]
+                self.assertIn('postpilot-media-worker-nvidia:',w['image'])
+                devices=w['deploy']['resources']['reservations']['devices']
+                self.assertEqual(devices,[{'driver':'nvidia','count':1,'capabilities':['gpu']}])
+                self.assertEqual(w['environment']['NVIDIA_DRIVER_CAPABILITIES'],'compute,video,utility')
+                if service=='diagnostic':
+                    self.assertEqual(w['network_mode'],'none')
+                    self.assertTrue(w['read_only'])
+                    self.assertNotIn('MEDIA_WORKER_TOKEN',w['environment'])
+                    self.assertNotIn('MEDIA_API_URL',w['environment'])
+
     def test_public_edge_routes_only_to_api_port(self):
         for file in (ROOT / 'deploy/edge/conf.d').glob('postpilot*.caddy*'):
             source = file.read_text()

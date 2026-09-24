@@ -22,6 +22,7 @@ from urllib.parse import urlsplit
 
 API_IMAGE = 'ghcr.io/hetarho/postpilot-api'
 WORKER_IMAGE = 'ghcr.io/hetarho/postpilot-media-worker'
+NVIDIA_IMAGE = 'ghcr.io/hetarho/postpilot-media-worker-nvidia'
 LABEL = 'org.postpilot.media.'
 CONTRACT_LABELS = ('protocol', 'renderer', 'assets', 'asset-input-sha256')
 TOOLS = {'CLIP_WORK_ROOT', 'CLIP_WORK_STALE_AGE', 'CLIP_MEDIA_TIMEOUT',
@@ -29,7 +30,7 @@ TOOLS = {'CLIP_WORK_ROOT', 'CLIP_WORK_STALE_AGE', 'CLIP_MEDIA_TIMEOUT',
          'CLIP_FONT_PATH', 'CLIP_FONT_PAPERLOGY_PATH', 'CLIP_FONT_JUA_PATH',
          'CLIP_FONT_NANUM_MYEONGJO_PATH', 'CLIP_FONT_NANUM_MYEONGJO_BOLD_PATH',
          'CLIP_ENCODE_THREADS', 'CLIP_DECODE_THREADS'}
-WORKER_KEYS = TOOLS | {'MEDIA_WORKER_IMAGE_TAG', 'MEDIA_API_URL', 'MEDIA_WORKER_ID',
+WORKER_KEYS = TOOLS | {'MEDIA_WORKER_VARIANT', 'MEDIA_WORKER_IMAGE_TAG', 'MEDIA_API_URL', 'MEDIA_WORKER_ID',
     'MEDIA_WORKER_TOKEN', 'MEDIA_ACCEL', 'MEDIA_WORKER_CONCURRENCY', 'MEDIA_WORKER_CPUS',
     'MEDIA_WORKER_MEMORY', 'MEDIA_DRAIN_TIMEOUT', 'MEDIA_STOP_TIMEOUT'}
 
@@ -90,7 +91,7 @@ class Stack:
         keys = set().union(*(env_keys(Path(p)) for p in self.env_files))
         self.environment = {k: v for k, v in os.environ.items()
                             if k not in keys | {'IMAGE_TAG', 'MEDIA_WORKER_IMAGE_TAG', 'MEDIA_TOPOLOGY',
-                                               'COMPOSE_FILE', 'COMPOSE_PROFILES', 'COMPOSE_ENV_FILES'}}
+                                               'MEDIA_WORKER_VARIANT', 'COMPOSE_FILE', 'COMPOSE_PROFILES', 'COMPOSE_ENV_FILES'}}
         self.prefix = ['docker', 'compose']
         for name in self.env_files:
             self.prefix += ['--env-file', name]
@@ -103,10 +104,15 @@ class Stack:
             if self.topology not in ('colocated', 'remote'):
                 raise RolloutError('MEDIA_TOPOLOGY must be colocated or remote')
             self.files.append(f'docker-compose.media.{self.topology}.yml')
+        self.variant = self.worker_values.get('MEDIA_WORKER_VARIANT', 'cpu')
+        if self.variant not in ('cpu', 'nvidia-candidate'):
+            raise RolloutError('MEDIA_WORKER_VARIANT must be cpu or nvidia-candidate')
+        if self.variant == 'nvidia-candidate' and self.topology != 'remote':
+            self.files.append('docker-compose.media.nvidia.yml' if role == 'api' else 'docker-compose.nvidia.yml')
         self.config = json.loads(self.compose('config', '--format', 'json', capture=True))
         self.project = self.config['name']
         self.services = ['api', 'media-worker'] if self.topology == 'colocated' else ['api' if role == 'api' else 'media-worker']
-        self.worker_image = WORKER_IMAGE + ':' + immutable_tag(self.worker_values.get('MEDIA_WORKER_IMAGE_TAG'))
+        self.worker_image = (NVIDIA_IMAGE if self.variant == 'nvidia-candidate' else WORKER_IMAGE) + ':' + immutable_tag(self.worker_values.get('MEDIA_WORKER_IMAGE_TAG'))
         self.api_image = None
         if role == 'api':
             self.api_image = API_IMAGE + ':' + immutable_tag(self.values.get('IMAGE_TAG'))
@@ -288,7 +294,8 @@ def saved_snapshot(directory):
         return None
     names = json.loads((directory / 'files.json').read_text())
     allowed = {'.env', 'worker.env', 'docker-compose.yml', 'docker-compose.prod.yml',
-               'docker-compose.media.colocated.yml', 'docker-compose.media.remote.yml'}
+               'docker-compose.media.colocated.yml', 'docker-compose.media.remote.yml',
+               'docker-compose.media.nvidia.yml', 'docker-compose.nvidia.yml'}
     if not set(names) <= allowed:
         raise RolloutError('invalid deployment snapshot')
     return {name: (directory / name).read_bytes() for name in names}
@@ -338,7 +345,7 @@ def prune_images(protected):
     # Retain every container's selected ref, including another Postpilot stack.
     protected = protected | set(command(['docker', 'ps', '-a', '--format', '{{.Image}}'], capture=True).splitlines())
     cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
-    for repository in sorted(repositories & {API_IMAGE, WORKER_IMAGE}):
+    for repository in sorted(repositories & {API_IMAGE, WORKER_IMAGE, NVIDIA_IMAGE}):
         rows = command(['docker', 'image', 'ls', '--filter', f'reference={repository}', '--format', '{{json .}}'], capture=True)
         for row in rows.splitlines():
             item = json.loads(row)
@@ -374,12 +381,12 @@ def rollout(args):
             restore(target)
         else:
             api_tag = immutable_tag(os.environ.get('IMAGE_TAG')) if args.role == 'api' else None
-            worker_tag = immutable_tag(os.environ.get('MEDIA_WORKER_IMAGE_TAG')) if args.role == 'worker' or stack.topology == 'colocated' else None
+            worker_tag = immutable_tag(os.environ.get('MEDIA_WORKER_IMAGE_TAG')) if args.role == 'worker' or (stack.topology == 'colocated' and stack.variant == 'cpu') else None
             if api_tag:
                 set_tag(Path('.env'), 'IMAGE_TAG', api_tag)
             if worker_tag:
                 set_tag(Path('worker.env'), 'MEDIA_WORKER_IMAGE_TAG', worker_tag)
-            # Remote API rollout preserves the executor's independently chosen pin.
+            # Remote and NVIDIA executors retain independently published/selected pins.
         stack = Stack(args.role)
         stack.compose('pull', *stack.services)
         if stack.topology == 'remote':

@@ -65,14 +65,15 @@
 | T372 | The test harness pins what it claims, and template limits have one constructor | ARCH | T354 T355 T359 T369 T371 | todo |
 | T373 | Entity boundaries for 분야 and post status | ARCH | T356 T367 | todo |
 | T375 | The editor's per-control cases live in the tests of the slices that own them | ARCH | T368 | todo |
-| T388 | GPU setup tooling and guides cover all three deployment environments | ARCH CLIP | T387 | todo |
 
 ## next
-- implement-task T388 next for the media-worker wave (T376..T387 are done; T388 completes the three-environment README/DEPLOY guides and isolated NVIDIA setup diagnostics; no live migration)
+- The media-worker wave T376..T388 is complete; CPU separation, both layouts and three-environment guides/isolated NVIDIA diagnostics are committed per task; no live migration
 - Later: update-ssot CLIP-163, then create-task ARCH CLIP for real-GPU validation, profile approval/automatic selection and concurrency tuning; ARCH r11 and CLIP r44 remain partially consumed, and physical host setup/migration remain operator actions
 - implement-task T355 (continuing T354..T375 in dependency order, p42); create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 
 ## log
+- 260925 T388 done (mw): three-environment guides, pinned NVIDIA candidate, explicit overrides/rollback and isolated diagnostics; CPU image/fixture parity, benchmark, 37 deploy tests and CI gates pass; real GPU activation remains unverified and pending
+- 260925 T388 claimed (mw); T387 committed as ac3953ae; three-environment guides, NVIDIA candidate packaging and isolated diagnostics only; production GPU activation remains gated
 - 260925 T387 done (mw): CPU worker-only production dispatch, separate-process colocated/remote release and capacity preflight; parity, restart/reclaim/cancel/cleanup, API image, 28 release cases and all CI gates pass; T388 next
 - 260925 T387 claimed (mw); T386 committed as 4de3ce80; separate-process CPU release fixtures, capacity preflight and production worker-only dispatch
 - 260925 T386 done (mw): explicit private CPU/remote layouts, independent image pins, drain and version-aware env/config rollback; fixture failures, real image contracts and all CI gates pass; T387 next
@@ -91,5 +92,3 @@
 - 260925 T371 claimed (p42)
 - 260925 T380 done (mw): standalone CPU execution, bounded transfers/leases/drain and measured runtime profiles; byte/frame parity including sequence captions, Linux reaping, health and isolated CI pass; T381 next
 - 260925 T380 claimed (mw); T379 committed as fa6d9517; standalone CPU executor only
-- 260925 T374 done; an ask conflict a 블록 composition raised is lowered when it unmounts, so 원문 saves a source that parses; FE gates pass (p42)
-- 260925 T374 claimed (p42)

@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/clip/diagnostic"
 	"github.com/postpilot/backend/internal/clip/media"
 	"github.com/postpilot/backend/internal/clip/worker"
 	"github.com/postpilot/backend/internal/clip/workerclient"
@@ -35,8 +36,17 @@ func run() error {
 	if len(os.Args) > 1 {
 		command = os.Args[1]
 	}
+	if command == "gpu-probe" || command == "benchmark" {
+		cfg, err := config.LoadWorkerRuntime()
+		if err != nil {
+			return err
+		}
+		ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+		defer stop()
+		return diagnostic.Run(ctx, command, os.Args[2:], environment(cfg))
+	}
 	if len(os.Args) > 2 || (command != "run" && command != "health" && command != "status" && command != "manifest") {
-		return errors.New("usage: media-worker [run|health|status|manifest]")
+		return errors.New("usage: media-worker [run|health|status|manifest] | gpu-probe --output NEW_DIR | benchmark --manifest FILE --output NEW_DIR [--cpu-only]")
 	}
 	load := config.LoadWorkerConfig
 	if command == "manifest" {

@@ -1,0 +1,43 @@
+name: NVIDIA candidate image (diagnostics only)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  packages: write
+jobs:
+  candidate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Candidate CPU and missing-device gate
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: backend/Dockerfile
+          target: media-worker-nvidia-smoke
+          load: true
+          tags: postpilot-nvidia-smoke:ci
+          cache-from: type=gha,scope=nvidia-candidate
+          cache-to: type=gha,mode=max,scope=nvidia-candidate
+      - run: |
+          docker run --rm --network none --cpus 1 --memory 512m --memory-swap 512m postpilot-nvidia-smoke:ci
+          docker run --rm --network none --cpus 1 --memory 512m --memory-swap 512m --entrypoint /media.test postpilot-nvidia-smoke:ci -test.run='^Test(WorkerCommandHealth|WorkerImageIsolation)$' -test.v
+      - name: Publish candidate independently of CPU deployment
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: backend/Dockerfile
+          target: media-worker-nvidia-candidate
+          push: true
+          platforms: linux/amd64
+          tags: ghcr.io/hetarho/postpilot-media-worker-nvidia:${{ github.sha }}
+          build-args: SOURCE_REVISION=${{ github.sha }}
+          cache-from: type=gha,scope=nvidia-candidate
+          provenance: true
+          sbom: true
