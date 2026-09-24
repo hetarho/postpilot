@@ -20,7 +20,7 @@
 | ARCH | 9 | 9 | - | 0 |
 | AUTH | 8 | 8 | - | 0 |
 | QUOTA | 19 | 19 | - | 0 |
-| POST | 12 | 11 | POST-20✎ POST-77✎ POST-79✎ POST-88+ | 0 |
+| POST | 13 | 11 | POST-77✎ POST-79✎ | 0 |
 | VOICE | 3 | 3 | - | 1 |
 | GEN | 11 | 10 | GEN-14✎ GEN-18✎ GEN-51✎ GEN-53✎ | 0 |
 | MODEL | 17 | 16 | MODEL-30✎ | 0 |
@@ -57,6 +57,8 @@
 - create-task review/published-quality-260924 + POST MEM MODEL QUAL GUIDE GEN TMPL THEME (this wave's deltas only; P1 F1 F2 F4 F18 first)
 - create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 ## log
+- 260924 POST r13: POST-88 removed and POST-20 back to its r11 text — an options save's presence rules are a request contract for the F4 task's impl notes, not product behavior
+- 260924 create-task review/published-quality-260924 + POST MEM MODEL QUAL GUIDE GEN TMPL THEME start (this wave's deltas only)
 - 260924 update-ssot done: POST r12 (POST-20✎ POST-77✎ POST-79✎ POST-88+ options saves are partial, a taken candidate is spent), MEM r2 MEM-19✎ + MODEL r17 MODEL-30✎ + GEN-18✎ a write comparison freezes 기억, GEN-14✎ GEN-51✎ ticked rules move to the per-post half, GEN-53✎, TMPL r11 TMPL-51✎ the title form binds only a title request in revise, GUIDE r6 GUIDE-40+ QUAL r4 QUAL-41✎ QUAL-46+, THEME r18 THEME-42+; no doing task affected
 - 260924 update-ssot POST MEM MODEL QUAL GUIDE GEN TMPL THEME start (review/published-quality-260924 notes)
 - 260924 review-code published-quality-260924 ready; 29 findings adopted: 4 P1 (F1 durable generate drops the native-effort flag since 260905, F2 its six hand-copied hops, F4 target length lost or split by mixed presence, F18 InlinePopover Tab), 8 P2, 17 P3; gates green
@@ -75,5 +77,3 @@
 - 260924 T349 claimed (p35)
 - 260924 T348 done; `pnpm dev --seed` shows the quality surfaces with no Naver keys: pro and master publish 2 and 11 posts at valid Naver addresses (master meeting every minimum), every generated post stores nouns its text contains, pro's and master's posts carry 일상·생각 with three candidates on each review post, master's first draft uses the 하루 기록 title-area template, and the daily_life phrase list is written only when absent and survives every seed; BE gate passes (p35)
 - 260924 T348 claimed (p35)
-- 260924 T347 done; the shared scope control offers 전역, 특정 템플릿 and 특정 분야 with the nine 분야 as a catalogue-order checkbox list (새 지침, 승인 and the whole-scope edit), each kind clearing the other's set; a 분야 create or rescope sends kind and both sets in one shape, a 분야 guideline badges one chip per 분야, the list keeps the server's three groups, a refusal keeps the draft, and an unreadable scope fails the read; FE gates pass (p35)
-- 260924 T347 claimed (p35)
