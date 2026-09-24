@@ -38,6 +38,7 @@ type Bucket struct {
 	ops s3API
 	// presign only ever builds URLs — it never dials anything.
 	presign      *s3.PresignClient
+	mediaPresign *s3.PresignClient
 	name         string
 	maxReadBytes int64
 }
@@ -53,6 +54,7 @@ type s3API interface {
 type Config struct {
 	Endpoint        string
 	PublicEndpoint  string
+	MediaEndpoint   string
 	AccessKeyID     string
 	SecretAccessKey string
 	Bucket          string
@@ -78,9 +80,18 @@ func New(ctx context.Context, cfg Config) (*Bucket, error) {
 	if err != nil {
 		return nil, err
 	}
+	mediaEndpoint := cfg.MediaEndpoint
+	if mediaEndpoint == "" {
+		mediaEndpoint = cfg.Endpoint
+	}
+	mediaSigner, err := newClient(ctx, cfg, mediaEndpoint)
+	if err != nil {
+		return nil, err
+	}
 
 	return &Bucket{
 		ops: ops, presign: s3.NewPresignClient(signer), name: cfg.Bucket,
+		mediaPresign: s3.NewPresignClient(mediaSigner),
 		maxReadBytes: cfg.MaxReadBytes,
 	}, nil
 }

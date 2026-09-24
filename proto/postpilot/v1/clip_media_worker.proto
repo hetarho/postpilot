@@ -65,11 +65,26 @@ message MediaArtifactAccess {
   string content_type = 3;
   int64 max_bytes = 4;
   int64 expires_after_ms = 5;
+  map<string, string> headers = 6;
 }
 message GetMediaArtifactAccessResponse { MediaArtifactAccess access = 1; }
 message ReserveMediaOutputsRequest {
   MediaLeaseCredentials lease = 1;
-  repeated string slots = 2;
+  reserved 2;
+  reserved "slots";
+  repeated MediaOutputMetadata outputs = 3;
+}
+message MediaOutputMetadata {
+  string slot = 1;
+  string source_id = 2;
+  int32 ordinal = 3;
+  int32 offset_ms = 4;
+  int32 duration_ms = 5;
+  int64 bytes = 6;
+  string content_type = 7;
+  string sha256 = 8;
+  // Bounded MediaInfo in the owning stage's versioned domain codec.
+  string media_info_json = 9;
 }
 message ReserveMediaOutputsResponse { repeated MediaArtifactAccess outputs = 1; }
 message CompleteMediaStageRequest {

@@ -11,6 +11,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/clip/mediacodec"
 	pb "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
 )
@@ -25,6 +26,8 @@ type MediaWorkerService interface {
 	Complete(context.Context, clip.MediaLeaseCredentials, string) error
 	Fail(context.Context, clip.MediaLeaseCredentials, clip.MediaFailure) error
 	Status(context.Context, string) (clip.MediaRuntimeStatus, error)
+	Read(context.Context, clip.MediaLeaseCredentials, string) (clip.MediaArtifactAccess, error)
+	Reserve(context.Context, clip.MediaLeaseCredentials, []clip.MediaOutput) ([]clip.MediaArtifactAccess, error)
 }
 
 type MediaWorkerHandler struct{ service MediaWorkerService }
@@ -84,8 +87,10 @@ func mediaWorkerError(err error) error {
 	}
 	code, message := connect.CodeInternal, "media operation failed"
 	switch {
-	case errors.Is(err, clip.ErrInvalid):
+	case errors.Is(err, clip.ErrInvalid), errors.Is(err, clip.ErrInvalidMedia), errors.Is(err, clip.ErrAnalysisTooLarge):
 		code, message = connect.CodeInvalidArgument, "invalid media request"
+	case errors.Is(err, clip.ErrSourceState), errors.Is(err, clip.ErrNotFound):
+		code, message = connect.CodeNotFound, "media input unavailable"
 	case errors.Is(err, clip.ErrMediaIncompatible):
 		code, message = connect.CodeFailedPrecondition, "incompatible media runtime"
 	case errors.Is(err, clip.ErrMediaLeaseLost):
@@ -172,9 +177,43 @@ func (h *MediaWorkerHandler) GetMediaRuntimeStatus(ctx context.Context, _ *conne
 	}
 	return connect.NewResponse(&pb.GetMediaRuntimeStatusResponse{ContractVersion: clip.MediaContractVersion, RendererVersion: clip.MediaRendererVersion, AssetVersion: clip.MediaAssetVersion, Profiles: []string{clip.MediaCPUProfile}, Waiting: status.Waiting, Active: status.Active, OwnActive: status.OwnActive, Ready: true}), nil
 }
-func (h *MediaWorkerHandler) GetMediaArtifactAccess(context.Context, *connect.Request[pb.GetMediaArtifactAccessRequest]) (*connect.Response[pb.GetMediaArtifactAccessResponse], error) {
-	return nil, mediaWorkerError(clip.ErrMediaUnsupported)
+func (h *MediaWorkerHandler) GetMediaArtifactAccess(ctx context.Context, r *connect.Request[pb.GetMediaArtifactAccessRequest]) (*connect.Response[pb.GetMediaArtifactAccessResponse], error) {
+	lease, err := workerLease(ctx, r.Msg.Lease)
+	if err != nil {
+		return nil, err
+	}
+	out, err := h.service.Read(ctx, lease, r.Msg.Slot)
+	if err != nil {
+		return nil, mediaWorkerError(err)
+	}
+	return connect.NewResponse(&pb.GetMediaArtifactAccessResponse{Access: mediaAccessMessage(out)}), nil
 }
-func (h *MediaWorkerHandler) ReserveMediaOutputs(context.Context, *connect.Request[pb.ReserveMediaOutputsRequest]) (*connect.Response[pb.ReserveMediaOutputsResponse], error) {
-	return nil, mediaWorkerError(clip.ErrMediaUnsupported)
+func (h *MediaWorkerHandler) ReserveMediaOutputs(ctx context.Context, r *connect.Request[pb.ReserveMediaOutputsRequest]) (*connect.Response[pb.ReserveMediaOutputsResponse], error) {
+	lease, err := workerLease(ctx, r.Msg.Lease)
+	if err != nil {
+		return nil, err
+	}
+	outputs := make([]clip.MediaOutput, 0, len(r.Msg.Outputs))
+	for _, o := range r.Msg.Outputs {
+		if o == nil {
+			return nil, mediaWorkerError(clip.ErrInvalid)
+		}
+		info, err := mediacodec.DecodeInfo(o.MediaInfoJson)
+		if err != nil {
+			return nil, mediaWorkerError(err)
+		}
+		outputs = append(outputs, clip.MediaOutput{Slot: o.Slot, SourceID: o.SourceId, Index: int(o.Ordinal), OffsetMS: int(o.OffsetMs), DurationMS: int(o.DurationMs), Bytes: o.Bytes, ContentType: o.ContentType, Digest: o.Sha256, Info: info})
+	}
+	access, err := h.service.Reserve(ctx, lease, outputs)
+	if err != nil {
+		return nil, mediaWorkerError(err)
+	}
+	out := &pb.ReserveMediaOutputsResponse{}
+	for _, a := range access {
+		out.Outputs = append(out.Outputs, mediaAccessMessage(a))
+	}
+	return connect.NewResponse(out), nil
+}
+func mediaAccessMessage(a clip.MediaArtifactAccess) *pb.MediaArtifactAccess {
+	return &pb.MediaArtifactAccess{Slot: a.Slot, Url: a.URL, ContentType: a.ContentType, MaxBytes: a.Bytes, ExpiresAfterMs: a.ExpiresAfter.Milliseconds(), Headers: a.Headers}
 }

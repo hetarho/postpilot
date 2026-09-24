@@ -65,3 +65,22 @@ func TestMediaWorkerConfigNeedsOnlyItsOwnCredentials(t *testing.T) {
 		}
 	}
 }
+
+func TestMediaStorageEndpointIsIndependentAndDefaultsToAPIEndpoint(t *testing.T) {
+	t.Setenv("R2_ENDPOINT", "http://api-storage:9000")
+	t.Setenv("R2_PUBLIC_ENDPOINT", "http://browser-storage:9000")
+	t.Setenv("MEDIA_STORAGE_ENDPOINT", "")
+	c, err := Load()
+	if err != nil || c.MediaStorageEndpoint != "http://api-storage:9000" {
+		t.Fatal("worker endpoint default", err)
+	}
+	t.Setenv("MEDIA_STORAGE_ENDPOINT", "http://worker-storage:9000")
+	c, err = Load()
+	if err != nil || c.MediaStorageEndpoint != "http://worker-storage:9000" || c.R2PublicEndpoint != "http://browser-storage:9000" {
+		t.Fatal("worker/browser endpoints coupled", err)
+	}
+	t.Setenv("MEDIA_STORAGE_ENDPOINT", "file:///tmp/objects")
+	if _, err := Load(); err == nil {
+		t.Fatal("invalid worker storage origin accepted")
+	}
+}

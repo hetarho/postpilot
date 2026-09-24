@@ -1,6 +1,7 @@
 package store_test
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -14,9 +15,24 @@ import (
 	"github.com/postpilot/backend/internal/clip/workerclient"
 )
 
+// These tests isolate the transport/lease receipt contract. Artifact admission
+// and verification are covered separately by the complete artifact saga tests.
+type protocolArtifacts struct{ queue *clipapp.MediaStages }
+
+func (p protocolArtifacts) Complete(ctx context.Context, a clip.MediaLeaseCredentials, result string) error {
+	_, err := p.queue.Complete(ctx, a, result)
+	return err
+}
+func (protocolArtifacts) Read(context.Context, clip.MediaLeaseCredentials, string) (clip.MediaArtifactAccess, error) {
+	return clip.MediaArtifactAccess{}, clip.ErrMediaUnsupported
+}
+func (protocolArtifacts) Reserve(context.Context, clip.MediaLeaseCredentials, []clip.MediaOutput) ([]clip.MediaArtifactAccess, error) {
+	return nil, clip.ErrMediaUnsupported
+}
+
 func TestMediaWorkerHTTPContractAndFencedReceipts(t *testing.T) {
 	q, st, in, now, _ := mediaFixture(t, clip.DefaultMediaStageLimits(clip.Environment{}))
-	api := httptest.NewServer(cliprpc.NewMediaWorkerServer("", map[string]string{"prod-one": "one", "prod-two": "two"}, clipapp.NewMediaWorker(st, func() time.Time { return *now })).Handler)
+	api := httptest.NewServer(cliprpc.NewMediaWorkerServer("", map[string]string{"prod-one": "one", "prod-two": "two"}, clipapp.NewMediaWorker(st, protocolArtifacts{q}, func() time.Time { return *now })).Handler)
 	defer api.Close()
 	c := workerclient.New(api.URL, "prod-one", "one")
 	other := workerclient.New(api.URL, "prod-two", "two")
@@ -117,7 +133,7 @@ func TestMediaWorkerCancellationAndFailureAreDistinctFromLeaseLoss(t *testing.T)
 	if _, err := q.Create(ctx, in); err != nil {
 		t.Fatal(err)
 	}
-	api := httptest.NewServer(cliprpc.NewMediaWorkerServer("", map[string]string{"worker-1": "token", "worker-2": "other"}, clipapp.NewMediaWorker(st, func() time.Time { return *now })).Handler)
+	api := httptest.NewServer(cliprpc.NewMediaWorkerServer("", map[string]string{"worker-1": "token", "worker-2": "other"}, clipapp.NewMediaWorker(st, protocolArtifacts{q}, func() time.Time { return *now })).Handler)
 	defer api.Close()
 	c := workerclient.New(api.URL, "worker-1", "token")
 	w, err := c.Claim(ctx, mediaProfile())
@@ -172,7 +188,7 @@ func TestMediaWorkerRefusesPersistedFutureContractsAfterRollback(t *testing.T) {
 	if _, err := q.Create(t.Context(), in); err != nil {
 		t.Fatal(err)
 	}
-	service := clipapp.NewMediaWorker(st, func() time.Time { return *now })
+	service := clipapp.NewMediaWorker(st, protocolArtifacts{q}, func() time.Time { return *now })
 	if _, err := service.Claim(t.Context(), mediaProfile()); !errors.Is(err, clip.ErrMediaIncompatible) {
 		t.Fatal("incompatible queued work silently polled", err)
 	}

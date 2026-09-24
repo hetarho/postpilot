@@ -51,6 +51,23 @@ type ClipGenerationQuote struct {
 	ConsumedJobID sql.NullString
 }
 
+type ClipMediaArtifact struct {
+	AttemptID    string
+	Slot         string
+	ObjectKey    string
+	ContentType  string
+	MaxBytes     int64
+	State        string
+	CreatedAt    string
+	ExactBytes   int64
+	MetadataJson string
+	ActualBytes  sql.NullInt64
+	WorkerDigest string
+	PutExpiresAt sql.NullString
+	AcceptedAt   sql.NullString
+	Canonical    int64
+}
+
 type ClipMediaAttempt struct {
 	ID              string
 	StageID         string

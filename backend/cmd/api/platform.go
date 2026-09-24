@@ -97,6 +97,7 @@ func (p *platform) load(ctx context.Context) error {
 	p.bucket, err = storage.New(ctx, storage.Config{
 		Endpoint:        cfg.R2Endpoint,
 		PublicEndpoint:  cfg.R2PublicEndpoint,
+		MediaEndpoint:   cfg.MediaStorageEndpoint,
 		AccessKeyID:     cfg.R2AccessKeyID,
 		SecretAccessKey: cfg.R2SecretAccessKey,
 		Bucket:          cfg.R2Bucket,

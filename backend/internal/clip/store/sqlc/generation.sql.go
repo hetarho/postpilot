@@ -200,6 +200,7 @@ func (q *Queries) RemoveProxy(ctx context.Context, objectKey string) error {
 
 const resultKeys = `-- name: ResultKeys :many
 SELECT result_key FROM clip_projects WHERE result_key IS NOT NULL UNION SELECT result_key FROM clip_attempt_results
+UNION SELECT object_key FROM clip_media_artifacts WHERE state IN ('reserved','uploaded','accepted')
 `
 
 func (q *Queries) ResultKeys(ctx context.Context) ([]sql.NullString, error) {

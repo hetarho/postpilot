@@ -17,15 +17,25 @@ type MediaWorkerStore interface {
 // MediaWorker is the execution-only internal API. Parent authorization is joined
 // through the owning saga when production dispatch is enabled.
 type MediaWorker struct {
-	store MediaWorkerStore
-	now   func() time.Time
+	store     MediaWorkerStore
+	artifacts MediaWorkerArtifacts
+	now       func() time.Time
 }
 
-func NewMediaWorker(store MediaWorkerStore, now func() time.Time) *MediaWorker {
+type MediaWorkerArtifacts interface {
+	Read(context.Context, clip.MediaLeaseCredentials, string) (clip.MediaArtifactAccess, error)
+	Reserve(context.Context, clip.MediaLeaseCredentials, []clip.MediaOutput) ([]clip.MediaArtifactAccess, error)
+	Complete(context.Context, clip.MediaLeaseCredentials, string) error
+}
+
+func NewMediaWorker(store MediaWorkerStore, artifacts MediaWorkerArtifacts, now func() time.Time) *MediaWorker {
+	if artifacts == nil {
+		panic("clip app: media worker needs artifact access")
+	}
 	if now == nil {
 		now = time.Now
 	}
-	return &MediaWorker{store: store, now: now}
+	return &MediaWorker{store: store, artifacts: artifacts, now: now}
 }
 
 func (m *MediaWorker) Claim(ctx context.Context, profile clip.MediaWorkerProfile) (*clip.MediaWork, error) {
@@ -62,8 +72,13 @@ func (m *MediaWorker) Renew(ctx context.Context, lease clip.MediaLeaseCredential
 	return max(end.Sub(m.now()), 0), nil
 }
 func (m *MediaWorker) Complete(ctx context.Context, lease clip.MediaLeaseCredentials, result string) error {
-	_, err := m.store.AcceptMediaResult(ctx, lease, result, m.now().UTC())
-	return err
+	return m.artifacts.Complete(ctx, lease, result)
+}
+func (m *MediaWorker) Read(ctx context.Context, lease clip.MediaLeaseCredentials, slot string) (clip.MediaArtifactAccess, error) {
+	return m.artifacts.Read(ctx, lease, slot)
+}
+func (m *MediaWorker) Reserve(ctx context.Context, lease clip.MediaLeaseCredentials, outputs []clip.MediaOutput) ([]clip.MediaArtifactAccess, error) {
+	return m.artifacts.Reserve(ctx, lease, outputs)
 }
 func (m *MediaWorker) Fail(ctx context.Context, lease clip.MediaLeaseCredentials, failure clip.MediaFailure) error {
 	return m.store.FailMediaStage(ctx, lease, failure, m.now().UTC())

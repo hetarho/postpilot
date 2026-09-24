@@ -10,6 +10,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/clip/mediacodec"
 	pb "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
 )
@@ -53,6 +54,8 @@ func failure(err error) error {
 		return clip.ErrInvalid
 	case connect.CodeAborted:
 		return clip.ErrMediaLeaseLost
+	case connect.CodeNotFound:
+		return clip.ErrSourceState
 	case connect.CodeCanceled:
 		return clip.ErrMediaCancelled
 	case connect.CodeAlreadyExists:
@@ -130,4 +133,49 @@ func (c *Client) Status(ctx context.Context) (clip.MediaRuntimeStatus, error) {
 		return clip.MediaRuntimeStatus{}, clip.ErrMediaUnavailable
 	}
 	return clip.MediaRuntimeStatus{Waiting: s.Waiting, Active: s.Active, OwnActive: s.OwnActive}, nil
+}
+
+func accessDomain(a *pb.MediaArtifactAccess) (clip.MediaArtifactAccess, error) {
+	if a == nil || a.ExpiresAfterMs <= 0 || a.ExpiresAfterMs > clip.MediaArtifactAccessTTL.Milliseconds() || a.MaxBytes <= 0 || a.Url == "" {
+		return clip.MediaArtifactAccess{}, clip.ErrInvalid
+	}
+	return clip.MediaArtifactAccess{Slot: a.Slot, URL: a.Url, ContentType: a.ContentType, Bytes: a.MaxBytes, Headers: a.Headers, ExpiresAfter: time.Duration(a.ExpiresAfterMs) * time.Millisecond}, nil
+}
+
+func (c *Client) Read(ctx context.Context, lease clip.MediaLeaseCredentials, slot string) (clip.MediaArtifactAccess, error) {
+	r, err := c.rpc.GetMediaArtifactAccess(ctx, request(c, &pb.GetMediaArtifactAccessRequest{Lease: leaseMessage(lease), Slot: slot}))
+	if err != nil {
+		return clip.MediaArtifactAccess{}, failure(err)
+	}
+	return accessDomain(r.Msg.Access)
+}
+
+func (c *Client) Reserve(ctx context.Context, lease clip.MediaLeaseCredentials, outputs []clip.MediaOutput) ([]clip.MediaArtifactAccess, error) {
+	msg := &pb.ReserveMediaOutputsRequest{Lease: leaseMessage(lease)}
+	for _, out := range outputs {
+		info, err := mediacodec.EncodeInfo(out.Info)
+		if err != nil {
+			return nil, err
+		}
+		msg.Outputs = append(msg.Outputs, &pb.MediaOutputMetadata{Slot: out.Slot, SourceId: out.SourceID, Ordinal: int32(out.Index), OffsetMs: int32(out.OffsetMS), DurationMs: int32(out.DurationMS), Bytes: out.Bytes, ContentType: out.ContentType, Sha256: out.Digest, MediaInfoJson: info})
+	}
+	r, err := c.rpc.ReserveMediaOutputs(ctx, request(c, msg))
+	if err != nil {
+		return nil, failure(err)
+	}
+	if len(r.Msg.Outputs) != len(outputs) {
+		return nil, clip.ErrInvalid
+	}
+	access := make([]clip.MediaArtifactAccess, 0, len(outputs))
+	for i, a := range r.Msg.Outputs {
+		out, err := accessDomain(a)
+		if err != nil {
+			return nil, err
+		}
+		if out.Slot != outputs[i].Slot || out.Bytes != outputs[i].Bytes || out.ContentType != outputs[i].ContentType {
+			return nil, clip.ErrInvalid
+		}
+		access = append(access, out)
+	}
+	return access, nil
 }

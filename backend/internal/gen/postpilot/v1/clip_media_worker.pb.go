@@ -544,6 +544,7 @@ type MediaArtifactAccess struct {
 	ContentType    string                 `protobuf:"bytes,3,opt,name=content_type,json=contentType,proto3" json:"content_type,omitempty"`
 	MaxBytes       int64                  `protobuf:"varint,4,opt,name=max_bytes,json=maxBytes,proto3" json:"max_bytes,omitempty"`
 	ExpiresAfterMs int64                  `protobuf:"varint,5,opt,name=expires_after_ms,json=expiresAfterMs,proto3" json:"expires_after_ms,omitempty"`
+	Headers        map[string]string      `protobuf:"bytes,6,rep,name=headers,proto3" json:"headers,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -613,6 +614,13 @@ func (x *MediaArtifactAccess) GetExpiresAfterMs() int64 {
 	return 0
 }
 
+func (x *MediaArtifactAccess) GetHeaders() map[string]string {
+	if x != nil {
+		return x.Headers
+	}
+	return nil
+}
+
 type GetMediaArtifactAccessResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Access        *MediaArtifactAccess   `protobuf:"bytes,1,opt,name=access,proto3" json:"access,omitempty"`
@@ -660,7 +668,7 @@ func (x *GetMediaArtifactAccessResponse) GetAccess() *MediaArtifactAccess {
 type ReserveMediaOutputsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Lease         *MediaLeaseCredentials `protobuf:"bytes,1,opt,name=lease,proto3" json:"lease,omitempty"`
-	Slots         []string               `protobuf:"bytes,2,rep,name=slots,proto3" json:"slots,omitempty"`
+	Outputs       []*MediaOutputMetadata `protobuf:"bytes,3,rep,name=outputs,proto3" json:"outputs,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -702,11 +710,120 @@ func (x *ReserveMediaOutputsRequest) GetLease() *MediaLeaseCredentials {
 	return nil
 }
 
-func (x *ReserveMediaOutputsRequest) GetSlots() []string {
+func (x *ReserveMediaOutputsRequest) GetOutputs() []*MediaOutputMetadata {
 	if x != nil {
-		return x.Slots
+		return x.Outputs
 	}
 	return nil
+}
+
+type MediaOutputMetadata struct {
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Slot        string                 `protobuf:"bytes,1,opt,name=slot,proto3" json:"slot,omitempty"`
+	SourceId    string                 `protobuf:"bytes,2,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
+	Ordinal     int32                  `protobuf:"varint,3,opt,name=ordinal,proto3" json:"ordinal,omitempty"`
+	OffsetMs    int32                  `protobuf:"varint,4,opt,name=offset_ms,json=offsetMs,proto3" json:"offset_ms,omitempty"`
+	DurationMs  int32                  `protobuf:"varint,5,opt,name=duration_ms,json=durationMs,proto3" json:"duration_ms,omitempty"`
+	Bytes       int64                  `protobuf:"varint,6,opt,name=bytes,proto3" json:"bytes,omitempty"`
+	ContentType string                 `protobuf:"bytes,7,opt,name=content_type,json=contentType,proto3" json:"content_type,omitempty"`
+	Sha256      string                 `protobuf:"bytes,8,opt,name=sha256,proto3" json:"sha256,omitempty"`
+	// Bounded MediaInfo in the owning stage's versioned domain codec.
+	MediaInfoJson string `protobuf:"bytes,9,opt,name=media_info_json,json=mediaInfoJson,proto3" json:"media_info_json,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MediaOutputMetadata) Reset() {
+	*x = MediaOutputMetadata{}
+	mi := &file_postpilot_v1_clip_media_worker_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MediaOutputMetadata) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MediaOutputMetadata) ProtoMessage() {}
+
+func (x *MediaOutputMetadata) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_clip_media_worker_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MediaOutputMetadata.ProtoReflect.Descriptor instead.
+func (*MediaOutputMetadata) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_clip_media_worker_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *MediaOutputMetadata) GetSlot() string {
+	if x != nil {
+		return x.Slot
+	}
+	return ""
+}
+
+func (x *MediaOutputMetadata) GetSourceId() string {
+	if x != nil {
+		return x.SourceId
+	}
+	return ""
+}
+
+func (x *MediaOutputMetadata) GetOrdinal() int32 {
+	if x != nil {
+		return x.Ordinal
+	}
+	return 0
+}
+
+func (x *MediaOutputMetadata) GetOffsetMs() int32 {
+	if x != nil {
+		return x.OffsetMs
+	}
+	return 0
+}
+
+func (x *MediaOutputMetadata) GetDurationMs() int32 {
+	if x != nil {
+		return x.DurationMs
+	}
+	return 0
+}
+
+func (x *MediaOutputMetadata) GetBytes() int64 {
+	if x != nil {
+		return x.Bytes
+	}
+	return 0
+}
+
+func (x *MediaOutputMetadata) GetContentType() string {
+	if x != nil {
+		return x.ContentType
+	}
+	return ""
+}
+
+func (x *MediaOutputMetadata) GetSha256() string {
+	if x != nil {
+		return x.Sha256
+	}
+	return ""
+}
+
+func (x *MediaOutputMetadata) GetMediaInfoJson() string {
+	if x != nil {
+		return x.MediaInfoJson
+	}
+	return ""
 }
 
 type ReserveMediaOutputsResponse struct {
@@ -718,7 +835,7 @@ type ReserveMediaOutputsResponse struct {
 
 func (x *ReserveMediaOutputsResponse) Reset() {
 	*x = ReserveMediaOutputsResponse{}
-	mi := &file_postpilot_v1_clip_media_worker_proto_msgTypes[11]
+	mi := &file_postpilot_v1_clip_media_worker_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -730,7 +847,7 @@ func (x *ReserveMediaOutputsResponse) String() string {
 func (*ReserveMediaOutputsResponse) ProtoMessage() {}
 
 func (x *ReserveMediaOutputsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_clip_media_worker_proto_msgTypes[11]
+	mi := &file_postpilot_v1_clip_media_worker_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -743,7 +860,7 @@ func (x *ReserveMediaOutputsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReserveMediaOutputsResponse.ProtoReflect.Descriptor instead.
 func (*ReserveMediaOutputsResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_media_worker_proto_rawDescGZIP(), []int{11}
+	return file_postpilot_v1_clip_media_worker_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ReserveMediaOutputsResponse) GetOutputs() []*MediaArtifactAccess {
@@ -764,7 +881,7 @@ type CompleteMediaStageRequest struct {
 
 func (x *CompleteMediaStageRequest) Reset() {
 	*x = CompleteMediaStageRequest{}
-	mi := &file_postpilot_v1_clip_media_worker_proto_msgTypes[12]
+	mi := &file_postpilot_v1_clip_media_worker_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -776,7 +893,7 @@ func (x *CompleteMediaStageRequest) String() string {
 func (*CompleteMediaStageRequest) ProtoMessage() {}
 
 func (x *CompleteMediaStageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_clip_media_worker_proto_msgTypes[12]
+	mi := &file_postpilot_v1_clip_media_worker_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -789,7 +906,7 @@ func (x *CompleteMediaStageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CompleteMediaStageRequest.ProtoReflect.Descriptor instead.
 func (*CompleteMediaStageRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_media_worker_proto_rawDescGZIP(), []int{12}
+	return file_postpilot_v1_clip_media_worker_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *CompleteMediaStageRequest) GetLease() *MediaLeaseCredentials {
@@ -814,7 +931,7 @@ type CompleteMediaStageResponse struct {
 
 func (x *CompleteMediaStageResponse) Reset() {
 	*x = CompleteMediaStageResponse{}
-	mi := &file_postpilot_v1_clip_media_worker_proto_msgTypes[13]
+	mi := &file_postpilot_v1_clip_media_worker_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -826,7 +943,7 @@ func (x *CompleteMediaStageResponse) String() string {
 func (*CompleteMediaStageResponse) ProtoMessage() {}
 
 func (x *CompleteMediaStageResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_clip_media_worker_proto_msgTypes[13]
+	mi := &file_postpilot_v1_clip_media_worker_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -839,7 +956,7 @@ func (x *CompleteMediaStageResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CompleteMediaStageResponse.ProtoReflect.Descriptor instead.
 func (*CompleteMediaStageResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_media_worker_proto_rawDescGZIP(), []int{13}
+	return file_postpilot_v1_clip_media_worker_proto_rawDescGZIP(), []int{14}
 }
 
 type FailMediaStageRequest struct {
@@ -853,7 +970,7 @@ type FailMediaStageRequest struct {
 
 func (x *FailMediaStageRequest) Reset() {
 	*x = FailMediaStageRequest{}
-	mi := &file_postpilot_v1_clip_media_worker_proto_msgTypes[14]
+	mi := &file_postpilot_v1_clip_media_worker_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -865,7 +982,7 @@ func (x *FailMediaStageRequest) String() string {
 func (*FailMediaStageRequest) ProtoMessage() {}
 
 func (x *FailMediaStageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_clip_media_worker_proto_msgTypes[14]
+	mi := &file_postpilot_v1_clip_media_worker_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -878,7 +995,7 @@ func (x *FailMediaStageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FailMediaStageRequest.ProtoReflect.Descriptor instead.
 func (*FailMediaStageRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_media_worker_proto_rawDescGZIP(), []int{14}
+	return file_postpilot_v1_clip_media_worker_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *FailMediaStageRequest) GetLease() *MediaLeaseCredentials {
@@ -903,7 +1020,7 @@ type FailMediaStageResponse struct {
 
 func (x *FailMediaStageResponse) Reset() {
 	*x = FailMediaStageResponse{}
-	mi := &file_postpilot_v1_clip_media_worker_proto_msgTypes[15]
+	mi := &file_postpilot_v1_clip_media_worker_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -915,7 +1032,7 @@ func (x *FailMediaStageResponse) String() string {
 func (*FailMediaStageResponse) ProtoMessage() {}
 
 func (x *FailMediaStageResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_clip_media_worker_proto_msgTypes[15]
+	mi := &file_postpilot_v1_clip_media_worker_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -928,7 +1045,7 @@ func (x *FailMediaStageResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FailMediaStageResponse.ProtoReflect.Descriptor instead.
 func (*FailMediaStageResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_media_worker_proto_rawDescGZIP(), []int{15}
+	return file_postpilot_v1_clip_media_worker_proto_rawDescGZIP(), []int{16}
 }
 
 type GetMediaRuntimeStatusRequest struct {
@@ -939,7 +1056,7 @@ type GetMediaRuntimeStatusRequest struct {
 
 func (x *GetMediaRuntimeStatusRequest) Reset() {
 	*x = GetMediaRuntimeStatusRequest{}
-	mi := &file_postpilot_v1_clip_media_worker_proto_msgTypes[16]
+	mi := &file_postpilot_v1_clip_media_worker_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -951,7 +1068,7 @@ func (x *GetMediaRuntimeStatusRequest) String() string {
 func (*GetMediaRuntimeStatusRequest) ProtoMessage() {}
 
 func (x *GetMediaRuntimeStatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_clip_media_worker_proto_msgTypes[16]
+	mi := &file_postpilot_v1_clip_media_worker_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -964,7 +1081,7 @@ func (x *GetMediaRuntimeStatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMediaRuntimeStatusRequest.ProtoReflect.Descriptor instead.
 func (*GetMediaRuntimeStatusRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_media_worker_proto_rawDescGZIP(), []int{16}
+	return file_postpilot_v1_clip_media_worker_proto_rawDescGZIP(), []int{17}
 }
 
 type GetMediaRuntimeStatusResponse struct {
@@ -983,7 +1100,7 @@ type GetMediaRuntimeStatusResponse struct {
 
 func (x *GetMediaRuntimeStatusResponse) Reset() {
 	*x = GetMediaRuntimeStatusResponse{}
-	mi := &file_postpilot_v1_clip_media_worker_proto_msgTypes[17]
+	mi := &file_postpilot_v1_clip_media_worker_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -995,7 +1112,7 @@ func (x *GetMediaRuntimeStatusResponse) String() string {
 func (*GetMediaRuntimeStatusResponse) ProtoMessage() {}
 
 func (x *GetMediaRuntimeStatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_clip_media_worker_proto_msgTypes[17]
+	mi := &file_postpilot_v1_clip_media_worker_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1008,7 +1125,7 @@ func (x *GetMediaRuntimeStatusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMediaRuntimeStatusResponse.ProtoReflect.Descriptor instead.
 func (*GetMediaRuntimeStatusResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_clip_media_worker_proto_rawDescGZIP(), []int{17}
+	return file_postpilot_v1_clip_media_worker_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *GetMediaRuntimeStatusResponse) GetContractVersion() int32 {
@@ -1109,18 +1226,33 @@ const file_postpilot_v1_clip_media_worker_proto_rawDesc = "" +
 	"\tcancelled\x18\x02 \x01(\bR\tcancelled\"n\n" +
 	"\x1dGetMediaArtifactAccessRequest\x129\n" +
 	"\x05lease\x18\x01 \x01(\v2#.postpilot.v1.MediaLeaseCredentialsR\x05lease\x12\x12\n" +
-	"\x04slot\x18\x02 \x01(\tR\x04slot\"\xa5\x01\n" +
+	"\x04slot\x18\x02 \x01(\tR\x04slot\"\xab\x02\n" +
 	"\x13MediaArtifactAccess\x12\x12\n" +
 	"\x04slot\x18\x01 \x01(\tR\x04slot\x12\x10\n" +
 	"\x03url\x18\x02 \x01(\tR\x03url\x12!\n" +
 	"\fcontent_type\x18\x03 \x01(\tR\vcontentType\x12\x1b\n" +
 	"\tmax_bytes\x18\x04 \x01(\x03R\bmaxBytes\x12(\n" +
-	"\x10expires_after_ms\x18\x05 \x01(\x03R\x0eexpiresAfterMs\"[\n" +
+	"\x10expires_after_ms\x18\x05 \x01(\x03R\x0eexpiresAfterMs\x12H\n" +
+	"\aheaders\x18\x06 \x03(\v2..postpilot.v1.MediaArtifactAccess.HeadersEntryR\aheaders\x1a:\n" +
+	"\fHeadersEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"[\n" +
 	"\x1eGetMediaArtifactAccessResponse\x129\n" +
-	"\x06access\x18\x01 \x01(\v2!.postpilot.v1.MediaArtifactAccessR\x06access\"m\n" +
+	"\x06access\x18\x01 \x01(\v2!.postpilot.v1.MediaArtifactAccessR\x06access\"\xa1\x01\n" +
 	"\x1aReserveMediaOutputsRequest\x129\n" +
-	"\x05lease\x18\x01 \x01(\v2#.postpilot.v1.MediaLeaseCredentialsR\x05lease\x12\x14\n" +
-	"\x05slots\x18\x02 \x03(\tR\x05slots\"Z\n" +
+	"\x05lease\x18\x01 \x01(\v2#.postpilot.v1.MediaLeaseCredentialsR\x05lease\x12;\n" +
+	"\aoutputs\x18\x03 \x03(\v2!.postpilot.v1.MediaOutputMetadataR\aoutputsJ\x04\b\x02\x10\x03R\x05slots\"\x97\x02\n" +
+	"\x13MediaOutputMetadata\x12\x12\n" +
+	"\x04slot\x18\x01 \x01(\tR\x04slot\x12\x1b\n" +
+	"\tsource_id\x18\x02 \x01(\tR\bsourceId\x12\x18\n" +
+	"\aordinal\x18\x03 \x01(\x05R\aordinal\x12\x1b\n" +
+	"\toffset_ms\x18\x04 \x01(\x05R\boffsetMs\x12\x1f\n" +
+	"\vduration_ms\x18\x05 \x01(\x05R\n" +
+	"durationMs\x12\x14\n" +
+	"\x05bytes\x18\x06 \x01(\x03R\x05bytes\x12!\n" +
+	"\fcontent_type\x18\a \x01(\tR\vcontentType\x12\x16\n" +
+	"\x06sha256\x18\b \x01(\tR\x06sha256\x12&\n" +
+	"\x0fmedia_info_json\x18\t \x01(\tR\rmediaInfoJson\"Z\n" +
 	"\x1bReserveMediaOutputsResponse\x12;\n" +
 	"\aoutputs\x18\x01 \x03(\v2!.postpilot.v1.MediaArtifactAccessR\aoutputs\"n\n" +
 	"\x19CompleteMediaStageRequest\x129\n" +
@@ -1163,7 +1295,7 @@ func file_postpilot_v1_clip_media_worker_proto_rawDescGZIP() []byte {
 	return file_postpilot_v1_clip_media_worker_proto_rawDescData
 }
 
-var file_postpilot_v1_clip_media_worker_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
+var file_postpilot_v1_clip_media_worker_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
 var file_postpilot_v1_clip_media_worker_proto_goTypes = []any{
 	(*MediaWorkerProfile)(nil),             // 0: postpilot.v1.MediaWorkerProfile
 	(*MediaLeaseCredentials)(nil),          // 1: postpilot.v1.MediaLeaseCredentials
@@ -1176,13 +1308,15 @@ var file_postpilot_v1_clip_media_worker_proto_goTypes = []any{
 	(*MediaArtifactAccess)(nil),            // 8: postpilot.v1.MediaArtifactAccess
 	(*GetMediaArtifactAccessResponse)(nil), // 9: postpilot.v1.GetMediaArtifactAccessResponse
 	(*ReserveMediaOutputsRequest)(nil),     // 10: postpilot.v1.ReserveMediaOutputsRequest
-	(*ReserveMediaOutputsResponse)(nil),    // 11: postpilot.v1.ReserveMediaOutputsResponse
-	(*CompleteMediaStageRequest)(nil),      // 12: postpilot.v1.CompleteMediaStageRequest
-	(*CompleteMediaStageResponse)(nil),     // 13: postpilot.v1.CompleteMediaStageResponse
-	(*FailMediaStageRequest)(nil),          // 14: postpilot.v1.FailMediaStageRequest
-	(*FailMediaStageResponse)(nil),         // 15: postpilot.v1.FailMediaStageResponse
-	(*GetMediaRuntimeStatusRequest)(nil),   // 16: postpilot.v1.GetMediaRuntimeStatusRequest
-	(*GetMediaRuntimeStatusResponse)(nil),  // 17: postpilot.v1.GetMediaRuntimeStatusResponse
+	(*MediaOutputMetadata)(nil),            // 11: postpilot.v1.MediaOutputMetadata
+	(*ReserveMediaOutputsResponse)(nil),    // 12: postpilot.v1.ReserveMediaOutputsResponse
+	(*CompleteMediaStageRequest)(nil),      // 13: postpilot.v1.CompleteMediaStageRequest
+	(*CompleteMediaStageResponse)(nil),     // 14: postpilot.v1.CompleteMediaStageResponse
+	(*FailMediaStageRequest)(nil),          // 15: postpilot.v1.FailMediaStageRequest
+	(*FailMediaStageResponse)(nil),         // 16: postpilot.v1.FailMediaStageResponse
+	(*GetMediaRuntimeStatusRequest)(nil),   // 17: postpilot.v1.GetMediaRuntimeStatusRequest
+	(*GetMediaRuntimeStatusResponse)(nil),  // 18: postpilot.v1.GetMediaRuntimeStatusResponse
+	nil,                                    // 19: postpilot.v1.MediaArtifactAccess.HeadersEntry
 }
 var file_postpilot_v1_clip_media_worker_proto_depIdxs = []int32{
 	1,  // 0: postpilot.v1.MediaWork.lease:type_name -> postpilot.v1.MediaLeaseCredentials
@@ -1190,30 +1324,32 @@ var file_postpilot_v1_clip_media_worker_proto_depIdxs = []int32{
 	2,  // 2: postpilot.v1.ClaimMediaStageResponse.work:type_name -> postpilot.v1.MediaWork
 	1,  // 3: postpilot.v1.RenewMediaStageRequest.lease:type_name -> postpilot.v1.MediaLeaseCredentials
 	1,  // 4: postpilot.v1.GetMediaArtifactAccessRequest.lease:type_name -> postpilot.v1.MediaLeaseCredentials
-	8,  // 5: postpilot.v1.GetMediaArtifactAccessResponse.access:type_name -> postpilot.v1.MediaArtifactAccess
-	1,  // 6: postpilot.v1.ReserveMediaOutputsRequest.lease:type_name -> postpilot.v1.MediaLeaseCredentials
-	8,  // 7: postpilot.v1.ReserveMediaOutputsResponse.outputs:type_name -> postpilot.v1.MediaArtifactAccess
-	1,  // 8: postpilot.v1.CompleteMediaStageRequest.lease:type_name -> postpilot.v1.MediaLeaseCredentials
-	1,  // 9: postpilot.v1.FailMediaStageRequest.lease:type_name -> postpilot.v1.MediaLeaseCredentials
-	3,  // 10: postpilot.v1.ClipMediaWorkerService.ClaimMediaStage:input_type -> postpilot.v1.ClaimMediaStageRequest
-	5,  // 11: postpilot.v1.ClipMediaWorkerService.RenewMediaStage:input_type -> postpilot.v1.RenewMediaStageRequest
-	7,  // 12: postpilot.v1.ClipMediaWorkerService.GetMediaArtifactAccess:input_type -> postpilot.v1.GetMediaArtifactAccessRequest
-	10, // 13: postpilot.v1.ClipMediaWorkerService.ReserveMediaOutputs:input_type -> postpilot.v1.ReserveMediaOutputsRequest
-	12, // 14: postpilot.v1.ClipMediaWorkerService.CompleteMediaStage:input_type -> postpilot.v1.CompleteMediaStageRequest
-	14, // 15: postpilot.v1.ClipMediaWorkerService.FailMediaStage:input_type -> postpilot.v1.FailMediaStageRequest
-	16, // 16: postpilot.v1.ClipMediaWorkerService.GetMediaRuntimeStatus:input_type -> postpilot.v1.GetMediaRuntimeStatusRequest
-	4,  // 17: postpilot.v1.ClipMediaWorkerService.ClaimMediaStage:output_type -> postpilot.v1.ClaimMediaStageResponse
-	6,  // 18: postpilot.v1.ClipMediaWorkerService.RenewMediaStage:output_type -> postpilot.v1.RenewMediaStageResponse
-	9,  // 19: postpilot.v1.ClipMediaWorkerService.GetMediaArtifactAccess:output_type -> postpilot.v1.GetMediaArtifactAccessResponse
-	11, // 20: postpilot.v1.ClipMediaWorkerService.ReserveMediaOutputs:output_type -> postpilot.v1.ReserveMediaOutputsResponse
-	13, // 21: postpilot.v1.ClipMediaWorkerService.CompleteMediaStage:output_type -> postpilot.v1.CompleteMediaStageResponse
-	15, // 22: postpilot.v1.ClipMediaWorkerService.FailMediaStage:output_type -> postpilot.v1.FailMediaStageResponse
-	17, // 23: postpilot.v1.ClipMediaWorkerService.GetMediaRuntimeStatus:output_type -> postpilot.v1.GetMediaRuntimeStatusResponse
-	17, // [17:24] is the sub-list for method output_type
-	10, // [10:17] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	19, // 5: postpilot.v1.MediaArtifactAccess.headers:type_name -> postpilot.v1.MediaArtifactAccess.HeadersEntry
+	8,  // 6: postpilot.v1.GetMediaArtifactAccessResponse.access:type_name -> postpilot.v1.MediaArtifactAccess
+	1,  // 7: postpilot.v1.ReserveMediaOutputsRequest.lease:type_name -> postpilot.v1.MediaLeaseCredentials
+	11, // 8: postpilot.v1.ReserveMediaOutputsRequest.outputs:type_name -> postpilot.v1.MediaOutputMetadata
+	8,  // 9: postpilot.v1.ReserveMediaOutputsResponse.outputs:type_name -> postpilot.v1.MediaArtifactAccess
+	1,  // 10: postpilot.v1.CompleteMediaStageRequest.lease:type_name -> postpilot.v1.MediaLeaseCredentials
+	1,  // 11: postpilot.v1.FailMediaStageRequest.lease:type_name -> postpilot.v1.MediaLeaseCredentials
+	3,  // 12: postpilot.v1.ClipMediaWorkerService.ClaimMediaStage:input_type -> postpilot.v1.ClaimMediaStageRequest
+	5,  // 13: postpilot.v1.ClipMediaWorkerService.RenewMediaStage:input_type -> postpilot.v1.RenewMediaStageRequest
+	7,  // 14: postpilot.v1.ClipMediaWorkerService.GetMediaArtifactAccess:input_type -> postpilot.v1.GetMediaArtifactAccessRequest
+	10, // 15: postpilot.v1.ClipMediaWorkerService.ReserveMediaOutputs:input_type -> postpilot.v1.ReserveMediaOutputsRequest
+	13, // 16: postpilot.v1.ClipMediaWorkerService.CompleteMediaStage:input_type -> postpilot.v1.CompleteMediaStageRequest
+	15, // 17: postpilot.v1.ClipMediaWorkerService.FailMediaStage:input_type -> postpilot.v1.FailMediaStageRequest
+	17, // 18: postpilot.v1.ClipMediaWorkerService.GetMediaRuntimeStatus:input_type -> postpilot.v1.GetMediaRuntimeStatusRequest
+	4,  // 19: postpilot.v1.ClipMediaWorkerService.ClaimMediaStage:output_type -> postpilot.v1.ClaimMediaStageResponse
+	6,  // 20: postpilot.v1.ClipMediaWorkerService.RenewMediaStage:output_type -> postpilot.v1.RenewMediaStageResponse
+	9,  // 21: postpilot.v1.ClipMediaWorkerService.GetMediaArtifactAccess:output_type -> postpilot.v1.GetMediaArtifactAccessResponse
+	12, // 22: postpilot.v1.ClipMediaWorkerService.ReserveMediaOutputs:output_type -> postpilot.v1.ReserveMediaOutputsResponse
+	14, // 23: postpilot.v1.ClipMediaWorkerService.CompleteMediaStage:output_type -> postpilot.v1.CompleteMediaStageResponse
+	16, // 24: postpilot.v1.ClipMediaWorkerService.FailMediaStage:output_type -> postpilot.v1.FailMediaStageResponse
+	18, // 25: postpilot.v1.ClipMediaWorkerService.GetMediaRuntimeStatus:output_type -> postpilot.v1.GetMediaRuntimeStatusResponse
+	19, // [19:26] is the sub-list for method output_type
+	12, // [12:19] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_clip_media_worker_proto_init() }
@@ -1227,7 +1363,7 @@ func file_postpilot_v1_clip_media_worker_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_postpilot_v1_clip_media_worker_proto_rawDesc), len(file_postpilot_v1_clip_media_worker_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   18,
+			NumMessages:   20,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

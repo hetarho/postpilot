@@ -193,6 +193,7 @@ const BillingTickInterval = 10 * time.Minute
 // Config is the fully-resolved process configuration.
 type Config struct {
 	MediaInternalAddr      string
+	MediaStorageEndpoint   string
 	MediaWorkerCredentials map[string]string
 	// Port the HTTP server listens on.
 	Port string
@@ -609,6 +610,12 @@ func Load() (*Config, error) {
 
 	if err := loadMediaListener(cfg); err != nil {
 		return nil, err
+	}
+	cfg.MediaStorageEndpoint = getenv("MEDIA_STORAGE_ENDPOINT", cfg.R2Endpoint)
+	if cfg.MediaStorageEndpoint != "" {
+		if err := validateEndpoint(cfg.MediaStorageEndpoint); err != nil {
+			return nil, fmt.Errorf("MEDIA_STORAGE_ENDPOINT: %w", err)
+		}
 	}
 	return cfg, nil
 }

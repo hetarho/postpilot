@@ -65,6 +65,7 @@ type Admission interface {
 type Ports struct {
 	Jobs      JobTx
 	Waits     JobWaitTx
+	Media     MediaArtifactTx
 	Clips     ClipTx
 	Admission Admission
 }

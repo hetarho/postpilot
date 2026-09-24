@@ -12,6 +12,7 @@ import (
 	authrpc "github.com/postpilot/backend/internal/auth/rpc"
 	"github.com/postpilot/backend/internal/billing"
 	billingrpc "github.com/postpilot/backend/internal/billing/rpc"
+	"github.com/postpilot/backend/internal/clip"
 	clipapp "github.com/postpilot/backend/internal/clip/app"
 	cliprpc "github.com/postpilot/backend/internal/clip/rpc"
 	"github.com/postpilot/backend/internal/experiment"
@@ -93,7 +94,8 @@ func serve(ctx context.Context, c *contexts) error {
 
 	servers := []*http.Server{server}
 	if cfg.MediaInternalAddr != "" {
-		servers = append(servers, cliprpc.NewMediaWorkerServer(cfg.MediaInternalAddr, cfg.MediaWorkerCredentials, clipapp.NewMediaWorker(c.clipStore, nil)))
+		artifacts := clipapp.NewMediaArtifacts(handle.Writer, c.clipPorts, p.bucket, clip.DefaultMediaConfig(clipEnvironment(cfg)), nil)
+		servers = append(servers, cliprpc.NewMediaWorkerServer(cfg.MediaInternalAddr, cfg.MediaWorkerCredentials, clipapp.NewMediaWorker(c.clipStore, artifacts, nil)))
 	}
 	slog.Info("server starting", "port", cfg.Port, "version", version)
 	return rpcserver.Serve(ctx, servers...)
