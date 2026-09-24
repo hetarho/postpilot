@@ -1,6 +1,7 @@
 import { Code, createRouterTransport } from '@connectrpc/connect'
 import { create, type MessageInitShape } from '@bufbuild/protobuf'
 import {
+  GetAccountQualityResponseSchema,
   GetPostMeasurementResponseSchema,
   QualityCompositionSchema,
   QualityCrossPostPhrasesSchema,
@@ -37,8 +38,20 @@ export interface FakeQualityOptions {
   measurements?: Record<string, FakeQualityReading[]>
   /** Make GetPostMeasurement fail. */
   measurementFails?: boolean
+  /** The account aggregate as each post's brief reads it, by slug. A slug not listed answers all
+   *  four metrics as absent with no values and no rule text. */
+  accounts?: Record<string, FakeQualityReading[]>
+  /** Make GetAccountQuality fail. */
+  accountFails?: boolean
   calls?: string[]
 }
+
+const ACCOUNT_ABSENT: FakeQualityReading[] = [
+  { metric: 'title_saturation', verdict: 'absent' },
+  { metric: 'cross_post_phrases', verdict: 'absent' },
+  { metric: 'in_post_repetition', verdict: 'absent' },
+  { metric: 'composition', verdict: 'absent' },
+]
 
 const ABSENT: FakeQualityReading[] = [
   { metric: 'cross_post_phrases', verdict: 'absent' },
@@ -85,6 +98,13 @@ export function registerQualityService(router: ConnectRouter, options: FakeQuali
     return create(GetPostMeasurementResponseSchema, {
       readings: readings.map(toFakeProtoReading),
     })
+  })
+
+  rpc(QualityService.method.getAccountQuality, (req) => {
+    calls?.push('GetAccountQuality')
+    if (options.accountFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
+    const readings = options.accounts?.[req.slug] ?? ACCOUNT_ABSENT
+    return create(GetAccountQualityResponseSchema, { readings: readings.map(toFakeProtoReading) })
   })
 }
 

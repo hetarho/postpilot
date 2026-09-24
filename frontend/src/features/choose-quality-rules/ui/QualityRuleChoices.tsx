@@ -1,0 +1,253 @@
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useGenerationOptions } from '@/entities/post'
+import {
+  QUALITY_METRICS,
+  absentValueLabel,
+  bandsAreOwnLine,
+  belowMinimumLine,
+  formatMeasure,
+  formatShare,
+  qualityMetricName,
+  useAccountQuality,
+  type QualityMetricId,
+  type QualityReading,
+  type QualityValues,
+} from '@/entities/quality'
+import type { ContentLanguage } from '@/shared/api'
+import {
+  Badge,
+  Button,
+  Checkbox,
+  FieldMessage,
+  Toggletip,
+  Typography,
+  typographyStyles,
+} from '@/shared/ui'
+
+interface QualityRuleChoicesProps {
+  ownerId: string
+  slug: string
+  /** The post's target language: each rule text is rendered in it, so it keys the read. */
+  targetLanguage: ContentLanguage
+  /** The ticks the post has saved, in catalogue order. */
+  ticked: readonly QualityMetricId[]
+  /** The brief's current length, resent with every tick so a tick cannot clear it. */
+  targetLength?: number
+  /** A running job or a published post: the boxes hold still, and the tips stay readable. */
+  disabled: boolean
+}
+
+function valuesOf<M extends QualityMetricId>(
+  reading: QualityReading,
+  metric: M,
+): Extract<QualityValues, { metric: M }> | undefined {
+  const values = reading.values
+  return values?.metric === metric ? (values as Extract<QualityValues, { metric: M }>) : undefined
+}
+
+const share = (value: number | undefined) =>
+  value === undefined ? absentValueLabel() : formatShare(value)
+const measure = (value: number | undefined) =>
+  value === undefined ? absentValueLabel() : formatMeasure(value)
+
+/** ①'s rows over the account's 발행됨 posts, one per metric in its four states (POST-81). Only an
+ *  over-band row offers a tick, which adds that metric's rule text to the next run; the enqueue
+ *  reads the saved ticks, so nothing here touches a start request. The client mirrors no number
+ *  and judges nothing: every value, edge and verdict is the server's. */
+export function QualityRuleChoices({
+  ownerId,
+  slug,
+  targetLanguage,
+  ticked,
+  targetLength,
+  disabled,
+}: QualityRuleChoicesProps) {
+  const { t } = useTranslation(['posts', 'common'])
+  const { quality, isError, isFetching, refetch } = useAccountQuality(ownerId, slug, targetLanguage)
+  const options = useGenerationOptions()
+  // The press is answered at once and the post stays the truth: a refused save puts the boxes
+  // back to what the post says (the UseMemoriesField rule).
+  const [optimistic, setOptimistic] = useState<QualityMetricId[] | null>(null)
+  const [failed, setFailed] = useState(false)
+  const current = optimistic ?? ticked
+
+  const toggle = async (metric: QualityMetricId, on: boolean) => {
+    const chosen = new Set(current)
+    if (on) chosen.add(metric)
+    else chosen.delete(metric)
+    // The whole set, in catalogue order: a stored tick with no box now is kept, and the server
+    // ignores it while its metric is within band.
+    const next = QUALITY_METRICS.filter((id) => chosen.has(id))
+    setFailed(false)
+    setOptimistic(next)
+    try {
+      await options.saveQualityRules(slug, next, targetLength)
+    } catch {
+      setOptimistic(null)
+      setFailed(true)
+    }
+  }
+
+  // The value(s) a row shows beside the name. M4's three context values are ②'s, not the brief's.
+  const values = (reading: QualityReading): string => {
+    switch (reading.metric) {
+      case 'title_saturation':
+        return share(valuesOf(reading, 'title_saturation')?.share)
+      case 'cross_post_phrases':
+        return share(valuesOf(reading, 'cross_post_phrases')?.share)
+      case 'in_post_repetition': {
+        const found = valuesOf(reading, 'in_post_repetition')
+        return [
+          t('qualityRules.values.repetition', {
+            ns: 'posts',
+            value: share(found?.repetitionShare),
+          }),
+          t('qualityRules.values.relevance', { ns: 'posts', value: share(found?.titleRelevance) }),
+        ].join(' · ')
+      }
+      case 'composition':
+        return t('qualityRules.values.blockTypes', {
+          ns: 'posts',
+          value: measure(valuesOf(reading, 'composition')?.distinctBlockTypes),
+        })
+    }
+  }
+
+  // What the metric counts, why this row appeared, and the exact sentence ticking adds. Plain
+  // text, because the tip mirrors it into a live region.
+  const tip = (reading: QualityReading): string => {
+    const count = reading.publishedCount
+    const why = (() => {
+      switch (reading.metric) {
+        case 'title_saturation': {
+          const found = valuesOf(reading, 'title_saturation')
+          return t('qualityRules.why.title_saturation', {
+            ns: 'posts',
+            count,
+            value: share(found?.share),
+            edge: found ? formatShare(found.shareWarnAbove) : absentValueLabel(),
+          })
+        }
+        case 'cross_post_phrases': {
+          const found = valuesOf(reading, 'cross_post_phrases')
+          return t('qualityRules.why.cross_post_phrases', {
+            ns: 'posts',
+            count,
+            value: share(found?.share),
+            edge: found ? formatShare(found.shareWarnAbove) : absentValueLabel(),
+          })
+        }
+        case 'in_post_repetition': {
+          const found = valuesOf(reading, 'in_post_repetition')
+          return t('qualityRules.why.in_post_repetition', {
+            ns: 'posts',
+            count,
+            repetition: share(found?.repetitionShare),
+            relevance: share(found?.titleRelevance),
+            repetitionEdge: found
+              ? formatShare(found.repetitionShareWarnAbove)
+              : absentValueLabel(),
+            relevanceEdge: found ? formatShare(found.titleRelevanceWarnBelow) : absentValueLabel(),
+          })
+        }
+        case 'composition': {
+          const found = valuesOf(reading, 'composition')
+          return t('qualityRules.why.composition', {
+            ns: 'posts',
+            count,
+            value: measure(found?.distinctBlockTypes),
+            edge: found ? formatMeasure(found.distinctBlockTypesWarnAtOrBelow) : absentValueLabel(),
+          })
+        }
+      }
+    })()
+    const what = t(`qualityRules.what.${reading.metric}`, { ns: 'posts' })
+    return `${what} ${why} ${t('qualityRules.adds', { ns: 'posts' })} “${reading.ruleText}”`
+  }
+
+  const row = (id: QualityMetricId) => {
+    const name = qualityMetricName(id)
+    // A metric missing from the answer is absent, never a missing row (POST-81).
+    const reading = quality?.readings.find((candidate) => candidate.metric === id)
+    const verdict = reading?.verdict ?? 'absent'
+    if (reading && verdict === 'over_band') {
+      return (
+        <div key={id} className="flex items-start gap-2">
+          <label
+            className={typographyStyles({
+              variant: 'label',
+              className: 'flex min-h-11 min-w-0 flex-1 items-center gap-3',
+            })}
+          >
+            <Checkbox
+              checked={current.includes(id)}
+              disabled={disabled || options.isPending}
+              onChange={(event) => void toggle(id, event.target.checked)}
+            />
+            <span className="min-w-0 break-words">
+              {name} {values(reading)}
+            </span>
+          </label>
+          {/* Beside the label, never inside it: a press inside a <label> would tick the box. */}
+          <Toggletip label={t('qualityRules.explain', { ns: 'posts', metric: name })}>
+            {tip(reading)}
+          </Toggletip>
+        </div>
+      )
+    }
+    return (
+      <div
+        key={id}
+        className={typographyStyles({
+          variant: 'label',
+          className: 'flex min-h-11 flex-wrap items-center gap-x-3 gap-y-1',
+        })}
+      >
+        <span>{name}</span>
+        {reading && verdict === 'within_band' && (
+          <>
+            <span>{values(reading)}</span>
+            <Badge tone="success">{t('quality.verdict.within_band', { ns: 'posts' })}</Badge>
+          </>
+        )}
+        {reading && verdict === 'below_minimum' && (
+          <span>{belowMinimumLine(reading.minimum, reading.publishedCount)}</span>
+        )}
+        {verdict === 'absent' && <span>{absentValueLabel()}</span>}
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      <Typography variant="label" as="p">
+        {t('qualityRules.heading', { ns: 'posts' })}
+      </Typography>
+      {quality ? (
+        <>
+          <div className="mt-2 grid grid-cols-1 gap-3">{QUALITY_METRICS.map(row)}</div>
+          <Typography variant="meta" as="p" className="text-content-secondary mt-2">
+            {bandsAreOwnLine()} {t('qualityRules.source', { ns: 'posts' })}
+          </Typography>
+          {failed && (
+            <FieldMessage className="mt-2">
+              {t('qualityRules.saveFailed', { ns: 'posts' })}
+            </FieldMessage>
+          )}
+        </>
+      ) : isError ? (
+        <Typography variant="meta" as="p" className="text-content-secondary mt-2">
+          {t('qualityRules.failed', { ns: 'posts' })}{' '}
+          <Button variant="ghost" onClick={refetch} pending={isFetching}>
+            {t('action.retry', { ns: 'common' })}
+          </Button>
+        </Typography>
+      ) : (
+        <Typography variant="meta" as="p" className="text-content-secondary mt-2">
+          {t('qualityRules.loading', { ns: 'posts' })}
+        </Typography>
+      )}
+    </div>
+  )
+}

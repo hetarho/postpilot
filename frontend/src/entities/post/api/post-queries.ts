@@ -6,6 +6,7 @@ import { blogFieldFromProto } from '@/entities/blog-field/@x/post'
 import { toPostImage } from '@/entities/image/@x/post'
 import { toPostVideo } from '@/entities/video/@x/post'
 import { toGenerationJob } from '@/entities/generation-job/@x/post'
+import { qualityMetricFromProto, type QualityMetricId } from '@/entities/quality/@x/post'
 import { toTemplateRef } from '@/entities/template/@x/post'
 import { toVoiceRef } from '@/entities/voice/@x/post'
 import { POST_TAG_COUNT_DEFAULT } from '../config'
@@ -50,6 +51,11 @@ export function toPostDraft(post: Post): PostDraft {
     targetLength: post.targetLength,
     tagCount: post.tagCount ?? POST_TAG_COUNT_DEFAULT,
     useMemory: post.useMemory,
+    // A metric a newer server adds names no row this build can show, so it is dropped rather
+    // than guessed (ARCH-3).
+    qualityRules: post.qualityRules
+      .map(qualityMetricFromProto)
+      .filter((id): id is QualityMetricId => id !== undefined),
     finalizedRevision: post.finalizedRevision,
     finalizedAt: post.finalizedAt,
     publishedUrl: post.publishedUrl,

@@ -20,6 +20,7 @@ import {
   type FakePostRow,
   type FakePostsOptions,
 } from '@/test/posts'
+import type { FakeQualityReading } from '@/test/quality'
 import { clearCaret } from '@/features/edit-post-content/model/caret-handoff'
 
 const USER = { id: 'alice' }
@@ -3072,6 +3073,209 @@ describe('the post measurement row', () => {
     expect(await screen.findByText(/아직 다듬을 글이 없어요/)).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: HEADING })).toBeNull()
     expect(measurementReads(calls)).toBe(0)
+  })
+})
+
+// POST-81: ①'s brief reads the account aggregate and offers a tick on an over-band metric; the
+// ticks autosave per post, where the next run's enqueue reads them.
+describe('the brief quality rows', () => {
+  const SLUG = '20260901-seongsu'
+  const OVER: FakeQualityReading[] = [
+    {
+      metric: 'title_saturation',
+      verdict: 'over_band',
+      minimum: 10,
+      publishedCount: 12,
+      ruleText: '제목마다 “성수 카페”를 반복하지 마세요.',
+      values: { share: 0.42, shareWarnAbove: 0.3 },
+    },
+  ]
+  const m1 = () => screen.findByRole('checkbox', { name: /^제목 도배율 42%/ })
+  const reads = (calls: string[]) => calls.filter((call) => call === 'GetAccountQuality').length
+
+  it('saves a tick and keeps it across a reload', async () => {
+    const user = userEvent.setup()
+    const calls: string[] = []
+    const qualityRuleSaves: NonNullable<FakePostsOptions['qualityRuleSaves']> = []
+    const generationOptionSaves: Array<number | undefined> = []
+    const first = renderAppAt(`/posts/${SLUG}`, {
+      user: USER,
+      calls,
+      posts: {
+        calls,
+        qualityRuleSaves,
+        generationOptionSaves,
+        posts: [{ slug: SLUG, title: '성수 카페', targetLength: 1800 }],
+      },
+      quality: { accounts: { [SLUG]: OVER } },
+    })
+
+    // Read as soon as the dock renders, before anyone opens the brief.
+    await screen.findByRole('tab', { name: '글 생성' })
+    await waitFor(() => expect(reads(calls)).toBe(1))
+    await openBrief(user)
+    const box = await m1()
+    expect(box).not.toBeChecked()
+    await user.click(box)
+    await waitFor(() => expect(qualityRuleSaves).toEqual([['title_saturation']]))
+    // The post's 목표 글자 수 rides along, so the tick cannot clear it.
+    expect(generationOptionSaves).toEqual([1800])
+    // The start requests carry nothing new: the enqueue reads the saved ticks (T344).
+    expect(calls).not.toContain('StartGeneration')
+
+    first.unmount()
+    renderAppAt(`/posts/${SLUG}`, { transport: first.transport })
+    await openBrief(user)
+    expect(await m1()).toBeChecked()
+  })
+
+  it('re-reads the aggregate when the target language changes', async () => {
+    const user = userEvent.setup()
+    const calls: string[] = []
+    const { queryClient } = renderAppAt(`/posts/${SLUG}`, {
+      user: USER,
+      calls,
+      posts: { calls, posts: [{ slug: SLUG, title: '성수 카페' }] },
+      quality: { accounts: { [SLUG]: OVER } },
+    })
+
+    const language = await briefField(user, '글 언어')
+    await m1()
+    const before = reads(calls)
+    await user.click(language)
+    await user.click(await screen.findByRole('option', { name: '영어' }))
+
+    await waitFor(() => expect(calls).toContain('SavePostDraft'))
+    await waitFor(() => expect(reads(calls)).toBeGreaterThan(before))
+    // The rows on screen read the aggregate in the new language, whose rule texts are in it.
+    await waitFor(() => {
+      const shown = queryClient
+        .getQueryCache()
+        .findAll({ queryKey: ['quality'] })
+        .filter((query) => query.queryKey[3] === 'account' && query.getObserversCount() > 0)
+        .map((query) => query.queryKey[5])
+      expect(shown).toEqual(['en'])
+    })
+  })
+
+  it('omits the rows on /posts/new', async () => {
+    const user = userEvent.setup()
+    const calls: string[] = []
+    renderAppAt('/posts/new', {
+      user: USER,
+      calls,
+      quality: { calls, accounts: { [SLUG]: OVER } },
+    })
+
+    await openBrief(user)
+    expect(await screen.findByRole('combobox', { name: /작성 모델/ })).toBeInTheDocument()
+    expect(screen.queryByText('발행 글 점검')).toBeNull()
+    expect(reads(calls)).toBe(0)
+  })
+
+  it('refetches the aggregate after a URL save', async () => {
+    const user = userEvent.setup()
+    const calls: string[] = []
+    const { queryClient } = renderAppAt(`/posts/${SLUG}`, {
+      user: USER,
+      calls,
+      posts: {
+        calls,
+        posts: [
+          {
+            slug: SLUG,
+            title: '성수 카페',
+            status: 'finalized',
+            content: POST_CONTENT_FIXTURE,
+            contentRevision: 1n,
+            machineBaselineRevision: 1n,
+            canFinalize: true,
+            finalizedRevision: 1n,
+            finalizedAt: '2026-08-20T12:00:00Z',
+          },
+        ],
+      },
+      quality: { accounts: { [SLUG]: OVER } },
+    })
+
+    await openBrief(user)
+    await m1()
+    await user.keyboard('{Escape}')
+    await openStep(user, '글 완성')
+    await user.click(await screen.findByLabelText('네이버 블로그 글 주소'))
+    await user.paste('https://blog.naver.com/alice/223000000001')
+    await user.click(
+      within(screen.getByRole('region', { name: '발행' })).getByRole('button', { name: '저장' }),
+    )
+    await waitFor(() => expect(calls).toContain('SavePostPublishedUrl'))
+
+    // The paste changed which posts are 발행됨, so the aggregate this brief read is stale (QUAL-3).
+    await waitFor(() => {
+      const account = queryClient
+        .getQueryCache()
+        .findAll({ queryKey: ['quality'] })
+        .find((query) => query.queryKey[3] === 'account')
+      expect(account?.state.isInvalidated).toBe(true)
+    })
+    const before = reads(calls)
+    await openBrief(user)
+    await waitFor(() => expect(reads(calls)).toBeGreaterThan(before))
+  })
+
+  it('disables the ticks while a job runs', async () => {
+    const user = userEvent.setup()
+    renderAppAt(`/posts/${SLUG}`, {
+      user: USER,
+      posts: {
+        posts: [
+          {
+            slug: SLUG,
+            title: '성수 카페',
+            activeJob: { id: 'job-1', kind: 'generate', status: 'running' },
+          },
+        ],
+      },
+      jobs: { jobs: [{ id: 'job-1', kind: 'generate', status: 'running' }] },
+      quality: { accounts: { [SLUG]: OVER } },
+    })
+
+    await openBrief(user)
+    expect(await m1()).toBeDisabled()
+    // The tip still explains the row while the box holds still.
+    expect(screen.getByRole('button', { name: '제목 도배율 설명' })).toBeEnabled()
+  })
+
+  it('disables the ticks on a published post', async () => {
+    const user = userEvent.setup()
+    renderAppAt(`/posts/${SLUG}`, {
+      user: USER,
+      posts: {
+        posts: [
+          {
+            slug: SLUG,
+            title: '성수 카페',
+            status: 'published',
+            content: POST_CONTENT_FIXTURE,
+            contentRevision: 1n,
+            machineBaselineRevision: 1n,
+            canFinalize: true,
+            finalizedRevision: 1n,
+            finalizedAt: '2026-08-20T12:00:00Z',
+            publishedUrl: 'https://blog.naver.com/alice/1',
+            publishedAt: '2026-08-21T09:00:00Z',
+            qualityRules: ['title_saturation'],
+          },
+        ],
+      },
+      quality: { accounts: { [SLUG]: OVER } },
+    })
+
+    await openStep(user, '글 생성')
+    await openBrief(user)
+    const box = await m1()
+    expect(box).toBeDisabled()
+    expect(box).toBeChecked()
+    expect(screen.getByRole('button', { name: '제목 도배율 설명' })).toBeEnabled()
   })
 })
 

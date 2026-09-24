@@ -1,4 +1,4 @@
-import { forwardRef } from 'react'
+import { forwardRef, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Settings } from 'lucide-react'
 import type { ContentLanguage } from '@/shared/api'
@@ -27,10 +27,13 @@ interface GenerationBriefProps {
     disabled: boolean
     onSaved: (values: GenerationOptionValues) => void
   }
+  /** The 발행 글 점검 rows, under 목표 분량. A slot, so the page decides when they exist: a draft
+   *  with no post yet has none (POST-81). */
+  qualityRules?: ReactNode
 }
 
 /** Everything the next AI run is given that is a SETTING rather than a per-draft decision:
- *  관찰 모델 · 작성 모델 · 작성 A/B 후보 · 글 언어 · 목표 분량 · 태그 개수.
+ *  관찰 모델 · 작성 모델 · 작성 A/B 후보 · 글 언어 · 목표 분량 · 태그 개수 · 발행 글 점검.
  *
  *  It is a WIDGET because it composes four different `features/*` slices and a feature may not
  *  import a sibling feature (ARCHITECTURE §3). Every callback is supplied by `pages/editor`, so
@@ -52,6 +55,7 @@ export const GenerationBrief = forwardRef<PopoverHandle, GenerationBriefProps>(
       photoCount,
       locked = false,
       options,
+      qualityRules,
     },
     ref,
   ) {
@@ -117,6 +121,7 @@ export const GenerationBrief = forwardRef<PopoverHandle, GenerationBriefProps>(
                 />
               </div>
             )}
+            {qualityRules}
           </div>
         )}
       </Popover>

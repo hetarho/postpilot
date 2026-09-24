@@ -1,10 +1,12 @@
 import {
   ProtoQualityMetric,
   ProtoQualityVerdict,
+  type ProtoAccountQuality,
   type ProtoPostMeasurement,
   type ProtoQualityReading,
 } from '@/shared/api'
 import type {
+  AccountQuality,
   PostMeasurement,
   QualityMetricId,
   QualityReading,
@@ -124,6 +126,10 @@ export function toQualityReading(reading: ProtoQualityReading): QualityReading {
     ruleText: reading.ruleText,
     values: toQualityValues(metric, reading.values),
   }
+}
+
+export function toAccountQuality(response: ProtoAccountQuality): AccountQuality {
+  return { readings: response.readings.map(toQualityReading) }
 }
 
 export function toPostMeasurement(response: ProtoPostMeasurement): PostMeasurement {

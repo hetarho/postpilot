@@ -43,6 +43,11 @@ import {
   type ContentLanguage,
 } from '@/shared/api'
 import { blogFieldFromProto, blogFieldToProto, isBlogFieldId } from '@/entities/blog-field'
+import {
+  qualityMetricFromProto,
+  qualityMetricToProto,
+  type QualityMetricId,
+} from '@/entities/quality'
 import { parseNaverBlogUrl } from '@/entities/post'
 import { type FakeGenerationJobRow, toFakeProto } from './jobs'
 import { connectAppError } from './app-error'
@@ -146,6 +151,8 @@ export interface FakePostRow {
   /** The memory opt-in (MEM-18). Omitted means off, which is what every draft saved before
    *  memories existed reads as. */
   useMemory?: boolean
+  /** The quality metrics ticked for the next run (POST-81); omitted means none. */
+  qualityRules?: QualityMetricId[]
   finalizedRevision?: bigint
   finalizedAt?: string
   /** A published post's Naver Blog address and when it was recorded; `status: 'published'` is
@@ -184,6 +191,10 @@ export interface FakePostsOptions {
   memoryOptionSaves?: Array<boolean | undefined>
   /** Refuse every option save, so the checkbox's failure path is testable. */
   optionSaveFails?: boolean
+  /** Every SavePostGenerationOptions' tick set as sent, undefined when the member was absent. */
+  qualityRuleSaves?: Array<QualityMetricId[] | undefined>
+  /** Every SavePostGenerationOptions' tag count as sent, undefined when absent. */
+  tagCountSaves?: Array<number | undefined>
   /** The voices a post may be assigned to. Omitted, only `DEFAULT_POST_VOICE` exists. */
   voices?: FakePostVoice[]
   /** The 템플릿 a post may be assigned to. Omitted, the account has none. */
@@ -236,6 +247,7 @@ type Row = {
   targetLength?: number
   tagCount: number
   useMemory: boolean
+  qualityRules: ReturnType<typeof qualityMetricToProto>[]
   finalizedRevision: bigint
   finalizedAt: string
   publishedUrl: string
@@ -375,6 +387,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       // The real server always fills it (POST-63): a row never saved with one is the default.
       tagCount: row.tagCount ?? 4,
       useMemory: row.useMemory ?? false,
+      qualityRules: (row.qualityRules ?? []).map(qualityMetricToProto),
       finalizedRevision: row.finalizedRevision ?? 0n,
       finalizedAt: row.finalizedAt ?? '',
       publishedUrl: row.publishedUrl ?? '',
@@ -560,6 +573,8 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       targetLength: seededLength,
       tagCount: seededTags,
       useMemory: existing?.useMemory ?? false,
+      // A draft save never touches the ticks; only the options save does.
+      qualityRules: existing?.qualityRules ?? [],
       finalizedRevision: existing?.finalizedRevision ?? 0n,
       finalizedAt: existing?.finalizedAt ?? '',
       publishedUrl: existing?.publishedUrl ?? '',
@@ -626,13 +641,21 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
     if (options.optionSaveFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
     options.generationOptionSaves?.push(req.targetLength)
     options.memoryOptionSaves?.push(req.useMemory)
+    options.tagCountSaves?.push(req.tagCount)
+    const ticks = req.qualityRules?.metrics.map(qualityMetricFromProto)
+    options.qualityRuleSaves?.push(ticks?.filter((id): id is QualityMetricId => id !== undefined))
     const row = rows.get(req.slug)
     if (!row) throw connectAppError('POST_NOT_FOUND', Code.NotFound)
     refuseIfPublished(row)
+    // Validated before anything is written, like the server: an unknown metric changes nothing.
+    if (ticks?.some((id) => id === undefined))
+      throw connectAppError('POST_QUALITY_RULE_INVALID', Code.InvalidArgument)
     row.targetLength = req.targetLength
     // Presence-aware like the server: absent keeps the stored count.
     if (req.tagCount !== undefined) row.tagCount = req.tagCount
     if (req.useMemory !== undefined) row.useMemory = req.useMemory
+    // Present replaces the whole set, deduplicated, and present with none clears it.
+    if (req.qualityRules !== undefined) row.qualityRules = [...new Set(req.qualityRules.metrics)]
     return create(SavePostGenerationOptionsResponseSchema, { post: toProto(row) })
   })
 

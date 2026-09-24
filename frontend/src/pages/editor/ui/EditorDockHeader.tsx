@@ -1,6 +1,8 @@
 import { forwardRef } from 'react'
 import { isTerminal } from '@/entities/generation-job'
 import type { PostDraft } from '@/entities/post'
+import { usePrefetchAccountQuality } from '@/entities/quality'
+import { QualityRuleChoices } from '@/features/choose-quality-rules'
 import { PostTemplateSelect } from '@/features/select-post-template'
 import { PostVoiceSelect, reassignmentBlocker } from '@/features/select-post-voice'
 import type { ContentLanguage } from '@/shared/api'
@@ -52,6 +54,11 @@ export const EditorDockHeader = forwardRef<
   },
   briefRef,
 ) {
+  const jobRunning = Boolean(post?.activeJob && !isTerminal(post.activeJob))
+  // Read as soon as the dock renders, so the rows are there when the brief opens; the language is
+  // part of the read, since every rule text is rendered in it.
+  usePrefetchAccountQuality(ownerId, post?.slug ?? '', targetLanguage)
+
   // Everything the next AI run is given, in one surface. Every callback goes through the autosave
   // queue for an existing post, and through local state for a draft the server has not created.
   //
@@ -77,10 +84,24 @@ export const EditorDockHeader = forwardRef<
               // The length and the tag count are the fields in the brief a running job has already
               // frozen; the others are still worth changing for the NEXT run, which is why only
               // these grey.
-              disabled: Boolean(post.activeJob && !isTerminal(post.activeJob)),
+              disabled: jobRunning,
               onSaved: onBriefSaved,
             }
           : undefined
+      }
+      // Only for a saved post: a draft has no slug to tick against (POST-81). A running job or the
+      // publish lock holds the boxes, with no reason of their own — ① says it once.
+      qualityRules={
+        post ? (
+          <QualityRuleChoices
+            ownerId={ownerId}
+            slug={post.slug}
+            targetLanguage={targetLanguage}
+            ticked={post.qualityRules}
+            targetLength={targetLength}
+            disabled={jobRunning || locked}
+          />
+        ) : undefined
       }
     />
   )

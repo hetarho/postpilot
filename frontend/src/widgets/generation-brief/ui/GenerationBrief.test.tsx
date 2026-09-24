@@ -11,8 +11,10 @@ import {
   createRoute,
   createRouter,
 } from '@tanstack/react-router'
+import { QualityRuleChoices } from '@/features/choose-quality-rules'
 import { Stage } from '@/shared/api'
 import { chooseOption } from '@/test/listbox'
+import type { FakeQualityOptions } from '@/test/quality'
 import { createFakeAuthTransport, createTestQueryClient } from '@/test/session'
 import { GenerationBrief } from './GenerationBrief'
 
@@ -46,7 +48,7 @@ function renderInRouter(
 
 function renderBrief(
   overrides: Partial<Parameters<typeof GenerationBrief>[0]> = {},
-  { savedPair = false }: { savedPair?: boolean } = {},
+  { savedPair = false, quality }: { savedPair?: boolean; quality?: FakeQualityOptions } = {},
 ) {
   const calls: string[] = []
   const transport = createFakeAuthTransport({
@@ -73,6 +75,8 @@ function renderBrief(
     },
     voice: { voices: [{ id: 'voice-a', name: '일상 말투', isDefault: true }] },
     templates: { templates: [{ id: 'template-a', name: '일기' }] },
+    posts: { posts: [{ slug: 'post-a' }] },
+    quality,
   })
   renderInRouter(
     <GenerationBrief
@@ -194,6 +198,88 @@ describe('GenerationBrief', () => {
     await user.click(await screen.findByRole('button', { name: '글쓰기 옵션' }))
     const candidateA = await screen.findByRole('combobox', { name: /후보 A/ })
     expect(candidateA).toHaveTextContent('모델을 선택하세요')
+  })
+
+  // POST-81: the 발행 글 점검 rows sit after 목표 분량, one per metric in catalogue order, each in the
+  // state the server judged.
+  it('renders the four quality states after 목표 분량', async () => {
+    const user = userEvent.setup()
+    renderBrief(
+      {
+        qualityRules: (
+          <QualityRuleChoices
+            ownerId="alice"
+            slug="post-a"
+            targetLanguage="ko"
+            ticked={[]}
+            disabled={false}
+          />
+        ),
+      },
+      {
+        quality: {
+          accounts: {
+            'post-a': [
+              {
+                metric: 'title_saturation',
+                verdict: 'below_minimum',
+                minimum: 10,
+                publishedCount: 5,
+                values: { shareWarnAbove: 0.3 },
+              },
+              {
+                metric: 'cross_post_phrases',
+                verdict: 'over_band',
+                minimum: 3,
+                publishedCount: 5,
+                ruleText: '다른 글에 있던 문장을 그대로 쓰지 마세요.',
+                values: { share: 0.15, shareWarnAbove: 0.1 },
+              },
+              {
+                metric: 'in_post_repetition',
+                verdict: 'within_band',
+                minimum: 1,
+                publishedCount: 5,
+                values: {
+                  repetitionShare: 0.05,
+                  titleRelevance: 0.7,
+                  repetitionShareWarnAbove: 0.08,
+                  titleRelevanceWarnBelow: 0.5,
+                },
+              },
+              { metric: 'composition', verdict: 'absent', minimum: 3, publishedCount: 5 },
+            ],
+          },
+        },
+      },
+    )
+
+    await user.click(await screen.findByRole('button', { name: '글쓰기 옵션' }))
+    const heading = await screen.findByText('발행 글 점검')
+    expect(
+      screen.getByLabelText('태그 개수').compareDocumentPosition(heading) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    expect(await screen.findByRole('checkbox', { name: /^글 간 고정 문구 15%/ })).toBeEnabled()
+    expect(
+      screen.getByText('발행한 글이 10편 이상이면 비교해요. 지금은 5편이에요.'),
+    ).toBeInTheDocument()
+    expect(screen.getByText('양호')).toBeInTheDocument()
+    expect(screen.getByText('측정할 수 없어요')).toBeInTheDocument()
+    const text = heading.parentElement?.textContent ?? ''
+    const order = ['제목 도배율', '글 간 고정 문구', '글 안 반복과 제목 관련성', '분량·구성'].map(
+      (name) => text.indexOf(name),
+    )
+    expect(order.every((at, i) => at >= 0 && (i === 0 || at > order[i - 1]))).toBe(true)
+  })
+
+  it('omits the quality section without a slot', async () => {
+    const user = userEvent.setup()
+    renderBrief()
+
+    await user.click(await screen.findByRole('button', { name: '글쓰기 옵션' }))
+    expect(await screen.findByLabelText('태그 개수')).toBeInTheDocument()
+    expect(screen.queryByText('발행 글 점검')).toBeNull()
   })
 
   // A1: a draft with no post yet has no slug to save a target length against, so that one field

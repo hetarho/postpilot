@@ -1,12 +1,14 @@
 import { create } from '@bufbuild/protobuf'
 import { describe, expect, it } from 'vitest'
 import {
+  GetAccountQualityResponseSchema,
   GetPostMeasurementResponseSchema,
   ProtoQualityMetric,
   ProtoQualityVerdict,
   QualityCompositionSchema,
   QualityCrossPostPhrasesSchema,
   QualityReadingSchema,
+  QualityTitleSaturationSchema,
 } from '@/shared/api'
 import { QUALITY_METRICS } from '../model/types'
 import {
@@ -16,6 +18,7 @@ import {
   qualityVerdictToProto,
   requireQualityMetric,
   requireQualityVerdict,
+  toAccountQuality,
   toPostMeasurement,
   toQualityReading,
 } from './quality-mappers'
@@ -161,6 +164,48 @@ describe('a quality reading', () => {
       share: undefined,
       shareWarnAbove: 0.1,
     })
+  })
+
+  it('maps the account aggregate with its rule text', () => {
+    const quality = toAccountQuality(
+      create(GetAccountQualityResponseSchema, {
+        readings: [
+          create(QualityReadingSchema, {
+            metric: ProtoQualityMetric.TITLE_SATURATION,
+            verdict: ProtoQualityVerdict.OVER_BAND,
+            minimum: 10,
+            publishedCount: 12,
+            ruleText: '제목에 “성수”를 매번 넣지 마세요.',
+            values: {
+              case: 'titleSaturation',
+              value: create(QualityTitleSaturationSchema, { share: 0.42, shareWarnAbove: 0.3 }),
+            },
+          }),
+          create(QualityReadingSchema, {
+            metric: ProtoQualityMetric.COMPOSITION,
+            verdict: ProtoQualityVerdict.WITHIN_BAND,
+          }),
+        ],
+      }),
+    )
+    expect(quality.readings).toEqual([
+      {
+        metric: 'title_saturation',
+        verdict: 'over_band',
+        minimum: 10,
+        publishedCount: 12,
+        ruleText: '제목에 “성수”를 매번 넣지 마세요.',
+        values: { metric: 'title_saturation', share: 0.42, shareWarnAbove: 0.3 },
+      },
+      {
+        metric: 'composition',
+        verdict: 'within_band',
+        minimum: 0,
+        publishedCount: 0,
+        ruleText: '',
+        values: undefined,
+      },
+    ])
   })
 
   it('fails the whole measurement on a reading it cannot name', () => {

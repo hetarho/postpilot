@@ -3,6 +3,7 @@ import type { BlogFieldChoice } from '@/entities/blog-field/@x/post'
 import type { PostImage } from '@/entities/image/@x/post'
 import type { PostVideo } from '@/entities/video/@x/post'
 import type { GenerationJob } from '@/entities/generation-job/@x/post'
+import type { QualityMetricId } from '@/entities/quality/@x/post'
 import type { TemplateRef } from '@/entities/template/@x/post'
 import type { VoiceRef } from '@/entities/voice/@x/post'
 import type { ContentLanguage, Observation, PostContent } from '@/shared/api'
@@ -77,6 +78,9 @@ export interface PostDraft {
    *  draft saved before memories existed reads as — such a post's prompt is byte-identical to the
    *  one it produced before the domain existed. */
   useMemory: boolean
+  /** The quality metrics ticked for the next run, in catalogue order (POST-81). The enqueue reads
+   *  them; a stored tick whose metric is no longer over band is kept and ignored there. */
+  qualityRules: QualityMetricId[]
   finalizedRevision: bigint
   finalizedAt: string
   /** The Naver Blog address the post was published at, and when; both `''` until it is. */

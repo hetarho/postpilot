@@ -47,6 +47,12 @@ export interface QualityReading {
   values: QualityValues | undefined
 }
 
+/** The account aggregate over its 발행됨 posts, all four metrics in wire order (POST-81). An
+ *  over-band reading carries the rule text ticking it adds, in the post's target language. */
+export interface AccountQuality {
+  readings: QualityReading[]
+}
+
 /** A post's own M2, M3 and M4 at the content revision they describe (QUAL-3, QUAL-36). */
 export interface PostMeasurement {
   contentRevision: bigint
