@@ -35,6 +35,24 @@ func (q *Queries) AcceptMediaArtifact(ctx context.Context, arg AcceptMediaArtifa
 	return result.RowsAffected()
 }
 
+const consumeMediaRender = `-- name: ConsumeMediaRender :execrows
+UPDATE clip_media_artifacts SET canonical=1
+WHERE attempt_id=?1 AND slot='result' AND object_key=?2 AND state='accepted'
+`
+
+type ConsumeMediaRenderParams struct {
+	AttemptID string
+	ObjectKey string
+}
+
+func (q *Queries) ConsumeMediaRender(ctx context.Context, arg ConsumeMediaRenderParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, consumeMediaRender, arg.AttemptID, arg.ObjectKey)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const extendMediaPutExpiry = `-- name: ExtendMediaPutExpiry :exec
 UPDATE clip_media_artifacts SET put_expires_at=MAX(COALESCE(put_expires_at,created_at),?1) WHERE attempt_id=?2 AND slot=?3
 `

@@ -39,6 +39,7 @@ import (
 	"github.com/postpilot/backend/internal/platform/db"
 	"github.com/postpilot/backend/internal/usage"
 	usagestore "github.com/postpilot/backend/internal/usage/store"
+	"google.golang.org/protobuf/proto"
 )
 
 type releaseAdmission struct {
@@ -887,6 +888,10 @@ func (h *releaseHarness) exercise(mode string) {
 		t.Fatal("incorrect measured charge", a)
 	}
 	if wantStatus == "done" {
+		if got.Result != nil || len(got.GetEditing().GetPlan().GetCuts()) == 0 {
+			t.Fatal("generation must save a plan without rendering a file")
+		}
+		got = h.renderSavedPlan(got)
 		if got.Result == nil {
 			t.Fatal("no result")
 		}
@@ -940,7 +945,8 @@ func (h *releaseHarness) exercise(mode string) {
 		for i, key := range h.sourceKeys {
 			want := 1
 			if i == 0 || strings.HasPrefix(mode, "multi-source") {
-				want = 2
+				// Preparation, then the separate render's probe and encode.
+				want = 3
 			}
 			if mode == "multi-source-timing" && i != 0 && i != 3 && i != 6 && i != 7 {
 				want = 1
@@ -1010,6 +1016,44 @@ func (h *releaseHarness) exercise(mode string) {
 	}
 	t.Logf("release sources=%d chunks=%d HTTP=%d max_request=%d max_proxy=%d disk_peak=%d prepared_peak=%d originals=%d workspaces=%d processes=%d preparation=%s render=%s elapsed=%s approved=%d held=%d charged=%d refund=%d", len(h.sourceKeys), len(m.prepared), wantCalls, h.provider.maxRequest.Load(), m.maxProxy, m.disk, m.proxyBytes, m.maxOriginals, m.maxWorkspaces, m.maxProcesses, m.prepareTime, m.renderTime, time.Since(start), maxCredits, held, charged, a.GetRefundCredits())
 }
+
+// Generation saves a plan; the owner explicitly starts a separate free render.
+// Keep the full release gate on that public path, including its no-AI promise.
+func (h *releaseHarness) renderSavedPlan(before *v1.ClipProject) *v1.ClipProject {
+	t, ctx := h.t, h.t.Context()
+	calls, balance := h.provider.posts.Load(), h.balance()
+	started, err := h.client.StartClipRender(ctx, releaseRequest(h, &v1.StartClipRenderRequest{ProjectId: h.project, BatchId: h.batch, ExpectedRevision: before.EditPlanRevision, RenderKind: v1.ClipRenderKind_CLIP_RENDER_KIND_SERVER}))
+	if err != nil {
+		t.Fatal("start free render:", err)
+	}
+	deadline := time.NewTimer(10 * time.Minute)
+	defer deadline.Stop()
+	ticker := time.NewTicker(50 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		read, err := h.client.GetClipProject(ctx, releaseRequest(h, &v1.GetClipProjectRequest{Id: h.project}))
+		if err != nil {
+			t.Fatal(err)
+		}
+		p := read.Msg.Project
+		j := p.GetLatestJob()
+		if j.GetId() == started.Msg.GetJobId() && (j.GetStatus() == "done" || j.GetStatus() == "failed") {
+			if j.Status != "done" || p.GetResult() == nil || p.GetRenderedPlanRevision() != before.GetEditPlanRevision() || p.GetEditPlanRevision() != before.GetEditPlanRevision() {
+				t.Fatalf("free render did not publish the saved revision: %s %v", j.Status, j.Failure)
+			}
+			if h.provider.posts.Load() != calls || h.balance() != balance {
+				t.Fatal("free render called a provider or charged credits")
+			}
+			return p
+		}
+		select {
+		case <-deadline.C:
+			t.Fatal("render timeout")
+		case <-ticker.C:
+		}
+	}
+}
+
 func usageChargeForRelease(calls int, mode string) int {
 	if mode == "partial" {
 		calls = 1
@@ -1135,7 +1179,7 @@ func (h *releaseHarness) verifyFinalization() {
 		t.Fatal(err)
 	}
 	finalized := response.Msg.Project
-	if finalized.FinalizedResultId != p.Result.Id || finalized.GetCanEdit() || finalized.Editing != nil || finalized.Result.DownloadUrl == "" || h.balance() != balance || h.provider.posts.Load() != calls {
+	if finalized.FinalizedResultId != p.Result.Id || finalized.GetCanEdit() || !proto.Equal(finalized.GetEditing().GetPlan(), p.GetEditing().GetPlan()) || finalized.Result.DownloadUrl == "" || h.balance() != balance || h.provider.posts.Load() != calls {
 		t.Fatal("finalization changed output, credit or AI work")
 	}
 	keys, err := h.objects.ListSourceKeys(ctx)

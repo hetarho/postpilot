@@ -14,3 +14,7 @@ UPDATE clip_media_artifacts SET put_expires_at=MAX(COALESCE(put_expires_at,creat
 -- name: AcceptMediaArtifact :execrows
 UPDATE clip_media_artifacts SET state='accepted',actual_bytes=exact_bytes,accepted_at=sqlc.arg(now)
 WHERE attempt_id=sqlc.arg(attempt_id) AND slot=sqlc.arg(slot) AND metadata_json=sqlc.arg(metadata) AND state='reserved' AND exact_bytes>0;
+
+-- name: ConsumeMediaRender :execrows
+UPDATE clip_media_artifacts SET canonical=1
+WHERE attempt_id=sqlc.arg(attempt_id) AND slot='result' AND object_key=sqlc.arg(object_key) AND state='accepted';

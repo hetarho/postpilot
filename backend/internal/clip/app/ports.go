@@ -62,14 +62,21 @@ type Admission interface {
 	Hold(context.Context, Hold) error
 }
 
+// MediaPublicationTx consumes the accepted worker candidate with the canonical
+// result and parent job commit. Legacy embedded results have no media stage.
+type MediaPublicationTx interface {
+	ConsumeMediaRender(context.Context, clip.AttemptResult, time.Time) error
+}
+
 // Ports is what one writer transaction exposes to a saga.
 type Ports struct {
-	Jobs      JobTx
-	Waits     JobWaitTx
-	Media     MediaArtifactTx
-	Stages    MediaDispatchTx
-	Clips     ClipTx
-	Admission Admission
+	Jobs        JobTx
+	Waits       JobWaitTx
+	Media       MediaArtifactTx
+	Stages      MediaDispatchTx
+	Publication MediaPublicationTx
+	Clips       ClipTx
+	Admission   Admission
 }
 
 // Binder turns the open transaction into the tx-scoped ports. It is the one

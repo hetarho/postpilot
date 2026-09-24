@@ -39,6 +39,38 @@ func NewMediaDispatch(writer *sql.DB, bind Binder, limits clip.MediaStageLimits,
 }
 func MediaWaitKey(stage string) string { return "clip-media:" + stage }
 
+func mediaResumePolicy(op clip.MediaOperation) job.ResumePolicy {
+	if op == clip.MediaRender {
+		return job.ReplaySafe
+	}
+	return job.FailOnInterrupt
+}
+
+// Old queued render payloads do not carry their resolved legacy recipe. Once
+// dispatched, their immutable stage is the authority even after a template edit.
+func (d *MediaDispatch) FrozenTask(ctx context.Context, user, parent string, op clip.MediaOperation) (*clip.MediaTask, error) {
+	var task *clip.MediaTask
+	err := WriteTx(ctx, d.writer, d.bind, func(p Ports) error {
+		stage, err := p.Stages.MediaStageForJob(ctx, parent, op)
+		if errors.Is(err, clip.ErrNotFound) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		if stage.UserID != user {
+			return clip.ErrNotFound
+		}
+		decoded, err := mediacodec.DecodeTask(stage.Payload)
+		if err != nil {
+			return err
+		}
+		task = &decoded
+		return nil
+	})
+	return task, err
+}
+
 type MediaDispatchRequest struct {
 	UserID, JobID, ProjectID string
 	Revision                 int
@@ -72,6 +104,9 @@ func (d *MediaDispatch) Request(ctx context.Context, in MediaDispatchRequest) (s
 		if parent.UserID != in.UserID || parent.Subject(clip.JobSubject) != in.ProjectID || parent.Status != job.StatusRunning || !parent.DispatchReady || !clip.IsJobKind(parent.Kind) {
 			return clip.ErrMediaLeaseLost
 		}
+		if in.Operation == clip.MediaRender && parent.Kind != clip.JobKindRender || in.Operation == clip.MediaPrepare && parent.Kind != clip.JobKindGenerate {
+			return clip.ErrInvalid
+		}
 		project, err := p.Clips.GetProject(ctx, in.UserID, in.ProjectID)
 		if err != nil {
 			return err
@@ -83,14 +118,11 @@ func (d *MediaDispatch) Request(ctx context.Context, in MediaDispatchRequest) (s
 		if err != nil {
 			return err
 		}
-		if batch.ProjectID != in.ProjectID || batch.AccessDenied || len(batch.Sources) != len(in.Task.Sources) {
+		if batch.ProjectID != in.ProjectID {
 			return clip.ErrSourceState
 		}
-		for i, s := range batch.Sources {
-			frozen := in.Task.Sources[i]
-			if s.ID != frozen.ID || s.SourceMetadata != frozen.SourceMetadata || s.ActualBytes != s.Bytes || s.State != "ready" || s.CleanupPending || !s.ExpiresAt.After(now) {
-				return clip.ErrSourceState
-			}
+		if err := clip.ValidateMediaSourceBinding(in.Operation, in.Task, batch, now); err != nil {
+			return err
 		}
 		stage, err = p.Stages.MediaStageForJob(ctx, in.JobID, in.Operation)
 		if errors.Is(err, clip.ErrNotFound) {
@@ -98,7 +130,7 @@ func (d *MediaDispatch) Request(ctx context.Context, in MediaDispatchRequest) (s
 			if err != nil {
 				return err
 			}
-			if err = p.Waits.Park(ctx, in.JobID, MediaWaitKey(stage.ID), job.FailOnInterrupt, now); err != nil {
+			if err = p.Waits.Park(ctx, in.JobID, MediaWaitKey(stage.ID), mediaResumePolicy(in.Operation), now); err != nil {
 				return err
 			}
 			pending = true
@@ -122,7 +154,7 @@ func (d *MediaDispatch) Request(ctx context.Context, in MediaDispatchRequest) (s
 			if err != nil {
 				return err
 			}
-			if continuation.WaitKey != MediaWaitKey(stage.ID) || continuation.Policy != job.FailOnInterrupt {
+			if continuation.WaitKey != MediaWaitKey(stage.ID) || continuation.Policy != mediaResumePolicy(in.Operation) {
 				return job.ErrInvalidWait
 			}
 			if continuation.State != job.ContinuationClaimed {

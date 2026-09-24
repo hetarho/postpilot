@@ -156,7 +156,7 @@ func (e *Executor) renderTask(ctx context.Context, ws clip.MediaWorkspace, w cli
 		if err = errors.Join(err, drop()); err != nil {
 			return err
 		}
-		if !localmedia.SameIdentity(s.Info, actual) || s.Info.CadenceVerified && !actual.CadenceVerified {
+		if !clip.SameMediaOriginal(s.Info, actual) {
 			return clip.ErrInvalidMedia
 		}
 		sources = append(sources, clip.RenderSource{ID: s.ID, Fingerprint: s.Fingerprint, Info: actual})

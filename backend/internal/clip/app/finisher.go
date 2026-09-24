@@ -96,6 +96,11 @@ func (f Finisher) Complete(ctx context.Context, c clip.AttemptResult) error {
 		if candidate.UserID != j.UserID || candidate.ProjectID != j.Subject(clip.JobSubject) || candidate.Result.Key != c.Result.Key || (j.Kind == clip.JobKindGenerate) != (candidate.EditPlan != "") {
 			return clip.ErrInvalid
 		}
+		if !plan && p.Publication != nil {
+			if err := p.Publication.ConsumeMediaRender(ctx, candidate, f.now()); err != nil {
+				return err
+			}
+		}
 		if err := p.Clips.ApplyAttemptResult(ctx, candidate); err != nil {
 			return err
 		}

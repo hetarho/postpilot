@@ -173,6 +173,34 @@ func ValidateMediaResult(op MediaOperation, task MediaTask, result MediaResult, 
 		if len(result.Outputs) != 1 {
 			return ErrInvalid
 		}
+		for i, source := range task.Sources {
+			if !SameMediaOriginal(source.Info, result.Sources[i].Info) {
+				return ErrInvalidMedia
+			}
+		}
+		if result.Plan != "" {
+			plan, err := DecodeEditPlan(result.Plan)
+			if err != nil {
+				return err
+			}
+			frozen, err := DecodeEditPlan(task.Plan)
+			if err != nil {
+				return err
+			}
+			// Rendering records contrast/glyph diagnostics after sampling the
+			// original. Those notices do not change the frozen assembly. Every
+			// field that can change the delivered clip must still match.
+			plan.Notices, plan.NoticeCutRevisions = nil, nil
+			frozen.Notices, frozen.NoticeCutRevisions = nil, nil
+			canonical, err := EncodeEditPlan(plan)
+			if err != nil {
+				return err
+			}
+			expected, err := EncodeEditPlan(frozen)
+			if err != nil || canonical != expected {
+				return ErrInvalidMedia
+			}
+		}
 		return ValidateMediaOutput(op, task, result.Outputs[0], cfg)
 	}
 	if result.Plan != "" {

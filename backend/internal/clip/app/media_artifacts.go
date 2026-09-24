@@ -77,6 +77,13 @@ func (a *MediaArtifacts) authorized(ctx context.Context, p Ports, auth clip.Medi
 	if project.Finalized != nil || project.EditPlanRevision != stage.ExpectedRevision {
 		return stage, task, clip.ErrMediaCancelled
 	}
+	batch, err := p.Media.MediaSourceBatch(ctx, stage.UserID, stage.ParentJobID)
+	if err != nil || batch.ProjectID != stage.ProjectID {
+		return stage, task, clip.ErrSourceState
+	}
+	if err := clip.ValidateMediaSourceBinding(stage.Operation, task, batch, a.now()); err != nil {
+		return stage, task, err
+	}
 	return stage, task, nil
 }
 
@@ -128,21 +135,15 @@ func (a *MediaArtifacts) Read(ctx context.Context, auth clip.MediaLeaseCredentia
 		if err != nil || batch.ProjectID != stage.ProjectID || batch.AccessDenied {
 			return clip.ErrMediaLeaseLost
 		}
-		for _, s := range batch.Sources {
-			if s.ID != id {
-				continue
-			}
-			if s.SourceMetadata != frozen.SourceMetadata || s.ActualBytes != s.Bytes || s.State != "ready" || s.CleanupPending || !s.ExpiresAt.After(a.now()) {
-				return clip.ErrSourceState
-			}
-			source = s
-			deadline = stage.DeadlineAt
-			if s.ExpiresAt.Before(deadline) {
-				deadline = s.ExpiresAt
-			}
-			return nil
+		source, err = clip.ResolveMediaSource(stage.Operation, *frozen, batch, a.now())
+		if err != nil {
+			return err
 		}
-		return clip.ErrInvalid
+		deadline = stage.DeadlineAt
+		if source.ExpiresAt.Before(deadline) {
+			deadline = source.ExpiresAt
+		}
+		return nil
 	})
 	if err != nil {
 		return clip.MediaArtifactAccess{}, err

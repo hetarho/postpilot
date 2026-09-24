@@ -8,6 +8,7 @@ import (
 	"reflect"
 
 	"github.com/postpilot/backend/internal/clip"
+	jobctx "github.com/postpilot/backend/internal/job"
 )
 
 func (s *GenerationService) EditingState(p clip.Project) (*clip.CorrectionState, error) {
@@ -92,6 +93,7 @@ func (s *GenerationService) SaveCorrection(ctx context.Context, user, id string,
 }
 
 type renderPayload struct {
+	Execution      *clip.MediaTask
 	HideDisclosure bool
 	Version        int
 	ProjectID      string
@@ -152,7 +154,7 @@ func (s *GenerationService) StartRender(ctx context.Context, user, id, batch str
 	// The owner's per-source sound choice is frozen HERE, from the leases that
 	// own it, so the job payload carries what the owner has chosen right now
 	// rather than whatever a plan was last saved with (CLIP-100).
-	plan.SourceAudio = clip.FreezeSourceAudio(b, plan.Cuts)
+	plan.SourceAudio = freezeRenderSourceAudio(b, plan)
 	for _, v := range b.Sources {
 		if v.State != "ready" || v.ActualBytes != v.Bytes {
 			return "", clip.ErrSourceState
@@ -176,6 +178,7 @@ func (s *GenerationService) StartRender(ctx context.Context, user, id, batch str
 		plan = plan.WithFacts(p.Disclosure, p.Answers, t.Preset, p.CTA, t.Accent, p.HideDisclosure)
 	}
 	plan = plan.WithDesign(p.DesignSelection())
+	plan.HideDisclosure = p.HideDisclosure
 	refs := make([]clip.RenderSource, 0, len(sources))
 	for _, source := range sources {
 		refs = append(refs, source.RenderSource)
@@ -204,7 +207,15 @@ func (s *GenerationService) StartRender(ctx context.Context, user, id, batch str
 	if kind == clip.RenderBrowser {
 		return s.beginBrowserRender(ctx, p, plan, refs)
 	}
-	raw, err := json.Marshal(renderPayload{HideDisclosure: p.HideDisclosure, Version: 1, ProjectID: id, Revision: revision, PlanJSON: p.EditPlan, Sources: sources, Batch: b})
+	frozen := renderPayload{HideDisclosure: p.HideDisclosure, Version: 1, ProjectID: id, Revision: revision, PlanJSON: p.EditPlan, Sources: sources, Batch: b}
+	if s.remoteMedia != nil {
+		task, err := freezeRenderTask(plan, sources, b, s.cfg.Media)
+		if err != nil {
+			return "", err
+		}
+		frozen.Version, frozen.Execution = 2, &task
+	}
+	raw, err := json.Marshal(frozen)
 	if err != nil {
 		return "", err
 	}
@@ -218,7 +229,7 @@ func (s *GenerationService) RunRender(ctx context.Context, user, job, project st
 	stage := "prepare"
 	checkpoint := clip.AttemptCheckpoint{Version: 1, JobID: job, Stage: stage}
 	defer func() {
-		if err == nil {
+		if err == nil || errors.Is(err, jobctx.ErrYield) {
 			return
 		}
 		checkpoint.Stage = stage
@@ -233,7 +244,7 @@ func (s *GenerationService) RunRender(ctx context.Context, user, job, project st
 		s.checkpoint(recordCtx, user, project, checkpoint)
 	}()
 	defer func() {
-		if err != nil {
+		if err != nil && !errors.Is(err, jobctx.ErrYield) {
 			err = &clip.StageFailure{Stage: stage, Cause: err}
 		}
 	}()
@@ -242,7 +253,7 @@ func (s *GenerationService) RunRender(ctx context.Context, user, job, project st
 		return err
 	}
 	var frozen renderPayload
-	if clip.StrictJSON(string(payload), &frozen) != nil || frozen.Version != 1 || frozen.ProjectID != project || frozen.Batch.ID != b.ID || frozen.Batch.UserID != user || !clip.SameSourceManifest(frozen.Batch.Sources, b.Sources) {
+	if clip.StrictJSON(string(payload), &frozen) != nil || (frozen.Version != 1 && frozen.Version != 2) || (frozen.Version == 2) != (frozen.Execution != nil) || frozen.ProjectID != project || frozen.Batch.ID != b.ID || frozen.Batch.UserID != user || !clip.SameSourceManifest(frozen.Batch.Sources, b.Sources) {
 		return clip.ErrInvalid
 	}
 	if b.State != "consuming" {
@@ -273,16 +284,16 @@ func (s *GenerationService) RunRender(ctx context.Context, user, job, project st
 	// Manual rerender reads the frozen legacy recipe, including after template
 	// edits or deletion. Project-local disclosure changes retain their meaning.
 	t := clip.VideoTemplate{}
-	if p.Composition != nil && p.Composition.Snapshot.LegacyRecipe != nil {
+	if s.remoteMedia == nil && p.Composition != nil && p.Composition.Snapshot.LegacyRecipe != nil {
 		t.Recipe = *p.Composition.Snapshot.LegacyRecipe
-	} else if plan.Portable == nil && p.VideoTemplateID != "" {
+	} else if s.remoteMedia == nil && plan.Portable == nil && p.VideoTemplateID != "" {
 		t, err = s.projects.store.GetTemplate(ctx, user, p.VideoTemplateID)
 		if err != nil && !errors.Is(err, clip.ErrNotFound) {
 			return err
 		}
 	}
 
-	if plan.Portable == nil {
+	if s.remoteMedia == nil && plan.Portable == nil {
 		plan = plan.WithFacts(p.Disclosure, p.Answers, t.Preset, p.CTA, t.Accent, frozen.HideDisclosure)
 	}
 	if err = clip.MatchRenderBatch(plan, b); err != nil {
@@ -308,6 +319,9 @@ func (s *GenerationService) RunRender(ctx context.Context, user, job, project st
 		}
 	}
 	var result clip.Result
+	if s.remoteMedia != nil {
+		return s.runRemoteRender(ctx, user, job, p, b, frozen, set)
+	}
 	err = s.media.WithWorkspace(ctx, job, func(ws clip.MediaWorkspace) error {
 		set("prepare", 0, len(b.Sources))
 		actual, infos, _, err := s.probeBatch(ctx, ws, b, func(n int) { set("prepare", n, len(b.Sources)) })
