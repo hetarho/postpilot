@@ -17,13 +17,12 @@ function renderField(useMemory: boolean, posts: FakePostsOptions = {}, targetLen
 }
 
 describe('기억 사용', () => {
-  // POST-71/MEM-18: default off, and the label says what turning it on does.
+  // POST-71/MEM-18: default off, and the box carries its name and nothing else.
   it('reads the post and starts off', () => {
     renderField(false)
-    expect(screen.getByRole('checkbox', { name: '기억 사용' })).not.toBeChecked()
-    expect(
-      screen.getByText('이 글을 쓸 때 저장해 둔 기억 중 관련 있는 것을 함께 참고해요.'),
-    ).toBeInTheDocument()
+    const box = screen.getByRole('checkbox', { name: '기억 사용' })
+    expect(box).not.toBeChecked()
+    expect(box).not.toHaveAccessibleDescription()
   })
 
   it('shows a post that opted in as checked', () => {

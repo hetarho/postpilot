@@ -40,17 +40,20 @@ export function EditorGeneratePanel({
       {titleField}
       {memoField}
       {answerFields}
-      {fieldPicker}
-      {/* At the foot of the memo and the data fields, which is what it is about: whether this
-          draft's run may carry the account's memories (POST-71). It is NOT in the writing brief
-          — it silently changes what a run may write. */}
-      <UseMemoriesField
-        slug={post.slug}
-        useMemory={post.useMemory}
-        targetLength={post.targetLength}
-        disabled={locked}
-        className="mt-6"
-      />
+      {/* 분야 and 기억 사용 share one row: stacked, two short choices took a screenful of ① (owner
+          decision 2026-09-25). The row wraps only when it cannot hold both, at a large text size. */}
+      <div className="mt-6 flex flex-wrap items-start gap-x-6 gap-y-2">
+        {fieldPicker}
+        {/* At the foot of the memo and the data fields, which is what it is about: whether this
+            draft's run may carry the account's memories (POST-71). It is NOT in the writing brief
+            — it silently changes what a run may write. */}
+        <UseMemoriesField
+          slug={post.slug}
+          useMemory={post.useMemory}
+          targetLength={post.targetLength}
+          disabled={locked}
+        />
+      </div>
       <EditorPhotos post={post} ensureSlug={ensureSlug} locked={locked} />
       <EditorVoiceWarning ownerId={ownerId} voice={post.voice} />
 

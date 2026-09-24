@@ -175,7 +175,6 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
       value={fieldId}
       disabled={locked}
       onSelect={post ? autosave.assignField : assignments.setFieldId}
-      className="mt-6"
     />
   )
 
@@ -303,8 +302,8 @@ export function DraftEditor({ post, defaultVoiceId = '' }: DraftEditorProps) {
           {titleField}
           {memoField}
           {answerFieldsPanel}
-          {/* Before the photos, and with no 기억 사용 to sit above: that needs a slug. */}
-          {fieldPicker}
+          {/* Before the photos, and with no 기억 사용 to share its row: that needs a slug. */}
+          <div className="mt-6">{fieldPicker}</div>
           <EditorPhotos post={post} ensureSlug={autosave.ensureSlug} />
           <EditorVoiceWarning ownerId={ownerId} voice={assignments.voice} />
           {/* A draft with no post yet has no committing action, but its 말투 and the rest of the

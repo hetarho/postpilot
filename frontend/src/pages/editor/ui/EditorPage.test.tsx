@@ -2796,8 +2796,6 @@ describe('the template data fields in ①', () => {
 describe('the post 분야', () => {
   const AUTOSAVED = { timeout: 4_000 }
   const SLUG = '20260301-jeju'
-  const HELP =
-    '다음 생성부터 이 분야의 지침과, 네이버 검색 결과의 제목·설명에서 자주 보인 표현을 함께 참고해요.'
   const WITH_FIELDS = [
     {
       id: 'template-review',
@@ -2840,7 +2838,8 @@ describe('the post 분야', () => {
     // A post with no 분야 reads 없음, under a label a sighted user can read.
     const picker = await screen.findByRole('button', { name: '분야 없음' })
     expect(screen.getByText('분야', { selector: 'label' })).not.toHaveClass('sr-only')
-    expect(picker).toHaveAccessibleDescription(HELP)
+    // It carries its name and nothing else (owner decision 2026-09-25).
+    expect(picker).not.toHaveAccessibleDescription()
     const memories = screen.getByRole('checkbox', { name: '기억 사용' })
     expect(following(lastAnswer, picker)).toBe(true)
     expect(following(picker, memories)).toBe(true)
@@ -2978,7 +2977,7 @@ describe('the post 분야', () => {
         '발행된 글은 바꿀 수 없어요. 글 완성에서 발행 URL을 지우면 다시 고칠 수 있어요.',
       ),
     ).toHaveLength(1)
-    expect(picker).toHaveAccessibleDescription(HELP)
+    expect(picker).not.toHaveAccessibleDescription()
   })
 })
 

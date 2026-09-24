@@ -62,16 +62,9 @@ export function PhotoStrip({
   const deleteFailed =
     attempted && confirmingId !== undefined && deleteFailedId === confirmingId && !deleting
 
-  // An empty section reads as a bug on a phone, where there is no other chrome around it
-  // (design-language §7): the slot says what photos are for instead of collapsing. The body
-  // role, not the 12px of a status line — it is a sentence the user is meant to act on (§3).
-  if (images.length === 0 && videos.length === 0 && inFlight.length === 0) {
-    return (
-      <Typography variant="body" className="text-content-tertiary">
-        {t('upload.empty', { ns: 'posts' })}
-      </Typography>
-    )
-  }
+  // Nothing to show before the first photo or clip: the 사진·영상 추가 button above is the whole
+  // slot, with no sentence under it (owner decision 2026-09-25).
+  if (images.length === 0 && videos.length === 0 && inFlight.length === 0) return null
 
   return (
     <div className="flex flex-col gap-2">

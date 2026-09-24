@@ -21,10 +21,8 @@ it('offers 없음 and then the nine 분야 in catalogue order, under a visible l
   expect(screen.getByText('분야', { selector: 'label' })).not.toHaveClass('sr-only')
   const picker = screen.getByRole('button', { name: '분야 없음' })
   expect(picker).toHaveAttribute('aria-haspopup', 'dialog')
-  // What the choice feeds, and nothing it cannot promise (QUAL-19).
-  expect(picker).toHaveAccessibleDescription(
-    '다음 생성부터 이 분야의 지침과, 네이버 검색 결과의 제목·설명에서 자주 보인 표현을 함께 참고해요.',
-  )
+  // The name and nothing else: no help line (owner decision 2026-09-25).
+  expect(picker).not.toHaveAccessibleDescription()
   await user.click(picker)
   expect(chips().map((chip) => chip.textContent)).toEqual([
     '없음',
@@ -104,7 +102,7 @@ it('clears a refusal once a later choice lands', async () => {
   await user.click(picker)
   await user.click(screen.getByRole('button', { name: '맛집' }))
   await waitFor(() => expect(screen.queryByRole('alert')).toBeNull())
-  expect(picker).toHaveAccessibleDescription(expect.not.stringContaining('분야를 찾을 수 없어요'))
+  expect(picker).not.toHaveAccessibleDescription()
 })
 
 it('is disabled for a reason the caller states, adding none of its own', () => {
@@ -134,7 +132,7 @@ it.each([
     await user.click(screen.getByRole('button', { name: option }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent(copy)
-    expect(picker).toHaveAccessibleDescription(expect.stringContaining(copy))
+    expect(picker).toHaveAccessibleDescription(copy)
     await waitFor(() => expect(picker).toBeEnabled())
   },
 )

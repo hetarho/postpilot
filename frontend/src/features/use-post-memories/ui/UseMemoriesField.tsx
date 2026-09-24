@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useGenerationOptions } from '@/entities/post'
-import { Checkbox, FieldMessage, Typography, typographyStyles } from '@/shared/ui'
+import { Checkbox, FieldMessage, typographyStyles } from '@/shared/ui'
 
 /** ①'s memory opt-in (POST-71, MEM-18). It sits at the foot of the panel rather than in the
  *  writing brief because it silently changes what a run may write — the same reason 말투 and
@@ -45,7 +45,8 @@ export function UseMemoriesField({
 
   return (
     <div className={className}>
-      {/* The primitive owns the 44px target; the label wraps it so the words are part of it. */}
+      {/* The primitive owns the 44px target; the label wraps it so the words are part of it. No
+          help line follows: the box shares one row with 분야 (owner decision 2026-09-25). */}
       <label
         className={typographyStyles({
           variant: 'label',
@@ -59,9 +60,6 @@ export function UseMemoriesField({
         />
         {t('useMemories.label')}
       </label>
-      <Typography variant="meta" as="p" className="text-content-secondary mt-1">
-        {t('useMemories.help')}
-      </Typography>
       {options.isError && (
         <FieldMessage className="mt-1">{t('useMemories.saveFailed')}</FieldMessage>
       )}

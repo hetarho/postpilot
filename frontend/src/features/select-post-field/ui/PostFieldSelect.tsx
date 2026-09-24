@@ -21,14 +21,7 @@ import {
 } from '@/entities/blog-field'
 import { appFailureFromConnect, type AppFailure } from '@/shared/api'
 import { formatAppFailure } from '@/shared/lib'
-import {
-  ChipToggle,
-  FieldLabel,
-  FieldMessage,
-  Popover,
-  Typography,
-  type PopoverHandle,
-} from '@/shared/ui'
+import { ChipToggle, FieldLabel, FieldMessage, Popover, type PopoverHandle } from '@/shared/ui'
 
 /** The glyph each choice wears beside its name, in the trigger and in the panel alike. */
 const ICONS: Record<BlogFieldChoice, ComponentType<{ className?: string }>> = {
@@ -71,7 +64,6 @@ export function PostFieldSelect({
 }: PostFieldSelectProps) {
   const { t } = useTranslation('posts')
   const id = useId()
-  const hintId = `${id}-hint`
   const errorId = `${id}-error`
   const [pending, setPending] = useState(false)
   const [failure, setFailure] = useState<AppFailure>()
@@ -104,59 +96,62 @@ export function PostFieldSelect({
 
   return (
     <div className={className}>
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
-      <Popover
-        ref={popoverRef}
-        label={label}
-        triggerAttributes={{
-          id,
-          'aria-label': `${label} ${t(blogFieldLabelKey(value))}`,
-          'aria-describedby': `${hintId}${failure ? ` ${errorId}` : ''}`,
-        }}
-        triggerLabel={
-          <>
-            <Current aria-hidden="true" className="size-4 shrink-0" />
-            <span className="min-w-0 truncate">{t(blogFieldLabelKey(value))}</span>
-            <ChevronDown aria-hidden="true" className="size-4 shrink-0" />
-          </>
-        }
-        disabled={disabled || pending}
-        // A bottom sheet on a phone: the room under a field in ①'s flow depends on the scroll,
-        // and the tab bar and the dock cover the bottom of it, which cut the last row of chips
-        // off. From `sm:` it opens downward from its own left edge.
-        phone="sheet"
-        placement="below"
-        align="start"
-        className="mt-1 max-w-full"
-        triggerClassName="max-w-full"
-      >
-        {(close) => (
-          <div role="group" aria-label={label} className="flex flex-wrap gap-2">
-            {CHOICES.map((choice) => {
-              const Icon = ICONS[choice]
-              const pressed = choice === value
-              return (
-                <ChipToggle
-                  key={choice || 'none'}
-                  pressed={pressed}
-                  data-autofocus={pressed || undefined}
-                  className="gap-1.5"
-                  onClick={() => {
-                    close()
-                    void select(choice)
-                  }}
-                >
-                  <Icon aria-hidden="true" className="size-4 shrink-0" />
-                  {t(blogFieldLabelKey(choice))}
-                </ChipToggle>
-              )
-            })}
-          </div>
-        )}
-      </Popover>
-      <Typography variant="body" as="p" id={hintId} className="text-content-secondary mt-2">
-        {t('postField.help')}
-      </Typography>
+      {/* The name sits beside its trigger, not over it, and no help line follows: the field
+          shares one row with 기억 사용 (owner decision 2026-09-25), whose 44px line this matches. */}
+      <div className="flex min-h-11 min-w-0 items-center gap-3">
+        <FieldLabel htmlFor={id} className="shrink-0">
+          {label}
+        </FieldLabel>
+        <Popover
+          ref={popoverRef}
+          label={label}
+          triggerAttributes={{
+            id,
+            'aria-label': `${label} ${t(blogFieldLabelKey(value))}`,
+            'aria-describedby': failure ? errorId : undefined,
+          }}
+          triggerLabel={
+            <>
+              <Current aria-hidden="true" className="size-4 shrink-0" />
+              <span className="min-w-0 truncate">{t(blogFieldLabelKey(value))}</span>
+              <ChevronDown aria-hidden="true" className="size-4 shrink-0" />
+            </>
+          }
+          disabled={disabled || pending}
+          // A bottom sheet on a phone: the room under a field in ①'s flow depends on the scroll,
+          // and the tab bar and the dock cover the bottom of it, which cut the last row of chips
+          // off. From `sm:` it opens downward from its own left edge.
+          phone="sheet"
+          placement="below"
+          align="start"
+          className="min-w-0"
+          triggerClassName="max-w-full"
+        >
+          {(close) => (
+            <div role="group" aria-label={label} className="flex flex-wrap gap-2">
+              {CHOICES.map((choice) => {
+                const Icon = ICONS[choice]
+                const pressed = choice === value
+                return (
+                  <ChipToggle
+                    key={choice || 'none'}
+                    pressed={pressed}
+                    data-autofocus={pressed || undefined}
+                    className="gap-1.5"
+                    onClick={() => {
+                      close()
+                      void select(choice)
+                    }}
+                  >
+                    <Icon aria-hidden="true" className="size-4 shrink-0" />
+                    {t(blogFieldLabelKey(choice))}
+                  </ChipToggle>
+                )
+              })}
+            </div>
+          )}
+        </Popover>
+      </div>
       {failure && (
         <FieldMessage id={errorId} className="mt-2">
           {formatAppFailure(failure)}
