@@ -1,5 +1,5 @@
 # GUIDE writing guidelines (작문 지침)
-> r5 | Reusable, account-owned rules about what a post must avoid or watch out for — applied to every generation by default or scoped to specific templates, frozen at enqueue, capturable from the revision flow, accrued verbatim as candidates from completed revisions, and never learned. Migrated from legacy policy/guidelines.md and plan/16.
+> r6 | Reusable, account-owned rules about what a post must avoid or watch out for — applied to every generation by default or scoped to specific templates, frozen at enqueue, capturable from the revision flow, accrued verbatim as candidates from completed revisions, and never learned. Migrated from legacy policy/guidelines.md and plan/16.
 
 ## decisions
 - GUIDE-1 [o] a guideline is the third authored layer: the voice decides how sentences sound (VOICE), the template decides genre and required content (TMPL), and a guideline is a prohibition or caution that outranks the template on content while leaving register to the voice ← the recurring failures were fluent, on-genre but unnatural or ungrounded sentences that no voice rule (wrong aggregate, re-registered per voice) or template brief (optional per post) could hold
@@ -41,10 +41,11 @@
 - GUIDE-37 [o] inside the guideline section the earlier line wins and the product's preset is injected last of all ← an owner's own guideline must beat the preset, which would otherwise sit in the same 분야 group ordered only by creation time
 - GUIDE-38 [o] the preset row is always on screen and carries its own on/off; GUIDE-19's ban on enable/disable toggles covers an owner's own guidelines, which stay always-on; switched on with no 분야 picked it applies to no post and the row asks for a first 분야 ← switching a product-offered rule on is adopting it, not silencing one the owner wrote
 - GUIDE-39 [o] the preset counts against neither `GUIDELINE_MAX_PER_ACCOUNT` nor the account's text uniqueness ← a cap on what an owner writes should not be spent by what the product offers
+- GUIDE-40 [o] the preset's line rides only with its phrases: a post whose 분야 froze no phrases (an empty list →QUAL-41) receives no preset line, while its 분야-scoped owner guidelines still apply ← the line points the writer at a phrase section the prompt would not carry
 
 ## flow
 - author: `/guidelines` → 새 지침 → text + scope(전역 | templates | 분야) → CreateGuideline(bound, cap, dedupe → row; approves a matching candidate)
-- inject: StartGeneration / StartRevision(resolve template id and 분야 once → ForPrompt(global + template-linked + field-linked) → freeze texts, plus the preset's phrases when it is on) → `[작문 지침]` after the template section → model
+- inject: StartGeneration / StartRevision(resolve template id and 분야 once → ForPrompt(global + template-linked + field-linked) → freeze texts, plus the preset's line and phrases when it is on and the 분야's list is non-empty) → `[작문 지침]` after the template section → model
 - accrue: revise done → record instruction(dedupe → pending +1 | nothing | queue full) → 지침 후보 disclosure(closed, counted) → 승인(create with from_candidate_id) | 무시 | 전부 수락(전역, refusals kept) | 전부 거절
 
 ## constraints
@@ -55,6 +56,7 @@
 - contract: `proto/postpilot/v1/guideline.proto`
 
 ## chg
+- r6 260924 GUIDE-40+ no preset line without frozen phrases
 - r5 260923 GUIDE-14✎ the screen pins the preset row above the owner's rules · GUIDE-15✎ revise leaves out the preset line · GUIDE-17✎ resolves 분야 with the template · GUIDE-20✎ 분야 chips and a third scope choice · GUIDE-31✎ the ② offer depends on the post's 분야, not the preset · GUIDE-34✎ byte-identical prompt→no preset line · GUIDE-38✎ on with no 분야 applies nowhere
 - r4 260923 GUIDE-29+ 30+ 31+ 32+ 33+ 34+ 35+ 36+ 37+ 38+ 39+ the product-owned 상위 노출 단어 사용 preset, its phrases resolved at enqueue, substitution only where the source already says the same thing, no owner editing, GUIDE-18 and seeding left intact · GUIDE-5✎ scope `global|templates`→`global|templates|fields` · GUIDE-14✎ resolution and injection order gain the 분야 group · GUIDE-35 rewrites both precedence sentences: 문체·종결어미·어휘 to the profile → 문체·종결어미 to the profile with vocabulary ranked guideline > template > profile
 - r3 260920 GUIDE-16✎ the grounding constants three→four (the altitude rule joins) and the write scope binds factual claims alone · GUIDE-28+ a guideline outranks a memory the way it outranks a template instruction

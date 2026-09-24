@@ -20,23 +20,23 @@
 | ARCH | 9 | 9 | - | 0 |
 | AUTH | 8 | 8 | - | 0 |
 | QUOTA | 19 | 19 | - | 0 |
-| POST | 11 | 11 | - | 0 |
+| POST | 12 | 11 | POST-20✎ POST-77✎ POST-79✎ POST-88+ | 0 |
 | VOICE | 3 | 3 | - | 1 |
-| GEN | 10 | 10 | - | 0 |
-| MODEL | 16 | 16 | - | 0 |
-| TMPL | 10 | 10 | - | 1 |
-| GUIDE | 5 | 5 | - | 0 |
+| GEN | 11 | 10 | GEN-14✎ GEN-18✎ GEN-51✎ GEN-53✎ | 0 |
+| MODEL | 17 | 16 | MODEL-30✎ | 0 |
+| TMPL | 11 | 10 | TMPL-51✎ | 1 |
+| GUIDE | 6 | 5 | GUIDE-40+ | 0 |
 | EXPORT | 5 | 5 | - | 0 |
 | PUB | 6 | 6 | - | 0 |
 | LANG | 5 | 5 | - | 0 |
-| THEME | 17 | 15 | THEME-19✎ | 0 |
+| THEME | 18 | 15 | THEME-19✎ THEME-42+ | 0 |
 | MKT | 6 | 6 | - | 0 |
 | VIDEO | 3 | 3 | - | 0 |
 | CLIP | 43 | 40 | CLIP-13✎ | 1 |
 | CDS | 25 | 23 | CDS-17✎ CDS-19✎ CDS-21✎ CDS-84✎ | 1 |
 | BILL | 4 | 4 | - | 0 |
-| MEM | 1 | 1 | - | 2 |
-| QUAL | 3 | 3 | - | 0 |
+| MEM | 2 | 1 | MEM-19✎ | 2 |
+| QUAL | 4 | 3 | QUAL-41✎ QUAL-46+ | 0 |
 
 ## review
 | id | st |
@@ -54,10 +54,11 @@
 |---|---|---|---|---|
 
 ## next
-- create-task review/published-quality-260924 (29 adopted, P1 F1 F2 F4 F18 first)
-- update-ssot MEM MODEL: whether a write comparison's snapshot freezes 기억 (T352 finding in the log); update-ssot POST QUAL GUIDE GEN TMPL THEME for the notes in review/published-quality-260924 (POST-20 first: F4 waits on it)
+- create-task review/published-quality-260924 + POST MEM MODEL QUAL GUIDE GEN TMPL THEME (this wave's deltas only; P1 F1 F2 F4 F18 first)
 - create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 ## log
+- 260924 update-ssot done: POST r12 (POST-20✎ POST-77✎ POST-79✎ POST-88+ options saves are partial, a taken candidate is spent), MEM r2 MEM-19✎ + MODEL r17 MODEL-30✎ + GEN-18✎ a write comparison freezes 기억, GEN-14✎ GEN-51✎ ticked rules move to the per-post half, GEN-53✎, TMPL r11 TMPL-51✎ the title form binds only a title request in revise, GUIDE r6 GUIDE-40+ QUAL r4 QUAL-41✎ QUAL-46+, THEME r18 THEME-42+; no doing task affected
+- 260924 update-ssot POST MEM MODEL QUAL GUIDE GEN TMPL THEME start (review/published-quality-260924 notes)
 - 260924 review-code published-quality-260924 ready; 29 findings adopted: 4 P1 (F1 durable generate drops the native-effort flag since 260905, F2 its six hand-copied hops, F4 target length lost or split by mixed presence, F18 InlinePopover Tab), 8 P2, 17 P3; gates green
 - 260924 review-code published-quality-260924 start (scope: T322..T353, fe065cdc..f42a3c95)
 - 260924 T353 done; ticking or unticking 기억 사용 resends the post's 목표 글자 수 with the flag, so a stored length survives the toggle and its refetch, a natural-length post stays natural, and the tag count stays absent and kept; FE gates pass (p35)
@@ -76,5 +77,3 @@
 - 260924 T348 claimed (p35)
 - 260924 T347 done; the shared scope control offers 전역, 특정 템플릿 and 특정 분야 with the nine 분야 as a catalogue-order checkbox list (새 지침, 승인 and the whole-scope edit), each kind clearing the other's set; a 분야 create or rescope sends kind and both sets in one shape, a 분야 guideline badges one chip per 분야, the list keeps the server's three groups, a refusal keeps the draft, and an unreadable scope fails the read; FE gates pass (p35)
 - 260924 T347 claimed (p35)
-- 260924 T346 done; ② shows one 이 글의 측정값 row directly above the article on a post with content that is not published: M2, M3 and M4 in three groups with the server's band edges, 주의 or 양호 only where a band was judged, 측정할 수 없어요 for an unset value and 0 for a stored one, M2's minimum line while under it, the bands-are-ours line, and loading and failure lines; it reads per content revision and refetches after content, URL and delete saves; FE gates pass (p35)
-- 260924 T346 claimed (p35)

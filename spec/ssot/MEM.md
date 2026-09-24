@@ -1,5 +1,5 @@
 # MEM memories
-> r1 | An account owns short atomic facts about its author's world, approved by hand from what a finished post yielded, retrieved by tag and injected as the write prompt's fourth grounding source only when the draft opts in
+> r2 | An account owns short atomic facts about its author's world, approved by hand from what a finished post yielded, retrieved by tag and injected as the write prompt's fourth grounding source only when the draft opts in
 
 ## decisions
 - MEM-1 [o] a memory (the user-facing noun 기억) is ONE atomic fact about the author's world, authored by the user approving an extracted candidate or by writing it by hand; an account owns zero or more, and an account with none produces prompts byte-identical to the ones it produces today
@@ -20,7 +20,7 @@
 - MEM-16 [o] what is stored is the approved facts alone — never the post body, never a summary of it, never the raw candidate list
 - MEM-17 [o] a memory links every post it was approved from; deleting a post drops that link and deletes the memory only when it was its last one ← a fact re-confirmed across several posts outlives any one of them, while a fact that existed only inside a deleted post leaves no orphan
 - MEM-18 [o] a post carries a `use_memory` option, default off, autosaved with the draft as an option save that changes no status, revision, baseline or learning eligibility (→POST-62); off is the shape every existing draft decodes as
-- MEM-19 [o] the selected memories are resolved once at enqueue and frozen into the generation payload as text beside the template brief and the guideline texts (→GEN-15); handlers never re-read the rows, so editing or deleting a memory after the start changes nothing in flight, across restart-resume or retry
+- MEM-19 [o] the selected memories are resolved once at enqueue and frozen as text into the generation payload beside the template brief and the guideline texts (→GEN-15) and into a write comparison's snapshot (→GEN-18); handlers never re-read the rows, so editing or deleting a memory after the start changes nothing in flight, across restart-resume or retry
 - MEM-20 [o] the frozen memories render as ONE `[기억]` section in the per-post half of the write prompt, beside the memo and the observations, never in the stable prefix ← the selected set differs per post, and the prefix is what the provider's cache and every prompt golden rest on
 - MEM-21 [o] the section closes with its own line naming the memories as legitimate material for this post, appended only when the section exists (→GEN-16 →GUIDE-16), so a post with the option off carries no memory bytes and no mention of a source it has none of (→TMPL-46's conditional legend)
 - MEM-22 [o] memories reach the write pass only; the revise pass receives none ← revise holds neither memo nor observations, and material it cannot check against would license rewriting sentences the request never touched
@@ -44,4 +44,5 @@
 - a post with `use_memory` off produces a prompt byte-identical to the one it produces without this domain
 
 ## chg
+- r2 260924 MEM-19✎ frozen into the generation payload→the generation payload and a write comparison's snapshot
 - r1 260920 initial
