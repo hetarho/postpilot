@@ -198,7 +198,15 @@ func (s *Service) RunWriteCandidate(ctx context.Context, raw []byte, model llm.M
 	if !snapshot.Prepared {
 		return WriteAnswer{}, CandidateUsage{}, fmt.Errorf("write snapshot is not prepared")
 	}
-	answer, usage, err := s.writeCandidate(ctx, snapshot.Post, snapshot.Profile, snapshot.Observations, model)
+	// The two candidates run different models, so the reasoning headroom is this candidate's
+	// own, from its catalog entry — the same flag its quote priced (MODEL-39) — and never a
+	// value frozen into the snapshot both candidates share. An unresolvable model keeps the
+	// bare budget, as before.
+	post := snapshot.Post
+	if info, ok := s.models.Resolve(model); ok {
+		post.WriteNativeEffort = info.ReasoningNativeEffort
+	}
+	answer, usage, err := s.writeCandidate(ctx, post, snapshot.Profile, snapshot.Observations, model)
 	return answer, candidateUsage(usage), err
 }
 

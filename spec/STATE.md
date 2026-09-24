@@ -52,7 +52,6 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T354 | A generate's payload is encoded and decoded inside generation | ARCH | - | todo |
 | T355 | The writing brief saves its run options together | POST MEM ARCH | - | todo |
 | T356 | Tab moves through an anchored panel; a hover-opened panel closes on Escape | THEME ARCH | T355 | todo |
 | T357 | The published lock is one guard, and an unclassified write fails a test | ARCH | T355 | todo |
@@ -88,9 +87,11 @@
 ## next
 - implement-task T379 next for the media-worker wave (T376..T378 are done; T387 verifies CPU/VPS compatibility locally; T388 completes README/DEPLOY guides for all three environments and GPU setup tooling without live migration)
 - Later: update-ssot CLIP-163, then create-task ARCH CLIP for real-GPU validation, profile approval/automatic selection and concurrency tuning; ARCH r11 and CLIP r44 remain partially consumed, and physical host setup/migration remain operator actions
-- implement-task T354 (then T355 T356 by dep; 22 todo from review/published-quality-260924, T355 now the brief's whole-set 저장); create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
+- implement-task T355 (continuing T354..T375 in dependency order, p42); create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 
 ## log
+- 260925 T354 done; a generate's payload is encoded by Start and decoded by Generate, cmd/api carries opaque bytes; the native-effort flag now reaches the drain and each A/B candidate takes its own model's headroom; BE gate passes (p42)
+- 260925 T354 claimed (p42)
 - 260925 T378 done (mw): authenticated separate worker API, compatible claims, fenced reports, bounded transport and private runtime status; HTTP/SQLite/race, isolated ARCH-26/FE/CI/codegen checks pass; T379 next
 - 260925 T378 claimed (mw); T377 committed as b56a62bc; sequential media-wave scope only
 - 260925 create-task POST MEM done: T355 rewritten as the brief's whole-set 저장 (분야 joins SavePostGenerationOptions, a partial request is refused, 분야 and 기억 사용 leave ①'s panel, the draft queue's 분야 channel goes); T356 T357 T361 T363 T366 T367 T368 T372 T373 T375 updated to match, T366 now after T355, T373 also refuses an unknown quality tick
@@ -109,5 +110,3 @@
 - 260924 ARCH r10, GEN r11, CLIP r44 documented separate CPU/GPU media execution, private stage artifacts and bounded recovery; CLIP-163 output equivalence remains open; prior pending deltas preserved, no tasks changed
 - 260925 update-ssot done: POST r14 MEM r3 — 분야 and 기억 사용 move from ①'s panel into the writing brief (POST-51✎ POST-54✎ POST-71✎ POST-82✎ MEM-18✎ MEM-26✎), and the brief's run options (목표 분량, 태그 수, quality ticks, 분야, 기억 사용) save together by its 저장 (POST-81✎ POST-89+); no doing task affected, todo T355 T366 T367 T368 T373 T375 assume the old placement
 - 260925 update-ssot POST MEM start: 분야 and 기억 사용 move into the writing brief
-- 260925 create-task done: T354..T375 (22 todo) from review/published-quality-260924 (29 findings, now converted) and this wave's POST MEM MODEL QUAL GUIDE GEN TMPL THEME-42 deltas; P1 first: T354 (F1 F2, plus the same native-effort drop in A/B write candidates), T355 (F4), T356 (F18, THEME-42)
-- 260925 POST r12..r13 POST-77 no-op (no code impact: the shared URL fixture already refuses the blog's home)

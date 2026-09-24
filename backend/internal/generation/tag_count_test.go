@@ -36,11 +36,11 @@ func TestParseContentTrimsSurplusTagsAndAcceptsFewer(t *testing.T) {
 }
 
 func TestGenerationPayloadFreezesTheTagCount(t *testing.T) {
-	raw, err := EncodeGenerationPayload(GenerationOptions{TargetLanguage: LanguageKorean, TagCount: 7})
+	raw, err := encodeGenerationPayload(generationOptions{TargetLanguage: LanguageKorean, TagCount: 7})
 	if err != nil {
 		t.Fatal(err)
 	}
-	decoded, err := DecodeGenerationPayload(raw)
+	decoded, err := decodeGenerationPayload(raw)
 	if err != nil || decoded.TagCount != 7 {
 		t.Fatalf("decoded = %+v err=%v", decoded, err)
 	}
@@ -48,7 +48,7 @@ func TestGenerationPayloadFreezesTheTagCount(t *testing.T) {
 		"before the member": []byte(`{"target_language":"ko"}`),
 		"empty payload":     nil,
 	} {
-		decoded, err := DecodeGenerationPayload(legacy)
+		decoded, err := decodeGenerationPayload(legacy)
 		if err != nil || decoded.TagCount != 4 {
 			t.Fatalf("%s: decoded = %+v err=%v, want the default 4", name, decoded, err)
 		}

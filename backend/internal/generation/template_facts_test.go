@@ -83,14 +83,14 @@ func TestGroundingNamesTheTemplateFields(t *testing.T) {
 // A restart-resume prompts identically, so the facts have to survive the payload — and a
 // payload written before they existed decodes as a brief with none.
 func TestFactsSurviveTheGenerationPayload(t *testing.T) {
-	raw, err := EncodeGenerationPayload(GenerationOptions{
+	raw, err := encodeGenerationPayload(generationOptions{
 		TargetLanguage: LanguageKorean,
 		Template:       briefWithFacts(),
 	})
 	if err != nil {
 		t.Fatalf("encode: %v", err)
 	}
-	decoded, err := DecodeGenerationPayload(raw)
+	decoded, err := decodeGenerationPayload(raw)
 	if err != nil {
 		t.Fatalf("decode: %v", err)
 	}
@@ -104,14 +104,14 @@ func TestFactsSurviveTheGenerationPayload(t *testing.T) {
 
 	// A brief with no fact encodes no `facts` key at all: a template whose fields were all
 	// switched off has to be byte-identical to one that never declared any.
-	bare, err := EncodeGenerationPayload(GenerationOptions{TargetLanguage: LanguageKorean, Template: testBrief()})
+	bare, err := encodeGenerationPayload(generationOptions{TargetLanguage: LanguageKorean, Template: testBrief()})
 	if err != nil {
 		t.Fatalf("encode bare: %v", err)
 	}
 	if strings.Contains(string(bare), "facts") {
 		t.Errorf("an empty fact list reached the payload: %s", bare)
 	}
-	resumed, err := DecodeGenerationPayload(bare)
+	resumed, err := decodeGenerationPayload(bare)
 	if err != nil {
 		t.Fatalf("decode bare: %v", err)
 	}

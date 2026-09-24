@@ -91,8 +91,11 @@ func TestReuseEverythingMakesNoObservationCallAndLeavesTheSnapshotUntouched(t *t
 
 	var progress []string
 	err := svc.Generate(context.Background(), GenerateJob{
-		UserID: "alice", PostSlug: "post", ObserveModel: observeRef.String(), WriteModel: writeRef.String(),
-		ObserveFiles: stringPointer(), Observations: stored,
+		UserID:       "alice",
+		PostSlug:     "post",
+		ObserveModel: observeRef.String(),
+		WriteModel:   writeRef.String(),
+		Payload:      mustGeneratePayload(t, generationOptions{ObserveFiles: stringPointer(), Observations: stored}),
 	}, func(stage string, done, total int) {
 		progress = append(progress, fmt.Sprintf("%s:%d/%d", stage, done, total))
 	})
@@ -128,8 +131,11 @@ func TestReuseEverythingWritesFromTheStoredObservations(t *testing.T) {
 	}
 	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, reobserveBatchSize, testReasoningPolicy, testBudget, testDeps())
 	if err := svc.Generate(context.Background(), GenerateJob{
-		UserID: "alice", PostSlug: "post", ObserveModel: observeRef.String(), WriteModel: writeRef.String(),
-		ObserveFiles: stringPointer(), Observations: stored,
+		UserID:       "alice",
+		PostSlug:     "post",
+		ObserveModel: observeRef.String(),
+		WriteModel:   writeRef.String(),
+		Payload:      mustGeneratePayload(t, generationOptions{ObserveFiles: stringPointer(), Observations: stored}),
 	}, func(string, int, int) {}); err != nil {
 		t.Fatal(err)
 	}
@@ -151,8 +157,11 @@ func TestPartialReobservationReplacesOnlyTheSelectedEntries(t *testing.T) {
 	selected := filenames(2, 5, 7, 11, 14)
 	var progress []string
 	if err := svc.Generate(context.Background(), GenerateJob{
-		UserID: "alice", PostSlug: "post", ObserveModel: observeRef.String(), WriteModel: writeRef.String(),
-		ObserveFiles: &selected, Observations: stored,
+		UserID:       "alice",
+		PostSlug:     "post",
+		ObserveModel: observeRef.String(),
+		WriteModel:   writeRef.String(),
+		Payload:      mustGeneratePayload(t, generationOptions{ObserveFiles: &selected, Observations: stored}),
 	}, func(stage string, done, total int) {
 		progress = append(progress, fmt.Sprintf("%s:%d/%d", stage, done, total))
 	}); err != nil {
@@ -209,7 +218,7 @@ func TestStartForcesPhotosWithNothingToReuse(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	frozen := jobs.generations[0]
+	frozen := jobs.frozen(t, 0)
 	if frozen.ObserveFiles == nil {
 		t.Fatal("Start left the observation set unfrozen")
 	}
@@ -217,8 +226,8 @@ func TestStartForcesPhotosWithNothingToReuse(t *testing.T) {
 		t.Fatalf("frozen set = %v, want the two photos with nothing to reuse", *frozen.ObserveFiles)
 	}
 	// T006: the credit hold prices the frozen set, not the attached count.
-	if frozen.ObserveCalls != 1 {
-		t.Fatalf("ObserveCalls = %d, want 1 (2 photos at batch %d)", frozen.ObserveCalls, reobserveBatchSize)
+	if calls := jobs.generations[0].ObserveCalls; calls != 1 {
+		t.Fatalf("ObserveCalls = %d, want 1 (2 photos at batch %d)", calls, reobserveBatchSize)
 	}
 	// The unknown name is dropped, exactly as an unattached observation would be.
 	if _, err := svc.Start(context.Background(), StartRequest{
@@ -227,7 +236,7 @@ func TestStartForcesPhotosWithNothingToReuse(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	frozen = jobs.generations[1]
+	frozen = jobs.frozen(t, 1)
 	if !reflect.DeepEqual(*frozen.ObserveFiles, []string{"IMG_1.jpg", "IMG_2.jpg", "IMG_4.jpg"}) {
 		t.Fatalf("frozen set = %v, want the asked photo plus the two forced ones", *frozen.ObserveFiles)
 	}
@@ -280,8 +289,6 @@ func TestPostEditsAfterEnqueueCannotChangeWhatTheRunObserves(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	frozen := jobs.generations[0]
-
 	// The post moves on while the job waits: a photo is added, another is deleted, and the
 	// stored snapshot is replaced by a different model's work.
 	posts.input.Images = []Image{
@@ -290,10 +297,7 @@ func TestPostEditsAfterEnqueueCannotChangeWhatTheRunObserves(t *testing.T) {
 	}
 	posts.input.Observations = []Observation{{File: "IMG_1.jpg", Scene: "rewritten", Model: "other/observer"}}
 
-	if err := svc.Generate(context.Background(), GenerateJob{
-		UserID: "alice", PostSlug: "post", ObserveModel: frozen.ObserveModel, WriteModel: frozen.WriteModel,
-		ObserveFiles: frozen.ObserveFiles, Observations: frozen.Observations,
-	}, func(string, int, int) {}); err != nil {
+	if err := svc.Generate(context.Background(), jobs.queued(0), func(string, int, int) {}); err != nil {
 		t.Fatal(err)
 	}
 	if got := filesOfObserveCalls(models); !reflect.DeepEqual(got, [][]string{{"IMG_2.jpg"}}) {
@@ -355,7 +359,7 @@ func TestZeroPhotoPathStillClearsTheSnapshot(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if jobs.generations[0].ObserveFiles != nil || jobs.generations[0].ObserveCalls != 0 {
+	if jobs.frozen(t, 0).ObserveFiles != nil || jobs.generations[0].ObserveCalls != 0 {
 		t.Fatalf("zero-photo start froze a selection: %+v", jobs.generations[0])
 	}
 	if err := svc.Generate(context.Background(), GenerateJob{
@@ -384,14 +388,14 @@ func TestGenerationPayloadPreservesFrozenSetPresence(t *testing.T) {
 		{name: "present with names", set: stringPointer("IMG_1.jpg", "IMG_2.jpg")},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			raw, err := EncodeGenerationPayload(GenerationOptions{
+			raw, err := encodeGenerationPayload(generationOptions{
 				TargetLanguage: LanguageKorean, ObserveFiles: test.set,
 				Observations: []Observation{{File: "IMG_1.jpg", Scene: "s", Objects: []string{"o"}, Model: "old/observer"}},
 			})
 			if err != nil {
 				t.Fatal(err)
 			}
-			decoded, err := DecodeGenerationPayload(raw)
+			decoded, err := decodeGenerationPayload(raw)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -409,7 +413,7 @@ func TestGenerationPayloadPreservesFrozenSetPresence(t *testing.T) {
 		})
 	}
 	// A payload written before this contract existed decodes as "observe everything".
-	decoded, err := DecodeGenerationPayload([]byte(`{"target_language":"ko"}`))
+	decoded, err := decodeGenerationPayload([]byte(`{"target_language":"ko"}`))
 	if err != nil || decoded.ObserveFiles != nil {
 		t.Fatalf("legacy payload decoded to %v (err %v)", decoded.ObserveFiles, err)
 	}
@@ -489,13 +493,9 @@ func TestAPhotoAttachedAfterEnqueueNeverReachesTheWritePrompt(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	frozen := jobs.generations[0]
 	posts.input.Images = append(append([]Image(nil), images...), Image{Filename: "LATE.jpg", Key: "key-late"})
 
-	if err := svc.Generate(context.Background(), GenerateJob{
-		UserID: "alice", PostSlug: "post", ObserveModel: frozen.ObserveModel, WriteModel: frozen.WriteModel,
-		ObserveFiles: frozen.ObserveFiles, Observations: frozen.Observations,
-	}, func(string, int, int) {}); err != nil {
+	if err := svc.Generate(context.Background(), jobs.queued(0), func(string, int, int) {}); err != nil {
 		t.Fatal(err)
 	}
 	if strings.Contains(writePrompt, "LATE.jpg") {

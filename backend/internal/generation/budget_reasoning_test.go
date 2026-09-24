@@ -45,8 +45,11 @@ func TestEachStageSendsItsOwnCompletionBudget(t *testing.T) {
 	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
 
 	if err := svc.Generate(context.Background(), GenerateJob{
-		UserID: "alice", PostSlug: "post", ObserveModel: observeRef.String(), WriteModel: writeRef.String(),
-		TargetLength: &target,
+		UserID:       "alice",
+		PostSlug:     "post",
+		ObserveModel: observeRef.String(),
+		WriteModel:   writeRef.String(),
+		Payload:      mustGeneratePayload(t, generationOptions{TargetLength: &target}),
 	}, func(string, int, int) {}); err != nil {
 		t.Fatal(err)
 	}
@@ -83,10 +86,12 @@ func TestNativeEffortWritingGetsFrozenHeadroom(t *testing.T) {
 	if _, err := svc.Start(context.Background(), StartRequest{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()}); err != nil {
 		t.Fatal(err)
 	}
-	if len(jobs.generations) != 1 || !jobs.generations[0].WriteNativeEffort {
+	if len(jobs.generations) != 1 || !jobs.frozen(t, 0).WriteNativeEffort {
 		t.Fatalf("native effort was not frozen: %+v", jobs.generations)
 	}
-	if err := svc.Generate(context.Background(), GenerateJob{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(), WriteNativeEffort: true}, func(string, int, int) {}); err != nil {
+	// The payload Start enqueued, drained as the worker would drain it: the flag has to survive
+	// the whole path, not a job built by hand with it already set.
+	if err := svc.Generate(context.Background(), jobs.queued(0), func(string, int, int) {}); err != nil {
 		t.Fatal(err)
 	}
 	if got, want := models.calls[len(models.calls)-1].request.MaxTokens, testBudget.Write(nil, true); got != want {
@@ -144,5 +149,39 @@ func TestTruncationNamesTheReasoningSplitWhenReported(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+// The same headroom rule on the A/B path: the two candidates run different models, and each is
+// held for its own model's headroom, so each asks for its own — never a flag frozen into the
+// snapshot both share, which no snapshot sets.
+func TestEachWriteCandidateGetsItsOwnModelsHeadroom(t *testing.T) {
+	target := 1200
+	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, Title: "가제", Memo: "메모", TargetLength: &target}}
+	models := newFakeModels()
+	native := models.infos[writeRef]
+	native.ReasoningNativeEffort = true
+	models.infos[writeRef] = native
+	models.infos[writeRefB] = llm.ModelInfo{Ref: writeRefB, StructuredOutput: true}
+	models.complete = func(llm.ModelRef, llm.Request) (llm.Response, error) { return okContent(), nil }
+	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
+	raw, err := svc.SnapshotWriteInput(context.Background(), "alice", "post", llm.ModelRef{}, &target, nil, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prepared, err := svc.PrepareWriteInput(context.Background(), raw, func(string, int, int) {})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, ref := range []llm.ModelRef{writeRef, writeRefB} {
+		if _, _, err := svc.RunWriteCandidate(context.Background(), prepared, ref); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if got, want := models.calls[0].request.MaxTokens, testBudget.Write(&target, true); got != want {
+		t.Errorf("the native-effort candidate asked for %d tokens, want %d", got, want)
+	}
+	if got, want := models.calls[1].request.MaxTokens, testBudget.Write(&target, false); got != want {
+		t.Errorf("the plain candidate asked for %d tokens, want %d", got, want)
 	}
 }

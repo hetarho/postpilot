@@ -9,6 +9,13 @@ import (
 // Generate handles one durable generate job. Each model call completes before its
 // corresponding post write, so no SQLite transaction spans provider latency.
 func (s *Service) Generate(ctx context.Context, job GenerateJob, progress Progress) error {
+	// The frozen options first, as Revise reads its payload: a payload that cannot be read
+	// fails before anything else is read. Decode owns the legacy defaults — a payload queued
+	// before the language field existed is Korean, and an unknown language is refused.
+	options, err := decodeGenerationPayload(job.Payload)
+	if err != nil {
+		return err
+	}
 	post, err := s.posts.AttachedImages(ctx, job.UserID, job.PostSlug)
 	if err != nil {
 		return fmt.Errorf("load generation input: %w", err)
@@ -21,34 +28,11 @@ func (s *Service) Generate(ctx context.Context, job GenerateJob, progress Progre
 	if _, err := frozenVoice(post, job.VoiceID); err != nil {
 		return err
 	}
-	// Jobs queued before the language payload existed retain their established Korean
-	// behavior. New starts cannot omit the field and EncodeGenerationPayload refuses it.
-	if job.TargetLanguage == "" {
-		job.TargetLanguage = LanguageKorean
-	}
-	if !job.TargetLanguage.Valid() {
-		return ErrLanguageRequired
-	}
-	// Language is frozen in the durable payload. Never let the live post target retarget
-	// queued work after dequeue.
-	post.TargetLanguage = job.TargetLanguage
-	// Generation options are frozen when the job is enqueued. A later options edit
-	// must not change the prompt of work that is already waiting in the queue.
-	post.TargetLength = cloneOptionalInt(job.TargetLength)
-	post.TagCount = resolveTagCount(job.TagCount)
-	post.WriteNativeEffort = job.WriteNativeEffort
-	// Deliberately the payload's brief and never post.TemplateID: editing or deleting the
-	// template after the enqueue — including across a restart-resume or an explicit retry —
-	// must not change the prompt this run builds.
-	post.Template = cloneTemplate(job.Template)
-	// Same rule for the 지침: the frozen texts, never a fresh resolution.
-	post.Guidelines = cloneTexts(job.Guidelines)
-	// Same rule for 기억: the frozen texts, never a fresh retrieval (MEM-19).
-	post.Memories = cloneTexts(job.Memories)
-	// The frozen rule texts and phrases reach the write from the payload alone; the quality
-	// context is never asked again here.
-	post.QualityRules = cloneTexts(job.QualityRules)
-	post.FieldPhrases = cloneTexts(job.FieldPhrases)
+	// Generation options are frozen when the job is enqueued — language, length, tag count,
+	// template, 지침, 기억, rules, phrases and the write budget's headroom alike. A later edit
+	// must not change the prompt of work that is already waiting in the queue, and none of them
+	// is ever resolved afresh here (MEM-19, GEN-48, GEN-51).
+	post = options.onto(post)
 	// An empty observe model records that StartGeneration accepted a zero-photo input.
 	// Photos attached while the queued job waits belong to the next generation; without
 	// this snapshot bit the accepted job would fail later for lacking a vision model.
@@ -68,7 +52,7 @@ func (s *Service) Generate(ctx context.Context, job GenerateJob, progress Progre
 		}
 		// The payload's frozen decision, never a live snapshot: what this run observes was
 		// settled at enqueue and a photo attached since then belongs to the next generation.
-		targets, seed := frozenObserveSelection(post.Images, job.ObserveFiles, job.Observations)
+		targets, seed := frozenObserveSelection(post.Images, options.ObserveFiles, options.Observations)
 		if len(targets) == 0 {
 			// Every observation is being reused, so there is nothing to call a provider for
 			// and nothing to write: making no SetObservations call at all is what leaves the
@@ -99,7 +83,7 @@ func (s *Service) Generate(ctx context.Context, job GenerateJob, progress Progre
 	}
 	// The answer's annotations replace the post's, a phrase-less write's included: its nil
 	// replacements clear the candidates the last generation offered (GEN-48).
-	if err := s.posts.SetGeneratedContent(ctx, post.UserID, post.Slug, answer.Content, job.TargetLanguage, answer.Annotations()); err != nil {
+	if err := s.posts.SetGeneratedContent(ctx, post.UserID, post.Slug, answer.Content, options.TargetLanguage, answer.Annotations()); err != nil {
 		return fmt.Errorf("persist generated content: %w", err)
 	}
 	s.recordVersionSample(ctx, post.UserID, post.Voice.ID, answer.Content)

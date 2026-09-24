@@ -130,11 +130,11 @@ func TestBuildWritePromptOrderAndRules(t *testing.T) {
 
 func TestGenerationPayloadPreservesOptionalTargetPresence(t *testing.T) {
 	for _, target := range []*int{nil, intPointer(100), intPointer(10_000)} {
-		raw, err := EncodeGenerationPayload(GenerationOptions{TargetLanguage: LanguageKorean, TargetLength: target})
+		raw, err := encodeGenerationPayload(generationOptions{TargetLanguage: LanguageKorean, TargetLength: target})
 		if err != nil {
 			t.Fatal(err)
 		}
-		decoded, err := DecodeGenerationPayload(raw)
+		decoded, err := decodeGenerationPayload(raw)
 		if err != nil || (target == nil) != (decoded.TargetLength == nil) || target != nil && *target != *decoded.TargetLength {
 			t.Fatalf("target=%v raw=%s decoded=%v err=%v", target, raw, decoded.TargetLength, err)
 		}
@@ -309,7 +309,7 @@ func TestGenerateUsesFrozenTargetInsteadOfLaterPostOption(t *testing.T) {
 		return llm.Response{Text: `{"title":"t","summary":"s","tags":["a","b","c"],"blocks":[{"type":"TEXT","content":"ok"}]}`}, nil
 	}
 	svc := NewService(posts, fakeProfiles{}, &fakeRules{}, models, fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
-	if err := svc.Generate(context.Background(), GenerateJob{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(), TargetLength: &frozen, TagCount: 9}, func(string, int, int) {}); err != nil {
+	if err := svc.Generate(context.Background(), GenerateJob{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(), Payload: mustGeneratePayload(t, generationOptions{TargetLength: &frozen, TagCount: 9})}, func(string, int, int) {}); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -650,12 +650,49 @@ type fakeJobs struct {
 	revisions   []StartRevisionRequest
 	payloads    [][]byte
 	generations []StartRequest
+	// generatePayloads[i] is the payload Start encoded for generations[i].
+	generatePayloads [][]byte
 }
 
-func (f *fakeJobs) EnqueueGeneration(_ context.Context, request StartRequest) (string, error) {
+func (f *fakeJobs) EnqueueGeneration(_ context.Context, request StartRequest, payload []byte) (string, error) {
 	f.enqueues++
 	f.generations = append(f.generations, request)
+	f.generatePayloads = append(f.generatePayloads, append([]byte(nil), payload...))
 	return f.id, f.err
+}
+
+// queued is the job the worker would run for the i-th Start: the row's routing plus the payload
+// exactly as Start encoded it.
+func (f *fakeJobs) queued(i int) GenerateJob {
+	request := f.generations[i]
+	return GenerateJob{
+		UserID: request.UserID, PostSlug: request.PostSlug, VoiceID: request.VoiceID,
+		ObserveModel: request.ObserveModel, WriteModel: request.WriteModel, Payload: f.generatePayloads[i],
+	}
+}
+
+// frozen decodes what the i-th Start froze.
+func (f *fakeJobs) frozen(t *testing.T, i int) generationOptions {
+	t.Helper()
+	options, err := decodeGenerationPayload(f.generatePayloads[i])
+	if err != nil {
+		t.Fatal(err)
+	}
+	return options
+}
+
+// mustGeneratePayload encodes hand-built frozen options for a job a test drains directly. An
+// empty language is Korean, the default every hand-built job relied on.
+func mustGeneratePayload(t *testing.T, options generationOptions) []byte {
+	t.Helper()
+	if options.TargetLanguage == "" {
+		options.TargetLanguage = LanguageKorean
+	}
+	raw, err := encodeGenerationPayload(options)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return raw
 }
 func (f *fakeJobs) EnqueueRevision(_ context.Context, request StartRevisionRequest, payload []byte) (string, error) {
 	f.enqueues++

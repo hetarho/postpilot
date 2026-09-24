@@ -241,8 +241,6 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (string, erro
 		return "", ErrLanguageRequired
 	}
 	request.TargetLanguage = post.TargetLanguage
-	// From the post, never from the request: there is no per-run override to carry (GEN-46).
-	request.TagCount = resolveTagCount(post.TagCount)
 	voiceID, err := activeVoice(post)
 	if err != nil {
 		return "", err
@@ -258,11 +256,9 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (string, erro
 	}
 	request.WriteNativeEffort = writeInfo.ReasoningNativeEffort
 	if len(post.Images) == 0 {
-		request.ObserveModel = ""
 		// A zero-photo post has no reuse decision to make, so nothing about the picker is
 		// frozen for it: the run observes nothing and clears the snapshot, as it always has.
-		request.ObserveFiles = nil
-		request.Observations = nil
+		request.ObserveModel = ""
 	} else {
 		observe, valid := parseModelRef(request.ObserveModel)
 		if !valid || !modelEnabled(s.models, observe, llm.StageNameObserve) {
@@ -279,39 +275,46 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (string, erro
 	if err != nil {
 		return "", err
 	}
-	request.Template = brief
 	texts, err := s.freezeGuidelines(ctx, post, false)
 	if err != nil {
 		return "", err
 	}
-	request.Guidelines = texts
 	memories, err := s.freezeMemories(ctx, post)
 	if err != nil {
 		return "", err
 	}
-	request.Memories = memories
 	rules, err := s.freezeQualityRules(ctx, post)
 	if err != nil {
 		return "", err
 	}
-	request.QualityRules = rules
 	phrases, err := s.freezeFieldPhrases(ctx, post)
 	if err != nil {
 		return "", err
 	}
-	request.FieldPhrases = phrases
+	options := generationOptions{
+		TargetLanguage: post.TargetLanguage,
+		TargetLength:   cloneOptionalInt(request.TargetLength),
+		// From the post, never from the request: there is no per-run override to carry (GEN-46).
+		TagCount: resolveTagCount(post.TagCount),
+		Template: brief, Guidelines: texts, Memories: memories, QualityRules: rules, FieldPhrases: phrases,
+		WriteNativeEffort: writeInfo.ReasoningNativeEffort,
+	}
 	if len(post.Images) > 0 {
 		// Both halves of the reuse decision are resolved HERE, from one read of the post,
-		// and frozen into the payload by the enqueue. Attaching a photo, deleting one or
-		// switching the observation model afterwards cannot reach the queued run.
+		// and frozen into the payload. Attaching a photo, deleting one or switching the
+		// observation model afterwards cannot reach the queued run.
 		files, carried := freezeObserveSelection(post.Images, post.Observations, request.ObserveFiles)
-		request.ObserveFiles = &files
-		request.Observations = carried
+		options.ObserveFiles = &files
+		options.Observations = carried
 	}
 	// Priced over the FROZEN set, never over the attached count: a run that reuses every
 	// observation makes no observation call and must not be held for fifteen of them.
-	request.ObserveCalls = s.observeCalls(observeTargets(post.Images, request.ObserveFiles))
-	id, err := s.jobs.EnqueueGeneration(ctx, request)
+	request.ObserveCalls = s.observeCalls(observeTargets(post.Images, options.ObserveFiles))
+	payload, err := encodeGenerationPayload(options)
+	if err != nil {
+		return "", fmt.Errorf("encode generation payload: %w", err)
+	}
+	id, err := s.jobs.EnqueueGeneration(ctx, request, payload)
 	if err != nil {
 		return "", fmt.Errorf("enqueue generation: %w", err)
 	}

@@ -259,67 +259,37 @@ type Profile struct {
 // StartRequest.VoiceID is filled by the service from the owned post and frozen into the
 // job, so the handler can prove the post still belongs to the voice it was queued for.
 type StartRequest struct {
-	UserID         string
-	PostSlug       string
-	VoiceID        string
-	ObserveModel   string
-	WriteModel     string
+	UserID       string
+	PostSlug     string
+	VoiceID      string
+	ObserveModel string
+	WriteModel   string
+	// TargetLanguage, VoiceID and WriteNativeEffort are resolved by Start from the post and the
+	// catalog; the enqueue adapter reads them for the row and the hold.
 	TargetLanguage Language
 	TargetLength   *int
-	// TagCount is read from the post at Start, never from the request (GEN-46).
-	TagCount int
-	// Template is resolved from the post server-side at Start and frozen into the payload;
-	// the request never carries one. Nil means the post had none, or it was deleted first.
-	Template *TemplateBrief
-	// Guidelines is resolved the same way, from the same template id, and frozen alongside.
-	Guidelines []string
-	// Memories is the retrieved 기억 texts, frozen alongside — empty unless the post opted in.
-	Memories []string
-	// QualityRules and FieldPhrases are the ticked rule texts still over band and the 분야's
-	// first phrases, resolved at Start and frozen alongside — none for a post with nothing
-	// ticked and no list (GEN-51, GEN-48).
-	QualityRules []string
-	FieldPhrases []string
 	// ObserveCalls is how many observation calls the photos will take, resolved at Start
 	// where the post is already in hand. Observation batches photos, so this is not the
 	// photo count — and the credit hold has to price every call, not every photo.
 	ObserveCalls int
-	// ObserveFiles is the re-observation picker's answer on the way in, and the RESOLVED
-	// frozen set on the way out of Start: unknown names dropped, photos with nothing to
-	// reuse forced in. Nil is a client that sent no picker answer, which observes everything.
-	ObserveFiles *[]string
-	// Observations is the reusable snapshot as it stood at Start, frozen into the payload
-	// beside ObserveFiles. Which of its entries survive the run is decided by ObserveFiles
-	// alone, so a photo waiting for its batch can keep the entry it already had.
-	Observations      []Observation
+	// ObserveFiles is the re-observation picker's answer on the way in. Nil is a client that
+	// sent no picker answer, which observes everything. The resolved set Start freezes lives in
+	// the payload, not here.
+	ObserveFiles      *[]string
 	WriteNativeEffort bool
 }
 
+// GenerateJob is one queued generate as the worker hands it over: the row's routing plus the
+// payload Start encoded.
 type GenerateJob struct {
-	UserID         string
-	PostSlug       string
-	VoiceID        string
-	ObserveModel   string
-	WriteModel     string
-	TargetLanguage Language
-	TargetLength   *int
-	TagCount       int
-	Template       *TemplateBrief
-	Guidelines     []string
-	Memories       []string
-	// QualityRules and FieldPhrases are what Start froze; the run reads them from here and
-	// never from the quality context.
-	QualityRules []string
-	FieldPhrases []string
-	// ObserveFiles carries PRESENCE, not just emptiness. Nil is a job queued before this
-	// contract existed and keeps the observe-everything behavior; non-nil but empty is the
-	// frozen decision to observe nothing at all.
-	ObserveFiles *[]string
-	// Observations is the reusable snapshot frozen at enqueue, beside ObserveFiles and from
-	// the same read. It is the run's ONLY view of what was already known — no handler reads
-	// a live snapshot.
-	Observations      []Observation
-	WriteNativeEffort bool
+	UserID       string
+	PostSlug     string
+	VoiceID      string
+	ObserveModel string
+	WriteModel   string
+	// Payload is the frozen options exactly as Start encoded them. Generate decodes them, and
+	// nothing else does.
+	Payload []byte
 }
 
 type StartRevisionRequest struct {

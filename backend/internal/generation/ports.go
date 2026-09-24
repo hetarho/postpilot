@@ -60,7 +60,9 @@ type LLM interface {
 }
 
 type Jobs interface {
-	EnqueueGeneration(ctx context.Context, request StartRequest) (string, error)
+	// EnqueueGeneration stores payload verbatim and reads only request, for the row, the guards
+	// and the hold.
+	EnqueueGeneration(ctx context.Context, request StartRequest, payload []byte) (string, error)
 	EnqueueRevision(ctx context.Context, request StartRevisionRequest, payload []byte) (string, error)
 	GetGeneration(ctx context.Context, id, userID string) (*JobSummary, error)
 }

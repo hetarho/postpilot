@@ -345,17 +345,10 @@ type generationJobs struct {
 	budget config.LLMCompletionBudget
 }
 
-func (a generationJobs) EnqueueGeneration(ctx context.Context, request generation.StartRequest) (string, error) {
+// EnqueueGeneration stores the payload generation encoded, byte for byte: the frozen options are
+// generation's own, and this adapter only routes the row, guards it and prices its hold.
+func (a generationJobs) EnqueueGeneration(ctx context.Context, request generation.StartRequest, payload []byte) (string, error) {
 	slug := request.PostSlug
-	payload, err := generation.EncodeGenerationPayload(generation.GenerationOptions{
-		TargetLanguage: request.TargetLanguage, TargetLength: request.TargetLength, TagCount: request.TagCount, Template: request.Template,
-		Guidelines: request.Guidelines, Memories: request.Memories,
-		QualityRules: request.QualityRules, FieldPhrases: request.FieldPhrases,
-		ObserveFiles: request.ObserveFiles, Observations: request.Observations,
-	})
-	if err != nil {
-		return "", err
-	}
 	calls := map[string]int{}
 	if request.ObserveModel != "" {
 		// Stated even when it is ZERO: a run that reuses every stored observation makes no

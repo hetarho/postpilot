@@ -29,20 +29,20 @@ func languagePointer(value Language) *Language { return &value }
 
 func TestGenerationPayloadRequiresAndFreezesCanonicalTargetLanguage(t *testing.T) {
 	for _, invalid := range []Language{"", "fr"} {
-		if _, err := EncodeGenerationPayload(GenerationOptions{TargetLanguage: invalid}); !strings.Contains(err.Error(), ErrLanguageRequired.Error()) {
-			t.Fatalf("EncodeGenerationPayload(%q) error = %v", invalid, err)
+		if _, err := encodeGenerationPayload(generationOptions{TargetLanguage: invalid}); !strings.Contains(err.Error(), ErrLanguageRequired.Error()) {
+			t.Fatalf("encodeGenerationPayload(%q) error = %v", invalid, err)
 		}
 	}
-	raw, err := EncodeGenerationPayload(GenerationOptions{TargetLanguage: LanguageEnglish})
+	raw, err := encodeGenerationPayload(generationOptions{TargetLanguage: LanguageEnglish})
 	if err != nil {
 		t.Fatal(err)
 	}
-	decoded, err := DecodeGenerationPayload(raw)
+	decoded, err := decodeGenerationPayload(raw)
 	if err != nil || decoded.TargetLanguage != LanguageEnglish {
 		t.Fatalf("decoded = %+v, err = %v", decoded, err)
 	}
 	for _, legacy := range [][]byte{nil, []byte(`{}`)} {
-		decoded, err := DecodeGenerationPayload(legacy)
+		decoded, err := decodeGenerationPayload(legacy)
 		if err != nil || decoded.TargetLanguage != LanguageKorean {
 			t.Fatalf("legacy payload %q decoded = %+v, err = %v", legacy, decoded, err)
 		}
@@ -78,8 +78,11 @@ func TestOrdinaryGenerationUsesFrozenTargetAndWritesMatchingProvenance(t *testin
 	posts.input.TargetLanguage = LanguageKorean
 	request := jobs.generations[0]
 	err := svc.Generate(context.Background(), GenerateJob{
-		UserID: request.UserID, PostSlug: request.PostSlug, VoiceID: request.VoiceID,
-		WriteModel: request.WriteModel, TargetLanguage: request.TargetLanguage,
+		UserID:     request.UserID,
+		PostSlug:   request.PostSlug,
+		VoiceID:    request.VoiceID,
+		WriteModel: request.WriteModel,
+		Payload:    mustGeneratePayload(t, generationOptions{TargetLanguage: request.TargetLanguage}),
 	}, func(string, int, int) {})
 	if err != nil {
 		t.Fatal(err)

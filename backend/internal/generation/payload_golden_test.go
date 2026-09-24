@@ -16,7 +16,7 @@ import (
 func TestGenerationPayloadWireShapeIsPinned(t *testing.T) {
 	length := 1200
 	observe := []string{"a.jpg"}
-	raw, err := EncodeGenerationPayload(GenerationOptions{
+	raw, err := encodeGenerationPayload(generationOptions{
 		TargetLanguage: LanguageKorean,
 		TargetLength:   &length,
 		TagCount:       7,
@@ -49,7 +49,7 @@ func TestGenerationPayloadWireShapeIsPinned(t *testing.T) {
 	}
 
 	// And it round trips: what the worker decodes is what enqueue froze.
-	back, err := DecodeGenerationPayload(raw)
+	back, err := decodeGenerationPayload(raw)
 	if err != nil || back.TagCount != 7 || back.TargetLength == nil || *back.TargetLength != 1200 {
 		t.Fatalf("round trip = %+v, %v", back, err)
 	}
@@ -66,7 +66,7 @@ func TestGenerationPayloadWireShapeIsPinned(t *testing.T) {
 	// The three states of the re-observation set survive the edge, including the empty one
 	// that means "observe nothing" — the silent double-spend this contract prevents.
 	none := []string{}
-	empty, err := EncodeGenerationPayload(GenerationOptions{
+	empty, err := encodeGenerationPayload(generationOptions{
 		TargetLanguage: LanguageKorean, TagCount: 4, ObserveFiles: &none,
 	})
 	if err != nil {
@@ -79,7 +79,7 @@ func TestGenerationPayloadWireShapeIsPinned(t *testing.T) {
 	if string(keys["observe_files"]) != "[]" {
 		t.Fatalf("observe_files = %s, want []", keys["observe_files"])
 	}
-	absent, err := EncodeGenerationPayload(GenerationOptions{TargetLanguage: LanguageKorean})
+	absent, err := encodeGenerationPayload(generationOptions{TargetLanguage: LanguageKorean})
 	if err != nil {
 		t.Fatalf("encode absent: %v", err)
 	}

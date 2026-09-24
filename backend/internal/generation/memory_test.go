@@ -104,25 +104,25 @@ func TestTheRevisePromptCarriesNoMemories(t *testing.T) {
 // The payload is what the worker reads, so the freeze is only real if it survives the
 // encode: a memory edited or deleted after the start cannot reach queued work.
 func TestMemoriesAreFrozenIntoThePayload(t *testing.T) {
-	raw, err := EncodeGenerationPayload(GenerationOptions{TargetLanguage: LanguageKorean, Memories: testMemories()})
+	raw, err := encodeGenerationPayload(generationOptions{TargetLanguage: LanguageKorean, Memories: testMemories()})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(string(raw), `"memories":["매운 음식을 못 먹는다","연남동에 자주 간다"]`) {
 		t.Fatalf("payload = %s", raw)
 	}
-	back, err := DecodeGenerationPayload(raw)
+	back, err := decodeGenerationPayload(raw)
 	if err != nil || len(back.Memories) != 2 || back.Memories[1] != "연남동에 자주 간다" {
 		t.Fatalf("round trip = %+v, %v", back.Memories, err)
 	}
 
 	// A payload written before memories existed — and one frozen for a post with the option
 	// off — are the same absent member, and both decode as none.
-	legacy, err := DecodeGenerationPayload([]byte(`{"target_language":"ko","observe_files":null}`))
+	legacy, err := decodeGenerationPayload([]byte(`{"target_language":"ko","observe_files":null}`))
 	if err != nil || legacy.Memories != nil {
 		t.Fatalf("a payload without the member decoded %v (%v)", legacy.Memories, err)
 	}
-	off, err := EncodeGenerationPayload(GenerationOptions{TargetLanguage: LanguageKorean})
+	off, err := encodeGenerationPayload(generationOptions{TargetLanguage: LanguageKorean})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -206,7 +206,7 @@ func TestADurableGenerateCarriesItsFrozenMemories(t *testing.T) {
 	if _, err := svc.Start(ctx, StartRequest{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()}); err != nil {
 		t.Fatal(err)
 	}
-	frozen := jobs.generations[0].Memories
+	frozen := jobs.frozen(t, 0).Memories
 	if len(frozen) != 2 {
 		t.Fatalf("the start froze %v", frozen)
 	}
@@ -214,7 +214,7 @@ func TestADurableGenerateCarriesItsFrozenMemories(t *testing.T) {
 	// Between the enqueue and the drain every memory is edited or deleted.
 	recorder.texts = []string{"바뀐 기억"}
 
-	job := GenerateJob{UserID: "alice", PostSlug: "post", VoiceID: liveVoice.ID, WriteModel: writeRef.String(), Memories: frozen}
+	job := GenerateJob{UserID: "alice", PostSlug: "post", VoiceID: liveVoice.ID, WriteModel: writeRef.String(), Payload: mustGeneratePayload(t, generationOptions{Memories: frozen})}
 	if err := svc.Generate(ctx, job, func(string, int, int) {}); err != nil {
 		t.Fatal(err)
 	}
@@ -231,7 +231,7 @@ func TestADurableGenerateCarriesItsFrozenMemories(t *testing.T) {
 		t.Fatalf("memories were retrieved %d times; only the enqueue may", recorder.calls)
 	}
 
-	job.Memories = nil
+	job.Payload = mustGeneratePayload(t, generationOptions{})
 	if err := svc.Generate(ctx, job, func(string, int, int) {}); err != nil {
 		t.Fatal(err)
 	}
@@ -248,7 +248,7 @@ func TestADurableGenerateCarriesItsFrozenMemories(t *testing.T) {
 // member — writes the prompt it wrote before: no section, no closing line and no memory text,
 // and nothing is retrieved, even for a post that has the option on by now.
 func TestADurableGenerateWithoutMemoriesIsUnchanged(t *testing.T) {
-	legacy, err := DecodeGenerationPayload([]byte(`{"target_language":"ko","observe_files":null}`))
+	legacy, err := decodeGenerationPayload([]byte(`{"target_language":"ko","observe_files":null}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -257,7 +257,11 @@ func TestADurableGenerateWithoutMemoriesIsUnchanged(t *testing.T) {
 		recorder := &recordingMemories{texts: testMemories()}
 		svc, _, models := memoryDrainService(recorder)
 		if err := svc.Generate(context.Background(), GenerateJob{
-			UserID: "alice", PostSlug: "post", VoiceID: liveVoice.ID, WriteModel: writeRef.String(), Memories: memories,
+			UserID:     "alice",
+			PostSlug:   "post",
+			VoiceID:    liveVoice.ID,
+			WriteModel: writeRef.String(),
+			Payload:    mustGeneratePayload(t, generationOptions{Memories: memories}),
 		}, func(string, int, int) {}); err != nil {
 			t.Fatalf("%s: %v", name, err)
 		}

@@ -117,24 +117,16 @@ func metered(handler job.Handler) job.Handler {
 }
 
 // generateJob maps a stored generate job onto the run the worker executes: the subjects name the
-// post and the voice, and everything else is the payload's frozen decision. It is its own
-// function so a test drives exactly the mapping the worker uses.
+// post and the voice, the row names the models, and the payload crosses opaque — generation
+// froze it and only generation reads it. It is its own function so a test drives exactly the
+// mapping the worker uses.
 func generateJob(found job.Job) (generation.GenerateJob, error) {
 	slug := found.Subject(post.JobSubject)
 	if slug == "" {
 		return generation.GenerateJob{}, job.ErrInvalidTarget
 	}
-	options, err := generation.DecodeGenerationPayload(found.Payload)
-	if err != nil {
-		return generation.GenerateJob{}, err
-	}
 	return generation.GenerateJob{
 		UserID: found.UserID, PostSlug: slug, VoiceID: found.Subject(voice.JobSubject),
-		ObserveModel: found.ObserveModel, WriteModel: found.WriteModel,
-		TargetLanguage: options.TargetLanguage, TargetLength: options.TargetLength, TagCount: options.TagCount, Template: options.Template,
-		Guidelines: options.Guidelines, Memories: options.Memories,
-		QualityRules: options.QualityRules, FieldPhrases: options.FieldPhrases,
-		ObserveFiles: options.ObserveFiles, Observations: options.Observations,
-		WriteNativeEffort: options.WriteNativeEffort,
+		ObserveModel: found.ObserveModel, WriteModel: found.WriteModel, Payload: found.Payload,
 	}, nil
 }

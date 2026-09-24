@@ -52,7 +52,7 @@ func TestGenerateHandsTheWriteAnswerToThePost(t *testing.T) {
 	posts := phrasedPost()
 	svc := phrasedService(posts, annotatingModels(annotatedAnswer))
 	// The phrases arrive frozen in the job, as Start froze them.
-	if err := svc.Generate(context.Background(), GenerateJob{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(), FieldPhrases: annotatedPhrases}, func(string, int, int) {}); err != nil {
+	if err := svc.Generate(context.Background(), GenerateJob{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(), Payload: mustGeneratePayload(t, generationOptions{FieldPhrases: annotatedPhrases})}, func(string, int, int) {}); err != nil {
 		t.Fatal(err)
 	}
 	if len(posts.annotations) != 1 || posts.annotations[0] == nil {

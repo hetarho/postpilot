@@ -195,7 +195,7 @@ func TestGenerationFreezesGuidelinesAtEnqueueAndTheDrainIgnoresLiveRows(t *testi
 	if guidelines.askedTemplate == nil || *guidelines.askedTemplate != "template-review" {
 		t.Fatalf("resolution asked for %v, want the post's current template", guidelines.askedTemplate)
 	}
-	frozen := jobs.generations[0].Guidelines
+	frozen := jobs.frozen(t, 0).Guidelines
 	if len(frozen) != 2 {
 		t.Fatalf("the start froze %v", frozen)
 	}
@@ -204,7 +204,11 @@ func TestGenerationFreezesGuidelinesAtEnqueueAndTheDrainIgnoresLiveRows(t *testi
 	guidelines.texts = nil
 
 	if err := svc.Generate(ctx, GenerateJob{
-		UserID: "alice", PostSlug: "post", VoiceID: liveVoice.ID, WriteModel: writeRef.String(), Guidelines: frozen,
+		UserID:     "alice",
+		PostSlug:   "post",
+		VoiceID:    liveVoice.ID,
+		WriteModel: writeRef.String(),
+		Payload:    mustGeneratePayload(t, generationOptions{Guidelines: frozen}),
 	}, func(string, int, int) {}); err != nil {
 		t.Fatal(err)
 	}
@@ -221,18 +225,18 @@ func TestGenerationFreezesGuidelinesAtEnqueueAndTheDrainIgnoresLiveRows(t *testi
 // same prompt; a payload written before guidelines existed decodes as none.
 func TestFrozenGuidelinesSurviveAResumeAndALegacyPayloadDecodesAsNone(t *testing.T) {
 	texts := testGuidelines()
-	raw, err := EncodeGenerationPayload(GenerationOptions{TargetLanguage: LanguageKorean, Guidelines: texts})
+	raw, err := encodeGenerationPayload(generationOptions{TargetLanguage: LanguageKorean, Guidelines: texts})
 	if err != nil {
 		t.Fatal(err)
 	}
 	// The caller's slice is rewritten after the freeze; the payload holds its own copy.
 	texts[0] = "편집됨"
 
-	first, err := DecodeGenerationPayload(raw)
+	first, err := decodeGenerationPayload(raw)
 	if err != nil {
 		t.Fatal(err)
 	}
-	again, err := DecodeGenerationPayload(raw)
+	again, err := decodeGenerationPayload(raw)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -245,7 +249,7 @@ func TestFrozenGuidelinesSurviveAResumeAndALegacyPayloadDecodesAsNone(t *testing
 		t.Fatal("a resumed run built a different prompt than the retry")
 	}
 	for _, legacy := range [][]byte{nil, []byte(`{}`), []byte(`{"target_length":800}`)} {
-		decoded, err := DecodeGenerationPayload(legacy)
+		decoded, err := decodeGenerationPayload(legacy)
 		if err != nil || len(decoded.Guidelines) != 0 {
 			t.Fatalf("legacy payload %s decoded to %v err=%v", legacy, decoded.Guidelines, err)
 		}
@@ -344,8 +348,8 @@ func TestAnUnwiredResolverPromptsWithoutGuidelines(t *testing.T) {
 	if _, err := svc.Start(ctx, StartRequest{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()}); err != nil {
 		t.Fatal(err)
 	}
-	if len(jobs.generations[0].Guidelines) != 0 {
-		t.Fatalf("an unwired resolver produced %v", jobs.generations[0].Guidelines)
+	if len(jobs.frozen(t, 0).Guidelines) != 0 {
+		t.Fatalf("an unwired resolver produced %v", jobs.frozen(t, 0).Guidelines)
 	}
 }
 

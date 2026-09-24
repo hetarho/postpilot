@@ -1,8 +1,8 @@
 package main
 
 import (
+	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"path/filepath"
 	"reflect"
@@ -31,9 +31,9 @@ import (
 	voicestore "github.com/postpilot/backend/internal/voice/store"
 )
 
-// Both frozen members survive the adapter, the stored job row and the worker's own mapping; a
-// request without them stores a payload with neither key.
-func TestEnqueueGenerationCarriesRulesAndPhrasesThroughTheJobRow(t *testing.T) {
+// The adapter stores the payload generation encoded byte for byte, and the worker's mapping hands
+// those same bytes back: nothing in between decodes, retypes or drops a frozen member.
+func TestTheGenerateRowCarriesStartsPayloadVerbatim(t *testing.T) {
 	d, err := db.Open(filepath.Join(t.TempDir(), "freeze.db"))
 	if err != nil {
 		t.Fatal(err)
@@ -48,7 +48,6 @@ func TestEnqueueGenerationCarriesRulesAndPhrasesThroughTheJobRow(t *testing.T) {
 		"INSERT INTO users(id,password_hash,created_at) VALUES('alice','hash',?)",
 		"INSERT INTO voices(id,user_id,name,is_default,created_at,updated_at) VALUES('voice-alice','alice','기본',1,?,?)",
 		"INSERT INTO posts(slug,user_id,voice_id,created_at,updated_at) VALUES('alice-post','alice','voice-alice',?,?)",
-		"INSERT INTO posts(slug,user_id,voice_id,created_at,updated_at) VALUES('alice-plain','alice','voice-alice',?,?)",
 	} {
 		args := []any{now}
 		if strings.Count(statement, "?") == 2 {
@@ -61,45 +60,28 @@ func TestEnqueueGenerationCarriesRulesAndPhrasesThroughTheJobRow(t *testing.T) {
 	queue := job.New(jobstore.New(d.Writer, d.Reader, jobKindsForTest()), time.Millisecond, jobReportingForTest())
 	queue.Admit(&stubAdmitter{})
 	jobs := generationJobs{queue: queue, budget: testCompletionBudget()}
-	rules, phrases := []string{"제목에 같은 말을 되풀이하지 않는다"}, []string{"분위기 좋은 식당", "웨이팅 필수"}
 
-	stored := func(slug string, request generation.StartRequest) (generation.GenerateJob, []byte) {
-		t.Helper()
-		request.UserID, request.PostSlug, request.VoiceID = "alice", slug, "voice-alice"
-		request.WriteModel, request.TargetLanguage, request.TagCount = "p/writer", generation.LanguageKorean, 4
-		id, err := jobs.EnqueueGeneration(ctx, request)
-		if err != nil {
-			t.Fatal(err)
-		}
-		var payload []byte
-		if err := d.Reader.QueryRow("SELECT payload FROM generation_jobs WHERE id = ?", id).Scan(&payload); err != nil {
-			t.Fatal(err)
-		}
-		subjects, _ := postVoiceWork(job.KindGenerate, "alice", slug, "voice-alice")
-		run, err := generateJob(job.Job{ID: id, Kind: job.KindGenerate, UserID: "alice", Subjects: subjects, WriteModel: request.WriteModel, Payload: payload})
-		if err != nil {
-			t.Fatal(err)
-		}
-		return run, payload
-	}
-
-	run, _ := stored("alice-post", generation.StartRequest{QualityRules: rules, FieldPhrases: phrases})
-	if !reflect.DeepEqual(run.QualityRules, rules) || !reflect.DeepEqual(run.FieldPhrases, phrases) || run.PostSlug != "alice-post" {
-		t.Fatalf("the worker's run = %+v", run)
-	}
-
-	plain, payload := stored("alice-plain", generation.StartRequest{})
-	var keys map[string]json.RawMessage
-	if err := json.Unmarshal(payload, &keys); err != nil {
+	raw := []byte(`{"target_language":"ko","quality_rules":["x"],"write_native_effort":true}`)
+	id, err := jobs.EnqueueGeneration(ctx, generation.StartRequest{
+		UserID: "alice", PostSlug: "alice-post", VoiceID: "voice-alice", WriteModel: "p/writer", TargetLanguage: generation.LanguageKorean,
+	}, raw)
+	if err != nil {
 		t.Fatal(err)
 	}
-	for _, member := range []string{"quality_rules", "field_phrases"} {
-		if _, carried := keys[member]; carried {
-			t.Errorf("a request without %s stored one: %s", member, payload)
-		}
+	var stored []byte
+	if err := d.Reader.QueryRow("SELECT payload FROM generation_jobs WHERE id = ?", id).Scan(&stored); err != nil {
+		t.Fatal(err)
 	}
-	if plain.QualityRules != nil || plain.FieldPhrases != nil {
-		t.Fatalf("the plain run carried %+v %+v", plain.QualityRules, plain.FieldPhrases)
+	if !bytes.Equal(stored, raw) {
+		t.Fatalf("the row stored %s, want %s", stored, raw)
+	}
+	subjects, _ := postVoiceWork(job.KindGenerate, "alice", "alice-post", "voice-alice")
+	run, err := generateJob(job.Job{ID: id, Kind: job.KindGenerate, UserID: "alice", Subjects: subjects, WriteModel: "p/writer", Payload: stored})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(run.Payload, raw) || run.PostSlug != "alice-post" || run.VoiceID != "voice-alice" || run.WriteModel != "p/writer" {
+		t.Fatalf("the worker's run = %+v", run)
 	}
 	if _, err := generateJob(job.Job{Kind: job.KindGenerate, UserID: "alice"}); !errors.Is(err, job.ErrInvalidTarget) {
 		t.Fatalf("a job without a post subject mapped: %v", err)
@@ -173,10 +155,12 @@ func (freezeLinker) PresignGet(context.Context, string, time.Duration) (string, 
 type recordingModels struct {
 	mu       sync.Mutex
 	requests []llm.Request
+	// nativeEffort is what every model resolves with as ReasoningNativeEffort.
+	nativeEffort bool
 }
 
 func (m *recordingModels) Resolve(ref llm.ModelRef) (llm.ModelInfo, bool) {
-	return llm.ModelInfo{Ref: ref, StructuredOutput: true, Stages: []string{llm.StageNameWrite}}, true
+	return llm.ModelInfo{Ref: ref, StructuredOutput: true, Stages: []string{llm.StageNameWrite}, ReasoningNativeEffort: m.nativeEffort}, true
 }
 
 func (m *recordingModels) Complete(_ context.Context, _ llm.ModelRef, request llm.Request) (llm.Response, error) {
@@ -192,10 +176,22 @@ func (m *recordingModels) last() llm.Request {
 	return m.requests[len(m.requests)-1]
 }
 
-// GEN-48, GUIDE-30, GEN-57 end to end on the real stores and adapters: a post in 분야 restaurant,
-// with a stored list and the preset on for restaurant, writes with the phrase section and the
-// preset line; its revision carries neither.
-func TestFieldPhrasesReachTheWritePromptAndNeverTheRevisePrompt(t *testing.T) {
+// drainHarness is the real generate path end to end: real stores and services, the real
+// generationJobs adapter, a running queue worker with the production generateJob mapping, and
+// models that record every request.
+type drainHarness struct {
+	ctx        context.Context
+	handle     *db.DB
+	posts      *post.Service
+	guidelines *guideline.Service
+	generation *generation.Service
+	quality    *qualitystore.Store
+	voiceID    string
+	waitDone   func(id string)
+}
+
+func newDrainHarness(t *testing.T, models *recordingModels) *drainHarness {
+	t.Helper()
 	handle, err := db.Open(filepath.Join(t.TempDir(), "phrases.db"))
 	if err != nil {
 		t.Fatal(err)
@@ -224,30 +220,12 @@ func TestFieldPhrasesReachTheWritePromptAndNeverTheRevisePrompt(t *testing.T) {
 	qualityStore := qualitystore.New(handle.Writer, handle.Reader)
 	qualitySvc := quality.NewService(quality.Deps{Measurements: qualityStore, Phrases: qualityStore, Posts: qualityPosts{service: postSvc}, Now: time.Now})
 
-	// Phrases the model's content never says, so the revise prompt, which quotes the content,
-	// cannot carry them by accident.
-	listed := []string{"웨이팅 필수 맛집", "줄 서는 식당"}
-	refreshed := time.Now()
-	if err := qualityStore.ReplacePhraseList(ctx, quality.PhraseList{Field: "restaurant", Phrases: listed, CorpusSize: 120, RefreshedAt: &refreshed, NextRefreshAt: refreshed.Add(24 * time.Hour)}); err != nil {
-		t.Fatal(err)
-	}
-	on, restaurant := true, []string{"restaurant"}
-	if _, err := guidelineSvc.UpdatePreset(ctx, "alice", guideline.PresetPatch{Enabled: &on, Fields: &restaurant}); err != nil {
-		t.Fatal(err)
-	}
 	defaultVoice, err := voiceSvc.DefaultVoice(ctx, "alice")
 	if err != nil {
 		t.Fatal(err)
 	}
-	language, field := post.LanguageKorean, "restaurant"
-	saved, err := postSvc.SaveDraft(ctx, "alice", post.DraftSave{Title: "을지로", Memo: "노포에 갔다", VoiceID: &defaultVoice.ID, Field: &field, TargetLanguage: &language})
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	queue := job.New(jobstore.New(handle.Writer, handle.Reader, jobKindsForTest()), time.Millisecond, jobReportingForTest())
 	queue.Admit(&stubAdmitter{})
-	models := &recordingModels{}
 	generationSvc := generation.NewService(
 		generationPosts{service: postSvc}, freezeProfiles{}, freezeRules{}, models, freezeImages{},
 		generationJobs{queue: queue, budget: testCompletionBudget()}, 4, generation.DefaultReasoningPolicy(), testCompletionBudget(),
@@ -272,7 +250,7 @@ func TestFieldPhrasesReachTheWritePromptAndNeverTheRevisePrompt(t *testing.T) {
 		}, generation.Progress(progress))
 	})
 	workerCtx, stop := context.WithCancel(ctx)
-	defer stop()
+	t.Cleanup(stop)
 	go queue.Run(workerCtx)
 	waitDone := func(id string) {
 		t.Helper()
@@ -294,6 +272,65 @@ func TestFieldPhrasesReachTheWritePromptAndNeverTheRevisePrompt(t *testing.T) {
 			time.Sleep(5 * time.Millisecond)
 		}
 	}
+	return &drainHarness{
+		ctx: ctx, handle: handle, posts: postSvc, guidelines: guidelineSvc, generation: generationSvc,
+		quality: qualityStore, voiceID: defaultVoice.ID, waitDone: waitDone,
+	}
+}
+
+// draft saves a Korean draft on the default voice, optionally in a 분야.
+func (h *drainHarness) draft(t *testing.T, field string) post.Post {
+	t.Helper()
+	language := post.LanguageKorean
+	save := post.DraftSave{Title: "을지로", Memo: "노포에 갔다", VoiceID: &h.voiceID, TargetLanguage: &language}
+	if field != "" {
+		save.Field = &field
+	}
+	saved, err := h.posts.SaveDraft(h.ctx, "alice", save)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return saved
+}
+
+// Review F1: a write model with native reasoning effort is held for its headroom at the enqueue,
+// so the drained write call must ask for that same headroom — not the bare budget.
+func TestANativeEffortStartDrainsWithReasoningHeadroom(t *testing.T) {
+	models := &recordingModels{nativeEffort: true}
+	h := newDrainHarness(t, models)
+	saved := h.draft(t, "")
+	writer := llm.ModelRef{ProviderID: "p", ModelID: "writer"}.String()
+	id, err := h.generation.Start(h.ctx, generation.StartRequest{UserID: "alice", PostSlug: saved.Slug, WriteModel: writer})
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.waitDone(id)
+	if got, want := models.last().MaxTokens, testCompletionBudget().Write(nil, true); got != want {
+		t.Fatalf("the drained write asked for %d tokens, want %d (the headroom the hold priced)", got, want)
+	}
+}
+
+// GEN-48, GUIDE-30, GEN-57 end to end on the real stores and adapters: a post in 분야 restaurant,
+// with a stored list and the preset on for restaurant, writes with the phrase section and the
+// preset line; its revision carries neither.
+func TestFieldPhrasesReachTheWritePromptAndNeverTheRevisePrompt(t *testing.T) {
+	models := &recordingModels{}
+	h := newDrainHarness(t, models)
+	ctx, qualityStore, guidelineSvc, generationSvc, waitDone := h.ctx, h.quality, h.guidelines, h.generation, h.waitDone
+
+	// Phrases the model's content never says, so the revise prompt, which quotes the content,
+	// cannot carry them by accident.
+	listed := []string{"웨이팅 필수 맛집", "줄 서는 식당"}
+	refreshed := time.Now()
+	if err := qualityStore.ReplacePhraseList(ctx, quality.PhraseList{Field: "restaurant", Phrases: listed, CorpusSize: 120, RefreshedAt: &refreshed, NextRefreshAt: refreshed.Add(24 * time.Hour)}); err != nil {
+		t.Fatal(err)
+	}
+	on, restaurant := true, []string{"restaurant"}
+	if _, err := guidelineSvc.UpdatePreset(ctx, "alice", guideline.PresetPatch{Enabled: &on, Fields: &restaurant}); err != nil {
+		t.Fatal(err)
+	}
+	saved := h.draft(t, "restaurant")
+
 	writer := llm.ModelRef{ProviderID: "p", ModelID: "writer"}.String()
 
 	id, err := generationSvc.Start(ctx, generation.StartRequest{UserID: "alice", PostSlug: saved.Slug, WriteModel: writer})

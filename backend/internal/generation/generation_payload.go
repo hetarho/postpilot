@@ -84,10 +84,14 @@ type generationPayload struct {
 	WriteNativeEffort bool                 `json:"write_native_effort,omitempty"`
 }
 
-// GenerationOptions is what a durable generate job froze at enqueue. Every field is an
+// generationOptions is what a durable generate job froze at enqueue. Every field is an
 // option of that one run: a later edit of the post's target length, of the template row, or
 // of any guideline must not change the prompt of work already waiting in the queue.
-type GenerationOptions struct {
+//
+// Only this package encodes or decodes it: Start freezes it, the job row carries it as opaque
+// bytes, and Generate reads it back. A member retyped by hand anywhere in between is how a
+// frozen option used to go missing on the way to the run.
+type generationOptions struct {
 	TargetLanguage Language
 	TargetLength   *int
 	TagCount       int
@@ -103,8 +107,8 @@ type GenerationOptions struct {
 	WriteNativeEffort bool
 }
 
-// EncodeGenerationPayload freezes generation-only options in the durable job.
-func EncodeGenerationPayload(options GenerationOptions) ([]byte, error) {
+// encodeGenerationPayload freezes generation-only options in the durable job.
+func encodeGenerationPayload(options generationOptions) ([]byte, error) {
 	if !options.TargetLanguage.Valid() {
 		return nil, ErrLanguageRequired
 	}
@@ -123,19 +127,19 @@ func EncodeGenerationPayload(options GenerationOptions) ([]byte, error) {
 	})
 }
 
-// DecodeGenerationPayload accepts an empty payload for jobs queued before this
+// decodeGenerationPayload accepts an empty payload for jobs queued before this
 // contract existed; those jobs intentionally carry no target length and no template.
 // A payload written before templates existed simply decodes with the field absent.
-func DecodeGenerationPayload(raw []byte) (GenerationOptions, error) {
+func decodeGenerationPayload(raw []byte) (generationOptions, error) {
 	if len(raw) == 0 {
-		return GenerationOptions{TargetLanguage: LanguageKorean, TagCount: resolveTagCount(0)}, nil
+		return generationOptions{TargetLanguage: LanguageKorean, TagCount: resolveTagCount(0)}, nil
 	}
 	var payload generationPayload
 	if err := json.Unmarshal(raw, &payload); err != nil {
-		return GenerationOptions{}, fmt.Errorf("decode generation payload: %w", err)
+		return generationOptions{}, fmt.Errorf("decode generation payload: %w", err)
 	}
 	if payload.TargetLength != nil && *payload.TargetLength <= 0 {
-		return GenerationOptions{}, fmt.Errorf("decode generation payload: target length must be positive")
+		return generationOptions{}, fmt.Errorf("decode generation payload: target length must be positive")
 	}
 	// Payloads queued before language support did not carry this field. Migration and
 	// compatibility both preserve their established Korean behavior.
@@ -144,10 +148,10 @@ func DecodeGenerationPayload(raw []byte) (GenerationOptions, error) {
 		var err error
 		language, err = ParseLanguage(payload.TargetLanguage)
 		if err != nil {
-			return GenerationOptions{}, fmt.Errorf("decode generation payload: %w", err)
+			return generationOptions{}, fmt.Errorf("decode generation payload: %w", err)
 		}
 	}
-	return GenerationOptions{
+	return generationOptions{
 		TargetLanguage:    language,
 		TargetLength:      cloneOptionalInt(payload.TargetLength),
 		TagCount:          resolveTagCount(payload.TagCount),
@@ -160,6 +164,23 @@ func DecodeGenerationPayload(raw []byte) (GenerationOptions, error) {
 		Observations:      decodeObservations(payload.Observations),
 		WriteNativeEffort: payload.WriteNativeEffort,
 	}, nil
+}
+
+// onto lays the frozen options over the post the run read live, so the prompt is built from
+// what Start froze and never from a later edit. ObserveFiles and Observations are not post
+// members: they decide which photos the run observes (frozenObserveSelection), and
+// post.Observations stays the stored snapshot.
+func (o generationOptions) onto(post PostInput) PostInput {
+	post.TargetLanguage = o.TargetLanguage
+	post.TargetLength = cloneOptionalInt(o.TargetLength)
+	post.TagCount = resolveTagCount(o.TagCount)
+	post.WriteNativeEffort = o.WriteNativeEffort
+	post.Template = cloneTemplate(o.Template)
+	post.Guidelines = cloneTexts(o.Guidelines)
+	post.Memories = cloneTexts(o.Memories)
+	post.QualityRules = cloneTexts(o.QualityRules)
+	post.FieldPhrases = cloneTexts(o.FieldPhrases)
+	return post
 }
 
 // cloneOptionalTexts keeps the frozen set frozen while PRESERVING presence: a non-nil empty

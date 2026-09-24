@@ -81,20 +81,20 @@ func TestStartFreezesOnlyTheReturnedRuleTexts(t *testing.T) {
 		!reflect.DeepEqual(rules.ticked, []string{"title_saturation", "composition"}) {
 		t.Fatalf("the port was asked %+v", rules)
 	}
-	if got := jobs.generations[0].QualityRules; !reflect.DeepEqual(got, []string{"rule B", "rule A"}) {
+	if got := jobs.frozen(t, 0).QualityRules; !reflect.DeepEqual(got, []string{"rule B", "rule A"}) {
 		t.Fatalf("froze %q", got)
 	}
 
 	rules.answer = nil
 	startOnce(t, svc)
-	if got := jobs.generations[1].QualityRules; got != nil {
+	if got := jobs.frozen(t, 1).QualityRules; got != nil {
 		t.Fatalf("a tick with no text froze %q", got)
 	}
 
 	posts.input.QualityRuleIDs = nil
 	startOnce(t, svc)
-	if rules.calls != 2 || jobs.generations[2].QualityRules != nil {
-		t.Fatalf("a post with nothing ticked reached the port: %d calls, froze %q", rules.calls, jobs.generations[2].QualityRules)
+	if rules.calls != 2 || jobs.frozen(t, 2).QualityRules != nil {
+		t.Fatalf("a post with nothing ticked reached the port: %d calls, froze %q", rules.calls, jobs.frozen(t, 2).QualityRules)
 	}
 }
 
@@ -107,19 +107,19 @@ func TestStartFreezesTheFirstThirtyFieldPhrases(t *testing.T) {
 	if list.calls != 1 || list.field != "restaurant" {
 		t.Fatalf("the port was asked %+v", list)
 	}
-	if got := jobs.generations[0].FieldPhrases; !reflect.DeepEqual(got, phrases(FieldPhrasesMax)) {
+	if got := jobs.frozen(t, 0).FieldPhrases; !reflect.DeepEqual(got, phrases(FieldPhrasesMax)) {
 		t.Fatalf("froze %d phrases: %q", len(got), got)
 	}
 
 	list.answer = []string{}
 	startOnce(t, svc)
-	if got := jobs.generations[1].FieldPhrases; got != nil {
+	if got := jobs.frozen(t, 1).FieldPhrases; got != nil {
 		t.Fatalf("an empty list froze %q", got)
 	}
 
 	posts.input.Field = ""
 	startOnce(t, svc)
-	if list.calls != 2 || jobs.generations[2].FieldPhrases != nil {
+	if list.calls != 2 || jobs.frozen(t, 2).FieldPhrases != nil {
 		t.Fatalf("a post with no 분야 reached the port: %d calls", list.calls)
 	}
 }
@@ -131,22 +131,13 @@ func TestNoTicksAndNoListLeaveThePayloadAndPromptByteIdentical(t *testing.T) {
 	jobs, rules, list := &fakeJobs{id: "job"}, &recordingRules{answer: []string{"never"}}, &recordingPhrases{answer: []string{"never"}}
 	svc := freezingService(posts, jobs, newFakeModels(), rules, list)
 	startOnce(t, svc)
-	request := jobs.generations[0]
-	raw, err := EncodeGenerationPayload(GenerationOptions{
-		TargetLanguage: request.TargetLanguage, TargetLength: request.TargetLength, TagCount: request.TagCount,
-		Template: request.Template, Guidelines: request.Guidelines, Memories: request.Memories,
-		QualityRules: request.QualityRules, FieldPhrases: request.FieldPhrases,
-		ObserveFiles: request.ObserveFiles, Observations: request.Observations,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	raw := jobs.generatePayloads[0]
 	// Exactly what HEAD's enqueue wrote for this post: its language, its resolved tag count and
 	// no observation decision — and neither new member.
 	if string(raw) != `{"target_language":"ko","tag_count":4,"observe_files":null}` {
 		t.Fatalf("payload = %s", raw)
 	}
-	decoded, err := DecodeGenerationPayload(raw)
+	decoded, err := decodeGenerationPayload(raw)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -170,22 +161,19 @@ func TestTheDrainIgnoresRowsChangedAfterEnqueue(t *testing.T) {
 	models.complete = func(llm.ModelRef, llm.Request) (llm.Response, error) { return okContent(), nil }
 	svc := freezingService(posts, jobs, models, rules, list)
 	startOnce(t, svc)
-	request := jobs.generations[0]
-	raw, err := EncodeGenerationPayload(GenerationOptions{
-		TargetLanguage: request.TargetLanguage, QualityRules: request.QualityRules, FieldPhrases: request.FieldPhrases,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	raw := jobs.generatePayloads[0]
 
 	rules.answer, list.answer = []string{"live rule"}, []string{"live phrase"}
-	decoded, err := DecodeGenerationPayload(raw)
+	decoded, err := decodeGenerationPayload(raw)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err := svc.Generate(context.Background(), GenerateJob{
-		UserID: "alice", PostSlug: "post", VoiceID: liveVoice.ID, WriteModel: writeRef.String(),
-		TargetLanguage: decoded.TargetLanguage, QualityRules: decoded.QualityRules, FieldPhrases: decoded.FieldPhrases,
+		UserID:     "alice",
+		PostSlug:   "post",
+		VoiceID:    liveVoice.ID,
+		WriteModel: writeRef.String(),
+		Payload:    mustGeneratePayload(t, generationOptions{TargetLanguage: decoded.TargetLanguage, QualityRules: decoded.QualityRules, FieldPhrases: decoded.FieldPhrases}),
 	}, func(string, int, int) {}); err != nil {
 		t.Fatal(err)
 	}
@@ -214,8 +202,11 @@ func TestAFrozenRuleRunMakesOneWriteCall(t *testing.T) {
 	rules, list := &recordingRules{}, &recordingPhrases{}
 	svc := freezingService(posts, &fakeJobs{id: "job"}, models, rules, list)
 	if err := svc.Generate(context.Background(), GenerateJob{
-		UserID: "alice", PostSlug: "post", VoiceID: liveVoice.ID, WriteModel: writeRef.String(), TargetLanguage: LanguageEnglish,
-		QualityRules: []string{"frozen rule"}, FieldPhrases: []string{"frozen phrase"},
+		UserID:     "alice",
+		PostSlug:   "post",
+		VoiceID:    liveVoice.ID,
+		WriteModel: writeRef.String(),
+		Payload:    mustGeneratePayload(t, generationOptions{TargetLanguage: LanguageEnglish, QualityRules: []string{"frozen rule"}, FieldPhrases: []string{"frozen phrase"}}),
 	}, func(string, int, int) {}); err != nil {
 		t.Fatal(err)
 	}

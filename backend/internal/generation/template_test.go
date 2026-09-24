@@ -198,7 +198,7 @@ func TestRevisePromptInjectsTheSameSectionAtTheSamePosition(t *testing.T) {
 // enqueue — the case a restart-resume or an explicit retry also lands in — changes nothing.
 func TestTheFrozenPayloadSurvivesAnEditOrDeletionOfTheLiveRow(t *testing.T) {
 	frozen := testBrief()
-	raw, err := EncodeGenerationPayload(GenerationOptions{TargetLanguage: LanguageKorean, Template: frozen})
+	raw, err := encodeGenerationPayload(generationOptions{TargetLanguage: LanguageKorean, Template: frozen})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -208,7 +208,7 @@ func TestTheFrozenPayloadSurvivesAnEditOrDeletionOfTheLiveRow(t *testing.T) {
 	frozen.Body = "<write>편집된 본문</write>"
 	frozen.Slots[0].Label = "편집된 라벨"
 
-	decoded, err := DecodeGenerationPayload(raw)
+	decoded, err := decodeGenerationPayload(raw)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -218,7 +218,7 @@ func TestTheFrozenPayloadSurvivesAnEditOrDeletionOfTheLiveRow(t *testing.T) {
 		t.Fatalf("payload followed the live row: %+v", decoded.Template)
 	}
 	// Decoding twice is what a resume and a retry each do; both must build the same prompt.
-	again, err := DecodeGenerationPayload(raw)
+	again, err := decodeGenerationPayload(raw)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -232,7 +232,7 @@ func TestTheFrozenPayloadSurvivesAnEditOrDeletionOfTheLiveRow(t *testing.T) {
 // A payload written before templates existed decodes as "no template" rather than failing.
 func TestAPayloadWithoutATemplateFieldDecodesAsNoTemplate(t *testing.T) {
 	for _, raw := range [][]byte{nil, []byte(`{}`), []byte(`{"target_length":800}`)} {
-		decoded, err := DecodeGenerationPayload(raw)
+		decoded, err := decodeGenerationPayload(raw)
 		if err != nil || decoded.Template != nil {
 			t.Fatalf("payload %s decoded to %+v err=%v", raw, decoded.Template, err)
 		}
@@ -304,17 +304,21 @@ func TestGenerationFreezesTheTemplateAtEnqueueAndTheDrainIgnoresTheLiveRow(t *te
 	if _, err := svc.Start(ctx, StartRequest{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()}); err != nil {
 		t.Fatal(err)
 	}
-	if len(jobs.generations) != 1 || jobs.generations[0].Template == nil {
+	if len(jobs.generations) != 1 || jobs.frozen(t, 0).Template == nil {
 		t.Fatalf("the start did not freeze a template: %+v", jobs.generations)
 	}
-	frozen := *jobs.generations[0].Template
+	frozen := *jobs.frozen(t, 0).Template
 
 	// Between the enqueue and the drain the template is edited and then deleted outright.
 	briefs.brief = TemplateBrief{Name: "편집됨", Body: "<write>편집된 본문</write>"}
 	briefs.deleted = true
 
 	if err := svc.Generate(ctx, GenerateJob{
-		UserID: "alice", PostSlug: "post", VoiceID: liveVoice.ID, WriteModel: writeRef.String(), Template: &frozen,
+		UserID:     "alice",
+		PostSlug:   "post",
+		VoiceID:    liveVoice.ID,
+		WriteModel: writeRef.String(),
+		Payload:    mustGeneratePayload(t, generationOptions{Template: &frozen}),
 	}, func(string, int, int) {}); err != nil {
 		t.Fatal(err)
 	}
@@ -390,7 +394,7 @@ func TestTheEnqueuePassesThePostAnswersToTheRenderOnce(t *testing.T) {
 // one writes no key at all, so every payload frozen before the member stays byte-identical.
 func TestTheTitleAreaRidesBothPayloadsAndALegacyOneDecodesAsNone(t *testing.T) {
 	brief := titleAreaBrief()
-	generate, err := EncodeGenerationPayload(GenerationOptions{TargetLanguage: LanguageKorean, Template: brief})
+	generate, err := encodeGenerationPayload(generationOptions{TargetLanguage: LanguageKorean, Template: brief})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -409,7 +413,7 @@ func TestTheTitleAreaRidesBothPayloadsAndALegacyOneDecodesAsNone(t *testing.T) {
 			t.Fatalf("%s payload template = %v", name, wire.Template)
 		}
 	}
-	decoded, err := DecodeGenerationPayload(generate)
+	decoded, err := decodeGenerationPayload(generate)
 	if err != nil || decoded.Template == nil || decoded.Template.TitleArea != brief.TitleArea {
 		t.Fatalf("decoded generate template = %+v, %v", decoded.Template, err)
 	}
@@ -418,7 +422,7 @@ func TestTheTitleAreaRidesBothPayloadsAndALegacyOneDecodesAsNone(t *testing.T) {
 		t.Fatalf("decoded revision template = %+v, %v", parsed.Template, err)
 	}
 
-	plainGenerate, err := EncodeGenerationPayload(GenerationOptions{TargetLanguage: LanguageKorean, Template: testBrief()})
+	plainGenerate, err := encodeGenerationPayload(generationOptions{TargetLanguage: LanguageKorean, Template: testBrief()})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -430,7 +434,7 @@ func TestTheTitleAreaRidesBothPayloadsAndALegacyOneDecodesAsNone(t *testing.T) {
 		t.Fatalf("a brief without a title area wrote the key:\n%s\n%s", plainGenerate, plainRevise)
 	}
 
-	legacy, err := DecodeGenerationPayload([]byte(`{"template":{"name":"정보성 식당 리뷰","body":"<write>인트로</write>"}}`))
+	legacy, err := decodeGenerationPayload([]byte(`{"template":{"name":"정보성 식당 리뷰","body":"<write>인트로</write>"}}`))
 	if err != nil || legacy.Template == nil || legacy.Template.TitleArea != "" || legacy.Template.Body != "<write>인트로</write>" {
 		t.Fatalf("legacy generate payload = %+v, %v", legacy.Template, err)
 	}
@@ -455,23 +459,27 @@ func TestTheFrozenTitleAreaSurvivesAnEditOfTheLiveRow(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := titleAreaBrief().TitleArea
-	if len(jobs.generations) != 1 || jobs.generations[0].Template == nil || jobs.generations[0].Template.TitleArea != want {
+	if len(jobs.generations) != 1 || jobs.frozen(t, 0).Template == nil || jobs.frozen(t, 0).Template.TitleArea != want {
 		t.Fatalf("the start froze %+v", jobs.generations)
 	}
 	// The payload crosses the queue as bytes, and the live row's title area is rewritten
 	// between the enqueue and the drain.
-	raw, err := EncodeGenerationPayload(GenerationOptions{TargetLanguage: LanguageKorean, Template: jobs.generations[0].Template})
+	raw, err := encodeGenerationPayload(generationOptions{TargetLanguage: LanguageKorean, Template: jobs.frozen(t, 0).Template})
 	if err != nil {
 		t.Fatal(err)
 	}
 	briefs.brief.TitleArea = "[편집됨] <write>다른 제목</write>"
-	decoded, err := DecodeGenerationPayload(raw)
+	decoded, err := decodeGenerationPayload(raw)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	if err := svc.Generate(ctx, GenerateJob{
-		UserID: "alice", PostSlug: "post", VoiceID: liveVoice.ID, WriteModel: writeRef.String(), Template: decoded.Template,
+		UserID:     "alice",
+		PostSlug:   "post",
+		VoiceID:    liveVoice.ID,
+		WriteModel: writeRef.String(),
+		Payload:    mustGeneratePayload(t, generationOptions{Template: decoded.Template}),
 	}, func(string, int, int) {}); err != nil {
 		t.Fatal(err)
 	}
