@@ -893,6 +893,51 @@ describe('opening a post', () => {
     expect(calls).not.toContain('StartWriteExperiment')
   })
 
+  // POST-20 and MEM-18: ticking 기억 사용 is an option save of its own, and it resends the post's
+  // 목표 글자 수, so the number the brief saved survives the refetch that follows the toggle.
+  it('keeps 목표 글자 수 when 기억 사용 is ticked after it', async () => {
+    const calls: string[] = []
+    const generationOptionSaves: Array<number | undefined> = []
+    const memoryOptionSaves: Array<boolean | undefined> = []
+    const user = userEvent.setup()
+    renderAppAt('/posts/20260820-memo', {
+      user: USER,
+      calls,
+      posts: {
+        calls,
+        posts: [{ slug: '20260820-memo' }],
+        generationOptionSaves,
+        memoryOptionSaves,
+      },
+    })
+
+    const brief = await openBrief(user)
+    await user.click(within(brief).getByRole('checkbox', { name: '목표 글자 수 사용' }))
+    await user.clear(within(brief).getByLabelText('목표 글자 수'))
+    await user.type(within(brief).getByLabelText('목표 글자 수'), '1500')
+    await user.click(within(brief).getByRole('button', { name: '저장' }))
+    // The brief closes once its save and the refetch behind it have landed.
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: BRIEF_TRIGGER })).toHaveAttribute(
+        'aria-expanded',
+        'false',
+      ),
+    )
+    expect(generationOptionSaves).toEqual([1500])
+
+    const reads = () => calls.filter((call) => call === 'GetPost').length
+    const before = reads()
+    await user.click(screen.getByRole('checkbox', { name: '기억 사용' }))
+    await waitFor(() => expect(memoryOptionSaves).toEqual([undefined, true]))
+    expect(generationOptionSaves).toEqual([1500, 1500])
+    await waitFor(() => expect(reads()).toBeGreaterThan(before))
+    await waitFor(() => expect(screen.getByRole('checkbox', { name: '기억 사용' })).toBeEnabled())
+
+    const reopened = await openBrief(user)
+    expect(within(reopened).getByLabelText('목표 글자 수')).toHaveValue(1500)
+    expect(screen.getByRole('checkbox', { name: '기억 사용' })).toBeChecked()
+  })
+
   // A8 (client half): 확정 copies the AI title into `posts.title`, and the editor still holds the
   // 가제 in state where `useAutosave` would write it straight back on the next keystroke.
   it('re-seeds the local 가제 from the confirmed title before another save can queue', async () => {

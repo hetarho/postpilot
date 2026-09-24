@@ -47,6 +47,7 @@ export function EditorGeneratePanel({
       <UseMemoriesField
         slug={post.slug}
         useMemory={post.useMemory}
+        targetLength={post.targetLength}
         disabled={locked}
         className="mt-6"
       />

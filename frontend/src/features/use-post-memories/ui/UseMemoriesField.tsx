@@ -12,11 +12,15 @@ import { Checkbox, FieldMessage, Typography, typographyStyles } from '@/shared/u
 export function UseMemoriesField({
   slug,
   useMemory,
+  targetLength,
   disabled,
   className,
 }: {
   slug: string
   useMemory: boolean
+  /** The post's 목표 글자 수, resent with the flag: this save reads an absent length as natural
+   *  length, so leaving it out would clear the number the brief saved. */
+  targetLength?: number
   disabled?: boolean
   className?: string
 }) {
@@ -33,7 +37,7 @@ export function UseMemoriesField({
   const toggle = async (next: boolean) => {
     setOptimistic(next)
     try {
-      await options.saveUseMemory(slug, next)
+      await options.saveUseMemory(slug, next, targetLength)
     } catch {
       setOptimistic(null)
     }

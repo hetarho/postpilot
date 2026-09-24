@@ -5,14 +5,15 @@ import type { FakePostsOptions } from '@/test/posts'
 import { createFakeAuthTransport, createTestQueryClient, withProviders } from '@/test/session'
 import { UseMemoriesField } from './UseMemoriesField'
 
-function renderField(useMemory: boolean, posts: FakePostsOptions = {}) {
+function renderField(useMemory: boolean, posts: FakePostsOptions = {}, targetLength?: number) {
   const transport = createFakeAuthTransport({
     user: { id: 'alice' },
-    posts: { posts: [{ slug: 'draft' }], ...posts },
+    posts: { posts: [{ slug: 'draft', useMemory, targetLength }], ...posts },
   })
-  return render(<UseMemoriesField slug="draft" useMemory={useMemory} />, {
-    wrapper: withProviders(transport, createTestQueryClient()),
-  })
+  return render(
+    <UseMemoriesField slug="draft" useMemory={useMemory} targetLength={targetLength} />,
+    { wrapper: withProviders(transport, createTestQueryClient()) },
+  )
 }
 
 describe('기억 사용', () => {
@@ -32,7 +33,40 @@ describe('기억 사용', () => {
 
   // It autosaves on the toggle — there is nothing to confirm, because the flag is an option of
   // the next RUN and saving it moves no status, revision or baseline.
-  it('autosaves the flag on the toggle and sends nothing else', async () => {
+  it('autosaves the flag on the toggle and leaves the tag count alone', async () => {
+    const user = userEvent.setup()
+    const memoryOptionSaves: Array<boolean | undefined> = []
+    const tagCountSaves: Array<number | undefined> = []
+    renderField(false, { memoryOptionSaves, tagCountSaves })
+
+    await user.click(screen.getByRole('checkbox', { name: '기억 사용' }))
+
+    await waitFor(() => expect(memoryOptionSaves).toEqual([true]))
+    // The server keeps an absent tag count, so the toggle does not send one.
+    expect(tagCountSaves).toEqual([undefined])
+    expect(screen.getByRole('checkbox', { name: '기억 사용' })).toBeChecked()
+  })
+
+  // POST-20: on this call an absent target length is natural length, so the toggle resends the
+  // post's own number both ways. The page test reads it back after the refetch.
+  it('ticking keeps the stored target length', async () => {
+    const user = userEvent.setup()
+    const memoryOptionSaves: Array<boolean | undefined> = []
+    const generationOptionSaves: Array<number | undefined> = []
+    const view = renderField(false, { memoryOptionSaves, generationOptionSaves }, 1500)
+
+    await user.click(screen.getByRole('checkbox', { name: '기억 사용' }))
+    await waitFor(() => expect(memoryOptionSaves).toEqual([true]))
+    expect(generationOptionSaves).toEqual([1500])
+
+    view.unmount()
+    renderField(true, { memoryOptionSaves, generationOptionSaves }, 1500)
+    await user.click(screen.getByRole('checkbox', { name: '기억 사용' }))
+    await waitFor(() => expect(memoryOptionSaves).toEqual([true, false]))
+    expect(generationOptionSaves).toEqual([1500, 1500])
+  })
+
+  it('a natural-length post stays natural', async () => {
     const user = userEvent.setup()
     const memoryOptionSaves: Array<boolean | undefined> = []
     const generationOptionSaves: Array<number | undefined> = []
@@ -41,9 +75,7 @@ describe('기억 사용', () => {
     await user.click(screen.getByRole('checkbox', { name: '기억 사용' }))
 
     await waitFor(() => expect(memoryOptionSaves).toEqual([true]))
-    // Presence is the edit unit: the two numbers the brief owns were not part of this save.
     expect(generationOptionSaves).toEqual([undefined])
-    expect(screen.getByRole('checkbox', { name: '기억 사용' })).toBeChecked()
   })
 
   it('turns it back off', async () => {

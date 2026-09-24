@@ -51,14 +51,15 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T353 | Toggling 기억 사용 keeps the post's 목표 글자 수 | POST MEM ARCH | - | todo |
 
 ## next
-- implement-task T353 (the last todo)
-- T353 is an independent pre-existing bug fix (the 기억 사용 toggle clears 목표 글자 수)
+- no todo left: create-task for the next job, or review-code for the T352 and T353 findings in the log
 - update-ssot MEM MODEL: whether a write comparison's snapshot freezes 기억 (T352 finding in the log)
 - create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 ## log
+- 260924 T353 done; ticking or unticking 기억 사용 resends the post's 목표 글자 수 with the flag, so a stored length survives the toggle and its refetch, a natural-length post stays natural, and the tag count stays absent and kept; FE gates pass (p35)
+- 260924 finding (T353): a 기억 사용 toggle or a 발행 글 점검 tick pressed while the brief's own length save is still in flight resends the length the post held before it, and the later request wins, so the new number can be lost in that round trip (p35)
+- 260924 T353 claimed (p35)
 - 260924 T352 done; a durable generate's write prompt carries the memories Start froze into the payload as one [기억] section in the per-post half, in payload order, with the stable half unchanged; the drain never asks the memory port, and a job with no memories (option off or a legacy payload) builds the prompt it built before; BE gate passes (p35)
 - 260924 finding (T352): the write-comparison snapshot (`SnapshotWriteInput`) freezes 지침, quality rules and 분야 phrases but no 기억, so an A/B write of a post with 기억 사용 on compares prompts without its memories; MODEL-30 and MEM-19 do not say whether it should (update-ssot MEM MODEL) (p35)
 - 260924 T352 claimed (p35)
@@ -76,6 +77,3 @@
 - 260924 T346 claimed (p35)
 - 260924 T345 done; ① picks the post's 분야 under the data fields and above 기억 사용 (before the photos on /posts/new) through a fifth draft-queue channel with the 템플릿's presence rules: a create carries a chosen 분야 and omits 없음, a saved post sends a pick at once and 없음 as a present clear, a refusal is taken back with its reason under the field, and a published post shows it disabled under T339's one reason; FE gates pass (p35)
 - 260924 T345 claimed (p35)
-- 260924 T344 done; StartGeneration and the write-comparison snapshot freeze the ticked rule texts still over band (in the run's language) and the 분야's first 30 phrases, the job row and the worker carry both, the drain and a revision never ask the quality context, and a post with nothing ticked and no list writes the payload and prompt it wrote before; end to end the phrase section and the preset line reach the write and never the revision; BE gate passes (p35)
-- 260924 T344 claimed (p35)
-- 260924 T343 done; ③ ends with a 발행 field that pastes, replaces or clears the post's Naver address through SavePostPublishedUrl, refuses a non-Naver address in place with the server's own sentence before sending (the shared fixture pins the pre-check), stays closed with its reason before 확정, and shows server refusals under the field; FE gates and lint:retirement pass (p35)

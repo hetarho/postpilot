@@ -29,11 +29,13 @@ export function useGenerationOptions() {
       ])
       return response
     },
-    /** The memory opt-in on its own (MEM-18, POST-71). Presence is the edit unit on this call, so
-     *  sending only the flag cannot disturb the two numbers the brief saves — and it changes no
-     *  status, revision or baseline, which is why it autosaves on the toggle. */
-    saveUseMemory: async (slug: string, useMemory: boolean) => {
-      const response = await mutation.mutateAsync({ slug, useMemory })
+    /** The memory opt-in (MEM-18, POST-71). It changes no status, revision or baseline, which is
+     *  why it autosaves on the toggle. `targetLength` rides along because it is the one member this
+     *  call does not read by presence: absent, the server stores natural length (POST-20), and the
+     *  toggle would clear 목표 글자 수. It is required, so no caller can forget it; `undefined` is
+     *  natural length. The tag count stays absent, which keeps it. */
+    saveUseMemory: async (slug: string, useMemory: boolean, targetLength: number | undefined) => {
+      const response = await mutation.mutateAsync({ slug, useMemory, targetLength })
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: getPostQueryKey(transport, slug) }),
         queryClient.invalidateQueries({ queryKey: listPostsQueryKey(transport) }),
