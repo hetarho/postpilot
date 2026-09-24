@@ -20,7 +20,7 @@
 | ARCH | 9 | 9 | - | 0 |
 | AUTH | 8 | 8 | - | 0 |
 | QUOTA | 19 | 19 | - | 0 |
-| POST | 13 | 13 | - | 0 |
+| POST | 14 | 13 | POST-51✎ POST-54✎ POST-71✎ POST-81✎ POST-82✎ POST-89+ | 0 |
 | VOICE | 3 | 3 | - | 1 |
 | GEN | 11 | 11 | - | 0 |
 | MODEL | 17 | 17 | - | 0 |
@@ -35,7 +35,7 @@
 | CLIP | 43 | 40 | CLIP-13✎ | 1 |
 | CDS | 25 | 23 | CDS-17✎ CDS-19✎ CDS-21✎ CDS-84✎ | 1 |
 | BILL | 4 | 4 | - | 0 |
-| MEM | 2 | 2 | - | 2 |
+| MEM | 3 | 2 | MEM-18✎ MEM-26✎ | 2 |
 | QUAL | 4 | 4 | - | 0 |
 
 ## review
@@ -76,9 +76,11 @@
 | T375 | The editor's per-control cases live in the tests of the slices that own them | ARCH | T368 | todo |
 
 ## next
-- implement-task T354 (then T355 T356 by dep; 22 todo from review/published-quality-260924 and this wave's deltas)
+- create-task POST MEM first: 분야 and 기억 사용 move into the writing brief, saved together by its 저장 — rewrite todo T355 and re-check T366 T367 T368 T373 T375, which assume the old placement; then implement-task T354
 - create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 ## log
+- 260925 update-ssot done: POST r14 MEM r3 — 분야 and 기억 사용 move from ①'s panel into the writing brief (POST-51✎ POST-54✎ POST-71✎ POST-82✎ MEM-18✎ MEM-26✎), and the brief's run options (목표 분량, 태그 수, quality ticks, 분야, 기억 사용) save together by its 저장 (POST-81✎ POST-89+); no doing task affected, todo T355 T366 T367 T368 T373 T375 assume the old placement
+- 260925 update-ssot POST MEM start: 분야 and 기억 사용 move into the writing brief
 - 260925 create-task done: T354..T375 (22 todo) from review/published-quality-260924 (29 findings, now converted) and this wave's POST MEM MODEL QUAL GUIDE GEN TMPL THEME-42 deltas; P1 first: T354 (F1 F2, plus the same native-effort drop in A/B write candidates), T355 (F4), T356 (F18, THEME-42)
 - 260925 POST r12..r13 POST-77 no-op (no code impact: the shared URL fixture already refuses the blog's home)
 - 260924 POST r13: POST-88 removed and POST-20 back to its r11 text — an options save's presence rules are a request contract for the F4 task's impl notes, not product behavior
@@ -97,5 +99,3 @@
 - 260924 T351 claimed (p35)
 - 260924 T350 done; /guidelines opens with the 상위 노출 단어 사용 preset above the list and the empty state: its server text read-only, its own switch and a 적용할 분야 picker that is its fields scope, each saving its own half and showing the answered state at once, a line saying the owner's guidelines win, a prompt while it is on with no 분야, and a refusal in the catalogue's words; FE gates pass (p35)
 - 260924 T350 claimed (p35)
-- 260924 T349 done; ①'s brief shows 발행 글 점검 after 목표 분량 with M1–M4 in their four states from the account aggregate: an over-band row is a checkbox whose toggletip quotes the rule text it adds, ticks autosave the whole set with the length, a stored within-band tick is kept, the boxes hold still for a running job or the publish lock, and the read is prefetched, follows the target language and refreshes after URL, content and delete saves; FE gates pass (p35)
-- 260924 T349 claimed (p35)
