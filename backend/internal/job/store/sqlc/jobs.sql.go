@@ -561,7 +561,7 @@ func (q *Queries) LatestForProject(ctx context.Context, arg LatestForProjectPara
 const pickNextQueued = `-- name: PickNextQueued :one
 UPDATE generation_jobs
 SET status = 'running',
-    stage = CASE kind
+    stage = CASE WHEN generation_jobs.status='running' THEN generation_jobs.stage ELSE CASE kind
         WHEN 'generate_clip' THEN 'prepare'
         WHEN 'revise_clip' THEN 'prepare'
         WHEN 'analyze_voice' THEN 'analyze'
@@ -570,17 +570,18 @@ SET status = 'running',
         WHEN 'validate_voice_profile' THEN 'validate_profile'
         WHEN 'revise' THEN 'write'
         ELSE 'observe'
-    END,
+    END END,
     error = NULL,
     error_reason = NULL,
     error_params = NULL,
     technical_detail = NULL,
-    started_at = ?,
-    updated_at = ?
+    started_at = CASE WHEN generation_jobs.status='queued' THEN ?1 ELSE generation_jobs.started_at END,
+    updated_at = ?2
 WHERE id = (
-    SELECT id FROM generation_jobs
-    WHERE status = 'queued' AND dispatch_ready=1 AND cancel_requested_at IS NULL
-    ORDER BY created_at, id
+    SELECT j.id FROM generation_jobs j LEFT JOIN job_continuations c ON c.job_id=j.id
+    WHERE j.cancel_requested_at IS NULL
+      AND ((j.status='queued' AND j.dispatch_ready=1) OR (j.status='running' AND c.state='ready'))
+    ORDER BY CASE WHEN j.status='running' THEN c.ready_at ELSE j.created_at END, j.id
     LIMIT 1
 )
 RETURNING id, post_slug, user_id, voice_id, kind, status, stage, progress_done, progress_total, error, observe_model, write_model, payload, created_at, updated_at, started_at, finished_at, target_language, error_reason, error_params, technical_detail, clip_project_id, dispatch_ready, cancel_requested_at, cancellation_policy_version, experiment_id
@@ -630,6 +631,8 @@ UPDATE generation_jobs SET status='cancelled',finished_at=?1,updated_at=?1,
  error=NULL,error_reason=NULL,error_params=NULL,technical_detail=NULL
 WHERE status IN ('queued','running') AND cancel_requested_at IS NOT NULL
  AND kind IN (SELECT value FROM json_each(?2))
+ AND NOT EXISTS(SELECT 1 FROM job_continuations c WHERE c.job_id=generation_jobs.id
+   AND (c.state IN ('waiting','ready') OR (c.state='claimed' AND c.resume_policy='replay_safe')))
 `
 
 type RecoverCancellationsParams struct {
@@ -735,6 +738,7 @@ UPDATE generation_jobs
 SET status = 'failed', error = NULL, error_reason = ?, error_params = ?, technical_detail = ?,
     finished_at = ?, updated_at = ?
 WHERE status = 'running' AND cancel_requested_at IS NULL
+AND NOT EXISTS(SELECT 1 FROM job_continuations c WHERE c.job_id=generation_jobs.id AND c.state IN ('waiting','ready'))
 `
 
 type SweepRunningParams struct {

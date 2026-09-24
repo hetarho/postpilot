@@ -49,13 +49,14 @@ type Kinds struct {
 }
 
 type Store struct {
-	write *sqlc.Queries
-	read  *sqlc.Queries
-	kinds Kinds
+	writer *sql.DB
+	write  *sqlc.Queries
+	read   *sqlc.Queries
+	kinds  Kinds
 }
 
 func New(writer, reader *sql.DB, kinds Kinds) *Store {
-	return &Store{write: sqlc.New(writer), read: sqlc.New(reader), kinds: kinds}
+	return &Store{writer: writer, write: sqlc.New(writer), read: sqlc.New(reader), kinds: kinds}
 }
 
 func NewTx(tx *sql.Tx, kinds Kinds) *Store {
@@ -116,13 +117,32 @@ func (s *Store) Insert(ctx context.Context, found job.Job) error {
 }
 
 func (s *Store) PickNextQueued(ctx context.Context, now time.Time) (job.Job, error) {
-	row, err := s.write.PickNextQueued(ctx, sqlc.PickNextQueuedParams{
-		StartedAt: sql.NullString{String: formatTime(now), Valid: true}, UpdatedAt: formatTime(now),
+	return withWriter(ctx, s, func(q *sqlc.Queries) (job.Job, error) {
+		row, err := q.PickNextQueued(ctx, sqlc.PickNextQueuedParams{StartedAt: nullString(formatTime(now)), UpdatedAt: formatTime(now)})
+		if err != nil {
+			return job.Job{}, mapNotFound(err, "pick runnable job")
+		}
+		found, err := toJob(row)
+		if err != nil {
+			return found, err
+		}
+		c, err := q.GetContinuation(ctx, found.ID)
+		if errors.Is(err, sql.ErrNoRows) {
+			return found, nil
+		}
+		if err != nil {
+			return found, err
+		}
+		n, err := q.ClaimContinuation(ctx, sqlc.ClaimContinuationParams{Now: formatTime(now), JobID: found.ID})
+		if err != nil {
+			return found, err
+		}
+		if n != 1 {
+			return found, job.ErrInvalidWait
+		}
+		found.Resume = &job.Continuation{JobID: found.ID, WaitKey: c.WaitKey, State: job.ContinuationClaimed, Policy: job.ResumePolicy(c.ResumePolicy)}
+		return found, nil
 	})
-	if err != nil {
-		return job.Job{}, mapNotFound(err, "pick queued job")
-	}
-	return toJob(row)
 }
 
 func (s *Store) UpdateProgress(ctx context.Context, id, stage string, done, total int, now time.Time) error {
@@ -186,9 +206,11 @@ func (s *Store) SweepRunning(ctx context.Context, failure job.Failure, now time.
 	if err != nil {
 		return 0, fmt.Errorf("sweep running job failure: %w", err)
 	}
-	n, err := s.write.SweepRunning(ctx, sqlc.SweepRunningParams{
-		ErrorReason: reason, ErrorParams: params, TechnicalDetail: detail,
-		FinishedAt: sql.NullString{String: formatTime(now), Valid: true}, UpdatedAt: formatTime(now),
+	n, err := withWriter(ctx, s, func(q *sqlc.Queries) (int64, error) {
+		if err := q.ReadyReplaySafeContinuations(ctx, nullString(formatTime(now))); err != nil {
+			return 0, err
+		}
+		return q.SweepRunning(ctx, sqlc.SweepRunningParams{ErrorReason: reason, ErrorParams: params, TechnicalDetail: detail, FinishedAt: nullString(formatTime(now)), UpdatedAt: formatTime(now)})
 	})
 	if err != nil {
 		return 0, fmt.Errorf("sweep running jobs: %w", err)

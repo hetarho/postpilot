@@ -29,6 +29,13 @@ type JobTx interface {
 	ActiveFor(ctx context.Context, subject job.Subject, filter job.Filter) (*job.Job, error)
 }
 
+// JobWaitTx parks/wakes the same parent in the transaction that creates or
+// accepts its external stage. Payloads and wait keys remain opaque to job.
+type JobWaitTx interface {
+	Park(context.Context, string, string, job.ResumePolicy, time.Time) error
+	Wake(context.Context, string, string, time.Time) (bool, error)
+}
+
 // ClipStore is the clip persistence the sagas use outside a transaction: the
 // staging row that survives a crash and the reads that decide idempotency.
 type ClipStore interface {
@@ -57,6 +64,7 @@ type Admission interface {
 // Ports is what one writer transaction exposes to a saga.
 type Ports struct {
 	Jobs      JobTx
+	Waits     JobWaitTx
 	Clips     ClipTx
 	Admission Admission
 }

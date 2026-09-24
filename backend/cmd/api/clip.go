@@ -25,7 +25,8 @@ import (
 // store so a hold lands with the job row it guards.
 func clipTxPorts(ledger *usage.Service, registry *llm.Registry, plans *auth.Service) clipapp.Binder {
 	return func(tx *sql.Tx) clipapp.Ports {
-		ports := clipapp.Ports{Jobs: jobstore.NewTx(tx, jobKinds()), Clips: clipstore.NewTx(tx)}
+		jobs := jobstore.NewTx(tx, jobKinds())
+		ports := clipapp.Ports{Jobs: jobs, Waits: jobs, Clips: clipstore.NewTx(tx)}
 		if ledger != nil {
 			ports.Admission = clipAdmission{jobAdmission{ledger: ledger.WithStore(usagestore.NewTx(tx)), registry: registry, plans: plans}}
 		}

@@ -8,7 +8,7 @@ INSERT INTO generation_jobs (
 -- name: PickNextQueued :one
 UPDATE generation_jobs
 SET status = 'running',
-    stage = CASE kind
+    stage = CASE WHEN generation_jobs.status='running' THEN generation_jobs.stage ELSE CASE kind
         WHEN 'generate_clip' THEN 'prepare'
         WHEN 'revise_clip' THEN 'prepare'
         WHEN 'analyze_voice' THEN 'analyze'
@@ -17,17 +17,18 @@ SET status = 'running',
         WHEN 'validate_voice_profile' THEN 'validate_profile'
         WHEN 'revise' THEN 'write'
         ELSE 'observe'
-    END,
+    END END,
     error = NULL,
     error_reason = NULL,
     error_params = NULL,
     technical_detail = NULL,
-    started_at = ?,
-    updated_at = ?
+    started_at = CASE WHEN generation_jobs.status='queued' THEN sqlc.narg(started_at) ELSE generation_jobs.started_at END,
+    updated_at = sqlc.arg(updated_at)
 WHERE id = (
-    SELECT id FROM generation_jobs
-    WHERE status = 'queued' AND dispatch_ready=1 AND cancel_requested_at IS NULL
-    ORDER BY created_at, id
+    SELECT j.id FROM generation_jobs j LEFT JOIN job_continuations c ON c.job_id=j.id
+    WHERE j.cancel_requested_at IS NULL
+      AND ((j.status='queued' AND j.dispatch_ready=1) OR (j.status='running' AND c.state='ready'))
+    ORDER BY CASE WHEN j.status='running' THEN c.ready_at ELSE j.created_at END, j.id
     LIMIT 1
 )
 RETURNING *;
@@ -57,7 +58,8 @@ WHERE id = ? AND user_id = ? AND status = 'queued' AND cancel_requested_at IS NU
 UPDATE generation_jobs
 SET status = 'failed', error = NULL, error_reason = ?, error_params = ?, technical_detail = ?,
     finished_at = ?, updated_at = ?
-WHERE status = 'running' AND cancel_requested_at IS NULL;
+WHERE status = 'running' AND cancel_requested_at IS NULL
+AND NOT EXISTS(SELECT 1 FROM job_continuations c WHERE c.job_id=generation_jobs.id AND c.state IN ('waiting','ready'));
 
 -- name: SweepQueuedPersonalization :execrows
 UPDATE generation_jobs
@@ -144,7 +146,9 @@ WHERE id=sqlc.arg(id) AND user_id=sqlc.arg(user_id) AND clip_project_id=sqlc.arg
 UPDATE generation_jobs SET status='cancelled',finished_at=sqlc.arg(now),updated_at=sqlc.arg(now),
  error=NULL,error_reason=NULL,error_params=NULL,technical_detail=NULL
 WHERE status IN ('queued','running') AND cancel_requested_at IS NOT NULL
- AND kind IN (SELECT value FROM json_each(sqlc.arg(kinds)));
+ AND kind IN (SELECT value FROM json_each(sqlc.arg(kinds)))
+ AND NOT EXISTS(SELECT 1 FROM job_continuations c WHERE c.job_id=generation_jobs.id
+   AND (c.state IN ('waiting','ready') OR (c.state='claimed' AND c.resume_policy='replay_safe')));
 -- name: AuthorizeDispatch :execrows
 UPDATE generation_jobs SET updated_at=updated_at
 WHERE id=sqlc.arg(id) AND user_id=sqlc.arg(user_id) AND kind IN (SELECT value FROM json_each(sqlc.arg(kinds)))

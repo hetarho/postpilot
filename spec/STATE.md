@@ -74,7 +74,6 @@
 | T373 | Entity boundaries for 분야 and post status | ARCH | T356 T367 | todo |
 | T374 | The template screen's ask-conflict flags follow the mounted composition | ARCH | - | todo |
 | T375 | The editor's per-control cases live in the tests of the slices that own them | ARCH | T368 | todo |
-| T377 | A job can wait durably without occupying the API worker | ARCH GEN | - | todo |
 | T378 | Workers authenticate to a separate versioned media API | ARCH | T376 | todo |
 | T379 | Media bytes cross stages through authorized private artifacts | ARCH CLIP | T376 T378 | todo |
 | T380 | A standalone CPU worker prepares and renders frozen media jobs | ARCH CLIP | T378 T379 | todo |
@@ -88,11 +87,13 @@
 | T388 | GPU setup tooling and guides cover all three deployment environments | ARCH CLIP | T387 | todo |
 
 ## next
-- implement-task T377 next for the media-worker wave (T376 is done; T387 verifies CPU/VPS compatibility locally; T388 completes README/DEPLOY guides for all three environments and GPU setup tooling without live migration)
+- implement-task T378 next for the media-worker wave (T376 and T377 are done; T387 verifies CPU/VPS compatibility locally; T388 completes README/DEPLOY guides for all three environments and GPU setup tooling without live migration)
 - Later: update-ssot CLIP-163, then create-task ARCH CLIP for real-GPU validation, profile approval/automatic selection and concurrency tuning; ARCH r11 and CLIP r44 remain partially consumed, and physical host setup/migration remain operator actions
 - create-task POST MEM first: 분야 and 기억 사용 move into the writing brief, saved together by its 저장 — rewrite todo T355 and re-check T366 T367 T368 T373 T375, which assume the old placement; then implement-task T354; create-task MKT THEME for /about overflow and CLIP CDS THEME for the unconsumed Wanted Sans delta
 
 ## log
+- 260925 T377 done (mw): durable park/wake and replay policies, continued queue processing and fenced cancellation acknowledgement; SQLite/queue/race, ARCH-26, FE/CI/codegen and spec checks pass; T378 next
+- 260925 T377 claimed (mw); T376 committed as 2554cef1; sequential media-wave scope only
 - 260925 T376 done (mw): durable fenced media stages/attempts/artifact reservations and bounded env limits; SQLite concurrency/race/upgrade, ARCH-26, FE/CI/codegen and spec checks pass; production dispatch unchanged; commit per task, T377 next
 - 260925 T376 claimed (mw); implementation scope T376..T388 only, sequential; other sessions own the remaining wave
 - 260925 create-task media-worker scope correction done: T386 keeps CPU VPS deployment as default, T387 verifies both layouts locally, T388 delivers three-environment README/DEPLOY guides and CPU-verifiable GPU setup tooling; no live deployment, friend-PC installation, migration or hardware benchmark is required by this wave; T376..T388 remain 13 todo with ARCH@11 bases; references, dependencies, STATE/format and diff checks pass
@@ -111,5 +112,3 @@
 - 260924 create-task review/published-quality-260924 + POST MEM MODEL QUAL GUIDE GEN TMPL THEME start (this wave's deltas only)
 - 260924 update-ssot done: POST r12 (POST-20✎ POST-77✎ POST-79✎ POST-88+ options saves are partial, a taken candidate is spent), MEM r2 MEM-19✎ + MODEL r17 MODEL-30✎ + GEN-18✎ a write comparison freezes 기억, GEN-14✎ GEN-51✎ ticked rules move to the per-post half, GEN-53✎, TMPL r11 TMPL-51✎ the title form binds only a title request in revise, GUIDE r6 GUIDE-40+ QUAL r4 QUAL-41✎ QUAL-46+, THEME r18 THEME-42+; no doing task affected
 - 260924 update-ssot POST MEM MODEL QUAL GUIDE GEN TMPL THEME start (review/published-quality-260924 notes)
-- 260924 review-code published-quality-260924 ready; 29 findings adopted: 4 P1 (F1 durable generate drops the native-effort flag since 260905, F2 its six hand-copied hops, F4 target length lost or split by mixed presence, F18 InlinePopover Tab), 8 P2, 17 P3; gates green
-- 260924 review-code published-quality-260924 start (scope: T322..T353, fe065cdc..f42a3c95)

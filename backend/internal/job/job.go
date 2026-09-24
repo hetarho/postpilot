@@ -166,6 +166,9 @@ func normalizePlannedCalls(input []PlannedCall) []PlannedCall {
 
 // Job is the worker-facing record, including the kind-specific payload.
 type Job struct {
+	// Resume is attached only to an atomically claimed durable continuation.
+	// It is internal execution context, not a new public status or payload.
+	Resume                    *Continuation
 	CancelRequestedAt         *time.Time
 	CancellationPolicyVersion int
 	DispatchReady             bool

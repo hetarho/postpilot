@@ -36,3 +36,13 @@ type GenerationJob struct {
 	CancellationPolicyVersion int64
 	ExperimentID              sql.NullString
 }
+
+type JobContinuation struct {
+	JobID        string
+	WaitKey      string
+	State        string
+	ResumePolicy string
+	ReadyAt      sql.NullString
+	CreatedAt    string
+	UpdatedAt    string
+}

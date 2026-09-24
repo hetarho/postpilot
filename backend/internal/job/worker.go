@@ -92,6 +92,27 @@ func (q *Queue) run(ctx context.Context, found Job) {
 	// so that result must still be committed.
 	finishCtx, cancel := context.WithTimeout(context.WithoutCancel(workerCtx), finishTimeout)
 	defer cancel()
+	if store, ok := q.store.(ContinuationStore); ok {
+		pending, err := store.HasPendingWait(finishCtx, found.ID)
+		if err != nil {
+			slog.Error("read durable job wait failed", "job", found.ID, "err", err)
+			return
+		}
+		// The committed wait wins even if cancellation or a lost park response
+		// raced the handler's return. Its owner reconciles external work first.
+		if pending {
+			return
+		}
+	}
+	if errors.Is(runErr, ErrYield) {
+		// The owner may acknowledge a stopped external operation before this
+		// handler returns its yield. It already owns settlement and hooks.
+		current, err := q.store.GetByID(finishCtx, found.ID)
+		if err != nil || Terminal(current.Status) {
+			return
+		}
+		runErr = ErrInvalidWait
+	}
 	var persisted Job
 	if cancellable {
 		var err error
