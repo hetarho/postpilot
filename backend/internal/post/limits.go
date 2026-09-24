@@ -16,5 +16,6 @@ type TagCount struct {
 func (t TagCount) Allows(count int) bool { return count >= t.Min && count <= t.Max }
 
 // PublishedURLMaxChars bounds a pasted Naver Blog address, in Unicode scalar values like every
-// other *MaxChars bound. The frontend mirrors it for its pre-check.
+// other *MaxChars bound. The frontend mirrors it for its pre-check, and the shared fixture's
+// maxChars (testdata/published_url/cases.json) pins the two equal.
 const PublishedURLMaxChars = 2048

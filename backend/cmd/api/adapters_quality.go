@@ -128,14 +128,14 @@ func qualityContentLanguage(language *post.Language) (*quality.Language, error) 
 
 // naverBlog is the search client as the adapter below uses it, so a test can stand one in.
 type naverBlog interface {
-	SearchBlog(ctx context.Context, query string, start int) ([]naversearch.Item, error)
+	SearchBlog(ctx context.Context, query string, start, display int) ([]naversearch.Item, error)
 }
 
 // qualityBlogSearch hands the phrase batch the Naver blog search, item for item in its order.
 type qualityBlogSearch struct{ client naverBlog }
 
-func (a qualityBlogSearch) SearchBlog(ctx context.Context, query string, start int) ([]quality.SearchItem, error) {
-	items, err := a.client.SearchBlog(ctx, query, start)
+func (a qualityBlogSearch) SearchBlog(ctx context.Context, query string, start, display int) ([]quality.SearchItem, error) {
+	items, err := a.client.SearchBlog(ctx, query, start, display)
 	if err != nil {
 		return nil, err
 	}

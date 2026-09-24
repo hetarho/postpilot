@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -66,8 +67,11 @@ func TestFieldPhrasesRenderOnceInThePerPostHalf(t *testing.T) {
 			t.Errorf("the section claims %q", claim)
 		}
 	}
-	if !strings.Contains(replacementsInstruction, "최대 20개") {
-		t.Error("the instruction does not state the span bound")
+	// The instruction's two numbers are the validation's caps (GEN-54).
+	for _, want := range []string{fmt.Sprintf("최대 %d개", ReplacementSpansMax), fmt.Sprintf("1~%d개", ReplacementPhrasesMax)} {
+		if !strings.Contains(replacementsInstruction, want) {
+			t.Errorf("the instruction does not say %q:\n%s", want, replacementsInstruction)
+		}
 	}
 }
 

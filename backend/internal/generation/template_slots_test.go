@@ -1,6 +1,7 @@
 package generation
 
 import (
+	"github.com/postpilot/backend/internal/template"
 	"strings"
 	"testing"
 )
@@ -14,7 +15,7 @@ func slotBrief() *TemplateBrief {
 }
 
 // SlotTokenForTest exposes the token form to this package's tests without widening the API.
-func SlotTokenForTest(n int) string { return slotToken(n) }
+func SlotTokenForTest(n int) string { return template.SlotToken(n) }
 
 func text(content string) Block { return Block{Type: BlockText, Content: content} }
 
@@ -32,7 +33,7 @@ func kinds(content PostContent) []string {
 
 func TestApplyTemplateSlotsTurnsTokensIntoSlotBlocksInPlace(t *testing.T) {
 	content := PostContent{Blocks: []Block{
-		text("인트로 문단"), text(slotToken(1)), text("본문 문단"), text(slotToken(2)),
+		text("인트로 문단"), text(template.SlotToken(1)), text("본문 문단"), text(template.SlotToken(2)),
 	}}
 
 	got := kinds(ApplyTemplateSlots(content, slotBrief()))
@@ -55,7 +56,7 @@ func TestApplyTemplateSlotsTurnsTokensIntoSlotBlocksInPlace(t *testing.T) {
 // A10: a slot the model never echoed is inserted rather than lost — a post that looks
 // finished and silently dropped the one thing a person still has to do is the failure here.
 func TestApplyTemplateSlotsInsertsAnOmittedSlot(t *testing.T) {
-	content := PostContent{Blocks: []Block{text("인트로"), text(slotToken(1)), text("본문")}}
+	content := PostContent{Blocks: []Block{text("인트로"), text(template.SlotToken(1)), text("본문")}}
 
 	got := ApplyTemplateSlots(content, slotBrief())
 	slots := 0
@@ -84,7 +85,7 @@ func TestApplyTemplateSlotsAppendsWhenNoTokenCameBack(t *testing.T) {
 
 // A token buried in a paragraph keeps the paragraph: the model wrote something real around it.
 func TestApplyTemplateSlotsStripsATokenFromProseAndKeepsBoth(t *testing.T) {
-	content := PostContent{Blocks: []Block{text("여기가 " + slotToken(1) + " 위치입니다"), text(slotToken(2))}}
+	content := PostContent{Blocks: []Block{text("여기가 " + template.SlotToken(1) + " 위치입니다"), text(template.SlotToken(2))}}
 
 	got := ApplyTemplateSlots(content, slotBrief())
 	if len(got.Blocks) != 3 {
@@ -96,7 +97,7 @@ func TestApplyTemplateSlotsStripsATokenFromProseAndKeepsBoth(t *testing.T) {
 }
 
 func TestApplyTemplateSlotsDropsARepeatedToken(t *testing.T) {
-	content := PostContent{Blocks: []Block{text(slotToken(1)), text(slotToken(1)), text(slotToken(2))}}
+	content := PostContent{Blocks: []Block{text(template.SlotToken(1)), text(template.SlotToken(1)), text(template.SlotToken(2))}}
 
 	got := ApplyTemplateSlots(content, slotBrief())
 	slots := 0
@@ -114,7 +115,7 @@ func TestApplyTemplateSlotsDropsARepeatedToken(t *testing.T) {
 // already carries slot blocks — the position is kept rather than re-appended.
 func TestApplyTemplateSlotsIsIdempotent(t *testing.T) {
 	once := ApplyTemplateSlots(PostContent{Blocks: []Block{
-		text("인트로"), text(slotToken(1)), text("본문"), text(slotToken(2)),
+		text("인트로"), text(template.SlotToken(1)), text("본문"), text(template.SlotToken(2)),
 	}}, slotBrief())
 	twice := ApplyTemplateSlots(once, slotBrief())
 
@@ -147,7 +148,7 @@ func TestApplyTemplateSlotsIsANoOpWithoutSlots(t *testing.T) {
 // after: template order is the only position information this pass has, and inserting relative
 // to "the last slot seen" reversed them.
 func TestApplyTemplateSlotsKeepsTemplateOrderWhenOnlyALaterTokenCameBack(t *testing.T) {
-	content := PostContent{Blocks: []Block{text("인트로"), text(slotToken(2)), text("본문")}}
+	content := PostContent{Blocks: []Block{text("인트로"), text(template.SlotToken(2)), text("본문")}}
 
 	got := ApplyTemplateSlots(content, slotBrief())
 	want := []string{"TEXT:인트로", "slot:place", "slot:link", "TEXT:본문"}
@@ -164,7 +165,7 @@ func TestApplyTemplateSlotsKeepsTemplateOrderWhenOnlyALaterTokenCameBack(t *test
 // Two different tokens crammed into one paragraph: BOTH slots resolve and neither token is
 // left in the prose, so a second pass changes nothing.
 func TestApplyTemplateSlotsResolvesEveryTokenInOneBlock(t *testing.T) {
-	content := PostContent{Blocks: []Block{text(slotToken(1) + " 그리고 " + slotToken(2))}}
+	content := PostContent{Blocks: []Block{text(template.SlotToken(1) + " 그리고 " + template.SlotToken(2))}}
 
 	got := ApplyTemplateSlots(content, slotBrief())
 	for _, block := range got.Blocks {

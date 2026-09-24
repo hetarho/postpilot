@@ -62,8 +62,8 @@ const (
 	PhraseRefreshMinInterval = time.Hour
 	PhraseRefreshCheck       = 10 * time.Minute
 	PhraseRetryDelay         = time.Hour
-	// PhrasePageSize is one search page, which must equal the search client's display size;
-	// PhrasePages of them make QUAL-17's 300 results.
+	// PhrasePageSize is the page the batch asks for, sent as the API's display, so a shorter page
+	// means the search has no more; PhrasePages of them make QUAL-17's 300 results.
 	PhrasePageSize  = 100
 	PhrasePages     = 3
 	PhraseMinTokens = 2

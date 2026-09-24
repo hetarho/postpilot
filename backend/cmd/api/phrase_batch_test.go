@@ -34,14 +34,14 @@ func TestPhraseSearchIsAbsentWithoutBothKeys(t *testing.T) {
 }
 
 type fakeNaverBlog struct {
-	query string
-	start int
-	items []naversearch.Item
-	err   error
+	query          string
+	start, display int
+	items          []naversearch.Item
+	err            error
 }
 
-func (f *fakeNaverBlog) SearchBlog(_ context.Context, query string, start int) ([]naversearch.Item, error) {
-	f.query, f.start = query, start
+func (f *fakeNaverBlog) SearchBlog(_ context.Context, query string, start, display int) ([]naversearch.Item, error) {
+	f.query, f.start, f.display = query, start, display
 	return f.items, f.err
 }
 
@@ -51,7 +51,7 @@ func TestQualityBlogSearchMapsItemsInOrder(t *testing.T) {
 		{Title: "을지로 노포", Description: ""},
 		{Title: "", Description: "설명만 있는 글"},
 	}}
-	got, err := qualityBlogSearch{client: blog}.SearchBlog(context.Background(), "카페 추천", 101)
+	got, err := qualityBlogSearch{client: blog}.SearchBlog(context.Background(), "카페 추천", 101, 100)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -60,12 +60,12 @@ func TestQualityBlogSearchMapsItemsInOrder(t *testing.T) {
 		{Title: "을지로 노포", Description: ""},
 		{Title: "", Description: "설명만 있는 글"},
 	}
-	if !reflect.DeepEqual(got, want) || blog.query != "카페 추천" || blog.start != 101 {
-		t.Fatalf("got %+v for (%q, %d), want %+v for (카페 추천, 101)", got, blog.query, blog.start, want)
+	if !reflect.DeepEqual(got, want) || blog.query != "카페 추천" || blog.start != 101 || blog.display != 100 {
+		t.Fatalf("got %+v for (%q, %d, %d), want %+v for (카페 추천, 101, 100)", got, blog.query, blog.start, blog.display, want)
 	}
 
 	boom := &naversearch.StatusError{Status: 429, Code: "012"}
-	if _, err := (qualityBlogSearch{client: &fakeNaverBlog{err: boom}}).SearchBlog(context.Background(), "q", 1); !errors.Is(err, boom) {
+	if _, err := (qualityBlogSearch{client: &fakeNaverBlog{err: boom}}).SearchBlog(context.Background(), "q", 1, 100); !errors.Is(err, boom) {
 		t.Fatalf("err = %v, want the client's error", err)
 	}
 }

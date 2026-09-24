@@ -36,13 +36,15 @@ func TestSearchBlogRequestContract(t *testing.T) {
 		t.Fatalf("the endpoint moved: %s%s", baseURL, blogPath)
 	}
 	for name, test := range map[string]struct {
-		query    string
-		start    int
-		rawQuery string
+		query          string
+		start, display int
+		rawQuery       string
 	}{
 		// url.Values sorts its keys and encodes a space as +, as the docs' Java sample does.
-		"a field query with a space": {"패션 미용", 101, "display=100&query=%ED%8C%A8%EC%85%98+%EB%AF%B8%EC%9A%A9&sort=sim&start=101"},
-		"the first page":             {"맛집", 1, "display=100&query=%EB%A7%9B%EC%A7%91&sort=sim&start=1"},
+		"a field query with a space": {"패션 미용", 101, 100, "display=100&query=%ED%8C%A8%EC%85%98+%EB%AF%B8%EC%9A%A9&sort=sim&start=101"},
+		"the first page":             {"맛집", 1, 100, "display=100&query=%EB%A7%9B%EC%A7%91&sort=sim&start=1"},
+		// The page is the caller's: the client keeps no page size that could drift from it.
+		"the display it is given": {"맛집", 1, 40, "display=40&query=%EB%A7%9B%EC%A7%91&sort=sim&start=1"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			client, requests := testClient(t, func(w http.ResponseWriter, r *http.Request) {
@@ -57,7 +59,7 @@ func TestSearchBlogRequestContract(t *testing.T) {
 				}
 				_, _ = w.Write([]byte(`{"items":[]}`))
 			})
-			if _, err := client.SearchBlog(context.Background(), test.query, test.start); err != nil {
+			if _, err := client.SearchBlog(context.Background(), test.query, test.start, test.display); err != nil {
 				t.Fatal(err)
 			}
 			if got := atomic.LoadInt32(requests); got != 1 {
@@ -78,7 +80,7 @@ func TestSearchBlogReturnsPlainText(t *testing.T) {
 			]
 		}`))
 	})
-	items, err := client.SearchBlog(context.Background(), "성수 카페", 1)
+	items, err := client.SearchBlog(context.Background(), "성수 카페", 1, 100)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -95,7 +97,7 @@ func TestSearchBlogEmptyItems(t *testing.T) {
 	client, _ := testClient(t, func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte(`{"total":0,"start":1,"display":0,"items":[]}`))
 	})
-	items, err := client.SearchBlog(context.Background(), "아무도 쓰지 않은 말", 1)
+	items, err := client.SearchBlog(context.Background(), "아무도 쓰지 않은 말", 1, 100)
 	if err != nil || items == nil || len(items) != 0 {
 		t.Fatalf("items = %#v, err = %v; want an empty slice and no error", items, err)
 	}
@@ -117,7 +119,7 @@ func TestSearchBlogStatusErrors(t *testing.T) {
 				w.WriteHeader(test.status)
 				_, _ = w.Write([]byte(test.body))
 			})
-			_, err := client.SearchBlog(context.Background(), "맛집", 1)
+			_, err := client.SearchBlog(context.Background(), "맛집", 1, 100)
 			var status *StatusError
 			if !errors.As(err, &status) || status.Status != test.status || status.Code != test.code {
 				t.Fatalf("error = %#v, want status %d and code %q", err, test.status, test.code)
@@ -134,16 +136,18 @@ func TestSearchBlogRefusesAnInvalidRequest(t *testing.T) {
 		_, _ = w.Write([]byte(`{"items":[]}`))
 	})
 	for name, test := range map[string]struct {
-		query string
-		start int
+		query          string
+		start, display int
 	}{
-		"a blank query":  {"  ", 1},
-		"an empty query": {"", 1},
-		"start 0":        {"맛집", 0},
-		"start 1001":     {"맛집", 1001},
-		"a negative one": {"맛집", -1},
+		"a blank query":  {"  ", 1, 100},
+		"an empty query": {"", 1, 100},
+		"start 0":        {"맛집", 0, 100},
+		"start 1001":     {"맛집", 1001, 100},
+		"a negative one": {"맛집", -1, 100},
+		"display 0":      {"맛집", 1, 0},
+		"display 101":    {"맛집", 1, 101},
 	} {
-		if _, err := client.SearchBlog(context.Background(), test.query, test.start); err == nil {
+		if _, err := client.SearchBlog(context.Background(), test.query, test.start, test.display); err == nil {
 			t.Errorf("%s was accepted", name)
 		}
 	}
@@ -152,8 +156,13 @@ func TestSearchBlogRefusesAnInvalidRequest(t *testing.T) {
 	}
 	// The bounds themselves are legal.
 	for _, start := range []int{1, 1000} {
-		if _, err := client.SearchBlog(context.Background(), "맛집", start); err != nil {
+		if _, err := client.SearchBlog(context.Background(), "맛집", start, 100); err != nil {
 			t.Errorf("start %d was refused: %v", start, err)
+		}
+	}
+	for _, display := range []int{1, 100} {
+		if _, err := client.SearchBlog(context.Background(), "맛집", 1, display); err != nil {
+			t.Errorf("display %d was refused: %v", display, err)
 		}
 	}
 }
@@ -164,7 +173,7 @@ func TestSearchBlogTimesOut(t *testing.T) {
 	})
 	client.timeout = 50 * time.Millisecond
 	began := time.Now()
-	if _, err := client.SearchBlog(context.Background(), "맛집", 1); err == nil {
+	if _, err := client.SearchBlog(context.Background(), "맛집", 1, 100); err == nil {
 		t.Fatal("a request that never answers returned no error")
 	}
 	if elapsed := time.Since(began); elapsed > time.Second {
@@ -176,7 +185,7 @@ func TestSearchBlogTimesOut(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	time.AfterFunc(50*time.Millisecond, cancel)
 	began = time.Now()
-	if _, err := client.SearchBlog(ctx, "맛집", 1); !errors.Is(err, context.Canceled) {
+	if _, err := client.SearchBlog(ctx, "맛집", 1, 100); !errors.Is(err, context.Canceled) {
 		t.Fatalf("a cancelled request returned %v", err)
 	}
 	if elapsed := time.Since(began); elapsed > time.Second {

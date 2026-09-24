@@ -263,3 +263,21 @@ func assertRows(t *testing.T, got, want []PhotoRow) {
 		}
 	}
 }
+
+// Review F11: one slot-token grammar. What quality and generation read stored content with is
+// exactly what SlotToken renders — no near miss, no photo token — and the replacement is literal.
+func TestReplaceSlotTokensMatchesExactlySlotTokens(t *testing.T) {
+	for _, n := range []int{1, 9, 10, 123} {
+		if got := ReplaceSlotTokens("a"+SlotToken(n)+"b", "|"); got != "a|b" {
+			t.Errorf("slot %d: %q", n, got)
+		}
+	}
+	for _, text := range []string{"{{slot:}}", "{{slot:x}}", "{{slot:-1}}", "{slot:1}", PhotoToken("a.jpg")} {
+		if got := ReplaceSlotTokens(text, "|"); got != text {
+			t.Errorf("%q was replaced: %q", text, got)
+		}
+	}
+	if got := ReplaceSlotTokens(SlotToken(1), "$1"); got != "$1" {
+		t.Errorf("a $ replacement expanded: %q", got)
+	}
+}

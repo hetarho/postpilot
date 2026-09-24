@@ -2,6 +2,7 @@ package template
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 )
 
@@ -27,6 +28,16 @@ const (
 // SlotToken is the token slot n (1-based) is rendered as, and the exact string the
 // post-processing pass looks for in the model's output.
 func SlotToken(n int) string { return fmt.Sprintf("%s%d%s", slotTokenPrefix, n, tokenSuffix) }
+
+// slotTokenPattern matches exactly what SlotToken renders, for any slot number.
+var slotTokenPattern = regexp.MustCompile(regexp.QuoteMeta(slotTokenPrefix) + "[0-9]+" + regexp.QuoteMeta(tokenSuffix))
+
+// ReplaceSlotTokens replaces every unfilled slot's token in text with `with`, literally (a `$` in
+// it is never an expansion). A post block carries no slot marker of its own, so this is how a
+// reader of stored content tells an unfilled slot's token from prose.
+func ReplaceSlotTokens(text, with string) string {
+	return slotTokenPattern.ReplaceAllLiteralString(text, with)
+}
 
 // PhotoToken names the attachment a photo slot was bound to during expansion.
 func PhotoToken(filename string) string { return photoTokenPrefix + filename + tokenSuffix }

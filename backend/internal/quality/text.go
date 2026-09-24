@@ -1,11 +1,12 @@
 package quality
 
 import (
-	"regexp"
 	"strings"
 	"unicode"
 
 	"golang.org/x/text/unicode/norm"
+
+	"github.com/postpilot/backend/internal/template"
 )
 
 // Tokens splits text into 어절: NFC first, so a decomposed Hangul input compares equal to its
@@ -101,10 +102,6 @@ func keycapBefore(runes []rune) int {
 	return 0
 }
 
-// slotToken is an unfilled template slot's marker inside a TEXT block. A post block carries no
-// slot field of its own, so the token in its content is how one is recognized.
-var slotToken = regexp.MustCompile(`\{\{slot:[0-9]+\}\}`)
-
 // Unit is one stretch of text a run may not cross: a block's text, or one LIST item.
 type Unit struct {
 	Type BlockType
@@ -125,7 +122,7 @@ func Units(doc Document) []Unit {
 		switch block.Type {
 		case BlockText:
 			// A space, not nothing, so a token set between two words cannot join them into one.
-			add(block.Type, slotToken.ReplaceAllString(block.Content, " "))
+			add(block.Type, template.ReplaceSlotTokens(block.Content, " "))
 		case BlockHeading, BlockQuote:
 			add(block.Type, block.Content)
 		case BlockList:

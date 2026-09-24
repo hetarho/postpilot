@@ -23,8 +23,9 @@ import (
 const (
 	baseURL  = "https://openapi.naver.com"
 	blogPath = "/v1/search/blog.json"
-	// pageSize is the API's own maximum, and the batch reads three such pages per 분야.
-	pageSize = 100
+	// maxDisplay is the API's own maximum page. The caller names the page it wants: the batch's
+	// short-page stop is right only when it knows the page it asked for.
+	maxDisplay = 100
 	// maxStart is the API's own bound on `start`.
 	maxStart          = 1000
 	requestTimeout    = 10 * time.Second
@@ -67,23 +68,26 @@ func (e *StatusError) Error() string {
 	return fmt.Sprintf("naver blog search: status %d, errorCode %q", e.Status, e.Code)
 }
 
-// SearchBlog reads one page of up to 100 results for query, ranked by similarity, starting at
-// the 1-based position start. A blank query or a start outside 1…1000 is refused before any
-// request is sent. Each request is bounded by the client's own timeout even when ctx has
+// SearchBlog reads one page of display results (1…100) for query, ranked by similarity,
+// starting at the 1-based position start. A blank query, a start outside 1…1000 or a display
+// outside 1…100 is refused before any request is sent. Each request is bounded by the client's own timeout even when ctx has
 // none, and ctx still cancels it.
-func (c *Client) SearchBlog(ctx context.Context, query string, start int) ([]Item, error) {
+func (c *Client) SearchBlog(ctx context.Context, query string, start, display int) ([]Item, error) {
 	if strings.TrimSpace(query) == "" {
 		return nil, errors.New("naver blog search: the query is blank")
 	}
 	if start < 1 || start > maxStart {
 		return nil, fmt.Errorf("naver blog search: start %d is outside 1…%d", start, maxStart)
 	}
+	if display < 1 || display > maxDisplay {
+		return nil, fmt.Errorf("naver blog search: display %d is outside 1…%d", display, maxDisplay)
+	}
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 
 	parameters := url.Values{
 		"query":   {query},
-		"display": {strconv.Itoa(pageSize)},
+		"display": {strconv.Itoa(display)},
 		"start":   {strconv.Itoa(start)},
 		"sort":    {"sim"},
 	}

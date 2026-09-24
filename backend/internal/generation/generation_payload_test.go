@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"reflect"
+	"strconv"
 	"testing"
 )
 
@@ -54,7 +55,7 @@ func requireNoZero(t *testing.T, path string, v reflect.Value) {
 			return
 		}
 		for i := 0; i < v.Len(); i++ {
-			requireNoZero(t, path+"["+itoa(i)+"]", v.Index(i))
+			requireNoZero(t, path+"["+strconv.Itoa(i)+"]", v.Index(i))
 		}
 	default:
 		if v.IsZero() {

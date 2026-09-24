@@ -145,7 +145,7 @@ func (b *PhraseBatch) RunOnce(ctx context.Context) error {
 func (b *PhraseBatch) fetch(ctx context.Context, query string) ([]SearchItem, error) {
 	var items []SearchItem
 	for page := range PhrasePages {
-		got, err := b.search.SearchBlog(ctx, query, 1+page*PhrasePageSize)
+		got, err := b.search.SearchBlog(ctx, query, 1+page*PhrasePageSize, PhrasePageSize)
 		if err != nil {
 			return nil, err
 		}

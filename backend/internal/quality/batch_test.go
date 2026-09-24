@@ -14,8 +14,8 @@ import (
 var batchNow = time.Date(2026, 9, 24, 12, 0, 0, 0, time.UTC)
 
 type searchCall struct {
-	query string
-	start int
+	query          string
+	start, display int
 }
 
 // fakeSearch answers each query from pages keyed by start, or fails from fail; it records every
@@ -29,9 +29,9 @@ type fakeSearch struct {
 	started chan struct{}
 }
 
-func (f *fakeSearch) SearchBlog(ctx context.Context, query string, start int) ([]SearchItem, error) {
+func (f *fakeSearch) SearchBlog(ctx context.Context, query string, start, display int) ([]SearchItem, error) {
 	f.mu.Lock()
-	f.calls = append(f.calls, searchCall{query, start})
+	f.calls = append(f.calls, searchCall{query, start, display})
 	f.mu.Unlock()
 	if f.started != nil {
 		select {
@@ -155,7 +155,7 @@ func TestPhraseBatchFetchesThreePagesOfOneHundred(t *testing.T) {
 		t.Fatal(err)
 	}
 	query := queryOf(t, "cafe")
-	if want := []searchCall{{query, 1}, {query, 101}, {query, 201}}; !reflect.DeepEqual(search.recorded(), want) {
+	if want := []searchCall{{query, 1, PhrasePageSize}, {query, 101, PhrasePageSize}, {query, 201, PhrasePageSize}}; !reflect.DeepEqual(search.recorded(), want) {
 		t.Fatalf("calls = %+v, want %+v", search.recorded(), want)
 	}
 	row := store.rows["cafe"]

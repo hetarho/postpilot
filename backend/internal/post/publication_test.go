@@ -31,7 +31,8 @@ func TestParseNaverBlogURL(t *testing.T) {
 		t.Fatal(err)
 	}
 	var fixture struct {
-		Cases []publishedURLCase `json:"cases"`
+		MaxChars int                `json:"maxChars"`
+		Cases    []publishedURLCase `json:"cases"`
 	}
 	if err := json.Unmarshal(raw, &fixture); err != nil {
 		t.Fatal(err)
@@ -39,9 +40,12 @@ func TestParseNaverBlogURL(t *testing.T) {
 	if len(fixture.Cases) == 0 {
 		t.Fatal("the address fixture is empty")
 	}
-	// The length bound is built from the constant rather than spelled out in the file.
+	// The length bound is the fixture's, pinned to this side's constant as the frontend pins its own.
+	if fixture.MaxChars != PublishedURLMaxChars {
+		t.Fatalf("the fixture's maxChars is %d, PublishedURLMaxChars is %d", fixture.MaxChars, PublishedURLMaxChars)
+	}
 	prefix := "https://blog.naver.com/alice/"
-	atLimit := prefix + strings.Repeat("a", PublishedURLMaxChars-len(prefix))
+	atLimit := prefix + strings.Repeat("a", fixture.MaxChars-len(prefix))
 	cases := append(fixture.Cases,
 		publishedURLCase{Name: "an address at the length limit", Input: atLimit, Stored: &atLimit},
 		publishedURLCase{Name: "an address over the length limit", Input: atLimit + "a"},

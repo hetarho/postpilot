@@ -88,3 +88,20 @@ func TestABlankMeasuredStringRendersNoRule(t *testing.T) {
 		}
 	}
 }
+
+// Review F11: the composition rule spells out the count the band implies (DistinctBlockTypesBand
+// warns at or below it, so the rule asks for one more). The words are product copy frozen into
+// prompts, so a band change stops here and asks for the sentence to be rewritten rather than
+// respelling a numeral.
+func TestCompositionRuleNamesTheBandCount(t *testing.T) {
+	words := map[int][2]string{3: {"세 가지 이상", "at least three"}}
+	w, ok := words[DistinctBlockTypesBand+1]
+	if !ok {
+		t.Fatalf("DistinctBlockTypesBand is %d: rewrite compositionRuleKorean and compositionRuleEnglish for %d block types and add their words here", DistinctBlockTypesBand, DistinctBlockTypesBand+1)
+	}
+	korean, _ := RuleText(MetricComposition, LanguageKorean, "")
+	english, _ := RuleText(MetricComposition, LanguageEnglish, "")
+	if !strings.Contains(korean, w[0]) || !strings.Contains(english, w[1]) {
+		t.Fatalf("the composition rule does not name %d block types:\n%s\n%s", DistinctBlockTypesBand+1, korean, english)
+	}
+}

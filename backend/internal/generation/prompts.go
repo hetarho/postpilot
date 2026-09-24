@@ -361,7 +361,9 @@ const fieldPhrasesObservation = "위 문구는 이 글의 분야로 네이버 �
 
 // replacementsInstruction asks for the candidate spans beside the content (GEN-48, GEN-53): the
 // author sees them on ② and nothing is replaced unless they choose to.
-const replacementsInstruction = "제목, 태그, 본문 블록에서 위 문구 가운데 하나와 같은 대상을 가리키는 표현이 있으면 그 자리를 JSON의 replacements 배열에 적으세요. 각 항목의 surface는 title, tag, body 중 하나, index는 tags나 blocks에서 0부터 센 위치(제목은 0), source는 그 자리에 쓴 표현 그대로, phrases는 바꿔 쓸 수 있는 위 문구 1~3개를 그대로 옮긴 것이며 source 자체는 넣지 않습니다. 항목은 최대 20개이고, 없으면 빈 배열로 두세요. replacements 때문에 title, tags, blocks를 바꾸지 마세요."
+// Its two numbers are the validation's own caps (GEN-54), so the instruction cannot ask for more
+// than the server keeps.
+var replacementsInstruction = fmt.Sprintf("제목, 태그, 본문 블록에서 위 문구 가운데 하나와 같은 대상을 가리키는 표현이 있으면 그 자리를 JSON의 replacements 배열에 적으세요. 각 항목의 surface는 title, tag, body 중 하나, index는 tags나 blocks에서 0부터 센 위치(제목은 0), source는 그 자리에 쓴 표현 그대로, phrases는 바꿔 쓸 수 있는 위 문구 1~%d개를 그대로 옮긴 것이며 source 자체는 넣지 않습니다. 항목은 최대 %d개이고, 없으면 빈 배열로 두세요. replacements 때문에 title, tags, blocks를 바꾸지 마세요.", ReplacementPhrasesMax, ReplacementSpansMax)
 
 // fieldPhrasesSection renders the frozen phrases once in the per-post half, between the memo and
 // the memories (GEN-14). Like the memories it is per-post material rather than the stable

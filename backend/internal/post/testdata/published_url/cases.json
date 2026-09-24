@@ -3,9 +3,10 @@
     "The Naver Blog address contract (POST-77). The Go parser (internal/post/publication_test.go) and",
     "the frontend pre-check both run every case of this file, so a rule cannot change on one side",
     "only. `stored` is the normalized address an accepted input is saved as, and null means the",
-    "input is refused. The at-limit and over-limit lengths are built by each harness from",
-    "PublishedURLMaxChars rather than spelled out here."
+    "input is refused.",
+    "The at-limit and over-limit lengths are built by each harness from `maxChars`, which each asserts equal to its own constant."
   ],
+  "maxChars": 2048,
   "cases": [
     {
       "name": "a desktop post address",

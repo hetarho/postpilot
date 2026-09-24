@@ -4,6 +4,8 @@ import (
 	"log/slog"
 	"sort"
 	"strings"
+
+	"github.com/postpilot/backend/internal/template"
 )
 
 // ApplyTemplateSlots is the one template-aware pass over a model result. It runs after block
@@ -123,7 +125,7 @@ func slotBlock(slot TemplateSlot, number int) Block {
 	}
 	return Block{
 		Type:    BlockText,
-		Content: slotToken(number),
+		Content: template.SlotToken(number),
 		Slot:    &BlockSlot{Kind: slot.Kind, Label: label},
 	}
 }
@@ -145,7 +147,7 @@ func slotTokensIn(block Block, slots int) (found []int, rest string, exact bool)
 	}
 	hits := make([]hit, 0, 2)
 	for i := 0; i < slots; i++ {
-		if at := strings.Index(rest, slotToken(i+1)); at >= 0 {
+		if at := strings.Index(rest, template.SlotToken(i+1)); at >= 0 {
 			hits = append(hits, hit{index: i, at: at})
 		}
 	}
@@ -155,26 +157,7 @@ func slotTokensIn(block Block, slots int) (found []int, rest string, exact bool)
 	sort.Slice(hits, func(a, b int) bool { return hits[a].at < hits[b].at })
 	for _, h := range hits {
 		found = append(found, h.index)
-		rest = strings.ReplaceAll(rest, slotToken(h.index+1), "")
+		rest = strings.ReplaceAll(rest, template.SlotToken(h.index+1), "")
 	}
 	return found, rest, strings.TrimSpace(rest) == ""
-}
-
-// slotToken mirrors the template context's token form. It is duplicated rather than imported
-// because the two contexts must not depend on each other (ARCHITECTURE §2.2); the shared
-// truth is the grammar spec, and the golden prompts fail loudly if the two ever disagree.
-func slotToken(n int) string {
-	return "{{slot:" + itoa(n) + "}}"
-}
-
-func itoa(value int) string {
-	if value == 0 {
-		return "0"
-	}
-	digits := make([]byte, 0, 4)
-	for value > 0 {
-		digits = append([]byte{byte('0' + value%10)}, digits...)
-		value /= 10
-	}
-	return string(digits)
 }

@@ -29,9 +29,9 @@ type PostSource interface {
 	Published(ctx context.Context, userID string, limit int) ([]PublishedPost, error)
 }
 
-// BlogSearch is the Naver blog search as the phrase batch reads it: one page of plain titles
-// and descriptions from start (1-based). The port is this context's, so the wrapper that
+// BlogSearch is the Naver blog search as the phrase batch reads it: one page of display plain
+// titles and descriptions from start (1-based). The port is this context's, so the wrapper that
 // implements it never imports quality (ARCH-6).
 type BlogSearch interface {
-	SearchBlog(ctx context.Context, query string, start int) ([]SearchItem, error)
+	SearchBlog(ctx context.Context, query string, start, display int) ([]SearchItem, error)
 }

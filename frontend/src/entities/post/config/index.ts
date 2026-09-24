@@ -27,5 +27,6 @@ export const POST_TAG_COUNT_MAX = 10
 export const REPLACEMENT_PHRASES_MAX = 3
 
 /** The longest Naver Blog address a post stores, in code points. Mirrors the server's
- *  `post.PublishedURLMaxChars` (ARCH-21), which stays authoritative. */
+ *  `post.PublishedURLMaxChars` (ARCH-21), which stays authoritative; the shared fixture's
+ *  `maxChars` pins the two equal. */
 export const POST_PUBLISHED_URL_MAX_CHARS = 2048
